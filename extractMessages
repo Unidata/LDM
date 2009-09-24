@@ -1,0 +1,26 @@
+files=${@:?}
+
+for file in $files; do
+    echo $file
+    awk '
+#	/err_log/ {
+#	    doPrint = 1;
+#	}
+#	/serror/ {
+#	    doPrint = 1;
+#	}
+#	/uerror/ {
+#	    doPrint = 1;
+#	}
+	/unotice/ {
+	    doPrint = 1;
+	}
+	{
+	    if (doPrint)
+		print;
+	}
+	/;[	 ]*$/ {
+	    doPrint = 0;
+	}
+    ' $file
+done

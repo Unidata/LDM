@@ -1,0 +1,23 @@
+status=1
+pqFile=/tmp/ldm$$.pq
+ldmConfFile=/tmp/ldmd$$.conf
+if ../pqcreate/pqcreate -c -s 20M -q $pqFile; then
+    echo 'ACCEPT ANY .* ^127\.0\.0\.1$' >$ldmConfFile
+    ./rpc.ldmd -l- -P 38800 -q $pqFile $ldmConfFile 2>/dev/null &
+    ldmPid=$!
+    while ! kill -s 0 $ldmPid; do
+	sleep 1
+    done
+    if ldmsend -l- -h localhost -P 38800 $pqFile; then
+	sleep 1
+	if test `ps -ef | grep -w $ldmPid | wc -l` -eq 2; then
+	    status=0
+	else
+	    echo 1>&2 "Downstream LDM died"
+	fi
+    fi
+    kill $ldmPid
+    rm -f $ldmConfFile
+    rm -f $pqFile
+fi
+exit $status

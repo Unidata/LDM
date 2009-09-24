@@ -1,0 +1,186 @@
+<?xml version="1.0"?>
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xml:lang="en">
+
+  <xsd:simpleType name="Name" type="xsd:NMTOKEN"/>
+
+  <xsd:simpleType name="NameList">
+    <xsd:list itemType="Name"/>
+  </xsd:simpleType>
+
+  <xsd:element name="name" type="Name"/>
+
+  <xsd:element name="description" type="xsd:normalizedString"/>
+
+  <xsd:element name="bit">
+    <xsd:simpleType>
+      <xsd:simpleContent>
+	<xsd:restriction base="xsd:nonNegativeInteger">
+	  <xsd:maxInclusive value="30"/>
+	</xsd:restriction>
+      </xsd:simpleContent>
+    </xsd:simpleType>
+  </xsd:element>
+
+  <xsd:element name="value">
+    <xsd:simpleType>
+      <xsd:simpleContent>
+	<xsd:restriction base="xsd:hexBinary">
+	  <xsd:maxLength value="8"/>
+	</xsd:restriction>
+      </xsd:simpleContent>
+    </xsd:simpleType>
+  </xsd:element>
+
+  <xsd:complexType name="FeedDef">
+    <xsd:sequence>
+	<xsd:element ref="name"/>
+	<xsd:element ref="description" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:element name="bitDef">
+    <xsd:complexType>
+      <xsd:complexContent>
+	<xsd:extension base="FeedDef">
+	  <xsd:element ref="bit"/>
+	</xsd:extension>
+      </xsd:complexContent>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:element name="maskDef">
+    <xsd:complexType>
+      <xsd:complexContent>
+	<xsd:extension base="FeedDef">
+	  <xsd:sequence>
+	    <xsd:element name="include" type="NameList"/>
+	    <xsd:element name="exclude" type="NameList" minOccurs=0/>
+	  </xsd:sequence>
+	</xsd:extension>
+      </xsd:complexContent>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:element name="valueDef">
+    <xsd:complexType>
+      <xsd:complexContent>
+	<xsd:extension base="FeedDef">
+	  <xsd:sequence>
+	    <xsd:element ref="value"/>
+	    <xsd:element name="include" type="NameList" minOccurs=0/>
+	    <xsd:element name="exclude" type="NameList" minOccurs=0/>
+	  </xsd:sequence>
+	</xsd:extension>
+      </xsd:complexContent>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:group name="maskOrValueDef">
+    <xsd:choice>
+	<xsd:element ref="valueDef"/>
+	<xsd:element ref="maskDef"/>
+    </xsd:choice>
+  </xsd:group>
+
+  <xsd:element name="definitions">
+    <xsd:complexType>
+      <xsd:sequence>
+	<xsd:element ref="bitDef" minOccurs="0" maxOccurs="32"/>
+	<xsd:group ref="maskOrValueDef" minOccurs="0" maxOccurs="unbounded"/>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>
+
+###############################
+
+<schema xmlns="http://www.w3.org/2001/XMLSchema">
+
+  <complexType name="feedType">
+    <attribute name="name" type="string" use="required"/>
+  </complexType>
+
+  <complexType name="feedType">
+    <attribute name="feed" type="string" use="required"/>
+  </complexType>
+
+  <complexType name="bitType">
+      <complexContent>
+	<extension base="feedType">
+	  <attribute name="bit" use="required">
+	    <simpleType>
+	      <restriction base="nonNegativeInteger">
+		<maxInclusive value="31"/>
+	      </restriction>
+	    </simpleType>
+	  </attribute>
+	</extension>
+      </complexContent>
+  </complexType>
+
+  <complexType name="alias">
+    <attribute name="name" type="string" use="required"/>
+    <attribute name="feed" type="string" use="required"/>
+  </complexType>
+
+  <group name="bitGroup">
+    <sequence>
+      <element name="bit" type="bitType" maxOccurs="unbounded"/>
+    </sequence>
+  </group>
+
+  <group name="maskComponent">
+    <sequence>
+      <element name="include" type="feedType"/>
+    </sequence>
+  </group>
+
+  <group name="maskGroup">
+    <sequence>
+      <element name="mask" maxOccurs="unbounded">
+	<complexContent>
+	  <extension base="feedType">
+	    <group ref="maskComponent" maxOccurs="unbounded"/>
+	  </extension base="feedType">
+	</complexContent>
+      </element>
+    </sequence>
+  </group>
+
+  <group name="includeGroup">
+    <sequence>
+      <element name="include" type="feedType" maxOccurs="unbounded"/>
+    </sequence>
+  </group>
+
+  <group name="valueGroup">
+    <sequence>
+      <element name="value" maxOccurs="unbounded">
+	<complexContent>
+	  <extension base="feedType">
+	    <attribute name="value" use="required">
+	      <simpleType>
+		<restriction base="positiveInteger">
+		  <maxInclusive value="0xfffffffe"/>
+		</restriction>
+	      </simpleType>
+	    </attribute>
+	    <group name="includeGroup" minOccurs="0"/>
+	  </extension>
+	</complexContent>
+      </element>
+    </sequence>
+  </group>
+
+  <element name="feedtypes">
+    <complexType>
+      <sequence>
+	<group ref="bitGroup" minOccurs="0"/>
+	<group ref="maskGroup" minOccurs="0"/>
+	<group ref="valueGroup" minOccurs="0"/>
+      </sequence>
+    </complexType>
+  </element>
+
+</schema>

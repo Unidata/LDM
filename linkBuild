@@ -1,0 +1,81 @@
+ERR_USAGE=1
+ERR_SETUP=2
+ERR_BUILD=3
+ERR_CLEANUP=4
+
+configOpts=
+ccOpt="-C c89"
+makeOpt="-m make"
+yaccOpt=""
+
+while getopts c:C:m:y: opt 
+do
+    case $opt in
+	c)  configOpts=${OPTARG:+-c $OPTARG};;
+	C)  if test -z "$OPTARG"; then
+		echo 1>&2 "C Compiler not specified"
+		exit $ERR_USAGE
+	    fi
+	    ccOpt="-C $OPTARG";;
+	m)  if test -z "$OPTARG"; then
+		echo 1>&2 "make(1) not specified"
+		exit $ERR_USAGE
+	    fi
+	    makeOpt="-m $OPTARG";;
+	y)  if test -z "$OPTARG"; then
+		echo 1>&2 "yacc(1) utility not specified"
+		exit $ERR_USAGE
+	    fi
+	    yaccOpt="-y $OPTARG";;
+	*)  printf "Usage: %s: [-c configOpts] [-C compiler] [-m make] [-y yacc]\n" $0
+	    exit $ERR_USAGE;;
+    esac
+done
+
+if ! cd /tmp; then
+    echo 1>&2 "Couldn't cd(1) to /tmp"
+    status=$ERR_SETUP
+else
+    status=0
+    if test -e ldm; then
+	if ! rm -rf ldm; then
+	    echo 1>&2 "Can't remove directory /tmp/ldm"
+	    status=$ERR_CLEANUP
+	fi
+    fi
+
+    if test $status -eq 0; then
+	if ! mkdir ldm; then
+	    echo 1>&2 "Couldn't mkdir(1) /tmp/ldm"
+	    status=$ERR_SETUP
+	else
+	    if ! cd ldm; then
+		echo 1>&2 "Couldn't cd(1) to /tmp/ldm"
+		status=$ERR_SETUP
+	    else
+		if ! linktree $HOME/ldm/package/src src; then
+		    echo 1>&2 "linktree(1) failure"
+		    status=$ERR_SETUP
+		else
+		    if ! cd src; then
+			echo 1>&2 "Couldn't cd(1) to /tmp/ldm/src"
+			status=$ERR_SETUP
+		    else
+			if ! LDMHOME=/tmp/ldm $SHELL ./build $configOpts \
+				$ccOpt $makeOpt $yaccOpt; then
+			    echo 1>&2 "build(1) failure"
+			    status=$ERR_BUILD
+			else
+			    status=0
+			fi
+			cd ..
+		    fi
+		fi
+		cd ..
+	    fi
+	    test $status -eq 0 && rm -rf ldm
+	fi
+    fi
+fi
+
+exit $status

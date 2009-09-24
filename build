@@ -1,0 +1,62 @@
+ERR_USAGE=1
+ERR_CONFIGURE=2
+ERR_MAKE_ALL=3
+ERR_MAKE_CHECK=4
+ERR_MAKE_INSTALL=5
+
+configOpts=
+unset CC
+unset LD_LIBRARY_PATH
+make=make
+
+while getopts c:C:m:y: opt 
+do
+    case $opt in
+	c)  configOpts="$OPTARG";;
+	C)  if test -z "$OPTARG"; then
+		echo 1>&2 "C Compiler not specified"
+		exit $ERR_USAGE
+	    fi
+	    CC=$OPTARG
+	    export CC;;
+	m)  make="$OPTARG"
+	    if test -z "$make"; then
+		echo 1>&2 "make(1) not specified"
+		exit $ERR_USAGE
+	    fi;;
+	y)  if test -z "$OPTARG"; then
+		echo 1>&2 "yacc(1) utility not specified"
+		exit $ERR_USAGE
+	    fi
+	    YACC=$OPTARG
+	    export YACC;;
+	*)  printf "Usage: %s [-c configOpts] [-C compiler] [-m make] [-y yacc]\n" $0
+	    exit $ERR_USAGE;;
+    esac
+done
+
+$make distclean
+
+if ! ./configure $configOpts; then
+    echo 1>&2 "configure(1) failure"
+    status=$ERR_CONFIGURE
+else
+    if ! $make; then
+	echo 1>&2 "\"make(1) all\" failure"
+	status=$ERR_MAKE_ALL
+    else
+	if ! (cd pqact && make check); then
+	    echo 1>&2 "\"make(1) pqact/check\" failure"
+	    status=$ERR_MAKE_CHECK
+	else
+	    if ! $make install; then
+		echo 1>&2 "\"make(1) install\" failure"
+		status=$ERR_MAKE_INSTALL
+	    else
+		status=0
+	    fi
+	fi
+    fi
+fi
+
+exit $status

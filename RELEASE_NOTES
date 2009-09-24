@@ -1,0 +1,56 @@
+VETTING NEW CLIENT CONNECTIONS:
+
+    In this version, the way the top-level LDM server vets new client
+    connections is improved.  Before, the LDM server would get the
+    hostname of the client system and then check both the IP address and
+    hostname of the client system against the ALLOW and ACCEPT entries
+    in the LDM configuration-file before fork(1)ing a child LDM process
+    to handle the connection.  Now, the LDM server immediately and
+    unconditionally fork(2)s a child LDM process to handle the
+    connection and the child process uses a two-phase procedure to vet
+    the client system.  First the IP address of the client is checked
+    against the ALLOW and ACCEPT entries.  If that succeeds, then the
+    client connection is allowed; otherwise, the hostname of the client
+    system is obtained and that is then checked against the entries.
+    These changes were made to prevent a client whose hostname cannot be
+    found from suspending the LDM server until the hostname lookup
+    times-out.
+
+    As a consequence of these changes, there is now an upper limit on
+    the number of active client connections to an LDM server.  The
+    default is 256.  This value can be changed via the "$max_clients"
+    variable in the ldmadmin(1) configuration-file
+    (etc/ldmadmin-pl.conf).
+
+CHECKING THE SYSTEM CLOCK:
+
+    As you may know, an accurate system clock is necessary for correct
+    operation by the LDM: an inaccurate clock can cause a delay in data
+    reception or even a loss of data.  By default, this new feature
+    causes almost every ldmadmin(1) command to also check the accuracy
+    of the system clock.  This new feature is also highly customizable:
+    everything from being disabled to causing it to *not* start the LDM
+    if the clock is off by a user-settable threshold.  The default is to
+    check the system clock but to allow the LDM to start.  To customize
+    this feature, pay close attention to the instructions on web-page
+    <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/vet-ldmadmin.html>.
+    Do a case-insensitive search for the word "time".
+
+ACCUMULATING AND PLOTTING METRICS:
+
+    This feature deals with metrics for the LDM system such as the
+    number of LDM connections, the age of the oldest data-product in the
+    product-queue, CPU load average and modes, etc.  This feature allows
+    the metrics to be periodically accumulated in a file and to be
+    displayed as time-series plots (great for figuring-out if your
+    product-queue is large enough).  You will need to have the top(1),
+    uptime(1), netstat(1), and vmstat(1) utilities installed in order to
+    collect metrics, and you'll need to have the gnuplot(1) utility
+    installed in order to display them.  To use this feature, pay close
+    attention to the web-pages
+    <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/platform.html>,
+    <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/vet-ldmadmin.html>,
+    <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/configuring.html>,
+    and
+    <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/monitoring.html>.
+    Do a case-insensitive search for the word "metric".

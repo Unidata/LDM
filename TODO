@@ -1,0 +1,35 @@
+Add mort to platform table.
+
+Modify doc/basics/behavior.html.  Document transfer-mode switching by
+downstream LDM.
+
+Replace the use of <regex.h> with Perl-compatible regular-expressions.
+Search for "Jared P Bostic" in the "from" field in +ldm.
+
+Add upstream filtering to upstream LDM 5.
+
+Add string-replacement tokens in pqact(1)'s configuration-file for
+other data-product metadata (e.g., size, origin, etc.).
+
+Add "-P port" option to notifyme(1) (might require global "ldmPort" 
+parameter).
+
+Allow the substring referenced by "\x:..." to be the day-of-year as well as
+the day-of-month.  This can be done by looking at the number of matched
+characters.
+
+Modify pqsend(1) to use LDM 6 protocols.
+
+Modify svc_getreqsock() so that it returns a status, adapt one_svc_run()
+and callers of one_svc_run().
+
+Allow user-customization of the autoswitch feature: time interval, 
+amount threshold.
+
+Add consideration of product latency to autoswitch feature?
+
+Have configure(1) determine absolute pathname of ntpdate(1).
+
+Have configure(1) determine netstat(1) command-line.
+
+Modify processing of netstat(1) output to use "ldm" instead of 388.

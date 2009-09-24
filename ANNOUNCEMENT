@@ -1,0 +1,30 @@
+Dear LDM user,
+
+Version 6.8 of the LDM is now available from the LDM homepage at
+    <http://www.unidata.ucar.edu/software/ldm/>
+or from
+    <ftp://ftp.unidata.ucar.edu/pub/ldm/ldm-6.8.0.tar.gz>
+
+This version features the following:
+
+    1)  The way the top-level LDM server vets new client connections is
+	improved;
+    2)  More information is printed by the "ldmadmin config"
+	command;
+    3)  The accuracy of the system clock can be checked by
+	ldmadmin(1); and
+    4)  LDM performance metrics can now be collected and plotted by the
+	ldmadmin(1) script if the requisite utilities are installed.
+
+More information can be found in the file RELEASE_NOTES in the top-level
+source-directory.
+
+For an extensive history of changes to the LDM, see the file CHANGE_LOG
+in the top-level source-directory.
+
+As always, we are happy to install the LDM system for you if you grant
+us root access to your system.
+
+Regards,
+Steve Emmerson
+LDM Developer

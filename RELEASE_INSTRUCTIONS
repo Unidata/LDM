@@ -1,0 +1,89 @@
+Change all "6.8.1" and "6\.8\.1" in this document to the current version
+identifier:
+
+    :%s/6\.8\.1/x.x.x/g
+    :%s/6\\\.6\\\.5/x\\.x\\.x/g
+
+Ensure that the configure(1) script is up-to-date:
+
+    autoconf
+
+Ensure that the package builds on all systems:
+
+    ./remoteBuild all
+
+Edit certain files:
+
+    vi VERSION
+    vi CHANGE_LOG
+    vi RELEASE_NOTES
+    vi ANNOUNCEMENT
+
+Edit the release notes for the online documentation:
+
+    vi ../doc/release-notes.html
+
+Update the version information in the documentation:
+
+    vi ../doc/macros.make
+    vipat '6\.8' ../doc/*.html ../doc/basics/*.html
+
+Copy the change-log to the documentation directory:
+
+    cp CHANGE_LOG ../doc
+
+Update the supported-platforms information:
+
+    vi ../doc/basics/platform.html remoteBuild
+
+Commit changes to the documentation:
+
+    (cd ../doc && cvs commit)
+
+Create the (hidden) online documentation:
+
+    (cd ../doc && make)
+
+Commit all changes:
+
+    sce commit
+
+Create the FTP distribution:
+
+    make ftp
+
+Install the package on Conan:
+
+    ssh ldm@conan
+    exec bash --login
+    gunzip -c /web/ftp/pub/ldm/ldm-6.8.1.tar.gz | pax -r &&
+	cd ldm-6.8.1/src
+    vi '+/listen(sock/' server/ldmd.c		# change "32" to "512"
+    ./configure CFLAGS=-g CPPFLAGS=-UNDEBUG \
+	    >&configure.log && 
+	make >&make.log &&
+	make install >&install.log && 
+	../bin/pqcheck -vl- &&
+	echo OK
+
+    /usr/ccs/bin/make install_setuids	# as "root"
+
+    cd &&
+	ldmadmin stop &&
+	rm runtime &&
+	ln -s ldm-6.8.1 runtime &&
+	ldmadmin start &&
+	ldmadmin watch
+    exit
+
+Online the hidden documentation on Conan:
+
+    ssh conan
+    cd /content/software/ldm
+    vi '+/6\.6\.4/' index.html
+    rm ldm-current && ln -s ldm-6.8.1 ldm-current
+    cd /content/downloads/ldm
+    vi '+/6\.6\.4/' toc.xml
+    exit
+
+Post ANNOUNCEMENT to "ldm-users@unidata.ucar.edu" with RELEASE_NOTES attached.
