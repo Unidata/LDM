@@ -1,0 +1,112 @@
+<html>
+
+<head>
+<meta name="UIINDEX" content="4">
+<title>Logfile Rotation</title>
+<meta NAME="BOOKMARK" CONTENT="Logfile Rotation">
+<meta NAME="AUTHOR" CONTENT="steve">
+<meta NAME="KEYWORDS" CONTENT="LDM, Logfile, rotation">
+<meta NAME="DESCRIPTION" CONTENT="Describes the rotation of the LDM logfiles">
+</head>
+
+<body>
+
+<h1 align="center">LDM Logfile Rotation</h1>
+
+<p>
+Without intervention, the <a href="glindex.html#logfile">LDM logfile</a> ,
+<tt>ldmd.log</tt>,
+will grow without bound.
+For this reason, it is desirable to have an automatic process manage the
+<a href="glindex.html#logfile">LDM logfile</a>.
+A convenient mechanism for curtailing growth is provided by the 
+<tt><a href="glindex.html#ldmadmin">ldmadmin</a> newlog</tt>
+command in conjunction with the UNIX
+<a
+href="http://www.opengroup.org/onlinepubs/007908799/xcu/crontab.html">
+crontab</a> utility.
+
+<p>
+The <tt><a href="glindex.html#ldmadmin">ldmadmin</a> newlog</tt>
+command rotates through the last <tt>$numlogs</tt> logfiles of the 
+<a href="glindex.html#LDM">LDM</a>, where
+<tt>$numlogs</tt> is a user-customizable variable in the
+<tt><a href="glindex.html#ldmadmin">ldmadmin</a></tt>
+script.
+The command causes every logfile matching the patten 
+<tt>ldmd.log.<i>n</i></tt>, where <i>n</i> is a positive integer less than
+<tt>$numlogs</tt>,
+to be renamed <tt>ldmd.log.<i>n+1</i></tt>, where <i>n+1</i> denotes
+the next higher integer.  This action will proceed from the larger
+<i>n</i>-s to the smaller so that no logfile is lost.
+Then, the file <tt>ldmd.log</tt> is renamed <tt>ldmd.log.1</tt>.
+Finally an empty <tt>ldmd.log</tt> file is created.
+
+<p>For example, 
+if the <tt>ldmadmin newlog</tt> command was executed at 18:00 on the
+20th and if the <tt>$numlogs</tt> variable was 2, then
+the following files:
+<blockquote><pre>
+-rw-r--r--   1 ldm      staff       972 Sep 19 18:00 /opt/ldm/logs/ldmd.log
+-rw-r--r--   1 ldm      staff       845 Sep 18 18:00 /opt/ldm/logs/ldmd.log.1
+-rw-rw-r--   1 ldm      staff       826 Sep 17 18:00 /opt/ldm/logs/ldmd.log.2
+-rw-r--r--   1 ldm      staff       981 Sep 16 18:00 /opt/ldm/logs/ldmd.log.3
+</pre></blockquote>
+
+would become 
+
+<blockquote><pre>
+-rw-r--r--   1 ldm      staff         0 Sep 20 18:00 /opt/ldm/logs/ldmd.log
+-rw-r--r--   1 ldm      staff       972 Sep 19 18:00 /opt/ldm/logs/ldmd.log.1
+-rw-r--r--   1 ldm      staff       845 Sep 18 18:00 /opt/ldm/logs/ldmd.log.2
+-rw-r--r--   1 ldm      staff       981 Sep 16 18:00 /opt/ldm/logs/ldmd.log.3
+</pre></blockquote>
+
+Note that the <tt>ldmd.log.3</tt> file was untouched.
+
+<p>
+An excellent way to ensure that this rotation occurs on an automatic and
+regular basis is to execute the command out of the
+<a href="glindex.html#LDM user">LDM user</a>'s 
+<a href="http://www.opengroup.org/onlinepubs/007908799/xcu/crontab.html">
+crontab</a> file.
+For example, the following entry will cause the command to be executed
+at 1800 hours local-time every day:
+
+<blockquote><pre>
+0 18 * * * bin/ldmadmin newlog
+</pre></blockquote>
+
+<p>
+Because the timestamps in an 
+<a href="glindex.html#logfile">LDM logfile</a> 
+are usually in UTC, a common convention is to rotate the logfiles at 0000 
+hours UTC.
+This is why the above example used 1800 hours MDT.  (If we remember, we
+change the execution-time to 1700 MST when appropriate.)  An alternative
+convention is to rotate the logfile at local midnight, <i>e.g.</i>,
+<blockquote><pre>
+0 0 * * * bin/ldmadmin newlog
+</pre></blockquote>
+Both conventions are equally valid.  You'll just have to remember which one
+you use.
+
+<p>
+We also like to keep a week's worth of <a
+href="glindex.html#logfile">LDM logfile</a> entries around
+-- so we change the 
+<tt>$numlogs</tt> variable to 7.
+
+<p>
+This rotation (and purging) of the
+<a href="glindex.html#logfile">LDM logfile</a>s will ensure that the space
+occupied by the logfiles will not grow indefinitely.
+
+<hr>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</body>
+</html>

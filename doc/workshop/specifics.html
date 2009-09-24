@@ -1,0 +1,253 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>Workshop-Specific Instructions</TITLE>
+<META NAME="BOOKMARK" CONTENT="Workshop-Specific Instructions">
+<META NAME="AUTHOR" CONTENT="steve">
+<META NAME="KEYWORDS" CONTENT="Software, LDM, 2005, workshop, training, specifics">
+<META NAME="DESCRIPTION" CONTENT="Invitational 2005 LDM Workshop-Specific
+Instructions">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">Workshop-Specific Instructions</h1>
+
+<p>
+The following comprises workshop-specific instructions and details for the 
+Summer 2009 LDM Training Workshop.
+
+<hr>
+
+<h2><a name="LdmUserAccount"></a>
+Create the LDM user-account</h2>
+
+<p>An account for the LDM user should already exist on your
+workstation.
+
+<hr>
+
+<h2><a name="/etc/services"></a>
+Edit file <code>/etc/services</code></h2>
+
+<p>Many modern operating systems already have entries for the LDM.
+You should, however, verify your system with the command
+<blockquote><pre>
+grep ldm /etc/services
+</pre></blockquote>
+
+<hr>
+
+<h2><a name="/etc/rpc"></a>
+Edit file <code>/etc/rpc</code></h2>
+
+<p>Many modern operating systems already have entries for the LDM. 
+You should, however, verify your system with the command
+<blockquote><pre>
+grep ldm /etc/rpc
+</pre></blockquote>
+
+<hr>
+
+<h2><a name="etc/syslog.conf"></a>
+Edit file <tt>/etc/syslog.conf</tt></h2>
+
+<p>This should already have been done.  You can verify this with the
+command
+<blockquote><pre>
+grep local0 /etc/rsyslog.conf
+</pre></blockquote>
+
+
+<hr>
+
+<h2><a name="firewall"></a>
+Ensure that TCP connections can be made</h2>
+
+<p>This should already have been done.
+
+<hr>
+
+<h2><a name="becomeLdmUser"></a>
+Become the LDM user in the user's home-directory</h2>
+
+<p>If you became root by executing the <tt>su</tt> command as the LDM
+user in a terminal window, then simply execute the command <tt>exit</tt>
+in the terminal window;
+otherwise, log off the computer and log in as the LDM user.
+
+<hr>
+
+<h2><a name="profile"></a>
+Edit the LDM user's profile-file</h2>
+
+<p>This should already have been done.  You can verify this with the
+command
+<blockquote><pre>
+cat .bash_profile
+</pre></blockquote>
+
+<hr>
+
+<h2><a name="build"></a>
+Build and Install the Distribution</h2>
+
+<p>If <tt>bash(1)</tt> is your user-shell (which is the default) then do
+the following:
+
+<blockquote><pre>
+cd $HOME/$VDIR/src
+make distclean
+./configure >&configure.log && make >&make.log && 
+make install >&install.log && sudo make install_setuids &&
+make clean &&
+echo OK
+</blockquote></pre>
+
+Otherwise, do the equivalent of the above for your user-shell.
+
+<hr>
+
+<h2><a name="ldmadmin"></a>
+Vet the ldmadmin(1) configuration-file</h2>
+
+<p>From monitoring the product-queue, it is known that the following are
+good values for the queue parameters for receiving data-products of the
+feedtype <tt>IDS|DDPLUS|NEXRAD3</tt>:
+
+<ul>
+
+    <li>Set the <tt>$pq_size</tt> variable to 200M:
+<blockquote><pre>
+$pq_size = "200M";
+</blockquote></pre>
+
+    <li>Set the <tt>$pq_slots</tt> variable to 50000:
+<blockquote><pre>
+$pq_slots = "50000";
+</blockquote></pre>
+
+</ul>
+
+(For average rates of the various feedtypes, see, for example, the
+<a
+href="http://www.unidata.ucar.edu/cgi-bin/rtstats/rtstats_summary_volume?idd.unidata.ucar.edu">
+data-volume summary webpage for a computer at the UPC</a>.)
+
+<hr>
+
+<h2><a name="dataAndLogDirs"></a>
+Create directories for data-files and LDM logfiles</h2>
+
+<p>Execute the commands
+
+<blockquote><pre>
+cd
+mkdir /machine/data/ldm/data /machine/data/ldm/logs
+ln -s /machine/data/ldm/data /machine/data/ldm/logs .
+</blockquote></pre>
+
+<hr>
+
+
+<h2><a name="allow"></a>
+Request authorization at the upstream LDM</h2>
+
+<p>Add the following entry to the file <tt>$HOME/etc/ldmd.conf</tt> to allow all
+workshop LDM-s to obtain data from any workshop LDM:
+<blockquote><pre>
+ALLOW	ANY	^workshop[0-9]{2}\.ucar\.edu$
+</blockquote></pre>
+
+<p>For reference, see
+<a href="../basics/ldmd.conf.html">LDM Basics: <tt>ldmd.conf</tt></a>.
+
+<hr>
+
+<h2><a name="ldmd.conf"></a>
+Edit the LDM configuration-file, <tt>etc/ldmd.conf</tt></h2>
+
+<p>The "<tt>EXEC pqact</tt>" entry should already be enabled to allow local
+processing of received data-products.
+
+<p>Add the following entries to the LDM
+configuration file, <tt>ldmd.conf</tt>, to request the
+<tt>IDS|DDPLUS</tt> and <tt>NEXRAD3</tt> data-feeds from the
+instructor's LDM:
+<blockquote><pre>
+REQUEST	IDS|DDPLUS	.*	workshop00.ucar.edu
+REQUEST	NEXRAD3		.*	workshop00.ucar.edu
+</blockquote></pre>
+
+<p>For reference, see
+<a href="../basics/ldmd.conf.html">LDM Basics: <tt>ldmd.conf</tt></a>.
+
+<hr>
+
+<h2><a name="pqact.conf"></a>
+Edit the <tt>pqact</tt> configuration-file, <tt>etc/pqact.conf</tt></h2>
+
+<p>Ensure that the following is the only active entry:
+<blockquote><pre>
+IDS|DDPLUS
+	^(..)(..).. .... (..)(..)
+	FILE
+	data/IDS_DDPLUS/\1/\2/(\3:yyyy)(\3:mm)(\3:dd)T\4.txt
+</blockquote></pre>
+<em>Remember to start the continuation-lines with a tab character!</em>
+
+<p>This entry will file data-products of feedtype
+<tt>IDS|DDPLUS</tt> in an appropriate directory hierarchy with the
+canonical time of the data-product as the file name.
+
+<p>For reference, see
+<a href="../basics/pqact.conf.html">LDM Basics: <tt>pqact.conf</tt></a>.
+
+<hr>
+
+<h2><a name="scour.conf"></a>
+Edit the <tt>scour</tt> configuration-file, <tt>etc/scour.conf</tt></h2>
+
+<p>Add the following line to the scour(1) configuration-file,
+<code>etc/scour.conf</code>:
+
+<blockquote><pre>
+data/IDS_DDPLUS 1
+</blockquote></pre>
+
+This will remove all files in the data directory hierarchy that are
+older than one day.
+
+<p>For reference, see
+<a href="../basics/scour.conf.html">LDM Basics: <tt>scour.conf</tt></a>.
+
+<hr>
+
+<h2><a name="crontab"></a>
+Edit the LDM-user's <b><tt>crontab(1)</tt></b> file</h2>
+
+<p>Add the following lines via the command "crontab -e":
+<blockquote><pre>
+0 * * * * bin/ldmadmin scour >/dev/null
+0 0 * * * bin/ldmadmin newlog
+* * * * * bin/ldmadmin addmetrics
+* * * * 0 bin/ldmadmin newmetrics
+</blockquote></pre>
+
+<hr>
+
+<h2><a name="boot"></a>
+Ensure that the LDM is started at boot-time</h2>
+
+<p>We're not concerned about restarting the LDM at boot-time for this
+workshop.  So we'll skip this step.
+
+<hr>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</BODY>
+</HTML>

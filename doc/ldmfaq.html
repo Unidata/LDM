@@ -1,0 +1,132 @@
+<HTML>
+
+<HEAD>
+<TITLE>LDM FAQ</TITLE>
+<META NAME="BOOKMARK" CONTENT="FAQ">
+<META NAME="AUTHOR" CONTENT="steve">
+<META NAME="KEYWORDS" CONTENT="Software, LDM, FAQ, frequently asked questions">
+<META NAME="DESCRIPTION" CONTENT="Frequently asked questions about the
+LDM">
+</HEAD>
+
+<body>
+
+<H2 align="center">LDM Frequently Asked Questions</H2>
+
+This page contains answers to some of the most frequently asked questions 
+about the LDM.
+
+<hr>
+
+<h3>Table of Contents</h3>
+
+<ul>
+ <li><a href="#ldm-what">What is the LDM</a>?
+ <li><a href="#ldm-who">Who can use the LDM software</a>
+ <li><a href="#ldm-distribution">How do I get the LDM distribution</a>?
+ <li><a href="#ldm-notfound">Why do I get the error "bin/ldmadmin: Command not found" when I run ldmadmin</a>?
+ <li><a href="#ldm-access1">(IRIX 6.1) Why does my server deny RPC access to others</a>?
+ <li><a href="#ldm-defrag">(IRIX) Why does my LDM die every Sunday at 4:30 am</a>?
+ <li><a href="#ldm-388">Why do I get the error that another server is
+      running on port 388 when there is no other server active</a>?
+</ul>
+
+<hr>
+
+<a name="ldm-what"></a>
+<h4>What is the LDM?</h4>
+
+The LDM is a distributed system for event-driven data distribution.  It
+consists of a suite of software to select, capture, process, and distribute
+data products using a set of network client/server programs and their shared
+protocols.
+
+<a name="ldm-who"></a>
+<h4>Who can use the LDM software?</h4>
+
+The LDM software is freely available to anyone who wishes to use it. It is <a href="copyright.html">copyrighted</a> 
+by the <a href="http://www.ucar.edu"> University 
+Corporation for Atmospheric Resesarch</a>. <a name="ldm-distribution"></a> 
+<h4>How do I get the LDM distribution?</h4>
+
+<p> The Unidata LDM software is now used by more than 150 universities/cooperating 
+  agencies. The LDM software is currently <a
+href="copyright.html">freely available</a> via anonymous 
+  FTP <a
+href="ftp://ftp.unidata.ucar.edu/pub/ldm">in 
+  source form</a> or <a
+href="ftp://ftp.unidata.ucar.edu/pub/binary/">as 
+  binaries</a> for several supported platforms from the Unidata Program Center. 
+<p>
+
+<a name="ldm-notfound"></a>
+<h4>Why do I get the error "bin/ldmadmin: Command not found" when I run ldmadmin</h4>
+
+If you install the binary release of the LDM, the path to the
+<code><b>perl</b></code> binary (which interprets the <b><tt>ldmadmin</tt></b> 
+script) is based on the perl installation at the Unidata
+Program Center.  This might
+not be correct for your site's setup.  The first line of each perl script
+in the LDM distribution starts with a line that looks something like:
+
+<blockquote><pre>
+#!/usr/local/perl</code>
+</blockquote></pre>
+
+If your <code><b>perl</b></code> binary is not located in the path noted on that
+line, modify the line to use the correct path.
+
+
+<a name="ldm-access1"></a>
+<h4>(IRIX 6.1) Why does my server deny RPC access to others?</h4>
+
+In IRIX, version 6.1, there is a file, /etc/config/portmap.options.  The -a
+option in this file disallows any host trying to do an RPC call to the
+machine.  You must explicitly allow any hosts that will connect to you.  See
+the man page for <code>portmap</code> for more information.
+
+<a name="ldm-defrag"></a>
+<h4>(IRIX) Why does my LDM die every Sunday at 4:30 am?</h4>
+
+On IRIX systems, a disk defragger process runs every Sunday at
+4:30 a.m. out of the root account.  Because the product queue is a memory-mapped
+I/O file, it cannot be defragmented on disk while it is mapped.  If it is,
+it corrupts the queue.<p>
+
+The solution is to either remove the root cron job that runs
+<code>/usr/etc/fsr</code>, or to add a -m switch pointing to a file that does
+not include the file system that contains the queue.  This will allow other
+file systems to be defragmented, ignoring the data file system.  See the
+man page for <code>fsr</code> for more information.<p>
+
+4/30/96: SGI now has a patch available that seems to fix the <code>fsr</code>
+problem: patchSG0000870 - EFS filesystem roll-up patch for non-XFS systems.
+
+<a name="ldm-388"></a>
+<h4>Why do I get the error that another server is running on port 388 when
+there is no other server active?</h4>
+
+If the LDM server does not exit cleanly, port 388 may remain registered with
+the portmapper, even if the server is no longer running.  Use
+<code>rpcinfo</code> to check this:<p>
+
+<pre>
+     % rpcinfo -p
+</pre><p>
+
+If port 388 is still registered, <em>as root</em>, use rpcinfo to deregister
+the port:<p>
+
+<pre>
+     % rpcinfo -d 300029 version
+</pre><p>
+
+where <em>version</em> is the version number of the program that is running,
+which will be 5 and/or 6.
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</body>
+</html>

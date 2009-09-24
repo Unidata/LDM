@@ -1,0 +1,80 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta name="UIINDEX" content="4">
+   <meta name="BOOKMARK" content="Running Multiple LDM-s">
+   <meta name="AUTHOR" content="steve">
+   <meta name="KEYWORDS" content="LDM, multiple">
+   <title>Running Multiple LDM-s</title>
+</head>
+<body>
+
+<h1 align="center">Running Multiple LDM-s</h1>       
+
+<p>
+It's possible to run multiple instances of an
+<a href="glindex.html#LDM">LDM</a>
+system on a single computer.  
+This article explains how and leaves the "why" to the reader.
+
+<p>
+It is assumed that the reader is familiar with the installation and
+configuration procedures for an 
+<a href="glindex.html#LDM">LDM</a>
+system.
+For each
+<a href="glindex.html#LDM">LDM</a>
+system that you want to execute, build and install an 
+<a href="glindex.html#LDM">LDM</a>
+package
+with the following modifications:
+
+<ol>
+    <li>Choose a distinct user-account with its own name (e.g., 
+	<code>ldm2</code>) and home directory (e.g., <code>/local/ldm2</code>).
+
+    <li>Choose a distinct logging facility to use (e.g., <code>local2</code>)
+	and modify the <code>/etc/syslog.conf</code> file appropriately.
+
+    <li>When executing the configure(1) script, use the 
+	<code>--enable-logging=<a href="glindex.html#localn">local<i>n</i></a>
+	to set the logging facility.
+
+    <li>Decide on one of the following approaches for allowing connections
+	from downstream sites:
+
+    <ul>
+
+	<li>Decide on a distinct IP address to use.  This necessitates the use
+	of a distinct network interface, which could be a real one (implemented
+	in hardware) or a virtual one (implemented in software).  When
+	configuring the <a
+	href="glindex.html#ldmadmin"><code>ldmadmin(1)</code></a>
+	configuration-file, <a href="glindex.html#ldmadmin-pl.conf">
+	<code>etc/ldmadmin-pl.conf</code></a>, use the <code>$ip_addr</code>
+	variable to specify that IP address.
+
+	<li>Select a distinct port on which the LDM server will listen. Use
+	the "--enable-port=port" option of the configure script to
+	configure the LDM to use that port. On the downstream hosts, do
+	one of the following:
+
+	<ul>
+
+	    <li>Use the optional ":port" field in REQUEST entries to
+	    specify to which port to connect.
+
+	    <li>Configure the downstream LDM to use the same port via
+	    the same "--enable-port=port" option of the
+	    configure script.  This approach is recursive: further
+	    downstream sites will also need to be modified.
+
+	</ul>
+
+    </ul>
+
+</ol>
+
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<html>
+
+<HEAD>
+<title>NOGAPS/COAMPS</title>
+<META NAME="BOOKMARK" CONTENT="NOGAPS/COAMPS">
+<META NAME="AUTHOR" CONTENT="steve">
+<meta name="KEYWORDS" content="idd, ldm, data, nogaps, coamps, Feedtype, ft19, ">
+<meta name="DESCRIPTION" content="Feedtype FT19 is currently allocated to FNMOC's Global Ocean Data Assimilation Experiment (GODAE)server. FNMOC currently provides two data streams via Unidata's Internet Data Distribution (IDD) network under the FNMOC feedtype: the Navy Operational Global Atmospheric Prediction System (NOGAPS) stream and the Coupled Ocean Atmosphere Mesoscale Prediction System (COAMPS) stream.">
+</HEAD>
+
+<body>
+
+<h1 align="center">FT19/NOGAPS/FNMOC Feedtype</h1><br>
+
+<p align="justify">Feedtype FT19 is currently allocated to FNMOC's Global Ocean Data Assimilation 
+  Experiment <a href="http://usgodae3.fnmoc.navy.mil/"> <b>(GODAE)</b></a> 
+  server. This feedtype also has the alias "NOGAPS". Additionally, the newly introduced 
+  alias "FNMOC", is available in LDM version 5.1.4 or greater. This latter alias 
+  was introduced as we became aware that FNMOC would be providing more than one 
+  data stream. </p>
+<p align="justify"> FNMOC currently provides two data streams via Unidata's Internet Data Distribution 
+  (IDD) network under the FNMOC feedtype: the Navy Operational Global Atmospheric 
+  Prediction System <a href="http://www.usgodae.fnmoc.navy.mil/cgi-bin/datalist.pl?generate=summary"> 
+  <b>(NOGAPS)</b></a> stream and the Coupled Ocean Atmosphere Mesoscale Prediction 
+  System <a href="http://www.usgodae.fnmoc.navy.mil/cgi-bin/datalist.pl?generate=summary"> 
+  <b>(COAMPS)</b> </a> stream. 
+</p><p align="justify">
+
+Below are some example pqact.conf entries showing showing patterns that specify this data and
+differentiate the two streams.  Although both product IDs start with
+US058, the NOGAPS data uses model ID 0058, while the COAMPS models are
+0027, 0041, 0060, 0083, and 0082.  Note that the second pattern simply
+files any non-0058 model as COAMPS data. 
+
+</p><pre>
+<b># NOGAPS</b>
+NOGAPS  ^US058....-.......(0058)_...._.........(....)(..)(..)(..)_(.*)
+        FILE    -overwrite      -close  data/nogaps/\2/\3/\4/\5/\1/\6
+
+
+<b># COAMPS</b>
+NOGAPS  ^US058....-.......([^0]...|0[^0]..|00[^5].|005[^8])_...._.........(....)(..)(..)(..)_(.*)
+        FILE    -overwrite      -close  data/coamps/\2/\3/\4/\5/\1/\6
+</pre>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+
+</script>
+</body></html>

@@ -1,0 +1,131 @@
+<HTML>
+<HEAD>
+<TITLE>LDM 6.8.1 Known Problems</TITLE>
+<META NAME="BOOKMARK" CONTENT="Known Problems">
+<META NAME="AUTHOR" CONTENT="Steve">
+<META NAME="KEYWORDS" CONTENT="Software, LDM, Data, Manager, Release, 
+6.8.1, Notes ">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">LDM 6.8.1 Known Problems</h1>
+
+<ul>
+    <li><a href="#futex">Hung downstream LDM on Linux system </a>
+    <li><a href="#fcntl">Product-queue access hangs in Mac OS X 10
+	(Darwin 8 & 9)</a>
+    <li><a href="#linux_time">Some data-products not processed or
+    relayed</a>
+    <li><a href="#ntpdate_timeout"><b><tt>ldmadmin</tt></b> commands take a
+	long time to execute</a>
+    <li><a href="#reporting">Reporting Problems</a>
+</ul>
+
+<hr>
+
+<h2><a name="futex">Hung downstream LDM on Linux system</a></h2>
+
+<p>On some Linux systems, an <b><tt>ldmadmin stop</tt></b> command can
+hang because a downstream LDM process hangs.
+An <b><tt>strace(1)</tt></b> of the hung process indicates that it is
+repeatedly invoking the <b><tt>futex</tt></b> system-call:
+<blockquote><pre>
+futex(0x583844, FUTEX_WAIT, 2, NULL)    = -1 EINTR (Interrupted system call)
+--- SIGCONT (Continued) @ 0 (0) ---
+futex(0x583844, FUTEX_WAIT, 2, NULL)    = -1 EINTR (Interrupted system call)
+--- SIGCONT (Continued) @ 0 (0) ---
+...
+</blockquote></pre>
+This is a known Linux bug.  Fixing it requires modifying either the Linux
+kernel or the gcc runtime library or both.  The bug appears to exist in all
+2.6 versions prior to and including version 2.6.13.  Further information
+can be found by Googling "futex hang".
+
+<p>A workaround appears to be to set the environment variable <tt><b>
+LD_ASSUME_KERNEL</b></tt> to <tt><b>2.4.19</b></tt> before executing any
+LDM program.  For best effect, this should be done in the LDM user's 
+profile-file.
+
+<hr>
+
+<h2><a name="fcntl">Product-queue access hangs in Mac OS X 10
+(Darwin 8 & 9)</a></h2>
+
+<p>
+The product-queue module, pq(3), makes repeated use of the fcntl(2)
+system-function to lock portions of the product-queue.  This function
+invokes the Mac OS X system-function fcntl$UNIX2003, which, for an
+unknown reason, eventually hangs (i.e., never returns) if two or more
+processes are accessing the product-queue.  This problem has been seen on
+Mac OS X versions 10.5.0 and 10.5.2.
+
+<p>
+This bug was first reported to Apple on April 1, 2008.  There have been
+only a few inquiries from Apple and no resolution to date.
+
+<p>
+There is no workaround.
+
+<hr>
+
+<h2><a name="linux_time">Some data-products not processed or relayed</a></h2>
+
+<p>
+Processes that read the product-queue such as upstream LDM-s,
+<tt><b>pqact</b>(1)</tt>, and <tt><b>pqcat</b>(1)</tt> can sometimes
+miss a data-product that they should have, otherwise, selected and that
+is actually in the queue if the system clock is not monotonic
+(<i>i.e.</i> if the system clock sometimes jumps backwards).  This is
+because the order in which products reside in the queue is the same
+order as their <em>insertion-time</em> into the queue.  Consequently, a
+backwards time-jump by the system clock can cause a newly-arrived data
+product to <em>not</em> be inserted at the tail of the queue and,
+consequently, be missed by a reader of the queue that's waiting at the
+queue's tail for the next product.
+
+<p>
+Some Linux systems are particularly vulnerable to this phenomena.  They
+are noted <a
+href="http://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=1006086">here</a>.
+
+<p>
+The solution is to run the <tt><b>ntpd</b>(8)</tt> daemon to
+continuously adjust the clock slew rate to ensure a monotonic system
+clock.  Linux users are also <b>strongly advised</b> to follow <a
+href="http://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=1006113">
+this recommendation</a>.
+
+<hr>
+
+<h2><a name="ntpdate_timeout"><tt><b>ldmadmin</b>(1)</tt> commands take a
+long time to execute</a></h2>
+
+In order to ensure that the system clock is accurate, most of the
+<tt><b>ldmadmin</b>(1)</tt> commands also check the system clock via the
+<tt><b>ntpdate</b>(1)</tt> utility, which contacts a remote timeserver.
+In LDM version 6.8.0, the default timeout for that utility was 20
+seconds and that value will still be used if you installed that version.
+To ensure faster
+response times, set the value of the variable
+<tt><b>$ntpdate_timeout</b></tt> in the <tt><b>ldmadmin</b>(1)</tt> 
+configuration-file, <tt><b>etc/ldmadmin-pl.conf</b></tt>,
+to a smaller number of seconds (<i>e.g.</i>, 5).
+
+<hr>
+<h2><a name="reporting">Reporting Problems</a></h2>
+
+<p>
+If you encounter bugs or problems, please contact <a
+href="mailto:support-ldm@unidata.ucar.edu">support-LDM at unidata.ucar.edu</a>.
+Include in the email all relevant items that could aid the diagnosis.
+
+<hr>
+
+<p>
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</BODY>
+</HTML>

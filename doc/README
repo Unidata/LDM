@@ -1,0 +1,28 @@
+This package contains the HTML documentation for the Unidata Program
+Center's Local Data Manager (LDM).
+
+The release-identifier of this package has the following form:
+
+    ldm-<major>.<minor>.<rev>
+
+where:
+
+    <major>	Is the major release-number (e.g., 6).  This component
+		tracks the major release number of the source distribution.
+
+    <minor>	Is the minor release-number (e.g., 1).  This component
+		tracks the minor release number of the source distribution.
+
+    <rev>	Is the revision-level of the documentation (e.g., B).
+		This component does NOT track the revision-level of the 
+		source distribution.
+
+Because the online version of the documentation is likely to be more
+up-to-date than any downloaded version, we strongly recommend that you
+use the online version rather than a downloaded version.
+
+The online documentation is available at
+
+    http://www.unidata.ucar.edu/software/ldm
+
+under the appropriate release-identifier.

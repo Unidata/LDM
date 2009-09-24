@@ -1,0 +1,348 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>ldmd.conf</TITLE>
+<META NAME="BOOKMARK" CONTENT="ldmd.conf">
+<META NAME="AUTHOR" CONTENT="Steve">
+<META NAME="KEYWORDS" CONTENT="LDM, configuration, ldmd.conf">
+<META NAME="DESCRIPTION" CONTENT="The LDM configuration-file 
+<tt>ldmd.conf</tt>">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">The LDM Configuration-File, <tt>ldmd.conf</tt></h1><br>
+
+<p>You should also read the discussion on 
+<a href="configuring.html#ldmd.conf">editing <tt>ldmd.conf</tt></a>
+when configuring an 
+<a href="glindex.html#LDM">LDM</a> installation.
+
+<h2>Contents</h2>
+
+<ul>
+    <li><a href="#introduction">Introduction</a>
+    <li>Entries
+	<ul>
+	    <li><a href="#EXEC"><tt>EXEC</tt></a>
+	    <li><a href="#REQUEST"><tt>REQUEST</tt></a>
+	    <li><a href="#ALLOW"><tt>ALLOW</tt></a>
+	    <li><a href="#ACCEPT"><tt>ACCEPT</tt></a>
+	    <li><a href="#INCLUDE"><tt>INCLUDE</tt></a>
+	</ul>
+</ul>
+
+<hr>
+
+<h2><a name="introduction"></a>Introduction</h2>
+
+<p>
+The 
+<a href="glindex.html#LDM">LDM</a>
+configuration-file, <tt>ldmd.conf</tt>,
+provides information to
+the top-level <a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> and
+contains the following types of entries:
+<blockquote>
+<dl>
+    <dt><a href="#EXEC"><tt>EXEC</tt></a>
+    <dd>Execute programs as child processes on startup
+
+    <dt><a href="#REQUEST"><tt>REQUEST</tt></a>
+    <dd>Connect to <a href="glindex.html#upstream LDM">upstream LDM</a>s to
+	request <a href="glindex.html#data-product">data-product</a>s
+
+    <dt><a href="#ALLOW"><tt>ALLOW</tt></a>
+    <dd>Allow certain
+	<a href="glindex.html#downstream LDM">downstream LDM</a>s
+	to connect and to receive certain
+	<a href="glindex.html#data-product">data-product</a>s
+
+    <dt><a href="#ACCEPT"><tt>ACCEPT</tt></a>
+    <dd>Allow certain
+	<a href="glindex.html#upstream LDM">upstream LDM</a>s 
+	to send certain unrequested
+	<a href="glindex.html#data-product">data-product</a>s
+
+    <dt><a href="#INCLUDE"><tt>INCLUDE</tt></a>
+    <dd>Include another configuration-file
+</dl>
+</blockquote>
+This file normally resides in the <tt>etc/</tt> subdirectory of the
+<a href="glindex.html#LDM">LDM</a>
+installation.
+
+<hr>
+
+<h2><a name="EXEC"></a><tt>EXEC</tt> Entry</h2>
+
+<p>
+An <tt>EXEC</tt> entry tells the top-level 
+<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> to execute a
+program on startup.  The programs most typically executed are
+<a href="glindex.html#pqact">pqact</a> and
+<a href="glindex.html#rtstats">rtstats</a> (for IDD
+<a href="glindex.html#gateway LDM">gateway LDM</a>s).
+
+<p>
+The syntax of an <tt>EXEC</tt> entry is
+<blockquote><pre>
+EXEC "<i>command</i>"
+</blockquote><p/re>
+where the quotation marks are mandatory and <i>command</i> is a string
+that may contain newlines.  Escape quotation marks in <i>command</i> with
+a backslash (<tt>\"</tt>).
+
+<p>
+The <i>command</i> strings of <tt>EXEC</tt> entries are executed via the
+<a href="glindex.html#execvp"><tt>execvp()</tt> function</a>
+when the top-level
+<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> program is
+started.
+
+<hr>
+
+<h2><a name="REQUEST"></a><tt>REQUEST</tt> Entry</h2>
+
+<p>
+A <tt>REQUEST</tt> entry tells the top-level 
+<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> to start a
+<a href="glindex.html#downstream LDM">downstream LDM</a> child process.
+
+<p>
+The syntax of a <tt>REQUEST</tt> entry is
+<blockquote><pre>
+REQUEST <a href="#feedtype"><i>feedtype</i></a> <a href="#prodIdEre"><i>prodIdEre</i></a> <a href="#hostId"><i>hostId</i></a>[:<i>port</i>]
+</blockquote><p/re>
+
+<p>
+When the top-level <a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> is
+started, it creates a 
+<a href="glindex.html#downstream LDM">downstream LDM</a> child process
+for every <tt>REQUEST</tt> entry.  The
+<a href="glindex.html#downstream LDM">downstream LDM</a> connects to the
+<a href="glindex.html#upstream LDM">upstream LDM</a> on the specified host.
+The specified port is used if it exists; otherwise, the default port is used.
+The
+<a href="glindex.html#downstream LDM">downstream LDM</a>
+requests the specified class of 
+<a href="glindex.html#data-product">data-product</a>s.
+If there are multiple request-entries with the same
+<a href="#feedtype"><i>feedtype</i></a>
+and
+<a href="#prodIdEre"><i>prodIdEre</i></a>
+combination, then the
+<a href="glindex.html#downstream LDM">downstream LDM</a>
+corresponding to the first such entry in the file will use the primary
+<a href="glindex.html#transfer-mode">transfer-mode</a>
+and all others will use the alternate
+<a href="glindex.html#transfer-mode">transfer-mode</a>.
+
+<p>The behavior of the
+<a href="glindex.html#LDM">LDM</a>
+is unspecified if multiple <tt>REQUEST</tt> entries exist for the same
+<a href="glindex.html#upstream LDM">upstream LDM</a>
+and the
+<a href="glindex.html#feedtype">feedtype</a>s
+in the entries are not disjoint.
+
+<hr>
+
+<h2><a name="ALLOW"></a><tt>ALLOW</tt> Entry</h2>
+
+<p>
+An <tt>ALLOW</tt> entry tells the top-level 
+<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> what
+<a href="glindex.html#downstream LDM">downstream LDM</a>s are allowed
+to connect and what class of
+<a href="glindex.html#data-product">data-product</a> they are allowed to
+receive.
+
+<p>
+The syntax of an <tt>ALLOW</tt> entry is
+<blockquote><pre>
+ALLOW <a href="#feedtype"><i>feedtype</i></a> <a href="#hostIdEre"><i>hostIdEre</i></a> [<a href="#OK_pattern"><i>OK_pattern</i></a> [<a href="#NOT_pattern"><i>NOT_pattern</i></a>]]
+</blockquote><p/re>
+where the square brackets denote optional fields and are not part of the
+syntax.
+
+<p>
+When a <a href="glindex.html#downstream LDM">downstream LDM</a> connects,
+its host identifier is checked against the set of <tt>ALLOW</tt> entries.
+If nothing matches the host identifier, then the
+<a href="glindex.html#downstream LDM">downstream LDM</a> is disconnected.
+The
+<a href="glindex.html#feedtype">feedtype</a> of the matching entry
+specifies the type of 
+<a href="glindex.html#data-product">data-product</a>s the 
+<a href="glindex.html#downstream LDM">downstream LDM</a> is allowed
+to receive.
+If the host identifier and feedtype in the incoming request
+match multiple <tt>ALLOW</tt> entries and the
+<a href="glindex.html#feedtype">feedtype</a>s
+of the entries are not disjoint, then
+the behavior of the 
+<a href="glindex.html#upstream LDM">upstream LDM</a>
+is determined by the first matching entry.
+
+<p>
+Besides matching the
+<a href="glindex.html#criteria">data-product selection-criteria</a>
+specified by the
+<a href="glindex.html#downstream LDM">downstream LDM</a>,
+the
+<a href="glindex.html#identifier">data-product identifier</a>
+must also match the
+optional <a href="#OK_pattern"><i>OK_pattern</i></a>
+and not match the
+optional <a href="#NOT_pattern"><i>NOT_pattern</i></a>
+in order to be transmitted.  The default for the OK-pattern is
+<tt>".*"</tt> and the default for the NOT-pattern is to not perform
+that test.  These two patterns allow an
+<a href="glindex.html#upstream LDM">upstream LDM</a> 
+to fine-tune the products that a 
+<a href="glindex.html#downstream LDM">downstream LDM</a>
+receives.
+For example, the following entry will allow a 
+<a href="glindex.html#downstream LDM">downstream LDM</a>
+on host <tt>ldm.downstream.site</tt> to receive all
+<a href="glindex.html#data-product">data-product</a>s
+except those that begin with "TEST"
+<blockquote><pre>
+ALLOW ANY ^ldm\.downstream\.site$ .* ^TEST
+</blockquote><p/re>
+
+<p>
+The configuration-file should always have the following entries:
+<blockquote><pre>
+ALLOW   ANY ^(localhost|loopback)|(127\.0\.0\.1\.?$)
+ALLOW   ANY ^([a-z].*\.unidata\.ucar\.edu\.?$)
+</blockquote></pre>
+The first entry allows the
+<a href="glindex.html#LDM">LDM</a> to request data from itself and is
+necessary for proper operation.
+The second entry allows the 
+<a href="glindex.html#UPC">Unidata Program Center</a> to monitor the
+<a href="glindex.html#LDM">LDM</a>.
+
+<hr>
+
+<h2><a name="ACCEPT"></a><tt>ACCEPT</tt> Entry</h2>
+
+<p>
+An <tt>ACCEPT</tt> entry tells the top-level 
+<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> what unrequested
+<a href="glindex.html#upstream LDM">upstream LDM</a>s
+are allowed to connect and what class of
+<a href="glindex.html#data-product">data-product</a> they are allowed to
+send.
+
+<p>
+The syntax of an <tt>ACCEPT</tt> entry is
+<blockquote><pre>
+ACCEPT <a href="#feedtype"><i>feedtype</i></a> <a href="#prodIdEre"><i>prodIdEre</i></a> <a href="#hostIdEre"><i>hostIdEre</i></a>
+</blockquote><p/re>
+
+<p>
+When an <a href="glindex.html#upstream LDM 5">upstream LDM</a> 
+connects using the <a href="glindex.html#HIYA">HIYA</a> message,
+its host identifier is checked against the set of <tt>ACCEPT</tt> entries.
+If nothing matches the host identifier, then the
+<a href="glindex.html#upstream LDM">upstream LDM</a>
+is disconnected.
+The <a href="glindex.html#feedtype">feedtype</a> 
+and
+<a href="#prodIdEre"><i>prodIdEre</i></a>
+of the first matching entry
+specifies the type of 
+<a href="glindex.html#data-product">data-product</a>s the 
+<a href="glindex.html#upstream LDM">upstream LDM</a>
+is allowed to send.
+
+<p>
+This entry was primarily used for receiving (unREQUESTed) radar data from WSI 
+Corporation and is now primarily used to receive statistics from the
+<a href="glindex.html#rtstats">rtstats(1)</a> utility, which are formatted as
+<a href="glindex.html#data-product">data-product</a>s.
+
+<hr>
+
+<h2><a name="INCLUDE"></a><tt>INCLUDE</tt> Entry</h2>
+
+<p>
+An <tt>INCLUDE</tt> entry tells the top-level 
+<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> to temporarily
+suspend processing of the current configuration-file and to process
+another configuration-file instead.
+Processing of the current configuration-file resumes when the end of
+the other configuration-file is reached.
+
+<p>
+The syntax of an <tt>INCLUDE</tt> entry is
+<blockquote><pre>
+INCLUDE <i>pathname</i>
+</blockquote><p/re>
+or
+<blockquote><pre>
+INCLUDE "<i>pathname with spaces</i>"
+</blockquote><p/re>
+
+<p>A non-absolute pathname is relative to the directory that contains the
+configuration-file being processed.
+
+<hr>
+
+<h2>Key</h2>
+
+<dl>
+    <dt><a name="feedtype"><i>feedtype</i></a>
+    <dd>A <a href="glindex.html#feedtype">feedtype</a> (<i>e.g.</i>, 
+	<tt>WMO</tt>, <tt>IDS|DDPLUS</tt>, <tt>3</tt>).
+
+    <dt><a name="hostId"><i>hostId</i></a>
+    <dd>An identifier for a host.  It may be either a fully-qualified
+	hostname (<i>e.g.</i>, <tt>thelma.ucar.edu</tt>) or an IP address
+	in dotted-quad notation (<i>e.g.</i>, <tt>192.52.106.21</tt>).
+
+    <dt><a name="hostIdEre"><i>hostIdEre</i></a>
+    <dd>An <a href="glindex.html#ERE">ERE</a> for matching 
+	a <a href="#hostId">hostId</a>.  It must not contain whitespace and
+	must not be enclosed in quotation marks.
+
+    <dt><a name="prodIdEre"><i>prodIdEre</i></a>
+    <dd>An <a href="glindex.html#ERE">ERE</a> for matching 
+	<a href="glindex.html#identifier">data-product identifier</a>s.
+	If it contains whitespace, then it must be enclosed in quotation
+	marks (") and any internal quotation marks must be escaped with a
+	backslash (<tt>\"</tt>).
+
+    <dt><a name="OK_pattern"><i>OK_pattern</i></a>
+    <dd>An <a href="glindex.html#ERE">ERE</a> that
+	<a href="glindex.html#identifier">data-product identifier</a>s
+	must match in order for the 
+	<a href="glindex.html#data-product">data-product</a>
+	to be transmitted.
+	If it contains whitespace, then it must be enclosed in quotation
+	marks (") and any internal quotation marks must be escaped with a
+	backslash (<tt>\"</tt>).
+
+    <dt><a name="NOT_pattern"><i>NOT_pattern</i></a>
+    <dd>An <a href="glindex.html#ERE">ERE</a> that
+	<a href="glindex.html#identifier">data-product identifier</a>s
+	must <em>not</em> match in order for the 
+	<a href="glindex.html#data-product">data-product</a>
+	to be transmitted.
+	If it contains whitespace, then it must be enclosed in quotation
+	marks (") and any internal quotation marks must be escaped with a
+	backslash (<tt>\"</tt>).
+</dl>
+
+<hr>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</BODY>
+</HTML>

@@ -1,0 +1,430 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
+	<TITLE>LDM Platform Requirements</TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.9.109  (Solaris Sparc)">
+	<META NAME="AUTHOR" CONTENT="Unidata">
+	<META NAME="CREATED" CONTENT="20050714;13432600">
+	<META NAME="CHANGED" CONTENT="20050714;14240600">
+	<META NAME="KEYWORDS" CONTENT="LDM, Installation, Platform, Requirements">
+	<META NAME="UIINDEX" CONTENT="4">
+	<META NAME="BOOKMARK" CONTENT="LDM Platform Requirements">
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<H1 ALIGN=CENTER>LDM Platform Requirements</H1>
+<H2>Contents</H2>
+<UL>
+	<LI><P STYLE="margin-bottom: 0in"><A HREF="#general">General
+	Requirements</A> 
+	</P>
+	<LI><P><A HREF="#development">Requirements for Installing from
+	Source-Code</A> 
+	</P>
+</UL>
+<HR>
+<H2><A NAME="general"></A>General Requirements</H2>
+<P>Your computer must 
+</P>
+<UL>
+	<LI><P STYLE="margin-bottom: 0in">Run some variant of a UNIX<SUP>&reg;</SUP>
+	operating system. 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">Have a standard user-shell (<I>e.g.</I>,
+	<TT>sh(1)</TT>, <TT>ksh(1)</TT>, <TT>bash(1)</TT>) . 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">Have sufficient local disk-space
+	for the <A HREF="glindex.html#LDM">LDM</A> <A HREF="glindex.html#product-queue">product-queue</A>,
+	which can range from a few megabytes to many gigabytes in size --
+	depending on your data requirements. 
+	</P>
+
+	<LI><P STYLE="margin-bottom: 0in">Have <A HREF="http://www.perl.com/">perl</A>
+	5 installed. 
+	</P>
+
+	<LI><P STYLE="margin-bottom: 0in">
+	Have the
+	<A HREF="glindex.html#uptime utility">uptime</A>,
+	<A HREF="glindex.html#vmstat utility">vmstat</A>,
+	<A HREF="glindex.html#netstat utility">netstat</A>, and
+	<A HREF="glindex.html#top utility">top</A>
+	utilities installed if you wish to collect metrics on
+	the performance of the LDM system via the 
+	<tt><A HREF="glindex.html#ldmadmin">ldmadmin</A>
+	addmetrics</tt> command.
+	</P>
+
+	<LI><P STYLE="margin-bottom: 0in">
+	Have the
+	<tt><A HREF="glindex.html#gnuplot">gnuplot</A></tt>
+	utility installed if you wish to plot metrics on
+	the performance of the LDM system via the 
+	<tt><A HREF="glindex.html#ldmadmin">ldmadmin</A>
+	plotmetrics</tt> command, or the
+	<tt><A HREF="glindex.html#plotMetrics">plotMetrics</A></tt>
+	utility.
+	</P>
+
+	<LI><P>Have an accurate and <EM>monotonic</EM> clock.
+</UL>
+<P STYLE="margin-bottom: 0in">The last requirement is absolutely
+necessary because the <A HREF="glindex.html#LDM%20protocol">LDM
+protocol</A> depends on accurate clocks on both the <A
+HREF="glindex.html#upstream%20host">upstream host</A> and the <A
+HREF="glindex.html#downstream%20host">downstream host</A>.</P>
+
+<p>Additionally, if the clock is not monotonic (because it is periodically
+set backwards by <CODE>ntpdate(8)</CODE>, for example) then processes
+that read from the <A
+HREF="glindex.html#product-queue">product-queue</A> (such as <a
+href="glindex.html#upstream LDM">upstream LDM</a>s and <a
+href="glindex.html#pqact"><tt>pqact</tt></a>s <strong>will miss some <A
+HREF="glindex.html#data-product">data-product</A>s</strong> that are in
+the queue.  This is because data-products reside in the product-queue in
+the order in which they were inserted into the queue <em>according to
+the system clock</em>.  If the system clock jumps backwards, then a
+data-product might <em>not</em> be inserted at the tail
+of the queue and so be missed by a process waiting at the tail
+for the next product.  The rate at which products will be missed
+depends, among other things, on the rate at which products are inserted
+into the queue, the frequency with which the system clock is adjusted
+backwards, and the amount of the adjustments.</p>
+
+<p>Linux systems with kernels older than 2.6.18 (for 32-bit systems) or 2.6.21
+(for 64-bit systems) are at high-risk for non-monotonic system clocks.</p>
+
+<P>This requirement can be generally satisfied by running a Network Time
+Protocol daemon (ntpd).  The NTP daemon
+is available at <A HREF="http://www.ntp.org/">ntp.org</A>.
+Information on public NTP time servers is available at
+<A HREF="http://ntp.isc.org/bin/view/Servers/WebHome">http://ntp.isc.org/bin/view/Servers/WebHome</A>.
+Linux users with the older kernels mentioned above should pay particular
+attention to the NTP support documentation on
+<a href="http://support.ntp.org/bin/view/Support/KnownHardwareIssues">
+Known Hardware Issues</a> and
+<a href="http://support.ntp.org/bin/view/Support/KnownOsIssues">
+Known Operating System Issues</a>.
+</P>
+
+<HR>
+
+<H2><A NAME="development"></A>Requirements for Installing from
+Source-Code</H2>
+<P>You must have a UNIX<SUP>&reg;</SUP> development-environment. In
+particular, your platform must have: 
+</P>
+<UL>
+	<LI><P STYLE="margin-bottom: 0in">A Standard C compiler. 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">A standard <A HREF="glindex.html#rpcgen">rpcgen(1)</A>
+	utility. 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">A standard <A HREF="glindex.html#make">make(1)</A>
+	utility. 
+	</P>
+	<LI><P>The <TT><A HREF="glindex.html#lex">lex(1)</A></TT> and
+	<TT><A HREF="glindex.html#yacc">yacc(1)</A></TT> utilities (or
+	workalikes like <TT>byacc</TT>, <TT>bison</TT>, <TT>flex</TT>,
+	<I>etc</I>.). 
+	</P>
+</UL>
+<P>While every effort is made to ensure that the <A HREF="glindex.html#LDM">LDM</A>
+source-code distribution can be compiled and installed on as wide a
+variety of UNIX<SUP>&reg;</SUP> platforms as possible, we can,
+necessarily, only test on platforms that are available at the <A HREF="glindex.html#UPC">Unidata
+Program Center</A> (UPC).</P>
+<P>With that in mind, the <A HREF="glindex.html#LDM">LDM</A> package
+has been successfully built at the <A HREF="glindex.html#UPC">UPC</A>
+on the following systems using the specified C compilers and <A HREF="glindex.html#make">make(1)</A>
+utilities 
+</P>
+<CENTER>
+	<TABLE WIDTH=677 BORDER=1 CELLPADDING=6 CELLSPACING=0>
+		<COL WIDTH=61>
+		<COL WIDTH=152>
+		<COL WIDTH=119>
+		<COL WIDTH=156>
+		<COL WIDTH=128>
+		<TR>
+			<TH WIDTH=61>
+				<P>OS<A HREF="#1"><SUP>1</SUP></A></P>
+			</TH>
+			<TH WIDTH=152>
+				<P>Release(s)<A HREF="#2"><SUP>2</SUP></A></P>
+			</TH>
+			<TH WIDTH=119>
+				<P>Hardware Type<A HREF="#3"><SUP>3</SUP></A></P>
+			</TH>
+			<TH WIDTH=156>
+				<P>C Compiler(s)</P>
+			</TH>
+			<TH WIDTH=128>
+				<P>make(s)</P>
+			</TH>
+		</TR>
+		<TR><!-- Zasu: -->
+			<TD WIDTH=61>
+				<P>AIX</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>5.1<A HREF="#4"><SUP>4</SUP></A></P>
+			</TD>
+			<TD WIDTH=119>
+				<P>RS6000</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/usr/vac/bin/cc<BR>
+				/usr/vac/bin/xlc<BR>
+				/usr/vac/bin/c89(v6)<BR>
+				gcc(v3.2)<A HREF="#5"><SUP>5</SUP></A></P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/ccs/bin/make<BR>GNU&nbsp;make 
+				</P>
+			</TD>
+		</TR>
+		<TR><!-- "Visram, Kassim" <KxV4@PGE.COM>: -->
+			<TD WIDTH=61>
+				<P>AIX</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>5.3<A HREF="#4"><SUP>4</SUP></A></P>
+			</TD>
+			<TD WIDTH=119>
+				<P>powerpc<A HREF="#6"><SUP>6</SUP></A></P>
+			</TD>
+			<TD WIDTH=156>
+				<P>gcc(v4.1.0)<A HREF="#5"><SUP>5</SUP></A></P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/bin/make</P>
+			</TD>
+		</TR>
+		<TR><!-- Sid: -->
+			<TD WIDTH=61>
+				<P>Darwin</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>8.11.0</P>
+			</TD>
+			<TD WIDTH=119>
+				<P>Power Macintosh</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/usr/bin/c89<BR>/usr/bin/gcc(v4.0.1)</P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/bin/make<BR>
+				/usr/bin/gnumake
+				</P>
+			</TD>
+		</TR>
+		<TR><!-- Mort: -->
+			<TD WIDTH=61>
+				<P>Darwin</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>9.8.0</P>
+			</TD>
+			<TD WIDTH=119>
+				<P>i386</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/usr/bin/c89<BR>
+				/usr/bin/gcc(v4.0.1)<BR>
+				/usr/bin/cc
+				</P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/bin/make<BR>
+				/usr/bin/gnumake
+				</P>
+			</TD>
+		</TR>
+		<TR><!-- Redd: --> 
+			<TD WIDTH=61>
+				<P>FreeBSD</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>7.2-RELEASE</P>
+			</TD>
+			<TD WIDTH=119>
+				<P>i386</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/usr/bin/c89</P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/bin/make</P>
+			</TD>
+		</TR>
+		<TR><!-- Tweety -->
+			<TD WIDTH=61>
+				<P>HP-UX</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>B.11.00</P>
+			</TD>
+			<TD WIDTH=119>
+				<P>9000/785</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/opt/ansic/bin/c89<BR>gcc(v3.3.2)<A HREF="#5"><SUP>5</SUP></A>
+								</P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/ccs/bin/make<BR>GNU&nbsp;make 
+				</P>
+			</TD>
+		</TR>
+		<TR><!-- Flip: -->
+			<TD WIDTH=61>
+				<P>IRIX64</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>6.5</P>
+			</TD>
+			<TD WIDTH=119>
+				<P>IP30</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/bin/c89<BR>gcc(v3.3)<A HREF="#5"><SUP>5</SUP></A> 
+				</P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/sbin/make<BR>GNU&nbsp;make 
+				</P>
+			</TD>
+		</TR>
+		<TR><!-- Imogene: -->
+			<TD WIDTH=61>
+				<P>Linux</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>2.6.27.24-78.2.53.fc9.x86_64</P>
+			</TD>
+			<TD WIDTH=119>
+				<P>x86_64</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/usr/bin/c89</P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/bin/make</P>
+			</TD>
+		</TR>
+		<TR><!-- Gilda: -->
+			<TD WIDTH=61>
+				<P>Linux</P>
+			</TD>
+			<TD WIDTH=152>
+				2.6.27.25-170.2.72.fc10.x86_64
+			</TD>
+			<TD WIDTH=119>
+				x86_64
+			</TD>
+			<TD WIDTH=156>
+				/usr/bin/c89<BR>
+				/usr/bin/cc<BR>
+				/usr/bin/gcc(v4.3.2)<A HREF="#5"><SUP>5</SUP></A>
+			</TD>
+			<TD WIDTH=128>
+				/usr/bin/make
+			</TD>
+		</TR>
+		<TR><!-- Dana: -->
+			<TD WIDTH=61>
+				<P>OSF1</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>V5.1</P>
+			</TD>
+			<TD WIDTH=119>
+				<P>alpha</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/usr/bin/c89<BR>gcc(v3.3.2) 
+				</P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/ccs/bin/make<BR>/usr/bin/posix/make</P>
+			</TD>
+		</TR>
+		<TR><!-- Zero -->
+			<TD WIDTH=61>
+				<P>SunOS</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>5.9</P>
+			</TD>
+			<TD WIDTH=119>
+				sun4u<A HREF="#7"><SUP>7</SUP></A>
+			</TD>
+			<TD WIDTH=156>
+				/opt/SUNWspro/bin/cc<BR>
+				/opt/csw/gcc3/bin/gcc<BR>
+				/opt/csw/gcc4/bin/gcc
+				<!-- /opt/SUNWspro/bin/c89 (doesn't work) -->
+			</TD>
+			<TD WIDTH=128>
+				/usr/ccs/bin/make<BR>
+				/usr/xpg4/bin/make<BR>
+				/opt/csw/bin/gmake
+			</TD>
+		</TR>
+		<TR><!-- Buddy -->
+			<TD WIDTH=61>
+				<P>SunOS</P>
+			</TD>
+			<TD WIDTH=152>
+				<P>5.10</P>
+			</TD>
+			<TD WIDTH=119>
+				<P>i86pc</P>
+			</TD>
+			<TD WIDTH=156>
+				<P>/opt/SUNWspro/bin/cc<BR>
+				gcc(v4.0.2)
+				<!-- gcc(v3.3.2)(doesn't work) --></P>
+			</TD>
+			<TD WIDTH=128>
+				<P>/usr/ccs/bin/make<BR>
+				/usr/xpg4/bin/make</P>
+			</TD>
+		</TR>
+	</TABLE>
+</CENTER>
+<P>Notes: 
+</P>
+<OL>
+	<LI><P STYLE="margin-bottom: 0in"><A NAME="1"></A>This is the output
+	of the command &quot;<CODE>uname -s</CODE>&quot;. 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in"><A NAME="2"></A>This is the output
+	of the command &quot;<CODE>uname -r</CODE>&quot; unless otherwise
+	noted. 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in"><A NAME="3"></A>This is the output
+	of the command &quot;<CODE>uname -m</CODE>&quot;. 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in"><A NAME="4"></A>This is the output
+	of the command &quot;<CODE>echo $(uname -v).$(uname -r)</CODE>&quot;
+	(AIX's interpretation of <EM>release</EM> and <EM>version</EM>
+	differs from that of most other operating systems). 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in"><A NAME="5"></A>If this compiler
+	is used, then the option <CODE><B>--disable-max-size</B></CODE> <EM>must</EM>
+	be given to the <CODE><B>configure</B></CODE> script, which means
+	that the resulting <A HREF="glindex.html#LDM">LDM</A> will only
+	support a small <A HREF="glindex.html#product-queue">product-queue</A>.
+		</P>
+	<LI><P STYLE="margin-bottom: 0in"><A NAME="6"></A>This is the output
+	of the command &quot;<CODE>uname -p</CODE>&quot;. 
+	<LI><P><A NAME="7"></A>Alias SPARC. 
+	</P>
+</OL>
+<P>The <A HREF="glindex.html#UPC">UPC</A> reserves the right to deny
+support to outdated or irregular platforms.</P>
+</BODY>
+</HTML>

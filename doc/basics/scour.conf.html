@@ -1,0 +1,67 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>scour.conf</TITLE>
+<META NAME="BOOKMARK" CONTENT="scour.conf">
+<META NAME="AUTHOR" CONTENT="Steve">
+<META NAME="KEYWORDS" CONTENT="LDM, configuration, scour, scour.conf">
+<META NAME="DESCRIPTION" CONTENT="The scour(1) configuration-file 
+<tt>scour.conf</tt>">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">scour.conf</h1><br>
+
+<p>
+A 
+<a href="glindex.html#scour">scour</a>
+configuration-file (typically <tt>scour.conf</tt>) tells the
+<a href="glindex.html#scour">scour</a> utility that reads it what 
+directories to recursively check for old files and what the maximum age 
+of the files should be.
+This file normally resides in the <tt>etc/</tt> subdirectory of the
+<a href="glindex.html#LDM">LDM</a>
+installation.
+
+<p>
+The syntax of a entry in the configuration-file is
+<blockquote><pre>
+<i>dir</i> <i>maxAge</i> [<i>pattern</i>]
+</blockquote></pre>
+where:
+<blockquote>
+<dl>
+    <dt><i>dir</i>
+    <dd>is a directory pathname.  The tilde character (<tt>~</tt>) may be used
+	to represent the user's home-directory.  The 
+	<a href="glindex.html#scour"><tt>scour</tt></a> utility
+	will recursively
+	descend the directory hierarchy beginning at the specified
+	directory.  It will follow symbolic links.
+
+    <dt><i>maxAge</i>
+    <dd>is the maximum age, in days, for the files in the directory.
+        Files that are not directories and that are older than this 
+	will be deleted.  Directories are not deleted.
+
+    <dt>[<i>pattern</i>]
+    <dd>is an optional pattern used for filename expansion.  The default is
+	"<tt>*</tt>" (which matches all files).  Definitive information on
+	patterns used for filename expansion can be found
+	<a href="http://www.opengroup.org/onlinepubs/7908799/xcu/chap2.html#tag_001_006_006">
+	here</a>.
+</dl>
+</blockquote>
+and the fields are separated by whitespace.
+Comments have a hash character (<tt>#</tt>) in column one.
+
+<hr>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</BODY>
+</HTML>

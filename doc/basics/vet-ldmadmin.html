@@ -1,0 +1,308 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+    <meta name="UIINDEX" content="4">
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="BOOKMARK" content="Vet ldmadmin(1) configuration-file">
+   <meta name="AUTHOR" content="Unidata">
+   <meta name="GENERATOR" content="Mozilla/4.75 [en] (X11; U; SunOS 5.8 sun4u) [Netscape]">
+   <title>Vet the ldmadmin Configuration-File</title>
+</head>
+<body>
+
+<h1 align="center">Vet the <code>ldmadmin</code> configuration-file
+(<code>ldmadmin-pl.conf</code>)</h1>
+
+<p><em>["To vet" is to examine and possibly modify or correct.]</em>
+
+<p>The <a href="glindex.html#perl utility">perl</a>(1)-script for
+administering the 
+<a href="glindex.html#LDM">LDM</a> should have been installed
+as the file
+<b><code>$HOME/ldm-6.8.1/bin/</code></b><a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a>
+The configuration-file
+for this script should have been installed as the file
+<code><b>$HOME/etc/</b></code><a href="glindex.html#ldmadmin-pl.conf">
+<tt>ldmadmin-pl.conf</tt></a>, if it didn't already exist.
+What follows is
+information on possible modifications to this configuration-file for your site.
+
+<p>If this is your first LDM installation, then
+you will probably need to manually configure several
+variables in the 
+<a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a> configuration-file.
+Versions 6.1 and earlier of the 
+<a href="glindex.html#LDM">LDM</a> package did not have this 
+configuration-file.  If you have a version 6.1 or earlier
+installation of the 
+<a href="glindex.html#LDM">LDM</a> package, then you can use that
+installation's 
+<a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a>
+script to help you determine appropriate
+values.</p>
+
+<p>Vet the following variables in the 
+<a href="glindex.html#ldmadmin"><code><b>ldmadmin</b></code></a>
+configuration-file,
+<code><b>$HOME/etc/</b></code><a href="glindex.html#ldmadmin-pl.conf">
+<tt>ldmadmin-pl.conf</tt></a>:
+<blockquote>
+<table align="center" border="2" cellpadding="6" cellspacing="0">
+    <tr>
+	<th>Variable</th>
+	<th>Meaning</th>
+    </tr>
+    <tr>
+	<td><tt>$hostname</tt></td>
+	<td>The fully-qualified name of the host computer on which the
+	<a href="glindex.html#LDM">LDM</a>
+	will execute.  This name must contain periods.  If the
+	command <code><b>uname -n</b></code> doesn't return such a name, 
+	then set the
+	value appropriately.</td>
+    </tr>
+    <tr>
+	<td><a name="pq_size"><tt>$pq_size</tt></a></td>
+	<td>The size, in bytes, of the data portion of the
+	    <a href="glindex.html#LDM">LDM</a>'s 
+	    <a href="glindex.html#product-queue">product-queue</a>.
+	    This parameter is used when the
+	    <a href="glindex.html#product-queue">product-queue</a> is created.
+	    The size should be greater than the desired minimum residency-time 
+	    for a 
+	    <a href="glindex.html#data-product">data-product</a> in the
+	    <a href="glindex.html#product-queue">product-queue</a> 
+	    (<i>e.g.</i>, 1 hour) times the maximum rate of data arrival.
+	    (<i>e.g.</i>, 13.4 MB/h if only the <tt>IDS|DDPLUS</tt>
+	    data-feed is being received).
+            If the value is less than this, then late-arriving
+            data-products that are older than the minimum residency
+            time could, nevertheless, still be inserted into the
+            product-queue because their predecessors will have been
+            purged from the queue.
+
+	    <p>For convenience, a "K", "M", or "G" suffix can be appended
+		to the numeric specification to mean "kilo", "mega", and
+		"giga", respectively.  Thus the specifications
+		"1G" "1000M", "1000000K", and "1000000000", are all 
+		equivalent, for example.
+
+	    <p>The value for this parameter can be fine-tuned by using the
+	    <a href="glindex.html#pqmon utility">pqmon utility</a>.
+    </tr>
+    <tr>
+	<td><a name="pq_slots"><tt>$pq_slots</tt></a></td>
+	<td>The number of data-product slots for the
+	    <a href="glindex.html#LDM">LDM</a> 
+	    <a href="glindex.html#product-queue">product-queue</a>.
+	    This is the maximum number of data-products that the product-queue
+	    can contain (assuming that the data portion of the
+	    product-queue is sufficiently capacious).
+	    This parameter is used when the
+	    <a href="glindex.html#product-queue">product-queue</a> is created.
+	    The number of slots should equal the maximum number of data-products
+	    expected over the desired minimum residency-time (<i>e.g.</i>,
+	    16000 for one hour of <tt>IDS|DDPLUS</tt> data, if that is all 
+	    that's being received).
+	    If this parameter is defaulted, then the number of slots
+	    will be computed using the size of the data portion of the
+	    product-queue and 4096 bytes as the mean
+	    <a href="glindex.html#data-product">data-product</a> size (which
+	    is, undoubtably, incorrect).
+
+	    <p>The value for this parameter can be fine-tuned by using the
+	    <a href="glindex.html#pqmon utility">pqmon utility</a>.
+    </tr>
+    <tr>
+	<td><tt>$numlogs</tt></td>
+	<td>The maximum number of 
+	<a href="glindex.html#logfile">LDM logfile</a>s
+	to keep around.</td>
+    </tr>
+    <tr>
+	<td><tt>$ip_addr</tt></td>
+	<td>The IP address of the network interface on which the
+	    <a href="glindex.html#LDM">LDM</a> server should listen for
+	    connections.
+	    This variable doesn't exist in older versions of the
+	    configuration-file and may be added manually.
+	    If this variable isn't set, then the
+	    <a href="glindex.html#LDM">LDM</a>
+	    server will listen on all available network interfaces.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$port</tt></td>
+	<td>The port on which the
+	    <a href="glindex.html#LDM">LDM</a> server should listen for
+	    connections.
+	    This variable doesn't exist in older versions of the
+	    configuration-file and may be added manually.
+	    If this variable isn't set, then the
+	    <a href="glindex.html#LDM">LDM</a>
+	    server will listen on the port that was specified when the
+	    package was built.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$max_clients</tt></td>
+	<td>
+	    The maximum number of clients allowed to connect to the LDM
+	    server before additional connections are rejected.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$netstat</tt></td>
+	<td>The
+	    <a href="glindex.html#netstat utility"><tt>netstat</tt></a>
+	    command for printing numeric port numbers of all TCP
+	    Internet connections.  Two common variations are
+	    <tt>"netstat -A inet -t -n"</tt> and <tt>"netstat -f inet -p
+	    tcp -n"</tt>.  This command will be used to collect LDM
+	    performance metrics.
+    </tr>
+    <tr>
+	<td><tt>$metrics_file</tt></td>
+	<td>The pathname of the data-file into which to accumulate
+	    performance metrics on the
+	    <a href="glindex.html#LDM">LDM</a>
+	    system by the command <tt>addmetrics</tt>.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$metrics_files</tt></td>
+	<td>The file-pattern for the metrics data-files to be plottted
+	    by the command <tt>plotmetrics</tt>.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$num_metrics</tt></td>
+	<td>The number of metrics data-files to keep around.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$max_latency</tt></td>
+	<td>
+	    Maximum latency in seconds.  A data-product arriving with a latency
+	    greater than this will be rejected by the downstream LDM.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$offset</tt></td>
+	<td>
+	    Request time-offset in seconds.  Nomally, a downstream LDM will
+	    request data starting with just after the last successfully
+	    received data-product.  If that product doesn't exist in the
+	    upstream LDM's product-queue, however, then the downstream LDM will
+	    request data starting from this many seconds ago.  The need for
+	    this parameter can arise if, for example, the downstream LDM has
+	    been offline long enough for the last successfully recieved
+	    data-product to be purged from the upstream LDM's product-queue.
+	    The value must be less than or equal to <tt>$max_latency</tt>.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$delete_info_files</tt></td>
+	<td>
+	    Whether or not to delete the product-information files when the
+	    product-queue is deleted (via the <tt>delqueue</tt> command).  If
+	    true, then the new product-queue will be initially populated by
+	    requests for data that go back <tt>$offset</tt> seconds in time;
+	    otherwise, the requests for data that are the same as before will
+	    start with the last successfully-received data-product for each
+	    connection.  Relay nodes should probably set this variable to true
+	    in order to regenerate a buffer of data while leaf nodes should
+	    probably set it to false in order to avoid receiving (and
+	    processing) duplicate data-products.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$check_time</tt></td>
+	<td>Whether or not to check the accuracy of the system clock.
+	    Because accurate time is vital
+	    for proper operation of the
+	    <a href="glindex.html#LDM">LDM</a> system, the
+	    <a href="glindex.html#ldmadmin">ldmadmin</a>(1)
+	    script will, by default, verify the accuracy of the system clock
+	    by executing the 
+	    <a href="glindex.html#ntpdate">ntpdate</a>(1)
+	    utility every time the script is executed.
+	    Setting this variable to <tt>0</tt> will disable this checking.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$warn_if_check_time_disabled</tt></td>
+	<td>Whether or not to print a warning message if checking the
+	    accuracy of the system clock is disabled.  If the
+	    <tt>$check_time</tt> variable is non-zero, then a warning
+	    message might be printed.  Setting this variable to
+	    <tt>0</tt> will disable the printing.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$ntpdate</tt></td>
+	<td>Pathname of the
+	    <a href="glindex.html#ntpdate">ntpdate</a>(1)
+	    utility.  The pathname may be absolute or relative.  If
+	    relative, then the utility must be findable via the
+	    <tt>$PATH</tt> environment variable.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$ntpdate_timeout</tt></td>
+	<td>Timeout, in seconds, for the 
+	    <a href="glindex.html#ntpdate">ntpdate</a>(1)
+	    utility.  The utility will terminate if it hasn't received a
+	    response from a time-server in this many seconds.
+	</td>
+    </tr>
+    <tr>
+	<td>@time_servers</td>
+	<td>List of
+	    <a href="glindex.html#NTP">NTP</a>(1)
+	    time-server candidates for the
+	    <a href="glindex.html#ntpdate">ntpdate</a>(1)
+	    utility to use.  If you're on the Unidata
+	    <a href="glindex.html#IDD">IDD</a>
+	    and located in North America, then this list is probably
+	    adequate.  Otherwise, you should modify this list by
+	    replacing the entries with accessible time-servers in your
+	    vicinity.  You might also replace this list if you have fast
+	    access to your own
+	    <a href="glindex.html#NTP">NTP</a>(1)
+	    time-servers.  The elements of the list are accessed in
+	    random order to spread the load.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$check_time_limit</tt></td>
+	<td>The maximum time-difference, in seconds, that the system
+	    clock may be off before being considered inaccurate.
+	    If you're running the
+	    <a href="glindex.html#ntpd">ntpd</a>(1)
+	    daemon, then you can set this variable to <tt>1</tt>.
+	</td>
+    </tr>
+    <tr>
+	<td><tt>$abort_if_check_time_failure</tt></td>
+	<td>Whether or not the
+	    <a href="glindex.html#ldmadmin">ldmadmin</a>(1)
+	    script should permaturely terminate with an error status if
+	    the system clock isn't accurate or can't be determined to be
+	    accurate.  Set this variable to <tt>0</tt> if you don't
+	    wan't the script to abort.
+	</td>
+    </tr>
+</table>
+</blockquote>
+
+<p><a href="../workshop/specifics.html#ldmadmin">Workshop-specific instructions</a>.
+
+<p>You can check the configuration of the <tt>ldmadmin</tt> configuration-file
+by executing the following command:
+<blockquote><pre>
+$HOME/ldm-6.8.1/bin/ldmadmin config
+</blockquote></pre>
+
+</body>
+</html>

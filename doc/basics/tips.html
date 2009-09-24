@@ -1,0 +1,41 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>Data-Product Metadata</TITLE>
+<META NAME="BOOKMARK" CONTENT="Tips">
+<META NAME="AUTHOR" CONTENT="steve">
+<META NAME="KEYWORDS" CONTENT="LDM, tips">
+<META NAME="DESCRIPTION" CONTENT="LDM Tips">
+</HEAD>
+
+<BODY>
+
+<h1 align="center"><a href="glindex.html#LDM">LDM</a> Tips</h1>
+
+<p>This webpage contains "best practice" advice on the LDM.
+
+<ul>
+<li>
+Have a product-queue sufficiently large that the age of the oldest 
+product is greater than the "from" time of any FEEDME request.
+
+<li>
+Have sufficient physical memory on the LDM computer to allow the
+product-queue to be completely contained in memory.
+
+<li>
+Try to do your local processing of data-products by <tt>pqact</tt> on a
+computer that's not relaying data.
+
+<li>
+Consider splitting a large-volume REQUEST entry in the LDM 
+configuration-file,
+<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>,
+into multiple, smaller, disjoint entries.
+<a href="tradeoffs.html">More information</a>.
+
+</ul>
+
+</BODY>
+</HTML>

@@ -1,0 +1,36 @@
+<HTML>
+<HEAD>
+<TITLE>LDM Version Compatibility</TITLE>
+<META NAME="BOOKMARK" CONTENT="Compatibility">
+<META NAME="AUTHOR" CONTENT="Unidata">
+<META NAME="KEYWORDS" CONTENT="Software, LDM, Data, Manager, Compatibility">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">Compatibility with Previous LDM Versions</h1>
+
+<p>The LDM-6 system is backward-compatible with LDM-5.  LDM-6 supports the
+full complement of LDM-5 protocol messages:
+<ul>
+    <li>NULLPROC
+    <li>NOTIFYME
+    <li>FEEDME
+    <li>HEREIS
+    <li>COMINGSOON
+    <li>BLKDATA
+    <li>HIYA
+</ul>
+Therefore, an LDM-6 system can both send and receive data
+products from an LDM-5 system.
+
+<p>LDM-6 is <em>not</em> backward-compatible with LDM-4.  The only LDM-4
+message supported by LDM-6 is NULLPROC, which is used by the
+ldmping(1) utility of LDM-5.
+
+<p>If you make use of the <em>maximum HEREIS size</em> field in the LDM
+configuration-file, <code>ldmd.conf</code>, then the configuration-file
+will no longer be backward compatible with LDM-5.
+
+</BODY>
+</HTML>

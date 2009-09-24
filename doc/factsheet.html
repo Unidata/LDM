@@ -1,0 +1,64 @@
+<HTML><HEAD><TITLE>LDM Factsheet</TITLE>
+<META NAME="BOOKMARK" CONTENT="LDM Factsheet">
+<META NAME="AUTHOR" CONTENT="steve">
+<META NAME="KEYWORDS" CONTENT="">
+<META NAME="DESCRIPTION" CONTENT="">
+</HEAD><BODY>
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1252">
+<META NAME="Generator" CONTENT="Microsoft Word 97">
+<TITLE>LDM Factsheet</TITLE>
+<META NAME="Template" CONTENT="C:\Program Files\Microsoft Office\Office\html.dot">
+</HEAD>
+<BODY LINK="#0000ff" VLINK="#800080" BGCOLOR="#ffffff">
+
+<h1 align="center">LDM Factsheet</h1><br>
+<H3>Overview:</H3>
+<P align="justify">Unidata's Local Data Manager (LDM) software acquires data and
+shares them with other networked computers. A data product is treated
+as a opaque unit, thus nearly any data can be relayed.  In particular, the LDM can handle data from National Weather Service "NOAAport channel 3" data streams, including gridded data from the numerical forecast models. It also handles NEXRAD radar data, lightning data from the National Lightning Detection Network, and GOES satellite imagery.</P>
+<P align="justify">Data can either be ingested directly from a data source by a client ingester, or the LDM server can talk to other LDM servers to either receive or send data. Ingesters scan the data stream, determine product boundaries, and extract products, passing those products on to the server product queue. These data, in turn, can be processed locally and/or passed on to other LDM servers.</P>
+<P align="justify">Data passed to the LDM server are processed in a variety of ways; how specific data are processed is determined by data identifiers and a configuration file. Processing actions include placing the data in files and running arbitrary programs on the data. Decoders are also available from Unidata that interface with the LDM and convert data into the forms required by various applications.</P><br>
+<H3>Features:</H3>
+
+<UL>
+<LI><B>User configurable:</B> The LDM server can be instructed to append a particular product to a file; execute an arbitrary program with the data product as input; store or retrieve products in a simple key-access database; or forward the data along to other running servers. </LI>
+<LI><B>Supports distributed processing:</B> Data captured on one machine can be stored on other machines on a network. This means that data ingest functions can be separated from storage and use functions. LDM servers may also be configured to relay subsets of data among themselves, distributing the storage and processing around the network. </LI>
+<LI><B>Extensible:</B> New decoders can be added easily, including decoders for archival data. </LI>
+<LI><B>Event-driven:</B> Handles data as it arrives. </LI></UL><br>
+
+<H3>Distribution:</H3>
+<P>The Unidata Program Center distributes the LDM software via FTP and WWW at /software/ldm/. There is no cost for the LDM software. </P><br>
+<H3>Support:</H3>
+<P>US institutions of higher education receive full support from the Unidata Program Center. Full support includes software upgrades and bug fixes; training; documentation; consultation via e-mail; and an active, special-interest-group electronic mailing list. </P><br>
+<H3>Platforms:</H3>
+<P>The LDM is designed to run on a properly configured UNIX workstation. The following specifications represent minimum platform requirements: </P>
+
+<UL>
+<LI>UNIX workstation </LI>
+<LI>adequate disk storage for data </LI>
+<LI>TCP/IP Ethernet </LI>
+<LI>standard C compiler </LI>
+<LI>Perl </LI></UL>
+
+<P>&nbsp;</P>
+<H3>For further information:</H3>
+<P ALIGN="CENTER"><STRONG>UCAR Unidata Program Center</STRONG><BR>
+P.O. Box 3000 <BR>
+Boulder, Colorado, USA 80307 <BR>
+(303) 497-8643<BR>
+<B>Internet:</B><I> support at unidata.ucar.edu</I></P>
+<P>
+<HR>
+Questions or comments can be sent to <A
+HREF="mailto:support@unidata.ucar.edu">&lt;support-general at unidata.ucar.
+edu&gt;</A>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</BODY>
+</HTML>
+</BODY></HTML>

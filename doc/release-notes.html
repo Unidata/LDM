@@ -1,0 +1,120 @@
+<HTML>
+<HEAD>
+<TITLE>LDM 6.8 Release Notes</TITLE>
+<META NAME="BOOKMARK" CONTENT="Release Notes">
+<META NAME="AUTHOR" CONTENT="Steve">
+<META NAME="KEYWORDS" CONTENT="Software, LDM, Data, Manager, Release, 
+6.8, Notes ">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">LDM 6.8 Release Notes</h1>
+<ul>
+    <li>
+    Installation:
+    <ul>
+	<li>
+	The ldmadmin(1) configuration-file is copied, read, and
+	rewritten with additional user-configurable parameters.
+    </ul>
+
+    <li>
+    LDM Server (rpc.ldmd):
+    <ul>
+	<li>
+	Improved vetting (i.e., access-checking) of a client to
+	prevent delays due to a time-out on the reverse DNS lookup,
+	which is used to convert the client IP address into a
+	hostname:
+	<ul>
+	    <li>
+	    Moved vetting from the LDM server before fork(2)ing a
+	    child process to the fork(2)ed child process.
+
+	    <li>
+	    Made vetting a two-phase procedure: first with the
+	    client IP address and then, if and only if that fails,
+	    with the client hostname.
+	</ul>
+
+	<li>
+	Added the new option "-M max_clients" (default: 256).
+    </ul>
+
+    <li>
+    ldmadmin(1):
+    <ul>
+	<li>
+	Program:
+	<ul>
+	    <li>
+	    Added the ability to check the accuracy of the system
+	    clock.  This new ability is highly user-configurable.
+	    The defaults are to check the clock but not to abort if
+	    it's off by too much.
+
+	    <li>
+	    Added removal of product-information (~/.*.info) files
+	    to the "delqueue" command if "$deleteInfoFiles" is true
+	    in the ldmadmin(1) configuration-file.
+
+	    <li>
+	    Added the new option "-M max_clients".
+
+	    <li>
+	    Added the new commands "printmetrics", "addmetrics", and
+	    "plotmetrics".
+
+	    <li>
+	    Moved variables "$os" and "$release" to the
+	    configuration-file.
+
+	    <li>
+	    Added the error message "Uknown command: ".
+
+	    <li>
+	    Removed printing of "ldmadmin" from "ldmadmin usage" output.
+	</ul>
+
+	<li>
+	Configuration-file (ldmadmin-pl.conf):
+	<ul>
+	    <li>
+	    Improved internal documentation and layout.
+
+	    <li>
+	    Added many new variables.
+	</ul>
+
+	<li>
+	Manual-Page:
+	<ul>
+	    <li>
+	    Documented LDM configuration-file argument.
+
+	    <li>
+	    Added "-C" and "-x" options.
+
+	    <li>
+	    Rearranged options alphabetically.
+	</ul>
+
+    <li>
+    scour(1):
+	Added the prefix "scour: " to log messages.
+
+    <li>
+    scripts/plotMetrics:
+	Created this script for plotting the accumulated output of
+	"ldmadmin addmetrics".
+</ul>
+
+<hr>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</BODY>
+</HTML>

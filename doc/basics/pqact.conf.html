@@ -1,0 +1,617 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>pqact.conf</TITLE>
+<META NAME="BOOKMARK" CONTENT="pqact.conf">
+<META NAME="AUTHOR" CONTENT="Steve">
+<META NAME="KEYWORDS" CONTENT="LDM, configuration, pqact, pqact.conf">
+<META NAME="DESCRIPTION" CONTENT="The pqact(1) configuration-file 
+<tt>pqact.conf</tt>">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">pqact.conf</h1><br>
+
+<h2>Contents</h2>
+
+<ul>
+    <li><a href="#introduction">Introduction and General Syntax</a>
+    <li><a href="#argref">String Substitution in Action-Arguments</a>
+    <li>Actions
+    <ul>
+	<li><a href="#NOOP"><tt>NOOP</tt></a>
+	<li><a href="#FILE"><tt>FILE</tt></a>
+	<li><a href="#STDIOFILE"><tt>STDIOFILE</tt></a>
+	<li><a href="#DBFILE"><tt>DBFILE</tt></a>
+	<li><a href="#EXEC"><tt>EXEC</tt></a>
+	<li><a href="#PIPE"><tt>PIPE</tt></a>
+    </ul>
+    <li><a href="#checking">Checking Modifications</a>
+    <li><a href="#output-file limit">Limit on the Number of Open
+	Output-Files</a>
+</ul>
+
+<hr>
+
+<h2><a name="introduction"></a>Introduction and General Syntax</h2>
+
+<p>
+A 
+<a href="glindex.html#pqact">pqact</a>
+configuration-file (typically <tt>pqact.conf</tt>) tells the
+<a href="glindex.html#pqact">pqact</a> process that reads it how to
+dispose of certain classes of
+<a href="glindex.html#data-product">data-product</a>s.
+This file normally resides in the <tt>etc/</tt> subdirectory of the
+<a href="glindex.html#LDM">LDM</a>
+installation.
+
+<p>
+The general syntax of an entry in the configuration-file is:
+<blockquote><pre>
+<i>feedtype</i> <i>TAB</i> <i>prodIdPat</i> <i>TAB</i> <i>action</i> <i>TAB</i> [<i>arg ...</i>]
+</blockquote></pre>
+where:
+<blockquote>
+<dl>
+    <dt><a name="feedtype"><i>feedtype</i></a>
+    <dd>A <a href="glindex.html#feedtype">feedtype</a> (<i>e.g.</i>, 
+	<tt>WMO</tt>, <tt>IDS|DDPLUS</tt>, <tt>3</tt>).
+
+    <dt><a name="prodIdPat"><i>prodIdPat</i></a>
+    <dd>An <a href="glindex.html#ERE">ERE</a> for matching 
+        <a href="glindex.html#identifier">data-product identifier</a>s
+        or the string <b><tt>^_ELSE_$</tt></b>.
+        If <i>prodIdPat</i> is <b><tt>^_ELSE_$</tt></b>, then the
+        specified action is performed if nothing has been done with
+        the data-product yet and the first character of the data-product
+        identifier is not an underscore (_).
+
+    <dt><i>action</i>
+    <dd>The action to take with 
+	<a href="glindex.html#data-product">data-product</a>s that match
+	<a href="#feedtype"><i>feedtype</i></a> and
+	<a href="#prodIdPat"><i>prodIdPat</i></a>.
+	Possible actions are
+	<blockquote>
+	<dl>
+	    <dt><a href="#NOOP"><tt>NOOP</tt></a>
+	    <dd>Don't do anything with the
+		<a href="glindex.html#data-product">data-product</a>.
+		This might be useful to prevent data-products from being
+		acted-upon by a subsequent entry whose
+		product-ID pattern is
+		<b><tt>^_ELSE_$</tt></b>.
+
+	    <dt><a href="#FILE"><tt>FILE</tt></a>
+	    <dd>Write the
+		<a href="glindex.html#data-product">data-product</a> to a
+		file using the 
+		<a href="http://www.opengroup.org/onlinepubs/007908799/xsh/write.html">
+		<tt>write()</tt></a> function.
+
+	    <dt><a href="#STDIOFILE"><tt>STDIOFILE</tt></a>
+	    <dd>Write the
+		<a href="glindex.html#data-product">data-product</a> to a
+		file using the (buffered)
+		<a href="http://www.opengroup.org/onlinepubs/007908799/xsh/fwrite.html">
+		<tt>fwrite()</tt></a> function.
+
+	    <dt><a href="#DBFILE"><tt>DBFILE</tt></a>
+	    <dd>Write the
+		<a href="glindex.html#data-product">data-product</a> to a
+		database.
+
+	    <dt><a href="#EXEC"><tt>EXEC</tt></a>
+	    <dd>Execute a program.
+
+	    <dt><a href="#PIPE"><tt>PIPE</tt></a>
+	    <dd>Write the
+		<a href="glindex.html#data-product">data-product</a> to a
+		program's standard input.
+	</dl>
+	</blockquote>
+
+    <dt>[<i>arg</i> ...]
+    <dd>Optional arguments for <i>action</i>.
+	See <a href="#argref">String Substitution in Action-Arguments</a>
+	below.
+
+    <dt><a name="TAB"><i>TAB</i></a>
+    <dd>Is either a tab character or a newline character followed by a tab
+	character.
+</dl>
+</blockquote>
+Comments have a hash character (<tt>#</tt>) in column one.
+
+<hr>
+
+<h2><a name="argref"></a>String Substitution in Action-Arguments</h2>
+
+<p>
+In constructing arguments for an action, certain character sequences have
+special meaning.  These sequences serve as templates for replacement strings
+derived from either the
+combination of the
+<a href="#prodIdPat"><i>prodIdPat</i></a> and the
+<a href="glindex.html#identifier">data-product identifier</a>, or from the
+<a href="glindex.html#creation-time">data-product creation-time</a>.
+
+<h3>Replacment-Strings Derived from the
+<a href="#prodIdPat"><i>prodIdPat</i></a> and the
+<a href="glindex.html#identifier">Data-Product Identifier</a></h3>
+
+<h4>Simple Subexpression Replacement</h4>
+
+<p>
+The character sequence <tt>\<i>x</i></tt> in the argument field
+is replaced by the substring of the 
+<a href="glindex.html#identifier">data-product identifier</a>
+that matches the corresponding subexpression of
+<a href="#prodIdPat"><i>prodIdPat</i></a>.
+<i>x</i> is either a single digit greater than 0
+and less than or equal to 9 (e.g., <tt>\3</tt>)
+or two digits surrounded by parentheses (e.g., <tt>\(12)</tt>).
+Thus, for example, the entry
+<blockquote><pre>
+DDS	^SAUS.. .... (..)(..)
+	FILE	saus_\1\2.wmo
+</blockquote></pre>
+would append all products with a DDS 
+<a href="glindex.html#feedtype">feedtype</a> that have
+<a href="glindex.html#identifier">data-product identifier</a>s
+(in this case WMO headers) beginning with the characters "<tt>SAUS</tt>" to
+hourly files named "<tt>saus_<i>ddhh</i>.wmo</tt>",
+ where <i>dd</i> and <i>hh</i>
+are the two-digit day and hour from the
+<a href="glindex.html#identifier">data-product identifier</a>, respectively.
+
+<p><b>ASIDE:</b> Information on the format of WMO headers can be found
+at <a href="http://www.nws.noaa.gov/tg/table.html">
+<tt>http://www.nws.noaa.gov/tg/table.html</tt></a>
+
+<h4>Temporal Subexpression Replacement</h4>
+
+<p>
+If a parenthetical subexpression of
+<a href="#prodIdPat"><i>prodIdPat</i></a> delimits the day of the month
+field in the
+<a href="glindex.html#identifier">data-product identifier</a>,
+then that
+subexpression can be used to obtain certain temporal strings in
+the argument field.  If <tt>\</tt><i>n</i> is the matching subexpression,
+then the following character sequences in the argument field 
+are replaced with the indicated
+strings (the parentheses are mandatory):
+<blockquote>
+<dl>
+    <dt><tt>(\<i>x</i>:yyyy)</tt>
+    <dd>is replaced with the 4-digit year.
+    <dt><tt>(\<i>x</i>:yy)</tt>
+    <dd>is replaced with the 2-digit year of the century.
+    <dt><tt>(\<i>x</i>:mmm)</tt>
+    <dd>is replaced with the 3-character abbreviation for the month.
+    <dt><tt>(\<i>x</i>:mm)</tt>
+    <dd>is replaced with the 2-digit index of the month (Jan = 1).
+    <dt><tt>(\<i>x</i>:ddd)</tt>
+    <dd>is replaced with the 3-digit day of the year.
+    <dt><tt>(\<i>x</i>:dd)</tt>
+    <dd>is replaced with the 2-digit day of the month.  This will differ
+    	from the original <tt>\<i>x</i></tt> string if, for example, 
+	the day-of-the-month field is <tt>31</tt> but the data-product
+	arrives on September 30th.
+</dl>
+</blockquote>
+where <i>x</i> is as described under "Simple Subexpression Replacement", 
+above (i.e., either a single digit or two digits surrounded by parentheses).
+
+<p>
+The interpretation of the day of the month subexpression is aided by the
+current clock-time in the (hopefully) obvious way.
+
+<p>
+Thus, for example, the following entry
+<blockquote><pre>
+WMO	^...... .... ([0-3][0-9])([0-2][0-9]).*/pAGO
+	FILE	data/gempak/nwx/obs/ago/(\1:yyyy)(\1:mm)\1\2.ago
+</blockquote></pre>
+would append matching
+<a href="glindex.html#data-product">data-product</a>s to files whose
+pathnames were based on the year, month, day, and hour
+of the
+<a href="glindex.html#data-product">data-product</a>
+as indicated or implied by the
+<a href="glindex.html#identifier">data-product identifier</a>.
+
+<h3>Replacment-Strings Derived from the
+<a href="glindex.html#creation-time">Data-Product Creation-Time</a></h3>
+
+<p>
+The following characters sequences in the argument field
+are replaced with the indicated strings
+based on the
+<a href="glindex.html#creation-time">data-product creation-time</a>:
+<blockquote>
+<dl>
+    <dt>%a
+    <dd>is replaced by the locale's abbreviated weekday name.
+    <dt>%A
+    <dd>is replaced by the locale's full weekday name.
+    <dt>%b
+    <dd>is replaced by the locale's abbreviated month name.
+    <dt>%B
+    <dd>is replaced by the locale's full month name. 
+    <dt>%c
+    <dd>is replaced by the locale's appropriate date and time representation. 
+    <dt>%C
+    <dd>is replaced by the century number (the year divided by 100 and 
+	truncated to an integer) as a decimal number [00-99]. 
+    <dt>%d
+    <dd>is replaced by the day of the month as a decimal number [01,31]. 
+    <dt>%D
+    <dd>same as %m/%d/%y. 
+    <dt>%e
+    <dd>is replaced by the day of the month as a decimal number [1,31]; 
+	a single digit is preceded by a space. 
+    <dt>%h
+    <dd>same as %b. 
+    <dt>%H
+    <dd>is replaced by the hour (24-hour clock) as a decimal number [00,23]. 
+    <dt>%I
+    <dd>is replaced by the hour (12-hour clock) as a decimal number [01,12]. 
+    <dt>%j
+    <dd>is replaced by the day of the year as a decimal number [001,366]. 
+    <dt>%m
+    <dd>is replaced by the month as a decimal number [01,12]. 
+    <dt>%M
+    <dd>is replaced by the minute as a decimal number [00,59]. 
+    <dt>%n
+    <dd>is replaced by a newline character. 
+    <dt>%p
+    <dd>is replaced by the locale's equivalent of either a.m. or p.m. 
+    <dt>%r
+    <dd>is replaced by the time in a.m. and p.m. notation; in the POSIX
+	 locale this is equivalent to %I:%M:%S %p. 
+    <dt>%R
+    <dd>is replaced by the time in 24 hour notation (%H:%M). 
+    <dt>%S
+    <dd>is replaced by the second as a decimal number [00,61]. 
+    <dt>%t
+    <dd>is replaced by a tab character. 
+    <dt>%T
+    <dd>is replaced by the time (%H:%M:%S). 
+    <dt>%u
+    <dd>is replaced by the weekday as a decimal number [1,7], with 1
+     representing Monday. 
+    <dt>%U
+    <dd>is replaced by the week number of the year (Sunday as the first
+	 day of the week) as a decimal number [00,53]. 
+    <dt>%V
+    <dd>is replaced by the week number of the year (Monday as the first
+        day of the week) as a decimal number [01,53]. If the week
+        containing 1 January has four or more days in the new year, then
+        it is considered week 1. Otherwise, it is the last week of the
+        previous year, and the next week is week 1.
+    <dt>%w
+    <dd>is replaced by the weekday as a decimal number [0,6], with 0
+	representing Sunday.
+    <dt>%W
+    <dd>is replaced by the week number of the year (Monday as the first
+        day of the week) as a decimal number [00,53]. All days in a new
+        year preceding the first Monday are considered to be in week 0.
+    <dt>%x
+    <dd>is replaced by the locale's appropriate date representation. 
+    <dt>%X
+    <dd>is replaced by the locale's appropriate time representation. 
+    <dt>%y
+    <dd>is replaced by the year without century as a decimal number [00,99]. 
+    <dt>%Y
+    <dd>is replaced by the year with century as a decimal number. 
+    <dt>%Z
+    <dd>is replaced by the timezone name or abbreviation, or by no bytes
+	if no timezone information exists.
+    <dt>%%
+    <dd>is replaced by %. 
+</dl>
+</blockquote>
+
+<hr>
+
+<h2><a name="NOOP"></a><tt>NOOP</tt> Action</h2>
+
+<p>
+The <tt>NOOP</tt> action tells the 
+<a href="glindex.html#pqact"><tt>pqact</tt></a> process to
+do nothing to the
+<a href="glindex.html#data-product">data-product</a>.
+This might be useful to prevent data-products from being
+acted-upon by a subsequent entry whose product-ID pattern is
+<b><tt>^_ELSE_$</tt></b>.
+
+<hr>
+
+<h2><a name="FILE"></a><tt>FILE</tt> Action</h2>
+
+<p>
+The <tt>FILE</tt> action tells the 
+<a href="glindex.html#pqact"><tt>pqact</tt></a> process to
+write the 
+<a href="glindex.html#data-product">data-product</a>
+to a file using the (unbuffered)
+<a href="http://www.opengroup.org/onlinepubs/007908799/xsh/write.html">
+<tt>write()</tt></a> function.
+
+<p>
+The syntax of a <tt>FILE</tt> action is
+<blockquote><pre>
+FILE <a href="#TAB"><i>TAB</i></a> [-overwrite] [-flush|-close] [-strip] [-log] <i>pathname</i>
+</blockquote></pre>
+where:
+<blockquote>
+<dl>
+    <dt><tt>-overwrite</tt>
+    <dd>Causes the file to be completely rewritten every time it is opened;
+	consequently, you should probably always use the <tt>-close</tt>
+	option in conjunction with this option.
+
+    <dt><tt>-flush</tt>
+    <dd>Causes the 
+	<a href="http://www.opengroup.org/onlinepubs/007908799/xsh/fsync.html">
+	<tt>fsync()</tt></a> function to be called after a
+	<a href="glindex.html#data-product">data-product</a> is
+	written.
+
+    <dt><tt>-close</tt>
+    <dd>Causes the file to be closed after a
+	<a href="glindex.html#data-product">data-product</a> is
+	written.  The default is to keep the file open.
+
+    <dt><tt>-strip</tt>
+    <dd>Causes control characters other than newline (see
+	<a
+	href="http://www.opengroup.org/onlinepubs/007908799/xsh/iscntrl.html">
+	<tt>iscntrl()</tt></a>) to be removed from the
+	<a href="glindex.html#data-product">data-product</a> before it is
+	written to the file.
+
+    <dt><tt>-log</tt>
+    <dd>Causes the
+	<a href="glindex.html#pqact"><tt>pqact</tt></a>
+	process to log the fact that it filed the
+	<a href="glindex.html#data-product">data-product</a>.
+
+    <dt><i>pathname</i>
+    <dd>Is the pathname of the file to which the
+	<a href="glindex.html#data-product">data-product</a> will be 
+	written.
+</dl>
+</blockquote>
+
+<hr>
+
+<h2><a name="STDIOFILE"></a><tt>STDIOFILE</tt> Action</h2>
+
+<p>
+The <tt>STDIOFILE</tt> action tells the 
+<a href="glindex.html#pqact"><tt>pqact</tt></a> process to
+write the 
+<a href="glindex.html#data-product">data-product</a>
+to a file using the (buffered)
+<a href="http://www.opengroup.org/onlinepubs/007908799/xsh/fwrite.html">
+<tt>fwrite()</tt></a> function.
+In general, this is more efficient than the 
+<a href="#FILE"><tt>FILE</tt></a> action but risks loosing data if the
+computer crashes.
+
+<p>
+The syntax of an <tt>STDIOFILE</tt> action is
+<blockquote><pre>
+STDIOFILE <a href="#TAB"><i>TAB</i></a> [-overwrite] [-flush|-close] [-strip] [-log] <i>pathname</i>
+</blockquote></pre>
+where the options and argument are the same as for the
+<a href="#FILE"><tt>FILE</tt></a> action, except that the <tt>-flush</tt>
+option calls the
+<a href="http://www.opengroup.org/onlinepubs/007908799/xsh/fflush.html">
+<tt>fflush()</tt></a> function.
+
+<hr>
+
+<h2><a name="DBFILE"></a><tt>DBFILE</tt> Action</h2>
+
+<p>
+The <tt>DBFILE</tt> action tells the 
+<a href="glindex.html#pqact"><tt>pqact</tt></a> process to
+store the 
+<a href="glindex.html#data-product">data-product</a>
+in a 
+<a href="glindex.html#gdbm">gdbm database</a>.
+
+<p>
+The syntax of a <tt>DBFILE</tt> action is
+<blockquote><pre>
+DBFILE <a href="#TAB"><i>TAB</i></a> <i>pathname</i> [<i>key</i>]
+</blockquote></pre>
+where:
+<blockquote>
+<dl>
+    <dt><i>pathname</i>
+    <dd>Is the pathname of the 
+	<a href="glindex.html#gdbm">gdbm database</a>
+	into which the
+	<a href="glindex.html#data-product">data-product</a> will be 
+	put.
+
+    <dt>[<i>key</i>]
+    <dd>Is the optional key under which to put the 
+	<a href="glindex.html#data-product">data-product</a>.
+</dl>
+</blockquote>
+
+<hr>
+
+<h2><a name="EXEC"></a><tt>EXEC</tt> Action</h2>
+
+<p>
+The <tt>EXEC</tt> action tells the 
+<a href="glindex.html#pqact"><tt>pqact</tt></a> process to
+execute a program as a child process.
+
+<p>
+The syntax of a <tt>EXEC</tt> action is
+<blockquote><pre>
+EXEC <a href="#TAB"><i>TAB</i></a> [-wait] <i>pathname</i> [<i>arg</i> ...]
+</blockquote></pre>
+where:
+<blockquote>
+<dl>
+    <dt><tt>-wait</tt>
+    <dd>Causes the 
+	<a href="glindex.html#pqact"><tt>pqact</tt></a> process to
+	suspend itself until the child-process has terminated before 
+	continuing.  This should only be done if it is known that the
+	child-process will terminate quickly.
+
+    <dt><i>pathname</i>
+    <dd>Is the pathname of the program to be executed.
+
+    <dt>[<i>arg</i> ...]
+    <dd>Are optional arguments to <i>pathname</i>.
+</dl>
+</blockquote>
+
+<hr>
+
+<h2><a name="PIPE"></a><tt>PIPE</tt> Action</h2>
+
+<p>
+The <tt>PIPE</tt> action tells the 
+<a href="glindex.html#pqact"><tt>pqact</tt></a> process to
+execute a program as a child process and to write the
+<a href="glindex.html#data-product">data-product</a> to the standard
+input of the child process.
+
+<p>
+The syntax of a <tt>PIPE</tt> action is
+<blockquote><pre>
+PIPE <a href="#TAB"><i>TAB</i></a> [-strip] [-flush|-close] <i>pathname</i> [<i>arg</i> ...]
+</blockquote></pre>
+where:
+<blockquote>
+<dl>
+    <dt><tt>-strip</tt>
+    <dd>Causes control characters other than newline (see
+	<a
+	href="http://www.opengroup.org/onlinepubs/007908799/xsh/iscntrl.html">
+	<tt>iscntrl()</tt></a>) to be removed from the
+	<a href="glindex.html#data-product">data-product</a> before it is
+	written to the pipe.
+
+    <dt><tt>-flush</tt>
+    <dd>Causes the 
+	<a href="glindex.html#pqact"><tt>pqact</tt></a> 
+	process to flush its internal buffer to the pipe at the end of each
+	<a href="glindex.html#data-product">data-product</a>.
+
+    <dt><tt>-close</tt>
+    <dd>Causes the 
+	<a href="glindex.html#pqact"><tt>pqact</tt></a> process to
+	close the pipe to the child process after writing the
+	<a href="glindex.html#data-product">data-product</a>.
+	The default is to keep the pipe open.
+
+    <dt><i>pathname</i>
+    <dd>Is the pathname of the program to be executed.
+
+    <dt>[<i>arg</i> ...]
+    <dd>Are optional arguments to <i>pathname</i>.
+</dl>
+</blockquote>
+
+<p>
+The program <i>pathname</i> should be written so that it times-out and 
+terminates after some interval (<i>e.g.</i>, ten minutes).
+
+<hr>
+
+<h2><a name="checking"></a>Checking Modifications</h2>
+
+<p>
+Modifications to a configuration-file should be checked for correct
+syntax before being made operational.
+The syntax of <em>all</em>
+<a href="glindex.html#pqact"><tt>pqact</tt></a>
+configuration-files that are associated with active <tt>EXEC pqact</tt>
+entries in the
+<a href="glindex.html#ldmd.conf"><tt>LDM configuration-file</tt></a>
+can be checked via the command
+<blockquote><pre>
+ldmadmin pqactcheck
+</blockquote></pre>
+
+Otherwise, the syntax of the single
+<a href="glindex.html#pqact"><tt>pqact</tt></a>
+configuration-file, <i>pathname</i>,
+can be checked via the command
+<blockquote><pre>
+ldmadmin pqactcheck -p <i>pathname</i>
+</blockquote></pre>
+
+<hr>
+
+<a name="output-file limit"></a>
+<h2>Limit on the Number of Open Output-Files</h2>
+
+<p>The
+<a href="glindex.html#pqact"><tt>pqact</tt></a>
+utility has a limit on the number
+of open output-files.  A output-file is opened for every unique instance
+of the following actions:
+<blockquote><pre>
+<a href="#FILE"><tt>FILE</tt></a>
+<a href="#STDIOFILE"><tt>STDIOFILE</tt></a>
+<a href="#DBFILE"><tt>DBFILE</tt></a>
+<a href="#PIPE"><tt>PIPE</tt></a>
+</blockquote></pre>
+<strong>when taken together with their action-arguments after
+<a href="#argref">string substitution</a></strong>.  Thus, for example, the 
+(somewhat contrived) entry
+<blockquote><pre>
+ANY	(.*)	FILE	\1
+</blockquote></pre>
+would cause an output-file to be opened for every unique 
+<a href="glindex.html#identifier">data-product identifier</a> that the
+<a href="glindex.html#pqact"><tt>pqact</tt></a> process encountered!
+
+<p>The limit on the number of open output-files is equal to the output of
+the command
+<blockquote><pre>
+getconf OPEN_MAX | awk '{print $1-3}'
+</pre></blockquote>
+
+<p><strong>This limit has ramifications for decoding data.</strong>  When the 
+<a href="glindex.html#pqact"><tt>pqact</tt></a> program wants to open a
+new output-file after having reached its limit, it first closes the
+least recently used output-file.  If the action associated with that 
+output-file is
+<a href="#PIPE"><tt>PIPE</tt></a>,
+then the 
+<a href="glindex.html#decoder">decoder</a> process reading from the pipe
+will encounter an end-of-file condition and will terminate.
+As a consequence, decoders must be written so that they
+can "start-up" in the middle of decoding a product.
+
+If this is not possible, then more
+than one <tt>pqact(1)</tt> utility can be started (each with its own
+configuration-file, or course) and the work shared between them so that
+no one <tt>pqact(1)</tt> utility reaches the limit.
+
+<hr>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</BODY>
+</HTML>

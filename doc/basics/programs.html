@@ -1,0 +1,447 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>LDM Programs</TITLE>
+<META NAME="BOOKMARK" CONTENT="LDM Programs">
+<META NAME="AUTHOR" CONTENT="steve">
+<META NAME="KEYWORDS" CONTENT="LDM, Programs">
+<META NAME="DESCRIPTION" CONTENT="Describes the programs of an LDM system">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">Programs of the LDM System</h1>
+
+<p>
+<ul>
+    <li><a href="#rpc.ldmd">The LDM Program <tt>rpc.ldmd</tt></a>
+    <li><a href="#pqact">The Utility <tt>pqact</tt></a>
+    <li><a href="#ingesters">Data-Product Ingesters</a>
+    <li><a href="#decoders">Data-Product Decoders</a>
+    <li><a href="#ldmadmin">The <tt>ldmadmin</tt> Script</a>
+    <li><a href="#ancillary utilities">Ancillary Utilities of the LDM</a>
+</ul>
+
+<hr>
+
+<h2><a name="rpc.ldmd">The LDM Program <tt>rpc.ldmd</tt></a></h2>
+
+<p>An <a href="glindex.html#LDM">LDM</a> system's main program is
+the binary executable <tt>rpc.ldmd</tt>.  This program
+<ul>
+    <li>Is typically started by the 
+	<a href="glindex.html#ldmadmin">ldmadmin</a> script.
+    <li>Configures itself according to the LDM configuration-file, <a
+	href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>.
+    <li>Starts-up the LDM <a
+	href="glindex.html#ingester">ingester</a>s.
+    <li>Forks itself to create
+	<a href="glindex.html#downstream LDM">downstream LDM</a>s.
+    <li>Starts-up the <a href="glindex.html#pqact"><tt>pqact</tt></a>
+	 processes.
+    <li>Validates <a href="glindex.html#FEEDME">FEEDME</a> requests by
+	<a href="glindex.html#downstream LDM">
+	downstream LDM</a>s and forks itself to create corresponding
+	<a href="glindex.html#upstream LDM">upstream LDM</a>
+	processes.
+    <li>Validates <a href="glindex.html#HIYA">HIYA</a> connections by
+	<a href="glindex.html#upstream LDM">upstream LDM</a>s
+	and forks itself to create corresponding <a
+	href="glindex.html#downstream LDM">downstream LDM</a>
+	processes.  This is an uncommon operation.
+</ul>
+
+<hr>
+
+<h2><a name="pqact">The Utility <tt>pqact</tt></h2>
+
+<p>The <tt>pqact</tt> utility reads <a
+href="glindex.html#data-product">data-product</a>s from the <a
+href="glindex.html#product-queue">product-queue</a> and disposes of
+them according to user-configurable instructions.  One or more instances
+of this program are,
+typically, started by the top-level <a
+href="glindex.html#rpc.ldmd">rpc.ldmd</a> process as the result of
+<a href="glindex.html#EXEC entry"><tt>EXEC</tt> entries</a> in the LDM
+configuration-file, <a
+href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>.
+Instructions for the disposition of data-products are contained in a
+<a href="glindex.html#pqact.conf"><tt>pqact</tt> configuration-file</a>.
+
+<p>Certain instructions in the 
+<a href="glindex.html#pqact.conf"><tt>pqact</tt> configuration-file</a>
+cause the <tt>pqact</tt> utility to spawn 
+<a href="glindex.html#child process">child process</a>s to aid in the
+disposition of data-products.  These instructions are the 
+<a href="glindex.html#PIPE"><tt>pqact PIPE</tt> action</a> and the
+<a href="glindex.html#EXEC"><tt>pqact EXEC</tt> action</a>.
+
+<p>Typically, <tt>pqact</tt> processes are terminated by reception of a
+<a href="glindex.html#SIGINT"><tt>SIGINT</tt></a> or
+<a href="glindex.html#SIGTERM"><tt>SIGTERM</tt></a>
+from the top-level <a
+href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process.
+
+<p>When a <tt>pqact</tt> process terminates, it saves the
+<a href="glindex.html#insertion-time">insertion-time</a>
+of the last, successfully-processed
+<a href="glindex.html#data-product">data-product</a>
+in a file.
+The pathname of the file is that of the 
+<a href="glindex.html#pqact.conf"><tt>pqact</tt> configuration-file</a>
+with "<tt>.state</tt>" appended.
+This allows a subsequent <tt>pqact</tt> process that uses the same
+configuration-file to start processing where the previous
+process stopped.
+It also means <strong>only one <tt>pqact</tt> process should use any
+configuration-file</strong>.
+
+
+<hr>
+
+<h2><a name="ingesters">Data-Product Ingesters</h2>
+
+<p>An LDM <a href="glindex.html#data-product">data-product</a> ingester is a
+program that creates <a
+href="glindex.html#data-product">data-product</a>s and inserts them
+into the LDM <a href="glindex.html#product-queue">product-queue</a>
+using the <tt>pq(3)</tt> API.
+Such a program has the following characteristics:
+<ul>
+    <li>It should send a 
+	<a href="glindex.html#SIGCONT"><tt>SIGCONT</tt></a> signal to its
+	<a href="glindex.html#process group">process group</a> whenever
+	it inserts a <a href="glindex.html#data-product">data-product</a>
+	into the <a href="glindex.html#product-queue">product-queue</a>.
+
+    <li>In general, it should be started by the top-level <a
+	href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process as the
+	result of an <a href="glindex.html#EXEC entry"><tt>EXEC
+	entry</tt></tt></a> in the LDM configuration-file, <a
+	href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>, so that the
+	the LDM <a href="glindex.html#process group">process group</a> will
+	immediately act upon the new data-product.  Failure to be started 
+	in this way will result in larger than necessary 
+	<a href="glindex.html#data-product latency">data-product latency</a>.
+	
+    <li>In general, it should never self-terminate; instead, it should 
+	terminate upon reception of a 
+	<a href="glindex.html#SIGINT"><tt>SIGINT</tt></a> or
+	<a href="glindex.html#SIGTERM"><tt>SIGTERM</tt></a>, which will be
+	sent to it from the top-level <a
+	href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process.
+
+    <li>It should use the <tt>ulog(3)</tt> API for logging messages, which
+    	is provided by the <tt>ulog</tt> module in the LDM library.
+</ul>
+
+<p>It is, ultimately, irrelevant how ingesters obtain the data from 
+which they create <a
+href="glindex.html#data-product">data-product</a>s because such
+information is lost once the <a
+href="glindex.html#data-product">data-product</a> has been created and
+inserted into the <a
+href="glindex.html#product-queue">product-queue</a>.  Data sources that
+have been used include the following: serial ports, files,
+and pseudo-random number generators.
+
+<p>The LDM package comes with the following ingesters.  While some are
+useful in their own right, their primary purpose is to provide examples
+of how to write ingesters.
+<blockquote>
+<dl>
+    <dt> <tt>pqing</tt>
+    <dd> Reads meteorological data in WMO or AFOS format from a file or
+	serial port.  This is a "classical" data-product ingester.
+
+    <dt> <tt>pqinsert</tt>
+    <dd> Inserts files as <a
+	href="glindex.html#data-product">data-product</a>s.   This is an
+	example of an ingester that not only runs outside the LDM 
+	process group but also self-terminates.
+</dl>
+</blockquote>
+
+<hr>
+
+<h2><a name="decoders">Data-Product Decoders</h2>
+
+<p>An LDM <a href="glindex.html#data-product">data-product</a> decoder is a
+program that reads <a href="glindex.html#data-product data">
+data-product data</a> from 
+<a href="glindex.html#standard input">
+standard input</a> and disposes of the data in some fashion -- often
+by writing the data into a file that is specific to an analysis
+package (<i>e.g.</i>, 
+<a href="glindex.html#McIDAS">McIDAS</a> or
+<a href="glindex.html#GEMPAK">GEMPAK</a>).
+Such programs have the following characteristics:
+<ul>
+    <li>They are typically started by a 
+	<a href="glindex.html#pqact">pqact</a> process
+	as the result of 
+	<a href="glindex.html#pqact PIPE action"><tt>PIPE</tt> action</a>s
+	in the process's
+	<a href="glindex.html#pqact.conf"><tt>pqact</tt> configuration-file</a>.
+
+    <li>They self-terminate if no data has been received
+	within a certain period of time (<i>e.g.</i>, 10 minutes)
+	or upon reception of a
+	<a href="glindex.html#SIGINT"><tt>SIGINT</tt></a> or
+	<a href="glindex.html#SIGTERM"><tt>SIGTERM</tt></a>
+	from the 
+	<a href="glindex.html#pqact"><tt>pqact</tt></a> 
+	<a href="glindex.html#parent process">parent process</a>.
+
+    <li>Due to a limitation on the number of output-files that the
+	<a href="glindex.html#pqact">pqact</a> program can have open 
+	at one time, decoders should
+	
+	<ul>
+	
+	<li>Continue reading until the end-of-file
+	    is encountered and then exit; otherwise, the decoder process
+	    might become a zombie (alias defunct) process.
+
+	<li>Be written so that they
+	    can "start-up" in the middle of decoding something that spans 
+	    multiple
+	    <a href="glindex.html#data-product">data-product</a>s (for example
+	    a single "sweep" of a NEXRAD radar actually comprises four 
+	    data-products per parameter).
+	    The reason for this can be found in the documentation for the
+	    <a href="glindex.html#pqact.conf">
+	    <tt>pqact</tt> configuration-file</a>.
+
+	</ul>
+
+</ul>
+
+<hr>
+
+<h2><a name="ldmadmin">The <tt>ldmadmin</tt> Script</h2>
+
+<p>The <tt>ldmadmin</tt> utility is a <a href="glindex.html#perl utility">
+Perl</a>-5 script intended for high-level administration of an <a
+href="glindex.html#LDM">LDM</a> system.  The script acts as a facade
+for more primitive utilities -- coordinating their use for the sake of
+convenience.  The things you can do with the ldmadmin script include the
+following:
+<p>
+<table summary="This table specifies some of the actions that the 
+<tt>ldmadmin</tt> can perform" border="1" rules="all" align="center"
+cellpadding="5">
+    <tr>
+	<th><b>Action</b></th>
+	<th><b>Command</b></th>
+    </tr>
+    <tr>
+	<td>Start the <a href="glindex.html#LDM">LDM</a> system</td>
+	<td nowrap><tt>ldmadmin start</tt></td>
+    </tr>
+    <tr>
+	<td>Stop the <a href="glindex.html#LDM">LDM</a> system</td>
+	<td nowrap><tt>ldmadmin stop</tt></td>
+    </tr>
+    <tr>
+	<td>Stop then restart the <a href="glindex.html#LDM">LDM</a> system</td>
+	<td nowrap><tt>ldmadmin restart</tt></td>
+    </tr>
+    <tr>
+	<td>Determine if the <a href="glindex.html#LDM">LDM</a> system is
+	    running</td>
+	<td nowrap><tt>ldmadmin isrunning</tt></td>
+    </tr>
+    <tr>
+	<td>Create the <a href="glindex.html#product-queue">
+	    product-queue</a></td>
+	<td nowrap><tt>ldmadmin mkqueue</tt></td>
+    </tr>
+    <tr>
+	<td>Delete the <a href="glindex.html#product-queue">product-queue</a>
+	    </td>
+	<td nowrap><tt>ldmadmin delqueue</tt></td>
+    </tr>
+    <tr>
+	<td>Watch the most recent <a
+	    href="glindex.html#data-product">data-product</a>s arrive in the
+	    <a href="glindex.html#product-queue">product-queue</a></td>
+	<td nowrap><tt>ldmadmin watch</tt></td>
+    </tr>
+    <tr>
+	<td>Check the syntax of all <a
+	    href="glindex.html#pqact.conf"><tt>pqact</tt>
+	    configuration-file</a>s
+	    associated with active <tt>EXEC pqact</tt> entries in the
+	    <a href="glindex.html#ldmd.conf"><tt>LDM configuration-file</tt>
+	    </a>.
+	<td nowrap><tt>ldmadmin pqactcheck</tt></td>
+    </tr>
+    <tr>
+	<td>Rotate the <a href="glindex.html#logfile">LDM logfile</a>s
+	<td nowrap><tt>ldmadmin newlog</tt></td>
+    </tr>
+    <tr>
+	<td>Accumulate performance metrics on the
+	<a href="glindex.html#LDM">LDM</a>
+	system.
+	<td nowrap><tt>ldmadmin addmetrics</tt></td>
+    </tr>
+    <tr>
+	<td>Plot performance metrics on the
+	<a href="glindex.html#LDM">LDM</a>
+	system.
+	<td nowrap><tt>ldmadmin plotmetrics</tt></td>
+    </tr>
+    <tr>
+	<td>Rotate the performance metrics data-files.
+	<td nowrap><tt>ldmadmin newmetrics</tt></td>
+    </tr>
+</table>
+
+<hr>
+
+<h2><a name="ancillary utilities">Ancillary Utilities of the LDM</h2>
+
+<p>Utilities that are included in the <a
+href="glindex.html#LDM">LDM</a> package but are less important
+than the separately-documented ones above include the following:
+<p>
+<table summary="This table specifies some of the LDM utilities of
+lesser importance" border="1" rules="all" align="center"
+cellpadding="5">
+    <tr>
+	<th><b>Utility</b></th>
+	<th><b>Description</b></th>
+    </tr>
+    <tr>
+	<td><tt>feedme</tt></td>
+	<td>Requests <a
+	    href="glindex.html#data-product">data-product</a>s from an 
+	    <a href="glindex.html#upstream LDM">upstream LDM</a> and writes
+	    them to 
+	    <a href="glindex.html#standard output">standard output</a>.
+	    <a href="glindex.html#deprecated"><strong>Deprecated</strong></a>.
+    </tr>
+    <tr>
+	<td><tt>ldmping</tt></td>
+	<td>Temporarily connects to an
+	    <a href="glindex.html#upstream LDM">upstream LDM</a> to
+	    test its availability.
+    </tr>
+    <tr>
+	<td><tt>notifyme</tt></td>
+	<td>Requests <a
+	    <a href="glindex.html#metadata">data-product metadata</a>
+	    from an 
+	    <a href="glindex.html#upstream LDM">upstream LDM</a> and,
+	    optionally, writes
+	    the metadata to an <a href="glindex.html#logfile">LDM
+	    logfile</a>.
+    </tr>
+    <tr>
+	<td><tt>pqcat</tt></td>
+	<td>Reads once through a
+	    <a href="glindex.html#product-queue">product-queue</a>
+	    and writes the
+	    <a href="glindex.html#data-product">data-product</a>s
+	    to a file or to
+	    <a href="glindex.html#standard output">standard output</a>.
+	    Useful for ensuring that a
+	    <a href="glindex.html#product-queue">product-queue</a>
+	    isn't corrupt.
+    </tr>
+    <tr>
+	<td><tt>pqcheck</tt></td>
+	<td>Checks the 
+	    <a href="glindex.html#writer-counter">writer-counter</a>
+	    in the
+	    <a href="glindex.html#product-queue">product-queue</a>.
+	    Useful for ensuring that a
+	    <a href="glindex.html#product-queue">product-queue</a>
+	    isn't corrupt.
+    </tr>
+    <tr>
+	<td><tt>pqcreate</tt></td>
+	<td>Creates an empty LDM <a
+	    href="glindex.html#product-queue">product-queue</a>.
+    </tr>
+    <tr>
+	<td><tt>pqexpire</tt></td>
+	<td>Deletes old <a
+	    href="glindex.html#data-product">data-product</a>s from a <a
+	    href="glindex.html#product-queue">product-queue</a>.
+	    <a href="glindex.html#deprecated"><strong>Deprecated</strong></a>.
+    </tr>
+    <tr>
+	<td><tt>pqmon</tt></td>
+	<td>Prints a summary of the state of a <a
+	    href="glindex.html#product-queue">product-queue</a>.
+    </tr>
+    <tr>
+	<td><tt>pqsend</tt></td>
+	<td>Reads a
+	    <a href="glindex.html#product-queue">product-queue</a>
+	    and sends the
+	    <a href="glindex.html#data-product">data-product</a>s
+	    to a 
+	    <a href="glindex.html#downstream LDM">downstream LDM</a>.
+	    Waits for more 
+	    <a href="glindex.html#data-product">data-product</a>s.
+    </tr>
+    <tr>
+	<td><tt>pqsurf</tt></td>
+	<td>Reads <a href="glindex.html#data-product">data-product</a>s
+	    that are composite WMO surface bulletins from the
+	    <a href="glindex.html#product-queue">product-queue</a>,
+	    splits them into individual bulletins, inserts them as <a
+	    href="glindex.html#data-product">data-product</a>s into a
+	    separate <a
+	    href="glindex.html#product-queue">product-queue</a>, and
+	    processes the individual bulletins similar to <a
+	    href="glindex.html#pqact">pqact</a>.
+	    <a href="glindex.html#deprecated"><strong>Deprecated</strong></a>.
+    </tr>
+    <tr>
+	<td><tt>pqutil</tt></td>
+	<td>Interactive program for accessing the <a
+	    href="glindex.html#product-queue">product-queue</a>.
+    </tr>
+    <tr>
+	<td><tt>rtstats</tt></td>
+	<td>Monitors the <a
+	href="glindex.html#product-queue">product-queue</a> and
+	periodically sends summary statistics to a <a
+	href="glindex.html#downstream LDM">downstream LDM</a> (which,
+	for the <a href="glindex.html#IDD">IDD</a>, 
+	is at the <a href="glindex.html#UPC">Unidata Program 
+	Center</a>).
+    </tr>
+    <tr>
+	<td><tt>scour</tt></td>
+	<td><a
+	    href="http://www.opengroup.org/onlinepubs/007908799/xcu/crontab.html">
+	    <tt>crontab</tt></a>-driven utility for deleting old data-files
+	    based on <a
+	    href="http://www.opengroup.org/onlinepubs/7908799/xbd/glindex.html#tag_004_000_196">
+	    pathname</a> patterns and retention-times.
+    </tr>
+    <tr>
+	<td><tt>ldmsend</tt></td>
+	<td>Sends files as LDM <a
+	    href="glindex.html#data-product">data-product</a>s to a
+	    <a href="glindex.html#downstream LDM">downstream LDM</a>
+	    using <a href="glindex.html#HEREIS">HEREIS</a>
+	    messages.
+    </tr>
+    <tr>
+	<td><tt>plotMetrics</tt></td>
+	<td>Plots performance metrics on the
+	    <a href="glindex.html#LDM">LDM</a>
+	    system.
+    </tr>
+</table>
+
+</BODY>
+</HTML>

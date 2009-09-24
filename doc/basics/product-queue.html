@@ -1,0 +1,73 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>Product-Queue</TITLE>
+<META NAME="BOOKMARK" CONTENT="Product-Queue">
+<META NAME="AUTHOR" CONTENT="steve">
+<META NAME="KEYWORDS" CONTENT="LDM, product-queue">
+<META NAME="DESCRIPTION" CONTENT="Describes the LDM product-queue">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">The LDM Product-Queue</h1>
+
+<p>The product-queue is a memory-mapped file that temporarily
+stores <a href="glindex.html#data-product">data-product</a>s.
+Access to the product-queue is via the <tt>pq</tt> module, which
+coordinates access by the reading and writing processes 
+to ensure that the product-queue isn't corrupted.
+
+<p>The product-queue has the following characteristics:
+<ul>
+    <li>The number of <a
+	href="glindex.html#data-product">data-product</a>s 
+	that the queue can contain is fixed when the queue is created.
+	This is the maximum number of
+	<a href="glindex.html#data-product">data-product</a> <em>slots</em>.
+    <li>A <a href="glindex.html#data-product">data-product</a> is
+	inserted into the product-queue in contiguous space and indexed 
+	by to the time of insertion according to the system clock.
+    <li>Reading a <a href="glindex.html#data-product">data-product</a>
+	from the queue creates a read-lock on that product.
+	Read-locks can be shared by reading processes.
+    <li><a href="glindex.html#data-product">Data-product</a>s
+	read from the product-queue sequentially are returned in time-sorted
+	order (oldest first) according to the insertion-time.  Therefore,
+	<a href="glindex.html#data-product">data-product</a>s
+	can be skipped if the system clock is set backwards.
+    <li>Writing a <a href="glindex.html#data-product">data-product</a>
+	into the queue creates a write-lock on that product.
+	Write-locks can't be shared.
+    <li>If a new <a
+	href="glindex.html#data-product">data-product</a> 
+	can't be added,
+	either because no space is available for the 
+	<a href="glindex.html#data-product">data-product</a> 
+	or because no slot is available, then
+	unlocked <a href="glindex.html#data-product">data-product</a>s
+	are deleted from the queue -- begining with the oldest <a
+	href="glindex.html#data-product">data-product</a> and
+	continuing to the youngest -- until addition is possible.
+    <li>A <a name="writer-counter"><i>writer-counter</i></a>
+	field in the product-queue keeps track 
+	of the number of times
+	the product-queue has been opened for writing.  Opening the 
+	product-queue for writing increments the counter; closing the
+	product-queue decrements the counter.  If no process has the 
+	product-queue open for writing, then the <i>writer-counter</i>
+	should be 0.  This counter is used to ensure that the product-queue
+	has been properly closed by all processes that could modify it.
+</ul>
+
+<p>
+The canonical pathname of the LDM product-queue, relative to the LDM
+home-directory, is <tt>data/ldm.pq</tt>
+
+<p>A paper on implementation-details can be found
+<a href="http://www.unidata.ucar.edu/staff/russ/papers/ldm51.fm5.pdf">
+here</a>.
+
+</BODY>
+</HTML>
