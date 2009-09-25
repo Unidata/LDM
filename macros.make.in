@@ -41,7 +41,7 @@ BINDIR	= $(exec_prefix)/bin
 ETCDIR	= $(ldmhome)/etc
 MANDIR	= $(prefix)/man
 # only used to update the release at the source site
-FTPDIR	= /home/ftp/pub/ldm
+FTPDIR	= /web/ftp/pub/ldm
 
 # Manual pages:
 WHATIS		= @WHATIS@

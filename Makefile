@@ -69,8 +69,6 @@ TEST_TARGETS = \
 
 LIBRARY	= libldm.a
 
-LDM_VERSION = ldm_version
-
 INSTALL_TARGETS = \
 	config/install \
 	ulog/install \
@@ -188,12 +186,12 @@ PACKING_LIST = \
 # in subdirectories link against it.
 all:		$(LIBRARY) rpc/all $(ALL_TARGETS)
 
-$(LIBRARY):	$(LDM_VERSION).o
-	$(AR) $(ARFLAGS) $(LIBRARY) $(LDM_VERSION).o
+$(LIBRARY):	ldm_version.o
+	$(AR) $(ARFLAGS) $(LIBRARY) ldm_version.o
 	$(RANLIB) $(LIBRARY)
 
-$(LDM_VERSION).o:	$(LDM_VERSION).c
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(LDM_VERSION).c
+ldm_version.o:	ldm_version.c
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) ldm_version.c
 
 test:		$(TEST_TARGETS)
 
@@ -211,13 +209,13 @@ $(MANDIR)/$(WHATIS):	$(MANDIR)
 install_setuids:	$(INSTALL_SETUIDS_TARGETS)
 
 clean:		$(CLEAN_TARGETS)
-	rm -f *.a *.o *.ln *.i $(LIBRARY) $(LDM_VERSION).c
+	rm -f *.a *.o *.ln *.i $(LIBRARY) ldm_version.c
 
 distclean:	$(DISTCLEAN_TARGETS)
-	rm -f *.a *.o *.ln *.i $(LIBRARY) $(LDM_VERSION).c
+	rm -f *.a *.o *.ln *.i $(LIBRARY) ldm_version.c
 	rm -f config.cache config.status *.log MANIFEST *.Z macros.make
 
-$(LDM_VERSION).c: VERSION
+ldm_version.c: VERSION
 	echo 'const char* ldm_version = "'`cat VERSION`'";' >$@
 
 $(ALL_TARGETS) \
@@ -290,113 +288,56 @@ TOP_MANIFEST.echo:
 	    :; \
 	fi
 
-tag:
-	@tag=ldm-`sed 's/\./_/g' VERSION`; \
-	cvs tag -F $$tag . rpc
-
-tar.gz:
-	version=`cat VERSION`; \
-	$(MAKE) $(MFLAGS) $(PACKAGE)-$$version.tar.gz VERSION=$$version
-
-$(PACKAGE)-$(VERSION).tar.gz:	FORCE
-	tag=ldm-`echo "$(VERSION)" | sed 's/\./_/g'`; \
-	dir=ldm-$(VERSION); \
-	srcdir=$$dir/src; \
-	if cvs export -N -d $$dir -r $$tag src && \
-		(cd $$srcdir && \
-		$(MAKE) -f ../../rpc/Makefile $(MFLAGS) export TAG=$$tag); \
-	then \
-	    pax -x ustar -w $$srcdir | gzip -c >$@; \
-	    status=$$?; \
-	else \
-	    status=1; \
-	fi; \
-	rm -rf $$dir; \
-	exit $$status
-
-$(PACKAGE)-$(VERSION).binary.tar.gz:	install
-	id=$(PACKAGE)-$(VERSION).binary \
-	&& rm -rf $$id \
-	&& mkdir $$id \
-	&& cd $$id \
-	&& cp ../[ABD-Z]* . \
-	&& cp ../COPYRIGHT . \
-	&& mkdir etc \
-	&& cd etc \
-	&& cp ../../server/*.conf . \
-	&& cp ../../pqact/*.conf . \
-	&& cp ../../scour/*.conf . \
-	&& cp ../../scripts/*.conf . \
-	&& cd .. \
-	&& mkdir bin \
-	&& cd bin \
-	&& cp ../../../bin/* . \
-	&& rm -f ldmadmin ldmcheck ldmfail ldmprods netcheck syscheck mailpqstats \
-	&& rm -f ddplus dds hds feedtest hrs ids pps afos \
-	&& cp ../../scripts/*.in . \
-	&& cd .. \
-	&& ln -s ../../lib . \
-	&& ln -s ../../include . \
-	&& ln -s ../../man . \
-	&& rm -rf Makefile* */Makefile* \
-	&& cd .. \
-	&& pax -x ustar -w $$id | gzip -c > $@ \
-	&& rm -r $$id
-
-binary.tar.gz:
-	version=`cat VERSION`; \
-	$(MAKE) $(MFLAGS) $(PACKAGE)-$$version.binary.tar.gz VERSION=$$version
-
-$(FTPDIR)/$(PACKAGE)-$(VERSION).tar.gz:	$(PACKAGE)-$(VERSION).tar.gz
-	scp $(PACKAGE)-$(VERSION).tar.gz ftp:$@ 
-	ssh ftp chmod u+rw,g+rw,o=r $@
-
-ftp:
-	if cvs status . rpc 2>/dev/null | grep Status: \
-		| grep -v Up-to-date >/dev/null; then \
-	    echo 1>&2 'Package or rpc/ needs "cvs commit"'; \
+commit-check:	FORCE
+	if git status -a >/dev/null; then \
+	    echo 1>&2 'Package needs "git commit -a"'; \
 	    exit 1; \
-	else true; fi
-	$(MAKE) tag
-	version=`cat VERSION`; \
-	$(MAKE) FTPDIR=$(FTPDIR) PACKAGE=$(PACKAGE) VERSION=$$version \
-	    $(FTPDIR)/$(PACKAGE)-$$version.tar.gz; \
-	test ! -h $(FTPDIR)/$(PACKAGE).tar.gz && exit 0; \
-#	cd $(FTPDIR) || exit 1; \
-#	rm $(PACKAGE).tar.gz || exit 1; \
-#	ln -s $(PACKAGE)-$$version.tar.gz $(PACKAGE).tar.gz;
+	fi
 
-beta:
-	if cvs status . rpc 2>/dev/null | grep Status: \
-		| grep -v Up-to-date >/dev/null; then \
-	    echo 1>&2 'Package or rpc/ needs "cvs commit"'; \
-	    exit 1; \
-	else true; fi
-	$(MAKE) tag
-	version=`cat VERSION`; \
-	$(MAKE) FTPDIR=$(FTPDIR)/beta PACKAGE=$(PACKAGE) VERSION=$$version \
-	    $(FTPDIR)/beta/$(PACKAGE)-$$version.tar.gz; \
-	test ! -h $(FTPDIR)/beta/$(PACKAGE).tar.gz && exit 0; \
+tag:	FORCE
+	git tag -f v$(VERSION)
 
-binftp:
-	version=`cat VERSION`; \
-	ftpbindir=/home/ftp/pub/binary/`system`; \
-	$(MAKE) VERSION=$$version FTPBINDIR=$$ftpbindir \
-	    $$ftpbindir/$(PACKAGE)-$$version.tar.gz
-ftpbin:		binftp
+tar.gz:	FORCE commit-check tag
+	@tag=v$(VERSION) \
+	dir=$(PACKAGE)-$(VERSION); \
+	srcdir=/tmp/$$dir/src; \
+	rm -rf $$srcdir; \
+	if git clone . $$srcdir; then \
+	    rm -rf $$srcdir/.git; \
+	    pax -x ustar -w -s ':/tmp/::' $$srcdir | gzip -c >$$dir.$@; \
+		status=$$?; \
+	    else \
+		status=1; \
+	    fi; \
+	    rm -rf $$srcdir; \
+	    exit $$status; \
+	fi
 
-$(FTPBINDIR)/$(PACKAGE)-$(VERSION).tar.gz:
-	id=$(PACKAGE)-$(VERSION); \
-	&& rm -f $$id \
-	&& ln -s $(prefix) $$id \
-	&& pax -x ustar -w $$id/bin $$id/etc $$id/include $$id/lib \
-	   $$id/man | gzip -c > $@ \
-	&& rm $$id
-	chmod u+rw,g+rw,o=r $@
-	test ! -h $(FTPBINDIR)/$(PACKAGE).tar.gz && exit 0; \
-	    cd $(FTPBINDIR) || exit 1; \
-	    rm $(PACKAGE).tar.gz || exit 1; \
-	    ln -s $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE).tar.gz;
+#tar.gz:	FORCE
+#	@tag=v$(VERSION) \
+#	dir=ldm-$(VERSION); \
+#	srcdir=$$dir/src; \
+#	if cvs export -N -d $$dir -r $$tag src && \
+#		(cd $$srcdir && \
+#		$(MAKE) -f ../../rpc/Makefile $(MFLAGS) export TAG=$$tag); \
+#	then \
+#	    pax -x ustar -w $$srcdir | gzip -c >$@; \
+#	    status=$$?; \
+#	else \
+#	    status=1; \
+#	fi; \
+#	rm -rf $$dir; \
+#	exit $$status
+
+ftp:	FORCE commit-check tag tar.gz
+	filename=$(PACKAGE)-$(VERSION).tar.gz \
+	&& scp $$filename ftp:$(FTPDIR) \
+	&& ssh ftp chmod u+rw,g+rw,o=r $(FTPDIR)/$$filename
+
+beta:	FORCE commit-check tag tar.gz
+	filename=$(PACKAGE)-$(VERSION).tar.gz \
+	&& scp $$filename ftp:$(FTPDIR)/beta \
+	&& ssh ftp chmod u+rw,g+rw,o=r $(FTPDIR)/beta/$$filename
 
 FORCE:
 
