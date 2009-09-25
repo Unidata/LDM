@@ -1,9 +1,11 @@
 include ../macros.make
 
-all:	commit-check web-update
+all:
+	cd tutorial && $(MAKE) $@
 
 clean:
 	rm -rf *.Z
+	cd tutorial && $(MAKE) $@
 
 commit-check:	FORCE
 	if git status -a >/dev/null; then \
@@ -11,7 +13,7 @@ commit-check:	FORCE
 	    exit 1; \
 	fi
 
-web-update:	FORCE
+web-update:	commit-check FORCE
 	rsync $(RSYNC_FLAGS) -u \
 	    history.html \
 	    factsheet.html \
@@ -25,7 +27,7 @@ web-update:	FORCE
 	    troubleshooting \
 	    conan:/content/software/ldm/$(PACKAGE)-$(BUG_VERSION)
 	cd basics && make $@
-	cd tutorial-src && make $@
+	cd tutorial && make $@
 	cd workshop && make $@
 
 FORCE:
