@@ -1,4 +1,4 @@
-include macros.make
+include ../macros.make
 
 all:	commit-check web-update
 
@@ -20,7 +20,7 @@ web-update:	FORCE
 	    conan:/content/software/ldm
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    README \
-	    CHANGE_LOG \
+	    ../CHANGE_LOG \
 	    *.html \
 	    install \
 	    troubleshooting \
