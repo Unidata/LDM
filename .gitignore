@@ -1,1 +1,5 @@
+config.status
+*.gz
+*.log
+macros.make
 *.swp
