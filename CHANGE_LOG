@@ -13,6 +13,11 @@
 	    Corrected ability to build without mmap(2) support via the
 	    NO_MMAP C macro.
 
+	Misc:
+	    Transitioned from CVS version-control to git(1).
+
+	    Moved "../doc" to subdirectory of "src".
+
 6.8.1	2009-08-14
 	Installation:
 	    Improved configure(1) script:

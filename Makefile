@@ -298,33 +298,17 @@ tag:	FORCE
 	git tag -f v$(VERSION)
 
 tar.gz:	FORCE commit-check tag
-	@tag=v$(VERSION) \
-	dir=$(PACKAGE)-$(VERSION); \
-	srcdir=/tmp/$$dir/src; \
+	tag=v$(VERSION) \
+	id=$(PACKAGE)-$(VERSION); \
+	srcdir=/tmp/$$id/src; \
 	rm -rf $$srcdir; \
-	if git clone . $$srcdir; then \
+	if git clone . $$srcdir >/dev/null; then \
 	    rm -rf $$srcdir/.git; \
-	    pax -x ustar -w -s ':/tmp/::' $$srcdir | gzip -c >$$dir.$@; \
+	    pax -x ustar -w -s ':/tmp/::' $$srcdir | gzip -c >$$id.$@; \
 	    status=$$?; \
 	    rm -rf $$srcdir; \
 	    exit $$status; \
 	fi
-
-#tar.gz:	FORCE
-#	@tag=v$(VERSION) \
-#	dir=ldm-$(VERSION); \
-#	srcdir=$$dir/src; \
-#	if cvs export -N -d $$dir -r $$tag src && \
-#		(cd $$srcdir && \
-#		$(MAKE) -f ../../rpc/Makefile $(MFLAGS) export TAG=$$tag); \
-#	then \
-#	    pax -x ustar -w $$srcdir | gzip -c >$@; \
-#	    status=$$?; \
-#	else \
-#	    status=1; \
-#	fi; \
-#	rm -rf $$dir; \
-#	exit $$status
 
 ftp:	FORCE commit-check tag tar.gz
 	filename=$(PACKAGE)-$(VERSION).tar.gz \
