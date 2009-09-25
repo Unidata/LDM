@@ -6,11 +6,10 @@ clean:
 	rm -rf *.Z
 
 commit-check:	FORCE
-	if cvs status 2>/dev/null | grep Status: \
-		| grep -v Up-to-date >/dev/null; then \
-	    echo 1>&2 'Package needs "cvs commit"'; \
+	if git status -a >/dev/null; then \
+	    echo 1>&2 'Package needs "git commit -a"'; \
 	    exit 1; \
-	else true; fi
+	fi
 
 web-update:	FORCE
 	rsync $(RSYNC_FLAGS) -u \
@@ -28,10 +27,5 @@ web-update:	FORCE
 	cd basics && make $@
 	cd tutorial-src && make $@
 	cd workshop && make $@
-
-$(PACKAGE)-$(REV_VERSION)-doc.tar.Z:	web-update
-	ssh conan 'pax -x ustar -w -s \
-	    ";/content/software/ldm/$(PACKAGE)-$(BUG_VERSION);doc;" \
-	    /content/software/ldm/$(PACKAGE)-$(BUG_VERSION)' | compress >$@
 
 FORCE:

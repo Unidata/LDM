@@ -160,7 +160,7 @@ DISTCLEAN_TARGETS = \
 	regex/distclean \
 	rpc/distclean
 
-SUBDIRS = rpc config $(LIBSUBDIRS) $(PROGSUBDIRS)
+SUBDIRS = rpc config $(LIBSUBDIRS) $(PROGSUBDIRS) doc
 
 TAG_SRCS	= \
 	ulog/*.h ulog/*.c \

@@ -13,11 +13,17 @@ CFLAGS	= @CFLAGS@
 CONFIGURE_CPPFLAGS	= @CPPFLAGS@
 GDBMLIB	= @GDBMLIB@
 CONFIGURE_LIBS	= @LIBS@
+RSYNC_FLAGS	= --rsh=ssh --rsync-path=/opt/bin/rsync
 
 LD_YACC	= @LD_YACC@
 LD_GEN	= @LD_GEN@
 
 PACKAGE	= ldm
+VERSION	= `cat @LDMHOME@/src/VERSION`
+MAJOR_VERSION	= `cut -d . -f 1 @LDMHOME@/src/VERSION`
+MINOR_VERSION	= `cut -d . -f 1-2 @LDMHOME@/src/VERSION`
+BUG_VERSION	= `cut -d . -f 1-3 @LDMHOME@/src/VERSION`
+RC_VERSION	= `cut -d . -f 1-4 @LDMHOME@/src/VERSION`
 
 prefix	= @prefix@
 exec_prefix	= $(prefix)

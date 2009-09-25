@@ -1,4 +1,4 @@
-include ../macros.make
+include ../../macros.make
 
 all:	web-update
 
