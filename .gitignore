@@ -1,5 +1,7 @@
 config.status
 *.gz
+ldm_version.*
 *.log
 macros.make
+*.o
 *.swp
