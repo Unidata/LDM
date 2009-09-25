@@ -300,13 +300,14 @@ tag:	FORCE
 tar.gz:	FORCE commit-check tag
 	tag=v$(VERSION) \
 	id=$(PACKAGE)-$(VERSION); \
-	srcdir=/tmp/$$id/src; \
-	rm -rf $$srcdir; \
+	prefix=/tmp/$$id; \
+	rm -rf $$prefix; \
+	srcdir=$$prefix/src; \
 	if git clone . $$srcdir >/dev/null; then \
 	    rm -rf $$srcdir/.git; \
 	    pax -x ustar -w -s ':/tmp/::' $$srcdir | gzip -c >$$id.$@; \
 	    status=$$?; \
-	    rm -rf $$srcdir; \
+	    rm -rf $$prefix; \
 	    exit $$status; \
 	fi
 
