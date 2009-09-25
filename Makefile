@@ -305,10 +305,7 @@ tar.gz:	FORCE commit-check tag
 	if git clone . $$srcdir; then \
 	    rm -rf $$srcdir/.git; \
 	    pax -x ustar -w -s ':/tmp/::' $$srcdir | gzip -c >$$dir.$@; \
-		status=$$?; \
-	    else \
-		status=1; \
-	    fi; \
+	    status=$$?; \
 	    rm -rf $$srcdir; \
 	    exit $$status; \
 	fi
