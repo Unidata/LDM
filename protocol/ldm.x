@@ -31,11 +31,6 @@
 %#define LDM_H
 %
 %/*
-% * The identifier string for this version of the LDM.
-% */
-%extern const char* ldm_version;  /* defined in ../ldm_version.c */
-%
-%/*
 % * these define the range of "transient program numbers"
 % */
 %#define TRANSIENT_BEGIN 0x40000000 
@@ -70,14 +65,14 @@
 %#define pIf(a,b) (!(a) || (b))	/* a implies b */
 %
 %static bool_t
-%xdr_stringck(XDR *xdrs, char **cpp, u_int maxsize)
+%xdr_stringck(XDR *xdrs, char **cpp, unsigned int maxsize)
 %{
 %	assert(pIf(xdrs->x_op == XDR_ENCODE, *cpp != NULL && **cpp != 0));
 %	return(xdr_string(xdrs, cpp, maxsize));
 %}
 %
 %static bool_t
-%xdr_referenceck(XDR *xdrs, caddr_t *pp, u_int size, const xdrproc_t proc)
+%xdr_referenceck(XDR *xdrs, void* *pp, unsigned int size, const xdrproc_t proc)
 %{
 %	assert(pIf(xdrs->x_op == XDR_ENCODE, *pp != NULL));
 %	return(xdr_reference(xdrs, pp, size, proc));
@@ -368,8 +363,8 @@ struct ldm_addr_rpc {
 #endif
 struct ldm_addr_ip {
 	int protocol; /* rfc 790: IPPROTO_TCP (or IPPROTO_UDP) */
-	u_short port; /* (struct sockaddr_in).sin_port */
-	u_long addr; /*(struct sockaddr_in).(struct in_addr)sin_addr.s_addr*/
+	unsigned short port; /* (struct sockaddr_in).sin_port */
+	unsigned long addr; /*(struct sockaddr_in).(struct in_addr)sin_addr.s_addr*/
 };
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
@@ -544,7 +539,7 @@ const DBUFMAX = 16384;
  */
 %
 %struct dbuf {
-%	u_int dbuf_len;
+%	unsigned int dbuf_len;
 %	char *dbuf_val;
 %};
 %typedef struct dbuf dbuf;
@@ -570,7 +565,7 @@ struct comingsoon_args {
 % * Determined empirically to be 68.
 % * Round it up to 72 (something divisible by 8 == sizeof(double).
 % */
-%#define DATAPKT_RPC_OVERHEAD ((u_int)72)
+%#define DATAPKT_RPC_OVERHEAD ((unsigned int)72)
 %/*
 % * The size of the RPC receiving buffer.  Such a buffer is like a stdio
 % * buffer: it doesn't limit the size of an entity, only the efficiency 
@@ -669,7 +664,7 @@ union hiya_reply_t switch (ldm_errt code) {
 
 union fornme_reply_t switch (ldm_errt code) {
     case OK:
-	u_int       id;
+	unsigned int       id;
     case BADPATTERN:
 	void;
     case RECLASS:
@@ -699,7 +694,7 @@ program LDMPROG {
 		 */
 		fornme_reply_t     FEEDME(feedpar_t) = 4;
 		fornme_reply_t     NOTIFYME(prod_class_t) = 9;
-		bool               IS_ALIVE(u_int) = 14;
+		bool               IS_ALIVE(unsigned int) = 14;
 		/*
 		 * Upstream to downstream messages:
 		 */
@@ -755,7 +750,7 @@ program LDMPROG {
 %    comingsoon_args *comingPar, struct svc_req *rqstp);
 %void               *blkdata_6_svc(datapkt *argp, struct svc_req *rqstp);
 %int                 ldmprog_6_freeresult(
-%    SVCXPRT *transp, xdrproc_t xdr_result, caddr_t result);
+%    SVCXPRT *transp, xdrproc_t xdr_result, void* result);
 %
 %#endif
 #endif
@@ -878,7 +873,7 @@ program LDMPROG {
 %
 %error_t* ldm6_is_alive(
 %    ldm6_clnt_t*        ldm6_clnt,
-%    u_int*              pid,
+%    unsigned int*              pid,
 %    bool_t*             reply);
 %
 %error_t* ldm6_clnt_hiya(

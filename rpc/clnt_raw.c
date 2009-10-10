@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)clnt_raw.c 1.22 87/08/11 Copyr 1984 Sun Micro";
  * any interference from the kernal.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <stdio.h>
 #include <stdlib.h>

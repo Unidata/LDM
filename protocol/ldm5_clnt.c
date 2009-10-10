@@ -49,8 +49,8 @@ hereis5( h_clnt *hcp, product *prod, unsigned int timeo,
         (void) memset(replyp, 0, sizeof(ldm_replyt));
 
         return h_clnt_call(hcp, HEREIS,
-                (xdrproc_t)xdr_product, (caddr_t)prod,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)replyp,
+                (xdrproc_t)xdr_product, (void*)prod,
+                (xdrproc_t)xdr_ldm_replyt, (void*)replyp,
                 timeo);
 }
 
@@ -61,10 +61,10 @@ hereis5( h_clnt *hcp, product *prod, unsigned int timeo,
  * They allow us to send an already xdr'ed product
  * directly from the arena.
  */
-static u_int xlen_prod = 0;
+static unsigned int xlen_prod = 0;
 
 static bool_t
-xdr_xprod(XDR *xdrs, caddr_t xprod)
+xdr_xprod(XDR *xdrs, void* xprod)
 {
         if(xdrs->x_op != XDR_ENCODE)
                 return FALSE; /* assert(xdrs->x_op == XDR_ENCODE) */
@@ -78,13 +78,13 @@ enum clnt_stat
 xhereis5(h_clnt *hcp, void *xprod, size_t size, unsigned int timeo,
         ldm_replyt *replyp)
 {
-        xlen_prod = (u_int)size;
+        xlen_prod = (unsigned int)size;
 
         (void) memset(replyp, 0, sizeof(ldm_replyt));
 
         return h_clnt_call(hcp, HEREIS,
-                (xdrproc_t)xdr_xprod, (caddr_t)xprod,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)replyp,
+                (xdrproc_t)xdr_xprod, (void*)xprod,
+                (xdrproc_t)xdr_ldm_replyt, (void*)replyp,
                 timeo);
 }
 /* End XHEREIS */
@@ -100,8 +100,8 @@ feedme5(h_clnt *hcp, const prod_class *clssp, unsigned int timeo,
         (void) memset(replyp, 0, sizeof(ldm_replyt));
 
         return h_clnt_call(hcp, FEEDME,
-                (xdrproc_t)xdr_prod_class, (caddr_t)clssp,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)replyp,
+                (xdrproc_t)xdr_prod_class, (void*)clssp,
+                (xdrproc_t)xdr_ldm_replyt, (void*)replyp,
                 timeo);
 }
 
@@ -116,8 +116,8 @@ hiya5(h_clnt *hcp, const prod_class *clssp, unsigned int timeo,
         (void) memset(replyp, 0, sizeof(ldm_replyt));
 
         return h_clnt_call(hcp, HIYA,
-                (xdrproc_t)xdr_prod_class, (caddr_t)clssp,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)replyp,
+                (xdrproc_t)xdr_prod_class, (void*)clssp,
+                (xdrproc_t)xdr_ldm_replyt, (void*)replyp,
                 timeo);
 }
 
@@ -132,8 +132,8 @@ notification5(h_clnt *hcp, const prod_info *infop,
         (void) memset(replyp, 0, sizeof(ldm_replyt));
 
         return h_clnt_call(hcp, NOTIFICATION,
-                (xdrproc_t)xdr_prod_info, (caddr_t)infop,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)replyp,
+                (xdrproc_t)xdr_prod_info, (void*)infop,
+                (xdrproc_t)xdr_ldm_replyt, (void*)replyp,
                 timeo);
 }
 
@@ -148,8 +148,8 @@ notifyme5(h_clnt *hcp, const prod_class *clssp, unsigned int timeo,
         (void) memset(replyp, 0, sizeof(ldm_replyt));
 
         return h_clnt_call(hcp, NOTIFYME,
-                (xdrproc_t)xdr_prod_class, (caddr_t)clssp,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)replyp,
+                (xdrproc_t)xdr_prod_class, (void*)clssp,
+                (xdrproc_t)xdr_ldm_replyt, (void*)replyp,
                 timeo);
 }
 
@@ -160,7 +160,7 @@ notifyme5(h_clnt *hcp, const prod_class *clssp, unsigned int timeo,
  * Then do a sequence of 'blkdata' calls.
  */
 enum clnt_stat
-comingsoon5(h_clnt *hcp, const prod_info *infop, u_int pktsz,
+comingsoon5(h_clnt *hcp, const prod_info *infop, unsigned int pktsz,
         unsigned int timeo, ldm_replyt *replyp)
 {
         comingsoon_args arg;
@@ -170,8 +170,8 @@ comingsoon5(h_clnt *hcp, const prod_info *infop, u_int pktsz,
         (void) memset(replyp, 0, sizeof(ldm_replyt));
 
         return h_clnt_call(hcp, COMINGSOON,
-                (xdrproc_t)xdr_comingsoon_args, (caddr_t)&arg,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)replyp,
+                (xdrproc_t)xdr_comingsoon_args, (void*)&arg,
+                (xdrproc_t)xdr_ldm_replyt, (void*)replyp,
                 timeo);
 }
 
@@ -186,8 +186,8 @@ blkdata5(h_clnt *hcp, const datapkt *pktp,
         (void) memset(replyp, 0, sizeof(ldm_replyt));
 
         return h_clnt_call(hcp, BLKDATA,
-                (xdrproc_t)xdr_datapkt, (caddr_t)pktp,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)replyp,
+                (xdrproc_t)xdr_datapkt, (void*)pktp,
+                (xdrproc_t)xdr_ldm_replyt, (void*)replyp,
                 timeo);
 }
 
@@ -202,7 +202,7 @@ blkdata5(h_clnt *hcp, const datapkt *pktp,
  */
 static int
 forn_signon(
-        const u_long proc, /* FEEDME or NOTIFYME only */
+        const unsigned long proc, /* FEEDME or NOTIFYME only */
         const char *remote, 
         prod_class **reqpp, /* may be modified on return */
         const unsigned rpctimeo,
@@ -228,8 +228,8 @@ retry:
         
         (void) memset(&reply, 0, sizeof(ldm_replyt));
         rpc_stat = h_clnt_call(&hc, proc,
-                (xdrproc_t)xdr_prod_class, (caddr_t)clssp,
-                (xdrproc_t)xdr_ldm_replyt, (caddr_t)&reply,
+                (xdrproc_t)xdr_prod_class, (void*)clssp,
+                (xdrproc_t)xdr_ldm_replyt, (void*)&reply,
                 rpctimeo);
 
         (void)exitIfDone(0);
@@ -442,7 +442,7 @@ adjustByLastInfo(
  */
 int
 forn5(
-    const u_long                        proc,
+    const unsigned long                        proc,
     const char* const                   remote,
     prod_class_t** const                  request,
     const unsigned                      rpctimeo, 

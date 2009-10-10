@@ -7,6 +7,8 @@
 #ifndef _ATOFEEDT_H_
 #define _ATOFEEDT_H_
 
+#include "ldm.h"
+
 /* correlate string names with associated enumerated type */
 struct fal {
 #define MAXFEEDTYPELEN 14	/* max len of name string */

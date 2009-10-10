@@ -406,7 +406,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         if(ident != NULL && *ident != 0)
                 set_abbr_ident(remote_name(), ident);
         unotice("Starting Up(%s/5): %s", 
-            ldm_version, s_prod_class(NULL, 0, remote.clssp));
+            PACKAGE_VERSION, s_prod_class(NULL, 0, remote.clssp));
 
         unotice("topo:  %s %s", remote_name(),
                         s_feedtypet(clss_feedtypeU(remote.clssp)));

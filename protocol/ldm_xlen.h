@@ -6,6 +6,8 @@
 #ifndef LDM_XLEN_H
 #define LDM_XLEN_H
 
+#include "ldm.h"
+
 extern size_t xlen_prod_info(const prod_info *info);
 extern size_t xlen_dbuf(const dbuf *data);
 extern size_t xlen_prod_i(const prod_info *info);

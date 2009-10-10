@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)clnt_udp.c 1.39 87/08/11 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <stdio.h>
 #include <stdlib.h>

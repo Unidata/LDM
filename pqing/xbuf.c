@@ -14,10 +14,10 @@
 #include "ulog.h" /* use _uassert() => ulog printing of assert messages */
 #endif
 
-#ifdef NO_MEMMOVE
-/* define memmove in terms of bcopy - recividist */
-#define memmove(d1, d2, n) bcopy((d2), (d1), (n))
-#endif /* NO_MEMMOVE */
+#ifndef HAVE_MEMMOVE
+    /* define memmove in terms of bcopy - recividist */
+    #define memmove(d1, d2, n) bcopy((d2), (d1), (n))
+#endif
 
 void
 free_xbuf(

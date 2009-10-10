@@ -509,7 +509,7 @@ static void hndlr_noop(int sig)
  * Returns:
  *   0               Success.
  */
-int
+unsigned
 pq_suspend(unsigned int maxsleep)
 {
         struct sigaction sigact, csavact, asavact;

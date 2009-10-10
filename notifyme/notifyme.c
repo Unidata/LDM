@@ -103,7 +103,7 @@ signal_handler(int sig)
 static void
 set_sigactions(void)
 {
-#ifndef NO_POSIXSIGNALS
+#ifdef HAVE_SIGACTION
         struct sigaction sigact;
 
         sigact.sa_handler = signal_handler;

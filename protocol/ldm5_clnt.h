@@ -42,7 +42,7 @@ notifyme5(h_clnt *hcp, const prod_class *clssp, unsigned int timeo,
 	ldm_replyt *replyp);
 
 enum clnt_stat
-comingsoon5(h_clnt *hcp, const prod_info *infop, u_int pktsz, unsigned int timeo,
+comingsoon5(h_clnt *hcp, const prod_info *infop, unsigned int pktsz, unsigned int timeo,
 	ldm_replyt *replyp);
 
 extern enum clnt_stat
@@ -76,7 +76,7 @@ one_svc_run5(const int xp_sock, const unsigned inactive_timeo);
  */
 int
 forn5(
-	const u_long		proc,	 /* FEEDME or NOTIFYME only */
+	const unsigned long		proc,	 /* FEEDME or NOTIFYME only */
 	const char*		remote,
 	prod_class_t**		clsspp,
 	const unsigned		rpctimeo, 

@@ -439,12 +439,12 @@ up6_run(void)
     if (NOTIFY == _mode) {
         set_abbr_ident(_downName, "(noti)");
         unotice("Starting Up(%s/6): %s, SIG=%s",
-            ldm_version, s_prod_class(NULL, 0, _class), sig);
+            PACKAGE_VERSION, s_prod_class(NULL, 0, _class), sig);
     }
     else {
         set_abbr_ident(_downName, "(feed)");
         unotice("Starting Up(%s/6): %s, SIG=%s, %s",
-            ldm_version, s_prod_class(NULL, 0, _class),
+            PACKAGE_VERSION, s_prod_class(NULL, 0, _class),
             sig, _isPrimary ? "Primary" : "Alternate");
     }
 

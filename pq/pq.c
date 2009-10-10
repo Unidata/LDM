@@ -12,9 +12,9 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef NO_MMAP
-#include <sys/mman.h>
-#endif /*!NO_MMAP*/
+#ifdef HAVE_MMAP
+    #include <sys/mman.h>
+#endif
 #include <unistd.h> /* sysconf */
 #include <limits.h>
 #include <assert.h>
@@ -3135,7 +3135,7 @@ fd_lock(const int fd, const int cmd, const short l_type,
 }
 
 
-#ifndef NO_MMAP
+#ifdef HAVE_MMAP
 /*
  * Wrapper around mmap()
  *
@@ -3251,7 +3251,7 @@ unmapwrap(void *const ptr,
 
         return status;
 }
-#endif /*!NO_MMAP*/
+#endif /*HAVE_MMAP*/
 
 /*
  * Get a lock on (offset, extent) according to the
@@ -3513,7 +3513,7 @@ unwind_vp:
 }
 
 
-#ifndef NO_MMAP
+#ifdef HAVE_MMAP
 /*
  * file to memory using mmap
  *
@@ -3857,7 +3857,7 @@ mm0_mtof(pqueue *const pq,
         return rgn_unlock(pq, offset, extent, rflags);
 }
 /* End OS */
-#endif /*!NO_MMAP*/
+#endif /*HAVE_MMAP*/
 
 
 /*
@@ -3894,7 +3894,7 @@ pq_setAccessFunctions(
 {
     assert(NULL != pq);
 
-#ifndef NO_MMAP
+#ifdef HAVE_MMAP
     if (fIsSet(pflags, PQ_NOMAP))
     {
 #endif
@@ -3903,7 +3903,7 @@ pq_setAccessFunctions(
          */
         pq->ftom = f_ftom;
         pq->mtof = f_mtof;
-#ifndef NO_MMAP
+#ifdef HAVE_MMAP
     }
     else {
         static size_t   maxSizeT = ~(size_t)0;
@@ -4109,7 +4109,7 @@ ctl_init(pqueue *const pq, size_t const align)
          */
         status = (pq->ftom)(pq,
                          0, (size_t)pq->datao, RGN_WRITE|RGN_NOWAIT, &vp);
-#ifndef NO_MMAP
+#ifdef HAVE_MMAP
         if(status == EIO && (pq->ftom == mm_ftom || pq->ftom == mm0_ftom))
         {
                 unotice("EIO => remote file system\n");
@@ -4119,7 +4119,7 @@ ctl_init(pqueue *const pq, size_t const align)
                 status = (pq->ftom)(pq,
                         0, (size_t)pq->datao, RGN_WRITE|RGN_NOWAIT, &vp);
         }
-#endif /*!NO_MMAP*/
+#endif
         if(status != ENOERR)
                 return status;
 
@@ -4212,7 +4212,7 @@ ctl_gopen(pqueue *const pq, const char *path)
         /*FALLTHROUGH*/
 remap:
         status = (pq->ftom)(pq, 0, ctlsz, 0, &vp);
-#ifndef NO_MMAP
+#ifdef HAVE_MMAP
         if(status == EIO && (pq->ftom == mm_ftom || pq->ftom == mm0_ftom))
         {
                 uwarn("Product-queue can't be memory-mapped!  "
@@ -4222,7 +4222,7 @@ remap:
                 pq->mtof = f_mtof;
                 status = (pq->ftom)(pq, 0, ctlsz, 0, &vp);
         }
-#endif /*!NO_MMAP*/
+#endif
         if(status != ENOERR)
                 return status;
 
@@ -4333,7 +4333,7 @@ ctl_get(pqueue *const pq, int const rflags)
 {
         int status = ENOERR;
 
-#if _NOMAP || NO_MMAP
+#if _NOMAP || !defined(HAVE_MMAP)
         assert(pq->mtof == f_mtof);
         assert(pq->ctlp == NULL);
         assert(pq->ixp == NULL);
@@ -5015,7 +5015,7 @@ pq_close(pqueue *pq)
             }
         }                                       /* was opened for writing */
 
-#ifndef NO_MMAP
+#ifdef HAVE_MMAP
         if(pq->base != NULL && pq->ftom == mm0_ftom)
         {
                 /* special case, time to unmap the whole thing */
@@ -5023,7 +5023,7 @@ pq_close(pqueue *pq)
                 (void) unmapwrap(pq->base, 0, pq->ixo + pq->ixsz, mflags);
                 pq->base = NULL;
         }
-#endif /*!NO_MMAP*/
+#endif
 
         pq_delete(pq);
         

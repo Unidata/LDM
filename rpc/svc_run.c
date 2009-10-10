@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)svc_run.c 1.1 87/10/13 Copyr 1984 Sun Micro";
  * This is the rpc server side idle loop
  * Wait for input, call server program.
  */
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <stdio.h>
 #include <sys/errno.h>

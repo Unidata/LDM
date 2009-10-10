@@ -49,8 +49,6 @@
 #include "UpFilter.h"
 #include "md5.h"
 
-extern const char*      ldm_version;
-
 
 void
 free_host_set(host_set *hsp)
@@ -1462,7 +1460,7 @@ prog_requester(
      */
     vetFromTime(&clssp->from, backoffTime);
 
-    unotice("Starting Up(%s): %s:%u %s", ldm_version, source, port,
+    unotice("Starting Up(%s): %s:%u %s", PACKAGE_VERSION, source, port,
         s_prod_class(NULL, 0, clssp));
 
     (void)as_setLdmCount(hostCount);

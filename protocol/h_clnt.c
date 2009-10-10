@@ -307,7 +307,7 @@ struct ct_data {
 #endif /* !TIRPC */
         struct rpc_err  ct_error;
         char        ct_mcall[MCALL_MSG_SIZE];   /* marshalled callmsg */
-        u_int       ct_mpos;            /* pos after marshal */
+        unsigned int       ct_mpos;            /* pos after marshal */
         XDR     ct_xdrs;
 };
 
@@ -773,8 +773,8 @@ get_port(h_clnt *hcp, struct timeval timeo)
         }
         (void) clnt_control(hcp->pmap_clnt, CLSET_TIMEOUT, (char *) &timeo);
         hcp->rpcerr.re_status = clnt_call(hcp->pmap_clnt, PMAPPROC_GETPORT,
-                (xdrproc_t)xdr_pmap, (caddr_t)&parms,
-                (xdrproc_t)xdr_u_short, (caddr_t)&port,
+                (xdrproc_t)xdr_pmap, (void*)&parms,
+                (xdrproc_t)xdr_u_short, (void*)&port,
                 timeo);
         if(hcp->rpcerr.re_status != RPC_SUCCESS)
         {
@@ -902,11 +902,11 @@ get_clnt_timeo:
 static remote_state
 hC_clnt_call(
         h_clnt *hcp,
-        u_long proc,
+        unsigned long proc,
         xdrproc_t xargs,
-        caddr_t argsp,
+        void* argsp,
         xdrproc_t xres,
-        caddr_t resp,
+        void* resp,
         struct timeval timeo)
 {
 
@@ -1028,11 +1028,11 @@ disco:
 enum clnt_stat
 h_clnt_call(
         h_clnt *hcp,
-        u_long proc,
+        unsigned long proc,
         xdrproc_t xargs,
-        caddr_t argsp,
+        void* argsp,
         xdrproc_t xres,
-        caddr_t resp,
+        void* resp,
         unsigned int timeout)
 {
         remote_state state, sav;
@@ -1167,8 +1167,8 @@ remote_state
 h_xprt_turn(h_clnt *hcp,
         const char *remote,
         SVCXPRT *xprt,
-        u_int sendsz,
-        u_int recvsz)
+        unsigned int sendsz,
+        unsigned int recvsz)
 {
         int sock;
         CLIENT *clnt = NULL;
@@ -1404,13 +1404,13 @@ flush_timeo :
 enum clnt_stat
 h_callrpc(
         char *remote,
-        u_long program,
-        u_long version,
-        u_long proc,
+        unsigned long program,
+        unsigned long version,
+        unsigned long proc,
         xdrproc_t xargs,
-        caddr_t argsp,
+        void* argsp,
         xdrproc_t xres,
-        caddr_t resp,
+        void* resp,
         unsigned int timeout /* N.B.: this call could take 2x timeout */
 )
 {

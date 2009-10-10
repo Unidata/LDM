@@ -21,7 +21,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#if defined(_AIX) && !defined(NO_WAITPID)
+#if defined(_AIX) && defined(HAVE_WAITPID)
 /*
  * Use POSIX wait macros, not _BSD
  */
@@ -615,7 +615,7 @@ unio_sync(fl_entry *entry, int block)
                 entry->handle.fd, block ? "" : "non-block"); 
         if(block)
         {
-#ifndef NO_FSYNC
+#ifdef HAVE_FSYNC
                 if(entry->handle.fd != -1)
                         status = fsync(entry->handle.fd); 
                 if(status == -1)
@@ -1614,7 +1614,7 @@ spipe_prodput(const product *prod, int argc, char **argv,
         int status = ENOERR;
 
         typedef union {
-                unsigned long u_long;
+                unsigned long ulong;
                 char cu_long[sizeof(unsigned long)];
         } conv;
         conv key_len;
@@ -1660,9 +1660,9 @@ spipe_prodput(const product *prod, int argc, char **argv,
 #define SPIPE_RS '\036'
 #endif /* !SPIPE_ETX */
 
-        key_len.u_long = strlen(prod->info.ident);
-        data_len.u_long = prod->info.sz + 2;
-        sync.u_long = SPIPE_SYNC;
+        key_len.ulong = strlen(prod->info.ident);
+        data_len.ulong = prod->info.sz + 2;
+        sync.ulong = SPIPE_SYNC;
 
         len = (unsigned ) (sizeof(unsigned long) +
           sizeof(key_len.cu_long) + strlen(prod->info.ident) +
@@ -1682,8 +1682,8 @@ spipe_prodput(const product *prod, int argc, char **argv,
         memcpy(buffer+offset, key_len.cu_long, sizeof(key_len.cu_long));
         offset = offset + sizeof(key_len);
 
-        memcpy(buffer+offset, prod->info.ident, (size_t)key_len.u_long);
-        offset = offset + key_len.u_long;
+        memcpy(buffer+offset, prod->info.ident, (size_t)key_len.ulong);
+        offset = offset + key_len.ulong;
 
         memcpy(buffer+offset, data_len.cu_long, sizeof(data_len.cu_long));
         offset = offset + sizeof(data_len);

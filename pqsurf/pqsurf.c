@@ -285,7 +285,7 @@ reap_act(int options)
         if (act_pid != 0) {
             int status = 0;
 
-#ifndef NO_WAITPID
+#ifdef HAVE_WAITPID
             wpid = waitpid(act_pid, &status, options);
 #else
             if(options == 0)
@@ -307,7 +307,7 @@ reap_act(int options)
             {
                     /* tag_pid_entry(wpid); */
 
-#ifndef NO_WAITPID
+#ifdef HAVE_WAITPID
                     if(WIFSTOPPED(status))
                     {
                             unotice("child %d stopped by signal %d",

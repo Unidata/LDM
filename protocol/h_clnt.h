@@ -143,11 +143,11 @@ extern h_clnt *new_h_clnt(
 
 extern enum clnt_stat h_clnt_call(
 	h_clnt *hcp,
-	u_long proc,
+	unsigned long proc,
 	xdrproc_t xargs,
-	caddr_t argsp,
+	void* argsp,
 	xdrproc_t xres,
-	caddr_t resp,
+	void* resp,
 	unsigned int timeout );
 
 extern h_clnt *open_h_clnt(
@@ -161,8 +161,8 @@ extern remote_state
 h_xprt_turn(h_clnt *hcp,
 	const char *remote,
 	SVCXPRT *xprt,
-	u_int sendsz,
-	u_int recvsz);
+	unsigned int sendsz,
+	unsigned int recvsz);
 
 extern int
 h_clnt_flush(
@@ -174,13 +174,13 @@ h_clnt_flush(
 enum clnt_stat
 h_callrpc(
 	char *remote,
-	u_long program,
-	u_long version,
-	u_long proc,
+	unsigned long program,
+	unsigned long version,
+	unsigned long proc,
 	xdrproc_t xargs,
-	caddr_t argsp,
+	void* argsp,
 	xdrproc_t xres,
-	caddr_t resp,
+	void* resp,
 	unsigned int timeout);
 
 #ifdef __cplusplus

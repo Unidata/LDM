@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)xdr_array.c 1.10 87/08/11 Copyr 1984 Sun Micro";
  * arrays.  See xdr.h for more info on the interface to xdr.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <limits.h>
 #include <stdio.h>

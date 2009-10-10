@@ -37,7 +37,7 @@
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
-#ifndef NO_WAITPID
+#ifdef HAVE_WAITPID
 #    include <sys/wait.h>
 #endif
 #include "ulog.h"
@@ -50,7 +50,7 @@
 #    define va_start(list, arg) list = (char *)&arg + sizeof(arg)
 #endif
 
-#if defined(NO_STRERROR) && !defined(lint) /* recividist unie */
+#if !defined(HAVE_STRERROR) && !defined(lint) /* recividist unie */
     char *
     strerror(errnum)
     int errnum;
@@ -64,7 +64,7 @@
     }
 #elif defined(sun) /* Sun OS 4.x */
     extern char *strerror(/* int */);
-#endif /* NO_STRERROR */
+#endif
 
 
 #if (LOG_NFACILITIES > 0)

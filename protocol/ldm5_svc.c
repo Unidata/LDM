@@ -100,7 +100,7 @@ ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp)
 
         udebug("%s:%d: %s", __FILE__, __LINE__, procName);
         (void) memset((void *)&argument, 0, sizeof (argument));
-        if (!svc_getargs(transp, xdr_argument, (caddr_t) &argument)) {
+        if (!svc_getargs(transp, xdr_argument, (void*) &argument)) {
                 unotice("%s:%d: %s: Couldn't decode RPC-request arguments", 
                         __FILE__, __LINE__, procName);
                 svcerr_decode(transp);
@@ -112,7 +112,7 @@ ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp)
                         __FILE__, __LINE__, procName);
                 svcerr_systemerr(transp);
         }
-        if (!svc_freeargs(transp, xdr_argument, (caddr_t) &argument)) {
+        if (!svc_freeargs(transp, xdr_argument, (void*) &argument)) {
                 uerror("unable to free arguments");
                 exit(1);
         }

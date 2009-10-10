@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)svc_auth_unix.c 1.28 88/02/08 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <stdio.h>
 #include <strings.h>

@@ -14,8 +14,8 @@
 #include <stdlib.h>
 #include <rpc/rpc.h>
 #include <signal.h>
-#ifndef NO_MMAP
-#include <sys/mman.h>
+#ifdef HAVE_MMAP
+    #include <sys/mman.h>
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -39,8 +39,8 @@
         /* N.B.: assumes hostname doesn't change during program execution :-) */
 static char             myname[HOSTNAMESIZE];
 static feedtypet        feedtype = EXP;
-#ifdef NO_MMAP
-static struct pqe_index pqeIndex;
+#ifndef HAVE_MMAP
+    static struct pqe_index pqeIndex;
 #endif
 
 
@@ -71,7 +71,7 @@ void
 cleanup(void)
 {
     if (pq) {
-#ifdef NO_MMAP
+#ifndef HAVE_MMAP
         if (!pqeIsNone(pqeIndex))
             (void)pqe_discard(pq, pqeIndex);
 #endif
@@ -109,7 +109,7 @@ signal_handler(
 static void
 set_sigactions(void)
 {
-#ifndef NO_POSIXSIGNALS
+#ifdef HAVE_SIGACTION
         struct sigaction sigact;
 
         sigemptyset(&sigact.sa_mask);
@@ -205,7 +205,7 @@ int main(
             exit_md5 = 6        /* couldn't initialize MD5 processing */
         } exitCode = exit_success;
 
-#ifdef NO_MMAP
+#ifndef HAVE_MMAP
         pqeIndex = PQE_NONE;
 #endif
         logfname = "-";
@@ -387,7 +387,7 @@ int main(
                         continue;
                 }
 
-#ifndef NO_MMAP
+#ifdef HAVE_MMAP
                 prod.data = mmap(0, prod.info.sz,
                         PROT_READ, MAP_PRIVATE, fd, 0);
                 if(prod.data == NULL)
@@ -449,7 +449,7 @@ int main(
                 }
 
                 (void) munmap(prod.data, prod.info.sz);
-#else /*!NO_MMAP*/
+#else /*HAVE_MMAP*/
                 status = 
                     signatureFromId
                         ? mm_md5(md5ctxp, prod.info.ident,
@@ -528,7 +528,7 @@ int main(
                     }
                 }                       /* "pqeIndex" region allocated */
 
-#endif /*!NO_MMAP*/
+#endif /*HAVE_MMAP*/
                 (void) close(fd);
         }                               /* input-file loop */
 

@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)xdr.c 1.35 87/08/12";
  * xdr.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -189,7 +189,7 @@ xdr_long(
 	register XDR *xdrs,
 	long *lp)
 {
-#if SIZEOF_LONG == SIZEOF_INT32
+#if SIZEOF_LONG == SIZEOF_INT32_T
 	if (xdrs->x_op == XDR_ENCODE)
 		return (XDR_PUTLONG(xdrs, (uint32_t*)lp));
 
@@ -236,7 +236,7 @@ xdr_u_long(
 	register XDR *xdrs,
 	unsigned long *ulp)
 {
-#if SIZEOF_LONG == SIZEOF_INT32
+#if SIZEOF_LONG == SIZEOF_INT32_T
 	if (xdrs->x_op == XDR_DECODE)
 		return (XDR_GETLONG(xdrs, (uint32_t *)ulp));
 	if (xdrs->x_op == XDR_ENCODE)

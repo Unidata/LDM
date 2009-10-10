@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)auth_none.c 1.19 87/08/11 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc. 
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <stdlib.h>
 #include "types.h"

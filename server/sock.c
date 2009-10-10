@@ -11,7 +11,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#define PORTMAP
 #include <rpc/rpc.h>
 
 int main()

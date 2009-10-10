@@ -27,8 +27,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#ifndef NO_WAITPID
-#include <sys/wait.h>
+#ifdef HAVE_WAITPID
+    #include <sys/wait.h>
 #endif 
 
 #include "paths.h"
@@ -36,9 +36,9 @@
 #include "ldm4.h"
 #include "ulog.h"
 #include "pq.h"
-#ifdef NO_SETENV
-#include "setenv.h"
-#endif /* NO_SETENV */
+#ifndef HAVE_SETENV
+    #include "setenv.h"
+#endif
 #include "priv.h"
 #include "abbr.h"
 #include "acl.h"
@@ -69,7 +69,7 @@ reap(pid_t pid, int options)
         pid_t wpid = 0;
         int status = 0;
 
-#ifndef NO_WAITPID
+#ifdef HAVE_WAITPID
         wpid = waitpid(pid, &status, options);
 #else
         if(options == 0) {
@@ -985,7 +985,7 @@ main(
     (void) openulog(ubasename(av[0]),
         (LOG_CONS|LOG_PID), LOG_LDM, logfname);
     unotice("Starting Up (version: %s; built: %s %s)", 
-        ldm_version, __DATE__, __TIME__);
+        PACKAGE_VERSION, __DATE__, __TIME__);
 
     /*
      * register exit handler

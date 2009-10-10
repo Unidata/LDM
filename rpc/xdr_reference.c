@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)xdr_reference.c 1.11 87/08/11 SMI";
  * "pointers".  See xdr.h for more info on the interface to xdr.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <netinet/in.h>
 #include <stdio.h>

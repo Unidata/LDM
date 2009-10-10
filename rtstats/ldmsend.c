@@ -8,11 +8,7 @@
  * ldm client to ship files
  */
 
-#ifdef PORTMAP
-/* SVR4 tirpc, but this prog doesn't use the old interfaces */
-#undef PORTMAP
 #define TIRPC
-#endif
 #include <ldmconfig.h>
 
 #include "ldm.h"
@@ -391,10 +387,11 @@ ldmsend(
     prod_class_t* test_clssp = clssp;
 
     /* ldmproduct "filename" length = 255
-     * assert that sprintf(filename,"rtstats-%s/%s/%s/%s\0",ldm_version,
+     * assert that
+     * sprintf(filename,"rtstats-%s/%s/%s/%s\0",PACKAGE_VERSION,
      * origin,feedid,prodo); will fit into allocated space.
      */
-    assert ( ( strlen(ldm_version) + 2 * HOSTNAMESIZE + 80 + 9 ) < 255 );
+    assert ( ( strlen(PACKAGE_VERSION) + 2 * HOSTNAMESIZE + 80 + 9 ) < 255 );
 
     /*
      * time_insert time_arrive myname feedid product_origin
@@ -444,7 +441,7 @@ ldmsend(
 
             info.seqno = *seq_start;
 
-            sprintf(filename,"rtstats-%s/%s/%s/%s\0",ldm_version,origin,
+            sprintf(filename,"rtstats-%s/%s/%s/%s\0",PACKAGE_VERSION,origin,
                 feedid,prodo);
             info.ident = filename;
             /*

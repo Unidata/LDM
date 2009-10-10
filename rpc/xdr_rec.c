@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)xdr_rec.c 1.21 87/08/11 Copyr 1984 Sun Micro";
  * The other 31 bits encode the byte length of the fragment.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <arpa/inet.h>	/* htonl(), ntohl() */
 #include <inttypes.h>	/* uint32_t, uintptr_t */

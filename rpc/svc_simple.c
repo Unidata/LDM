@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)svc_simple.c 1.18 87/08/11 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <netdb.h>
 #include <stdio.h>

@@ -29,7 +29,7 @@ extern void
 free_prod_class(prod_class_t *clssp);
 
 extern prod_class_t *
-new_prod_class(u_int psa_len);
+new_prod_class(unsigned int psa_len);
 
 int spec_eq(prod_spec *left, prod_spec *rght);
 

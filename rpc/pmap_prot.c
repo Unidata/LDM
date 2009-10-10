@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)pmap_prot.c 1.17 87/08/11 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <netinet/in.h>
 #include "types.h"

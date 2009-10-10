@@ -11,9 +11,9 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef NO_MMAP
-#include <sys/mman.h>
-#endif /*!NO_MMAP*/
+#ifdef HAVE_MMAP
+    #include <sys/mman.h>
+#endif
 #include <unistd.h> /* sysconf */
 #include <limits.h>
 #include <assert.h>

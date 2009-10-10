@@ -25,9 +25,9 @@
 #include "ulog.h"
 #include "pq.h"
 #include "paths.h"
-#ifdef NO_SETENV
-#include "setenv.h"
-#endif /* NO_SETENV */
+#ifndef HAVE_SETENV
+    #include "setenv.h"
+#endif
 #include "RegularExpressions.h"
 
 #ifdef NO_ATEXIT

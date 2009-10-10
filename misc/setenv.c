@@ -1,5 +1,3 @@
-#include <ldmconfig.h>
-#ifdef NO_SETENV
 /*
  * Copyright (c) 1987 Regents of the University of California.
  * All rights reserved.
@@ -32,6 +30,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include <ldmconfig.h>
+#ifndef HAVE_SETENV
 
 #include <string.h>
 #include <stdlib.h>

@@ -149,7 +149,7 @@ ldmsend_statsbin(statsbin *sb)
                 sb->latency_sum/(sb->nprods == 0 ? 1: sb->nprods),
                 sb->max_latency,
                 s_time_abrv(sb->slowest_at),
-                ldm_version
+                PACKAGE_VERSION
         );
         status = ldmsend_main(stats_data);
         if ( status == 0 ) sb->needswrite = 0;

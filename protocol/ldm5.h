@@ -19,11 +19,6 @@ extern "C" {
 #include "timestamp.h"
 
 /*
- * The identifier string for this version of the LDM.
- */
-extern const char* ldm_version;  /* defined in ../ldm_version.c */
-
-/*
  * these define the range of "transient program numbers"
  */
 #define TRANSIENT_BEGIN 0x40000000 
@@ -250,7 +245,7 @@ extern const char* ldm_version;  /* defined in ../ldm_version.c */
  */
 #define	ANY 0xffffffff
 
-typedef u_int feedtypet;
+typedef unsigned int feedtypet;
 
 /*
  * max length of a network hostname, aka MAXHOSTNAMELEN
@@ -263,8 +258,8 @@ typedef u_int feedtypet;
 
 struct ldm_addr_rpc {
 	char *hostname;
-	u_long prog;
-	u_long vers;
+	unsigned long prog;
+	unsigned long vers;
 };
 typedef struct ldm_addr_rpc ldm_addr_rpc;
 
@@ -274,8 +269,8 @@ typedef struct ldm_addr_rpc ldm_addr_rpc;
 
 struct ldm_addr_ip {
 	int protocol;
-	u_short port;
-	u_long addr;
+	unsigned short port;
+	unsigned long addr;
 };
 typedef struct ldm_addr_ip ldm_addr_ip;
 
@@ -345,7 +340,7 @@ struct prod_class {
 	timestampt from;
 	timestampt to;
 	struct {
-		u_int psa_len;
+		unsigned int psa_len;
 		prod_spec *psa_val;
 	} psa;
 };
@@ -358,7 +353,7 @@ typedef struct prod_class prod_class_t;
 
 struct FeedArg {
 	prod_class_t prodClass;
-	u_int threshold;
+	unsigned int threshold;
 };
 typedef struct FeedArg FeedArg;
 
@@ -373,9 +368,9 @@ struct prod_info {
 	signaturet signature;
 	char *origin;
 	feedtypet feedtype;
-	u_int seqno;
+	unsigned int seqno;
 	keyt ident;
-	u_int sz;
+	unsigned int sz;
 };
 typedef struct prod_info prod_info;
 
@@ -388,7 +383,7 @@ typedef struct prod_info prod_info;
 #define	DBUFMAX 16384
 
 typedef struct {
-	u_int dbuf_len;
+	unsigned int dbuf_len;
 	char *dbuf_val;
 } dbuf;
 
@@ -398,7 +393,7 @@ typedef struct {
 
 struct comingsoon_args {
 	prod_info *infop;
-	u_int pktsz;
+	unsigned int pktsz;
 };
 typedef struct comingsoon_args comingsoon_args;
 
@@ -408,7 +403,7 @@ typedef struct comingsoon_args comingsoon_args;
  * Determined empirically to be 68.
  * Round it up to 72 (something divisible by 8 == sizeof(double).
  */
-#define DATAPKT_RPC_OVERHEAD ((u_int)72)
+#define DATAPKT_RPC_OVERHEAD ((unsigned int)72)
 /*
  * The size of the RPC receiving buffer.  Such a buffer is like a stdio
  * buffer: it doesn't limit the size of an entity, only the efficiency 
@@ -424,7 +419,7 @@ typedef struct comingsoon_args comingsoon_args;
 
 struct datapkt {
 	signaturet *signaturep;
-	u_int pktnum;
+	unsigned int pktnum;
 	dbuf data;
 };
 typedef struct datapkt datapkt;
@@ -436,7 +431,7 @@ typedef struct datapkt datapkt;
 
 struct datapktd {
 	signaturet *signaturep;
-	u_int pktnum;
+	unsigned int pktnum;
 };
 typedef struct datapktd datapktd;
 
@@ -506,7 +501,7 @@ extern  ldm_replyt * comingsoon_5_svc(comingsoon_args *, struct svc_req *);
 #define	BLKDATA	13
 extern  ldm_replyt * blkdata_5(datapkt *, CLIENT *);
 extern  ldm_replyt * blkdata_5_svc(datapkt *, struct svc_req *);
-extern int ldmprog_5_freeresult(SVCXPRT *, xdrproc_t, caddr_t);
+extern int ldmprog_5_freeresult(SVCXPRT *, xdrproc_t, void*);
 
 #else /* K&R C */
 #define	HEREIS	1

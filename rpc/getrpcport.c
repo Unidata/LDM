@@ -35,7 +35,7 @@ static  char sccsid[] = "@(#)getrpcport.c 1.3 87/08/11 SMI";
  * Copyright (c) 1985 by Sun Microsystems, Inc.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <stdio.h>
 #include <strings.h>

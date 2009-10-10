@@ -420,7 +420,7 @@ s_prod_class(char *buf,
         bufsize -= (size_t)conv;
 
         {
-        const u_int last = clssp->psa.psa_len;
+        const unsigned int last = clssp->psa.psa_len;
         for(ii = 0; bufsize > 0 && ii < last; /* incr below */)
         {
                 conv = sprint_prod_spec(&buf[len], bufsize,

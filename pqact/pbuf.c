@@ -17,10 +17,10 @@
 #include "error.h"
 #include "fdnb.h"
 
-#ifdef NO_MEMMOVE
-/* define memmove in terms of bcopy - recividist */
-#define memmove(d1, d2, n) bcopy((d2), (d1), (n))
-#endif /* NO_MEMMOVE */
+#ifndef HAVE_MEMMOVE
+    /* define memmove in terms of bcopy - recividist */
+    #define memmove(d1, d2, n) bcopy((d2), (d1), (n))
+#endif
 
 #define INSTRUMENT
 

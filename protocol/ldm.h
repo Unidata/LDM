@@ -25,11 +25,6 @@ extern "C" {
 #define LDM_H
 
 /*
- * The identifier string for this version of the LDM.
- */
-extern const char* ldm_version; /* defined in ../ldm_version.c */
-
-/*
  * these define the range of "transient program numbers"
  */
 #define TRANSIENT_BEGIN 0x40000000
@@ -304,7 +299,7 @@ typedef struct ldm_addr_ip ldm_addr_ip;
 enum ldm_addrt {
 	LDM_ADDR_NONE = 0,
 	LDM_ADDR_RPC = 1,
-	LDM_ADDR_IP = 2
+	LDM_ADDR_IP = 2,
 };
 typedef enum ldm_addrt ldm_addrt;
 
@@ -414,7 +409,7 @@ typedef struct prod_info prod_info;
 #define DBUFMAX 16384
 
 struct dbuf {
- u_int dbuf_len;
+ unsigned int dbuf_len;
  char *dbuf_val;
 };
 typedef struct dbuf dbuf;
@@ -435,7 +430,7 @@ typedef struct comingsoon_args comingsoon_args;
  * Determined empirically to be 68.
  * Round it up to 72 (something divisible by 8 == sizeof(double).
  */
-#define DATAPKT_RPC_OVERHEAD ((u_int)72)
+#define DATAPKT_RPC_OVERHEAD ((unsigned int)72)
 /*
  * The size of the RPC receiving buffer.  Such a buffer is like a stdio
  * buffer: it doesn't limit the size of an entity, only the efficiency 
@@ -479,7 +474,7 @@ enum ldm_errt {
 	RESEND = 4,
 	RESTART = 5,
 	REDIRECT = 6,
-	RECLASS = 7
+	RECLASS = 7,
 };
 typedef enum ldm_errt ldm_errt;
 
@@ -552,7 +547,7 @@ comingsoon_reply_t *comingsoon_6_svc(
  comingsoon_args *comingPar, struct svc_req *rqstp);
 void *blkdata_6_svc(datapkt *argp, struct svc_req *rqstp);
 int ldmprog_6_freeresult(
- SVCXPRT *transp, xdrproc_t xdr_result, caddr_t result);
+ SVCXPRT *transp, xdrproc_t xdr_result, void* result);
 
 #endif
 

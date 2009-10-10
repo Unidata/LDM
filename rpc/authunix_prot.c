@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)authunix_prot.c 1.15 87/08/11 Copyr 1984 Sun Micro";
  */
 
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include "types.h"
 #include "xdr.h"

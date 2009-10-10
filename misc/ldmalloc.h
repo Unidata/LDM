@@ -2,7 +2,7 @@
 #ifndef _ALLOC_H_
 #define _ALLOC_H_
 
-#ifndef NO_STDLIB_H
+#ifdef HAVE_STDLIB_H
 /* assume __STDC__ */
 
 #include <stdlib.h>
@@ -17,7 +17,7 @@ extern char *realloc();
 #define NULL  0
 #endif /* !NULL */
 
-#endif /* !NO_STDLIB_H */
+#endif /* HAVE_STDLIB_H */
 
 
 #define Alloc(theNum, theType) \

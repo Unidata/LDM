@@ -36,7 +36,7 @@ static  char sccsid[] = "@(#)getrpcent.c 1.9 87/08/11  Copyr 1984 Sun Micro";
  * Copyright (c) 1985 by Sun Microsystems, Inc.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include "rpc.h"	/* prototypes? struct rpcent? */
 

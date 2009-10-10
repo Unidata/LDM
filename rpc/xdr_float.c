@@ -41,14 +41,14 @@ static char sccsid[] = "@(#)xdr_float.c 1.12 87/08/11 Copyr 1984 Sun Micro";
  * xdr.
  */
 
-#include "config.h"
+#include "ldmconfig.h"
 
 #include <stdio.h>
 
 #include "types.h"
 #include "xdr.h"
 
-#if SIZEOF_FLOAT != SIZEOF_INT32
+#if SIZEOF_FLOAT != SIZEOF_INT32_T
 #    error A "float" is not 32-bits wide.  xdr_float() cannot be compiled.
 #endif
 
@@ -157,7 +157,7 @@ xdr_float(
  * This routine works on Suns (Sky / 68000's) and Vaxen.
  */
 
-#if SIZEOF_DOUBLE != SIZEOF_INT64
+#if SIZEOF_DOUBLE != SIZEOF_INT64_T
 #    error A "double" is not 64-bits wide.  xdr_double() cannot be compiled.
 #endif
 

@@ -1,3 +1,13 @@
+.deps
+*.loT
+ldmconfig.h
+*~
+feedme/feedme
+ldmping/ldmping
+autom4te.cache
+.libs
+configure
+Makefile
 config.status
 *.gz
 ldm_version.*
@@ -5,3 +15,9 @@ ldm_version.*
 macros.make
 *.o
 *.swp
+.dirstamp
+config.guess config.sub
+*.la
+stamp-h1
+config.guess
+config.sub

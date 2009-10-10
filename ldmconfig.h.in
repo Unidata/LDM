@@ -1,0 +1,281 @@
+/* ldmconfig.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define if building universal (internal helper macro) */
+#undef AC_APPLE_UNIVERSAL_BUILD
+
+/* Define if on a BSD system */
+#undef BSD
+
+/* Define to obtain optional system API */
+#undef BSD_SOURCE
+
+/* Define to obtain optional system API */
+#undef BSD_TYPES
+
+/* Define to concatenate DBFILE products with same key */
+#undef DB_CONCAT
+
+/* Define to DBFILE entire data-product and not just data */
+#undef DB_XPROD
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the `dnl' function. */
+#undef HAVE_DNL
+
+/* Define to 1 if you have the `fsync' function. */
+#undef HAVE_FSYNC
+
+/* Define to 1 if you have the `ftruncate' function. */
+#undef HAVE_FTRUNCATE
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `memcmp' function. */
+#undef HAVE_MEMCMP
+
+/* Define to 1 if you have the `memmove' function. */
+#undef HAVE_MEMMOVE
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the `mmap' function. */
+#undef HAVE_MMAP
+
+/* Define to 1 if you have the `rename' function. */
+#undef HAVE_RENAME
+
+/* Define to 1 if you have the `setenv' function. */
+#undef HAVE_SETENV
+
+/* Define to 1 if you have the `seteuid' function. */
+#undef HAVE_SETEUID
+
+/* Define to 1 if you have the `sigaction' function. */
+#undef HAVE_SIGACTION
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the `strdup' function. */
+#undef HAVE_STRDUP
+
+/* Define to 1 if you have the `strerror' function. */
+#undef HAVE_STRERROR
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the <stropts.h> header file. */
+#undef HAVE_STROPTS_H
+
+/* Define to 1 if `st_blksize' is member of `struct stat'. */
+#undef HAVE_STRUCT_STAT_ST_BLKSIZE
+
+/* Define to 1 if your `struct stat' has `st_blksize'. Deprecated, use
+   `HAVE_STRUCT_STAT_ST_BLKSIZE' instead. */
+#undef HAVE_ST_BLKSIZE
+
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+#undef HAVE_SYS_IOCTL_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the `timegm' function. */
+#undef HAVE_TIMEGM
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the `waitpid' function. */
+#undef HAVE_WAITPID
+
+/* Define to obtain optional system API */
+#undef HPUX_SOURCE
+
+/* use IEEE double-precision in XDR layer */
+#undef IEEE_DOUBLE
+
+/* use IEEE floating-point in XDR layer */
+#undef IEEE_FLOAT
+
+/* Top-level install-point */
+#undef LDMHOME
+
+/* Port on which LDM server listens */
+#undef LDM_PORT
+
+/* RPC program-number of LDM server */
+#undef LDM_PROG
+
+/* Define if the canonical log file is a socket */
+#undef LOGNAME_ISSOCK
+
+/* Default LDM logging facility [LOG_LOCAL0] */
+#undef LOG_LDM
+
+/* Disables the DBFILE capability */
+#undef NO_DB
+
+/* Define to 1 if your C compiler doesn't accept -c and -o together. */
+#undef NO_MINUS_C_MINUS_O
+
+/* Causes syslog(3) to not be defined in the ulog(3) module */
+#undef NO_REPLACE_SYSLOG
+
+/* Define to obtain optional system API */
+#undef OSF_SOURCE
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Time limit for resolving hostname */
+#undef RESOLVER_TIME_THRESHOLD
+
+/* Define to obtain optional system API */
+#undef SGI_SOURCE
+
+/* The size of `double', as computed by sizeof. */
+#undef SIZEOF_DOUBLE
+
+/* size of an enum */
+#undef SIZEOF_ENUM
+
+/* The size of `float', as computed by sizeof. */
+#undef SIZEOF_FLOAT
+
+/* size of a gid_t */
+#undef SIZEOF_GID_T
+
+/* The size of `int', as computed by sizeof. */
+#undef SIZEOF_INT
+
+/* The size of `int32_t', as computed by sizeof. */
+#undef SIZEOF_INT32_T
+
+/* The size of `int64_t', as computed by sizeof. */
+#undef SIZEOF_INT64_T
+
+/* The size of `long', as computed by sizeof. */
+#undef SIZEOF_LONG
+
+/* The size of `short', as computed by sizeof. */
+#undef SIZEOF_SHORT
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* Pathname of system logging daemon PID file */
+#undef SYSLOG_PIDFILE
+
+/* Whether or not syslog(3) returns an int */
+#undef SYSLOG_RETURNS_INT
+
+/* Pathname of the system logging console */
+#undef ULOGNAME
+
+/* Use the gdbm(3) library instead of the ndbm(3) library */
+#undef USE_GDBM
+
+/* Version number of package */
+#undef VERSION
+
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
+   significant byte first (like Motorola and SPARC, unlike Intel). */
+#if defined AC_APPLE_UNIVERSAL_BUILD
+# if defined __BIG_ENDIAN__
+#  define WORDS_BIGENDIAN 1
+# endif
+#else
+# ifndef WORDS_BIGENDIAN
+#  undef WORDS_BIGENDIAN
+# endif
+#endif
+
+/* Define to obtain optional system API */
+#undef _ALL_SOURCE
+
+/* Define to obtain optional system API */
+#undef _DARWIN_C_SOURCE
+
+/* Define if the file /dev/conslog exists */
+#undef _DEV_CONSLOG
+
+/* Obtains optional system API */
+#undef _EXTENSIONS__
+
+/* Causes product-queue to memory-map by data-product */
+#undef _MAPRGNS
+
+/* Causes <sys/user.h> to not be included */
+#undef _SYS_USER_INCLUDED
+
+/* Defines level of POSIX compliance */
+#undef _XOPEN_SOURCE
+
+/* Obtains extended POSIX API */
+#undef _XOPEN_SOURCE_EXTENDED
+
+/* Obtains optional system API */
+#undef __DARWIN_UNIX03
+
+/* rpcgen(1) typedef */
+#undef caddr_t
+
+/* Define to empty if `const' does not conform to ANSI C. */
+#undef const
+
+/* Define to `long int' if <sys/types.h> does not define. */
+#undef off_t
+
+/* Define to `int' if <sys/types.h> does not define. */
+#undef ptrdiff_t
+
+/* Type of atomic signal-handler variable */
+#undef sig_atomic_t
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+#undef size_t
+
+/* Type of variable for holding socket-length data */
+#undef socklen_t
+
+/* Define to `int' if <sys/types.h> does not define. */
+#undef ssize_t
+
+/* rpcgen(1) typedef */
+#undef u_int
+
+/* rpcgen(1) typedef */
+#undef u_long
+
+/* rpcgen(1) typedef */
+#undef u_short

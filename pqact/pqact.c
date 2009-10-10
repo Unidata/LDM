@@ -20,8 +20,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <regex.h>
-#ifndef NO_WAITPID
-#include <sys/wait.h>
+#ifdef HAVE_WAITPID
+    #include <sys/wait.h>
 #endif 
 #include "ldm.h"
 #include "error.h"

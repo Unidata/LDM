@@ -23,11 +23,11 @@
  * unless the OS supports the "saved set-user-ID"
  * feature and has seteuid().
  */
-#if NO_SETEUID
-#define seteuid(uid) setuid(uid)
+#ifndef HAVE_SETEUID
+    #define seteuid(uid) setuid(uid)
 #else
-/* Is there a standard place where this is declared? missing on IRIX */
-extern int seteuid(uid_t euid);
+    /* Is there a standard place where this is declared? missing on IRIX */
+    extern int seteuid(uid_t euid);
 #endif
 
 #define UID_NONE ((uid_t)-1)
@@ -96,7 +96,7 @@ rootpriv(void)
 void
 unpriv(void)
 {
-#ifndef NO_SETEUID
+#ifdef HAVE_SETEUID
         if(sav_uid != UID_NONE && sav_uid != 0)
         {
                 (void) seteuid(sav_uid);

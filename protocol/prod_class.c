@@ -248,7 +248,7 @@ free_prod_class(prod_class_t *clssp)
 
 
 prod_class_t *
-new_prod_class(u_int psa_len)
+new_prod_class(unsigned int psa_len)
 {
         prod_class_t *clssp;
         size_t sz = sizeof(prod_class_t) + psa_len * sizeof(prod_spec);   
@@ -469,7 +469,7 @@ clss_intersect(const prod_class_t *filt, const prod_class_t *want,
 
         if(filt->psa.psa_val[0].feedtype != ANY)
         {
-                u_int ii, jj;
+                unsigned int ii, jj;
                 feedtypet fi;
                 for(ii = 0; ii < is->psa.psa_len; ii++)
                 {
@@ -498,7 +498,7 @@ unwind_alloc:
 void
 clss_regcomp(prod_class_t *clssp)
 {
-        u_int ii;
+        unsigned int ii;
         if(clssp == NULL 
                         || clssp->psa.psa_val == NULL
                         || clssp->psa.psa_len == 0)
@@ -516,7 +516,7 @@ clss_regcomp(prod_class_t *clssp)
 feedtypet
 clss_feedtypeU(const prod_class_t *clssp)
 {
-        u_int ii;
+        unsigned int ii;
         feedtypet feedtypeU = NONE;
         
         if(clssp != NULL && clssp->psa.psa_val != NULL)
