@@ -47,6 +47,9 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
-install-data-local:	$(sysconfdir)/pqact.conf
-$(sysconfdir)/pqact.conf:
-	cp pqact.conf $@
+install-data-local:	\
+    $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/pqact.conf
+$(DESTDIR)$(sysconfdir):
+	$(MKDIR_P) $@
+$(DESTDIR)$(sysconfdir)/pqact.conf:
+	$(INSTALL_DATA) $(srcdir)/pqact.conf $@

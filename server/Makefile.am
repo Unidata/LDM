@@ -116,8 +116,14 @@ scanner.c:	scanner.l
 	mv lex.yy.c scanner.c
 
 install-exec-hook:
-	-cd $(mandir)/man1 && ln -s ldmd.1 rpc.ldmd.1
+	-cd $(DESTDIR)$(mandir)/man1 && ln -s ldmd.1 rpc.ldmd.1
 
-install-data-local:	$(sysconfdir)/ldmd.conf
-$(sysconfdir)/ldmd.conf:
-	cp ldmd.conf $@
+install-data-local:	\
+    $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/ldmd.conf
+$(DESTDIR)$(sysconfdir):
+	$(MKDIR_P) $@
+$(DESTDIR)$(sysconfdir)/ldmd.conf:
+	$(INSTALL_DATA) $(srcdir)/ldmd.conf $@
+
+uninstall-local:
+	rm -f $(DESTDIR)$(mandir)/man1/rpc.ldmd.1

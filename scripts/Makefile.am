@@ -24,7 +24,7 @@ dist_bin_SCRIPTS	= \
 dist_man1_MANS		= ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1
 
 install-exec-hook:
-	confFile=$(sysconfdir)/ldmadmin-pl.conf; \
+	confFile=$(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf; \
 	if [ -f "$$confFile" ]; then \
 	    if cp $$confFile $$confFile.old; then \
 		: true; \
@@ -48,6 +48,9 @@ install-exec-hook:
 	    exit 1; \
 	fi
 
-install-data-local:	$(sysconfdir)/netcheck.conf
-$(sysconfdir)/netcheck.conf:
-	cp netcheck.conf $@
+install-data-local:	\
+    $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/netcheck.conf
+$(DESTDIR)$(sysconfdir):
+	$(MKDIR_P) $@
+$(DESTDIR)$(sysconfdir)/netcheck.conf:
+	$(INSTALL_DATA) $(srcdir)/netcheck.conf $@

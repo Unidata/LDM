@@ -21,3 +21,9 @@ config.guess config.sub
 stamp-h1
 config.guess
 config.sub
+bin
+doc
+etc
+lib
+include
+man

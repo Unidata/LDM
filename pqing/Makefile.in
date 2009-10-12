@@ -665,7 +665,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-man
+uninstall-am: uninstall-binPROGRAMS uninstall-local uninstall-man
 
 uninstall-man: uninstall-man1
 
@@ -684,8 +684,8 @@ uninstall-man: uninstall-man1
 	installdirs maintainer-clean maintainer-clean-generic \
 	mostlyclean mostlyclean-compile mostlyclean-generic \
 	mostlyclean-libtool pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-man \
-	uninstall-man1
+	uninstall-am uninstall-binPROGRAMS uninstall-local \
+	uninstall-man uninstall-man1
 
 
 do_check.o:	do.c
@@ -694,14 +694,25 @@ do_nocheck.o:	do.c
 	$(COMPILE) -USCAN_CHECK -c $(srcdir)/do.c && mv do.o $@;
 
 install-exec-hook:
-	cd $(DESTDIR)$(bindir) ; rm -f dds ; ln -s $(bin_PROGRAMS) dds
-	cd $(DESTDIR)$(bindir) ; rm -f pps ; ln -s $(bin_PROGRAMS) pps
-	cd $(DESTDIR)$(bindir) ; rm -f ids ; ln -s $(bin_PROGRAMS) ids
-	cd $(DESTDIR)$(bindir) ; rm -f hds ; ln -s $(bin_PROGRAMS) hds
-	cd $(DESTDIR)$(bindir) ; rm -f hrs ; ln -s $(bin_PROGRAMS) hrs
-	cd $(DESTDIR)$(bindir) ; rm -f ddplus ; ln -s $(bin_PROGRAMS) ddplus
-	cd $(DESTDIR)$(bindir) ; rm -f feedtest ; ln -s $(bin_PROGRAMS) feedtest
-	cd $(DESTDIR)$(bindir) ; rm -f afos ; ln -s $(bin_PROGRAMS) afos
+	cd $(DESTDIR)$(bindir) && rm -f dds && ln -s $(bin_PROGRAMS) dds
+	cd $(DESTDIR)$(bindir) && rm -f pps && ln -s $(bin_PROGRAMS) pps
+	cd $(DESTDIR)$(bindir) && rm -f ids && ln -s $(bin_PROGRAMS) ids
+	cd $(DESTDIR)$(bindir) && rm -f hds && ln -s $(bin_PROGRAMS) hds
+	cd $(DESTDIR)$(bindir) && rm -f hrs && ln -s $(bin_PROGRAMS) hrs
+	cd $(DESTDIR)$(bindir) && rm -f ddplus && ln -s $(bin_PROGRAMS) ddplus
+	cd $(DESTDIR)$(bindir) && rm -f feedtest && ln -s $(bin_PROGRAMS) \
+	    feedtest
+	cd $(DESTDIR)$(bindir) && rm -f afos && ln -s $(bin_PROGRAMS) afos
+
+uninstall-local:
+	rm -f $(DESTDIR)$(bindir)/dds
+	rm -f $(DESTDIR)$(bindir)/pps
+	rm -f $(DESTDIR)$(bindir)/ids
+	rm -f $(DESTDIR)$(bindir)/hds
+	rm -f $(DESTDIR)$(bindir)/hrs
+	rm -f $(DESTDIR)$(bindir)/ddplus
+	rm -f $(DESTDIR)$(bindir)/feedtest
+	rm -f $(DESTDIR)$(bindir)/afos
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

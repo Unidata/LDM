@@ -115,7 +115,7 @@ CTAGS = ctags
 DIST_SUBDIRS = rpc ulog misc protocol pq fauxPq pqcreate pqcheck \
 	pqinsert pqcat pqexpire pqmon pqutil pqsend pqing pqact pqsurf \
 	ldmsend rtstats feedme notifyme server ldmping scripts scour \
-	regex doc
+	regex html
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -150,7 +150,6 @@ am__relativize = \
   reldir="$$dir2"
 DIST_ARCHIVES = $(distdir).tar.gz
 GZIP_ENV = --best
-distuninstallcheck_listfiles = find . -type f -print
 distcleancheck_listfiles = find . -type f -print
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -282,7 +281,6 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-DISTCHECK_CONFIGURE_FLAGS = --enable-ldmhome=$(prefix)
 include_HEADERS = ldmconfig.h
 @WANT_FAUX_PQ_FALSE@PQ_DIR = pq
 @WANT_FAUX_PQ_TRUE@PQ_DIR = fauxPq
@@ -312,7 +310,7 @@ SUBDIRS = \
     scripts \
     scour \
     regex \
-    doc
+    html
 
 lib_LTLIBRARIES = libldm.la
 libldm_la_SOURCES = 
@@ -333,6 +331,7 @@ EXTRA_DIST = \
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 DISTCLEANFILES = *.log $(distArchive)
+distuninstallcheck_listfiles = find . -type f -print | grep -v './etc/'
 all: ldmconfig.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -824,7 +823,8 @@ info: info-recursive
 info-am:
 
 install-data-am: install-includeHEADERS
-
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) install-data-hook
 install-dvi: install-dvi-recursive
 
 install-dvi-am:
@@ -873,7 +873,8 @@ ps-am:
 uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES
 
 .MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) all \
-	ctags-recursive install-am install-strip tags-recursive
+	ctags-recursive install-am install-data-am install-strip \
+	tags-recursive
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
 	all all-am am--refresh check check-am clean clean-generic \
@@ -883,267 +884,54 @@ uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES
 	distclean-generic distclean-hdr distclean-libtool \
 	distclean-tags distcleancheck distdir distuninstallcheck dvi \
 	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-includeHEADERS install-info install-info-am \
-	install-libLTLIBRARIES install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs installdirs-am maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-recursive uninstall uninstall-am \
+	install-data install-data-am install-data-hook install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-includeHEADERS install-info \
+	install-info-am install-libLTLIBRARIES install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags tags-recursive uninstall uninstall-am \
 	uninstall-includeHEADERS uninstall-libLTLIBRARIES
 
 
 all:
 
-#LIBRARY	= libldm.a
-#
-#INSTALL_TARGETS = \
-#	misc/install \
-#	protocol/install \
-#	$(pq_dir)/install \
-#	pqcheck/install \
-#	pqcreate/install \
-#	pqinsert/install \
-#	pqcat/install \
-#	pqexpire/install \
-#	pqmon/install \
-#	pqutil/install \
-#	pqsend/install \
-#	pqing/install \
-#	pqact/install \
-#	pqsurf/install \
-#	send/install \
-#	rtstats/install \
-#	feedme/install \
-#	notifyme/install \
-#	server/install \
-#	ldmping/install \
-#	scripts/install \
-#	scour/install \
-#	regex/install
-#
-#INSTALL_SETUIDS_TARGETS = \
-#	ulog/install_setuids \
-#	server/install_setuids
-#
-#CLEAN_TARGETS = \
-#	misc/clean \
-#	protocol/clean \
-#	pq/clean \
-#	fauxPq/clean \
-#	pqcheck/clean \
-#	pqcreate/clean \
-#	pqinsert/clean \
-#	pqcat/clean \
-#	pqexpire/clean \
-#	pqmon/clean \
-#	pqutil/clean \
-#	pqsend/clean \
-#	pqing/clean \
-#	pqact/clean \
-#	pqsurf/clean \
-#	send/clean \
-#	rtstats/clean \
-#	feedme/clean \
-#	notifyme/clean \
-#	server/clean \
-#	ldmping/clean \
-#	scripts/clean \
-#	scour/clean \
-#	regex/clean \
-#	rpc/clean
-#
-#DISTCLEAN_TARGETS = \
-#	misc/distclean \
-#	protocol/distclean \
-#	pq/distclean \
-#	fauxPq/distclean \
-#	pqcheck/distclean \
-#	pqcreate/distclean \
-#	pqinsert/distclean \
-#	pqcat/distclean \
-#	pqexpire/distclean \
-#	pqmon/distclean \
-#	pqutil/distclean \
-#	pqsend/distclean \
-#	pqing/distclean \
-#	pqact/distclean \
-#	pqsurf/distclean \
-#	send/distclean \
-#	rtstats/distclean \
-#	feedme/distclean \
-#	notifyme/distclean \
-#	server/distclean \
-#	ldmping/distclean \
-#	scripts/distclean \
-#	scour/distclean \
-#	regex/distclean \
-#	rpc/distclean
-#
-#SUBDIRS = rpc $(LIBSUBDIRS) $(PROGSUBDIRS) doc
-#
-#TAG_SRCS	= \
-#	ulog/*.h ulog/*.c \
-#	protocol/*.c protocol/*.h \
-#	server/*.c server/*.h \
-#	misc/*.c misc/*.h \
-#	pq/*.c pq/*.h
-#
-#PACKING_LIST = \
-#	ANNOUNCEMENT \
-#	configure \
-#	COPYRIGHT \
-#	CHANGE_LOG \
-#	macros.make.in \
-#	Makefile \
-#	MANIFEST \
-#	README \
-#	RELEASE_NOTES \
-#	rules.make \
-#	simple_program.make \
-#	VERSION
-#
-#all:		$(LIBRARY) rpc/all $(ALL_TARGETS)
-#
-#$(LIBRARY):	ldm_version.o
-#	$(AR) $(ARFLAGS) $(LIBRARY) ldm_version.o
-#	$(RANLIB) $(LIBRARY)
-#
-#ldm_version.o:	ldm_version.c
-#	$(CC) -c $(CPPFLAGS) $(CFLAGS) ldm_version.c
-#
-#test:		$(TEST_TARGETS)
-#
-#install:	$(LIBDIR)/$(LIBRARY) $(INSTALL_TARGETS) whatis
-#
-#whatis:		$(MANDIR)/$(WHATIS)
-#
-#$(MANDIR)/$(WHATIS):	$(MANDIR)
-#	@if test "$(MAKEWHATIS_CMD)"; then \
-#	    touch $@; \
-#	    eval $(MAKEWHATIS_CMD) || \
-#		echo 1>&2 "Couldn't build manual-page database"; \
-#	fi
-#
-#install_setuids:	$(INSTALL_SETUIDS_TARGETS)
-#
-#clean:		$(CLEAN_TARGETS)
-#	rm -f *.a *.o *.ln *.i $(LIBRARY) ldm_version.c
-#
-#distclean:	$(DISTCLEAN_TARGETS)
-#	rm -f *.a *.o *.ln *.i $(LIBRARY) ldm_version.c
-#	rm -f config.cache config.status *.log MANIFEST *.Z macros.make
-#
-#ldm_version.c: VERSION
-#	echo 'const char* ldm_version = "'`cat VERSION`'";' >$@
-#
-#$(ALL_TARGETS) \
-#$(TEST_TARGETS) \
-#$(INSTALL_TARGETS) \
-#$(INSTALL_SETUIDS_TARGETS) \
-#$(CLEAN_TARGETS) \
-#$(DISTCLEAN_TARGETS):
-#	@subdir=`echo $@ | sed 's,/.*,,'`; \
-#	target=`echo $@ | sed 's,.*/,,'`; \
-#	$(MAKE) $(MFLAGS) SUBDIR=$$subdir TGET=$$target subdir_target
-#
-#rpc/all:
-#	@echo ""
-#	@cd rpc && \
-#	    echo "Making \`all' in directory `pwd`" && \
-#	    echo "" && \
-#	    $(MAKE) all LIBRARY=../$(LIBRARY) || exit 1
-#	@echo ""
-#	@echo "Returning to directory `pwd`"
-#	@echo ""
-#
-#subdir_target:
-#	@echo ""
-#	@cd $(SUBDIR) && \
-#	    echo "Making \`$(TGET)' in directory `pwd`" && \
-#	    echo "" && \
-#	    $(MAKE) $(TGET) || exit 1
-#	@echo ""
-#	@echo "Returning to directory `pwd`"
-#	@echo ""
-#
-#$(LIBDIR)/$(LIBRARY) :	$(LIBDIR) FORCE
-#	-@cmp -s $(LIBRARY) $@ || (cp $(LIBRARY) $@ && \
-#	echo 'updated $@')
-#
-#$(LIBDIR):
-#	mkdir $@
-#
-#configure: configure.in aclocal.m4
-#	autoconf
-#
-#config.status: configure
-#	-@if [ -f "$@" ]; then \
-#		$(SHELL) config.status --recheck ; \
-#	else \
-#		echo 1>&1 "$@ must be created by the configure script"; \
-#		exit 1; \
-#	fi
-#
-#subdirs:
-#	@echo $(SUBDIRS)
-#
-#MANIFEST: Makefile FORCE
-#	@echo 1>&2 Creating MANIFEST
-#	@$(MAKE) -s $(LOCAL_MACROS) TOP_MANIFEST.echo | sort -o $@
-#
-#TOP_MANIFEST.echo:
-#	@echo $(PACKING_LIST) | fmt -1
-#	@if [ -n "$(SUBDIRS)" ]; then \
-#	    subdirs="$(SUBDIRS)"; \
-#	    for subdir in $$subdirs; do \
-#		(cd $$subdir && \
-#		echo 1>&2 Creating MANIFEST.echo in `pwd` && \
-#		$(MAKE) $(MFLAGS) $(SUBDIR_MACROS) MANIFEST.echo | \
-#		    sed "s|^|$$subdir/|") || exit 1; \
-#	    done; \
-#	else \
-#	    :; \
-#	fi
-#
-#commit-check:	FORCE
-#	if git status -a >/dev/null; then \
-#	    echo 1>&2 'Package needs "git commit -a"'; \
-#	    exit 1; \
-#	fi
-#
-#tag:	FORCE
-#	git tag -f v$(VERSION)
-#
-#tar.gz:	FORCE commit-check tag
-#	tag=v$(VERSION) \
-#	id=$(PACKAGE)-$(VERSION); \
-#	prefix=/tmp/$$id; \
-#	rm -rf $$prefix; \
-#	srcdir=$$prefix/src; \
-#	if git clone . $$srcdir >/dev/null; then \
-#	    rm -rf $$srcdir/.git; \
-#	    pax -x ustar -w -s ':/tmp/::' $$srcdir | gzip -c >$$id.$@; \
-#	    status=$$?; \
-#	    rm -rf $$prefix; \
-#	    exit $$status; \
-#	fi
-#
-#ftp:	FORCE commit-check tag tar.gz
-#	filename=$(PACKAGE)-$(VERSION).tar.gz \
-#	&& scp $$filename ftp:$(FTPDIR) \
-#	&& ssh ftp chmod u+rw,g+rw,o=r $(FTPDIR)/$$filename
-#
-#beta:	FORCE commit-check tag tar.gz
-#	filename=$(PACKAGE)-$(VERSION).tar.gz \
-#	&& scp $$filename ftp:$(FTPDIR)/beta \
-#	&& ssh ftp chmod u+rw,g+rw,o=r $(FTPDIR)/beta/$$filename
-#
-#FORCE:
-#
-#ldm_version.o:	ldm_version.c
+install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
+$(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
+	@if test "$(MAKEWHATIS_CMD)"; then \
+	    touch $@; \
+	    eval $(MAKEWHATIS_CMD) || \
+		echo 1>&2 "Couldn't build manual-page database"; \
+	fi
+
+install_setuids:
+	chown root $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} \
+	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} 
+
+commit-check:
+	if git status -a >/dev/null; then \
+	    echo 1>&2 'Package needs "git commit -a"'; \
+	    exit 1; \
+	fi
+
+tag:
+	git tag -f v$(VERSION)
+
+ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
+	filename=$(PACKAGE)-$(VERSION).tar.gz \
+	dest=ftp:/home/ftp/pub/ldm/$$filename \
+	&& scp $$filename $$dest \
+	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
+
+beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
+	filename=$(PACKAGE)-$(VERSION).tar.gz \
+	dest=ftp:/home/ftp/pub/ldm/beta/$$filename \
+	&& scp $$filename $$dest \
+	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
+
+.PHONY:		install_setuids commit-check tag ftp beta
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

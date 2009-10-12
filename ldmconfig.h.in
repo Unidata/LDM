@@ -112,7 +112,7 @@
 /* use IEEE floating-point in XDR layer */
 #undef IEEE_FLOAT
 
-/* Top-level install-point */
+/* Pathname of the home directory of the LDM user */
 #undef LDMHOME
 
 /* Port on which LDM server listens */

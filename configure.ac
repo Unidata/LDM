@@ -72,6 +72,8 @@ AC_ARG_ENABLE([ldmhome],
 	(default=$LDMHOME if set; otherwise $HOME))],
     [LDMHOME=$enableval])
 AC_SUBST([LDMHOME])
+AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
+    [Pathname of the home directory of the LDM user])
 
 AC_SUBST(PATH)
 
@@ -171,10 +173,12 @@ fi
 AC_SUBST(ARFLAGS)
 
 UD_CPPFLAGS
-UD_PREFIX(..)
+test -z "$prefix" -o "$prefix" = NONE && prefix=`pwd`
+#AM_COND_IF([MAINTAINER], [UD_PREFIX(..)], [UD_PREFIX(.)])
 datarootdir=$prefix
-sysconfdir=$LDMHOME/etc
 docdir=$prefix/doc
+AM_COND_IF([MAINTAINER], [LDMHOME=$prefix])
+sysconfdir=$LDMHOME/etc
 AC_REVISION ($Revision: 1.47.18.22 $)
 UD_DOMAINNAME
 UD_HPUX
@@ -188,7 +192,6 @@ UD_PROG_NETSTAT
 UD_PROG_TOP
 UD_LIB_YACC
 UD_MMAP
-UD_LDMHOME()
 AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
 AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])
 AC_CHECK_TYPE([u_long],,[AC_DEFINE([u_long], [unsigned long], [rpcgen(1) typedef])])
@@ -310,8 +313,8 @@ AC_CONFIG_FILES([
     scour/Makefile
     scour/scour
     regex/Makefile
-    doc/Makefile
-    doc/basics/Makefile
-    doc/tutorial/Makefile
+    html/Makefile
+    html/basics/Makefile
+    html/tutorial/Makefile
 ])
 AC_OUTPUT

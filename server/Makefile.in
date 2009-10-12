@@ -667,7 +667,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-man
+uninstall-am: uninstall-binPROGRAMS uninstall-local uninstall-man
 
 uninstall-man: uninstall-man1
 
@@ -686,7 +686,8 @@ uninstall-man: uninstall-man1
 	maintainer-clean maintainer-clean-generic mostlyclean \
 	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
 	pdf pdf-am ps ps-am tags uninstall uninstall-am \
-	uninstall-binPROGRAMS uninstall-man uninstall-man1
+	uninstall-binPROGRAMS uninstall-local uninstall-man \
+	uninstall-man1
 
 
 # Because both the client-side and server-side code that rpcgen(1) generates
@@ -737,11 +738,17 @@ scanner.c:	scanner.l
 	mv lex.yy.c scanner.c
 
 install-exec-hook:
-	-cd $(mandir)/man1 && ln -s ldmd.1 rpc.ldmd.1
+	-cd $(DESTDIR)$(mandir)/man1 && ln -s ldmd.1 rpc.ldmd.1
 
-install-data-local:	$(sysconfdir)/ldmd.conf
-$(sysconfdir)/ldmd.conf:
-	cp ldmd.conf $@
+install-data-local:	\
+    $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/ldmd.conf
+$(DESTDIR)$(sysconfdir):
+	$(MKDIR_P) $@
+$(DESTDIR)$(sysconfdir)/ldmd.conf:
+	$(INSTALL_DATA) $(srcdir)/ldmd.conf $@
+
+uninstall-local:
+	rm -f $(DESTDIR)$(mandir)/man1/rpc.ldmd.1
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

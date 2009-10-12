@@ -685,9 +685,12 @@ uninstall-man: uninstall-man1
 	uninstall-man1
 
 
-install-data-local:	$(sysconfdir)/pqact.conf
-$(sysconfdir)/pqact.conf:
-	cp pqact.conf $@
+install-data-local:	\
+    $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/pqact.conf
+$(DESTDIR)$(sysconfdir):
+	$(MKDIR_P) $@
+$(DESTDIR)$(sysconfdir)/pqact.conf:
+	$(INSTALL_DATA) $(srcdir)/pqact.conf $@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
