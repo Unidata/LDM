@@ -65,16 +65,6 @@ AC_ARG_ENABLE(max-size,
     max_size=$enableval,
     max_size=yes)
 
-test -z "$LDMHOME" && LDMHOME=$HOME
-AC_ARG_ENABLE([ldmhome],
-    [AC_HELP_STRING([--enable-ldmhome=dir],
-	use "dir" for the home directory of the LDM user
-	(default=$LDMHOME if set; otherwise $HOME))],
-    [LDMHOME=$enableval])
-AC_SUBST([LDMHOME])
-AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
-    [Pathname of the home directory of the LDM user])
-
 AC_SUBST(PATH)
 
 AC_PROG_CC(c89 cc gcc)
@@ -170,15 +160,25 @@ then
 	    AC_MSG_FAILURE($CC failed to compile test code))
     fi
 fi
-AC_SUBST(ARFLAGS)
 
-UD_CPPFLAGS
+AC_MSG_CHECKING([the installation prefix]);
 test -z "$prefix" -o "$prefix" = NONE && prefix=`pwd`
 #AM_COND_IF([MAINTAINER], [UD_PREFIX(..)], [UD_PREFIX(.)])
+AC_MSG_RESULT([$prefix])
 datarootdir=$prefix
 docdir=$prefix/doc
+
+AC_MSG_CHECKING([LDMHOME]);
+test -z "$LDMHOME" && LDMHOME=$HOME
+AC_SUBST([LDMHOME])
+AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
+    [Pathname of the home directory of the LDM user])
 AM_COND_IF([MAINTAINER], [LDMHOME=$prefix])
+AC_MSG_RESULT([$LDMHOME])
 sysconfdir=$LDMHOME/etc
+
+AC_SUBST(ARFLAGS)
+UD_CPPFLAGS
 AC_REVISION ($Revision: 1.47.18.22 $)
 UD_DOMAINNAME
 UD_HPUX

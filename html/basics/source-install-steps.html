@@ -87,9 +87,9 @@ Build and Install the Distribution</h2>
 
 <ol>
 
-<li><p>Go to the top-level source-directory of the just-unpacked package:
+<li><p>Go to the top-level directory of the just-unpacked package:
 <blockquote><pre>
-cd $HOME/$VDIR/src
+cd $HOME/$VDIR
 </pre></blockquote>
 </p></li>
 
@@ -491,9 +491,9 @@ mkdir data logs                      # create data and logging subdirectories
     <p>Execute the following commands:
 
 <blockquote><pre>
-cd                         # go to the LDM user's home-directory
-ln -s $VDIR runtime        # create the "runtime" symbolic-link
-ln -s runtime/* .          # create the individual links through "runtime"
+cd                                    # go to LDM user's home-directory
+ln -s $VDIR runtime                   # create "runtime" symbolic-link
+ln -s runtime/{bin,include,lib,man} . # create individual links through "runtime"
 </blockquote></pre>
 
     <p>The directory structure should now look something like this
@@ -509,7 +509,6 @@ ls -lF
 ... logs -> /var/data/ldm/logs/
 ... man -> runtime/man/
 ... runtime -> ldm-6.8.1/
-... src -> runtime/src/
 </blockquote></pre>
 
 
