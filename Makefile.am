@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+DISTCHECK_CONFIGURE_FLAGS	= --disable-include-install-setuids
 include_HEADERS			= ldmconfig.h
 
 if WANT_FAUX_PQ
@@ -65,6 +66,41 @@ distuninstallcheck_listfiles = find . -type f -print | grep -v './etc/'
 
 all:
 
+if INCLUDE_INSTALL_SETUIDS
+install-exec-hook:
+	@echo
+	@echo "\
+This next step will set the owner of the LDM server program and the \
+hupsyslog(1) program to \"root\" and enable the setuid bit for those \
+programs.  These actions are necessary for proper operation of the LDM \
+system.  If this step doesn't work (for example, if you don't know \
+root's password), then you or someone else will have to manually execute \
+the command \"make install_setuids\" as the root user." \
+	| fmt
+	@echo
+	su -c 'make install_setuids'
+	@if ls -l $(DESTDIR)$(bindir)/rpc.ldmd | grep -q root \
+	&& ls -l $(DESTDIR)$(bindir)/rpc.ldmd | grep -q rws \
+	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q root \
+	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q rws; then \
+	    : true; \
+	else \
+	    echo; \
+	    echo "\
+The owner of the LDM server program (bin/rpc.ldmd) or the hupsyslog(1) \
+program (bin/hupsyslog) is not \"root\" or either program does not have \
+the setuid bit enabled.  The command \"make install_setuids\" will have \
+to be executed manually by the root user." \
+	    | fmt; \
+	    echo; \
+	    exit 1; \
+	fi
+endif
+
+install_setuids:
+	chown root $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} \
+	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} 
+
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 	@if test "$(MAKEWHATIS_CMD)"; then \
@@ -72,10 +108,6 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 	    eval $(MAKEWHATIS_CMD) || \
 		echo 1>&2 "Couldn't build manual-page database"; \
 	fi
-
-install_setuids:
-	chown root $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} \
-	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} 
 
 commit-check:
 	if git status -a >/dev/null; then \

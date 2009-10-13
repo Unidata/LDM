@@ -65,6 +65,23 @@ AC_ARG_ENABLE(max-size,
     max_size=$enableval,
     max_size=yes)
 
+AC_ARG_ENABLE([include-install-setuids],
+    AC_HELP_STRING([--enable-include-install-setuids],
+	[include "make install_setuids" actions in "make install"
+	[[default=enabled]]]),
+    [
+	case "$enableval" in
+	yes) enable_include=true;;
+	no) enable_include=false;;
+	*) AC_MSG_ERROR(
+	    [bad value {$enableval} for --enable-include-install-setuids]);;
+	esac
+    ],
+    [
+	enable_include=true
+    ])
+AM_CONDITIONAL([INCLUDE_INSTALL_SETUIDS], [test "x$enable_include" = "xtrue"])
+
 AC_SUBST(PATH)
 
 AC_PROG_CC(c89 cc gcc)
