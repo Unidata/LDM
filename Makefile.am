@@ -79,15 +79,15 @@ the command \"make install_setuids\" as the root user." \
 	| fmt
 	@echo
 	su -c 'make install_setuids'
-	@if ls -l $(DESTDIR)$(bindir)/rpc.ldmd | grep -q root \
-	&& ls -l $(DESTDIR)$(bindir)/rpc.ldmd | grep -q rws \
+	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep -q root \
+	&& ls -l $(DESTDIR)$(bindir)/ldmd | grep -q rws \
 	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q root \
 	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q rws; then \
 	    : true; \
 	else \
 	    echo; \
 	    echo "\
-The owner of the LDM server program (bin/rpc.ldmd) or the hupsyslog(1) \
+The owner of the LDM server program (bin/ldmd) or the hupsyslog(1) \
 program (bin/hupsyslog) is not \"root\" or either program does not have \
 the setuid bit enabled.  The command \"make install_setuids\" will have \
 to be executed manually by the root user." \
@@ -98,8 +98,8 @@ to be executed manually by the root user." \
 endif
 
 install_setuids:
-	chown root $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} \
-	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} 
+	chown root $(DESTDIR)$(bindir)/{hupsyslog,ldmd} \
+	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,ldmd} 
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)

@@ -45,4 +45,4 @@ ulog/ulogger
 ldmsend/ldmsend
 notifyme/notifyme
 rtstats/rtstats
-server/rpc.ldmd
+server/ldmd

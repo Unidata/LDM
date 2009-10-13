@@ -214,7 +214,7 @@ additional information">
   <dt> <a name="downstream LDM"></a>downstream LDM
   <dd> Typically, a <a href="#fork">fork</a>ed, 
       <a href="#child process">child process</a> of <a
-      href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> that sends a
+      href="glindex.html#ldmd"><tt>ldmd</tt></a> that sends a
       <a href="glindex.html#FEEDME">FEEDME</a> request to an
       <a href="glindex.html#upstream LDM">upstream LDM</a> and,
       consequently, receives
@@ -243,7 +243,7 @@ additional information">
   <dd> An entry in the <a href="glindex.html#LDM">LDM</a>
       configuration-file
       <a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a> that tells the
-      top-level <a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> to
+      top-level <a href="glindex.html#ldmd"><tt>ldmd</tt></a> to
       asynchronously execute a program as a 
       <a href="#child process">child process</a> on startup.
 
@@ -390,7 +390,7 @@ additional information">
   <dd> A message from a
       <a href="glindex.html#downstream LDM">downstream LDM</a>
       to the top-level
-      <a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process on
+      <a href="glindex.html#ldmd"><tt>ldmd</tt></a> process on
       an <a href="glindex.html#upstream host">upstream host</a>
       inquiring whether or not the relevant
       <a href="glindex.html#upstream LDM">upstream LDM</a> process is
@@ -498,7 +498,7 @@ additional information">
 
   <dt> <a name="ldmd.conf"></a><tt>ldmd.conf</tt>
   <dd> The configuration-file for the top-level <a
-      href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process.
+      href="glindex.html#ldmd"><tt>ldmd</tt></a> process.
       <a href="ldmd.conf.html"><tt>ldmd.conf</tt> webpage</a>.
 
   <dt> <a name="lex"></a><tt>lex</tt> utility
@@ -882,9 +882,9 @@ additional information">
   <dd> A program for generating 
 	<a href="#RPC">RPC</a>-using C code from an input file.
 
-  <dt> <a name="rpc.ldmd"></a>rpc.ldmd
+  <dt> <a name="ldmd"></a>ldmd
   <dd> The main program of the <a href="glindex.html#LDM">LDM</a>
-      system.  <a href="programs.html#rpc.ldmd">An LDM 6 program</a>.
+      system.  <a href="programs.html#ldmd">An LDM 6 program</a>.
       <a href="behavior.html">Behavior</a>.
 
   <dt> <a name="rtstats"></a>rtstats
@@ -894,7 +894,7 @@ additional information">
 	href="glindex.html#downstream LDM">downstream LDM</a>, which
 	is, typically, at the <a href="glindex.html#UPC">Unidata Program 
 	Center</a>.  The utility is usually started by the top-level
-	<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process
+	<a href="glindex.html#ldmd"><tt>ldmd</tt></a> process
 	due to an entry in the <a href="glindex.html#LDM">LDM</a>
 	configuration-file, 
 	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>.
@@ -1057,7 +1057,7 @@ additional information">
   <dt> <a name="upstream LDM"></a>upstream LDM
   <dd> Typically, a <a href="#fork">fork</a>ed, 
       <a href="#child process">child process</a> of <a
-      href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> that reads
+      href="glindex.html#ldmd"><tt>ldmd</tt></a> that reads
       <a href="glindex.html#data-product">data-product</a>s from the <a
       href="glindex.html#product-queue">product-queue</a> and sends
       the <a href="glindex.html#data-product">data-product</a>s or the

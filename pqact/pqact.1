@@ -47,7 +47,7 @@ expression) pair.  The available actions are described in the ``USAGE''
 section, below.
 .LP
 Although it can be run manually, this program
-is typically started as subprocess of the ldm server, \fBrpc.ldmd(1)\fP,
+is typically started as subprocess of the ldm server, \fBldmd(1)\fP,
 at system startup, from an \fBexec\fP line in the configuration file.
 This ensures that \fBpqact\fP is in the same process group as other
 programs sharing the queue.
@@ -295,12 +295,12 @@ Store a product in a database.
 .TP 10
 .B ALLOW
 Obsolete action to specify which hosts may request which products.  This is
-now handled by the \fBldmd.access\fP configuration file of \fBrpc.ldmd\fP(1)
+now handled by the \fBldmd.access\fP configuration file of \fBldmd\fP(1)
 instead.
 .TP 10
 .B ACCEPT
 Obsolete action to specify which hosts may feed which products.  This is
-now handled by the \fBldmd.access\fP configuration file of \fBrpc.ldmd\fP(1)
+now handled by the \fBldmd.access\fP configuration file of \fBldmd\fP(1)
 instead.
 .LP
 For more information on these actions and their arguments, see the LDM Site

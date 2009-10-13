@@ -28,7 +28,7 @@ of an LDM system">
 write diagnostic and informational messages to 
 <a href="glindex.html#standard output">standard output</a>, most
 utilities (in particular the LDM server, <a
-href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a>)
+href="glindex.html#ldmd"><tt>ldmd</tt></a>)
 are designed to write such messages to a logfile.  Typically, the logfile is
 <tt>$LDMHOME/logs/ldmd.log</tt>, where <tt>$LDMHOME</tt> is the
 home-directory of the <a href="glindex.html#LDM user">LDM user</a>.
@@ -57,7 +57,7 @@ logfile to grow extremely fast).  You should rarely, if ever, need to
 use the "<tt>-x</tt>" option.
 
 <p>Each LDM process (
-<a href="glindex.html#rpc.ldmd"><tt>server</tt></a>,
+<a href="glindex.html#ldmd"><tt>server</tt></a>,
 <a href="glindex.html#upstream LDM">upstream LDM</a>,
 <a href="glindex.html#downstream LDM">downstream LDM</a>)
 has another way to alter its logging-level.  Reception of a
@@ -99,7 +99,7 @@ fields are shown.
 
 <p>Message Templates for
 <ul>
-    <li><a href="#rpc.ldmd">The LDM Server (top-level <tt>rpc.ldmd</tt></a>)
+    <li><a href="#ldmd">The LDM Server (top-level <tt>ldmd</tt></a>)
     <li><a href="#downstream">A Downstream LDM</a>
     <li><a href="#upstream">An Upstream LDM</a>
     <li><a href="#pqact">The <tt>pqact</tt> Utility</a>
@@ -110,8 +110,8 @@ fields are shown.
 
 <hr>
 
-<h3><a name="rpc.ldmd"></a>Message Templates for the LDM Server
-(top-level <a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt>)</h3>
+<h3><a name="ldmd"></a>Message Templates for the LDM Server
+(top-level <a href="glindex.html#ldmd"><tt>ldmd</tt>)</h3>
 
 <blockquote>
 
@@ -125,8 +125,8 @@ fields are shown.
 	Starting Up (version: <a href="#version"><i>maj.min.bug</i></a>; 
 	built: <i>MMM-DD-YYYY</i> 
 	<a href="#hh:mm:ss"><i>hh:mm:ss</i></a>)</b></tt>
-    <dd>The top-level (<i>i.e.</i>, parent) <a href="glindex.html#rpc.ldmd">
-	<tt>rpc.ldmd</tt></a> is
+    <dd>The top-level (<i>i.e.</i>, parent) <a href="glindex.html#ldmd">
+	<tt>ldmd</tt></a> is
 	starting.
 	The package was built in month <i>MMM</i> day <i>DD</i> of year
 	<i>YYYY</i> at hour <i>hh</i> minute <i>mm</i> and second <i>ss</i>,
@@ -260,7 +260,7 @@ fields are shown.
 	in the LDM configuration-file
 	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>.
 
-    <dt><tt><b>rpc.ldmd[<a href="#pid"><i>pid</i></a>]: 
+    <dt><tt><b>ldmd[<a href="#pid"><i>pid</i></a>]: 
 	Adjusted pathological regular expression "<i>ere</i>" at line 
 	<i>lineno</i>, file <i>pathname</i></b></tt>
     <dd>The 
@@ -1644,7 +1644,7 @@ Utilty</h3>
     <dd>The <a href="glindex.html#rtstats">rtstats</a> utility was started
 	by the parent process whose process-ID is <i>parent-pid</i>
 	(typically, the
-	top-level <a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a>).
+	top-level <a href="glindex.html#ldmd"><tt>ldmd</tt></a>).
 
     <dt><tt><b>
 	Interrupt</b></tt>
@@ -1811,7 +1811,7 @@ Utilty</h3>
     <dt><a name="util"></a><i>util</i>
     <dd>Is the identifier of the utility that generated the message.  This
 	is usually the name of the program (<i>e.g.</i>, <a
-	href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a>,
+	href="glindex.html#ldmd"><tt>ldmd</tt></a>,
 	<a href="glindex.html#pqact"><tt>pqact</tt></a>).  For a
 	<a href="glindex.html#downstream LDM">downstream LDM</a>,
 	however, the identifier is the name of computer that's running
