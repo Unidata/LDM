@@ -65,22 +65,52 @@ AC_ARG_ENABLE(max-size,
     max_size=$enableval,
     max_size=yes)
 
-AC_ARG_ENABLE([include-install-setuids],
-    AC_HELP_STRING([--enable-include-install-setuids],
-	[include "make install_setuids" actions in "make install"
+AC_ARG_ENABLE([include-root-actions],
+    AC_HELP_STRING([--enable-include-root-actions],
+	[include superuser (i.e., "root") actions in "make install"
 	[[default=enabled]]]),
     [
 	case "$enableval" in
 	yes) enable_include=true;;
 	no) enable_include=false;;
 	*) AC_MSG_ERROR(
-	    [bad value {$enableval} for --enable-include-install-setuids]);;
+	    [bad value {$enableval} for --enable-include-root-actions]);;
 	esac
     ],
     [
 	enable_include=true
     ])
-AM_CONDITIONAL([INCLUDE_INSTALL_SETUIDS], [test "x$enable_include" = "xtrue"])
+AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS], [test "x$enable_include" = "xtrue"])
+AM_COND_IF([INCLUDE_ROOT_ACTIONS], 
+    [if touch conftest && chmod u=rws conftest &&
+	    ls -l conftest | grep -q rws; then \
+	AC_CACHE_CHECK([for sudo(1) that you can use], [ac_cv_path_SUDO],
+	    [AC_PATH_PROGS_FEATURE_CHECK([SUDO], [sudo],
+		[echo "Enter the LDM user's password." >/dev/tty
+		$ac_path_SUDO true && ac_cv_path_SUDO=$ac_path_SUDO],
+		[AC_MSG_RESULT([not found])
+		AC_CACHE_CHECK([for su(1) that you can use], [ac_cv_path_SU],
+		    [AC_PATH_PROGS_FEATURE_CHECK([SU], [su],
+			[echo "Enter root's password." >/dev/tty
+			$ac_path_SU -c true >/dev/tty 2>&1 </dev/tty \
+			&& ac_cv_path_SU=$ac_path_SU],
+			[AC_MSG_RESULT([not found])])])])])
+	AC_SUBST([SU], [$ac_cv_path_SU])
+	AC_SUBST([SUDO], [$ac_cv_path_SUDO])
+	if test -n "$SUDO" -o -n "$SU"; then \
+	    include_root_actions=true
+	else
+	    include_root_actions=false
+	fi
+    else
+	include_root_actions=false
+    fi
+    rm -f conftest],
+    [include_root_actions=false])
+AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
+    [test "$include_root_actions" = true])
+AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
+AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
 AC_SUBST(PATH)
 

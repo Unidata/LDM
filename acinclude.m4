@@ -435,6 +435,21 @@ dnl ])
 dnl Set ulog parameters
 dnl
 AC_DEFUN([UD_ULOG], [dnl
+    AC_MSG_CHECKING([for system logging daemon])
+    if ps -u root | grep -q syslog; then
+	AC_MSG_RESULT([found])
+    else
+	AC_MSG_ERROR([system logging daemon not running], 1)
+    fi
+
+    AC_CHECK_FILE([/etc/rsyslog.conf],
+	[SYSLOG_CONF=/etc/rsyslog.conf],
+	[AC_CHECK_FILE([/etc/syslog.conf],
+	    [SYSLOG_CONF=/etc/syslog.conf],
+	    [AC_MSG_ERROR([system logging configuration-file not found])])])
+    AC_SUBST([SYSLOG_CONF])
+    AC_SUBST([LDM_LOGFILE], [$LDMHOME/logs/ldmd.log])
+
     AC_MSG_CHECKING(ulog defines)
     case `uname -sr` in
 	OSF1*|sn1036*|Linux*|Darwin*)

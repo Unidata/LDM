@@ -6,7 +6,14 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-DISTCHECK_CONFIGURE_FLAGS	= --disable-include-install-setuids
+LDMHOME		= @LDMHOME@
+LOG_LDM		= @LOG_LDM@
+SYSLOG_CONF	= @SYSLOG_CONF@
+LDM_LOGFILE	= @LDM_LOGFILE@
+SUDO		= @SUDO@
+SU		= @SU@
+
+DISTCHECK_CONFIGURE_FLAGS	= --disable-include-root-actions
 include_HEADERS			= ldmconfig.h
 
 if WANT_FAUX_PQ
@@ -66,40 +73,82 @@ distuninstallcheck_listfiles = find . -type f -print | grep -v './etc/'
 
 all:
 
-if INCLUDE_INSTALL_SETUIDS
-install-exec-hook:
+install-data-hook:	ensure-ldmhome-links ensure-ldmhome-dirs
+if INCLUDE_ROOT_ACTIONS
 	@echo
 	@echo "\
-This next step will set the owner of the LDM server program and the \
-hupsyslog(1) program to \"root\" and enable the setuid bit for those \
-programs.  These actions are necessary for proper operation of the LDM \
-system.  If this step doesn't work (for example, if you don't know \
-root's password), then you or someone else will have to manually execute \
-the command \"make install_setuids\" as the root user." \
+This next step will perform those installation actions that must be \
+executed by the superuser.  \
+If this step doesn't work (for example, if you don't know \
+root's password), then the superuser will have to manually execute \
+the command \"$(MAKE) root-actions\". \
 	| fmt
 	@echo
-	su -c 'make install_setuids'
-	@if ls -l $(DESTDIR)$(bindir)/rpc.ldmd | grep -q root \
-	&& ls -l $(DESTDIR)$(bindir)/rpc.ldmd | grep -q rws \
+if HAVE_SUDO
+	$(SUDO) $(MAKE) root-actions
+else
+if HAVE_SU
+	$(SU) -c '$(MAKE) root-actions'
+endif
+endif
+else
+	@echo
+	@echo "\
+NOTE: The command \"$(MAKE) root-actions\" will have to be executed by the \
+superuser in order to complete the installation process." \
+	| fmt
+	@echo
+endif
+
+ensure-ldmhome-links:
+	cd $(LDMHOME) \
+	&& ( ls bin >/dev/null || ln -s runtime/bin bin ) \
+	&& ( ls doc >/dev/null || ln -s runtime/doc doc ) \
+	&& ( ls include >/dev/null || ln -s runtime/include include ) \
+	&& ( ls lib >/dev/null || ln -s runtime/lib lib ) \
+	&& ( ls man >/dev/null || ln -s runtime/man man ) \
+	&& ( ls runtime >/dev/null || ln -s $(DESTDIR)$(prefix) runtime )
+
+ensure-ldmhome-dirs:
+	cd $(LDMHOME) \
+	&& ( ls data >/dev/null || mkdir data ) \
+	&& ( ls logs >/dev/null || mkdir logs )
+
+root-actions:	install_setuids ensure-syslog-entry
+
+install_setuids:
+	chown root $(DESTDIR)$(bindir)/{hupsyslog,ldmd} \
+	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,ldmd} 
+	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep -q root \
+	&& ls -l $(DESTDIR)$(bindir)/ldmd | grep -q rws \
 	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q root \
 	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q rws; then \
 	    : true; \
 	else \
 	    echo; \
 	    echo "\
-The owner of the LDM server program (bin/rpc.ldmd) or the hupsyslog(1) \
-program (bin/hupsyslog) is not \"root\" or either program does not have \
+ERROR: The LDM server program (bin/ldmd) or the hupsyslog(1) \
+program (bin/hupsyslog) is not owned by \"root\" or does not have \
 the setuid bit enabled.  The command \"make install_setuids\" will have \
-to be executed manually by the root user." \
+to be executed manually by the superuser on a system that allows these \
+actions." \
 	    | fmt; \
 	    echo; \
 	    exit 1; \
 	fi
-endif
 
-install_setuids:
-	chown root $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} \
-	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} 
+ensure-syslog-entry:
+	if grep -q $(LOG_LDM) $(SYSLOG_CONF); then \
+	    : true; \
+	else \
+	    awk '/\.none/{print $$1 ";$(LOG_LDM).none	" $$2; next}{print}' \
+		$(SYSLOG_CONF) >$(SYSLOG_CONF).new \
+	    && echo >>$(SYSLOG_CONF).new \
+	    && echo '# Unidata LDM:' >>$(SYSLOG_CONF).new \
+	    && echo '$(LOG_LDM).debug	$(LDM_LOGFILE)' >>$(SYSLOG_CONF).new \
+	    && cp $(SYSLOG_CONF) $(SYSLOG_CONF).old \
+	    && mv -f $(SYSLOG_CONF).new $(SYSLOG_CONF); \
+	fi
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
@@ -130,4 +179,13 @@ beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
 	&& scp $$filename $$dest \
 	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
 
-.PHONY:		install_setuids commit-check tag ftp beta
+.PHONY:		\
+    root-actions \
+    install_setuids \
+    ensure-syslog-entry \
+    ensure-ldmhome-links \
+    ensure-ldmhome-dirs \
+    commit-check \
+    tag \
+    ftp \
+    beta

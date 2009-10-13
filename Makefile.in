@@ -190,6 +190,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LDMHOME = @LDMHOME@
+LDM_LOGFILE = @LDM_LOGFILE@
 LDM_PORT = @LDM_PORT@
 LD_GEN = @LD_GEN@
 LD_YACC = @LD_YACC@
@@ -223,6 +224,9 @@ SET_MAKE = @SET_MAKE@
 SH = @SH@
 SHELL = @SHELL@
 STRIP = @STRIP@
+SU = @SU@
+SUDO = @SUDO@
+SYSLOG_CONF = @SYSLOG_CONF@
 TOP = @TOP@
 VERSION = @VERSION@
 WHATIS = @WHATIS@
@@ -281,7 +285,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-DISTCHECK_CONFIGURE_FLAGS = --disable-include-install-setuids
+DISTCHECK_CONFIGURE_FLAGS = --disable-include-root-actions
 include_HEADERS = ldmconfig.h
 @WANT_FAUX_PQ_FALSE@PQ_DIR = pq
 @WANT_FAUX_PQ_TRUE@PQ_DIR = fauxPq
@@ -800,7 +804,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-@INCLUDE_INSTALL_SETUIDS_FALSE@install-exec-hook:
 clean: clean-recursive
 
 clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
@@ -832,8 +835,7 @@ install-dvi: install-dvi-recursive
 install-dvi-am:
 
 install-exec-am: install-libLTLIBRARIES
-	@$(NORMAL_INSTALL)
-	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
+
 install-html: install-html-recursive
 
 install-html-am:
@@ -876,8 +878,8 @@ ps-am:
 uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES
 
 .MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) all \
-	ctags-recursive install-am install-data-am install-exec-am \
-	install-strip tags-recursive
+	ctags-recursive install-am install-data-am install-strip \
+	tags-recursive
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
 	all all-am am--refresh check check-am clean clean-generic \
@@ -888,52 +890,87 @@ uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES
 	distclean-tags distcleancheck distdir distuninstallcheck dvi \
 	dvi-am html html-am info info-am install install-am \
 	install-data install-data-am install-data-hook install-dvi \
-	install-dvi-am install-exec install-exec-am install-exec-hook \
-	install-html install-html-am install-includeHEADERS \
-	install-info install-info-am install-libLTLIBRARIES \
-	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs installdirs-am maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-recursive uninstall uninstall-am \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-includeHEADERS install-info \
+	install-info-am install-libLTLIBRARIES install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags tags-recursive uninstall uninstall-am \
 	uninstall-includeHEADERS uninstall-libLTLIBRARIES
 
 
 all:
 
-@INCLUDE_INSTALL_SETUIDS_TRUE@install-exec-hook:
-@INCLUDE_INSTALL_SETUIDS_TRUE@	@echo
-@INCLUDE_INSTALL_SETUIDS_TRUE@	@echo "\
-@INCLUDE_INSTALL_SETUIDS_TRUE@This next step will set the owner of the LDM server program and the \
-@INCLUDE_INSTALL_SETUIDS_TRUE@hupsyslog(1) program to \"root\" and enable the setuid bit for those \
-@INCLUDE_INSTALL_SETUIDS_TRUE@programs.  These actions are necessary for proper operation of the LDM \
-@INCLUDE_INSTALL_SETUIDS_TRUE@system.  If this step doesn't work (for example, if you don't know \
-@INCLUDE_INSTALL_SETUIDS_TRUE@root's password), then you or someone else will have to manually execute \
-@INCLUDE_INSTALL_SETUIDS_TRUE@the command \"make install_setuids\" as the root user." \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	| fmt
-@INCLUDE_INSTALL_SETUIDS_TRUE@	@echo
-@INCLUDE_INSTALL_SETUIDS_TRUE@	su -c 'make install_setuids'
-@INCLUDE_INSTALL_SETUIDS_TRUE@	@if ls -l $(DESTDIR)$(bindir)/rpc.ldmd | grep -q root \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	&& ls -l $(DESTDIR)$(bindir)/rpc.ldmd | grep -q rws \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q root \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q rws; then \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	    : true; \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	else \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	    echo; \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	    echo "\
-@INCLUDE_INSTALL_SETUIDS_TRUE@The owner of the LDM server program (bin/rpc.ldmd) or the hupsyslog(1) \
-@INCLUDE_INSTALL_SETUIDS_TRUE@program (bin/hupsyslog) is not \"root\" or either program does not have \
-@INCLUDE_INSTALL_SETUIDS_TRUE@the setuid bit enabled.  The command \"make install_setuids\" will have \
-@INCLUDE_INSTALL_SETUIDS_TRUE@to be executed manually by the root user." \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	    | fmt; \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	    echo; \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	    exit 1; \
-@INCLUDE_INSTALL_SETUIDS_TRUE@	fi
+install-data-hook:	ensure-ldmhome-links ensure-ldmhome-dirs
+@INCLUDE_ROOT_ACTIONS_TRUE@	@echo
+@INCLUDE_ROOT_ACTIONS_TRUE@	@echo "\
+@INCLUDE_ROOT_ACTIONS_TRUE@This next step will perform those installation actions that must be \
+@INCLUDE_ROOT_ACTIONS_TRUE@executed by the superuser.  \
+@INCLUDE_ROOT_ACTIONS_TRUE@If this step doesn't work (for example, if you don't know \
+@INCLUDE_ROOT_ACTIONS_TRUE@root's password), then the superuser will have to manually execute \
+@INCLUDE_ROOT_ACTIONS_TRUE@the command \"$(MAKE) root-actions\". \
+@INCLUDE_ROOT_ACTIONS_TRUE@	| fmt
+@INCLUDE_ROOT_ACTIONS_TRUE@	@echo
+@HAVE_SUDO_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	$(SUDO) $(MAKE) root-actions
+@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	$(SU) -c '$(MAKE) root-actions'
+@INCLUDE_ROOT_ACTIONS_FALSE@	@echo
+@INCLUDE_ROOT_ACTIONS_FALSE@	@echo "\
+@INCLUDE_ROOT_ACTIONS_FALSE@NOTE: The command \"$(MAKE) root-actions\" will have to be executed by the \
+@INCLUDE_ROOT_ACTIONS_FALSE@superuser in order to complete the installation process." \
+@INCLUDE_ROOT_ACTIONS_FALSE@	| fmt
+@INCLUDE_ROOT_ACTIONS_FALSE@	@echo
+
+ensure-ldmhome-links:
+	cd $(LDMHOME) \
+	&& ( ls bin >/dev/null || ln -s runtime/bin bin ) \
+	&& ( ls doc >/dev/null || ln -s runtime/doc doc ) \
+	&& ( ls include >/dev/null || ln -s runtime/include include ) \
+	&& ( ls lib >/dev/null || ln -s runtime/lib lib ) \
+	&& ( ls man >/dev/null || ln -s runtime/man man ) \
+	&& ( ls runtime >/dev/null || ln -s $(DESTDIR)$(prefix) runtime )
+
+ensure-ldmhome-dirs:
+	cd $(LDMHOME) \
+	&& ( ls data >/dev/null || mkdir data ) \
+	&& ( ls logs >/dev/null || mkdir logs )
+
+root-actions:	install_setuids ensure-syslog-entry
 
 install_setuids:
-	chown root $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} \
-	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,rpc.ldmd} 
+	chown root $(DESTDIR)$(bindir)/{hupsyslog,ldmd} \
+	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,ldmd} 
+	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep -q root \
+	&& ls -l $(DESTDIR)$(bindir)/ldmd | grep -q rws \
+	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q root \
+	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q rws; then \
+	    : true; \
+	else \
+	    echo; \
+	    echo "\
+ERROR: The LDM server program (bin/ldmd) or the hupsyslog(1) \
+program (bin/hupsyslog) is not owned by \"root\" or does not have \
+the setuid bit enabled.  The command \"make install_setuids\" will have \
+to be executed manually by the superuser on a system that allows these \
+actions." \
+	    | fmt; \
+	    echo; \
+	    exit 1; \
+	fi
+
+ensure-syslog-entry:
+	if grep -q $(LOG_LDM) $(SYSLOG_CONF); then \
+	    : true; \
+	else \
+	    awk '/\.none/{print $$1 ";$(LOG_LDM).none	" $$2; next}{print}' \
+		$(SYSLOG_CONF) >$(SYSLOG_CONF).new \
+	    && echo >>$(SYSLOG_CONF).new \
+	    && echo '# Unidata LDM:' >>$(SYSLOG_CONF).new \
+	    && echo '$(LOG_LDM).debug	$(LDM_LOGFILE)' >>$(SYSLOG_CONF).new \
+	    && cp $(SYSLOG_CONF) $(SYSLOG_CONF).old \
+	    && mv -f $(SYSLOG_CONF).new $(SYSLOG_CONF); \
+	fi
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
@@ -964,7 +1001,16 @@ beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
 	&& scp $$filename $$dest \
 	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
 
-.PHONY:		install_setuids commit-check tag ftp beta
+.PHONY:		\
+    root-actions \
+    install_setuids \
+    ensure-syslog-entry \
+    ensure-ldmhome-links \
+    ensure-ldmhome-dirs \
+    commit-check \
+    tag \
+    ftp \
+    beta
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
