@@ -15,7 +15,7 @@
 
 <p>
 <ul>
-    <li><a href="#rpc.ldmd">The LDM Program <tt>rpc.ldmd</tt></a>
+    <li><a href="#ldmd">The LDM Program <tt>ldmd</tt></a>
     <li><a href="#pqact">The Utility <tt>pqact</tt></a>
     <li><a href="#ingesters">Data-Product Ingesters</a>
     <li><a href="#decoders">Data-Product Decoders</a>
@@ -25,10 +25,10 @@
 
 <hr>
 
-<h2><a name="rpc.ldmd">The LDM Program <tt>rpc.ldmd</tt></a></h2>
+<h2><a name="ldmd">The LDM Program <tt>ldmd</tt></a></h2>
 
 <p>An <a href="glindex.html#LDM">LDM</a> system's main program is
-the binary executable <tt>rpc.ldmd</tt>.  This program
+the binary executable <tt>ldmd</tt>.  This program
 <ul>
     <li>Is typically started by the 
 	<a href="glindex.html#ldmadmin">ldmadmin</a> script.
@@ -62,7 +62,7 @@ href="glindex.html#product-queue">product-queue</a> and disposes of
 them according to user-configurable instructions.  One or more instances
 of this program are,
 typically, started by the top-level <a
-href="glindex.html#rpc.ldmd">rpc.ldmd</a> process as the result of
+href="glindex.html#ldmd">ldmd</a> process as the result of
 <a href="glindex.html#EXEC entry"><tt>EXEC</tt> entries</a> in the LDM
 configuration-file, <a
 href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>.
@@ -81,7 +81,7 @@ disposition of data-products.  These instructions are the
 <a href="glindex.html#SIGINT"><tt>SIGINT</tt></a> or
 <a href="glindex.html#SIGTERM"><tt>SIGTERM</tt></a>
 from the top-level <a
-href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process.
+href="glindex.html#ldmd"><tt>ldmd</tt></a> process.
 
 <p>When a <tt>pqact</tt> process terminates, it saves the
 <a href="glindex.html#insertion-time">insertion-time</a>
@@ -116,7 +116,7 @@ Such a program has the following characteristics:
 	into the <a href="glindex.html#product-queue">product-queue</a>.
 
     <li>In general, it should be started by the top-level <a
-	href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process as the
+	href="glindex.html#ldmd"><tt>ldmd</tt></a> process as the
 	result of an <a href="glindex.html#EXEC entry"><tt>EXEC
 	entry</tt></tt></a> in the LDM configuration-file, <a
 	href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>, so that the
@@ -130,7 +130,7 @@ Such a program has the following characteristics:
 	<a href="glindex.html#SIGINT"><tt>SIGINT</tt></a> or
 	<a href="glindex.html#SIGTERM"><tt>SIGTERM</tt></a>, which will be
 	sent to it from the top-level <a
-	href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> process.
+	href="glindex.html#ldmd"><tt>ldmd</tt></a> process.
 
     <li>It should use the <tt>ulog(3)</tt> API for logging messages, which
     	is provided by the <tt>ulog</tt> module in the LDM library.

@@ -32,8 +32,8 @@ else
     PQ_DIR 		= pq
 endif
 BUILT_SOURCES		= ldm6_svc.c parser.c scanner.c
-bin_PROGRAMS		= rpc.ldmd
-rpc_ldmd_SOURCES	= \
+bin_PROGRAMS		= ldmd
+ldmd_SOURCES	= \
     abbr.c \
     acl.c \
     child_process_set.c \
@@ -116,7 +116,7 @@ scanner.c:	scanner.l
 	mv lex.yy.c scanner.c
 
 install-exec-hook:
-	-cd $(DESTDIR)$(mandir)/man1 && ln -s ldmd.1 rpc.ldmd.1
+	-cd $(DESTDIR)$(mandir)/man1 && ln -s ldmd.1 ldmd.1
 
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/ldmd.conf
@@ -126,4 +126,4 @@ $(DESTDIR)$(sysconfdir)/ldmd.conf:
 	$(INSTALL_DATA) $(srcdir)/ldmd.conf $@
 
 uninstall-local:
-	rm -f $(DESTDIR)$(mandir)/man1/rpc.ldmd.1
+	rm -f $(DESTDIR)$(mandir)/man1/ldmd.1

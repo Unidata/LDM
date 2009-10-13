@@ -659,7 +659,7 @@ sub start_ldm
 
 # build the command line
 
-    $cmd_line = "rpc.ldmd -I $ip_addr -P $port -M $max_clients -m $max_latency -o $offset -q $pq_path";
+    $cmd_line = "ldmd -I $ip_addr -P $port -M $max_clients -m $max_latency -o $offset -q $pq_path";
 
     if ($debug) {
 	$cmd_line .= " -x";

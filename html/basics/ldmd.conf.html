@@ -42,7 +42,7 @@ The
 <a href="glindex.html#LDM">LDM</a>
 configuration-file, <tt>ldmd.conf</tt>,
 provides information to
-the top-level <a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> and
+the top-level <a href="glindex.html#ldmd"><tt>ldmd</tt></a> and
 contains the following types of entries:
 <blockquote>
 <dl>
@@ -79,7 +79,7 @@ installation.
 
 <p>
 An <tt>EXEC</tt> entry tells the top-level 
-<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> to execute a
+<a href="glindex.html#ldmd"><tt>ldmd</tt></a> to execute a
 program on startup.  The programs most typically executed are
 <a href="glindex.html#pqact">pqact</a> and
 <a href="glindex.html#rtstats">rtstats</a> (for IDD
@@ -98,7 +98,7 @@ a backslash (<tt>\"</tt>).
 The <i>command</i> strings of <tt>EXEC</tt> entries are executed via the
 <a href="glindex.html#execvp"><tt>execvp()</tt> function</a>
 when the top-level
-<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> program is
+<a href="glindex.html#ldmd"><tt>ldmd</tt></a> program is
 started.
 
 <hr>
@@ -107,7 +107,7 @@ started.
 
 <p>
 A <tt>REQUEST</tt> entry tells the top-level 
-<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> to start a
+<a href="glindex.html#ldmd"><tt>ldmd</tt></a> to start a
 <a href="glindex.html#downstream LDM">downstream LDM</a> child process.
 
 <p>
@@ -117,7 +117,7 @@ REQUEST <a href="#feedtype"><i>feedtype</i></a> <a href="#prodIdEre"><i>prodIdEr
 </blockquote><p/re>
 
 <p>
-When the top-level <a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> is
+When the top-level <a href="glindex.html#ldmd"><tt>ldmd</tt></a> is
 started, it creates a 
 <a href="glindex.html#downstream LDM">downstream LDM</a> child process
 for every <tt>REQUEST</tt> entry.  The
@@ -153,7 +153,7 @@ in the entries are not disjoint.
 
 <p>
 An <tt>ALLOW</tt> entry tells the top-level 
-<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> what
+<a href="glindex.html#ldmd"><tt>ldmd</tt></a> what
 <a href="glindex.html#downstream LDM">downstream LDM</a>s are allowed
 to connect and what class of
 <a href="glindex.html#data-product">data-product</a> they are allowed to
@@ -232,7 +232,7 @@ The second entry allows the
 
 <p>
 An <tt>ACCEPT</tt> entry tells the top-level 
-<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> what unrequested
+<a href="glindex.html#ldmd"><tt>ldmd</tt></a> what unrequested
 <a href="glindex.html#upstream LDM">upstream LDM</a>s
 are allowed to connect and what class of
 <a href="glindex.html#data-product">data-product</a> they are allowed to
@@ -272,7 +272,7 @@ Corporation and is now primarily used to receive statistics from the
 
 <p>
 An <tt>INCLUDE</tt> entry tells the top-level 
-<a href="glindex.html#rpc.ldmd"><tt>rpc.ldmd</tt></a> to temporarily
+<a href="glindex.html#ldmd"><tt>ldmd</tt></a> to temporarily
 suspend processing of the current configuration-file and to process
 another configuration-file instead.
 Processing of the current configuration-file resumes when the end of

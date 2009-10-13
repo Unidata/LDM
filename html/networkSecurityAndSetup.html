@@ -31,13 +31,13 @@ href="http://www.iana.org/numbers.html"> <b>IANA's
 <p align="justify">
 Under UNIX it is necessary to have root level privileges in order to
 acquire a reserved port.  For this reason the LDM server, the parent
-<code>rpc.ldmd</code> process, temporarily becomes 'root' when opening and closing the port.
+<code>ldmd</code> process, temporarily becomes 'root' when opening and closing the port.
 At all other times, it has the reduced privileges of the LDM user.
 Similarly, all child processes are owned by the LDM user and thus do not have
 root privileges.
 (The LDM should always be invoked by the LDM user and never by 'root'.)
 In order to implement this, LDM installation requires root
-privileges to set the user id of <code>rpc.ldmd</code> to root and to set the
+privileges to set the user id of <code>ldmd</code> to root and to set the
 SUID bit.
 </p>
 <p align="justify">Also, like FTP and HTTP, network communication between LDMs 
