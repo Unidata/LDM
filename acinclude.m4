@@ -436,7 +436,7 @@ dnl Set ulog parameters
 dnl
 AC_DEFUN([UD_ULOG], [dnl
     AC_MSG_CHECKING([for system logging daemon])
-    if ps -u root | grep -q syslog; then
+    if ps -u root | grep syslog >/dev/null; then
 	AC_MSG_RESULT([found])
     else
 	AC_MSG_ERROR([system logging daemon not running], 1)
@@ -474,7 +474,7 @@ AC_DEFUN([UD_ULOG], [dnl
 	    AC_DEFINE_UNQUOTED(ULOGNAME, "$ULOGNAME", 
 		[Pathname of the system logging console])
 	    AC_MSG_RESULT(-DULOGNAME=$ULOGNAME)
-	    if ls -lL $usock | grep -q '^s'; then
+	    if ls -lL $usock | grep '^s' >/dev/null; then
 		AC_DEFINE(LOGNAME_ISSOCK, 1,
 		    [Define if the canonical log file is a socket])
 		AC_MSG_RESULT(-DLOGNAME_ISSOCK)

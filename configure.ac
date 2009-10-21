@@ -10,7 +10,7 @@ AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([ldmconfig.h])
 
 AM_CONDITIONAL([MAINTAINER],
-    [test "$USER" == steve && hostname | fgrep -q unidata.ucar.edu])
+    [test "$USER" == steve && hostname | fgrep unidata.ucar.edu >/dev/null])
 
 AC_ARG_ENABLE(faux-pq,
     AC_HELP_STRING([--enable-faux-pq],
@@ -83,7 +83,7 @@ AC_ARG_ENABLE([include-root-actions],
 AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS], [test "x$enable_include" = "xtrue"])
 AM_COND_IF([INCLUDE_ROOT_ACTIONS], 
     [if touch conftest && chmod u=rws conftest &&
-	    ls -l conftest | grep -q rws; then \
+	    ls -l conftest | grep rws >/dev/null; then \
 	AC_CACHE_CHECK([for sudo(1) that you can use], [ac_cv_path_SUDO],
 	    [AC_PATH_PROGS_FEATURE_CHECK([SUDO], [sudo],
 		[echo "Enter the LDM user's password." >/dev/tty
