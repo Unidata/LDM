@@ -362,6 +362,7 @@ AC_CONFIG_FILES([
     regex/Makefile
     html/Makefile
     html/basics/Makefile
+    html/basics/source-install-steps.html
     html/tutorial/Makefile
 ])
 AC_OUTPUT

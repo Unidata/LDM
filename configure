@@ -26835,7 +26835,7 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
-ac_config_files="$ac_config_files Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile scripts/Makefile scripts/ldmadmin scripts/writeConfiguration.pl scripts/ldmfail scripts/netcheck scripts/syscheck scripts/ldmcheck scour/Makefile scour/scour regex/Makefile html/Makefile html/basics/Makefile html/tutorial/Makefile"
+ac_config_files="$ac_config_files Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile scripts/Makefile scripts/ldmadmin scripts/writeConfiguration.pl scripts/ldmfail scripts/netcheck scripts/syscheck scripts/ldmcheck scour/Makefile scour/scour regex/Makefile html/Makefile html/basics/Makefile html/basics/source-install-steps.html html/tutorial/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -27552,6 +27552,7 @@ do
     "regex/Makefile") CONFIG_FILES="$CONFIG_FILES regex/Makefile" ;;
     "html/Makefile") CONFIG_FILES="$CONFIG_FILES html/Makefile" ;;
     "html/basics/Makefile") CONFIG_FILES="$CONFIG_FILES html/basics/Makefile" ;;
+    "html/basics/source-install-steps.html") CONFIG_FILES="$CONFIG_FILES html/basics/source-install-steps.html" ;;
     "html/tutorial/Makefile") CONFIG_FILES="$CONFIG_FILES html/tutorial/Makefile" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5

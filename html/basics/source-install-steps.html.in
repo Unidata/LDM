@@ -11,26 +11,47 @@
 
 <h1 align="center">LDM Source-Code Installation</h1>       
 
-<h2>Steps:</h2>
+<hr>
+
+<h2>Short Installation Instructions:</h3>
+
+<p>
+Not all development enviroments can build and install this package. See the
+long installation instructions in the next section for details.
+
+<p>
+The following assumes that you are familiar with both the LDM system and with
+autoconf-based package-installation. If you're not, then follow the long
+installation instructions in the next section. 
+
+<pre>
+    $ su - ldm
+    $ wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
+    $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r
+    $ cd @PACKAGE@-@VERSION@
+    $ ./configure [--disable-max-size] [--enable-logging=local<b><i>n</i></b>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
+    Password: ...
+    $ make install &gt;make.log
+    $ make clean # optional
+    $ vi ~/ldmadmin-pl.conf # necessary if no previous installation exists
+</pre>
+
+<p>
+The root of the installation tree will be <code>~ldm/@PACKAGE@-@VERSION@</code>
+for the version-dependent files.
+
+<p>
+If you encounter problems, then follow the long installation instructions in the next section. 
+
+<hr>
+
+<h2>Long Installation Instructions:</h3>
 
 <ol>
-    <li><a href="#become">Become the LDM user<a>
 
-    <li><a href="#obtain">Obtain the distribution</a></li>
-
-    <li><a href="#unpack">Unpack the distribution</a></li>
-
-    <li><a href="#build">Build and install the distribution</a></li>
-
-    <li><a href="vet-ldmadmin.html">Vet the <code><b>ldmadmin</b></code>
-	configuration-file</a>
-
-    <LI><a href="#subdirs">Create the appropriate subdirectory structure</a>
-	only if you do not already have an LDM installation
-</ol>
-
-<hr><a NAME="become"></a>
-<h2>Become the LDM User</h2>
+<li>
+<a NAME="become"></a>
+<h3>Become the LDM User</h3>
 
 <p>Follow
 <a href="become_ldm.html">this advice</a> on becoming the 
@@ -38,10 +59,11 @@
 
 <p><a href="../workshop/specifics.html#becomeLdmUser">Workshop-specific instructions</a>.
 
-<hr><a NAME="obtain"></a>
-<h2>
+<li>
+<a NAME="obtain"></a>
+<h3>
 Obtain the 
-<a href="glindex.html#LDM">LDM</a> Source-Distribution</h2>
+<a href="glindex.html#LDM">LDM</a> Source-Distribution</h3>
 
 <p>The 
 <a href="glindex.html#LDM">LDM</a> 
@@ -54,9 +76,9 @@ Download the file into the
 into the 
 <a href="glindex.html#LDM user">LDM user</a>'s home-directory.</p>
 
+<li>
 <a NAME="unpack"></a>
-<hr>
-<h2>Unpack the Distribution</h2>
+<h3>Unpack the Distribution</h3>
 
 <p>Unpack the distribution in the 
 <a href="glindex.html#LDM user">LDM user</a>'s home directory
@@ -65,31 +87,25 @@ utilities.
 For example:
 <blockquote><pre>
 cd                                     # go to the LDM user's home-directory
-gunzip -c ldm-6.8.1.tar.gz | tar xvf - # unpack the distribution
+gunzip -c @PACKAGE@-@VERSION@.tar.gz | tar xvf - # unpack the distribution
 </pre></blockquote>
 
 The name of the
 subdirectory will contain the version identifier of the just-unpacked package
-(<i>e.g.</i>, <tt><b>ldm-6.8.1</b></tt>).  For the meaning of
+(<i>e.g.</i>, <tt><b>@PACKAGE@-@VERSION@</b></tt>).  For the meaning of
 the version identifier, see
 <a href="versionId.html">The LDM Version Identifier</a>.
 
-<p>Assign the pathname of the version subdirectory to the shell variable
-<b><code>VDIR</code></b>, <i>e.g.</i>,
-<blockquote><pre>
-VDIR=ldm-6.8.1
-</blockquote></pre>
-This will be useful later.
+<li>
+<a NAME="build"></a>
+<h3>
+Build and Install the Distribution</h3>
 
-<hr><a NAME="build"></a>
-<h2>
-Build and Install the Distribution</h2>
-
-<ol>
+<ol type="A">
 
 <li><p>Go to the top-level directory of the just-unpacked package:
 <blockquote><pre>
-cd $HOME/$VDIR
+cd $HOME/@PACKAGE@-@VERSION@
 </pre></blockquote>
 </p></li>
 
@@ -237,6 +253,19 @@ The relevant command depends on your user-shell.  For example:
 </blockquote>
 This step customizes the installation process for your particular
 system.
+
+Because certain aspects of the LDM require root privileges
+(<i>e.g.</i>, listening on port 388, using the system logging daemon), the
+configure script will acertain if you can access those privileges.  <b>The
+script will ask you for your password and, possibly, the superuser's 
+(<i>i.e.</i> root's) password.</b>  The script doesn't store or transmit this
+information, it simply uses the passwords to acertain if you have access to
+the necessary privileges.
+
+If you don't have access to root privileges (or don't trust the configure
+script) then simply enter nonsense when asked for the passwords.  The
+superuser will subsequently have to execute an additional step in order
+to complete the installation process.
 </li>
 
 <p>Inspect the file <b><code>configure.log</code></b> to verify the
@@ -253,7 +282,7 @@ enclose the files <b><code>configure.log</code></b> and
 <li>
 <p>Use the 
 <a href="platform.html#development"><b><code>make(1)</code></b> utility
-appropriate for your system</a> to build the package,
+appropriate for your system</a> to build and install the package,
 redirecting <em>both</em> standard output
 and standard error to the file <b><code>make.log</code></b>.
 The relevant command depends on your user shell.  For example:
@@ -264,22 +293,22 @@ The relevant command depends on your user shell.  For example:
 	<th>Command</th>
     </tr>
 	<td>Standard UNIX<sup>®</sup> (e.g. <code>sh, ksh, bash</code>)</td>
-	<td nowrap><code><a href="platform.html#development">make</a>
+	<td nowrap><code><a href="platform.html#development">make</a> install
 	    &gt;make.log 2>&1</code></td>
     </tr>
     <tr>
 	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-	<td nowrap><code><a href="platform.html#development">make</a>
+	<td nowrap><code><a href="platform.html#development">make</a> install
 	    &gt;&! make.log</code></td>
     </tr>
 </table>
 </blockquote>
 
-This step creates the package libraries and programs but doesn't install 
+This step builds the package libraries and programs and installs
 them.</p>
 
 <p>Inspect the file <b><code>make.log</code></b> to verify the
-build process.  If something went wrong that you think might be fixed by
+installation process.  If something went wrong that you think might be fixed by
 <a href="#environment-variables">setting an environment variable</a>
 (such as using the <b><code>cc</code></b> compiler rather than the
 <b><code>c89</code></b> compiler) then return to the
@@ -301,12 +330,12 @@ from a version 6.1 (or earlier)
 <a href="glindex.html#LDM">LDM</a>, then verify that it
 does so by executing the command 
 <blockquote><pre>
-pqcheck/pqcheck
+bin/pqcheck
 </blockquote></pre>
 If this indicates that the
 <a href="glindex.html#product-queue">product-queue</a> is invalid, then
 you must either 
-rebuild this package -- starting with the
+reinstall this package -- starting with the
 <a href="#clean-up">clean-up step above</a> --
 and specify the 
 <code><b>--disable-max-size</b></code>
@@ -353,19 +382,20 @@ enclose the file <b><code>install.log</code></b>.</p>
 
 <li>
 <p>
-Install some components with superuser privileges:
+If the configure script was unable to access superuser privileges, then
+the superuser must execute <b><code>make root-actions</code></b> to finish
+the installation.  For example:
 <blockquote><pre>
-su root -c 'make install_setuids'
+su root -c 'make root-actions'
 </blockquote></pre>
-Note that you need the superuser's password to accomplish 
-this step.
+Note that this example requires the superuser's password.
 </p>
 
-<p>This step is necessary for the 
+<p>Among other things, this step is necessary for the 
 <a href="glindex.html#LDM">LDM</a> server to listen on port 388 (which is
 a restricted port) 
-and for the <b><code>hupsyslog(1)</code></b> utility
-to notify the <b><code>syslogd(8)</code></b> daemon when a new log-file has been
+and for the LDM's <b><code>hupsyslog(1)</code></b> utility
+to notify the system logging daemon when a new log-file has been
 created.
 
 <li>
@@ -379,140 +409,54 @@ make clean
 
 <p><a href="../workshop/specifics.html#build">Workshop-specific instructions</a>.
 
-<hr><a NAME="ldmadmin"></a>
-<h2>Vet the <a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a> 
-configuration-file</h2>
-
-<p>
-Follow <a href="vet-ldmadmin.html">these instructions</a> on vetting the
-<a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a> 
-configuration-file.
-
-<hr>
-
+<li>
 <a name="subdirs"></a>
-<h2>Create the appropriate subdirectory structure</h2>
-
-    <blockquote>
+<h3>(Optional) Modify the installed subdirectory structure</h3>
 
     <p>
     You may skip this step if you already have an LDM installation
     (because you are upgrading your LDM, for example) because the
-    directories should already exist.
+    subdirectory structure should already be correct.
 
-    <ul>
-	<li><a href="#data-and-log-dirs">Create subdirectories for data-files 
-	    and LDM logfiles</a>
-	<li><a href="#runtime-subdirs">Create symbolic-link subdirectories</a>
-    </ul>
+    <p>The default installation will create some subdirectories
+    in the LDM user's home directory.
+    The subdirectories are
+    <em><tt>queue</tt></em> (containing the LDM product-queue),
+    <em><tt>logs</tt></em> (containing LDM log files),
+    and <em><tt>data</tt></em> (by default, containing locally-decoded data).
+    If the LDM user's home directory is automatically backed-up or is on
+    a remotely-mounted disk, then this structure should be modified.
 
-    <a name="data-and-log-dirs"></a>
-    <h3>
-    Create subdirectories for data-files and 
-    <a href="glindex.html#logfile">LDM logfile</a>s</h3>
-
-    <blockquote>
-
-	<h4>If you back-up users' home-directories:</h4>
-
-	<blockquote>
-
-	    <p>The 
-	    <a href="glindex.html#LDM">LDM</a>'s 
-	    <a href="glindex.html#product-queue">product-queue</a> 
-	    <strong>must</strong> be on a locally-mounted disk,
-	    and it is highly recommended that locally-decoded and stored data
-	    also be written to locally-mounted disk(s).  Also, because
-	    data-files and 
-	    <a href="glindex.html#logfile">LDM logfile</a>s are extremely
-	    volatile, they should probably
-	    not be automatically backed-up on a regular basis.
-	    For these reasons, we strongly recommend that
-	    the directories containing the 
-	    <a href="glindex.html#logfile">LDM logfile</a>s and decoded 
-	    data-files
-	    be on locally-mounted but not automatically backed-up disk(s).
-
-	    <p>If you routinely back-up users' home-directories, then the 
-	    <a href="glindex.html#LDM">LDM</a>'s
-	    log and data directories should not reside under the 
-	    <a href="glindex.html#LDM user">LDM user</a>'s
-	    home-directory but should, instead, be on other local, but not 
-	    backed-up disk(s) (<i>e.g.</i>, <code>/var/data</code>).
-	    In this case, you
-	    must create the data and log directories (possibly as root) and 
-	    ensure that they can be managed by the 
-	    <a href="glindex.html#LDM user">LDM user</a> and the 
-	    <a href="glindex.html#LDM user">LDM user</a>'s group.  For example:
-<blockquote><pre>
-su                                    # become root
-cd /var/data                          # go to a non-backed-up directory
-mkdir ldm ldm/data ldm/logs           # create the subdirectories
-chmod -R g+w ldm                      # set group write permission
-chown -R ldm:<em>groupId</em> ldm            # set group to LDM user's group
-exit                                  # become LDM user
-cd                                    # go to home-directory
-ln -s /var/data/ldm/data .            # symbolic-link to data directory
-ln -s /var/data/ldm/logs .            # symbolic-link to logging directory
-</blockquote></pre>
-
-	</blockquote>
-
-    <h4>If you don't back-up users' home-directories:</h4>
-
-	<blockquote>
-
-	    <p>If you don't routinely back-up users' home-directories,
-	    then you may simply create the necessary directories in the 
-	    <a href="glindex.html#LDM user">LDM user</a>'s
-	    home-directory.  For example:
-<blockquote><pre>
-cd                                   # go to home-directory
-mkdir data logs                      # create data and logging subdirectories
-</blockquote></pre>
-
-	</blockquote>
-
-    <p><a href="../workshop/specifics.html#dataAndLogDirs">Workshop-specific
-    instructions</a>.
-
-    </blockquote>
-
-<a name="runtime-subdirs"></a>
-<h3>Create symbolic-link subdirectories</A></h3>
-
-<blockquote>
-
-    <p>The symbolic-link subdirectories allow for easy switching between
-    different versions of an LDM installation.  Each symbolic-link
-    subdirectory goes through a "runtime" symbolic-link, which, in turn,
-    references the currently-active LDM installation.
-
-    <p>Execute the following commands:
-
-<blockquote><pre>
-cd                                    # go to LDM user's home-directory
-ln -s $VDIR runtime                   # create "runtime" symbolic-link
-ln -s runtime/{bin,include,lib,man} . # create individual links through "runtime"
-</blockquote></pre>
-
-    <p>The directory structure should now look something like this
-      (your <tt>data</tt> and <tt>logs</tt> "directories" might be different):
-<blockquote><pre>
-ls -lF
-... bin -> runtime/bin/
-... data -> /var/data/ldm/data/
-... etc/
-... include -> runtime/include/
-... ldm-6.8.1/
-... lib -> runtime/lib/
-... logs -> /var/data/ldm/logs/
-... man -> runtime/man/
-... runtime -> ldm-6.8.1/
-</blockquote></pre>
-
-
-</blockquote>
+    The LDM's
+    <a href="glindex.html#product-queue">product-queue</a> 
+    <strong>must</strong> be on a locally-mounted disk because it's
+    memory-mapped, file-locked, and can be accessed like free beer at a frat
+    party.  Its contents are also highly volatile and probably
+    shouldn't be backed-up -- a situation that's also true for the LDM
+    log files and, possibly, the decoded-data hierarchy.  For these
+    reasons, you might consider moving some of these
+    subdirectories to another disk partition.
+    For example, the
+    following will create an LDM-specific directory on a disk partition
+    that is local to most systems but that's not automatically backed-up:
+    <pre>
+	su                           # become root
+	mkdir /var/ldm               # create new subdirectory
+	chown ldm:<i>groupId</i> /var/ldm   # change ownership
+	exit                         # become LDM user
+    </pre>
+    Once this is done, you can move any of the previously-mentioned
+    subdirectories.  For example, the
+    following moves the decoded-data directory:
+    <pre>
+	mkdir /var/ldm/data          # create new subdirectory
+	chmod -R g+w /var/ldm/data   # (optional) set group write permission
+	cd                           # go to home directory
+	rmdir data                   # remove previous default subdirectory
+	ln -s /var/ldm/data data     # create link from previous default
+    </pre>
+    The <em><tt>queue</tt></em> and <em><tt>logs</tt></em> subdirectories
+    can be similarly handled.
 
 <script language="JavaScript" type="text/JavaScript">
 document.write(date_modified);

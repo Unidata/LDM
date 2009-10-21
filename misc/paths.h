@@ -8,7 +8,7 @@
 #define DEFAULT_CONFFILENAME	DEFAULT_ETCDIR "/pqact.conf"
 #define DEFAULT_DATADIR		LDMHOME
 #define DEFAULT_LOGDIR		LDMHOME "/logs"
-#define DEFAULT_QUEUE		LDMHOME "/data/ldm.pq"
-#define DEFAULT_SURF_OUTQUEUE	LDMHOME "/data/pqsurf.pq"
+#define DEFAULT_QUEUE		LDMHOME "/queues/ldm.pq"
+#define DEFAULT_SURF_OUTQUEUE	LDMHOME "/queues/pqsurf.pq"
 #define DEFAULT_SURF_CONFFILE	DEFAULT_ETCDIR "/pqsurf.conf"
 #define DEFAULT_SURF_DATADIR	LDMHOME

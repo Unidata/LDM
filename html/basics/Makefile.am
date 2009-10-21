@@ -25,7 +25,7 @@ EXTRA_DIST	= \
     programs.html \
     protocol.html \
     scour.conf.html \
-    source-install-steps.html \
+    source-install-steps.html.in \
     source_or_binary.html \
     startStop.html \
     support.html \

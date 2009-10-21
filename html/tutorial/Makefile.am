@@ -68,19 +68,22 @@ nobase_html_DATA	= \
     tutorial/images/TopArrow.gif
 
 if MAINTAINER
-tutorial:	FORCE
+all:		$(EXTRA_DIST)
+
+$(EXTRA_DIST):
 	rm -rf tutorial
 	tclsh ~/java/metapps/auxdata/docs/build/generate.tcl -verbose \
 	    -target tutorial \
 	    -noglossary \
 	    -notclevaluation
 
-web-update:	tutorial
+web-update:	$(EXTRA_DIST)
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    tutorial/ \
 	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/tutorial
 
-.PHONY:		web-update tutorial FORCE
+clean-local:
+	rm -rf tutorial
 
-FORCE:
+.PHONY:		web-update tutorial
 endif

@@ -102,19 +102,32 @@ endif
 
 ensure-ldmhome-links:
 	cd $(LDMHOME) \
-	&& ( ls bin >/dev/null || ln -s runtime/bin bin ) \
-	&& ( ls doc >/dev/null || ln -s runtime/doc doc ) \
-	&& ( ls include >/dev/null || ln -s runtime/include include ) \
-	&& ( ls lib >/dev/null || ln -s runtime/lib lib ) \
-	&& ( ls man >/dev/null || ln -s runtime/man man ) \
-	&& ( ls runtime >/dev/null || ln -s $(DESTDIR)$(prefix) runtime )
+	&& ( test -e bin || ln -s runtime/bin bin ) \
+	&& ( test -e doc || ln -s runtime/doc doc ) \
+	&& ( test -e include || ln -s runtime/include include ) \
+	&& ( test -e lib || ln -s runtime/lib lib ) \
+	&& ( test -e man || ln -s runtime/man man ) \
+	&& ( test -e runtime || ln -s $(DESTDIR)$(prefix) runtime )
 
 ensure-ldmhome-dirs:
-	cd $(LDMHOME) \
-	&& ( ls data >/dev/null || mkdir data ) \
-	&& ( ls logs >/dev/null || mkdir logs )
+	cd $(LDMHOME); \
+	if test -e logs || mkdir logs; then \
+	    if test -e queue; then \
+		test -e data || mkdir data; \
+	    else \
+		if test -e data; then \
+		    ln -s data queue; \
+		else \
+		    mkdir data queue; \
+		fi; \
+	    fi; \
+	fi
 
-root-actions:	install_setuids ensure-syslog-entry
+root-actions:	\
+    install_setuids \
+    ensure-syslog-entry \
+    ensure-rpc-entry \
+    ensure-services-entry
 
 install_setuids:
 	chown root $(DESTDIR)$(bindir)/{hupsyslog,ldmd} \
@@ -141,13 +154,26 @@ ensure-syslog-entry:
 	if grep -q $(LOG_LDM) $(SYSLOG_CONF); then \
 	    : true; \
 	else \
-	    awk '/\.none/{print $$1 ";$(LOG_LDM).none	" $$2; next}{print}' \
+	    awk 'NF==2 && /\.none/{\
+		print $$1 ";$(LOG_LDM).none	" $$2; next}{print}' \
 		$(SYSLOG_CONF) >$(SYSLOG_CONF).new \
 	    && echo >>$(SYSLOG_CONF).new \
 	    && echo '# Unidata LDM:' >>$(SYSLOG_CONF).new \
 	    && echo '$(LOG_LDM).debug	$(LDM_LOGFILE)' >>$(SYSLOG_CONF).new \
 	    && cp $(SYSLOG_CONF) $(SYSLOG_CONF).old \
 	    && mv -f $(SYSLOG_CONF).new $(SYSLOG_CONF); \
+	fi
+
+ensure-rpc-entry:
+	if awk '$$2 == 300029{exit 1}' /etc/rpc; then \
+	    cp -f /etc/rpc /etc/rpc.old; \
+	    echo 'ldmd		300029	# Unidata LDM system' >>/etc/rpc; \
+	fi
+
+ensure-services-entry:
+	if awk '$$2 ~ /388\/tcp/{exit 1}' /etc/services; then \
+	    cp -f /etc/services /etc/services.old; \
+	    echo 'ldm		388/tcp		# Unidata LDM' >>/etc/services;\
 	fi
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
@@ -183,6 +209,8 @@ beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
     root-actions \
     install_setuids \
     ensure-syslog-entry \
+    ensure-rpc-entry \
+    ensure-services-entry \
     ensure-ldmhome-links \
     ensure-ldmhome-dirs \
     commit-check \

@@ -406,9 +406,10 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+@MAINTAINER_FALSE@clean-local:
 clean: clean-am
 
-clean-am: clean-generic clean-libtool mostlyclean-am
+clean-am: clean-generic clean-libtool clean-local mostlyclean-am
 
 distclean: distclean-am
 	-rm -f Makefile
@@ -475,11 +476,11 @@ uninstall-am: uninstall-nobase_htmlDATA
 .MAKE: install-am install-strip
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
-	distclean distclean-generic distclean-libtool distdir dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man \
+	clean-local distclean distclean-generic distclean-libtool \
+	distdir dvi dvi-am html html-am info info-am install \
+	install-am install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
 	install-nobase_htmlDATA install-pdf install-pdf-am install-ps \
 	install-ps-am install-strip installcheck installcheck-am \
 	installdirs maintainer-clean maintainer-clean-generic \
@@ -487,21 +488,24 @@ uninstall-am: uninstall-nobase_htmlDATA
 	ps ps-am uninstall uninstall-am uninstall-nobase_htmlDATA
 
 
-@MAINTAINER_TRUE@tutorial:	FORCE
+@MAINTAINER_TRUE@all:		$(EXTRA_DIST)
+
+@MAINTAINER_TRUE@$(EXTRA_DIST):
 @MAINTAINER_TRUE@	rm -rf tutorial
 @MAINTAINER_TRUE@	tclsh ~/java/metapps/auxdata/docs/build/generate.tcl -verbose \
 @MAINTAINER_TRUE@	    -target tutorial \
 @MAINTAINER_TRUE@	    -noglossary \
 @MAINTAINER_TRUE@	    -notclevaluation
 
-@MAINTAINER_TRUE@web-update:	tutorial
+@MAINTAINER_TRUE@web-update:	$(EXTRA_DIST)
 @MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 @MAINTAINER_TRUE@	    tutorial/ \
 @MAINTAINER_TRUE@	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/tutorial
 
-@MAINTAINER_TRUE@.PHONY:		web-update tutorial FORCE
+@MAINTAINER_TRUE@clean-local:
+@MAINTAINER_TRUE@	rm -rf tutorial
 
-@MAINTAINER_TRUE@FORCE:
+@MAINTAINER_TRUE@.PHONY:		web-update tutorial
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

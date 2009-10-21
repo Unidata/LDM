@@ -56,16 +56,16 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_rpc_ldmd_OBJECTS = abbr.$(OBJEXT) acl.$(OBJEXT) \
+am_ldmd_OBJECTS = abbr.$(OBJEXT) acl.$(OBJEXT) \
 	child_process_set.$(OBJEXT) parser.$(OBJEXT) down6.$(OBJEXT) \
 	DownHelp.$(OBJEXT) forn5_svc.$(OBJEXT) ldm6_server.$(OBJEXT) \
 	ldm6_svc.$(OBJEXT) ldmd.$(OBJEXT) priv.$(OBJEXT) \
 	remote.$(OBJEXT) requester6.$(OBJEXT) svc5.$(OBJEXT) \
 	up6.$(OBJEXT) UpFilter.$(OBJEXT) wordexp.$(OBJEXT)
-rpc_ldmd_OBJECTS = $(am_rpc_ldmd_OBJECTS)
-rpc_ldmd_LDADD = $(LDADD)
+ldmd_OBJECTS = $(am_ldmd_OBJECTS)
+ldmd_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-rpc_ldmd_DEPENDENCIES = ../$(PQ_DIR)/lib.la ../protocol/lib.la \
+ldmd_DEPENDENCIES = ../$(PQ_DIR)/lib.la ../protocol/lib.la \
 	../ulog/lib.la ../misc/lib.la ../rpc/lib.la \
 	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -81,8 +81,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(rpc_ldmd_SOURCES)
-DIST_SOURCES = $(rpc_ldmd_SOURCES)
+SOURCES = $(ldmd_SOURCES)
+DIST_SOURCES = $(ldmd_SOURCES)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -266,7 +266,7 @@ EXTRA_DIST = \
 @WANT_FAUX_PQ_FALSE@PQ_DIR = pq
 @WANT_FAUX_PQ_TRUE@PQ_DIR = fauxPq
 BUILT_SOURCES = ldm6_svc.c parser.c scanner.c
-rpc_ldmd_SOURCES = \
+ldmd_SOURCES = \
     abbr.c \
     acl.c \
     child_process_set.c \
@@ -380,9 +380,9 @@ clean-binPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
-rpc.ldmd$(EXEEXT): $(rpc_ldmd_OBJECTS) $(rpc_ldmd_DEPENDENCIES) 
-	@rm -f rpc.ldmd$(EXEEXT)
-	$(LINK) $(rpc_ldmd_OBJECTS) $(rpc_ldmd_LDADD) $(LIBS)
+ldmd$(EXEEXT): $(ldmd_OBJECTS) $(ldmd_DEPENDENCIES) 
+	@rm -f ldmd$(EXEEXT)
+	$(LINK) $(ldmd_OBJECTS) $(ldmd_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -631,8 +631,7 @@ install-dvi: install-dvi-am
 install-dvi-am:
 
 install-exec-am: install-binPROGRAMS
-	@$(NORMAL_INSTALL)
-	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
+
 install-html: install-html-am
 
 install-html-am:
@@ -675,7 +674,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-local uninstall-man
 
 uninstall-man: uninstall-man1
 
-.MAKE: all check install install-am install-exec-am install-strip
+.MAKE: all check install install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
 	clean-generic clean-libtool ctags distclean distclean-compile \
@@ -683,15 +682,14 @@ uninstall-man: uninstall-man1
 	dvi-am html html-am info info-am install install-am \
 	install-binPROGRAMS install-data install-data-am \
 	install-data-local install-dvi install-dvi-am install-exec \
-	install-exec-am install-exec-hook install-html install-html-am \
-	install-info install-info-am install-man install-man1 \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
-	pdf pdf-am ps ps-am tags uninstall uninstall-am \
-	uninstall-binPROGRAMS uninstall-local uninstall-man \
-	uninstall-man1
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-man1 install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-local uninstall-man uninstall-man1
 
 
 # Because both the client-side and server-side code that rpcgen(1) generates
@@ -741,9 +739,6 @@ scanner.c:	scanner.l
 	flex scanner.l
 	mv lex.yy.c scanner.c
 
-install-exec-hook:
-	-cd $(DESTDIR)$(mandir)/man1 && ln -s ldmd.1 rpc.ldmd.1
-
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/ldmd.conf
 $(DESTDIR)$(sysconfdir):
@@ -752,7 +747,7 @@ $(DESTDIR)$(sysconfdir)/ldmd.conf:
 	$(INSTALL_DATA) $(srcdir)/ldmd.conf $@
 
 uninstall-local:
-	rm -f $(DESTDIR)$(mandir)/man1/rpc.ldmd.1
+	rm -f $(DESTDIR)$(mandir)/man1/ldmd.1
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

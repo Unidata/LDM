@@ -28,23 +28,8 @@ distribution is unpacked.
 	</P>
 </UL>
 <HR>
-<H2 ALIGN=CENTER><A NAME="root"></A>Steps to Perform as <CODE>root</CODE></H2>
-<OL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="#LDM user">Create the LDM
-	user-account</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="#services">(Optional)
-	Edit file <CODE>/etc/services</CODE></A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="#rpc">(Optional) Edit
-	file <CODE>/etc/rpc</CODE></A> 
-	</P>
-	<LI><P><A HREF="#syslog.conf">Edit file <CODE>/etc/syslog.conf</CODE></A>
-		</P>
-	<li><p><a href="#firewall">Ensure that TCP 
-	    connections can be made</a></p>
-</OL>
-<hr>
+<H2><A NAME="root"></A>Steps to Perform as <CODE>root</CODE></H2>
+
 	<H3><A NAME="LDM user"></A>Create the <A HREF="glindex.html#LDM">LDM</A>
 	user-account</H3>
 	<P>This is, necessarily, a system-dependent operation. Consult with
@@ -55,85 +40,15 @@ distribution is unpacked.
 	</P>
 	<UL>
 		<LI><P>The name of the user should be &quot;<CODE>ldm</CODE>&quot;.</P>
-		<LI><P STYLE="margin-bottom: 0in">Conventionally, the <A HREF="glindex.html#LDM">LDM</A>
-		user's home-directory is <CODE>/usr/local/ldm</CODE>. This pathname
-		is compiled into the binary distributions, so when installing from
-		a binary distribution you should either specify that directory as
-		the LDM user's home-directory, or do one of the following: 
-		</P>
-		<UL>
-			<LI><P>Use the <CODE>ldmadmin</CODE> script to manage the <A HREF="glindex.html#LDM">LDM</A>
-			and always override appropriate pathname arguments on
-			command-lines when executing individual LDM programs; or</P>
-			<LI><P>Make a symbolic link from <CODE>/usr/local/ldm</CODE> to
-			the <A HREF="glindex.html#LDM">LDM</A> user's home-directory; or</P>
-			<LI><P>Never install a binary distribution of the <A HREF="glindex.html#LDM">LDM</A>.</P>
-		</UL>
+		<LI><P STYLE="margin-bottom: 0in">The installation process
+		is simpler if the LDM user's home-directory is on local disk.
+
 		<LI><P>Use a group ID that allows other non-<A HREF="glindex.html#LDM">LDM</A>
 		processes to write files (decoders, etc.). The <A HREF="/software/mcidas/index.html">McIDAS</A>
 		and <A HREF="/software/gempak/index.html">GEMPAK</A>
 		users are often members of this group.</P>
 	</UL>
 	<P><A HREF="../workshop/specifics.html#LdmUserAccount">Workshop-specific
-	instructions</A>. 
-	</P>
-	<H3><A NAME="services"></A>(Optional) Edit file <CODE>/etc/services</CODE></H3>
-	<P>Add the following line: 
-	</P>
-	<BLOCKQUOTE><CODE>ldm&nbsp;388/tcp&nbsp;ldmd&nbsp;&nbsp;#&nbsp;UCAR&nbsp;Unidata&nbsp;LDM</CODE></BLOCKQUOTE>
-	<P>This allows programs such as <CODE><B>netstat</B>(1)</CODE> to
-	use &quot;ldm&quot; and &quot;ldmd&quot; instead of &quot;388&quot;
-	(the LDM port number). 
-	</P>
-	<P><A HREF="../workshop/specifics.html#/etc/services">Workshop-specific
-	instructions</A>. 
-	</P>
-	<H3><A NAME="rpc"></A>(Optional) Edit file <CODE>/etc/rpc</CODE></H3>
-	<P>Add the following line: 
-	</P>
-	<BLOCKQUOTE><CODE>ldm 300029 ldmd</CODE></BLOCKQUOTE>
-	<P>This allows programs such as <CODE><B>rpcinfo</B>(1)</CODE> to
-	use &quot;ldm&quot; and &quot;ldmd&quot; instead of &quot;300029&quot;
-	(the LDM program number for <A HREF="glindex.html#RPC">RPC</A>). 
-	</P>
-	<P><A HREF="../workshop/specifics.html#/etc/rpc">Workshop-specific
-	instructions</A>. 
-	</P>
-	<H3><A NAME="syslog.conf"></A>Edit file <CODE>/etc/syslog.conf</CODE></H3>
-	<P STYLE="margin-bottom: 0in">The <A HREF="glindex.html#LDM">LDM</A>
-	uses the system logging daemon, <CODE>syslogd(8)</CODE>, to write
-	error messages using the <A HREF="glindex.html#localn">local<I>n</I></A>
-	logging facility Such messages should end up in the <A HREF="glindex.html#logfile">LDM
-	logfile</A>. 
-	</P>
-	<UL>
-		<LI><P>Add the following entry to file
-		<CODE>/etc/syslog.conf</CODE>
-		(or <code>/etc/rsyslog.conf</code>, depending on your
-		operating system).
-				</P>
-		<BLOCKQUOTE><CODE><A HREF="glindex.html#localn">local<I>n</I></A>.debug&nbsp;/usr/local/ldm/logs/ldmd.log</CODE></BLOCKQUOTE>
-		<P STYLE="margin-bottom: 0in">where <CODE><A HREF="glindex.html#localn">local<I>n</I></A></CODE>
-		is the logging facility that the <A HREF="glindex.html#LDM">LDM</A>
-		will use. Note that you might have to adjust the pathname of the
-		log-file. 
-		</P>
-		<LI><P>Add the string <CODE><A HREF="glindex.html#localn">local<I>n</I></A></CODE>
-		to entries like the following so that LDM messages will not be
-		written to the console (Note: entries might not be exactly like
-		these, but they should be similar): 
-		</P>
-		<BLOCKQUOTE><CODE>*.err;kern.notice;auth.notice;user.none;<CODE><A HREF="glindex.html#localn">local<I>n</I></A></CODE>.none&nbsp;/dev/console<BR>*.err;kern.debug;daemon.notice;mail.crit;user.none;<CODE><A HREF="glindex.html#localn">local<I>n</I></A></CODE>.none&nbsp;/var/adm/messages</CODE></BLOCKQUOTE>
-		<LI><P>If the operating system is Linux and the file
-		<CODE><B>/etc/selinux/config</B></CODE> exists and contains the
-		variable <CODE><B>SELINUX</B></CODE>, then that variable must be
-		set to <CODE><B>disabled</B></CODE> in order to allow the <CODE>syslog(8)</CODE>
-		daemon to write log messages to the LDM logfile. 
-		<em>The computer must be rebooted for this change to take
-		effect.</em>
-		</P>
-	</UL>
-	<P><A HREF="../workshop/specifics.html#etc/syslog.conf">Workshop-specific
 	instructions</A>. 
 	</P>
 
@@ -181,88 +96,46 @@ distribution is unpacked.
 	instructions</A>.</P>
 
 <HR>
-<H2 ALIGN=CENTER><A NAME="ldm-user"></A>Steps to Perform as the LDM
+<H2><A NAME="ldm-user"></A>Steps to Perform as the LDM
 User</H2>
-<OL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="#home">Become the LDM
-	user in the user's home-directory</A> 
-	</P>
-	<LI><P><A HREF="#profile">Edit the LDM user's profile-file</A></P>
-</OL>
 
-	<H3><A NAME="home"></A>Become the <A HREF="glindex.html#LDM%20user">LDM
-	user</A> in the user's home-directory</H3>
-	<P>For example: 
-	</P>
-	<BLOCKQUOTE><CODE>su - ldm </CODE>
-	</BLOCKQUOTE>
-	<P>The &quot;-&quot; option guarantees that the current working
-	directory is the <A HREF="glindex.html#LDM%20user">LDM user</A>'s
-	home-directory. Alternatively, just log-out and log back in as the
-	<A HREF="glindex.html#LDM%20user">LDM user</A>. 
-	</P>
-	<P><A HREF="../workshop/specifics.html#becomeLdmUser">Workshop-specific
-	instructions</A>. 
-	</P>
 	<H3><A NAME="profile"></A>Edit the <A HREF="glindex.html#LDM%20user">LDM
 	user</A>'s profile-file</H3>
-	<P STYLE="margin-bottom: 0in">Add the following lines to the
-	appropriate login profile-file of the
-	<A HREF="glindex.html#LDM%20user">LDM user</A>'s
-	user-shell. The profile-file should be the one that the
-	user-shell reads when it's a login shell 
-	(<i>e.g.</i>, <b><tt>.bash_profile</b></tt>,
+	<P STYLE="margin-bottom: 0in">As the LDM user, add the following entries
+	to the appropriate login profile-file of the <A
+	HREF="glindex.html#LDM%20user">LDM user</A>'s user-shell. The
+	profile-file should be the one that the user-shell reads when it's a
+	login shell (<i>e.g.</i>, <b><tt>.bash_profile</b></tt>,
 	<b><tt>.login</b></tt>).
 
-	<P STYLE="margin-bottom: 0in">
-	If more than one person might manage the
-	<A HREF="glindex.html#LDM">LDM</A>,
-	then it's a good idea to add both of the following snippets in case
-	the other person prefers a different user-shell. 
-	</P>
-	<UL>
-		<LI><P STYLE="margin-bottom: 0in">Standard user-shell (e.g. <TT>sh</TT>,
-		<TT>ksh</TT>, <TT>bash</TT>): 
-		</P>
-		<UL>
-			<LI><P>Required 
-			</P>
-			<BLOCKQUOTE><A NAME="MANPATH"></A><CODE>export&nbsp;LDMHOME=$HOME<BR>export&nbsp;PATH=$HOME/decoders:$HOME/util:$HOME/bin:$PATH<BR>export&nbsp;MANPATH=$HOME/man:<I>SysManPath</I>
-			</CODE>
-			</BLOCKQUOTE>
-			<LI><P>Optional 
-			</P>
-			<BLOCKQUOTE><CODE># Example pathname of UDUNITS(3)
-			database<BR>export&nbsp;UDUNITS_PATH=$HOME/etc/udunits.dat </CODE>
-			</BLOCKQUOTE>
-		</UL>
-		<LI><P STYLE="margin-bottom: 0in"><TT>csh</TT>-like user-shell
-		(e.g. <TT>csh</TT>, <TT>tcsh</TT>): 
-		</P>
-		<UL>
-			<LI><P>Required 
-			</P>
-			<BLOCKQUOTE><CODE>setenv&nbsp;LDMHOME&nbsp;$HOME<BR>set&nbsp;path=($HOME/decoders&nbsp;$HOME/util&nbsp;$HOME/bin&nbsp;$path)<BR>setenv&nbsp;MANPATH&nbsp;$HOME/man:<I>SysManPath</I></CODE></BLOCKQUOTE>
-			<LI><P>Optional 
-			</P>
-			<BLOCKQUOTE><CODE># Example pathname of UDUNITS(3) database<BR>setenv
-			UDUNITS_PATH $HOME/etc/udunits.dat </CODE>
-			</BLOCKQUOTE>
-		</UL>
+	    <blockquote>
+	    <table align="center" border="2" cellpadding="6" cellspacing="0">
+		<tr>
+		    <th>User Shell</th>
+		    <th>Entries</th>
+		</tr>
+		    <td>Standard (e.g. <code>sh, ksh, bash</code>)</td>
+		    <td nowrap><code>
+export&nbsp;PATH=$HOME/decoders:$HOME/util:$HOME/bin:$PATH<br>
+export&nbsp;MANPATH=$HOME/man:<I>SysManPath</I></code></td>
+		</tr>
+		<tr>
+		    <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
+		    <td nowrap><code>
+set&nbsp;path=($HOME/decoders&nbsp;$HOME/util&nbsp;$HOME/bin&nbsp;$path)<br>
+setenv&nbsp;MANPATH&nbsp;$HOME/man:<I>SysManPath</I></code></td>
+		</tr>
+	    </table>
+	    </blockquote>
+
 	</UL>
-	<P><I>SysManPath</I> is the pathname for the manual-pages of the
+	<P><I>SysManPath</I></a>
+	is the pathname for the manual-pages of the
 	operating system (<I>e.g.</I>, <TT><B>/usr/man</B></TT> or
 	<TT><B>/usr/share/man</B></TT>). The <TT>MANPATH</TT> environment
 	variable might already contain this path. 
 	</P>
-	<P>The <CODE><B>UDUNITS_PATH</B></CODE> environment variable conains
-	the pathname of the database of the UDUNITS package. It should only
-	be necessary to define this variable if your <A HREF="glindex.html#LDM">LDM</A>
-	system will decode incoming products using the <CODE><B>gribtonc(1)</B></CODE>
-	utility (i.e. if an <A HREF="glindex.html#exec%20entry"><TT>exec</TT>
-	entry</A> that uses <CODE><B>gribtonc</B></CODE> exists in a <A HREF="glindex.html#pqact.conf"><TT>pqact</TT>
-	configuration-file</A>). 
-	</P>
+
 	<P>If necessary, modify the setting of the <TT>PATH</TT> environment
 	variable above to ensure that the <A HREF="platform.html#development">necessary
 	build utilities</A> can be found. 
@@ -270,18 +143,24 @@ User</H2>
 	<p>
 	Don't forget to source the profile-file so that the modifications
 	take effect.  For example:
-	<UL>
-		<LI><P STYLE="margin-bottom: 0in">Standard user-shell (e.g. <TT>sh</TT>,
-		<TT>ksh</TT>, <TT>bash</TT>): 
-			<BLOCKQUOTE><CODE>.&nbsp;.bash_profile</CODE>
-			</BLOCKQUOTE>
-		    </P>
-		<LI><P STYLE="margin-bottom: 0in"><TT>csh</TT>-like user-shell
-		    (e.g. <TT>csh</TT>, <TT>tcsh</TT>): 
-			<BLOCKQUOTE><CODE>source&nbsp;.login</CODE>
-			</BLOCKQUOTE>
-		    </P>
+
+	    <blockquote>
+	    <table align="center" border="2" cellpadding="6" cellspacing="0">
+		<tr>
+		    <th>User Shell</th>
+		    <th>Command</th>
+		</tr>
+		    <td>Standard (e.g. <code>sh, ksh, bash</code>)</td>
+		    <td><code>.&nbsp;.bash_profile</code></td>
+		</tr>
+		<tr>
+		    <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
+		    <td><code>source&nbsp;.login</code></td>
+		</tr>
+	    </table>
+	    </blockquote>
 	</p>
+
 	<P><A HREF="../workshop/specifics.html#profile">Workshop-specific
 	instructions</A>. 
 	</P>

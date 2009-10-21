@@ -47,3 +47,7 @@ notifyme/notifyme
 rtstats/rtstats
 server/ldmd
 logs
+data
+queue
+runtime
+html/basics/source-install-steps.html

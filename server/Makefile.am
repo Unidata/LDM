@@ -115,9 +115,6 @@ scanner.c:	scanner.l
 	flex scanner.l
 	mv lex.yy.c scanner.c
 
-install-exec-hook:
-	-cd $(DESTDIR)$(mandir)/man1 && ln -s ldmd.1 ldmd.1
-
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/ldmd.conf
 $(DESTDIR)$(sysconfdir):
