@@ -1,0 +1,7 @@
+# libtool(1) can't build a sharable library using this compiler.
+# /usr/bin/c89: illegal option -- d
+PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89
+
+PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc
+
+PATH=/usr/bin:/bin,/usr/bin/gnumake,/usr/bin/gcc
