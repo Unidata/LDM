@@ -1,8 +1,6 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: ldm5_clnt.c,v 5.69.2.3.2.1.4.10 2008/04/15 16:34:11 steve Exp $ */
 
 /*
  * ldm client side functions
@@ -17,6 +15,7 @@
 
 #include "ldm5.h"
 #include "globals.h"
+#include "remote.h"
 #include "h_clnt.h"
 #include "ldmprint.h"
 #include "prod_class.h"
@@ -442,12 +441,12 @@ adjustByLastInfo(
  */
 int
 forn5(
-    const unsigned long                        proc,
-    const char* const                   remote,
-    prod_class_t** const                  request,
-    const unsigned                      rpctimeo, 
-    const int                           inactive_timeo,
-    void (* const                       dispatch)(struct svc_req*, SVCXPRT*))
+    const unsigned long         proc,
+    const char* const           remote,
+    prod_class_t** const        request,
+    const unsigned              rpctimeo, 
+    const int                   inactive_timeo,
+    void (* const               dispatch)(struct svc_req*, SVCXPRT*))
 {
     int status = adjustByLastInfo(request);
 

@@ -20,6 +20,7 @@
 #include <regex.h>
 #include "ldm5.h"
 #include "globals.h"
+#include "remote.h"
 #include "ldmprint.h"
 #include "atofeedt.h"
 #include "ulog.h"

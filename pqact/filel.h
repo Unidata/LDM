@@ -1,8 +1,6 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: filel.h,v 1.144.16.2.2.5 2008/09/17 16:35:45 steve Exp $ */
 #ifndef _FILEL_H_
 #define _FILEL_H_
 
@@ -38,7 +36,9 @@ extern int xpipe_prodput( const product *prod, int argc, char **argv,
 extern int ldmdb_prodput( const product *prod, int argc, char **argv,
 	const void *xprod, size_t xlen);
 #endif /* !NO_DB */
-extern pid_t reap(pid_t pid, int options);
+extern pid_t reap(
+    const pid_t pid,
+    const int   options);
 extern void fl_sync(int nentries, int block);
 extern void close_lru(int skipflags);
 extern void fl_close_all(void);

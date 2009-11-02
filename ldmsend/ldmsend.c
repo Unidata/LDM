@@ -28,6 +28,7 @@
 #include "atofeedt.h"
 #include "error.h"
 #include "globals.h"
+#include "remote.h"
 #include "inetutil.h"
 #include "ldm_clnt.h"
 #include "ldmprint.h"

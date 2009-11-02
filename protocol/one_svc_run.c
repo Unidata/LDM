@@ -22,6 +22,7 @@
 #include "autoshift.h"  /* asTimeToShift() */
 #include "timestamp.h"
 #include "globals.h"
+#include "remote.h"
 
 
 /*

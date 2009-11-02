@@ -9,6 +9,7 @@ $numlogs = "7";
 $num_metrics = "4";
 $metrics_files = "$ldmhome/logs/metrics.txt*";
 $data_path = "$ldmhome/data";
+$queue_path = "$ldmhome/queue";
 $pq_path = "@PQ_PATH@";
 $etc_path = "$ldmhome/etc";
 $log_rotate = "1";
@@ -18,6 +19,7 @@ $max_clients = 256;
 $max_latency = 3600;
 $offset = 3600;
 $delete_info_files = 0;
+$insertion_check_period = 300;
 $check_time = 1;		# whether or not to check the system clock
 $warn_if_check_time_disabled = 1;	# warn if time-checking is disabled
 $ntpdate = "@NTPDATE@";	# pathname of the ntpdate(1) utility
@@ -84,12 +86,13 @@ print "
 \$etc_path = \"\$ldmhome/etc\";
 \$log_path = \"\$ldmhome/logs\";
 \$data_path = \"\$ldmhome/data\";
-\$pq_path = \"\$data_path/ldm.pq\";;
+\$queue_path = \"\$ldmhome/queue\";
+\$pq_path = \"\$queue_path/ldm.pq\";;
 
 # NOTE: If you change the following, then you must also modify the EXEC entry
 # for the \"pqsurf(1)\" utility in the LDM configuration-file (etc/ldmd.conf)
 # to ensure that the same pathname is used (via the \"-q path\" option).
-\$surf_path = \"\$data_path/pqsurf.pq\";
+\$surf_path = \"\$queue_path/pqsurf.pq\";
 
 # ldmadmin(1) file locations and names:
 \$pid_file = \"\$ldmhome/ldmd.pid\";
@@ -112,7 +115,7 @@ print "
 \$port = $port;
 
 ################################################################################
-# The following variables are new with LDM version 6.8.0:
+# The following variables are new with LDM 6.8.0 and later versions:
 ################################################################################
 
 # Maximum latency in seconds.  A data-product arriving with a latency greater
@@ -142,6 +145,10 @@ print "
 # The maximum number of extant client connections the LDM server will allow
 # before additional incoming connections requests are rejected.
 \$max_clients = $max_clients;
+
+# How far back, in seconds, to check the product-queue for the recent addition
+# of a data-product.
+\$insertion_check_period = $insertion_check_period;
 
 ################################################################################
 # The following deal with verifying the accuracy of the system clock.

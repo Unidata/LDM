@@ -1,8 +1,6 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: abbr.c,v 1.4.18.2 2006/02/28 21:03:26 steve Exp $ */
 
 #include "ldmconfig.h"
 

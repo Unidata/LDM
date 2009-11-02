@@ -1,8 +1,6 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: ldm5_clnt.h,v 5.52.18.5 2008/04/15 16:34:11 steve Exp $ */
 
 #ifndef _LDMCLNT_H_
 #define _LDMCLNT_H_
@@ -11,8 +9,8 @@
 #include "h_clnt.h"
 
 #ifdef __cplusplus
-/* TODO */
-#elif defined(__STDC__)
+extern "C" {
+#endif
 
 extern enum clnt_stat
 nullproc5(h_clnt *hcp, unsigned int timeo) ;
@@ -61,7 +59,7 @@ blkdata5(h_clnt *hcp, const datapkt *pktp,
  * other guy going away mapped to ECONNRESET.
  */ 
 int
-one_svc_run5(const int xp_sock, const unsigned inactive_timeo);
+one_svc_run(const int xp_sock, const unsigned inactive_timeo);
 
 /*
  * Send a FEEDME or NOTIFYME request (proc)
@@ -76,14 +74,15 @@ one_svc_run5(const int xp_sock, const unsigned inactive_timeo);
  */
 int
 forn5(
-	const unsigned long		proc,	 /* FEEDME or NOTIFYME only */
-	const char*		remote,
-	prod_class_t**		clsspp,
-	const unsigned		rpctimeo, 
-	const int		inactive_timeo, 
-	void(*			dispatch)(struct svc_req *,SVCXPRT *)
-	);
+    const unsigned long         proc,
+    const char* const           remote,
+    prod_class_t** const        request,
+    const unsigned              rpctimeo, 
+    const int                   inactive_timeo,
+    void (* const               dispatch)(struct svc_req*, SVCXPRT*));
 
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* !_LDMCLNT_H_ */

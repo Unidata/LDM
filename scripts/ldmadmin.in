@@ -154,8 +154,13 @@ elsif ($command eq "isrunning") { # check if the ldm is running
     $status = !isRunning();
     checkTime(0);
 }
-elsif ($command eq "check") {	# analyze the log files
-    system("$bin_path/ldmcheck -d $log_path");
+elsif ($command eq "checkinsertion") { # check if a product has been inserted
+    $status = !check_insertion();
+    checkTime(0);
+}
+elsif ($command eq "check") {	# check the LDM system
+    $status = check_ldm();
+#    system("$bin_path/ldmcheck -d $log_path");
     checkTime(0);
 }
 elsif ($command eq "watch") {	# monitor incoming products
@@ -316,6 +321,8 @@ sub print_usage
     print "\n\tscour\t\t\t\t\tScour data directories";
     print "\n\tisrunning\t\t\t\tExit status 0 if LDM is running,";
     print "\n\t\t\t\t\t\t  else exit 1";
+    print "\n\tcheckinsertion\t\t\t\tCheck for recent insertion of";
+    print "\n\t\t\t\t\t\tdata-product into product-queue";
     print "\n\tpqactcheck [-p pqact_conf]\t\tCheck syntax for pqact files";
     print "\n\tpqactHUP\t\t\t\tSend HUP signal to pqact program";
     print "\n\tqueuecheck\t\t\t\tCheck for queue corruption";
@@ -854,6 +861,61 @@ sub isRunning
     }
 
     return $running;
+}
+
+###############################################################################
+# Check that a data-product has been inserted into the product-queue
+###############################################################################
+
+sub check_insertion
+{
+    my $failure = 1;
+    if (!open(PQCAT, "pqcat -l /dev/null -q $pq_path -o @_ -i 0 |")) {
+        errmsg("Couldn't invoke the pqcat(1) utility");
+    }
+    else {
+        my $wasSomething = 0;
+        while (<PQCAT>) {
+            $wasSomething = 1;
+        }
+        close PQCAT;
+        if ($wasSomething) {
+            $failure = 0;
+        }
+        else {
+            errmsg("No data-product has been inserted into the product-queue ".
+                "in the last $insertion_check_period seconds");
+        }
+    }
+    return !$failure;
+}
+
+###############################################################################
+# Check the LDM system.
+###############################################################################
+
+sub check_ldm
+{
+    my $status = 0;
+    print "Checking if the LDM server is running\n";
+    if (!isRunning()) {
+        errmsg("The LDM server is not running");
+        $status = 1;
+    }
+    else {
+        print "Checking if a data-product has been inserted in the last ".
+            "$insertion_check_period seconds\n";
+        if (!check_insertion($insertion_check_period)) {
+            $status = 2;
+        }
+        else {
+            print "Checking the system clock\n";
+            if (!checkTime()) {
+                $status = 3;
+            }
+        }
+    }
+    return $status;
 }
 
 ###############################################################################

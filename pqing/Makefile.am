@@ -20,11 +20,7 @@ EXTRA_DIST		= \
     wmo_message.h \
     wmo_start.h \
     xbuf.h
-if WANT_FAUX_PQ
-    PQ_DIR 		= fauxPq
-else
-    PQ_DIR 		= pq
-endif
+PQ_SUBDIR		= @PQ_SUBDIR@
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= dtime.c wmo_header.c tokens.c xbuf.c
 bin_PROGRAMS		= pqing
@@ -39,12 +35,17 @@ pqing_SOURCES		= \
     tty.c \
     wmo_message.c \
     wmo_start.c
-CPPFLAGS		= -I$(top_srcdir)/ulog -I$(top_srcdir)/protocol -I$(top_srcdir)/pq -I$(top_srcdir)/misc -I$(top_srcdir)
+CPPFLAGS		= \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)/pq \
+    -I$(top_srcdir)/misc \
+    -I$(top_srcdir)
 pqing_LDADD		= \
     do_check.o \
     do_nocheck.o \
     lib.la \
-    ../$(PQ_DIR)/lib.la \
+    ../$(PQ_SUBDIR)/lib.la \
     ../protocol/lib.la \
     ../ulog/lib.la \
     ../misc/lib.la \
@@ -52,7 +53,7 @@ pqing_LDADD		= \
     -lm
 dist_man1_MANS		= pqing.1
 TAGS_FILES		= \
-    ../$(PQ_DIR)/*.c ../$(PQ_DIR)/*.h \
+    ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \

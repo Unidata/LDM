@@ -21,6 +21,7 @@
 #include "ldm.h"
 #include "atofeedt.h"
 #include "globals.h"
+#include "remote.h"
 #include "ldmprint.h"
 #include "ulog.h"
 #include "pq.h"

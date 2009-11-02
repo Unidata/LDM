@@ -9,51 +9,35 @@
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
 EXTRA_DIST		= \
-    abbr.h \
-    acl.h \
     child_process_set.h \
-    down6.h \
-    DownHelp.h \
-    feedTime.h \
     forn5_svc.h \
     ldmd.conf \
     parser.y \
-    peer_info.h \
-    priv.h \
-    requester6.h \
     scanner.l \
     scanner.c \
     up6.h \
-    UpFilter.h \
     wordexp.h
-if WANT_FAUX_PQ
-    PQ_DIR 		= fauxPq
-else
-    PQ_DIR 		= pq
-endif
+PQ_SUBDIR		= @PQ_SUBDIR@
 BUILT_SOURCES		= ldm6_svc.c parser.c scanner.c
 bin_PROGRAMS		= ldmd
 ldmd_SOURCES	= \
-    abbr.c \
-    acl.c \
     child_process_set.c \
     parser.c \
-    down6.c \
-    DownHelp.c \
     forn5_svc.c \
     ldm6_server.c \
     ldm6_svc.c \
     ldmd.c \
-    priv.c \
-    remote.c \
-    requester6.c \
     svc5.c \
     up6.c \
-    UpFilter.c \
     wordexp.c
-CPPFLAGS		= -I$(top_srcdir)/ulog -I$(top_srcdir)/protocol -I$(top_srcdir)/pq -I$(top_srcdir)/misc -I$(top_srcdir)
+CPPFLAGS		= \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)/pq \
+    -I$(top_srcdir)/misc \
+    -I$(top_srcdir)
 LDADD			= \
-    ../$(PQ_DIR)/lib.la \
+    ../$(PQ_SUBDIR)/lib.la \
     ../protocol/lib.la \
     ../ulog/lib.la \
     ../misc/lib.la \
@@ -62,7 +46,7 @@ LDADD			= \
     -lm
 dist_man1_MANS		= ldmd.1
 TAGS_FILES		= \
-    ../$(PQ_DIR)/*.c ../$(PQ_DIR)/*.h \
+    ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
@@ -98,6 +82,8 @@ ldm6_svc.c:	../protocol/ldm.x
 ldm6_server.c:	# ../protocol/ldm.x
 	(echo '#include "ldmconfig.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
 
+if MAINTAINER
+
 parser.c:	parser.y
 	status=1; \
 	$(YACC) parser.y && \
@@ -114,6 +100,8 @@ parser.c:	parser.y
 scanner.c:	scanner.l
 	flex scanner.l
 	mv lex.yy.c scanner.c
+
+endif
 
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/ldmd.conf

@@ -1,8 +1,6 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: acl.c,v 1.98.2.1.6.1.2.4.2.29 2009/08/17 17:12:32 steve Exp $ */
 
 /*LINTLIBRARY*/
 
@@ -19,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 #include <regex.h>
 #include <unistd.h>
@@ -29,6 +28,7 @@
 #include "down6.h"
 #include "error.h"
 #include "feedTime.h"
+#include "remote.h"
 #include "globals.h"            /* global "pq"; defined in ldmd.c */
 #include "inetutil.h"
 #include "ldm5_clnt.h"

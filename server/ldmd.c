@@ -34,6 +34,7 @@
 #include "paths.h"
 #include "ldm.h"
 #include "ldm4.h"
+#include "log.h"
 #include "ulog.h"
 #include "pq.h"
 #ifndef HAVE_SETENV
@@ -44,8 +45,10 @@
 #include "acl.h"
 #include "down6.h"              /* down6_destroy() */
 #include "globals.h"
+#include "remote.h"
 #include "child_process_set.h"
 #include "inetutil.h"
+#include "remote.h"
 #include "rpcutil.h"  /* clnt_errmsg() */
 #include "requester6.h"
 #include "up6.h"

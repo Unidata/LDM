@@ -4,10 +4,8 @@
 
 %{
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: parser.y,v 1.1.2.2 2008/05/15 21:26:41 steve Exp $ */
 
 #include "ldmconfig.h"
 
@@ -15,6 +13,7 @@
 #include "atofeedt.h"
 #include "error.h"
 #include "globals.h"
+#include "remote.h"
 #include "ldm.h"
 #include "ldmprint.h"
 #include "RegularExpressions.h"
@@ -37,7 +36,7 @@ static unsigned	ldmPort = LDM_PORT;
 static int      execute = 1;
 
 static const char*	scannerGetPath(void);
-static int		scannerPush(const char*);
+static int              scannerPush(const char* const path);
 static int		scannerPop(void);
 
 static void
@@ -409,11 +408,6 @@ decodeRequestEntry(
 
 #if YYDEBUG
 #define printf udebug
-#endif
-
-#ifdef __hpux
-/* otherwise, they define it to 'int' in spite of the union typedef */
-#define YYSTYPE YYSTYPE
 #endif
 
 %}

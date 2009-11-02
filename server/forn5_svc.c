@@ -23,6 +23,7 @@
 #include "prod_class.h"
 #include "peer_info.h"
 #include "globals.h"
+#include "remote.h"
 
 static timestampt maxlatency;
 

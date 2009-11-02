@@ -26,6 +26,7 @@
 #include "error.h"
 #include "ldm.h"         /* LDM version 6 client-side functions */
 #include "ldmprint.h"    /* s_prod_class(), s_prod_info() */
+#include "log.h"
 #include "peer_info.h"   /* peer_info */
 #include "pq.h"          /* pq_close(), pq_open() */
 #include "prod_class.h"  /* clss_eq() */
@@ -33,6 +34,7 @@
 #include "UpFilter.h"
 #include "ulog.h"
 #include "globals.h"
+#include "remote.h"
 
 #include "up6.h"
 

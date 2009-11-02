@@ -1,0 +1,9 @@
+PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/cc -o32
+PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/cc -64
+
+PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/c89 -o32
+PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/c89 -64
+
+# /opt/gnu/bin/gcc has neither a "-m32" nor "-m64" option
+# libtool: link: `auth_none.lo' is not a valid libtool object
+PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/sbin,/opt/gnu/bin/make,/opt/gnu/bin/gcc

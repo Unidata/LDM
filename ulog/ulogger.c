@@ -48,6 +48,7 @@ static char rcsid[] = "$Id: ulogger.c,v 6.21.18.1 2004/10/19 19:03:13 steve Exp 
 #include <ctype.h>
 #include <unistd.h> /* getlogin() */
 #include <string.h>
+#include <strings.h>
 #define SYSLOG_NAMES
 #include "ulog.h"
 

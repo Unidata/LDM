@@ -34,12 +34,13 @@ struct error {
  ******************************************************************************/
 
 
-ErrorObj* err_new(
+ErrorObj*
+err_new(
     const int           code,
-    ErrorObj    *const   cause,
-    const char *const   file,
+    ErrorObj* const     cause,
+    const char* const   file,
     const unsigned      line, 
-    const char *const   fmt,
+    const char* const   fmt,
     ...)
 {
     ErrorObj *err;
@@ -94,7 +95,8 @@ ErrorObj* err_new(
 
 
 int
-err_code(const ErrorObj* err)
+err_code(
+    const ErrorObj*     err)
 {
     assert(err != NULL);
 
@@ -103,7 +105,8 @@ err_code(const ErrorObj* err)
 
 
 ErrorObj*
-err_cause(const ErrorObj *err)
+err_cause(
+    const ErrorObj*     err)
 {
     assert(err != NULL);
 
@@ -112,7 +115,8 @@ err_cause(const ErrorObj *err)
 
 
 const char*
-err_message(const ErrorObj *err)
+err_message(
+    const ErrorObj*     err)
 {
     return err->msg;
 }
@@ -122,9 +126,10 @@ err_message(const ErrorObj *err)
  * This function is not re-entrant because it contains static variables that are
  * potentially modified on every invocation.
  */
-void err_log(
-    const ErrorObj       *const err,
-    const enum err_level level)
+void
+err_log(
+    const ErrorObj* const       err,
+    const enum err_level        level)
 {
     static const unsigned logMasks[] = {
         LOG_MASK(LOG_ERR),
@@ -236,7 +241,9 @@ void err_log(
 }
 
 
-void err_free(ErrorObj *const err)
+void
+err_free(
+    ErrorObj* const     err)
 {
     if (err != NULL) {
         if (err->cause != NULL)
@@ -256,9 +263,10 @@ void err_free(ErrorObj *const err)
  *      err     The error.
  *      level   The logging level.
  */
-void err_log_and_free(
-    ErrorObj             *const err,
-    const enum err_level level)
+void
+err_log_and_free(
+    ErrorObj* const             err,
+    const enum err_level        level)
 {
     err_log(err, level);
     err_free(err);

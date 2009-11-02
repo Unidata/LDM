@@ -26,6 +26,7 @@
 #include "ldm.h"
 #include "pq.h"
 #include "globals.h"
+#include "remote.h"
 #include "atofeedt.h"
 #include "ldmprint.h"
 #include "inetutil.h"
@@ -149,10 +150,10 @@ set_sigactions(void)
 static int
 fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
 {
-        int nread;
-        char buf[8192];
-        MD5Init(md5ctxp);
+        int           nread;
+        unsigned char buf[8192];
 
+        MD5Init(md5ctxp);
         for(; st_size > 0; st_size -= nread )
         {
                 nread = read(fd, buf, sizeof(buf));
@@ -162,10 +163,8 @@ fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
                         return -1;
                 } /* else */
                 MD5Update(md5ctxp, buf, nread);
-
                 (void)exitIfDone(1);
         }
-
         MD5Final(signature, md5ctxp);
         return 0;
 }

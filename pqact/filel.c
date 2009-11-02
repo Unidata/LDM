@@ -1,8 +1,6 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: filel.c,v 1.177.10.6.2.18 2008/09/17 16:35:18 steve Exp $ */
 
 #include <ldmconfig.h>
 #include <stdio.h>
@@ -36,6 +34,7 @@
 #include "ldm.h"
 #include "ldmalloc.h"
 #include "ldmprint.h"
+#include "log.h"
 #include "mkdirs_open.h"
 #include "ulog.h"
 #include "pbuf.h"
@@ -1451,32 +1450,82 @@ static struct fl_ops pipe_ops = {
         pipe_put,
 };
 
+/*
+ * Writes the data-product creation-time to the pipe as
+ *     integer portion                  uint64_t
+ *     microseconds portion             int32_t
+ * ARGUMENTS:
+ *     entry    Pointer to file-list entry
+ *     creation Pointer to data-product creation-time
+ * RETURNS:
+ *     ENOERR   Success
+ *     !ENOERR  Failure
+ */
+static int
+pipe_putcreation(
+    fl_entry*         entry,
+    const timestampt* creation)
+{
+    int         status;
+#if SIZEOF_UINT64_T*CHAR_BIT == 64
+    uint64_t    uint64 = (uint64_t)creation->tv_sec;
+    status = pbuf_write(entry->handle.pbuf, (void*)&uint64,
+        (u_int)sizeof(uint64_t), pipe_timeo, entry->path);
+#else
+    uint32_t    lower32 = (uint32_t)creation->tv_sec;
+#   if SIZEOF_LONG*CHAR_BIT <= 32
+        uint32_t    upper32 = 0;
+#   else
+        uint32_t    upper32 =
+            (uint32_t)(((unsigned long)creation->tv_sec) >> 32);
+#   endif
+#   if WORDS_BIGENDIAN
+        uint32_t        first32 = upper32;
+        uint32_t        second32 = lower32;
+#   else
+        uint32_t        first32 = lower32;
+        uint32_t        second32 = upper32;
+#   endif
+    status = pbuf_write(entry->handle.pbuf, (void*)&first32,
+            (u_int)sizeof(uint32_t), pipe_timeo, entry->path);
+        if (status == ENOERR) {
+            status = pbuf_write(entry->handle.pbuf, (void*)&second32,
+                (u_int)sizeof(uint32_t), pipe_timeo, entry->path);
+            if (status == ENOERR) {
+                int32_t int32 = (int32_t)creation->tv_usec;
+                status = pbuf_write(entry->handle.pbuf, (void*)&int32,
+                    (u_int)sizeof(int32_t), pipe_timeo, entry->path);
+            }
+        }
+#endif
+    return status;
+}
+
+/*
+ * Writes the data-product metadata to the pipe as:
+ *      metadata-length in bytes                                 uint32_t
+ *      data-product signature (MD5 checksum)                    uchar[16]
+ *      data-product size in bytes                               uint32_t
+ *      product creation-time in seconds since the epoch:
+ *              integer portion                                  uint64_t
+ *              microseconds portion                             int32_t
+ *      data-product feedtype                                    uint32_t
+ *      data-product sequence number                             uint32_t
+ *      product-identifier:
+ *              length in bytes (excluding NUL)                  uint32_t
+ *              non-NUL-terminated string                        char[]
+ *      product-origin:
+ *              length in bytes (excluding NUL)                  uint32_t
+ *              non-NUL-terminated string                        char[]
+ */
 static int
 pipe_putmeta(
     fl_entry*           entry,
     const prod_info*    info,
     uint32_t            sz)
 {
-    /*
-     * metadata-length in bytes                                 uint32_t
-     * data-product signature (MD5 checksum)                    uchar[16]
-     * data-product size in bytes                               uint32_t
-     * product creation-time in seconds since the epoch:
-     *     integer portion                                      uint64_t
-     *     microseconds portion                                 int32_t
-     * data-product feedtype                                    uint32_t
-     * data-product sequence number                             uint32_t
-     * product-identifier:
-     *     length in bytes (excluding NUL)                      uint32_t
-     *     non-NUL-terminated string                            char[]
-     * product-origin:
-     *     length in bytes (excluding NUL)                      uint32_t
-     *     non-NUL-terminated string                            char[]
-     */
-
     int32_t     int32;
     uint32_t    uint32;
-    uint64_t    uint64;
     uint32_t    identLen = (uint32_t)strlen(info->ident);
     uint32_t    originLen = (uint32_t)strlen(info->origin);
     uint32_t    totalLen = 4 + 16 + 4 + 8 + 4 + 4 + 4 + (4 + identLen) + 
@@ -1495,9 +1544,7 @@ pipe_putmeta(
         (u_int)sizeof(sz), pipe_timeo, entry->path);
     if (status != ENOERR) return status;
 
-    uint64 = (uint64_t)info->arrival.tv_sec;
-    status = pbuf_write(entry->handle.pbuf, (void*)&uint64,
-        (u_int)sizeof(uint64), pipe_timeo, entry->path);
+    status = pipe_putcreation(entry, &info->arrival);
     if (status != ENOERR) return status;
 
     int32 = (int32_t)info->arrival.tv_usec;

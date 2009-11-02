@@ -1,8 +1,6 @@
 /*
- *   Copyright 1994, University Corporation for Atmospheric Research
- *   See top level COPYRIGHT file for copying and redistribution conditions.
+ *   See file COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: pq.h,v 3.20.8.2.2.1.2.7 2009/05/21 20:30:44 steve Exp $ */
 
 #ifndef _PQ_H
 #define _PQ_H
@@ -44,24 +42,29 @@ typedef struct pqueue pqueue; /* private, implemented in pq.c */
 #define PQ_SPARSE       0x80    /* Created as sparse file, zero blocks unallocated */
 /* N.B.: bits 0x1000 (and above) in use internally */
 
-extern int
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int
 pq_create(const char *path, mode_t mode, int pflags,
 	size_t align, off_t initialsz, size_t nproducts,
 	pqueue **pqp);
 
-extern int
-pq_open(const char *path,
-	int pflags,
-	pqueue **pqp);
+int
+pq_open(
+    const char* const path,
+    int               pflags,
+    pqueue** const    pqp);
 
-extern int 
+int 
 pq_close(pqueue *pq);
 
 
 /*
  * Let the user find out the pagesize.
  */
-extern int pq_pagesize(const pqueue *pq);
+int pq_pagesize(const pqueue *pq);
 
 
 struct pqe_index {
@@ -303,14 +306,23 @@ int
 pq_getOldestCursor(
     pqueue*		pq,
     timestampt* const	oldestCursor);
-
-extern int		pq_del_oldest(pqueue *pq);
-extern int		pq_fext_dump(pqueue *const pq);
-extern void		pq_coffset(pqueue *pq, off_t c_offset);
-extern void		pq_reset_random(void);
-extern int		pq_clear_write_count(const char* path);
-extern int		pq_get_write_count(const char* path, unsigned* count);
-extern const char*	pq_strerror(const pqueue* pq, int error);
+int pq_del_oldest(
+    pqueue*             pq);
+int pq_fext_dump(
+    pqueue* const       pq);
+void pq_coffset(
+    pqueue*             pq,
+    off_t               c_offset);
+void pq_reset_random(
+    void);
+int pq_clear_write_count(
+    const char* const   path);
+int pq_get_write_count(
+    const char* const   path,
+    unsigned* const     count);
+const char* pq_strerror(
+    const pqueue* const pq,
+    const int           error);
 
 
 /*
@@ -384,5 +396,9 @@ int
 pq_setCursorFromSignature(
     pqueue* const       pq,
     const signaturet    signature);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_PQ_H */

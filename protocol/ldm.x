@@ -27,9 +27,6 @@
 #endif /* RPC_HDR */
 
 #ifdef RPC_HDR
-%#ifndef LDM_H
-%#define LDM_H
-%
 %/*
 % * these define the range of "transient program numbers"
 % */
@@ -734,6 +731,7 @@ program LDMPROG {
 %bool_t xdr_dbuf(XDR* xdrs, dbuf* objp);
 #endif
 
+#if 0
 /*
  * Module ldm6_server function declarations:
  */
@@ -753,6 +751,7 @@ program LDMPROG {
 %    SVCXPRT *transp, xdrproc_t xdr_result, void* result);
 %
 %#endif
+#endif
 #endif
 
 #if defined(RPC_XDR)

@@ -257,6 +257,7 @@ pi_free(
  *      -1      Failure.  log_errno() called.
  *      else    Number of bytes written.
  */
+int
 pi_print(
     const prod_info* const      info,
     FILE*                       file)
@@ -388,6 +389,7 @@ scanString(
  *      -1      Failure.  log_*() called.
  *      else    Number of bytes scanned.
  */
+int
 pi_scan(
     prod_info* const    info,
     FILE*               file)

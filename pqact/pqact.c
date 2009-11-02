@@ -26,6 +26,7 @@
 #include "ldm.h"
 #include "error.h"
 #include "globals.h"
+#include "remote.h"
 #include "paths.h" /* built by configure from paths.h.in */
 #include "atofeedt.h"
 #include "pq.h"

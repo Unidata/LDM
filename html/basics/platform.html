@@ -33,9 +33,10 @@
 	<LI><P STYLE="margin-bottom: 0in">Have a standard user-shell (<I>e.g.</I>,
 	<TT>sh(1)</TT>, <TT>ksh(1)</TT>, <TT>bash(1)</TT>) . 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in">Have sufficient local disk-space
+	<LI><P STYLE="margin-bottom: 0in">Have sufficient <em>local</em>
+        disk-space
 	for the <A HREF="glindex.html#LDM">LDM</A> <A HREF="glindex.html#product-queue">product-queue</A>,
-	which can range from a few megabytes to many gigabytes in size --
+	which can range from a few megabytes to many gigabytes in size ­-
 	depending on your data requirements. 
 	</P>
 
@@ -115,18 +116,11 @@ Source-Code</H2>
 particular, your platform must have: 
 </P>
 <UL>
-	<LI><P STYLE="margin-bottom: 0in">A Standard C compiler. 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in">A standard <A HREF="glindex.html#rpcgen">rpcgen(1)</A>
-	utility. 
+	<LI><P STYLE="margin-bottom: 0in">A Standard C compiler (<i>e.g.</i>,
+        <code>c89(1)</code>). 
 	</P>
 	<LI><P STYLE="margin-bottom: 0in">A standard <A HREF="glindex.html#make">make(1)</A>
 	utility. 
-	</P>
-	<LI><P>The <TT><A HREF="glindex.html#lex">lex(1)</A></TT> and
-	<TT><A HREF="glindex.html#yacc">yacc(1)</A></TT> utilities (or
-	workalikes like <TT>byacc</TT>, <TT>bison</TT>, <TT>flex</TT>,
-	<I>etc</I>.). 
 	</P>
 </UL>
 <P>While every effort is made to ensure that the <A HREF="glindex.html#LDM">LDM</A>
@@ -134,296 +128,10 @@ source-code distribution can be compiled and installed on as wide a
 variety of UNIX<SUP>&reg;</SUP> platforms as possible, we can,
 necessarily, only test on platforms that are available at the <A HREF="glindex.html#UPC">Unidata
 Program Center</A> (UPC).</P>
-<P>With that in mind, the <A HREF="glindex.html#LDM">LDM</A> package
-has been successfully built at the <A HREF="glindex.html#UPC">UPC</A>
-on the following systems using the specified C compilers and <A HREF="glindex.html#make">make(1)</A>
-utilities 
+<P>With that in mind, here are tables of
+<a href="successes.html">successful build environments</a> and
+<a href="failures.html">unsuccessful build environments</a>.
 </P>
-<CENTER>
-	<TABLE WIDTH=677 BORDER=1 CELLPADDING=6 CELLSPACING=0>
-		<COL WIDTH=61>
-		<COL WIDTH=152>
-		<COL WIDTH=119>
-		<COL WIDTH=156>
-		<COL WIDTH=128>
-		<TR>
-			<TH WIDTH=61>
-				<P>OS<A HREF="#1"><SUP>1</SUP></A></P>
-			</TH>
-			<TH WIDTH=152>
-				<P>Release(s)<A HREF="#2"><SUP>2</SUP></A></P>
-			</TH>
-			<TH WIDTH=119>
-				<P>Hardware Type<A HREF="#3"><SUP>3</SUP></A></P>
-			</TH>
-			<TH WIDTH=156>
-				<P>C Compiler(s)</P>
-			</TH>
-			<TH WIDTH=128>
-				<P>make(s)</P>
-			</TH>
-		</TR>
-		<TR><!-- Zasu: -->
-			<TD WIDTH=61>
-				<P>AIX</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>5.1<A HREF="#4"><SUP>4</SUP></A></P>
-			</TD>
-			<TD WIDTH=119>
-				<P>RS6000</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/usr/vac/bin/cc<BR>
-				/usr/vac/bin/xlc<BR>
-				/usr/vac/bin/c89(v6)<BR>
-				gcc(v3.2)<A HREF="#5"><SUP>5</SUP></A></P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/ccs/bin/make<BR>GNU&nbsp;make 
-				</P>
-			</TD>
-		</TR>
-		<TR><!-- "Visram, Kassim" <KxV4@PGE.COM>: -->
-			<TD WIDTH=61>
-				<P>AIX</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>5.3<A HREF="#4"><SUP>4</SUP></A></P>
-			</TD>
-			<TD WIDTH=119>
-				<P>powerpc<A HREF="#6"><SUP>6</SUP></A></P>
-			</TD>
-			<TD WIDTH=156>
-				<P>gcc(v4.1.0)<A HREF="#5"><SUP>5</SUP></A></P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/bin/make</P>
-			</TD>
-		</TR>
-		<TR><!-- Sid: -->
-			<TD WIDTH=61>
-				<P>Darwin</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>8.11.0</P>
-			</TD>
-			<TD WIDTH=119>
-				<P>Power Macintosh</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/usr/bin/c89<BR>/usr/bin/gcc(v4.0.1)</P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/bin/make<BR>
-				/usr/bin/gnumake
-				</P>
-			</TD>
-		</TR>
-		<TR><!-- Mort: -->
-			<TD WIDTH=61>
-				<P>Darwin</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>9.8.0</P>
-			</TD>
-			<TD WIDTH=119>
-				<P>i386</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/usr/bin/c89<BR>
-				/usr/bin/gcc(v4.0.1)<BR>
-				/usr/bin/cc
-				</P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/bin/make<BR>
-				/usr/bin/gnumake
-				</P>
-			</TD>
-		</TR>
-		<TR><!-- Redd: --> 
-			<TD WIDTH=61>
-				<P>FreeBSD</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>7.2-RELEASE</P>
-			</TD>
-			<TD WIDTH=119>
-				<P>i386</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/usr/bin/c89</P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/bin/make</P>
-			</TD>
-		</TR>
-		<TR><!-- Tweety -->
-			<TD WIDTH=61>
-				<P>HP-UX</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>B.11.00</P>
-			</TD>
-			<TD WIDTH=119>
-				<P>9000/785</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/opt/ansic/bin/c89<BR>gcc(v3.3.2)<A HREF="#5"><SUP>5</SUP></A>
-								</P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/ccs/bin/make<BR>GNU&nbsp;make 
-				</P>
-			</TD>
-		</TR>
-		<TR><!-- Flip: -->
-			<TD WIDTH=61>
-				<P>IRIX64</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>6.5</P>
-			</TD>
-			<TD WIDTH=119>
-				<P>IP30</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/bin/c89<BR>gcc(v3.3)<A HREF="#5"><SUP>5</SUP></A> 
-				</P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/sbin/make<BR>GNU&nbsp;make 
-				</P>
-			</TD>
-		</TR>
-		<TR><!-- Imogene: -->
-			<TD WIDTH=61>
-				<P>Linux</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>2.6.27.24-78.2.53.fc9.x86_64</P>
-			</TD>
-			<TD WIDTH=119>
-				<P>x86_64</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/usr/bin/c89</P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/bin/make</P>
-			</TD>
-		</TR>
-		<TR><!-- Gilda: -->
-			<TD WIDTH=61>
-				<P>Linux</P>
-			</TD>
-			<TD WIDTH=152>
-				2.6.27.25-170.2.72.fc10.x86_64
-			</TD>
-			<TD WIDTH=119>
-				x86_64
-			</TD>
-			<TD WIDTH=156>
-				/usr/bin/c89<BR>
-				/usr/bin/cc<BR>
-				/usr/bin/gcc(v4.3.2)<A HREF="#5"><SUP>5</SUP></A>
-			</TD>
-			<TD WIDTH=128>
-				/usr/bin/make
-			</TD>
-		</TR>
-		<TR><!-- Dana: -->
-			<TD WIDTH=61>
-				<P>OSF1</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>V5.1</P>
-			</TD>
-			<TD WIDTH=119>
-				<P>alpha</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/usr/bin/c89<BR>gcc(v3.3.2) 
-				</P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/ccs/bin/make<BR>/usr/bin/posix/make</P>
-			</TD>
-		</TR>
-		<TR><!-- Zero -->
-			<TD WIDTH=61>
-				<P>SunOS</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>5.9</P>
-			</TD>
-			<TD WIDTH=119>
-				sun4u<A HREF="#7"><SUP>7</SUP></A>
-			</TD>
-			<TD WIDTH=156>
-				/opt/SUNWspro/bin/cc<BR>
-				/opt/csw/gcc3/bin/gcc<BR>
-				/opt/csw/gcc4/bin/gcc
-				<!-- /opt/SUNWspro/bin/c89 (doesn't work) -->
-			</TD>
-			<TD WIDTH=128>
-				/usr/ccs/bin/make<BR>
-				/usr/xpg4/bin/make<BR>
-				/opt/csw/bin/gmake
-			</TD>
-		</TR>
-		<TR><!-- Buddy -->
-			<TD WIDTH=61>
-				<P>SunOS</P>
-			</TD>
-			<TD WIDTH=152>
-				<P>5.10</P>
-			</TD>
-			<TD WIDTH=119>
-				<P>i86pc</P>
-			</TD>
-			<TD WIDTH=156>
-				<P>/opt/SUNWspro/bin/cc<BR>
-				gcc(v4.0.2)
-				<!-- gcc(v3.3.2)(doesn't work) --></P>
-			</TD>
-			<TD WIDTH=128>
-				<P>/usr/ccs/bin/make<BR>
-				/usr/xpg4/bin/make</P>
-			</TD>
-		</TR>
-	</TABLE>
-</CENTER>
-<P>Notes: 
-</P>
-<OL>
-	<LI><P STYLE="margin-bottom: 0in"><A NAME="1"></A>This is the output
-	of the command &quot;<CODE>uname -s</CODE>&quot;. 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A NAME="2"></A>This is the output
-	of the command &quot;<CODE>uname -r</CODE>&quot; unless otherwise
-	noted. 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A NAME="3"></A>This is the output
-	of the command &quot;<CODE>uname -m</CODE>&quot;. 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A NAME="4"></A>This is the output
-	of the command &quot;<CODE>echo $(uname -v).$(uname -r)</CODE>&quot;
-	(AIX's interpretation of <EM>release</EM> and <EM>version</EM>
-	differs from that of most other operating systems). 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A NAME="5"></A>If this compiler
-	is used, then the option <CODE><B>--disable-max-size</B></CODE> <EM>must</EM>
-	be given to the <CODE><B>configure</B></CODE> script, which means
-	that the resulting <A HREF="glindex.html#LDM">LDM</A> will only
-	support a small <A HREF="glindex.html#product-queue">product-queue</A>.
-		</P>
-	<LI><P STYLE="margin-bottom: 0in"><A NAME="6"></A>This is the output
-	of the command &quot;<CODE>uname -p</CODE>&quot;. 
-	<LI><P><A NAME="7"></A>Alias SPARC. 
-	</P>
-</OL>
 <P>The <A HREF="glindex.html#UPC">UPC</A> reserves the right to deny
 support to outdated or irregular platforms.</P>
 </BODY>

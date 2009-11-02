@@ -21,6 +21,7 @@
 #include "error.h"
 #include "filel.h"
 #include "globals.h"
+#include "remote.h"
 #include "pq.h"
 #include "ulog.h"
 

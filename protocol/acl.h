@@ -20,6 +20,10 @@
 
 typedef struct RequestEntry	RequestEntry;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum host_set_type { HS_NONE, HS_NAME, HS_DOTTED_QUAD, HS_REGEXP };
 typedef struct {
 	enum host_set_type type;
@@ -95,9 +99,9 @@ requestEntry_get(
 
 int
 requestEntry_addHost(
-    RequestEntry* const		entry,
-    const char* const		hostId,
-    const unsigned		port);
+    RequestEntry* const entry,
+    const char* const   hostId,
+    unsigned            port);
 
 ErrorObj*
 acl_getUpstreamFilter(
@@ -112,5 +116,9 @@ acl_addAllow(
     const host_set* const	hostSet,
     const char* const		okEre,
     const char* const		notEre);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_ACL_H */

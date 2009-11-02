@@ -36,37 +36,37 @@ enum err_level {
 
 ErrorObj*
 err_new(
-    const int		code,
-    ErrorObj*		cause,
-    const char*		file,
-    const unsigned	line, 
-    const char*		fmt,
+    const int                   code,
+    ErrorObj* const             cause,
+    const char* const           file,
+    const unsigned              line, 
+    const char* const           fmt,
     ...);
 
 int
 err_code(
-    const ErrorObj *err);
+    const ErrorObj*             err);
 
 ErrorObj*
 err_cause(
-    const ErrorObj *err);
+    const ErrorObj*             err);
 
 const char*
 err_message(
-    const ErrorObj *err);
+    const ErrorObj*             err);
 
 void
 err_log(
-    const ErrorObj *err,
-    enum err_level level);
+    const ErrorObj* const       err,
+    const enum err_level        level);
 
 void
 err_free(
-    ErrorObj *err);
+    ErrorObj* const             err);
 
 void
 err_log_and_free(
-    ErrorObj       *err,
-    enum err_level level);
+    ErrorObj* const             err,
+    const enum err_level        level);
 
 #endif

@@ -7,10 +7,8 @@
 
 %{
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: scanner.l,v 1.1.2.1 2007/02/16 20:07:17 steve Exp $ */
 
 /* 
  * Lexical scanner for LDM configuration-file.

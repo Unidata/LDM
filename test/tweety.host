@@ -1,0 +1,21 @@
+# libtool(1) can't build a sharable library with this compiler
+PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc
+PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc +DA2.0W
+
+# libtool(1) can't build a sharable library with this compiler
+PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89
+PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89 +DA2.0W
+
+# /usr/ccs/bin/cc has problems with "#include <stdio.h>"
+PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc
+PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc +DA2.0W
+
+# libtool(1) can't build a sharable library with this compiler
+PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc
+PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc +DA2.0W
+
+# libtool(1) can't build a sharable library with this compiler
+PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89
+PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89 +DA2.0W
+
+PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc

@@ -1,8 +1,9 @@
 /*
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
+ *
  * This module contains the requester, which implements the REQUEST action for
  * version 6 of the LDM.
  */
-/* $Id: requester6.c,v 1.34.2.5.2.3.2.2.2.19 2008/04/15 16:34:13 steve Exp $ */
 
 #include "ldmconfig.h"
 
@@ -23,6 +24,7 @@
 #include "down6.h"       /* down6_init(), down6_destroy() */
 #include "error.h"
 #include "globals.h"
+#include "remote.h"
 #include "inetutil.h"    /* hostbyaddr() */
 #include "ldm.h"         /* client-side LDM functions */
 #include "ldm_clnt.h"    /* client-side LDM functions */

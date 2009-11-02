@@ -3,15 +3,6 @@
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
 
-/* Define if on a BSD system */
-#undef BSD
-
-/* Define to obtain optional system API */
-#undef BSD_SOURCE
-
-/* Define to obtain optional system API */
-#undef BSD_TYPES
-
 /* Define to concatenate DBFILE products with same key */
 #undef DB_CONCAT
 
@@ -23,6 +14,12 @@
 
 /* Define to 1 if you have the `dnl' function. */
 #undef HAVE_DNL
+
+/* Define to 1 if you have the `fstatfs' function. */
+#undef HAVE_FSTATFS
+
+/* Define to 1 if you have the `fstatvfs' function. */
+#undef HAVE_FSTATVFS
 
 /* Define to 1 if you have the `fsync' function. */
 #undef HAVE_FSYNC
@@ -103,9 +100,6 @@
 /* Define to 1 if you have the `waitpid' function. */
 #undef HAVE_WAITPID
 
-/* Define to obtain optional system API */
-#undef HPUX_SOURCE
-
 /* use IEEE double-precision in XDR layer */
 #undef IEEE_DOUBLE
 
@@ -121,7 +115,7 @@
 /* RPC program-number of LDM server */
 #undef LDM_PROG
 
-/* Define if the canonical log file is a socket */
+/* Define if the system log file is a socket */
 #undef LOGNAME_ISSOCK
 
 /* Default LDM logging facility [LOG_LOCAL0] */
@@ -135,9 +129,6 @@
 
 /* Causes syslog(3) to not be defined in the ulog(3) module */
 #undef NO_REPLACE_SYSLOG
-
-/* Define to obtain optional system API */
-#undef OSF_SOURCE
 
 /* Name of package */
 #undef PACKAGE
@@ -160,9 +151,6 @@
 /* Time limit for resolving hostname */
 #undef RESOLVER_TIME_THRESHOLD
 
-/* Define to obtain optional system API */
-#undef SGI_SOURCE
-
 /* The size of `double', as computed by sizeof. */
 #undef SIZEOF_DOUBLE
 
@@ -178,17 +166,14 @@
 /* The size of `int', as computed by sizeof. */
 #undef SIZEOF_INT
 
-/* The size of `int32_t', as computed by sizeof. */
-#undef SIZEOF_INT32_T
-
-/* The size of `int64_t', as computed by sizeof. */
-#undef SIZEOF_INT64_T
-
 /* The size of `long', as computed by sizeof. */
 #undef SIZEOF_LONG
 
 /* The size of `short', as computed by sizeof. */
 #undef SIZEOF_SHORT
+
+/* The size of `uint64_t', as computed by sizeof. */
+#undef SIZEOF_UINT64_T
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
@@ -196,14 +181,36 @@
 /* Pathname of system logging daemon PID file */
 #undef SYSLOG_PIDFILE
 
-/* Whether or not syslog(3) returns an int */
+/* Whether syslog(3) returns an int */
 #undef SYSLOG_RETURNS_INT
 
-/* Pathname of the system logging console */
+/* Pathname of the system log file */
 #undef ULOGNAME
 
 /* Use the gdbm(3) library instead of the ndbm(3) library */
 #undef USE_GDBM
+
+/* Enable extensions on AIX 3, Interix.  */
+#ifndef _ALL_SOURCE
+# undef _ALL_SOURCE
+#endif
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+# undef _GNU_SOURCE
+#endif
+/* Enable threading extensions on Solaris.  */
+#ifndef _POSIX_PTHREAD_SEMANTICS
+# undef _POSIX_PTHREAD_SEMANTICS
+#endif
+/* Enable extensions on HP NonStop.  */
+#ifndef _TANDEM_SOURCE
+# undef _TANDEM_SOURCE
+#endif
+/* Enable general extensions on Solaris.  */
+#ifndef __EXTENSIONS__
+# undef __EXTENSIONS__
+#endif
+
 
 /* Version number of package */
 #undef VERSION
@@ -220,32 +227,32 @@
 # endif
 #endif
 
-/* Define to obtain optional system API */
-#undef _ALL_SOURCE
-
-/* Define to obtain optional system API */
-#undef _DARWIN_C_SOURCE
-
 /* Define if the file /dev/conslog exists */
 #undef _DEV_CONSLOG
 
-/* Obtains optional system API */
-#undef _EXTENSIONS__
+/* Define to 1 if on MINIX. */
+#undef _MINIX
 
-/* Causes product-queue to memory-map by data-product */
-#undef _MAPRGNS
+/* Define to 2 if the system does not provide POSIX.1 features except with
+   this defined. */
+#undef _POSIX_1_SOURCE
+
+/* Define to 1 if you need to in order for `stat' and other things to work. */
+#undef _POSIX_SOURCE
 
 /* Causes <sys/user.h> to not be included */
 #undef _SYS_USER_INCLUDED
 
-/* Defines level of POSIX compliance */
+/* Define for Solaris 2.5.1 so the uint64_t typedef from <sys/synch.h>,
+   <pthread.h>, or <semaphore.h> is not used. If the typedef were allowed, the
+   #define below would cause a syntax error. */
+#undef _UINT64_T
+
+/* Level of POSIX compliance */
 #undef _XOPEN_SOURCE
 
-/* Obtains extended POSIX API */
+/* Additional POSIX functionality */
 #undef _XOPEN_SOURCE_EXTENDED
-
-/* Obtains optional system API */
-#undef __DARWIN_UNIX03
 
 /* rpcgen(1) typedef */
 #undef caddr_t
@@ -279,3 +286,7 @@
 
 /* rpcgen(1) typedef */
 #undef u_short
+
+/* Define to the type of an unsigned integer type of width exactly 64 bits if
+   such a type exists and the standard includes do not define it. */
+#undef uint64_t

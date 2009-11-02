@@ -122,7 +122,6 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
-DOMAINNAME = @DOMAINNAME@
 DSYMUTIL = @DSYMUTIL@
 ECHO = @ECHO@
 ECHO_C = @ECHO_C@
@@ -168,6 +167,7 @@ PATH = @PATH@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
+PQ_SUBDIR = @PQ_SUBDIR@
 RANLIB = @RANLIB@
 RPCGEN = @RPCGEN@
 SED = @SED@
@@ -240,7 +240,12 @@ noinst_LTLIBRARIES = lib.la
 include_HEADERS = pq.h fbits.h lcm.h
 lib_la_SOURCES = pq.c lcm.c
 dist_man3_MANS = pq.3
-lib_la_CPPFLAGS = -I$(top_srcdir)/misc -I$(top_srcdir)/ulog -I$(top_srcdir)/protocol -I$(top_srcdir)
+lib_la_CPPFLAGS = \
+    -I$(top_srcdir)/misc \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)
+
 TAGS_FILES = \
     ../misc/*.c ../misc/*.h \
     ../ulog/*.c ../ulog/*.h \

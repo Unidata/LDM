@@ -1,8 +1,6 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: pbuf.h,v 1.7.22.1 2007/01/19 20:47:04 steve Exp $ */
 
 #ifndef _PBUF_H_
 #define _PBUF_H_
@@ -24,17 +22,31 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" void free_pbuf(pbuf *buf);
 extern "C" pbuf * new_pbuf(int pfd, size_t bufsize);
-extern "C" int pbuf_flush(pbuf *buf, int /*bool_t*/ block, unsigned int timeo,
-	const char* id);
-extern "C" int pbuf_write(pbuf *buf, const char *ptr, size_t nbytes,
-	unsigned int timeo, const char* id);
+extern "C" int pbuf_flush(
+    pbuf*               buf,
+    int                 block,          /* bool_t */
+    unsigned int        timeo,          /* N.B. Not a struct timeval */
+    const char* const   id);
+extern "C" int pbuf_write(
+    pbuf*               buf,
+    const char*         ptr,
+    size_t              nbytes,
+    unsigned int        timeo,          /* N.B. Not a struct timeval */
+    const char* const   id);
 #elif defined(__STDC__)
 extern void free_pbuf(pbuf *buf);
 extern pbuf * new_pbuf(int pfd, size_t bufsize);
-extern int pbuf_flush(pbuf *buf, int /*bool_t*/ block, unsigned int timeo,
-	const char* id);
-extern int pbuf_write(pbuf *buf, const char *ptr, size_t nbytes,
-	unsigned int timeo, const char* id);
+extern int pbuf_flush(
+    pbuf*               buf,
+    int                 block,          /* bool_t */
+    unsigned int        timeo,          /* N.B. Not a struct timeval */
+    const char* const   id);
+extern int pbuf_write(
+    pbuf*               buf,
+    const char*         ptr,
+    size_t              nbytes,
+    unsigned int        timeo,          /* N.B. Not a struct timeval */
+    const char* const   id);
 #else /* Old Style C */
 extern void free_pbuf();
 extern pbuf * new_pbuf();

@@ -5,28 +5,36 @@
 
 typedef struct Pattern Pattern;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 ErrorObj*
 pat_new(
-    Pattern**		pat,
-    const char*		re,
-    const int		ignoreCase);
+    Pattern** const             pat,
+    const char* const           ere,
+    const int                   ignoreCase);
 
 ErrorObj*
 pat_clone(
-    Pattern**		dst,
-    const Pattern*	src);
+    Pattern** const             dst,
+    const Pattern* const        src);
 
 int
 pat_isMatch(
-    const Pattern*	pat,
-    const char*		string);
+    const Pattern* const        pat,
+    const char* const           string);
 
 const char*
 pat_getEre(
-    const Pattern*	pat);
+    const Pattern* const        pat);
 
 void
 pat_free(
-    Pattern*	pat);
+    Pattern* const              pat);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

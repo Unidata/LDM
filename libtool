@@ -82,13 +82,13 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="c89"
+LTCC="gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-g -O2 -m64"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
-CC="c89"
+CC="gcc"
 
 # Is the compiler the GNU C compiler?
 with_gcc=yes
@@ -7350,10 +7350,10 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="c89"
+LTCC="gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-g -O2 -m64"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
 CC="g++"
@@ -7659,10 +7659,10 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="c89"
+LTCC="gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-g -O2 -m64"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
 CC="gfortran"

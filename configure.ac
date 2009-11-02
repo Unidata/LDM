@@ -9,22 +9,37 @@ AC_CONFIG_SRCDIR([ldmconfig.h.in])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([ldmconfig.h])
 
+#UD_CPPFLAGS
+#AC_DEFINE([_POSIX_C_SOURCE], [1], [Level of POSIX compliance])
+AC_DEFINE([_XOPEN_SOURCE], [500], [Level of POSIX compliance])
+AC_DEFINE([_XOPEN_SOURCE_EXTENDED], [1], [Additional POSIX functionality])
+AC_USE_SYSTEM_EXTENSIONS
+
 AM_CONDITIONAL([MAINTAINER],
-    [test "$USER" == steve && hostname | fgrep unidata.ucar.edu >/dev/null])
+    [test "$USER" = steve && test $PWD = /home/steve/ldm/package/src &&
+        test "X$HOST" = "Xgilda"])
 
 AC_ARG_ENABLE(faux-pq,
     AC_HELP_STRING([--enable-faux-pq],
 	[use the faux product-queue [[default=disable]]]),
     [
-	fauxPq=yes
-	PQ_PATH="\$etc_path/pq.xml"
+	case "${enableval}" in
+	yes) fauxPq=yes;;
+	no)  fauxPq=no;;
+	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-faux-pq]);;
+	esac
     ],
     [
 	fauxPq=no
-	PQ_PATH="\$data_path/ldm.pq"
     ])
-AC_SUBST(PQ_PATH)
 AM_CONDITIONAL([WANT_FAUX_PQ], [test $fauxPq = "yes"])
+AM_COND_IF([WANT_FAUX_PQ],
+    [PQ_PATH="\$etc_path/pq.xml"
+    PQ_SUBDIR=fauxPq],
+    [PQ_PATH="\$data_path/ldm.pq"
+    PQ_SUBDIR=pq])
+AC_SUBST(PQ_PATH)
+AC_SUBST(PQ_SUBDIR)
 
 AC_ARG_ENABLE(logging,
     AC_HELP_STRING([--enable-logging=facility],
@@ -58,15 +73,8 @@ AC_DEFINE_UNQUOTED(LDM_PROG, $ldm_prog, [RPC program-number of LDM server])
 AC_DEFINE([RESOLVER_TIME_THRESHOLD], [10], [Time limit for resolving hostname])
 AC_SUBST(LDM_PORT)
 
-AC_ARG_ENABLE(max-size,
-    AC_HELP_STRING([--disable-max-size], 
-	[minimize the (long, void*, off_t) programming environment
-	[[default=enable]]]),
-    max_size=$enableval,
-    max_size=yes)
-
-AC_ARG_ENABLE([include-root-actions],
-    AC_HELP_STRING([--enable-include-root-actions],
+AC_ARG_ENABLE([root-actions],
+    AC_HELP_STRING([--enable-root-actions],
 	[include superuser (i.e., "root") actions in "make install"
 	[[default=enabled]]]),
     [
@@ -74,7 +82,7 @@ AC_ARG_ENABLE([include-root-actions],
 	yes) enable_include=true;;
 	no) enable_include=false;;
 	*) AC_MSG_ERROR(
-	    [bad value {$enableval} for --enable-include-root-actions]);;
+	    [bad value {$enableval} for --enable-root-actions]);;
 	esac
     ],
     [
@@ -125,89 +133,6 @@ else
 	AC_MSG_FAILURE($CC failed to compile test code))
 fi
 
-ARFLAGS=-cru
-if test "$max_size" = yes
-then
-    AC_MSG_NOTICE(Checking how to maximize the (long, void*, off_t) programming environment)
-    success=no
-    AC_MSG_CHECKING([if the system supports _XBS5_LPBIG_OFFBIG])
-    avail=`getconf _XBS5_LPBIG_OFFBIG 2>/dev/null`
-    if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
-    then
-	if cflags=`getconf XBS5_LPBIG_OFFBIG_CFLAGS 2>/dev/null`
-	then
-	    if ldflags=`getconf XBS5_LPBIG_OFFBIG_LDFLAGS 2>/dev/null`
-	    then
-		if libs=`getconf XBS5_LPBIG_OFFBIG_LIBS 2>/dev/null`
-		then
-		    maprgns=-U_MAPRGNS
-		    success=yes
-		fi
-	    fi
-	fi
-    fi
-    AC_MSG_RESULT($success)
-    if test "$success" = no
-    then
-	AC_MSG_CHECKING([if the system supports _XBS5_LP64_OFF64])
-	avail=`getconf _XBS5_LP64_OFF64 2>/dev/null`
-	if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
-	then
-	    if cflags=`getconf XBS5_LP64_OFF64_CFLAGS 2>/dev/null`
-	    then
-		if ldflags=`getconf XBS5_LP64_OFF64_LDFLAGS 2>/dev/null`
-		then
-		    if libs=`getconf XBS5_LP64_OFF64_LIBS 2>/dev/null`
-		    then
-			maprgns=-U_MAPRGNS
-			success=yes
-		    fi
-		fi
-	    fi
-	fi
-	AC_MSG_RESULT($success)
-    fi
-    if test "$success" = no
-    then
-	AC_MSG_CHECKING([if the system supports _XBS5_ILP32_OFFBIG])
-	avail=`getconf _XBS5_ILP32_OFFBIG 2>/dev/null`
-	if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
-	then
-	    if cflags=`getconf XBS5_ILP32_OFFBIG_CFLAGS 2>/dev/null`
-	    then
-		if ldflags=`getconf XBS5_ILP32_OFFBIG_LDFLAGS 2>/dev/null`
-		then
-		    if libs=`getconf XBS5_ILP32_OFFBIG_LIBS 2>/dev/null`
-		    then
-			AC_DEFINE(_MAPRGNS, 1,
-			    [Causes product-queue to memory-map by
-			    data-product])
-			maprgns=-D_MAPRGNS
-			success=yes
-		    fi
-		fi
-	    fi
-	fi
-	AC_MSG_RESULT($success)
-    fi
-    if test "$success" = yes
-    then
-	test -n "$cflags"  && CFLAGS="$CFLAGS${CFLAGS+ }$cflags"
-	test -n "$ldflags" && LDFLAGS="$LDFLAGS${LDFLAGS+ }$ldflags"
-	test -n "$libs"    && LIBS="$LIBS${LIBS+ }$libs"
-	test `uname` = AIX && ARFLAGS='-cru -X 32_64'
-	AC_MSG_NOTICE([$maprgns])
-	AC_MSG_NOTICE([cflags=\"$cflags\"])
-	AC_MSG_NOTICE([ldflags=\"$ldflags\"])
-	AC_MSG_NOTICE([libs=\"$libs\"])
-	AC_MSG_NOTICE([ARFLAGS=\"$ARFLAGS\"])
-	AC_MSG_CHECKING([the C compiler (again)])
-	AC_COMPILE_IFELSE([int foo;], 
-	    AC_MSG_RESULT(works),
-	    AC_MSG_FAILURE($CC failed to compile test code))
-    fi
-fi
-
 AC_MSG_CHECKING([the installation prefix]);
 test -z "$prefix" -o "$prefix" = NONE && prefix=`pwd`
 #AM_COND_IF([MAINTAINER], [UD_PREFIX(..)], [UD_PREFIX(.)])
@@ -225,9 +150,7 @@ AC_MSG_RESULT([$LDMHOME])
 sysconfdir=$LDMHOME/etc
 
 AC_SUBST(ARFLAGS)
-UD_CPPFLAGS
 AC_REVISION ($Revision: 1.47.18.22 $)
-UD_DOMAINNAME
 UD_HPUX
 UD_PROG_CPP
 UD_PROG_PERL
@@ -248,6 +171,7 @@ AC_CHECK_SIZEOF(int, 4)
 AC_CHECK_SIZEOF(long, 4)
 AC_CHECK_SIZEOF(float)
 AC_CHECK_SIZEOF(double)
+AC_CHECK_SIZEOF(uint64_t)
 AC_MSG_CHECKING([size of enum])
 AC_TRY_RUN([
     #include <stdio.h>
@@ -284,14 +208,14 @@ AC_TRY_RUN([
 
 AC_DEFINE([IEEE_FLOAT], [1], [use IEEE floating-point in XDR layer])
 AC_DEFINE([IEEE_DOUBLE], [1], [use IEEE double-precision in XDR layer])
-AC_CHECK_SIZEOF([int32_t])
-AC_CHECK_SIZEOF([int64_t])
 
 AC_TYPE_SIZE_T
 AC_TYPE_OFF_T
+AC_TYPE_UINT64_T
 AC_CHECK_TYPE(ssize_t, int)
 AC_CHECK_TYPE(ptrdiff_t, int)
-AC_CHECK_FUNCS(timegm)
+AC_CHECK_FUNCS([timegm])
+AC_CHECK_FUNCS([fstatvfs fstatfs])
 TYPE_SOCKLEN_T
 AC_CHECK_HEADERS([stdlib.h unistd.h])
 AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid dnl
@@ -337,6 +261,7 @@ AC_CONFIG_FILES([
     pqcheck/Makefile
     pqinsert/Makefile
     pqcat/Makefile
+    pqcat/pqcat.1
     pqexpire/Makefile
     pqmon/Makefile
     pqutil/Makefile
@@ -364,5 +289,6 @@ AC_CONFIG_FILES([
     html/basics/Makefile
     html/basics/source-install-steps.html
     html/tutorial/Makefile
+    test/Makefile
 ])
 AC_OUTPUT

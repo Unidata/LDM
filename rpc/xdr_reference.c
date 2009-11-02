@@ -63,11 +63,11 @@ static char sccsid[] = "@(#)xdr_reference.c 1.11 87/08/11 SMI";
 bool_t
 xdr_reference(
 	register XDR *xdrs,
-	char* *pp,		/* the pointer to work on */
+	void* *pp,		/* the pointer to work on */
 	unsigned size,		/* size of the object pointed to */
 	xdrproc_t proc)		/* xdr routine to handle the object */
 {
-	register char* loc = *pp;
+	register char* loc = (char*)*pp;
 	register bool_t stat;
 
 	if (loc == NULL)
@@ -118,7 +118,7 @@ xdr_reference(
 bool_t
 xdr_pointer(
 	register XDR *xdrs,
-	char **objpp,
+	void **objpp,
 	unsigned obj_size,
 	xdrproc_t xdr_obj)
 {

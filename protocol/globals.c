@@ -12,6 +12,7 @@
 
 #include "ldm.h"
 #include "globals.h"
+#include "remote.h"
 #include "ldm.h"
 #include "paths.h"
 #include "pq.h"

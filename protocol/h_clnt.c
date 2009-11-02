@@ -41,6 +41,7 @@
 #include "ldmalloc.h"
 #include "alrm.h"
 #include "globals.h"
+#include "remote.h"
 #include "h_clnt.h"
 #ifdef LDM_NBTCP
 #include "clnt_nbtcp.h"

@@ -353,6 +353,14 @@ as the LDM-user.  Then
        You might choose a different interval.  See
        <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
 
+    <li><p>Add an entry to check that the LDM system is working:
+       <blockquote><tt>
+           0,5,10,15,20,25,30,35,40,45,50,55 0 * * * bash -l -c 'bin/ldmadmin check >/dev/null'
+       </tt></blockquote>
+       This entry will check that the LDM system is working every 5 minutes and
+       cause an email to be sent to the LDM user if the system isn't working.
+       You might choose a different interval.
+
 </ul>
 
 <p><a href="../workshop/specifics.html#crontab">

@@ -21,9 +21,6 @@ extern "C" {
 #include <regex.h>
 
 #include "timestamp.h"
-#ifndef LDM_H
-#define LDM_H
-
 /*
  * these define the range of "transient program numbers"
  */
@@ -299,7 +296,7 @@ typedef struct ldm_addr_ip ldm_addr_ip;
 enum ldm_addrt {
 	LDM_ADDR_NONE = 0,
 	LDM_ADDR_RPC = 1,
-	LDM_ADDR_IP = 2,
+	LDM_ADDR_IP = 2
 };
 typedef enum ldm_addrt ldm_addrt;
 
@@ -474,7 +471,7 @@ enum ldm_errt {
 	RESEND = 4,
 	RESTART = 5,
 	REDIRECT = 6,
-	RECLASS = 7,
+	RECLASS = 7
 };
 typedef enum ldm_errt ldm_errt;
 
@@ -535,21 +532,6 @@ typedef struct product product;
 
 bool_t xdr_product(XDR *, product*);
 bool_t xdr_dbuf(XDR* xdrs, dbuf* objp);
-
-fornme_reply_t *feedme_6_svc( feedpar_t *feedPar, struct svc_req *rqstp);
-fornme_reply_t *notifyme_6_svc( prod_class_t *want, struct svc_req *rqstp);
-int *is_alive_6_svc( unsigned *id, struct svc_req *rqstp);
-hiya_reply_t *hiya_6_svc( prod_class_t *offered, struct svc_req *rqstp);
-void *hereis_6_svc( product *prod, struct svc_req *rqstp);
-void *notification_6_svc(
- prod_info *info, struct svc_req *rqstp);
-comingsoon_reply_t *comingsoon_6_svc(
- comingsoon_args *comingPar, struct svc_req *rqstp);
-void *blkdata_6_svc(datapkt *argp, struct svc_req *rqstp);
-int ldmprog_6_freeresult(
- SVCXPRT *transp, xdrproc_t xdr_result, void* result);
-
-#endif
 
 #define LDMPROG LDM_PROG
 #define FIVE 5

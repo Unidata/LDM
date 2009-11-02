@@ -10,8 +10,13 @@ RPCGEN			= @RPCGEN@
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
+    abbr.h \
+    acl.h \
     atofeedt.h \
     autoshift.h \
+    down6.h \
+    DownHelp.h \
+    feedTime.h \
     globals.h \
     h_clnt.h \
     ldm.h \
@@ -20,13 +25,22 @@ include_HEADERS		= \
     ldm_clnt.h \
     ldm_xlen.h \
     md5.h \
+    peer_info.h \
+    priv.h \
     prod_class.h \
+    remote.h \
+    requester6.h \
     savedInfo.h \
     timestamp.h \
+    UpFilter.h \
     xdr_data.h
 lib_la_SOURCES		= \
+    abbr.c \
+    acl.c \
     atofeedt.c \
     autoshift.c \
+    down6.c \
+    DownHelp.c \
     globals.c \
     h_clnt.c \
     ldm4_svc.c \
@@ -39,17 +53,29 @@ lib_la_SOURCES		= \
     ldm_clnt.c \
     md5c.c \
     one_svc_run.c \
+    priv.c \
     prod_info.c \
     prod_class.c \
+    remote.c \
+    requester6.c \
     savedInfo.c \
     timestamp.c \
+    UpFilter.c \
     xdr_data.c
 lib_la_CPPFLAGS		= -I$(top_srcdir)/misc -I$(top_srcdir)/ulog -I$(top_srcdir)/pq -I$(top_srcdir)
 #-I../server
 TAGS_FILES		= \
     ../ulog/*.c ../ulog/*.h \
-    ../misc/*.c ../misc/*.h
-EXTRA_DIST		= ldm.x ldm4.h ldm5.h rsaglobal.h prod_info.h
+    ../misc/*.c ../misc/*.h \
+    ../rpc/*.c ../rpc/*.h
+EXTRA_DIST		= \
+    ldm.x \
+    ldm4.h \
+    ldm5.h \
+    rsaglobal.h \
+    prod_info.h \
+    fix_clnt.pl
+CLEANFILES		= *.i
 
 ldm.h:		ldm.x
 	$(RPCGEN) -h ldm.x | \
@@ -72,7 +98,10 @@ ldm_xdr.c:	ldm.x
 # course, it also uses "xdr_void" rather than NULL for the return-value
 # XDR-routine (sheesh!)).
 #
-ldm6_clnt.c:	ldm.x
+ldm6_clnt.c:	ldm.x fix_clnt.pl
 	(echo '#include "ldmconfig.h"'; $(RPCGEN) -l ldm.x) > $@.tmp || \
 	    rm $@.tmp
 	$(PERL) fix_clnt.pl < $@.tmp > $@ && rm $@.tmp       # fix stuff
+
+.c.i:
+	$(CPP) $(CPPFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $< >$@

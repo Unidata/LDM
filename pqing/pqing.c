@@ -24,6 +24,7 @@ static char version[] =
 #include "ldm.h"
 #include "ulog.h"
 #include "globals.h"
+#include "remote.h"
 #include "inetutil.h"
 #include "feed.h"
 #include "atofeedt.h"

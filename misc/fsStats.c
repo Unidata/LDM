@@ -1,92 +1,60 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: fsStats.c,v 1.11.18.3 2005/06/24 21:05:18 steve Exp $ */
 
 #include "ldmconfig.h"
 
+#include <stddef.h>
+#include <sys/types.h>
+
 #include "fsStats.h"
 
-#if __ultrix
-        /* ULTRIX 4.4 (MIPS), 4.3 (VAX), blatant kludge */
-#include <sys/param.h>
-#include <sys/mount.h>
-typedef struct fs_data STRUCT_STATFS;
-#if 1
-#define FSTATFS(fd, sbp) (errno = ENOSYS, -1)
-#else
-#define FSTATFS(fd, sbp) (statfs(".", (sbp)))
-#endif
-#define f_blocks fd_btot
-#define f_bavail fd_bfreen
+#if HAVE_FSTATVFS
+#    include <sys/statvfs.h>
+#elif HAVE_FSTATFS
+#    include <sys/vfs.h>
 #endif
 
-#if __bsdi__ || __bsdi || __FreeBSD__ || (__APPLE__ && __MACH__)
-        /* BSDI, ... */
-#include <sys/stat.h>
-#include <sys/param.h>
-#include <sys/mount.h>
-typedef struct statfs STRUCT_STATFS;
-#define FSTATFS(fd, sbp) (fstatfs((fd), (sbp)))
-#define f_frsize f_bsize
-#endif
-
-#if defined(CRAY)
-        /* UNICOS */
-#include <sys/statfs.h>
-typedef struct statfs STRUCT_STATFS;
-#define FSTATFS(fd, sbp) (fstatfs((fd), (sbp), (sizeof(struct statfs)), (0)))
-#define f_frsize f_bsize
-#define f_bavail f_bfree
-#endif
-
-#if (__sun && !__SVR4)  || __hpux || __linux
-        /* SunOS 4, HPUX, Linux */
-#include <sys/vfs.h>
-typedef struct statfs STRUCT_STATFS;
-#define FSTATFS(fd, sbp) (fstatfs((fd), (sbp)))
-#define f_frsize f_bsize
-        /* On HP the f_bavail member seems to be wrong, and f_bfree
-         * agrees with others f_bavail... */
-#endif
-
-#if _SYSTYPE_SVR4 || __SVR4 || _AIX || __osf__ || __sgi
-        /* irix 5.3, SunOS 5, AIX, OSF1 */
-#include <sys/statvfs.h>
-typedef struct statvfs STRUCT_STATFS;
-#define FSTATFS(fd, sbp) (fstatvfs((fd), (sbp)))
-#endif
-
-
+/*
+ * Returns the size of a disk partition and the amount of free space.
+ * ARGUMENTS:
+ *      fd      File descritor of an open file in the partition
+ *      total   Returned partition size in bytes
+ *      avail   Returned free space for non-superusers in bytes
+ * RETURNS:
+ *      0       Success
+ *      else    <errno.h> error code.
+ */
 int
-fsStats(int fd, off_t *fs_szp, off_t *remp)
+fsStats(
+    int         fd,
+    off_t*      total,
+    off_t*      avail)
 {
-        STRUCT_STATFS sbuf;
-        off_t frsize; /* multiplier */
-
-        if(FSTATFS(fd, &sbuf) == -1)
-        {
-                return errno;
-        }
-        /* else */
-#if __ultrix
-        frsize = 1024;
+    int                 status;
+#if HAVE_FSTATVFS
+    struct statvfs      buf;
+    if (fstatvfs(fd, &buf) == -1) {
+        status = errno;
+    }
+#elif HAVE_FSTATFS
+    struct statfs       buf;
+    if (fstatfs(fd, &buf) == -1) {
+        status = errno;
+    }
 #else
-        frsize = sbuf.f_frsize;
-        if(frsize <= 0)
-        {
-                /* f_frsize not supported ? */
-                frsize = sbuf.f_bsize;
-        }
+    status = ENOSYS;
 #endif
-
-        if(fs_szp != 0)
-                *fs_szp = frsize * sbuf.f_blocks;
-        if(remp != 0)
-                *remp = frsize * sbuf.f_bavail;
-
-        return ENOERR;
+    else {
+        off_t           blockSize =
+            buf.f_frsize > 0 ? buf.f_frsize : buf.f_bsize;
+        if (total != NULL)
+            *total = blockSize * buf.f_blocks;
+        if (avail != NULL)
+            *avail = blockSize * buf.f_bavail;
+        status = 0;
+    }
+    return status;
 }
 
 

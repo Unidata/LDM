@@ -1,10 +1,8 @@
 #ifndef _FSSTATS_H_
 #define _FSSTATS_H_
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: fsStats.h,v 1.1 1995/05/31 17:20:31 davis Exp $ */
 
 #include <sys/types.h> /* off_t */
 #include <errno.h>

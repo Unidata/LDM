@@ -17,7 +17,9 @@
 #ifdef IPPROTO_IP /* we included netinet/in.h, so struct sockaddr_in is */
 extern const char* hostbyaddr(
     const struct sockaddr_in* const	paddr);
-extern int addrbyhost(const char *hostname, struct sockaddr_in *paddr);
+extern int addrbyhost(
+    const char* const           id,
+    struct sockaddr_in* const   paddr);
 extern ErrorObj* hostHasIpAddress(
     const char* const	hostname,
     const in_addr_t	targetAddr,

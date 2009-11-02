@@ -1,10 +1,8 @@
+/*
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
+ */
 #ifndef _LDM_SERVER_GLOBAL_H
 #define _LDM_SERVER_GLOBAL_H
-/*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
- */
-/* $Id: globals.h,v 1.1.2.8 2009/07/24 16:04:26 steve Exp $ */
 
 /*
  * Unless otherwise noted, globals are
@@ -13,6 +11,10 @@
 
 #include <rpc/rpc.h>  /* svc_req */
 #include <signal.h>   /* sig_atomic_t */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern const char *conf_path;
 extern volatile sig_atomic_t done;
@@ -48,21 +50,10 @@ extern int max_latency;
 extern int toffset;
 
 extern void clr_pip_5(void);	        /* defined in svc5.c */
-extern int  read_conf(
-    const char*	conf_path,
-    int		doSomething,		/* defined in conf.y */
-    unsigned	port);
-
-/*
- * The following are defined in remote.c:
- */
-extern void        free_remote_clss(void);
-extern void
-    setremote(const struct sockaddr_in* const paddr, const int sock);
-extern void        svc_setremote(struct svc_req *rqstp);
-extern void        str_setremote(const char *name);
-extern const char *remote_name(void);
-extern int         update_remote_clss(prod_class_t *want);
+extern int read_conf(
+    const char* const	conf_path,
+    int			doSomething,    /* defined in parser.y */
+    unsigned		defaultPort);
 
 /*
  * Calls exit() if the "done" global variable is set; othewise, returns 1 so
@@ -76,5 +67,9 @@ extern int         update_remote_clss(prod_class_t *want);
 int
 exitIfDone(
     const int	status);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /*!_LDM_SERVER_GLOBAL_H*/

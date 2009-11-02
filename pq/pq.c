@@ -1,8 +1,6 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See top level COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: pq.c,v 3.78.8.2.2.9.2.40 2009/09/17 20:03:59 steve Exp $ */
 
 #include "ldmconfig.h"
 
@@ -29,6 +27,7 @@
 #include "pq.h"
 #include "fbits.h"
 #include "globals.h"
+#include "remote.h"
 #include "lcm.h"
 #include "ulog.h"
 #include "ldmprint.h"
@@ -5618,7 +5617,9 @@ pq_getOldestCursor(
  *      else        <errno.h> error-code.  *count untouched.
  */
 int
-pq_get_write_count(const char* const path, unsigned* const count)
+pq_get_write_count(
+    const char* const   path,
+    unsigned* const     count)
 {
     int status;
 

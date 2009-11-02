@@ -60,7 +60,7 @@ am_pqsurf_OBJECTS = pqsurf.$(OBJEXT) surf_split.$(OBJEXT)
 pqsurf_OBJECTS = $(am_pqsurf_OBJECTS)
 pqsurf_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-pqsurf_DEPENDENCIES = ../pqing/lib.la ../$(PQ_DIR)/lib.la \
+pqsurf_DEPENDENCIES = ../pqing/lib.la ../$(PQ_SUBDIR)/lib.la \
 	../protocol/lib.la ../ulog/lib.la ../misc/lib.la ../rpc/lib.la \
 	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -117,7 +117,14 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
-CPPFLAGS = -I$(top_srcdir)/ulog -I$(top_srcdir)/protocol -I$(top_srcdir)/pq -I$(top_srcdir)/misc -I$(top_srcdir)/pqing -I$(top_srcdir)
+CPPFLAGS = \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)/pq \
+    -I$(top_srcdir)/misc \
+    -I$(top_srcdir)/pqing \
+    -I$(top_srcdir)
+
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
@@ -125,7 +132,6 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
-DOMAINNAME = @DOMAINNAME@
 DSYMUTIL = @DSYMUTIL@
 ECHO = @ECHO@
 ECHO_C = @ECHO_C@
@@ -171,6 +177,7 @@ PATH = @PATH@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
+PQ_SUBDIR = @PQ_SUBDIR@
 RANLIB = @RANLIB@
 RPCGEN = @RPCGEN@
 SED = @SED@
@@ -240,12 +247,10 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 EXTRA_DIST = surface.h
-@WANT_FAUX_PQ_FALSE@PQ_DIR = pq
-@WANT_FAUX_PQ_TRUE@PQ_DIR = fauxPq
 pqsurf_SOURCES = pqsurf.c surf_split.c
 LDADD = \
     ../pqing/lib.la \
-    ../$(PQ_DIR)/lib.la \
+    ../$(PQ_SUBDIR)/lib.la \
     ../protocol/lib.la \
     ../ulog/lib.la \
     ../misc/lib.la \
@@ -255,7 +260,7 @@ LDADD = \
 dist_man1_MANS = pqsurf.1
 TAGS_FILES = \
     ../pqing/*.c ../pqing/*.h \
-    ../$(PQ_DIR)/*.c ../$(PQ_DIR)/*.h \
+    ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \

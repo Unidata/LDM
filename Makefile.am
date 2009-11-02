@@ -12,22 +12,17 @@ SYSLOG_CONF	= @SYSLOG_CONF@
 LDM_LOGFILE	= @LDM_LOGFILE@
 SUDO		= @SUDO@
 SU		= @SU@
+PQ_SUBDIR	= @PQ_SUBDIR@
 
-DISTCHECK_CONFIGURE_FLAGS	= --disable-include-root-actions
+DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 include_HEADERS			= ldmconfig.h
-
-if WANT_FAUX_PQ
-    PQ_DIR = fauxPq
-else
-    PQ_DIR = pq
-endif
 
 SUBDIRS	= \
     rpc \
     ulog \
     misc \
     protocol \
-    $(PQ_DIR) \
+    $(PQ_SUBDIR) \
     pqcreate \
     pqcheck \
     pqinsert \
@@ -50,6 +45,36 @@ SUBDIRS	= \
     regex \
     html
 
+DIST_SUBDIRS		= \
+    rpc \
+    ulog \
+    misc \
+    protocol \
+    pq \
+    pqcreate \
+    pqcheck \
+    pqinsert \
+    pqcat \
+    pqexpire \
+    pqmon \
+    pqutil \
+    pqsend \
+    pqing \
+    pqact \
+    pqsurf \
+    ldmsend \
+    rtstats \
+    feedme \
+    notifyme \
+    server \
+    ldmping \
+    scripts \
+    scour \
+    regex \
+    html \
+    fauxPq \
+    test
+
 lib_LTLIBRARIES		= libldm.la
 libldm_la_SOURCES	=
 libldm_la_LIBADD	= \
@@ -57,7 +82,7 @@ libldm_la_LIBADD	= \
     ulog/lib.la \
     misc/lib.la \
     protocol/lib.la \
-    $(PQ_DIR)/lib.la
+    $(PQ_SUBDIR)/lib.la
 
 EXTRA_DIST = \
     ANNOUNCEMENT \
@@ -130,12 +155,14 @@ root-actions:	\
     ensure-services-entry
 
 install_setuids:
-	chown root $(DESTDIR)$(bindir)/{hupsyslog,ldmd} \
-	&& chmod 4755 $(DESTDIR)$(bindir)/{hupsyslog,ldmd} 
-	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep -q root \
-	&& ls -l $(DESTDIR)$(bindir)/ldmd | grep -q rws \
-	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q root \
-	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep -q rws; then \
+	chown root $(DESTDIR)$(bindir)/hupsyslog \
+	&& chown root $(DESTDIR)$(bindir)/ldmd \
+	&& chmod 4755 $(DESTDIR)$(bindir)/hupsyslog \
+	&& chmod 4755 $(DESTDIR)$(bindir)/ldmd
+	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep root >/dev/null \
+	&& ls -l $(DESTDIR)$(bindir)/ldmd | grep rws >/dev/null \
+	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep root >/dev/null \
+	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep rws >/dev/null; then \
 	    : true; \
 	else \
 	    echo; \
@@ -151,7 +178,7 @@ actions." \
 	fi
 
 ensure-syslog-entry:
-	if grep -q $(LOG_LDM) $(SYSLOG_CONF); then \
+	if grep q $(LOG_LDM) $(SYSLOG_CONF) >/dev/null; then \
 	    : true; \
 	else \
 	    awk 'NF==2 && /\.none/{\

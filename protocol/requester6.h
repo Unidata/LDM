@@ -1,4 +1,6 @@
-/* $Id: requester6.h,v 1.8.2.3.4.1.2.6 2008/04/15 16:34:14 steve Exp $ */
+/*
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
+ */
 
 #ifndef REQUESTER6_H
 #define REQUESTER6_H
@@ -25,14 +27,15 @@ typedef enum {
     REQ6_SYSTEM_ERROR
 } req6_error;
 
-ErrorObj* req6_new(
-    const char            *upName,
-    const unsigned	   port,
-    const prod_class_t      *request,
-    unsigned               inactiveTimeout,
-    const char            *pqPathname,
-    pqueue                *pq,
-    int			   isPrimary);
+ErrorObj*
+req6_new(
+    const char* const                   upName,
+    const unsigned                      port,
+    const prod_class_t* const             request,
+    const unsigned                      inactiveTimeout,
+    const char* const                   pqPathname,
+    pqueue* const                       pq,
+    const int                           isPrimary);
 
 
 /*

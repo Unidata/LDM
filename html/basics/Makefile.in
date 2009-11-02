@@ -92,7 +92,6 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
-DOMAINNAME = @DOMAINNAME@
 DSYMUTIL = @DSYMUTIL@
 ECHO = @ECHO@
 ECHO_C = @ECHO_C@
@@ -138,6 +137,7 @@ PATH = @PATH@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
+PQ_SUBDIR = @PQ_SUBDIR@
 RANLIB = @RANLIB@
 RPCGEN = @RPCGEN@
 SED = @SED@
@@ -214,6 +214,7 @@ EXTRA_DIST = \
     configuring.html \
     data-product.html \
     ERE.html \
+    failures.html \
     generic-LDM.html \
     glindex.html \
     index.html \
@@ -234,6 +235,7 @@ EXTRA_DIST = \
     source-install-steps.html.in \
     source_or_binary.html \
     startStop.html \
+    successes.html \
     support.html \
     tips.html \
     tradeoffs.html \
@@ -268,6 +270,7 @@ html_DATA = \
     configuring.html \
     data-product.html \
     ERE.html \
+    failures.html \
     generic-LDM.html \
     glindex.html \
     index.html \
@@ -288,6 +291,7 @@ html_DATA = \
     source-install-steps.html \
     source_or_binary.html \
     startStop.html \
+    successes.html \
     support.html \
     tips.html \
     tradeoffs.html \
@@ -553,12 +557,92 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 
 all:
 
-web-update:
-	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
-	    *.html \
-	    *.gif \
-	    feedtypes \
-	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/basics
+@MAINTAINER_TRUE@successes.html:	$(top_srcdir)/test/results.tab
+@MAINTAINER_TRUE@	sort -t , -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 -k 7,7 $< \
+@MAINTAINER_TRUE@	| awk -F , 'BEGIN { \
+@MAINTAINER_TRUE@		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
+@MAINTAINER_TRUE@		print "<html>"; \
+@MAINTAINER_TRUE@		print "  <head>"; \
+@MAINTAINER_TRUE@		print "    <meta name=\"UIINDEX\" content=\"4\">"; \
+@MAINTAINER_TRUE@	        print "    <meta name=\"BOOKMARK\" content=\"Successful Build Environments\">"; \
+@MAINTAINER_TRUE@	        print "    <meta name=\"AUTHOR\" content=\"steve\">"; \
+@MAINTAINER_TRUE@	        print "    <meta name=\"KEYWORDS\" content=\"LDM, build, source\">"; \
+@MAINTAINER_TRUE@	        print "    <title>Successful Build Environments</title>"; \
+@MAINTAINER_TRUE@		print "  </head>"; \
+@MAINTAINER_TRUE@		print "  <body>"; \
+@MAINTAINER_TRUE@		print "    <h1 align=\"center\">Successful Build Environments</h1>"; \
+@MAINTAINER_TRUE@		print "    <table align=\"center\" border=\"2\" cellpadding=\"6\" cellspacing=\"0\">"; \
+@MAINTAINER_TRUE@		print "      <tr>"; \
+@MAINTAINER_TRUE@		print "        <th>O/S</th>"; \
+@MAINTAINER_TRUE@		print "        <th>CPU</th>"; \
+@MAINTAINER_TRUE@		print "        <th>Environment Variable(s)</th>"; \
+@MAINTAINER_TRUE@		print "        <th>configure(1) Option</th>"; \
+@MAINTAINER_TRUE@		print "        <th>make(1)</th>"; \
+@MAINTAINER_TRUE@		print "        <th>C Compiler</th>"; \
+@MAINTAINER_TRUE@		print "      </tr>"; \
+@MAINTAINER_TRUE@	    } \
+@MAINTAINER_TRUE@	    $$8 != 0 { \
+@MAINTAINER_TRUE@		print "      <tr>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$2 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$3 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$4 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$7 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$5 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$6 "</td>"; \
+@MAINTAINER_TRUE@		print "      </tr>"; \
+@MAINTAINER_TRUE@	    } \
+@MAINTAINER_TRUE@	    END { \
+@MAINTAINER_TRUE@		print "    </table>"; \
+@MAINTAINER_TRUE@		print "  </body>"; \
+@MAINTAINER_TRUE@		print "</html>"; \
+@MAINTAINER_TRUE@	    }' >$@
+
+@MAINTAINER_TRUE@failures.html:	$(top_srcdir)/test/results.tab
+@MAINTAINER_TRUE@	sort -t , -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 -k 7,7 $< \
+@MAINTAINER_TRUE@	| awk -F , 'BEGIN { \
+@MAINTAINER_TRUE@		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
+@MAINTAINER_TRUE@		print "<html>"; \
+@MAINTAINER_TRUE@		print "  <head>"; \
+@MAINTAINER_TRUE@		print "    <meta name=\"UIINDEX\" content=\"4\">"; \
+@MAINTAINER_TRUE@	        print "    <meta name=\"BOOKMARK\" content=\"Unsuccessful Build Environments\">"; \
+@MAINTAINER_TRUE@	        print "    <meta name=\"AUTHOR\" content=\"steve\">"; \
+@MAINTAINER_TRUE@	        print "    <meta name=\"KEYWORDS\" content=\"LDM, build, source\">"; \
+@MAINTAINER_TRUE@	        print "    <title>Unsuccessful Build Environments</title>"; \
+@MAINTAINER_TRUE@		print "  </head>"; \
+@MAINTAINER_TRUE@		print "  <body>"; \
+@MAINTAINER_TRUE@		print "    <h1 align=\"center\">Unsuccessful Build Environments</h1>"; \
+@MAINTAINER_TRUE@		print "    <table align=\"center\" border=\"2\" cellpadding=\"6\" cellspacing=\"0\">"; \
+@MAINTAINER_TRUE@		print "      <tr>"; \
+@MAINTAINER_TRUE@		print "        <th>O/S</th>"; \
+@MAINTAINER_TRUE@		print "        <th>CPU</th>"; \
+@MAINTAINER_TRUE@		print "        <th>Environment Variable(s)</th>"; \
+@MAINTAINER_TRUE@		print "        <th>configure(1) Option</th>"; \
+@MAINTAINER_TRUE@		print "        <th>make(1)</th>"; \
+@MAINTAINER_TRUE@		print "        <th>C Compiler</th>"; \
+@MAINTAINER_TRUE@		print "      </tr>"; \
+@MAINTAINER_TRUE@	    } \
+@MAINTAINER_TRUE@	    $$8 == 0 { \
+@MAINTAINER_TRUE@		print "      <tr>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$2 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$3 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$4 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$7 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$5 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$6 "</td>"; \
+@MAINTAINER_TRUE@		print "      </tr>"; \
+@MAINTAINER_TRUE@	    } \
+@MAINTAINER_TRUE@	    END { \
+@MAINTAINER_TRUE@		print "    </table>"; \
+@MAINTAINER_TRUE@		print "  </body>"; \
+@MAINTAINER_TRUE@		print "</html>"; \
+@MAINTAINER_TRUE@	    }' >$@
+
+@MAINTAINER_TRUE@web-update:
+@MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
+@MAINTAINER_TRUE@	    *.html \
+@MAINTAINER_TRUE@	    *.gif \
+@MAINTAINER_TRUE@	    feedtypes \
+@MAINTAINER_TRUE@	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/basics
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

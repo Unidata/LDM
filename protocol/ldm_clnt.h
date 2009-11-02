@@ -1,8 +1,6 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: ldm_clnt.h,v 5.2.2.3.6.4 2007/02/22 19:43:16 steve Exp $ */
 
 #ifndef LDM_CLNT_H
 #define LDM_CLNT_H
@@ -21,6 +19,10 @@ typedef enum {
     LDM_CLNT_DONE
 } ldm_clnt_error_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 ErrorObj*
 ldm_clnt_addr(
     const char* const		name,
@@ -28,11 +30,15 @@ ldm_clnt_addr(
 
 ErrorObj*
 ldm_clnttcp_create_vers(
-    const char*                  upName,
-    const unsigned		 port,
-    unsigned                     version,
-    CLIENT**                     client,
-    int*                         socket,
+    const char* const            upName,
+    const unsigned               port,
+    unsigned const               version,
+    CLIENT** const               client,
+    int* const                   socket,
     struct sockaddr_in*          upAddr);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -27,6 +27,7 @@
 #include "ldmprint.h"
 #include "pq.h"
 #include "prod_info.h"
+#include "remote.h"
 #include "savedInfo.h"
 #include "ulog.h"
 #include "xdr_data.h"

@@ -1,8 +1,6 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: remote.c,v 1.15.18.11 2009/07/24 16:06:32 steve Exp $ */
 
 /*LINTLIBRARY*/
 
@@ -22,6 +20,7 @@
 #include "ulog.h"
 #include "peer_info.h"
 #include "globals.h"
+#include "remote.h"
 #include "inetutil.h"
 #include "acl.h"
 #include "timestamp.h"
@@ -122,6 +121,13 @@ ensureRemoteName(
 }
 
 
+const char *
+remote_name(void)
+{
+    return remote.printname;
+}
+
+
 /*
  * Sets most of the members of the global structure "remote".  Does not set the
  * "name" member.  Does not set the structure if its IP address is the same as
@@ -219,13 +225,6 @@ str_setremote(const char *id)
         remote.name[0] = 0;
         remote.printname =  remote.astr;
     }
-}
-
-
-const char *
-remote_name(void)
-{
-        return remote.printname;
 }
 
 int

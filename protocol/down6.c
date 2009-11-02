@@ -1,7 +1,8 @@
 /*
- * This module contains the "downstream" code for version 6 of the LDM.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
+ *
+ *   This module contains the "downstream" code for version 6 of the LDM.
  */
-/* $Id: down6.c,v 1.24.2.1.2.1.4.17 2009/07/23 20:02:13 steve Exp $ */
 
 #include "ldmconfig.h"
 
@@ -19,6 +20,7 @@
 #include "DownHelp.h"
 #include "error.h"
 #include "globals.h"     /* inactive_timeo */
+#include "remote.h"
 #include "ldm.h"         /* client-side LDM functions */
 #include "ldmprint.h"    /* s_prod_info() */
 #include "peer_info.h"   /* peer_info */

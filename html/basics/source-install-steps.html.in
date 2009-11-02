@@ -16,24 +16,27 @@
 <h2>Short Installation Instructions:</h3>
 
 <p>
-Not all development enviroments can build and install this package. See the
-long installation instructions in the next section for details.
-
-<p>
 The following assumes that you are familiar with both the LDM system and with
 autoconf-based package-installation. If you're not, then follow the long
 installation instructions in the next section. 
+
+<p>
+First, vet your build environment against the table of
+<a href="successes.html">successful build environments</a> and
+<a href="failures.html">unsuccessful build environments</a>.
+Choose a 64-bit environment if possible.
+Then, do the following:
 
 <pre>
     $ su - ldm
     $ wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
     $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r
     $ cd @PACKAGE@-@VERSION@
-    $ ./configure [--disable-max-size] [--enable-logging=local<b><i>n</i></b>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
+    $ export PATH=... ... # if necessary
+    $ ./configure [--enable-logging=local<i>n</i>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
     Password: ...
     $ make install &gt;make.log
     $ make clean # optional
-    $ vi ~/ldmadmin-pl.conf # necessary if no previous installation exists
 </pre>
 
 <p>
@@ -41,7 +44,8 @@ The root of the installation tree will be <code>~ldm/@PACKAGE@-@VERSION@</code>
 for the version-dependent files.
 
 <p>
-If you encounter problems, then follow the long installation instructions in the next section. 
+If you encounter problems, then follow the long installation instructions in
+the next section. 
 
 <hr>
 
@@ -82,19 +86,19 @@ into the
 
 <p>Unpack the distribution in the 
 <a href="glindex.html#LDM user">LDM user</a>'s home directory
-using the <b><code>gunzip(1)</code></b> and <b><code>tar(1)</code></b>
+using the <code>gunzip(1)</code> and <code>pax(1)</code>
 utilities.
 For example:
 <blockquote><pre>
-cd                                     # go to the LDM user's home-directory
-gunzip -c @PACKAGE@-@VERSION@.tar.gz | tar xvf - # unpack the distribution
+cd                                    # go to the LDM user's home-directory
+gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r # unpack the distribution
 </pre></blockquote>
 
 The name of the
-subdirectory will contain the version identifier of the just-unpacked package
-(<i>e.g.</i>, <tt><b>@PACKAGE@-@VERSION@</b></tt>).  For the meaning of
-the version identifier, see
-<a href="versionId.html">The LDM Version Identifier</a>.
+subdirectory will contain the
+<a href="versionId.html">version identifier</a>
+of the just-unpacked package
+(<i>e.g.</i>, <tt>@PACKAGE@-@VERSION@</tt>).
 
 <li>
 <a NAME="build"></a>
@@ -111,7 +115,7 @@ cd $HOME/@PACKAGE@-@VERSION@
 
 <a name="clean-up"></a>
 <li><p>If you need to clean-up from a previous build attempt, then 
-use the <b><code>make(1)</code></b> utility to return the 
+use the <code>make(1)</code> utility to return the 
 distribution to a pristine state:
 <blockquote><pre>
 make distclean
@@ -129,6 +133,11 @@ following:
 	<th>Variable</th>
 	<th>Meaning</th>
 	<th>Example Value</th>
+    </tr>
+	<td><code>PATH</code></td>
+	<td>Directory search-order for utilties</td>
+	<td><code>PATH=/usr/bin:/bin:/usr/sbin:/sbin</code></td>
+    </tr>
     </tr>
 	<td><code>CC</code></td>
 	<td>C compiler</td>
@@ -151,7 +160,17 @@ following:
     </tr>
 </table>
 </blockquote>
-Normally, this step should not be necessary.
+This step can be necessary due to the vagaries of build environments.  You
+should compare your build environment against the table of
+<a href="successes.html">successful build environments</a>
+and also against the table of
+<a href="failures.html">unsuccessful build environments</a>
+to determine if you need to perform this step.  Note that some of the computer
+systems can build both a 32-bit and a 64-bit LDM system.  We strongly 
+recommend that you choose a 64-bit build environment whenever possible so
+that the
+<a href="glindex.html#product-queue">product-queue</a>
+isn't unnecessarilly restricted to small sizes only.
 
 <p>How to set an environment variable depends on your user-shell.  For
 example:
@@ -171,54 +190,12 @@ example:
 </table>
 </blockquote>
 
-<p><b>NOTE: Because of the following step, you should unset all
-of the above environment variables that you don't explicitly use.
-In particular, you should probably not set any of the above
-environment variables in your shell's profile-file.</b>
-
-<li>
-<p>Decide if the
-<a href="glindex.html#LDM">LDM</a> system needs to support
-a small <a href="glindex.html#product-queue">product-queue</a> from a
-previous installation.  By default, the build procedure will create an
-<a href="glindex.html#LDM">LDM</a> system that supports a
-64-bit <a href="glindex.html#product-queue">product-queue</a>,
-which can be up to (2^64)-1 bytes in size (if that is possible on your
-computer system).  This aspect of the 
-<a href="glindex.html#LDM">LDM</a>
-is different from version 6.1 (and earlier versions) which required
-manual modification of the build procedure in order to support a large
-<a href="glindex.html#product-queue">product-queue</a>.
-It could be, however, that you wish to continue to use the
-32-bit <a href="glindex.html#product-queue">product-queue</a>
-created by a 6.1 (or earlier) version of the
-<a href="glindex.html#LDM">LDM</a>,
-in which case, you should specify the option 
-<code><b>--disable-max-size</b></code>
-when executing the <b><code>configure</code></b> script.  This will result in an
-<a href="glindex.html#LDM">LDM</a>
-system that will continue to work with the previously-existing
-<a href="glindex.html#product-queue">product-queue</a>.
-
-<p><a href="#pqcheck">Step 7</a>, below, contains related information.
-
 <li>
 <p><a name="run configure script"></a>
-Run the <b><code>configure</code></b> script.  You may use the following
+Run the <code>configure</code> script.  You may use the following
 options, when and if appropriate:
 <blockquote>
 <dl>
-    <p><dt><code>--disable-max-size</code>
-    <dd>Disables any attempt to maximize the size of the 
-	programming-environment.  Use of this option depends on your
-	decision from the previous step and
-	<a href="platform.html#development">
-	whether or not it's necessary given your platform and C compiler</a>.
-	The default is to try to maximize the integer, long, pointer and 
-	<code>off_t</code> programming-environment in order to support
-	large
-	<a href="glindex.html#product-queue">product-queue</a>s.
-
     <p><dt><code>--enable-logging=<a href="glindex.html#localn">local<i>n</i>
 	</a>
     <dd>Configures the <a href="glindex.html#LDM">LDM</a> to use the
@@ -227,12 +204,12 @@ options, when and if appropriate:
 	<a href="glindex.html#LDM">LDM</a>
 	installation, then you should use the same facility.
 	The default is to use the
-	<code><b>local0</b></code> facility.
+	<code>local0</code> facility.
 </dl>
 </blockquote>
 
 <p>Redirect <em>both</em> standard output
-and standard error to the file <b><code>configure.log</code></b>.
+and standard error to the file <code>configure.log</code>.
 The relevant command depends on your user-shell.  For example:
 <blockquote>
 <table align="center" border="2" cellpadding="6" cellspacing="0">
@@ -268,23 +245,23 @@ superuser will subsequently have to execute an additional step in order
 to complete the installation process.
 </li>
 
-<p>Inspect the file <b><code>configure.log</code></b> to verify the
+<p>Inspect the file <code>configure.log</code> to verify the
 configuration process.
 If an error occurred, then the reason for the error can often be found
-in the file <b><code>config.log</code></b> (note the slightly different name).<p>
+in the file <code>config.log</code> (note the slightly different name).<p>
 <p>If you email the 
 <a href="glindex.html#UPC">UPC</a>
 because of a problem with this step, be sure to
-enclose the files <b><code>configure.log</code></b> and 
-<b><code>config.log</code></b>.</p>
+enclose the files <code>configure.log</code> and 
+<code>config.log</code>.</p>
 </li>
 
 <li>
-<p>Use the 
-<a href="platform.html#development"><b><code>make(1)</code></b> utility
+<p>Use a
+<a href="successes.html"><code>make(1)</code> utility
 appropriate for your system</a> to build and install the package,
 redirecting <em>both</em> standard output
-and standard error to the file <b><code>make.log</code></b>.
+and standard error to the file <code>make.log</code>.
 The relevant command depends on your user shell.  For example:
 <blockquote>
 <table align="center" border="2" cellpadding="6" cellspacing="0">
@@ -293,12 +270,12 @@ The relevant command depends on your user shell.  For example:
 	<th>Command</th>
     </tr>
 	<td>Standard UNIX<sup>®</sup> (e.g. <code>sh, ksh, bash</code>)</td>
-	<td nowrap><code><a href="platform.html#development">make</a> install
+	<td nowrap><code><a href="glindex.html#make">make</a> install
 	    &gt;make.log 2>&1</code></td>
     </tr>
     <tr>
 	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-	<td nowrap><code><a href="platform.html#development">make</a> install
+	<td nowrap><code><a href="glindex.html#make">make</a> install
 	    &gt;&! make.log</code></td>
     </tr>
 </table>
@@ -307,19 +284,19 @@ The relevant command depends on your user shell.  For example:
 This step builds the package libraries and programs and installs
 them.</p>
 
-<p>Inspect the file <b><code>make.log</code></b> to verify the
+<p>Inspect the file <code>make.log</code> to verify the
 installation process.  If something went wrong that you think might be fixed by
 <a href="#environment-variables">setting an environment variable</a>
-(such as using the <b><code>cc</code></b> compiler rather than the
-<b><code>c89</code></b> compiler) then return to the
+(such as using the <code>cc</code> compiler rather than the
+<code>c89</code> compiler) then return to the
 <a href="#clean-up">clean-up step</a> above.
 
 <p>If you email the 
 <a href="glindex.html#UPC">UPC</a>
 because of a problem with this step, be sure to
-enclose the files <b><code>configure.log</code></b>, 
-<b><code>config.log</code></b>, and
-<b><code>make.log</code></b>.</p>
+enclose the files <code>configure.log</code>, 
+<code>config.log</code>, and
+<code>make.log</code>.</p>
 </li>
 
 <li><a name="pqcheck"></a>
@@ -337,19 +314,22 @@ If this indicates that the
 you must either 
 reinstall this package -- starting with the
 <a href="#clean-up">clean-up step above</a> --
-and specify the 
-<code><b>--disable-max-size</b></code>
-option to the <code><b>configure</b></code> script when it is executed, or
+and specify a different programming environment via the
+<code>CC</code> environment variable 
+(<i>e.g.</i> <code>cc -m32</code> instead of 
+<code>cc -m64</code>)
+before re-executing the <code>configure</code> script, or
 you will have to remove the previous 
 <a href="glindex.html#product-queue">product-queue</a> and
 create a new, empty one using the programs of this package before starting
 the new LDM.
 
 <li>
-<p>Use the <a href="platform.html#development"><b><code>make</code></b>
+<p>Use a
+<a href="successes.html"><code>make(1)</code> utility
 utility appropriate for your system</a> to install the package components,
 redirecting <em>both</em> standard output
-and standard error to the file <b><code>install.log</code></b>.
+and standard error to the file <code>install.log</code>.
 The relevant command depends on your user shell.  For example:
 <blockquote>
 <table align="center" border="2" cellpadding="6" cellspacing="0">
@@ -358,32 +338,32 @@ The relevant command depends on your user shell.  For example:
 	<th>Command</th>
     </tr>
 	<td>Standard UNIX<sup>®</sup> (e.g. <code>sh, ksh, bash</code>)</td>
-	<td nowrap><code><a href="platform.html#development">make</a>
+	<td nowrap><code><a href="glindex.html#make">make</a>
 	    install &gt;install.log 2>&1</code></td>
     </tr>
     <tr>
 	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-	<td nowrap><code><a href="platform.html#development">make</a>
+	<td nowrap><code><a href="glindex.html#make">make</a>
 	    install &gt;&! install.log</code></td>
     </tr>
 </table>
 </blockquote>
 </p>
 
-<p>Inspect the file <b><code>install.log</code></b> to verify the
-installation process.  Ignore all errors that <b><code>make</code></b>, itself,
+<p>Inspect the file <code>install.log</code> to verify the
+installation process.  Ignore all errors that <code>make</code>, itself,
 ignores.</p>
 
 <p>If you email the 
 <a href="glindex.html#UPC">UPC</a>
 because of a problem with this step, be sure to
-enclose the file <b><code>install.log</code></b>.</p>
+enclose the file <code>install.log</code>.</p>
 </li>
 
 <li>
 <p>
 If the configure script was unable to access superuser privileges, then
-the superuser must execute <b><code>make root-actions</code></b> to finish
+the superuser must execute <code>make root-actions</code> to finish
 the installation.  For example:
 <blockquote><pre>
 su root -c 'make root-actions'
@@ -394,12 +374,12 @@ Note that this example requires the superuser's password.
 <p>Among other things, this step is necessary for the 
 <a href="glindex.html#LDM">LDM</a> server to listen on port 388 (which is
 a restricted port) 
-and for the LDM's <b><code>hupsyslog(1)</code></b> utility
+and for the LDM's <code>hupsyslog(1)</code> utility
 to notify the system logging daemon when a new log-file has been
 created.
 
 <li>
-<p>Use the <b><code>make(1)</code></b> utility to clean-up after yourself.
+<p>Use the <code>make(1)</code> utility to clean-up after yourself.
 <blockquote><pre>
 make clean
 </blockquote></pre>

@@ -22,6 +22,7 @@
 #include "timestamp.h"
 #include "ulog.h"
 #include "globals.h"
+#include "remote.h"
 
 /*
  * The following parameters condition the behavior of this module.
@@ -198,8 +199,8 @@ stats_addEntry(
     Stats* const        stats,
     const Entry* const  entry)
 {
-    assert(stats);
-    assert(entry);
+    assert(stats != NULL);
+    assert(entry != NULL);
 
     stats->amount += entry->size;
     stats->count++;
@@ -218,8 +219,8 @@ stats_subtractEntry(
     Stats* const        stats,
     const Entry* const  entry)
 {
-    assert(stats);
-    assert(entry);
+    assert(stats != NULL);
+    assert(entry != NULL);
 
     stats->amount -= entry->size;
     assert(stats->amount >= 0);

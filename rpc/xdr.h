@@ -316,13 +316,13 @@ extern bool_t	xdr_double(register XDR *xdrs, double *dp);
 #define xdr_reference	my_xdr_reference
 extern bool_t	xdr_reference(
 	XDR *xdrs,
-	char* *pp,		/* the pointer to work on */
+	void* *pp,		/* the pointer to work on */
 	unsigned size,		/* size of the object pointed to */
 	xdrproc_t proc);	/* xdr routine to handle the object */
 #define xdr_pointer	my_xdr_pointer
 extern bool_t	xdr_pointer(
 	XDR *xdrs,
-	char **objpp,
+	void **objpp,
 	unsigned obj_size,
 	xdrproc_t xdr_obj);
 #define xdr_wrapstring	my_xdr_wrapstring

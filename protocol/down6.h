@@ -30,10 +30,10 @@ typedef enum {
 
 int
 down6_init(
-    const char*			upName,
-    const struct sockaddr_in*	upAddr,
-    const char*			pqPath,
-    pqueue* 			pq);
+    const char               *upName, 
+    const struct sockaddr_in *upAddr,
+    const char               *pqPath,
+    pqueue                   *const pq);
 
 const prod_info*
 down6_getLastInfo();

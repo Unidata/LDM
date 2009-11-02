@@ -1,8 +1,6 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: mkdirs_open.c,v 1.14.18.4 2006/01/23 22:12:26 steve Exp $ */
 
 #include "ldmconfig.h"
 

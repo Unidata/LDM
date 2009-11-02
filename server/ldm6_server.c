@@ -28,6 +28,7 @@
 #include "down6.h"       /* the pure "downstream" LDM module */
 #include "error.h"
 #include "globals.h"
+#include "remote.h"
 #include "inetutil.h"    /* hostbyaddr() */
 #include "ldm.h"         /* *_6_svc() functions */
 #include "ldmprint.h"    /* s_prod_class() */

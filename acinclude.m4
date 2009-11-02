@@ -38,8 +38,8 @@ AC_DEFUN([UD_CPPFLAGS],
 		[Defines level of POSIX compliance])
 	    AC_DEFINE([_XOPEN_SOURCE_EXTENDED], [1],
 		[Obtains extended POSIX API])
-	    AC_DEFINE([_ALL_SOURCE], [1],
-		[Define to obtain optional system API])
+dnl	    AC_DEFINE([_ALL_SOURCE], [1],
+dnl		[Define to obtain optional system API])
 	    AC_DEFINE([BSD], [43], [Define if on a BSD system])
 	    ;;
 	Darwin)
@@ -159,13 +159,14 @@ dnl Find the perl(1) program.
 dnl
 AC_DEFUN([UD_PROG_PERL],
 [dnl
+    AC_PROG_EGREP
     AC_ARG_VAR([PERL], [version 5 perl(1) command])
     AC_CACHE_CHECK(
 	[for version 5 perl(1) utility],
 	[ac_cv_path_PERL],
 	[AC_PATH_PROGS_FEATURE_CHECK([PERL], [perl],
 	    [dnl
-		if $ac_path_PERL -v | grep 'v5\.' >/dev/null; then
+		if $ac_path_PERL -v | $EGREP 'version 5|v5\.' >/dev/null; then
 		    ac_cv_path_PERL=$ac_path_PERL
 		    ac_path_PERL_found=:
 		fi
@@ -255,11 +256,7 @@ dnl
 AC_DEFUN([UD_FQDN], [dnl
 AC_MSG_CHECKING(fully-qualified domain name)
 if test -z "$FQDN"; then
-    name=`hostname`
-    case "$name" in
-    "") name=`uname -n`
-	;;
-    esac
+    name=`uname -n || hostname`
     FQDN=
     case "$name" in
     *.*)FQDN=$name
@@ -296,7 +293,7 @@ dnl
 AC_DEFUN([UD_DOMAINNAME], [dnl
 AC_MSG_CHECKING(domain name)
 if test -z "$DOMAINNAME"; then
-    name=`hostname`
+    name=`uname -n || hostname`
     case "$name" in
     *.*)
 	changequote(,)dnl
@@ -436,7 +433,9 @@ dnl Set ulog parameters
 dnl
 AC_DEFUN([UD_ULOG], [dnl
     AC_MSG_CHECKING([for system logging daemon])
-    if ps -u root | grep syslog >/dev/null; then
+    if ps -e | grep syslog >/dev/null; then
+	AC_MSG_RESULT([found])
+    elif ps -A | grep syslog >/dev/null; then
 	AC_MSG_RESULT([found])
     else
 	AC_MSG_ERROR([system logging daemon not running], 1)
@@ -450,46 +449,54 @@ AC_DEFUN([UD_ULOG], [dnl
     AC_SUBST([SYSLOG_CONF])
     AC_SUBST([LDM_LOGFILE], [$LDMHOME/logs/ldmd.log])
 
-    AC_MSG_CHECKING(ulog defines)
     case `uname -sr` in
 	OSF1*|sn1036*|Linux*|Darwin*)
+            AC_MSG_CHECKING([if ulog(3) should define syslog(3)])
 	    AC_DEFINE(NO_REPLACE_SYSLOG, 1,
 		[Causes syslog(3) to not be defined in the ulog(3) module])
-	    AC_MSG_RESULT(-DNO_REPLACE_SYSLOG)
+	    AC_MSG_RESULT([no])
 	    ;;
 	*)
+            AC_MSG_CHECKING([whether syslog(3) returns an int])
 	    AC_TRY_COMPILE(
 		[#include <syslog.h>],
 		[int i = syslog(0,0);],
 		AC_DEFINE(SYSLOG_RETURNS_INT, 1,
-		    [Whether or not syslog(3) returns an int])
-		AC_MSG_RESULT(-DSYSLOG_RETURNS_INT))
+		    [Whether syslog(3) returns an int])
+		AC_MSG_RESULT([yes]),
+                [AC_MSG_RESULT([no])])
 	    ;;
     esac
 
+    AC_MSG_CHECKING([pathname of system log file])
     unset ULOGNAME
     for usock in /dev/log /var/run/syslog; do
 	if test -w $usock; then
 	    ULOGNAME=$usock
 	    AC_DEFINE_UNQUOTED(ULOGNAME, "$ULOGNAME", 
-		[Pathname of the system logging console])
-	    AC_MSG_RESULT(-DULOGNAME=$ULOGNAME)
+		[Pathname of the system log file])
+	    AC_MSG_RESULT([$ULOGNAME])
+            AC_MSG_CHECKING([if system log file is a socket])
 	    if ls -lL $usock | grep '^s' >/dev/null; then
 		AC_DEFINE(LOGNAME_ISSOCK, 1,
-		    [Define if the canonical log file is a socket])
-		AC_MSG_RESULT(-DLOGNAME_ISSOCK)
+		    [Define if the system log file is a socket])
+		AC_MSG_RESULT([yes])
+            else
+		AC_MSG_RESULT([no])
 	    fi
 	    break
 	fi
     done
 
     if test -z "$ULOGNAME"; then
+        AC_MSG_RESULT([not found])
+        AC_MSG_CHECKING([pathname of console])
 	if test -w /dev/conslog; then
 	    AC_DEFINE(_DEV_CONSLOG, 1,
 		[Define if the file /dev/conslog exists])
-	    AC_MSG_RESULT(-D_DEV_CONSLOG)
+	    AC_MSG_RESULT([/dev/conslog])
 	else
-	    AC_MSG_RESULT(no log device)
+	    AC_MSG_RESULT([no console found])
 	fi
     fi
 ])
@@ -661,7 +668,7 @@ dnl Turn off DB support if not available
 dnl
 AC_DEFUN([UD_DB], [dnl
    if test -z "$GDBMLIB"; then
-       AC_MSG_WARN("GDBMLIB not set")
+       AC_MSG_NOTICE("GDBMLIB not set")
        AC_CHECK_FUNC(dbm_open,
           ,
           AC_DEFINE(NO_DB, 1, [Disables the DBFILE capability])
@@ -823,7 +830,7 @@ AC_DEFUN([UD_MAKEWHATIS],
 [
     #
     # NB: We always want to define WHATIS to prevent the
-    # $(MANDIR)/$(WHATIS) make(1) target from being just $(MANDIR)/ and
+    # $(mandir)/$(WHATIS) make(1) target from being just $(mandir)/ and
     # conflicting with the (directory creation) target with the same name.
     #
     WHATIS=whatis
@@ -833,7 +840,7 @@ AC_DEFUN([UD_MAKEWHATIS],
 	    MAKEWHATIS_CMD=
 	    ;;
 	'IRIX64 6.5'|'IRIX 6.5')
-	    MAKEWHATIS_CMD='/usr/lib/makewhatis -M $(MANDIR) $(MANDIR)/whatis'
+	    MAKEWHATIS_CMD='/usr/lib/makewhatis -M $(mandir) $(mandir)/whatis'
 	    ;;
 	'IRIX 6'*)
 	    # Can't generate a user-database.
@@ -858,10 +865,10 @@ AC_DEFUN([UD_MAKEWHATIS],
 	    AC_CHECK_PROGS(prog, catman makewhatis /usr/lib/makewhatis)
 	    case "$prog" in
 		*catman*)
-		    MAKEWHATIS_CMD=$prog' -w -M $(MANDIR)'
+		    MAKEWHATIS_CMD=$prog' -w -M $(mandir)'
 		    ;;
 		*makewhatis*)
-		    MAKEWHATIS_CMD=$prog' $(MANDIR)'
+		    MAKEWHATIS_CMD=$prog' $(mandir)'
 		    ;;
 	    esac
 	    ;;

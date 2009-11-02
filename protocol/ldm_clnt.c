@@ -1,9 +1,6 @@
-
 /*
- *   Copyright 2003, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: ldm_clnt.c,v 5.9.2.4.6.7 2007/02/22 19:43:16 steve Exp $ */
 
 #include <ldmconfig.h>
 
@@ -24,6 +21,7 @@
 #include "rpcutil.h"
 #include "ulog.h"
 #include "globals.h"
+#include "remote.h"
 
 
 /*

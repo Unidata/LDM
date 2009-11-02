@@ -20,6 +20,7 @@
 #include "ldm.h"
 #include <regex.h>
 #include "globals.h"
+#include "remote.h"
 #include "palt.h"
 #include "pq.h"
 #include "action.h"

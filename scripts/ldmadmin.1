@@ -119,8 +119,18 @@ Status messages are written to the standard-output stream.
 Check LDM queue for errors.
 Status messages are written to the standard-output stream.
 .TP
+.B checkinsertion
+Checks whether a data-product has been inserted into the product-queue
+in the last \fB$insertion_check_period\fP seconds.  Terminates with a 0
+exit status if and only if one has.
+.TP
 .B checktime
 Just checks the system clock.
+.TP
+.B check
+Performs the sequence \fBisRunning\fP, \fBcheckinsertion\fP, and
+\fBchecktime\fP.  Terminates with a 0 exit status if and only if there
+were no problems.
 .TP
 .B printmetrics
 Prints LDM performance metrics to the standard output stream.  The
