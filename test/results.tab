@@ -1,0 +1,128 @@
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89,,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89,--disable-shared,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64,,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64,--disable-shared,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc,,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc,--disable-shared,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64,,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64,--disable-shared,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/c89,,0
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/c89,--disable-shared,0
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/c89 -m64,,0
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/c89 -m64,--disable-shared,0
+buddy,SunOS 5.10,i86pc,PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m32,,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m32,--disable-shared,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m32,,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m32,--disable-shared,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m64,,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m64,--disable-shared,1
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99,,0
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99,--disable-shared,0
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99 -m64,,0
+buddy,SunOS 5.10,i86pc,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99 -m64,--disable-shared,0
+dana,OSF1 V5.1,alpha,PATH=/usr/bin/posix:/usr/bin:/bin,/usr/bin/posix/make,/usr/bin/c89,,1
+dana,OSF1 V5.1,alpha,PATH=/usr/bin/posix:/usr/bin:/bin,/usr/bin/posix/make,/usr/bin/c89,--disable-shared,1
+dana,OSF1 V5.1,alpha,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc,,1
+dana,OSF1 V5.1,alpha,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc,--disable-shared,1
+dana,OSF1 V5.1,alpha,PATH=/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/usr/ccs/bin/c89,,1
+dana,OSF1 V5.1,alpha,PATH=/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/usr/ccs/bin/c89,--disable-shared,1
+dana,OSF1 V5.1,alpha,PATH=/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc,,1
+dana,OSF1 V5.1,alpha,PATH=/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc,--disable-shared,1
+dana,OSF1 V5.1,alpha,PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/gnu/bin/gcc,,0
+dana,OSF1 V5.1,alpha,PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/gnu/bin/gcc,--disable-shared,0
+flip,IRIX64 6.5,IP30,PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/cc -o32,,1
+flip,IRIX64 6.5,IP30,PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/cc -o32,--disable-shared,1
+flip,IRIX64 6.5,IP30,PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/cc -64,,1
+flip,IRIX64 6.5,IP30,PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/cc -64,--disable-shared,1
+flip,IRIX64 6.5,IP30,PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/c89 -o32,,1
+flip,IRIX64 6.5,IP30,PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/c89 -o32,--disable-shared,1
+flip,IRIX64 6.5,IP30,PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/c89 -64,,1
+flip,IRIX64 6.5,IP30,PATH=/usr/bin:/bin:/usr/sbin,/usr/bin/make,/usr/bin/c89 -64,--disable-shared,1
+flip,IRIX64 6.5,IP30,PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/sbin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,,0
+flip,IRIX64 6.5,IP30,PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/sbin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,--disable-shared,0
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m32,,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m32,--disable-shared,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m64,,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m64,--disable-shared,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m32,,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m32,--disable-shared,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m64,,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m64,--disable-shared,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m32,,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m32,--disable-shared,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m64,,1
+gilda,Linux 2.6.27.25-170.2.72.fc10.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m64,--disable-shared,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m32,,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m32,--disable-shared,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m64,,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m64,--disable-shared,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m32,,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m32,--disable-shared,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m64,,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m64,--disable-shared,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m32,,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m32,--disable-shared,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m64,,1
+imogene,Linux 2.6.27.24-78.2.53.fc9.x86_64,x86_64,PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m64,--disable-shared,1
+sid,Darwin 8.11.0,Power Macintosh,PATH=/usr/bin:/bin:/usr/sbin:/sbin,/usr/bin/make,/usr/bin/c89,,0
+sid,Darwin 8.11.0,Power Macintosh,PATH=/usr/bin:/bin:/usr/sbin:/sbin,/usr/bin/make,/usr/bin/c89,--disable-shared,1
+sid,Darwin 8.11.0,Power Macintosh,PATH=/usr/bin:/bin:/usr/sbin:/sbin,/usr/bin/make,/usr/bin/cc,,1
+sid,Darwin 8.11.0,Power Macintosh,PATH=/usr/bin:/bin:/usr/sbin:/sbin,/usr/bin/make,/usr/bin/cc,--disable-shared,1
+sid,Darwin 8.11.0,Power Macintosh,PATH=/usr/bin:/bin:/usr/sbin:/sbin,/usr/bin/gnumake,/usr/bin/gcc,,1
+sid,Darwin 8.11.0,Power Macintosh,PATH=/usr/bin:/bin:/usr/sbin:/sbin,/usr/bin/gnumake,/usr/bin/gcc,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc +DA2.0W,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc +DA2.0W,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89 +DA2.0W,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89 +DA2.0W,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc,--disable-shared,0
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc +DA2.0W,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc +DA2.0W,--disable-shared,0
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc +DA2.0W,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc +DA2.0W,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89 +DA2.0W,,0
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89 +DA2.0W,--disable-shared,1
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,,1
+tweety,HP-UX B.11.00,9000/785,PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,--disable-shared,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/bin/make,/usr/vac/bin/c89 -q32,,0
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/bin/make,/usr/vac/bin/c89 -q32,--disable-shared,0
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/bin/make,/usr/vac/bin/c89 -q64,,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/bin/make,/usr/vac/bin/c89 -q64,--disable-shared,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/cc -q32,,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/cc -q32,--disable-shared,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/cc -q64,,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/cc -q64,--disable-shared,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/xlc -q32,,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/xlc -q32,--disable-shared,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/xlc -q64,,1
+zasu,AIX 1 5,000C330F4C00,PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/xlc -q64,--disable-shared,1
+zasu,AIX 1 5,000C330F4C00,PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,,0
+zasu,AIX 1 5,000C330F4C00,PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,--disable-shared,0
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89,,1
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89,--disable-shared,1
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64,,1
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64,--disable-shared,1
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc,,1
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc,--disable-shared,1
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64,,1
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64,--disable-shared,1
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc,,0
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc,--disable-shared,0
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc -m64,,0
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc -m64,--disable-shared,0
+zero,SunOS 5.9,sun4u,PATH=/opt/csw/gcc3/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/csw/gcc3/bin/gcc -m32,,1
+zero,SunOS 5.9,sun4u,PATH=/opt/csw/gcc3/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/csw/gcc3/bin/gcc -m32,--disable-shared,1
+zero,SunOS 5.9,sun4u,PATH=/opt/csw/gcc3/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/csw/gcc3/bin/gcc -m64,,0
+zero,SunOS 5.9,sun4u,PATH=/opt/csw/gcc3/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/csw/gcc3/bin/gcc -m64,--disable-shared,0
+zero,SunOS 5.9,sun4u,PATH=/opt/csw/gcc4/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/csw/gcc4/bin/gcc -m32,,1
+zero,SunOS 5.9,sun4u,PATH=/opt/csw/gcc4/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/csw/gcc4/bin/gcc -m32,--disable-shared,1
+zero,SunOS 5.9,sun4u,PATH=/opt/csw/gcc4/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/csw/gcc4/bin/gcc -m64,,0
+zero,SunOS 5.9,sun4u,PATH=/opt/csw/gcc4/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/csw/gcc4/bin/gcc -m64,--disable-shared,0

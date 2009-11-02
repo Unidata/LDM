@@ -1,0 +1,319 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+  <head>
+    <meta name="UIINDEX" content="4">
+    <meta name="BOOKMARK" content="Unsuccessful Build Environments">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, build, source">
+    <title>Unsuccessful Build Environments</title>
+  </head>
+  <body>
+    <h1 align="center">Unsuccessful Build Environments</h1>
+    <table align="center" border="2" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>O/S</th>
+        <th>CPU</th>
+        <th>Environment Variable(s)</th>
+        <th>configure(1) Option</th>
+        <th>make(1)</th>
+        <th>C Compiler</th>
+      </tr>
+      <tr>
+        <td>AIX 1 5</td>
+        <td>000C330F4C00</td>
+        <td>PATH=/opt/gnu/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/opt/gnu/bin/make</td>
+        <td>/opt/gnu/bin/gcc</td>
+      </tr>
+      <tr>
+        <td>AIX 1 5</td>
+        <td>000C330F4C00</td>
+        <td>PATH=/opt/gnu/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/opt/gnu/bin/make</td>
+        <td>/opt/gnu/bin/gcc</td>
+      </tr>
+      <tr>
+        <td>AIX 1 5</td>
+        <td>000C330F4C00</td>
+        <td>PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=32</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/usr/vac/bin/c89 -q32</td>
+      </tr>
+      <tr>
+        <td>AIX 1 5</td>
+        <td>000C330F4C00</td>
+        <td>PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=32</td>
+        <td>--disable-shared</td>
+        <td>/usr/bin/make</td>
+        <td>/usr/vac/bin/c89 -q32</td>
+      </tr>
+      <tr>
+        <td>Darwin 8.11.0</td>
+        <td>Power Macintosh</td>
+        <td>PATH=/usr/bin:/bin:/usr/sbin:/sbin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/usr/bin/c89</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/opt/ansic/bin/c89</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/opt/ansic/bin/c89 +DA2.0W</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/opt/ansic/bin/cc</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/opt/ansic/bin/cc +DA2.0W</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/usr/bin/c89</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/usr/bin/c89 +DA2.0W</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/usr/bin/cc</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/bin/make</td>
+        <td>/usr/bin/cc +DA2.0W</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/ccs/bin/make</td>
+        <td>/usr/ccs/bin/cc</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td>--disable-shared</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>/usr/ccs/bin/cc</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td></td>
+        <td>/usr/ccs/bin/make</td>
+        <td>/usr/ccs/bin/cc +DA2.0W</td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td>--disable-shared</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>/usr/ccs/bin/cc +DA2.0W</td>
+      </tr>
+      <tr>
+        <td>IRIX64 6.5</td>
+        <td>IP30</td>
+        <td>PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/sbin</td>
+        <td></td>
+        <td>/opt/gnu/bin/make</td>
+        <td>/opt/gnu/bin/gcc</td>
+      </tr>
+      <tr>
+        <td>IRIX64 6.5</td>
+        <td>IP30</td>
+        <td>PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/sbin</td>
+        <td>--disable-shared</td>
+        <td>/opt/gnu/bin/make</td>
+        <td>/opt/gnu/bin/gcc</td>
+      </tr>
+      <tr>
+        <td>OSF1 V5.1</td>
+        <td>alpha</td>
+        <td>PATH=/opt/gnu/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/opt/gnu/bin/gmake</td>
+        <td>/opt/gnu/bin/gcc</td>
+      </tr>
+      <tr>
+        <td>OSF1 V5.1</td>
+        <td>alpha</td>
+        <td>PATH=/opt/gnu/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/opt/gnu/bin/gmake</td>
+        <td>/opt/gnu/bin/gcc</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/usr/ccs/bin/make</td>
+        <td>/opt/SUNWspro/bin/c99</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>/opt/SUNWspro/bin/c99</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/usr/ccs/bin/make</td>
+        <td>/opt/SUNWspro/bin/c99 -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>/opt/SUNWspro/bin/c99 -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/usr/xpg4/bin/make</td>
+        <td>/opt/SUNWspro/bin/c89</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/usr/xpg4/bin/make</td>
+        <td>/opt/SUNWspro/bin/c89</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/usr/xpg4/bin/make</td>
+        <td>/opt/SUNWspro/bin/c89 -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/usr/xpg4/bin/make</td>
+        <td>/opt/SUNWspro/bin/c89 -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.9</td>
+        <td>sun4u</td>
+        <td>PATH=/opt/csw/gcc3/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/opt/gnu/bin/gmake</td>
+        <td>/opt/csw/gcc3/bin/gcc -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.9</td>
+        <td>sun4u</td>
+        <td>PATH=/opt/csw/gcc3/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/opt/gnu/bin/gmake</td>
+        <td>/opt/csw/gcc3/bin/gcc -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.9</td>
+        <td>sun4u</td>
+        <td>PATH=/opt/csw/gcc4/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/opt/gnu/bin/gmake</td>
+        <td>/opt/csw/gcc4/bin/gcc -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.9</td>
+        <td>sun4u</td>
+        <td>PATH=/opt/csw/gcc4/bin:/opt/gnu/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/opt/gnu/bin/gmake</td>
+        <td>/opt/csw/gcc4/bin/gcc -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.9</td>
+        <td>sun4u</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/usr/xpg4/bin/make</td>
+        <td>/opt/SUNWspro/bin/cc</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.9</td>
+        <td>sun4u</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/usr/xpg4/bin/make</td>
+        <td>/opt/SUNWspro/bin/cc</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.9</td>
+        <td>sun4u</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td></td>
+        <td>/usr/xpg4/bin/make</td>
+        <td>/opt/SUNWspro/bin/cc -m64</td>
+      </tr>
+      <tr>
+        <td>SunOS 5.9</td>
+        <td>sun4u</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>--disable-shared</td>
+        <td>/usr/xpg4/bin/make</td>
+        <td>/opt/SUNWspro/bin/cc -m64</td>
+      </tr>
+    </table>
+  </body>
+</html>

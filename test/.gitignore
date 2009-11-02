@@ -1,0 +1,11 @@
+hostchecks
+*.log
+redo-results
+*.results
+Makefile
+*.log
+*.results
+hostchecks
+redo-results
+*.host.*
+*.results.*
