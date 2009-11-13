@@ -134,7 +134,7 @@ else
 fi
 
 AC_MSG_CHECKING([the installation prefix]);
-test -z "$prefix" -o "$prefix" = NONE && prefix=`pwd`
+test -z "$prefix" -o "$prefix" = NONE && prefix=`(cd .. && pwd)`
 #AM_COND_IF([MAINTAINER], [UD_PREFIX(..)], [UD_PREFIX(.)])
 AC_MSG_RESULT([$prefix])
 datarootdir=$prefix
@@ -287,6 +287,7 @@ AC_CONFIG_FILES([
     regex/Makefile
     html/Makefile
     html/basics/Makefile
+    html/basics/activating.html
     html/basics/source-install-steps.html
     html/tutorial/Makefile
     test/Makefile

@@ -1,7 +1,7 @@
 docdir		= @docdir@/basics
 
 EXTRA_DIST	= \
-    activating.html \
+    activating.html.in \
     become_ldm.html \
     behavior.html \
     cluster.html \

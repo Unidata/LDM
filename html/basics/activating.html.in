@@ -35,7 +35,7 @@
 	<a href="glindex.html#runtime"><tt>runtime</tt> symbolic link</a>
 	to the just-installed LDM:
 	<blockquote><tt>
-	    ln -s ldm-6.8.1 runtime
+	    ln -s @PACKAGE@-@VERSION@ runtime
 	</tt></blockquote>
     <li>Ensure that a valid
 	<a href="glindex.html#product-queue">product-queue</a>
@@ -105,7 +105,7 @@ can minimize the time that the LDM is off-line
 by combining some of the above steps.  For example
 <blockquote><pre>
 cd $HOME && ldmadmin stop && rm -f runtime && \
-ln -s ldm-6.8.1 runtime && ldmadmin start && ldmadmin watch
+ln -s @PACKAGE@-@VERSION@ runtime && ldmadmin start && ldmadmin watch
 </pre></blockquote>
 
 <p>If you encounter a problem, check the 

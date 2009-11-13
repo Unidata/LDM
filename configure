@@ -5661,7 +5661,7 @@ fi
 
 { $as_echo "$as_me:$LINENO: checking the installation prefix" >&5
 $as_echo_n "checking the installation prefix... " >&6; };
-test -z "$prefix" -o "$prefix" = NONE && prefix=`pwd`
+test -z "$prefix" -o "$prefix" = NONE && prefix=`(cd .. && pwd)`
 #AM_COND_IF([MAINTAINER], [UD_PREFIX(..)], [UD_PREFIX(.)])
 { $as_echo "$as_me:$LINENO: result: $prefix" >&5
 $as_echo "$prefix" >&6; }
@@ -27499,7 +27499,7 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
-ac_config_files="$ac_config_files Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile scripts/Makefile scripts/ldmadmin scripts/writeConfiguration.pl scripts/ldmfail scripts/netcheck scripts/syscheck scripts/ldmcheck scour/Makefile scour/scour regex/Makefile html/Makefile html/basics/Makefile html/basics/source-install-steps.html html/tutorial/Makefile test/Makefile"
+ac_config_files="$ac_config_files Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile scripts/Makefile scripts/ldmadmin scripts/writeConfiguration.pl scripts/ldmfail scripts/netcheck scripts/syscheck scripts/ldmcheck scour/Makefile scour/scour regex/Makefile html/Makefile html/basics/Makefile html/basics/activating.html html/basics/source-install-steps.html html/tutorial/Makefile test/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -28224,6 +28224,7 @@ do
     "regex/Makefile") CONFIG_FILES="$CONFIG_FILES regex/Makefile" ;;
     "html/Makefile") CONFIG_FILES="$CONFIG_FILES html/Makefile" ;;
     "html/basics/Makefile") CONFIG_FILES="$CONFIG_FILES html/basics/Makefile" ;;
+    "html/basics/activating.html") CONFIG_FILES="$CONFIG_FILES html/basics/activating.html" ;;
     "html/basics/source-install-steps.html") CONFIG_FILES="$CONFIG_FILES html/basics/source-install-steps.html" ;;
     "html/tutorial/Makefile") CONFIG_FILES="$CONFIG_FILES html/tutorial/Makefile" ;;
     "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
