@@ -30,8 +30,9 @@ Then, do the following:
 <pre>
     $ su - ldm
     $ wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
-    $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r
-    $ cd @PACKAGE@-@VERSION@
+    $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
+    $ rm @PACKAGE@-@VERSION@.tar.gz # optional
+    $ cd @PACKAGE@-@VERSION@/src
     $ export PATH=... ... # if necessary
     $ ./configure [--enable-logging=local<i>n</i>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
     Password: ...
@@ -85,20 +86,27 @@ into the
 <h3>Unpack the Distribution</h3>
 
 <p>Unpack the distribution in the 
-<a href="glindex.html#LDM user">LDM user</a>'s home directory
+<a href="glindex.html#LDM user">LDM user</a>'s home directory into the
+directory <code>@PACKAGE@-@VERSION@/src</code>
 using the <code>gunzip(1)</code> and <code>pax(1)</code>
 utilities.
 For example:
 <blockquote><pre>
-cd                                    # go to the LDM user's home-directory
-gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r # unpack the distribution
+cd                                                  # go to the LDM user's home-directory
+gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
+</pre></blockquote>
+or
+<blockquote><pre>
+cd                                                  # go to the LDM user's home-directory
+mkdir @PACKAGE@-@VERSION@                                   # make a version-specific subdirectory
+cd @PACKAGE@-@VERSION@                                      # go to the version-specific subdirectory
+gunzip -c $HOME/@PACKAGE@-@VERSION@.tar.gz | pax -r         # unpack the distribution
+mv @PACKAGE@-@VERSION@ src                                  # rename the source directory
 </pre></blockquote>
 
-The name of the
-subdirectory will contain the
-<a href="versionId.html">version identifier</a>
-of the just-unpacked package
-(<i>e.g.</i>, <tt>@PACKAGE@-@VERSION@</tt>).
+<p>The reason for creating the additional <code>src/</code> subdirectory will
+become apparent when the installation is activated.  Basically, it's to allow
+multiple LDM versions to be installed while using only one.
 
 <li>
 <a NAME="build"></a>
@@ -109,7 +117,7 @@ Build and Install the Distribution</h3>
 
 <li><p>Go to the top-level directory of the just-unpacked package:
 <blockquote><pre>
-cd $HOME/@PACKAGE@-@VERSION@
+cd $HOME/@PACKAGE@-@VERSION@/src
 </pre></blockquote>
 </p></li>
 

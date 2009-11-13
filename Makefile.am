@@ -128,12 +128,13 @@ endif
 
 ensure-ldmhome-links:
 	cd $(LDMHOME) \
-	&& ( test -e bin || ln -s runtime/bin bin ) \
-	&& ( test -e doc || ln -s runtime/doc doc ) \
-	&& ( test -e include || ln -s runtime/include include ) \
-	&& ( test -e lib || ln -s runtime/lib lib ) \
-	&& ( test -e man || ln -s runtime/man man ) \
-	&& ( test -e runtime || ln -s $(DESTDIR)$(prefix) runtime )
+	&& ( test -e src || $(LN_S) runtime/src src ) \
+	&& ( test -e bin || $(LN_S) runtime/bin bin ) \
+	&& ( test -e doc || $(LN_S) runtime/doc doc ) \
+	&& ( test -e include || $(LN_S) runtime/include include ) \
+	&& ( test -e lib || $(LN_S) runtime/lib lib ) \
+	&& ( test -e man || $(LN_S) runtime/man man ) \
+	&& ( test -e runtime || $(LN_S) $(DESTDIR)$(prefix) runtime )
 
 ensure-ldmhome-dirs:
 	cd $(LDMHOME); \
@@ -142,7 +143,7 @@ ensure-ldmhome-dirs:
 		test -e data || mkdir data; \
 	    else \
 		if test -e data; then \
-		    ln -s data queue; \
+		    $(LN_S) data queue; \
 		else \
 		    mkdir data queue; \
 		fi; \
@@ -179,7 +180,7 @@ actions." \
 	fi
 
 ensure-syslog-entry:
-	if grep q $(LOG_LDM) $(SYSLOG_CONF) >/dev/null; then \
+	if grep $(LOG_LDM) $(SYSLOG_CONF) >/dev/null; then \
 	    : true; \
 	else \
 	    awk 'NF==2 && /\.none/{\

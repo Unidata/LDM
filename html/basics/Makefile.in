@@ -36,6 +36,7 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = html/basics
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+	$(srcdir)/activating.html.in \
 	$(srcdir)/source-install-steps.html.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
@@ -44,7 +45,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/ldmconfig.h
-CONFIG_CLEAN_FILES = source-install-steps.html
+CONFIG_CLEAN_FILES = activating.html source-install-steps.html
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -210,7 +211,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 EXTRA_DIST = \
-    activating.html \
+    activating.html.in \
     become_ldm.html \
     behavior.html \
     cluster.html \
@@ -356,6 +357,8 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+activating.html: $(top_builddir)/config.status $(srcdir)/activating.html.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 source-install-steps.html: $(top_builddir)/config.status $(srcdir)/source-install-steps.html.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
