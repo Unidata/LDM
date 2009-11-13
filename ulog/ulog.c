@@ -150,6 +150,23 @@ setulogident(const char *ident)
  * N.B. multiple calls without an intervening 'closeulog()' simply reinitialize
  * ident, options, and facility.
  * The data referred to by 'ident' and 'filename' should have process lifetime.
+ *
+ * ARGUMENTS:
+ *      ident           Pointer to the name of the program.  The client
+ *                      shall not modify or free.
+ *      options         Logging options.  Bitwise or of
+ *          LOG_NOTIME      Don't add a timestamp
+ *          LOG_LOCALTIME   Use localtime rather than UTC.
+ *          LOG_IDENT       Don't add the program name.
+ *      facility        Logging facility.  One of LOG_LOCAL1...LOG_LOCAL7.
+ *      logfilename     Pathname of the log file:
+ *          NULL        Log to syslogd(8).
+ *          "-"         Log to the standard error stream.
+ *          else        Log to the named file.  The client shall not modify or
+ *                      free.
+ * RETURNS:
+ *      -1              System error.  See "errno".
+ *      else            File descriptor of the logging system.
  */
 int
 openulog(

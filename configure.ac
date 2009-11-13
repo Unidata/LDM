@@ -19,6 +19,21 @@ AM_CONDITIONAL([MAINTAINER],
     [test "$USER" = steve && test $PWD = /home/steve/ldm/package/src &&
         test "X$HOST" = "Xgilda"])
 
+AC_ARG_ENABLE([debug],
+    AC_HELP_STRING([--enable-debug],
+	[enable support for debugging [[default=disabled]]]),
+    [
+	case "$enableval" in
+	yes) enable_debug=true;;
+	no) enable_debug=false;;
+	*) AC_MSG_ERROR(
+	    [bad value {$enableval} for --enable-debug]);;
+	esac
+    ],
+    [
+	enable_debug=false
+    ])
+
 AC_ARG_ENABLE(faux-pq,
     AC_HELP_STRING([--enable-faux-pq],
 	[use the faux product-queue [[default=disable]]]),
@@ -120,6 +135,31 @@ AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
 AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
 AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
+# Check for the CUNIT unit-testing package
+AC_MSG_NOTICE([Checking for the CUNIT unit-testing package.])
+AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
+    [CPPFLAGS_CUNIT=-I/opt/include
+    AC_SUBST(CPPFLAGS_CUNIT)
+    AC_CHECK_FILE([/opt/lib/libcunit.so],
+        [LIBS_CUNIT='-L/opt/lib -lcunit'
+        AC_SUBST(LIBS_CUNIT)],
+        [AC_CHECK_FILE([/opt/lib/libcunit.a],
+            [LIBS_CUNIT='-L/opt/lib -lcunit'
+            AC_SUBST(LIBS_CUNIT)])])],
+    [AC_CHECK_FILE([/usr/local/include/CUnit/CUnit.h],
+        [CPPFLAGS_CUNIT=-I/usr/local/include
+        AC_SUBST(CPPFLAGS_CUNIT)
+        AC_CHECK_FILE([/usr/local/lib/libcunit.so],
+            [LIBS_CUNIT='-L/usr/local/lib -lcunit'
+            AC_SUBST(LIBS_CUNIT)],
+            [AC_CHECK_FILE([/usr/local/lib/libcunit.a],
+                [LIBS_CUNIT='-L/usr/local/lib -lcunit'
+                AC_SUBST(LIBS_CUNIT)])])])])
+AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
+AM_COND_IF([HAVE_CUNIT], 
+    [AC_MSG_NOTICE([CUNIT found.  Enabling unit-tests.])],
+    [AC_MSG_NOTICE([CUNIT not found.  Disabling unit-tests.])])
+
 AC_SUBST(PATH)
 
 AC_PROG_CC(c89 cc gcc)
@@ -137,8 +177,6 @@ AC_MSG_CHECKING([the installation prefix]);
 test -z "$prefix" -o "$prefix" = NONE && prefix=`pwd`
 #AM_COND_IF([MAINTAINER], [UD_PREFIX(..)], [UD_PREFIX(.)])
 AC_MSG_RESULT([$prefix])
-datarootdir=$prefix
-docdir=$prefix/doc
 
 AC_MSG_CHECKING([LDMHOME]);
 test -z "$LDMHOME" && LDMHOME=$HOME
@@ -275,6 +313,7 @@ AC_CONFIG_FILES([
     notifyme/Makefile
     server/Makefile
     ldmping/Makefile
+    rdb/Makefile
     scripts/Makefile
     scripts/ldmadmin
     scripts/writeConfiguration.pl
@@ -291,4 +330,7 @@ AC_CONFIG_FILES([
     html/tutorial/Makefile
     test/Makefile
 ])
+
+AC_CONFIG_SUBDIRS([rdb/tokyocabinet])
+
 AC_OUTPUT

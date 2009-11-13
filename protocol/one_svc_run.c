@@ -28,9 +28,10 @@
 /*
  * Like svc_run(3RPC) except that it runs on one socket until one of the 
  * following occurs:
- *   1) The socket is closed;
+ *   1) The socket gets closed;
  *   2) The timeout expires without any activity;
- *   4) as_shouldSwitch() returns true.
+ *   3) as_shouldSwitch() returns true;
+ *   4) An error occurs.
  *
  * This function uses the "log" module to accumulate messages.
  *

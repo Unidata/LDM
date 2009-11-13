@@ -28,7 +28,7 @@
 
 
 /*
- * A log-message:
+ * A log-message.  Such structures accumulate: they are never freed.
  */
 typedef struct message {
     char                   string[512];
@@ -63,8 +63,7 @@ void log_clear()
 
 
 /*
- * Adds a log-message.  If the format is NULL, then no message will
- * be added.
+ * Adds a log-message.  If the format is NULL, then no message will be added.
  * Arguments:
  *      fmt     The format for the message or NULL.
  *      args    The arguments referenced by the format.
@@ -122,7 +121,8 @@ void log_vadd(
  * Resets this module and adds the first log-message.  This function
  * is equivalent to calling log_clear() followed by log_add().
  * Arguments:
- *      fmt     The format for the message or NULL.
+ *      fmt     The format for the message or NULL.  If NULL, then no
+ *              messsage is added.
  *      ...     The arguments referenced in the format.
  */
 void log_start(
@@ -163,6 +163,31 @@ void log_add(
 void log_errno(void)
 {
     log_start(strerror(errno));
+}
+
+/*
+ * Adds a system error-message and a higher-level error-message.  This is a
+ * convenience function for the sequence
+ *      log_errno();
+ *      log_add(fmt, ...);
+ *
+ * ARGUMENTS:
+ *      fmt             The format-string for the higher-level error-message or
+ *                      NULL.  If NULL, then no higher-level error-message is
+ *                      added.
+ *      ...             Arguments for the format-string.
+ */
+void
+log_serror(
+    const char *const   fmt,
+    ...)
+{
+    va_list     args;
+
+    log_errno();
+    va_start(args, fmt);
+    log_vadd(fmt, args);
+    va_end(args);
 }
 
 

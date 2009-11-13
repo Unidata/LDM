@@ -1,8 +1,6 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: ldmd.c,v 1.174.8.3.2.4.2.31 2009/08/17 17:12:59 steve Exp $ */
 
 /* 
  * ldm server mainline program module

@@ -5,16 +5,20 @@ Version 6.8 of the LDM is now available from the LDM homepage at
 or from
     <ftp://ftp.unidata.ucar.edu/pub/ldm/ldm-6.8.0.tar.gz>
 
-This version features the following:
+This version features the following changes:
 
-    1)  The way the top-level LDM server vets new client connections is
-	improved;
-    2)  More information is printed by the "ldmadmin config"
-	command;
-    3)  The accuracy of the system clock can be checked by
-	ldmadmin(1); and
-    4)  LDM performance metrics can now be collected and plotted by the
-	ldmadmin(1) script if the requisite utilities are installed.
+  1)  The package now users the GNU automake(1) package-installation
+      system.  Besides making my life easier (by simplifying LDM
+      development), this has the following consequences for you:
+
+      1.1)  The manual-pages will appear to be be installed in
+            $HOME/share/man instead of $HOME/man.  Consequently, you
+            will have to modify the LDM user's MANPATH environment
+            variable.
+
+      1.2)  The HTML documentation that was previously available only
+            on-line will now appear to be installed under
+            $HOME/share/doc.
 
 More information can be found in the file RELEASE_NOTES in the top-level
 source-directory.

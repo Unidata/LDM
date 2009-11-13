@@ -18,6 +18,7 @@ DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 include_HEADERS			= ldmconfig.h
 
 SUBDIRS	= \
+    rdb \
     rpc \
     ulog \
     misc \
