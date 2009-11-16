@@ -134,9 +134,11 @@ beOpen(
             }                       /* "env" opened */
 
             /*
-             * Calling env->remove() after env->close() results in a SIGSEGV
-             * and calling env->remove() with no preceeding call to env->close()
-             * results in a memory-leak.
+             * env->close() is called here (if it hasn't been called already)
+             * instead of calling env->remove()) because calling env->remove()
+             * after env->close() results in a SIGSEGV and calling
+             * env->remove() with no preceeding call to env->close() results in
+             * a memory-leak.
              */
             if (status && NULL != env)
                 env->close(env, 0);
@@ -239,6 +241,12 @@ beRemove(
                 status = RDB_DBERR;
             }
             else {
+                /*
+                 * The database environment is closed and then recreated rather
+                 * than creating another DB_ENV and removing that because
+                 * calling DB_ENV->remove() while another DB_ENV exists results
+                 * in a SIGSEGV.
+                 */
                 if (status = env->close(env, 0)) {
                     log_add("Couldn't close database environment in \"%s\"",
                         path);

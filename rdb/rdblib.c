@@ -17,10 +17,11 @@
 #include "backend.h"
 #include <log.h>
 
-union rdb {
+static struct {
     Backend*    backend;
+    int         isOpen;
     int         readonly;
-};
+}       rdb;
 
 /*******************************************************************************
  * Utility functions:
@@ -77,9 +78,6 @@ shortenKey(char* const key)
  * Opens a runtime database.
  *
  * ARGUMENTS:
- *      rdb             Pointer to a pointer to the runtime database.  Shall not
- *                      be NULL.  The client should call "rdbClose(*rdb)" when
- *                      the database is no longer needed.
  *      path            Pathname of the database directory.  Shall not be NULL.
  *                      The directory must already exist and be writable.
  *      forWriting      Open the database for writing? 0 <=> no
@@ -90,34 +88,24 @@ shortenKey(char* const key)
  */
 RdbStatus
 rdbOpen(
-    Rdb** const         rdb,
     const char* const   path,
     const int           forWriting)
 {
     RdbStatus   status;
-    Rdb*        db = (Rdb*)malloc(sizeof(Rdb));
 
     assert(NULL != path);
-    assert(NULL != rdb);
 
-    if (NULL == db) {
-        log_serror("Couldn't allocate %d bytes", sizeof(Rdb));
-        status = RDB_SYSERR;
-    }
-    else {
+    if (!rdb.isOpen) {
         Backend*        backend;
         
         status = beOpen(&backend, path, forWriting);
 
         if (0 == status) {
-            db->readonly = !forWriting;
-            db->backend = backend;
-            *rdb = db;
+            rdb.readonly = !forWriting;
+            rdb.backend = backend;
+            rdb.isOpen = 1;
         }                               /* "backend" allocated */
-
-        if (status)
-            free(db);
-    }                                   /* "db" allocated */
+    }                                   /* "rdb" not open */
 
     return status;
 }
@@ -125,24 +113,19 @@ rdbOpen(
 /*
  * Closes a runtime database.
  *
- * ARGUMENTS:
- *      rdb           Pointer to the database.  May be NULL.  Upon return,
- *                    "rdb" shall not be used again.  "rdb" shall have
- *                    been returned by "rdbOpen()" or "rdbNode()".
  * RETURNS:
  *      0               Success.
  *      RDB_DBERR       Backend database error.  "log_start()" called.
  */
 RdbStatus
-rdbClose(Rdb* rdb)
+rdbClose(void)
 {
     RdbStatus   status;
 
-    assert(NULL != rdb);
-
-    status = beClose(rdb->backend);
-
-    free(rdb);
+    if (rdb.isOpen) {
+        status = beClose(rdb.backend);
+        rdb.isOpen = 0;
+    }
 
     return status;
 }
@@ -173,7 +156,6 @@ rdbRemove(
  * Puts a key/string pair into the database.
  *
  * ARGUMENTS:
- *      rdb           Pointer to the runtime database.  Shall not be NULL.
  *      key           Pointer to the 0-terminated key.  Shall not be NULL.
  *      value         Pointer to the 0-terminated string value.  Shall not be
  *                    NULL.
@@ -186,22 +168,20 @@ rdbRemove(
  */
 RdbStatus
 rdbPutString(
-    Rdb*                rdb,
     const char* const   key,
     const char* const   value)
 {
-    assert(NULL != rdb);
+    assert(rdb.isOpen);
     assert(NULL != key);
     assert(NULL != value);
 
-    return bePut(rdb->backend, key, value);
+    return bePut(rdb.backend, key, value);
 }
 
 /*
  * Puts a key/integer pair into the database.
  *
  * ARGUMENTS:
- *      rdb           Pointer to the runtime database.  Shall not be NULL.
  *      key           Pointer to the 0-terminated key.  Shall not be NULL.
  *      value         The integer value.
  * RETURNS:
@@ -213,18 +193,17 @@ rdbPutString(
  */
 RdbStatus
 rdbPutInt(
-    Rdb*                rdb,
     const char* const   key,
     const int           value)
 {
     char    buffer[80];
 
-    assert(NULL != rdb);
+    assert(rdb.isOpen);
     assert(NULL != key);
 
     (void)snprintf(buffer, sizeof(buffer), "%d", value);
 
-    return bePut(rdb->backend, key, buffer);
+    return bePut(rdb.backend, key, buffer);
 }
 
 /*
@@ -234,7 +213,6 @@ rdbPutInt(
  * search-key becomes the empty-string.
  *
  * ARGUMENTS:
- *      rdb           Pointer to the database.  Shall not be NULL.
  *      key           Pointer to the 0-terminated key.  Shall not be NULL.
  *      value         Pointer to the pointer to the value.  Upon successful
  *                    return, "*value" will point to the 0-terminated string to
@@ -251,7 +229,6 @@ rdbPutInt(
  */
 RdbStatus
 rdbGetString(
-    Rdb*                rdb,
     const char* const   key,
     char** const        value,
     char* const         defaultValue)
@@ -259,7 +236,7 @@ rdbGetString(
     RdbStatus   status;
     char*       keyBuf;
 
-    assert(NULL != rdb);
+    assert(rdb.isOpen);
     assert(NULL != key);
     assert(NULL != value);
 
@@ -270,7 +247,7 @@ rdbGetString(
     }
     else {
         for (status = RDB_NOENTRY; 0 != *keyBuf; shortenKey(keyBuf)) {
-            status = beGet(rdb->backend, keyBuf, value);
+            status = beGet(rdb.backend, keyBuf, value);
 
             if (RDB_NOENTRY != status)
                 break;
@@ -307,7 +284,6 @@ rdbGetString(
  * search-key becomes the empty-string.
  *
  * ARGUMENTS:
- *      rdb           Pointer to the database.  Shall not be NULL.
  *      key           Pointer to the 0-terminated key.  Shall not be NULL.
  *      value         Pointer to the value.  Upon successful return, "*value"
  *                    will be the integer associated with the key.
@@ -320,7 +296,6 @@ rdbGetString(
  */
 RdbStatus
 rdbGetInt(
-    Rdb*                rdb,
     const char* const   key,
     int* const          value,
     int                 defaultValue)
@@ -328,7 +303,7 @@ rdbGetInt(
     RdbStatus   status;
     char*       keyBuf;
 
-    assert(NULL != rdb);
+    assert(rdb.isOpen);
     assert(NULL != key);
     assert(NULL != value);
 
@@ -341,7 +316,7 @@ rdbGetInt(
         char*   stringValue;
 
         for (status = RDB_NOENTRY; 0 != *keyBuf; shortenKey(keyBuf)) {
-            status = beGet(rdb->backend, keyBuf, &stringValue);
+            status = beGet(rdb.backend, keyBuf, &stringValue);
 
             if (RDB_NOENTRY != status)
                 break;
@@ -378,7 +353,6 @@ rdbGetInt(
  * Deletes an entry in the database.
  *
  * ARGUMENTS:
- *      rdb             Pointer to the database.  Shall not be NULL.
  *      key             Pointer to the 0-terminated key.
  * RETURNS:
  *      0               Success.  The entry associated with the key was deleted.
@@ -387,13 +361,12 @@ rdbGetInt(
  */
 RdbStatus
 rdbDelete(
-    Rdb*                rdb,
     const char* const   key)
 {
-    assert(NULL != rdb);
+    assert(rdb.isOpen);
     assert(NULL != key);
 
-    return beDelete(rdb->backend, key);
+    return beDelete(rdb.backend, key);
 }
 
 /*******************************************************************************
@@ -408,7 +381,7 @@ rdbDelete(
         # calls per iteration.
         #
         RdbCursor*       cursor;
-        RdbStatus        status = rdbNewCursor(rdb, &cursor);
+        RdbStatus        status = rdbNewCursor(&cursor);
 
         if (status) {
             ...
@@ -434,7 +407,7 @@ rdbDelete(
         # calls per iteration.
         #
         RdbCursor*       cursor;
-        RdbStatus        status = rdbNewCursor(&cursor, rdb);
+        RdbStatus        status = rdbNewCursor(&cursor);
 
         for (; status == 0; status = rdbNextEntry(cursor)) {
             rdbCursorKey(cursor)
@@ -449,7 +422,7 @@ rdbDelete(
         # Returning object; not keeping last-op state.  Has 6 functions and 3
         # calls per iteration.
         #
-        RdbCursor*       cursor = rdbNewCursor(rdb);
+        RdbCursor*       cursor = rdbNewCursor();
 
         if (NULL == cursor) {
             ...
@@ -472,7 +445,7 @@ rdbDelete(
         # Returning actual object; keeping last-op state.  Has 6 functions
         # and 4 calls per iteration.
         #
-        RdbCursor*       cursor = rdbNewCursor(rdb);
+        RdbCursor*       cursor = rdbNewCursor();
 
         for (; rdbCursorStatus(cursor) == 0; rdbNextEntry(cursor)) {
             rdbCursorKey(cursor)
@@ -489,7 +462,7 @@ rdbDelete(
         #
         RdbCursor*       cursor;
 
-        for (rdbInitEntry(&cursor, rdb); rdbNextEntry(cursor); ) {
+        for (rdbInitEntry(&cursor); rdbNextEntry(cursor); ) {
             rdbCursorKey(cursor)
             rdbCursorStringValue(cursor)
         }
@@ -502,7 +475,7 @@ rdbDelete(
         # Exposing internals of "RdbCursor".  Has 3 functions; 1 call per
         # iteration; and tighter coupling with client through data-structure.
         #
-        for (cursor = rdbNewCursor(rdb); cursor.status == 0;
+        for (cursor = rdbNewCursor(); cursor.status == 0;
                 rdbNextEntry(cursor)) {
             cursor.key
             cursor.valueType
@@ -519,7 +492,6 @@ rdbDelete(
  * Returns a new cursor object.
  *
  * ARGUMENTS:
- *      rdb             Pointer to the database.  Shall not be NULL.
  *      cursor          Pointer to a pointer to cursor structure.  Shall not be
  *                      NULL.  Upon successful return, "*cursor" will be set.
  *                      The client should call "rdbFreeCursor(*cursor)" when
@@ -531,13 +503,12 @@ rdbDelete(
  */
 RdbStatus
 rdbNewCursor(
-    Rdb*                rdb,
     RdbCursor** const   cursor)
 {
     RdbStatus   status;
     RdbCursor*  curs = (RdbCursor*)malloc(sizeof(RdbCursor));
 
-    assert(NULL != rdb);
+    assert(rdb.isOpen);
     assert(NULL != cursor);
 
     if (NULL == curs) {
@@ -545,8 +516,7 @@ rdbNewCursor(
         status = RDB_SYSERR;
     }
     else {
-        curs->rdb = rdb;
-        status = beInitCursor(rdb->backend, curs, "");
+        status = beInitCursor(rdb.backend, curs, "");
 
         if (0 == status) {
             *cursor = curs;
@@ -567,7 +537,6 @@ rdbNewCursor(
  *                      set by "rdbNewCursor()".  Upon successful return,
  *                      "*cursor" will reference the first entry of the
  *                      database.
- *      rdb             Pointer to the database.  Shall not be NULL.
  * RETURNS:
  *      0               Success.  "*cursor" is set.
  *      RDB_SYSERR      System error.  "log_start()" called.
@@ -656,7 +625,6 @@ RdbFreeCursor(RdbCursor* const cursor)
     assert(NULL != cursor);
 
     status = beCloseCursor(cursor);
-    cursor->rdb = NULL;
 
     free(cursor);
 

@@ -16,7 +16,6 @@ extern "C" {
 typedef struct backend  Backend;
 
 typedef struct {
-    Rdb*        rdb;            /* responsibility of "rdblib" */
     char*       key;            /* responsibility of backend database */
     char*       value;          /* responsibility of backend database */
     void*       private;        /* responsibility of backend database */

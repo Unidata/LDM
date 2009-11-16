@@ -2,14 +2,12 @@
 #
 # Process this file with automake to produce Makefile.in
 
-#SUBDIRS                = tokyocabinet
 noinst_LTLIBRARIES      = lib.la
 EXTRA_DIST              = rdblib.h
 lib_la_SOURCES          = rdblib.c backend-bdb.c
 lib_la_CPPFLAGS         = \
     -I$(top_srcdir) \
     -I$(top_srcdir)/ulog \
-    -I$(srcdir)/tokyocabinet \
     -I/home/steve/Berkeley-DB/include
 TAGS_FILES              = \
     *.c *.h \
@@ -17,9 +15,13 @@ TAGS_FILES              = \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     /home/steve/Berkeley-DB/db-4.8.24.NC/env/*.c \
     /home/steve/Berkeley-DB/db-4.8.24.NC/os/*.c \
-    $(srcdir)/tokyocabinet/*.c $(srcdir)/tokyocabinet/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
+bin_PROGRAMS		= rdbutil
+CPPFLAGS	= \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)
+LDADD		= ../ulog/lib.la
 
 if HAVE_CUNIT
 check_PROGRAMS		= testRdb

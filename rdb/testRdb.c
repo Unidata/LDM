@@ -44,28 +44,27 @@ teardown(void)
 static void
 test_rdbOpen(void)
 {
-    Rdb*        rdb;
     RdbStatus   status;
 
-    status = rdbOpen(&rdb, TESTDIR_PATH, 1);
+    status = rdbOpen(TESTDIR_PATH, 1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = rdbClose(rdb);
+    status = rdbClose();
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbOpen(&rdb, TESTDIR_PATH, 0);
+    status = rdbOpen(TESTDIR_PATH, 0);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
-    status = rdbClose(rdb);
+    status = rdbClose();
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbOpen(&rdb, "/foo", 0);
+    status = rdbOpen("/foo", 0);
     log_clear();
     CU_ASSERT_EQUAL(status, RDB_DBERR);
 
-    status = rdbOpen(&rdb, "/foo", 1);
+    status = rdbOpen("/foo", 1);
     log_clear();
     CU_ASSERT_EQUAL(status, RDB_DBERR);
 }
@@ -73,53 +72,52 @@ test_rdbOpen(void)
 static void
 test_rdbString(void)
 {
-    Rdb*        rdb;
     RdbStatus   status;
     char*       value;
 
-    status = rdbOpen(&rdb, TESTDIR_PATH, 1);
+    status = rdbOpen(TESTDIR_PATH, 1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = rdbPutString(rdb, "foo key", "foo value 0");
+    status = rdbPutString("foo key", "foo value 0");
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbPutString(rdb, "foo key", "foo value");
+    status = rdbPutString("foo key", "foo value");
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbGetString(rdb, "foo key", &value, "overridden default");
-    if (status)
-        log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_STRING_EQUAL(value, "foo value");
-    free(value);
-
-    status = rdbGetString(rdb, "foo key/sub key", &value, "overridden default");
+    status = rdbGetString("foo key", &value, "overridden default");
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_STRING_EQUAL(value, "foo value");
     free(value);
 
-    status = rdbGetString(rdb, "bar key", &value, "default bar value");
+    status = rdbGetString("foo key/sub key", &value, "overridden default");
+    if (status)
+        log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, 0);
+    CU_ASSERT_STRING_EQUAL(value, "foo value");
+    free(value);
+
+    status = rdbGetString("bar key", &value, "default bar value");
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_STRING_EQUAL(value, "default bar value");
     free(value);
 
-    status = rdbGetString(rdb, "bof key", &value, NULL);
+    status = rdbGetString("bof key", &value, NULL);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_PTR_NULL(value);
 
-    status = rdbClose(rdb);
+    status = rdbClose();
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
@@ -128,44 +126,43 @@ test_rdbString(void)
 static void
 test_rdbInt(void)
 {
-    Rdb*        rdb;
     RdbStatus   status;
     int         value;
 
-    status = rdbOpen(&rdb, TESTDIR_PATH, 1);
+    status = rdbOpen(TESTDIR_PATH, 1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = rdbPutInt(rdb, "fooInt key", 1);
+    status = rdbPutInt("fooInt key", 1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbPutInt(rdb, "fooInt key", 2);
+    status = rdbPutInt("fooInt key", 2);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbGetInt(rdb, "fooInt key", &value, 3);
-    if (status)
-        log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_EQUAL(value, 2);
-
-    status = rdbGetInt(rdb, "fooInt key/subkey", &value, 3);
+    status = rdbGetInt("fooInt key", &value, 3);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(value, 2);
 
-    status = rdbGetInt(rdb, "barInt key", &value, 4);
+    status = rdbGetInt("fooInt key/subkey", &value, 3);
+    if (status)
+        log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, 0);
+    CU_ASSERT_EQUAL(value, 2);
+
+    status = rdbGetInt("barInt key", &value, 4);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(value, 4);
 
-    status = rdbClose(rdb);
+    status = rdbClose();
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
@@ -175,67 +172,66 @@ test_rdbInt(void)
 static void
 test_rdbDelete(void)
 {
-    Rdb*        rdb;
     RdbStatus   status;
     char*       string;
     int         value;
 
-    status = rdbOpen(&rdb, TESTDIR_PATH, 1);
+    status = rdbOpen(TESTDIR_PATH, 1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = rdbPutString(rdb, "string key", "string value");
+    status = rdbPutString("string key", "string value");
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbGetString(rdb, "string key", &string, NULL);
+    status = rdbGetString("string key", &string, NULL);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_STRING_EQUAL(string, "string value");
     free(string);
 
-    status = rdbDelete(rdb, "string key");
+    status = rdbDelete("string key");
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbGetString(rdb, "string key", &string, "default string value");
+    status = rdbGetString("string key", &string, "default string value");
     if (status && RDB_NOENTRY != status)
         log_log(LOG_ERR);
     CU_ASSERT_STRING_EQUAL(string, "default string value");
     free(string);
 
-    status = rdbPutInt(rdb, "int key", -1);
+    status = rdbPutInt("int key", -1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbGetInt(rdb, "int key", &value, 4);
+    status = rdbGetInt("int key", &value, 4);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(value, -1);
 
-    status = rdbDelete(rdb, "int key");
+    status = rdbDelete("int key");
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = rdbGetInt(rdb, "int key", &value, 4);
+    status = rdbGetInt("int key", &value, 4);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(value, 4);
 
-    status = rdbDelete(rdb, "nosuch key");
+    status = rdbDelete("nosuch key");
     if (status && RDB_NOENTRY != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, RDB_NOENTRY);
 
-    status = rdbClose(rdb);
+    status = rdbClose();
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
@@ -245,7 +241,6 @@ test_rdbDelete(void)
 static void
 test_rdbRemove(void)
 {
-    Rdb*        rdb;
     RdbStatus   status;
 
     status = rdbRemove(TESTDIR_PATH);

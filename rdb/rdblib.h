@@ -22,17 +22,10 @@ typedef enum {
     RDB_DBERR
 }       RdbStatus;
 
-typedef union rdb       Rdb;
-
-typedef struct rdbEntry RdbEntry;
-
 /*
  * Opens a runtime database.
  *
  * ARGUMENTS:
- *      rdb             Pointer to a pointer to the runtime database.  Shall not
- *                      be NULL.  The client should call "rdbClose(*rdb)" when
- *                      the database is no longer needed.
  *      path            Pathname of the database directory.  Shall not be NULL.
  *                      The directory must already exist and be writable.
  *      forWriting      Open the database for writing? 0 <=> no
@@ -43,23 +36,18 @@ typedef struct rdbEntry RdbEntry;
  */
 RdbStatus
 rdbOpen(
-    Rdb** const         rdb,
     const char* const   path,
     const int           forWriting);
 
 /*
  * Closes a runtime database.
  *
- * ARGUMENTS:
- *      rdb           Pointer to the database.  May be NULL.  Upon return,
- *                    "rdb" shall not be used again.  "rdb" shall have
- *                    been returned by "rdbOpen()" or "rdbNode()".
  * RETURNS:
  *      0               Success.
  *      RDB_DBERR       Backend database error.  "log_start()" called.
  */
 RdbStatus
-rdbClose(Rdb* rdb);
+rdbClose(void);
 
 /*
  * Removes a runtime database.  This method should not be called while any
@@ -80,7 +68,6 @@ rdbRemove(
  * Puts a key/string pair into the database.
  *
  * ARGUMENTS:
- *      rdb           Pointer to the runtime database.  Shall not be NULL.
  *      key           Pointer to the 0-terminated key.  Shall not be NULL.
  *      value         Pointer to the 0-terminated string value.  Shall not be
  *                    NULL.
@@ -93,7 +80,6 @@ rdbRemove(
  */
 RdbStatus
 rdbPutString(
-    Rdb*                rdb,
     const char* const   key,
     const char* const   value);
 
@@ -101,7 +87,6 @@ rdbPutString(
  * Puts a key/integer pair into the database.
  *
  * ARGUMENTS:
- *      rdb           Pointer to the runtime database.  Shall not be NULL.
  *      key           Pointer to the 0-terminated key.  Shall not be NULL.
  *      value         The integer value.
  * RETURNS:
@@ -113,7 +98,6 @@ rdbPutString(
  */
 RdbStatus
 rdbPutInt(
-    Rdb*                rdb,
     const char* const   key,
     const int           value);
 
@@ -121,7 +105,6 @@ rdbPutInt(
  * Gets the string-value to which a key maps.
  *
  * ARGUMENTS:
- *      rdb           Pointer to the database.  Shall not be NULL.
  *      key           Pointer to the 0-terminated key.  Shall not be NULL.
  *      value         Pointer to the pointer to the value.  Upon successful
  *                    return, "*value" will point to the 0-terminated string to
@@ -138,7 +121,6 @@ rdbPutInt(
  */
 RdbStatus
 rdbGetString(
-    Rdb*                rdb,
     const char* const   key,
     char** const        value,
     char* const         defaultValue);
