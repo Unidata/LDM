@@ -17,7 +17,7 @@ TAGS_FILES              = \
     /home/steve/Berkeley-DB/db-4.8.24.NC/os/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
-bin_PROGRAMS		= rdbutil
+#bin_PROGRAMS		= rdbutil
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)

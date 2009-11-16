@@ -81,7 +81,7 @@ beOpen(
     assert(NULL != path);
 
     if (NULL == back) {
-        log_serror("Couldn't allocate %d bytes", sizeof(Backend));
+        log_serror("Couldn't allocate %lu bytes", (long)sizeof(Backend));
         status = RDB_SYSERR;
     }
     else {
@@ -95,7 +95,12 @@ beOpen(
         else {
             env->set_errcall(env, logDbError);
 
-            if (status = env->open(env, path, DB_CREATE | DB_INIT_MPOOL, 0)) {
+            /*
+             * The database is configured for concurrent access rather than for
+             * transactional access because the former is faster and sufficient.
+             */
+            if (status = env->open(env, path,
+                    DB_CREATE | DB_INIT_CDB | DB_INIT_MPOOL, 0)) {
                 log_add("Couldn't open database environment in \"%s\"", path);
                 status = RDB_DBERR;
             }
@@ -548,7 +553,7 @@ beInitCursor(
         BackCursor*  backCursor = (BackCursor*)malloc(sizeof(BackCursor));
 
         if (NULL == backCursor) {
-            log_serror("Couldn't allocate %ld bytes", sizeof(BackCursor));
+            log_serror("Couldn't allocate %lu bytes", (long)sizeof(BackCursor));
             status = RDB_SYSERR;
         }
         else {
@@ -605,7 +610,7 @@ beFirstEntry(
     char*   dupKey = strdup(key);
 
     if (NULL == dupKey) {
-        log_serror("Couldn't allocate %ld bytes", strlen(key));
+        log_serror("Couldn't allocate %lu bytes", (long)strlen(key));
         status = RDB_SYSERR;
     }
     else {
