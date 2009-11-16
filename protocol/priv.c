@@ -4,7 +4,7 @@
  */
 /* $Id: priv.c,v 1.10.18.3 2005/09/23 21:52:10 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <errno.h>
 #include <string.h>

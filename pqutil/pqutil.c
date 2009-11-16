@@ -4,7 +4,7 @@
  */
 /* $Id: pqutil.c,v 1.18.10.2.2.6 2008/04/15 16:34:10 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <ctype.h>
 #include <errno.h>

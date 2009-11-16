@@ -7,7 +7,7 @@
 /* 
  * Utility functions for printing contents of some protocol data structures
  */
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <assert.h>
 #include <errno.h>

@@ -4,7 +4,7 @@
  */
 /* $Id: feedtypeDB.c,v 1.1.2.1 2009/08/14 14:56:08 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #ifdef UNIT_TEST
 #  undef NDEBUG

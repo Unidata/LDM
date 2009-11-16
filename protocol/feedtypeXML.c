@@ -13,7 +13,7 @@
 #  undef NDEBUG
 #endif
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <assert.h>
 #include <ctype.h>

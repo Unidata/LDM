@@ -1,4 +1,4 @@
-pqsend.o: ../config/ldmconfig.h
+pqsend.o: ../config.h
 pqsend.o: ../misc/inetutil.h
 pqsend.o: ../misc/paths.h
 pqsend.o: ../pq/pq.h

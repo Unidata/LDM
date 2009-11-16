@@ -3,7 +3,7 @@
  */
 /* $Id: up6.c,v 1.14.2.3.2.2.2.2.2.20 2009/08/17 17:13:11 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <assert.h>      /* assert() */
 #include <errno.h>       /* error numbers */

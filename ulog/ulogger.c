@@ -41,7 +41,7 @@ char copyright[] =
 static char rcsid[] = "$Id: ulogger.c,v 6.21.18.1 2004/10/19 19:03:13 steve Exp $";
 #endif /* not lint */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

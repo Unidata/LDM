@@ -1,4 +1,4 @@
-pqinsert.o: ../config/ldmconfig.h
+pqinsert.o: ../config.h
 pqinsert.o: ../misc/inetutil.h
 pqinsert.o: ../misc/paths.h
 pqinsert.o: ../pq/pq.h

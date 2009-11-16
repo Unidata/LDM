@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)rpc_callmsg.c 1.4 87/08/11 Copyr 1984 Sun Micro";
  *
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <inttypes.h>
 #include <stdlib.h>

@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)svc_raw.c 1.15 87/08/11 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <stdlib.h>
 #include "rpc.h"

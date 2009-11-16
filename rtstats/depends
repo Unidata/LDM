@@ -1,4 +1,4 @@
-binstats.o: ../config/ldmconfig.h
+binstats.o: ../config.h
 binstats.o: ../misc/inetutil.h
 binstats.o: ../misc/ldmalloc.h
 binstats.o: ../protocol/atofeedt.h
@@ -7,14 +7,14 @@ binstats.o: ../protocol/ldmprint.h
 binstats.o: ../protocol/timestamp.h
 binstats.o: ../ulog/ulog.h
 binstats.o: binstats.c
-filel.o: ../config/ldmconfig.h
+filel.o: ../config.h
 filel.o: ../misc/ldmalloc.h
 filel.o: ../protocol/ldm.h
 filel.o: ../protocol/ldmprint.h
 filel.o: ../protocol/timestamp.h
 filel.o: ../ulog/ulog.h
 filel.o: filel.c
-ldmsend.o: ../config/ldmconfig.h
+ldmsend.o: ../config.h
 ldmsend.o: ../misc/error.h
 ldmsend.o: ../misc/inetutil.h
 ldmsend.o: ../misc/rpcutil.h
@@ -27,7 +27,7 @@ ldmsend.o: ../protocol/prod_class.h
 ldmsend.o: ../protocol/timestamp.h
 ldmsend.o: ../ulog/ulog.h
 ldmsend.o: ldmsend.c
-rtstats.o: ../config/ldmconfig.h
+rtstats.o: ../config.h
 rtstats.o: ../misc/paths.h
 rtstats.o: ../misc/setenv.h
 rtstats.o: ../pq/pq.h

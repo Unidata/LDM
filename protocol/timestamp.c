@@ -4,7 +4,7 @@
  */
 /* $Id: timestamp.c,v 1.15.18.2 2008/03/17 16:16:40 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <errno.h>
 #include <assert.h>
 #include <stdio.h>

@@ -4,7 +4,7 @@
  */
 /* $Id: action.c,v 1.78.16.4.2.3 2005/09/21 18:37:12 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <stdio.h>
 #include <assert.h>

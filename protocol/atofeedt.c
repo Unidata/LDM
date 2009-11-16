@@ -4,7 +4,7 @@
  */
 /* $Id: atofeedt.c,v 1.39.10.1.2.5 2008/10/09 19:55:56 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <ctype.h>
 #include <string.h>

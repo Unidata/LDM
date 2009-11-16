@@ -8,7 +8,7 @@
  * Create an empty ldm product queue of a given size
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>

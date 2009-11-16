@@ -755,7 +755,7 @@ PACKAGE_VERSION='6.8.2.3'
 PACKAGE_STRING='LDM 6.8.2.3'
 PACKAGE_BUGREPORT='support-ldm@unidata.ucar.edu'
 
-ac_unique_file="ldmconfig.h.in"
+ac_unique_file="config.h.in"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -2625,7 +2625,7 @@ am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
-ac_config_headers="$ac_config_headers ldmconfig.h"
+ac_config_headers="$ac_config_headers config.h"
 
 
 #UD_CPPFLAGS
@@ -28185,7 +28185,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "ldmconfig.h") CONFIG_HEADERS="$CONFIG_HEADERS ldmconfig.h" ;;
+    "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "rpc/Makefile") CONFIG_FILES="$CONFIG_FILES rpc/Makefile" ;;

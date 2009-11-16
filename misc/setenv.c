@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include <ldmconfig.h>
+#include <config.h>
 #ifndef HAVE_SETENV
 
 #include <string.h>

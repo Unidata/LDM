@@ -8,7 +8,7 @@
  * Miscellaneous functions to make dealing with internet addresses easier.
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <stdio.h>
 #include <unistd.h>

@@ -1,4 +1,4 @@
-pqutil.o: ../config/ldmconfig.h
+pqutil.o: ../config.h
 pqutil.o: ../misc/inetutil.h
 pqutil.o: ../pq/pq.h
 pqutil.o: ../protocol/atofeedt.h

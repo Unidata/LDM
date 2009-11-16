@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)pmap_prot2.c 1.3 87/08/11 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include "types.h"
 #include "xdr.h"

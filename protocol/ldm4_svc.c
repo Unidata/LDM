@@ -1,4 +1,4 @@
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <rpc/rpc.h>
 

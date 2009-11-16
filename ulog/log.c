@@ -11,7 +11,7 @@
  */
 /* $Id: log.c,v 1.1.2.4 2006/12/17 22:07:19 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <assert.h>
 #include <errno.h>

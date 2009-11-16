@@ -27,7 +27,7 @@
  * 2550 Garcia Avenue
  * Mountain View, California  94043
  */
-#include "ldmconfig.h"
+#include "config.h"
 #include "rpc.h"
 
 #include <sys/time.h>		/* FD_SETSIZE */

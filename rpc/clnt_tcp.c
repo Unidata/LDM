@@ -50,7 +50,7 @@ static char sccsid[] = "@(#)clnt_tcp.c 1.37 87/10/05 Copyr 1984 Sun Micro";
  * Now go hang yourself.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>

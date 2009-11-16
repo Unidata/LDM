@@ -1,4 +1,4 @@
-action.o: ../config/ldmconfig.h
+action.o: ../config.h
 action.o: ../misc/ldmalloc.h
 action.o: ../protocol/ldm.h
 action.o: ../protocol/timestamp.h
@@ -6,7 +6,7 @@ action.o: ../ulog/ulog.h
 action.o: action.c
 action.o: action.h
 action.o: filel.h
-filel.o: ../config/ldmconfig.h
+filel.o: ../config.h
 filel.o: ../misc/ldmalloc.h
 filel.o: ../misc/mkdirs_open.h
 filel.o: ../protocol/ldm.h
@@ -16,7 +16,7 @@ filel.o: action.h
 filel.o: filel.c
 filel.o: filel.h
 filel.o: pbuf.h
-palt.o: ../config/ldmconfig.h
+palt.o: ../config.h
 palt.o: ../misc/ldmalloc.h
 palt.o: ../protocol/atofeedt.h
 palt.o: ../protocol/ldm.h
@@ -27,14 +27,14 @@ palt.o: action.h
 palt.o: filel.h
 palt.o: palt.c
 palt.o: palt.h
-pbuf.o: ../config/ldmconfig.h
+pbuf.o: ../config.h
 pbuf.o: ../misc/alrm.h
 pbuf.o: ../misc/fdnb.h
 pbuf.o: ../misc/ldmalloc.h
 pbuf.o: ../ulog/ulog.h
 pbuf.o: pbuf.c
 pbuf.o: pbuf.h
-pqact.o: ../config/ldmconfig.h
+pqact.o: ../config.h
 pqact.o: ../misc/paths.h
 pqact.o: ../pq/pq.h
 pqact.o: ../protocol/atofeedt.h

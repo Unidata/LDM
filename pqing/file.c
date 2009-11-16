@@ -4,7 +4,7 @@
  */
 /* $Id: file.c,v 1.19.22.1 2004/12/09 19:36:24 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

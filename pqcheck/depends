@@ -1,4 +1,4 @@
-pqcheck.o: ../config/ldmconfig.h
+pqcheck.o: ../config.h
 pqcheck.o: ../misc/paths.h
 pqcheck.o: ../pq/pq.h
 pqcheck.o: ../protocol/atofeedt.h

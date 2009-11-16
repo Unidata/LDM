@@ -4,7 +4,7 @@
  */
 /* $Id: surf_split.c,v 1.41.18.2 2008/03/13 15:25:08 steve Exp $     */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>

@@ -15,7 +15,6 @@ SU		= @SU@
 PQ_SUBDIR	= @PQ_SUBDIR@
 
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
-include_HEADERS			= ldmconfig.h
 
 SUBDIRS	= \
     rpc \

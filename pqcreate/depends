@@ -1,4 +1,4 @@
-pqcreate.o: ../config/ldmconfig.h
+pqcreate.o: ../config.h
 pqcreate.o: ../misc/paths.h
 pqcreate.o: ../pq/pq.h
 pqcreate.o: ../protocol/ldm.h

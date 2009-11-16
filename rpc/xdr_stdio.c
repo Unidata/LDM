@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)xdr_stdio.c 1.16 87/08/11 Copyr 1984 Sun Micro";
  * from the stream.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <arpa/inet.h>	/* for htonl() & ntohl() */
 #include <stdio.h>

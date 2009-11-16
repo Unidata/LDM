@@ -6,7 +6,7 @@
 
 /* #define _POSIX_SOURCE */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>

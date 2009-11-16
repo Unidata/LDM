@@ -12,7 +12,7 @@
  * or FAA604 documentation.
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <string.h>
 #include <ctype.h>
 #include "xbuf.h"

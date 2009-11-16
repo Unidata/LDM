@@ -8,7 +8,7 @@
  *  dump a pq
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

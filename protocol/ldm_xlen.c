@@ -11,7 +11,7 @@
  * xlen_product changes.
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include "ldm.h"                /* prod_info */
 #include "ldm_xlen.h"
 #include <string.h> /* strlen() */

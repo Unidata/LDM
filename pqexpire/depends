@@ -1,4 +1,4 @@
-pqexpire.o: ../config/ldmconfig.h
+pqexpire.o: ../config.h
 pqexpire.o: ../misc/paths.h
 pqexpire.o: ../pq/pq.h
 pqexpire.o: ../protocol/atofeedt.h

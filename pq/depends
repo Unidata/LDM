@@ -1,7 +1,7 @@
-lcm.o: ../config/ldmconfig.h
+lcm.o: ../config.h
 lcm.o: lcm.c
 lcm.o: lcm.h
-pq.o: ../config/ldmconfig.h
+pq.o: ../config.h
 pq.o: ../misc/fsStats.h
 pq.o: ../protocol/ldm.h
 pq.o: ../protocol/ldm_xlen.h

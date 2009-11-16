@@ -13,7 +13,7 @@
  * pqcreate -c -s 2M -S 13762 /usr/local/ldm/data/pqsurf.pq
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

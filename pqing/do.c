@@ -5,7 +5,7 @@
  * asynchronous binary products (e.g. HDS) with byte stuffing and checksums.
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <ctype.h>
 

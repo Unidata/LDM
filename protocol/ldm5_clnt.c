@@ -6,7 +6,7 @@
  * ldm client side functions
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <errno.h>
 #include <rpc/rpc.h>

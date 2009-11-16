@@ -60,7 +60,7 @@ TAGS_FILES		= \
 # Also, the target-file must be modified to be more portable.
 #
 ldm6_svc.c:	../protocol/ldm.x
-	(echo '#include "ldmconfig.h"'; $(RPCGEN) -m ../protocol/ldm.x) | sed \
+	(echo '#include "config.h"'; $(RPCGEN) -m ../protocol/ldm.x) | sed \
 	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
 	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
 	    -e 's;notifyme_6\([^A-Za-z_]\);notifyme_6_svc\1;' \
@@ -80,14 +80,14 @@ ldm6_svc.c:	../protocol/ldm.x
 # manually modified to a great extent.
 #
 ldm6_server.c:	# ../protocol/ldm.x
-	(echo '#include "ldmconfig.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
+	(echo '#include "config.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
 
 if MAINTAINER
 
 parser.c:	parser.y
 	status=1; \
 	$(YACC) parser.y && \
-	    echo '#include "ldmconfig.h"' >parser.c && \
+	    echo '#include "config.h"' >parser.c && \
 	    cat y.tab.c >>parser.c && \
 	    status=0; \
 	rm -f y.tab.c conf.tab.c; \

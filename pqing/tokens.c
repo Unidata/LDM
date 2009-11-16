@@ -3,7 +3,7 @@
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
 /* $Id: tokens.c,v 1.22.22.1 2004/12/09 19:36:24 steve Exp $ */
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <ctype.h>
 /* #include <assert.h> */

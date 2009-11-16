@@ -1,8 +1,8 @@
-dtime.o: ../config/ldmconfig.h
+dtime.o: ../config.h
 dtime.o: ../misc/ldmalloc.h
 dtime.o: dtime.c
 dtime.o: dtime.h
-pqsurf.o: ../config/ldmconfig.h
+pqsurf.o: ../config.h
 pqsurf.o: ../misc/paths.h
 pqsurf.o: ../pq/pq.h
 pqsurf.o: ../protocol/atofeedt.h
@@ -14,7 +14,7 @@ pqsurf.o: ../ulog/ulog.h
 pqsurf.o: dtime.h
 pqsurf.o: pqsurf.c
 pqsurf.o: surface.h
-surf_split.o: ../config/ldmconfig.h
+surf_split.o: ../config.h
 surf_split.o: ../protocol/ldm.h
 surf_split.o: ../protocol/md5.h
 surf_split.o: ../protocol/timestamp.h
@@ -25,11 +25,11 @@ surf_split.o: surface.h
 surf_split.o: tokens.h
 surf_split.o: wmo_header.h
 surf_split.o: xbuf.h
-tokens.o: ../config/ldmconfig.h
+tokens.o: ../config.h
 tokens.o: tokens.c
 tokens.o: tokens.h
 tokens.o: xbuf.h
-wmo_header.o: ../config/ldmconfig.h
+wmo_header.o: ../config.h
 wmo_header.o: ../misc/ldmalloc.h
 wmo_header.o: ../ulog/ulog.h
 wmo_header.o: dtime.h
@@ -37,7 +37,7 @@ wmo_header.o: tokens.h
 wmo_header.o: wmo_header.c
 wmo_header.o: wmo_header.h
 wmo_header.o: xbuf.h
-xbuf.o: ../config/ldmconfig.h
+xbuf.o: ../config.h
 xbuf.o: ../misc/ldmalloc.h
 xbuf.o: ../ulog/ulog.h
 xbuf.o: xbuf.c

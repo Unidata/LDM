@@ -4,7 +4,7 @@
  *   This module contains the "downstream" code for version 6 of the LDM.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <arpa/inet.h>   /* inet_ntoa() */
 #include <assert.h>      /* assert() */
