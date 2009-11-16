@@ -6,7 +6,7 @@
  * ldm server mainline program module
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)xdr.c 1.35 87/08/12";
  * xdr.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <inttypes.h>
 #include <limits.h>

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)svc_auth.c	2.1 88/08/07 4.0 RPCSRC; from 1.19 87/08/
  * Copyright (C) 1984, Sun Microsystems, Inc.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include "rpc.h"
 

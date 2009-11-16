@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)clnt_perror.c 1.15 87/10/07 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc.
  *
  */
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>

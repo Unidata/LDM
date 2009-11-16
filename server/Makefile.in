@@ -51,7 +51,7 @@ am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
-CONFIG_HEADER = $(top_builddir)/ldmconfig.h
+CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
@@ -679,7 +679,7 @@ uninstall-man: uninstall-man1
 # Also, the target-file must be modified to be more portable.
 #
 ldm6_svc.c:	../protocol/ldm.x
-	(echo '#include "ldmconfig.h"'; $(RPCGEN) -m ../protocol/ldm.x) | sed \
+	(echo '#include "config.h"'; $(RPCGEN) -m ../protocol/ldm.x) | sed \
 	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
 	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
 	    -e 's;notifyme_6\([^A-Za-z_]\);notifyme_6_svc\1;' \
@@ -699,12 +699,12 @@ ldm6_svc.c:	../protocol/ldm.x
 # manually modified to a great extent.
 #
 ldm6_server.c:	# ../protocol/ldm.x
-	(echo '#include "ldmconfig.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
+	(echo '#include "config.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
 
 @MAINTAINER_TRUE@parser.c:	parser.y
 @MAINTAINER_TRUE@	status=1; \
 @MAINTAINER_TRUE@	$(YACC) parser.y && \
-@MAINTAINER_TRUE@	    echo '#include "ldmconfig.h"' >parser.c && \
+@MAINTAINER_TRUE@	    echo '#include "config.h"' >parser.c && \
 @MAINTAINER_TRUE@	    cat y.tab.c >>parser.c && \
 @MAINTAINER_TRUE@	    status=0; \
 @MAINTAINER_TRUE@	rm -f y.tab.c conf.tab.c; \

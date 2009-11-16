@@ -4,7 +4,7 @@
  */
 /* $Id: fxbuf.c,v 1.28 2000/06/28 15:59:11 russ Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <string.h>
 #include "xbuf.h"
 #ifndef MCIDAS_ONLY

@@ -4,7 +4,7 @@
  * Install it setuid root.
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #if defined(SYSLOG_PIDFILE)
 /*
  * On most systems we get the pid from

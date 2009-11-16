@@ -4,7 +4,7 @@
  */
 /* $Id: xbuf.c,v 1.46 2001/08/24 22:54:13 russ Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>

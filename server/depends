@@ -1,4 +1,4 @@
-DownHelp.o: ../config/ldmconfig.h
+DownHelp.o: ../config.h
 DownHelp.o: ../misc/error.h
 DownHelp.o: ../pq/pq.h
 DownHelp.o: ../protocol/autoshift.h
@@ -23,7 +23,7 @@ DownHelp.o: ../ulog/ulog.h
 DownHelp.o: DownHelp.c
 DownHelp.o: down6.h
 DownHelp.o: peer_info.h
-UpFilter.o: ../config/ldmconfig.h
+UpFilter.o: ../config.h
 UpFilter.o: ../misc/StringBuf.h
 UpFilter.o: ../misc/error.h
 UpFilter.o: ../misc/pattern.h
@@ -43,11 +43,11 @@ UpFilter.o: ../rpc/types.h
 UpFilter.o: ../rpc/xdr.h
 UpFilter.o: UpFilter.c
 UpFilter.o: UpFilter.h
-abbr.o: ../config/ldmconfig.h
+abbr.o: ../config.h
 abbr.o: ../ulog/ulog.h
 abbr.o: abbr.c
 abbr.o: abbr.h
-acl.o: ../config/ldmconfig.h
+acl.o: ../config.h
 acl.o: ../misc/RegularExpressions.h
 acl.o: ../misc/error.h
 acl.o: ../misc/inetutil.h
@@ -86,11 +86,11 @@ acl.o: peer_info.h
 acl.o: priv.h
 acl.o: requester6.h
 acl.o: wordexp.h
-child_process_set.o: ../config/ldmconfig.h
+child_process_set.o: ../config.h
 child_process_set.o: ../ulog/ulog.h
 child_process_set.o: child_process_set.c
 child_process_set.o: child_process_set.h
-conftab.o: ../config/ldmconfig.h
+conftab.o: ../config.h
 conftab.o: ../misc/RegularExpressions.h
 conftab.o: ../misc/error.h
 conftab.o: ../misc/pattern.h
@@ -118,7 +118,7 @@ conftab.o: parser.c
 conftab.o: scanner.c
 conftab.o: peer_info.h
 conftab.o: wordexp.h
-parser.y.o: ../config/ldmconfig.h
+parser.y.o: ../config.h
 parser.y.o: ../misc/RegularExpressions.h
 parser.y.o: ../misc/error.h
 parser.y.o: ../misc/pattern.h
@@ -142,7 +142,7 @@ parser.y.o: acl.h
 parser.y.o: scanner.c
 parser.y.o: peer_info.h
 parser.y.o: wordexp.h
-down6.o: ../config/ldmconfig.h
+down6.o: ../config.h
 down6.o: ../misc/error.h
 down6.o: ../misc/pattern.h
 down6.o: ../pq/pq.h
@@ -174,7 +174,7 @@ down6.o: down6.c
 down6.o: down6.h
 down6.o: peer_info.h
 down6.o: wordexp.h
-feedTime.o: ../config/ldmconfig.h
+feedTime.o: ../config.h
 feedTime.o: ../protocol/ldm.h
 feedTime.o: ../protocol/ldmprint.h
 feedTime.o: ../protocol/timestamp.h
@@ -192,7 +192,7 @@ feedTime.o: ../rpc/xdr.h
 feedTime.o: ../ulog/ulog.h
 feedTime.o: feedTime.c
 feedTime.o: feedTime.h
-forn5_svc.o: ../config/ldmconfig.h
+forn5_svc.o: ../config.h
 forn5_svc.o: ../pq/pq.h
 forn5_svc.o: ../protocol/globals.h
 forn5_svc.o: ../protocol/h_clnt.h
@@ -216,7 +216,7 @@ forn5_svc.o: ../ulog/ulog.h
 forn5_svc.o: abbr.h
 forn5_svc.o: forn5_svc.c
 forn5_svc.o: peer_info.h
-ldm6_server.o: ../config/ldmconfig.h
+ldm6_server.o: ../config.h
 ldm6_server.o: ../misc/error.h
 ldm6_server.o: ../misc/inetutil.h
 ldm6_server.o: ../misc/pattern.h
@@ -245,7 +245,7 @@ ldm6_server.o: ldm6_server.c
 ldm6_server.o: peer_info.h
 ldm6_server.o: up6.h
 ldm6_server.o: wordexp.h
-ldm6_svc.o: ../config/ldmconfig.h
+ldm6_svc.o: ../config.h
 ldm6_svc.o: ../protocol/ldm.h
 ldm6_svc.o: ../protocol/timestamp.h
 ldm6_svc.o: ../rpc/auth.h
@@ -260,7 +260,7 @@ ldm6_svc.o: ../rpc/svc_auth.h
 ldm6_svc.o: ../rpc/types.h
 ldm6_svc.o: ../rpc/xdr.h
 ldm6_svc.o: ldm6_svc.c
-ldmd.o: ../config/ldmconfig.h
+ldmd.o: ../config.h
 ldmd.o: ../misc/error.h
 ldmd.o: ../misc/inetutil.h
 ldmd.o: ../misc/paths.h
@@ -294,10 +294,10 @@ ldmd.o: ldmd.c
 ldmd.o: peer_info.h
 ldmd.o: priv.h
 ldmd.o: wordexp.h
-priv.o: ../config/ldmconfig.h
+priv.o: ../config.h
 priv.o: priv.c
 priv.o: priv.h
-remote.o: ../config/ldmconfig.h
+remote.o: ../config.h
 remote.o: ../misc/error.h
 remote.o: ../misc/pattern.h
 remote.o: ../protocol/globals.h
@@ -321,7 +321,7 @@ remote.o: acl.h
 remote.o: peer_info.h
 remote.o: remote.c
 remote.o: wordexp.h
-requester6.o: ../config/ldmconfig.h
+requester6.o: ../config.h
 requester6.o: ../misc/error.h
 requester6.o: ../misc/inetutil.h
 requester6.o: ../misc/rpcutil.h
@@ -362,7 +362,7 @@ sock.o: ../rpc/svc_auth.h
 sock.o: ../rpc/types.h
 sock.o: ../rpc/xdr.h
 sock.o: sock.c
-state.o: ../config/ldmconfig.h
+state.o: ../config.h
 state.o: ../misc/error.h
 state.o: ../protocol/ldm.h
 state.o: ../protocol/timestamp.h
@@ -379,7 +379,7 @@ state.o: ../rpc/types.h
 state.o: ../rpc/xdr.h
 state.o: state.c
 state.o: state.h
-svc5.o: ../config/ldmconfig.h
+svc5.o: ../config.h
 svc5.o: ../misc/error.h
 svc5.o: ../misc/pattern.h
 svc5.o: ../pq/pq.h
@@ -411,7 +411,7 @@ svc5.o: forn5_svc.h
 svc5.o: peer_info.h
 svc5.o: svc5.c
 svc5.o: wordexp.h
-up6.o: ../config/ldmconfig.h
+up6.o: ../config.h
 up6.o: ../misc/error.h
 up6.o: ../misc/pattern.h
 up6.o: ../misc/rpcutil.h
@@ -440,10 +440,10 @@ up6.o: peer_info.h
 up6.o: up6.c
 up6.o: up6.h
 up6.o: wordexp.h
-wordexp.o: ../config/ldmconfig.h
+wordexp.o: ../config.h
 wordexp.o: wordexp.c
 wordexp.o: wordexp.h
-y.tab.o: ../config/ldmconfig.h
+y.tab.o: ../config.h
 y.tab.o: ../misc/RegularExpressions.h
 y.tab.o: ../misc/error.h
 y.tab.o: ../misc/pattern.h

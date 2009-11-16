@@ -3,7 +3,7 @@
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
 /* $Id: wmo_start.c,v 1.12 2001/08/24 22:54:13 russ Exp $ */
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <ctype.h>
 #include "wmo_start.h"

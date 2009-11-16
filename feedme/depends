@@ -1,4 +1,4 @@
-feedme.o: ../config/ldmconfig.h
+feedme.o: ../config.h
 feedme.o: ../misc/inetutil.h
 feedme.o: ../protocol/atofeedt.h
 feedme.o: ../protocol/h_clnt.h

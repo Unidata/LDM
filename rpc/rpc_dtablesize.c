@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)rpc_dtablesize.c 1.2 87/08/11 Copyr 1987 Sun Micro";
 #endif
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <sys/time.h>	/* FD_SETSIZE */
 

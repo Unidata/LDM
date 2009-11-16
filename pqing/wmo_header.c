@@ -4,7 +4,7 @@
  */
 /* $Id: wmo_header.c,v 1.35.18.2 2007/06/01 20:42:47 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <ctype.h>
 #include <stdio.h>

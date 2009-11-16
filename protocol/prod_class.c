@@ -4,7 +4,7 @@
  */
 /* $Id: prod_class.c,v 1.23.12.5 2008/04/15 16:34:11 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <assert.h>
 #include <errno.h>

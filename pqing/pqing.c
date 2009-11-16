@@ -6,7 +6,7 @@
 static char version[] =
 "$Revision: 1.78.10.2.2.3 $ built "__DATE__" "__TIME__;
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>

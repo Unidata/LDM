@@ -1,4 +1,4 @@
-#include "ldmconfig.h"
+#include "config.h"
 #include "ldm.h"
 #include "ldmprint.h"
 #include "prod_info.h"

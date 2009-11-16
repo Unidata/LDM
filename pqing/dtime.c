@@ -4,7 +4,7 @@
  */
 /* $Id: dtime.c,v 1.12 2001/08/24 22:54:12 russ Exp $	*/
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <time.h>
 #include "ldmalloc.h"

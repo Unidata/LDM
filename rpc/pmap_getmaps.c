@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)pmap_getmaps.c 1.10 87/08/11 Copyr 1984 Sun Micro";
  * Copyright (C) 1984, Sun Microsystems, Inc.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <arpa/inet.h>
 #include <sys/socket.h>

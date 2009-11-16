@@ -82,7 +82,7 @@ ldm.h:		ldm.x
 	sed 's/typedef *char *signaturet/typedef unsigned char signaturet/' > $@
 
 ldm_xdr.c:	ldm.x
-	(echo '#include "ldmconfig.h"'; $(RPCGEN) -c ldm.x) | \
+	(echo '#include "config.h"'; $(RPCGEN) -c ldm.x) | \
 	sed \
 	  -e 's/xdr_opaque *( *xdrs, *objp, *16)/xdr_opaque(xdrs, (char*)objp, 16)/' \
 	  -e '/#if defined(_LP64)/,/#endif/d' > $@
@@ -99,7 +99,7 @@ ldm_xdr.c:	ldm.x
 # XDR-routine (sheesh!)).
 #
 ldm6_clnt.c:	ldm.x fix_clnt.pl
-	(echo '#include "ldmconfig.h"'; $(RPCGEN) -l ldm.x) > $@.tmp || \
+	(echo '#include "config.h"'; $(RPCGEN) -l ldm.x) > $@.tmp || \
 	    rm $@.tmp
 	$(PERL) fix_clnt.pl < $@.tmp > $@ && rm $@.tmp       # fix stuff
 

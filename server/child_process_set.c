@@ -9,7 +9,7 @@
  * can respond to IS_ALIVE inquiries.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <errno.h>
 #include <search.h>

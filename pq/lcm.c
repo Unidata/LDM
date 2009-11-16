@@ -4,7 +4,7 @@
  */
 /* $Id: lcm.c,v 1.3 1998/10/16 19:28:13 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <assert.h>
 #include <limits.h>
 #include <errno.h>

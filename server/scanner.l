@@ -14,7 +14,7 @@
  * Lexical scanner for LDM configuration-file.
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <libgen.h>
 #include <limits.h>

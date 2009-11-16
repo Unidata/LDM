@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)xdr_mem.c 1.19 87/08/11 Copyr 1984 Sun Micro";
  */
 
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <limits.h>
 #include <arpa/inet.h>

@@ -3,7 +3,7 @@
  */
 /* $Id: DownHelp.c,v 1.1.2.9 2009/06/18 23:37:20 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <string.h>
 

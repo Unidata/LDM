@@ -13,7 +13,7 @@
  */
 
 #if defined(RPC_HDR) || defined(RPC_SVC)
-%#include "ldmconfig.h"
+%#include "config.h"
 #endif
 
 #ifdef RPC_HDR

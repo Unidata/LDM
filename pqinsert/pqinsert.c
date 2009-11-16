@@ -7,7 +7,7 @@
 /* 
  * Convert files to ldm "products" and insert in local que
  */
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>

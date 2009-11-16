@@ -4,7 +4,7 @@
  */
 /* $Id: feedTime.c,v 1.1.18.3 2008/04/15 16:34:13 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <assert.h>
 #include <stdlib.h>

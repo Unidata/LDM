@@ -1,6 +1,6 @@
 .deps
 *.loT
-ldmconfig.h
+config.h
 *~
 feedme/feedme
 ldmping/ldmping

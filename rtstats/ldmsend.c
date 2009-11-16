@@ -9,7 +9,7 @@
  */
 
 #define TIRPC
-#include <ldmconfig.h>
+#include <config.h>
 
 #include "ldm.h"
 #include <assert.h>

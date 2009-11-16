@@ -4,7 +4,7 @@
 
 /*LINTLIBRARY*/
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <arpa/inet.h>
 #include <assert.h>

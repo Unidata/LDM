@@ -9,7 +9,7 @@
  * processes between invocations.
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <assert.h>
 #include <libgen.h>
 #include <stdio.h>

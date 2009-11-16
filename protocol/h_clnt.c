@@ -21,7 +21,7 @@
  * Implementation
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <sys/types.h> /* struct timeval */
 #include <sys/time.h> /* struct timeval */
 #include <errno.h>

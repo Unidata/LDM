@@ -4,7 +4,7 @@
  */
 /* $Id: globals.c,v 1.1.2.3 2007/02/12 20:38:54 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <rpc/rpc.h>  /* svc_req */
 #include <stddef.h>

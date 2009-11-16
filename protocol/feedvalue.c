@@ -9,7 +9,7 @@
  * set of child feed-values, and a (possibly empty) child feed-mask.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <assert.h>
 #include <string.h>

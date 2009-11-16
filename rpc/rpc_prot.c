@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)rpc_prot.c 1.36 87/08/11 Copyr 1984 Sun Micro";
  * routines are also in this program.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <sys/param.h>
 

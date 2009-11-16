@@ -5,7 +5,7 @@
 /* $Id: rawfile.c,v 1.16 1998/10/16 19:28:53 steve Exp $ */
 
 /* It amazes me that POSIX has us pull in 3 include files to use open(2) */
-#include <ldmconfig.h>
+#include <config.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

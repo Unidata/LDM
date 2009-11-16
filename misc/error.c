@@ -4,7 +4,7 @@
  */
 /* $Id: error.c,v 1.10.2.3.6.6 2006/12/17 22:06:26 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <assert.h>
 #include <stdarg.h>

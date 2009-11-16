@@ -31,7 +31,7 @@
  * Copyright (c) 1987 by Sun Microsystems, Inc.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include "clnt.h"	/* bindresvport */
 

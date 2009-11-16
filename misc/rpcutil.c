@@ -2,7 +2,7 @@
  * This module contains RPC helper functions.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <rpc/rpc.h>
 #include <arpa/inet.h>

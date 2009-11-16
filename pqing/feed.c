@@ -4,7 +4,7 @@
  */
 /* $Id: feed.c,v 1.60.2.1.6.2 2006/02/24 22:42:59 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>

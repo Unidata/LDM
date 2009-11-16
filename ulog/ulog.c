@@ -16,7 +16,7 @@
  * We use this macro to handle SVR4 streams based logging.
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

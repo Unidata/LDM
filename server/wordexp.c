@@ -4,7 +4,7 @@
  */
 /* $Id: wordexp.c,v 1.13.18.1 2005/06/24 21:05:25 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 /*
  * Hack to provide POSIX 1003.2-1992 _interface_.

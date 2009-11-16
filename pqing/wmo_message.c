@@ -9,7 +9,7 @@
  * Ref: _Manual on the Global Telecommunications System_, Volume 1,
  *      Global Aspects. WMO-No. 386, 1986
  */
-#include <ldmconfig.h>
+#include <config.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>

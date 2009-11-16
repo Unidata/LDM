@@ -8,7 +8,7 @@
  *
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <rpc/rpc.h>
 #include <errno.h> /* EIO */
 #include <stdlib.h>

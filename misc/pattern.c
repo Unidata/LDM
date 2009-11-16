@@ -1,4 +1,4 @@
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <errno.h>
 #include <regex.h>

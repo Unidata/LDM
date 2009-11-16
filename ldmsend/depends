@@ -1,4 +1,4 @@
-ldmsend.o: ../config/ldmconfig.h
+ldmsend.o: ../config.h
 ldmsend.o: ../misc/error.h
 ldmsend.o: ../misc/inetutil.h
 ldmsend.o: ../misc/rpcutil.h

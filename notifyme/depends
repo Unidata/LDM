@@ -1,4 +1,4 @@
-notifyme.o: ../config/ldmconfig.h
+notifyme.o: ../config.h
 notifyme.o: ../misc/inetutil.h
 notifyme.o: ../protocol/atofeedt.h
 notifyme.o: ../protocol/h_clnt.h

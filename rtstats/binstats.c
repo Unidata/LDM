@@ -8,7 +8,7 @@
  *
  */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
 #define PATH_MAX 255

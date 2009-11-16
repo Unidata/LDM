@@ -8,7 +8,7 @@
  * pings remote host
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <errno.h>
 #include <rpc/rpc.h>

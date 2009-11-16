@@ -5,7 +5,7 @@
 /* $Id: regex.c,v 1.2.18.1 2005/01/21 21:35:15 steve Exp $ */
 
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <sys/types.h>  /* necessary for "off_t" under FreeBSD 4.7-STABLE */
 #include <regex.h>

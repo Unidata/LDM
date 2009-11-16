@@ -8,7 +8,7 @@
  */
 /* $Id: ldm6_server.c,v 1.13.8.2.2.3.2.19 2009/08/17 17:12:45 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <arpa/inet.h>
 #include <assert.h>

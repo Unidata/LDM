@@ -5,9 +5,9 @@ AC_PREREQ(2.59)
 AC_INIT([LDM], [6.8.2.3], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
-AC_CONFIG_SRCDIR([ldmconfig.h.in])
+AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
-AC_CONFIG_HEADERS([ldmconfig.h])
+AC_CONFIG_HEADERS([config.h])
 
 #UD_CPPFLAGS
 #AC_DEFINE([_POSIX_C_SOURCE], [1], [Level of POSIX compliance])

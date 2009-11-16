@@ -7,7 +7,7 @@
  *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include "acl.h"
 #include "atofeedt.h"

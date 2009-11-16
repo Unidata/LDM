@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)xdr_float.c 1.12 87/08/11 Copyr 1984 Sun Micro";
  * xdr.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <limits.h>
 #include <stdio.h>

@@ -3,7 +3,7 @@
  * It was generated using rpcgen.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <stdlib.h> /* getenv(), exit() */
 #include <string.h> /* memset() */

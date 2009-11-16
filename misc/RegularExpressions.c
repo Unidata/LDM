@@ -1,6 +1,6 @@
 /* $Id: RegularExpressions.c,v 1.1.2.1 2005/01/26 21:38:35 steve Exp $ */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include "RegularExpressions.h"
 

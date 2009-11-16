@@ -5,7 +5,7 @@
  * version 6 of the LDM.
  */
 
-#include "ldmconfig.h"
+#include "config.h"
 
 #include <assert.h>      /* assert() */
 #include <errno.h>       /* system error codes */

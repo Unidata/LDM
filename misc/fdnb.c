@@ -4,7 +4,7 @@
  */
 /* $Id: fdnb.c,v 1.5 2002/12/09 18:23:56 steve Exp $ */
 
-#include <ldmconfig.h>
+#include <config.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include "ulog.h"

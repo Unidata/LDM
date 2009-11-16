@@ -1,4 +1,4 @@
-pqmon.o: ../config/ldmconfig.h
+pqmon.o: ../config.h
 pqmon.o: ../misc/paths.h
 pqmon.o: ../pq/pq.h
 pqmon.o: ../protocol/atofeedt.h
