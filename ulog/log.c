@@ -28,23 +28,65 @@
 
 
 /*
- * A log-message.  Such structures accumulate: they are never freed.
+ * A log-message.  Such structures accumulate: they are freed only by
+ * log_close().
  */
 typedef struct message {
-    char                   string[512];
-    struct message*        nextMessage;
+    char                string[512];
+    struct message*     nextMessage;
 } Message;
 
 /*
  * The first (i.e., most fundamental) log-message.
  */
-static Message      firstMessage;
+static Message*         head = NULL;
 
 /*
- * The tail of the message-list.  Points to the last added message.  Will be
- * NULL if and only if the message-list is empty.
+ * Pointer to the pointer to be set to the next message:
  */
-static Message* tail;
+static Message**        next = &head;
+
+/*
+ * Whether or not this module is initialized.
+ */
+static int              initialized = 0;
+
+
+/*
+ * Closes this module, releasing all resources.
+ */
+static void log_close(void)
+{
+    if (NULL != head) {
+        Message*        msg = head;
+
+        while (NULL != msg) {
+            Message*    nextMessage = msg->nextMessage;
+
+            free(msg);
+
+            msg = nextMessage;
+        }
+
+        head = NULL;
+        next = &head;
+        initialized = 0;
+    }
+}
+
+
+/*
+ * Initializes this module.
+ */
+static void log_init(void)
+{
+    if (!initialized) {
+        if (atexit(log_close))
+            serror("log_init(): Couldn't initialize module: %s",
+                strerror(errno));
+        initialized = 1;
+    }
+}
 
 
 /******************************************************************************
@@ -53,12 +95,12 @@ static Message* tail;
 
 
 /*
- * Deletes the accumulated log-messages.  If log_log() is invoked after this
+ * Clears the accumulated log-messages.  If log_log() is invoked after this
  * function, then no messages will be logged.
  */
 void log_clear()
 {
-    tail = NULL;
+    next = &head;
 }
 
 
@@ -72,28 +114,26 @@ void log_vadd(
     const char *const   fmt,
     va_list             args)
 {
-    if (fmt != NULL) {
-        Message*        msg;
+    log_init();
 
-        if (tail == NULL) {
-            msg = &firstMessage;
-        }
-        else {
-            msg = tail->nextMessage;
+    if (fmt != NULL) {
+        Message*        msg = *next;
+
+        if (msg == NULL) {
+            msg = (Message*)malloc(sizeof(Message));
 
             if (msg == NULL) {
-                msg = (Message*)malloc(sizeof(Message));
-
-                if (msg == NULL) {
-                    serror("log_vadd(): malloc(%lu) failure",
-                        (unsigned long)sizeof(Message));
-                }
-                else {
-                    msg->string[0] = 0;
-                    msg->nextMessage = NULL;
-                }
+                serror("log_vadd(): malloc(%lu) failure",
+                    (unsigned long)sizeof(Message));
             }
-        }                               /* tail != NULL */
+            else {
+                msg->string[0] = 0;
+                msg->nextMessage = NULL;
+
+                if (NULL == head)
+                    head = msg;         /* very first message structure */
+            }
+        }
 
         if (msg != NULL) {
             char*       cp = msg->string;
@@ -107,11 +147,8 @@ void log_vadd(
             }
 
             msg->string[sizeof(msg->string)-1] = 0;
-
-            if (tail != NULL)
-                tail->nextMessage = msg;
-
-            tail = msg;
+            *next = msg;
+            next = &msg->nextMessage;
         }                               /* msg != NULL */
     }                                   /* format string != NULL */
 }
@@ -177,8 +214,7 @@ void log_errno(void)
  *                      added.
  *      ...             Arguments for the format-string.
  */
-void
-log_serror(
+void log_serror(
     const char *const   fmt,
     ...)
 {
@@ -203,7 +239,7 @@ log_serror(
 void log_log(
     const int   level)
 {
-    if (tail != NULL) {
+    if (next != &head) {
         static const unsigned       allPrioritiesMask = 
             LOG_MASK(LOG_ERR) |
             LOG_MASK(LOG_WARNING) |
@@ -218,7 +254,7 @@ void log_log(
         else if (getulogmask() & priorityMask) {
             const Message*     msg;
 
-            for (msg = &firstMessage; ; msg = msg->nextMessage) {
+            for (msg = head; msg != *next; msg = msg->nextMessage) {
                 /*
                  * NB: The message is not printed using "ulog(level,
                  * msg->string)" because "msg->string" might have formatting
@@ -226,9 +262,6 @@ void log_log(
                  * "s_prod_info()" with a dangerous product-identifier.
                  */
                 ulog(level, "%s", msg->string);
-
-                if (msg == tail)
-                    break;
             }
         }
 

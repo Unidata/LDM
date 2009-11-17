@@ -4,7 +4,7 @@
  * This module implements the runtime database backend database API via the
  * Tokyo Cabinet API.
  */
-#include <ldmconfig.h>
+#include <config.h>
 
 #undef NDEBUG
 #include <assert.h>

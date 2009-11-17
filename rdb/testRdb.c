@@ -1,7 +1,7 @@
 /*
  * See file ../COPYRIGHT for copying and redistribution conditions.
  */
-#include "ldmconfig.h"
+#include "config.h"
 
 #ifndef _XOPEN_SOURCE
 #   define _XOPEN_SOURCE 500

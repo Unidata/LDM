@@ -4,7 +4,7 @@
  * This module implements the runtime database.  It is thread-compatible
  * but not thread-safe.
  */
-#include <ldmconfig.h>
+#include <config.h>
 
 #undef NDEBUG
 #include <assert.h>
@@ -409,7 +409,7 @@ rdbDelete(
         RdbCursor*       cursor;
         RdbStatus        status = rdbNewCursor(&cursor);
 
-        for (; status == 0; status = rdbNextEntry(cursor)) {
+        for (; 0 == status; status = rdbNextEntry(cursor)) {
             rdbCursorKey(cursor)
             rdbCursorStringValue(cursor)
         }

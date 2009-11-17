@@ -4,7 +4,7 @@
  * This module implements the runtime database backend database API via the
  * Berkeley DB API.
  */
-#include <ldmconfig.h>
+#include <config.h>
 
 #undef NDEBUG
 #include <assert.h>

@@ -4,7 +4,7 @@
  *
  * This program is the runtime database utility.
  */
-#include <ldmconfig.h>
+#include <config.h>
 
 #include <libgen.h>
 #include <stdio.h>
