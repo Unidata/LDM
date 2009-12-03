@@ -817,7 +817,7 @@ RegStatus       reg_putUint(
     const char*         path,
     unsigned            value)
 {
-    return 0;
+    return put(path, &value, &uintStruct);
 }
 
 /*
@@ -838,7 +838,7 @@ RegStatus       reg_putString(
     const char*         path,
     const char*         value)
 {
-    return 0;
+    return put(path, value, &stringStruct);
 }
 
 /*
@@ -859,7 +859,7 @@ RegStatus       reg_putTime(
     const char*         path,
     const timestampt*   value)
 {
-    return 0;
+    return put(path, value, &timeStruct);
 }
 
 /*
@@ -880,7 +880,7 @@ RegStatus       reg_putSignature(
     const char*         path,
     const signaturet*   value)
 {
-    return 0;
+    return put(path, value, &signatureStruct);
 }
 
 /*

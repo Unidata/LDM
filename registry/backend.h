@@ -4,8 +4,8 @@
  *   This header-file defines the API for the backend database.
  */
 
-#ifndef BACKEND_H
-#define BACKEND_H
+#ifndef LDM_BACKEND_H
+#define LDM_BACKEND_H
 
 #include "registry.h"
 #include "stringBuf.h"
