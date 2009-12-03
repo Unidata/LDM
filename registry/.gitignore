@@ -1,2 +1,6 @@
 testRdb
 rdbutil
+registry.h stringBuf.h backend.c
+backend.c
+registry.h
+stringBuf.h

@@ -1,0 +1,399 @@
+Configuration:
+    Key/Value Data Model:
+        Common includes:
+            #include <log.h>
+            #include <rdblib.h>
+
+        Getting a configuration integer from C code:
+            int         maxLatency;
+            const char* key = "maximum latency:ldmd";
+            // The following will try "maximum latency" if the key doesn't work:
+            int         status = rdbGetInt(key, &maxLatency, 3600);
+            if (RDB_SYSTEM_ERROR == status)
+                return ...;
+            if (status)
+                // "maxLatency" set to default value
+                log_log(RDB_NO_ENTRY == status ? LOG_INFO : LOG_WARNING);
+            ...     // use "maxLatency"
+
+        Getting a configuration string from C code:
+            char*   timeServers;
+            char*   key = "timeServers";
+            int     status = rdbGetString(key, &timeServers, "foo.edu bar.gov");
+            if (RDB_SYSTEM_ERROR == status)
+                return ...;
+            if (status)
+                // "timeServers" set to default value
+                log_log(LOG_NOENTRY == status ? LOG_INFO : LOG_WARNING);
+            ...     // use "timeServers"
+            free(timeServers);
+
+        Getting all entries from C code:
+            RdbCursor*       cursor;
+            // NB: rdbNewCursor() sets "cursor" to NULL on failure
+            RdbStatus        status = rdbNewCursor("", &cursor);
+            for (; 0 == status; status = rdbNextEntry(cursor)) {
+                const char* key;    // NB: not free(3)d
+                const char* value;  // NB: not free(3)d
+                if ((status = rdbCursorKey(cursor, &key)) ||
+                        (status = rdbCursorStringValue(cursor, &value)))
+                    break;
+                // use "*key" and "*value"
+            }
+            if (RDB_NO_ENTRY != status) {
+                ...
+            }
+            rdbFreeCursor(cursor);  // NB: NULL safe
+
+        Getting REQUEST entries from C code:
+            RdbCursor*      cursor;
+            // NB: rdbNewCursor() sets "cursor" to NULL on failure
+            int             status = rdbNewCursor("requests", &cursor);
+            for (; 0 == status; status = rdbNextEntry(cursor)) {
+                const char* key;    // NB: not free(3)d
+                const char* value;  // NB: not free(3)d
+                if ((status = rdbCursorKey(cursor, &key)) ||
+                        (status = rdbCursorStringValue(cursor, &value)))
+                    break;
+                // use "*key" and "*value"
+                // TODO
+            }
+            if (RDB_NO_ENTRY != status) {
+                ...
+            }
+            rdbFreeCursor(cursor);  // NULL safe
+
+    Node-with-Children Data model:
+        Getting a configuration integer from C code:
+            int         maxLatency;
+            const char* path = "maximum latency:ldmd";
+            // The following will try "maximum latency" if the path doesn't
+            // exist
+            int         status = rdb_getUint(path, &maxLatency, 3600);
+            if (RDB_SYSTEM_ERROR == status)
+                ...
+            else if (status)
+                // "maxLatency" set to default value
+                log_log(LOG_NOENTRY == status ? LOG_INFO : LOG_WARNING);
+            else
+                ...     // use "maxLatency"
+
+        Getting a configuration string from C code:
+            char*   timeServers;
+            char*   path = "timeServers";   // NB: must be free(3)d
+            int     status = rdb_getString(path, &timeServers,
+                "foo.edu bar.gov");
+            if (RDB_SYSTEM_ERROR == status)
+                ...
+            else {
+                if (status)
+                    // "timeServers" set to default value
+                    log_log(LOG_NOENTRY == status ? LOG_INFO : LOG_WARNING);
+                ...     // use "timeServers"
+                free(timeServers);
+            }
+
+        Getting REQUEST entries from C code:
+            static RdbNode* requests;
+            int             status = rdb_getNode("requests", &requests);
+            if (status)
+                ...
+            else {
+                static RdbNode* reqMap;
+                // NB: 2nd arg to rdbNextChild() must have been set by
+                // rdbFirstChild()
+                for (status = rdbFirstChild(requests, &reqMap); 0 == status;
+                        status = rdbNextChild(requests, &reqMap)) {
+                    feedtypet   feedtype;
+                    const char* hostId;     // NB: not free(3)d
+                    const char* pattern;    // NB: not free(3)d
+                    if ((status = rdb_getString(reqMap, "hostId", &hostId))
+                            || (status = rdb_getUint(reqMap, "feedtype",
+                                &feedtype))
+                            || (status = rdb_getString(reqMap, "pattern",
+                                &pattern)))
+                        break;
+                    // use "*hostId", "feedtype", and "*pattern"
+                }
+                if (RDB_NO_ENTRY != status)
+                    ...
+            }
+
+        Processing all entries from C code:
+            static int processNode(RdbNode* node)
+            {
+                RdbNode*    child;
+                RdbStatus   status = rdbFirstChild(node, &child);
+                for (; 0 == status; status = rdbNextChild(node, &child)) {
+                    if (status = processNode(child))
+                        break;
+                }
+                if (RDB_NO_ENTRY == status) {        // if leaf node
+                    char*     path;
+                    char*     value;
+                    if ((status = rdbNode_getPath(node, &path)) == 0) {
+                        if (status = rdbNode_getString_value(node, &value)) {
+                            ... // use "*path" & "*value"
+                            status = 0;
+                            free(value);
+                        }
+                        free(path);
+                    }
+                }
+                return status;
+            }
+            ...
+                static RdbNode* node;
+                int             status = rdb_getNode("", &node);
+                return status
+                    ? status
+                    : processNode(node);
+
+    Typed-Node Data Model without Iterators:
+        Getting REQUEST entries from C code:
+            (Identical to Node-with-Children except for function names)
+        
+            static RdbNode* requests;
+            int             status = rdb_getNode("requests", &requests);
+            if (status)
+                ...
+            else {
+                RdbNode*    reqMap;
+                // NB: 2nd arg to rdbListNext() must have been set by
+                // rdbListFirst()
+                for (status = rdbListFirst(requests, &reqMap); 0 == status;
+                        status = rdbListNext(requests, &reqMap)) {
+                    feedtypet   feedtype;
+                    const char* hostId;     // NB: not free(3)d
+                    const char* pattern;    // NB: not free(3)d
+                    if ((status = rdbMap_getString(reqMap,
+                                "hostId", &hostId))
+                            || (status = rdbMap_getUint(reqMap,
+                                "feedtype", &feedtype))
+                            || (status = rdbMap_getString(reqMap,
+                                "pattern", &pattern)))
+                        break;
+                    // use "*hostId", "feedtype", and "*pattern"
+                }
+                if (RDB_NO_ENTRY != status)
+                    ...
+            }
+
+    Typed-Node Data Model with Iterators:
+        Getting a configuration integer from C code:
+            (Identical to Node-with-Children)
+
+            int         maxLatency;
+            const char* path = RDB_MAX_LATENCY RDB_SEP RDB_LDMD;
+            // The following will try RDB_MAX_LATENCY if the path doesn't
+            // exist
+            int         status = rdb_getUint(path, &maxLatency, 3600);
+            if (status && RDB_NO_ENTRY != status)
+                ...
+            else {
+                if (status)
+                    log_log(LOG_WARNING); // "maxLatency" set to default value
+                ...     // use "maxLatency"
+            }
+
+        Getting a configuration string from C code:
+            (Identical to Node-with-Children)
+
+            const char* timeServers;   // NB: not free(3)d
+            char*       path = RDB_TIME_SERVERS;
+            // NB: rdb_getString() returns pointer to internal buffer
+            int     status = rdb_getString(path, &timeServers,
+                "foo.edu bar.gov");
+            if (status && RDB_NO_ENTRY != status)
+                ...
+            else {
+                if (status)
+                    log_log(LOG_WARNING); // "timeServers" set to default value
+                ...     // use "timeServers"
+            }
+
+        Processing REQUEST entries from C code:
+            const RdbNode*      requests;
+            int                 status = rdb_getNode(RDB_REQUESTS, &requests);
+            if (status)
+                ...
+            else {
+                RdbCursor   cursor;
+                if (status = rdbNode_newCursor(requests, &cursor))
+                    ...
+                else {
+                    RdbNode*    reqMap; // NB: not free(3)d
+                    while (!(status = rdbCursor_next(cursor, &reqMap))) {
+                        feedtypet       feedtype;
+                        const char*     hostId;     // NB: not free(3)d
+                        const char*     pattern;    // NB: not free(3)d
+                        const char*     hash;       // NB: not free(3)d
+                        if ((status = rdbMap_getString(reqMap,
+                                    RDB_HOST_ID, &hostId))
+                                || (status = rdbMap_getUint(reqMap,
+                                    RDB_FEEDTYPE, &feedtype))
+                                || (status = rdbMap_getString(reqMap,
+                                    RDB_PATTERN, &pattern))
+                                || (status = rdbMap_getString(reqMap,
+                                    RDB_HASH, &hash)))
+                            break;
+                        // use "*hostId", "feedtype", and "*pattern"
+                    }
+                    if (RDB_NO_ENTRY != status)
+                        ...
+                    rdbCursor_free(cursor);
+                }
+            }
+
+        Processing all entries from C code:
+            static int processNode(const RdbNode* node)
+            {
+                RdbStatus   status;
+                if (RDB_LEAF_NODE == rdbNode_type(node)) {
+                    const char*     path;   // NB: not free(3)d
+                    const char*     value;  // NB: not free(3)d
+                    if (!(status = rdbNode_getPath(node, &path)) &&
+                            !(status = rdbNode_getString(node, &value))) {
+
+                        ... // use "*path" & "*value"
+                    }
+                }
+                else {
+                    RdbCursor   cursor;
+                    if (!(status = rdbNode_newCursor(node, &cursor))) {
+                        RdbNode*    childNode;
+                        while (!(status = rdbCursor_next(cursor, &childNode)) {
+                            if (status = processNode(childNode))
+                                break;
+                        }
+                        rdbCursor_free(cursor);
+                    }
+                }
+                return status;
+            }
+            ...
+                const RdbNode*   node;
+                int              status = rdb_getNode("", &node);
+                return status
+                    ? status
+                    : processNode(node);
+
+        Deleting defunct pqact(1) entries:
+            RdbNode*    pqactsNode;
+            RdbStatus   status = rdb_getNode(RDB_PQACTS, &pqactsNode);
+            if (!status) {
+                RdbCursor   cursor;
+                if (!(status = rdbNode_newCursor(node, &cursor))) {
+                    RdbNode*    configFileNode;
+                    while (!(status = rdbCursor_next(cursor, &configFileNode)) {
+                        timestampt*     processedTime;  // NB: not free(3)d
+                        if (status = rdbNode_getTime(configFileNode,
+                                RDB_PROCESSED_TIME, &processedTime))
+                            break;
+                        if (d_diff_timestamp(now, processedTime) >= maxLatency)
+                            if (status = rdb_deleteNode(configFileNode))
+                                break;
+                    }
+                    if (status != RDB_NOENTRY)
+                        ...
+                    rdbCursor_free(cursor);
+                }                       // "cursor" allocated
+                rdbNode_free(pqactsNode);
+            }                           // "pqactsNode" allocated
+
+        Deleting defunct downstream LDM entries:
+            RdbNode*  downLdmsNode;
+            RdbStatus status = rdb_getNode(RDB_DOWNSTREAM_LDMS, &downLdmsNode);
+            if (!status) {
+                unsigned        maxLatency = ...;
+                RdbCursor       cursor;
+                if (!(status = rdbNode_newCursor(node, &cursor))) {
+                    RdbNode*    hashNode;
+                    while (!(status = rdbCursor_next(cursor, &hashNode)) {
+                        timestampt processedTime;
+                        if (status = rdbNode_getTime(hashNode,
+                                RDB_LAST_PRODUCT RDB_SEP RDB_PROCESSED_TIME,
+                                &processedTime))
+                            break;
+                        if (d_diff_timestamp(now, processedTime) >= maxLatency)
+                            if (status = rdb_deleteNode(hashNode))
+                                break;
+                    }
+                    if (status != RDB_NOENTRY)
+                        ...
+                    rdbCursor_free(cursor);
+                }                       // "cursor" allocated
+                rdbNode_free(downLdmsNode);
+            }                           // "downLdmsNode" allocated
+
+        Writing a configuration integer from C code:
+            int         value = ...;
+            const char* path = RDB_MAX_LATENCY RDB_SEP RDB_LDMD;
+            int         status = rdb_putUint(path, value);
+            if (status)
+                ...
+
+        Writing a configuration string from C code:
+            const char* value = "foo.edu bar.gov";
+            const char* path = RDB_TIME_SERVERS;
+            int         status = rdb_putString(path, value);
+            if (status)
+                ...
+
+Persistent Runtime:
+    Ensuring the existence of a downstream-LDM node:
+        RdbNode*        downNode = rdbNode_new(); // NB: must be freed
+        if (NULL == downNode) {
+            ...
+        }
+        else {
+            char*       upHostId = ...;
+            feedtypet   feedtype = ...;
+            char*       pattern = ...;
+            timestampt  now = ...;
+            signaturet  hash = ...;
+            if (!(status = rdbNode_putString(downNode, RDB_UPSTREAM_HOST_ID,
+                    upHostId) ||
+                !(status = rdbNode_putUint(downNode, RDB_FEEDTYPE, feedtype)) ||
+                !(status = rdbNode_putString(downNode, RDB_PATTERN, pattern)) ||
+                !(status = rdbNode_putTime(downNode, RDB_START_TIME, &now))) {
+
+                status = rdb_putNode(RDB_DOWNSTREAM_LDMS RDB_SEP <hash>,
+                    downNode);
+            }
+            rdbNode_free(downNode);
+        }                               // "downNode" allocated
+
+    Saving information on the last data-product received by a downstream LDM:
+        static RdbNode*        lastProdNode; // NB: must be free(3)d eventually
+        if (NULL == lastProdNode) {
+            lastProdNode = rdbNode_new();
+            if (NULL == lastProdNode)
+                ...
+        }
+        if (NULL != lastProdNode) {
+            timestampt   now = ...;
+            prod_info   *info;
+            if (!(status = rdbNode_putTime(RDB_CREATION_TIME, info->arrival)) ||
+                !(status = rdbNode_putSignature(RDB_SIGNATURE,
+                    info->signature)) ||
+                !(status = rdbNode_putString(RDB_ORIGIN, info->origin))
+                !(status = rdbNode_putUint(RDB_FEEDTYPE, info->feedtype)) ||
+                !(status = rdbNode_putUint(RDB_SEQUENCE_NUMBER, info->seqno)) ||
+                !(status = rdbNode_putString(RDB_ID, info->ident)) ||
+                !(status = rdbNode_putUint(RDB_SIZE, info->sz)) ||
+                !(status = rdbNode_putTime(RDB_PROCESSED_TIME, &now))) {
+
+                status = rdb_putNode(RDB_DOWNSTREAM_LDMS RDB_SEP <hash> 
+                    RDB_SEP RDB_LAST_PRODUCT, lastProdNode);
+            }
+        }                           // "lastProdNode" allocated
+
+    Saving information on last data-product processed by a pqact(1) process:
+        Similar to the above.
+
+Transient Runtime:
+    Saving information on the ldmd(8) server process:
+        timestampt   startTime = ...;
+        rdb_putUint(RDB_LDMD RDB_SEP RDB_PID, getpid());
+        rdb_putTime(RDB_LDMD RDB_SEP RDB_START_TIME, &startTime);
