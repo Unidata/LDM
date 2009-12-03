@@ -70,8 +70,14 @@ extern timestampt
 diff_timestamp(const timestampt *const afta, const timestampt *const b4);
 
 /*
- * Take the difference between two timevals,
- * return as a double.
+ * Returns the difference, in seconds, between two timestamps.
+ *
+ * Arguments:
+ *      afta    Pointer to the later timestamp
+ *      b4      Pointer to the earlier timestamp
+ * Returns:
+ *      The value (afta - b4) in seconds.  Will be negative if "afta" is before
+ *      "b4".
  */
 extern double
 d_diff_timestamp(const timestampt *const afta,

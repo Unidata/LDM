@@ -275,7 +275,7 @@ run_service(
 static ErrorObj*
 make_request(
     const char* const                   upName,
-    const prod_class_t* const             prodClass,
+    const prod_class_t* const           prodClass,
     const int                           isPrimary,
     CLIENT* const                       clnt,
     unsigned* const                     id)
@@ -490,8 +490,8 @@ adjustByLastInfo(
     const prod_class_t* const     protoClass,
     prod_class_t** const          newClass)
 {
-    ErrorObj*                    errObj = NULL;  /* success */
-    const prod_info* const      info = savedInfo_get();
+    ErrorObj*                     errObj = NULL;  /* success */
+    const prod_info* const        info = savedInfo_get();
 
     if (NULL == info) {
         prod_class_t* const       prodClass = dup_prod_class(protoClass);
@@ -569,7 +569,7 @@ ErrorObj*
 req6_new(
     const char* const                   upName,
     const unsigned                      port,
-    const prod_class_t* const             request,
+    const prod_class_t* const           request,
     const unsigned                      inactiveTimeout,
     const char* const                   pqPathname,
     pqueue* const                       pq,

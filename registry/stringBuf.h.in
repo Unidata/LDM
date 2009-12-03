@@ -1,0 +1,24 @@
+/*
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
+ *
+ *   This header-file specifies the API for string buffers.
+ *   The methods of this module are thread-compatible but not thread-safe.
+ */
+#ifndef LDM_REGISTRY_H
+#define LDM_REGISTRY_H
+
+#include "registry.h"
+
+typedef struct stringBuf        StringBuf;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

@@ -238,7 +238,6 @@ psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
-subdirs = @subdirs@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
@@ -305,6 +304,8 @@ lib_la_CPPFLAGS = -I$(top_srcdir)/misc -I$(top_srcdir)/ulog -I$(top_srcdir)/pq -
 TAGS_FILES = \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
+    ../pq/*.c ../pq/*.h \
+    ../server/*.c \
     ../rpc/*.c ../rpc/*.h
 
 EXTRA_DIST = \

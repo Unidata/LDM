@@ -67,6 +67,8 @@ lib_la_CPPFLAGS		= -I$(top_srcdir)/misc -I$(top_srcdir)/ulog -I$(top_srcdir)/pq 
 TAGS_FILES		= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
+    ../pq/*.c ../pq/*.h \
+    ../server/*.c \
     ../rpc/*.c ../rpc/*.h
 EXTRA_DIST		= \
     ldm.x \

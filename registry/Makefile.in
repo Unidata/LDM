@@ -40,7 +40,7 @@ build_triplet = @build@
 host_triplet = @host@
 @HAVE_CUNIT_TRUE@check_PROGRAMS = testRdb$(EXEEXT)
 @HAVE_CUNIT_TRUE@TESTS = testRdb$(EXEEXT)
-subdir = rdb
+subdir = registry
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
@@ -53,7 +53,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 lib_la_LIBADD =
-am_lib_la_OBJECTS = lib_la-rdblib.lo lib_la-backend-bdb.lo
+am_lib_la_OBJECTS = lib_la-stringBuf.lo
 lib_la_OBJECTS = $(am_lib_la_OBJECTS)
 testRdb_SOURCES = testRdb.c
 testRdb_OBJECTS = testRdb-testRdb.$(OBJEXT)
@@ -91,11 +91,7 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
-#bin_PROGRAMS		= rdbutil
-CPPFLAGS = \
-    -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)
-
+CPPFLAGS = @CPPFLAGS@
 CPPFLAGS_CUNIT = @CPPFLAGS_CUNIT@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
@@ -214,17 +210,18 @@ psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
-subdirs = @subdirs@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LTLIBRARIES = lib.la
-EXTRA_DIST = rdblib.h
-lib_la_SOURCES = rdblib.c backend-bdb.c
+EXTRA_DIST = registry.h backend.h stringBuf.h extractHeader
+#lib_la_SOURCES          = registry.c backend-bdb.c stringBuf.c
+lib_la_SOURCES = stringBuf.c
 lib_la_CPPFLAGS = \
     -I$(top_srcdir) \
+    -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
     -I/home/steve/Berkeley-DB/include
 
@@ -232,12 +229,12 @@ TAGS_FILES = \
     *.c *.h \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
+    $(top_srcdir)/protocol/*.c \
     /home/steve/Berkeley-DB/db-4.8.24.NC/env/*.c \
     /home/steve/Berkeley-DB/db-4.8.24.NC/os/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 
-LDADD = ../ulog/lib.la
 @HAVE_CUNIT_TRUE@testRdb_CPPFLAGS = \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/ulog \
 @HAVE_CUNIT_TRUE@    -I/home/steve/Berkeley-DB/include \
@@ -252,7 +249,7 @@ LDADD = ../ulog/lib.la
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .obj
+.SUFFIXES: .c .h .i .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -262,9 +259,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign rdb/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign registry/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign rdb/Makefile
+	  $(AUTOMAKE) --foreign registry/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -313,8 +310,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-backend-bdb.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-rdblib.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-stringBuf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testRdb-testRdb.Po@am__quote@
 
 .c.o:
@@ -341,19 +337,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-lib_la-rdblib.lo: rdblib.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-rdblib.lo -MD -MP -MF $(DEPDIR)/lib_la-rdblib.Tpo -c -o lib_la-rdblib.lo `test -f 'rdblib.c' || echo '$(srcdir)/'`rdblib.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-rdblib.Tpo $(DEPDIR)/lib_la-rdblib.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='rdblib.c' object='lib_la-rdblib.lo' libtool=yes @AMDEPBACKSLASH@
+lib_la-stringBuf.lo: stringBuf.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-stringBuf.lo -MD -MP -MF $(DEPDIR)/lib_la-stringBuf.Tpo -c -o lib_la-stringBuf.lo `test -f 'stringBuf.c' || echo '$(srcdir)/'`stringBuf.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-stringBuf.Tpo $(DEPDIR)/lib_la-stringBuf.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='stringBuf.c' object='lib_la-stringBuf.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-rdblib.lo `test -f 'rdblib.c' || echo '$(srcdir)/'`rdblib.c
-
-lib_la-backend-bdb.lo: backend-bdb.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-backend-bdb.lo -MD -MP -MF $(DEPDIR)/lib_la-backend-bdb.Tpo -c -o lib_la-backend-bdb.lo `test -f 'backend-bdb.c' || echo '$(srcdir)/'`backend-bdb.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-backend-bdb.Tpo $(DEPDIR)/lib_la-backend-bdb.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='backend-bdb.c' object='lib_la-backend-bdb.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-backend-bdb.lo `test -f 'backend-bdb.c' || echo '$(srcdir)/'`backend-bdb.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-stringBuf.lo `test -f 'stringBuf.c' || echo '$(srcdir)/'`stringBuf.c
 
 testRdb-testRdb.o: testRdb.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRdb_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testRdb-testRdb.o -MD -MP -MF $(DEPDIR)/testRdb-testRdb.Tpo -c -o testRdb-testRdb.o `test -f 'testRdb.c' || echo '$(srcdir)/'`testRdb.c
@@ -667,6 +656,32 @@ uninstall-am:
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am
 
+#bin_PROGRAMS		= rdbutil
+#CPPFLAGS	= \
+#    -I$(top_srcdir)/ulog \
+#    -I$(top_srcdir)
+#LDADD		= ../ulog/lib.la
+
+.c.h:
+	./extractHeader $*.h.in $< >$@.tmp
+	mv -f $@.tmp $@
+registry.h:	registry.h.in registry.c
+stringBuf.h:	stringBuf.h.in stringBuf.c
+backend.h:	backend.h.in backend.c
+backend.c:	backend-bdb.c
+	$(LN_S) backend-bdb.c $@
+#registry.h:	registry.h.in registry.c
+#	./extractHeader registry.h.in registry.c >$@.tmp
+#	mv -f $@.tmp $@
+#stringBuf.h:	stringBuf.h.in stringBuf.c
+#	./extractHeader stringBuf.h.in stringBuf.c >$@.tmp
+#	mv -f $@.tmp $@
+#backend.h:	backend.h.in backend.c
+#	./extractHeader backend.h.in backend.c >$@.tmp
+#	mv -f $@.tmp $@
+
+.c.i:
+	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
 @HAVE_CUNIT_TRUE@debug:		testRdb
 @HAVE_CUNIT_TRUE@	$(LIBTOOL) --mode=execute gdb testRdb

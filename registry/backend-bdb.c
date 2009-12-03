@@ -53,6 +53,53 @@ logDbError(
 }
 
 /*
+ * Copies a key/value pair from a backend cursor structure to an RDB cursor
+ * structure.
+ *
+ * ARGUMENTS:
+ *      rdbCursor       Pointer to the RDB cursor structure.
+ *      backend         Pointer to the backend cursor structure.
+ * RETURNS:
+ *      0               Success.  The backend cursor structure is set.
+ *      REG_SYS_ERROR   System error.  The backend cursor structure is
+ *                      unmodified.
+ */
+static RegStatus
+copyEntry(
+    RdbCursor*          rdbCursor,
+    BackCursor*         backCursor)
+{
+    RegStatus   status;
+    char*       key = strdup(backCursor->key.data);
+
+    if (NULL == key) {
+        status = REG_SYS_ERROR;
+    }
+    else {
+        char*       value = strdup(backCursor->value.data);
+
+        if (NULL == value) {
+            free(key);
+            status = REG_SYS_ERROR;
+        }
+        else {
+            free(rdbCursor->key);
+            free(rdbCursor->value);
+
+            rdbCursor->key = key;
+            rdbCursor->value = value;
+            status = 0;
+        }
+    }                                   /* "key" allocated */
+
+    return status;
+}
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
+/*
  * Opens the backend database.
  *
  * ARGUMENTS:
@@ -65,16 +112,16 @@ logDbError(
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.  "*backend" is set.
- *      RDB_SYSERR      System error.  "log_start()" called.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
+ *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 beOpen(
     Backend** const     backend,
     const char* const   path,
     int                 forWriting)
 {
-    RdbStatus   status;
+    RegStatus   status;
     Backend*    back = (Backend*)malloc(sizeof(Backend));
 
     assert(NULL != backend);
@@ -82,7 +129,7 @@ beOpen(
 
     if (NULL == back) {
         log_serror("Couldn't allocate %lu bytes", (long)sizeof(Backend));
-        status = RDB_SYSERR;
+        status = REG_SYS_ERROR;
     }
     else {
         DB_ENV* env;
@@ -90,7 +137,7 @@ beOpen(
         if (status = db_env_create(&env, 0)) {
             log_start("Couldn't create database environment: %s",
                 db_strerror(status));
-            status = RDB_DBERR;
+            status = REG_DB_ERROR;
         }
         else {
             env->set_errcall(env, logDbError);
@@ -102,14 +149,14 @@ beOpen(
             if (status = env->open(env, path,
                     DB_CREATE | DB_INIT_CDB | DB_INIT_MPOOL, 0)) {
                 log_add("Couldn't open database environment in \"%s\"", path);
-                status = RDB_DBERR;
+                status = REG_DB_ERROR;
             }
             else {
                 DB*     db;
 
                 if (status = db_create(&db, env, 0)) {
                     log_add("Couldn't create database");
-                    status = RDB_DBERR;
+                    status = REG_DB_ERROR;
                 }
                 else {
                     db->set_errcall(db, logDbError);
@@ -119,7 +166,7 @@ beOpen(
                         log_add("Couldn't open database \"%s\" in \"%s\" for "
                             "%s", DB_FILENAME, path,
                             forWriting ? "writing" : "reading");
-                        status = RDB_DBERR;
+                        status = REG_DB_ERROR;
                     }
                     else {
                         back->env = env;
@@ -165,13 +212,13 @@ beOpen(
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 beClose(
     Backend* const      backend)
 {
-    RdbStatus   status;
+    RegStatus   status;
     const char* path;
     DB_ENV*     env;
     DB*         db;
@@ -187,7 +234,7 @@ beClose(
     if (status) {
         (void)env->get_home(env, &path);
         log_add("Couldn't close backend database \"%s\"", path);
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
     else {
         backend->db = NULL;
@@ -196,7 +243,7 @@ beClose(
             (void)env->get_home(env, &path);
             log_add("Couldn't close environment of backend database \"%s\"",
                 path);
-            status = RDB_DBERR;
+            status = REG_DB_ERROR;
         }
         else {
             backend->env = NULL;
@@ -216,14 +263,14 @@ beClose(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      RDB_SYSERR      System error.  "log_start()" called.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
+ *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 beRemove(
     const char* const   path)
 {
-    RdbStatus   status;
+    RegStatus   status;
     DB_ENV*     env;
 
     assert(NULL != path);
@@ -231,19 +278,19 @@ beRemove(
     if (status = db_env_create(&env, 0)) {
         log_start("Couldn't create database environment: %s",
             db_strerror(status));
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
     else {
         env->set_errcall(env, logDbError);
 
         if (status = env->open(env, path, 0, 0)) {
             log_add("Couldn't open database environment in \"%s\"", path);
-            status = RDB_DBERR;
+            status = REG_DB_ERROR;
         }
         else {
             if (status = env->dbremove(env, NULL, DB_FILENAME, NULL, 0)) {
                 log_add("Couldn't open database environment in \"%s\"", path);
-                status = RDB_DBERR;
+                status = REG_DB_ERROR;
             }
             else {
                 /*
@@ -260,14 +307,14 @@ beRemove(
                     if (status = db_env_create(&env, 0)) {
                         log_start("Couldn't create database environment: %s",
                             db_strerror(status));
-                        status = RDB_DBERR;
+                        status = REG_DB_ERROR;
                     }
                     else {
                         env->set_errcall(env, logDbError);
 
                         if (status = env->remove(env, path, 0)) {
                             log_add("Couldn't remove database environment");
-                            status = RDB_DBERR;
+                            status = REG_DB_ERROR;
                         }
                         else {
                             env = NULL;
@@ -295,15 +342,15 @@ beRemove(
  *      value           Pointer to the string value.
  * RETURNS:
  *      0               Success.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 bePut(
-    Backend*            backend,
-    const char* const   key,
-    const char* const   value)
+    Backend*                    backend,
+    const char* const           key,
+    const StringBuf* const      value)
 {
-    RdbStatus   status;
+    RegStatus   status;
     DBT         keyDbt;
     DBT         valueDbt;
 
@@ -317,13 +364,13 @@ bePut(
 
     keyDbt.data = (void*)key;
     keyDbt.size = strlen(key) + 1;
-    valueDbt.data = (void*)value;
-    valueDbt.size = strlen(value) + 1;
+    valueDbt.data = (void*)sb_string(value);
+    valueDbt.size = sb_len(value) + 1;
 
     if (status = backend->db->put(backend->db, NULL, &keyDbt, &valueDbt,
             0)) {
         log_add("Couldn't map key \"%s\" to value \"%s\"", key, value);
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
     else {
         status = 0;
@@ -345,16 +392,16 @@ bePut(
  *                      "free(*value)" when the value is no longer needed.
  * RETURNS:
  *      0               Success.  "*value" points to the string value.
- *      RDB_NOENTRY     The given key doesn't match any entry.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
+ *      REG_NO_NODE     The given key doesn't match any entry.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 beGet(
     Backend*            backend,
     const char* const   key,
     char** const        value)
 {
-    RdbStatus   status;
+    RegStatus   status;
     DBT         keyDbt;
     DBT         valueDbt;
     DB*         db;
@@ -378,11 +425,11 @@ beGet(
         *value = (char*)valueDbt.data;
     }
     else if (DB_NOTFOUND == status) {
-        status = RDB_NOENTRY;
+        status = REG_NO_NODE;
     }
     else {
         log_add("Couldn't get value for key \"%s\"", key);
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
 
     return status;
@@ -397,15 +444,15 @@ beGet(
  *      key             Pointer to the 0-terminated key.
  * RETURNS:
  *      0               Success.  The entry associated with the key was deleted.
- *      RDB_NOENTRY     The given key doesn't match any entry.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
+ *      REG_NO_NODE     The given key doesn't match any entry.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 beDelete(
     Backend* const      backend,
     const char* const   key)
 {
-    RdbStatus   status;
+    RegStatus   status;
     DBT         keyDbt;
 
     assert(NULL != backend);
@@ -420,11 +467,11 @@ beDelete(
     status = backend->db->del(backend->db, NULL, &keyDbt, 0);
 
     if (DB_NOTFOUND == status) {
-        status = RDB_NOENTRY;
+        status = REG_NO_NODE;
     }
     else if (status) {
         log_add("Couldn't delete entry for key \"%s\"", key);
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
 
     return status;
@@ -438,67 +485,24 @@ beDelete(
  *                      "beOpen()".  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 beSync(
     Backend* const      backend)
 {
-    RdbStatus   status;
+    RegStatus   status;
 
     assert(NULL != backend);
     assert(NULL != backend->db);
 
     if (status = backend->db->sync(backend->db, 0)) {
         log_add("Couldn't sync() database");
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
     else {
         status = 0;                     /* success */
     }
-
-    return status;
-}
-
-/*
- * Copies a key/value pair from a backend cursor structure to an RDB cursor
- * structure.
- *
- * ARGUMENTS:
- *      rdbCursor       Pointer to the RDB cursor structure.
- *      backend         Pointer to the backend cursor structure.
- * RETURNS:
- *      0               Success.  The backend cursor structure is set.
- *      RDB_SYSERR      System error.  The backend cursor structure is
- *                      unmodified.
- */
-static RdbStatus
-copyEntry(
-    RdbCursor*          rdbCursor,
-    BackCursor*         backCursor)
-{
-    RdbStatus   status;
-    char*       key = strdup(backCursor->key.data);
-
-    if (NULL == key) {
-        status = RDB_SYSERR;
-    }
-    else {
-        char*       value = strdup(backCursor->value.data);
-
-        if (NULL == value) {
-            free(key);
-            status = RDB_SYSERR;
-        }
-        else {
-            free(rdbCursor->key);
-            free(rdbCursor->value);
-
-            rdbCursor->key = key;
-            rdbCursor->value = value;
-            status = 0;
-        }
-    }                                   /* "key" allocated */
 
     return status;
 }
@@ -515,15 +519,15 @@ copyEntry(
  *                      is no longer needed.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
- *      RDB_SYSERR      System error.  "log_start()" called.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      REG_SYS_ERROR   System error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 beInitCursor(
     Backend* const      backend,
     RdbCursor* const    rdbCursor)
 {
-    RdbStatus   status;
+    RegStatus   status;
     DBC*        dbCursor;
     DB_ENV*     env;
     DB*         db;
@@ -547,14 +551,14 @@ beInitCursor(
 
         (void)env->get_home(env, &path);
         log_add("Couldn't create cursor for database \"%s\"", path);
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
     else {
         BackCursor*  backCursor = (BackCursor*)malloc(sizeof(BackCursor));
 
         if (NULL == backCursor) {
             log_serror("Couldn't allocate %lu bytes", (long)sizeof(BackCursor));
-            status = RDB_SYSERR;
+            status = REG_SYS_ERROR;
         }
         else {
             (void)memset(&backCursor->key, 0, sizeof(DBT));
@@ -591,17 +595,17 @@ beInitCursor(
  *                      if it exists.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      RDB_DBERR       Backend database error.  "*rdbCursor" is unmodified.
+ *      REG_DB_ERROR    Backend database error.  "*rdbCursor" is unmodified.
  *                      "log_start()" called.
- *      RDB_NOENTRY     The database is empty.  "*rdbCursor" is unmodified.
- *      RDB_SYSERR      System error.  "log_start()" called.
+ *      REG_NO_NODE     The database is empty.  "*rdbCursor" is unmodified.
+ *      REG_SYS_ERROR   System error.  "log_start()" called.
  */
-RdbStatus
+RegStatus
 beFirstEntry(
     RdbCursor* const    rdbCursor,
     const char* const   key)
 {
-    RdbStatus           status;
+    RegStatus           status;
 
     assert(NULL != rdbCursor);
     assert(NULL != rdbCursor->private);
@@ -611,7 +615,7 @@ beFirstEntry(
 
     if (NULL == dupKey) {
         log_serror("Couldn't allocate %lu bytes", (long)strlen(key));
-        status = RDB_SYSERR;
+        status = REG_SYS_ERROR;
     }
     else {
         BackCursor*         backCursor = (BackCursor*)rdbCursor->private;
@@ -627,7 +631,7 @@ beFirstEntry(
             status = copyEntry(rdbCursor, backCursor);
         }
         else if (DB_NOTFOUND == status) {
-            status = RDB_NOENTRY;
+            status = REG_NO_NODE;
         }
         else {
             const char* path;
@@ -636,7 +640,7 @@ beFirstEntry(
             (void)env->get_home(env, &path);
             log_add("Couldn't set cursor for database \"%s\" to first entry on "
                 "or after key \"%s\"", path, key);
-            status = RDB_DBERR;
+            status = REG_DB_ERROR;
         }
     }                               /* "dupKey" allocated */
 
@@ -656,15 +660,15 @@ beFirstEntry(
  *                      strings to which they point.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      RDB_DBERR       Backend database error.  "*rdbCursor" is unmodified.
+ *      REG_DB_ERROR    Backend database error.  "*rdbCursor" is unmodified.
  *                      "log_start()" called.
- *      RDB_NOENTRY     The database is empty.  "*rdbCursor" is unmodified.
+ *      REG_NO_NODE     The database is empty.  "*rdbCursor" is unmodified.
  */
-RdbStatus
+RegStatus
 beNextEntry(
     RdbCursor* const    rdbCursor)
 {
-    RdbStatus   status;
+    RegStatus   status;
     BackCursor* backCursor;
     DBC*        dbCursor;
     DBT*        keyDbt;
@@ -684,7 +688,7 @@ beNextEntry(
         status = copyEntry(rdbCursor, backCursor);
     }
     else if (DB_NOTFOUND == status) {
-        status = RDB_NOENTRY;
+        status = REG_NO_NODE;
     }
     else {
         DB_ENV*         env = backCursor->backend->env;
@@ -693,7 +697,7 @@ beNextEntry(
         (void)env->get_home(env, &path);
         log_add("Couldn't advance cursor for database \"%s\" to next entry "
             "after key \"%s\"", path, rdbCursor->key);
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
 
     return status;
@@ -706,11 +710,11 @@ beNextEntry(
  *      rdbCursor       Pointer to the RDB cursor structure.
  * RETURNS:
  *      0               Success.  The client shall not use the cursor again.
- *      RDB_DBERR       Backend database error.  "log_start()" called.
+ *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
 beCloseCursor(RdbCursor* rdbCursor)
 {
-    RdbStatus           status;
+    RegStatus           status;
     BackCursor*         backCursor;
     DBC*                dbCursor;
 
@@ -727,7 +731,7 @@ beCloseCursor(RdbCursor* rdbCursor)
 
         (void)env->get_home(env, &path);
         log_add("Couldn't close cursor for database \"%s\"", path);
-        status = RDB_DBERR;
+        status = REG_DB_ERROR;
     }
 
     free(backCursor->key.data);

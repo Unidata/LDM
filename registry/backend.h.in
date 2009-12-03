@@ -1,0 +1,31 @@
+/*
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
+ *
+ *   This header-file defines the API for the backend database.
+ */
+
+#ifndef LDM_BACKEND_H
+#define LDM_BACKEND_H
+
+#include "registry.h"
+#include "stringBuf.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct backend  Backend;
+
+typedef struct {
+    char*       key;            /* responsibility of backend database */
+    char*       value;          /* responsibility of backend database */
+    void*       private;        /* responsibility of backend database */
+}       RdbCursor;
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

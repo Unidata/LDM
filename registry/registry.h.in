@@ -1,0 +1,53 @@
+/*
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
+ *
+ *   This header-file specifies the API for the registry.
+ *   The methods of this module are thread-compatible but not thread-safe.
+ *
+ *   The registry comprises a directed acyclic graph of nodes.  Each node is
+ *   either a map-node or a value-node.  A value-node comprises a value; a
+ *   map-node comprises a mapping from names to nodes.
+ */
+/* Apparently, the macro REGISTRY_H is defined by the compilation system */
+#ifndef LDM_REGISTRY_H
+#define LDM_REGISTRY_H
+
+#include <timestamp.h>
+#include <ldm.h>
+
+#define REG_MAX_LATENCY "maximum latency"
+#define REG_SEP         "/"
+#define REG_LDMD        "ldmd"
+#define REG_DEFAULT     "default"
+
+typedef enum {
+    REG_NO_NODE,
+    REG_NO_VALUE,
+    REG_BAD_ARG,
+    REG_WRONG_TYPE,
+    REG_SYS_ERROR,
+    REG_DB_ERROR
+}       RegStatus;
+
+typedef enum {
+    REG_MAP,
+    REG_VALUE_STRING,
+    REG_VALUE_UINT,
+    REG_VALUE_TIME,
+    REG_VALUE_SIGNATURE
+}       RegNodeType;
+
+typedef struct regNode          RegNode;
+typedef struct regCursor        RegCursor;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

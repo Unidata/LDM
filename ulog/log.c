@@ -70,7 +70,6 @@ static void log_close(void)
 
         head = NULL;
         next = &head;
-        initialized = 0;
     }
 }
 
@@ -82,7 +81,7 @@ static void log_init(void)
 {
     if (!initialized) {
         if (atexit(log_close))
-            serror("log_init(): Couldn't initialize module: %s",
+            serror("log_init(): Couldn't register atexit(3) routine: %s",
                 strerror(errno));
         initialized = 1;
     }

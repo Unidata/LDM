@@ -187,6 +187,9 @@ AM_COND_IF([MAINTAINER], [LDMHOME=$prefix])
 AC_MSG_RESULT([$LDMHOME])
 sysconfdir=$LDMHOME/etc
 
+AC_DEFINE_UNQUOTED([REGISTRY_PATH], ["$sysconfdir/registry"],
+    [Pathname of the registry directory])
+
 AC_SUBST(ARFLAGS)
 AC_REVISION ($Revision: 1.47.18.22 $)
 UD_HPUX
@@ -313,7 +316,7 @@ AC_CONFIG_FILES([
     notifyme/Makefile
     server/Makefile
     ldmping/Makefile
-    rdb/Makefile
+    registry/Makefile
     scripts/Makefile
     scripts/ldmadmin
     scripts/writeConfiguration.pl
@@ -332,6 +335,6 @@ AC_CONFIG_FILES([
     test/Makefile
 ])
 
-AC_CONFIG_SUBDIRS([rdb/tokyocabinet])
+#AC_CONFIG_SUBDIRS([rdb/tokyocabinet])
 
 AC_OUTPUT

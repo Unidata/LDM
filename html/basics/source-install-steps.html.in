@@ -104,9 +104,10 @@ gunzip -c $HOME/@PACKAGE@-@VERSION@.tar.gz | pax -r         # unpack the distrib
 mv @PACKAGE@-@VERSION@ src                                  # rename the source directory
 </pre></blockquote>
 
-<p>The reason for creating the additional <code>src/</code> subdirectory will
-become apparent when the installation is activated.  Basically, it's to allow
-multiple LDM versions to be installed while using only one.
+<p>The reason for creating the additional <code>src/</code> subdirectory is
+to allow for reversible upgrading of the LDM.  The section on
+<a href="activating.html">activating the LDM installation</a>
+has additional information.
 
 <li>
 <a NAME="build"></a>

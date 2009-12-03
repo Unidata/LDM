@@ -17,7 +17,7 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 
 SUBDIRS	= \
-    rdb \
+    registry \
     rpc \
     ulog \
     misc \

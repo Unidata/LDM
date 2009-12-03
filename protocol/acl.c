@@ -1175,7 +1175,7 @@ static int
 getPreviousProdInfo(
     const char* const           upId,
     const unsigned              port,
-    const prod_class_t* const     prodClass,
+    const prod_class_t* const   prodClass,
     prod_info* const            info)
 
 {
@@ -1351,7 +1351,7 @@ initSavedInfo(
     const char* const           upId,
     const unsigned              port,
     const char* const           pqPath,
-    const prod_class_t* const     prodClass)
+    const prod_class_t* const   prodClass)
 {
     int         status;
     prod_info*  info = pi_new();
@@ -1435,7 +1435,7 @@ static void
 prog_requester(
     const char*         source,
     const unsigned      port,
-    prod_class_t*         clssp,
+    prod_class_t*       clssp,
     int                 isPrimary,
     const unsigned      hostCount)
 {
@@ -1529,9 +1529,18 @@ prog_requester(
                                 : "primary"),
                     ERR_NOTICE);
 
+                /*
+                 * NB: If the slection-criteria is modified at this point by
+                 * taking into account the most-recently received data-product
+                 * by any *other* downstream LDM processes (e.g. by calling
+                 * getQueueProdInfo()), then bad things could happen.  For
+                 * example, imagine getting NEXRAD Level-II data from both the
+                 * Eastern and Western HQs (same data but disjoint sets).
+                 */
+
                 isPrimary = !isPrimary;
-                sleepAmount = 0;/* immediate retry */
-            }                       /* req6_new() success */
+                sleepAmount = 0;        /* immediate retry */
+            }                           /* req6_new() success */
             else {
                 errCode = err_code(errObj);
 
@@ -1666,7 +1675,7 @@ static pid_t
 run_requester(
     const char*         hostId,
     const unsigned      port,
-    prod_class_t*         clssp,
+    prod_class_t*       clssp,
     const int           isPrimary,
     const unsigned      hostCount)
 {
@@ -1711,7 +1720,7 @@ run_requester(
 static requester*
 new_requester(
     const RemoteLocation*       remoteLocation,
-    prod_class_t*                 clssp,
+    prod_class_t*               clssp,
     const int                   isPrimary,
     const unsigned              hostCount)
 {
@@ -1774,7 +1783,7 @@ static requester *requesters;
 static int
 requester_add(
     const RemoteLocation*       remoteLocation,
-    prod_class_t*                 clssp,
+    prod_class_t*               clssp,
     const int                   isPrimary,
     unsigned                    hostCount)
 {
