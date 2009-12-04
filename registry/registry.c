@@ -77,6 +77,7 @@ typedef struct {
     Formatter   format;
 }       TypeStruct;
 
+static char*                    _registryPath = REGISTRY_PATH;
 static int                      _initialized;   /* Module is initialized? */
 static Backend*                 _backend;       /* backend database */
 static int                      _forWriting;    /* registry open for writing? */
@@ -113,7 +114,7 @@ static int isAbsolutePath(const char* const path)
  *                      "free(*clone)" when the clone is no longer needed.
  *      src             The string to clone.  Shall not be NULL.
  * RETURNS:
- *      0               Success
+ *      0               Success.  "*clone" is not NULL.
  *      REG_SYS_ERROR   System error.  "log_start()" called.
  */
 static RegStatus cloneString(
@@ -479,7 +480,8 @@ static const TypeStruct  signatureStruct =
  *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  *      REG_SYS_ERROR   System error.  "log_start()" called.
  */
-static RegStatus initRegistry(const int forWriting)
+static RegStatus initRegistry(
+    const int   forWriting)
 {
    RegStatus   status = 0;             /* success */
 
@@ -523,7 +525,7 @@ static RegStatus initRegistry(const int forWriting)
 
        if (!status && NULL == _backend) {
            /* The backend isn't open. */
-           if (0 == (status = beOpen(&_backend, REGISTRY_PATH, forWriting))) {
+           if (0 == (status = beOpen(&_backend, _registryPath, forWriting))) {
                _forWriting = forWriting;
            }                           /* "_backend" allocated and open */
        }                               /* backend database not open */
@@ -600,7 +602,7 @@ static RegStatus get(
     const char*         path,
     void*               value,
     const TypeStruct*   typeStruct,
-    const void*         defaultValue)
+    const void* const   defaultValue)
 {
     RegStatus   status;
 
@@ -654,8 +656,46 @@ static RegStatus put(
 }
 
 /******************************************************************************
-  * Public API:
-  ******************************************************************************/
+ * Public API:
+ ******************************************************************************/
+
+/*
+ * Sets the pathname of the registry.  To have an effect, this function must be
+ * called before any function that access the registry.
+ *
+ * Arguments:
+ *      path            Pointer to the pathname of the registry.  May be NULL.
+ *                      If NULL, then the default pathname is used.  The client
+ *                      may free upon return.
+ * Returns:
+ *      0               Success
+ *      REG_SYS_ERROR   System error.  "log_start()" called.
+ */
+RegStatus       reg_setPathname(
+    const char* const   path)
+{
+    RegStatus   status;
+
+    if (NULL == path) {
+        _registryPath = REGISTRY_PATH;
+        status = 0;
+    }
+    else {
+        const char*     clone;
+
+        if (0 != (status = cloneString(&clone, path))) {
+            log_add("Couldn't copy new registry pathname");
+        }
+        else {
+            if (REGISTRY_PATH != _registryPath)
+                free(_registryPath);
+
+            _registryPath = clone;
+        }
+    }
+
+    return status;
+}
 
 /*
  * Creates the registry if it doesn't already exist.
@@ -793,9 +833,9 @@ RegStatus       reg_getTime(
  *      REG_SYS_ERROR   System error.  "log_start()" called.
  */
 RegStatus       reg_getSignature(
-    const char*         path,
-    signaturet*         value,
-    const signaturet*   defaultValue)
+    const char*                 path,
+    signaturet*                 value,
+    const signaturet* const     defaultValue)
 {
     return get(path, value, &signatureStruct, defaultValue);
 }
