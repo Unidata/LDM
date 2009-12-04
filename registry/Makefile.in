@@ -38,8 +38,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@HAVE_CUNIT_TRUE@check_PROGRAMS = testRdb$(EXEEXT)
-@HAVE_CUNIT_TRUE@TESTS = testRdb$(EXEEXT)
+@HAVE_CUNIT_TRUE@check_PROGRAMS = testRegistry$(EXEEXT)
+@HAVE_CUNIT_TRUE@TESTS = testRegistry$(EXEEXT)
 subdir = registry
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -53,11 +53,12 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 lib_la_LIBADD =
-am_lib_la_OBJECTS = lib_la-stringBuf.lo
+am_lib_la_OBJECTS = lib_la-stringBuf.lo lib_la-registry.lo \
+	lib_la-backend.lo
 lib_la_OBJECTS = $(am_lib_la_OBJECTS)
-testRdb_SOURCES = testRdb.c
-testRdb_OBJECTS = testRdb-testRdb.$(OBJEXT)
-@HAVE_CUNIT_TRUE@testRdb_DEPENDENCIES = lib.la \
+testRegistry_SOURCES = testRegistry.c
+testRegistry_OBJECTS = testRegistry-testRegistry.$(OBJEXT)
+@HAVE_CUNIT_TRUE@testRegistry_DEPENDENCIES = lib.la \
 @HAVE_CUNIT_TRUE@	$(top_builddir)/ulog/lib.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -72,8 +73,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(lib_la_SOURCES) testRdb.c
-DIST_SOURCES = $(lib_la_SOURCES) testRdb.c
+SOURCES = $(lib_la_SOURCES) testRegistry.c
+DIST_SOURCES = $(lib_la_SOURCES) testRegistry.c
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -218,7 +219,7 @@ top_srcdir = @top_srcdir@
 noinst_LTLIBRARIES = lib.la
 EXTRA_DIST = registry.h backend.h stringBuf.h extractHeader
 #lib_la_SOURCES          = registry.c backend-bdb.c stringBuf.c
-lib_la_SOURCES = stringBuf.c
+lib_la_SOURCES = stringBuf.c registry.c backend.c
 lib_la_CPPFLAGS = \
     -I$(top_srcdir) \
     -I$(top_srcdir)/protocol \
@@ -235,12 +236,13 @@ TAGS_FILES = \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 
-@HAVE_CUNIT_TRUE@testRdb_CPPFLAGS = \
+@HAVE_CUNIT_TRUE@testRegistry_CPPFLAGS = \
+@HAVE_CUNIT_TRUE@    -I$(top_srcdir)/protocol \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/ulog \
 @HAVE_CUNIT_TRUE@    -I/home/steve/Berkeley-DB/include \
 @HAVE_CUNIT_TRUE@    @CPPFLAGS_CUNIT@
 
-@HAVE_CUNIT_TRUE@testRdb_LDADD = \
+@HAVE_CUNIT_TRUE@testRegistry_LDADD = \
 @HAVE_CUNIT_TRUE@    lib.la \
 @HAVE_CUNIT_TRUE@    $(top_builddir)/ulog/lib.la \
 @HAVE_CUNIT_TRUE@    -L/home/steve/Berkeley-DB/lib -ldb \
@@ -300,9 +302,9 @@ clean-checkPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
-testRdb$(EXEEXT): $(testRdb_OBJECTS) $(testRdb_DEPENDENCIES) 
-	@rm -f testRdb$(EXEEXT)
-	$(LINK) $(testRdb_OBJECTS) $(testRdb_LDADD) $(LIBS)
+testRegistry$(EXEEXT): $(testRegistry_OBJECTS) $(testRegistry_DEPENDENCIES) 
+	@rm -f testRegistry$(EXEEXT)
+	$(LINK) $(testRegistry_OBJECTS) $(testRegistry_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -310,8 +312,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-backend.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-registry.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-stringBuf.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testRdb-testRdb.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testRegistry-testRegistry.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -344,19 +348,33 @@ lib_la-stringBuf.lo: stringBuf.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-stringBuf.lo `test -f 'stringBuf.c' || echo '$(srcdir)/'`stringBuf.c
 
-testRdb-testRdb.o: testRdb.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRdb_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testRdb-testRdb.o -MD -MP -MF $(DEPDIR)/testRdb-testRdb.Tpo -c -o testRdb-testRdb.o `test -f 'testRdb.c' || echo '$(srcdir)/'`testRdb.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/testRdb-testRdb.Tpo $(DEPDIR)/testRdb-testRdb.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='testRdb.c' object='testRdb-testRdb.o' libtool=no @AMDEPBACKSLASH@
+lib_la-registry.lo: registry.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-registry.lo -MD -MP -MF $(DEPDIR)/lib_la-registry.Tpo -c -o lib_la-registry.lo `test -f 'registry.c' || echo '$(srcdir)/'`registry.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-registry.Tpo $(DEPDIR)/lib_la-registry.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='registry.c' object='lib_la-registry.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRdb_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testRdb-testRdb.o `test -f 'testRdb.c' || echo '$(srcdir)/'`testRdb.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-registry.lo `test -f 'registry.c' || echo '$(srcdir)/'`registry.c
 
-testRdb-testRdb.obj: testRdb.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRdb_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testRdb-testRdb.obj -MD -MP -MF $(DEPDIR)/testRdb-testRdb.Tpo -c -o testRdb-testRdb.obj `if test -f 'testRdb.c'; then $(CYGPATH_W) 'testRdb.c'; else $(CYGPATH_W) '$(srcdir)/testRdb.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/testRdb-testRdb.Tpo $(DEPDIR)/testRdb-testRdb.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='testRdb.c' object='testRdb-testRdb.obj' libtool=no @AMDEPBACKSLASH@
+lib_la-backend.lo: backend.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-backend.lo -MD -MP -MF $(DEPDIR)/lib_la-backend.Tpo -c -o lib_la-backend.lo `test -f 'backend.c' || echo '$(srcdir)/'`backend.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-backend.Tpo $(DEPDIR)/lib_la-backend.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='backend.c' object='lib_la-backend.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRdb_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testRdb-testRdb.obj `if test -f 'testRdb.c'; then $(CYGPATH_W) 'testRdb.c'; else $(CYGPATH_W) '$(srcdir)/testRdb.c'; fi`
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-backend.lo `test -f 'backend.c' || echo '$(srcdir)/'`backend.c
+
+testRegistry-testRegistry.o: testRegistry.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRegistry_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testRegistry-testRegistry.o -MD -MP -MF $(DEPDIR)/testRegistry-testRegistry.Tpo -c -o testRegistry-testRegistry.o `test -f 'testRegistry.c' || echo '$(srcdir)/'`testRegistry.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/testRegistry-testRegistry.Tpo $(DEPDIR)/testRegistry-testRegistry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='testRegistry.c' object='testRegistry-testRegistry.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRegistry_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testRegistry-testRegistry.o `test -f 'testRegistry.c' || echo '$(srcdir)/'`testRegistry.c
+
+testRegistry-testRegistry.obj: testRegistry.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRegistry_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testRegistry-testRegistry.obj -MD -MP -MF $(DEPDIR)/testRegistry-testRegistry.Tpo -c -o testRegistry-testRegistry.obj `if test -f 'testRegistry.c'; then $(CYGPATH_W) 'testRegistry.c'; else $(CYGPATH_W) '$(srcdir)/testRegistry.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/testRegistry-testRegistry.Tpo $(DEPDIR)/testRegistry-testRegistry.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='testRegistry.c' object='testRegistry-testRegistry.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRegistry_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testRegistry-testRegistry.obj `if test -f 'testRegistry.c'; then $(CYGPATH_W) 'testRegistry.c'; else $(CYGPATH_W) '$(srcdir)/testRegistry.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -670,25 +688,16 @@ stringBuf.h:	stringBuf.h.in stringBuf.c
 backend.h:	backend.h.in backend.c
 backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
-#registry.h:	registry.h.in registry.c
-#	./extractHeader registry.h.in registry.c >$@.tmp
-#	mv -f $@.tmp $@
-#stringBuf.h:	stringBuf.h.in stringBuf.c
-#	./extractHeader stringBuf.h.in stringBuf.c >$@.tmp
-#	mv -f $@.tmp $@
-#backend.h:	backend.h.in backend.c
-#	./extractHeader backend.h.in backend.c >$@.tmp
-#	mv -f $@.tmp $@
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
-@HAVE_CUNIT_TRUE@debug:		testRdb
-@HAVE_CUNIT_TRUE@	$(LIBTOOL) --mode=execute gdb testRdb
+@HAVE_CUNIT_TRUE@debug:		testRegistry
+@HAVE_CUNIT_TRUE@	$(LIBTOOL) --mode=execute gdb testRegistry
 
-@HAVE_CUNIT_TRUE@valgrind:	testRdb
+@HAVE_CUNIT_TRUE@valgrind:	testRegistry
 @HAVE_CUNIT_TRUE@	$(LIBTOOL) --mode=execute valgrind --leak-check=full \
-@HAVE_CUNIT_TRUE@	    --show-reachable=yes ./testRdb
+@HAVE_CUNIT_TRUE@	    --show-reachable=yes ./testRegistry
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

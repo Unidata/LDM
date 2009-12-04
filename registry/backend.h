@@ -220,6 +220,7 @@ beNextEntry(
  *      0               Success.  The client shall not use the cursor again.
  *      REG_DB_ERROR    Backend database error.  "log_start()" called.
  */
+RegStatus
 beCloseCursor(RdbCursor* rdbCursor);
 
 #ifdef __cplusplus

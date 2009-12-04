@@ -7,6 +7,8 @@
  */
 #include <config.h>
 
+#undef NDEBUG
+#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,7 +84,7 @@ static int                      _initialized;   /* Module is initialized? */
 static Backend*                 _backend;       /* backend database */
 static int                      _forWriting;    /* registry open for writing? */
 static StringBuf*               _pathBuf;       /* buffer for creating paths */
-static StringBuf                _formatBuf;     /* values-formatting buffer */
+static StringBuf*               _formatBuf;     /* values-formatting buffer */
 static const TypeStruct*        _typeStructs[REG_TYPECOUNT];
 
 /******************************************************************************
@@ -171,8 +173,8 @@ static RegStatus makeDefaultPath(
        status = REG_BAD_ARG;
    }
    else if (0 == (status = sb_set(strBuf, path, NULL))) {
-       if (0 == (status = sb_trim((size_t)(lastSep - path))))
-           status = sb_cat(strBuf, REG_SEP, REG_DEFAULT, NULL);
+       sb_trim(strBuf, (size_t)(lastSep - path));
+       status = sb_cat(strBuf, REG_SEP, REG_DEFAULT, NULL);
    }
 
    if (status)
@@ -376,7 +378,7 @@ static RegStatus formatTime(
     const void* const   value,
     StringBuf* const    strBuf)
 {
-    return sb_set(strBuf, tsFormat((const timestampt*)value, NULL));
+    return sb_set(strBuf, tsFormat((const timestampt*)value));
 }
 
 /*
@@ -443,7 +445,8 @@ static RegStatus formatSignature(
     const void* const   value,
     StringBuf* const    strBuf)
 {
-    return sb_set(strBuf, s_signaturet(NULL, 0, (const signaturet)value), NULL);
+    return sb_set(strBuf, s_signaturet(NULL, 0, *(const signaturet*)value),
+        NULL);
 }
 
 /*
@@ -612,7 +615,7 @@ static RegStatus get(
         if (REG_NO_VALUE == (status = getX(path, typeStruct->parse, value))) {
             const char*     defaultPath;
 
-            if (REG_BAD_ARG == (status = makeDefaultPath(path, &_pathBuf))) {
+            if (REG_BAD_ARG == (status = makeDefaultPath(path, _pathBuf))) {
                 /* Can't make a "default" path */
                 status = typeStruct->setDefault(value, defaultValue);
             }
@@ -648,8 +651,8 @@ static RegStatus put(
     RegStatus   status = initRegistry(1);
 
     if (0 == status) {
-        if (0 == (status = typeStruct->format(value, &_formatBuf)))
-            status = bePut(_backend, path, &_formatBuf);
+        if (0 == (status = typeStruct->format(value, _formatBuf)))
+            status = bePut(_backend, path, _formatBuf);
     }
 
     return status;
@@ -681,7 +684,7 @@ RegStatus       reg_setPathname(
         status = 0;
     }
     else {
-        const char*     clone;
+        char*   clone;
 
         if (0 != (status = cloneString(&clone, path))) {
             log_add("Couldn't copy new registry pathname");
@@ -698,19 +701,6 @@ RegStatus       reg_setPathname(
 }
 
 /*
- * Creates the registry if it doesn't already exist.
- *
- * Returns:
- *      0               Success
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- */
-RegStatus       reg_create(void)
-{
-    return 0;
-}
-
-/*
  * Removes the registry if it exists.  Upon successful return, attempts to
  * access the registry will fail.
  *
@@ -721,7 +711,7 @@ RegStatus       reg_create(void)
  */
 RegStatus       reg_remove(void)
 {
-    return 0;
+    return beRemove(_registryPath);
 }
 
 /*
@@ -1036,7 +1026,6 @@ const char*     regNode_absolutePath(RegNode* node)
  */
 void            regNode_free(RegNode* node)
 {
-    return 0;
 }
 
 /*
