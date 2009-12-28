@@ -285,13 +285,15 @@ tsParse(
     else {
         struct tm           tm;
 
+        tzset();
+
         tm.tm_isdst = 0;
         tm.tm_year = year - 1900;
         tm.tm_mon = month - 1;
         tm.tm_mday = day;
         tm.tm_hour = hour;
         tm.tm_min = minute;
-        tm.tm_sec = second;
+        tm.tm_sec = second - timezone;
         timestamp->tv_sec = mktime(&tm);
         timestamp->tv_usec = microseconds;
         nbytes = 22;
