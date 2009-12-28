@@ -17,6 +17,7 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 
 SUBDIRS	= \
+    Berkeley-DB/build_unix \
     registry \
     rpc \
     ulog \
@@ -46,6 +47,8 @@ SUBDIRS	= \
     html
 
 DIST_SUBDIRS		= \
+    Berkeley-DB/build_unix \
+    registry \
     rpc \
     ulog \
     misc \

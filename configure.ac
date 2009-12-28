@@ -13,7 +13,8 @@ AC_CONFIG_HEADERS([config.h])
 #AC_DEFINE([_POSIX_C_SOURCE], [1], [Level of POSIX compliance])
 AC_DEFINE([_XOPEN_SOURCE], [500], [Level of POSIX compliance])
 AC_DEFINE([_XOPEN_SOURCE_EXTENDED], [1], [Additional POSIX functionality])
-AC_USE_SYSTEM_EXTENSIONS
+AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
+#AC_USE_SYSTEM_EXTENSIONS
 
 AM_CONDITIONAL([MAINTAINER],
     [test "$USER" = steve && test $PWD = /home/steve/ldm/package/src &&
@@ -335,6 +336,7 @@ AC_CONFIG_FILES([
     test/Makefile
 ])
 
-#AC_CONFIG_SUBDIRS([rdb/tokyocabinet])
+#AC_CONFIG_SUBDIRS([registry/db])
+(cd Berkeley-DB/build_unix && ../dist/configure --prefix=$prefix --enable-smallbuild)
 
 AC_OUTPUT
