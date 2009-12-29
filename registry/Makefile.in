@@ -19,6 +19,7 @@
 #
 # Process this file with automake to produce Makefile.in
 
+
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
@@ -38,8 +39,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+bin_PROGRAMS = regutil$(EXEEXT)
 @HAVE_CUNIT_TRUE@check_PROGRAMS = testRegistry$(EXEEXT)
-@HAVE_CUNIT_TRUE@TESTS = testRegistry$(EXEEXT)
 subdir = registry
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -53,13 +54,22 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 lib_la_LIBADD =
-am_lib_la_OBJECTS = lib_la-stringBuf.lo lib_la-registry.lo \
-	lib_la-backend.lo
+am_lib_la_OBJECTS = backend.lo misc.lo node.lo registry.lo \
+	stringBuf.lo
 lib_la_OBJECTS = $(am_lib_la_OBJECTS)
+am__installdirs = "$(DESTDIR)$(bindir)"
+PROGRAMS = $(bin_PROGRAMS)
+regutil_SOURCES = regutil.c
+regutil_OBJECTS = regutil.$(OBJEXT)
+regutil_LDADD = $(LDADD)
+regutil_DEPENDENCIES = lib.la ../protocol/lib.la ../rpc/lib.la \
+	../ulog/lib.la
 testRegistry_SOURCES = testRegistry.c
 testRegistry_OBJECTS = testRegistry-testRegistry.$(OBJEXT)
 @HAVE_CUNIT_TRUE@testRegistry_DEPENDENCIES = lib.la \
-@HAVE_CUNIT_TRUE@	$(top_builddir)/ulog/lib.la
+@HAVE_CUNIT_TRUE@	$(top_builddir)/protocol/lib.la \
+@HAVE_CUNIT_TRUE@	$(top_builddir)/ulog/lib.la \
+@HAVE_CUNIT_TRUE@	$(top_builddir)/rpc/lib.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -73,8 +83,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(lib_la_SOURCES) testRegistry.c
-DIST_SOURCES = $(lib_la_SOURCES) testRegistry.c
+SOURCES = $(lib_la_SOURCES) regutil.c testRegistry.c
+DIST_SOURCES = $(lib_la_SOURCES) regutil.c testRegistry.c
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -92,7 +102,12 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
-CPPFLAGS = @CPPFLAGS@
+CPPFLAGS = \
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/Berkeley-DB/build_unix
+
 CPPFLAGS_CUNIT = @CPPFLAGS_CUNIT@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
@@ -217,41 +232,65 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LTLIBRARIES = lib.la
-EXTRA_DIST = registry.h backend.h stringBuf.h extractHeader
-#lib_la_SOURCES          = registry.c backend-bdb.c stringBuf.c
-lib_la_SOURCES = stringBuf.c registry.c backend.c
-lib_la_CPPFLAGS = \
-    -I$(top_srcdir) \
-    -I$(top_srcdir)/protocol \
-    -I$(top_srcdir)/ulog \
-    -I/home/steve/Berkeley-DB/include
+EXTRA_DIST = \
+    backend.hin \
+    extractHeader \
+    misc.hin \
+    node.hin \
+    registry.hin \
+    stringBuf.hin
+
+BUILT_SOURCES = \
+    backend.c backend.h \
+    misc.h \
+    node.h \
+    registry.h \
+    stringBuf.h
+
+lib_la_SOURCES = \
+    backend.c \
+    misc.c \
+    node.c \
+    registry.c \
+    stringBuf.c
 
 TAGS_FILES = \
     *.c *.h \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/protocol/*.c \
-    /home/steve/Berkeley-DB/db-4.8.24.NC/env/*.c \
-    /home/steve/Berkeley-DB/db-4.8.24.NC/os/*.c \
+    $(top_srcdir)/Berkeley-DB/env/*.c \
+    $(top_srcdir)/Berkeley-DB/os/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
+
+LDADD = \
+    lib.la \
+    ../protocol/lib.la \
+    ../rpc/lib.la \
+    ../ulog/lib.la \
+    -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8
 
 @HAVE_CUNIT_TRUE@testRegistry_CPPFLAGS = \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/protocol \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/ulog \
-@HAVE_CUNIT_TRUE@    -I/home/steve/Berkeley-DB/include \
+@HAVE_CUNIT_TRUE@    -I$(top_builddir)/Berkeley-DB/build_unix \
 @HAVE_CUNIT_TRUE@    @CPPFLAGS_CUNIT@
 
 @HAVE_CUNIT_TRUE@testRegistry_LDADD = \
 @HAVE_CUNIT_TRUE@    lib.la \
+@HAVE_CUNIT_TRUE@    $(top_builddir)/protocol/lib.la \
 @HAVE_CUNIT_TRUE@    $(top_builddir)/ulog/lib.la \
-@HAVE_CUNIT_TRUE@    -L/home/steve/Berkeley-DB/lib -ldb \
+@HAVE_CUNIT_TRUE@    $(top_builddir)/rpc/lib.la \
+@HAVE_CUNIT_TRUE@    -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8 \
 @HAVE_CUNIT_TRUE@    @LIBS_CUNIT@
 
-all: all-am
+@HAVE_CUNIT_TRUE@TESTS = checkRegistry
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .h .i .lo .o .obj
+.SUFFIXES: .c .h .hin .i .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -293,6 +332,49 @@ clean-noinstLTLIBRARIES:
 	done
 lib.la: $(lib_la_OBJECTS) $(lib_la_DEPENDENCIES) 
 	$(LINK)  $(lib_la_OBJECTS) $(lib_la_LIBADD) $(LIBS)
+install-binPROGRAMS: $(bin_PROGRAMS)
+	@$(NORMAL_INSTALL)
+	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
+	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
+	for p in $$list; do echo "$$p $$p"; done | \
+	sed 's/$(EXEEXT)$$//' | \
+	while read p p1; do if test -f $$p || test -f $$p1; \
+	  then echo "$$p"; echo "$$p"; else :; fi; \
+	done | \
+	sed -e 'p;s,.*/,,;n;h' -e 's|.*|.|' \
+	    -e 'p;x;s,.*/,,;s/$(EXEEXT)$$//;$(transform);s/$$/$(EXEEXT)/' | \
+	sed 'N;N;N;s,\n, ,g' | \
+	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1 } \
+	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
+	    if ($$2 == $$4) files[d] = files[d] " " $$1; \
+	    else { print "f", $$3 "/" $$4, $$1; } } \
+	  END { for (d in files) print "f", d, files[d] }' | \
+	while read type dir files; do \
+	    if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
+	    test -z "$$files" || { \
+	    echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(bindir)$$dir'"; \
+	    $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
+	    } \
+	; done
+
+uninstall-binPROGRAMS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
+	files=`for p in $$list; do echo "$$p"; done | \
+	  sed -e 'h;s,^.*/,,;s/$(EXEEXT)$$//;$(transform)' \
+	      -e 's/$$/$(EXEEXT)/' `; \
+	test -n "$$list" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(bindir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(bindir)" && rm -f $$files
+
+clean-binPROGRAMS:
+	@list='$(bin_PROGRAMS)'; test -n "$$list" || exit 0; \
+	echo " rm -f" $$list; \
+	rm -f $$list || exit $$?; \
+	test -n "$(EXEEXT)" || exit 0; \
+	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
+	echo " rm -f" $$list; \
+	rm -f $$list
 
 clean-checkPROGRAMS:
 	@list='$(check_PROGRAMS)'; test -n "$$list" || exit 0; \
@@ -302,6 +384,9 @@ clean-checkPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+regutil$(EXEEXT): $(regutil_OBJECTS) $(regutil_DEPENDENCIES) 
+	@rm -f regutil$(EXEEXT)
+	$(LINK) $(regutil_OBJECTS) $(regutil_LDADD) $(LIBS)
 testRegistry$(EXEEXT): $(testRegistry_OBJECTS) $(testRegistry_DEPENDENCIES) 
 	@rm -f testRegistry$(EXEEXT)
 	$(LINK) $(testRegistry_OBJECTS) $(testRegistry_LDADD) $(LIBS)
@@ -312,9 +397,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-backend.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-registry.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-stringBuf.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/backend.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/misc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/node.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/registry.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regutil.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stringBuf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testRegistry-testRegistry.Po@am__quote@
 
 .c.o:
@@ -340,27 +428,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
-
-lib_la-stringBuf.lo: stringBuf.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-stringBuf.lo -MD -MP -MF $(DEPDIR)/lib_la-stringBuf.Tpo -c -o lib_la-stringBuf.lo `test -f 'stringBuf.c' || echo '$(srcdir)/'`stringBuf.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-stringBuf.Tpo $(DEPDIR)/lib_la-stringBuf.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='stringBuf.c' object='lib_la-stringBuf.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-stringBuf.lo `test -f 'stringBuf.c' || echo '$(srcdir)/'`stringBuf.c
-
-lib_la-registry.lo: registry.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-registry.lo -MD -MP -MF $(DEPDIR)/lib_la-registry.Tpo -c -o lib_la-registry.lo `test -f 'registry.c' || echo '$(srcdir)/'`registry.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-registry.Tpo $(DEPDIR)/lib_la-registry.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='registry.c' object='lib_la-registry.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-registry.lo `test -f 'registry.c' || echo '$(srcdir)/'`registry.c
-
-lib_la-backend.lo: backend.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-backend.lo -MD -MP -MF $(DEPDIR)/lib_la-backend.Tpo -c -o lib_la-backend.lo `test -f 'backend.c' || echo '$(srcdir)/'`backend.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-backend.Tpo $(DEPDIR)/lib_la-backend.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='backend.c' object='lib_la-backend.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-backend.lo `test -f 'backend.c' || echo '$(srcdir)/'`backend.c
 
 testRegistry-testRegistry.o: testRegistry.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRegistry_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testRegistry-testRegistry.o -MD -MP -MF $(DEPDIR)/testRegistry-testRegistry.Tpo -c -o testRegistry-testRegistry.o `test -f 'testRegistry.c' || echo '$(srcdir)/'`testRegistry.c
@@ -559,10 +626,15 @@ distdir: $(DISTFILES)
 check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) $(check_PROGRAMS)
 	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
-check: check-am
-all-am: Makefile $(LTLIBRARIES)
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
+all-am: Makefile $(LTLIBRARIES) $(PROGRAMS)
 installdirs:
-install: install-am
+	for dir in "$(DESTDIR)$(bindir)"; do \
+	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
+	done
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -587,10 +659,11 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
-clean-am: clean-checkPROGRAMS clean-generic clean-libtool \
-	clean-noinstLTLIBRARIES mostlyclean-am
+clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
+	clean-libtool clean-noinstLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -616,7 +689,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am:
+install-exec-am: install-binPROGRAMS
 
 install-html: install-html-am
 
@@ -656,48 +729,47 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am:
+uninstall-am: uninstall-binPROGRAMS
 
-.MAKE: check-am install-am install-strip
+.MAKE: all check check-am install install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-TESTS check-am clean \
-	clean-checkPROGRAMS clean-generic clean-libtool \
-	clean-noinstLTLIBRARIES ctags distclean distclean-compile \
-	distclean-generic distclean-libtool distclean-tags distdir dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
+	clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
+	clean-libtool clean-noinstLTLIBRARIES ctags distclean \
+	distclean-compile distclean-generic distclean-libtool \
+	distclean-tags distdir dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am
+	tags uninstall uninstall-am uninstall-binPROGRAMS
 
-#bin_PROGRAMS		= rdbutil
-#CPPFLAGS	= \
-#    -I$(top_srcdir)/ulog \
-#    -I$(top_srcdir)
-#LDADD		= ../ulog/lib.la
 
-.c.h:
-	./extractHeader $*.h.in $< >$@.tmp
-	mv -f $@.tmp $@
-registry.h:	registry.h.in registry.c
-stringBuf.h:	stringBuf.h.in stringBuf.c
-backend.h:	backend.h.in backend.c
 backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
+
+.hin.h:
+	./extractHeader $*.hin $*.c >$@.tmp
+	mv -f $@.tmp $@
+backend.h:	backend.hin backend.c
+misc.h:		misc.hin misc.c
+node.h:		node.hin node.c
+registry.h:	registry.hin registry.c
+stringBuf.h:	stringBuf.hin stringBuf.c
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
 @HAVE_CUNIT_TRUE@debug:		testRegistry
-@HAVE_CUNIT_TRUE@	$(LIBTOOL) --mode=execute gdb testRegistry
+@HAVE_CUNIT_TRUE@	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb testRegistry
 
 @HAVE_CUNIT_TRUE@valgrind:	testRegistry
-@HAVE_CUNIT_TRUE@	$(LIBTOOL) --mode=execute valgrind --leak-check=full \
-@HAVE_CUNIT_TRUE@	    --show-reachable=yes ./testRegistry
+@HAVE_CUNIT_TRUE@	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+@HAVE_CUNIT_TRUE@	    --leak-check=full --show-reachable=yes ./testRegistry
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

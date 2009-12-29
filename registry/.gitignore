@@ -1,6 +1,6 @@
-testRdb
-rdbutil
-registry.h stringBuf.h backend.c
 backend.c
 registry.h
+regutil
+regutil.out
 stringBuf.h
+testRegistry

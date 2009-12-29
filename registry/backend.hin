@@ -7,14 +7,14 @@
 #ifndef LDM_BACKEND_H
 #define LDM_BACKEND_H
 
+typedef struct backend  Backend;
+
 #include "registry.h"
 #include "stringBuf.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct backend  Backend;
 
 typedef struct {
     char*       key;            /* responsibility of backend database */

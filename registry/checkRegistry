@@ -1,0 +1,23 @@
+regdir=/tmp/testRegistry
+rm -rf $regdir
+echo "Testing registry library..."
+if ! ./testRegistry; then
+    echo 1>&2 "Failure testing library"
+    status=1
+else
+    echo "Testing regutil(1)..."
+    if ! ./regutil -r $regdir | tee regutil.out; then
+        echo 1>&2 "Failure executing regutil(1)"
+        status=2
+    else
+        if ! cmp regutil.out regutil.txt; then
+            echo 1>&2 "Unexpected output from regutil(1)"
+            status=3
+        else
+            rm -rf $regdir
+            rm -f regutil.out
+        fi
+    fi
+fi
+
+exit $status

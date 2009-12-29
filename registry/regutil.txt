@@ -1,0 +1,4 @@
+/foo key : foo value
+/fooInt key : 2
+/fooSignature key : 00000000000000000000000000000000
+/fooTime key : 19700101T000000.000000

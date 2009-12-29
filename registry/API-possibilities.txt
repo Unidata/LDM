@@ -340,6 +340,23 @@ Configuration:
             if (status)
                 ...
 
+    Node-with-keys Data Model with Iterators:
+        Getting a configuration integer from C code:
+            RegNode*    node;
+            RegStatus   status = reg_getNode(RDB_SEP RDB_LDMD, &node);
+            if (0 == status) {
+                int         maxLatency;
+                if (0 == (status = regNode_getUint(RDB_MAX_LATENCY,
+                        &maxLatenty, -1))) {
+                    if (-1 == maxLatency) {
+                        maxLatency = 3600;
+                        uwarn("maxLatency set to default value: %d",
+                            maxLatency);
+                    }
+                    ...     // use "maxLatency"
+                }
+            }
+
 Persistent Runtime:
     Ensuring the existence of a downstream-LDM node:
         RdbNode*        downNode = rdbNode_new(); // NB: must be freed

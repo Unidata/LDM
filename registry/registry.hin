@@ -12,33 +12,19 @@
 #ifndef LDM_REGISTRY_H
 #define LDM_REGISTRY_H
 
-#include <timestamp.h>
-#include <ldm.h>
-
 #define REG_MAX_LATENCY "maximum latency"
 #define REG_SEP         "/"
 #define REG_LDMD        "ldmd"
 #define REG_DEFAULT     "default"
 
-typedef enum {
-    REG_NO_NODE,
-    REG_NO_VALUE,
-    REG_BAD_ARG,
-    REG_WRONG_TYPE,
-    REG_SYS_ERROR,
-    REG_DB_ERROR
-}       RegStatus;
+typedef int                     RegStatus;
 
-typedef enum {
-    REG_MAP,
-    REG_VALUE_STRING,
-    REG_VALUE_UINT,
-    REG_VALUE_TIME,
-    REG_VALUE_SIGNATURE
-}       RegNodeType;
-
-typedef struct regNode          RegNode;
 typedef struct regCursor        RegCursor;
+
+#include <errno.h>
+#include <timestamp.h>
+#include <ldm.h>
+#include "node.h"
 
 #ifdef __cplusplus
 extern "C" {

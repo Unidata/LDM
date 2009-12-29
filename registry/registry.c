@@ -3,6 +3,8 @@
  *
  *   This file implements the API for the registry.
  *
+ *   This module hides the decision on how to implement the persistent store.
+ *
  *   The functions in this file are thread-compatible but not thread-safe.
  */
 #include <config.h>
@@ -12,16 +14,19 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <search.h>
 
 #include "backend.h"
 #include <ldmprint.h>
 #include <log.h>
+#include "misc.h"
+#include "node.h"
 #include "registry.h"
 #include "stringBuf.h"
 #include <timestamp.h>
 
-struct regNode {
-};
+#define NOT_SYNCHED     0
+#define SYNCHED         1
 
 struct regCursor {
 };
@@ -35,7 +40,8 @@ struct regCursor {
  *      value           Pointer to the value.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EILSEQ          The string isn't a valid representation of the type
  */
 typedef RegStatus (*Parser)(const char* string, void* value);
 /*
@@ -45,8 +51,8 @@ typedef RegStatus (*Parser)(const char* string, void* value);
  *      dest            Pointer to the value to be set.  Shall not be NULL.
  *      src             Pointer to the default value.  Shall not be NULL.
  * Returns:
- *      0               Success.  "*dest" is set.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  "*dest" is not NULL.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 typedef RegStatus (*Setter)(void* value, const void* defaultValue);
 /*
@@ -58,8 +64,8 @@ typedef RegStatus (*Setter)(void* value, const void* defaultValue);
  *      strBuf          Pointer to a string-buffer to receive the formatted
  *                      representation of the value.  Shall not be NULL.
  * Returns:
- *      0               Success.  "*strBuf" is set.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  "*strBuf" is not NULL.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 typedef RegStatus (*Formatter)(const void* value, StringBuf* strBuf);
 
@@ -86,112 +92,20 @@ static int                      _forWriting;    /* registry open for writing? */
 static StringBuf*               _pathBuf;       /* buffer for creating paths */
 static StringBuf*               _formatBuf;     /* values-formatting buffer */
 static const TypeStruct*        _typeStructs[REG_TYPECOUNT];
+static RegNode*                 _rootNode;
+static ValueFunc                _extantValueFunc;
+static const char*              _nodePath;      /* pathname of visited node */
+static StringBuf*               _valuePath;     /* pathname of visited value */
 
 /******************************************************************************
  * Private Functions:
  ******************************************************************************/
 
 /*
- * Indicates if a path is absolute or not.
- *
- * Arguments:
- *      path            The path to be checked.  Shall not be NULL.
- * Returns:
- *      0               The path is not absolute
- *      else            The path is absolute
+ * Resets this module
  */
-static int isAbsolutePath(const char* const path)
+static void resetRegistry(void)
 {
-    assert(NULL != path);
-
-    return REG_SEP[0] == path[0];
-}
-
-/*
- * Clones a string.  Logs a message if an error occurs.
- *
- * ARGUMENTS:
- *      clone           Pointer to a pointer to the clone.  Set upon successful
- *                      return.  Shall not be NULL.  The client should call
- *                      "free(*clone)" when the clone is no longer needed.
- *      src             The string to clone.  Shall not be NULL.
- * RETURNS:
- *      0               Success.  "*clone" is not NULL.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- */
-static RegStatus cloneString(
-    char** const        clone,
-    const char* const   src)
-{
-    RegStatus   status;
-    char*       copy;
-
-    assert(NULL != clone);
-    assert(NULL != src);
-
-    copy = strdup(src);
-
-    if (NULL != copy) {
-        *clone = copy;
-        status = 0;
-    }
-    else {
-        log_serror("Couldn't clone %lu-byte string \"%s\"",
-            (unsigned long)strlen(src), src);
-        status = REG_SYS_ERROR;
-    }
-
-    return status;
-}
-
-/*
- * Returns the "../default" form of an absolute path name.
- *
- * Arguments:
- *      path           Pointer to the path name to have its "default" path
- *                     name returned.  Shall not be NULL.
- *      strBuf         Pointer to the string-buffer to receive the default
- *                     path.  Shall not be NULL.
- * Returns:
- *      0              Success
- *      REG_BAD_ARG    A default path name can't be constructed from "path".
- *                     "log_start()" called.
- *      REG_SYS_ERROR  System error.  "log_start()" called.
- */
-static RegStatus makeDefaultPath(
-    const char* const  path,
-    StringBuf* const   strBuf)
-{
-   RegStatus           status = 0;     /* success */
-   char*               lastSep;
-
-   assert(NULL != path);
-
-   lastSep = strrchr(path, REG_SEP[0]);
-
-   if (NULL == lastSep || lastSep == path) {
-       status = REG_BAD_ARG;
-   }
-   else if (0 == (status = sb_set(strBuf, path, NULL))) {
-       sb_trim(strBuf, (size_t)(lastSep - path));
-       status = sb_cat(strBuf, REG_SEP, REG_DEFAULT, NULL);
-   }
-
-   if (status)
-       log_start("Can't construct default path for \"%s\"", path);
-
-   return status;
-}
-
-/*
- * Closes the registry if it's open.
- */
-static void closeRegistry(void)
-{
-    if (NULL != _backend) {
-        (void)beClose(_backend);
-        _backend = NULL;
-    }
     if (NULL != _pathBuf) {
         sb_free(_pathBuf);
         _pathBuf = NULL;
@@ -200,10 +114,47 @@ static void closeRegistry(void)
         sb_free(_formatBuf);
         _formatBuf = NULL;
     }
+    if (NULL != _valuePath) {
+        sb_free(_valuePath);
+        _valuePath = NULL;
+    }
+    if (NULL != _rootNode) {
+        rn_free(_rootNode);
+        _rootNode = NULL;
+    }
+    if (REGISTRY_PATH != _registryPath) {
+        free(_registryPath);
+        _registryPath = REGISTRY_PATH;
+    }
+    _initialized = 0;
+    _backend = NULL;
+    _forWriting = 0;
 }
 
 /*
- * "Parses" a string into a value.
+ * Closes the registry if it's open.  Doesn't reset this module, however.
+ *
+ * Returns:
+ *      0               Success.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+static RegStatus closeRegistry(void)
+{
+    RegStatus   status;
+
+    if (NULL == _backend) {
+        status = 0;
+    }
+    else {
+        status = beClose(_backend);
+        _backend = NULL;
+    }
+
+    return status;
+}
+
+/*
+ * "Parses" a string into a string.
  *
  * Arguments:
  *      string          Pointer to the string to be "parsed".  Shall not be
@@ -216,7 +167,7 @@ static RegStatus parseString(
     const char* const   string,
     void* const         value)
 {
-    return cloneString((char**)value, string);
+    return reg_cloneString((char**)value, string);
 }
 
 /*
@@ -228,8 +179,8 @@ static RegStatus parseString(
  *      strBuf          Pointer to a string-buffer to receive the formatted
  *                      representation of the value.  Shall not be NULL.
  * Returns:
- *      0               Success.  The string-buffer is set.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  The string-buffer is not NULL.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus formatString(
     const void* const   value,
@@ -245,16 +196,26 @@ static RegStatus formatString(
  *      dest            Pointer to the value to be set.  Shall not be NULL.
  *                      The client should call "free(*dest)" when the value
  *                      is no longer needed.
- *      src             Pointer to the value to be assigned
+ *      src             Pointer to the value to be assigned.  May be NULL.
  * Returns:
- *      0               Success.  "*dest" is set.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  "*dest" is not NULL.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus setString(
     void* const         dest,
     const void* const   src)
 {
-    return cloneString((char**)dest, (const char*)src);
+    RegStatus   status;
+
+    if (NULL != src) {
+        status = reg_cloneString((char**)dest, (const char*)src);
+    }
+    else {
+        *(char**)dest = NULL;
+        status = 0;
+    }
+
+    return status;
 }
 
 /*
@@ -265,7 +226,8 @@ static RegStatus setString(
  *      value           Pointer to the value.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      REG_WRONG_TYPE  The string doesn't represent an unsigned integer
+ *      EILSEQ          The string doesn't represent an unsigned integer.
+ *                      "log_start()" called.
  */
 static RegStatus parseUint(
     const char* const   string,
@@ -275,14 +237,12 @@ static RegStatus parseUint(
     char*               end;
     unsigned long       val;
 
-    assert(NULL != string);
-    assert(NULL != value);
-
     errno = 0;
     val = strtoul(string, &end, 0);
 
     if (0 != *end || (0 == val && 0 != errno)) {
-        status = REG_WRONG_TYPE;
+        log_start("Not an unsigned integer: \"%s\"", string);
+        status = EILSEQ;
     }
     else {
         *(unsigned*)value = (unsigned)val;
@@ -300,8 +260,8 @@ static RegStatus parseUint(
  *      strBuf          Pointer to a string-buffer to receive the formatted
  *                      representation of the value.  Shall not be NULL.
  * Returns:
- *      0               Success.  The string-buffer is set.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  "*value" is not NULL.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus formatUint(
     const void* const   value,
@@ -309,7 +269,7 @@ static RegStatus formatUint(
 {
     static char buf[80];
 
-    (void)snprintf(buf, sizeof(buf)-1, "%u", (unsigned*)value);
+    (void)snprintf(buf, sizeof(buf)-1, "%u", *(unsigned*)value);
 
     return sb_set(strBuf, buf, NULL);
 }
@@ -318,14 +278,15 @@ static RegStatus formatUint(
  * Assigns a default unsigned integer to a value.
  *
  * Arguments:
- *      dest            Pointer to the value to be set.
- *      src             Pointer to the value to be assigned.
+ *      dest            Pointer to the value to be set.  Shall not be NULL.
+ *      src             Pointer to the value to be assigned.  May be NULL.
  */
 static RegStatus setUint(
     void* const         dest,
     const void* const   src)
 {
-    *(unsigned*)dest = *(unsigned*)src;
+    if (NULL != src)
+        *(unsigned*)dest = *(unsigned*)src;
 
     return 0;
 }
@@ -338,7 +299,7 @@ static RegStatus setUint(
  *      value           Pointer to the value.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      REG_WRONG_TYPE  The string doesn't represent a time
+ *      EILSEQ          The string doesn't represent a time
  */
 static RegStatus parseTime(
     const char* const   string,
@@ -347,13 +308,11 @@ static RegStatus parseTime(
     RegStatus   status;
     timestampt  val;
 
-    assert(NULL != string);
-    assert(NULL != value);
-
     status = tsParse(string, &val);
 
     if (0 > status || 0 != string[status]) {
-        status = REG_WRONG_TYPE;
+        log_start("Not a timestamp: \"%s\"", string);
+        status = EILSEQ;
     }
     else {
         *(timestampt*)value = val;
@@ -371,28 +330,29 @@ static RegStatus parseTime(
  *      strBuf          Pointer to a string-buffer to receive the formatted
  *                      representation of the value.  Shall not be NULL.
  * Returns:
- *      0               Success.  The string-buffer is set.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  "*strBuf" is not NULL.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus formatTime(
     const void* const   value,
     StringBuf* const    strBuf)
 {
-    return sb_set(strBuf, tsFormat((const timestampt*)value));
+    return sb_set(strBuf, tsFormat((const timestampt*)value), NULL);
 }
 
 /*
  * Assigns a default time to a value.
  *
  * Arguments:
- *      dest            Pointer to the value to be set
- *      src             Pointer to the value to be assigned
+ *      dest            Pointer to the value to be set.  Shall not be NULL.
+ *      src             Pointer to the value to be assigned.  May be NULL.
  */
 static RegStatus setTime(
     void* const         dest,
     const void* const   src)
 {
-    *(timestampt*)dest = *(timestampt*)src;
+    if (NULL != src)
+        *(timestampt*)dest = *(timestampt*)src;
 
     return 0;
 }
@@ -405,7 +365,7 @@ static RegStatus setTime(
  *      value           Pointer to the value.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      REG_WRONG_TYPE  The string doesn't represent a signature
+ *      EILSEQ          The string doesn't represent a signature
  */
 static RegStatus parseSignature(
     const char* const   string,
@@ -414,16 +374,14 @@ static RegStatus parseSignature(
     RegStatus   status;
     signaturet  val;
 
-    assert(NULL != string);
-    assert(NULL != value);
-
     status = sigParse(string, &val);
 
     if (0 > status || 0 != string[status]) {
-        status = REG_WRONG_TYPE;
+        log_start("Not a signature: \"%s\"", string);
+        status = EILSEQ;
     }
     else {
-        (void)memcpy((signaturet*)value, val, sizeof(signaturet));
+        (void)memcpy(value, val, sizeof(signaturet));
         status = 0;
     }
 
@@ -438,14 +396,14 @@ static RegStatus parseSignature(
  *      strBuf          Pointer to a string-buffer to receive the formatted
  *                      representation of the value.  Shall not be NULL.
  * Returns:
- *      0               Success.  The string-buffer is set.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  "*strBuf" is not NULL.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus formatSignature(
     const void* const   value,
     StringBuf* const    strBuf)
 {
-    return sb_set(strBuf, s_signaturet(NULL, 0, *(const signaturet*)value),
+    return sb_set(strBuf, s_signaturet(NULL, 0, (const signaturet*)value),
         NULL);
 }
 
@@ -453,14 +411,15 @@ static RegStatus formatSignature(
  * Assigns a default signature to a value.
  *
  * Arguments:
- *      dest            Pointer to the value to be set
- *      src             Pointer to the value to be assigned
+ *      dest            Pointer to the value to be set.  Shall not be NULL.
+ *      src             Pointer to the value to be assigned.  May be NULL.
  */
 static RegStatus setSignature(
     void* const         dest,
     const void* const   src)
 {
-    (void)memcpy((signaturet*)dest, src, sizeof(signaturet));
+    if (NULL != src)
+        (void)memcpy(dest, src, sizeof(signaturet));
 
     return 0;
 }
@@ -471,167 +430,415 @@ static const TypeStruct  timeStruct = {parseTime, setTime, formatTime};
 static const TypeStruct  signatureStruct =
     {parseSignature, setSignature, formatSignature};
 
+static RegStatus sync(
+    RegNode* const      node);
+
 /*
  * Initializes the registry.  Ensures that the backend is open for the desired
- * access.  Registers the process termination function.
+ * access.  Registers the process termination function.  May be called many
+ * times.
  *
  * Arguments:
  *      forWriting      Indicates if the backend should be open for writing:
  *                      0 <=> no.
  * Returns:
  *      0               Success
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus initRegistry(
     const int   forWriting)
 {
-   RegStatus   status = 0;             /* success */
+    RegStatus   status = 0;             /* success */
+ 
+    if (!_initialized) {
+        if (0 != sb_new(&_pathBuf, 80)) {
+            log_add("Couldn't allocate path-buffer");
+            status = ENOMEM;
+        }
+        else {
+            if (0 != sb_new(&_formatBuf, 80)) {
+                log_add("Couldn't allocate formating-buffer");
+                status = ENOMEM;
+            }
+            else {
+                if (0 != sb_new(&_valuePath, 80)) {
+                    log_add("Couldn't allocate value-pathname buffer");
+                    status = ENOMEM;
+                }
+                else {
+                    _typeStructs[REG_STRING] = &stringStruct;
+                    _typeStructs[REG_UINT] = &uintStruct;
+                    _typeStructs[REG_TIME] = &timeStruct;
+                    _typeStructs[REG_SIGNATURE] = &signatureStruct;
+                    _initialized = 1;
+                    status = 0;
+                }                   /* "_valuePath" allocated */
 
-   if (!_initialized) {
-       if (0 != atexit(closeRegistry)) {
-           log_serror("Couldn't register closeRegistry() with atexit()");
-           status = REG_SYS_ERROR;
-       }
-       else {
-           if (NULL == (_pathBuf = sb_new(80))) {
-               log_add("Couldn't allocate path-buffer");
-               status = REG_SYS_ERROR;
-           }
-           else {
-               if (NULL == (_formatBuf = sb_new(80))) {
-                   log_add("Couldn't allocate formating-buffer");
-                   status = REG_SYS_ERROR;
-               }
-               else {
-                   _typeStructs[REG_STRING] = &stringStruct;
-                   _typeStructs[REG_UINT] = &uintStruct;
-                   _typeStructs[REG_TIME] = &timeStruct;
-                   _typeStructs[REG_SIGNATURE] = &signatureStruct;
-                   _initialized = 1;
-               }                       /* "_formatBuf" allocated */
+                if (status) {
+                    sb_free(_formatBuf);
+                    _formatBuf = NULL;
+                }
+            }                       /* "_formatBuf" allocated */
 
-               if (status) {
-                   sb_free(_pathBuf);
-                   _pathBuf = NULL;
-               }
-           }                           /* "_pathBuf" allocated */
-       }                               /* "closeRegistry()" registered */
-   }                                   /* module not initialized */
+            if (status) {
+                sb_free(_pathBuf);
+                _pathBuf = NULL;
+            }
+        }                           /* "_pathBuf" allocated */
+    }                               /* module not initialized */
+ 
+    if (0 == status) {
+        if (NULL != _backend && forWriting && !_forWriting) {
+            /* The backend is open for the wrong (read-only) access */
+            status = beClose(_backend);
+            _backend = NULL;
+        }
+ 
+        if (0 == status && NULL == _backend) {
+            /* The backend isn't open. */
+            if (0 == (status = beOpen(&_backend, _registryPath, forWriting))) {
+                _forWriting = forWriting;
+ 
+                if (NULL == _rootNode) {
+                    RegNode*    root;
 
-   if (0 == status) {
-       if (NULL != _backend && forWriting && !_forWriting) {
-           /* The backend is open for the wrong (read-only) access */
-           status = beClose(_backend);
-           _backend = NULL;
-       }
-
-       if (!status && NULL == _backend) {
-           /* The backend isn't open. */
-           if (0 == (status = beOpen(&_backend, _registryPath, forWriting))) {
-               _forWriting = forWriting;
-           }                           /* "_backend" allocated and open */
-       }                               /* backend database not open */
-   }
-
-   return status;
+                    if (0 == (status = rn_newRoot(&root))) {
+                        if (0 == (status = sync(root)))
+                            _rootNode = root;
+                    }
+                }
+                if (status) {
+                    beClose(_backend);
+                    _backend = NULL;
+                }
+            }                           /* "_backend" allocated and open */
+        }                               /* backend database not open */
+    }                                   /* module initialized */
+ 
+    return status;
 }
 
 /*
- * Returns the binary value of a value-node from the registry.
+ * Forms the absolute path name of a value.
+ *
+ * Arguments:
+ *      sb              Pointer to a string-buffer.  Shall not be NULL.
+ *      nodePath        Pointer to the absolute path name of the containing
+ *                      node.  Shall not be NULL.
+ *      vt              Pointer to the value-thing.  Shall not be NULL.
+ * Returns:
+ *      0               Success
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+static int formAbsValuePath(
+    StringBuf* const            sb,
+    const char* const           nodePath,
+    const ValueThing* const     vt)
+{
+    return sb_set(sb, reg_isAbsRootPath(nodePath) ? "" : nodePath, REG_SEP,
+        vt_getName(vt), NULL);
+}
+
+/*
+ * Writes a value to the backend database.
+ *
+ * Arguments:
+ *      vt              Pointer to the ValueThing.  Shall not be NULL.
+ * Returns:
+ *      0               Success
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+static RegStatus writeValue(
+    ValueThing* const   vt)
+{
+    RegStatus   status;
+
+    if (SYNCHED == vt_getStatus(vt)) {
+        status = 0;
+    }
+    else {
+        if (0 == (status = formAbsValuePath(_valuePath, _nodePath, vt))) {
+            if (0 == (status = bePut(_backend, sb_string(_valuePath),
+                    vt_getValue(vt)))) {
+                (void)vt_setStatus(vt, SYNCHED);
+            }
+        }
+    }
+
+    return status;
+}
+
+/*
+ * Deletes a value from the backend database.
+ *
+ * Arguments:
+ *      vt              Pointer to the ValueThing.  Shall not be NULL.
+ * Returns:
+ *      0               Success
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+static RegStatus deleteValue(
+    ValueThing* const     vt)
+{
+    RegStatus   status = formAbsValuePath(_valuePath, _nodePath, vt);
+
+    if (0 == status)
+        status = beDelete(_backend, sb_string(_valuePath));
+
+    return status;
+}
+
+/*
+ * Writes a node to the backend database.
+ *
+ * Arguments:
+ *      node            Pointer to the node to be written.  Shall not be NULL.
+ * Returns:
+ *      0               Success
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+static RegStatus writeNode(
+    RegNode*    node)
+{
+    RegStatus   status;
+
+    if (rn_isDeleted(node))
+        _extantValueFunc = deleteValue;
+
+    _nodePath = rn_getAbsPath(node);
+
+    if (0 == (status = rn_visitValues(node, _extantValueFunc, deleteValue)))
+        rn_freeDeletedValues(node);
+
+    if (0 != status)
+        log_add("Couldn't update values of node \"%s\"", rn_getAbsPath(node));
+
+    return status;
+}
+
+/*
+ * Flushes a node and all its descendents to the backend database.
+ *
+ * Arguments:
+ *      node            Pointer to the node to be flushed along with all its
+ *                      descendents.  Shall not be NULL.
+ * Returns:
+ *      0               Success
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+static RegStatus flush(
+    RegNode* const      node)
+{
+    _extantValueFunc = writeValue;
+
+    return rn_visitNodes(node, writeNode);
+}
+
+/*
+ * Synchronizes a node and its descendants from the backend database.
+ *
+ * Arguments:
+ *      node            Pointer to the node to have it and its descendants
+ *                      synchronized from the backend database.  Shall not be
+ *                      NULL.
+ * Returns:
+ *      0               Success
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+static RegStatus sync(
+    RegNode* const      node)
+{
+    const char* absPath = rn_getAbsPath(node);
+    RegStatus   status = initRegistry(0);
+
+    if (0 == status) {
+        RdbCursor   cursor;
+
+        rn_clear(node);
+
+        if (0 == (status = beInitCursor(_backend, &cursor))) {
+            for (status = beFirstEntry(&cursor, absPath); 0 == status;
+                    status = beNextEntry(&cursor)) {
+                if (strstr(cursor.key, absPath) != cursor.key) {
+                    /* The entry is outside the scope of "node" */
+                    status = ENOENT;
+                    break;
+                }
+                else {
+                    char* relPath;
+                    char* name;
+
+                    if (0 == (status = reg_splitAbsPath(cursor.key, absPath,
+                            &relPath, &name))) {
+                        RegNode*        subnode;
+
+                        if (0 == (status = rn_ensure(node, relPath,
+                                &subnode))) {
+                            ValueThing* vt;
+
+                            if (0 == (status = rn_putValue(subnode, name,
+                                    cursor.value, &vt))) {
+                                (void)vt_setStatus(vt, SYNCHED);
+                            }
+                        }
+
+                        free(relPath);
+                        free(name);
+                    }                       /* "relPath" & "name" allocated */
+                }
+            }
+
+            if (ENOENT == status)
+                status = 0;
+
+            beCloseCursor(&cursor);
+        }                                   /* "cursor" allocated */
+    }
+
+    if (status)
+        log_add("Couldn't synchronize node \"%s\"", absPath);
+
+    return status;
+}
+
+/*
+ * Returns a binary value of a node.
+ *
+ * Arguments:
+ *      node            Pointer to the node whose value is to be returned.
+ *                      Shall not be NULL.
+ *      name            Pointer to the name of the value.  Shall not be NULL.
+ *      value           Pointer to the location to hold the binary value.
+ *                      Shall not be NULL.
+ *      defaultValue    Pointer to the default value to return if the named
+ *                      value doesn't exist.  Shall not be NULL.
+ *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
+ * Returns:
+ *      0               Success.  "*value" is set.
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+static RegStatus getNodeValue(
+    const RegNode* const        node,
+    const char* const           name,
+    void* const                 value,
+    const void* const           defaultValue,
+    const TypeStruct* const     typeStruct)
+{
+    RegStatus   status = initRegistry(0);
+
+    if (0 == status) {
+        char*       string;
+
+        status = rn_getValue(node, name, &string);
+
+        if (ENOENT == status) {
+            status = typeStruct->setDefault(value, defaultValue);
+        }
+        else if (0 == status) {
+            status = typeStruct->parse(string, value);
+            free(string);
+        }                               /* "string" allocated */
+    }
+
+    if (0 != status)
+        log_add("Couldn't get value \"%s\" from node \"%s\"", name,
+            rn_getAbsPath(node));
+
+    return status;
+}
+
+/*
+ * Returns the binary representation of a value from the registry.
  *
  * Preconditions:
  *      The registry has been initialized.
  * Arguments:
- *      path            Pointer to the absolute path name of the value-node
- *                      whose value will be returned.  Shall not be NULL.
- *      parse           Function for parsing the string representation of the
- *                      value into its binary representation.
+ *      path            Pointer to the absolute path name of the value to be
+ *                      returned.  Shall not be NULL.
  *      value           Pointer to memory to hold the binary value.  Shall not
  *                      be NULL.
+ *      defaultValue    Pointer to the default value to which "value" will be
+ *                      set if no value is found.  May be NULL.
+ *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
  * Returns:
- *      0               Success.  Value found and put in "*value".
- *      REG_NO_VALUE    No value found
- *      REG_WRONG_TYPE  The found value is the wrong type.  "log_start()"
+ *      0               Success.  "*value" is not NULL.
+ *      ENOENT          No value found for "path"
+ *      EINVAL          The path name isn't valid.  "log_start()" called.
+ *      EILSEQ          The value found isn't the expected type.  "log_start()"
  *                      called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-static RegStatus getX(
-    const char*         path,
-    RegStatus           parse(const char* string, void* value),
-    void*               value)
+static RegStatus getValue(
+    const char* const           path,
+    void* const                 value,
+    const void* const           defaultValue,
+    const TypeStruct* const     typeStruct)
 {
-    RegStatus   status;
-    char*       string;
-
-    assert(isAbsolutePath(path));
-    assert(NULL != parse);
-
-    status = beGet(_backend, path, &string);
+    RegNode*    lastNode;
+    char*       remPath;
+    RegStatus   status = rn_getLastNode(_rootNode, path+1, &lastNode, &remPath);
 
     if (0 == status) {
-        status = parse(string, value);
+        if (0 == (status = flush(lastNode))) {
+            if (0 == (status = sync(lastNode))) {
+                status = getNodeValue(lastNode, remPath, value, defaultValue,
+                    typeStruct);
+            }
+        }
 
-        free(string);
-    }                               /* "string" allocated */
+        free(remPath);
+    }                                   /* "remPath" allocated */
 
     return status;
 }
 
 /*
- * Returns the binary value of a value-node from the registry.  If the
- * value-node doesn't exist, then the value of the "default" value-node of the
- * parent map-node is returned if it exists.  If no value is found, then the
- * value of the default argument is returned.
+ * Puts a value into a node.
  *
  * Arguments:
- *      path            Pointer to the absolute path name of the value-node
- *                      whose value will be returned.  Shall not be NULL.
- *      value           Pointer to memory to hold the binary value.  Shall not
- *                      be NULL.
+ *      node            Pointer to the node into which to put the value.  Shall
+ *                      not be NULL.
+ *      name            Pointer to the name of the value.  Shall not be NULL.
+ *      value           Pointer to the value.  Shall not be NULL.
  *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
- *      defaultValue    Pointer to the default value to which "value" will be
- *                      set if no value is found.  Shall not be NULL.
  * Returns:
- *      0               Success.  Value found and put in "*value".
- *      REG_NO_VALUE    No value found.  "*value" is set to the default value.
- *      REG_WRONG_TYPE  The found value isn't an unsigned integer.
- *                      "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success
+ *      ENOMEM          System error.  "log_start()" called.
  */
-static RegStatus get(
-    const char*         path,
-    void*               value,
-    const TypeStruct*   typeStruct,
-    const void* const   defaultValue)
+static RegStatus putNodeValue(
+    RegNode* const              node,
+    const char* const           name,
+    const void* const           value,
+    const TypeStruct* const     typeStruct)
 {
-    RegStatus   status;
+    RegStatus   status = initRegistry(1);
 
-    assert(NULL != typeStruct);
+    if (0 == status) {
+        if (0 == (status = typeStruct->format(value, _formatBuf))) {
+            ValueThing* vt;
 
-    if (0 == (status = initRegistry(0))) {
-        if (REG_NO_VALUE == (status = getX(path, typeStruct->parse, value))) {
-            const char*     defaultPath;
-
-            if (REG_BAD_ARG == (status = makeDefaultPath(path, _pathBuf))) {
-                /* Can't make a "default" path */
-                status = typeStruct->setDefault(value, defaultValue);
+            if (0 == (status = rn_putValue(node, name,
+                    sb_string(_formatBuf), &vt))) {
+                (void)vt_setStatus(vt, NOT_SYNCHED);
             }
-            else if (0 == status) {
-                if (REG_NO_VALUE == (status = getX(sb_string(_pathBuf),
-                        typeStruct->parse, value)))
-                    status = typeStruct->setDefault(value, defaultValue);
-            }
-        }                               /* value not found under "path" */
-    }                                   /* registry opened */
+        }
+    }
+
+    if (status)
+        log_add("Couldn't put value \"%s\" in node \"%s\"", name,
+            rn_getAbsPath(node));
 
     return status;
 }
 
 /*
- * Puts the string representation of a value into the registry.
+ * Puts the string representation of a value into the registry.  Makes the
+ * change persistent.
  *
  * Arguments:
  *      path            Pointer to the absolute path name under which to store
@@ -640,10 +847,12 @@ static RegStatus get(
  *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      EINVAL          The absolute path name is invalid.  "log_start()"
+ *                      called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
-static RegStatus put(
+static RegStatus putValue(
     const char* const           path,
     const void* const           value,
     const TypeStruct* const     typeStruct)
@@ -651,15 +860,30 @@ static RegStatus put(
     RegStatus   status = initRegistry(1);
 
     if (0 == status) {
-        if (0 == (status = typeStruct->format(value, _formatBuf)))
-            status = bePut(_backend, path, _formatBuf);
+        char*       nodePath;
+        char*       valueName;
+
+        if (0 == (status = reg_splitAbsPath(path, REG_SEP, &nodePath,
+                &valueName))) {
+            RegNode*    node;
+
+            if (0 == (status = rn_ensure(_rootNode, nodePath, &node))) {
+                if (0 == (status = putNodeValue(node, valueName, value,
+                        typeStruct))) {
+                    status = flush(node);
+                }
+            }
+
+            free(valueName);
+            free(nodePath);
+        }                               /* "nodePath", "valueName" allocated */
     }
 
     return status;
 }
 
 /******************************************************************************
- * Public API:
+ * Public Functions:
  ******************************************************************************/
 
 /*
@@ -672,28 +896,36 @@ static RegStatus put(
  *                      may free upon return.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EPERM           Backend database already open.  "log_start()" called.
  */
-RegStatus       reg_setPathname(
+RegStatus reg_setPathname(
     const char* const   path)
 {
     RegStatus   status;
 
-    if (NULL == path) {
-        _registryPath = REGISTRY_PATH;
-        status = 0;
+    if (NULL != _backend) {
+        log_start("Can't set registry to \"%s\"; registry already open on "
+            "\"%s\"", path, _registryPath);
+        status = EPERM;
     }
     else {
-        char*   clone;
-
-        if (0 != (status = cloneString(&clone, path))) {
-            log_add("Couldn't copy new registry pathname");
+        if (NULL == path) {
+            _registryPath = REGISTRY_PATH;
+            status = 0;
         }
         else {
-            if (REGISTRY_PATH != _registryPath)
-                free(_registryPath);
+            char*   clone;
 
-            _registryPath = clone;
+            if (0 != (status = reg_cloneString(&clone, path))) {
+                log_add("Couldn't set new registry pathname to \"%s\"", path);
+            }
+            else {
+                if (REGISTRY_PATH != _registryPath)
+                    free(_registryPath);
+
+                _registryPath = clone;
+            }
         }
     }
 
@@ -701,25 +933,51 @@ RegStatus       reg_setPathname(
 }
 
 /*
- * Removes the registry if it exists.  Upon successful return, attempts to
- * access the registry will fail.
+ * Closes the registry.  Frees all resources and unconditionally resets the
+ * module.
  *
  * Returns:
  *      0               Success
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
-RegStatus       reg_remove(void)
+RegStatus reg_close(void)
 {
-    return beRemove(_registryPath);
+    RegStatus   status = closeRegistry();
+
+    resetRegistry();
+
+    return status;
 }
 
 /*
- * Returns the value of a value-node from the registry as a string.
- * If the value-node doesn't exist, then the value of the "default" value-node
- * of the parent map-node is returned if it exists.  If no value is found, then
- * the value of the default argument is returned.  Every value has a string
- * representation.
+ * Removes the registry if it exists.  Unconditionally resets the module.
+ *
+ * Returns:
+ *      0               Success
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+RegStatus reg_remove(void)
+{
+    RegStatus   status = initRegistry(1);
+
+    if (0 == status) {
+        closeRegistry();
+
+        if (0 == status) {
+            status = beRemove(_registryPath);
+        }
+    }
+
+    resetRegistry();
+
+    return status;
+}
+
+/*
+ * Returns the string representation of a value from the registry.  The value
+ * is obtained from the backing store.  If the value doesn't exist, then the
+ * default value is returned.  Every value has a string representation.
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the node whose
@@ -729,105 +987,103 @@ RegStatus       reg_remove(void)
  *                      "free(*value)" when the value is no longer needed
  *                      (regardless of whether it is set to the default value).
  *      defaultValue    The default value to return if no value is found.  May
- *                      be NULL.
+ *                      be NULL, in which case "*value" will be set to NULL if
+ *                      no value is found.
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      REG_NO_VALUE    No value found.  "*value" is set to the default value.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EINVAL          The path name isn't absolute.  "log_start()" called.
+ *      EILSEQ          The value found isn't a string.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       reg_getString(
-    const char*         path,
+RegStatus reg_getString(
+    const char* const   path,
     char** const        value,
-    const char*         defaultValue)
+    const char* const   defaultValue)
 {
-    return get(path, value, &stringStruct, defaultValue);
+    return getValue(path, value, defaultValue, &stringStruct);
 }
 
 /*
- * Returns the value of a value-node from the registry as an unsigned integer.
- * If the value-node doesn't exist, then the value of the "default" value-node
- * of the parent map-node is returned if it exists.  If no value is found, then
- * the value of the default argument is returned.
+ * Returns a value from the registry as an unsigned integer.  If no value is
+ * found, then the value of the default argument is returned.
  *
  * Arguments:
- *      path            Pointer to the absolute path name of the value-node
- *                      whose value will be returned.  Shall not be NULL.
+ *      path            Pointer to the absolute path name of the value to be
+ *                      returned.  Shall not be NULL.
  *      value           Pointer to memory to hold the value.  Shall not be
  *                      NULL.
  *      defaultValue    The default value to return if no value is found
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      REG_BAD_ARG     "path" isn't an absolute path name
- *      REG_NO_VALUE    No value found.  "*value" is set to the default value.
- *      REG_WRONG_TYPE  The found value isn't an unsigned integer.
+ *      EINVAL          The path name isn't absolute.  "log_start()" called.
+ *      EILSEQ          The value found isn't an unsigned integer.
  *                      "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       reg_getUint(
-    const char*         path,
-    unsigned*           value,
-    unsigned            defaultValue)
+RegStatus reg_getUint(
+    const char* const   path,
+    unsigned* const     value,
+    const unsigned      defaultValue)
 {
-    return get(path, value, &uintStruct,  &defaultValue);
+    return getValue(path, value,  &defaultValue, &uintStruct);
 }
 
 /*
- * Returns the value of a value-node from the registry as a time-value.
- * If the value-node doesn't exist, then the value of the "default" value-node
- * of the parent map-node is returned if it exists.  If no value is found, then
- * the value of the default argument is returned.
+ * Returns a value from the registry as a time.  If no value is found, then the
+ * value of the default argument is returned.
  *
  * Arguments:
- *      path            Pointer to the absolute path name of the node whose
- *                      value will be returned.  Shall not be NULL.
+ *      path            Pointer to the absolute path name of the value to be
+ *                      returned.  Shall not be NULL.
  *      value           Pointer to memory to hold the value.  Shall not be NULL.
  *                      The client may free upon return.
  *      defaultValue    Pointer to the default value to return if no value is
- *                      found.  Shall not be NULL.
+ *                      found.  May be NULL, in which case "*value" is unchaned
+ *                      if no value is found.
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      REG_NO_VALUE    No value found.  "*value" is set to the default value.
- *      REG_WRONG_TYPE  The found value isn't a timestamp.  "log_start()"
+ *      EINVAL          The path name isn't absolute.  "log_start()" called.
+ *      EILSEQ          The value found isn't a timestamp.  "log_start()"
  *                      called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       reg_getTime(
-    const char*         path,
-    timestampt*         value,
-    const timestampt*   defaultValue)
+RegStatus reg_getTime(
+    const char* const           path,
+    timestampt* const           value,
+    const timestampt* const     defaultValue)
 {
-    return get(path, value, &timeStruct, defaultValue);
+    return getValue(path, value, defaultValue, &timeStruct);
 }
 
 /*
- * Returns the value of a value-node from the registry as a signature.
- * If the value-node doesn't exist, then the value of the "default" value-node
- * of the parent map-node is returned if it exists.  If no value is found, then
- * the value of the default argument is returned.
+ * Returns a value from the registry as a signature.  If no value is found,
+ * then the value of the default argument is returned.
  *
  * Arguments:
- *      path            Pointer to the absolute path name of the node whose
- *                      value will be returned.  Shall not be NULL.
+ *      path            Pointer to the absolute path name of the value to be
+ *                      returned.  Shall not be NULL.
  *      value           Pointer to memory to hold the value.  Shall not be NULL.
  *                      The client may free upon return.
- *      defaultValue    The default value to return if no value is found
+ *      defaultValue    The default value to return if no value is found.  May
+ *                      be NULL, in which case "*value" is unchanged if no
+ *                      value is found.
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      REG_NO_VALUE    No value found.  "*value" is set to the default value.
- *      REG_WRONG_TYPE  The found value is the wrong type.  "log_start()"
+ *      EINVAL          The path name isn't absolute.  "log_start()" called.
+ *      EILSEQ          The value found isn't a signature.  "log_start()"
  *                      called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       reg_getSignature(
-    const char*                 path,
-    signaturet*                 value,
-    const signaturet* const     defaultValue)
+RegStatus reg_getSignature(
+    const char* const           path,
+    signaturet* const           value,
+    const signaturet const      defaultValue)
 {
-    return get(path, value, &signatureStruct, defaultValue);
+    return getValue(path, value, defaultValue, &signatureStruct);
 }
 
 /*
@@ -840,14 +1096,14 @@ RegStatus       reg_getSignature(
  *      value           The value to be written to the registry.
  * Returns:
  *      0               Success.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
-RegStatus       reg_putUint(
-    const char*         path,
-    unsigned            value)
+RegStatus reg_putUint(
+    const char* const   path,
+    const unsigned      value)
 {
-    return put(path, &value, &uintStruct);
+    return putValue(path, &value, &uintStruct);
 }
 
 /*
@@ -861,14 +1117,14 @@ RegStatus       reg_putUint(
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
-RegStatus       reg_putString(
-    const char*         path,
-    const char*         value)
+RegStatus reg_putString(
+    const char* const   path,
+    const char* const   value)
 {
-    return put(path, value, &stringStruct);
+    return putValue(path, value, &stringStruct);
 }
 
 /*
@@ -882,14 +1138,14 @@ RegStatus       reg_putString(
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
-RegStatus       reg_putTime(
-    const char*         path,
-    const timestampt*   value)
+RegStatus reg_putTime(
+    const char* const           path,
+    const timestampt* const     value)
 {
-    return put(path, value, &timeStruct);
+    return putValue(path, value, &timeStruct);
 }
 
 /*
@@ -903,369 +1159,184 @@ RegStatus       reg_putTime(
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
-RegStatus       reg_putSignature(
-    const char*         path,
-    const signaturet*   value)
+RegStatus reg_putSignature(
+    const char* const   path,
+    const signaturet    value)
 {
-    return put(path, value, &signatureStruct);
+    return putValue(path, value, &signatureStruct);
 }
 
 /*
- * Returns the node in the registry corresponding to an absolute path name .
+ * Deletes a value from the registry.
  *
  * Arguments:
- *      path            The absolute path name of the node to be returned.
- *                      Shall not be NULL.  The empty string obtains the
- *                      top-level node.
- *      node            Pointer to a pointer to a node.  Set on success.  Shall
- *                      not be NULL.  The client should call
+ *      path            Pointer to the absolute path name of the value to be
+ *                      deleted.  Shall not be NULL.
+ * Returns:
+ *      0               Success
+ *      EINVAL          The absolute path name is invalid.  "log_start()"
+ *                      called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+RegStatus reg_deleteValue(
+    const char* const   path)
+{
+    RegStatus   status = initRegistry(1);
+
+    if (0 == status) {
+        char*   nodePath;
+        char*   valueName;
+
+        if (0 == (status = (reg_splitAbsPath(path, REG_SEP, &nodePath,
+                &valueName)))) {
+            RegNode*    node;
+
+            if (ENOENT == (status = rn_find(_rootNode, nodePath,
+                    &node))) {
+                status = ENOENT;
+            }
+            else if (0 == status) {
+                if (0 == (status = rn_deleteValue(node, valueName)))
+                    status = flush(node);
+            }
+
+            free(valueName);
+            free(nodePath);
+        }                               /* "nodePath", "valueName" allocated */
+    }
+
+    if (status && ENOENT != status)
+        log_add("Couldn't delete value \"%s\"", path);
+
+    return status;
+}
+
+/*
+ * Returns a node in the registry.  Creates the node and its ancestors if they
+ * don't exist.  If the node didn't exist, then changes to the node won't be
+ * made persistent until "reg_flush()" is called on the node or one of its
+ * ancestors.
+ *
+ * Arguments:
+ *      path            Pointer to the absolute path name of the node to be
+ *                      returned.  Shall not be NULL.  The empty string obtains
+ *                      the top-level node.
+ *      node            Pointer to a pointer to a node.  Shall not be NULL.
+ *                      Set on success.  The client should call
  *                      "regNode_free(*node)" when the node is no longer
  *                      needed.
  * Returns:
  *      0               Success.  "*node" is set.  The client should call
  *                      "regNode_free(*node)" when the node is no longer
  *                      needed.
- *      REG_NO_NODE     No node found
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EINVAL          "path" isn't a valid absolute path name.  "log_start()
+ *                      called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       reg_getNode(
-    const char*         path,
-    RegNode*            node)
+RegStatus reg_getNode(
+    const char* const   path,
+    RegNode** const     node)
 {
-    return 0;
+    RegStatus   status = reg_vetAbsPath(path);
+
+    if (0 == status) {
+        if (0 == (status = initRegistry(0)))
+            status = rn_ensure(_rootNode, path+1, node);
+    }
+
+    return status;
 }
 
 /*
- * Writes a node to the registry.
+ * Deletes a node and all of its children.  The node and its children are only
+ * marked as being deleted: they are not removed from the registry until
+ * "reg_flushNode()" is called on the node or one of its ancestors.
  *
  * Arguments:
- *      node            Pointer to the node to be written to the registry.
- *                      Shall not be NULL.  Ancestral nodes are created if they
- *                      don't exist.  The client may call "regNode_free()"
- *                      upon return.
+ *      node            Pointer to the node to be deleted along with all it
+ *                      children.  Shall not be NULL.
+ */
+void reg_deleteNode(
+    RegNode*    node)
+{
+    rn_delete(node);
+}
+
+/*
+ * Flushes all changes to a node and its children to the backend database.
+ *
+ * Arguments:
+ *      node            Pointer to the node to be flushed to the registry.
+ *                      Shall not be NULL.
  * Returns:
  *      0               Success
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       reg_putNode(RegNode* node)
+RegStatus reg_flushNode(
+    RegNode*    node)
 {
-    return 0;
-}
+    RegStatus   status = initRegistry(1);
 
-/*
- * Returns a newly-allocated node.
- *
- * Arguments:
- *      path            Pointer to the absolute path name of the node.  Shall
- *                      not be NULL.  The client may free upon return.
- * Returns:
- *      NULL            System error
- *      else            Pointer to a newly-allocated node with the given
- *                      absolute path name .  The client should call
- *                      "regNode_free()" when the node is no longer needed.
- */
-RegNode*        regNode_new(const char* path)
-{
-    return 0;
-}
-
-/*
- * Returns the type of a node.
- *
- * Arguments:
- *      node            Pointer to the node to have its type returned.  Shall
- *                      not be NULL.
- * Returns:
- *      One of REG_MAP or REG_VALUE.
- */
-RegNodeType     regNode_type(RegNode* node)
-{
-    return 0;
+    return (0 != status)
+        ? status
+        : flush(node);
 }
 
 /*
  * Returns the name of a node.
  *
  * Arguments:
- *      node            Pointer to the node whose name is to be returned.  Shall
+ *      node            Pointer to the node whose name will be returned.  Shall
  *                      not be NULL.
  * Returns:
- *      Pointer to an internal buffer containing the name of the node.  The
- *      client shall not free the buffer.
+ *      Pointer to the name of the node.  The client shall not free.
  */
-const char*     regNode_name(RegNode* node)
+const char* reg_getNodeName(
+    const RegNode* const        node)
 {
-    return 0;
+    return rn_getName(node);
 }
 
 /*
  * Returns the absolute path name of a node.
  *
  * Arguments:
- *      node            Pointer to the node to have its absolute path name
- *                      returned.  Shall not be NULL.
+ *      node            Pointer to the node.  Shall not be NULL.
  * Returns:
- *      Pointer to an internal buffer containing the absolute path name of the
- *      node.  The client shall not free the buffer.
+ *      Pointer to the absolute path name of the node.  The client shall not
+ *      free.
  */
-const char*     regNode_absolutePath(RegNode* node)
+const char* reg_getNodeAbsPath(
+    const RegNode* const        node)
 {
-    return 0;
+    return rn_getAbsPath(node);
 }
 
 /*
- * Frees a returned node.
+ * Adds a string value to a node.
  *
  * Arguments:
- *      node            Pointer to the node to be freed
- */
-void            regNode_free(RegNode* node)
-{
-}
-
-/*
- * Deletes a node.  Deleting a node also deletes its children.
- *
- * Arguments:
- *      node            Pointer to the node to be deleted
- * Returns:
- *      0               Success
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- */
-RegStatus       regNode_delete(RegNode* node)
-{
-    return 0;
-}
-
-/*
- * Returns the value of a value-node as a string.
- *
- * Arguments:
- *      node            Pointer to the value-node whose value is to be returned
- *                      as a string.  Shall not be NULL.
- *      value           Pointer to a pointer to a string.  Shall not be NULL.
- *                      Set upon successful return.  The client shall not call
- *                      "free(*value)".
- * Returns:
- *      0               Success.  "*value" is set.
- *      REG_NO_VALUE    The node is not a value-node.
- */
-RegStatus       regNode_getString(
-    RegNode*            node,
-    const char**        value)
-{
-    return 0;
-}
-
-/*
- * Returns the value of a value-node as an unsigned integer.
- *
- * Arguments:
- *      node            Pointer to the value-node whose unsigned integer value
- *                      is to be returned.  Shall not be NULL.
- *      value           Pointer to an unsigned integer.  Set upon success.
- *                      Shall not be NULL.
- * Returns:
- *      0               Success.  "*value" is set.
- *      REG_NO_VALUE    The node is not a value-node.  "log_start()" called.
- *      REG_WRONG_TYPE  The value isn't an unsigned integer.  "log_start()"
- *                      called.
- */
-RegStatus       regNode_getUint(
-    RegNode*            node,
-    unsigned*           value)
-{
-    return 0;
-}
-
-/*
- * Returns the value of a value-node as a time.
- *
- * Arguments:
- *      node            Pointer to the value-node whose value is to
- *                      be returned as a time.  Shall not be NULL.
- *      value           Pointer to a time.  Set upon success.  Shall not be
- *                      NULL.  The client may free upon return.
- * Returns:
- *      0               Success.  "*value" is set.
- *      REG_NO_VALUE    The node is not a value-node.  "log_start()" called.
- *      REG_WRONG_TYPE  The value isn't a time.  "log_start()" called.
- */
-RegStatus       regNode_getTime(
-    RegNode*            node,
-    timestampt*         value)
-{
-    return 0;
-}
-
-/*
- * Returns the value of a value-node as a signature.
- *
- * Arguments:
- *      node            Pointer to the value-node whose value is to
- *                      be returned as a signature.  Shall not be NULL.
- *      value           Pointer to a signature.  Set upon success.  Shall not
- *                      be NULL.  The client may free upon return.
- * Returns:
- *      0               Success.  "*value" is set.
- *      REG_NO_VALUE    The node is not a value-node.  "log_start()" called.
- *      REG_WRONG_TYPE  The value isn't a signature.  "log_start()" called.
- */
-RegStatus       regNode_getSignature(
-    RegNode*            node,
-    signaturet*         value)
-{
-    return 0;
-}
-
-/*
- * Returns the value of a value-node as a string given the parent map-node and
- * the name of the value-node.
- *
- * Arguments:
- *      parent          Pointer to the parent map-node.  Shall not be NULL.
- *      name            Pointer to the name of the child-node whose value is to
- *                      be returned as a string.  Shall not be NULL.
- *      value           Pointer to a pointer to a string.  Set upon success.
- *                      Shall not be NULL.  Upon successful return, the client
- *                      shall not call "free(*value)".
- * Returns:
- *      0               Success.  "*value" is set.  The client shall not call
- *                      "free(*value)".
- *      REG_BAD_ARG     The given parent-node isn't a map-node.  "log_start()"
- *                      called.
- *      REG_NO_NODE     No such child-node exists with the given name.
- *                      "log_start()" called.
- *      REG_NO_VALUE    The child-node exists but is not a value-node.
- *                      "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- */
-RegStatus       regMap_getString(
-    RegNode*            parent,
-    const char*         name,
-    const char**        value)
-{
-    return 0;
-}
-
-/*
- * Returns the value of a value-node as an unsigned integer given the parent
- * map-node and the name of the value-node.
- *
- * Arguments:
- *      parent          Pointer to the parent map-node.  Shall not be NULL.
- *      name            Pointer to the name of the child-node whose value is
- *                      to be returned as an unsigned integer.  Shall not be
- *                      NULL.
- *      value           Pointer to an unsigned integer.  Set upon success.
- *                      Shall not be NULL.
- * Returns:
- *      0               Success.  "*value" is set.
- *      REG_BAD_ARG     The given parent-node isn't a map-node.  "log_start()"
- *                      called.
- *      REG_NO_NODE     No such child-node exists with the given name.
- *                      "log_start()" called.
- *      REG_NO_VALUE    The child-node exists but isn't a value-node.
- *                      "log_start()" called.
- *      REG_WRONG_TYPE  The value isn't an unsigned integer.  "log_start()"
- *                      called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- */
-RegStatus       regMap_getUint(
-    RegNode*            parent,
-    const char*         name,
-    unsigned*           value)
-{
-    return 0;
-}
-
-/*
- * Returns the value of a value-node as a time given the parent map-node and
- * the name of the value-node.
- *
- * Arguments:
- *      parent          Pointer to the parent map-node.  Shall not be NULL.
- *      name            Pointer to the name of the child-node whose value
- *                      is to be returned as a time.  Shall not be NULL.
- *      value           Pointer to a time.  Set upon success.  Shall not be
- *                      NULL.  The client may free upon return.
- * Returns:
- *      0               Success.  "*value" is set.
- *      REG_BAD_ARG     The given parent-node isn't a map-node.  "log_start()"
- *                      called.
- *      REG_NO_NODE     No such child-node exists with the given name.
- *                      "log_start()" called.
- *      REG_NO_VALUE    The child-node exists but isn't a value-node.
- *                      "log_start()" called.
- *      REG_WRONG_TYPE  The value isn't a time.  "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- */
-RegStatus       regMap_getTime(
-    RegNode*            parent,
-    const char*         name,
-    timestampt*         value)
-{
-    return 0;
-}
-
-/*
- * Returns the value of a value-node as a signature given the parent map-node
- * and the name of the value-node.
- *
- * Arguments:
- *      parent          Pointer to the parent map-node.  Shall not be NULL.
- *      name            Pointer to the name of the child-node whose value
- *                      is to be returned as a signature.  Shall not be NULL.
- *      value           Pointer to a signature.  Set upon success.  Shall not
- *                      be NULL.  The client may free upon return.
- * Returns:
- *      0               Success.  "*value" is set.
- *      REG_BAD_ARG     The given parent-node isn't a map-node.  "log_start()"
- *                      called.
- *      REG_NO_NODE     No such child-node exists with the given name.
- *                      "log_start()" called.
- *      REG_NO_VALUE    The child-node exists but isn't a value-node.
- *                      "log_start()" called.
- *      REG_WRONG_TYPE  The value isn't a signature.  "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- */
-RegStatus       regMap_getSignature(
-    RegNode*            parent,
-    const char*         name,
-    signaturet*         value)
-{
-    return 0;
-}
-
-/*
- * Adds a string value-node to a map-node.
- *
- * Arguments:
- *      node            Pointer to the parent node.  Shall not be NULL.
- *      name            Pointer to the name of the value-node.  Shall not be
+ *      node            Pointer to the node.  Shall not be NULL.
+ *      name            Pointer to the name of the value.  Shall not be
  *                      NULL.  The client may free upon return.
  *      value           Pointer to the string value.  Shall not be NULL.  The
- *                      may free upon return.
+ *                      client may free upon return.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       regMap_putString(
+RegStatus reg_putNodeString(
     RegNode*            node,
     const char*         name,
     const char*         value)
 {
-    return 0;
+    return putNodeValue(node, name, value, &stringStruct);
 }
 
 /*
@@ -1278,14 +1349,14 @@ RegStatus       regMap_putString(
  *      value           The unsigned integer value
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       regMap_putUint(
+RegStatus reg_putNodeUint(
     RegNode*            node,
     const char*         name,
     unsigned            value)
 {
-    return 0;
+    return putNodeValue(node, name, &value, &uintStruct);
 }
 
 /*
@@ -1299,90 +1370,198 @@ RegStatus       regMap_putUint(
  *                      The client may free upon return.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       regMap_putTime(
+RegStatus reg_putNodeTime(
     RegNode*            node,
     const char*         name,
     const timestampt*   value)
 {
-    return 0;
+    return putNodeValue(node, name, value, &timeStruct);
 }
 
 /*
- * Adds a signature value-node to a map-node.
+ * Adds a signature value to a node.
  *
  * Arguments:
- *      node            Pointer to the parent node.  Shall not be NULL.
- *      name            Pointer to the name of the value-node.  Shall not be
+ *      node            Pointer to the node.  Shall not be NULL.
+ *      name            Pointer to the name of the value.  Shall not be
  *                      NULL.  The client may free upon return.
  *      value           Pointer to the signature value.  Shall not be NULL.
  *                      The client may free upon return.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       regMap_putSignature(
+RegStatus reg_putNodeSignature(
     RegNode*            node,
     const char*         name,
-    const signaturet*   value)
+    const signaturet    value)
 {
-    return 0;
+    return putNodeValue(node, name, value, &signatureStruct);
 }
 
 /*
- * Returns an interator over the children of a map-node.
+ * Returns a string value of a node.
  *
  * Arguments:
- *      node            Pointer to the node whose children will be iterated.
- *                      Shall not be NULL.
- *      cursor          Pointer to a pointer to an iterator.  Set on success.
- *                      Shall not be NULL.
+ *      node            Pointer to the node whose value is to be returned
+ *                      as a string.  Shall not be NULL.
+ *      name            Pointer to the name of the value.  Shall not be NULL.
+ *      value           Pointer to a pointer to a string.  Shall not be NULL.
+ *                      Set upon successful return.  The client should call call
+ *                      "free(*value)" when the value is no longer needed.
+ *      defaultValue    The default value to return if the named value doesn't
+ *                      exist.
  * Returns:
- *      0               Success.  "*cursor" is set.  The client should call 
- *                      "regCursor_free(*cursor)" when the iterator is no
- *                      longer needed.
- *      REG_BAD_ARG     The given node isn't iterable.  "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  "*value" is set.
+ *      ENOMEM          System error.  "log_start()" called.
  */
-RegStatus       regNode_newCursor(
-    RegNode*            node,
-    RegCursor*          cursor)
+RegStatus reg_getNodeString(
+    const RegNode* const        node,
+    const char* const           name,
+    char** const                value,
+    const char* const           defaultValue)
 {
-    return 0;
+    return getNodeValue(node, name, value, defaultValue, &stringStruct);
 }
 
 /*
- * Returns the next child-node.  Returns the first child-node on the first
- * call.
+ * Returns an unsigned integer value of a node.
  *
  * Arguments:
- *      cursor          Pointer to the iterator over the child-nodes of a node.
+ *      node            Pointer to the node whose value is to be returned.
  *                      Shall not be NULL.
- *      node            Pointer to a pointer to a node.  Set upon success.
+ *      name            Pointer to the name of the value.  Shall not be NULL.
+ *      value           Pointer to an unsigned integer.  Set upon success.
  *                      Shall not be NULL.
+ *      defaultValue    The default value to return if the named value doesn't
+ *                      exist.
  * Returns:
- *      0               Success.  "*node" is set.  The client shall not call
- *                      "regNode_free(*node)".
- *      REG_NO_NODE     No more child-nodes.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      0               Success.  "*value" is set.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EILSEQ          The value isn't an unsigned integer.  "log_start()"
+ *                      called.
  */
-RegStatus       regCursor_next(
-    RegCursor*          cursor,
-    RegNode**           node)
+RegStatus reg_getNodeUint(
+    const RegNode* const        node,
+    const char* const           name,
+    unsigned* const             value,
+    unsigned const              defaultValue)
 {
-    return 0;
+    return getNodeValue(node, name, value, &defaultValue, &uintStruct);
 }
 
 /*
- * Frees an iterator.
+ * Returns a time value of a node.
  *
  * Arguments:
- *      cursor          Pointer to the iterator to be freed.  Upon return,
- *                      the client shall not dereference "cursor".
+ *      node            Pointer to the node whose value is to
+ *                      be returned as a time.  Shall not be NULL.
+ *      value           Pointer to a time.  Set upon success.  Shall not be
+ *                      NULL.  The client may free upon return.
+ * Returns:
+ *      0               Success.  "*value" is set.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EILSEQ          The value isn't a time.  "log_start()" called.
  */
-void            regCursor_free(RegCursor* cursor)
+RegStatus reg_getNodeTime(
+    const RegNode* const        node,
+    const char* const           name,
+    timestampt* const           value,
+    const timestampt* const     defaultValue)
 {
+    return getNodeValue(node, name, value, defaultValue, &timeStruct);
+}
+
+/*
+ * Returns a signature value of a node.
+ *
+ * Arguments:
+ *      node            Pointer to the node whose value is to be returned as a
+ *                      signature.  Shall not be NULL.
+ *      value           Pointer to a signature.  Set upon success.  Shall not
+ *                      be NULL.  The client may free upon return.
+ * Returns:
+ *      0               Success.  "*value" is not NULL.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EILSEQ          The value isn't a signature.  "log_start()" called.
+ */
+RegStatus reg_getNodeSignature(
+    const RegNode* const        node,
+    const char* const           name,
+    signaturet* const           value,
+    const signaturet const      defaultValue)
+{
+    return getNodeValue(node, name, value, defaultValue, &signatureStruct);
+}
+
+/*
+ * Deletes a value from a node.  The value is only marked as being deleted: it
+ * is not removed from the registry until "reg_flushNode()" is called on the
+ * node or one of its ancestors.
+ *
+ * Arguments:
+ *      node            Pointer to the node to have the value deleted.  Shall
+ *                      note be NULL.
+ *      name            Pointer to the name of the value to be deleted.  Shall
+ *                      not be NULL.
+ * Returns:
+ *      0               Success
+ *      ENOENT          No such value
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EPERM           The node has been deleted.  "log_start()" called.
+ */
+RegStatus reg_deleteNodeValue(
+    RegNode* const      node,
+    const char* const   name)
+{
+    RegStatus   status = initRegistry(1);
+
+    if (0 == status)
+        status = rn_deleteValue(node, name);
+
+    return status;
+}
+
+/*
+ * Visits a node and all its descendents in the natural order of their path
+ * names.
+ *
+ * Arguments:
+ *      node            Pointer to the node at which to start.  Shall not be
+ *                      NULL.
+ *      func            Pointer to the function to call at each node.  Shall
+ *                      not be NULL.  The function shall not modify the set
+ *                      of child-nodes to which the node being visited belongs.
+ * Returns:
+ *      0               Success
+ *      else            The first non-zero value returned by "func".
+ */
+RegStatus reg_visitNodes(
+    RegNode* const      node,
+    const NodeFunc      func)
+{
+    return rn_visitNodes(node, func);
+}
+
+/*
+ * Visits all the values of a node in the natural order of their path names.
+ *
+ * Arguments:
+ *      node            Pointer to the node whose values are to be visited.
+ *                      Shall not be NULL.
+ *      func            Pointer to the function to call for each value.
+ *                      Shall not be NULL.  The function shall not modify the
+ *                      set of values to which the visited value belongs.
+ * Returns:
+ *      0               Success
+ *      ENOMEM          System error.  "log_start()" called.
+ *      else            The first non-zero value returned by "func"
+ */
+RegStatus reg_visitValues(
+    RegNode* const      node,
+    const ValueFunc     func)
+{
+    return rn_visitValues(node, func, NULL);
 }

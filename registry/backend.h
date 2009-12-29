@@ -7,14 +7,14 @@
 #ifndef LDM_BACKEND_H
 #define LDM_BACKEND_H
 
+typedef struct backend  Backend;
+
 #include "registry.h"
 #include "stringBuf.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct backend  Backend;
 
 typedef struct {
     char*       key;            /* responsibility of backend database */
@@ -35,8 +35,8 @@ typedef struct {
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.  "*backend" is set.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
  */
 RegStatus
 beOpen(
@@ -53,7 +53,7 @@ beOpen(
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
  */
 RegStatus
 beClose(
@@ -67,8 +67,8 @@ beClose(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
  */
 RegStatus
 beRemove(
@@ -80,17 +80,17 @@ beRemove(
  * ARGUMENTS:
  *      backend         Pointer to the database.  Shall have been set by
  *                      "beOpen()".  Shall not be NULL.
- *      key             Pointer to the 0-terminated key.
- *      value           Pointer to the string value.
+ *      key             Pointer to the 0-terminated key.  Shall not be NULL.
+ *      value           Pointer to the string value.  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
  */
 RegStatus
 bePut(
-    Backend*                    backend,
-    const char* const           key,
-    const StringBuf* const      value);
+    Backend*            backend,
+    const char* const   key,
+    const char* const   value);
 
 /*
  * Returns the string to which a key maps.
@@ -98,15 +98,15 @@ bePut(
  * ARGUMENTS:
  *      backend         Pointer to the database.  Shall have been set by
  *                      "beOpen()".  Shall not be NULL.
- *      key             Pointer to the 0-terminated key.
+ *      key             Pointer to the 0-terminated key.  Shall not be NULL.
  *      value           Pointer to a pointer to the string value.  Shall not be
  *                      NULL.  "*value" shall point to the 0-terminated string
  *                      value upon successful return.  The client should call
  *                      "free(*value)" when the value is no longer needed.
  * RETURNS:
  *      0               Success.  "*value" points to the string value.
- *      REG_NO_NODE     The given key doesn't match any entry.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      ENOENT     The given key doesn't match any entry.
+ *      EIO    Backend database error.  "log_start()" called.
  */
 RegStatus
 beGet(
@@ -123,8 +123,7 @@ beGet(
  *      key             Pointer to the 0-terminated key.
  * RETURNS:
  *      0               Success.  The entry associated with the key was deleted.
- *      REG_NO_NODE     The given key doesn't match any entry.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beDelete(
@@ -139,7 +138,7 @@ beDelete(
  *                      "beOpen()".  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
  */
 RegStatus
 beSync(
@@ -157,8 +156,8 @@ beSync(
  *                      is no longer needed.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 RegStatus
 beInitCursor(
@@ -180,10 +179,10 @@ beInitCursor(
  *                      if it exists.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      REG_DB_ERROR    Backend database error.  "*rdbCursor" is unmodified.
+ *      ENOENT     The database is empty.  "*rdbCursor" is unmodified.
+ *      EIO    Backend database error.  "*rdbCursor" is unmodified.
  *                      "log_start()" called.
- *      REG_NO_NODE     The database is empty.  "*rdbCursor" is unmodified.
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 RegStatus
 beFirstEntry(
@@ -203,9 +202,9 @@ beFirstEntry(
  *                      strings to which they point.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      REG_DB_ERROR    Backend database error.  "*rdbCursor" is unmodified.
+ *      ENOENT     The database is empty.  "*rdbCursor" is unmodified.
+ *      EIO    Backend database error.  "*rdbCursor" is unmodified.
  *                      "log_start()" called.
- *      REG_NO_NODE     The database is empty.  "*rdbCursor" is unmodified.
  */
 RegStatus
 beNextEntry(
@@ -218,7 +217,7 @@ beNextEntry(
  *      rdbCursor       Pointer to the RDB cursor structure.
  * RETURNS:
  *      0               Success.  The client shall not use the cursor again.
- *      REG_DB_ERROR    Backend database error.  "log_start()" called.
+ *      EIO    Backend database error.  "log_start()" called.
  */
 RegStatus
 beCloseCursor(RdbCursor* rdbCursor);

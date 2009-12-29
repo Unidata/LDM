@@ -3,37 +3,58 @@
 # Process this file with automake to produce Makefile.in
 
 noinst_LTLIBRARIES      = lib.la
-EXTRA_DIST              = registry.h backend.h stringBuf.h extractHeader
-#lib_la_SOURCES          = registry.c backend-bdb.c stringBuf.c
-lib_la_SOURCES          = stringBuf.c registry.c backend.c
-lib_la_CPPFLAGS         = \
-    -I$(top_srcdir) \
-    -I$(top_srcdir)/protocol \
-    -I$(top_srcdir)/ulog \
-    -I/home/steve/Berkeley-DB/include
+EXTRA_DIST              = \
+    backend.hin \
+    extractHeader \
+    misc.hin \
+    node.hin \
+    registry.hin \
+    stringBuf.hin
+BUILT_SOURCES		= \
+    backend.c backend.h \
+    misc.h \
+    node.h \
+    registry.h \
+    stringBuf.h
+lib_la_SOURCES          = \
+    backend.c \
+    misc.c \
+    node.c \
+    registry.c \
+    stringBuf.c
 TAGS_FILES              = \
     *.c *.h \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/protocol/*.c \
-    /home/steve/Berkeley-DB/db-4.8.24.NC/env/*.c \
-    /home/steve/Berkeley-DB/db-4.8.24.NC/os/*.c \
+    $(top_srcdir)/Berkeley-DB/env/*.c \
+    $(top_srcdir)/Berkeley-DB/os/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
-#bin_PROGRAMS		= rdbutil
-#CPPFLAGS	= \
-#    -I$(top_srcdir)/ulog \
-#    -I$(top_srcdir)
-#LDADD		= ../ulog/lib.la
+CPPFLAGS		= \
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/Berkeley-DB/build_unix
+bin_PROGRAMS		= regutil
+LDADD			= \
+    lib.la \
+    ../protocol/lib.la \
+    ../rpc/lib.la \
+    ../ulog/lib.la \
+    -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8
 
-.c.h:
-	./extractHeader $*.h.in $< >$@.tmp
-	mv -f $@.tmp $@
-registry.h:	registry.h.in registry.c
-stringBuf.h:	stringBuf.h.in stringBuf.c
-backend.h:	backend.h.in backend.c
 backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
+
+.hin.h:
+	./extractHeader $*.hin $*.c >$@.tmp
+	mv -f $@.tmp $@
+backend.h:	backend.hin backend.c
+misc.h:		misc.hin misc.c
+node.h:		node.hin node.c
+registry.h:	registry.hin registry.c
+stringBuf.h:	stringBuf.hin stringBuf.c
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
@@ -43,19 +64,21 @@ check_PROGRAMS		= testRegistry
 testRegistry_CPPFLAGS	= \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
-    -I/home/steve/Berkeley-DB/include \
+    -I$(top_builddir)/Berkeley-DB/build_unix \
     @CPPFLAGS_CUNIT@
 testRegistry_LDADD		= \
     lib.la \
+    $(top_builddir)/protocol/lib.la \
     $(top_builddir)/ulog/lib.la \
-    -L/home/steve/Berkeley-DB/lib -ldb \
+    $(top_builddir)/rpc/lib.la \
+    -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8 \
     @LIBS_CUNIT@
-TESTS			= testRegistry
+TESTS			= checkRegistry
 
 debug:		testRegistry
-	$(LIBTOOL) --mode=execute gdb testRegistry
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb testRegistry
 
 valgrind:	testRegistry
-	$(LIBTOOL) --mode=execute valgrind --leak-check=full \
-	    --show-reachable=yes ./testRegistry
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./testRegistry
 endif

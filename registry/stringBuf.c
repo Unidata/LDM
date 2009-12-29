@@ -16,8 +16,9 @@
 #include <string.h>
 
 #include <log.h>
-#include "stringBuf.h"
+#include "misc.h"
 #include "registry.h"
+#include "stringBuf.h"
 
 struct stringBuf {
     char*       buf;    /* NUL-terminated string */
@@ -47,18 +48,18 @@ static void clear(
  *
  * Arguments:
  *      strBuf          Pointer to the string-buffer.  Shall not be NULL.
- *      nchar           The number of characters that the string-buffer must
+ *      nbytes          The number of bytes that the string-buffer must
  *                      contain (excluding the terminating NUL)
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus ensure(
     StringBuf* const    strBuf,
-    const size_t        nchar)
+    const size_t        nbytes)
 {
     RegStatus   status;
-    size_t      max = nchar + 1;
+    size_t      max = nbytes + 1;
 
     assert(NULL != strBuf);
 
@@ -69,12 +70,13 @@ static RegStatus ensure(
         char*   buf = (char*)realloc(strBuf->buf, max);
 
         if (NULL == buf) {
-            log_serror("Couldn't allocate %lu-byte buffer", (unsigned long)max);
-            status = REG_SYS_ERROR;
+            log_serror("Couldn't allocate %lu-bytes", (unsigned long)max);
+            status = ENOMEM;
         }
         else {
             strBuf->buf = buf;
             strBuf->max = max;
+            status = 0;
         }
     }
 
@@ -90,20 +92,24 @@ static RegStatus ensure(
  *                      NULL.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus appendString(
     StringBuf* const    strBuf,
     const char* const   string)
 {
     RegStatus   status;
+    size_t      newLen;
 
     assert(NULL != strBuf);
     assert(NULL != string);
 
-    if (0 == (status = ensure(strBuf, strBuf->len + strlen(string)))) {
+    newLen = strBuf->len + strlen(string);
+
+    if (0 == (status = ensure(strBuf, newLen))) {
         (void)strcpy(strBuf->buf + strBuf->len, string);
 
+        strBuf->len = newLen;
         status = 0;
     }
 
@@ -120,7 +126,7 @@ static RegStatus appendString(
  *                      be NULL.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 static RegStatus appendArgs(
     StringBuf* const    strBuf,
@@ -147,36 +153,40 @@ static RegStatus appendArgs(
  * Returns a new instance of a string-buffer.
  *
  * Arguments:
+ *      buf             Pointer to a pointer to the new buffer.  Shall not be
+ *                      NULL.  Set upon successful return.  The client should
+ *                      call "sb_free()" when the string-buffer is no longer
+ *                      needed.
  *      nchar           Initial maximum number of characters.
  * Returns:
- *      NULL            System error.  "log_start()" called.
- *      else            Pointer to new string-buffer.  The client should call
- *                      "sb_free()" when the string-buffer is no longer needed.
+ *      0               Success.  "*buf" is set.
+ *      ENOMEM   System error.  "log_start()" called.
  */
-StringBuf* sb_new(
+RegStatus sb_new(
+    StringBuf** const   buf,
     const size_t        nchar)
 {
+    RegStatus   status;
     size_t      nbytes = sizeof(StringBuf);
-    StringBuf*  instance = (StringBuf*)malloc(nbytes);
+    StringBuf*  instance = (StringBuf*)reg_malloc(nbytes, &status);
 
-    if (NULL == instance) {
-        log_serror("Couldn't allocate %lu-byte string-buffer",
-            (unsigned long)nbytes);
-    }
-    else {
+    if (0 == status) {
         instance->buf = NULL;
         instance->max = 0;
 
-        if (0 == ensure(instance, nchar)) {
-            clear(instance);
+        if (0 != (status = ensure(instance, nchar))) {
+            free(instance);
         }
         else {
-            free(instance);
-            instance = NULL;
+            clear(instance);
+            *buf = instance;
         }
     }                                   /* "instance" allocated */
 
-    return instance;
+    if (status)
+        log_add("Couldn't create new string-buffer");
+
+    return status;
 }
 
 /*
@@ -205,7 +215,7 @@ void sb_free(
  *                      (excluding the terminating NUL)
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 RegStatus sb_ensure(
     StringBuf* const    strBuf,
@@ -225,7 +235,7 @@ RegStatus sb_ensure(
  *                      pointer which shall be NULL.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 RegStatus sb_set(
     StringBuf* const    strBuf,
@@ -244,6 +254,41 @@ RegStatus sb_set(
 }
 
 /*
+ * Sets a string-buffer to the first "n" bytes of a string.
+ *
+ * Arguments:
+ *      strBuf          Pointer to the string-buffer to be set.  Shall not be
+ *                      NULL.
+ *      string          Pointer to the string with which to set the buffer.
+ *                      Shall not be NULL.
+ *      nbytes          Number of bytes of the string to use (excluding
+ *                      terminating NUL).
+ * Returns:
+ *      0               Success
+ *      ENOMEM   System error.  "log_start()" called.
+ */
+RegStatus sb_nset(
+    StringBuf* const    strBuf,
+    const char* const   string,
+    size_t              nbytes)
+{
+    RegStatus           status;
+    const size_t        len = strlen(string);
+
+    if (len < nbytes)
+        nbytes = len;
+
+    if (0 == (status = ensure(strBuf, nbytes))) {
+        strncpy(strBuf->buf, string, nbytes);
+
+        strBuf->buf[nbytes] = 0;
+        strBuf->len = nbytes;
+    }
+
+    return status;
+}
+
+/*
  * Appends strings to a string-buffer.
  *
  * Arguments:
@@ -254,7 +299,7 @@ RegStatus sb_set(
  *                      pointer which shall be NULL.
  * Returns:
  *      0               Success
- *      REG_SYS_ERROR   System error.  "log_start()" called.
+ *      ENOMEM   System error.  "log_start()" called.
  */
 RegStatus sb_cat(
     StringBuf* const    strBuf,
