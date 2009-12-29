@@ -6,6 +6,9 @@
  */
 #include <config.h>
 
+#undef NDEBUG
+#include <assert.h>
+#include <errno.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,8 +25,18 @@ static StringBuf*       _valuePath;
 static void printUsage(const char* progname)
 {
     (void)fprintf(stderr,
-        "Usage:\n"
-        "  %s [path [value]]\n", progname);
+        "Usages:\n"
+        "  %s [-r dir] [path]\n"
+        "  %s [-r dir] (-c sig|-s string|-t time|-u uint) valpath\n"
+        "where:\n"
+        "  dir          Path name of registry directory\n"
+        "  path         Absolute path name of registry node or value\n"
+        "  valpath      Absolute path name of value\n"
+        "  sig          Data-product signature as 32 hexadecimal characters\n"
+        "  string       String registry value\n"
+        "  time         Time registry value as YYYYMMDDThhmmss.mmmmmm\n"
+        "  uint         Unsigned integer registry value\n",
+        progname, progname);
 }
 
 /*
@@ -109,78 +122,138 @@ static int printValues(
     return status;
 }
 
-/*
- * Puts an entry into the registry.
- *
- * Arguments:
- *      key     The key of the entry.
- *      value   The value of the entry.
- * Returns:
- *      0       Failure.  "log_start()" called.
- *      else    Success.
- */
-static int putEntry(
-    const char* const   key,
-    const char* const   value)
-{
-    return 0;   /* TODO */
-}
-
 int main(
     int         argc,
     char*       argv[])
 {
-    int status;
+    int                 status;
+    const char* const   progname = basename(argv[0]);
 
-    (void) openulog(basename(argv[0]), LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
+    (void) openulog(progname, LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
 
     if (status = sb_new(&_valuePath, 80)) {
         log_add("Couldn't initialize utility");
     }
     else {
+        enum {
+            PRINT,
+            PUT_STRING,
+            PUT_UINT,
+            PUT_SIGNATURE,
+            PUT_TIME,
+        }                   usage = PRINT;
         int                 ch;
         extern int          optind;
         extern int          opterr;
         extern char*        optarg;
+        const char*         string;
+        signaturet          signature;
+        timestampt          timestamp;
+        unsigned long       uint;
 
         opterr = 0;                     /* supress getopt(3) error messages */
 
-        while (0 == status && (ch = getopt(argc, argv, "r:")) != EOF) {
+        while (0 == status && (ch = getopt(argc, argv, "c:r:s:t:u:")) != EOF) {
             switch (ch) {
+            case 'c': {
+                status = sigParse(optarg, &signature);
+
+                if (0 > status || 0 != optarg[status]) {
+                    log_start("Not a signature: \"%s\"", optarg);
+                    status = EILSEQ;
+                }
+                else {
+                    usage = PUT_SIGNATURE;
+                }
+                break;
+            }
             case 'r': {
                 status = reg_setPathname(optarg);
                 break;
             }
+            case 's': {
+                string = optarg;
+                usage = PUT_STRING;
+                break;
+            }
+            case 't': {
+                status = tsParse(optarg, &timestamp);
+
+                if (0 > status || 0 != optarg[status]) {
+                    log_start("Not a timestamp: \"%s\"", optarg);
+                    status = EILSEQ;
+                }
+                else {
+                    usage = PUT_TIME;
+                }
+                break;
+            }
+            case 'u': {
+                char*   end;
+
+                errno = 0;
+                uint = strtoul(optarg, &end, 0);
+
+                if (0 != *end || (0 == uint && 0 != errno)) {
+                    log_start("Not an unsigned integer: \"%s\"", optarg);
+                    status = EILSEQ;
+                }
+                else {
+                    usage = PUT_UINT;
+                }
+                break;
+            }
             default:
                 log_start("Unknown option: \"%c\"\n", ch);
-                log_log(LOG_ERR);
-                printUsage(argv[0]);
                 status = 1;
+            }
+
+            if (status) {
+                log_log(LOG_ERR);
+                printUsage(progname);
             }
         }                               /* options loop */
 
         if (0 == status) {
             int     argCount = argc - optind;
 
-            if (0 == argCount) {
-                if (status = printValues("/")) {
+            if (PRINT == usage) {
+                if (1 < argCount) {
+                    log_start("Too many arguments");
+                    log_log(LOG_ERR);
+                    printUsage(progname);
+                    status = 1;
+                }
+                else if (status =
+                        printValues(0 == argCount ? "/" : argv[optind])) {
                     log_log(LOG_ERR);
                 }
             }
-            else if (1 == argCount) {
-                if (status = printValues(argv[optind])) {
-                    log_log(LOG_ERR);
-                }
-            }
-            else if (2 == argCount) {
-                if (status = putEntry(argv[optind], argv[optind+1])) {
-                    log_log(LOG_ERR);
-                }
+            else if (1 != argCount) {
+                log_start("Path name of value not specified");
+                log_log(LOG_ERR);
+                printUsage(progname);
+                status = 1;
             }
             else {
-                (void)fprintf(stderr, "Too many arguments\n");
-                printUsage(argv[0]);
-                status = 1;
+                switch (usage) {
+                case PUT_UINT:
+                    status = reg_putUint(argv[optind], uint);
+                    break;
+                case PUT_STRING:
+                    status = reg_putString(argv[optind], string);
+                    break;
+                case PUT_TIME:
+                    status = reg_putTime(argv[optind], &timestamp);
+                    break;
+                case PUT_SIGNATURE:
+                    status = reg_putSignature(argv[optind], signature);
+                    break;
+                default:
+                    assert(0);
+                }
+                if (status)
+                    log_log(LOG_ERR);
             }
         }
 

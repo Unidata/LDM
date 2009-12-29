@@ -234,10 +234,12 @@ top_srcdir = @top_srcdir@
 noinst_LTLIBRARIES = lib.la
 EXTRA_DIST = \
     backend.hin \
-    extractHeader \
+    checkRegistry \
+    extractDecls \
     misc.hin \
     node.hin \
     registry.hin \
+    regutil.txt \
     stringBuf.hin
 
 BUILT_SOURCES = \
@@ -271,6 +273,7 @@ LDADD = \
     ../ulog/lib.la \
     -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8
 
+CLEANFILES = regutil.out
 @HAVE_CUNIT_TRUE@testRegistry_CPPFLAGS = \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/protocol \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/ulog \
@@ -651,6 +654,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -753,7 +757,7 @@ backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
 
 .hin.h:
-	./extractHeader $*.hin $*.c >$@.tmp
+	./extractDecls $*.hin $*.c >$@.tmp
 	mv -f $@.tmp $@
 backend.h:	backend.hin backend.c
 misc.h:		misc.hin misc.c

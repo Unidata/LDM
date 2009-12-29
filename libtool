@@ -85,7 +85,7 @@ AR_FLAGS="cru"
 LTCC="c89"
 
 # LTCC compiler flags.
-LTCFLAGS="-g"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
 CC="c89"
@@ -7353,7 +7353,7 @@ AR_FLAGS="cru"
 LTCC="c89"
 
 # LTCC compiler flags.
-LTCFLAGS="-g"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
 CC="g++"
@@ -7662,7 +7662,7 @@ AR_FLAGS="cru"
 LTCC="c89"
 
 # LTCC compiler flags.
-LTCFLAGS="-g"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
 CC="gfortran"

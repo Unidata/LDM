@@ -5,10 +5,12 @@
 noinst_LTLIBRARIES      = lib.la
 EXTRA_DIST              = \
     backend.hin \
-    extractHeader \
+    checkRegistry \
+    extractDecls \
     misc.hin \
     node.hin \
     registry.hin \
+    regutil.txt \
     stringBuf.hin
 BUILT_SOURCES		= \
     backend.c backend.h \
@@ -43,12 +45,13 @@ LDADD			= \
     ../rpc/lib.la \
     ../ulog/lib.la \
     -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8
+CLEANFILES		= regutil.out
 
 backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
 
 .hin.h:
-	./extractHeader $*.hin $*.c >$@.tmp
+	./extractDecls $*.hin $*.c >$@.tmp
 	mv -f $@.tmp $@
 backend.h:	backend.hin backend.c
 misc.h:		misc.hin misc.c
