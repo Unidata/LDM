@@ -1,6 +1,7 @@
 #ifndef LOG_H
 
 #include <stdarg.h>
+#include "ulog.h"
 
 #ifdef __cplusplus
 extern "C" {
