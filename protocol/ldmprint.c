@@ -18,6 +18,7 @@
 #include <rpc/rpc.h>
 
 #include "ldm.h"
+#include "ldmprint.h"
 #include "atofeedt.h"           /* for fassoc[] */
 #include "log.h"
 
