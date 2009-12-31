@@ -1,4 +1,4 @@
 /foo key : foo value
 /fooInt key : 2
-/fooSignature key : 00000000000000000000000000000000
+/fooSignature key : 0102030405060708090a0b0c0d0e0f10
 /fooTime key : 19700101T000000.000000

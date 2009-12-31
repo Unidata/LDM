@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.8.2.3], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.9.0.0], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -166,7 +166,7 @@ AC_SUBST(PATH)
 AC_PROG_CC(c89 cc gcc)
 AM_PROG_CC_C_O
 if test -z "$CC"; then
-    AC_MSG_ERROR(no C compiler found)
+    AC_MSG_ERROR([no C compiler found])
 else
     AC_MSG_CHECKING(the C compiler)
     AC_COMPILE_IFELSE([int foo;], 
@@ -292,6 +292,7 @@ AC_CHECK_HEADERS([stropts.h], ,
 AC_PROG_LIBTOOL
 
 AC_CONFIG_FILES([
+    Berkeley-DB/Makefile
     Makefile
     rpc/Makefile
     ulog/Makefile
@@ -336,7 +337,30 @@ AC_CONFIG_FILES([
     test/Makefile
 ])
 
-#AC_CONFIG_SUBDIRS([registry/db])
-(cd Berkeley-DB/build_unix && ../dist/configure --prefix=$prefix --enable-smallbuild)
+#AC_CONFIG_SUBDIRS([Berkeley-DB/dist])
+# $srcdir appears to be the only available path-related shell variable:
+# $top_srcdir, $ac_srcdir, $abs_top_srcdir, and $ac_top_srcdir are all empty.
+AC_MSG_NOTICE([***************************************************************])
+AC_MSG_NOTICE([Configuring Berkeley-DB subpackage])
+if test -d Berkeley-DB/build_unix; then
+    : true
+else
+    if mkdir -p Berkeley-DB/build_unix; then
+        : true
+    else
+        AC_MSG_ERROR([Couldn't create Berkeley-DB build directory])
+    fi
+fi
+if abs_top_srcdir=`cd $srcdir && pwd`; then
+    if (cd Berkeley-DB/build_unix && 
+            $abs_top_srcdir/Berkeley-DB/dist/configure --prefix=$prefix \
+            --enable-smallbuild); then
+        : true
+    else
+        AC_MSG_ERROR([Couldn't configure Berkeley-DB subpackage])
+    fi
+else
+    AC_MSG_ERROR([Couldn't get absolute pathname of top-level source-directory])
+fi
 
 AC_OUTPUT

@@ -4,6 +4,7 @@
 
 noinst_LTLIBRARIES      = lib.la
 EXTRA_DIST              = \
+    backend-bdb.c \
     backend.hin \
     checkRegistry \
     extractDecls \
@@ -41,17 +42,23 @@ CPPFLAGS		= \
 bin_PROGRAMS		= regutil
 LDADD			= \
     lib.la \
-    ../protocol/lib.la \
-    ../rpc/lib.la \
-    ../ulog/lib.la \
-    -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8
-CLEANFILES		= regutil.out
+    $(top_builddir)/protocol/lib.la \
+    $(top_builddir)/rpc/lib.la \
+    $(top_builddir)/ulog/lib.la \
+    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
+CLEANFILES		= \
+    regutil.out \
+    backend.h \
+    misc.h \
+    node.h \
+    registry.h \
+    stringBuf.h
 
 backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
 
 .hin.h:
-	./extractDecls $*.hin $*.c >$@.tmp
+	$(srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 backend.h:	backend.hin backend.c
 misc.h:		misc.hin misc.c
@@ -74,7 +81,7 @@ testRegistry_LDADD		= \
     $(top_builddir)/protocol/lib.la \
     $(top_builddir)/ulog/lib.la \
     $(top_builddir)/rpc/lib.la \
-    -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8 \
+    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
     @LIBS_CUNIT@
 TESTS			= checkRegistry
 

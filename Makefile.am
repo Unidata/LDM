@@ -17,13 +17,13 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 
 SUBDIRS	= \
-    Berkeley-DB/build_unix \
-    registry \
+    Berkeley-DB \
     rpc \
     ulog \
     misc \
     protocol \
     $(PQ_SUBDIR) \
+    registry \
     pqcreate \
     pqcheck \
     pqinsert \
@@ -47,13 +47,13 @@ SUBDIRS	= \
     html
 
 DIST_SUBDIRS		= \
-    Berkeley-DB/build_unix \
-    registry \
+    Berkeley-DB \
     rpc \
     ulog \
     misc \
     protocol \
     pq \
+    registry \
     pqcreate \
     pqcheck \
     pqinsert \
@@ -132,10 +132,9 @@ ensure-ldmhome-links:
 	cd $(LDMHOME) \
 	&& ( test -e src || $(LN_S) runtime/src src ) \
 	&& ( test -e bin || $(LN_S) runtime/bin bin ) \
-	&& ( test -e doc || $(LN_S) runtime/doc doc ) \
 	&& ( test -e include || $(LN_S) runtime/include include ) \
 	&& ( test -e lib || $(LN_S) runtime/lib lib ) \
-	&& ( test -e man || $(LN_S) runtime/man man ) \
+	&& ( test -e man || $(LN_S) runtime/share/man man ) \
 	&& ( test -e runtime || $(LN_S) $(DESTDIR)$(prefix) runtime )
 
 ensure-ldmhome-dirs:

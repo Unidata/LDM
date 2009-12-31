@@ -403,7 +403,7 @@ static RegStatus formatSignature(
     const void* const   value,
     StringBuf* const    strBuf)
 {
-    return sb_set(strBuf, s_signaturet(NULL, 0, (const signaturet*)value),
+    return sb_set(strBuf, s_signaturet(NULL, 0, value),
         NULL);
 }
 

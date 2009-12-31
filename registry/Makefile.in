@@ -62,14 +62,16 @@ PROGRAMS = $(bin_PROGRAMS)
 regutil_SOURCES = regutil.c
 regutil_OBJECTS = regutil.$(OBJEXT)
 regutil_LDADD = $(LDADD)
-regutil_DEPENDENCIES = lib.la ../protocol/lib.la ../rpc/lib.la \
-	../ulog/lib.la
+regutil_DEPENDENCIES = lib.la $(top_builddir)/protocol/lib.la \
+	$(top_builddir)/rpc/lib.la $(top_builddir)/ulog/lib.la \
+	$(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
 testRegistry_SOURCES = testRegistry.c
 testRegistry_OBJECTS = testRegistry-testRegistry.$(OBJEXT)
 @HAVE_CUNIT_TRUE@testRegistry_DEPENDENCIES = lib.la \
 @HAVE_CUNIT_TRUE@	$(top_builddir)/protocol/lib.la \
 @HAVE_CUNIT_TRUE@	$(top_builddir)/ulog/lib.la \
-@HAVE_CUNIT_TRUE@	$(top_builddir)/rpc/lib.la
+@HAVE_CUNIT_TRUE@	$(top_builddir)/rpc/lib.la \
+@HAVE_CUNIT_TRUE@	$(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -233,6 +235,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LTLIBRARIES = lib.la
 EXTRA_DIST = \
+    backend-bdb.c \
     backend.hin \
     checkRegistry \
     extractDecls \
@@ -268,12 +271,19 @@ TAGS_FILES = \
 
 LDADD = \
     lib.la \
-    ../protocol/lib.la \
-    ../rpc/lib.la \
-    ../ulog/lib.la \
-    -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8
+    $(top_builddir)/protocol/lib.la \
+    $(top_builddir)/rpc/lib.la \
+    $(top_builddir)/ulog/lib.la \
+    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
 
-CLEANFILES = regutil.out
+CLEANFILES = \
+    regutil.out \
+    backend.h \
+    misc.h \
+    node.h \
+    registry.h \
+    stringBuf.h
+
 @HAVE_CUNIT_TRUE@testRegistry_CPPFLAGS = \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/protocol \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/ulog \
@@ -285,7 +295,7 @@ CLEANFILES = regutil.out
 @HAVE_CUNIT_TRUE@    $(top_builddir)/protocol/lib.la \
 @HAVE_CUNIT_TRUE@    $(top_builddir)/ulog/lib.la \
 @HAVE_CUNIT_TRUE@    $(top_builddir)/rpc/lib.la \
-@HAVE_CUNIT_TRUE@    -L$(top_builddir)/Berkeley-DB/build_unix/.libs -ldb-4.8 \
+@HAVE_CUNIT_TRUE@    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
 @HAVE_CUNIT_TRUE@    @LIBS_CUNIT@
 
 @HAVE_CUNIT_TRUE@TESTS = checkRegistry
@@ -757,7 +767,7 @@ backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
 
 .hin.h:
-	./extractDecls $*.hin $*.c >$@.tmp
+	$(srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 backend.h:	backend.hin backend.c
 misc.h:		misc.hin misc.c

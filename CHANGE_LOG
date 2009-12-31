@@ -1,22 +1,42 @@
-6.8.2
-	Portability:
-	    Added checks for netstat(1) and top(1) to configure(1)
-	    script and appropriately modified ldmadmin(1).  Among other
-	    things, this ported the "ldmadmin printmetrics" command to
-	    Mac OS X:
+6.9.0.0
+        SUMMARY: Dragged the kicking and screaming LDM into the late
+            20th century.  :-)
 
-	LDM (rpc.ldmd):
-	    Added logging to some failed pq_close() calls in an attempt
-	    to debug the Mac OS X 10.5 fcntl() problem.
+        Registry:
+            Created a registry for the LDM similar to the Windows registry,
+            Gnome's GCONF, or Java's preferences.  This feature is implemented
+            using the Berkeley DB package.  While this might seem like
+            overkill, it's one of the few, proven, freely-available packages
+            with support for both transactions and concurent access.
+
+	Portability:
+            Added checks for netstat(1) and top(1) to configure(1) script and
+            appropriately modified ldmadmin(1).  Among other things, this
+            ported the "ldmadmin printmetrics" command to Mac OS X (note,
+            however, that a bug in Mac OS X prevents the LDM from working
+            reliably).
+
+        Installation:
+            Upgraded the package-installation mechanism from one based on
+            autoconf(1) and ad-hoc makefiles to one based on automake(1).  THIS
+            IS A BIG DEAL WITH LOTS OF RAMIFICATIONS.  FORGET EVERYTHING YOU
+            THINK YOU KNOW ABOUT INSTALLING THE LDM AND FOLLOW THE NEW
+            INSTRUCTIONS.
+
+            Incorporated documentation into "src".
+
+	LDM (ldmd):
+            Renamed the LDM server from "rpc.ldmd" to just "ldmd".
+
+            Added logging to some failed pq_close() calls in an attempt to
+            debug the Mac OS X 10.5 fcntl() problem.
 
 	pq(3) library:
-	    Corrected ability to build without mmap(2) support via the
-	    NO_MMAP C macro.
+            Corrected ability to build without mmap(2) support via the NO_MMAP
+            C macro.
 
 	Misc:
-	    Transitioned from CVS version-control to git(1).
-
-	    Moved "../doc" to subdirectory of "src".
+	    Upgraded the version-control mechanism from CVS to git(1).
 
 6.8.1	2009-08-14
 	Installation:
