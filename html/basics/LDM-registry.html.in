@@ -1,0 +1,40 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>LDM Registry</TITLE>
+<META NAME="BOOKMARK" CONTENT="LDM Registry">
+<META NAME="AUTHOR" CONTENT="Steve">
+<META NAME="KEYWORDS" CONTENT="LDM, registry, configuration">
+<META NAME="DESCRIPTION" CONTENT="Description of the LDM Registry">
+</HEAD>
+
+<BODY>
+
+<p>
+The <a href="glindex.html#LDM">LDM</a> system has a registry for configuration
+and runtime parameters that is similar to Java preferences, the Windows
+registry, or the GNU Gconf registry.  The parameters of the registry and their
+values can be viewed by executing the command "<b><tt>regutil</tt></b>".
+
+<p>
+The parameters are
+
+<blockquote>
+<table align="center" border="2" cellpadding="6" cellspacing="0">
+    <tr>
+	<th>Name</th>
+	<th>Description</th>
+	<th>Default Value</th>
+    </tr>
+    <tr>
+	<td><tt>/config/queuePath</tt></td>
+	<td>The path name of the 
+        <a href="glindex.html#product-queue">product-queue</a></td>
+        <td><tt>$LDMHOME/var/queue/ldm.pq</tt></td>
+    </tr>
+</table>
+</blockquote>
+
+</BODY>
+</HTML>

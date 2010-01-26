@@ -24,7 +24,7 @@ struct backend {
     DB*         db;
 };
 
-#define DB_FILENAME    "ldm-runtime.db"
+#define DB_FILENAME    "registry.db"
 
 /*
  * Decorator for the Berkeley cursor structure for use by this backend module.
@@ -116,8 +116,8 @@ copyEntry(
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.  "*backend" is set.
- *      ENOMEM   System error.  "log_start()" called.
- *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beOpen(
@@ -189,11 +189,11 @@ beOpen(
             }                       /* "env" opened */
 
             /*
-             * env->close() is called here (if it hasn't been called already)
-             * instead of calling env->remove()) because calling env->remove()
-             * after env->close() results in a SIGSEGV and calling
-             * env->remove() with no preceeding call to env->close() results in
-             * a memory-leak.
+             * DB_ENV->close() is called here (if it hasn't been called
+             * already) instead of calling DB_ENV->remove()) because calling
+             * DB_ENV->remove() after DB_ENV->close() results in a SIGSEGV and
+             * calling DB_ENV->remove() with no preceeding call to env->close()
+             * results in a memory-leak.
              */
             if (status && NULL != env)
                 env->close(env, 0);
@@ -514,8 +514,8 @@ beSync(
  *                      is no longer needed.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      EIO    Backend database error.  "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
 beInitCursor(
@@ -539,7 +539,7 @@ beInitCursor(
      * Because this function is only used for reading, the Berkeley cursor
      * needn't be transactionally protected.
      */
-    status = db->cursor(db, NULL, &dbCursor, DB_READ_COMMITTED);
+    status = db->cursor(db, NULL, &dbCursor, 0);
 
     if (status) {
         const char*     path;
@@ -590,10 +590,10 @@ beInitCursor(
  *                      if it exists.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      ENOENT     The database is empty.  "*rdbCursor" is unmodified.
- *      EIO    Backend database error.  "*rdbCursor" is unmodified.
+ *      ENOENT          The database is empty.  "*rdbCursor" is unmodified.
+ *      EIO             Backend database error.  "*rdbCursor" is unmodified.
  *                      "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
 beFirstEntry(
@@ -705,7 +705,7 @@ beNextEntry(
  *      rdbCursor       Pointer to the RDB cursor structure.
  * RETURNS:
  *      0               Success.  The client shall not use the cursor again.
- *      EIO    Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beCloseCursor(RdbCursor* rdbCursor)
