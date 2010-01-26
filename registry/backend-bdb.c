@@ -20,7 +20,6 @@
 #include <log.h>
 
 struct backend {
-    DB_ENV*     env;
     DB*         db;
 };
 
@@ -172,7 +171,6 @@ beOpen(
                         status = EIO;
                     }
                     else {
-                        back->env = env;
                         back->db = db;
                         *backend = back;
                         status = 0;     /* success */
@@ -226,8 +224,8 @@ beClose(
     DB_ENV*     env;
     DB*         db;
 
-    env = backend->env;
     db = backend->db;
+    env = db->get_env(db);
     status = db->close(db, 0);
 
     if (status) {
@@ -245,7 +243,6 @@ beClose(
             status = EIO;
         }
         else {
-            backend->env = NULL;
             free(backend);
             status = 0;                 /* success */
         }
@@ -528,12 +525,11 @@ beInitCursor(
     DB*         db;
 
     assert(NULL != backend);
-    assert(NULL != backend->env);
     assert(NULL != backend->db);
     assert(NULL != rdbCursor);
 
-    env = backend->env;
     db = backend->db;
+    env = db->get_env(db);
 
     /*
      * Because this function is only used for reading, the Berkeley cursor
@@ -630,7 +626,8 @@ beFirstEntry(
         }
         else {
             const char* path;
-            DB_ENV*     env = backCursor->backend->env;
+            DB_ENV*     env =
+                backCursor->backend->db->get_env(backCursor->backend->db);
 
             (void)env->get_home(env, &path);
             log_add("Couldn't set cursor for database \"%s\" to first entry on "
@@ -686,7 +683,8 @@ beNextEntry(
         status = ENOENT;
     }
     else {
-        DB_ENV*         env = backCursor->backend->env;
+        DB_ENV*         env =
+            backCursor->backend->db->get_env(backCursor->backend->db);
         const char*     path;
 
         (void)env->get_home(env, &path);
@@ -722,7 +720,8 @@ beCloseCursor(RdbCursor* rdbCursor)
     status = dbCursor->close(dbCursor);
 
     if (status) {
-        DB_ENV*         env = backCursor->backend->env;
+        DB_ENV*         env =
+            backCursor->backend->db->get_env(backCursor->backend->db);
         const char*     path;
 
         (void)env->get_home(env, &path);
