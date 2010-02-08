@@ -4,3 +4,4 @@ ldmfail
 netcheck
 syscheck
 writeConfiguration.pl
+ldmadmin.pl
