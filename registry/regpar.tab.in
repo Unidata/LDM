@@ -1,0 +1,36 @@
+DELETE_INFO_FILES:/config/delete-info-files:Whether or not to remove the files that track the last successfully-received data-products.  0 means no; otherwise, yes:0
+HOSTNAME:/config/hostname:The fully-qualified name of the LDM computer:Output from "uname -n"
+INSERTION_CHECK_INTERVAL:/config/insertion-check-interval:How often, in seconds, the <a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a> script should check for a <a href="glindex.html#data-product">data-product</a> being inserted into the <a href="glindex.html#product-queue">product-queue</a>:300
+RECONCILIATION_MODE:/config/reconciliation-mode:How to reconcile the request
+time-offset with the observed minimum residency time.  One of "increase queue", "decrease time-offset", or "do nothing":increase queue
+ABORT_IF_CHECK_TIME_FAILURE:/config/check-time/abort-if-failure:Whether or not to abort if the system clock is off more than allowed.  Zero means no; non-zero means yes:0
+CHECK_TIME:/config/check-time/enabled:Whether or not the <a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a> script should check the system clock for accuracy.  Zero means no; non-zero means yes:1
+CHECK_TIME_LIMIT:/config/check-time/limit:The maximum amount, in seconds, that the system clock can be off before something is done:10
+WARN_IF_CHECK_TIME_DISABLED:/config/check-time/warn-if-disabled:Whether or not the <a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a> script should print a warning message if checking of the system clock is disabled.  Zero means no; non-zero means yes:1
+NTPDATE_COMMAND:/config/check-time/ntpdate/command:The <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> command for checking the system clock:@NTPDATE@
+NTPDATE_SERVERS:/config/check-time/ntpdate/servers:Time servers for the for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility:ntp.ucsd.edu ntp1.cs.wisc.edu ntppub.tamu.edu otc1.psu.edu timeserver.unidata.ucar.edu
+NTPDATE_TIMEOUT:/config/check-time/ntpdate/timeout:Timeout, in seconds, for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility:5
+LOG_COUNT:/config/log/count:The number of LDM log files to keep around:7
+LOG_FILE:/config/log/file:Pathname of the LDM log file:@LDMHOME@/var/logs/ldmd.log
+LOG_ROTATE:/config/log/rotate:Whether or not the command "<tt>ldmadmin start</tt>" should start a new log file.  Zero means no; non-zero means yes.:1
+METRICS_COUNT:/config/metrics/count:The number of LDM metrics files to keep around:4
+METRICS_FILE:/config/metrics/file:Pathname of the LDM metrics file:@LDMHOME@/var/logs/metrics.txt
+METRICS_FILES:/config/metrics/files:Filename pattern for the metrics files to plot:@LDMHOME@/var/logs/metrics.txt*
+NETSTAT_COMMAND:/config/metrics/netstat-command:The <a href="glindex.html#netstat utility">netstat</a> command for obtaining performance metrics:@NETSTAT@
+TOP_COMMAND:/config/metrics/top-command:The <a href="glindex.html#top utility">top</a> command for obtaining performance metrics:@TOP@
+PQACT_CONFIG_PATH:/config/pqact/config-path:The pathname of the default pqact(1) configuration-file:@LDMHOME@/etc/pqact.conf
+PQACT_DATADIR_PATH:/config/pqact/datadir-path:The pathname of the default pqact(1) data-directory:@LDMHOME@
+PQSURF_CONFIG_PATH:/config/pqsurf/config-path:The pathname of the default pqsurf(1) configuration-file:@LDMHOME@/etc/pqsurf.conf
+PQSURF_DATADIR_PATH:/config/pqsurf/datadir-path:The pathname of the default pqsurf(1) data-directory:@LDMHOME@
+QUEUE_PATH:/config/queue/path:The path name of the <a href="glindex.html#product-queue">product-queue</a>:@LDMHOME@/var/queue/ldm.pq
+QUEUE_SIZE:/config/queue/size:The size of the <a href="glindex.html#product-queue">product-queue</a> in bytes.  The suffixes <tt>K</tt>, <tt>M</tt>, and <tt>G</tt> may be used for multiplying by 1e3, 1e6, and 1e9, respectively.:500M
+QUEUE_SLOTS:/config/queue/slots:The capacity of the <a href="glindex.html#product-queue">product-queue</a> in terms of the maximum number of data-products that it can hold.  Specified as a number or as the string <tt>default</tt> (in which case the number of slots is automatically computed based on an assumed mean size for the data-products).:default
+SCOUR_CONFIG_PATH:/config/scour/config-path:The pathname of the scour(1) configuration-file:@LDMHOME@/etc/scour.conf
+LDMD_CONFIG_PATH:/config/server/config-path:The pathname of the LDM server configuration-file:@LDMHOME@/etc/ldmd.conf
+IP_ADDR:/config/server/ip-addr:The IP address of the interface on which the LDM server should listen for incoming connections.  An address of <tt>0.0.0.0</tt> will cause the server to listen on all available interfaces.:0.0.0.0
+MAX_CLIENTS:/config/server/max-clients:The maximum number of remotely-initiated connections the LDM server should allow before ignoring additional remotely-initiated connection attempts:256
+MAX_LATENCY:/config/server/max-latency:The maximum <a href="glindex#data-product latency">data-product latency</a> in seconds.  Arriving data-products with greater latency will be discarded.  This also defines the minimum data-product <a href="glindex.html#residency time">residency time</a>:3600
+PORT:/config/server/port:The number of the port on which the LDM server should listen for incoming connections:388
+TIME_OFFSET:/config/server/time-offset:A cold-started LDM server will request data from this many seconds ago:3600
+SURFQUEUE_PATH:/config/surf-queue/path:The pathname of the pqsurf(1) product-queue:@LDMHOME@/var/queue/pqsurf.pq
+SURFQUEUE_SIZE:/config/surf-queue/size:The size of the <a href="glindex.html#pqsurf">pqsurf</a> queue in bytes.  The suffixes <tt>K</tt>, <tt>M</tt>, and <tt>G</tt> may be used for multiplying by 1e3, 1e6, and 1e9, respectively.:2M
