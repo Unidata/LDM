@@ -155,6 +155,7 @@ LIBS = @LIBS@
 LIBS_CUNIT = @LIBS_CUNIT@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
+LOGS_DIR = @LOGS_DIR@
 LOG_LDM = @LOG_LDM@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -175,7 +176,9 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
+QUEUE_DIR = @QUEUE_DIR@
 RANLIB = @RANLIB@
+REGISTRY_DIR = @REGISTRY_DIR@
 RPCGEN = @RPCGEN@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -243,6 +246,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+BUILT_SOURCES = ../registry/registry.h globals.h
 noinst_LTLIBRARIES = lib.la
 include_HEADERS = \
     abbr.h \
@@ -299,16 +303,22 @@ lib_la_SOURCES = \
     UpFilter.c \
     xdr_data.c
 
-lib_la_CPPFLAGS = -I$(top_srcdir)/misc -I$(top_srcdir)/ulog -I$(top_srcdir)/pq -I$(top_srcdir)
-#-I../server
+lib_la_CPPFLAGS = \
+    -I$(top_srcdir)/misc \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/pq \
+    -I$(top_srcdir)/registry
+
 TAGS_FILES = \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../pq/*.c ../pq/*.h \
     ../server/*.c \
-    ../rpc/*.c ../rpc/*.h
+    ../rpc/*.c ../rpc/*.h \
+    ../registry/*.c
 
 EXTRA_DIST = \
+    globals.hin \
     ldm.x \
     ldm4.h \
     ldm5.h \
@@ -316,11 +326,12 @@ EXTRA_DIST = \
     prod_info.h \
     fix_clnt.pl
 
-CLEANFILES = *.i
-all: all-am
+CLEANFILES = *.i globals.h
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .i .lo .o .obj
+.SUFFIXES: .c .h .hin .i .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -719,13 +730,15 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: check-am
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
 all-am: Makefile $(LTLIBRARIES) $(HEADERS)
 installdirs:
 	for dir in "$(DESTDIR)$(includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: install-am
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -751,6 +764,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
@@ -822,7 +836,7 @@ ps-am:
 
 uninstall-am: uninstall-includeHEADERS
 
-.MAKE: install-am install-strip
+.MAKE: all check install install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
 	clean-libtool clean-noinstLTLIBRARIES ctags distclean \
@@ -838,6 +852,14 @@ uninstall-am: uninstall-includeHEADERS
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-includeHEADERS
 
+
+../registry/registry.h:
+	cd ../registry && $(MAKE) $@
+
+.hin.h:
+	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
+	mv -f $@.tmp $@
+globals.h:	globals.hin globals.c
 
 ldm.h:		ldm.x
 	$(RPCGEN) -h ldm.x | \

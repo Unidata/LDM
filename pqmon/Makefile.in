@@ -60,7 +60,8 @@ pqmon_SOURCES = pqmon.c
 pqmon_OBJECTS = pqmon.$(OBJEXT)
 pqmon_LDADD = $(LDADD)
 pqmon_DEPENDENCIES = ../$(PQ_SUBDIR)/lib.la ../protocol/lib.la \
-	../ulog/lib.la ../misc/lib.la ../rpc/lib.la
+	../ulog/lib.la ../misc/lib.la ../rpc/lib.la ../registry/lib.la \
+	../Berkeley-DB/build_unix/libdb-4.8.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -157,6 +158,7 @@ LIBS = @LIBS@
 LIBS_CUNIT = @LIBS_CUNIT@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
+LOGS_DIR = @LOGS_DIR@
 LOG_LDM = @LOG_LDM@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -177,7 +179,9 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
+QUEUE_DIR = @QUEUE_DIR@
 RANLIB = @RANLIB@
+REGISTRY_DIR = @REGISTRY_DIR@
 RPCGEN = @RPCGEN@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -251,6 +255,8 @@ LDADD = \
     ../ulog/lib.la \
     ../misc/lib.la \
     ../rpc/lib.la \
+    ../registry/lib.la \
+    ../Berkeley-DB/build_unix/libdb-4.8.la \
     -lm
 
 dist_man1_MANS = pqmon.1
@@ -259,6 +265,7 @@ TAGS_FILES = \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
+    ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
 
 all: all-am
@@ -630,6 +637,13 @@ uninstall-man: uninstall-man1
 	uninstall-am uninstall-binPROGRAMS uninstall-man \
 	uninstall-man1
 
+
+debug:		pqmon
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb pqmon
+
+valgrind:	pqmon
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./pqmon -S
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

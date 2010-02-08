@@ -50,6 +50,148 @@
 #include "md5.h"
 
 
+struct aclt {
+        feedtypet       ft;
+        char*           pattern;
+        regex_t*        rgx;
+        host_set*       hsp;
+        struct aclt*    next;
+        int             isPrimary;
+};
+typedef struct aclt aclt;
+
+typedef struct AllowEntry {
+    struct AllowEntry*          next;
+    host_set*                   hsp;
+    Pattern*                    okPattern;
+    Pattern*                    notPattern;
+    feedtypet                   ft;
+} AllowEntry;
+
+typedef struct {
+    char*       hostId;
+    unsigned    port;
+} RemoteLocation;
+
+struct RequestEntry {
+    regex_t*                    regex;
+    struct RequestEntry*        next;
+    char*                       pattern;
+    RemoteLocation*             remoteLocations;
+    feedtypet                   ft;
+    unsigned                    hostCount;
+};
+
+struct proct {
+        pid_t pid;
+        wordexp_t wrdexp;
+        struct proct *next;
+};
+typedef struct proct proct ;
+
+static AllowEntry*      allowEntryHead = NULL;
+static AllowEntry*      allowEntryTail = NULL;
+static aclt*            accept_acl;
+static RequestEntry*    requestEntryHead = NULL;
+static RequestEntry*    requestEntryTail = NULL;
+static proct*           procs;
+
+
+/*
+ * Frees an access-control-list entry.
+ *
+ * Arguments:
+ *      ap      Pointer to memory containing the access-control-list entry.
+ *              May be NULL.
+ */
+static void free_aclt(
+    aclt*       entry)
+{
+    if (NULL != entry) {
+        if (NULL != entry->pattern) {
+            free(entry->pattern);
+
+            if (NULL != entry->rgx) {
+                regfree(entry->rgx);
+                free(entry->rgx);
+            }
+        }
+
+        free_host_set(entry->hsp);
+        free(entry);
+    }
+}
+
+/*
+ * Frees the resources of the ACCEPT entries.
+ */
+static void freeAcceptEntries(void)
+{
+    aclt*       entry = accept_acl;
+
+    while (NULL != entry) {
+        aclt*   next = entry->next;
+        free_aclt(entry);
+        entry = next;
+    }
+
+    accept_acl = NULL;
+}
+
+/*
+ * Frees the resources of the REQUEST entries.
+ */
+static void freeRequestEntries(void)
+{
+    RequestEntry* entry = requestEntryHead;
+
+    while (entry != NULL) {
+        int             i;
+        RequestEntry*   nextEntry = entry->next;
+
+        regfree(entry->regex);
+        free(entry->regex);
+        free(entry->pattern);
+
+        for (i = 0; i < entry->hostCount; ++i)
+            free(entry->remoteLocations[i].hostId);
+        free(entry->remoteLocations);
+
+        free(entry);
+
+        entry = nextEntry;
+    }
+
+    requestEntryHead = NULL;
+    requestEntryTail = NULL;
+}
+
+/*
+ * Frees the resources of the ALLOW entries.
+ */
+static void freeAllowEntries(void)
+{
+    AllowEntry* entry = allowEntryHead;
+
+    while (entry != NULL) {
+        AllowEntry*     nextEntry = entry->next;
+
+        pat_free(entry->okPattern);
+        pat_free(entry->notPattern);
+        free_host_set(entry->hsp);
+        free(entry);
+
+        entry = nextEntry;
+    }
+
+    allowEntryHead = NULL;
+    allowEntryTail = NULL;
+}
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
 void
 free_host_set(host_set *hsp)
 {
@@ -134,46 +276,6 @@ host_set_match(const peer_info *rmtip, const host_set *hsp)
 }
 
 
-struct aclt {
-        feedtypet       ft;
-        const char*     pattern;
-        regex_t         rgx;
-        const host_set* hsp;
-        struct aclt*    next;
-        int             isPrimary;
-};
-typedef struct aclt aclt;
-
-typedef struct AllowEntry {
-    struct AllowEntry*          next;
-    const host_set*             hsp;
-    Pattern*                    okPattern;
-    Pattern*                    notPattern;
-    feedtypet                   ft;
-} AllowEntry;
-
-typedef struct {
-    char*       hostId;
-    unsigned    port;
-} RemoteLocation;
-
-struct RequestEntry {
-    regex_t                     regex;
-    struct RequestEntry*        next;
-    char*                       pattern;
-    RemoteLocation*             remoteLocations;
-    feedtypet                   ft;
-    unsigned                    hostCount;
-};
-
-
-static AllowEntry*      allowEntryHead = NULL;
-static AllowEntry*      allowEntryTail = NULL;
-static aclt*            accept_acl;
-static RequestEntry*    requestEntryHead = NULL;
-static RequestEntry*    requestEntryTail = NULL;
-
-
 /*
  * Returns the RequestEntry corresponding to a feedtype and pattern -- creating
  * it if necessary.
@@ -183,19 +285,21 @@ static RequestEntry*    requestEntryTail = NULL;
  *      ft              Feedtype.
  *      pattern         Pointer to ERE pattern for product-identifier.  Caller 
  *                      may free on return.
- *      regex           Pointer to compiled ERE for product-identifier.  On 
- *                      success, caller must not call regfree(regex) or modify
- *                      *regex.
+ *      regex           Pointer to allocated memory containing the compiled ERE
+ *                      for matching product-identifiers.  Shall not be NULL.
+ *                      Upon successful return, the client shall abandon
+ *                      responsibility for calling "regfree(regex)" and
+ *                      "free(regex)".
  * Returns:
  *      0       Success
- *      ENOMEM  Out of memory.
+ *      ENOMEM  Out of memory
  */
 int
 requestEntry_get(
     RequestEntry** const        entry,
     const feedtypet             ft,
     const char* const           pattern,
-    const regex_t* const        regex)
+    regex_t* const              regex)
 {
     int                 errCode = 0;    /* success */
     RequestEntry*       ent;
@@ -216,11 +320,10 @@ requestEntry_get(
         else {
             if (NULL == (ent->pattern = strdup(pattern))) {
                 errCode = ENOMEM;
-                free(ent);
             }
             else {
                 ent->ft = ft;
-                ent->regex = *regex;
+                ent->regex = regex;
                 ent->hostCount = 0;
                 ent->remoteLocations = NULL;
                 ent->next = NULL;
@@ -235,7 +338,10 @@ requestEntry_get(
                 }
 
                 *entry = ent;
-            }
+            }                           /* "ent->pattern" allocated */
+
+            if (errCode)
+                free(ent);
         }                               /* "ent" allocated */
     }                                   /* relevant entry doesn't exist */
 
@@ -288,36 +394,24 @@ requestEntry_addHost(
 }
 
 
-#if 0
-static void
-free_aclt(aclt *ap)
-{
-        if(ap == NULL)  
-                return;
-        if(ap->pattern != NULL)
-        {
-                free((void *)ap->pattern); /* cast away const */
-                regfree(&ap->rgx);
-        }
-        if(ap->hsp != NULL)
-                free_host_set((host_set *)ap->hsp); /* cast away const */
-        free(ap);
-}
-#endif
-
-
 /*
  * Allocates and initializes an access-control entry.
  *
  * Arguments:
  *      ft              The feedtype.
- *      pattern         Pointer to the pattern for matching the data-product
- *                      identifier.  The string is not copied.
- *      rgxp            Pointer to the regular-expression for matching the
- *                      data-product identifier.  The caller may free upon
- *                      return.
- *      hsp             Pointer to the allowed set of hosts.  The set is not
- *                      copied.
+ *      pattern         Pointer to allocated memory containing the pattern for
+ *                      matching the data-product identifier.  Upon successful
+ *                      return, the client shall abandon responsibility for
+ *                      freeing.
+ *      rgxp            Pointer to allocated memory containing the
+ *                      regular-expression for matching the data-product
+ *                      identifier.  Upon successful return, the client shall
+ *                      abandon responsibility for calling "regfree(rgxp)" and
+ *                      "free(rgxp)".
+ *      hsp             Pointer to allocated memory containing the allowed set
+ *                      of hosts.  Upon successful return, the client shall
+ *                      abandon responsibility for calling
+ *                      "free_host_set(hsp)".
  *      isPrimary       Whether or not the initial data-product exchange-mode is
  *                      primary (i.e., uses HEREIS) or alternate (i.e., uses
  *                      COMINGSOON/BLKDATA).
@@ -327,23 +421,27 @@ free_aclt(aclt *ap)
  */
 static aclt *
 new_aclt(
-    feedtypet           ft,
-    const char*         pattern,
-    const regex_t*      rgxp,
-    const host_set*     hsp,
-    int                 isPrimary)
+    feedtypet   ft,
+    char*       pattern,
+    regex_t*    rgxp,
+    host_set*   hsp,
+    int         isPrimary)
 {
-        aclt *ap = (aclt *)malloc(sizeof(aclt));
-        if(ap == NULL)
-                return NULL;
+    aclt*       ap = (aclt *)malloc(sizeof(aclt));
+
+    if (NULL != ap) {
         ap->ft = ft;
         ap->pattern = pattern;
-        if(rgxp != NULL)
-                ap->rgx = *rgxp;
+
+        if (rgxp != NULL)
+            ap->rgx = rgxp;
+
         ap->hsp = hsp;
         ap->isPrimary = isPrimary;
         ap->next = NULL;
-        return ap;
+    }
+
+    return ap;
 }
 
 
@@ -354,28 +452,34 @@ new_aclt(
  *      app             Address of the pointer to the access-control list.  May
  *                      not be NULL.
  *      ft              The feedtype.
- *      pattern         Pointer to the pattern for matching the data-product
- *                      identifier.  The string is not copied.
- *      rgxp            Pointer to the regular-expression for matching the
- *                      data-product identifier.  The caller may free upon
- *                      return.
- *      hsp             Pointer to the allowed set of hosts.  The set is not
- *                      copied.
+ *      pattern         Pointer to allocated memory containing the pattern for
+ *                      matching the data-product identifier.  Upon successful
+ *                      return, the client shall abandon resposibility for
+ *                      freeing.
+ *      rgxp            Pointer to allocated memory containing the
+ *                      regular-expression for matching the data-product
+ *                      identifier.  Upon successful return, the client shall
+ *                      abandon responsibility for calling "regfree(rgxp)" and
+ *                      "free(rgxp).
+ *      hsp             Pointer to allocated memory containing the allowed set
+ *                      of hosts.  Upon successful return, the client shall
+ *                      abandon responsibility for calling
+ *                      "free_host_set(hsp)".
  *      isPrimary       Whether or not the initial data-product exchange-mode is
  *                      primary (i.e., uses HEREIS) or alternate (i.e., uses
  *                      COMINGSOON/BLKDATA).
  * Returns:
  *      0               Success
- *      !0              <errno.h> error-code.
+ *      !0              <errno.h> error-code
  */
 static int
 acl_add(
-    aclt**              app,
-    feedtypet           ft,
-    const char*         pattern,
-    const regex_t*      rgxp,
-    const host_set*     hsp, 
-    int                 isPrimary)
+    aclt**        app,
+    feedtypet     ft,
+    char*         pattern,
+    regex_t*      rgxp,
+    host_set*     hsp, 
+    int           isPrimary)
 {
         aclt *ap = new_aclt(ft, pattern, rgxp, hsp, isPrimary);
         if(ap == NULL)
@@ -399,8 +503,9 @@ acl_add(
 /*
  * Arguments:
  *      ft              The feedtype.
- *      hostSet         Pointer to set of allowed downstream hosts.  On success,
- *                      caller must neither free nor modify upon return.
+ *      hostSet         Pointer to allocated set of allowed downstream hosts.
+ *                      Upon successful return, the client shall abandon
+ *                      responsibility for calling "free_host_set(hostSet)".
  *      okEre           Pointer to the ERE that data-product identifiers
  *                      must match.  Caller may free upon return.
  *      notEre          Pointer to the ERE that data-product identifiers
@@ -408,16 +513,16 @@ acl_add(
  *                      disabled.  Caller may free upon return.
  * Returns:
  *      NULL            Success.
- *      else            Failure error object.
+ *      else            Failure error object
  */
 ErrorObj*
 acl_addAllow(
     const feedtypet             ft,
-    const host_set* const       hostSet,
+    host_set* const             hostSet,
     const char* const           okEre,
     const char* const           notEre)
 {
-    ErrorObj*            errObj = NULL;  /* success */
+    ErrorObj*           errObj = NULL;  /* success */
     AllowEntry* const   entry = (AllowEntry*)malloc(sizeof(AllowEntry));
 
     if (NULL == entry) {
@@ -461,7 +566,10 @@ acl_addAllow(
                     allowEntryTail = entry;
                 }
             }
-        }
+
+            if (errObj)
+                pat_free(okPattern);
+        }                               /* "okPattern" allocated */
         
         if (errObj)
             free(entry);
@@ -748,28 +856,33 @@ acl_getUpstreamFilter(
 /*
  * Arguments:
  *      ft              Feedtype.
- *      pattern         Pointer to extended regular-expression for
- *                      product-identifier.  On success, caller must not free.
- *      rgxp            Pointer to regular-expression structure.  Caller may
- *                      free on return but must not call regfree() if and only
- *                      if call is successful.
- *      hsp             Pointer to host-set.  Caller must not free on return nor
- *                      call free_host_set() if and only if call is successful.
+ *      pattern         Pointer to allocated memory containing extended
+ *                      regular-expression for matching the product-identifier.
+ *                      Upon successful return, the client shall abandon
+ *                      responsibility for freeing.
+ *      rgxp            Pointer to allocated memory containing the
+ *                      regular-expression structure for matching
+ *                      product-identifiers.  Upon successful return, the
+ *                      client shall abandon responsibility for calling
+ *                      "regfree(rgxp)" and "free(rgxp)".
+ *      hsp             Pointer to allocated memory containing the host-set.
+ *                      Upon successful return, the client shall abandon
+ *                      responsibility for calling "free_host_set(hsp)".
  *      isPrimary       Whether or not the initial data-product exchange-mode
  *                      is primary (i.e., uses HEREIS) or alternate (i.e., uses
  *                      COMINGSOON/BLKDATA).
  * Returns:
  *      0               Success
- *      !0              <errno.h> error-code.
+ *      !0              <errno.h> error-code
  *
  */
 int
 accept_acl_add(
-    feedtypet           ft,
-    const char*         pattern,
-    const regex_t*      rgxp,
-    const host_set*     hsp,
-    int                 isPrimary)
+    feedtypet     ft,
+    char*         pattern,
+    regex_t*      rgxp,
+    host_set*     hsp,
+    int           isPrimary)
 {
         return acl_add(&accept_acl, ft, pattern, rgxp, hsp, isPrimary);
 }
@@ -832,13 +945,13 @@ hiya_acl_ck(peer_info *rmtip, prod_class_t *offerd)
  *      dotAddr         Pointer to the dotted-quad form of the IP address of the
  *                      host.
  *      offered         Pointer to the class of offered products.
- *      accept          Address of pointer to set of acceptable products.
- *                      On success, the pointer will be set to reference
- *                      allocated space; otherwise, it won't be modified.
- *                      Acceptable product set may be empty. Invoke
- *                      free_prod_class(prod_class_t*) on non-NULL pointer when
- *                      done.  In general, the class of acceptable products will
- *                      be a subset of *offered.
+ *      accept          Address of pointer to set of acceptable products.  On
+ *                      success, the pointer will be set to reference allocated
+ *                      space; otherwise, it won't be modified.  Acceptable
+ *                      product set may be empty. The client should call
+ *                      "free_prod_class(prod_class_t*)" when the product-class
+ *                      is no longer needed.  In general, the class of
+ *                      acceptable products will be a subset of *offered.
  *      isPrimary       Pointer to flag indicating whether or not the
  *                      data-product exchange-mode should be primary (i.e., use
  *                      HEREIS) or alternate (i.e., use COMINGSOON/BLKDATA).
@@ -1471,7 +1584,7 @@ prog_requester(
      *
      * NB: Potentially lengthy and CPU-intensive.
      */
-    if (initSavedInfo(source, port, pqfname, clssp) != 0) {
+    if (initSavedInfo(source, port, getQueuePath(), clssp) != 0) {
         log_add("prog_requester(): "
             "Couldn't initialize saved product-information module");
         log_log(LOG_ERR);
@@ -1485,12 +1598,12 @@ prog_requester(
          * Open the product-queue for writing.  It will be closed by
          * cleanup() at process termination.
          */
-        errCode = pq_open(pqfname, PQ_DEFAULT, &pq);
+        errCode = pq_open(getQueuePath(), PQ_DEFAULT, &pq);
         if (errCode) {
             err_log_and_free(
                 ERR_NEW2(errCode, NULL,
                     "Couldn't open product-queue \"%s\" for writing: %s",
-                    pqfname, pq_strerror(pq, errCode)),
+                    getQueuePath(), pq_strerror(pq, errCode)),
                 ERR_FAILURE);
 
             errCode = EXIT_FAILURE;
@@ -1509,8 +1622,8 @@ prog_requester(
             /*
              * Try LDM version 6.
              */
-            errObj = req6_new(source, port, clssp, maxSilence, pqfname, pq,
-                isPrimary);
+            errObj = req6_new(source, port, clssp, maxSilence, getQueuePath(),
+                pq, isPrimary);
 
             exitIfDone(0);
 
@@ -1887,29 +2000,19 @@ invert_request_acl(
 
 /** EXEC */
 
-struct proct {
-        pid_t pid;
-        wordexp_t wrdexp;
-        struct proct *next;
-};
-typedef struct proct proct ;
-
-
 static void
 free_proct(proct *proc)
 {
-        if(proc == NULL)
-                return;
-        if(proc->wrdexp.we_wordc)
-        {
-                wordfree(&proc->wrdexp);
-                if(proc->pid > 0)
-                {
-                  /*EMPTY*/
-                  /* TODO */ ;
-                }
+    if (NULL != proc) {
+        wordfree(&proc->wrdexp);
+
+        if(proc->pid > 0) {
+          /*EMPTY*/
+          /* TODO */ ;
         }
+
         free(proc);
+    }
 }
 
 
@@ -2034,8 +2137,6 @@ new_proct(
     return proc;
 }
 
-static proct *procs;
-
 /*
  * On Success:
  *      Copies *wrdexpp structure and accepts responsibility for calling 
@@ -2074,21 +2175,14 @@ void
 exec_free(
     const pid_t pid)
 {
-    if (procs != NULL) {
-        proct** prev = &procs;
-        proct*  entry;
+    proct*      entry = procs;
+    proct**     prev = &procs;
 
-        for (entry = *prev; entry != NULL; entry = *prev) {
-            if (entry->pid == pid)
-                break;
-
-            prev = &entry->next;
-        }
-
-        if (entry != NULL) {
+    for (; entry != NULL; prev = &entry->next, entry = entry->next) {
+        if (entry->pid == pid) {
             *prev = entry->next;
-
             free_proct(entry);
+            break;
         }
     }
 }
@@ -2189,4 +2283,14 @@ host_ok(const peer_info *rmtip)
                         return 1;
         }
         return 0;
+}
+
+/*
+ * Frees the resources of this module.
+ */
+void acl_free(void)
+{
+    freeAllowEntries();
+    freeRequestEntries();
+    freeAcceptEntries();
 }

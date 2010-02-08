@@ -388,16 +388,16 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
             (void) pq_close(pq);
             pq = NULL;
         }
-        status = pq_open(pqfname, PQ_READONLY, &pq);
+        status = pq_open(getQueuePath(), PQ_READONLY, &pq);
         if(status)
         {
                 if (PQ_CORRUPT == status) {
                     uerror("The product-queue \"%s\" is inconsistent\n",
-                            pqfname);
+                            getQueuePath());
                 }
                 else {
                     uerror("pq_open failed: %s: %s\n",
-                            pqfname, strerror(status)) ;
+                            getQueuePath(), strerror(status)) ;
                 }
                 svcerr_systemerr(rqstp->rq_xprt);
                 return NULL;
@@ -449,7 +449,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         if(status)
         {
                 uerror("pq_cClassSet failed: %s: %s\n",
-                        pqfname, strerror(status)) ;
+                        getQueuePath(), strerror(status)) ;
                 exit(1);
         }
         

@@ -62,6 +62,7 @@ pqsurf_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
 pqsurf_DEPENDENCIES = ../pqing/lib.la ../$(PQ_SUBDIR)/lib.la \
 	../protocol/lib.la ../ulog/lib.la ../misc/lib.la ../rpc/lib.la \
+	../registry/lib.la ../Berkeley-DB/build_unix/libdb-4.8.la \
 	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -160,6 +161,7 @@ LIBS = @LIBS@
 LIBS_CUNIT = @LIBS_CUNIT@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
+LOGS_DIR = @LOGS_DIR@
 LOG_LDM = @LOG_LDM@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -180,7 +182,9 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
+QUEUE_DIR = @QUEUE_DIR@
 RANLIB = @RANLIB@
+REGISTRY_DIR = @REGISTRY_DIR@
 RPCGEN = @RPCGEN@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -257,6 +261,8 @@ LDADD = \
     ../ulog/lib.la \
     ../misc/lib.la \
     ../rpc/lib.la \
+    ../registry/lib.la \
+    ../Berkeley-DB/build_unix/libdb-4.8.la \
     $(GDBMLIB) -lm
 
 dist_man1_MANS = pqsurf.1

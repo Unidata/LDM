@@ -7,6 +7,8 @@
 ## Process this file with automake to produce Makefile.in
 
 LDMHOME		= @LDMHOME@
+LOGS_DIR	= @LOGS_DIR@
+QUEUE_DIR	= @QUEUE_DIR@
 LOG_LDM		= @LOG_LDM@
 SYSLOG_CONF	= @SYSLOG_CONF@
 LDM_LOGFILE	= @LDM_LOGFILE@
@@ -92,7 +94,8 @@ EXTRA_DIST = \
     CHANGE_LOG \
     COPYRIGHT \
     README \
-    RELEASE_NOTES
+    RELEASE_NOTES \
+    extractDecls
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
@@ -138,17 +141,19 @@ ensure-ldmhome-links:
 	&& ( test -e runtime || $(LN_S) $(DESTDIR)$(prefix) runtime )
 
 ensure-ldmhome-dirs:
-	cd $(LDMHOME); \
-	if test -e logs || mkdir logs; then \
-	    if test -e queue; then \
-		test -e data || mkdir data; \
-	    else \
-		if test -e data; then \
-		    $(LN_S) data queue; \
-		else \
-		    mkdir data queue; \
-		fi; \
-	    fi; \
+	if test -e $(DESTDIR)$(LDMHOME)/data; then \
+	    test -e $(DESTDIR)$(QUEUE_DIR) \
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data \
+		$(DESTDIR)$(QUEUE_DIR); \
+	else \
+	    mkdir $(DESTDIR)$(QUEUE_DIR); \
+	fi
+	if test -e $(DESTDIR)$(LDMHOME)/logs; then \
+	    test -e $(DESTDIR)$(LOGS_DIR)\
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/logs \
+		$(DESTDIR)$(LOGS_DIR); \
+	else \
+	    mkdir $(DESTDIR)$(LOGS_DIR); \
 	fi
 
 root-actions:	\

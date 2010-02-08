@@ -21,6 +21,8 @@ LDADD		= \
     ../ulog/lib.la \
     ../misc/lib.la \
     ../rpc/lib.la \
+    ../registry/lib.la \
+    ../Berkeley-DB/build_unix/libdb-4.8.la \
     -lm
 TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
@@ -29,3 +31,7 @@ TAGS_FILES	= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 dist_man1_MANS	= pqcreate.1
+CLEANFILES	= *.i
+
+.c.i:
+	$(COMPILE) $(AM_CPPFLAGS) $(CPPFLAGS) -E $< >$@

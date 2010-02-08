@@ -68,6 +68,7 @@ html_DATA	= \
     glindex.html \
     index.html \
     ldmd.conf.html \
+    LDM-registry.html \
     LDM-user.html \
     logfile-format.html \
     logfile.html \
@@ -112,9 +113,50 @@ nobase_html_DATA	= \
     feedtypes/public_bulletins.html \
     feedtypes/wsi.html
 
-all:
-
 if MAINTAINER
+
+all:	LDM-registry.html
+
+LDM-registry.html:	Makefile regpar-top.html \
+		$(top_srcdir)/registry/regpar.tab
+	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
+	cat regpar-top.html >>$@.tmp
+	echo '<table align="center" border="2" cellpadding="6"' \
+	    'cellspacing="0">' >>$@.tmp
+	echo '<tr>' >>$@.tmp
+	echo '<th>Parameter Pathname</th>' >>$@.tmp
+	echo '<th>Parameter Description</th>' >>$@.tmp
+	echo '<th>Default Value</th>' >>$@.tmp
+	echo '</tr>' >>$@.tmp
+	while IFS=: read name path desc default; do \
+	    echo "<tr>"; \
+		echo "<td nowrap><tt>$$path</tt></td>"; \
+		echo "<td>$$desc</td>"; \
+		echo "<td><tt>$$default</tt></td>"; \
+	    echo "</tr>"; \
+	done <$(top_srcdir)/registry/regpar.tab >>$@.tmp
+	echo '</blockquote></BODY></HTML>' >>$@.tmp
+	mv $@.tmp $@
+
+registry-check:	$(top_srcdir)/configure.ac
+	sed -n '/UD_CONFIGPAR/{s/^.*(//;s/,.*//;s/\[//;s/\]//;p}' \
+	    $(top_srcdir)/configure.ac \
+	| while read name; do \
+	    if ! grep -q $$name LDM-registry.html.in; then \
+		echo 1>&2 "Parameter \"$$name\" is missing from" \
+		    "file \"LDM-registry.html.in\""; \
+		exit 1; \
+	    fi; \
+	done
+#	while read name value; do \
+#	    if ! grep -q $$name LDM-registry.html; then \
+#		echo 1>&2 "Parameter \"$$name\" is missing from the " \
+#		    "registry description"; \
+#		exit 1; \
+#	    fi; \
+#	done <$(top_srcdir)/registry/configDefaults.txt
+
+.PHONY:	registry-check
 
 successes.html:	$(top_srcdir)/test/results.tab
 	sort -t , -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 -k 7,7 $< \

@@ -21,6 +21,8 @@ LDADD		= \
     ../ulog/lib.la \
     ../misc/lib.la \
     ../rpc/lib.la \
+    ../registry/lib.la \
+    ../Berkeley-DB/build_unix/libdb-4.8.la \
     -lm
 dist_man1_MANS	= pqcheck.1
 TAGS_FILES	= \
@@ -29,3 +31,7 @@ TAGS_FILES	= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
+
+valgrind:	pqcheck
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./pqcheck

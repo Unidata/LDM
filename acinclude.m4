@@ -8,6 +8,13 @@ dnl
 define(diversion_number, divnum)dnl
 divert(-1)
 
+AC_DEFUN([UD_REGPAR], [
+    AC_DEFINE([REG_$1], ["$2"], [$3])
+    AC_SUBST([REG_$1], [$2])
+    m4_ifval([$4], [AC_SUBST([REG_$1_DEFAULT], [$4])])
+    echo '$2':'$3':'$4' >>regpar.txt
+])
+
 
 AC_DEFUN([UD_PREFIX],
 [

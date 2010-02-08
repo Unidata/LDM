@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+BUILT_SOURCES		= ../registry/registry.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
 	ldmalloc.h \
@@ -15,7 +16,6 @@ include_HEADERS		= \
 	fsStats.h \
 	inetutil.h \
 	mkdirs_open.h \
-	paths.h \
 	pattern.h \
 	RegularExpressions.h \
 	rpcutil.h \
@@ -34,7 +34,16 @@ lib_la_SOURCES	= \
 	statsMath.c \
 	StringBuf.c
 EXTRA_DIST	= StringBuf.h
-lib_la_CPPFLAGS	= -I$(top_srcdir)/ulog -I$(top_srcdir)
+lib_la_CPPFLAGS	= \
+    -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/registry \
+    -I$(top_srcdir)
 TAGS_FILES	= \
+    $(top_srcdir)/protocol/*.c $(top_srcdir)/protocol/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
+    $(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
     $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h
+
+../registry/registry.h:
+	cd ../registry && $(MAKE) $@

@@ -842,6 +842,9 @@ EGREP
 GREP
 CPP
 ARFLAGS
+REGISTRY_DIR
+QUEUE_DIR
+LOGS_DIR
 LDMHOME
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
@@ -4186,25 +4189,22 @@ $as_echo "$prefix" >&6; }
 
 { $as_echo "$as_me:$LINENO: checking LDMHOME" >&5
 $as_echo_n "checking LDMHOME... " >&6; };
-test -z "$LDMHOME" && LDMHOME=$HOME
-
-
-cat >>confdefs.h <<_ACEOF
-#define LDMHOME "$LDMHOME"
-_ACEOF
-
 if test "$USER" = steve && test $PWD = /home/steve/ldm/package/src &&
         test "X$HOST" = "Xgilda"; then
   LDMHOME=$prefix
+else
+  test -z "$LDMHOME" && LDMHOME=$HOME
 fi
+
 { $as_echo "$as_me:$LINENO: result: $LDMHOME" >&5
 $as_echo "$LDMHOME" >&6; }
-sysconfdir=$LDMHOME/etc
+sysconfdir='$(LDMHOME)/etc'
+localstatedir='$(LDMHOME)/var'
+LOGS_DIR='$(localstatedir)'/logs
 
+QUEUE_DIR='$(localstatedir)'/queue
 
-cat >>confdefs.h <<_ACEOF
-#define REGISTRY_PATH "$sysconfdir/registry"
-_ACEOF
+REGISTRY_DIR='$(localstatedir)'/registry
 
 
 
@@ -26643,7 +26643,7 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
-ac_config_files="$ac_config_files Berkeley-DB/Makefile Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile registry/Makefile scripts/Makefile scripts/ldmadmin scripts/writeConfiguration.pl scripts/ldmfail scripts/netcheck scripts/syscheck scripts/ldmcheck scour/Makefile scour/scour regex/Makefile html/Makefile html/basics/Makefile html/basics/activating.html html/basics/source-install-steps.html html/tutorial/Makefile test/Makefile"
+ac_config_files="$ac_config_files Berkeley-DB/Makefile Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile registry/Makefile registry/regpar.tab scripts/Makefile scripts/ldmadmin.pl scripts/ldmcheck scripts/ldmfail scripts/netcheck scripts/syscheck scripts/writeConfiguration.pl scour/Makefile scour/scour regex/Makefile html/Makefile html/basics/Makefile html/basics/activating.html html/basics/source-install-steps.html html/tutorial/Makefile test/Makefile"
 
 
 #AC_CONFIG_SUBDIRS([Berkeley-DB/dist])
@@ -27393,13 +27393,14 @@ do
     "server/Makefile") CONFIG_FILES="$CONFIG_FILES server/Makefile" ;;
     "ldmping/Makefile") CONFIG_FILES="$CONFIG_FILES ldmping/Makefile" ;;
     "registry/Makefile") CONFIG_FILES="$CONFIG_FILES registry/Makefile" ;;
+    "registry/regpar.tab") CONFIG_FILES="$CONFIG_FILES registry/regpar.tab" ;;
     "scripts/Makefile") CONFIG_FILES="$CONFIG_FILES scripts/Makefile" ;;
-    "scripts/ldmadmin") CONFIG_FILES="$CONFIG_FILES scripts/ldmadmin" ;;
-    "scripts/writeConfiguration.pl") CONFIG_FILES="$CONFIG_FILES scripts/writeConfiguration.pl" ;;
+    "scripts/ldmadmin.pl") CONFIG_FILES="$CONFIG_FILES scripts/ldmadmin.pl" ;;
+    "scripts/ldmcheck") CONFIG_FILES="$CONFIG_FILES scripts/ldmcheck" ;;
     "scripts/ldmfail") CONFIG_FILES="$CONFIG_FILES scripts/ldmfail" ;;
     "scripts/netcheck") CONFIG_FILES="$CONFIG_FILES scripts/netcheck" ;;
     "scripts/syscheck") CONFIG_FILES="$CONFIG_FILES scripts/syscheck" ;;
-    "scripts/ldmcheck") CONFIG_FILES="$CONFIG_FILES scripts/ldmcheck" ;;
+    "scripts/writeConfiguration.pl") CONFIG_FILES="$CONFIG_FILES scripts/writeConfiguration.pl" ;;
     "scour/Makefile") CONFIG_FILES="$CONFIG_FILES scour/Makefile" ;;
     "scour/scour") CONFIG_FILES="$CONFIG_FILES scour/scour" ;;
     "regex/Makefile") CONFIG_FILES="$CONFIG_FILES regex/Makefile" ;;

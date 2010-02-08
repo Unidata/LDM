@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+EXTRA_DIST		= pq.hin pq.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= pq.h fbits.h lcm.h
 lib_la_SOURCES		= pq.c lcm.c
@@ -19,3 +20,9 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../protocol/*.c ../protocol/*.h
+
+.hin.h:
+	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
+	mv -f $@.tmp $@
+
+pq.h:	pq.hin pq.c

@@ -12,10 +12,8 @@
 #ifndef LDM_REGISTRY_H
 #define LDM_REGISTRY_H
 
-#define REG_MAX_LATENCY "maximum latency"
 #define REG_SEP         "/"
-#define REG_LDMD        "ldmd"
-#define REG_DEFAULT     "default"
+@PARAMETER_NAME_DEFINITIONS@
 
 typedef int                     RegStatus;
 

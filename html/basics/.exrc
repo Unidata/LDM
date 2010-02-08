@@ -33,3 +33,6 @@ ab scourc <a href="glindex.html#scour.conf"><tt>scour.conf</tt></a>
 ab faq <a href="glindex.html#FAQ">FAQ</a>
 ab ladmin <a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a>
 ab ee <a href="glindex.html#EXEC entry"><tt>EXEC entry</tt></tt></a>
+ab regutil <a href="glindex.html#regutil"><tt>regutil</tt></a>
+ab ldmreg <a href="glindex.html#LDM registry">LDM registry</a>
+ab pqsurf <a href="glindex.html#pqsurf">pqsurf</a>

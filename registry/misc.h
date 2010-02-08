@@ -100,6 +100,28 @@ RegStatus reg_vetAbsPath(
     const char* const   path);
 
 /*
+ * Returns the parent pathname of a child pathname.  The child pathname may
+ * be absolute or relative.
+ *
+ * Arguments:
+ *      child           Pointer to the child pathname whose parent pathname is
+ *                      to be returned.  Shall not be NULL.  May point to an
+ *                      empty string, in which case ENOENT will be
+ *                      returned.
+ *      parent          Pointer to a pointer to the parent pathname.  Shall not
+ *                      be NULL.  Set upon successful return.  The client
+ *                      should call "free(*parent)" when the parent pathname is
+ *                      no longer needed.
+ * Returns:
+ *      0               Success.  "*parent" is not NULL.
+ *      ENOENT          The child pathname has no parent pathname
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+RegStatus reg_getParentPath(
+    const char* const   child,
+    char** const        parent);
+
+/*
  * Splits an absolute path name into relative path name and value-name
  * components.
  *
@@ -127,28 +149,6 @@ RegStatus reg_splitAbsPath(
     const char* const   absPath,
     char** const        relPath,
     char** const        valueName);
-
-/*
- * Returns the parent pathname of a child pathname.  The child pathname may
- * be absolute or relative.
- *
- * Arguments:
- *      child           Pointer to the child pathname whose parent pathname is
- *                      to be returned.  Shall not be NULL.  May point to an
- *                      empty string, in which case ENOENT will be
- *                      returned.
- *      parent          Pointer to a pointer to the parent pathname.  Shall not
- *                      be NULL.  Set upon successful return.  The client
- *                      should call "free(*parent)" when the parent pathname is
- *                      no longer needed.
- * Returns:
- *      0               Success.  "*parent" is not NULL.
- *      ENOENT          The child pathname has no parent pathname
- *      ENOMEM          System error.  "log_start()" called.
- */
-RegStatus reg_getParentPath(
-    const char* const   child,
-    char** const        parent);
 
 #ifdef __cplusplus
 }

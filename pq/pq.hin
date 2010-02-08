@@ -1,0 +1,88 @@
+/*
+ *   See file COPYRIGHT for copying and redistribution conditions.
+ */
+
+#ifndef _PQ_H
+#define _PQ_H
+
+#include <sys/types.h>	/* off_t, mode_t */
+#include <stddef.h>	/* size_t */
+
+#include "prod_class.h"
+
+
+/*
+ * The functions below return ENOERR upon success.
+ * Upon failure, the return something else :-).
+ * (Usually, that something else will be the a system
+ * error (errno.h), don't count on it making sense.)
+ */
+#ifndef ENOERR
+#define ENOERR 0
+#endif /*!ENOERR */
+
+#define PQ_END		-1	/* at end of product-queue */
+#define PQ_CORRUPT	-2	/* the product-queue is corrupt */
+#define PQ_NOTFOUND	-3	/* no such data-product */
+
+typedef struct pqueue pqueue; /* private, implemented in pq.c */
+
+typedef struct pqe_index pqe_index;
+
+/* prototype for 4th arg to pq_sequence() */
+typedef int pq_seqfunc(const prod_info *infop, const void *datap,
+	void *xprod, size_t len,
+	void *otherargs);
+
+/*
+ * Which direction the cursor moves in pq_sequence().
+ */
+typedef enum {
+	TV_LT = -1,
+	TV_EQ =  0,
+	TV_GT =  1
+} pq_match;
+
+struct pqe_index {
+	off_t offset;
+	signaturet signature;
+};
+
+/*
+ * pflags arg to pq_open() and pq_create()
+ */
+#define PQ_DEFAULT	0x00
+#define PQ_NOCLOBBER	0x01	/* Don't destroy existing file on create */
+#define PQ_READONLY	0x02	/* Default is read/write */
+#define PQ_NOLOCK	0x04	/* Disable locking */
+#define PQ_PRIVATE	0x08	/* mmap() the file MAP_PRIVATE, default MAP_SHARED */
+#define PQ_NOGROW	0x10	/* If pq_create(), must have intialsz */
+#define PQ_NOMAP	0x20	/* Use malloc/read/write/free instead of mmap() */
+#define PQ_MAPRGNS	0x40	/* Map region by region, default whole file */
+#define PQ_SPARSE       0x80    /* Created as sparse file, zero blocks unallocated */
+/* N.B.: bits 0x1000 (and above) in use internally */
+
+#define pqeOffset(pqe) ((pqe).offset)
+#define pqeEqual(left, rght) (pqeOffset(left) == pqeOffset(rght))
+
+#define PQE_NONE (_pqenone)
+#define pqeIsNone(pqe) (pqeEqual(pqe, PQE_NONE))
+#define PQUEUE_DUP (-2)	/* return value indicating attempt to insert
+				duplicate product */
+#define PQUEUE_BIG (-3)	/* return value indicating attempt to insert
+				product that's too large */
+#define PQUEUE_END PQ_END	/* return value indicating end of queue */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern const pqe_index _pqenone;
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* !_PQ_H */

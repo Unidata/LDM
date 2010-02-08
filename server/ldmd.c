@@ -29,7 +29,6 @@
     #include <sys/wait.h>
 #endif 
 
-#include "paths.h"
 #include "ldm.h"
 #include "ldm4.h"
 #include "log.h"
@@ -204,6 +203,8 @@ reap(pid_t pid, int options)
 static void
 cleanup(void)
 {
+        const char* const       pqfname = getQueuePath();
+
         if (done) {
             unotice("Exiting");
         }
@@ -286,7 +287,21 @@ cleanup(void)
                 ; /*empty*/
         }
 
-        (void) closeulog();
+        /*
+         * Free access-control-list resources.
+         */
+        acl_free();
+
+        /*
+         * Close registry.
+         */
+        if (reg_close())
+            log_log(LOG_ERR);
+
+        /*
+         * Terminate logging.
+         */
+        (void)closeulog();
 }
 
 
@@ -397,9 +412,9 @@ usage(char *av0)  /*  id string */
         "\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
         "\t                (default is %d)\n",
         av0,
-        DEFAULT_ACLPATHNAME,
+        getLdmdConfigPath(),
         LDM_PORT,
-        DEFAULT_QUEUE,
+        getQueuePath(),
         DEFAULT_OLDEST,
         DEFAULT_RPCTIMEO);
 
@@ -794,6 +809,7 @@ main(
     int         ac,
     char*       av[])
 {
+    const char* pqfname = getQueuePath();
     int         sock = -1;
     int         status;
     int         doSomething = 1;
@@ -802,16 +818,6 @@ main(
 
     ensureDumpable();
 
-    /*
-     * Check the environment for some options.
-     * May be overridden by command line switches below.
-     */
-    {
-        const char *ldmpqfname = getenv("LDMPQFNAME");
-
-        if (ldmpqfname != NULL)
-            pqfname = ldmpqfname;
-    }
     /*
      * deal with the command line, set options
      */
@@ -852,20 +858,7 @@ main(
                     break;
                 case 'q':
                     pqfname = optarg;
-                    /*
-                     * We set the environment variable here,
-                     * so the children will be able to pick it
-                     * up.
-                     */
-                    if (setenv("LDMPQFNAME", pqfname, 1) == -1)
-                    {
-                            int errnum = errno;
-
-                            (void)fprintf(stderr,
-                    "%s: setenv: Couldn't set LDMPQFNAME: %s\n",
-                                    av[0], strerror(errnum));
-                            exit(1);        
-                    }
+                    setQueuePath(optarg);
                     break;
                 case 'o':
                     toffset = atoi(optarg);
@@ -936,7 +929,7 @@ main(
         }                               /* argument loop */
 
         if (ac - optind == 1)
-                conf_path = av[optind];
+                setLdmdConfigPath(av[optind]);
         (void) setulogmask(logmask);
 
         if (toffset != TOFFSET_NONE && toffset > max_latency)
@@ -1049,7 +1042,7 @@ main(
      * Read the configuration file and initialize access control.
      */
     udebug("main(): Reading configuration-file");
-    if (read_conf(conf_path, doSomething, ldmPort) != 0) {
+    if (read_conf(getLdmdConfigPath(), doSomething, ldmPort) != 0) {
         log_log(LOG_ERR);
         exit(1);
     }

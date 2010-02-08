@@ -98,6 +98,44 @@ copyEntry(
     return status;
 }
 
+/*
+ * Resets the backend database.
+ *
+ * ARGUMENTS:
+ *      path            Pathname of the database directory.  Shall not be NULL.
+ *                      The client can free it upon return.
+ * RETURNS:
+ *      0               Success.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+RegStatus
+reset(
+    const char* const   path)
+{
+    RegStatus   status = EIO;           /* failure */
+    DB_ENV*     env;
+
+    assert(NULL != path);
+
+    if (status = db_env_create(&env, 0)) {
+        log_start("Couldn't create database environment: %s",
+            db_strerror(status));
+    }
+    else {
+        env->set_errcall(env, logDbError);
+
+        if (status = env->remove(env, path, DB_FORCE)) {
+            log_add("Couldn't remove database environment");
+        }
+        else {
+            status = 0;                 /* success */
+        }
+    }                                   /* "env" allocated */
+
+    return status;
+}
+
 /******************************************************************************
  * Public API:
  ******************************************************************************/
@@ -213,7 +251,7 @@ beOpen(
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beClose(
@@ -252,6 +290,24 @@ beClose(
 }
 
 /*
+ * Resets the backend database.
+ *
+ * ARGUMENTS:
+ *      path            Pathname of the database directory.  Shall not be NULL.
+ *                      The client can free it upon return.
+ * RETURNS:
+ *      0               Success.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+RegStatus
+beReset(
+    const char* const   path)
+{
+    return reset(path);
+}
+
+/*
  * Removes the backend database.
  *
  * ARGUMENTS:
@@ -259,8 +315,8 @@ beClose(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      ENOMEM   System error.  "log_start()" called.
- *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beRemove(
@@ -299,25 +355,10 @@ beRemove(
                 if (status = env->close(env, 0)) {
                     log_add("Couldn't close database environment in \"%s\"",
                         path);
+                    env = NULL;
                 }
                 else {
-                    if (status = db_env_create(&env, 0)) {
-                        log_start("Couldn't create database environment: %s",
-                            db_strerror(status));
-                        status = EIO;
-                    }
-                    else {
-                        env->set_errcall(env, logDbError);
-
-                        if (status = env->remove(env, path, 0)) {
-                            log_add("Couldn't remove database environment");
-                            status = EIO;
-                        }
-                        else {
-                            env = NULL;
-                            status = 0; /* success */
-                        }
-                    }                   /* "env" allocated */
+                    status = reset(path);
                 }                       /* "env" closed */
             }                           /* database removed */
         }                               /* "env" opened */
@@ -339,7 +380,7 @@ beRemove(
  *      value           Pointer to the string value.  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 bePut(
@@ -387,8 +428,8 @@ bePut(
  *                      "free(*value)" when the value is no longer needed.
  * RETURNS:
  *      0               Success.  "*value" points to the string value.
- *      ENOENT     The given key doesn't match any entry.
- *      EIO    Backend database error.  "log_start()" called.
+ *      ENOENT          The given key doesn't match any entry.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beGet(

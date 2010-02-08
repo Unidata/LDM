@@ -150,6 +150,7 @@ LIBS = @LIBS@
 LIBS_CUNIT = @LIBS_CUNIT@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
+LOGS_DIR = @LOGS_DIR@
 LOG_LDM = @LOG_LDM@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -170,7 +171,9 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
+QUEUE_DIR = @QUEUE_DIR@
 RANLIB = @RANLIB@
+REGISTRY_DIR = @REGISTRY_DIR@
 RPCGEN = @RPCGEN@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -238,6 +241,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+EXTRA_DIST = pq.hin pq.h
 noinst_LTLIBRARIES = lib.la
 include_HEADERS = pq.h fbits.h lcm.h
 lib_la_SOURCES = pq.c lcm.c
@@ -256,7 +260,7 @@ TAGS_FILES = \
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .obj
+.SUFFIXES: .c .h .hin .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -623,6 +627,12 @@ uninstall-man: uninstall-man3
 	tags uninstall uninstall-am uninstall-includeHEADERS \
 	uninstall-man uninstall-man3
 
+
+.hin.h:
+	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
+	mv -f $@.tmp $@
+
+pq.h:	pq.hin pq.c
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

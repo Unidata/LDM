@@ -151,6 +151,50 @@ RegStatus reg_vetAbsPath(
 }
 
 /*
+ * Returns the parent pathname of a child pathname.  The child pathname may
+ * be absolute or relative.
+ *
+ * Arguments:
+ *      child           Pointer to the child pathname whose parent pathname is
+ *                      to be returned.  Shall not be NULL.  May point to an
+ *                      empty string, in which case ENOENT will be
+ *                      returned.
+ *      parent          Pointer to a pointer to the parent pathname.  Shall not
+ *                      be NULL.  Set upon successful return.  The client
+ *                      should call "free(*parent)" when the parent pathname is
+ *                      no longer needed.
+ * Returns:
+ *      0               Success.  "*parent" is not NULL.
+ *      ENOENT          The child pathname has no parent pathname
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+RegStatus reg_getParentPath(
+    const char* const   child,
+    char** const        parent)
+{
+    RegStatus   status;
+    char*       lastSep = strrchr(child, REG_SEP[0]);
+
+    if (NULL == lastSep) {
+        status = (0 == child[0])
+            ? ENOENT
+            : reg_cloneString(parent, "");
+    }
+    else {
+        if (lastSep == child) {
+            status = (0 == child[1])
+                ? ENOENT
+                : reg_cloneString(parent, REG_SEP);
+        }
+        else {
+            status = reg_clonePrefix(parent, child, lastSep - child);
+        }
+    }
+
+    return status;
+}
+
+/*
  * Splits an absolute path name into relative path name and value-name
  * components.
  *
@@ -189,75 +233,36 @@ RegStatus reg_splitAbsPath(
                 status = EINVAL;
             }
             else {
-                char*       sep = strrchr(path, REG_SEP[0]);
+                const char*     lastSep = strrchr(path, REG_SEP[0]);
 
-                if (NULL == sep) {
+                if (NULL == lastSep) {
                     log_start("Not a valid path to a value: \"%s\"", path);
                     status = EINVAL;
                 }
                 else {
-                    char*       rel;
-                    size_t      prefixLen = strlen(absPath);
-                    size_t      nbytes = sep - path - prefixLen + 1;
+                    char*       name;
 
-                    if (0 == (status = reg_clonePrefix(&rel, path+prefixLen,
-                            nbytes))) {
-                        char*       name;
+                    if (0 == (status = reg_cloneString(&name, lastSep+1))) {
+                        const char*     relStart = path + strlen(absPath);
+                        size_t          nbytes;
 
-                        if (0 == (status = reg_cloneString(&name, sep+1))) {
-                            *relPath = rel;
+                        if (REG_SEP[0] == *relStart)
+                            relStart++;
+
+                        nbytes = (lastSep < relStart)
+                            ? 0
+                            : lastSep - relStart;
+
+                        if (0 == (status = reg_clonePrefix(relPath, relStart,
+                                nbytes))) {
                             *valueName = name;
-                        }                           /* "name" allocated */
+                        }               /* "*relPath" allocated */
 
                         if (status)
-                            free(rel);
-                    }                               /* "rel" allocated */
+                            free(name);
+                    }                   /* "name" allocated */
                 }
             }
-        }
-    }
-
-    return status;
-}
-
-/*
- * Returns the parent pathname of a child pathname.  The child pathname may
- * be absolute or relative.
- *
- * Arguments:
- *      child           Pointer to the child pathname whose parent pathname is
- *                      to be returned.  Shall not be NULL.  May point to an
- *                      empty string, in which case ENOENT will be
- *                      returned.
- *      parent          Pointer to a pointer to the parent pathname.  Shall not
- *                      be NULL.  Set upon successful return.  The client
- *                      should call "free(*parent)" when the parent pathname is
- *                      no longer needed.
- * Returns:
- *      0               Success.  "*parent" is not NULL.
- *      ENOENT          The child pathname has no parent pathname
- *      ENOMEM          System error.  "log_start()" called.
- */
-RegStatus reg_getParentPath(
-    const char* const   child,
-    char** const        parent)
-{
-    RegStatus   status;
-    char*       lastSep = strrchr(child, REG_SEP[0]);
-
-    if (NULL == lastSep) {
-        status = (0 == child[0])
-            ? ENOENT
-            : reg_cloneString(parent, "");
-    }
-    else {
-        if (lastSep == child) {
-            status = (0 == child[1])
-                ? ENOENT
-                : reg_cloneString(parent, REG_SEP);
-        }
-        else {
-            status = reg_clonePrefix(parent, child, lastSep - child);
         }
     }
 

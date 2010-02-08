@@ -25,7 +25,6 @@
 #include "ldmprint.h"
 #include "ulog.h"
 #include "pq.h"
-#include "paths.h"
 #ifndef HAVE_SETENV
     #include "setenv.h"
 #endif
@@ -89,7 +88,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-p pattern   Interested in products matching \"pattern\" (default \".*\")\n") ;
         (void)fprintf(stderr,
-                "\t-q queue     Default \"%s\"\n", DEFAULT_QUEUE);
+                "\t-q queue     Default \"%s\"\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-o offset    The oldest product we will consider is \"offset\" secs before now (default: most recent in queue)\n");
         (void)fprintf(stderr,
@@ -179,6 +178,7 @@ set_sigactions(void)
 
 int main(int ac, char *av[])
 {
+        const char* const       pqfname = getQueuePath();
         const char *progname = ubasename(av[0]);
         char *logfname;
         prod_class_t clss;
@@ -220,16 +220,6 @@ int main(int ac, char *av[])
                         progname, strerror(errnum));
                 exit(1);        
         }
-        
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
 
         {
         extern int opterr;
@@ -267,7 +257,7 @@ int main(int ac, char *av[])
                         }
                         break;
                 case 'q':
-                        pqfname = optarg;
+                        setQueuePath(optarg);
                         break;
                 case 'o':
                         toffset = atoi(optarg);

@@ -6,7 +6,7 @@ if ! ./testRegistry; then
     status=1
 else
     echo "Testing regutil(1)..."
-    if ! ./regutil -r $regdir | tee regutil.out; then
+    if ! ./regutil -d $regdir | tee regutil.out; then
         echo 1>&2 "Failure executing regutil(1)"
         status=2
     else

@@ -8,8 +8,6 @@ $surf_size = "2000000";
 $numlogs = "7";
 $num_metrics = "4";
 $metrics_files = "$ldmhome/logs/metrics.txt*";
-$data_path = "$ldmhome/data";
-$queue_path = "$ldmhome/queue";
 $pq_path = "@PQ_PATH@";
 $etc_path = "$ldmhome/etc";
 $log_rotate = "1";
@@ -86,13 +84,12 @@ print "
 \$etc_path = \"\$ldmhome/etc\";
 \$log_path = \"\$ldmhome/logs\";
 \$data_path = \"\$ldmhome/data\";
-\$queue_path = \"\$ldmhome/queue\";
-\$pq_path = \"\$queue_path/ldm.pq\";;
+\$pq_path = \"\$ldmhome/var/queue/ldm.pq\";;
 
 # NOTE: If you change the following, then you must also modify the EXEC entry
 # for the \"pqsurf(1)\" utility in the LDM configuration-file (etc/ldmd.conf)
 # to ensure that the same pathname is used (via the \"-q path\" option).
-\$surf_path = \"\$queue_path/pqsurf.pq\";
+\$surf_path = \"\$ldmhome/var/queue/pqsurf.pq\";
 
 # ldmadmin(1) file locations and names:
 \$pid_file = \"\$ldmhome/ldmd.pid\";

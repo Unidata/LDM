@@ -180,16 +180,15 @@ test -z "$prefix" -o "$prefix" = NONE && prefix=`(cd .. && pwd)`
 AC_MSG_RESULT([$prefix])
 
 AC_MSG_CHECKING([LDMHOME]);
-test -z "$LDMHOME" && LDMHOME=$HOME
+AM_COND_IF([MAINTAINER], [LDMHOME=$prefix],
+    [test -z "$LDMHOME" && LDMHOME=$HOME])
 AC_SUBST([LDMHOME])
-AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
-    [Pathname of the home directory of the LDM user])
-AM_COND_IF([MAINTAINER], [LDMHOME=$prefix])
 AC_MSG_RESULT([$LDMHOME])
-sysconfdir=$LDMHOME/etc
-
-AC_DEFINE_UNQUOTED([REGISTRY_PATH], ["$sysconfdir/registry"],
-    [Pathname of the registry directory])
+sysconfdir='$(LDMHOME)/etc'
+localstatedir='$(LDMHOME)/var'
+AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
+AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queue])
+AC_SUBST([REGISTRY_DIR], ['$(localstatedir)'/registry])
 
 AC_SUBST(ARFLAGS)
 AC_REVISION ($Revision: 1.47.18.22 $)
@@ -319,13 +318,14 @@ AC_CONFIG_FILES([
     server/Makefile
     ldmping/Makefile
     registry/Makefile
+    registry/regpar.tab
     scripts/Makefile
-    scripts/ldmadmin
-    scripts/writeConfiguration.pl
+    scripts/ldmadmin.pl
+    scripts/ldmcheck
     scripts/ldmfail
     scripts/netcheck
     scripts/syscheck
-    scripts/ldmcheck
+    scripts/writeConfiguration.pl
     scour/Makefile
     scour/scour
     regex/Makefile

@@ -185,7 +185,10 @@ clnt_perror(
 	CLIENT *rpch,
 	char *s)
 {
-	(void) fprintf(stderr,"%s",clnt_sperror(rpch,s));
+        char* const     msg = clnt_sperror(rpch,s);
+
+	(void) fprintf(stderr, "%s", msg);
+        free(msg);
 }
 
 

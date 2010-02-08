@@ -24,7 +24,6 @@
 #include "remote.h"
 #include "inetutil.h"
 #include "ulog.h"
-#include "paths.h"
 #include "pq.h"
 #include "h_clnt.h"
 #include "ldm5_clnt.h"
@@ -143,7 +142,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t             (Pattern is usually overridden by downstream subset)\n");
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", DEFAULT_QUEUE);
+                "\t-q queue     default \"%s\"\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-o offset    set the \"from\" time offset secs before now\n");
         (void)fprintf(stderr,
@@ -518,6 +517,7 @@ shipprod(const prod_info *infop, const void *datap,
 
 int main(int ac, char *av[])
 {
+        const char* const       pqfname = getQueuePath();
         const char *progname = ubasename(av[0]);
         char *logfname;
         prod_spec spec;
@@ -552,16 +552,6 @@ int main(int ac, char *av[])
         if(strcmp(progname, "pqsend") != 0)
                 remote = progname;
 
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
-
         {
         extern int opterr;
         extern char *optarg;
@@ -587,7 +577,7 @@ int main(int ac, char *av[])
                         remote = optarg;
                         break;
                 case 'q':
-                        pqfname = optarg;
+                        setQueuePath(optarg);
                         break;
                 case 'p':
                         spec.pattern = optarg;

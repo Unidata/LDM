@@ -377,6 +377,7 @@ fornme_reply_t *feedme_6_svc(
     feedpar_t      *feedPar,
     struct svc_req *rqstp)
 {
+    const char* const       pqfname = getQueuePath();
     SVCXPRT* const      xprt = rqstp->rq_xprt;
     prod_class_t*         want = feedPar->prod_class;
     prod_class_t*         prodClass;
@@ -426,6 +427,7 @@ fornme_reply_t *notifyme_6_svc(
     prod_class_t*         want,
     struct svc_req*     rqstp)
 {
+    const char* const       pqfname = getQueuePath();
     SVCXPRT* const      xprt = rqstp->rq_xprt;
     prod_class_t*         prodClass;
     const signaturet*   signature;
@@ -508,6 +510,7 @@ hiya_6_svc(
     prod_class_t     *offered,
     struct svc_req *rqstp)
 {
+    const char* const       pqfname = getQueuePath();
     static hiya_reply_t reply;
     SVCXPRT            *const xprt = rqstp->rq_xprt;
     struct sockaddr_in *upAddr = (struct sockaddr_in*)svc_getcaller(xprt);

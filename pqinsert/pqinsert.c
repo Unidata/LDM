@@ -22,7 +22,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <time.h>
-#include "paths.h"
 #include "ldm.h"
 #include "pq.h"
 #include "globals.h"
@@ -57,7 +56,7 @@ usage(
         (void)fprintf(stderr,
                 "\t-l logfile    log to a file rather than stderr\n");
         (void)fprintf(stderr,
-                "\t-q queue      default \"%s\"\n", DEFAULT_QUEUE);
+                "\t-q queue      default \"%s\"\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-s seqno      set initial product sequence number to \"seqno\", defaults to 0\n");
         (void)fprintf(stderr,
@@ -187,6 +186,7 @@ int main(
         char *av[]
 )
 {
+        const char* const       pqfname = getQueuePath();
         char *progname = av[0];
         char *logfname;
         int useProductID = FALSE;
@@ -208,16 +208,6 @@ int main(
         pqeIndex = PQE_NONE;
 #endif
         logfname = "-";
-
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
 
         {
         extern int optind;
@@ -244,7 +234,7 @@ int main(
                         logfname = optarg;
                         break;
                 case 'q':
-                        pqfname = optarg;
+                        setQueuePath(optarg);
                         break;
                 case 's':
                         seq_start = atoi(optarg);

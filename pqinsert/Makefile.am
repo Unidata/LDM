@@ -21,6 +21,8 @@ LDADD		= \
     ../ulog/lib.la \
     ../misc/lib.la \
     ../rpc/lib.la \
+    ../registry/lib.la \
+    ../Berkeley-DB/build_unix/libdb-4.8.la \
     -lm
 TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \

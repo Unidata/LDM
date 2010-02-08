@@ -20,11 +20,11 @@
 #include <assert.h>
 #include <regex.h>
 #include "ldm.h"
+#include "globals.h"
 #include "atofeedt.h"
 #include "ldmprint.h"
 #include "ulog.h"
 #include "pq.h"
-#include "paths.h"
 #include "md5.h"
 #include "RegularExpressions.h"
 
@@ -41,13 +41,11 @@
 #define DEFAULT_FEEDTYPE ANY
 #endif
 
-static volatile int done = 0;
 static volatile int intr = 0;
 static volatile int stats_req = 0;
 static int showProdOrigin = 0;
 
-static const char *pqfname = DEFAULT_QUEUE;
-static pqueue *pq = NULL;
+static const char *pqfname;
 
 static int nprods = 0;
 
@@ -128,7 +126,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-p pattern   Interested in products matching \"pattern\" (default \".*\")\n") ;
         (void)fprintf(stderr,
-                "\t-q pqfname   (default \"%s\")\n", DEFAULT_QUEUE);
+                "\t-q pqfname   (default \"%s\")\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-o offset    Set the \"from\" time \"offset\" secs before now\n");
         (void)fprintf(stderr,
@@ -262,16 +260,6 @@ int main(int ac, char *av[])
         clss.psa.psa_val = &spec;
         spec.feedtype = ANY;
         spec.pattern = ".*";
-        
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
 
         {
         extern int optind;
@@ -283,6 +271,7 @@ int main(int ac, char *av[])
         int fterr;
 
         opterr = 1;
+        pqfname = getQueuePath();
 
         while ((ch = getopt(ac, av, "cvxOsl:p:f:q:o:i:")) != EOF)
                 switch (ch) {

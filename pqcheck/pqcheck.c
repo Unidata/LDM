@@ -21,10 +21,10 @@
 #include <regex.h>
 #include "ldm.h"
 #include "atofeedt.h"
+#include "globals.h"
 #include "ldmprint.h"
 #include "ulog.h"
 #include "pq.h"
-#include "paths.h"
 #include "md5.h"
 
 #ifdef NO_ATEXIT
@@ -40,8 +40,7 @@
 #define DEFAULT_FEEDTYPE ANY
 #endif
 
-static const char *pqfname = DEFAULT_QUEUE;
-static pqueue *pq = NULL;
+static const char *pqfname;
 
 static void
 usage(const char *av0) /*  id string */
@@ -56,7 +55,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-l logfile   Log to a file rather than stderr\n");
         (void)fprintf(stderr,
-                "\t-q pqfname   (default \"%s\")\n", DEFAULT_QUEUE);
+                "\t-q pqfname   (default \"%s\")\n", getQueuePath());
         (void)fprintf(stderr,
                 "Output defaults to standard output\n");
         exit(1);
@@ -67,10 +66,6 @@ static void
 cleanup(void)
 {
         unotice("Exiting"); 
-
-        if(pq != NULL)  
-                (void)pq_close(pq);
-
         (void) closeulog();
 }
 
@@ -123,16 +118,6 @@ int main(int ac, char *av[])
                 logoptions = 0 ;
         }
 
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
-
         {
             extern int opterr;
             extern char *optarg;
@@ -141,6 +126,7 @@ int main(int ac, char *av[])
                 LOG_MASK(LOG_NOTICE));
 
             opterr = 1;
+            pqfname = getQueuePath();
 
             while ((ch = getopt(ac, av, "Fvxl:q:")) != EOF)
                     switch (ch) {

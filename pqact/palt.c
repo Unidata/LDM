@@ -395,7 +395,7 @@ err:
  */
 /* init_pattern_file */
 int
-readPatFile(char *path)
+readPatFile(const char *path)
 {
     int         status;
     FILE        *fp = fopen(path, "r");

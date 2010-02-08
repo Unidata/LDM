@@ -7,6 +7,7 @@ pqmon - program to monitor the state of an LDM product queue
 .ft B
 pqmon
 .nh
+\%[-S]
 \%[-l\ \fIlogfile\fP]
 \%[-q\ \fIpqfname\fP]
 \%[-i\ \fIinterval\fP]
@@ -31,6 +32,41 @@ is typically used to verify that the product queue is peforming
 adequately, is not close to running out of product slots, and is large
 enough to hold products for a desired time period.
 .SH OPTIONS
+.TP
+.BI "-S"
+Writes modified output to the standard output stream (the "-l" option is
+ignored except for error messages).  The output comprises a single line
+of the following parameters, in order:
+.RS +4
+.TP
+.B isFull
+Whether or not the queue is full (i.e., whether or not an old data-product has
+been deleted in order to make room for a new data-product).
+.TP
+.B dataCapacity
+The size, in bytes, of the data portion of the queue.
+.TP
+.B dataHighWater
+The high-water usage-mark of the data portion of the queue, in bytes.
+.TP
+.B dataCurrent
+The the current usage of the data portion of the queue, in bytes.
+.TP
+.B prodCapacity
+The number of products the queue can contain.
+.TP
+.B prodHighWater
+The maximum number of products in the queue since it was created.
+.TP
+.B prodCurrent
+The current number of products in the queue.
+.TP
+.B ageOldest
+The age, in seconds, of the oldest data-product in the queue.
+.TP
+.B ageYoungest
+The age, in seconds, of the youngest data-product in the queue.
+.RE
 .TP
 .BI "-l " logfile
 The path name of a file to be used as the log file for the process.  The

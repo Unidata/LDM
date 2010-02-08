@@ -32,7 +32,6 @@ static char version[] =
 #include "wmo_message.h"
 #include "afos_message.h"
 #include "faa604_message.h"
-#include "paths.h"
 #include "pq.h"
 #include "md5.h"
 #include "timestamp.h"
@@ -56,7 +55,7 @@ static const char *progname = NULL;
 static char *logpath = "";
 static char feedfname[PATH_MAX];
 static char myname[HOSTNAMESIZE];
-static const char *pqpath = DEFAULT_QUEUE;
+static const char *pqpath;
 extern int usePil;  /* 1/0 flag to signal use of AFOS like pil identifier */
 int useNex=1; /* 1/0 flag to retype nexrad products as NEXRAD */
 /* skipLeadingCtlString: used in computing checksum, default is to skip */
@@ -213,7 +212,7 @@ usage(
         (void)fprintf(stderr,
                 "\t-b baud      Set baudrate for tty feed.\n");
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", DEFAULT_QUEUE);
+                "\t-q queue     default \"%s\"\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-p [even|odd|none]  Set parity for tty feed.\n");
         (void)fprintf(stderr,
@@ -448,16 +447,6 @@ main(int ac, char *av[])
 
         feedtype = whatami(av[0]);
 
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqpath = ldmpqfname;
-        }
-
         {
         extern int optind;
         extern int opterr;
@@ -469,6 +458,7 @@ main(int ac, char *av[])
         opterr = 1;
         usePil = 1;
         useNex = 1;
+        pqpath = getQueuePath();
 
         while ((ch = getopt(ac, av, "vxcni5Nl:b:p:P:T:q:r:f:")) != EOF)
                 switch (ch) {

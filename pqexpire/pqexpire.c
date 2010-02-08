@@ -22,7 +22,6 @@
 #include "atofeedt.h"
 #include "globals.h"
 #include "remote.h"
-#include "paths.h"
 #include "pq.h"
 
 #ifdef NO_ATEXIT
@@ -142,7 +141,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-l logfile   Send log info to file (default uses syslogd)\n");
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", DEFAULT_QUEUE);
+                "\t-q queue     default \"%s\"\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-a age       Protect products younger than \"age\" hours (default %.4f)\n", DEFAULT_AGE);
         (void)fprintf(stderr,
@@ -238,6 +237,7 @@ int main(ac,av)
 int ac;
 char *av[];
 {
+        const char* const       pqfname = getQueuePath();
         char *logfname = 0;
         int status;
         double age = DEFAULT_AGE;
@@ -260,16 +260,6 @@ char *av[];
         clss.psa.psa_val = &spec;
         spec.feedtype = DEFAULT_FEEDTYPE;
         spec.pattern = DEFAULT_PATTERN;
-
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
 
         {
         extern int optind;
@@ -320,7 +310,7 @@ char *av[];
                         }
                         break;
                 case 'q':
-                        pqfname = optarg;
+                        setQueuePath(optarg);
                         break;
                 case 'i':
                         interval = atoi(optarg);

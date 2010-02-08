@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "ldm.h"
-#include "paths.h"
+#include "globals.h"
 #include "ulog.h"
 #include "pq.h"
 
@@ -39,7 +39,7 @@ Options:\n\
         (void)fprintf(stderr, USAGE_FMT,
                         av0,
                         av0,
-                        DEFAULT_QUEUE);
+                        getQueuePath());
         exit(1);
 }
 
@@ -47,7 +47,7 @@ Options:\n\
 int main(int ac, char *av[])
 {
         int verbose = 0;
-        const char *pqfname = DEFAULT_QUEUE;
+        const char *pqfname = getQueuePath();
         int pflags = PQ_NOCLOBBER;
         off_t initialsz = 0;
         size_t nproducts = 0;
@@ -63,16 +63,6 @@ int main(int ac, char *av[])
         char *Sopt = NULL;
         extern char     *optarg;
         extern int       optind;
-
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
 
         while ((ch = getopt(ac, av, "xvcfq:s:S:l:")) != EOF)
                 switch (ch) {

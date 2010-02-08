@@ -2848,21 +2848,24 @@ riul_delete(riul *rl, riu *const rp)
  */
 struct pqctl {
 #define PQ_MAGIC        0x50515545      /* PQUE */
-        size_t magic;
-#define PQ_VERSION      0x07
-        size_t version;
-        off_t datao;            /* beginning of data segment */
-        off_t ixo;              /* beginning of index segment */
-        size_t ixsz;            /* size of index segement */
-        size_t nalloc;          /* slots allocated for products */
-        size_t align;
+        size_t          magic;
+#define PQ_VERSION      8
+        size_t          version;
+        off_t           datao;          /* beginning of data segment */
+        off_t           ixo;            /* beginning of index segment */
+        size_t          ixsz;           /* size of index segement */
+        size_t          nalloc;         /* slots allocated for products */
+        size_t          align;
         /* stats */
-        off_t highwater;
-        size_t maxproducts;
+        off_t           highwater;
+        size_t          maxproducts;
 #define WRITE_COUNT_MAGIC       PQ_MAGIC
-        unsigned write_count_magic;
-#define MAX_WRITE_COUNT         ~0u
-        unsigned write_count;
+        unsigned        write_count_magic;
+#define MAX_WRITE_COUNT ~0u
+        unsigned        write_count;
+        timestampt      mostRecent;     /* time of most recent insertion */
+        timestampt      minResidency;   /* minimum residency time */
+        int             isFull;         /* is the queue full? */
 };
 typedef struct pqctl pqctl;
 
@@ -4134,6 +4137,9 @@ ctl_init(pqueue *const pq, size_t const align)
         pq->ctlp->highwater = 0;
         pq->ctlp->maxproducts = 0;
         pq->ctlp->align = align;
+        pq->ctlp->mostRecent = TS_NONE;
+        pq->ctlp->minResidency = TS_NONE;
+        pq->ctlp->isFull = 0;
 
         /* bring in the indexes */
         status = (pq->ftom)(pq,
@@ -4181,9 +4187,9 @@ ctl_init(pqueue *const pq, size_t const align)
 
 
 /*
- * Initialize the in memory state of pq from
- * an existing file. Called by pq_open().
- * On return, the control region (pq->ctlp) will be mapped and/or locked.
+ * Initialize the in-memory state of pq from an existing file. Called by
+ * pq_open().  On successful return, the control region (pq->ctlp) will be
+ * mapped and/or locked.
  *
  * Arguments:
  *      pq      Pointer to product-queue structure to be set.
@@ -4233,7 +4239,7 @@ remap:
                 status = EINVAL;
                 goto unwind_map;
         }
-        if(ctlp->version != PQ_VERSION)
+        if (PQ_VERSION != ctlp->version && 7 != ctlp->version)
         {
                 uerror("%s: Product queue is version %d instead of expected version %d\n",
                        path, ctlp->version, PQ_VERSION);
@@ -4366,7 +4372,7 @@ ctl_get(pqueue *const pq, int const rflags)
                         goto unwind_mask;
         }
         assert(pq->ctlp->magic == PQ_MAGIC);
-        assert(pq->ctlp->version == PQ_VERSION);
+        assert(PQ_VERSION == pq->ctlp->version || 7 == pq->ctlp->version);
         assert(pq->ctlp->datao == pq->datao);
         assert(pq->ctlp->ixo == pq->ixo);
         assert(pq->ctlp->ixsz == pq->ixsz);
@@ -4529,12 +4535,19 @@ rpqe_free(pqueue *pq, off_t offset, signaturet signature)
 
 
 /*
- * Delete the oldest product in the product queue pq that is not
- * locked.  In the unlikely event that all the products in the queue
- * are locked or a deadlock is detected, returns an error status
- * other than ENOERR.  
-*/
-int
+ * Deletes the oldest product in a product queue that is not locked.  In the
+ * unlikely event that all the products in the queue are locked or a deadlock
+ * is detected, returns an error status other than ENOERR.  Sets the "isFull"
+ * and "minResidency" members of the product-queue control block on success.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue object.  Shall not be
+ *                      NULL.
+ * Returns:
+ *      0               Success.  "pq->ctlp->isFull" is non-zero.
+ *      else            <errno.h> error code.
+ */
+static int
 pq_del_oldest(pqueue *pq)
 {
     tqelem*             tqep;
@@ -4578,6 +4591,8 @@ pq_del_oldest(pqueue *pq)
          */
         off_t           offset = rep->offset;
         unsigned char*  signature;
+        /* The time-list entry that "tpep" references will be deleted. */
+        timestampt      insertionTime = tqep->tv;
 
         /*
          * Remove the corresponding entry from the time-list.
@@ -4607,6 +4622,26 @@ pq_del_oldest(pqueue *pq)
          * Release the data region.
          */
         (void) rgn_rel(pq, offset, 0);
+
+        /*
+         * Mark the queue as full.
+         */
+        pq->ctlp->isFull = 1;
+
+        /*
+         * Set the minimum residency time if appropriate.
+         */
+        {
+            timestampt  now;
+            timestampt  residencyTime;
+            
+            (void)set_timestamp(&now);
+            residencyTime = diff_timestamp(&now, &insertionTime);
+            if (tvIsNone(pq->ctlp->minResidency) || 
+                    tvCmp(residencyTime, pq->ctlp->minResidency, <))  {
+                pq->ctlp->minResidency = residencyTime;
+            }
+        }
     }                                   /* got data region */
 
     return status;
@@ -4902,7 +4937,6 @@ pq_open(
                     if (!status) {
                         int      rflags = 0;    /* control-block unmodified */
                         pqctl*   ctlp = pq->ctlp;
-                        unsigned count;
 
                         if (WRITE_COUNT_MAGIC != ctlp->write_count_magic) {
                             /*
@@ -4915,19 +4949,30 @@ pq_open(
                             rflags = RGN_MODIFIED;
                         }
 
-                        count = ctlp->write_count;
-
-                        if (MAX_WRITE_COUNT > count) {
+                        if (MAX_WRITE_COUNT > ctlp->write_count) {
                             ctlp->write_count++;
-
                             rflags = RGN_MODIFIED;
                         }
                         else {
                             uerror("Too many writers (%u) to product-queue "
-                                "(%s)", count, path);
+                                "(%s)", ctlp->write_count, path);
 
                             status = EACCES;    /* too many writers */
                         }
+
+                        if (!status) {
+                            if (7 == ctlp->version) {
+                                /*
+                                 * Some parameters don't exist on-disk.
+                                 */
+                                ctlp->mostRecent = TS_NONE;
+                                ctlp->minResidency = TS_NONE;
+                                ctlp->isFull = 0;
+                                ctlp->version = PQ_VERSION;
+                                rflags = RGN_MODIFIED;
+                            }
+                        }
+
                         (void)ctl_rel(pq, rflags);
                     }                           /* ctl_get() success */
                 }                               /* open for writing */
@@ -5050,6 +5095,20 @@ pq_pagesize(const pqueue *pq)
 }
 
 
+/*
+ * Returns a region into which to accumulate a data-product.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue object.
+ *      infop           Pointer to the data-product metadata object.
+ *      ptrp            Pointer to the pointer to the region into which to 
+ *                      write the data-product.  Set upon successful return.
+ *      indexp          Pointer to the handle to identify the region.  Set
+ *                      upon successful return.
+ * Returns:
+ *      0               Success.  "*ptrp" and "*indexp" are set.
+ *      else            <errno.h> error code.
+ */
 int
 pqe_new(pqueue *pq,
         const prod_info *infop,
@@ -5116,6 +5175,17 @@ unwind_ctl:
 }
 
 
+/*
+ * Discards a region obtained from "pqe_new()".
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue.  Shall not be NULL.
+ *      pqe_index       Pointer to the region-index set by "pqe_new()".  Shall
+ *                      not be NULL.
+ * Returns:
+ *      0               Success.
+ *      else            <errno.h> error code.
+ */
 int
 pqe_discard(pqueue *pq, pqe_index index)
 {
@@ -5245,6 +5315,8 @@ pqe_insert(pqueue *pq, pqe_index index)
         status = tq_add(pq->tqp, offset);
         if(status != ENOERR)
                 goto unwind_ctl;
+
+        set_timestamp(&pq->ctlp->mostRecent);
         
         /*
          * Inform others in our process group
@@ -5418,6 +5490,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 goto unwind_rgn;
         }
 
+        set_timestamp(&pq->ctlp->mostRecent);
         vetCreationTime(&prod->info);
 
         /*FALLTHROUGH*/
@@ -5459,7 +5532,20 @@ pq_insert(pqueue *pq, const product *prod)
 
 
 /*
- * Get some useful statistics.
+ * Returns some useful, "highwater" statistics of a product-queue.  The
+ * statistics are since the queue was created.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue.  Shall not be NULL.
+ *      highwaterp      Pointer to the maxium number of bytes used in the
+ *                      data portion of the product-queue.  Shall not be NULL.
+ *                      Set upon successful return.
+ *      maxproductsp    Pointer to the maximum number of data-products that the
+ *                      product-queue has held since it was created.  Shall not
+ *                      be NULL.  Set upon successful return.
+ * Returns:
+ *      0               Success.  "*highwaterp" and "*maxproductsp" are set.
+ *      else            <errno.h> error code.
  */
 int
 pq_highwater(pqueue *pq, off_t *highwaterp, size_t *maxproductsp)
@@ -5479,15 +5565,108 @@ pq_highwater(pqueue *pq, off_t *highwaterp, size_t *maxproductsp)
 
 
 /*
+ * Indicates if the product-queue is full (i.e., if a data-product has been
+ * deleted in order to make room for another data-product).
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue structure.  Shall not be
+ *                      NULL.
+ *      isFull          Pointer to the indicator of whether or not the queue
+ *                      is full.  Shall not be NULL.  Set upon successful
+ *                      return.  "*isfull" will be non-zero if and only if the
+ *                      product-queue is full.
+ * Returns:
+ *      0               Success.  "*isFull" is set.
+ *      else            <errno.h> error code.
+ */
+int pq_isFull(
+    pqueue* const       pq,
+    int* const          isFull)
+{
+    int status = ctl_get(pq, 0);
+
+    if (status == ENOERR) {
+        *isFull = pq->ctlp->isFull;
+
+        (void)ctl_rel(pq, 0);
+    }                                   /* "pq->ctlp" allocated */
+
+    return status;
+}
+
+
+/*
+ * Returns the time of the most-recent insertion of a data-product.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue structure.  Shall not be
+ *                      NULL.
+ *      mostRecent      Pointer to the time of the most-recent insertion of a
+ *                      data-product.  Upon successful return, "*mostRecent"
+ *                      shall be TS_NONE if such a time doesn't exist (because
+ *                      the queue is empty, for example).
+ * Returns:
+ *      0               Success.  "*mostRecent" is set.
+ *      else            <errno.h> error code.
+ */
+int pq_getMostRecent(
+    pqueue* const       pq,
+    timestampt* const   mostRecent)
+{
+    int status = ctl_get(pq, 0);
+
+    if (status == ENOERR) {
+        *mostRecent = pq->ctlp->mostRecent;
+
+        (void)ctl_rel(pq, 0);
+    }                                   /* "pq->ctlp" allocated */
+
+    return status;
+}
+
+
+/*
+ * Returns the minimum residency time of the queue since it was created.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue structure.  Shall not be
+ *                      NULL.
+ *      minResidency    Pointer to the minimum residency time of the queue
+ *                      since it was created.  Shall not be NULL.
+ *                      "*minResidency" is set upon successful return.  If such
+ *                      a time doesn't exist (because the queue is empty, for
+ *                      example), then "*minResidency" shall be TS_NONE upon
+ *                      successful return.
+ * Returns:
+ *      0               Success.  "*minResidency" is set.
+ *      else            <errno.h> error code.
+ */
+int pq_getMinResidency(
+    pqueue* const       pq,
+    timestampt* const   minResidency)
+{
+    int status = ctl_get(pq, 0);
+
+    if (status == ENOERR) {
+        *minResidency = pq->ctlp->minResidency;
+
+        (void)ctl_rel(pq, 0);
+    }                                   /* "pq->ctlp" allocated */
+
+    return status;
+}
+
+
+/*
  * Get some detailed product queue statistics.  These may be useful for
  * monitoring the internal state of the product queue:
  *   nprodsp
- *         holds the current number of products in the queue.
+ *         holds the current number of products in the queue.  May be NULL.
  *   nfreep
  *         holds the current number of free regions.  This should be small
  *         and it's OK if it's zero, since new free regions are created
  *         as needed by deleting oldest products.  If this gets large,
- *         insertion and deletion take longer.
+ *         insertion and deletion take longer.  May be NULL.
  *   nemptyp
  *         holds the number of product slots left.  This may decrease, but
  *         should eventually stay above some positive value unless too
@@ -5495,31 +5674,42 @@ pq_highwater(pqueue *pq, off_t *highwaterp, size_t *maxproductsp)
  *         created.  New product slots get created when adjacent free
  *         regions are consolidated, and product slots get consumed
  *         when larger free regions are split into smaller free
- *         regions.
+ *         regions.  May be NULL.
  *   nbytesp
  *         holds the current number of bytes in the queue used for data
- *         products.
+ *         products.  May be NULL.
  *   maxprodsp
- *         holds the maximum number of products in the queue, so far.
+ *         holds the maximum number of products in the queue, so far.  May be
+ *         NULL.
  *   maxfreep
- *         holds the maximum number of free regions, so far.
+ *         holds the maximum number of free regions, so far.  May be NULL.
  *   minemptyp
- *         holds the minimum number of empty product slots, so far.
+ *         holds the minimum number of empty product slots, so far.  May be
+ *         NULL.
  *   maxbytesp
- *         holds the maximum number of bytes used for data, so far.
+ *         holds the maximum number of bytes used for data, so far.  May be
+ *         NULL.
  *   age_oldestp
- *         holds the age in seconds of the oldest product in the queue.
+ *         holds the age in seconds of the oldest product in the queue.  May be
+ *         NULL.
  *   maxextentp
- *         holds extent of largest free region
+ *         holds extent of largest free region  May be NULL.
  *
  *   Note: the fixed number of slots allocated for products when the
  *         queue was created is nalloc = (nprods + nfree + nempty).
  */
 int
 pq_stats(pqueue *pq,
-         size_t *nprodsp,   size_t *nfreep,   size_t *nemptyp,   size_t *nbytesp,
-         size_t *maxprodsp, size_t *maxfreep, size_t *minemptyp, size_t *maxbytesp, 
-         double *age_oldestp, size_t *maxextentp)
+     size_t* const      nprodsp,
+     size_t* const      nfreep,
+     size_t* const      nemptyp,
+     size_t* const      nbytesp,
+     size_t* const      maxprodsp,
+     size_t* const      maxfreep,
+     size_t* const      minemptyp,
+     size_t* const      maxbytesp,
+     double* const      age_oldestp,
+     size_t* const      maxextentp)
 {
     /* Read lock pq->ctl. */
     int status = ctl_get(pq, 0);
@@ -5560,6 +5750,36 @@ pq_stats(pqueue *pq,
     (void) ctl_rel(pq, 0);
 
     return status;
+}
+
+/*
+ * Returns the size of the data portion of a product-queue.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue object.
+ * Returns:
+ *      The size, in bytes, of the data portion of the product-queue.
+ */
+size_t
+pq_getDataSize(
+    pqueue* const       pq)
+{
+    return pq->ixo - pq->datao;
+}
+
+/*
+ * Returns the number of slots in a product-queue.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue object.
+ * Returns:
+ *      The number of slots in the product-queue.
+ */
+size_t
+pq_getSlotCount(
+    pqueue* const       pq)
+{
+    return pq->nalloc;
 }
 
 
@@ -5798,6 +6018,12 @@ pq_ctimestamp(const pqueue *pq, timestampt *tvp)
 }
 
 
+/*
+ * Figure out the direction of scan of clssp, and set *mtp to it.
+ * Set the cursor to include all of clssp time range in the queue.
+ * (N.B.: For "reverse" scans, this range may not include all
+ * the arrival times.)
+ */
 int
 pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class *clssp)
 {
@@ -6202,8 +6428,20 @@ pq_setCursorFromSignature(
  * Step thru the time sorted inventory according to 'mt',
  * and the current cursor value.
  *
- * If no product is in the inventory which meets the
- * spec, return PQUEUE_END.
+ * If(mt == TV_LT), pq_sequence() will get a product
+ * whose queue insertion timestamp is strictly less than
+ * the current cursor value.
+ *
+ * If(mt == TV_GT), pq_sequence() will get a product
+ * whose queue insertion timestamp is strictly greater than
+ * the current cursor value.
+ *
+ * If(mt == TV_EQ), pq_sequence() will get a product
+ * whose queue insertion timestamp is equal to
+ * the current cursor value.
+ *
+ * If no product is in the inventory which which meets the
+ * above spec, return PQUEUE_END.
  *
  * Otherwise, if the product info matches class,
  * execute ifMatch(xprod, len, otherargs) and return the
@@ -6394,6 +6632,12 @@ unwind_ctl:
 }
 
 
+/*
+ * Boolean function to
+ * check that the cursor timestime is
+ * in the time range specified by clssp.
+ * Returns non-zero if this is the case, zero if not.
+ */
 int
 pq_ctimeck(const pqueue *pq, pq_match mt, const prod_class *clssp,
         const timestampt *maxlatencyp)
@@ -6424,6 +6668,7 @@ pq_ctimeck(const pqueue *pq, pq_match mt, const prod_class *clssp,
 /*
  * Like pq_sequence(), but the ifmatch action is to remove the
  * product from inventory.
+ * If wait is nonzero, then wait for locks.
  */
 /* TODO: add class filter */
 /*ARGSUSED*/

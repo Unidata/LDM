@@ -16,13 +16,15 @@ struct Pattern {
     int         ignoreCase;
 };
 
-static Pattern* matchAll;
+static Pattern  MATCH_ALL;
 
 
 /*
  * Arguments:
  *      pat             Pointer to memory that will be set to point to an
- *                      allocated Pattern.  Set on and only on success.
+ *                      allocated Pattern.  Set on and only on success.  The
+ *                      client should call "pat_free(*pat)" when the pattern
+ *                      is no longer needed.
  *      ere             The extended regular expression.  Caller may free upon
  *                      return.  If the expression is a pathological 
  *                      regular-expression, then it will be repaired.
@@ -43,8 +45,8 @@ pat_new(
     ErrorObj*   errObj = NULL;  /* success */
     int         isTrivial = 0 == strcmp(".*", ere);
 
-    if (isTrivial && NULL != matchAll) {
-        *pat = matchAll;
+    if (isTrivial) {
+        *pat = &MATCH_ALL;
     }
     else {
         Pattern* const  ptr = (Pattern*)malloc(sizeof(Pattern));
@@ -78,9 +80,6 @@ pat_new(
                 else {
                     ptr->ignoreCase = ignoreCase;
                     *pat = ptr;
-
-                    if (isTrivial && NULL == matchAll)
-                        matchAll = ptr;
                 }                       /* ERE compiled */
 
                 if (errObj)
@@ -90,7 +89,7 @@ pat_new(
             if (errObj)
                 free(ptr);
         }                               /* "ptr" allocated */
-    }                                   /* non-trivial ERE or matchAll==NULL */
+    }                                   /* non-trivial ERE */
 
     return errObj;
 }
@@ -129,7 +128,7 @@ pat_isMatch(
     const char* const           string)
 {
     return
-        matchAll == pat
+        &MATCH_ALL == pat
             ? 1
             : 0 == regexec(&pat->reg, string, 0, NULL, 0);
 }
@@ -149,7 +148,7 @@ pat_getEre(
     const Pattern* const        pat)
 {
     return 
-        matchAll == pat
+        &MATCH_ALL == pat
             ? ".*"
             : pat->string;
 }
@@ -165,11 +164,9 @@ void
 pat_free(
     Pattern* const      pat)
 {
-    if (pat && matchAll != pat) {
-        Pattern*        p = (Pattern*)pat;
-
-        regfree(&p->reg);
-        free(p->string);
-        free(p);
+    if (pat && &MATCH_ALL != pat) {
+        regfree(&pat->reg);
+        free(pat->string);
+        free(pat);
     }
 }

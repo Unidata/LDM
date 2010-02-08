@@ -27,7 +27,6 @@
 #include "error.h"
 #include "globals.h"
 #include "remote.h"
-#include "paths.h" /* built by configure from paths.h.in */
 #include "atofeedt.h"
 #include "pq.h"
 #include "palt.h"
@@ -44,7 +43,7 @@
 #endif
 
 static volatile int     hupped = 0;
-static char*            conffilename = 0;
+static const char*      conffilename = 0;
 
 timestampt              oldestCursor;
 timestampt              currentCursor;
@@ -205,9 +204,9 @@ usage(
                 "\t-d datadir   cd to \"datadir\" before interpreting filenames in\n");
         (void)fprintf(stderr,
                 "\t             conffile (default %s)\n",
-                DEFAULT_DATADIR);
+                getPqactDataDirPath());
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", DEFAULT_QUEUE);
+                "\t-q queue     default \"%s\"\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-p pattern   Interested in products matching \"pattern\" (default \"%s\")\n", DEFAULT_PATTERN);
         (void)fprintf(stderr,
@@ -219,8 +218,7 @@ usage(
         (void)fprintf(stderr,
                 "\t-o offset    the oldest product we will consider is \"offset\" secs before now (default: most recent in queue)\n");
         (void)fprintf(stderr,
-                "\t(default conffilename is %s)\n",
-                DEFAULT_CONFFILENAME);
+                "\t(default conffilename is %s)\n", getPqactConfigPath());
         exit(1);
         /*NOTREACHED*/
 }
@@ -229,17 +227,18 @@ usage(
 int
 main(int ac, char *av[])
 {
+        const char* const       pqfname = getQueuePath();
         int status = 0;
         char *logfname = 0;
         /* data directory, conffile paths may be relative */
-        char *datadir = DEFAULT_DATADIR;
+        const char *datadir;
         int interval = DEFAULT_INTERVAL;
         prod_spec spec;
         prod_class_t clss;
         int toffset = TOFFSET_NONE;
         int loggingToStdErr = 0;
 
-        conffilename = DEFAULT_CONFFILENAME;
+        conffilename = getPqactConfigPath();
 
         spec.feedtype = DEFAULT_FEEDTYPE;
         spec.pattern = DEFAULT_PATTERN;
@@ -256,15 +255,6 @@ main(int ac, char *av[])
         clss.psa.psa_len = 1;
         clss.psa.psa_val = &spec;
 
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
         /*
          * deal with the command line, set options
          */
@@ -291,7 +281,7 @@ main(int ac, char *av[])
                         logfname = optarg;
                         break;
                 case 'd':
-                        datadir = optarg;
+                        setPqactDataDirPath(optarg);
                         break;
                 case 'f':
                         fterr = strfeedtypet(optarg, &spec.feedtype);
@@ -303,7 +293,7 @@ main(int ac, char *av[])
                         }
                         break;
                 case 'q':
-                        pqfname = optarg;
+                        setQueuePath(optarg);
                         break;
                 case 'o':
                         toffset = atoi(optarg);
@@ -341,6 +331,7 @@ main(int ac, char *av[])
                 conffilename = av[optind];
         (void) setulogmask(logmask);
         }
+        datadir = getPqactDataDirPath();
 
         /*
          * Initialize logging.

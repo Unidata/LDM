@@ -99,6 +99,8 @@ int rn_isDeleted(
  *      0               Success.  "*vt" is set if "vt" isn't NULL.
  *      ENOMEM          System error.  "log_start()" called.
  *      EPERM           The node has been deleted.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
  */
 RegStatus rn_putValue(
     RegNode* const      node,
@@ -122,7 +124,7 @@ RegStatus rn_putValue(
  *      0               Success.  "*string" is not NULL.
  *      EPERM           The node containing the value has been deleted.
  *                      "log_start()" called.
- *      ENOENT          No such value
+ *      ENOENT          No such value.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus rn_getValue(
@@ -179,6 +181,8 @@ RegStatus rn_deleteValue(
  *                      Set upon successful return.
  * Returns:
  *      0               Success.  "*node" is not NULL.
+ *      EEXIST          A node would have to be created with the same absolute
+ *                      path name as an existing value.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus rn_ensure(

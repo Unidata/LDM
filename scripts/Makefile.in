@@ -44,7 +44,7 @@ host_triplet = @host@
 subdir = scripts
 DIST_COMMON = $(dist_bin_SCRIPTS) $(dist_man1_MANS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/ldmadmin.in $(srcdir)/ldmcheck.in \
+	$(srcdir)/ldmadmin.pl.in $(srcdir)/ldmcheck.in \
 	$(srcdir)/ldmfail.in $(srcdir)/netcheck.in \
 	$(srcdir)/syscheck.in $(srcdir)/writeConfiguration.pl.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -54,8 +54,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = ldmadmin writeConfiguration.pl ldmfail netcheck \
-	syscheck ldmcheck
+CONFIG_CLEAN_FILES = ldmadmin.pl ldmcheck ldmfail netcheck syscheck \
+	writeConfiguration.pl
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -134,6 +134,7 @@ LIBS = @LIBS@
 LIBS_CUNIT = @LIBS_CUNIT@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
+LOGS_DIR = @LOGS_DIR@
 LOG_LDM = @LOG_LDM@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -154,7 +155,9 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
+QUEUE_DIR = @QUEUE_DIR@
 RANLIB = @RANLIB@
+REGISTRY_DIR = @REGISTRY_DIR@
 RPCGEN = @RPCGEN@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -223,7 +226,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 EXTRA_DIST = \
-    ldmadmin.in \
+    ldmadmin.pl.in \
     ldmcheck.in \
     ldmfail.in \
     netcheck.in \
@@ -231,6 +234,7 @@ EXTRA_DIST = \
     syscheck.in \
     writeConfiguration.pl.in
 
+BUILT_SOURCES = ldmadmin
 dist_bin_SCRIPTS = \
     netcheck \
     syscheck \
@@ -240,7 +244,8 @@ dist_bin_SCRIPTS = \
     plotMetrics
 
 dist_man1_MANS = ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1
-all: all-am
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -273,9 +278,9 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-ldmadmin: $(top_builddir)/config.status $(srcdir)/ldmadmin.in
+ldmadmin.pl: $(top_builddir)/config.status $(srcdir)/ldmadmin.pl.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-writeConfiguration.pl: $(top_builddir)/config.status $(srcdir)/writeConfiguration.pl.in
+ldmcheck: $(top_builddir)/config.status $(srcdir)/ldmcheck.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 ldmfail: $(top_builddir)/config.status $(srcdir)/ldmfail.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
@@ -283,7 +288,7 @@ netcheck: $(top_builddir)/config.status $(srcdir)/netcheck.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 syscheck: $(top_builddir)/config.status $(srcdir)/syscheck.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-ldmcheck: $(top_builddir)/config.status $(srcdir)/ldmcheck.in
+writeConfiguration.pl: $(top_builddir)/config.status $(srcdir)/writeConfiguration.pl.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-dist_binSCRIPTS: $(dist_bin_SCRIPTS)
 	@$(NORMAL_INSTALL)
@@ -410,13 +415,15 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: check-am
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
 all-am: Makefile $(SCRIPTS) $(MANS)
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: install-am
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -441,6 +448,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-libtool mostlyclean-am
@@ -488,7 +496,7 @@ install-ps: install-ps-am
 
 install-ps-am:
 
-installcheck-am:
+installcheck-am: installcheck-local
 
 maintainer-clean: maintainer-clean-am
 	-rm -f Makefile
@@ -510,7 +518,7 @@ uninstall-am: uninstall-dist_binSCRIPTS uninstall-man
 
 uninstall-man: uninstall-man1
 
-.MAKE: install-am install-exec-am install-strip
+.MAKE: all check install install-am install-exec-am install-strip
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
 	distclean distclean-generic distclean-libtool distdir dvi \
@@ -521,11 +529,18 @@ uninstall-man: uninstall-man1
 	install-html-am install-info install-info-am install-man \
 	install-man1 install-pdf install-pdf-am install-ps \
 	install-ps-am install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
-	ps ps-am uninstall uninstall-am uninstall-dist_binSCRIPTS \
-	uninstall-man uninstall-man1
+	installcheck-local installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am \
+	uninstall-dist_binSCRIPTS uninstall-man uninstall-man1
 
+
+ldmadmin:	ldmadmin.pl $(top_srcdir)/registry/regpar.tab Makefile
+	awk -F : '{printf "s:@REG_%s@:%s:\n", $$1, $$2}' \
+	    $(top_srcdir)/registry/regpar.tab >$@.sed
+	sed -f $@.sed <ldmadmin.pl >$@.tmp
+	mv -f $@.tmp $@
+	rm $@.sed
 
 install-exec-hook:
 	confFile=$(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf; \
@@ -558,6 +573,11 @@ $(DESTDIR)$(sysconfdir):
 	$(MKDIR_P) $@
 $(DESTDIR)$(sysconfdir)/netcheck.conf:
 	$(INSTALL_DATA) $(srcdir)/netcheck.conf $@
+
+installcheck-local:
+	$(bindir)/ldmadmin start
+	sleep 2
+	$(bindir)/ldmadmin isrunning
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

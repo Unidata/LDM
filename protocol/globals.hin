@@ -19,7 +19,6 @@ extern "C" {
 extern const char *conf_path;
 extern volatile sig_atomic_t done;
 extern const char *logfname;
-extern const char *pqfname;
 extern struct pqueue *pq;
 
 /* timeout for rpc calls */
@@ -55,18 +54,7 @@ extern int read_conf(
     int			doSomething,    /* defined in parser.y */
     unsigned		defaultPort);
 
-/*
- * Calls exit() if the "done" global variable is set; othewise, returns 1 so
- * that it can be easily used in programming loops.
- *
- * Arguments:
- *	status	Exit status for the call to exit().
- * Returns:
- *	1
- */
-int
-exitIfDone(
-    const int	status);
+@FUNCTION_DECLARATIONS@
 
 #ifdef __cplusplus
 }

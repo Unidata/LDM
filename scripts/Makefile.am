@@ -7,13 +7,14 @@
 ## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST		= \
-    ldmadmin.in \
+    ldmadmin.pl.in \
     ldmcheck.in \
     ldmfail.in \
     netcheck.in \
     netcheck.conf \
     syscheck.in \
     writeConfiguration.pl.in
+BUILT_SOURCES		= ldmadmin
 dist_bin_SCRIPTS	= \
     netcheck \
     syscheck \
@@ -22,6 +23,13 @@ dist_bin_SCRIPTS	= \
     ldmfail \
     plotMetrics
 dist_man1_MANS		= ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1
+
+ldmadmin:	ldmadmin.pl $(top_srcdir)/registry/regpar.tab Makefile
+	awk -F : '{printf "s:@REG_%s@:%s:\n", $$1, $$2}' \
+	    $(top_srcdir)/registry/regpar.tab >$@.sed
+	sed -f $@.sed <ldmadmin.pl >$@.tmp
+	mv -f $@.tmp $@
+	rm $@.sed
 
 install-exec-hook:
 	confFile=$(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf; \
@@ -54,3 +62,8 @@ $(DESTDIR)$(sysconfdir):
 	$(MKDIR_P) $@
 $(DESTDIR)$(sysconfdir)/netcheck.conf:
 	$(INSTALL_DATA) $(srcdir)/netcheck.conf $@
+
+installcheck-local:
+	$(bindir)/ldmadmin start
+	sleep 2
+	$(bindir)/ldmadmin isrunning

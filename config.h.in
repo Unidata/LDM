@@ -106,9 +106,6 @@
 /* use IEEE floating-point in XDR layer */
 #undef IEEE_FLOAT
 
-/* Pathname of the home directory of the LDM user */
-#undef LDMHOME
-
 /* Port on which LDM server listens */
 #undef LDM_PORT
 
@@ -147,9 +144,6 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* Pathname of the registry directory */
-#undef REGISTRY_PATH
 
 /* Time limit for resolving hostname */
 #undef RESOLVER_TIME_THRESHOLD

@@ -21,13 +21,10 @@
 #include "timestamp.h"
 #include <ulog.h>
 
-#define TESTDIR_PATH    "/tmp/testRegistry"
-
-
 static int
 setup(void)
 {
-    return reg_setPathname(TESTDIR_PATH);
+    return 0;
 }
 
 
@@ -36,6 +33,18 @@ teardown(void)
 {
     reg_close();
     return 0;
+}
+
+static void
+test_regMissing(void)
+{
+    RegStatus   status;
+    char*       value;
+
+    /* The registry shouldn't exist. */
+    status = reg_getString("/foo key", &value);
+    CU_ASSERT_EQUAL(status, EIO);
+    log_clear();
 }
 
 static void
@@ -54,25 +63,17 @@ test_regString(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getString("/foo key", &value, "unused default");
+    status = reg_getString("/foo key", &value);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_STRING_EQUAL(value, "foo value");
     free(value);
 
-    status = reg_getString("/bar key", &value, "default bar value");
-    if (status)
+    status = reg_getString("/bar key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_STRING_EQUAL(value, "default bar value");
-    free(value);
-
-    status = reg_getString("/bof key", &value, NULL);
-    if (status)
-        log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_PTR_NULL(value);
+    CU_ASSERT_EQUAL(status, ENOENT);
 }
 
 static void
@@ -91,17 +92,16 @@ test_regInt(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getUint("/fooInt key", &value, 3);
-    if (status)
+    status = reg_getUint("/fooInt key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(value, 2);
 
-    status = reg_getUint("/barInt key", &value, 4);
-    if (status)
+    status = reg_getUint("/barInt key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_EQUAL(value, 4);
+    CU_ASSERT_EQUAL(status, ENOENT);
 }
 
 static void
@@ -120,17 +120,16 @@ test_regTime(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getTime("/fooTime key", &value, &TS_NONE);
-    if (status)
+    status = reg_getTime("/fooTime key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(d_diff_timestamp(&value, &TS_ZERO), 0.0);
 
-    status = reg_getTime("/barTime key", &value, &TS_ENDT);
-    if (status)
+    status = reg_getTime("/barTime key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_EQUAL(d_diff_timestamp(&value, &TS_ENDT), 0.0);
+    CU_ASSERT_EQUAL(status, ENOENT);
 }
 
 static void
@@ -152,17 +151,16 @@ test_regSignature(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getSignature("/fooSignature key", &value, value1);
-    if (status)
+    status = reg_getSignature("/fooSignature key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(memcmp(value, value2, sizeof(signaturet)), 0);
 
-    status = reg_getSignature("/barSignature key", &value, value1);
-    if (status)
+    status = reg_getSignature("/barSignature key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_EQUAL(memcmp(value, value1, sizeof(signaturet)), 0);
+    CU_ASSERT_EQUAL(status, ENOENT);
 }
 
 static void
@@ -177,8 +175,8 @@ test_regDelete(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getString("/string key", &string, NULL);
-    if (status)
+    status = reg_getString("/string key", &string);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_STRING_EQUAL(string, "string value");
@@ -189,19 +187,18 @@ test_regDelete(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getString("/string key", &string, "default string value");
-    if (status)
+    status = reg_getString("/string key", &string);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_STRING_EQUAL(string, "default string value");
-    free(string);
+    CU_ASSERT_EQUAL(status, ENOENT);
 
     status = reg_putUint("/int key", -1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getUint("/int key", &value, 4);
-    if (status)
+    status = reg_getUint("/int key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(value, -1);
@@ -211,11 +208,10 @@ test_regDelete(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getUint("/int key", &value, 4);
-    if (status)
+    status = reg_getUint("/int key", &value);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_EQUAL(value, 4);
+    CU_ASSERT_EQUAL(status, ENOENT);
 
     status = reg_deleteValue("/nosuch key");
     if (status && ENOENT != status)
@@ -237,7 +233,7 @@ test_regNode(void)
     signaturet  defSig2 = {1};
     signaturet  sig;
 
-    status = reg_getNode("/test node/subnode", &subnode);
+    status = reg_getNode("/test node/subnode", &subnode, 1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -249,74 +245,67 @@ test_regNode(void)
     constString = reg_getNodeAbsPath(subnode);
     CU_ASSERT_STRING_EQUAL(constString, "/test node/subnode");
 
-    status = reg_getNodeString(subnode, "string key", &string,
-        "default string");
-    if (status)
+    status = reg_getNodeString(subnode, "string key", &string);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_STRING_EQUAL(string, "default string");
-    free(string);
+    CU_ASSERT_EQUAL(status, ENOENT);
 
     status = reg_putNodeString(subnode, "string key", "string value");
     if (0 != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getNodeString(subnode, "string key", &string,
-        "default string");
-    if (status)
+    status = reg_getNodeString(subnode, "string key", &string);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_STRING_EQUAL(string, "string value");
     free(string);
 
-    status = reg_getNodeUint(subnode, "uint key", &uint, 9);
-    if (status)
+    status = reg_getNodeUint(subnode, "uint key", &uint);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_EQUAL(uint, 9);
+    CU_ASSERT_EQUAL(status, ENOENT);
 
     status = reg_putNodeUint(subnode, "uint key", 5);
     if (0 != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getNodeUint(subnode, "uint key", &uint, 9);
-    if (status)
+    status = reg_getNodeUint(subnode, "uint key", &uint);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(uint, 5);
 
-    status = reg_getNodeTime(subnode, "time key", &time, &TS_ENDT);
-    if (status)
+    status = reg_getNodeTime(subnode, "time key", &time);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_EQUAL(d_diff_timestamp(&time, &TS_ENDT), 0.0);
+    CU_ASSERT_EQUAL(status, ENOENT);
 
     status = reg_putNodeTime(subnode, "time key", &TS_ZERO);
     if (0 != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getNodeTime(subnode, "time key", &time, &TS_ENDT);
-    if (status)
+    status = reg_getNodeTime(subnode, "time key", &time);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(d_diff_timestamp(&time, &TS_ZERO), 0.0);
 
-    status = reg_getNodeSignature(subnode, "sig key", &sig, defSig1);
-    if (status)
+    status = reg_getNodeSignature(subnode, "sig key", &sig);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_EQUAL(memcmp(sig, defSig1, sizeof(signaturet)), 0);
+    CU_ASSERT_EQUAL(status, ENOENT);
 
     status = reg_putNodeSignature(subnode, "sig key", defSig2);
     if (0 != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getNodeSignature(subnode, "sig key", &sig, defSig1);
-    if (status)
+    status = reg_getNodeSignature(subnode, "sig key", &sig);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(memcmp(sig, defSig2, sizeof(signaturet)), 0);
@@ -331,15 +320,12 @@ test_regNode(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getNodeString(subnode, "string key", &string,
-        "default string");
-    if (status)
+    status = reg_getNodeString(subnode, "string key", &string);
+    if (status && ENOENT != status)
         log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_STRING_EQUAL(string, "default string");
-    free(string);
+    CU_ASSERT_EQUAL(status, ENOENT);
 
-    status = reg_getNode("/test node", &testnode);
+    status = reg_getNode("/test node", &testnode, 1);
     if (status)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -347,8 +333,7 @@ test_regNode(void)
 
     reg_deleteNode(testnode);
 
-    status = reg_getNodeString(subnode, "string key", &string,
-        "default string");
+    status = reg_getNodeString(subnode, "string key", &string);
     CU_ASSERT_EQUAL(status, EPERM);
 
     status = reg_flushNode(testnode);
@@ -356,6 +341,18 @@ test_regNode(void)
         log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 }
+
+static void
+test_regReset(void)
+{
+    RegStatus   status;
+
+    status = reg_reset();
+    if (status)
+        log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
 
 static void
 test_regRemove(void)
@@ -375,15 +372,16 @@ main(
 {
     int         exitCode = EXIT_FAILURE;
     char        cmd[80];
+    char*       regPath = "/tmp/testRegistry";
 
-    if (0 != system(strcat(strcpy(cmd, "rm -rf "), TESTDIR_PATH))) {
+    if (0 != system(strcat(strcpy(cmd, "rm -rf "), regPath))) {
         (void)fprintf(stderr, "Couldn't remove test-directory \"%s\": %s",
-            TESTDIR_PATH, strerror(errno));
+            regPath, strerror(errno));
     }
     else {
-        if (-1 == mkdir(TESTDIR_PATH, S_IRWXU)) {
+        if (-1 == mkdir(regPath, S_IRWXU)) {
             (void)fprintf(stderr, "Couldn't create test directory \"%s\": %s\n",
-                TESTDIR_PATH, strerror(errno));
+                regPath, strerror(errno));
         }
         else {
             if (CUE_SUCCESS == CU_initialize_registry()) {
@@ -397,10 +395,12 @@ main(
                         ? argv[0]
                         : progname + 1;
 
+                    CU_ADD_TEST(testSuite, test_regMissing);
                     CU_ADD_TEST(testSuite, test_regString);
                     CU_ADD_TEST(testSuite, test_regInt);
                     CU_ADD_TEST(testSuite, test_regTime);
                     CU_ADD_TEST(testSuite, test_regSignature);
+                    CU_ADD_TEST(testSuite, test_regReset);
                     CU_ADD_TEST(testSuite, test_regDelete);
                     CU_ADD_TEST(testSuite, test_regNode);
                     #if 0
@@ -411,6 +411,8 @@ main(
                         (void)fprintf(stderr, "Couldn't open logging system\n");
                     }
                     else {
+                        reg_setPathname(regPath);
+
                         if (CU_basic_run_tests() == CUE_SUCCESS) {
                             if (0 == CU_get_number_of_failures())
                                 exitCode = EXIT_SUCCESS;
@@ -422,10 +424,10 @@ main(
             }                           /* CUnit registery allocated */
 
             #if 0
-            if (-1 == rmdir(TESTDIR_PATH))
+            if (-1 == rmdir(regPath))
                 (void)fprintf(stderr,
                     "Couldn't delete test directory \"%s\": %s\n",
-                    TESTDIR_PATH, strerror(errno));
+                    regPath, strerror(errno));
             #endif
         }                               /* test-directory created */
     }                                   /* test-directory removed */

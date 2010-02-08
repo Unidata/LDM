@@ -252,7 +252,7 @@ additional information">
 	that can be set by 
 	a user via the shell or by a program.  Copies of environment 
 	variables are inherited by
-	<a href="#child process"child process">child process</a>es.
+	<a href="#child process">child process</a>es.
 	<a href="http://www.opengroup.org/onlinepubs/7908799/xbd/envvar.html">
 	Official description</a>.
 
@@ -414,6 +414,10 @@ additional information">
 	<a href="glindex.html#data-product">data-product</a>s in near
 	real-time via the Internet.
       <a href="../index.html">LDM homepage</a>.
+
+  <dt> <a name="LDM registry">LDM registry</a>
+  <dd> An LDM-specific database of configuration and runtime parameters and
+        their values.  <a href="LDM-registry.html">LDM registry webpage</a>.
 
   <dt> <a name="localn"></a>local<i>n</i>
   <dd> The facility used by the LDM for logging messages via the
@@ -811,26 +815,6 @@ additional information">
 
 <h2><a name="R"></a>R</h2>
 <dl>
-  <dt> <a name="transfer-mode"></a>transfer-mode
-  <dd> One of two modes in which a
-      <a href="#downstream LDM">downstream LDM</a>
-      can receive
-      <a href="glindex.html#data-product">data-product</a>s.
-      In the <em>primary</em> transfer-mode,
-      <a href="glindex.html#data-product">data-product</a>s
-      are received via
-      <a href="#asynchronous">asynchronous</a>
-      <a href="#HEREIS">HEREIS</a>
-      messages.
-      In the <em>alternate</em> transfer-mode,
-      <a href="glindex.html#data-product">data-product</a>s
-      are received via
-      <a href="#synchronous">synchronous</a>
-      <a href="#COMINGSOON">COMINGSOON</a>
-      and
-      <a href="#BLKDATA">BLKDATA</a>
-      messages.
-
   <dt> receiving LDM
   <dd> See <a href="glindex.html#downstream LDM">downstream LDM</a>.
 
@@ -860,6 +844,11 @@ additional information">
   <dd> A program for validating
       <a href="#ERE">ERE</a>-s and for testing their efficiency.
 
+  <dt> <a name="regutil"></a><tt>regutil</tt>
+  <dd> A program for managing the contents of the 
+        <a href="#LDM registry">LDM registry</a>.  Execute the command
+        <tt>man regutil</tt> for more information.
+
   <dt> <a name="REQUEST entry"></a><tt>REQUEST</tt> entry
   <dd> An entry in the LDM configuration-file,
       <a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>,
@@ -867,6 +856,17 @@ additional information">
       <a href="glindex.html#upstream LDM">upstream LDM</a> for
       <a href="glindex.html#data-product">data-product</a>s.
       <a href="ldmd.conf.html#REQUEST"><tt>ldmd.conf</tt> webpage</a>.
+
+  <dt> <a name="residency time"></a>residency time
+  <dd> The amount of time a <a
+      href="glindex.html#data-product">data-product</a> spends in the <a
+      href="glindex.html#product-queue">product-queue</a> before being
+      discarded.  If this time is not greater than the maximum 
+      <a name="data-product latency">data-product latency</a> configuration
+      parameter of the LDM server, then any
+      <a href="glindex.html#downstream LDM">downstream LDM</a>
+      might not reject a duplicate incoming 
+      <a href="glindex.html#data-product">data-product</a>.
 
   <dt> <a name="RPC"></a>RPC
   <dd> Remote Procedure Call.  A system by which a function-call on one
@@ -888,8 +888,7 @@ additional information">
       <a href="behavior.html">Behavior</a>.
 
   <dt> <a name="rtstats"></a>rtstats
-  <dd>A utility that monitors the <a
-	href="glindex.html#product-queue">product-queue</a> and
+  <dd>A utility that monitors the <a href="glindex.html#product-queue">product-queue</a> and
 	periodically sends summary statistics to a <a
 	href="glindex.html#downstream LDM">downstream LDM</a>, which
 	is, typically, at the <a href="glindex.html#UPC">Unidata Program 
@@ -1018,6 +1017,27 @@ additional information">
   <dd> A freely-available, 3rd-party UNIX<sup>®</sup> utility for 
       displaying system resources and utlization.  
       <a href="http://procps.sf.net/">GNU distribution</a>.
+
+  <dt> <a name="transfer-mode"></a>transfer-mode
+  <dd> One of two modes in which a
+      <a href="#downstream LDM">downstream LDM</a>
+      can receive
+      <a href="glindex.html#data-product">data-product</a>s.
+      In the <em>primary</em> transfer-mode,
+      <a href="glindex.html#data-product">data-product</a>s
+      are received via
+      <a href="#asynchronous">asynchronous</a>
+      <a href="#HEREIS">HEREIS</a>
+      messages.
+      In the <em>alternate</em> transfer-mode,
+      <a href="glindex.html#data-product">data-product</a>s
+      are received via
+      <a href="#synchronous">synchronous</a>
+      <a href="#COMINGSOON">COMINGSOON</a>
+      and
+      <a href="#BLKDATA">BLKDATA</a>
+      messages.
+
 </dl>
 
 <h2><a name="U"></a>U</h2>

@@ -193,6 +193,7 @@ LIBS = @LIBS@
 LIBS_CUNIT = @LIBS_CUNIT@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
+LOGS_DIR = @LOGS_DIR@
 LOG_LDM = @LOG_LDM@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -213,7 +214,9 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
+QUEUE_DIR = @QUEUE_DIR@
 RANLIB = @RANLIB@
+REGISTRY_DIR = @REGISTRY_DIR@
 RPCGEN = @RPCGEN@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -358,7 +361,8 @@ EXTRA_DIST = \
     CHANGE_LOG \
     COPYRIGHT \
     README \
-    RELEASE_NOTES
+    RELEASE_NOTES \
+    extractDecls
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
@@ -939,17 +943,19 @@ ensure-ldmhome-links:
 	&& ( test -e runtime || $(LN_S) $(DESTDIR)$(prefix) runtime )
 
 ensure-ldmhome-dirs:
-	cd $(LDMHOME); \
-	if test -e logs || mkdir logs; then \
-	    if test -e queue; then \
-		test -e data || mkdir data; \
-	    else \
-		if test -e data; then \
-		    $(LN_S) data queue; \
-		else \
-		    mkdir data queue; \
-		fi; \
-	    fi; \
+	if test -e $(DESTDIR)$(LDMHOME)/data; then \
+	    test -e $(DESTDIR)$(QUEUE_DIR) \
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data \
+		$(DESTDIR)$(QUEUE_DIR); \
+	else \
+	    mkdir $(DESTDIR)$(QUEUE_DIR); \
+	fi
+	if test -e $(DESTDIR)$(LDMHOME)/logs; then \
+	    test -e $(DESTDIR)$(LOGS_DIR)\
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/logs \
+		$(DESTDIR)$(LOGS_DIR); \
+	else \
+	    mkdir $(DESTDIR)$(LOGS_DIR); \
 	fi
 
 root-actions:	\

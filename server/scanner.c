@@ -864,7 +864,7 @@ YY_RULE_SETUP
     int	status;
 
     if (yyleng > sizeof(yylval.string)-1) {
-	err_log_and_free(ERR_NEW(0, NULL, "String too long"), ERR_FAILURE);
+        log_start("String too long: \"%s\"", yytext);
 
 	status = -1;
     }
@@ -885,7 +885,7 @@ YY_RULE_SETUP
     int	status;
 
     if (yyleng-2 > sizeof(yylval.string)-1) {
-	err_log_and_free(ERR_NEW(0, NULL, "String too long"), ERR_FAILURE);
+        log_start("String too long: %s", yytext);
 
 	status = -1;
     }
@@ -1941,8 +1941,7 @@ scannerPush(
     FileEntry*	entry = malloc(sizeof(FileEntry));
 
     if (entry == NULL) {
-	log_errno();
-	log_add("Couldn't allocate new input-file entry");
+	log_serror("Couldn't allocate new input-file entry");
     }
     else {
 	if (path[0] == '/' || currentFileEntry == NULL) {
@@ -1965,15 +1964,13 @@ scannerPush(
 	entry->file = fopen(entry->path, "r");
 
 	if (entry->file == NULL) {
-	    log_errno();
-	    log_add("Couldn't open input-file \"%s\"", entry->path);
+	    log_serror("Couldn't open input-file \"%s\"", entry->path);
 	}
 	else {
 	    entry->buf = yy_create_buffer(entry->file,YY_BUF_SIZE);
 
 	    if (entry->buf == NULL) {
-		log_errno();
-		log_add("Couldn't create new input-file buffer");
+		log_serror("Couldn't create new input-file buffer");
 	    }
 	    else {
 		entry->prev = currentFileEntry;

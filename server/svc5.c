@@ -181,6 +181,8 @@ feedme_5_svc(prod_class_t *want, struct svc_req *rqstp)
 ldm_replyt * 
 hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
 {
+        const char* const       pqfname = getQueuePath();
+
         udebug("%s:%d: hiya_5_svc()", __FILE__, __LINE__);
 
         (void)memset((char*)&reply, 0, sizeof(reply));

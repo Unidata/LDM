@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+BUILT_SOURCES		= ../registry/registry.h globals.h
 RPCGEN			= @RPCGEN@
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
@@ -62,22 +63,35 @@ lib_la_SOURCES		= \
     timestamp.c \
     UpFilter.c \
     xdr_data.c
-lib_la_CPPFLAGS		= -I$(top_srcdir)/misc -I$(top_srcdir)/ulog -I$(top_srcdir)/pq -I$(top_srcdir)
-#-I../server
+lib_la_CPPFLAGS		= \
+    -I$(top_srcdir)/misc \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/pq \
+    -I$(top_srcdir)/registry
 TAGS_FILES		= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../pq/*.c ../pq/*.h \
     ../server/*.c \
-    ../rpc/*.c ../rpc/*.h
+    ../rpc/*.c ../rpc/*.h \
+    ../registry/*.c
 EXTRA_DIST		= \
+    globals.hin \
     ldm.x \
     ldm4.h \
     ldm5.h \
     rsaglobal.h \
     prod_info.h \
     fix_clnt.pl
-CLEANFILES		= *.i
+CLEANFILES		= *.i globals.h
+
+../registry/registry.h:
+	cd ../registry && $(MAKE) $@
+
+.hin.h:
+	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
+	mv -f $@.tmp $@
+globals.h:	globals.hin globals.c
 
 ldm.h:		ldm.x
 	$(RPCGEN) -h ldm.x | \

@@ -174,11 +174,14 @@ wordexp(const char *words, wordexp_t *pwordexp, int flags)
 void
 wordfree(wordexp_t *pwordexp)
 {
-        if(pwordexp == NULL || pwordexp->we_wordv == NULL)
-                return;
-        if(*pwordexp->we_wordv)
-                free(*pwordexp->we_wordv);
+    if (pwordexp != NULL) {
+        int     i;
+
+        for (i = 0; i < pwordexp->we_wordc; ++i)
+            free(pwordexp->we_wordv[i]);
+
         free(pwordexp->we_wordv);
+    }
 }
 
 

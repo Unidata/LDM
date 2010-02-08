@@ -45,17 +45,6 @@ struct regCursor {
  */
 typedef RegStatus (*Parser)(const char* string, void* value);
 /*
- * Sets a value to a default value.
- *
- * Arguments:
- *      dest            Pointer to the value to be set.  Shall not be NULL.
- *      src             Pointer to the default value.  Shall not be NULL.
- * Returns:
- *      0               Success.  "*dest" is not NULL.
- *      ENOMEM          System error.  "log_start()" called.
- */
-typedef RegStatus (*Setter)(void* value, const void* defaultValue);
-/*
  * Formats a value into a string.
  *
  * Arguments:
@@ -81,12 +70,12 @@ typedef enum {
 
 typedef struct {
     Parser      parse;
-    Setter      setDefault;
     Formatter   format;
 }       TypeStruct;
 
 static char*                    _registryPath = REGISTRY_PATH;
 static int                      _initialized;   /* Module is initialized? */
+static int                      _atexitCalled;  /* atexit() called? */
 static Backend*                 _backend;       /* backend database */
 static int                      _forWriting;    /* registry open for writing? */
 static StringBuf*               _pathBuf;       /* buffer for creating paths */
@@ -154,6 +143,16 @@ static RegStatus closeRegistry(void)
 }
 
 /*
+ * Closes the registry if it's open.  This function shall only be called by
+ * exit().
+ */
+static void terminate(void)
+{
+    (void)closeRegistry();
+    resetRegistry();
+}
+
+/*
  * "Parses" a string into a string.
  *
  * Arguments:
@@ -187,35 +186,6 @@ static RegStatus formatString(
     StringBuf* const    strBuf)
 {
     return sb_set(strBuf, (const char*)value, NULL);
-}
-
-/*
- * Assigns a default string to a value.
- *
- * Arguments:
- *      dest            Pointer to the value to be set.  Shall not be NULL.
- *                      The client should call "free(*dest)" when the value
- *                      is no longer needed.
- *      src             Pointer to the value to be assigned.  May be NULL.
- * Returns:
- *      0               Success.  "*dest" is not NULL.
- *      ENOMEM   System error.  "log_start()" called.
- */
-static RegStatus setString(
-    void* const         dest,
-    const void* const   src)
-{
-    RegStatus   status;
-
-    if (NULL != src) {
-        status = reg_cloneString((char**)dest, (const char*)src);
-    }
-    else {
-        *(char**)dest = NULL;
-        status = 0;
-    }
-
-    return status;
 }
 
 /*
@@ -275,23 +245,6 @@ static RegStatus formatUint(
 }
 
 /*
- * Assigns a default unsigned integer to a value.
- *
- * Arguments:
- *      dest            Pointer to the value to be set.  Shall not be NULL.
- *      src             Pointer to the value to be assigned.  May be NULL.
- */
-static RegStatus setUint(
-    void* const         dest,
-    const void* const   src)
-{
-    if (NULL != src)
-        *(unsigned*)dest = *(unsigned*)src;
-
-    return 0;
-}
-
-/*
  * Parses a string into a time.
  *
  * Arguments:
@@ -338,23 +291,6 @@ static RegStatus formatTime(
     StringBuf* const    strBuf)
 {
     return sb_set(strBuf, tsFormat((const timestampt*)value), NULL);
-}
-
-/*
- * Assigns a default time to a value.
- *
- * Arguments:
- *      dest            Pointer to the value to be set.  Shall not be NULL.
- *      src             Pointer to the value to be assigned.  May be NULL.
- */
-static RegStatus setTime(
-    void* const         dest,
-    const void* const   src)
-{
-    if (NULL != src)
-        *(timestampt*)dest = *(timestampt*)src;
-
-    return 0;
 }
 
 /*
@@ -407,28 +343,10 @@ static RegStatus formatSignature(
         NULL);
 }
 
-/*
- * Assigns a default signature to a value.
- *
- * Arguments:
- *      dest            Pointer to the value to be set.  Shall not be NULL.
- *      src             Pointer to the value to be assigned.  May be NULL.
- */
-static RegStatus setSignature(
-    void* const         dest,
-    const void* const   src)
-{
-    if (NULL != src)
-        (void)memcpy(dest, src, sizeof(signaturet));
-
-    return 0;
-}
-
-static const TypeStruct  stringStruct = {parseString, setString, formatString};
-static const TypeStruct  uintStruct = {parseUint, setUint, formatUint};
-static const TypeStruct  timeStruct = {parseTime, setTime, formatTime};
-static const TypeStruct  signatureStruct =
-    {parseSignature, setSignature, formatSignature};
+static const TypeStruct  stringStruct = {parseString, formatString};
+static const TypeStruct  uintStruct = {parseUint, formatUint};
+static const TypeStruct  timeStruct = {parseTime, formatTime};
+static const TypeStruct  signatureStruct = {parseSignature, formatSignature};
 
 static RegStatus sync(
     RegNode* const      node);
@@ -497,7 +415,10 @@ static RegStatus initRegistry(
  
         if (0 == status && NULL == _backend) {
             /* The backend isn't open. */
-            if (0 == (status = beOpen(&_backend, _registryPath, forWriting))) {
+            if (0 != (status = beOpen(&_backend, _registryPath, forWriting))) {
+                log_add("Couldn't open registry \"%s\"", _registryPath);
+            }
+            else {
                 _forWriting = forWriting;
  
                 if (NULL == _rootNode) {
@@ -515,6 +436,16 @@ static RegStatus initRegistry(
             }                           /* "_backend" allocated and open */
         }                               /* backend database not open */
     }                                   /* module initialized */
+
+    if (!_atexitCalled) {
+        if (0 == atexit(terminate)) {
+            _atexitCalled = 1;
+        }
+        else {
+            log_serror("Couldn't register registry cleanup routine");
+            log_log(LOG_ERR);
+        }
+    }
  
     return status;
 }
@@ -653,51 +584,47 @@ static RegStatus sync(
     RegNode* const      node)
 {
     const char* absPath = rn_getAbsPath(node);
-    RegStatus   status = initRegistry(0);
+    RegStatus   status;
+    RdbCursor   cursor;
 
-    if (0 == status) {
-        RdbCursor   cursor;
+    rn_clear(node);
 
-        rn_clear(node);
-
-        if (0 == (status = beInitCursor(_backend, &cursor))) {
-            for (status = beFirstEntry(&cursor, absPath); 0 == status;
-                    status = beNextEntry(&cursor)) {
-                if (strstr(cursor.key, absPath) != cursor.key) {
-                    /* The entry is outside the scope of "node" */
-                    status = ENOENT;
-                    break;
-                }
-                else {
-                    char* relPath;
-                    char* name;
-
-                    if (0 == (status = reg_splitAbsPath(cursor.key, absPath,
-                            &relPath, &name))) {
-                        RegNode*        subnode;
-
-                        if (0 == (status = rn_ensure(node, relPath,
-                                &subnode))) {
-                            ValueThing* vt;
-
-                            if (0 == (status = rn_putValue(subnode, name,
-                                    cursor.value, &vt))) {
-                                (void)vt_setStatus(vt, SYNCHED);
-                            }
-                        }
-
-                        free(relPath);
-                        free(name);
-                    }                       /* "relPath" & "name" allocated */
-                }
+    if (0 == (status = beInitCursor(_backend, &cursor))) {
+        for (status = beFirstEntry(&cursor, absPath); 0 == status;
+                status = beNextEntry(&cursor)) {
+            if (strstr(cursor.key, absPath) != cursor.key) {
+                /* The entry is outside the scope of "node" */
+                status = ENOENT;
+                break;
             }
+            else {
+                char* relPath;
+                char* name;
 
-            if (ENOENT == status)
-                status = 0;
+                if (0 == (status = reg_splitAbsPath(cursor.key, absPath,
+                        &relPath, &name))) {
+                    RegNode*        subnode;
 
-            beCloseCursor(&cursor);
-        }                                   /* "cursor" allocated */
-    }
+                    if (0 == (status = rn_ensure(node, relPath, &subnode))) {
+                        ValueThing* vt;
+
+                        if (0 == (status = rn_putValue(subnode, name,
+                                cursor.value, &vt))) {
+                            (void)vt_setStatus(vt, SYNCHED);
+                        }
+                    }
+
+                    free(relPath);
+                    free(name);
+                }                       /* "relPath" & "name" allocated */
+            }
+        }
+
+        if (ENOENT == status)
+            status = 0;
+
+        beCloseCursor(&cursor);
+    }                                   /* "cursor" allocated */
 
     if (status)
         log_add("Couldn't synchronize node \"%s\"", absPath);
@@ -714,18 +641,16 @@ static RegStatus sync(
  *      name            Pointer to the name of the value.  Shall not be NULL.
  *      value           Pointer to the location to hold the binary value.
  *                      Shall not be NULL.
- *      defaultValue    Pointer to the default value to return if the named
- *                      value doesn't exist.  Shall not be NULL.
  *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*value" is set.
+ *      ENOENT          No such value.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 static RegStatus getNodeValue(
     const RegNode* const        node,
     const char* const           name,
     void* const                 value,
-    const void* const           defaultValue,
     const TypeStruct* const     typeStruct)
 {
     RegStatus   status = initRegistry(0);
@@ -733,20 +658,11 @@ static RegStatus getNodeValue(
     if (0 == status) {
         char*       string;
 
-        status = rn_getValue(node, name, &string);
-
-        if (ENOENT == status) {
-            status = typeStruct->setDefault(value, defaultValue);
-        }
-        else if (0 == status) {
+        if (0 == (status = rn_getValue(node, name, &string))) {
             status = typeStruct->parse(string, value);
             free(string);
         }                               /* "string" allocated */
     }
-
-    if (0 != status)
-        log_add("Couldn't get value \"%s\" from node \"%s\"", name,
-            rn_getAbsPath(node));
 
     return status;
 }
@@ -761,12 +677,10 @@ static RegStatus getNodeValue(
  *                      returned.  Shall not be NULL.
  *      value           Pointer to memory to hold the binary value.  Shall not
  *                      be NULL.
- *      defaultValue    Pointer to the default value to which "value" will be
- *                      set if no value is found.  May be NULL.
  *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*value" is not NULL.
- *      ENOENT          No value found for "path"
+ *      ENOENT          No value found for "path".  "log_start()" called.
  *      EINVAL          The path name isn't valid.  "log_start()" called.
  *      EILSEQ          The value found isn't the expected type.  "log_start()"
  *                      called.
@@ -776,23 +690,33 @@ static RegStatus getNodeValue(
 static RegStatus getValue(
     const char* const           path,
     void* const                 value,
-    const void* const           defaultValue,
     const TypeStruct* const     typeStruct)
 {
-    RegNode*    lastNode;
-    char*       remPath;
-    RegStatus   status = rn_getLastNode(_rootNode, path+1, &lastNode, &remPath);
+    RegStatus   status = initRegistry(0);
 
     if (0 == status) {
-        if (0 == (status = flush(lastNode))) {
-            if (0 == (status = sync(lastNode))) {
-                status = getNodeValue(lastNode, remPath, value, defaultValue,
-                    typeStruct);
-            }
-        }
+        RegNode*    lastNode;
+        char*       remPath;
 
-        free(remPath);
-    }                                   /* "remPath" allocated */
+        status = rn_getLastNode(_rootNode, path+1, &lastNode, &remPath);
+
+        if (0 == status) {
+            if (0 == *remPath) {
+                log_start("\"%s\" is a node; not a value", path);
+                status = ENOENT;
+            }
+            else if (0 == (status = flush(lastNode))) {
+                if (0 == (status = sync(lastNode))) {
+                    status = getNodeValue(lastNode, remPath, value, typeStruct);
+                }
+            }
+
+            free(remPath);
+        }                               /* "remPath" allocated */
+    }
+
+    if (0 != status && ENOENT != status)
+        log_add("Couldn't get value \"%s\"", path);
 
     return status;
 }
@@ -809,6 +733,8 @@ static RegStatus getValue(
  * Returns:
  *      0               Success
  *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
  */
 static RegStatus putNodeValue(
     RegNode* const              node,
@@ -851,6 +777,9 @@ static RegStatus putNodeValue(
  *                      called.
  *      ENOMEM          System error.  "log_start()" called.
  *      EIO             Backend database error.  "log_start()" called.
+ *      EEXIST          A node or value would have to be created with the same
+ *                      absolute path name as an existing value or node.
+ *                      "log_start()" called.
  */
 static RegStatus putValue(
     const char* const           path,
@@ -888,7 +817,7 @@ static RegStatus putValue(
 
 /*
  * Sets the pathname of the registry.  To have an effect, this function must be
- * called before any function that access the registry.
+ * called before any function that accesses the registry.
  *
  * Arguments:
  *      path            Pointer to the pathname of the registry.  May be NULL.
@@ -934,7 +863,7 @@ RegStatus reg_setPathname(
 
 /*
  * Closes the registry.  Frees all resources and unconditionally resets the
- * module.
+ * module (including the pathname of the registry).
  *
  * Returns:
  *      0               Success
@@ -950,7 +879,28 @@ RegStatus reg_close(void)
 }
 
 /*
- * Removes the registry if it exists.  Unconditionally resets the module.
+ * Resets the registry if it exists.  Unconditionally resets this module.
+ *
+ * Returns:
+ *      0               Success
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+RegStatus reg_reset(void)
+{
+    RegStatus   status;
+
+    closeRegistry();
+
+    status = beReset(_registryPath);
+
+    resetRegistry();
+
+    return status;
+}
+
+/*
+ * Removes the registry if it exists.  Unconditionally resets this module.
  *
  * Returns:
  *      0               Success
@@ -976,46 +926,39 @@ RegStatus reg_remove(void)
 
 /*
  * Returns the string representation of a value from the registry.  The value
- * is obtained from the backing store.  If the value doesn't exist, then the
- * default value is returned.  Every value has a string representation.
+ * is obtained from the backing store.
  *
  * Arguments:
- *      path            Pointer to the absolute path name of the node whose
- *                      value will be returned.  Shall not be NULL.
- *      value           Pointer to a pointer to be set.  Shall not be NULL.
- *                      Upon successful return, the client should call
- *                      "free(*value)" when the value is no longer needed
- *                      (regardless of whether it is set to the default value).
- *      defaultValue    The default value to return if no value is found.  May
- *                      be NULL, in which case "*value" will be set to NULL if
- *                      no value is found.
+ *      path            Pointer to the absolute path name of the value to be
+ *                      returned.  Shall not be NULL.
+ *      value           Pointer to a pointer to the value.  Shall not be NULL.
+ *                      Set upon successful return.  The client should call
+ *                      "free(*value)" when the value is no longer needed.
  * Returns:
  *      0               Success.  Value found and put in "*value".
+ *      ENOENT          No such value.  "log_start()" called.
  *      EINVAL          The path name isn't absolute.  "log_start()" called.
- *      EILSEQ          The value found isn't a string.  "log_start()" called.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus reg_getString(
     const char* const   path,
-    char** const        value,
-    const char* const   defaultValue)
+    char** const        value)
 {
-    return getValue(path, value, defaultValue, &stringStruct);
+    return getValue(path, value, &stringStruct);
 }
 
 /*
- * Returns a value from the registry as an unsigned integer.  If no value is
- * found, then the value of the default argument is returned.
+ * Returns a value from the registry as an unsigned integer.
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the value to be
  *                      returned.  Shall not be NULL.
  *      value           Pointer to memory to hold the value.  Shall not be
  *                      NULL.
- *      defaultValue    The default value to return if no value is found
  * Returns:
  *      0               Success.  Value found and put in "*value".
+ *      ENOENT          No such value.  "log_start()" called.
  *      EINVAL          The path name isn't absolute.  "log_start()" called.
  *      EILSEQ          The value found isn't an unsigned integer.
  *                      "log_start()" called.
@@ -1024,26 +967,22 @@ RegStatus reg_getString(
  */
 RegStatus reg_getUint(
     const char* const   path,
-    unsigned* const     value,
-    const unsigned      defaultValue)
+    unsigned* const     value)
 {
-    return getValue(path, value,  &defaultValue, &uintStruct);
+    return getValue(path, value,  &uintStruct);
 }
 
 /*
- * Returns a value from the registry as a time.  If no value is found, then the
- * value of the default argument is returned.
+ * Returns a value from the registry as a time.
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the value to be
  *                      returned.  Shall not be NULL.
  *      value           Pointer to memory to hold the value.  Shall not be NULL.
  *                      The client may free upon return.
- *      defaultValue    Pointer to the default value to return if no value is
- *                      found.  May be NULL, in which case "*value" is unchaned
- *                      if no value is found.
  * Returns:
  *      0               Success.  Value found and put in "*value".
+ *      ENOENT          No such value.  "log_start()" called.
  *      EINVAL          The path name isn't absolute.  "log_start()" called.
  *      EILSEQ          The value found isn't a timestamp.  "log_start()"
  *                      called.
@@ -1052,26 +991,22 @@ RegStatus reg_getUint(
  */
 RegStatus reg_getTime(
     const char* const           path,
-    timestampt* const           value,
-    const timestampt* const     defaultValue)
+    timestampt* const           value)
 {
-    return getValue(path, value, defaultValue, &timeStruct);
+    return getValue(path, value, &timeStruct);
 }
 
 /*
- * Returns a value from the registry as a signature.  If no value is found,
- * then the value of the default argument is returned.
+ * Returns a value from the registry as a signature.
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the value to be
  *                      returned.  Shall not be NULL.
  *      value           Pointer to memory to hold the value.  Shall not be NULL.
  *                      The client may free upon return.
- *      defaultValue    The default value to return if no value is found.  May
- *                      be NULL, in which case "*value" is unchanged if no
- *                      value is found.
  * Returns:
  *      0               Success.  Value found and put in "*value".
+ *      ENOENT          No such value.  "log_start()" called.
  *      EINVAL          The path name isn't absolute.  "log_start()" called.
  *      EILSEQ          The value found isn't a signature.  "log_start()"
  *                      called.
@@ -1080,10 +1015,9 @@ RegStatus reg_getTime(
  */
 RegStatus reg_getSignature(
     const char* const           path,
-    signaturet* const           value,
-    const signaturet const      defaultValue)
+    signaturet* const           value)
 {
-    return getValue(path, value, defaultValue, &signatureStruct);
+    return getValue(path, value, &signatureStruct);
 }
 
 /*
@@ -1096,8 +1030,11 @@ RegStatus reg_getSignature(
  *      value           The value to be written to the registry.
  * Returns:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          A node or value would have to be created with the same
+ *                      absolute path name as an existing value or node.
+ *                      "log_start()" called.
  */
 RegStatus reg_putUint(
     const char* const   path,
@@ -1117,8 +1054,11 @@ RegStatus reg_putUint(
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          A node or value would have to be created with the same
+ *                      absolute path name as an existing value or node.
+ *                      "log_start()" called.
  */
 RegStatus reg_putString(
     const char* const   path,
@@ -1138,8 +1078,11 @@ RegStatus reg_putString(
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          A node or value would have to be created with the same
+ *                      absolute path name as an existing value or node.
+ *                      "log_start()" called.
  */
 RegStatus reg_putTime(
     const char* const           path,
@@ -1159,8 +1102,11 @@ RegStatus reg_putTime(
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          A node or value would have to be created with the same
+ *                      absolute path name as an existing value or node.
+ *                      "log_start()" called.
  */
 RegStatus reg_putSignature(
     const char* const   path,
@@ -1216,9 +1162,9 @@ RegStatus reg_deleteValue(
 }
 
 /*
- * Returns a node in the registry.  Creates the node and its ancestors if they
- * don't exist.  If the node didn't exist, then changes to the node won't be
- * made persistent until "reg_flush()" is called on the node or one of its
+ * Returns a node in the registry.  Can create the node and its ancestors if
+ * they don't exist.  If the node didn't exist, then changes to the node won't
+ * be made persistent until "reg_flush()" is called on the node or one of its
  * ancestors.
  *
  * Arguments:
@@ -1229,10 +1175,13 @@ RegStatus reg_deleteValue(
  *                      Set on success.  The client should call
  *                      "regNode_free(*node)" when the node is no longer
  *                      needed.
+ *      create          Whether or not to create the node if it doesn't
+ *                      exist.  Zero means no; otherwise, yes.
  * Returns:
  *      0               Success.  "*node" is set.  The client should call
  *                      "regNode_free(*node)" when the node is no longer
  *                      needed.
+ *      ENOENT          "create" was 0 and the node doesn't exist
  *      EINVAL          "path" isn't a valid absolute path name.  "log_start()
  *                      called.
  *      EIO             Backend database error.  "log_start()" called.
@@ -1240,13 +1189,33 @@ RegStatus reg_deleteValue(
  */
 RegStatus reg_getNode(
     const char* const   path,
-    RegNode** const     node)
+    RegNode** const     node,
+    const int           create)
 {
     RegStatus   status = reg_vetAbsPath(path);
 
     if (0 == status) {
-        if (0 == (status = initRegistry(0)))
-            status = rn_ensure(_rootNode, path+1, node);
+        if (0 == (status = initRegistry(create))) {
+            if (create) {
+                status = rn_ensure(_rootNode, path+1, node);
+            }
+            else {
+                RegNode*        lastNode;
+                char*           remPath;
+
+                if (0 == (status = rn_getLastNode(_rootNode, path+1, 
+                        &lastNode, &remPath))) {
+                    if (0 == *remPath) {
+                        *node = lastNode;
+                    }
+                    else {
+                        status = ENOENT;
+                    }
+
+                    free(remPath);
+                }                       /* "remPath" allocated */
+            }
+        }
     }
 
     return status;
@@ -1330,6 +1299,8 @@ const char* reg_getNodeAbsPath(
  * Returns:
  *      0               Success
  *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
  */
 RegStatus reg_putNodeString(
     RegNode*            node,
@@ -1340,7 +1311,7 @@ RegStatus reg_putNodeString(
 }
 
 /*
- * Adds an unsigned integer value-node to a map-node.
+ * Adds an unsigned integer value to a node.
  *
  * Arguments:
  *      node            Pointer to the parent node.  Shall not be NULL.
@@ -1350,6 +1321,8 @@ RegStatus reg_putNodeString(
  * Returns:
  *      0               Success
  *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
  */
 RegStatus reg_putNodeUint(
     RegNode*            node,
@@ -1360,7 +1333,7 @@ RegStatus reg_putNodeUint(
 }
 
 /*
- * Adds a time value-node to a map-node.
+ * Adds a time value to a node.
  *
  * Arguments:
  *      node            Pointer to the parent node.  Shall not be NULL.
@@ -1371,6 +1344,8 @@ RegStatus reg_putNodeUint(
  * Returns:
  *      0               Success
  *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
  */
 RegStatus reg_putNodeTime(
     RegNode*            node,
@@ -1392,6 +1367,8 @@ RegStatus reg_putNodeTime(
  * Returns:
  *      0               Success
  *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
  */
 RegStatus reg_putNodeSignature(
     RegNode*            node,
@@ -1411,19 +1388,17 @@ RegStatus reg_putNodeSignature(
  *      value           Pointer to a pointer to a string.  Shall not be NULL.
  *                      Set upon successful return.  The client should call call
  *                      "free(*value)" when the value is no longer needed.
- *      defaultValue    The default value to return if the named value doesn't
- *                      exist.
  * Returns:
  *      0               Success.  "*value" is set.
+ *      ENOENT          No such value
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus reg_getNodeString(
     const RegNode* const        node,
     const char* const           name,
-    char** const                value,
-    const char* const           defaultValue)
+    char** const                value)
 {
-    return getNodeValue(node, name, value, defaultValue, &stringStruct);
+    return getNodeValue(node, name, value, &stringStruct);
 }
 
 /*
@@ -1435,10 +1410,9 @@ RegStatus reg_getNodeString(
  *      name            Pointer to the name of the value.  Shall not be NULL.
  *      value           Pointer to an unsigned integer.  Set upon success.
  *                      Shall not be NULL.
- *      defaultValue    The default value to return if the named value doesn't
- *                      exist.
  * Returns:
  *      0               Success.  "*value" is set.
+ *      ENOENT          No such value
  *      ENOMEM          System error.  "log_start()" called.
  *      EILSEQ          The value isn't an unsigned integer.  "log_start()"
  *                      called.
@@ -1446,10 +1420,9 @@ RegStatus reg_getNodeString(
 RegStatus reg_getNodeUint(
     const RegNode* const        node,
     const char* const           name,
-    unsigned* const             value,
-    unsigned const              defaultValue)
+    unsigned* const             value)
 {
-    return getNodeValue(node, name, value, &defaultValue, &uintStruct);
+    return getNodeValue(node, name, value, &uintStruct);
 }
 
 /*
@@ -1458,20 +1431,21 @@ RegStatus reg_getNodeUint(
  * Arguments:
  *      node            Pointer to the node whose value is to
  *                      be returned as a time.  Shall not be NULL.
+ *      name            Pointer to the name of the value.  Shall not be NULL.
  *      value           Pointer to a time.  Set upon success.  Shall not be
  *                      NULL.  The client may free upon return.
  * Returns:
  *      0               Success.  "*value" is set.
+ *      ENOENT          No such value
  *      ENOMEM          System error.  "log_start()" called.
  *      EILSEQ          The value isn't a time.  "log_start()" called.
  */
 RegStatus reg_getNodeTime(
     const RegNode* const        node,
     const char* const           name,
-    timestampt* const           value,
-    const timestampt* const     defaultValue)
+    timestampt* const           value)
 {
-    return getNodeValue(node, name, value, defaultValue, &timeStruct);
+    return getNodeValue(node, name, value, &timeStruct);
 }
 
 /*
@@ -1480,20 +1454,21 @@ RegStatus reg_getNodeTime(
  * Arguments:
  *      node            Pointer to the node whose value is to be returned as a
  *                      signature.  Shall not be NULL.
+ *      name            Pointer to the name of the value.  Shall not be NULL.
  *      value           Pointer to a signature.  Set upon success.  Shall not
  *                      be NULL.  The client may free upon return.
  * Returns:
  *      0               Success.  "*value" is not NULL.
+ *      ENOENT          No such value
  *      ENOMEM          System error.  "log_start()" called.
  *      EILSEQ          The value isn't a signature.  "log_start()" called.
  */
 RegStatus reg_getNodeSignature(
     const RegNode* const        node,
     const char* const           name,
-    signaturet* const           value,
-    const signaturet const      defaultValue)
+    signaturet* const           value)
 {
-    return getNodeValue(node, name, value, defaultValue, &signatureStruct);
+    return getNodeValue(node, name, value, &signatureStruct);
 }
 
 /*

@@ -21,6 +21,8 @@ LDADD		= \
     ../ulog/lib.la \
     ../misc/lib.la \
     ../rpc/lib.la \
+    ../registry/lib.la \
+    ../Berkeley-DB/build_unix/libdb-4.8.la \
     -lm
 dist_man1_MANS	= pqmon.1
 TAGS_FILES	= \
@@ -28,4 +30,12 @@ TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
+    ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
+
+debug:		pqmon
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb pqmon
+
+valgrind:	pqmon
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./pqmon -S

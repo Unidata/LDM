@@ -9,6 +9,11 @@
             overkill, it's one of the few, proven, freely-available packages
             with support for both transactions and concurent access.
 
+            As a consequence of the creation and use of the registry, the
+            following environment variables no longer work:
+                LDMHOSTNAME
+                LDMPQFNAME
+
 	Portability:
             Added checks for netstat(1) and top(1) to configure(1) script and
             appropriately modified ldmadmin(1).  Among other things, this
@@ -19,9 +24,9 @@
         Installation:
             Upgraded the package-installation mechanism from one based on
             autoconf(1) and ad-hoc makefiles to one based on automake(1).  THIS
-            IS A BIG DEAL WITH LOTS OF RAMIFICATIONS.  FORGET EVERYTHING YOU
-            THINK YOU KNOW ABOUT INSTALLING THE LDM AND FOLLOW THE NEW
-            INSTRUCTIONS.
+            IS A BIG DEAL WITH RAMIFICATIONS -- ESPCIALLY FOR THE INSTALLATION
+            LAYOUT.  FORGET EVERYTHING YOU KNOW ABOUT INSTALLING THE LDM AND
+            FOLLOW THE NEW INSTRUCTIONS.
 
             Incorporated documentation into "src".
 

@@ -31,7 +31,6 @@
 #include "ldmprint.h"
 #include "ulog.h"
 #include "pq.h"
-#include "paths.h"
 #include "surface.h"
 #include "RegularExpressions.h"
 
@@ -55,26 +54,7 @@ static volatile int stats_req = 0;
 #define DEFAULT_FEEDTYPE  (IDS|DDS)
 #endif
 
-/* set in paths.h by configure */
-#ifndef DEFAULT_SURF_OUTQUEUE
-#define DEFAULT_SURF_OUTQUEUE "/usr/local/ldm/data/pqsurf.pq"
-#endif
-static char *opqfname = DEFAULT_SURF_OUTQUEUE;
 static pqueue *opq = NULL;
-
-/* set in paths.h by configure */
-#ifndef DEFAULT_SURF_CONFFILE
-#define DEFAULT_SURF_CONFFILE "/usr/local/ldm/etc/pqsurf.conf"
-#endif
-
-/* set in paths.h by configure */
-#ifndef DEFAULT_SURF_DATADIR
-#ifndef DEFAULT_DATADIR
-#define DEFAULT_SURF_DATADIR "/usr/local/ldm"
-#else
-#define DEFAULT_SURF_DATADIR DEFAULT_DATADIR
-#endif
-#endif
 
 #ifndef DEFAULT_PIPE_TIMEO
 #define DEFAULT_PIPE_TIMEO 60
@@ -254,9 +234,9 @@ usage(const char *av0) /*  id string */
                 "\t-d datadir   cd to \"datadir\" before interpreting filenames in\n");
         (void)fprintf(stderr,
                 "\t             conffile (default %s)\n",
-                DEFAULT_SURF_DATADIR);
+                getPqsurfDataDirPath());
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", DEFAULT_QUEUE);
+                "\t-q queue     default \"%s\"\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-p pattern   Interested in products matching \"pattern\" (default \"%s\")\n", DEFAULT_PATTERN);
         (void)fprintf(stderr,
@@ -270,10 +250,10 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-o offset    the oldest product we will consider is \"offset\" secs before now (default: most recent in output queue)\n");
         (void)fprintf(stderr,
-                "\t-Q outQueue    default \"%s\"\n", DEFAULT_SURF_OUTQUEUE);
+                "\t-Q outQueue    default \"%s\"\n", getSurfQueuePath());
         (void)fprintf(stderr,
                 "\t(default conffilename is %s)\n",
-                DEFAULT_SURF_CONFFILE);
+                getPqsurfConfigPath());
         exit(1);
 }
 
@@ -569,6 +549,8 @@ expire(pqueue *epq, const unsigned interval, const double age)
 
 int main(int ac, char *av[])
 {
+        const char* pqfname = getQueuePath();
+        const char *opqfname = getSurfQueuePath();
         const char *progname = ubasename(av[0]);
         char *logfname;
         prod_class_t clss;
@@ -598,20 +580,9 @@ int main(int ac, char *av[])
         spec.feedtype = DEFAULT_FEEDTYPE;
         spec.pattern = DEFAULT_PATTERN;
 
-
         memset(argv, 0, sizeof(argv));
         argv[0] = "pqact";
         argc++;
-        
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
 
         {
         extern int optind;
@@ -621,8 +592,8 @@ int main(int ac, char *av[])
         int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
             LOG_MASK(LOG_NOTICE));
         int fterr;
-        char *conffilename = DEFAULT_SURF_CONFFILE;
-        char *datadir = DEFAULT_SURF_DATADIR;
+        const char *conffilename = getPqsurfConfigPath();
+        const char *datadir = getPqsurfDataDirPath();
 
         usePil = 1;
         opterr = 1;
@@ -729,10 +700,10 @@ int main(int ac, char *av[])
                 conffilename = av[optind];
 
         argv[argc++] = "-d";
-        argv[argc++] = datadir;
+        argv[argc++] = (char*)datadir;
         argv[argc++] = "-q";
-        argv[argc++] = opqfname;
-        argv[argc++] = conffilename;
+        argv[argc++] = (char*)opqfname;
+        argv[argc++] = (char*)conffilename;
 
         age *= 3600.;
 
@@ -772,7 +743,7 @@ int main(int ac, char *av[])
 
 
         /*
-         * Open the Output product que
+         * Open the output product queue
          */
         status = pq_open(opqfname, PQ_DEFAULT, &opq);
         if(status)
@@ -794,7 +765,7 @@ int main(int ac, char *av[])
                 exit(1);
 
         /*
-         * Open the product que
+         * Open the input product queue
          */
         status = pq_open(pqfname, PQ_READONLY, &pq);
         if(status)

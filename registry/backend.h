@@ -23,6 +23,21 @@ typedef struct {
 }       RdbCursor;
 
 /*
+ * Resets the backend database.
+ *
+ * ARGUMENTS:
+ *      path            Pathname of the database directory.  Shall not be NULL.
+ *                      The client can free it upon return.
+ * RETURNS:
+ *      0               Success.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+RegStatus
+reset(
+    const char* const   path);
+
+/*
  * Opens the backend database.
  *
  * ARGUMENTS:
@@ -35,8 +50,8 @@ typedef struct {
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.  "*backend" is set.
- *      ENOMEM   System error.  "log_start()" called.
- *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beOpen(
@@ -53,11 +68,26 @@ beOpen(
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beClose(
     Backend* const      backend);
+
+/*
+ * Resets the backend database.
+ *
+ * ARGUMENTS:
+ *      path            Pathname of the database directory.  Shall not be NULL.
+ *                      The client can free it upon return.
+ * RETURNS:
+ *      0               Success.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+RegStatus
+beReset(
+    const char* const   path);
 
 /*
  * Removes the backend database.
@@ -67,8 +97,8 @@ beClose(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      ENOMEM   System error.  "log_start()" called.
- *      EIO    Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beRemove(
@@ -84,7 +114,7 @@ beRemove(
  *      value           Pointer to the string value.  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 bePut(
@@ -105,8 +135,8 @@ bePut(
  *                      "free(*value)" when the value is no longer needed.
  * RETURNS:
  *      0               Success.  "*value" points to the string value.
- *      ENOENT     The given key doesn't match any entry.
- *      EIO    Backend database error.  "log_start()" called.
+ *      ENOENT          The given key doesn't match any entry.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beGet(
@@ -156,8 +186,8 @@ beSync(
  *                      is no longer needed.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      EIO    Backend database error.  "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
 beInitCursor(
@@ -179,10 +209,10 @@ beInitCursor(
  *                      if it exists.
  * RETURNS
  *      0               Success.  "*rdbCursor" is set.
- *      ENOENT     The database is empty.  "*rdbCursor" is unmodified.
- *      EIO    Backend database error.  "*rdbCursor" is unmodified.
+ *      ENOENT          The database is empty.  "*rdbCursor" is unmodified.
+ *      EIO             Backend database error.  "*rdbCursor" is unmodified.
  *                      "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
 beFirstEntry(
@@ -217,7 +247,7 @@ beNextEntry(
  *      rdbCursor       Pointer to the RDB cursor structure.
  * RETURNS:
  *      0               Success.  The client shall not use the cursor again.
- *      EIO    Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beCloseCursor(RdbCursor* rdbCursor);

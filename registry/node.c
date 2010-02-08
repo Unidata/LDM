@@ -142,6 +142,8 @@ static int compareNodes(
  *      child           Pointer to the child node.  Shall not be NULL.
  * Returns:
  *      0               Success
+ *      EEXIST          A value with the same name exists in the parent node.
+ *                      "log_start()" called.
  */
 static RegStatus addChild(
     RegNode* const              parent,
@@ -154,17 +156,28 @@ static RegStatus addChild(
         status = 0;
     }
     else {
-        if (NULL == tsearch(child, &parent->children, compareNodes)) {
-            const char* path;
+        ValueThing      vt;
 
-            log_serror("Couldn't add child-node \"%s\" to parent-node \"%s\"",
-                child->name, parent->absPath);
-            status = ENOMEM;
+        vt.name = (char*)child->name;   /* safe cast */
+
+        if (NULL != tfind(&vt, &parent->values, compareValueThings)) {
+            log_start("A value named \"%s\" exists", vt.name);
+            status = EEXIST;
         }
         else {
-            assert(parent == child->parent);
-            status = 0;
+            if (NULL == tsearch(child, &parent->children, compareNodes)) {
+                log_errno();
+                status = ENOMEM;
+            }
+            else {
+                assert(parent == child->parent);
+                status = 0;
+            }
         }
+
+        if (status)
+            log_add("Couldn't add child-node \"%s\" to parent-node "
+                "\"%s\"", child->name, parent->absPath);
     }
 
     return status;
@@ -221,6 +234,8 @@ static RegStatus initNameAndPath(
  * Returns:
  *      0               Success
  *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          A value with the same name exists in the parent node.
+ *                      "log_start()" called.
  */
 static RegStatus newNode(
     RegNode* const      parent,
@@ -764,6 +779,8 @@ static RegStatus undelete(
  *      0               Success.  "*node" is not NULL.
  *      EINVAL          "path" is an invalid relative path name.  "log_start()"
  *                      called.
+ *      EEXIST          A node would have to be created with the same absolute
+ *                      path name as an existing value.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 static RegStatus ensureNode(
@@ -839,6 +856,8 @@ static RegStatus vetExtant(
  *                      NULL.
  *      ENOMEM          System error.  "log_start()" called.
  *      EPERM           The node has been deleted.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
  */
 static RegStatus putValue(
     RegNode* const      node,
@@ -873,30 +892,45 @@ static RegStatus putValue(
                 tfind(&template, &node->deletedValues, compareValueThings));
         }
         else {
-            /* The ValueThing doesn't exist.  This should be uncommon. */
-            if (NULL != (ptr = tfind(&template, &node->deletedValues,
-                    compareValueThings))) {
-                vt = *(ValueThing**)ptr;
+            /*
+             * The ValueThing doesn't exist.  This should be uncommon.
+             *
+             * It's not permitted to have a value and a node with the same
+             * absolute path name.
+             */
+            RegNode     child;
 
-                (void)tdelete(vt, &node->deletedValues, compareValueThings);
-                freeValueThing(vt);
+            child.name = name;
+
+            if (NULL != tfind(&child, &node->children, compareNodes)) {
+                log_start("A child-node named \"%s\" exists", name);
+                status = EEXIST;
             }
-            if (0 == (status = newValueThing(&vt))) {
-                if (0 == (status = reg_cloneString(&vt->name, name))) {
-                    if (NULL == (ptr = tsearch(vt, &node->values,
-                            compareValueThings))) {
-                        log_errno();
+            else {
+                if (NULL != (ptr = tfind(&template, &node->deletedValues,
+                        compareValueThings))) {
+                    vt = *(ValueThing**)ptr;
 
-                        status = ENOMEM;
-                    }
-                    else {
-                        status = reg_cloneString(&vt->string, value);
-                    }
-                }                           /* "valueThing->name" allocated */
-
-                if (status)
+                    (void)tdelete(vt, &node->deletedValues, compareValueThings);
                     freeValueThing(vt);
-            }                               /* "valueThing" allocated */
+                }
+                if (0 == (status = newValueThing(&vt))) {
+                    if (0 == (status = reg_cloneString(&vt->name, name))) {
+                        if (NULL == (ptr = tsearch(vt, &node->values,
+                                compareValueThings))) {
+                            log_errno();
+
+                            status = ENOMEM;
+                        }
+                        else {
+                            status = reg_cloneString(&vt->string, value);
+                        }
+                    }                       /* "valueThing->name" allocated */
+
+                    if (status)
+                        freeValueThing(vt);
+                }                           /* "valueThing" allocated */
+            }
         }
 
         if (status) {
@@ -1080,6 +1114,8 @@ int rn_isDeleted(
  *      0               Success.  "*vt" is set if "vt" isn't NULL.
  *      ENOMEM          System error.  "log_start()" called.
  *      EPERM           The node has been deleted.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
  */
 RegStatus rn_putValue(
     RegNode* const      node,
@@ -1106,7 +1142,7 @@ RegStatus rn_putValue(
  *      0               Success.  "*string" is not NULL.
  *      EPERM           The node containing the value has been deleted.
  *                      "log_start()" called.
- *      ENOENT          No such value
+ *      ENOENT          No such value.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus rn_getValue(
@@ -1127,9 +1163,14 @@ RegStatus rn_getValue(
             template.name = (char*)valueName;
             ptr = tfind(&template, &lastNode->values, compareValueThings);
 
-            status = (NULL == ptr)
-                ? ENOENT
-                : reg_cloneString(string, (*(ValueThing**)ptr)->string);
+            if (NULL == ptr) {
+                log_start("No such value \"%s\" in node \"%s\"", template.name,
+                    rn_getAbsPath(lastNode));
+                status = ENOENT;
+            }
+            else {
+                status = reg_cloneString(string, (*(ValueThing**)ptr)->string);
+            }
         }
 
         free(valueName);
@@ -1193,6 +1234,8 @@ RegStatus rn_deleteValue(
  *                      Set upon successful return.
  * Returns:
  *      0               Success.  "*node" is not NULL.
+ *      EEXIST          A node would have to be created with the same absolute
+ *                      path name as an existing value.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus rn_ensure(

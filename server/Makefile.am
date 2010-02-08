@@ -11,10 +11,13 @@ YACC			= @YACC@
 EXTRA_DIST		= \
     child_process_set.h \
     forn5_svc.h \
+    ldm6_svc.c \
     ldmd.conf \
+    ldmd.conf.grow \
+    parser.c \
     parser.y \
-    scanner.l \
     scanner.c \
+    scanner.l \
     up6.h \
     wordexp.h
 PQ_SUBDIR		= @PQ_SUBDIR@
@@ -43,6 +46,8 @@ LDADD			= \
     ../misc/lib.la \
     ../rpc/lib.la \
     $(LD_GEN) \
+    ../registry/lib.la \
+    ../Berkeley-DB/build_unix/libdb-4.8.la \
     -lm
 dist_man1_MANS		= ldmd.1
 TAGS_FILES		= \
@@ -50,7 +55,10 @@ TAGS_FILES		= \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
+    ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
+CLEANFILES		= *.i
+sysconf_DATA		= ldmd.conf.grow
 
 # Because both the client-side and server-side code that rpcgen(1) generates
 # use identical function names like "hereis_6" and because the LDM links to
@@ -103,12 +111,22 @@ scanner.c:	scanner.l
 
 endif
 
-install-data-local:	\
+install-data-local:    \
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/ldmd.conf
-$(DESTDIR)$(sysconfdir):
-	$(MKDIR_P) $@
 $(DESTDIR)$(sysconfdir)/ldmd.conf:
 	$(INSTALL_DATA) $(srcdir)/ldmd.conf $@
 
 uninstall-local:
 	rm -f $(DESTDIR)$(mandir)/man1/ldmd.1
+
+valgrind:	ldmd
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes \
+	    --trace-children=no --child-silent-after-fork=yes ./ldmd -l-
+#	    ./ldmd -l-
+
+debug:		ldmd
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb ./ldmd
+
+.c.i:
+	$(COMPILE) $(CPPFLAGS) -E -o $@ $<

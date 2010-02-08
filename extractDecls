@@ -19,6 +19,9 @@ sed '/@FUNCTION_DECLARATIONS@/,$d' $templateFile \
         } 
         declStarted = 0;
     } 
+    /^struct/ || /^typedef/ || /^}/ {
+        declStarted = 0;
+    }
     declStarted {
         lines[++lineCount] = $0;
     }

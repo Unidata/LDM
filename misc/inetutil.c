@@ -28,6 +28,7 @@
 #include "ulog.h"
 #include "inetutil.h"
 #include "../protocol/timestamp.h"
+#include <registry.h>
 
 /*
  * Host names are limited to 255 bytes by the The Single UNIX®
@@ -99,17 +100,20 @@ ghostname(void)
                 return hostname;
 
         /*
-         * Since the ldm programs require fully qualified
-         * hostnames in an internet environment AND users
-         * often don't have control over the system admin
-         * conventions, we allow override of the 
-         * hostname with an environment variable.
-         * This is meant to be the fully qualified
-         * hostname of the current host.
+         * The registry is first checked for the hostname because the ldm
+         * programs require fully qualified hostnames in an internet
+         * environment AND users often don't have control over the system admin
+         * conventions,
          */
         {
-                char *cp;
-                cp = getenv("LDMHOSTNAME");
+                char*   cp;
+                int     status = reg_getString(REG_HOSTNAME, &cp);
+
+                if (status) {
+                    ENOENT == status
+                        ? log_clear()
+                        : log_log(LOG_ERR);
+                }
                 if(cp != NULL)
                 {
                         (void)strncpy(hostname, cp, MAXHOSTNAMELEN);

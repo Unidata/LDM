@@ -42,7 +42,7 @@ allow_acl_add(
     feedtypet			ft,
     const char* const		pattern,
     regex_t* const		regex,
-    const host_set*		hsp);
+    host_set*		        hsp);
 
 extern int
 forn_acl_ck(peer_info *rmtip, prod_class_t *want);
@@ -50,9 +50,12 @@ forn_acl_ck(peer_info *rmtip, prod_class_t *want);
 int acl_product_intersection(const char *name, const struct in_addr *addr, 
     const prod_class_t *want, prod_class_t **const intersect);
 
-extern int
-accept_acl_add(feedtypet ft, const char *pattern,
-	 const regex_t *rgxp, const host_set *hsp, int isPrimary);
+extern int accept_acl_add(
+    feedtypet     ft,
+    char*         pattern,
+    regex_t*      rgxp,
+    host_set*     hsp,
+    int           isPrimary);
 
 extern int
 hiya_acl_ck(peer_info *rmtip, prod_class_t *offered);
@@ -95,7 +98,7 @@ requestEntry_get(
     RequestEntry** const	entry,
     const feedtypet		ft,
     const char* const		pattern,
-    const regex_t* const	regex);
+    regex_t* const	        regex);
 
 int
 requestEntry_addHost(
@@ -112,10 +115,12 @@ acl_getUpstreamFilter(
 
 ErrorObj*
 acl_addAllow(
-    const feedtypet		ft,
-    const host_set* const	hostSet,
-    const char* const		okEre,
-    const char* const		notEre);
+    const feedtypet             ft,
+    host_set* const             hostSet,
+    const char* const           okEre,
+    const char* const           notEre);
+
+void acl_freeAllowEntries(void);
 
 #ifdef __cplusplus
 }

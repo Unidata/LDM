@@ -18,6 +18,7 @@
 #include "ldmprint.h"
 #include "RegularExpressions.h"
 #include "ulog.h"
+#include "log.h"
 #include "wordexp.h"
 
 #include <limits.h>
@@ -42,11 +43,8 @@ static int		scannerPop(void);
 static void
 yyerror(const char *msg)
 {
-    err_log_and_free(
-	ERR_NEW3(0, NULL,
-	    "Error near line %d, file \"%s\": %s",
-	    line, scannerGetPath(), msg),
-	ERR_FAILURE);
+    log_add("Error near line %d, file \"%s\": %s", line, scannerGetPath(),
+        msg);
 }
 
 #if __STDC__
@@ -72,12 +70,9 @@ decodeFeedtype(
 	error = 0;
     }
     else {
-	err_log_and_free(
-	    ERR_NEW4(0, NULL, 
-		"Invalid feedtype expression \"%s\" near line %d, file \"%s\": "
-		    "%s",
-		string, line, scannerGetPath(), strfeederr(status)),
-	    ERR_FAILURE);
+	log_start("Invalid feedtype expression \"%s\" near line %d, "
+            "file \"%s\": %s", string, line, scannerGetPath(),
+            strfeederr(status));
 
 	error = 1;
     }
@@ -95,35 +90,27 @@ decodeRegEx(
     char* const	clone = strdup(string);
 
     if (NULL == clone) {
-	err_log_and_free(
-	    ERR_NEW4(0, NULL, 
-		"Couldn't clone regular-expression \"%s\" near line %d, "
-		    "file \"%s\": %s",
-		string, line, scannerGetPath(), strerror(errno)),
-	    ERR_FAILURE);
+	log_start("Couldn't clone regular-expression \"%s\" near line %d, "
+            "file \"%s\": %s", string, line, scannerGetPath(),
+            strerror(errno));
     }
     else {
 	regex_t*	regexp = (regex_t*)malloc(sizeof(regex_t));
 
 	if (NULL == regexp) {
-	    err_log_and_free(
-		ERR_NEW3(0, NULL, 
-		    "Couldn't allocate %lu bytes for \"regex_t\""
-			"near line %d, file \"%s\"",
-		    (unsigned long)sizeof(regex_t), line, scannerGetPath()),
-		ERR_FAILURE);
+	    log_start("Couldn't allocate %lu bytes for \"regex_t\""
+                "near line %d, file \"%s\"", (unsigned long)sizeof(regex_t),
+                line, scannerGetPath());
 	}
 	else {
 	    if (re_vetSpec(clone)) {
 		/*
 		 * Pathological regular expression.
 		 */
-		err_log_and_free(
-		    ERR_NEW3(0, NULL, 
-			"Adjusted pathological regular expression \"%s\" "
-			    "near line %d, file \"%s\"",
-			string, line, scannerGetPath()),
-		    ERR_WARNING);
+		log_start("Adjusted pathological regular expression \"%s\" "
+                    "near line %d, file \"%s\"", string, line,
+                    scannerGetPath());
+                log_log(LOG_WARNING);
 	    }
 
 	    error = regcomp(regexp, clone, REG_EXTENDED|REG_ICASE|REG_NOSUB);
@@ -135,20 +122,17 @@ decodeRegEx(
 		char	buf[132];
 
 		(void)regerror(error, regexp, buf, sizeof(buf));
-		err_log_and_free(
-		    ERR_NEW4(0, NULL,
-			"Couldn't compile regular-expression \"%s\" near "
-			    " line %d, file \"%s\": %s",
-			clone, line, scannerGetPath(), buf),
-		    ERR_FAILURE);
+		log_start("Couldn't compile regular-expression \"%s\" near "
+                    " line %d, file \"%s\": %s", clone, line, scannerGetPath(),
+                    buf);
 	    }
 
 	    if (error)
 		free(regexp);
-	}				/* "regexp" set */
+	}				/* "regexp" allocated */
 
 	free(clone);
-    }					/* "clone" set */
+    }					/* "clone" allocated */
 
     return error;
 }
@@ -166,23 +150,17 @@ decodeHostSet(
 	char* dup = strdup(string);
 
 	if (NULL == dup) {
-	    err_log_and_free(
-		ERR_NEW4(0, NULL, 
-		    "Couldn't clone string \"%s\" near line %d, "
-			"file \"%s\": %s",
-		    string, line, scannerGetPath(), strerror(errno)),
-		ERR_FAILURE);
+	    log_start("Couldn't clone string \"%s\" near line %d, "
+                "file \"%s\": %s", string, line, scannerGetPath(),
+                strerror(errno));
 	}
 	else {
 	    host_set*	hsp = new_host_set(HS_REGEXP, dup, regexp);
 
 	    if (NULL == hsp) {
-		err_log_and_free(
-		    ERR_NEW4(0, NULL, 
-			"Couldn't create host-set for "
-			    "\"%s\" near line %d, file \"%s\": %s",
-			dup, line, scannerGetPath(), strerror(errno)),
-		    ERR_FAILURE);
+		log_start("Couldn't create host-set for "
+                    "\"%s\" near line %d, file \"%s\": %s", dup, line,
+                    scannerGetPath(), strerror(errno));
 
 		error = 1;
 	    }
@@ -245,12 +223,9 @@ warnIfPathological(
 	/*
 	 * Pathological regular expression.
 	 */
-	err_log_and_free(
-	    ERR_NEW3(0, NULL, 
-		"Pathological regular expression \"%s\" "
-		    "near line %d, file \"%s\"",
-		re, line, scannerGetPath()),
-	    ERR_WARNING);
+	log_start("Pathological regular expression \"%s\" "
+            "near line %d, file \"%s\"", re, line, scannerGetPath());
+        log_log(LOG_WARNING);
     }
 }
 
@@ -298,17 +273,11 @@ decodeAllowEntry(
 	    errObj = acl_addAllow(ft, hsp, okPattern, notPattern);
 
 	    if (errObj) {
-		err_log_and_free(
-		    ERR_NEW2(0, errObj, 
-			"Couldn't add ALLOW entry near line %d, file \"%s\"",
-			line, scannerGetPath()),
-		    ERR_FAILURE);
-
+		log_start("Couldn't add ALLOW entry near line %d, file \"%s\"",
+                    line, scannerGetPath());
+                free_host_set(hsp);
 		errCode = -1;
-	    }
-
-	    if (errCode)
-		free_host_set(hsp);
+            }
 	}				/* "hsp" allocated */
     }					/* "ft" set */
 
@@ -331,22 +300,18 @@ decodeRequestEntry(
 	RequestEntry*	entry;
 
 	if (errCode = requestEntry_get(&entry, ft, prodPattern, regexp)) {
-	    err_log_and_free(
-		ERR_NEW3(0, NULL, 
-		    "Couldn't get request-entry near line %d, file \"%s\": %s",
-		    line, scannerGetPath(), strerror(errCode)),
-		ERR_FAILURE);
+	    log_start(
+                "Couldn't get request-entry near line %d, file \"%s\": %s",
+                line, scannerGetPath(), strerror(errCode));
 	}
 	else {
 	    const char*	hostId = strtok(hostSpec, ":");
 
+            regexp = NULL;              /* abandon */
+
 	    if (NULL == hostId) {
-		err_log_and_free(
-		    ERR_NEW3(0, NULL, 
-			"Invalid hostname specification \"%s\" near "
-			    "line %d, file \"%s\"",
-			hostSpec, line, scannerGetPath()),
-		    ERR_FAILURE);
+		log_start("Invalid hostname specification \"%s\" near "
+                    "line %d, file \"%s\"", hostSpec, line, scannerGetPath());
 
 		errCode = EINVAL;
 	    }
@@ -370,12 +335,9 @@ decodeRequestEntry(
 			localPort = (unsigned)port;
 		    }
 		    else {
-			err_log_and_free(
-			    ERR_NEW3(0, NULL, 
-				"Invalid port specification \"%s\" near "
-				    "line %d, file \"%s\"",
-				portSpec, line, scannerGetPath()),
-			    ERR_FAILURE);
+			log_start("Invalid port specification \"%s\" near "
+                            "line %d, file \"%s\"", portSpec, line,
+                            scannerGetPath());
 
 			errCode = EINVAL;
 		    }
@@ -385,22 +347,19 @@ decodeRequestEntry(
 		    if ((errCode =
 			    requestEntry_addHost(entry, hostId, localPort))) {
 
-			err_log_and_free(
-			    ERR_NEW3(0, NULL, 
-				"Couldn't add host to request-entry near "
-				    "line %d, file \"%s\": %s",
-				line, scannerGetPath(), strerror(errCode)),
-			    ERR_FAILURE);
+			log_start("Couldn't add host to request-entry near "
+                            "line %d, file \"%s\": %s", line, scannerGetPath(),
+                            strerror(errCode));
 		    }
 		}			/* "localPort" set */
 	    }				/* valid hostname */
 	}				/* got request "entry" */
 
-	if (errCode)
-	    regfree(regexp);
-
-	free(regexp);
-    }					/* "ft" & "regexp" set */
+        if (errCode && NULL != regexp) {
+            regfree(regexp);
+            free(regexp);
+        }
+    }                                   /* "regexp" allocated */
 
     return errCode;
 }
@@ -477,12 +436,9 @@ accept_entry:	ACCEPT_K STRING STRING STRING
 			    char*	patp = strdup($3);
 
 			    if (NULL == patp) {
-				err_log_and_free(
-				    ERR_NEW3(0, NULL, 
-					"Couldn't clone string \"%s\" "
-					    "near line %d, file \"%s\": %s",
-					$3, scannerGetPath(), strerror(errno)),
-				    ERR_FAILURE);
+				log_start("Couldn't clone string \"%s\" "
+                                    "near line %d, file \"%s\": %s",
+                                    $3, scannerGetPath(), strerror(errno));
 
 				error = 1;
 			    }
@@ -490,29 +446,29 @@ accept_entry:	ACCEPT_K STRING STRING STRING
 				error =
 				    accept_acl_add(ft, patp, regexp, hsp, 1);
 
-				if (error) {
-				    err_log_and_free(
-					ERR_NEW3(0, NULL, 
-					    "Couldn't add ACCEPT entry "
-						"near line %d, file \"%s\": %s",
-					    line, scannerGetPath(),
-					    strerror(error)),
-					ERR_FAILURE);
+				if (!error) {
+                                    patp = NULL;    /* abandon */
+                                    hsp = NULL;     /* abandon */
+                                    regexp = NULL;  /* abandon */
 				}
-
-				if (error)
-				    free(patp);
-			    }		/* "patp" set */
+                                else {
+				    log_start("Couldn't add ACCEPT entry "
+                                        "near line %d, file \"%s\": %s",
+                                        line, scannerGetPath(),
+                                        strerror(error));
+                                    free(patp);
+                                }
+			    }		/* "patp" allocated */
 
 			    if (error)
 				free_host_set(hsp);
-			}		/* "*hsp" set */
+			}		/* "*hsp" allocated */
 
-			if (error)
-			    regfree(regexp);
-
-			free(regexp);
-		    }			/* "ft" & "regexp" set */
+                        if (error && regexp) {
+                            regfree(regexp);
+                            free(regexp);
+                        }
+		    }			/* "regexp" allocated */
 
 		    if (error)
 			return error;
@@ -545,12 +501,9 @@ exec_entry:	EXEC_K STRING
 		    error = wordexp($2, &words, 0);
 
 		    if (error) {
-			err_log_and_free(
-			    ERR_NEW4(0, NULL,
-				"Couldn't decode command \"%s\" near "
-				    " line %d, file \"%s\": %s",
-				$2, line, scannerGetPath(), strerror(errno)),
-			    ERR_FAILURE);
+			log_start("Couldn't decode command \"%s\" near "
+                            " line %d, file \"%s\": %s", $2, line,
+                            scannerGetPath(), strerror(errno));
 		    }
 		    else {
 #if YYDEBUG
@@ -561,13 +514,9 @@ exec_entry:	EXEC_K STRING
 			    error = exec_add(&words);
 
 			    if (error) {
-				err_log_and_free(
-				    ERR_NEW3(0, NULL,
-					"Couldn't add EXEC entry near "
-					    " line %d, file \"%s\": %s",
-					line, scannerGetPath(),
-					strerror(errno)),
-				    ERR_FAILURE);
+				log_start("Couldn't add EXEC entry near "
+                                    " line %d, file \"%s\": %s", line,
+                                    scannerGetPath(), strerror(errno));
 				wordfree(&words);
 			    }
 			}
@@ -627,16 +576,14 @@ read_conf(
 	status = yyparse();
 
 	if (status != 0) {
-	    udebug("yyparse returns %d", status);
+            log_add("Error reading LDM configuration-file \"%s\"", conf_path);
 	}
 	else {
 	    if (doSomething) {
 		status = invert_request_acl(defaultPort);
 
-		if (status != 0) {
-		    log_errno();
-		    log_add("Problem requesting data");
-		}
+		if (status != 0)
+		    log_serror("Problem requesting data");
 	    }
 	}
     }

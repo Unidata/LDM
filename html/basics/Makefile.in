@@ -121,6 +121,7 @@ LIBS = @LIBS@
 LIBS_CUNIT = @LIBS_CUNIT@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
+LOGS_DIR = @LOGS_DIR@
 LOG_LDM = @LOG_LDM@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -141,7 +142,9 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
+QUEUE_DIR = @QUEUE_DIR@
 RANLIB = @RANLIB@
+REGISTRY_DIR = @REGISTRY_DIR@
 RPCGEN = @RPCGEN@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -278,6 +281,7 @@ html_DATA = \
     glindex.html \
     index.html \
     ldmd.conf.html \
+    LDM-registry.html \
     LDM-user.html \
     logfile-format.html \
     logfile.html \
@@ -560,7 +564,48 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 	uninstall-nobase_htmlDATA
 
 
-all:
+@MAINTAINER_TRUE@all:	LDM-registry.html
+
+@MAINTAINER_TRUE@LDM-registry.html:	Makefile regpar-top.html \
+@MAINTAINER_TRUE@		$(top_srcdir)/registry/regpar.tab
+@MAINTAINER_TRUE@	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
+@MAINTAINER_TRUE@	cat regpar-top.html >>$@.tmp
+@MAINTAINER_TRUE@	echo '<table align="center" border="2" cellpadding="6"' \
+@MAINTAINER_TRUE@	    'cellspacing="0">' >>$@.tmp
+@MAINTAINER_TRUE@	echo '<tr>' >>$@.tmp
+@MAINTAINER_TRUE@	echo '<th>Parameter Pathname</th>' >>$@.tmp
+@MAINTAINER_TRUE@	echo '<th>Parameter Description</th>' >>$@.tmp
+@MAINTAINER_TRUE@	echo '<th>Default Value</th>' >>$@.tmp
+@MAINTAINER_TRUE@	echo '</tr>' >>$@.tmp
+@MAINTAINER_TRUE@	while IFS=: read name path desc default; do \
+@MAINTAINER_TRUE@	    echo "<tr>"; \
+@MAINTAINER_TRUE@		echo "<td nowrap><tt>$$path</tt></td>"; \
+@MAINTAINER_TRUE@		echo "<td>$$desc</td>"; \
+@MAINTAINER_TRUE@		echo "<td><tt>$$default</tt></td>"; \
+@MAINTAINER_TRUE@	    echo "</tr>"; \
+@MAINTAINER_TRUE@	done <$(top_srcdir)/registry/regpar.tab >>$@.tmp
+@MAINTAINER_TRUE@	echo '</blockquote></BODY></HTML>' >>$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
+
+@MAINTAINER_TRUE@registry-check:	$(top_srcdir)/configure.ac
+@MAINTAINER_TRUE@	sed -n '/UD_CONFIGPAR/{s/^.*(//;s/,.*//;s/\[//;s/\]//;p}' \
+@MAINTAINER_TRUE@	    $(top_srcdir)/configure.ac \
+@MAINTAINER_TRUE@	| while read name; do \
+@MAINTAINER_TRUE@	    if ! grep -q $$name LDM-registry.html.in; then \
+@MAINTAINER_TRUE@		echo 1>&2 "Parameter \"$$name\" is missing from" \
+@MAINTAINER_TRUE@		    "file \"LDM-registry.html.in\""; \
+@MAINTAINER_TRUE@		exit 1; \
+@MAINTAINER_TRUE@	    fi; \
+@MAINTAINER_TRUE@	done
+#	while read name value; do \
+#	    if ! grep -q $$name LDM-registry.html; then \
+#		echo 1>&2 "Parameter \"$$name\" is missing from the " \
+#		    "registry description"; \
+#		exit 1; \
+#	    fi; \
+#	done <$(top_srcdir)/registry/configDefaults.txt
+
+@MAINTAINER_TRUE@.PHONY:	registry-check
 
 @MAINTAINER_TRUE@successes.html:	$(top_srcdir)/test/results.tab
 @MAINTAINER_TRUE@	sort -t , -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 -k 7,7 $< \

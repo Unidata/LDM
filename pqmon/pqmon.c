@@ -24,9 +24,9 @@
 #include "globals.h"
 #include "remote.h"
 #include "ldmprint.h"
+#include "timestamp.h"
 #include "ulog.h"
 #include "pq.h"
-#include "paths.h"
 #include "md5.h"
 
 #ifdef NO_ATEXIT
@@ -42,7 +42,8 @@
 #define DEFAULT_FEEDTYPE ANY
 #endif
 
-static volatile int intr = 0;
+static volatile sig_atomic_t    intr = 0;
+static int                      printSizePar = 0;
 
 static void
 usage(const char *av0) /*  id string */
@@ -52,7 +53,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-l logfile   Log to a file rather than stderr\n");
         (void)fprintf(stderr,
-                "\t-q pqfname   (default \"%s\")\n", DEFAULT_QUEUE);
+                "\t-q pqfname   (default \"%s\")\n", getQueuePath());
         (void)fprintf(stderr,
                 "\t-i interval  Poll queue after \"interval\" secs (default %d)\n",
                 DEFAULT_INTERVAL);
@@ -67,7 +68,8 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-        unotice("Exiting"); 
+        if (!printSizePar)
+            unotice("Exiting"); 
 
         if(!intr)
         {
@@ -217,33 +219,25 @@ xsuspend(unsigned int maxsleep)
 int
 main(int ac, char *av[])
 {
-        const char *progname = ubasename(av[0]);
-        char *logfname;
-        int status = 0;
-        int interval = DEFAULT_INTERVAL;
-        int logoptions = (LOG_CONS|LOG_PID) ;
-        int list_extents = 0;
+    const char* pqfname = getQueuePath();
+    const char* progname = ubasename(av[0]);
+    char*       logfname;
+    int         status = 0;
+    int         interval = DEFAULT_INTERVAL;
+    int         logoptions = (LOG_CONS|LOG_PID) ;
+    int         list_extents = 0;
+    int         extended = 0;
 
-        logfname = "";
+    logfname = "";
 
-        if(isatty(fileno(stderr)))
-        {
-                /* set interactive defaults */
-                logfname = "-" ;
-                logoptions = 0 ;
-        }
+    if(isatty(fileno(stderr)))
+    {
+        /* set interactive defaults */
+        logfname = "-" ;
+        logoptions = 0 ;
+    }
 
-        /*
-         * Check the environment for some options.
-         * May be overridden by command line switches below.
-         */
-        {
-                const char *ldmpqfname = getenv("LDMPQFNAME");
-                if(ldmpqfname != NULL)
-                        pqfname = ldmpqfname;
-        }
-
-        {
+    {
         extern int optind;
         extern int opterr;
         extern char *optarg;
@@ -253,93 +247,178 @@ main(int ac, char *av[])
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "vxl:q:o:i:")) != EOF)
-                switch (ch) {
-                case 'v':
-                        logmask |= LOG_MASK(LOG_INFO);
-                        break;
-                case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG);
-                        list_extents = 1;
-                        break;
-                case 'l':
-                        logfname = optarg;
-                        break;
-                case 'q':
-                        pqfname = optarg;
-                        break;
-                case 'i':
-                        interval = atoi(optarg);
-                        if(interval == 0 && *optarg != '0')
-                        {
-                                fprintf(stderr, "%s: invalid interval %s",
-                                        progname, optarg);
-                                usage(progname);
-                        }
-                        break;
-                case '?':
-                        usage(progname);
-                        break;
+        while ((ch = getopt(ac, av, "Sevxl:q:o:i:")) != EOF)
+            switch (ch) {
+            case 'v':
+                logmask |= LOG_MASK(LOG_INFO);
+                break;
+            case 'x':
+                logmask |= LOG_MASK(LOG_DEBUG);
+                list_extents = 1;
+                break;
+            case 'l':
+                logfname = optarg;
+                break;
+            case 'q':
+                pqfname = optarg;
+                setQueuePath(optarg);
+                break;
+            case 'i':
+                interval = atoi(optarg);
+                if(interval == 0 && *optarg != '0')
+                {
+                    fprintf(stderr, "%s: invalid interval %s",
+                        progname, optarg);
+                    usage(progname);
                 }
+                break;
+            case 'e': {
+                extended = 1;
+                break;
+            }
+            case 'S': {
+                printSizePar = 1;
+                break;
+            }
+            case '?':
+                usage(progname);
+                break;
+            }
 
         (void) setulogmask(logmask);
 
         /* last arg, outputfname, is optional */
         if(ac - optind > 0)
         {
-                const char *const outputfname = av[optind];
-                if(freopen(outputfname, "a+b", stdout) == NULL)
-                {
-                        status = errno;
-                        fprintf(stderr, "%s: Couldn't open \"%s\": %s\n",
-                                progname, outputfname, strerror(status));
-                }
+            const char *const outputfname = av[optind];
+            if(freopen(outputfname, "a+b", stdout) == NULL)
+            {
+                status = errno;
+                fprintf(stderr, "%s: Couldn't open \"%s\": %s\n",
+                    progname, outputfname, strerror(status));
+            }
         }
+    }
 
-        }
-
-        /*
-         * Set up error logging.
-         */
-        (void) openulog(progname,
-                logoptions, LOG_LDM, logfname);
+    /*
+     * Set up error logging.
+     */
+    (void) openulog(progname, logoptions, LOG_LDM, logfname);
+    if (!printSizePar)
         unotice("Starting Up (%d)", getpgrp());
 
-        /*
-         * register exit handler
-         */
-        if(atexit(cleanup) != 0)
-        {
-                serror("atexit");
-                exit(1);
+    /*
+     * register exit handler
+     */
+    if(atexit(cleanup) != 0)
+    {
+        serror("atexit");
+        exit(1);
+    }
+
+    /*
+     * set up signal handlers
+     */
+    set_sigactions();
+
+
+    /*
+     * Open the product que
+     */
+    status = pq_open(pqfname, PQ_READONLY, &pq);
+    if(status)
+    {
+        if (PQ_CORRUPT == status) {
+            uerror("The product-queue \"%s\" is inconsistent\n",
+                pqfname);
         }
-
-        /*
-         * set up signal handlers
-         */
-        set_sigactions();
-
-
-        /*
-         * Open the product que
-         */
-        status = pq_open(pqfname, PQ_READONLY, &pq);
-        if(status)
-        {
-                if (PQ_CORRUPT == status) {
-                    uerror("The product-queue \"%s\" is inconsistent\n",
-                            pqfname);
-                }
-                else {
-                    uerror("pq_open failed: %s: %s\n",
-                            pqfname, strerror(status));
-                }
-                exit(1);
+        else {
+            uerror("pq_open failed: %s: %s\n",
+                pqfname, strerror(status));
         }
+        exit(1);
+    }
 
-        unotice("nprods nfree  nempty      nbytes  maxprods  maxfree  minempty    maxext  age");
-        while(exitIfDone(1))
-        {
+    if (!printSizePar) {
+        if (extended) {
+            unotice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
+                "minempty    maxext    age    maxbytes");
+        }
+        else {
+            unotice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
+                "minempty    maxext  age");
+        }
+    }
+
+    while(exitIfDone(1))
+    {
+        if (printSizePar) {
+            size_t          nprods;
+            size_t          nfree;
+            size_t          nempty;
+            size_t          nbytes;
+            size_t          maxprods;
+            size_t          maxfree;
+            size_t          minempty;
+            size_t          maxbytes;
+            double          age_oldest;
+            size_t          maxextent;
+            double          age_youngest;
+            long            min_residency;
+            int             isFull;
+
+            status = pq_stats(pq, &nprods,   &nfree,   &nempty, &nbytes,
+                              &maxprods, &maxfree, &minempty, &maxbytes, 
+                              &age_oldest, &maxextent);
+
+            if (status) {
+                uerror("pq_stats() failed: %s (errno = %d)", strerror(status),
+                    status);
+                exit(1);
+            }
+
+            if (status = pq_isFull(pq, &isFull)) {
+                uerror("pq_isFull() failed: %s (errno = %d)", strerror(status),
+                    status);
+                exit(1);
+            }
+
+            if (0 == nprods) {
+                age_youngest = -1;
+                min_residency = -1;
+            }
+            else {
+                timestampt      now;
+                timestampt      mostRecent;
+                timestampt      minResidency;
+
+                if (status = pq_getMostRecent(pq, &mostRecent)) {
+                    uerror("pq_getMostRecent() failed: %s (errno = %d)",
+                        strerror(status), status);
+                    exit(1);
+                }
+
+                age_youngest = (0 == set_timestamp(&now))
+                    ? d_diff_timestamp(&now, &mostRecent)
+                    : -1;
+
+                if (status = pq_getMinResidency(pq, &minResidency)) {
+                    uerror("pq_getMinResidency() failed: %s (errno = %d)",
+                        strerror(status), status);
+                    exit(1);
+                }
+
+                min_residency = (long)minResidency.tv_sec;
+            }
+
+            printf("%d %lu %lu %lu %lu %lu %lu %.0f %.0f %ld\n", isFull,
+                (unsigned long)pq_getDataSize(pq), (unsigned long)maxbytes,
+                (unsigned long)nbytes,
+                (unsigned long)pq_getSlotCount(pq), (unsigned long)maxprods,
+                (unsigned long)nprods, age_oldest, age_youngest,
+                min_residency);
+        }
+        else {
             size_t nprods;
             size_t nfree;
             size_t nempty;
@@ -356,29 +435,37 @@ main(int ac, char *av[])
                               &age_oldest, &maxextent);
 
             if (status) {
-                uerror("pq_stats failed: %s (errno = %d)",
-                       strerror(status), status);
+                uerror("pq_stats() failed: %s (errno = %d)",
+                   strerror(status), status);
                 exit(1);
             }
 
-            unotice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f",
+            if (extended) {
+                unotice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f %11lu",
+                    nprods,   nfree,   nempty, nbytes,
+                    maxprods, maxfree, minempty, maxextent, age_oldest,
+                    maxbytes);
+            }
+            else {
+                unotice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f",
                     nprods,   nfree,   nempty, nbytes,
                     maxprods, maxfree, minempty, maxextent, age_oldest);
+            }
             if(list_extents) {
                 status = pq_fext_dump(pq);
             }
             if (status) {
                 uerror("pq_fext_dump failed: %s (errno = %d)",
-                       strerror(status), status);
+                   strerror(status), status);
                 exit(1);
             }
-            
-            if(interval == 0)
-                break;
-            xsuspend(interval);
-            
         }
+        
+        if(interval == 0)
+            break;
+        xsuspend(interval);
+    }
 
-        exit(0);
-        /*NOTREACHED*/
+    exit(0);
+    /*NOTREACHED*/
 }
