@@ -400,9 +400,9 @@ main(
                     CU_ADD_TEST(testSuite, test_regInt);
                     CU_ADD_TEST(testSuite, test_regTime);
                     CU_ADD_TEST(testSuite, test_regSignature);
-                    CU_ADD_TEST(testSuite, test_regReset);
                     CU_ADD_TEST(testSuite, test_regDelete);
                     CU_ADD_TEST(testSuite, test_regNode);
+                    CU_ADD_TEST(testSuite, test_regReset);
                     #if 0
                     CU_ADD_TEST(testSuite, test_regRemove);
                     #endif

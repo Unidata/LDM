@@ -6,16 +6,8 @@ regutil \- Utility for Managing the LDM Registry
 .ft B
 regutil
 .nh
+\fR[\fB-d \fIdir\fR]
 \fR\fB-c\fR
-\fR[\fB-d \fIdir\fR]
-.hy
-.ft
-.HP
-.ft B
-regutil
-.nh
-\fR\fB-r\fR
-\fR[\fB-d \fIdir\fR]
 .hy
 .ft
 .HP
@@ -23,7 +15,24 @@ regutil
 regutil
 .nh
 \fR[\fB-d \fIdir\fR]
-\fR[\fIpath\fR]
+\fR\fB-R\fR
+.hy
+.ft
+.HP
+.ft B
+regutil
+.nh
+\fR[\fB-d \fIdir\fR]
+\fR[\fIpath ...\fR]
+.hy
+.ft
+.HP
+.ft B
+regutil
+.nh
+\fR[\fB-d \fIdir\fR]
+\fB-r \fP
+\fR\fIpath ...\fR
 .hy
 .ft
 .HP
@@ -45,8 +54,13 @@ The second execution form resets the registry, performing as much recovery
 as possible without removing any data.
 .PP
 The third execution form prints to the standard output stream all
-pathname/value pairs in the registry that have \fIpath\fP as a prefix.  If
-\fIpath\fP is not specified, then all pathname/value pairs are printed.
+pathname/value pairs in the registry that have one of the \fIpath\fP arguments
+as a prefix.  If no pathname arguments are specified,
+then all pathname/value pairs are printed.
+.PP
+The fourth execution form removes from the registry all
+pathname/value pairs that have one of the \fIpath\fP arguments
+as a prefix.
 .PP
 The last execution form sets a pathname/value pair in the registry.  One of
 the options \fB-h\fP, \fB-s\fP, \fB-t\fP, or \fB-u\fP must be specified.
@@ -64,7 +78,7 @@ Pathname of the directory containing the LDM registry.  The default is
 The signature value to which to set the parameter.  The signature shall be
 specified as a 32 character hexadecimal digit.
 .TP
-.BI "-r"
+.BI "-R"
 Resets the registry.  Does as much recovery as possible.
 .TP
 .BI "-s " string
@@ -72,7 +86,8 @@ The string value to which to set the parameter.
 .TP
 .BI "-t " time
 The time value to which to set the parameter.  The time shall be specified as
-\fBYYYYMMDDThhmmss.uuuuuu\fP.
+\fBYYYYMMDDThhmmss[.uuuuuu]\fP, where \fB[.uuuuuu]\fP denotes an optional
+microsecond portion (without the brackets).
 .TP
 .BI "-u " uint
 The unsigned integer value to which to set the parameter.
@@ -82,9 +97,15 @@ The unsigned integer value to which to set the parameter.
 Success.
 .TP
 .B 1
-No such entry.
+Incorrect usage (\fIi.e.\fP, command-line syntax error).  A "usage" 
+error-message should have been printed.
 .TP
 .B 2
+At least one of the referenced entries didn't exist.  All the other entries
+were correctly processed.  Error messages identifying the missing entries
+should have been printed.
+.TP
+.B 3
 System error.  An error message should have been printed.
 .SH SUPPORT
 .LP

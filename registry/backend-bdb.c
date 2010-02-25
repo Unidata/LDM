@@ -175,7 +175,7 @@ beOpen(
         DB_ENV* env;
 
         if (status = db_env_create(&env, 0)) {
-            log_start("Couldn't create database environment: %s",
+            log_start("Couldn't create database environment handle: %s",
                 db_strerror(status));
             status = EIO;
         }
@@ -183,8 +183,9 @@ beOpen(
             env->set_errcall(env, logDbError);
 
             /*
-             * The database is configured for concurrent access rather than for
-             * transactional access because the former is faster and sufficient.
+             * The database is configured for "concurrent data store" access
+             * rather than for transactional access because the former is
+             * faster and sufficient.
              */
             if (status = env->open(env, path,
                     DB_CREATE | DB_INIT_CDB | DB_INIT_MPOOL, 0)) {
@@ -195,16 +196,16 @@ beOpen(
                 DB*     db;
 
                 if (status = db_create(&db, env, 0)) {
-                    log_add("Couldn't create database");
+                    log_add("Couldn't create database handle");
                     status = EIO;
                 }
                 else {
                     db->set_errcall(db, logDbError);
 
-                    if (status = db->open(db, NULL, DB_FILENAME, NULL, DB_BTREE,
-                            forWriting ? DB_CREATE : DB_RDONLY, 0)) {
-                        log_add("Couldn't open database \"%s\" in \"%s\" for "
-                            "%s", DB_FILENAME, path,
+                    if (status = db->open(db, NULL, DB_FILENAME, NULL,
+                            DB_BTREE, forWriting ? DB_CREATE : DB_RDONLY, 0)) {
+                        log_add("Couldn't open database \"%s\" in \"%s\" "
+                            "for %s", DB_FILENAME, path,
                             forWriting ? "writing" : "reading");
                         status = EIO;
                     }
@@ -214,8 +215,8 @@ beOpen(
                         status = 0;     /* success */
                     }                   /* "db" opened */
 
-                    if (status && NULL != db)
-                        db->remove(db, DB_FILENAME, NULL, 0);
+                    if (status)
+                        db->close(db, 0);
                 }                       /* "db" allocated */
 
                 if (status) {
@@ -247,7 +248,7 @@ beOpen(
  *
  * ARGUMENTS:
  *      backend         Pointer to the database.  Shall have been set by
- *                      "beOpen()".  Shall not be NULL.  Upon return, "backend"
+ *                      "beOpen()".  May be NULL.  Upon return, "backend"
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.
@@ -258,31 +259,33 @@ beClose(
     Backend* const      backend)
 {
     RegStatus   status;
-    const char* path;
-    DB_ENV*     env;
-    DB*         db;
 
-    db = backend->db;
-    env = db->get_env(db);
-    status = db->close(db, 0);
-
-    if (status) {
-        (void)env->get_home(env, &path);
-        log_add("Couldn't close backend database \"%s\"", path);
-        status = EIO;
+    if (NULL == backend) {
+        status = 0;                     /* success */
     }
     else {
-        backend->db = NULL;
+        const char* path;
+        DB*         db = backend->db;
+        DB_ENV*     env = db->get_env(db);
 
-        if (env->close(env, 0)) {
+        if (db->close(db, 0)) {
             (void)env->get_home(env, &path);
-            log_add("Couldn't close environment of backend database \"%s\"",
-                path);
+            log_add("Couldn't close backend database \"%s\"", path);
             status = EIO;
         }
         else {
-            free(backend);
-            status = 0;                 /* success */
+            backend->db = NULL;
+
+            if (env->close(env, 0)) {
+                (void)env->get_home(env, &path);
+                log_add("Couldn't close environment of backend database \"%s\"",
+                    path);
+                status = EIO;
+            }
+            else {
+                free(backend);
+                status = 0;             /* success */
+            }
         }
     }
 

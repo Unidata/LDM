@@ -149,19 +149,13 @@ F77 = @F77@
 FFLAGS = @FFLAGS@
 GDBMLIB = @GDBMLIB@
 GREP = @GREP@
+HOSTNAME = @HOSTNAME@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
-
-#nobase_localstate_FILES	= \
-#    registry/__db.001 \
-#    registry/__db.002 \
-#    registry/__db.003 \
-#    registry/__db.004 \
-#    registry/registry.db
 LDMHOME = @LDMHOME@
 LDM_LOGFILE = @LDM_LOGFILE@
 LDM_PORT = @LDM_PORT@
@@ -269,6 +263,7 @@ EXTRA_DIST = \
     backend.hin \
     backend.h \
     checkRegistry \
+    installRegistry \
     misc.hin \
     misc.h \
     node.hin \
@@ -277,16 +272,14 @@ EXTRA_DIST = \
     registry.h \
     regutil.txt \
     stringBuf.hin \
-    stringBuf.h \
-    configDefaults.txt
+    stringBuf.h
 
 BUILT_SOURCES = \
     backend.c backend.h \
     misc.h \
     node.h \
     registry.h \
-    stringBuf.h \
-    configDefaults.txt
+    stringBuf.h
 
 lib_la_SOURCES = \
     backend.c \
@@ -321,7 +314,9 @@ LDADD = \
 
 dist_man1_MANS = regutil.1
 CLEANFILES = regutil.out backend.c
+DISTCLEANFILES = registry.h
 @HAVE_CUNIT_TRUE@testRegistry_CPPFLAGS = \
+@HAVE_CUNIT_TRUE@    -I$(top_srcdir) \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/protocol \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/ulog \
 @HAVE_CUNIT_TRUE@    -I$(top_builddir)/Berkeley-DB/build_unix \
@@ -755,6 +750,7 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -829,7 +825,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-local uninstall-man
+uninstall-am: uninstall-binPROGRAMS uninstall-man
 
 uninstall-man: uninstall-man1
 
@@ -849,8 +845,8 @@ uninstall-man: uninstall-man1
 	installdirs maintainer-clean maintainer-clean-generic \
 	mostlyclean mostlyclean-compile mostlyclean-generic \
 	mostlyclean-libtool pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-local \
-	uninstall-man uninstall-man1
+	uninstall-am uninstall-binPROGRAMS uninstall-man \
+	uninstall-man1
 
 
 backend.c:	backend-bdb.c
@@ -860,7 +856,7 @@ registry.h:	registry.hin registry.c regpar.tab Makefile
 	awk '/@PARAMETER_NAME_DEFINITIONS@/{exit}{print}' \
 	    $(srcdir)/registry.hin >$@.tmp1
 	awk -F : '{printf "#define REG_%s \"%s\"\n", $$1, $$2}' \
-	    <$(srcdir)/regpar.tab >>$@.tmp1
+	    <regpar.tab >>$@.tmp1
 	awk '{if (doPrint)print}/@PARAMETER_NAME_DEFINITIONS@/{doPrint=1}' \
 	    $(srcdir)/registry.hin >>$@.tmp1
 	$(top_srcdir)/extractDecls $@.tmp1 $(srcdir)/registry.c >$@.tmp2
@@ -878,44 +874,12 @@ stringBuf.h:	stringBuf.hin stringBuf.c
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
-#registry:
-#	mkdir $@
-#registry/registry.db:
-configDefaults.txt:	../config.h
-	(echo '#include <config.h>'; \
-	find $(top_srcdir) \( -path '*/registry' -o -path '*/Berkeley-DB' \) \
-	    -prune -o -name \*.c -print \
-	| xargs sed -n \
-	    '/reg_getString(/{N;s/\n//;s/.*reg[A-Za-z_]*(//;s/).*//;p}' \
-	| tr -s ', ' ' ' | awk '{print $$1, $$3}' ) >configDefaults.c
-	$(COMPILE) $(lib_la_CPPFLAGS) -E -o configDefaults.i configDefaults.c
-	rm configDefaults.c
-	sed -n '/^[^#]/s/"//gp' configDefaults.i >$@
-	rm configDefaults.i
+install-exec-local:	regpar.tab regutil $(REGISTRY_DIR)
+	$(PERL) $(srcdir)/installRegistry regpar.tab regutil \
+	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf
 
-install-exec-local:	regpar.tab regutil
-	-mkdir -p $(REGISTRY_DIR)
-	./regutil -c
-	while IFS=: read name path desc default; do \
-	    ./regutil "$$path" >/dev/null 2>&1; \
-	    status=$$?; \
-	    if test $$status = 0; then \
-		echo "Already in registry: \"$$path\" "; \
-	    elif test $$status = 1; then \
-		if test "$$name" = HOSTNAME; then \
-		    ./regutil -s `uname -n` "$$path" || break; \
-		else \
-		    ./regutil -s "$$default" "$$path" || break; \
-		fi; \
-		echo "Added to registry: \"$$path\" "; \
-	    else \
-		echo 1>&2 "Error loading registry"; \
-		exit 1; \
-	    fi; \
-	done < regpar.tab
-
-uninstall-local:
-	rm -f $(DESTDIR)$(mandir)/man1/regutil.1
+$(REGISTRY_DIR):
+	mkdir -p $@
 
 @HAVE_CUNIT_TRUE@debug:		testRegistry
 @HAVE_CUNIT_TRUE@	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb testRegistry

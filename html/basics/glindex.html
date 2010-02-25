@@ -415,28 +415,8 @@ additional information">
 	real-time via the Internet.
       <a href="../index.html">LDM homepage</a>.
 
-  <dt> <a name="LDM registry">LDM registry</a>
-  <dd> An LDM-specific database of configuration and runtime parameters and
-        their values.  <a href="LDM-registry.html">LDM registry webpage</a>.
-
-  <dt> <a name="localn"></a>local<i>n</i>
-  <dd> The facility used by the LDM for logging messages via the
-       <a href="#syslog">syslog daemon</a>.
-       By default, the <tt><b>local0</b></tt> facility is used.
-       <a href="preinstallation.html#syslog.conf">Configuring the
-       <tt><b>syslog.conf</b></tt> file.</a>
-       <a href="source-install-steps.html#run configure script">
-       Setting the facility via the <b><code>configure</code></b>
-       script.</a>
-
   <dt> LDM, downstream
   <dd> See <a href="glindex.html#downstream LDM">downstream LDM</a>.
-
-  <dt> <a name="logfile"></a>LDM logfile
-  <dd> The file used to log diagnostic messages from 
-      <a href="glindex.html#LDM">LDM</a> programs.
-	<a href="logfile-format.html">Format and interpretation</a>.
-	<a href="newlog.html">Rotation and purging</a>.
 
   <dt> LDM, receiving
   <dd> See <a href="glindex.html#downstream LDM">downstream LDM</a>.
@@ -472,11 +452,21 @@ additional information">
 	of the <a href="glindex.html#LDM">LDM</a>.
 	<a href="protocol.html">LDM 6 protocol webpage</a>.
 
+  <dt> <a name="logfile"></a>LDM logfile
+  <dd> The file used to log diagnostic messages from 
+      <a href="glindex.html#LDM">LDM</a> programs.
+	<a href="logfile-format.html">Format and interpretation</a>.
+	<a href="newlog.html">Rotation and purging</a>.
+
   <dt> <a name="LDM protocol"></a>LDM protocol
   <dd> The set of <a href="#RPC">RPC</a> messages used by a version of the
 	<a href="glindex.html#LDM">LDM</a> to
 	communicate with another <a href="glindex.html#LDM">LDM</a> of the
 	same version.
+
+  <dt> <a name="LDM registry">LDM registry</a>
+  <dd> An LDM-specific database of configuration parameters.
+        <a href="LDM-registry.html">LDM registry webpage</a>.
 
   <dt> <a name="LDM user"></a>LDM user
   <dd> The user on a computer system that owns the local <a
@@ -509,6 +499,16 @@ additional information">
   <dd> A UNIX<sup>®</sup> utility for generating a lexical scanner.
 	<a href="http://www.opengroup.org/onlinepubs/007908799/xcu/lex.html">
 	Official description</a>.
+
+  <dt> <a name="localn"></a>local<i>n</i>
+  <dd> The facility used by the LDM for logging messages via the
+       <a href="#syslog">syslog daemon</a>.
+       By default, the <tt><b>local0</b></tt> facility is used.
+       <a href="preinstallation.html#syslog.conf">Configuring the
+       <tt><b>syslog.conf</b></tt> file.</a>
+       <a href="source-install-steps.html#run configure script">
+       Setting the facility via the <b><code>configure</code></b>
+       script.</a>
 
   <dt> logfile, LDM
   <dd> See <a href="#logfile">LDM logfile</a>.
@@ -557,6 +557,20 @@ additional information">
 
   <dt> metadata, data-product
   <dd> See <a href="#metadata">data-product metadata</a>.
+
+  <dt> <a name="minimum virtual residence time">minimum virtual residence
+      time</a>
+  <dd> The minimum, observed <a href="#virtual residence time">
+      virtual residence time</a>
+      since this parameter was initialized (either by creation of the 
+      <a href="#product-queue">product-queue</a> or via the
+      <a href="#pqutil"><tt>pqutil</tt></a> utility.
+      If this time is not greater than the maximum 
+      <a name="data-product latency">data-product latency</a> configuration
+      parameter of the LDM server, then any
+      <a href="glindex.html#downstream LDM">downstream LDM</a>
+      might not reject a duplicate incoming 
+      <a href="glindex.html#data-product">data-product</a>.
 </dl>
 
 <h2><a name="N"></a>N</h2>
@@ -747,7 +761,7 @@ additional information">
       <a href="glindex.html#deprecated"><strong>Deprecated</strong></a>.
 
   <dt> <a name="pqutil"></a><tt>pqutil</tt>
-  <dd> An interactive program that reads from or writes to the <a
+  <dd> A utility for interacting with the <a
       href="glindex.html#product-queue">product-queue</a>.
 
   <dt> <a name="process"></a>process
@@ -844,6 +858,9 @@ additional information">
   <dd> A program for validating
       <a href="#ERE">ERE</a>-s and for testing their efficiency.
 
+  <dt> registry</a>
+  <dd> See <a href="#LDM registry">LDM registry</a>.
+
   <dt> <a name="regutil"></a><tt>regutil</tt>
   <dd> A program for managing the contents of the 
         <a href="#LDM registry">LDM registry</a>.  Execute the command
@@ -857,16 +874,11 @@ additional information">
       <a href="glindex.html#data-product">data-product</a>s.
       <a href="ldmd.conf.html#REQUEST"><tt>ldmd.conf</tt> webpage</a>.
 
-  <dt> <a name="residency time"></a>residency time
+  <dt> <a name="residence time"></a>residence time
   <dd> The amount of time a <a
       href="glindex.html#data-product">data-product</a> spends in the <a
       href="glindex.html#product-queue">product-queue</a> before being
-      discarded.  If this time is not greater than the maximum 
-      <a name="data-product latency">data-product latency</a> configuration
-      parameter of the LDM server, then any
-      <a href="glindex.html#downstream LDM">downstream LDM</a>
-      might not reject a duplicate incoming 
-      <a href="glindex.html#data-product">data-product</a>.
+      deleted to make room for more products.
 
   <dt> <a name="RPC"></a>RPC
   <dd> Remote Procedure Call.  A system by which a function-call on one
@@ -1110,6 +1122,18 @@ additional information">
 </dl>
 
 <h2><a name="V"></a>V</h2>
+
+<dl>
+  <dt> <a name="virtual residence time">virtual residence time</a>
+  <dd> The time difference between when a <a
+      href="glindex.html#data-product">data-product</a> is created and
+      when it is removed from the <a
+      href="glindex.html#product-queue">product-queue</a>.  For each product,
+      it is the sum of that product's
+      <a href="#data-product latency">latency</a> plus that product's
+      <a href="#residence time">residence time</a>.
+</dl>
+
 <dl>
   <dt> <a name="vmstat utility"></a><tt>vmstat</tt> utility
   <dd> A utility for displaying system metrics.

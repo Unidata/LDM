@@ -177,6 +177,7 @@ F77 = @F77@
 FFLAGS = @FFLAGS@
 GDBMLIB = @GDBMLIB@
 GREP = @GREP@
+HOSTNAME = @HOSTNAME@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -367,7 +368,7 @@ EXTRA_DIST = \
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 DISTCLEANFILES = *.log $(distArchive)
-distuninstallcheck_listfiles = find . -type f -print | grep -v './etc/'
+distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -917,45 +918,43 @@ all:
 install-data-hook:	ensure-ldmhome-links ensure-ldmhome-dirs
 @INCLUDE_ROOT_ACTIONS_TRUE@	@echo
 @INCLUDE_ROOT_ACTIONS_TRUE@	@echo "\
-@INCLUDE_ROOT_ACTIONS_TRUE@This next step will perform those installation actions that must be \
+@INCLUDE_ROOT_ACTIONS_TRUE@The next step will perform those installation actions that must be \
 @INCLUDE_ROOT_ACTIONS_TRUE@executed by the superuser.  \
 @INCLUDE_ROOT_ACTIONS_TRUE@If this step doesn't work (for example, if you don't know \
 @INCLUDE_ROOT_ACTIONS_TRUE@root's password), then the superuser will have to manually execute \
-@INCLUDE_ROOT_ACTIONS_TRUE@the command \"$(MAKE) root-actions\". \
-@INCLUDE_ROOT_ACTIONS_TRUE@	| fmt
-@INCLUDE_ROOT_ACTIONS_TRUE@	@echo
-@HAVE_SUDO_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	$(SUDO) $(MAKE) root-actions
-@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	$(SU) -c '$(MAKE) root-actions'
+@INCLUDE_ROOT_ACTIONS_TRUE@the command \"$(MAKE) root-actions\"." \
+@INCLUDE_ROOT_ACTIONS_TRUE@	| fmt >/dev/tty
+@INCLUDE_ROOT_ACTIONS_TRUE@	@echo >/dev/tty
+@HAVE_SUDO_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions
+@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@printf "Enter root's password: " >/dev/tty
+@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@$(SU) -c '$(MAKE) $(AM_MAKEFLAGS) root-actions' </dev/tty 2>/dev/null
+@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@echo >/dev/tty
 @INCLUDE_ROOT_ACTIONS_FALSE@	@echo
 @INCLUDE_ROOT_ACTIONS_FALSE@	@echo "\
 @INCLUDE_ROOT_ACTIONS_FALSE@NOTE: The command \"$(MAKE) root-actions\" will have to be executed by the \
 @INCLUDE_ROOT_ACTIONS_FALSE@superuser in order to complete the installation process." \
-@INCLUDE_ROOT_ACTIONS_FALSE@	| fmt
+@INCLUDE_ROOT_ACTIONS_FALSE@	| fmt >/dev/tty 2>&1
 @INCLUDE_ROOT_ACTIONS_FALSE@	@echo
 
 ensure-ldmhome-links:
-	cd $(LDMHOME) \
+	cd $(DESTDIR)$(LDMHOME) \
 	&& ( test -e src || $(LN_S) runtime/src src ) \
 	&& ( test -e bin || $(LN_S) runtime/bin bin ) \
 	&& ( test -e include || $(LN_S) runtime/include include ) \
-	&& ( test -e lib || $(LN_S) runtime/lib lib ) \
-	&& ( test -e man || $(LN_S) runtime/share/man man ) \
-	&& ( test -e runtime || $(LN_S) $(DESTDIR)$(prefix) runtime )
+	&& ( test -e lib || $(LN_S) runtime/lib lib )
 
 ensure-ldmhome-dirs:
 	if test -e $(DESTDIR)$(LDMHOME)/data; then \
 	    test -e $(DESTDIR)$(QUEUE_DIR) \
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data \
-		$(DESTDIR)$(QUEUE_DIR); \
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data $(DESTDIR)$(QUEUE_DIR); \
 	else \
-	    mkdir $(DESTDIR)$(QUEUE_DIR); \
+	    test -e $(DESTDIR)$(QUEUE_DIR) || mkdir -p $(DESTDIR)$(QUEUE_DIR); \
 	fi
 	if test -e $(DESTDIR)$(LDMHOME)/logs; then \
-	    test -e $(DESTDIR)$(LOGS_DIR)\
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/logs \
-		$(DESTDIR)$(LOGS_DIR); \
+	    test -e $(DESTDIR)$(LOGS_DIR) \
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/logs $(DESTDIR)$(LOGS_DIR); \
 	else \
-	    mkdir $(DESTDIR)$(LOGS_DIR); \
+	    test -e $(DESTDIR)$(LOGS_DIR) || mkdir -p $(DESTDIR)$(LOGS_DIR); \
 	fi
 
 root-actions:	\
@@ -980,7 +979,7 @@ install_setuids:
 ERROR: The LDM server program (bin/ldmd) or the hupsyslog(1) \
 program (bin/hupsyslog) is not owned by \"root\" or does not have \
 the setuid bit enabled.  The command \"make install_setuids\" will have \
-to be executed manually by the superuser on a system that allows these \
+to be manually executed by the superuser on a system that allows these \
 actions." \
 	    | fmt; \
 	    echo; \

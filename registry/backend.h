@@ -64,7 +64,7 @@ beOpen(
  *
  * ARGUMENTS:
  *      backend         Pointer to the database.  Shall have been set by
- *                      "beOpen()".  Shall not be NULL.  Upon return, "backend"
+ *                      "beOpen()".  May be NULL.  Upon return, "backend"
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.

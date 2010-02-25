@@ -1,0 +1,87 @@
+# See file ../COPYRIGHT for copying and redistribution conditions.
+#
+# This perl script installs the LDM registry.
+#
+# Usage: perl thisScript regpar regutil confPath
+#
+# where:
+#       thisScript      This script
+#       regpar          Pathname of the input registry parameters.  The file
+#                       must exist.
+#       regutil         Pathname of the regutil(1) utility.  The file must
+#                       exist.
+#       confPath        Pathname of the ldmadmin(1) configuration-file.  The
+#                       file needn't exist.
+
+if ($#ARGV != 2) {
+    die "3 (and only 3) arguments not specified";
+}
+
+# Set internal variables from command-line arguments.
+$parPath = $ARGV[0];
+$utilPath = $ARGV[1];
+$confPath = $ARGV[2];
+
+# Read the obsolete ldmadmin(1) configuration-file if it exists.
+if (-e $confPath) {
+    require $confPath;
+}
+
+if (system("$utilPath -c")) {
+    die "Couldn't create registry environment: $!";
+}
+
+if (!open(REGPAR, "<$parPath")) {
+    die "Couldn't open parameter file \"$parPath\": $!";
+}
+
+while (<REGPAR>) {
+    chomp;
+    my @params = split(/:/);
+    my $name = $params[0];
+    my $path = $params[1];
+    my $default = $params[3];
+    my $varName = $params[4];
+    my $value = `$utilPath \"$path\" 2>/dev/null`;
+    my $status = $? >> 8;
+
+    chomp $value;
+
+    if ($status == 0) {
+        # The parameter already exists in the registry.
+        print "    $path : $value\n";
+    }
+    elsif ($status == 2) {
+        # The parameter doesn't exist in the registry.
+        if ($varName) {
+            # The parameter has an obsolete counterpart in the ldmadmin(1)
+            # configuration-file.  Change the default value.
+            if ($varName eq "time_servers" && $#time_servers >= 0) {
+                # The list of time-servers is a special case because it's an
+                # array.
+                $time_servers = join(" ", @time_servers);
+            }
+            if (${$varName}) {
+                $default = ${$varName};
+            }
+            print "    $varName -> ";
+        }
+        else {
+            # The parameter has no counterpart in the ldmadmin(1)
+            # configuration-file.
+            print "    (nil) -> ";
+        }
+
+        # Add the parameter to the registry.
+        if (system("$utilPath -s \"$default\" \"$path\"")) {
+            die "Error loading registry";
+        }
+
+        print "$path : $default\n";
+    }
+    else {
+        die "Couldn't load registry";
+    }
+}
+
+close REGPAR;

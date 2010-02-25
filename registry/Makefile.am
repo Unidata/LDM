@@ -2,13 +2,7 @@
 #
 # Process this file with automake to produce Makefile.in
 
-#nobase_localstate_FILES	= \
-#    registry/__db.001 \
-#    registry/__db.002 \
-#    registry/__db.003 \
-#    registry/__db.004 \
-#    registry/registry.db
-LDMHOME			= @LDMHOME@
+PERL			= @PERL@
 REGISTRY_DIR		= $(DESTDIR)@REGISTRY_DIR@
 noinst_LTLIBRARIES      = lib.la
 EXTRA_DIST              = \
@@ -16,6 +10,7 @@ EXTRA_DIST              = \
     backend.hin \
     backend.h \
     checkRegistry \
+    installRegistry \
     misc.hin \
     misc.h \
     node.hin \
@@ -24,15 +19,13 @@ EXTRA_DIST              = \
     registry.h \
     regutil.txt \
     stringBuf.hin \
-    stringBuf.h \
-    configDefaults.txt
+    stringBuf.h
 BUILT_SOURCES		= \
     backend.c backend.h \
     misc.h \
     node.h \
     registry.h \
-    stringBuf.h \
-    configDefaults.txt
+    stringBuf.h
 lib_la_SOURCES          = \
     backend.c \
     misc.c \
@@ -63,6 +56,7 @@ LDADD			= \
     $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
 dist_man1_MANS		= regutil.1
 CLEANFILES		= regutil.out backend.c
+DISTCLEANFILES		= registry.h
 
 backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
@@ -71,7 +65,7 @@ registry.h:	registry.hin registry.c regpar.tab Makefile
 	awk '/@PARAMETER_NAME_DEFINITIONS@/{exit}{print}' \
 	    $(srcdir)/registry.hin >$@.tmp1
 	awk -F : '{printf "#define REG_%s \"%s\"\n", $$1, $$2}' \
-	    <$(srcdir)/regpar.tab >>$@.tmp1
+	    <regpar.tab >>$@.tmp1
 	awk '{if (doPrint)print}/@PARAMETER_NAME_DEFINITIONS@/{doPrint=1}' \
 	    $(srcdir)/registry.hin >>$@.tmp1
 	$(top_srcdir)/extractDecls $@.tmp1 $(srcdir)/registry.c >$@.tmp2
@@ -89,48 +83,17 @@ stringBuf.h:	stringBuf.hin stringBuf.c
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
-#registry:
-#	mkdir $@
-#registry/registry.db:
-configDefaults.txt:	../config.h
-	(echo '#include <config.h>'; \
-	find $(top_srcdir) \( -path '*/registry' -o -path '*/Berkeley-DB' \) \
-	    -prune -o -name \*.c -print \
-	| xargs sed -n \
-	    '/reg_getString(/{N;s/\n//;s/.*reg[A-Za-z_]*(//;s/).*//;p}' \
-	| tr -s ', ' ' ' | awk '{print $$1, $$3}' ) >configDefaults.c
-	$(COMPILE) $(lib_la_CPPFLAGS) -E -o configDefaults.i configDefaults.c
-	rm configDefaults.c
-	sed -n '/^[^#]/s/"//gp' configDefaults.i >$@
-	rm configDefaults.i
+install-exec-local:	regpar.tab regutil $(REGISTRY_DIR)
+	$(PERL) $(srcdir)/installRegistry regpar.tab regutil \
+	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf
 
-install-exec-local:	regpar.tab regutil
-	-mkdir -p $(REGISTRY_DIR)
-	./regutil -c
-	while IFS=: read name path desc default; do \
-	    ./regutil "$$path" >/dev/null 2>&1; \
-	    status=$$?; \
-	    if test $$status = 0; then \
-		echo "Already in registry: \"$$path\" "; \
-	    elif test $$status = 1; then \
-		if test "$$name" = HOSTNAME; then \
-		    ./regutil -s `uname -n` "$$path" || break; \
-		else \
-		    ./regutil -s "$$default" "$$path" || break; \
-		fi; \
-		echo "Added to registry: \"$$path\" "; \
-	    else \
-		echo 1>&2 "Error loading registry"; \
-		exit 1; \
-	    fi; \
-	done < regpar.tab
-
-uninstall-local:
-	rm -f $(DESTDIR)$(mandir)/man1/regutil.1
+$(REGISTRY_DIR):
+	mkdir -p $@
 
 if HAVE_CUNIT
 check_PROGRAMS		= testRegistry
 testRegistry_CPPFLAGS	= \
+    -I$(top_srcdir) \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/Berkeley-DB/build_unix \

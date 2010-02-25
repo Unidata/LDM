@@ -457,70 +457,65 @@ xdr_comingsoon_reply_t (XDR *xdrs, comingsoon_reply_t *objp)
 bool_t
 xdr_product(XDR *xdrs, product *objp)
 {
- if (!xdr_prod_info(xdrs, &objp->info)) {
- return (FALSE);
- }
+    if (!xdr_prod_info(xdrs, &objp->info)) {
+        return (FALSE);
+    }
 
- switch (xdrs->x_op) {
+    switch (xdrs->x_op) {
+        case XDR_DECODE:
+            if (objp->info.sz == 0) {
+                return (TRUE);
+            }
+            if (objp->data == NULL) {
+                objp->data = xd_getBuffer(objp->info.sz);
+                if(objp->data == NULL) {
+                    return (FALSE);
+                }
+            }
+        /*FALLTHRU*/
+        case XDR_ENCODE:
+            return (xdr_opaque(xdrs, objp->data, objp->info.sz));
 
- case XDR_DECODE:
- if (objp->info.sz == 0) {
- return (TRUE);
- }
- if (objp->data == NULL) {
- objp->data = xd_getBuffer(objp->info.sz);
- if(objp->data == NULL) {
- return (FALSE);
- }
- }
- /*FALLTHRU*/
+        case XDR_FREE:
+            objp->data = NULL;
+            return (TRUE);
+    }
 
- case XDR_ENCODE:
- return (xdr_opaque(xdrs, objp->data, objp->info.sz));
-
- case XDR_FREE:
- objp->data = NULL;
- return (TRUE);
-
- }
- return (FALSE); /* never reached */
+    return (FALSE); /* never reached */
 }
 
 
 bool_t
 xdr_dbuf(XDR* xdrs, dbuf* objp)
 {
- /*
+    /*
      * First, deal with the length since dbuf-s are counted.
      */
- if (!xdr_u_int(xdrs, &objp->dbuf_len))
- return FALSE;
+    if (!xdr_u_int(xdrs, &objp->dbuf_len))
+        return FALSE;
 
- /*
+    /*
      * Now, deal with the actual bytes.
      */
- switch (xdrs->x_op) {
+    switch (xdrs->x_op) {
+        case XDR_DECODE:
+            if (objp->dbuf_len == 0)
+                return TRUE;
 
- case XDR_DECODE:
- if (objp->dbuf_len == 0)
- return TRUE;
+            if (NULL == (objp->dbuf_val =
+                    (char*)xd_getNextSegment(objp->dbuf_len))) {
+                serror("xdr_dbuf()");
+                return FALSE;
+            }
+        /*FALLTHROUGH*/
+        case XDR_ENCODE:
+            return (xdr_opaque(xdrs, objp->dbuf_val, objp->dbuf_len));
 
- if (NULL == (objp->dbuf_val =
- (char*)xd_getNextSegment(objp->dbuf_len))) {
- serror("xdr_dbuf()");
- return FALSE;
- }
+        case XDR_FREE:
+            objp->dbuf_val = NULL;
 
- /*FALLTHROUGH*/
+        return TRUE;
+    }
 
- case XDR_ENCODE:
- return (xdr_opaque(xdrs, objp->dbuf_val, objp->dbuf_len));
-
- case XDR_FREE:
- objp->dbuf_val = NULL;
-
- return TRUE;
- }
-
- return FALSE;
+    return FALSE;
 }

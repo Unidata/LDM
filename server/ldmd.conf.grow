@@ -2,4 +2,4 @@
 # product-queue by accepting data-products sent via a pqsend(1) executing on
 # the local host.
 #
-ACCEPT ANY ".*" ^((localhost|loopback)|(127\.0\.0\.1\.?$))
+ACCEPT ANY ".*" ^127\.0\.0\.1$

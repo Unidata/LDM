@@ -364,7 +364,7 @@ main(int ac, char *av[])
             double          age_oldest;
             size_t          maxextent;
             double          age_youngest;
-            long            min_residency;
+            long            minReside;
             int             isFull;
 
             status = pq_stats(pq, &nprods,   &nfree,   &nempty, &nbytes,
@@ -385,12 +385,12 @@ main(int ac, char *av[])
 
             if (0 == nprods) {
                 age_youngest = -1;
-                min_residency = -1;
+                minReside = -1;
             }
             else {
                 timestampt      now;
                 timestampt      mostRecent;
-                timestampt      minResidency;
+                timestampt      minResidenceTime;
 
                 if (status = pq_getMostRecent(pq, &mostRecent)) {
                     uerror("pq_getMostRecent() failed: %s (errno = %d)",
@@ -402,21 +402,20 @@ main(int ac, char *av[])
                     ? d_diff_timestamp(&now, &mostRecent)
                     : -1;
 
-                if (status = pq_getMinResidency(pq, &minResidency)) {
+                if (status = pq_getMinVirtResTime(pq, &minResidenceTime)) {
                     uerror("pq_getMinResidency() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
                 }
 
-                min_residency = (long)minResidency.tv_sec;
+                minReside = (long)minResidenceTime.tv_sec;
             }
 
             printf("%d %lu %lu %lu %lu %lu %lu %.0f %.0f %ld\n", isFull,
                 (unsigned long)pq_getDataSize(pq), (unsigned long)maxbytes,
                 (unsigned long)nbytes,
                 (unsigned long)pq_getSlotCount(pq), (unsigned long)maxprods,
-                (unsigned long)nprods, age_oldest, age_youngest,
-                min_residency);
+                (unsigned long)nprods, age_oldest, age_youngest, minReside);
         }
         else {
             size_t nprods;

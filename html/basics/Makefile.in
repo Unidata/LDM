@@ -37,7 +37,8 @@ host_triplet = @host@
 subdir = html/basics
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/activating.html.in \
-	$(srcdir)/source-install-steps.html.in
+	$(srcdir)/source-install-steps.html.in \
+	$(srcdir)/what-gets-installed.html.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -45,7 +46,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = activating.html source-install-steps.html
+CONFIG_CLEAN_FILES = activating.html source-install-steps.html \
+	what-gets-installed.html
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -105,6 +107,7 @@ F77 = @F77@
 FFLAGS = @FFLAGS@
 GDBMLIB = @GDBMLIB@
 GREP = @GREP@
+HOSTNAME = @HOSTNAME@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -237,6 +240,7 @@ EXTRA_DIST = \
     product-queue.html \
     programs.html \
     protocol.html \
+    regpar-top.html \
     scour.conf.html \
     source-install-steps.html.in \
     source_or_binary.html \
@@ -247,6 +251,7 @@ EXTRA_DIST = \
     tradeoffs.html \
     versionId.html \
     vet-ldmadmin.html \
+    what-gets-installed.html.in \
     Downstream_6.4_Alternate.gif \
     Downstream_6.4_Primary.gif \
     downstream6.gif \
@@ -304,6 +309,7 @@ html_DATA = \
     tradeoffs.html \
     versionId.html \
     vet-ldmadmin.html \
+    what-gets-installed.html \
     Downstream_6.4_Alternate.gif \
     Downstream_6.4_Primary.gif \
     downstream6.gif \
@@ -327,7 +333,10 @@ nobase_html_DATA = \
     feedtypes/public_bulletins.html \
     feedtypes/wsi.html
 
-all: all-am
+BUILT_SOURCES = LDM-registry.html
+DISTCLEANFILES = LDM-registry.html
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -363,6 +372,8 @@ $(am__aclocal_m4_deps):
 activating.html: $(top_builddir)/config.status $(srcdir)/activating.html.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 source-install-steps.html: $(top_builddir)/config.status $(srcdir)/source-install-steps.html.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+what-gets-installed.html: $(top_builddir)/config.status $(srcdir)/what-gets-installed.html.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 mostlyclean-libtool:
@@ -451,13 +462,15 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: check-am
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
 all-am: Makefile $(DATA)
 installdirs:
 	for dir in "$(DESTDIR)$(htmldir)" "$(DESTDIR)$(htmldir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: install-am
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -478,10 +491,12 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-libtool mostlyclean-am
@@ -548,7 +563,7 @@ ps-am:
 
 uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 
-.MAKE: install-am install-strip
+.MAKE: all check install install-am install-strip
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
 	distclean distclean-generic distclean-libtool distdir dvi \
@@ -564,28 +579,26 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 	uninstall-nobase_htmlDATA
 
 
-@MAINTAINER_TRUE@all:	LDM-registry.html
-
-@MAINTAINER_TRUE@LDM-registry.html:	Makefile regpar-top.html \
-@MAINTAINER_TRUE@		$(top_srcdir)/registry/regpar.tab
-@MAINTAINER_TRUE@	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
-@MAINTAINER_TRUE@	cat regpar-top.html >>$@.tmp
-@MAINTAINER_TRUE@	echo '<table align="center" border="2" cellpadding="6"' \
-@MAINTAINER_TRUE@	    'cellspacing="0">' >>$@.tmp
-@MAINTAINER_TRUE@	echo '<tr>' >>$@.tmp
-@MAINTAINER_TRUE@	echo '<th>Parameter Pathname</th>' >>$@.tmp
-@MAINTAINER_TRUE@	echo '<th>Parameter Description</th>' >>$@.tmp
-@MAINTAINER_TRUE@	echo '<th>Default Value</th>' >>$@.tmp
-@MAINTAINER_TRUE@	echo '</tr>' >>$@.tmp
-@MAINTAINER_TRUE@	while IFS=: read name path desc default; do \
-@MAINTAINER_TRUE@	    echo "<tr>"; \
-@MAINTAINER_TRUE@		echo "<td nowrap><tt>$$path</tt></td>"; \
-@MAINTAINER_TRUE@		echo "<td>$$desc</td>"; \
-@MAINTAINER_TRUE@		echo "<td><tt>$$default</tt></td>"; \
-@MAINTAINER_TRUE@	    echo "</tr>"; \
-@MAINTAINER_TRUE@	done <$(top_srcdir)/registry/regpar.tab >>$@.tmp
-@MAINTAINER_TRUE@	echo '</blockquote></BODY></HTML>' >>$@.tmp
-@MAINTAINER_TRUE@	mv $@.tmp $@
+LDM-registry.html:	$(srcdir)/regpar-top.html \
+		../../registry/regpar.tab
+	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
+	cat $(srcdir)/regpar-top.html >>$@.tmp
+	echo '<table align="center" border="2" cellpadding="6"' \
+	    'cellspacing="0">' >>$@.tmp
+	echo '<tr>' >>$@.tmp
+	echo '<th>Parameter Pathname</th>' >>$@.tmp
+	echo '<th>Parameter Description</th>' >>$@.tmp
+	echo '<th>Default Value</th>' >>$@.tmp
+	echo '</tr>' >>$@.tmp
+	while IFS=: read name path desc default varName; do \
+	    echo "<tr>"; \
+		echo "<td nowrap><tt>$$path</tt></td>"; \
+		echo "<td>$$desc</td>"; \
+		echo "<td><tt>$$default</tt></td>"; \
+	    echo "</tr>"; \
+	done <../../registry/regpar.tab >>$@.tmp
+	echo '</blockquote></BODY></HTML>' >>$@.tmp
+	mv $@.tmp $@
 
 @MAINTAINER_TRUE@registry-check:	$(top_srcdir)/configure.ac
 @MAINTAINER_TRUE@	sed -n '/UD_CONFIGPAR/{s/^.*(//;s/,.*//;s/\[//;s/\]//;p}' \

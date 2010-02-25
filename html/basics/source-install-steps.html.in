@@ -33,7 +33,7 @@ Then, do the following:
     $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
     $ rm @PACKAGE@-@VERSION@.tar.gz # optional
     $ cd @PACKAGE@-@VERSION@/src
-    $ export PATH=... ... # if necessary
+    $ export PATH=... # if necessary
     $ ./configure [--enable-logging=local<i>n</i>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
     Password: ...
     $ make install &gt;make.log
@@ -290,10 +290,9 @@ The relevant command depends on your user shell.  For example:
 </table>
 </blockquote>
 
-This step builds the package libraries and programs and installs
-them.</p>
+This step builds the package and installs it.</p>
 
-<p>Inspect the file <code>make.log</code> to verify the
+<p>Inspect the file <code>make.log</code> to verify the build and
 installation process.  If something went wrong that you think might be fixed by
 <a href="#environment-variables">setting an environment variable</a>
 (such as using the <code>cc</code> compiler rather than the
@@ -316,7 +315,7 @@ from a version 6.1 (or earlier)
 <a href="glindex.html#LDM">LDM</a>, then verify that it
 does so by executing the command 
 <blockquote><pre>
-bin/pqcheck
+../bin/pqcheck
 </blockquote></pre>
 If this indicates that the
 <a href="glindex.html#product-queue">product-queue</a> is invalid, then
@@ -332,42 +331,6 @@ you will have to remove the previous
 <a href="glindex.html#product-queue">product-queue</a> and
 create a new, empty one using the programs of this package before starting
 the new LDM.
-
-<li>
-<p>Use a
-<a href="successes.html"><code>make(1)</code> utility
-utility appropriate for your system</a> to install the package components,
-redirecting <em>both</em> standard output
-and standard error to the file <code>install.log</code>.
-The relevant command depends on your user shell.  For example:
-<blockquote>
-<table align="center" border="2" cellpadding="6" cellspacing="0">
-    <tr>
-	<th>User Shell</th>
-	<th>Command</th>
-    </tr>
-	<td>Standard UNIX<sup>®</sup> (e.g. <code>sh, ksh, bash</code>)</td>
-	<td nowrap><code><a href="glindex.html#make">make</a>
-	    install &gt;install.log 2>&1</code></td>
-    </tr>
-    <tr>
-	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-	<td nowrap><code><a href="glindex.html#make">make</a>
-	    install &gt;&! install.log</code></td>
-    </tr>
-</table>
-</blockquote>
-</p>
-
-<p>Inspect the file <code>install.log</code> to verify the
-installation process.  Ignore all errors that <code>make</code>, itself,
-ignores.</p>
-
-<p>If you email the 
-<a href="glindex.html#UPC">UPC</a>
-because of a problem with this step, be sure to
-enclose the file <code>install.log</code>.</p>
-</li>
 
 <li>
 <p>
@@ -395,6 +358,9 @@ make clean
 </li>
 
 </ol>
+
+<p>Click <a href="what-gets-installed.html">here</a> to see what gets
+installed where in a canonical installation process.
 
 <p><a href="../workshop/specifics.html#build">Workshop-specific instructions</a>.
 

@@ -17,8 +17,7 @@ AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
 #AC_USE_SYSTEM_EXTENSIONS
 
 AM_CONDITIONAL([MAINTAINER],
-    [test "$USER" = steve && test $PWD = /home/steve/ldm/package/src &&
-        test "X$HOST" = "Xgilda"])
+    [test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu])
 
 AC_ARG_ENABLE([debug],
     AC_HELP_STRING([--enable-debug],
@@ -90,9 +89,9 @@ AC_DEFINE([RESOLVER_TIME_THRESHOLD], [10], [Time limit for resolving hostname])
 AC_SUBST(LDM_PORT)
 
 AC_ARG_ENABLE([root-actions],
-    AC_HELP_STRING([--enable-root-actions],
-	[include superuser (i.e., "root") actions in "make install"
-	[[default=enabled]]]),
+    AC_HELP_STRING([--disable-root-actions],
+	[don't include superuser (i.e., "root") actions in "make install"
+	[[default=include]]]),
     [
 	case "$enableval" in
 	yes) enable_include=true;;
@@ -107,17 +106,19 @@ AC_ARG_ENABLE([root-actions],
 AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS], [test "x$enable_include" = "xtrue"])
 AM_COND_IF([INCLUDE_ROOT_ACTIONS], 
     [if touch conftest && chmod u=rws conftest &&
-	    ls -l conftest | grep rws >/dev/null; then \
-	AC_CACHE_CHECK([for sudo(1) that you can use], [ac_cv_path_SUDO],
-	    [AC_PATH_PROGS_FEATURE_CHECK([SUDO], [sudo],
-		[echo "Enter the LDM user's password." >/dev/tty
-		$ac_path_SUDO true && ac_cv_path_SUDO=$ac_path_SUDO],
+	    ls -l conftest | grep -i rws >/dev/null; then \
+	AC_CACHE_CHECK([for su(1) that you can use], [ac_cv_path_SU],
+	    [AC_PATH_PROGS_FEATURE_CHECK([SU], [su],
+		[echo "Enter root's password." >/dev/tty
+		$ac_path_SU -c true </dev/tty >/dev/tty &&
+                    ac_cv_path_SU=$ac_path_SU],
 		[AC_MSG_RESULT([not found])
-		AC_CACHE_CHECK([for su(1) that you can use], [ac_cv_path_SU],
-		    [AC_PATH_PROGS_FEATURE_CHECK([SU], [su],
-			[echo "Enter root's password." >/dev/tty
-			$ac_path_SU -c true >/dev/tty 2>&1 </dev/tty \
-			&& ac_cv_path_SU=$ac_path_SU],
+		AC_CACHE_CHECK([for sudo(1) that you can use],
+                    [ac_cv_path_SUDO],
+		    [AC_PATH_PROGS_FEATURE_CHECK([SUDO], [sudo],
+			[echo "Enter your password." >/dev/tty
+			$ac_path_SUDO true >/dev/tty 2>&1 </dev/tty \
+			&& ac_cv_path_SUDO=$ac_path_SUDO],
 			[AC_MSG_RESULT([not found])])])])])
 	AC_SUBST([SU], [$ac_cv_path_SU])
 	AC_SUBST([SUDO], [$ac_cv_path_SUDO])
@@ -179,6 +180,11 @@ test -z "$prefix" -o "$prefix" = NONE && prefix=`(cd .. && pwd)`
 #AM_COND_IF([MAINTAINER], [UD_PREFIX(..)], [UD_PREFIX(.)])
 AC_MSG_RESULT([$prefix])
 
+AC_MSG_CHECKING([the name of the host])
+HOSTNAME=`uname -n`
+AC_SUBST([HOSTNAME])
+AC_MSG_RESULT([$HOSTNAME])
+
 AC_MSG_CHECKING([LDMHOME]);
 AM_COND_IF([MAINTAINER], [LDMHOME=$prefix],
     [test -z "$LDMHOME" && LDMHOME=$HOME])
@@ -188,7 +194,7 @@ sysconfdir='$(LDMHOME)/etc'
 localstatedir='$(LDMHOME)/var'
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queue])
-AC_SUBST([REGISTRY_DIR], ['$(localstatedir)'/registry])
+AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 
 AC_SUBST(ARFLAGS)
 AC_REVISION ($Revision: 1.47.18.22 $)
@@ -325,7 +331,6 @@ AC_CONFIG_FILES([
     scripts/ldmfail
     scripts/netcheck
     scripts/syscheck
-    scripts/writeConfiguration.pl
     scour/Makefile
     scour/scour
     regex/Makefile
@@ -333,6 +338,7 @@ AC_CONFIG_FILES([
     html/basics/Makefile
     html/basics/activating.html
     html/basics/source-install-steps.html
+    html/basics/what-gets-installed.html
     html/tutorial/Makefile
     test/Makefile
 ])

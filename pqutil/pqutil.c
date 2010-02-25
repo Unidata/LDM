@@ -131,6 +131,8 @@ usage(const char *av0) {
     fprintf(stderr,
             "\t-w             Run the watch command and exit when through\n");
     fprintf(stderr,
+            "\t-C             Clear the minimum virtual residence time and exit\n");
+    fprintf(stderr,
             "\t-f feedtype    Product feedtype (default ANY)\n");
 
     exit(EXIT_FAILURE);
@@ -1301,7 +1303,8 @@ rm_prod(pqueue          *pq,
 ******************************************************************************/
 
 int
-main(int argc, char *argv[]) {
+main(int argc, char *argv[])
+{
 
     char        *path;                                 /* product queue path */
     char        *logname = 0;            /* logfile name - STDERR by default */
@@ -1314,6 +1317,7 @@ main(int argc, char *argv[]) {
     int         create = 0;                             /* queue create flag */
     int         logopts = (LOG_CONS|LOG_PID);             /* logging options */
     int         watch_flag = 0;                        /* watch command flag */
+    int         clearMinVirtResTime = 0;   /* clear min virt residence time? */
     off_t       initialsz = 0;    /* initial product queue data section size */
     size_t      align = 0;                               /* alignment factor */
     size_t      nproducts = 0;         /* number of products for index space */
@@ -1351,7 +1355,7 @@ main(int argc, char *argv[]) {
 
         opterr = 1;
 
-        while ((ch=getopt(argc, argv, "vxl:pa:cs:nrPLFMS:wf:")) != EOF)
+        while ((ch=getopt(argc, argv, "vxl:pa:cs:nrPLFMS:wf:C")) != EOF)
             switch (ch) {
             case 'v':
                 logmask |= LOG_MASK(LOG_INFO);
@@ -1452,6 +1456,10 @@ main(int argc, char *argv[]) {
                 }
                 break;
 
+            case 'C':
+                clearMinVirtResTime = 1;
+                break;
+
             case '?':                                        /* bad argument */
                 usage(argv[0]);
                 break;
@@ -1509,6 +1517,21 @@ main(int argc, char *argv[]) {
     if (watch_flag) {
         watch_queue(pq, &clss);
         exit(0);
+    }
+
+/* if the "clear minimum virtual residence time" flag is set, then simply clear
+ * that product-queue metric and exit. */
+    if (clearMinVirtResTime) {
+        int     status = pq_clearMinVirtResTime(pq);
+
+        if (status) {
+            uerror("Couldn't clear minimum virtual residence time: %s",
+                strerror(status));
+        }
+
+        pq_close(pq);
+
+        return status;
     }
 
 /* main process loop */

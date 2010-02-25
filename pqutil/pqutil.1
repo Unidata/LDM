@@ -21,6 +21,7 @@ pqutil
 \%[-L]
 \%[-F]
 \%[-M]
+\%[-C]
 \%[-w]
 \%\fIpq_file\fP
 .hy
@@ -79,6 +80,16 @@ Open the queue as a fixed size (PQ_NOGROW).
 .TP
 .B -M
 Open the queue without using mmap() (PQ_NOMAP).
+.TP
+.B -C
+Tells
+.B pqutil
+to clear the minimum virtual residence time in the product queue and
+then exit.
+The virtual residence time of a data-product
+is the time that the product was removed from the queue minus the time that
+the product was created.  The minimum virtual residence time is the minimum
+of the virtual residence times over all applicable products.
 .TP
 .B -w
 Tells

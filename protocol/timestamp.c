@@ -245,12 +245,13 @@ tsFormat(
 
 
 /*
- * Parses a timestamp.
+ * Parses a string representation of a timestamp.  The format of the timestamp
+ * must be YYYYMMDDThhmmss[.uuuuuu].
  *
  * Arguments:
  *      timestamp       Pointer to the timestamp to be parsed.
  * Returns:
- *      -1              Error.
+ *      -1              Error.  "uerror()" called.
  *      else            Number of bytes parsed.
  */
 int
@@ -265,12 +266,12 @@ tsParse(
     int                 hour;
     int                 minute;
     int                 second;
-    long                microseconds;
+    long                microseconds = 0;
     const char*         format = "%04d%02d%02dT%02d%02d%02d.%06ld";
+    int                 nfields = sscanf(string, format, &year, &month, &day,
+                            &hour, &minute, &second, &microseconds);
 
-    if (sscanf(string, format, &year, &month, &day, &hour, &minute, &second,
-            &microseconds)
-            != 7) {
+    if (6 > nfields) {
         uerror("Couldn't decode timestamp \"%s\" with format \"%s\"", string,
             format);
     }
@@ -296,7 +297,7 @@ tsParse(
         tm.tm_sec = second - timezone;
         timestamp->tv_sec = mktime(&tm);
         timestamp->tv_usec = microseconds;
-        nbytes = 22;
+        nbytes = 6 == nfields ? 15 : 22;
     }
 
     return nbytes;

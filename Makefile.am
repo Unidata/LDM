@@ -100,7 +100,7 @@ EXTRA_DIST = \
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 DISTCLEANFILES	= *.log $(distArchive)
-distuninstallcheck_listfiles = find . -type f -print | grep -v './etc/'
+distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
 
 all:
 
@@ -108,18 +108,20 @@ install-data-hook:	ensure-ldmhome-links ensure-ldmhome-dirs
 if INCLUDE_ROOT_ACTIONS
 	@echo
 	@echo "\
-This next step will perform those installation actions that must be \
+The next step will perform those installation actions that must be \
 executed by the superuser.  \
 If this step doesn't work (for example, if you don't know \
 root's password), then the superuser will have to manually execute \
-the command \"$(MAKE) root-actions\". \
-	| fmt
-	@echo
+the command \"$(MAKE) root-actions\"." \
+	| fmt >/dev/tty
+	@echo >/dev/tty
 if HAVE_SUDO
-	$(SUDO) $(MAKE) root-actions
+	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions
 else
 if HAVE_SU
-	$(SU) -c '$(MAKE) root-actions'
+	@printf "Enter root's password: " >/dev/tty
+	@$(SU) -c '$(MAKE) $(AM_MAKEFLAGS) root-actions' </dev/tty 2>/dev/null
+	@echo >/dev/tty
 endif
 endif
 else
@@ -127,33 +129,29 @@ else
 	@echo "\
 NOTE: The command \"$(MAKE) root-actions\" will have to be executed by the \
 superuser in order to complete the installation process." \
-	| fmt
+	| fmt >/dev/tty 2>&1
 	@echo
 endif
 
 ensure-ldmhome-links:
-	cd $(LDMHOME) \
+	cd $(DESTDIR)$(LDMHOME) \
 	&& ( test -e src || $(LN_S) runtime/src src ) \
 	&& ( test -e bin || $(LN_S) runtime/bin bin ) \
 	&& ( test -e include || $(LN_S) runtime/include include ) \
-	&& ( test -e lib || $(LN_S) runtime/lib lib ) \
-	&& ( test -e man || $(LN_S) runtime/share/man man ) \
-	&& ( test -e runtime || $(LN_S) $(DESTDIR)$(prefix) runtime )
+	&& ( test -e lib || $(LN_S) runtime/lib lib )
 
 ensure-ldmhome-dirs:
 	if test -e $(DESTDIR)$(LDMHOME)/data; then \
 	    test -e $(DESTDIR)$(QUEUE_DIR) \
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data \
-		$(DESTDIR)$(QUEUE_DIR); \
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data $(DESTDIR)$(QUEUE_DIR); \
 	else \
-	    mkdir $(DESTDIR)$(QUEUE_DIR); \
+	    test -e $(DESTDIR)$(QUEUE_DIR) || mkdir -p $(DESTDIR)$(QUEUE_DIR); \
 	fi
 	if test -e $(DESTDIR)$(LDMHOME)/logs; then \
-	    test -e $(DESTDIR)$(LOGS_DIR)\
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/logs \
-		$(DESTDIR)$(LOGS_DIR); \
+	    test -e $(DESTDIR)$(LOGS_DIR) \
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/logs $(DESTDIR)$(LOGS_DIR); \
 	else \
-	    mkdir $(DESTDIR)$(LOGS_DIR); \
+	    test -e $(DESTDIR)$(LOGS_DIR) || mkdir -p $(DESTDIR)$(LOGS_DIR); \
 	fi
 
 root-actions:	\
@@ -178,7 +176,7 @@ install_setuids:
 ERROR: The LDM server program (bin/ldmd) or the hupsyslog(1) \
 program (bin/hupsyslog) is not owned by \"root\" or does not have \
 the setuid bit enabled.  The command \"make install_setuids\" will have \
-to be executed manually by the superuser on a system that allows these \
+to be manually executed by the superuser on a system that allows these \
 actions." \
 	    | fmt; \
 	    echo; \

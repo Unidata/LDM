@@ -2864,7 +2864,7 @@ struct pqctl {
 #define MAX_WRITE_COUNT ~0u
         unsigned        write_count;
         timestampt      mostRecent;     /* time of most recent insertion */
-        timestampt      minResidency;   /* minimum residency time */
+        timestampt      minVirtResTime; /* minimum virtual residence time */
         int             isFull;         /* is the queue full? */
 };
 typedef struct pqctl pqctl;
@@ -4138,7 +4138,7 @@ ctl_init(pqueue *const pq, size_t const align)
         pq->ctlp->maxproducts = 0;
         pq->ctlp->align = align;
         pq->ctlp->mostRecent = TS_NONE;
-        pq->ctlp->minResidency = TS_NONE;
+        pq->ctlp->minVirtResTime = TS_NONE;
         pq->ctlp->isFull = 0;
 
         /* bring in the indexes */
@@ -4497,6 +4497,50 @@ rgn_get(pqueue *const pq, off_t const offset, size_t const extent,
 
 /* End rp */
 
+/* Begin XDR */
+
+static void *
+xinfo_i(void *buf, size_t size, enum xdr_op op,
+        prod_info *infop)
+{
+        XDR xdrs[1] ;
+
+        xdrmem_create(xdrs, buf, (u_int)size, op) ;
+        
+        if(!xdr_prod_info(xdrs, infop))
+        {
+                uerror("xinfo:%s xdr_prod_info() failed\n",
+                        infop->ident) ;
+                return NULL;
+        }
+        /* return data ptr. Unwarranted intimacy with xdr_mem implementation */
+        return xdrs->x_private;
+}
+
+
+/*
+ * XDR Encode or Decode "prod" to or from "buf" of size "size".
+ */
+static ptrdiff_t
+xproduct(void *buf, size_t size, enum xdr_op op, product *prod)
+{
+        XDR xdrs[1] ;
+        xdrmem_create(xdrs, buf, (u_int)size, op);
+
+        if (!xdr_product(xdrs, prod))
+        {
+                uerror("xproduct: %s xdr_product() failed\n",
+                        prod->info.ident);
+                return 0;
+        }
+
+        /*      return xlen_product(prod) ; */
+        return (xdrs->x_private - xdrs->x_base);
+}
+
+
+/* End XDR */
+
 
 /*
  * Free a region, by offset
@@ -4538,7 +4582,7 @@ rpqe_free(pqueue *pq, off_t offset, signaturet signature)
  * Deletes the oldest product in a product queue that is not locked.  In the
  * unlikely event that all the products in the queue are locked or a deadlock
  * is detected, returns an error status other than ENOERR.  Sets the "isFull"
- * and "minResidency" members of the product-queue control block on success.
+ * and "minVirtResTime" members of the product-queue control block on success.
  *
  * Arguments:
  *      pq              Pointer to the product-queue object.  Shall not be
@@ -4591,8 +4635,12 @@ pq_del_oldest(pqueue *pq)
          */
         off_t           offset = rep->offset;
         unsigned char*  signature;
-        /* The time-list entry that "tpep" references will be deleted. */
-        timestampt      insertionTime = tqep->tv;
+        InfoBuf         infoBuf;
+
+        /*
+         * Get the metadata of the data-product.
+         */
+        (void)xinfo_i(vp, Extent(rep), XDR_DECODE, ib_init(&infoBuf));
 
         /*
          * Remove the corresponding entry from the time-list.
@@ -4629,17 +4677,19 @@ pq_del_oldest(pqueue *pq)
         pq->ctlp->isFull = 1;
 
         /*
-         * Set the minimum residency time if appropriate.
+         * Set the minimum virtual residence time if appropriate.
          */
         {
             timestampt  now;
-            timestampt  residencyTime;
+            timestampt  virtResTime;
             
             (void)set_timestamp(&now);
-            residencyTime = diff_timestamp(&now, &insertionTime);
-            if (tvIsNone(pq->ctlp->minResidency) || 
-                    tvCmp(residencyTime, pq->ctlp->minResidency, <))  {
-                pq->ctlp->minResidency = residencyTime;
+
+            virtResTime = diff_timestamp(&now, &infoBuf.info.arrival);
+
+            if (tvIsNone(pq->ctlp->minVirtResTime) || 
+                    tvCmp(virtResTime, pq->ctlp->minVirtResTime, <))  {
+                pq->ctlp->minVirtResTime = virtResTime;
             }
         }
     }                                   /* got data region */
@@ -4778,50 +4828,6 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
 
         return status;
 }
-
-/* Begin XDR */
-
-static void *
-xinfo_i(void *buf, size_t size, enum xdr_op op,
-        prod_info *infop)
-{
-        XDR xdrs[1] ;
-
-        xdrmem_create(xdrs, buf, (u_int)size, op) ;
-        
-        if(!xdr_prod_info(xdrs, infop))
-        {
-                uerror("xinfo:%s xdr_prod_info() failed\n",
-                        infop->ident) ;
-                return NULL;
-        }
-        /* return data ptr. Unwarranted intimacy with xdr_mem implementation */
-        return xdrs->x_private;
-}
-
-
-/*
- * XDR Encode or Decode "prod" to or from "buf" of size "size".
- */
-static ptrdiff_t
-xproduct(void *buf, size_t size, enum xdr_op op, product *prod)
-{
-        XDR xdrs[1] ;
-        xdrmem_create(xdrs, buf, (u_int)size, op);
-
-        if (!xdr_product(xdrs, prod))
-        {
-                uerror("xproduct: %s xdr_product() failed\n",
-                        prod->info.ident);
-                return 0;
-        }
-
-        /*      return xlen_product(prod) ; */
-        return (xdrs->x_private - xdrs->x_base);
-}
-
-
-/* End XDR */
 
 
 /*****  Begin public interface */
@@ -4966,7 +4972,7 @@ pq_open(
                                  * Some parameters don't exist on-disk.
                                  */
                                 ctlp->mostRecent = TS_NONE;
-                                ctlp->minResidency = TS_NONE;
+                                ctlp->minVirtResTime = TS_NONE;
                                 ctlp->isFull = 0;
                                 ctlp->version = PQ_VERSION;
                                 rflags = RGN_MODIFIED;
@@ -5626,29 +5632,62 @@ int pq_getMostRecent(
 
 
 /*
- * Returns the minimum residency time of the queue since it was created.
+ * Returns the minimum virtual residence time of data-products in the queue
+ * since the queue was created.  The virtual residence time of a data-product
+ * is the time that the product was removed from the queue minus the time that
+ * the product was created.  The minimum virtual residence time is the minimum
+ * of the virtual residence times over all applicable products.
  *
  * Arguments:
  *      pq              Pointer to the product-queue structure.  Shall not be
  *                      NULL.
- *      minResidency    Pointer to the minimum residency time of the queue
- *                      since it was created.  Shall not be NULL.
- *                      "*minResidency" is set upon successful return.  If such
- *                      a time doesn't exist (because the queue is empty, for
- *                      example), then "*minResidency" shall be TS_NONE upon
- *                      successful return.
+ *      minVirtResTime  Pointer to the minimum virtual residence time of the
+ *                      queue since the queue was created.  Shall not be NULL.
+ *                      "*minVirtResTime" is set upon successful return.  If
+ *                      such a time doesn't exist (because no products have
+ *                      been deleted from the queue, for example), then
+ *                      "*minVirtResTime" shall be TS_NONE upon successful
+ *                      return.
  * Returns:
- *      0               Success.  "*minResidency" is set.
+ *      0               Success.  "*minVirtResTime" is set.
  *      else            <errno.h> error code.
  */
-int pq_getMinResidency(
+int pq_getMinVirtResTime(
     pqueue* const       pq,
-    timestampt* const   minResidency)
+    timestampt* const   minVirtResTime)
 {
     int status = ctl_get(pq, 0);
 
     if (status == ENOERR) {
-        *minResidency = pq->ctlp->minResidency;
+        *minVirtResTime = pq->ctlp->minVirtResTime;
+
+        (void)ctl_rel(pq, 0);
+    }                                   /* "pq->ctlp" allocated */
+
+    return status;
+}
+
+
+/*
+ * Clears the minimum virtual residence time of data-products in the queue.
+ * After this function, the minimum virtual residence metric will be 
+ * recomputed as products are deleted from the queue.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue structure.  Shall not be
+ *                      NULL.  Must be open for writing.
+ * Returns:
+ *      0               Success.  The minimum virtual residence time is
+ *                      cleared.
+ *      else            <errno.h> error code.
+ */
+int pq_clearMinVirtResTime(
+    pqueue* const       pq)
+{
+    int status = ctl_get(pq, 0);
+
+    if (status == ENOERR) {
+        pq->ctlp->minVirtResTime = TS_NONE;
 
         (void)ctl_rel(pq, 0);
     }                                   /* "pq->ctlp" allocated */

@@ -25,6 +25,7 @@ EXTRA_DIST	= \
     product-queue.html \
     programs.html \
     protocol.html \
+    regpar-top.html \
     scour.conf.html \
     source-install-steps.html.in \
     source_or_binary.html \
@@ -35,6 +36,7 @@ EXTRA_DIST	= \
     tradeoffs.html \
     versionId.html \
     vet-ldmadmin.html \
+    what-gets-installed.html.in \
     Downstream_6.4_Alternate.gif \
     Downstream_6.4_Primary.gif \
     downstream6.gif \
@@ -91,6 +93,7 @@ html_DATA	= \
     tradeoffs.html \
     versionId.html \
     vet-ldmadmin.html \
+    what-gets-installed.html \
     Downstream_6.4_Alternate.gif \
     Downstream_6.4_Primary.gif \
     downstream6.gif \
@@ -112,15 +115,13 @@ nobase_html_DATA	= \
     feedtypes/ntext.html \
     feedtypes/public_bulletins.html \
     feedtypes/wsi.html
+BUILT_SOURCES		= LDM-registry.html
+DISTCLEANFILES		= LDM-registry.html
 
-if MAINTAINER
-
-all:	LDM-registry.html
-
-LDM-registry.html:	Makefile regpar-top.html \
-		$(top_srcdir)/registry/regpar.tab
+LDM-registry.html:	$(srcdir)/regpar-top.html \
+		../../registry/regpar.tab
 	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
-	cat regpar-top.html >>$@.tmp
+	cat $(srcdir)/regpar-top.html >>$@.tmp
 	echo '<table align="center" border="2" cellpadding="6"' \
 	    'cellspacing="0">' >>$@.tmp
 	echo '<tr>' >>$@.tmp
@@ -128,15 +129,17 @@ LDM-registry.html:	Makefile regpar-top.html \
 	echo '<th>Parameter Description</th>' >>$@.tmp
 	echo '<th>Default Value</th>' >>$@.tmp
 	echo '</tr>' >>$@.tmp
-	while IFS=: read name path desc default; do \
+	while IFS=: read name path desc default varName; do \
 	    echo "<tr>"; \
 		echo "<td nowrap><tt>$$path</tt></td>"; \
 		echo "<td>$$desc</td>"; \
 		echo "<td><tt>$$default</tt></td>"; \
 	    echo "</tr>"; \
-	done <$(top_srcdir)/registry/regpar.tab >>$@.tmp
+	done <../../registry/regpar.tab >>$@.tmp
 	echo '</blockquote></BODY></HTML>' >>$@.tmp
 	mv $@.tmp $@
+
+if MAINTAINER
 
 registry-check:	$(top_srcdir)/configure.ac
 	sed -n '/UD_CONFIGPAR/{s/^.*(//;s/,.*//;s/\[//;s/\]//;p}' \

@@ -19,6 +19,12 @@
 #include "ulog.h"
 #include "log.h"
 
+typedef enum {
+    COMMAND_SYNTAX = 1,
+    NO_SUCH_ENTRY,
+    SYSTEM_ERROR
+}       Status;
+
 static const char*      _pathPrefix;
 static const char*      _nodePath;
 static StringBuf*       _valuePath;
@@ -27,20 +33,21 @@ static void printUsage(const char* progname)
 {
     (void)fprintf(stderr,
         "Usages:\n"
-        "  Create Registry:  %s [-d dir] -c\n"
-        "  Reset Registry:   %s [-d dir] -r\n"
-        "  Print Parameters: %s [-d dir] [path]\n"
-        "  Set Parameter:    %s [-d dir] (-h sig|-s string|-t time|-u uint) "
+        "  Create Registry:     %s [-d dir] -c\n"
+        "  Reset Registry:      %s [-d dir] -R\n"
+        "  Print Parameters:    %s [-d dir] [path ...]\n"
+        "  Remove Parameter(s): %s [-d dir] -r path ...\n"
+        "  Set Parameter:       %s [-d dir] (-h sig|-s string|-t time|-u uint) "
             "valpath\n"
         "where:\n"
         "  dir          Path name of registry directory\n"
         "  path         Absolute path name of registry node or value\n"
-        "  valpath      Absolute path name of value\n"
         "  sig          Data-product signature as 32 hexadecimal characters\n"
         "  string       String registry value\n"
-        "  time         Time registry value as YYYYMMDDThhmmss.uuuuuu\n"
-        "  uint         Unsigned integer registry value\n",
-        progname, progname, progname, progname);
+        "  time         Time registry value as YYYYMMDDThhmmss[.uuuuuu]\n"
+        "  uint         Unsigned integer registry value\n"
+        "  valpath      Absolute path name of value\n",
+        progname, progname, progname, progname, progname);
 }
 
 /*
@@ -63,7 +70,8 @@ static int printValue(
 }
 
 /*
- * Prints a value-thing.
+ * Prints a value-thing.  This function is designed to be called by the
+ * registry module.
  *
  * Arguments:
  *      vt              Pointer to the value-thing to be printed.  Shall not be
@@ -89,7 +97,8 @@ static int printValueThing(
 }
 
 /*
- * Prints the values of a node.
+ * Prints the values of a node.  This function is designed to be called by the
+ * registry module.
  *
  * Arguments:
  *      node            Pointer to the node.  Shall not be NULL.
@@ -125,41 +134,175 @@ static int printNodeValues(
  * name starts with a given prefix.
  *
  * Arguments:
- *      path    The path name prefix.  Shall not be NULL.
+ *      path            Pointer to a registry pathname to be printed.  Shall
+ *                      not be NULL.
  * Returns:
- *      0       Sucess
- *      ENOENT  No such value or node.  "log_start()" called.
- *      else    Failure.  "log_start()" called.
+ *      0               Sucess
+ *      NO_SUCH_ENTRY   No such value or node.  "log_start()" called.
+ *      SYSTEM_ERROR    Failure.  "log_start()" called.
  */
-static int printValues(
-    const char* const   path)
+static Status printPath(
+    const char*         path)
 {
+    int         status;
     char*       value;
     /*
      * The path name is first assumed to reference an existing value;
      * otherwise, the value wouldn't be printed.
      */ 
-    int         status = reg_getString(path, &value);
-
-    if (0 == status && NULL != value) {
-        (void)printf("%s\n", value);
-        free(value);
-    }                                   /* "value" allocated */
-    else if (ENOENT == status) {
-        RegNode*    node;
-
-        log_clear();
-
-        if (0 != (status = reg_getNode(path, &node, 0))) {
-            if (ENOENT == status)
-                log_start("No such value or node: \"%s\"", path);
+    if (0 == (status = reg_getString(path, &value))) {
+        if (NULL != value) {
+            (void)printf("%s\n", value);
+            free(value);
+        }                               /* "value" allocated */
+    }                                   /* got value-string */
+    else {
+        if (ENOENT != status) {
+            status = SYSTEM_ERROR;
         }
         else {
-            _pathPrefix = path;
-            status = reg_visitNodes(node, printNodeValues);
+            /*
+             * The path must reference a node.
+             */
+            RegNode*    node;
 
-            if (ENOENT == status)
-                status = 0;                 /* success */
+            log_clear();
+
+            if (0 != (status = reg_getNode(path, &node, 0))) {
+                if (ENOENT == status) {
+                    log_start("No such value or node: \"%s\"", path);
+                    status = NO_SUCH_ENTRY;
+                }
+                else {
+                    status = SYSTEM_ERROR;
+                }
+            }                           /* didn't get node */
+            else {
+                _pathPrefix = path;
+
+                if (0 != (status = reg_visitNodes(node, printNodeValues))) {
+                    status = SYSTEM_ERROR;
+                }                       /* error visiting nodes */
+            }                           /* got node */
+        }                               /* no such value */
+    }                                   /* didn't get value-string */
+
+    return status;
+}
+
+/*
+ * Creates the registry.
+ *
+ * Returns:
+ *      0               Success.
+ *      SYSTEM_ERROR    System error.  "log_log()" called.
+ */
+static Status createRegistry(void)
+{
+    RegNode*    rootNode;
+    int         status = reg_getNode("/", &rootNode, 1);
+
+    if (0 != status) {
+        log_add("Couldn't create registry");
+        log_log(LOG_ERR);
+        status = SYSTEM_ERROR;
+    }
+
+    return status;
+}
+
+/*
+ * Resets an existing registry.
+ *
+ * Returns:
+ *      0               Success.
+ *      SYSTEM_ERROR    System error.  "log_log()" called.
+ */
+static Status resetRegistry(void)
+{
+    int         status = reg_reset();
+
+    if (0 != status) {
+        log_add("Couldn't reset registry");
+        log_log(LOG_ERR);
+        status = SYSTEM_ERROR;
+    }
+
+    return status;
+}
+
+/*
+ * Removes the values referenced by an absolute registry pathname.
+ *
+ * Arguments:
+ *      path            Pointer to a an absolute registry pathname.  Shall not
+ *                      be NULL.  If the pathname refers to a node, then the
+ *                      node and all its subnodes are recursively removed.
+ * Returns:
+ *      0               Success.
+ *      NO_SUCH_ENTRY   No such entry in the registry.  "log_start()" called.
+ *      SYSTEM_ERROR    System error.  "log_start()" called.
+ */
+static Status deletePath(
+    const char* const   path)
+{
+    int status = reg_deleteValue(path);
+
+    if (ENOENT == status) {
+        RegNode*        node;
+
+        switch (reg_getNode(path, &node, 0)) {
+        case 0:
+            reg_deleteNode(node);
+
+            if (reg_flushNode(node))
+                status = SYSTEM_ERROR;
+
+            break;
+        case ENOENT:
+            log_start("No such value or node: \"%s\"", path);
+            status = NO_SUCH_ENTRY;
+            break;
+        default:
+            status = SYSTEM_ERROR;
+        }
+    }
+
+    return status;
+}
+
+/*
+ * Acts upon a list of registry pathnames.
+ *
+ * Arguments:
+ *      pathList        Pointer to a NULL-terminated array of pointers to
+ *                      absolute registry pathnames.  Shall not be NULL.
+ *      func            Pointer to the function to be applied to each pathname.
+ *                      The function shall return one of
+ *                          0   Success.
+ *                          NO_SUCH_ENTRY   No such entry.  "log_start()" called.
+ *                          SYSTEM_ERROR        System error.  "log_start()"
+ *                                              called.
+ * Returns:
+ *      0               Success.
+ *      NO_SUCH_ENTRY   An entry didn't exist.  "log_log()" called.  All
+ *                      pathnames were acted upon.
+ *      SYSTEM_ERROR    System error.  "log_log()" called.  Processing
+ *                      terminated with the pathname that caused the error.
+ */
+static Status actUponPathList(
+    char* const*        pathList,
+    Status              (*func)(const char* path))
+{
+    int                 status = 0;
+    const char*         path;
+
+    while (SYSTEM_ERROR > status && NULL != (path = *pathList++)) {
+        int     stat = func(path);
+
+        if (stat) {
+            log_log(LOG_ERR);
+            status = stat;
         }
     }
 
@@ -169,8 +312,9 @@ static int printValues(
 /*
  * Returns:
  *      0       Success
- *      1       No such parameter or node.  Error message written.
- *      2       Something else.  Error message written.
+ *      1       Incorrect usage (i.e., command-line syntax error).
+ *      2       No such parameter or node.  Error message written.
+ *      3       System error.  Error message written.
  */
 int main(
     int         argc,
@@ -183,6 +327,7 @@ int main(
 
     if (status = sb_new(&_valuePath, 80)) {
         log_add("Couldn't initialize utility");
+        status = SYSTEM_ERROR;
     }
     else {
         enum {
@@ -194,6 +339,7 @@ int main(
             PUT_SIGNATURE,
             PUT_TIME,
             RESET,
+            REMOVE,
         }               usage = UNKNOWN;
         const char*     string;
         signaturet      signature;
@@ -203,13 +349,13 @@ int main(
 
         opterr = 0;                     /* supress getopt(3) error messages */
 
-        while (0 == status && (ch = getopt(argc, argv, ":cd:h:rs:t:u:"))
+        while (0 == status && (ch = getopt(argc, argv, ":cd:h:Rrs:t:u:"))
                 != -1) {
             switch (ch) {
             case 'c': {
                 if (UNKNOWN != usage) {
                     log_start("Can't mix create action with other actions");
-                    status = 1;
+                    status = COMMAND_SYNTAX;
                 }
                 else {
                     usage = CREATE;
@@ -217,7 +363,8 @@ int main(
                 break;
             }
             case 'd': {
-                status = reg_setPathname(optarg);
+                if (status = reg_setPathname(optarg))
+                    status = SYSTEM_ERROR;
                 break;
             }
             case 'h': {
@@ -225,7 +372,7 @@ int main(
 
                 if (0 > status || 0 != optarg[status]) {
                     log_start("Not a signature: \"%s\"", optarg);
-                    status = EILSEQ;
+                    status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
@@ -233,16 +380,27 @@ int main(
                         log_log(LOG_INFO);
                     }
                     usage = PUT_SIGNATURE;
+                    status = 0;
+                }
+                break;
+            }
+            case 'R': {
+                if (UNKNOWN != usage) {
+                    log_start("Can't mix reset action with other actions");
+                    status = COMMAND_SYNTAX;
+                }
+                else {
+                    usage = RESET;
                 }
                 break;
             }
             case 'r': {
                 if (UNKNOWN != usage) {
-                    log_start("Can't mix reset action with other actions");
-                    status = 1;
+                    log_start("Can't mix remove action with other actions");
+                    status = COMMAND_SYNTAX;
                 }
                 else {
-                    usage = RESET;
+                    usage = REMOVE;
                 }
                 break;
             }
@@ -260,7 +418,7 @@ int main(
 
                 if (0 > status || 0 != optarg[status]) {
                     log_start("Not a timestamp: \"%s\"", optarg);
-                    status = EILSEQ;
+                    status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
@@ -268,6 +426,7 @@ int main(
                         log_log(LOG_INFO);
                     }
                     usage = PUT_TIME;
+                    status = 0;
                 }
                 break;
             }
@@ -279,7 +438,7 @@ int main(
 
                 if (0 != *end || (0 == uint && 0 != errno)) {
                     log_start("Not an unsigned integer: \"%s\"", optarg);
-                    status = EILSEQ;
+                    status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
@@ -292,11 +451,11 @@ int main(
             }
             case ':': {
                 log_start("Option \"-%c\" requires an operand", optopt);
-                status = 1;
+                status = COMMAND_SYNTAX;
             }
             case '?':
                 log_start("Unknown option: \"%c\"", optopt);
-                status = 1;
+                status = COMMAND_SYNTAX;
             }
         }                               /* options loop */
 
@@ -310,80 +469,77 @@ int main(
             if (UNKNOWN == usage)
                 usage = PRINT;
 
-            if (CREATE == usage) {
-                if (0 < argCount) {
-                    log_start("Too many arguments");
-                    log_log(LOG_ERR);
-                    printUsage(progname);
-                    status = 2;
-                }
-                else {
-                    RegNode*        rootNode;
-
-                    if (0 != (status = reg_getNode("/", &rootNode, 1))) {
-                        log_add("Couldn't create registry");
+            switch (usage) {
+                case CREATE: {
+                    if (0 < argCount) {
+                        log_start("Too many arguments");
                         log_log(LOG_ERR);
-                        status = 2;
+                        printUsage(progname);
+                        status = COMMAND_SYNTAX;
                     }
+                    else {
+                        status = createRegistry();
+                    }
+                    break;
                 }
-            }
-            else if (RESET == usage) {
-                if (0 < argCount) {
-                    log_start("Too many arguments");
-                    log_log(LOG_ERR);
-                    printUsage(progname);
-                    status = 2;
-                }
-                else {
-                    if (0 != reg_reset()) {
-                        log_add("Couldn't reset registry");
+                case RESET: {
+                    if (0 < argCount) {
+                        log_start("Too many arguments");
                         log_log(LOG_ERR);
-                        status = 2;
+                        printUsage(progname);
+                        status = COMMAND_SYNTAX;
                     }
-                }
-            }
-            else if (PRINT == usage) {
-                if (1 < argCount) {
-                    log_start("Too many arguments");
-                    log_log(LOG_ERR);
-                    printUsage(progname);
-                    status = 2;
-                }
-                else if (status =
-                        printValues(0 == argCount ? "/" : argv[optind])) {
-                    log_log(LOG_ERR);
-                    status = ENOENT == status ? 1 : 2;
-                }
-            }
-            else if (1 != argCount) {
-                log_start("Path name of node or value not specified");
-                log_log(LOG_ERR);
-                printUsage(progname);
-                status = 2;
-            }
-            else {
-                switch (usage) {
-                case PUT_UINT:
-                    status = reg_putUint(argv[optind], uint);
+                    else {
+                        status = resetRegistry();
+                    }
                     break;
-                case PUT_STRING:
-                    status = reg_putString(argv[optind], string);
-                    break;
-                case PUT_TIME:
-                    status = reg_putTime(argv[optind], &timestamp);
-                    break;
-                case PUT_SIGNATURE:
-                    status = reg_putSignature(argv[optind], signature);
-                    break;
-                default:
-                    abort();
                 }
-                if (status) {
-                    log_log(LOG_ERR);
-                    status = 2;
+                case REMOVE: {
+                    if (0 == argCount) {
+                        log_start(
+                            "Removal action requires absolute pathname(s)");
+                        log_log(LOG_ERR);
+                        printUsage(progname);
+                        status = COMMAND_SYNTAX;
+                    }
+                    else {
+                        status = actUponPathList(argv + optind, deletePath);
+                    }
+                    break;
                 }
-            }
-        }
+                case PRINT: {
+                    status = (0 == argCount)
+                        ? printPath("/")
+                        : actUponPathList(argv + optind, printPath);
+                    break;
+                }
+                default: {
+                    /*
+                     * Must be some kind of "put".
+                     */
+                    switch (usage) {
+                    case PUT_UINT:
+                        status = reg_putUint(argv[optind], uint);
+                        break;
+                    case PUT_STRING:
+                        status = reg_putString(argv[optind], string);
+                        break;
+                    case PUT_TIME:
+                        status = reg_putTime(argv[optind], &timestamp);
+                        break;
+                    case PUT_SIGNATURE:
+                        status = reg_putSignature(argv[optind], signature);
+                        break;
+                    default:
+                        abort();
+                    }
+                    if (status) {
+                        log_log(LOG_ERR);
+                        status = SYSTEM_ERROR;
+                    }
+                }                       /* put switch */
+            }                           /* "usage" switch */
+        }                               /* decoded options */
 
         sb_free(_valuePath);
     }                                   /* "_valuePath" allocated */

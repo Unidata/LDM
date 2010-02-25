@@ -1,0 +1,161 @@
+<HTML>
+
+<HEAD>
+<meta name="UIINDEX" content="4">
+<TITLE>What Gets Installed</TITLE>
+<META NAME="BOOKMARK" CONTENT="version ID">
+<META NAME="AUTHOR" CONTENT="steve">
+<META NAME="KEYWORDS" CONTENT="Software, LDM, basics, installation">
+<META NAME="DESCRIPTION" CONTENT="What Gets Installed.">
+</HEAD>
+
+<BODY>
+
+<h1 align="center">What Gets Installed</h1>
+
+<p>
+The following directories and files are created or installed by a canonical
+LDM installation process:
+<dl>
+    <dt><tt>$HOME/@PACKAGE@-@VERSION@/bin/</tt>
+    <dd>Executable program directory:
+    <br><br>
+        <dl>
+            <dt><tt>afos</tt>
+            <dd>Symbolic link to pqing(1) for AFOS data
+            <dt><tt>ddplus</tt>
+            <dd>Symbolic link to pqing(1) for DDPLUS data
+            <dt><tt>dds</tt>
+            <dd>Symbolic link to pqing(1) for DDS data
+            <dt><tt>feedme</tt>
+            <dd>Symbolic link to pqing(1) for generic data
+            <dt><tt>hds</tt>
+            <dd>Symbolic link to pqing(1) for HDS data
+            <dt><tt>hrs</tt>
+            <dd>Program to tell system logger to reread configuration file
+            <dt><tt>ids</tt>
+            <dd>Top-level LDM management utility
+            <dt><tt>ldmcheck</tt>
+            <dd>The LDM server
+            <dt><tt>ldmfail</tt>
+            <dd>Program for testing for an upstream LDM
+            <dt><tt>ldmsend</tt>
+            <dd>perl(1) script for monitoring remote hosts (deprecated)
+            <dt><tt>newlog</tt>
+            <dd>Program for testing access to remote LDM
+            <dt><tt>plotMetrics</tt>
+            <dd>Symbolic link to pqing(1) for PPS data
+            <dt><tt>pqact</tt>
+            <dd>Program for writing contents of the product-queue
+            <dt><tt>pqcheck</tt>
+            <dd>Program for creating a product-queue
+            <dt><tt>pqexpire</tt>
+            <dd>Program for ingesting serial data into the product-queue
+            <dt><tt>pqinsert</tt>
+            <dd>Program for monitoring the product-queue
+            <dt><tt>pqsend</tt>
+            <dd>Program for splitting WMO bulletins
+            <dt><tt>pqutil</tt>
+            <dd>Program for testing regular expressions
+            <dt><tt>regutil</tt>
+            <dd>Program for reporting LDM statistics to the mothership
+            <dt><tt>scour</tt>
+            <dd>Program for monitoring system parameters (deprecated)
+            <dt><tt>ulogger</tt>
+            <dd>Program for logging to the LDM log file
+        </dl>
+<br><br>
+    <dt><tt>$HOME/etc/</tt>
+    <dd>Configuration directory:
+    <br><br>
+        <dl>
+            <dt><tt>ldmd.conf</tt>
+            <dd>LDM server configuration file
+            <dt><tt>ldmd.conf.grow</tt>
+            <dd>LDM server configuration file for increasing queue size
+            <dt><tt>netcheck.conf</tt>
+            <dd>netcheck(1) configuration file (deprecated)
+            <dt><tt>pqact.conf</tt>
+            <dd>Canonical pqact(1) configuration file
+            <dt><tt>registry</tt>
+            <dd>LDM registry directory
+            <dt><tt>scour.conf</tt>
+            <dd>Scour((1) configuration file
+        </dl>
+<br><br>
+    <dt><tt>$HOME/@PACKAGE@-@VERSION@/include/</tt>
+    <dd>C header-file directory
+<br><br>
+    <dt><tt>$HOME/@PACKAGE@-@VERSION@/lib/</tt>
+    <dd>Library directory:
+    <br><br>
+        <dl>
+            <dt><tt>libdb-4.x.a</tt>
+            <dd>Static Berkeley-DB library
+            <dt><tt>libdb-4.x.la</tt>
+            <dd>libtool(1) reference for Berkeley-DB library
+            <dt><tt>libdb-4.x.so</tt>
+            <dd>Dynamic Berkeley-DB library
+            <dt><tt>libdb-4.so</tt>
+            <dd>Link to dynamic Berkeley-DB library
+            <dt><tt>libdb.a</tt>
+            <dd>Link to static Berkeley-DB library
+            <dt><tt>libdb.so</tt>
+            <dd>Link to dynamic Berkeley-DB library
+            <dt><tt>libldm.a</tt>
+            <dd>Static LDM library
+            <dt><tt>libldm.la</tt>
+            <dd>libtool(1) reference for LDM library
+            <dt><tt>libldm.so</tt>
+            <dd>Link to dynamic LDM library
+            <dt><tt>libldm.so.0</tt>
+            <dd>Link to dynamic LDM library
+            <dt><tt>libldm.so.0.0.0</tt>
+            <dd>Dynamic LDM library
+        </dl>
+<br><br>
+    <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/</tt>
+    <dd>Installation-independent documentation:
+    <br><br>
+        <dl>
+            <dt><tt>doc</tt>
+            <dd>Documentation other than man(1) pages (e.g., HTML files)
+            <dt><tt>man</tt>
+            <dd>man(1) pages
+        </dl>
+<br><br>
+    <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/doc/ldm/</tt>
+    <dd>LDM-related non-man(1) documentation:
+    <br><br>
+        <dl>
+            <dt>index.html</tt>
+            <dd>Top-level HTML page on the LDM
+        </dl>
+<br><br>
+    <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/man/</tt>
+    <dd>man(1) pages on the LDM system:
+    <br><br>
+        <dl>
+            <dt><tt>man1</tt>
+            <dd>man(1) pages for LDM programs
+            <dt><tt>man3</tt>
+            <dd>man(1) pages for LDM library functions
+        </dl>
+<br><br>
+    <dt><tt>$HOME/var/</tt>
+    <dd>Variable LDM state files:
+    <br><br>
+        <dl>
+            <dt><tt>logs</tt>
+            <dd>Log file directory
+            <dt><tt>queue</tt>
+            <dd>Product-queue directory
+        </dl>
+<dl>
+
+<script language="JavaScript" type="text/JavaScript">
+document.write(date_modified);
+</script>
+
+</BODY>
+</HTML>

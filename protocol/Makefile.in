@@ -139,6 +139,7 @@ F77 = @F77@
 FFLAGS = @FFLAGS@
 GDBMLIB = @GDBMLIB@
 GREP = @GREP@
+HOSTNAME = @HOSTNAME@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -304,6 +305,7 @@ lib_la_SOURCES = \
     xdr_data.c
 
 lib_la_CPPFLAGS = \
+    -I$(top_srcdir) \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/pq \

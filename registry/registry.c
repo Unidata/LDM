@@ -129,15 +129,9 @@ static void resetRegistry(void)
  */
 static RegStatus closeRegistry(void)
 {
-    RegStatus   status;
+    RegStatus   status = beClose(_backend);
 
-    if (NULL == _backend) {
-        status = 0;
-    }
-    else {
-        status = beClose(_backend);
-        _backend = NULL;
-    }
+    _backend = NULL;
 
     return status;
 }
@@ -249,10 +243,13 @@ static RegStatus formatUint(
  *
  * Arguments:
  *      string          Pointer to the string to be parsed.  Shall not be NULL.
+ *                      The format of the string shall be
+ *                      YYYYMMDDThhmmss[.uuuuuu].
  *      value           Pointer to the value.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      EILSEQ          The string doesn't represent a time
+ *      EILSEQ          The string doesn't represent a time.  "log_start()"
+ *                      called.
  */
 static RegStatus parseTime(
     const char* const   string,
@@ -817,7 +814,8 @@ static RegStatus putValue(
 
 /*
  * Sets the pathname of the registry.  To have an effect, this function must be
- * called before any function that accesses the registry.
+ * called before any function that accesses the registry and after calling
+ * "reg_reset()".
  *
  * Arguments:
  *      path            Pointer to the pathname of the registry.  May be NULL.
@@ -879,7 +877,8 @@ RegStatus reg_close(void)
 }
 
 /*
- * Resets the registry if it exists.  Unconditionally resets this module.
+ * Resets the registry if it exists.  Unconditionally resets this module,
+ * returning the pathname of the database to its default value.
  *
  * Returns:
  *      0               Success
@@ -1123,6 +1122,7 @@ RegStatus reg_putSignature(
  *                      deleted.  Shall not be NULL.
  * Returns:
  *      0               Success
+ *      ENOENT          No such value
  *      EINVAL          The absolute path name is invalid.  "log_start()"
  *                      called.
  *      EIO             Backend database error.  "log_start()" called.

@@ -517,8 +517,8 @@ shipprod(const prod_info *infop, const void *datap,
 
 int main(int ac, char *av[])
 {
-        const char* const       pqfname = getQueuePath();
-        const char *progname = ubasename(av[0]);
+        const char* pqfname = getQueuePath();
+        const char* progname = ubasename(av[0]);
         char *logfname;
         prod_spec spec;
         int status = 0;
@@ -577,6 +577,7 @@ int main(int ac, char *av[])
                         remote = optarg;
                         break;
                 case 'q':
+                        pqfname = optarg;
                         setQueuePath(optarg);
                         break;
                 case 'p':

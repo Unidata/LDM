@@ -64,6 +64,7 @@ lib_la_SOURCES		= \
     UpFilter.c \
     xdr_data.c
 lib_la_CPPFLAGS		= \
+    -I$(top_srcdir) \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/pq \

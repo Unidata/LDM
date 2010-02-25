@@ -66,6 +66,17 @@ The age, in seconds, of the oldest data-product in the queue.
 .TP
 .B ageYoungest
 The age, in seconds, of the youngest data-product in the queue.
+.TP
+.B minVirtResTime
+The minimum virtual residence time, in seconds, of data-products in the queue.
+The virtual residence time of a data-product is the time difference from when
+the data-product was originally created to when it was removed from the local
+product-queue.  The minimum virtual residence time is the smallest such value
+over all data-products that have been removed from the queue since this metric
+was initialized.  If the queue is not yet at equilibrium (i.e., if no
+data-products have been deleted since this parameter was initialized) then this
+metric will be -1.  This parameter can be reset via the \fBpqutil\fP(1)
+utility.
 .RE
 .TP
 .BI "-l " logfile
@@ -122,6 +133,7 @@ minutes.
 .LP
 .BR ldmd (1),
 .BR pqact(1),
+.BR pqutil(1),
 .BR ulog (3),
 .BR pq (3),
 .BR syslogd (8),
