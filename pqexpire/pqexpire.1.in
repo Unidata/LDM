@@ -1,5 +1,4 @@
-." $Id: pqexpire.1,v 1.10.20.3 2009/06/18 16:15:34 steve Exp $
-.TH PQEXPIRE 1 "$Date: 2009/06/18 16:15:34 $"
+.TH PQEXPIRE 1 "2010-03-10"
 .SH NAME
 pqexpire - program to delete old products from a Unidata LDM product queue
 .SH SYNOPSIS
@@ -76,8 +75,11 @@ default is to use \fBsyslogd\fP(8) if no logfile is provided.  Specifying
 .TP
 .BI "-q " queue
 The pathname of the data product queue.
-The default is \fBdata/ldm.pq\fP relative to the installation point,
-which is typically \fB/usr/local/ldm\fP. The compiled in default can
+The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP
+.hy
+The configuration default can
 be overridden by setting the environment variable \fBLDMPQFNAME\fP.
 Use of \fB-q\fP overrides the default and the environment variable.
 .TP

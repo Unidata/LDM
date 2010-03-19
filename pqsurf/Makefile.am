@@ -36,3 +36,9 @@ TAGS_FILES		= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
+
+if MAINTAINER
+pqsurf.1:	pqsurf.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif

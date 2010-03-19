@@ -1351,13 +1351,12 @@ getPreviousProdInfo(
              * successfully-received product.
              */
             int         c;
-            char        comment[1];
 
             /*
              * Skip any comments.
              */
             while ((c = fgetc(file)) == '#')
-                (void)fscanf(file, "%*[^\n]\n", comment);
+                (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
                 log_errno();
@@ -1680,22 +1679,19 @@ prog_requester(
                 else {
                     log_log(LOG_NOTICE);
                     err_log(errObj, ERR_NOTICE);
-                    free_prod_class(remote.clssp);
+                    free_remote_clss();
 
-                    if ((remote.clssp = dup_prod_class(clssp)) == NULL) {
-                        err_log_and_free(
-                            ERR_NEW1(0, NULL,
-                                "Couldn't duplicate product-class: %s",
-                                strerror(errno)),
-                            ERR_FAILURE);
-
+                    if (set_remote_class(clssp)) {
+                        log_log(LOG_ERR);
                         errCode = EXIT_FAILURE;
                     }
                     else {
                         /*
                          * Try LDM version 5.
                          */
-                        errCode = forn5(FEEDME, source, &remote.clssp,
+                        peer_info*      remote = get_remote();
+
+                        errCode = forn5(FEEDME, source, &remote->clssp,
                             rpctimeo, inactive_timeo, ldmprog_5);
 
                         udebug("forn5(...) = %d", errCode);
@@ -1723,7 +1719,7 @@ prog_requester(
 
                             errCode = EXIT_FAILURE;
                         }
-                    }               /* remote.clssp set */
+                    }               /* remote product-class set */
                 }                   /* LDM-6 protocol not supported */
 
                 log_clear();

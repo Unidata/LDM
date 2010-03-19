@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "registry.h"
+#include "log.h"
 
 /*
  * Allocates memory.

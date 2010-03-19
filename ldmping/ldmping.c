@@ -121,7 +121,6 @@ char *av[] ;
 #define MAX_REMOTES 14 /* 2 * MAX_REMOTES + 3 < max_open_file_descriptors */
         h_clnt stats[MAX_REMOTES + 1] ;
         h_clnt *sp ;
-        unsigned remotePort = LDM_PORT;
 
         if(isatty(fileno(stderr)))
         {
@@ -181,8 +180,6 @@ char *av[] ;
                              av[0], optarg);
                         usage(av[0]);   
                     }
-
-                    remotePort = (unsigned)port;
 
                     break;
                 }

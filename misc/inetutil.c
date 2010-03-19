@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include "error.h"
 #include "ulog.h"
+#include "log.h"
 #include "inetutil.h"
 #include "../protocol/timestamp.h"
 #include <registry.h>
@@ -402,7 +403,6 @@ gethostaddr_in(
 )
 {
         char hostname[MAXHOSTNAMELEN];
-        struct hostent *hp;
 
         if(gethostname(hostname,MAXHOSTNAMELEN) == -1)
                 return -1;

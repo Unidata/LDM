@@ -55,6 +55,7 @@ DIST_SUBDIRS		= \
     misc \
     protocol \
     pq \
+    fauxPq \
     registry \
     pqcreate \
     pqcheck \
@@ -76,9 +77,8 @@ DIST_SUBDIRS		= \
     scripts \
     scour \
     regex \
-    html \
-    fauxPq \
-    test
+    test \
+    html
 
 lib_LTLIBRARIES		= libldm.la
 libldm_la_SOURCES	=
@@ -104,7 +104,7 @@ distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
 
 all:
 
-install-data-hook:	ensure-ldmhome-links ensure-ldmhome-dirs
+install-data-hook:	ensure-ldmhome-links ensure-var
 if INCLUDE_ROOT_ACTIONS
 	@echo
 	@echo "\
@@ -129,18 +129,24 @@ else
 	@echo "\
 NOTE: The command \"$(MAKE) root-actions\" will have to be executed by the \
 superuser in order to complete the installation process." \
-	| fmt >/dev/tty 2>&1
+	| fmt
 	@echo
 endif
 
+# "ls" is used in the following instead of "test -e" because if "share" is a
+# symbolic link to "runtime/share" and "runtime/share" doesn't exist, then
+# "test -e share" is false.
 ensure-ldmhome-links:
 	cd $(DESTDIR)$(LDMHOME) \
-	&& ( test -e src || $(LN_S) runtime/src src ) \
-	&& ( test -e bin || $(LN_S) runtime/bin bin ) \
-	&& ( test -e include || $(LN_S) runtime/include include ) \
-	&& ( test -e lib || $(LN_S) runtime/lib lib )
+	&& ( ls src >/dev/null 2>&1 || $(LN_S) runtime/src src ) \
+	&& ( ls bin >/dev/null 2>&1 || $(LN_S) runtime/bin bin ) \
+	&& ( ls include >/dev/null 2>&1 || $(LN_S) runtime/include include ) \
+	&& ( ls lib >/dev/null 2>&1 || $(LN_S) runtime/lib lib ) \
+	&& ( ls share >/dev/null 2>&1 || $(LN_S) runtime/share share ) \
+	&& ( test ! -e $(distName) || ( test -e runtime || \
+	    $(LN_S) $(distName) runtime ) )
 
-ensure-ldmhome-dirs:
+ensure-var:	$(DESTDIR)$(localstatedir)
 	if test -e $(DESTDIR)$(LDMHOME)/data; then \
 	    test -e $(DESTDIR)$(QUEUE_DIR) \
 	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data $(DESTDIR)$(QUEUE_DIR); \
@@ -153,6 +159,15 @@ ensure-ldmhome-dirs:
 	else \
 	    test -e $(DESTDIR)$(LOGS_DIR) || mkdir -p $(DESTDIR)$(LOGS_DIR); \
 	fi
+	if test -e $(DESTDIR)$(LDMHOME)/data; then \
+	    test -e $(DESTDIR)$(DATA_DIR) \
+	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data $(DESTDIR)$(DATA_DIR); \
+	else \
+	    test -e $(DESTDIR)$(DATA_DIR) || mkdir -p $(DESTDIR)$(DATA_DIR); \
+	fi
+
+$(DESTDIR)$(localstatedir):
+	$(MKDIR_P) $@
 
 root-actions:	\
     install_setuids \
@@ -217,6 +232,9 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 		echo 1>&2 "Couldn't build manual-page database"; \
 	fi
 
+remote-checks:	dist
+	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
+
 commit-check:
 	if git status -a >/dev/null; then \
 	    echo 1>&2 'Package needs "git commit -a"'; \
@@ -245,8 +263,9 @@ beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
     ensure-rpc-entry \
     ensure-services-entry \
     ensure-ldmhome-links \
-    ensure-ldmhome-dirs \
+    ensure-var \
     commit-check \
+    remote-checks \
     tag \
     ftp \
     beta

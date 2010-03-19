@@ -31,3 +31,9 @@ TAGS_FILES	= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 dist_man1_MANS	= pqexpire.1
+
+if MAINTAINER
+pqexpire.1:	pqexpire.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif

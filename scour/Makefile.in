@@ -101,6 +101,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -225,6 +226,7 @@ top_srcdir = @top_srcdir@
 EXTRA_DIST = scour.in scour.conf
 dist_bin_SCRIPTS = scour
 dist_man1_MANS = scour.1
+DISTCLEANFILES = scour
 all: all-am
 
 .SUFFIXES:
@@ -412,6 +414,7 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -500,6 +503,14 @@ uninstall-man: uninstall-man1
 	uninstall uninstall-am uninstall-dist_binSCRIPTS uninstall-man \
 	uninstall-man1
 
+
+@MAINTAINER_TRUE@scour.1:	scour.1.in
+@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
+
+@MAINTAINER_TRUE@scour.conf:	scour.conf.in
+@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
 
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/scour.conf

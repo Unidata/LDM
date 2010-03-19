@@ -438,9 +438,6 @@ typedef string keyt<KEYSIZE>;
 %bool_t
 %xdr_prod_spec(XDR *xdrs, prod_spec *objp)
 %{
-%
-%	 register long *buf;
-%
 %	 if (!xdr_feedtypet(xdrs, &objp->feedtype)) {
 %		 return (FALSE);
 %	 }

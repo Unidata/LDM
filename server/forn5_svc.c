@@ -44,6 +44,7 @@ s_csbd(h_clnt *hcp, const prod_info *infop, const void *datap)
         datapkt pkt;
         unsigned unsent;
         char *cp;
+        peer_info*      remote = get_remote();
 
 restart:
         /* TODO: mtu */
@@ -71,13 +72,13 @@ restart:
 
                 if(status != ENOERR)
                         return EIO;
-                if(remote.clssp == NULL
-                                || remote.clssp->psa.psa_len == 0)
+                if(remote->clssp == NULL
+                                || remote->clssp->psa.psa_len == 0)
                 {
                         unotice("No match for request");
                         return EIO;
                 }
-                if(!clss_eq(remote.clssp, want))
+                if(!clss_eq(remote->clssp, want))
                 {
                         ldm_replyt reply2;
 
@@ -86,9 +87,10 @@ restart:
                          * only be changing timestamps.
                          */
                         uerror("SHOULDN'T HAPPEN remote: %s",
-                                 s_prod_class(NULL, 0, remote.clssp));
+                                 s_prod_class(NULL, 0, remote->clssp));
 
-                        rpc_stat = hiya5(hcp, remote.clssp, rpctimeo, &reply2);
+                        rpc_stat = hiya5(hcp, remote->clssp, rpctimeo,
+                            &reply2);
                         if(rpc_stat != RPC_SUCCESS)
                         {
                                 uerror("RECLASS: hiya5 failed: %s",
@@ -102,7 +104,7 @@ restart:
                                 return EIO;
                         }
                 }
-                if(!prodInClass(remote.clssp, infop))
+                if(!prodInClass(remote->clssp, infop))
                         return ENOERR;  /* He doesn't want this one */
                 /* else, here we go */
                 break;
@@ -159,6 +161,7 @@ s_xhereis(h_clnt *hcp, const prod_info *infop, const void *datap,
 {
         ldm_replyt reply;
         enum clnt_stat rpc_stat;
+        peer_info*      remote = get_remote();
         
         rpc_stat = xhereis5(hcp, xprod, size, rpctimeo, &reply);        
         if(rpc_stat == RPC_PROCUNAVAIL)
@@ -190,13 +193,13 @@ s_xhereis(h_clnt *hcp, const prod_info *infop, const void *datap,
 
                 if(status != ENOERR)
                         return EIO;
-                if(remote.clssp == NULL
-                                || remote.clssp->psa.psa_len == 0)
+                if(remote->clssp == NULL
+                                || remote->clssp->psa.psa_len == 0)
                 {
                         unotice("No match for request");
                         return EIO;
                 }
-                if(!clss_eq(remote.clssp, want))
+                if(!clss_eq(remote->clssp, want))
                 {
                         ldm_replyt reply2;
 
@@ -205,9 +208,10 @@ s_xhereis(h_clnt *hcp, const prod_info *infop, const void *datap,
                          * only be changing timestamps.
                          */
                         uerror("SHOULDN'T HAPPEN remote: %s",
-                                 s_prod_class(NULL, 0, remote.clssp));
+                                 s_prod_class(NULL, 0, remote->clssp));
 
-                        rpc_stat = hiya5(hcp, remote.clssp, rpctimeo, &reply2);
+                        rpc_stat = hiya5(hcp, remote->clssp, rpctimeo,
+                            &reply2);
                         if(rpc_stat != RPC_SUCCESS)
                         {
                                 uerror("RECLASS: hiya5 failed: %s",
@@ -257,6 +261,7 @@ noti5_sqf(const prod_info *infop, const void *datap,
         ldm_replyt reply;
         h_clnt *hcp = (h_clnt *)vp;
         enum clnt_stat rpc_stat;
+        peer_info*      remote = get_remote();
 
         rpc_stat = notification5(hcp, infop, rpctimeo, &reply);
         if(rpc_stat != RPC_SUCCESS)
@@ -275,13 +280,13 @@ noti5_sqf(const prod_info *infop, const void *datap,
                 unotice("RECLASS: %s", s_prod_class(NULL, 0, want));
                 if(status != ENOERR)
                         return EIO;
-                if(remote.clssp == NULL
-                                || remote.clssp->psa.psa_len == 0)
+                if(remote->clssp == NULL
+                                || remote->clssp->psa.psa_len == 0)
                 {
                         unotice("No match for request %s");
                         return EIO;
                 }
-                if(!clss_eq(remote.clssp, want))
+                if(!clss_eq(remote->clssp, want))
                 {
                         ldm_replyt reply2;
 
@@ -290,9 +295,10 @@ noti5_sqf(const prod_info *infop, const void *datap,
                          * only be changing timestamps.
                          */
                         uerror("SHOULDN'T HAPPEN remote: %s",
-                                 s_prod_class(NULL, 0, remote.clssp));
+                                 s_prod_class(NULL, 0, remote->clssp));
 
-                        rpc_stat = hiya5(hcp, remote.clssp, rpctimeo, &reply2);
+                        rpc_stat = hiya5(hcp, remote->clssp, rpctimeo,
+                            &reply2);
                         if(rpc_stat != RPC_SUCCESS)
                         {
                                 uerror("RECLASS: hiya5 failed: %s",
@@ -337,6 +343,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         /* used in keepalive calculation */
         timestampt now;
         const int keepalive_interval = (int)(inactive_timeo/2 - 2 * interval);
+        peer_info*      remote = get_remote();
 
         /* assert(keepalive_interval > 0); */
         
@@ -359,8 +366,8 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                 return NULL;
         }
 
-        if(remote.clssp == NULL
-                        || remote.clssp->psa.psa_len == 0)
+        if(remote->clssp == NULL
+                        || remote->clssp->psa.psa_len == 0)
         {
                 unotice("No match for request %s",
                         s_prod_class(NULL, 0, want));
@@ -369,14 +376,14 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                 return NULL;
         }
 
-        if(!clss_eq(remote.clssp, want))
+        if(!clss_eq(remote->clssp, want))
         {
                 theReply.code = RECLASS;
                 if (ulogIsVerbose())
                     uinfo("reclss: %s: %s",
                             remote_name(),
-                            s_prod_class(NULL, 0, remote.clssp));
-                theReply.ldm_replyt_u.newclssp = remote.clssp;
+                            s_prod_class(NULL, 0, remote->clssp));
+                theReply.ldm_replyt_u.newclssp = remote->clssp;
                 return(&theReply);
         }
 
@@ -407,10 +414,10 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         if(ident != NULL && *ident != 0)
                 set_abbr_ident(remote_name(), ident);
         unotice("Starting Up(%s/5): %s", 
-            PACKAGE_VERSION, s_prod_class(NULL, 0, remote.clssp));
+            PACKAGE_VERSION, s_prod_class(NULL, 0, remote->clssp));
 
         unotice("topo:  %s %s", remote_name(),
-                        s_feedtypet(clss_feedtypeU(remote.clssp)));
+                        s_feedtypet(clss_feedtypeU(remote->clssp)));
 
         /* else, theReply.code == OK */
         if(!svc_sendreply(rqstp->rq_xprt, (xdrproc_t)xdr_ldm_replyt, 
@@ -433,19 +440,19 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
          * Change the SVCXPRT into an h_clnt.
          */
         if(h_xprt_turn(&hc, remote_name(), rqstp->rq_xprt,
-                        remote.sendsz, remote.recvsz) < H_CLNTED)
+                        remote->sendsz, remote->recvsz) < H_CLNTED)
         {
                 uerror("%s", s_hclnt_sperrno(&hc));
                 exit(1);
         }
 
         /* Set the "pktsz" used by comingsoon5/blkdata5 */
-        feed_pktsz = remote.sendsz - DATAPKT_RPC_OVERHEAD;
+        feed_pktsz = remote->sendsz - DATAPKT_RPC_OVERHEAD;
         if(feed_pktsz > DBUFMAX)
                 feed_pktsz = DBUFMAX;
         udebug("feed_pktsz %u", feed_pktsz);
 
-        status =  pq_cClassSet(pq,  &mt, remote.clssp);
+        status =  pq_cClassSet(pq,  &mt, remote->clssp);
         if(status)
         {
                 uerror("pq_cClassSet failed: %s: %s\n",
@@ -458,7 +465,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         hc.elapsed = TS_ZERO;
         while(exitIfDone(0))
         {
-                status = pq_sequence(pq, mt, remote.clssp, doit, &hc);
+                status = pq_sequence(pq, mt, remote->clssp, doit, &hc);
 
                 switch(status) {
                 case 0: /* no error */
@@ -466,7 +473,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
                         udebug("End of Queue");
-                        if(!pq_ctimeck(pq, mt, remote.clssp, &maxlatency))
+                        if(!pq_ctimeck(pq, mt, remote->clssp, &maxlatency))
                         {
                                 unotice("Request Satisfied");
                                 done = 1;

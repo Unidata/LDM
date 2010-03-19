@@ -93,7 +93,7 @@ LDM installation process:
             <dt><tt>libdb-4.x.a</tt>
             <dd>Static Berkeley-DB library
             <dt><tt>libdb-4.x.la</tt>
-            <dd>libtool(1) reference for Berkeley-DB library
+            <dd>Berkeley-DB libtool(1) library
             <dt><tt>libdb-4.x.so</tt>
             <dd>Dynamic Berkeley-DB library
             <dt><tt>libdb-4.so</tt>
@@ -105,7 +105,7 @@ LDM installation process:
             <dt><tt>libldm.a</tt>
             <dd>Static LDM library
             <dt><tt>libldm.la</tt>
-            <dd>libtool(1) reference for LDM library
+            <dd>LDM libtool(1) library
             <dt><tt>libldm.so</tt>
             <dd>Link to dynamic LDM library
             <dt><tt>libldm.so.0</tt>
@@ -146,9 +146,11 @@ LDM installation process:
     <dd>Variable LDM state files:
     <br><br>
         <dl>
+            <dt><tt>data</tt>
+            <dd>Default locally-processed files directory
             <dt><tt>logs</tt>
             <dd>Log file directory
-            <dt><tt>queue</tt>
+            <dt><tt>queues</tt>
             <dd>Product-queue directory
         </dl>
 <dl>

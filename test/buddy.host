@@ -1,8 +1,10 @@
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64
-
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64
+
+# c89: Warning: option -/ passed to ld
+# c89: Warning: illegal option -mp/ldm-6.9.0.0/ldm-6.9.0.0/...
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64
 
 # /usr/xpg4/bin/make crashes on the autoconf-generated makefiles
 #

@@ -123,12 +123,11 @@ stateRead(
         }
         else {
             int         c;
-            char        comment[1];
 
             status = -3;                /* state-file is corrupt */
 
             while ((c = fgetc(file)) == '#')
-                (void)fscanf(file, "%*[^\n]\n", comment);
+                (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
                 log_errno();

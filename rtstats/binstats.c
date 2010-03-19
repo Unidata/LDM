@@ -138,7 +138,7 @@ ldmsend_statsbin(statsbin *sb)
 
         if(sb->recent_a.tv_sec == -1) return;
 
-        sprintf(stats_data, "%14s %14s %32s %7s %32s %12.0lf %12.0lf %g %10.2f %4.0f@%4s %20s\n\0",
+        sprintf(stats_data, "%14s %14s %32s %7s %32s %12.0lf %12.0lf %g %10.2f %4.0f@%4s %20s\n",
                 s_time(buf, sizeof(buf), sb->recent.tv_sec),
                 s_time(buf_a, sizeof(buf_a), sb->recent_a.tv_sec),
                 myname,

@@ -442,7 +442,7 @@ ldmsend(
 
             info.seqno = *seq_start;
 
-            sprintf(filename,"rtstats-%s/%s/%s/%s\0",PACKAGE_VERSION,origin,
+            sprintf(filename,"rtstats-%s/%s/%s/%s",PACKAGE_VERSION,origin,
                 feedid,prodo);
             info.ident = filename;
             /*

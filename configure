@@ -842,9 +842,10 @@ EGREP
 GREP
 CPP
 ARFLAGS
-REGISTRY_DIR
+DATA_DIR
 QUEUE_DIR
 LOGS_DIR
+REGISTRY_DIR
 LDMHOME
 HOSTNAME
 am__fastdepCC_FALSE
@@ -2647,17 +2648,13 @@ _ACEOF
 
 
 cat >>confdefs.h <<\_ACEOF
-#define _XOPEN_SOURCE_EXTENDED 1
-_ACEOF
-
-
-cat >>confdefs.h <<\_ACEOF
 #define _ALL_SOURCE 1
 _ACEOF
 
 #AC_USE_SYSTEM_EXTENSIONS
 
- if test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu; then
+ if test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu &&
+    test $PWD = $HOME/ldm/package/src; then
   MAINTAINER_TRUE=
   MAINTAINER_FALSE='#'
 else
@@ -4197,7 +4194,8 @@ $as_echo "$HOSTNAME" >&6; }
 
 { $as_echo "$as_me:$LINENO: checking LDMHOME" >&5
 $as_echo_n "checking LDMHOME... " >&6; };
-if test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu; then
+if test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu &&
+    test $PWD = $HOME/ldm/package/src; then
   LDMHOME=$prefix
 else
   test -z "$LDMHOME" && LDMHOME=$HOME
@@ -4205,13 +4203,19 @@ fi
 
 { $as_echo "$as_me:$LINENO: result: $LDMHOME" >&5
 $as_echo "$LDMHOME" >&6; }
-sysconfdir='$(LDMHOME)/etc'
-localstatedir='$(LDMHOME)/var'
+#
+# Certain installation directories are changed if they have default values
+# because an LDM installation has both version-dependent and
+# version-independent installation directories.
+test "$sysconfdir" = "$prefix/etc" || sysconfdir='$(LDMHOME)/etc'
+test "$localstatedir" = "$prefix/var" || localstatedir='$(LDMHOME)/var'
+REGISTRY_DIR='$(sysconfdir)'/registry
+
 LOGS_DIR='$(localstatedir)'/logs
 
-QUEUE_DIR='$(localstatedir)'/queue
+QUEUE_DIR='$(localstatedir)'/queues
 
-REGISTRY_DIR='$(sysconfdir)'/registry
+DATA_DIR='$(localstatedir)'/data
 
 
 
@@ -4809,6 +4813,48 @@ $as_echo_n "checking for POSIX shell... " >&6; }
     { $as_echo "$as_me:$LINENO: result: $SH" >&5
 $as_echo "$SH" >&6; }
 
+
+for ac_prog in gawk mawk nawk awk
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:$LINENO: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_AWK+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$AWK"; then
+  ac_cv_prog_AWK="$AWK" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_AWK="$ac_prog"
+    $as_echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+fi
+fi
+AWK=$ac_cv_prog_AWK
+if test -n "$AWK"; then
+  { $as_echo "$as_me:$LINENO: result: $AWK" >&5
+$as_echo "$AWK" >&6; }
+else
+  { $as_echo "$as_me:$LINENO: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$AWK" && break
+done
 
 for ac_prog in 'bison -y' byacc
 do
@@ -10991,6 +11037,71 @@ fi
 done
 
 
+# HACKS:
+{ $as_echo "$as_me:$LINENO: checking whether strtok_r is declared" >&5
+$as_echo_n "checking whether strtok_r is declared... " >&6; }
+if test "${ac_cv_have_decl_strtok_r+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+int
+main ()
+{
+#ifndef strtok_r
+  (void) strtok_r;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  ac_cv_have_decl_strtok_r=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_have_decl_strtok_r=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_have_decl_strtok_r" >&5
+$as_echo "$ac_cv_have_decl_strtok_r" >&6; }
+if test "x$ac_cv_have_decl_strtok_r" = x""yes; then
+  :
+else
+
+cat >>confdefs.h <<\_ACEOF
+#define _REENTRANT 1
+_ACEOF
+
+fi
+
+
 # Check whether --enable-shared was given.
 if test "${enable_shared+set}" = set; then
   enableval=$enable_shared; p=${PACKAGE-default}
@@ -11636,7 +11747,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 11639 "configure"' > conftest.$ac_ext
+  echo '#line 11750 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -14253,11 +14364,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14256: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14367: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14260: \$? = $ac_status" >&5
+   echo "$as_me:14371: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14543,11 +14654,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14546: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14657: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14550: \$? = $ac_status" >&5
+   echo "$as_me:14661: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14647,11 +14758,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14650: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14761: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14654: \$? = $ac_status" >&5
+   echo "$as_me:14765: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -17049,7 +17160,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 17052 "configure"
+#line 17163 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -17149,7 +17260,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 17152 "configure"
+#line 17263 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -19558,11 +19669,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:19561: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:19672: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:19565: \$? = $ac_status" >&5
+   echo "$as_me:19676: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -19662,11 +19773,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:19665: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:19776: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:19669: \$? = $ac_status" >&5
+   echo "$as_me:19780: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -21247,11 +21358,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:21250: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:21361: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:21254: \$? = $ac_status" >&5
+   echo "$as_me:21365: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -21351,11 +21462,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:21354: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:21465: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:21358: \$? = $ac_status" >&5
+   echo "$as_me:21469: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -23568,11 +23679,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:23571: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:23682: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:23575: \$? = $ac_status" >&5
+   echo "$as_me:23686: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -23858,11 +23969,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:23861: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:23972: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:23865: \$? = $ac_status" >&5
+   echo "$as_me:23976: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -23962,11 +24073,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:23965: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:24076: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:23969: \$? = $ac_status" >&5
+   echo "$as_me:24080: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -26650,7 +26761,7 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
-ac_config_files="$ac_config_files Berkeley-DB/Makefile Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile registry/Makefile registry/regpar.tab scripts/Makefile scripts/ldmadmin.pl scripts/ldmcheck scripts/ldmfail scripts/netcheck scripts/syscheck scour/Makefile scour/scour regex/Makefile html/Makefile html/basics/Makefile html/basics/activating.html html/basics/source-install-steps.html html/basics/what-gets-installed.html html/tutorial/Makefile test/Makefile"
+ac_config_files="$ac_config_files Berkeley-DB/Makefile Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile registry/Makefile scripts/Makefile scripts/ldmadmin scripts/ldmcheck scripts/ldmfail scripts/netcheck scripts/syscheck scour/Makefile scour/scour regex/Makefile html/Makefile html/basics/Makefile html/basics/activating.html html/basics/source-install-steps.html html/basics/what-gets-installed.html html/tutorial/Makefile test/Makefile"
 
 
 #AC_CONFIG_SUBDIRS([Berkeley-DB/dist])
@@ -27400,9 +27511,8 @@ do
     "server/Makefile") CONFIG_FILES="$CONFIG_FILES server/Makefile" ;;
     "ldmping/Makefile") CONFIG_FILES="$CONFIG_FILES ldmping/Makefile" ;;
     "registry/Makefile") CONFIG_FILES="$CONFIG_FILES registry/Makefile" ;;
-    "registry/regpar.tab") CONFIG_FILES="$CONFIG_FILES registry/regpar.tab" ;;
     "scripts/Makefile") CONFIG_FILES="$CONFIG_FILES scripts/Makefile" ;;
-    "scripts/ldmadmin.pl") CONFIG_FILES="$CONFIG_FILES scripts/ldmadmin.pl" ;;
+    "scripts/ldmadmin") CONFIG_FILES="$CONFIG_FILES scripts/ldmadmin" ;;
     "scripts/ldmcheck") CONFIG_FILES="$CONFIG_FILES scripts/ldmcheck" ;;
     "scripts/ldmfail") CONFIG_FILES="$CONFIG_FILES scripts/ldmfail" ;;
     "scripts/netcheck") CONFIG_FILES="$CONFIG_FILES scripts/netcheck" ;;

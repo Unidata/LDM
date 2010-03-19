@@ -16,26 +16,7 @@ typedef struct backend  Backend;
 extern "C" {
 #endif
 
-typedef struct {
-    char*       key;            /* responsibility of backend database */
-    char*       value;          /* responsibility of backend database */
-    void*       private;        /* responsibility of backend database */
-}       RdbCursor;
-
-/*
- * Resets the backend database.
- *
- * ARGUMENTS:
- *      path            Pathname of the database directory.  Shall not be NULL.
- *                      The client can free it upon return.
- * RETURNS:
- *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
- */
-RegStatus
-reset(
-    const char* const   path);
+typedef struct cursor        Cursor;
 
 /*
  * Opens the backend database.
@@ -75,7 +56,8 @@ beClose(
     Backend* const      backend);
 
 /*
- * Resets the backend database.
+ * Resets the backend database.  This function shall be called only when
+ * nothing holds the database open.
  *
  * ARGUMENTS:
  *      path            Pathname of the database directory.  Shall not be NULL.
@@ -90,7 +72,8 @@ beReset(
     const char* const   path);
 
 /*
- * Removes the backend database.
+ * Removes the backend database.  This function shall be called only when
+ * nothing holds the database open.
  *
  * ARGUMENTS:
  *      path            Pathname of the database directory.  Shall not be NULL.
@@ -175,82 +158,101 @@ beSync(
     Backend* const      backend);
 
 /*
- * Initializes an RDB cursor structure.
+ * Creates a new cursor structure.
  *
  * ARGUMENTS:
  *      backend         Pointer to the backend database.  Shall have been
  *                      set by beOpen().  Shall not be NULL.
- *      rdbCursor       Pointer to an RDB cursor structure.  Shall not be NULL.
- *                      Upon successful return, "*rdbCursor" will be set.  The
- *                      client should call "beCloseCursor()" when the cursor
- *                      is no longer needed.
+ *      cursor          Pointer to a pointer to a cursor structure.  Shall
+ *                      not be NULL.  Upon successful return, "*cursor" will
+ *                      be set.  The client should call "beFreeCursor()" when
+ *                      the cursor is no longer needed.
  * RETURNS
- *      0               Success.  "*rdbCursor" is set.
+ *      0               Success.  "*cursor" is set.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
-beInitCursor(
+beNewCursor(
     Backend* const      backend,
-    RdbCursor* const    rdbCursor);
+    Cursor** const      cursor);
 
 /*
- * Sets an RDB cursor structure to reference the first entry in the backend
+ * Sets an cursor structure to reference the first entry in the backend
  * database whose key is greater than or equal to a given key.
  *
  * ARGUMENTS:
- *      rdbCursor       Pointer to the RDB cursor structure.  Shall not be NULL.
+ *      cursor          Pointer to the cursor structure.  Shall not be NULL.
  *                      Shall have been set by "beInitCursor()".  Upon
- *                      successful return, "*rdbCursor" will be set.  The
- *                      client shall not modify "rdbCursor->key" or
- *                      "rdbCursor->value" or the strings to which they point.
+ *                      successful return, "*cursor" will be set.
  *      key             Pointer to the starting key.  Shall not be NULL.  The
  *                      empty string obtains the first entry in the database,
  *                      if it exists.
  * RETURNS
- *      0               Success.  "*rdbCursor" is set.
- *      ENOENT          The database is empty.  "*rdbCursor" is unmodified.
- *      EIO             Backend database error.  "*rdbCursor" is unmodified.
+ *      0               Success.  "*cursor" is set.
+ *      ENOENT          The database is empty.  "*cursor" is unmodified.
+ *      EIO             Backend database error.  "*cursor" is unmodified.
  *                      "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
 beFirstEntry(
-    RdbCursor* const    rdbCursor,
+    Cursor* const       cursor,
     const char* const   key);
 
 /*
  * Advances a cursor to the next entry.
  *
  * ARGUMENTS:
- *      rdbCursor       Pointer to the RDB cursor structure.  Shall not be NULL.
+ *      cursor          Pointer to the cursor structure.  Shall not be NULL.
  *                      Shall have been set by "beFirstCursor()".  Upon
- *                      successful return, "*rdbCursor" will be set.  The client
- *                      shall not modify "rdbCursor->key" or "rdbCursor->value"
- *                      or the strings to which they point.  This function can
- *                      change "rdbCursor->key", "rdbCursor->value", or the
- *                      strings to which they point.
+ *                      successful return, "*cursor" will be set.
  * RETURNS
- *      0               Success.  "*rdbCursor" is set.
- *      ENOENT     The database is empty.  "*rdbCursor" is unmodified.
- *      EIO    Backend database error.  "*rdbCursor" is unmodified.
+ *      0               Success.  "*cursor" is set.
+ *      ENOENT          The database is empty.  "*cursor" is unmodified.
+ *      EIO             Backend database error.  "*cursor" is unmodified.
  *                      "log_start()" called.
  */
 RegStatus
 beNextEntry(
-    RdbCursor* const    rdbCursor);
+    Cursor* const       cursor);
 
 /*
- * Closes an RDB cursor.
+ * Frees a cursor.  Should be called after every successful call to
+ * beNewCursor().
  *
  * ARGUMENTS:
- *      rdbCursor       Pointer to the RDB cursor structure.
+ *      cursor          Pointer to the cursor structure.  Shall not be NULL.
  * RETURNS:
  *      0               Success.  The client shall not use the cursor again.
  *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
-beCloseCursor(RdbCursor* rdbCursor);
+beFreeCursor(Cursor* cursor);
+
+/*
+ * Returns the key of a cursor.
+ *
+ * Arguments:
+ *      cursor          Pointer to the cursor whose key is to be returned.
+ *                      Shall not be NULL.
+ * Returns:
+ *      Pointer to the key.  Shall not be NULL if beFirstEntry() or 
+ *      beNextEntry() was successful.
+ */
+const char* beGetKey(const Cursor* cursor);
+
+/*
+ * Returns the value of a cursor.
+ *
+ * Arguments:
+ *      cursor          Pointer to the cursor whose value is to be returned.
+ *                      Shall not be NULL.
+ * Returns:
+ *      Pointer to the value.  Shall not be NULL if beFirstEntry() or 
+ *      beNextEntry() was successful.
+ */
+const char* beGetValue(const Cursor* cursor);
 
 #ifdef __cplusplus
 }

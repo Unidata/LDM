@@ -9,6 +9,17 @@
 EXTRA_DIST		= scour.in scour.conf
 dist_bin_SCRIPTS	= scour
 dist_man1_MANS		= scour.1
+DISTCLEANFILES		= scour
+
+if MAINTAINER
+scour.1:	scour.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+
+scour.conf:	scour.conf.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif
 
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/scour.conf

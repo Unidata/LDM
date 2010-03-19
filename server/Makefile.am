@@ -12,6 +12,7 @@ EXTRA_DIST		= \
     child_process_set.h \
     forn5_svc.h \
     ldm6_svc.c \
+    ldmd.1 \
     ldmd.conf \
     ldmd.conf.grow \
     parser.c \
@@ -34,6 +35,7 @@ ldmd_SOURCES	= \
     up6.c \
     wordexp.c
 CPPFLAGS		= \
+    -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
@@ -59,6 +61,12 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h
 CLEANFILES		= *.i
 sysconf_DATA		= ldmd.conf.grow
+
+if MAINTAINER
+ldmd.1:		ldmd.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif
 
 # Because both the client-side and server-side code that rpcgen(1) generates
 # use identical function names like "hereis_6" and because the LDM links to
@@ -122,8 +130,7 @@ uninstall-local:
 valgrind:	ldmd
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes \
-	    --trace-children=no --child-silent-after-fork=yes ./ldmd -l-
-#	    ./ldmd -l-
+	    --trace-children=no --child-silent-after-fork=no ./ldmd -l-
 
 debug:		ldmd
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb ./ldmd

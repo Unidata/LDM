@@ -44,7 +44,7 @@ host_triplet = @host@
 subdir = scripts
 DIST_COMMON = $(dist_bin_SCRIPTS) $(dist_man1_MANS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/ldmadmin.pl.in $(srcdir)/ldmcheck.in \
+	$(srcdir)/ldmadmin.in $(srcdir)/ldmcheck.in \
 	$(srcdir)/ldmfail.in $(srcdir)/netcheck.in \
 	$(srcdir)/syscheck.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -54,7 +54,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = ldmadmin.pl ldmcheck ldmfail netcheck syscheck
+CONFIG_CLEAN_FILES = ldmadmin ldmcheck ldmfail netcheck syscheck
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -104,6 +104,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -226,14 +227,13 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 EXTRA_DIST = \
-    ldmadmin.pl.in \
+    ldmadmin.in \
     ldmcheck.in \
     ldmfail.in \
     netcheck.in \
     netcheck.conf \
     syscheck.in
 
-BUILT_SOURCES = ldmadmin
 dist_bin_SCRIPTS = \
     netcheck \
     syscheck \
@@ -243,9 +243,8 @@ dist_bin_SCRIPTS = \
     plotMetrics
 
 dist_man1_MANS = ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1
-DISTCLEANFILES = ldmadmin
-all: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) all-am
+CLEANFILES = ldmadmin
+all: all-am
 
 .SUFFIXES:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -278,7 +277,7 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-ldmadmin.pl: $(top_builddir)/config.status $(srcdir)/ldmadmin.pl.in
+ldmadmin: $(top_builddir)/config.status $(srcdir)/ldmadmin.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 ldmcheck: $(top_builddir)/config.status $(srcdir)/ldmcheck.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
@@ -413,15 +412,13 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) check-am
+check: check-am
 all-am: Makefile $(SCRIPTS) $(MANS)
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) install-am
+install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -438,16 +435,15 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-libtool mostlyclean-am
@@ -516,7 +512,7 @@ uninstall-am: uninstall-dist_binSCRIPTS uninstall-man
 
 uninstall-man: uninstall-man1
 
-.MAKE: all check install install-am install-strip
+.MAKE: install-am install-strip
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
 	distclean distclean-generic distclean-libtool distdir dvi \
@@ -533,12 +529,15 @@ uninstall-man: uninstall-man1
 	uninstall-man1
 
 
-ldmadmin:	ldmadmin.pl ../registry/regpar.tab Makefile
-	awk -F : '{printf "s:@REG_%s@:%s:\n", $$1, $$2}' \
-	    ../registry/regpar.tab >$@.sed
-	sed -f $@.sed <ldmadmin.pl >$@.tmp
-	mv -f $@.tmp $@
-	rm $@.sed
+all:		ldmadmin
+
+@MAINTAINER_TRUE@ldmadmin.in:	ldmadmin.in.pl
+@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
+
+@MAINTAINER_TRUE@ldmadmin.1:	ldmadmin.1.in
+@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
 
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/netcheck.conf

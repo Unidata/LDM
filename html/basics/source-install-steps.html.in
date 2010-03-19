@@ -34,7 +34,7 @@ Then, do the following:
     $ rm @PACKAGE@-@VERSION@.tar.gz # optional
     $ cd @PACKAGE@-@VERSION@/src
     $ export PATH=... # if necessary
-    $ ./configure [--enable-logging=local<i>n</i>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
+    $ ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
     Password: ...
     $ make install &gt;make.log
     $ make clean # optional
@@ -56,7 +56,7 @@ the next section.
 
 <li>
 <a NAME="become"></a>
-<h3>Become the LDM User</h3>
+<h3>Become the LDM User in That User's Home Directory</h3>
 
 <p>Follow
 <a href="become_ldm.html">this advice</a> on becoming the 
@@ -72,7 +72,11 @@ Obtain the
 
 <p>The 
 <a href="glindex.html#LDM">LDM</a> 
-source-distribution can be obtained by clicking on the appropriate link in the 
+source-distribution can be obtained via the command
+<blockquote><pre>
+wget ftp://ftp.unidata.ucar.edu/pub/ldm/ldm</a>-6.9.0.0.tar.gz
+</pre></blockquote>
+or by clicking on the appropriate link in the 
 <a href="/downloads/ldm/">LDM download page</a>.
 Download the file into the 
 <a href="glindex.html#LDM user">LDM user</a>'s home directory.
@@ -93,11 +97,6 @@ utilities.
 For example:
 <blockquote><pre>
 cd                                                  # go to the LDM user's home-directory
-gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
-</pre></blockquote>
-or
-<blockquote><pre>
-cd                                                  # go to the LDM user's home-directory
 mkdir @PACKAGE@-@VERSION@                                   # make a version-specific subdirectory
 cd @PACKAGE@-@VERSION@                                      # go to the version-specific subdirectory
 gunzip -c $HOME/@PACKAGE@-@VERSION@.tar.gz | pax -r         # unpack the distribution
@@ -109,6 +108,13 @@ to allow for reversible upgrading of the LDM.  The section on
 <a href="activating.html">activating the LDM installation</a>
 has additional information.
 
+<p>If you don't care about having the ability to revert to a previous LDM
+installation, then you can simply do this:
+<blockquote><pre>
+cd                                                  # go to the LDM user's home-directory
+gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
+</pre></blockquote>
+
 <li>
 <a NAME="build"></a>
 <h3>
@@ -116,7 +122,7 @@ Build and Install the Distribution</h3>
 
 <ol type="A">
 
-<li><p>Go to the top-level directory of the just-unpacked package:
+<li><p>Go to the top-level directory of the just-unpacked package.  For example
 <blockquote><pre>
 cd $HOME/@PACKAGE@-@VERSION@/src
 </pre></blockquote>
@@ -131,50 +137,16 @@ make distclean
 </pre></blockquote>
 Don't worry if this command fails or even fails to execute.</li>
 
-<a name="environment-variables"></a>
-<li><p>(Optional) If necessary, override the default values for certain
-build-configuration parameters by setting the associated environment
-variables.  The environment variables that you may set include the
-following:
-<blockquote>
-<table align="center" border="2" cellpadding="6" cellspacing="0">
-    <tr>
-	<th>Variable</th>
-	<th>Meaning</th>
-	<th>Example Value</th>
-    </tr>
-	<td><code>PATH</code></td>
-	<td>Directory search-order for utilties</td>
-	<td><code>PATH=/usr/bin:/bin:/usr/sbin:/sbin</code></td>
-    </tr>
-    </tr>
-	<td><code>CC</code></td>
-	<td>C compiler</td>
-	<td><code>/usr/gnu/bin/gcc</code></td>
-    </tr>
-    <tr>
-	<td><code>CPPFLAGS</code></td>
-	<td >C preprocessor options</td>
-	<td><code>-DNDEBUG</code></td>
-    </tr>
-    <tr>
-	<td><code>CFLAGS</code></td>
-	<td >C compiler options</td>
-	<td><code>-O3</code></td>
-    </tr>
-    <tr>
-	<td><code>LIBS</code></td>
-	<td >Libraries to use</td>
-	<td><code>-lrpcsoc</code></td>
-    </tr>
-</table>
-</blockquote>
+<a name="PATH"></a>
+<li><p>(Optional) If necessary, adjust the <tt>PATH</tt> environment variable
+to obtain the necessary utilities.
 This step can be necessary due to the vagaries of build environments.  You
 should compare your build environment against the table of
 <a href="successes.html">successful build environments</a>
 and also against the table of
 <a href="failures.html">unsuccessful build environments</a>
-to determine if you need to perform this step.  Note that some of the computer
+to determine if you need to perform this step.
+Note that some of the computer
 systems can build both a 32-bit and a 64-bit LDM system.  We strongly 
 recommend that you choose a 64-bit build environment whenever possible so
 that the
@@ -190,19 +162,20 @@ example:
 	<th>Example</th>
     </tr>
 	<td>Standard UNIX<sup>®</sup> (e.g. <code>sh, ksh, bash</code>)</td>
-	<td nowrap><code>export CC=/usr/gnu/bin/gcc</code></td>
+	<td nowrap><code>export PATH=/usr/gnu/bin:/usr/bin:/bin</code></td>
     </tr>
     <tr>
 	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-	<td nowrap><code>setenv CC /usr/gnu/bin/gcc</code></td>
+	<td nowrap><code>setenv PATH /usr/gnu/bin:/usr/bin:/bin</code></td>
     </tr>
 </table>
 </blockquote>
 
 <li>
-<p><a name="run configure script"></a>
-Run the <code>configure</code> script.  You may use the following
-options, when and if appropriate:
+<p><a name="configure"></a>
+Execute the <code>configure</code> script to customize the
+installation process for your particular system.  You may use the following
+options and arguments, when and if appropriate:
 <blockquote>
 <dl>
     <p><dt><code>--enable-logging=<a href="glindex.html#localn">local<i>n</i>
@@ -212,14 +185,54 @@ options, when and if appropriate:
 	facility for logging messages.  If you have a previous 
 	<a href="glindex.html#LDM">LDM</a>
 	installation, then you should use the same facility.
-	The default is to use the
-	<code>local0</code> facility.
+	The default is <code>local0</code>.
+
+    <dt><code>--localstatedir=<i>volatile_dir</i></code>
+    <dd>Configures the LDM to use <i>volatile_dir</i> (<i>e.g.</i>,
+        <code>/var/ldm</code>) as the root directory for
+        highly volatile files such as the LDM 
+        <a href="glindex.html#product-queue">product-queue</a>,
+        <a href="glindex.html#logfile">LDM logfile</a>, and LDM metrics
+        files.  In general, such files should not be backed-up because of their
+        volatility, so having the root-directory for such files reside in a
+        disk partition that's not backed-up is a good idea.  Be aware, however,
+        that this directory <em>must</em> be on a locally mounted disk because
+        the LDM product-queue is memory-mapped, file-locked, and is accessed
+        more often than free beer at a frat party.  The default is
+        <code>$HOME/var</code>.
+
+    <dt><code>CC=</code><i>path</i>
+    <dd>Configures the build process to use <i>path</i> as the pathname of the
+        C compiler (<i>e.g.</i>, <code>CC=/usr/gnu/bin/gcc</code>).
+
+    <dt><code>CPPFLAGS=</code>...
+    <dd>C preprocessor options used by the build process
+        (<i>e.g.</i>, <code>CPPFLAGS=-UNDEBUG</code>).
+
+    <dt><code>CFLAGS=</code>...
+    <dd>C options used by the build process
+        (<i>e.g.</i>, <code>CFLAGS=-g</code>).
+
+    <dt><code>LIBS=</code>...
+    <dd>Additional libraries used by the build process
+        (<i>e.g.</i>, <code>LIBS="-L/opt/lib -lrpcsoc</code>").
 </dl>
 </blockquote>
 
-<p>Redirect <em>both</em> standard output
-and standard error to the file <code>configure.log</code>.
-The relevant command depends on your user-shell.  For example:
+<p>Use of the above can be necessary due to the vagaries of build
+environments.  You should compare your build environment against the table of
+<a href="successes.html">successful build environments</a> and also against the
+table of <a href="failures.html">unsuccessful build environments</a> to
+determine if you need particular arguments.  Note that some of the computer
+systems can build both a 32-bit and a 64-bit LDM system.  We strongly recommend
+that you choose a 64-bit build environment whenever possible so that the <a
+href="glindex.html#product-queue">product-queue</a> isn't unnecessarilly
+restricted to small sizes only.
+
+<p>When executing the <code>configure</code> script, redirect <em>both</em> the
+standard output and standard error streams to the file
+<code>configure.log</code>.  The relevant command depends on your user-shell.
+For example:
 <blockquote>
 <table align="center" border="2" cellpadding="6" cellspacing="0">
     <tr>
@@ -237,10 +250,8 @@ The relevant command depends on your user-shell.  For example:
     </tr>
 </table>
 </blockquote>
-This step customizes the installation process for your particular
-system.
 
-Because certain aspects of the LDM require root privileges
+<p>Because certain aspects of the LDM require root privileges
 (<i>e.g.</i>, listening on port 388, using the system logging daemon), the
 configure script will acertain if you can access those privileges.  <b>The
 script will ask you for your password and, possibly, the superuser's 
@@ -248,22 +259,17 @@ script will ask you for your password and, possibly, the superuser's
 information, it simply uses the passwords to acertain if you have access to
 the necessary privileges.
 
-If you don't have access to root privileges (or don't trust the configure
+<p>If you don't have access to root privileges (or don't trust the configure
 script) then simply enter nonsense when asked for the passwords.  The
 superuser will subsequently have to execute an additional step in order
 to complete the installation process.
-</li>
 
-<p>Inspect the file <code>configure.log</code> to verify the
-configuration process.
-If an error occurred, then the reason for the error can often be found
-in the file <code>config.log</code> (note the slightly different name).<p>
-<p>If you email the 
-<a href="glindex.html#UPC">UPC</a>
-because of a problem with this step, be sure to
-enclose the files <code>configure.log</code> and 
-<code>config.log</code>.</p>
-</li>
+<p>Inspect the file <code>configure.log</code> to verify the configuration
+process.  If an error occurred, then the reason for the error can often be
+found in the file <code>config.log</code> (note the slightly different
+name).<p> <p>If you email the <a href="glindex.html#UPC">UPC</a> because of a
+problem with this step, be sure to enclose the files <code>configure.log</code>
+and <code>config.log</code>.</p>
 
 <li>
 <p>Use a
@@ -290,14 +296,12 @@ The relevant command depends on your user shell.  For example:
 </table>
 </blockquote>
 
-This step builds the package and installs it.</p>
-
-<p>Inspect the file <code>make.log</code> to verify the build and
-installation process.  If something went wrong that you think might be fixed by
-<a href="#environment-variables">setting an environment variable</a>
-(such as using the <code>cc</code> compiler rather than the
-<code>c89</code> compiler) then return to the
-<a href="#clean-up">clean-up step</a> above.
+<p>Inspect the file <code>make.log</code> to verify the build and installation
+process.  If something went wrong that you think might be fixed by <a
+href="#PATH">setting the PATH environment variable</a> or by <a
+href="#configure">invoking the <tt>configure</tt> script</a> differently (such
+as by using the <code>cc</code> compiler rather than the <code>c89</code>
+compiler) then return to the <a href="#clean-up">clean-up step</a> above.
 
 <p>If you email the 
 <a href="glindex.html#UPC">UPC</a>
@@ -305,7 +309,6 @@ because of a problem with this step, be sure to
 enclose the files <code>configure.log</code>, 
 <code>config.log</code>, and
 <code>make.log</code>.</p>
-</li>
 
 <li><a name="pqcheck"></a>
 <p>(Optional) If you decided that the just-built
@@ -351,7 +354,7 @@ to notify the system logging daemon when a new log-file has been
 created.
 
 <li>
-<p>Use the <code>make(1)</code> utility to clean-up after yourself.
+<p>(Optional) Use the <code>make(1)</code> utility to clean-up after yourself.
 <blockquote><pre>
 make clean
 </blockquote></pre>
@@ -363,55 +366,6 @@ make clean
 installed where in a canonical installation process.
 
 <p><a href="../workshop/specifics.html#build">Workshop-specific instructions</a>.
-
-<li>
-<a name="subdirs"></a>
-<h3>(Optional) Modify the installed subdirectory structure</h3>
-
-    <p>
-    You may skip this step if you already have an LDM installation
-    (because you are upgrading your LDM, for example) because the
-    subdirectory structure should already be correct.
-
-    <p>The default installation will create some subdirectories
-    in the LDM user's home directory.
-    The subdirectories are
-    <em><tt>queue</tt></em> (containing the LDM product-queue),
-    <em><tt>logs</tt></em> (containing LDM log files),
-    and <em><tt>data</tt></em> (by default, containing locally-decoded data).
-    If the LDM user's home directory is automatically backed-up or is on
-    a remotely-mounted disk, then this structure should be modified.
-
-    The LDM's
-    <a href="glindex.html#product-queue">product-queue</a> 
-    <strong>must</strong> be on a locally-mounted disk because it's
-    memory-mapped, file-locked, and can be accessed like free beer at a frat
-    party.  Its contents are also highly volatile and probably
-    shouldn't be backed-up -- a situation that's also true for the LDM
-    log files and, possibly, the decoded-data hierarchy.  For these
-    reasons, you might consider moving some of these
-    subdirectories to another disk partition.
-    For example, the
-    following will create an LDM-specific directory on a disk partition
-    that is local to most systems but that's not automatically backed-up:
-    <pre>
-	su                           # become root
-	mkdir /var/ldm               # create new subdirectory
-	chown ldm:<i>groupId</i> /var/ldm   # change ownership
-	exit                         # become LDM user
-    </pre>
-    Once this is done, you can move any of the previously-mentioned
-    subdirectories.  For example, the
-    following moves the decoded-data directory:
-    <pre>
-	mkdir /var/ldm/data          # create new subdirectory
-	chmod -R g+w /var/ldm/data   # (optional) set group write permission
-	cd                           # go to home directory
-	rmdir data                   # remove previous default subdirectory
-	ln -s /var/ldm/data data     # create link from previous default
-    </pre>
-    The <em><tt>queue</tt></em> and <em><tt>logs</tt></em> subdirectories
-    can be similarly handled.
 
 <script language="JavaScript" type="text/JavaScript">
 document.write(date_modified);

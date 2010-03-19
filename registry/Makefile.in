@@ -43,7 +43,7 @@ bin_PROGRAMS = regutil$(EXEEXT)
 @HAVE_CUNIT_TRUE@check_PROGRAMS = testRegistry$(EXEEXT)
 subdir = registry
 DIST_COMMON = $(dist_man1_MANS) $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in $(srcdir)/regpar.tab.in
+	$(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -51,7 +51,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = regpar.tab
+CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 lib_la_LIBADD =
@@ -63,9 +63,11 @@ PROGRAMS = $(bin_PROGRAMS)
 regutil_SOURCES = regutil.c
 regutil_OBJECTS = regutil.$(OBJEXT)
 regutil_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
 regutil_DEPENDENCIES = lib.la $(top_builddir)/protocol/lib.la \
 	$(top_builddir)/rpc/lib.la $(top_builddir)/ulog/lib.la \
-	$(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
+	$(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
+	$(am__DEPENDENCIES_1)
 testRegistry_SOURCES = testRegistry.c
 testRegistry_OBJECTS = testRegistry-testRegistry.$(OBJEXT)
 @HAVE_CUNIT_TRUE@testRegistry_DEPENDENCIES = lib.la \
@@ -136,6 +138,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = $(DESTDIR)@DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -156,7 +159,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
-LDMHOME = @LDMHOME@
+LDMHOME = $(DESTDIR)@LDMHOME@
 LDM_LOGFILE = @LDM_LOGFILE@
 LDM_PORT = @LDM_PORT@
 LD_GEN = @LD_GEN@
@@ -166,7 +169,7 @@ LIBS = @LIBS@
 LIBS_CUNIT = @LIBS_CUNIT@
 LIBTOOL = @LIBTOOL@
 LN_S = @LN_S@
-LOGS_DIR = @LOGS_DIR@
+LOGS_DIR = $(DESTDIR)@LOGS_DIR@
 LOG_LDM = @LOG_LDM@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -187,7 +190,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
-QUEUE_DIR = @QUEUE_DIR@
+QUEUE_DIR = $(DESTDIR)@QUEUE_DIR@
 RANLIB = @RANLIB@
 REGISTRY_DIR = $(DESTDIR)@REGISTRY_DIR@
 RPCGEN = @RPCGEN@
@@ -257,29 +260,22 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+ETC_DIR = $(DESTDIR)$(sysconfdir)
+LOG_FILE = $(LOGS_DIR)/ldmd.log
+METRICS_FILE = $(LOGS_DIR)/metrics.txt
 noinst_LTLIBRARIES = lib.la
 EXTRA_DIST = \
-    backend-bdb.c \
-    backend.hin \
     backend.h \
+    backend-bdb.c \
     checkRegistry \
     installRegistry \
-    misc.hin \
     misc.h \
-    node.hin \
     node.h \
-    registry.hin \
     registry.h \
+    regpar.tab.in \
     regutil.txt \
-    stringBuf.hin \
-    stringBuf.h
-
-BUILT_SOURCES = \
-    backend.c backend.h \
-    misc.h \
-    node.h \
-    registry.h \
-    stringBuf.h
+    stringBuf.h \
+    substPaths
 
 lib_la_SOURCES = \
     backend.c \
@@ -310,11 +306,13 @@ LDADD = \
     $(top_builddir)/protocol/lib.la \
     $(top_builddir)/rpc/lib.la \
     $(top_builddir)/ulog/lib.la \
-    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
+    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
+    $(LD_GEN)
 
 dist_man1_MANS = regutil.1
-CLEANFILES = regutil.out backend.c
-DISTCLEANFILES = registry.h
+CLEANFILES = regutil.out regpar.tab
+DISTCLEANFILES = backend.c
+@MAINTAINER_TRUE@BUILT_SOURCES = substPaths
 @HAVE_CUNIT_TRUE@testRegistry_CPPFLAGS = \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir) \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/protocol \
@@ -366,8 +364,6 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-regpar.tab: $(top_builddir)/config.status $(srcdir)/regpar.tab.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 clean-noinstLTLIBRARIES:
 	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
@@ -849,34 +845,58 @@ uninstall-man: uninstall-man1
 	uninstall-man1
 
 
+all:		regpar.tab
+
+regpar.tab:	$(srcdir)/regpar.tab.in
+	sed -e 's;@''LDMHOME@;$(LDMHOME);g' \
+	    -e 's;@''LOGS_DIR@;$(LOGS_DIR);g' \
+	    -e 's;@''QUEUE_DIR@;$(QUEUE_DIR);g' \
+	    -e 's;@''DATA_DIR@;$(DATA_DIR);g' \
+	    -e 's;@''HOSTNAME@;$(HOSTNAME);g' \
+	    -e 's;@''NTPDATE@;$(NTPDATE);g' \
+	    -e 's;@''LOG_FILE@;$(LOG_FILE);g' \
+	    -e 's;@''METRICS_FILE@;$(METRICS_FILE);g' \
+	    -e 's;@''NETSTAT@;$(NETSTAT);g' \
+	    -e 's;@''TOP@;$(TOP);g' \
+	    -e 's;@''ETC_DIR@;$(ETC_DIR);g' \
+	    $(srcdir)/regpar.tab.in >$@.tmp
+	mv $@.tmp $@
+
 backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
 
-registry.h:	registry.hin registry.c regpar.tab Makefile
-	awk '/@PARAMETER_NAME_DEFINITIONS@/{exit}{print}' \
-	    $(srcdir)/registry.hin >$@.tmp1
-	awk -F : '{printf "#define REG_%s \"%s\"\n", $$1, $$2}' \
-	    <regpar.tab >>$@.tmp1
-	awk '{if (doPrint)print}/@PARAMETER_NAME_DEFINITIONS@/{doPrint=1}' \
-	    $(srcdir)/registry.hin >>$@.tmp1
-	$(top_srcdir)/extractDecls $@.tmp1 $(srcdir)/registry.c >$@.tmp2
-	mv -f $@.tmp2 $@
-	rm -f $@.tmp1 $@.sed
+@MAINTAINER_TRUE@substPaths:	regpar.tab.in
+@MAINTAINER_TRUE@	$(AWK) -F : 'BEGIN {print "sed \\"} \
+@MAINTAINER_TRUE@	    {print "    -e '\''s:regpath{" $$1 "}:" $$2 ":g'\'' \\"} \
+@MAINTAINER_TRUE@	    END {print ""}' regpar.tab.in >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
+@MAINTAINER_TRUE@	chmod +x $@
 
-.hin.h:
-	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
-	mv -f $@.tmp $@
-backend.h:	backend.hin backend.c
-misc.h:		misc.hin misc.c
-node.h:		node.hin node.c
-stringBuf.h:	stringBuf.hin stringBuf.c
+@MAINTAINER_TRUE@registry.h:	registry.hin registry.c regpar.tab.in
+@MAINTAINER_TRUE@	$(AWK) '/@PARAMETER_NAME_DEFINITIONS@/{exit}{print}' \
+@MAINTAINER_TRUE@	    $(srcdir)/registry.hin >$@.tmp1
+@MAINTAINER_TRUE@	$(AWK) -F : '{print "#define REG_" $$1 " \"" $$2 "\""}' \
+@MAINTAINER_TRUE@	    <regpar.tab.in >>$@.tmp1
+@MAINTAINER_TRUE@	$(AWK) '{if (doPrint)print}/@PARAMETER_NAME_DEFINITIONS@/{doPrint=1}' \
+@MAINTAINER_TRUE@	    $(srcdir)/registry.hin >>$@.tmp1
+@MAINTAINER_TRUE@	$(top_srcdir)/extractDecls $@.tmp1 $(srcdir)/registry.c >$@.tmp2
+@MAINTAINER_TRUE@	mv -f $@.tmp2 $@
+@MAINTAINER_TRUE@	rm -f $@.tmp1 $@.sed
+
+@MAINTAINER_TRUE@.hin.h:
+@MAINTAINER_TRUE@	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
+@MAINTAINER_TRUE@	mv -f $@.tmp $@
+@MAINTAINER_TRUE@backend.h:	backend.hin backend.c
+@MAINTAINER_TRUE@misc.h:		misc.hin misc.c
+@MAINTAINER_TRUE@node.h:		node.hin node.c
+@MAINTAINER_TRUE@stringBuf.h:	stringBuf.hin stringBuf.c
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
 install-exec-local:	regpar.tab regutil $(REGISTRY_DIR)
-	$(PERL) $(srcdir)/installRegistry regpar.tab regutil \
-	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf
+	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
+	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(REGISTRY_DIR)
 
 $(REGISTRY_DIR):
 	mkdir -p $@

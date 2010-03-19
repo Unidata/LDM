@@ -4,10 +4,14 @@
 
         Registry:
             Created a registry for the LDM similar to the Windows registry,
-            Gnome's GCONF, or Java's preferences.  This feature is implemented
-            using the Berkeley DB package.  While this might seem like
-            overkill, it's one of the few, proven, freely-available packages
-            with support for both transactions and concurent access.
+            Gnome's GCONF, or Java's preferences.  The registry can be
+            accessed both from scripts and programatically.  The new utility
+            regutil(1) can access the registry from the command-line.
+            
+            The registry is implemented using the Berkeley DB package.  While
+            this might seem like overkill, it's one of the few, proven,
+            freely-available packages with support for transactions, concurent
+            access, memory-mapping, and file-locking.
 
             As a consequence of the creation and use of the registry, the
             following environment variables no longer work:
@@ -30,18 +34,41 @@
 
             Incorporated documentation into "src".
 
-	LDM (ldmd):
+	LDM (ldmd(1)):
             Renamed the LDM server from "rpc.ldmd" to just "ldmd".
 
             Added logging to some failed pq_close() calls in an attempt to
             debug the Mac OS X 10.5 fcntl() problem.
 
+        ldmadmin(1):
+            Added "vetqueuesize" command to reconcile the maximum latency
+            parameter with the observed minimum virtual residence time of the
+            queue.
+
+            Added "check" command to check the LDM system via crontab(1).
+
+        regutil(1):
+            New utility for accessing the LDM registry from the command-line.
+
+        pqmon(1):
+            Added "-S" option to print various "size" parameters to the 
+            standard output stream.
+
+        pqutil(1):
+            Added "-C" option to clear the minimum virtual residence time
+            metric.
+
 	pq(3) library:
             Corrected ability to build without mmap(2) support via the NO_MMAP
             C macro.
 
+            Added the ability to track the minimum virtual residence time.
+
 	Misc:
 	    Upgraded the version-control mechanism from CVS to git(1).
+
+            Corrected FNEXRAD webpages: removed "floater" link and corrected 
+            "how to" link.
 
 6.8.1	2009-08-14
 	Installation:

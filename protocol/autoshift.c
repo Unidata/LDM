@@ -81,7 +81,7 @@ static Entry*           tail = NULL;    /* tail of database linked-list */
  * Returns:
  *      The number of entries in the database.
  */
-#define db_getCount()   ((const unsigned)entryCount)
+#define db_getCount()   ((unsigned)entryCount)
 
 
 /*
@@ -253,7 +253,7 @@ stats_reset(
  * Returns:
  *      The count of the statistics object.
  */
-#define stats_getCount(stats)   ((const unsigned)(stats)->count)
+#define stats_getCount(stats)   ((unsigned)(stats)->count)
 
 
 /*
@@ -277,7 +277,6 @@ static Stats            rejected;       /* rejected data-product statistics */
 static Stats            prevAccepted;   /* previous "accepted" value */
 static Stats            prevRejected;   /* previous "rejected value */
 static unsigned         ldmCount = 1;   /* number of LDM-s exchanging data */
-static timestampt       start;
 static int              haveEnough = 0;
 static int              prevHaveEnough = 0;
 static int              needComputation = 1;
@@ -322,7 +321,6 @@ sumStats_reset(void)
 
     haveEnough = 0;
     needComputation = 1;
-    start = *getTime();
 
     sumStats_save();
 }

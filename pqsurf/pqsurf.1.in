@@ -1,5 +1,4 @@
-." $Id: pqsurf.1,v 1.9.20.1.2.3 2009/06/18 16:19:22 steve Exp $
-.TH PQSURF 1 "$Date: 2009/06/18 16:19:22 $"
+.TH PQSURF 1 "2010-03-10"
 .SH NAME
 pqsurf - program to split surface bulletins and process the observations
 .SH SYNOPSIS
@@ -104,24 +103,30 @@ background.
 .BI \-d " datadir"
 The directory relative to
 which file names are specified in the configuration file.  
-The default is set at compile time, typically /usr/local/ldm.
+The default is \fB$LDMHOME\fP.
 .TP
 .BI "-q " q_path
 The pathname of the data product queue.
-The default is \fBdata/ldm.pq\fP relative to the installation point,
-which is typically \fB/usr/local/ldm\fP. The compiled in default can
+The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP
+.hy
+This configuration default can
 be overridden by setting the environment variable \fBLDMPQFNAME\fP.
 .TP
 .BI "-Q " private_q_path
 The pathname of the private data product queue used by this program
 and its child \fBpqact\fP.
-The default is \fBdata/pqsurf.pq\fP relative to the installation point.
+The default is
+.nh
+\fB$(regutil regpath{SURFQUEUE_PATH})\fP
+.hy
 It is important that the private queue be distinct from the input queue.
 This queue is "denser" than the default product queue; the average product
 size is only 152 bytes. A queue that has 1 Megabyte of data would need 6881 
 slots as opposed to the default 512.
  Use the -S option of \fBpqcreate\fR to specify more slots as follows:
-\fBpqcreate -c -s 1M -S 6881 /usr/local/ldm/data/pqsurf.pq\fR
+\fBpqcreate -c -s 1M -S 6881 `regutil regpath{SURFQUEUE_PATH}`\fR
 .TP
 .BI \-f " feedtype"
 Reads from the product queue only products that have a feedtype that is a
@@ -144,8 +149,7 @@ the product queue, a signal informs
 .B pqsurf
 and all other interested processes in the process group
 whenever a new product is available, so polling is not necessary in this
-case.  The default
-interval is 15 seconds.
+case.  The default interval is 15 seconds.
 .TP
 .BI \-a " age"
 Maximum product age, in hours, as a floating-point number.  Products
@@ -165,8 +169,10 @@ Configuration file.  This is the pattern-action file that specifies what to
 do with each product whose feed type and product identifier match a
 specified pattern.  The format of this file is described in the ``Usage''
 section of the man page for \fBpqact(1)\fP.
-The default is \fBetc/pqsurf.conf\fP relative to the
-installation point, which is typically \fB/usr/local/ldm\fP.   
+The default is
+.nh
+\fB$(regutil regpath{PQSURF_CONFIG_PATH})\fP.
+.hy
 .SH SIGNALS
 .TP
 .BR SIGTERM

@@ -23,6 +23,7 @@ regutil
 regutil
 .nh
 \fR[\fB-d \fIdir\fR]
+\fR[\fB-q\fR]
 \fR[\fIpath ...\fR]
 .hy
 .ft
@@ -31,6 +32,7 @@ regutil
 regutil
 .nh
 \fR[\fB-d \fIdir\fR]
+\fR[\fB-q\fR]
 \fB-r \fP
 \fR\fIpath ...\fR
 .hy
@@ -77,6 +79,10 @@ Pathname of the directory containing the LDM registry.  The default is
 .BI "-h " signature
 The signature value to which to set the parameter.  The signature shall be
 specified as a 32 character hexadecimal digit.
+.TP
+.BI "-q"
+Causes the utility to be "quiet" (i.e., to not write an error message to the
+standard error stream) if a value or node doesn't exist.
 .TP
 .BI "-R"
 Resets the registry.  Does as much recovery as possible.

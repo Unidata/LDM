@@ -429,7 +429,7 @@ flushConnection(void)
 static up6_error_t
 up6_run(void)
 {
-    int         errCode = 0;            /* success */
+    up6_error_t errCode = UP6_SUCCESS;  /* success */
     int         flags;
     char        buf[64];
     char*       sig = _signature == NULL ? "NONE" :
@@ -503,7 +503,7 @@ up6_run(void)
                 errCode = UP6_SYSTEM_ERROR;
             }
             else {
-                while (0 == errCode && exitIfDone(0)) {
+                while (UP6_SUCCESS == errCode && exitIfDone(0)) {
                     ErrorObj*   errObj = NULL;
                     int         err = pq_sequence(_pq, _mt, _class,
                         _mode == FEED ? feed : notify, &errObj);
@@ -543,7 +543,7 @@ up6_run(void)
                                 (void)exitIfDone(0);
                             }
 
-                            if (errCode == 0) {
+                            if (errCode == UP6_SUCCESS) {
                                 time_t      timeSinceLastSend =
                                     time(NULL) - _lastSendTime;
 

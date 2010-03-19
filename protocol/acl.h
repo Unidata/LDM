@@ -122,6 +122,11 @@ acl_addAllow(
 
 void acl_freeAllowEntries(void);
 
+/*
+ * Frees the resources of this module.
+ */
+void acl_free(void);
+
 #ifdef __cplusplus
 }
 #endif

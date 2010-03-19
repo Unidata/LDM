@@ -12,12 +12,12 @@ AC_CONFIG_HEADERS([config.h])
 #UD_CPPFLAGS
 #AC_DEFINE([_POSIX_C_SOURCE], [1], [Level of POSIX compliance])
 AC_DEFINE([_XOPEN_SOURCE], [500], [Level of POSIX compliance])
-AC_DEFINE([_XOPEN_SOURCE_EXTENDED], [1], [Additional POSIX functionality])
 AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
 #AC_USE_SYSTEM_EXTENSIONS
 
 AM_CONDITIONAL([MAINTAINER],
-    [test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu])
+    [test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu &&
+    test $PWD = $HOME/ldm/package/src])
 
 AC_ARG_ENABLE([debug],
     AC_HELP_STRING([--enable-debug],
@@ -190,11 +190,16 @@ AM_COND_IF([MAINTAINER], [LDMHOME=$prefix],
     [test -z "$LDMHOME" && LDMHOME=$HOME])
 AC_SUBST([LDMHOME])
 AC_MSG_RESULT([$LDMHOME])
-sysconfdir='$(LDMHOME)/etc'
-localstatedir='$(LDMHOME)/var'
-AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
-AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queue])
+#
+# Certain installation directories are changed if they have default values
+# because an LDM installation has both version-dependent and
+# version-independent installation directories.
+test "$sysconfdir" = "$prefix/etc" || sysconfdir='$(LDMHOME)/etc'
+test "$localstatedir" = "$prefix/var" || localstatedir='$(LDMHOME)/var'
 AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
+AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
+AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
+AC_SUBST([DATA_DIR], ['$(localstatedir)'/data])
 
 AC_SUBST(ARFLAGS)
 AC_REVISION ($Revision: 1.47.18.22 $)
@@ -202,6 +207,7 @@ UD_HPUX
 UD_PROG_CPP
 UD_PROG_PERL
 UD_PROG_SH
+AC_PROG_AWK
 AC_PROG_YACC
 UD_PROG_RPCGEN
 UD_PROG_NTPDATE
@@ -293,6 +299,10 @@ AC_CHECK_HEADERS([stropts.h], ,
     AC_CHECK_HEADERS([sys/ioctl.h], ,
 	AC_MSG_ERROR("Missing necessary header-file"))
 ])
+
+# HACKS:
+AC_CHECK_DECL([strtok_r], , [AC_DEFINE([_REENTRANT], [1], 
+    [For declarations of *_r() functions on our HP-UX/gcc 3.3.2 system])])
     
 AC_PROG_LIBTOOL
 
@@ -324,9 +334,8 @@ AC_CONFIG_FILES([
     server/Makefile
     ldmping/Makefile
     registry/Makefile
-    registry/regpar.tab
     scripts/Makefile
-    scripts/ldmadmin.pl
+    scripts/ldmadmin
     scripts/ldmcheck
     scripts/ldmfail
     scripts/netcheck

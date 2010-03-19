@@ -6,6 +6,7 @@
 
 #include "config.h"
 
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -18,7 +19,9 @@
 #include "error.h"
 #include "ldm.h"        /* needed by following */
 #include "ulog.h"
+#include "log.h"
 #include "peer_info.h"
+#include "prod_class.h"
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"
@@ -26,7 +29,7 @@
 #include "timestamp.h"
 
 /* global */
-peer_info remote; 
+static peer_info remote; 
 
 
 static const char *
@@ -87,6 +90,9 @@ so_buf(int sock, int optname)
 }
 
 
+/*
+ * Frees the product-class of the remote LDM.
+ */
 void
 free_remote_clss(void)
 {
@@ -247,4 +253,49 @@ update_remote_clss(prod_class_t *want)
                 remote.clssp->to = want->to;
         }
         return status;
+}
+
+/*
+ * Sets the product-class of the remote LDM.
+ *
+ * Arguments:
+ *      prodClass       Pointer to the product-class of the remote site.  May
+ *                      be NULL.  May be freed upon return.
+ * Returns:
+ *      0               Success.
+ *      ENOMEM          Out of memory.  "log_start()" called.
+ */
+int
+set_remote_class(
+    const prod_class_t* const   prodClass)
+{
+    prod_class_t*       newProdClass;
+
+    if (NULL == prodClass) {
+        newProdClass = NULL;
+    }
+    else {
+        newProdClass = dup_prod_class(prodClass);
+
+        if (NULL == newProdClass) {
+            log_serror("set_remote_class(): Couldn't duplicate product-class");
+            return ENOMEM;
+        }
+    }
+
+    free_prod_class(remote.clssp);
+    remote.clssp = newProdClass;
+
+    return 0;
+}
+
+/*
+ * Returns the informational structure for the remote LDM.
+ *
+ * Returns:
+ *      The informational structure for the remote LDM.
+ */
+peer_info* get_remote(void)
+{
+    return &remote;
 }

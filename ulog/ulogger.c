@@ -31,16 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-char copyright[] =
-"@(#) Copyright (c) 1983 Regents of the University of California.\n\
- All rights reserved.\n";
-#endif /* not lint */
-
-#ifndef lint
-static char rcsid[] = "$Id: ulogger.c,v 6.21.18.1 2004/10/19 19:03:13 steve Exp $";
-#endif /* not lint */
-
 #include <config.h>
 #include <errno.h>
 #include <stdio.h>

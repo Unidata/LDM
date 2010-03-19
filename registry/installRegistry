@@ -2,7 +2,7 @@
 #
 # This perl script installs the LDM registry.
 #
-# Usage: perl thisScript regpar regutil confPath
+# Usage: perl thisScript regpar regutil confPath regdir
 #
 # where:
 #       thisScript      This script
@@ -12,22 +12,24 @@
 #                       exist.
 #       confPath        Pathname of the ldmadmin(1) configuration-file.  The
 #                       file needn't exist.
+#       regdir          Pathname of the installation registry directory
 
-if ($#ARGV != 2) {
-    die "3 (and only 3) arguments not specified";
+if ($#ARGV != 3) {
+    die "4 (and only 4) arguments not specified";
 }
 
 # Set internal variables from command-line arguments.
 $parPath = $ARGV[0];
 $utilPath = $ARGV[1];
 $confPath = $ARGV[2];
+$dirPath = $ARGV[3];
 
 # Read the obsolete ldmadmin(1) configuration-file if it exists.
 if (-e $confPath) {
     require $confPath;
 }
 
-if (system("$utilPath -c")) {
+if (system("$utilPath -d $dirPath -c")) {
     die "Couldn't create registry environment: $!";
 }
 
@@ -42,7 +44,7 @@ while (<REGPAR>) {
     my $path = $params[1];
     my $default = $params[3];
     my $varName = $params[4];
-    my $value = `$utilPath \"$path\" 2>/dev/null`;
+    my $value = `$utilPath -d $dirPath -q \"$path\"`;
     my $status = $? >> 8;
 
     chomp $value;
@@ -73,14 +75,14 @@ while (<REGPAR>) {
         }
 
         # Add the parameter to the registry.
-        if (system("$utilPath -s \"$default\" \"$path\"")) {
+        if (system("$utilPath -d $dirPath -s \"$default\" \"$path\"")) {
             die "Error loading registry";
         }
 
         print "$path : $default\n";
     }
     else {
-        die "Couldn't load registry";
+        die "Couldn't get value \"$path\" from registry:  Status is $status";
     }
 }
 

@@ -117,7 +117,6 @@ pbuf_flush(
     int                 status = ENOERR;        /* success */
     int                 tmpErrno;
     time_t              start;
-    time_t              stop;
     time_t              duration;
 
     udebug("        pbuf_flush fd %d %6d %s",

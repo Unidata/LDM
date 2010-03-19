@@ -50,6 +50,12 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
+if MAINTAINER
+pqact.1:	pqact.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif
+
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/pqact.conf
 $(DESTDIR)$(sysconfdir):

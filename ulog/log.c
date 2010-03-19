@@ -135,8 +135,6 @@ void log_vadd(
         }
 
         if (msg != NULL) {
-            char*       cp = msg->string;
-            int         len = 0;
             int         nbytes;
 
             nbytes = vsnprintf(msg->string, sizeof(msg->string)-1, fmt, args);

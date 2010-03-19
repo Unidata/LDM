@@ -68,14 +68,11 @@ PROGRAMS = $(bin_PROGRAMS)
 hupsyslog_SOURCES = hupsyslog.c
 hupsyslog_OBJECTS = hupsyslog.$(OBJEXT)
 hupsyslog_LDADD = $(LDADD)
-hupsyslog_DEPENDENCIES = lib.la
 am_test0_OBJECTS = test0-ulog.$(OBJEXT)
 test0_OBJECTS = $(am_test0_OBJECTS)
-test0_LDADD = $(LDADD)
 test0_DEPENDENCIES = lib.la
 ulogger_SOURCES = ulogger.c
 ulogger_OBJECTS = ulogger.$(OBJEXT)
-ulogger_LDADD = $(LDADD)
 ulogger_DEPENDENCIES = lib.la
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -141,6 +138,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -268,7 +266,8 @@ lib_la_SOURCES = ulog.c log.c
 dist_bin_SCRIPTS = newlog
 test0_SOURCES = ulog.c
 test0_CPPFLAGS = -DTEST0
-LDADD = lib.la
+ulogger_LDADD = lib.la
+test0_LDADD = lib.la
 dist_man3_MANS = ulog.3
 EXTRA_DIST = log.h
 all: all-am
@@ -745,7 +744,7 @@ uninstall-man: uninstall-man3
 	uninstall-includeHEADERS uninstall-man uninstall-man3
 
 
-check:	$(LDADD)
+check:	$(test0_LDADD)
 	./test0 -l - 2>/dev/null
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

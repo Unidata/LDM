@@ -2,30 +2,34 @@
 #
 # Process this file with automake to produce Makefile.in
 
+AWK			= @AWK@
 PERL			= @PERL@
+LD_GEN			= @LD_GEN@
+LDMHOME			= $(DESTDIR)@LDMHOME@
+LOGS_DIR		= $(DESTDIR)@LOGS_DIR@
+QUEUE_DIR		= $(DESTDIR)@QUEUE_DIR@
 REGISTRY_DIR		= $(DESTDIR)@REGISTRY_DIR@
+ETC_DIR			= $(DESTDIR)$(sysconfdir)
+DATA_DIR		= $(DESTDIR)@DATA_DIR@
+HOSTNAME		= @HOSTNAME@
+NTPDATE			= @NTPDATE@
+LOG_FILE		= $(LOGS_DIR)/ldmd.log
+METRICS_FILE		= $(LOGS_DIR)/metrics.txt
+NETSTAT			= @NETSTAT@
+TOP			= @TOP@
 noinst_LTLIBRARIES      = lib.la
 EXTRA_DIST              = \
-    backend-bdb.c \
-    backend.hin \
     backend.h \
+    backend-bdb.c \
     checkRegistry \
     installRegistry \
-    misc.hin \
     misc.h \
-    node.hin \
     node.h \
-    registry.hin \
     registry.h \
+    regpar.tab.in \
     regutil.txt \
-    stringBuf.hin \
-    stringBuf.h
-BUILT_SOURCES		= \
-    backend.c backend.h \
-    misc.h \
-    node.h \
-    registry.h \
-    stringBuf.h
+    stringBuf.h \
+    substPaths
 lib_la_SOURCES          = \
     backend.c \
     misc.c \
@@ -53,20 +57,48 @@ LDADD			= \
     $(top_builddir)/protocol/lib.la \
     $(top_builddir)/rpc/lib.la \
     $(top_builddir)/ulog/lib.la \
-    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
+    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
+    $(LD_GEN)
 dist_man1_MANS		= regutil.1
-CLEANFILES		= regutil.out backend.c
-DISTCLEANFILES		= registry.h
+CLEANFILES		= regutil.out regpar.tab
+DISTCLEANFILES		= backend.c
+
+all:		regpar.tab
+
+regpar.tab:	$(srcdir)/regpar.tab.in
+	sed -e 's;@''LDMHOME@;$(LDMHOME);g' \
+	    -e 's;@''LOGS_DIR@;$(LOGS_DIR);g' \
+	    -e 's;@''QUEUE_DIR@;$(QUEUE_DIR);g' \
+	    -e 's;@''DATA_DIR@;$(DATA_DIR);g' \
+	    -e 's;@''HOSTNAME@;$(HOSTNAME);g' \
+	    -e 's;@''NTPDATE@;$(NTPDATE);g' \
+	    -e 's;@''LOG_FILE@;$(LOG_FILE);g' \
+	    -e 's;@''METRICS_FILE@;$(METRICS_FILE);g' \
+	    -e 's;@''NETSTAT@;$(NETSTAT);g' \
+	    -e 's;@''TOP@;$(TOP);g' \
+	    -e 's;@''ETC_DIR@;$(ETC_DIR);g' \
+	    $(srcdir)/regpar.tab.in >$@.tmp
+	mv $@.tmp $@
 
 backend.c:	backend-bdb.c
 	$(LN_S) backend-bdb.c $@
 
-registry.h:	registry.hin registry.c regpar.tab Makefile
-	awk '/@PARAMETER_NAME_DEFINITIONS@/{exit}{print}' \
+if MAINTAINER
+BUILT_SOURCES		= substPaths
+
+substPaths:	regpar.tab.in
+	$(AWK) -F : 'BEGIN {print "sed \\"} \
+	    {print "    -e '\''s:regpath{" $$1 "}:" $$2 ":g'\'' \\"} \
+	    END {print ""}' regpar.tab.in >$@.tmp
+	mv $@.tmp $@
+	chmod +x $@
+
+registry.h:	registry.hin registry.c regpar.tab.in
+	$(AWK) '/@PARAMETER_NAME_DEFINITIONS@/{exit}{print}' \
 	    $(srcdir)/registry.hin >$@.tmp1
-	awk -F : '{printf "#define REG_%s \"%s\"\n", $$1, $$2}' \
-	    <regpar.tab >>$@.tmp1
-	awk '{if (doPrint)print}/@PARAMETER_NAME_DEFINITIONS@/{doPrint=1}' \
+	$(AWK) -F : '{print "#define REG_" $$1 " \"" $$2 "\""}' \
+	    <regpar.tab.in >>$@.tmp1
+	$(AWK) '{if (doPrint)print}/@PARAMETER_NAME_DEFINITIONS@/{doPrint=1}' \
 	    $(srcdir)/registry.hin >>$@.tmp1
 	$(top_srcdir)/extractDecls $@.tmp1 $(srcdir)/registry.c >$@.tmp2
 	mv -f $@.tmp2 $@
@@ -79,13 +111,14 @@ backend.h:	backend.hin backend.c
 misc.h:		misc.hin misc.c
 node.h:		node.hin node.c
 stringBuf.h:	stringBuf.hin stringBuf.c
+endif
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
 install-exec-local:	regpar.tab regutil $(REGISTRY_DIR)
-	$(PERL) $(srcdir)/installRegistry regpar.tab regutil \
-	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf
+	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
+	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(REGISTRY_DIR)
 
 $(REGISTRY_DIR):
 	mkdir -p $@

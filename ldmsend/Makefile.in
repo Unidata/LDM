@@ -59,8 +59,8 @@ PROGRAMS = $(bin_PROGRAMS)
 ldmsend_SOURCES = ldmsend.c
 ldmsend_OBJECTS = ldmsend.$(OBJEXT)
 ldmsend_LDADD = $(LDADD)
-ldmsend_DEPENDENCIES = ../$(PQ_SUBDIR)/lib.la ../protocol/lib.la \
-	../ulog/lib.la ../misc/lib.la ../rpc/lib.la ../registry/lib.la \
+ldmsend_DEPENDENCIES = ../protocol/lib.la ../ulog/lib.la \
+	../misc/lib.la ../rpc/lib.la ../registry/lib.la \
 	../Berkeley-DB/build_unix/libdb-4.8.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -119,7 +119,6 @@ CPP = @CPP@
 CPPFLAGS = \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
-    -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
 
@@ -129,6 +128,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -251,18 +251,15 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 LDADD = \
-    ../$(PQ_SUBDIR)/lib.la \
     ../protocol/lib.la \
     ../ulog/lib.la \
     ../misc/lib.la \
     ../rpc/lib.la \
     ../registry/lib.la \
-    ../Berkeley-DB/build_unix/libdb-4.8.la \
-    -lm
+    ../Berkeley-DB/build_unix/libdb-4.8.la
 
 dist_man1_MANS = ldmsend.1
 TAGS_FILES = \
-    ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \

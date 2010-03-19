@@ -26,6 +26,4 @@ struct peer_info {
 };
 typedef struct peer_info peer_info;
 
-extern peer_info remote;	/* declared in remote.c */
-
 #endif /* !_PEER_INFO_H */

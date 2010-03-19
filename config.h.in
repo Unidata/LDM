@@ -208,6 +208,9 @@
 /* Define if the file /dev/conslog exists */
 #undef _DEV_CONSLOG
 
+/* For declarations of *_r() functions on our HP-UX/gcc 3.3.2 system */
+#undef _REENTRANT
+
 /* Causes <sys/user.h> to not be included */
 #undef _SYS_USER_INCLUDED
 
@@ -218,9 +221,6 @@
 
 /* Level of POSIX compliance */
 #undef _XOPEN_SOURCE
-
-/* Additional POSIX functionality */
-#undef _XOPEN_SOURCE_EXTENDED
 
 /* rpcgen(1) typedef */
 #undef caddr_t

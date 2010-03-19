@@ -38,7 +38,6 @@
 
 #include "requester6.h"
 
-static char*    _upName = NULL;
 static int      requestSocket = -1;
 static int      dataSocket = -1;
 static int      isAliveSocket = -1;

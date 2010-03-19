@@ -1,6 +1,4 @@
-'\"
-'\" $Header: /cvsroot/ldm/src/scripts/netcheck.1,v 1.1.22.1 2009/06/18 16:20:18 steve Exp $
-.TH NETCHECK 1 "$Date: 2009/06/18 16:20:18 $"
+.TH NETCHECK 1 "2010-03-10"
 .SH NAME
 netcheck - monitor network connectivity to select hosts
 .SH "UNIX SYNOPSIS"
@@ -39,12 +37,12 @@ default, only the ping(8) summary is displayed.
 .TP 8
 .BI \-l " logfile"
 The path name of a file to be used as the log file for the process.  The
-default is to use LDMHOME/logs/netcheck.log.
+default is to use \fB$LDMHOME/logs/netcheck.log\fP.
 .TP 8
 .BI \-c " conffile"
 The path name of the configuration file containing the hosts to be checked
 and the list of names for email.  The default is to use
-LDMHOME/etc/netcheck.conf.
+\fB$LDMHOME/etc/netcheck.conf\fP.
 .TP 8
 .BI \-t " percent"
 The packet loss percentage threshold.  Packet losses greater than the

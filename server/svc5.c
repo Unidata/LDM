@@ -107,39 +107,40 @@ hereis_5_svc(product *prod, struct svc_req *rqstp)
         reply.code = SHUTTING_DOWN;
     }
     else {
+        peer_info*      remote = get_remote();
         /*
          * Update the time bounds, fuzz by rpctimeo.
          */
-        (void)set_timestamp(&remote.clssp->from);
-        remote.clssp->from.tv_sec -= (max_latency + rpctimeo);
+        (void)set_timestamp(&remote->clssp->from);
+        remote->clssp->from.tv_sec -= (max_latency + rpctimeo);
 
-        if (!prodInClass(remote.clssp, &prod->info)) {
+        if (!prodInClass(remote->clssp, &prod->info)) {
             /*
              * Reply with RECLASS
              */
             if (toffset != TOFFSET_NONE) {
-                remote.clssp->from.tv_sec += (max_latency - toffset);
+                remote->clssp->from.tv_sec += (max_latency - toffset);
             }
             else {
                 /*
                  * Undo the fuzz.
                  */
-                remote.clssp->from.tv_sec += rpctimeo;
+                remote->clssp->from.tv_sec += rpctimeo;
             }
 
-            unotice("RECLASS: %s", s_prod_class(NULL, 0, remote.clssp));
+            unotice("RECLASS: %s", s_prod_class(NULL, 0, remote->clssp));
 
-            if (tvCmp(remote.clssp->from, prod->info.arrival, >)) {
+            if (tvCmp(remote->clssp->from, prod->info.arrival, >)) {
                 char buf[32];
 
                 (void) sprint_timestampt(buf, sizeof(buf), &prod->info.arrival);
                 unotice("skipped: %s (%.3f seconds)", buf,
-                        d_diff_timestamp(&remote.clssp->from,
+                        d_diff_timestamp(&remote->clssp->from,
                                 &prod->info.arrival));
             }
 
             reply.code = RECLASS;
-            reply.ldm_replyt_u.newclssp = remote.clssp;
+            reply.ldm_replyt_u.newclssp = remote->clssp;
         }
         else {
             if (setNewInfo(&prod->info)) {
@@ -182,6 +183,7 @@ ldm_replyt *
 hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
 {
         const char* const       pqfname = getQueuePath();
+        peer_info*              remote = get_remote();
 
         udebug("%s:%d: hiya_5_svc()", __FILE__, __LINE__);
 
@@ -189,11 +191,11 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
 
         if(remote_name() == NULL)
                 svc_setremote(rqstp);
-        else if(remote.addr.s_addr == 0)
+        else if(remote->addr.s_addr == 0)
         {
                 struct sockaddr_in *paddr = 
                     (struct sockaddr_in *)svc_getcaller(rqstp->rq_xprt);
-                remote.addr.s_addr = paddr->sin_addr.s_addr;
+                remote->addr.s_addr = paddr->sin_addr.s_addr;
         }
 
         if(ulogIsVerbose())
@@ -209,13 +211,13 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
                 return(&reply);
         }
 
-        if(!clsspsa_eq(remote.clssp, offerd))
+        if(!clsspsa_eq(remote->clssp, offerd))
         {
                 /* request doesn't match cache */
 
                 free_remote_clss();
 
-                switch(hiya_acl_ck(&remote, offerd)) {
+                switch(hiya_acl_ck(remote, offerd)) {
                 case ENOERR:
                         break;
                 case EINVAL:
@@ -231,12 +233,12 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
         else
         {
                 /* Update the time range */
-                remote.clssp->from = offerd->from;
-                remote.clssp->to = offerd->to;
+                remote->clssp->from = offerd->from;
+                remote->clssp->to = offerd->to;
         }
         
 
-        if(remote.clssp == NULL || remote.clssp->psa.psa_len == 0)
+        if(remote->clssp == NULL || remote->clssp->psa.psa_len == 0)
         {
                 if(!ulogIsVerbose())
                         unotice("hiya5: Accept: No Match: %s",
@@ -248,19 +250,19 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
                 return NULL;
         }
 
-        if(!clss_eq(remote.clssp, offerd))
+        if(!clss_eq(remote->clssp, offerd))
         {
                 reply.code = RECLASS;
                 if(ulogIsVerbose())
                         uinfo("hiya5: reclss: %s: %s",
                                 remote_name(),
-                                s_prod_class(NULL, 0, remote.clssp));
-                reply.ldm_replyt_u.newclssp = remote.clssp;
+                                s_prod_class(NULL, 0, remote->clssp));
+                reply.ldm_replyt_u.newclssp = remote->clssp;
         }
         /* else, reply.code == OK */
         if(!ulogIsVerbose())
                 unotice("hiya5: %s",
-                        s_prod_class(NULL, 0, remote.clssp));
+                        s_prod_class(NULL, 0, remote->clssp));
 
         /*
          * Ensure that the product-queue is open for writing.  It will be closed
@@ -352,6 +354,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         int             status;
         int             error;
         prod_info*      infop = argsp->infop;
+        peer_info*      remote = get_remote();
 
         udebug("%s:%d: comingsoon_5_svc()", __FILE__, __LINE__);
 
@@ -374,33 +377,33 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         }
 
         /* Update the time bounds, fuzz by rpctimeo */
-        (void)set_timestamp(&remote.clssp->from);
-        remote.clssp->from.tv_sec -= (max_latency + rpctimeo);
+        (void)set_timestamp(&remote->clssp->from);
+        remote->clssp->from.tv_sec -= (max_latency + rpctimeo);
 
-        if(!prodInClass(remote.clssp, infop))
+        if(!prodInClass(remote->clssp, infop))
         {
                 /* Reply with RECLASS */
                 if(toffset != TOFFSET_NONE)
                 {
-                        remote.clssp->from.tv_sec += (max_latency - toffset);
+                        remote->clssp->from.tv_sec += (max_latency - toffset);
                 }
                 else
                 {
                         /* undo the fuzz */
-                        remote.clssp->from.tv_sec += rpctimeo;
+                        remote->clssp->from.tv_sec += rpctimeo;
                 }
-                unotice("RECLASS: %s", s_prod_class(NULL, 0, remote.clssp));
-                if(tvCmp(remote.clssp->from, infop->arrival, >))
+                unotice("RECLASS: %s", s_prod_class(NULL, 0, remote->clssp));
+                if(tvCmp(remote->clssp->from, infop->arrival, >))
                 {
                         char buf[32];
                         (void) sprint_timestampt(buf, sizeof(buf),
                                  &infop->arrival);
                         unotice("skipped: %s (%.3f seconds)", buf,
-                                d_diff_timestamp(&remote.clssp->from,
+                                d_diff_timestamp(&remote->clssp->from,
                                         &infop->arrival));
                 }
                 reply.code = RECLASS;
-                reply.ldm_replyt_u.newclssp = remote.clssp;
+                reply.ldm_replyt_u.newclssp = remote->clssp;
                 return(&reply);
         }
 

@@ -137,7 +137,7 @@ static volatile sig_atomic_t initialized = 0;
 
 
 void
-pq_reset_random()
+pq_reset_random(void)
 {
     initialized = 0;
 }

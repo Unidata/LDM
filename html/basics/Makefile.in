@@ -94,6 +94,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -250,7 +251,6 @@ EXTRA_DIST = \
     tips.html \
     tradeoffs.html \
     versionId.html \
-    vet-ldmadmin.html \
     what-gets-installed.html.in \
     Downstream_6.4_Alternate.gif \
     Downstream_6.4_Primary.gif \
@@ -263,6 +263,7 @@ EXTRA_DIST = \
     feedtypes/fnexrad.html \
     feedtypes/gem.html \
     feedtypes/hds.html \
+    feedtypes/howto-nnexrad.html \
     feedtypes/index.html \
     feedtypes/nexrad-fonx.html \
     feedtypes/ngraph.html \
@@ -308,7 +309,6 @@ html_DATA = \
     tips.html \
     tradeoffs.html \
     versionId.html \
-    vet-ldmadmin.html \
     what-gets-installed.html \
     Downstream_6.4_Alternate.gif \
     Downstream_6.4_Primary.gif \
@@ -323,6 +323,7 @@ nobase_html_DATA = \
     feedtypes/fnexrad.html \
     feedtypes/gem.html \
     feedtypes/hds.html \
+    feedtypes/howto-nnexrad.html \
     feedtypes/index.html \
     feedtypes/nexrad-fonx.html \
     feedtypes/ngraph.html \
@@ -579,8 +580,7 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 	uninstall-nobase_htmlDATA
 
 
-LDM-registry.html:	$(srcdir)/regpar-top.html \
-		../../registry/regpar.tab
+LDM-registry.html:	$(srcdir)/regpar-top.html ../../registry/regpar.tab
 	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
 	cat $(srcdir)/regpar-top.html >>$@.tmp
 	echo '<table align="center" border="2" cellpadding="6"' \
@@ -599,6 +599,12 @@ LDM-registry.html:	$(srcdir)/regpar-top.html \
 	done <../../registry/regpar.tab >>$@.tmp
 	echo '</blockquote></BODY></HTML>' >>$@.tmp
 	mv $@.tmp $@
+
+@MAINTAINER_TRUE@all:	$(srcdir)/successes.html $(srcdir)/failures.html
+
+@MAINTAINER_TRUE@configuring.html:	configuring.html.in
+@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
 
 @MAINTAINER_TRUE@registry-check:	$(top_srcdir)/configure.ac
 @MAINTAINER_TRUE@	sed -n '/UD_CONFIGPAR/{s/^.*(//;s/,.*//;s/\[//;s/\]//;p}' \
@@ -621,7 +627,7 @@ LDM-registry.html:	$(srcdir)/regpar-top.html \
 @MAINTAINER_TRUE@.PHONY:	registry-check
 
 @MAINTAINER_TRUE@successes.html:	$(top_srcdir)/test/results.tab
-@MAINTAINER_TRUE@	sort -t , -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 -k 7,7 $< \
+@MAINTAINER_TRUE@	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $< \
 @MAINTAINER_TRUE@	| awk -F , 'BEGIN { \
 @MAINTAINER_TRUE@		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
 @MAINTAINER_TRUE@		print "<html>"; \
@@ -638,20 +644,20 @@ LDM-registry.html:	$(srcdir)/regpar-top.html \
 @MAINTAINER_TRUE@		print "      <tr>"; \
 @MAINTAINER_TRUE@		print "        <th>O/S</th>"; \
 @MAINTAINER_TRUE@		print "        <th>CPU</th>"; \
-@MAINTAINER_TRUE@		print "        <th>Environment Variable(s)</th>"; \
-@MAINTAINER_TRUE@		print "        <th>configure(1) Option</th>"; \
-@MAINTAINER_TRUE@		print "        <th>make(1)</th>"; \
 @MAINTAINER_TRUE@		print "        <th>C Compiler</th>"; \
+@MAINTAINER_TRUE@		print "        <th>Environment Variable(s)</th>"; \
+@MAINTAINER_TRUE@		print "        <th>make(1)</th>"; \
+@MAINTAINER_TRUE@		print "        <th>configure(1) Option</th>"; \
 @MAINTAINER_TRUE@		print "      </tr>"; \
 @MAINTAINER_TRUE@	    } \
 @MAINTAINER_TRUE@	    $$8 != 0 { \
 @MAINTAINER_TRUE@		print "      <tr>"; \
 @MAINTAINER_TRUE@		print "        <td>" $$2 "</td>"; \
 @MAINTAINER_TRUE@		print "        <td>" $$3 "</td>"; \
-@MAINTAINER_TRUE@		print "        <td>" $$4 "</td>"; \
-@MAINTAINER_TRUE@		print "        <td>" $$7 "</td>"; \
-@MAINTAINER_TRUE@		print "        <td>" $$5 "</td>"; \
 @MAINTAINER_TRUE@		print "        <td>" $$6 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$4 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$5 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$7 "</td>"; \
 @MAINTAINER_TRUE@		print "      </tr>"; \
 @MAINTAINER_TRUE@	    } \
 @MAINTAINER_TRUE@	    END { \
@@ -661,7 +667,7 @@ LDM-registry.html:	$(srcdir)/regpar-top.html \
 @MAINTAINER_TRUE@	    }' >$@
 
 @MAINTAINER_TRUE@failures.html:	$(top_srcdir)/test/results.tab
-@MAINTAINER_TRUE@	sort -t , -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 -k 7,7 $< \
+@MAINTAINER_TRUE@	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $< \
 @MAINTAINER_TRUE@	| awk -F , 'BEGIN { \
 @MAINTAINER_TRUE@		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
 @MAINTAINER_TRUE@		print "<html>"; \
@@ -678,20 +684,20 @@ LDM-registry.html:	$(srcdir)/regpar-top.html \
 @MAINTAINER_TRUE@		print "      <tr>"; \
 @MAINTAINER_TRUE@		print "        <th>O/S</th>"; \
 @MAINTAINER_TRUE@		print "        <th>CPU</th>"; \
-@MAINTAINER_TRUE@		print "        <th>Environment Variable(s)</th>"; \
-@MAINTAINER_TRUE@		print "        <th>configure(1) Option</th>"; \
-@MAINTAINER_TRUE@		print "        <th>make(1)</th>"; \
 @MAINTAINER_TRUE@		print "        <th>C Compiler</th>"; \
+@MAINTAINER_TRUE@		print "        <th>Environment Variable(s)</th>"; \
+@MAINTAINER_TRUE@		print "        <th>make(1)</th>"; \
+@MAINTAINER_TRUE@		print "        <th>configure(1) Option</th>"; \
 @MAINTAINER_TRUE@		print "      </tr>"; \
 @MAINTAINER_TRUE@	    } \
 @MAINTAINER_TRUE@	    $$8 == 0 { \
 @MAINTAINER_TRUE@		print "      <tr>"; \
 @MAINTAINER_TRUE@		print "        <td>" $$2 "</td>"; \
 @MAINTAINER_TRUE@		print "        <td>" $$3 "</td>"; \
-@MAINTAINER_TRUE@		print "        <td>" $$4 "</td>"; \
-@MAINTAINER_TRUE@		print "        <td>" $$7 "</td>"; \
-@MAINTAINER_TRUE@		print "        <td>" $$5 "</td>"; \
 @MAINTAINER_TRUE@		print "        <td>" $$6 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$4 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$5 "</td>"; \
+@MAINTAINER_TRUE@		print "        <td>" $$7 "</td>"; \
 @MAINTAINER_TRUE@		print "      </tr>"; \
 @MAINTAINER_TRUE@	    } \
 @MAINTAINER_TRUE@	    END { \

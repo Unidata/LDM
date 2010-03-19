@@ -4,13 +4,14 @@
 #
 # Each line consists of a directory, a retention time (in days), and
 # (optionally) a shell filename pattern for files to be deleted.  If no
-# filename pattern is specified, "*" representing all files not beginning
-# with "." is assumed.
+# filename pattern is specified, "*" representing all files not beginning with
+# "." is assumed.  The syntax "~user" is understood.  Non-absolute pathnames
+# are relative to the directory `regutil regpath{PQACT_DATADIR_PATH}`.
 #
 # A hash in column one indicates a comment line.
 
 # Directory			Days-old	Optional-filename-pattern
 
-#~ldm/data/dir1			2
-#~ldm/data/dir2			2		*.foo
-~ldm/logs			1		*.stats
+#dir1		                2
+#dir2			        2		*.foo
+#~ldm/var/logs			1		*.stats

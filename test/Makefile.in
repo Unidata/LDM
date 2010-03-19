@@ -66,6 +66,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -195,9 +196,10 @@ top_srcdir = @top_srcdir@
 # redistribution conditions.
 #
 EXTRA_DIST = results.tab redo-results
-distName = $(PACKAGE)-$(VERSION)
-distArchive = $(top_srcdir)/$(distName).tar.gz
-topTmpDir = /tmp/$(distName)
+distId = $(PACKAGE)-$(VERSION)
+distName = $(distId).tar.gz
+distPath = $(top_srcdir)/$(distName)
+topTmpDir = /tmp/$(distId)
 all: all-am
 
 .SUFFIXES:
@@ -392,7 +394,7 @@ uninstall-am:
 @MAINTAINER_TRUE@	-test -d $(topTmpDir) && rm -rf $(topTmpDir)
 @MAINTAINER_TRUE@	mkdir $(topTmpDir)
 @MAINTAINER_TRUE@	gunzip -c $(distArchive) | (cd $(topTmpDir) && pax -r)
-@MAINTAINER_TRUE@	if cd $(topTmpDir)/$(distName); then \
+@MAINTAINER_TRUE@	if cd $(topTmpDir)/$(distId); then \
 @MAINTAINER_TRUE@	    if ./configure --prefix=$(topTmpDir) --disable-root-actions \
 @MAINTAINER_TRUE@		    $(CONFIG_OPTS) CC='$(CC)' MAKE="$(MAKE)" \
 @MAINTAINER_TRUE@		    LDMHOME=$(topTmpDir); then \
@@ -407,38 +409,92 @@ uninstall-am:
 @MAINTAINER_TRUE@	    exit $$status; \
 @MAINTAINER_TRUE@	fi
 
+@MAINTAINER_TRUE@test:
+@MAINTAINER_TRUE@	for util in false true; do \
+@MAINTAINER_TRUE@	    if echo '\
+@MAINTAINER_TRUE@		if '$$util'; then \
+@MAINTAINER_TRUE@		    status=$$?; \
+@MAINTAINER_TRUE@		else \
+@MAINTAINER_TRUE@		    status=$$?; \
+@MAINTAINER_TRUE@		fi; \
+@MAINTAINER_TRUE@		exit $$status' | ssh buddy; \
+@MAINTAINER_TRUE@	    then \
+@MAINTAINER_TRUE@		echo true; \
+@MAINTAINER_TRUE@	    else \
+@MAINTAINER_TRUE@		echo false; \
+@MAINTAINER_TRUE@	    fi; \
+@MAINTAINER_TRUE@	done
+
 # The following rule starts a single synchronous build process on a remote
-# system.
+# system.  Setting MAKEFLAGS to the empty string on the make(1) invocation line
+# appears to be necessary due to a bug in the AIX 5.1 make(1).
 @MAINTAINER_TRUE@singleCheck:
-@MAINTAINER_TRUE@	if echo "cd $$PWD" '&& $(env) $(make) -e MAKE="$(make)"' \
-@MAINTAINER_TRUE@		'CC="$(cc)" CONFIG_OPTS="$(configOpts)" hostcheck' \
-@MAINTAINER_TRUE@		| ssh $(host); then \
+@MAINTAINER_TRUE@	scp remoteCheck $(distPath) $(host):/tmp
+@MAINTAINER_TRUE@	ssh $(host) chmod +x /tmp/remoteCheck
+@MAINTAINER_TRUE@	if ssh $(host) /tmp/remoteCheck $(distId) \
+@MAINTAINER_TRUE@	    /tmp/$(distName) '"$(env)"' '"$(configOpts)"' '"$(make)"' \
+@MAINTAINER_TRUE@		'"$(cc)"' $(tmp); \
+@MAINTAINER_TRUE@	then \
 @MAINTAINER_TRUE@	    echo "$(env),$(make),$(cc),$(configOpts),1" >>$(host).results; \
 @MAINTAINER_TRUE@	else \
 @MAINTAINER_TRUE@	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
 @MAINTAINER_TRUE@	fi
 @MAINTAINER_TRUE@	touch redo-results
+@MAINTAINER_TRUE@	ssh $(host) rm /tmp/remoteCheck /tmp/$(distName)
+#	distPath=`cd $(top_srcdir) && pwd`/$(distName); \
+#	if echo '\
+#	    $(env) && \
+#	    echo "########################################################" && \
+#	    echo "Building on `uname -n` with" && \
+#	    echo "    PATH=$$PATH" && \
+#	    echo "    CONFIG_OPTS=\"$(configOpts)\"" && \
+#	    echo "    MAKE=\"$(make)\"" && \
+#	    echo "    CC=\"$(cc)\"" && \
+#	    echo && \
+#	    rm -rf $(topTmpDir) && \
+#	    mkdir $(topTmpDir) && \
+#	    cd $(topTmpDir) && \
+#	    scp '$$HOST:$$distPath' $(distName) && \
+#	    gunzip -c $(distName) | pax -r && \
+#	    cd $(distId) && \
+#	    if ./configure --prefix=$(topTmpDir) --disable-root-actions \
+#		    $(configOpts) CC="$(cc)" MAKE="$(make)" \
+#		    LDMHOME=$(topTmpDir); then \
+#		MAKEFLAGS= $(make) install uninstall; \
+#		status=$$?; \
+#	    else \
+#		status=$$?; \
+#		cat config.log; \
+#	    fi; \
+#	    cd /tmp && rm -rf $(topTmpDir); \
+#	    exit $$status' | ssh $(host); \
+#	then \
+#	    echo "$(env),$(make),$(cc),$(configOpts),1" >>$(host).results; \
+#	else \
+#	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
+#	fi
+#	touch redo-results
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for a single make(1) and cc(1) pair.
 @MAINTAINER_TRUE@multiCheck:
 @MAINTAINER_TRUE@	for configOpts in '' '--disable-shared'; do \
 @MAINTAINER_TRUE@	    $(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
-@MAINTAINER_TRUE@		configOpts="$$configOpts" singleCheck; \
+@MAINTAINER_TRUE@		tmp="$(tmp)" configOpts="$$configOpts" singleCheck; \
 @MAINTAINER_TRUE@	done >>$(host).log 2>&1
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for multiple make(1) and cc(1) pairs.
 @MAINTAINER_TRUE@.host.check:
 @MAINTAINER_TRUE@	rm -f $*.results $*.log
-@MAINTAINER_TRUE@	grep '^[^#]' $< | while IFS=',' read env make cc; do \
-@MAINTAINER_TRUE@	    $(MAKE) host="$*" env="$$env" make="$$make" cc="$$cc" \
+@MAINTAINER_TRUE@	grep '^[^#]' $< | while IFS=',' read env make cc tmp; do \
+@MAINTAINER_TRUE@	    $(MAKE) host="$*" env="$$env" make="$$make" cc="$$cc" tmp="$$tmp" \
 @MAINTAINER_TRUE@		multiCheck </dev/null; \
 @MAINTAINER_TRUE@	done
 
 # The following rule starts concurrent asynchronous builds on multiple remote
 # systems.
-@MAINTAINER_TRUE@hostchecks:	$(distArchive)
+@MAINTAINER_TRUE@hostchecks:	$(distPath)
 @MAINTAINER_TRUE@	-rm -f $@
 @MAINTAINER_TRUE@	hosts=`ls *.host | sed 's/.host//'`; \
 @MAINTAINER_TRUE@	for host in $$hosts; do \

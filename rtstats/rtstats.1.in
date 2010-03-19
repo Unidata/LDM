@@ -1,5 +1,4 @@
-." $Id: rtstats.1,v 1.3.16.1.2.5 2009/06/18 16:19:47 steve Exp $
-.TH RTSTATS 1 "$Date: 2009/06/18 16:19:47 $"
+.TH RTSTATS 1 "2010-03-10"
 .SH NAME
 rtstats - Generate time based statistics from an LDM product queue and transmit
 to a receiving host using LDM protocol.
@@ -115,8 +114,11 @@ The default is `\fB.*\fP', specifying all products.
 .TP
 .BI "-q " queue
 The pathname of the data product queue.
-The default is \fBdata/ldm.pq\fP relative to the installation point,
-which is typically \fB/usr/local/ldm\fP. The compiled in default can
+The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP.
+.hy
+The configuration default can
 be overridden by setting the environment variable \fBLDMPQFNAME\fP.
 .TP
 .BI \-i " interval"

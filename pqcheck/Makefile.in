@@ -129,6 +129,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -637,6 +638,10 @@ uninstall-man: uninstall-man1
 	uninstall-am uninstall-binPROGRAMS uninstall-man \
 	uninstall-man1
 
+
+@MAINTAINER_TRUE@pqcheck.1:	pqcheck.1.in
+@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
 
 valgrind:	pqcheck
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \

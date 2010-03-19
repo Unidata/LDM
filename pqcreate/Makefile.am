@@ -33,5 +33,11 @@ TAGS_FILES	= \
 dist_man1_MANS	= pqcreate.1
 CLEANFILES	= *.i
 
+if MAINTAINER
+pqcreate.1:	pqcreate.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif
+
 .c.i:
 	$(COMPILE) $(AM_CPPFLAGS) $(CPPFLAGS) -E $< >$@

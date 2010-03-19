@@ -1,6 +1,4 @@
-'\"
-'\" $Header: /cvsroot/ldm/src/pqinsert/pqinsert.1,v 1.7.22.4 2009/06/18 16:18:52 steve Exp $
-.TH PQINSERT 1 "$Date: 2009/06/18 16:18:52 $"
+.TH PQINSERT 1 "2010-03-10"
 .SH NAME
 pqinsert - insert files as products in an LDM product queue.
 .SH "SYNOPSIS"
@@ -50,7 +48,11 @@ The default product identifier is the name of the file being
 inserted.
 .TP
 .BI \-q " queue"
-Insert date to the named queue. The default is `/usr/local/ldm/data/ldm.pq'.
+Pathname of the queue into which to insert the files.
+The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP.
+.hy
 .TP
 .BI \-s " seqno"
 Sets the product sequence number associated with the first product

@@ -32,6 +32,12 @@ TAGS_FILES	= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
+if MAINTAINER
+pqcheck.1:	pqcheck.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif
+
 valgrind:	pqcheck
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./pqcheck

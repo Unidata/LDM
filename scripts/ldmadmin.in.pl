@@ -73,38 +73,37 @@ if (!isRunning($pid_file, $ip_addr)) {
     resetRegistry();
 }
 @regpar = (
-    [\$ldmd_conf, "@REG_LDMD_CONFIG_PATH@"],
-    [\$q_path, "@REG_QUEUE_PATH@"],
-    [\$q_path, "@REG_QUEUE_PATH@"],
-    [\$hostname, "@REG_HOSTNAME@"],
-    [\$insertion_check_period, "@REG_INSERTION_CHECK_INTERVAL@"],
-    [\$pq_size, "@REG_QUEUE_SIZE@"],
-    [\$pq_slots, "@REG_QUEUE_SLOTS@"],
-    [\$surf_path, "@REG_SURFQUEUE_PATH@"],
-    [\$surf_size, "@REG_SURFQUEUE_SIZE@"],
-    [\$metrics_file, "@REG_METRICS_FILE@"],
-    [\$metrics_files, "@REG_METRICS_FILES@"],
-    [\$log_file, "@REG_LOG_FILE@"],
-    [\$numlogs, "@REG_LOG_COUNT@"],
-    [\$log_rotate, "@REG_LOG_ROTATE@"],
-    [\$num_metrics, "@REG_METRICS_COUNT@"],
-    [\$ip_addr, "@REG_IP_ADDR@"],
-    [\$port, "@REG_PORT@"],
-    [\$max_clients, "@REG_MAX_CLIENTS@"],
-    [\$max_latency, "@REG_MAX_LATENCY@"],
-    [\$offset, "@REG_TIME_OFFSET@"],
-    [\$pqact_conf, "@REG_PQACT_CONFIG_PATH@"],
-    [\$scour_file, "@REG_SCOUR_CONFIG_PATH@"],
-    [\$check_time , "@REG_CHECK_TIME@"],
-    [\$warn_if_check_time_disabled, "@REG_WARN_IF_CHECK_TIME_DISABLED@"],
-    [\$ntpdate, "@REG_NTPDATE_COMMAND@"],
-    [\$ntpdate_timeout, "@REG_NTPDATE_TIMEOUT@"],
-    [\$time_servers, "@REG_NTPDATE_SERVERS@"],
-    [\$check_time_limit, "@REG_CHECK_TIME_LIMIT@"],
-    [\$abort_if_check_time_failure, "@REG_ABORT_IF_CHECK_TIME_FAILURE@"],
-    [\$netstat, "@REG_NETSTAT_COMMAND@"],
-    [\$top, "@REG_TOP_COMMAND@"],
-    [\$delete_info_files, "@REG_DELETE_INFO_FILES@"],
+    [\$ldmd_conf, "regpath{LDMD_CONFIG_PATH}"],
+    [\$q_path, "regpath{QUEUE_PATH}"],
+    [\$q_path, "regpath{QUEUE_PATH}"],
+    [\$hostname, "regpath{HOSTNAME}"],
+    [\$insertion_check_period, "regpath{INSERTION_CHECK_INTERVAL}"],
+    [\$pq_size, "regpath{QUEUE_SIZE}"],
+    [\$pq_slots, "regpath{QUEUE_SLOTS}"],
+    [\$surf_path, "regpath{SURFQUEUE_PATH}"],
+    [\$surf_size, "regpath{SURFQUEUE_SIZE}"],
+    [\$metrics_file, "regpath{METRICS_FILE}"],
+    [\$metrics_files, "regpath{METRICS_FILES}"],
+    [\$log_file, "regpath{LOG_FILE}"],
+    [\$numlogs, "regpath{LOG_COUNT}"],
+    [\$log_rotate, "regpath{LOG_ROTATE}"],
+    [\$num_metrics, "regpath{METRICS_COUNT}"],
+    [\$ip_addr, "regpath{IP_ADDR}"],
+    [\$port, "regpath{PORT}"],
+    [\$max_clients, "regpath{MAX_CLIENTS}"],
+    [\$max_latency, "regpath{MAX_LATENCY}"],
+    [\$offset, "regpath{TIME_OFFSET}"],
+    [\$pqact_conf, "regpath{PQACT_CONFIG_PATH}"],
+    [\$scour_file, "regpath{SCOUR_CONFIG_PATH}"],
+    [\$check_time , "regpath{CHECK_TIME}"],
+    [\$warn_if_check_time_disabled, "regpath{WARN_IF_CHECK_TIME_DISABLED}"],
+    [\$ntpdate, "regpath{NTPDATE_COMMAND}"],
+    [\$ntpdate_timeout, "regpath{NTPDATE_TIMEOUT}"],
+    [\$time_servers, "regpath{NTPDATE_SERVERS}"],
+    [\$check_time_limit, "regpath{CHECK_TIME_LIMIT}"],
+    [\$netstat, "regpath{NETSTAT_COMMAND}"],
+    [\$top, "regpath{TOP_COMMAND}"],
+    [\$delete_info_files, "regpath{DELETE_INFO_FILES}"],
 );
 for my $entryRef (@regpar) {
     ${$entryRef->[0]} = `regutil $entryRef->[1]` || die;
@@ -141,7 +140,7 @@ while ($_ = $ARGV[0]) {
 #
 if ($hostname !~ /\./) {
     bad_exit("The LDM-hostname is not fully-qualified.  " . 
-        "Execute the command \"regutil -s <hostname> @REG_HOSTNAME@\" ".
+        "Execute the command \"regutil -s <hostname> regpath{HOSTNAME}\" ".
         "to set the fully-qualified name of the host.")
 }
 
@@ -206,7 +205,7 @@ elsif ($command eq "watch") {	# monitor incoming products
     if (!isRunning($pid_file, $ip_addr)) {
 	bad_exit("There is no LDM server running");
     }
-    system("$pqutil -r -f \"$feedset\" -w $q_path");
+    system("pqutil -r -f \"$feedset\" -w $q_path");
 }
 elsif ($command eq "pqactcheck") {	# check pqact file for errors
     $status = !are_pqact_confs_ok();
@@ -251,7 +250,7 @@ elsif ($command eq "clean") {	# clean up after an abnormal termination
 elsif ($command eq "checktime") {
     print "Checking accuracy of system clock ... ";
     $check_time = 1;
-    if (checkTime(0)) {
+    if (checkTime()) {
         print "\n";
 	$status = 1;
     }
@@ -882,7 +881,6 @@ sub ldm_config
     print  "ntpdate(1) timeout:    $ntpdate_timeout\n";
     print  "time servers:          ", join(" ", @time_servers), "\n";
     print  "time-offset limit:     $check_time_limit\n";
-    print  "check time abort:      $abort_if_check_time_failure\n";
     print "\n";
 
     return 0;
@@ -934,7 +932,7 @@ sub check_insertion
         if ($age > $insertion_check_period) {
             errmsg("check_insertion(): The last data-product was inserted ".
                 "$age seconds ago, which is greater than the configuration-".
-                "parameter \"@REG_INSERTION_CHECK_INTERVAL@\" ".
+                "parameter \"regpath{INSERTION_CHECK_INTERVAL}\" ".
                 "($insertion_check_period seconds).");
         }
         else {
@@ -1023,15 +1021,15 @@ sub saveQueuePar
     my $slots = $_[1];
     my $status = 1;                     # failure default
 
-    if (system("regutil -u $size @REG_QUEUE_SIZE@")) {
+    if (system("regutil -u $size regpath{QUEUE_SIZE}")) {
         errmsg("saveQueuePar(): Couldn't save new queue size");
     }
     else {
-        if (system("regutil -u $slots @REG_QUEUE_SLOTS@")) {
+        if (system("regutil -u $slots regpath{QUEUE_SLOTS}")) {
             errmsg("saveQueuePar(): Couldn't save queue slots");
 
             print "Restoring previous queue size\n";
-            if (system("regutil -u $pq_size @REG_QUEUE_SIZE@")) {
+            if (system("regutil -u $pq_size regpath{QUEUE_SIZE}")) {
                 errmsg("saveQueuePar(): Couldn't restore previous queue size");
             }
         }
@@ -1051,16 +1049,16 @@ sub saveTimePar
     my $newMaxLatency = $_[1];
     my $status = 1;                     # failure default
 
-    if (system("regutil -u $newTimeOffset @REG_TIME_OFFSET@")) {
+    if (system("regutil -u $newTimeOffset regpath{TIME_OFFSET}")) {
         errmsg("saveTimePar(): Couldn't save new time-offset");
     }
     else {
-        if (system("regutil -u $newMaxLatency @REG_MAX_LATENCY@")) {
+        if (system("regutil -u $newMaxLatency regpath{MAX_LATENCY}")) {
             errmsg("saveTimePar(): Couldn't save new maximum acceptible ".
                 "latency");
 
             print "Restoring previous time-offset\n";
-            if (system("regutil -u $offset @REG_TIME_OFFSET@")) {
+            if (system("regutil -u $offset regpath{TIME_OFFSET}")) {
                 errmsg("saveTimePar(): Couldn't restore previous time-offset");
             }
         }
@@ -1095,15 +1093,15 @@ sub vetQueueSize
         }
         else {
             errmsg("vetQueueSize(): The maximum acceptible latency ".
-                "(configuration parameter \"@REG_MAX_LATENCY@\": ".
+                "(configuration parameter \"regpath{MAX_LATENCY}\": ".
                 "$max_latency seconds) is greater ".
                 "than the observed minimum virtual residence time of ".
                 "data-products in the queue ($minVirtResTime seconds).  This ".
                 "will hinder detection of duplicate data-products.");
 
-            chomp(my $reconMode = `regutil @REG_RECONCILIATION_MODE@`);
+            chomp(my $reconMode = `regutil regpath{RECONCILIATION_MODE}`);
             print "The value of the ".
-                "\"@REG_RECONCILIATION_MODE@\" configuration parameter is ".
+                "\"regpath{RECONCILIATION_MODE}\" configuration parameter is ".
                 "\"$reconMode\"\n";
             if ($reconMode eq $increaseQueue) {
                 print "Increasing the capacity of the queue...\n";
@@ -1159,8 +1157,8 @@ sub vetQueueSize
             elsif ($reconMode eq $decreaseMaxLatency) {
                 print "Decreasing the maximum acceptible ".
                     "latency and the time-offset of requests (configuration ".
-                    "parameters \"@REG_MAX_LATENCY@\" and ".
-                    "\"@REG_TIME_OFFSET@\")...\n";
+                    "parameters \"regpath{MAX_LATENCY}\" and ".
+                    "\"regpath{TIME_OFFSET}\")...\n";
 
                 if (0 >= $minVirtResTime) {
                     # Use age of oldest product, instead
@@ -1191,7 +1189,7 @@ sub vetQueueSize
             }                           # mode is decrease max latency
             elsif ($reconMode eq $doNothing) {
                 print "Doing nothing.  You should consider setting ".
-                    "configuration parameter \"@REG_RECONCILIATION_MODE@\" ".
+                    "configuration parameter \"regpath{RECONCILIATION_MODE}\" ".
                     "to \"$increaseQueue\" or \"$decreaseMaxLatency\" or ".
                     "recreate the queue yourself.\n";
             }
@@ -1228,7 +1226,7 @@ sub check_ldm
     }
 
     print "Checking the system clock...\n";
-    if (checkTime(0)) {
+    if (checkTime()) {
         return 4;
     }
 
@@ -1476,11 +1474,6 @@ sub removeOldProdInfoFiles
 sub checkTime
 {
     my $failure = 1;
-    # If it exists, then use the passed-in argument to decide whether or not to
-    # abort on failure,
-    #
-    my $abort_if_check_time_failure =
-	($#_ >= 0 ? $_[0] : $abort_if_check_time_failure);
 
     if (!$check_time) {
 	if ($warn_if_check_time_disabled) {
@@ -1488,14 +1481,14 @@ sub checkTime
 		"WARNING: The checking of the system clock is disabled.  ".
 		"You might loose data if the clock is off.  To enable this ".
 		"checking, execute the command \"regutil -u 1 ".
-                "@REG_CHECK_TIME@\".");
+                "regpath{CHECK_TIME}\".");
 	}
 	$failure = 0;
     }
     else {
 	if ($#time_servers < 0) {
 	    errmsg("\nWARNING: No time-servers are specified by the registry ".
-		"parameter \"@REG_NTPDATE_SERVERS@\". Consequently, the ".
+		"parameter \"regpath{NTPDATE_SERVERS}\". Consequently, the ".
 		"system clock can't be checked and you might loose data if ".
 		"it's off.");
 	}
@@ -1510,7 +1503,7 @@ sub checkTime
 		    errmsg("\n".
 			"Couldn't execute the command \"$ntpdate\": $!.  ".
                         "Execute the command \"regutil -s path ".
-                        "@REG_NTPDATE_COMMAND@\" to set the pathname of ".
+                        "regpath{NTPDATE_COMMAND}\" to set the pathname of ".
                         "the ntpdate(1) utility to \"path\".");
 		    last;
 		}
@@ -1531,7 +1524,7 @@ sub checkTime
 			    "If the utility is valid and this happens often, ".
 			    "then remove $timeServer ".
 			    "from registry parameter ".
-                            "\"@REG_NTPDATE_SERVERS@\".");
+                            "\"regpath{NTPDATE_SERVERS}\".");
 		    }
 		    else {
 			if (abs($offset) > $check_time_limit) {
@@ -1539,7 +1532,7 @@ sub checkTime
 				"The system clock is more than ".
 				"$check_time_limit seconds off, which is ".
 				"specified by registry parameter ".
-				"\"@REG_CHECK_TIME_LIMIT@\".");
+				"\"regpath{CHECK_TIME_LIMIT}\".");
 			}
 			else {
 			    $failure = 0;
@@ -1553,10 +1546,7 @@ sub checkTime
 	    errmsg("\n".
 		"You should either fix the problem (recommended) or disable ".
 		"time-checking by executing the command ".
-                "\"regutil -u 0 @REG_CHECK_TIME@\" (not recommended).");
-	    if ($abort_if_check_time_failure) {
-		bad_exit("Aborting....");
-	    }
+                "\"regutil -u 0 regpath{CHECK_TIME}\" (not recommended).");
 	}
     }
     return $failure;

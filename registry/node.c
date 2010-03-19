@@ -321,7 +321,7 @@ static void visitValue(
 
 static RegStatus visitNodes(
     RegNode* const      node,
-    NodeFunc            func);
+    const NodeFunc      func);
 
 /*
  * Visits the child-nodes of a node in the natural order of their path names.

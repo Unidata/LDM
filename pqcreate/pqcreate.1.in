@@ -1,5 +1,4 @@
-." $Id: pqcreate.1,v 1.5.20.5.2.2 2009/06/18 16:15:20 steve Exp $
-.TH PQCREATE 1 "$Date: 2009/06/18 16:15:20 $"
+.TH PQCREATE 1 "2010-03-10"
 .SH NAME
 pqcreate - program to create a Unidata LDM product queue
 .SH SYNOPSIS
@@ -64,8 +63,10 @@ section of the queue file. If unspecified, it defaults to \fIsize\fP/4096,
 eg, one slot for each 4096 bytes of data.
 .TP
 .BI \-q " pqfname"
-The name of the product queue file.  The default is \fBdata/ldm.pq\fP
-relative to the installation point, which is typically \fB/usr/local/ldm\fP.
+The name of the product queue file.  The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP.
+.hy
 This should specify a local file, not a remotely mounted file.
 .TP
 .BI "-f "

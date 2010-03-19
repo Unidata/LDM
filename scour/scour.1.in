@@ -1,6 +1,4 @@
-'\"
-'\" $Header: /cvsroot/ldm/src/scour/scour.1,v 1.1.22.1 2009/06/18 16:19:54 steve Exp $
-.TH SCOUR 1 "$Date: 2009/06/18 16:19:54 $"
+.TH SCOUR 1 "2010-03-10"
 .SH NAME
 scour - utility for deleting old data files
 .SH "UNIX SYNOPSIS"
@@ -52,8 +50,8 @@ Turn on debugging.  This will produce extra debugging output in the log file.
 .BI "config-file"
 The path name of the configuration file containing the table of data
 directories to be scoured and data retention times in days.  If no
-configuration file is named, a default configuration file,
-/usr/local/ldm/etc/scour.conf, is used.
+configuration file is named, the default configuration file printed by the
+command "regutil regpath{PQACT_CONFIG_PATH}", is used.
 
 .SH EXAMPLE
 The command
@@ -69,28 +67,32 @@ a configuration file:
 .RS +4
 .nf
 
-# Directory			Days-old	Optional-filename-pattern
+# Directory                     Days-old        Optional-filename-pattern
 
-~ldm/data/forecasts		3		*.gdbm
-~ldm/data/warnings		3		*.gdbm
-~ldm/data/decoded		2		*.nc
-~ldm/data/upperair		2		*.wmo
-~ldm/data/GRIB			2
-~ldm/data/GRIB			1		*eta.nc
+~ldm/var/data/forecasts         3               *.gdbm
+~ldm/var/data/warnings          3               *.gdbm
+~ldm/var/data/decoded           2               *.nc
+~ldm/var/data/upperair          2               *.wmo
+~ldm/var/data/GRIB              2
+~ldm/var/data/GRIB              1               *eta.nc
 # this contains sao, rad, buoy, syn, and front subdirectories
-~ldm/data/surface		2
-~ldm/data/gempak		2
+~ldm/var/data/surface           2
+~ldm/var/data/gempak            2
 
 .fi
 .RE
+
+Directory pathname that are not absolute are relative to the directory
+printed by the command "regutil regpath{PQACT_DATADIR_PATH}".
+
 Comment lines must begin with the `#' character.  Blank lines are ignored.
 Directory names may be absolute pathnames, or may use the `~user' notation of
 csh(1).  If a filename pattern is not specified, `*' matching all files that
 don't begin with the character `.' is assumed.
-.RE
-In the example above, the directory name `~ldm/data/GRIB' is specified
+
+In the example above, the directory name `~ldm/var/data/GRIB' is specified
 twice, once without a pattern and once with a pattern.  The intention is
-that all files in ~ldm/data/GRIB older than 2 days should be removed, but
+that all files in ~ldm/var/data/GRIB older than 2 days should be removed, but
 that in addition, files with names matching the pattern `*eta.nc' that are
 older than 1 day should also be removed.
 .SH FILES

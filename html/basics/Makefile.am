@@ -35,7 +35,6 @@ EXTRA_DIST	= \
     tips.html \
     tradeoffs.html \
     versionId.html \
-    vet-ldmadmin.html \
     what-gets-installed.html.in \
     Downstream_6.4_Alternate.gif \
     Downstream_6.4_Primary.gif \
@@ -48,6 +47,7 @@ EXTRA_DIST	= \
     feedtypes/fnexrad.html \
     feedtypes/gem.html \
     feedtypes/hds.html \
+    feedtypes/howto-nnexrad.html \
     feedtypes/index.html \
     feedtypes/nexrad-fonx.html \
     feedtypes/ngraph.html \
@@ -92,7 +92,6 @@ html_DATA	= \
     tips.html \
     tradeoffs.html \
     versionId.html \
-    vet-ldmadmin.html \
     what-gets-installed.html \
     Downstream_6.4_Alternate.gif \
     Downstream_6.4_Primary.gif \
@@ -106,6 +105,7 @@ nobase_html_DATA	= \
     feedtypes/fnexrad.html \
     feedtypes/gem.html \
     feedtypes/hds.html \
+    feedtypes/howto-nnexrad.html \
     feedtypes/index.html \
     feedtypes/nexrad-fonx.html \
     feedtypes/ngraph.html \
@@ -118,8 +118,7 @@ nobase_html_DATA	= \
 BUILT_SOURCES		= LDM-registry.html
 DISTCLEANFILES		= LDM-registry.html
 
-LDM-registry.html:	$(srcdir)/regpar-top.html \
-		../../registry/regpar.tab
+LDM-registry.html:	$(srcdir)/regpar-top.html ../../registry/regpar.tab
 	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
 	cat $(srcdir)/regpar-top.html >>$@.tmp
 	echo '<table align="center" border="2" cellpadding="6"' \
@@ -140,6 +139,12 @@ LDM-registry.html:	$(srcdir)/regpar-top.html \
 	mv $@.tmp $@
 
 if MAINTAINER
+
+all:	$(srcdir)/successes.html $(srcdir)/failures.html
+
+configuring.html:	configuring.html.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
 
 registry-check:	$(top_srcdir)/configure.ac
 	sed -n '/UD_CONFIGPAR/{s/^.*(//;s/,.*//;s/\[//;s/\]//;p}' \
@@ -162,7 +167,7 @@ registry-check:	$(top_srcdir)/configure.ac
 .PHONY:	registry-check
 
 successes.html:	$(top_srcdir)/test/results.tab
-	sort -t , -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 -k 7,7 $< \
+	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $< \
 	| awk -F , 'BEGIN { \
 		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
 		print "<html>"; \
@@ -179,20 +184,20 @@ successes.html:	$(top_srcdir)/test/results.tab
 		print "      <tr>"; \
 		print "        <th>O/S</th>"; \
 		print "        <th>CPU</th>"; \
-		print "        <th>Environment Variable(s)</th>"; \
-		print "        <th>configure(1) Option</th>"; \
-		print "        <th>make(1)</th>"; \
 		print "        <th>C Compiler</th>"; \
+		print "        <th>Environment Variable(s)</th>"; \
+		print "        <th>make(1)</th>"; \
+		print "        <th>configure(1) Option</th>"; \
 		print "      </tr>"; \
 	    } \
 	    $$8 != 0 { \
 		print "      <tr>"; \
 		print "        <td>" $$2 "</td>"; \
 		print "        <td>" $$3 "</td>"; \
-		print "        <td>" $$4 "</td>"; \
-		print "        <td>" $$7 "</td>"; \
-		print "        <td>" $$5 "</td>"; \
 		print "        <td>" $$6 "</td>"; \
+		print "        <td>" $$4 "</td>"; \
+		print "        <td>" $$5 "</td>"; \
+		print "        <td>" $$7 "</td>"; \
 		print "      </tr>"; \
 	    } \
 	    END { \
@@ -202,7 +207,7 @@ successes.html:	$(top_srcdir)/test/results.tab
 	    }' >$@
 
 failures.html:	$(top_srcdir)/test/results.tab
-	sort -t , -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 -k 7,7 $< \
+	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $< \
 	| awk -F , 'BEGIN { \
 		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
 		print "<html>"; \
@@ -219,20 +224,20 @@ failures.html:	$(top_srcdir)/test/results.tab
 		print "      <tr>"; \
 		print "        <th>O/S</th>"; \
 		print "        <th>CPU</th>"; \
-		print "        <th>Environment Variable(s)</th>"; \
-		print "        <th>configure(1) Option</th>"; \
-		print "        <th>make(1)</th>"; \
 		print "        <th>C Compiler</th>"; \
+		print "        <th>Environment Variable(s)</th>"; \
+		print "        <th>make(1)</th>"; \
+		print "        <th>configure(1) Option</th>"; \
 		print "      </tr>"; \
 	    } \
 	    $$8 == 0 { \
 		print "      <tr>"; \
 		print "        <td>" $$2 "</td>"; \
 		print "        <td>" $$3 "</td>"; \
-		print "        <td>" $$4 "</td>"; \
-		print "        <td>" $$7 "</td>"; \
-		print "        <td>" $$5 "</td>"; \
 		print "        <td>" $$6 "</td>"; \
+		print "        <td>" $$4 "</td>"; \
+		print "        <td>" $$5 "</td>"; \
+		print "        <td>" $$7 "</td>"; \
 		print "      </tr>"; \
 	    } \
 	    END { \

@@ -18,6 +18,7 @@
 #include "registry.h"
 #include "ulog.h"
 #include "log.h"
+#include "ldmprint.h"
 
 typedef enum {
     COMMAND_SYNTAX = 1,
@@ -35,17 +36,18 @@ static void printUsage(const char* progname)
         "Usages:\n"
         "  Create Registry:     %s [-d dir] -c\n"
         "  Reset Registry:      %s [-d dir] -R\n"
-        "  Print Parameters:    %s [-d dir] [path ...]\n"
-        "  Remove Parameter(s): %s [-d dir] -r path ...\n"
+        "  Print Parameters:    %s [-d dir] [-q] [path ...]\n"
+        "  Remove Parameter(s): %s [-d dir] [-q] -r path ...\n"
         "  Set Parameter:       %s [-d dir] (-h sig|-s string|-t time|-u uint) "
             "valpath\n"
         "where:\n"
-        "  dir          Path name of registry directory\n"
+        "  -d dir       Path name of registry directory\n"
+        "  -h sig       Data-product signature as 32 hexadecimal characters\n"
+        "  -q           Be quiet about missing values or nodes\n"
+        "  -s string    String registry value\n"
+        "  -t time      Time registry value as YYYYMMDDThhmmss[.uuuuuu]\n"
+        "  -u uint      Unsigned integer registry value\n"
         "  path         Absolute path name of registry node or value\n"
-        "  sig          Data-product signature as 32 hexadecimal characters\n"
-        "  string       String registry value\n"
-        "  time         Time registry value as YYYYMMDDThhmmss[.uuuuuu]\n"
-        "  uint         Unsigned integer registry value\n"
         "  valpath      Absolute path name of value\n",
         progname, progname, progname, progname, progname);
 }
@@ -136,28 +138,35 @@ static int printNodeValues(
  * Arguments:
  *      path            Pointer to a registry pathname to be printed.  Shall
  *                      not be NULL.
+ *      quiet           Whether or not to be quiet about a pathname not
+ *                      existing.
  * Returns:
  *      0               Sucess
- *      NO_SUCH_ENTRY   No such value or node.  "log_start()" called.
- *      SYSTEM_ERROR    Failure.  "log_start()" called.
+ *      NO_SUCH_ENTRY   No such value or node.  "log_log()" called iff "quiet
+ *                      == 0".
+ *      SYSTEM_ERROR    Failure.  "log_log()" called.
  */
 static Status printPath(
-    const char*         path)
+    const char*         path,
+    const int           quiet)
 {
-    int         status;
+    Status      status = 0;             /* success */
+    RegStatus   regStatus;
     char*       value;
+
     /*
      * The path name is first assumed to reference an existing value;
      * otherwise, the value wouldn't be printed.
      */ 
-    if (0 == (status = reg_getString(path, &value))) {
+    if (0 == (regStatus = reg_getString(path, &value))) {
         if (NULL != value) {
             (void)printf("%s\n", value);
             free(value);
         }                               /* "value" allocated */
     }                                   /* got value-string */
     else {
-        if (ENOENT != status) {
+        if (ENOENT != regStatus) {
+            log_log(LOG_ERR);
             status = SYSTEM_ERROR;
         }
         else {
@@ -168,19 +177,24 @@ static Status printPath(
 
             log_clear();
 
-            if (0 != (status = reg_getNode(path, &node, 0))) {
-                if (ENOENT == status) {
-                    log_start("No such value or node: \"%s\"", path);
+            if (0 != (regStatus = reg_getNode(path, &node, 0))) {
+                if (ENOENT == regStatus) {
+                    if (!quiet) {
+                        log_start("No such value or node: \"%s\"", path);
+                        log_log(LOG_ERR);
+                    }
                     status = NO_SUCH_ENTRY;
                 }
                 else {
+                    log_log(LOG_ERR);
                     status = SYSTEM_ERROR;
                 }
             }                           /* didn't get node */
             else {
                 _pathPrefix = path;
 
-                if (0 != (status = reg_visitNodes(node, printNodeValues))) {
+                if (0 != (regStatus = reg_visitNodes(node, printNodeValues))) {
+                    log_log(LOG_ERR);
                     status = SYSTEM_ERROR;
                 }                       /* error visiting nodes */
             }                           /* got node */
@@ -200,15 +214,14 @@ static Status printPath(
 static Status createRegistry(void)
 {
     RegNode*    rootNode;
-    int         status = reg_getNode("/", &rootNode, 1);
 
-    if (0 != status) {
+    if (0 != reg_getNode("/", &rootNode, 1)) {
         log_add("Couldn't create registry");
         log_log(LOG_ERR);
-        status = SYSTEM_ERROR;
+        return SYSTEM_ERROR;
     }
 
-    return status;
+    return 0;
 }
 
 /*
@@ -220,15 +233,13 @@ static Status createRegistry(void)
  */
 static Status resetRegistry(void)
 {
-    int         status = reg_reset();
-
-    if (0 != status) {
+    if (0 != reg_reset()) {
         log_add("Couldn't reset registry");
         log_log(LOG_ERR);
-        status = SYSTEM_ERROR;
+        return SYSTEM_ERROR;
     }
 
-    return status;
+    return 0;
 }
 
 /*
@@ -238,37 +249,51 @@ static Status resetRegistry(void)
  *      path            Pointer to a an absolute registry pathname.  Shall not
  *                      be NULL.  If the pathname refers to a node, then the
  *                      node and all its subnodes are recursively removed.
+ *      quiet           Whether or not to be quiet about a pathname not
+ *                      existing.
  * Returns:
  *      0               Success.
- *      NO_SUCH_ENTRY   No such entry in the registry.  "log_start()" called.
- *      SYSTEM_ERROR    System error.  "log_start()" called.
+ *      NO_SUCH_ENTRY   No such entry in the registry.  "log_log()" called iff
+ *                      "quiet == 0".
+ *      SYSTEM_ERROR    System error.  "log_log()" called.
  */
 static Status deletePath(
-    const char* const   path)
+    const char* const   path,
+    const int           quiet)
 {
-    int status = reg_deleteValue(path);
-
-    if (ENOENT == status) {
-        RegNode*        node;
-
-        switch (reg_getNode(path, &node, 0)) {
+    switch (reg_deleteValue(path)) {
         case 0:
-            reg_deleteNode(node);
+            return 0;
 
-            if (reg_flushNode(node))
-                status = SYSTEM_ERROR;
+        case ENOENT: {
+            RegNode*        node;
 
-            break;
-        case ENOENT:
-            log_start("No such value or node: \"%s\"", path);
-            status = NO_SUCH_ENTRY;
-            break;
-        default:
-            status = SYSTEM_ERROR;
+            switch (reg_getNode(path, &node, 0)) {
+                case 0:
+                    reg_deleteNode(node);
+
+                    if (reg_flushNode(node)) {
+                        log_log(LOG_ERR);
+                        return SYSTEM_ERROR;
+                    }
+
+                    return 0;
+                case ENOENT:
+                    if (!quiet) {
+                        log_start("No such value or node: \"%s\"", path);
+                        log_log(LOG_ERR);
+                    }
+                    return NO_SUCH_ENTRY;
+                default:
+                    log_log(LOG_ERR);
+                    return SYSTEM_ERROR;
+            }
         }
-    }
 
-    return status;
+        default:
+            log_log(LOG_ERR);
+            return SYSTEM_ERROR;
+    }
 }
 
 /*
@@ -280,9 +305,12 @@ static Status deletePath(
  *      func            Pointer to the function to be applied to each pathname.
  *                      The function shall return one of
  *                          0   Success.
- *                          NO_SUCH_ENTRY   No such entry.  "log_start()" called.
+ *                          NO_SUCH_ENTRY       No such entry.  "log_start()"
+ *                                              called iff "quiet == 0".
  *                          SYSTEM_ERROR        System error.  "log_start()"
  *                                              called.
+ *      quiet           Whether or not to be quiet about a pathname not
+ *                      existing.
  * Returns:
  *      0               Success.
  *      NO_SUCH_ENTRY   An entry didn't exist.  "log_log()" called.  All
@@ -292,17 +320,21 @@ static Status deletePath(
  */
 static Status actUponPathList(
     char* const*        pathList,
-    Status              (*func)(const char* path))
+    Status              (*func)(const char* path, int quiet),
+    int                 quiet)
 {
-    int                 status = 0;
+    Status              status = 0;
     const char*         path;
 
     while (SYSTEM_ERROR > status && NULL != (path = *pathList++)) {
-        int     stat = func(path);
+        Status  stat = func(path, quiet);
 
         if (stat) {
-            log_log(LOG_ERR);
-            status = stat;
+            /*
+             * "status" should indicate the worse thing that happened.
+             */
+            if (stat > status)
+                status = stat;
         }
     }
 
@@ -327,6 +359,7 @@ int main(
 
     if (status = sb_new(&_valuePath, 80)) {
         log_add("Couldn't initialize utility");
+        log_log(LOG_ERR);
         status = SYSTEM_ERROR;
     }
     else {
@@ -339,17 +372,18 @@ int main(
             PUT_SIGNATURE,
             PUT_TIME,
             RESET,
-            REMOVE,
+            REMOVE
         }               usage = UNKNOWN;
         const char*     string;
         signaturet      signature;
         timestampt      timestamp;
         unsigned long   uint;
         int             ch;
+        int             quiet = 0;
 
         opterr = 0;                     /* supress getopt(3) error messages */
 
-        while (0 == status && (ch = getopt(argc, argv, ":cd:h:Rrs:t:u:"))
+        while (0 == status && (ch = getopt(argc, argv, ":cd:h:qRrs:t:u:"))
                 != -1) {
             switch (ch) {
             case 'c': {
@@ -382,6 +416,10 @@ int main(
                     usage = PUT_SIGNATURE;
                     status = 0;
                 }
+                break;
+            }
+            case 'q': {
+                quiet = 1;
                 break;
             }
             case 'R': {
@@ -461,7 +499,9 @@ int main(
 
         if (status) {
             log_log(LOG_ERR);
-            printUsage(progname);
+
+            if (COMMAND_SYNTAX == status)
+                printUsage(progname);
         }
         else {
             const int     argCount = argc - optind;
@@ -503,14 +543,15 @@ int main(
                         status = COMMAND_SYNTAX;
                     }
                     else {
-                        status = actUponPathList(argv + optind, deletePath);
+                        status = actUponPathList(argv + optind, deletePath,
+                            quiet);
                     }
                     break;
                 }
                 case PRINT: {
                     status = (0 == argCount)
-                        ? printPath("/")
-                        : actUponPathList(argv + optind, printPath);
+                        ? printPath("/", quiet)
+                        : actUponPathList(argv + optind, printPath, quiet);
                     break;
                 }
                 default: {

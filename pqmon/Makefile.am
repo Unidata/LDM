@@ -33,6 +33,12 @@ TAGS_FILES	= \
     ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
 
+if MAINTAINER
+pqmon.1:	pqmon.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif
+
 debug:		pqmon
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb pqmon
 

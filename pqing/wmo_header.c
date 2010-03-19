@@ -188,10 +188,10 @@ done:
                             allnum = 0;
                     }
                     if((nonalph == 0)&&(allnum == 0))
-                        sprintf(hdr->PIL," /p%s\0",pilstr);
+                        sprintf(hdr->PIL," /p%s",pilstr);
                 }
                 else if((linelen == 10) && (strncmp(pilstr,"^NMC",4) == 0))
-                    sprintf(hdr->PIL," /p%s\0",pilstr+4); 
+                    sprintf(hdr->PIL," /p%s",pilstr+4); 
             }
         }
         

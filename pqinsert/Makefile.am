@@ -31,3 +31,9 @@ TAGS_FILES	= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 dist_man1_MANS	= pqinsert.1
+
+if MAINTAINER
+pqinsert.1:	pqinsert.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif

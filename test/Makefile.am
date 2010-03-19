@@ -6,9 +6,10 @@
 #
 ## Process this file with automake to produce Makefile.in
 EXTRA_DIST	= results.tab redo-results
-distName	= $(PACKAGE)-$(VERSION)
-distArchive	= $(top_srcdir)/$(distName).tar.gz
-topTmpDir	= /tmp/$(distName)
+distId		= $(PACKAGE)-$(VERSION)
+distName	= $(distId).tar.gz
+distPath	= $(top_srcdir)/$(distName)
+topTmpDir	= /tmp/$(distId)
 
 if MAINTAINER
 
@@ -26,7 +27,7 @@ hostcheck: $(distArchive)
 	-test -d $(topTmpDir) && rm -rf $(topTmpDir)
 	mkdir $(topTmpDir)
 	gunzip -c $(distArchive) | (cd $(topTmpDir) && pax -r)
-	if cd $(topTmpDir)/$(distName); then \
+	if cd $(topTmpDir)/$(distId); then \
 	    if ./configure --prefix=$(topTmpDir) --disable-root-actions \
 		    $(CONFIG_OPTS) CC='$(CC)' MAKE="$(MAKE)" \
 		    LDMHOME=$(topTmpDir); then \
@@ -41,38 +42,92 @@ hostcheck: $(distArchive)
 	    exit $$status; \
 	fi
 
+test:
+	for util in false true; do \
+	    if echo '\
+		if '$$util'; then \
+		    status=$$?; \
+		else \
+		    status=$$?; \
+		fi; \
+		exit $$status' | ssh buddy; \
+	    then \
+		echo true; \
+	    else \
+		echo false; \
+	    fi; \
+	done
+
 # The following rule starts a single synchronous build process on a remote
-# system.
+# system.  Setting MAKEFLAGS to the empty string on the make(1) invocation line
+# appears to be necessary due to a bug in the AIX 5.1 make(1).
 singleCheck:
-	if echo "cd $$PWD" '&& $(env) $(make) -e MAKE="$(make)"' \
-		'CC="$(cc)" CONFIG_OPTS="$(configOpts)" hostcheck' \
-		| ssh $(host); then \
+	scp remoteCheck $(distPath) $(host):/tmp
+	ssh $(host) chmod +x /tmp/remoteCheck
+	if ssh $(host) /tmp/remoteCheck $(distId) \
+	    /tmp/$(distName) '"$(env)"' '"$(configOpts)"' '"$(make)"' \
+		'"$(cc)"' $(tmp); \
+	then \
 	    echo "$(env),$(make),$(cc),$(configOpts),1" >>$(host).results; \
 	else \
 	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
 	fi
 	touch redo-results
+	ssh $(host) rm /tmp/remoteCheck /tmp/$(distName)
+#	distPath=`cd $(top_srcdir) && pwd`/$(distName); \
+#	if echo '\
+#	    $(env) && \
+#	    echo "########################################################" && \
+#	    echo "Building on `uname -n` with" && \
+#	    echo "    PATH=$$PATH" && \
+#	    echo "    CONFIG_OPTS=\"$(configOpts)\"" && \
+#	    echo "    MAKE=\"$(make)\"" && \
+#	    echo "    CC=\"$(cc)\"" && \
+#	    echo && \
+#	    rm -rf $(topTmpDir) && \
+#	    mkdir $(topTmpDir) && \
+#	    cd $(topTmpDir) && \
+#	    scp '$$HOST:$$distPath' $(distName) && \
+#	    gunzip -c $(distName) | pax -r && \
+#	    cd $(distId) && \
+#	    if ./configure --prefix=$(topTmpDir) --disable-root-actions \
+#		    $(configOpts) CC="$(cc)" MAKE="$(make)" \
+#		    LDMHOME=$(topTmpDir); then \
+#		MAKEFLAGS= $(make) install uninstall; \
+#		status=$$?; \
+#	    else \
+#		status=$$?; \
+#		cat config.log; \
+#	    fi; \
+#	    cd /tmp && rm -rf $(topTmpDir); \
+#	    exit $$status' | ssh $(host); \
+#	then \
+#	    echo "$(env),$(make),$(cc),$(configOpts),1" >>$(host).results; \
+#	else \
+#	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
+#	fi
+#	touch redo-results
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for a single make(1) and cc(1) pair.
 multiCheck:
 	for configOpts in '' '--disable-shared'; do \
 	    $(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
-		configOpts="$$configOpts" singleCheck; \
+		tmp="$(tmp)" configOpts="$$configOpts" singleCheck; \
 	done >>$(host).log 2>&1
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for multiple make(1) and cc(1) pairs.
 .host.check:
 	rm -f $*.results $*.log
-	grep '^[^#]' $< | while IFS=',' read env make cc; do \
-	    $(MAKE) host="$*" env="$$env" make="$$make" cc="$$cc" \
+	grep '^[^#]' $< | while IFS=',' read env make cc tmp; do \
+	    $(MAKE) host="$*" env="$$env" make="$$make" cc="$$cc" tmp="$$tmp" \
 		multiCheck </dev/null; \
 	done
 
 # The following rule starts concurrent asynchronous builds on multiple remote
 # systems.
-hostchecks:	$(distArchive)
+hostchecks:	$(distPath)
 	-rm -f $@
 	hosts=`ls *.host | sed 's/.host//'`; \
 	for host in $$hosts; do \

@@ -126,6 +126,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -247,7 +248,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-BUILT_SOURCES = ../registry/registry.h globals.h
+BUILT_SOURCES = ../registry/registry.h
 noinst_LTLIBRARIES = lib.la
 include_HEADERS = \
     abbr.h \
@@ -320,7 +321,8 @@ TAGS_FILES = \
     ../registry/*.c
 
 EXTRA_DIST = \
-    globals.hin \
+    globals.h \
+    ldm.h \
     ldm.x \
     ldm4.h \
     ldm5.h \
@@ -328,7 +330,7 @@ EXTRA_DIST = \
     prod_info.h \
     fix_clnt.pl
 
-CLEANFILES = *.i globals.h
+CLEANFILES = *.i
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -858,10 +860,10 @@ uninstall-am: uninstall-includeHEADERS
 ../registry/registry.h:
 	cd ../registry && $(MAKE) $@
 
-.hin.h:
-	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
-	mv -f $@.tmp $@
-globals.h:	globals.hin globals.c
+@MAINTAINER_TRUE@.hin.h:
+@MAINTAINER_TRUE@	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
+@MAINTAINER_TRUE@	mv -f $@.tmp $@
+@MAINTAINER_TRUE@globals.h:	globals.hin globals.c
 
 ldm.h:		ldm.x
 	$(RPCGEN) -h ldm.x | \

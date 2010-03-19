@@ -1,6 +1,4 @@
-'\"
-'\" $Id: pqing.1,v 1.9.20.1.2.3 2009/06/18 16:18:41 steve Exp $
-.TH PQING 1 "$Date: 2009/06/18 16:18:41 $"
+.TH PQING 1 "2010-03-10"
 .SH NAME
 pqing, dds, pps, ddplus, ids, hds, afos \- product queue ingester for Unidata LDM
 .SH "SYNOPSIS"
@@ -89,8 +87,11 @@ The default varies according to feedtype.
 .TP
 .BI "-q " q_path
 The pathname of the data product queue.
-The default is \fBdata/ldm.pq\fP relative to the installation point,
-which is typically \fB/usr/local/ldm\fP. The compiled in default can
+The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP
+.hy
+This configuration default can
 be overridden by setting the environment variable \fBLDMPQFNAME\fP.
 .TP
 .B "\-P port"
@@ -145,8 +146,6 @@ SIGUSR2 \- the \fIverbose\fP flag is toggled.
 On successful insertion of a product into the product queue, SIGCONT is sent
 to \fBpqing\fP's process group, informing all queue processes that are
 members of the same process group that a new product has arrived.
-.SH FILES
-\fBpqing.log\fP	the default log file
 .SH "SEE ALSO"
 .LP
 .BR ldmd (1),

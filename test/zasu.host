@@ -1,14 +1,15 @@
 # /usr/vac/bin/c89 insists on using "uint64_t" if _ALL_SOURCE_ is defined
 # and that type doesn't exist if "-q32" is specified.
-PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/bin/make,/usr/vac/bin/c89 -q32
-PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/bin/make,/usr/vac/bin/c89 -q64
+PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/bin/make,/usr/vac/bin/c89 -q32,/zasu/steve
+# syntax error on "sizeof((off_t))"
+PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/bin/make,/usr/vac/bin/c89 -q64,/zasu/steve
 
-PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/cc -q32
-PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/cc -q64
+PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/cc -q32,/zasu/steve
+PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/cc -q64,/zasu/steve
 
-PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/xlc -q32
-PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/xlc -q64
+PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/xlc -q32,/zasu/steve
+PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/xlc -q64,/zasu/steve
 
 # /opt/gnu/bin/gcc doesn't have the options "-m32" or "-m64"
 # collect2: ld returned 12 exit status
-PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc
+PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,/zasu/steve

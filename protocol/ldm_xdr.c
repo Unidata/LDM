@@ -163,9 +163,6 @@ xdr_keyt (XDR *xdrs, keyt *objp)
 bool_t
 xdr_prod_spec(XDR *xdrs, prod_spec *objp)
 {
-
- register long *buf;
-
  if (!xdr_feedtypet(xdrs, &objp->feedtype)) {
  return (FALSE);
  }
@@ -235,7 +232,7 @@ xdr_feedpar (XDR *xdrs, feedpar *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_pointer (xdrs, (void **)&objp->prod_class, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
+	 if (!xdr_pointer (xdrs, (char **)&objp->prod_class, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
 		 return FALSE;
 	 if (!xdr_max_hereis_t (xdrs, &objp->max_hereis))
 		 return FALSE;
@@ -289,7 +286,7 @@ xdr_comingsoon_args (XDR *xdrs, comingsoon_args *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_pointer (xdrs, (void **)&objp->infop, sizeof (prod_info), (xdrproc_t) xdr_prod_info))
+	 if (!xdr_pointer (xdrs, (char **)&objp->infop, sizeof (prod_info), (xdrproc_t) xdr_prod_info))
 		 return FALSE;
 	 if (!xdr_u_int (xdrs, &objp->pktsz))
 		 return FALSE;
@@ -307,7 +304,7 @@ xdr_datapkt (XDR *xdrs, datapkt *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_pointer (xdrs, (void **)&objp->signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
+	 if (!xdr_pointer (xdrs, (char **)&objp->signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
 		 return FALSE;
 	 if (!xdr_u_int (xdrs, &objp->pktnum))
 		 return FALSE;
@@ -326,7 +323,7 @@ xdr_datapktd (XDR *xdrs, datapktd *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_pointer (xdrs, (void **)&objp->signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
+	 if (!xdr_pointer (xdrs, (char **)&objp->signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
 		 return FALSE;
 	 if (!xdr_u_int (xdrs, &objp->pktnum))
 		 return FALSE;
@@ -368,19 +365,19 @@ xdr_ldm_replyt (XDR *xdrs, ldm_replyt *objp)
 	case DONT_SEND:
 		break;
 	case RESEND:
-		 if (!xdr_pointer (xdrs, (void **)&objp->ldm_replyt_u.dpktdp, sizeof (datapktd), (xdrproc_t) xdr_datapktd))
+		 if (!xdr_pointer (xdrs, (char **)&objp->ldm_replyt_u.dpktdp, sizeof (datapktd), (xdrproc_t) xdr_datapktd))
 			 return FALSE;
 		break;
 	case RESTART:
-		 if (!xdr_pointer (xdrs, (void **)&objp->ldm_replyt_u.signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
+		 if (!xdr_pointer (xdrs, (char **)&objp->ldm_replyt_u.signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
 			 return FALSE;
 		break;
 	case REDIRECT:
-		 if (!xdr_pointer (xdrs, (void **)&objp->ldm_replyt_u.alternatep, sizeof (rendezvoust), (xdrproc_t) xdr_rendezvoust))
+		 if (!xdr_pointer (xdrs, (char **)&objp->ldm_replyt_u.alternatep, sizeof (rendezvoust), (xdrproc_t) xdr_rendezvoust))
 			 return FALSE;
 		break;
 	case RECLASS:
-		 if (!xdr_pointer (xdrs, (void **)&objp->ldm_replyt_u.newclssp, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
+		 if (!xdr_pointer (xdrs, (char **)&objp->ldm_replyt_u.newclssp, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
 			 return FALSE;
 		break;
 	default:
@@ -428,7 +425,7 @@ xdr_fornme_reply_t (XDR *xdrs, fornme_reply_t *objp)
 	case BADPATTERN:
 		break;
 	case RECLASS:
-		 if (!xdr_pointer (xdrs, (void **)&objp->fornme_reply_t_u.prod_class, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
+		 if (!xdr_pointer (xdrs, (char **)&objp->fornme_reply_t_u.prod_class, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
 			 return FALSE;
 		break;
 	default:
@@ -457,65 +454,70 @@ xdr_comingsoon_reply_t (XDR *xdrs, comingsoon_reply_t *objp)
 bool_t
 xdr_product(XDR *xdrs, product *objp)
 {
-    if (!xdr_prod_info(xdrs, &objp->info)) {
-        return (FALSE);
-    }
+ if (!xdr_prod_info(xdrs, &objp->info)) {
+ return (FALSE);
+ }
 
-    switch (xdrs->x_op) {
-        case XDR_DECODE:
-            if (objp->info.sz == 0) {
-                return (TRUE);
-            }
-            if (objp->data == NULL) {
-                objp->data = xd_getBuffer(objp->info.sz);
-                if(objp->data == NULL) {
-                    return (FALSE);
-                }
-            }
-        /*FALLTHRU*/
-        case XDR_ENCODE:
-            return (xdr_opaque(xdrs, objp->data, objp->info.sz));
+ switch (xdrs->x_op) {
 
-        case XDR_FREE:
-            objp->data = NULL;
-            return (TRUE);
-    }
+ case XDR_DECODE:
+ if (objp->info.sz == 0) {
+ return (TRUE);
+ }
+ if (objp->data == NULL) {
+ objp->data = xd_getBuffer(objp->info.sz);
+ if(objp->data == NULL) {
+ return (FALSE);
+ }
+ }
+ /*FALLTHRU*/
 
-    return (FALSE); /* never reached */
+ case XDR_ENCODE:
+ return (xdr_opaque(xdrs, objp->data, objp->info.sz));
+
+ case XDR_FREE:
+ objp->data = NULL;
+ return (TRUE);
+
+ }
+ return (FALSE); /* never reached */
 }
 
 
 bool_t
 xdr_dbuf(XDR* xdrs, dbuf* objp)
 {
-    /*
+ /*
      * First, deal with the length since dbuf-s are counted.
      */
-    if (!xdr_u_int(xdrs, &objp->dbuf_len))
-        return FALSE;
+ if (!xdr_u_int(xdrs, &objp->dbuf_len))
+ return FALSE;
 
-    /*
+ /*
      * Now, deal with the actual bytes.
      */
-    switch (xdrs->x_op) {
-        case XDR_DECODE:
-            if (objp->dbuf_len == 0)
-                return TRUE;
+ switch (xdrs->x_op) {
 
-            if (NULL == (objp->dbuf_val =
-                    (char*)xd_getNextSegment(objp->dbuf_len))) {
-                serror("xdr_dbuf()");
-                return FALSE;
-            }
-        /*FALLTHROUGH*/
-        case XDR_ENCODE:
-            return (xdr_opaque(xdrs, objp->dbuf_val, objp->dbuf_len));
+ case XDR_DECODE:
+ if (objp->dbuf_len == 0)
+ return TRUE;
 
-        case XDR_FREE:
-            objp->dbuf_val = NULL;
+ if (NULL == (objp->dbuf_val =
+ (char*)xd_getNextSegment(objp->dbuf_len))) {
+ serror("xdr_dbuf()");
+ return FALSE;
+ }
 
-        return TRUE;
-    }
+ /*FALLTHROUGH*/
 
-    return FALSE;
+ case XDR_ENCODE:
+ return (xdr_opaque(xdrs, objp->dbuf_val, objp->dbuf_len));
+
+ case XDR_FREE:
+ objp->dbuf_val = NULL;
+
+ return TRUE;
+ }
+
+ return FALSE;
 }

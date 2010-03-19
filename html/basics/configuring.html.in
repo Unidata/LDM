@@ -21,11 +21,9 @@ probably skip these steps.
 <h2>Steps</h2>
 
 <ol>
-<li><p><a href="#ldmadmin">Vet the <code><b>ldmadmin</code></b>
-    configuration-file</a>
+<li><p><a href="#vet registry">Vet the LDM registry</a>
 <li><p><a href="#upstream feeds">Obtain upstream data-feeds</a>
 <li><p><a href="#upstream config">Request authorization at the upstream LDM</a>
-<li><p><a href="#edit registry">Edit the LDM registry, if necessary</a>
 <li><p><a href="#ldmd.conf">Edit the LDM configuration-file,
     <tt><b>etc/ldmd.conf</b></tt></a>
 <li><p><a href="#pqact.conf">Edit the <tt>pqact</tt> configuration-file,
@@ -39,14 +37,28 @@ probably skip these steps.
 
 <hr>
 
-<a NAME="ldmadmin"></a>
-<h3>Vet the <a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a> 
-configuration-file</h3>
+<h2><a name="vet registry">Vet the LDM registry</a></h2>
 
 <p>
-Follow <a href="vet-ldmadmin.html">these instructions</a> on vetting the
-<a href="glindex.html#ldmadmin"><tt>ldmadmin</tt></a> 
-configuration-file.
+Make any necessary changes to the configuration-parameters in the
+<a href="LDM-registry.html">LDM registry</a>.  If this is your first
+installation, then pay particular attention to the parameters <tt>
+regpath{HOSTNAME},
+regpath{RECONCILIATION_MODE},
+regpath{QUEUE_SIZE},</tt> and <tt>
+regpath{QUEUE_SLOTS}</tt>.  These parameters can be set via the <code>
+<a href="glindex.html#regutil"><tt>regutil</tt></a>(1) utility.
+
+<p>If you are upgrading an existing LDM installation or are planning to use the
+GEMPAK or McIDAS decoders, then make sure that the data directory printed by
+the command "<code><a href="glindex.html#regutil"><tt>regutil</tt></a>
+regpath{PQACT_DATADIR_PATH}</code>" is the same as the current working
+directory assumed by the <a href="glindex.html#scour"><tt>scour</tt></a>
+configuration-file, and the <a href="glindex.html#pqact.conf"><tt>pqact</tt>
+configuration-file</a>.
+
+<p><a href="../workshop/specifics.html#allow">
+Workshop-specific instructions</a>.
 
 <hr>
 
@@ -97,17 +109,6 @@ ALLOW NLDN  your.ldm.host
 <p><a href="../workshop/specifics.html#allow">
 Workshop-specific instructions</a>.
 
-
-<hr>
-
-<a name="edit registry"></a>
-<h2>Edit the LDM registry, if necessary</a></h2>
-
-<p>
-Make any necessary changes to the <a href="LDM-registry.html">LDM registry</a>.
-
-<p><a href="../workshop/specifics.html#allow">
-Workshop-specific instructions</a>.
 
 <hr>
 
@@ -345,7 +346,7 @@ as the LDM-user.  Then
        The above runs the
        <a href="glindex.html#scour"><tt>scour</tt></a> program to remove
        too-old files every
-       three hours.  You might choose a different time interval.
+       three hours.  You might choose different times.
 
     <li><p>Add an entry to accumulate performance metrics on the
 	<a href="glindex.html#LDM">LDM</a>
@@ -354,7 +355,7 @@ as the LDM-user.  Then
            0,5,10,15,20,25,30,35,40,45,50,55 * * * * bash -l -c 'bin/ldmadmin addmetrics'
        </tt></blockquote>
        This entry will accumulate metrics every 5 minutes.  You might choose 
-       a different interval.  See
+       different times.  See
        <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
 
     <li><p>Add an entry to rotate the metrics data files
@@ -363,16 +364,16 @@ as the LDM-user.  Then
            0 0 * * * bash -l -c 'bin/ldmadmin newmetrics'
        </tt></blockquote>
        This entry will rotate the metrics data files every day at midnight.
-       You might choose a different interval.  See
+       You might choose different times.  See
        <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
 
-    <li><p>Add an entry to check that the LDM system is working:
+    <li><p>Add an entry to check the LDM system:
        <blockquote><tt>
-           0,5,10,15,20,25,30,35,40,45,50,55 0 * * * bash -l -c 'bin/ldmadmin check >/dev/null'
+           0,15,30,45 0 * * * bash -l -c 'bin/ldmadmin check >/dev/null'
        </tt></blockquote>
-       This entry will check that the LDM system is working every 5 minutes and
-       cause an email to be sent to the LDM user if the system isn't working.
-       You might choose a different interval.
+       This entry will check the LDM system every 15 minutes and
+       send an email to the LDM user if the system isn't OK.
+       You might choose different times.
 
 </ul>
 

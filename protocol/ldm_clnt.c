@@ -227,7 +227,7 @@ ldm_clnttcp_create_vers(
                         "Couldn't connect to LDM %d on %s using port "
                             "%d",
                         version, upName, port),
-                    LOG_INFO);
+                    ERR_INFO);
 
                 (void)exitIfDone(0);
 

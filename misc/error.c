@@ -54,9 +54,6 @@ err_new(
             (unsigned long)sizeof(ErrorObj));
     }
     else {
-        char   *cp = err->msg;
-        int     len = 0;
-
         err->line = line;
         err->file = file;
 

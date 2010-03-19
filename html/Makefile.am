@@ -6,7 +6,6 @@ EXTRA_DIST	= \
     generalHelp.html \
     glossary.html \
     history.html \
-    howto-nnexrad.html \
     huge-queues.html \
     index.html \
     known-problems.html \
@@ -47,7 +46,6 @@ html_DATA	= \
     generalHelp.html \
     glossary.html \
     history.html \
-    howto-nnexrad.html \
     huge-queues.html \
     index.html \
     known-problems.html \

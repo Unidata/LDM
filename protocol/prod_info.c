@@ -262,13 +262,13 @@ pi_print(
     const prod_info* const      info,
     FILE*                       file)
 {
-    int nbytes = fprintf(file, "{%s,%s,%u,{%d,%s},%u,{%d,%s},%s}",
+    int nbytes = fprintf(file, "{%s,%s,%lu,{%d,%s},%lu,{%d,%s},%s}",
         tsFormat(&info->arrival),
         s_feedtypet(info->feedtype),
-        info->seqno,
-        strlen(info->origin), info->origin,
-        info->sz,
-        strlen(info->ident), info->ident,
+        (unsigned long)info->seqno,
+        (int)strlen(info->origin), info->origin,
+        (unsigned long)info->sz,
+        (int)strlen(info->ident), info->ident,
         s_signaturet(NULL, 0, info->signature));
 
     if (nbytes < 0)

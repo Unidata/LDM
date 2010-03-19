@@ -1,5 +1,4 @@
-." $Id: pqcheck.1,v 1.1.4.1.4.4.2.2 2009/06/18 16:15:11 steve Exp $
-.TH PQCHECK 1 "$Date: 2009/06/18 16:15:11 $"
+.TH PQCHECK 1 "2010-03-10"
 .SH NAME
 pqcheck - program to check that an LDM product queue was successfully closed
 .SH SYNOPSIS
@@ -43,8 +42,10 @@ To use syslogd(8) from the command line, execute "pqcheck ... 2> /dev/null".
 .TP
 .BI "-q " pqfname
 The filename of the product queue.
-The default is \fBdata/ldm.pq\fP relative to the installation point,
-which is typically \fB/usr/local/ldm\fP.
+The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP.
+.hy
 .TP
 .B -v
 Verbose logging.  The write-count for the product-queue will be printed.

@@ -1,5 +1,4 @@
-." $Id: ldmadmin.1,v 1.11.20.5.2.11 2009/07/23 23:19:02 steve Exp $
-.TH LDMADMIN 1 "$Date: 2009/07/23 23:19:02 $"
+.TH LDMADMIN 1 "2010-03-10"
 .SH NAME
 ldmadmin \- Administrative script for the Unidata Local Data Manager
 .SH SYNOPSIS
@@ -18,11 +17,6 @@ This program provides a high-level use interface to the Unidata Local
 Data Manager (LDM) system.  
 For most applications, it should be invoked instead of the individual
 programs that comprise the LDM system.
-.PP
-In the following, \fIprefix\fP stands for the root of the LDM installation
-(e.g. \fB/usr/local/ldm\fP)
-which contains the installation subdirectories
-\fBbin/\fP, \fBetc/\fP, etc.
 .SH COMMANDS
 .TP
 .BI "start [-vx] [-m " maxLatency "] [-o " offset "] [-q " queue_path "] [" LDM_conf_file ]
@@ -31,8 +25,11 @@ Exits 0 if the LDM system starts successfully.
 This command will ensure that the product queue exists before starting.
 It also verifies that no other LDM system is already running.  A file,
 \fBldmd.pid\fP is created containing the PID of the parent LDM server.
-By default the LDM log files are rotated.  To change this behavior set the
-\fB$log_rotate\fP variable in the \fPldmadmin\fP(1) configuration-file to 0.
+By default the LDM log files are rotated.  To change this behavior execute the
+command
+.nh
+"\fBregutil -u 0 regpath{LOG_ROTATE}\fP".
+.hy
 .TP
 .B stop
 Halts the LDM system by sending a SIGTERM to the PID of the LDM
@@ -68,17 +65,28 @@ option requires support from the operating-system).
 Deletes an existing \fBpqsurf\fP product queue.
 .TP
 .BI "newlog [-n " numlogs "] [-l " logfile "]
-Shift the log files.  Retain the last \fInumlogs\fP files.
-Old log files have a numbered suffix (e.g. \fBldmd.log.7\fP).
+Shift the log files.  Retains the last
+.nh
+\fB$(regutil regpath{LOG_COUNT})\fP
+.hy
+files.  Old log files have a numbered suffix (e.g. \fBldmd.log.7\fP).
 If a log file
-with a suffix equal to \fInumlogs\fP exists, then it will be removed.
+with a suffix equal to
+.nh
+\fB$(regutil regpath{LOG_COUNT})\fP
+.hy
+exists,
+then it will be removed.
 All other suffixes will be increased by one.
 The current log file will have \fB.1\fP appended to it's name.
 .TP
 .B scour
-Remove old decoded-data files as specifified in the \fBscour\fP
-configuration file, \fIprefix\fP\fB/etc/scour.conf\fP.
-The user associated with the LDM system should periodically invoke this
+Remove old decoded-data files as specified in the \fBscour\fP
+configuration file
+.nh
+\fB$(regutil regpath{SCOUR_CONFIG_PATH})\fP.
+.hy
+The LDM user should periodically invoke this
 action from their \fBcrontab\fP file.  For example, the following entry
 .sp
 .RS
@@ -106,10 +114,16 @@ Control-D will terminate the pqutil program.
 List the configuration that the LDM is currently using.
 .TP
 .B log
-Performs a \fBmore\fP on the LDM logfile, \fBprefix/logs/ldmd.log\fP.
+Performs a \fBmore\fP on the LDM logfile
+.nh
+\fB$(regutil regpath{LOG_FILE})\fP.
+.hy
 .TP
 .B tail
-Performs a \fBtail -f\fP on the LDM logfile, \fBprefix/logs/ldmd.log\fP.
+Performs a \fBtail -f\fP on the LDM logfile
+.nh
+\fB$(regutil regpath{LOG_FILE})\fP.
+.hy
 .TP
 .B pqactcheck
 Check pqact.conf file(s) for errors.
@@ -121,16 +135,69 @@ Status messages are written to the standard-output stream.
 .TP
 .B checkinsertion
 Checks whether a data-product has been inserted into the product-queue
-in the last \fB$insertion_check_period\fP seconds.  Terminates with a 0
-exit status if and only if one has.
+in the last
+.nh
+\fB$(regutil regpath{INSERTION_CHECK_INTERVAL})\fP
+.hy
+seconds.
+Terminates with a 0 exit status if and only if one has.
+.TP
+.B vetqueuesize
+Vets the size of the LDM queue,
+.nh
+\fB$(regutil regpath{QUEUE_SIZE})\fP,
+.hy
+against
+the maximum-latency configuration-parameter 
+.nh
+\fB$(regutil regpath{MAX_LATENCY})\fP.
+.hy
+If the queue is too small to guarantee that duplicate data-products will be
+detected, then the script will take the action specified by
+.nh
+\fB$(regutil regpath{RECONCILIATION_MODE})\fP:
+.hy
+.RS +4
+.TP
+.B increase queue
+Increase the size of the product-queue to match the desired maximim-latency.
+.TP
+.B decrease maximum latency
+Decrease the maximum latency configuration parameter to match the size of the
+product-queue.
+.TP
+.B do nothing
+Don't modify the queue or the maximum latency parameter.  A warning message
+will be written to the standard error stream.
+.RE
 .TP
 .B checktime
-Just checks the system clock.
+Checks the system clock.  Terminates with a 0 exit status if 
+.nh
+\fB$(regutil regpath{CHECK_TIME})\fP
+.hy
+is 0 or if the system clock is less than 
+.nh
+\fB$(regutil regpath{CHECK_TIME_LIMIT})\fP
+.hy
+seconds off.
 .TP
 .B check
-Performs the sequence \fBisRunning\fP, \fBcheckinsertion\fP, and
-\fBchecktime\fP.  Terminates with a 0 exit status if and only if there
-were no problems.
+Performs the sequence \fBisRunning\fP, \fBcheckinsertion\fP, 
+\fBvetqueuesize\fP, and \fBchecktime\fP.  Terminates with a 0 exit status and
+with nothing witten to the standard error stream if
+and only if there were no problems.
+The LDM user should periodically invoke this
+action from their \fBcrontab\fP file.  For example, the following entry
+.sp
+.RS
+.RS +4
+0,15,30,45 * * * * bin/ldmadmin scour >/dev/null
+.RE
+.sp
+would check the LDM system every fifteen minutes and send email to the
+LDM user only if a problem was found.
+.RE
 .TP
 .B printmetrics
 Prints LDM performance metrics to the standard output stream.  The
@@ -203,22 +270,30 @@ The number of CPU context switches per second.
 .RE
 .TP
 .B addmetrics
-Appends a line of metrics to the file defined by the \fB$metrics_file\fP
-variable in the \fIldmadmin\fP configuration-file.  See the
-\fIprintmetrics\fP command.
+Appends a line of metrics to the file
+.nh
+\fB$(regutil regpath{METRICS_FILE})\fP.
+.hy
+See the \fIprintmetrics\fP command.
 .TP
 .BI "plotmetrics [-b " begin "] [-e " end "]"
-Plots time-series of the LDM performance metrics from the metrics files
-defined by the \fB$metrics_files\fP
-variable in the \fIldmadmin\fP configuration-file.  See the
-\fIaddmetrics\fP command.
+Plots time-series of LDM performance metrics from the metrics files
+.nh
+\fB$(regutil regpath{METRICS_FILES})\fP.
+.hy
+See the \fIaddmetrics\fP command.
 .TP
 .B newmetrics
-Rotates the metrics files defined by the \fB$metrics_file\fP
-variable in the \fIldmadmin\fP configuration-file.  Keeps the number of
-files defined by the \fB$num_metrics\fP
-variable in the \fIldmadmin\fP configuration-file.  See the
-\fIprintmetrics\fP command.
+Rotates the metrics file
+.nh
+\fB$(regutil regpath{METRICS_FILE})\fP.
+.hy
+Keeps the latest
+.nh
+\fB$(regutil regpath{METRICS_COUNT})\fP
+.hy
+files.
+See the \fIprintmetrics\fP command.
 .TP
 .B usage
 Display an \fIldmadmin\fP usage message.
@@ -226,13 +301,6 @@ Display an \fIldmadmin\fP usage message.
 .TP
 .BI "-b " begin
 Begin time for metrics plots as YYYYMMDD[.hh[mm[ss]]].
-.TP
-.BI "-C " conf_file
-Use \fIconf_file\fP as the \fBldmadmin\fP(1) configuration-file.  The default
-is \fBprefix/etc/ldmadmin-pl.conf\fP.  The position of this option in the 
-command-line is significant: values specified in the configuration-file will
-override those specified by previous options and will be overridden by 
-subsequent options.
 .TP
 .B -c
 Remove an existing product queue
@@ -247,7 +315,10 @@ Feedset to use with the watch command.  Default is \fBANY\fP.
 Creates the queue quickly -- possibly without allocating any space
 .TP
 .BI "-l " logfile
-Name of the logfile to use.  Default is \fBprefix/logs/ldmd.log\fP.
+Name of the logfile to use.  The default is
+.nh
+\fB$(regutil regpath{LOG_FILE})\fP.
+.hy
 .TP
 .BI "-m " maxLatency
 The maximum latency, in seconds, to use when requesting data.
@@ -256,11 +327,17 @@ the \fIfrom\fP time of a data-request will be the more recent of the
 current time minus the maximum latency and the time of the most recent,
 matching data-product in the product-queue.
 The value must be greater than 0.
-The default is specified by the \fB$max_latency\fP variable in the
-\fIldmadmin\fP configuration-file (typically 3600 seconds).
+The default is specified by
+.nh
+\fB$(regutil regpath{MAX_LATENCY})\fP
+.hy
+(typically 3600 seconds).
 .TP
 .BI "-n " numlogs
-Number of logs files to rotate.  Default is 4 logs.
+Number of logs files to rotate.  The default is
+.nh
+\fB$(regutil regpath{LOG_COUNT})\fP.
+.hy
 .TP
 .BI "-o " offset
 The temporal offset, in seconds, to use when requesting data.
@@ -269,23 +346,44 @@ the \fIfrom\fP time of a data-request will be the
 current time minus this offset
 (it will not be adjusted by matching data-products in the product-queue).
 The value must be greater than 0 and less than the maximum latency.
-The default is specified by the \fB$offset\fP variable in the
-\fIldmadmin\fP configuration-file (typically 3600 seconds).
+The default is specified by
+.nh
+\fB$(regutil regpath{TIME_OFFSET})\fP
+.hy
+(typically 3600 seconds).
 .TP
 .BI "-P " port
-The default port to use rather than the default port that was set when 
-the package was built.  The well-known LDM port is 388.
+The port to use rather than the default port of
+.nh
+\fB$(regutil regpath{PORT})\fP.
+The registered, well-known LDM port is 388.
 .TP
 .BI "-p " file
 The \fIpqact\fP configuration-file that the \fBpqactcheck\fP command will use.
 .TP
 .BI "-q " queue_path
-Specify a product queue path.  Default is \fBprefix/data/ldm.pq\fP for the
-LDM and \fBprefix/data/pqsurf.pq\fP for \fBpqsurf\fP.
+Specify a product queue path.  The defaults are the files
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP
+.hy
+and
+.nh
+\fB$(regutil regpath{SURFQUEUE_PATH})\fP
+.hy
+for the
+LDM and \fBpqsurf\fP, respectively.
 .TP
 .BI "-s " size
-Specify a product queue size in bytes.  Default is 20MBytes for the LDM and
-2MBytes for \fBpqsurf\fP.
+Specify a product queue size in bytes.  The defaults are
+.nh
+\fB$(regutil regpath{QUEUE_SIZE})\fP
+.hy
+and
+.nh
+\fB$(regutil regpath{SURFQUEUE_SIZE})\fP
+.hy
+for the LDM and
+\fBpqsurf\fP product-queues, respectively.
 .TP
 .B -v
 Turn on verbose logging mode.
@@ -295,18 +393,20 @@ Turn on debug logging mode.
 .SH LDM_CONF_FILE
 .TP
 .BI LDM_conf_file
-Which LDM configuration-file file to inspect.  Default is
-\fBprefix/etc/ldmd.conf\fP.
+Which LDM configuration-file file to inspect.  The default is
+.nh
+\fB$(regutil regpath{LDMD_CONFIG_PATH})\fP.
+.hy
 .SH FILES
 .TP
-.IB prefix /etc/ldmd.conf
-Default LDM configuration file.
+.B $(regutil regpath{LDMD_CONFIG_PATH})
+The default LDM configuration file.
 .TP
-.IB prefix /data/ldm.pq
-Default pathname of the LDM product queue.
+.B $(regutil regpath{QUEUE_PATH})
+The default LDM product-queue.
 .TP
-.IB prefix /logs/ldmd.log
-Default pathname of the (current) LDM log file.
+.B $(regutil regpath{LOG_FILE})
+The default LDM log file.
 .SH "SEE ALSO"
 .PP
 .BR ldmd (1),

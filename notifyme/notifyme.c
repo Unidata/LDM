@@ -236,7 +236,6 @@ int main(int ac, char *av[])
         prod_spec spec;
         int status;
         prod_class_t *clssp;
-        unsigned remotePort = LDM_PORT;
 
         if(set_timestamp(&clss.from) != 0)
         {
@@ -288,8 +287,6 @@ int main(int ac, char *av[])
                              av[0], optarg);
                         usage(av[0]);   
                     }
-
-                    remotePort = (unsigned)port;
 
                     break;
                 }

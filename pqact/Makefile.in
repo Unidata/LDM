@@ -138,6 +138,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DATA_DIR = @DATA_DIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
@@ -700,6 +701,10 @@ uninstall-man: uninstall-man1
 	uninstall-am uninstall-binPROGRAMS uninstall-man \
 	uninstall-man1
 
+
+@MAINTAINER_TRUE@pqact.1:	pqact.1.in
+@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
 
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/pqact.conf

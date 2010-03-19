@@ -47,6 +47,7 @@
 #include "inetutil.h"
 #include "remote.h"
 #include "rpcutil.h"  /* clnt_errmsg() */
+#include "registry.h"
 #include "requester6.h"
 #include "up6.h"
 
@@ -599,6 +600,7 @@ handle_connection(int sock)
         pid_t pid;
         SVCXPRT *xprt;
         int status = 1; /* EXIT_FAILURE assumed unless one_svc_run() success */
+        peer_info*      remote = get_remote();
 
 again:
         len = sizeof(raddr);
@@ -626,7 +628,7 @@ again:
         if (cps_count() >= maxClients) {
             setremote(&raddr, xp_sock);
             unotice("Denying connection from [%s] because too many clients",
-                remote.astr);
+                remote->astr);
             (void) close(xp_sock);
             return; 
         }
@@ -656,14 +658,14 @@ again:
         setremote(&raddr, xp_sock);
 
         /* Access control */
-        if (!host_ok(&remote))
+        if (!host_ok(remote))
         {       
             ensureRemoteName(&raddr);
-            if (!host_ok(&remote))
+            if (!host_ok(remote))
             {       
-                if (remote.printname == remote.astr) {
+                if (remote->printname == remote->astr) {
                         unotice("Denying connection from [%s] because not "
-                            "allowed", remote.astr);
+                            "allowed", remote->astr);
                 }
                 else {
                         unotice("Denying connection from \"%s\" because not "
@@ -674,7 +676,7 @@ again:
                  * Try to tell the other guy.
                  * TODO: Why doesn't this work?
                  */
-                xprt = svcfd_create(xp_sock, remote.sendsz, remote.recvsz);
+                xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
                 if(xprt != NULL)
                 {
                         (void)memcpy(&xprt->xp_raddr, &raddr, len);
@@ -698,7 +700,7 @@ again:
 
         uinfo("Connection from %s", remote_name());
 
-        xprt = svcfd_create(xp_sock, remote.sendsz, remote.recvsz);
+        xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
         if(xprt == NULL)
         {
                 uerror("Can't create fd service.");

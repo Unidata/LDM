@@ -6,27 +6,21 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-PQ_SUBDIR	= @PQ_SUBDIR@
-
 bin_PROGRAMS	= feedme
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
-    -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
 LDADD		= \
-    ../$(PQ_SUBDIR)/lib.la \
     ../protocol/lib.la \
     ../ulog/lib.la \
     ../misc/lib.la \
     ../rpc/lib.la \
     ../registry/lib.la \
-    ../Berkeley-DB/build_unix/libdb-4.8.la \
-    -lm
+    ../Berkeley-DB/build_unix/libdb-4.8.la
 dist_man1_MANS	= feedme.1
 TAGS_FILES	= \
-    ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \

@@ -1,5 +1,4 @@
-." $Id: pqsend.1,v 1.7.20.1.2.2 2009/06/18 16:19:12 steve Exp $
-.TH PQSEND 1 "$Date: 2009/06/18 16:19:12 $"
+.TH PQSEND 1 "2010-03-10"
 .SH NAME
 pqsend - program to send products from a local product queue to an LDM server
 .SH SYNOPSIS
@@ -62,8 +61,11 @@ feed types.
 .TP
 .BI \-q " queue"
 The pathname of the data product queue.
-The default is \fBdata/ldm.pq\fP relative to the installation point,
-which is typically \fB/usr/local/ldm\fP.  The compiled in default can
+The default is 
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP.
+.hy
+The configuration value can
 be overridden by setting the environment variable \fBLDMPQFNAME\fP.
 .TP
 .BI \-i " interval"

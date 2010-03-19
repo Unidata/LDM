@@ -1,21 +1,21 @@
 # libtool(1) can't build a sharable library with this compiler
-PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc
-PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc +DA2.0W
+PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc,/usr/tmp
+PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc +DA2.0W,/usr/tmp
 
 # libtool(1) can't build a sharable library with this compiler
-PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89
-PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89 +DA2.0W
+PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89,/usr/tmp
+PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89 +DA2.0W,/usr/tmp
 
 # /usr/ccs/bin/cc has problems with "#include <stdio.h>"
-PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc
-PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc +DA2.0W
+PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc,/usr/tmp
+PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc +DA2.0W,/usr/tmp
 
 # libtool(1) can't build a sharable library with this compiler
-PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc
-PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc +DA2.0W
+PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc,/usr/tmp
+PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc +DA2.0W,/usr/tmp
 
 # libtool(1) can't build a sharable library with this compiler
-PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89
-PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89 +DA2.0W
+PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89,/usr/tmp
+PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89 +DA2.0W,/usr/tmp
 
-PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc
+PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,/usr/tmp

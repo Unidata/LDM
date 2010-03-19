@@ -1,5 +1,4 @@
-." $Id: pqmon.1,v 1.4.20.1.2.2 2009/06/18 16:19:02 steve Exp $
-.TH PQMON 1 "$Date: 2009/06/18 16:19:02 $"
+.TH PQMON 1 "2010-03-10"
 .SH NAME
 pqmon - program to monitor the state of an LDM product queue
 .SH SYNOPSIS
@@ -86,8 +85,10 @@ To use syslogd from the command line, enter ``pqmon ... >& /dev/null''.
 .TP
 .BI "-q " pqfname
 The filename of the product queue.
-The default is \fBdata/ldm.pq\fP relative to the installation point,
-which is typically \fB/usr/local/ldm\fP.
+The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP.
+.hy
 .TP
 .BI \-i " interval"
 Polling interval, in seconds.  The program sleeps and

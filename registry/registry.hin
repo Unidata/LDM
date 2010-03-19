@@ -17,8 +17,6 @@
 
 typedef int                     RegStatus;
 
-typedef struct regCursor        RegCursor;
-
 #include <errno.h>
 #include <timestamp.h>
 #include <ldm.h>

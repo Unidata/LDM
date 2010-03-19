@@ -1,5 +1,4 @@
-." $Id: pqact.1,v 1.9.20.1.2.6 2009/06/18 16:14:52 steve Exp $
-.TH PQACT 1 "$Date: 2009/06/18 16:14:52 $"
+.TH PQACT 1 "2010-03-10"
 .SH NAME
 pqact - program to process products in a Unidata LDM product queue
 .SH SYNOPSIS
@@ -38,9 +37,13 @@ programs on the arrival of selected products, e.g., mailing local severe
 weather warnings to users.
 .LP
 .B pqact
-uses a configuration file
+uses the configuration file
 .IR conf_file ,
-(default pqact.conf) to set up the table of patterns and associated actions
+(default
+.nh
+\fB$(regutil regpath{PQACT_CONFIG_PATH})\fP
+.hy
+) to set up the table of patterns and associated actions
 for products.  This file is human-readable and editable.  It contains a list
 of pattern-action entries, where a pattern is a (feed type, regular
 expression) pair.  The available actions are described in the ``USAGE''
@@ -86,12 +89,18 @@ background.
 .BI \-d " datadir"
 The directory relative to
 which file names are specified in the configuration file.  
-The default is set at compile time, typically /usr/local/ldm.
+The default is
+.nh
+\fB$(regutil regpath{PQACT_DATADIR_PATH})\fP.
+.hy
 .TP
 .BI "-q " pqfname
 The name of the product queue file.
-The default is \fBdata/ldm.pq\fP relative to the installation point,
-which is typically \fB/usr/local/ldm\fP. The compiled in default can
+The default is
+.nh
+\fB$(regutil regpath{QUEUE_PATH})\fP
+.hy
+This configuration default can
 be overridden by setting the environment variable \fBLDMPQFNAME\fP.
 You can specify a null product queue
 \fB/dev/null\fP to just check the syntax of a configuration file for
@@ -124,8 +133,7 @@ the product queue, a signal informs
 .B pqact
 and all other interested processes in the process group
 whenever a new product is available, so polling is not necessary in this
-case.  The default
-interval is 15 seconds.
+case.  The default interval is 15 seconds.
 .TP
 .BI \-o " time"
 Offset time, in seconds.
@@ -139,8 +147,10 @@ This option might be used when manually processing data from an old queue.
 Configuration file.  This is the pattern-action file that specifies what to
 do with each product whose feed type and product identifier match a
 specified pattern.  The format of this file is described in the ``Usage''
-section, below.  The default is \fBetc/pqact.conf\fP relative to the
-installation point, which is typically \fB/usr/local/ldm\fP.   
+section, below.  The default is
+.nh
+\fB$(regutil regpath{PQACT_CONFIG_PATH})\fP.
+.hy
 .SH SIGNALS
 .TP
 .BR SIGTERM
@@ -332,10 +342,11 @@ DDS	^SAUS.. ... (..)(..)	FILE	saus_\1\2.wmo
 
 .SH FILES
 .TP
-.B pqact.conf
+.B $(regutil regpath{PQACT_CONFIG_PATH})
+.hy
 Default configuration-file.
 .TP
-.B pqact.conf.state
+.B $(regutil regpath{PQACT_CONFIG_PATH}).state
 Default persistent-state file.  Used to hold the insertion-time of
 the last, successfully-processed data-product.
 

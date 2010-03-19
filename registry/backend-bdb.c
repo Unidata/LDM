@@ -26,14 +26,14 @@ struct backend {
 #define DB_FILENAME    "registry.db"
 
 /*
- * Decorator for the Berkeley cursor structure for use by this backend module.
+ * Decorator of the Berkeley cursor structure for use by this backend module.
  */
-typedef struct {
+struct cursor {
     DBT         key;
     DBT         value;
     Backend*    backend;
     DBC*        dbCursor;
-}       BackCursor;
+};
 
 /*
  * Callback function for logging error-messages from the Berkeley DB.
@@ -56,50 +56,7 @@ logDbError(
 }
 
 /*
- * Copies a key/value pair from a backend cursor structure to an RDB cursor
- * structure.
- *
- * ARGUMENTS:
- *      rdbCursor       Pointer to the RDB cursor structure.
- *      backend         Pointer to the backend cursor structure.
- * RETURNS:
- *      0               Success.  The backend cursor structure is set.
- *      ENOMEM   System error.  The backend cursor structure is
- *                      unmodified.
- */
-static RegStatus
-copyEntry(
-    RdbCursor*          rdbCursor,
-    BackCursor*         backCursor)
-{
-    RegStatus   status;
-    char*       key = strdup(backCursor->key.data);
-
-    if (NULL == key) {
-        status = ENOMEM;
-    }
-    else {
-        char*       value = strdup(backCursor->value.data);
-
-        if (NULL == value) {
-            free(key);
-            status = ENOMEM;
-        }
-        else {
-            free(rdbCursor->key);
-            free(rdbCursor->value);
-
-            rdbCursor->key = key;
-            rdbCursor->value = value;
-            status = 0;
-        }
-    }                                   /* "key" allocated */
-
-    return status;
-}
-
-/*
- * Resets the backend database.
+ * Forcebly removes the database environment.
  *
  * ARGUMENTS:
  *      path            Pathname of the database directory.  Shall not be NULL.
@@ -109,8 +66,8 @@ copyEntry(
  *      ENOMEM          System error.  "log_start()" called.
  *      EIO             Backend database error.  "log_start()" called.
  */
-RegStatus
-reset(
+static RegStatus
+removeEnvironment(
     const char* const   path)
 {
     RegStatus   status = EIO;           /* failure */
@@ -134,6 +91,56 @@ reset(
     }                                   /* "env" allocated */
 
     return status;
+}
+
+/*
+ * Sets a cursor.
+ *
+ * Arguments:
+ *      cursor          Pointer to the cursor.  Shall not be NULL.
+ *      mode            The mode for setting the cursor.  One of DB_SET_RANGE
+ *                      or DB_NEXT.
+ * Returns:
+ *      0               Success.  "*cursor" is set.
+ *      ENOENT          No such entry.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+static RegStatus setCursor(
+    Cursor* const       cursor,
+    int                 mode)
+{
+    DBC*        dbCursor = cursor->dbCursor;
+    DBT*        keyDbt = &cursor->key;
+    DBT*        valueDbt = &cursor->value;
+    int         status = dbCursor->get(dbCursor, keyDbt, valueDbt, mode);
+
+    if (DB_NOTFOUND == status) {
+        status = ENOENT;
+    }
+    else if (0 != status) {
+        status = EIO;
+    }
+
+    return status;
+}
+
+/*
+ * Returns the path name of the Berkeley database.
+ *
+ * Arguments:
+ *      db              Pointer to the database.  Shall not be NULL.
+ *
+ * Returns
+ *      Pointer to the path name of the database.
+ */
+static const char* getPath(DB* db)
+{
+    DB_ENV* const       env = db->get_env(db);
+    const char*         path;
+
+    (void)env->get_home(env, &path);
+
+    return path;
 }
 
 /******************************************************************************
@@ -189,7 +196,8 @@ beOpen(
              */
             if (status = env->open(env, path,
                     DB_CREATE | DB_INIT_CDB | DB_INIT_MPOOL, 0)) {
-                log_add("Couldn't open database environment in \"%s\"", path);
+                log_add("Couldn't open or create database environment in "
+                    "\"%s\": %s", path, strerror(status));
                 status = EIO;
             }
             else {
@@ -215,25 +223,25 @@ beOpen(
                         status = 0;     /* success */
                     }                   /* "db" opened */
 
+                    /*
+                     * According to the documentation on DB->open(), if that
+                     * call fails, then DB->close() must be called to discard
+                     * the DB handle, so DB->close() is the termination
+                     * counterpart of db_create() rather than of DB->open().
+                     */
                     if (status)
-                        db->close(db, 0);
+                        (void)db->close(db, 0);
                 }                       /* "db" allocated */
-
-                if (status) {
-                    env->close(env, 0);
-                    env = NULL;
-                }
-            }                       /* "env" opened */
+            }                           /* "env" opened */
 
             /*
-             * DB_ENV->close() is called here (if it hasn't been called
-             * already) instead of calling DB_ENV->remove()) because calling
-             * DB_ENV->remove() after DB_ENV->close() results in a SIGSEGV and
-             * calling DB_ENV->remove() with no preceeding call to env->close()
-             * results in a memory-leak.
+             * According to the documentation on DB_ENV->open(), if that
+             * call fails, then DB_ENV->close() must be called to discard
+             * the DB_ENV handle, so DB_ENV->close() is the termination
+             * counterpart of db_env_create() rather than of DB_ENV->open().
              */
-            if (status && NULL != env)
-                env->close(env, 0);
+            if (status)
+                (void)env->close(env, 0);
         }                               /* "env" allocated */
 
         if (status)
@@ -264,12 +272,11 @@ beClose(
         status = 0;                     /* success */
     }
     else {
-        const char* path;
-        DB*         db = backend->db;
-        DB_ENV*     env = db->get_env(db);
+        DB* const       db = backend->db;
+        const char*     path = getPath(db);
+        DB_ENV* const   env = db->get_env(db);
 
         if (db->close(db, 0)) {
-            (void)env->get_home(env, &path);
             log_add("Couldn't close backend database \"%s\"", path);
             status = EIO;
         }
@@ -277,7 +284,6 @@ beClose(
             backend->db = NULL;
 
             if (env->close(env, 0)) {
-                (void)env->get_home(env, &path);
                 log_add("Couldn't close environment of backend database \"%s\"",
                     path);
                 status = EIO;
@@ -293,7 +299,8 @@ beClose(
 }
 
 /*
- * Resets the backend database.
+ * Resets the backend database.  This function shall be called only when
+ * nothing holds the database open.
  *
  * ARGUMENTS:
  *      path            Pathname of the database directory.  Shall not be NULL.
@@ -307,11 +314,12 @@ RegStatus
 beReset(
     const char* const   path)
 {
-    return reset(path);
+    return removeEnvironment(path);
 }
 
 /*
- * Removes the backend database.
+ * Removes the backend database.  This function shall be called only when
+ * nothing holds the database open.
  *
  * ARGUMENTS:
  *      path            Pathname of the database directory.  Shall not be NULL.
@@ -330,9 +338,12 @@ beRemove(
 
     assert(NULL != path);
 
+    /*
+     * First, remove the database.
+     */
     if (status = db_env_create(&env, 0)) {
-        log_start("Couldn't create database environment: %s",
-            db_strerror(status));
+        log_start("Couldn't create database environment in \"%s\": %s",
+            path, db_strerror(status));
         status = EIO;
     }
     else {
@@ -348,27 +359,22 @@ beRemove(
                     DB_FILENAME, path);
                 status = EIO;
             }
-            else {
-                /*
-                 * The database environment is closed and then recreated rather
-                 * than creating another DB_ENV and removing that because
-                 * calling DB_ENV->remove() while another DB_ENV exists results
-                 * in a SIGSEGV.
-                 */
-                if (status = env->close(env, 0)) {
-                    log_add("Couldn't close database environment in \"%s\"",
-                        path);
-                    env = NULL;
-                }
-                else {
-                    status = reset(path);
-                }                       /* "env" closed */
-            }                           /* database removed */
         }                               /* "env" opened */
 
-        if (status && NULL != env)
-            env->close(env, 0);
+        /*
+         * According to the documentation on DB_ENV->open(), if that call
+         * fails, then DB_ENV->close() must be called to discard the DB_ENV
+         * handle, so DB_ENV->close() is the termination counterpart of
+         * db_env_create() rather than of DB_ENV->open().
+         */
+        (void)env->close(env, 0);
     }                                   /* "env" allocated */
+
+    /*
+     * Then, remove the database environment.
+     */
+    if (0 == status)
+        status = removeEnvironment(path);
 
     return status;
 }
@@ -544,139 +550,109 @@ beSync(
 }
 
 /*
- * Initializes an RDB cursor structure.
+ * Creates a new cursor structure.
  *
  * ARGUMENTS:
  *      backend         Pointer to the backend database.  Shall have been
  *                      set by beOpen().  Shall not be NULL.
- *      rdbCursor       Pointer to an RDB cursor structure.  Shall not be NULL.
- *                      Upon successful return, "*rdbCursor" will be set.  The
- *                      client should call "beCloseCursor()" when the cursor
- *                      is no longer needed.
+ *      cursor          Pointer to a pointer to a cursor structure.  Shall
+ *                      not be NULL.  Upon successful return, "*cursor" will
+ *                      be set.  The client should call "beFreeCursor()" when
+ *                      the cursor is no longer needed.
  * RETURNS
- *      0               Success.  "*rdbCursor" is set.
+ *      0               Success.  "*cursor" is set.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
-beInitCursor(
+beNewCursor(
     Backend* const      backend,
-    RdbCursor* const    rdbCursor)
+    Cursor** const      cursor)
 {
     RegStatus   status;
-    DBC*        dbCursor;
-    DB_ENV*     env;
-    DB*         db;
+    Cursor*     cur = (Cursor*)malloc(sizeof(Cursor));
 
     assert(NULL != backend);
     assert(NULL != backend->db);
-    assert(NULL != rdbCursor);
+    assert(NULL != cursor);
 
-    db = backend->db;
-    env = db->get_env(db);
-
-    /*
-     * Because this function is only used for reading, the Berkeley cursor
-     * needn't be transactionally protected.
-     */
-    status = db->cursor(db, NULL, &dbCursor, 0);
-
-    if (status) {
-        const char*     path;
-
-        (void)env->get_home(env, &path);
-        log_add("Couldn't create cursor for database \"%s\"", path);
-        status = EIO;
+    if (NULL == cur) {
+        log_serror("Couldn't allocate %lu bytes", (long)sizeof(Cursor));
+        status = ENOMEM;
     }
     else {
-        BackCursor*  backCursor = (BackCursor*)malloc(sizeof(BackCursor));
-
-        if (NULL == backCursor) {
-            log_serror("Couldn't allocate %lu bytes", (long)sizeof(BackCursor));
-            status = ENOMEM;
+        DB*         db = backend->db;
+        DBC*        dbCursor;
+        /*
+         * Because this function is only used for reading, the Berkeley
+         * cursor needn't be transactionally protected.
+         */
+        if (status = db->cursor(db, NULL, &dbCursor, 0)) {
+            log_add("Couldn't create cursor for database \"%s\"", getPath(db));
+            status = EIO;
         }
         else {
-            (void)memset(&backCursor->key, 0, sizeof(DBT));
-            (void)memset(&backCursor->value, 0, sizeof(DBT));
+            (void)memset(&cur->key, 0, sizeof(DBT));
+            (void)memset(&cur->value, 0, sizeof(DBT));
 
-            backCursor->key.data = NULL;
-            backCursor->value.data = NULL;
-            backCursor->key.flags |= DB_DBT_REALLOC;
-            backCursor->value.flags |= DB_DBT_REALLOC;
-            backCursor->dbCursor = dbCursor;
-            backCursor->backend = backend;
-            rdbCursor->key = NULL;
-            rdbCursor->value = NULL;
-            rdbCursor->private = backCursor;
-            status = 0;
-        }                               /* "backCursor" allocated */
-    }                                   /* "dbCursor" allocated */
+            cur->key.data = NULL;
+            cur->value.data = NULL;
+            cur->key.flags |= DB_DBT_REALLOC;
+            cur->value.flags |= DB_DBT_REALLOC;
+            cur->dbCursor = dbCursor;
+            cur->backend = backend;
+            *cursor = cur;              /* success */
+        }                               /* "dbCursor" allocated */
+
+        if (status)
+            free(cur);
+    }                                   /* "cur" allocated */
 
     return status;
 }
 
 /*
- * Sets an RDB cursor structure to reference the first entry in the backend
+ * Sets an cursor structure to reference the first entry in the backend
  * database whose key is greater than or equal to a given key.
  *
  * ARGUMENTS:
- *      rdbCursor       Pointer to the RDB cursor structure.  Shall not be NULL.
+ *      cursor          Pointer to the cursor structure.  Shall not be NULL.
  *                      Shall have been set by "beInitCursor()".  Upon
- *                      successful return, "*rdbCursor" will be set.  The
- *                      client shall not modify "rdbCursor->key" or
- *                      "rdbCursor->value" or the strings to which they point.
+ *                      successful return, "*cursor" will be set.
  *      key             Pointer to the starting key.  Shall not be NULL.  The
  *                      empty string obtains the first entry in the database,
  *                      if it exists.
  * RETURNS
- *      0               Success.  "*rdbCursor" is set.
- *      ENOENT          The database is empty.  "*rdbCursor" is unmodified.
- *      EIO             Backend database error.  "*rdbCursor" is unmodified.
+ *      0               Success.  "*cursor" is set.
+ *      ENOENT          The database is empty.  "*cursor" is unmodified.
+ *      EIO             Backend database error.  "*cursor" is unmodified.
  *                      "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
 beFirstEntry(
-    RdbCursor* const    rdbCursor,
+    Cursor* const       cursor,
     const char* const   key)
 {
-    RegStatus           status;
+    RegStatus   status;
+    char*       dupKey;
 
-    assert(NULL != rdbCursor);
-    assert(NULL != rdbCursor->private);
+    assert(NULL != cursor);
     assert(NULL != key);
 
-    char*   dupKey = strdup(key);
+    dupKey = strdup(key);
 
     if (NULL == dupKey) {
         log_serror("Couldn't allocate %lu bytes", (long)strlen(key));
         status = ENOMEM;
     }
     else {
-        BackCursor*         backCursor = (BackCursor*)rdbCursor->private;
-        DBC*                dbCursor = backCursor->dbCursor;
-        DBT*                keyDbt = &backCursor->key;
-        DBT*                valueDbt = &backCursor->value;
+        cursor->key.data = dupKey;
+        cursor->key.size = strlen(dupKey) + 1;
 
-        keyDbt->data = dupKey;
-        keyDbt->size = strlen(dupKey) + 1;
-        status = dbCursor->get(dbCursor, keyDbt, valueDbt, DB_SET_RANGE);
-
-        if (0 == status) {
-            status = copyEntry(rdbCursor, backCursor);
-        }
-        else if (DB_NOTFOUND == status) {
-            status = ENOENT;
-        }
-        else {
-            const char* path;
-            DB_ENV*     env =
-                backCursor->backend->db->get_env(backCursor->backend->db);
-
-            (void)env->get_home(env, &path);
-            log_add("Couldn't set cursor for database \"%s\" to first entry on "
-                "or after key \"%s\"", path, key);
-            status = EIO;
+        if (EIO == (status = setCursor(cursor, DB_SET_RANGE))) {
+            log_add("Couldn't set cursor for database \"%s\" to first entry "
+                "on or after key \"%s\"", getPath(cursor->backend->db), key);
         }
     }                               /* "dupKey" allocated */
 
@@ -687,102 +663,95 @@ beFirstEntry(
  * Advances a cursor to the next entry.
  *
  * ARGUMENTS:
- *      rdbCursor       Pointer to the RDB cursor structure.  Shall not be NULL.
+ *      cursor          Pointer to the cursor structure.  Shall not be NULL.
  *                      Shall have been set by "beFirstCursor()".  Upon
- *                      successful return, "*rdbCursor" will be set.  The client
- *                      shall not modify "rdbCursor->key" or "rdbCursor->value"
- *                      or the strings to which they point.  This function can
- *                      change "rdbCursor->key", "rdbCursor->value", or the
- *                      strings to which they point.
+ *                      successful return, "*cursor" will be set.
  * RETURNS
- *      0               Success.  "*rdbCursor" is set.
- *      ENOENT     The database is empty.  "*rdbCursor" is unmodified.
- *      EIO    Backend database error.  "*rdbCursor" is unmodified.
+ *      0               Success.  "*cursor" is set.
+ *      ENOENT          The database is empty.  "*cursor" is unmodified.
+ *      EIO             Backend database error.  "*cursor" is unmodified.
  *                      "log_start()" called.
  */
 RegStatus
 beNextEntry(
-    RdbCursor* const    rdbCursor)
+    Cursor* const       cursor)
 {
     RegStatus   status;
-    BackCursor* backCursor;
-    DBC*        dbCursor;
-    DBT*        keyDbt;
-    DBT*        valueDbt;
 
-    assert(NULL != rdbCursor);
-    assert(NULL != rdbCursor->private);
+    assert(NULL != cursor);
 
-    backCursor = (BackCursor*)rdbCursor->private;
-    dbCursor = backCursor->dbCursor;
-    keyDbt = &backCursor->key;
-    valueDbt = &backCursor->value;
-
-    status = dbCursor->get(dbCursor, keyDbt, valueDbt, DB_NEXT);
-
-    if (0 == status) {
-        status = copyEntry(rdbCursor, backCursor);
-    }
-    else if (DB_NOTFOUND == status) {
-        status = ENOENT;
-    }
-    else {
-        DB_ENV*         env =
-            backCursor->backend->db->get_env(backCursor->backend->db);
-        const char*     path;
-
-        (void)env->get_home(env, &path);
+    if (EIO == (status = setCursor(cursor, DB_NEXT))) {
         log_add("Couldn't advance cursor for database \"%s\" to next entry "
-            "after key \"%s\"", path, rdbCursor->key);
-        status = EIO;
+            "after key \"%s\"", getPath(cursor->backend->db), cursor->key.data);
     }
 
     return status;
 }
 
 /*
- * Closes an RDB cursor.
+ * Frees a cursor.  Should be called after every successful call to
+ * beNewCursor().
  *
  * ARGUMENTS:
- *      rdbCursor       Pointer to the RDB cursor structure.
+ *      cursor          Pointer to the cursor structure.  Shall not be NULL.
  * RETURNS:
  *      0               Success.  The client shall not use the cursor again.
  *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
-beCloseCursor(RdbCursor* rdbCursor)
+beFreeCursor(Cursor* cursor)
 {
     RegStatus           status;
-    BackCursor*         backCursor;
     DBC*                dbCursor;
 
-    assert(NULL != rdbCursor);
-    assert(NULL != rdbCursor->private);
+    assert(NULL != cursor);
 
-    backCursor = (BackCursor*)rdbCursor->private;
-    dbCursor = backCursor->dbCursor;
-    status = dbCursor->close(dbCursor);
+    dbCursor = cursor->dbCursor;
 
-    if (status) {
-        DB_ENV*         env =
-            backCursor->backend->db->get_env(backCursor->backend->db);
-        const char*     path;
-
-        (void)env->get_home(env, &path);
-        log_start("Couldn't close cursor for database \"%s\"", path);
+    if (status = dbCursor->close(dbCursor)) {
+        log_start("Couldn't close cursor for database \"%s\"",
+            getPath(cursor->backend->db));
         status = EIO;
     }
     else {
-        free(backCursor->key.data);
-        free(backCursor->value.data);
-        free(rdbCursor->key);
-        free(rdbCursor->value);
-        free(rdbCursor->private);
-
-        rdbCursor->key = NULL;
-        rdbCursor->value = NULL;
-        rdbCursor->private = NULL;
+        free(cursor->key.data);
+        free(cursor->value.data);
+        free(cursor);
     }
 
     return status;
+}
+
+/*
+ * Returns the key of a cursor.
+ *
+ * Arguments:
+ *      cursor          Pointer to the cursor whose key is to be returned.
+ *                      Shall not be NULL.
+ * Returns:
+ *      Pointer to the key.  Shall not be NULL if beFirstEntry() or 
+ *      beNextEntry() was successful.
+ */
+const char* beGetKey(const Cursor* cursor)
+{
+    assert(NULL != cursor);
+
+    return cursor->key.data;
+}
+
+/*
+ * Returns the value of a cursor.
+ *
+ * Arguments:
+ *      cursor          Pointer to the cursor whose value is to be returned.
+ *                      Shall not be NULL.
+ * Returns:
+ *      Pointer to the value.  Shall not be NULL if beFirstEntry() or 
+ *      beNextEntry() was successful.
+ */
+const char* beGetValue(const Cursor* cursor)
+{
+    assert(NULL != cursor);
+
+    return cursor->value.data;
 }

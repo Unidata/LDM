@@ -6,7 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES		= ../registry/registry.h globals.h
+BUILT_SOURCES		= ../registry/registry.h
 RPCGEN			= @RPCGEN@
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
@@ -77,22 +77,25 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h \
     ../registry/*.c
 EXTRA_DIST		= \
-    globals.hin \
+    globals.h \
+    ldm.h \
     ldm.x \
     ldm4.h \
     ldm5.h \
     rsaglobal.h \
     prod_info.h \
     fix_clnt.pl
-CLEANFILES		= *.i globals.h
+CLEANFILES		= *.i
 
 ../registry/registry.h:
 	cd ../registry && $(MAKE) $@
 
+if MAINTAINER
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 globals.h:	globals.hin globals.c
+endif
 
 ldm.h:		ldm.x
 	$(RPCGEN) -h ldm.x | \

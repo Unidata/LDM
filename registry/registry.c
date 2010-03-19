@@ -28,9 +28,6 @@
 #define NOT_SYNCHED     0
 #define SYNCHED         1
 
-struct regCursor {
-};
-
 /*
  * Parses a string into a value.
  *
@@ -80,7 +77,6 @@ static Backend*                 _backend;       /* backend database */
 static int                      _forWriting;    /* registry open for writing? */
 static StringBuf*               _pathBuf;       /* buffer for creating paths */
 static StringBuf*               _formatBuf;     /* values-formatting buffer */
-static const TypeStruct*        _typeStructs[REG_TYPECOUNT];
 static RegNode*                 _rootNode;
 static ValueFunc                _extantValueFunc;
 static const char*              _nodePath;      /* pathname of visited node */
@@ -358,8 +354,8 @@ static RegStatus sync(
  *                      0 <=> no.
  * Returns:
  *      0               Success
- *      EIO    Backend database error.  "log_start()" called.
- *      ENOMEM   System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 static RegStatus initRegistry(
     const int   forWriting)
@@ -382,10 +378,6 @@ static RegStatus initRegistry(
                     status = ENOMEM;
                 }
                 else {
-                    _typeStructs[REG_STRING] = &stringStruct;
-                    _typeStructs[REG_UINT] = &uintStruct;
-                    _typeStructs[REG_TIME] = &timeStruct;
-                    _typeStructs[REG_SIGNATURE] = &signatureStruct;
                     _initialized = 1;
                     status = 0;
                 }                   /* "_valuePath" allocated */
@@ -422,9 +414,13 @@ static RegStatus initRegistry(
                     RegNode*    root;
 
                     if (0 == (status = rn_newRoot(&root))) {
-                        if (0 == (status = sync(root)))
+                        if (0 != (status = sync(root))) {
+                            rn_free(root);
+                        }
+                        else {
                             _rootNode = root;
-                    }
+                        }
+                    }                   /* "root" allocated */
                 }
                 if (status) {
                     beClose(_backend);
@@ -582,31 +578,33 @@ static RegStatus sync(
 {
     const char* absPath = rn_getAbsPath(node);
     RegStatus   status;
-    RdbCursor   cursor;
+    Cursor*     cursor;
 
     rn_clear(node);
 
-    if (0 == (status = beInitCursor(_backend, &cursor))) {
-        for (status = beFirstEntry(&cursor, absPath); 0 == status;
-                status = beNextEntry(&cursor)) {
-            if (strstr(cursor.key, absPath) != cursor.key) {
+    if (0 == (status = beNewCursor(_backend, &cursor))) {
+        for (status = beFirstEntry(cursor, absPath); 0 == status;
+                status = beNextEntry(cursor)) {
+            const char* key = beGetKey(cursor);
+
+            if (strstr(key, absPath) != key) {
                 /* The entry is outside the scope of "node" */
-                status = ENOENT;
                 break;
             }
             else {
                 char* relPath;
                 char* name;
 
-                if (0 == (status = reg_splitAbsPath(cursor.key, absPath,
-                        &relPath, &name))) {
+                if (0 == (status = reg_splitAbsPath(key, absPath, &relPath,
+                        &name))) {
                     RegNode*        subnode;
 
                     if (0 == (status = rn_ensure(node, relPath, &subnode))) {
                         ValueThing* vt;
+                        const char*     value = beGetValue(cursor);
 
-                        if (0 == (status = rn_putValue(subnode, name,
-                                cursor.value, &vt))) {
+                        if (0 == (status = rn_putValue(subnode, name, value,
+                                &vt))) {
                             (void)vt_setStatus(vt, SYNCHED);
                         }
                     }
@@ -620,7 +618,7 @@ static RegStatus sync(
         if (ENOENT == status)
             status = 0;
 
-        beCloseCursor(&cursor);
+        beFreeCursor(cursor);
     }                                   /* "cursor" allocated */
 
     if (status)

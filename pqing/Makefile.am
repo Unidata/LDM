@@ -61,6 +61,12 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
+if MAINTAINER
+pqing.1:	pqing.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif
+
 do_check.o:	do.c
 	$(COMPILE) -DSCAN_CHECK -c $(srcdir)/do.c && mv do.o $@;
 do_nocheck.o:	do.c
