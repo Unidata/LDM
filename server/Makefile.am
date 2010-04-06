@@ -14,7 +14,6 @@ EXTRA_DIST		= \
     ldm6_svc.c \
     ldmd.1 \
     ldmd.conf \
-    ldmd.conf.grow \
     parser.c \
     parser.y \
     scanner.c \
@@ -59,8 +58,7 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
-CLEANFILES		= *.i
-sysconf_DATA		= ldmd.conf.grow
+CLEANFILES		= *.i .*.info
 
 if MAINTAINER
 ldmd.1:		ldmd.1.in

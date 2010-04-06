@@ -706,7 +706,7 @@ int main(int ac, char *av[])
 
 
         /*
-         * Open the product que
+         * Open the product queue
          */
         status = pq_open(pqfname, PQ_READONLY, &pq);
         if(status)

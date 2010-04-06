@@ -58,20 +58,14 @@ if (!$command) {
     print_usage();
     exit 1;
 }
-# The "clean" command is checked for here because a locked registry will cause
-# this script to hang trying to get parameters from the registry.
-if ($command eq "clean") {	# clean up after an abnormal termination
-    if (resetRegistry()) {
-	exit 4;
-    }
+
+# Ensure that the registry is available because a locked registry will cause
+# this script to hang.
+if (resetRegistry()) {
+    exit 4;
 }
 
 # Get some configuration parameters from the registry
-#
-if (!isRunning($pid_file, $ip_addr)) {
-    # This is a workaround for problems with the Berkeley DB environment.
-    resetRegistry();
-}
 @regpar = (
     [\$ldmd_conf, "regpath{LDMD_CONFIG_PATH}"],
     [\$q_path, "regpath{QUEUE_PATH}"],
@@ -770,15 +764,11 @@ sub stop_ldm
         $rpc_pid = getPid($pid_file) ;
 
         if ($rpc_pid == -1) {
-            errmsg("The LDM isn't running or its process-ID is unavailable");
+            errmsg("The LDM server isn't running or its process-ID is ".
+                "unavailable");
             $status = 1;
         }
         else {
-            # Flush system I/O buffers to disk.
-            print "Flushing the LDM product-queue to disk...\n";
-            system( "sync" );
-            sleep(1);
-
             # kill the server and associated processes
             print "Stopping the LDM server...\n";
             system( "kill $rpc_pid" );
@@ -787,10 +777,10 @@ sub stop_ldm
             my($loopcount) = 1;
             while(isRunning($pid_file, $ip_addr)) {
                 if($loopcount > 65) {
-                    bad_exit("stop_ldm: Server not dead.");
+                    bad_exit("stop_ldm: LDM server not dead.");
                     $status = 1;
                 }
-                print "Waiting for the LDM to terminate...\n" ;
+                print "Waiting for the LDM server to terminate...\n" ;
                 sleep($loopcount);
                 $loopcount++;
             }
@@ -953,64 +943,38 @@ sub grow
     my $newQueuePath = $_[1];
     my $status = 1;                     # failure default;
 
-    print "Starting restricted LDM...\n";
-    my $cmd = "ldmd -I 127.0.0.1 -P $port -m $max_latency -q $newQueuePath ".
-            "$ldmd_conf.grow >$pid_file &";
-    if (system("$cmd")) {
-        errmsg("grow(): Couldn't start restricted LDM");
+    print "Copying products from old queue to new queue...\n";
+    if (system("pqcopy $oldQueuePath $newQueuePath")) {
+        errmsg("grow(): Couldn't copy products");
     }
     else {
-        my $restrictedLdmRunning = 1;
-
-        print "Copying products from old queue to new ".
-            "queue...\n";
-        if (system("pqsend -h 127.0.0.1 -i 0 -o $max_latency ".
-                "-q $oldQueuePath")) {
-            errmsg("grow(): Couldn't copy products");
+        print "Renaming old queue\n";
+        if (system("mv -f $oldQueuePath $oldQueuePath.old")) {
+            errmsg("grow(): Couldn't rename old queue");
         }
         else {
-            print "Stopping restricted LDM...\n";
-            if (0 != ($status = stop_ldm())) {
-                errmsg("grow(): Couldn't stop restricted LDM");
+            print "Renaming new queue\n";
+            if (system("mv $newQueuePath $oldQueuePath")) {
+                errmsg("grow(): Couldn't rename new queue");
             }
             else {
-                print "Renaming old queue\n";
-                if (system("mv -f $oldQueuePath $oldQueuePath.old")) {
-                    errmsg("grow(): Couldn't rename old queue");
+                print "Deleting old queue\n";
+                if (unlink($oldQueuePath.".old") != 1) {
+                    errmsg("grow(): Couldn't delete old queue");
                 }
                 else {
-                    print "Renaming new queue\n";
-                    if (system("mv $newQueuePath $oldQueuePath")) {
-                        errmsg("grow(): Couldn't rename new queue");
-                    }
-                    else {
-                        $restrictedLdmRunning = 0;
+                    $status = 0;        # success
+                }
+            }                           # new queue renamed
 
-                        if ($status) {
-                            print "Deleting new queue\n";
-                            if (unlink($oldQueuePath) == 0) {
-                                errmsg("grow(): Couldn't delete new queue");
-                            }
-                        }
-                    }                   # new queue renamed
-
-                    if ($status) {
-                        print "Restoring old queue\n";
-                        if (system("mv -f $oldQueuePath.old $oldQueuePath")) {
-                            errmsg("grow(): Couldn't restore old queue");
-                        }
-                    }
-                }                       # old queue renamed
-            }                           # restricted LDM stopped
-        }                               # products copied
-
-        if ($status && $restrictedLdmRunning) {
-            print "Stopping the restricted LDM\n";
-            if (stop_ldm()) {
-                errmsg("grow(): Couldn't stop restricted LDM");
+            if ($status) {
+                print "Restoring old queue\n";
+                if (system("mv -f $oldQueuePath.old $oldQueuePath")) {
+                    errmsg("grow(): Couldn't restore old queue");
+                }
             }
-        }
-    }                                   # restricted LDM started
+        }                               # old queue renamed
+    }                                   # products copied
 
     return $status;
 }
@@ -1131,10 +1095,9 @@ sub vetQueueSize
                     $status = 0;
 
                     if (isRunning($pid_file, $ip_addr)) {
-                        $restartNeeded = 1;
                         print "Stopping the LDM...\n";
-                        if (0 != ($status = stop_ldm())) {
-                            errmsg("vetQueueSize(): Couldn't stop the LDM");
+                        if (0 == ($status = stop_ldm())) {
+                            $restartNeeded = 1;
                         }
                     }
                     if (0 == $status) {
@@ -1145,10 +1108,10 @@ sub vetQueueSize
                         }
 
                         if ($restartNeeded) {
-                            print "Restarting original LDM...\n";
+                            print "Restarting the LDM...\n";
                             if ($status = start_ldm()) {
                                 errmsg("vetQueueSize(): ".
-                                    "Couldn't restart original LDM");
+                                    "Couldn't restart the LDM");
                             }
                         }
                     }                   # LDM stopped
@@ -1208,29 +1171,46 @@ sub vetQueueSize
 
 sub check_ldm
 {
-    print "Checking for a running LDM system...\n";
-    if (!isRunning($pid_file, $ip_addr)) {
-        errmsg("The LDM server is not running");
-        return 1;
-    }
+    my $status;
 
-    print "Checking the most-recent insertion into the queue...\n";
-    if (check_insertion()) {
-        return 2;
+    # Create the lockfile
+    if (make_lockfile()) {
+        $status = 1;
     }
+    else {
+        print "Checking for a running LDM system...\n";
+        if (!isRunning($pid_file, $ip_addr)) {
+            errmsg("The LDM server is not running");
+            $status = 2;
+        }
+        else {
+            print "Checking the most-recent insertion into the queue...\n";
+            if (check_insertion()) {
+                $status = 3;
+            }
+            else {
+                print "Vetting the size of the queue and the maximum ".
+                    "acceptible latency...\n";
+                if (vetQueueSize()) {
+                    $status = 4;
+                }
+                else {
+                    print "Checking the system clock...\n";
+                    if (checkTime()) {
+                        $status = 5;
+                    }
+                    else {
+                        $status = 0;
+                    }
+                }
+            }
+        }
 
-    print "Vetting the size of the queue versus the maximum acceptible ".
-        "latency...\n";
-    if (vetQueueSize()) {
-        return 3;
-    }
+        # Remove the lockfile
+        rm_lockfile();
+    }                                   # lockfile created
 
-    print "Checking the system clock...\n";
-    if (checkTime()) {
-        return 4;
-    }
-
-    return 0;
+    return $status;
 }
 
 ###############################################################################
@@ -1418,7 +1398,7 @@ sub ldmadmin_pqactHUP
 sub isProductQueueOk
 {
     my $isOk = 0;
-    my($status) = system("pqcheck -l- -q $q_path 2>/dev/null") >> 8;
+    my($status) = system("pqcheck -q $q_path 2>/dev/null") >> 8;
 
     if( 0 == $status ) {
 	print "The product-queue is OK.\n";

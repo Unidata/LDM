@@ -60,3 +60,4 @@ share
 .cproject
 .project
 .settings
+.gitignore

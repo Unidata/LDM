@@ -1,2 +1,4 @@
 ldm6_svc.c
 parser.c
+*.info
+ldmd.1

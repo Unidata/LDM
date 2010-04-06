@@ -120,7 +120,7 @@ static void setPath(
  *                      desired pathname.
  *      desc            Pointer to a description of the file.
  * Returns:
- *      NULL            Error.  "log_start()" called.
+ *      NULL            Error.  "log_log()" called.
  *      else            Pointer to the pathname of the file.  Might be absolute
  *                      or relative to the current working directory.
  */
@@ -132,6 +132,7 @@ static const char* getPath(
     if (NULL == *var) {
         if (reg_getString(name, var)) {
             log_add("Couldn't get pathname of %s", desc);
+            log_log(LOG_ERR);
         }
         else {
             registerCleanup();

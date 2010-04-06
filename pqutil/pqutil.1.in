@@ -22,7 +22,7 @@ pqutil
 \%[-M]
 \%[-C]
 \%[-w]
-\%\fIpq_file\fP
+\%[\fIpq_file\fP]
 .hy
 .ft
 .SH DESCRIPTION
@@ -30,9 +30,16 @@ pqutil
 This is an interactive program that provides an interface to the LDM
 product queue.  It may be used to create a queue, examine the contents of
 a queue, insert products into the queue and monitor products as they are
-received by the queue.  Once the program has been started it prompts for
-commands (and optional modifiers).  Typing help at the command prompt
+received by the queue.  Unless otherwise noted, once the program has been
+started it prompts for commands (and optional modifiers).  Typing help at the
+command prompt
 will cause an abbreviated help screen to be displayed.
+.LP
+If the path name of the product queue is not specified on the command-line,
+then the default is the output of the command
+.nh
+"\fBregutil regpath{QUEUE_PATH}\fP".
+.hy
 
 .SH OPTIONS
 .TP
@@ -81,9 +88,7 @@ Open the queue as a fixed size (PQ_NOGROW).
 Open the queue without using mmap() (PQ_NOMAP).
 .TP
 .B -C
-Tells
-.B pqutil
-to clear the minimum virtual residence time in the product queue and
+Clear the minimum virtual residence time in the product queue and
 then exit.
 The virtual residence time of a data-product
 is the time that the product was removed from the queue minus the time that

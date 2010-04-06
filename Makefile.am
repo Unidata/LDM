@@ -30,6 +30,7 @@ SUBDIRS	= \
     pqcheck \
     pqinsert \
     pqcat \
+    pqcopy \
     pqexpire \
     pqmon \
     pqutil \
@@ -61,6 +62,7 @@ DIST_SUBDIRS		= \
     pqcheck \
     pqinsert \
     pqcat \
+    pqcopy \
     pqexpire \
     pqmon \
     pqutil \

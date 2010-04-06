@@ -245,7 +245,7 @@ warnIfPathological(
  *			disabled.  Caller may free upon return.
  * Returns:
  *	0		Success.
- *	else		Failure.
+ *	else		Failure.  "log_start()" called.
  */
 static int
 decodeAllowEntry(
@@ -556,7 +556,7 @@ yywrap(void)
  *	defaultPort	The default LDM port.
  * Returns:
  *	0		Success.
- *	!0		Failure.
+ *	!0		Failure.  "log_start()" called.
  */
 int
 read_conf(

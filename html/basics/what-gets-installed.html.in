@@ -28,38 +28,72 @@ LDM installation process:
             <dt><tt>dds</tt>
             <dd>Symbolic link to pqing(1) for DDS data
             <dt><tt>feedme</tt>
+            <dd>Program for obtaining data from a remote LDM (deprecated)
+            <dt><tt>feedtest</tt>
             <dd>Symbolic link to pqing(1) for generic data
             <dt><tt>hds</tt>
             <dd>Symbolic link to pqing(1) for HDS data
             <dt><tt>hrs</tt>
+            <dd>Symbolic link to pqing(1) for HRS data
+            <dt><tt>hupsyslog</tt>
             <dd>Program to tell system logger to reread configuration file
             <dt><tt>ids</tt>
+            <dd>Symbolic link to pqing(1) for IDS data
+            <dt><tt>ldmadmin</tt>
             <dd>Top-level LDM management utility
             <dt><tt>ldmcheck</tt>
+            <dd>LDM system checking utility (deprecated)
+            <dt><tt>ldmd</tt>
             <dd>The LDM server
             <dt><tt>ldmfail</tt>
-            <dd>Program for testing for an upstream LDM
+            <dd>LDM system failure utility (deprecated)
+            <dt><tt>ldmping</tt>
+            <dd>Program for testing for a remote LDM server
             <dt><tt>ldmsend</tt>
-            <dd>perl(1) script for monitoring remote hosts (deprecated)
+            <dd>Program for sending files to a remote LDM
+            <dt><tt>netcheck</tt>
+            <dd>Utility for monitoring remote hosts (deprecated)
             <dt><tt>newlog</tt>
-            <dd>Program for testing access to remote LDM
+            <dd>Program for rotating LDM log files
+            <dt><tt>notifyme</tt>
+            <dd>Program for testing access to a remote LDM
             <dt><tt>plotMetrics</tt>
+            <dd>Utility for plotting LDM metrics
+            <dt><tt>pps</tt>
             <dd>Symbolic link to pqing(1) for PPS data
             <dt><tt>pqact</tt>
+            <dd>Program for locally-processing contents of the product-queue
+            <dt><tt>pqcat</tt>
             <dd>Program for writing contents of the product-queue
             <dt><tt>pqcheck</tt>
+            <dd>Program for checking a product-queue for consistency
+            <dt><tt>pqcopy</tt>
+            <dd>Program for copying data-products from one product-queue to another
+            <dt><tt>pqcreate</tt>
             <dd>Program for creating a product-queue
             <dt><tt>pqexpire</tt>
+            <dd>Program for removing old data-products from a product-queue (deprecated)
+            <dt><tt>pqing</tt>
             <dd>Program for ingesting serial data into the product-queue
             <dt><tt>pqinsert</tt>
+            <dd>Program for inserting files into the product-queue
+            <dt><tt>pqmon</tt>
             <dd>Program for monitoring the product-queue
             <dt><tt>pqsend</tt>
+            <dd>Program for sending product-queue data-products to a remote LDM
+            <dt><tt>pqsurf</tt>
             <dd>Program for splitting WMO bulletins
             <dt><tt>pqutil</tt>
+            <dd>Program for manipulating a product-queue
+            <dt><tt>regex</tt>
             <dd>Program for testing regular expressions
             <dt><tt>regutil</tt>
-            <dd>Program for reporting LDM statistics to the mothership
+            <dd>Program for managing the LDM registry
+            <dt><tt>rtstats</tt>
+            <dd>Program for reporting LDM statistics back to the mothership
             <dt><tt>scour</tt>
+            <dd>Program for purging old, locally-processed data-files.
+            <dt><tt>syscheck</tt>
             <dd>Program for monitoring system parameters (deprecated)
             <dt><tt>ulogger</tt>
             <dd>Program for logging to the LDM log file
@@ -71,8 +105,6 @@ LDM installation process:
         <dl>
             <dt><tt>ldmd.conf</tt>
             <dd>LDM server configuration file
-            <dt><tt>ldmd.conf.grow</tt>
-            <dd>LDM server configuration file for increasing queue size
             <dt><tt>netcheck.conf</tt>
             <dd>netcheck(1) configuration file (deprecated)
             <dt><tt>pqact.conf</tt>

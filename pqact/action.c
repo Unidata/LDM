@@ -17,6 +17,7 @@
 
 #include "ldm.h"
 #include "ldmalloc.h"
+#include "ldmfork.h"
 #include "action.h"
 #include "error.h"
 #include "filel.h"
@@ -68,22 +69,16 @@ exec_prodput(
         argc--; argv++;
     }
 
-    pid = fork();
+    pid = ldmfork();
     if (-1 == pid)
     {
-        err_log_and_free(
-            ERR_NEW1(0, NULL,
-                "Couldn't fork() child-process: %s", strerror(errno)),
-            ERR_FAILURE);
+        log_add("Couldn't fork EXEC process");
+        log_log(LOG_ERR);
     }
     else
     {
         if (0 == pid)
         {
-            /*
-             * Child process.
-             */
-
             /*
              * Detach the child process from the parents process group??
             (void) setpgid(0,0);

@@ -1,5 +1,0 @@
-# This LDM configuration-file is strictly for growing the size of the
-# product-queue by accepting data-products sent via a pqsend(1) executing on
-# the local host.
-#
-ACCEPT ANY ".*" ^127\.0\.0\.1$

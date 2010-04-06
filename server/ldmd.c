@@ -31,6 +31,7 @@
 
 #include "ldm.h"
 #include "ldm4.h"
+#include "ldmfork.h"
 #include "log.h"
 #include "ulog.h"
 #include "pq.h"
@@ -42,13 +43,12 @@
 #include "acl.h"
 #include "down6.h"              /* down6_destroy() */
 #include "globals.h"
-#include "remote.h"
 #include "child_process_set.h"
 #include "inetutil.h"
-#include "remote.h"
-#include "rpcutil.h"  /* clnt_errmsg() */
 #include "registry.h"
+#include "remote.h"
 #include "requester6.h"
+#include "rpcutil.h"  /* clnt_errmsg() */
 #include "up6.h"
 
 #ifdef NO_ATEXIT
@@ -633,10 +633,11 @@ again:
             return; 
         }
 
-        pid = fork();
+        pid = ldmfork();
         if(pid == -1)
         {
-                serror("fork");
+                log_add("Couldn't fork process to handle incoming connection");
+                log_log(LOG_ERR);
                 /* TODO: try again?*/
                 (void)close(xp_sock);
                 return;
@@ -953,9 +954,12 @@ main(
     if (logfname == NULL || *logfname != '-') {
         /* detach */
         pid_t pid;
-        pid = fork();
-        if (pid == -1)
+        pid = ldmfork();
+        if (pid == -1) {
+            log_add("Couldn't fork LDM daemon");
+            log_log(LOG_ERR);
             exit(2);
+        }
 
         if (pid > 0) {
             /* parent */
@@ -963,7 +967,6 @@ main(
             exit(0);
         }
 
-        /* child */
         /* detach the child from parents process group ?? */
         (void) setsid();
     }
@@ -978,8 +981,7 @@ main(
         (void)fclose(stderr);
     else if (!(logfname[0] == '-' && logfname[1] == 0))
         (void)close(2);
-    (void) openulog(ubasename(av[0]),
-        (LOG_CONS|LOG_PID), LOG_LDM, logfname);
+    (void) openulog(ubasename(av[0]), (LOG_CONS|LOG_PID), LOG_LDM, logfname);
     unotice("Starting Up (version: %s; built: %s %s)", 
         PACKAGE_VERSION, __DATE__, __TIME__);
 

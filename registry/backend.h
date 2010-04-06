@@ -16,8 +16,6 @@ typedef struct backend  Backend;
 extern "C" {
 #endif
 
-typedef struct cursor        Cursor;
-
 /*
  * Opens the backend database.
  *
@@ -45,7 +43,7 @@ beOpen(
  *
  * ARGUMENTS:
  *      backend         Pointer to the database.  Shall have been set by
- *                      "beOpen()".  May be NULL.  Upon return, "backend"
+ *                      "beOpen()" or may be NULL.  Upon return, "backend"
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.
@@ -64,7 +62,6 @@ beClose(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
  *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
@@ -158,101 +155,96 @@ beSync(
     Backend* const      backend);
 
 /*
- * Creates a new cursor structure.
+ * Initializes the cursor.
  *
  * ARGUMENTS:
  *      backend         Pointer to the backend database.  Shall have been
  *                      set by beOpen().  Shall not be NULL.
- *      cursor          Pointer to a pointer to a cursor structure.  Shall
- *                      not be NULL.  Upon successful return, "*cursor" will
- *                      be set.  The client should call "beFreeCursor()" when
- *                      the cursor is no longer needed.
  * RETURNS
- *      0               Success.  "*cursor" is set.
+ *      0               Success.
+ *      EINVAL          The backend database already has an active cursor.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
-beNewCursor(
-    Backend* const      backend,
-    Cursor** const      cursor);
+beInitCursor(
+    Backend* const      backend);
 
 /*
- * Sets an cursor structure to reference the first entry in the backend
+ * Sets the cursor to reference the first entry in the backend
  * database whose key is greater than or equal to a given key.
  *
  * ARGUMENTS:
- *      cursor          Pointer to the cursor structure.  Shall not be NULL.
- *                      Shall have been set by "beInitCursor()".  Upon
- *                      successful return, "*cursor" will be set.
+ *      backend         Pointer to the backend database.  Shall have been
+ *                      set by beOpen().  Shall not be NULL.
  *      key             Pointer to the starting key.  Shall not be NULL.  The
  *                      empty string obtains the first entry in the database,
  *                      if it exists.
  * RETURNS
- *      0               Success.  "*cursor" is set.
- *      ENOENT          The database is empty.  "*cursor" is unmodified.
- *      EIO             Backend database error.  "*cursor" is unmodified.
- *                      "log_start()" called.
+ *      0               Success.
+ *      EINVAL          The cursor is not initialized.
+ *      ENOENT          The database is empty.
+ *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus
 beFirstEntry(
-    Cursor* const       cursor,
+    Backend* const      backend,
     const char* const   key);
 
 /*
- * Advances a cursor to the next entry.
+ * Advances the cursor to the next entry.
  *
  * ARGUMENTS:
- *      cursor          Pointer to the cursor structure.  Shall not be NULL.
- *                      Shall have been set by "beFirstCursor()".  Upon
- *                      successful return, "*cursor" will be set.
+ *      backend         Pointer to the backend database.  Shall have been
+ *                      set by beOpen().  Shall not be NULL.
  * RETURNS
- *      0               Success.  "*cursor" is set.
- *      ENOENT          The database is empty.  "*cursor" is unmodified.
- *      EIO             Backend database error.  "*cursor" is unmodified.
- *                      "log_start()" called.
- */
-RegStatus
-beNextEntry(
-    Cursor* const       cursor);
-
-/*
- * Frees a cursor.  Should be called after every successful call to
- * beNewCursor().
- *
- * ARGUMENTS:
- *      cursor          Pointer to the cursor structure.  Shall not be NULL.
- * RETURNS:
- *      0               Success.  The client shall not use the cursor again.
+ *      0               Success.
+ *      ENOENT          The database is empty.
  *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
-beFreeCursor(Cursor* cursor);
+beNextEntry(
+    Backend* const      backend);
 
 /*
- * Returns the key of a cursor.
+ * Frees the cursor.  Should be called after every successful call to
+ * beInitCursor().
+ *
+ * ARGUMENTS:
+ *      backend         Pointer to the backend database.  Shall have been
+ *                      set by beOpen().  Shall not be NULL.
+ * RETURNS:
+ *      0               Success.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
+RegStatus
+beFreeCursor(
+    Backend* const      backend);
+
+/*
+ * Returns the key of the cursor.
  *
  * Arguments:
- *      cursor          Pointer to the cursor whose key is to be returned.
- *                      Shall not be NULL.
+ *      backend         Pointer to the backend database.  Shall have been
+ *                      set by beOpen().  Shall not be NULL.
  * Returns:
  *      Pointer to the key.  Shall not be NULL if beFirstEntry() or 
  *      beNextEntry() was successful.
  */
-const char* beGetKey(const Cursor* cursor);
+const char* beGetKey(const Backend* const backend);
 
 /*
- * Returns the value of a cursor.
+ * Returns the value of the cursor.
  *
  * Arguments:
- *      cursor          Pointer to the cursor whose value is to be returned.
- *                      Shall not be NULL.
+ *      backend         Pointer to the backend database.  Shall have been
+ *                      set by beOpen().  Shall not be NULL.
  * Returns:
  *      Pointer to the value.  Shall not be NULL if beFirstEntry() or 
  *      beNextEntry() was successful.
  */
-const char* beGetValue(const Cursor* cursor);
+const char* beGetValue(const Backend* backend);
 
 #ifdef __cplusplus
 }

@@ -31,6 +31,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
+    -I$(top_srcdir)/registry \
     -I$(top_srcdir)
 date_sub_CPPFLAGS	= $(CPPFLAGS) -UNDEBUG -DTEST_DATE_SUB
 LDADD			= \

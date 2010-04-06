@@ -6,21 +6,16 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST		= surface.h
-GDBMLIB			= @GDBMLIB@
-PQ_SUBDIR		= @PQ_SUBDIR@
-bin_PROGRAMS		= pqsurf
-pqsurf_SOURCES		= pqsurf.c surf_split.c
-CPPFLAGS		= \
+PQ_SUBDIR	= @PQ_SUBDIR@
+EXTRA_DIST	= pqcopy.1
+bin_PROGRAMS	= pqcopy
+CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir)/pqing \
-    -I$(top_srcdir)/registry \
     -I$(top_srcdir)
-LDADD			= \
-    ../pqing/lib.la \
+LDADD		= \
     ../$(PQ_SUBDIR)/lib.la \
     ../protocol/lib.la \
     ../ulog/lib.la \
@@ -28,18 +23,11 @@ LDADD			= \
     ../rpc/lib.la \
     ../registry/lib.la \
     ../Berkeley-DB/build_unix/libdb-4.8.la \
-    $(GDBMLIB) -lm
-dist_man1_MANS		= pqsurf.1
-TAGS_FILES		= \
-    ../pqing/*.c ../pqing/*.h \
+    -lm
+dist_man1_MANS	= pqcopy.1
+TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
-
-if MAINTAINER
-pqsurf.1:	pqsurf.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
-	mv $@.tmp $@
-endif

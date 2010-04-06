@@ -32,13 +32,16 @@
 #include "globals.h"            /* global "pq"; defined in ldmd.c */
 #include "inetutil.h"
 #include "ldm5_clnt.h"
+#include "ldmfork.h"
 #include "ldmprint.h"
+#include "log.h"
 #include "pattern.h"
 #include "peer_info.h"
 #include "pq.h"
 #include "priv.h"
 #include "prod_class.h"
 #include "prod_info.h"
+#include "registry.h"
 #include "RegularExpressions.h"
 #include "requester6.h"
 #include "rpcutil.h"
@@ -785,7 +788,8 @@ acl_product_intersection(
  * Arguments:
  *      name            Pointer to the name of the downstream host.
  *      addr            Pointer to the IP address of the downstream host.
- *      want            Pointer to he class of products that this host wants.
+ *      want            Pointer to the class of products that the downstream
+ *                      host wants.
  *      filter          Pointer to a pointer to the upstream filter.
  *                      *filter is set on and only on success.  Caller
  *                      should call upFilter_free(*filter). *filter is set to
@@ -799,10 +803,10 @@ ErrorObj*
 acl_getUpstreamFilter(
     const char*                 name,
     const struct in_addr*       addr, 
-    const prod_class_t*           want,
+    const prod_class_t*         want,
     UpFilter** const            upFilter)
 {
-    ErrorObj*    errObj;
+    ErrorObj*   errObj;
     UpFilter*   filt;
     
     if (errObj = upFilter_new(&filt)) {
@@ -1777,7 +1781,7 @@ prog_requester(
  *      hostCount       The number of hosts to which the same request will be
  *                      made.
  * Returns:
- *      -1              Failure.  errno is set.
+ *      -1              Failure.  errno is set.  "log_log()" called.
  *      else            Success.
  */
 static pid_t
@@ -1788,16 +1792,16 @@ run_requester(
     const int           isPrimary,
     const unsigned      hostCount)
 {
-        pid_t pid = fork();
+        pid_t pid = ldmfork();
         if(pid == -1)
         {
-                serror("run_requester: fork");
+                log_add("Couldn't fork downstream LDM");
+                log_log(LOG_ERR);
                 return -1;
         }
 
         if(pid == 0)
         {
-                /* child */
                 endpriv();
                 prog_requester(hostId, port, clssp, isPrimary, hostCount);
                 /*NOTREACHED*/
@@ -2037,17 +2041,16 @@ exec_proct(proct *proc)
         assert(proc->pid == -1);
         assert(proc->wrdexp.we_wordv[proc->wrdexp.we_wordc] == NULL);
 
-        proc->pid = fork() ;
+        proc->pid = ldmfork() ;
         if(proc->pid == -1)
         {       /* failure */
-                serror("fork") ;
+                log_log(LOG_ERR);
                 return -1;
         }
         /* else */
 
         if(proc->pid == 0)
         {       /* child */
-
                 /* restore signals */
                 {
                         struct sigaction sigact;

@@ -25,8 +25,10 @@
 #include <assert.h>
 #include <regex.h>
 #include "ldm.h"
+#include "ldmfork.h"
 #include "atofeedt.h"
 #include "globals.h"
+#include "registry.h"
 #include "remote.h"
 #include "ldmprint.h"
 #include "ulog.h"
@@ -110,16 +112,15 @@ run_child(int argc, char *argv[])
                 udebug("exec'ing: \"%s\"", command);
         }
 
-        pid = fork();
+        pid = ldmfork();
         if(pid == -1)
         {
-                serror("run_child: fork failed");
+                log_log(LOG_ERR);
                 return pid;
         }
 
         if(pid == 0)
         {       /* child */
-
                 (void)signal(SIGCHLD, SIG_DFL);
                 (void)signal(SIGTERM, SIG_DFL);
 

@@ -107,10 +107,6 @@ static void resetRegistry(void)
         rn_free(_rootNode);
         _rootNode = NULL;
     }
-    if (REGISTRY_PATH != _registryPath) {
-        free(_registryPath);
-        _registryPath = REGISTRY_PATH;
-    }
     _initialized = 0;
     _backend = NULL;
     _forWriting = 0;
@@ -341,8 +337,70 @@ static const TypeStruct  uintStruct = {parseUint, formatUint};
 static const TypeStruct  timeStruct = {parseTime, formatTime};
 static const TypeStruct  signatureStruct = {parseSignature, formatSignature};
 
+/*
+ * Synchronizes a node and its descendants from the backend database.
+ *
+ * Arguments:
+ *      node            Pointer to the node to have it and its descendants
+ *                      synchronized from the backend database.  Shall not be
+ *                      NULL.
+ * Returns:
+ *      0               Success
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ */
 static RegStatus sync(
-    RegNode* const      node);
+    RegNode* const      node)
+{
+    const char* absPath = rn_getAbsPath(node);
+    RegStatus   status;
+
+    rn_clear(node);
+
+    if (0 == (status = beInitCursor(_backend))) {
+        for (status = beFirstEntry(_backend, absPath); 0 == status;
+                status = beNextEntry(_backend)) {
+            const char* key = beGetKey(_backend);
+
+            if (strstr(key, absPath) != key) {
+                /* The entry is outside the scope of "node" */
+                break;
+            }
+            else {
+                char* relPath;
+                char* name;
+
+                if (0 == (status = reg_splitAbsPath(key, absPath, &relPath,
+                        &name))) {
+                    RegNode*        subnode;
+
+                    if (0 == (status = rn_ensure(node, relPath, &subnode))) {
+                        ValueThing* vt;
+                        const char*     value = beGetValue(_backend);
+
+                        if (0 == (status = rn_putValue(subnode, name, value,
+                                &vt))) {
+                            (void)vt_setStatus(vt, SYNCHED);
+                        }
+                    }
+
+                    free(relPath);
+                    free(name);
+                }                       /* "relPath" & "name" allocated */
+            }
+        }
+
+        if (ENOENT == status)
+            status = 0;
+
+        beFreeCursor(_backend);
+    }                                   /* cursor initialized */
+
+    if (status)
+        log_add("Couldn't synchronize node \"%s\"", absPath);
+
+    return status;
+}
 
 /*
  * Initializes the registry.  Ensures that the backend is open for the desired
@@ -559,72 +617,6 @@ static RegStatus flush(
     _extantValueFunc = writeValue;
 
     return rn_visitNodes(node, writeNode);
-}
-
-/*
- * Synchronizes a node and its descendants from the backend database.
- *
- * Arguments:
- *      node            Pointer to the node to have it and its descendants
- *                      synchronized from the backend database.  Shall not be
- *                      NULL.
- * Returns:
- *      0               Success
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
- */
-static RegStatus sync(
-    RegNode* const      node)
-{
-    const char* absPath = rn_getAbsPath(node);
-    RegStatus   status;
-    Cursor*     cursor;
-
-    rn_clear(node);
-
-    if (0 == (status = beNewCursor(_backend, &cursor))) {
-        for (status = beFirstEntry(cursor, absPath); 0 == status;
-                status = beNextEntry(cursor)) {
-            const char* key = beGetKey(cursor);
-
-            if (strstr(key, absPath) != key) {
-                /* The entry is outside the scope of "node" */
-                break;
-            }
-            else {
-                char* relPath;
-                char* name;
-
-                if (0 == (status = reg_splitAbsPath(key, absPath, &relPath,
-                        &name))) {
-                    RegNode*        subnode;
-
-                    if (0 == (status = rn_ensure(node, relPath, &subnode))) {
-                        ValueThing* vt;
-                        const char*     value = beGetValue(cursor);
-
-                        if (0 == (status = rn_putValue(subnode, name, value,
-                                &vt))) {
-                            (void)vt_setStatus(vt, SYNCHED);
-                        }
-                    }
-
-                    free(relPath);
-                    free(name);
-                }                       /* "relPath" & "name" allocated */
-            }
-        }
-
-        if (ENOENT == status)
-            status = 0;
-
-        beFreeCursor(cursor);
-    }                                   /* "cursor" allocated */
-
-    if (status)
-        log_add("Couldn't synchronize node \"%s\"", absPath);
-
-    return status;
 }
 
 /*
@@ -859,7 +851,7 @@ RegStatus reg_setPathname(
 
 /*
  * Closes the registry.  Frees all resources and unconditionally resets the
- * module (including the pathname of the registry).
+ * module (excluding the pathname of the registry).
  *
  * Returns:
  *      0               Success
@@ -875,8 +867,8 @@ RegStatus reg_close(void)
 }
 
 /*
- * Resets the registry if it exists.  Unconditionally resets this module,
- * returning the pathname of the database to its default value.
+ * Resets the registry if it exists.  Unconditionally resets this module.
+ * Doesn't return the pathname of the database to its default value.
  *
  * Returns:
  *      0               Success

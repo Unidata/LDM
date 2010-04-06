@@ -23,6 +23,7 @@
 
 #include "ldm.h"        /* needed by following */
 #include "atofeedt.h"
+#include "globals.h"
 #include "inetutil.h"
 #include "ldmprint.h"
 #include "md5.h"
@@ -99,7 +100,7 @@ static void
 usage(const char *av0) {
 
     fprintf(stderr,
-            "Usage: %s [options] pqueuefname\t\nOptions:\n", av0);
+            "Usage: %s [options] [pqueuefname]\t\nOptions:\n", av0);
     fprintf(stderr,
             "\t-l logfile     Send log info to file (default STDERR)\n");
     fprintf(stderr,
@@ -1306,7 +1307,7 @@ int
 main(int argc, char *argv[])
 {
 
-    char        *path;                                 /* product queue path */
+    char        *path = getQueuePath();                /* product queue path */
     char        *logname = 0;            /* logfile name - STDERR by default */
     const char  *logident = ubasename(argv[0]);     /* log file program name */
     char        command[MAX_COMMAND];                /* input command buffer */
@@ -1465,11 +1466,10 @@ main(int argc, char *argv[])
                 break;
             }
 
-/* product queue path is required */
+/* product queue path is optional */
 
-        if (argc - optind <= 0)
-            usage(argv[0]);
-        path = argv[optind];
+        if (NULL != argv[optind])
+            path = argv[optind];
 
 /* set the logging mask */
 

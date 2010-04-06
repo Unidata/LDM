@@ -147,8 +147,9 @@ while read dir age pattern; do
 			BEFORE=`du -s . 2>/dev/null | \
 			    sed 's/^ *\([0-9]*\).*/\1/'`
 		    fi
-		    find . -type f -mtime +$FINDAGE -name "$pattern" \
-			-print | xargs rm -f && touch ".scour$pattern"
+		    find . -type f -mtime +$FINDAGE -name "$pattern" -print \
+                        | sed 's/\([^\n]\)/\\\1/g' \
+                        | xargs rm -f && touch ".scour$pattern"
 		    if [ "$VERBOSEFLAG" != "" ]
 		    then
 			AFTER=`du -s . 2>/dev/null | \

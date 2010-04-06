@@ -124,6 +124,7 @@ CPPFLAGS = \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)/pqing \
+    -I$(top_srcdir)/registry \
     -I$(top_srcdir)
 
 CPPFLAGS_CUNIT = @CPPFLAGS_CUNIT@

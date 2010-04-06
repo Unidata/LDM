@@ -96,7 +96,7 @@ upFilter_addComponent(
     const Pattern* const        okPattern,
     const Pattern* const        notPattern)
 {
-    ErrorObj*    errObj = NULL;          /* success */
+    ErrorObj*   errObj = NULL;          /* success */
     Element*    elt;
 
     /*

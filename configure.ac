@@ -199,7 +199,13 @@ test "$localstatedir" = "$prefix/var" || localstatedir='$(LDMHOME)/var'
 AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
-AC_SUBST([DATA_DIR], ['$(localstatedir)'/data])
+# The following accomodates pre-6.9 LDM installations:
+if ls $LDMHOME/data >/dev/null 2>&1; then
+    DATA_DIR=$LDMHOME
+else
+    DATA_DIR='$(localstatedir)'/data
+fi
+AC_SUBST([DATA_DIR])
 
 AC_SUBST(ARFLAGS)
 AC_REVISION ($Revision: 1.47.18.22 $)
@@ -320,6 +326,7 @@ AC_CONFIG_FILES([
     pqinsert/Makefile
     pqcat/Makefile
     pqcat/pqcat.1
+    pqcopy/Makefile
     pqexpire/Makefile
     pqmon/Makefile
     pqutil/Makefile
@@ -369,7 +376,8 @@ fi
 if abs_top_srcdir=`cd $srcdir && pwd`; then
     if (cd Berkeley-DB/build_unix && 
             $abs_top_srcdir/Berkeley-DB/dist/configure --prefix=$prefix \
-            --enable-smallbuild); then
+            --disable-cryptography --disable-hash --disable-queue \
+            --disable-replication --disable-statistics); then
         : true
     else
         AC_MSG_ERROR([Couldn't configure Berkeley-DB subpackage])

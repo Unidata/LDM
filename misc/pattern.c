@@ -111,6 +111,11 @@ pat_clone(
     Pattern** const             dst,
     const Pattern* const        src)
 {
+    if(&MATCH_ALL == src) {
+        *dst = &MATCH_ALL;
+        return NULL;
+    }
+        
     return pat_new(dst, src->string, src->ignoreCase);
 }
 

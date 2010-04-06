@@ -639,6 +639,10 @@ uninstall-man: uninstall-man1
 	uninstall-man1
 
 
+@MAINTAINER_TRUE@pqutil.1:	pqutil.1.in
+@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	mv $@.tmp $@
+
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

@@ -1,0 +1,29 @@
+# c89: Warning: option -/ passed to ld
+# c89: Warning: illegal option -mp/ldm-6.9.0.0/ldm-6.9.0.0/...
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
+# c89: Warning: option -/ passed to ld
+# c89: Warning: illegal option -mp/ldm-6.9.0.0/ldm-6.9.0.0/...
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64
+
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64
+
+# /usr/xpg4/bin/make crashes on the autoconf-generated makefiles
+#
+PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc
+PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc -m64
+
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99 -m64
+
+PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m32
+#
+# ld: warning: file ./.libs/lib.a ignored: unable to locate archive
+# symbol table
+PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m64
+
+PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m32
+#
+# ld: warning: file ./.libs/lib.a ignored: unable to locate archive
+# symbol table
+PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m64

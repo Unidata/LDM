@@ -58,6 +58,10 @@
             Added "-C" option to clear the minimum virtual residence time
             metric.
 
+        ulogger(1):
+            Made the LDM logging facility (default: LOG_LOCAL0) the default
+            facility for the "-p" option.
+
 	pq(3) library:
             Corrected ability to build without mmap(2) support via the NO_MMAP
             C macro.
@@ -65,6 +69,8 @@
             Added the ability to track the minimum virtual residence time.
 
 	Misc:
+            Corrected pat_clone() if the source is the trivial pattern ".*".
+
 	    Upgraded the version-control mechanism from CVS to git(1).
 
             Corrected FNEXRAD webpages: removed "floater" link and corrected 

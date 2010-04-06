@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
         argv += optind;
 
         /* setup for logging */
-        logfd = openulog(tag ? tag : getlogin(), logflags, 0, logfname);
+        logfd = openulog(tag ? tag : getlogin(), logflags, LOG_LDM, logfname);
 
         if (logfd == -1) {
             fprintf(stderr, "openulog() failure\n");

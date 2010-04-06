@@ -33,9 +33,11 @@
 #include "action.h"
 #include "ldm.h"
 #include "ldmalloc.h"
+#include "ldmfork.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "mkdirs_open.h"
+#include "registry.h"
 #include "ulog.h"
 #include "pbuf.h"
 #include "pq.h"
@@ -1140,15 +1142,12 @@ pipe_open(fl_entry *entry, int argc, char **argv)
         }
         else
         {
-            pid_t       pid = fork();
+            pid_t       pid = ldmfork();
 
             if (-1 == pid)
             {
-                err_log_and_free(
-                    ERR_NEW1(0, NULL,
-                        "Couldn't fork() child process: %s",
-                        strerror(errno)),
-                    ERR_FAILURE);
+                log_add("Couldn't fork decoder process");
+                log_log(LOG_ERR);
             }
             else
             {
@@ -1157,7 +1156,6 @@ pipe_open(fl_entry *entry, int argc, char **argv)
                     /*
                      * Child process.
                      */
-
                     (void)signal(SIGTERM, SIG_DFL);
                     (void)pq_close(pq);
                     pq = NULL;

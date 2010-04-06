@@ -22,6 +22,7 @@ include_HEADERS		= \
     h_clnt.h \
     ldm.h \
     ldm5_clnt.h \
+    ldmfork.h \
     ldmprint.h \
     ldm_clnt.h \
     ldm_xlen.h \
@@ -50,6 +51,7 @@ lib_la_SOURCES		= \
     ldm_xlen.c \
     ldm5_clnt.c \
     ldm6_clnt.c \
+    ldmfork.c \
     ldmprint.c \
     ldm_clnt.c \
     md5c.c \
@@ -95,6 +97,7 @@ if MAINTAINER
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 globals.h:	globals.hin globals.c
+ldmfork.h:	ldmfork.hin ldmfork.c
 endif
 
 ldm.h:		ldm.x

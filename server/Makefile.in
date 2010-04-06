@@ -22,7 +22,6 @@
 # redistribution conditions.
 #
 
-
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
@@ -55,8 +54,7 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)" \
-	"$(DESTDIR)$(sysconfdir)"
+am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_ldmd_OBJECTS = child_process_set.$(OBJEXT) parser.$(OBJEXT) \
 	forn5_svc.$(OBJEXT) ldm6_server.$(OBJEXT) ldm6_svc.$(OBJEXT) \
@@ -107,7 +105,6 @@ am__base_list = \
 man1dir = $(mandir)/man1
 NROFF = nroff
 MANS = $(dist_man1_MANS)
-DATA = $(sysconf_DATA)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -265,7 +262,6 @@ EXTRA_DIST = \
     ldm6_svc.c \
     ldmd.1 \
     ldmd.conf \
-    ldmd.conf.grow \
     parser.c \
     parser.y \
     scanner.c \
@@ -305,8 +301,7 @@ TAGS_FILES = \
     ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
 
-CLEANFILES = *.i
-sysconf_DATA = ldmd.conf.grow
+CLEANFILES = *.i .*.info
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -468,26 +463,6 @@ uninstall-man1:
 	test -z "$$files" || { \
 	  echo " ( cd '$(DESTDIR)$(man1dir)' && rm -f" $$files ")"; \
 	  cd "$(DESTDIR)$(man1dir)" && rm -f $$files; }
-install-sysconfDATA: $(sysconf_DATA)
-	@$(NORMAL_INSTALL)
-	test -z "$(sysconfdir)" || $(MKDIR_P) "$(DESTDIR)$(sysconfdir)"
-	@list='$(sysconf_DATA)'; test -n "$(sysconfdir)" || list=; \
-	for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; \
-	done | $(am__base_list) | \
-	while read files; do \
-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(sysconfdir)'"; \
-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(sysconfdir)" || exit $$?; \
-	done
-
-uninstall-sysconfDATA:
-	@$(NORMAL_UNINSTALL)
-	@list='$(sysconf_DATA)'; test -n "$(sysconfdir)" || list=; \
-	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	test -n "$$files" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(sysconfdir)' && rm -f" $$files ")"; \
-	cd "$(DESTDIR)$(sysconfdir)" && rm -f $$files
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -587,9 +562,9 @@ distdir: $(DISTFILES)
 check-am: all-am
 check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-am
-all-am: Makefile $(PROGRAMS) $(MANS) $(DATA)
+all-am: Makefile $(PROGRAMS) $(MANS)
 installdirs:
-	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(sysconfdir)"; do \
+	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: $(BUILT_SOURCES)
@@ -648,7 +623,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-binPROGRAMS install-sysconfDATA
+install-exec-am: install-binPROGRAMS
 
 install-html: install-html-am
 
@@ -688,8 +663,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-local uninstall-man \
-	uninstall-sysconfDATA
+uninstall-am: uninstall-binPROGRAMS uninstall-local uninstall-man
 
 uninstall-man: uninstall-man1
 
@@ -704,12 +678,11 @@ uninstall-man: uninstall-man1
 	install-exec-am install-html install-html-am install-info \
 	install-info-am install-man install-man1 install-pdf \
 	install-pdf-am install-ps install-ps-am install-strip \
-	install-sysconfDATA installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
-	pdf pdf-am ps ps-am tags uninstall uninstall-am \
-	uninstall-binPROGRAMS uninstall-local uninstall-man \
-	uninstall-man1 uninstall-sysconfDATA
+	installcheck installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-local uninstall-man uninstall-man1
 
 
 @MAINTAINER_TRUE@ldmd.1:		ldmd.1.in

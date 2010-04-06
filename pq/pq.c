@@ -2849,7 +2849,7 @@ riul_delete(riul *rl, riu *const rp)
 struct pqctl {
 #define PQ_MAGIC        0x50515545      /* PQUE */
         size_t          magic;
-#define PQ_VERSION      8
+#define PQ_VERSION      7
         size_t          version;
         off_t           datao;          /* beginning of data segment */
         off_t           ixo;            /* beginning of index segment */
@@ -2861,8 +2861,10 @@ struct pqctl {
         size_t          maxproducts;
 #define WRITE_COUNT_MAGIC       PQ_MAGIC
         unsigned        write_count_magic;
-#define MAX_WRITE_COUNT ~0u
+#define MAX_WRITE_COUNT         ~0u
         unsigned        write_count;
+#define METRICS_MAGIC           (PQ_MAGIC+1)
+        unsigned        metrics_magic;
         timestampt      mostRecent;     /* time of most recent insertion */
         timestampt      minVirtResTime; /* minimum virtual residence time */
         int             isFull;         /* is the queue full? */
@@ -4137,6 +4139,7 @@ ctl_init(pqueue *const pq, size_t const align)
         pq->ctlp->highwater = 0;
         pq->ctlp->maxproducts = 0;
         pq->ctlp->align = align;
+        pq->ctlp->metrics_magic = METRICS_MAGIC;
         pq->ctlp->mostRecent = TS_NONE;
         pq->ctlp->minVirtResTime = TS_NONE;
         pq->ctlp->isFull = 0;
@@ -4967,14 +4970,17 @@ pq_open(
                         }
 
                         if (!status) {
-                            if (7 == ctlp->version) {
+                            if (METRICS_MAGIC != ctlp->metrics_magic) {
                                 /*
-                                 * Some parameters don't exist on-disk.
+                                 * This process is the first one of this
+                                 * version of the LDM to open the product-queue
+                                 * for writing.  Initialize the additional
+                                 * metrics.
                                  */
+                                ctlp->metrics_magic = METRICS_MAGIC;
                                 ctlp->mostRecent = TS_NONE;
                                 ctlp->minVirtResTime = TS_NONE;
                                 ctlp->isFull = 0;
-                                ctlp->version = PQ_VERSION;
                                 rflags = RGN_MODIFIED;
                             }
                         }
@@ -5514,8 +5520,8 @@ unwind_ctl:
  * Insert at rear of queue, send SIGCONT to process group
  *
  * Returns:
- *      ENOERR  Success.
- *      EINVAL  Invalid argument.
+ *      ENOERR          Success.
+ *      EINVAL          Invalid argument.
  *      PQUEUE_DUP      Product already exists in the queue.
  *      PQUEUE_BIG      Product is too large to insert in the queue.
  */

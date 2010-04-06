@@ -31,3 +31,9 @@ TAGS_FILES	= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
+
+if MAINTAINER
+pqutil.1:	pqutil.1.in
+	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	mv $@.tmp $@
+endif
