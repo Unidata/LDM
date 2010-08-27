@@ -1,3 +1,9 @@
+6.9.0.1
+        Replaced defunct hyperlinks to list of WMO headers with hyperlink
+        to WMO Tables from Manual 386.
+
+        Added some error-message to ldmadmin(1) for when regutil(1) fails.
+
 6.9.0.0
         SUMMARY: Dragged the kicking and screaming LDM into the late
             20th century.  :-)

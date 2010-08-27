@@ -1184,19 +1184,19 @@ sub check_ldm
             $status = 2;
         }
         else {
-            print "Checking the most-recent insertion into the queue...\n";
-            if (check_insertion()) {
+            print "Checking the system clock...\n";
+            if (checkTime()) {
                 $status = 3;
             }
             else {
-                print "Vetting the size of the queue and the maximum ".
-                    "acceptible latency...\n";
-                if (vetQueueSize()) {
+                print "Checking the most-recent insertion into the queue...\n";
+                if (check_insertion()) {
                     $status = 4;
                 }
                 else {
-                    print "Checking the system clock...\n";
-                    if (checkTime()) {
+                    print "Vetting the size of the queue and the maximum ".
+                        "acceptible latency...\n";
+                    if (vetQueueSize()) {
                         $status = 5;
                     }
                     else {
