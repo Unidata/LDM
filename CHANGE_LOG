@@ -4,6 +4,9 @@
 
         Added some error-message to ldmadmin(1) for when regutil(1) fails.
 
+        Added printing of product-queue reconciliation-mode to "ldmadmin 
+        config".
+
 6.9.0.0
         SUMMARY: Dragged the kicking and screaming LDM into the late
             20th century.  :-)

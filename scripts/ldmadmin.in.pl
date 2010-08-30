@@ -74,6 +74,7 @@ if (resetRegistry()) {
     [\$insertion_check_period, "regpath{INSERTION_CHECK_INTERVAL}"],
     [\$pq_size, "regpath{QUEUE_SIZE}"],
     [\$pq_slots, "regpath{QUEUE_SLOTS}"],
+    [\$reconMode, "regpath{RECONCILIATION_MODE}"],
     [\$surf_path, "regpath{SURFQUEUE_PATH}"],
     [\$surf_size, "regpath{SURFQUEUE_SIZE}"],
     [\$metrics_file, "regpath{METRICS_FILE}"],
@@ -100,7 +101,8 @@ if (resetRegistry()) {
     [\$delete_info_files, "regpath{DELETE_INFO_FILES}"],
 );
 for my $entryRef (@regpar) {
-    ${$entryRef->[0]} = `regutil $entryRef->[1]` || die;
+    ${$entryRef->[0]} = `regutil $entryRef->[1]` || \
+        die "Couldn't get \"$entryRef->[1]\"";
     chop(${$entryRef->[0]});
 }
 @time_servers = split(/\s+/, $time_servers);
@@ -848,6 +850,7 @@ sub ldm_config
     print  "product queue:         $q_path\n";
     print  "queue size:            $pq_size bytes\n";
     print  "queue slots:           $pq_slots\n";
+    print  "reconcilliation mode:  $reconMode\n";
     print  "pqsurf(1) path:        $surf_path\n";
     print  "pqsurf(1) size:        $surf_size\n";
     printf "IP address:            %s\n", length($ip_addr) ? $ip_addr : "all";
@@ -1063,7 +1066,6 @@ sub vetQueueSize
                 "data-products in the queue ($minVirtResTime seconds).  This ".
                 "will hinder detection of duplicate data-products.");
 
-            chomp(my $reconMode = `regutil regpath{RECONCILIATION_MODE}`);
             print "The value of the ".
                 "\"regpath{RECONCILIATION_MODE}\" configuration parameter is ".
                 "\"$reconMode\"\n";
