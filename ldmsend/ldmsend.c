@@ -360,7 +360,7 @@ send_product_6(CLIENT *clnt, int fd, prod_info *infop)
 
         udebug("Sending file via HEREIS");
 
-        if (NULL == buf) {
+        if (NULL == buf && 0 < size) {
             serror("Couldn't allocate %u bytes for product data", size);
         }
         else {

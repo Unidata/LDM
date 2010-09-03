@@ -7,7 +7,10 @@
         Added printing of product-queue reconciliation-mode to "ldmadmin 
         config".
 
-6.9.0.0
+        Modified ldmsend(1) to ensure that it can send a zero-length file
+        on any system.
+
+6.9.0.0 2010-04-06
         SUMMARY: Dragged the kicking and screaming LDM into the late
             20th century.  :-)
 
