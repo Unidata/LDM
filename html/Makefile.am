@@ -85,7 +85,7 @@ BUILT_SOURCES	= CHANGE_LOG
 CLEANFILES	= CHANGE_LOG
 
 if MAINTAINER
-WEB_DESTDIR	= conan:/content/software/ldm
+WEB_DESTDIR	= /web/content/software/ldm
 
 commit-check:
 	if git status -a >/dev/null; then \
@@ -106,12 +106,12 @@ web-update:	commit-check
 	    install \
 	    troubleshooting \
 	    $(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
-	cd basics && make $@
-	cd tutorial && make $@
-	cd workshop && make $@
+	cd basics && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
+	cd tutorial && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
+	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
 
 alpha:
-	$(MAKE) web-update WEB_DESTDIR=conan:/content/staff/steve/ldm
+	$(MAKE) web-update WEB_DESTDIR=/web/content/staff/steve/ldm
 
 .PHONY:		commit-check alpha web-update
 endif

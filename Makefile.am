@@ -235,7 +235,7 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 	fi
 
 if MAINTAINER
-FTPDIR	= ftp:/home/ftp/pub/ldm
+FTPDIR	= /web/content/ftp/pub/ldm
 
 remote-checks:	dist
 	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
@@ -252,14 +252,14 @@ tag:
 ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
 	filename=$(PACKAGE)-$(VERSION).tar.gz \
 	dest=$(FTPDIR)/$$filename \
-	&& scp $$filename $$dest \
-	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
+	&& cp $$filename $$dest \
+	&& chmod u+rw,g+rw,o=r $$dest
 
 beta:
-	$(MAKE) ftp FTPDIR=ftp:/home/ftp/pub/ldm/beta
+	$(MAKE) ftp FTPDIR=/web/content/ftp/pub/ldm/beta
 
 alpha:
-	$(MAKE) ftp FTPDIR=conan:/content/staff/steve/ldm
+	$(MAKE) ftp FTPDIR=/web/content/staff/steve/ldm
 	cd html && $(MAKE) alpha
 endif
 

@@ -78,10 +78,12 @@ $(EXTRA_DIST):
 	    -noglossary \
 	    -notclevaluation
 
+WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
+
 web-update:	$(EXTRA_DIST)
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    tutorial/ \
-	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/tutorial
+	    $(WEB_DESTDIR)/tutorial
 
 clean-local:
 	rm -rf tutorial

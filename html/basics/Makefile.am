@@ -245,11 +245,13 @@ failures.html:	$(top_srcdir)/test/results.tab
 		print "</html>"; \
 	    }' >$@
 
+WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
+
 web-update:
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    *.html \
 	    *.gif \
 	    feedtypes \
-	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/basics
+	    $(WEB_DESTDIR)/basics
 
 endif

@@ -372,7 +372,7 @@ distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 DISTCLEANFILES = *.log $(distArchive)
 distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
-@MAINTAINER_TRUE@FTPDIR = ftp:/home/ftp/pub/ldm
+@MAINTAINER_TRUE@FTPDIR = /web/content/ftp/pub/ldm
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -1054,14 +1054,14 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 @MAINTAINER_TRUE@ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
 @MAINTAINER_TRUE@	filename=$(PACKAGE)-$(VERSION).tar.gz \
 @MAINTAINER_TRUE@	dest=$(FTPDIR)/$$filename \
-@MAINTAINER_TRUE@	&& scp $$filename $$dest \
-@MAINTAINER_TRUE@	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
+@MAINTAINER_TRUE@	&& cp $$filename $$dest \
+@MAINTAINER_TRUE@	&& chmod u+rw,g+rw,o=r $$dest
 
 @MAINTAINER_TRUE@beta:
-@MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=ftp:/home/ftp/pub/ldm/beta
+@MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=/web/content/ftp/pub/ldm/beta
 
 @MAINTAINER_TRUE@alpha:
-@MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=conan:/content/staff/steve/ldm
+@MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=/web/content/staff/steve/ldm
 @MAINTAINER_TRUE@	cd html && $(MAKE) alpha
 
 .PHONY:		\
