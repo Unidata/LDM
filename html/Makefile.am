@@ -85,30 +85,24 @@ BUILT_SOURCES	= CHANGE_LOG
 CLEANFILES	= CHANGE_LOG
 
 if MAINTAINER
-WEB_DESTDIR	= /web/content/software/ldm
+WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
-commit-check:
+commit-check:	Makefile
 	if git status -a >/dev/null; then \
 	    echo 1>&2 'Package needs "git commit -a"'; \
 	    exit 1; \
 	fi
 
 web-update:	commit-check
-	rsync $(RSYNC_FLAGS) -u \
-	    factsheet.html \
-	    generalHelp.html \
-	    history.html \
-	    index.html \
-	    $(WEB_DESTDIR)
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    ../README \
 	    ../CHANGE_LOG \
 	    *.html \
 	    troubleshooting \
-	    $(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
-	cd basics && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
-	cd tutorial && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
-	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
+	    $(WEB_DESTDIR)
+	cd basics && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
+	cd tutorial && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
+	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
 
 alpha:
 	$(MAKE) web-update WEB_DESTDIR=/web/content/staff/steve/ldm

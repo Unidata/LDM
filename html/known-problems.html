@@ -17,8 +17,6 @@
 	(Darwin 8 & 9)</a>
     <li><a href="#linux_time">Some data-products not processed or
     relayed</a>
-    <li><a href="#ntpdate_timeout"><b><tt>ldmadmin</tt></b> commands take a
-	long time to execute</a>
     <li><a href="#reporting">Reporting Problems</a>
 </ul>
 
@@ -56,13 +54,12 @@ profile-file.
 The product-queue module, pq(3), makes repeated use of the fcntl(2)
 system-function to lock portions of the product-queue.  This function
 invokes the Mac OS X system-function fcntl$UNIX2003, which, for an
-unknown reason, eventually hangs (i.e., never returns) if two or more
-processes are accessing the product-queue.  This problem has been seen on
-Mac OS X versions 10.5.0 and 10.5.2.
+unknown reason, eventually hangs (i.e., never returns).
+This problem has been seen on Mac OS X versions 10.5 and 10.6.
 
 <p>
 This bug was first reported to Apple on April 1, 2008.  There have been
-only a few inquiries from Apple and no resolution to date.
+only a few responses from Apple and no resolution to date.
 
 <p>
 There is no workaround.
@@ -98,21 +95,6 @@ this recommendation</a>.
 
 <hr>
 
-<h2><a name="ntpdate_timeout"><tt><b>ldmadmin</b>(1)</tt> commands take a
-long time to execute</a></h2>
-
-In order to ensure that the system clock is accurate, most of the
-<tt><b>ldmadmin</b>(1)</tt> commands also check the system clock via the
-<tt><b>ntpdate</b>(1)</tt> utility, which contacts a remote timeserver.
-In LDM version 6.8.0, the default timeout for that utility was 20
-seconds and that value will still be used if you installed that version.
-To ensure faster
-response times, set the value of the variable
-<tt><b>$ntpdate_timeout</b></tt> in the <tt><b>ldmadmin</b>(1)</tt> 
-configuration-file, <tt><b>etc/ldmadmin-pl.conf</b></tt>,
-to a smaller number of seconds (<i>e.g.</i>, 5).
-
-<hr>
 <h2><a name="reporting">Reporting Problems</a></h2>
 
 <p>

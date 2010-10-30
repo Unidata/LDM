@@ -341,7 +341,7 @@ EXTRA_DIST = \
 
 BUILT_SOURCES = CHANGE_LOG
 CLEANFILES = CHANGE_LOG
-@MAINTAINER_TRUE@WEB_DESTDIR = /web/content/software/ldm
+@MAINTAINER_TRUE@WEB_DESTDIR = /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -749,28 +749,22 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 	uninstall-nobase_htmlDATA
 
 
-@MAINTAINER_TRUE@commit-check:
+@MAINTAINER_TRUE@commit-check:	Makefile
 @MAINTAINER_TRUE@	if git status -a >/dev/null; then \
 @MAINTAINER_TRUE@	    echo 1>&2 'Package needs "git commit -a"'; \
 @MAINTAINER_TRUE@	    exit 1; \
 @MAINTAINER_TRUE@	fi
 
 @MAINTAINER_TRUE@web-update:	commit-check
-@MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -u \
-@MAINTAINER_TRUE@	    factsheet.html \
-@MAINTAINER_TRUE@	    generalHelp.html \
-@MAINTAINER_TRUE@	    history.html \
-@MAINTAINER_TRUE@	    index.html \
-@MAINTAINER_TRUE@	    $(WEB_DESTDIR)
 @MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 @MAINTAINER_TRUE@	    ../README \
 @MAINTAINER_TRUE@	    ../CHANGE_LOG \
 @MAINTAINER_TRUE@	    *.html \
 @MAINTAINER_TRUE@	    troubleshooting \
-@MAINTAINER_TRUE@	    $(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
-@MAINTAINER_TRUE@	cd basics && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
-@MAINTAINER_TRUE@	cd tutorial && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
-@MAINTAINER_TRUE@	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
+@MAINTAINER_TRUE@	    $(WEB_DESTDIR)
+@MAINTAINER_TRUE@	cd basics && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
+@MAINTAINER_TRUE@	cd tutorial && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
+@MAINTAINER_TRUE@	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
 
 @MAINTAINER_TRUE@alpha:
 @MAINTAINER_TRUE@	$(MAKE) web-update WEB_DESTDIR=/web/content/staff/steve/ldm
