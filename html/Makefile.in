@@ -341,7 +341,7 @@ EXTRA_DIST = \
 
 BUILT_SOURCES = CHANGE_LOG
 CLEANFILES = CHANGE_LOG
-@MAINTAINER_TRUE@WEB_DESTDIR = conan:/content/software/ldm
+@MAINTAINER_TRUE@WEB_DESTDIR = /web/content/software/ldm
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -768,12 +768,12 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 @MAINTAINER_TRUE@	    install \
 @MAINTAINER_TRUE@	    troubleshooting \
 @MAINTAINER_TRUE@	    $(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
-@MAINTAINER_TRUE@	cd basics && make $@
-@MAINTAINER_TRUE@	cd tutorial && make $@
-@MAINTAINER_TRUE@	cd workshop && make $@
+@MAINTAINER_TRUE@	cd basics && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
+@MAINTAINER_TRUE@	cd tutorial && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
+@MAINTAINER_TRUE@	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
 
 @MAINTAINER_TRUE@alpha:
-@MAINTAINER_TRUE@	$(MAKE) web-update WEB_DESTDIR=conan:/content/staff/steve/ldm
+@MAINTAINER_TRUE@	$(MAKE) web-update WEB_DESTDIR=/web/content/staff/steve/ldm
 
 @MAINTAINER_TRUE@.PHONY:		commit-check alpha web-update
 
