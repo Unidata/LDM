@@ -10,6 +10,4 @@ PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/u
 PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/xlc -q32,/zasu/steve
 PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/xlc -q64,/zasu/steve
 
-# /opt/gnu/bin/gcc doesn't have the options "-m32" or "-m64"
-# collect2: ld returned 12 exit status
 PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,/zasu/steve

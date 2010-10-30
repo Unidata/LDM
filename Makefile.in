@@ -288,7 +288,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 DISTCHECK_CONFIGURE_FLAGS = --disable-root-actions
 SUBDIRS = \
-    Berkeley-DB \
+    libxml2 \
     rpc \
     ulog \
     misc \
@@ -319,7 +319,7 @@ SUBDIRS = \
     html
 
 DIST_SUBDIRS = \
-    Berkeley-DB \
+    libxml2 \
     rpc \
     ulog \
     misc \
@@ -372,6 +372,7 @@ distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 DISTCLEANFILES = *.log $(distArchive)
 distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
+@MAINTAINER_TRUE@FTPDIR = ftp:/home/ftp/pub/ldm
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -1038,29 +1039,30 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 		echo 1>&2 "Couldn't build manual-page database"; \
 	fi
 
-remote-checks:	dist
-	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
+@MAINTAINER_TRUE@remote-checks:	dist
+@MAINTAINER_TRUE@	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
 
-commit-check:
-	if git status -a >/dev/null; then \
-	    echo 1>&2 'Package needs "git commit -a"'; \
-	    exit 1; \
-	fi
+@MAINTAINER_TRUE@commit-check:
+@MAINTAINER_TRUE@	if git status -a >/dev/null; then \
+@MAINTAINER_TRUE@	    echo 1>&2 'Package needs "git commit -a"'; \
+@MAINTAINER_TRUE@	    exit 1; \
+@MAINTAINER_TRUE@	fi
 
-tag:
-	git tag -f v$(VERSION)
+@MAINTAINER_TRUE@tag:
+@MAINTAINER_TRUE@	git tag -f v$(VERSION)
 
-ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
-	filename=$(PACKAGE)-$(VERSION).tar.gz \
-	dest=ftp:/home/ftp/pub/ldm/$$filename \
-	&& scp $$filename $$dest \
-	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
+@MAINTAINER_TRUE@ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
+@MAINTAINER_TRUE@	filename=$(PACKAGE)-$(VERSION).tar.gz \
+@MAINTAINER_TRUE@	dest=$(FTPDIR)/$$filename \
+@MAINTAINER_TRUE@	&& scp $$filename $$dest \
+@MAINTAINER_TRUE@	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
 
-beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
-	filename=$(PACKAGE)-$(VERSION).tar.gz \
-	dest=ftp:/home/ftp/pub/ldm/beta/$$filename \
-	&& scp $$filename $$dest \
-	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
+@MAINTAINER_TRUE@beta:
+@MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=ftp:/home/ftp/pub/ldm/beta
+
+@MAINTAINER_TRUE@alpha:
+@MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=conan:/content/staff/steve/ldm
+@MAINTAINER_TRUE@	cd html && $(MAKE) alpha
 
 .PHONY:		\
     root-actions \
@@ -1074,7 +1076,8 @@ beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
     remote-checks \
     tag \
     ftp \
-    beta
+    beta \
+    alpha
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

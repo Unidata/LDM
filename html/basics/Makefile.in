@@ -36,7 +36,7 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = html/basics
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/activating.html.in \
+	$(srcdir)/activating.html.in $(srcdir)/index.html.in \
 	$(srcdir)/source-install-steps.html.in \
 	$(srcdir)/what-gets-installed.html.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -46,8 +46,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = activating.html source-install-steps.html \
-	what-gets-installed.html
+CONFIG_CLEAN_FILES = index.html activating.html \
+	source-install-steps.html what-gets-installed.html
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -184,7 +184,7 @@ build_vendor = @build_vendor@
 builddir = @builddir@
 datadir = @datadir@
 datarootdir = @datarootdir@
-docdir = @docdir@/basics
+docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 host = @host@
@@ -192,7 +192,7 @@ host_alias = @host_alias@
 host_cpu = @host_cpu@
 host_os = @host_os@
 host_vendor = @host_vendor@
-htmldir = @htmldir@
+htmldir = $(docdir)/basics
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
@@ -370,6 +370,8 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+index.html: $(top_builddir)/config.status $(srcdir)/index.html.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 activating.html: $(top_builddir)/config.status $(srcdir)/activating.html.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 source-install-steps.html: $(top_builddir)/config.status $(srcdir)/source-install-steps.html.in

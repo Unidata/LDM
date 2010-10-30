@@ -33,18 +33,18 @@
  */
 typedef struct message {
     char                string[512];
-    struct message*     nextMessage;
+    struct message*     next;
 } Message;
 
 /*
  * The first (i.e., most fundamental) log-message.
  */
-static Message*         head = NULL;
+static Message*         first = NULL;
 
 /*
- * Pointer to the pointer to be set to the next message:
+ * Pointer to the last message to be set.
  */
-static Message**        next = &head;
+static Message*         last = NULL;
 
 /*
  * Whether or not this module is initialized.
@@ -57,20 +57,17 @@ static int              initialized = 0;
  */
 static void log_close(void)
 {
-    if (NULL != head) {
-        Message*        msg = head;
+    Message*        msg = first;
 
-        while (NULL != msg) {
-            Message*    nextMessage = msg->nextMessage;
+    while (NULL != msg) {
+        Message*    next = msg->next;
 
-            free(msg);
-
-            msg = nextMessage;
-        }
-
-        head = NULL;
-        next = &head;
+        free(msg);
+        msg = next;
     }
+
+    first = NULL;
+    last = NULL;
 }
 
 
@@ -88,35 +85,20 @@ static void log_init(void)
 }
 
 
-/******************************************************************************
- * Public API:
- ******************************************************************************/
-
-
-/*
- * Clears the accumulated log-messages.  If log_log() is invoked after this
- * function, then no messages will be logged.
- */
-void log_clear()
-{
-    next = &head;
-}
-
-
 /*
  * Adds a log-message.  If the format is NULL, then no message will be added.
  * Arguments:
  *      fmt     The format for the message or NULL.
  *      args    The arguments referenced by the format.
  */
-void log_vadd(
+static void log_vadd(
     const char *const   fmt,
     va_list             args)
 {
     log_init();
 
     if (fmt != NULL) {
-        Message*        msg = *next;
+        Message*        msg = (NULL == last) ? first : last->next;
 
         if (msg == NULL) {
             msg = (Message*)malloc(sizeof(Message));
@@ -127,10 +109,10 @@ void log_vadd(
             }
             else {
                 msg->string[0] = 0;
-                msg->nextMessage = NULL;
+                msg->next = NULL;
 
-                if (NULL == head)
-                    head = msg;         /* very first message structure */
+                if (NULL == first)
+                    first = msg;         /* very first message structure */
             }
         }
 
@@ -144,10 +126,27 @@ void log_vadd(
             }
 
             msg->string[sizeof(msg->string)-1] = 0;
-            *next = msg;
-            next = &msg->nextMessage;
+            if (NULL != last) {
+                last->next = msg;
+            }
+            last = msg;
         }                               /* msg != NULL */
     }                                   /* format string != NULL */
+}
+
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
+
+/*
+ * Clears the accumulated log-messages.  If log_log() is invoked after this
+ * function, then no messages will be logged.
+ */
+void log_clear()
+{
+    last = NULL;
 }
 
 
@@ -236,7 +235,7 @@ void log_serror(
 void log_log(
     const int   level)
 {
-    if (next != &head) {
+    if (NULL != last) {
         static const unsigned       allPrioritiesMask = 
             LOG_MASK(LOG_ERR) |
             LOG_MASK(LOG_WARNING) |
@@ -251,7 +250,7 @@ void log_log(
         else if (getulogmask() & priorityMask) {
             const Message*     msg;
 
-            for (msg = head; msg != *next; msg = msg->nextMessage) {
+            for (msg = first; NULL != msg; msg = msg->next) {
                 /*
                  * NB: The message is not printed using "ulog(level,
                  * msg->string)" because "msg->string" might have formatting
@@ -259,9 +258,12 @@ void log_log(
                  * "s_prod_info()" with a dangerous product-identifier.
                  */
                 ulog(level, "%s", msg->string);
+
+                if (msg == last)
+                    break;
             }
-        }
+        }                                       /* messages should be printed */
 
         log_clear();
-    }
+    }                                           /* have messages */
 }

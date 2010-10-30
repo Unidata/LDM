@@ -34,7 +34,7 @@ void* reg_malloc(
     void*       ptr = malloc(nbytes);
 
     if (NULL == ptr) {
-        log_serror("Couldn't allocate %lu bytes", nbytes);
+        LOG_SERROR1("Couldn't allocate %lu bytes", nbytes);
         *status = ENOMEM;
     }
     else {
@@ -71,7 +71,7 @@ RegStatus reg_clonePrefix(
         status = 0;
     }
     else {
-        log_serror("Couldn't clone first %lu bytes of string \"%s\"",
+        LOG_SERROR2("Couldn't clone first %lu bytes of string \"%s\"",
             nbytes, string);
         status = ENOMEM;
     }
@@ -144,7 +144,7 @@ RegStatus reg_vetAbsPath(
         status = 0;
     }
     else {
-        log_start("Not an absolute path name: \"%s\"", path);
+        LOG_START1("Not an absolute path name: \"%s\"", path);
         status = EINVAL;
     }
 
@@ -229,7 +229,7 @@ RegStatus reg_splitAbsPath(
     if (0 == status) {
         if (0 == (status = reg_vetAbsPath(absPath))) {
             if (strstr(path, absPath) != path) {
-                log_start("Path \"%s\" doesn't have prefix \"%s\"", path,
+                LOG_START2("Path \"%s\" doesn't have prefix \"%s\"", path,
                     absPath);
                 status = EINVAL;
             }
@@ -237,7 +237,7 @@ RegStatus reg_splitAbsPath(
                 const char*     lastSep = strrchr(path, REG_SEP[0]);
 
                 if (NULL == lastSep) {
-                    log_start("Not a valid path to a value: \"%s\"", path);
+                    LOG_START1("Not a valid path to a value: \"%s\"", path);
                     status = EINVAL;
                 }
                 else {

@@ -66,15 +66,14 @@ regutil_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
 regutil_DEPENDENCIES = lib.la $(top_builddir)/protocol/lib.la \
 	$(top_builddir)/rpc/lib.la $(top_builddir)/ulog/lib.la \
-	$(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
-	$(am__DEPENDENCIES_1)
+	$(top_builddir)/libxml2/libxml2.la $(am__DEPENDENCIES_1)
 testRegistry_SOURCES = testRegistry.c
 testRegistry_OBJECTS = testRegistry-testRegistry.$(OBJEXT)
 @HAVE_CUNIT_TRUE@testRegistry_DEPENDENCIES = lib.la \
 @HAVE_CUNIT_TRUE@	$(top_builddir)/protocol/lib.la \
 @HAVE_CUNIT_TRUE@	$(top_builddir)/ulog/lib.la \
 @HAVE_CUNIT_TRUE@	$(top_builddir)/rpc/lib.la \
-@HAVE_CUNIT_TRUE@	$(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la
+@HAVE_CUNIT_TRUE@	$(top_builddir)/libxml2/libxml2.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -192,7 +191,7 @@ PQ_PATH = @PQ_PATH@
 PQ_SUBDIR = @PQ_SUBDIR@
 QUEUE_DIR = $(DESTDIR)@QUEUE_DIR@
 RANLIB = @RANLIB@
-REGISTRY_DIR = $(DESTDIR)@REGISTRY_DIR@
+REGISTRY_DIR = @REGISTRY_DIR@
 RPCGEN = @RPCGEN@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
@@ -266,7 +265,6 @@ METRICS_FILE = $(LOGS_DIR)/metrics.txt
 noinst_LTLIBRARIES = lib.la
 EXTRA_DIST = \
     backend.h \
-    backend-bdb.c \
     checkRegistry \
     installRegistry \
     misc.h \
@@ -289,8 +287,7 @@ TAGS_FILES = \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/protocol/*.c \
-    $(top_srcdir)/Berkeley-DB/env/*.c \
-    $(top_srcdir)/Berkeley-DB/os/*.c \
+    $(top_srcdir)/libxml2/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 
@@ -298,26 +295,25 @@ AM_CPPFLAGS = \
     -I$(top_srcdir) \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
-    -I$(top_builddir)/Berkeley-DB/build_unix \
-    -DREGISTRY_PATH='"$(REGISTRY_DIR)"'
+    -I$(top_srcdir)/libxml2/include \
+    -DREGISTRY_DIR='"$(ETC_DIR)"'
 
 LDADD = \
     lib.la \
     $(top_builddir)/protocol/lib.la \
     $(top_builddir)/rpc/lib.la \
     $(top_builddir)/ulog/lib.la \
-    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
+    $(top_builddir)/libxml2/libxml2.la \
     $(LD_GEN)
 
 dist_man1_MANS = regutil.1
 CLEANFILES = regutil.out regpar.tab
-DISTCLEANFILES = backend.c
 @MAINTAINER_TRUE@BUILT_SOURCES = substPaths
 @HAVE_CUNIT_TRUE@testRegistry_CPPFLAGS = \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir) \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/protocol \
 @HAVE_CUNIT_TRUE@    -I$(top_srcdir)/ulog \
-@HAVE_CUNIT_TRUE@    -I$(top_builddir)/Berkeley-DB/build_unix \
+@HAVE_CUNIT_TRUE@    -I$(top_srcdir)/libxml2/include \
 @HAVE_CUNIT_TRUE@    @CPPFLAGS_CUNIT@
 
 @HAVE_CUNIT_TRUE@testRegistry_LDADD = \
@@ -325,7 +321,7 @@ DISTCLEANFILES = backend.c
 @HAVE_CUNIT_TRUE@    $(top_builddir)/protocol/lib.la \
 @HAVE_CUNIT_TRUE@    $(top_builddir)/ulog/lib.la \
 @HAVE_CUNIT_TRUE@    $(top_builddir)/rpc/lib.la \
-@HAVE_CUNIT_TRUE@    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
+@HAVE_CUNIT_TRUE@    $(top_builddir)/libxml2/libxml2.la \
 @HAVE_CUNIT_TRUE@    @LIBS_CUNIT@
 
 @HAVE_CUNIT_TRUE@TESTS = checkRegistry
@@ -746,7 +742,6 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -862,8 +857,8 @@ regpar.tab:	$(srcdir)/regpar.tab.in
 	    $(srcdir)/regpar.tab.in >$@.tmp
 	mv $@.tmp $@
 
-backend.c:	backend-bdb.c
-	$(LN_S) backend-bdb.c $@
+@MAINTAINER_TRUE@backend.c:	backend-libxml2.c
+@MAINTAINER_TRUE@	$(LN_S) backend-libxml2.c $@
 
 @MAINTAINER_TRUE@substPaths:	regpar.tab.in
 @MAINTAINER_TRUE@	$(AWK) -F : 'BEGIN {print "sed \\"} \
@@ -894,11 +889,11 @@ backend.c:	backend-bdb.c
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
-install-exec-local:	regpar.tab regutil $(REGISTRY_DIR)
+install-exec-local:	regpar.tab regutil $(ETC_DIR)
 	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
-	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(REGISTRY_DIR)
+	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(ETC_DIR)
 
-$(REGISTRY_DIR):
+$(ETC_DIR):
 	mkdir -p $@
 
 @HAVE_CUNIT_TRUE@debug:		testRegistry

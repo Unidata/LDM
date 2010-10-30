@@ -61,3 +61,4 @@ share
 .project
 .settings
 .gitignore
+libxml2

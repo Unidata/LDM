@@ -19,7 +19,7 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 
 SUBDIRS	= \
-    Berkeley-DB \
+    libxml2 \
     rpc \
     ulog \
     misc \
@@ -50,7 +50,7 @@ SUBDIRS	= \
     html
 
 DIST_SUBDIRS		= \
-    Berkeley-DB \
+    libxml2 \
     rpc \
     ulog \
     misc \
@@ -234,6 +234,9 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 		echo 1>&2 "Couldn't build manual-page database"; \
 	fi
 
+if MAINTAINER
+FTPDIR	= ftp:/home/ftp/pub/ldm
+
 remote-checks:	dist
 	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
 
@@ -248,15 +251,17 @@ tag:
 
 ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
 	filename=$(PACKAGE)-$(VERSION).tar.gz \
-	dest=ftp:/home/ftp/pub/ldm/$$filename \
+	dest=$(FTPDIR)/$$filename \
 	&& scp $$filename $$dest \
 	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
 
-beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
-	filename=$(PACKAGE)-$(VERSION).tar.gz \
-	dest=ftp:/home/ftp/pub/ldm/beta/$$filename \
-	&& scp $$filename $$dest \
-	&& ssh ftp chmod u+rw,g+rw,o=r $$dest
+beta:
+	$(MAKE) ftp FTPDIR=ftp:/home/ftp/pub/ldm/beta
+
+alpha:
+	$(MAKE) ftp FTPDIR=conan:/content/staff/steve/ldm
+	cd html && $(MAKE) alpha
+endif
 
 .PHONY:		\
     root-actions \
@@ -270,4 +275,5 @@ beta:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
     remote-checks \
     tag \
     ftp \
-    beta
+    beta \
+    alpha

@@ -23,7 +23,7 @@ LDADD			= \
     ../misc/lib.la \
     ../rpc/lib.la \
     ../registry/lib.la \
-    ../Berkeley-DB/build_unix/libdb-4.8.la \
+    ../libxml2/libxml2.la \
     -lm
 dist_man1_MANS		= rtstats.1
 TAGS_FILES		= \

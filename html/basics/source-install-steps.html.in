@@ -36,7 +36,7 @@ Then, do the following:
     $ export PATH=... # if necessary
     $ ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
     Password: ...
-    $ make install &gt;make.log
+    $ make install &gt;make.log 2&gt;&1
     $ make clean # optional
 </pre>
 

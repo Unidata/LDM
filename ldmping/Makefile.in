@@ -61,7 +61,7 @@ ldmping_OBJECTS = ldmping.$(OBJEXT)
 ldmping_LDADD = $(LDADD)
 ldmping_DEPENDENCIES = ../protocol/lib.la ../ulog/lib.la \
 	../misc/lib.la ../rpc/lib.la ../registry/lib.la \
-	../Berkeley-DB/build_unix/libdb-4.8.la
+	../libxml2/libxml2.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -256,7 +256,7 @@ LDADD = \
     ../misc/lib.la \
     ../rpc/lib.la \
     ../registry/lib.la \
-    ../Berkeley-DB/build_unix/libdb-4.8.la \
+    ../libxml2/libxml2.la \
     -lm
 
 dist_man1_MANS = ldmping.1

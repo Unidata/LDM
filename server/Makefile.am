@@ -48,7 +48,7 @@ LDADD			= \
     ../rpc/lib.la \
     $(LD_GEN) \
     ../registry/lib.la \
-    ../Berkeley-DB/build_unix/libdb-4.8.la \
+    ../libxml2/libxml2.la \
     -lm
 dist_man1_MANS		= ldmd.1
 TAGS_FILES		= \

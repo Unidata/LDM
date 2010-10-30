@@ -24,8 +24,8 @@ extern "C" {
  *                      NULL.  Upon successful return, "*backend" will be set.
  *                      The client should call "beClose(*backend)" when the
  *                      backend is no longer needed.
- *      path            Pathname of the database directory.  Shall not be NULL.
- *                      The client can free it upon return.
+ *      dir             Pathname of the parent directory of the database.
+ *                      Shall not be NULL.  The client may free it upon return.
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.  "*backend" is set.
@@ -35,14 +35,14 @@ extern "C" {
 RegStatus
 beOpen(
     Backend** const     backend,
-    const char* const   path,
+    const char* const   dir,
     int                 forWriting);
 
 /*
  * Closes the backend database.
  *
  * ARGUMENTS:
- *      backend         Pointer to the database.  Shall have been set by
+ *      back            Pointer to the database.  Shall have been set by
  *                      "beOpen()" or may be NULL.  Upon return, "backend"
  *                      shall not be used again.
  * RETURNS:
@@ -51,7 +51,7 @@ beOpen(
  */
 RegStatus
 beClose(
-    Backend* const      backend);
+    Backend* const      back);
 
 /*
  * Resets the backend database.  This function shall be called only when
@@ -73,8 +73,8 @@ beReset(
  * nothing holds the database open.
  *
  * ARGUMENTS:
- *      path            Pathname of the database directory.  Shall not be NULL.
- *                      The client can free it upon return.
+ *      dir             Pathname of the parent directory of the database.
+ *                      Shall not be NULL.  The client may free it upon return.
  * RETURNS:
  *      0               Success.
  *      ENOMEM          System error.  "log_start()" called.
@@ -82,7 +82,7 @@ beReset(
  */
 RegStatus
 beRemove(
-    const char* const   path);
+    const char* const   dir);
 
 /*
  * Maps a key to a string.  Overwrites any pre-existing entry.
@@ -91,10 +91,13 @@ beRemove(
  *      backend         Pointer to the database.  Shall have been set by
  *                      "beOpen()".  Shall not be NULL.
  *      key             Pointer to the 0-terminated key.  Shall not be NULL.
+ *                      Shall not contain any spaces.
  *      value           Pointer to the string value.  Shall not be NULL.
  * RETURNS:
  *      0               Success.
+ *      EINVAL          "key" contains a space.
  *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error. "log_start()" called.
  */
 RegStatus
 bePut(
@@ -141,14 +144,15 @@ beDelete(
     const char* const   key);
 
 /*
- * Synchronizes the database (i.e., flushes any cached data to disk).
+ * Synchronizes the database (i.e., flushes any cached data to disk) if
+ * appropriate.
  *
  * ARGUMENTS:
  *      backend         Pointer to the database.  Shall have been set by
  *                      "beOpen()".  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
 beSync(
@@ -200,7 +204,7 @@ beFirstEntry(
  *                      set by beOpen().  Shall not be NULL.
  * RETURNS
  *      0               Success.
- *      ENOENT          The database is empty.
+ *      ENOENT          No more entries.
  *      EIO             Backend database error.  "log_start()" called.
  */
 RegStatus
@@ -232,19 +236,25 @@ beFreeCursor(
  *      Pointer to the key.  Shall not be NULL if beFirstEntry() or 
  *      beNextEntry() was successful.
  */
-const char* beGetKey(const Backend* const backend);
+const char*
+beGetKey(
+    const Backend* const        backend);
 
 /*
- * Returns the value of the cursor.
+ * Returns the value of the cursor. If the last "beFirstEntry()" or
+ * "beNextEntry()" was successful, then NULL shall not be returned unless an
+ * error occurs.
  *
  * Arguments:
  *      backend         Pointer to the backend database.  Shall have been
  *                      set by beOpen().  Shall not be NULL.
  * Returns:
- *      Pointer to the value.  Shall not be NULL if beFirstEntry() or 
- *      beNextEntry() was successful.
+ *      NULL            Error occurred. "log_start()" called.
+ *      else            Pointer to the value.
  */
-const char* beGetValue(const Backend* backend);
+const char*
+beGetValue(
+    const Backend* const        backend);
 
 #ifdef __cplusplus
 }

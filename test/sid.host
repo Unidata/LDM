@@ -1,4 +1,5 @@
 # libtool(1) can't build a sharable library with this compiler
+# c89: illegal option -- p
 PATH=/usr/bin:/bin:/usr/sbin:/sbin,/usr/bin/make,/usr/bin/c89
 
 PATH=/usr/bin:/bin:/usr/sbin:/sbin,/usr/bin/make,/usr/bin/cc

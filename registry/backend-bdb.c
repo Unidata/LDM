@@ -38,6 +38,7 @@ struct backend {
     Cursor      cursor;
 };
 
+static const char     DB_DIRNAME[] = "registry";
 static const char     DB_FILENAME[] = "registry.db";
 
 /*
@@ -554,8 +555,8 @@ static RegStatus closeCursor(
  *                      NULL.  Upon successful return, "*backend" will be set.
  *                      The client should call "beClose(*backend)" when the
  *                      backend is no longer needed.
- *      path            Pathname of the database directory.  Shall not be NULL.
- *                      The client can free it upon return.
+ *      dir             Pathname of the parent directory of the database.
+ *                      Shall not be NULL.  The client can free it upon return.
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.  "*backend" is set.
@@ -565,46 +566,54 @@ static RegStatus closeCursor(
 RegStatus
 beOpen(
     Backend** const     backend,
-    const char* const   path,
+    const char* const   dir,
     int                 forWriting)
 {
     RegStatus   status;
     Backend*    back = (Backend*)malloc(sizeof(Backend));
 
-    assert(NULL != path);
+    assert(NULL != dir);
 
     if (NULL == back) {
         log_serror("Couldn't allocate %lu bytes", (long)sizeof(Backend));
         status = ENOMEM;
     }
     else {
-        DB_ENV* env;
-        DB*     db;
+        DB_ENV*         env;
+        DB*             db;
+        StringBuf*      path;
 
-        if (0 == (status = createDbHandle(path, &env, &db))) {
-            if (status = db->open(db, NULL, DB_FILENAME, NULL,
-                    DB_BTREE, forWriting ? DB_CREATE : DB_RDONLY, 0)) {
-                log_add("Couldn't open database \"%s\" in \"%s\" for %s",
-                    DB_FILENAME, path, forWriting ? "writing" : "reading");
-                status = EIO;
-            }
-            else {
-                back->db = db;
-                back->cursor.dbCursor = NULL;
-                *backend = back;    /* success */
-            }                       /* "db" opened */
+        if (0 == (status = sb_new(&path, PATH_MAX))) {
+            if (0 == (status = sb_cat(path, dir, "/", DB_DIRNAME))) {
+                if (0 == (status = createDbHandle(path, &env, &db))) {
+                    if (status = db->open(db, NULL, DB_FILENAME, NULL,
+                            DB_BTREE, forWriting ? DB_CREATE : DB_RDONLY, 0)) {
+                        log_add("Couldn't open database \"%s\" in \"%s\" "
+                            "for %s", DB_FILENAME, path,
+                            forWriting ? "writing" : "reading");
+                        status = EIO;
+                    }
+                    else {
+                        back->db = db;
+                        back->cursor.dbCursor = NULL;
+                        *backend = back;    /* success */
+                    }                       /* "db" opened */
 
-            /*
-             * According to the documentation on DB->open(), if that
-             * call fails, then DB->close() must be called to discard
-             * the DB handle, so DB->close() is the termination
-             * counterpart of db_create() rather than of DB->open().
-             */
-            if (status) {
-                (void)db->close(db, 0);
-                (void)env->close(env, 0);
-            }
-        }                               /* "env" allocated */
+                    /*
+                     * According to the documentation on DB->open(), if that
+                     * call fails, then DB->close() must be called to discard
+                     * the DB handle, so DB->close() is the termination
+                     * counterpart of db_create() rather than of DB->open().
+                     */
+                    if (status) {
+                        (void)db->close(db, 0);
+                        (void)env->close(env, 0);
+                    }
+                }                       /* "env" allocated */
+            }                           /* DB directory pathname created */
+
+            sb_free(path);
+        }                               /* "path" allocated */
 
         if (status)
             free(back);

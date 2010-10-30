@@ -35,7 +35,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 subdir = html
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
+DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+	$(srcdir)/index.html.in $(srcdir)/known-problems.html.in \
+	$(srcdir)/release-notes.html.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -43,7 +45,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = index.html release-notes.html known-problems.html
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -228,7 +230,7 @@ host_alias = @host_alias@
 host_cpu = @host_cpu@
 host_os = @host_os@
 host_vendor = @host_vendor@
-htmldir = @htmldir@
+htmldir = $(docdir)
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
@@ -252,8 +254,52 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = basics tutorial
+SUBDIRS = basics tutorial workshop
+html_DATA = \
+    CHANGE_LOG \
+    compatibility.html \
+    copyright.html \
+    factsheet.html \
+    generalHelp.html \
+    glossary.html \
+    history.html \
+    huge-queues.html \
+    index.html \
+    known-problems.html \
+    LDM_and_CVS.html \
+    LDM_icon.GIF \
+    ldmConfigInstallList.html \
+    LDM_Development_Steps.html \
+    ldmfaq.html \
+    manindex.html \
+    networkSecurityAndSetup.html \
+    release-notes.html \
+    rtstats-description.html \
+    subscribe_ldm-users.html
+
+nobase_html_DATA = \
+    troubleshooting/index.html \
+    troubleshooting/networkTrouble.html \
+    troubleshooting/pqmon.html \
+    troubleshooting/reclassDoc.html \
+    troubleshooting/packetshaper/addpart.gif \
+    troubleshooting/packetshaper/addpart.jpg \
+    troubleshooting/packetshaper/addpolicy.gif \
+    troubleshooting/packetshaper/addpolicy.jpg \
+    troubleshooting/packetshaper/manageLDM.gif \
+    troubleshooting/packetshaper/manageLDM.jpg \
+    troubleshooting/packetshaper/managepage.gif \
+    troubleshooting/packetshaper/managepage.jpg \
+    troubleshooting/packetshaper/newclass2.gif \
+    troubleshooting/packetshaper/newclass2.jpg \
+    troubleshooting/packetshaper/newclass.gif \
+    troubleshooting/packetshaper/newclass.jpg \
+    troubleshooting/packetshaper/packetshaper.html \
+    troubleshooting/packetshaper/traffictest.gif \
+    troubleshooting/packetshaper/traffictest.jpg
+
 EXTRA_DIST = \
+    CHANGE_LOG \
     compatibility.html \
     copyright.html \
     factsheet.html \
@@ -293,50 +339,9 @@ EXTRA_DIST = \
     troubleshooting/packetshaper/traffictest.gif \
     troubleshooting/packetshaper/traffictest.jpg
 
-html_DATA = \
-    CHANGE_LOG \
-    compatibility.html \
-    copyright.html \
-    factsheet.html \
-    generalHelp.html \
-    glossary.html \
-    history.html \
-    huge-queues.html \
-    index.html \
-    known-problems.html \
-    LDM_and_CVS.html \
-    ldmConfigInstallList.html \
-    LDM_Development_Steps.html \
-    ldmfaq.html \
-    manindex.html \
-    networkSecurityAndSetup.html \
-    release-notes.html \
-    rtstats-description.html \
-    subscribe_ldm-users.html
-
-nobase_html_DATA = \
-    troubleshooting/index.html \
-    troubleshooting/networkTrouble.html \
-    troubleshooting/pqmon.html \
-    troubleshooting/reclassDoc.html \
-    troubleshooting/packetshaper/addpart.gif \
-    troubleshooting/packetshaper/addpart.jpg \
-    troubleshooting/packetshaper/addpolicy.gif \
-    troubleshooting/packetshaper/addpolicy.jpg \
-    troubleshooting/packetshaper/manageLDM.gif \
-    troubleshooting/packetshaper/manageLDM.jpg \
-    troubleshooting/packetshaper/managepage.gif \
-    troubleshooting/packetshaper/managepage.jpg \
-    troubleshooting/packetshaper/newclass2.gif \
-    troubleshooting/packetshaper/newclass2.jpg \
-    troubleshooting/packetshaper/newclass.gif \
-    troubleshooting/packetshaper/newclass.jpg \
-    troubleshooting/packetshaper/packetshaper.html \
-    troubleshooting/packetshaper/traffictest.gif \
-    troubleshooting/packetshaper/traffictest.jpg
-
 BUILT_SOURCES = CHANGE_LOG
 CLEANFILES = CHANGE_LOG
+@MAINTAINER_TRUE@WEB_DESTDIR = conan:/content/software/ldm
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -371,6 +376,12 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+index.html: $(top_builddir)/config.status $(srcdir)/index.html.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+release-notes.html: $(top_builddir)/config.status $(srcdir)/release-notes.html.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+known-problems.html: $(top_builddir)/config.status $(srcdir)/known-problems.html.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -738,26 +749,33 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 	uninstall-nobase_htmlDATA
 
 
-@MAINTAINER_TRUE@web-update:	commit-check FORCE
+@MAINTAINER_TRUE@commit-check:
+@MAINTAINER_TRUE@	if git status -a >/dev/null; then \
+@MAINTAINER_TRUE@	    echo 1>&2 'Package needs "git commit -a"'; \
+@MAINTAINER_TRUE@	    exit 1; \
+@MAINTAINER_TRUE@	fi
+
+@MAINTAINER_TRUE@web-update:	commit-check
 @MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -u \
 @MAINTAINER_TRUE@	    history.html \
 @MAINTAINER_TRUE@	    factsheet.html \
 @MAINTAINER_TRUE@	    generalHelp.html \
-@MAINTAINER_TRUE@	    conan:/content/software/ldm
+@MAINTAINER_TRUE@	    $(WEB_DESTDIR)
 @MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 @MAINTAINER_TRUE@	    README \
 @MAINTAINER_TRUE@	    ../CHANGE_LOG \
 @MAINTAINER_TRUE@	    *.html \
 @MAINTAINER_TRUE@	    install \
 @MAINTAINER_TRUE@	    troubleshooting \
-@MAINTAINER_TRUE@	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)
+@MAINTAINER_TRUE@	    $(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
 @MAINTAINER_TRUE@	cd basics && make $@
 @MAINTAINER_TRUE@	cd tutorial && make $@
 @MAINTAINER_TRUE@	cd workshop && make $@
 
-@MAINTAINER_TRUE@.PHONY:		web-update FORCE
+@MAINTAINER_TRUE@alpha:
+@MAINTAINER_TRUE@	$(MAKE) web-update WEB_DESTDIR=conan:/content/staff/steve/ldm
 
-@MAINTAINER_TRUE@FORCE:
+@MAINTAINER_TRUE@.PHONY:		commit-check alpha web-update
 
 CHANGE_LOG:
 	cp $(top_srcdir)/$@ $@

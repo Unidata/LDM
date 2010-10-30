@@ -30,11 +30,11 @@ if (-e $confPath) {
 }
 
 if (system("$utilPath -d $dirPath -c")) {
-    die "Couldn't create registry environment: $!";
+    die "Couldn't ensure that registry exists in directory \"$dirPath\"";
 }
 
 if (!open(REGPAR, "<$parPath")) {
-    die "Couldn't open parameter file \"$parPath\": $!";
+    die "Couldn't open parameter file \"$parPath\"";
 }
 
 while (<REGPAR>) {

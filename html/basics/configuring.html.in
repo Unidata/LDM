@@ -83,7 +83,7 @@ with the following information:
       the <a href="glindex.html#LDM">LDM</a>
   <li>Desired <a href="glindex.html#feedtype">feedtypes</a>.
 </ul>
-Note that you can have multiple
+Note that you can (and probably should) have multiple
 <a href="glindex.html#upstream host">upstream host</a>s
 for any given data-feed.
 
@@ -315,12 +315,13 @@ Workshop-specific instructions</a>.
 <a name="cron"></a>
 <h2>Edit the LDM-user's <b><tt>crontab(1)</tt></b> file</h2>
 
-<p>Edit the <tt>crontab</tt> file of the LDM-user by, for example,
-executing the command
+<p>Edit the <tt>crontab</tt> file of the
+<a href="glindex.html#LDM user">LDM-user</a>
+by, for example, executing the command
 <blockquote><b><tt>
     crontab -e
 </tt></b></blockquote>
-as the LDM-user.  Then
+as the <a href="glindex.html#LDM user">LDM-user</a>.  Then 
 <ul>
     <li><p>Add an entry to rotate the 
         <a href="glindex.html#logfile">LDM logfile</a>s by
@@ -367,15 +368,32 @@ as the LDM-user.  Then
        You might choose different times.  See
        <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
 
-    <li><p>Add an entry to check the LDM system:
+    <li><p>Add an entry to periodically check the LDM system:
        <blockquote><tt>
            0,15,30,45 0 * * * bash -l -c 'bin/ldmadmin check >/dev/null'
        </tt></blockquote>
        This entry will check the LDM system every 15 minutes and
        send an email to the LDM user if the system isn't OK.
-       You might choose different times.
+       You might choose a different period.
+
+       <p>
+       In particular, this entry
+       will notify the LDM user if a data-product hasn't been received
+       in the past number of seconds given by the <tt>
+       /insertion-check-interval</tt> parameter in the 
+       <a href="glindex.html#LDM registry">LDM registry</a>
+       (to see that value, execute the command
+       <tt><a href="glindex.html#regutil">regutil</a> 
+       /insertion-check-interval</tt>).
 
 </ul>
+
+<p><b>NOTE:</b> These examples 
+<ol>
+    <li>Assume that the LDM user uses the <tt>bash(1)</tt> shell; and
+    <li>Use the <tt>-l</tt> option to obtain that user's login environment.
+</ol>
+You might have to do something different in order to obtain the same results.
 
 <p><a href="../workshop/specifics.html#crontab">
 Workshop-specific instructions</a>.

@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.9.0.1], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.9.0.2], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -120,6 +120,7 @@ AM_COND_IF([INCLUDE_ROOT_ACTIONS],
 			$ac_path_SUDO true >/dev/tty 2>&1 </dev/tty \
 			&& ac_cv_path_SUDO=$ac_path_SUDO],
 			[AC_MSG_RESULT([not found])])])])])
+        [echo Continuing... >/dev/tty]
 	AC_SUBST([SU], [$ac_cv_path_SU])
 	AC_SUBST([SUDO], [$ac_cv_path_SUDO])
 	if test -n "$SUDO" -o -n "$SU"; then \
@@ -313,7 +314,6 @@ AC_CHECK_DECL([strtok_r], , [AC_DEFINE([_REENTRANT], [1],
 AC_PROG_LIBTOOL
 
 AC_CONFIG_FILES([
-    Berkeley-DB/Makefile
     Makefile
     rpc/Makefile
     ulog/Makefile
@@ -351,39 +351,21 @@ AC_CONFIG_FILES([
     scour/scour
     regex/Makefile
     html/Makefile
+    html/index.html
+    html/release-notes.html
+    html/known-problems.html
     html/basics/Makefile
+    html/basics/index.html
     html/basics/activating.html
     html/basics/source-install-steps.html
     html/basics/what-gets-installed.html
     html/tutorial/Makefile
+    html/workshop/Makefile
     test/Makefile
 ])
 
-#AC_CONFIG_SUBDIRS([Berkeley-DB/dist])
-# $srcdir appears to be the only available path-related shell variable:
-# $top_srcdir, $ac_srcdir, $abs_top_srcdir, and $ac_top_srcdir are all empty.
-AC_MSG_NOTICE([***************************************************************])
-AC_MSG_NOTICE([Configuring Berkeley-DB subpackage])
-if test -d Berkeley-DB/build_unix; then
-    : true
-else
-    if mkdir -p Berkeley-DB/build_unix; then
-        : true
-    else
-        AC_MSG_ERROR([Couldn't create Berkeley-DB build directory])
-    fi
-fi
-if abs_top_srcdir=`cd $srcdir && pwd`; then
-    if (cd Berkeley-DB/build_unix && 
-            $abs_top_srcdir/Berkeley-DB/dist/configure --prefix=$prefix \
-            --disable-cryptography --disable-hash --disable-queue \
-            --disable-replication --disable-statistics); then
-        : true
-    else
-        AC_MSG_ERROR([Couldn't configure Berkeley-DB subpackage])
-    fi
-else
-    AC_MSG_ERROR([Couldn't get absolute pathname of top-level source-directory])
-fi
+#AC_CONFIG_SUBDIRS([libxml2])
+(cd libxml2 && ./configure --prefix=$prefix --disable-ipv6 --without-c14n --without-catalog --without-debug --without-docbook --without-ftp --without-html --without-http --without-iconv --without-iso8859x --without-legacy --without-pattern --without-python --without-reader --without-readline --without-regexps --without-schemas --without-schematron --without-threads --without-valid --without-xinclude --without-xpath --without-xptr --without-zlib)
+
 
 AC_OUTPUT

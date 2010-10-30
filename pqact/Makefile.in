@@ -63,14 +63,14 @@ date_sub_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
 date_sub_DEPENDENCIES = ../$(PQ_SUBDIR)/lib.la ../protocol/lib.la \
 	../ulog/lib.la ../misc/lib.la ../rpc/lib.la ../registry/lib.la \
-	../Berkeley-DB/build_unix/libdb-4.8.la $(am__DEPENDENCIES_1)
+	../libxml2/libxml2.la $(am__DEPENDENCIES_1)
 am_pqact_OBJECTS = action.$(OBJEXT) filel.$(OBJEXT) palt.$(OBJEXT) \
 	pbuf.$(OBJEXT) pqact.$(OBJEXT) state.$(OBJEXT)
 pqact_OBJECTS = $(am_pqact_OBJECTS)
 pqact_LDADD = $(LDADD)
 pqact_DEPENDENCIES = ../$(PQ_SUBDIR)/lib.la ../protocol/lib.la \
 	../ulog/lib.la ../misc/lib.la ../rpc/lib.la ../registry/lib.la \
-	../Berkeley-DB/build_unix/libdb-4.8.la $(am__DEPENDENCIES_1)
+	../libxml2/libxml2.la $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -287,7 +287,7 @@ LDADD = \
     ../misc/lib.la \
     ../rpc/lib.la \
     ../registry/lib.la \
-    ../Berkeley-DB/build_unix/libdb-4.8.la \
+    ../libxml2/libxml2.la \
     $(GDBMLIB) -lm
 
 dist_man1_MANS = pqact.1

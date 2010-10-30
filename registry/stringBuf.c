@@ -235,7 +235,7 @@ RegStatus sb_ensure(
  *                      pointer which shall be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 RegStatus sb_set(
     StringBuf* const    strBuf,

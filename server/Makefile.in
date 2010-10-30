@@ -64,8 +64,7 @@ ldmd_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
 ldmd_DEPENDENCIES = ../$(PQ_SUBDIR)/lib.la ../protocol/lib.la \
 	../ulog/lib.la ../misc/lib.la ../rpc/lib.la \
-	$(am__DEPENDENCIES_1) ../registry/lib.la \
-	../Berkeley-DB/build_unix/libdb-4.8.la
+	$(am__DEPENDENCIES_1) ../registry/lib.la ../libxml2/libxml2.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -289,7 +288,7 @@ LDADD = \
     ../rpc/lib.la \
     $(LD_GEN) \
     ../registry/lib.la \
-    ../Berkeley-DB/build_unix/libdb-4.8.la \
+    ../libxml2/libxml2.la \
     -lm
 
 dist_man1_MANS = ldmd.1

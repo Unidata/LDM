@@ -41,7 +41,7 @@ struct valueThing {
     int         status;
 };
 
-static RegStatus        _status;        /* visitation status */
+static RegStatus        _status = 0;    /* visitation status */
 static ValueFunc        _valueFunc;     /* value visitation function */
 static NodeFunc         _nodeFunc;      /* node visitation function */
 
@@ -67,7 +67,7 @@ static RegStatus newValueThing(
     ValueThing* vt = (ValueThing*)reg_malloc(sizeof(ValueThing), &status);
 
     if (0 != status) {
-        log_add("Couldn't allocate a new ValueThing");
+        LOG_ADD0("Couldn't allocate a new ValueThing");
     }
     else {
         vt->name = NULL;
@@ -161,12 +161,13 @@ static RegStatus addChild(
         vt.name = (char*)child->name;   /* safe cast */
 
         if (NULL != tfind(&vt, &parent->values, compareValueThings)) {
-            log_start("A value named \"%s\" exists", vt.name);
+            LOG_START2("Node \"%s\" has a value named \"%s\"", parent->absPath,
+                    vt.name);
             status = EEXIST;
         }
         else {
             if (NULL == tsearch(child, &parent->children, compareNodes)) {
-                log_errno();
+                LOG_ERRNO();
                 status = ENOMEM;
             }
             else {
@@ -176,8 +177,8 @@ static RegStatus addChild(
         }
 
         if (status)
-            log_add("Couldn't add child-node \"%s\" to parent-node "
-                "\"%s\"", child->name, parent->absPath);
+            LOG_ADD2("Couldn't add child-node \"%s\" to parent-node \"%s\"",
+                    child->name, parent->absPath);
     }
 
     return status;
@@ -268,9 +269,9 @@ static RegStatus newNode(
 
     if (status) {
         if (NULL == parent)
-            log_add("Couldn't create root-node");
+            LOG_ADD0("Couldn't create root-node");
         else
-            log_add("Couldn't create child-node \"%s\" of parent-node \"%s\"",
+            LOG_ADD2("Couldn't create child-node \"%s\" of parent-node \"%s\"",
                 name, parent->absPath);
     }
 
@@ -566,7 +567,7 @@ static RegStatus getLastNode(
     RegStatus   status;
 
     if (reg_isAbsPath(initPath)) {
-        log_start("Invalid relative path name: \"%s\"", initPath);
+        LOG_START1("Invalid relative path name: \"%s\"", initPath);
         status = EINVAL;
     }
     else {
@@ -830,7 +831,7 @@ static RegStatus vetExtant(
     RegStatus   status;
 
     if (node->deleted) {
-        log_start("Node \"%s\" has been deleted", node->absPath);
+        LOG_START1("Node \"%s\" has been deleted", node->absPath);
         status = EPERM;
     }
     else {
@@ -903,7 +904,7 @@ static RegStatus putValue(
             child.name = name;
 
             if (NULL != tfind(&child, &node->children, compareNodes)) {
-                log_start("A child-node named \"%s\" exists", name);
+                LOG_START1("A child-node named \"%s\" exists", name);
                 status = EEXIST;
             }
             else {
@@ -918,8 +919,7 @@ static RegStatus putValue(
                     if (0 == (status = reg_cloneString(&vt->name, name))) {
                         if (NULL == (ptr = tsearch(vt, &node->values,
                                 compareValueThings))) {
-                            log_errno();
-
+                            LOG_ERRNO();
                             status = ENOMEM;
                         }
                         else {
@@ -934,7 +934,7 @@ static RegStatus putValue(
         }
 
         if (status) {
-            log_add("Couldn't add value \"%s\" to node \"%s\"", name,
+            LOG_ADD2("Couldn't add value \"%s\" to node \"%s\"", name,
                 node->absPath);
         }
         else {
@@ -998,7 +998,7 @@ static RegStatus deleteValue(
             (void)tdelete(vt, &node->values, compareValueThings);
 
             if (NULL == tsearch(vt, &node->deletedValues, compareValueThings)) {
-                log_serror("Couldn't add value to set of deleted values");
+                LOG_SERROR0("Couldn't add value to set of deleted values");
                 status = ENOMEM;
             }
             else {
@@ -1009,7 +1009,7 @@ static RegStatus deleteValue(
     }
 
     if (status && ENOENT != status)
-        log_add("Couldn't delete value \"%s\" of node \"%s\"",
+        LOG_ADD2("Couldn't delete value \"%s\" of node \"%s\"",
             name, node->absPath);
 
     return status;
@@ -1164,7 +1164,7 @@ RegStatus rn_getValue(
             ptr = tfind(&template, &lastNode->values, compareValueThings);
 
             if (NULL == ptr) {
-                log_start("No such value \"%s\" in node \"%s\"", template.name,
+                LOG_START2("No such value \"%s\" in node \"%s\"", template.name,
                     rn_getAbsPath(lastNode));
                 status = ENOENT;
             }

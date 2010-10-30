@@ -32,12 +32,12 @@ DUALCASE=1; export DUALCASE # for MKS sh
 # if CDPATH is set.
 (unset CDPATH) >/dev/null 2>&1 && unset CDPATH
 
-relink_command="(cd /home/steve/ldm/package/src/pqcopy; { test -z \"\${LIBRARY_PATH+set}\" || unset LIBRARY_PATH || { LIBRARY_PATH=; export LIBRARY_PATH; }; }; { test -z \"\${COMPILER_PATH+set}\" || unset COMPILER_PATH || { COMPILER_PATH=; export COMPILER_PATH; }; }; { test -z \"\${GCC_EXEC_PREFIX+set}\" || unset GCC_EXEC_PREFIX || { GCC_EXEC_PREFIX=; export GCC_EXEC_PREFIX; }; }; { test -z \"\${LD_RUN_PATH+set}\" || unset LD_RUN_PATH || { LD_RUN_PATH=; export LD_RUN_PATH; }; }; { test -z \"\${LD_LIBRARY_PATH+set}\" || unset LD_LIBRARY_PATH || { LD_LIBRARY_PATH=; export LD_LIBRARY_PATH; }; }; PATH=\"/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/db-derby-10.3.2.1-bin/bin:/opt/bin:/local/bin:/home/steve/bin:/home/steve/ldm/package/bin\"; export PATH; c89 -g -o \$progdir/\$file pqcopy.o  ../pq/.libs/lib.a ../protocol/.libs/lib.a ../ulog/.libs/lib.a ../misc/.libs/lib.a ../rpc/.libs/lib.a ../registry/.libs/lib.a ../Berkeley-DB/build_unix/.libs/libdb-4.8.so -lpthread -lm  -Wl,--rpath -Wl,/home/steve/ldm/package/src/Berkeley-DB/build_unix/.libs -Wl,--rpath -Wl,/home/steve/ldm/package/lib ) "
+relink_command="(cd /home/steve/ldm/package/src/pqcopy; { test -z \"\${LIBRARY_PATH+set}\" || unset LIBRARY_PATH || { LIBRARY_PATH=; export LIBRARY_PATH; }; }; { test -z \"\${COMPILER_PATH+set}\" || unset COMPILER_PATH || { COMPILER_PATH=; export COMPILER_PATH; }; }; { test -z \"\${GCC_EXEC_PREFIX+set}\" || unset GCC_EXEC_PREFIX || { GCC_EXEC_PREFIX=; export GCC_EXEC_PREFIX; }; }; { test -z \"\${LD_RUN_PATH+set}\" || unset LD_RUN_PATH || { LD_RUN_PATH=; export LD_RUN_PATH; }; }; { test -z \"\${LD_LIBRARY_PATH+set}\" || unset LD_LIBRARY_PATH || { LD_LIBRARY_PATH=; export LD_LIBRARY_PATH; }; }; PATH=\"/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/db-derby-10.3.2.1-bin/bin:/opt/bin:/local/bin:/home/steve/bin:/home/steve/ldm/package/bin\"; export PATH; c89 -g -O2 -o \$progdir/\$file pqcopy.o  ../pq/.libs/lib.a ../protocol/.libs/lib.a ../ulog/.libs/lib.a ../misc/.libs/lib.a ../rpc/.libs/lib.a ../registry/.libs/lib.a ../libxml2/.libs/libxml2.so -ldl -lm  -Wl,--rpath -Wl,/home/steve/ldm/package/src/libxml2/.libs -Wl,--rpath -Wl,/home/steve/ldm/package/lib ) "
 
 # This environment variable determines our operation mode.
 if test "$libtool_install_magic" = "%%%MAGIC variable%%%"; then
   # install mode needs the following variable:
-  notinst_deplibs=' ../Berkeley-DB/build_unix/libdb-4.8.la'
+  notinst_deplibs=' ../libxml2/libxml2.la'
 else
   # When we are sourced in execute mode, $file and $echo are already set.
   if test "$libtool_execute_magic" != "%%%MAGIC variable%%%"; then

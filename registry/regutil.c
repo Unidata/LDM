@@ -88,7 +88,7 @@ static int printValueThing(
         NULL);
 
     if (0 != status) {
-        log_add("Couldn't form pathname for value \"%s\"", vt_getName(vt));
+        LOG_ADD1("Couldn't form pathname for value \"%s\"", vt_getName(vt));
     }
     else {
         (void)printf("%s : %s\n", sb_string(_valuePath), vt_getValue(vt));
@@ -180,7 +180,7 @@ static Status printPath(
             if (0 != (regStatus = reg_getNode(path, &node, 0))) {
                 if (ENOENT == regStatus) {
                     if (!quiet) {
-                        log_start("No such value or node: \"%s\"", path);
+                        LOG_START1("No such value or node: \"%s\"", path);
                         log_log(LOG_ERR);
                     }
                     status = NO_SUCH_ENTRY;
@@ -216,7 +216,7 @@ static Status createRegistry(void)
     RegNode*    rootNode;
 
     if (0 != reg_getNode("/", &rootNode, 1)) {
-        log_add("Couldn't create registry");
+        LOG_ADD0("Couldn't create registry");
         log_log(LOG_ERR);
         return SYSTEM_ERROR;
     }
@@ -234,7 +234,7 @@ static Status createRegistry(void)
 static Status resetRegistry(void)
 {
     if (0 != reg_reset()) {
-        log_add("Couldn't reset registry");
+        LOG_ADD0("Couldn't reset registry");
         log_log(LOG_ERR);
         return SYSTEM_ERROR;
     }
@@ -280,7 +280,7 @@ static Status deletePath(
                     return 0;
                 case ENOENT:
                     if (!quiet) {
-                        log_start("No such value or node: \"%s\"", path);
+                        LOG_START1("No such value or node: \"%s\"", path);
                         log_log(LOG_ERR);
                     }
                     return NO_SUCH_ENTRY;
@@ -358,7 +358,7 @@ int main(
     (void) openulog(progname, LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
 
     if (status = sb_new(&_valuePath, 80)) {
-        log_add("Couldn't initialize utility");
+        LOG_ADD0("Couldn't initialize utility");
         log_log(LOG_ERR);
         status = SYSTEM_ERROR;
     }
@@ -388,7 +388,7 @@ int main(
             switch (ch) {
             case 'c': {
                 if (UNKNOWN != usage) {
-                    log_start("Can't mix create action with other actions");
+                    LOG_START0("Can't mix create action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
@@ -397,7 +397,7 @@ int main(
                 break;
             }
             case 'd': {
-                if (status = reg_setPathname(optarg))
+                if (status = reg_setDirectory(optarg))
                     status = SYSTEM_ERROR;
                 break;
             }
@@ -405,12 +405,12 @@ int main(
                 status = sigParse(optarg, &signature);
 
                 if (0 > status || 0 != optarg[status]) {
-                    log_start("Not a signature: \"%s\"", optarg);
+                    LOG_START1("Not a signature: \"%s\"", optarg);
                     status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
-                        log_start("Create action ignored");
+                        LOG_START0("Create action ignored");
                         log_log(LOG_INFO);
                     }
                     usage = PUT_SIGNATURE;
@@ -424,7 +424,7 @@ int main(
             }
             case 'R': {
                 if (UNKNOWN != usage) {
-                    log_start("Can't mix reset action with other actions");
+                    LOG_START0("Can't mix reset action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
@@ -434,7 +434,7 @@ int main(
             }
             case 'r': {
                 if (UNKNOWN != usage) {
-                    log_start("Can't mix remove action with other actions");
+                    LOG_START0("Can't mix remove action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
@@ -444,7 +444,7 @@ int main(
             }
             case 's': {
                 if (CREATE == usage) {
-                    log_start("Create action  ignored");
+                    LOG_START0("Create action  ignored");
                     log_log(LOG_INFO);
                 }
                 string = optarg;
@@ -455,12 +455,12 @@ int main(
                 status = tsParse(optarg, &timestamp);
 
                 if (0 > status || 0 != optarg[status]) {
-                    log_start("Not a timestamp: \"%s\"", optarg);
+                    LOG_START1("Not a timestamp: \"%s\"", optarg);
                     status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
-                        log_start("Create action ignored");
+                        LOG_START0("Create action ignored");
                         log_log(LOG_INFO);
                     }
                     usage = PUT_TIME;
@@ -475,12 +475,12 @@ int main(
                 uint = strtoul(optarg, &end, 0);
 
                 if (0 != *end || (0 == uint && 0 != errno)) {
-                    log_start("Not an unsigned integer: \"%s\"", optarg);
+                    LOG_START1("Not an unsigned integer: \"%s\"", optarg);
                     status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
-                        log_start("\"-c\" option ignored");
+                        LOG_START0("Create option ignored");
                         log_log(LOG_INFO);
                     }
                     usage = PUT_UINT;
@@ -488,11 +488,11 @@ int main(
                 break;
             }
             case ':': {
-                log_start("Option \"-%c\" requires an operand", optopt);
+                LOG_START1("Option \"-%c\" requires an operand", optopt);
                 status = COMMAND_SYNTAX;
             }
             case '?':
-                log_start("Unknown option: \"%c\"", optopt);
+                LOG_START1("Unknown option: \"%c\"", optopt);
                 status = COMMAND_SYNTAX;
             }
         }                               /* options loop */
@@ -512,7 +512,7 @@ int main(
             switch (usage) {
                 case CREATE: {
                     if (0 < argCount) {
-                        log_start("Too many arguments");
+                        LOG_START0("Too many arguments");
                         log_log(LOG_ERR);
                         printUsage(progname);
                         status = COMMAND_SYNTAX;
@@ -524,7 +524,7 @@ int main(
                 }
                 case RESET: {
                     if (0 < argCount) {
-                        log_start("Too many arguments");
+                        LOG_START0("Too many arguments");
                         log_log(LOG_ERR);
                         printUsage(progname);
                         status = COMMAND_SYNTAX;
@@ -536,7 +536,7 @@ int main(
                 }
                 case REMOVE: {
                     if (0 == argCount) {
-                        log_start(
+                        LOG_START0(
                             "Removal action requires absolute pathname(s)");
                         log_log(LOG_ERR);
                         printUsage(progname);

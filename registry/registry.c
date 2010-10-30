@@ -70,7 +70,7 @@ typedef struct {
     Formatter   format;
 }       TypeStruct;
 
-static char*                    _registryPath = REGISTRY_PATH;
+static char*                    _registryDir = REGISTRY_DIR;
 static int                      _initialized;   /* Module is initialized? */
 static int                      _atexitCalled;  /* atexit() called? */
 static Backend*                 _backend;       /* backend database */
@@ -136,6 +136,9 @@ static void terminate(void)
 {
     (void)closeRegistry();
     resetRegistry();
+
+    if (REGISTRY_DIR != _registryDir)
+        free(_registryDir);
 }
 
 /*
@@ -197,7 +200,7 @@ static RegStatus parseUint(
     val = strtoul(string, &end, 0);
 
     if (0 != *end || (0 == val && 0 != errno)) {
-        log_start("Not an unsigned integer: \"%s\"", string);
+        LOG_START1("Not an unsigned integer: \"%s\"", string);
         status = EILSEQ;
     }
     else {
@@ -253,7 +256,7 @@ static RegStatus parseTime(
     status = tsParse(string, &val);
 
     if (0 > status || 0 != string[status]) {
-        log_start("Not a timestamp: \"%s\"", string);
+        LOG_START1("Not a timestamp: \"%s\"", string);
         status = EILSEQ;
     }
     else {
@@ -302,7 +305,7 @@ static RegStatus parseSignature(
     status = sigParse(string, &val);
 
     if (0 > status || 0 != string[status]) {
-        log_start("Not a signature: \"%s\"", string);
+        LOG_START1("Not a signature: \"%s\"", string);
         status = EILSEQ;
     }
     else {
@@ -397,7 +400,7 @@ static RegStatus sync(
     }                                   /* cursor initialized */
 
     if (status)
-        log_add("Couldn't synchronize node \"%s\"", absPath);
+        LOG_ADD1("Couldn't synchronize node \"%s\"", absPath);
 
     return status;
 }
@@ -422,17 +425,17 @@ static RegStatus initRegistry(
  
     if (!_initialized) {
         if (0 != sb_new(&_pathBuf, 80)) {
-            log_add("Couldn't allocate path-buffer");
+            LOG_ADD0("Couldn't allocate path-buffer");
             status = ENOMEM;
         }
         else {
             if (0 != sb_new(&_formatBuf, 80)) {
-                log_add("Couldn't allocate formating-buffer");
+                LOG_ADD0("Couldn't allocate formating-buffer");
                 status = ENOMEM;
             }
             else {
                 if (0 != sb_new(&_valuePath, 80)) {
-                    log_add("Couldn't allocate value-pathname buffer");
+                    LOG_ADD0("Couldn't allocate value-pathname buffer");
                     status = ENOMEM;
                 }
                 else {
@@ -462,8 +465,8 @@ static RegStatus initRegistry(
  
         if (0 == status && NULL == _backend) {
             /* The backend isn't open. */
-            if (0 != (status = beOpen(&_backend, _registryPath, forWriting))) {
-                log_add("Couldn't open registry \"%s\"", _registryPath);
+            if (0 != (status = beOpen(&_backend, _registryDir, forWriting))) {
+                LOG_ADD0("Couldn't open registry");
             }
             else {
                 _forWriting = forWriting;
@@ -493,7 +496,7 @@ static RegStatus initRegistry(
             _atexitCalled = 1;
         }
         else {
-            log_serror("Couldn't register registry cleanup routine");
+            LOG_SERROR0("Couldn't register registry cleanup routine");
             log_log(LOG_ERR);
         }
     }
@@ -585,18 +588,23 @@ static RegStatus deleteValue(
 static RegStatus writeNode(
     RegNode*    node)
 {
-    RegStatus   status;
+    RegStatus   status = 0;                     /* success */
 
-    if (rn_isDeleted(node))
+    if (rn_isDeleted(node)) {
+        status = beDelete(_backend, rn_getAbsPath(node));
         _extantValueFunc = deleteValue;
+    }
 
-    _nodePath = rn_getAbsPath(node);
+    if (0 == status) {
+        _nodePath = rn_getAbsPath(node);
 
-    if (0 == (status = rn_visitValues(node, _extantValueFunc, deleteValue)))
-        rn_freeDeletedValues(node);
+        if (0 == (status = rn_visitValues(node, _extantValueFunc, deleteValue)))
+            rn_freeDeletedValues(node);
 
-    if (0 != status)
-        log_add("Couldn't update values of node \"%s\"", rn_getAbsPath(node));
+        if (0 != status)
+            LOG_ADD1("Couldn't update values of node \"%s\"",
+                    rn_getAbsPath(node));
+    }
 
     return status;
 }
@@ -633,6 +641,8 @@ static RegStatus flush(
  *      0               Success.  "*value" is set.
  *      ENOENT          No such value.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
+ *      EPERM           The node containing the value has been deleted.
+ *                      "log_start()" called.
  */
 static RegStatus getNodeValue(
     const RegNode* const        node,
@@ -689,7 +699,7 @@ static RegStatus getValue(
 
         if (0 == status) {
             if (0 == *remPath) {
-                log_start("\"%s\" is a node; not a value", path);
+                LOG_START1("\"%s\" is a node; not a value", path);
                 status = ENOENT;
             }
             else if (0 == (status = flush(lastNode))) {
@@ -703,7 +713,7 @@ static RegStatus getValue(
     }
 
     if (0 != status && ENOENT != status)
-        log_add("Couldn't get value \"%s\"", path);
+        LOG_ADD1("Couldn't get value of key \"%s\"", path);
 
     return status;
 }
@@ -743,7 +753,7 @@ static RegStatus putNodeValue(
     }
 
     if (status)
-        log_add("Couldn't put value \"%s\" in node \"%s\"", name,
+        LOG_ADD2("Couldn't put value \"%s\" in node \"%s\"", name,
             rn_getAbsPath(node));
 
     return status;
@@ -761,7 +771,7 @@ static RegStatus putNodeValue(
  * Returns:
  *      0               Success
  *      EINVAL          The absolute path name is invalid.  "log_start()"
- *                      called.
+ *                      called. The registry is unchanged.
  *      ENOMEM          System error.  "log_start()" called.
  *      EIO             Backend database error.  "log_start()" called.
  *      EEXIST          A node or value would have to be created with the same
@@ -786,7 +796,9 @@ static RegStatus putValue(
             if (0 == (status = rn_ensure(_rootNode, nodePath, &node))) {
                 if (0 == (status = putNodeValue(node, valueName, value,
                         typeStruct))) {
-                    status = flush(node);
+                    if (0 != (status = flush(node))) {
+                        rn_deleteValue(node, valueName);
+                    }
                 }
             }
 
@@ -803,45 +815,45 @@ static RegStatus putValue(
  ******************************************************************************/
 
 /*
- * Sets the pathname of the registry.  To have an effect, this function must be
- * called before any function that accesses the registry and after calling
- * "reg_reset()".
+ * Sets the pathname of the directory that contains the registry.  To have an
+ * effect, this function must be called before any function that accesses the
+ * registry and after calling "reg_reset()".
  *
  * Arguments:
- *      path            Pointer to the pathname of the registry.  May be NULL.
- *                      If NULL, then the default pathname is used.  The client
- *                      may free upon return.
+ *      path            Pointer to the pathname of the parent directory of the
+ *                      registry.  May be NULL.  If NULL, then the default
+ *                      pathname is used.  The client may free upon return.
  * Returns:
  *      0               Success
  *      ENOMEM          System error.  "log_start()" called.
  *      EPERM           Backend database already open.  "log_start()" called.
  */
-RegStatus reg_setPathname(
+RegStatus reg_setDirectory(
     const char* const   path)
 {
     RegStatus   status;
 
     if (NULL != _backend) {
-        log_start("Can't set registry to \"%s\"; registry already open on "
-            "\"%s\"", path, _registryPath);
+        LOG_START2("Can't set registry directory to "
+                "\"%s\"; registry already open in \"%s\"", path, _registryDir);
         status = EPERM;
     }
     else {
         if (NULL == path) {
-            _registryPath = REGISTRY_PATH;
+            _registryDir = REGISTRY_DIR;
             status = 0;
         }
         else {
             char*   clone;
 
             if (0 != (status = reg_cloneString(&clone, path))) {
-                log_add("Couldn't set new registry pathname to \"%s\"", path);
+                LOG_ADD1("Couldn't set new registry pathname to \"%s\"", path);
             }
             else {
-                if (REGISTRY_PATH != _registryPath)
-                    free(_registryPath);
+                if (REGISTRY_DIR != _registryDir)
+                    free(_registryDir);
 
-                _registryPath = clone;
+                _registryDir = clone;
             }
         }
     }
@@ -881,7 +893,7 @@ RegStatus reg_reset(void)
 
     closeRegistry();
 
-    status = beReset(_registryPath);
+    status = beReset(_registryDir);
 
     resetRegistry();
 
@@ -904,7 +916,7 @@ RegStatus reg_remove(void)
         closeRegistry();
 
         if (0 == status) {
-            status = beRemove(_registryPath);
+            status = beRemove(_registryDir);
         }
     }
 
@@ -919,13 +931,14 @@ RegStatus reg_remove(void)
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the value to be
- *                      returned.  Shall not be NULL.
+ *                      returned.  Shall not be NULL. Shall not contain a space.
  *      value           Pointer to a pointer to the value.  Shall not be NULL.
  *                      Set upon successful return.  The client should call
  *                      "free(*value)" when the value is no longer needed.
  * Returns:
  *      0               Success.  Value found and put in "*value".
  *      ENOENT          No such value.  "log_start()" called.
+ *      EINVAL          "path" contains a space.
  *      EINVAL          The path name isn't absolute.  "log_start()" called.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
@@ -942,13 +955,14 @@ RegStatus reg_getString(
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the value to be
- *                      returned.  Shall not be NULL.
+ *                      returned.  Shall not be NULL. Shall not contain a space.
  *      value           Pointer to memory to hold the value.  Shall not be
  *                      NULL.
  * Returns:
  *      0               Success.  Value found and put in "*value".
  *      ENOENT          No such value.  "log_start()" called.
  *      EINVAL          The path name isn't absolute.  "log_start()" called.
+ *      EINVAL          "path" contains a space.
  *      EILSEQ          The value found isn't an unsigned integer.
  *                      "log_start()" called.
  *      EIO             Backend database error.  "log_start()" called.
@@ -966,13 +980,14 @@ RegStatus reg_getUint(
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the value to be
- *                      returned.  Shall not be NULL.
+ *                      returned.  Shall not be NULL. Shall not contain a space.
  *      value           Pointer to memory to hold the value.  Shall not be NULL.
  *                      The client may free upon return.
  * Returns:
  *      0               Success.  Value found and put in "*value".
  *      ENOENT          No such value.  "log_start()" called.
  *      EINVAL          The path name isn't absolute.  "log_start()" called.
+ *      EINVAL          "path" contains a space.
  *      EILSEQ          The value found isn't a timestamp.  "log_start()"
  *                      called.
  *      EIO             Backend database error.  "log_start()" called.
@@ -990,13 +1005,14 @@ RegStatus reg_getTime(
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the value to be
- *                      returned.  Shall not be NULL.
+ *                      returned.  Shall not be NULL. Shall not contain a space.
  *      value           Pointer to memory to hold the value.  Shall not be NULL.
  *                      The client may free upon return.
  * Returns:
  *      0               Success.  Value found and put in "*value".
  *      ENOENT          No such value.  "log_start()" called.
  *      EINVAL          The path name isn't absolute.  "log_start()" called.
+ *      EINVAL          "path" contains a space.
  *      EILSEQ          The value found isn't a signature.  "log_start()"
  *                      called.
  *      EIO             Backend database error.  "log_start()" called.
@@ -1015,10 +1031,11 @@ RegStatus reg_getSignature(
  * Arguments:
  *      path            Pointer to the absolute path name of the value.  Shall
  *                      not be NULL.  Ancestral nodes are created if they
- *                      don't exist.
+ *                      don't exist. Shall not contain a space.
  *      value           The value to be written to the registry.
  * Returns:
  *      0               Success.
+ *      EINVAL          "path" contains a space.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  *      EEXIST          A node or value would have to be created with the same
@@ -1038,11 +1055,12 @@ RegStatus reg_putUint(
  * Arguments:
  *      path            Pointer to the absolute path name of the value.  Shall
  *                      not be NULL.  Ancestral nodes are created if they
- *                      don't exist.
+ *                      don't exist. Shall not contain a space.
  *      value           Pointer to the value to be written to the registry.
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
+ *      EINVAL          "path" contains a space.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  *      EEXIST          A node or value would have to be created with the same
@@ -1053,7 +1071,14 @@ RegStatus reg_putString(
     const char* const   path,
     const char* const   value)
 {
-    return putValue(path, value, &stringStruct);
+    RegStatus   status = putValue(path, value, &stringStruct);
+
+    if (status) {
+        LOG_ADD2("Couldn't store value \"%s\" in parameter \"%s\"",
+                value, path);
+    }
+
+    return status;
 }
 
 /*
@@ -1062,11 +1087,12 @@ RegStatus reg_putString(
  * Arguments:
  *      path            Pointer to the absolute path name of the value.  Shall
  *                      not be NULL.  Ancestral nodes are created if they
- *                      don't exist.
+ *                      don't exist. Shall not contain a space.
  *      value           Pointer to the value to be written to the registry.
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
+ *      EINVAL          "path" contains a space.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  *      EEXIST          A node or value would have to be created with the same
@@ -1086,11 +1112,12 @@ RegStatus reg_putTime(
  * Arguments:
  *      path            Pointer to the absolute path name of the value.  Shall
  *                      not be NULL.  Ancestral nodes are created if they
- *                      don't exist.
+ *                      don't exist. Shall not contain a space.
  *      value           Pointer to the value to be written to the registry.
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.
+ *      EINVAL          "path" contains a space.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  *      EEXIST          A node or value would have to be created with the same
@@ -1109,12 +1136,13 @@ RegStatus reg_putSignature(
  *
  * Arguments:
  *      path            Pointer to the absolute path name of the value to be
- *                      deleted.  Shall not be NULL.
+ *                      deleted.  Shall not be NULL. Shall not contain a space.
  * Returns:
  *      0               Success
  *      ENOENT          No such value
  *      EINVAL          The absolute path name is invalid.  "log_start()"
  *                      called.
+ *      EINVAL          "path" contains a space.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
@@ -1146,7 +1174,7 @@ RegStatus reg_deleteValue(
     }
 
     if (status && ENOENT != status)
-        log_add("Couldn't delete value \"%s\"", path);
+        LOG_ADD1("Couldn't delete value \"%s\"", path);
 
     return status;
 }
@@ -1160,20 +1188,22 @@ RegStatus reg_deleteValue(
  * Arguments:
  *      path            Pointer to the absolute path name of the node to be
  *                      returned.  Shall not be NULL.  The empty string obtains
- *                      the top-level node.
+ *                      the top-level node. Shall not contain a space.
  *      node            Pointer to a pointer to a node.  Shall not be NULL.
  *                      Set on success.  The client should call
- *                      "regNode_free(*node)" when the node is no longer
+ *                      "rn_free(*node)" when the node is no longer
  *                      needed.
  *      create          Whether or not to create the node if it doesn't
  *                      exist.  Zero means no; otherwise, yes.
  * Returns:
  *      0               Success.  "*node" is set.  The client should call
- *                      "regNode_free(*node)" when the node is no longer
+ *                      "rn_free(*node)" when the node is no longer
  *                      needed.
- *      ENOENT          "create" was 0 and the node doesn't exist
+ *      ENOENT          "create" was 0 and the node doesn't exist. "log_start()"
+ *                      called.
  *      EINVAL          "path" isn't a valid absolute path name.  "log_start()
  *                      called.
+ *      EINVAL          "path" contains a space.
  *      EIO             Backend database error.  "log_start()" called.
  *      ENOMEM          System error.  "log_start()" called.
  */
@@ -1199,6 +1229,7 @@ RegStatus reg_getNode(
                         *node = lastNode;
                     }
                     else {
+                        LOG_START1("Node \"%s\" not found", path);
                         status = ENOENT;
                     }
 
@@ -1283,11 +1314,13 @@ const char* reg_getNodeAbsPath(
  * Arguments:
  *      node            Pointer to the node.  Shall not be NULL.
  *      name            Pointer to the name of the value.  Shall not be
- *                      NULL.  The client may free upon return.
+ *                      NULL.  The client may free upon return. Shall not
+ *                      contain a space.
  *      value           Pointer to the string value.  Shall not be NULL.  The
  *                      client may free upon return.
  * Returns:
  *      0               Success
+ *      EINVAL          "path" contains a space.
  *      ENOMEM          System error.  "log_start()" called.
  *      EEXIST          The value would have the same absolute path name as an
  *                      existing node.  "log_start()" called.
@@ -1306,10 +1339,12 @@ RegStatus reg_putNodeString(
  * Arguments:
  *      node            Pointer to the parent node.  Shall not be NULL.
  *      name            Pointer to the name of the value-node.  Shall not be
- *                      NULL.  The client may free upon return.
+ *                      NULL.  The client may free upon return. Shall not
+ *                      contain a space.
  *      value           The unsigned integer value
  * Returns:
  *      0               Success
+ *      EINVAL          "path" contains a space.
  *      ENOMEM          System error.  "log_start()" called.
  *      EEXIST          The value would have the same absolute path name as an
  *                      existing node.  "log_start()" called.
@@ -1328,11 +1363,13 @@ RegStatus reg_putNodeUint(
  * Arguments:
  *      node            Pointer to the parent node.  Shall not be NULL.
  *      name            Pointer to the name of the value-node.  Shall not be
- *                      NULL.  The client may free upon return.
+ *                      NULL.  The client may free upon return. Shall not 
+ *                      contain a space.
  *      value           Pointer to the time value.  Shall not be NULL.
  *                      The client may free upon return.
  * Returns:
  *      0               Success
+ *      EINVAL          "path" contains a space.
  *      ENOMEM          System error.  "log_start()" called.
  *      EEXIST          The value would have the same absolute path name as an
  *                      existing node.  "log_start()" called.
@@ -1351,11 +1388,13 @@ RegStatus reg_putNodeTime(
  * Arguments:
  *      node            Pointer to the node.  Shall not be NULL.
  *      name            Pointer to the name of the value.  Shall not be
- *                      NULL.  The client may free upon return.
+ *                      NULL.  The client may free upon return. Shall not 
+ *                      contain a space.
  *      value           Pointer to the signature value.  Shall not be NULL.
  *                      The client may free upon return.
  * Returns:
  *      0               Success
+ *      EINVAL          "path" contains a space.
  *      ENOMEM          System error.  "log_start()" called.
  *      EEXIST          The value would have the same absolute path name as an
  *                      existing node.  "log_start()" called.
@@ -1375,13 +1414,17 @@ RegStatus reg_putNodeSignature(
  *      node            Pointer to the node whose value is to be returned
  *                      as a string.  Shall not be NULL.
  *      name            Pointer to the name of the value.  Shall not be NULL.
+ *                      Shall not contain a space.
  *      value           Pointer to a pointer to a string.  Shall not be NULL.
  *                      Set upon successful return.  The client should call call
  *                      "free(*value)" when the value is no longer needed.
  * Returns:
  *      0               Success.  "*value" is set.
+ *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
  *      ENOMEM          System error.  "log_start()" called.
+ *      EPERM           The node containing the value has been deleted.
+ *                      "log_start()" called.
  */
 RegStatus reg_getNodeString(
     const RegNode* const        node,
@@ -1398,10 +1441,12 @@ RegStatus reg_getNodeString(
  *      node            Pointer to the node whose value is to be returned.
  *                      Shall not be NULL.
  *      name            Pointer to the name of the value.  Shall not be NULL.
+ *                      Shall not contain a space.
  *      value           Pointer to an unsigned integer.  Set upon success.
  *                      Shall not be NULL.
  * Returns:
  *      0               Success.  "*value" is set.
+ *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
  *      ENOMEM          System error.  "log_start()" called.
  *      EILSEQ          The value isn't an unsigned integer.  "log_start()"
@@ -1422,10 +1467,12 @@ RegStatus reg_getNodeUint(
  *      node            Pointer to the node whose value is to
  *                      be returned as a time.  Shall not be NULL.
  *      name            Pointer to the name of the value.  Shall not be NULL.
+ *                      Shall not contain a space.
  *      value           Pointer to a time.  Set upon success.  Shall not be
  *                      NULL.  The client may free upon return.
  * Returns:
  *      0               Success.  "*value" is set.
+ *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
  *      ENOMEM          System error.  "log_start()" called.
  *      EILSEQ          The value isn't a time.  "log_start()" called.
@@ -1470,9 +1517,10 @@ RegStatus reg_getNodeSignature(
  *      node            Pointer to the node to have the value deleted.  Shall
  *                      note be NULL.
  *      name            Pointer to the name of the value to be deleted.  Shall
- *                      not be NULL.
+ *                      not be NULL. Shall not contain a space.
  * Returns:
  *      0               Success
+ *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
  *      ENOMEM          System error.  "log_start()" called.
  *      EPERM           The node has been deleted.  "log_start()" called.

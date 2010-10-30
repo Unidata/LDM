@@ -1,15 +1,15 @@
 <HTML>
 <HEAD>
-<TITLE>LDM 6.9.0.2 Release Notes</TITLE>
+<TITLE>LDM @VERSION@ Release Notes</TITLE>
 <META NAME="BOOKMARK" CONTENT="Release Notes">
 <META NAME="AUTHOR" CONTENT="Steve">
 <META NAME="KEYWORDS" CONTENT="Software, LDM, Data, Manager, Release, 
-6.9.0.2, Notes ">
+@VERSION@, Notes ">
 </HEAD>
 
 <BODY>
 
-<h1 align="center">LDM 6.9.0.2 Release Notes</h1>
+<h1 align="center">LDM @VERSION@ Release Notes</h1>
 <ul>
     <li>
     Installation:

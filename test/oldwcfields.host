@@ -1,8 +1,6 @@
-# c89: Warning: option -/ passed to ld
-# c89: Warning: illegal option -mp/ldm-6.9.0.0/ldm-6.9.0.0/...
+# "xmllint.c", line 2334: argument #2 is incompatible with prototype:
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
-# c89: Warning: option -/ passed to ld
-# c89: Warning: illegal option -mp/ldm-6.9.0.0/ldm-6.9.0.0/...
+# Works
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64
 
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc

@@ -1,5 +1,4 @@
-docdir		= @docdir@/basics
-
+htmldir	= $(docdir)/basics
 EXTRA_DIST	= \
     activating.html.in \
     become_ldm.html \

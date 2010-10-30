@@ -2,25 +2,23 @@
 #
 # Process this file with automake to produce Makefile.in
 
-AWK			= @AWK@
+AWK				= @AWK@
 PERL			= @PERL@
 LD_GEN			= @LD_GEN@
 LDMHOME			= $(DESTDIR)@LDMHOME@
 LOGS_DIR		= $(DESTDIR)@LOGS_DIR@
 QUEUE_DIR		= $(DESTDIR)@QUEUE_DIR@
-REGISTRY_DIR		= $(DESTDIR)@REGISTRY_DIR@
 ETC_DIR			= $(DESTDIR)$(sysconfdir)
 DATA_DIR		= $(DESTDIR)@DATA_DIR@
 HOSTNAME		= @HOSTNAME@
 NTPDATE			= @NTPDATE@
 LOG_FILE		= $(LOGS_DIR)/ldmd.log
-METRICS_FILE		= $(LOGS_DIR)/metrics.txt
+METRICS_FILE	= $(LOGS_DIR)/metrics.txt
 NETSTAT			= @NETSTAT@
-TOP			= @TOP@
+TOP				= @TOP@
 noinst_LTLIBRARIES      = lib.la
 EXTRA_DIST              = \
     backend.h \
-    backend-bdb.c \
     checkRegistry \
     installRegistry \
     misc.h \
@@ -41,27 +39,28 @@ TAGS_FILES              = \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/protocol/*.c \
-    $(top_srcdir)/Berkeley-DB/env/*.c \
-    $(top_srcdir)/Berkeley-DB/os/*.c \
+    $(top_srcdir)/libxml2/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
+
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
-    -I$(top_builddir)/Berkeley-DB/build_unix \
-    -DREGISTRY_PATH='"$(REGISTRY_DIR)"'
+    -I$(top_srcdir)/libxml2/include \
+    -DREGISTRY_DIR='"$(ETC_DIR)"'
+
 bin_PROGRAMS		= regutil
 LDADD			= \
     lib.la \
     $(top_builddir)/protocol/lib.la \
     $(top_builddir)/rpc/lib.la \
     $(top_builddir)/ulog/lib.la \
-    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
+    $(top_builddir)/libxml2/libxml2.la \
     $(LD_GEN)
+
 dist_man1_MANS		= regutil.1
-CLEANFILES		= regutil.out regpar.tab
-DISTCLEANFILES		= backend.c
+CLEANFILES			= regutil.out regpar.tab
 
 all:		regpar.tab
 
@@ -80,10 +79,10 @@ regpar.tab:	$(srcdir)/regpar.tab.in
 	    $(srcdir)/regpar.tab.in >$@.tmp
 	mv $@.tmp $@
 
-backend.c:	backend-bdb.c
-	$(LN_S) backend-bdb.c $@
-
 if MAINTAINER
+backend.c:	backend-libxml2.c
+	$(LN_S) backend-libxml2.c $@
+
 BUILT_SOURCES		= substPaths
 
 substPaths:	regpar.tab.in
@@ -116,11 +115,11 @@ endif
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
-install-exec-local:	regpar.tab regutil $(REGISTRY_DIR)
+install-exec-local:	regpar.tab regutil $(ETC_DIR)
 	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
-	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(REGISTRY_DIR)
+	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(ETC_DIR)
 
-$(REGISTRY_DIR):
+$(ETC_DIR):
 	mkdir -p $@
 
 if HAVE_CUNIT
@@ -129,15 +128,17 @@ testRegistry_CPPFLAGS	= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
-    -I$(top_builddir)/Berkeley-DB/build_unix \
+    -I$(top_srcdir)/libxml2/include \
     @CPPFLAGS_CUNIT@
+
 testRegistry_LDADD		= \
     lib.la \
     $(top_builddir)/protocol/lib.la \
     $(top_builddir)/ulog/lib.la \
     $(top_builddir)/rpc/lib.la \
-    $(top_builddir)/Berkeley-DB/build_unix/libdb-4.8.la \
+    $(top_builddir)/libxml2/libxml2.la \
     @LIBS_CUNIT@
+
 TESTS			= checkRegistry
 
 debug:		testRegistry

@@ -1,8 +1,12 @@
-6.9.0.1
+6.9.0.2
+        Replaced Berkeley-DB backend for the registry (etc/registry/) with the
+        use of "libxml2" and an XML file (etc/registry.xml).
+
+6.9.0.1 2010-10-25
         Replaced defunct hyperlinks to list of WMO headers with hyperlink
         to WMO Tables from Manual 386.
 
-        Added some error-message to ldmadmin(1) for when regutil(1) fails.
+        Added some error-messages to ldmadmin(1) for when regutil(1) fails.
 
         Added printing of product-queue reconciliation-mode to "ldmadmin 
         config".
@@ -14,16 +18,28 @@
         SUMMARY: Dragged the kicking and screaming LDM into the late
             20th century.  :-)
 
+        Installation:
+            Upgraded the package-installation mechanism from one based on
+            autoconf(1) and ad-hoc makefiles to one based on automake(1).  THIS
+            IS A BIG DEAL WITH RAMIFICATIONS: BOTH THE INSTALLATION PROCEDURE
+            AND LAYOUT ARE DIFFERENT.  FORGET EVERYTHING YOU KNOW ABOUT
+            INSTALLING THE LDM AND FOLLOW THE NEW INSTRUCTIONS ON THE WEB PAGE.
+
+            Incorporated documentation into the package.
+
+	LDM (ldmd(1)):
+            Renamed the LDM server from "rpc.ldmd" to just "ldmd".
+
+            Added logging to some failed pq_close() calls in an attempt to
+            debug the Mac OS X 10.5 fcntl() problem.
+
         Registry:
             Created a registry for the LDM similar to the Windows registry,
-            Gnome's GCONF, or Java's preferences.  The registry can be
-            accessed both from scripts and programatically.  The new utility
-            regutil(1) can access the registry from the command-line.
+            Gnome's GCONF, and Java's preferences.  The registry can be
+            accessed both from scripts and programatically.  A new utility,
+            regutil(1), can access the registry from the command-line.
             
-            The registry is implemented using the Berkeley DB package.  While
-            this might seem like overkill, it's one of the few, proven,
-            freely-available packages with support for transactions, concurent
-            access, memory-mapping, and file-locking.
+            The registry is implemented as an XML file (etc/registry.xml).
 
             As a consequence of the creation and use of the registry, the
             following environment variables no longer work:
@@ -35,22 +51,7 @@
             appropriately modified ldmadmin(1).  Among other things, this
             ported the "ldmadmin printmetrics" command to Mac OS X (note,
             however, that a bug in Mac OS X prevents the LDM from working
-            reliably).
-
-        Installation:
-            Upgraded the package-installation mechanism from one based on
-            autoconf(1) and ad-hoc makefiles to one based on automake(1).  THIS
-            IS A BIG DEAL WITH RAMIFICATIONS -- ESPCIALLY FOR THE INSTALLATION
-            LAYOUT.  FORGET EVERYTHING YOU KNOW ABOUT INSTALLING THE LDM AND
-            FOLLOW THE NEW INSTRUCTIONS.
-
-            Incorporated documentation into "src".
-
-	LDM (ldmd(1)):
-            Renamed the LDM server from "rpc.ldmd" to just "ldmd".
-
-            Added logging to some failed pq_close() calls in an attempt to
-            debug the Mac OS X 10.5 fcntl() problem.
+            reliably on that system).
 
         ldmadmin(1):
             Added "vetqueuesize" command to reconcile the maximum latency

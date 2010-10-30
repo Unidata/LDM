@@ -1,3 +1,4 @@
+htmldir	= $(docdir)
 EXTRA_DIST		= \
     tutorial/activate.html \
     tutorial/configure.html \
