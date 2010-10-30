@@ -41,6 +41,15 @@ Then, do the following:
 </pre>
 
 <p>
+NOTE: If you don't have the <tt>pax(1)</tt> utility, then use this command,
+instead:
+
+<pre>
+    $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
+    cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
+</pre>
+
+<p>
 The root of the installation tree will be <code>~ldm/@PACKAGE@-@VERSION@</code>
 for the version-dependent files.
 

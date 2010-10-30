@@ -97,7 +97,7 @@ Build and Install the Distribution</h2>
 the following:
 
 <blockquote><pre>
-cd $HOME/$VDIR/src
+cd $HOME/ldm-@VERSION@/src
 make distclean
 ./configure >&configure.log && make >&make.log && 
 make install >&install.log && sudo make install_setuids &&

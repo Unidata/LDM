@@ -5,6 +5,8 @@ html_DATA	= \
     index.html \
     specifics.html
 
+DISTCLEANFILES	= specifics.html
+
 EXTRA_DIST	= $(html_DATA)
 
 if MAINTAINER

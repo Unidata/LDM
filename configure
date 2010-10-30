@@ -26767,7 +26767,7 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
-ac_config_files="$ac_config_files Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqcopy/Makefile pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile registry/Makefile scripts/Makefile scripts/ldmadmin scripts/ldmcheck scripts/ldmfail scripts/netcheck scripts/syscheck scour/Makefile scour/scour regex/Makefile html/Makefile html/index.html html/release-notes.html html/known-problems.html html/basics/Makefile html/basics/index.html html/basics/activating.html html/basics/source-install-steps.html html/basics/what-gets-installed.html html/tutorial/Makefile html/workshop/Makefile test/Makefile"
+ac_config_files="$ac_config_files Makefile rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqcopy/Makefile pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile registry/Makefile scripts/Makefile scripts/ldmadmin scripts/ldmcheck scripts/ldmfail scripts/netcheck scripts/syscheck scour/Makefile scour/scour regex/Makefile html/Makefile html/index.html html/release-notes.html html/known-problems.html html/basics/Makefile html/basics/index.html html/basics/activating.html html/basics/source-install-steps.html html/basics/what-gets-installed.html html/tutorial/Makefile html/workshop/Makefile html/workshop/specifics.html test/Makefile"
 
 
 #AC_CONFIG_SUBDIRS([libxml2])
@@ -27507,6 +27507,7 @@ do
     "html/basics/what-gets-installed.html") CONFIG_FILES="$CONFIG_FILES html/basics/what-gets-installed.html" ;;
     "html/tutorial/Makefile") CONFIG_FILES="$CONFIG_FILES html/tutorial/Makefile" ;;
     "html/workshop/Makefile") CONFIG_FILES="$CONFIG_FILES html/workshop/Makefile" ;;
+    "html/workshop/specifics.html") CONFIG_FILES="$CONFIG_FILES html/workshop/specifics.html" ;;
     "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5

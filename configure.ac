@@ -361,6 +361,7 @@ AC_CONFIG_FILES([
     html/basics/what-gets-installed.html
     html/tutorial/Makefile
     html/workshop/Makefile
+    html/workshop/specifics.html
     test/Makefile
 ])
 
