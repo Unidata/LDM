@@ -103,7 +103,6 @@ web-update:	commit-check
 	    ../README \
 	    ../CHANGE_LOG \
 	    *.html \
-	    install \
 	    troubleshooting \
 	    $(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
 	cd basics && make $@ WEB_DESTDIR=$(WEB_DESTDIR)/$(PACKAGE)-$(VERSION)
