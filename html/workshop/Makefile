@@ -219,6 +219,7 @@ html_DATA = \
     specifics.html
 
 EXTRA_DIST = $(html_DATA)
+WEB_DESTDIR = /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 all: all-am
 
 .SUFFIXES:
@@ -431,7 +432,7 @@ uninstall-am: uninstall-htmlDATA
 web-update:
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    *.html \
-	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/workshop
+	    $(WEB_DESTDIR)/workshop
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

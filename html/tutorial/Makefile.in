@@ -282,6 +282,7 @@ nobase_html_DATA = \
     tutorial/images/TOCIcon.gif \
     tutorial/images/TopArrow.gif
 
+@MAINTAINER_TRUE@WEB_DESTDIR = /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 all: all-am
 
 .SUFFIXES:
@@ -507,7 +508,7 @@ uninstall-am: uninstall-nobase_htmlDATA
 @MAINTAINER_TRUE@web-update:	$(EXTRA_DIST)
 @MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 @MAINTAINER_TRUE@	    tutorial/ \
-@MAINTAINER_TRUE@	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/tutorial
+@MAINTAINER_TRUE@	    $(WEB_DESTDIR)/tutorial
 
 @MAINTAINER_TRUE@clean-local:
 @MAINTAINER_TRUE@	rm -rf tutorial

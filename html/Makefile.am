@@ -95,9 +95,10 @@ commit-check:
 
 web-update:	commit-check
 	rsync $(RSYNC_FLAGS) -u \
-	    history.html \
 	    factsheet.html \
 	    generalHelp.html \
+	    history.html \
+	    index.html \
 	    $(WEB_DESTDIR)
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    ../README \

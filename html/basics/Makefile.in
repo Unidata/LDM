@@ -336,6 +336,7 @@ nobase_html_DATA = \
 
 BUILT_SOURCES = LDM-registry.html
 DISTCLEANFILES = LDM-registry.html
+@MAINTAINER_TRUE@WEB_DESTDIR = /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -713,7 +714,7 @@ LDM-registry.html:	$(srcdir)/regpar-top.html ../../registry/regpar.tab
 @MAINTAINER_TRUE@	    *.html \
 @MAINTAINER_TRUE@	    *.gif \
 @MAINTAINER_TRUE@	    feedtypes \
-@MAINTAINER_TRUE@	    conan:/content/software/ldm/$(PACKAGE)-$(VERSION)/basics
+@MAINTAINER_TRUE@	    $(WEB_DESTDIR)/basics
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
