@@ -762,7 +762,7 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 @MAINTAINER_TRUE@	    generalHelp.html \
 @MAINTAINER_TRUE@	    $(WEB_DESTDIR)
 @MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
-@MAINTAINER_TRUE@	    README \
+@MAINTAINER_TRUE@	    ../README \
 @MAINTAINER_TRUE@	    ../CHANGE_LOG \
 @MAINTAINER_TRUE@	    *.html \
 @MAINTAINER_TRUE@	    install \

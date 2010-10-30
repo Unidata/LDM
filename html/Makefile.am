@@ -100,7 +100,7 @@ web-update:	commit-check
 	    generalHelp.html \
 	    $(WEB_DESTDIR)
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
-	    README \
+	    ../README \
 	    ../CHANGE_LOG \
 	    *.html \
 	    install \
