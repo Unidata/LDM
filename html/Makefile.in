@@ -757,9 +757,10 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 
 @MAINTAINER_TRUE@web-update:	commit-check
 @MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -u \
-@MAINTAINER_TRUE@	    history.html \
 @MAINTAINER_TRUE@	    factsheet.html \
 @MAINTAINER_TRUE@	    generalHelp.html \
+@MAINTAINER_TRUE@	    history.html \
+@MAINTAINER_TRUE@	    index.html \
 @MAINTAINER_TRUE@	    $(WEB_DESTDIR)
 @MAINTAINER_TRUE@	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 @MAINTAINER_TRUE@	    ../README \
