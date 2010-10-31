@@ -85,6 +85,7 @@ BUILT_SOURCES	= CHANGE_LOG
 CLEANFILES	= CHANGE_LOG
 
 if MAINTAINER
+ALPHADIR	= /web/content/staff/steve/ldm
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
 commit-check:	Makefile
@@ -105,7 +106,7 @@ web-update:	commit-check
 	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
 
 alpha:
-	$(MAKE) web-update WEB_DESTDIR=/web/content/staff/steve/ldm
+	$(MAKE) web-update WEB_DESTDIR=$(ALPHADIR)
 
 .PHONY:		commit-check alpha web-update
 endif

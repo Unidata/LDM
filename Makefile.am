@@ -240,7 +240,7 @@ FTPDIR	= /web/content/ftp/pub/ldm
 remote-checks:	dist
 	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
 
-commit-check:
+commit-check:	Makefile
 	if git status -a >/dev/null; then \
 	    echo 1>&2 'Package needs "git commit -a"'; \
 	    exit 1; \
@@ -260,7 +260,7 @@ beta:
 
 alpha:
 	$(MAKE) ftp FTPDIR=/web/content/staff/steve/ldm
-	cd html && $(MAKE) alpha
+	cd html && $(MAKE) alpha ALPHADIR=/web/content/staff/steve/ldm
 endif
 
 .PHONY:		\

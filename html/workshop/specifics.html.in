@@ -16,7 +16,7 @@ Instructions">
 
 <p>
 The following comprises workshop-specific instructions and details for the 
-Summer 2009 LDM Training Workshop.
+LDM Training Workshop.
 
 <hr>
 
@@ -99,41 +99,24 @@ the following:
 <blockquote><pre>
 cd $HOME/ldm-@VERSION@/src
 make distclean
-./configure >&configure.log && make >&make.log && 
-make install >&install.log && sudo make install_setuids &&
-make clean &&
-echo OK
+./configure >&configure.log && echo Configured &&
+make install >&install.log &&  echo Installed &&
+make clean && echo Cleaned
 </blockquote></pre>
 
 Otherwise, do the equivalent of the above for your user-shell.
 
 <hr>
 
-<h2><a name="ldmadmin"></a>
-Vet the ldmadmin(1) configuration-file</h2>
+<h2><a name="registry"></a>
+Vet the LDM registry</h2>
 
-<p>From monitoring the product-queue, it is known that the following are
-good values for the queue parameters for receiving data-products of the
-feedtype <tt>IDS|DDPLUS|NEXRAD3</tt>:
+<p>The default values are fine.
 
-<ul>
-
-    <li>Set the <tt>$pq_size</tt> variable to 200M:
-<blockquote><pre>
-$pq_size = "200M";
-</blockquote></pre>
-
-    <li>Set the <tt>$pq_slots</tt> variable to 50000:
-<blockquote><pre>
-$pq_slots = "50000";
-</blockquote></pre>
-
-</ul>
-
-(For average rates of the various feedtypes, see, for example, the
+<p>For average rates of the various feedtypes, see, for example, the
 <a
 href="http://www.unidata.ucar.edu/cgi-bin/rtstats/rtstats_summary_volume?idd.unidata.ucar.edu">
-data-volume summary webpage for a computer at the UPC</a>.)
+data-volume summary webpage for a computer at the UPC</a>.
 
 <hr>
 
@@ -233,6 +216,7 @@ Edit the LDM-user's <b><tt>crontab(1)</tt></b> file</h2>
 0 0 * * * bin/ldmadmin newlog
 * * * * * bin/ldmadmin addmetrics
 * * * * 0 bin/ldmadmin newmetrics
+0,15,30,45 0 * * * bin/ldmadmin check >/dev/null
 </blockquote></pre>
 
 <hr>

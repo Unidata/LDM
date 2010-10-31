@@ -341,6 +341,7 @@ EXTRA_DIST = \
 
 BUILT_SOURCES = CHANGE_LOG
 CLEANFILES = CHANGE_LOG
+@MAINTAINER_TRUE@ALPHADIR = /web/content/staff/steve/ldm
 @MAINTAINER_TRUE@WEB_DESTDIR = /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
@@ -767,7 +768,7 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 @MAINTAINER_TRUE@	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
 
 @MAINTAINER_TRUE@alpha:
-@MAINTAINER_TRUE@	$(MAKE) web-update WEB_DESTDIR=/web/content/staff/steve/ldm
+@MAINTAINER_TRUE@	$(MAKE) web-update WEB_DESTDIR=$(ALPHADIR)
 
 @MAINTAINER_TRUE@.PHONY:		commit-check alpha web-update
 

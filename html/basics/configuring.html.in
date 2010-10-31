@@ -57,7 +57,7 @@ directory assumed by the <a href="glindex.html#scour"><tt>scour</tt></a>
 configuration-file, and the <a href="glindex.html#pqact.conf"><tt>pqact</tt>
 configuration-file</a>.
 
-<p><a href="../workshop/specifics.html#allow">
+<p><a href="../workshop/specifics.html#registry">
 Workshop-specific instructions</a>.
 
 <hr>
@@ -391,7 +391,7 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
 <p><b>NOTE:</b> These examples 
 <ol>
     <li>Assume that the LDM user uses the <tt>bash(1)</tt> shell; and
-    <li>Use the <tt>-l</tt> option to obtain that user's login environment.
+    <li>Use the <tt>-l</tt> option to obtain the LDM user's login environment.
 </ol>
 You might have to do something different in order to obtain the same results.
 
