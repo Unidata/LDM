@@ -176,7 +176,7 @@ Edit the <tt>pqact</tt> configuration-file, <tt>etc/pqact.conf</tt></h2>
 IDS|DDPLUS
 	^(..)(..).. .... (..)(..)
 	FILE
-	data/IDS_DDPLUS/\1/\2/(\3:yyyy)(\3:mm)(\3:dd)T\4.txt
+	IDS_DDPLUS/\1/\2/(\3:yyyy)(\3:mm)(\3:dd)T\4.txt
 </blockquote></pre>
 <em>Remember to start the continuation-lines with a tab character!</em>
 
@@ -196,7 +196,7 @@ Edit the <tt>scour</tt> configuration-file, <tt>etc/scour.conf</tt></h2>
 <code>etc/scour.conf</code>:
 
 <blockquote><pre>
-data/IDS_DDPLUS 1
+IDS_DDPLUS 1
 </blockquote></pre>
 
 This will remove all files in the data directory hierarchy that are
@@ -216,7 +216,7 @@ Edit the LDM-user's <b><tt>crontab(1)</tt></b> file</h2>
 0 0 * * * bin/ldmadmin newlog
 * * * * * bin/ldmadmin addmetrics
 * * * * 0 bin/ldmadmin newmetrics
-0,15,30,45 0 * * * bin/ldmadmin check >/dev/null
+0,15,30,45 * * * * bin/ldmadmin check >/dev/null
 </blockquote></pre>
 
 <hr>

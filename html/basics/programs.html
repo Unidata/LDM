@@ -233,70 +233,76 @@ following:
 <tt>ldmadmin</tt> can perform" border="1" rules="all" align="center"
 cellpadding="5">
     <tr>
-	<th><b>Action</b></th>
 	<th><b>Command</b></th>
+	<th><b>Action</b></th>
     </tr>
     <tr>
-	<td>Start the <a href="glindex.html#LDM">LDM</a> system</td>
 	<td nowrap><tt>ldmadmin start</tt></td>
+	<td>Start the <a href="glindex.html#LDM">LDM</a> system</td>
     </tr>
     <tr>
-	<td>Stop the <a href="glindex.html#LDM">LDM</a> system</td>
 	<td nowrap><tt>ldmadmin stop</tt></td>
+	<td>Stop the <a href="glindex.html#LDM">LDM</a> system</td>
     </tr>
     <tr>
-	<td>Stop then restart the <a href="glindex.html#LDM">LDM</a> system</td>
 	<td nowrap><tt>ldmadmin restart</tt></td>
+	<td>Stop then restart the <a href="glindex.html#LDM">LDM</a> system</td>
     </tr>
     <tr>
+	<td nowrap><tt>ldmadmin isrunning</tt></td>
 	<td>Determine if the <a href="glindex.html#LDM">LDM</a> system is
 	    running</td>
-	<td nowrap><tt>ldmadmin isrunning</tt></td>
     </tr>
     <tr>
+	<td nowrap><tt>ldmadmin mkqueue</tt></td>
 	<td>Create the <a href="glindex.html#product-queue">
 	    product-queue</a></td>
-	<td nowrap><tt>ldmadmin mkqueue</tt></td>
     </tr>
     <tr>
+	<td nowrap><tt>ldmadmin delqueue</tt></td>
 	<td>Delete the <a href="glindex.html#product-queue">product-queue</a>
 	    </td>
-	<td nowrap><tt>ldmadmin delqueue</tt></td>
     </tr>
     <tr>
+	<td nowrap><tt>ldmadmin watch</tt></td>
 	<td>Watch the most recent <a
 	    href="glindex.html#data-product">data-product</a>s arrive in the
 	    <a href="glindex.html#product-queue">product-queue</a></td>
-	<td nowrap><tt>ldmadmin watch</tt></td>
     </tr>
     <tr>
+	<td nowrap><tt>ldmadmin pqactcheck</tt></td>
 	<td>Check the syntax of all <a
 	    href="glindex.html#pqact.conf"><tt>pqact</tt>
 	    configuration-file</a>s
 	    associated with active <tt>EXEC pqact</tt> entries in the
 	    <a href="glindex.html#ldmd.conf"><tt>LDM configuration-file</tt>
 	    </a>.
-	<td nowrap><tt>ldmadmin pqactcheck</tt></td>
     </tr>
     <tr>
-	<td>Rotate the <a href="glindex.html#logfile">LDM logfile</a>s
 	<td nowrap><tt>ldmadmin newlog</tt></td>
+	<td>Rotate the <a href="glindex.html#logfile">LDM logfile</a>s
     </tr>
     <tr>
+	<td nowrap><tt>ldmadmin addmetrics</tt></td>
 	<td>Accumulate performance metrics on the
 	<a href="glindex.html#LDM">LDM</a>
 	system.
-	<td nowrap><tt>ldmadmin addmetrics</tt></td>
     </tr>
     <tr>
+	<td nowrap><tt>ldmadmin plotmetrics</tt></td>
 	<td>Plot performance metrics on the
 	<a href="glindex.html#LDM">LDM</a>
 	system.
-	<td nowrap><tt>ldmadmin plotmetrics</tt></td>
     </tr>
     <tr>
-	<td>Rotate the performance metrics data-files.
 	<td nowrap><tt>ldmadmin newmetrics</tt></td>
+	<td>Rotate the performance metrics data-files.
+    </tr>
+    <tr>
+	<td nowrap><tt>ldmadmin check</tt></td>
+	<td>Check that everything is OK with the LDM system. Usually executed
+        periodically via the
+        <a href="glindex.html#crontab utility">crontab utility</a>.
     </tr>
 </table>
 
@@ -415,6 +421,11 @@ cellpadding="5">
 	<td><tt>pqutil</tt></td>
 	<td>Interactive program for accessing the <a
 	    href="glindex.html#product-queue">product-queue</a>.
+    </tr>
+    <tr>
+	<td><tt>regex</tt></td>
+        <td>Utility for testing extended regular expressions 
+            (<a href="glindex.html#ERE">ERE</a>).
     </tr>
     <tr>
 	<td><tt>regutil</tt></td>

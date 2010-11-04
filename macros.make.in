@@ -1,52 +1,44 @@
 # This file contains make(1) macro definitions.
 
-SHELL	= @SH@
-YACC	= @YACC@
-CC	= @CC@
-RPCGEN	= @RPCGEN@
-AR	= @AR@
-ARFLAGS	= @ARFLAGS@
-RANLIB	= @RANLIB@
-PERL	= @PERL@
+SHELL	        = @SHELL@
+YACC	        = @YACC@
+CC	        = @CC@
+RPCGEN	        = @RPCGEN@
+AR	        = @AR@
+ARFLAGS	        = @ARFLAGS@
+RANLIB	        = @RANLIB@
+PERL	        = @PERL@
 
-CFLAGS	= @CFLAGS@
+CFLAGS	        = @CFLAGS@
 CONFIGURE_CPPFLAGS	= @CPPFLAGS@
-GDBMLIB	= @GDBMLIB@
+GDBMLIB	        = @GDBMLIB@
 CONFIGURE_LIBS	= @LIBS@
-RSYNC_FLAGS	= --rsh=ssh --rsync-path=/opt/bin/rsync
 
-LD_YACC	= @LD_YACC@
-LD_GEN	= @LD_GEN@
+LD_YACC	        = @LD_YACC@
+LD_GEN	        = @LD_GEN@
 
-PACKAGE	= ldm
-VERSION	= `cat @LDMHOME@/src/VERSION`
-MAJOR_VERSION	= `cut -d . -f 1 @LDMHOME@/src/VERSION`
-MINOR_VERSION	= `cut -d . -f 1-2 @LDMHOME@/src/VERSION`
-BUG_VERSION	= `cut -d . -f 1-3 @LDMHOME@/src/VERSION`
-RC_VERSION	= `cut -d . -f 1-4 @LDMHOME@/src/VERSION`
+PACKAGE	        = ldm
 
-prefix	= @prefix@
+prefix	        = @prefix@
 exec_prefix	= $(prefix)
-ldmhome	= @LDMHOME@
-pq_dir	= @PQ_DIR@
+ldmhome	        = @LDMHOME@
+pq_dir	        = @QUEUE_DIR@
 
 PROGRAM		= dummy_program
 HEADER		= dummy_header
 ETC_FILE	= dummy_etc_file
 MANUAL		= dummy_manual
 
-INCDIR	= $(prefix)/include
-LIBDIR	= $(exec_prefix)/lib
-BINDIR	= $(exec_prefix)/bin
-ETCDIR	= $(ldmhome)/etc
-MANDIR	= $(prefix)/man
+INCDIR	        = $(includedir)
+LIBDIR	        = $(libdir)
+BINDIR	        = $(bindir)
+ETCDIR	        = $(sysconfdir)
+MANDIR	        = $(mandir)
 # only used to update the release at the source site
-FTPDIR	= /web/ftp/pub/ldm
+FTPDIR	        = /home/ftp/pub/ldm
 
 # Manual pages:
 WHATIS		= @WHATIS@
 # The following macro should be empty on systems that don't
 # allow users to create their own manual-page indexes.
 MAKEWHATIS_CMD	= @MAKEWHATIS_CMD@
-
-LIBRARY	= ../libldm.a

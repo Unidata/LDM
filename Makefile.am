@@ -97,7 +97,8 @@ EXTRA_DIST = \
     COPYRIGHT \
     README \
     RELEASE_NOTES \
-    extractDecls
+    extractDecls \
+    macros.make.in
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz

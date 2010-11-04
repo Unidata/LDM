@@ -1,11 +1,8 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
- */
-/* $Id: pqsend.c,v 1.70.10.1.2.4 2008/04/15 16:34:10 steve Exp $ */
-
-/* 
- * ldm client to ship files
+ * Stand-alone, upstream LDM utility for shipping the contents of a
+ * product-queue to a downstream LDM.
+ *
+ * See file ../COPYRIGHT for copying and redistribution conditions.
  */
 
 #include <config.h>
@@ -104,17 +101,17 @@ dump_stats(const sendstats *stp)
                         unotice(">  last disconnect:  %s", cp);
                 if(stp->nprods)
                 {
-        unotice(">     nprods min_latency max_latency"); 
-        unotice("> %10d  %10.3f  %10.3f", 
+        unotice(">     nprods min_latency max_latency");
+        unotice("> %10d  %10.3f  %10.3f",
                 stp->nprods, stp->min_latency, stp->max_latency);
                 }
                 else
                 {
-        unotice(">     nprods"); 
+        unotice(">     nprods");
         unotice("> %10d", stp->nprods);
                 }
-        unotice(">  nconnects      ndisco  secs_disco"); 
-        unotice("> %10d  %10d  %10.3f", 
+        unotice(">  nconnects      ndisco  secs_disco");
+        unotice("> %10d  %10d  %10.3f",
                 stp->nconnects, stp->ndisco, stp->downtime);
         }
         else
@@ -161,12 +158,12 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-        unotice("Exiting"); 
+        unotice("Exiting");
 
         if(done)
                 close_h_clnt(&hc);
 
-        if(pq && done)  
+        if(pq && done)
                 (void)pq_close(pq);
 
         if(hc.state < H_CLNTED)
@@ -182,7 +179,7 @@ static void
 signal_handler(int sig)
 {
 #ifdef SVR3SIGNALS
-        /* 
+        /*
          * Some systems reset handler to SIG_DFL upon entry to handler.
          * In that case, we reregister our handler.
          */
@@ -192,7 +189,7 @@ signal_handler(int sig)
         case SIGINT :
                 exit(1);
         case SIGTERM :
-                done = 1;       
+                done = 1;
                 return;
         case SIGUSR1 :
                 stats_req = 1;
@@ -259,7 +256,7 @@ sign_on(h_clnt *hcp,
         enum clnt_stat rpc_stat;
         ldm_replyt reply;
         int remaining = TotalTimeo;
-        
+
 
 #define MAXREFERRALS 8
         int loopcounter = 0; /* maximum levels of indirection */
@@ -276,12 +273,12 @@ sign_on(h_clnt *hcp,
 
         if(loopcounter++ > MAXREFERRALS)
         {
-                uerror("too many levels (%d) of indirection", 
+                uerror("too many levels (%d) of indirection",
                         loopcounter -1);
                 goto unwind_clnt;
         }
 
-retry:  
+retry:
         rpc_stat = hiya5(hcp, *clsspp, USE_H_TIMEO, &reply);
 
         (void)exitIfDone(1);
@@ -361,13 +358,13 @@ retry:
                                 s_prod_class(NULL, 0, *clsspp));
                         break;
         }
-        
+
 
         return hcp->state;
 
 unwind_clnt:
         close_h_clnt(hcp);
-        
+
         return hcp->state;
 }
 
@@ -415,7 +412,7 @@ csbd(h_clnt *hcp, const prod_info *infop, const void *datap,
                         return rpc_stat;
                 CSBD_CHECK_REMAINING(remaining);
         }
-        
+
         return rpc_stat;
 }
 
@@ -441,8 +438,8 @@ shipprod(const prod_info *infop, const void *datap,
                 rpc_stat = csbd(hcp, infop, datap, USE_H_TIMEO,
                          remaining, &reply);
         else
-                rpc_stat = xhereis5(hcp, xprod, size, USE_H_TIMEO, &reply);     
-                
+                rpc_stat = xhereis5(hcp, xprod, size, USE_H_TIMEO, &reply);
+
 
         if(rpc_stat != RPC_SUCCESS)
         {
@@ -463,7 +460,7 @@ shipprod(const prod_info *infop, const void *datap,
                 {
                         prod_class_t *want = reply.ldm_replyt_u.newclssp;
                         unotice("RECLASS: %s", s_prod_class(NULL, 0, want));
-        
+
                         /* Paranoia. */
                         if(want == NULL
                                         || want->psa.psa_len == 0
@@ -472,7 +469,7 @@ shipprod(const prod_info *infop, const void *datap,
                                 uerror("Bizarre RECLASS reply");
                                 return EIO;
                         }
-        
+
                         clss_regcomp(want);
                         /*
                          * N.B. This program trusts downstream
@@ -482,7 +479,7 @@ shipprod(const prod_info *infop, const void *datap,
                         if(clssp != &clss)
                                 free_prod_class(clssp);
                         clssp = want;
-        
+
                         if(!prodInClass(clssp, infop))
                                 return ENOERR;  /* He doesn't want this one */
                         /* else, here we go */
@@ -503,7 +500,7 @@ shipprod(const prod_info *infop, const void *datap,
                                                 ulogIsDebug()));
                         return 0;
         }
-        
+
         if(ulogIsVerbose())
                 uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
         stats.nprods++;
@@ -533,7 +530,7 @@ int main(int ac, char *av[])
         if(set_timestamp(&stats.starttime) != ENOERR)
         {
                 int errnum = errno;
-                (void) fprintf(stderr, "Couldn't set timestamp: %s", 
+                (void) fprintf(stderr, "Couldn't set timestamp: %s",
                         strerror(errnum));
                 exit(1);
         }
@@ -546,7 +543,7 @@ int main(int ac, char *av[])
         clss.psa.psa_val = &spec;
         spec.feedtype = ANY;
         spec.pattern = ".*";
-        
+
         /* if called as something other than "pqsend",
                 use it as the remote */
         if(strcmp(progname, "pqsend") != 0)
@@ -591,7 +588,7 @@ int main(int ac, char *av[])
                                 (void) fprintf(stderr,
                                         "Bad feedtype \"%s\", %s\n",
                                         optarg, strfeederr(fterr)) ;
-                                usage(progname);        
+                                usage(progname);
                         }
                         break;
                 case 'o':
@@ -601,7 +598,7 @@ int main(int ac, char *av[])
                                 (void) fprintf(stderr,
                                          "%s: invalid offset %s\n",
                                          av[0], optarg);
-                                usage(av[0]);   
+                                usage(av[0]);
                         }
                         toffset.tv_usec = 0;
                         break;
@@ -612,7 +609,7 @@ int main(int ac, char *av[])
                                 (void) fprintf(stderr,
                                         "%s: invalid timeout \"%s\"\n",
                                         progname, optarg);
-                                usage(progname);        
+                                usage(progname);
                         }
                         break;
                 case 'i':
@@ -632,7 +629,7 @@ int main(int ac, char *av[])
                                 (void) fprintf(stderr,
                                         "%s: invalid Total timeout \"%s\"\n",
                                         progname, optarg);
-                                usage(progname);        
+                                usage(progname);
                         }
                         break;
                 case '?':
@@ -740,7 +737,7 @@ int main(int ac, char *av[])
                                 free_prod_class(clssp);
                                 clssp = &clss;
                         }
-        
+
                         /* Offer what we can */
                         clss.from = diff_timestamp(&now, &toffset);
 

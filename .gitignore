@@ -62,3 +62,4 @@ share
 .settings
 .gitignore
 libxml2
+macros.make

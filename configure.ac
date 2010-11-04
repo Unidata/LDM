@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.9.0.2], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.9.0.3], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -315,6 +315,7 @@ AC_PROG_LIBTOOL
 
 AC_CONFIG_FILES([
     Makefile
+    macros.make
     rpc/Makefile
     ulog/Makefile
     misc/Makefile

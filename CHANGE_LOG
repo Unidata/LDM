@@ -1,3 +1,10 @@
+6.9.0.3
+        Added stuff to HTML documentation that was found to be missing in the
+        recent workshop.
+
+        Added creation of the file "macros.make" by the configure(1)-script
+        to accomodate the readnoaaport(1) and gribinsert(1) packages.
+
 6.9.0.2
         Replaced Berkeley-DB backend for the registry (etc/registry/) with the
         use of "libxml2" and an XML file (etc/registry.xml).
