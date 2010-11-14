@@ -371,7 +371,7 @@ distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 DISTCLEANFILES = *.log $(distArchive)
 distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
-@MAINTAINER_TRUE@FTPDIR = /web/content/ftp/pub/ldm
+@MAINTAINER_TRUE@FTPDIR = /web/ftp/pub/ldm
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -1059,7 +1059,7 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 @MAINTAINER_TRUE@	&& chmod u+rw,g+rw,o=r $$dest
 
 @MAINTAINER_TRUE@beta:
-@MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=/web/content/ftp/pub/ldm/beta
+@MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=$(FTPDIR)/beta
 @MAINTAINER_TRUE@	cd html && $(MAKE) web-update
 
 @MAINTAINER_TRUE@alpha:

@@ -234,7 +234,7 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 	fi
 
 if MAINTAINER
-FTPDIR	= /web/content/ftp/pub/ldm
+FTPDIR	= /web/ftp/pub/ldm
 
 remote-checks:	dist
 	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
@@ -255,7 +255,7 @@ ftp:		commit-check tag dist
 	&& chmod u+rw,g+rw,o=r $$dest
 
 beta:
-	$(MAKE) ftp FTPDIR=/web/content/ftp/pub/ldm/beta
+	$(MAKE) ftp FTPDIR=$(FTPDIR)/beta
 	cd html && $(MAKE) web-update
 
 alpha:
