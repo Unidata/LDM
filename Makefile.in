@@ -361,11 +361,9 @@ libldm_la_LIBADD = \
     $(PQ_SUBDIR)/lib.la
 
 EXTRA_DIST = \
-    ANNOUNCEMENT \
     CHANGE_LOG \
     COPYRIGHT \
     README \
-    RELEASE_NOTES \
     extractDecls \
     macros.make.in
 
