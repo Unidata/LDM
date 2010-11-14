@@ -1054,7 +1054,7 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 @MAINTAINER_TRUE@tag:
 @MAINTAINER_TRUE@	git tag -f v$(VERSION)
 
-@MAINTAINER_TRUE@ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
+@MAINTAINER_TRUE@ftp:		commit-check tag dist
 @MAINTAINER_TRUE@	filename=$(PACKAGE)-$(VERSION).tar.gz \
 @MAINTAINER_TRUE@	dest=$(FTPDIR)/$$filename \
 @MAINTAINER_TRUE@	&& cp $$filename $$dest \

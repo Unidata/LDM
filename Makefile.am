@@ -250,7 +250,7 @@ commit-check:	Makefile
 tag:
 	git tag -f v$(VERSION)
 
-ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
+ftp:		commit-check tag dist
 	filename=$(PACKAGE)-$(VERSION).tar.gz \
 	dest=$(FTPDIR)/$$filename \
 	&& cp $$filename $$dest \
