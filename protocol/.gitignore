@@ -2,3 +2,5 @@
 *.i
 globals.h
 ldmfork.h
+LdmProxy.h
+timer.h

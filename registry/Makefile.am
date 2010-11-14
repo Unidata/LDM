@@ -2,7 +2,7 @@
 #
 # Process this file with automake to produce Makefile.in
 
-AWK				= @AWK@
+AWK			= @AWK@
 PERL			= @PERL@
 LD_GEN			= @LD_GEN@
 LDMHOME			= $(DESTDIR)@LDMHOME@
@@ -13,7 +13,7 @@ DATA_DIR		= $(DESTDIR)@DATA_DIR@
 HOSTNAME		= @HOSTNAME@
 NTPDATE			= @NTPDATE@
 LOG_FILE		= $(LOGS_DIR)/ldmd.log
-METRICS_FILE	= $(LOGS_DIR)/metrics.txt
+METRICS_FILE		= $(LOGS_DIR)/metrics.txt
 NETSTAT			= @NETSTAT@
 TOP				= @TOP@
 noinst_LTLIBRARIES      = lib.la

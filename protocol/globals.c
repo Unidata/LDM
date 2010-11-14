@@ -67,7 +67,7 @@ int                     toffset = TOFFSET_NONE;
  */
 static void setPath(
     const char* const   path,
-    char const          buf[PATH_MAX])
+    char                buf[PATH_MAX])
 {
     strncpy(buf, path, PATH_MAX)[PATH_MAX-1] = 0;
 }
@@ -87,10 +87,10 @@ static void setPath(
  */
 static const char* getPath(
     const char* const   name,
-    char const          buf[PATH_MAX],
+    char                buf[PATH_MAX],
     const char* const   desc)
 {
-    const char*         var;
+    char*               var;
 
     if (0 == buf[0]) {
         if (reg_getString(name, &var)) {

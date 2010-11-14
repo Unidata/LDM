@@ -53,6 +53,7 @@ lib_la_SOURCES		= \
     ldm6_clnt.c \
     ldmfork.c \
     ldmprint.c \
+    LdmProxy.c \
     ldm_clnt.c \
     md5c.c \
     one_svc_run.c \
@@ -62,6 +63,7 @@ lib_la_SOURCES		= \
     remote.c \
     requester6.c \
     savedInfo.c \
+    timer.c \
     timestamp.c \
     UpFilter.c \
     xdr_data.c
@@ -79,6 +81,8 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h \
     ../registry/*.c
 EXTRA_DIST		= \
+    exitStatus.h \
+    LdmProxy.h \
     globals.h \
     ldm.h \
     ldm.x \
@@ -86,7 +90,8 @@ EXTRA_DIST		= \
     ldm5.h \
     rsaglobal.h \
     prod_info.h \
-    fix_clnt.pl
+    fix_clnt.pl \
+    timer.h
 CLEANFILES		= *.i
 
 ../registry/registry.h:
@@ -98,6 +103,8 @@ if MAINTAINER
 	mv -f $@.tmp $@
 globals.h:	globals.hin globals.c
 ldmfork.h:	ldmfork.hin ldmfork.c
+LdmProxy.h:	LdmProxy.hin LdmProxy.c
+timer.h:	timer.hin timer.c
 endif
 
 ldm.h:		ldm.x

@@ -1062,6 +1062,7 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 
 @MAINTAINER_TRUE@beta:
 @MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=/web/content/ftp/pub/ldm/beta
+@MAINTAINER_TRUE@	cd html && $(MAKE) web-update
 
 @MAINTAINER_TRUE@alpha:
 @MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=/web/content/staff/steve/ldm

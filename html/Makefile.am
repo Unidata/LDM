@@ -2,12 +2,11 @@ htmldir		= $(docdir)
 SUBDIRS		= basics tutorial workshop
 html_DATA	= \
     CHANGE_LOG \
+    COPYRIGHT \
     compatibility.html \
-    copyright.html \
     factsheet.html \
     generalHelp.html \
     glossary.html \
-    history.html \
     huge-queues.html \
     index.html \
     known-problems.html \
@@ -18,7 +17,6 @@ html_DATA	= \
     ldmfaq.html \
     manindex.html \
     networkSecurityAndSetup.html \
-    release-notes.html \
     rtstats-description.html \
     subscribe_ldm-users.html
 nobase_html_DATA	= \
@@ -42,13 +40,10 @@ nobase_html_DATA	= \
     troubleshooting/packetshaper/traffictest.gif \
     troubleshooting/packetshaper/traffictest.jpg
 EXTRA_DIST	= \
-    CHANGE_LOG \
     compatibility.html \
-    copyright.html \
     factsheet.html \
     generalHelp.html \
     glossary.html \
-    history.html \
     huge-queues.html \
     index.html \
     known-problems.html \
@@ -58,7 +53,6 @@ EXTRA_DIST	= \
     ldmfaq.html \
     manindex.html \
     networkSecurityAndSetup.html \
-    release-notes.html \
     rtstats-description.html \
     subscribe_ldm-users.html \
     LDM_icon.GIF \
@@ -81,8 +75,8 @@ EXTRA_DIST	= \
     troubleshooting/packetshaper/packetshaper.html \
     troubleshooting/packetshaper/traffictest.gif \
     troubleshooting/packetshaper/traffictest.jpg
-BUILT_SOURCES	= CHANGE_LOG
-CLEANFILES	= CHANGE_LOG
+BUILT_SOURCES	= CHANGE_LOG COPYRIGHT
+CLEANFILES	= CHANGE_LOG COPYRIGHT
 
 if MAINTAINER
 ALPHADIR	= /web/content/staff/steve/ldm
@@ -98,6 +92,7 @@ web-update:	commit-check
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    ../README \
 	    ../CHANGE_LOG \
+	    ../COPYRIGHT \
 	    *.html \
 	    troubleshooting \
 	    $(WEB_DESTDIR)
@@ -111,5 +106,5 @@ alpha:
 .PHONY:		commit-check alpha web-update
 endif
 
-CHANGE_LOG:
-	cp $(top_srcdir)/$@ $@
+CHANGE_LOG COPYRIGHT:
+	ln -s $(top_srcdir)/$@ $@

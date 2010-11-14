@@ -12,6 +12,7 @@ pqsend
 \%[-l\ \fIlogpath\fP]
 \%[-f\ \fIfeedtype\fP]
 \%[-q\ \fIqueue\fP]
+\%[-d]
 \%[-T\ \fITotalTimeo\fP]
 \%[-o\ \fIoffset\fP]
 \%[-t\ \fItimeout\fP]
@@ -82,11 +83,15 @@ whenever a new product is available, so polling is not necessary in this
 case.  The default
 interval is 15 seconds.
 .TP
+.BI \-d
+Decouple the \fB-T\fP and \fB-o\fP options; otherwise, the
+time-offset value can't be greater than the total time-out
+value and the product-queue cursor will never be earlier
+than the total time-out ago.
+.TP
 .BI \-T " TotalTimeo"
 Total timeout, in seconds.  
-Maximum time to attempt to make a connection, and the maximum
-time to spend trying to send a given product. This should be
-less than the \fIage\fP parameter to \fBpqexpire(1)\fP.
+Maximum time for the program to execute.
 The default total timeout is 3600 seconds (1 hour).
 .TP
 .BI \-o " offset"

@@ -61,11 +61,11 @@ am_lib_la_OBJECTS = lib_la-abbr.lo lib_la-acl.lo lib_la-atofeedt.lo \
 	lib_la-globals.lo lib_la-h_clnt.lo lib_la-ldm4_svc.lo \
 	lib_la-ldm5_svc.lo lib_la-ldm_xdr.lo lib_la-ldm_xlen.lo \
 	lib_la-ldm5_clnt.lo lib_la-ldm6_clnt.lo lib_la-ldmfork.lo \
-	lib_la-ldmprint.lo lib_la-ldm_clnt.lo lib_la-md5c.lo \
-	lib_la-one_svc_run.lo lib_la-priv.lo lib_la-prod_info.lo \
-	lib_la-prod_class.lo lib_la-remote.lo lib_la-requester6.lo \
-	lib_la-savedInfo.lo lib_la-timestamp.lo lib_la-UpFilter.lo \
-	lib_la-xdr_data.lo
+	lib_la-ldmprint.lo lib_la-LdmProxy.lo lib_la-ldm_clnt.lo \
+	lib_la-md5c.lo lib_la-one_svc_run.lo lib_la-priv.lo \
+	lib_la-prod_info.lo lib_la-prod_class.lo lib_la-remote.lo \
+	lib_la-requester6.lo lib_la-savedInfo.lo lib_la-timer.lo \
+	lib_la-timestamp.lo lib_la-UpFilter.lo lib_la-xdr_data.lo
 lib_la_OBJECTS = $(am_lib_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -295,6 +295,7 @@ lib_la_SOURCES = \
     ldm6_clnt.c \
     ldmfork.c \
     ldmprint.c \
+    LdmProxy.c \
     ldm_clnt.c \
     md5c.c \
     one_svc_run.c \
@@ -304,6 +305,7 @@ lib_la_SOURCES = \
     remote.c \
     requester6.c \
     savedInfo.c \
+    timer.c \
     timestamp.c \
     UpFilter.c \
     xdr_data.c
@@ -324,6 +326,8 @@ TAGS_FILES = \
     ../registry/*.c
 
 EXTRA_DIST = \
+    exitStatus.h \
+    LdmProxy.h \
     globals.h \
     ldm.h \
     ldm.x \
@@ -331,7 +335,8 @@ EXTRA_DIST = \
     ldm5.h \
     rsaglobal.h \
     prod_info.h \
-    fix_clnt.pl
+    fix_clnt.pl \
+    timer.h
 
 CLEANFILES = *.i
 all: $(BUILT_SOURCES)
@@ -388,6 +393,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-DownHelp.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-LdmProxy.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-UpFilter.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-abbr.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-acl.Plo@am__quote@
@@ -413,6 +419,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-remote.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-requester6.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-savedInfo.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-timer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-timestamp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-xdr_data.Plo@am__quote@
 
@@ -552,6 +559,13 @@ lib_la-ldmprint.lo: ldmprint.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-ldmprint.lo `test -f 'ldmprint.c' || echo '$(srcdir)/'`ldmprint.c
 
+lib_la-LdmProxy.lo: LdmProxy.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-LdmProxy.lo -MD -MP -MF $(DEPDIR)/lib_la-LdmProxy.Tpo -c -o lib_la-LdmProxy.lo `test -f 'LdmProxy.c' || echo '$(srcdir)/'`LdmProxy.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-LdmProxy.Tpo $(DEPDIR)/lib_la-LdmProxy.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='LdmProxy.c' object='lib_la-LdmProxy.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-LdmProxy.lo `test -f 'LdmProxy.c' || echo '$(srcdir)/'`LdmProxy.c
+
 lib_la-ldm_clnt.lo: ldm_clnt.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-ldm_clnt.lo -MD -MP -MF $(DEPDIR)/lib_la-ldm_clnt.Tpo -c -o lib_la-ldm_clnt.lo `test -f 'ldm_clnt.c' || echo '$(srcdir)/'`ldm_clnt.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-ldm_clnt.Tpo $(DEPDIR)/lib_la-ldm_clnt.Plo
@@ -614,6 +628,13 @@ lib_la-savedInfo.lo: savedInfo.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='savedInfo.c' object='lib_la-savedInfo.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-savedInfo.lo `test -f 'savedInfo.c' || echo '$(srcdir)/'`savedInfo.c
+
+lib_la-timer.lo: timer.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-timer.lo -MD -MP -MF $(DEPDIR)/lib_la-timer.Tpo -c -o lib_la-timer.lo `test -f 'timer.c' || echo '$(srcdir)/'`timer.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-timer.Tpo $(DEPDIR)/lib_la-timer.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='timer.c' object='lib_la-timer.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-timer.lo `test -f 'timer.c' || echo '$(srcdir)/'`timer.c
 
 lib_la-timestamp.lo: timestamp.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-timestamp.lo -MD -MP -MF $(DEPDIR)/lib_la-timestamp.Tpo -c -o lib_la-timestamp.lo `test -f 'timestamp.c' || echo '$(srcdir)/'`timestamp.c
@@ -876,6 +897,8 @@ uninstall-am: uninstall-includeHEADERS
 @MAINTAINER_TRUE@	mv -f $@.tmp $@
 @MAINTAINER_TRUE@globals.h:	globals.hin globals.c
 @MAINTAINER_TRUE@ldmfork.h:	ldmfork.hin ldmfork.c
+@MAINTAINER_TRUE@LdmProxy.h:	LdmProxy.hin LdmProxy.c
+@MAINTAINER_TRUE@timer.h:	timer.hin timer.c
 
 ldm.h:		ldm.x
 	$(RPCGEN) -h ldm.x | \

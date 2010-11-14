@@ -14,7 +14,7 @@ extern char *malloc();
 extern char *realloc();
 
 #ifndef NULL
-#define NULL  0
+#define NULL  ((void*)0)
 #endif /* !NULL */
 
 #endif /* HAVE_STDLIB_H */

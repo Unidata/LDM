@@ -654,9 +654,10 @@ static int contains(const host_set *hsp, const char *name, const char *dotAddr)
  * Returns the class of products that a host is allowed to receive based on the
  * host and the feed-types of products that it wants to receive.  The pointer
  * to the product-class structure will reference allocated space on success;
- * otherwise, it won't be modified.  The returned product-class may be the empty
- * set.  The client is responsible for invoking free_prod_class(prod_class_t*) on
- * a non-NULL product-class structure when it is no longer needed.
+ * otherwise, it won't be modified.  The returned product-class may be the
+ * empty set.  The client is responsible for invoking
+ * free_prod_class(prod_class_t*) on a non-NULL product-class structure when it
+ * is no longer needed.
  *
  * Arguments:
  *      name            Pointer to the name of the host.

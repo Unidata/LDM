@@ -6592,7 +6592,8 @@ pq_sequence(pqueue *pq, pq_match mt,
         offset = rp->offset;
         extent = Extent(rp);
 
-        if(ulogIsDebug()) {     /* delay to process product, useful to see if it's falling behind */
+        if(ulogIsDebug()) {     /* delay to process product, useful to see
+                                   if it's falling behind */
           timestampt now;
           pq_time = tqep->tv;
           if(gettimeofday(&now, 0) == 0) {
@@ -6654,7 +6655,8 @@ pq_sequence(pqueue *pq, pq_match mt,
                 status =  (*ifMatch)(info, datap,
                                 vp, extent, otherargs);
                 if(status)
-                  {             /* back up, presumes clock tick > usec (not always true) */
+                  {             /* back up, presumes clock tick > usec
+                                   (not always true) */
                         if(mt == TV_GT) {
                                 timestamp_decr(&pq->cursor);
                                 pq_coffset(pq, OFF_NONE);

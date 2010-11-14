@@ -63,3 +63,4 @@ share
 .gitignore
 libxml2
 macros.make
+TAGS

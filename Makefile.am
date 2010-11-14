@@ -258,6 +258,7 @@ ftp:		commit-check tag $(PACKAGE)-$(VERSION).tar.gz
 
 beta:
 	$(MAKE) ftp FTPDIR=/web/content/ftp/pub/ldm/beta
+	cd html && $(MAKE) web-update
 
 alpha:
 	$(MAKE) ftp FTPDIR=/web/content/staff/steve/ldm

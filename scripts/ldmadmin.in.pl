@@ -1428,7 +1428,7 @@ sub isProductQueueOk
 
 sub removeOldProdInfoFiles
 {
-     system("find .*.info -prune \! -newer $pid_file | xargs rm -f");
+    system("find .*.info -prune \! -newer $pid_file 2>/dev/null | xargs rm -f");
 }
 
 ###############################################################################

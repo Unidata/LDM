@@ -31,15 +31,14 @@ The LDM supports flexible, site-specific configuration.
 
     <li><p>Release Information
 	<ul>
-	    <li><a href="release-notes.html">Release Notes</a>
-	    <li><a href="known-problems.html">Known Problems</a>
 	    <li><a href="CHANGE_LOG">Change Log</a>
+	    <li><a href="known-problems.html">Known Problems</a>
 	    <li><a href="compatibility.html">Compatibility with Previous
 		Versions</a>
 	</ul>
     <li><p>Legal Notices
 	<ul>
-	    <li><a href="copyright.html">LDM Software Licensing Terms and
+	    <li><a href="COPYRIGHT">LDM Software Licensing Terms and
 		Conditions</a>
 	    <li><a href="/data/data_usage.html#data">
 		Data Usage Terms and Conditions</a>
