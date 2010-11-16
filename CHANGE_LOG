@@ -1,4 +1,4 @@
-6.9.0.5
+6.9.0.5 2010-11-16
         Improved pqsend(1) and ldmsend(1). If the LDM replied to the HIYA with
         a RECLASS response, then the offered product-class specification was
         replaced with the one in the reply. This would prevent the originating
