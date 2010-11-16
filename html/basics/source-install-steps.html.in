@@ -201,7 +201,9 @@ options and arguments, when and if appropriate:
         <code>/var/ldm</code>) as the root directory for
         highly volatile files such as the LDM 
         <a href="glindex.html#product-queue">product-queue</a>,
-        <a href="glindex.html#logfile">LDM logfile</a>, and LDM metrics
+        <a href="glindex.html#logfile">LDM logfile</a>, and 
+        <a href="monitoring.html#metrics">
+        LDM metrics</a>
         files.  In general, such files should not be backed-up because of their
         volatility, so having the root-directory for such files reside in a
         disk partition that's not backed-up is a good idea.  Be aware, however,
@@ -209,6 +211,11 @@ options and arguments, when and if appropriate:
         the LDM product-queue is memory-mapped, file-locked, and is accessed
         more often than free beer at a frat party.  The default is
         <code>$HOME/var</code>.
+
+        <p><b>NOTE:</b> This option
+        will <em>not</em> work if a pre-6.9 version of the LDM has been
+        installed because then this version wouldn't use the product-queue
+        that already exists.
 
     <dt><code>CC=</code><i>path</i>
     <dd>Configures the build process to use <i>path</i> as the pathname of the

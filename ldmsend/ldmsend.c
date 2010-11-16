@@ -197,8 +197,8 @@ send_product(
  *
  * Arguments:
  *      ldmProxy        The LDM proxy data-structure.
- *      clssp           The description of the class of data-products that will
- *                      be sent.
+ *      offer           The description of the class of data-products that this
+ *                      process is willing to send.
  *      origin          The identifier of the host that created the
  *                      data-products (typically the host running this program).
  *      seq_start       The starting value of the data-product sequence number.
@@ -213,7 +213,7 @@ send_product(
 static int
 ldmsend(
     LdmProxy*           ldmProxy,
-    prod_class_t*       clssp,
+    prod_class_t*       offer,
     char*               origin,
     int                 seq_start,
     int                 nfiles,
@@ -225,6 +225,7 @@ ldmsend(
     struct stat         statb;
     prod_info           info;
     MD5_CTX*            md5ctxp = NULL;
+    prod_class_t*       want;
 
     /*
      * Allocate an MD5 context
@@ -233,74 +234,82 @@ ldmsend(
     if (md5ctxp == NULL)
     {
         LOG_SERROR0("new_md5_CTX failed");
-        return errno;
+        return SYSTEM_ERROR;
     }
 
-    status = lp_hiya(ldmProxy, &clssp);
+    status = lp_hiya(ldmProxy, offer, &want);
 
-    if (status != 0)
-        return CONNECTION_ABORTED;
+    if (status != 0) {
+        status = CONNECTION_ABORTED;
+    }
+    else {
+        /* These members are constant over the loop. */
+        info.origin = origin;
+        info.feedtype = offer->psa.psa_val->feedtype;
 
-    /* These members are constant over the loop. */
-    info.origin = origin;
-    info.feedtype = clssp->psa.psa_val->feedtype;
+        for (info.seqno = seq_start; exitIfDone(1) && nfiles > 0;
+                filenames++, nfiles--, info.seqno++) {
+            filename = *filenames;
+            info.ident = filename;
+            /*
+             * ?? This could be the creation time of the file.
+             */
+            (void) set_timestamp(&info.arrival);
 
-    for (info.seqno = seq_start; exitIfDone(1) && nfiles > 0;
-            filenames++, nfiles--, info.seqno++) {
-        filename = *filenames;
-        info.ident = filename;
-        /*
-         * ?? This could be the creation time of the file.
-         */
-        (void) set_timestamp(&info.arrival);
+            /*
+             * Checks 'arrival', 'feedtype', and 'ident'
+             * against what the other guy has said he wants.
+             */
+            if (!prodInClass(offer, &info)) {
+                uinfo("Not going to send %s", filename);
+                continue;       
+            }
+            if (!prodInClass(want, &info)) {
+                uinfo("%s doesn't want %s", lp_host(ldmProxy), filename);
+                continue;       
+            }
 
-        /*
-         * Checks 'arrival', 'feedtype', and 'ident'
-         * against what the other guy has said he wants.
-         */
-        if (!prodInClass(clssp, &info)) {
-            uinfo("%s doesn't want %s", lp_host(ldmProxy), filename);
-            continue;       
-        }
+            fd = open(filename, O_RDONLY, 0);
+            if (fd == -1) {
+                serror("open: %s", filename);
+                continue;
+            }
 
-        fd = open(filename, O_RDONLY, 0);
-        if (fd == -1) {
-            serror("open: %s", filename);
-            continue;
-        }
+            if (fstat(fd, &statb) == -1) {
+                serror("fstat: %s", filename);
+                (void) close(fd);
+                continue;
+            }
 
-        if (fstat(fd, &statb) == -1) {
-            serror("fstat: %s", filename);
+            uinfo("Sending %s, %d bytes", filename, statb.st_size);
+            
+            /* These members, and seqno, vary over the loop. */
+            if (fd_md5(md5ctxp, fd, statb.st_size, info.signature) != 0) {
+                (void) close(fd);
+                continue;
+            }
+            if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
+                serror("rewind: %s", filename);
+                (void) close(fd);
+                continue;
+            }
+
+            info.sz = (u_int)statb.st_size;
+
+            (void)exitIfDone(1);
+
+            status = send_product(ldmProxy, fd, &info);
+
             (void) close(fd);
-            continue;
-        }
 
-        uinfo("Sending %s, %d bytes", filename, statb.st_size);
-        
-        /* These members, and seqno, vary over the loop. */
-        if (fd_md5(md5ctxp, fd, statb.st_size, info.signature) != 0) {
-            (void) close(fd);
-            continue;
-        }
-        if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
-            serror("rewind: %s", filename);
-            (void) close(fd);
-            continue;
-        }
+            if (0 != status) {
+                LOG_ADD1("Couldn't send file \"%s\" to LDM", filename);
+                break;
+            }
+        }                                       /* file loop */
 
-        info.sz = (u_int)statb.st_size;
-
-        (void)exitIfDone(1);
-
-        status = send_product(ldmProxy, fd, &info);
-
-        (void) close(fd);
-
-        if (0 != status) {
-            LOG_ADD1("Couldn't send file \"%s\" to LDM", filename);
-            break;
-        }
-    }                                           /* file loop */
+        free_prod_class(want);
+    }                                           /* HIYA succeeded */
 
     free_MD5_CTX(md5ctxp);  
     return status;

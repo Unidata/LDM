@@ -134,4 +134,4 @@ ldm6_clnt.c:	ldm.x fix_clnt.pl
 	$(PERL) fix_clnt.pl < $@.tmp > $@ && rm $@.tmp       # fix stuff
 
 .c.i:
-	$(CPP) $(CPPFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $< >$@
+	$(CPP) $(lib_la_CPPFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $< >$@

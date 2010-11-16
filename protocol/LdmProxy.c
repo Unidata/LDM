@@ -13,12 +13,14 @@
 #include <ldm.h>
 #include <ldm_clnt.h>
 #include <log.h>
+#include <prod_class.h>
 #include <rpc/rpc.h>
 
 #include "LdmProxy.h"
 
 struct ldmProxy {
-    LdmProxyStatus      (*hiya)(LdmProxy* proxy, prod_class_t** clsspp);
+    LdmProxyStatus      (*hiya)(LdmProxy* proxy, prod_class_t* offer, 
+                            prod_class_t** want);
     LdmProxyStatus      (*send)(LdmProxy* proxy, product* product);
     LdmProxyStatus      (*flush)(LdmProxy* proxy);
     char*               host;
@@ -85,7 +87,7 @@ getStatus(
  * Returns:
  *      0
  */
-static void*
+static LdmProxyStatus
 my_flush_5(
     LdmProxy* const     proxy)
 {
@@ -98,10 +100,13 @@ my_flush_5(
  *
  * Arguments:
  *      proxy           Pointer to the LDM proxy data-structure.
- *      clsspp          Pointer to a pointer to the data-product class
- *                      structure, which must be set.  "*clsspp" is modified
- *                      upon successful return if the LDM requests that the
- *                      class be modified.
+ *      offer           Pointer to the data-product class structure which will
+ *                      be offered to the LDM.
+ *      want            Pointer to a pointer to a data-product class structure.
+ *                      "*want" will be set the data-product class structure
+ *                      that the LDM wants. The client should call
+ *                      "free_prod_class(*want)" when the product-class is no
+ *                      longer needed.
  * Returns:
  *      0               Success. "*clsspp" might be modified.
  *      LP_TIMEDOUT     The RPC call timed-out. "log_start()" called.
@@ -111,7 +116,8 @@ my_flush_5(
 static LdmProxyStatus
 my_hiya_5(
     LdmProxy* const             proxy,
-    prod_class_t** const        clsspp)
+    prod_class_t* const         offer,
+    prod_class_t** const        want)
 {
     static ldm_replyt   reply;
     enum clnt_stat      rpc_stat;
@@ -119,7 +125,7 @@ my_hiya_5(
 
     memset(&reply, 0, sizeof(ldm_replyt));
 
-    rpc_stat = clnt_call(clnt, HIYA, xdr_prod_class, (caddr_t)*clsspp,
+    rpc_stat = clnt_call(clnt, HIYA, xdr_prod_class, (caddr_t)offer,
             xdr_ldm_replyt, (caddr_t)&reply, proxy->rpcTimeout);
 
     if (rpc_stat != RPC_SUCCESS) {
@@ -128,6 +134,7 @@ my_hiya_5(
 
     switch (reply.code) {
         case OK:
+            *want = (prod_class_t*)PQ_CLASS_ALL;
             break;
         case SHUTTING_DOWN:
             LOG_START1("%s is shutting down", proxy->host);
@@ -140,11 +147,11 @@ my_hiya_5(
                     s_ldm_errt(reply.code));
             return LP_LDM_ERROR;
         case RECLASS:
-            *clsspp = reply.ldm_replyt_u.newclssp;
-            clss_regcomp(*clsspp);
+            *want = reply.ldm_replyt_u.newclssp;
+            clss_regcomp(*want);
             /* N.B. we use the downstream patterns */
             unotice("%s: reclass: %s", proxy->host,
-                    s_prod_class(NULL, 0, *clsspp));
+                    s_prod_class(NULL, 0, *want));
             break;
     }
 
@@ -157,10 +164,13 @@ my_hiya_5(
  *
  * Arguments:
  *      proxy           Pointer to the LDM proxy data-structure.
- *      clsspp          Pointer to a pointer to the data-product class
- *                      structure, which must be set.  "*clsspp" is modified
- *                      upon successful return if the LDM requests that the
- *                      class be modified.
+ *      offer           Pointer to the data-product class structure which will
+ *                      be offered to the LDM.
+ *      want            Pointer to a pointer to a data-product class structure.
+ *                      "*want" will be set the data-product class structure
+ *                      that the LDM wants. The client should call
+ *                      "free_prod_class(*want)" when the product-class is no
+ *                      longer needed.
  * Returns:
  *      0               Success. "*clsspp" might be modified.
  *      LP_RPC_ERROR    RPC error. "log_start()" called.
@@ -169,13 +179,14 @@ my_hiya_5(
 static LdmProxyStatus
 my_hiya_6(
     LdmProxy* const             proxy,
-    prod_class_t** const        clsspp)
+    prod_class_t* const         offer,
+    prod_class_t** const        want)
 {
     CLIENT* const       clnt = proxy->clnt;
     hiya_reply_t*       reply;
     LdmProxyStatus      status;
     
-    reply = hiya_6(*clsspp, clnt);
+    reply = hiya_6(offer, clnt);
 
     if (NULL == reply) {
         status = getStatus(proxy, "HIYA_6", NULL);
@@ -183,6 +194,7 @@ my_hiya_6(
     else {
         switch (reply->code) {
             case OK:
+                *want = (prod_class_t*)PQ_CLASS_ALL;
                 proxy->max_hereis = reply->hiya_reply_t_u.max_hereis;
                 status = 0;
                 break;
@@ -221,12 +233,12 @@ my_hiya_6(
                 break;
 
             case RECLASS:
-                *clsspp = reply->hiya_reply_t_u.feedPar.prod_class;
+                *want = reply->hiya_reply_t_u.feedPar.prod_class;
                 proxy->max_hereis = reply->hiya_reply_t_u.feedPar.max_hereis;
-                clss_regcomp(*clsspp);
+                clss_regcomp(*want);
                 /* N.B. we use the downstream patterns */
                 unotice("%s: reclass: %s", proxy->host, s_prod_class(NULL, 0,
-                        *clsspp));
+                        *want));
                 status = 0;
                 break;
         }
@@ -765,12 +777,15 @@ lp_version(
  *
  * Arguments:
  *      proxy           Pointer to the LDM proxy structure.
- *      clsspp          Pointer to a pointer to the data-product class
- *                      structure, which must be set.  "*clsspp" is modified
- *                      upon successful return if the LDM requests that the
- *                      class be modified.
+ *      offer           Pointer to the data-product class structure which will
+ *                      be offered to the LDM.
+ *      want            Pointer to a pointer to a data-product class structure.
+ *                      "*want" will be set to the data-product class structure
+ *                      that the LDM wants. The client should call
+ *                      "free_prod_class(*want)" when the product-class is no
+ *                      longer needed.
  * Returns:
- *      0               Success. "*clsspp" might be modified.
+ *      0               Success. "*want" is set.
  *      LP_TIMEDOUT     The RPC call timed-out. "log_start()" called.
  *      LP_RPC_ERROR    RPC error. "log_start()" called.
  *      LP_LDM_ERROR    LDM error. "log_start()" called.
@@ -778,9 +793,10 @@ lp_version(
 LdmProxyStatus
 lp_hiya(
     LdmProxy* const             proxy,
-    prod_class_t** const        clsspp)
+    prod_class_t* const         offer,
+    prod_class_t** const        want)
 {
-    return proxy->hiya(proxy, clsspp);
+    return proxy->hiya(proxy, offer, want);
 }
 
 /*

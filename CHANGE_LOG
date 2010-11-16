@@ -1,4 +1,17 @@
-6.9.0.4
+6.9.0.5
+        Improved pqsend(1) and ldmsend(1). If the LDM replied to the HIYA with
+        a RECLASS response, then the offered product-class specification was
+        replaced with the one in the reply. This would prevent the originating
+        site from restricting the class of products sent to the LDM. Now, the
+        product-class specification in the RECLASS response from the LDM is
+        used in series with the originating site's specification: products must
+        now pass both filters.
+
+        Added note to documentation about how the "--localstatedir" option of
+        configure(1) script won't work if an older version of the LDM is
+        installed.
+
+6.9.0.4 2010-11-14
         Modified pqsend(1) to use LDM-6 protocol and added option to decouple
         its total time-out and time-offset parameters.
 

@@ -894,13 +894,15 @@ accept_acl_add(
 
 
 /*
- * Checks the access-control-list (ACL) for a HIYA.
+ * Checks the access-control-list (ACL) for ACCEPT entries.
  *
- * @param *rmtip           Information on the remote host.
- * @param *offerd          The product-class that the remote host is offering to
- *                         send.
- * @return 0               if successful.
- * @return <errno.h>ENOMEM if out-of-memory.
+ * Arguments:
+ *      rmtip           Information on the remote host. May be modified.
+ *      offerd          The product-class that the remote host is offering to
+ *                      send.
+ * Returns:
+ *      0               if successful.
+ *      ENOMEM          if out-of-memory.
  */
 int
 hiya_acl_ck(peer_info *rmtip, prod_class_t *offerd)
@@ -916,7 +918,7 @@ hiya_acl_ck(peer_info *rmtip, prod_class_t *offerd)
         error = ENOERR;
     }
     else {
-        prod_class_t*     prodClass;
+        prod_class_t*   prodClass;
         int             isPrimary;
 
         error = acl_check_hiya(rmtip->name, inet_ntoa(rmtip->addr),
@@ -968,14 +970,14 @@ int
 acl_check_hiya(
     const char*         name,
     const char*         dotAddr, 
-    prod_class_t*         offerd,
-    prod_class_t**        accept,
+    prod_class_t*       offerd,
+    prod_class_t**      accept,
     int*                isPrimary)
 {
-    int         error = 0;
-    prod_class_t *prodClass;
-    u_int       nhits = 0;
-    aclt       *hits[MAXHITS];
+    int                 error = 0;
+    prod_class_t*       prodClass;
+    u_int               nhits = 0;
+    aclt*               hits[MAXHITS];
 
     if (NULL != accept_acl) {
         aclt       *ap;

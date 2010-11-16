@@ -1,8 +1,8 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See top level COPYRIGHT file for copying and redistribution conditions.
+ * See top level file COPYRIGHT for copying and redistribution conditions.
+ *
+ * Functions for handling product-class specifications.
  */
-/* $Id: prod_class.c,v 1.23.12.5 2008/04/15 16:34:11 steve Exp $ */
 
 #include <config.h>
 
@@ -23,6 +23,7 @@
 #include "ldmprint.h"
 #endif
 #include "ulog.h"
+#include "log.h"
 #endif
 
 #ifndef ENOERR
@@ -220,6 +221,9 @@ free_prod_class(prod_class_t *clssp)
         if(clssp == NULL)
                 return;
 
+        if (clssp == &_clss_all)
+            return;
+
         if(clssp->psa.psa_val != NULL)
         {
                 int ii = (int) clssp->psa.psa_len;
@@ -247,17 +251,33 @@ free_prod_class(prod_class_t *clssp)
 }
 
 
+/*
+ * Returns a new product-class structure.
+ *
+ * Arguments:
+ *      psa_len         The size of the product-specification array.
+ * Returns:
+ *      NULL            Out-of-memory. "log_start()" called.
+ *      else            Pointer to the new product-class structure. The elements
+ *                      of the product-specification array will be NULL.
+ */
 prod_class_t *
-new_prod_class(unsigned int psa_len)
+new_prod_class(
+    unsigned            psa_len)
 {
-        prod_class_t *clssp;
-        size_t sz = sizeof(prod_class_t) + psa_len * sizeof(prod_spec);   
+    prod_class_t*       clssp;
+    size_t              sz = sizeof(prod_class_t) + psa_len *
+        sizeof(prod_spec);   
 
-        clssp = (prod_class_t *)malloc(sz);
-        if(clssp == NULL)
-                return NULL;
+    clssp = (prod_class_t*)malloc(sz);
+
+    if (clssp == NULL) {
+        LOG_SERROR1("Couldn't allocate %lu bytes for product-class", sz);
+    }
+    else {
         (void)memset(clssp, 0, sz);
-        clssp->psa.psa_val = (prod_spec *)(&clssp[1]);
+
+        clssp->psa.psa_val = (prod_spec*)(&clssp[1]);
         clssp->psa.psa_len = psa_len;
 
         {
@@ -265,8 +285,9 @@ new_prod_class(unsigned int psa_len)
             for (i = 0; i < psa_len; ++i)
                 clssp->psa.psa_val[i].pattern = NULL;
         }
+    }
 
-        return clssp;
+    return clssp;
 }
 
 
@@ -275,63 +296,91 @@ new_prod_class(unsigned int psa_len)
  * *lhs must be greater than or equal to that of *rhs (e.g. use lhs =
  * new_prod_class(rhs->psa.psa_len)).
  *
- * @param *lhs             The product-class into which to copy.
- * @param *rhs             The product-class to be copied.
- * @param  shallow         If true, then only the feed-types of the
- *                         feed-type/pattern product-specifications will be
- *                         copied; otherwise, both the feed-types and patterns
- *                         will be copied.
- * @return 0               if successful.
- * @return <errno.h>EINVAL if the regular expression pattern of a
- *                         product-specification couldn't be compiled.
- * @return <errno.h>ENOMEM if out-of-memory.
- * @throws SIGSEGV         if "lhs" or "rhs"  is NULL.
+ * Arguments:
+ *      lhs             The product-class into which to copy.
+ *      rhs             The product-class to be copied.
+ *      shallow         If true, then only the feed-types of the
+ *                      feed-type/pattern product-specifications will be
+ *                      copied; otherwise, both the feed-types and patterns
+ *                      will be copied.
+ * Returns:
+ *      0               if successful.
+ *      EINVAL          if the regular expression pattern of a
+ *                      product-specification couldn't be compiled.
+ *                      "log_start()" called.
+ *      ENOMEM          if out-of-memory. "log_start()" called.
+ * Throws:
+ *      SIGSEGV         if "lhs" or "rhs"  is NULL.
  */
 int
-cp_prod_class(prod_class_t *lhs, const prod_class_t *rhs, int shallow)
+cp_prod_class(
+    prod_class_t*       lhs,
+    const prod_class_t* rhs,
+    const int           shallow)
 {
-        int status = ENOERR;
-        assert(rhs != NULL);
-        assert(lhs != NULL);
-        
-        lhs->from = rhs->from;
-        lhs->to = rhs->to;
-        for(lhs->psa.psa_len = 0; lhs->psa.psa_len < rhs->psa.psa_len;
-                        lhs->psa.psa_len++)
-        {
-                if(!shallow)
-                {
-                        status = cp_prod_spec(
-                                &lhs->psa.psa_val[lhs->psa.psa_len],
-                                &rhs->psa.psa_val[lhs->psa.psa_len]
-                        );
-                        if(status != ENOERR)
-                                return status;
-                }
-                else
-                {
-                        lhs->psa.psa_val[lhs->psa.psa_len].feedtype =
-                                rhs->psa.psa_val[lhs->psa.psa_len].feedtype;
-                }
+    int                 status = ENOERR;
+
+    assert(rhs != NULL);
+    assert(lhs != NULL);
+    
+    lhs->from = rhs->from;
+    lhs->to = rhs->to;
+
+    for (lhs->psa.psa_len = 0; lhs->psa.psa_len < rhs->psa.psa_len;
+            lhs->psa.psa_len++) {
+        if (!shallow) {
+            char        buf[80];
+            prod_spec*  prodSpec = &rhs->psa.psa_val[lhs->psa.psa_len];
+
+            status = cp_prod_spec(&lhs->psa.psa_val[lhs->psa.psa_len],
+                prodSpec);
+
+            if (status != ENOERR) {
+                LOG_SERROR1("Couldn't copy product-specification \"%s\"",
+                        sprint_prod_spec(buf, sizeof(buf), prodSpec));
+                return status;
+            }
         }
-        assert(lhs->psa.psa_len ==  rhs->psa.psa_len);
-        return status;
+        else {
+            lhs->psa.psa_val[lhs->psa.psa_len].feedtype =
+                    rhs->psa.psa_val[lhs->psa.psa_len].feedtype;
+        }
+    }
+
+    assert(lhs->psa.psa_len ==  rhs->psa.psa_len);
+
+    return status;
 }
 
 
+/*
+ * Returns a deep copy of a product-class.
+ *
+ * Arguments:
+ *      class           Pointer to the product-class to be duplicated.
+ *
+ * Returns:
+ *      NULL            Out-of-memory. "log_start()" called.
+ *      else            Pointer to the duplicate product-class.
+ */
 prod_class_t *
-dup_prod_class(const prod_class_t *rhs)
+dup_prod_class(
+    const prod_class_t* class)
 {
-        prod_class_t *clssp = new_prod_class(rhs->psa.psa_len);
+    prod_class_t *clone = new_prod_class(class->psa.psa_len);
 
-        if(clssp != NULL) {
-                if (cp_prod_class(clssp, rhs, 0)) {
-                        free_prod_class(clssp);
-                        clssp = NULL;
-                }
+    if (clone == NULL) {
+        LOG_ADD0("Couldn't allocate product-class clone");
+    }
+    else {
+        if (cp_prod_class(clone, class, 0)) {
+            LOG_ADD0("Couldn't copy product-class to clone");
+            free_prod_class(clone);
+            clone = NULL;
         }
+    }
 
-        return clssp;
+    return clone;
 }
 
 

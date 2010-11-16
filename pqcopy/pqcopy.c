@@ -59,7 +59,7 @@ dump_stats(void)
 static int
 copyProduct(
     const prod_info     *infop,
-    const void          *datap,
+    void                *datap,
     void                *xprod,
     size_t              size,
     void                *notused)

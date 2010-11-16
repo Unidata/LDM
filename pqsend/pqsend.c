@@ -26,6 +26,7 @@
 #include "LdmProxy.h"
 #include "log.h"
 #include "pq.h"
+#include "prod_class.h"
 #include "RegularExpressions.h"
 #include "timer.h"
 
@@ -51,11 +52,12 @@ static LdmProxy*                ldmProxy = NULL;
 static int                      totalTimeo = DEFAULT_TOTALTIMEOUT;
 static int                      sendStatus;
 static const char*              pqfname;
-static prod_spec                spec;
+static prod_spec                offerProdSpec;
 static timestampt               timeOffset;
 static unsigned                 rpcTimeout = DEFAULT_TIMEOUT;
 static const char*              remote = NULL;  /* LDM hostname */
-static prod_class               clss;
+static prod_class_t             offer;
+static prod_class_t*            want;
 static int                      coupledTimes = 1;
 
 struct sendstats {
@@ -257,7 +259,7 @@ set_sigactions(void)
  *      datap           The data-product's data.
  *      xprod           XDR-encoded version of the data-product.
  *      size            Size of "xprod" in bytes.
- *      ldmProxy        The LDM proxy data-structure.
+ *      arg             Ignored.
  *
  * Returns:
  *      0               Success.
@@ -269,42 +271,49 @@ mySend(
     const void*         datap,
     void*               xprod,
     size_t              size,
-    void*               ldmProxy)
+    void*               arg)
 {
-    product             product;
-
-    product.info = *infop;
-    product.data = (void*)datap;        /* safe to remove "const" */
-
-    sendStatus = lp_send((LdmProxy*)ldmProxy, &product);
-
-    if (0 != sendStatus) {
-        if (LP_UNWANTED == sendStatus) {
-            if(ulogIsVerbose())
-                uinfo(" dup: %s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
-            sendStatus = 0;
-        }
-        else {
-            sendStatus = (LP_TIMEDOUT == sendStatus)
-                ? CONNECTION_TIMEDOUT
-                : CONNECTION_ABORTED;
-        }
+    if (!prodInClass(want, infop)) {
+        uinfo("%s doesn't want %s", lp_host(ldmProxy), 
+                s_prod_info(NULL, 0, infop, ulogIsDebug()));
     }
     else {
-        timestampt      now;
-        double          latency;
+        product         product;
 
-        if (ulogIsVerbose())
-            uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
+        product.info = *infop;
+        product.data = (void*)datap;        /* safe to remove "const" */
 
-        set_timestamp(&now);
-        latency = d_diff_timestamp(&now, &infop->arrival);
-        stats.nprods++;
+        sendStatus = lp_send(ldmProxy, &product);
 
-        if (latency < stats.min_latency)
-            stats.min_latency = latency;
-        if (latency > stats.max_latency)
-            stats.max_latency = latency;
+        if (0 != sendStatus) {
+            if (LP_UNWANTED == sendStatus) {
+                if (ulogIsVerbose())
+                    uinfo(" dup: %s", s_prod_info(NULL, 0, infop,
+                                ulogIsDebug()));
+                sendStatus = 0;
+            }
+            else {
+                sendStatus = (LP_TIMEDOUT == sendStatus)
+                    ? CONNECTION_TIMEDOUT
+                    : CONNECTION_ABORTED;
+            }
+        }
+        else {
+            timestampt      now;
+            double          latency;
+
+            if (ulogIsVerbose())
+                uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
+
+            set_timestamp(&now);
+            latency = d_diff_timestamp(&now, &infop->arrival);
+            stats.nprods++;
+
+            if (latency < stats.min_latency)
+                stats.min_latency = latency;
+            if (latency > stats.max_latency)
+                stats.max_latency = latency;
+        }
     }
 
     return 0;
@@ -353,11 +362,12 @@ getConfiguration(
         stats.min_latency = INIT_MIN_LATENCY;
         stats.last_downtime = 0.;
 
-        clss.to = TS_ENDT;
-        clss.psa.psa_len = 1;
-        clss.psa.psa_val = &spec;
-        spec.feedtype = ANY;
-        spec.pattern = ".*";
+        offer.from = TS_ZERO;
+        offer.to = TS_ENDT;
+        offer.psa.psa_len = 1;
+        offer.psa.psa_val = &offerProdSpec;
+        offerProdSpec.feedtype = ANY;
+        offerProdSpec.pattern = ".*";
 
         /* If called as something other than "pqsend", use it as the remote */
         if(strcmp(progname, "pqsend") != 0)
@@ -373,7 +383,7 @@ getConfiguration(
                 break;
             }
             case 'f':
-                fterr = strfeedtypet(optarg, &spec.feedtype) ;
+                fterr = strfeedtypet(optarg, &offerProdSpec.feedtype) ;
                 if (fterr != FEEDTYPE_OK) {
                     (void) fprintf(stderr, "Bad feedtype \"%s\", %s\n",
                             optarg, strfeederr(fterr)) ;
@@ -404,7 +414,7 @@ getConfiguration(
                 timeOffset.tv_usec = 0;
                 break;
             case 'p':
-                spec.pattern = optarg;
+                offerProdSpec.pattern = optarg;
                 /* compiled below */
                 break;
             case 'q':
@@ -461,28 +471,29 @@ getConfiguration(
                     }
                     else {
                         if (tvIsNone(timeOffset)) {
-                            clss.from = TS_ZERO;
+                            offer.from = TS_ZERO;
                         }
                         else {
                             timestampt  now;
 
                             (void)set_timestamp(&now);
-                            clss.from = diff_timestamp(&now, &timeOffset);
+                            offer.from = diff_timestamp(&now, &timeOffset);
                         }
                     }
 
                     (void) setulogmask(logmask);
 
-                    if (re_isPathological(spec.pattern)) {
+                    if (re_isPathological(offerProdSpec.pattern)) {
                         fprintf(stderr, "Adjusting pathological "
-                                "regular-expression: \"%s\"\n", spec.pattern);
-                        (void)re_vetSpec(spec.pattern);
+                                "regular-expression: \"%s\"\n",
+                                offerProdSpec.pattern);
+                        (void)re_vetSpec(offerProdSpec.pattern);
                     }
-                    status = regcomp(&spec.rgx, spec.pattern,
+                    status = regcomp(&offerProdSpec.rgx, offerProdSpec.pattern,
                             REG_EXTENDED|REG_NOSUB);
                     if (status != 0) {
                         fprintf(stderr, "Bad regular expression \"%s\"\n",
-                                spec.pattern);
+                                offerProdSpec.pattern);
                         status = INVOCATION_ERROR;
                     }
                 }
@@ -514,7 +525,6 @@ executeConnection(void)
     CLIENT*             clnt = NULL;
     ErrorObj*           error;
     timestampt          now;
-    prod_class*         clssp = &clss;
 
     if (stats_req) {
         dump_stats(&stats);
@@ -525,7 +535,7 @@ executeConnection(void)
 
     /* Offer what we can */
     if (coupledTimes)
-        clss.from = diff_timestamp(&now, &timeOffset);
+        offer.from = diff_timestamp(&now, &timeOffset);
 
     /* Connect to the LDM. */
     exitIfDone(INTERRUPTED);
@@ -549,8 +559,17 @@ executeConnection(void)
         update_last_downtime(&now);
         stats.downtime += stats.last_downtime;
 
+        /* Check totalTimeo */
+        if (coupledTimes) {
+            if (d_diff_timestamp(&now, &offer.from) > totalTimeo) {
+                offer.from = now;
+                offer.from.tv_sec -= totalTimeo;
+            }
+            pq_cset(pq, &offer.from);
+        }
+
         exitIfDone(INTERRUPTED);
-        status = lp_hiya(ldmProxy, &clssp);
+        status = lp_hiya(ldmProxy, &offer, &want);
 
         if (0 != status) {
             if (LP_TIMEDOUT == status) {
@@ -561,19 +580,10 @@ executeConnection(void)
             }
         }
         else {
-            /* Check totalTimeo */
-            if (coupledTimes) {
-                if (d_diff_timestamp(&now, &clssp->from) > totalTimeo) {
-                    clssp->from = now;
-                    clssp->from.tv_sec -= totalTimeo;
-                }
-                pq_cset(pq, &clssp->from);
-            }
-
             /* Loop over data-products to be sent. */
             for (;;) {
                 exitIfDone(INTERRUPTED);
-                status = pq_sequence(pq, TV_GT, clssp, mySend, ldmProxy);
+                status = pq_sequence(pq, TV_GT, &offer, mySend, NULL);
 
                 if (0 != sendStatus) {
                     /* mySend() encountered a problem */
@@ -696,7 +706,7 @@ execute(void)
             }
             else {
                 if (!coupledTimes)
-                    pq_cset(pq, &clss.from);
+                    pq_cset(pq, &offer.from);
 
                 /*
                  * Loop over connection attempts.
