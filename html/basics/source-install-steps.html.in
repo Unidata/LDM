@@ -41,8 +41,8 @@ Then, do the following:
 </pre>
 
 <p>
-NOTE: If you don't have the <tt>pax(1)</tt> utility, then use this command,
-instead:
+<b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then use this
+command, instead:
 
 <pre>
     $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
@@ -112,17 +112,18 @@ gunzip -c $HOME/@PACKAGE@-@VERSION@.tar.gz | pax -r         # unpack the distrib
 mv @PACKAGE@-@VERSION@ src                                  # rename the source directory
 </pre></blockquote>
 
+<b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then use this
+command, instead:
+
+<pre>
+    $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
+    cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
+</pre>
+
 <p>The reason for creating the additional <code>src/</code> subdirectory is
 to allow for reversible upgrading of the LDM.  The section on
 <a href="activating.html">activating the LDM installation</a>
 has additional information.
-
-<p>If you don't care about having the ability to revert to a previous LDM
-installation, then you can simply do this:
-<blockquote><pre>
-cd                                                  # go to the LDM user's home-directory
-gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
-</pre></blockquote>
 
 <li>
 <a NAME="build"></a>
