@@ -1,3 +1,7 @@
+6.9.0.6
+        Corrected ldmadmin(1) script: corrected logic surrounding queue
+        pathnames in the registry and the command-line "-q" option.
+
 6.9.0.5 2010-11-16
         Improved pqsend(1) and ldmsend(1). If the LDM replied to the HIYA with
         a RECLASS response, then the offered product-class specification was

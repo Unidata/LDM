@@ -68,8 +68,7 @@ if (resetRegistry()) {
 # Get some registry parameters
 @regpar = (
     [\$ldmd_conf, "regpath{LDMD_CONFIG_PATH}"],
-    [\$q_path, "regpath{QUEUE_PATH}"],
-    [\$q_path, "regpath{QUEUE_PATH}"],
+    [\$pq_path, "regpath{QUEUE_PATH}"],
     [\$hostname, "regpath{HOSTNAME}"],
     [\$insertion_check_period, "regpath{INSERTION_CHECK_INTERVAL}"],
     [\$pq_size, "regpath{QUEUE_SIZE}"],
@@ -150,6 +149,9 @@ chdir $ldmhome;
 # process the command request
 #
 if ($command eq "start") {	# start the ldm
+    if ($q_path) {
+        $pq_path = $q_path;
+    }
     if (0 == ($status = make_lockfile())) {
         $status = start_ldm();
         rm_lockfile();
@@ -162,6 +164,9 @@ elsif ($command eq "stop") {	# stop the ldm
     }
 }
 elsif ($command eq "restart") {	# restart the ldm
+    if ($q_path) {
+        $pq_path = $q_path;
+    }
     if (0 == ($status = make_lockfile())) {
         $status = stop_ldm();
         if (!$status) {
@@ -171,12 +176,18 @@ elsif ($command eq "restart") {	# restart the ldm
     }
 }
 elsif ($command eq "mkqueue") {	# create a product queue using pqcreate(1)
+    if ($q_path) {
+        $pq_path = $q_path;
+    }
     if (0 == ($status = make_lockfile())) {
         $status = make_pq();
         rm_lockfile();
     }
 }
 elsif ($command eq "delqueue") { # delete a product queue
+    if ($q_path) {
+        $pq_path = $q_path;
+    }
     if (0 == ($status = make_lockfile())) {
         $status = delete_pq();
         if ($status == 0 && $delete_info_files) {
@@ -186,12 +197,18 @@ elsif ($command eq "delqueue") { # delete a product queue
     }
 }
 elsif ($command eq "mksurfqueue") { # create a product queue for pqsurf(1)
+    if ($q_path) {
+        $surf_path = $q_path;
+    }
     if (0 == ($status = make_lockfile())) {
         $status = make_surf_pq();
         rm_lockfile();
     }
 }
 elsif ($command eq "delsurfqueue") { # delete a pqsurf product queue
+    if ($q_path) {
+        $surf_path = $q_path;
+    }
     if (0 == ($status = make_lockfile())) {
         $status = del_surf_pq();
         rm_lockfile();
@@ -231,7 +248,7 @@ elsif ($command eq "watch") {	# monitor incoming products
         $status = 1;
     }
     else {
-        system("pqutil -r -f \"$feedset\" -w $q_path");
+        system("pqutil -r -f \"$feedset\" -w $pq_path");
         $status = $?;
     }
 }
@@ -394,7 +411,7 @@ sub print_usage
     print "\n\t\t\t  Default: $numlogs";
     print "\n\t-o offset\tUnconditional data-request temporal-offset";
     print "\n\t-q q_path\tSpecify a product queue path";
-    print "\n\t\t\t  LDM Default: $q_path";
+    print "\n\t\t\t  LDM Default: $pq_path";
     print "\n\t\t\t  pqsurf Default: $surf_path";
     print "\n\t-v\t\tTurn on verbose mode";
     print "\n\t-x\t\tTurn on debug mode (includes verbose mode)";
@@ -487,7 +504,7 @@ sub make_pq
             $cmd_line .= " -c" if ($pq_clobber);
             $cmd_line .= " -f" if ($pq_fast);
             $cmd_line .= " -S $pq_slots" if ($pq_slots ne "default");
-            $cmd_line .= " -q $q_path -s $pq_size";
+            $cmd_line .= " -q $pq_path -s $pq_size";
 
             # execute pqcreate(1)
             if (system("$cmd_line")) {
@@ -516,11 +533,11 @@ sub delete_pq
     }
     else {
         # Delete the queue
-        if (! -e $q_path) {
-            errmsg("delete_pq(): Product-queue \"$q_path\" doesn't exist");
+        if (! -e $pq_path) {
+            errmsg("delete_pq(): Product-queue \"$pq_path\" doesn't exist");
         }
         else {
-            unlink($q_path);
+            unlink($pq_path);
             $status = 0;
         }
     }
@@ -546,11 +563,6 @@ sub make_surf_pq
                 "mkqueue aborted");
         }
         else {
-            # set path if necessary
-            if ($q_path) {
-                $surf_path = $q_path;
-            }
-
             # need the number of slots to create
             $surf_slots = $surf_size / 1000000 * 6881;
 
@@ -600,11 +612,6 @@ sub del_surf_pq
         errmsg("del_surf_pq: A server is running, cannot delete the queue");
     }
     else {
-        # check for the queue path
-        if ($q_path) {
-            $surf_path = $q_path;
-        }
-
         # delete the queue
         if (! -e $surf_path) {
             errmsg("del_surf_pq(): $surf_path does not exist");
@@ -628,7 +635,7 @@ sub start
 
     # Build the command line
     $cmd_line = "ldmd -I $ip_addr -P $port -M $max_clients -m $max_latency ".
-        "-o $offset -q $q_path";
+        "-o $offset -q $pq_path";
 
     if ($debug) {
         $cmd_line .= " -x";
@@ -827,7 +834,7 @@ sub ldm_config
     print  "LDM conf file:         $ldmd_conf\n";
     print  "pqact(1) conf file:    $pqact_conf\n";
     print  "scour(1) conf file:    $scour_file\n";
-    print  "product queue:         $q_path\n";
+    print  "product queue:         $pq_path\n";
     print  "queue size:            $pq_size bytes\n";
     print  "queue slots:           $pq_slots\n";
     print  "reconcilliation mode:  $reconMode\n";
@@ -893,7 +900,7 @@ sub isRunning
 sub check_insertion
 {
     my $status = 1;                     # default failure
-    chomp(my($line) = `pqmon -S -q $q_path`);
+    chomp(my($line) = `pqmon -S -q $pq_path`);
 
     if ($?) {
         errmsg("check_insertion(): pqmon(1) failure");
@@ -1025,7 +1032,7 @@ sub vetQueueSize
     my $decreaseMaxLatency = "decrease maximum latency";
     my $doNothing = "do nothing";
     my $status = 1;                     # failure default
-    chomp(my $line = `pqmon -S -q $q_path`);
+    chomp(my $line = `pqmon -S -q $pq_path`);
 
     if ($?) {
         errmsg("vetQueueSize(): pqmon(1) failure");
@@ -1063,7 +1070,7 @@ sub vetQueueSize
                 my $ratio = $offset/$minVirtResTime + 0.1;
                 my $newByteCount = int($ratio*$params[3]);
                 my $newSlotCount = int($ratio*$params[6]);
-                my $newQueuePath = "$q_path.new";
+                my $newQueuePath = "$pq_path.new";
 
                 print "Creating new queue of $newByteCount ".
                     "bytes and $newSlotCount slots...\n";
@@ -1083,7 +1090,7 @@ sub vetQueueSize
                         }
                     }
                     if (0 == $status) {
-                        if (0 == ($status = grow($q_path, $newQueuePath))) {
+                        if (0 == ($status = grow($pq_path, $newQueuePath))) {
                             print "Saving new queue parameters...\n";
                             $status =
                                 saveQueuePar($newByteCount, $newSlotCount);
@@ -1382,7 +1389,7 @@ sub ldmadmin_pqactHUP
 sub isProductQueueOk
 {
     my $isOk = 0;
-    my($status) = system("pqcheck -q $q_path 2>/dev/null") >> 8;
+    my($status) = system("pqcheck -q $pq_path 2>/dev/null") >> 8;
 
     if( 0 == $status ) {
 	print "The product-queue is OK.\n";
@@ -1397,7 +1404,7 @@ sub isProductQueueOk
 	errmsg(
 	    "The product-queue doesn't have a writer-counter.  Using " .
 	    "\"pqcheck -F\" to create one...");
-	system("pqcheck -F -q $q_path");
+	system("pqcheck -F -q $pq_path");
 	if ($?) {
 	    errmsg("Couldn't add writer-counter to product-queue.");
 	}
@@ -1410,7 +1417,7 @@ sub isProductQueueOk
 	    "The writer-counter of the product-queue isn't zero.  Either " .
 	    "a process has the product-queue open for writing or the queue " .
 	    "might be corrupt.  Terminate the process and recheck or use\n" .
-	    "    pqcat -l- -s -q $q_path && pqcheck -F -q $q_path\n" .
+	    "    pqcat -l- -s -q $pq_path && pqcheck -F -q $pq_path\n" .
 	    "to validate the queue and set the writer-counter to zero.");
     }
     else {
@@ -1557,7 +1564,7 @@ sub getPq
     my($age) = -1;
     my($prodCount) = -1;
     my($byteCount) = -1;
-    open(FH, "pqmon -l- -q $q_path 2>&1 |") or die "Can't fork() pqmon(1): $!";
+    open(FH, "pqmon -l- -q $pq_path 2>&1 |") or die "Can't fork() pqmon(1): $!";
     while (<FH>) {
 	my(@fields) = split(/\s+/);
 	if ($#fields == 13) {
