@@ -1,4 +1,4 @@
-6.9.0.6
+6.9.0.6 2010-11-17
         Corrected ldmadmin(1) script: corrected logic surrounding queue
         pathnames in the registry and the use of the command-line "-q" option
         (the "mksurfqueue" command was using the product-queue pathname).
