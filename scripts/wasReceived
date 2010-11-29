@@ -1,0 +1,23 @@
+# Indicates whether or not data-products that match a given selection
+# criteria have been received.
+#
+# Usage: wasReceived [-f feedset] [-o offset] [-p pattern]
+#
+# Exits:
+#       0       Data-products matching the given criteria have been received
+#       1       Data-products matching the given criteria have not been received
+
+feedset=ANY
+offset=3600
+pattern=".*"
+
+while getopts f:o:p: opt; do
+    case $opt in
+        f)  feedset="$OPTARG";;
+        o)  offset="$OPTARG";;
+        p)  pattern="$OPTARG";;
+    esac
+done
+
+pqcat -l- -f "$feedset" -o "$offset" -p "$pattern" 2>&1 >/dev/null |
+    awk '/Number/ {exit ($NF > 0) ? 0 : 1}'

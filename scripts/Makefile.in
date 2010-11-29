@@ -240,7 +240,8 @@ dist_bin_SCRIPTS = \
     ldmcheck \
     ldmadmin \
     ldmfail \
-    plotMetrics
+    plotMetrics \
+    wasReceived
 
 dist_man1_MANS = ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1
 CLEANFILES = ldmadmin
