@@ -558,25 +558,33 @@ int main(
                     /*
                      * Must be some kind of "put".
                      */
-                    switch (usage) {
-                    case PUT_UINT:
-                        status = reg_putUint(argv[optind], uint);
-                        break;
-                    case PUT_STRING:
-                        status = reg_putString(argv[optind], string);
-                        break;
-                    case PUT_TIME:
-                        status = reg_putTime(argv[optind], &timestamp);
-                        break;
-                    case PUT_SIGNATURE:
-                        status = reg_putSignature(argv[optind], signature);
-                        break;
-                    default:
-                        abort();
-                    }
-                    if (status) {
+                    if (0 == argCount) {
+                        LOG_START0("Put action requires value pathname");
                         log_log(LOG_ERR);
-                        status = SYSTEM_ERROR;
+                        printUsage(progname);
+                        status = COMMAND_SYNTAX;
+                    }
+                    else {
+                        switch (usage) {
+                        case PUT_UINT:
+                            status = reg_putUint(argv[optind], uint);
+                            break;
+                        case PUT_STRING:
+                            status = reg_putString(argv[optind], string);
+                            break;
+                        case PUT_TIME:
+                            status = reg_putTime(argv[optind], &timestamp);
+                            break;
+                        case PUT_SIGNATURE:
+                            status = reg_putSignature(argv[optind], signature);
+                            break;
+                        default:
+                            abort();
+                        }
+                        if (status) {
+                            log_log(LOG_ERR);
+                            status = SYSTEM_ERROR;
+                        }
                     }
                 }                       /* put switch */
             }                           /* "usage" switch */

@@ -106,31 +106,6 @@ for my $entryRef (@regpar) {
 }
 @time_servers = split(/\s+/, $time_servers);
 
-while ($_ = $ARGV[0]) {
-    shift;
-    /^([a-z]|[A-Z]|\/)/ && ($ldmd_conf = $_);
-    /^-b/ && ($begin = shift);
-    /^-e/ && ($end = shift);
-    /^-q/ && ($q_path = shift);
-    /^-s/ && ($q_size = shift);
-    if (/^-C/) {
-	$configurationFilePath = shift;
-	require $configurationFilePath;
-    }
-    /^-c/ && $pq_clobber++;
-    /^-f/ && $pq_fast++;
-    /^-v/ && $verbose++;
-    /^-x/ && ($debug++, $verbose++);
-    /^-M/ && ($max_clients = shift);
-    /^-m/ && ($max_latency = shift);
-    /^-n/ && ($numlogs = shift);
-    /^-o/ && ($offset = shift);
-    /^-P/ && ($port = shift);
-    /^-l/ && ($log_file = shift);
-    /^-f/ && ($feedset = shift);
-    /^-p/ && ($pqact_conf = shift, $pqact_conf_option = 1);
-}
-
 # Check the hostname for a fully-qualified version.
 #
 if ($hostname !~ /\./) {
@@ -149,6 +124,16 @@ chdir $ldmhome;
 # process the command request
 #
 if ($command eq "start") {	# start the ldm
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^([a-z]|[A-Z]|\/)/ && ($ldmd_conf = $_);
+        /^-q/ && ($q_path = shift);
+        /^-v/ && $verbose++;
+        /^-x/ && ($debug++, $verbose++);
+        /^-M/ && ($max_clients = shift);
+        /^-m/ && ($max_latency = shift);
+        /^-o/ && ($offset = shift);
+    }
     if ($q_path) {
         $pq_path = $q_path;
     }
@@ -164,6 +149,16 @@ elsif ($command eq "stop") {	# stop the ldm
     }
 }
 elsif ($command eq "restart") {	# restart the ldm
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^([a-z]|[A-Z]|\/)/ && ($ldmd_conf = $_);
+        /^-q/ && ($q_path = shift);
+        /^-v/ && $verbose++;
+        /^-x/ && ($debug++, $verbose++);
+        /^-M/ && ($max_clients = shift);
+        /^-m/ && ($max_latency = shift);
+        /^-o/ && ($offset = shift);
+    }
     if ($q_path) {
         $pq_path = $q_path;
     }
@@ -176,6 +171,14 @@ elsif ($command eq "restart") {	# restart the ldm
     }
 }
 elsif ($command eq "mkqueue") {	# create a product queue using pqcreate(1)
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^-q/ && ($q_path = shift);
+        /^-c/ && $pq_clobber++;
+        /^-f/ && $pq_fast++;
+        /^-v/ && $verbose++;
+        /^-x/ && ($debug++, $verbose++);
+    }
     if ($q_path) {
         $pq_path = $q_path;
     }
@@ -185,6 +188,10 @@ elsif ($command eq "mkqueue") {	# create a product queue using pqcreate(1)
     }
 }
 elsif ($command eq "delqueue") { # delete a product queue
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^-q/ && ($q_path = shift);
+    }
     if ($q_path) {
         $pq_path = $q_path;
     }
@@ -197,6 +204,14 @@ elsif ($command eq "delqueue") { # delete a product queue
     }
 }
 elsif ($command eq "mksurfqueue") { # create a product queue for pqsurf(1)
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^-q/ && ($q_path = shift);
+        /^-c/ && $pq_clobber++;
+        /^-f/ && $pq_fast++;
+        /^-v/ && $verbose++;
+        /^-x/ && ($debug++, $verbose++);
+    }
     if ($q_path) {
         $surf_path = $q_path;
     }
@@ -206,6 +221,10 @@ elsif ($command eq "mksurfqueue") { # create a product queue for pqsurf(1)
     }
 }
 elsif ($command eq "delsurfqueue") { # delete a pqsurf product queue
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^-q/ && ($q_path = shift);
+    }
     if ($q_path) {
         $surf_path = $q_path;
     }
@@ -215,6 +234,11 @@ elsif ($command eq "delsurfqueue") { # delete a pqsurf product queue
     }
 }
 elsif ($command eq "newlog") {	# rotate the log files
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^-n/ && ($numlogs = shift);
+        /^-l/ && ($log_file = shift);
+    }
     if (0 == ($status = make_lockfile())) {
         $status = new_log();
         rm_lockfile();
@@ -243,6 +267,10 @@ elsif ($command eq "check") {	# check the LDM system
     }
 }
 elsif ($command eq "watch") {	# monitor incoming products
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^-f/ && ($feedset = shift);
+    }
     if (!isRunning($pid_file, $ip_addr)) {
 	errmsg("There is no LDM server running");
         $status = 1;
@@ -253,6 +281,11 @@ elsif ($command eq "watch") {	# monitor incoming products
     }
 }
 elsif ($command eq "pqactcheck") {	# check pqact file for errors
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^([a-z]|[A-Z]|\/)/ && ($ldmd_conf = $_);
+        /^-p/ && ($pqact_conf = shift, $pqact_conf_option = 1);
+    }
     $status = !are_pqact_confs_ok();
 }
 elsif ($command eq "pqactHUP") {	# HUP pqact 
@@ -313,6 +346,11 @@ elsif ($command eq "addmetrics") {
     $status = system("ldmadmin printmetrics >>$metrics_file");
 }
 elsif ($command eq "plotmetrics") {
+    while ($_ = $ARGV[0]) {
+        shift;
+        /^-b/ && ($begin = shift);
+        /^-e/ && ($end = shift);
+    }
     $status = plotMetrics();
 }
 elsif ($command eq "newmetrics") {
@@ -358,67 +396,64 @@ sub get_date
 
 sub print_usage
 {
-    print "Usage: $progname command [options] [conf_file]";
-    print "\n\ncommands:";
-    print "\n\tstart [-v] [-x] [-m maxLatency] [-o offset] [-q q_path] [-M max_clients]\n" .
-	"\t\t\t\t\t\tStart the LDM";
-    print "\n\tstop\t\t\t\t\tStop the LDM";
-    print "\n\trestart [-v] [-x] [-m maxLatency] [-o offset] [-q q_path] [-M max_clients]\n" .
-	"\t\t\t\t\t\tRestart a running LDM";
-    print "\n\tmkqueue [-v] [-x] [-c] [-f] [-q q_path]\n" .
-	"\t\t\t\t\t\tCreate a product queue";
-    print "\n\tdelqueue [-q q_path]\t\t\tDelete a product queue";
-    print "\n\tmksurfqueue [-v] [-x] [-c] [-f] [-q q_path]\n" .
-	"\t\t\t\t\t\tCreate a product queue for \n" .
-	"\t\t\t\t\t\t  pqsurf";
-    print "\n\tdelsurfqueue [-q q_path]\t\tDelete a pqsurf product queue";
-    print "\n\tnewlog [-n numlogs] [-l logfile]\tRotate a log file";
-    print "\n\tscour\t\t\t\t\tScour data directories";
-    print "\n\tisrunning\t\t\t\tExit status 0 if LDM is running,";
-    print "\n\t\t\t\t\t\t  else exit 1";
-    print "\n\tcheckinsertion\t\t\t\tCheck for recent insertion of";
-    print "\n\t\t\t\t\t\tdata-product into product-queue";
-    print "\n\tvetqueuesize\t\t\t\tVet the size of the queue";
-    print "\n\tpqactcheck [-p pqact_conf]\t\tCheck syntax for pqact files";
-    print "\n\tpqactHUP\t\t\t\tSend HUP signal to pqact program";
-    print "\n\tqueuecheck\t\t\t\tCheck for queue corruption";
-    print "\n\twatch [-f feedpat]\t\t\tMonitor incoming products";
-    print "\n\tconfig\t\t\t\t\tPrint LDM configuration";
-    print "\n\tlog\t\t\t\t\tPage through the LDM log file";
-    print "\n\ttail\t\t\t\t\tMonitor the LDM log file";
-    print "\n\tchecktime\t\t\t\tChecks the system clock";
-    print "\n\tclean\t\t\t\t\tCleans up after an abnormal termination";
-    print "\n\tprintmetrics\t\t\t\tPrints LDM metrics";
-    print "\n\taddmetrics\t\t\t\tAccumulates LDM metrics";
-    print "\n\tplotmetrics [-b begin] [-e end]\t\tPlots LDM metrics";
-    print "\n\tnewmetrics\t\t\t\tRotates the metrics files";
-    print "\n\tusage\t\t\t\t\tThis message\n";
-    print "\n\noptions:";
-    print "\n\t-b begin\tBegin time as YYYYMMDD[.hh[mm[ss]]]";
-    print "\n\t-C path\t\tConfiguration-file for this utility";
-    print "\n\t\t\t  Default: $configurationFilePath";
-    print "\n\t-c\t\tClobber an exisiting product queue";
-    print "\n\t-e end\t\tEnd time as YYYYMMDD[.hh[mm[ss]]]";
-    print "\n\t-f feedset\tFeed set to use with command";
-    print "\n\t\t\t  Default: $feedset";
-    print "\n\t\t\t  If more than one word, enclose string in double quotes";
-    print "\n\t\t\t  Default is user name, tty, login time";
-    print "\n\t-l logfile\tName of logfile";
-    print "\n\t\t\t  Default: $log_file";
-    print "\n\t-m maxLatency\tConditional data-request temporal-offset";
-    print "\n\t-M max_clients\tMaximum number of active clients";
-    print "\n\t-n numlogs\tNumber of logs to rotate";
-    print "\n\t\t\t  Default: $numlogs";
-    print "\n\t-o offset\tUnconditional data-request temporal-offset";
-    print "\n\t-q q_path\tSpecify a product queue path";
-    print "\n\t\t\t  LDM Default: $pq_path";
-    print "\n\t\t\t  pqsurf Default: $surf_path";
-    print "\n\t-v\t\tTurn on verbose mode";
-    print "\n\t-x\t\tTurn on debug mode (includes verbose mode)";
-    print "\n\nconf_file:";
-    print "\n\twhich LDM configuration-file file to use";
-    print "\n\t    Default: $ldmd_conf";
-    print "\n";
+    print "\
+Usage: $progname command [arg ...]
+
+commands:
+    start [-v] [-x] [-m maxLatency] [-o offset] [-q q_path] [-M max_clients]
+        [conf_file]                          Starts the LDM
+    stop                                     Stops the LDM
+    restart [-v] [-x] [-m maxLatency] [-o offset] [-q q_path] [-M max_clients]
+        [conf_file]                          Restarts a running LDM
+    mkqueue [-v] [-x] [-c] [-f] [-q q_path]  Creates a product-queue
+    delqueue [-q q_path]                     Deletes a product-queue
+    mksurfqueue [-v] [-x] [-c] [-f] [-q q_path]
+                                             Creates a product-queue for
+                                                 pqsurf(1)
+    delsurfqueue [-q q_path ]                Deletes a pqsurf(1) product-queue
+    newlog [-n numlogs] [-l logfile]         Rotates a log file
+    scour                                    Scours data directories
+    isrunning                                Exits status 0 if LDM is running
+                                                 else exit 1
+    checkinsertion                           Checks for recent insertion of
+                                                 data-product into product-queue
+    vetqueuesize                             Vets the size of the product-queue
+    pqactcheck [-p pqact_conf] [conf_file]   Checks syntax of pqact(1) files
+    pqactHUP                                 Sends HUP signal to pqact(1)
+                                                 program
+    queuecheck                               Checks for product-queue corruption
+    watch [-f feedset]                       Monitors incoming products
+    config                                   Prints LDM configuration
+    log                                      Pages through the LDM log file
+    tail                                     Monitors the LDM log file
+    checktime                                Checks the system clock
+    clean                                    Cleans up after an abnormal
+                                                 termination
+    printmetrics                             Prints LDM metrics
+    addmetrics                               Accumulates LDM metrics
+    plotmetrics [-b begin] [-e end]          Plots LDM metrics
+    newmetrics                               Rotates the metrics files
+    usage                                    Prints this message
+
+options:
+    -b begin        Begin time as YYYYMMDD[.hh[mm[ss]]]
+    -c              Clobber an exisiting product-queue
+    -e end          End time as YYYYMMDD[.hh[mm[ss]]]
+    -f              Create queue \"fast\"
+    -f feedset      Feed-set to use with command. Default: $feedset
+    -l logfile      Pathname of logfile. Default: $log_file
+    -m maxLatency   Conditional data-request temporal-offset
+    -M max_clients  Maximum number of active clients
+    -n numlogs      Number of logs to rotate. Default: $numlogs
+    -o offset       Unconditional data-request temporal-offset
+    -q q_path       Specify a product-queue path. LDM Default: $pq_path,
+                    pqsurf(1) default: $surf_path
+    -v              Turn on verbose mode
+    -x              Turn on debug mode (includes verbose mode)
+
+conf_file:
+    Which LDM configuration-file file to use. Default: $ldmd_conf
+";
 }
 
 # Resets the LDM registry.
@@ -830,7 +865,6 @@ sub ldm_config
     print  "ldmhome:               $ldmhome\n";
     print  "LDM version:           @VERSION@\n";
     print  "PATH:                  $ENV{'PATH'}\n";
-    print  "log file:              $log_file\n";
     print  "LDM conf file:         $ldmd_conf\n";
     print  "pqact(1) conf file:    $pqact_conf\n";
     print  "scour(1) conf file:    $scour_file\n";
