@@ -1,4 +1,7 @@
-6.9.0.7
+6.9.0.8
+        Modified wording of password requests.
+
+6.9.0.7 2010-11-29
         Improved ldmadmin(1):
             Made decoding of invocation-arguments command-specific so that
             the "-f" option could be used in both the "mkqueue" and "watch"
