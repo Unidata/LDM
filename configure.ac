@@ -109,14 +109,14 @@ AM_COND_IF([INCLUDE_ROOT_ACTIONS],
 	    ls -l conftest | grep -i rws >/dev/null; then \
 	AC_CACHE_CHECK([for su(1) that you can use], [ac_cv_path_SU],
 	    [AC_PATH_PROGS_FEATURE_CHECK([SU], [su],
-		[echo "Enter root's password." >/dev/tty
+		[echo "Enter root's password (or don't)." >/dev/tty
 		$ac_path_SU -c true </dev/tty >/dev/tty &&
                     ac_cv_path_SU=$ac_path_SU],
 		[AC_MSG_RESULT([not found])
 		AC_CACHE_CHECK([for sudo(1) that you can use],
                     [ac_cv_path_SUDO],
 		    [AC_PATH_PROGS_FEATURE_CHECK([SUDO], [sudo],
-			[echo "Enter your password." >/dev/tty
+			[echo "Enter your password (or don't)." >/dev/tty
 			$ac_path_SUDO true >/dev/tty 2>&1 </dev/tty \
 			&& ac_cv_path_SUDO=$ac_path_SUDO],
 			[AC_MSG_RESULT([not found])])])])])

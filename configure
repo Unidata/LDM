@@ -2817,7 +2817,7 @@ do
     for ac_exec_ext in '' $ac_executable_extensions; do
       ac_path_SU="$as_dir/$ac_prog$ac_exec_ext"
       { test -f "$ac_path_SU" && $as_test_x "$ac_path_SU"; } || continue
-echo "Enter root's password." >/dev/tty
+echo "Enter root's password (or don't)." >/dev/tty
 		$ac_path_SU -c true </dev/tty >/dev/tty &&
                     ac_cv_path_SU=$ac_path_SU
       $ac_path_SU_found && break 3
@@ -2845,7 +2845,7 @@ do
     for ac_exec_ext in '' $ac_executable_extensions; do
       ac_path_SUDO="$as_dir/$ac_prog$ac_exec_ext"
       { test -f "$ac_path_SUDO" && $as_test_x "$ac_path_SUDO"; } || continue
-echo "Enter your password." >/dev/tty
+echo "Enter your password (or don't)." >/dev/tty
 			$ac_path_SUDO true >/dev/tty 2>&1 </dev/tty \
 			&& ac_cv_path_SUDO=$ac_path_SUDO
       $ac_path_SUDO_found && break 3

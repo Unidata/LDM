@@ -925,7 +925,7 @@ install-data-hook:	ensure-ldmhome-links ensure-var
 @INCLUDE_ROOT_ACTIONS_TRUE@	@echo "\
 @INCLUDE_ROOT_ACTIONS_TRUE@The next step will perform those installation actions that must be \
 @INCLUDE_ROOT_ACTIONS_TRUE@executed by the superuser.  \
-@INCLUDE_ROOT_ACTIONS_TRUE@If this step doesn't work (for example, if you don't know \
+@INCLUDE_ROOT_ACTIONS_TRUE@If this step doesn't work (for example, if you don't enter \
 @INCLUDE_ROOT_ACTIONS_TRUE@root's password), then the superuser will have to manually execute \
 @INCLUDE_ROOT_ACTIONS_TRUE@the command \"$(MAKE) root-actions\"." \
 @INCLUDE_ROOT_ACTIONS_TRUE@	| fmt >/dev/tty

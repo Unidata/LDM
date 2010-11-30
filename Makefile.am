@@ -111,7 +111,7 @@ if INCLUDE_ROOT_ACTIONS
 	@echo "\
 The next step will perform those installation actions that must be \
 executed by the superuser.  \
-If this step doesn't work (for example, if you don't know \
+If this step doesn't work (for example, if you don't enter \
 root's password), then the superuser will have to manually execute \
 the command \"$(MAKE) root-actions\"." \
 	| fmt >/dev/tty
