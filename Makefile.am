@@ -91,6 +91,8 @@ libldm_la_LIBADD	= \
     protocol/lib.la \
     $(PQ_SUBDIR)/lib.la
 
+include_HEADERS		= config.h
+
 EXTRA_DIST = \
     CHANGE_LOG \
     COPYRIGHT \

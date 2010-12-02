@@ -1,6 +1,8 @@
 6.9.0.8
         Modified wording of password requests.
 
+        Added "config.h" to installed headers.
+
 6.9.0.7 2010-11-29
         Improved ldmadmin(1):
             Made decoding of invocation-arguments command-specific so that
