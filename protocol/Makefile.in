@@ -57,15 +57,18 @@ CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 lib_la_LIBADD =
 am_lib_la_OBJECTS = lib_la-abbr.lo lib_la-acl.lo lib_la-atofeedt.lo \
-	lib_la-autoshift.lo lib_la-down6.lo lib_la-DownHelp.lo \
+	lib_la-autoshift.lo lib_la-child_process_set.lo \
+	lib_la-down6.lo lib_la-DownHelp.lo lib_la-forn5_svc.lo \
 	lib_la-globals.lo lib_la-h_clnt.lo lib_la-ldm4_svc.lo \
-	lib_la-ldm5_svc.lo lib_la-ldm_xdr.lo lib_la-ldm_xlen.lo \
-	lib_la-ldm5_clnt.lo lib_la-ldm6_clnt.lo lib_la-ldmfork.lo \
-	lib_la-ldmprint.lo lib_la-LdmProxy.lo lib_la-ldm_clnt.lo \
-	lib_la-md5c.lo lib_la-one_svc_run.lo lib_la-priv.lo \
-	lib_la-prod_info.lo lib_la-prod_class.lo lib_la-remote.lo \
-	lib_la-requester6.lo lib_la-savedInfo.lo lib_la-timer.lo \
-	lib_la-timestamp.lo lib_la-UpFilter.lo lib_la-xdr_data.lo
+	lib_la-ldm5_svc.lo lib_la-ldm6_svc.lo lib_la-ldm_xdr.lo \
+	lib_la-ldm_xlen.lo lib_la-ldm5_clnt.lo lib_la-ldm6_clnt.lo \
+	lib_la-ldm6_server.lo lib_la-ldmfork.lo lib_la-ldmprint.lo \
+	lib_la-LdmProxy.lo lib_la-ldm_clnt.lo lib_la-md5c.lo \
+	lib_la-one_svc_run.lo lib_la-priv.lo lib_la-prod_info.lo \
+	lib_la-prod_class.lo lib_la-remote.lo lib_la-requester6.lo \
+	lib_la-savedInfo.lo lib_la-svc5.lo lib_la-timer.lo \
+	lib_la-timestamp.lo lib_la-up6.lo lib_la-UpFilter.lo \
+	lib_la-xdr_data.lo
 lib_la_OBJECTS = $(am_lib_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -249,7 +252,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-BUILT_SOURCES = ../registry/registry.h
+BUILT_SOURCES = ../registry/registry.h ldm6_svc.c
 noinst_LTLIBRARIES = lib.la
 include_HEADERS = \
     abbr.h \
@@ -283,16 +286,20 @@ lib_la_SOURCES = \
     acl.c \
     atofeedt.c \
     autoshift.c \
+    child_process_set.c \
     down6.c \
     DownHelp.c \
+    forn5_svc.c \
     globals.c \
     h_clnt.c \
     ldm4_svc.c \
     ldm5_svc.c \
+    ldm6_svc.c \
     ldm_xdr.c \
     ldm_xlen.c \
     ldm5_clnt.c \
     ldm6_clnt.c \
+    ldm6_server.c \
     ldmfork.c \
     ldmprint.c \
     LdmProxy.c \
@@ -305,8 +312,10 @@ lib_la_SOURCES = \
     remote.c \
     requester6.c \
     savedInfo.c \
+    svc5.c \
     timer.c \
     timestamp.c \
+    up6.c \
     UpFilter.c \
     xdr_data.c
 
@@ -326,7 +335,9 @@ TAGS_FILES = \
     ../registry/*.c
 
 EXTRA_DIST = \
+    child_process_set.h \
     exitStatus.h \
+    forn5_svc.h \
     LdmProxy.h \
     globals.h \
     ldm.h \
@@ -336,7 +347,8 @@ EXTRA_DIST = \
     rsaglobal.h \
     prod_info.h \
     fix_clnt.pl \
-    timer.h
+    timer.h \
+    up6.h
 
 CLEANFILES = *.i
 all: $(BUILT_SOURCES)
@@ -399,13 +411,17 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-acl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-atofeedt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-autoshift.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-child_process_set.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-down6.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-forn5_svc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-globals.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-h_clnt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm4_svc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm5_clnt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm5_svc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm6_clnt.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm6_server.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm6_svc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm_clnt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm_xdr.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-ldm_xlen.Plo@am__quote@
@@ -419,8 +435,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-remote.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-requester6.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-savedInfo.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-svc5.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-timer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-timestamp.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-up6.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lib_la-xdr_data.Plo@am__quote@
 
 .c.o:
@@ -475,6 +493,13 @@ lib_la-autoshift.lo: autoshift.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-autoshift.lo `test -f 'autoshift.c' || echo '$(srcdir)/'`autoshift.c
 
+lib_la-child_process_set.lo: child_process_set.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-child_process_set.lo -MD -MP -MF $(DEPDIR)/lib_la-child_process_set.Tpo -c -o lib_la-child_process_set.lo `test -f 'child_process_set.c' || echo '$(srcdir)/'`child_process_set.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-child_process_set.Tpo $(DEPDIR)/lib_la-child_process_set.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='child_process_set.c' object='lib_la-child_process_set.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-child_process_set.lo `test -f 'child_process_set.c' || echo '$(srcdir)/'`child_process_set.c
+
 lib_la-down6.lo: down6.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-down6.lo -MD -MP -MF $(DEPDIR)/lib_la-down6.Tpo -c -o lib_la-down6.lo `test -f 'down6.c' || echo '$(srcdir)/'`down6.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-down6.Tpo $(DEPDIR)/lib_la-down6.Plo
@@ -488,6 +513,13 @@ lib_la-DownHelp.lo: DownHelp.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='DownHelp.c' object='lib_la-DownHelp.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-DownHelp.lo `test -f 'DownHelp.c' || echo '$(srcdir)/'`DownHelp.c
+
+lib_la-forn5_svc.lo: forn5_svc.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-forn5_svc.lo -MD -MP -MF $(DEPDIR)/lib_la-forn5_svc.Tpo -c -o lib_la-forn5_svc.lo `test -f 'forn5_svc.c' || echo '$(srcdir)/'`forn5_svc.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-forn5_svc.Tpo $(DEPDIR)/lib_la-forn5_svc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='forn5_svc.c' object='lib_la-forn5_svc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-forn5_svc.lo `test -f 'forn5_svc.c' || echo '$(srcdir)/'`forn5_svc.c
 
 lib_la-globals.lo: globals.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-globals.lo -MD -MP -MF $(DEPDIR)/lib_la-globals.Tpo -c -o lib_la-globals.lo `test -f 'globals.c' || echo '$(srcdir)/'`globals.c
@@ -517,6 +549,13 @@ lib_la-ldm5_svc.lo: ldm5_svc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-ldm5_svc.lo `test -f 'ldm5_svc.c' || echo '$(srcdir)/'`ldm5_svc.c
 
+lib_la-ldm6_svc.lo: ldm6_svc.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-ldm6_svc.lo -MD -MP -MF $(DEPDIR)/lib_la-ldm6_svc.Tpo -c -o lib_la-ldm6_svc.lo `test -f 'ldm6_svc.c' || echo '$(srcdir)/'`ldm6_svc.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-ldm6_svc.Tpo $(DEPDIR)/lib_la-ldm6_svc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ldm6_svc.c' object='lib_la-ldm6_svc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-ldm6_svc.lo `test -f 'ldm6_svc.c' || echo '$(srcdir)/'`ldm6_svc.c
+
 lib_la-ldm_xdr.lo: ldm_xdr.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-ldm_xdr.lo -MD -MP -MF $(DEPDIR)/lib_la-ldm_xdr.Tpo -c -o lib_la-ldm_xdr.lo `test -f 'ldm_xdr.c' || echo '$(srcdir)/'`ldm_xdr.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-ldm_xdr.Tpo $(DEPDIR)/lib_la-ldm_xdr.Plo
@@ -544,6 +583,13 @@ lib_la-ldm6_clnt.lo: ldm6_clnt.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ldm6_clnt.c' object='lib_la-ldm6_clnt.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-ldm6_clnt.lo `test -f 'ldm6_clnt.c' || echo '$(srcdir)/'`ldm6_clnt.c
+
+lib_la-ldm6_server.lo: ldm6_server.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-ldm6_server.lo -MD -MP -MF $(DEPDIR)/lib_la-ldm6_server.Tpo -c -o lib_la-ldm6_server.lo `test -f 'ldm6_server.c' || echo '$(srcdir)/'`ldm6_server.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-ldm6_server.Tpo $(DEPDIR)/lib_la-ldm6_server.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='ldm6_server.c' object='lib_la-ldm6_server.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-ldm6_server.lo `test -f 'ldm6_server.c' || echo '$(srcdir)/'`ldm6_server.c
 
 lib_la-ldmfork.lo: ldmfork.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-ldmfork.lo -MD -MP -MF $(DEPDIR)/lib_la-ldmfork.Tpo -c -o lib_la-ldmfork.lo `test -f 'ldmfork.c' || echo '$(srcdir)/'`ldmfork.c
@@ -629,6 +675,13 @@ lib_la-savedInfo.lo: savedInfo.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-savedInfo.lo `test -f 'savedInfo.c' || echo '$(srcdir)/'`savedInfo.c
 
+lib_la-svc5.lo: svc5.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-svc5.lo -MD -MP -MF $(DEPDIR)/lib_la-svc5.Tpo -c -o lib_la-svc5.lo `test -f 'svc5.c' || echo '$(srcdir)/'`svc5.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-svc5.Tpo $(DEPDIR)/lib_la-svc5.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='svc5.c' object='lib_la-svc5.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-svc5.lo `test -f 'svc5.c' || echo '$(srcdir)/'`svc5.c
+
 lib_la-timer.lo: timer.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-timer.lo -MD -MP -MF $(DEPDIR)/lib_la-timer.Tpo -c -o lib_la-timer.lo `test -f 'timer.c' || echo '$(srcdir)/'`timer.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-timer.Tpo $(DEPDIR)/lib_la-timer.Plo
@@ -642,6 +695,13 @@ lib_la-timestamp.lo: timestamp.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='timestamp.c' object='lib_la-timestamp.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-timestamp.lo `test -f 'timestamp.c' || echo '$(srcdir)/'`timestamp.c
+
+lib_la-up6.lo: up6.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-up6.lo -MD -MP -MF $(DEPDIR)/lib_la-up6.Tpo -c -o lib_la-up6.lo `test -f 'up6.c' || echo '$(srcdir)/'`up6.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/lib_la-up6.Tpo $(DEPDIR)/lib_la-up6.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='up6.c' object='lib_la-up6.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lib_la-up6.lo `test -f 'up6.c' || echo '$(srcdir)/'`up6.c
 
 lib_la-UpFilter.lo: UpFilter.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lib_la-UpFilter.lo -MD -MP -MF $(DEPDIR)/lib_la-UpFilter.Tpo -c -o lib_la-UpFilter.lo `test -f 'UpFilter.c' || echo '$(srcdir)/'`UpFilter.c
@@ -909,6 +969,36 @@ ldm_xdr.c:	ldm.x
 	sed \
 	  -e 's/xdr_opaque *( *xdrs, *objp, *16)/xdr_opaque(xdrs, (char*)objp, 16)/' \
 	  -e '/#if defined(_LP64)/,/#endif/d' > $@
+
+# Because both the client-side and server-side code that rpcgen(1) generates
+# use identical function names like "hereis_6" and because the LDM links to
+# both client-side and server-side functions, the server-side functions are
+# renamed using a "_svc" suffix.
+#
+# Also, the target-file must be modified to be more portable.
+#
+ldm6_svc.c:	ldm.x
+	(echo '#include "config.h"'; $(RPCGEN) -m ldm.x) | sed \
+	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
+	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
+	    -e 's;notifyme_6\([^A-Za-z_]\);notifyme_6_svc\1;' \
+	    -e 's;is_alive_6\([^A-Za-z_]\);is_alive_6_svc\1;' \
+	    -e 's;hiya_6\([^A-Za-z_]\);hiya_6_svc\1;' \
+	    -e 's;hereis_6\([^A-Za-z_]\);hereis_6_svc\1;' \
+	    -e 's;notification_6\([^A-Za-z_]\);notification_6_svc\1;' \
+	    -e 's;comingsoon_6\([^A-Za-z_]\);comingsoon_6_svc\1;' \
+	    -e 's;blkdata_6\([^A-Za-z_]\);blkdata_6_svc\1;' \
+	    -e '/<stropts\.h>/d;' | \
+	case `uname` in \
+	    Darwin)	sed '/rpcsvcdirty/d';; \
+	    *)		cat;; \
+	esac >$@
+
+# The following rule is for completeness only because the target-file must be
+# manually modified to a great extent.
+#
+ldm6_server.c:	# ../protocol/ldm.x
+	(echo '#include "config.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
 
 # The client-side code created by rpcgen(1) must be modified to ensure that
 # certain functions use batched RPC by having: 

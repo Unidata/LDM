@@ -56,15 +56,11 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_ldmd_OBJECTS = child_process_set.$(OBJEXT) parser.$(OBJEXT) \
-	forn5_svc.$(OBJEXT) ldm6_server.$(OBJEXT) ldm6_svc.$(OBJEXT) \
-	ldmd.$(OBJEXT) svc5.$(OBJEXT) up6.$(OBJEXT) wordexp.$(OBJEXT)
+am_ldmd_OBJECTS = parser.$(OBJEXT) ldmd.$(OBJEXT) wordexp.$(OBJEXT)
 ldmd_OBJECTS = $(am_ldmd_OBJECTS)
 ldmd_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-ldmd_DEPENDENCIES = ../$(PQ_SUBDIR)/lib.la ../protocol/lib.la \
-	../ulog/lib.la ../misc/lib.la ../rpc/lib.la \
-	$(am__DEPENDENCIES_1) ../registry/lib.la ../libxml2/libxml2.la
+ldmd_DEPENDENCIES = ../lib/libldm.la $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -256,39 +252,23 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 EXTRA_DIST = \
-    child_process_set.h \
-    forn5_svc.h \
-    ldm6_svc.c \
     ldmd.1 \
     ldmd.conf \
     parser.c \
     parser.y \
     scanner.c \
     scanner.l \
-    up6.h \
     wordexp.h
 
-BUILT_SOURCES = ldm6_svc.c parser.c scanner.c
+BUILT_SOURCES = parser.c scanner.c
 ldmd_SOURCES = \
-    child_process_set.c \
     parser.c \
-    forn5_svc.c \
-    ldm6_server.c \
-    ldm6_svc.c \
     ldmd.c \
-    svc5.c \
-    up6.c \
     wordexp.c
 
 LDADD = \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
+    ../lib/libldm.la \
     $(LD_GEN) \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
     -lm
 
 dist_man1_MANS = ldmd.1
@@ -389,14 +369,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/child_process_set.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/forn5_svc.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldm6_server.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldm6_svc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldmd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parser.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svc5.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/up6.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wordexp.Po@am__quote@
 
 .c.o:
@@ -687,36 +661,6 @@ uninstall-man: uninstall-man1
 @MAINTAINER_TRUE@ldmd.1:		ldmd.1.in
 @MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 @MAINTAINER_TRUE@	mv $@.tmp $@
-
-# Because both the client-side and server-side code that rpcgen(1) generates
-# use identical function names like "hereis_6" and because the LDM links to
-# both client-side and server-side functions, the server-side functions are
-# renamed using a "_svc" suffix.
-#
-# Also, the target-file must be modified to be more portable.
-#
-ldm6_svc.c:	../protocol/ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -m ../protocol/ldm.x) | sed \
-	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
-	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
-	    -e 's;notifyme_6\([^A-Za-z_]\);notifyme_6_svc\1;' \
-	    -e 's;is_alive_6\([^A-Za-z_]\);is_alive_6_svc\1;' \
-	    -e 's;hiya_6\([^A-Za-z_]\);hiya_6_svc\1;' \
-	    -e 's;hereis_6\([^A-Za-z_]\);hereis_6_svc\1;' \
-	    -e 's;notification_6\([^A-Za-z_]\);notification_6_svc\1;' \
-	    -e 's;comingsoon_6\([^A-Za-z_]\);comingsoon_6_svc\1;' \
-	    -e 's;blkdata_6\([^A-Za-z_]\);blkdata_6_svc\1;' \
-	    -e '/<stropts\.h>/d;' | \
-	case `uname` in \
-	    Darwin)	sed '/rpcsvcdirty/d';; \
-	    *)		cat;; \
-	esac >$@
-
-# The following rule is for completeness only because the target-file must be
-# manually modified to a great extent.
-#
-ldm6_server.c:	# ../protocol/ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
 
 @MAINTAINER_TRUE@parser.c:	parser.y
 @MAINTAINER_TRUE@	status=1; \

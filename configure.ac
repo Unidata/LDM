@@ -322,6 +322,7 @@ AC_CONFIG_FILES([
     protocol/Makefile
     pq/Makefile
     fauxPq/Makefile
+    lib/Makefile
     pqcreate/Makefile
     pqcheck/Makefile
     pqinsert/Makefile

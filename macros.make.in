@@ -1,44 +1,4 @@
-# This file contains make(1) macro definitions.
-
-SHELL	        = @SHELL@
-YACC	        = @YACC@
+# This file contains make(1) macro definitions for the readnoaaport(1) and
+# gribinsert(1) packages.
 CC	        = @CC@
-RPCGEN	        = @RPCGEN@
-AR	        = @AR@
-ARFLAGS	        = @ARFLAGS@
-RANLIB	        = @RANLIB@
-PERL	        = @PERL@
-
 CFLAGS	        = @CFLAGS@
-CONFIGURE_CPPFLAGS	= @CPPFLAGS@
-GDBMLIB	        = @GDBMLIB@
-CONFIGURE_LIBS	= @LIBS@
-
-LD_YACC	        = @LD_YACC@
-LD_GEN	        = @LD_GEN@
-
-PACKAGE	        = ldm
-
-prefix	        = @prefix@
-exec_prefix	= $(prefix)
-ldmhome	        = @LDMHOME@
-pq_dir	        = @QUEUE_DIR@
-
-PROGRAM		= dummy_program
-HEADER		= dummy_header
-ETC_FILE	= dummy_etc_file
-MANUAL		= dummy_manual
-
-INCDIR	        = $(includedir)
-LIBDIR	        = $(libdir)
-BINDIR	        = $(bindir)
-ETCDIR	        = $(sysconfdir)
-MANDIR	        = $(mandir)
-# only used to update the release at the source site
-FTPDIR	        = /home/ftp/pub/ldm
-
-# Manual pages:
-WHATIS		= @WHATIS@
-# The following macro should be empty on systems that don't
-# allow users to create their own manual-page indexes.
-MAKEWHATIS_CMD	= @MAKEWHATIS_CMD@

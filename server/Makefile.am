@@ -9,29 +9,19 @@
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
 EXTRA_DIST		= \
-    child_process_set.h \
-    forn5_svc.h \
-    ldm6_svc.c \
     ldmd.1 \
     ldmd.conf \
     parser.c \
     parser.y \
     scanner.c \
     scanner.l \
-    up6.h \
     wordexp.h
 PQ_SUBDIR		= @PQ_SUBDIR@
-BUILT_SOURCES		= ldm6_svc.c parser.c scanner.c
+BUILT_SOURCES		= parser.c scanner.c
 bin_PROGRAMS		= ldmd
 ldmd_SOURCES	= \
-    child_process_set.c \
     parser.c \
-    forn5_svc.c \
-    ldm6_server.c \
-    ldm6_svc.c \
     ldmd.c \
-    svc5.c \
-    up6.c \
     wordexp.c
 CPPFLAGS		= \
     -I$(top_srcdir)/registry \
@@ -41,14 +31,8 @@ CPPFLAGS		= \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
 LDADD			= \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
+    ../lib/libldm.la \
     $(LD_GEN) \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
     -lm
 dist_man1_MANS		= ldmd.1
 TAGS_FILES		= \
@@ -65,36 +49,6 @@ ldmd.1:		ldmd.1.in
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 endif
-
-# Because both the client-side and server-side code that rpcgen(1) generates
-# use identical function names like "hereis_6" and because the LDM links to
-# both client-side and server-side functions, the server-side functions are
-# renamed using a "_svc" suffix.
-#
-# Also, the target-file must be modified to be more portable.
-#
-ldm6_svc.c:	../protocol/ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -m ../protocol/ldm.x) | sed \
-	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
-	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
-	    -e 's;notifyme_6\([^A-Za-z_]\);notifyme_6_svc\1;' \
-	    -e 's;is_alive_6\([^A-Za-z_]\);is_alive_6_svc\1;' \
-	    -e 's;hiya_6\([^A-Za-z_]\);hiya_6_svc\1;' \
-	    -e 's;hereis_6\([^A-Za-z_]\);hereis_6_svc\1;' \
-	    -e 's;notification_6\([^A-Za-z_]\);notification_6_svc\1;' \
-	    -e 's;comingsoon_6\([^A-Za-z_]\);comingsoon_6_svc\1;' \
-	    -e 's;blkdata_6\([^A-Za-z_]\);blkdata_6_svc\1;' \
-	    -e '/<stropts\.h>/d;' | \
-	case `uname` in \
-	    Darwin)	sed '/rpcsvcdirty/d';; \
-	    *)		cat;; \
-	esac >$@
-
-# The following rule is for completeness only because the target-file must be
-# manually modified to a great extent.
-#
-ldm6_server.c:	# ../protocol/ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
 
 if MAINTAINER
 

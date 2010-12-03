@@ -26,6 +26,7 @@ SUBDIRS	= \
     protocol \
     $(PQ_SUBDIR) \
     registry \
+    lib \
     pqcreate \
     pqcheck \
     pqinsert \
@@ -58,6 +59,7 @@ DIST_SUBDIRS		= \
     pq \
     fauxPq \
     registry \
+    lib \
     pqcreate \
     pqcheck \
     pqinsert \
@@ -81,15 +83,6 @@ DIST_SUBDIRS		= \
     regex \
     test \
     html
-
-lib_LTLIBRARIES		= libldm.la
-libldm_la_SOURCES	=
-libldm_la_LIBADD	= \
-    rpc/lib.la \
-    ulog/lib.la \
-    misc/lib.la \
-    protocol/lib.la \
-    $(PQ_SUBDIR)/lib.la
 
 include_HEADERS		= config.h
 

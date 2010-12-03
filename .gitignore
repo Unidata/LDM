@@ -24,7 +24,6 @@ config.sub
 bin
 doc
 etc
-lib
 include
 man
 *.lo

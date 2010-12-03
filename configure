@@ -26767,7 +26767,7 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
-ac_config_files="$ac_config_files Makefile macros.make rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqcopy/Makefile pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile registry/Makefile scripts/Makefile scripts/ldmadmin scripts/ldmcheck scripts/ldmfail scripts/netcheck scripts/syscheck scour/Makefile scour/scour regex/Makefile html/Makefile html/index.html html/known-problems.html html/basics/Makefile html/basics/index.html html/basics/activating.html html/basics/source-install-steps.html html/basics/what-gets-installed.html html/tutorial/Makefile html/workshop/Makefile html/workshop/specifics.html test/Makefile"
+ac_config_files="$ac_config_files Makefile macros.make rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile lib/Makefile pqcreate/Makefile pqcheck/Makefile pqinsert/Makefile pqcat/Makefile pqcat/pqcat.1 pqcopy/Makefile pqexpire/Makefile pqmon/Makefile pqutil/Makefile pqsend/Makefile pqing/Makefile pqact/Makefile pqsurf/Makefile ldmsend/Makefile rtstats/Makefile feedme/Makefile notifyme/Makefile server/Makefile ldmping/Makefile registry/Makefile scripts/Makefile scripts/ldmadmin scripts/ldmcheck scripts/ldmfail scripts/netcheck scripts/syscheck scour/Makefile scour/scour regex/Makefile html/Makefile html/index.html html/known-problems.html html/basics/Makefile html/basics/index.html html/basics/activating.html html/basics/source-install-steps.html html/basics/what-gets-installed.html html/tutorial/Makefile html/workshop/Makefile html/workshop/specifics.html test/Makefile"
 
 
 #AC_CONFIG_SUBDIRS([libxml2])
@@ -27468,6 +27468,7 @@ do
     "protocol/Makefile") CONFIG_FILES="$CONFIG_FILES protocol/Makefile" ;;
     "pq/Makefile") CONFIG_FILES="$CONFIG_FILES pq/Makefile" ;;
     "fauxPq/Makefile") CONFIG_FILES="$CONFIG_FILES fauxPq/Makefile" ;;
+    "lib/Makefile") CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
     "pqcreate/Makefile") CONFIG_FILES="$CONFIG_FILES pqcreate/Makefile" ;;
     "pqcheck/Makefile") CONFIG_FILES="$CONFIG_FILES pqcheck/Makefile" ;;
     "pqinsert/Makefile") CONFIG_FILES="$CONFIG_FILES pqinsert/Makefile" ;;

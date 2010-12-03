@@ -1,7 +1,16 @@
 6.9.0.8
-        Modified wording of password requests.
+        Modified wording of password requests to notify the user that they
+        can opt-out.
 
         Added "config.h" to installed headers.
+
+        Simplified "macros.make.in".
+
+        Moved many modules from "server/" to "protocol/" and made them part of
+        the LDM library.
+
+        Moved creation of the LDM library from the top-level source-directory
+        to the new "lib/" subdirectory.
 
 6.9.0.7 2010-11-29
         Improved ldmadmin(1):

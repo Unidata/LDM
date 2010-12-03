@@ -6,7 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES		= ../registry/registry.h
+BUILT_SOURCES		= ../registry/registry.h ldm6_svc.c
 RPCGEN			= @RPCGEN@
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
@@ -41,16 +41,20 @@ lib_la_SOURCES		= \
     acl.c \
     atofeedt.c \
     autoshift.c \
+    child_process_set.c \
     down6.c \
     DownHelp.c \
+    forn5_svc.c \
     globals.c \
     h_clnt.c \
     ldm4_svc.c \
     ldm5_svc.c \
+    ldm6_svc.c \
     ldm_xdr.c \
     ldm_xlen.c \
     ldm5_clnt.c \
     ldm6_clnt.c \
+    ldm6_server.c \
     ldmfork.c \
     ldmprint.c \
     LdmProxy.c \
@@ -63,8 +67,10 @@ lib_la_SOURCES		= \
     remote.c \
     requester6.c \
     savedInfo.c \
+    svc5.c \
     timer.c \
     timestamp.c \
+    up6.c \
     UpFilter.c \
     xdr_data.c
 lib_la_CPPFLAGS		= \
@@ -81,7 +87,9 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h \
     ../registry/*.c
 EXTRA_DIST		= \
+    child_process_set.h \
     exitStatus.h \
+    forn5_svc.h \
     LdmProxy.h \
     globals.h \
     ldm.h \
@@ -91,7 +99,8 @@ EXTRA_DIST		= \
     rsaglobal.h \
     prod_info.h \
     fix_clnt.pl \
-    timer.h
+    timer.h \
+    up6.h
 CLEANFILES		= *.i
 
 ../registry/registry.h:
@@ -116,6 +125,36 @@ ldm_xdr.c:	ldm.x
 	sed \
 	  -e 's/xdr_opaque *( *xdrs, *objp, *16)/xdr_opaque(xdrs, (char*)objp, 16)/' \
 	  -e '/#if defined(_LP64)/,/#endif/d' > $@
+
+# Because both the client-side and server-side code that rpcgen(1) generates
+# use identical function names like "hereis_6" and because the LDM links to
+# both client-side and server-side functions, the server-side functions are
+# renamed using a "_svc" suffix.
+#
+# Also, the target-file must be modified to be more portable.
+#
+ldm6_svc.c:	ldm.x
+	(echo '#include "config.h"'; $(RPCGEN) -m ldm.x) | sed \
+	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
+	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
+	    -e 's;notifyme_6\([^A-Za-z_]\);notifyme_6_svc\1;' \
+	    -e 's;is_alive_6\([^A-Za-z_]\);is_alive_6_svc\1;' \
+	    -e 's;hiya_6\([^A-Za-z_]\);hiya_6_svc\1;' \
+	    -e 's;hereis_6\([^A-Za-z_]\);hereis_6_svc\1;' \
+	    -e 's;notification_6\([^A-Za-z_]\);notification_6_svc\1;' \
+	    -e 's;comingsoon_6\([^A-Za-z_]\);comingsoon_6_svc\1;' \
+	    -e 's;blkdata_6\([^A-Za-z_]\);blkdata_6_svc\1;' \
+	    -e '/<stropts\.h>/d;' | \
+	case `uname` in \
+	    Darwin)	sed '/rpcsvcdirty/d';; \
+	    *)		cat;; \
+	esac >$@
+
+# The following rule is for completeness only because the target-file must be
+# manually modified to a great extent.
+#
+ldm6_server.c:	# ../protocol/ldm.x
+	(echo '#include "config.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
 
 # The client-side code created by rpcgen(1) must be modified to ensure that
 # certain functions use batched RPC by having: 
