@@ -316,16 +316,22 @@ elsif ($command eq "clean") {	# clean up after an abnormal termination
 	errmsg("The LDM system is running!  Stop it first.");
 	$status = 1;
     }
-    elsif (unlink($lock_file) == 0) {
-	errmsg("Couldn't remove ldmadmin(1) lock-file \"$lock_file\"");
-	$status = 2;
-    }
-    elsif (unlink($pid_file) == 0) {
-	errmsg("Couldn't remove LDM server PID-file \"$pid_file\"");
-	$status = 3;
-    }
     else {
-	$status = 0;
+        system("rm -f $lock_file");
+        if ($?) {
+            errmsg("Couldn't remove ldmadmin(1) lock-file \"$lock_file\"");
+            $status = 2;
+        }
+        else {
+            system("rm -f $pid_file");
+            if ($?) {
+                errmsg("Couldn't remove LDM server PID-file \"$pid_file\"");
+                $status = 3;
+            }
+            else {
+                $status = 0;
+            }
+        }
     }
 }
 elsif ($command eq "checktime") {

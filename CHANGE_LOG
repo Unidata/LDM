@@ -1,4 +1,10 @@
-6.9.0.8
+6.9.0.9
+        Modified ldmadmin(1) script: "ldmadmin clean" no longer error exits
+        if the ldmadmin(1) lock-file or pid-file don't exist.
+
+        Corrected use of "LdmProxyStatus" in "protocol/LdmProxy.c".
+
+6.9.0.8 2010-12-06
         Modified wording of password requests to notify the user that they
         can opt-out.
 

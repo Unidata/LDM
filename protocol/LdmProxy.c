@@ -49,7 +49,7 @@ static struct timeval rpcTimeout = {25, 0}; /* usual RPC default */
 static LdmProxyStatus
 getStatus(
     LdmProxy* const     proxy,
-    const const char*   name,
+    const char* const   name,
     prod_info* const    info)
 {
     LdmProxyStatus      status;
@@ -264,7 +264,7 @@ my_hiya_6(
  *      LP_RPC_ERROR    RPC error. "log_start()" called.
  *      LP_LDM_ERROR    LDM error. "log_start()" called.
  */
-static enum clnt_stat
+static LdmProxyStatus
 my_comingsoon_5(
     LdmProxy* const     proxy,
     prod_info* const    infop,
@@ -299,7 +299,7 @@ my_comingsoon_5(
  *      LP_RPC_ERROR    RPC error. "log_start()" called.
  *      LP_LDM_ERROR    LDM error. "log_start()" called.
  */
-static enum clnt_stat
+static LdmProxyStatus
 my_blkdata_5(
     LdmProxy* const     proxy,
     datapkt*            dpkp,

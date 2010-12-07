@@ -15,8 +15,9 @@ NTPDATE			= @NTPDATE@
 LOG_FILE		= $(LOGS_DIR)/ldmd.log
 METRICS_FILE		= $(LOGS_DIR)/metrics.txt
 NETSTAT			= @NETSTAT@
-TOP				= @TOP@
-noinst_LTLIBRARIES      = lib.la
+TOP			= @TOP@
+noinst_LTLIBRARIES	= lib.la
+bin_PROGRAMS		= regutil
 EXTRA_DIST              = \
     backend.h \
     checkRegistry \
@@ -42,15 +43,12 @@ TAGS_FILES              = \
     $(top_srcdir)/libxml2/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
-
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/libxml2/include \
     -DREGISTRY_DIR='"$(ETC_DIR)"'
-
-bin_PROGRAMS		= regutil
 LDADD			= \
     lib.la \
     $(top_builddir)/protocol/lib.la \
@@ -60,7 +58,7 @@ LDADD			= \
     $(LD_GEN)
 
 dist_man1_MANS		= regutil.1
-CLEANFILES			= regutil.out regpar.tab
+CLEANFILES		= regutil.out regpar.tab
 
 all:		regpar.tab
 
