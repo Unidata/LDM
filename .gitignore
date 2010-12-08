@@ -63,3 +63,4 @@ share
 libxml2
 macros.make
 TAGS
+Makefile.in
