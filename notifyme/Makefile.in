@@ -59,9 +59,8 @@ PROGRAMS = $(bin_PROGRAMS)
 notifyme_SOURCES = notifyme.c
 notifyme_OBJECTS = notifyme.$(OBJEXT)
 notifyme_LDADD = $(LDADD)
-notifyme_DEPENDENCIES = ../protocol/lib.la ../ulog/lib.la \
-	../misc/lib.la ../rpc/lib.la ../registry/lib.la \
-	../libxml2/libxml2.la
+notifyme_DEPENDENCIES = $(top_builddir)/lib/libldm.la \
+	$(top_builddir)/libxml2/libxml2.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -251,12 +250,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 LDADD = \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     -lm
 
 dist_man1_MANS = notifyme.1

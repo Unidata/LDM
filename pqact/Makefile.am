@@ -35,13 +35,8 @@ CPPFLAGS		= \
     -I$(top_srcdir)
 date_sub_CPPFLAGS	= $(CPPFLAGS) -UNDEBUG -DTEST_DATE_SUB
 LDADD			= \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     $(GDBMLIB) -lm
 dist_man1_MANS		= pqact.1
 TAGS_FILES		= \

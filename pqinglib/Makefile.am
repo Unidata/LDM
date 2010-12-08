@@ -1,4 +1,4 @@
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2010 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -6,17 +6,22 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-bin_PROGRAMS	= feedme
-CPPFLAGS	= \
+PQ_SUBDIR		= @PQ_SUBDIR@
+EXTRA_DIST		= \
+    dtime.h \
+    tokens.h \
+    wmo_header.h \
+    xbuf.h
+noinst_LTLIBRARIES	= lib.la
+lib_la_SOURCES		= dtime.c wmo_header.c tokens.c xbuf.c
+CPPFLAGS		= \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
-LDADD		= \
-    ../lib/libldm.la \
-    ../libxml2/libxml2.la
-dist_man1_MANS	= feedme.1
-TAGS_FILES	= \
+TAGS_FILES		= \
+    ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \

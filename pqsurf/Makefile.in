@@ -60,9 +60,8 @@ am_pqsurf_OBJECTS = pqsurf.$(OBJEXT) surf_split.$(OBJEXT)
 pqsurf_OBJECTS = $(am_pqsurf_OBJECTS)
 pqsurf_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-pqsurf_DEPENDENCIES = ../pqing/lib.la ../$(PQ_SUBDIR)/lib.la \
-	../protocol/lib.la ../ulog/lib.la ../misc/lib.la ../rpc/lib.la \
-	../registry/lib.la ../libxml2/libxml2.la $(am__DEPENDENCIES_1)
+pqsurf_DEPENDENCIES = $(top_builddir)/lib/libldm.la \
+	$(top_builddir)/libxml2/libxml2.la $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -118,6 +117,7 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = \
+    -I$(top_srcdir)/pqinglib \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
@@ -257,14 +257,8 @@ top_srcdir = @top_srcdir@
 EXTRA_DIST = surface.h
 pqsurf_SOURCES = pqsurf.c surf_split.c
 LDADD = \
-    ../pqing/lib.la \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     $(GDBMLIB) -lm
 
 dist_man1_MANS = pqsurf.1

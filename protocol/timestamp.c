@@ -1,8 +1,7 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
+ *   Copyright 2010, University Corporation for Atmospheric Research
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: timestamp.c,v 1.15.18.2 2008/03/17 16:16:40 steve Exp $ */
 
 #include <config.h>
 #include <errno.h>

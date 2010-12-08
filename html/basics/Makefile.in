@@ -583,7 +583,7 @@ uninstall-am: uninstall-htmlDATA uninstall-nobase_htmlDATA
 	uninstall-nobase_htmlDATA
 
 
-LDM-registry.html:	$(srcdir)/regpar-top.html ../../registry/regpar.tab
+LDM-registry.html:	$(srcdir)/regpar-top.html ../../regutil/regpar.tab
 	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
 	cat $(srcdir)/regpar-top.html >>$@.tmp
 	echo '<table align="center" border="2" cellpadding="6"' \
@@ -599,14 +599,14 @@ LDM-registry.html:	$(srcdir)/regpar-top.html ../../registry/regpar.tab
 		echo "<td>$$desc</td>"; \
 		echo "<td><tt>$$default</tt></td>"; \
 	    echo "</tr>"; \
-	done <../../registry/regpar.tab >>$@.tmp
+	done <../../regutil/regpar.tab >>$@.tmp
 	echo '</blockquote></BODY></HTML>' >>$@.tmp
 	mv $@.tmp $@
 
 @MAINTAINER_TRUE@all:	$(srcdir)/successes.html $(srcdir)/failures.html
 
 @MAINTAINER_TRUE@configuring.html:	configuring.html.in
-@MAINTAINER_TRUE@	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+@MAINTAINER_TRUE@	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 @MAINTAINER_TRUE@	mv $@.tmp $@
 
 @MAINTAINER_TRUE@registry-check:	$(top_srcdir)/configure.ac
@@ -625,7 +625,7 @@ LDM-registry.html:	$(srcdir)/regpar-top.html ../../registry/regpar.tab
 #		    "registry description"; \
 #		exit 1; \
 #	    fi; \
-#	done <$(top_srcdir)/registry/configDefaults.txt
+#	done <$(top_srcdir)/regutil/configDefaults.txt
 
 @MAINTAINER_TRUE@.PHONY:	registry-check
 

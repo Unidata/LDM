@@ -9,10 +9,10 @@
 lib_LTLIBRARIES		= libldm.la
 libldm_la_SOURCES	=
 libldm_la_LIBADD	= \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../registry/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../ulog/lib.la \
-    ../libxml2/libxml2.la
+    $(top_builddir)/misc/*.lo \
+    $(top_builddir)/pqinglib/*.lo \
+    $(top_builddir)/$(PQ_SUBDIR)/*.lo \
+    $(top_builddir)/protocol/*.lo \
+    $(top_builddir)/registry/*.lo \
+    $(top_builddir)/rpc/*.lo \
+    $(top_builddir)/ulog/*.lo

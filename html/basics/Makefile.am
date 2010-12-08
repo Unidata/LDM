@@ -117,7 +117,7 @@ nobase_html_DATA	= \
 BUILT_SOURCES		= LDM-registry.html
 DISTCLEANFILES		= LDM-registry.html
 
-LDM-registry.html:	$(srcdir)/regpar-top.html ../../registry/regpar.tab
+LDM-registry.html:	$(srcdir)/regpar-top.html ../../regutil/regpar.tab
 	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
 	cat $(srcdir)/regpar-top.html >>$@.tmp
 	echo '<table align="center" border="2" cellpadding="6"' \
@@ -133,7 +133,7 @@ LDM-registry.html:	$(srcdir)/regpar-top.html ../../registry/regpar.tab
 		echo "<td>$$desc</td>"; \
 		echo "<td><tt>$$default</tt></td>"; \
 	    echo "</tr>"; \
-	done <../../registry/regpar.tab >>$@.tmp
+	done <../../regutil/regpar.tab >>$@.tmp
 	echo '</blockquote></BODY></HTML>' >>$@.tmp
 	mv $@.tmp $@
 
@@ -142,7 +142,7 @@ if MAINTAINER
 all:	$(srcdir)/successes.html $(srcdir)/failures.html
 
 configuring.html:	configuring.html.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 
 registry-check:	$(top_srcdir)/configure.ac
@@ -161,7 +161,7 @@ registry-check:	$(top_srcdir)/configure.ac
 #		    "registry description"; \
 #		exit 1; \
 #	    fi; \
-#	done <$(top_srcdir)/registry/configDefaults.txt
+#	done <$(top_srcdir)/regutil/configDefaults.txt
 
 .PHONY:	registry-check
 

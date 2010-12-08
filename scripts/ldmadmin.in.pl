@@ -1042,7 +1042,7 @@ sub saveTimePar
     }
     else {
         if (system("regutil -u $newMaxLatency regpath{MAX_LATENCY}")) {
-            errmsg("saveTimePar(): Couldn't save new maximum acceptible ".
+            errmsg("saveTimePar(): Couldn't save new maximum acceptable ".
                 "latency");
 
             print "Restoring previous time-offset\n";
@@ -1076,11 +1076,11 @@ sub vetQueueSize
         my $isFull = $params[0];
         my $minVirtResTime = $params[9];
 
-        if (!$isFull || $minVirtResTime >= $offset) {
+        if (!$isFull || $minVirtResTime < 0 || $minVirtResTime >= $offset) {
             $status = 0;
         }
         else {
-            errmsg("vetQueueSize(): The maximum acceptible latency ".
+            errmsg("vetQueueSize(): The maximum acceptable latency ".
                 "(registry parameter \"regpath{MAX_LATENCY}\": ".
                 "$max_latency seconds) is greater ".
                 "than the observed minimum virtual residence time of ".
@@ -1141,7 +1141,7 @@ sub vetQueueSize
                 }                       # new queue created
             }                           # mode is increase queue
             elsif ($reconMode eq $decreaseMaxLatency) {
-                print "Decreasing the maximum acceptible ".
+                print "Decreasing the maximum acceptable ".
                     "latency and the time-offset of requests (registry ".
                     "parameters \"regpath{MAX_LATENCY}\" and ".
                     "\"regpath{TIME_OFFSET}\")...\n";
@@ -1213,7 +1213,7 @@ sub check_ldm
             }
             else {
                 print "Vetting the size of the queue and the maximum ".
-                    "acceptible latency...\n";
+                    "acceptable latency...\n";
                 if (vetQueueSize()) {
                     $status = 5;
                 }

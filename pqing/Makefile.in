@@ -22,7 +22,6 @@
 # redistribution conditions.
 #
 
-
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
@@ -55,10 +54,6 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-LTLIBRARIES = $(noinst_LTLIBRARIES)
-lib_la_LIBADD =
-am_lib_la_OBJECTS = dtime.lo wmo_header.lo tokens.lo xbuf.lo
-lib_la_OBJECTS = $(am_lib_la_OBJECTS)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_pqing_OBJECTS = afos_message.$(OBJEXT) faa604_message.$(OBJEXT) \
@@ -66,10 +61,9 @@ am_pqing_OBJECTS = afos_message.$(OBJEXT) faa604_message.$(OBJEXT) \
 	rawfile.$(OBJEXT) tty.$(OBJEXT) wmo_message.$(OBJEXT) \
 	wmo_start.$(OBJEXT)
 pqing_OBJECTS = $(am_pqing_OBJECTS)
-pqing_DEPENDENCIES = do_check.o do_nocheck.o lib.la \
-	../$(PQ_SUBDIR)/lib.la ../protocol/lib.la ../ulog/lib.la \
-	../misc/lib.la ../rpc/lib.la ../registry/lib.la \
-	../libxml2/libxml2.la
+pqing_DEPENDENCIES = do_check.o do_nocheck.o \
+	$(top_builddir)/lib/libldm.la \
+	$(top_builddir)/libxml2/libxml2.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -83,8 +77,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(lib_la_SOURCES) $(pqing_SOURCES)
-DIST_SOURCES = $(lib_la_SOURCES) $(pqing_SOURCES)
+SOURCES = $(pqing_SOURCES)
+DIST_SOURCES = $(pqing_SOURCES)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -125,6 +119,7 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = \
+    -I$(top_srcdir)/pqinglib \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
@@ -262,20 +257,13 @@ top_srcdir = @top_srcdir@
 EXTRA_DIST = \
     afos_message.h \
     do.c \
-    dtime.h \
-    tokens.h \
-    wmo_header.h \
-    xbuf.h \
     crc_tab.h \
     faa604_message.h \
     feed.h \
     rawfile.h \
     wmo_message.h \
-    wmo_start.h \
-    xbuf.h
+    wmo_start.h
 
-noinst_LTLIBRARIES = lib.la
-lib_la_SOURCES = dtime.c wmo_header.c tokens.c xbuf.c
 pqing_SOURCES = \
     afos_message.c \
     faa604_message.c \
@@ -291,18 +279,13 @@ pqing_SOURCES = \
 pqing_LDADD = \
     do_check.o \
     do_nocheck.o \
-    lib.la \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     -lm
 
 dist_man1_MANS = pqing.1
 TAGS_FILES = \
+    ../pqinglib/*.c ../pqinglib/*.h \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
@@ -343,17 +326,6 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-
-clean-noinstLTLIBRARIES:
-	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
-	@list='$(noinst_LTLIBRARIES)'; for p in $$list; do \
-	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
-	  test "$$dir" != "$$p" || dir=.; \
-	  echo "rm -f \"$${dir}/so_locations\""; \
-	  rm -f "$${dir}/so_locations"; \
-	done
-lib.la: $(lib_la_OBJECTS) $(lib_la_DEPENDENCIES) 
-	$(LINK)  $(lib_la_OBJECTS) $(lib_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -408,19 +380,15 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/afos_message.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dtime.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/faa604_message.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/feed.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/file.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fxbuf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pqing.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rawfile.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tokens.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tty.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wmo_header.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wmo_message.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wmo_start.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xbuf.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -583,7 +551,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(MANS)
+all-am: Makefile $(PROGRAMS) $(MANS)
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -615,8 +583,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-libtool \
-	clean-noinstLTLIBRARIES mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -690,14 +657,13 @@ uninstall-man: uninstall-man1
 .MAKE: install-am install-exec-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
-	clean-generic clean-libtool clean-noinstLTLIBRARIES ctags \
-	distclean distclean-compile distclean-generic \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-binPROGRAMS \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-exec-hook install-html \
-	install-html-am install-info install-info-am install-man \
-	install-man1 install-pdf install-pdf-am install-ps \
+	clean-generic clean-libtool ctags distclean distclean-compile \
+	distclean-generic distclean-libtool distclean-tags distdir dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-binPROGRAMS install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-exec-hook \
+	install-html install-html-am install-info install-info-am \
+	install-man install-man1 install-pdf install-pdf-am install-ps \
 	install-ps-am install-strip installcheck installcheck-am \
 	installdirs maintainer-clean maintainer-clean-generic \
 	mostlyclean mostlyclean-compile mostlyclean-generic \

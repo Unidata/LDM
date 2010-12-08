@@ -105,20 +105,22 @@ AC_ARG_ENABLE([root-actions],
     ])
 AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS], [test "x$enable_include" = "xtrue"])
 AM_COND_IF([INCLUDE_ROOT_ACTIONS], 
-    [if touch conftest && chmod u=rws conftest &&
+    [if touch conftest && chmod u=rwxs conftest &&
 	    ls -l conftest | grep -i rws >/dev/null; then \
 	AC_CACHE_CHECK([for su(1) that you can use], [ac_cv_path_SU],
 	    [AC_PATH_PROGS_FEATURE_CHECK([SU], [su],
 		[echo "Enter root's password (or don't)." >/dev/tty
-		$ac_path_SU -c true </dev/tty >/dev/tty &&
-                    ac_cv_path_SU=$ac_path_SU],
+		$ac_path_SU root -c true </dev/tty >/dev/tty &&
+                    ac_cv_path_SU=$ac_path_SU
+                    ac_path_SU_found=:],
 		[AC_MSG_RESULT([not found])
 		AC_CACHE_CHECK([for sudo(1) that you can use],
                     [ac_cv_path_SUDO],
 		    [AC_PATH_PROGS_FEATURE_CHECK([SUDO], [sudo],
 			[echo "Enter your password (or don't)." >/dev/tty
-			$ac_path_SUDO true >/dev/tty 2>&1 </dev/tty \
-			&& ac_cv_path_SUDO=$ac_path_SUDO],
+			$ac_path_SUDO true >/dev/tty 2>&1 </dev/tty &&
+                            ac_cv_path_SUDO=$ac_path_SUDO
+                            ac_path_SUDO_found=:],
 			[AC_MSG_RESULT([not found])])])])])
         [echo Continuing... >/dev/tty]
 	AC_SUBST([SU], [$ac_cv_path_SU])
@@ -323,35 +325,39 @@ AC_CONFIG_FILES([
     pq/Makefile
     fauxPq/Makefile
     lib/Makefile
-    pqcreate/Makefile
-    pqcheck/Makefile
-    pqinsert/Makefile
+    feedme/Makefile
+    hupsyslog/Makefile
+    ldmd/Makefile
+    ldmping/Makefile
+    ldmsend/Makefile
+    notifyme/Makefile
+    pqact/Makefile
     pqcat/Makefile
     pqcat/pqcat.1
+    pqcheck/Makefile
     pqcopy/Makefile
+    pqcreate/Makefile
     pqexpire/Makefile
-    pqmon/Makefile
-    pqutil/Makefile
-    pqsend/Makefile
     pqing/Makefile
-    pqact/Makefile
+    pqinglib/Makefile
+    pqinsert/Makefile
+    pqmon/Makefile
+    pqsend/Makefile
     pqsurf/Makefile
-    ldmsend/Makefile
-    rtstats/Makefile
-    feedme/Makefile
-    notifyme/Makefile
-    server/Makefile
-    ldmping/Makefile
+    pqutil/Makefile
+    regex/Makefile
     registry/Makefile
-    scripts/Makefile
+    regutil/Makefile
+    rtstats/Makefile
+    scour/Makefile
+    scour/scour
     scripts/ldmadmin
     scripts/ldmcheck
     scripts/ldmfail
+    scripts/Makefile
     scripts/netcheck
     scripts/syscheck
-    scour/Makefile
-    scour/scour
-    regex/Makefile
+    ulogger/Makefile
     html/Makefile
     html/index.html
     html/known-problems.html

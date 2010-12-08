@@ -13,12 +13,9 @@ CPPFLAGS	= \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
 LDADD		= \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
+    -lm
 dist_man1_MANS	= ldmsend.1
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \

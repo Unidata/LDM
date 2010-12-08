@@ -12,6 +12,7 @@ PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS		= pqsurf
 pqsurf_SOURCES		= pqsurf.c surf_split.c
 CPPFLAGS		= \
+    -I$(top_srcdir)/pqinglib \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
@@ -20,14 +21,8 @@ CPPFLAGS		= \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)
 LDADD			= \
-    ../pqing/lib.la \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     $(GDBMLIB) -lm
 dist_man1_MANS		= pqsurf.1
 TAGS_FILES		= \

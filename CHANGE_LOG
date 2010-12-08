@@ -4,6 +4,25 @@
 
         Corrected use of "LdmProxyStatus" in "protocol/LdmProxy.c".
 
+        Separated combined library/program subdirectories in the source-tree
+        into separate library and program subdirectories (e.g., "ulog/" ->
+        "ulog/" + "ulogger/").
+
+        Renamed "server" source-subdirectory to "ldmd".
+
+        Improved configure(1) script's determination of ability to set the
+        user ID on execution.
+
+        Corrected spelling of "acceptable" in ldmadmin(1) script.
+
+        Improved portability of su(1) use in configure(1) script and top-level
+        makefile.
+
+        Ported installation procedure to 64-bit Solaris 5.10.
+
+        Added addtional vetting of the minimum virtual residence time before
+        taking action.
+
 6.9.0.8 2010-12-06
         Modified wording of password requests to notify the user that they
         can opt-out.

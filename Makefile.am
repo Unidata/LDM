@@ -18,71 +18,57 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 
-SUBDIRS	= \
+COMMON_LIB_SUBDIRS	= \
     libxml2 \
     rpc \
     ulog \
     misc \
+    pqinglib \
     protocol \
-    $(PQ_SUBDIR) \
     registry \
-    lib \
-    pqcreate \
-    pqcheck \
-    pqinsert \
-    pqcat \
-    pqcopy \
-    pqexpire \
-    pqmon \
-    pqutil \
-    pqsend \
-    pqing \
-    pqact \
-    pqsurf \
-    ldmsend \
-    rtstats \
+    lib
+
+LIB_SUBDIRS	= \
+    $(PQ_SUBDIR) \
+    $(COMMON_LIB_SUBDIRS)
+
+PROG_SUBDIRS	= \
     feedme \
-    notifyme \
-    server \
+    hupsyslog \
+    ldmd \
     ldmping \
-    scripts \
-    scour \
+    ldmsend \
+    notifyme \
+    pqact \
+    pqcat \
+    pqcheck \
+    pqcopy \
+    pqcreate \
+    pqexpire \
+    pqing \
+    pqinsert \
+    pqmon \
+    pqsend \
+    pqsurf \
+    pqutil \
     regex \
+    regutil \
+    rtstats \
+    scour \
+    scripts \
+    ulogger
+
+SUBDIRS		= \
+    $(LIB_SUBDIRS) \
+    $(PROG_SUBDIRS) \
     html
 
-DIST_SUBDIRS		= \
-    libxml2 \
-    rpc \
-    ulog \
-    misc \
-    protocol \
+DIST_SUBDIRS	= \
+    $(COMMON_LIB_SUBDIRS) \
     pq \
     fauxPq \
-    registry \
-    lib \
-    pqcreate \
-    pqcheck \
-    pqinsert \
-    pqcat \
-    pqcopy \
-    pqexpire \
-    pqmon \
-    pqutil \
-    pqsend \
-    pqing \
-    pqact \
-    pqsurf \
-    ldmsend \
-    rtstats \
-    feedme \
-    notifyme \
-    server \
-    ldmping \
-    scripts \
-    scour \
-    regex \
-    test \
-    html
+    $(PROG_SUBDIRS) \
+    test html
 
 include_HEADERS		= config.h
 
@@ -115,8 +101,9 @@ if HAVE_SUDO
 	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions
 else
 if HAVE_SU
-	@printf "Enter root's password: " >/dev/tty
-	@$(SU) -c '$(MAKE) $(AM_MAKEFLAGS) root-actions' </dev/tty 2>/dev/null
+	@printf "Enter root's password (or don't): " >/dev/tty
+	@$(SU) root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) root-actions' \
+	    </dev/tty 2>/dev/null
 	@echo >/dev/tty
 endif
 endif

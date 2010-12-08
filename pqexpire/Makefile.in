@@ -59,9 +59,8 @@ PROGRAMS = $(bin_PROGRAMS)
 pqexpire_SOURCES = pqexpire.c
 pqexpire_OBJECTS = pqexpire.$(OBJEXT)
 pqexpire_LDADD = $(LDADD)
-pqexpire_DEPENDENCIES = ../$(PQ_SUBDIR)/lib.la ../protocol/lib.la \
-	../ulog/lib.la ../misc/lib.la ../rpc/lib.la ../registry/lib.la \
-	../libxml2/libxml2.la
+pqexpire_DEPENDENCIES = $(top_builddir)/lib/libldm.la \
+	$(top_builddir)/libxml2/libxml2.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -252,13 +251,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 LDADD = \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     -lm
 
 TAGS_FILES = \

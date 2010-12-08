@@ -42,7 +42,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = ldmd$(EXEEXT)
-subdir = server
+subdir = ldmd
 DIST_COMMON = $(dist_man1_MANS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -60,7 +60,8 @@ am_ldmd_OBJECTS = parser.$(OBJEXT) ldmd.$(OBJEXT) wordexp.$(OBJEXT)
 ldmd_OBJECTS = $(am_ldmd_OBJECTS)
 ldmd_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-ldmd_DEPENDENCIES = ../lib/libldm.la $(am__DEPENDENCIES_1)
+ldmd_DEPENDENCIES = $(top_builddir)/lib/libldm.la \
+	$(top_builddir)/libxml2/libxml2.la $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -267,7 +268,8 @@ ldmd_SOURCES = \
     wordexp.c
 
 LDADD = \
-    ../lib/libldm.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     $(LD_GEN) \
     -lm
 
@@ -295,9 +297,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign server/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign ldmd/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign server/Makefile
+	  $(AUTOMAKE) --foreign ldmd/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \

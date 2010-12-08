@@ -274,71 +274,57 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 DISTCHECK_CONFIGURE_FLAGS = --disable-root-actions
-SUBDIRS = \
+COMMON_LIB_SUBDIRS = \
     libxml2 \
     rpc \
     ulog \
     misc \
+    pqinglib \
     protocol \
-    $(PQ_SUBDIR) \
     registry \
-    lib \
-    pqcreate \
-    pqcheck \
-    pqinsert \
-    pqcat \
-    pqcopy \
-    pqexpire \
-    pqmon \
-    pqutil \
-    pqsend \
-    pqing \
-    pqact \
-    pqsurf \
-    ldmsend \
-    rtstats \
+    lib
+
+LIB_SUBDIRS = \
+    $(PQ_SUBDIR) \
+    $(COMMON_LIB_SUBDIRS)
+
+PROG_SUBDIRS = \
     feedme \
-    notifyme \
-    server \
+    hupsyslog \
+    ldmd \
     ldmping \
-    scripts \
-    scour \
+    ldmsend \
+    notifyme \
+    pqact \
+    pqcat \
+    pqcheck \
+    pqcopy \
+    pqcreate \
+    pqexpire \
+    pqing \
+    pqinsert \
+    pqmon \
+    pqsend \
+    pqsurf \
+    pqutil \
     regex \
+    regutil \
+    rtstats \
+    scour \
+    scripts \
+    ulogger
+
+SUBDIRS = \
+    $(LIB_SUBDIRS) \
+    $(PROG_SUBDIRS) \
     html
 
 DIST_SUBDIRS = \
-    libxml2 \
-    rpc \
-    ulog \
-    misc \
-    protocol \
+    $(COMMON_LIB_SUBDIRS) \
     pq \
     fauxPq \
-    registry \
-    lib \
-    pqcreate \
-    pqcheck \
-    pqinsert \
-    pqcat \
-    pqcopy \
-    pqexpire \
-    pqmon \
-    pqutil \
-    pqsend \
-    pqing \
-    pqact \
-    pqsurf \
-    ldmsend \
-    rtstats \
-    feedme \
-    notifyme \
-    server \
-    ldmping \
-    scripts \
-    scour \
-    regex \
-    test \
-    html
+    $(PROG_SUBDIRS) \
+    test html
 
 include_HEADERS = config.h
 EXTRA_DIST = \
@@ -890,8 +876,9 @@ install-data-hook:	ensure-ldmhome-links ensure-var
 @INCLUDE_ROOT_ACTIONS_TRUE@	| fmt >/dev/tty
 @INCLUDE_ROOT_ACTIONS_TRUE@	@echo >/dev/tty
 @HAVE_SUDO_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions
-@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@printf "Enter root's password: " >/dev/tty
-@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@$(SU) -c '$(MAKE) $(AM_MAKEFLAGS) root-actions' </dev/tty 2>/dev/null
+@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@printf "Enter root's password (or don't): " >/dev/tty
+@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@$(SU) root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) root-actions' \
+@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	    </dev/tty 2>/dev/null
 @HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@echo >/dev/tty
 @INCLUDE_ROOT_ACTIONS_FALSE@	@echo
 @INCLUDE_ROOT_ACTIONS_FALSE@	@echo "\

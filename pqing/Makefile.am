@@ -9,20 +9,13 @@
 EXTRA_DIST		= \
     afos_message.h \
     do.c \
-    dtime.h \
-    tokens.h \
-    wmo_header.h \
-    xbuf.h \
     crc_tab.h \
     faa604_message.h \
     feed.h \
     rawfile.h \
     wmo_message.h \
-    wmo_start.h \
-    xbuf.h
+    wmo_start.h
 PQ_SUBDIR		= @PQ_SUBDIR@
-noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= dtime.c wmo_header.c tokens.c xbuf.c
 bin_PROGRAMS		= pqing
 pqing_SOURCES		= \
     afos_message.c \
@@ -36,6 +29,7 @@ pqing_SOURCES		= \
     wmo_message.c \
     wmo_start.c
 CPPFLAGS		= \
+    -I$(top_srcdir)/pqinglib \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
@@ -44,17 +38,12 @@ CPPFLAGS		= \
 pqing_LDADD		= \
     do_check.o \
     do_nocheck.o \
-    lib.la \
-    ../$(PQ_SUBDIR)/lib.la \
-    ../protocol/lib.la \
-    ../ulog/lib.la \
-    ../misc/lib.la \
-    ../rpc/lib.la \
-    ../registry/lib.la \
-    ../libxml2/libxml2.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     -lm
 dist_man1_MANS		= pqing.1
 TAGS_FILES		= \
+    ../pqinglib/*.c ../pqinglib/*.h \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
