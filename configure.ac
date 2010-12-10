@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.9.0.9], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.9.0.10], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -110,7 +110,7 @@ AM_COND_IF([INCLUDE_ROOT_ACTIONS],
 	AC_CACHE_CHECK([for su(1) that you can use], [ac_cv_path_SU],
 	    [AC_PATH_PROGS_FEATURE_CHECK([SU], [su],
 		[echo "Enter root's password (or don't)." >/dev/tty
-		$ac_path_SU root -c true </dev/tty >/dev/tty &&
+		$ac_path_SU root -c true </dev/tty >/dev/tty 2>&1 &&
                     ac_cv_path_SU=$ac_path_SU
                     ac_path_SU_found=:],
 		[AC_MSG_RESULT([not found])

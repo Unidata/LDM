@@ -90,20 +90,20 @@ install-data-hook:	ensure-ldmhome-links ensure-var
 if INCLUDE_ROOT_ACTIONS
 	@echo
 	@echo "\
-The next step will perform those installation actions that must be \
-executed by the superuser.  \
+The next step will perform those installation actions that must be executed \
+by the superuser. \
 If this step doesn't work (for example, if you don't enter \
-root's password), then the superuser will have to manually execute \
-the command \"$(MAKE) root-actions\"." \
+root's password), then the superuser will have to manually execute the \
+command \"$(MAKE) root-actions\"." \
 	| fmt >/dev/tty
 	@echo >/dev/tty
 if HAVE_SUDO
-	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions
+	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions 2>/dev/tty
 else
 if HAVE_SU
 	@printf "Enter root's password (or don't): " >/dev/tty
 	@$(SU) root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) root-actions' \
-	    </dev/tty 2>/dev/null
+	    </dev/tty 2>/dev/tty
 	@echo >/dev/tty
 endif
 endif

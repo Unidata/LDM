@@ -1,3 +1,8 @@
+6.9.0.10
+        Improved output redirection of su(1) and sudo(1) in configure(1) script
+        and makefile so that the user will get any error messages even if they
+        redirect output to a file.
+
 6.9.0.9 2010-12-10
         Modified ldmadmin(1) script: "ldmadmin clean" no longer error exits
         if the ldmadmin(1) lock-file or pid-file don't exist.

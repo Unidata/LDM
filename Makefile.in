@@ -868,17 +868,17 @@ all:
 install-data-hook:	ensure-ldmhome-links ensure-var
 @INCLUDE_ROOT_ACTIONS_TRUE@	@echo
 @INCLUDE_ROOT_ACTIONS_TRUE@	@echo "\
-@INCLUDE_ROOT_ACTIONS_TRUE@The next step will perform those installation actions that must be \
-@INCLUDE_ROOT_ACTIONS_TRUE@executed by the superuser.  \
+@INCLUDE_ROOT_ACTIONS_TRUE@The next step will perform those installation actions that must be executed \
+@INCLUDE_ROOT_ACTIONS_TRUE@by the superuser. \
 @INCLUDE_ROOT_ACTIONS_TRUE@If this step doesn't work (for example, if you don't enter \
-@INCLUDE_ROOT_ACTIONS_TRUE@root's password), then the superuser will have to manually execute \
-@INCLUDE_ROOT_ACTIONS_TRUE@the command \"$(MAKE) root-actions\"." \
+@INCLUDE_ROOT_ACTIONS_TRUE@root's password), then the superuser will have to manually execute the \
+@INCLUDE_ROOT_ACTIONS_TRUE@command \"$(MAKE) root-actions\"." \
 @INCLUDE_ROOT_ACTIONS_TRUE@	| fmt >/dev/tty
 @INCLUDE_ROOT_ACTIONS_TRUE@	@echo >/dev/tty
-@HAVE_SUDO_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions
+@HAVE_SUDO_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions 2>/dev/tty
 @HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@printf "Enter root's password (or don't): " >/dev/tty
 @HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@$(SU) root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) root-actions' \
-@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	    </dev/tty 2>/dev/null
+@HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	    </dev/tty 2>/dev/tty
 @HAVE_SUDO_FALSE@@HAVE_SU_TRUE@@INCLUDE_ROOT_ACTIONS_TRUE@	@echo >/dev/tty
 @INCLUDE_ROOT_ACTIONS_FALSE@	@echo
 @INCLUDE_ROOT_ACTIONS_FALSE@	@echo "\
