@@ -114,7 +114,7 @@ multiCheck:
 	for configOpts in '' '--disable-shared'; do \
 	    $(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
 		tmp="$(tmp)" configOpts="$$configOpts" singleCheck; \
-	done >>$(host).log 2>&1
+	done
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for multiple make(1) and cc(1) pairs.
@@ -123,7 +123,7 @@ multiCheck:
 	grep '^[^#]' $< | while IFS=',' read env make cc tmp; do \
 	    $(MAKE) host="$*" env="$$env" make="$$make" cc="$$cc" tmp="$$tmp" \
 		multiCheck </dev/null; \
-	done
+	done >$*.log 2>&1
 
 # The following rule starts concurrent asynchronous builds on multiple remote
 # systems.

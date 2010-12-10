@@ -23,6 +23,11 @@
         Added addtional vetting of the minimum virtual residence time before
         taking action.
 
+        Corrected argument declaration in pqsend.c.
+
+        Added logging of data-product metadata when the associated data-product
+        is deleted from the product-queue and it was created in the future.
+
 6.9.0.8 2010-12-06
         Modified wording of password requests to notify the user that they
         can opt-out.

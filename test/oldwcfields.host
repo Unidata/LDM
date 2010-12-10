@@ -1,27 +1,24 @@
 # "xmllint.c", line 2334: argument #2 is incompatible with prototype:
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
-# Works
+# malloc(12) failure
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89 -m64
 
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc
+# malloc(12) failure
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64
 
-# /usr/xpg4/bin/make crashes on the autoconf-generated makefiles
-#
+# /tmp/remoteCheck: line 45: 17789 Segmentation Fault      (core dumped) MAKEFLAGS= $make install uninstall
 PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc
+# /tmp/remoteCheck: line 45:  9097 Segmentation Fault      (core dumped) MAKEFLAGS= $make install uninstall
 PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc -m64
 
+# c99: c99 utility unavailable SunOS 5.9
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99
+# c99: c99 utility unavailable SunOS 5.9
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99 -m64
 
 PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m32
-#
-# ld: warning: file ./.libs/lib.a ignored: unable to locate archive
-# symbol table
 PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m64
 
 PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m32
-#
-# ld: warning: file ./.libs/lib.a ignored: unable to locate archive
-# symbol table
 PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m64

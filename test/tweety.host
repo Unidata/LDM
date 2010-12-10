@@ -1,21 +1,29 @@
 # libtool(1) can't build a sharable library with this compiler
+# ld: Unsatisfied symbol "main" in file <no file>
 PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc,/usr/tmp
+# cc: "../rpc/svc.h", line 106: error 1574: Unknown size for "xp_raddr".
 PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/cc +DA2.0W,/usr/tmp
 
 # libtool(1) can't build a sharable library with this compiler
+# cc: "../rpc/svc.h", line 106: error 1574: Unknown size for "xp_raddr".
 PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89,/usr/tmp
+# (Bundled) cc: "conftest.c", line 38: error 1000: Unexpected symbol: "i".
 PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/usr/bin/c89 +DA2.0W,/usr/tmp
 
 # /usr/ccs/bin/cc has problems with "#include <stdio.h>"
+# (Bundled) cc: "conftest.c", line 38: error 1000: Unexpected symbol: "i".
 PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc,/usr/tmp
+# (Bundled) cc: "conftest.c", line 38: error 1000: Unexpected symbol: "i".
 PATH=/usr/ccs/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc +DA2.0W,/usr/tmp
 
-# libtool(1) can't build a sharable library with this compiler
+# /usr/ccs/bin/ld: Unsatisfied symbols: main (Not referenced yet! Probably due to -u option)
 PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc,/usr/tmp
+# ld: Unsatisfied symbol "main" in file <no file>
 PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/cc +DA2.0W,/usr/tmp
 
-# libtool(1) can't build a sharable library with this compiler
+# cc: "../rpc/svc.h", line 106: error 1574: Unknown size for "xp_raddr".
 PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89,/usr/tmp
+# cc: "../rpc/svc.h", line 106: error 1574: Unknown size for "xp_raddr".
 PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/usr/bin/make,/opt/ansic/bin/c89 +DA2.0W,/usr/tmp
 
 PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,/usr/tmp

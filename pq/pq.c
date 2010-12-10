@@ -30,6 +30,7 @@
 #include "remote.h"
 #include "lcm.h"
 #include "ulog.h"
+#include "log.h"
 #include "ldmprint.h"
 #include "fsStats.h"
 #include "ldm_xlen.h"
@@ -4646,6 +4647,31 @@ pq_del_oldest(pqueue *pq)
         (void)xinfo_i(vp, Extent(rep), XDR_DECODE, ib_init(&infoBuf));
 
         /*
+         * Set the minimum virtual residence time if appropriate.
+         */
+        {
+            timestampt  now;
+            
+            (void)set_timestamp(&now);
+
+            if (tvCmp(now, infoBuf.info.arrival, <)) {
+                LOG_START1("pq_del_oldest(): Oldest product is from the future:"
+                        " %s",
+                        s_prod_info(NULL, 0, &infoBuf.info, ulogIsDebug()));
+                log_log(LOG_WARNING);
+            }
+            else {
+                timestampt  virtResTime =
+                    diff_timestamp(&now, &infoBuf.info.arrival);
+
+                if (tvIsNone(pq->ctlp->minVirtResTime) || 
+                        tvCmp(virtResTime, pq->ctlp->minVirtResTime, <))  {
+                    pq->ctlp->minVirtResTime = virtResTime;
+                }
+            }
+        }
+
+        /*
          * Remove the corresponding entry from the time-list.
          */
         tq_delete(pq->tqp, tqep);
@@ -4678,23 +4704,6 @@ pq_del_oldest(pqueue *pq)
          * Mark the queue as full.
          */
         pq->ctlp->isFull = 1;
-
-        /*
-         * Set the minimum virtual residence time if appropriate.
-         */
-        {
-            timestampt  now;
-            timestampt  virtResTime;
-            
-            (void)set_timestamp(&now);
-
-            virtResTime = diff_timestamp(&now, &infoBuf.info.arrival);
-
-            if (tvIsNone(pq->ctlp->minVirtResTime) || 
-                    tvCmp(virtResTime, pq->ctlp->minVirtResTime, <))  {
-                pq->ctlp->minVirtResTime = virtResTime;
-            }
-        }
     }                                   /* got data region */
 
     return status;

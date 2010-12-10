@@ -95,6 +95,9 @@ install-exec-local:	regpar.tab regutil $(ETC_DIR)
 	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
 	    $(ETC_DIR)/ldmadmin-pl.conf $(ETC_DIR)
 
+$(ETC_DIR):
+	mkdir $@
+
 if HAVE_CUNIT
 check_PROGRAMS		= testRegistry
 testRegistry_CPPFLAGS	= \

@@ -125,7 +125,7 @@ dump_stats(const sendstats *stp)
 
 static void
 printUsage(
-    const char const    *av0)
+    const char* const   av0)
 {
     const char* const   progname = ubasename(av0);
 

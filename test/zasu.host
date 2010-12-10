@@ -1,13 +1,19 @@
 # /usr/vac/bin/c89 insists on using "uint64_t" if _ALL_SOURCE_ is defined
 # and that type doesn't exist if "-q32" is specified.
+# "/usr/include/netinet/in.h", line 280.1: 1506-166 (S) Definition of function uint64_t requires parentheses.
 PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/bin/make,/usr/vac/bin/c89 -q32,/zasu/steve
-# syntax error on "sizeof((off_t))"
+# "xmlIO.c", line 768.16: 1506-007 (S) "struct stat" is undefined.
 PATH=/usr/vac/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/bin/make,/usr/vac/bin/c89 -q64,/zasu/steve
 
+# dynamic library fails: malloc(12) failure
 PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/cc -q32,/zasu/steve
+# dynamic library fails: malloc(12) failure
 PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/cc -q64,/zasu/steve
 
+# dynamic library fails: malloc(12) failure
 PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,/usr/ccs/bin/make,/usr/vac/bin/xlc -q32,/zasu/steve
+# dynamic library fails: malloc(12) failure
 PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,/usr/ccs/bin/make,/usr/vac/bin/xlc -q64,/zasu/steve
 
+# dynamic library fails: malloc(12) failure
 PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/make,/opt/gnu/bin/gcc,/zasu/steve

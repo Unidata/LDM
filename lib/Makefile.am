@@ -7,12 +7,12 @@
 ## Process this file with automake to produce Makefile.in
 
 lib_LTLIBRARIES		= libldm.la
-libldm_la_SOURCES	=
+libldm_la_SOURCES	= dummy.c
 libldm_la_LIBADD	= \
-    $(top_builddir)/misc/*.lo \
-    $(top_builddir)/pqinglib/*.lo \
-    $(top_builddir)/$(PQ_SUBDIR)/*.lo \
-    $(top_builddir)/protocol/*.lo \
-    $(top_builddir)/registry/*.lo \
-    $(top_builddir)/rpc/*.lo \
-    $(top_builddir)/ulog/*.lo
+    $(top_builddir)/misc/lib.la \
+    $(top_builddir)/pqinglib/lib.la \
+    $(top_builddir)/$(PQ_SUBDIR)/lib.la \
+    $(top_builddir)/protocol/lib.la \
+    $(top_builddir)/registry/lib.la \
+    $(top_builddir)/rpc/lib.la \
+    $(top_builddir)/ulog/lib.la

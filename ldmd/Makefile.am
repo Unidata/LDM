@@ -77,6 +77,9 @@ install-data-local:    \
 $(DESTDIR)$(sysconfdir)/ldmd.conf:
 	$(INSTALL_DATA) $(srcdir)/ldmd.conf $@
 
+$(DESTDIR)$(sysconfdir):
+	mkdir $@
+
 uninstall-local:
 	rm -f $(DESTDIR)$(mandir)/man1/ldmd.1
 

@@ -481,7 +481,7 @@ uninstall-am:
 @MAINTAINER_TRUE@	for configOpts in '' '--disable-shared'; do \
 @MAINTAINER_TRUE@	    $(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
 @MAINTAINER_TRUE@		tmp="$(tmp)" configOpts="$$configOpts" singleCheck; \
-@MAINTAINER_TRUE@	done >>$(host).log 2>&1
+@MAINTAINER_TRUE@	done
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for multiple make(1) and cc(1) pairs.
@@ -490,7 +490,7 @@ uninstall-am:
 @MAINTAINER_TRUE@	grep '^[^#]' $< | while IFS=',' read env make cc tmp; do \
 @MAINTAINER_TRUE@	    $(MAKE) host="$*" env="$$env" make="$$make" cc="$$cc" tmp="$$tmp" \
 @MAINTAINER_TRUE@		multiCheck </dev/null; \
-@MAINTAINER_TRUE@	done
+@MAINTAINER_TRUE@	done >$*.log 2>&1
 
 # The following rule starts concurrent asynchronous builds on multiple remote
 # systems.

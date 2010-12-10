@@ -166,7 +166,7 @@ timestamp_decr(timestampt *ts)
 
 
 /*
- * take the difference between two timestamps
+ * Returns the non-negative difference between two timestamps; otherwise zero.
  *
  * N.B. Meaningful only if "afta" is later than "b4",
  * negative differences map to TS_ZERO
