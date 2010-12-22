@@ -1,6 +1,6 @@
 printUsage()
 {
-cat 1>&2 <<EOF
+    cat 1>&2 <<EOF
 Usage: $0 [-b start] [-e stop] [file ...]
 Options:
     -b start    UTC start-time of data as YYYYMMDD[.hh[mm[ss]]].  Default is
@@ -8,17 +8,17 @@ Options:
     -e stop     UTC stop-time of data as YYYYMMDD[.hh[mm[ss]]].  Default is
                 end of data.
 Arguments:
-    file ...    Pathnames of data-files.  Default is "$HOME/logs/metrics.txt".
+    file ...    Pathnames of data-files.  Default is "$files".
 EOF
 }
 
 # Static initialization:
 start=19700101
 stop=30000101
-files=$HOME/logs/metrics.txt
+files=`regutil /metrics/files`
 
 # Dynamic initialization:
-while getopts h:f:b:e:u: id; do
+while getopts b:e: id; do
     case $id in
         b)      start="$OPTARG";;
         e)      stop="$OPTARG";;
@@ -53,7 +53,11 @@ datafile=/tmp/metrics.txt
 #       17      amount of free swap space in bytes
 #       18      number of CPU context switches per second
 
-awk "\$1>$start && \$1<$stop" `ls -rt $files` >$datafile
+files=`ls -rt $files`
+if test -z "$files"; then
+    exit 2;
+fi
+awk "\$1>$start && \$1<$stop" $files >$datafile
 if test ! -s $datafile; then
     echo 1>&2 "No matching data"
     rm -f $datafile

@@ -13,7 +13,8 @@ use POSIX;
 # Files:
 #
 #  $LDMHOME/ldm.pid          file containing process group ID
-#  $LDMHOME/.ldmadmin.lck    lock file for operations that modify the LDM
+#  $LDMHOME/.ldmadmin.lck    lock file for operations that modify the state of
+#                            the LDM system
 #  $LDMHOME/.[0-9a-f]*.info  product-information of the last, successfuly-
 #                            received data-product
 ###############################################################################
@@ -137,15 +138,15 @@ if ($command eq "start") {	# start the ldm
     if ($q_path) {
         $pq_path = $q_path;
     }
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = start_ldm();
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "stop") {	# stop the ldm
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = stop_ldm();
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "restart") {	# restart the ldm
@@ -162,12 +163,12 @@ elsif ($command eq "restart") {	# restart the ldm
     if ($q_path) {
         $pq_path = $q_path;
     }
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = stop_ldm();
         if (!$status) {
             $status = start_ldm();
         }
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "mkqueue") {	# create a product queue using pqcreate(1)
@@ -182,9 +183,9 @@ elsif ($command eq "mkqueue") {	# create a product queue using pqcreate(1)
     if ($q_path) {
         $pq_path = $q_path;
     }
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = make_pq();
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "delqueue") { # delete a product queue
@@ -195,12 +196,12 @@ elsif ($command eq "delqueue") { # delete a product queue
     if ($q_path) {
         $pq_path = $q_path;
     }
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = delete_pq();
         if ($status == 0 && $delete_info_files) {
             unlink <.*.info>;
         }
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "mksurfqueue") { # create a product queue for pqsurf(1)
@@ -215,9 +216,9 @@ elsif ($command eq "mksurfqueue") { # create a product queue for pqsurf(1)
     if ($q_path) {
         $surf_path = $q_path;
     }
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = make_surf_pq();
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "delsurfqueue") { # delete a pqsurf product queue
@@ -228,9 +229,9 @@ elsif ($command eq "delsurfqueue") { # delete a pqsurf product queue
     if ($q_path) {
         $surf_path = $q_path;
     }
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = del_surf_pq();
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "newlog") {	# rotate the log files
@@ -239,9 +240,9 @@ elsif ($command eq "newlog") {	# rotate the log files
         /^-n/ && ($numlogs = shift);
         /^-l/ && ($log_file = shift);
     }
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = new_log();
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "scour") {	# scour data directories
@@ -255,15 +256,15 @@ elsif ($command eq "checkinsertion") { # check if a product has been inserted
     $status = check_insertion();
 }
 elsif ($command eq "vetqueuesize") { # vet the size of the queue
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = vetQueueSize();
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "check") {	# check the LDM system
-    if (0 == ($status = make_lockfile())) {
+    if (0 == ($status = getLock())) {
         $status = check_ldm();
-        rm_lockfile();
+        releaseLock();
     }
 }
 elsif ($command eq "watch") {	# monitor incoming products
@@ -315,10 +316,6 @@ elsif ($command eq "clean") {	# clean up after an abnormal termination
     if (isRunning($pid_file, $ip_addr)) {
 	errmsg("The LDM system is running!  Stop it first.");
 	$status = 1;
-    }
-    elsif (unlink($lock_file) == 0) {
-	errmsg("Couldn't remove ldmadmin(1) lock-file \"$lock_file\"");
-	$status = 2;
     }
     elsif (unlink($pid_file) == 0) {
 	errmsg("Couldn't remove LDM server PID-file \"$pid_file\"");
@@ -476,25 +473,28 @@ sub resetRegistry
     return $status;
 }
 
+use Fcntl qw(:flock SEEK_END); # import LOCK_* and SEEK_END constants
+
 ###############################################################################
-# check for the existence of the lock file.  Exit if found, create if not
-# found.
+# Lock the lock-file.
 ###############################################################################
 
-sub make_lockfile
+sub getLock
 {
-    my $status = 1;     # default failure
+    my $status = 0;     # default success
 
-    if (-e $lock_file) {
-	errmsg("make_lockfile(): another ldmadmin(1) process exists");
-    }
-    else {
+    if (! -e $lock_file) {
         if (!open(LOCKFILE,">$lock_file")) {
-            errmsg("make_lockfile(): Cannot open lock file $lock_file");
+            errmsg("getLock(): Cannot create lock-file \"$lock_file\"");
+            $status = 1;
         }
-        else {
-            close(LOCKFILE);
-            $status = 0;
+    }
+
+    if (0 == $status) {
+        if (flock(LOCKFILE, LOCK_EX | LOCK_NB)) {
+            errmsg("getLock(): Couldn't lock lock-file \"$lock_file\". ".
+                    "Another ldmadmin(1) script is likely running");
+            $status = 1;
         }
     }
 
@@ -502,17 +502,16 @@ sub make_lockfile
 }
 
 ###############################################################################
-# Remove a lock file. Exit if not found.
+# Unlock the lock file.
 ###############################################################################
 
-sub rm_lockfile
+sub releaseLock
 {
-    if (-e $lock_file) {
-	unlink($lock_file);
+    if (flock(LOCKFILE, LOCK_UN)) {
+        errmsg("releaseLock(): Couldn't unlock lock-file \"$lock_file\"");
     }
-    else {
-	errmsg("rm_lockfile: Lock-file \"$lock_file\" does not exist");
-    }
+
+    close(LOCKFILE);
 }
 
 ###############################################################################

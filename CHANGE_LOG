@@ -1,7 +1,13 @@
-6.9.0.10
+6.9.0.10        2010-12-22
         Improved output redirection of su(1) and sudo(1) in configure(1) script
         and makefile so that the user will get any error messages even if they
         redirect output to a file.
+
+        Modified plotMetrics: ported to use regutil(1) and added test for
+        non-existent data-files.
+
+        Improved locking in ldmadmin(1): replaced lock-file existence with
+        non-blocking call to flock().
 
 6.9.0.9 2010-12-10
         Modified ldmadmin(1) script: "ldmadmin clean" no longer error exits
