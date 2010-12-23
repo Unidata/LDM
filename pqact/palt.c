@@ -219,6 +219,20 @@ again2:
 }
 
 
+/*
+ * Tokenizes according to whitespace (tabs and spaces). Quotation marks
+ * (") are discarded but all the enclosed text is kept (including whitespace).
+ *
+ * Arguments
+ *      buf             Pointer to the NUL-terminated string to be tokenized.
+ *      tokensp         Pointer to an array of string pointers, each of which
+ *                      will be set to point to its corresponding token, in
+ *                      order.
+ *      maxtokens       The number of elements in the "tokensp" array.
+ * Returns
+ *      The number of tokens (i.e., the number of elements set in the
+ *      "tokensp" array).
+ */
 static int
 tokenize(char *buf,
         char **tokensp,
