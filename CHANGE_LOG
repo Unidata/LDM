@@ -17,7 +17,8 @@
             accessed both from scripts and programatically.  A new utility,
             regutil(1), can access the registry from the command-line.
             
-            The registry is implemented as an XML file (etc/registry.xml).
+            The registry is implemented as an XML file (etc/registry.xml) -- so
+            it can be manually edited if no other process is writing to it.
 
             As a consequence of the creation and use of the registry, the
             following environment variables no longer work:
@@ -50,8 +51,8 @@
             Improved support for concurrent ldmadmin(1) processes: replaced
             test for lock-file existence with non-blocking call to flock().
 
-            Modified "clean" command so that it no longer error exits if the LDM
-            server pid-file (~/ldmd.pid) doesn't exist.
+            Modified "clean" command so that it no longer emits a warning and
+            error exits if the LDM server pid-file (~/ldmd.pid) doesn't exist.
 
             Made "usage" the default command.
 

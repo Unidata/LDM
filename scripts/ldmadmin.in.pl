@@ -316,9 +316,9 @@ elsif ($command eq "clean") {	# clean up after an abnormal termination
 	errmsg("The LDM system is running!  Stop it first.");
 	$status = 1;
     }
-    elsif (unlink($pid_file) == 0) {
-	errmsg("Couldn't remove LDM server PID-file \"$pid_file\"");
-	$status = 3;
+    elsif ((-e $pid_file) && (unlink($pid_file) == 0)) {
+        errmsg("Couldn't remove LDM server PID-file \"$pid_file\"");
+        $status = 3;
     }
     else {
 	$status = 0;
