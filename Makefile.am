@@ -243,6 +243,11 @@ beta:
 alpha:
 	$(MAKE) ftp FTPDIR=/web/content/staff/steve/ldm
 	cd html && $(MAKE) alpha ALPHADIR=/web/content/staff/steve/ldm
+
+web-update:
+	cd html && $(MAKE) web-update
+
+available:	ftp web-update
 endif
 
 .PHONY:		\
@@ -258,4 +263,6 @@ endif
     tag \
     ftp \
     beta \
-    alpha
+    alpha \
+    web-update \
+    available
