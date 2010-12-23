@@ -1,124 +1,4 @@
 6.9.0.10        2010-12-22
-        Improved output redirection of su(1) and sudo(1) in configure(1) script
-        and makefile so that the user will get any error messages even if they
-        redirect output to a file.
-
-        Modified plotMetrics: ported to use regutil(1) and added test for
-        non-existent data-files.
-
-        Improved locking in ldmadmin(1): replaced lock-file existence with
-        non-blocking call to flock().
-
-6.9.0.9 2010-12-10
-        Modified ldmadmin(1) script: "ldmadmin clean" no longer error exits
-        if the ldmadmin(1) lock-file or pid-file don't exist.
-
-        Corrected use of "LdmProxyStatus" in "protocol/LdmProxy.c".
-
-        Separated combined library/program subdirectories in the source-tree
-        into separate library and program subdirectories (e.g., "ulog/" ->
-        "ulog/" + "ulogger/").
-
-        Renamed "server" source-subdirectory to "ldmd".
-
-        Improved configure(1) script's determination of ability to set the
-        user ID on execution.
-
-        Corrected spelling of "acceptable" in ldmadmin(1) script.
-
-        Improved portability of su(1) use in configure(1) script and top-level
-        makefile.
-
-        Ported installation procedure to 64-bit Solaris 5.10.
-
-        Added addtional vetting of the minimum virtual residence time before
-        taking action.
-
-        Corrected argument declaration in pqsend.c.
-
-        Added logging of data-product metadata when the associated data-product
-        is deleted from the product-queue and it was created in the future.
-
-6.9.0.8 2010-12-06
-        Modified wording of password requests to notify the user that they
-        can opt-out.
-
-        Added "config.h" to installed headers.
-
-        Simplified "macros.make.in".
-
-        Moved many modules from "server/" to "protocol/" and made them part of
-        the LDM library.
-
-        Moved creation of the LDM library from the top-level source-directory
-        to the new "lib/" subdirectory.
-
-6.9.0.7 2010-11-29
-        Improved ldmadmin(1):
-            Made decoding of invocation-arguments command-specific so that
-            the "-f" option could be used in both the "mkqueue" and "watch"
-            commands.
-
-            Cleaned-up "usage" message.
-
-        Fixed regutil(1): no longer crashes when "put" action is invoked
-        without a value-path argument.
-
-        Added (undocumented) wasReceived(1).
-
-6.9.0.6 2010-11-17
-        Corrected ldmadmin(1) script: corrected logic surrounding queue
-        pathnames in the registry and the use of the command-line "-q" option
-        (the "mksurfqueue" command was using the product-queue pathname).
-
-6.9.0.5 2010-11-16
-        Improved pqsend(1) and ldmsend(1). If the LDM replied to the HIYA with
-        a RECLASS response, then the offered product-class specification was
-        replaced with the one in the reply. This would prevent the originating
-        site from restricting the class of products sent to the LDM. Now, the
-        product-class specification in the RECLASS response from the LDM is
-        used in series with the originating site's specification: products must
-        now pass both filters.
-
-        Added note to documentation about how the "--localstatedir" option of
-        configure(1) script won't work if an older version of the LDM is
-        installed.
-
-6.9.0.4 2010-11-14
-        Modified pqsend(1) to use LDM-6 protocol and added option to decouple
-        its total time-out and time-offset parameters.
-
-        Created the following:
-            "LdmProxy" module           Communicates with an LDM. Used by
-                                        ldmsend(1) and pqsend(1).
-            "timer" module              Implements a countdown timer.
-            "exitStatus.h"              Contains exit-status values for
-                                        programs. Used by ldmsend(1) and
-                                        pqsend(1).
-
-6.9.0.3 2010-10-04
-        Improved web pages based on recent workshop.
-
-        Added creation of file "macros.make" by configure(1)-script to
-        accomodate readnoaaport(1) and gribinsert(1) packages.
-
-6.9.0.2 2010-10-29
-        Replaced Berkeley-DB backend for the registry (etc/registry/) with the
-        use of "libxml2" and an XML file (etc/registry.xml).
-
-6.9.0.1 2010-10-25
-        Replaced defunct hyperlinks to list of WMO headers with hyperlink
-        to WMO Tables from Manual 386.
-
-        Added some error-messages to ldmadmin(1) for when regutil(1) fails.
-
-        Added printing of product-queue reconciliation-mode to "ldmadmin 
-        config".
-
-        Modified ldmsend(1) to ensure that it can send a zero-length file
-        on any system.
-
-6.9.0.0 2010-04-06
         SUMMARY: Dragged the kicking and screaming LDM package into the late
             20th century.  :-)
 
@@ -144,6 +24,13 @@
                 LDMHOSTNAME
                 LDMPQFNAME
 
+        Portability:
+            Added checks for netstat(1) and top(1) to configure(1) script and
+            appropriately modified ldmadmin(1).  Among other things, this
+            ported the "ldmadmin printmetrics" command to Mac OS X (note,
+            however, that a bug in Mac OS X prevents the LDM from working
+            reliably on that system).
+
         ldmadmin(1):
             Added "vetqueuesize" command to reconcile the maximum latency
             parameter with the observed minimum virtual residence time of the
@@ -152,21 +39,32 @@
             NECESSARY -- TO PREVENT DUPLICATE PRODUCTS FROM BEING TRANSMITTED.
             See the web-page on configuring the LDM for details.
 
-        LDM (ldmd(1)):
+            Added "check" command to check the LDM system via crontab(1). This
+            command will adjust the size of the product-queue if necessary
+            and configured to do so.
+
+            Made decoding of invocation-arguments command-specific so that
+            the "-f" option could be used in both the "mkqueue" and "watch"
+            commands.
+
+            Improved support for concurrent ldmadmin(1) processes: replaced
+            test for lock-file existence with non-blocking call to flock().
+
+            Mofied "clean" command so that it no longer error exits if the LDM
+            server pid-file (~/ldmd.pid) doesn't exist.
+
+            Cleaned-up "usage" message.
+
+            Enhanced output of "config" command.
+
+            Improved some error-messages.
+
+        LDM server (ldmd(1)):
             Renamed the LDM server from "rpc.ldmd" to just "ldmd".
             APPROPRIATELY ADJUST ANYTHING YOU HAVE THAT DEPENDS ON THIS NAME.
 
             Added logging to some failed pq_close() calls in an attempt to
             debug the Mac OS X 10.5 fcntl() problem.
-
-        Portability:
-            Added checks for netstat(1) and top(1) to configure(1) script and
-            appropriately modified ldmadmin(1).  Among other things, this
-            ported the "ldmadmin printmetrics" command to Mac OS X (note,
-            however, that a bug in Mac OS X prevents the LDM from working
-            reliably on that system).
-
-            Added "check" command to check the LDM system via crontab(1).
 
         regutil(1):
             New utility for accessing the LDM registry from the command-line.
@@ -183,11 +81,44 @@
             Made the LDM logging facility (default: LOG_LOCAL0) the default
             facility for the "-p" option.
 
+        pqsend(1):
+            Modified to use LDM-6 protocol and added option to decouple its
+            total time-out and time-offset parameters.
+
+            Improved filtering of sent data-products.  If the downstream LDM
+            replied to the HIYA with a RECLASS response, then the offered
+            product-class specification was replaced with the one in the reply.
+            This would prevent the originating site from restricting the class
+            of products sent to the LDM. Now, the product-class specification
+            in the RECLASS response from the LDM is used in series with the
+            originating site's specification: products must now pass both
+            filters.
+
+        ldmsend(1):
+            Modified to ensure that it can send a zero-length file on any
+            system.
+
+            Improved filtering of sent data-products.  If the downstream LDM
+            replied to the HIYA with a RECLASS response, then the offered
+            product-class specification was replaced with the one in the reply.
+            This would prevent the originating site from restricting the class
+            of products sent to the LDM. Now, the product-class specification
+            in the RECLASS response from the LDM is used in series with the
+            originating site's specification: products must now pass both
+            filters.
+
         pq(3) library:
             Corrected ability to build without mmap(2) support via the NO_MMAP
             C macro.
 
             Added the ability to track the minimum virtual residence time.
+
+            Added logging of data-product metadata when the associated
+            data-product is deleted from the product-queue and it was created
+            in the future.
+
+        plotMetrics(1):
+            Added test for non-existent data-files.
 
         Misc:
             Corrected pat_clone() if the source is the trivial pattern ".*".
@@ -196,6 +127,13 @@
 
             Corrected FNEXRAD webpages: removed "floater" link and corrected 
             "how to" link.
+
+            Replaced defunct hyperlinks to list of WMO headers with hyperlink
+            to WMO Tables from Manual 386.
+
+            Added (undocumented) wasReceived(1) script.
+
+            Added "config.h" to installed headers.
 
 6.8.1   2009-08-14
         Installation:
