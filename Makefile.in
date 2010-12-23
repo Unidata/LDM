@@ -1012,6 +1012,11 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 @MAINTAINER_TRUE@	$(MAKE) ftp FTPDIR=/web/content/staff/steve/ldm
 @MAINTAINER_TRUE@	cd html && $(MAKE) alpha ALPHADIR=/web/content/staff/steve/ldm
 
+@MAINTAINER_TRUE@web-update:
+@MAINTAINER_TRUE@	cd html && $(MAKE) web-update
+
+@MAINTAINER_TRUE@available:	ftp web-update
+
 .PHONY:		\
     root-actions \
     install_setuids \
@@ -1025,7 +1030,9 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
     tag \
     ftp \
     beta \
-    alpha
+    alpha \
+    web-update \
+    available
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
