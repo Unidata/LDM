@@ -303,8 +303,8 @@ elsif ($command eq "queuecheck") {	# check queue for corruption
 elsif ($command eq "config") {	# show the ldm configuration
     $status = ldm_config();
 }
-elsif ($command eq "log") {	# do a "more" on the logfile
-    system("more","$log_file");
+elsif ($command eq "log") {	# page the logfile
+    system("$ENV{'PAGER'}","$log_file");
     $status = $?;
 }
 elsif ($command eq "tail") {	# do a "tail -f" on the logfile

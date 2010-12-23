@@ -54,6 +54,9 @@
             Modified "clean" command so that it no longer emits a warning and
             error exits if the LDM server pid-file (~/ldmd.pid) doesn't exist.
 
+            Modified "log" command so that it uses the PAGER environment
+            variable instead of more(1).
+
             Made "usage" the default command.
 
             Cleaned-up "usage" message.
