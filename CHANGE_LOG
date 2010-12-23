@@ -50,8 +50,10 @@
             Improved support for concurrent ldmadmin(1) processes: replaced
             test for lock-file existence with non-blocking call to flock().
 
-            Mofied "clean" command so that it no longer error exits if the LDM
+            Modified "clean" command so that it no longer error exits if the LDM
             server pid-file (~/ldmd.pid) doesn't exist.
+
+            Made "usage" the default command.
 
             Cleaned-up "usage" message.
 

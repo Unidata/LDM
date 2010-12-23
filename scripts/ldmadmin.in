@@ -51,13 +51,12 @@ $ENV{'PATH'} = "$bin_path:$ENV{'PATH'}";
 # we want a flush after every print statement
 $| = 1;
 
-# Get the command. Error if no command specified.
+# Get the command. Default to "usage" if no command specified.
 $_ = $ARGV[0];
 shift;
 $command = $_;
 if (!$command) {
-    print_usage();
-    exit 1;
+    $command = "usage";
 }
 
 # Ensure that the registry is available because a locked registry will cause
