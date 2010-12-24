@@ -1,11 +1,23 @@
 # Indicates whether or not data-products that match a given selection
 # criteria have been received.
 #
-# Usage: wasReceived [-f feedset] [-o offset] [-p pattern]
+# Usage: wasReceived [-f feedset] [-p pattern] [-o offset]
 #
-# Exits:
+# Exit Status:
 #       0       Data-products matching the given criteria have been received
 #       1       Data-products matching the given criteria have not been received
+
+printUsage()
+{
+    cat 1>&2 <<EOF
+Usage: `basename $0` [-f feedset] [-p pattern] [-o offset]
+Options:
+    -f feedset  Feedtypes to check for (e.g., "IDS|DDPLUS"). Default is ANY.
+    -p pattern  Product-identifier pattern to check for (e.g., "^SAUS").
+                Default is ".*".
+    -o offset   How far back to check in seconds. Default is 3600.
+EOF
+}
 
 feedset=ANY
 offset=3600
@@ -16,6 +28,7 @@ while getopts f:o:p: opt; do
         f)  feedset="$OPTARG";;
         o)  offset="$OPTARG";;
         p)  pattern="$OPTARG";;
+        *)  printUsage;;
     esac
 done
 
