@@ -21,7 +21,8 @@ dist_bin_SCRIPTS	= \
     ldmfail \
     plotMetrics \
     wasReceived
-dist_man1_MANS		= ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1
+dist_man1_MANS		= ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1 \
+			  wasReceived.1
 CLEANFILES		= ldmadmin
 
 all:		ldmadmin

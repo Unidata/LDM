@@ -1,0 +1,68 @@
+.TH WASRECEIVED 1 "2010-12-27"
+.SH NAME
+wasReceived \- script for determining data-product reception
+.SH SYNOPSIS
+.HP
+.ft B
+wasReceived
+.nh
+.BI [-f " feedset" ]
+.BI [-o " offset" ]
+.BI [-p " pattern" ]
+.hy
+.ft
+.SH DESCRIPTION
+.PP
+This program indicates whether or not a data-product of a given feedtype
+and given product-identifier has been inserted into the LDM product-queue
+within the last given time period.
+.SH OPTIONS
+.TP
+.BI "-f " feedset
+Selects data-products whose feedtype matches \fIfeedset\fP (\fie.g., \fP
+\fBIDS|DDPLUS\fP). The default is \fBANY\fP.
+.TP
+.BI "-o " offset
+Selects data-products that have been received in the past \fIoffset\fP 
+seconds. The default is \fB3600\fP.
+.TP
+.BI "-p " pattern
+Selects data-products whose product-identifier matches the extended regular
+expression \fIpattern\fP. The default is \fB.*\fP.
+.SH EXIT STATUS
+.TP
+0
+A data-product matching the selection criteria has been received.
+.TP
+1
+A data-product matching the selection criteria has not been received.
+.SH EXAMPLES
+.PP
+The following entry in the LDM user's \fBcrontab(1)\fP file will cause
+the LDM user to received email if NEXRAD2 data-products have not been
+received in the past 15 minutes:
+.sp
+.RS +4
+.nh
+0,15,30,45 * * * * /bin/bash -l -c 'wasReceived -f NEXRAD2 -o 900' || echo NEXRAD2 data-products have not been received in the last 15 minutes
+.hy
+.RE
+.sp
+Note: This example entry is one line.
+.SH SUPPORT
+.PP
+If you have problems with this program, then you should first examine the 
+LDM email archive for similar problems and how they were solved.
+The email archive is available via the following World Wide Web URL:
+.sp
+.RS
+\fBhttp://www.unidata.ucar.edu/software/ldm/\fP
+.RE
+.sp
+If this does not suffice \fBand\fP your site is a member of the Unidata 
+program, then send an inquiry via email -- together will all relevant 
+information -- to
+.sp
+.RS
+\fBsupport-ldm@unidata.ucar.edu\fP
+.RE

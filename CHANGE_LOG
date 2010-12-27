@@ -1,5 +1,8 @@
 6.9.1
-        Added printing of usage message to wasReceived(1).
+        Documented wasReceived(1):
+            Added printing of usage message;
+            Created man(1)-page; and
+            Added to list of programs.
 
 6.9.0   2010-12-23
         SUMMARY: Dragged the kicking and screaming LDM package into the late
