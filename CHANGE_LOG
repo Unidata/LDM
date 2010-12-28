@@ -4,7 +4,9 @@
             Created man(1)-page; and
             Added to list of programs.
 
-        Improved queue-deletion logic in ldmadmin(1).
+        Improved ldmadmin(1):
+            Corrected ldmadmin(1) lock-file locking.
+            Improved queue-deletion logic.
 
 6.9.0   2010-12-23
         SUMMARY: Dragged the kicking and screaming LDM package into the late

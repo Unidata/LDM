@@ -482,18 +482,16 @@ sub getLock
 {
     my $status = 0;     # default success
 
-    if (! -e $lock_file) {
-        if (!open(LOCKFILE,">$lock_file")) {
-            errmsg("getLock(): Cannot create lock-file \"$lock_file\"");
-            $status = 1;
-        }
+    if (!open(LOCKFILE,">$lock_file")) {
+        errmsg("getLock(): Cannot create/open lock-file \"$lock_file\"");
+        $status = 1;
     }
-
-    if (0 == $status) {
-        if (flock(LOCKFILE, LOCK_EX | LOCK_NB)) {
+    else {
+        if (!flock(LOCKFILE, LOCK_EX | LOCK_NB)) {
             errmsg("getLock(): Couldn't lock lock-file \"$lock_file\". ".
-                    "Another ldmadmin(1) script is likely running");
+                    "Another ldmadmin(1) script is likely running.");
             $status = 1;
+            close(LOCKFILE);
         }
     }
 
@@ -506,7 +504,7 @@ sub getLock
 
 sub releaseLock
 {
-    if (flock(LOCKFILE, LOCK_UN)) {
+    if (!flock(LOCKFILE, LOCK_UN)) {
         errmsg("releaseLock(): Couldn't unlock lock-file \"$lock_file\"");
     }
 
