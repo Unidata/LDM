@@ -196,7 +196,7 @@ elsif ($command eq "delqueue") { # delete a product queue
         $pq_path = $q_path;
     }
     if (0 == ($status = getLock())) {
-        $status = delete_pq();
+        $status = deleteQueue($pq_path);
         if ($status == 0 && $delete_info_files) {
             unlink <.*.info>;
         }
@@ -229,7 +229,7 @@ elsif ($command eq "delsurfqueue") { # delete a pqsurf product queue
         $surf_path = $q_path;
     }
     if (0 == ($status = getLock())) {
-        $status = del_surf_pq();
+        $status = deleteQueue($surf_path);
         releaseLock();
     }
 }
@@ -553,27 +553,28 @@ sub make_pq
 }
 
 ###############################################################################
-# delete a product queue
+# Deletes a product-queue
 ###############################################################################
 
-sub delete_pq
+sub deleteQueue
 {
-    my $status = 1;     # default failure
+    my $queuePath       = $_[0];
+    my $status          = 1;     # default failure
 
     # Check to see if the server is running.
     if (isRunning($pid_file, $ip_addr)) {
-        errmsg("delete_pq(): A server is running, cannot delete the queue");
+        errmsg("deleteQueue(): The LDM is running, cannot delete the queue");
     }
     else {
         # Delete the queue
-        if (! -e $pq_path) {
-            errmsg("delete_pq(): Product-queue \"$pq_path\" doesn't exist");
+        if (! -e $queuePath) {
+            errmsg("deleteQueue(): Product-queue \"$queuePath\" doesn't exist");
             $status = 0;
         }
         else {
-            if (unlink($pq_path) != 1) {
-                errmsg("delete_pq(): Couldn't delete product-queue ".
-                        "\"$pq_path\": $!");
+            if (unlink($queuePath) != 1) {
+                errmsg("deleteQueue(): Couldn't delete product-queue ".
+                        "\"$queuePath\": $!");
             }
             else {
                 $status = 0;
@@ -636,38 +637,6 @@ sub make_surf_pq
     }
 
     return $status;
-}
-
-###############################################################################
-# delete a pqsurf product queue
-###############################################################################
-
-sub del_surf_pq
-{
-    my $status = 1;                     # default failure
-
-    # check to see if the server is running.  Exit if it is
-    if (isRunning($pid_file, $ip_addr)) {
-        errmsg("del_surf_pq: A server is running, cannot delete the queue");
-    }
-    else {
-        # delete the queue
-        if (! -e $surf_path) {
-            errmsg("del_surf_pq(): Surf-queue \"$surf_path\" does not exist");
-            $status = 0;
-        }
-        else {
-            if (unlink($surf_path) != 1) {
-                errmsg("delete_pq(): Couldn't delete surf-queue ".
-                        "\"$surf_path\": $!");
-            }
-            else {
-                $status = 0;
-            }
-        }
-    }
-
-    return 0;
 }
 
 ###############################################################################
