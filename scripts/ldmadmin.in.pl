@@ -560,7 +560,7 @@ sub delete_pq
 {
     my $status = 1;     # default failure
 
-    # Check to see if the server is running.  Exit if it is.
+    # Check to see if the server is running.
     if (isRunning($pid_file, $ip_addr)) {
         errmsg("delete_pq(): A server is running, cannot delete the queue");
     }
@@ -568,10 +568,16 @@ sub delete_pq
         # Delete the queue
         if (! -e $pq_path) {
             errmsg("delete_pq(): Product-queue \"$pq_path\" doesn't exist");
+            $status = 0;
         }
         else {
-            unlink($pq_path);
-            $status = 0;
+            if (unlink($pq_path) != 1) {
+                errmsg("delete_pq(): Couldn't delete product-queue ".
+                        "\"$pq_path\": $!");
+            }
+            else {
+                $status = 0;
+            }
         }
     }
 
@@ -647,11 +653,17 @@ sub del_surf_pq
     else {
         # delete the queue
         if (! -e $surf_path) {
-            errmsg("del_surf_pq(): $surf_path does not exist");
+            errmsg("del_surf_pq(): Surf-queue \"$surf_path\" does not exist");
+            $status = 0;
         }
         else {
-            unlink($surf_path);
-            $status = 0;
+            if (unlink($surf_path) != 1) {
+                errmsg("delete_pq(): Couldn't delete surf-queue ".
+                        "\"$surf_path\": $!");
+            }
+            else {
+                $status = 0;
+            }
         }
     }
 
