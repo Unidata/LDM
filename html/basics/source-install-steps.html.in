@@ -34,7 +34,7 @@ Then, do the following:
     $ rm @PACKAGE@-@VERSION@.tar.gz # optional
     $ cd @PACKAGE@-@VERSION@/src
     $ export PATH=... # if necessary
-    $ ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
+    $ ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [--disable-max-size] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
     Password: ...
     $ make install &gt;make.log 2&gt;&1
     $ make clean # optional
@@ -218,6 +218,16 @@ options and arguments, when and if appropriate:
         installed because then this version wouldn't use the product-queue
         that already exists.
 
+    <dt><code>--disable-max-size</code>
+    <dd>By default, if the C compiler is <tt><b>c89</b>(1)</tt> or
+        <tt><b>c99</b>(1)</tt>, then the <tt><b>configure(1)</b></tt> script
+        will attempt to obtain as large a programming environment as possible
+        in order to support a <a
+        href="glindex.html#product-queue">product-queue</a> that is larger than
+        2^31 bytes in size.  This option disables that attempt so that the
+        <tt><b>CC</b></tt>, <tt><b>CPPFLAGS</b></tt>, <tt><b>CFLAGS</b></tt>,
+        and <tt><b>LDFLAGS</b></tt> variables are used verbatim. 
+
     <dt><code>CC=</code><i>path</i>
     <dd>Configures the build process to use <i>path</i> as the pathname of the
         C compiler (<i>e.g.</i>, <code>CC=/usr/gnu/bin/gcc</code>).
@@ -236,15 +246,18 @@ options and arguments, when and if appropriate:
 </dl>
 </blockquote>
 
-<p>Use of the above can be necessary due to the vagaries of build
-environments.  You should compare your build environment against the table of
-<a href="successes.html">successful build environments</a> and also against the
+<p>Use of the above can be necessary due to the vagaries of build environments.
+You should compare your build environment against the table of <a
+href="successes.html">successful build environments</a> and also against the
 table of <a href="failures.html">unsuccessful build environments</a> to
 determine if you need particular arguments.  Note that some of the computer
 systems can build both a 32-bit and a 64-bit LDM system.  We strongly recommend
 that you choose a 64-bit build environment whenever possible so that the <a
 href="glindex.html#product-queue">product-queue</a> isn't unnecessarilly
-restricted to small sizes only.
+restricted to small sizes only. Note that, by default, the
+<tt><b>configure</b>(1)</tt> script will attempt to support a large <a
+href="glindex.html#product-queue">product-queue</a> if the C compiler is
+<tt><b>c89</b>(1)</tt> or <tt><b>c99</b>(1)</tt>).
 
 <p>When executing the <code>configure</code> script, redirect <em>both</em> the
 standard output and standard error streams to the file
