@@ -112,32 +112,51 @@ int main(int ac, char *av[])
         if(qopt)
                 pqfname = qopt ;
 
-        if(sopt)
-        {
-                char *cp = sopt + strlen(sopt) -1;
-                initialsz = atol(sopt);
-                if(isalpha(*cp))
-                {
-                        switch(*cp) {
-                        case 'k':
-                        case 'K':
-                                initialsz *= 1000;
-                                break;
-                        case 'm':
-                        case 'M':
-                                initialsz *= 1000*1000;
-                                break;
-                        case 'g':
-                        case 'G':
-                                initialsz *= 1000*1000*1000;
-                                break;
-                        default:
-                                initialsz = 0; /* trigger error below */
-                                break;
-                        }
-                }
-        }
+        if (sopt) {
+            char*       cp;
+            int         exponent = 0;
 
+            errno = 0;
+            initialsz = strtol(sopt, &cp, 0);
+
+            if (0 != errno) {
+                initialsz = 0; /* trigger error below */
+            }
+            else {
+                switch (*cp) {
+                    case 0:
+                        break;
+                    case 'k':
+                    case 'K':
+                        exponent = 1;
+                        break;
+                    case 'm':
+                    case 'M':
+                        exponent = 2;
+                        break;
+                    case 'g':
+                    case 'G':
+                        exponent = 3;
+                        break;
+                    default:
+                        initialsz = 0; /* trigger error below */
+                        break;
+                }
+
+                if (0 < initialsz) {
+                    int     i;
+
+                    for (i = 0; i < exponent; i++) {
+                        initialsz *= 1000;
+                        
+                        if (0 >= initialsz) {
+                            fprintf(stderr, "Size \"%s\" too big\n", sopt);
+                            usage(av[0]);
+                        }
+                    }
+                }
+            }
+        }
         if(initialsz <= 0)
         {
                 if(sopt)
