@@ -50,7 +50,7 @@ test:
 		else \
 		    status=$$?; \
 		fi; \
-		exit $$status' | ssh buddy; \
+		exit $$status' | ssh -x buddy; \
 	    then \
 		echo true; \
 	    else \
@@ -63,8 +63,8 @@ test:
 # appears to be necessary due to a bug in the AIX 5.1 make(1).
 singleCheck:
 	scp remoteCheck $(distPath) $(host):/tmp
-	ssh $(host) chmod +x /tmp/remoteCheck
-	if ssh $(host) /tmp/remoteCheck $(distId) \
+	ssh -x $(host) chmod +x /tmp/remoteCheck
+	if ssh -x $(host) /tmp/remoteCheck $(distId) \
 	    /tmp/$(distName) '"$(env)"' '"$(configOpts)"' '"$(make)"' \
 		'"$(cc)"' $(tmp); \
 	then \
@@ -73,7 +73,7 @@ singleCheck:
 	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
 	fi
 	touch redo-results
-	ssh $(host) rm /tmp/remoteCheck /tmp/$(distName)
+	ssh -x $(host) rm /tmp/remoteCheck /tmp/$(distName)
 #	distPath=`cd $(top_srcdir) && pwd`/$(distName); \
 #	if echo '\
 #	    $(env) && \
@@ -100,7 +100,7 @@ singleCheck:
 #		cat config.log; \
 #	    fi; \
 #	    cd /tmp && rm -rf $(topTmpDir); \
-#	    exit $$status' | ssh $(host); \
+#	    exit $$status' | ssh -x $(host); \
 #	then \
 #	    echo "$(env),$(make),$(cc),$(configOpts),1" >>$(host).results; \
 #	else \
@@ -111,18 +111,18 @@ singleCheck:
 # The following rule executes multiple synchronous build processes on a
 # remote system for a single make(1) and cc(1) pair.
 multiCheck:
-	for configOpts in '' '--disable-shared'; do \
-	    $(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
-		tmp="$(tmp)" configOpts="$$configOpts" singleCheck; \
-	done
+	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
+	    tmp="$(tmp)" configOpts="$$configOpts" singleCheck
+	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
+	    tmp="$(tmp)" configOpts="--disable-shared $$configOpts" singleCheck
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for multiple make(1) and cc(1) pairs.
 .host.check:
 	rm -f $*.results $*.log
-	grep '^[^#]' $< | while IFS=',' read env make cc tmp; do \
-	    $(MAKE) host="$*" env="$$env" make="$$make" cc="$$cc" tmp="$$tmp" \
-		multiCheck </dev/null; \
+	grep '^[^#]' $< | while IFS=',' read env configOpts make cc tmp; do \
+	    $(MAKE) host="$*" env="$$env" configOpts="$$configOpts" \
+		make="$$make" cc="$$cc" tmp="$$tmp" multiCheck </dev/null; \
 	done >$*.log 2>&1
 
 # The following rule starts concurrent asynchronous builds on multiple remote
@@ -155,11 +155,11 @@ hostchecks:	$(distPath)
 results.tab:	redo-results
 	ls *.results | sed 's/.results//' | \
 	while read host; do \
-	    case `ssh $$host uname </dev/null` in \
-		AIX)	os=`ssh $$host uname -srv </dev/null`;; \
-		*)	os=`ssh $$host uname -sr </dev/null`;; \
+	    case `ssh -x $$host uname </dev/null` in \
+		AIX)	os=`ssh -x $$host uname -srv </dev/null`;; \
+		*)	os=`ssh -x $$host uname -sr </dev/null`;; \
 	    esac; \
-	    cpu=`ssh $$host uname -m </dev/null`; \
+	    cpu=`ssh -x $$host uname -m </dev/null`; \
 	    sed -n "s;^;$$host,$$os,$$cpu,;p" $$host.results </dev/null; \
 	done >$@
 

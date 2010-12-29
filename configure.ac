@@ -88,6 +88,13 @@ AC_DEFINE_UNQUOTED(LDM_PROG, $ldm_prog, [RPC program-number of LDM server])
 AC_DEFINE([RESOLVER_TIME_THRESHOLD], [10], [Time limit for resolving hostname])
 AC_SUBST(LDM_PORT)
 
+AC_ARG_ENABLE(max-size,
+    AC_HELP_STRING([--disable-max-size], 
+	[minimize the (long, void*, off_t) programming environment
+	[[default=enable]]]),
+    max_size=$enableval,
+    max_size=yes)
+
 AC_ARG_ENABLE([root-actions],
     AC_HELP_STRING([--disable-root-actions],
 	[don't include superuser (i.e., "root") actions in "make install"
@@ -177,6 +184,95 @@ else
 	AC_MSG_RESULT(works),
 	AC_MSG_FAILURE($CC failed to compile test code))
 fi
+
+case "$CC" in
+*c[89]9*)
+    ARFLAGS=-cru
+    if test "$max_size" = yes
+    then
+        AC_MSG_NOTICE(Checking how to maximize the (long, void*, off_t) 
+                programming environment)
+        success=no
+        AC_MSG_CHECKING([if the system supports _XBS5_LPBIG_OFFBIG])
+        avail=`getconf _XBS5_LPBIG_OFFBIG 2>/dev/null`
+        if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
+        then
+            if cflags=`getconf XBS5_LPBIG_OFFBIG_CFLAGS 2>/dev/null`
+            then
+                if ldflags=`getconf XBS5_LPBIG_OFFBIG_LDFLAGS 2>/dev/null`
+                then
+                    if libs=`getconf XBS5_LPBIG_OFFBIG_LIBS 2>/dev/null`
+                    then
+                        maprgns=-U_MAPRGNS
+                        success=yes
+                    fi
+                fi
+            fi
+        fi
+        AC_MSG_RESULT($success)
+        if test "$success" = no
+        then
+            AC_MSG_CHECKING([if the system supports _XBS5_LP64_OFF64])
+            avail=`getconf _XBS5_LP64_OFF64 2>/dev/null`
+            if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
+            then
+                if cflags=`getconf XBS5_LP64_OFF64_CFLAGS 2>/dev/null`
+                then
+                    if ldflags=`getconf XBS5_LP64_OFF64_LDFLAGS 2>/dev/null`
+                    then
+                        if libs=`getconf XBS5_LP64_OFF64_LIBS 2>/dev/null`
+                        then
+                            maprgns=-U_MAPRGNS
+                            success=yes
+                        fi
+                    fi
+                fi
+            fi
+            AC_MSG_RESULT($success)
+        fi
+        if test "$success" = no
+        then
+            AC_MSG_CHECKING([if the system supports _XBS5_ILP32_OFFBIG])
+            avail=`getconf _XBS5_ILP32_OFFBIG 2>/dev/null`
+            if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
+            then
+                if cflags=`getconf XBS5_ILP32_OFFBIG_CFLAGS 2>/dev/null`
+                then
+                    if ldflags=`getconf XBS5_ILP32_OFFBIG_LDFLAGS 2>/dev/null`
+                    then
+                        if libs=`getconf XBS5_ILP32_OFFBIG_LIBS 2>/dev/null`
+                        then
+                            AC_DEFINE(_MAPRGNS, 1)
+                            AC_DEFINE([_MAPRGNS], [1], [Whether or not to map
+                                    the product-queue by individual product 
+                                    region])
+                            maprgns=-D_MAPRGNS
+                            success=yes
+                        fi
+                    fi
+                fi
+            fi
+            AC_MSG_RESULT($success)
+        fi
+        if test "$success" = yes
+        then
+            test -n "$cflags"  && CFLAGS="$CFLAGS${CFLAGS+ }$cflags"
+            test -n "$ldflags" && LDFLAGS="$LDFLAGS${LDFLAGS+ }$ldflags"
+            test -n "$libs"    && LIBS="$LIBS${LIBS+ }$libs"
+            test `uname` = AIX && ARFLAGS='-cru -X 32_64'
+            AC_MSG_NOTICE([$maprgns])
+            AC_MSG_NOTICE([cflags="\"$cflags\""])
+            AC_MSG_NOTICE([ldflags="\"$ldflags\""])
+            AC_MSG_NOTICE([libs="\"$libs\""])
+            AC_MSG_NOTICE([ARFLAGS="\"$ARFLAGS\""])
+            AC_MSG_CHECKING([the C compiler (again)])
+            AC_COMPILE_IFELSE([int foo;], 
+                AC_MSG_RESULT(works),
+                AC_MSG_FAILURE($CC failed to compile test code))
+        fi
+    fi
+    AC_SUBST(ARFLAGS);;
+esac
 
 AC_MSG_CHECKING([the installation prefix]);
 test -z "$prefix" -o "$prefix" = NONE && prefix=`(cd .. && pwd)`

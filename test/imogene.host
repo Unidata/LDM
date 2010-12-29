@@ -1,8 +1,8 @@
-PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m32
-PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/c89 -m64
+PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/c89
+PATH=/usr/bin:/bin,--disable-max-size,/usr/bin/make,/usr/bin/c89
 
-PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m32
-PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc -m64
+PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/cc -m32
+PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/cc -m64
 
-PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m32
-PATH=/usr/bin:/bin,/usr/bin/gmake,/usr/bin/gcc -m64
+PATH=/usr/bin:/bin,,/usr/bin/gmake,/usr/bin/gcc -m32
+PATH=/usr/bin:/bin,,/usr/bin/gmake,/usr/bin/gcc -m64

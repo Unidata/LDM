@@ -1,12 +1,27 @@
 6.9.1
-        Documented wasReceived(1):
-            Added printing of usage message;
-            Created man(1)-page; and
-            Added to list of programs.
+        Enhance installation:
 
-        Improved ldmadmin(1):
-            Corrected ldmadmin(1) lock-file locking.
-            Improved queue-deletion logic.
+            Modify configure(1) script so that it attempts to build in as large
+            a programming environment as possible (as it did in versions 6.2
+            through 6.8) in order to support product-queues larger than 2^31
+            bytes. The configure option "--disable-max-size" disables this
+            feature.
+
+        Modify ldmadmin(1):
+
+            Correct ldmadmin(1) lock-file locking (IMPORTANT!).
+            Improve queue-deletion logic.
+
+        Improve pqcreate(1):
+
+            Check for overflow of size specification due to suffix ("M", "G",
+            etc.).
+
+        Document wasReceived(1):
+
+            Add printing of usage message;
+            Create man(1)-page; and
+            Add to list of programs in HTML documentation.
 
 6.9.0   2010-12-23
         SUMMARY: Dragged the kicking and screaming LDM package into the late

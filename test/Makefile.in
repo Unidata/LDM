@@ -417,7 +417,7 @@ uninstall-am:
 @MAINTAINER_TRUE@		else \
 @MAINTAINER_TRUE@		    status=$$?; \
 @MAINTAINER_TRUE@		fi; \
-@MAINTAINER_TRUE@		exit $$status' | ssh buddy; \
+@MAINTAINER_TRUE@		exit $$status' | ssh -x buddy; \
 @MAINTAINER_TRUE@	    then \
 @MAINTAINER_TRUE@		echo true; \
 @MAINTAINER_TRUE@	    else \
@@ -430,8 +430,8 @@ uninstall-am:
 # appears to be necessary due to a bug in the AIX 5.1 make(1).
 @MAINTAINER_TRUE@singleCheck:
 @MAINTAINER_TRUE@	scp remoteCheck $(distPath) $(host):/tmp
-@MAINTAINER_TRUE@	ssh $(host) chmod +x /tmp/remoteCheck
-@MAINTAINER_TRUE@	if ssh $(host) /tmp/remoteCheck $(distId) \
+@MAINTAINER_TRUE@	ssh -x $(host) chmod +x /tmp/remoteCheck
+@MAINTAINER_TRUE@	if ssh -x $(host) /tmp/remoteCheck $(distId) \
 @MAINTAINER_TRUE@	    /tmp/$(distName) '"$(env)"' '"$(configOpts)"' '"$(make)"' \
 @MAINTAINER_TRUE@		'"$(cc)"' $(tmp); \
 @MAINTAINER_TRUE@	then \
@@ -440,7 +440,7 @@ uninstall-am:
 @MAINTAINER_TRUE@	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
 @MAINTAINER_TRUE@	fi
 @MAINTAINER_TRUE@	touch redo-results
-@MAINTAINER_TRUE@	ssh $(host) rm /tmp/remoteCheck /tmp/$(distName)
+@MAINTAINER_TRUE@	ssh -x $(host) rm /tmp/remoteCheck /tmp/$(distName)
 #	distPath=`cd $(top_srcdir) && pwd`/$(distName); \
 #	if echo '\
 #	    $(env) && \
@@ -467,7 +467,7 @@ uninstall-am:
 #		cat config.log; \
 #	    fi; \
 #	    cd /tmp && rm -rf $(topTmpDir); \
-#	    exit $$status' | ssh $(host); \
+#	    exit $$status' | ssh -x $(host); \
 #	then \
 #	    echo "$(env),$(make),$(cc),$(configOpts),1" >>$(host).results; \
 #	else \
@@ -478,18 +478,18 @@ uninstall-am:
 # The following rule executes multiple synchronous build processes on a
 # remote system for a single make(1) and cc(1) pair.
 @MAINTAINER_TRUE@multiCheck:
-@MAINTAINER_TRUE@	for configOpts in '' '--disable-shared'; do \
-@MAINTAINER_TRUE@	    $(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
-@MAINTAINER_TRUE@		tmp="$(tmp)" configOpts="$$configOpts" singleCheck; \
-@MAINTAINER_TRUE@	done
+@MAINTAINER_TRUE@	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
+@MAINTAINER_TRUE@	    tmp="$(tmp)" configOpts="$$configOpts" singleCheck
+@MAINTAINER_TRUE@	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
+@MAINTAINER_TRUE@	    tmp="$(tmp)" configOpts="--disable-shared $$configOpts" singleCheck
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for multiple make(1) and cc(1) pairs.
 @MAINTAINER_TRUE@.host.check:
 @MAINTAINER_TRUE@	rm -f $*.results $*.log
-@MAINTAINER_TRUE@	grep '^[^#]' $< | while IFS=',' read env make cc tmp; do \
-@MAINTAINER_TRUE@	    $(MAKE) host="$*" env="$$env" make="$$make" cc="$$cc" tmp="$$tmp" \
-@MAINTAINER_TRUE@		multiCheck </dev/null; \
+@MAINTAINER_TRUE@	grep '^[^#]' $< | while IFS=',' read env configOpts make cc tmp; do \
+@MAINTAINER_TRUE@	    $(MAKE) host="$*" env="$$env" configOpts="$$configOpts" \
+@MAINTAINER_TRUE@		make="$$make" cc="$$cc" tmp="$$tmp" multiCheck </dev/null; \
 @MAINTAINER_TRUE@	done >$*.log 2>&1
 
 # The following rule starts concurrent asynchronous builds on multiple remote
@@ -522,11 +522,11 @@ uninstall-am:
 @MAINTAINER_TRUE@results.tab:	redo-results
 @MAINTAINER_TRUE@	ls *.results | sed 's/.results//' | \
 @MAINTAINER_TRUE@	while read host; do \
-@MAINTAINER_TRUE@	    case `ssh $$host uname </dev/null` in \
-@MAINTAINER_TRUE@		AIX)	os=`ssh $$host uname -srv </dev/null`;; \
-@MAINTAINER_TRUE@		*)	os=`ssh $$host uname -sr </dev/null`;; \
+@MAINTAINER_TRUE@	    case `ssh -x $$host uname </dev/null` in \
+@MAINTAINER_TRUE@		AIX)	os=`ssh -x $$host uname -srv </dev/null`;; \
+@MAINTAINER_TRUE@		*)	os=`ssh -x $$host uname -sr </dev/null`;; \
 @MAINTAINER_TRUE@	    esac; \
-@MAINTAINER_TRUE@	    cpu=`ssh $$host uname -m </dev/null`; \
+@MAINTAINER_TRUE@	    cpu=`ssh -x $$host uname -m </dev/null`; \
 @MAINTAINER_TRUE@	    sed -n "s;^;$$host,$$os,$$cpu,;p" $$host.results </dev/null; \
 @MAINTAINER_TRUE@	done >$@
 

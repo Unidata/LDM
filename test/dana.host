@@ -1,11 +1,13 @@
-PATH=/usr/bin/posix:/usr/bin:/bin,/usr/bin/posix/make,/usr/bin/c89,/local/tmp
+PATH=/usr/bin/posix:/usr/bin:/bin,,/usr/bin/posix/make,/usr/bin/c89,/local/tmp
+PATH=/usr/bin/posix:/usr/bin:/bin,--disable-max-size,/usr/bin/posix/make,/usr/bin/c89,/local/tmp
 
-PATH=/usr/bin:/bin,/usr/bin/make,/usr/bin/cc,/local/tmp
+PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/cc,/local/tmp
 
-PATH=/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/usr/ccs/bin/c89,/local/tmp
+PATH=/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/usr/ccs/bin/c89,/local/tmp
+PATH=/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/ccs/bin/make,/usr/ccs/bin/c89,/local/tmp
 
-PATH=/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/usr/ccs/bin/cc,/local/tmp
+PATH=/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/usr/ccs/bin/cc,/local/tmp
 
-# The compiler thinks a "struct sigaction" is an incomplete type:
-# acl.c:1945: error: storage size of `sigact' isn't known
-PATH=/opt/gnu/bin:/usr/bin:/bin,/opt/gnu/bin/gmake,/opt/gnu/bin/gcc,/local/tmp
+# pq.c: In function `pq_suspend':
+# pq.c:7029: error: storage size of `sigact' isn't known
+PATH=/opt/gnu/bin:/usr/bin:/bin,,/opt/gnu/bin/gmake,/opt/gnu/bin/gcc,/local/tmp
