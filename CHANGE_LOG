@@ -1,5 +1,5 @@
-6.9.2
-        Improved HTML documentation:
+6.9.2   2010-12-30
+        Improve HTML documentation:
             Correct crontab(1) example for "ldmadmin check".
 
 6.9.1   2010-12-29
