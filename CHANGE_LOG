@@ -1,3 +1,7 @@
+6.9.2
+        Improved HTML documentation:
+            Correct crontab(1) example for "ldmadmin check".
+
 6.9.1   2010-12-29
         Enhance installation:
             Modify configure(1) script so that it attempts to build in as large

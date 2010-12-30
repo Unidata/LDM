@@ -356,7 +356,7 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
            0,5,10,15,20,25,30,35,40,45,50,55 * * * * bash -l -c 'bin/ldmadmin addmetrics'
        </tt></blockquote>
        This entry will accumulate metrics every 5 minutes.  You might choose 
-       different times.  See
+       a different interval.  See
        <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
 
     <li><p>Add an entry to rotate the metrics data files
@@ -365,16 +365,16 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
            0 0 * * * bash -l -c 'bin/ldmadmin newmetrics'
        </tt></blockquote>
        This entry will rotate the metrics data files every day at midnight.
-       You might choose different times.  See
+       You might choose a different time.  See
        <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
 
     <li><p>Add an entry to periodically check the LDM system:
        <blockquote><tt>
-           0,15,30,45 0 * * * bash -l -c 'bin/ldmadmin check >/dev/null'
+           0,15,30,45 * * * * bash -l -c 'bin/ldmadmin check >/dev/null'
        </tt></blockquote>
        This entry will check the LDM system every 15 minutes and
        send an email to the LDM user if the system isn't OK.
-       You might choose a different period.
+       You might choose a different interval.
 
        <p>
        In particular, this entry
