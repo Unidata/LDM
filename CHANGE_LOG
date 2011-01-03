@@ -1,3 +1,6 @@
+6.9.3
+        Corrected bug in test for c89(1) or c99(1) compiler.
+
 6.9.2   2010-12-30
         Improve HTML documentation:
             Correct crontab(1) example for "ldmadmin check".
