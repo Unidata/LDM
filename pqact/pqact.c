@@ -157,6 +157,7 @@ set_sigactions(void)
         /* Ignore these */
         sigact.sa_handler = SIG_IGN;
         (void) sigaction(SIGPIPE, &sigact, NULL);
+        (void) sigaction(SIGXFSZ, &sigact, NULL);       /* file too large */
 
         /* Handle these */
 #ifdef SA_RESTART       /* SVR4, 4.3+ BSD */

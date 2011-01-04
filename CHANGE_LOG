@@ -1,8 +1,15 @@
 6.9.3
-        Corrected bug in test for c89(1) or c99(1) compiler.
+        Installation:
+            Corrected a bug in the configure(1) script's test for the c89(1) or
+            c99(1) compiler that prevented building for large file support.
 
-        Made more general the makefile rule that adds the LDM to the list of
-        facilities that don't log to the system log file.
+            Generalized the makefile rule that adds the LDM to the list of
+            facilities that don't log to the system log file.
+
+        pqact(1):
+            Added the SIGXFSZ (file size limit exceeded) signal to the set of
+            ignored signals in order to prevent the FILE action from crashing a
+            running LDM system if the output file gets too big.
 
 6.9.2   2010-12-30
         Improve HTML documentation:
