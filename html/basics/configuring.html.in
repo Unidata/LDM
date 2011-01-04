@@ -330,7 +330,7 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
         the names of the old logfiles, and ensuring that the number of
         logfiles doesn't grow without bound:
        <blockquote><tt>
-            0 0 * * * bash -l -c 'bin/ldmadmin newlog'
+            0 0 * * * bash -l -c 'ldmadmin newlog'
        </tt></blockquote>
        <a href="newlog.html">More information on rotating logfiles</a>.
 
@@ -342,7 +342,7 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
         an entry like the following to purge outdated files so that your
         disk doesn't become full:
        <blockquote><tt>
-           0 1,4,7,10,13,16,19,22 * * * bash -l -c 'bin/ldmadmin scour'
+           0 1,4,7,10,13,16,19,22 * * * bash -l -c 'ldmadmin scour'
        </tt></blockquote>
        The above runs the
        <a href="glindex.html#scour"><tt>scour</tt></a> program to remove
@@ -353,7 +353,7 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
 	<a href="glindex.html#LDM">LDM</a>
 	system if you wish and have the necessary utilities installed:
        <blockquote><tt>
-           0,5,10,15,20,25,30,35,40,45,50,55 * * * * bash -l -c 'bin/ldmadmin addmetrics'
+           0,5,10,15,20,25,30,35,40,45,50,55 * * * * bash -l -c 'ldmadmin addmetrics'
        </tt></blockquote>
        This entry will accumulate metrics every 5 minutes.  You might choose 
        a different interval.  See
@@ -362,7 +362,7 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
     <li><p>Add an entry to rotate the metrics data files
 	if you are accumulating metrics:
        <blockquote><tt>
-           0 0 * * * bash -l -c 'bin/ldmadmin newmetrics'
+           0 0 * * * bash -l -c 'ldmadmin newmetrics'
        </tt></blockquote>
        This entry will rotate the metrics data files every day at midnight.
        You might choose a different time.  See
@@ -370,7 +370,7 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
 
     <li><p>Add an entry to periodically check the LDM system:
        <blockquote><tt>
-           0,15,30,45 * * * * bash -l -c 'bin/ldmadmin check >/dev/null'
+           0,15,30,45 * * * * bash -l -c 'ldmadmin check >/dev/null'
        </tt></blockquote>
        This entry will check the LDM system every 15 minutes and
        send an email to the LDM user if the system isn't OK.
