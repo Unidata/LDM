@@ -1,15 +1,25 @@
-6.9.3
+6.9.3   2010-12-30
         Installation:
-            Corrected a bug in the configure(1) script's test for the c89(1) or
-            c99(1) compiler that prevented building for large file support.
+            Correct a bug in the configure(1) script's test for the c89(1) or
+            c99(1) compiler that prevents building with support for large files
+            on 32-bit systems.
 
-            Generalized the makefile rule that adds the LDM to the list of
+            Generalize the makefile rule that adds the LDM to the list of
             facilities that don't log to the system log file.
 
+        ldmadmin(1):
+            Modify "newlog" command so that it no longer prevents other
+            ldmadmin(1) scripts from executing simultaneously.
+
         pqact(1):
-            Added the SIGXFSZ (file size limit exceeded) signal to the set of
+            Add the SIGXFSZ (file size limit exceeded) signal to the set of
             ignored signals in order to prevent the FILE action from crashing a
             running LDM system if the output file gets too big.
+
+        Documentation:
+             Remove "bin/" prefix from crontab(1) entry examples. It's
+             unnecessary because the entries' "bash -l" beginning should obtain
+             the correct LDM user's PATH environment variable.
 
 6.9.2   2010-12-30
         Improve HTML documentation:
