@@ -239,10 +239,7 @@ elsif ($command eq "newlog") {	# rotate the log files
         /^-n/ && ($numlogs = shift);
         /^-l/ && ($log_file = shift);
     }
-    if (0 == ($status = getLock())) {
-        $status = new_log();
-        releaseLock();
-    }
+    $status = new_log();
 }
 elsif ($command eq "scour") {	# scour data directories
     system("scour $scour_file");
