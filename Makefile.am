@@ -185,7 +185,7 @@ ensure-syslog-entry:
 	if grep $(LOG_LDM) $(SYSLOG_CONF) >/dev/null; then \
 	    : true; \
 	else \
-	    awk 'mail\.none/{\
+	    awk '/mail\.none/{\
 		print $$1 ";$(LOG_LDM).none	" $$2; next}{print}' \
 		$(SYSLOG_CONF) >$(SYSLOG_CONF).new \
 	    && echo >>$(SYSLOG_CONF).new \
