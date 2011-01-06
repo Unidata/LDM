@@ -4363,8 +4363,8 @@ $as_echo "$LDMHOME" >&6; }
 # Certain installation directories are changed if they have default values
 # because an LDM installation has both version-dependent and
 # version-independent installation directories.
-test "$sysconfdir" = "$prefix/etc" || sysconfdir='$(LDMHOME)/etc'
-test "$localstatedir" = "$prefix/var" || localstatedir='$(LDMHOME)/var'
+test "$sysconfdir" = '${prefix}/etc' && sysconfdir='$(LDMHOME)/etc'
+test "$localstatedir" = '${prefix}/var' && localstatedir='$(LDMHOME)/var'
 REGISTRY_DIR='$(sysconfdir)'/registry
 
 LOGS_DIR='$(localstatedir)'/logs

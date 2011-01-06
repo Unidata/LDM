@@ -956,9 +956,10 @@ ensure-syslog-entry:
 	if grep $(LOG_LDM) $(SYSLOG_CONF) >/dev/null; then \
 	    : true; \
 	else \
-	    awk 'mail\.none/{\
-		print $$1 ";$(LOG_LDM).none	" $$2; next}{print}' \
-		$(SYSLOG_CONF) >$(SYSLOG_CONF).new \
+	    awk '/\.none/ || /\/var\/log\/messages/ || /\/var\/log\/syslog/ { \
+		print $$1 ";$(LOG_LDM).none	" $$2; next; \
+	    } \
+	    {print}' $(SYSLOG_CONF) >$(SYSLOG_CONF).new \
 	    && echo >>$(SYSLOG_CONF).new \
 	    && echo '# Unidata LDM:' >>$(SYSLOG_CONF).new \
 	    && echo '$(LOG_LDM).debug	$(LDM_LOGFILE)' >>$(SYSLOG_CONF).new \

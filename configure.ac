@@ -293,8 +293,8 @@ AC_MSG_RESULT([$LDMHOME])
 # Certain installation directories are changed if they have default values
 # because an LDM installation has both version-dependent and
 # version-independent installation directories.
-test "$sysconfdir" = "$prefix/etc" || sysconfdir='$(LDMHOME)/etc'
-test "$localstatedir" = "$prefix/var" || localstatedir='$(LDMHOME)/var'
+test "$sysconfdir" = '${prefix}/etc' && sysconfdir='$(LDMHOME)/etc'
+test "$localstatedir" = '${prefix}/var' && localstatedir='$(LDMHOME)/var'
 AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])

@@ -1,7 +1,14 @@
 6.9.4
         Installation:
+            Correct the configure(1) script's adjusting of the "sysconfdir" and
+            "localstatedir" variables in order to get the "--syscondir=" and
+            "--localstatedir" options working.
+
             Correct a bug in the makefile rule that adds the LDM to the list
-            of facilities that don't log to the system log file.
+            of facilities that don't log to any system log files.
+            
+            Generalize the makefile rule that ensures the LDM doesn't log to
+            any system log files.
 
 6.9.3   2011-01-04
         Installation:
