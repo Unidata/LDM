@@ -2,7 +2,7 @@
         Installation:
             Correct the configure(1) script's adjusting of the "sysconfdir" and
             "localstatedir" variables in order to get the "--syscondir=" and
-            "--localstatedir" options working.
+            "--localstatedir=" options working.
 
             Correct a bug in the makefile rule that adds the LDM to the list
             of facilities that don't log to any system log files.
