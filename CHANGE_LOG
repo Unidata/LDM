@@ -1,4 +1,4 @@
-6.9.4
+6.9.4   2011-01-10
         Installation:
             Correct the configure(1) script's adjusting of the "sysconfdir" and
             "localstatedir" variables in order to get the "--syscondir=" and
