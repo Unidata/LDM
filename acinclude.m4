@@ -454,7 +454,11 @@ AC_DEFUN([UD_ULOG], [dnl
 	    [SYSLOG_CONF=/etc/syslog.conf],
 	    [AC_MSG_ERROR([system logging configuration-file not found])])])
     AC_SUBST([SYSLOG_CONF])
-    AC_SUBST([LDM_LOGFILE], [$LDMHOME/logs/ldmd.log])
+    if test -e $LDMHOME/logs; then
+        AC_SUBST([LDM_LOGFILE], [$LDMHOME/logs/ldmd.log])
+    else
+        AC_SUBST([LDM_LOGFILE], [$LDMHOME/var/logs/ldmd.log])
+    fi
 
     case `uname -sr` in
 	OSF1*|sn1036*|Linux*|Darwin*)

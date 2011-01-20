@@ -1,3 +1,9 @@
+6.9.5
+        Installation:
+            Corrected determination by the configure(1) script of the pathname
+            of the LDM log file for setting in the configuration-file of the
+            system logging daemon.
+
 6.9.4   2011-01-10
         Installation:
             Correct the configure(1) script's adjusting of the "sysconfdir" and
