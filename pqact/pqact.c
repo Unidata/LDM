@@ -9,6 +9,7 @@
  */
 
 #include <config.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -341,6 +342,32 @@ main(int ac, char *av[])
             ubasename(av[0]), (LOG_CONS|LOG_PID), LOG_LDM, logfname);
 
         unotice("Starting Up");
+
+        if ('/' != conffilename[0]) {
+            /*
+             * The pathname of the configuration-file is relative. Convert it
+             * to absolute so that it can be (re)read even if the current
+             * working directory changes.
+             */
+#ifdef PATH_MAX
+            char    buf[PATH_MAX];          /* includes NUL */
+#else
+            char    buf[_POSIX_PATH_MAX];   /* includes NUL */
+#endif
+            if (getcwd(buf, sizeof(buf)) == NULL) {
+                LOG_SERROR0("Couldn't get current working directory");
+                log_log(LOG_ERR);
+                exit(1);
+            }
+            (void)strncat(buf, "/", sizeof(buf)-strlen(buf)-1);
+            (void)strncat(buf, conffilename, sizeof(buf)-strlen(buf)-1);
+            conffilename = strdup(buf);
+            if (conffilename == NULL) {
+                LOG_SERROR1("Couldn't duplicate string \"%s\"", buf);
+                log_log(LOG_ERR);
+                exit(1);
+            }
+        }
 
         /*
          * Initialze the previous-state module for this process.
