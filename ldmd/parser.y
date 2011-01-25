@@ -43,8 +43,8 @@ static int		scannerPop(void);
 static void
 yyerror(const char *msg)
 {
-    log_add("Error near line %d, file \"%s\": %s", line, scannerGetPath(),
-        msg);
+    log_add("Error on or before line %d, file \"%s\": %s", line,
+            scannerGetPath(), msg);
 }
 
 #if __STDC__
@@ -70,7 +70,7 @@ decodeFeedtype(
 	error = 0;
     }
     else {
-	log_start("Invalid feedtype expression \"%s\" near line %d, "
+	log_start("Invalid feedtype expression \"%s\" on or before line %d, "
             "file \"%s\": %s", string, line, scannerGetPath(),
             strfeederr(status));
 
@@ -87,52 +87,61 @@ decodeRegEx(
     const char* 	string)
 {
     int		error = 1;		/* failure */
-    char* const	clone = strdup(string);
 
-    if (NULL == clone) {
-	log_start("Couldn't clone regular-expression \"%s\" near line %d, "
-            "file \"%s\": %s", string, line, scannerGetPath(),
-            strerror(errno));
+    if (strlen(string) == 0) {
+        LOG_START2("Empty regular-expression on or before line %d of file "
+                "\"%s\"", line, scannerGetPath());
+        log_log(LOG_ERR);
     }
     else {
-	regex_t*	regexp = (regex_t*)malloc(sizeof(regex_t));
+        char* const	clone = strdup(string);
 
-	if (NULL == regexp) {
-	    log_start("Couldn't allocate %lu bytes for \"regex_t\""
-                "near line %d, file \"%s\"", (unsigned long)sizeof(regex_t),
-                line, scannerGetPath());
-	}
-	else {
-	    if (re_vetSpec(clone)) {
-		/*
-		 * Pathological regular expression.
-		 */
-		log_start("Adjusted pathological regular expression \"%s\" "
-                    "near line %d, file \"%s\"", string, line,
-                    scannerGetPath());
-                log_log(LOG_WARNING);
-	    }
+        if (NULL == clone) {
+            log_start("Couldn't clone regular-expression \"%s\" on or before "
+                    "line %d, " "file \"%s\": %s", string, line,
+                    scannerGetPath(), strerror(errno));
+        }
+        else {
+            regex_t*	regexp = (regex_t*)malloc(sizeof(regex_t));
 
-	    error = regcomp(regexp, clone, REG_EXTENDED|REG_ICASE|REG_NOSUB);
+            if (NULL == regexp) {
+                log_start("Couldn't allocate %lu bytes for \"regex_t\" "
+                    "on or before line %d, file \"%s\"",
+                    (unsigned long)sizeof(regex_t), line, scannerGetPath());
+            }
+            else {
+                if (re_vetSpec(clone)) {
+                    /*
+                     * Pathological regular expression.
+                     */
+                    log_start("Adjusted pathological regular expression \"%s\" "
+                        "on or before line %d, file \"%s\"", string, line,
+                        scannerGetPath());
+                    log_log(LOG_WARNING);
+                }
 
-	    if (!error) {
-		*regexpp = regexp;
-	    }
-	    else {
-		char	buf[132];
+                error = regcomp(regexp, clone,
+                        REG_EXTENDED|REG_ICASE|REG_NOSUB);
 
-		(void)regerror(error, regexp, buf, sizeof(buf));
-		log_start("Couldn't compile regular-expression \"%s\" near "
-                    " line %d, file \"%s\": %s", clone, line, scannerGetPath(),
-                    buf);
-	    }
+                if (!error) {
+                    *regexpp = regexp;
+                }
+                else {
+                    char	buf[132];
 
-	    if (error)
-		free(regexp);
-	}				/* "regexp" allocated */
+                    (void)regerror(error, regexp, buf, sizeof(buf));
+                    log_start("Couldn't compile regular-expression \"%s\" "
+                            "on or before line %d, file \"%s\": %s", clone,
+                            line, scannerGetPath(), buf);
+                }
 
-	free(clone);
-    }					/* "clone" allocated */
+                if (error)
+                    free(regexp);
+            }                           /* "regexp" allocated */
+
+            free(clone);
+        }				/* "clone" allocated */
+    }                                   /* non-empty regular-expression */
 
     return error;
 }
@@ -150,7 +159,7 @@ decodeHostSet(
 	char* dup = strdup(string);
 
 	if (NULL == dup) {
-	    log_start("Couldn't clone string \"%s\" near line %d, "
+	    log_start("Couldn't clone string \"%s\" on or before line %d, "
                 "file \"%s\": %s", string, line, scannerGetPath(),
                 strerror(errno));
 	}
@@ -159,7 +168,7 @@ decodeHostSet(
 
 	    if (NULL == hsp) {
 		log_start("Couldn't create host-set for "
-                    "\"%s\" near line %d, file \"%s\": %s", dup, line,
+                    "\"%s\" on or before line %d, file \"%s\": %s", dup, line,
                     scannerGetPath(), strerror(errno));
 
 		error = 1;
@@ -224,7 +233,7 @@ warnIfPathological(
 	 * Pathological regular expression.
 	 */
 	log_start("Pathological regular expression \"%s\" "
-            "near line %d, file \"%s\"", re, line, scannerGetPath());
+            "on or before line %d, file \"%s\"", re, line, scannerGetPath());
         log_log(LOG_WARNING);
     }
 }
@@ -273,8 +282,8 @@ decodeAllowEntry(
 	    errObj = acl_addAllow(ft, hsp, okPattern, notPattern);
 
 	    if (errObj) {
-		log_start("Couldn't add ALLOW entry near line %d, file \"%s\"",
-                    line, scannerGetPath());
+		log_start("Couldn't add ALLOW entry on or before line %d, "
+                        "file \"%s\"", line, scannerGetPath());
                 free_host_set(hsp);
 		errCode = -1;
             }
@@ -300,9 +309,8 @@ decodeRequestEntry(
 	RequestEntry*	entry;
 
 	if (errCode = requestEntry_get(&entry, ft, prodPattern, regexp)) {
-	    log_start(
-                "Couldn't get request-entry near line %d, file \"%s\": %s",
-                line, scannerGetPath(), strerror(errCode));
+	    log_start("Couldn't get request-entry on or before line %d, file "
+                "\"%s\": %s", line, scannerGetPath(), strerror(errCode));
 	}
 	else {
 	    const char*	hostId = strtok(hostSpec, ":");
@@ -310,7 +318,7 @@ decodeRequestEntry(
             regexp = NULL;              /* abandon */
 
 	    if (NULL == hostId) {
-		log_start("Invalid hostname specification \"%s\" near "
+		log_start("Invalid hostname specification \"%s\" on or before "
                     "line %d, file \"%s\"", hostSpec, line, scannerGetPath());
 
 		errCode = EINVAL;
@@ -335,9 +343,9 @@ decodeRequestEntry(
 			localPort = (unsigned)port;
 		    }
 		    else {
-			log_start("Invalid port specification \"%s\" near "
-                            "line %d, file \"%s\"", portSpec, line,
-                            scannerGetPath());
+			log_start("Invalid port specification \"%s\" "
+                                "on or before line %d, file \"%s\"", portSpec,
+                                line, scannerGetPath());
 
 			errCode = EINVAL;
 		    }
@@ -347,9 +355,9 @@ decodeRequestEntry(
 		    if ((errCode =
 			    requestEntry_addHost(entry, hostId, localPort))) {
 
-			log_start("Couldn't add host to request-entry near "
-                            "line %d, file \"%s\": %s", line, scannerGetPath(),
-                            strerror(errCode));
+			log_start("Couldn't add host to request-entry "
+                                "on or before line %d, file \"%s\": %s", line,
+                                scannerGetPath(), strerror(errCode));
 		    }
 		}			/* "localPort" set */
 	    }				/* valid hostname */
@@ -437,8 +445,9 @@ accept_entry:	ACCEPT_K STRING STRING STRING
 
 			    if (NULL == patp) {
 				log_start("Couldn't clone string \"%s\" "
-                                    "near line %d, file \"%s\": %s",
-                                    $3, scannerGetPath(), strerror(errno));
+                                    "on or before line %d, file \"%s\": %s",
+                                    $3, line, scannerGetPath(),
+                                    strerror(errno));
 
 				error = 1;
 			    }
@@ -453,7 +462,7 @@ accept_entry:	ACCEPT_K STRING STRING STRING
 				}
                                 else {
 				    log_start("Couldn't add ACCEPT entry "
-                                        "near line %d, file \"%s\": %s",
+                                        "on or before line %d, file \"%s\": %s",
                                         line, scannerGetPath(),
                                         strerror(error));
                                     free(patp);
@@ -501,7 +510,7 @@ exec_entry:	EXEC_K STRING
 		    error = wordexp($2, &words, 0);
 
 		    if (error) {
-			log_start("Couldn't decode command \"%s\" near "
+			log_start("Couldn't decode command \"%s\" on or before "
                             " line %d, file \"%s\": %s", $2, line,
                             scannerGetPath(), strerror(errno));
 		    }
@@ -514,9 +523,10 @@ exec_entry:	EXEC_K STRING
 			    error = exec_add(&words);
 
 			    if (error) {
-				log_start("Couldn't add EXEC entry near "
-                                    " line %d, file \"%s\": %s", line,
-                                    scannerGetPath(), strerror(errno));
+				log_start("Couldn't add EXEC entry "
+                                        "on or before line %d, file \"%s\": %s",
+                                        line, scannerGetPath(),
+                                        strerror(errno));
 				wordfree(&words);
 			    }
 			}

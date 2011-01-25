@@ -1,3 +1,15 @@
+6.9.6   2011-01-25
+        pqact(1):
+            Now converts a relative specification of its configuration-file to
+            an absolute one so that the file can be (re)read even if the
+            current working directory changes (which is the default in LDM
+            6.9).
+
+        ldmd(1):
+            Add check for empty product-identifier patterns in the LDM
+            configuration-file. ldmd(1) will now emit a good error message and
+            error-exit if it encounters one.
+
 6.9.5   2011-01-20
         Installation:
             Correct determination by the configure(1) script of the pathname
