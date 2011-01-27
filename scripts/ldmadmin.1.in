@@ -147,28 +147,29 @@ Vets the size of the LDM queue,
 .nh
 \fB$(regutil regpath{QUEUE_SIZE})\fP,
 .hy
-against
-the maximum-latency configuration-parameter 
+against the maximum-latency configuration-parameter 
 .nh
 \fB$(regutil regpath{MAX_LATENCY})\fP.
 .hy
-If the queue is too small to guarantee that duplicate data-products will be
-detected, then the script will take the action specified by
+Terminates with a 0 exit status if the size of the queue is consistent with
+the maximum-latency configuration-parameter; otherwise,
+the script will take the action specified by
 .nh
 \fB$(regutil regpath{RECONCILIATION_MODE})\fP:
 .hy
 .RS +4
 .TP
 .B increase queue
-Increase the size of the product-queue to match the desired maximim-latency.
+Increase the size of the product-queue to match the desired maximum-latency.
 .TP
 .B decrease maximum latency
-Decrease the maximum latency configuration parameter to match the size of the
+Decrease the maximum-latency configuration parameter to match the size of the
 product-queue.
 .TP
 .B do nothing
-Don't modify the queue or the maximum latency parameter.  A warning message
-will be written to the standard error stream.
+Don't modify the queue or the maximum-latency parameter.  A warning message
+will be written to the standard error stream if the queue is too small or
+the maximum-latency parameter is too large.
 .RE
 .TP
 .B checktime
@@ -321,10 +322,10 @@ Name of the logfile to use.  The default is
 .hy
 .TP
 .BI "-m " maxLatency
-The maximum latency, in seconds, to use when requesting data.
+The maximum-latency, in seconds, to use when requesting data.
 If the \fB-o\fP option is not specified, then
 the \fIfrom\fP time of a data-request will be the more recent of the
-current time minus the maximum latency and the time of the most recent,
+current time minus the maximum-latency and the time of the most recent,
 matching data-product in the product-queue.
 The value must be greater than 0.
 The default is specified by
@@ -345,7 +346,7 @@ If specified, then
 the \fIfrom\fP time of a data-request will be the 
 current time minus this offset
 (it will not be adjusted by matching data-products in the product-queue).
-The value must be greater than 0 and less than the maximum latency.
+The value must be greater than 0 and less than the maximum-latency.
 The default is specified by
 .nh
 \fB$(regutil regpath{TIME_OFFSET})\fP

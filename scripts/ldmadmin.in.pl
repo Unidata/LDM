@@ -1,8 +1,6 @@
 #!@PERL@
 use POSIX;
 #
-# $Id: ldmadmin.in,v 1.86.2.3.2.2.2.17.2.53 2009/09/04 15:37:18 steve Exp $
-#
 # File:         ldmadmin
 #
 # See file ../COPYRIGHT for copying and redistribution conditions.
@@ -1034,26 +1032,73 @@ sub saveTimePar
     return $status;
 }
 
+# Returns new size parameters for the product-queue
+#
+# Arguments:
+#       minVirtResTime          The minimum virtual residence time in seconds.
+#       oldestProductAge        The age of the oldest product in the queue in
+#                               seconds.
+#       mvrtSize                The amount of space used in the queue for data
+#                               in bytes.
+#       mvrtSlots               The number of slots used in the queue for 
+#                               products.
+# Returns:
+#       [0]                     The new size for the queue in bytes.
+#       [1]                     The new number of slots for the queue.
+sub computeNewQueueSize
+{
+    my $minVirtResTime = $_[0];
+    my $oldestProductAge = $_[1];
+    my $mvrtSize = $_[2];
+    my $mvrtSlots = $_[3];
+
+    if (0 >= $minVirtResTime) {
+        # Use age of oldest product, instead
+        $minVirtResTime = $oldestProductAge;
+    }
+    if (0 >= $minVirtResTime) {
+        # Ensure that the divisor isn't zero
+        $minVirtResTime = 1;
+    }
+    my $ratio = $max_latency/$minVirtResTime + 0.1;
+    my $newByteCount = int($ratio*$mvrtSize);
+    my $newSlotCount = int($ratio*$mvrtSlots);
+
+    return ($newByteCount, $newSlotCount);
+}
+
+# Returns
+#       0       Success. Nothing wrong.
+#       1       The queue is too small or the maximum-latency parameter is
+#               too large.
+#       2       Major failure.
 sub vetQueueSize
 {
-    my $increaseQueue = "increase queue";
-    my $decreaseMaxLatency = "decrease maximum latency";
-    my $doNothing = "do nothing";
-    my $status = 1;                     # failure default
+    my $status = 2;                     # default major failure
+
     chomp(my $line = `pqmon -S -q $pq_path`);
 
     if ($?) {
         errmsg("vetQueueSize(): pqmon(1) failure");
+        $status = 2;                    # major failure
     }
     else {
         my @params = split(/\s+/, $line);
         my $isFull = $params[0];
+        my $ageOldest = $params[7];
         my $minVirtResTime = $params[9];
+        my $mvrtSize = $params[10];
+        my $mvrtSlots = $params[11];
 
-        if (!$isFull || $minVirtResTime < 0 || $minVirtResTime >= $offset) {
-            $status = 0;
+        if (!$isFull || $minVirtResTime < 0 || $minVirtResTime >= $max_latency
+                || $mvrtSize <= 0 || $mvrtSlots <= 0) {
+            $status = 0;                # reconciliation not yet needed
         }
         else {
+            my $increaseQueue = "increase queue";
+            my $decreaseMaxLatency = "decrease maximum latency";
+            my $doNothing = "do nothing";
+
             errmsg("vetQueueSize(): The maximum acceptable latency ".
                 "(registry parameter \"regpath{MAX_LATENCY}\": ".
                 "$max_latency seconds) is greater ".
@@ -1064,20 +1109,14 @@ sub vetQueueSize
             print "The value of the ".
                 "\"regpath{RECONCILIATION_MODE}\" registry-parameter is ".
                 "\"$reconMode\"\n";
+
             if ($reconMode eq $increaseQueue) {
                 print "Increasing the capacity of the queue...\n";
 
-                if (0 >= $minVirtResTime) {
-                    # Use age of oldest product, instead
-                    $minVirtResTime = $params[7];
-                }
-                if (0 >= $minVirtResTime) {
-                    # Ensure that the divisor isn't zero
-                    $minVirtResTime = 1;
-                }
-                my $ratio = $offset/$minVirtResTime + 0.1;
-                my $newByteCount = int($ratio*$params[3]);
-                my $newSlotCount = int($ratio*$params[6]);
+                my @newParams = computeNewQueueSize($minVirtResTime, 
+                        $ageOldest, $mvrtSize, $mvrtSlots);
+                my $newByteCount = $newParams[0];
+                my $newSlotCount = $newParams[1];
                 my $newQueuePath = "$pq_path.new";
 
                 print "Creating new queue of $newByteCount ".
@@ -1086,29 +1125,42 @@ sub vetQueueSize
                         "-q $newQueuePath")) {
                     errmsg("vetQueueSize(): Couldn't create new queue: ".
                         "$newQueuePath");
+                    $status = 2;                # major failure
                 }
                 else {
                     my $restartNeeded;
-                    $status = 0;
 
-                    if (isRunning($pid_file, $ip_addr)) {
+                    $status = 0;                # success so far
+
+                    if (!isRunning($pid_file, $ip_addr)) {
+                        $restartNeeded = 0;
+                    }
+                    else {
                         print "Stopping the LDM...\n";
-                        if (0 == ($status = stop_ldm())) {
+                        if (stop_ldm()) {
+                            $status = 2;        # major failure
+                        }
+                        else {
                             $restartNeeded = 1;
                         }
                     }
                     if (0 == $status) {
-                        if (0 == ($status = grow($pq_path, $newQueuePath))) {
+                        if (grow($pq_path, $newQueuePath)) {
+                            $status = 2;        # major failure
+                        }
+                        else {
                             print "Saving new queue parameters...\n";
-                            $status =
-                                saveQueuePar($newByteCount, $newSlotCount);
+                            if (saveQueuePar($newByteCount, $newSlotCount)) {
+                                $status = 2;    # major failure
+                            }
                         }
 
                         if ($restartNeeded) {
                             print "Restarting the LDM...\n";
-                            if ($status = start_ldm()) {
+                            if (start_ldm()) {
                                 errmsg("vetQueueSize(): ".
                                     "Couldn't restart the LDM");
+                                $status = 2;    # major failure
                             }
                         }
                     }                   # LDM stopped
@@ -1122,42 +1174,61 @@ sub vetQueueSize
 
                 if (0 >= $minVirtResTime) {
                     # Use age of oldest product, instead
-                    $minVirtResTime = $params[7];
+                    $minVirtResTime = $ageOldest;
                 }
                 $minVirtResTime = 1 if (0 >= $minVirtResTime);
-                my $ratio = $minVirtResTime/$max_latency;
-                my $newMaxLatency = int($ratio*$max_latency);
+                my $newMaxLatency = $minVirtResTime;
                 my $newTimeOffset = $newMaxLatency;
 
                 print "New time-offset and maximum latency: ".
                     "$newTimeOffset seconds\n";
                 print "Saving new time parameters...\n";
-                if (0 == ($status = saveTimePar($newTimeOffset,
-                        $newMaxLatency))) {
-                    if (isRunning($pid_file, $ip_addr)) {
+                if (saveTimePar($newTimeOffset, $newMaxLatency)) {
+                    $status = 2;        # major failure
+                }
+                else {
+                    if (!isRunning($pid_file, $ip_addr)) {
+                        $status = 0;    # success
+                    }
+                    else {
                         print "Restarting the LDM...\n";
-                        if ($status = stop_ldm()) {
+                        if (stop_ldm()) {
                             errmsg("vetQueueSize(): Couldn't stop LDM");
+                            $status = 2;        # major failure
                         }
                         else {
-                            if ($status = start_ldm()) {
+                            if (start_ldm()) {
                                 errmsg("vetQueueSize(): Couldn't start LDM");
+                                $status = 2;    # major failure
+                            }
+                            else {
+                                $status = 0     # success
                             }
                         }               # LDM stopped
                     }                   # LDM is running
                 }                       # new time parameters saved
             }                           # mode is decrease max latency
             elsif ($reconMode eq $doNothing) {
-                print "Doing nothing.  You should consider setting ".
+                my @newParams = computeNewQueueSize($minVirtResTime, $ageOldest,
+                        $mvrtSize, $mvrtSlots);
+                my $newByteCount = $newParams[0];
+                my $newSlotCount = $newParams[1];
+                print "Doing nothing. You should consider setting ".
                     "registry-parameter \"regpath{RECONCILIATION_MODE}\" ".
                     "to \"$increaseQueue\" or \"$decreaseMaxLatency\" or ".
                     "recreate the queue yourself.\n";
+                errmsg("vetQueueSize(): The queue should be $newByteCount ".
+                    "bytes in size with $newSlotCount slots or the ".
+                    "maximum-latency parameter should be decreased to ".
+                    "$minVirtResTime seconds.");
+                $status = 1;            # queue too small or max-latency too big
             }
             else {
                 errmsg("Unknown reconciliation mode: \"$reconMode\"");
+                $status = 2;            # major failure
             }
-        }
-    }
+        }                               # reconciliation needed
+    }                                   # pqmon(1) success
 
     return $status;
 }
@@ -1186,7 +1257,7 @@ sub check_ldm
                 $status = 4;
             }
             else {
-                print "Vetting the size of the queue and the maximum ".
+                print "Vetting the size of the queue against the maximum ".
                     "acceptable latency...\n";
                 if (vetQueueSize()) {
                     $status = 5;

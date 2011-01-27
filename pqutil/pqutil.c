@@ -132,7 +132,7 @@ usage(const char *av0) {
     fprintf(stderr,
             "\t-w             Run the watch command and exit when through\n");
     fprintf(stderr,
-            "\t-C             Clear the minimum virtual residence time and exit\n");
+            "\t-C             Clear the minimum virtual residence time metrics and exit\n");
     fprintf(stderr,
             "\t-f feedtype    Product feedtype (default ANY)\n");
 
@@ -1520,12 +1520,12 @@ main(int argc, char *argv[])
     }
 
 /* if the "clear minimum virtual residence time" flag is set, then simply clear
- * that product-queue metric and exit. */
+ * the associated product-queue metrics and exit. */
     if (clearMinVirtResTime) {
-        int     status = pq_clearMinVirtResTime(pq);
+        int     status = pq_clearMinVirtResTimeMetrics(pq);
 
         if (status) {
-            uerror("Couldn't clear minimum virtual residence time: %s",
+            uerror("Couldn't clear minimum virtual residence time metrics: %s",
                 strerror(status));
         }
 

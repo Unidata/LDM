@@ -1,8 +1,7 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2011, University Corporation for Atmospheric Research
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: pqmon.c,v 1.7.16.1.2.2 2007/02/09 21:35:02 steve Exp $ */
 
 /* 
  *  Monitor a product queue by reporting some of its vital statistics.
@@ -365,6 +364,8 @@ main(int ac, char *av[])
             size_t          maxextent;
             double          age_youngest;
             long            minReside;
+            off_t           mvrtSize;
+            size_t          mvrtSlots;
             int             isFull;
 
             status = pq_stats(pq, &nprods,   &nfree,   &nempty, &nbytes,
@@ -386,6 +387,8 @@ main(int ac, char *av[])
             if (0 == nprods) {
                 age_youngest = -1;
                 minReside = -1;
+                mvrtSize = -1;
+                mvrtSlots = 0;
             }
             else {
                 timestampt      now;
@@ -402,7 +405,8 @@ main(int ac, char *av[])
                     ? d_diff_timestamp(&now, &mostRecent)
                     : -1;
 
-                if (status = pq_getMinVirtResTime(pq, &minResidenceTime)) {
+                if (status = pq_getMinVirtResTimeMetrics(pq,
+                            &minResidenceTime, &mvrtSize, &mvrtSlots)) {
                     uerror("pq_getMinResidency() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
@@ -411,11 +415,12 @@ main(int ac, char *av[])
                 minReside = (long)minResidenceTime.tv_sec;
             }
 
-            printf("%d %lu %lu %lu %lu %lu %lu %.0f %.0f %ld\n", isFull,
+            printf("%d %lu %lu %lu %lu %lu %lu %.0f %.0f %ld %ld %lu\n", isFull,
                 (unsigned long)pq_getDataSize(pq), (unsigned long)maxbytes,
                 (unsigned long)nbytes,
                 (unsigned long)pq_getSlotCount(pq), (unsigned long)maxprods,
-                (unsigned long)nprods, age_oldest, age_youngest, minReside);
+                (unsigned long)nprods, age_oldest, age_youngest, minReside,
+                (long)mvrtSize, (unsigned long)mvrtSlots);
         }
         else {
             size_t nprods;

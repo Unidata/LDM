@@ -2869,6 +2869,10 @@ struct pqctl {
         timestampt      mostRecent;     /* time of most recent insertion */
         timestampt      minVirtResTime; /* minimum virtual residence time */
         int             isFull;         /* is the queue full? */
+#define METRICS_MAGIC_2         (PQ_MAGIC+2)
+        unsigned        metrics_magic_2;
+        off_t           mvrtSize;       /* data-usage in bytes when MVRT set */
+        size_t          mvrtSlots;      /* slot-usage when MVRT set */
 };
 typedef struct pqctl pqctl;
 
@@ -4144,6 +4148,9 @@ ctl_init(pqueue *const pq, size_t const align)
         pq->ctlp->mostRecent = TS_NONE;
         pq->ctlp->minVirtResTime = TS_NONE;
         pq->ctlp->isFull = 0;
+        pq->ctlp->metrics_magic_2 = METRICS_MAGIC_2;
+        pq->ctlp->mvrtSize = -1;
+        pq->ctlp->mvrtSlots = 0;
 
         /* bring in the indexes */
         status = (pq->ftom)(pq,
@@ -4585,8 +4592,9 @@ rpqe_free(pqueue *pq, off_t offset, signaturet signature)
 /*
  * Deletes the oldest product in a product queue that is not locked.  In the
  * unlikely event that all the products in the queue are locked or a deadlock
- * is detected, returns an error status other than ENOERR.  Sets the "isFull"
- * and "minVirtResTime" members of the product-queue control block on success.
+ * is detected, returns an error status other than ENOERR.  Sets the "isFull",
+ * "minVirtResTime", "mvrtSize", and "mvrtSlots" members of the product-queue
+ * control block on success.
  *
  * Arguments:
  *      pq              Pointer to the product-queue object.  Shall not be
@@ -4647,7 +4655,7 @@ pq_del_oldest(pqueue *pq)
         (void)xinfo_i(vp, Extent(rep), XDR_DECODE, ib_init(&infoBuf));
 
         /*
-         * Set the minimum virtual residence time if appropriate.
+         * Set the minimum virtual residence time parameters if appropriate.
          */
         {
             timestampt  now;
@@ -4666,7 +4674,13 @@ pq_del_oldest(pqueue *pq)
 
                 if (tvIsNone(pq->ctlp->minVirtResTime) || 
                         tvCmp(virtResTime, pq->ctlp->minVirtResTime, <))  {
+                    LOG_START1("pq_del_oldest(): MVRT product:"
+                            " %s",
+                            s_prod_info(NULL, 0, &infoBuf.info, ulogIsDebug()));
+                    log_log(LOG_INFO);
                     pq->ctlp->minVirtResTime = virtResTime;
+                    pq->ctlp->mvrtSize = pq->rlp->nbytes;
+                    pq->ctlp->mvrtSlots = pq->rlp->nelems;
                 }
             }
         }
@@ -4990,6 +5004,18 @@ pq_open(
                                 ctlp->mostRecent = TS_NONE;
                                 ctlp->minVirtResTime = TS_NONE;
                                 ctlp->isFull = 0;
+                                rflags = RGN_MODIFIED;
+                            }
+                            if (METRICS_MAGIC_2 != ctlp->metrics_magic_2) {
+                                /*
+                                 * This process is the first one of this
+                                 * version of the LDM to open the product-queue
+                                 * for writing.  Initialize the additional
+                                 * metrics.
+                                 */
+                                ctlp->metrics_magic_2 = METRICS_MAGIC_2;
+                                ctlp->mvrtSize = -1;
+                                ctlp->mvrtSlots = 0;
                                 rflags = RGN_MODIFIED;
                             }
                         }
@@ -5647,11 +5673,12 @@ int pq_getMostRecent(
 
 
 /*
- * Returns the minimum virtual residence time of data-products in the queue
- * since the queue was created.  The virtual residence time of a data-product
- * is the time that the product was removed from the queue minus the time that
- * the product was created.  The minimum virtual residence time is the minimum
- * of the virtual residence times over all applicable products.
+ * Returns metrics associated with the minimum virtual residence time of
+ * data-products in the queue since the queue was created or the metrics reset.
+ * The virtual residence time of a data-product is the time that the product
+ * was removed from the queue minus the time that the product was created.  The
+ * minimum virtual residence time is the minimum of the virtual residence times
+ * over all applicable products.
  *
  * Arguments:
  *      pq              Pointer to the product-queue structure.  Shall not be
@@ -5663,18 +5690,44 @@ int pq_getMostRecent(
  *                      been deleted from the queue, for example), then
  *                      "*minVirtResTime" shall be TS_NONE upon successful
  *                      return.
+ *      size            Pointer to the amount of data used, in bytes, when the
+ *                      minimum virtual residence time was set. Shall not be
+ *                      NULL. Set upon successful return. If this parameter
+ *                      doesn't exist, then "*size" shall be set to -1.
+ *      slots           Pointer to the number of slots used when the minimum
+ *                      virtual residence time was set. Shall not be NULL. Set
+ *                      upon successful return. If this parameter doesn't exist,
+ *                      the "*slots" shall be set to 0.
  * Returns:
- *      0               Success.  "*minVirtResTime" is set.
+ *      0               Success.  All the outout metrics are set.
  *      else            <errno.h> error code.
  */
-int pq_getMinVirtResTime(
+int pq_getMinVirtResTimeMetrics(
     pqueue* const       pq,
-    timestampt* const   minVirtResTime)
+    timestampt* const   minVirtResTime,
+    off_t* const        size,
+    size_t* const       slots)
 {
     int status = ctl_get(pq, 0);
 
     if (status == ENOERR) {
-        *minVirtResTime = pq->ctlp->minVirtResTime;
+        pqctl*   ctlp = pq->ctlp;
+
+        if (METRICS_MAGIC == ctlp->metrics_magic) {
+            *minVirtResTime = ctlp->minVirtResTime;
+        }
+        else {
+            *minVirtResTime = TS_NONE;
+        }
+
+        if (METRICS_MAGIC_2 == ctlp->metrics_magic_2) {
+            *size = ctlp->mvrtSize;
+            *slots = ctlp->mvrtSlots;
+        }
+        else {
+            *size = -1;
+            *slots = 0;
+        }
 
         (void)ctl_rel(pq, 0);
     }                                   /* "pq->ctlp" allocated */
@@ -5682,29 +5735,31 @@ int pq_getMinVirtResTime(
     return status;
 }
 
-
 /*
- * Clears the minimum virtual residence time of data-products in the queue.
- * After this function, the minimum virtual residence metric will be 
- * recomputed as products are deleted from the queue.
+ * Clears the metrics associated with the minimum virtual residence time of
+ * data-products in the queue.  After this function, the minimum virtual
+ * residence time metrics will be recomputed as products are deleted from the
+ * queue.
  *
  * Arguments:
  *      pq              Pointer to the product-queue structure.  Shall not be
  *                      NULL.  Must be open for writing.
  * Returns:
- *      0               Success.  The minimum virtual residence time is
+ *      0               Success.  The minimum virtual residence time metrics are
  *                      cleared.
  *      else            <errno.h> error code.
  */
-int pq_clearMinVirtResTime(
+int pq_clearMinVirtResTimeMetrics(
     pqueue* const       pq)
 {
-    int status = ctl_get(pq, 0);
+    int status = ctl_get(pq, RGN_WRITE);
 
     if (status == ENOERR) {
         pq->ctlp->minVirtResTime = TS_NONE;
+        pq->ctlp->mvrtSize = -1;
+        pq->ctlp->mvrtSlots = 0;
 
-        (void)ctl_rel(pq, 0);
+        (void)ctl_rel(pq, RGN_MODIFIED);
     }                                   /* "pq->ctlp" allocated */
 
     return status;

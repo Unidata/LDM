@@ -1,3 +1,28 @@
+6.9.7
+        ldmadmin(1):
+            Improve the computation of the size of data area and the number of
+            slots when the queue is too small or the maximum-latency is too
+            large based on data-usage and slot usage when the minimum virtual
+            residence time is modified.
+
+            Add printing to the standard error stream the new queue parameters
+            and the new maximum-latency parameter if the queue and the
+            maximum-latency need to be reconciled but the reconciliation-mode
+            parameter is "do nothing".
+
+        pqmon(1):
+            Add printing of two more metrics to the "-S" option: the
+            data-usage, in bytes, and the slot-usage for when the minimum
+            virtual residence time was modified.
+
+        pq(3):
+            Add persistent tracking of the number of bytes used and the number
+            of slots used when the minimum virtual residence time is modified.
+
+            Replace pq_getMinVirtResTime() and pq_clearMinVirtResTime() with
+            pq_getMinVirResTimeMetrics() and pq_clearMinVirtResTimeMetrics(),
+            respectively.
+
 6.9.6   2011-01-25
         pqact(1):
             Now converts a relative specification of its configuration-file to
