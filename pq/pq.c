@@ -4600,7 +4600,7 @@ rpqe_free(pqueue *pq, off_t offset, signaturet signature)
  *      pq              Pointer to the product-queue object.  Shall not be
  *                      NULL.
  * Returns:
- *      0               Success.  "pq->ctlp->isFull" is non-zero.
+ *      0               Success.  "pq->ctlp->isFull" set to true.
  *      else            <errno.h> error code.
  */
 static int
@@ -4655,29 +4655,37 @@ pq_del_oldest(pqueue *pq)
         (void)xinfo_i(vp, Extent(rep), XDR_DECODE, ib_init(&infoBuf));
 
         /*
-         * Set the minimum virtual residence time parameters if appropriate.
+         * Set the minimum virtual residence time metrics if appropriate.
          */
         {
-            timestampt  now;
-            
+            const timestampt*           creationTime = &infoBuf.info.arrival;
+            const timestampt* const     receptionTime = &tqep->tv;
+            timestampt                  now;
+
+            /*
+             * If the product was received before it was created, then use the
+             * product's reception-time as its creation-time in the computation
+             * of the product's virtual residence-time.
+             */
+            if (TV_CMP_LT(*receptionTime, *creationTime)) {
+                creationTime = receptionTime;
+            }
+
             (void)set_timestamp(&now);
 
-            if (tvCmp(now, infoBuf.info.arrival, <)) {
-                LOG_START1("pq_del_oldest(): Oldest product is from the future:"
-                        " %s",
-                        s_prod_info(NULL, 0, &infoBuf.info, ulogIsDebug()));
-                log_log(LOG_WARNING);
-            }
-            else {
-                timestampt  virtResTime =
-                    diff_timestamp(&now, &infoBuf.info.arrival);
+            /*
+             * Compute the product's residence time only if the product was
+             * created before now.
+             */
+            if (TV_CMP_LT(*creationTime, now)) {
+                timestampt      virtResTime =
+                    diff_timestamp(&now, creationTime);
 
                 if (tvIsNone(pq->ctlp->minVirtResTime) || 
-                        tvCmp(virtResTime, pq->ctlp->minVirtResTime, <))  {
-                    LOG_START1("pq_del_oldest(): MVRT product:"
-                            " %s",
+                        TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime))  {
+                    LOG_START1("pq_del_oldest(): MVRT product: %s",
                             s_prod_info(NULL, 0, &infoBuf.info, ulogIsDebug()));
-                    log_log(LOG_INFO);
+                    log_log(LOG_NOTICE);
                     pq->ctlp->minVirtResTime = virtResTime;
                     pq->ctlp->mvrtSize = pq->rlp->nbytes;
                     pq->ctlp->mvrtSlots = pq->rlp->nelems;
@@ -5427,8 +5435,10 @@ vetCreationTime(
             cp == NULL ?  strlen(origin) : (size_t)(cp - origin);
 
         if (ulogIsVerbose()) {
-            uwarn("Future product from \"%*s\".  Fix local or ingest clock. %s",
-                (int)len, origin, s_prod_info(NULL, 0, info, 0));
+            LOG_START3("Future product from \"%*s\". "
+                    "Fix local or ingest clock. %s",
+                    (int)len, origin, s_prod_info(NULL, 0, info, 0));
+            log_log(LOG_WARNING);
         }
         else {
             FutureEntry         targetEntry;
@@ -5448,9 +5458,10 @@ vetCreationTime(
                 time_t          now = time(NULL);
 
                 if (entry->start <= now) {
-                    uwarn("Future product from \"%s\".  Fix local or ingest "
-                        "clock. %s", entry->hostname,
-                        s_prod_info(NULL, 0, info, 0));
+                    LOG_START2("Future product from \"%s\". "
+                            "Fix local or ingest clock. %s", entry->hostname,
+                            s_prod_info(NULL, 0, info, 0));
+                    log_log(LOG_WARNING);
 
                     entry->start = now + FUTURE_INTERVAL;
                 }
@@ -5458,9 +5469,10 @@ vetCreationTime(
             else {
                 FutureEntry*    newEntry = malloc(sizeof(FutureEntry));
 
-                uwarn("Future product from \"%s\".  Fix local or ingest "
-                    "clock. %s", targetEntry.hostname,
+                LOG_START2("Future product from \"%s\". "
+                        "Fix local or ingest clock. %s", targetEntry.hostname,
                     s_prod_info(NULL, 0, info, 0));
+                log_log(LOG_WARNING);
 
                 if (newEntry != NULL) {
                     newEntry->start = time(NULL) + FUTURE_INTERVAL;

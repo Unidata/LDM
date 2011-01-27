@@ -1,8 +1,7 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
+ *   Copyright 2011, University Corporation for Atmospheric Research
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: pqcat.c,v 1.40.10.1.2.4 2008/04/15 16:34:09 steve Exp $ */
 
 /* 
  *  dump a pq
