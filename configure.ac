@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.9.6], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.9.7], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -197,11 +197,11 @@ case "$CC" in
         avail=`getconf _XBS5_LPBIG_OFFBIG 2>/dev/null`
         if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
         then
-            if cflags=`getconf -v _XBS5_LPBIG_OFFBIG XBS5_LPBIG_OFFBIG_CFLAGS 2>/dev/null`
+            if cflags=`getconf XBS5_LPBIG_OFFBIG_CFLAGS 2>/dev/null`
             then
-                if ldflags=`getconf -v _XBS5_LPBIG_OFFBIG XBS5_LPBIG_OFFBIG_LDFLAGS 2>/dev/null`
+                if ldflags=`getconf XBS5_LPBIG_OFFBIG_LDFLAGS 2>/dev/null`
                 then
-                    if libs=`getconf -v _XBS5_LPBIG_OFFBIG XBS5_LPBIG_OFFBIG_LIBS 2>/dev/null`
+                    if libs=`getconf XBS5_LPBIG_OFFBIG_LIBS 2>/dev/null`
                     then
                         maprgns=-U_MAPRGNS
                         success=yes
@@ -216,11 +216,11 @@ case "$CC" in
             avail=`getconf _XBS5_LP64_OFF64 2>/dev/null`
             if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
             then
-                if cflags=`getconf -v _XBS5_LP64_OFF64 XBS5_LP64_OFF64_CFLAGS 2>/dev/null`
+                if cflags=`getconf XBS5_LP64_OFF64_CFLAGS 2>/dev/null`
                 then
-                    if ldflags=`getconf -v _XBS5_LP64_OFF64 XBS5_LP64_OFF64_LDFLAGS 2>/dev/null`
+                    if ldflags=`getconf XBS5_LP64_OFF64_LDFLAGS 2>/dev/null`
                     then
-                        if libs=`getconf -v _XBS5_LP64_OFF64 XBS5_LP64_OFF64_LIBS 2>/dev/null`
+                        if libs=`getconf XBS5_LP64_OFF64_LIBS 2>/dev/null`
                         then
                             maprgns=-U_MAPRGNS
                             success=yes
@@ -236,11 +236,11 @@ case "$CC" in
             avail=`getconf _XBS5_ILP32_OFFBIG 2>/dev/null`
             if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
             then
-                if cflags=`getconf -v _XBS5_ILP32_OFFBIG XBS5_ILP32_OFFBIG_CFLAGS 2>/dev/null`
+                if cflags=`getconf XBS5_ILP32_OFFBIG_CFLAGS 2>/dev/null`
                 then
-                    if ldflags=`getconf -v _XBS5_ILP32_OFFBIG XBS5_ILP32_OFFBIG_LDFLAGS 2>/dev/null`
+                    if ldflags=`getconf XBS5_ILP32_OFFBIG_LDFLAGS 2>/dev/null`
                     then
-                        if libs=`getconf -v _XBS5_ILP32_OFFBIG XBS5_ILP32_OFFBIG_LIBS 2>/dev/null`
+                        if libs=`getconf XBS5_ILP32_OFFBIG_LIBS 2>/dev/null`
                         then
                             AC_DEFINE(_MAPRGNS, 1)
                             AC_DEFINE([_MAPRGNS], [1], [Whether or not to map
