@@ -7,5 +7,4 @@ Makefile
 *.results
 hostchecks
 redo-results
-*.host.*
 *.results.*

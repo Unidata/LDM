@@ -1,29 +1,43 @@
-6.9.7
-        ldmadmin(1):
-            Improve the computation of the size of data area and the number of
-            slots when the queue is too small or the maximum-latency is too
-            large based on data-usage and slot usage when the minimum virtual
-            residence time is modified.
+6.9.7   2011-02-01
+        Installation:
+            Make the determination of large-file support by the configure(1)
+            script more robust by removing the use of the "-v <spec>" option of
+            the getconf(1) utility because some of those utilities are broken.
 
-            Add printing to the standard error stream the new queue parameters
-            and the new maximum-latency parameter if the queue and the
-            maximum-latency need to be reconciled but the reconciliation-mode
-            parameter is "do nothing".
+        ldmadmin(1):
+            Improve the computation of the queue parameters when the queue is
+            too small or the maximum-latency is too large by basing the
+            computation on the data-usage and slot usage at the time when the
+            minimum virtual residence time is set in order to increase the
+            stability of the result.
+
+            Improve the warning message from the "ldmadmin vetqueuesize"
+            command when the reconciliation-mode is "do nothing" in order to
+            better inform the user by printing to the standard error stream
+            what the queue parameters or the maximum-latency parameter should
+            be in order to guarantee rejection of duplicate products.
 
         pqmon(1):
-            Add printing of two more metrics to the "-S" option: the
-            data-usage, in bytes, and the slot-usage for when the minimum
-            virtual residence time was modified.
+            Improve the output from the "-S" option in order to improve the
+            stability of the computation of new queue parameters and maximum
+            latency parameter by printing two more metrics: the data-usage and
+            the slot-usage at the time when the minimum virtual residence time
+            was set.
 
         pq(3):
-            Add persistent tracking of the number of bytes used and the number
-            of slots used when the minimum virtual residence time is modified.
+            Add additional queue metrics in order to improve the stability of
+            the computation of new queue parameters and maximum latency
+            parameter by adding persistent tracking of the number of bytes used
+            and the number of slots used when the minimum virtual residence
+            time is modified.
 
-            Safeguard the computation of the minimum virtual residence time
-            against data-products that are received or deleted before they are
-            created.
+            Improve the computation of the minimum virtual residence time in
+            order to improve its stability by safeguarding the computation
+            against data-products that are received or deleted before their
+            creation-time.
 
-            Replace pq_getMinVirtResTime() and pq_clearMinVirtResTime() with
+            Improve the minimum virtual residence time access-API by replacing
+            pq_getMinVirtResTime() and pq_clearMinVirtResTime() with
             pq_getMinVirResTimeMetrics() and pq_clearMinVirtResTimeMetrics(),
             respectively.
 
