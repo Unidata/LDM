@@ -1,3 +1,8 @@
+6.9.8
+        ldmadmin(1):
+            Remove reference to SEEK_END from "use Fcntl" statement because
+            that constant isn't used and older perl(1)'s don't have it.
+
 6.9.7   2011-02-01
         Installation:
             Make the determination of large-file support by the configure(1)

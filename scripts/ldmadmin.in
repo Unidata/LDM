@@ -467,7 +467,7 @@ sub resetRegistry
     return $status;
 }
 
-use Fcntl qw(:flock SEEK_END); # import LOCK_* and SEEK_END constants
+use Fcntl qw(:flock); # import LOCK_* constants
 
 ###############################################################################
 # Lock the lock-file.
