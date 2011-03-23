@@ -208,9 +208,6 @@
 /* Define if the file /dev/conslog exists */
 #undef _DEV_CONSLOG
 
-/* Whether or not to map the product-queue by individual product region */
-#undef _MAPRGNS
-
 /* For declarations of *_r() functions on our HP-UX/gcc 3.3.2 system */
 #undef _REENTRANT
 

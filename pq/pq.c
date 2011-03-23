@@ -2927,6 +2927,9 @@ struct pqueue {
         sigset_t sav_set;
 };
 
+/* The total size of a product-queue in bytes: */
+#define TOTAL_SIZE(pq) ((off_t)((pq)->ixo + (pq)->ixsz))
+
 /* Begin OS */
 
 /*
@@ -3381,7 +3384,7 @@ f_ftom(pqueue *const pq,
         assert(pq->ixsz % pq->pagesz == 0);
 
         assert(0 <= offset && offset <= pq->ixo);
-        assert(0 != extent && extent < pq->ixo + pq->ixsz);
+        assert(0 != extent && extent < TOTAL_SIZE(pq));
 
         assert(pIf(fIsSet(rflags, RGN_WRITE),
                         !fIsSet(pq->pflags, PQ_READONLY)));
@@ -3477,7 +3480,7 @@ f_mtof(pqueue *const pq,
         }
 
         assert(rp->offset == offset);
-        assert(0 < rp->extent && rp->extent < pq->ixo + pq->ixsz);
+        assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
         extent = rp->extent;
         assert(rp->vp != NULL);
         vp = rp->vp;
@@ -3614,7 +3617,7 @@ mm_ftom(pqueue *const pq,
         assert(pq->ixsz % pq->pagesz == 0);
 
         assert(0 <= offset && offset <= pq->ixo);
-        assert(0 != extent && extent < pq->ixo + pq->ixsz);
+        assert(0 != extent && extent < TOTAL_SIZE(pq));
 
         assert(pIf(fIsSet(rflags, RGN_WRITE),
                         !fIsSet(pq->pflags, PQ_READONLY)));
@@ -3691,7 +3694,7 @@ mm_mtof(pqueue *const pq,
         }
 
         assert(rp->offset == offset);
-        assert(0 < rp->extent && rp->extent < pq->ixo + pq->ixsz);
+        assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
         extent = rp->extent;
         assert(rp->vp != NULL);
         vp = rp->vp;
@@ -3724,7 +3727,7 @@ mm0_map(pqueue *const pq)
         int status = ENOERR;
         void *vp = pq->base;
         struct stat sb;
-        off_t st_size = pq->ixo + (off_t)pq->ixsz;
+        off_t st_size = TOTAL_SIZE(pq);
         int mflags = fIsSet(pq->pflags, PQ_PRIVATE) ?
                         MAP_PRIVATE : MAP_SHARED;
         int prot = fIsSet(pq->pflags, PQ_READONLY) ?
@@ -3787,7 +3790,7 @@ mm0_ftom(pqueue *const pq,
         assert(pq->ixsz % pq->pagesz == 0);
 
         assert(0 <= offset && offset <= pq->ixo);
-        assert(0 != extent && extent < pq->ixo + pq->ixsz);
+        assert(0 != extent && extent < TOTAL_SIZE(pq));
 
         assert(pIf(fIsSet(rflags, RGN_WRITE),
                         !fIsSet(pq->pflags, PQ_READONLY)));
@@ -3851,7 +3854,7 @@ mm0_mtof(pqueue *const pq,
         }
 
         assert(rp->offset == offset);
-        assert(0 < rp->extent && rp->extent < pq->ixo + pq->ixsz);
+        assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
         extent = rp->extent;
         assert(pq->base == NULL || (rp->vp != NULL
                  && pq->base <= rp->vp
@@ -3887,25 +3890,90 @@ pq_delete(pqueue *const pq)
 
 
 /*
+ * Sets the offset and size fields of a product-queue structure.
+ *
+ * Arguments:
+ *      pq              Pointer to the product-queue structure to have its
+ *                      "pagesz", "datao", "ixo", "ixsz", and "nalloc" fields
+ *                      set.
+ *      align           Alignment reguirement in bytes.
+ *      initsz          Initial size of the data segment in bytes.
+ *      nregions        The capacity of the product-queue in products.
+ */
+static void
+setOffsetsAndSizes(
+    pqueue* const       pq,
+    const size_t        align,
+    const off_t         initsz,
+    const size_t        nregions)
+{
+    /* Size of an I/O page in bytes: */
+    pq->pagesz = (size_t)pagesize();
+    /* Offset to the data segment in bytes: */
+    pq->datao = lcm(pq->pagesz, align);
+    assert(pq->datao >= sizeof(pqctl));
+    /* Offset to the index segment in bytes: */
+    pq->ixo = pq->datao + _RNDUP(initsz, pq->pagesz);
+    /* The capacity of the product-queue in products: */
+    pq->nalloc = nregions;
+
+    /* Size of the index segement: */
+    if (nregions == 0) {
+        pq->ixsz = pq->pagesz;
+    }
+    else {
+        pq->ixsz = ix_sz(nregions, align);
+        pq->ixsz = _RNDUP(pq->ixsz, pq->pagesz);
+    }
+}
+
+
+/* The maximum value of a "size_t": */
+static const size_t MAX_SIZE_T = ~(size_t)0;
+
+
+/**
+ * Indicates if memory-mapping by individual data-products is necessary.
+ *
+ * Arguments:
+ *      pq      Pointer to the product-queue structure.
+ * Returns:
+ *      0       If and only if it is not necessary to memory-map the
+ *              product-queue by individual data-products.
+ */
+static int
+isProductMappingNecessary(
+    const pqueue* const pq)
+{
+    return (TOTAL_SIZE(pq) > MAX_SIZE_T)
+#if __FreeBSD__ == 4
+        /*
+         * The operating-system is 32-bit Free BSD 4, which has a limit of
+         * 2 gigabytes on the extent argument of an mmap(2) call.
+         */
+        || (sizeof(size_t) == 4 && TOTAL_SIZE(pq) > 2000000000)
+#endif
+        ;
+}
+
+
+/*
  * Sets the functions to be used to access the product-queue.
  *
  * Arguments:
  *      pq      Pointer to product-queue structure.  The following members
  *              must be set to their final values: pflags, ixo, ixsz.
- *      pflags  The flags governing the product-queue.
- *      pqSize  The maximum possible size of the product-queue in bytes.
  */
 static void
 pq_setAccessFunctions(
-    pqueue* const       pq,
-    const int           pflags,
-    const off_t         pqSize)
+    pqueue* const       pq)
 {
+    const int           pflags = pq->pflags;
+
     assert(NULL != pq);
 
 #ifdef HAVE_MMAP
-    if (fIsSet(pflags, PQ_NOMAP))
-    {
+    if (fIsSet(pflags, PQ_NOMAP)) {
 #endif
         /*
          * The product-queue will be accessed via read() and write().
@@ -3915,18 +3983,7 @@ pq_setAccessFunctions(
 #ifdef HAVE_MMAP
     }
     else {
-        static size_t   maxSizeT = ~(size_t)0;
-
-        if (fIsSet(pflags, PQ_MAPRGNS) || pqSize <= 0 || pqSize > maxSizeT
-#if __FreeBSD__ == 4
-            || (sizeof(size_t) == 4 && pqSize > 2000000000)
-            /*
-             * The operating-system is 32-bit Free BSD 4, which has a limit of
-             * 2 gigabytes on the extent of an mmap() call.
-             */
-#endif
-            )
-        {
+        if (fIsSet(pflags, PQ_MAPRGNS) || isProductMappingNecessary(pq)) {
             /*
              * The product-queue will be accessed by being memory-mapped
              * on a region-by-region basis.
@@ -3949,81 +4006,82 @@ pq_setAccessFunctions(
 
 
 /*
- * Allocate and initialize a pqueue.  The product-queue access-functions
- * (pq->ftom & pq->mtof) are set assuming a product-queue of maximum-size.
+ * Allocates and initializes a product-queue structure.
+ *
+ * Arguments:
+ *      pflags          Product-queue flags.
+ *      align           Alignment reguirement in bytes.
+ *      initialsz       Capacity of the product-queue in bytes.
+ *      maxProds        Capacity of the product-queue in number of products.
+ * Returns:
+ *      NULL            Failure. "errno" set.
+ *      else            Pointer to the product-queue structure. The client
+ *                      should call "pq_delete(pq)" when the structure is no
+ *                      longer needed.
  */
-static pqueue *
-pq_new( int pflags,
-        size_t align,
-        off_t initialsz, /* initial allocation available */
-        size_t nregions) /* initial rl->nalloc, ... */
+static pqueue*
+pq_new(
+    const int           pflags,
+    const size_t        align,
+    const off_t         initialsz,
+    const size_t        maxProds)
 {
-        pqueue *const pq = (pqueue *)malloc(sizeof(pqueue));
+    pqueue* const       pq = (pqueue*)malloc(sizeof(pqueue));
 
-        if(pq == NULL)
-                return NULL; 
+    if (pq == NULL)
+        return NULL; 
 
-        (void)memset(pq, 0, sizeof(pqueue));
-        (void)sigemptyset(&pq->sav_set);
+    (void)memset(pq, 0, sizeof(pqueue));
+    (void)sigemptyset(&pq->sav_set);
 
-/*
- * This is a convenient place to overide things at compile time.
- */
+    /*
+     * This is a convenient place to overide things at compile time.
+     */
 
-        fSet(pflags, PQ_NOGROW); /* always set for this version of pq! */
-#if _MAPRGNS
-        fSet(pflags, PQ_MAPRGNS);
-#endif
-        pq->pflags = pflags;
+    pq->pflags = pflags;
 
-        pq->pagesz = (size_t)pagesize();
+    fSet(pq->pflags, PQ_NOGROW); /* always set for this version of pq! */
+    setOffsetsAndSizes(pq, align, initialsz, maxProds);
+
+    if (isProductMappingNecessary(pq)) {
+        /*
+         * The entire product-queue can't be memory-mapped in one mmap(2)
+         * call; consequently, each data-product will be individually
+         * memory-mapped.
+         */
+        fSet(pq->pflags, PQ_MAPRGNS);
+    }
 
 #if __hpux
-        /* doesn't allow overlapping maps */
-        if(fIsSet(pflags, PQ_MAPRGNS) && align < pq->pagesz)
-        {
-                /* unotice("forcing alignment %u", pq->pagesz); */
-                align =  pq->pagesz;
+    if (fIsSet(pq->pflags, PQ_MAPRGNS)) {
+        /*
+         * HP-UX requires that memory-mapped segments be aligned on page
+         * boundaries.
+         */
+        if (align < pq->pagesz) {
+            /* unotice("forcing alignment %u", pq->pagesz); */
+            setOffsetsAndSizes(pq, pq->pagesz, initialsz, maxProds);
         }
+    }
 #endif
 
-        pq->riulp = (riul *)malloc(pq->pagesz);
-        if(pq->riulp == NULL)
-        {
-                free(pq);
-                return NULL;    
-        }
-        riul_init(pq->riulp, 0, pq->pagesz);
+    pq->riulp = (riul*)malloc(pq->pagesz);
+    if (pq->riulp == NULL) {
+        free(pq);
+        return NULL;    
+    }
+    riul_init(pq->riulp, 0, pq->pagesz);
 
-        pq->fd = -1;
+    /*
+     * Set the product-queue access-functions.
+     */
+    pq_setAccessFunctions(pq);
 
-        pq->datao = (off_t)lcm(pq->pagesz, align);
-        assert(pq->datao >= sizeof(pqctl));
+    pq->fd = -1;
+    pq->cursor = TS_NONE;
+    pq->cursor_offset = OFF_NONE;
 
-        pq->ixo = pq->datao + (off_t)_RNDUP(initialsz, pq->pagesz);
-        if(nregions != 0)
-        {
-                pq->ixsz = ix_sz(nregions, align);
-                pq->ixsz =  _RNDUP(pq->ixsz, pq->pagesz);
-                pq->nalloc = nregions;
-        }
-        else
-        {
-                pq->ixsz = pq->pagesz;
-        }
-
-        /*
-         * Se the product-queue access-functions.  As a failsafe, assume a
-         * maximum size for the product-queue.
-         */
-        pq_setAccessFunctions(pq, pq->pflags, 
-            ((off_t)1 << ((sizeof(off_t)*CHAR_BIT - 2))) + 
-            (((off_t)1 << (sizeof(off_t)*CHAR_BIT - 2)) - 1));
-
-        pq->cursor = TS_NONE;
-        pq->cursor_offset = OFF_NONE;
-
-        return pq;
+    return pq;
 }
 
 
@@ -4304,7 +4362,7 @@ remap:
          * Reset the product-queue access-functions based on the product-queue's
          * actual size.
          */
-        pq_setAccessFunctions(pq, pq->pflags, (off_t)(pq->ixo + pq->ixsz));
+        pq_setAccessFunctions(pq);
 
         /* bring in the indexes */
         status = (pq->ftom)(pq, pq->ixo, pq->ixsz, RGN_NOLOCK, &pq->ixp);
@@ -4902,8 +4960,6 @@ pq_create(const char *path, mode_t mode,
         if(pq == NULL)
                 return errno;
 
-        pq_setAccessFunctions(pq, pq->pflags, initialsz);
-
         if(fIsSet(pflags, PQ_NOCLOBBER))
                 fSet(oflags, O_EXCL);
         fd = open(path, oflags, mode);
@@ -5119,7 +5175,7 @@ pq_close(pqueue *pq)
         {
                 /* special case, time to unmap the whole thing */
                 int mflags = 0; /* TODO: translate rflags to mflags */
-                (void) unmapwrap(pq->base, 0, pq->ixo + pq->ixsz, mflags);
+                (void) unmapwrap(pq->base, 0, TOTAL_SIZE(pq), mflags);
                 pq->base = NULL;
         }
 #endif

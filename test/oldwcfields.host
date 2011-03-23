@@ -4,7 +4,6 @@
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
 
-#Couldn't ensure that registry exists in directory "/tmp/ldm-6.9.1/etc" at ./installRegistry line 33.
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64
 

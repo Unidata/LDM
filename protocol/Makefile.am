@@ -83,7 +83,7 @@ TAGS_FILES		= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../pq/*.c ../pq/*.h \
-    ../server/*.c \
+    ../ldmd/*.c \
     ../rpc/*.c ../rpc/*.h \
     ../registry/*.c
 EXTRA_DIST		= \

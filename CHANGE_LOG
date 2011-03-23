@@ -1,7 +1,30 @@
 6.9.8
+        Installation:
+            Changed the build-procedure for the product-queue library (pq(3))
+            to improve throughput.  Before, the build-procedure was configured
+            to create a pq(3) library that always memory-mapped the
+            data-products individually (rather than memory-mapping the entire
+            product-queue) if the C compiler was c89(1) or c99(1) and the
+            "int", "long", and pointer types were 32-bits but the "off_t" type
+            was at least 64-bits. Now, the pq(3) library will always memory-map
+            the product-queue in a single call if possible regardless of the
+            programming environment. This reduces the number of calls to the
+            system mmap(2) and munmap(2) functions and, consequently, increases
+            throughput.
+
+        configure(1) script:
+            Eliminated use of _MAPRGNS C macro.
+
         ldmadmin(1):
-            Remove reference to SEEK_END from "use Fcntl" statement because
+            Removed reference to SEEK_END from "use Fcntl" statement because
             that constant isn't used and older perl(1)'s don't have it.
+
+        pq(3) library:
+            Modified logic for deciding whether or not to memory-map data-
+            products individually. Such mapping now occurs if and only if the
+            PQ_MAPRGNS flag is specified (not likely) or the actual size of the
+            product-queue prevents it from being memory-mapped by a single
+            mmap(2) call. Eliminated use of _MAPRGNS C macro.
 
 6.9.7   2011-02-01
         Installation:
@@ -29,7 +52,7 @@
             the slot-usage at the time when the minimum virtual residence time
             was set.
 
-        pq(3):
+        pq(3) library:
             Add additional queue metrics in order to improve the stability of
             the computation of new queue parameters and maximum latency
             parameter by adding persistent tracking of the number of bytes used

@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.9.7], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.9.8], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -203,7 +203,6 @@ case "$CC" in
                 then
                     if libs=`getconf XBS5_LPBIG_OFFBIG_LIBS 2>/dev/null`
                     then
-                        maprgns=-U_MAPRGNS
                         success=yes
                     fi
                 fi
@@ -222,7 +221,6 @@ case "$CC" in
                     then
                         if libs=`getconf XBS5_LP64_OFF64_LIBS 2>/dev/null`
                         then
-                            maprgns=-U_MAPRGNS
                             success=yes
                         fi
                     fi
@@ -242,11 +240,6 @@ case "$CC" in
                     then
                         if libs=`getconf XBS5_ILP32_OFFBIG_LIBS 2>/dev/null`
                         then
-                            AC_DEFINE(_MAPRGNS, 1)
-                            AC_DEFINE([_MAPRGNS], [1], [Whether or not to map
-                                    the product-queue by individual product 
-                                    region])
-                            maprgns=-D_MAPRGNS
                             success=yes
                         fi
                     fi
@@ -260,7 +253,6 @@ case "$CC" in
             test -n "$ldflags" && LDFLAGS="$LDFLAGS${LDFLAGS+ }$ldflags"
             test -n "$libs"    && LIBS="$LIBS${LIBS+ }$libs"
             test `uname` = AIX && ARFLAGS='-cru -X 32_64'
-            AC_MSG_NOTICE([$maprgns])
             AC_MSG_NOTICE([cflags="\"$cflags\""])
             AC_MSG_NOTICE([ldflags="\"$ldflags\""])
             AC_MSG_NOTICE([libs="\"$libs\""])
