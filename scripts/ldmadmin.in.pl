@@ -39,7 +39,7 @@ $begin = 19700101;
 $end = 30000101;
 $lock_file = "$ldmhome/.ldmadmin.lck";
 $pid_file = "$ldmhome/ldmd.pid";
-$bin_path = "$ldmhome/bin";
+$bin_path = "@prefix@/bin";
 $line_prefix = "";
 $pqact_conf_option = 0;
 

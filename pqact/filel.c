@@ -523,6 +523,10 @@ unio_open(fl_entry *entry, int ac, char **av)
         else if (0 == strncmp(*av,"-strip",3)) {
             entry->flags |= FL_STRIP;
         }
+        else if (strncmp(*av, "-metadata", 3) == 0)
+        {
+            entry->flags |= FL_METADATA;
+        }
         else if (0 == strncmp(*av,"-log",4)) {
             entry->flags |= FL_LOG;
         }
@@ -689,6 +693,153 @@ static struct fl_ops unio_ops = {
         unio_put,
 };
 
+/*
+ * Writes the data-product creation-time to the file as
+ *     integer portion                  uint64_t
+ *     microseconds portion             int32_t
+ * ARGUMENTS:
+ *     entry    Pointer to file-list entry
+ *     creation Pointer to data-product creation-time
+ * RETURNS:
+ *     0        Success
+ *     else     "errno"
+ */
+static int
+unio_putcreation(
+    fl_entry*         entry,
+    const timestampt* creation)
+{
+    int         status;
+#if SIZEOF_UINT64_T*CHAR_BIT == 64
+    uint64_t    uint64 = (uint64_t)creation->tv_sec;
+    status = write(entry->handle.fd, (void*)&uint64, (u_int)sizeof(uint64_t));
+#else
+    uint32_t    lower32 = (uint32_t)creation->tv_sec;
+#   if SIZEOF_LONG*CHAR_BIT <= 32
+        uint32_t    upper32 = 0;
+#   else
+        uint32_t    upper32 =
+            (uint32_t)(((unsigned long)creation->tv_sec) >> 32);
+#   endif
+#   if WORDS_BIGENDIAN
+        uint32_t        first32 = upper32;
+        uint32_t        second32 = lower32;
+#   else
+        uint32_t        first32 = lower32;
+        uint32_t        second32 = upper32;
+#   endif
+    status = write(entry->handle.fd, (void*)&first32, (u_int)sizeof(uint32_t));
+    if (status != -1) {
+        status = write(entry->handle.fd, (void*)&second32,
+            (u_int)sizeof(uint32_t));
+        if (status != -1) {
+            int32_t int32 = (int32_t)creation->tv_usec;
+            status = write(entry->handle.fd, (void*)&int32,
+                (u_int)sizeof(int32_t));
+        }
+    }
+#endif
+    return status == -1 ? errno : 0;
+}
+
+/*
+ * Writes the data-product metadata to the file as:
+ *      metadata-length in bytes                                 uint32_t
+ *      data-product signature (MD5 checksum)                    uchar[16]
+ *      data-product size in bytes                               uint32_t
+ *      product creation-time in seconds since the epoch:
+ *              integer portion                                  uint64_t
+ *              microseconds portion                             int32_t
+ *      data-product feedtype                                    uint32_t
+ *      data-product sequence number                             uint32_t
+ *      product-identifier:
+ *              length in bytes (excluding NUL)                  uint32_t
+ *              non-NUL-terminated string                        char[]
+ *      product-origin:
+ *              length in bytes (excluding NUL)                  uint32_t
+ *              non-NUL-terminated string                        char[]
+ *
+ * Arguments:
+ *      entry   Pointer to the action-entry.
+ *      info    Pointer to the data-product's metadata.
+ *      sz      The size of the data in bytes.
+ * Returns:
+ *      0       Success
+ *      else    "errno"
+ */
+static int
+unio_putmeta(
+    fl_entry*           entry,
+    const prod_info*    info,
+    uint32_t            sz)
+{
+    int32_t     int32;
+    uint32_t    uint32;
+    uint32_t    identLen = (uint32_t)strlen(info->ident);
+    uint32_t    originLen = (uint32_t)strlen(info->origin);
+    uint32_t    totalLen = 4 + 16 + 4 + 8 + 4 + 4 + 4 + (4 + identLen) + 
+        (4 + originLen);
+    int         status;
+
+    status = write(entry->handle.fd, (void*)&totalLen, (u_int)sizeof(totalLen));
+    if (status == -1) return errno;
+
+    status = write(entry->handle.fd, (void*)&info->signature,
+        (u_int)sizeof(info->signature));
+    if (status == -1) return errno;
+
+    status = write(entry->handle.fd, (void*)&sz, (u_int)sizeof(sz));
+    if (status == -1) return errno;
+
+    status = unio_putcreation(entry, &info->arrival);
+    if (status != 0) return status;
+
+    int32 = (int32_t)info->arrival.tv_usec;
+    status = write(entry->handle.fd, (void*)&int32, (u_int)sizeof(int32));
+    if (status == -1) return errno;
+
+    uint32 = (uint32_t)info->feedtype;
+    status = write(entry->handle.fd, (void*)&uint32, (u_int)sizeof(uint32));
+    if (status == -1) return errno;
+
+    uint32 = (uint32_t)info->seqno;
+    status = write(entry->handle.fd, (void*)&uint32, (u_int)sizeof(uint32));
+    if (status == -1) return errno;
+
+    status = write(entry->handle.fd, (void*)&identLen, (u_int)sizeof(identLen));
+    if (status == -1) return errno;
+
+    status = write(entry->handle.fd, (void*)info->ident, identLen);
+    if (status == -1) return errno;
+
+    status = write(entry->handle.fd, (void*)&originLen,
+        (u_int)sizeof(originLen));
+    if (status == -1) return errno;
+
+    status = write(entry->handle.fd, (void*)info->origin, originLen);
+
+    return status == -1 ? errno : ENOERR;
+}
+
+static int
+unio_out(
+    fl_entry*           entry,
+    const product*      prodp,
+    const void*         data,
+    const uint32_t      sz)
+{
+    int         status = ENOERR;
+
+    if (entry->flags & FL_METADATA) {
+        status = unio_putmeta(entry, &prodp->info, sz); 
+    }
+    if (status == ENOERR && !(entry->flags & FL_NODATA)) {
+        status = unio_put(entry, prodp->info.ident, data, sz); 
+    }
+
+    return status;
+}
+
 
 /*ARGSUSED*/
 int
@@ -727,7 +878,7 @@ unio_prodput(
                 }
             }
 
-            status = unio_put(entry, prodp->info.ident, data, sz);
+            status = unio_out(entry, prodp, data, sz);
 
             if (status == 0) {
                 if (entry->flags & FL_OVERWRITE)
@@ -1486,15 +1637,15 @@ pipe_putcreation(
 #   endif
     status = pbuf_write(entry->handle.pbuf, (void*)&first32,
             (u_int)sizeof(uint32_t), pipe_timeo, entry->path);
+    if (status == ENOERR) {
+        status = pbuf_write(entry->handle.pbuf, (void*)&second32,
+            (u_int)sizeof(uint32_t), pipe_timeo, entry->path);
         if (status == ENOERR) {
-            status = pbuf_write(entry->handle.pbuf, (void*)&second32,
-                (u_int)sizeof(uint32_t), pipe_timeo, entry->path);
-            if (status == ENOERR) {
-                int32_t int32 = (int32_t)creation->tv_usec;
-                status = pbuf_write(entry->handle.pbuf, (void*)&int32,
-                    (u_int)sizeof(int32_t), pipe_timeo, entry->path);
-            }
+            int32_t int32 = (int32_t)creation->tv_usec;
+            status = pbuf_write(entry->handle.pbuf, (void*)&int32,
+                (u_int)sizeof(int32_t), pipe_timeo, entry->path);
         }
+    }
 #endif
     return status;
 }

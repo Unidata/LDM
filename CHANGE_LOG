@@ -1,4 +1,13 @@
-6.9.8
+6.9.8.2
+        ldmadmin(1) script:
+            Changed setting of PATH environment variable. Before,
+            "$LDMHOME/bin" was prefixed to PATH; now, "@prefix@/bin" is
+            prefixed to PATH, where "@prefix@" is the value of the "prefix"
+            variable determined by the configure(1) script). This allows the
+            LDM user to easily execute an LDM system to which the "runtime"
+            link doesn't point.
+
+6.9.8.1 2011-03-28
         Installation:
             Changed the build-procedure for the product-queue library (pq(3))
             to improve throughput.  Before, the build-procedure was configured
@@ -25,6 +34,15 @@
             PQ_MAPRGNS flag is specified (not likely) or the actual size of the
             product-queue prevents it from being memory-mapped by a single
             mmap(2) call. Eliminated use of _MAPRGNS C macro.
+
+        pqact(1):
+            Added "-metadata" option to FILE action. This causes a binary
+            representation of the data-product's metadata to be written to the
+            output file. See the distributed, example pqact(1) configuration-
+            file for more information.
+
+            Documented "-log" option of FILE action in distributed, example
+            pqact(1) configuration-file.
 
 6.9.7   2011-02-01
         Installation:
