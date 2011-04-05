@@ -4743,7 +4743,7 @@ pq_del_oldest(pqueue *pq)
                         TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime))  {
                     LOG_START1("pq_del_oldest(): MVRT product: %s",
                             s_prod_info(NULL, 0, &infoBuf.info, ulogIsDebug()));
-                    log_log(LOG_NOTICE);
+                    log_log(LOG_INFO);
                     pq->ctlp->minVirtResTime = virtResTime;
                     pq->ctlp->mvrtSize = pq->rlp->nbytes;
                     pq->ctlp->mvrtSlots = pq->rlp->nelems;

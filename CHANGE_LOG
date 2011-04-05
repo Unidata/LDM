@@ -7,6 +7,15 @@
             LDM user to easily execute an LDM system to which the "runtime"
             link doesn't point.
 
+        Product-queue library, pq(3):
+            Demoted the logging-level of the minimum virtual residence time
+            (MVRT) data-product message from NOTICE to INFO so that it will
+            only be emitted if verbose logging is enabled.
+
+        HTML documentation:
+            Removed all attributes from <body> element to enable correct
+            working with new UPC website.
+
 6.9.8.1 2011-03-28
         Installation:
             Changed the build-procedure for the product-queue library (pq(3))
