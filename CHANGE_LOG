@@ -1,4 +1,8 @@
 6.9.8.2
+        Installation:
+            Removed installation of build-time "config.h" header-file because
+            it interfered with the "config.h" file in the NOAAPORT package.
+
         ldmadmin(1) script:
             Changed setting of PATH environment variable. Before,
             "$LDMHOME/bin" was prefixed to PATH; now, "@prefix@/bin" is

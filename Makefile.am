@@ -70,8 +70,6 @@ DIST_SUBDIRS	= \
     $(PROG_SUBDIRS) \
     test html
 
-include_HEADERS		= config.h
-
 EXTRA_DIST = \
     CHANGE_LOG \
     COPYRIGHT \
