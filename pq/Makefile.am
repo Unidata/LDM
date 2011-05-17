@@ -19,7 +19,8 @@ lib_la_CPPFLAGS		= \
 TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../ulog/*.c ../ulog/*.h \
-    ../protocol/*.c ../protocol/*.h
+    ../protocol/*.c ../protocol/*.h \
+    ../rpc/*.c ../rpc/*.h
 
 if MAINTAINER
 .hin.h:

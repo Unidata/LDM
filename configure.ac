@@ -461,7 +461,7 @@ AC_CONFIG_FILES([
 ])
 
 #AC_CONFIG_SUBDIRS([libxml2])
-(cd libxml2 && ./configure --prefix=$prefix --disable-ipv6 --without-c14n --without-catalog --without-debug --without-docbook --without-ftp --without-html --without-http --without-iconv --without-iso8859x --without-legacy --without-pattern --without-python --without-reader --without-readline --without-regexps --without-schemas --without-schematron --without-threads --without-valid --without-xinclude --without-xpath --without-xptr --without-zlib)
+(cd libxml2 && ./configure --prefix=$prefix --disable-ipv6 --without-c14n --without-catalog --without-debug --without-docbook --without-ftp --without-html --without-http --without-iconv --without-iso8859x --without-legacy --without-pattern --without-python --without-reader --without-readline --without-regexps --without-schemas --without-schematron --without-threads --without-valid --without-xinclude --without-xpath --without-xptr --without-zlib CC="$CC")
 
 
 AC_OUTPUT

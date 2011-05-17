@@ -70,6 +70,20 @@ DIST_SUBDIRS	= \
     $(PROG_SUBDIRS) \
     test html
 
+nobase_include_HEADERS		= \
+    config.h \
+    rpc/rpc.h \
+    rpc/types.h \
+    rpc/xdr.h \
+    rpc/auth.h \
+    rpc/clnt.h \
+    rpc/rpc_msg.h \
+    rpc/auth_unix.h \
+    rpc/svc.h \
+    rpc/svc_auth.h \
+    rpc/pmap_clnt.h \
+    rpc/pmap_prot.h
+
 EXTRA_DIST = \
     CHANGE_LOG \
     COPYRIGHT \

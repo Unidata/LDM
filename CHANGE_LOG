@@ -1,8 +1,4 @@
 6.9.8.2
-        Installation:
-            Removed installation of build-time "config.h" header-file because
-            it interfered with the "config.h" file in the NOAAPORT package.
-
         ldmadmin(1) script:
             Changed setting of PATH environment variable. Before,
             "$LDMHOME/bin" was prefixed to PATH; now, "@prefix@/bin" is
@@ -19,6 +15,19 @@
         HTML documentation:
             Removed all attributes from <body> element to enable correct
             working with new UPC website.
+
+        Building:
+            Installed rpc/ header-files because the native ones on a Solaris
+            system were preventing the NOAAPORT package from being built.
+
+            Changed "configure.ac" so that the C compiler determined by the
+            top-level "configure" script is used to build the "libxml2"
+            subpackage.
+
+        Misc:
+            Modified file "protocol/LdmProxy.c". Replaced use of
+            "s_prod_info(NULL, 0, ...)" with use of a static buffer to prevent
+            SIGSEGV on 64-bit RHEL 6. Thanks Doug Gaer.
 
 6.9.8.1 2011-03-28
         Installation:

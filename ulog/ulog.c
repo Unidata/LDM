@@ -897,6 +897,9 @@ ulogIsDebug(void)
  *         serror("shutting down");
  *         serror("can't open %s", file_name);
  *         serror("process %d in state %s",pid,state);
+ *
+ * This function is unsafe: calling it from a signal handler as a result of
+ * an interruption of an unsafe function results in undefined behavior.
  */
 #ifdef STDC_ARGS
 void
@@ -943,6 +946,9 @@ serror(fmt, va_alist)
  * specifiers.  For example:
  *
  *         uerror("Inconsistant input %s", input);
+ *
+ * This function is unsafe: calling it from a signal handler as a result of
+ * an interruption of an unsafe function results in undefined behavior.
  */
 #ifdef STDC_ARGS
 void
@@ -974,6 +980,9 @@ uerror(fmt, va_alist)
  * specifiers.  For example:
  *
  *         uwarn("Inconsistant input %s", input);
+ *
+ * This function is unsafe: calling it from a signal handler as a result of
+ * an interruption of an unsafe function results in undefined behavior.
  */
 #ifdef STDC_ARGS
 void
@@ -1005,6 +1014,9 @@ uwarn(fmt, va_alist)
  * specifiers.  For example:
  *
  *         unotice("Shutting down on signal %s", s_signal(sig));
+ *
+ * This function is unsafe: calling it from a signal handler as a result of
+ * an interruption of an unsafe function results in undefined behavior.
  */
 #ifdef STDC_ARGS
 void
@@ -1036,6 +1048,9 @@ unotice(fmt, va_alist)
  * specifiers.  For example:
  *
  *         uinfo("%s", info->ident);
+ *
+ * This function is unsafe: calling it from a signal handler as a result of
+ * an interruption of an unsafe function results in undefined behavior.
  */
 #ifdef STDC_ARGS
 void
@@ -1069,6 +1084,9 @@ uinfo(fmt, va_alist)
  *
  * This one is a little different than the others in that it behaves diferently
  * when logging to a file than when logging to syslogd(8).
+ *
+ * This function is unsafe: calling it from a signal handler as a result of
+ * an interruption of an unsafe function results in undefined behavior.
  */
 #ifdef STDC_ARGS
 void

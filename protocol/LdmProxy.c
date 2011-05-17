@@ -30,7 +30,9 @@ struct ldmProxy {
     int                 version;
 };
 
-static struct timeval rpcTimeout = {25, 0}; /* usual RPC default */
+static struct timeval   rpcTimeout = {25, 0}; /* usual RPC default */
+/* Added to prevent SIGSEGV on 64-bit RHEL 6 */
+static char             buf[2048];
 
 /*
  * Returns the LDM proxy status for a given client failure. Logs the failure.
@@ -150,8 +152,9 @@ my_hiya_5(
             *want = reply.ldm_replyt_u.newclssp;
             clss_regcomp(*want);
             /* N.B. we use the downstream patterns */
-            unotice("%s: reclass: %s", proxy->host,
-                    s_prod_class(NULL, 0, *want));
+            /* Use of "buf" added to prevent SIGSEGV on 64-bit RHEL 6 */
+            (void)s_prod_class(buf, sizeof(buf)-1, *want);
+            unotice("%s: reclass: %s", proxy->host, buf);
             break;
     }
 
@@ -237,8 +240,9 @@ my_hiya_6(
                 proxy->max_hereis = reply->hiya_reply_t_u.feedPar.max_hereis;
                 clss_regcomp(*want);
                 /* N.B. we use the downstream patterns */
-                unotice("%s: reclass: %s", proxy->host, s_prod_class(NULL, 0,
-                        *want));
+                /* Use of "buf" added to prevent SIGSEGV on 64-bit RHEL 6 */
+                (void)s_prod_class(buf, sizeof(buf)-1, *want);
+                unotice("%s: reclass: %s", proxy->host, buf);
                 status = 0;
                 break;
         }
