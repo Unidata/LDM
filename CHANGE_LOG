@@ -29,6 +29,8 @@
             "s_prod_info(NULL, 0, ...)" with use of a static buffer to prevent
             SIGSEGV on 64-bit RHEL 6. Thanks Doug Gaer.
 
+            Removed valgrind(1) lint from "misc/inetutil.c:ghostname()".
+
 6.9.8.1 2011-03-28
         Installation:
             Changed the build-procedure for the product-queue library (pq(3))

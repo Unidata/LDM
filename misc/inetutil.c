@@ -118,6 +118,7 @@ ghostname(void)
                 if(cp != NULL)
                 {
                         (void)strncpy(hostname, cp, MAXHOSTNAMELEN);
+                        free(cp);
                         return hostname;
                 }
         }
