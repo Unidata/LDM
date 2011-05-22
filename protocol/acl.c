@@ -2233,7 +2233,7 @@ exec_getCommandLine(
             int n = snprintf(cp, size, i == 0 ? "%s" : " %s",
                 wrdexpp->we_wordv[i]);
 
-            if (n >= 0) {
+            if (n >= 0 && n <= size) {
                 cp += n;
                 size -= n;
             }

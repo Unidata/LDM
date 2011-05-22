@@ -31,6 +31,9 @@
 
             Removed valgrind(1) lint from "misc/inetutil.c:ghostname()".
 
+            Added handling of snprintf(3) and vsnprintf(3) returning a value
+            greater than the size of the buffer.
+
 6.9.8.1 2011-03-28
         Installation:
             Changed the build-procedure for the product-queue library (pq(3))

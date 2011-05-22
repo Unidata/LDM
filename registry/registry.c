@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <search.h>
 
@@ -220,7 +221,7 @@ static RegStatus parseUint(
  *                      representation of the value.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*value" is not NULL.
- *      ENOMEM   System error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
  */
 static RegStatus formatUint(
     const void* const   value,

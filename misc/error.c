@@ -1,8 +1,7 @@
 /*
- *   Copyright 2002, University Corporation for Atmospheric Research
+ *   Copyright 2011, University Corporation for Atmospheric Research
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: error.c,v 1.10.2.3.6.6 2006/12/17 22:06:26 steve Exp $ */
 
 #include <config.h>
 
@@ -66,21 +65,25 @@ err_new(
         else {
             va_list     args;
             int         nbytes;
+            size_t      size = sizeof(err->msg);
 
             va_start(args, fmt);
 
-            nbytes = vsnprintf(err->msg, sizeof(err->msg)-1, fmt, args);
+            nbytes = vsnprintf(err->msg, size, fmt, args);
             if (nbytes < 0) {
-                nbytes = snprintf(err->msg, sizeof(err->msg)-1, 
+                nbytes = snprintf(err->msg, size, 
                     "err_new(): vsnprintf() failure: \"%s\"", fmt);
+            }
+            else if (nbytes >= size) {
+                nbytes = size - 1;
             }
 
             va_end(args);
 
-            err->msg[sizeof(err->msg)-1] = 0;
+            err->msg[nbytes] = 0;
             err->msglen = (size_t)nbytes;
 
-            assert(err->msglen < sizeof(err->msg));
+            assert(err->msglen < size);
 
             err->code = code;
             err->cause = cause;
