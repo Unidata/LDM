@@ -29,6 +29,12 @@ extern "C" {
 #define LOG_SERROR3(fmt,a,b,c)      log_serror(LOG_FMT(fmt),a,b,c,__FILE__,__LINE__)
 #define LOG_SERROR4(fmt,a,b,c,d)    log_serror(LOG_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
 #define LOG_SERROR5(fmt,a,b,c,d,e)  log_serror(LOG_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
+#define LOG_ERRNUM0(err,fmt)        log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__)
+#define LOG_ERRNUM1(err,fmt,a)      log_errnum(err,LOG_FMT(fmt),a,__FILE__,__LINE__)
+#define LOG_ERRNUM2(err,fmt,a,b)    log_errnum(err,LOG_FMT(fmt),a,b,__FILE__,__LINE__)
+#define LOG_ERRNUM3(err,fmt,a,b,c)  log_errnum(err,LOG_FMT(fmt),a,b,c,__FILE__,__LINE__)
+#define LOG_ERRNUM4(err,fmt,a,b,c,d)    log_errnum(err,LOG_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
+#define LOG_ERRNUM5(err,fmt,a,b,c,d,e)  log_errnum(err,LOG_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
 
 void log_clear();
 void log_start(
@@ -38,22 +44,50 @@ void log_errno(void);
 void log_add(
     const char *const   fmt,
     ...);
+/**
+ * Adds a variadic log-message to the message-list for the current thread.
+ *
+ * This function is thread-safe.
+ *
+ * @retval 0            Success
+ * @retval EAGAIN       Failure due to the buffer being too small for the
+ *                      message.  The buffer has been expanded and the client
+ *                      should call this function again.
+ * @retval EINVAL       \a fmt or \a args is \c NULL. Error message logged.
+ * @retval EINVAL       There are insufficient arguments. Error message logged.
+ * @retval EILSEQ       A wide-character code that doesn't correspond to a
+ *                      valid character has been detected. Error message logged.
+ * @retval ENOMEM       Out-of-memory. Error message logged.
+ * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
+ *                      Error message logged.
+ */
+int log_vadd(
+    const char* const   fmt,  /**< The message format */
+    va_list             args) /**< The arguments referenced by the format. */;
 void log_log(
     const int		level);
 
 /*
- * Write a system error.  This is a convenience function for the sequence
- *      log_errno();
- *      log_add(fmt, ...);
- *      log_log(LOG_ERR);
+ * Adds a system error-message based on the current value of "errno" and a
+ * higher-level error-message.
  *
- * ARGUMENTS:
- *      fmt             The format-string for the log message.
- *      ...             Arguments for the format-string.
+ * This function is thread-safe.
  */
 void log_serror(
-    const char *const   fmt,
-    ...);
+    const char* const fmt,  /**< The higher-level message format */
+    ...)                    /**< Arguments referenced by the format */;
+
+/*
+ * Adds a system error-message based on a error number and a higher-level
+ * error-message.
+ *
+ * This function is thread-safe.
+ */
+void log_errnum(
+    const int           errnum, /**< The "errno" error number */
+    const char* const   fmt,    /**< The higher-level message format or NULL
+                                  *  for no higher-level message */
+    ...)                        /**< Arguments referenced by the format */;
 
 #ifdef __cplusplus
 }

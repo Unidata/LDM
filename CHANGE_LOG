@@ -34,6 +34,13 @@
             Added handling of snprintf(3) and vsnprintf(3) returning a value
             greater than the size of the buffer.
 
+            Improved log(3) module:
+                * Arbitrarily long messages;
+                * Return-value handling of vsnprintf(3); and
+                * Thread-safe.
+                * Added log_errnum(int errnum) in anticipation of supporting
+                  multiple threads.
+
 6.9.8.1 2011-03-28
         Installation:
             Changed the build-procedure for the product-queue library (pq(3))

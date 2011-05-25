@@ -1,137 +1,153 @@
 /*
- *   Copyright 2006, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright © 2011, University Corporation for Atmospheric Research
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  *
  * Provides for the accumulation of log-messages and the printing of all,
  * accumlated log-messages at a single priority.
  *
  * This module uses the ulog(3) module.
  *
- * This module is not thread-safe.
+ * This module is thread-safe.
  */
-/* $Id: log.c,v 1.1.2.4 2006/12/17 22:07:19 steve Exp $ */
-
 #include <config.h>
+#undef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
 
 #include <assert.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>   /* NULL */
 #include <stdio.h>    /* vsnprintf(), snprintf() */
 #include <stdlib.h>   /* malloc(), free(), abort() */
 #include <string.h>
-#include <strings.h>  /* strdup() */
 
 #include "ulog.h"
 
 #include "log.h"
 
 
-/*
- * A log-message.  Such structures accumulate: they are freed only by
- * log_close().
+/**
+ * A log-message.  Such structures accumulate.
  */
 typedef struct message {
-    char                string[512];
-    struct message*     next;
+    struct message*     next;   /**< pointer to next message */
+    char*               string; /**< message buffer */
+#define DEFAULT_STRING_SIZE     256
+    size_t              size;   /**< size of message buffer */
 } Message;
 
-/*
- * The first (i.e., most fundamental) log-message.
+/**
+ * A list of log messages.
  */
-static Message*         first = NULL;
+typedef struct list {
+    Message*    first;
+    Message*    last;           /* NULL => empty list */
+} List;
 
-/*
- * Pointer to the last message to be set.
+/**
+ * Key for the thread-specific list of log messages.
  */
-static Message*         last = NULL;
+static pthread_key_t    listKey;
 
-/*
- * Whether or not this module is initialized.
+/**
+ * Whether or not the key has been created.
  */
-static int              initialized = 0;
+static int              keyCreated = 0;
 
-
-/*
- * Closes this module, releasing all resources.
+/**
+ * The mutex that makes this module thread-safe and is also used to make use
+ * of the ulog(3) module thread-safe.
  */
-static void log_close(void)
+static pthread_mutex_t  mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * Locks this module's lock.
+ *
+ * This function is thread-safe. On entry, this module's lock shall be
+ * unlocked.
+ */
+static void lock(void)
 {
-    Message*        msg = first;
-
-    while (NULL != msg) {
-        Message*    next = msg->next;
-
-        free(msg);
-        msg = next;
-    }
-
-    first = NULL;
-    last = NULL;
+    if (pthread_mutex_lock(&mutex) != 0)
+        serror("Couldn't lock logging mutex");
 }
 
-
-/*
- * Initializes this module.
+/**
+ * Unlocks this module's lock.
+ *
+ * This function is thread-safe. On entry, this module's lock shall be locked
+ * by the current thread.
  */
-static void log_init(void)
+static void unlock(void)
 {
-    if (!initialized) {
-        if (atexit(log_close))
-            serror("log_init(): Couldn't register atexit(3) routine: %s",
-                strerror(errno));
-        initialized = 1;
-    }
+    if (pthread_mutex_unlock(&mutex) != 0)
+        serror("Couldn't unlock logging mutex");
 }
 
-
-/*
- * Adds a log-message.  If the format is NULL, then no message will be added.
- * Arguments:
- *      fmt     The format for the message or NULL.
- *      args    The arguments referenced by the format.
+/**
+ * Returns the current thread's message-list.
+ *
+ * This function is thread-safe. On entry, this module's lock shall be
+ * unlocked.
+ *
+ * @return  The message-list of the current thread or NULL if the message-list
+ *          doesn't exist and couldn't be created.
  */
-static void log_vadd(
-    const char *const   fmt,
-    va_list             args)
+static List* getList(void)
 {
-    log_init();
+    List*   list;
+    int     status;
 
-    if (fmt != NULL) {
-        Message*        msg = (NULL == last) ? first : last->next;
+    lock();
 
-        if (msg == NULL) {
-            msg = (Message*)malloc(sizeof(Message));
+    if (!keyCreated) {
+        status = pthread_key_create(&listKey, NULL);
 
-            if (msg == NULL) {
-                serror("log_vadd(): malloc(%lu) failure",
-                    (unsigned long)sizeof(Message));
+        if (status != 0) {
+            serror("getList(): pthread_key_create() failure: %s",
+                    strerror(status));
+        }
+        else {
+            keyCreated = 1;
+        }
+    }
+
+    unlock();
+
+    if (!keyCreated) {
+        list = NULL;
+    }
+    else {
+        list = pthread_getspecific(listKey);
+
+        if (NULL == list) {
+            list = (List*)malloc(sizeof(List));
+
+            if (NULL == list) {
+                lock();
+                serror("getList(): malloc() failure");
+                unlock();
             }
             else {
-                msg->string[0] = 0;
-                msg->next = NULL;
+                if ((status = pthread_setspecific(listKey, list)) != 0) {
+                    lock();
+                    serror("getList(): pthread_setspecific() failure: %s",
+                        strerror(status));
+                    unlock();
+                    free(list);
 
-                if (NULL == first)
-                    first = msg;         /* very first message structure */
+                    list = NULL;
+                }
+                else {
+                    list->first = NULL;
+                    list->last = NULL;
+                }
             }
         }
+    }
 
-        if (msg != NULL) {
-            int         nbytes;
-
-            nbytes = vsnprintf(msg->string, sizeof(msg->string)-1, fmt, args);
-            if (nbytes < 0) {
-                nbytes = snprintf(msg->string, sizeof(msg->string)-1, 
-                    "log_vadd(): vsnprintf() failure: \"%s\"", fmt);
-            }
-
-            msg->string[sizeof(msg->string)-1] = 0;
-            if (NULL != last) {
-                last->next = msg;
-            }
-            last = msg;
-        }                               /* msg != NULL */
-    }                                   /* format string != NULL */
+    return list;
 }
 
 
@@ -140,58 +156,184 @@ static void log_vadd(
  ******************************************************************************/
 
 
-/*
- * Clears the accumulated log-messages.  If log_log() is invoked after this
- * function, then no messages will be logged.
+/**
+ * Clears the accumulated log-messages.
+ *
+ * This function is thread-safe.
  */
 void log_clear()
 {
-    last = NULL;
+    List*   list = getList();
+
+    if (NULL != list)
+        list->last = NULL;
 }
 
+/**
+ * Adds a variadic log-message to the message-list for the current thread.
+ *
+ * This function is thread-safe.
+ *
+ * @retval 0            Success
+ * @retval EAGAIN       Failure due to the buffer being too small for the
+ *                      message.  The buffer has been expanded and the client
+ *                      should call this function again.
+ * @retval EINVAL       \a fmt or \a args is \c NULL. Error message logged.
+ * @retval EINVAL       There are insufficient arguments. Error message logged.
+ * @retval EILSEQ       A wide-character code that doesn't correspond to a
+ *                      valid character has been detected. Error message logged.
+ * @retval ENOMEM       Out-of-memory. Error message logged.
+ * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
+ *                      Error message logged.
+ */
+int log_vadd(
+    const char* const   fmt,  /**< The message format */
+    va_list             args) /**< The arguments referenced by the format. */
+{
+    int                 status;
+
+    if (NULL == fmt || NULL == args) {
+        lock();
+        uerror("log_vadd(): NULL argument");
+        unlock();
+
+        status = EINVAL;
+    }
+    else {
+        List*   list = getList();
+
+        if (NULL != list) {
+            Message*    msg = (NULL == list->last) ? list->first :
+                list->last->next;
+
+            status = 0;
+
+            if (msg == NULL) {
+                msg = (Message*)malloc(sizeof(Message));
+
+                if (msg == NULL) {
+                    status = errno;
+
+                    lock();
+                    serror("log_vadd(): malloc(%lu) failure",
+                        (unsigned long)sizeof(Message));
+                    unlock();
+                }
+                else {
+                    char*   string = (char*)malloc(DEFAULT_STRING_SIZE);
+
+                    if (NULL == string) {
+                        status = errno;
+
+                        lock();
+                        serror("log_vadd(): malloc(%lu) failure",
+                            (unsigned long)DEFAULT_STRING_SIZE);
+                        unlock();
+                    }
+                    else {
+                        msg->string = string;
+                        msg->size = DEFAULT_STRING_SIZE;
+                        msg->next = NULL;
+
+                        if (NULL == list->first)
+                            list->first = msg;  /* very first message */
+                    }
+                }
+            }
+
+            if (0 == status) {
+                int nbytes = vsnprintf(msg->string, msg->size, fmt, args);
+
+                if (0 > nbytes) {
+                    status = errno;
+
+                    lock();
+                    serror("log_vadd(): vsnprintf() failure");
+                    unlock();
+                }
+                else if (msg->size <= nbytes) {
+                    /* The buffer is too small for the message */
+                    size_t  size = nbytes + 1;
+                    char*   string = (char*)malloc(size);
+
+                    if (NULL == string) {
+                        status = errno;
+
+                        lock();
+                        serror("log_vadd(): malloc(%lu) failure",
+                            (unsigned long)size);
+                        unlock();
+                    }
+                    else {
+                        free(msg->string);
+
+                        msg->string = string;
+                        msg->size = size;
+                        status = EAGAIN;
+                    }
+                }
+                else {
+                    if (NULL != list->last)
+                        list->last->next = msg;
+
+                    list->last = msg;
+                }
+            }                               /* have a message structure */
+        }                                   /* message-list isn't NULL */
+    }                                       /* arguments aren't NULL */
+
+    return status;
+}
 
 /*
- * Resets this module and adds the first log-message.  This function
- * is equivalent to calling log_clear() followed by log_add().
- * Arguments:
- *      fmt     The format for the message or NULL.  If NULL, then no
- *              messsage is added.
- *      ...     The arguments referenced in the format.
+ * Sets the first log-message.
+ *
+ * This function is thread-safe.
  */
 void log_start(
-    const char* const   fmt,
-    ...)
+    const char* const fmt,  /**< The message format */
+    ...)                    /**< Arguments referenced by the format */
 {
     va_list     args;
 
     log_clear();
     va_start(args, fmt);
-    log_vadd(fmt, args);
+
+    if (EAGAIN == log_vadd(fmt, args)) {
+        va_end(args);
+        va_start(args, fmt);
+        (void)log_vadd(fmt, args);
+    }
+
     va_end(args);
 }
 
-
 /*
  * Adds a log-message.
- * Arguments:
- *      fmt     The format for the message or NULL.
- *      ...     The arguments referenced in the format.
+ *
+ * This function is thread-safe.
  */
 void log_add(
-    const char *const   fmt,
-    ...)
+    const char* const fmt,  /**< The message format */
+    ...)                    /**< Arguments referenced by the format */
 {
     va_list     args;
 
     va_start(args, fmt);
-    log_vadd(fmt, args);
+
+    if (EAGAIN == log_vadd(fmt, args)) {
+        va_end(args);
+        va_start(args, fmt);
+        (void)log_vadd(fmt, args);
+    }
+
     va_end(args);
 }
 
-
 /*
- * Resets this module and adds an "errno" message.  Calling this function is
- * equivalent to calling log_start(strerror(errno)).
+ * Adds a system error-message.
+ *
+ * This function is thread-safe.
  */
 void log_errno(void)
 {
@@ -199,43 +341,72 @@ void log_errno(void)
 }
 
 /*
- * Adds a system error-message and a higher-level error-message.  This is a
- * convenience function for the sequence
- *      log_errno();
- *      log_add(fmt, ...);
+ * Adds a system error-message based on the current value of "errno" and a
+ * higher-level error-message.
  *
- * ARGUMENTS:
- *      fmt             The format-string for the higher-level error-message or
- *                      NULL.  If NULL, then no higher-level error-message is
- *                      added.
- *      ...             Arguments for the format-string.
+ * This function is thread-safe.
  */
 void log_serror(
-    const char *const   fmt,
-    ...)
+    const char* const fmt,  /**< The higher-level message format */
+    ...)                    /**< Arguments referenced by the format */
 {
     va_list     args;
 
     log_errno();
     va_start(args, fmt);
-    log_vadd(fmt, args);
+
+    if (EAGAIN == log_vadd(fmt, args)) {
+        va_end(args);
+        va_start(args, fmt);
+        (void)log_vadd(fmt, args);
+    }
+
     va_end(args);
 }
 
-
 /*
- * Logs the currently-accumulated log-messages and resets this module.
+ * Adds a system error-message based on a error number and a higher-level
+ * error-message.
  *
  * This function is thread-safe.
- * Arguments:
- *      level   The level at which to log the messages.  One of LOG_ERR,
- *              LOG_WARNING, LOG_NOTICE, LOG_INFO, or LOG_DEBUG; otherwise,
- *              the behavior is undefined.
+ */
+void log_errnum(
+    const int           errnum, /**< The "errno" error number */
+    const char* const   fmt,    /**< The higher-level message format or NULL
+                                  *  for no higher-level message */
+    ...)                        /**< Arguments referenced by the format */
+{
+    log_start(strerror(errnum));
+
+    if (NULL != fmt) {
+        va_list     args;
+
+        va_start(args, fmt);
+
+        if (EAGAIN == log_vadd(fmt, args)) {
+            va_end(args);
+            va_start(args, fmt);
+            (void)log_vadd(fmt, args);
+        }
+
+        va_end(args);
+    }
+}
+
+/*
+ * Logs the currently-accumulated log-messages and resets the message-list for
+ * the current thread.
+ *
+ * This function is thread-safe.
  */
 void log_log(
-    const int   level)
+    const int   level)  /**< The level at which to log the messages.  One of
+                          *  LOG_ERR, LOG_WARNING, LOG_NOTICE, LOG_INFO, or
+                          *  LOG_DEBUG; otherwise, the behavior is undefined. */
 {
-    if (NULL != last) {
+    List*   list = getList();
+
+    if (NULL != list && NULL != list->last) {
         static const unsigned       allPrioritiesMask = 
             LOG_MASK(LOG_ERR) |
             LOG_MASK(LOG_WARNING) |
@@ -244,13 +415,15 @@ void log_log(
             LOG_MASK(LOG_DEBUG);
         const int                   priorityMask = LOG_MASK(level);
 
+        lock();
+
         if ((priorityMask & allPrioritiesMask) == 0) {
             uerror("log_log(): Invalid logging-level (%d)", level);
         }
         else if (getulogmask() & priorityMask) {
             const Message*     msg;
 
-            for (msg = first; NULL != msg; msg = msg->next) {
+            for (msg = list->first; NULL != msg; msg = msg->next) {
                 /*
                  * NB: The message is not printed using "ulog(level,
                  * msg->string)" because "msg->string" might have formatting
@@ -259,11 +432,12 @@ void log_log(
                  */
                 ulog(level, "%s", msg->string);
 
-                if (msg == last)
+                if (msg == list->last)
                     break;
-            }
-        }                                       /* messages should be printed */
+            }                       /* message loop */
+        }                           /* messages should be printed */
 
+        unlock();
         log_clear();
-    }                                           /* have messages */
+    }                               /* have messages */
 }
