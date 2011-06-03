@@ -40,6 +40,25 @@ with the following modifications:
 	<code>--enable-logging=<a href="glindex.html#localn">local<i>n</i></a>
 	to set the logging facility.
 
+    <li>Edit the template
+        <a href="glindex.html#ldmadmin"><tt>ldmadmin(1)</tt></a>
+        script, <tt>src/scripts/ldmadmin.in.pl</tt>.
+        Delete or comment-out the code in the subroutine <tt>isRunning</tt>
+        that uses
+        <a href="glindex.html#ldmping"><tt>ldmping(1)</tt></a> to determine if
+        the
+        LDM server, <a href="glindex.html#ldmd"><tt>ldmd</tt></a>, is running.
+        The code should look something like this:
+        <blockquote><pre>
+if (!$running) {
+    my($cmd_line) = "ldmping -l- -i 0";
+    $cmd_line = $cmd_line . " $ip_addr" if $ip_addr ne "0.0.0.0";
+
+    system("$cmd_line > /dev/null 2>&1");
+    $running = !$?;
+}
+    </pre></blockquote>
+
     <li>Decide on one of the following approaches for allowing connections
 	from downstream sites:
 

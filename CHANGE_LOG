@@ -16,6 +16,9 @@
             Removed all attributes from <body> element to enable correct
             working with new UPC website.
 
+            Added section on editing the "isRunning" subroutine in the 
+            ldmadmin(1) script in order to run multiple LDM-s.
+
         Building:
             Installed rpc/ header-files because the native ones on a Solaris
             system were preventing the NOAAPORT package from being built.

@@ -121,6 +121,7 @@ char *av[] ;
 #define MAX_REMOTES 14 /* 2 * MAX_REMOTES + 3 < max_open_file_descriptors */
         h_clnt stats[MAX_REMOTES + 1] ;
         h_clnt *sp ;
+        unsigned        port = 0;
 
         if(isatty(fileno(stderr)))
         {
@@ -137,8 +138,6 @@ char *av[] ;
         extern int opterr;
         extern char *optarg;
         int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE)) ;
 
         opterr = 1;
 
@@ -168,17 +167,20 @@ char *av[] ;
                         break ;
                 case 'P': {
                     char*       suffix = "";
-                    long        port;
+                    long        p;
 
                     errno = 0;
-                    port = strtol(optarg, &suffix, 0);
+                    p = strtol(optarg, &suffix, 0);
 
                     if (0 != errno || 0 != *suffix ||
-                        0 >= port || 0xffff < port) {
+                        0 >= p || 0xffff < p) {
 
                         (void)fprintf(stderr, "%s: invalid port %s\n",
                              av[0], optarg);
                         usage(av[0]);   
+                    }
+                    else {
+                        port = p;
                     }
 
                     break;

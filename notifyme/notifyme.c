@@ -236,6 +236,7 @@ int main(int ac, char *av[])
         prod_spec spec;
         int status;
         prod_class_t *clssp;
+        unsigned        port = 0;
 
         if(set_timestamp(&clss.from) != 0)
         {
@@ -275,17 +276,20 @@ int main(int ac, char *av[])
                         break;
                 case 'P': {
                     char*       suffix = "";
-                    long        port;
+                    long        p;
 
                     errno = 0;
-                    port = strtol(optarg, &suffix, 0);
+                    p = strtol(optarg, &suffix, 0);
 
                     if (0 != errno || 0 != *suffix ||
-                        0 >= port || 0xffff < port) {
+                        0 >= p || 0xffff < p) {
 
                         (void)fprintf(stderr, "%s: invalid port %s\n",
                              av[0], optarg);
                         usage(av[0]);   
+                    }
+                    else {
+                        port = p;
                     }
 
                     break;
