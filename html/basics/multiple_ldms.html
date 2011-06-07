@@ -33,9 +33,6 @@ with the following modifications:
     <li>Choose a distinct user-account with its own name (e.g., 
 	<code>ldm2</code>) and home directory (e.g., <code>/local/ldm2</code>).
 
-    <li>Choose a distinct logging facility to use (e.g., <code>local2</code>)
-	and modify the <code>/etc/syslog.conf</code> file appropriately.
-
     <li>When executing the <tt>configure(1)</tt> script, use the 
 	<code>--enable-logging=<a href="glindex.html#localn">local<i>n</i></a>
 	to set the logging facility.
@@ -51,7 +48,7 @@ with the following modifications:
         configuring the LDM installation, set the
         relevant "interface" parameter in the 
         <a href="glindex.html#LDM registry">LDM registry</a> to the IP
-        address.
+        address. Or
 
 	<li>Select a distinct port on which the LDM server will listen. Use
 	the <tt>--enable-port=port</tt> option of the <tt>configure(1)</tt>
