@@ -86,20 +86,6 @@ data-volume summary webpage for a computer at the UPC</a>.
 
 <hr>
 
-<h2><a name="dataAndLogDirs"></a>
-Create directories for data-files and LDM logfiles</h2>
-
-<p>Execute the commands
-
-<blockquote><pre>
-cd
-mkdir /machine/data/ldm/data /machine/data/ldm/logs
-ln -s /machine/data/ldm/data /machine/data/ldm/logs .
-</blockquote></pre>
-
-<hr>
-
-
 <h2><a name="allow"></a>
 Request authorization at the upstream LDM</h2>
 
