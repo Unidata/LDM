@@ -1,4 +1,26 @@
-6.9.8.2
+6.9.8   2011-06-10
+        Installation:
+            Changed the build-procedure for the product-queue library (pq(3))
+            to improve throughput.  Before, the build-procedure was configured
+            to create a pq(3) library that always memory-mapped the
+            data-products individually (rather than memory-mapping the entire
+            product-queue) if the C compiler was c89(1) or c99(1) and the
+            "int", "long", and pointer types were 32-bits but the "off_t" type
+            was at least 64-bits. Now, the pq(3) library will always memory-map
+            the product-queue in a single call if possible regardless of the
+            programming environment. This reduces the number of calls to the
+            system mmap(2) and munmap(2) functions and, consequently, increases
+            throughput.
+
+            Installed rpc/ header-files because the native ones on a Solaris
+            system were preventing the NOAAPORT package from being built.
+
+            Changed "configure.ac" so that the C compiler determined by the
+            top-level "configure" script is used to build the "libxml2"
+            subpackage.
+
+            Eliminated use of _MAPRGNS C macro.
+
         ldmadmin(1) script:
             Changed setting of PATH environment variable. Before,
             "$LDMHOME/bin" was prefixed to PATH; now, "@prefix@/bin" is
@@ -7,24 +29,34 @@
             LDM user to easily execute an LDM system to which the "runtime"
             link doesn't point.
 
+            Removed reference to SEEK_END from "use Fcntl" statement because
+            that constant isn't used and older perl(1)'s don't have it.
+
         Product-queue library, pq(3):
             Demoted the logging-level of the minimum virtual residence time
             (MVRT) data-product message from NOTICE to INFO so that it will
             only be emitted if verbose logging is enabled.
+
+            Modified logic for deciding whether or not to memory-map data-
+            products individually. Such mapping now occurs if and only if the
+            PQ_MAPRGNS flag is specified (not likely) or the actual size of the
+            product-queue prevents it from being memory-mapped by a single
+            mmap(2) call. Eliminated use of _MAPRGNS C macro.
+
+        pqact(1):
+            Added "-metadata" option to FILE action. This causes a binary
+            representation of the data-product's metadata to be written to the
+            output file. See the distributed, example pqact(1) configuration-
+            file for more information.
+
+            Documented "-log" option of FILE action in distributed, example
+            pqact(1) configuration-file.
 
         HTML documentation:
             Removed all attributes from <body> element to enable correct
             working with new UPC website.
 
             Improved documentation on running multiple LDM-s.
-
-        Building:
-            Installed rpc/ header-files because the native ones on a Solaris
-            system were preventing the NOAAPORT package from being built.
-
-            Changed "configure.ac" so that the C compiler determined by the
-            top-level "configure" script is used to build the "libxml2"
-            subpackage.
 
         Misc:
             Modified file "protocol/LdmProxy.c". Replaced use of
@@ -42,43 +74,6 @@
                 * Thread-safe.
                 * Added log_errnum(int errnum) in anticipation of supporting
                   multiple threads.
-
-6.9.8.1 2011-03-28
-        Installation:
-            Changed the build-procedure for the product-queue library (pq(3))
-            to improve throughput.  Before, the build-procedure was configured
-            to create a pq(3) library that always memory-mapped the
-            data-products individually (rather than memory-mapping the entire
-            product-queue) if the C compiler was c89(1) or c99(1) and the
-            "int", "long", and pointer types were 32-bits but the "off_t" type
-            was at least 64-bits. Now, the pq(3) library will always memory-map
-            the product-queue in a single call if possible regardless of the
-            programming environment. This reduces the number of calls to the
-            system mmap(2) and munmap(2) functions and, consequently, increases
-            throughput.
-
-        configure(1) script:
-            Eliminated use of _MAPRGNS C macro.
-
-        ldmadmin(1):
-            Removed reference to SEEK_END from "use Fcntl" statement because
-            that constant isn't used and older perl(1)'s don't have it.
-
-        pq(3) library:
-            Modified logic for deciding whether or not to memory-map data-
-            products individually. Such mapping now occurs if and only if the
-            PQ_MAPRGNS flag is specified (not likely) or the actual size of the
-            product-queue prevents it from being memory-mapped by a single
-            mmap(2) call. Eliminated use of _MAPRGNS C macro.
-
-        pqact(1):
-            Added "-metadata" option to FILE action. This causes a binary
-            representation of the data-product's metadata to be written to the
-            output file. See the distributed, example pqact(1) configuration-
-            file for more information.
-
-            Documented "-log" option of FILE action in distributed, example
-            pqact(1) configuration-file.
 
 6.9.7   2011-02-01
         Installation:
