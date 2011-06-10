@@ -28,40 +28,6 @@ workstation.
 
 <hr>
 
-<h2><a name="/etc/services"></a>
-Edit file <code>/etc/services</code></h2>
-
-<p>Many modern operating systems already have entries for the LDM.
-You should, however, verify your system with the command
-<blockquote><pre>
-grep ldm /etc/services
-</pre></blockquote>
-
-<hr>
-
-<h2><a name="/etc/rpc"></a>
-Edit file <code>/etc/rpc</code></h2>
-
-<p>Many modern operating systems already have entries for the LDM. 
-You should, however, verify your system with the command
-<blockquote><pre>
-grep ldm /etc/rpc
-</pre></blockquote>
-
-<hr>
-
-<h2><a name="etc/syslog.conf"></a>
-Edit file <tt>/etc/syslog.conf</tt></h2>
-
-<p>This should already have been done.  You can verify this with the
-command
-<blockquote><pre>
-grep local0 /etc/rsyslog.conf
-</pre></blockquote>
-
-
-<hr>
-
 <h2><a name="firewall"></a>
 Ensure that TCP connections can be made</h2>
 
@@ -97,11 +63,11 @@ Build and Install the Distribution</h2>
 the following:
 
 <blockquote><pre>
-cd $HOME/ldm-@VERSION@/src
-make distclean
-./configure >&configure.log && echo Configured &&
-make install >&install.log &&  echo Installed &&
-make clean && echo Cleaned
+cd
+wget ftp://ftp.unidata.ucar.edu/pub/ldm/ldm-6.9.8.tar.gz
+gunzip -c ldm-6.9.8.tar.gz | pax -r '-s:/:/src/:'
+cd ldm-6.9.8/src
+./configure >&configure.log && echo Configured && make install >&install.log &&  echo Installed && make clean && echo Cleaned
 </blockquote></pre>
 
 Otherwise, do the equivalent of the above for your user-shell.

@@ -380,6 +380,11 @@ UD_ULOG
 UD_NEILLEY_COMPAT
 UD_DB
 UD_MAKEWHATIS
+AC_SEARCH_LIBS(
+    [pthread_key_create],
+    [pthread],
+    ,
+    [AC_MSG_ERROR([Could not find required function pthread_key_create],[1])])
 libs=$LIBS
 LIBS=
 AC_SEARCH_LIBS(
