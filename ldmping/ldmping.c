@@ -122,6 +122,7 @@ char *av[] ;
         h_clnt stats[MAX_REMOTES + 1] ;
         h_clnt *sp ;
         unsigned        port = 0;
+        unsigned        logmask;
 
         if(isatty(fileno(stderr)))
         {
