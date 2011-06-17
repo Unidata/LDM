@@ -34,7 +34,6 @@ $check_time_limit = 10;		# maximum allowable time-difference in seconds
 # installation and disabled for an update.
 $abort_if_check_time_failure = 0;
 $netstat = "@NETSTAT@";
-$top = "@TOP@";
 
 if ($ARGV[0]) {
     require $ARGV[0];
@@ -178,9 +177,6 @@ print ");
 # The netstat(1) command for printing numeric port numbers of TCP Internet
 # connections:
 \$netstat = \"$netstat\";
-
-# The top(1) command for printing system (but not process) information once:
-\$top = \"$top\";
 
 # The metrics file into which the \"addmetrics\" command appends data:
 \$metrics_file = \"\$log_path/metrics.txt\";

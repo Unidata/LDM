@@ -1,7 +1,7 @@
 /*
  * This module contains the "upstream" code for version 6 of the LDM.
  */
-/* $Id: up6.c,v 1.14.2.3.2.2.2.2.2.20 2009/08/17 17:13:11 steve Exp $ */
+/* $Id: up6.c,v 1.14.2.3.2.2.2.2.2.19 2008/04/15 16:34:14 steve Exp $ */
 
 #include "ldmconfig.h"
 
@@ -592,12 +592,7 @@ up6_destroy(void)
     }
 
     if (_pq) {
-        int status = pq_close(_pq);
-        if (status) {
-            log_start("main(): Error closing product-queue: %s",
-                EOVERFLOW == status ? "queue inconsistent" : strerror(status));
-            log_log(LOG_ERR);
-        }
+        (void)pq_close(_pq);
         _pq = NULL;
     }
 }

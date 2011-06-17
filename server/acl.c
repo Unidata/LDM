@@ -2,7 +2,7 @@
  *   Copyright 1995, University Corporation for Atmospheric Research
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: acl.c,v 1.98.2.1.6.1.2.4.2.29 2009/08/17 17:12:32 steve Exp $ */
+/* $Id: acl.c,v 1.98.2.1.6.1.2.4.2.28 2008/04/15 16:34:12 steve Exp $ */
 
 /*LINTLIBRARY*/
 
@@ -1042,7 +1042,7 @@ getInfo(
 static int
 getQueueProdInfo(
     pqueue* const               pq,
-    const prod_class_t* const   prodClass,
+    const prod_class_t* const     prodClass,
     prod_info* const            info)
 {
     int     status = -1;                /* error */
@@ -1394,13 +1394,7 @@ initSavedInfo(
                     status = 0;
                 }                       /* no matching data-product in queue */
 
-                if (status = pq_close(pq)) {
-                    log_start("initSavedInfo(): Error closing "
-                        "product-queue \"%s\": %s", pqPath,
-                        EOVERFLOW == status ? "queue inconsistent" :
-                            strerror(status));
-                    status = -1;
-                }
+                (void)pq_close(pq);
             }                           /* "pq" open */
         }                               /* no previous product-information */
 

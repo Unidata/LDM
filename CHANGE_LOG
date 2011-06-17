@@ -1,20 +1,5 @@
-6.8.2
-	Portability:
-	    Added checks for netstat(1) and top(1) to configure(1)
-	    script and appropriately modified ldmadmin(1).  Among other
-	    things, this ported the "ldmadmin printmetrics" command to
-	    Mac OS X:
-
-	LDM (rpc.ldmd):
-	    Added logging to some failed pq_close() calls in an attempt
-	    to debug the Mac OS X 10.5 fcntl() problem.
-
-	pq(3) library:
-	    Corrected ability to build without mmap(2) support via the
-	    NO_MMAP C macro.
-
 6.8.1	2009-08-14
-	Installation:
+	Improved installation:
 	    Improved configure(1) script:
 		Added checks for ar(1), rpcgen(1), netstat(1), ntpdate(8),
 		and version 5 of perl(1).
@@ -25,7 +10,7 @@
 	    Replaced use of $(INSTALL) in makefiles with cp(1) because
 	    that was always the value of the macro.
 
-	ldmadmin(1):
+	Improved ldmadmin(1):
 	    Improved responsiveness by changing default ntpdate(1)
 	    timeout from 20 seconds to 5.
 

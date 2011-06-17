@@ -2,7 +2,7 @@
  *   Copyright 1995, University Corporation for Atmospheric Research
  *   See top level COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: pq.c,v 3.78.8.2.2.9.2.40 2009/09/17 20:03:59 steve Exp $ */
+/* $Id: pq.c,v 3.78.8.2.2.9.2.38 2009/05/21 20:30:42 steve Exp $ */
 
 #include "ldmconfig.h"
 
@@ -3894,16 +3894,13 @@ pq_setAccessFunctions(
 {
     assert(NULL != pq);
 
-#ifndef NO_MMAP
     if (fIsSet(pflags, PQ_NOMAP))
     {
-#endif
         /*
          * The product-queue will be accessed via read() and write().
          */
         pq->ftom = f_ftom;
         pq->mtof = f_mtof;
-#ifndef NO_MMAP
     }
     else {
         static size_t   maxSizeT = ~(size_t)0;
@@ -3935,7 +3932,6 @@ pq_setAccessFunctions(
             pq->mtof = mm0_mtof;
         }
     }
-#endif
 }
 
 
@@ -3962,6 +3958,9 @@ pq_new( int pflags,
  */
 
         fSet(pflags, PQ_NOGROW); /* always set for this version of pq! */
+#if _NOMAP || NO_MMAP
+        fSet(pflags, PQ_NOMAP);
+#endif
 #if _MAPRGNS
         fSet(pflags, PQ_MAPRGNS);
 #endif

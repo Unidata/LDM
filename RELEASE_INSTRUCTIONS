@@ -4,10 +4,6 @@ identifier:
     :%s/6\.8\.1/x.x.x/g
     :%s/6\\\.6\\\.5/x\\.x\\.x/g
 
-Ensure that the configure(1) script is up-to-date:
-
-    autoconf
-
 Ensure that the package builds on all systems:
 
     ./remoteBuild all
@@ -19,6 +15,10 @@ Edit certain files:
     vi RELEASE_NOTES
     vi ANNOUNCEMENT
 
+Commit all changes:
+
+    sce commit
+
 Edit the release notes for the online documentation:
 
     vi ../doc/release-notes.html
@@ -26,7 +26,7 @@ Edit the release notes for the online documentation:
 Update the version information in the documentation:
 
     vi ../doc/macros.make
-    vipat '6\.8' ../doc/*.html ../doc/basics/*.html
+    vipat '6\.8\.1' ../doc/*.html ../doc/basics/*.html
 
 Copy the change-log to the documentation directory:
 
@@ -43,10 +43,6 @@ Commit changes to the documentation:
 Create the (hidden) online documentation:
 
     (cd ../doc && make)
-
-Commit all changes:
-
-    sce commit
 
 Create the FTP distribution:
 
@@ -68,7 +64,8 @@ Install the package on Conan:
 
     /usr/ccs/bin/make install_setuids	# as "root"
 
-    cd &&
+    make clean &&
+	cd &&
 	ldmadmin stop &&
 	rm runtime &&
 	ln -s ldm-6.8.1 runtime &&

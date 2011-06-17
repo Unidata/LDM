@@ -1,4 +1,4 @@
-dnl $Id: aclocal.m4,v 1.27.2.1.2.1.2.1.2.23 2009/08/21 19:58:25 steve Exp $
+dnl $Id: aclocal.m4,v 1.27.2.1.2.1.2.1.2.21 2009/08/14 18:59:03 steve Exp $
 dnl
 dnl These are the local macros used by the ldm4 configure.in
 dnl autoconf 1.6
@@ -427,8 +427,7 @@ AC_DEFUN(UD_PROG_NETSTAT,
 	[ac_cv_path_NETSTAT],
 	[AC_PATH_PROGS_FEATURE_CHECK([NETSTAT], [netstat],
 	    [dnl
-		for options in '-f inet -P tcp -n' '-f inet -p tcp -n' \
-			'-A inet -t -n'; do
+		for options in '-A inet -t -n' '-f inet -P tcp -n'; do
 		    cmd="$ac_path_NETSTAT $options"
 		    if $cmd >/dev/null 2>&1; then
 			ac_cv_path_NETSTAT=$cmd
@@ -442,33 +441,6 @@ AC_DEFUN(UD_PROG_NETSTAT,
 		ac_cv_path_NETSTAT=true
 	    ])])
     AC_SUBST([NETSTAT], [$ac_cv_path_NETSTAT])
-])dnl
-
-dnl
-dnl Find the top(1) command.
-dnl
-AC_DEFUN(UD_PROG_TOP,
-[dnl
-    AC_ARG_VAR([TOP], [top(1) command])
-    AC_CACHE_CHECK(
-	[for top(1) command],
-	[ac_cv_path_TOP],
-	[AC_PATH_PROGS_FEATURE_CHECK([TOP], [top],
-	    [dnl
-		for options in '-b -n 1' '-n 0 -l 1'; do
-		    cmd="$ac_path_TOP $options"
-		    if $cmd >/dev/null 2>&1; then
-			ac_cv_path_TOP=$cmd
-			ac_path_TOP_found=:
-			break
-		    fi
-		done
-	    ],
-	    [
-		AC_MSG_WARN("Could not find top(1).  Using true(1)")
-		ac_cv_path_TOP=true
-	    ])])
-    AC_SUBST([TOP], [$ac_cv_path_TOP])
 ])dnl
 
 
@@ -1118,7 +1090,7 @@ dnl Check whether sys/socket.h defines type socklen_t. Please note
 dnl that some systems require sys/types.h to be included before
 dnl sys/socket.h can be compiled.
 dnl
-dnl @version $Id: aclocal.m4,v 1.27.2.1.2.1.2.1.2.23 2009/08/21 19:58:25 steve Exp $
+dnl @version $Id: aclocal.m4,v 1.27.2.1.2.1.2.1.2.21 2009/08/14 18:59:03 steve Exp $
 dnl @author Lars Brinkhoff <lars@nocrew.org>
 dnl
 AC_DEFUN([TYPE_SOCKLEN_T],

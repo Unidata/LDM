@@ -1,6 +1,6 @@
 #!@PERL@
 #
-# $Id: ldmadmin.in,v 1.86.2.3.2.2.2.17.2.53 2009/09/04 15:37:18 steve Exp $
+# $Id: ldmadmin.in,v 1.86.2.3.2.2.2.17.2.49 2009/08/11 20:51:47 steve Exp $
 #
 # File:         ldmadmin
 #
@@ -815,7 +815,6 @@ sub ldm_config
     print  "numlogs:               $numlogs\n";
     print  "log_rotate:            $log_rotate\n";
     print  "netstat:               $netstat\n";
-    print  "top:                   $top\n";
     print  "metrics file:          $metrics_file\n";
     print  "metrics files:         $metrics_files\n";
     print  "num_metrics:           $num_metrics\n";
@@ -823,7 +822,7 @@ sub ldm_config
     print  "delete info files:     $delete_info_files\n";
     print  "ntpdate(1):            $ntpdate\n";
     print  "ntpdate(1) timeout:    $ntpdate_timeout\n";
-    print  "time servers:          ", join(" ", @time_servers), "\n";
+    print  "time servers:          @time_servers\n";
     print  "time-offset limit:     $check_time_limit\n";
     print  "check time abort:      $abort_if_check_time_failure\n";
     print "\n";
@@ -847,7 +846,10 @@ sub isRunning
 
     if (!$running) {
 	my($cmd_line) = "ldmping -l- -i 0";
-	$cmd_line = $cmd_line . " $ip_addr" if $ip_addr ne "0.0.0.0";
+
+	if (length($ip_addr)) {
+	    $cmd_line .= " $ip_addr";
+	}
 
 	system("$cmd_line > /dev/null 2>&1");
 	$running = !$?;
@@ -1209,7 +1211,7 @@ sub getPortCount
 {
     my($localCount) = 0;
     my($remoteCount) = 0;
-    open(FH, $netstat."|") or die "Can't fork() netstat(1): $!";
+    open(FH, $netstat."|") or die "Can't fork(): $!";
     while (<FH>) {
 	if (/ESTABLISHED/) {
 	    my(@fields) = split(/\s+/);
@@ -1227,7 +1229,7 @@ sub getPq
     my($age) = -1;
     my($prodCount) = -1;
     my($byteCount) = -1;
-    open(FH, "pqmon -l- -q $pq_path 2>&1 |") or die "Can't fork() pqmon(1): $!";
+    open(FH, "pqmon -l- -q $pq_path 2>&1 |") or die "Can't fork(): $!";
     while (<FH>) {
 	my(@fields) = split(/\s+/);
 	if ($#fields == 13) {
@@ -1255,7 +1257,7 @@ sub getCpu
     my($contextSwitches) = -1;
     my($haveMem) = 0;
     my($haveSwap) = 0;
-    open(FH, $top."|") or die "Can't fork() top(1): $!";
+    open(FH, "top -b -n 1 |") or die "Can't fork(): $!";
     while (<FH>) {
 	if (/^mem/i) {
 	    s/k/e3/gi;
@@ -1299,7 +1301,7 @@ sub getCpu
     my($idIndex) = -1;
     my($waIndex) = -1;
     my($line) = "";
-    open(FH, "vmstat 1 2|") or die "Can't fork() vmstat(1): $!";
+    open(FH, "vmstat 1 2|") or die "Can't fork(): $!";
     while (<FH>) {
 	my(@fields) = split(/\s+/);
 	for (my($i) = 0; $i <= $#fields; ++$i) {
@@ -1354,7 +1356,7 @@ sub plotMetrics
 sub errmsg
 {
     $SIG{PIPE} = 'IGNORE';
-    open(FH, "|fmt 1>&2")	or die "Can't fork() fmt(1): $!";
+    open(FH, "|fmt 1>&2")	or die "Can't fork(): $!";
     print FH @_			or die "Can't write(): $!";
     close FH			or die "Can't close(): status=$?";
 }

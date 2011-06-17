@@ -2,7 +2,7 @@
  *   Copyright 1993, University Corporation for Atmospheric Research
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: pqinsert.c,v 1.27.10.2.2.7 2009/09/17 20:33:46 steve Exp $ */
+/* $Id: pqinsert.c,v 1.27.10.2.2.6 2007/02/09 21:35:02 steve Exp $ */
 
 /* 
  * Convert files to ldm "products" and insert in local que
@@ -40,7 +40,7 @@
 static char             myname[HOSTNAMESIZE];
 static feedtypet        feedtype = EXP;
 #ifdef NO_MMAP
-static struct pqe_index pqeIndex;
+static struct pqe_index index = PQE_NONE;
 #endif
 
 
@@ -72,8 +72,8 @@ cleanup(void)
 {
     if (pq) {
 #ifdef NO_MMAP
-        if (!pqeIsNone(pqeIndex))
-            (void)pqe_discard(pq, pqeIndex);
+        if (!pqeIsNone(index))
+            (void)pqe_discard(pq, index);
 #endif
 
         (void) pq_close(pq);
@@ -146,6 +146,7 @@ set_sigactions(void)
 }
 
 
+#ifdef NO_MMAP
 static int
 fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
 {
@@ -169,8 +170,7 @@ fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
         MD5Final(signature, md5ctxp);
         return 0;
 }
-
-
+#else
 static int
 mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 {
@@ -181,6 +181,7 @@ mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
         MD5Final((unsigned char*)signature, md5ctxp);
         return 0;
 }
+#endif
 
 
 int main(
@@ -205,9 +206,6 @@ int main(
             exit_md5 = 6        /* couldn't initialize MD5 processing */
         } exitCode = exit_success;
 
-#ifdef NO_MMAP
-        pqeIndex = PQE_NONE;
-#endif
         logfname = "-";
 
         /*
@@ -379,14 +377,6 @@ int main(
                 prod.info.sz = statb.st_size;
                 prod.data = NULL;
 
-                /* These members, and seqno, vary over the loop. */
-                status = set_timestamp(&prod.info.arrival);
-                if(status != ENOERR) {
-                        serror("set_timestamp: %s, filename");
-                        exitCode = exit_infile;
-                        continue;
-                }
-
 #ifndef NO_MMAP
                 prod.data = mmap(0, prod.info.sz,
                         PROT_READ, MAP_PRIVATE, fd, 0);
@@ -413,6 +403,14 @@ int main(
                     (void) close(fd);
                     exitCode = exit_infile;
                     continue;
+                }
+
+                /* These members, and seqno, vary over the loop. */
+                status = set_timestamp(&prod.info.arrival);
+                if(status != ENOERR) {
+                        serror("set_timestamp: %s, filename");
+                        exitCode = exit_infile;
+                        continue;
                 }
 
                 /*
@@ -474,8 +472,8 @@ int main(
                         continue;
                 }
 
-                pqeIndex = PQE_NONE;
-                status = pqe_new(pq, &prod.info, &prod.data, &pqeIndex);
+                index = PQE_NONE;
+                status = pqe_new(pq, &prod.info, &prod.data, &index);
 
                 if(status != ENOERR) {
                     serror("pqe_new: %s", filename);
@@ -491,8 +489,8 @@ int main(
                         status = EIO;
                     }
                     else {
-                        status = pqe_insert(pq, pqeIndex);
-                        pqeIndex = PQE_NONE;
+                        status = pqe_insert(pq, index);
+                        index = PQE_NONE;
 
                         switch (status) {
                         case ENOERR:
@@ -520,13 +518,13 @@ int main(
                             uerror("pq_insert: %s", status > 0
                                 ? strerror(status) : "Internal error");
                         }
-                    }                   /* data read into "pqeIndex" region */
+                    }                   /* data read into "index" region */
 
                     if (status != ENOERR) {
-                        (void)pqe_discard(pq, pqeIndex);
-                        pqeIndex = PQE_NONE;
+                        (void)pqe_discard(pq, index);
+                        index = PQE_NONE;
                     }
-                }                       /* "pqeIndex" region allocated */
+                }                       /* "index" region allocated */
 
 #endif /*!NO_MMAP*/
                 (void) close(fd);
