@@ -449,6 +449,7 @@ AC_CONFIG_FILES([
     scripts/ldmfail
     scripts/Makefile
     scripts/netcheck
+    scripts/plotMetrics
     scripts/syscheck
     ulogger/Makefile
     html/Makefile

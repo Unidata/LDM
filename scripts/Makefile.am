@@ -12,6 +12,7 @@ EXTRA_DIST		= \
     ldmfail.in \
     netcheck.in \
     netcheck.conf \
+    plotMetrics.in \
     syscheck.in
 dist_bin_SCRIPTS	= \
     netcheck \
@@ -19,8 +20,8 @@ dist_bin_SCRIPTS	= \
     ldmcheck \
     ldmadmin \
     ldmfail \
-    plotMetrics \
     wasReceived
+nodist_bin_SCRIPTS	= plotMetrics
 dist_man1_MANS		= ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1 \
 			  wasReceived.1
 CLEANFILES		= ldmadmin

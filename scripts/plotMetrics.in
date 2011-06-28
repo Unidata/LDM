@@ -16,6 +16,7 @@ EOF
 start=19700101
 stop=30000101
 files=`regutil /metrics/files`
+version=@VERSION@
 
 # Dynamic initialization:
 while getopts b:e: id; do
@@ -31,6 +32,7 @@ if test "$1"; then
     files="$@"
 fi
 datafile=/tmp/metrics.txt
+host=`regutil /hostname`
 
 # Input datafile format (space separated):
 #       FIELD#  VALUE
@@ -76,19 +78,19 @@ else
 
         set terminal x11 1 title "Queue Size"
         #set terminal png medium
-        set title "Number of Bytes Used in Queue vs. Time"
+        set title "Number of Bytes Used in Queue vs. Time\n$host LDM: $version"
         set ylabel "Bytes / 1 GB"
         plot "$datafile" u 1:(\$9/1e9) title "Bytes Used" with lines
 
         set terminal x11 2 title "Product Count"
         #set terminal png medium
-        set title "Number of Products in Queue vs. Time"
+        set title "Number of Products in Queue vs. Time\n$host LDM: $version"
         set ylabel "Count"
         plot "$datafile" u 1:(\$8) title "Number of Products" with lines
 
         set terminal x11 3 title "LDM Connections"
         #set terminal png medium
-        set title "LDM Connections vs. Time"
+        set title "LDM Connections vs. Time\n$host LDM: $version"
         set ylabel "Count"
         plot \
              "$datafile" u 1:5 title "Local LDM Port" with lines, \
@@ -97,7 +99,7 @@ else
 
         set terminal x11 4 title "Space"
         #set terminal png medium
-        set title "Space vs. Time"
+        set title "Space vs. Time\n$host LDM: $version"
         set ylabel "Space / 1 GB"
         plot \
             "$datafile" u 1:(\$14 < 0 ? 1/0 : \$14/1e9) \
@@ -114,7 +116,7 @@ else
 
         set terminal x11 5 title "CPU-Modes"
         #set terminal png medium
-        set title "CPU-Modes vs. Time"
+        set title "CPU-Modes vs. Time\n$host LDM: $version"
         set ylabel "%"
         plot \
              "$datafile" u 1:((\$12 < 0 || \$12 > 100) ? 1/0 : \$12) \
@@ -128,13 +130,13 @@ else
 
         set terminal x11 6 title "Context Switches"
         #set terminal png medium
-        set title "CPU Context Switch Rate vs. Time"
+        set title "CPU Context Switch Rate vs. Time\n$host LDM: $version"
         set ylabel "1/s"
         plot "$datafile" u 1:18 title "CPU Context Switches" with lines
 
         set terminal x11 7 title "Load-Average"
         #set terminal png medium
-        set title "Load-Average vs. Time"
+        set title "Load-Average vs. Time\n$host LDM: $version"
         set ylabel "Process Count"
         plot \
              "$datafile" u 1:(\$2 < 1e7 ? \$2 : 1/0) \
@@ -146,7 +148,7 @@ else
 
         set terminal x11 8 title "Age"
         #set terminal png medium
-        set title "Age of Oldest Product in Queue vs. Time"
+        set title "Age of Oldest Product in Queue vs. Time\n$host LDM: $version"
         set ylabel "Age / 1 h"
         plot "$datafile" u 1:(\$7/3600) title "Age" with lines
 EOF
