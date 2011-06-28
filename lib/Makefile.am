@@ -1,4 +1,4 @@
-# Copyright 2010 University Corporation for Atmospheric Research
+# Copyright 2011 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -11,7 +11,7 @@ libldm_la_SOURCES	= dummy.c
 libldm_la_LIBADD	= \
     $(top_builddir)/misc/lib.la \
     $(top_builddir)/pqinglib/lib.la \
-    $(top_builddir)/$(PQ_SUBDIR)/lib.la \
+    $(top_builddir)/@PQ_SUBDIR@/lib.la \
     $(top_builddir)/protocol/lib.la \
     $(top_builddir)/registry/lib.la \
     $(top_builddir)/rpc/lib.la \

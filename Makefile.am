@@ -1,4 +1,4 @@
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2011 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -71,7 +71,6 @@ DIST_SUBDIRS	= \
     test html
 
 nobase_include_HEADERS		= \
-    config.h \
     rpc/rpc.h \
     rpc/types.h \
     rpc/xdr.h \
@@ -87,9 +86,17 @@ nobase_include_HEADERS		= \
 EXTRA_DIST = \
     CHANGE_LOG \
     COPYRIGHT \
-    README \
     extractDecls \
-    macros.make.in
+    ldm.spec \
+    macros.make.in \
+    README
+
+dist_bin_SCRIPTS	= \
+    ensureLdmhomeLinks \
+    ensureVar \
+    ensureSyslogEntry \
+    ensureRpcEntry \
+    ensureServicesEntry
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
@@ -132,34 +139,11 @@ endif
 # symbolic link to "runtime/share" and "runtime/share" doesn't exist, then
 # "test -e share" is false.
 ensure-ldmhome-links:
-	cd $(DESTDIR)$(LDMHOME) \
-	&& ( ls src >/dev/null 2>&1 || $(LN_S) runtime/src src ) \
-	&& ( ls bin >/dev/null 2>&1 || $(LN_S) runtime/bin bin ) \
-	&& ( ls include >/dev/null 2>&1 || $(LN_S) runtime/include include ) \
-	&& ( ls lib >/dev/null 2>&1 || $(LN_S) runtime/lib lib ) \
-	&& ( ls share >/dev/null 2>&1 || $(LN_S) runtime/share share ) \
-	&& ( test ! -e $(distName) || ( test -e runtime || \
-	    $(LN_S) $(distName) runtime ) )
+	$(srcdir)/ensureLdmhomeLinks $(LDMHOME) $(distName)
 
 ensure-var:	$(DESTDIR)$(localstatedir)
-	if test -e $(DESTDIR)$(LDMHOME)/data; then \
-	    test -e $(DESTDIR)$(QUEUE_DIR) \
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data $(DESTDIR)$(QUEUE_DIR); \
-	else \
-	    test -e $(DESTDIR)$(QUEUE_DIR) || mkdir -p $(DESTDIR)$(QUEUE_DIR); \
-	fi
-	if test -e $(DESTDIR)$(LDMHOME)/logs; then \
-	    test -e $(DESTDIR)$(LOGS_DIR) \
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/logs $(DESTDIR)$(LOGS_DIR); \
-	else \
-	    test -e $(DESTDIR)$(LOGS_DIR) || mkdir -p $(DESTDIR)$(LOGS_DIR); \
-	fi
-	if test -e $(DESTDIR)$(LDMHOME)/data; then \
-	    test -e $(DESTDIR)$(DATA_DIR) \
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data $(DESTDIR)$(DATA_DIR); \
-	else \
-	    test -e $(DESTDIR)$(DATA_DIR) || mkdir -p $(DESTDIR)$(DATA_DIR); \
-	fi
+	$(srcdir)/ensureVar $(DESTDIR)$(LDMHOME) $(DESTDIR)$(QUEUE_DIR) \
+	    $(DESTDIR)$(LOGS_DIR) $(DESTDIR)$(DATA_DIR) 
 
 $(DESTDIR)$(localstatedir):
 	$(MKDIR_P) $@
@@ -171,54 +155,36 @@ root-actions:	\
     ensure-services-entry
 
 install_setuids:
-	chown root $(DESTDIR)$(bindir)/hupsyslog \
-	&& chown root $(DESTDIR)$(bindir)/ldmd \
-	&& chmod 4755 $(DESTDIR)$(bindir)/hupsyslog \
-	&& chmod 4755 $(DESTDIR)$(bindir)/ldmd
-	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep root >/dev/null \
-	&& ls -l $(DESTDIR)$(bindir)/ldmd | grep rws >/dev/null \
-	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep root >/dev/null \
-	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep rws >/dev/null; then \
-	    : true; \
-	else \
-	    echo; \
-	    echo "\
-ERROR: The LDM server program (bin/ldmd) or the hupsyslog(1) \
-program (bin/hupsyslog) is not owned by \"root\" or does not have \
-the setuid bit enabled.  The command \"make install_setuids\" will have \
-to be manually executed by the superuser on a system that allows these \
-actions." \
-	    | fmt; \
-	    echo; \
-	    exit 1; \
+	if chown root $(DESTDIR)$(bindir)/hupsyslog && \
+		chown root $(DESTDIR)$(bindir)/ldmd && \
+		chmod 4755 $(DESTDIR)$(bindir)/hupsyslog && \
+		chmod 4755 $(DESTDIR)$(bindir)/ldmd; then \
+	    if ls -l $(DESTDIR)$(bindir)/ldmd | grep root >/dev/null && \
+		ls -l $(DESTDIR)$(bindir)/ldmd | grep rws >/dev/null && \
+		ls -l $(DESTDIR)$(bindir)/hupsyslog | \
+		    grep root >/dev/null && \
+		ls -l $(DESTDIR)$(bindir)/hupsyslog | grep rws >/dev/null; \
+	    then \
+		: true; \
+	    else \
+		echo; \
+		echo " \
+ERROR: The LDM server program (bin/ldmd) or the hupsyslog(1) program \
+(bin/hupsyslog) is not owned by \"root\" or does not have the setuid bit \
+enabled. The superuser will have to set these attributes manually."; \
+		echo; \
+		exit 1; \
+	    fi \
 	fi
 
 ensure-syslog-entry:
-	if grep $(LOG_LDM) $(SYSLOG_CONF) >/dev/null; then \
-	    : true; \
-	else \
-	    awk '/\.none/ || /\/var\/log\/messages/ || /\/var\/log\/syslog/ { \
-		print $$1 ";$(LOG_LDM).none	" $$2; next; \
-	    } \
-	    {print}' $(SYSLOG_CONF) >$(SYSLOG_CONF).new \
-	    && echo >>$(SYSLOG_CONF).new \
-	    && echo '# Unidata LDM:' >>$(SYSLOG_CONF).new \
-	    && echo '$(LOG_LDM).debug	$(LDM_LOGFILE)' >>$(SYSLOG_CONF).new \
-	    && cp $(SYSLOG_CONF) $(SYSLOG_CONF).old \
-	    && mv -f $(SYSLOG_CONF).new $(SYSLOG_CONF); \
-	fi
+	$(srcdir)/ensureSyslogEntry $(LOG_LDM) $(SYSLOG_CONF) $(LDM_LOGFILE)
 
 ensure-rpc-entry:
-	if awk '$$2 == 300029{exit 1}' /etc/rpc; then \
-	    cp -f /etc/rpc /etc/rpc.old; \
-	    echo 'ldmd		300029	# Unidata LDM system' >>/etc/rpc; \
-	fi
+	$(srcdir)/ensureRpcEntry
 
 ensure-services-entry:
-	if awk '$$2 ~ /388\/tcp/{exit 1}' /etc/services; then \
-	    cp -f /etc/services /etc/services.old; \
-	    echo 'ldm		388/tcp		# Unidata LDM' >>/etc/services;\
-	fi
+	$(srcdir)/ensureServicesEntry
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
@@ -263,19 +229,29 @@ web-update:
 available:	ftp web-update
 endif
 
+TOP_BUILD_DIR	= /tmp/rpmbuild
+rpm:		dist ldm.spec
+	rm -rf $(TOP_BUILD_DIR)
+	mkdir -p $(TOP_BUILD_DIR)/SOURCES
+	cp $(distArchive) $(TOP_BUILD_DIR)/SOURCES 
+	mkdir $(TOP_BUILD_DIR)/SPECS
+	cp ldm.spec $(TOP_BUILD_DIR)/SPECS
+	rpmbuild --define '_topdir $(TOP_BUILD_DIR)' -v -bb ldm.spec
+
 .PHONY:		\
-    root-actions \
-    install_setuids \
-    ensure-syslog-entry \
+    alpha \
+    available \
+    beta \
+    commit-check \
+    ensure-ldmhome-links \
     ensure-rpc-entry \
     ensure-services-entry \
-    ensure-ldmhome-links \
+    ensure-syslog-entry \
     ensure-var \
-    commit-check \
-    remote-checks \
-    tag \
     ftp \
-    beta \
-    alpha \
-    web-update \
-    available
+    install_setuids \
+    remote-checks \
+    root-actions \
+    rpm \
+    tag \
+    web-update

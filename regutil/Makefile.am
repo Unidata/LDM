@@ -38,8 +38,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
-    -I$(top_srcdir)/libxml2/include \
-    -DREGISTRY_DIR='"$(ETC_DIR)"'
+    -I$(top_srcdir)/libxml2/include
 LDADD			= \
     $(top_builddir)/lib/libldm.la \
     $(top_builddir)/libxml2/libxml2.la \
@@ -50,6 +49,15 @@ CLEANFILES		= regutil.out regpar.tab
 
 all:		regpar.tab
 
+# "regpar.tab" fields:
+#
+# id		Identifier in "regpath{id}" substitution expressions and 
+# 		suffix of "REG_" C macro names
+# path		Pathname of the parameter in the registry
+# desc		Description of the parameter
+# default	Default value
+# perl-id	Identifier of corresponding perl(1) variable in ldmadmin(1)
+# 		configuration-file, if it exists
 regpar.tab:	$(srcdir)/regpar.tab.in
 	sed -e 's;@''LDMHOME@;$(LDMHOME);g' \
 	    -e 's;@''LOGS_DIR@;$(LOGS_DIR);g' \
