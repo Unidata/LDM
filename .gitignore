@@ -6,7 +6,6 @@ feedme/feedme
 ldmping/ldmping
 autom4te.cache
 .libs
-configure
 Makefile
 config.status
 *.gz
@@ -64,3 +63,5 @@ libxml2
 macros.make
 TAGS
 Makefile.in
+ldm.spec
+configure

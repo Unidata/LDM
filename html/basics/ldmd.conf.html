@@ -90,9 +90,11 @@ The syntax of an <tt>EXEC</tt> entry is
 <blockquote><pre>
 EXEC "<i>command</i>"
 </blockquote><p/re>
-where the quotation marks are mandatory and <i>command</i> is a string
-that may contain newlines.  Escape quotation marks in <i>command</i> with
-a backslash (<tt>\"</tt>).
+where the quotation marks are mandatory if <i>command</i> contains whitespace
+(including newlines).
+Escape quotation marks in <i>command</i> with
+a backslash (<tt>\"</tt>). Each pair of backslashes is replaced with a single
+backslash.
 
 <p>
 The <i>command</i> strings of <tt>EXEC</tt> entries are executed via the
@@ -315,7 +317,8 @@ configuration-file being processed.
 	<a href="glindex.html#identifier">data-product identifier</a>s.
 	If it contains whitespace, then it must be enclosed in quotation
 	marks (") and any internal quotation marks must be escaped with a
-	backslash (<tt>\"</tt>).
+	backslash (<tt>\"</tt>). Each pair of backslashes is replaced with a
+        single backslash.
 
     <dt><a name="OK_pattern"><i>OK_pattern</i></a>
     <dd>An <a href="glindex.html#ERE">ERE</a> that
@@ -325,7 +328,8 @@ configuration-file being processed.
 	to be transmitted.
 	If it contains whitespace, then it must be enclosed in quotation
 	marks (") and any internal quotation marks must be escaped with a
-	backslash (<tt>\"</tt>).
+	backslash (<tt>\"</tt>). Each pair of backslashes is replaced with a
+        single backslash.
 
     <dt><a name="NOT_pattern"><i>NOT_pattern</i></a>
     <dd>An <a href="glindex.html#ERE">ERE</a> that
@@ -335,7 +339,8 @@ configuration-file being processed.
 	to be transmitted.
 	If it contains whitespace, then it must be enclosed in quotation
 	marks (") and any internal quotation marks must be escaped with a
-	backslash (<tt>\"</tt>).
+	backslash (<tt>\"</tt>). Each pair of backslashes is replaced with a
+        single backslash.
 </dl>
 
 <hr>

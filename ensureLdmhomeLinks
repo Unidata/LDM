@@ -1,0 +1,14 @@
+LDMHOME=${1?LDM home directory not set}
+distName=${2?LDM package name not set}
+
+# "ls" is used in the following instead of "test -e" because if "share" is a
+# symbolic link to "runtime/share" and "runtime/share" doesn't exist, then
+# "test -e share" is false.
+cd $LDMHOME &&
+( ls src >/dev/null 2>&1 || ln -s runtime/src src ) &&
+( ls bin >/dev/null 2>&1 || ln -s runtime/bin bin ) &&
+( ls include >/dev/null 2>&1 || ln -s runtime/include include ) &&
+( ls lib >/dev/null 2>&1 || ln -s runtime/lib lib ) &&
+( ls share >/dev/null 2>&1 || ln -s runtime/share share ) &&
+( test ! -e $distName ||
+    ( test -e runtime || ln -s $distName runtime ) )

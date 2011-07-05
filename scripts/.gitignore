@@ -6,3 +6,6 @@ syscheck
 writeConfiguration.pl
 ldmadmin.pl
 ldmadmin.1
+plotMetrics
+Makefile.in
+plotMetrics

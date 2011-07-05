@@ -16,7 +16,7 @@ EOF
 start=19700101
 stop=30000101
 files=`regutil /metrics/files`
-version=6.9.8
+version=@VERSION@
 
 # Dynamic initialization:
 while getopts b:e: id; do

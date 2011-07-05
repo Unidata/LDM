@@ -46,7 +46,7 @@ DIST_COMMON = $(dist_bin_SCRIPTS) $(dist_man1_MANS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/ldmadmin.in $(srcdir)/ldmcheck.in \
 	$(srcdir)/ldmfail.in $(srcdir)/netcheck.in \
-	$(srcdir)/syscheck.in
+	$(srcdir)/plotMetrics.in $(srcdir)/syscheck.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -54,7 +54,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = ldmadmin ldmcheck ldmfail netcheck syscheck
+CONFIG_CLEAN_FILES = ldmadmin ldmcheck ldmfail netcheck plotMetrics \
+	syscheck
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -77,8 +78,9 @@ am__nobase_list = $(am__nobase_strip_setup); \
 am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
-SCRIPTS = $(dist_bin_SCRIPTS)
+am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)" \
+	"$(DESTDIR)$(man1dir)"
+SCRIPTS = $(dist_bin_SCRIPTS) $(nodist_bin_SCRIPTS)
 SOURCES =
 DIST_SOURCES =
 man1dir = $(mandir)/man1
@@ -232,6 +234,7 @@ EXTRA_DIST = \
     ldmfail.in \
     netcheck.in \
     netcheck.conf \
+    plotMetrics.in \
     syscheck.in
 
 dist_bin_SCRIPTS = \
@@ -240,9 +243,9 @@ dist_bin_SCRIPTS = \
     ldmcheck \
     ldmadmin \
     ldmfail \
-    plotMetrics \
     wasReceived
 
+nodist_bin_SCRIPTS = plotMetrics
 dist_man1_MANS = ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1 \
 			  wasReceived.1
 
@@ -288,6 +291,8 @@ ldmfail: $(top_builddir)/config.status $(srcdir)/ldmfail.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 netcheck: $(top_builddir)/config.status $(srcdir)/netcheck.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+plotMetrics: $(top_builddir)/config.status $(srcdir)/plotMetrics.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 syscheck: $(top_builddir)/config.status $(srcdir)/syscheck.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-dist_binSCRIPTS: $(dist_bin_SCRIPTS)
@@ -319,6 +324,40 @@ install-dist_binSCRIPTS: $(dist_bin_SCRIPTS)
 uninstall-dist_binSCRIPTS:
 	@$(NORMAL_UNINSTALL)
 	@list='$(dist_bin_SCRIPTS)'; test -n "$(bindir)" || exit 0; \
+	files=`for p in $$list; do echo "$$p"; done | \
+	       sed -e 's,.*/,,;$(transform)'`; \
+	test -n "$$list" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(bindir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(bindir)" && rm -f $$files
+install-nodist_binSCRIPTS: $(nodist_bin_SCRIPTS)
+	@$(NORMAL_INSTALL)
+	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
+	@list='$(nodist_bin_SCRIPTS)'; test -n "$(bindir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  if test -f "$$d$$p"; then echo "$$d$$p"; echo "$$p"; else :; fi; \
+	done | \
+	sed -e 'p;s,.*/,,;n' \
+	    -e 'h;s|.*|.|' \
+	    -e 'p;x;s,.*/,,;$(transform)' | sed 'N;N;N;s,\n, ,g' | \
+	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1; } \
+	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
+	    if ($$2 == $$4) { files[d] = files[d] " " $$1; \
+	      if (++n[d] == $(am__install_max)) { \
+		print "f", d, files[d]; n[d] = 0; files[d] = "" } } \
+	    else { print "f", d "/" $$4, $$1 } } \
+	  END { for (d in files) print "f", d, files[d] }' | \
+	while read type dir files; do \
+	     if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
+	     test -z "$$files" || { \
+	       echo " $(INSTALL_SCRIPT) $$files '$(DESTDIR)$(bindir)$$dir'"; \
+	       $(INSTALL_SCRIPT) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
+	     } \
+	; done
+
+uninstall-nodist_binSCRIPTS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(nodist_bin_SCRIPTS)'; test -n "$(bindir)" || exit 0; \
 	files=`for p in $$list; do echo "$$p"; done | \
 	       sed -e 's,.*/,,;$(transform)'`; \
 	test -n "$$list" || exit 0; \
@@ -418,7 +457,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(SCRIPTS) $(MANS)
 installdirs:
-	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"; do \
+	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -473,7 +512,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-dist_binSCRIPTS
+install-exec-am: install-dist_binSCRIPTS install-nodist_binSCRIPTS
 
 install-html: install-html-am
 
@@ -511,7 +550,8 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-dist_binSCRIPTS uninstall-man
+uninstall-am: uninstall-dist_binSCRIPTS uninstall-man \
+	uninstall-nodist_binSCRIPTS
 
 uninstall-man: uninstall-man1
 
@@ -524,12 +564,13 @@ uninstall-man: uninstall-man1
 	install-dist_binSCRIPTS install-dvi install-dvi-am \
 	install-exec install-exec-am install-html install-html-am \
 	install-info install-info-am install-man install-man1 \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	uninstall uninstall-am uninstall-dist_binSCRIPTS uninstall-man \
-	uninstall-man1
+	install-nodist_binSCRIPTS install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am \
+	uninstall-dist_binSCRIPTS uninstall-man uninstall-man1 \
+	uninstall-nodist_binSCRIPTS
 
 
 all:		ldmadmin

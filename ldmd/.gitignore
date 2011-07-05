@@ -3,3 +3,4 @@ parser.c
 *.info
 ldmd.1
 ldmd
+scanner.c
