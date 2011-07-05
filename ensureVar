@@ -1,0 +1,25 @@
+LDMHOME=${1?LDM home directory not set}
+QUEUE_DIR=${2?LDM Product-queue directory not set}
+LOGS_DIR=${3?LDM Logs directory not set}
+DATA_DIR=${4?LDM data directory not set}
+
+if test -e $LDMHOME/data; then
+    test -e $QUEUE_DIR ||
+    ln -s $LDMHOME/data $QUEUE_DIR
+else
+    test -e $QUEUE_DIR || mkdir -p $QUEUE_DIR
+fi
+
+if test -e $LDMHOME/logs; then
+    test -e $LOGS_DIR ||
+    ln -s $LDMHOME/logs $LOGS_DIR
+else
+    test -e $LOGS_DIR || mkdir -p $LOGS_DIR
+fi
+
+if test -e $LDMHOME/data; then
+    test -e $DATA_DIR ||
+    ln -s $LDMHOME/data $DATA_DIR
+else
+    test -e $DATA_DIR || mkdir -p $DATA_DIR
+fi

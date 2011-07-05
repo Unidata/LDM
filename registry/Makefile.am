@@ -2,7 +2,6 @@
 #
 # Process this file with automake to produce Makefile.in
 
-ETC_DIR			= $(DESTDIR)$(sysconfdir)
 noinst_LTLIBRARIES	= lib.la
 EXTRA_DIST              = \
     backend.h \
@@ -28,8 +27,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
-    -I$(top_srcdir)/libxml2/include \
-    -DREGISTRY_DIR='"$(ETC_DIR)"'
+    -I$(top_srcdir)/libxml2/include
 
 if MAINTAINER
 backend.c:	backend-libxml2.c

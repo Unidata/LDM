@@ -1,0 +1,17 @@
+LOG_LDM=${1?LDM logging facility not set}
+SYSLOG_CONF=${2?System logging configuration-file not set}
+LDM_LOGFILE=${3?LDM log file pathname not set}
+
+if grep ${LOG_LDM} ${SYSLOG_CONF} >/dev/null; then
+    : true
+else
+    awk '/\.none/ || /\/var\/log\/messages/ || /\/var\/log\/syslog/ {
+        print $1 ";${LOG_LDM}.none	" $2; next;
+    }
+    {print}' ${SYSLOG_CONF} >${SYSLOG_CONF}.new &&
+    echo >>${SYSLOG_CONF}.new &&
+    echo '# Unidata LDM:' >>${SYSLOG_CONF}.new &&
+    echo '${LOG_LDM}.debug	${LDM_LOGFILE}' >>${SYSLOG_CONF}.new &&
+    cp ${SYSLOG_CONF} ${SYSLOG_CONF}.old &&
+    mv -f ${SYSLOG_CONF}.new ${SYSLOG_CONF}
+fi

@@ -20,6 +20,7 @@
 #include "backend.h"
 #include <ldmprint.h>
 #include <log.h>
+#include "globals.h"
 #include "misc.h"
 #include "node.h"
 #include "registry.h"
@@ -71,7 +72,7 @@ typedef struct {
     Formatter   format;
 }       TypeStruct;
 
-static char*                    _registryDir = REGISTRY_DIR;
+static char*                    _registryDir;   /* registry directory path */
 static int                      _initialized;   /* Module is initialized? */
 static int                      _atexitCalled;  /* atexit() called? */
 static Backend*                 _backend;       /* backend database */
@@ -86,6 +87,66 @@ static StringBuf*               _valuePath;     /* pathname of visited value */
 /******************************************************************************
  * Private Functions:
  ******************************************************************************/
+
+/**
+ * Returns the registry directory pathname.
+ *
+ * Returns:
+ *      The registry directory pathname.
+ */
+static const char* getRegistryDir(void)
+{
+    if (NULL == _registryDir)
+        _registryDir = (char*)getRegistryDirPath();
+
+    return _registryDir;
+}
+
+/**
+ * Frees the registry directory pathname, if necessary.
+ */
+static void freeRegistryDir(void)
+{
+    if (getRegistryDirPath() != _registryDir)
+        free(_registryDir);
+
+    _registryDir = NULL;
+}
+
+/**
+ * Sets the registry directory pathname.
+ *
+ * @retval 0            Success
+ * @retval ENOMEM       System error.  "log_start()" called.
+ */
+static int setRegistryDir(
+    const char* const   path)   /**< [in] Pointer to pathname of registry
+                                  *  directory or NULL to reset the registry
+                                  *  directory pathname to the default value. */
+{
+    int         status;
+
+    if (NULL == path) {
+        freeRegistryDir();
+        (void)getRegistryDirPath();
+
+        status = 0;
+    }
+    else {
+        char*   clone;
+
+        if (0 != (status = reg_cloneString(&clone, path))) {
+            LOG_ADD1("Couldn't set new registry pathname to \"%s\"", path);
+        }
+        else {
+            freeRegistryDir();
+
+            _registryDir = clone;
+        }
+    }
+
+    return status;
+}
 
 /*
  * Resets this module
@@ -138,8 +199,7 @@ static void terminate(void)
     (void)closeRegistry();
     resetRegistry();
 
-    if (REGISTRY_DIR != _registryDir)
-        free(_registryDir);
+    freeRegistryDir();
 }
 
 /*
@@ -466,7 +526,8 @@ static RegStatus initRegistry(
  
         if (0 == status && NULL == _backend) {
             /* The backend isn't open. */
-            if (0 != (status = beOpen(&_backend, _registryDir, forWriting))) {
+            if (0 != (status = beOpen(&_backend, getRegistryDir(),
+                            forWriting))) {
                 LOG_ADD0("Couldn't open registry");
             }
             else {
@@ -836,27 +897,12 @@ RegStatus reg_setDirectory(
 
     if (NULL != _backend) {
         LOG_START2("Can't set registry directory to "
-                "\"%s\"; registry already open in \"%s\"", path, _registryDir);
+                "\"%s\"; registry already open in \"%s\"", path,
+                getRegistryDir());
         status = EPERM;
     }
     else {
-        if (NULL == path) {
-            _registryDir = REGISTRY_DIR;
-            status = 0;
-        }
-        else {
-            char*   clone;
-
-            if (0 != (status = reg_cloneString(&clone, path))) {
-                LOG_ADD1("Couldn't set new registry pathname to \"%s\"", path);
-            }
-            else {
-                if (REGISTRY_DIR != _registryDir)
-                    free(_registryDir);
-
-                _registryDir = clone;
-            }
-        }
+        status = setRegistryDir(path);
     }
 
     return status;
@@ -894,7 +940,7 @@ RegStatus reg_reset(void)
 
     closeRegistry();
 
-    status = beReset(_registryDir);
+    status = beReset(getRegistryDir());
 
     resetRegistry();
 
@@ -917,7 +963,7 @@ RegStatus reg_remove(void)
         closeRegistry();
 
         if (0 == status) {
-            status = beRemove(_registryDir);
+            status = beRemove(getRegistryDir());
         }
     }
 

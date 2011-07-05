@@ -882,18 +882,52 @@ case 8:
 YY_RULE_SETUP
 #line 117 "scanner.l"
 {
-    int	status;
+    int         status;
 
     if (yyleng-2 > sizeof(yylval.string)-1) {
-        log_start("String too long: %s", yytext);
+        LOG_START1("String too long: \"%s\"", yytext);
 
 	status = -1;
     }
     else {
-	(void)strncpy(yylval.string, yytext+1, yyleng-2);
+        /*
+         * A backslash escapes the following character, causing it to be copied
+         * to the output string verbatim -- even if the following character is
+         * a backslash.  The escaping backslash is not copied to the output
+         * string.
+         */
+        const char*             from = yytext + 1;         /* exclude first " */
+        const char* const       EOS = yytext + yyleng - 1; /* exclude last " */
+        char*                   to = yylval.string;
+        int                     backslashSeen = 0;
 
-	yylval.string[yyleng-2] = 0;
-	status = STRING;
+        status = STRING;
+
+        while (EOS > from) {
+            if (backslashSeen) {
+                *to++ = *from++;
+                backslashSeen = 0;
+            }
+            else {
+                if ('"' == *from) {
+                    LOG_START1("Unescaped quote: \"%s\"", yytext);
+
+                    status = -1;
+
+                    break;
+                }
+
+                if ('\\' == *from) {
+                    from++;
+                    backslashSeen = 1;
+                }
+                else {
+                    *to++ = *from++;
+                }
+            }
+        }
+
+        *to = 0;
     }
 
     return status;
@@ -901,21 +935,21 @@ YY_RULE_SETUP
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 136 "scanner.l"
+#line 170 "scanner.l"
 {/* whitespace */;}
 	YY_BREAK
 case 10:
 /* rule 10 can match eol */
 YY_RULE_SETUP
-#line 139 "scanner.l"
+#line 173 "scanner.l"
 { line++; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 141 "scanner.l"
+#line 175 "scanner.l"
 ECHO;
 	YY_BREAK
-#line 919 "lex.yy.c"
+#line 953 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1916,7 +1950,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 141 "scanner.l"
+#line 175 "scanner.l"
 
 
 

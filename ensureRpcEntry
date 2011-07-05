@@ -1,0 +1,6 @@
+if awk '$2 == 300029 {exit 1}' /etc/rpc; then
+    cp -f /etc/rpc /etc/rpc.old &&
+    echo 'ldmd		300029	# Unidata LDM system' >>/etc/rpc
+else
+    : true
+fi

@@ -15,12 +15,13 @@
 
 @SET_MAKE@
 
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2011 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
 # redistribution conditions.
 #
+
 
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
@@ -42,9 +43,10 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 subdir = .
-DIST_COMMON = README $(am__configure_deps) $(nobase_include_HEADERS) \
-	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/config.h.in $(srcdir)/macros.make.in \
+DIST_COMMON = README $(am__configure_deps) $(dist_bin_SCRIPTS) \
+	$(nobase_include_HEADERS) $(srcdir)/Makefile.am \
+	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
+	$(srcdir)/ldm.spec.in $(srcdir)/macros.make.in \
 	$(top_srcdir)/configure BACKLOG TODO compile config.guess \
 	config.sub depcomp install-sh ltmain.sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -56,17 +58,8 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES = macros.make
+CONFIG_CLEAN_FILES = macros.make ldm.spec
 CONFIG_CLEAN_VPATH_FILES =
-SOURCES =
-DIST_SOURCES =
-RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
-	html-recursive info-recursive install-data-recursive \
-	install-dvi-recursive install-exec-recursive \
-	install-html-recursive install-info-recursive \
-	install-pdf-recursive install-ps-recursive install-recursive \
-	installcheck-recursive installdirs-recursive pdf-recursive \
-	ps-recursive uninstall-recursive
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -88,7 +81,17 @@ am__nobase_list = $(am__nobase_strip_setup); \
 am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-am__installdirs = "$(DESTDIR)$(includedir)"
+am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(includedir)"
+SCRIPTS = $(dist_bin_SCRIPTS)
+SOURCES =
+DIST_SOURCES =
+RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
+	html-recursive info-recursive install-data-recursive \
+	install-dvi-recursive install-exec-recursive \
+	install-html-recursive install-info-recursive \
+	install-pdf-recursive install-ps-recursive install-recursive \
+	installcheck-recursive installdirs-recursive pdf-recursive \
+	ps-recursive uninstall-recursive
 HEADERS = $(nobase_include_HEADERS)
 RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
@@ -327,7 +330,6 @@ DIST_SUBDIRS = \
     test html
 
 nobase_include_HEADERS = \
-    config.h \
     rpc/rpc.h \
     rpc/types.h \
     rpc/xdr.h \
@@ -343,15 +345,24 @@ nobase_include_HEADERS = \
 EXTRA_DIST = \
     CHANGE_LOG \
     COPYRIGHT \
-    README \
     extractDecls \
-    macros.make.in
+    ldm.spec \
+    macros.make.in \
+    README
+
+dist_bin_SCRIPTS = \
+    ensureLdmhomeLinks \
+    ensureVar \
+    ensureSyslogEntry \
+    ensureRpcEntry \
+    ensureServicesEntry
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 DISTCLEANFILES = *.log $(distArchive)
 distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
 @MAINTAINER_TRUE@FTPDIR = /web/ftp/pub/ldm
+TOP_BUILD_DIR = /tmp/rpmbuild
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -409,6 +420,42 @@ distclean-hdr:
 	-rm -f config.h stamp-h1
 macros.make: $(top_builddir)/config.status $(srcdir)/macros.make.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
+ldm.spec: $(top_builddir)/config.status $(srcdir)/ldm.spec.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+install-dist_binSCRIPTS: $(dist_bin_SCRIPTS)
+	@$(NORMAL_INSTALL)
+	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
+	@list='$(dist_bin_SCRIPTS)'; test -n "$(bindir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  if test -f "$$d$$p"; then echo "$$d$$p"; echo "$$p"; else :; fi; \
+	done | \
+	sed -e 'p;s,.*/,,;n' \
+	    -e 'h;s|.*|.|' \
+	    -e 'p;x;s,.*/,,;$(transform)' | sed 'N;N;N;s,\n, ,g' | \
+	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1; } \
+	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
+	    if ($$2 == $$4) { files[d] = files[d] " " $$1; \
+	      if (++n[d] == $(am__install_max)) { \
+		print "f", d, files[d]; n[d] = 0; files[d] = "" } } \
+	    else { print "f", d "/" $$4, $$1 } } \
+	  END { for (d in files) print "f", d, files[d] }' | \
+	while read type dir files; do \
+	     if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
+	     test -z "$$files" || { \
+	       echo " $(INSTALL_SCRIPT) $$files '$(DESTDIR)$(bindir)$$dir'"; \
+	       $(INSTALL_SCRIPT) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
+	     } \
+	; done
+
+uninstall-dist_binSCRIPTS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(dist_bin_SCRIPTS)'; test -n "$(bindir)" || exit 0; \
+	files=`for p in $$list; do echo "$$p"; done | \
+	       sed -e 's,.*/,,;$(transform)'`; \
+	test -n "$$list" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(bindir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(bindir)" && rm -f $$files
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -753,10 +800,10 @@ distcleancheck: distclean
 	       exit 1; } >&2
 check-am: all-am
 check: check-recursive
-all-am: Makefile $(HEADERS) config.h
+all-am: Makefile $(SCRIPTS) $(HEADERS) config.h
 installdirs: installdirs-recursive
 installdirs-am:
-	for dir in "$(DESTDIR)$(includedir)"; do \
+	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-recursive
@@ -814,7 +861,7 @@ install-dvi: install-dvi-recursive
 
 install-dvi-am:
 
-install-exec-am:
+install-exec-am: install-dist_binSCRIPTS
 
 install-html: install-html-recursive
 
@@ -854,7 +901,8 @@ ps: ps-recursive
 
 ps-am:
 
-uninstall-am: uninstall-nobase_includeHEADERS
+uninstall-am: uninstall-dist_binSCRIPTS \
+	uninstall-nobase_includeHEADERS
 
 .MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) all \
 	ctags-recursive install-am install-data-am install-strip \
@@ -868,14 +916,15 @@ uninstall-am: uninstall-nobase_includeHEADERS
 	distclean-libtool distclean-tags distcleancheck distdir \
 	distuninstallcheck dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am \
-	install-data-hook install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-nobase_includeHEADERS \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
-	ps ps-am tags tags-recursive uninstall uninstall-am \
+	install-data-hook install-dist_binSCRIPTS install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-nobase_includeHEADERS install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs installdirs-am maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-recursive \
+	uninstall uninstall-am uninstall-dist_binSCRIPTS \
 	uninstall-nobase_includeHEADERS
 
 
@@ -907,34 +956,11 @@ install-data-hook:	ensure-ldmhome-links ensure-var
 # symbolic link to "runtime/share" and "runtime/share" doesn't exist, then
 # "test -e share" is false.
 ensure-ldmhome-links:
-	cd $(DESTDIR)$(LDMHOME) \
-	&& ( ls src >/dev/null 2>&1 || $(LN_S) runtime/src src ) \
-	&& ( ls bin >/dev/null 2>&1 || $(LN_S) runtime/bin bin ) \
-	&& ( ls include >/dev/null 2>&1 || $(LN_S) runtime/include include ) \
-	&& ( ls lib >/dev/null 2>&1 || $(LN_S) runtime/lib lib ) \
-	&& ( ls share >/dev/null 2>&1 || $(LN_S) runtime/share share ) \
-	&& ( test ! -e $(distName) || ( test -e runtime || \
-	    $(LN_S) $(distName) runtime ) )
+	$(srcdir)/ensureLdmhomeLinks $(LDMHOME) $(distName)
 
 ensure-var:	$(DESTDIR)$(localstatedir)
-	if test -e $(DESTDIR)$(LDMHOME)/data; then \
-	    test -e $(DESTDIR)$(QUEUE_DIR) \
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data $(DESTDIR)$(QUEUE_DIR); \
-	else \
-	    test -e $(DESTDIR)$(QUEUE_DIR) || mkdir -p $(DESTDIR)$(QUEUE_DIR); \
-	fi
-	if test -e $(DESTDIR)$(LDMHOME)/logs; then \
-	    test -e $(DESTDIR)$(LOGS_DIR) \
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/logs $(DESTDIR)$(LOGS_DIR); \
-	else \
-	    test -e $(DESTDIR)$(LOGS_DIR) || mkdir -p $(DESTDIR)$(LOGS_DIR); \
-	fi
-	if test -e $(DESTDIR)$(LDMHOME)/data; then \
-	    test -e $(DESTDIR)$(DATA_DIR) \
-	    || $(LN_S) $(DESTDIR)$(LDMHOME)/data $(DESTDIR)$(DATA_DIR); \
-	else \
-	    test -e $(DESTDIR)$(DATA_DIR) || mkdir -p $(DESTDIR)$(DATA_DIR); \
-	fi
+	$(srcdir)/ensureVar $(DESTDIR)$(LDMHOME) $(DESTDIR)$(QUEUE_DIR) \
+	    $(DESTDIR)$(LOGS_DIR) $(DESTDIR)$(DATA_DIR) 
 
 $(DESTDIR)$(localstatedir):
 	$(MKDIR_P) $@
@@ -946,54 +972,36 @@ root-actions:	\
     ensure-services-entry
 
 install_setuids:
-	chown root $(DESTDIR)$(bindir)/hupsyslog \
-	&& chown root $(DESTDIR)$(bindir)/ldmd \
-	&& chmod 4755 $(DESTDIR)$(bindir)/hupsyslog \
-	&& chmod 4755 $(DESTDIR)$(bindir)/ldmd
-	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep root >/dev/null \
-	&& ls -l $(DESTDIR)$(bindir)/ldmd | grep rws >/dev/null \
-	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep root >/dev/null \
-	&& ls -l $(DESTDIR)$(bindir)/hupsyslog | grep rws >/dev/null; then \
-	    : true; \
-	else \
-	    echo; \
-	    echo "\
-ERROR: The LDM server program (bin/ldmd) or the hupsyslog(1) \
-program (bin/hupsyslog) is not owned by \"root\" or does not have \
-the setuid bit enabled.  The command \"make install_setuids\" will have \
-to be manually executed by the superuser on a system that allows these \
-actions." \
-	    | fmt; \
-	    echo; \
-	    exit 1; \
+	if chown root $(DESTDIR)$(bindir)/hupsyslog && \
+		chown root $(DESTDIR)$(bindir)/ldmd && \
+		chmod 4755 $(DESTDIR)$(bindir)/hupsyslog && \
+		chmod 4755 $(DESTDIR)$(bindir)/ldmd; then \
+	    if ls -l $(DESTDIR)$(bindir)/ldmd | grep root >/dev/null && \
+		ls -l $(DESTDIR)$(bindir)/ldmd | grep rws >/dev/null && \
+		ls -l $(DESTDIR)$(bindir)/hupsyslog | \
+		    grep root >/dev/null && \
+		ls -l $(DESTDIR)$(bindir)/hupsyslog | grep rws >/dev/null; \
+	    then \
+		: true; \
+	    else \
+		echo; \
+		echo " \
+ERROR: The LDM server program (bin/ldmd) or the hupsyslog(1) program \
+(bin/hupsyslog) is not owned by \"root\" or does not have the setuid bit \
+enabled. The superuser will have to set these attributes manually."; \
+		echo; \
+		exit 1; \
+	    fi \
 	fi
 
 ensure-syslog-entry:
-	if grep $(LOG_LDM) $(SYSLOG_CONF) >/dev/null; then \
-	    : true; \
-	else \
-	    awk '/\.none/ || /\/var\/log\/messages/ || /\/var\/log\/syslog/ { \
-		print $$1 ";$(LOG_LDM).none	" $$2; next; \
-	    } \
-	    {print}' $(SYSLOG_CONF) >$(SYSLOG_CONF).new \
-	    && echo >>$(SYSLOG_CONF).new \
-	    && echo '# Unidata LDM:' >>$(SYSLOG_CONF).new \
-	    && echo '$(LOG_LDM).debug	$(LDM_LOGFILE)' >>$(SYSLOG_CONF).new \
-	    && cp $(SYSLOG_CONF) $(SYSLOG_CONF).old \
-	    && mv -f $(SYSLOG_CONF).new $(SYSLOG_CONF); \
-	fi
+	$(srcdir)/ensureSyslogEntry $(LOG_LDM) $(SYSLOG_CONF) $(LDM_LOGFILE)
 
 ensure-rpc-entry:
-	if awk '$$2 == 300029{exit 1}' /etc/rpc; then \
-	    cp -f /etc/rpc /etc/rpc.old; \
-	    echo 'ldmd		300029	# Unidata LDM system' >>/etc/rpc; \
-	fi
+	$(srcdir)/ensureRpcEntry
 
 ensure-services-entry:
-	if awk '$$2 ~ /388\/tcp/{exit 1}' /etc/services; then \
-	    cp -f /etc/services /etc/services.old; \
-	    echo 'ldm		388/tcp		# Unidata LDM' >>/etc/services;\
-	fi
+	$(srcdir)/ensureServicesEntry
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
@@ -1033,23 +1041,31 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 @MAINTAINER_TRUE@	cd html && $(MAKE) web-update
 
 @MAINTAINER_TRUE@available:	ftp web-update
+rpm:		dist ldm.spec
+	rm -rf $(TOP_BUILD_DIR)
+	mkdir -p $(TOP_BUILD_DIR)/SOURCES
+	cp $(distArchive) $(TOP_BUILD_DIR)/SOURCES 
+	mkdir $(TOP_BUILD_DIR)/SPECS
+	cp ldm.spec $(TOP_BUILD_DIR)/SPECS
+	rpmbuild --define '_topdir $(TOP_BUILD_DIR)' -v -bb ldm.spec
 
 .PHONY:		\
-    root-actions \
-    install_setuids \
-    ensure-syslog-entry \
+    alpha \
+    available \
+    beta \
+    commit-check \
+    ensure-ldmhome-links \
     ensure-rpc-entry \
     ensure-services-entry \
-    ensure-ldmhome-links \
+    ensure-syslog-entry \
     ensure-var \
-    commit-check \
-    remote-checks \
-    tag \
     ftp \
-    beta \
-    alpha \
-    web-update \
-    available
+    install_setuids \
+    remote-checks \
+    root-actions \
+    rpm \
+    tag \
+    web-update
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

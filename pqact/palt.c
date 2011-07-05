@@ -164,8 +164,7 @@ again1:
         incr++;
 
         cp = &buf[len-1];
-        if(*cp != '\n')
-        {
+        if(*cp != '\n' && !feof(fp)) {
                 uerror("Entry too long at line %d", linenumber);
                 return -2;
         }

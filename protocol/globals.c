@@ -10,6 +10,7 @@
 #include <rpc/rpc.h>  /* svc_req */
 #include <stddef.h>
 #include <signal.h>   /* sig_atomic_t */
+#include <stdlib.h>
 #include <string.h>
 
 #include "ldm.h"
@@ -32,6 +33,7 @@ static char             ldmdConfigPath[PATH_MAX];
 static char             pqactDataDirPath[PATH_MAX];
 static char             pqsurfDataDirPath[PATH_MAX];
 static char             surfQueuePath[PATH_MAX];
+static char             sysConfDirPath[PATH_MAX];
 
 /*
  * Timeout for rpc calls:
@@ -317,8 +319,77 @@ void setPqsurfConfigPath(
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
-const char* getPqsurfConfigPath()
+const char* getPqsurfConfigPath(void)
 {
     return getPath(REG_PQSURF_CONFIG_PATH, pqsurfConfigPath,
         "default pqsurf(1) configuration-file");
+}
+
+/**
+ * Returns the pathname of the home of the LDM installation.
+ *
+ * Returns
+ *      Pointer to the pathname.  Might be absolute or relative to the current
+ *      working directory.
+ */
+const char* getLdmHomePath(void)
+{
+    static const char*  ldmHomePath;
+
+    if (NULL == ldmHomePath) {
+        ldmHomePath = getenv("LDMHOME");
+
+        if (NULL == ldmHomePath) {
+            LOG_START0("LDMHOME environment variable not set. Using HOME.");
+            log_log(LOG_WARNING);
+
+            ldmHomePath = getenv("HOME");
+
+            if (NULL == ldmHomePath) {
+                LOG_START0("HOME environment variable not set");
+                log_log(LOG_ERR);
+                abort();
+            }
+        }
+    }
+
+    return ldmHomePath;
+}
+
+/**
+ * Returns the pathname of the static, system-specific directory
+ *
+ * Returns:
+ *      Pointer to the pathname.  Might be absolute or relative to the current
+ *      working directory.
+ */
+const char* getSysConfDirPath(void)
+{
+    if (strlen(sysConfDirPath) == 0) {
+        const char*            ldmHome = getLdmHomePath();
+        static const char      subdir[] = "/etc";
+
+        if (strlen(ldmHome) + strlen(subdir) >= sizeof(sysConfDirPath)) {
+            LOG_START2("System configuration directory pathname too long: "
+                    "\"%s%s\"", ldmHome, subdir);
+            log_log(LOG_ERR);
+            abort();
+        }
+
+        (void)strcat(strcpy(sysConfDirPath, ldmHome), subdir);
+    }
+
+    return sysConfDirPath;
+}
+
+/**
+ * Returns the pathname of the registry directory.
+ *
+ * Returns:
+ *      else            Pointer to the pathname.  Might be absolute or relative
+ *                      to the current working directory.
+ */
+const char* getRegistryDirPath(void)
+{
+    return getSysConfDirPath();
 }

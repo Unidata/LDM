@@ -420,6 +420,7 @@ AC_CONFIG_FILES([
     lib/Makefile
     feedme/Makefile
     hupsyslog/Makefile
+    ldm.spec
     ldmd/Makefile
     ldmping/Makefile
     ldmsend/Makefile
