@@ -41,8 +41,6 @@ LDM installation process:
             <dd>Symbolic link to pqing(1) for IDS data
             <dt><tt>ldmadmin</tt>
             <dd>Top-level LDM management utility
-            <dt><tt>ldmcheck</tt>
-            <dd>LDM system checking utility (deprecated)
             <dt><tt>ldmd</tt>
             <dd>The LDM server
             <dt><tt>ldmfail</tt>

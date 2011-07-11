@@ -8,7 +8,6 @@
 
 EXTRA_DIST		= \
     ldmadmin.in \
-    ldmcheck.in \
     ldmfail.in \
     netcheck.in \
     netcheck.conf \
@@ -17,7 +16,6 @@ EXTRA_DIST		= \
 dist_bin_SCRIPTS	= \
     netcheck \
     syscheck \
-    ldmcheck \
     ldmadmin \
     ldmfail \
     wasReceived
