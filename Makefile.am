@@ -142,8 +142,7 @@ ensure-ldmhome-links:
 	$(srcdir)/ensureLdmhomeLinks $(LDMHOME) $(distName)
 
 ensure-var:	$(DESTDIR)$(localstatedir)
-	$(srcdir)/ensureVar $(DESTDIR)$(LDMHOME) $(DESTDIR)$(QUEUE_DIR) \
-	    $(DESTDIR)$(LOGS_DIR) $(DESTDIR)$(DATA_DIR) 
+	$(srcdir)/ensureVar $(DESTDIR)$(LDMHOME)
 
 $(DESTDIR)$(localstatedir):
 	$(MKDIR_P) $@
