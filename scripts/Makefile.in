@@ -44,9 +44,9 @@ host_triplet = @host@
 subdir = scripts
 DIST_COMMON = $(dist_bin_SCRIPTS) $(dist_man1_MANS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/ldmadmin.in $(srcdir)/ldmcheck.in \
-	$(srcdir)/ldmfail.in $(srcdir)/netcheck.in \
-	$(srcdir)/plotMetrics.in $(srcdir)/syscheck.in
+	$(srcdir)/ldmadmin.in $(srcdir)/ldmfail.in \
+	$(srcdir)/netcheck.in $(srcdir)/plotMetrics.in \
+	$(srcdir)/syscheck.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -54,8 +54,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = ldmadmin ldmcheck ldmfail netcheck plotMetrics \
-	syscheck
+CONFIG_CLEAN_FILES = ldmadmin ldmfail netcheck plotMetrics syscheck
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -282,8 +281,6 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 ldmadmin: $(top_builddir)/config.status $(srcdir)/ldmadmin.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-ldmcheck: $(top_builddir)/config.status $(srcdir)/ldmcheck.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 ldmfail: $(top_builddir)/config.status $(srcdir)/ldmfail.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@

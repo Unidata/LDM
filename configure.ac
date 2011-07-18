@@ -446,7 +446,6 @@ AC_CONFIG_FILES([
     scour/Makefile
     scour/scour
     scripts/ldmadmin
-    scripts/ldmcheck
     scripts/ldmfail
     scripts/Makefile
     scripts/netcheck

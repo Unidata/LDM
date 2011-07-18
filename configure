@@ -27004,7 +27004,7 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
-ac_config_files="$ac_config_files Makefile macros.make rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile lib/Makefile feedme/Makefile hupsyslog/Makefile ldm.spec ldmd/Makefile ldmping/Makefile ldmsend/Makefile notifyme/Makefile pqact/Makefile pqcat/Makefile pqcat/pqcat.1 pqcheck/Makefile pqcopy/Makefile pqcreate/Makefile pqexpire/Makefile pqing/Makefile pqinglib/Makefile pqinsert/Makefile pqmon/Makefile pqsend/Makefile pqsurf/Makefile pqutil/Makefile regex/Makefile registry/Makefile regutil/Makefile rtstats/Makefile scour/Makefile scour/scour scripts/ldmadmin scripts/ldmcheck scripts/ldmfail scripts/Makefile scripts/netcheck scripts/plotMetrics scripts/syscheck ulogger/Makefile html/Makefile html/index.html html/known-problems.html html/basics/Makefile html/basics/index.html html/basics/activating.html html/basics/source-install-steps.html html/basics/what-gets-installed.html html/tutorial/Makefile html/workshop/Makefile html/workshop/specifics.html test/Makefile"
+ac_config_files="$ac_config_files Makefile macros.make rpc/Makefile ulog/Makefile misc/Makefile protocol/Makefile pq/Makefile fauxPq/Makefile lib/Makefile feedme/Makefile hupsyslog/Makefile ldm.spec ldmd/Makefile ldmping/Makefile ldmsend/Makefile notifyme/Makefile pqact/Makefile pqcat/Makefile pqcat/pqcat.1 pqcheck/Makefile pqcopy/Makefile pqcreate/Makefile pqexpire/Makefile pqing/Makefile pqinglib/Makefile pqinsert/Makefile pqmon/Makefile pqsend/Makefile pqsurf/Makefile pqutil/Makefile regex/Makefile registry/Makefile regutil/Makefile rtstats/Makefile scour/Makefile scour/scour scripts/ldmadmin scripts/ldmfail scripts/Makefile scripts/netcheck scripts/plotMetrics scripts/syscheck ulogger/Makefile html/Makefile html/index.html html/known-problems.html html/basics/Makefile html/basics/index.html html/basics/activating.html html/basics/source-install-steps.html html/basics/what-gets-installed.html html/tutorial/Makefile html/workshop/Makefile html/workshop/specifics.html test/Makefile"
 
 
 #AC_CONFIG_SUBDIRS([libxml2])
@@ -27734,7 +27734,6 @@ do
     "scour/Makefile") CONFIG_FILES="$CONFIG_FILES scour/Makefile" ;;
     "scour/scour") CONFIG_FILES="$CONFIG_FILES scour/scour" ;;
     "scripts/ldmadmin") CONFIG_FILES="$CONFIG_FILES scripts/ldmadmin" ;;
-    "scripts/ldmcheck") CONFIG_FILES="$CONFIG_FILES scripts/ldmcheck" ;;
     "scripts/ldmfail") CONFIG_FILES="$CONFIG_FILES scripts/ldmfail" ;;
     "scripts/Makefile") CONFIG_FILES="$CONFIG_FILES scripts/Makefile" ;;
     "scripts/netcheck") CONFIG_FILES="$CONFIG_FILES scripts/netcheck" ;;

@@ -47,7 +47,7 @@
 		<a href="glindex.html#product-queue">product-queue</a>
 		doesn't exist and the command
 		<blockquote><tt>
-		    df -k data
+		    df -k var
 		</tt></blockquote>
 		indicates that sufficient space exists for it, then
 		create the
@@ -59,7 +59,7 @@
 		where the <code>-f</code> option requests "fast" creation.
 
 		<p>If you don't have sufficient space for the product-queue,
-		then you'll have to free-up some space or configure-in a
+		then you'll have to free-up some space or configure a
 		smaller queue.
 	    <li>If the 
 		<a href="glindex.html#product-queue">product-queue</a>

@@ -1,7 +1,7 @@
 Name:		@PACKAGE@
 Version:	@VERSION@
 Release:	1%{?dist}
-Summary:	Receives, processes, and relays data-products 24/7
+Summary:	Subscribes to, receives, relays, and processes data-products
 
 Group:		Applications/Internet
 Vendor:         University Corporation for Atmospheric Research
@@ -14,9 +14,9 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Excludeos:      windows
 
 %ifos linux
-BuildRequires:  make sed perl gcc bash gawk pthreads
+BuildRequires:  make sed perl gcc bash gawk libpthread.so.0
 %else
-BuildRequires:  make sed perl c89 sh awk pthreads
+BuildRequires:  make sed perl c89 sh awk libpthread.so.0
 %endif
 
 Requires:	perl ntpdate netstat top
@@ -65,6 +65,7 @@ make
 
 
 %install
+rm -rf %{buildroot}
 make install
 
 # Adjust pathnames in the LDM registry
