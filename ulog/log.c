@@ -11,7 +11,7 @@
  */
 #include <config.h>
 #undef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 600
+#define _XOPEN_SOURCE 500
 
 #include <assert.h>
 #include <errno.h>
@@ -192,7 +192,7 @@ int log_vadd(
 {
     int                 status;
 
-    if (NULL == fmt || NULL == args) {
+    if (NULL == fmt) {
         lock();
         uerror("log_vadd(): NULL argument");
         unlock();

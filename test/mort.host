@@ -1,5 +1,5 @@
-# libtool(1) can't build a sharable library using this compiler.
-# /usr/bin/c89: illegal option -- d
+# libtool(1) can't use this compiler.
+# /usr/bin/c89: illegal option -- p
 PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/c89
 PATH=/usr/bin:/bin,--disable-max-size,/usr/bin/make,/usr/bin/c89
 

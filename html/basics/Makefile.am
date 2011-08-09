@@ -253,5 +253,10 @@ web-update:
 	    *.gif \
 	    feedtypes \
 	    $(WEB_DESTDIR)/basics
+	sed -e 's:$(DESTDIR)@LDMHOME@:$$LDMHOME:g' \
+	    $(WEB_DESTDIR)/basics/LDM-registry.html \
+	    >$(WEB_DESTDIR)/basics/LDM-registry.html.new
+	mv $(WEB_DESTDIR)/basics/LDM-registry.html.new \
+	    $(WEB_DESTDIR)/basics/LDM-registry.html 
 
 endif

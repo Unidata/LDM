@@ -58,12 +58,9 @@ share
 .cproject
 .project
 .settings
-.gitignore
 libxml2
 macros.make
 TAGS
 Makefile.in
 ldm.spec
-configure
-Makefile.in
 configure

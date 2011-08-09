@@ -69,8 +69,7 @@ rm -rf %{buildroot}
 make install
 
 # Adjust pathnames in the LDM registry
-sed -e "s:%{ldmhome}/%{name}-%{version}:%{defhome}/%{name}-%{version}:g" \
-    -e "s:%{ldmhome}:%{defhome}:g" \
+sed -e "s:%{ldmhome}:%{defhome}:g" \
     %{ldmhome}/etc/registry.xml >%{ldmhome}/etc/registry.xml.new && 
 mv -f %{ldmhome}/etc/registry.xml.new %{ldmhome}/etc/registry.xml || exit 1
 

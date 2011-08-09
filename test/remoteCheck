@@ -1,3 +1,4 @@
+
 # Execute a check of the package on a remote system.  This script is designed
 # to be executed on the remote system.
 #
@@ -10,12 +11,12 @@
 #       cc              Pathname of the C compiler to use
 #       tmp             Pathname of the temporary directory to use (optional)
 
-distId=${1?name of distribution not specified}
-distPath=${2?distribution file not specified}
-env=${3?environment variable settings not specified}
-configOpts=${4?configure-script options not specified}
-make=${5?make utility not specified}
-cc=${6?C compiler not specified}
+distId=${1?'name of distribution not specified'}
+distPath=${2?'distribution file not specified'}
+env=${3?'environment variable settings not specified'}
+configOpts=${4?'configure-script options not specified'}
+make=${5?'make utility not specified'}
+cc=${6?'C compiler not specified'}
 tmp=${7-}
 test -n "$tmp" || tmp=/tmp
 

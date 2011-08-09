@@ -1,5 +1,4 @@
-." $Id: pqcat.1,v 1.14.16.1.2.2 2009/06/18 16:15:03 steve Exp $
-.TH PQCAT 1 "$Date: 2009/06/18 16:15:03 $"
+.TH PQCAT 1 "Date: 2011/07/19"
 .SH NAME
 pqcat - program to print products from an LDM product queue
 .SH SYNOPSIS
@@ -73,8 +72,7 @@ The default is `\fB.*\fP', specifying all products.
 .TP
 .BI "-q " pqfname
 The filename of the product queue.
-The default is \fBqueue/ldm.pq\fP relative to the installation point,
-which was \fB@LDMHOME@\fP.
+The default is printed by the command \fBregutil /queue/path\fP.
 .TP
 .BI \-i " interval"
 Polling interval, in seconds.  When the end of the queue is reached, the
@@ -179,5 +177,5 @@ program, then send an inquiry via email -- together will all relevant
 information -- to
 .sp
 .RS
-\fBsupport@unidata.ucar.edu\fP
+\fBsupport-ldm@unidata.ucar.edu\fP
 .RE

@@ -7,7 +7,6 @@
 ## Process this file with automake to produce Makefile.in
 
 PQ_SUBDIR	= @PQ_SUBDIR@
-EXTRA_DIST	= pqcat.1.in
 bin_PROGRAMS	= pqcat
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \

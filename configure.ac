@@ -427,7 +427,6 @@ AC_CONFIG_FILES([
     notifyme/Makefile
     pqact/Makefile
     pqcat/Makefile
-    pqcat/pqcat.1
     pqcheck/Makefile
     pqcopy/Makefile
     pqcreate/Makefile

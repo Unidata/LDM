@@ -59,8 +59,7 @@ test:
 	done
 
 # The following rule starts a single synchronous build process on a remote
-# system.  Setting MAKEFLAGS to the empty string on the make(1) invocation line
-# appears to be necessary due to a bug in the AIX 5.1 make(1).
+# system.
 singleCheck:
 	scp remoteCheck $(distPath) $(host):/tmp
 	ssh -x $(host) chmod +x /tmp/remoteCheck
@@ -74,39 +73,6 @@ singleCheck:
 	fi
 	touch redo-results
 	ssh -x $(host) rm /tmp/remoteCheck /tmp/$(distName)
-#	distPath=`cd $(top_srcdir) && pwd`/$(distName); \
-#	if echo '\
-#	    $(env) && \
-#	    echo "########################################################" && \
-#	    echo "Building on `uname -n` with" && \
-#	    echo "    PATH=$$PATH" && \
-#	    echo "    CONFIG_OPTS=\"$(configOpts)\"" && \
-#	    echo "    MAKE=\"$(make)\"" && \
-#	    echo "    CC=\"$(cc)\"" && \
-#	    echo && \
-#	    rm -rf $(topTmpDir) && \
-#	    mkdir $(topTmpDir) && \
-#	    cd $(topTmpDir) && \
-#	    scp '$$HOST:$$distPath' $(distName) && \
-#	    gunzip -c $(distName) | pax -r && \
-#	    cd $(distId) && \
-#	    if ./configure --prefix=$(topTmpDir) --disable-root-actions \
-#		    $(configOpts) CC="$(cc)" MAKE="$(make)" \
-#		    LDMHOME=$(topTmpDir); then \
-#		MAKEFLAGS= $(make) install uninstall; \
-#		status=$$?; \
-#	    else \
-#		status=$$?; \
-#		cat config.log; \
-#	    fi; \
-#	    cd /tmp && rm -rf $(topTmpDir); \
-#	    exit $$status' | ssh -x $(host); \
-#	then \
-#	    echo "$(env),$(make),$(cc),$(configOpts),1" >>$(host).results; \
-#	else \
-#	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
-#	fi
-#	touch redo-results
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for a single make(1) and cc(1) pair.
