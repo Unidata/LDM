@@ -1,3 +1,12 @@
+6.9.9.1
+        ldmadmin(1) script:
+            Improved the command "vetqueuesize" (and, consequently, the command
+            "check"). The capacity of the product-queue will not be vetted
+            until the LDM server has been running for at least `regutil
+            /server/max-latency` seconds. This will prevent a misdiagnosis of
+            the queue capacity when an initially empty queue is being rapidly
+            filled at LDM startup.
+
 6.9.8   2011-06-10
         Installation:
             Changed the build-procedure for the product-queue library (pq(3))
