@@ -1,0 +1,27 @@
+/Makefile/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/adler32.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/compress.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/crc32.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/deflate.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/deflate.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/gzio.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/infblock.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/infblock.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/infcodes.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/infcodes.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/inffast.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/inffast.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/inffixed.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/inflate.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/inftrees.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/inftrees.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/infutil.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/infutil.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/trees.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/trees.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/uncompr.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/zconf.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/zlib.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/zutil.c/1.1.1.1/Thu Dec 23 19:21:11 2004//
+/zutil.h/1.1.1.1/Thu Dec 23 19:21:11 2004//
+D

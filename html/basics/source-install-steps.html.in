@@ -34,7 +34,7 @@ Then, do the following:
     $ rm @PACKAGE@-@VERSION@.tar.gz # optional
     $ cd @PACKAGE@-@VERSION@/src
     $ export PATH=... # if necessary
-    $ ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [--disable-max-size] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
+    $ ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [--disable-max-size] [--with-noaaport] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
     Password: ...
     $ make install &gt;make.log 2&gt;&1
     $ make clean # optional
@@ -105,7 +105,7 @@ using the <code>gunzip(1)</code> and <code>pax(1)</code>
 utilities.
 For example:
 <blockquote><pre>
-cd                                                 # go to the LDM user's home-directory
+cd                                                   # go to the LDM user's home-directory
 mkdir @PACKAGE@-@VERSION@                                   # make a version-specific subdirectory
 cd @PACKAGE@-@VERSION@                                      # go to the version-specific subdirectory
 gunzip -c $HOME/@PACKAGE@-@VERSION@.tar.gz | pax -r         # unpack the distribution
@@ -227,6 +227,12 @@ options and arguments, when and if appropriate:
         2^31 bytes in size.  This option disables that attempt so that the
         <tt><b>CC</b></tt>, <tt><b>CPPFLAGS</b></tt>, <tt><b>CFLAGS</b></tt>,
         and <tt><b>LDFLAGS</b></tt> variables are used verbatim. 
+
+    <dt><code>--with-noaaport</code>
+    <dd>Include support for ingesting data-products from a NOAAPORT receiver.
+        This option is disabled by default because most sites don't have a
+        NOAAPORT receiver.
+        <a href="../../noaaport/index.html">NOAAPORT ingestion webpages</a>.
 
     <dt><code>CC=</code><i>path</i>
     <dd>Configures the build process to use <i>path</i> as the pathname of the

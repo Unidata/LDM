@@ -9,7 +9,7 @@ sed '/@FUNCTION_DECLARATIONS@/,$d' $templateFile \
         declStarted = 1;
         lineCount = 0;
     } 
-    /^{/	{ 
+    /^\{/	{ 
         if (declStarted) { 
             for (i = 1; i <= lineCount; i++) {
                 printf ("%s%s", lineSep, lines[i]);

@@ -1,6 +1,7 @@
 /*
- *   Copyright 2010, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2011, University Corporation for Atmospheric Research
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
 
 #include <config.h>
@@ -293,7 +294,7 @@ tsParse(
         tm.tm_mday = day;
         tm.tm_hour = hour;
         tm.tm_min = minute;
-        tm.tm_sec = second - timezone;
+        tm.tm_sec = second - (int)timezone;
         timestamp->tv_sec = mktime(&tm);
         timestamp->tv_usec = microseconds;
         nbytes = 6 == nfields ? 15 : 22;

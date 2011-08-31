@@ -42,7 +42,7 @@ if ./configure --prefix=$tmpPath --disable-root-actions $configOpts \
 then
     MAKEFLAGS= $make install uninstall && status=0
 else
-    cat config.log;
-fi;
-cd /tmp && rm -rf $tmpPath;
+    cat config.log
+fi
+cd $tmp && rm -rf $tmpPath;
 exit $status

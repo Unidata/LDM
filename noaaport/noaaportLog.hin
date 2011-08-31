@@ -1,0 +1,41 @@
+/*
+ *   Copyright © 2011, University Corporation for Atmospheric Research.
+ *   See file COPYRIGHT for copying and redistribution conditions.
+ */
+#ifndef NOAAPORT_LOG_H
+#define NOAAPORT_LOG_H
+
+#include <stdarg.h>
+
+#include <ulog.h>
+
+#define NPL_FMT(fmt)                fmt " [%s:%d]"
+#define NPL_ERRNO()                 nplErrno(NPL_FMT("%s"),strerror(errno),__FILE__,__LINE__)
+#define NPL_START0(fmt)             nplStart(NPL_FMT(fmt),__FILE__,__LINE__);
+#define NPL_START1(fmt,a)           nplStart(NPL_FMT(fmt),a,__FILE__,__LINE__);
+#define NPL_START2(fmt,a,b)         nplStart(NPL_FMT(fmt),a,b,__FILE__,__LINE__);
+#define NPL_START3(fmt,a,b,c)       nplStart(NPL_FMT(fmt),a,b,c,__FILE__,__LINE__);
+#define NPL_START4(fmt,a,b,c,d)     nplStart(NPL_FMT(fmt),a,b,c,d,__FILE__,__LINE__);
+#define NPL_START5(fmt,a,b,c,d,e)   nplStart(NPL_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__);
+#define NPL_ADD0(fmt)               nplAdd(NPL_FMT(fmt),__FILE__,__LINE__)
+#define NPL_ADD1(fmt,a)             nplAdd(NPL_FMT(fmt),a,__FILE__,__LINE__)
+#define NPL_ADD2(fmt,a,b)           nplAdd(NPL_FMT(fmt),a,b,__FILE__,__LINE__)
+#define NPL_ADD3(fmt,a,b,c)         nplAdd(NPL_FMT(fmt),a,b,c,__FILE__,__LINE__)
+#define NPL_ADD4(fmt,a,b,c,d)       nplAdd(NPL_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
+#define NPL_ADD5(fmt,a,b,c,d,e)     nplAdd(NPL_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
+#define NPL_SERROR0(fmt)            nplErrno(NPL_FMT(fmt),__FILE__,__LINE__)
+#define NPL_SERROR1(fmt,a)          nplErrno(NPL_FMT(fmt),a,__FILE__,__LINE__)
+#define NPL_SERROR2(fmt,a,b)        nplErrno(NPL_FMT(fmt),a,b,__FILE__,__LINE__)
+#define NPL_SERROR3(fmt,a,b,c)      nplErrno(NPL_FMT(fmt),a,b,c,__FILE__,__LINE__)
+#define NPL_SERROR4(fmt,a,b,c,d)    nplErrno(NPL_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
+#define NPL_SERROR5(fmt,a,b,c,d,e)  nplErrno(NPL_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
+#define NPL_ERRNUM0(err,fmt)            nplErrnum(err,NPL_FMT(fmt),__FILE__,__LINE__)
+#define NPL_ERRNUM1(err,fmt,a)          nplErrnum(err,NPL_FMT(fmt),a,__FILE__,__LINE__)
+#define NPL_ERRNUM2(err,fmt,a,b)        nplErrnum(err,NPL_FMT(fmt),a,b,__FILE__,__LINE__)
+#define NPL_ERRNUM3(err,fmt,a,b,c)      nplErrnum(err,NPL_FMT(fmt),a,b,c,__FILE__,__LINE__)
+#define NPL_ERRNUM4(err,fmt,a,b,c,d)    nplErrnum(err,NPL_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
+#define NPL_ERRNUM5(err,fmt,a,b,c,d,e)  nplErrnum(err,NPL_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
+
+@FUNCTION_DECLARATIONS@
+
+#endif

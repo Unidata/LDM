@@ -1,0 +1,91 @@
+#!/bin/csh -f
+
+@ COUNT=5844
+@ ANSWERED=0
+
+while ( $COUNT <= 6473 )
+   set UPC=`grep -c -i '^From.*unidata.ucar.edu' ~support/Mail/gempak/${COUNT}`
+   if ( $UPC > 0 ) then
+      set IS_CHIS=`grep -c -i chiswell ~support/Mail/gempak/${COUNT}`
+      if ( $IS_CHIS == 0 ) set IS_CHIS=`grep -c -i chiz ~support/Mail/gempak/${COUNT}`
+      if ( $IS_CHIS > 0 ) @ ANSWERED= $ANSWERED + 1
+   endif
+   @ COUNT = $COUNT + 1
+end
+
+echo Answered GEMPAK $ANSWERED
+
+@ COUNT=1958
+@ ANSWERED=0
+
+while ( $COUNT <= 2243 )
+   set UPC=`grep -c -i '^From.*unidata.ucar.edu' ~support/Mail/gembud-list/${COUNT}`
+   if ( $UPC > 0 ) then
+      set IS_CHIS=`grep -c -i chiswell ~support/Mail/gembud-list/${COUNT}`
+      if ( $IS_CHIS == 0 ) set IS_CHIS=`grep -c -i chiz ~support/Mail/gembud-list/${COUNT}`
+      if ( $IS_CHIS > 0 ) @ ANSWERED= $ANSWERED + 1
+   endif
+   @ COUNT = $COUNT + 1
+end
+
+echo Answered GEMBUD $ANSWERED
+
+@ COUNT=6506
+@ ANSWERED=0
+
+while ( $COUNT <= 7062 )
+   set UPC=`grep -c -i '^From.*unidata.ucar.edu' ~support/Mail/idd/${COUNT}`
+   if ( $UPC > 0 ) then
+      set IS_CHIS=`grep -c -i chiswell ~support/Mail/idd/${COUNT}`
+      if ( $IS_CHIS == 0 ) set IS_CHIS=`grep -c -i chiz ~support/Mail/idd/${COUNT}`
+      if ( $IS_CHIS > 0 ) @ ANSWERED= $ANSWERED + 1
+   endif
+   @ COUNT = $COUNT + 1
+end
+
+echo Answered IDD $ANSWERED
+
+@ COUNT=6796
+@ ANSWERED=0
+
+while ( $COUNT <= 7302 )
+   set UPC=`grep -c -i '^From.*unidata.ucar.edu' ~support/Mail/ldm-users-list/${COUNT}`
+   if ( $UPC > 0 ) then
+      set IS_CHIS=`grep -c -i chiswell ~support/Mail/ldm-users-list/${COUNT}`
+      if ( $IS_CHIS == 0 ) set IS_CHIS=`grep -c -i chiz ~support/Mail/ldm-users-list/${COUNT}`
+      if ( $IS_CHIS > 0 ) @ ANSWERED= $ANSWERED + 1
+   endif
+   @ COUNT = $COUNT + 1
+end
+
+echo Answered LDM-USER-LIST $ANSWERED
+
+@ COUNT=6186
+@ ANSWERED=0
+
+while ( $COUNT <= 6648 )
+   set UPC=`grep -c -i '^From.*unidata.ucar.edu' ~support/Mail/ldm/${COUNT}`
+   if ( $UPC > 0 ) then
+      set IS_CHIS=`grep -c -i chiswell ~support/Mail/ldm/${COUNT}`
+      if ( $IS_CHIS == 0 ) set IS_CHIS=`grep -c -i chiz ~support/Mail/ldm/${COUNT}`
+      if ( $IS_CHIS > 0 ) @ ANSWERED= $ANSWERED + 1
+   endif
+   @ COUNT = $COUNT + 1
+end
+
+echo Answered LDM $ANSWERED
+
+@ COUNT=79
+@ ANSWERED=0
+
+while ( $COUNT <= 322 )
+   set UPC=`grep -c -i '^From.*unidata.ucar.edu' ~support/Mail/conduit/${COUNT}`
+   if ( $UPC > 0 ) then
+      set IS_CHIS=`grep -c -i chiswell ~support/Mail/conduit/${COUNT}`
+      if ( $IS_CHIS == 0 ) set IS_CHIS=`grep -c -i chiz ~support/Mail/conduit/${COUNT}`
+      if ( $IS_CHIS > 0 ) @ ANSWERED= $ANSWERED + 1
+   endif
+   @ COUNT = $COUNT + 1
+end
+
+echo Answered CONDUIT $ANSWERED

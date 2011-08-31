@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # libtoolT - Provide generalized library-building support services.
-# Generated automatically by  (GNU ldm 6.9.9.1)
+# Generated automatically by  (GNU ldm 6.10.0.1)
 # NOTE: Changes made to this file will be lost: look at ltmain.sh.
 #
 # Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
@@ -82,13 +82,13 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="c89"
+LTCC="gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-g -O2 -m64"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
-CC="c89"
+CC="gcc"
 
 # Is the compiler the GNU C compiler?
 with_gcc=yes
@@ -7350,10 +7350,10 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="c89"
+LTCC="gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-g -O2 -m64"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
 CC="g++"
@@ -7659,10 +7659,10 @@ AR="ar"
 AR_FLAGS="cru"
 
 # A C compiler.
-LTCC="c89"
+LTCC="gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-g -O2 -m64"
+LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
 CC="gfortran"

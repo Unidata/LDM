@@ -1,0 +1,32 @@
+templateFile=${1:?'header template-file not specified'}
+cFile=${2:?'C source-file not specified'}
+sed '/@FUNCTION_DECLARATIONS@/,$d' $templateFile \
+&& awk '
+    BEGIN {
+        lineSep = "";
+    }
+    /^$/        {
+        declStarted = 1;
+        lineCount = 0;
+        next;
+    }
+    /^static/ {
+        declStarted = 0;
+        lineCount = 0;
+    }
+    /^\{/	{
+        if (declStarted) {
+            for (i = 1; i <= lineCount; i++) {
+                printf ("%s%s", lineSep, lines[i]);
+                lineSep = "\n";
+            }
+            print ";";
+            declStarted = 0;
+            lineCount = 0;
+        }
+    }
+    declStarted != 0 {
+        lines[++lineCount] = $0;
+    }
+    ' $cFile \
+&& sed '1,/@FUNCTION_DECLARATIONS@/d' $templateFile

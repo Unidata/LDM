@@ -5,13 +5,30 @@
 # redistribution conditions.
 #
 ## Process this file with automake to produce Makefile.in
-EXTRA_DIST	= results.tab redo-results
+EXTRA_DIST	= redo_results.tab results.tab
 distId		= $(PACKAGE)-$(VERSION)
 distName	= $(distId).tar.gz
 distPath	= $(top_srcdir)/$(distName)
 topTmpDir	= /tmp/$(distId)
 
 if MAINTAINER
+
+HOST_FILES	= \
+    buddy.host \
+    dana.host \
+    flip.host \
+    gilda.host \
+    imogene.host \
+    rip.host \
+    sid.host \
+    tweety.host \
+    zasu.host
+RESULTS_FILES	= $(HOST_FILES:.host=.results)
+
+all:
+
+$(distPath):
+	cd .. && $(MAKE) dist
 
 # The following rule is executed on the remote system.  Setting
 # MAKEFLAGS to the empty string on the make(1) invocation line appears
@@ -62,8 +79,8 @@ test:
 # system.
 singleCheck:
 	scp remoteCheck $(distPath) $(host):/tmp
-	ssh -x $(host) chmod +x /tmp/remoteCheck
-	if ssh -x $(host) /tmp/remoteCheck $(distId) \
+	ssh -vvv -x $(host) chmod +x /tmp/remoteCheck
+	if ssh -vvv -x $(host) /tmp/remoteCheck $(distId) \
 	    /tmp/$(distName) '"$(env)"' '"$(configOpts)"' '"$(make)"' \
 		'"$(cc)"' $(tmp); \
 	then \
@@ -71,21 +88,27 @@ singleCheck:
 	else \
 	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
 	fi
-	touch redo-results
-	ssh -x $(host) rm /tmp/remoteCheck /tmp/$(distName)
+	ssh -vvv -x $(host) rm /tmp/remoteCheck /tmp/$(distName)
+	touch redo_results.tab
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for a single make(1) and cc(1) pair.
 multiCheck:
 	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
-	    tmp="$(tmp)" configOpts="$$configOpts" singleCheck
+	    tmp="$(tmp)" configOpts="$(configOpts)" singleCheck
 	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
-	    tmp="$(tmp)" configOpts="--disable-shared $$configOpts" singleCheck
+	    tmp="$(tmp)" configOpts="--disable-shared $(configOpts)" singleCheck
+	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
+	    tmp="$(tmp)" configOpts="--with-noaaport $(configOpts)" singleCheck
+	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
+	    tmp="$(tmp)" \
+	    configOpts="--with-noaaport --disable-shared $(configOpts)" \
+	    singleCheck
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for multiple make(1) and cc(1) pairs.
-.host.check:
-	rm -f $*.results $*.log
+.host.results:
+	rm -f $*.results
 	grep '^[^#]' $< | while IFS=',' read env configOpts make cc tmp; do \
 	    $(MAKE) host="$*" env="$$env" configOpts="$$configOpts" \
 		make="$$make" cc="$$cc" tmp="$$tmp" multiCheck </dev/null; \
@@ -93,11 +116,11 @@ multiCheck:
 
 # The following rule starts concurrent asynchronous builds on multiple remote
 # systems.
-hostchecks:	$(distPath)
-	-rm -f $@
-	hosts=`ls *.host | sed 's/.host//'`; \
+hostchecks:
+	rm -f $@
+	hosts=`echo $(HOST_FILES) | sed 's/\.host//g'`; \
 	for host in $$hosts; do \
-	    $(MAKE) -s $$host.check & pid="$$!"; \
+	    $(MAKE) -s $$host.results & pid="$$!"; \
 	    echo $$host $$pid >>$@; \
 	    echo "Building on $$host"; \
 	done; \
@@ -117,10 +140,14 @@ hostchecks:	$(distPath)
 	rm -f $@; \
 	exit $$status
 
-# hostname,os,cpu,make,cc,config_opts,exit_status
-results.tab:	redo-results
-	ls *.results | sed 's/.results//' | \
-	while read host; do \
+# "results.tab" doesn't depend on $(RESULTS_FILES) because that would cause it
+# to be recreated every time a "make ... singleCheck" was executed to debug
+# the build on a remote system.
+#
+# FIELDS: hostname,os,cpu,make,cc,config_opts,exit_status
+results.tab:	redo_results.tab
+	hosts=`echo $(RESULTS_FILES) | sed 's/\.results//g'`; \
+	for host in $$hosts; do \
 	    case `ssh -x $$host uname </dev/null` in \
 		AIX)	os=`ssh -x $$host uname -srv </dev/null`;; \
 		*)	os=`ssh -x $$host uname -sr </dev/null`;; \

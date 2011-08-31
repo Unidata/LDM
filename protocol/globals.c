@@ -1,8 +1,8 @@
 /*
- *   Copyright 2005, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2011, University Corporation for Atmospheric Research
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: globals.c,v 1.1.2.3 2007/02/12 20:38:54 steve Exp $ */
 
 #include "config.h"
 

@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "config.h"
+#include <config.h>
 #include <signal.h> /* sig_atomic_t */
 #include <stdlib.h> /* at least malloc() */
 #include <sys/time.h> /* timeval */

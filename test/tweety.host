@@ -1,3 +1,6 @@
+# configure: ZLib not installed => can't build NOAAPORT
+PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,,/opt/gnu/bin/make,/opt/gnu/bin/gcc,/usr/tmp
+
 # libtool(1) can't build a sharable library with this compiler
 # ld: Unsatisfied symbol "main" in file <no file>
 PATH=/usr/bin:/bin:/usr/contrib/bin:/opt/bin,,/usr/bin/make,/usr/bin/cc,/usr/tmp
@@ -25,5 +28,3 @@ PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,,/usr/bin/make,/opt/
 #cc: "../rpc/svc.h", line 106: error 1578: Size of struct or union member is unknown.
 PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,,/usr/bin/make,/opt/ansic/bin/c89,/usr/tmp
 PATH=/opt/ansic/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,--disable-max-size,/usr/bin/make,/opt/ansic/bin/c89,/usr/tmp
-
-PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,,/opt/gnu/bin/make,/opt/gnu/bin/gcc,/usr/tmp

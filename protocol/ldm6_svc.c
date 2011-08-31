@@ -4,7 +4,7 @@
  * It was generated using rpcgen.
  */
 
-#include "../protocol/ldm.h"
+#include "ldm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <rpc/pmap_clnt.h>
@@ -16,7 +16,7 @@
 #ifndef SIG_PF
 #define SIG_PF void(*)(int)
 #endif
-#include "config.h"
+#include <config.h>
 
 void
 ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp)

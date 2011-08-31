@@ -1,0 +1,13 @@
+/*
+ *   Copyright 2011, University Corporation for Atmospheric Research.
+ *   See file COPYRIGHT for copying and redistribution conditions.
+ */
+
+#ifndef LDM_PRODUCT_QUEUE_H
+#define LDM_PRODUCT_QUEUE_H
+
+typedef struct LdmProductQueue  LdmProductQueue;
+
+@FUNCTION_DECLARATIONS@
+
+#endif

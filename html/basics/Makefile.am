@@ -17,6 +17,7 @@ EXTRA_DIST	= \
     logfile.html \
     monitoring.html \
     multiple_ldms.html \
+    noaaport.html \
     newlog.html \
     platform.html \
     pqact.conf.html \
@@ -75,6 +76,7 @@ html_DATA	= \
     logfile.html \
     monitoring.html \
     multiple_ldms.html \
+    noaaport.html \
     newlog.html \
     platform.html \
     pqact.conf.html \

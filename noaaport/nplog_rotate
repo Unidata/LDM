@@ -1,0 +1,19 @@
+#!/bin/csh -f
+#
+# This is the log directory defined in syslog.conf
+cd /data/tmp
+
+set LOGS=("nwstg.log" "goes.log" "nwstg2.log" "oconus.log")
+
+if ( $#argv > 0 ) then
+  set KEEP_LOG=$1
+else
+  set KEEP_LOG=14
+endif
+
+foreach LOG ($LOGS)
+   echo rotate $LOG
+   ~ldm/bin/newlog ./$LOG $KEEP_LOG
+end
+
+~ldm/bin/hupsyslog

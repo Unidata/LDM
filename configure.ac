@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.9.9.1], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.10.0.1], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -11,13 +11,36 @@ AC_CONFIG_HEADERS([config.h])
 
 #UD_CPPFLAGS
 #AC_DEFINE([_POSIX_C_SOURCE], [1], [Level of POSIX compliance])
-AC_DEFINE([_XOPEN_SOURCE], [500], [Level of POSIX compliance])
-AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
-#AC_USE_SYSTEM_EXTENSIONS
+#AC_DEFINE([_XOPEN_SOURCE], [500], [Level of POSIX compliance])
+#AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
+AC_USE_SYSTEM_EXTENSIONS
+
+case `uname -s` in
+    OSF1)
+        AC_DEFINE([_XOPEN_SOURCE], [500],
+                [Needed for MAP_FAILED and EOVERFLOW on OSF1 systems])
+        AC_DEFINE([_OSF_SOURCE], [1],
+                [Needed for "struct mreq" on OSF1 systems])
+        ;;
+    IRIX*)
+        AC_DEFINE([_SGI_SOURCE], [1],
+                [Needed for "struct mreq" on IRIX systems])
+        AC_DEFINE([_BSD_TYPES], [1],
+                [Needed for "u_int" and the like on IRIX systems])
+        ;;
+esac
 
 AM_CONDITIONAL([MAINTAINER],
     [test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu &&
     test `/bin/pwd` = /machine/steve/ldm/src])
+
+AC_ARG_WITH([noaaport],
+    AC_HELP_STRING([--with-noaaport],
+	[enable support for reading data from a NOAAPORT receiver
+        [[default=without]]]),
+    [],
+    [with_noaaport=no])
+AM_CONDITIONAL([WANT_NOAAPORT], [test "x$with_noaaport" != xno])
 
 AC_ARG_ENABLE([debug],
     AC_HELP_STRING([--enable-debug],
@@ -148,7 +171,7 @@ AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
 AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
 # Check for the CUNIT unit-testing package
-AC_MSG_NOTICE([Checking for the CUNIT unit-testing package.])
+AC_MSG_NOTICE([checking for the CUNIT unit-testing package.])
 AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
     [CPPFLAGS_CUNIT=-I/opt/include
     AC_SUBST(CPPFLAGS_CUNIT)
@@ -312,10 +335,6 @@ UD_PROG_NETSTAT
 UD_PROG_TOP
 UD_LIB_YACC
 UD_MMAP
-AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
-AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])
-AC_CHECK_TYPE([u_long],,[AC_DEFINE([u_long], [unsigned long], [rpcgen(1) typedef])])
-AC_CHECK_TYPE([caddr_t],,[AC_DEFINE([caddr_t], [void*], [rpcgen(1) typedef])])
 AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int, 4)
 AC_CHECK_SIZEOF(long, 4)
@@ -367,7 +386,6 @@ AC_CHECK_TYPE(ptrdiff_t, int)
 AC_CHECK_FUNCS([timegm])
 AC_CHECK_FUNCS([fstatvfs fstatfs])
 TYPE_SOCKLEN_T
-AC_CHECK_HEADERS([stdlib.h unistd.h])
 AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid dnl
 strdup seteuid setenv mmap sigaction])
 UD_SIG_ATOMIC_T
@@ -394,17 +412,41 @@ AC_SEARCH_LIBS(
     AC_SUBST([LD_GEN])
     LIBS=$libs],
     [AC_MSG_ERROR([Could not find required function dirname],[1])])
+AC_SEARCH_LIBS([sched_setscheduler], [rt])
 
 AC_C_BIGENDIAN
+AC_HEADER_STDC
+AC_CHECK_HEADERS([errno.h stdio.h unistd.h stdlib.h string.h sys/types.h \
+        sys/ipc.h sys/shm.h sys/sem.h sys/stat.h sys/wait.h unistd.h])
 AC_CHECK_HEADERS([stropts.h], ,
 [
     AC_CHECK_HEADERS([sys/ioctl.h], ,
 	AC_MSG_ERROR("Missing necessary header-file"))
 ])
 
+AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
+AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])
+AC_CHECK_TYPE([u_long],,[AC_DEFINE([u_long], [unsigned long], [rpcgen(1) typedef])])
+AC_CHECK_TYPE([caddr_t],,[AC_DEFINE([caddr_t], [void*], [rpcgen(1) typedef])])
+
 # HACKS:
 AC_CHECK_DECL([strtok_r], , [AC_DEFINE([_REENTRANT], [1], 
     [For declarations of *_r() functions on our HP-UX/gcc 3.3.2 system])])
+
+AC_MSG_CHECKING([for PATH_MAX])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_SOURCE([
+            #include <limits.h>
+            char path[[PATH_MAX+1]];
+        ])
+    ],
+    AC_MSG_RESULT([found]),
+    [
+        AC_DEFINE([PATH_MAX], [255], [Maximum length of a pathname])
+        AC_MSG_RESULT([not found])
+    ]
+)
     
 AC_PROG_LIBTOOL
 
@@ -424,6 +466,11 @@ AC_CONFIG_FILES([
     ldmd/Makefile
     ldmping/Makefile
     ldmsend/Makefile
+    noaaport/Makefile
+    noaaport/g2/Makefile
+    noaaport/gempak/Makefile
+    noaaport/tables/Makefile
+    noaaport/zlib/Makefile
     notifyme/Makefile
     pqact/Makefile
     pqcat/Makefile
@@ -465,7 +512,11 @@ AC_CONFIG_FILES([
     test/Makefile
 ])
 
+export CC
+
+AM_COND_IF([WANT_NOAAPORT], [AC_CONFIG_SUBDIRS([noaaport/libpng])])
 #AC_CONFIG_SUBDIRS([libxml2])
+
 (cd libxml2 && ./configure --prefix=$prefix --disable-ipv6 --without-c14n --without-catalog --without-debug --without-docbook --without-ftp --without-html --without-http --without-iconv --without-iso8859x --without-legacy --without-pattern --without-python --without-reader --without-readline --without-regexps --without-schemas --without-schematron --without-threads --without-valid --without-xinclude --without-xpath --without-xptr --without-zlib CC="$CC")
 
 

@@ -124,7 +124,7 @@ The default file that comes with the distribution contains examples.
 More information on this configuration-file can be found on the
 <a href="ldmd.conf.html"><tt>ldmd.conf</tt> webpage</a>.
 
-
+<p>Here are some examples:
 
 <ul>
   <li><p><a href="glindex.html#REQUEST entry"><tt>REQUEST</tt> entries</a>
@@ -233,6 +233,12 @@ EXEC "pqact -f ANY-NNEXRAD /local/ldm/etc/GEMPAK/pqact.gempak_decoders"
       <p><a href="glindex.html#IDD">IDD</a>
       statistics are displayed on the <a 
       href="glindex.html#IDD rtstats webpages">IDD rtstats webpages</a>.
+
+  <li><p><a href="glindex.html#EXEC entry">
+      <tt>EXEC</tt> entries</a> for 
+      <a href="../../noaaport/index.html#configuration">
+      ingesting data-products from a NOAAPORT receiver</a> -- if you
+      built the LDM package to support this.
 
 </ul>
 
@@ -385,6 +391,11 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
        (to see that value, execute the command
        <tt><a href="glindex.html#regutil">regutil</a> 
        /insertion-check-interval</tt>).
+
+    <li><p>If you intend to ingest data-products from a NOAAPORT receiver,
+        then you should read the section on
+        <a href="../../noaaport/index.html#logging">logging</a> in the 
+        <a href="../../noaaport/index.html">NOAAPORT ingestion webpages</a>.
 
 </ul>
 

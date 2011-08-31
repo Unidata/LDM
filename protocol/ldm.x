@@ -1,5 +1,3 @@
-/* $Id: ldm.x,v 5.69.8.1.4.9 2008/10/09 20:00:23 steve Exp $ */
-
 /*
  * The server- and client-side modules created from this file include support
  * for both "downstream" and "upstream" LDM-s.  For example, the client-side
@@ -13,7 +11,7 @@
  */
 
 #if defined(RPC_HDR) || defined(RPC_SVC)
-%#include "config.h"
+%#include <config.h>
 #endif
 
 #ifdef RPC_HDR

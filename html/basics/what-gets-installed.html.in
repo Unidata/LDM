@@ -27,6 +27,8 @@ LDM installation process:
             <dd>Symbolic link to pqing(1) for DDPLUS data
             <dt><tt>dds</tt>
             <dd>Symbolic link to pqing(1) for DDS data
+            <dt><tt>dvbs_multicast</tt>
+            <dd>Optional program for ingesting NOAAPORT data (deprecated)
             <dt><tt>feedme</tt>
             <dd>Program for obtaining data from a remote LDM (deprecated)
             <dt><tt>feedtest</tt>
@@ -53,6 +55,8 @@ LDM installation process:
             <dd>Utility for monitoring remote hosts (deprecated)
             <dt><tt>newlog</tt>
             <dd>Program for rotating LDM log files
+            <dt><tt>noaaportIngester</tt>
+            <dd>Optional program for ingesting NOAAPORT data
             <dt><tt>notifyme</tt>
             <dd>Program for testing access to a remote LDM
             <dt><tt>plotMetrics</tt>
@@ -83,6 +87,8 @@ LDM installation process:
             <dd>Program for splitting WMO bulletins
             <dt><tt>pqutil</tt>
             <dd>Program for manipulating a product-queue
+            <dt><tt>readnoaaport</tt>
+            <dd>Optional program for ingesting NOAAPORT data (deprecated)
             <dt><tt>regex</tt>
             <dd>Program for testing regular expressions
             <dt><tt>regutil</tt>
@@ -101,6 +107,8 @@ LDM installation process:
     <dd>Configuration directory:
     <br><br>
         <dl>
+            <dt><tt>g2*.tbl</tt>
+            <dd>Optional GRIB2 tables for ingesting NOAAPORT data
             <dt><tt>ldmd.conf</tt>
             <dd>LDM server configuration file
             <dt><tt>netcheck.conf</tt>
@@ -155,11 +163,19 @@ LDM installation process:
         </dl>
 <br><br>
     <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/doc/ldm/</tt>
-    <dd>LDM-related non-man(1) documentation:
+    <dd>HTML documentation on the LDM:
     <br><br>
         <dl>
             <dt>index.html</tt>
             <dd>Top-level HTML page on the LDM
+        </dl>
+<br><br>
+    <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/doc/noaaport/</tt>
+    <dd>Optional HTML documentation on NOAAPORT ingestion:
+    <br><br>
+        <dl>
+            <dt>index.html</tt>
+            <dd>Top-level HTML page on NOAAPORT ingestion
         </dl>
 <br><br>
     <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/man/</tt>
