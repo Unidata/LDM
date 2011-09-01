@@ -39,3 +39,5 @@
 249 255 Shallow convective cloud top lev  -                    SCTL     0
 251 255 Deep convective cloud bottom lev  -                    DCBL     0
 252 255 Deep convective cloud top level   -                    DCTL     0
+253 255 Low bottom lvl of supercool H2O   -                    LBSH     0
+254 255 High top lvl of supercool H2O     -                    HTSH     0
