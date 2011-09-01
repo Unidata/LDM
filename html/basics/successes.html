@@ -61,6 +61,14 @@
       <tr>
         <td>AIX 1 5</td>
         <td>000C330F4C00</td>
+        <td>/usr/vac/bin/cc -q64</td>
+        <td>PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>AIX 1 5</td>
+        <td>000C330F4C00</td>
         <td>/usr/vac/bin/xlc -q32</td>
         <td>PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32</td>
         <td>/usr/ccs/bin/make</td>
@@ -83,6 +91,14 @@
         <td>--disable-shared </td>
       </tr>
       <tr>
+        <td>AIX 1 5</td>
+        <td>000C330F4C00</td>
+        <td>/usr/vac/bin/xlc -q64</td>
+        <td>PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
         <td>Darwin 8.11.0</td>
         <td>Power Macintosh</td>
         <td>/usr/bin/cc</td>
@@ -101,6 +117,22 @@
       <tr>
         <td>Darwin 8.11.0</td>
         <td>Power Macintosh</td>
+        <td>/usr/bin/cc</td>
+        <td>PATH=/usr/bin:/bin:/usr/sbin:/sbin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>Darwin 8.11.0</td>
+        <td>Power Macintosh</td>
+        <td>/usr/bin/cc</td>
+        <td>PATH=/usr/bin:/bin:/usr/sbin:/sbin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>Darwin 8.11.0</td>
+        <td>Power Macintosh</td>
         <td>/usr/bin/gcc</td>
         <td>PATH=/usr/bin:/bin:/usr/sbin:/sbin</td>
         <td>/usr/bin/gnumake</td>
@@ -120,7 +152,15 @@
         <td>/usr/bin/gcc</td>
         <td>PATH=/usr/bin:/bin:/usr/sbin:/sbin</td>
         <td>/usr/bin/gnumake</td>
-        <td>--with-noaaport</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>Darwin 8.11.0</td>
+        <td>Power Macintosh</td>
+        <td>/usr/bin/gcc</td>
+        <td>PATH=/usr/bin:/bin:/usr/sbin:/sbin</td>
+        <td>/usr/bin/gnumake</td>
+        <td>--with-noaaport --disable-shared </td>
       </tr>
       <tr>
         <td>HP-UX B.11.00</td>
@@ -136,6 +176,38 @@
         <td>/opt/gnu/bin/gcc</td>
         <td>PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
         <td>/opt/gnu/bin/make</td>
+        <td>--disable-shared </td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>/opt/gnu/bin/gcc</td>
+        <td>PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td>/opt/gnu/bin/make</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>HP-UX B.11.00</td>
+        <td>9000/785</td>
+        <td>/opt/gnu/bin/gcc</td>
+        <td>PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin</td>
+        <td>/opt/gnu/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>IRIX64 6.5</td>
+        <td>IP30</td>
+        <td>/bin/c99 -64</td>
+        <td>PATH=/usr/bin:/bin:/usr/sbin</td>
+        <td>/usr/bin/make</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>IRIX64 6.5</td>
+        <td>IP30</td>
+        <td>/bin/c99 -64</td>
+        <td>PATH=/usr/bin:/bin:/usr/sbin</td>
+        <td>/usr/bin/make</td>
         <td>--disable-shared </td>
       </tr>
       <tr>
@@ -144,7 +216,15 @@
         <td>/bin/c99 -64</td>
         <td>PATH=/usr/bin:/bin:/usr/sbin</td>
         <td>/usr/bin/make</td>
-        <td>--with-noaaport</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>IRIX64 6.5</td>
+        <td>IP30</td>
+        <td>/bin/c99 -64</td>
+        <td>PATH=/usr/bin:/bin:/usr/sbin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
       </tr>
       <tr>
         <td>Linux 2.6.27.41-170.2.117.fc10.x86_64</td>
@@ -293,6 +373,22 @@
       <tr>
         <td>Linux 2.6.27.41-170.2.117.fc10.x86_64</td>
         <td>x86_64</td>
+        <td>/usr/bin/cc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.27.41-170.2.117.fc10.x86_64</td>
+        <td>x86_64</td>
+        <td>/usr/bin/cc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.27.41-170.2.117.fc10.x86_64</td>
+        <td>x86_64</td>
         <td>/usr/bin/cc -m64</td>
         <td>PATH=/usr/bin:/bin</td>
         <td>/usr/bin/make</td>
@@ -337,6 +433,22 @@
         <td>PATH=/usr/bin:/bin</td>
         <td>/usr/bin/gmake</td>
         <td>--disable-shared </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.27.41-170.2.117.fc10.x86_64</td>
+        <td>x86_64</td>
+        <td>/usr/bin/gcc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/gmake</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.27.41-170.2.117.fc10.x86_64</td>
+        <td>x86_64</td>
+        <td>/usr/bin/gcc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/gmake</td>
+        <td>--with-noaaport --disable-shared </td>
       </tr>
       <tr>
         <td>Linux 2.6.27.41-170.2.117.fc10.x86_64</td>
@@ -453,6 +565,22 @@
       <tr>
         <td>Linux 2.6.32.26-175.fc12.x86_64</td>
         <td>x86_64</td>
+        <td>/usr/bin/cc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.32.26-175.fc12.x86_64</td>
+        <td>x86_64</td>
+        <td>/usr/bin/cc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.32.26-175.fc12.x86_64</td>
+        <td>x86_64</td>
         <td>/usr/bin/cc -m64</td>
         <td>PATH=/usr/bin:/bin</td>
         <td>/usr/bin/make</td>
@@ -497,6 +625,22 @@
         <td>PATH=/usr/bin:/bin</td>
         <td>/usr/bin/gmake</td>
         <td>--disable-shared </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.32.26-175.fc12.x86_64</td>
+        <td>x86_64</td>
+        <td>/usr/bin/gcc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/gmake</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.32.26-175.fc12.x86_64</td>
+        <td>x86_64</td>
+        <td>/usr/bin/gcc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/gmake</td>
+        <td>--with-noaaport --disable-shared </td>
       </tr>
       <tr>
         <td>Linux 2.6.32.26-175.fc12.x86_64</td>
@@ -677,6 +821,22 @@
       <tr>
         <td>Linux 2.6.35.13-92.fc14.x86_64</td>
         <td>x86_64</td>
+        <td>/usr/bin/cc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.35.13-92.fc14.x86_64</td>
+        <td>x86_64</td>
+        <td>/usr/bin/cc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.35.13-92.fc14.x86_64</td>
+        <td>x86_64</td>
         <td>/usr/bin/cc -m64</td>
         <td>PATH=/usr/bin:/bin</td>
         <td>/usr/bin/make</td>
@@ -725,6 +885,22 @@
       <tr>
         <td>Linux 2.6.35.13-92.fc14.x86_64</td>
         <td>x86_64</td>
+        <td>/usr/bin/gcc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/gmake</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.35.13-92.fc14.x86_64</td>
+        <td>x86_64</td>
+        <td>/usr/bin/gcc -m32</td>
+        <td>PATH=/usr/bin:/bin</td>
+        <td>/usr/bin/gmake</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>Linux 2.6.35.13-92.fc14.x86_64</td>
+        <td>x86_64</td>
         <td>/usr/bin/gcc -m64</td>
         <td>PATH=/usr/bin:/bin</td>
         <td>/usr/bin/gmake</td>
@@ -753,94 +929,6 @@
         <td>PATH=/usr/bin:/bin</td>
         <td>/usr/bin/gmake</td>
         <td>--with-noaaport --disable-shared </td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/bin/c89 -pthread</td>
-        <td>PATH=/usr/bin/posix:/usr/bin:/bin</td>
-        <td>/usr/bin/posix/make</td>
-        <td></td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/bin/c89 -pthread</td>
-        <td>PATH=/usr/bin/posix:/usr/bin:/bin</td>
-        <td>/usr/bin/posix/make</td>
-        <td>--disable-max-size</td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/bin/c89 -pthread</td>
-        <td>PATH=/usr/bin/posix:/usr/bin:/bin</td>
-        <td>/usr/bin/posix/make</td>
-        <td>--disable-shared </td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/bin/c89 -pthread</td>
-        <td>PATH=/usr/bin/posix:/usr/bin:/bin</td>
-        <td>/usr/bin/posix/make</td>
-        <td>--disable-shared --disable-max-size</td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/bin/c89 -pthread</td>
-        <td>PATH=/usr/bin/posix:/usr/bin:/bin</td>
-        <td>/usr/bin/posix/make</td>
-        <td>--with-noaaport</td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/bin/cc -pthread</td>
-        <td>PATH=/usr/bin:/bin</td>
-        <td>/usr/bin/make</td>
-        <td></td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/bin/cc -pthread</td>
-        <td>PATH=/usr/bin:/bin</td>
-        <td>/usr/bin/make</td>
-        <td>--with-noaaport</td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/ccs/bin/c89 -pthread</td>
-        <td>PATH=/usr/ccs/bin:/usr/bin:/bin</td>
-        <td>/usr/ccs/bin/make</td>
-        <td>--disable-max-size</td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/ccs/bin/c89 -pthread</td>
-        <td>PATH=/usr/ccs/bin:/usr/bin:/bin</td>
-        <td>/usr/ccs/bin/make</td>
-        <td>--disable-shared --disable-max-size</td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/ccs/bin/c89 -pthread</td>
-        <td>PATH=/usr/ccs/bin:/usr/bin:/bin</td>
-        <td>/usr/ccs/bin/make</td>
-        <td>--with-noaaport</td>
-      </tr>
-      <tr>
-        <td>OSF1 V5.1</td>
-        <td>alpha</td>
-        <td>/usr/ccs/bin/cc -pthread</td>
-        <td>PATH=/usr/ccs/bin:/usr/bin:/bin</td>
-        <td>/usr/ccs/bin/make</td>
-        <td>--with-noaaport</td>
       </tr>
       <tr>
         <td>SunOS 5.10</td>
@@ -893,6 +981,22 @@
       <tr>
         <td>SunOS 5.10</td>
         <td>i86pc</td>
+        <td>/opt/csw/gcc4/bin/gcc -m32</td>
+        <td>PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>/opt/csw/bin/gmake</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>/opt/csw/gcc4/bin/gcc -m32</td>
+        <td>PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>/opt/csw/bin/gmake</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
         <td>/opt/csw/gcc4/bin/gcc -m64</td>
         <td>PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin</td>
         <td>/opt/csw/bin/gmake</td>
@@ -905,6 +1009,22 @@
         <td>PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin</td>
         <td>/opt/csw/bin/gmake</td>
         <td>--disable-shared </td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>/opt/csw/gcc4/bin/gcc -m64</td>
+        <td>PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>/opt/csw/bin/gmake</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>/opt/csw/gcc4/bin/gcc -m64</td>
+        <td>PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>/opt/csw/bin/gmake</td>
+        <td>--with-noaaport --disable-shared </td>
       </tr>
       <tr>
         <td>SunOS 5.10</td>
@@ -925,6 +1045,22 @@
       <tr>
         <td>SunOS 5.10</td>
         <td>i86pc</td>
+        <td>/opt/SUNWspro/bin/cc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>/opt/SUNWspro/bin/cc</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
         <td>/opt/SUNWspro/bin/cc -m64</td>
         <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
         <td>/usr/ccs/bin/make</td>
@@ -944,7 +1080,15 @@
         <td>/opt/SUNWspro/bin/cc -m64</td>
         <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
         <td>/usr/ccs/bin/make</td>
-        <td>--with-noaaport</td>
+        <td>--with-noaaport </td>
+      </tr>
+      <tr>
+        <td>SunOS 5.10</td>
+        <td>i86pc</td>
+        <td>/opt/SUNWspro/bin/cc -m64</td>
+        <td>PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin</td>
+        <td>/usr/ccs/bin/make</td>
+        <td>--with-noaaport --disable-shared </td>
       </tr>
     </table>
   </body>

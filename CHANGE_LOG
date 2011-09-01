@@ -1,18 +1,21 @@
-6.10.0.1
-        ldmadmin(1) script:
-            Improved the command "vetqueuesize" (and, consequently, the command
-            "check"). The capacity of the product-queue will not be vetted
-            until the LDM server has been running for at least `regutil
-            /server/max-latency` seconds. This will prevent a misdiagnosis of
-            the queue capacity when an initially empty queue is being rapidly
-            filled at LDM startup.
+6.10.0.1 	2011-09-01 12:59:29-06:00
+    ldmadmin(1) script:
+        Improved the command "vetqueuesize" (and, consequently, the command
+        "check"). The capacity of the product-queue will not be vetted
+        until the LDM server has been running for at least `regutil
+        /server/max-latency` seconds. This will prevent a misdiagnosis of
+        the queue capacity when an initially empty queue is being rapidly
+        filled at LDM startup.
 
-        NOAAPORT
-            Merged the NOAAPORT package into the LDM package.
+    NOAAPORT
+        Merged the NOAAPORT package into the LDM package.
 
-            Corrected a bug in the deprecated readnoaaport(1) and
-            dvbs_ingest(1) programs that caused an abort if the logging level
-            was DEBUG due to the shared memory FIFO being already locked.
+        Corrected a bug in the deprecated readnoaaport(1) and
+        dvbs_ingest(1) programs that caused an abort if the logging level
+        was DEBUG due to the shared memory FIFO being already locked.
+
+    Misc:
+        Many changes related to porting to different platforms.
 
 6.9.8   2011-06-10
         Installation:
