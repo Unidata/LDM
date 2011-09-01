@@ -1,4 +1,3 @@
-# configure: ZLib not installed => can't build NOAAPORT
 PATH=/opt/gnu/bin:/usr/bin:/bin:/usr/contrib/bin:/opt/bin,,/opt/gnu/bin/make,/opt/gnu/bin/gcc,/usr/tmp
 
 # libtool(1) can't build a sharable library with this compiler

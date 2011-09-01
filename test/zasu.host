@@ -1,7 +1,6 @@
 # dynamic library fails: malloc(12) failure
 #Couldn't ensure that registry exists in directory "/zasu/steve/ldm-6.9.1/etc" at ./installRegistry line 33.
 PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=32,,/usr/ccs/bin/make,/usr/vac/bin/cc -q32,/zasu/steve
-# configure: ZLib not loaded => can build NOAAPORT
 PATH=/usr/vac/bin:/usr/ccs/bin:/usr/bin:/bin OBJECT_MODE=64,,/usr/ccs/bin/make,/usr/vac/bin/cc -q64,/zasu/steve
 
 #"xmlIO.c", line 768.16: 1506-007 (S) "struct stat" is undefined.

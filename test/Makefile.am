@@ -15,7 +15,6 @@ if MAINTAINER
 
 HOST_FILES	= \
     buddy.host \
-    dana.host \
     flip.host \
     gilda.host \
     imogene.host \
@@ -148,12 +147,11 @@ hostchecks:
 results.tab:	redo_results.tab
 	hosts=`echo $(RESULTS_FILES) | sed 's/\.results//g'`; \
 	for host in $$hosts; do \
-	    case `ssh -x $$host uname </dev/null` in \
-		AIX)	os=`ssh -x $$host uname -srv </dev/null`;; \
-		*)	os=`ssh -x $$host uname -sr </dev/null`;; \
-	    esac; \
-	    cpu=`ssh -x $$host uname -m </dev/null`; \
-	    sed -n "s;^;$$host,$$os,$$cpu,;p" $$host.results </dev/null; \
+	    (ssh -x $$host 'if test `uname` = AIX; then uname -srv; \
+		    else uname -sr; fi; uname -m'; \
+	    cat $$host.results) | \
+	    awk 'NR==1{os=$$0}NR==2{cpu=$$0} \
+		NR>2{print "'$$host'," os "," cpu "," $$0}'; \
 	done >$@
 
 portability.csv:	results.tab
