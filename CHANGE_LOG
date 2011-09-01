@@ -1,3 +1,7 @@
+6.10.0.2 	2011-09-01 15:51:59-06:00
+    Updated GRIB2 tables. Also made installation rule create links instead of
+    install duplicate files.
+
 6.10.0.1 	2011-09-01 12:59:29-06:00
     ldmadmin(1) script:
         Improved the command "vetqueuesize" (and, consequently, the command
