@@ -57,7 +57,7 @@ void  gb2_sklvl( int lvl1, int lvl2, G2lvls *lvltbl,
     }
 
     if (*iret < 0) {
-        NPL_START("lvl1, lvl2, lvltbl->info[n].id1, lvltbl->info[n].id: "
+        NPL_START4("lvl1, lvl2, lvltbl->info[n].id1, lvltbl->info[n].id: "
             "%d %d %d %d",
             lvl1, lvl2, lvltbl->info[n-1].id1, lvltbl->info[n-1].id2);
         nplLog(LOG_INFO);
