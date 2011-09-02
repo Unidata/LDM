@@ -1,5 +1,6 @@
 #include "gbcmn.h"
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_next( Gribmsg *cmsg, int *ivers , int *iret )
 /************************************************************************
@@ -127,7 +128,7 @@ void gb2_next( Gribmsg *cmsg, int *ivers , int *iret )
             *iret=(int)g2_info(cmsg->cgrib2, listsec0, listsec1, 
                                &(cmsg->field_tot), &numlocal);
             if ( *iret != 0 ) {
-                er_wmsg("GB2",iret," ",&iret2,3,1);
+                ER_WMSG("GB2",iret,"Invalid GRIB2 message",&iret2,3,1);
                 *iret=-28;
                 return;
             }

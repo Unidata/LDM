@@ -80,3 +80,8 @@ lib_la_CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
 			  -I$(srcdir)/.. \
 			  -I$(top_srcdir)/ulog \
 			  -I$(top_srcdir)/protocol
+
+TAGS_FILES		= \
+	*.c *.h \
+	../noaaportLog.c ../noaaportLog.h \
+	../g2/*.c ../g2/*.h

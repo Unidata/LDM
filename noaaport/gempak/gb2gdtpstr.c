@@ -1,4 +1,5 @@
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_gdtpstr( float *navblk, int *igdtmpl, int *iret )
 /************************************************************************
@@ -39,7 +40,7 @@ void gb2_gdtpstr( float *navblk, int *igdtmpl, int *iret )
          */
         if ( strncmp( (char *)(navblk+1), "STR", 3) != 0 ) {
            *iret=-36;
-           er_wmsg("GB", iret, (char *)(navblk+1), &ier, 2, 4 );
+           ER_WMSG("GB", iret, (char *)(navblk+1), &ier, 2, 4 );
         }
 
         nx = G_NINT(navblk[4]);

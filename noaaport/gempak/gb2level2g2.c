@@ -1,4 +1,5 @@
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_level2g2( int vcord, char *wmolvltbl, char *lcllvltbl,
                    int wmover, int lclver, char *wmocntr, 
@@ -81,7 +82,7 @@ void gb2_level2g2( int vcord, char *wmolvltbl, char *lcllvltbl,
         if ( ier == -30 ) {
            vcabbrev[4]='\0';
            lv_ccrd( &vcord, vcabbrev, &ret, 4 );
-           er_wmsg("GB",&ier,vcabbrev,&ret,2,4);
+           ER_WMSG("GB",&ier,vcabbrev,&ret,2,4);
         }
         *iret=1;
         return;

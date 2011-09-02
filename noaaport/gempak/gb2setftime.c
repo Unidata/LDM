@@ -1,4 +1,5 @@
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_setftime( char *dattim, int tint, int pdtnum, int *pdtmpl, int *iret )
 /************************************************************************
@@ -101,7 +102,7 @@ void gb2_setftime( char *dattim, int tint, int pdtnum, int *pdtmpl, int *iret )
     else if ( pdtnum != 65535 ) {
         *iret = -27;
         snprintf( cnum, 10, "4.%d", pdtnum);
-        er_wmsg( "GB", iret, cnum, &ret, 2, strlen(cnum) );
+        ER_WMSG( "GB", iret, cnum, &ret, 2, strlen(cnum) );
     }
 
 }

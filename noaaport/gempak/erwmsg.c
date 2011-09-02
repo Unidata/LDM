@@ -1,12 +1,17 @@
-#include "ulog.h"
-#include "noaaportLog.h"
+#include <noaaportLog.h>
 
-void	er_wmsg ( char *errgrp, int *numerr, char *errstr, int *iret)
+void er_wmsg(
+    const char* const   errgrp,
+    const int* const    numerr,
+    const char* const   errstr,
+    int* const          iret,
+    const int           i1,
+    const int           i2)
 {
-*iret = 0;
+    *iret = 0;
 
-if ( *numerr != 0 )
-   nplError("[%s %d] %s",errgrp,*numerr,errstr);
-else
-   if(ulogIsVerbose()) nplInfo("[%s %d] %s",errgrp,*numerr,errstr);
+    if (*numerr != 0)
+        nplError("[%s %d] %s", errgrp, *numerr, errstr);
+    else
+        nplInfo("[%s %d] %s", errgrp, *numerr, errstr);
 }

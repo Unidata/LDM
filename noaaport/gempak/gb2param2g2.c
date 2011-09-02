@@ -1,4 +1,5 @@
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_param2g2( char *param, char *wmovartbl, char *lclvartbl,
                    int wmover, int lclver, char *wmocntr, 
@@ -78,7 +79,7 @@ void gb2_param2g2( char *param, char *wmovartbl, char *lclvartbl,
 
     if ( ier != 0 ) {
         if ( ier == -32 ) {
-           er_wmsg("GB",&ier,param,&ret,2,strlen(param));
+           ER_WMSG("GB",&ier,param,&ret,2,strlen(param));
         }
         *iret=1;
         return;

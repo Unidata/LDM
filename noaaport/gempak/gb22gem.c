@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 500
 
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
 /************************************************************************
@@ -47,7 +48,13 @@ void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
     cntrid = tg->idsect[0];
     gb2_gtcntr( cntrid, tbls[4], wmocntr, &ier);
     if ( ier != 0 ) {
-        er_wmsg("GB", &ier, " ", &itmp, 2, 1);
+        char    msg[132];
+
+        (void)snprintf(msg, sizeof(msg),
+                "Couldn't find originating center %d in table \"%s\"",
+                cntrid, tbls[4]);
+        msg[sizeof(msg)-1] = 0;
+        ER_WMSG("GB", &ier, msg, &itmp, 2, 1);
     }
     cst_uclc(wmocntr, cmsg->origcntr, &ier);
     
@@ -64,7 +71,7 @@ void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
      */
     gb2_param( tbls[0], tbls[1], cmsg, gem->parm, &scal, &missng, &ier );
     if ( ier != 0 ) {
-        er_wmsg("GB", &ier, " ", &itmp, 2, 1);
+        ER_WMSG("GB", &ier, "Couldn't get parameter values", &itmp, 2, 1);
         *iret=-34;
         return;
     }
@@ -82,7 +89,8 @@ void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
     gem->unit[0] = '\0';
     gb2_vcrd( tbls[2], tbls[3], cmsg, gem->level, &gem->vcord, gem->unit, &ier);
     if ( ier != 0 ) {
-        er_wmsg("GB", &ier, " ", &itmp, 2, 1);
+        ER_WMSG("GB", &ier, "Couldn't compute vertical co-ordinate values",
+                &itmp, 2, 1);
         *iret=-34;
         return;
     }

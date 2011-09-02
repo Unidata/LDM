@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 500
 
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void  gb2_gtlclvartbl( char *lclvartbl, char *cntr, int lclver,
                        G2vars_t **g2vartbl, int *iret)
@@ -64,7 +65,7 @@ void  gb2_gtlclvartbl( char *lclvartbl, char *cntr, int lclver,
         if ( ier != 0 ) {
             currvartbl.nlines=0;
             *iret=-31;
-            er_wmsg("GB",iret,tmpname,&ier,2,strlen(tmpname));
+            ER_WMSG("GB",iret,tmpname,&ier,2,strlen(tmpname));
             *g2vartbl = &currvartbl;
             return;
         }

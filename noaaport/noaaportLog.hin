@@ -36,6 +36,12 @@
 #define NPL_ERRNUM4(err,fmt,a,b,c,d)    nplErrnum(err,NPL_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
 #define NPL_ERRNUM5(err,fmt,a,b,c,d,e)  nplErrnum(err,NPL_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
 
+#define ER_WMSG(grp,ier,msg,iret,i1,i2) { \
+    NPL_START3("[%s %d] %s", grp, *(ier), msg); \
+    nplLog(LOG_ERR); \
+    *(iret) = 0; \
+}
+
 @FUNCTION_DECLARATIONS@
 
 #endif

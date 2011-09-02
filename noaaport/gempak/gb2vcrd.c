@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 500
 
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg, 
                 int *levels, int *vcord, char *unit, int *iret )
@@ -80,7 +81,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
         *iret=ier;
         if ( ier == -30 ) {
             sprintf(ctemp,"%d|%d", lvl1, lvl2);
-            er_wmsg("GB",&ier,ctemp,&ret,2,strlen(ctemp));
+            ER_WMSG("GB",&ier,ctemp,&ret,2,strlen(ctemp));
         }
         return;
     }

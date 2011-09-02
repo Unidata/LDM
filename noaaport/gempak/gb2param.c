@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 500
 
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg, 
                 char *param, int *scal, float *msng, int *iret )
@@ -100,7 +101,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     if ( ier != 0 ) {
         if ( ier == -32 ) {
            sprintf( ctemp,"%d|%d|%d|%d", disc, cat, id, pdtn);
-           er_wmsg("GB",&ier,ctemp,&ret,2,strlen(ctemp));
+           ER_WMSG("GB",&ier,ctemp,&ret,2,strlen(ctemp));
         }
         *iret=1;
         return;

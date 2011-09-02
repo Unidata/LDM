@@ -1,4 +1,5 @@
 #include "gb2def.h"
+#include <noaaportLog.h>
 
 void gb2_navgdt( float *navblk, int *igdtnum, int *igdtmpl, int *iret)
 /************************************************************************
@@ -50,7 +51,7 @@ void gb2_navgdt( float *navblk, int *igdtnum, int *igdtmpl, int *iret)
         }
         else { 
             *iret=-35;
-            er_wmsg("GB", iret, proj, &ier, 2, 4 );
+            ER_WMSG("GB", iret, proj, &ier, 2, 4 );
         }
 
 }
