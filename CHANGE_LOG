@@ -1,3 +1,6 @@
+6.10.0.4 	2011-09-02 15:50:09-06:00
+    Corrected use of NPL_START.
+
 6.10.0.3 	2011-09-02 15:31:39-06:00
     Improved log messages in noaaport/gempak.
 
