@@ -1,3 +1,5 @@
+PATH=/usr/bin:/bin:/usr/sbin,,/usr/bin/make,/bin/c99 -64
+
 # cfe: Warning 605: /usr/include/stdint.h: 5: #error This header file is to be used only for c99 mode compilations
 PATH=/usr/bin:/bin:/usr/sbin,,/usr/bin/make,/usr/bin/cc -o32
 # cc-1035 cc: WARNING File = /usr/include/stdint.h, Line = 5
@@ -12,8 +14,6 @@ PATH=/usr/bin:/bin:/usr/sbin,,/usr/bin/make,/usr/bin/c89 -64
 
 # c99 ERROR:  c99 is not installed in /bin/../../usr/lib/c99
 PATH=/usr/bin:/bin:/usr/sbin,,/usr/bin/make,/bin/c99 -o32
-
-PATH=/usr/bin:/bin:/usr/sbin,,/usr/bin/make,/bin/c99 -64
 
 # /opt/gnu/bin/gcc has neither a "-m32" nor "-m64" option
 # libtool: link: `lib_la-pq.lo' is not a valid libtool object

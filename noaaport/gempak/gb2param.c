@@ -1,5 +1,6 @@
 #define _XOPEN_SOURCE 500
 
+#include <stdio.h>
 #include "gb2def.h"
 #include <noaaportLog.h>
 
@@ -39,7 +40,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
  ***********************************************************************/
 {
     int     ret, ier, disc, cat, id, pdtn, iver, lclver, len;
-    char    blanks[13]="            ", ctemp[20];
+    char    blanks[13]="            ";
     G2Vinfo  g2var;
     G2vars_t  *g2vartbl;
 
@@ -49,7 +50,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     strncpy( param, "UNKNOWN", 12);
 
     /* 
-     *  Get Parameter into from Paramter table(s).
+     *  Get Parameter information from Parameter table(s).
      */
     iver=cmsg->gfld->idsect[2];
     lclver=cmsg->gfld->idsect[3];
@@ -58,55 +59,39 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     id=cmsg->gfld->ipdtmpl[1];
     pdtn=cmsg->gfld->ipdtnum;
 
-    if ( iver == 255 ) {      /* use only local parameter table  */
-        gb2_gtlclvartbl( lclvartbl, cmsg->origcntr, lclver, &g2vartbl, 
-                         &ier);
-        if ( ier == 0 ) {
-           /* 
-            *  Find paramter info in Local Parameter table.
-            */
-            gb2_skvar( disc, cat, id, pdtn, g2vartbl, &g2var, &ier);
-        }
+    if ((iver != 255) &&
+        ((disc < 192   || disc == 255  ) && 
+         (cat  < 192   || cat  == 255  ) &&
+         (id   < 192   || id   == 255  ) &&
+         (pdtn < 32768 || pdtn == 65535))) {
+       /* 
+        *  Get WMO Parameter table.
+        */
+        gb2_gtwmovartbl(wmovartbl, iver, &g2vartbl, &ier);
     }
     else {
-        if ( ( disc < 192   || disc == 255   ) && 
-             ( cat  < 192   || cat  == 255   ) &&
-             ( id   < 192   || id   == 255   ) &&
-             ( pdtn < 32768 || pdtn == 65535 ) ) {
-           /* 
-            *  Get WMO Parameter table.
-            */
-            gb2_gtwmovartbl ( wmovartbl, iver, &g2vartbl, &ier);
-            if ( ier == 0 ) {
-               /* 
-                *  Find paramter info in WMO Parameter table.
-                */
-                gb2_skvar( disc, cat, id, pdtn, g2vartbl, &g2var, &ier);
-            }
-        }
-        else {
-           /* 
-            *  Get Local Parameter table.
-            */
-            gb2_gtlclvartbl( lclvartbl, cmsg->origcntr, lclver, &g2vartbl, 
-                             &ier);
-            if ( ier == 0 ) {
-               /* 
-                *  Find paramter info in Local Parameter table.
-                */
-                gb2_skvar( disc, cat, id, pdtn, g2vartbl, &g2var, &ier);
-            }
-        }
+       /* 
+        *  Get Local Parameter table.
+        */
+        gb2_gtlclvartbl(lclvartbl, cmsg->origcntr, lclver, &g2vartbl, &ier);
     }
-    if ( ier != 0 ) {
-        if ( ier == -32 ) {
-           sprintf( ctemp,"%d|%d|%d|%d", disc, cat, id, pdtn);
-           ER_WMSG("GB",&ier,ctemp,&ret,2,strlen(ctemp));
-        }
-        *iret=1;
-        return;
-    }
+    if (ier == 0) {
+       /* 
+        *  Get parameter information from table.
+        */
+        gb2_skvar(disc, cat, id, pdtn, g2vartbl, &g2var, &ier);
 
+        if (ier != 0) {
+            char    ctemp[256];
+
+            (void)sprintf(ctemp, "Couldn't get parameter info: "
+                    "disc=%d, cat=%d, id=%d, pdtn=%d", disc, cat, id, pdtn);
+            ER_WMSG("GB", &ier, ctemp, &ret, 2, strlen(ctemp));
+            *iret = 1;
+            return;
+        }
+    }
+    
     /* 
      *  Insert time range period in parameter abbreviation,
      *  if necessary.

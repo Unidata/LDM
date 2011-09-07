@@ -1,5 +1,6 @@
 #define _XOPEN_SOURCE 500
 
+#include <stdio.h>
 #include "gb2def.h"
 #include <noaaportLog.h>
 
@@ -60,12 +61,15 @@ void  gb2_gtlclvartbl( char *lclvartbl, char *cntr, int lclver,
             currvartbl.info=0;
             currvartbl.nlines=0;
         }
-        printf(" Opening Local GRIB2 Parameter Table %s...\n",tmpname);
         ctb_g2rdvar( tmpname, &currvartbl, &ier );
         if ( ier != 0 ) {
+            char        ctemp[256];
+
             currvartbl.nlines=0;
             *iret=-31;
-            ER_WMSG("GB",iret,tmpname,&ier,2,strlen(tmpname));
+            (void)sprintf(ctemp, "Couldn't open local GRIB2 parameter table: "
+                    "\"%s\"", tmpname);
+            ER_WMSG("GB",iret,ctemp,&ier,2,strlen(tmpname));
             *g2vartbl = &currvartbl;
             return;
         }
