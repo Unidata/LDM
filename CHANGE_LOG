@@ -1,3 +1,7 @@
+6.10.0.5 	2011-09-07 08:50:18-06:00
+    Improved noaaport/gempak error messages -- specifically, added information
+    to messages about missing tables and parameters.
+
 6.10.0.4 	2011-09-02 15:50:09-06:00
     Corrected use of NPL_START.
 
