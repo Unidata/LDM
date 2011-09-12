@@ -260,6 +260,14 @@
 000 191 193 000 East longitude (0 to 360)        Degree               LOND             0  -9999.00
 000 191 194 000 Seconds prior to reference time  s                    TSEC             0  -9999.00
 !
+! covariance category (category 192)
+!D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
+!23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
+000 192 192 000 Unknown covariance product       -                    COV192           0  -9999.00
+000 192 192 009 Unknown covariance product       -                    COV192           0  -9999.00
+000 192 194 000 Unknown covariance product       -                    COV194           0  -9999.00
+000 192 194 009 Unknown covariance product       -                    COV194           0  -9999.00
+!
 ! Hydrology basic products
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89

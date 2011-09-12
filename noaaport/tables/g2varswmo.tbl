@@ -421,7 +421,7 @@
 010 003 000 000 Water Temperature                K                    WTMP             0  -9999.00
 010 003 001 000 Deviation of Sea Level from Mean m                    DSLM             0  -9999.00
 !
-010 004 000 000 Main Thermocline Depth           m                    MTHDP            0  -9999.00            
-010 004 001 000 Main Thermocline Anomaly         m                    MTHAN            0  -9999.00            
-010 004 002 000 Transient Thermocline Depth      m                    TTHDP            0  -9999.00            
-010 004 003 000 Salinity                         kg kg**-1            SLTY             0  -9999.00            
+010 004 000 000 Main Thermocline Depth           m                    MTHDP            0  -9999.00
+010 004 001 000 Main Thermocline Anomaly         m                    MTHAN            0  -9999.00
+010 004 002 000 Transient Thermocline Depth      m                    TTHDP            0  -9999.00
+010 004 003 000 Salinity                         kg kg**-1            SLTY             0  -9999.00
