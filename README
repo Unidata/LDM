@@ -55,11 +55,6 @@ INFORMATION:
         Changes to the package are documented in the file CHANGE_LOG,
         which is in the top-level source-directory.
 
-    RELEASE NOTES:
-
-        Release-specific aspects are documented in the file
-        RELEASE_NOTES, which is in the top-level source-directory.
-
 LDM DECODERS:
 
     LDM-compatible decoders for local processing of received data
@@ -78,8 +73,10 @@ LDM DECODERS:
 
 SUPPORT:
 
-    If you are a licensed Unidata member, then you may obtain support by
-    sending an email inquiry to support-ldm@unidata.ucar.edu.  Please
-    include a description of the type of platform (hardware and
+    You may request support by sending an email inquiry to
+    
+        support-ldm@unidata.ucar.edu
+        
+    Please include a description of the type of platform (hardware and
     operating system) and any relevant information that can help us
     answer your question (error messages, symptoms, etc.).
