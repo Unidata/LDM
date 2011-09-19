@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "noaaportLog.h"
+#include "log.h"
 #include "fifo.h"
 #include "reader.h"     /* Eat own dog food */
 
@@ -34,8 +34,8 @@ struct reader {
  * This function is thread-safe.
  *
  * @retval 0    Success.
- * @retval 1    Precondition failure. \c nplStart() called.
- * @retval 2    O/S failure. \c nplStart() called.
+ * @retval 1    Precondition failure. \c log_start() called.
+ * @retval 2    O/S failure. \c log_start() called.
  */
 int readerNew(
     const int           fd,         /**< [in] File-descriptor to read from */
@@ -50,18 +50,18 @@ int readerNew(
     Reader*   r = (Reader*)malloc(sizeof(Reader));
 
     if (NULL == r) {
-        NPL_SERROR0("Couldn't allocate new reader");
+        LOG_SERROR0("Couldn't allocate new reader");
     }
     else {
         unsigned char*    buf = (unsigned char*)malloc(maxSize);
 
         if (NULL == buf) {
-            NPL_SERROR1("Couldn't allocate %lu bytes for buffer", 
+            LOG_SERROR1("Couldn't allocate %lu bytes for buffer", 
                     (unsigned long)maxSize);
         }
         else {
             if ((status = pthread_mutex_init(&r->mutex, NULL)) != 0) {
-                NPL_ERRNUM0(status, "Couldn't initialize product-maker mutex");
+                LOG_ERRNUM0(status, "Couldn't initialize product-maker mutex");
                 status = 2;
             }
             else {
@@ -111,8 +111,8 @@ void* readerStart(
         size_t          size;
 
         if (fifoWriteReserve(reader->fifo, reader->maxSize, &buf, &size) != 0) {
-            NPL_ADD1("Couldn't reserve %lu bytes in FIFO", reader->maxSize);
-            nplLog(LOG_ERR);
+            LOG_ADD1("Couldn't reserve %lu bytes in FIFO", reader->maxSize);
+            log_log(LOG_ERR);
             status = 2;
             break;
         }
@@ -128,26 +128,26 @@ void* readerStart(
                 break;              /* end of input */
             }
             if (-1 == nbytes) {
-                NPL_SERROR0("read() failure");
-                nplLog(LOG_ERR);
+                LOG_SERROR0("read() failure");
+                log_log(LOG_ERR);
                 status = 2;
                 break;
             }
 
             if (buf == reader->buf) {
                 if (fifoCopy(reader->fifo, buf, nbytes) != 0) {
-                    NPL_ADD1("Couldn't copy %l bytes of data into FIFO", 
+                    LOG_ADD1("Couldn't copy %l bytes of data into FIFO", 
                             (long)nbytes);
-                    nplLog(LOG_ERR);
+                    log_log(LOG_ERR);
                     status = 2;
                     break;
                 }
             }
             else {
                 if (fifoWriteUpdate(reader->fifo, nbytes) != 0) {
-                    NPL_ADD1("Couldn't update FIFO with %l bytes of data",
+                    LOG_ADD1("Couldn't update FIFO with %l bytes of data",
                             (long)nbytes);
-                    nplLog(LOG_ERR);
+                    log_log(LOG_ERR);
                     status = 2;
                     break;
                 }
@@ -185,8 +185,8 @@ void readerGetStatistics(
  * Returns the termination status of a data-reader.
  *
  * @retval 0    Success. End-of-file encountered.
- * @retval 1    Precondition failure. \c nplStart() called.
- * @retval 2    O/S failure. \c nplStart() called.
+ * @retval 1    Precondition failure. \c log_start() called.
+ * @retval 2    O/S failure. \c log_start() called.
  */
 int readerStatus(
     Reader* const   reader) /**< [in] Pointer to the reader */

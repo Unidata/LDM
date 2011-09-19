@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "noaaportLog.h"
+#include "log.h"
 #include "fifo.h"                   /* Eat own dog food */
 
 struct fifo {
@@ -30,8 +30,8 @@ struct fifo {
  * Initializes a FIFO
  *
  * @retval 0    Success
- * @retval 1    Usage error. \c nplStart() called.
- * @retval 2    O/S failure. \c nplStart() called.
+ * @retval 1    Usage error. \c log_start() called.
+ * @retval 2    O/S failure. \c log_start() called.
  */
 static int initializeFifo(
     Fifo* const             fifo,   /**< [in/out] Pointer to the FIFO */
@@ -42,38 +42,38 @@ static int initializeFifo(
     pthread_mutexattr_t mutexAttr;
 
     if ((status = pthread_mutexattr_init(&mutexAttr)) != 0) {
-        NPL_ERRNUM0(status, "Couldn't initialize mutex attributes");
+        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
         status = 2;
     }
     else {
         (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_ERRORCHECK);
 
         if ((status = pthread_mutex_init(&fifo->writeMutex, &mutexAttr)) != 0) {
-            NPL_ERRNUM0(status, "Couldn't initialize write-mutex");
+            LOG_ERRNUM0(status, "Couldn't initialize write-mutex");
             status = 2;
         }
         else {
             if ((status = pthread_mutex_init(&fifo->readMutex, &mutexAttr)) !=
                     0) {
-                NPL_ERRNUM0(status, "Couldn't initialize read-mutex");
+                LOG_ERRNUM0(status, "Couldn't initialize read-mutex");
                 status = 2;
             }
             else {
                 if ((status = pthread_mutex_init(&fifo->mutex, NULL)) != 0) {
-                    NPL_ERRNUM0(status, "Couldn't initialize FIFO mutex");
+                    LOG_ERRNUM0(status, "Couldn't initialize FIFO mutex");
                     status = 2;
                 }
                 else {
                     if ((status = pthread_cond_init(&fifo->readCond, NULL)) !=
                             0) {
-                        NPL_ERRNUM0(status,
+                        LOG_ERRNUM0(status,
                             "Couldn't initialize reading condition variable");
                         status = 2;
                     }
                     else {
                         if ((status = pthread_cond_init(&fifo->writeCond,
                                         NULL)) != 0) {
-                            NPL_ERRNUM0(status,
+                            LOG_ERRNUM0(status,
                             "Couldn't initialize writing condition variable");
                             status = 2;
                         }
@@ -112,8 +112,8 @@ static int initializeFifo(
  * This function is thread-safe.
  *
  * @retval 0    Success.
- * @retval 1    Usage error. \c nplStart() called.
- * @retval 2    O/S failure. \c nplStart() called.
+ * @retval 1    Usage error. \c log_start() called.
+ * @retval 2    O/S failure. \c log_start() called.
  */
 int fifoNew(
     const size_t        npages,         /**< [in] FIFO size in pages */
@@ -124,7 +124,7 @@ int fifoNew(
     Fifo*               f = (Fifo*)malloc(sizeof(Fifo));
 
     if (NULL == f) {
-        NPL_SERROR0("Couldn't allocate FIFO");
+        LOG_SERROR0("Couldn't allocate FIFO");
     }
     else {
         const long              pagesize = sysconf(_SC_PAGESIZE);
@@ -132,7 +132,7 @@ int fifoNew(
         unsigned char* const    buf = (unsigned char*)malloc(size);
 
         if (NULL == buf) {
-            NPL_SERROR1("Couldn't allocate %lu bytes for FIFO buffer",
+            LOG_SERROR1("Couldn't allocate %lu bytes for FIFO buffer",
                     (unsigned long)size);
         }
         else {
@@ -161,8 +161,8 @@ int fifoNew(
  * This function is thread-safe.
  *
  * @retval 0    Success. \c *bytes points to at least \c nbytes of memory.
- * @retval 1    Usage error. \c nplStart() called.
- * @retval 2    O/S error. \c nplStart() called.
+ * @retval 1    Usage error. \c log_start() called.
+ * @retval 2    O/S error. \c log_start() called.
  * @retval 3    FIFO is closed.
  */
 int fifoWriteReserve(
@@ -184,18 +184,18 @@ int fifoWriteReserve(
     int             status;
 
     if (nbytes > fifo->size) {
-        NPL_START2("Requested space larger than FIFO: %lu > %lu", nbytes,
+        LOG_START2("Requested space larger than FIFO: %lu > %lu", nbytes,
                 fifo->size);
         status = 1;
     }
     else {
         if ((status = pthread_mutex_lock(&fifo->writeMutex)) != 0) {
-            NPL_ERRNUM0(status, "Couldn't lock write-mutex");
+            LOG_ERRNUM0(status, "Couldn't lock write-mutex");
             status = 2;
         }
         else {
             if ((status = pthread_mutex_lock(&fifo->mutex)) != 0) {
-                NPL_ERRNUM0(status, "Couldn't lock FIFO mutex");
+                LOG_ERRNUM0(status, "Couldn't lock FIFO mutex");
                 status = 2;
             }
             else {
@@ -214,7 +214,7 @@ int fifoWriteReserve(
 
                     if ((status = pthread_cond_wait(&fifo->writeCond,
                                     &fifo->mutex)) != 0) {
-                        NPL_ERRNUM0(status,
+                        LOG_ERRNUM0(status,
                                 "Couldn't wait on writing condition variable");
                         status = 2;
                         break;
@@ -241,8 +241,8 @@ int fifoWriteReserve(
  * This function in thread-safe.
  *
  * @retval 0    Success
- * @retval 1    Usage error. \c nplStart() called.
- * @retval 2    O/S error. \c nplStart() called.
+ * @retval 1    Usage error. \c log_start() called.
+ * @retval 2    O/S error. \c log_start() called.
  */
 int fifoWriteUpdate(
     Fifo* const     fifo,   /**< [in/out] Pointer to FIFO */
@@ -251,19 +251,19 @@ int fifoWriteUpdate(
     int             status;
 
     if ((status = pthread_mutex_lock(&fifo->mutex)) != 0) {
-        NPL_ERRNUM0(status, "Couldn't lock FIFO mutex");
+        LOG_ERRNUM0(status, "Couldn't lock FIFO mutex");
         status = 2;
     }
     else {
         if (nbytes > fifo->nreserved) {
-            NPL_START2("Amount written > amount reserved: %lu > %lu",
+            LOG_START2("Amount written > amount reserved: %lu > %lu",
                     (unsigned long)nbytes, 
                     (unsigned long)fifo->nreserved);
             status = 1;                 /* usage error */
         }
         else {
             if ((status = pthread_cond_signal(&fifo->readCond)) != 0) {
-                NPL_ERRNUM0(status,
+                LOG_ERRNUM0(status,
                         "Couldn't signal reading condition variable");
                 status = 2;             /* Usage error */
             }
@@ -273,7 +273,7 @@ int fifoWriteUpdate(
                 fifo->nreserved = 0;
 
                 if ((status = pthread_mutex_unlock(&fifo->writeMutex)) != 0) {
-                    NPL_ERRNUM0(status, "Couldn't unlock write-mutex");
+                    LOG_ERRNUM0(status, "Couldn't unlock write-mutex");
                     status = 1;         /* Usage error */
                 }
                 else {
@@ -293,8 +293,8 @@ int fifoWriteUpdate(
  * returned from the previous call to \link fifoWriteReserve() \endlink. 
  *
  * @retval 0    Success
- * @retval 1    Usage error. \c nplStart() called.
- * @retval 2    O/S error. \c nplStart() called.
+ * @retval 1    Usage error. \c log_start() called.
+ * @retval 2    O/S error. \c log_start() called.
  */
 int fifoCopy(
     Fifo* const             fifo,   /**< [in] The FIFO */
@@ -304,12 +304,12 @@ int fifoCopy(
     int             status;
 
     if ((status = pthread_mutex_lock(&fifo->mutex)) != 0) {
-        NPL_ERRNUM0(status, "Couldn't lock FIFO mutex");
+        LOG_ERRNUM0(status, "Couldn't lock FIFO mutex");
         status = 2;
     }
     else {
         if (nbytes > fifo->nreserved) {
-            NPL_START2("Amount to copy > amount reserved: %lu > %lu",
+            LOG_START2("Amount to copy > amount reserved: %lu > %lu",
                     (unsigned long)nbytes, 
                     (unsigned long)fifo->nreserved); 
             status = 1;                 /* usage error */
@@ -324,7 +324,7 @@ int fifoCopy(
                 (void)memcpy(fifo->buf, buf + n, nbytes - n);
 
             if ((status = pthread_cond_signal(&fifo->readCond)) != 0) {
-                NPL_ERRNUM0(status,
+                LOG_ERRNUM0(status,
                         "Couldn't signal reading condition variable");
                 status = 2;             /* Usage error */
             }
@@ -334,7 +334,7 @@ int fifoCopy(
                 fifo->nreserved = 0;
 
                 if ((status = pthread_mutex_unlock(&fifo->writeMutex)) != 0) {
-                    NPL_ERRNUM0(status, "Couldn't unlock write-mutex");
+                    LOG_ERRNUM0(status, "Couldn't unlock write-mutex");
                     status = 1;         /* Usage error */
                 }
                 else {
@@ -357,8 +357,8 @@ int fifoCopy(
  * This function is thread-safe.
  *
  * @retval 0    Success
- * @retval 1    Usage error. \c nplStart() called.
- * @retval 2    O/S error. \c nplStart() called.
+ * @retval 1    Usage error. \c log_start() called.
+ * @retval 2    O/S error. \c log_start() called.
  * @retval 3    FIFO is closed.
  */
 int fifoRead(
@@ -369,18 +369,18 @@ int fifoRead(
     int status;
 
     if (nbytes > fifo->size) {
-        NPL_START2("Requested read amount is larger than FIFO: %lu > %lu",
+        LOG_START2("Requested read amount is larger than FIFO: %lu > %lu",
                 nbytes, fifo->size);
         status = 1;
     }
     else {
         if ((status = pthread_mutex_lock(&fifo->readMutex)) != 0) {
-            NPL_ERRNUM0(status, "Couldn't lock read-mutex");
+            LOG_ERRNUM0(status, "Couldn't lock read-mutex");
             status = 2;
         }
         else {
             if ((status = pthread_mutex_lock(&fifo->mutex)) != 0) {
-                NPL_ERRNUM0(status, "Couldn't lock FIFO mutex");
+                LOG_ERRNUM0(status, "Couldn't lock FIFO mutex");
                 status = 2;
             }
             else {
@@ -395,7 +395,7 @@ int fifoRead(
 
                     if ((status = pthread_cond_wait(&fifo->readCond,
                                     &fifo->mutex)) != 0) {
-                        NPL_ERRNUM0(status,
+                        LOG_ERRNUM0(status,
                                 "Couldn't wait on reading condition variable");
                         status = 2;
                         break;
@@ -404,7 +404,7 @@ int fifoRead(
 
                 if (0 == status) {
                     if ((status = pthread_cond_signal(&fifo->writeCond)) != 0) {
-                        NPL_ERRNUM0(status,
+                        LOG_ERRNUM0(status,
                                 "Couldn't signal writing condition variable");
                         status = 2;
                     }
@@ -446,8 +446,8 @@ int fifoRead(
  * This function is thread-safe.
  *
  * @retval 0    Success
- * @retval 1    Usage error. \c nplStart() called.
- * @retval 2    O/S error. \c nplStart() called.
+ * @retval 1    Usage error. \c log_start() called.
+ * @retval 2    O/S error. \c log_start() called.
  */
 int fifoCloseWhenEmpty(
     Fifo* const fifo)       /**< [in/out] Pointer to FIFO */
@@ -455,18 +455,18 @@ int fifoCloseWhenEmpty(
     int         status = 0; /* default success */
 
     if ((status = pthread_mutex_lock(&fifo->mutex)) != 0) {
-        NPL_ERRNUM0(status, "Couldn't lock mutex");
+        LOG_ERRNUM0(status, "Couldn't lock mutex");
         status = 2;
     }
     else {
         fifo->closeIfEmpty = 1;
 
         if ((status = pthread_cond_signal(&fifo->writeCond)) != 0) {
-            NPL_ERRNUM0(status, "Couldn't signal writing condition variable");
+            LOG_ERRNUM0(status, "Couldn't signal writing condition variable");
             status = 2;
         }
         if ((status = pthread_cond_signal(&fifo->readCond)) != 0) {
-            NPL_ERRNUM0(status, "Couldn't signal reading condition variable");
+            LOG_ERRNUM0(status, "Couldn't signal reading condition variable");
             status = 2;
         }
 

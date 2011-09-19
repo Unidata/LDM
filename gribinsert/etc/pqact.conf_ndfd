@@ -1,0 +1,16 @@
+#########################################################################
+#
+# NDFD processing
+#
+# NOTEs:
+#        - add EXEC line to ldmd.conf to process NDFD data in EXP feed
+#        - set feedtype in action below to that desired:
+#          EXP     - for testing
+#          CONDUIT - for operational use
+#        - stop and restart the LDM to activate
+#
+#########################################################################
+
+EXP	(......) (....) (..)(....)
+	PIPE	-close
+	util/ndfdprocess.sh \1 \2 \3 \4 data/ndfd EXP

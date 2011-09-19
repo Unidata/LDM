@@ -14,8 +14,6 @@ SUDO			= @SUDO@
 SU			= @SU@
 docdir			= ${datarootdir}/doc/noaaport
 
-SUBDIRS			= zlib g2 gempak libpng tables
-
 EXTRA_DIST 		= \
 	Doxyfile \
 	extractDecls \
@@ -26,7 +24,6 @@ EXTRA_DIST 		= \
 	ldmProductQueue.hin \
 	mainpage.h \
 	multicastReader.hin \
-	noaaportLog.hin \
 	nwstgdump.data \
 	productMaker.hin \
 	reader.hin \
@@ -38,7 +35,6 @@ BUILT_SOURCES		= \
 	getFacilityName.h \
 	ldmProductQueue.h \
 	multicastReader.h \
-	noaaportLog.h \
 	productMaker.h \
 	reader.h \
 	shmfifo.h
@@ -46,18 +42,14 @@ BUILT_SOURCES		= \
 CLEANFILES		= $(BUILT_SOURCES)
 
 CPPFLAGS		= \
-	-I$(srcdir)/g2 \
-	-I$(srcdir)/gempak \
-	-I$(srcdir)/zlib \
+	-I$(top_srcdir)/grib2 \
+	-I$(top_srcdir)/gempak \
+	-I$(top_srcdir)/zlib \
 	-I$(top_srcdir)/ulog \
 	-I$(top_srcdir)/protocol \
 	-I$(top_srcdir)/pq \
 	-I$(top_srcdir)/misc \
 	@CPPFLAGS@
-
-lib_LTLIBRARIES		= libnoaaport.la
-libnoaaport_la_SOURCES	= shmfifo.c shmfifo.h noaaportLog.c noaaportLog.h
-libnoaaport_la_LIBADD	= g2/lib.la gempak/lib.la libpng/libpng.la zlib/lib.la
 
 bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester
 dist_bin_SCRIPTS	= \
@@ -66,13 +58,6 @@ dist_bin_SCRIPTS	= \
 	dvbs_nwstg2 \
 	dvbs_oconus \
 	nplog_rotate
-
-LDADD 			= \
-	libnoaaport.la \
-	../lib/libldm.la \
-	../libxml2/libxml2.la
-
-dvbs_multicast_SOURCES	= dvbs_multicast.c
 
 COMMON_SOURCES		= \
 	dvbs.h \
@@ -90,8 +75,11 @@ COMMON_SOURCES		= \
 	wgrib.c \
 	wmo_header.c \
 	wmo_header.h
+SHMFIFO_SOURCES		= shmfifo.c shmfifo.h
 
-readnoaaport_SOURCES	= readnoaaport.c $(COMMON_SOURCES)
+dvbs_multicast_SOURCES	= dvbs_multicast.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
+
+readnoaaport_SOURCES	= readnoaaport.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
 noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	fifo.c fifo.h \
@@ -101,10 +89,13 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
+LDADD 			= \
+      $(top_builddir)/lib/libldm.la $(top_builddir)/libxml2/libxml2.la
+
 TAGS_FILES		= \
 	*.c *.h \
-	g2/*.c g2/*.h \
-	gempak/*.c gempak/*.h \
+	../grib2/*.c ../grib2/*.h \
+	../gempak/*.c ../gempak/*.h \
 	$(top_srcdir)/pq/*.c $(top_srcdir)/pq/*.h \
 	$(top_srcdir)/protocol/*.c $(top_srcdir)/protocol/*.h \
 	$(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
@@ -128,13 +119,9 @@ fileReader.h:		fileReader.c fileReader.hin extractDecls
 multicastReader.h:	multicastReader.c multicastReader.hin extractDecls
 productMaker.h:		productMaker.c productMaker.hin extractDecls
 getFacilityName.h:	getFacilityName.c getFacilityName.hin extractDecls
-noaaportLog.h:		noaaportLog.c noaaportLog.hin extractDecls
 
 .c.i:
 	$(COMPILE) -E $< >$@
-
-libpng/libpng.la:
-	cd libpng && $(MAKE) $(AM_MAKEFLAGS) all
 
 installcheck-local:
 	pqcreate -c -s 2m /tmp/readnoaaport-test.pq

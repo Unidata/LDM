@@ -9,6 +9,7 @@
 lib_LTLIBRARIES		= libldm.la
 libldm_la_SOURCES	= dummy.c
 libldm_la_LIBADD	= \
+    $(NOAAPORT_LIBS) \
     $(top_builddir)/misc/lib.la \
     $(top_builddir)/pqinglib/lib.la \
     $(top_builddir)/@PQ_SUBDIR@/lib.la \
@@ -16,3 +17,10 @@ libldm_la_LIBADD	= \
     $(top_builddir)/registry/lib.la \
     $(top_builddir)/rpc/lib.la \
     $(top_builddir)/ulog/lib.la
+if WANT_NOAAPORT
+    libldm_la_LIBADD	+= \
+	$(top_builddir)/grib2/lib.la \
+	$(top_builddir)/gempak/lib.la \
+	$(top_builddir)/libpng/libpng.la \
+	$(top_builddir)/zlib/lib.la
+endif

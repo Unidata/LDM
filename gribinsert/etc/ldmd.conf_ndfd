@@ -1,0 +1,1 @@
+exec	"pqact -f EXP -p ^[LYZ]..... etc/pqact.conf_ndfd"

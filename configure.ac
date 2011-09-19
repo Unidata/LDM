@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.10.0.5], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.10.0.6], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -41,6 +41,14 @@ AC_ARG_WITH([noaaport],
     [],
     [with_noaaport=no])
 AM_CONDITIONAL([WANT_NOAAPORT], [test "x$with_noaaport" != xno])
+
+AC_ARG_WITH([gribinsert],
+    AC_HELP_STRING([--with-gribinsert],
+	[enable support for converting GRIB2 files into data-products
+        [[default=without]]]),
+    [],
+    [with_gribinsert=no])
+AM_CONDITIONAL([WANT_GRIBINSERT], [test "x$with_gribinsert" != xno])
 
 AC_ARG_ENABLE([debug],
     AC_HELP_STRING([--enable-debug],
@@ -213,7 +221,7 @@ case "$CC" in
     ARFLAGS=-cru
     if test "$max_size" = yes
     then
-        AC_MSG_NOTICE(Checking how to maximize the (long, void*, off_t) 
+        AC_MSG_NOTICE(checking how to maximize the (long, void*, off_t) 
                 programming environment)
         success=no
         AC_MSG_CHECKING([if the system supports _XBS5_LPBIG_OFFBIG])
@@ -451,26 +459,33 @@ AC_COMPILE_IFELSE(
 AC_PROG_LIBTOOL
 
 AC_CONFIG_FILES([
-    Makefile
-    macros.make
-    rpc/Makefile
-    ulog/Makefile
-    misc/Makefile
-    protocol/Makefile
-    pq/Makefile
     fauxPq/Makefile
-    lib/Makefile
     feedme/Makefile
+    gempak/Makefile
+    gempak/tables/Makefile
+    grib2/Makefile
+    gribinsert/Makefile
+    html/basics/activating.html
+    html/basics/index.html
+    html/basics/Makefile
+    html/basics/source-install-steps.html
+    html/basics/what-gets-installed.html
+    html/index.html
+    html/known-problems.html
+    html/Makefile
+    html/tutorial/Makefile
+    html/workshop/Makefile
+    html/workshop/specifics.html
     hupsyslog/Makefile
-    ldm.spec
     ldmd/Makefile
     ldmping/Makefile
     ldmsend/Makefile
+    ldm.spec
+    lib/Makefile
+    macros.make
+    Makefile
+    misc/Makefile
     noaaport/Makefile
-    noaaport/g2/Makefile
-    noaaport/gempak/Makefile
-    noaaport/tables/Makefile
-    noaaport/zlib/Makefile
     notifyme/Makefile
     pqact/Makefile
     pqcat/Makefile
@@ -478,16 +493,19 @@ AC_CONFIG_FILES([
     pqcopy/Makefile
     pqcreate/Makefile
     pqexpire/Makefile
-    pqing/Makefile
     pqinglib/Makefile
+    pqing/Makefile
     pqinsert/Makefile
+    pq/Makefile
     pqmon/Makefile
     pqsend/Makefile
     pqsurf/Makefile
     pqutil/Makefile
+    protocol/Makefile
     regex/Makefile
     registry/Makefile
     regutil/Makefile
+    rpc/Makefile
     rtstats/Makefile
     scour/Makefile
     scour/scour
@@ -497,27 +515,17 @@ AC_CONFIG_FILES([
     scripts/netcheck
     scripts/plotMetrics
     scripts/syscheck
-    ulogger/Makefile
-    html/Makefile
-    html/index.html
-    html/known-problems.html
-    html/basics/Makefile
-    html/basics/index.html
-    html/basics/activating.html
-    html/basics/source-install-steps.html
-    html/basics/what-gets-installed.html
-    html/tutorial/Makefile
-    html/workshop/Makefile
-    html/workshop/specifics.html
     test/Makefile
+    ulogger/Makefile
+    ulog/Makefile
+    zlib/Makefile
 ])
 
 export CC
 
-AM_COND_IF([WANT_NOAAPORT], [AC_CONFIG_SUBDIRS([noaaport/libpng])])
+AC_CONFIG_SUBDIRS([libpng])
 #AC_CONFIG_SUBDIRS([libxml2])
 
 (cd libxml2 && ./configure --prefix=$prefix --disable-ipv6 --without-c14n --without-catalog --without-debug --without-docbook --without-ftp --without-html --without-http --without-iconv --without-iso8859x --without-legacy --without-pattern --without-python --without-reader --without-readline --without-regexps --without-schemas --without-schematron --without-threads --without-valid --without-xinclude --without-xpath --without-xptr --without-zlib CC="$CC")
-
 
 AC_OUTPUT

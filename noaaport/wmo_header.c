@@ -8,7 +8,7 @@
 #include <ctype.h>
 #include <time.h>
 #include "wmo_header.h"
-#include "noaaportLog.h"
+#include "log.h"
 
 char *levels(int, int, int);
 char *k5toa(unsigned char *pds);
@@ -162,8 +162,8 @@ else
             tm2.tm_min     = 0; tm2.tm_sec     = 0;
             tm2.tm_isdst   = -1; time2 = mktime(&tm2);
 
-            /*nplDebug("check %d %d %d\0",(int)vcordid,(int)level[0],(int)level[1]);
-            nplDebug("levels %s strlen %d\0",levels((int)vcordid,(int)level[0],(int)level[1]),
+            /*udebug("check %d %d %d\0",(int)vcordid,(int)level[0],(int)level[1]);
+            udebug("levels %s strlen %d\0",levels((int)vcordid,(int)level[0],(int)level[1]),
 	      strlen(levels((int)vcordid,(int)level[0],(int)level[1])));*/
 
             sprintf(wmometa,"grib/%s/%s/#%03d/%04d%02d%02d%02d%02d/F%03d/%s/%s/ \0",
@@ -185,7 +185,7 @@ else
                b3 = (unsigned char) cpos[14];
                b4 = (unsigned char) cpos[15];
                lensec = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
-               nplError("grib2 length %u\0",lensec);
+               uerror("grib2 length %u\0",lensec);
 	       grib2name(cpos, (size_t)lensec, hdr, wmometa);
                }*/
 	    break;
@@ -245,7 +245,7 @@ if(hdr.model[0] != '\0')
 
 if((strlen(wmoid) > 128)||(strlen(wmoid) < 1)) 
    {
-   nplError("wmoid is bizzare %d\n",strlen(wmoid));
+   uerror("wmoid is bizzare %d\n",strlen(wmoid));
    return(-1);
    }
 

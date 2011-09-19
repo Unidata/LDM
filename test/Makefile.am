@@ -1,4 +1,4 @@
-# Copyright 2008, 2009 University Corporation for Atmospheric Research
+# Copyright 2011 University Corporation for Atmospheric Research
 #
 # This file is part of the UDUNITS-2 package.  See the file LICENSE
 # in the top-level source-directory of the package for copying and
@@ -13,18 +13,15 @@ topTmpDir	= /tmp/$(distId)
 
 if MAINTAINER
 
-HOST_FILES	= \
-    buddy.host \
-    flip.host \
-    gilda.host \
-    imogene.host \
-    rip.host \
-    sid.host \
-    tweety.host \
-    zasu.host
-RESULTS_FILES	= $(HOST_FILES:.host=.results)
-
-all:
+HOSTS		= \
+    buddy \
+    flip \
+    gilda \
+    imogene \
+    rip \
+    sid \
+    tweety \
+    zasu
 
 $(distPath):
 	cd .. && $(MAKE) dist
@@ -78,8 +75,8 @@ test:
 # system.
 singleCheck:
 	scp remoteCheck $(distPath) $(host):/tmp
-	ssh -vvv -x $(host) chmod +x /tmp/remoteCheck
-	if ssh -vvv -x $(host) /tmp/remoteCheck $(distId) \
+	ssh -x $(host) chmod +x /tmp/remoteCheck
+	if ssh -x $(host) /tmp/remoteCheck $(distId) \
 	    /tmp/$(distName) '"$(env)"' '"$(configOpts)"' '"$(make)"' \
 		'"$(cc)"' $(tmp); \
 	then \
@@ -87,7 +84,7 @@ singleCheck:
 	else \
 	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
 	fi
-	ssh -vvv -x $(host) rm /tmp/remoteCheck /tmp/$(distName)
+	ssh -x $(host) rm /tmp/remoteCheck /tmp/$(distName)
 	touch redo_results.tab
 
 # The following rule executes multiple synchronous build processes on a
@@ -98,55 +95,46 @@ multiCheck:
 	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
 	    tmp="$(tmp)" configOpts="--disable-shared $(configOpts)" singleCheck
 	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
-	    tmp="$(tmp)" configOpts="--with-noaaport $(configOpts)" singleCheck
+	    tmp="$(tmp)" \
+	    configOpts="--with-noaaport --with-gribinsert $(configOpts)" \
+	    singleCheck
 	-$(MAKE) host="$(host)" env="$(env)" make="$(make)" cc="$(cc)" \
 	    tmp="$(tmp)" \
-	    configOpts="--with-noaaport --disable-shared $(configOpts)" \
+	    configOpts="--with-noaaport --with-gribinsert --disable-shared $(configOpts)" \
 	    singleCheck
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for multiple make(1) and cc(1) pairs.
 .host.results:
-	rm -f $*.results
+	rm -f $*.results $*.log
 	grep '^[^#]' $< | while IFS=',' read env configOpts make cc tmp; do \
-	    $(MAKE) host="$*" env="$$env" configOpts="$$configOpts" \
-		make="$$make" cc="$$cc" tmp="$$tmp" multiCheck </dev/null; \
-	done >$*.log 2>&1
+	    if ! $(MAKE) host="$*" env="$$env" configOpts="$$configOpts" \
+		make="$$make" cc="$$cc" tmp="$$tmp" multiCheck </dev/null \
+		    >>$*.log 2>&1; \
+	    then \
+		echo 1>&2 "Couldn't build on $*.  See file \"$*.log\"."; \
+		exit 1; \
+	    fi; \
+	done
+	echo Done: $*
 
 # The following rule starts concurrent asynchronous builds on multiple remote
 # systems.
 hostchecks:
-	rm -f $@
-	hosts=`echo $(HOST_FILES) | sed 's/\.host//g'`; \
-	for host in $$hosts; do \
-	    $(MAKE) -s $$host.results & pid="$$!"; \
-	    echo $$host $$pid >>$@; \
+	rm -f *.results results.tab
+	for host in $(HOSTS); do \
+	    $(MAKE) -s $$host.results & \
 	    echo "Building on $$host"; \
 	done; \
-	status=0; \
-	while read host pid; do \
-	    echo "Waiting on $$host"; \
-	    wait $$pid; \
-	    stat=$$?; \
-	    if test $$stat -ne 0; then \
-		echo 1>&2 \
-		    "Build on \"$$host\" exited with status $$stat.  " \
-		    "See file \"$$host.log\"."; \
-		status=$$(($$status+1)); \
-	    fi; \
-	done <$@; \
-	echo "Done waiting"; \
-	rm -f $@; \
-	exit $$status
+	wait
 
-# "results.tab" doesn't depend on $(RESULTS_FILES) because that would cause it
+# "results.tab" doesn't depend on $(HOSTS) because that would cause it
 # to be recreated every time a "make ... singleCheck" was executed to debug
 # the build on a remote system.
 #
 # FIELDS: hostname,os,cpu,make,cc,config_opts,exit_status
 results.tab:	redo_results.tab
-	hosts=`echo $(RESULTS_FILES) | sed 's/\.results//g'`; \
-	for host in $$hosts; do \
+	for host in $(HOSTS); do \
 	    (ssh -x $$host 'if test `uname` = AIX; then uname -srv; \
 		    else uname -sr; fi; uname -m'; \
 	    cat $$host.results) | \

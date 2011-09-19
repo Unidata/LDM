@@ -17,7 +17,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
-#include "noaaportLog.h"
+#include "log.h"
 #include "dvbs.h"
 #include "fifo.h"
 #include "multicastReader.h" /* Eat own dog food */
@@ -28,8 +28,8 @@
  * This function is thread-safe.
  *
  * @retval 0    Success.
- * @retval 1    Usage failure. \c nplStart() called.
- * @retval 2    O/S failure. \c nplStart() called.
+ * @retval 1    Usage failure. \c log_start() called.
+ * @retval 2    O/S failure. \c log_start() called.
  */
 int multicastReaderNew(
     const char* const   mcastSpec,  /**< [in] Multicast group in IPv4 dotted-
@@ -47,18 +47,18 @@ int multicastReaderNew(
     int pidChannel;                 /* NOAAPORT PID channel to use */
 
     if (sscanf(mcastSpec, "%*d.%*d.%*d.%d", &pidChannel) != 1) {
-        NPL_START1("Couldn't decode multicast specification \"%s\"", mcastSpec);
+        LOG_START1("Couldn't decode multicast specification \"%s\"", mcastSpec);
         status = 1;
     }
     else if ((pidChannel < 1) || (pidChannel > MAX_DVBS_PID)) {
-        NPL_START1("Invalid NOAAPORT PID channel: %d", pidChannel);
+        LOG_START1("Invalid NOAAPORT PID channel: %d", pidChannel);
         status = 1;
     }
     else {
         struct hostent* hostEntry = gethostbyname(mcastSpec);
 
         if (NULL == hostEntry) {
-            NPL_START1("Unknown multicast group \"%s\"", mcastSpec);
+            LOG_START1("Unknown multicast group \"%s\"", mcastSpec);
             status = 1;
         }
         else {
@@ -68,14 +68,14 @@ int multicastReaderNew(
                     hostEntry->h_length);
 
             if (!IN_MULTICAST(ntohl(mcastAddr.s_addr))) {
-                NPL_START1("Not a multicast address: \"%s\"", mcastSpec);
+                LOG_START1("Not a multicast address: \"%s\"", mcastSpec);
                 status = 1;
             }
             else {
                 int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
                 if (-1 == sock) {
-                    NPL_SERROR0("Couldn't create socket");
+                    LOG_SERROR0("Couldn't create socket");
                     status = 2;
                 }
                 else {
@@ -88,7 +88,7 @@ int multicastReaderNew(
                     
                     if (bind(sock, (struct sockaddr*)&sockAddr,
                                 sizeof(sockAddr)) < 0) {
-                        NPL_SERROR1("Couldn't bind to port %d", port);
+                        LOG_SERROR1("Couldn't bind to port %d", port);
                         status = 2;
                     }
                     else {
@@ -101,7 +101,7 @@ int multicastReaderNew(
 
                         if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                                     (void*)&mreq, sizeof(mreq)) == -1) {
-                            NPL_SERROR2("Couldn't join multicast group "
+                            LOG_SERROR2("Couldn't join multicast group "
                                     "\"%s\" on interface \"%s\"",
                                     mcastSpec,
                                     NULL == interface ? "ANY" : interface);
@@ -109,7 +109,7 @@ int multicastReaderNew(
                         else {
                             if ((status = readerNew(sock, fifo, 10000,
                                             reader)) != 0) {
-                                NPL_ADD0("Couldn't create new reader object");
+                                LOG_ADD0("Couldn't create new reader object");
                             }           /* "*reader" set */
                         }               /* joined multicast group */
                     }                   /* socket bound */

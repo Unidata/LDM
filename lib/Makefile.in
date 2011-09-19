@@ -41,6 +41,12 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@WANT_NOAAPORT_TRUE@am__append_1 = \
+@WANT_NOAAPORT_TRUE@	$(top_builddir)/grib2/lib.la \
+@WANT_NOAAPORT_TRUE@	$(top_builddir)/gempak/lib.la \
+@WANT_NOAAPORT_TRUE@	$(top_builddir)/libpng/libpng.la \
+@WANT_NOAAPORT_TRUE@	$(top_builddir)/zlib/lib.la
+
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -80,7 +86,7 @@ libldm_la_DEPENDENCIES = $(top_builddir)/misc/lib.la \
 	$(top_builddir)/@PQ_SUBDIR@/lib.la \
 	$(top_builddir)/protocol/lib.la \
 	$(top_builddir)/registry/lib.la $(top_builddir)/rpc/lib.la \
-	$(top_builddir)/ulog/lib.la
+	$(top_builddir)/ulog/lib.la $(am__append_1)
 am_libldm_la_OBJECTS = dummy.lo
 libldm_la_OBJECTS = $(am_libldm_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -245,15 +251,12 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 lib_LTLIBRARIES = libldm.la
 libldm_la_SOURCES = dummy.c
-libldm_la_LIBADD = \
-    $(top_builddir)/misc/lib.la \
-    $(top_builddir)/pqinglib/lib.la \
-    $(top_builddir)/@PQ_SUBDIR@/lib.la \
-    $(top_builddir)/protocol/lib.la \
-    $(top_builddir)/registry/lib.la \
-    $(top_builddir)/rpc/lib.la \
-    $(top_builddir)/ulog/lib.la
-
+libldm_la_LIBADD = $(NOAAPORT_LIBS) $(top_builddir)/misc/lib.la \
+	$(top_builddir)/pqinglib/lib.la \
+	$(top_builddir)/@PQ_SUBDIR@/lib.la \
+	$(top_builddir)/protocol/lib.la \
+	$(top_builddir)/registry/lib.la $(top_builddir)/rpc/lib.la \
+	$(top_builddir)/ulog/lib.la $(am__append_1)
 all: all-am
 
 .SUFFIXES:

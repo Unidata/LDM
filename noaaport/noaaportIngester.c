@@ -27,7 +27,7 @@
 #include <ldm.h>
 #include <ulog.h>
 
-#include "noaaportLog.h"
+#include "log.h"
 #include "fifo.h"
 #include "fileReader.h"
 #include "ldmProductQueue.h"
@@ -57,7 +57,7 @@ static void usage(
 {
     int logmask = setulogmask(LOG_UPTO(LOG_NOTICE));
 
-    nplNotice(
+    unotice(
 "%s version %s\n"
 "%s\n"
 "\n"
@@ -106,8 +106,8 @@ static int initLogging(
     int status;
 
     if (openulog(progName, logOptions, logFacility, logPath) == -1) {
-        NPL_SERROR0("Couldn't initialize logging");
-        nplLog(LOG_ERR);
+        LOG_SERROR0("Couldn't initialize logging");
+        log_log(LOG_ERR);
         usage(progName);
         status = 1;
     }
@@ -209,8 +209,8 @@ static void set_sigactions(void)
  * Creates a product-maker and starts it in a new thread.
  *
  * @retval 0    Success.
- * @retval 1    Usage failure. \c nplStart() called.
- * @retval 2    O/S failure. \c nplStart() called.
+ * @retval 1    Usage failure. \c log_start() called.
+ * @retval 2    O/S failure. \c log_start() called.
  */
 static int spawnProductMaker(
     const pthread_attr_t* const attr,           /**< [in] Thread-creation
@@ -229,14 +229,14 @@ static int spawnProductMaker(
     int             status = pmNew(fifo, productQueue, &pm);
 
     if (0 != status) {
-        NPL_ADD0("Couldn't create new LDM product-maker");
+        LOG_ADD0("Couldn't create new LDM product-maker");
         status = 1;
     }
     else {
         pthread_t   thrd;
 
         if (0 != (status = pthread_create(&thrd, attr, pmStart, pm))) {
-            NPL_ERRNUM0(status, "Couldn't start product-maker thread");
+            LOG_ERRNUM0(status, "Couldn't start product-maker thread");
             status = 1;
         }
         else {
@@ -252,8 +252,8 @@ static int spawnProductMaker(
  * Creates a file data-reader and starts it in a new thread.
  *
  * @retval 0    Success
- * @retval 1    Usage failure. \c nplStart() called.
- * @retval 2    O/S failure. \c nplStart() called.
+ * @retval 1    Usage failure. \c log_start() called.
+ * @retval 2    O/S failure. \c log_start() called.
  */
 static int spawnFileReader(
     const pthread_attr_t* const attr,       /**< [in] Thread-creation
@@ -272,14 +272,14 @@ static int spawnFileReader(
     int                 status = fileReaderNew(NULL, fifo, &fileReader);
 
     if (0 != status) {
-        NPL_ADD0("Couldn't create file-reader");
+        LOG_ADD0("Couldn't create file-reader");
     }
     else {
         pthread_t   thrd;
 
         if ((status = pthread_create(&thrd, attr, readerStart, fileReader)) !=
                 0) {
-            NPL_ERRNUM0(status, "Couldn't start file-reader thread");
+            LOG_ERRNUM0(status, "Couldn't start file-reader thread");
             status = 1;
         }
         else {
@@ -295,8 +295,8 @@ static int spawnFileReader(
  * Creates a multicast data-reader and starts it in a new thread.
  *
  * @retval 0    Success
- * @retval 1    Usage failure. \c nplStart() called.
- * @retval 2    O/S failure. \c nplStart() called.
+ * @retval 1    Usage failure. \c log_start() called.
+ * @retval 2    O/S failure. \c log_start() called.
  */
 static int spawnMulticastReader(
     const pthread_attr_t* const attr,       /**< [in] Thread-creation
@@ -322,14 +322,14 @@ static int spawnMulticastReader(
                     &multicastReader);
 
     if (0 != status) {
-        NPL_ADD0("Couldn't create multicast-reader");
+        LOG_ADD0("Couldn't create multicast-reader");
     }
     else {
         pthread_t   thrd;
 
         if (0 != (status = pthread_create(&thrd, attr, readerStart,
                         multicastReader))) {
-            NPL_ERRNUM0(status, "Couldn't start multicast-reader thread");
+            LOG_ERRNUM0(status, "Couldn't start multicast-reader thread");
             status = 1;
         }
         else {
@@ -455,51 +455,51 @@ static void reportStats(void)
 
     logmask = setulogmask(LOG_UPTO(LOG_NOTICE));
 
-    nplStart("----------------------------------------");
-    nplAdd("Ingestion Statistics:");
-    nplAdd("    Since Previous Report (or Start):");
+    log_start("----------------------------------------");
+    log_add("Ingestion Statistics:");
+    log_add("    Since Previous Report (or Start):");
     interval = duration(&now, &reportTime);
     encodeDuration(buf, sizeof(buf), interval);
-    nplAdd("        Duration          %s", buf);
-    nplAdd("        Raw Data:");
-    nplAdd("            Octets        %lu", CHAR_BIT*byteCount/8);
-    nplAdd("            Mean Rate:");
+    log_add("        Duration          %s", buf);
+    log_add("        Raw Data:");
+    log_add("            Octets        %lu", CHAR_BIT*byteCount/8);
+    log_add("            Mean Rate:");
     rate = (byteCount/interval)*(CHAR_BIT/8.0);
-    nplAdd("                Octets    %g/s", rate);
-    nplAdd("                Bits      %g/s", 8*rate);
-    nplAdd("        Received packets:");
-    nplAdd("            Number        %lu", packetCount);
-    nplAdd("            Mean Rate     %g/s", packetCount/interval);
-    nplAdd("        Missed packets:");
-    nplAdd("            Number        %lu", missedPacketCount);
-    nplAdd("            %%             %g",
+    log_add("                Octets    %g/s", rate);
+    log_add("                Bits      %g/s", 8*rate);
+    log_add("        Received packets:");
+    log_add("            Number        %lu", packetCount);
+    log_add("            Mean Rate     %g/s", packetCount/interval);
+    log_add("        Missed packets:");
+    log_add("            Number        %lu", missedPacketCount);
+    log_add("            %%             %g",
             100.0 * missedPacketCount / (missedPacketCount + packetCount));
-    nplAdd("        Products:");
-    nplAdd("            Inserted      %lu", prodCount);
-    nplAdd("            Mean Rate     %g/s", prodCount/interval);
-    nplAdd("    Since Start:");
+    log_add("        Products:");
+    log_add("            Inserted      %lu", prodCount);
+    log_add("            Mean Rate     %g/s", prodCount/interval);
+    log_add("    Since Start:");
     interval = duration(&now, &startTime);
     encodeDuration(buf, sizeof(buf), interval);
-    nplAdd("        Duration          %s", buf);
-    nplAdd("        Raw Data:");
-    nplAdd("            Octets        %lu", CHAR_BIT*totalByteCount/8);
-    nplAdd("            Mean Rate:");
+    log_add("        Duration          %s", buf);
+    log_add("        Raw Data:");
+    log_add("            Octets        %lu", CHAR_BIT*totalByteCount/8);
+    log_add("            Mean Rate:");
     rate = (totalByteCount/interval)*(CHAR_BIT/8.0);
-    nplAdd("                Octets    %g/s", rate);
-    nplAdd("                Bits      %g/s", 8*rate);
-    nplAdd("        Received packets:");
-    nplAdd("            Number        %lu", totalPacketCount);
-    nplAdd("            Mean Rate     %g/s", totalPacketCount/interval);
-    nplAdd("        Missed packets:");
-    nplAdd("            Number        %lu", totalMissedPacketCount);
-    nplAdd("            %%             %g", 100.0 * totalMissedPacketCount /
+    log_add("                Octets    %g/s", rate);
+    log_add("                Bits      %g/s", 8*rate);
+    log_add("        Received packets:");
+    log_add("            Number        %lu", totalPacketCount);
+    log_add("            Mean Rate     %g/s", totalPacketCount/interval);
+    log_add("        Missed packets:");
+    log_add("            Number        %lu", totalMissedPacketCount);
+    log_add("            %%             %g", 100.0 * totalMissedPacketCount /
             (totalMissedPacketCount + totalPacketCount));
-    nplAdd("        Products:");
-    nplAdd("            Inserted      %lu", totalProdCount);
-    nplAdd("            Mean Rate     %g/s", totalProdCount/interval);
-    nplAdd("----------------------------------------");
+    log_add("        Products:");
+    log_add("            Inserted      %lu", totalProdCount);
+    log_add("            Mean Rate     %g/s", totalProdCount/interval);
+    log_add("----------------------------------------");
 
-    nplLog(LOG_NOTICE);
+    log_log(LOG_NOTICE);
     (void)setulogmask(logmask);
 
     reportTime = now;
@@ -621,7 +621,7 @@ int main(
                 unsigned long   n;
 
                 if (sscanf(optarg, "%lu", &n) != 1) {
-                    NPL_SERROR1("Couldn't decode FIFO size in pages: \"%s\"",
+                    LOG_SERROR1("Couldn't decode FIFO size in pages: \"%s\"",
                             optarg);
                     status = 1;
                 }
@@ -651,8 +651,8 @@ int main(
                 processPriority = (int)strtol(optarg, &cp, 0);
 
                 if (0 != errno) {
-                    NPL_SERROR1("Couldn't decode priority \"%s\"", optarg);
-                    nplLog(LOG_ERR);
+                    LOG_SERROR1("Couldn't decode priority \"%s\"", optarg);
+                    log_log(LOG_ERR);
                 }
                 else {
                     if (processPriority < -20)
@@ -670,7 +670,7 @@ int main(
                 int         i = atoi(optarg);
 
                 if (0 > i || 7 < i) {
-                    NPL_START1("Invalid logging facility number: %d", i);
+                    LOG_START1("Invalid logging facility number: %d", i);
                     status = 1;
                 }
                 else {
@@ -698,7 +698,7 @@ int main(
                 optopt = ch;
                 /*FALLTHROUGH*/
             case '?': {
-                nplError("Unknown option: \"%c\"", optopt);
+                uerror("Unknown option: \"%c\"", optopt);
                 status = 1;
             }
         }                               /* option character switch */
@@ -706,30 +706,30 @@ int main(
 
     if (0 == status) {
         if (optind < argc) {
-            nplError("Extraneous command-line argument: \"%s\"",
+            uerror("Extraneous command-line argument: \"%s\"",
                     argv[optind]);
             status = 1;
         }
     }
 
     if (0 != status) {
-        nplError("Error decoding command-line");
+        uerror("Error decoding command-line");
         usage(progName);
     }
     else {
-        nplNotice("Starting Up %s", PACKAGE_VERSION);
-        nplNotice("%s", COPYRIGHT_NOTICE);
+        unotice("Starting Up %s", PACKAGE_VERSION);
+        unotice("%s", COPYRIGHT_NOTICE);
 
         if ((status = fifoNew(npages, &fifo)) != 0) {
-            NPL_ADD0("Couldn't create FIFO");
-            nplLog(LOG_ERR);
+            LOG_ADD0("Couldn't create FIFO");
+            log_log(LOG_ERR);
         }
         else {
             LdmProductQueue*    prodQueue;
 
             if ((status = lpqGet(prodQueuePath, &prodQueue)) != 0) {
-                NPL_ADD0("Couldn't open LDM product-queue");
-                nplLog(LOG_ERR);
+                LOG_ADD0("Couldn't open LDM product-queue");
+                log_log(LOG_ERR);
             }
             else {
                 if (NULL == mcastSpec) {
@@ -743,12 +743,12 @@ int main(
                     pthread_attr_t  attr;
 
                     if (0 != (status = pthread_attr_init(&attr))) {
-                        NPL_ERRNUM0(status,
+                        LOG_ERRNUM0(status,
                                 "Couldn't initialize thread attribute");
                     }
                     else {
 #ifndef _POSIX_THREAD_PRIORITY_SCHEDULING
-                        nplWarn("Can't adjust thread priorities due to lack of "
+                        uwarn("Can't adjust thread priorities due to lack of "
                                 "necessary support from environment");
 #else
                         /*
@@ -784,7 +784,7 @@ int main(
                 }                               /* reading multicast packets */
 
                 if (0 != status) {
-                    nplLog(LOG_ERR);
+                    log_log(LOG_ERR);
                     status = 1;
                 }
                 else {

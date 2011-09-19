@@ -19,7 +19,7 @@
 #include "ldmProductQueue.h"
 #include "md5.h"
 #include "inetutil.h"
-#include "noaaportLog.h"
+#include "log.h"
 
 datastore *dataheap=NULL;
 int nextfrag = 0, MAXFRAGS=1000;
@@ -31,7 +31,7 @@ if ( dataheap == NULL ) dataheap = (datastore *)malloc(MAXFRAGS * sizeof(datasto
 if ( nfrags >= MAXFRAGS )
    {
    MAXFRAGS = nfrags + 1;
-   nplNotice("increasing fragheap to %d\0",MAXFRAGS);
+   unotice("increasing fragheap to %d\0",MAXFRAGS);
    dataheap = (datastore *)realloc ( dataheap, MAXFRAGS * sizeof(datastore));
    }
 
@@ -49,7 +49,7 @@ if ( dataheap == NULL )
 if ( nextfrag >= MAXFRAGS )
    {
    MAXFRAGS += 1000;
-   nplError("Error in number of frags, increasing fragheap to %d\0",MAXFRAGS);
+   uerror("Error in number of frags, increasing fragheap to %d\0",MAXFRAGS);
    dataheap = (datastore *)realloc ( dataheap, MAXFRAGS * sizeof(datastore));
    }
 
@@ -145,7 +145,7 @@ static feedtypet feedpoint = NPOINT;
        b4 = (unsigned char) cpos[15];
        lengrib = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
        grib2name(cpos, lengrib, PROD_NAME, &psh->metadata[2]);
-       nplDebug("%d PRODname %s meta %s",psh->metaoff,PROD_NAME,psh->metadata); 
+       udebug("%d PRODname %s meta %s",psh->metaoff,PROD_NAME,psh->metadata); 
        }
     }
 
@@ -220,37 +220,37 @@ static feedtypet feedpoint = NPOINT;
 
   if (prod.info.sz <= 0)
     {
-      nplError ("heapsize is invalid %ld for prod %s\0", prod.info.sz,
+      uerror ("heapsize is invalid %ld for prod %s\0", prod.info.sz,
 	      prod.info.ident);
       return;
     }
 
 
   MD5Final (prod.info.signature, md5try);
-  nplInfo ("md5 checksum final\0");
+  uinfo ("md5 checksum final\0");
 
   if (strlen (prod.info.ident) == 0)
     {
       prod.info.ident = _nohead;
-      nplNotice ("strange header %s (%d) size %d %d\0", prod.info.ident,
+      unotice ("strange header %s (%d) size %d %d\0", prod.info.ident,
 	       psh->ptype, prod.info.sz, prod.info.seqno);
     }
 
   status = set_timestamp (&prod.info.arrival);
-  nplInfo ("timestamp %ld\0", prod.info.arrival);
+  uinfo ("timestamp %ld\0", prod.info.arrival);
 
   status = lpqInsert(lpq, &prod);
   if (status == 0) {
-      nplNotice ("%s inserted [cat %d type %d ccb %d/%d seq %d size %d]\0",
+      unotice ("%s inserted [cat %d type %d ccb %d/%d seq %d size %d]\0",
 	       prod.info.ident, psh->pcat, psh->ptype, psh->ccbmode,
 	       psh->ccbsubmode, prod.info.seqno, prod.info.sz);
       return;
   }
   else if (3 == status) {
-    nplNotice ("%s already in queue [%d]\0", prod.info.ident, prod.info.seqno);
+    unotice ("%s already in queue [%d]\0", prod.info.ident, prod.info.seqno);
   }
   else {
-    nplError ("pqinsert failed [%d] %s\0", status, prod.info.ident);
+    uerror ("pqinsert failed [%d] %s\0", status, prod.info.ident);
   }
 
 
@@ -269,12 +269,12 @@ prodalloc (long int nfrags, long int dbsize, char **heap)
     nfrags = 1;
   bsize = (nfrags * dbsize) + 32;
 
-  nplDebug ("heap allocate %ld  [%ld %ld] bytes\0", bsize, nfrags, dbsize);
+  udebug ("heap allocate %ld  [%ld %ld] bytes\0", bsize, nfrags, dbsize);
   if (*heap == NULL)
     {
       newheap = (char *) malloc (bsize);
       largestsiz = bsize;
-      nplDebug ("malloc new\0");
+      udebug ("malloc new\0");
     }
   else
     {
@@ -282,7 +282,7 @@ prodalloc (long int nfrags, long int dbsize, char **heap)
 	{
 	  newheap = (char *) realloc (*heap, bsize);
 	  largestsiz = bsize;
-	  nplDebug ("remalloc\0");
+	  udebug ("remalloc\0");
 	}
       else
 	newheap = *heap;

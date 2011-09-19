@@ -18,19 +18,27 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 
-COMMON_LIB_SUBDIRS	= \
+if WANT_FAUX_PQ
+    LIB_SUBDIRS	= fauxPq
+else
+    LIB_SUBDIRS	= pq
+endif
+LIB_SUBDIRS	+= \
     libxml2 \
     rpc \
     ulog \
     misc \
     pqinglib \
     protocol \
-    registry \
-    lib
-
-LIB_SUBDIRS	= \
-    $(PQ_SUBDIR) \
-    $(COMMON_LIB_SUBDIRS)
+    registry
+if WANT_NOAAPORT
+    LIB_SUBDIRS	+= grib2 gempak libpng zlib
+else
+if WANT_GRIBINSERT
+    LIB_SUBDIRS	+= grib2 gempak
+endif
+endif
+LIB_SUBDIRS	+= lib
 
 PROG_SUBDIRS	= \
     feedme \
@@ -57,24 +65,17 @@ PROG_SUBDIRS	= \
     scour \
     scripts \
     ulogger
-
 if WANT_NOAAPORT
-    NOAAPORT_SUBDIR	= noaaport
+    PROG_SUBDIRS	+= noaaport
+endif
+if WANT_GRIBINSERT
+    PROG_SUBDIRS	+= gribinsert
 endif
 
 SUBDIRS		= \
     $(LIB_SUBDIRS) \
     $(PROG_SUBDIRS) \
-    $(NOAAPORT_SUBDIR) \
-    html
-
-DIST_SUBDIRS	= \
-    $(COMMON_LIB_SUBDIRS) \
-    pq \
-    fauxPq \
-    $(PROG_SUBDIRS) \
-    noaaport \
-    test html
+    html test
 
 nobase_include_HEADERS		= \
     rpc/rpc.h \

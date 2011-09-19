@@ -1,0 +1,4 @@
+#
+# Rotate NDFD processing log files
+#
+0 17 * * * bin/newlog logs/ndfdprocess.log 7

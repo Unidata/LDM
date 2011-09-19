@@ -4,7 +4,7 @@
  */
 #include <stdio.h>
 #include <string.h>
-#include <noaaportLog.h>
+#include <log.h>
 #include "nport.h"
 
 int wmo_header(char *prod_name, size_t prod_size, char *wmohead, char *wmometa, int *metaoff);
@@ -126,7 +126,7 @@ ccb->len = 2 * (int)(((b1 & 63) << 8) + b2);
 
 if ( ccb->len > blen ) /* A rouge product missing its CCB, reported to NWS DM 3/10/05 by Chiz */
    {
-   nplError ("invalid ccb length = %d %d %d, blen %d\n",ccb->len,b1,b2,blen);
+   uerror ("invalid ccb length = %d %d %d, blen %d\n",ccb->len,b1,b2,blen);
 
    /* try a failsafe header, otherwise use our own! */
    wmolen = 0;
@@ -144,14 +144,14 @@ b1 = (unsigned char)buf[10];
 b2 = (unsigned char)buf[11];
 psh->ccbmode = b1;
 psh->ccbsubmode = b2;
-nplDebug("ccb mode %d ccb submode %d\0",psh->ccbmode,psh->ccbsubmode);
+udebug("ccb mode %d ccb submode %d\0",psh->ccbmode,psh->ccbsubmode);
 psh->hasccb = 1;
 
 b1 = (unsigned char)buf[12];
 b2 = (unsigned char)buf[13];
 ccb->user1 = b1;
 ccb->user2 = b1;
-nplDebug("ccb user1 %d ccb user2 %d\0",ccb->user1,ccb->user2);
+udebug("ccb user1 %d ccb user2 %d\0",ccb->user1,ccb->user2);
 psh->ccbdtype[0] = '\0';     /* Initialize ccbdtype...eventually used to identify data type */
 
 /* see if this looks like a WMO header, if so canonicalize */
@@ -181,7 +181,7 @@ else
    else
       sprintf(psh->pname,"Unidentifiable product\0");
 
-   nplNotice("Non-wmo product type %s ccbmode %d ccbsubmode %d\0",
+   unotice("Non-wmo product type %s ccbmode %d ccbsubmode %d\0",
 	psh->pname, psh->ccbmode, psh->ccbsubmode);
    }
 
