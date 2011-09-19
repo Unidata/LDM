@@ -1,3 +1,11 @@
+6.10.0.6 	2011-09-19 10:47:59-06:00
+    Incorporated GRIBINSERT package.  Distributed subpackages used by both the
+    GRIBINSERT and NOAAPORT packages into their own subdirectories. Ported
+    GRIBINSERT package to LDM package environment.
+
+    Corrrected GRIB2 tables:  Moved site-specific stuff from "g2varswmo.tbl" to
+    "g2varsncep.tbl".
+
 6.10.0.5 	2011-09-07 08:50:18-06:00
     Improved noaaport/gempak error messages -- specifically, added information
     to messages about missing tables and parameters.
