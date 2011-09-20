@@ -1,3 +1,13 @@
+6.10.0.7 	2011-09-20 09:39:11-06:00
+    Corrected "--with-gribinsert" building: ensured that the "grib2" and
+    "gempak" libraries are added to the LDM library if "--with-gribinsert" is
+    specified but not "--with-noaaport".
+    
+    Removed repository files that are generated from ".in" files.
+
+    Modified README: removed RELEASE_NOTES section and modified SUPPORT
+    section.
+
 6.10.0.6 	2011-09-19 10:47:59-06:00
     Incorporated GRIBINSERT package.  Distributed subpackages used by both the
     GRIBINSERT and NOAAPORT packages into their own subdirectories. Ported
