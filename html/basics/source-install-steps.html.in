@@ -50,7 +50,7 @@ command, instead:
 </pre>
 
 <p>
-The root of the installation tree will be <code>~ldm/@PACKAGE@-@VERSION@</code>
+The root of the installation tree will be <code>$HOME/@PACKAGE@-@VERSION@</code>
 for the version-dependent files.
 
 <p>
@@ -123,7 +123,7 @@ command, instead:
 <p>The reason for creating the additional <code>src/</code> subdirectory is
 to allow for reversible upgrading of the LDM.  The section on
 <a href="activating.html">activating the LDM installation</a>
-has additional information.
+provides an example.
 
 <li>
 <a NAME="build"></a>
