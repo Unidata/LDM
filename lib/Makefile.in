@@ -47,6 +47,10 @@ host_triplet = @host@
 @WANT_NOAAPORT_TRUE@	$(top_builddir)/libpng/libpng.la \
 @WANT_NOAAPORT_TRUE@	$(top_builddir)/zlib/lib.la
 
+@WANT_GRIBINSERT_TRUE@@WANT_NOAAPORT_FALSE@am__append_2 = \
+@WANT_GRIBINSERT_TRUE@@WANT_NOAAPORT_FALSE@	$(top_builddir)/grib2/lib.la \
+@WANT_GRIBINSERT_TRUE@@WANT_NOAAPORT_FALSE@	$(top_builddir)/gempak/lib.la
+
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -86,7 +90,7 @@ libldm_la_DEPENDENCIES = $(top_builddir)/misc/lib.la \
 	$(top_builddir)/@PQ_SUBDIR@/lib.la \
 	$(top_builddir)/protocol/lib.la \
 	$(top_builddir)/registry/lib.la $(top_builddir)/rpc/lib.la \
-	$(top_builddir)/ulog/lib.la $(am__append_1)
+	$(top_builddir)/ulog/lib.la $(am__append_1) $(am__append_2)
 am_libldm_la_OBJECTS = dummy.lo
 libldm_la_OBJECTS = $(am_libldm_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
@@ -256,7 +260,7 @@ libldm_la_LIBADD = $(NOAAPORT_LIBS) $(top_builddir)/misc/lib.la \
 	$(top_builddir)/@PQ_SUBDIR@/lib.la \
 	$(top_builddir)/protocol/lib.la \
 	$(top_builddir)/registry/lib.la $(top_builddir)/rpc/lib.la \
-	$(top_builddir)/ulog/lib.la $(am__append_1)
+	$(top_builddir)/ulog/lib.la $(am__append_1) $(am__append_2)
 all: all-am
 
 .SUFFIXES:
