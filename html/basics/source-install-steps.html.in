@@ -83,7 +83,7 @@ Obtain the
 <a href="glindex.html#LDM">LDM</a> 
 source-distribution can be obtained via the command
 <blockquote><pre>
-wget ftp://ftp.unidata.ucar.edu/pub/ldm/ldm</a>-6.9.0.0.tar.gz
+wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
 </pre></blockquote>
 or by clicking on the appropriate link in the 
 <a href="/downloads/ldm/">LDM download page</a>.
