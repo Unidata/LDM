@@ -188,8 +188,8 @@ installation process for your particular system.  You may use the following
 options and arguments, when and if appropriate:
 <blockquote>
 <dl>
-    <p><dt><code>--enable-logging=<a href="glindex.html#localn">local<i>n</i>
-	</a>
+    <p><dt><code>--enable-logging=<a href="glindex.html#localn">local<em>n</em>
+	</a></code>
     <dd>Configures the <a href="glindex.html#LDM">LDM</a> to use the
 	<a href="glindex.html#localn">local<i>n</i></a>
 	facility for logging messages.  If you have a previous 
@@ -241,7 +241,7 @@ options and arguments, when and if appropriate:
         href="glindex.html#product-queue">product-queue</a>.  This option is
         disabled by default because most sites don't need this capability.
 
-    <dt><code>CC=</code><i>path</i>
+    <dt><code>CC=<em>path</em></code>
     <dd>Configures the build process to use <i>path</i> as the pathname of the
         C compiler (<i>e.g.</i>, <code>CC=/usr/gnu/bin/gcc</code>).
 
