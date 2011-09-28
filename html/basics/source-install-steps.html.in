@@ -255,7 +255,7 @@ options and arguments, when and if appropriate:
 
     <dt><code>LIBS=</code>...
     <dd>Additional libraries used by the build process
-        (<i>e.g.</i>, <code>LIBS="-L/opt/lib -lrpcsoc</code>").
+        (<i>e.g.</i>, <code>LIBS="-L/opt/lib -lrpcsoc"</code>).
 </dl>
 </blockquote>
 

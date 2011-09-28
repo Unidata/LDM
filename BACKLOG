@@ -3,3 +3,6 @@ Move $LDMHOME/ldmd.pid file to var/
 Move $LDMHOME/etc/*.state files to var/
 
 Move $LDMHOME/.*.info files to var/
+
+LDM 7:
+    Add "but not" to REQUEST message.
