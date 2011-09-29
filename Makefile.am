@@ -142,9 +142,6 @@ superuser in order to complete the installation process." \
 	@echo
 endif
 
-# "ls" is used in the following instead of "test -e" because if "share" is a
-# symbolic link to "runtime/share" and "runtime/share" doesn't exist, then
-# "test -e share" is false.
 ensure-ldmhome-links:
 	$(srcdir)/ensureLdmhomeLinks $(LDMHOME) $(distName)
 
