@@ -47,7 +47,7 @@ regpath{HOSTNAME},
 regpath{RECONCILIATION_MODE},
 regpath{QUEUE_SIZE},</tt> and <tt>
 regpath{QUEUE_SLOTS}</tt>.  These parameters can be set via the <code>
-<a href="glindex.html#regutil"><tt>regutil</tt></a>(1) utility.
+<a href="glindex.html#regutil"><tt>regutil</tt></a>(1)</code> utility.
 
 <p>If you are upgrading an existing LDM installation or are planning to use the
 GEMPAK or McIDAS decoders, then make sure that the data directory printed by
@@ -83,7 +83,7 @@ with the following information:
       the <a href="glindex.html#LDM">LDM</a>
   <li>Desired <a href="glindex.html#feedtype">feedtypes</a>.
 </ul>
-Note that you can (and probably should) have multiple
+Note that you can (and probably should) have two
 <a href="glindex.html#upstream host">upstream host</a>s
 for any given data-feed.
 
@@ -368,10 +368,11 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
     <li><p>Add an entry to rotate the metrics data files
 	if you are accumulating metrics:
        <blockquote><tt>
-           0 0 * * * bash -l -c 'ldmadmin newmetrics'
+           0 0 * * 0 bash -l -c 'ldmadmin newmetrics'
        </tt></blockquote>
-       This entry will rotate the metrics data files every day at midnight.
-       You might choose a different time.  See
+       This entry will rotate the metrics data files at the beginning of each
+       week.
+       You might choose a different period.  See
        <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
 
     <li><p>Add an entry to periodically check the LDM system:
