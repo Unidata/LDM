@@ -27,7 +27,7 @@ while getopts b:e: id; do
                 exit 1;;
     esac
 done
-shift $(($OPTIND - 1))
+shift `expr $OPTIND - 1`
 if test "$1"; then
     files="$@"
 fi
