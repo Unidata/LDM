@@ -1191,6 +1191,8 @@ sub vetQueueSize
                             }
                         }               # LDM stopped
                     }                   # new queue created
+
+                    system("pqutil -C");# reset queue metrics
                 }                       # mode is increase queue
                 elsif ($reconMode eq $decreaseMaxLatency) {
                     if (0 >= $minVirtResTime) {
@@ -1233,6 +1235,8 @@ sub vetQueueSize
                             }           # LDM stopped
                         }               # LDM is running
                     }                   # new time parameters saved
+
+                    system("pqutil -C");# reset queue metrics
                 }                       # mode is decrease max latency
                 elsif ($reconMode eq $doNothing) {
                     my @newParams = computeNewQueueSize($minVirtResTime,
@@ -1256,10 +1260,6 @@ sub vetQueueSize
             }                           # reconciliation needed
         }                               # pqmon(1) success
     }                                   # queue has reached equilibrium
-
-    if (2 != $status) {
-        system("pqutil -C");            # reset queue metrics
-    }
 
     return $status;
 }
