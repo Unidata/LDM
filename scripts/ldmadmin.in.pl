@@ -1719,7 +1719,7 @@ sub getCpu
 		if (/([[:digit:]]+(e\d)?) (free swap|swap free)/i) {
 		    $swapFree = $1;
 		}
-		elsif (/([[:digit:]]+(e\d)?) (total )?swap/i) {
+		if (/([[:digit:]]+(e\d)?) (total )?swap/i) {
 		    $swapUsed = $1 - $swapFree;
 		}
 		if (/([[:digit:]]+(e\d)?) swap in use/i) {
@@ -1756,7 +1756,9 @@ sub getCpu
 	    elsif ($usIndex < 0 && $fields[$i] eq "us") {
 		$usIndex = $i;
 	    }
-	    elsif ($syIndex < 0 && $fields[$i] eq "sy") {
+	    elsif ($fields[$i] eq "sy") {
+                # The vmstat(1) on SunOS, HP-UX, and AIX emits 2 "sy" fields.
+                # The CPU percentage is the last one.
 		$syIndex = $i;
 	    }
 	    elsif ($idIndex < 0 && $fields[$i] eq "id") {
