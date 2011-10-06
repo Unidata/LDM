@@ -76,6 +76,16 @@ was initialized.  If the queue is not yet at equilibrium (i.e., if no
 data-products have been deleted since this parameter was initialized) then this
 metric will be -1.  This parameter can be reset via the \fBpqutil\fP(1)
 utility.
+.TP
+.B mvrtSize
+The amount of data in the queue, in bytes, when the minimum virtual
+residence time was determined.
+This parameter can be reset via the \fBpqutil\fP(1) utility.
+.TP
+.B mvrtSlots
+The number of data-products in the queue when the minimum virtual
+residence time was determined.
+This parameter can be reset via the \fBpqutil\fP(1) utility.
 .RE
 .TP
 .BI "-l " logfile
