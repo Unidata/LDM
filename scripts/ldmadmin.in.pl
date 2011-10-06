@@ -738,10 +738,10 @@ sub start_ldm
                         }
                     }
 
-                    # Reset queue metrics
-                    system("pqutil -C");
-
                     if (0 == $status) {
+                        # Reset queue metrics
+                        system("pqutil -C");
+
                         $status = start();
                     }
                 }                   # pqact(1) config-files OK
