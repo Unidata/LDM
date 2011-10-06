@@ -738,6 +738,9 @@ sub start_ldm
                         }
                     }
 
+                    # Reset queue metrics
+                    system("pqutil -C");
+
                     if (0 == $status) {
                         $status = start();
                     }
