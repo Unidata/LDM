@@ -78,7 +78,7 @@ else
 
         set terminal x11 1 title "Queue Size"
         #set terminal png medium
-        set title "Number of Bytes Used in Queue vs. Time\n$host LDM: $version"
+        set title "Amount of Data in Queue vs. Time\n$host LDM: $version"
         set ylabel "Bytes / 1 GB"
         plot "$datafile" u 1:(\$9/1e9) title "Bytes Used" with lines
 
