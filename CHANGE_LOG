@@ -1,3 +1,31 @@
+6.10.0.8 	2011-10-07 15:02:22-06:00
+    Added printing of error-exiting FILE commands.
+
+    Changed a plot title to "Amount of Data in Queue vs. time".
+
+    Documented "mvrtSize" & "mvrtSlots" in pqmon(1).
+
+    Changed when product-queue metrics are reset by ldmadmin(1) and added queue
+    metrics resetting to "ldmadmin start".
+    
+    No longer reset if the reconciliation-mode is "do nothing".
+
+    Ported most of "ldmadmin printmetrics" to SunOS. Getting the number of LDM
+    connections is still problematical because the output of netstat(1) differs
+    radically from Linux's netstat(1).
+
+    Made plotMetrics(1) script more portable by replacing arithmetic expansion
+    with use of expr(1).
+
+    Improved "ldmadmin newmetrics" example: corrected minute and hour fields
+    and changed interval to weekly.
+
+    Removed extraneous commentary from makefile.
+
+    Improved installation documentation.
+
+    Made tarfile reference version-independent.
+
 6.10.0.7 	2011-09-20 09:39:11-06:00
     Corrected "--with-gribinsert" building: ensured that the "grib2" and
     "gempak" libraries are added to the LDM library if "--with-gribinsert" is
