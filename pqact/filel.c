@@ -1,5 +1,8 @@
 /*
- *   See file ../COPYRIGHT for copying and redistribution conditions.
+ *   Copyright 2011 University Corporation for Atmoserpheric Research
+ *
+ *   See file "COPYRIGHT" in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
 
 #include <config.h>
@@ -376,6 +379,32 @@ get_fl_entry(ft_t type, int argc, char **argv)
         dump_fl();
 #endif
         return entry;
+}
+
+
+/*
+ * Returns the file-list entry associated with a PID.
+ *
+ * Arguments:
+ *      pid             The PID of the file-list entry to return.
+ * Returns:
+ *      NULL            The file-list doesn't contain an entry with the given
+ *                      PID.
+ *      else            A pointer to the associated file-list entry.
+ */
+static fl_entry*
+fl_findByPid(
+    const pid_t pid)
+{
+    fl_entry*   entry = NULL;           /* entry not found */
+
+    for (entry = thefl->tail; entry != NULL; entry = entry->prev)
+    {
+        if (pid == entry->private)
+            break;
+    }
+
+    return entry;
 }
 
 
@@ -983,8 +1012,7 @@ stdio_open(fl_entry *entry, int ac, char **av)
                         /*
                          * The "file" must be a pipe or FIFO.
                          */
-                        serror("stdio_open(): Couldn't seek to EOF: %s",
-                            entry->path);
+                        serror("stdio_open(): Couldn't seek to EOF: %s", path);
                     }
                 }
 
@@ -1408,102 +1436,6 @@ pipe_open(fl_entry *entry, int argc, char **argv)
     }                                   /* pipe() success */
 
     return writeFd;
-}
-
-
-/*
- * Returns the file-list PIPE-entry associated with a PID.
- *
- * Arguments:
- *      pid             The PID of the PIPE-entry to return.
- * Returns:
- *      NULL            The file-list doesn't contain a PIPE-entry with the
- *                      given PID.
- *      else            A pointer to the associated file-list PIPE-entry.
- */
-static fl_entry*
-fl_findByPid(
-    pid_t       pid)
-{
-    fl_entry*   entry = NULL;           /* entry not found */
-
-    for (entry = thefl->tail; entry != NULL; entry = entry->prev)
-    {
-        if (entry->type == PIPE && pid == entry->private)
-            break;
-    }
-
-    return entry;
-}
-
-
-/*
- * Waits-upon one or more child processes.
- *
- * Arguments:
- *      pid             The PID of the process upon which to wait.  If 
- *                      (pid_t)-1, then any child process is waited-upon.
- *      options         Bitwise or of WCONTINUED, WNOHANG, or WUNTRACED.
- *                      See waitpid().
- * Returns:
- *      -1              Failure.  "errno" is set.
- *      0               "options" & WNOHANG is true and status isn't available
- *                      for process "pid".
- *      else            PID of the waited-upon process.
- */
-pid_t
-reap(
-    const pid_t pid,
-    const int   options)
-{
-    int         status = 0;
-    const pid_t wpid = waitpid(pid, &status, options);
-
-    if (wpid == -1)
-    {
-        if (!(errno == ECHILD && pid == -1))
-        {
-            /*
-             * Unwaited-for child processes exist.
-             */
-            serror("waitpid()");
-        }
-    }
-    else if (wpid != 0) 
-    {
-        fl_entry* const         entry = fl_findByPid(wpid);
-        const char* const       cmd = entry ? entry->path : NULL;
-
-        if (WIFSTOPPED(status))
-        {
-            unotice(
-                cmd
-                    ? "child %d stopped by signal %d (%s)"
-                    : "child %d stopped by signal %d",
-                wpid, WSTOPSIG(status), cmd);
-        }
-        else if (WIFSIGNALED(status))
-        {
-            unotice(
-                cmd
-                    ? "child %d terminated by signal %d (%s)"
-                    : "child %d terminated by signal %d",
-                wpid, WTERMSIG(status), cmd);
-            delete_entry(entry);        /* NULL safe */
-        }
-        else if (WIFEXITED(status))
-        {
-            if (WEXITSTATUS(status) != 0)
-                unotice(
-                    cmd
-                        ? "child %d exited with status %d (%s)"
-                        : "child %d exited with status %d",
-                    wpid, WEXITSTATUS(status), cmd);
-            delete_entry(entry);        /* NULL safe */
-        }
-    }                                   /* wpid != -1 && wpid != 0 */
-
-    return wpid;
 }
 
 
@@ -2518,4 +2450,74 @@ openMax()
     }
 
     return max;
+}
+
+
+/*
+ * Waits-upon one or more child processes.
+ *
+ * Arguments:
+ *      pid             The PID of the process upon which to wait.  If 
+ *                      (pid_t)-1, then any child process is waited-upon.
+ *      options         Bitwise or of WCONTINUED, WNOHANG, or WUNTRACED.
+ *                      See waitpid().
+ * Returns:
+ *      -1              Failure.  "errno" is set.
+ *      0               "options" & WNOHANG is true and status isn't available
+ *                      for process "pid".
+ *      else            PID of the waited-upon process.
+ */
+pid_t
+reap(
+    const pid_t pid,
+    const int   options)
+{
+    int         status = 0;
+    const pid_t wpid = waitpid(pid, &status, options);
+
+    if (wpid == -1)
+    {
+        if (!(errno == ECHILD && pid == -1))
+        {
+            /*
+             * Unwaited-for child processes exist.
+             */
+            serror("waitpid()");
+        }
+    }
+    else if (wpid != 0) 
+    {
+        fl_entry* const         entry = fl_findByPid(wpid);
+        const char* const       cmd = entry ? entry->path : NULL;
+
+        if (WIFSTOPPED(status))
+        {
+            unotice(
+                cmd
+                    ? "child %d stopped by signal %d (%s)"
+                    : "child %d stopped by signal %d",
+                wpid, WSTOPSIG(status), cmd);
+        }
+        else if (WIFSIGNALED(status))
+        {
+            unotice(
+                cmd
+                    ? "child %d terminated by signal %d (%s)"
+                    : "child %d terminated by signal %d",
+                wpid, WTERMSIG(status), cmd);
+            delete_entry(entry);        /* NULL safe */
+        }
+        else if (WIFEXITED(status))
+        {
+            if (WEXITSTATUS(status) != 0)
+                unotice(
+                    cmd
+                        ? "child %d exited with status %d (%s)"
+                        : "child %d exited with status %d",
+                    wpid, WEXITSTATUS(status), cmd);
+            delete_entry(entry);        /* NULL safe */
+        }
+    }                                   /* wpid != -1 && wpid != 0 */
+
+    return wpid;
 }

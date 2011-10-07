@@ -1,8 +1,9 @@
 /*
+ * Copyright 2011 University Corporation for Atmospheric Research.
+ * See file "COPYRIGHT" in the top-level source-directory for conditions.
+ *
  * This module contains the "upstream" code for version 6 of the LDM.
  */
-/* $Id: up6.c,v 1.14.2.3.2.2.2.2.2.20 2009/08/17 17:13:11 steve Exp $ */
-
 #include "config.h"
 
 #include <assert.h>      /* assert() */
@@ -496,8 +497,7 @@ up6_run(void)
 
             if (error != NULL) {
                 err_log_and_free(
-                    ERR_NEW(0, error,
-                        "Couldn't initialize autoshift module"),
+                    ERR_NEW(0, error, "Couldn't initialize autoshift module"),
                     ERR_FAILURE);
 
                 errCode = UP6_SYSTEM_ERROR;
