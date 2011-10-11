@@ -15,7 +15,7 @@ EXTRA_DIST		= \
     SharedCounter.h \
     state.h
 GDBMLIB			= @GDBMLIB@
-PQ_SUBDIR	= @PQ_SUBDIR@
+PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS		= pqact
 check_PROGRAMS		= date_sub
 pqact_SOURCES		= \
@@ -44,7 +44,10 @@ TAGS_FILES		= \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
-    ../rpc/*.c ../rpc/*.h
+    ../rpc/*.c ../rpc/*.h \
+    /usr/local/include/CUnit/CUnit.h \
+    /usr/local/include/CUnit/Basic.h
+CLEANFILES		= *.i
 
 if MAINTAINER
 pqact.1:	pqact.1.in
@@ -58,3 +61,6 @@ $(DESTDIR)$(sysconfdir):
 	$(MKDIR_P) $@
 $(DESTDIR)$(sysconfdir)/pqact.conf:
 	$(INSTALL_DATA) $(srcdir)/pqact.conf $@
+
+.c.i:
+	$(COMPILE) -E $< >$@

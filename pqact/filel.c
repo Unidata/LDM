@@ -31,6 +31,7 @@
 #include <sys/wait.h>
 
 
+#include "child_map.h"
 #include "error.h"
 #include "filel.h"
 #include "action.h"
@@ -45,7 +46,8 @@
 #include "pbuf.h"
 #include "pq.h"
 
-extern pqueue*  pq;
+extern pqueue*          pq;
+extern ChildMap*        execMap;
 
 static unsigned maxEntries = 0;
 
@@ -383,7 +385,8 @@ get_fl_entry(ft_t type, int argc, char **argv)
 
 
 /*
- * Returns the file-list entry associated with a PID.
+ * Returns the file-list entry associated with a PID. Note that only PIPE
+ * entries have a PID.
  *
  * Arguments:
  *      pid             The PID of the file-list entry to return.
@@ -2487,35 +2490,67 @@ reap(
     }
     else if (wpid != 0) 
     {
-        fl_entry* const         entry = fl_findByPid(wpid);
-        const char* const       cmd = entry ? entry->path : NULL;
+        fl_entry* const entry = fl_findByPid(wpid);
+        const char*     cmd;
+        const char*     childType;
+        int             isExec = 0;
+
+        if (NULL != entry) {
+            cmd = entry->path;
+            childType = "PIPE ";
+        }
+        else if (NULL == execMap) {
+            cmd = NULL;
+            childType = "";
+        }
+        else {
+            cmd = cm_get_command(execMap, wpid);
+
+            if (NULL != cmd) {
+                childType = "EXEC ";
+                isExec = 1;
+            }
+            else {
+                childType = "";
+            }
+        }
 
         if (WIFSTOPPED(status))
         {
             unotice(
                 cmd
-                    ? "child %d stopped by signal %d (%s)"
+                    ? "child %d stopped by signal %d (%s%s)"
                     : "child %d stopped by signal %d",
-                wpid, WSTOPSIG(status), cmd);
+                wpid, WSTOPSIG(status), childType, cmd);
         }
         else if (WIFSIGNALED(status))
         {
-            unotice(
+            uwarn(
                 cmd
-                    ? "child %d terminated by signal %d (%s)"
+                    ? "child %d terminated by signal %d (%s%s)"
                     : "child %d terminated by signal %d",
-                wpid, WTERMSIG(status), cmd);
-            delete_entry(entry);        /* NULL safe */
+                wpid, WTERMSIG(status), childType, cmd);
+            if (isExec) {
+                (void)cm_remove(execMap, wpid);
+            }
+            else {
+                delete_entry(entry);    /* NULL safe */
+            }
         }
         else if (WIFEXITED(status))
         {
             if (WEXITSTATUS(status) != 0)
-                unotice(
+                uerror(
                     cmd
-                        ? "child %d exited with status %d (%s)"
+                        ? "child %d exited with status %d (%s%s)"
                         : "child %d exited with status %d",
-                    wpid, WEXITSTATUS(status), cmd);
-            delete_entry(entry);        /* NULL safe */
+                    wpid, WEXITSTATUS(status), childType, cmd);
+            if (isExec) {
+                (void)cm_remove(execMap, wpid);
+            }
+            else {
+                delete_entry(entry);    /* NULL safe */
+            }
         }
     }                                   /* wpid != -1 && wpid != 0 */
 

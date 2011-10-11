@@ -1,8 +1,9 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2011 University Corporation for Atmospheric Research
+ *
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: child_process_set.c,v 1.5.18.1 2009/07/22 21:14:39 steve Exp $ */
 
 /* 
  * This module implements a set of child process identifiers -- so the LDM
@@ -17,7 +18,6 @@
 #include <sys/types.h>
 
 #include "ulog.h"
-
 #include "child_process_set.h"
 
 

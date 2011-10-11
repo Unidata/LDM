@@ -1,8 +1,9 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2011 University Corporation for Atmospheric Research
+ *
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: action.c,v 1.78.16.4.2.3 2005/09/21 18:37:12 steve Exp $ */
 
 #include "config.h"
 
@@ -15,6 +16,7 @@
 #include <signal.h>
 #include <fcntl.h>
 
+#include "child_map.h"
 #include "ldm.h"
 #include "ldmalloc.h"
 #include "ldmfork.h"
@@ -24,7 +26,9 @@
 #include "globals.h"
 #include "remote.h"
 #include "pq.h"
-#include "ulog.h"
+#include "log.h"
+
+ChildMap*        execMap = NULL;
 
 
 /*ARGSUSED*/
@@ -60,67 +64,78 @@ exec_prodput(
      const void*        xprod,
      size_t             xlen)
 {
-    pid_t       pid;
-    int         waitOnChild = 0;        /* default is not to wait */
+    pid_t       pid = 0;
 
-    if (strcmp(argv[0], "-wait") == 0)
-    {
-        waitOnChild = 1;                /* => wait for child */
-        argc--; argv++;
-    }
+    if (NULL == execMap) {
+        execMap = cm_new();
 
-    pid = ldmfork();
-    if (-1 == pid)
-    {
-        log_add("Couldn't fork EXEC process");
-        log_log(LOG_ERR);
-    }
-    else
-    {
-        if (0 == pid)
-        {
-            /*
-             * Detach the child process from the parents process group??
-            (void) setpgid(0,0);
-             */
-
-            (void)signal(SIGTERM, SIG_DFL);
-            (void)pq_close(pq);
-
-            /*
-             * It is assumed that the standard input, output, and error streams
-             * are correctly established and should not be modified.
-             */
-
-            /*
-             * Don't let the child process get any inappropriate privileges.
-             */
-            endpriv();
-
-            (void) execvp(argv[0], &argv[0]);
-            err_log_and_free(
-                ERR_NEW2(0, NULL, "Couldn't exec(%s): %s",
-                    argv[0], strerror(errno)),
-                ERR_FAILURE);
-            exit(EXIT_FAILURE);
+        if (NULL == execMap) {
+            LOG_ADD0("Couldn't create child-process map for EXEC entries");
+            log_log(LOG_ERR);
+            pid = -1;
         }
-        else
-        {
-            /*
-             * Parent process.
-             */
+    }                                   /* child-process map not allocated */
 
-            if (!waitOnChild)
-            {
-                udebug("    exec %s[%d]", argv[0], pid);
-            }
-            else
-            {
-                udebug("    exec -wait %s[%d]", argv[0], pid);
-                (void)reap(pid, 0);
-            }
+    if (0 == pid) {
+        int     waitOnChild = 0;        /* default is not to wait */
+
+        if (strcmp(argv[0], "-wait") == 0) {
+            waitOnChild = 1;            /* => wait for child */
+            argc--; argv++;
         }
-    }
+
+        pid = ldmfork();
+        if (-1 == pid) {
+            LOG_SERROR0("Couldn't fork EXEC process");
+            log_log(LOG_ERR);
+        }
+        else {
+            if (0 == pid) {
+                /*
+                 * Child process.
+                 *
+                 * Detach the child process from the parents process group??
+                 *
+                 * (void) setpgid(0,0);
+                 */
+
+                (void)signal(SIGTERM, SIG_DFL);
+                (void)pq_close(pq);
+
+                /*
+                 * It is assumed that the standard input, output, and error
+                 * streams are correctly established and should not be
+                 * modified.
+                 */
+
+                /*
+                 * Don't let the child process get any inappropriate privileges.
+                 */
+                endpriv();
+
+                (void) execvp(argv[0], argv);
+                err_log_and_free(
+                    ERR_NEW2(0, NULL, "Couldn't exec(%s): %s",
+                        argv[0], strerror(errno)),
+                    ERR_FAILURE);
+                exit(EXIT_FAILURE);
+            }                           /* child process */
+            else {
+                /*
+                 * Parent process.
+                 */
+                (void)cm_add_argv(execMap, pid, argv);
+
+                if (!waitOnChild) {
+                    udebug("    exec %s[%d]", argv[0], pid);
+                }
+                else {
+                    udebug("    exec -wait %s[%d]", argv[0], pid);
+                    (void)reap(pid, 0);
+                }
+            }
+        }                               /* child-process forked */
+    }                                   /* child-process map allocated */
 
     return -1 == pid ? -1 : 1;
 }

@@ -1,9 +1,8 @@
 6.10.0.8 	2011-10-07 15:02:22-06:00
-    Added printing of error-exiting FILE commands.
+    Changed the title of an "ldmadmin plotmetrics" plot to "Amount of Data in
+    Queue vs. time".
 
-    Changed a plot title to "Amount of Data in Queue vs. time".
-
-    Documented "mvrtSize" & "mvrtSlots" in pqmon(1).
+    Documented "mvrtSize" & "mvrtSlots" in pqmon(1) output.
 
     Changed when product-queue metrics are reset by ldmadmin(1) and added queue
     metrics resetting to "ldmadmin start".
@@ -11,8 +10,8 @@
     No longer reset if the reconciliation-mode is "do nothing".
 
     Ported most of "ldmadmin printmetrics" to SunOS. Getting the number of LDM
-    connections is still problematical because the output of netstat(1) differs
-    radically from Linux's netstat(1).
+    connections is still problematical because the output of SunOS's netstat(1)
+    differs radically from Linux's netstat(1).
 
     Made plotMetrics(1) script more portable by replacing arithmetic expansion
     with use of expr(1).

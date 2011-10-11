@@ -22,6 +22,7 @@ include_HEADERS		= \
 	setenv.h \
 	statsMath.h
 lib_la_SOURCES	= \
+	child_map.c child_map.h \
 	error.c \
 	fdnb.c \
 	fsStats.c \
@@ -33,7 +34,7 @@ lib_la_SOURCES	= \
 	setenv.c \
 	statsMath.c \
 	StringBuf.c
-EXTRA_DIST	= StringBuf.h
+EXTRA_DIST	= StringBuf.h child_map.h
 lib_la_CPPFLAGS	= \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
@@ -43,7 +44,38 @@ TAGS_FILES	= \
     $(top_srcdir)/protocol/*.c $(top_srcdir)/protocol/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
-    $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h
+    $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h \
+    /usr/local/include/CUnit/CUnit.h \
+    /usr/local/include/CUnit/Basic.h
 
 ../registry/registry.h:
 	cd ../registry && $(MAKE) $@
+
+if MAINTAINER
+.hin.h:
+	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
+	mv -f $@.tmp $@
+child_map.h:	child_map.hin child_map.c
+endif
+
+if HAVE_CUNIT
+check_PROGRAMS		= test_child_map
+test_child_map_CPPFLAGS	= \
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/ulog \
+    @CPPFLAGS_CUNIT@
+
+test_child_map_LDADD	= \
+    lib.la \
+    $(top_builddir)/ulog/lib.la \
+    @LIBS_CUNIT@
+
+TESTS			= test_child_map
+
+debug:		test_child_map
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb test_child_map
+
+valgrind:	test_child_map
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./test_child_map
+endif

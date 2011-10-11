@@ -290,12 +290,15 @@ TAGS_FILES = \
     ../protocol/*.c ../protocol/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
-    ../rpc/*.c ../rpc/*.h
+    ../rpc/*.c ../rpc/*.h \
+    /usr/local/include/CUnit/CUnit.h \
+    /usr/local/include/CUnit/Basic.h
 
+CLEANFILES = *.i
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .obj
+.SUFFIXES: .c .i .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -597,6 +600,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -707,6 +711,9 @@ $(DESTDIR)$(sysconfdir):
 	$(MKDIR_P) $@
 $(DESTDIR)$(sysconfdir)/pqact.conf:
 	$(INSTALL_DATA) $(srcdir)/pqact.conf $@
+
+.c.i:
+	$(COMPILE) -E $< >$@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
