@@ -96,8 +96,8 @@ static const char* getPath(
 
     if (0 == buf[0]) {
         if (reg_getString(name, &var)) {
-            log_add("Couldn't get pathname of %s", desc);
-            log_log(LOG_ERR);
+            LOG_ADD1("Couldn't get pathname of %s", desc);
+            return NULL;
         }
         else {
             setPath(var, buf);

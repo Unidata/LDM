@@ -24,7 +24,7 @@
 #include "remote.h"
 #include "ldmprint.h"
 #include "timestamp.h"
-#include "ulog.h"
+#include "log.h"
 #include "pq.h"
 #include "md5.h"
 
@@ -218,22 +218,33 @@ xsuspend(unsigned int maxsleep)
 int
 main(int ac, char *av[])
 {
-    const char* pqfname = getQueuePath();
+    const char* pqfname;
     const char* progname = ubasename(av[0]);
-    char*       logfname;
+    char*       logfname = NULL;        /* log to syslogd(8) */
+    int         logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
+                    LOG_MASK(LOG_NOTICE));
     int         status = 0;
     int         interval = DEFAULT_INTERVAL;
     int         logoptions = (LOG_CONS|LOG_PID) ;
     int         list_extents = 0;
     int         extended = 0;
 
-    logfname = "";
-
+    /*
+     * Set up default logging before calling anything that might log.
+     */
     if(isatty(fileno(stderr)))
     {
         /* set interactive defaults */
-        logfname = "-" ;
+        logfname = "-" ;                /* log to standard error stream */
         logoptions = 0 ;
+    }
+    (void)openulog(progname, logoptions, LOG_LDM, logfname);
+    (void)setulogmask(logmask);
+
+    pqfname = getQueuePath();           /* this might log */
+    if (NULL == pqfname) {
+        log_log(LOG_ERR);
+        exit(1);
     }
 
     {
@@ -241,8 +252,6 @@ main(int ac, char *av[])
         extern int opterr;
         extern char *optarg;
         int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
 
         opterr = 1;
 
