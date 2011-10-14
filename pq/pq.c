@@ -3209,8 +3209,10 @@ mapwrap(const int fd,
         if(mm == (void *)((ptrdiff_t)-1))
         {
                 status = errno;
-                serror("mmap: %p %ld %lu", *ptrp,
-                        (long)offset, (unsigned long)extent);
+                LOG_SERROR3("mmap() failure: *ptrp=%p, offset=%ld, extent=%lu",
+                    *ptrp, (long)offset, (unsigned long)extent);
+                LOG_ADD0("Product-queue size too big?");
+                log_log(LOG_ERR);
                 return status;
         }
 #if TRACE_MMAP
