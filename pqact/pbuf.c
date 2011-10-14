@@ -109,7 +109,7 @@ pbuf_flush(
     pbuf*               buf,
     int                 block,          /* bool_t */
     unsigned int        timeo,          /* N.B. Not a struct timeval */
-    const char* const   id)
+    const char* const   id)             /* destination identifier */
 {
     size_t              len = (size_t)(buf->ptr - buf->base);
     int                 changed = 0;
@@ -149,7 +149,10 @@ pbuf_flush(
         else {
             status = tmpErrno;
 
-            serror("pbuf_flush (%d) write", buf->pfd);
+            serror(NULL == id
+                    ? "pbuf_flush(): fd=%d"
+                    : "pbuf_flush(): fd=%d, cmd=(%s)",
+                buf->pfd, id);
         }
     }
     else if(nwrote == len) {
@@ -160,7 +163,7 @@ pbuf_flush(
         len = 0;
     }
     else if(nwrote > 0) {
-        /* partial write, just shift the amount wrote */
+        /* partial write, just shift the buffer by the amount written */
         udebug("         pbuf_flush: partial write %d of %d bytes",
             nwrote, len);
 
@@ -179,8 +182,8 @@ pbuf_flush(
 
     if(duration > 5)
         uwarn(id == NULL
-                ?  "write(%d,,%d) to decoder took %lu s"
-                :  "write(%d,,%d) to decoder took %lu s: %s",
+                ?  "pbuf_flush(): write(%d,,%d) to decoder took %lu s"
+                :  "pbuf_flush(): write(%d,,%d) to decoder took %lu s: %s",
             buf->pfd, nwrote, (unsigned long)duration, id);
 
     return status;
@@ -190,8 +193,8 @@ flush_timeo:
         set_fd_nonblock(buf->pfd);
 
     uerror(id == NULL
-            ?  "write(%d,,%lu) to decoder timed-out (%lu s)"
-            :  "write(%d,,%lu) to decoder timed-out (%lu s): %s",
+            ?  "pbuf_flush(): write(%d,,%lu) to decoder timed-out (%lu s)"
+            :  "pbuf_flush(): write(%d,,%lu) to decoder timed-out (%lu s): %s",
         buf->pfd, (unsigned long)len, (unsigned long)(time(NULL) - start), id);
 
     return EAGAIN;

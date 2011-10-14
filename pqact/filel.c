@@ -115,6 +115,7 @@ struct fl_entry {
     f_handle            handle;
     unsigned long       private;        /* pid, hstat*, R/W flg */
     int                 flags;
+    int                 isClosed;       /* if entry can't be used for writing */
     ft_t                type;
     char                path[PATH_MAX]; /* PATH_MAX includes NUL */
 };
@@ -241,6 +242,8 @@ lookup_fl_entry(ft_t type, int argc, char **argv)
         for(entry = thefl->head; entry != NULL; 
                         entry = entry->next )
         {
+                if (entry->isClosed)
+                        continue;
                 if(entry->type == type &&
                                 entry->ops->cmp(entry, argc, argv) == 0)
                         break;
@@ -308,11 +311,8 @@ close_lru(int skipflags)
 
         if(thefl->size <= 0)
                 return;
-        entry = thefl->tail;    
 
-
-        for(entry = thefl->tail;
-                entry != NULL; entry = prev)
+        for(entry = thefl->tail; entry != NULL; entry = prev)
         {
                 prev = entry->prev;
                 /* twisted logic */
@@ -634,7 +634,7 @@ unio_close(fl_entry *entry)
                         serror("close: %s", entry->path);
                 }
         }
-        entry->path[0] = 0;
+        entry->isClosed = 1;
         entry->handle.fd = -1;
 }
 
@@ -1048,7 +1048,7 @@ stdio_close(fl_entry *entry)
                         serror("fclose: %s", entry->path);
                 }
         }
-        entry->path[0] = 0;
+        entry->isClosed = 1;
         entry->handle.stream = NULL;
 }
 
@@ -1189,11 +1189,17 @@ argcat(char *buf, int len, int argc, char **argv)
 
         while(argc-- > 0 && (cp = *argv++) != NULL)
         {
+                if (len <= cnt)
+                        break;
+
+                if (cnt)
+                        buf[cnt++] = ' ';
+
                 while(*cp != 0)
                 {
-                        buf[cnt++] = *cp++;
-                        if(cnt >= len)
+                        if (len <= cnt)
                                 break;
+                        buf[cnt++] = *cp++;
                 }
         }
         buf[cnt] = 0;
@@ -1450,8 +1456,11 @@ pipe_sync(fl_entry *entry, int block)
                 entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                 block ? "" : "non-block"); 
         status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo, entry->path);
-        if(status != ENOERR && status != EINTR)
+        if(status != ENOERR && status != EINTR) {
                 entry->flags &= ~FL_NEEDS_SYNC;
+                uerror("pipe_sync(): pid=%lu, cmd=(%s)", entry->private, 
+                        entry->path);
+        }
         return status;
 }
 
@@ -1485,9 +1494,8 @@ pipe_close(fl_entry *entry)
                  * upon synchronously in a loop in main().
                  */
         }
-        entry->path[0] = 0;
+        entry->isClosed = 1;
         entry->handle.pbuf = NULL;
-        entry->private = 0;
 }
 
 
@@ -1514,7 +1522,8 @@ pipe_put(fl_entry *entry, const char *ignored,
 
             if(status != ENOERR && status != EINTR)
             {
-                    uerror("pipe_put: %s write error", entry->path);
+                    uerror("pipe_put(): write error: pid=%lu, cmd=(%s)",
+                            entry->private, entry->path);
                     /* don't waste time syncing an errored entry */
                     entry->flags &= ~FL_NEEDS_SYNC;
                     delete_entry(entry);
@@ -1984,7 +1993,7 @@ ldmdb_close(fl_entry *entry)
         if(entry->handle.db != NULL)
                 gdbm_close(entry->handle.db);
         entry->private = 0;
-        entry->path[0] = 0;
+        entry->isClosed = 1;
         entry->handle.db = NULL;
 }
 
@@ -2164,7 +2173,7 @@ ldmdb_close(fl_entry *entry)
         if(entry->handle.db != NULL)
                 dbm_close(entry->handle.db);
         entry->private = 0;
-        entry->path[0] = 0;
+        entry->isClosed = 1;
         entry->handle.db = NULL;
 }
 
@@ -2376,6 +2385,7 @@ new_fl_entry(ft_t type, int argc, char **argv)
         entry->prev = NULL;
         entry->path[0] = 0;
         entry->private = 0;
+        entry->isClosed = 0;
 
         if( entry->ops->open(entry, argc, argv) == -1 )
                 goto err;
@@ -2499,19 +2509,15 @@ reap(
             cmd = entry->path;
             childType = "PIPE ";
         }
-        else if (NULL == execMap) {
-            cmd = NULL;
-            childType = "";
-        }
         else {
             cmd = cm_get_command(execMap, wpid);
 
-            if (NULL != cmd) {
-                childType = "EXEC ";
-                isExec = 1;
+            if (NULL == cmd) {
+                childType = "";
             }
             else {
-                childType = "";
+                childType = "EXEC ";
+                isExec = 1;
             }
         }
 
