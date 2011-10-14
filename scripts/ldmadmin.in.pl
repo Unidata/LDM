@@ -846,7 +846,7 @@ sub ldm_config
     print  "product queue:         $pq_path\n";
     print  "queue size:            $pq_size bytes\n";
     print  "queue slots:           $pq_slots\n";
-    print  "reconcilliation mode:  $reconMode\n";
+    print  "reconciliation mode:   $reconMode\n";
     print  "pqsurf(1) path:        $surf_path\n";
     print  "pqsurf(1) size:        $surf_size\n";
     printf "IP address:            %s\n", length($ip_addr) ? $ip_addr : "all";
