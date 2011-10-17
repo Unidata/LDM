@@ -39,7 +39,7 @@ pid_t ldmfork(void)
         }
         else if (-1 == pid) {
             /* System error */
-            log_serror("Couldn't fork a child process");
+            LOG_SERROR0("Couldn't fork a child process");
         }
     }
 

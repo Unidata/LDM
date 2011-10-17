@@ -59,7 +59,7 @@ dump_stats(void)
 static int
 copyProduct(
     const prod_info     *infop,
-    void                *datap,
+    const void          *datap,
     void                *xprod,
     size_t              size,
     void                *notused)
@@ -67,7 +67,7 @@ copyProduct(
     product             product;
 
     product.info = *infop;
-    product.data = datap;
+    product.data = (void*)datap;
 
     switch (pq_insert(outPq, &product)) {
     case 0:

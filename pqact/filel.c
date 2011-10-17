@@ -82,7 +82,7 @@ extern int pipe_timeo;
 
 
 /*
- * 
+ * The types of entries in the list:
  */
 typedef enum {
         FT_NONE = 0,
@@ -91,6 +91,16 @@ typedef enum {
         PIPE,
         FT_DB
 } ft_t ;
+
+/*
+ * The reasons for deleting an entry in the list:
+ */
+typedef enum {
+    DR_NONE = 0,        /**< No reason */
+    DR_CLOSE,           /**< entry contained "-close" option */
+    DR_LRU,             /**< Close least-recently-used entry */
+    DR_ERROR            /**< I/O error */
+} DeleteReason;
 
 
 union f_handle {
@@ -253,10 +263,20 @@ lookup_fl_entry(ft_t type, int argc, char **argv)
 
 
 static void
-delete_entry(fl_entry *entry)
+delete_entry(
+    fl_entry* const     entry,  /**< [in/out] Pointer to the entry to be
+                                  *  deleted. May be \c NULL. */
+    const DeleteReason  dr)     /**< [in] The reason for the deletion */
 {
-        /* assert(thefl->size >= 1); */
-        if(entry == NULL) return;
+    /* assert(thefl->size >= 1); */
+
+    if (entry != NULL) {
+        PIPE == entry->type
+            ? LOG_START2("Deleting least-recently-used: pid=%lu, "
+                    "cmd=\"%s\"", entry->private, entry->path)
+            : LOG_START1("Deleting least-recently-used: entry=\"%s\"",
+                    entry->path);
+        log_log(DR_ERROR == dr ? LOG_ERR : LOG_INFO);
 
         if(entry->prev != NULL)
                 entry->prev->next = entry->next;
@@ -266,9 +286,11 @@ delete_entry(fl_entry *entry)
                 thefl->head = entry->next;
         if(thefl->tail == entry)
                 thefl->tail = entry->prev;
+
         thefl->size--;
 
         free_fl_entry(entry);
+    }
 }
 
 
@@ -295,7 +317,7 @@ fl_sync(int nentries,
                 if(entry->flags & FL_NEEDS_SYNC)
                 {
                         if(entry->ops->sync(entry, block) == -1)
-                                delete_entry(entry);
+                                delete_entry(entry, DR_ERROR);
                 }
         }
 }
@@ -319,8 +341,7 @@ close_lru(int skipflags)
                 if(entry->flags & skipflags)
                         continue;
                 /* else */
-        /*      udebug("   close_lru: %s", entry->path); */
-                delete_entry(entry);
+                delete_entry(entry, DR_LRU);
                 return;
         }
 }
@@ -467,7 +488,7 @@ atFinishedArgs(int ac,
         if(syncflag)
                 status = (*entry->ops->sync)(entry, syncflag);
         if(closeflag)
-                delete_entry(entry);
+                delete_entry(entry, 0 == status ? DR_CLOSE : DR_ERROR);
         return status;
 }
 
@@ -694,7 +715,7 @@ unio_put(fl_entry *entry, const char *ignored,
                      * however.  For a discussion of the SA_RESTART option, see
                      * http://www.opengroup.org/onlinepubs/007908799/xsh/sigaction.html
                      */
-                    serror("unio_put(): write() error: %s", entry->path);
+                    serror("unio_put(): write() error: \"%s\"", entry->path);
                     errCode = -1;
                     break;
                 }
@@ -709,7 +730,7 @@ unio_put(fl_entry *entry, const char *ignored,
              * Don't waste time syncing an errored entry.
              */
             entry->flags &= ~FL_NEEDS_SYNC;
-            delete_entry(entry);
+            delete_entry(entry, DR_ERROR);
         }
     }
 
@@ -1085,11 +1106,11 @@ stdio_put(fl_entry *entry, const char *ignored,
         if(nwrote != sz)
         {
                 if (errno != EINTR)
-                    serror("stdio_put(): fwrite() error: %s", entry->path);
+                    serror("stdio_put(): fwrite() error: \"%s\"", entry->path);
 
                 /* don't waste time syncing an errored entry */
                 entry->flags &= ~FL_NEEDS_SYNC;
-                delete_entry(entry);
+                delete_entry(entry, DR_ERROR);
                 return -1;
         }
         /* else */
@@ -1308,9 +1329,8 @@ pipe_open(fl_entry *entry, int argc, char **argv)
             close_lru(0);
         }
 
-        err_log_and_free(
-            ERR_NEW1(0, NULL, "Couldn't create pipe: %s", strerror(errno)),
-            ERR_FAILURE);
+        LOG_SERROR0("Couldn't create pipe");
+        log_log(LOG_ERR);
     }
     else
     {
@@ -1334,7 +1354,7 @@ pipe_open(fl_entry *entry, int argc, char **argv)
 
             if (-1 == pid)
             {
-                log_add("Couldn't fork decoder process");
+                LOG_ADD0("Couldn't fork PIPE process");
                 log_log(LOG_ERR);
             }
             else
@@ -1354,9 +1374,8 @@ pipe_open(fl_entry *entry, int argc, char **argv)
                      * (e.g., SIGCONTs, SIGINTs, and SIGTERMs).
                      */
                     if (setpgid(0, 0) == -1) {
-                        log_errno();
-                        log_add(
-                            "Couldn't make decoder a process-group leader.");
+                        LOG_SERROR0(
+                            "Couldn't make decoder a process-group leader");
                         log_log(LOG_WARNING);
                     }
 
@@ -1373,11 +1392,9 @@ pipe_open(fl_entry *entry, int argc, char **argv)
                     {
                         if (-1 == dup2(pfd[0], STDIN_FILENO))
                         {
-                            err_log_and_free(
-                                ERR_NEW3(0, NULL,
-                                    "Couldn't dup2(%d,%d): %s",
-                                    pfd[0], STDIN_FILENO, strerror(errno)),
-                                ERR_FAILURE);
+                            LOG_SERROR2("Couldn't dup2(%d,%d)",
+                                    pfd[0], STDIN_FILENO),
+                            log_log(LOG_ERR);
                         }
                         else
                         {
@@ -1391,10 +1408,8 @@ pipe_open(fl_entry *entry, int argc, char **argv)
                     {
                         endpriv();
                         (void)execvp(av[0], &av[0]);
-                        err_log_and_free(
-                            ERR_NEW2(0, NULL, "Couldn't exec(%s): %s",
-                                av[0], strerror(errno)),
-                            ERR_FAILURE);
+                        LOG_SERROR1("Couldn't execute decoder \"%s\"", av[0]),
+                        log_log(LOG_ERR);
                     }
 
                     exit(EXIT_FAILURE);
@@ -1419,11 +1434,8 @@ pipe_open(fl_entry *entry, int argc, char **argv)
 #endif
                     if (NULL == entry->handle.pbuf) 
                     {
-                        err_log_and_free(
-                            ERR_NEW1(0, NULL,
-                                "Couldn't create pipe-buffer: %s",
-                                strerror(errno)),
-                            ERR_FAILURE);
+                        LOG_SERROR0("Couldn't create pipe-buffer");
+                        log_log(LOG_ERR);
                     }
                     else
                     {
@@ -1526,7 +1538,7 @@ pipe_put(fl_entry *entry, const char *ignored,
                             entry->private, entry->path);
                     /* don't waste time syncing an errored entry */
                     entry->flags &= ~FL_NEEDS_SYNC;
-                    delete_entry(entry);
+                    delete_entry(entry, DR_ERROR);
                     return status;
             }
         }
@@ -2333,7 +2345,7 @@ ldmdb_prodput(const product *prod, int ac, char **av,
         }
         if(closeflag || status == -1)
         {
-                delete_entry(entry);
+                delete_entry(entry, -1 == status ? DR_ERROR : DR_CLOSE);
         }
 
         return status;
@@ -2540,7 +2552,7 @@ reap(
                 (void)cm_remove(execMap, wpid);
             }
             else {
-                delete_entry(entry);    /* NULL safe */
+                delete_entry(entry, DR_ERROR);    /* NULL safe */
             }
         }
         else if (WIFEXITED(status))
@@ -2555,7 +2567,8 @@ reap(
                 (void)cm_remove(execMap, wpid);
             }
             else {
-                delete_entry(entry);    /* NULL safe */
+                delete_entry(entry, 0 == WEXITSTATUS(status)
+                        ? DR_NONE : DR_ERROR);  /* NULL safe */
             }
         }
     }                                   /* wpid != -1 && wpid != 0 */

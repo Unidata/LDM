@@ -1,8 +1,9 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See top level COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2011 University Corporation for Atmospheric Research
+ *
+ *   See file COPYRIGHT in top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: pqutil.c,v 1.18.10.2.2.6 2008/04/15 16:34:10 steve Exp $ */
 
 #include <config.h>
 
@@ -1306,8 +1307,7 @@ rm_prod(pqueue          *pq,
 int
 main(int argc, char *argv[])
 {
-
-    char        *path = getQueuePath();                /* product queue path */
+    const char  *path;                                 /* product queue path */
     char        *logname = 0;            /* logfile name - STDERR by default */
     const char  *logident = ubasename(argv[0]);     /* log file program name */
     char        command[MAX_COMMAND];                /* input command buffer */
@@ -1331,12 +1331,14 @@ main(int argc, char *argv[])
 
     putenv("TZ=GMT");
 
-/* if interactive set the logging for STDERR */
 
+/* initialize logger */
+/* if interactive set the logging for STDERR */
     if (isatty(fileno(stderr))) {
         logname = "-";
         logopts = 0;
     }
+    (void)openulog(logident, logopts, LOG_LDM, logname);
 
     if (isatty(fileno(stdin)))
         tty_flag = 1;
@@ -1479,6 +1481,9 @@ main(int argc, char *argv[])
 /* initialize logger */
 
     (void)openulog(logident, logopts, LOG_LDM, logname);
+
+    if (NULL == path)
+        path = getQueuePath();                         /* product queue path */
 
 /* open the queue */
 

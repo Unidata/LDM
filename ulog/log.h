@@ -11,12 +11,12 @@ extern "C" {
 
 #define LOG_FMT(fmt)                fmt " [%s:%d]"
 #define LOG_ERRNO()                 log_start(LOG_FMT("%s"),strerror(errno),__FILE__,__LINE__)
-#define LOG_START0(fmt)             log_start(LOG_FMT(fmt),__FILE__,__LINE__);
-#define LOG_START1(fmt,a)           log_start(LOG_FMT(fmt),a,__FILE__,__LINE__);
-#define LOG_START2(fmt,a,b)         log_start(LOG_FMT(fmt),a,b,__FILE__,__LINE__);
-#define LOG_START3(fmt,a,b,c)       log_start(LOG_FMT(fmt),a,b,c,__FILE__,__LINE__);
-#define LOG_START4(fmt,a,b,c,d)     log_start(LOG_FMT(fmt),a,b,c,d,__FILE__,__LINE__);
-#define LOG_START5(fmt,a,b,c,d,e)   log_start(LOG_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__);
+#define LOG_START0(fmt)             log_start(LOG_FMT(fmt),__FILE__,__LINE__)
+#define LOG_START1(fmt,a)           log_start(LOG_FMT(fmt),a,__FILE__,__LINE__)
+#define LOG_START2(fmt,a,b)         log_start(LOG_FMT(fmt),a,b,__FILE__,__LINE__)
+#define LOG_START3(fmt,a,b,c)       log_start(LOG_FMT(fmt),a,b,c,__FILE__,__LINE__)
+#define LOG_START4(fmt,a,b,c,d)     log_start(LOG_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
+#define LOG_START5(fmt,a,b,c,d,e)   log_start(LOG_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
 #define LOG_ADD0(fmt)               log_add(LOG_FMT(fmt),__FILE__,__LINE__)
 #define LOG_ADD1(fmt,a)             log_add(LOG_FMT(fmt),a,__FILE__,__LINE__)
 #define LOG_ADD2(fmt,a,b)           log_add(LOG_FMT(fmt),a,b,__FILE__,__LINE__)

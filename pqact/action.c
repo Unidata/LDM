@@ -114,10 +114,8 @@ exec_prodput(
                 endpriv();
 
                 (void) execvp(argv[0], argv);
-                err_log_and_free(
-                    ERR_NEW2(0, NULL, "Couldn't exec(%s): %s",
-                        argv[0], strerror(errno)),
-                    ERR_FAILURE);
+                LOG_SERROR1("Couldn't execute command \"%s\"", argv[0]);
+                log_log(LOG_ERR);
                 exit(EXIT_FAILURE);
             }                           /* child process */
             else {
