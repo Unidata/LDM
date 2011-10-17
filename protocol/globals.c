@@ -92,15 +92,16 @@ static const char* getPath(
     char                buf[PATH_MAX],
     const char* const   desc)
 {
-    char*               var;
-
     if (0 == buf[0]) {
+        char*           var;
+
         if (reg_getString(name, &var)) {
             LOG_ADD1("Couldn't get pathname of %s", desc);
             return NULL;
         }
         else {
             setPath(var, buf);
+            free(var);
         }
     }
 

@@ -1,8 +1,9 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2011 University Corporation for Atmospheric Research
+ *
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: pqact.c,v 1.40.10.6.2.14 2008/09/04 20:09:52 steve Exp $ */
 
 /* 
  * ldm server mainline program module
@@ -229,7 +230,7 @@ usage(
 int
 main(int ac, char *av[])
 {
-        const char* const       pqfname = getQueuePath();
+        const char* pqfname;
         int status = 0;
         char *logfname = 0;
         /* data directory, conffile paths may be relative */
@@ -240,6 +241,12 @@ main(int ac, char *av[])
         int toffset = TOFFSET_NONE;
         int loggingToStdErr = 0;
 
+        /*
+         * Setup default logging before anything else.
+         */
+        openulog(ubasename(av[0]), (LOG_CONS|LOG_PID), LOG_LDM, logfname);
+
+        pqfname = getQueuePath();
         conffilename = getPqactConfigPath();
 
         spec.feedtype = DEFAULT_FEEDTYPE;

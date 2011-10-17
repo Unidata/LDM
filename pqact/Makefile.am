@@ -1,4 +1,4 @@
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2011 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -45,6 +45,7 @@ TAGS_FILES		= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h \
+    ../registry/*.c ../registry/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 CLEANFILES		= *.i
@@ -64,3 +65,8 @@ $(DESTDIR)$(sysconfdir)/pqact.conf:
 
 .c.i:
 	$(COMPILE) -E $< >$@
+
+valgrind:	pqact
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./pqact -l /dev/null \
+	    -o 200000000

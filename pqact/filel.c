@@ -82,7 +82,7 @@ extern int pipe_timeo;
 
 
 /*
- * The types of entries in the list:
+ * The types of entries in the list. Keep consonant with TYPE_NAME.
  */
 typedef enum {
         FT_NONE = 0,
@@ -93,14 +93,27 @@ typedef enum {
 } ft_t ;
 
 /*
- * The reasons for deleting an entry in the list:
+ * Converts "ft_t" into ASCII. Keep consonant with "ft_t".
+ */
+static const char* const        TYPE_NAME[] = {"NOOP", "FILE", "STDIOFILE",
+    "PIPE", "DBFILE"};
+
+/*
+ * The reasons for deleting an entry in the list. Keep consonant with 
+ * REASON_STRING.
  */
 typedef enum {
-    DR_NONE = 0,        /**< No reason */
+    DR_TERMINATED = 0,  /**< Child terminated */
     DR_CLOSE,           /**< entry contained "-close" option */
     DR_LRU,             /**< Close least-recently-used entry */
     DR_ERROR            /**< I/O error */
 } DeleteReason;
+
+/*
+ * Printable versions of "DeleteReason". Keep consonant with that type.
+ */
+static const char* const        REASON_STRING[] = {"terminated", "closed", 
+    "least-recently-used", "failed"};
 
 
 union f_handle {
@@ -272,10 +285,11 @@ delete_entry(
 
     if (entry != NULL) {
         PIPE == entry->type
-            ? LOG_START2("Deleting least-recently-used: pid=%lu, "
-                    "cmd=\"%s\"", entry->private, entry->path)
-            : LOG_START1("Deleting least-recently-used: entry=\"%s\"",
-                    entry->path);
+            ? LOG_START4("Deleting %s %s entry: pid=%lu, cmd=\"%s\"",
+                    REASON_STRING[dr], TYPE_NAME[entry->type], entry->private,
+                    entry->path)
+            : LOG_START3("Deleting %s %s entry \"%s\"", REASON_STRING[dr],
+                    TYPE_NAME[entry->type], entry->path);
         log_log(DR_ERROR == dr ? LOG_ERR : LOG_INFO);
 
         if(entry->prev != NULL)
@@ -2519,7 +2533,7 @@ reap(
 
         if (NULL != entry) {
             cmd = entry->path;
-            childType = "PIPE ";
+            childType = TYPE_NAME[entry->type];
         }
         else {
             cmd = cm_get_command(execMap, wpid);
@@ -2557,6 +2571,10 @@ reap(
         }
         else if (WIFEXITED(status))
         {
+            /*
+             * NB: A PIPE-entry command-string will not be printed if the 
+             * corresponding "thefl" entry was deleted by close_lru().
+             */
             if (WEXITSTATUS(status) != 0)
                 uerror(
                     cmd
@@ -2568,7 +2586,7 @@ reap(
             }
             else {
                 delete_entry(entry, 0 == WEXITSTATUS(status)
-                        ? DR_NONE : DR_ERROR);  /* NULL safe */
+                        ? DR_TERMINATED : DR_ERROR);  /* NULL safe */
             }
         }
     }                                   /* wpid != -1 && wpid != 0 */
