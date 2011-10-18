@@ -1,104 +1,82 @@
-6.10.0.12 	2011-10-17 15:31:57-06:00
-    Improved pqact(1) log messages: added reason for deleting in-memory entry.
+6.10.0 	2011-10-18 11:01:05-06:00
+    NOAAPORT:
+        Merged the NOAAPORT package into the LDM package.
 
-6.10.0.11 	2011-10-17 11:06:25-06:00
-    Improved pqact(1) logging: now logs whenever an in-memory pqact(1) entry is
-    deleted. Logs at level LOG_ERR if the cause for the deletion was an error;
-    otherwise, logs at level LOG_INFO.
+        Corrected a bug in the deprecated readnoaaport(1) and dvbs_ingest(1)
+        programs that caused an abort if the logging level was DEBUG due to the
+        shared memory FIFO being already locked.
 
-6.10.0.10 	2011-10-14 12:47:01-06:00
+        Improved noaaport/gempak error messages -- in particular, added
+        information to messages about missing tables and parameters.
 
-    ldmadmin(1):
-        Corrected spelling of "reconciliation"
+    GRIBINSERT:
+        Merged the GRIBINSERT package into the LDM package. This subpackage
+        converts GRIB messages in files into LDM data-products and inserts them
+        into the LDM product-queue.
 
-    pq(3):
-        Improved error-message when queue is too big
+        Improved GRIB2 tables:
+            Updated tables.
+
+            Made installation rule create links instead of install duplicate
+            files.
+
+            Moved site-specific stuff from "g2varswmo.tbl" to "g2varsncep.tbl".
 
     pqact(1):
-        Added printing of PIPE command that error exits
+        Improved log messages:
+            The PID and command-string of every child process is logged at
+            level ERROR if its parent pqact(1) process deletes the reference to
+            the child process due to an error in an interaction with it.
+
+            The PID and command-string of every child process created due to a
+            PIPE entry and whose reference is deleted in order to create
+            another pipe is logged at level INFO.
+
+    ldmadmin(1):
+        Changed when product-queue metrics are reset by ldmadmin(1) and added
+        queue metrics resetting to "ldmadmin start". The metrics are no longer
+        reset if the reconciliation-mode is "do nothing".
+
+        Improved the command "vetqueuesize" (and, consequently, the command
+        "check"). The capacity of the product-queue will not be vetted until
+        the LDM server has been running for at least `regutil
+        /server/max-latency` seconds. This will prevent a misdiagnosis of the
+        queue capacity when an initially empty queue is being rapidly filled at
+        LDM startup.
+
+        Improved "plotmetrics" command:
+            Ported most of the command to SunOS. Getting the number of LDM
+            connections is still problematical, however, because the output of
+            SunOS's netstat(1) differs radically from Linux's netstat(1).
+
+            Made the plotMetrics(1) script more portable by replacing
+            arithmetic expansion with use of expr(1).
+
+            Changed the title of an "ldmadmin plotmetrics" plot to "Amount of
+            Data in Queue vs. time".
+
+        Improved "ldmadmin newmetrics" example: corrected minute and hour
+        fields and changed interval to weekly.
+
+        Corrected spelling of "reconciliation"
+
+    pqmon(1):
+        Documented "mvrtSize" & "mvrtSlots" in output.
+
+    pq(3):
+        Improved error-message when queue is too big.
+
+    Documentation:
+        Improved installation documentation.
+
+        Made tarfile reference version-independent.
+
+        Modified README: removed RELEASE_NOTES section and modified SUPPORT
+        section.
 
     Misc:
         Fixed error-logging when LDMHOME isn't set
 
-6.10.0.9 	2011-10-11 14:29:31-06:00
-    Added logging of EXEC commands when they error-exit.
-
-6.10.0.8 	2011-10-07 15:02:22-06:00
-    Changed the title of an "ldmadmin plotmetrics" plot to "Amount of Data in
-    Queue vs. time".
-
-    Documented "mvrtSize" & "mvrtSlots" in pqmon(1) output.
-
-    Changed when product-queue metrics are reset by ldmadmin(1) and added queue
-    metrics resetting to "ldmadmin start".
-    
-    No longer reset if the reconciliation-mode is "do nothing".
-
-    Ported most of "ldmadmin printmetrics" to SunOS. Getting the number of LDM
-    connections is still problematical because the output of SunOS's netstat(1)
-    differs radically from Linux's netstat(1).
-
-    Made plotMetrics(1) script more portable by replacing arithmetic expansion
-    with use of expr(1).
-
-    Improved "ldmadmin newmetrics" example: corrected minute and hour fields
-    and changed interval to weekly.
-
-    Removed extraneous commentary from makefile.
-
-    Improved installation documentation.
-
-    Made tarfile reference version-independent.
-
-6.10.0.7 	2011-09-20 09:39:11-06:00
-    Corrected "--with-gribinsert" building: ensured that the "grib2" and
-    "gempak" libraries are added to the LDM library if "--with-gribinsert" is
-    specified but not "--with-noaaport".
-    
-    Removed repository files that are generated from ".in" files.
-
-    Modified README: removed RELEASE_NOTES section and modified SUPPORT
-    section.
-
-6.10.0.6 	2011-09-19 10:47:59-06:00
-    Incorporated GRIBINSERT package.  Distributed subpackages used by both the
-    GRIBINSERT and NOAAPORT packages into their own subdirectories. Ported
-    GRIBINSERT package to LDM package environment.
-
-    Corrrected GRIB2 tables:  Moved site-specific stuff from "g2varswmo.tbl" to
-    "g2varsncep.tbl".
-
-6.10.0.5 	2011-09-07 08:50:18-06:00
-    Improved noaaport/gempak error messages -- specifically, added information
-    to messages about missing tables and parameters.
-
-6.10.0.4 	2011-09-02 15:50:09-06:00
-    Corrected use of NPL_START.
-
-6.10.0.3 	2011-09-02 15:31:39-06:00
-    Improved log messages in noaaport/gempak.
-
-6.10.0.2 	2011-09-01 15:51:59-06:00
-    Updated GRIB2 tables. Also made installation rule create links instead of
-    install duplicate files.
-
-6.10.0.1 	2011-09-01 12:59:29-06:00
-    ldmadmin(1) script:
-        Improved the command "vetqueuesize" (and, consequently, the command
-        "check"). The capacity of the product-queue will not be vetted
-        until the LDM server has been running for at least `regutil
-        /server/max-latency` seconds. This will prevent a misdiagnosis of
-        the queue capacity when an initially empty queue is being rapidly
-        filled at LDM startup.
-
-    NOAAPORT
-        Merged the NOAAPORT package into the LDM package.
-
-        Corrected a bug in the deprecated readnoaaport(1) and
-        dvbs_ingest(1) programs that caused an abort if the logging level
-        was DEBUG due to the shared memory FIFO being already locked.
-
-    Misc:
         Many changes related to porting to different platforms.
 
 6.9.8   2011-06-10
