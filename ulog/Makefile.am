@@ -12,7 +12,7 @@ lib_la_SOURCES		= ulog.c log.c
 check_PROGRAMS		= test0
 test0_SOURCES		= ulog.c
 test0_CPPFLAGS		= -DTEST0
-test0_LDADD		= ../lib/libldm.la
+test0_LDADD		= ../lib/libldm.la ../libxml2/libxml2.la
 EXTRA_DIST		= log.h
 dist_man3_MANS		= ulog.3
 

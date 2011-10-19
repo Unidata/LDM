@@ -1,8 +1,9 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2011 University Corporation for Atmospheric Research
+ *
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: ulog.c,v 1.99.16.1.2.9 2008/03/17 16:16:59 steve Exp $ */
 
 /* 
  * Utility Functions to implement consistant logging mechanisms.
@@ -914,7 +915,7 @@ serror(fmt, va_alist)
 {
     va_list args;
 #ifdef STDC_ARGS
-        va_start(args ,fmt);
+        va_start(args, fmt);
 #else
         va_start(args);
 #endif /* STDC_ARGS */
@@ -922,12 +923,8 @@ serror(fmt, va_alist)
         {
                 char buf[1024];
                 int errnum = errno;             /* save real errno in case we wipe it out */
-                char *cp;
-                (void) vsnprintf(buf, sizeof(buf)-1, fmt, args);
-                for(cp = buf; *cp != 0; )
-                    cp++;
-                strcat(cp, ": %s");
-                ulog(LOG_ERR, buf, strerror(errnum));
+                (void)vsnprintf(buf, sizeof(buf), fmt, args);
+                ulog(LOG_ERR, "%s: %s", buf, strerror(errnum));
                 errno = 0;
         }
         else
@@ -1173,11 +1170,8 @@ terror(fmt, va_alist)
         {
                 char buf[1024];
                 int errnum = t_errno;   /* save real t_errno in case we wipe it out */
-                char *cp;
-                (void) vsnprintf(buf, sizeof(buf)-1, fmt, args);
-                for(cp = buf; *cp != 0; cp++) /*EMPTY*/;
-                strcat(cp, ": %s");
-                ulog(LOG_ERR, buf,
+                (void)vsnprintf(buf, sizeof(buf), fmt, args);
+                ulog(LOG_ERR, "%s: %s", buf,
                         (errnum > 0 && errnum < t_nerr) ? t_errlist[errnum] : "");
                 t_errno = 0;
         }

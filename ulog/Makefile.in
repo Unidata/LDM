@@ -61,7 +61,7 @@ am_lib_la_OBJECTS = ulog.lo log.lo
 lib_la_OBJECTS = $(am_lib_la_OBJECTS)
 am_test0_OBJECTS = test0-ulog.$(OBJEXT)
 test0_OBJECTS = $(am_test0_OBJECTS)
-test0_DEPENDENCIES = ../lib/libldm.la
+test0_DEPENDENCIES = ../lib/libldm.la ../libxml2/libxml2.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -253,7 +253,7 @@ include_HEADERS = ulog.h
 lib_la_SOURCES = ulog.c log.c
 test0_SOURCES = ulog.c
 test0_CPPFLAGS = -DTEST0
-test0_LDADD = ../lib/libldm.la
+test0_LDADD = ../lib/libldm.la ../libxml2/libxml2.la
 EXTRA_DIST = log.h
 dist_man3_MANS = ulog.3
 all: all-am
