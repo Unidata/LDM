@@ -341,16 +341,11 @@ const char* getLdmHomePath(void)
         ldmHomePath = getenv("LDMHOME");
 
         if (NULL == ldmHomePath) {
-            LOG_START0("LDMHOME environment variable not set. Using HOME.");
-            log_log(LOG_WARNING);
-
-            ldmHomePath = getenv("HOME");
-
-            if (NULL == ldmHomePath) {
-                LOG_START0("HOME environment variable not set");
-                log_log(LOG_ERR);
-                abort();
-            }
+            /*
+             * LDMHOME is guaranteed by the configure(1) script to be a
+             * non-empty string.
+             */
+            ldmHomePath = LDMHOME;
         }
     }
 

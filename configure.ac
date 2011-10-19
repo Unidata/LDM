@@ -310,8 +310,13 @@ AC_MSG_RESULT([$HOSTNAME])
 AC_MSG_CHECKING([LDMHOME]);
 AM_COND_IF([MAINTAINER], [LDMHOME=$prefix],
     [test -z "$LDMHOME" && LDMHOME=$HOME])
-AC_SUBST([LDMHOME])
 AC_MSG_RESULT([$LDMHOME])
+if test -z $LDMHOME; then
+    AC_MSG_ERROR([invalid value $LDMHOME for LDMHOME], [1])
+fi
+AC_SUBST([LDMHOME])
+AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
+        [Root directory of the LDM installation])
 #
 # Certain installation directories are changed if they have default values
 # because an LDM installation has both version-dependent and
