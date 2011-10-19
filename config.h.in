@@ -124,6 +124,9 @@
 /* use IEEE floating-point in XDR layer */
 #undef IEEE_FLOAT
 
+/* Root directory of the LDM installation */
+#undef LDMHOME
+
 /* Port on which LDM server listens */
 #undef LDM_PORT
 
