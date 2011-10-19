@@ -1307,7 +1307,7 @@ rm_prod(pqueue          *pq,
 int
 main(int argc, char *argv[])
 {
-    const char  *path;                                 /* product queue path */
+    const char  *path = NULL;                          /* product queue path */
     char        *logname = 0;            /* logfile name - STDERR by default */
     const char  *logident = ubasename(argv[0]);     /* log file program name */
     char        command[MAX_COMMAND];                /* input command buffer */
@@ -1322,8 +1322,8 @@ main(int argc, char *argv[])
     off_t       initialsz = 0;    /* initial product queue data section size */
     size_t      align = 0;                               /* alignment factor */
     size_t      nproducts = 0;         /* number of products for index space */
-    pq_match    cdir = (pq_match)0;             /* cursor direction */
-    prod_class_t  clss;                        /* product class record */
+    pq_match    cdir = (pq_match)0;                      /* cursor direction */
+    prod_class_t  clss;                              /* product class record */
     prod_spec   spec;
     product     prodrec;                                   /* product struct */
 
