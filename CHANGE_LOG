@@ -1,3 +1,21 @@
+6.10.1.1 	2011-10-20 14:12:37-06:00
+    Removed setting of LDMHOME to $HOME in ldmadmin(1) because it was no longer
+    necessary (and could be wrong) because LDMHOME is now determined by the
+    configure(1) script.
+
+    Corrected "ensureSyslogEntry": ensured that ${LOG_LDM} and ${LDM_LOGFILE}
+    would be replaced by their values rather than by their names.
+
+    Corrected serror(): corrected code to correctly handle case where an
+    argument contained "%".
+
+    Improved pqutil(1): initialized "path" variable to NULL to prevent crashing
+    when used.
+
+    Improved getLdmHomePath(): added LDMHOME to header-file "config.h" and made
+    configure(1) script set C macro LDMHOME to valid value, which is used if
+    the environment variable LDMHOME isn't set.
+
 6.10.0 	2011-10-18 11:01:05-06:00
     NOAAPORT:
         Merged the NOAAPORT package into the LDM package.
