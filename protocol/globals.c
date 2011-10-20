@@ -1,5 +1,6 @@
 /*
  *   Copyright 2011, University Corporation for Atmospheric Research
+ *
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
  */
