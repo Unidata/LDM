@@ -1,20 +1,33 @@
-6.10.1.1 	2011-10-20 14:12:37-06:00
-    Removed setting of LDMHOME to $HOME in ldmadmin(1) because it was no longer
-    necessary (and could be wrong) because LDMHOME is now determined by the
-    configure(1) script.
+6.10.1 	2011-10-24 13:11:04-06:00
+    Installation:
+        Corrected installation helper-script "ensureSyslogEntry": ensured that
+        ${LOG_LDM} and ${LDM_LOGFILE} would be replaced by their values rather
+        than by their names.
 
-    Corrected "ensureSyslogEntry": ensured that ${LOG_LDM} and ${LDM_LOGFILE}
-    would be replaced by their values rather than by their names.
+        Added C macro LDMHOME to configuration header-file "config.h" and made
+        configure(1) script set it to default value to be used if environment
+        variable LDMHOME isn't set.
 
-    Corrected serror(): corrected code to correctly handle case where an
-    argument contained "%".
+    ldmadmin(1):
+        Removed setting of LDMHOME to $HOME in ldmadmin(1) because it was no
+        longer necessary (and could be wrong) because LDMHOME is now determined
+        by the configure(1) script.
 
-    Improved pqutil(1): initialized "path" variable to NULL to prevent crashing
-    when used.
+    pqutil(1):
+        Improved pqutil(1): initialized "path" variable in main() to NULL to
+        prevent crashing when dereferenced.
 
-    Improved getLdmHomePath(): added LDMHOME to header-file "config.h" and made
-    configure(1) script set C macro LDMHOME to valid value, which is used if
-    the environment variable LDMHOME isn't set.
+    LDM library:
+        globals.c:
+            Improved getLdmHomePath(): made use of LDMHOME C macro in 
+            "config.h" if environment variable LDMHOME isn't set.
+
+        ulog.c:
+            Corrected serror(): now handles arguments that contain "%".
+
+    Documentation:
+        Made cosmetic change to HTML documentation: remove extra space from
+        example command.
 
 6.10.0 	2011-10-18 11:01:05-06:00
     NOAAPORT:
