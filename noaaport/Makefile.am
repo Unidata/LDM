@@ -12,7 +12,7 @@ LDMHOME			= @LDMHOME@
 LDMSRC			= $(top_srcdir)
 SUDO			= @SUDO@
 SU			= @SU@
-docdir			= ${datarootdir}/doc/noaaport
+docdir			= @docdir@/noaaport
 
 EXTRA_DIST 		= \
 	Doxyfile \
@@ -196,123 +196,37 @@ root-ni-db:
 	$(LIBTOOL) --mode=execute gdb -x /tmp/noaaportIngester.gdb \
 	      noaaportIngester
 
-install-html:		$(srcdir)/html/index.html $(DESTDIR)$(htmldir)
-	cp -R $(srcdir)/html/* $(DESTDIR)$(htmldir)
+install-html:		$(srcdir)/html/index.html $(DESTDIR)$(docdir)
+	cp -R $(srcdir)/html/* $(DESTDIR)$(docdir)
 
-$(DESTDIR)$(htmldir):
+$(DESTDIR)$(docdir):
 	mkdir -p $@
 
 install-data-hook:	install-html
 
 uninstall-hook:
-	chmod -R +w $(DESTDIR)$(htmldir)
-	rm -rf $(DESTDIR)$(htmldir)
+	chmod -R +w $(DESTDIR)$(docdir)
+	rm -rf $(DESTDIR)$(docdir)
 
-FTPDIR	= /web/ftp/pub/$(PACKAGE)
-WEBROOT	= /web/content/software/$(PACKAGE)
+if MAINTAINER
+WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)/noaaport
 
-$(FTPDIR) \
-$(WEBROOT):
+commit-check:	Makefile
+	if git status -a >/dev/null; then \
+	    echo 1>&2 'Package needs "git commit -a"'; \
+	    exit 1; \
+	fi
+
+$(WEB_DESTDIR):
 	mkdir -p $@
 
-releaseCheck:
-	git diff `git tag -l v\* | tail -1` >diff.log
-	if ! test -s diff.log; then \
-	    echo 2>&1 "No changes since last release!"; \
-	    rm diff.log; \
-	    exit 1; \
-	fi
-	rm diff.log
-	regex=`echo $(VERSION) | sed 's/\./\\./g'`; \
-	if git tag -l v\* | grep "^v$$regex$$"; then \
-	    echo 2>&1 'Tag "v$(VERSION)" already exists!'; \
-	    exit 1; \
-	fi
-
-timestamp:
-	awk 'NR == 1 {\
-		print $$1, "	'"`date --rfc-3339=seconds`"'";\
-		next;\
-	    }\
-	    {print}' CHANGE_LOG >CHANGE_LOG.tmp
-	mv CHANGE_LOG.tmp CHANGE_LOG
-
-dist:		configure $(srcdir)/html/index.html
-
-commitAndTag:
-	git commit -a -m "v$(VERSION)"
-	git tag -f "v$(VERSION)"
-
-release:	releaseCheck
-	-git commit -a
-	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
-	git log --pretty=full `git tag -l v\* | \
-	    sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | \
-	    tail -1`.. >>CHANGE_LOG.tmp
-	echo '' >>CHANGE_LOG.tmp
-	cat CHANGE_LOG >>CHANGE_LOG.tmp
-	vi CHANGE_LOG.tmp
-	mv CHANGE_LOG.tmp CHANGE_LOG
-	@newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
-	echo $$newVersion | egrep '^[0-9]+(\.[0-9]+)*$$' >/dev/null || exit 1; \
-	sed '/^AC_INIT(/s/[0-9][0-9.]*,/'"$$newVersion"',/' configure.ac \
-	    >configure.ac.tmp
-	mv configure.ac.tmp configure.ac
-	$(MAKE) timestamp dist commitAndTag
-
-ensureRelease:
-	-@$(MAKE) release
-
-ftp-actual:		dist $(FTPDIR)
-	cp $(distArchive) $(FTPDIR)
-	chmod u+rw,g+rw,o=r $(FTPDIR)/$(distArchive)
-	rm -f $(FTPDIR)/$(PACKAGE).tar.gz
-	$(LN_S) $(distArchive) $(FTPDIR)/$(PACKAGE).tar.gz
-
-ftp:			ensureRelease
-	$(MAKE) ftp-actual
-
-software-update:	$(srcdir)/html/index.html $(WEBROOT)
-	-mkdir $(WEBROOT)/$(VERSION)
-	cp -R html/* $(WEBROOT)/$(VERSION)
-	echo 'RemoveOutputFilter LAYOUT html htm' \
-	    >$(WEBROOT)/$(VERSION)/.htaccess
-	rm -f $(WEBROOT)/current
-	$(LN_S) $(VERSION) $(WEBROOT)/current
-
-download_update:
-	previous=`sed -n 's/.*"%current%" value="\(.*\)".*/\1/p' \
-		 /web/content/downloads/$(PACKAGE)/toc.xml`; \
-	if test "$$previous" != "$(VERSION)"; then \
-	    sed -e 's/"%current%" value=".*"/"%current%" value="$(VERSION)"/' \
-	    -e 's/"%previous%" value=".*"/"%previous%" value="'$$previous'"/' \
-		/web/content/downloads/$(PACKAGE)/toc.xml >toc.xml.new; \
-	    cp /web/content/downloads/$(PACKAGE)/toc.xml \
-		/web/content/downloads/$(PACKAGE)/toc.xml.old; \
-	    mv -f toc.xml.new /web/content/downloads/$(PACKAGE)/toc.xml; \
-	fi
-
-web-update:		ensureRelease
-	$(MAKE) software-update download_update
-
-# Apparently, there's no rule to create $(distArchive).
-available:		ensureRelease
-	$(MAKE) $(distArchive) ftp web-update
+web-update:	commit-check $(WEB_DESTDIR)
+	cp -R html/* $(WEB_DESTDIR)
+endif
 
 .PHONY:	\
-	available \
-	commitAndTag \
-	download_update \
-	ensureRelease \
-	ftp \
-	ftp-actual \
 	install-html \
-	release \
-	releaseCheck \
 	root-ni-ck \
 	root-ni-db \
 	root-ni-vg \
-	software-update \
-	sudo \
-	timestamp \
-	web-update
+	sudo

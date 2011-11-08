@@ -301,6 +301,7 @@ alpha:
 
 web-update:
 	cd html && $(MAKE) web-update
+	cd noaaport && $(MAKE) web-update
 
 available:	ftp web-update
 
