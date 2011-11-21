@@ -419,9 +419,16 @@ int main(
                 case PQUEUE_DUP:
                     uerror("Product already in queue: %s",
                         s_prod_info(NULL, 0, &prod.info, 1));
+                    exitCode = exit_infile;
+                    break;
+                case PQUEUE_BIG:
+                    uerror("Product too big for queue: %s",
+                        s_prod_info(NULL, 0, &prod.info, 1));
+                    exitCode = exit_infile;
                     break;
                 case ENOMEM:
                     uerror("queue full?");
+                    exitCode = exit_system;
                     break;  
                 case EINTR:
 #if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
