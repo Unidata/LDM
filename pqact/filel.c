@@ -2533,7 +2533,9 @@ reap(
 
         /*
          * "entry" will be NULL if it was in the list but a write to the file
-         * or pipe resulted in an I/O error.
+         * or pipe resulted in an I/O error (in which case an error message
+         * should be logged) or if it's a PIPE entry with the "-close" option
+         * (in which case no error message will be logged by pqact(1)).
          */
         if (NULL != entry) {
             cmd = entry->path;
