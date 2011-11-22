@@ -2531,6 +2531,10 @@ reap(
         const char*     childType;
         int             isExec = 0;
 
+        /*
+         * "entry" will be NULL if it was in the list but a write to the file
+         * or pipe resulted in an I/O error.
+         */
         if (NULL != entry) {
             cmd = entry->path;
             childType = TYPE_NAME[entry->type];
