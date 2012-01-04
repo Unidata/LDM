@@ -197,10 +197,11 @@ int main(
         int status;
         int seq_start = 0;
         enum ExitCode {
-            exit_success = 0,
+            exit_success = 0,   /* all files inserted successfully */
             exit_system = 1,    /* operating-system failure */
             exit_pq_open = 2,   /* couldn't open product-queue */
             exit_infile = 3,    /* couldn't process input file */
+            exit_dup = 4,       /* input-file already in product-queue */
             exit_md5 = 6        /* couldn't initialize MD5 processing */
         } exitCode = exit_success;
 
@@ -419,7 +420,7 @@ int main(
                 case PQUEUE_DUP:
                     uerror("Product already in queue: %s",
                         s_prod_info(NULL, 0, &prod.info, 1));
-                    exitCode = exit_infile;
+                    exitCode = exit_dup;
                     break;
                 case PQUEUE_BIG:
                     uerror("Product too big for queue: %s",
@@ -500,6 +501,7 @@ int main(
                         case PQUEUE_DUP:
                             uerror("Product already in queue: %s",
                                 s_prod_info(NULL, 0, &prod.info, 1));
+                            exitCode = exit_dup;
                             break;
                         case ENOMEM:
                             uerror("queue full?");

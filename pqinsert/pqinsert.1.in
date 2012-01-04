@@ -68,7 +68,11 @@ Requests that debugging information also be printed (currently none).
 .SH EXIT STATUS
 .LP
 If the program exits with a failure status, then the user should check 
-the log messages for details on the failure.
+the log messages for details on the failure. If the exit-status is 
+non-zero, then it will be that of the last input file for which an error
+occurred, which will hide previous errors; consequently, inserting files
+one-at-a-time is advisable if you need to know for which file an error
+occurred.
 .TP
 .B 0
 Success.  All input files were inserted into the product-queue.
@@ -82,6 +86,10 @@ The product-queue couldn't be opened for writing.  No files were processed.
 .B 3
 A problem occurred while processing an input file, which was not added
 to the product-queue.  Other files might have been added.
+.TP
+.B 4
+An input file is already in the product-queue according to its MD5 
+signature.
 .TP
 .B 6
 The MD5 signature computation couldn't be initialized.  No files were
