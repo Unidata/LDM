@@ -20,6 +20,9 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <regex.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
 #ifndef NO_WAITPID
 #include <sys/wait.h>
 #endif 
@@ -44,7 +47,10 @@
 
 static volatile int     hupped = 0;
 static char*            conffilename = 0;
-
+static int              shmid = -1;
+static int              semid = -1;
+static key_t            key;
+static key_t            semkey;
 timestampt              oldestCursor;
 timestampt              currentCursor;
 int                     currentCursorSet = 0;
@@ -102,6 +108,14 @@ cleanup(void)
 
         while (reap(-1, WNOHANG) > 0)
             /*EMPTY*/;
+    }
+
+    if(shmid != -1) {
+        unotice("Deleting shared segment.");
+        shmctl(shmid, IPC_RMID, NULL);
+    }
+    if(semid != -1) {
+        semctl(semid, 0, IPC_RMID);
     }
 
     (void)closeulog();
@@ -237,6 +251,7 @@ main(int ac, char *av[])
         prod_class_t clss;
         int toffset = TOFFSET_NONE;
         int loggingToStdErr = 0;
+        unsigned queue_size = 5000;
 
         conffilename = DEFAULT_CONFFILENAME;
 
@@ -271,6 +286,7 @@ main(int ac, char *av[])
         extern int optind;
         extern int opterr;
         extern char *optarg;
+
         int ch;
         int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
             LOG_MASK(LOG_NOTICE));
@@ -278,13 +294,19 @@ main(int ac, char *av[])
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "vxl:d:f:q:o:p:i:t:")) != EOF)
+        while ((ch = getopt(ac, av, "vxel:d:f:q:o:p:i:t:")) != EOF)
                 switch (ch) {
                 case 'v':
                         logmask |= LOG_UPTO(LOG_INFO);
                         break;
                 case 'x':
                         logmask |= LOG_MASK(LOG_DEBUG);
+                        break;
+                case 'e':
+                        key = ftok("/etc/rc.d/rc.local",'R');
+                        semkey = ftok("/etc/rc.d/rc.local",'e');
+                        shmid = shmget(key, sizeof(edex_message) * queue_size, 0666 | IPC_CREAT);
+                        semid = semget(semkey, 2, 0666 | IPC_CREAT);
                         break;
                 case 'l':
                         logfname = optarg;
@@ -418,6 +440,14 @@ main(int ac, char *av[])
             unotice("Exiting");
             exit(1);
             /*NOTREACHED*/
+        }
+
+        /*
+         * Inform the "filel" module of the shared memory segment
+         */
+        if (shmid != -1 && semid != -1)
+        {
+            set_shared_space(shmid, semid, queue_size);
         }
 
         /*
