@@ -16,6 +16,7 @@
 #define PATH_MAX 255                    /* _POSIX_PATH_MAX */
 #endif /* !PATH_MAX */
 #include <sys/types.h>
+#include <sys/sem.h>                                          
 #include <sys/stat.h>
 #include <fcntl.h> /* O_RDONLY et al */
 #include <unistd.h> /* access, lseek */
@@ -50,7 +51,12 @@ extern pqueue*          pq;
 extern ChildMap*        execMap;
 
 static unsigned maxEntries = 0;
-
+static int shared_id = -1;
+static int sem_id = -1;
+static unsigned shared_size;
+static unsigned queue_counter = 0;
+static unsigned largest_queue_element = 0;
+static union semun semarg;
 /*
  * Defined in pqcat.c
  */
@@ -596,6 +602,9 @@ unio_open(fl_entry *entry, int ac, char **av)
         }
         else if (0 == strncmp(*av,"-log",4)) {
             entry->flags |= FL_LOG;
+	}
+	else if (0 == strncmp(*av,"-edex",3)) {
+            entry->flags |= FL_EDEX;
         }
     }
 
@@ -645,7 +654,7 @@ unio_open(fl_entry *entry, int ac, char **av)
             strncpy(entry->path, path, PATH_MAX);
             entry->path[PATH_MAX-1] = 0; /* just in case */
 
-            udebug("    unio_open: %d", entry->handle.fd);
+            udebug("    unio_open: %d %s", entry->handle.fd, entry->path);
         }                               /* output-file set to close_on_exec */
 
         if (error) {
@@ -920,12 +929,25 @@ unio_prodput(
     int         status = -1;            /* failure */
     fl_entry*   entry = get_fl_entry(UNIXIO, argc, argv);
 
-    udebug("    unio_prodput: %d %s",
+    udebug("    unio_prodput: %d",
             entry == NULL
                 ? -1
-                : entry->handle.fd , prodp->info.ident);
+                : entry->handle.fd);
 
     if (entry != NULL) {
+        if(entry->flags & FL_EDEX) {
+            if(shared_id == -1) {
+                uerror("Notification specified but shared memory is not available.");
+            }
+            else {
+                edex_message * queue = (edex_message *)shmat(shared_id, (void *)0, 0);
+                strncpy(queue[queue_counter].filename, entry->path, 4096);
+                strncpy(queue[queue_counter].ident, prodp->info.ident, 256);
+                if(shmdt(queue) == -1) {
+                    uerror("Detaching shared memory failed.");
+                }
+            }
+        }
         size_t  sz = prodp->info.sz;
         void*   data = 
             (entry->flags & FL_STRIP)
@@ -953,17 +975,29 @@ unio_prodput(
 
                 status = atFinishedArgs(argc, argv, entry);
 
-                if ((status == 0) && (entry->flags & FL_LOG))
+/*                if ((status == 0) && (entry->flags & FL_LOG))
                     unotice("Filed in \"%s\": %s",
                         argv[argc-1],
                         s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
             }                       /* data written */
+                if (status == 0) {
+                    if(entry->flags & FL_LOG)
+                        unotice("Filed in \"%s\": %s",
+                            argv[argc-1],
+                            s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
+                    if(entry->flags & FL_EDEX && shared_id != -1) {
+                        semarg.val = queue_counter;
+                        int semreturn = semctl(sem_id, 1, SETVAL, semarg);
+                        queue_counter = (queue_counter == largest_queue_element) ? queue_counter = 0 : queue_counter + 1;
+                    }
+                }
+            } /* data written */
 
             if (data != prodp->data)
                 free(data);
         }                               /* data != NULL */
     }                                   /* entry != NULL */
-
+    udebug("    unio_prodput: complete for %s at location %s", prodp->info.ident, entry->path);
     return status;
 }
 
@@ -2456,6 +2490,30 @@ set_avail_fd_count(
     return error;
 }
 
+int
+set_shared_space(
+    int shid,
+    int semid,
+    unsigned size)
+{
+    int error;
+    if(shid == -1 || semid == -1) {
+        uerror("Shared memory is not available.  Notification system disabled.");
+        error = -1;
+    }
+    else {
+        shared_id = shid;
+        sem_id = semid;
+        shared_size = size;
+        semarg.val = size;
+        semctl(sem_id, 0, SETVAL, semarg);
+        semarg.val = -1;
+        semctl(sem_id, 1, SETVAL, semarg);                    
+        largest_queue_element = shared_size - 1;
+        error = 0;
+    }
+    return error;
+}
 
 /*
  * Returns the maximum number of file-descriptors that one process can have 

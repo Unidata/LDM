@@ -18,12 +18,7 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 
-if WANT_FAUX_PQ
-    LIB_SUBDIRS	= fauxPq
-else
-    LIB_SUBDIRS	= pq
-endif
-LIB_SUBDIRS	+= \
+LIB_SUBDIRS	= \
     libxml2 \
     rpc \
     ulog \
@@ -31,6 +26,11 @@ LIB_SUBDIRS	+= \
     pqinglib \
     protocol \
     registry
+if WANT_FAUX_PQ
+    LIB_SUBDIRS	+= fauxPq
+else
+    LIB_SUBDIRS	+= pq
+endif
 if WANT_NOAAPORT
     LIB_SUBDIRS	+= grib2 gempak libpng zlib
 else

@@ -23,6 +23,7 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h
 
 if MAINTAINER
+BUILT_SOURCES		= pq.h
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@

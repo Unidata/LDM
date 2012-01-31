@@ -566,6 +566,54 @@ utcToEpochTime(
     return epochTime;
 }
 
+static void
+seq_sub(
+   const char* istring,        /* input string, possibly including
+                                  indicators to be expanded */
+   char*       ostring,        /* output string, with date indicators
+                                  expanded */
+   u_int       seqnum)     /* UTC-based product-time (might be "now") */
+{
+   static int          seqfirst = 1;      /* true only first time called */
+   static regex_t      seqprog;           /* compiled regexp for date indicator */
+   static regmatch_t   seqpmatch[1];      /* substring matching information */
+   const char*         e2;             /* pointer to last character of seq
+                                        * indicator substring */
+   const char*         is;             /* pointer to next input character */
+   /*
+    * Compile regular-expression on first call.
+    */
+   if (seqfirst) {
+      static char     seq_exp[] = "\\(seq\\)";
+
+      if (regcomp(&seqprog, seq_exp, REG_EXTENDED) != 0)
+         serror("Bad regular expression or out of memory: %s", seq_exp);
+      seqfirst = 0;
+   }
+
+   for (is = istring; regexec(&seqprog, is, 1, seqpmatch, 0) == 0; is = e2) {
+      /*
+       * Process the next date indicator in "istring".
+       */
+      printf("%d, %d\n", seqpmatch[0].rm_so, seqpmatch[0].rm_eo);
+      const char *const       s0 = &is[seqpmatch[0].rm_so];
+                                      /* start of entire substring match */
+
+      e2 = &is[seqpmatch[0].rm_eo];      /* points to last char of substring */
+
+      /*
+       * Copy stuff before match.
+       */
+      {
+         while (is < s0)
+            *ostring++ = *is++;
+      }
+
+      int printed =  sprintf(ostring, "%d", seqnum);
+      ostring+=printed;
+   }
+   (void)strcpy(ostring, is);          /* copy rest of input to output */
+}
 
 /*
         from  ldm3/dd_regexp.c,v 1.24 1991/03/02 17:32:08
@@ -1019,6 +1067,7 @@ main()
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, may31);
     assert(strcmp(buf, "2007-05-02") == 0);
+    seq_sub("/tmp/(seq).txt", buf, 1234);
 
     exit(0);
 }
@@ -1124,10 +1173,13 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         date_sub(buf2, buf1, prod->info.arrival.tv_sec);
         buf1[sizeof(buf1)-1] = 0;
 
-        if (ulogIsVerbose())
-            uinfo("               %s: %s", s_actiont(&pal->action), buf1);
+        seq_sub(buf1, buf2, prod->info.seqno);
+        buf2[sizeof(buf2)-1] = 0;
 
-        argc = tokenize(buf1, argv, ARRAYLEN(argv));
+        if (ulogIsVerbose())
+            uinfo("               %s: %s and the ident is %s", s_actiont(&pal->action), buf2, prod->info.ident);
+
+        argc = tokenize(buf2, argv, ARRAYLEN(argv));
 
         if (argc < ARRAYLEN(argv))
         {
@@ -1136,7 +1188,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         }
         else
         {
-            uerror("Too many PIPE arguments: \"%s\"", buf1);
+            uerror("Too many PIPE arguments: \"%s\"", buf2);
             status = -1;
         }
     }

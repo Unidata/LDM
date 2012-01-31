@@ -261,7 +261,9 @@ TAGS_FILES = \
     ../protocol/*.c ../protocol/*.h \
     ../rpc/*.c ../rpc/*.h
 
-all: all-am
+@MAINTAINER_TRUE@BUILT_SOURCES = pq.h
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .h .hin .lo .o .obj
@@ -510,13 +512,15 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: check-am
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
 all-am: Makefile $(LTLIBRARIES) $(MANS) $(HEADERS)
 installdirs:
 	for dir in "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: install-am
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -541,6 +545,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
@@ -614,7 +619,7 @@ uninstall-am: uninstall-includeHEADERS uninstall-man
 
 uninstall-man: uninstall-man3
 
-.MAKE: install-am install-strip
+.MAKE: all check install install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
 	clean-libtool clean-noinstLTLIBRARIES ctags distclean \
@@ -630,7 +635,6 @@ uninstall-man: uninstall-man3
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-includeHEADERS \
 	uninstall-man uninstall-man3
-
 
 @MAINTAINER_TRUE@.hin.h:
 @MAINTAINER_TRUE@	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp

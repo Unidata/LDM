@@ -6,7 +6,7 @@
  * From a design-pattern perspective, this module is a combination façade and
  * adapter for the "up6" and "down6" modules.
  */
-/* $Id: ldm6_server.c,v 1.13.8.2.2.3.2.19 2009/08/17 17:12:45 steve Exp $ */
+/* $Id: ldm6_server.c,v 1.13.8.2.2.3.2.18 2009/06/18 23:37:22 steve Exp $ */
 
 #include "config.h"
 
@@ -35,7 +35,6 @@
 #include "pq.h"
 #include "prod_class.h"  /* free_prod_class() */
 #include "ulog.h"
-#include "log.h"
 #include "UpFilter.h"
 
 #include "up6.h"         /* the pure "upstream" LDM module */
@@ -525,14 +524,7 @@ hiya_6_svc(
      * during process termination.
      */
     if (pq) {
-        if (error = pq_close(pq)) {
-            log_start("hiya_6_svc(): Error closing product-queue: %s",
-                EOVERFLOW == error ? "queue inconsistent" : strerror(error));
-            log_log(LOG_ERR);
-            svcerr_systemerr(xprt);
-            svc_destroy(xprt);
-            exit(error);
-        }
+        (void)pq_close(pq);
         pq = NULL;
     }
     error = pq_open(pqfname, PQ_DEFAULT, &pq);

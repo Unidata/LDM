@@ -6,7 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES		= ../registry/registry.h ldm6_svc.c
+BUILT_SOURCES		= globals.h ../registry/registry.h ldm6_svc.c
 RPCGEN			= @RPCGEN@
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la

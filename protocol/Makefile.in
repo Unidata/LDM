@@ -253,7 +253,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-BUILT_SOURCES = ../registry/registry.h ldm6_svc.c
+BUILT_SOURCES = globals.h ../registry/registry.h ldm6_svc.c
 noinst_LTLIBRARIES = lib.la
 include_HEADERS = \
     abbr.h \

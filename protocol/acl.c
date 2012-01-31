@@ -1160,7 +1160,7 @@ getInfo(
 static int
 getQueueProdInfo(
     pqueue* const               pq,
-    const prod_class_t* const   prodClass,
+    const prod_class_t* const     prodClass,
     prod_info* const            info)
 {
     int     status = -1;                /* error */
@@ -1511,13 +1511,7 @@ initSavedInfo(
                     status = 0;
                 }                       /* no matching data-product in queue */
 
-                if (status = pq_close(pq)) {
-                    log_start("initSavedInfo(): Error closing "
-                        "product-queue \"%s\": %s", pqPath,
-                        EOVERFLOW == status ? "queue inconsistent" :
-                            strerror(status));
-                    status = -1;
-                }
+                (void)pq_close(pq);
             }                           /* "pq" open */
         }                               /* no previous product-information */
 

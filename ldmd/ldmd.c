@@ -227,14 +227,7 @@ cleanup(void)
          * Close product-queue.
          */
         if (pq) {
-            int status = pq_close(pq);
-            if (status) {
-                log_start("cleanup(): Error closing product-queue \"%s\": %s",
-                    pqfname,
-                    EOVERFLOW == status
-                        ? "queue inconsistent" : strerror(status));
-                log_log(LOG_ERR);
-            }
+            (void)pq_close(pq);
             pq = NULL;
         }
 
@@ -1018,12 +1011,8 @@ main(
             exit(1);
         }
 
-        if (status = pq_close(pq)) {
-            log_start("main(): Error closing product-queue \"%s\": %s", pqfname,
-                EOVERFLOW == status ? "queue inconsistent" : strerror(status));
-            log_log(LOG_ERR);
-            exit(1);
-        }
+        (void)pq_close(pq);
+
         pq = NULL;
     }
 

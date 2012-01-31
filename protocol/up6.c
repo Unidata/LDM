@@ -594,12 +594,7 @@ up6_destroy(void)
     }
 
     if (_pq) {
-        int status = pq_close(_pq);
-        if (status) {
-            log_start("main(): Error closing product-queue: %s",
-                EOVERFLOW == status ? "queue inconsistent" : strerror(status));
-            log_log(LOG_ERR);
-        }
+        (void)pq_close(_pq);
         _pq = NULL;
     }
 }
