@@ -586,8 +586,22 @@ sub make_surf_pq
                 "mkqueue aborted");
         }
         else {
+            my $size;
+            if ($surf_size =~ /(.*)k$/i) {
+                $size = $1 * 1000;
+            }
+            else if ($surf_size =~ /(.*)M$/i) {
+                $size = $1 * 1000000;
+            }
+            else if ($surf_size =~ /(.*)G$/i) {
+                $size = $1 * 1000000000;
+            }
+            else {
+                $size = $surf_size;
+            }
+
             # need the number of slots to create
-            $surf_slots = $surf_size / 1000000 * 6881;
+            $surf_slots = $size / 1000000 * 6881;
 
             # build the command line
             $cmd_line = "pqcreate";
@@ -1001,7 +1015,7 @@ sub saveQueuePar
             errmsg("saveQueuePar(): Couldn't save queue slots");
 
             print "Restoring previous queue size\n";
-            if (system("regutil -u $pq_size regpath{QUEUE_SIZE}")) {
+            if (system("regutil -s $pq_size regpath{QUEUE_SIZE}")) {
                 errmsg("saveQueuePar(): Couldn't restore previous queue size");
             }
         }
