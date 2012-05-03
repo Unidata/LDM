@@ -590,10 +590,10 @@ sub make_surf_pq
             if ($surf_size =~ /(.*)k$/i) {
                 $size = $1 * 1000;
             }
-            else if ($surf_size =~ /(.*)M$/i) {
+            elsif ($surf_size =~ /(.*)M$/i) {
                 $size = $1 * 1000000;
             }
-            else if ($surf_size =~ /(.*)G$/i) {
+            elsif ($surf_size =~ /(.*)G$/i) {
                 $size = $1 * 1000000000;
             }
             else {
