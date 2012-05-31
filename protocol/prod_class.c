@@ -18,13 +18,8 @@
 #include "timestamp.h" 
 #include "RegularExpressions.h"
 
-#ifndef NDEBUG
-#if 0
-#include "ldmprint.h"
-#endif
 #include "ulog.h"
 #include "log.h"
-#endif
 
 #ifndef ENOERR
 #define ENOERR 0
