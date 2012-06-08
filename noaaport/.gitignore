@@ -24,7 +24,6 @@ Makefile
 shmfifo.h
 core.*
 *.swp
-mainpage.h
 html
 fifo.h
 fileReader.h
