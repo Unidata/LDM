@@ -49,19 +49,20 @@ usage(
 )
 {
         (void)fprintf(stderr,
-                "Usage: %s [options] filename ...\n\tOptions:\n", av0);
-        (void)fprintf(stderr,
-                "\t-v         Verbose, tell me about each product\n");
-        (void)fprintf(stderr,
-                "\t-l logfile    log to a file rather than stderr\n");
-        (void)fprintf(stderr,
-                "\t-q queue      default \"%s\"\n", getQueuePath());
-        (void)fprintf(stderr,
-                "\t-s seqno      set initial product sequence number to \"seqno\", defaults to 0\n");
-        (void)fprintf(stderr,
-                "\t-f feedtype   assert your feed type as \"feedtype\", defaults to \"EXP\"\n");
-        (void)fprintf(stderr,
-                "\t-p productID  assert product ID as \"productID\", defaults to filename\n\t\t      With multiple files, product ID becomes productID.<sequenceNumber>\n");
+"Usage: %s [options] filename ...\n"
+"    Options:\n"
+"    -v            Verbose, tell me about each product\n"
+"    -l logfile    Log to file <logfile> rather than stderr\n"
+"    -q queue      Use <queue> as product-queue. Default:\n"
+"                  \"%s\"\n"
+"    -s seqno      Set initial product sequence number to <seqno>.\n"
+"                  Default: 0\n"
+"    -f feedtype   Assert your feed type as <feedtype>. Default: \"EXP\"\n"
+"    -p productID  Assert product-ID as <productID>. Default is the \n"
+"                  filename. With multiple files, product-ID becomes\n"
+"                  <productID>.<seqno>\n"
+"    -i            Compute product signature (MD5 checksum) from product ID\n",
+            basename(av0), getQueuePath());
         exit(1);
 }
 
