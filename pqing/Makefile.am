@@ -43,12 +43,13 @@ pqing_LDADD		= \
     -lm
 dist_man1_MANS		= pqing.1
 TAGS_FILES		= \
-    ../pqinglib/*.c ../pqinglib/*.h \
-    ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
-    ../protocol/*.c ../protocol/*.h \
-    ../ulog/*.c ../ulog/*.h \
-    ../misc/*.c ../misc/*.h \
-    ../rpc/*.c ../rpc/*.h
+	do.c \
+	../pqinglib/*.c ../pqinglib/*.h \
+	../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
+	../protocol/*.c ../protocol/*.h \
+	../ulog/*.c ../ulog/*.h \
+	../misc/*.c ../misc/*.h \
+	../rpc/*.c ../rpc/*.h
 
 if MAINTAINER
 pqing.1:	pqing.1.in
