@@ -77,6 +77,7 @@ compareFeedtypes(
  * Returns:
  *      FV_NOMEM        Out of memory.
  */
+#if 0
 static FeedValueError
 addChild(
     FeedValue* const       parent,
@@ -117,6 +118,7 @@ addChild(
 
     return error;
 }
+#endif
 
 
 /*
@@ -126,6 +128,7 @@ addChild(
  *      parent  The feed-value.
  *      child   The feed-value to be removed.
  */
+#if 0
 static void
 removeChild(
     FeedValue* const       parent,
@@ -142,6 +145,7 @@ removeChild(
         }
     }
 }
+#endif
 
 
 /*

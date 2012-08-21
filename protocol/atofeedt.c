@@ -324,6 +324,7 @@ feedterm(
         }
     }
     /*NOTREACHED*/
+    return NONE;
 }
 
 
@@ -349,6 +350,7 @@ feedexpr(
         }
     }
     /*NOTREACHED*/
+    return NONE;
 }
 
 

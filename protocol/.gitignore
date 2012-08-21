@@ -4,3 +4,5 @@ globals.h
 ldmfork.h
 LdmProxy.h
 timer.h
+/uldb.h
+/testuldb

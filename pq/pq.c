@@ -614,7 +614,7 @@ tq_add(
                 /*
                  * while(q->key < key) {...}
                  */
-                while (TV_CMP_LT(tqp->tv, tp->tv)) {
+                while ((TV_CMP_LT(tqp->tv, tp->tv))) {
                     p = q;
                     tpp = tqp;
                     /*
@@ -727,7 +727,7 @@ tqe_find(const tqueue *const tq, const timestampt *const key, const pq_match mt)
         q = fbp->fblks[tpp->fblk + k];
         tqp = &tq->tqep[q];
         /* while(q->key < key) {...} */
-        while(TV_CMP_LT(tqp->tv, *key)) {
+        while((TV_CMP_LT(tqp->tv, *key))) {
             p = q;
             tpp = &tq->tqep[p];
             /* q = p->forward[k]; */
@@ -824,7 +824,7 @@ tq_delete(tqueue *const tq, tqelem *tqep)
         assert((q == TQ_NIL) || (TQ_HEAD < q && q < tq->nalloc + TQ_OVERHEAD_ELEMS));
         /* while(q->key < key) { */
         /* on fast machines distinct products may have equal timestamps */
-        while(TV_CMP_LT(tqp->tv, tqep->tv) ||
+        while((TV_CMP_LT(tqp->tv, tqep->tv)) ||
               (TV_CMP_EQ(tqp->tv, tqep->tv) && tqp->offset < tqep->offset)) {
             p = q;
             tpp = tqp;
@@ -4727,7 +4727,7 @@ pq_del_oldest(pqueue *pq)
              * product's reception-time as its creation-time in the computation
              * of the product's virtual residence-time.
              */
-            if (TV_CMP_LT(*receptionTime, *creationTime)) {
+            if ((TV_CMP_LT(*receptionTime, *creationTime))) {
                 creationTime = receptionTime;
             }
 
@@ -4737,12 +4737,12 @@ pq_del_oldest(pqueue *pq)
              * Compute the product's residence time only if the product was
              * created before now.
              */
-            if (TV_CMP_LT(*creationTime, now)) {
+            if ((TV_CMP_LT(*creationTime, now))) {
                 timestampt      virtResTime =
                     diff_timestamp(&now, creationTime);
 
                 if (tvIsNone(pq->ctlp->minVirtResTime) || 
-                        TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime))  {
+                        (TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime)))  {
                     LOG_START1("pq_del_oldest(): MVRT product: %s",
                             s_prod_info(NULL, 0, &infoBuf.info, ulogIsDebug()));
                     log_log(LOG_INFO);

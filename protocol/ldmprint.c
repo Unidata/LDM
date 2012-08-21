@@ -16,6 +16,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <rpc/rpc.h>
+#include <netinet/in.h>
 
 #include "ldm.h"
 #include "ldmprint.h"

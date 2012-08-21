@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include "ldm.h"
 #include "ulog.h"
+#include "log.h"
 #include "ldmprint.h"
 #include "abbr.h"
 #include "pq.h"
@@ -24,6 +25,7 @@
 #include "peer_info.h"
 #include "globals.h"
 #include "remote.h"
+#include "uldb.h"
 
 static timestampt maxlatency;
 
@@ -388,6 +390,42 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         }
 
         /*
+         * According to the access control list, the request is valid.
+         */
+        const struct sockaddr_in* downAddr = &rqstp->rq_xprt->xp_raddr;
+
+        status = (noti5_sqf == doit) ?
+                    uldb_addNotifier(getpid(), 5, downAddr, remote->clssp) :
+                    uldb_addFeeder(getpid(), 5, downAddr, remote->clssp);
+
+        if (status) {
+            if (ULDB_DISALLOWED == status) {
+                /**
+                 * Product-class for signaling that the subscription by the
+                 * downstream LDM is disallowed.
+                 */
+                static prod_class disallowedProdClass = { { 0, 0 }, /* TS_ZERO */
+                    { 0, 0 }, /* TS_ZERO */
+                    { 0, (prod_spec *) NULL /* cast away const */
+                    } };
+
+                LOG_ADD0("New upstream LDM process is disallowed");
+                log_log(LOG_NOTICE);
+
+                theReply.code = RECLASS;
+                theReply.ldm_replyt_u.newclssp = &disallowedProdClass;
+
+                return &theReply;
+            }
+            else {
+                LOG_ADD0("Problem with new upstream LDM process");
+                log_log(LOG_ERR);
+                svcerr_systemerr(rqstp->rq_xprt);
+                return NULL;
+            }
+        }
+
+        /*
          * Ensure that the product queue is open for reading only.  It will be 
          * closed during process termination by cleanup().
          */
@@ -407,6 +445,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                             getQueuePath(), strerror(status)) ;
                 }
                 svcerr_systemerr(rqstp->rq_xprt);
+                uldb_remove(getpid());
                 return NULL;
         }
 
@@ -428,6 +467,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         if(!svc_freeargs(rqstp->rq_xprt, xdr_prod_class, (caddr_t)want))
         {
                 uerror("unable to free arguments");
+                uldb_remove(getpid());
                 exit(1);
         }
 
@@ -443,6 +483,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         remote->sendsz, remote->recvsz) < H_CLNTED)
         {
                 uerror("%s", s_hclnt_sperrno(&hc));
+                uldb_remove(getpid());
                 exit(1);
         }
 
@@ -457,6 +498,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         {
                 uerror("pq_cClassSet failed: %s: %s\n",
                         getQueuePath(), strerror(status)) ;
+                uldb_remove(getpid());
                 exit(1);
         }
         
@@ -477,6 +519,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         {
                                 unotice("Request Satisfied");
                                 done = 1;
+                                uldb_remove(getpid());
                                 continue;
                         }
                         (void)set_timestamp(&now);
@@ -490,6 +533,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                                 uerror("nullproc5(%s): %s",
                                         remote_name(), clnt_sperrno(rpc_stat));
                                 done = 1;
+                                uldb_remove(getpid());
                                 continue;
                         }
                         lastsent = timestamp_add(&hc.begin, &hc.elapsed);
@@ -501,6 +545,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                 default:
                         uerror("pq_sequence failed: %s (errno = %d)",
                                 strerror(status), status);
+                        uldb_remove(getpid());
                         exit(1);
                         break;
                 }
@@ -509,6 +554,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         
         }
         
+        uldb_remove(getpid());
         exit(0);
 
         /*NOTREACHED*/

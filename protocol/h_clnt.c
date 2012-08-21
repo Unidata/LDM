@@ -1399,6 +1399,7 @@ flush_timeo :
         status = -1;
         goto done;
         /*NOTREACHED*/
+        return 0;
 }
 
 

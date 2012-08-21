@@ -64,6 +64,7 @@ PROG_SUBDIRS	= \
     rtstats \
     scour \
     scripts \
+    uldbutil \
     ulogger
 if WANT_NOAAPORT
     PROG_SUBDIRS	+= noaaport

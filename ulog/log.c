@@ -337,7 +337,7 @@ void log_add(
  */
 void log_errno(void)
 {
-    log_start(strerror(errno));
+    log_start("%s", strerror(errno));
 }
 
 /*

@@ -520,7 +520,7 @@ vulog(pri, fmt, args)
             {
                 int     addSpace = 0;
 
-                if (logOptions & LOG_IDENT && *logIdent)
+                if ((logOptions & LOG_IDENT) && *logIdent)
                 {
                     /*
                      * Encode the utility identifier.

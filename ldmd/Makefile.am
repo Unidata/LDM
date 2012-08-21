@@ -6,19 +6,19 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+BUILT_SOURCES   = parser.c scanner.c
+CLEANFILES		= *.i .*.info
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
 EXTRA_DIST		= \
     ldmd.1 \
     ldmd.conf \
-    parser.c \
     parser.y \
     scanner.c \
     scanner.l \
     wordexp.h
 PQ_SUBDIR		= @PQ_SUBDIR@
-BUILT_SOURCES		= parser.c scanner.c
-bin_PROGRAMS		= ldmd
+bin_PROGRAMS	= ldmd
 ldmd_SOURCES	= \
     parser.c \
     ldmd.c \
@@ -43,7 +43,6 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
-CLEANFILES		= *.i .*.info
 
 if MAINTAINER
 ldmd.1:		ldmd.1.in
@@ -72,6 +71,11 @@ scanner.c:	scanner.l
 
 endif
 
+SUFFIXES:	.h .hin
+.hin.h:
+	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
+	mv -f $@.tmp $@
+
 install-data-local:    \
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/ldmd.conf
 $(DESTDIR)$(sysconfdir)/ldmd.conf:
@@ -93,3 +97,14 @@ debug:		ldmd
 
 .c.i:
 	$(COMPILE) $(CPPFLAGS) -E -o $@ $<
+    
+if HAVE_CUNIT
+
+debug_uldb:		testUpstreamLdmDb
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb testUpstreamLdmDb
+
+valgrind_uldb:	testUpstreamLdmDb
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./testUpstreamLdmDb
+        
+endif

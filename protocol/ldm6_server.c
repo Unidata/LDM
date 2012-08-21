@@ -3,7 +3,7 @@
  * "ldm6_svc" module.  Because RPC assumes a client/server structure, this
  * module contains code for both upstream and downstream LDM-s.
  *
- * From a design-pattern perspective, this module is a combination façade and
+ * From a design-pattern perspective, this module is a combination faï¿½ade and
  * adapter for the "up6" and "down6" modules.
  */
 /* $Id: ldm6_server.c,v 1.13.8.2.2.3.2.18 2009/06/18 23:37:22 steve Exp $ */
@@ -20,6 +20,7 @@
 #include <stdlib.h>      /* getenv, exit */
 #include <string.h>      /* strncpy(), strerror() */
 #include <strings.h>     /* strncasecmp() */
+#include <sys/types.h>
 #include <unistd.h>      /* getpid() */
 
 #include "acl.h"         /* acl_product_intersection(), acl_check_hiya() */
@@ -35,13 +36,13 @@
 #include "pq.h"
 #include "prod_class.h"  /* free_prod_class() */
 #include "ulog.h"
+#include "log.h"
 #include "UpFilter.h"
+#include "uldb.h"
 
 #include "up6.h"         /* the pure "upstream" LDM module */
 
-
-static fornme_reply_t           theReply;
-
+static fornme_reply_t theReply;
 
 /*
  * Decodes a data-product signature from the last product-specification of a
@@ -58,56 +59,54 @@ static fornme_reply_t           theReply;
  */
 static const signaturet*
 decodeSignature(
-    const prod_class_t* const     prodClass)
+        const prod_class_t* const prodClass)
 {
-    const signaturet* sig = NULL;             /* no valid, encoded signature */
+    const signaturet* sig = NULL; /* no valid, encoded signature */
 
     if (0 < prodClass->psa.psa_len) {
-        const prod_spec* const  lastProdSpec =
-            &prodClass->psa.psa_val[prodClass->psa.psa_len-1];
+        const prod_spec* const lastProdSpec =
+                &prodClass->psa.psa_val[prodClass->psa.psa_len - 1];
 
         if (NONE == lastProdSpec->feedtype) {
-            char*       pat = lastProdSpec->pattern;
+            char* pat = lastProdSpec->pattern;
 
             if (strncasecmp("SIG=", pat, 4) == 0) {
-                char*                   encodedSig = pat + 4;
-                int                     i;
-                unsigned                value;
-                static signaturet       sigBuf;
+                char* encodedSig = pat + 4;
+                int i;
+                unsigned value;
+                static signaturet sigBuf;
 
                 errno = 0;
 
                 for (i = 0; i < sizeof(signaturet); i++) {
-                    if (sscanf(encodedSig + 2*i, "%2x", &value) != 1)
+                    if (sscanf(encodedSig + 2 * i, "%2x", &value) != 1)
                         break;
 
-                    sigBuf[i] = (unsigned char)value;
+                    sigBuf[i] = (unsigned char) value;
                 }
 
                 if (i == sizeof(signaturet)) {
-                    sig = (const signaturet*)&sigBuf[0];
+                    sig = (const signaturet*) &sigBuf[0];
                 }
                 else {
                     if (0 == errno) {
                         err_log_and_free(
-                            ERR_NEW1(1, NULL, "Invalid signature (%s)",
-                                encodedSig),
-                            ERR_NOTICE);
+                                ERR_NEW1(1, NULL, "Invalid signature (%s)",
+                                        encodedSig), ERR_NOTICE);
                     }
                     else {
                         err_log_and_free(
-                            ERR_NEW2(1, NULL, "Invalid signature (%s): %s", 
-                                encodedSig, strerror(errno)),
-                            ERR_NOTICE);
+                                ERR_NEW2(1, NULL, "Invalid signature (%s): %s",
+                                        encodedSig, strerror(errno)),
+                                ERR_NOTICE);
                     }
-                }                       /* signature not decoded */
-            }                           /* "SIG=" found */
-        }                               /* last feedtype is NONE */
-    }                                   /* at least one product-specification */
+                } /* signature not decoded */
+            } /* "SIG=" found */
+        } /* last feedtype is NONE */
+    } /* at least one product-specification */
 
     return sig;
 }
-
 
 /*
  * Separates a product-class into a signature component and a non-signature
@@ -131,31 +130,30 @@ decodeSignature(
  */
 static ErrorObj*
 separateProductClass(
-    const prod_class_t* const     prodClass,
-    prod_class_t** const          noSigProdClass,
-    const signaturet** const    signature)
+        const prod_class_t* const prodClass,
+        prod_class_t** const noSigProdClass,
+        const signaturet** const signature)
 {
-    ErrorObj*            errObj;
-    prod_class_t*         noSigClass = dup_prod_class(prodClass);
+    ErrorObj* errObj;
+    prod_class_t* noSigClass = dup_prod_class(prodClass);
 
     if (NULL == noSigClass) {
         errObj = ERR_NEW1(0, NULL,
-            "Couldn't duplicate product-class: %s", strerror(errno));
+                "Couldn't duplicate product-class: %s", strerror(errno));
     }
     else {
-        const signaturet*       sig = decodeSignature(prodClass);
+        const signaturet* sig = decodeSignature(prodClass);
 
         if (NULL != sig)
-            clss_scrunch(noSigClass);   /* removes encoded signature */
+            clss_scrunch(noSigClass); /* removes encoded signature */
 
         *noSigProdClass = noSigClass;
         *signature = sig;
-        errObj = NULL;                  /* success */
+        errObj = NULL; /* success */
     }
 
     return errObj;
 }
-
 
 /*
  * Code common to both FEEDME and NOTIFYME requests.  If a fatal error occurs,
@@ -185,6 +183,8 @@ separateProductClass(
  *      upFilter        Pointer to pointer to upstream filter of data-products.
  *                      Set on and only on success.  Caller should invoke
  *                      upFilter_free(*upFilter).
+ *      isNotifier      Whether or not the upstream LDM is a feeder or a
+ *                      notifier.
  * Returns:
  *      NULL            Success.  A reply has been sent to the client and the
  *                      connection can now be "turned around".  *class, 
@@ -198,27 +198,28 @@ separateProductClass(
  */
 static fornme_reply_t*
 feed_or_notify(
-    SVCXPRT* const              xprt,
-    const prod_class_t* const     want,
-    prod_class_t** const          prodClass,
-    const signaturet** const    signature,
-    char* const                 downName,
-    const size_t                len,
-    struct sockaddr_in* const   downAddr,
-    int* const                  socket,
-    UpFilter** const            upFilter)
+        SVCXPRT* const xprt,
+        const prod_class_t* const want,
+        prod_class_t** const prodClass,
+        const signaturet** const signature,
+        char* const downName,
+        const size_t len,
+        struct sockaddr_in* const downAddr,
+        int* const socket,
+        UpFilter** const upFilter,
+        const int isNotifier)
 {
-    fornme_reply_t*             reply = NULL;
-    int                         errCode;
-    static prod_class_t*          allow = NULL;
-    int                         terminate = 1;    /* terminate process */
-    int                         sock;
-    const char*                 name;
-    struct sockaddr_in*         addr;
-    UpFilter*                   filter;
-    prod_class_t*                 noSigProdClass;
-    const signaturet*           sig;
-    ErrorObj*                   errObj;
+    fornme_reply_t* reply = NULL;
+    int errCode;
+    static prod_class_t* allow = NULL;
+    int terminate = 1; /* terminate process */
+    int sock;
+    const char* name;
+    struct sockaddr_in* addr;
+    UpFilter* filter;
+    prod_class_t* noSigProdClass;
+    const signaturet* sig;
+    ErrorObj* errObj;
 
     addr = svc_getcaller(xprt);
     name = hostbyaddr(addr);
@@ -233,8 +234,8 @@ feed_or_notify(
             allow = NULL;
         }
 
-        errCode = acl_product_intersection(name, &addr->sin_addr, 
-            noSigProdClass, &allow);
+        errCode = acl_product_intersection(name, &addr->sin_addr,
+                noSigProdClass, &allow);
 
         if (errCode == ENOMEM) {
             serror("Couldn't compute wanted/allowed product intersection");
@@ -249,12 +250,12 @@ feed_or_notify(
                 svcerr_systemerr(xprt);
             }
             else {
-                reply = (fornme_reply_t*)memset(&theReply, 0, sizeof(theReply));
+                reply = (fornme_reply_t*) memset(&theReply, 0,
+                        sizeof(theReply));
 
                 if (errCode == EINVAL) {
-                    uerror("%s:%d: Invalid product pattern: %s",
-                        __FILE__, __LINE__,
-                        s_prod_class(NULL, 0, noSigProdClass));
+                    uerror("%s:%d: Invalid product pattern: %s", __FILE__,
+                            __LINE__, s_prod_class(NULL, 0, noSigProdClass));
 
                     reply->code = BADPATTERN;
                 }
@@ -263,8 +264,8 @@ feed_or_notify(
 
                     /* TODO: adjust time? */
 
-                    if (allow->psa.psa_len == 0 ||
-                        !clss_eq(noSigProdClass, allow)) {
+                    if (allow->psa.psa_len == 0
+                            || !clss_eq(noSigProdClass, allow)) {
 
                         /*
                          * The downstream LDM is not allowed to receive what it
@@ -272,86 +273,135 @@ feed_or_notify(
                          */
                         if (allow->psa.psa_len == 0) {
                             uwarn("Empty wanted/allowed product-class "
-                                "intersection for %s: %s -> <nil>",
-                                name,
-                                s_prod_class(NULL, 0, noSigProdClass));
+                                    "intersection for %s: %s -> <nil>", name,
+                                    s_prod_class(NULL, 0, noSigProdClass));
                             svcerr_weakauth(xprt);
                         }
                         else {
                             char wantStr[1984];
 
-                            (void)s_prod_class(wantStr, sizeof(wantStr),
-                                noSigProdClass);
-                            unotice("Restricting request: %s -> %s",
-                                wantStr, s_prod_class(NULL, 0, allow));
+                            (void) s_prod_class(wantStr, sizeof(wantStr),
+                                    noSigProdClass);
+                            unotice("Restricting request: %s -> %s", wantStr,
+                                    s_prod_class(NULL, 0, allow));
 
                             reply->code = RECLASS;
                             reply->fornme_reply_t_u.prod_class = allow;
-                            terminate = 0;          /* return to caller */
+                            terminate = 0; /* return to caller */
                         }
-                    }                               /* request not allowed */
+                    } /* request not allowed */
                     else {
                         errObj = acl_getUpstreamFilter(name, &addr->sin_addr,
-                            noSigProdClass, &filter);
+                                noSigProdClass, &filter);
 
                         if (errObj) {
-                            err_log_and_free(
-                                ERR_NEW(0, errObj,
+                            err_log_and_free(ERR_NEW(0, errObj,
                                     "Couldn't get \"upstream\" filter"),
-                                ERR_FAILURE);
+                                    ERR_FAILURE);
                             svcerr_systemerr(xprt);
                         }
                         else if (NULL == filter) {
-                            err_log_and_free(
-                                ERR_NEW(0, NULL,
+                            err_log_and_free(ERR_NEW(0, NULL,
                                     "Upstream filter prevents data-transfer"),
-                                ERR_FAILURE);
+                                    ERR_FAILURE);
                             svcerr_weakauth(xprt);
                         }
                         else {
                             /*
-                             * The downstream LDM is allowed to receive 
-                             * data-products.
+                             * According to the access control list, the
+                             * request is valid.
                              */
-                            reply->code = OK;
-                            reply->fornme_reply_t_u.id = (unsigned)getpid();
+                            int status =
+                                    isNotifier ?
+                                            uldb_addNotifier(getpid(), 6,
+                                                    downAddr, prodClass) :
+                                            uldb_addFeeder(getpid(), 6,
+                                                    downAddr, prodClass);
 
-                            if (svc_sendreply(xprt,
-                                    (xdrproc_t)xdr_fornme_reply_t, 
-                                    (caddr_t)reply)) {
-                                terminate = 0;          /* return to caller */
-                                reply = NULL;           /* success */
+                            if (status) {
+                                if (ULDB_DISALLOWED == status) {
+                                    /**
+                                     * Product-class for signaling that the
+                                     * subscription by the downstream LDM is
+                                     * disallowed.
+                                     */
+                                    static prod_class disallowedProdClass = { {
+                                            0, 0 }, /* TS_ZERO */
+                                    { 0, 0 }, /* TS_ZERO */
+                                    { 0, (prod_spec *) NULL /* cast away const */
+                                    } };
+
+                                    LOG_ADD0(
+                                            "New upstream LDM process is disallowed");
+                                    log_log(LOG_NOTICE);
+
+                                    reply->code = RECLASS;
+                                    reply->fornme_reply_t_u.prod_class =
+                                            &disallowedProdClass;
+
+                                    if (svc_sendreply(xprt,
+                                            (xdrproc_t) xdr_fornme_reply_t,
+                                            (caddr_t) reply)) {
+                                    }
+                                    else {
+                                        uerror("svc_sendreply(...) failure");
+                                        svcerr_systemerr(xprt);
+                                    }
+                                }
+                                else {
+                                    LOG_ADD0(
+                                            "Problem with new upstream LDM process");
+                                    log_log(LOG_ERR);
+                                    svcerr_systemerr(xprt);
+                                }
                             }
                             else {
-                                uerror("svc_sendreply(...) failure");
-                                svcerr_systemerr(xprt);
-                                upFilter_free(filter);
+                                /*
+                                 * Request is allowed by upstream LDM database.
+                                 */
+                                reply->code = OK;
+                                reply->fornme_reply_t_u.id =
+                                        (unsigned) getpid();
+
+                                if (svc_sendreply(xprt,
+                                        (xdrproc_t) xdr_fornme_reply_t,
+                                        (caddr_t) reply)) {
+                                    terminate = 0; /* return to caller */
+                                    reply = NULL; /* success */
+                                }
+                                else {
+                                    uerror("svc_sendreply(...) failure");
+                                    svcerr_systemerr(xprt);
+                                }
                             }
-                        }               /* "filter" allocated */
-                    }                   /* request feedtype allowed */
-                }                       /* valid patterns */
+
+                            if (terminate)
+                                upFilter_free(filter);
+                        } /* "filter" allocated */
+                    } /* request feedtype allowed */
+                } /* valid patterns */
 
                 if (terminate)
-                    (void)close(sock);
-            }                           /* socket duplicated */
+                    (void) close(sock);
+            } /* socket duplicated */
 
             if (terminate) {
                 free_prod_class(allow);
                 allow = NULL;
             }
-        }                               /* "allow" allocated */
+        } /* "allow" allocated */
 
         free_prod_class(noSigProdClass);
-    }                                   /* "noSigProdClass" allocated */
+    } /* "noSigProdClass" allocated */
 
     if (terminate) {
         svc_destroy(xprt);
         exit(2);
         /*NOTREACHED*/
     }
-    /* else */ {
-        (void)strncpy(downName, name, len-1);
-        downName[len-1] = 0;
+    /* else */{
+        (void) strncpy(downName, name, len - 1);
+        downName[len - 1] = 0;
         *downAddr = *addr;
         *socket = sock;
         *prodClass = allow;
@@ -362,35 +412,32 @@ feed_or_notify(
     return reply;
 }
 
-
 /******************************************************************************
  * Begin Public API:
  ******************************************************************************/
-
 
 /*
  * This function will not normally return unless the request necessitates a
  * reply (e.g., RECLASS).
  */
 fornme_reply_t *feedme_6_svc(
-    feedpar_t      *feedPar,
-    struct svc_req *rqstp)
+        feedpar_t *feedPar,
+        struct svc_req *rqstp)
 {
-    const char* const       pqfname = getQueuePath();
-    SVCXPRT* const      xprt = rqstp->rq_xprt;
-    prod_class_t*         want = feedPar->prod_class;
-    prod_class_t*         prodClass;
-    const signaturet*   signature;
-    char                downName[MAXHOSTNAMELEN+1];
-    struct sockaddr_in  downAddr;
-    int                 socket;
-    UpFilter*           upFilter;
-    fornme_reply_t*     reply = 
-        feed_or_notify(xprt, want, &prodClass, &signature, downName,
-            sizeof(downName), &downAddr, &socket, &upFilter);
+    const char* const pqfname = getQueuePath();
+    SVCXPRT* const xprt = rqstp->rq_xprt;
+    prod_class_t* want = feedPar->prod_class;
+    prod_class_t* prodClass;
+    const signaturet* signature;
+    char downName[MAXHOSTNAMELEN + 1];
+    struct sockaddr_in downAddr;
+    int socket;
+    UpFilter* upFilter;
+    fornme_reply_t* reply = feed_or_notify(xprt, want, &prodClass, &signature,
+            downName, sizeof(downName), &downAddr, &socket, &upFilter, 0);
 
     if (!reply) {
-        int     errCode;
+        int errCode;
 
         if (!svc_freeargs(xprt, xdr_feedpar_t, (caddr_t)feedPar)) {
             uerror("Couldn't free arguments");
@@ -404,42 +451,42 @@ fornme_reply_t *feedme_6_svc(
         /*
          * Wait a second before sending anything to the downstream LDM.
          */
-        (void)sleep(1);
+        (void) sleep(1);
 
         errCode = up6_new_feeder(socket, downName, &downAddr, prodClass,
-            signature, feedPar->max_hereis > UINT_MAX/2, pqfname, interval,
-            upFilter);
+                signature, feedPar->max_hereis > UINT_MAX / 2, pqfname,
+                interval, upFilter);
+
+        (void) uldb_remove(getpid());
 
         free_prod_class(prodClass);
 
         exit(errCode);
 
         /*NOTREACHED*/
-    }
+    } /* The request is OK */
 
     return reply;
 }
 
-
 /*ARGSUSED1*/
 fornme_reply_t *notifyme_6_svc(
-    prod_class_t*         want,
-    struct svc_req*     rqstp)
+        prod_class_t* want,
+        struct svc_req* rqstp)
 {
-    const char* const       pqfname = getQueuePath();
-    SVCXPRT* const      xprt = rqstp->rq_xprt;
-    prod_class_t*         prodClass;
-    const signaturet*   signature;
-    char                downName[MAXHOSTNAMELEN+1];
-    struct sockaddr_in  downAddr;
-    int                 socket;
-    UpFilter*           upFilter;
-    fornme_reply_t*     reply = 
-        feed_or_notify(xprt, want, &prodClass, &signature, downName,
-            sizeof(downName), &downAddr, &socket, &upFilter);
+    const char* const pqfname = getQueuePath();
+    SVCXPRT* const xprt = rqstp->rq_xprt;
+    prod_class_t* prodClass;
+    const signaturet* signature;
+    char downName[MAXHOSTNAMELEN + 1];
+    struct sockaddr_in downAddr;
+    int socket;
+    UpFilter* upFilter;
+    fornme_reply_t* reply = feed_or_notify(xprt, want, &prodClass, &signature,
+            downName, sizeof(downName), &downAddr, &socket, &upFilter, 1);
 
     if (!reply) {
-        int     errCode;
+        int errCode;
 
         if (!svc_freeargs(xprt, xdr_prod_class, (caddr_t)want)) {
             uerror("Couldn't free arguments");
@@ -453,10 +500,12 @@ fornme_reply_t *notifyme_6_svc(
         /*
          * Wait a second before sending anything to the downstream LDM.
          */
-        (void)sleep(1);
+        (void) sleep(1);
 
         errCode = up6_new_notifier(socket, downName, &downAddr, prodClass,
-            signature, pqfname, interval, upFilter);
+                signature, pqfname, interval, upFilter);
+
+        (void) uldb_remove(getpid());
 
         free_prod_class(prodClass);
 
@@ -468,22 +517,21 @@ fornme_reply_t *notifyme_6_svc(
     return reply;
 }
 
-
 int *is_alive_6_svc(
-    unsigned       *id,
-    struct svc_req *rqstp)
+        unsigned *id,
+        struct svc_req *rqstp)
 {
-    static int  alive;
-    SVCXPRT    *const xprt = rqstp->rq_xprt;
-    int         error = 0;
+    static int alive;
+    SVCXPRT * const xprt = rqstp->rq_xprt;
+    int error = 0;
 
-    alive = cps_contains((pid_t)*id);
+    alive = cps_contains((pid_t) *id);
 
     if (ulogIsDebug()) {
         udebug("LDM %u is %s", *id, alive ? "alive" : "dead");
     }
 
-    if (!svc_sendreply(xprt, (xdrproc_t)xdr_bool, (caddr_t)&alive)) {
+    if (!svc_sendreply(xprt, (xdrproc_t) xdr_bool, (caddr_t) &alive)) {
         svcerr_systemerr(xprt);
 
         error = 1;
@@ -500,43 +548,40 @@ int *is_alive_6_svc(
 
     /*NOTREACHED*/
 
-    return NULL;
+    return NULL ;
 }
-
 
 hiya_reply_t*
 hiya_6_svc(
-    prod_class_t     *offered,
-    struct svc_req *rqstp)
+        prod_class_t *offered,
+        struct svc_req *rqstp)
 {
-    const char* const       pqfname = getQueuePath();
+    const char* const pqfname = getQueuePath();
     static hiya_reply_t reply;
-    SVCXPRT            *const xprt = rqstp->rq_xprt;
-    struct sockaddr_in *upAddr = (struct sockaddr_in*)svc_getcaller(xprt);
-    const char         *upName = hostbyaddr(upAddr);
-    int                 error;
-    int                 isPrimary;
-    unsigned int        maxHereis;
-    static prod_class_t  *accept;
+    SVCXPRT * const xprt = rqstp->rq_xprt;
+    struct sockaddr_in *upAddr = (struct sockaddr_in*) svc_getcaller(xprt);
+    const char *upName = hostbyaddr(upAddr);
+    int error;
+    int isPrimary;
+    unsigned int maxHereis;
+    static prod_class_t *accept;
 
     /*
      * Open the product-queue for writing.  It will be closed by cleanup()
      * during process termination.
      */
     if (pq) {
-        (void)pq_close(pq);
+        (void) pq_close(pq);
         pq = NULL;
     }
     error = pq_open(pqfname, PQ_DEFAULT, &pq);
     if (error) {
-        err_log_and_free(
-            ERR_NEW2(error, NULL,
+        err_log_and_free(ERR_NEW2(error, NULL,
                 "Couldn't open product-queue \"%s\" for writing: %s",
                 pqfname,
-                PQ_CORRUPT == error 
-                    ? "The product-queue is inconsistent" 
-                    : strerror(error)),
-            ERR_FAILURE);
+                PQ_CORRUPT == error
+                ? "The product-queue is inconsistent"
+                : strerror(error)), ERR_FAILURE);
         svcerr_systemerr(xprt);
         svc_destroy(xprt);
         exit(error);
@@ -561,12 +606,12 @@ hiya_6_svc(
      * be used in the reply.
      */
     if (accept) {
-        free_prod_class(accept);  /* NULL safe */
+        free_prod_class(accept); /* NULL safe */
         accept = NULL;
     }
 
     error = acl_check_hiya(upName, inet_ntoa(upAddr->sin_addr), offered,
-        &accept, &isPrimary);
+            &accept, &isPrimary);
 
     maxHereis = isPrimary ? UINT_MAX : 0;
 
@@ -582,7 +627,7 @@ hiya_6_svc(
 
         if (accept->psa.psa_len == 0) {
             uwarn("Empty intersection of HIYA offer from %s (%s) and ACCEPT "
-                "entries", upName, s_prod_class(NULL, 0, offered));
+                    "entries", upName, s_prod_class(NULL, 0, offered));
             svcerr_weakauth(xprt);
             svc_destroy(xprt);
             exit(0);
@@ -593,11 +638,11 @@ hiya_6_svc(
             if (error) {
                 if (DOWN6_SYSTEM_ERROR == error) {
                     serror("Couldn't set product class: %s",
-                        s_prod_class(NULL, 0, accept));
+                            s_prod_class(NULL, 0, accept));
                 }
                 else {
                     uerror("Couldn't set product class: %s",
-                        s_prod_class(NULL, 0, accept));
+                            s_prod_class(NULL, 0, accept));
                 }
 
                 svcerr_systemerr(xprt);
@@ -615,7 +660,7 @@ hiya_6_svc(
              * initialized as an upstream LDM to effectively disable it (which
              * is appropriate for a HIYA message).
              */
-            (void)as_init(1, isPrimary, xprt->xp_sock);
+            (void) as_init(1, isPrimary, xprt->xp_sock);
 
             if (clss_eq(offered, accept)) {
                 unotice("hiya6: %s", s_prod_class(NULL, 0, offered));
@@ -628,8 +673,8 @@ hiya_6_svc(
                     char off[512];
                     char acc[512];
 
-                    (void)s_prod_class(off, sizeof(off), offered),
-                    (void)s_prod_class(acc, sizeof(acc), accept);
+                    (void) s_prod_class(off, sizeof(off), offered), (void) s_prod_class(
+                            acc, sizeof(acc), accept);
 
                     uinfo("hiya6: RECLASS: %s -> %s", off, acc);
                 }
@@ -638,48 +683,45 @@ hiya_6_svc(
                 reply.hiya_reply_t_u.feedPar.prod_class = accept;
                 reply.hiya_reply_t_u.feedPar.max_hereis = maxHereis;
             }
-        }  /* product-intersection != empty set */
-    }  /* successful acl_check_hiya() */
+        } /* product-intersection != empty set */
+    } /* successful acl_check_hiya() */
 
     return &reply;
 }
 
-
 /*ARGSUSED1*/
 void *hereis_6_svc(
-    product        *prod,
-    struct svc_req *rqstp)
+        product *prod,
+        struct svc_req *rqstp)
 {
-    int         error = down6_hereis(prod);
+    int error = down6_hereis(prod);
 
     if (error && DOWN6_UNWANTED != error && DOWN6_PQ_BIG != error) {
-        (void)svcerr_systemerr(rqstp->rq_xprt);
+        (void) svcerr_systemerr(rqstp->rq_xprt);
         svc_destroy(rqstp->rq_xprt);
         exit(error);
     }
 
-    return NULL;  /* don't reply */
+    return NULL ; /* don't reply */
 }
-
 
 /*ARGSUSED1*/
 void *notification_6_svc(
-    prod_info      *info,
-    struct svc_req *rqstp)
+        prod_info *info,
+        struct svc_req *rqstp)
 {
-    (void)down6_notification(info);
+    (void) down6_notification(info);
 
-    return NULL;  /* don't reply */
+    return NULL ; /* don't reply */
 }
-
 
 /*ARGSUSED1*/
 comingsoon_reply_t *comingsoon_6_svc(
-    comingsoon_args    *comingPar,
-    struct svc_req     *rqstp)
+        comingsoon_args *comingPar,
+        struct svc_req *rqstp)
 {
     static comingsoon_reply_t reply;
-    int                       error = down6_comingsoon(comingPar);
+    int error = down6_comingsoon(comingPar);
 
     if (error == 0) {
         reply = OK;
@@ -688,7 +730,7 @@ comingsoon_reply_t *comingsoon_6_svc(
         reply = DONT_SEND;
     }
     else {
-        (void)svcerr_systemerr(rqstp->rq_xprt);
+        (void) svcerr_systemerr(rqstp->rq_xprt);
         svc_destroy(rqstp->rq_xprt);
         exit(error);
     }
@@ -696,23 +738,21 @@ comingsoon_reply_t *comingsoon_6_svc(
     return &reply;
 }
 
-
 /*ARGSUSED1*/
 void *blkdata_6_svc(
-    datapkt        *argp,
-    struct svc_req *rqstp)
+        datapkt *argp,
+        struct svc_req *rqstp)
 {
     int error = down6_blkdata(argp);
 
     if (error && DOWN6_UNWANTED != error && DOWN6_PQ_BIG != error) {
-        (void)svcerr_systemerr(rqstp->rq_xprt);
+        (void) svcerr_systemerr(rqstp->rq_xprt);
         svc_destroy(rqstp->rq_xprt);
         exit(error);
     }
 
-    return NULL;  /* don't reply */
+    return NULL ; /* don't reply */
 }
-
 
 /*
  * Frees resources allocated by the creation of the return result.
@@ -725,11 +765,11 @@ void *blkdata_6_svc(
  */
 /*ARGSUSED0*/
 int ldmprog_6_freeresult(
-    SVCXPRT   *transp,
-    xdrproc_t  xdr_result, 
-    caddr_t    result)
+        SVCXPRT *transp,
+        xdrproc_t xdr_result,
+        caddr_t result)
 {
-    (void)xdr_free(xdr_result, result);
+    (void) xdr_free(xdr_result, result);
 
     return 1;
 }

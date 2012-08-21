@@ -1214,6 +1214,7 @@ getQueueProdInfo(
  *              if no such data-product was found.
  *      else    Failure.
  */
+#if 0
 static ErrorObj*
 restoreFromQueue(
     pqueue* const               pq,
@@ -1271,6 +1272,7 @@ restoreFromQueue(
 
     return errObj;
 }
+#endif
 
 
 static char     statePath[_POSIX_PATH_MAX];
@@ -1643,7 +1645,7 @@ prog_requester(
                     ERR_NOTICE);
 
                 /*
-                 * NB: If the slection-criteria is modified at this point by
+                 * NB: If the selection-criteria is modified at this point by
                  * taking into account the most-recently received data-product
                  * by any *other* downstream LDM processes (e.g. by calling
                  * getQueueProdInfo()), then bad things could happen.  For
@@ -1669,6 +1671,14 @@ prog_requester(
                         "Terminating due to system failure");
                     err_log(errObj, ERR_FAILURE);
                     errCode = EXIT_FAILURE;
+                }
+                else if (errCode == REQ6_NOT_ALLOWED) {
+                    log_log(LOG_NOTICE);
+                    errObj = ERR_NEW(0, errObj,
+                        "Request not allowed. Does it overlap with another?");
+                    err_log(errObj, ERR_NOTICE);
+                    errCode = 0;
+                    sleepAmount = 2 * interval;
                 }
                 else if (errCode != REQ6_BAD_VERSION) {
                     log_log(LOG_ERR);

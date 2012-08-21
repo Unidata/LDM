@@ -27,6 +27,7 @@
 
 
 const prod_spec _spec_all = {ANY, ".*", 0};
+const prod_spec _spec_none = {NONE, NULL, 0};
 
 const prod_class_t _clss_all = {
         {0, 0}, /* TS_ZERO */
@@ -34,6 +35,15 @@ const prod_class_t _clss_all = {
         {
                 1,
                 (prod_spec *)&_spec_all /* cast away const */
+        }
+};
+
+const prod_class_t _clss_none = {
+        {0, 0}, /* TS_ZERO */
+        {0, 0}, /* TS_ZERO */
+        {
+                0,
+                (prod_spec *)&_spec_none /* cast away const */
         }
 };
 

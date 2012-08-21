@@ -1,0 +1,75 @@
+.TH ULDBUTIL 1 "2012-08-21"
+.SH NAME
+uldbutil \- Utility for Accessing the Upstream LDM Database
+.SH SYNOPSIS
+.HP
+.ft B
+uldbutil
+.ft
+.SH DESCRIPTION
+.PP
+This program access the database of upstream LDM processes. An upstream LDM
+process is a child process of the LDM server that's responsible for feeding
+a remote downstream LDM in response to a request for data from the downsteam
+LDM.
+.PP
+This utility prints the contends of the upstream LDM database to the standard
+output stream. The format of the output is multiple lines of the following
+fields:
+.RS
+pid protoVers type host product-class
+.RE
+where:
+.TP
+pid
+Process-identifier of the upstream LDM.
+.TP
+protoVers
+Protocol version (e.g., 5 or 6) of the upstream LDM.
+.TP
+type
+The type of the upstream LDM: "feeder" or "notifier".
+.TP
+host
+The Internet name of the computer on which the downstream LDM process is
+running. This will normally be the fully-qualified hostname of the computer
+unless the IP address can't be resolved into a hostname, in which case the IP
+address will be printed.
+.TP
+product-class
+The class of products requested by the downstream LDM. 
+.SH EXIT STATUS
+.PP
+Error messages should be printed to the standard error stream if the utility
+fails for any reason.
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Incorrect usage (\fIi.e.\fP, command-line syntax error).
+.TP
+.B 2
+The upstream LDM database doesn't exist.  This is likely because the LDM
+server isn't running.
+.TP
+.B 3
+The upstream LDM database exists but couldn't be accessed.
+.SH "SEE ALSO"
+.BR uldb (3)
+.SH SUPPORT
+.LP
+If you have problems with this program, then you should first examine the 
+LDM email archive for similar problems and how they were solved.
+The email archive is available via the following URL:
+.sp
+.RS
+\fBhttp://www.unidata.ucar.edu/software/ldm/\fP
+.RE
+.sp
+If this does not suffice, then send an inquiry via email -- together will 
+all relevant information -- to
+.sp
+.RS
+\fBsupport-ldm@unidata.ucar.edu\fP
+.RE

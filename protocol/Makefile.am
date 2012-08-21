@@ -1,4 +1,4 @@
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2012 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -6,7 +6,21 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES		= globals.h ../registry/registry.h ldm6_svc.c
+builtHeaders	= globals.h ldmfork.h LdmProxy.h timer.h uldb.h
+BUILT_SOURCES	= ../registry/registry.h ldm6_svc.c $(builtHeaders)
+CLEANFILES		= $(builtHeaders) *.i
+EXTRA_DIST		= \
+	$(builtHeaders:.h=.hin) \
+    child_process_set.h \
+    exitStatus.h \
+    forn5_svc.h \
+    ldm.x \
+    ldm4.h \
+    ldm5.h \
+    rsaglobal.h \
+    prod_info.h \
+    fix_clnt.pl \
+    up6.h
 RPCGEN			= @RPCGEN@
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
@@ -22,7 +36,6 @@ include_HEADERS		= \
     h_clnt.h \
     ldm.h \
     ldm5_clnt.h \
-    ldmfork.h \
     ldmprint.h \
     ldm_clnt.h \
     ldm_xlen.h \
@@ -35,6 +48,7 @@ include_HEADERS		= \
     savedInfo.h \
     timestamp.h \
     UpFilter.h \
+    uldb.h \
     xdr_data.h
 lib_la_SOURCES		= \
     abbr.c \
@@ -72,10 +86,12 @@ lib_la_SOURCES		= \
     timestamp.c \
     up6.c \
     UpFilter.c \
+    uldb.c \
     xdr_data.c
 lib_la_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/misc \
+    -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/registry
@@ -86,27 +102,11 @@ TAGS_FILES		= \
     ../ldmd/*.c \
     ../rpc/*.c ../rpc/*.h \
     ../registry/*.c
-EXTRA_DIST		= \
-    child_process_set.h \
-    exitStatus.h \
-    forn5_svc.h \
-    LdmProxy.h \
-    globals.h \
-    ldm.h \
-    ldm.x \
-    ldm4.h \
-    ldm5.h \
-    rsaglobal.h \
-    prod_info.h \
-    fix_clnt.pl \
-    timer.h \
-    up6.h
-CLEANFILES		= *.i
+dist_man3_MANS		= uldb.3
 
 ../registry/registry.h:
 	cd ../registry && $(MAKE) $@
 
-if MAINTAINER
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
@@ -114,7 +114,7 @@ globals.h:	globals.hin globals.c
 ldmfork.h:	ldmfork.hin ldmfork.c
 LdmProxy.h:	LdmProxy.hin LdmProxy.c
 timer.h:	timer.hin timer.c
-endif
+uldb.h:	uldb.hin uldb.c
 
 ldm.h:		ldm.x
 	$(RPCGEN) -h ldm.x | \
@@ -174,3 +174,26 @@ ldm6_clnt.c:	ldm.x fix_clnt.pl
 
 .c.i:
 	$(CPP) $(lib_la_CPPFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $< >$@
+    
+if HAVE_CUNIT
+
+check_PROGRAMS		= testuldb
+testuldb_CPPFLAGS	= \
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/registry \
+    @CPPFLAGS_CUNIT@
+
+testuldb_LDADD		= \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
+    @LIBS_CUNIT@
+
+TESTS			= testuldb
+
+valgrind:	testuldb
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./testuldb
+
+endif

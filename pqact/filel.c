@@ -985,7 +985,7 @@ unio_prodput(
                         unotice("Filed in \"%s\": %s",
                             argv[argc-1],
                             s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
-                    if(entry->flags & FL_EDEX && shared_id != -1) {
+                    if((entry->flags & FL_EDEX) && shared_id != -1) {
                         semarg.val = queue_counter;
                         int semreturn = semctl(sem_id, 1, SETVAL, semarg);
                         queue_counter = (queue_counter == largest_queue_element) ? queue_counter = 0 : queue_counter + 1;

@@ -35,7 +35,7 @@ AM_CONDITIONAL([MAINTAINER],
     test `/bin/pwd` = /machine/steve/ldm/src])
 
 AC_ARG_WITH([noaaport],
-    AC_HELP_STRING([--with-noaaport],
+    AS_HELP_STRING([--with-noaaport],
 	[enable support for reading data from a NOAAPORT receiver
         [[default=without]]]),
     [],
@@ -43,7 +43,7 @@ AC_ARG_WITH([noaaport],
 AM_CONDITIONAL([WANT_NOAAPORT], [test "x$with_noaaport" != xno])
 
 AC_ARG_WITH([gribinsert],
-    AC_HELP_STRING([--with-gribinsert],
+    AS_HELP_STRING([--with-gribinsert],
 	[enable support for converting GRIB2 files into data-products
         [[default=without]]]),
     [],
@@ -51,7 +51,7 @@ AC_ARG_WITH([gribinsert],
 AM_CONDITIONAL([WANT_GRIBINSERT], [test "x$with_gribinsert" != xno])
 
 AC_ARG_ENABLE([debug],
-    AC_HELP_STRING([--enable-debug],
+    AS_HELP_STRING([--enable-debug],
 	[enable support for debugging [[default=disabled]]]),
     [
 	case "$enableval" in
@@ -66,7 +66,7 @@ AC_ARG_ENABLE([debug],
     ])
 
 AC_ARG_ENABLE(faux-pq,
-    AC_HELP_STRING([--enable-faux-pq],
+    AS_HELP_STRING([--enable-faux-pq],
 	[use the faux product-queue [[default=disable]]]),
     [
 	case "${enableval}" in
@@ -88,7 +88,7 @@ AC_SUBST(PQ_PATH)
 AC_SUBST(PQ_SUBDIR)
 
 AC_ARG_ENABLE(logging,
-    AC_HELP_STRING([--enable-logging=facility],
+    AS_HELP_STRING([--enable-logging=facility],
 	[use "facility" when logging [[default=local0]]]),
     [
 	facility=`echo $enableval |
@@ -104,7 +104,7 @@ AC_ARG_ENABLE(logging,
     ])
 
 AC_ARG_ENABLE(port,
-    AC_HELP_STRING([--enable-port=port],
+    AS_HELP_STRING([--enable-port=port],
 	[use "port" for LDM server [[default=388]]]),
     [
 	LDM_PORT=$enableval
@@ -120,14 +120,14 @@ AC_DEFINE([RESOLVER_TIME_THRESHOLD], [10], [Time limit for resolving hostname])
 AC_SUBST(LDM_PORT)
 
 AC_ARG_ENABLE(max-size,
-    AC_HELP_STRING([--disable-max-size], 
+    AS_HELP_STRING([--disable-max-size], 
 	[minimize the (long, void*, off_t) programming environment
 	[[default=enable]]]),
     max_size=$enableval,
     max_size=yes)
 
 AC_ARG_ENABLE([root-actions],
-    AC_HELP_STRING([--disable-root-actions],
+    AS_HELP_STRING([--disable-root-actions],
 	[don't include superuser (i.e., "root") actions in "make install"
 	[[default=include]]]),
     [
@@ -221,8 +221,8 @@ case "$CC" in
     ARFLAGS=-cru
     if test "$max_size" = yes
     then
-        AC_MSG_NOTICE(checking how to maximize the (long, void*, off_t) 
-                programming environment)
+        AC_MSG_NOTICE([checking how to maximize the (long, void*, off_t) 
+                programming environment])
         success=no
         AC_MSG_CHECKING([if the system supports _XBS5_LPBIG_OFFBIG])
         avail=`getconf _XBS5_LPBIG_OFFBIG 2>/dev/null`
@@ -425,7 +425,7 @@ AC_SEARCH_LIBS(
     AC_SUBST([LD_GEN])
     LIBS=$libs],
     [AC_MSG_ERROR([Could not find required function dirname],[1])])
-AC_SEARCH_LIBS([sched_setscheduler], [rt])
+AC_SEARCH_LIBS([sched_setscheduler], [rt],)
 
 AC_C_BIGENDIAN
 AC_HEADER_STDC
@@ -521,6 +521,7 @@ AC_CONFIG_FILES([
     scripts/plotMetrics
     scripts/syscheck
     test/Makefile
+    uldbutil/Makefile
     ulogger/Makefile
     ulog/Makefile
     zlib/Makefile

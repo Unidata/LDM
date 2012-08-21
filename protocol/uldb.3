@@ -1,0 +1,311 @@
+.TH ULDB 3 "2012-08-21" "Printed: \n(yr.\n(mo.\n(dy" "UNIDATA LIBRARY FUNCTIONS"
+.SH NAME
+.nh
+.na
+uldb,
+uldb_Status,
+uldb_create,
+uldb_open,
+uldb_close,
+uldb_delete,
+uldb_getSize,
+uldb_addFeeder,
+uldb_addNotifier,
+uldb_remove,
+uldb_getIterator,
+uldb_iter_free,
+uldb_iter_firstEntry,
+uldb_iter_nextEntry,
+uldb_entry_getPid,
+uldb_entry_getProtocolVersion,
+uldb_entry_isNotifier,
+uldb_entry_getSockAddr,
+uldb_entry_getProdClass - upstream LDM database API
+.hy
+.SH SYNOPSIS
+.nf
+.B
+#include "uldb.h"
+.B
+cc -I$LDMHOME/include ... -L$LDMHOME/lib -lldm
+.fi
+.nh
+.na
+.HP
+uldb_Status \fBuldb_create\fP(unsigned \fIcapacity\fP);
+.HP
+uldb_Status \fBuldb_open\fP(void);
+.HP
+uldb_Status \fBuldb_close\fP(void);
+.HP
+uldb_Status \fBuldb_delete\fP(void);
+.HP
+uldb_Status \fBuldb_getSize\fP(unsigned* \fIsize\fP);
+.HP
+uldb_Status \fBuldb_addFeeder\fP(pid_t \fIpid\fP,
+int \fIprotoVers\fP,
+const struct sockaddr_in* \fIsockAddr\fP,
+const prod_class* \fIprodClass\fP);
+.HP
+uldb_Status \fBuldb_addNotifier\fP(pid_t \fIpid\fP,
+int \fIprotoVers\fP,
+const struct sockaddr_in* \fIsockAddr\fP,
+const prod_class* \fIprodClass\fP);
+.HP
+uldb_Status \fBuldb_remove\fP(pid_t \fIpid\fP);
+.HP
+uldb_Status \fBuldb_getIterator\fP(uldb_Iter** \fIiterator\fP);
+.HP
+void \fBuldb_iter_free\fP(uldb_Iter* \fIiter\fP);
+.HP
+const uldb_Entry* \fBuldb_iter_firstEntry\fP(uldb_Iter* \fIiter\fP);
+.HP
+const uldb_Entry* \fBuldb_iter_nextEntry\fP(uldb_Iter* \fIiter\fP);
+.HP
+pid_t \fBuldb_entry_getPid\fP(const uldb_Entry* \fIentry\fP);
+.HP
+pid_t \fBuldb_entry_getProtocolVersion\fP(const uldb_Entry* \fIentry\fP);
+.HP
+pid_t \fBuldb_entry_isNotifier\fP(const uldb_Entry* \fIentry\fP);
+.HP
+const struct sockaddr_in* \fBuldb_entry_getSockAddr\fP(const uldb_Entry* \fIentry\fP);
+.HP
+uldb_Status \fBuldb_entry_getProdClass\fP(const uldb_Entry* \fIentry\fP,
+prod_class** \fIprodClass\fP);
+.ad
+.hy
+.SH DESCRIPTION
+.LP
+The Upstream LDM Database API, \fBULDB\fP, provides access to a sharable,
+non-persistent
+database of metadata on upstream LDM processes. An upstream LDM
+process is a child process of the LDM server, created in response to a request
+for data by a downstream LDM process and responsible for feeding data to the
+downstream LDM process.
+.LP
+By "sharable" we mean the queue database be accessed by multiple processes.
+Contention control is handled below the level of this interface by use of
+POSIX semaphores.
+.LP
+By "non-persistent" we mean the database is created by the LDM server and is
+deleted when the LDM server terminates normally.
+.LP
+All of the  functions return \fBULDB_SUCCESS\fP (0) if successful.
+The
+.BR ulog (3)
+package is used for error reporting below the interface,
+logging descriptive information about problems at the point where they
+occur and up the call-stack.
+.na
+.HP
+uldb_Status \fBuldb_create\fP(
+    unsigned \fIcapacity\fP);
+.ad
+.IP
+Creates the upstream LDM database.
+\fIcapacity\fP is the initial capacity of the database in bytes. The database
+grows, as necessary, to accomodate new entries.
+.na
+.HP
+uldb_Status \fBuldb_open\fP(void);
+.ad
+.IP
+Opens an existing upstream LDM database.
+.na
+.HP
+uldb_Status \fBuldb_close\fP(void);
+.ad
+.IP
+Closes an open upstream LDM database.
+.na
+.HP
+uldb_Status \fBuldb_delete\fP(void);
+.ad
+.IP
+Unconditionally deletes the existing upstream LDM database.
+.na
+.HP
+uldb_Status \fBuldb_getSize\fP(
+    unsigned* const \fIsize\fP);
+.ad
+.IP
+Returns the number of entries in the upstream LDM database. \fIsize\fP points
+to the location in which to store the number of entries.
+.na
+.HP
+uldb_Status \fBuldb_addFeeder\fP(
+    const pid_t \fIpid\fP,
+    int \fIprotoVers\fP,
+    const struct sockaddr_in* const \fIsockAddr\fP,
+    const prod_class* const \fIprodClass\fP);
+.ad
+.IP
+Adds to the upstream LDM database an entry corresponding to an upstream LDM 
+process that's sending data-products to its associated downstream LDM process.
+\fIpid\fP is the process-identifier of the upstream LDM process; \fIprotoVers\fP
+is the protocol version (e.g., 5 or 6); \fIsockAddr\fP
+is the socket Internet address of the computer on which the downstream LDM
+process is running; and \fIprodClass\fP is the class of data-products
+that the downstream LDM requested.
+.na
+.HP
+uldb_Status \fBuldb_addNotifier\fP(
+    const pid_t \fIpid\fP,
+    int \fIprotoVers\fP,
+    const struct sockaddr_in* const \fIsockAddr\fP,
+    const prod_class* const \fIprodClass\fP);
+.ad
+.IP
+Adds to the upstream LDM database an entry corresponding to an upstream LDM 
+process that's sending notifications of new data-products to its associated
+downstream LDM process.  \fIpid\fP is the process-identifier of the upstream
+LDM process; \fIprotoVers\fP
+is the protocol version (e.g., 5 or 6); \fIsockAddr\fP
+is the socket Internet address of the computer on which the downstream LDM
+process is running; and \fIprodClass\fP is the class of data-products
+for which the downstream LDM requested notifications.
+.na
+.HP
+uldb_Status \fBuldb_remove\fP(
+    const pid_t \fIpid);
+.ad
+.IP
+Removes the entry from the upstream LDM database corresponding to an upstream
+LDM process. \fIpid\fP is the process identifier of the upstream LDM process.
+.na
+.HP
+uldb_Status \fBuldb_getIterator\fP(
+    uldb_Iter** const \fIiterator\fP);
+.ad
+.IP
+Returns an iterator over a snapshot of the upstream LDM database. Subsequent
+changes to the database are not reflected in the iterator. \fIiterator\fP 
+points to the location in which to store a pointer to the iterator. The client
+should call \fBuldb_iter_free(*\fIiterator\fP)\fR when the iterator is no
+longer needed.
+.na
+.HP
+const uldb_Entry* \fBuldb_iter_firstEntry\fP(
+    uldb_Iter* const \fIiter\fP);
+.ad
+.IP
+Returns the next entry of the given iterator or \fBNULL\fP if the snapshot is
+empty.
+.na
+.HP
+const uldb_Entry* \fBuldb_iter_nextEntry\fP(
+    uldb_Iter* const \fIiter\fP);
+.ad
+.IP
+Returns the next entry of the given iterator or \fBNULL\fP if there are no more
+entries.
+.na
+.HP
+pid_t \fBuldb_entry_getPid\fP(
+    const uldb_Entry* const \fIentry\fP);
+.ad
+.IP
+Returns the process-identifier of the given entry.
+.na
+.HP
+pid_t \fBuldb_entry_getProtocolVersion\fP(
+    const uldb_Entry* const \fIentry\fP);
+.ad
+.IP
+Returns the protocol version (e.g., 5 or 6) of the given entry.
+.na
+.HP
+pid_t \fBuldb_entry_isNotifier\fP(
+    const uldb_Entry* const \fIentry\fP);
+.ad
+.IP
+Returns 1 if and only if the upstream LDM of the entry is sending
+only data-notifications to the downstream LDM; otherwise, returns 0;
+.na
+.HP
+const struct sockaddr_in* \fBuldb_entry_getSockAddr\fP(
+    const uldb_Entry* const \fIentry\fP);
+.ad
+.IP
+For the given entry, returns the socket Internet address of the computer on
+which the downstream LDM process is running.
+.na
+.HP
+uldb_Status \fBuldb_entry_getProdClass\fP(
+    const uldb_Entry* const \fIentry\fP,
+    prod_class** const \fIprodClass\fP);
+.ad
+.IP
+For the given entry, returns the class of products requested by the downstream
+LDM process. \fIprodClass\fP is the address in which to store a pointer to
+the returned product-class. The client should call
+\fBfree_prod_class(*\fIprodClass\fB)\fR when the product-class is no longer
+needed.
+.SH "RETURN VALUES"
+.PP
+The values of \fBuldb_Status\fP are the following:
+.IP \fBULDB_SUCCESS\fP 16
+Success. The value of this symbol is 0. Returned by all functions that return
+a \fBuldb_Status\fP when the function succeeds.
+.IP \fBULDB_ARG\fP
+Invalid argument. \fBlog_start\fP() called. Returned by 
+\fBuldb_addFeeder\fP(),
+\fBuldb_addNotifier\fP(), and
+\fBuldb_remove\fP() to indicate an invalid process-identifier.
+.IP \fBULDB_INIT\fP 16
+Returned by
+\fBuldb_create\fP() and
+\fBuldb_open\fP()
+to indicate that the upstream LDM database is already open.
+Returned by
+\fBuldb_close\fP(),
+\fBuldb_getSize\fP(),
+\fBuldb_addFeeder\fP(),
+\fBuldb_addNotifier\fP(),
+\fBuldb_remove\fP(), and
+\fBuldb_getIterator\fP()
+to indicate that the upstream LDM database is not open.
+\fBlog_start\fP() called.
+.IP \fBULDB_EXIST\fP 16
+Returned by
+\fBuldb_create\fP()
+to indicate that the upstream LDM database already exists.
+Returned by
+\fBuldb_open\fP() and
+\fBuldb_delete\fP()
+to indicate that the upstream LDM database doesn't exist.
+Returned by
+\fBuldb_addFeeder\fP() and
+\fBuldb_addNotifier\fP()
+to indicate that an entry for the given process identifier already exists.
+Returned by
+\fBuldb_remove\fP()
+to indicate that an entry for the given process identifier doesn't exist.
+\fBlog_start\fP() called.
+.IP \fBULDB_DISALLOWED\fP
+Returned by
+\fBuldb_addFeeder\fP() and
+\fBuldb_addNotifier\fP()
+to indicate that the request for data by the downstream LDM is not allowed --
+typically because the request duplicates or overlaps with a previously-accepted
+request.
+\fBlog_start\fP() called.
+.IP \fBULDB_SYSTEM\fP 16
+System error. \fBlog_start\fP() called.
+.SH "EXAMPLES"
+.LP
+The utility
+.BR uldbutil (1)
+provides an example of using this API.
+.SH DIAGNOSTICS
+.LP
+This package uses the \fBulog\fP(3) library to print
+(hopefully) self-explanatory error-messages.
+.SH "SEE ALSO"
+.LP
+.BR uldbutil (1),
+.BR ulog (3)
+.SH "BUGS AND RESTRICTIONS"
+.LP
+The implementation is primitive: database modification-times scale linearly
+with the number of entries.

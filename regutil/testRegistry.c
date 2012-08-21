@@ -642,7 +642,7 @@ test_regReset(void)
     }
 }
 
-
+#if 0
 static void
 test_regRemove(void)
 {
@@ -657,6 +657,7 @@ test_regRemove(void)
         CU_ASSERT_EQUAL(status, 0);
     }
 }
+#endif
 
 int
 main(

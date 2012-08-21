@@ -6,7 +6,9 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES		= ../registry/registry.h
+EXTRA_DIST	        = child_map.hin semRWLock.hin
+BUILT_SOURCES		= ../registry/registry.h child_map.h semRWLock.h
+CLEANFILES		    = child_map.h semRWLock.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
 	ldmalloc.h \
@@ -32,9 +34,9 @@ lib_la_SOURCES	= \
 	RegularExpressions.c \
 	rpcutil.c \
 	setenv.c \
+    semRWLock.c semRWLock.h \
 	statsMath.c \
-	StringBuf.c
-EXTRA_DIST	= StringBuf.h child_map.h
+	StringBuf.c StringBuf.h
 lib_la_CPPFLAGS	= \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
@@ -51,26 +53,39 @@ TAGS_FILES	= \
 ../registry/registry.h:
 	cd ../registry && $(MAKE) $@
 
-if MAINTAINER
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 child_map.h:	child_map.hin child_map.c
-endif
+semRWLock.h:	semRWLock.hin semRWLock.c
 
 if HAVE_CUNIT
-check_PROGRAMS		= test_child_map
+check_PROGRAMS		= test_child_map testSemRWLock
 test_child_map_CPPFLAGS	= \
-    -I$(top_srcdir) \
+    -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/registry \
+    -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
 
 test_child_map_LDADD	= \
-    lib.la \
-    $(top_builddir)/ulog/lib.la \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
     @LIBS_CUNIT@
 
-TESTS			= test_child_map
+testSemRWLock_CPPFLAGS	= \
+    -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/registry \
+    -I$(top_srcdir) \
+    @CPPFLAGS_CUNIT@
+
+testSemRWLock_LDADD	= \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
+    @LIBS_CUNIT@
+
+TESTS			= test_child_map testSemRWLock
 
 debug:		test_child_map
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb test_child_map

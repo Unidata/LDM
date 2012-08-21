@@ -78,7 +78,7 @@ struct SVCXPRT {
 	int		xp_sock;
 	unsigned short		xp_port;	 /* associated port number */
 	struct xp_ops {
-	    /* receive incomming requests */
+	    /* receive incoming requests */
 	    bool_t	(*xp_recv)(SVCXPRT *xprt, struct rpc_msg *msg);
 
 	    /* get transport status */

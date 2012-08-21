@@ -26,7 +26,6 @@ volatile sig_atomic_t   done = 0;
 const char*             logfname = 0;
 pqueue*                 pq = NULL;
 
-static int              cleanupRegistered = 0;
 static char             queuePath[PATH_MAX];
 static char             pqactConfigPath[PATH_MAX];
 static char             pqsurfConfigPath[PATH_MAX];

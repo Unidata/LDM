@@ -22,7 +22,8 @@ typedef enum {
     UP6_SYSTEM_ERROR,
     UP6_CLOSED,
     UP6_PQ,
-    UP6_NO_CLASS
+    UP6_NO_CLASS,
+    UP6_DISALLOWED
 } up6_error_t;
 
 int

@@ -62,6 +62,7 @@ static void printUsage(const char* progname)
  * Returns:
  *      0               Success
  */
+#if 0
 static int printValue(
     const char* const   path,
     const char* const   value)
@@ -70,6 +71,7 @@ static int printValue(
 
     return 0;
 }
+#endif
 
 /*
  * Prints a value-thing.  This function is designed to be called by the
@@ -289,6 +291,7 @@ static Status deletePath(
                     return SYSTEM_ERROR;
             }
         }
+        /* FALLTHROUGH */
 
         default:
             log_log(LOG_ERR);
@@ -491,7 +494,8 @@ int main(
                 LOG_START1("Option \"-%c\" requires an operand", optopt);
                 status = COMMAND_SYNTAX;
             }
-            case '?':
+            /*FALLTHROUGH*/
+            default:
                 LOG_START1("Unknown option: \"%c\"", optopt);
                 status = COMMAND_SYNTAX;
             }
