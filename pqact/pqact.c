@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 University Corporation for Atmospheric Research
+ *   Copyright 2012 University Corporation for Atmospheric Research
  *
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
@@ -10,6 +10,7 @@
  */
 
 #include <config.h>
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -208,37 +209,39 @@ set_sigactions(void)
 
 static void
 usage(
-        char *av0 /*  id string */
+        const char* const av0 /*  id string */
 )
 {
-        (void)fprintf(stderr,
-                "Usage: %s [options] [confilename]\t\nOptions:\n",
-                av0);
-        (void)fprintf(stderr,
-                "\t-v           Verbose, log each match (SIGUSR2 cycles)\n");
-        (void)fprintf(stderr,
-                "\t-x           Debug mode (SIGUSR2 cycles)\n");
-        (void)fprintf(stderr,
-                "\t-l logfile   Send log info to file (default uses syslogd)\n");
-        (void)fprintf(stderr,
-                "\t-d datadir   cd to \"datadir\" before interpreting filenames in\n");
-        (void)fprintf(stderr,
-                "\t             conffile (default %s)\n",
+        (void)uerror("Usage: %s [options] [config_file]\t\nOptions:\n", av0);
+        (void)uerror("Options:");
+        (void)uerror(
+                "\t-v           Log INFO-level messages, log each match "
+                "(SIGUSR2 cycles)");
+        (void)uerror(
+                "\t-x           Log DEBUG-level messages (SIGUSR2 cycles)");
+        (void)uerror(
+                "\t-l logfile   Log to \"logfile\" (default: use system "
+                "logging daemon)");
+        (void)uerror(
+                "\t-d datadir   cd(1) to \"datadir\" before interpreting "
+                "pathnames in configuration-file (default: \"%s\")",
                 getPqactDataDirPath());
-        (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", getQueuePath());
-        (void)fprintf(stderr,
-                "\t-p pattern   Interested in products matching \"pattern\" (default \"%s\")\n", DEFAULT_PATTERN);
-        (void)fprintf(stderr,
-                "\t-f feedtype  Interested in products from feed \"feedtype\" (default %s)\n", s_feedtypet(DEFAULT_FEEDTYPE));
-        (void)fprintf(stderr,
-                "\t-i interval  loop, polling each \"interval\" seconds (default %d)\n", DEFAULT_INTERVAL);
-        (void)fprintf(stderr,
-                "\t-t timeo     set write timeo for PIPE subprocs to \"timeo\" secs (default %d)\n", DEFAULT_PIPE_TIMEO);
-        (void)fprintf(stderr,
-                "\t-o offset    the oldest product we will consider is \"offset\" secs before now (default: most recent in queue)\n");
-        (void)fprintf(stderr,
-                "\t(default conffilename is %s)\n", getPqactConfigPath());
+        (void)uerror(
+                "\t-q queue     Use product-queue \"queue\" (default: \"%s\")",
+                getQueuePath());
+        (void)uerror(
+                "\t-p pattern   Only process products matching \"pattern\" (default: \"%s\")", DEFAULT_PATTERN);
+        (void)uerror(
+                "\t-f feedtype  Only process products from feed \"feedtype\" (default: %s)", s_feedtypet(DEFAULT_FEEDTYPE));
+        (void)uerror(
+                "\t-i interval  Loop, polling every \"interval\" seconds (default: %d)", DEFAULT_INTERVAL);
+        (void)uerror(
+                "\t-t timeo     Set write timeout for PIPE subprocs to \"timeo\" secs (default: %d)", DEFAULT_PIPE_TIMEO);
+        (void)uerror(
+                "\t-o offset    Start with products arriving \"offset\" seconds before now (default: 0)");
+        (void)uerror(
+                "\tconfig_file  Pathname of configuration-file (default: "
+                "\"%s\")", getPqactConfigPath());
         exit(1);
         /*NOTREACHED*/
 }
@@ -258,11 +261,16 @@ main(int ac, char *av[])
         int toffset = TOFFSET_NONE;
         int loggingToStdErr = 0;
         unsigned queue_size = 5000;
+        int logmask = LOG_UPTO(LOG_NOTICE);
+        const char* progname = ubasename(av[0]);
+        unsigned logopts = LOG_CONS|LOG_PID;
 
         /*
          * Setup default logging before anything else.
          */
-        openulog(ubasename(av[0]), (LOG_CONS|LOG_PID), LOG_LDM, logfname);
+        loggingToStdErr = STDERR_FILENO ==
+            openulog(progname, logopts, LOG_LDM, logfname);
+        (void) setulogmask(logmask);
 
         pqfname = getQueuePath();
         conffilename = getPqactConfigPath();
@@ -273,8 +281,7 @@ main(int ac, char *av[])
         if(set_timestamp(&clss.from) != ENOERR) /* corrected by toffset below */
         {
                 int errnum = errno;
-                fprintf(stderr, "Couldn't set timestamp: %s", 
-                        strerror(errnum));
+                uerror("Couldn't set timestamp: %s", strerror(errnum));
                 exit(1);
                 /*NOTREACHED*/
         }
@@ -286,33 +293,36 @@ main(int ac, char *av[])
          * deal with the command line, set options
          */
         {
-        extern int optind;
-        extern int opterr;
-        extern char *optarg;
+            extern int optind;
+            extern int opterr;
+            extern char *optarg;
 
-        int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
-        int fterr;
+            int ch;
+            int fterr;
 
-        opterr = 1;
+            opterr = 1;
 
-        while ((ch = getopt(ac, av, "vxel:d:f:q:o:p:i:t:")) != EOF)
+            while ((ch = getopt(ac, av, "vxel:d:f:q:o:p:i:t:")) != EOF) {
                 switch (ch) {
                 case 'v':
                         logmask |= LOG_UPTO(LOG_INFO);
+                        (void) setulogmask(logmask);
                         break;
                 case 'x':
                         logmask |= LOG_MASK(LOG_DEBUG);
+                        (void) setulogmask(logmask);
                         break;
                 case 'e':
                         key = ftok("/etc/rc.d/rc.local",'R');
                         semkey = ftok("/etc/rc.d/rc.local",'e');
-                        shmid = shmget(key, sizeof(edex_message) * queue_size, 0666 | IPC_CREAT);
+                        shmid = shmget(key, sizeof(edex_message) * queue_size,
+                                0666 | IPC_CREAT);
                         semid = semget(semkey, 2, 0666 | IPC_CREAT);
                         break;
                 case 'l':
                         logfname = optarg;
+                        loggingToStdErr = STDERR_FILENO ==
+                            openulog(progname, logopts, LOG_LDM, logfname);
                         break;
                 case 'd':
                         setPqactDataDirPath(optarg);
@@ -321,9 +331,9 @@ main(int ac, char *av[])
                         fterr = strfeedtypet(optarg, &spec.feedtype);
                         if(fterr != FEEDTYPE_OK)
                         {
-                                fprintf(stderr, "Bad feedtype \"%s\", %s\n",
+                                uerror("Bad feedtype \"%s\", %s\n",
                                         optarg, strfeederr(fterr));
-                                usage(av[0]);
+                                usage(progname);
                         }
                         break;
                 case 'q':
@@ -333,45 +343,52 @@ main(int ac, char *av[])
                         toffset = atoi(optarg);
                         if(toffset == 0 && *optarg != '0')
                         {
-                                fprintf(stderr, "%s: invalid offset %s\n",
-                                         av[0], optarg);
-                                usage(av[0]);   
+                                uerror("%s: invalid offset %s\n", progname,
+                                        optarg);
+                                usage(progname);   
                         }
                         break;
                 case 'i':
                         interval = atoi(optarg);
                         if(interval == 0 && *optarg != '0')
                         {
-                                fprintf(stderr, "%s: invalid interval %s\n", av[0], optarg);
-                                usage(av[0]);   
+                                uerror("%s: invalid interval %s\n", progname,
+                                        optarg);
+                                usage(progname);   
                         }
                         break;
                 case 't':
                         pipe_timeo = atoi(optarg);
                         if(pipe_timeo == 0 && *optarg != 0)
                         {
-                                fprintf(stderr, "%s: invalid pipe_timeo %s", av[0], optarg);
-                                usage(av[0]);   
+                                uerror("%s: invalid pipe_timeo %s", progname,
+                                        optarg);
+                                usage(progname);   
                         }
                         break;
                 case 'p':
                         spec.pattern = optarg;
                         break;
-                case '?':
-                        usage(av[0]);
+                default:
+                        usage(progname);
                         break;
                 }
-        if(ac - optind == 1)
-                conffilename = av[optind];
-        (void) setulogmask(logmask);
-        }
-        datadir = getPqactDataDirPath();
+            }
 
-        /*
-         * Initialize logging.
-         */
-        loggingToStdErr = STDERR_FILENO == openulog(
-            ubasename(av[0]), (LOG_CONS|LOG_PID), LOG_LDM, logfname);
+            {
+                int numOperands = ac - optind;
+
+                if (1 < numOperands) {
+                    uerror("Too many operands");
+                    usage(progname);
+                }
+                else if (1 == numOperands) {
+                    conffilename = av[optind];
+                }
+            }
+        }
+
+        datadir = getPqactDataDirPath();
 
         unotice("Starting Up");
 
