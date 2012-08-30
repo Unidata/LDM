@@ -1454,7 +1454,8 @@ uldb_Status uldb_open(
 
 /**
  * Closes the database, freeing any system resources. Upon successful return,
- * the database still exists but may not be accessed until uldbOpen() is called.
+ * the database still exists but may not be accessed until uldb_open() is
+ * called.
  *
  * @retval ULDB_SUCCESS  Success.
  * @retval ULDB_INIT     Database not open. log_start() called.

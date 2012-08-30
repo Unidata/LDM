@@ -32,7 +32,7 @@ int main(
         int argc,
         char* argv[])
 {
-    const char* const progname = basename(argv[0]);
+    const char* const progname = ubasename(argv[0]);
     int status;
 
     (void) openulog(progname, LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
@@ -101,6 +101,8 @@ int main(
 
                 uldb_iter_free(iter);
             } /* got database iterator */
+
+            (void)uldb_close();
         } /* database opened */
     } /* correct invocation syntax */
 
