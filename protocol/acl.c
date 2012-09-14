@@ -1721,7 +1721,7 @@ prog_requester(
                             errCode = 0;
                         }
                         else if (errCode == ECONNREFUSED) {
-                            unotice("Connection refused by upstream LDM");
+                            unotice("Connection refused");
                             errCode = 0;
                         }
                         else if (errCode != 0){
