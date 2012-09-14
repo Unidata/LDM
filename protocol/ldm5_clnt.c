@@ -302,6 +302,9 @@ retry:
                 {
                         /* shouldn't happen ... */
                         (void) free_prod_class(reply.ldm_replyt_u.newclssp);
+                        uerror("Request denied by upstream LDM: %s",
+                                s_prod_class(NULL, 0, clssp));
+                        uerror("Does it overlap with another?");
                         status = ECONNREFUSED;
                         goto out;
                 }
