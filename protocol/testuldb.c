@@ -22,6 +22,9 @@ static const prod_class_t clss_some = { { 0, 0 }, /* TS_ZERO */
 { 1, (prod_spec *) &spec_some /* cast away const */
 } };
 
+/**
+ * Only called once.
+ */
 static int setup(
         void)
 {
@@ -45,6 +48,9 @@ static int setup(
     return status;
 }
 
+/**
+ * Only called once.
+ */
 static int teardown(
         void)
 {
@@ -194,7 +200,7 @@ static void test_iterator(
     CU_ASSERT_PTR_NOT_NULL(iter);
 
     entry = uldb_iter_firstEntry(iter);
-    CU_ASSERT_PTR_NOT_NULL(entry);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(entry);
     CU_ASSERT_EQUAL(uldb_entry_getPid(entry), 1);
     CU_ASSERT_EQUAL(uldb_entry_getProtocolVersion(entry), 6);
     CU_ASSERT_EQUAL(uldb_entry_isNotifier(entry), 0);
@@ -204,7 +210,7 @@ static void test_iterator(
     free_prod_class(prodClass);
 
     entry = uldb_iter_nextEntry(iter);
-    CU_ASSERT_PTR_NOT_NULL(entry);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(entry);
     CU_ASSERT_EQUAL(uldb_entry_getPid(entry), 2);
     CU_ASSERT_EQUAL(uldb_entry_getProtocolVersion(entry), 5);
     CU_ASSERT_EQUAL(uldb_entry_isNotifier(entry), 1);
