@@ -8,7 +8,8 @@
 /**
  * @file semRWLock.c
  *
- * A semaphore-based read/write lock.
+ * A semaphore-based read/write lock. The implementation is thread-compatible
+ * but not thread-safe.
  */
 
 #include <config.h>
@@ -20,7 +21,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <globals.h>
 #include <log.h>
 
 #include "semRWLock.h"
@@ -37,8 +37,8 @@ enum {
  */
 struct srwl_Lock {
     const char* isValid;
-    pid_t pid;
     int semId;
+    pid_t pid; /* the process that owns this structure */
     unsigned numReadLocks;
     unsigned numWriteLocks;
 };
@@ -50,7 +50,7 @@ static struct sembuf writeLockOps[SI_NUM_SEMS];
 static struct sembuf readLockOps[SI_NUM_SEMS];
 static struct sembuf shareOps[1];
 static struct sembuf writeUnlockOps[1];
-static struct sembuf readUnlockOps[SI_NUM_SEMS];
+static struct sembuf readUnlockOps[1];
 static int isInitialized;
 
 /**
@@ -67,24 +67,43 @@ static mode_t read_write;
  * Vets a lock structure.
  *
  * @retval RWL_SUCCESS  The lock structure is valid
- * @retval RWL_INVALID  The lock structure is invalid. log_start() called.
+ * @retval RWL_INVALID  The lock structure is invalid. log_add() called.
  */
 static srwl_Status vet(
-        const srwl_Lock* const lock /**< [in] the lock structure to vet */)
+        srwl_Lock* const lock /**< [in/out] the lock structure to vet */)
 {
-    if (lock->isValid == VALID_STRING)
-        return RWL_SUCCESS;
+    int status;
 
-    LOG_START0("Invalid lock structure");
+    if (lock->isValid != VALID_STRING) {
+        LOG_ADD0("Invalid lock structure");
 
-    return RWL_INVALID;
+        status = RWL_INVALID;
+    }
+    else {
+        const pid_t pid = getpid();
+
+        if (pid != lock->pid) {
+            /*
+             * This process must be a child process. Reset the lock. NB: A
+             * fork() zeroes the "semadj" value of semaphores in the child
+             * process.
+             */
+            lock->numReadLocks = 0;
+            lock->numWriteLocks = 0;
+            lock->pid = pid;
+        }
+
+        status = RWL_SUCCESS;
+    }
+
+    return status;
 }
 
 /**
  * Deletes a semaphore set.
  *
  * @retval RWL_SUCCESS  Success.
- * @retval RWL_SYSTEM   System error. See "errno". log_start() called.
+ * @retval RWL_SYSTEM   System error. See "errno". log_add() called.
  */
 static srwl_Status deleteSemSet(
         const int semId /**< [in] semaphore set identifier */)
@@ -101,7 +120,7 @@ static srwl_Status deleteSemSet(
  * semaphore set will be deleted.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_SYSTEM   System error. See "errno". log_start() called.
+ * @retval RWL_SYSTEM   System error. See "errno". log_add() called.
  */
 static srwl_Status createLock(
         const key_t key /**< [in] the key associated with the semaphore */,
@@ -147,7 +166,7 @@ static srwl_Status createLock(
  *
  * @retval RWL_SUCCESS  Success.
  * @retval RWL_EXIST    The lock doesn't exist.
- * @retval RWL_SYSTEM   System error. See "errno". log_start() called.
+ * @retval RWL_SYSTEM   System error. See "errno". log_add() called.
  */
 static srwl_Status getLock(
         const key_t key /**< [in] the key associated with the semaphore */,
@@ -173,8 +192,8 @@ static srwl_Status getLock(
  *
  * @retval RWL_SUCCESS  Success.
  * @retval RWL_EXIST    "create" is false and the semaphore set doesn't exist.
- *                      log_start() called.
- * @retval RWL_SYSTEM   System error. log_start() called.
+ *                      log_add() called.
+ * @retval RWL_SYSTEM   System error. log_add() called.
  */
 static srwl_Status initLock(
         const int create /**< [in] Whether to create the lock. If true, then
@@ -185,34 +204,34 @@ static srwl_Status initLock(
     srwl_Status status;
 
     if (!isInitialized) {
-        writeLockOps[SI_LOCK].sem_num = SI_LOCK;
-        writeLockOps[SI_LOCK].sem_op = -1;
-        writeLockOps[SI_LOCK].sem_flg = SEM_UNDO;
-        writeLockOps[SI_NUM_READERS].sem_num = SI_NUM_READERS;
-        writeLockOps[SI_NUM_READERS].sem_op = 0;
-        writeLockOps[SI_NUM_READERS].sem_flg = SEM_UNDO;
+        struct sembuf acquireLock;
+        struct sembuf releaseLock;
 
-        readLockOps[SI_LOCK].sem_num = SI_LOCK;
-        readLockOps[SI_LOCK].sem_op = -1;
-        readLockOps[SI_LOCK].sem_flg = SEM_UNDO;
-        readLockOps[SI_NUM_READERS].sem_num = SI_NUM_READERS;
-        readLockOps[SI_NUM_READERS].sem_op = 1;
-        readLockOps[SI_NUM_READERS].sem_flg = SEM_UNDO;
+        acquireLock.sem_num = SI_LOCK;
+        acquireLock.sem_op = -1;
+        acquireLock.sem_flg = SEM_UNDO; /* release lock upon exit */
 
-        shareOps[SI_LOCK].sem_num = SI_LOCK;
-        shareOps[SI_LOCK].sem_op = 1;
-        shareOps[SI_LOCK].sem_flg = SEM_UNDO;
+        releaseLock.sem_num = SI_LOCK;
+        releaseLock.sem_op = 1;
+        releaseLock.sem_flg = SEM_UNDO; /* undo acquireLock undo */
 
-        writeUnlockOps[SI_LOCK].sem_num = SI_LOCK;
-        writeUnlockOps[SI_LOCK].sem_op = 1;
-        writeUnlockOps[SI_LOCK].sem_flg = SEM_UNDO;
+        writeLockOps[0] = acquireLock;
+        writeLockOps[1].sem_num = SI_NUM_READERS;
+        writeLockOps[1].sem_op = 0;
+        writeLockOps[1].sem_flg = 0;
 
-        readUnlockOps[SI_LOCK].sem_num = SI_LOCK;
-        readUnlockOps[SI_LOCK].sem_op = 1;
-        readUnlockOps[SI_LOCK].sem_flg = SEM_UNDO;
-        readUnlockOps[SI_NUM_READERS].sem_num = SI_NUM_READERS;
-        readUnlockOps[SI_NUM_READERS].sem_op = -1;
-        readUnlockOps[SI_NUM_READERS].sem_flg = SEM_UNDO;
+        readLockOps[0] = acquireLock;
+        readLockOps[1].sem_num = SI_NUM_READERS;
+        readLockOps[1].sem_op = 1;
+        readLockOps[1].sem_flg = SEM_UNDO; /* decrement #readers upon exit */
+
+        shareOps[0] = releaseLock;
+
+        writeUnlockOps[0] = releaseLock;
+
+        readUnlockOps[0].sem_num = SI_NUM_READERS;
+        readUnlockOps[0].sem_op = -1;
+        readUnlockOps[0].sem_flg = SEM_UNDO; /* undo readLockOps[1] undo */
 
         {
             mode_t um = umask(0);
@@ -243,10 +262,10 @@ static srwl_Status initLock(
         }
         else {
             lck->semId = semId;
+            lck->pid = getpid();
             lck->isValid = VALID_STRING;
             lck->numReadLocks = 0;
             lck->numWriteLocks = 0;
-            lck->pid = getpid();
             *lock = lck;
         }
     } /* "lck" allocated */
@@ -260,7 +279,7 @@ static srwl_Status initLock(
  * @param key           [in] IPC key for the semaphore set
  * @param lock          [out] address of pointer to lock
  * @retval RWL_SUCCESS  Success
- * @retval RWL_SYSTEM   System error. See "errno". log_start() called.
+ * @retval RWL_SYSTEM   System error. See "errno". log_add() called.
  */
 srwl_Status srwl_create(
         int key,
@@ -275,8 +294,8 @@ srwl_Status srwl_create(
  * @param key   [in] IPC key for the lock
  * @param lock  [out] Address of the pointer to the lock
  * @retval RWL_SUCCESS  Success
- * @retval RWL_EXIST    The semaphore set doesn't exist. log_start() called.
- * @retval RWL_SYSTEM   System error. log_start() called.
+ * @retval RWL_EXIST    The semaphore set doesn't exist. log_add() called.
+ * @retval RWL_SYSTEM   System error. log_add() called.
  */
 srwl_Status srwl_get(
         const key_t key,
@@ -291,8 +310,8 @@ srwl_Status srwl_get(
  * returns.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_INVALID  The lock is invalid. log_start() called.
- * @retval RWL_SYSTEM   System error. log_start() called. The resulting state
+ * @retval RWL_INVALID  The lock is invalid. log_add() called.
+ * @retval RWL_SYSTEM   System error. log_add() called. The resulting state
  *                      of "*lock" is unspecified.
  */
 srwl_Status srwl_delete(
@@ -313,12 +332,13 @@ srwl_Status srwl_delete(
 }
 
 /**
- * Unconditionally deletes a read/write lock by IPC key.
+ * Unconditionally deletes a read/write lock by IPC key. The Semaphore on
+ * which the lock is based is deleted.
  *
  * @param key           The IPC key
  * @retval RWL_SUCCESS  Success
  * @retval RWL_EXIST    The key has no associated read/write lock
- * @retval RWL_SYSTEM   System error. log_start() called.
+ * @retval RWL_SYSTEM   System error. log_add() called.
  */
 srwl_Status srwl_deleteByKey(
         const key_t key)
@@ -346,8 +366,8 @@ srwl_Status srwl_deleteByKey(
  * function returns.
  *
  * @retval RWL_SUCCESS  Success or "lock" was NULL
- * @retval RWL_EXIST    The lock is locked. log_start() called.
- * @retval RWL_SYSTEM   System error. See "errno". log_start() called. The state
+ * @retval RWL_EXIST    The lock is locked. log_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". log_add() called. The state
  *                      of "*lock" is unspecified.
  */
 srwl_Status srwl_free(
@@ -363,7 +383,7 @@ srwl_Status srwl_free(
 
         if (RWL_SUCCESS == status) {
             if (0 != lock->numWriteLocks || 0 != lock->numReadLocks) {
-                LOG_START3("Lock is locked: semId=%d, numReadLocks=%u, "
+                LOG_ADD3("Lock is locked: semId=%d, numReadLocks=%u, "
                 "numWriteLocks=%u", lock->semId, lock->numReadLocks,
                         lock->numWriteLocks);
                 status = RWL_EXIST;
@@ -384,10 +404,10 @@ srwl_Status srwl_free(
  * Reentrant.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_INVALID  Lock structure is invalid. log_start() called.
+ * @retval RWL_INVALID  Lock structure is invalid. log_add() called.
  * @retval RWL_EXIST    Lock is locked for reading and the current process is
- *                      the one that created it. log_start() called.
- * @retval RWL_SYSTEM   System error. See "errno". log_start() called. Resulting
+ *                      the one that created it. log_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". log_add() called. Resulting
  *                      state of the lock is unspecified.
  */
 srwl_Status srwl_writeLock(
@@ -396,8 +416,8 @@ srwl_Status srwl_writeLock(
     srwl_Status status = vet(lock);
 
     if (RWL_SUCCESS == status) {
-        if (0 < lock->numReadLocks && getpid() == lock->pid) {
-            LOG_START1("Lock is locked for reading; semId=%d", lock->semId);
+        if (0 < lock->numReadLocks) {
+            LOG_ADD1("Lock is locked for reading; semId=%d", lock->semId);
             status = RWL_EXIST;
         }
         else if (0 < lock->numWriteLocks) {
@@ -407,7 +427,7 @@ srwl_Status srwl_writeLock(
         else {
             if (semop(lock->semId, writeLockOps,
                     sizeof(writeLockOps) / sizeof(writeLockOps[0])) == -1) {
-                LOG_START1("Couldn't lock for writing: semId=%d", lock->semId);
+                LOG_ADD1("Couldn't lock for writing: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -422,13 +442,12 @@ srwl_Status srwl_writeLock(
 
 /**
  * Locks a read/write lock for reading. Waits until the lock is available.
- * Reentrant.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_INVALID  Lock structure is invalid. log_start() called.
+ * @retval RWL_INVALID  Lock structure is invalid. log_add() called.
  * @retval RWL_EXIST    Lock is locked for writing and the current process is
- *                      the one that created it. log_start() called.
- * @retval RWL_SYSTEM   System error. See "errno". log_start() called. Resulting
+ *                      the one that created it. log_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". log_add() called. Resulting
  *                      state of the lock is unspecified.
  */
 srwl_Status srwl_readLock(
@@ -437,8 +456,8 @@ srwl_Status srwl_readLock(
     srwl_Status status = vet(lock);
 
     if (RWL_SUCCESS == status) {
-        if (0 < lock->numWriteLocks && getpid() == lock->pid) {
-            LOG_START1("Lock is locked for writing; semId=%d", lock->semId);
+        if (0 < lock->numWriteLocks) {
+            LOG_ADD1("Lock is locked for writing; semId=%d", lock->semId);
             status = RWL_EXIST;
         }
         else if (0 < lock->numReadLocks) {
@@ -448,17 +467,17 @@ srwl_Status srwl_readLock(
         else {
             /*
              * A read-lock is obtained in two steps because the semop(2)
-             * specification doesn't indicate that the operations array is executed
-             * sequentially.
+             * specification doesn't indicate that the operations array is
+             * executed sequentially.
              */
             if (semop(lock->semId, readLockOps,
                     sizeof(readLockOps) / sizeof(readLockOps[0])) == -1) {
-                LOG_START1("Couldn't lock for reading: semId=%d", lock->semId);
+                LOG_ADD1("Couldn't lock for reading: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else if (semop(lock->semId, shareOps,
                     sizeof(shareOps) / sizeof(shareOps[0])) == -1) {
-                LOG_START1("Couldn't share read-lock: semId=%d", lock->semId);
+                LOG_ADD1("Couldn't share read-lock: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -476,8 +495,8 @@ srwl_Status srwl_readLock(
  * locked before the lock will be truly unlocked.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_INVALID  Lock structure is invalid. log_start() called.
- * @retval RWL_SYSTEM   System error. See "errno". log_start() called. Resulting
+ * @retval RWL_INVALID  Lock structure is invalid. log_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". log_add() called. Resulting
  *                      state of the lock is unspecified.
  */
 srwl_Status srwl_unlock(
@@ -492,7 +511,7 @@ srwl_Status srwl_unlock(
         else if (1 == lock->numWriteLocks) {
             if (semop(lock->semId, writeUnlockOps,
                     sizeof(writeUnlockOps) / sizeof(writeUnlockOps[0])) == -1) {
-                LOG_START1("Couldn't unlock write-lock: semId=%d", lock->semId);
+                LOG_ADD1("Couldn't unlock write-lock: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -505,7 +524,7 @@ srwl_Status srwl_unlock(
         else if (1 == lock->numReadLocks) {
             if (semop(lock->semId, readUnlockOps,
                     sizeof(readUnlockOps) / sizeof(readUnlockOps[0])) == -1) {
-                LOG_START1("Couldn't unlock read-lock: semId=%d", lock->semId);
+                LOG_ADD1("Couldn't unlock read-lock: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
