@@ -314,9 +314,9 @@ feed_or_notify(
                             int status =
                                     isNotifier ?
                                             uldb_addNotifier(getpid(), 6,
-                                                    downAddr, prodClass) :
+                                                    addr, noSigProdClass) :
                                             uldb_addFeeder(getpid(), 6,
-                                                    downAddr, prodClass);
+                                                    addr, noSigProdClass);
 
                             if (status) {
                                 if (ULDB_DISALLOWED == status) {
