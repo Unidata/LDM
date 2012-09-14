@@ -14,6 +14,7 @@
 #include <libgen.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "ldm.h"
 #include "log.h"
@@ -21,6 +22,15 @@
 #include "inetutil.h"
 #include "ldmprint.h"
 #include "prod_class.h"
+
+static void printUsage(
+        const char* progname)
+{
+    LOG_ADD0("Usages:");
+    LOG_ADD1("  Print Database:     %s\n", progname);
+    LOG_ADD1("  Delete Database:    %s -d\n", progname);
+    log_log(LOG_ERR);
+}
 
 /**
  * @retval 0    Success
@@ -33,19 +43,53 @@ int main(
         char* argv[])
 {
     const char* const progname = ubasename(argv[0]);
-    int status;
+    int status = 0;
+    int delete = 0;
 
     (void) openulog(progname, LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
     (void) setulogmask(LOG_UPTO(LOG_NOTICE));
 
-    if (1 < argc) {
-        LOG_START0("Too many arguments");
-        LOG_ADD1("Usage: %s", progname);
-        log_log(LOG_ERR);
-        status = 1;
+    {
+        int ch;
+
+        opterr = 0; /* Suppress getopt(3) error messages */
+
+        while (0 == status && (ch = getopt(argc, argv, "d")) != -1) {
+            switch (ch) {
+            case 'd':
+                delete = 1;
+                break;
+            default:
+                LOG_START1("Unknown option: %c", optopt);
+                printUsage(progname);
+                status = 1;
+                break;
+            }
+        }
+
+        if (0 == status && optind < argc) {
+            LOG_START0("Too many arguments");
+            printUsage(progname);
+            status = 1;
+        }
     }
-    else {
-        if (status = uldb_open()) {
+
+    if (0 == status) {
+        if (delete) {
+            if (status = uldb_delete()) {
+                if (ULDB_EXIST == status) {
+                    LOG_ADD0("The upstream LDM database doesn't exist");
+                    log_log(LOG_INFO);
+                    status = 2;
+                }
+                else {
+                    LOG_ADD0("Couldn't open the upstream LDM database");
+                    log_log(LOG_ERR);
+                    status = 3;
+                }
+            }
+        }
+        else if (status = uldb_open()) {
             if (ULDB_EXIST == status) {
                 LOG_ADD0("The upstream LDM database doesn't exist");
                 LOG_ADD0("Is the LDM running?");
@@ -86,15 +130,15 @@ int main(
                         const struct sockaddr_in* sockAddr =
                                 uldb_entry_getSockAddr(entry);
                         char buf[2048];
-                        const char* const type = 
-                                uldb_entry_isNotifier(entry)
-                                    ? "notifier" : "feeder";
+                        const char* const type =
+                                uldb_entry_isNotifier(entry) ?
+                                        "notifier" : "feeder";
 
                         (void) s_prod_class(buf, sizeof(buf), prodClass);
                         (void) printf("%ld %d %s %s %s\n",
                                 (long) uldb_entry_getPid(entry),
-                                uldb_entry_getProtocolVersion(entry),
-                                type, hostbyaddr(sockAddr), buf);
+                                uldb_entry_getProtocolVersion(entry), type,
+                                hostbyaddr(sockAddr), buf);
                         free_prod_class(prodClass);
                     } /* "prodClass" allocated */
                 } /* entry loop */
@@ -102,7 +146,7 @@ int main(
                 uldb_iter_free(iter);
             } /* got database iterator */
 
-            (void)uldb_close();
+            (void) uldb_close();
         } /* database opened */
     } /* correct invocation syntax */
 

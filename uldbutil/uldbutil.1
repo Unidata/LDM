@@ -3,9 +3,11 @@
 uldbutil \- Utility for Accessing the Upstream LDM Database
 .SH SYNOPSIS
 .HP
-.ft B
+.B
 uldbutil
-.ft
+.HP
+.B
+uldbutil -d
 .SH DESCRIPTION
 .PP
 This program access the database of upstream LDM processes. An upstream LDM
@@ -13,31 +15,42 @@ process is a child process of the LDM server that's responsible for feeding
 a remote downstream LDM in response to a request for data from the downsteam
 LDM.
 .PP
-This utility prints the contends of the upstream LDM database to the standard
+In the first form, this utility prints the contents of the upstream LDM database to the standard
 output stream. The format of the output is multiple lines of the following
 fields:
 .RS
+.I
 pid protoVers type host product-class
 .RE
 where:
+.RS
 .TP
+.I
 pid
 Process-identifier of the upstream LDM.
 .TP
+.I
 protoVers
 Protocol version (e.g., 5 or 6) of the upstream LDM.
 .TP
+.I
 type
 The type of the upstream LDM: "feeder" or "notifier".
 .TP
+.I
 host
 The Internet name of the computer on which the downstream LDM process is
 running. This will normally be the fully-qualified hostname of the computer
 unless the IP address can't be resolved into a hostname, in which case the IP
 address will be printed.
 .TP
+.I
 product-class
 The class of products requested by the downstream LDM. 
+.RE
+.PP
+In the second form, this utility attempts to delete the upstream LDM 
+database.
 .SH EXIT STATUS
 .PP
 Error messages should be printed to the standard error stream if the utility
