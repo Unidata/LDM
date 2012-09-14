@@ -167,6 +167,7 @@
 000 006 199 000 Ice fraction of total condensate -                    FICE             0  -9999.00
 000 006 200 000 Convective Cloud Mass Flux       Pa s-1               MFLUX            0  -9999.00
 000 006 201 000 SunShine Duration                s                    SUNSD            0  -9999.00
+000 006 201 001 SunShine Duration                s                    SUNSD            0  -9999.00
 !
 ! thermodynamic stability indices 
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
@@ -253,6 +254,8 @@
 000 019 217 000 Supercooled Large Droplet Icing  non-dim              SIPD             0  -9999.00
 000 019 219 005 Turbulence Potential Fcst Index  NA                   TPFI             0  -9999.00
 !
+000 019 242 000 Mislabeled RH wrt PW             %                    RHPW             0  -9999.00
+!
 ! Miscellaneous
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
@@ -284,6 +287,7 @@
 001 001 194 008 Prob precip exceeding FFG        %                    PEFG--           0  -9999.00
 001 001 195 008 Prob of wetting rain > 0.10"     %                    POWR--           0  -9999.00
 !
+! Discipline 2 - Land Surface Products
 ! vegetation/Biomass
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
@@ -330,6 +334,7 @@
 002 003 203 000 Field Capacity                   %                    FLDCP            0  -9999.00
 002 003 203 001 Field Capacity                   %                    FLDCP            0  -9999.00
 !
+! Discipline 3 - Space Products
 !
 003 001 192 000 Scatterometer Estimated U wind   m/s                  USCT             0  -9999.00
 003 001 193 000 Scatterometer Estimated V wind   m/s                  VSCT             0  -9999.00
