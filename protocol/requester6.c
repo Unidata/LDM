@@ -334,8 +334,7 @@ make_request(
 
                         if (allow->psa.psa_len == 0) {
                             errObj = ERR_NEW1( REQ6_NOT_ALLOWED, NULL,
-                                "Upstream LDM says we're not allowed to "
-                                    "receive requested products: %s",
+                                "Request denied by upstream LDM: %s",
                                 s_prod_class(NULL, 0, feedpar.prod_class));
                         }
                         else {
