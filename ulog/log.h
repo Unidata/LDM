@@ -9,32 +9,35 @@
 extern "C" {
 #endif
 
-#define LOG_FMT(fmt)                fmt " [%s:%d]"
-#define LOG_ERRNO()                 log_start(LOG_FMT("%s"),strerror(errno),__FILE__,__LINE__)
+#define LOG_FMT(fmt)                 "[%s:%d] " fmt
+#define LOG_ERRNO()                 log_start(LOG_FMT("%s"),__FILE__,__LINE__,strerror(errno))
+/*
+ * The LOG_STARTn() macros are deprecated. Use the LOG_ADDn() macros instead.
+ */
 #define LOG_START0(fmt)             log_start(LOG_FMT(fmt),__FILE__,__LINE__)
-#define LOG_START1(fmt,a)           log_start(LOG_FMT(fmt),a,__FILE__,__LINE__)
-#define LOG_START2(fmt,a,b)         log_start(LOG_FMT(fmt),a,b,__FILE__,__LINE__)
-#define LOG_START3(fmt,a,b,c)       log_start(LOG_FMT(fmt),a,b,c,__FILE__,__LINE__)
-#define LOG_START4(fmt,a,b,c,d)     log_start(LOG_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
-#define LOG_START5(fmt,a,b,c,d,e)   log_start(LOG_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
+#define LOG_START1(fmt,a)           log_start(LOG_FMT(fmt),__FILE__,__LINE__,a)
+#define LOG_START2(fmt,a,b)         log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b)
+#define LOG_START3(fmt,a,b,c)       log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c)
+#define LOG_START4(fmt,a,b,c,d)     log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d)
+#define LOG_START5(fmt,a,b,c,d,e)   log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d,e)
 #define LOG_ADD0(fmt)               log_add(LOG_FMT(fmt),__FILE__,__LINE__)
-#define LOG_ADD1(fmt,a)             log_add(LOG_FMT(fmt),a,__FILE__,__LINE__)
-#define LOG_ADD2(fmt,a,b)           log_add(LOG_FMT(fmt),a,b,__FILE__,__LINE__)
-#define LOG_ADD3(fmt,a,b,c)         log_add(LOG_FMT(fmt),a,b,c,__FILE__,__LINE__)
-#define LOG_ADD4(fmt,a,b,c,d)       log_add(LOG_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
-#define LOG_ADD5(fmt,a,b,c,d,e)     log_add(LOG_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
+#define LOG_ADD1(fmt,a)             log_add(LOG_FMT(fmt),__FILE__,__LINE__,a)
+#define LOG_ADD2(fmt,a,b)           log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b)
+#define LOG_ADD3(fmt,a,b,c)         log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c)
+#define LOG_ADD4(fmt,a,b,c,d)       log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d)
+#define LOG_ADD5(fmt,a,b,c,d,e)     log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d,e)
 #define LOG_SERROR0(fmt)            log_serror(LOG_FMT(fmt),__FILE__,__LINE__)
-#define LOG_SERROR1(fmt,a)          log_serror(LOG_FMT(fmt),a,__FILE__,__LINE__)
-#define LOG_SERROR2(fmt,a,b)        log_serror(LOG_FMT(fmt),a,b,__FILE__,__LINE__)
-#define LOG_SERROR3(fmt,a,b,c)      log_serror(LOG_FMT(fmt),a,b,c,__FILE__,__LINE__)
-#define LOG_SERROR4(fmt,a,b,c,d)    log_serror(LOG_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
-#define LOG_SERROR5(fmt,a,b,c,d,e)  log_serror(LOG_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
+#define LOG_SERROR1(fmt,a)          log_serror(LOG_FMT(fmt),__FILE__,__LINE__,a)
+#define LOG_SERROR2(fmt,a,b)        log_serror(LOG_FMT(fmt),__FILE__,__LINE__,a,b)
+#define LOG_SERROR3(fmt,a,b,c)      log_serror(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c)
+#define LOG_SERROR4(fmt,a,b,c,d)    log_serror(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d)
+#define LOG_SERROR5(fmt,a,b,c,d,e)  log_serror(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d,e)
 #define LOG_ERRNUM0(err,fmt)        log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__)
-#define LOG_ERRNUM1(err,fmt,a)      log_errnum(err,LOG_FMT(fmt),a,__FILE__,__LINE__)
-#define LOG_ERRNUM2(err,fmt,a,b)    log_errnum(err,LOG_FMT(fmt),a,b,__FILE__,__LINE__)
-#define LOG_ERRNUM3(err,fmt,a,b,c)  log_errnum(err,LOG_FMT(fmt),a,b,c,__FILE__,__LINE__)
-#define LOG_ERRNUM4(err,fmt,a,b,c,d)    log_errnum(err,LOG_FMT(fmt),a,b,c,d,__FILE__,__LINE__)
-#define LOG_ERRNUM5(err,fmt,a,b,c,d,e)  log_errnum(err,LOG_FMT(fmt),a,b,c,d,e,__FILE__,__LINE__)
+#define LOG_ERRNUM1(err,fmt,a)      log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,a)
+#define LOG_ERRNUM2(err,fmt,a,b)    log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,a,b)
+#define LOG_ERRNUM3(err,fmt,a,b,c)  log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,a,b,c)
+#define LOG_ERRNUM4(err,fmt,a,b,c,d)    log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d)
+#define LOG_ERRNUM5(err,fmt,a,b,c,d,e)  log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d,e)
 
 void log_clear();
 void log_start(
