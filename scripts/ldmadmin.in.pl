@@ -721,6 +721,10 @@ sub start_ldm
                 $status = 1;
             }
             else {
+                # Ensure that the upstream LDM database doesn't exist
+                #print "Deleting upstream LDM database...\n";
+                system("uldbutil -d");
+                    
                 # Check the pqact(1) configuration-file(s)
                 print "Checking pqact(1) configuration-file(s)...\n";
                 my $prev_line_prefix = $line_prefix;
