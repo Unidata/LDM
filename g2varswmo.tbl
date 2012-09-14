@@ -59,6 +59,7 @@
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 000 001 000 000 Specific Humidity                kg kg**-1            SPFH             0  -9999.00
 000 001 000 001 Specific Humidity                kg kg**-1            SPFH             0  -9999.00
+000 001 000 002 Specific Humidity                kg kg**-1            SPFH             0  -9999.00
 000 001 000 011 Specific Humidity                kg kg**-1            SPFH             0  -9999.00
 000 001 001 000 Relative Humidity                %                    RELH             0  -9999.00
 000 001 001 001 Relative Humidity                %                    RELH             0  -9999.00
@@ -382,6 +383,15 @@
 !
 !
 002 003 000 000 Soil Type (as in Zobler)         -                    SOTYP            0  -9999.00
+!
+! Fire Weather
+!D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
+!23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
+! Haines index should be parameter 2, not 3.  This is an artifact of grib1 -> grib2 conversion 
+002 004 000 000 Fire Outlook                     -                    FIREOLK          0  -9999.00
+002 004 001 000 Fire Outlook Due to Dry Trw      -                    FIREODT          0  -9999.00
+002 004 002 000 Haines index                     -                    HINDEX           0  -9999.00
+002 004 003 000 Haines index                     -                    HINDEX           0  -9999.00
 !
 !
 ! Oceanograhic parameters, Discipline 10
