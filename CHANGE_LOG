@@ -1,3 +1,60 @@
+6.11.0 	2012-09-18 15:13:55-06:00
+    Instructions:
+        Improved preinstallation instructions: add modification of Red Hat
+        net.ipv4.conf.default.rp_filter kernel parameter to preinstallation
+        instructions.
+
+        Corrected LDM configuration-file example: merged multi-line entry into
+        single line.
+
+    Installation:
+        Improved configure(1) error-message: if the configuration-file for the
+        system logging daemon isn't found, then the error-message will now
+        indicate that the problem might be because it's not readable.
+
+    NOAAPORT:
+        Updated GRIB tables.
+
+        Added noaaport/mainpage.h to repository.
+
+        Fixed installation of NOAAPORT webpages
+
+    ldmadmin(1):
+        ldmadmin(1) calculates the number of slots from the size of the
+        surf-queue. Modified to allow use of suffixes on size specification.
+
+    ldmd(1):
+        Added transitory upstream LDM database.
+
+    uldbutil(1):
+        Created uldbutil(1) utility to list local upstream LDM processes.
+
+    pqact(1):
+        Improved command-line parsing and usage message: two operands caused
+        default configuration-file to be used, which is a latent bug.
+        Error-messages during command-line parsing are printed to the
+        standard-error stream, which doesn't exist in the LDM context.
+
+        Merged Raytheon's changes from ldm-6.8.1
+
+    pqinsert(1):
+        Added "-i" option to usage-message and improved message.
+
+        Improved exit status.
+
+    Logging:
+        Modified log_start(): it no longer clears accumulated log messages.
+
+        Moved filename and line number to start of log messages.
+
+        Corrected addition of "localx.none" to system logging
+        configuration-file when an entry comprises multiple lines.
+
+    General:
+        Removed some lint reported by Eclipse's C code analysis.
+
+        Merged AWIPS-2 modifications from Raytheon
+
 6.10.1 	2011-10-24 13:11:04-06:00
     Installation:
         Corrected installation helper-script "ensureSyslogEntry": ensured that
