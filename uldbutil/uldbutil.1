@@ -11,16 +11,16 @@ uldbutil -d
 .SH DESCRIPTION
 .PP
 This program access the database of upstream LDM processes. An upstream LDM
-process is a child process of the LDM server that's responsible for feeding
-a remote downstream LDM in response to a request for data from the downsteam
-LDM.
+process is a child process of the local LDM server that's responsible for
+feeding a remote downstream LDM in response to a request for data from the
+downsteam LDM.
 .PP
-In the first form, this utility prints the contents of the upstream LDM database to the standard
-output stream. The format of the output is multiple lines of the following
-fields:
+In the first form, this utility prints the contents of the upstream LDM
+database to the standard
+output stream. The format of the output is multiple lines each containing the
+following fields:
 .RS
-.I
-pid protoVers type host product-class
+.IR "pid protoVers type host fromTime toTime " { prodSpec "[,...]}"
 .RE
 where:
 .RS
@@ -44,9 +44,33 @@ running. This will normally be the fully-qualified hostname of the computer
 unless the IP address can't be resolved into a hostname, in which case the IP
 address will be printed.
 .TP
-.I
-product-class
-The class of products requested by the downstream LDM. 
+.I fromTime
+Earliest creation-time of matching data-products or \fBTS_BEGT\fP for the
+beginning-of-time.
+.TP
+.I toTime
+Latest creation-time of matching data-products or \fBTS_ENDT\fP for the
+end-of-time.
+.TP
+.I prodSpec
+Specification of the products requested by the downstream LDM in the form
+.RS
+.RS
+.RI { feedSpec , " pattern" }
+.RE
+where:
+.RS
+.TP
+.I feedSpec
+The union of feedtypes of matching data-products.
+.TP
+.I pattern
+Extended regular-expression for the product-identifier of matching
+data-products.
+.RE
+.PP
+There will normally be only one product-specfication.
+.RE
 .RE
 .PP
 In the second form, this utility attempts to delete the upstream LDM 
