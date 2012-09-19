@@ -515,7 +515,7 @@ static up6_error_t up6_run(
 
                                     err_log_and_free(ERR_NEW(0, errObj,
                                             "Couldn't flush connection"),
-                                            ERR_FAILURE);
+                                            ERR_NOTICE);
                                 }
 
                                 (void) exitIfDone(0);
