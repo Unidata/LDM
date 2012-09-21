@@ -158,7 +158,8 @@ setulogident(const char *ident)
  *      options         Logging options.  Bitwise or of
  *          LOG_NOTIME      Don't add a timestamp
  *          LOG_LOCALTIME   Use localtime rather than UTC.
- *          LOG_IDENT       Don't add the program name.
+ *          LOG_CONS        Log to the console as a last resort.
+ *          LOG_PID         Add the process-identifier.
  *      facility        Logging facility.  One of LOG_LOCAL1...LOG_LOCAL7.
  *      logfilename     Pathname of the log file:
  *          NULL        Log to syslogd(8).
