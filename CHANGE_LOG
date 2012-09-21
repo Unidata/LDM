@@ -1,3 +1,10 @@
+6.11.0.2 	2012-09-21 14:57:33-06:00
+    Improve HTML documentation
+    
+    Add uldbutil(1) to description of programs.
+    Add use of upstream LDM database to reject a request to behavior
+        description.
+
 6.11.0.1 	2012-09-21 12:54:35-06:00
     Release version with "pqing -s size"
 
