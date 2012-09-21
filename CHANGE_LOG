@@ -37,6 +37,10 @@
 
         Merged Raytheon's changes from ldm-6.8.1
 
+    pqing(1):
+        Made the size of the largest expected data-product a command-line
+        option (-s size).
+
     pqinsert(1):
         Added "-i" option to usage-message and improved message.
 
