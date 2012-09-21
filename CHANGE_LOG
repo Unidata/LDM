@@ -1,3 +1,12 @@
+6.11.0.1 	2012-09-21 12:54:35-06:00
+    Release version with "pqing -s size"
+
+    Document "-s size" option
+
+    Make maximum product size a command-line option
+
+    Demoted "Couldn't flush connection" log message from ERROR to NOTE
+
 6.11.0 	2012-09-18 15:13:55-06:00
     Instructions:
         Improved preinstallation instructions: add modification of Red Hat
