@@ -133,13 +133,24 @@ following:
 	<a href="glindex.html#ALLOW entry">ALLOW entry</a>.
 
     <li><p>If the
-	intersection is empty, then then connection is closed and the
+	intersection is empty, then the connection is closed and the
 	process terminates; otherwise, 
 
     <li><p>If the intersection is not empty but 
-	also not equal the the original request, then the process informs
+	also not equal to the original request, then the process informs
 	the <a href="glindex.html#downstream LDM">downstream LDM</a> about
 	the intersection and continues to listen; otherwise,
+
+    <li><p>If the request overlaps a previous request by the same downstream
+        site that is currently being serviced by an
+        <a href="glindex.html#upstream LDM">upstream LDM</a> process, then 
+        the request is rejected, the connection is closed, and the process
+        terminates (two requests overlap if their
+        <a href="glindex.html#feedtype">feedtype</a>s
+        overlap or if the feedtypes are identical and the
+        <a href="glindex.html#ERE">ERE</a> patterns that match the
+        <a href="glindex.html#identifier">data-product identifier</a>
+        are identical); otherwise,
 
     <li><p>The process acknowledges the request and begins sending matching
 	<a href="glindex.html#data-product">data-product</a>s from the
