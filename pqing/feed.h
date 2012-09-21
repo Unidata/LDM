@@ -23,7 +23,8 @@
 
 /* end feed.c definitions */
 
-extern int open_feed(const char *feedfname, int *const fdp);
+extern int open_feed(const char *feedfname, int *const fdp,
+        unsigned long maxProdSize);
 
 /* pointer to read funct */
 /* extern int (*read_feed)(int fd, char *, size_t, size_t *); */

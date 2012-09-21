@@ -22,7 +22,7 @@ static char version[] =
 #include <errno.h>
 
 #include "ldm.h"
-#include "ulog.h"
+#include "log.h"
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"
@@ -40,6 +40,11 @@ static char version[] =
 #include "atexit.h"
 #endif
 
+/*
+ * The default maximum size of a data-product:
+ */
+#define DEFAULT_MAX_PRODUCT_SIZE 1048576
+
 #if NET
 #define RETRY_DELAY     (10)            /* delay factor between retries */
 #define MAX_RETRIES     (30)
@@ -52,7 +57,7 @@ char *parity = NULL;
 enum { CHK_UNSET, CHK_CHECK, CHK_DONT} chkflag = CHK_UNSET;
 static feedtypet feedtype = NONE; /* deduce from av[0]  */
 static const char *progname = NULL;
-static char *logpath = "";
+static const char *logpath = NULL;
 static char feedfname[PATH_MAX];
 static char myname[HOSTNAMESIZE];
 static const char *pqpath;
@@ -196,47 +201,46 @@ set_sigactions(void)
 
 static void
 usage(
-        char *av0 /*  id string */
+        const char* const av0 /*  id string */
 )
 {
-        (void)fprintf(stderr,
-                "Usage: %s [options] feedname\t\nOptions:\n", av0);
-        (void)fprintf(stderr,
-                "\t-v           Verbose, tell me about each product\n");
-        (void)fprintf(stderr,
-                "\t-r rawfile   Stash 'raw' data in \"rawfile\"\n");
-        (void)fprintf(stderr,
-                "\t-l logfile   Default logs to syslogd\n");
-        (void)fprintf(stderr,
-                "\t-f type      Claim to be feedtype \"type\", one of \"hds\", \"ddplus\", ...\n");
-        (void)fprintf(stderr,
-                "\t-b baud      Set baudrate for tty feed.\n");
-        (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", getQueuePath());
-        (void)fprintf(stderr,
-                "\t-p [even|odd|none]  Set parity for tty feed.\n");
-        (void)fprintf(stderr,
-                "\t-c           Enable checksum or parity check on non tty feed\n");
-        (void)fprintf(stderr,
-                "\t-n           Disable checksum or parity check on tty feed\n");
-        (void)fprintf(stderr,
-                "\t-i           Do not include a PIL-like /p identifier for suitable products\n");
-        (void)fprintf(stderr,
-                "\t-5           Skip leading control string in calculating checksum\n");
-        (void)fprintf(stderr,
-                "\t-N           Do not place NEXRAD products in feedtype NEXRAD\n");
-        (void)fprintf(stderr,
-                "\t             (WMO products only)\n");
+    LOG_ADD1("Usage: %s [options] feedname", av0);
+    LOG_ADD0("where:");
+    LOG_ADD0("    -5            Skip leading control characters when calculating");
+    LOG_ADD0("                  checksum");
+    LOG_ADD0("    -b baud       Set baudrate for tty input to <baud>");
+    LOG_ADD0("    -c            Enable checksum or parity check on non-tty input");
+    LOG_ADD0("    -f type       Assign feedtype <type> to products. One of");
+    LOG_ADD0("                  \"HDS\", \"DDPLUS\", etc.");
+    LOG_ADD0("    -i            Do not include a PIL-like \"/p\" identifier in");
+    LOG_ADD0("                  the product-identifier of suitable products");
+    LOG_ADD0("    -l logfile    Log to <logfile>. \"-\" means standard error.");
+    LOG_ADD0("                  Default uses system logging daemon.");
+    LOG_ADD0("    -N            Do not assign NEXRAD feedtype to NEXRAD products");
+    LOG_ADD0("                  (for WMO products only)");
+    LOG_ADD0("    -n            Disable checksum or parity check on tty input");
+    LOG_ADD0("    -p parity     Set input parity to <parity>. One of \"even\",");
+    LOG_ADD0("                  \"odd\", or \"none\"");
+    LOG_ADD0("    -q queue      Use product-queue <queue>. Default is");
+    LOG_ADD1("                  \"%s\".", getQueuePath());
 #if NET
-        (void)fprintf(stderr,
-                "\t-P port      Get input via TCP connection to host \"feedname\" at \"port\"\n");
-        (void)fprintf(stderr,
-                "\t-T timeout   Idle timeout before TCP reconnect, in seconds\n");
-        (void)fprintf(stderr,
-                "\t             (defaults to %d, 0 disables timeout)\n",
-                        DEFAULT_RESET_SECS);
+    LOG_ADD0("    -P port       Get input via TCP connection to port <port> on");
+    LOG_ADD0("                  host <feedname>");
 #endif
-        exit(1);
+    LOG_ADD0("    -r rawfile    Write raw input data to file <rawfile>");
+    LOG_ADD0("    -s size       Use <size> as the size, in bytes, of the largest");
+    LOG_ADD1("                  expected data-product. Default is %lu.",
+            DEFAULT_MAX_PRODUCT_SIZE);
+#if NET
+    LOG_ADD0("    -T timeout    Reconnect TCP connection after idle for <timeout>");
+    LOG_ADD1("                  seconds. 0 disables timeout. Default is %d.",
+            DEFAULT_RESET_SECS);
+#endif
+    LOG_ADD0("    -v            Log verbosely: report each product");
+    LOG_ADD0("    -x            Log debug messages");
+    LOG_ADD0("    feedname      Use <feedname> as input");
+    log_log(LOG_NOTICE);
+    exit(1);
 }
 
 
@@ -436,7 +440,6 @@ whatami(const char *av0)
 int
 main(int ac, char *av[])
 {
-
         int logfd;
         int width;
         int ready;
@@ -444,120 +447,144 @@ main(int ac, char *av[])
         fd_set readfds;
         fd_set exceptfds;
         struct timeval timeo;
+        const char* const progname = ubasename(av[0]);
+        unsigned logopts = LOG_CONS|LOG_PID;
+        int logmask = LOG_UPTO(LOG_NOTICE);
+        unsigned long maxProductSize = DEFAULT_MAX_PRODUCT_SIZE;
+
+        /*
+         * Setup default logging before anything else.
+         */
+        (void) openulog(progname, logopts, LOG_LDM, logpath);
+        (void) setulogmask(logmask);
 
         feedtype = whatami(av[0]);
 
         {
-        extern int optind;
-        extern int opterr;
-        extern char *optarg;
-        int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
+            extern int optind;
+            extern int opterr;
+            extern char *optarg;
+            int ch;
 
-        opterr = 1;
-        usePil = 1;
-        useNex = 1;
-        pqpath = getQueuePath();
+            opterr = 0; /* stops getopt() from printing to stderr */
+            usePil = 1;
+            useNex = 1;
+            pqpath = getQueuePath();
 
-        while ((ch = getopt(ac, av, "vxcni5Nl:b:p:P:T:q:r:f:")) != EOF)
-                switch (ch) {
-                case 'v':
-                        logmask |= LOG_MASK(LOG_INFO);
-                        break;
-                case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG);
-                        break;
-                case 'c':
-                        chkflag = CHK_CHECK;
-                        break;
-                case 'n':
-                        chkflag = CHK_DONT;
-                        break;
-                case 'i':
-                        usePil = 0;
-                        break;
-                case 'N':
-                        useNex = 0;
-                        break;
-                case '5':
-                        skipLeadingCtlString = 0;
-                        break;
-                case 'l':
-                        if(optarg[0] == '-' && optarg[1] != 0)
-                        {
-                                fprintf(stderr, "logfile \"%s\" ??\n",
+            while ((ch = getopt(ac, av, ":vxcni5Nl:b:p:P:T:q:r:f:s:")) != EOF)
+                    switch (ch) {
+                    case 'v':
+                            logmask |= LOG_MASK(LOG_INFO);
+                            (void) setulogmask(logmask);
+                            break;
+                    case 'x':
+                            logmask |= LOG_MASK(LOG_DEBUG);
+                            (void) setulogmask(logmask);
+                            break;
+                    case 'c':
+                            chkflag = CHK_CHECK;
+                            break;
+                    case 'n':
+                            chkflag = CHK_DONT;
+                            break;
+                    case 'i':
+                            usePil = 0;
+                            break;
+                    case 'N':
+                            useNex = 0;
+                            break;
+                    case '5':
+                            skipLeadingCtlString = 0;
+                            break;
+                    case 'l': {
+                            logpath = optarg;
+                            if (strcmp(logpath, "-") == 0) {
+                                logopts = LOG_NOTIME;
+                            }
+                            else {
+                                logopts = LOG_CONS | LOG_PID;
+                                (void) fclose(stderr);
+                            }
+                            logfd = openulog(progname, logopts, LOG_LDM, logpath);
+                            break;
+                    }
+                    case 'b':
+                            baud = optarg;
+                            break;
+                    case 'p':
+                            parity = optarg;
+                            break;
+    #if NET
+                    case 'P':
+                            *((int *)&server_port) = atoi(optarg); /* cast away const */
+                            if(server_port <= 0 || server_port > 65536)
+                            {
+                                    LOG_ADD1("Invalid server port: \"%s\"", optarg);
+                                    log_log(LOG_ERR);
+                                    usage(progname);
+                            }
+                            break;
+                    case 's': {
+                            unsigned long size;
+
+                            if (sscanf(optarg, "%lu", &size) != 1 || 1 > size) {
+                                LOG_ADD1("Invalid maximum data-product size: \"%s\"",
                                         optarg);
-                                usage(av[0]);
-                        }
-                        /* else */
-                        logpath = optarg;
-                        break;
-                case 'b':
-                        baud = optarg;
-                        break;
-                case 'p':
-                        parity = optarg;
-                        break;
-#if NET
-                case 'P':
-                        *((int *)&server_port) = atoi(optarg); /* cast away const */
-                        if(server_port <= 0 || server_port > 65536)
-                        {
-                                fprintf(stderr, "invalid server_port %s\n",
-                                        optarg);
-                                usage(av[0]);
-                        }
-                        break;
-                case 'T':
-                        reset_secs = atoi(optarg);
-                        if(reset_secs < 0)
-                        {
-                                fprintf(stderr, "invalid timeout %s\n",
-                                        optarg);
-                                usage(av[0]);
-                        }
-                        break;
-#endif /* NET */
-                case 'q':
-                        pqpath = optarg;
-                        break;
-                case 'r':
-                        rawfname = optarg;
-                        break;
-                case 'f':
-                        {
-                                feedtypet type;
-                                type = atofeedtypet(optarg);
-                                if(type != NONE)
-                                {
-                                        feedtype = type;
-                                        if(!parity && !baud)
-                                                setFeedDefaults(type);
-                                }
-                        }
-                        break;
-                case '?':
-                        usage(av[0]);
-                        break;
-                }
+                                log_log(LOG_ERR);
+                                usage(progname);
+                            }
 
-        /* last arg, feedfname, is required */
-        if(ac - optind <= 0)
-                usage(av[0]);
-        strncat(feedfname,av[optind], sizeof(feedfname) - 6 );
+                            maxProductSize = size;
+                            break;
+                    }
+                    case 'T':
+                            reset_secs = atoi(optarg);
+                            if(reset_secs < 0)
+                            {
+                                    LOG_ADD1("Invalid timeout: \"%s\"", optarg);
+                                    usage(progname);
+                            }
+                            break;
+    #endif /* NET */
+                    case 'q':
+                            pqpath = optarg;
+                            break;
+                    case 'r':
+                            rawfname = optarg;
+                            break;
+                    case 'f':
+                            {
+                                    feedtypet type;
+                                    type = atofeedtypet(optarg);
+                                    if(type != NONE)
+                                    {
+                                            feedtype = type;
+                                            if(!parity && !baud)
+                                                    setFeedDefaults(type);
+                                    }
+                            }
+                            break;
+                    case '?': {
+                            LOG_ADD1("Unknown option: \"%c\"", optopt);
+                            usage(progname);
+                            break;
+                    }
+                    case ':':
+                    /*FALLTHROUGH*/
+                    default:
+                            LOG_ADD1("Missing argument for option: \"%c\"", optopt);
+                            usage(progname);
+                            break;
+                    }
 
-        (void) setulogmask(logmask);
+            /* last arg, feedfname, is required */
+            if(ac - optind != 1) {
+                    LOG_ADD1("Wrong number of operands: %d", ac - optind);
+                    usage(progname);
+            }
+            strncat(feedfname,av[optind], sizeof(feedfname) - 6 );
         }
 
-
-        /*
-         * initialize logger
-         */
-        if(logpath == NULL || !(*logpath == '-' && logpath[1] == 0))
-                (void) fclose(stderr);
-        logfd = openulog(ubasename(av[0]),
-                (LOG_CONS|LOG_PID), LOG_LDM, logpath);
         unotice("Starting Up");
         udebug(version);
 
@@ -610,7 +637,7 @@ main(int ac, char *av[])
         if(!(*feedfname == '-' && feedfname[1] == 0) && logfd != 0)
                 (void) close(0);
 
-        if(open_feed(feedfname, &ifd) != ENOERR)
+        if(open_feed(feedfname, &ifd, maxProductSize) != ENOERR)
                 return 1;
 
         if(usePil == 1)
@@ -770,7 +797,7 @@ if (INPUT_IS_SOCKET)
                         unotice("Trying to re-open connection on port %d", 
                                 server_port);
                         ++retries;
-                        if(open_feed(feedfname, &ifd) != ENOERR)
+                        if(open_feed(feedfname, &ifd, maxProductSize) != ENOERR)
                         {
                                 unotice ("sleeping %d seconds before retry %d",
                                          retries * RETRY_DELAY, retries+1);

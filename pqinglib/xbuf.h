@@ -49,7 +49,8 @@ extern void xbuf_rubout(xbuf *buf);
 /* these routines more application specific, fxbuf.c */
 extern void setTheScanner(int (*scanner)(xbuf *buf));
 extern int
-initTheXbuf(int (*readfunct)(int fd, char *buf, size_t nbytes, size_t *ngotp));
+initTheXbuf(int (*readfunct)(int fd, char *buf, size_t nbytes, size_t *ngotp),
+        unsigned long maxProdSize);
 #include <errno.h>
 #ifndef ENODATA
 #define ENODATA (-1)

@@ -165,12 +165,16 @@ which(const char *path)
 
 
 /*
- *    Given a feedname (path in the file system),
+ * Opens the input data-feed. Given a feedname (path in the file system),
  * determine what type of input feed it is.  Attempt to open
  * the feed. Hook up the appropriate read_,  _stats, and (optional) _close
  * function pointers.  Return errno on failure else set *fdp to the descriptor
  * and return 0.
  *
+ * @param feedfname     [in] The name of the input data-feed
+ * @param fdp           [out] The file-descriptor of the input data-feed
+ * @param maxProdSize   [in] The size, in bytes, of the largest expected
+ *                      data-product
  * Returns (if INPUT_IS_SOCKET):
  *   ENOENT        gethostbyname() failure.
  *   EAFNOSUPPORT  AF_INET address-family not supported.
@@ -200,7 +204,7 @@ which(const char *path)
  *   ENETDOWN      The local interface used to reach the destination is down.
  */
 int
-open_feed(const char *feedfname, int *const fdp)
+open_feed(const char *feedfname, int *const fdp, const unsigned long maxProdSize)
 {
         extern char *rawfname; /* declared in main() module */
         int status = ENOERR;
@@ -212,7 +216,7 @@ open_feed(const char *feedfname, int *const fdp)
                                 (unsigned short) server_port, fdp);
                 if(status != ENOERR)
                         return status;
-                if((status = initTheXbuf(read_file)) != ENOERR)
+                if((status = initTheXbuf(read_file, maxProdSize)) != ENOERR)
                         return status;
                 feed_stats = file_stats;
                 feed_close = file_close;
@@ -224,7 +228,7 @@ open_feed(const char *feedfname, int *const fdp)
         case TTY :
                 if((status = tty_open(feedfname, fdp)) != ENOERR)
                         return status;
-                if((status = initTheXbuf(read_tty)) != ENOERR)
+                if((status = initTheXbuf(read_tty, maxProdSize)) != ENOERR)
                         return status;
                 feed_stats = tty_stats;
                 feed_close = tty_close;
@@ -243,7 +247,7 @@ open_feed(const char *feedfname, int *const fdp)
                         if((status = file_open(feedfname, fdp)) != ENOERR)
                                 return status;
                 }
-                if((status = initTheXbuf(read_file)) != ENOERR)
+                if((status = initTheXbuf(read_file, maxProdSize)) != ENOERR)
                         return status;
                 feed_stats = file_stats;
                 feed_close = file_close;
