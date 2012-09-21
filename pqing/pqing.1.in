@@ -80,6 +80,10 @@ ids,\fR etc. Useful when sending data from a file. If the feedtype is
 AFOS, then the input is parsed as AFOS products, otherwise, WMO format
 is assumed.
 .TP
+.BI \-s " size"
+The size, in bytes, of the largest expected data-product. Unidentified
+data larger than this is discarded. The default is 1,048,576.
+.TP
 .BI \-b " baud"
 Set the baud rate of the feed. This makes no difference unless data is
 being read from a \fBtty\fP.
