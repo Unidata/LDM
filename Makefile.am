@@ -239,7 +239,9 @@ timestamp:
 dist:		configure
 
 commit-check:	Makefile
-	if git status -u >/dev/null; then \
+	if git status -u | fgrep 'nothing to commit'; then \
+	    : true; \
+	else \
 	    echo 1>&2 'Package needs "git commit -u"'; \
 	    exit 1; \
 	fi
