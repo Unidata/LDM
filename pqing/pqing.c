@@ -1,10 +1,8 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2012, University Corporation for Atmospheric Research
+ *   All Rights Reserved.
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: pqing.c,v 1.78.10.2.2.3 2007/02/12 20:38:54 steve Exp $ */
-static char version[] =
-"$Revision: 1.78.10.2.2.3 $ built "__DATE__" "__TIME__;
 
 #include <config.h>
 #include <stdio.h>
@@ -586,7 +584,7 @@ main(int ac, char *av[])
         }
 
         unotice("Starting Up");
-        udebug(version);
+        udebug(PACKAGE_VERSION);
 
         if(logpath == NULL || !(*logpath == '-' && logpath[1] == 0))
         {
