@@ -1,20 +1,4 @@
-6.11.0.2 	2012-09-21 14:57:33-06:00
-    Improve HTML documentation
-    
-    Add uldbutil(1) to description of programs.
-    Add use of upstream LDM database to reject a request to behavior
-        description.
-
-6.11.0.1 	2012-09-21 12:54:35-06:00
-    Release version with "pqing -s size"
-
-    Document "-s size" option
-
-    Make maximum product size a command-line option
-
-    Demoted "Couldn't flush connection" log message from ERROR to NOTE
-
-6.11.0 	2012-09-18 15:13:55-06:00
+6.11.0 	2012-09-24 16:13 -06:00
     Instructions:
         Improved preinstallation instructions: add modification of Red Hat
         net.ipv4.conf.default.rp_filter kernel parameter to preinstallation
@@ -69,6 +53,8 @@
 
         Corrected addition of "localx.none" to system logging
         configuration-file when an entry comprises multiple lines.
+
+        Demoted "Couldn't flush connection" log message from ERROR to NOTE.
 
     General:
         Removed some lint reported by Eclipse's C code analysis.
