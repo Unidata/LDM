@@ -270,9 +270,6 @@ release:	releaseCheck
 	mv configure.ac.tmp configure.ac
 	$(MAKE) timestamp dist commitAndTag
 
-ensureRelease:
-	-@$(MAKE) release
-
 ftp-actual:		dist $(FTPDIR)
 	cp $(distArchive) $(FTPDIR)
 	chmod u+rw,g+rw,o=r $(FTPDIR)/$(distArchive)
@@ -291,7 +288,7 @@ download_update:
 	    mv -f toc.xml.new /web/content/downloads/$(PACKAGE)/toc.xml; \
 	fi
 
-ftp:			ensureRelease
+ftp:			release
 	$(MAKE) ftp-actual download_update
 
 beta:
@@ -326,7 +323,6 @@ endif
     commit-check \
     download_update \
     ensure-ldmhome-links \
-    ensureRelease \
     ensure-rpc-entry \
     ensure-services-entry \
     ensure-syslog-entry \
