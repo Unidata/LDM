@@ -213,6 +213,8 @@ WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)/noaaport
 
 commit-check:	Makefile
 	if git status -u >/dev/null; then \
+	    : true; \
+	else \
 	    echo 1>&2 'Package needs "git commit -u"'; \
 	    exit 1; \
 	fi
