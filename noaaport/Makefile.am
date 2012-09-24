@@ -212,7 +212,7 @@ if MAINTAINER
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)/noaaport
 
 commit-check:	Makefile
-	if git status -u | fgrep 'nothing to commit'; then \
+	if git status -u | fgrep -Fq 'nothing to commit'; then \
 	    : true; \
 	else \
 	    echo 1>&2 'Package needs "git commit -u"'; \
