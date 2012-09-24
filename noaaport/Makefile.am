@@ -212,8 +212,8 @@ if MAINTAINER
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)/noaaport
 
 commit-check:	Makefile
-	if git status -a >/dev/null; then \
-	    echo 1>&2 'Package needs "git commit -a"'; \
+	if git status -u >/dev/null; then \
+	    echo 1>&2 'Package needs "git commit -u"'; \
 	    exit 1; \
 	fi
 

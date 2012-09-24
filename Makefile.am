@@ -239,20 +239,20 @@ timestamp:
 dist:		configure
 
 commit-check:	Makefile
-	if git status -a >/dev/null; then \
-	    echo 1>&2 'Package needs "git commit -a"'; \
+	if git status -u >/dev/null; then \
+	    echo 1>&2 'Package needs "git commit -u"'; \
 	    exit 1; \
 	fi
 
 commitAndTag:
-	git commit -a -m "v$(VERSION)"
+	git commit -u -m "v$(VERSION)"
 	git tag -f "v$(VERSION)"
 
 tag:
 	git tag -f v$(VERSION)
 
 release:	releaseCheck
-	-git commit -a
+	-git commit -u
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
 	git log --pretty=full `git tag -l v\* | \
 	    sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | \
