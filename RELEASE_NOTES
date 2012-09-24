@@ -1,0 +1,25 @@
+Hi,
+
+The main new feature of this minor release is the addition of a transitory
+database of information on local upstream LDM processes. The database is
+transitory because it only exists while an LDM server is running. The
+information it contains on the upstream LDM processes is documented in the
+manual-page for the associated new utility, uldbutil(1) (execute the command
+"man uldbutil").
+
+No similar database exists for downstream LDM processes because there is a
+one-to-one correspondence between such processes and the REQUEST entries in the
+LDM configuration-file, etc/ldmd.conf. If you want to know about locally-
+executing upstream LDM processes, then just grep(1) the LDM configuration-file
+(e.g., "grep -i ^request $HOME/etc/ldmd.conf").
+
+The change-history of this package can be found in the file CHANGE_LOG in the
+top-level source-directory.
+
+The home-page for this package is <http://www.unidata.ucar.edu/software/ldm>.
+
+This package is on GitHub at <https://github.com/Unidata/LDM>.
+
+Regards,
+Steve Emmerson
+LDM Developer
