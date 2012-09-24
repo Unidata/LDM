@@ -522,6 +522,15 @@ main(int ac, char *av[])
                                     usage(progname);
                             }
                             break;
+                    case 'T':
+                            reset_secs = atoi(optarg);
+                            if(reset_secs < 0)
+                            {
+                                    LOG_ADD1("Invalid timeout: \"%s\"", optarg);
+                                    usage(progname);
+                            }
+                            break;
+    #endif /* NET */
                     case 's': {
                             unsigned long size;
 
@@ -535,15 +544,6 @@ main(int ac, char *av[])
                             maxProductSize = size;
                             break;
                     }
-                    case 'T':
-                            reset_secs = atoi(optarg);
-                            if(reset_secs < 0)
-                            {
-                                    LOG_ADD1("Invalid timeout: \"%s\"", optarg);
-                                    usage(progname);
-                            }
-                            break;
-    #endif /* NET */
                     case 'q':
                             pqpath = optarg;
                             break;
