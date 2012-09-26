@@ -453,7 +453,7 @@ main(int ac, char *av[])
         /*
          * Setup default logging before anything else.
          */
-        (void) openulog(progname, logopts, LOG_LDM, logpath);
+        logfd = openulog(progname, logopts, LOG_LDM, logpath);
         (void) setulogmask(logmask);
 
         feedtype = whatami(av[0]);
