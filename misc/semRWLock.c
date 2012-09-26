@@ -111,7 +111,7 @@ static srwl_Status deleteSemSet(
     if (semctl(semId, 0, IPC_RMID) == 0)
         return RWL_SUCCESS;
 
-    LOG_SERROR0("Couldn't delete semaphore set");
+    LOG_SERROR1("Couldn't delete semaphore set: semId=%d", semId);
     return RWL_SYSTEM;
 }
 
@@ -427,7 +427,7 @@ srwl_Status srwl_writeLock(
         else {
             if (semop(lock->semId, writeLockOps,
                     sizeof(writeLockOps) / sizeof(writeLockOps[0])) == -1) {
-                LOG_ADD1("Couldn't lock for writing: semId=%d", lock->semId);
+                LOG_SERROR1("Couldn't lock for writing: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -472,12 +472,12 @@ srwl_Status srwl_readLock(
              */
             if (semop(lock->semId, readLockOps,
                     sizeof(readLockOps) / sizeof(readLockOps[0])) == -1) {
-                LOG_ADD1("Couldn't lock for reading: semId=%d", lock->semId);
+                LOG_SERROR1("Couldn't lock for reading: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else if (semop(lock->semId, shareOps,
                     sizeof(shareOps) / sizeof(shareOps[0])) == -1) {
-                LOG_ADD1("Couldn't share read-lock: semId=%d", lock->semId);
+                LOG_SERROR1("Couldn't share read-lock: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -511,7 +511,7 @@ srwl_Status srwl_unlock(
         else if (1 == lock->numWriteLocks) {
             if (semop(lock->semId, writeUnlockOps,
                     sizeof(writeUnlockOps) / sizeof(writeUnlockOps[0])) == -1) {
-                LOG_ADD1("Couldn't unlock write-lock: semId=%d", lock->semId);
+                LOG_SERROR1("Couldn't unlock write-lock: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -524,7 +524,7 @@ srwl_Status srwl_unlock(
         else if (1 == lock->numReadLocks) {
             if (semop(lock->semId, readUnlockOps,
                     sizeof(readUnlockOps) / sizeof(readUnlockOps[0])) == -1) {
-                LOG_ADD1("Couldn't unlock read-lock: semId=%d", lock->semId);
+                LOG_SERROR1("Couldn't unlock read-lock: semId=%d", lock->semId);
                 status = RWL_SYSTEM;
             }
             else {

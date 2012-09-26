@@ -646,7 +646,7 @@ static uldb_Status seg_clone(
     Segment* const copy = (Segment*) malloc(nbytes);
 
     if (NULL == copy) {
-        LOG_ADD1("Couldn't allocate %lu-byte clone-buffer", nbytes);
+        LOG_SERROR1("Couldn't allocate %lu-byte clone-buffer", nbytes);
         status = ULDB_SYSTEM;
     }
     else {
@@ -782,7 +782,7 @@ static uldb_Status sm_attach(
     int status = sm_setShmId(sm);
 
     if (status) {
-        LOG_SERROR0("Couldn't get shared-memory segment");
+        LOG_ADD0("Couldn't get shared-memory segment");
     }
     else {
         /*
@@ -821,8 +821,8 @@ static uldb_Status sm_detach(
 
     if (NULL != sm->segment) {
         if (shmdt(sm->segment)) {
-            LOG_SERROR1("Couldn't detach shared-memory segment at address %p",
-                    sm->segment);
+            LOG_SERROR2("Couldn't detach shared-memory segment %d at address %p",
+                    sm->shmId, sm->segment);
 
             status = ULDB_SYSTEM;
         }
