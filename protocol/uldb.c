@@ -230,17 +230,12 @@ static uldb_Status eps_vet(
 {
     const feedtypet feedtype = prodSpec->feedtype;
     const char* const pattern = prodSpec->pattern;
-    char entryFeedtype[129];
-    char ldmFeedtype[129];
 
     if (feedtype == NONE)
         return ULDB_SUCCESS;
 
     if (feedtype == entryProdSpec->feedtype) {
         if (strcmp(pattern, entryProdSpec->pattern) == 0) {
-            (void) sprint_feedtypet(ldmFeedtype, sizeof(ldmFeedtype), feedtype);
-            LOG_ADD2("Duplicate pattern \"%s\" for feedtype %s", pattern,
-                    ldmFeedtype);
             return ULDB_DISALLOWED;
         }
 
@@ -248,11 +243,6 @@ static uldb_Status eps_vet(
     }
 
     if (feedtype & entryProdSpec->feedtype) {
-        (void) sprint_feedtypet(ldmFeedtype, sizeof(ldmFeedtype), feedtype);
-        (void) sprint_feedtypet(entryFeedtype, sizeof(entryFeedtype),
-                entryProdSpec->feedtype);
-        LOG_ADD2("Overlapping feedtypes: requested=%s, extant=%s", ldmFeedtype,
-                entryFeedtype);
         return ULDB_DISALLOWED;
     }
 
@@ -821,7 +811,8 @@ static uldb_Status sm_detach(
 
     if (NULL != sm->segment) {
         if (shmdt(sm->segment)) {
-            LOG_SERROR2("Couldn't detach shared-memory segment %d at address %p",
+            LOG_SERROR2(
+                    "Couldn't detach shared-memory segment %d at address %p",
                     sm->shmId, sm->segment);
 
             status = ULDB_SYSTEM;
@@ -1171,15 +1162,16 @@ static uldb_Status sm_addUpstreamLdm(
 /**
  * Vets an upstream LDM.
  *
- * @param sm            [in/out] Pointer to shared-memory structure
- * @param pid           [in] PID of the upstream LDM process
- * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
- * @param isNotifier    [in] Type of the upstream LDM process
- * @param sockAddr      [in] Socket Internet address of the downstream LDM
- * @param prodClass     [in] The data-request by the downstream LDM
+ * @param sm                [in/out] Pointer to shared-memory structure
+ * @param pid               [in] PID of the upstream LDM process
+ * @param protoVers         [in] Protocol version number (e.g., 5 or 6)
+ * @param isNotifier        [in] Type of the upstream LDM process
+ * @param sockAddr          [in] Socket Internet address of the downstream LDM
+ * @param prodClass         [in] The data-request by the downstream LDM
  * @retval ULDB_SUCCESS     Success
  * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
  * @retval ULDB_DISALLOWED  Entry is disallowed. log_*() called.
+ * @retval ULDB_SYSTEM      System error. log_*() called.
  */
 static uldb_Status sm_vetUpstreamLdm(
         SharedMemory* const sm,
@@ -1201,9 +1193,39 @@ static uldb_Status sm_vetUpstreamLdm(
             break;
         }
 
-        if (areSocketAddressesEqual(sockAddr, &entry->sockAddr)) {
+        if (areSocketAddressesEqual(sockAddr, entry_getSockAddr(entry))) {
             if (status = entry_vet(entry, prodClass)) {
-                LOG_ADD0("Upstream LDM is disallowed");
+                prod_class* entryProdClass;
+                const char* hostString = inet_ntoa(sockAddr->sin_addr);
+
+                if (status = entry_getProdClass(entry, &entryProdClass)) {
+                    LOG_ADD1(
+                            "Couldn't get product-class of existing entry for host %s",
+                            hostString);
+                }
+                else {
+                    char requestBuf[1024];
+                    char entryBuf[1024];
+                    static const char* failureMsg = "<<couldn't print product-class>>>";
+
+                    if (s_prod_class(requestBuf, sizeof(requestBuf),
+                            prodClass) == NULL) {
+                        (void)strcpy(requestBuf, failureMsg);
+                    }
+                    if (s_prod_class(entryBuf, sizeof(entryBuf),
+                            entryProdClass) == NULL) {
+                        (void)strcpy(entryBuf, failureMsg);
+                    }
+
+                    requestBuf[sizeof(requestBuf)-1] = entryBuf[sizeof(entryBuf)-1] = 0;
+
+                    LOG_ADD3(
+                            "Request from %s overlaps existing service: "
+                            "request=\"%s\", service=\"%s\"",
+                            hostString, requestBuf, entryBuf);
+                    free_prod_class(entryProdClass);
+                }
+
                 break;
             }
         }
@@ -1238,12 +1260,12 @@ static uldb_Status sm_add(
     int status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier, sockAddr,
             prodClass);
 
-    if (status) {
-        LOG_ADD1("Disallowed request from %s", inet_ntoa(sockAddr->sin_addr));
-    }
-    else if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier,
-            sockAddr, prodClass)) {
-        LOG_ADD1("Couldn't add request from %s", inet_ntoa(sockAddr->sin_addr));
+    if (ULDB_SUCCESS == status) {
+        if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier, sockAddr,
+                prodClass)) {
+            LOG_ADD1("Couldn't add request from %s",
+                    inet_ntoa(sockAddr->sin_addr));
+        }
     }
 
     return status;
@@ -1766,10 +1788,8 @@ static uldb_Status uldb_add(
                 LOG_ADD0("Couldn't lock database");
             }
             else {
-                if (status = sm_add(&database.sharedMemory, pid, protoVers,
-                        isNotifier, sockAddr, prodClass)) {
-                    LOG_ADD0("Couldn't add entry to database");
-                }
+                status = sm_add(&database.sharedMemory, pid, protoVers,
+                        isNotifier, sockAddr, prodClass);
 
                 if (db_unlock(&database)) {
                     LOG_ADD0("Couldn't unlock database");
