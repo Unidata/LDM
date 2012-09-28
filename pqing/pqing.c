@@ -202,41 +202,41 @@ usage(
         const char* const av0 /*  id string */
 )
 {
-    LOG_ADD1("Usage: %s [options] feedname", av0);
-    LOG_ADD0("where:");
-    LOG_ADD0("    -5            Skip leading control characters when calculating");
-    LOG_ADD0("                  checksum");
-    LOG_ADD0("    -b baud       Set baudrate for tty input to <baud>");
-    LOG_ADD0("    -c            Enable checksum or parity check on non-tty input");
-    LOG_ADD0("    -f type       Assign feedtype <type> to products. One of");
-    LOG_ADD0("                  \"HDS\", \"DDPLUS\", etc.");
-    LOG_ADD0("    -i            Do not include a PIL-like \"/p\" identifier in");
-    LOG_ADD0("                  the product-identifier of suitable products");
-    LOG_ADD0("    -l logfile    Log to <logfile>. \"-\" means standard error.");
-    LOG_ADD0("                  Default uses system logging daemon.");
-    LOG_ADD0("    -N            Do not assign NEXRAD feedtype to NEXRAD products");
-    LOG_ADD0("                  (for WMO products only)");
-    LOG_ADD0("    -n            Disable checksum or parity check on tty input");
-    LOG_ADD0("    -p parity     Set input parity to <parity>. One of \"even\",");
-    LOG_ADD0("                  \"odd\", or \"none\"");
-    LOG_ADD0("    -q queue      Use product-queue <queue>. Default is");
-    LOG_ADD1("                  \"%s\".", getQueuePath());
+    log_add("Usage: %s [options] feedname", av0);
+    log_add("where:");
+    log_add("    -5            Skip leading control characters when calculating");
+    log_add("                  checksum");
+    log_add("    -b baud       Set baudrate for tty input to <baud>");
+    log_add("    -c            Enable checksum or parity check on non-tty input");
+    log_add("    -f type       Assign feedtype <type> to products. One of");
+    log_add("                  \"HDS\", \"DDPLUS\", etc.");
+    log_add("    -i            Do not include a PIL-like \"/p\" identifier in");
+    log_add("                  the product-identifier of suitable products");
+    log_add("    -l logfile    Log to <logfile>. \"-\" means standard error.");
+    log_add("                  Default uses system logging daemon.");
+    log_add("    -N            Do not assign NEXRAD feedtype to NEXRAD products");
+    log_add("                  (for WMO products only)");
+    log_add("    -n            Disable checksum or parity check on tty input");
+    log_add("    -p parity     Set input parity to <parity>. One of \"even\",");
+    log_add("                  \"odd\", or \"none\"");
+    log_add("    -q queue      Use product-queue <queue>. Default is");
+    log_add("                  \"%s\".", getQueuePath());
 #if NET
-    LOG_ADD0("    -P port       Get input via TCP connection to port <port> on");
-    LOG_ADD0("                  host <feedname>");
+    log_add("    -P port       Get input via TCP connection to port <port> on");
+    log_add("                  host <feedname>");
 #endif
-    LOG_ADD0("    -r rawfile    Write raw input data to file <rawfile>");
-    LOG_ADD0("    -s size       Use <size> as the size, in bytes, of the largest");
-    LOG_ADD1("                  expected data-product. Default is %lu.",
+    log_add("    -r rawfile    Write raw input data to file <rawfile>");
+    log_add("    -s size       Use <size> as the size, in bytes, of the largest");
+    log_add("                  expected data-product. Default is %lu.",
             DEFAULT_MAX_PRODUCT_SIZE);
 #if NET
-    LOG_ADD0("    -T timeout    Reconnect TCP connection after idle for <timeout>");
-    LOG_ADD1("                  seconds. 0 disables timeout. Default is %d.",
+    log_add("    -T timeout    Reconnect TCP connection after idle for <timeout>");
+    log_add("                  seconds. 0 disables timeout. Default is %d.",
             DEFAULT_RESET_SECS);
 #endif
-    LOG_ADD0("    -v            Log verbosely: report each product");
-    LOG_ADD0("    -x            Log debug messages");
-    LOG_ADD0("    feedname      Use <feedname> as input");
+    log_add("    -v            Log verbosely: report each product");
+    log_add("    -x            Log debug messages");
+    log_add("    feedname      Use <feedname> as input");
     log_log(LOG_NOTICE);
     exit(1);
 }

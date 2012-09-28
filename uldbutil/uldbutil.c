@@ -26,9 +26,9 @@
 static void printUsage(
         const char* progname)
 {
-    LOG_ADD0("Usages:");
-    LOG_ADD1("  Print Database:     %s", progname);
-    LOG_ADD1("  Delete Database:    %s -d", progname);
+    log_add("Usages:");
+    log_add("  Print Database:     %s", progname);
+    log_add("  Delete Database:    %s -d", progname);
     log_log(LOG_ERR);
 }
 
