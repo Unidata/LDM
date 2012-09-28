@@ -222,7 +222,7 @@ static size_t eps_sizeof(
  * @retval ULDB_SUCCESS     The product-specification is valid and may be
  *                          accepted
  * @retval ULDB_DISALLOWED  The product-specification conflicts with the
- *                          existing specification. log_*() called.
+ *                          existing specification
  */
 static uldb_Status eps_vet(
         const EntryProdSpec* const entryProdSpec,
@@ -383,7 +383,7 @@ static size_t entry_getSizeofEntry(
  * @param prodClass     [in] The data-request by the downstream LDM
  * @param entry         [in] Pointer to a potentially conflicting entry
  * @retval ULDB_SUCCESS     The data request is allowed
- * @retval ULDB_DISALLOWED  The data request is disallowed. log_*() called.
+ * @retval ULDB_DISALLOWED  The data request is disallowed
  */
 static entry_vet(
         const uldb_Entry* const entry,
