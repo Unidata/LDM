@@ -127,9 +127,12 @@ static srwl_Status createLock(
         int* const semId /**< [out] pointer to the semaphore identifier */)
 {
     srwl_Status status;
+    int id;
 
     (void) deleteSemSet(semget(key, 0, read_write));
-    int id = semget(key, SI_NUM_SEMS, IPC_CREAT | IPC_EXCL | read_write);
+    log_clear();
+
+    id = semget(key, SI_NUM_SEMS, IPC_CREAT | IPC_EXCL | read_write);
 
     if (-1 == id) {
         LOG_SERROR0("Couldn't create semaphore set");
