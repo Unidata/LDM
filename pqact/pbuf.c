@@ -1,10 +1,7 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2012, University Corporation for Atmospheric Research
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: pbuf.c,v 1.21.16.2.2.8 2009/05/21 20:30:44 steve Exp $ */
-
-/* #define _POSIX_SOURCE */
 
 #include <config.h>
 #include "pbuf.h"
@@ -20,45 +17,6 @@
 #ifndef HAVE_MEMMOVE
     /* define memmove in terms of bcopy - recividist */
     #define memmove(d1, d2, n) bcopy((d2), (d1), (n))
-#endif
-
-#define INSTRUMENT
-
-#ifdef INSTRUMENT
-#include <sys/time.h>
-
-/*
- * take the difference between two timevals
- *
- * N.B. Meaningful only if "afta" is later than "b4",
- * negative differences map to 0.0 
- */
-static struct timeval 
-diff_timeval(struct timeval *afta, struct timeval *b4)
-{
-        struct timeval diff;
-
-        diff.tv_sec = afta->tv_sec -  b4->tv_sec;
-        diff.tv_usec = afta->tv_usec -  b4->tv_usec;
-
-        if(diff.tv_usec < 0)
-        {
-                if(diff.tv_sec > 0)
-                {
-                        /* borrow */
-                        diff.tv_sec--;
-                        diff.tv_usec += 1000000;
-                }
-                else
-                {
-                        /* truncate to zero */
-                        diff.tv_sec = 0;
-                        diff.tv_usec = 0;
-                }
-        }
-
-        return diff;
-}
 #endif
 
 void
