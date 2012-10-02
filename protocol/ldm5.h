@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
+#ifndef CONFIG_H
 #include <config.h>  /* for LDM_PORT & LDM_PROG, at least */
+#endif
 #include <sys/time.h> /* timeval */
 #include <sys/types.h>
 #include <regex.h>

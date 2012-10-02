@@ -16,7 +16,6 @@
 #ifndef SIG_PF
 #define SIG_PF void(*)(int)
 #endif
-#include <config.h>
 
 void
 ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp)

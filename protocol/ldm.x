@@ -10,10 +10,6 @@
  * relationship.  You'll just have to get your head around this concept.
  */
 
-#if defined(RPC_HDR) || defined(RPC_SVC)
-%#include <config.h>
-#endif
-
 #ifdef RPC_HDR
 %#include <signal.h>     /* sig_atomic_t */
 %#include <stdlib.h>     /* at least malloc() */
@@ -326,7 +322,7 @@ const HOSTNAMESIZE = 64;
 %
 %/*
 % * The maximum length of a host name is 255 bytes
-% * according to the Single UNIX® Specification, Version 2
+% * according to the Single UNIXï¿½ Specification, Version 2
 % * <http://www.opengroup.org/onlinepubs/7908799/xns/gethostname.html>.  On a
 % * SunOS 5.8 system, MAXHOSTNAMELEN is defined in /usr/include/netdb.h; hence,
 % * the definition here is conditioned.

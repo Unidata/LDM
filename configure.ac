@@ -11,7 +11,8 @@ AC_CONFIG_HEADERS([config.h])
 
 #UD_CPPFLAGS
 #AC_DEFINE([_POSIX_C_SOURCE], [1], [Level of POSIX compliance])
-#AC_DEFINE([_XOPEN_SOURCE], [500], [Level of POSIX compliance])
+AC_DEFINE([CONFIG_H], [1], [Header-file lockout])
+AC_DEFINE([_XOPEN_SOURCE], [600], [Level of POSIX compliance])
 #AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
 AC_USE_SYSTEM_EXTENSIONS
 

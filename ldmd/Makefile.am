@@ -55,7 +55,6 @@ if MAINTAINER
 parser.c:	parser.y
 	status=1; \
 	$(YACC) parser.y && \
-	    echo '#include "config.h"' >parser.c && \
 	    cat y.tab.c >>parser.c && \
 	    status=0; \
 	rm -f y.tab.c conf.tab.c; \

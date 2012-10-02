@@ -5,10 +5,6 @@
  * See file COPYRIGHT in the top-level source-directory for legal conditions.
  */
 
-#ifndef _XOPEN_SOURCE
-#   define _XOPEN_SOURCE 500
-#endif
-
 #include <config.h>
 
 #include <libgen.h>
