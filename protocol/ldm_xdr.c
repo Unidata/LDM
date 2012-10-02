@@ -470,7 +470,7 @@ xdr_product(XDR *xdrs, product *objp)
  return (FALSE);
  }
  }
- /*FALLTHROUGH*/
+ /*FALLTHRU*/
 
  case XDR_ENCODE:
  return (xdr_opaque(xdrs, objp->data, objp->info.sz));
