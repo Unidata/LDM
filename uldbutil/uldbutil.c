@@ -1,5 +1,6 @@
 /**
- * Copyright 20012 University Corporation for Atmospheric Research.
+ * Copyright 2012 University Corporation for Atmospheric Research.
+ * All rights reserved.
  * See file ../COPYRIGHT for copying and redistribution conditions.
  *
  * This file contains the uldbutil(1) utility for accessing the upstream LDM
@@ -76,7 +77,7 @@ int main(
 
     if (0 == status) {
         if (delete) {
-            if (status = uldb_delete()) {
+            if (status = uldb_delete(NULL)) {
                 if (ULDB_EXIST == status) {
                     LOG_ADD0("The upstream LDM database doesn't exist");
                     log_log(LOG_INFO);
@@ -89,7 +90,7 @@ int main(
                 }
             }
         }
-        else if (status = uldb_open()) {
+        else if (status = uldb_open(NULL)) {
             if (ULDB_EXIST == status) {
                 LOG_ADD0("The upstream LDM database doesn't exist");
                 LOG_ADD0("Is the LDM running?");

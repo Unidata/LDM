@@ -28,7 +28,7 @@ static const prod_class_t clss_some = { { 0, 0 }, /* TS_ZERO */
 static int setup(
         void)
 {
-    int status = uldb_delete();
+    int status = uldb_delete(__FILE__);
 
     if (status) {
         if (ULDB_EXIST == status) {
@@ -40,7 +40,7 @@ static int setup(
         }
     }
 
-    if (status = uldb_create(0)) {
+    if (status = uldb_create(__FILE__, 0)) {
         LOG_ADD0("Couldn't create database");
         log_log(LOG_ERR);
     }
@@ -61,7 +61,7 @@ static int teardown(
         log_log(LOG_ERR);
     }
 
-    if (status = uldb_delete()) {
+    if (status = uldb_delete(__FILE__)) {
         LOG_ADD0("Couldn't delete database");
         log_log(LOG_ERR);
     }
@@ -108,6 +108,7 @@ static void populate(
 
     status = uldb_addFeeder(1, 6, &sockAddr, &_clss_all);
     CU_ASSERT_EQUAL(status, ULDB_EXIST);
+    log_clear();
 
     status = uldb_getSize(&count);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
@@ -115,6 +116,7 @@ static void populate(
 
     status = uldb_addNotifier(1, 5, &sockAddr, &_clss_all);
     CU_ASSERT_EQUAL(status, ULDB_EXIST);
+    log_clear();
 
     status = uldb_getSize(&count);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);

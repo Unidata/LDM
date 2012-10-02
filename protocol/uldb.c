@@ -39,7 +39,7 @@
  * Parameters for creating the key for the shared-memory segment and read/write
  * lock:
  */
-#define KEY_PATH    getQueuePath()
+#define DEFAULT_KEY_PATH    getQueuePath()
 #define KEY_INDEX   1
 
 const char* VALID_STRING = __FILE__;
@@ -1198,7 +1198,7 @@ static uldb_Status sm_vetUpstreamLdm(
                 prod_class* entryProdClass;
                 const char* hostString = inet_ntoa(sockAddr->sin_addr);
 
-                if (status = entry_getProdClass(entry, &entryProdClass)) {
+                if (entry_getProdClass(entry, &entryProdClass)) {
                     LOG_ADD1(
                             "Couldn't get product-class of existing entry for host %s",
                             hostString);
@@ -1227,9 +1227,9 @@ static uldb_Status sm_vetUpstreamLdm(
                 }
 
                 break;
-            }
-        }
-    }
+            } /* data-request is disallowed */
+        } /* socket addresses are equal */
+    } /* entry loop */
 
     return status;
 }
@@ -1507,18 +1507,28 @@ static uldb_Status uldb_ensureModuleInitialized(
 /**
  * Returns the IPC key.
  *
- * @param key
- * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @param path              [in] Pathname of an existing file to associate with
+ *                          the database or NULL to obtain the default
+ *                          association. Different pathnames obtain different
+ *                          databases.
+ * @param key               [out] The IPC key corresponding to "path"
+ * @retval ULDB_SUCCESS     Success
+ * @retval ULDB_SYSTEM      System error. log_*() called.
  */
 static uldb_Status uldb_getKey(
+        const char* path,
         key_t* const key)
 {
     int status;
-    key_t k = ftok(KEY_PATH, KEY_INDEX);
+    key_t k;
+
+    if (NULL == path)
+        path = DEFAULT_KEY_PATH;
+
+    k = ftok(path, KEY_INDEX);
 
     if ((key_t) -1 == k) {
-        LOG_SERROR2("Couldn't get IPC key for path \"%s\", index %d", KEY_PATH,
+        LOG_SERROR2("Couldn't get IPC key for path \"%s\", index %d", path,
                 KEY_INDEX);
         status = ULDB_SYSTEM;
     }
@@ -1533,12 +1543,17 @@ static uldb_Status uldb_getKey(
 /**
  * Initializes the database and returns the IPC key.
  *
+ * @param path              [in] Pathname of an existing file to associate with
+ *                          the database or NULL to obtain the default
+ *                          association. Different pathnames obtain different
+ *                          databases.
  * @param key               [out] Pointer to IPC key
  * @retval ULDB_SUCCESS     Success
  * @retval ULDB_INIT        Database already open. log_*() called.
  * @retval ULDB_SYSTEM      System error. log_*() called.
  */
 static uldb_Status uldb_init(
+        const char* const path,
         key_t* const key)
 {
     int status = uldb_ensureModuleInitialized();
@@ -1549,7 +1564,7 @@ static uldb_Status uldb_init(
     else if (status = db_verifyClosed(&database)) {
         LOG_ADD0("Database already open");
     }
-    else if (status = uldb_getKey(key)) {
+    else if (status = uldb_getKey(path, key)) {
         LOG_SERROR0("Couldn't get IPC key");
     }
 
@@ -1559,17 +1574,21 @@ static uldb_Status uldb_init(
 /**
  * Creates the database.
  *
- * @param capacity          [in] Initial capacity of the database in bytes
- * @retval ULDB_SUCCESS     Success.
- * @retval ULDB_INIT        Database already open. log_*() called.
- * @retval ULDB_EXIST       Database already exists. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @param path          [in] Pathname of an existing file to associate with the
+ *                      database or NULL to obtain the default association.
+ *                      Different pathnames obtain different databases.
+ * @param capacity      [in] Initial capacity of the database in bytes
+ * @retval ULDB_SUCCESS Success.
+ * @retval ULDB_INIT    Database already open. log_*() called.
+ * @retval ULDB_EXIST   Database already exists. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_*() called.
  */
 uldb_Status uldb_create(
+        const char* const path,
         unsigned capacity)
 {
     key_t key;
-    int status = uldb_init(&key);
+    int status = uldb_init(path, &key);
 
     if (status) {
         LOG_ADD0("Couldn't initialize database");
@@ -1592,16 +1611,19 @@ uldb_Status uldb_create(
 /**
  * Opens the existing database.
  *
+ * @param path           [in] Pathname of an existing file to associate with the
+ *                       database or NULL to obtain the default association.
+ *                       Different pathnames obtain different databases.
  * @retval ULDB_SUCCESS  Success.
  * @retval ULDB_INIT     Database already open. log_*() called.
  * @retval ULDB_EXIST    The database doesn't exist. log_*() called.
  * @retval ULDB_SYSTEM   System error. log_*() called.
  */
 uldb_Status uldb_open(
-        void)
+        const char* const path)
 {
     key_t key;
-    int status = uldb_init(&key);
+    int status = uldb_init(path, &key);
 
     if (status) {
         LOG_ADD0("Couldn't initialize database");
@@ -1660,13 +1682,16 @@ uldb_Status uldb_close(
 /**
  * Unconditionally deletes the database.
  *
+ * @param path           [in] Pathname of an existing file associated with the
+ *                       database or NULL to obtain the default association.
+ *                       Different pathnames obtain different databases.
  * @retval ULDB_SUCCESS  Success
  * @retval ULDB_EXIST    The database didn't exist. log_*() called.
  * @retval ULDB_SYSTEM   System error. log_*() called. Resulting module
  *                       state is unspecified.
  */
 uldb_Status uldb_delete(
-        void)
+        const char* const path)
 {
     int status = uldb_ensureModuleInitialized();
 
@@ -1676,7 +1701,7 @@ uldb_Status uldb_delete(
     else {
         key_t key;
 
-        status = uldb_getKey(&key);
+        status = uldb_getKey(path, &key);
 
         if (status) {
             LOG_ADD0("Couldn't get IPC key for database");

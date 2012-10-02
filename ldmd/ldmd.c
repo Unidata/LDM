@@ -282,7 +282,7 @@ static void cleanup(
         /*
          * Delete the upstream LDM database.
          */
-        (void) uldb_delete();
+        (void) uldb_delete(NULL);
     }
 
     /*
@@ -1013,7 +1013,7 @@ int main(
          * Create the sharable database of upstream LDM metadata.
          */
         udebug("main(): Creating shared upstream LDM database");
-        if (status = uldb_delete()) {
+        if (status = uldb_delete(NULL)) {
             if (ULDB_EXIST == status) {
                 log_clear();
             }
@@ -1024,7 +1024,7 @@ int main(
                 exit(1);
             }
         }
-        if (uldb_create(maxClients * 1024)) {
+        if (uldb_create(NULL, maxClients * 1024)) {
             LOG_ADD0("Couldn't create shared upstream LDM database");
             log_log(LOG_ERR);
             exit(1);
