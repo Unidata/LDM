@@ -254,7 +254,7 @@ tag:
 	git tag -f v$(VERSION)
 
 release:	releaseCheck
-	-git commit -u
+	-git commit -v -u
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
 	git log --pretty=full `git tag -l v\* | \
 	    sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | \

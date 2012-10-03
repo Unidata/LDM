@@ -1,3 +1,40 @@
+6.11.1.1 	2012-10-03 15:07:27-06:00
+    Added pathname to uldb(3) initialization so that "make check" in
+    "protocol/" doesn't interfere with a running LDM system.
+
+    Define _XOPEN_SOURCE as 600 and correct #include "config.h".
+
+    Eliminated logging of unnecessary no-such-semaphore message.
+
+    Replaced LOG_ADD() in usage message with log_add()
+
+    Removed "log_add() called" from commentary.
+
+    Improved logging
+    
+    Consolidated rejection messages.
+    Improved formatting of some internal documentation.
+
+    Correct setting of logging file-descriptor
+
+    Improve error-logging
+
+    Add 5th NOAAPORT channel to documentation
+
+    Moved parsing of pqing(1)'s "-s" option outside #ifdef conditional.
+
+    Corrected version printed by pqing(1).
+
+    Removed target "ensureRelease" and made "release" mandatory.
+    
+    To prevent bad CHANGE_LOG from being released.
+
+    Corrected "make commit-check" rule: added "-Fq" to grep(1).
+
+    Changed "make available" rule.
+
+    Added RELEASE_NOTES.
+
 6.11.0 	2012-09-24 16:13 -06:00
     Instructions:
         Improved preinstallation instructions: add modification of Red Hat
