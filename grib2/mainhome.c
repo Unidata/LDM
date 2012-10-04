@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include "grib2.h"
 
-extern gtemplate *getdrstemplate(int);
-extern gtemplate *extdrstemplate(int,g2int *);
-
 /*
 int main(void)
 {

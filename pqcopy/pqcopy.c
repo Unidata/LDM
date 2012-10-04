@@ -40,9 +40,6 @@
 
 static volatile int     intr;
 static volatile int     stats_req;
-static int              showProdOrigin;
-static const char       *inPath;
-static const char       *outPath;
 static pqueue           *inPq;
 static pqueue           *outPq;
 static int              nprods;

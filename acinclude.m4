@@ -717,8 +717,8 @@ dnl Check for a library that contains a function.
 dnl
 dnl NB: Always checks default library and library directories first.  This
 dnl obviates the need for a `-L...' reference, which can cause problems
-dnl (e.g. a `-L/usr/lib -lsocket' reference under SunOS 5.2 can cause the
-dnl wrong `-lm' to be loaded).
+dnl [(]e.g. a `-L/usr/lib -lsocket' reference under SunOS 5.2 can cause the
+dnl wrong `-lm' to be loaded[)].
 dnl
 dnl This rule was changed (for some reason) to return `-lc' if the 
 dnl function was in the default library.  This caused problems on
@@ -873,7 +873,7 @@ AC_DEFUN([UD_MAKEWHATIS],
 	    if test -r /usr/man/windex; then
 		WHATIS=windex
 	    fi
-	    AC_CHECK_PROGS(prog, catman makewhatis /usr/lib/makewhatis)
+	    AC_CHECK_PROGS(prog, catman makewhatis /usr/lib/makewhatis, [catman])
 	    case "$prog" in
 		*catman*)
 		    MAKEWHATIS_CMD=$prog' -w -M $(mandir)'

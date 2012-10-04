@@ -975,7 +975,8 @@ hC_clnt_call(
                  */
                 c_sperror(hcp->clnt, "select",
                         hcp->errmsg, H_CLNT_ERRMSG_SIZE);
-        /*FALLTHROUGH*/
+                /*FALLTHROUGH*/
+                /* no break */
         case RPC_PROCUNAVAIL :
                 hcp->state = H_CLNTED;
                 break;

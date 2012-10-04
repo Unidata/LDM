@@ -671,25 +671,6 @@ freeSortedIndex(
 }
 
 /**
- * Ensures an index of XML tree nodes in sorted order. Rebuilds the index if it
- * already exists.
- *
- * Arguments
- *      back            Pointer to the backend structure.
- * Returns
- *      0               Success
- *      ENOMEM          Out-of-memory. "log_start()" called.
- */
-static RegStatus
-ensureSortedIndex(
-    Backend*    back)
-{
-    freeSortedIndex(back);                      /* ensure non-existence */
-
-    return buildSortedIndex(back);
-}
-
-/**
  * Creates a new document.
  *
  * Arguments

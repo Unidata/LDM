@@ -709,46 +709,6 @@ static RegStatus findNode(
 }
 
 /*
- * Ensures the existance of a node.  This function is designed to be called by
- * "actUponLastNode()".
- *
- * Arguments:
- *      name            The last name searched for.  May be NULL, which
- *                      indicates that "lastNode" is the desired node.
- *      lastNode        Pointer to the last extant node.  Shall not be NULL.
- *      savePtr         Pointer to the current position in the relative path
- *                      name.
- *      desiredNode     Pointer to a pointer to the desired node.  Shall not be
- *                      NULL.  Set upon successful return.
- * Returns:
- *      0               Success
- *      ENOENT          The desired node wasn't found.
- */
-static RegStatus lastEnsureNode(
-    const char*         name,
-    RegNode*            lastNode,
-    char*               savePtr,
-    RegNode**           desiredNode)
-{
-    RegStatus   status = 0;
-    RegNode*    parent = lastNode;
-
-    assert(NULL != lastNode);
-
-    for (; NULL != name; name = strtok_r(NULL, REG_SEP, &savePtr)) {
-        if (0 != (status = newNode(parent, name, &lastNode)))
-            break;
-
-        parent = lastNode;
-    }
-
-    if (0 == status)
-        *desiredNode = lastNode;
-
-    return status;
-}
-
-/*
  * Undeletes a node.
  *
  * Arguments:

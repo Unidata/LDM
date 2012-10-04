@@ -464,8 +464,6 @@ binstats(const prod_info *infop,
 }
 
 
-extern const char *remote;
-
 void
 syncbinstats(void)
 {

@@ -38,8 +38,6 @@
 #include "atexit.h"
 #endif
 
-extern int errno;
-
 /* N.B.: assumes hostname doesn't change during program execution :-) */
 static char myname[HOSTNAMESIZE];
 static feedtypet feedtype = EXP;

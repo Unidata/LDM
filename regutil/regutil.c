@@ -292,6 +292,7 @@ static Status deletePath(
             }
         }
         /* FALLTHROUGH */
+        /* no break */
 
         default:
             log_log(LOG_ERR);
@@ -495,9 +496,11 @@ int main(
                 status = COMMAND_SYNTAX;
             }
             /*FALLTHROUGH*/
+            /* no break */
             default:
                 LOG_START1("Unknown option: \"%c\"", optopt);
                 status = COMMAND_SYNTAX;
+                /* no break */
             }
         }                               /* options loop */
 
@@ -591,6 +594,7 @@ int main(
                         }
                     }
                 }                       /* put switch */
+                /* no break */
             }                           /* "usage" switch */
         }                               /* decoded options */
 

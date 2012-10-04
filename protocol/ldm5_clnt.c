@@ -275,6 +275,7 @@ retry:
                 }
                 /* else */
                 /*FALLTHROUGH*/
+                /* no break */
         case RPC_UNKNOWNHOST:
         default:
                 uerror("%s(%s): %d: %s",

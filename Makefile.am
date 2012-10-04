@@ -240,22 +240,23 @@ timestamp:
 dist:		configure
 
 commit-check:	Makefile
-	if git status -u | grep -Fq 'nothing to commit'; then \
+	if git status --untracked-files | grep -Fq 'nothing to commit'; \
+	then \
 	    : true; \
 	else \
-	    echo 1>&2 'Package needs "git commit -u"'; \
+	    echo 1>&2 'Package needs "git commit --untracked-files"'; \
 	    exit 1; \
 	fi
 
 commitAndTag:
-	git commit -a -u -m "v$(VERSION)"
-	git tag -f "v$(VERSION)"
+	git commit --all --message="v$(VERSION)"
+	git tag --force "v$(VERSION)"
 
 tag:
-	git tag -f v$(VERSION)
+	git tag --force v$(VERSION)
 
 release:	releaseCheck
-	-git commit -v -u
+	-git commit --all --verbose
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
 	git log --name-status --pretty=full $(LAST_VERSION).. >>CHANGE_LOG.tmp
 	echo '' >>CHANGE_LOG.tmp

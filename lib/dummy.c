@@ -1,1 +1,1 @@
-static int dummy_linking_variable = 0;
+int dummy_linking_variable = 0;

@@ -84,6 +84,7 @@ static up6_error_t up6_error(
         break;
     default:
         error = UP6_SYSTEM_ERROR;
+        /* no break */
     }
 
     return error;

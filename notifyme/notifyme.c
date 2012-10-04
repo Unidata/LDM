@@ -218,7 +218,7 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                         uerror("unable to free arguments");
                         exit(1);
                 }
-
+                /* no break */
 
         default:
                 svcerr_noproc(transp);

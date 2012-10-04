@@ -1,10 +1,6 @@
 #include <stdio.h>
 #include "grib2.h"
 
-extern gtemplate *getdrstemplate(int);
-extern gtemplate *extdrstemplate(int,g2int *);
-extern gtemplate *getgridtemplate(int);
-extern gtemplate *extgridtemplate(int,g2int *);
 extern gtemplate *getpdstemplate(int);
 extern gtemplate *extpdstemplate(int,g2int *);
 

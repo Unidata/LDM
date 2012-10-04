@@ -164,6 +164,7 @@ static void signal_handler(
             else {
                 (void)setulogmask(LOG_UPTO(LOG_ERR));
             }
+            break;
         }
     }
 
@@ -628,6 +629,7 @@ int main(
                 else {
                     npages = n;
                 }
+                break;
             }
             case 'I':
                 interface = optarg;
@@ -697,9 +699,11 @@ int main(
             default:
                 optopt = ch;
                 /*FALLTHROUGH*/
+                /* no break */
             case '?': {
                 uerror("Unknown option: \"%c\"", optopt);
                 status = 1;
+                break;
             }
         }                               /* option character switch */
     }                                   /* getopt() loop */
