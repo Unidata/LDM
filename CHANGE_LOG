@@ -1,37 +1,42 @@
-6.11.1.1 	2012-10-03 15:07:27-06:00
+6.11.1.1 	2012-10-04 09:54:11-06:00
+    Regenerated protocol/ldm_xdr.c.
+
     Added pathname to uldb(3) initialization so that "make check" in
-    "protocol/" doesn't interfere with a running LDM system.
+    "protocol" doesn't interfere with a running LDM system.
 
-    Define _XOPEN_SOURCE as 600 and correct #include "config.h".
+    Defined _XOPEN_SOURCE as 600 and corrected #includes of "config.h".
 
-    Eliminated logging of unnecessary no-such-semaphore message.
+    Removed unused static function in pqact/pbuf.c.
 
-    Replaced LOG_ADD() in usage message with log_add()
+    Improved error-logging in misc/semRWLock.c.
 
-    Removed "log_add() called" from commentary.
+    Replaced LOG_ADD() in uldbutil(1) usage message with log_add().
 
-    Improved logging
-    
-    Consolidated rejection messages.
-    Improved formatting of some internal documentation.
+    protocol/uldb.c:
+        Improved logging.
 
-    Correct setting of logging file-descriptor
+        Improved some internal documentation.
 
-    Improve error-logging
+    Corrected main index in tutorial.
 
-    Add 5th NOAAPORT channel to documentation
+    Added 5th channel example to NOAAPORT documentation.
 
-    Moved parsing of pqing(1)'s "-s" option outside #ifdef conditional.
+    pqing(1):
+        Corrected setting of logging file-descriptor.
 
-    Corrected version printed by pqing(1).
+        Moved parsing of "-s" option to outside #ifdef conditional.
 
-    Removed target "ensureRelease" and made "release" mandatory.
-    
-    To prevent bad CHANGE_LOG from being released.
+        Corrected version printed.
 
-    Corrected "make commit-check" rule: added "-Fq" to grep(1).
+    Makefile:
+        Removed target "ensureRelease" and made "release" mandatory to
+        prevent bad CHANGE_LOG from being released.
 
-    Changed "make available" rule.
+        Corrected "commit-check" rule: added "-Fq" to grep(1).
+
+        Modified "available" rule.
+
+    Corrected CHANGE_LOG for release 6.11.0.
 
     Added RELEASE_NOTES.
 

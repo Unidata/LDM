@@ -110,6 +110,7 @@ distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 CLEANFILES	= *.log
 distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
+LAST_VERSION	= $$(git tag -l v\* | sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | tail -1)
 
 all:
 
@@ -215,7 +216,7 @@ remote-checks:	dist
 	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
 
 releaseCheck:
-	git diff `git tag -l v\* | tail -1` >diff.log
+	git diff $(LAST_VERSION) >diff.log
 	if ! test -s diff.log; then \
 	    echo 2>&1 "No changes since last release!"; \
 	    rm diff.log; \
@@ -247,7 +248,7 @@ commit-check:	Makefile
 	fi
 
 commitAndTag:
-	git commit -u -m "v$(VERSION)"
+	git commit -a -u -m "v$(VERSION)"
 	git tag -f "v$(VERSION)"
 
 tag:
@@ -256,9 +257,7 @@ tag:
 release:	releaseCheck
 	-git commit -v -u
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
-	git log --pretty=full `git tag -l v\* | \
-	    sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | \
-	    tail -1`.. >>CHANGE_LOG.tmp
+	git log --name-status --pretty=full $(LAST_VERSION).. >>CHANGE_LOG.tmp
 	echo '' >>CHANGE_LOG.tmp
 	cat CHANGE_LOG >>CHANGE_LOG.tmp
 	vi CHANGE_LOG.tmp
