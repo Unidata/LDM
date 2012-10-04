@@ -260,7 +260,7 @@ release:	releaseCheck
 	mv CHANGE_LOG.tmp CHANGE_LOG
 	@newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
 	echo $$newVersion | egrep '^[0-9]+(\.[0-9]+)*$$' >/dev/null || exit 1; \
-	sed '/^AC_INIT(/s/[0-9][0-9.]*,/'"$$newVersion"',/' configure.ac \
+	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
 	    >configure.ac.tmp
 	mv configure.ac.tmp configure.ac
 	$(MAKE) timestamp dist commitAndTag
