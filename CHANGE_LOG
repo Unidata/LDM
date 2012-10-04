@@ -1,3 +1,13 @@
+6.11.1.2 	2012-10-04 16:38:29-06:00
+    Makefile:
+        Improved "release" rule.
+
+    Code Repository:
+        Removed directories "pnglib/CVS" and "zlib/CVS".
+
+    General:
+        Removed Eclipse-identified lint.
+
 6.11.1.1 	2012-10-04 09:54:11-06:00
     Regenerated protocol/ldm_xdr.c.
 
