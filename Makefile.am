@@ -223,11 +223,6 @@ releaseCheck:
 	    exit 1; \
 	fi
 	rm diff.log
-	regex=`echo $(VERSION) | sed 's/\./\\./g'`; \
-	if git tag -l v\* | grep "^v$$regex$$"; then \
-	    echo 2>&1 'Tag "v$(VERSION)" already exists!'; \
-	    exit 1; \
-	fi
 
 timestamp:
 	awk 'NR == 1 {\
