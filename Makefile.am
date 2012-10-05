@@ -215,15 +215,6 @@ $(FTPDIR):
 remote-checks:	dist
 	cd test && $(MAKE) $(AM_MAKEFLAGS) $@
 
-releaseCheck:
-	git diff $(LAST_VERSION) >diff.log
-	if ! test -s diff.log; then \
-	    echo 2>&1 "No changes since last release!"; \
-	    rm diff.log; \
-	    exit 1; \
-	fi
-	rm diff.log
-
 timestamp:
 	awk 'NR == 1 {\
 		print $$1, "	'"`date --rfc-3339=seconds`"'";\
@@ -250,7 +241,7 @@ commitAndTag:
 tag:
 	git tag --force v$(VERSION)
 
-release:	releaseCheck
+release:
 	-git commit --all --verbose
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
 	git log --name-status --pretty=full $(LAST_VERSION).. >>CHANGE_LOG.tmp
@@ -258,7 +249,7 @@ release:	releaseCheck
 	cat CHANGE_LOG >>CHANGE_LOG.tmp
 	vi CHANGE_LOG.tmp
 	mv CHANGE_LOG.tmp CHANGE_LOG
-	@newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
+	newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
 	echo $$newVersion | egrep '^[0-9]+(\.[0-9]+)*$$' >/dev/null || exit 1; \
 	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
 	    >configure.ac.tmp
@@ -326,7 +317,6 @@ endif
     ftp-actual \
     install_setuids \
     release \
-    releaseCheck \
     remote-checks \
     root-actions \
     rpm \
