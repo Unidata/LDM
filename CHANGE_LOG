@@ -1,59 +1,48 @@
-6.11.1.3 	2012-10-04 16:53:39-06:00
-
+6.11.1 	2012-10-05 10:21:05-06:00
     Makefile:
-        Corrected how "release" rule sets version in AC_INIT().
+        Improved rules for releasing a new version:
+            Removed targets "releaseCheck" and "ensureRelease".
+            
+            Corrected how "release" rule sets version in AC_INIT().
 
-6.11.1.2 	2012-10-04 16:38:29-06:00
-    Makefile:
-        Improved "release" rule.
+            Made "release" mandatory to prevent bad CHANGE_LOG from being
+            released.
 
-    Code Repository:
-        Removed directories "pnglib/CVS" and "zlib/CVS".
+            Corrected "commit-check" rule: added "-Fq" to grep(1).
 
-    General:
-        Removed Eclipse-identified lint.
+    Upstream LDM Database (uldbutil(1) & uldb(3)):
+        Added pathname to uldb(3) initialization so that "make check" in
+        the "protocol/" subdirectory doesn't interfere with a running LDM
+        system.
 
-6.11.1.1 	2012-10-04 09:54:11-06:00
-    Regenerated protocol/ldm_xdr.c.
-
-    Added pathname to uldb(3) initialization so that "make check" in
-    "protocol" doesn't interfere with a running LDM system.
-
-    Defined _XOPEN_SOURCE as 600 and corrected #includes of "config.h".
-
-    Removed unused static function in pqact/pbuf.c.
-
-    Improved error-logging in misc/semRWLock.c.
-
-    Replaced LOG_ADD() in uldbutil(1) usage message with log_add().
-
-    protocol/uldb.c:
-        Improved logging.
-
-        Improved some internal documentation.
-
-    Corrected main index in tutorial.
-
-    Added 5th channel example to NOAAPORT documentation.
+        Improved logging by both uldb(3) and uldbutil(1).
 
     pqing(1):
-        Corrected setting of logging file-descriptor.
+        Corrected setting of logging file-descriptor (thanks Harry).
 
         Moved parsing of "-s" option to outside #ifdef conditional.
 
         Corrected version printed.
 
-    Makefile:
-        Removed target "ensureRelease" and made "release" mandatory to
-        prevent bad CHANGE_LOG from being released.
+    Documentation:
+        Corrected main index in tutorial.
 
-        Corrected "commit-check" rule: added "-Fq" to grep(1).
+        Added 5th channel example to NOAAPORT documentation.
 
-        Modified "available" rule.
+        Corrected CHANGE_LOG for release 6.11.0.
 
-    Corrected CHANGE_LOG for release 6.11.0.
+        Added RELEASE_NOTES.
 
-    Added RELEASE_NOTES.
+    Misc:
+        Defined _XOPEN_SOURCE as 600 and corrected #includes of "config.h".
+
+        Removed Eclipse-identified lint.
+
+        Regenerated protocol/ldm_xdr.c.
+
+        Improved some internal documentation.
+
+        Removed unnecessary directories "pnglib/CVS" and "zlib/CVS".
 
 6.11.0 	2012-09-24 16:13 -06:00
     Instructions:
