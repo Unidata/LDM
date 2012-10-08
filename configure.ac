@@ -9,6 +9,9 @@ AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
 
+YEAR=`date +%Y`
+AC_SUBST([YEAR])
+
 #UD_CPPFLAGS
 #AC_DEFINE([_POSIX_C_SOURCE], [1], [Level of POSIX compliance])
 AC_DEFINE([CONFIG_H], [1], [Header-file lockout])
