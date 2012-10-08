@@ -91,7 +91,7 @@ Request authorization at the upstream LDM</h2>
 <p>Add the following entry to the file <tt>$HOME/etc/ldmd.conf</tt> to allow all
 workshop LDM-s to obtain data from any workshop LDM:
 <blockquote><pre>
-ALLOW	ANY	^workshop[0-9]{2}\.ucar\.edu$
+ALLOW	ANY	^workshop[0-9]{2}\.guest\.ucar\.edu$
 </blockquote></pre>
 
 <p>For reference, see
@@ -110,8 +110,8 @@ configuration file, <tt>ldmd.conf</tt>, to request the
 <tt>IDS|DDPLUS</tt> and <tt>NEXRAD3</tt> data-feeds from the
 instructor's LDM:
 <blockquote><pre>
-REQUEST	IDS|DDPLUS	.*	workshop00.ucar.edu
-REQUEST	NEXRAD3		.*	workshop00.ucar.edu
+REQUEST	IDS|DDPLUS	.*	workshop00.guest.ucar.edu
+REQUEST	NEXRAD3		.*	workshop00.guest.ucar.edu
 </blockquote></pre>
 
 <p>For reference, see
