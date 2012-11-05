@@ -17,7 +17,7 @@ METRICS_FILES:/metrics/files:Filename pattern for the metrics files to plot.:@ME
 NETSTAT_COMMAND:/metrics/netstat-command:The <tt><a href="glindex.html#netstat utility">netstat</a></tt> command for obtaining performance metrics.  The default is set by the <tt>configure(1)</tt> script.:@NETSTAT@:netstat
 TOP_COMMAND:/metrics/top-command:The <tt><a href="glindex.html#top utility">top</a></tt> command for obtaining performance metrics.  The default is set by the <tt>configure(1)</tt> script.:@TOP@:top
 PQACT_CONFIG_PATH:/pqact/config-path:The pathname of the default <tt>pqact(1)</tt> configuration-file.  The default is set by the <tt>configure(1)</tt> script.:@ETC_DIR@/pqact.conf:pqact_conf
-PQACT_DATADIR_PATH:/pqact/datadir-path:The pathname of the default <tt>pqact(1)</tt> data-directory.  The default is set by the <tt>configure(1)</tt> script.:@DATA_DIR@
+PQACT_DATADIR_PATH:/pqact/datadir-path:The pathname of the default <tt>pqact(1)</tt> working-directory.  The default is set by the <tt>configure(1)</tt> script.:@DATA_DIR@
 PQSURF_CONFIG_PATH:/pqsurf/config-path:The pathname of the default <tt>pqsurf(1)</tt> configuration-file.  The default is set by the <tt>configure(1)</tt> script.:@ETC_DIR@/pqsurf.conf
 PQSURF_DATADIR_PATH:/pqsurf/datadir-path:The pathname of the default pqsurf(1) data-directory.  The default is set by the <tt>configure(1)</tt> script.:@DATA_DIR@
 QUEUE_PATH:/queue/path:The pathname of the <a href="glindex.html#product-queue">product-queue</a>.  The default is set by the <tt>configure(1)</tt> script.:@QUEUE_DIR@/ldm.pq

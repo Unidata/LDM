@@ -4,18 +4,20 @@ DATA_DIR=$LDMHOME/var/data
 QUEUE_DIR=$LDMHOME/var/queues
 LOGS_DIR=$LDMHOME/var/logs
 
-if test -e $LDMHOME/data; then
+if test -d $LDMHOME/data; then
     test -e $DATA_DIR || ln -s $LDMHOME/data $DATA_DIR
     test -e $QUEUE_DIR || ln -s $LDMHOME/data $QUEUE_DIR
 else
     test -e $QUEUE_DIR || mkdir -p $QUEUE_DIR
     test -e $DATA_DIR || mkdir -p $DATA_DIR
+    rm -f $LDMHOME/data
     ln -s $DATA_DIR $LDMHOME/data
 fi
 
-if test -e $LDMHOME/logs; then
+if test -d $LDMHOME/logs; then
     test -e $LOGS_DIR || ln -s $LDMHOME/logs $LOGS_DIR
 else
     test -e $LOGS_DIR || mkdir -p $LOGS_DIR
+    rm -f $LDMHOME/logs
     ln -s $LOGS_DIR $LDMHOME/logs
 fi

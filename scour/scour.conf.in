@@ -12,6 +12,6 @@
 
 # Directory			Days-old	Optional-filename-pattern
 
-#dir1		                2
+#dir1		            2
 #dir2			        2		*.foo
 #~ldm/var/logs			1		*.stats

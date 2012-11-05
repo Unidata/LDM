@@ -331,7 +331,7 @@ AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
 # The following accomodates pre-6.9 LDM installations:
-if ls $LDMHOME/data >/dev/null 2>&1; then
+if test -d $LDMHOME/data -a ! -h $LDMHOME/data; then
     DATA_DIR=$LDMHOME
 else
     DATA_DIR='$(localstatedir)'/data
