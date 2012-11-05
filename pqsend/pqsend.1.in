@@ -7,12 +7,11 @@ pqsend - program to send products from a local product queue to an LDM server
 pqsend
 .nh
 \%-h\ \fIremote\fP
-\%[-v]
-\%[-x]
+\%[-dvx]
 \%[-l\ \fIlogpath\fP]
 \%[-f\ \fIfeedtype\fP]
+\%[-p\ \fIpattern\fP]
 \%[-q\ \fIqueue\fP]
-\%[-d]
 \%[-T\ \fITotalTimeo\fP]
 \%[-o\ \fIoffset\fP]
 \%[-t\ \fItimeout\fP]
@@ -50,15 +49,20 @@ Debugging information is also emitted.
 .TP
 .BI \-l " logpath"
 The path name of a file to be used as the log file for the process.  The
-default is to use syslogd(8) if no logfile is provided.  Specifying `-' logs
+default is to use syslogd(8) if no logfile is provided.  Specifying "-" logs
 messages to stderr.
 .TP
 .BI \-f " feedtype"
 Offers only products that have a feedtype that is a
-member of the \fIfeedtype\fP set.  The default is `ANY', specifying all
+member of the \fIfeedtype\fP set.  The default is "ANY", specifying all
 feed types.  See \fBpqact\fP(1) for a list of basic feed types
 and the use of feedtype expressions to specify combinations of basic
 feed types.
+.TP
+.BI \-p " pattern"
+Offers only products whose product-identifier is matched by the extended
+regular expression \fIpattern\fP.
+The default is ".*", which matches all product-identifiers.
 .TP
 .BI \-q " queue"
 The pathname of the data product queue.
@@ -148,8 +152,8 @@ ldmhost.dept.univ.edu
 .RS +4
   pqsend -xvl - -o 3600 -T 3600 -h ldmhost.dept.univ.edu
 .RE
-Log info will come to the controlling terminal.
-The program should be terminated manually when \`End of Queue\' message
+Log messages will be written to the controlling terminal.
+The program should be terminated manually when the "End of Queue" message
 is displayed.
 
 .SH "SEE ALSO"
