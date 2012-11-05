@@ -320,9 +320,16 @@ kill -s USR2 <i>pid</i>
 </blockquote></pre>
 where <i>pid</i> is the process-ID of the 
 <a href="glindex.html#upstream LDM">upstream LDM</a> process, which can
-be discovered by searching the 
+be most easily discovered via the
+<a href="glindex.html#uldbutil"><tt>uldbutil</tt></a>
+utility:
+<blockquote><pre>
+<a href="glindex.html#uldbutil">uldbutil</a>
+...
+</blockquote></pre>
+or, less conveniently, by searching the
 <a href="glindex.html#logfile">LDM logfile</a>s for the relevant
-"<tt>Starting Up</tt>" message, <i>e.g.</i>,
+"<tt>Starting Up</tt>" message:
 <blockquote><pre>
 cd $HOME/logs
 <a href="glindex.html#grep utility">grep</a> -Fi 'Starting Up' `ls -rt ldmd.log*`
@@ -334,7 +341,7 @@ cd $HOME/logs
 <h2><a name="netstat"></a>The state of LDM network connections</a></h2>
 
 <p>The non-standard utility <tt>netstat(1)</tt> is, nevertheless,
-available on many UNIX<sup>®</sup> platforms and can be used to 
+available on many UNIX<sup>ï¿½</sup> platforms and can be used to 
 show the state of network connections.  For example, here is the output of
 a <tt>netstat(1)</tt> command on a computer at the 
 <a href="glindex.html#UPC">Unidata Program Center</a> that's running FreeBSD:
