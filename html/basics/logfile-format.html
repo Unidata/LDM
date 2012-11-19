@@ -1605,6 +1605,16 @@ Utilty</h3>
 	is overloaded.  The file-descriptor of the pipe was <a href="#fileno"><i>fileno</i></a>.
 
     <dt><tt><b>
+	pbuf_flush (<a href="#fileno"><i>fileno</i></a>) write:
+	Broken pipe </b></tt>
+    <dd>The <a href="glindex.html#pqact">pqact</a> process was unable
+	to write to an LDM <a href="glindex.html#decoder">decoder</a> because
+	the pipe was disconnected (the decoder process
+        either closed the pipe or terminated). The decoder should have logged
+        an error message.
+	The file-descriptor of the pipe was <a href="#fileno"><i>fileno</i></a>.
+
+    <dt><tt><b>
 	pipe_dbufput:
 	<a href="#pathname"><i>pathname</i></a> write error
 	</b></tt>
@@ -1613,12 +1623,14 @@ Utilty</h3>
 	<a href="#pathname"><i>pathname</i></a>.
 
     <dt><tt><b>
-	pbuf_flush (<a href="#fileno"><i>fileno</i></a>) write:
-	Broken pipe </b></tt>
+        pipe_put(): write error:
+        pid=<a href="#child-pid"><i>child-pid</i></a>,
+        cmd=(<i>cmd</i>)</b></tt>
     <dd>The <a href="glindex.html#pqact">pqact</a> process was unable
-	to write to an LDM <a href="glindex.html#decoder">decoder</a> because
-	the pipe was disconnected -- probably due to the decoder.
-	The file-descriptor of the pipe was <a href="#fileno"><i>fileno</i></a>.
+	to write to LDM <a href="glindex.html#decoder">decoder</a> command
+        <i>cmd</i> because the pipe is disconnected (the decoder process
+        either closed the pipe or terminated). The decoder should have logged
+        an error message.
 </dl>
 </blockquote>
 
@@ -1628,7 +1640,7 @@ Utilty</h3>
 
 <h3><a name="rtstats"></a>Message Templates for the
 <a href="glindex.html#rtstats"><tt>rtstats</tt></a>
-Utilty</h3>
+Utility</h3>
 
 <blockquote>
 
