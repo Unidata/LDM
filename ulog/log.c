@@ -10,8 +10,6 @@
  * This module is thread-safe.
  */
 #include <config.h>
-#undef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 500
 
 #include <assert.h>
 #include <errno.h>
