@@ -22,7 +22,7 @@ sed '/@FUNCTION_DECLARATIONS@/,$d' $templateFile \
     /^struct/ || /^typedef/ || /^}/ {
         declStarted = 0;
     }
-    declStarted {
+    declStarted != 0 {
         lines[++lineCount] = $0;
     }
     /^static/ { 
