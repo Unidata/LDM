@@ -1,0 +1,39 @@
+/*
+ * Copyright 2012 University Corporation for Atmospheric Research. All rights
+ * reserved.
+ *
+ * See file COPYRIGHT in the top-level source-directory for legal conditions.
+ */
+
+#ifndef IP_MULTICAST_H
+#define IP_MULTICAST_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Opaque type for this module.
+ */
+typedef struct ip_mcast ip_mcast_t;
+
+/**
+ * Return codes
+ */
+typedef enum {
+    IPM_SUCCESS = 0,    /* Success */
+    IPM_MEMORY,         /* Memory problem */
+    IPM_SOCKET,         /* Socket problem */
+    IPM_LOOPBACK,       /* Loopback problem */
+    IPM_TTL,            /* Time-to-live problem */
+    IPM_IFACE,          /* Interface problem */
+    IPM_BIND            /* Address binding problem */
+} ipm_status_t;
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
