@@ -706,7 +706,7 @@ static up6_error_t up6_init(
  ******************************************************************************/
 
 /*
- * Constructs a new, upstream LDM object that feeds a downtstream LDM. function
+ * Constructs a new, upstream LDM object that feeds a downstream LDM. function
  * prints diagnostic messages via the ulog(3) module.  It calls exitIfDone()
  * after potentially lengthy operations.
  *
@@ -720,8 +720,8 @@ static up6_error_t up6_init(
  *                      or modify on return.
  *      signature       Pointer to the signature of the last, successfully-
  *                      received data-product.  May be NULL.
- *      isPrimary       Whether data-product exchage-mode should be
- *                      primary (i.e., use HEREIS) or alternae (i.e.,
+ *      isPrimary       Whether data-product exchange-mode should be
+ *                      primary (i.e., use HEREIS) or alternate (i.e.,
  *                      use COMINGSOON/BLKDATA).
  *      pqPath          Pointer to pathname of product-queue.  Caller may
  *                      free or modify on return.
@@ -759,7 +759,7 @@ int up6_new_feeder(
 
 /*
  * Constructs a new, upstream LDM object that sends product notifications to a
- * downtstream LDM.  This function prints diagnostic messages via the ulog(3)
+ * downstream LDM.  This function prints diagnostic messages via the ulog(3)
  * module.  It calls exitIfDone() after potentially lengthy operations.
  *
  * Arguments:
