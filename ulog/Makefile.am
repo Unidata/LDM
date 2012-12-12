@@ -9,12 +9,14 @@
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= ulog.h
 lib_la_SOURCES		= ulog.c log.c
-check_PROGRAMS		= test0
+check_PROGRAMS		= test0 test_gmtime
 test0_SOURCES		= ulog.c
 test0_CPPFLAGS		= -DTEST0
 test0_LDADD		= ../lib/libldm.la ../libxml2/libxml2.la
+test_gmtime_SOURCES	= test_gmtime.c
 EXTRA_DIST		= log.h
 dist_man3_MANS		= ulog.3
 
 check:	$(test0_LDADD)
 	./test0 -l - 2>/dev/null
+	./test_gmtime
