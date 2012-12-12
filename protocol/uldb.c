@@ -1819,8 +1819,7 @@ static uldb_Status uldb_add(
                 if (db_unlock(&database)) {
                     LOG_ADD0("Couldn't unlock database");
 
-                    if (ULDB_SUCCESS == status)
-                        status = ULDB_SYSTEM;
+                    status = ULDB_SYSTEM;
                 }
             } /* database is locked */
         } /* module is initialized */
