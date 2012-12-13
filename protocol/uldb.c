@@ -183,19 +183,19 @@ static size_t getAlignment(
 }
 
 /**
- * Indicates if two socket Internet address are equal.
+ * Indicates if the IP addresses of two socket Internet address are equal.
  *
  * @param addr1     [in] The first socket Internet address
  * @param addr2     [in] The second socket Internet address
  * @retval 0        The addresses are unequal
  * @retval 1        The addresses are equal
  */
-static int areSocketAddressesEqual(
+static int areIpAddressesEqual(
         const struct sockaddr_in* const addr1,
         const struct sockaddr_in* const addr2)
 {
-    return memcmp(&addr1->sin_addr, &addr2->sin_addr, sizeof(addr1->sin_addr))
-            == 0;
+    return memcmp(&addr1->sin_addr.s_addr, &addr2->sin_addr.s_addr,
+            sizeof(addr1->sin_addr.s_addr)) == 0;
 }
 
 /**
@@ -380,34 +380,39 @@ static size_t entry_getSizeofEntry(
 /**
  * Vets a data request against a potentially conflicting entry.
  *
- * @param prodClass     [in] The data-request by the downstream LDM
  * @param entry         [in] Pointer to a potentially conflicting entry
+ * @param isNotifier    [in] Type of request by the downstream LDM
+ * @param prodClass     [in] The data-request by the downstream LDM
  * @retval ULDB_SUCCESS     The data request is allowed
  * @retval ULDB_DISALLOWED  The data request is disallowed
  */
 static entry_vet(
         const uldb_Entry* const entry,
+        const int isNotifier,
         const prod_class* const prodClass)
 {
     int status = ULDB_SUCCESS;
-    const prod_spec* prodSpec = prodClass->psa.psa_val;
-    unsigned numProdSpecs = prodClass->psa.psa_len;
-    int i;
 
-    for (i = 0; i < numProdSpecs; i++) {
-        const EntryProdClass* const entryProdClass = &entry->prodClass;
-        const EntryProdSpec* entryProdSpec;
+    if (isNotifier == entry->isNotifier) {
+        const prod_spec* prodSpec = prodClass->psa.psa_val;
+        unsigned numProdSpecs = prodClass->psa.psa_len;
+        int i;
 
-        for (entryProdSpec = epc_firstProdSpec(entryProdClass);
-                entryProdSpec != NULL ;
-                entryProdSpec = epc_nextProdSpec(entryProdClass,
-                        entryProdSpec)) {
-            if (status = eps_vet(entryProdSpec, prodSpec + i))
+        for (i = 0; i < numProdSpecs; i++) {
+            const EntryProdClass* const entryProdClass = &entry->prodClass;
+            const EntryProdSpec* entryProdSpec;
+
+            for (entryProdSpec = epc_firstProdSpec(entryProdClass);
+                    entryProdSpec != NULL ;
+                    entryProdSpec = epc_nextProdSpec(entryProdClass,
+                            entryProdSpec)) {
+                if (status = eps_vet(entryProdSpec, prodSpec + i))
+                    break;
+            }
+
+            if (status)
                 break;
         }
-
-        if (status)
-            break;
     }
 
     return status;
@@ -1193,8 +1198,8 @@ static uldb_Status sm_vetUpstreamLdm(
             break;
         }
 
-        if (areSocketAddressesEqual(sockAddr, entry_getSockAddr(entry))) {
-            if (status = entry_vet(entry, prodClass)) {
+        if (areIpAddressesEqual(sockAddr, entry_getSockAddr(entry))) {
+            if (status = entry_vet(entry, isNotifier, prodClass)) {
                 prod_class* entryProdClass;
                 const char* hostString = inet_ntoa(sockAddr->sin_addr);
 
@@ -1206,23 +1211,25 @@ static uldb_Status sm_vetUpstreamLdm(
                 else {
                     char requestBuf[1024];
                     char entryBuf[1024];
-                    static const char* failureMsg = "<<couldn't print product-class>>>";
+                    static const char* failureMsg =
+                            "<<couldn't print product-class>>>";
 
                     if (s_prod_class(requestBuf, sizeof(requestBuf),
                             prodClass) == NULL) {
-                        (void)strcpy(requestBuf, failureMsg);
+                        (void) strcpy(requestBuf, failureMsg);
                     }
                     if (s_prod_class(entryBuf, sizeof(entryBuf),
                             entryProdClass) == NULL) {
-                        (void)strcpy(entryBuf, failureMsg);
+                        (void) strcpy(entryBuf, failureMsg);
                     }
 
-                    requestBuf[sizeof(requestBuf)-1] = entryBuf[sizeof(entryBuf)-1] = 0;
+                    requestBuf[sizeof(requestBuf) - 1] =
+                            entryBuf[sizeof(entryBuf) - 1] = 0;
 
-                    LOG_ADD3(
-                            "Request from %s overlaps existing service: "
-                            "request=\"%s\", service=\"%s\"",
-                            hostString, requestBuf, entryBuf);
+                    LOG_ADD4("%s request from %s overlaps existing service: "
+                    "request=\"%s\", service=\"%s\"",
+                        isNotifier ? "NOTIFYME" : "FEEDME",
+                        hostString, requestBuf, entryBuf);
                     free_prod_class(entryProdClass);
                 }
 

@@ -394,6 +394,10 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
          */
         const struct sockaddr_in* downAddr = &rqstp->rq_xprt->xp_raddr;
 
+        /*
+         * The following relies on atexit()-registered cleanup for removal of
+         * the entry from the database.
+         */
         status = (noti5_sqf == doit) ?
                     uldb_addNotifier(getpid(), 5, downAddr, remote->clssp) :
                     uldb_addFeeder(getpid(), 5, downAddr, remote->clssp);
@@ -409,7 +413,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                     { 0, (prod_spec *) NULL /* cast away const */
                     } };
 
-                LOG_ADD0("New upstream LDM process is disallowed");
+                LOG_ADD0("This upstream LDM process is disallowed");
                 log_log(LOG_NOTICE);
 
                 theReply.code = RECLASS;
@@ -445,7 +449,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                             getQueuePath(), strerror(status)) ;
                 }
                 svcerr_systemerr(rqstp->rq_xprt);
-                uldb_remove(getpid());
                 return NULL;
         }
 
@@ -467,7 +470,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         if(!svc_freeargs(rqstp->rq_xprt, xdr_prod_class, (caddr_t)want))
         {
                 uerror("unable to free arguments");
-                uldb_remove(getpid());
                 exit(1);
         }
 
@@ -483,7 +485,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         remote->sendsz, remote->recvsz) < H_CLNTED)
         {
                 uerror("%s", s_hclnt_sperrno(&hc));
-                uldb_remove(getpid());
                 exit(1);
         }
 
@@ -498,7 +499,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         {
                 uerror("pq_cClassSet failed: %s: %s\n",
                         getQueuePath(), strerror(status)) ;
-                uldb_remove(getpid());
                 exit(1);
         }
         
@@ -519,7 +519,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         {
                                 unotice("Request Satisfied");
                                 done = 1;
-                                uldb_remove(getpid());
                                 continue;
                         }
                         (void)set_timestamp(&now);
@@ -533,7 +532,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                                 uerror("nullproc5(%s): %s",
                                         remote_name(), clnt_sperrno(rpc_stat));
                                 done = 1;
-                                uldb_remove(getpid());
                                 continue;
                         }
                         lastsent = timestamp_add(&hc.begin, &hc.elapsed);
@@ -545,7 +543,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                 default:
                         uerror("pq_sequence failed: %s (errno = %d)",
                                 strerror(status), status);
-                        uldb_remove(getpid());
                         exit(1);
                         break;
                 }
@@ -554,7 +551,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         
         }
         
-        uldb_remove(getpid());
         exit(0);
 
         /*NOTREACHED*/
