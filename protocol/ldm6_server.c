@@ -311,6 +311,11 @@ feed_or_notify(
                              * According to the access control list, the
                              * request is valid.
                              */
+                            /*
+                             * The following relies on atexit()-registered
+                             * cleanup for removal of the entry from the
+                             * database.
+                             */
                             int status =
                                     isNotifier ?
                                             uldb_addNotifier(getpid(), 6,
@@ -320,7 +325,7 @@ feed_or_notify(
 
                             if (status) {
                                 if (ULDB_DISALLOWED == status) {
-                                    /**
+                                    /*
                                      * Product-class for signaling that the
                                      * subscription by the downstream LDM is
                                      * disallowed.
@@ -332,7 +337,7 @@ feed_or_notify(
                                     } };
 
                                     LOG_ADD0(
-                                            "New upstream LDM process is disallowed");
+                                            "This upstream LDM process is disallowed");
                                     log_log(LOG_NOTICE);
 
                                     reply->code = RECLASS;
@@ -457,12 +462,8 @@ fornme_reply_t *feedme_6_svc(
                 signature, feedPar->max_hereis > UINT_MAX / 2, pqfname,
                 interval, upFilter);
 
-        (void) uldb_remove(getpid());
-
         free_prod_class(prodClass);
-
         exit(errCode);
-
         /*NOTREACHED*/
     } /* The request is OK */
 
@@ -505,12 +506,8 @@ fornme_reply_t *notifyme_6_svc(
         errCode = up6_new_notifier(socket, downName, &downAddr, prodClass,
                 signature, pqfname, interval, upFilter);
 
-        (void) uldb_remove(getpid());
-
         free_prod_class(prodClass);
-
         exit(errCode);
-
         /*NOTREACHED*/
     }
 

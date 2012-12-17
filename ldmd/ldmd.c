@@ -191,7 +191,8 @@ static pid_t reap(
 }
 
 /*
- * called at exit
+ * Called at exit.
+ * This callback routine registered by atexit().
  */
 static void cleanup(
         void)
@@ -224,8 +225,8 @@ static void cleanup(
     }
 
     /*
-     * Remove this process from the upstream LDM database and close the
-     * database.
+     * Ensure that this process has no entry in the upstream LDM database and
+     * that the database is closed.
      */
     (void) uldb_remove(getpid());
     (void) uldb_close();
