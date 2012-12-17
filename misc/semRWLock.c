@@ -261,7 +261,6 @@ static srwl_Status initLock(
 
         if (RWL_SUCCESS != status) {
             free(lck);
-            status = RWL_EXIST;
         }
         else {
             lck->semId = semId;
