@@ -904,7 +904,8 @@ int unio_prodput(
     int status = -1; /* failure */
     fl_entry* entry = get_fl_entry(UNIXIO, argc, argv);
 
-    udebug("    unio_prodput: %d", entry == NULL ? -1 : entry->handle.fd);
+    udebug("    unio_prodput: %d %s", entry == NULL ? -1 : entry->handle.fd,
+            prodp->info.ident);
 
     if (entry != NULL ) {
         if (entry->flags & FL_EDEX) {
