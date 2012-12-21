@@ -32,7 +32,6 @@ typedef enum {
     ULDB_ARG,            /**< Invalid argument */
     ULDB_INIT,           /**< Module not initialized or already initialized */
     ULDB_EXIST,          /**< Something doesn't exist or shouldn't exist */
-    ULDB_DISALLOWED,     /**< Data request not allowed */
     ULDB_SYSTEM          /**< System error. See "errno". */
 } uldb_Status;
 

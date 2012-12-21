@@ -23,11 +23,13 @@
 #include <sys/types.h>
 #include <unistd.h>      /* getpid() */
 
+#include "abbr.h"
 #include "acl.h"         /* acl_product_intersection(), acl_check_hiya() */
 #include "autoshift.h"
 #include "child_process_set.h"       /* cps_contains() */
 #include "down6.h"       /* the pure "downstream" LDM module */
 #include "error.h"
+#include "forn.h"
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"    /* hostbyaddr() */
@@ -41,8 +43,6 @@
 #include "uldb.h"
 
 #include "up6.h"         /* the pure "upstream" LDM module */
-
-static fornme_reply_t theReply;
 
 /*
  * Decodes a data-product signature from the last product-specification of a
@@ -155,273 +155,217 @@ separateProductClass(
     return errObj;
 }
 
-/*
- * Code common to both FEEDME and NOTIFYME requests.  If a fatal error occurs,
- * then an error-response is sent to the client and the process is terminated.
+/**
+ * Feeds or notifies a downstream LDM. This function either returns a reply to
+ * be sent to the downstream LDM (e.g., a RECLASS message) or terminates this
+ * process (hopefully after sending some data).
  * 
- * Arguments:
- *      xprt            Pointer to server-side transport handle.
- *      want            Pointer to product-class desired by downstream LDM.
+ * @param xprt          [in/out] Pointer to server-side transport handle.
+ * @param want          [in] Pointer to subscription by downstream LDM.
  *                      May contain a "signature" product-specification.
- *      prodClass       Pointer to pointer to intersection of desired and
- *                      allowed product-classes.  On success, caller should
- *                      call free_prod_class(*prodClass).  Will not contain a
- *                      "signature" product-specification.
- *      signature       Pointer to pointer to the signature of the last,
- *                      successfully-received data-product.  Set on and only
- *                      on success.  Set to NULL if and only if *class did not
- *                      contain such a specification; otherwise, points to a
- *                      static buffer.
- *      downName        Pointer to buffer into which this function will copy
- *                      the NUL-terminated name of the downstream host.
- *      len             Size of "downName" buffer in bytes -- including
- *                      terminating NUL.
- *      downAddr        Pointer to address of downstream LDM.  Set by this 
- *                      function.
- *      socket          Pointer to socket on which to send to downstream LDM.
- *                      Set by this function. Duplicate of xprt->xp_sock.
- *      upFilter        Pointer to pointer to upstream filter of data-products.
- *                      Set on and only on success.  Caller should invoke
- *                      upFilter_free(*upFilter).
- *      isNotifier      Whether or not the upstream LDM is a feeder or a
+ * @param isNotifier    [in] Whether or not the upstream LDM is a feeder or a
  *                      notifier.
- * Returns:
- *      NULL            Success.  A reply has been sent to the client and the
- *                      connection can now be "turned around".  *class, 
- *                      *downname, *downAddr, *socket, and *prodClass are set.
- *                      The caller should invoke free_prod_class(*prodClass).
- *      else            The return-value should be sent to the client as a
- *                      reply.  The return-value may reference *prodClass.
- *                      The connection should not be "turned around".
- *                      *prodClass is set and the caller should invoke
- *                      free_prod_class(*prodClass).
+ * @param maxHereis     Maximum HEREIS size parameter. Ignored if "isNotifier"
+ *                      is true.
+ * @return              The reply for the downstream LDM
  */
 static fornme_reply_t*
 feed_or_notify(
-        SVCXPRT* const xprt,
-        const prod_class_t* const want,
-        prod_class_t** const prodClass,
-        const signaturet** const signature,
-        char* const downName,
-        const size_t len,
-        struct sockaddr_in* const downAddr,
-        int* const socket,
-        UpFilter** const upFilter,
-        const int isNotifier)
+    SVCXPRT* const xprt,
+    const prod_class_t* const want,
+    const int isNotifier,
+    const max_hereis_t maxHereis)
 {
-    fornme_reply_t* reply = NULL;
-    int errCode;
-    static prod_class_t* allow = NULL;
-    int terminate = 1; /* terminate process */
-    int sock;
-    const char* name;
-    struct sockaddr_in* addr;
-    UpFilter* filter;
-    prod_class_t* noSigProdClass;
-    const signaturet* sig;
+    struct sockaddr_in downAddr = *svc_getcaller(xprt);
     ErrorObj* errObj;
+    int status;
+    int sock;
+    char* downName = NULL;
+    prod_class_t* origSub = NULL;
+    prod_class_t* allowSub = NULL;
+    prod_class_t* uldbSub = NULL;
+    const signaturet* signature = NULL;
+    UpFilter* upFilter = NULL;
+    fornme_reply_t* reply = NULL;
+    int terminate = 0;
+    static fornme_reply_t theReply;
 
-    addr = svc_getcaller(xprt);
-    name = hostbyaddr(addr);
+    /*
+     * Clean-up from a (possibly) previous invocation
+     */
+    (void)memset(&theReply, 0, sizeof(theReply));
 
-    if (errObj = separateProductClass(want, &noSigProdClass, &sig)) {
+    downName = strdup(hostbyaddr(&downAddr));
+    if (NULL == downName) {
+        LOG_ADD1("Couldn't duplicate downstream host name: \"%s\"",
+                hostbyaddr(&downAddr));
+        log_log(LOG_ERR);
+        svcerr_systemerr(xprt);
+        goto return_or_exit;
+    }
+
+    set_abbr_ident(downName, isNotifier ? "(noti)" : "(feed)");
+
+    /*
+     * Remove any "signature" specification from the subscription.
+     */
+    if (errObj = separateProductClass(want, &origSub, &signature)) {
         err_log_and_free(errObj, ERR_FAILURE);
         svcerr_systemerr(xprt);
-    }
-    else {
-        if (NULL != allow) {
-            free_prod_class(allow);
-            allow = NULL;
-        }
-
-        errCode = acl_product_intersection(name, &addr->sin_addr,
-                noSigProdClass, &allow);
-
-        if (errCode == ENOMEM) {
-            serror("Couldn't compute wanted/allowed product intersection");
-
-            svcerr_systemerr(xprt);
-        }
-        else {
-            sock = dup(xprt->xp_sock);
-
-            if (sock == -1) {
-                serror("Couldn't duplicate socket %d", xprt->xp_sock);
-                svcerr_systemerr(xprt);
-            }
-            else {
-                reply = (fornme_reply_t*) memset(&theReply, 0,
-                        sizeof(theReply));
-
-                if (errCode == EINVAL) {
-                    uerror("%s:%d: Invalid product pattern: %s", __FILE__,
-                            __LINE__, s_prod_class(NULL, 0, noSigProdClass));
-
-                    reply->code = BADPATTERN;
-                }
-                else {
-                    assert(errCode == 0);
-
-                    /* TODO: adjust time? */
-
-                    if (allow->psa.psa_len == 0
-                            || !clss_eq(noSigProdClass, allow)) {
-
-                        /*
-                         * The downstream LDM is not allowed to receive what it
-                         * requested.
-                         */
-                        if (allow->psa.psa_len == 0) {
-                            uwarn("Empty wanted/allowed product-class "
-                                    "intersection for %s: %s -> <nil>", name,
-                                    s_prod_class(NULL, 0, noSigProdClass));
-                            svcerr_weakauth(xprt);
-                        }
-                        else {
-                            char wantStr[1984];
-
-                            (void) s_prod_class(wantStr, sizeof(wantStr),
-                                    noSigProdClass);
-                            unotice("Restricting request: %s -> %s", wantStr,
-                                    s_prod_class(NULL, 0, allow));
-
-                            reply->code = RECLASS;
-                            reply->fornme_reply_t_u.prod_class = allow;
-                            terminate = 0; /* return to caller */
-                        }
-                    } /* request not allowed */
-                    else {
-                        errObj = acl_getUpstreamFilter(name, &addr->sin_addr,
-                                noSigProdClass, &filter);
-
-                        if (errObj) {
-                            err_log_and_free(ERR_NEW(0, errObj,
-                                    "Couldn't get \"upstream\" filter"),
-                                    ERR_FAILURE);
-                            svcerr_systemerr(xprt);
-                        }
-                        else if (NULL == filter) {
-                            err_log_and_free(ERR_NEW(0, NULL,
-                                    "Upstream filter prevents data-transfer"),
-                                    ERR_FAILURE);
-                            svcerr_weakauth(xprt);
-                        }
-                        else {
-                            /*
-                             * According to the access control list, the
-                             * request is valid.
-                             */
-                            /*
-                             * The following relies on atexit()-registered
-                             * cleanup for removal of the entry from the
-                             * database.
-                             */
-                            int status =
-                                    isNotifier ?
-                                            uldb_addNotifier(getpid(), 6,
-                                                    addr, noSigProdClass) :
-                                            uldb_addFeeder(getpid(), 6,
-                                                    addr, noSigProdClass);
-
-                            if (status) {
-                                if (ULDB_DISALLOWED == status) {
-                                    /*
-                                     * Product-class for signaling that the
-                                     * subscription by the downstream LDM is
-                                     * disallowed.
-                                     */
-                                    static prod_class disallowedProdClass = { {
-                                            0, 0 }, /* TS_ZERO */
-                                    { 0, 0 }, /* TS_ZERO */
-                                    { 0, (prod_spec *) NULL /* cast away const */
-                                    } };
-
-                                    LOG_ADD0(
-                                            "This upstream LDM process is disallowed");
-                                    log_log(LOG_NOTICE);
-
-                                    reply->code = RECLASS;
-                                    reply->fornme_reply_t_u.prod_class =
-                                            &disallowedProdClass;
-
-                                    if (svc_sendreply(xprt,
-                                            (xdrproc_t) xdr_fornme_reply_t,
-                                            (caddr_t) reply)) {
-                                    }
-                                    else {
-                                        uerror("svc_sendreply(...) failure");
-                                        svcerr_systemerr(xprt);
-                                    }
-                                }
-                                else {
-                                    LOG_ADD0(
-                                            "Problem with new upstream LDM process");
-                                    log_log(LOG_ERR);
-                                    svcerr_systemerr(xprt);
-                                }
-                            }
-                            else {
-                                /*
-                                 * Request is allowed by upstream LDM database.
-                                 */
-                                reply->code = OK;
-                                reply->fornme_reply_t_u.id =
-                                        (unsigned) getpid();
-
-                                if (svc_sendreply(xprt,
-                                        (xdrproc_t) xdr_fornme_reply_t,
-                                        (caddr_t) reply)) {
-                                    terminate = 0; /* return to caller */
-                                    reply = NULL; /* success */
-                                }
-                                else {
-                                    uerror("svc_sendreply(...) failure");
-                                    svcerr_systemerr(xprt);
-                                }
-                            }
-
-                            if (terminate)
-                                upFilter_free(filter);
-                        } /* "filter" allocated */
-                    } /* request feedtype allowed */
-                } /* valid patterns */
-
-                if (terminate)
-                    (void) close(sock);
-            } /* socket duplicated */
-
-            if (terminate) {
-                free_prod_class(allow);
-                allow = NULL;
-            }
-        } /* "allow" allocated */
-
-        free_prod_class(noSigProdClass);
-    } /* "noSigProdClass" allocated */
-
-    if (terminate) {
-        svc_destroy(xprt);
-        exit(2);
-        /*NOTREACHED*/
-    }
-    /* else */{
-        (void) strncpy(downName, name, len - 1);
-        downName[len - 1] = 0;
-        *downAddr = *addr;
-        *socket = sock;
-        *prodClass = allow;
-        *signature = sig;
-        *upFilter = filter;
+        goto free_down_name;
     }
 
-    return reply;
+    /*
+     * Get the upstream filter
+     */
+    errObj = acl_getUpstreamFilter(downName, &downAddr.sin_addr, origSub,
+            &upFilter);
+    if (errObj) {
+        err_log_and_free(ERR_NEW(0, errObj,
+                "Couldn't get \"upstream\" filter"), ERR_FAILURE);
+        svcerr_systemerr(xprt);
+        goto free_orig_sub;
+    }
+    if (NULL == upFilter) {
+        err_log_and_free(ERR_NEW(0, NULL,
+                "Upstream filter prevents data-transfer"), ERR_FAILURE);
+        svcerr_weakauth(xprt);
+        goto free_orig_sub;
+    }
+
+    /* TODO: adjust time? */
+
+    /*
+     * Reduce the subscription according to what the downstream host is allowed
+     * to receive.
+     */
+    status = acl_product_intersection(downName, &downAddr.sin_addr, origSub,
+            &allowSub);
+    if (status == ENOMEM) {
+        LOG_SERROR0("Couldn't compute wanted/allowed product intersection");
+        log_log(LOG_ERR);
+        svcerr_systemerr(xprt);
+        goto free_up_filter;
+    }
+    if (status == EINVAL) {
+        LOG_ADD1("Invalid pattern in product-class: %s",
+                s_prod_class(NULL, 0, origSub));
+        log_log(LOG_WARNING);
+        theReply.code = BADPATTERN;
+        reply = &theReply;
+        goto free_up_filter;
+    }
+    assert(status == 0);
+    (void) logIfReduced(origSub, allowSub, "ALLOW entries");
+
+    /*
+     * Reduce the subscription according to existing subscriptions from the
+     * same downstream host.
+     */
+    /*
+     * The following relies on atexit()-registered cleanup for removal of the
+     * entry from the upstream LDM database.
+     */
+    status = uldb_addProcess(getpid(), 6, &downAddr, allowSub, &uldbSub,
+            isNotifier);
+    if (status) {
+        LOG_ADD0("Couldn't add this process to the upstream LDM database");
+        log_log(LOG_ERR);
+        svcerr_systemerr(xprt);
+        goto free_allow_sub;
+    }
+    (void) logIfReduced(allowSub, uldbSub, "existing subscriptions");
+
+    /*
+     * Send a RECLASS reply to the downstream LDM if appropriate.
+     */
+    if (!clss_eq(origSub, uldbSub)) {
+        static prod_class noSub = { { 0, 0 }, /* TS_ZERO */
+            { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
+
+        (void)uldb_remove(getpid()); /* wait for next time */
+
+        theReply.code = RECLASS;
+        theReply.fornme_reply_t_u.prod_class = (0 == uldbSub->psa.psa_len)
+            ? &noSub /* downstream LDM isn't allowed anything */
+            : uldbSub;
+        reply = &theReply;
+        goto free_uldb_sub;
+    }
+
+    sock = dup(xprt->xp_sock);
+    if (sock == -1) {
+        LOG_SERROR1("Couldn't duplicate socket %d", xprt->xp_sock);
+        log_log(LOG_ERR);
+        svcerr_systemerr(xprt);
+        goto free_uldb_sub;
+    }
+
+    /*
+     * Reply to the downstream LDM that the subscription will be honored.
+     */
+    theReply.code = OK;
+    theReply.fornme_reply_t_u.id = (unsigned) getpid();
+    if (!svc_sendreply(xprt, (xdrproc_t) xdr_fornme_reply_t, (caddr_t) &reply)) {
+        LOG_ADD0("svc_sendreply(...) failure");
+        log_log(LOG_ERR);
+        svcerr_systemerr(xprt);
+        terminate = 1;
+        goto close_sock;
+    }
+
+    svc_destroy(xprt);
+
+    /*
+     * Wait a second before sending anything to the downstream LDM.
+     */
+    (void) sleep(1);
+
+    status = isNotifier
+            ? up6_new_notifier(sock, downName, &downAddr, uldbSub,
+                    signature, getQueuePath(), interval, upFilter)
+            : up6_new_feeder(sock, downName, &downAddr, uldbSub,
+                    signature, getQueuePath(), interval, upFilter,
+                    maxHereis > UINT_MAX / 2);
+
+    exit(status);
+
+    /*
+     * Error handling:
+     */
+    close_sock:
+        (void)close(sock);
+
+    free_uldb_sub:
+        if (terminate || &theReply != reply ||
+                theReply.fornme_reply_t_u.prod_class != uldbSub)
+            free_prod_class(uldbSub);
+
+    free_allow_sub:
+        free_prod_class(allowSub);
+
+    free_up_filter:
+        upFilter_free(upFilter);
+
+    free_orig_sub:
+        free_prod_class(origSub);
+
+    free_down_name:
+        free(downName);
+
+    return_or_exit:
+        if (terminate)
+            exit(1);
+        return reply;
 }
 
 /******************************************************************************
  * Begin Public API:
  ******************************************************************************/
 
-/*
+/**
+ * Sends a downstream LDM subscribed-to data-products.
+ * <p>
  * This function will not normally return unless the request necessitates a
  * reply (e.g., RECLASS).
  */
@@ -429,86 +373,36 @@ fornme_reply_t *feedme_6_svc(
         feedpar_t *feedPar,
         struct svc_req *rqstp)
 {
-    const char* const pqfname = getQueuePath();
     SVCXPRT* const xprt = rqstp->rq_xprt;
     prod_class_t* want = feedPar->prod_class;
-    prod_class_t* prodClass;
-    const signaturet* signature;
-    char downName[MAXHOSTNAMELEN + 1];
-    struct sockaddr_in downAddr;
-    int socket;
-    UpFilter* upFilter;
-    fornme_reply_t* reply = feed_or_notify(xprt, want, &prodClass, &signature,
-            downName, sizeof(downName), &downAddr, &socket, &upFilter, 0);
+    fornme_reply_t* reply = feed_or_notify(xprt, want, 0, feedPar->max_hereis);
 
-    if (!reply) {
-        int errCode;
-
-        if (!svc_freeargs(xprt, xdr_feedpar_t, (caddr_t)feedPar)) {
-            uerror("Couldn't free arguments");
-            svc_destroy(xprt);
-            exit(1);
-            /*NOTREACHED*/
-        }
-
+    if (!svc_freeargs(xprt, xdr_feedpar_t, (caddr_t)feedPar)) {
+        uerror("Couldn't free arguments");
         svc_destroy(xprt);
-
-        /*
-         * Wait a second before sending anything to the downstream LDM.
-         */
-        (void) sleep(1);
-
-        errCode = up6_new_feeder(socket, downName, &downAddr, prodClass,
-                signature, feedPar->max_hereis > UINT_MAX / 2, pqfname,
-                interval, upFilter);
-
-        free_prod_class(prodClass);
-        exit(errCode);
-        /*NOTREACHED*/
-    } /* The request is OK */
+        exit(1);
+    }
 
     return reply;
 }
 
-/*ARGSUSED1*/
+/**
+ * Notifies a downstream LDM of subscribed-to data-products.
+ * <p>
+ * This function will not normally return unless the request necessitates a
+ * reply (e.g., RECLASS).
+ */
 fornme_reply_t *notifyme_6_svc(
         prod_class_t* want,
         struct svc_req* rqstp)
 {
-    const char* const pqfname = getQueuePath();
     SVCXPRT* const xprt = rqstp->rq_xprt;
-    prod_class_t* prodClass;
-    const signaturet* signature;
-    char downName[MAXHOSTNAMELEN + 1];
-    struct sockaddr_in downAddr;
-    int socket;
-    UpFilter* upFilter;
-    fornme_reply_t* reply = feed_or_notify(xprt, want, &prodClass, &signature,
-            downName, sizeof(downName), &downAddr, &socket, &upFilter, 1);
+    fornme_reply_t* reply = feed_or_notify(xprt, want, 1, 0);
 
-    if (!reply) {
-        int errCode;
-
-        if (!svc_freeargs(xprt, xdr_prod_class, (caddr_t)want)) {
-            uerror("Couldn't free arguments");
-            svc_destroy(xprt);
-            exit(1);
-            /*NOTREACHED*/
-        }
-
+    if (!svc_freeargs(xprt, xdr_prod_class, (caddr_t)want)) {
+        uerror("Couldn't free arguments");
         svc_destroy(xprt);
-
-        /*
-         * Wait a second before sending anything to the downstream LDM.
-         */
-        (void) sleep(1);
-
-        errCode = up6_new_notifier(socket, downName, &downAddr, prodClass,
-                signature, pqfname, interval, upFilter);
-
-        free_prod_class(prodClass);
-        exit(errCode);
-        /*NOTREACHED*/
+        exit(1);
     }
 
     return reply;

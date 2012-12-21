@@ -75,6 +75,7 @@ static void test_nil(
     int status;
     struct sockaddr_in sockAddr;
     unsigned count;
+    prod_class_t* allowed;
 
     (void) memset(&sockAddr, 0, sizeof(sockAddr));
 
@@ -82,7 +83,7 @@ static void test_nil(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 0);
 
-    status = uldb_addFeeder(-1, 6, &sockAddr, &_clss_all);
+    status = uldb_addProcess(-1, 6, &sockAddr, &_clss_all, &allowed, 0);
     CU_ASSERT_EQUAL(status, ULDB_ARG);
 }
 
@@ -92,6 +93,7 @@ static void populate(
     int status;
     struct sockaddr_in sockAddr;
     unsigned count;
+    prod_class_t*   allowed;
 
     (void) memset(&sockAddr, 0, sizeof(sockAddr));
 
@@ -99,14 +101,15 @@ static void populate(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 0);
 
-    status = uldb_addFeeder(1, 6, &sockAddr, &_clss_all);
+    status = uldb_addProcess(1, 6, &sockAddr, &_clss_all, &allowed, 0);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    free_prod_class(allowed);
 
     status = uldb_getSize(&count);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 1);
 
-    status = uldb_addFeeder(1, 6, &sockAddr, &_clss_all);
+    status = uldb_addProcess(1, 6, &sockAddr, &_clss_all, &allowed, 0);
     CU_ASSERT_EQUAL(status, ULDB_EXIST);
     log_clear();
 
@@ -114,7 +117,7 @@ static void populate(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 1);
 
-    status = uldb_addNotifier(1, 5, &sockAddr, &_clss_all);
+    status = uldb_addProcess(1, 5, &sockAddr, &_clss_all, &allowed, 1);
     CU_ASSERT_EQUAL(status, ULDB_EXIST);
     log_clear();
 
@@ -122,20 +125,31 @@ static void populate(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 1);
 
-    status = uldb_addNotifier(2, 5, &sockAddr, &_clss_all);
-    CU_ASSERT_EQUAL(status, ULDB_DISALLOWED);
+    status = uldb_addProcess(2, 5, &sockAddr, &_clss_all, &allowed, 0);
+    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    CU_ASSERT_EQUAL(allowed->psa.psa_len, 0);
     log_clear();
+    free_prod_class(allowed);
 
     status = uldb_getSize(&count);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 1);
 
-    status = uldb_addNotifier(2, 5, &sockAddr, &clss_some);
+    status = uldb_addProcess(3, 5, &sockAddr, &_clss_all, &allowed, 1);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    free_prod_class(allowed);
 
     status = uldb_getSize(&count);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 2);
+
+    status = uldb_addProcess(4, 5, &sockAddr, &clss_some, &allowed, 1);
+    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    free_prod_class(allowed);
+
+    status = uldb_getSize(&count);
+    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    CU_ASSERT_EQUAL(count, 3);
 }
 
 static void clear(
@@ -213,7 +227,17 @@ static void test_iterator(
 
     entry = uldb_iter_nextEntry(iter);
     CU_ASSERT_PTR_NOT_NULL_FATAL(entry);
-    CU_ASSERT_EQUAL(uldb_entry_getPid(entry), 2);
+    CU_ASSERT_EQUAL(uldb_entry_getPid(entry), 3);
+    CU_ASSERT_EQUAL(uldb_entry_getProtocolVersion(entry), 5);
+    CU_ASSERT_EQUAL(uldb_entry_isNotifier(entry), 1);
+    status = uldb_entry_getProdClass(entry, &prodClass);
+    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    CU_ASSERT_TRUE(clss_eq(&_clss_all, prodClass));
+    free_prod_class(prodClass);
+
+    entry = uldb_iter_nextEntry(iter);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(entry);
+    CU_ASSERT_EQUAL(uldb_entry_getPid(entry), 4);
     CU_ASSERT_EQUAL(uldb_entry_getProtocolVersion(entry), 5);
     CU_ASSERT_EQUAL(uldb_entry_isNotifier(entry), 1);
     status = uldb_entry_getProdClass(entry, &prodClass);
@@ -246,26 +270,7 @@ static void test_remove(
 
     status = uldb_getSize(&count);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
-    CU_ASSERT_EQUAL(count, 1);
-
-    status = uldb_getIterator(&iter);
-    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
-    CU_ASSERT_PTR_NOT_NULL(iter);
-
-    entry = uldb_iter_firstEntry(iter);
-    CU_ASSERT_PTR_NOT_NULL(entry);
-    CU_ASSERT_EQUAL(uldb_entry_getPid(entry), 2);
-    CU_ASSERT_EQUAL(uldb_entry_getProtocolVersion(entry), 5);
-    CU_ASSERT_EQUAL(uldb_entry_isNotifier(entry), 1);
-    status = uldb_entry_getProdClass(entry, &prodClass);
-    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
-    CU_ASSERT_TRUE(clss_eq(&clss_some, prodClass));
-    free_prod_class(prodClass);
-
-    entry = uldb_iter_nextEntry(iter);
-    CU_ASSERT_PTR_NULL(entry);
-
-    uldb_iter_free(iter);
+    CU_ASSERT_EQUAL(count, 2);
 
     clear();
 }
@@ -281,7 +286,7 @@ static void test_fork(
 
     status = uldb_getSize(&count);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
-    CU_ASSERT_EQUAL(count, 2);
+    CU_ASSERT_EQUAL(count, 3);
 
     pid = fork();
     CU_ASSERT_NOT_EQUAL_FATAL(pid, -1);
@@ -305,26 +310,7 @@ static void test_fork(
 
         status = uldb_getSize(&count);
         CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
-        CU_ASSERT_EQUAL(count, 1);
-
-        status = uldb_getIterator(&iter);
-        CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
-        CU_ASSERT_PTR_NOT_NULL(iter);
-
-        entry = uldb_iter_firstEntry(iter);
-        CU_ASSERT_PTR_NOT_NULL(entry);
-        CU_ASSERT_EQUAL(uldb_entry_getPid(entry), 2);
-        CU_ASSERT_EQUAL(uldb_entry_getProtocolVersion(entry), 5);
-        CU_ASSERT_EQUAL(uldb_entry_isNotifier(entry), 1);
-        status = uldb_entry_getProdClass(entry, &prodClass);
-        CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
-        CU_ASSERT_TRUE(clss_eq(&clss_some, prodClass));
-        free_prod_class(prodClass);
-
-        entry = uldb_iter_nextEntry(iter);
-        CU_ASSERT_PTR_NULL(entry);
-
-        uldb_iter_free(iter);
+        CU_ASSERT_EQUAL(count, 2);
     }
 }
 

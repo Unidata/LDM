@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "forn.h"
 #include "ldm.h"
 #include "ulog.h"
 #include "log.h"
@@ -346,10 +347,15 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         timestampt now;
         const int keepalive_interval = (int)(inactive_timeo/2 - 2 * interval);
         peer_info*      remote = get_remote();
+        static prod_class_t*    uldbSub = NULL;
 
         /* assert(keepalive_interval > 0); */
         
         (void)memset(&theReply, 0, sizeof(theReply));
+        if (NULL != uldbSub) {
+            free_prod_class(uldbSub);
+            uldbSub = NULL;
+        }
 
         if(done)
         {
@@ -377,17 +383,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                 svcerr_weakauth(rqstp->rq_xprt);
                 return NULL;
         }
-
-        if(!clss_eq(remote->clssp, want))
-        {
-                theReply.code = RECLASS;
-                if (ulogIsVerbose())
-                    uinfo("reclss: %s: %s",
-                            remote_name(),
-                            s_prod_class(NULL, 0, remote->clssp));
-                theReply.ldm_replyt_u.newclssp = remote->clssp;
-                return(&theReply);
-        }
+        (void)logIfReduced(want, remote->clssp, "ALLOW entries");
 
         /*
          * According to the access control list, the request is valid.
@@ -395,38 +391,41 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         const struct sockaddr_in* downAddr = &rqstp->rq_xprt->xp_raddr;
 
         /*
+         * Reduce the subscription according to existing subscriptions from the
+         * same downstream host.
+         */
+        /*
          * The following relies on atexit()-registered cleanup for removal of
          * the entry from the database.
          */
-        status = (noti5_sqf == doit) ?
-                    uldb_addNotifier(getpid(), 5, downAddr, remote->clssp) :
-                    uldb_addFeeder(getpid(), 5, downAddr, remote->clssp);
-
+        status = uldb_addProcess(getpid(), 5, downAddr, remote->clssp, &uldbSub,
+                noti5_sqf == doit);
         if (status) {
-            if (ULDB_DISALLOWED == status) {
-                /**
-                 * Product-class for signaling that the subscription by the
-                 * downstream LDM is disallowed.
-                 */
-                static prod_class disallowedProdClass = { { 0, 0 }, /* TS_ZERO */
-                    { 0, 0 }, /* TS_ZERO */
-                    { 0, (prod_spec *) NULL /* cast away const */
-                    } };
+            LOG_ADD0("Couldn't add this process to the upstream LDM database");
+            log_log(LOG_ERR);
+            svcerr_systemerr(rqstp->rq_xprt);
+            return NULL;
+        }
+        if (logIfReduced(remote->clssp, uldbSub, "existing subscriptions")) {
+            free_prod_class(remote->clssp);
+            remote->clssp = uldbSub;
+        }
 
-                LOG_ADD0("This upstream LDM process is disallowed");
-                log_log(LOG_NOTICE);
+        /*
+         * Send a RECLASS reply to the downstream LDM if appropriate.
+         */
+        if (!clss_eq(want, remote->clssp)) {
+            static prod_class noSub = { { 0, 0 }, /* TS_ZERO */
+                { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
 
-                theReply.code = RECLASS;
-                theReply.ldm_replyt_u.newclssp = &disallowedProdClass;
+            uldb_remove(getpid()); /* wait for next time */
 
-                return &theReply;
-            }
-            else {
-                LOG_ADD0("Problem with new upstream LDM process");
-                log_log(LOG_ERR);
-                svcerr_systemerr(rqstp->rq_xprt);
-                return NULL;
-            }
+            theReply.code = RECLASS;
+            theReply.ldm_replyt_u.newclssp = (0 == remote->clssp->psa.psa_len)
+                ? &noSub /* downstream LDM isn't allowed anything */
+                : remote->clssp;
+
+            return &theReply;
         }
 
         /*

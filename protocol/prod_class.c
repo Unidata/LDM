@@ -548,6 +548,36 @@ unwind_alloc:
         return status;
 }
 
+/**
+ * Removes from an initial product class all product specifications in another
+ * product class. The time limits in the initial product class are untouched.
+ *
+ * @param initial       [in/out] Initial product class
+ * @param remove        [in] Product specifications to be removed
+ */
+void clss_remove_prod_specs(
+        prod_class_t* const initial,
+        const prod_class_t* const remove)
+{
+    int i;
+
+    for (i = 0; i < initial->psa.psa_len; i++) {
+        prod_spec* init_ps = initial->psa.psa_val + i;
+        int j;
+
+        for (j = 0; j < remove->psa.psa_len; j++) {
+            prod_spec* rem_ps = remove->psa.psa_val + i;
+
+            if ((init_ps->feedtype & rem_ps->feedtype) &&
+                    strcmp(init_ps->pattern, rem_ps->pattern) == 0) {
+                init_ps->feedtype &= ~rem_ps->feedtype;
+            }
+        }
+    }
+
+    clss_scrunch(initial);
+}
+
 
 void
 clss_regcomp(prod_class_t *clssp)

@@ -720,14 +720,14 @@ static up6_error_t up6_init(
  *                      or modify on return.
  *      signature       Pointer to the signature of the last, successfully-
  *                      received data-product.  May be NULL.
- *      isPrimary       Whether data-product exchage-mode should be
- *                      primary (i.e., use HEREIS) or alternae (i.e.,
- *                      use COMINGSOON/BLKDATA).
  *      pqPath          Pointer to pathname of product-queue.  Caller may
  *                      free or modify on return.
  *      interval        pq_suspend() interval in seconds.
  *      upFilter        Pointer to product-class for filtering data-products.
  *                      May not be NULL.
+ *      isPrimary       Whether data-product exchage-mode should be
+ *                      primary (i.e., use HEREIS) or alternae (i.e.,
+ *                      use COMINGSOON/BLKDATA).
  * Returns:
  *      0                       Success.
  *      UP6_PQ                  Problem with the product-queue.
@@ -740,10 +740,10 @@ int up6_new_feeder(
         const struct sockaddr_in* const downAddr,
         const prod_class_t* const prodClass,
         const signaturet* const signature,
-        const int isPrimary,
         const char* pqPath,
         const unsigned interval,
-        UpFilter* const upFilter)
+        UpFilter* const upFilter,
+        const int isPrimary)
 {
     int errCode = up6_init(socket, downName, downAddr, prodClass, signature,
             pqPath, interval, upFilter, FEED, isPrimary);

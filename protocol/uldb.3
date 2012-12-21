@@ -9,8 +9,7 @@ uldb_open,
 uldb_close,
 uldb_delete,
 uldb_getSize,
-uldb_addFeeder,
-uldb_addNotifier,
+uldb_addProcess,
 uldb_remove,
 uldb_getIterator,
 uldb_iter_free,
@@ -42,15 +41,12 @@ uldb_Status \fBuldb_delete\fP(void);
 .HP
 uldb_Status \fBuldb_getSize\fP(unsigned* \fIsize\fP);
 .HP
-uldb_Status \fBuldb_addFeeder\fP(pid_t \fIpid\fP,
+uldb_Status \fBuldb_addProcess\fP(pid_t \fIpid\fP,
 int \fIprotoVers\fP,
 const struct sockaddr_in* \fIsockAddr\fP,
-const prod_class* \fIprodClass\fP);
-.HP
-uldb_Status \fBuldb_addNotifier\fP(pid_t \fIpid\fP,
-int \fIprotoVers\fP,
-const struct sockaddr_in* \fIsockAddr\fP,
-const prod_class* \fIprodClass\fP);
+const prod_class* \fIdesired\fP,
+prod_class** \fIallowed\fP,
+int \fIisNotifier\fP);
 .HP
 uldb_Status \fBuldb_remove\fP(pid_t \fIpid\fP);
 .HP
@@ -133,37 +129,25 @@ Returns the number of entries in the upstream LDM database. \fIsize\fP points
 to the location in which to store the number of entries.
 .na
 .HP
-uldb_Status \fBuldb_addFeeder\fP(
+uldb_Status \fBuldb_addProcess\fP(
     const pid_t \fIpid\fP,
     int \fIprotoVers\fP,
     const struct sockaddr_in* const \fIsockAddr\fP,
-    const prod_class* const \fIprodClass\fP);
+    const prod_class* const \fIdesired\fP,
+    prod_class** const \fIallowed\fP,
+    int \fIisNotifier\fP);
 .ad
 .IP
-Adds to the upstream LDM database an entry corresponding to an upstream LDM 
-process that's sending data-products to its associated downstream LDM process.
+Adds an upstream LDM process to the upstream LDM database.
 \fIpid\fP is the process-identifier of the upstream LDM process; \fIprotoVers\fP
 is the protocol version (e.g., 5 or 6); \fIsockAddr\fP
 is the socket Internet address of the computer on which the downstream LDM
-process is running; and \fIprodClass\fP is the class of data-products
-that the downstream LDM requested.
-.na
-.HP
-uldb_Status \fBuldb_addNotifier\fP(
-    const pid_t \fIpid\fP,
-    int \fIprotoVers\fP,
-    const struct sockaddr_in* const \fIsockAddr\fP,
-    const prod_class* const \fIprodClass\fP);
-.ad
-.IP
-Adds to the upstream LDM database an entry corresponding to an upstream LDM 
-process that's sending notifications of new data-products to its associated
-downstream LDM process.  \fIpid\fP is the process-identifier of the upstream
-LDM process; \fIprotoVers\fP
-is the protocol version (e.g., 5 or 6); \fIsockAddr\fP
-is the socket Internet address of the computer on which the downstream LDM
-process is running; and \fIprodClass\fP is the class of data-products
-for which the downstream LDM requested notifications.
+process is running; \fIdesired\fP is the class of data-products desired by
+the downstream LDM; \fIallowed\fP is the desired class reduced by existing
+subscriptions from the same downstream host (NB: it might be the empty set); 
+and \fIisNotifier\fP indicates whether or not
+the upstream LDM is sending notifications of data-products or the data-products
+themselves.
 .na
 .HP
 uldb_Status \fBuldb_remove\fP(
@@ -248,10 +232,10 @@ The values of \fBuldb_Status\fP are the following:
 Success. The value of this symbol is 0. Returned by all functions that return
 a \fBuldb_Status\fP when the function succeeds.
 .IP \fBULDB_ARG\fP
-Invalid argument. \fBlog_start\fP() called. Returned by 
-\fBuldb_addFeeder\fP(),
-\fBuldb_addNotifier\fP(), and
+Invalid argument. \fBlog_add\fP() called. Returned by 
+\fBuldb_addProcess\fP() and
 \fBuldb_remove\fP() to indicate an invalid process-identifier.
+\fBlog_add\fP() called.
 .IP \fBULDB_INIT\fP 16
 Returned by
 \fBuldb_create\fP() and
@@ -260,12 +244,11 @@ to indicate that the upstream LDM database is already open.
 Returned by
 \fBuldb_close\fP(),
 \fBuldb_getSize\fP(),
-\fBuldb_addFeeder\fP(),
-\fBuldb_addNotifier\fP(),
+\fBuldb_addProcess\fP(),
 \fBuldb_remove\fP(), and
 \fBuldb_getIterator\fP()
 to indicate that the upstream LDM database is not open.
-\fBlog_start\fP() called.
+\fBlog_add\fP() called.
 .IP \fBULDB_EXIST\fP 16
 Returned by
 \fBuldb_create\fP()
@@ -275,23 +258,14 @@ Returned by
 \fBuldb_delete\fP()
 to indicate that the upstream LDM database doesn't exist.
 Returned by
-\fBuldb_addFeeder\fP() and
-\fBuldb_addNotifier\fP()
+\fBuldb_addProcess\fP()
 to indicate that an entry for the given process identifier already exists.
 Returned by
 \fBuldb_remove\fP()
 to indicate that an entry for the given process identifier doesn't exist.
-\fBlog_start\fP() called.
-.IP \fBULDB_DISALLOWED\fP
-Returned by
-\fBuldb_addFeeder\fP() and
-\fBuldb_addNotifier\fP()
-to indicate that the request for data by the downstream LDM is not allowed --
-typically because the request duplicates or overlaps with a previously-accepted
-request.
-\fBlog_start\fP() called.
+\fBlog_add\fP() called.
 .IP \fBULDB_SYSTEM\fP 16
-System error. \fBlog_start\fP() called.
+System error. \fBlog_add\fP() called.
 .SH "EXAMPLES"
 .LP
 The utility

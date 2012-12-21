@@ -236,7 +236,7 @@ str_setremote(const char *id)
 int
 update_remote_clss(prod_class_t *want)
 {
-        int status = ENOERR;
+        int status = 0;
 
         if(!clsspsa_eq(remote.clssp, want))
         {

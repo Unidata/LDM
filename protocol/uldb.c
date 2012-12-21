@@ -214,39 +214,19 @@ static size_t eps_sizeof(
 }
 
 /**
- * Vets a product-specification against one in an existing entry.
+ * Removes an entry's product-specification from a given product-specification.
  *
  * @param entryProdSpec     [in] Pointer to a product-specification in an entry
- * @param prodSpec          [in] Pointer to a product-specification requested
- *                          by a downstream LDM
- * @retval ULDB_SUCCESS     The product-specification is valid and may be
- *                          accepted
- * @retval ULDB_DISALLOWED  The product-specification conflicts with the
- *                          existing specification
+ * @param prodSpec          [in/out] Pointer to the given product-specification
  */
-static uldb_Status eps_vet(
+static void eps_remove_prod_spec(
         const EntryProdSpec* const entryProdSpec,
-        const prod_spec* const prodSpec)
+        prod_spec* const prodSpec)
 {
-    const feedtypet feedtype = prodSpec->feedtype;
-    const char* const pattern = prodSpec->pattern;
-
-    if (feedtype == NONE)
-        return ULDB_SUCCESS;
-
-    if (feedtype == entryProdSpec->feedtype) {
-        if (strcmp(pattern, entryProdSpec->pattern) == 0) {
-            return ULDB_DISALLOWED;
-        }
-
-        return ULDB_SUCCESS;
+    if ((entryProdSpec->feedtype & prodSpec->feedtype)
+            && strcmp(entryProdSpec->pattern, prodSpec->pattern) == 0) {
+        prodSpec->feedtype &= ~entryProdSpec->feedtype;
     }
-
-    if (feedtype & entryProdSpec->feedtype) {
-        return ULDB_DISALLOWED;
-    }
-
-    return ULDB_SUCCESS;
 }
 
 /**
@@ -353,6 +333,30 @@ static uldb_Status epc_getEverythingButProdSpecs(
 }
 
 /**
+ * Removes all product-specifications in an entry's product-class from a given
+ * product-class. The time limits of the given product-class are not modified.
+ *
+ * @param epc           [in] Pointer to an entry's product-class
+ * @param prodClass     [in/out] The given product-class
+ */
+static void epc_remove_prod_specs(
+        const EntryProdClass* const epc,
+        prod_class* const prodClass)
+{
+    int i;
+
+    for (i = 0; i < prodClass->psa.psa_len; i++) {
+        prod_spec* prodSpec = prodClass->psa.psa_val + i;
+        const EntryProdSpec* eps;
+
+        for (eps = epc_firstProdSpec(epc); eps != NULL ;
+                eps = epc_nextProdSpec(epc, eps)) {
+            eps_remove_prod_spec(eps, prodSpec);
+        }
+    }
+}
+
+/**
  * Returns the size that an entry will have.
  *
  * @param prodClass     [in] Data-request of the downstream LDM
@@ -375,47 +379,6 @@ static size_t entry_getSizeofEntry(
     size = roundUp(size, entryAlignment);
 
     return size;
-}
-
-/**
- * Vets a data request against a potentially conflicting entry.
- *
- * @param entry         [in] Pointer to a potentially conflicting entry
- * @param isNotifier    [in] Type of request by the downstream LDM
- * @param prodClass     [in] The data-request by the downstream LDM
- * @retval ULDB_SUCCESS     The data request is allowed
- * @retval ULDB_DISALLOWED  The data request is disallowed
- */
-static entry_vet(
-        const uldb_Entry* const entry,
-        const int isNotifier,
-        const prod_class* const prodClass)
-{
-    int status = ULDB_SUCCESS;
-
-    if (isNotifier == entry->isNotifier) {
-        const prod_spec* prodSpec = prodClass->psa.psa_val;
-        unsigned numProdSpecs = prodClass->psa.psa_len;
-        int i;
-
-        for (i = 0; i < numProdSpecs; i++) {
-            const EntryProdClass* const entryProdClass = &entry->prodClass;
-            const EntryProdSpec* entryProdSpec;
-
-            for (entryProdSpec = epc_firstProdSpec(entryProdClass);
-                    entryProdSpec != NULL ;
-                    entryProdSpec = epc_nextProdSpec(entryProdClass,
-                            entryProdSpec)) {
-                if (status = eps_vet(entryProdSpec, prodSpec + i))
-                    break;
-            }
-
-            if (status)
-                break;
-        }
-    }
-
-    return status;
 }
 
 /**
@@ -468,6 +431,18 @@ static const struct sockaddr_in* entry_getSockAddr(
         const uldb_Entry* const entry)
 {
     return &entry->sockAddr;
+}
+
+/**
+ * Returns an entry's product-class.
+ *
+ * @param entry         [in] The entry to have its product-class returned
+ * @return A pointer to the entry's product-class
+ */
+static const EntryProdClass* entry_getEntryProdClass(
+        const uldb_Entry* const entry)
+{
+    return &entry->prodClass;
 }
 
 /**
@@ -1167,15 +1142,17 @@ static uldb_Status sm_addUpstreamLdm(
 /**
  * Vets an upstream LDM.
  *
- * @param sm                [in/out] Pointer to shared-memory structure
- * @param pid               [in] PID of the upstream LDM process
- * @param protoVers         [in] Protocol version number (e.g., 5 or 6)
- * @param isNotifier        [in] Type of the upstream LDM process
- * @param sockAddr          [in] Socket Internet address of the downstream LDM
- * @param prodClass         [in] The data-request by the downstream LDM
+ * @param sm            [in/out] Pointer to shared-memory structure
+ * @param pid           [in] PID of the upstream LDM process
+ * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
+ * @param isNotifier    [in] Type of the upstream LDM process
+ * @param sockAddr      [in] Socket Internet address of the downstream LDM
+ * @param desired       [in] The subscription desired by the downstream LDM
+ * @param allowed       [out] The allowed subscription. Equal to the desired
+ *                      subscription reduced by existing subscriptions from the
+ *                      same host.
  * @retval ULDB_SUCCESS     Success
  * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_DISALLOWED  Entry is disallowed. log_*() called.
  * @retval ULDB_SYSTEM      System error. log_*() called.
  */
 static uldb_Status sm_vetUpstreamLdm(
@@ -1184,59 +1161,43 @@ static uldb_Status sm_vetUpstreamLdm(
         const int protoVers,
         const int isNotifier,
         const struct sockaddr_in* sockAddr,
-        const prod_class* const prodClass)
+        const prod_class* const desired,
+        prod_class** const allowed)
 {
-    int status = ULDB_SUCCESS;
+    int status = 0;
     const Segment* const segment = sm->segment;
     const uldb_Entry* entry;
+    prod_class_t* allow = dup_prod_class(desired);
 
-    for (entry = seg_firstEntry(segment); entry != NULL ;
-            entry = seg_nextEntry(segment, entry)) {
-        if (entry->pid == pid) {
-            LOG_ADD1("Entry already exists for PID %ld", pid);
-            status = ULDB_EXIST;
-            break;
-        }
-
-        if (areIpAddressesEqual(sockAddr, entry_getSockAddr(entry))) {
-            if (status = entry_vet(entry, isNotifier, prodClass)) {
-                prod_class* entryProdClass;
-                const char* hostString = inet_ntoa(sockAddr->sin_addr);
-
-                if (entry_getProdClass(entry, &entryProdClass)) {
-                    LOG_ADD1(
-                            "Couldn't get product-class of existing entry for host %s",
-                            hostString);
-                }
-                else {
-                    char requestBuf[1024];
-                    char entryBuf[1024];
-                    static const char* failureMsg =
-                            "<<couldn't print product-class>>>";
-
-                    if (s_prod_class(requestBuf, sizeof(requestBuf),
-                            prodClass) == NULL) {
-                        (void) strcpy(requestBuf, failureMsg);
-                    }
-                    if (s_prod_class(entryBuf, sizeof(entryBuf),
-                            entryProdClass) == NULL) {
-                        (void) strcpy(entryBuf, failureMsg);
-                    }
-
-                    requestBuf[sizeof(requestBuf) - 1] =
-                            entryBuf[sizeof(entryBuf) - 1] = 0;
-
-                    LOG_ADD4("%s request from %s overlaps existing service: "
-                    "request=\"%s\", service=\"%s\"",
-                        isNotifier ? "NOTIFYME" : "FEEDME",
-                        hostString, requestBuf, entryBuf);
-                    free_prod_class(entryProdClass);
-                }
-
+    if (NULL == allow) {
+        LOG_ADD0("Couldn't duplicate desired subscription");
+        status = ULDB_SYSTEM;
+    }
+    else {
+        for (entry = seg_firstEntry(segment); entry != NULL ; entry =
+                seg_nextEntry(segment, entry)) {
+            if (pid == entry->pid) {
+                LOG_ADD1("Entry already exists for PID %ld", pid);
+                status = ULDB_EXIST;
                 break;
-            } /* data-request is disallowed */
-        } /* socket addresses are equal */
-    } /* entry loop */
+            }
+
+            if (areIpAddressesEqual(sockAddr, entry_getSockAddr(entry))
+                    && isNotifier == entry_isNotifier(entry)) {
+                epc_remove_prod_specs(entry_getEntryProdClass(entry), allow);
+                clss_scrunch(allow);
+
+                if (0 >= allow->psa.psa_len)
+                    break;
+            } /* socket addresses are equal */
+        } /* entry loop */
+
+        if (status)
+            free_prod_class(allow);
+    } /* "allow" allocated */
+
+    if (0 == status)
+        *allowed = allow;
 
     return status;
 }
@@ -1250,10 +1211,15 @@ static uldb_Status sm_vetUpstreamLdm(
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
  * @param isNotifier    [in] Type of the upstream LDM process
  * @param sockAddr      [in] Socket Internet address of the downstream LDM
- * @param prodClass     [in] The data-request by the downstream LDM
- * @retval ULDB_SUCCESS     Success
+ * @param desired       [in] The subscription desired by the downstream LDM
+ * @param allowed       [out] The allowed subscription. Equal to the desired
+ *                      subscription reduced by existing subscriptions from the
+ *                      same host.
+ * @retval ULDB_SUCCESS     Success. If the resulting subscription is the empty
+ *                          set, however, then the shared-memory will not have
+ *                          been modified.
+ * @retval ULDB_INIT        Module not initialized. log_*() called.
  * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_DISALLOWED  Entry is disallowed. log_*() called.
  * @retval ULDB_SYSTEM      System error. log_*() called.
  */
 static uldb_Status sm_add(
@@ -1262,14 +1228,15 @@ static uldb_Status sm_add(
         const int protoVers,
         const int isNotifier,
         const struct sockaddr_in* sockAddr,
-        const prod_class* const prodClass)
+        const prod_class* const desired,
+        prod_class** const allowed)
 {
     int status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier, sockAddr,
-            prodClass);
+            desired, allowed);
 
-    if (ULDB_SUCCESS == status) {
+    if (0 == status && 0 < (*allowed)->psa.psa_len) {
         if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier, sockAddr,
-                prodClass)) {
+                *allowed)) {
             LOG_ADD1("Couldn't add request from %s",
                     inet_ntoa(sockAddr->sin_addr));
         }
@@ -1789,13 +1756,16 @@ uldb_Status uldb_getSize(
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
  * @param isNotifier    [in] The type of the upstream LDM: notifier or feeder
  * @param sockAddr      [in] Socket Internet address of downstream LDM
- * @param prodClass     [in] The data-request by the downstream LDM
- * @retval ULDB_SUCCESS     Success.
+ * @param desired       [in] The subscription desired by the downstream LDM
+ * @param allowed       [out] The allowed subscription. Equal to the desired
+ *                      subscription reduced by existing subscriptions from the
+ *                      same host.
+ * @retval ULDB_SUCCESS     Success. If the resulting subscription is the empty
+ *                          set, however, then the database will not have been
+ *                          modified.
  * @retval ULDB_INIT        Module not initialized. log_*() called.
  * @retval ULDB_ARG         Invalid PID. log_*() called.
  * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_DISALLOWED  The request is disallowed by policy. Database not
- *                          modified. log_*() called.
  * @retval ULDB_SYSTEM      System error. log_*() called.
  */
 static uldb_Status uldb_add(
@@ -1803,7 +1773,8 @@ static uldb_Status uldb_add(
         const int protoVers,
         const int isNotifier,
         const struct sockaddr_in* const sockAddr,
-        const prod_class* const prodClass)
+        const prod_class* const desired,
+        prod_class** const allowed)
 {
     int status;
 
@@ -1821,13 +1792,11 @@ static uldb_Status uldb_add(
             }
             else {
                 status = sm_add(&database.sharedMemory, pid, protoVers,
-                        isNotifier, sockAddr, prodClass);
+                        isNotifier, sockAddr, desired, allowed);
 
                 if (db_unlock(&database)) {
                     LOG_ADD0("Couldn't unlock database");
-
-                    if (ULDB_SUCCESS == status)
-                        status = ULDB_SYSTEM;
+                    status = ULDB_SYSTEM;
                 }
             } /* database is locked */
         } /* module is initialized */
@@ -1837,51 +1806,36 @@ static uldb_Status uldb_add(
 }
 
 /**
- * Adds an upstream LDM feeder to the database.
+ * Adds an upstream LDM process to the database.
  *
  * @param pid           [in] PID of upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
  * @param sockAddr      [in] Socket Internet address of downstream LDM
- * @param prodClass     [in] The data-request by the downstream LDM
- * @retval ULDB_SUCCESS     Success.
+ * @param desired       [in] The subscription desired by the downstream LDM
+ * @param allowed       [out] The allowed subscription. Equal to the desired
+ *                      subscription reduced by existing subscriptions from the
+ *                      same host. Upon successful return, the client should
+ *                      call "free_prod_class(*allowed)" when the allowed
+ *                      subscription is no longer needed.
+ * @param isNotifier    [in] Whether the upstream LDM is a notifier or a feeder
+ * @retval ULDB_SUCCESS     Success. The database is unmodified, however, if
+ *                          the allowed subscription is the empty set. The
+ *                          client should call "free_prod_class(*allowed)" when
+ *                          the allowed subscription is no longer needed.
  * @retval ULDB_INIT        Module not initialized. log_*() called.
  * @retval ULDB_ARG         Invalid PID. log_*() called.
  * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_DISALLOWED  The request is disallowed by policy. Database not
- *                          modified. log_*() called.
  * @retval ULDB_SYSTEM      System error. log_*() called.
  */
-uldb_Status uldb_addFeeder(
+uldb_Status uldb_addProcess(
         const pid_t pid,
         const int protoVers,
         const struct sockaddr_in* const sockAddr,
-        const prod_class* const prodClass)
+        const prod_class* const desired,
+        prod_class** const allowed,
+        const int isNotifier)
 {
-    return uldb_add(pid, protoVers, 0, sockAddr, prodClass);
-}
-
-/**
- * Adds an upstream LDM notifier to the database.
- *
- * @param pid           [in] PID of upstream LDM process
- * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
- * @param sockAddr      [in] Socket Internet address of downstream LDM
- * @param prodClass     [in] The data-request by the downstream LDM
- * @retval ULDB_SUCCESS     Success.
- * @retval ULDB_INIT        Module not initialized. log_*() called.
- * @retval ULDB_ARG         Invalid PID. log_*() called.
- * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_DISALLOWED  The request is disallowed by policy. Database not
- *                          modified. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
- */
-uldb_Status uldb_addNotifier(
-        const pid_t pid,
-        const int protoVers,
-        const struct sockaddr_in* const sockAddr,
-        const prod_class* const prodClass)
-{
-    return uldb_add(pid, protoVers, 1, sockAddr, prodClass);
+    return uldb_add(pid, protoVers, isNotifier, sockAddr, desired, allowed);
 }
 
 /**

@@ -31,19 +31,19 @@ up6_new_feeder(
     const int                           socket, 
     const char* const                   downName,
     const struct sockaddr_in* const     downAddr,
-    const prod_class_t* const             prodClass,
+    const prod_class_t* const           prodClass,
     const signaturet* const             signature,
-    const int                           isPrimary,
     const char*                         pqPath, 
     const unsigned                      interval,
-    UpFilter* const			upFilter);
+    UpFilter* const			            upFilter,
+    const int                           isPrimary);
 
 int
 up6_new_notifier(
     const int                           socket, 
     const char* const                   downName,
     const struct sockaddr_in* const     downAddr,
-    const prod_class_t* const             prodClass,
+    const prod_class_t* const           prodClass,
     const signaturet* const             signature,
     const char*                         pqPath, 
     const unsigned                      interval,
