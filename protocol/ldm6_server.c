@@ -188,6 +188,7 @@ feed_or_notify(
     UpFilter* upFilter = NULL;
     fornme_reply_t* reply = NULL;
     int terminate = 0;
+    int isPrimary;
     static fornme_reply_t theReply;
 
     /*
@@ -266,8 +267,9 @@ feed_or_notify(
      * The following relies on atexit()-registered cleanup for removal of the
      * entry from the upstream LDM database.
      */
+    isPrimary = maxHereis > UINT_MAX / 2;
     status = uldb_addProcess(getpid(), 6, &downAddr, allowSub, &uldbSub,
-            isNotifier);
+            isNotifier, isPrimary);
     if (status) {
         LOG_ADD0("Couldn't add this process to the upstream LDM database");
         log_log(LOG_ERR);
@@ -280,15 +282,24 @@ feed_or_notify(
      * Send a RECLASS reply to the downstream LDM if appropriate.
      */
     if (!clss_eq(origSub, uldbSub)) {
-        static prod_class noSub = { { 0, 0 }, /* TS_ZERO */
-            { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
-
-        (void)uldb_remove(getpid()); /* wait for next time */
+        (void)uldb_remove(getpid()); /* maybe next time */
 
         theReply.code = RECLASS;
-        theReply.fornme_reply_t_u.prod_class = (0 == uldbSub->psa.psa_len)
-            ? &noSub /* downstream LDM isn't allowed anything */
-            : uldbSub;
+
+        if (0 < uldbSub->psa.psa_len) {
+            theReply.fornme_reply_t_u.prod_class = uldbSub;
+        }
+        else {
+            /*
+             * The downstream LDM isn't allowed anything.
+             */
+            static prod_class noSub = { { 0, 0 }, /* TS_ZERO */
+                { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
+
+            theReply.fornme_reply_t_u.prod_class = &noSub;
+            done = 1; /* downstream will exit, so we need to */
+        }
+
         reply = &theReply;
         goto free_uldb_sub;
     }
@@ -326,7 +337,7 @@ feed_or_notify(
                     signature, getQueuePath(), interval, upFilter)
             : up6_new_feeder(sock, downName, &downAddr, uldbSub,
                     signature, getQueuePath(), interval, upFilter,
-                    maxHereis > UINT_MAX / 2);
+                    isPrimary);
 
     exit(status);
 

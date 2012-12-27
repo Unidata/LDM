@@ -399,7 +399,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
          * the entry from the database.
          */
         status = uldb_addProcess(getpid(), 5, downAddr, remote->clssp, &uldbSub,
-                noti5_sqf == doit);
+                noti5_sqf == doit, 0);
         if (status) {
             LOG_ADD0("Couldn't add this process to the upstream LDM database");
             log_log(LOG_ERR);
@@ -408,22 +408,35 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         }
         if (logIfReduced(remote->clssp, uldbSub, "existing subscriptions")) {
             free_prod_class(remote->clssp);
-            remote->clssp = uldbSub;
+
+            if (set_remote_class(uldbSub)) {
+                LOG_ADD0("Couldn't set remote subscription to reduced subscription");
+                svcerr_systemerr(rqstp->rq_xprt);
+                return NULL;
+            }
         }
 
         /*
          * Send a RECLASS reply to the downstream LDM if appropriate.
          */
         if (!clss_eq(want, remote->clssp)) {
-            static prod_class noSub = { { 0, 0 }, /* TS_ZERO */
-                { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
-
-            uldb_remove(getpid()); /* wait for next time */
+            uldb_remove(getpid()); /* maybe next time */
 
             theReply.code = RECLASS;
-            theReply.ldm_replyt_u.newclssp = (0 == remote->clssp->psa.psa_len)
-                ? &noSub /* downstream LDM isn't allowed anything */
-                : remote->clssp;
+
+            if (0 < remote->clssp->psa.psa_len) {
+                theReply.ldm_replyt_u.newclssp = remote->clssp;
+            }
+            else {
+                /*
+                 * The downstream LDM isn't allowed anything.
+                 */
+                static prod_class noSub = { { 0, 0 }, /* TS_ZERO */
+                    { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
+
+                theReply.ldm_replyt_u.newclssp = &noSub;
+                done = 1; /* downstream will exit, so we need to */
+            }
 
             return &theReply;
         }

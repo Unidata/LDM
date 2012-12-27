@@ -75,6 +75,7 @@ struct uldb_Entry {
     pid_t pid;
     int protoVers;
     int isNotifier;
+    int isPrimary;
     EntryProdClass prodClass;
 };
 
@@ -418,6 +419,19 @@ static pid_t entry_isNotifier(
         const uldb_Entry* const entry)
 {
     return entry->isNotifier;
+}
+
+/**
+ * Indicates if the upstream LDM of an entry is in primary transfer mode.
+ *
+ * @param entry     [in] Pointer to the entry
+ * @retval 0        The associated upstream LDM is in ALTERNATE transfer mode
+ * @retval 1        The associated upstream LDM is in PRIMARY transfer mode.
+ */
+static pid_t entry_isPrimary(
+        const uldb_Entry* const entry)
+{
+    return entry->isPrimary;
 }
 
 /**
@@ -1054,6 +1068,8 @@ static uldb_Status sm_ensureSpaceForEntry(
  * @param pid           [in] PID of the upstream LDM
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
  * @param isNotifier    [in] Type of the upstream LDM
+ * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
+ *                      mode or not
  * @param sockAddr      [in] Socket Internet address of the downstream LDM
  * @param prodClass     [in] Data-request of the downstream LDM
  */
@@ -1062,6 +1078,7 @@ static void sm_append(
         const pid_t pid,
         const int protoVers,
         const int isNotifier,
+        const int isPrimary,
         const struct sockaddr_in* sockAddr,
         const prod_class* const prodClass)
 {
@@ -1096,6 +1113,7 @@ static void sm_append(
     entry->pid = pid;
     entry->protoVers = protoVers;
     entry->isNotifier = isNotifier;
+    entry->isPrimary = isPrimary;
     entry->prodClass.from = prodClass->from;
     entry->prodClass.to = prodClass->to;
     entry->prodClass.prodSpecsSize = (unsigned) prodSpecsSize;
@@ -1112,6 +1130,8 @@ static void sm_append(
  * @param pid           [in] PID of the upstream LDM
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
  * @param isNotifier    [in] Type of the upstream LDM
+ * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
+ *                      mode or not
  * @param sockAddr      [in] Socket Internet address of the downstream LDM
  * @param prodClass     [in] Data-request of the downstream LDM
  * @retval ULDB_SUCCESS     Success
@@ -1122,6 +1142,7 @@ static uldb_Status sm_addUpstreamLdm(
         const pid_t pid,
         const int protoVers,
         const int isNotifier,
+        const int isPrimary,
         const struct sockaddr_in* sockAddr,
         const prod_class* const prodClass)
 {
@@ -1132,7 +1153,7 @@ static uldb_Status sm_addUpstreamLdm(
         LOG_ADD0("Couldn't ensure sufficient shared-memory");
     }
     else {
-        sm_append(sm, pid, protoVers, isNotifier, sockAddr, prodClass);
+        sm_append(sm, pid, protoVers, isNotifier, isPrimary, sockAddr, prodClass);
         status = ULDB_SUCCESS;
     }
 
@@ -1146,6 +1167,8 @@ static uldb_Status sm_addUpstreamLdm(
  * @param pid           [in] PID of the upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
  * @param isNotifier    [in] Type of the upstream LDM process
+ * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
+ *                      mode or not
  * @param sockAddr      [in] Socket Internet address of the downstream LDM
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
@@ -1160,6 +1183,7 @@ static uldb_Status sm_vetUpstreamLdm(
         const pid_t pid,
         const int protoVers,
         const int isNotifier,
+        const int isPrimary,
         const struct sockaddr_in* sockAddr,
         const prod_class* const desired,
         prod_class** const allowed)
@@ -1183,7 +1207,8 @@ static uldb_Status sm_vetUpstreamLdm(
             }
 
             if (areIpAddressesEqual(sockAddr, entry_getSockAddr(entry))
-                    && isNotifier == entry_isNotifier(entry)) {
+                    && (isNotifier == entry_isNotifier(entry)) &&
+                    isPrimary && entry_isPrimary(entry)) {
                 epc_remove_prod_specs(entry_getEntryProdClass(entry), allow);
                 clss_scrunch(allow);
 
@@ -1210,6 +1235,8 @@ static uldb_Status sm_vetUpstreamLdm(
  * @param pid           [in] PID of the upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
  * @param isNotifier    [in] Type of the upstream LDM process
+ * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
+ *                      mode or not
  * @param sockAddr      [in] Socket Internet address of the downstream LDM
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
@@ -1227,16 +1254,17 @@ static uldb_Status sm_add(
         const pid_t pid,
         const int protoVers,
         const int isNotifier,
+        const int isPrimary,
         const struct sockaddr_in* sockAddr,
         const prod_class* const desired,
         prod_class** const allowed)
 {
-    int status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier, sockAddr,
-            desired, allowed);
+    int status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier, isPrimary,
+            sockAddr, desired, allowed);
 
     if (0 == status && 0 < (*allowed)->psa.psa_len) {
-        if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier, sockAddr,
-                *allowed)) {
+        if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier,
+                isPrimary, sockAddr, *allowed)) {
             LOG_ADD1("Couldn't add request from %s",
                     inet_ntoa(sockAddr->sin_addr));
         }
@@ -1750,31 +1778,37 @@ uldb_Status uldb_getSize(
 }
 
 /**
- * Adds an entry to the database.
+ * Adds an upstream LDM process to the database.
  *
  * @param pid           [in] PID of upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
- * @param isNotifier    [in] The type of the upstream LDM: notifier or feeder
  * @param sockAddr      [in] Socket Internet address of downstream LDM
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host.
- * @retval ULDB_SUCCESS     Success. If the resulting subscription is the empty
- *                          set, however, then the database will not have been
- *                          modified.
+ *                      same host. Upon successful return, the client should
+ *                      call "free_prod_class(*allowed)" when the allowed
+ *                      subscription is no longer needed.
+ * @param isNotifier    [in] Whether the upstream LDM is a notifier or a feeder
+ * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
+ *                      mode or not
+ * @retval ULDB_SUCCESS     Success. The database is unmodified, however, if
+ *                          the allowed subscription is the empty set. The
+ *                          client should call "free_prod_class(*allowed)" when
+ *                          the allowed subscription is no longer needed.
  * @retval ULDB_INIT        Module not initialized. log_*() called.
  * @retval ULDB_ARG         Invalid PID. log_*() called.
  * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
  * @retval ULDB_SYSTEM      System error. log_*() called.
  */
-static uldb_Status uldb_add(
+uldb_Status uldb_addProcess(
         const pid_t pid,
         const int protoVers,
-        const int isNotifier,
         const struct sockaddr_in* const sockAddr,
         const prod_class* const desired,
-        prod_class** const allowed)
+        prod_class** const allowed,
+        const int isNotifier,
+        const int isPrimary)
 {
     int status;
 
@@ -1792,7 +1826,7 @@ static uldb_Status uldb_add(
             }
             else {
                 status = sm_add(&database.sharedMemory, pid, protoVers,
-                        isNotifier, sockAddr, desired, allowed);
+                        isNotifier, isPrimary, sockAddr, desired, allowed);
 
                 if (db_unlock(&database)) {
                     LOG_ADD0("Couldn't unlock database");
@@ -1803,39 +1837,6 @@ static uldb_Status uldb_add(
     } /* valid "pid" */
 
     return status;
-}
-
-/**
- * Adds an upstream LDM process to the database.
- *
- * @param pid           [in] PID of upstream LDM process
- * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
- * @param sockAddr      [in] Socket Internet address of downstream LDM
- * @param desired       [in] The subscription desired by the downstream LDM
- * @param allowed       [out] The allowed subscription. Equal to the desired
- *                      subscription reduced by existing subscriptions from the
- *                      same host. Upon successful return, the client should
- *                      call "free_prod_class(*allowed)" when the allowed
- *                      subscription is no longer needed.
- * @param isNotifier    [in] Whether the upstream LDM is a notifier or a feeder
- * @retval ULDB_SUCCESS     Success. The database is unmodified, however, if
- *                          the allowed subscription is the empty set. The
- *                          client should call "free_prod_class(*allowed)" when
- *                          the allowed subscription is no longer needed.
- * @retval ULDB_INIT        Module not initialized. log_*() called.
- * @retval ULDB_ARG         Invalid PID. log_*() called.
- * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
- */
-uldb_Status uldb_addProcess(
-        const pid_t pid,
-        const int protoVers,
-        const struct sockaddr_in* const sockAddr,
-        const prod_class* const desired,
-        prod_class** const allowed,
-        const int isNotifier)
-{
-    return uldb_add(pid, protoVers, isNotifier, sockAddr, desired, allowed);
 }
 
 /**
@@ -2024,6 +2025,19 @@ int uldb_entry_isNotifier(
         const uldb_Entry* const entry)
 {
     return entry_isNotifier(entry);
+}
+
+/**
+ * Indicates if the upstream LDM of an entry is in primary transfer mode.
+ *
+ * @param entry     Pointer to the entry
+ * @retval 0        The associated upstream LDM is in ALTERNATE transfer mode
+ * @retval 1        The associated upstream LDM is in PRIMARY transfer mode
+ */
+int uldb_entry_isPrimary(
+        const uldb_Entry* const entry)
+{
+    return entry_isPrimary(entry);
 }
 
 /**
