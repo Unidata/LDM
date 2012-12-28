@@ -138,19 +138,23 @@ upFilter_addComponent(
                     if (errObj = pat_clone(&elt->notPattern, notPattern)) {
                         errObj = ERR_NEW(0, errObj,
                             "Couldn't clone \"not\" pattern");
-
-                        pat_free(elt->okPattern);
                     }
                 }
 
-                if (!errObj) {
+                if (errObj) {
+                    pat_free(elt->okPattern);
+                }
+                else {
                     elt->ft = feedtype;
                     elt->next = upFilter->head;
                     upFilter->head = elt;
                     upFilter->stringOutOfDate = 1;
                     upFilter->count++;
                 }
-            }                           /* "elt->okPattern" set */
+            }                           /* "elt->okPattern" allocated */
+
+            if (errObj)
+                free(elt);
         }                               /* "elt" allocated */
     }
 

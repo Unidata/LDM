@@ -100,7 +100,8 @@ pat_new(
  *
  * Arguments:
  *      dst             Pointer to pointer to be set to the clone.  Set on and
- *                      only on success.
+ *                      only on success. Client should call "pat_free(*dst)"
+ *                      when the pattern is no longer needed.
  *      src             The pattern to be cloned.
  * Returns:
  *      NULL            Success.
