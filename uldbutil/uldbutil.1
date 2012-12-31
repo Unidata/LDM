@@ -20,7 +20,7 @@ database to the standard
 output stream. The format of the output is multiple lines each containing the
 following fields:
 .RS
-.IR "pid protoVers type host fromTime toTime " { prodSpec "[,...]}"
+.IR "pid protoVers type host fromTime toTime " { prodSpec "[,...]} mode"
 .RE
 where:
 .RS
@@ -71,6 +71,10 @@ data-products.
 .PP
 There will normally be only one product-specfication.
 .RE
+.TP
+.I mode
+Transfer-mode of the connection to the downstream LDM. Either "primary" or
+"alternate".
 .RE
 .PP
 In the second form, this utility attempts to delete the upstream LDM 

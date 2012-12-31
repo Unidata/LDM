@@ -1,3 +1,56 @@
+6.11.3.2 	2012-12-27 13:19:00-07:00
+    uldb(3):
+        Changed rejection by ULDB.
+
+        Replaced ULDB rejection by ULDB reduction
+
+        The upstream LDM database no longer rejects a subscription by a
+        downstream LDM based on existing subscriptions from the same downstream
+        host but, rather, reduces the subscription by the existing
+        subscriptions (which might result in an empty subscrption -- which is,
+        effectively, the same thing).
+
+        Now, the ULDB only modifies the subscription by a downstream LDM if the
+        transfer mode is primary. This is done because the ULDB feature
+        interacts with the autoswitching feature. An autoswitch from alternate
+        mode to primary mode risks receiving many products that won't make it
+        into the product-queue because they've already been received due to the
+        delay in termination of the (previous) upstream LDM in alternate mode.
+
+    pqact(1):
+        Added printing of product-ID to debug message
+
+    ulog/log.c:
+        Eliminated setting of _XOPEN_SOURCE to 500.  Necessary in order to
+        build on SunOS 5.11 system using /opt/solstudio12.2/bin/c99.
+
+    Installation:
+        Adapted extractDecls(1) to SunOS 5.11's /usr/bin/awk.
+
+        Fix creation of ~/data if it already exists and isn't a link
+
+    Documentation:
+        Added "pipe_put(): write error: ..." error-message
+
+        Documented "-p pattern" option in pqsend(1).
+
+        Documented use of uldbutil(1) for monitoring upstream LDM-s
+
+        Updated to 2012 workshop:
+            Made break-times indefinite in workshop web pages.
+
+            Corrected class times
+
+            Changed domain-name from guest.ucar.edu to fl-guest.ucar.edu
+
+            Added configuration variable YEAR to workshop-specifics
+
+        Replaced 6.9.8 with @VERSION@
+
+    Misc:
+        Makefile:
+            Corrected "git status -a" to "git status -u"
+
 6.11.2 	2012-12-17 11:11:20-07:00
     HOTFIX!
 

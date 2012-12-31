@@ -278,7 +278,7 @@ set_remote_class(
         newProdClass = dup_prod_class(prodClass);
 
         if (NULL == newProdClass) {
-            log_serror("set_remote_class(): Couldn't duplicate product-class");
+            LOG_SERROR0("Couldn't duplicate product-class");
             return ENOMEM;
         }
     }

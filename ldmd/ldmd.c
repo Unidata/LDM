@@ -230,6 +230,7 @@ static void cleanup(
      */
     (void) uldb_remove(getpid());
     (void) uldb_close();
+    log_clear();
 
     if (getpid() == getpgrp()) {
         /*

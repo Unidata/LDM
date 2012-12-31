@@ -83,7 +83,7 @@ static void test_nil(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 0);
 
-    status = uldb_addProcess(-1, 6, &sockAddr, &_clss_all, &allowed, 0);
+    status = uldb_addProcess(-1, 6, &sockAddr, &_clss_all, &allowed, 0, 1);
     CU_ASSERT_EQUAL(status, ULDB_ARG);
 }
 
@@ -101,15 +101,16 @@ static void populate(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 0);
 
-    status = uldb_addProcess(1, 6, &sockAddr, &_clss_all, &allowed, 0);
+    status = uldb_addProcess(1, 6, &sockAddr, &_clss_all, &allowed, 0, 1);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    CU_ASSERT_TRUE(clss_eq(&_clss_all, allowed));
     free_prod_class(allowed);
 
     status = uldb_getSize(&count);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 1);
 
-    status = uldb_addProcess(1, 6, &sockAddr, &_clss_all, &allowed, 0);
+    status = uldb_addProcess(1, 6, &sockAddr, &_clss_all, &allowed, 0, 1);
     CU_ASSERT_EQUAL(status, ULDB_EXIST);
     log_clear();
 
@@ -117,7 +118,7 @@ static void populate(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 1);
 
-    status = uldb_addProcess(1, 5, &sockAddr, &_clss_all, &allowed, 1);
+    status = uldb_addProcess(1, 5, &sockAddr, &_clss_all, &allowed, 1, 0);
     CU_ASSERT_EQUAL(status, ULDB_EXIST);
     log_clear();
 
@@ -125,7 +126,7 @@ static void populate(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 1);
 
-    status = uldb_addProcess(2, 5, &sockAddr, &_clss_all, &allowed, 0);
+    status = uldb_addProcess(2, 6, &sockAddr, &_clss_all, &allowed, 0, 1);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(allowed->psa.psa_len, 0);
     log_clear();
@@ -135,7 +136,22 @@ static void populate(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 1);
 
-    status = uldb_addProcess(3, 5, &sockAddr, &_clss_all, &allowed, 1);
+    status = uldb_addProcess(5, 5, &sockAddr, &_clss_all, &allowed, 0, 0);
+    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    CU_ASSERT_TRUE(clss_eq(&_clss_all, allowed));
+    free_prod_class(allowed);
+
+    status = uldb_getSize(&count);
+    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    CU_ASSERT_EQUAL(count, 2);
+
+    status = uldb_remove(5);
+
+    status = uldb_getSize(&count);
+    CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
+    CU_ASSERT_EQUAL(count, 1);
+
+    status = uldb_addProcess(3, 5, &sockAddr, &_clss_all, &allowed, 1, 0);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     free_prod_class(allowed);
 
@@ -143,7 +159,7 @@ static void populate(
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     CU_ASSERT_EQUAL(count, 2);
 
-    status = uldb_addProcess(4, 5, &sockAddr, &clss_some, &allowed, 1);
+    status = uldb_addProcess(4, 5, &sockAddr, &clss_some, &allowed, 1, 0);
     CU_ASSERT_EQUAL(status, ULDB_SUCCESS);
     free_prod_class(allowed);
 

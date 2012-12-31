@@ -725,8 +725,8 @@ static up6_error_t up6_init(
  *      interval        pq_suspend() interval in seconds.
  *      upFilter        Pointer to product-class for filtering data-products.
  *                      May not be NULL.
- *      isPrimary       Whether data-product exchage-mode should be
- *                      primary (i.e., use HEREIS) or alternae (i.e.,
+ *      isPrimary       Whether data-product exchange-mode should be
+ *                      primary (i.e., use HEREIS) or alternate (i.e.,
  *                      use COMINGSOON/BLKDATA).
  * Returns:
  *      0                       Success.

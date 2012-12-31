@@ -136,10 +136,11 @@ int main(
                                         "notifier" : "feeder";
 
                         (void) s_prod_class(buf, sizeof(buf), prodClass);
-                        (void) printf("%ld %d %s %s %s\n",
+                        (void) printf("%ld %d %s %s %s %s\n",
                                 (long) uldb_entry_getPid(entry),
                                 uldb_entry_getProtocolVersion(entry), type,
-                                hostbyaddr(sockAddr), buf);
+                                hostbyaddr(sockAddr), buf,
+                                uldb_entry_isPrimary(entry) ? "primary" : "alternate");
                         free_prod_class(prodClass);
                     } /* "prodClass" allocated */
                 } /* entry loop */
