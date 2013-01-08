@@ -439,13 +439,13 @@ down6_comingsoon(
                      * Use the approximate size of the COMINGSOON
                      * argument packet as the amount of data.
                      */
-                    int error = as_comingsoon(0, 
+                    int error = as_process(0,
                         (size_t)(sizeof(InfoBuf) + 2*sizeof(u_int)));
 
                     if (error) {
                         err_log_and_free(
                             ERR_NEW1(0, NULL,
-                                "Couldn't save rejection of "
+                                "Couldn't process rejection of "
                                 "data-product: %s", strerror(error)),
                             ERR_FAILURE);
 
