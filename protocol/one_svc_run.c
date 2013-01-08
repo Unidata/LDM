@@ -104,7 +104,7 @@ one_svc_run(
 
             stimeo = timeout;   /* reset select(2) timeout */
 
-            if (as_shouldSwitch()) {
+            if (as_shouldSwitch()) {    /* always false for upstream LDM-s */
                 retCode = 0;
                 break;
             }
