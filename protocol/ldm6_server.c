@@ -554,16 +554,6 @@ hiya_6_svc(
 
             /* else */
 
-            /*
-             * At this point, a reply will be sent to the upstream LDM;
-             * consequently, the autoshift module must be unconditionally
-             * initialized in case the upstream LDM starts sending data-products
-             * without first sending another HIYA.  The autoshift module is
-             * initialized as an upstream LDM to effectively disable it (which
-             * is appropriate for a HIYA message).
-             */
-            (void) as_init(1, isPrimary, xprt->xp_sock);
-
             if (clss_eq(offered, accept)) {
                 unotice("hiya6: %s", s_prod_class(NULL, 0, offered));
 
