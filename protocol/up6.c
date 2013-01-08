@@ -189,11 +189,11 @@ hereis(
 
         _lastSendTime = time(NULL );
         _flushNeeded = 1;
-        error = as_hereis(1, infop->sz); /* accepted */
+        error = as_process(1, infop->sz); /* accepted */
 
         if (error) {
             errObj = ERR_NEW1(UP6_SYSTEM_ERROR, NULL,
-                    "Couldn't save acceptance of data-product: %s",
+                    "Couldn't process acceptance of data-product: %s",
                     strerror(error));
         }
         else {
@@ -254,7 +254,7 @@ csbd(
              * approximate size of the COMINGSOON argument packet as the
              * amount of data.
              */
-            int error = as_comingsoon(0,
+            int error = as_process(0,
                     (size_t) (sizeof(timestampt) + sizeof(signaturet)
                             + strlen(infop->origin) + sizeof(feedtypet)
                             + sizeof(u_int) + strlen(infop->ident)
@@ -262,7 +262,7 @@ csbd(
 
             if (error) {
                 errObj = ERR_NEW1(UP6_SYSTEM_ERROR, NULL,
-                        "Couldn't save rejection of data-product: %s",
+                        "Couldn't process rejection of data-product: %s",
                         strerror(error));
             }
         }
@@ -283,11 +283,11 @@ csbd(
 
                 _lastSendTime = time(NULL );
                 _flushNeeded = 1; /* because asynchronous RPC call */
-                error = as_comingsoon(1, infop->sz); /* accepted */
+                error = as_process(1, infop->sz); /* accepted */
 
                 if (error) {
                     errObj = ERR_NEW1(UP6_SYSTEM_ERROR, NULL,
-                            "Couldn't save acceptance of data-product: %s",
+                            "Couldn't process acceptance of data-product: %s",
                             strerror(error));
                 }
                 else {
@@ -350,18 +350,6 @@ static int feed(
                     isDebug ? ERR_DEBUG : ERR_INFO);
 
         *errObj = _isPrimary ? hereis(info, data) : csbd(info, data);
-
-        if (NULL == *errObj) {
-            if (as_shouldSwitch()) {
-                err_log_and_free(ERR_NEW1(0, NULL,
-                        "Switching data-product send-mode from %s",
-                        _isPrimary
-                        ? "primary to alternate"
-                        : "alternate to primary"), ERR_NOTICE);
-
-                _isPrimary = !_isPrimary;
-            }
-        } /* product successfully sent */
     } /* product passes up-filter */
 
     return 0;
@@ -474,80 +462,68 @@ static up6_error_t up6_run(
             errCode = UP6_CLIENT_FAILURE;
         }
         else {
-            ErrorObj* error = as_init(1, _isPrimary, _socket);
+            while (UP6_SUCCESS == errCode && exitIfDone(0)) {
+                ErrorObj* errObj = NULL;
+                int err = pq_sequence(_pq, _mt, _class,
+                        _mode == FEED ? feed : notify, &errObj);
 
-            if (error != NULL ) {
-                err_log_and_free(
-                        ERR_NEW(0, error, "Couldn't initialize autoshift module"),
-                        ERR_FAILURE);
+                (void) exitIfDone(0);
 
-                errCode = UP6_SYSTEM_ERROR;
-            }
-            else {
-                while (UP6_SUCCESS == errCode && exitIfDone(0)) {
-                    ErrorObj* errObj = NULL;
-                    int err = pq_sequence(_pq, _mt, _class,
-                            _mode == FEED ? feed : notify, &errObj);
+                if (NULL != errObj) {
+                    /*
+                     * The feed() or notify() function reports a
+                     * problem.
+                     */
+                    errCode = (up6_error_t) err_code(errObj);
 
-                    (void) exitIfDone(0);
+                    err_log_and_free(
+                            ERR_NEW(0, errObj, "feed or notify failure"),
+                            ERR_NOTICE);
+                }
+                else if (err) {
+                    /*
+                     * The product-queue module reports a problem.
+                     */
+                    if (err == PQUEUE_END || err == EAGAIN || err == EACCES) {
+                        if (_flushNeeded) {
+                            errObj = flushConnection();
 
-                    if (NULL != errObj) {
-                        /*
-                         * The feed() or notify() function reports a
-                         * problem.
-                         */
-                        errCode = (up6_error_t) err_code(errObj);
+                            if (NULL != errObj) {
+                                errCode = (up6_error_t) err_code(errObj);
 
-                        err_log_and_free(
-                                ERR_NEW(0, errObj, "feed or notify failure"),
-                                ERR_NOTICE);
-                    }
-                    else if (err) {
-                        /*
-                         * The product-queue module reports a problem.
-                         */
-                        if (err == PQUEUE_END || err == EAGAIN || err == EACCES) {
-
-                            if (_flushNeeded) {
-                                errObj = flushConnection();
-
-                                if (NULL != errObj) {
-                                    errCode = (up6_error_t) err_code(errObj);
-
-                                    err_log_and_free(ERR_NEW(0, errObj,
-                                            "Couldn't flush connection"),
-                                            ERR_NOTICE);
-                                }
-
-                                (void) exitIfDone(0);
+                                err_log_and_free(ERR_NEW(0, errObj,
+                                        "Couldn't flush connection"),
+                                        ERR_NOTICE);
                             }
 
-                            if (errCode == UP6_SUCCESS) {
-                                time_t timeSinceLastSend = time(NULL )
-                                        - _lastSendTime;
-
-                                udebug(
-                                        err == PQUEUE_END ?
-                                                "End of product-queue" :
-                                                "Hit a lock");
-
-                                if (_interval <= timeSinceLastSend) {
-                                    _flushNeeded = 1;
-                                }
-                                else {
-                                    (void) pq_suspend(
-                                            _interval - timeSinceLastSend);
-                                }
-                            }
-                        } /* end-of-queue reached or lock hit */
-                        else {
-                            uerror("Product send failure: %s", strerror(err));
-
-                            errCode = UP6_PQ;
+                            (void) exitIfDone(0);
                         }
-                    } /* problem in product-queue module */
-                } /* pq_sequence() loop */
-            } /* autoshift module init-ed */
+
+                        if (errCode == UP6_SUCCESS) {
+                            time_t timeSinceLastSend = time(NULL )
+                                    - _lastSendTime;
+
+                            udebug(
+                                    err == PQUEUE_END ?
+                                            "End of product-queue" :
+                                            "Hit a lock");
+
+                            if (_interval <= timeSinceLastSend) {
+                                _flushNeeded = 1;
+                            }
+                            else {
+                                (void) pq_suspend(
+                                        _interval - timeSinceLastSend);
+                            }
+                        }
+                    } /* end-of-queue reached or lock hit */
+                    else {
+                        uerror("Product send failure: %s", strerror(err));
+
+                        errCode = UP6_PQ;
+                    }
+                } /* problem in product-queue module */
+            } /* pq_sequence() loop */
 
             auth_destroy(_clnt->cl_auth);
             clnt_destroy(_clnt);
