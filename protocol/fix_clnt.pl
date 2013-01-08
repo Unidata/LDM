@@ -5,7 +5,7 @@ my($modify);
 while( <STDIN> ) {
 
     if (/static[ 	]+struct[ 	]+timeval[ 	]+TIMEOUT/) {
-	s/25/60/;  # NOTE: INT_MAX causes EINVAL in clnt_call()
+#	s/25/60/;  # NOTE: INT_MAX causes EINVAL in clnt_call()
 	print $_;
 	print "static struct timeval ZERO_TIMEOUT = { 0, 0 };";
 	print "\n";
