@@ -185,21 +185,11 @@ hereis(
                 "HEREIS: %s", clnt_errmsg(_clnt));
     }
     else {
-        int error;
-
-        _lastSendTime = time(NULL );
+        _lastSendTime = time(NULL);
         _flushNeeded = 1;
-        error = as_process(1, infop->sz); /* accepted */
 
-        if (error) {
-            errObj = ERR_NEW1(UP6_SYSTEM_ERROR, NULL,
-                    "Couldn't process acceptance of data-product: %s",
-                    strerror(error));
-        }
-        else {
-            if (ulogIsDebug())
-                udebug("%s", s_prod_info(NULL, 0, infop, 1));
-        }
+        if (ulogIsDebug())
+            udebug("%s", s_prod_info(NULL, 0, infop, 1));
     }
 
     return errObj;
@@ -248,25 +238,7 @@ csbd(
         _lastSendTime = time(NULL );
         _flushNeeded = 0; /* because synchronous RPC call */
 
-        if (*reply == DONT_SEND) {
-            /*
-             * Notify the autoshift module of the rejection.  Use the 
-             * approximate size of the COMINGSOON argument packet as the
-             * amount of data.
-             */
-            int error = as_process(0,
-                    (size_t) (sizeof(timestampt) + sizeof(signaturet)
-                            + strlen(infop->origin) + sizeof(feedtypet)
-                            + sizeof(u_int) + strlen(infop->ident)
-                            + sizeof(u_int) + sizeof(u_int)));
-
-            if (error) {
-                errObj = ERR_NEW1(UP6_SYSTEM_ERROR, NULL,
-                        "Couldn't process rejection of data-product: %s",
-                        strerror(error));
-            }
-        }
-        else {
+        if (*reply != DONT_SEND) {
             datapkt pkt;
 
             pkt.signaturep = (signaturet *) &infop->signature; /* not const */
@@ -279,21 +251,11 @@ csbd(
                         "Error sending BLKDATA: %s", clnt_errmsg(_clnt));
             }
             else {
-                int error;
-
                 _lastSendTime = time(NULL );
                 _flushNeeded = 1; /* because asynchronous RPC call */
-                error = as_process(1, infop->sz); /* accepted */
 
-                if (error) {
-                    errObj = ERR_NEW1(UP6_SYSTEM_ERROR, NULL,
-                            "Couldn't process acceptance of data-product: %s",
-                            strerror(error));
-                }
-                else {
-                    if (ulogIsDebug())
-                        udebug("%s", s_prod_info(NULL, 0, infop, 1));
-                }
+                if (ulogIsDebug())
+                    udebug("%s", s_prod_info(NULL, 0, infop, 1));
             }
         }
 

@@ -125,7 +125,7 @@ dh_setInfo(
 /*
  * Tries to write a data-product to the product-queue.  Calls savedInfo_set()
  * on success or if the data-product is already in the product-queue.  Calls
- * as_hereis() or as_comingsoon() appropriately.
+ * as_process().
  *
  * Arguments:
  *      pq              Pointer to product-queue structure.
