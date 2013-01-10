@@ -1,5 +1,5 @@
 /**
- * Copyright 2012 University Corporation for Atmospheric Research. All rights
+ * Copyright 2013 University Corporation for Atmospheric Research. All rights
  * reserved.
  * <p>
  * See file COPYRIGHT in the top-level source-directory for legal conditions.
@@ -9,8 +9,9 @@
  * Module for IPv4 multicast.
  * <p>
  * Examples:
- *      Create a blocking socket for sending non-loopedback IP multicast packets
- *      on the local subnet using the default multicast interface:
+ *      Create a blocking socket for sending IP multicast packets on the local
+ *      subnet using the default multicast interface (the packets will not
+ *      appear on the loopback interface):
  *
  *          #include <arpa/inet.h>
  *          #include <ip_multicast.h>
@@ -84,10 +85,10 @@ struct ip_mcast {
  *                          ENOMEM      Insufficient memory was available.
  */
 static int ipm_new(
-        const in_addr_t iface_addr,
-        const unsigned char ttl,
-        const unsigned char loop,
-        const int nonblock)
+    const in_addr_t     iface_addr,
+    const unsigned char ttl,
+    const unsigned char loop,
+    const int           nonblock)
 {
     int success = 1;
     const int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
@@ -144,12 +145,13 @@ static int ipm_new(
 
 /**
  * Returns a socket configured for sending IP multicast packets to an IP
- * multicast group.
+ * multicast group. The originator of packets to a multicast group would
+ * typically call this function.
  * <p>
  * log_add() is called for all errors.
  *
  * @param mcast_addr    [in] Internet address of IP multicast group in network
- *                      byte order
+ *                      byte order.
  * @param iface_addr    [in] Internet address of interface for outgoing
  *                      multicast packets in network byte order. 0 means the
  *                      default interface for multicast packets.
@@ -164,11 +166,11 @@ static int ipm_new(
  *                        <128       Restricted to the same continent.
  *                        <255       Unrestricted in scope. Global.
  * @param loop          [in] Whether packets sent to the multicast group should
- *                      be received by the sending host via the loopback
+ *                      also be received by the sending host via the loopback
  *                      interface.
  * @param nonblock      Whether or not the socket should be in non-blocking
  *                      mode.
- * @return              The configured socket.
+ * @retval 0            Success.
  * @retval -1           Failure. "errno" will be one of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
@@ -189,11 +191,11 @@ static int ipm_new(
  *                          ENOBUFS     No buffer space is available.
  */
 int ipm_create(
-        const in_addr_t mcast_addr,
-        const in_addr_t iface_addr,
-        const unsigned char ttl,
-        const unsigned char loop,
-        const int nonblock)
+    const in_addr_t     mcast_addr,
+    const in_addr_t     iface_addr,
+    const unsigned char ttl,
+    const unsigned char loop,
+    const int           nonblock)
 {
     int sock = ipm_new(iface_addr, ttl, loop, nonblock);
 
@@ -218,12 +220,13 @@ int ipm_create(
 /**
  * Returns a socket configured for receiving IP multicast packets. The socket
  * will not receive any multicast packets until the client calls "ipm_add()".
+ * Receivers of multicast packets would typically call this function.
  * <p>
  * log_add() is called for all errors.
  *
  * @param nonblock      Whether or not the socket should be in non-blocking
  *                      mode.
- * @return              The configured socket.
+ * @retval 0            Succes.
  * @retval -1           Failure. "errno" will be one of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
@@ -236,7 +239,7 @@ int ipm_create(
  *                          ENOMEM      Insufficient memory was available.
  */
 int ipm_open(
-        const int nonblock)
+    const int nonblock)
 {
     return ipm_new(0, 1, 0, nonblock);
 }
@@ -259,7 +262,7 @@ int ipm_open(
  * @param iface_addr    [in] Internet address of interface in network byte
  *                      order. 0 means the default interface for multicast
  *                      packets.
- * @return              The configured socket.
+ * @retval 0            Success.
  * @retval -1           Failure. "errno" will be one of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.
@@ -271,21 +274,20 @@ int ipm_open(
  *                                      the system.
  */
 int ipm_add(
-        const int sock,
-        const in_addr_t mcast_addr,
-        const in_addr_t iface_addr)
+    const int       sock,
+    const in_addr_t mcast_addr,
+    const in_addr_t iface_addr)
 {
-    int status;
-    struct ip_mreq group;
+    int             status;
+    struct ip_mreq  group;
 
     group.imr_multiaddr.s_addr = mcast_addr;
     group.imr_interface.s_addr = iface_addr == 0 ? INADDR_ANY : iface_addr;
 
-    if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &group, sizeof(group))
-            == 0) {
-        status = 0;
-    }
-    else {
+    status = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &group,
+            sizeof(group));
+
+    if (status) {
         char buf[INET_ADDRSTRLEN];
         struct in_addr addr;
 
@@ -294,7 +296,6 @@ int ipm_add(
         (void) inet_ntop(AF_INET, &mcast_addr, buf, sizeof(buf));
         LOG_SERROR2("Couldn't add IP multicast group %s to interface %s", buf,
                 inet_ntoa(addr));
-        status = -1;
     }
 
     return status;
@@ -312,7 +313,7 @@ int ipm_add(
  * @param iface_addr    [in] Internet address of interface in network byte
  *                      order. 0 means the default interface for multicast
  *                      packets.
- * @return              The configured socket.
+ * @retval 0            Success.
  * @retval -1           Failure. "errno" will be one of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.
@@ -324,21 +325,20 @@ int ipm_add(
  *                                      the system.
  */
 int ipm_drop(
-        const ip_mcast_t* const mcast,
-        const in_addr_t mcast_addr,
-        const in_addr_t iface_addr)
+    const int       sock,
+    const in_addr_t mcast_addr,
+    const in_addr_t iface_addr)
 {
-    int status;
-    struct ip_mreq group;
+    int             status;
+    struct ip_mreq  group;
 
     group.imr_multiaddr.s_addr = mcast_addr;
     group.imr_interface.s_addr = iface_addr == 0 ? INADDR_ANY : iface_addr;
 
-    if (setsockopt(mcast->sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &group,
-            sizeof(group)) == 0) {
-        status = 0;
-    }
-    else {
+    status = setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &group,
+            sizeof(group));
+
+    if (status) {
         char buf[INET_ADDRSTRLEN];
         struct in_addr addr;
 
@@ -347,7 +347,6 @@ int ipm_drop(
         (void) inet_ntop(AF_INET, &mcast_addr, buf, sizeof(buf));
         LOG_SERROR2("Couldn't drop IP multicast group %s from interface %s",
                 buf, inet_ntoa(addr));
-        status = -1;
     }
 
     return status;
