@@ -42,13 +42,6 @@
 #include "log.h"
 #include "ip_multicast.h"
 
-/*
- * Opaque IP multicast type
- */
-struct ip_mcast {
-    int sock;
-};
-
 /**
  * Returns a socket configured for IP multicast.
  * <p>
