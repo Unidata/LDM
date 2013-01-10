@@ -125,7 +125,7 @@ dh_setInfo(
 /*
  * Tries to write a data-product to the product-queue.  Calls savedInfo_set()
  * on success or if the data-product is already in the product-queue.  Calls
- * as_hereis() or as_comingsoon() appropriately.
+ * as_process().
  *
  * Arguments:
  *      pq              Pointer to product-queue structure.
@@ -173,15 +173,12 @@ dh_saveDataProduct(
         }
         else {
             if (notifyAutoShift) {
-                error = 
-                    wasHereis
-                        ? as_hereis(1, info->sz)
-                        : as_comingsoon(1, info->sz);
+                error = as_process(1, info->sz);
 
                 if (error) {
                     err_log_and_free(
                         ERR_NEW1(0, NULL,
-                            "Couldn't save acceptance of data-product: %s",
+                            "Couldn't process acceptance of data-product: %s",
                             strerror(error)),
                         ERR_FAILURE);
 
@@ -226,15 +223,12 @@ dh_saveDataProduct(
         }
         else {
             if (notifyAutoShift) {
-                error =
-                    wasHereis
-                        ? as_hereis(0, info->sz)
-                        : as_comingsoon(0, info->sz);
+                error = as_process(0, info->sz);
 
                 if (error) {
                     err_log_and_free(
                         ERR_NEW1(0, NULL,
-                            "Couldn't save rejection of data-product: %s",
+                            "Couldn't process rejection of data-product: %s",
                             strerror(error)),
                         ERR_FAILURE);
 

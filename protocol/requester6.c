@@ -176,8 +176,9 @@ run_service(
     struct sockaddr_in    *const upAddr,
     const unsigned int     upId,
     const char            *pqPathname,
-    prod_class_t            *const expect,
-    pqueue                *const pq)
+    prod_class_t          *const expect,
+    pqueue                *const pq,
+    const int              isPrimary)
 {
     ErrorObj*    error = NULL;           /* success */
     SVCXPRT*    xprt;
@@ -214,6 +215,8 @@ run_service(
                         s_prod_class(NULL, 0, expect));
                 }
                 else {
+                    as_init(isPrimary);
+
                     udebug("%s:%d: Downstream LDM initialized",
                         __FILE__, __LINE__);
 
@@ -232,8 +235,8 @@ run_service(
 
                         if (err == ETIMEDOUT) {
                             if (ulogIsVerbose())
-                                uinfo("Connection from upstream LDM silent "
-                                    "for %d seconds", inactiveTimeout);
+                                uinfo("Connection from upstream LDM silent for "
+                                        "%d seconds", inactiveTimeout);
 
                             if (is_upstream_alive(upName, upAddr, upId)) {
                                 if (ulogIsVerbose())
@@ -242,14 +245,14 @@ run_service(
                                 continue;
                             }
 
-                            error = ERR_NEW(REQ6_DISCONNECT, NULL, 
+                            error = ERR_NEW(REQ6_DISCONNECT, NULL,
                                 "Upstream LDM died");
                         }
                         else if (err != 0) {
                             error = ERR_NEW(REQ6_DISCONNECT, NULL,
                                 "Connection to upstream LDM closed");
                             /*
-                             * The service-tranport was destroyed by 
+                             * The service-transport was destroyed by
                              * one_svc_run().
                              */
                             destroyTransport = 0;
@@ -639,42 +642,34 @@ req6_new(
             errObj = make_request(upName, prodClass, isPrimary, clnt, &id);
 
             if (!errObj) {
-                errObj = as_init(0, isPrimary, requestSocket);
+                /*
+                 * Duplicate the socket to allow destruction of the client
+                 * handle.
+                 */
+                dataSocket = dup(requestSocket);
 
-                if (NULL != errObj) {
-                    errObj = ERR_NEW(REQ6_SYSTEM_ERROR, errObj, 
-                        "Couldn't initialize autoshift module");
+                if (-1 == dataSocket) {
+                    errObj = ERR_NEW1(REQ6_SYSTEM_ERROR,
+                        ERR_NEW(errno, NULL, strerror(errno)),
+                        "Couldn't duplicate socket %d", requestSocket);
                 }
                 else {
-                    /*
-                     * Duplicate the socket to allow destruction of the client 
-                     * handle.
-                     */
-                    dataSocket = dup(requestSocket);
+                    auth_destroy(clnt->cl_auth);
+                    clnt_destroy(clnt);
+                    clnt = NULL;
 
-                    if (-1 == dataSocket) {
-                        errObj = ERR_NEW1(REQ6_SYSTEM_ERROR,
-                            ERR_NEW(errno, NULL, strerror(errno)),
-                            "Couldn't duplicate socket %d", requestSocket);
-                    }
-                    else {
-                        auth_destroy(clnt->cl_auth);
-                        clnt_destroy(clnt);
-                        clnt = NULL;
+                    (void)close(requestSocket);
+                    requestSocket = -1;
 
-                        (void)close(requestSocket);
-                        requestSocket = -1;
+                    udebug("%s:%d: Calling run_service()",
+                        __FILE__, __LINE__);
 
-                        udebug("%s:%d: Calling run_service()",
-                            __FILE__, __LINE__);
-
-                        errObj = run_service(dataSocket, inactiveTimeout,
-                            upName, &upAddr, id, pqPathname, prodClass, pq);
+                    errObj = run_service(dataSocket, inactiveTimeout, upName,
+                            &upAddr, id, pqPathname, prodClass, pq, isPrimary);
       
-                        (void)close(dataSocket);/* might be closed already */
-                        dataSocket = -1;
-                    }                   /* socket duplicated */
-                }                       /* autoshift module initialized */
+                    (void)close(dataSocket);/* might be closed already */
+                    dataSocket = -1;
+                }                       /* socket duplicated */
             }                           /* make_request() success */
 
             /*

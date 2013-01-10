@@ -1,5 +1,21 @@
+6.11.3.4 	2013-01-08 11:14:44-07:00
+    Removed as_process() calls by upstream LDM to eliminate error return.
+
+6.11.3.3 	2013-01-08 10:12:30-07:00
+    ldmd(1):
+        Improved the API of the autoshift module (which is responsible for
+        switching between primary and alternate transfer modes) and refactored
+        the module in order to improve its performance. Adapted the rest of the
+        LDM to the changes (in particular, an upstream LDM no longer
+        initializes the autoshift module).
+
+        Changed the client timeout from 60 seconds to the RPC-default of 25
+        seconds in order to ensure that the upstream LDM from a previous
+        primary-mode connection will have terminated before the downstream LDM
+        attempts another primary-mode connection.
+
 6.11.3.2 	2012-12-27 13:19:00-07:00
-    uldb(3):
+    uldb(3) (upstream LDM database module):
         Changed rejection by ULDB.
 
         Replaced ULDB rejection by ULDB reduction

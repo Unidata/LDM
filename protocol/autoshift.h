@@ -1,96 +1,66 @@
 #ifndef AUTOSHIFT_H
 #define AUTOSHIFT_H
 
-#include "error.h"
-
 #include <stddef.h>
 
-/*
- * Initializes the logic of this module.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Resets this module. Starts the clock on measuring performance.
  *
- * Arguments:
- *	isUpstream	Whether or not the process is an upstream (i.e., 
- *			sending) LDM.  True or false.
- *	isPrimary	Whether or not the transmission-mode is primary or
- *			alternate (i.e., uses HEREIS or COMINGSOON/BLKDATA
- *			messages).
- *	socket		The socket on which data-products are exchanged.
- * Returns:
- *	NULL		Success
- *	else		Failure.  Error codes:
- *		EBADF		The socket argument is not a valid file 
- *				descriptor.
- *		ENOTSOCK	The socket argument does not refer to a socket.
- *		EINVAL		The socket has been shut down.
- *		ENOBUFS		Insufficient resources are available in the 
- *				system to complete the call.
- *		ENOSR		There were insufficient STREAMS resources 
- *				available for the operation to complete.
+ * NB: The number of LDM processes receiving the same data is not modified.
+ *
+ * @param isPrimary     Whether or not the transmission-mode is primary (i.e.,
+ *                      uses HEREIS rather than COMINGSOON/BLKDATA messages)
+ * @retval NULL         Success
  */
-ErrorObj*
+void
 as_init(
-    const int	isUpstream,
-    const int	isPrimary,
-    const int	socket);
+    const int	isPrimary);
 
 
-/*
- * Sets the number of LDM-s exchanging data.  If the number doesn't equal
- * the previous number, then this module is reset.
+/**
+ * Sets the number of LDM-s receiving the same data.  If the number doesn't
+ * equal the previous number, then "as_init()" is called.
  *
- * Arguments:
- *      count   The number of LDM-s exchanging data.
- * Returns:
- *      0       Success.  The number will be used to determine when to switch.
- *      EINVAL  "count" is zero.  The previous number will still be used.
- *              The default number is 2.
+ * @param count     The number of LDM-s receiving the same data.
+ * @retval 0        Success
+ * @retval EINVAL  "count" is zero.  The previous number will be unchanged.
  */
 int
 as_setLdmCount(
     unsigned    count);
 
-/*
- * Processes the status of a data-product exchanged via the HEREIS protocol.
+
+/**
+ * Processes the status of a received data-product.
  *
- * Arguments:
- *	success		Whether or not the data-product was accepted.
- *			True or false.
- *	size		Size of the data-product in bytes.
- * Returns:
- *	0		Success.
- *	ENOMEM		Out of memory.
+ * @param success       Whether or not the data-product was inserted into the
+ *                      product-queue
+ * @param size          Size of the data-product in bytes
+ * @retval 0            Success
+ * @retval ENOSYS       "as_setLdmCount()" not yet called
+ * @retval ENOMEM       Out of memory
  */
 int
-as_hereis(
-    const int		success,
-    const size_t	size);
+as_process(
+    const int           success,
+    const size_t        size);
 
-/*
- * Processes the status of a data-product exchanged via the COMINGSOON/BLKDATA
- * protocols.
+/**
+ * Indicates whether or not this LDM process should switch its data-product
+ * receive-mode. Always returns 0 if "as_setLdmCount()" has not been called.
  *
- * Arguments:
- *	success		Whether or not the data-product was accepted.
- *			True or false.
- *	size		Size of the data-product in bytes.
- * Returns:
- *	0		Success.
- *	ENOMEM		Out of memory.
- */
-int
-as_comingsoon(
-    const int		success,
-    const size_t	size);
-
-/*
- * Indicates whether or not to switch between primary and alternate
- * data-product exchange modes.
- *
- * Returns:
- *	0	Don't switch.
- *	1	Do switch
+ * @retval 0       Don't switch
+ * @retval 1       Do switch
  */
 int
 as_shouldSwitch(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
