@@ -464,7 +464,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                 return NULL;
         }
 
-        /* Set the ulog identifer, optional. */
+        /* Set the ulog identifier, optional. */
         if(ident != NULL && *ident != 0)
                 set_abbr_ident(remote_name(), ident);
         unotice("Starting Up(%s/5): %s", 
