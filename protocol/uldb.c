@@ -1830,6 +1830,7 @@ uldb_Status uldb_addProcess(
 
                 if (db_unlock(&database)) {
                     LOG_ADD0("Couldn't unlock database");
+
                     status = ULDB_SYSTEM;
                 }
             } /* database is locked */

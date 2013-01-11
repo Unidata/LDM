@@ -644,7 +644,7 @@ static up6_error_t up6_init(
  ******************************************************************************/
 
 /*
- * Constructs a new, upstream LDM object that feeds a downtstream LDM. function
+ * Constructs a new, upstream LDM object that feeds a downstream LDM. function
  * prints diagnostic messages via the ulog(3) module.  It calls exitIfDone()
  * after potentially lengthy operations.
  *
@@ -697,7 +697,7 @@ int up6_new_feeder(
 
 /*
  * Constructs a new, upstream LDM object that sends product notifications to a
- * downtstream LDM.  This function prints diagnostic messages via the ulog(3)
+ * downstream LDM.  This function prints diagnostic messages via the ulog(3)
  * module.  It calls exitIfDone() after potentially lengthy operations.
  *
  * Arguments:
