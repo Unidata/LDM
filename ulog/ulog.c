@@ -140,6 +140,40 @@ setulogident(const char *ident)
 }
 
 
+/**
+ * Returns the identity string being used.
+ *
+ * @return the identity string.
+ */
+const char*
+getulogident(void) {
+    return logIdent;
+}
+
+
+/**
+ * Returns the logging facility being used.
+ *
+ * @return the logging facility being used.
+ */
+unsigned
+getulogfacility(void) {
+    return logFacility;
+}
+
+
+/**
+ * Returns the pathname of the log file.
+ *
+ * @return      the pathname of the log file. If "-", then the standard error
+ *              stream is used. If NULL, then the system logging daemon is used.
+ */
+const char*
+getulogpath(void) {
+    return logFilename;
+}
+
+
 /* 
  * Like Berkeley 'openlog(3)' - initialize syslog system.
  * But: 

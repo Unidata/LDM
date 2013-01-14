@@ -91,7 +91,26 @@ int openulog(
 	const char *logfilename);
 unsigned ulog_get_options();
 void ulog_set_options(unsigned mask, unsigned values);
+
+/**
+ * Returns the identity string being used.
+ *
+ * @return the identify string.
+ */
+const char* getulogident(void);
 void setulogident(const char *ident);
+/**
+ * Returns the logging facility being used.
+ *
+ * @return the logging facility being used.
+ */
+unsigned getulogfacility(void);
+/**
+ * Returns the pathname of the log file.
+ *
+ * @return the pathname of the log file.
+ */
+const char* getulogpath(void);
 void ulog(unsigned int pri, const char *fmt, ...);
 int vulog(unsigned int pri, const char *fmt, va_list args);
 unsigned int setulogmask(unsigned int pmask);
