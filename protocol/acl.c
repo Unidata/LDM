@@ -2058,6 +2058,12 @@ exec_proct(proct *proc)
 
         if(proc->pid == 0)
         {       /* child */
+                const unsigned  ulogMask = getulogmask();
+                const unsigned  ulogOptions = ulog_get_options();
+                const char*     ulogIdent = getulogident();
+                const unsigned  ulogFacility = getulogfacility();
+                const char*     ulogPath = getulogpath();
+
                 /* restore signals */
                 {
                         struct sigaction sigact;
@@ -2114,6 +2120,7 @@ exec_proct(proct *proc)
                 close_rest(3);
                 endpriv(); 
                 (void) execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
+                openulog(ulogIdent, ulogOptions, ulogFacility, ulogPath);
                 serror("execvp: %s", proc->wrdexp.we_wordv[0]) ;
                 _exit(127) ;
         }
