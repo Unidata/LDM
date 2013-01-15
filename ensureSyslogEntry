@@ -14,7 +14,7 @@ else
     ' ${SYSLOG_CONF} >${SYSLOG_CONF}.new &&
     echo >>${SYSLOG_CONF}.new &&
     echo '# Unidata LDM:' >>${SYSLOG_CONF}.new &&
-    echo "${LOG_LDM}.debug	${LDM_LOGFILE}" >>${SYSLOG_CONF}.new &&
+    echo "${LOG_LDM}.*	${LDM_LOGFILE}" >>${SYSLOG_CONF}.new &&
     cp ${SYSLOG_CONF} ${SYSLOG_CONF}.old &&
     mv -f ${SYSLOG_CONF}.new ${SYSLOG_CONF}
 fi
