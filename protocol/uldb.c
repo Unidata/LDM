@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 University Corporation for Atmospheric Research. All rights
+ * Copyright 2013 University Corporation for Atmospheric Research. All rights
  * reserved.
  *
  * See file COPYRIGHT in the top-level source-directory for legal conditions.
@@ -14,26 +14,26 @@
 
 #include <config.h>
 
-#include <errno.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-
-#include <ldm.h>
-
+#include "ldm.h"
 #include "uldb.h"
 #include "globals.h"
 #include "log.h"
 #include "ldmprint.h"
 #include "semRWLock.h"
 #include "prod_class.h"
+
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <string.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 /**
  * Parameters for creating the key for the shared-memory segment and read/write
@@ -159,7 +159,7 @@ static size_t roundUp(
  * Returns the alignment of a structure.
  *
  * @param size  The size of the structure as determined by "sizeof"
- * @retval 0    The alignment can't be found. log_*() called.
+ * @retval 0    The alignment can't be found. log_add() called.
  * @return      The alignment parameter for the structure
  */
 static size_t getAlignment(
@@ -191,7 +191,7 @@ static size_t getAlignment(
  * @retval 0        The addresses are unequal
  * @retval 1        The addresses are equal
  */
-static int areIpAddressesEqual(
+static int ipAddressesAreEqual(
         const struct sockaddr_in* const addr1,
         const struct sockaddr_in* const addr2)
 {
@@ -214,6 +214,7 @@ static size_t eps_sizeof(
     return roundUp(sizeof(EntryProdSpec) + strlen(pattern), prodSpecAlignment);
 }
 
+#if 0
 /**
  * Removes an entry's product-specification from a given product-specification.
  *
@@ -228,6 +229,24 @@ static void eps_remove_prod_spec(
             && strcmp(entryProdSpec->pattern, prodSpec->pattern) == 0) {
         prodSpec->feedtype &= ~entryProdSpec->feedtype;
     }
+}
+#endif
+
+/**
+ * Indicates if an entry's product-specification is a subset of a given
+ * product-specification.
+ *
+ * @param eps       [in] The entry's product-specification
+ * @param ps        [in] The given product-specification
+ * @retval 0        The entry's product-specification isn't a subset
+ * @retval 1        The entry's product-specification is a subset
+ */
+static int eps_isSubsetOf(
+        const EntryProdSpec* const  eps,
+        const prod_spec* const      ps)
+{
+    return ((eps->feedtype & ~ps->feedtype) == 0)
+            && (strcmp(eps->pattern, ps->pattern) == 0);
 }
 
 /**
@@ -308,7 +327,7 @@ static unsigned epc_numProdSpecs(
  *                      client should call free_prod_class(*prod_class) when
  *                      the product-class is no longer needed.
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status epc_getEverythingButProdSpecs(
         const EntryProdClass* const epc,
@@ -333,6 +352,7 @@ static uldb_Status epc_getEverythingButProdSpecs(
     return status;
 }
 
+#if 0
 /**
  * Removes all product-specifications in an entry's product-class from a given
  * product-class. The time limits of the given product-class are not modified.
@@ -355,6 +375,40 @@ static void epc_remove_prod_specs(
             eps_remove_prod_spec(eps, prodSpec);
         }
     }
+}
+#endif
+
+/**
+ * Indicates if the product-class of an entry is a subset of a given
+ * product-class. The time-limits are ignored.
+ *
+ * @param epc           [in] Pointer to the entry's product-class
+ * @param prodClass     [in] Pointer to the given product-class
+ * @retval 0            The entry's product-class isn't a subset
+ * @retval 1            The entry's product-class is a subset
+ */
+static int epc_isSubsetOf(
+        const EntryProdClass* const epc,
+        const prod_class* const     prodClass)
+{
+    const EntryProdSpec* eps;
+
+    for (eps = epc_firstProdSpec(epc); eps != NULL;
+            eps = epc_nextProdSpec(epc, eps)) {
+        int i;
+
+        for (i = 0; i < prodClass->psa.psa_len; i++) {
+            prod_spec* prodSpec = prodClass->psa.psa_val + i;
+
+            if (eps_isSubsetOf(eps, prodSpec))
+                break;
+        }
+
+        if (i >= prodClass->psa.psa_len)
+            return 0;
+    }
+
+    return 1;
 }
 
 /**
@@ -467,7 +521,7 @@ static const EntryProdClass* entry_getEntryProdClass(
  *                  client should call free_prod_class(*prodClass) when the
  *                  product-class is no longer needed.
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status entry_getProdClass(
         const uldb_Entry* const entry,
@@ -586,7 +640,7 @@ static size_t seg_getNeededCapacity(
  * @param dest          [out] Pointer to destination segment
  * @param src           [in] Pointer to source segment
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  Destination is too small to hold the source. log_*()
+ * @retval ULDB_SYSTEM  Destination is too small to hold the source. log_add()
  *                      called.
  */
 static uldb_Status seg_copy(
@@ -619,7 +673,7 @@ static uldb_Status seg_copy(
  *                          return, the client should call "seg_free(*clone)"
  *                          when the clone is no longer needed.
  * @retval ULDB_SUCCESS     Success
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status seg_clone(
         const Segment* const segment,
@@ -731,8 +785,8 @@ static void sm_clear(
  * @param sm            [in/out] Pointer to the shared-memory structure
  * @retval ULDB_SUCCESS Success
  * @retval ULDB_EXIST   The shared-memory segment corresponding to "sm->key"
- *                      doesn't exist. log_*() called.
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ *                      doesn't exist. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_setShmId(
         SharedMemory* const sm)
@@ -758,7 +812,7 @@ static uldb_Status sm_setShmId(
  *
  * @param sm            [in/out] Pointer to shared-memory structure
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_attach(
         SharedMemory* const sm)
@@ -796,7 +850,7 @@ static uldb_Status sm_attach(
  *
  * @param sm            [in] Pointer to the shared-memory structure
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_detach(
         SharedMemory* const sm)
@@ -829,8 +883,8 @@ static uldb_Status sm_detach(
  * @param key           [in] IPC key of shared-memory segment
  * @retval ULDB_SUCCESS Success
  * @retval ULDB_EXIST   The corresponding shared-memory segment doesn't exist.
- *                      log_*() called.
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ *                      log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_init(
         SharedMemory* const sm,
@@ -858,9 +912,9 @@ static uldb_Status sm_init(
  *
  * @param sm            [in] Pointer to the shared-memory structure
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_EXIST   The shared-memory segment doesn't exist. log_*()
+ * @retval ULDB_EXIST   The shared-memory segment doesn't exist. log_add()
  *                      called.
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_delete(
         SharedMemory* const sm)
@@ -903,9 +957,9 @@ static uldb_Status sm_delete(
  *
  * @param key           The IPC key
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_EXIST   The shared-memory segment doesn't exist. log_*()
+ * @retval ULDB_EXIST   The shared-memory segment doesn't exist. log_add()
  *                      called.
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_deleteByKey(
         const key_t key)
@@ -927,9 +981,9 @@ static uldb_Status sm_deleteByKey(
  * @param size          [in] The initial size, in bytes, of the data portion of
  *                      the shared-memory segment
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_EXIST   The shared-memory segment already exists. log_*()
+ * @retval ULDB_EXIST   The shared-memory segment already exists. log_add()
  *                      called.
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_create(
         SharedMemory* const sm,
@@ -1015,7 +1069,7 @@ static unsigned sm_getSize(
  * @param sm        [in/out] Pointer to the shared-memory structure
  * @param size      [in] The size of the new entry in bytes
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_ensureSpaceForEntry(
         SharedMemory* const sm,
@@ -1135,7 +1189,7 @@ static void sm_append(
  * @param sockAddr      [in] Socket Internet address of the downstream LDM
  * @param prodClass     [in] Data-request of the downstream LDM
  * @retval ULDB_SUCCESS     Success
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status sm_addUpstreamLdm(
         SharedMemory* const sm,
@@ -1175,8 +1229,8 @@ static uldb_Status sm_addUpstreamLdm(
  *                      subscription reduced by existing subscriptions from the
  *                      same host.
  * @retval ULDB_SUCCESS     Success
- * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status sm_vetUpstreamLdm(
         SharedMemory* const sm,
@@ -1206,15 +1260,32 @@ static uldb_Status sm_vetUpstreamLdm(
                 break;
             }
 
-            if (areIpAddressesEqual(sockAddr, entry_getSockAddr(entry))
+            if (ipAddressesAreEqual(sockAddr, entry_getSockAddr(entry))
                     && (isNotifier == entry_isNotifier(entry)) &&
-                    isPrimary && entry_isPrimary(entry)) {
+                    (isPrimary == entry_isPrimary(entry))) {
+                if (epc_isSubsetOf(entry_getEntryProdClass(entry), allow)) {
+                    pid_t   pid = entry_getPid(entry);
+
+                    LOG_ADD1("Terminating obsolete upstream LDM process %ld",
+                            pid);
+                    log_log(LOG_NOTICE);
+
+                    if (kill(pid, SIGTERM)) {
+                        LOG_SERROR1("Couldn't terminate obsolete upstream LDM process %ld",
+                            pid);
+                        log_log(LOG_WARNING);
+                    }
+                }
+#if 0
                 epc_remove_prod_specs(entry_getEntryProdClass(entry), allow);
                 clss_scrunch(allow);
 
-                if (0 >= allow->psa.psa_len)
+                if (0 >= allow->psa.psa_len) {
+                    entry_terminate(entry);
                     break;
-            } /* socket addresses are equal */
+                }
+#endif
+            } /* socket IP addresses are equal */
         } /* entry loop */
 
         if (status)
@@ -1245,9 +1316,9 @@ static uldb_Status sm_vetUpstreamLdm(
  * @retval ULDB_SUCCESS     Success. If the resulting subscription is the empty
  *                          set, however, then the shared-memory will not have
  *                          been modified.
- * @retval ULDB_INIT        Module not initialized. log_*() called.
- * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_INIT        Module not initialized. log_add() called.
+ * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status sm_add(
         SharedMemory* const sm,
@@ -1279,8 +1350,8 @@ static uldb_Status sm_add(
  * @param sm            [in/out] Pointer to the shared-memory structure
  * @param pid           [in] PID to be removed
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_EXIST   No corresponding entry found. log_*() called.
- * @retVal ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_EXIST   No corresponding entry found. log_add() called.
+ * @retVal ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_remove(
         SharedMemory* const sm,
@@ -1325,7 +1396,7 @@ static uldb_Status sm_remove(
  * @param db            [in] Pointer to the database structure
  * @retval 1            The database is open
  * @retval 0            The database is not open
- * @retval ULDB_INIT    Database is not open. log_*() called.
+ * @retval ULDB_INIT    Database is not open. log_add() called.
  */
 static int db_isOpen(
         const Database* const db)
@@ -1338,7 +1409,7 @@ static int db_isOpen(
  *
  * @param db            [in] Pointer to the database structure
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_INIT    The database is not open. log_*() called.
+ * @retval ULDB_INIT    The database is not open. log_add() called.
  */
 static uldb_Status db_verifyOpen(
         const Database* const db)
@@ -1356,7 +1427,7 @@ static uldb_Status db_verifyOpen(
  *
  * @param db            [in] Pointer to the database structure
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_INIT    The database is open. log_*() called.
+ * @retval ULDB_INIT    The database is open. log_add() called.
  */
 static uldb_Status db_verifyClosed(
         const Database* const db)
@@ -1376,8 +1447,8 @@ static uldb_Status db_verifyClosed(
  * @param db                [in/out]  Pointer to a database structure
  * @param forWriting        [in] Prepare for writing or reading?
  * @retval ULDB_SUCCESS     Success. Database is locked.
- * @retval ULDB_INIT        Database is not open. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_INIT        Database is not open. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status db_lock(
         Database* const db,
@@ -1414,8 +1485,8 @@ static uldb_Status db_lock(
  *
  * @param db                [in/out]  Pointer to a database structure
  * @retval ULDB_SUCCESS     Success. Database is locked for reading.
- * @retval ULDB_INIT        Database is not open. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_INIT        Database is not open. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status db_readLock(
         Database* const db)
@@ -1428,8 +1499,8 @@ static uldb_Status db_readLock(
  *
  * @param db                [in/out]  Pointer to a database structure
  * @retval ULDB_SUCCESS     Success. Database is locked for writing.
- * @retval ULDB_INIT        Database is not open. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_INIT        Database is not open. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status db_writeLock(
         Database* const db)
@@ -1442,7 +1513,7 @@ static uldb_Status db_writeLock(
  *
  * @param db                [in/out] Pointer to a database structure
  * @retval ULDB_SUCCESS     Success
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status db_unlock(
         Database* const db)
@@ -1465,7 +1536,7 @@ static uldb_Status db_unlock(
  * Ensures that this module is initialized.
  *
  * @retval ULDB_SUCCESS     Success
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status uldb_ensureModuleInitialized(
         void)
@@ -1515,7 +1586,7 @@ static uldb_Status uldb_ensureModuleInitialized(
  *                          databases.
  * @param key               [out] The IPC key corresponding to "path"
  * @retval ULDB_SUCCESS     Success
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status uldb_getKey(
         const char* path,
@@ -1551,8 +1622,8 @@ static uldb_Status uldb_getKey(
  *                          databases.
  * @param key               [out] Pointer to IPC key
  * @retval ULDB_SUCCESS     Success
- * @retval ULDB_INIT        Database already open. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_INIT        Database already open. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 static uldb_Status uldb_init(
         const char* const path,
@@ -1581,9 +1652,9 @@ static uldb_Status uldb_init(
  *                      Different pathnames obtain different databases.
  * @param capacity      [in] Initial capacity of the database in bytes
  * @retval ULDB_SUCCESS Success.
- * @retval ULDB_INIT    Database already open. log_*() called.
- * @retval ULDB_EXIST   Database already exists. log_*() called.
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_INIT    Database already open. log_add() called.
+ * @retval ULDB_EXIST   Database already exists. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 uldb_Status uldb_create(
         const char* const path,
@@ -1617,9 +1688,9 @@ uldb_Status uldb_create(
  *                       database or NULL to obtain the default association.
  *                       Different pathnames obtain different databases.
  * @retval ULDB_SUCCESS  Success.
- * @retval ULDB_INIT     Database already open. log_*() called.
- * @retval ULDB_EXIST    The database doesn't exist. log_*() called.
- * @retval ULDB_SYSTEM   System error. log_*() called.
+ * @retval ULDB_INIT     Database already open. log_add() called.
+ * @retval ULDB_EXIST    The database doesn't exist. log_add() called.
+ * @retval ULDB_SYSTEM   System error. log_add() called.
  */
 uldb_Status uldb_open(
         const char* const path)
@@ -1650,7 +1721,7 @@ uldb_Status uldb_open(
  * called.
  *
  * @retval ULDB_SUCCESS  Success.
- * @retval ULDB_INIT     Database not open. log_*() called.
+ * @retval ULDB_INIT     Database not open. log_add() called.
  * @retval ULDB_SYSTEM   System error. loc_start() called. Resulting module
  *                       state is unspecified.
  */
@@ -1688,8 +1759,8 @@ uldb_Status uldb_close(
  *                       database or NULL to obtain the default association.
  *                       Different pathnames obtain different databases.
  * @retval ULDB_SUCCESS  Success
- * @retval ULDB_EXIST    The database didn't exist. log_*() called.
- * @retval ULDB_SYSTEM   System error. log_*() called. Resulting module
+ * @retval ULDB_EXIST    The database didn't exist. log_add() called.
+ * @retval ULDB_SYSTEM   System error. log_add() called. Resulting module
  *                       state is unspecified.
  */
 uldb_Status uldb_delete(
@@ -1750,8 +1821,8 @@ uldb_Status uldb_delete(
  *
  * @param size          [out] Pointer to the size of the database
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_INIT    The database is closed. log_*() called.
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_INIT    The database is closed. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 uldb_Status uldb_getSize(
         unsigned* const size)
@@ -1796,10 +1867,10 @@ uldb_Status uldb_getSize(
  *                          the allowed subscription is the empty set. The
  *                          client should call "free_prod_class(*allowed)" when
  *                          the allowed subscription is no longer needed.
- * @retval ULDB_INIT        Module not initialized. log_*() called.
- * @retval ULDB_ARG         Invalid PID. log_*() called.
- * @retval ULDB_EXIST       Entry for PID already exists. log_*() called.
- * @retval ULDB_SYSTEM      System error. log_*() called.
+ * @retval ULDB_INIT        Module not initialized. log_add() called.
+ * @retval ULDB_ARG         Invalid PID. log_add() called.
+ * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
  */
 uldb_Status uldb_addProcess(
         const pid_t pid,
@@ -1845,10 +1916,10 @@ uldb_Status uldb_addProcess(
  *
  * @param pid                [in] PID of upstream LDM process
  * @retval ULDB_SUCCESS      Success. Corresponding entry found and removed.
- * @retval ULDB_INIT         Module not initialized. log_*() called.
- * @retval ULDB_ARG          Invalid PID. log_*() called.
- * @retval ULDB_EXIST        No corresponding entry found. log_*() called.
- * @retval ULDB_SYSTEM       System error. See "errno". log_*() called.
+ * @retval ULDB_INIT         Module not initialized. log_add() called.
+ * @retval ULDB_ARG          Invalid PID. log_add() called.
+ * @retval ULDB_EXIST        No corresponding entry found. log_add() called.
+ * @retval ULDB_SYSTEM       System error. See "errno". log_add() called.
  */
 uldb_Status uldb_remove(
         const pid_t pid)
@@ -1894,8 +1965,8 @@ uldb_Status uldb_remove(
  *                      client should call uldb_iter_free(*iterator) when the
  *                      iterator is no longer needed.
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_INIT    The database is not open. log_*() called.
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_INIT    The database is not open. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  *
  */
 uldb_Status uldb_getIterator(
@@ -2063,7 +2134,7 @@ const struct sockaddr_in* uldb_entry_getSockAddr(
  *                  client should call free_prod_class(*prodClass) when the
  *                  product-class is no longer needed.
  * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  System error. log_*() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 uldb_Status uldb_entry_getProdClass(
         const uldb_Entry* const entry,
