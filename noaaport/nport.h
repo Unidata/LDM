@@ -3,6 +3,8 @@
 #ifndef __nport__
 #define __nport__
 
+#include <sys/types.h>
+
 typedef struct sbn_struct {
    int version;
    int len;

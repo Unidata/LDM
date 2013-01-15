@@ -11,6 +11,18 @@
  */
 #include <config.h>
 
+#include "nport.h"
+#include "shmfifo.h"
+
+#include "ldm.h"
+#include "globals.h"
+#include "md5.h"
+#include "setenv.h"
+#include "libpng/png.h"
+#include "log.h"
+#include "dvbs.h"
+#include "ldmProductQueue.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -22,19 +34,6 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <errno.h>
-
-#include "nport.h"
-#include "shmfifo.h"
-
-#include "ldm.h"
-#include "globals.h"
-#include "md5.h"
-#include "setenv.h"
-#include "libpng/png.h"
-
-#include "log.h"
-#include "dvbs.h"
-#include "ldmProductQueue.h"
 
 /*
  * Function prototypes

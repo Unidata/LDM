@@ -8,18 +8,16 @@
  */
 #include "config.h"
 
+#include "log.h"
+#include "ldmProductQueue.h"    /* Eat own dog food */
+#include "ldm.h"
+#include "pq.h"
+#include "globals.h"
+
 #include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <ldm.h>
-#include <pq.h>
-
-#include <globals.h>
-
-#include "log.h"
-#include "ldmProductQueue.h"    /* Eat own dog food */
 
 struct LdmProductQueue {
     char*           path;       /**< Pathname of the LDM product-queue */

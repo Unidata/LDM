@@ -12,6 +12,17 @@
  */
 #include <config.h>
 
+#include "log.h"
+#include "fifo.h"
+#include "fileReader.h"
+#include "ldmProductQueue.h"
+#include "multicastReader.h"
+#include "productMaker.h"
+#include "reader.h"
+
+#include <ldm.h>
+#include <ulog.h>
+
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -23,17 +34,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-
-#include <ldm.h>
-#include <ulog.h>
-
-#include "log.h"
-#include "fifo.h"
-#include "fileReader.h"
-#include "ldmProductQueue.h"
-#include "multicastReader.h"
-#include "productMaker.h"
-#include "reader.h"
 
 static pthread_t        readerThread;
 static Reader*          reader;
