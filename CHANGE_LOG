@@ -1,3 +1,11 @@
+6.11.3.6 	2013-01-16 14:26:04-07:00
+    ULDB:
+        Modified termination and re-enabled subscription reduction.  Another
+        process is terminated only if the new process and the old process are
+        both feeders in primary mode.  Re-enabled subscription reduction for
+        feeders in primary mode of a subscription that isn't equal to or a
+        superset of an existing subscription.
+
 6.11.3.5 	2013-01-16 09:09:04-07:00
     Upstream LDM Database:
         Made ULDB module kill any other, obsolete LDM process rather than the
