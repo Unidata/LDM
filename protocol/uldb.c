@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -214,7 +215,6 @@ static size_t eps_sizeof(
     return roundUp(sizeof(EntryProdSpec) + strlen(pattern), prodSpecAlignment);
 }
 
-#if 0
 /**
  * Removes an entry's product-specification from a given product-specification.
  *
@@ -230,7 +230,6 @@ static void eps_remove_prod_spec(
         prodSpec->feedtype &= ~entryProdSpec->feedtype;
     }
 }
-#endif
 
 /**
  * Indicates if an entry's product-specification is a subset of a given
@@ -352,22 +351,21 @@ static uldb_Status epc_getEverythingButProdSpecs(
     return status;
 }
 
-#if 0
 /**
- * Removes all product-specifications in an entry's product-class from a given
- * product-class. The time limits of the given product-class are not modified.
+ * Removes all product-specifications in an entry's subscription from a given
+ * subscription. The time limits of the given subscription are not modified.
  *
  * @param epc           [in] Pointer to an entry's product-class
- * @param prodClass     [in/out] The given product-class
+ * @param givenSub      [in/out] The given subscription
  */
 static void epc_remove_prod_specs(
         const EntryProdClass* const epc,
-        prod_class* const prodClass)
+        prod_class* const           givenSub)
 {
     int i;
 
-    for (i = 0; i < prodClass->psa.psa_len; i++) {
-        prod_spec* prodSpec = prodClass->psa.psa_val + i;
+    for (i = 0; i < givenSub->psa.psa_len; i++) {
+        prod_spec* prodSpec = givenSub->psa.psa_val + i;
         const EntryProdSpec* eps;
 
         for (eps = epc_firstProdSpec(epc); eps != NULL ;
@@ -376,35 +374,34 @@ static void epc_remove_prod_specs(
         }
     }
 }
-#endif
 
 /**
- * Indicates if the product-class of an entry is a subset of a given
- * product-class. The time-limits are ignored.
+ * Indicates if the subscription of an entry is a subset of a given
+ * subscription. The time-limits of the subscriptions are ignored.
  *
- * @param epc           [in] Pointer to the entry's product-class
- * @param prodClass     [in] Pointer to the given product-class
- * @retval 0            The entry's product-class isn't a subset
- * @retval 1            The entry's product-class is a subset
+ * @param entrySub      [in] Pointer to the entry's subscription
+ * @param givenSub      [in] Pointer to the given subscription
+ * @retval 0            The entry's subscription isn't a subset
+ * @retval 1            The entry's subscription is a subset
  */
 static int epc_isSubsetOf(
-        const EntryProdClass* const epc,
-        const prod_class* const     prodClass)
+        const EntryProdClass* const entrySub,
+        const prod_class* const     givenSub)
 {
     const EntryProdSpec* eps;
 
-    for (eps = epc_firstProdSpec(epc); eps != NULL;
-            eps = epc_nextProdSpec(epc, eps)) {
+    for (eps = epc_firstProdSpec(entrySub); eps != NULL;
+            eps = epc_nextProdSpec(entrySub, eps)) {
         int i;
 
-        for (i = 0; i < prodClass->psa.psa_len; i++) {
-            prod_spec* prodSpec = prodClass->psa.psa_val + i;
+        for (i = 0; i < givenSub->psa.psa_len; i++) {
+            prod_spec* prodSpec = givenSub->psa.psa_val + i;
 
             if (eps_isSubsetOf(eps, prodSpec))
                 break;
         }
 
-        if (i >= prodClass->psa.psa_len)
+        if (i >= givenSub->psa.psa_len)
             return 0;
     }
 
@@ -520,7 +517,7 @@ static const EntryProdClass* entry_getEntryProdClass(
  * @param prodClass [out] Address of pointer to returned product-class. The
  *                  client should call free_prod_class(*prodClass) when the
  *                  product-class is no longer needed.
- * @retval ULDB_SUCCESS Success
+ * @retval 0            Success
  * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status entry_getProdClass(
@@ -564,6 +561,76 @@ static uldb_Status entry_getProdClass(
     }
 
     return status;
+}
+
+/**
+ * Indicates if the subscription of an entry is a subset of a given
+ * subscription. The time-limits of the subscriptions are ignored.
+ *
+ * @param entry         [in] Pointer to the entry
+ * @param givenSub      [in] Pointer to the given subscription
+ * @retval 0            The entry's subscription isn't a subset
+ * @retval 1            The entry's subscription is a subset
+ */
+static int entry_isSubsetOf(
+        const uldb_Entry* const entry,
+        const prod_class* const givenSub)
+{
+    return epc_isSubsetOf(&entry->prodClass, givenSub);
+}
+
+/**
+ * Removes an entry's subscription from a given subscription. The time-limits
+ * of the subscriptions are ignored.
+ *
+ * @param entry         [in] Pointer to the entry
+ * @param sub           [in/out] Pointer to a subscription
+ */
+static void entry_removeSubscriptionFrom(
+        const uldb_Entry* const entry,
+        prod_class* const       sub)
+{
+    epc_remove_prod_specs(&entry->prodClass, sub);
+}
+
+/**
+ * Returns the string encoding of an entry.
+ *
+ * @param entry         [in] The entry to be encoded
+ * @param buf           [in/out] Pointer to a buffer into which to encode the
+ *                      entry
+ * @param size          [in] Size of the buffer in bytes
+ * @return              The number of bytes that would have been written to the
+ *                      output buffer had its size been sufficiently large
+ *                      excluding the terminating NUL byte
+ */
+static int entry_toString(
+        const uldb_Entry* const entry,
+        char* const             buf,
+        const size_t            size)
+{
+    prod_class_t*   prodClass;
+    int             nbytes;
+
+    if (entry_getProdClass(entry, &prodClass)) {
+        const char* const   msg = "Couldn't format entry";
+
+        LOG_ADD1("%s", msg);
+        log_log(LOG_ERR);
+        nbytes = snprintf(buf, size, "%s", msg);
+    }
+    else {
+        nbytes = snprintf(buf, size,
+                "(addr=%s, pid=%ld, vers=%d, type=%s, mode=%s, sub=(%s))",
+                inet_ntoa(entry->sockAddr.sin_addr), (long)entry->pid,
+                entry->protoVers, entry->isNotifier ? "notifier" : "feeder",
+                entry->isPrimary ? "primary" : "alternate",
+                s_prod_class(NULL, 0, prodClass));
+
+        free_prod_class(prodClass);
+    }
+
+    return nbytes;
 }
 
 /**
@@ -1218,7 +1285,7 @@ static uldb_Status sm_addUpstreamLdm(
  * Vets an upstream LDM.
  *
  * @param sm            [in/out] Pointer to shared-memory structure
- * @param pid           [in] PID of the upstream LDM process
+ * @param myPid         [in] PID of the upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
  * @param isNotifier    [in] Type of the upstream LDM process
  * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
@@ -1234,7 +1301,7 @@ static uldb_Status sm_addUpstreamLdm(
  */
 static uldb_Status sm_vetUpstreamLdm(
         SharedMemory* const sm,
-        const pid_t pid,
+        const pid_t myPid,
         const int protoVers,
         const int isNotifier,
         const int isPrimary,
@@ -1254,37 +1321,36 @@ static uldb_Status sm_vetUpstreamLdm(
     else {
         for (entry = seg_firstEntry(segment); entry != NULL ; entry =
                 seg_nextEntry(segment, entry)) {
-            if (pid == entry->pid) {
-                LOG_ADD1("Entry already exists for PID %ld", pid);
+            if (myPid == entry->pid) {
+                LOG_ADD1("Entry already exists for PID %ld", myPid);
                 status = ULDB_EXIST;
                 break;
             }
 
             if (ipAddressesAreEqual(sockAddr, entry_getSockAddr(entry))
-                    && (isNotifier == entry_isNotifier(entry)) &&
-                    (isPrimary == entry_isPrimary(entry))) {
-                if (epc_isSubsetOf(entry_getEntryProdClass(entry), allow)) {
-                    pid_t   pid = entry_getPid(entry);
+                    && !(isNotifier || entry_isNotifier(entry)) &&
+                    (isPrimary && entry_isPrimary(entry))) {
+                if (entry_isSubsetOf(entry, allow)) {
+                    char    buf[1024];
 
-                    LOG_ADD1("Terminating obsolete upstream LDM process %ld",
-                            pid);
+                    (void)entry_toString(entry, buf, sizeof(buf));
+
+                    LOG_ADD1("Terminating obsolete upstream LDM %s", buf);
                     log_log(LOG_NOTICE);
 
-                    if (kill(pid, SIGTERM)) {
-                        LOG_SERROR1("Couldn't terminate obsolete upstream LDM process %ld",
-                            pid);
+                    if (kill(entry_getPid(entry), SIGTERM)) {
+                        LOG_SERROR1("Couldn't terminate obsolete upstream LDM %s",
+                            buf);
                         log_log(LOG_WARNING);
                     }
                 }
-#if 0
-                epc_remove_prod_specs(entry_getEntryProdClass(entry), allow);
-                clss_scrunch(allow);
+                else {
+                    entry_removeSubscriptionFrom(entry, allow);
+                    clss_scrunch(allow);
 
-                if (0 >= allow->psa.psa_len) {
-                    entry_terminate(entry);
-                    break;
+                    if (0 >= allow->psa.psa_len)
+                        break;
                 }
-#endif
             } /* socket IP addresses are equal */
         } /* entry loop */
 
