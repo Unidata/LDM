@@ -1,3 +1,39 @@
+6.11.3.5 	2013-01-16 09:09:04-07:00
+    Upstream LDM Database:
+        Made ULDB module kill any other, obsolete LDM process rather than the
+        current process but only if the other process is like the current
+        process in type (feeder, notifier) and mode (primary, alternate) and
+        its subscription is a (possibly improper) subset of the current
+        process.
+
+        Made system error unconditional if the shared database can't be
+        unlocked.
+
+    LDM Server:
+        Added restart of system logging if execvp() fails so that the reason
+        for the failure of an EXEC entry will be logged.
+
+        Ensured resource deallocation in upFilter_addComponent().
+
+    System Logging:
+        Logging library (ulog(3)):
+            Added getter functions for ulog(3) parameters to support the above
+            ldmd(1) modfication.
+
+            Created program "test_gmtime" for testing the gmtime() system
+            function as an aid is diagnosing why some systems log messages
+            using local timestamps.
+
+        Modification of system logging configuration-file during installation:
+            Replaced ".debug" with ".*" in LDM entry to get logging to work on
+            most systems.
+
+            Added addition and use of template on systems that use version 5 or
+            later of rsyslogd(8) so that the timestamps will be in UTC.
+
+    Added an unused module for IP multicast in preparation for testing that
+    possibility.
+
 6.11.3.4 	2013-01-08 11:14:44-07:00
     Removed as_process() calls by upstream LDM to eliminate error return.
 
