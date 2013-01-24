@@ -6,11 +6,11 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-builtHeaders	= forn.h globals.h ldmfork.h LdmProxy.h timer.h uldb.h
+builtHeaders	= acl.h forn.h globals.h ldmfork.h LdmProxy.h timer.h uldb.h
 BUILT_SOURCES	= ../registry/registry.h ldm6_svc.c $(builtHeaders)
 CLEANFILES		= $(builtHeaders) *.i
 EXTRA_DIST		= \
-	$(builtHeaders:.h=.hin) \
+    $(builtHeaders:.h=.hin) \
     child_process_set.h \
     exitStatus.h \
     forn5_svc.h \
@@ -111,12 +111,13 @@ dist_man3_MANS		= uldb.3
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
-forn.h:	forn.hin forn.c
+acl.h:		acl.hin acl.c
+forn.h:		forn.hin forn.c
 globals.h:	globals.hin globals.c
 ldmfork.h:	ldmfork.hin ldmfork.c
 LdmProxy.h:	LdmProxy.hin LdmProxy.c
 timer.h:	timer.hin timer.c
-uldb.h:	uldb.hin uldb.c
+uldb.h:		uldb.hin uldb.c
 
 ldm.h:		ldm.x
 	$(RPCGEN) -h ldm.x | \
