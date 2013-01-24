@@ -498,6 +498,7 @@ static const struct sockaddr_in* entry_getSockAddr(
     return &entry->sockAddr;
 }
 
+#if 0
 /**
  * Returns an entry's product-class.
  *
@@ -509,6 +510,7 @@ static const EntryProdClass* entry_getEntryProdClass(
 {
     return &entry->prodClass;
 }
+#endif
 
 /**
  * Returns the product-class of an entry.
