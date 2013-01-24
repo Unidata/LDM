@@ -1,3 +1,7 @@
+6.11.3.7 	2013-01-24 10:29:27-07:00
+    ldmd(1):
+        Added reduction of subscriptions by downstream LDM.
+
 6.11.3.6 	2013-01-16 14:26:04-07:00
     ULDB:
         Modified termination and re-enabled subscription reduction.  Another
