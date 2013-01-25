@@ -189,16 +189,6 @@ following:
 	<a href="glindex.html#NULLPROC">NULLPROC</a> message.
 </ol>
 
-<p>
-<center>
-<img src="Upstream_6.4_Primary.gif" alt="Upstream LDM 6 behavior in primary mode">
-</center>
-
-<p>
-<center>
-<img src="Upstream_6.4_Alternate.gif" alt="Upstream LDM 6 behavior in alternate mode">
-</center>
-
 <hr>
 
 <h2><a name="downstream">Downstream LDM 6 behavior</a></h2>
@@ -305,33 +295,9 @@ following:
 	<a href="glindex.html#criteria">data-product selection-criteria</a>.
 
     <li><p>If nothing has been received in 60 seconds, then the process
-	connects to the top-level
-	<a href="glindex.html#ldmd"><tt>ldmd</tt></a> on the
-	<a href="glindex.html#upstream host">upstream host</a> and 
-	uses an <a href="glindex.html#IS_ALIVE">IS_ALIVE</a>
-	message to inquire whether or not the relevant
-	<a href="glindex.html#upstream LDM">upstream LDM</a> process is
-	still running:
-	<ul>
-	    <li><p>If the <a href="glindex.html#upstream LDM">upstream LDM</a>
-		terminated, then the process closes the connection and
-		returns to step 2, above; otherwise,
-		
-	    <li><p>The process continues to wait for
-		<a href="glindex.html#data-product">data-product</a>s.
-	</ul>
+	closes the connection and returns to step 2, above.
 
 </ol>
-
-<p>
-<center>
-<img src="Downstream_6.4_Primary.gif" alt="Downstream LDM 6.6 behavior in primary mode">
-</center>
-
-<p>
-<center>
-<img src="Downstream_6.4_Alternate.gif" alt="Downstream LDM 6.6 behavior in alternate mode">
-</center>
 
 <hr>
 
