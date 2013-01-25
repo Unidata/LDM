@@ -1356,12 +1356,13 @@ static uldb_Status sm_vetUpstreamLdm(
             } /* socket IP addresses are equal */
         } /* entry loop */
 
-        if (status)
+        if (status) {
             free_prod_class(allow);
+        }
+        else {
+            *allowed = allow;
+        }
     } /* "allow" allocated */
-
-    if (0 == status)
-        *allowed = allow;
 
     return status;
 }
