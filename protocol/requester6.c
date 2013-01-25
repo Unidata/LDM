@@ -43,6 +43,7 @@ static int      dataSocket = -1;
 static int      isAliveSocket = -1;
 
 
+#if 0
 /*
  * Indicates if the upstream, sending LDM should be assumed to be alive based
  * on the failure mode of an IS_ALIVE inquiry.
@@ -155,6 +156,7 @@ static int is_upstream_alive(
 
     return alive;
 }
+#endif
 
 
 /*
@@ -238,12 +240,14 @@ run_service(
                                 uinfo("Connection from upstream LDM silent for "
                                         "%d seconds", inactiveTimeout);
 
+#if 0
                             if (is_upstream_alive(upName, upAddr, upId)) {
                                 if (ulogIsVerbose())
                                     uinfo("Upstream LDM is alive.  Waiting...");
 
                                 continue;
                             }
+#endif
 
                             error = ERR_NEW(REQ6_DISCONNECT, NULL,
                                 "Upstream LDM died");
