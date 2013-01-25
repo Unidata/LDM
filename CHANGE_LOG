@@ -1,3 +1,9 @@
+6.11.3.8 	2013-01-25 12:57:23-07:00
+    Made ULDB kill obsolete feeder in alternate mode (not just primary mode).
+
+    Removed use of IS_ALIVE functionality and undocumented use of IS_ALIVE and
+    removed state-transition diagrams
+
 6.11.3.7 	2013-01-24 10:29:27-07:00
     ldmd(1):
         Added reduction of subscriptions by downstream LDM.
