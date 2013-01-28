@@ -867,7 +867,7 @@ requester_exec(
     int                 errCode = 0;    /* success */
     /*
      * Maximum acceptable silence, in seconds, from upstream LDM before
-     * terminating the connection.  NOTE: Generally smaller than ldmd.c's
+     * taking action.  NOTE: Generally smaller than ldmd.c's
      * "inactive_timeo".  TODO: Make configurable.
      */
     unsigned int        maxSilence = 2 * interval;
