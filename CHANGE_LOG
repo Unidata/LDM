@@ -1,3 +1,10 @@
+6.11.3.10 	2013-01-29 13:54:09-07:00
+    Eliminated same transfer-mode requirement for termination in ULDB because
+    the downstream LDM can alternate between transfer-modes, the previous
+    upstream LDM should be terminated regardless of its transfer-mode.
+
+    Redocumented IS_ALIVE use by downstream LDM.
+
 6.11.3.9 	2013-01-29 10:19:46-07:00
     Re-enabled IS_ALIVE capability.  Otherwise, a downstream 6.11.3 LDM could
     cause multiple orphaned upstream LDM-s at a apre-6.11.3 site.
