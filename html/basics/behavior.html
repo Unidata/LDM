@@ -293,9 +293,23 @@ following:
 	<a href="glindex.html#creation-time">data-product creation-time</a> 
 	is used to update the "start" time in the current
 	<a href="glindex.html#criteria">data-product selection-criteria</a>.
-
+	
     <li><p>If nothing has been received in 60 seconds, then the process
-	closes the connection and returns to step 2, above.
+        connects to the top-level
+        <a href="glindex.html#ldmd"><tt>ldmd</tt></a> on the
+        <a href="glindex.html#upstream host">upstream host</a> and 
+        uses an <a href="glindex.html#IS_ALIVE">IS_ALIVE</a>
+        message to inquire whether or not the relevant
+        <a href="glindex.html#upstream LDM">upstream LDM</a> process is
+        still running:
+        <ul>
+            <li><p>If the <a href="glindex.html#upstream LDM">upstream LDM</a>
+                terminated, then the process closes the connection and
+                returns to step 2, above; otherwise,
+                
+            <li><p>The process continues to wait for
+                <a href="glindex.html#data-product">data-product</a>s.
+        </ul>
 
 </ol>
 
