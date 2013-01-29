@@ -1,3 +1,14 @@
+6.11.3.9 	2013-01-29 10:19:46-07:00
+    Re-enabled IS_ALIVE capability.  Otherwise, a downstream 6.11.3 LDM could
+    cause multiple orphaned upstream LDM-s at a apre-6.11.3 site.
+
+    Improved internal commentary.
+
+    Returned client RPC timeout to 60 seconds from 25.  This should be OK as
+    the upstream LDM now terminates obsolete, previous LDM processes.
+
+    Removed primary-mode condition for termination of previous process
+
 6.11.3.8 	2013-01-25 12:57:23-07:00
     Made ULDB kill obsolete feeder in alternate mode (not just primary mode).
 
