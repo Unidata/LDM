@@ -1330,8 +1330,7 @@ static uldb_Status sm_vetUpstreamLdm(
             }
 
             if (ipAddressesAreEqual(sockAddr, entry_getSockAddr(entry))
-                    && !(isNotifier || entry_isNotifier(entry)) &&
-                    (isPrimary == entry_isPrimary(entry))) {
+                    && !isNotifier && !entry_isNotifier(entry)) {
                 if (entry_isSubsetOf(entry, allow)) {
                     char    buf[1024];
 
@@ -1353,7 +1352,7 @@ static uldb_Status sm_vetUpstreamLdm(
                     if (0 >= allow->psa.psa_len)
                         break;
                 }
-            } /* socket IP addresses are equal */
+            } /* upstream LDM matches entry */
         } /* entry loop */
 
         if (status) {
