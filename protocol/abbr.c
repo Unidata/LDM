@@ -12,14 +12,14 @@
 #include "ulog.h"
 
 
-/*
+/**
  * Sets the ulog(3) identifer based on a remote-host identifier and an optional
  * suffix.
- * Arguments:
- *      remote  Pointer to identifier of remote host.  May be a hostname or a
- *              dotted-quad IP address.
- *      suffix  Pointer to suffix to be added to ulog(3) identifier (e.g.,
- *              "(feed)") or NULL.
+ *
+ * @param remote    Pointer to identifier of remote host.  May be a hostname or
+ *                  a dotted-quad IP address. Client may free upon return.
+ * @param suffix    Pointer to suffix to be added to ulog(3) identifier (e.g.,
+ *                  "(feed)") or NULL.
  */
 void
 set_abbr_ident(
