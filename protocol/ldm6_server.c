@@ -156,9 +156,9 @@ separateProductClass(
 }
 
 /**
- * Feeds or notifies a downstream LDM. This function either returns a reply to
- * be sent to the downstream LDM (e.g., a RECLASS message) or terminates this
- * process (hopefully after sending some data).
+ * Feeds or notifies a downstream LDM. This function returns either NULL or a
+ * reply to be sent to the downstream LDM (e.g., a RECLASS message) or
+ * terminates this process (hopefully after sending some data).
  * 
  * @param xprt          [in/out] Pointer to server-side transport handle.
  * @param want          [in] Pointer to subscription by downstream LDM.
@@ -167,7 +167,8 @@ separateProductClass(
  *                      notifier.
  * @param maxHereis     Maximum HEREIS size parameter. Ignored if "isNotifier"
  *                      is true.
- * @return              The reply for the downstream LDM
+ * @return              The reply for the downstream LDM or NULL if no reply
+ *                      should be made.
  */
 static fornme_reply_t*
 feed_or_notify(
@@ -183,18 +184,21 @@ feed_or_notify(
     char* downName = NULL;
     prod_class_t* origSub = NULL;
     prod_class_t* allowSub = NULL;
-    prod_class_t* uldbSub = NULL;
     const signaturet* signature = NULL;
     UpFilter* upFilter = NULL;
     fornme_reply_t* reply = NULL;
-    int terminate = 0;
     int isPrimary;
     static fornme_reply_t theReply;
+    static prod_class_t* uldbSub = NULL;
 
     /*
      * Clean-up from a (possibly) previous invocation
      */
     (void)memset(&theReply, 0, sizeof(theReply));
+    if (uldbSub != NULL) {
+        free_prod_class(uldbSub);
+        uldbSub = NULL;
+    }
 
     downName = strdup(hostbyaddr(&downAddr));
     if (NULL == downName) {
@@ -202,6 +206,7 @@ feed_or_notify(
                 hostbyaddr(&downAddr));
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
+        done = 1;
         goto return_or_exit;
     }
 
@@ -213,6 +218,7 @@ feed_or_notify(
     if (errObj = separateProductClass(want, &origSub, &signature)) {
         err_log_and_free(errObj, ERR_FAILURE);
         svcerr_systemerr(xprt);
+        done = 1;
         goto free_down_name;
     }
 
@@ -225,6 +231,7 @@ feed_or_notify(
         err_log_and_free(ERR_NEW(0, errObj,
                 "Couldn't get \"upstream\" filter"), ERR_FAILURE);
         svcerr_systemerr(xprt);
+        done = 1;
         goto free_orig_sub;
     }
     if (NULL == upFilter) {
@@ -246,6 +253,7 @@ feed_or_notify(
         LOG_SERROR0("Couldn't compute wanted/allowed product intersection");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
+        done = 1;
         goto free_up_filter;
     }
     if (status == EINVAL) {
@@ -274,6 +282,7 @@ feed_or_notify(
         LOG_ADD0("Couldn't add this process to the upstream LDM database");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
+        done = 1;
         goto free_allow_sub;
     }
     (void) logIfReduced(allowSub, uldbSub, "existing subscriptions");
@@ -297,11 +306,11 @@ feed_or_notify(
                 { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
 
             theReply.fornme_reply_t_u.prod_class = &noSub;
-            done = 1; /* downstream will exit, so we need to */
+            done = 1; /* downstream will reconnect, so we need to exit */
         }
 
         reply = &theReply;
-        goto free_uldb_sub;
+        goto free_allow_sub;
     }
 
     sock = dup(xprt->xp_sock);
@@ -309,7 +318,8 @@ feed_or_notify(
         LOG_SERROR1("Couldn't duplicate socket %d", xprt->xp_sock);
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        goto free_uldb_sub;
+        done = 1;
+        goto free_allow_sub;
     }
 
     /*
@@ -321,7 +331,7 @@ feed_or_notify(
         LOG_ADD0("svc_sendreply(...) failure");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        terminate = 1;
+        done = 1;
         goto close_sock;
     }
 
@@ -342,15 +352,10 @@ feed_or_notify(
     exit(status);
 
     /*
-     * Error handling:
+     * Reply and error handling:
      */
     close_sock:
         (void)close(sock);
-
-    free_uldb_sub:
-        if (terminate || &theReply != reply ||
-                theReply.fornme_reply_t_u.prod_class != uldbSub)
-            free_prod_class(uldbSub);
 
     free_allow_sub:
         free_prod_class(allowSub);
@@ -365,8 +370,6 @@ feed_or_notify(
         free(downName);
 
     return_or_exit:
-        if (terminate)
-            exit(1);
         return reply;
 }
 
