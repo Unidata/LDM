@@ -1,3 +1,13 @@
+6.11.3.11 	2013-01-31 10:19:42-07:00
+    Improved description of LDM behavior.
+
+    Improved internal documentation in protocol/abbr.c
+
+    ldm6_server.c:
+        Replaced exit() with done=1 in feed_or_notify().
+    
+        Also improved freeing of ULDB-determined product-class.
+
 6.11.3.10 	2013-01-29 13:54:09-07:00
     Eliminated same transfer-mode requirement for termination in ULDB because
     the downstream LDM can alternate between transfer-modes, the previous
