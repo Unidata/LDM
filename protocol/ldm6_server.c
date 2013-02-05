@@ -584,17 +584,23 @@ hiya_6_svc(
     return &reply;
 }
 
-/*ARGSUSED1*/
 void *hereis_6_svc(
         product *prod,
         struct svc_req *rqstp)
 {
-    int error = down6_hereis(prod);
+    if (dp_isNil(prod)) {
+        /*
+         * The upstream LDM sent a nil data-product to flush the connection.
+         */
+    }
+    else {
+        int error = down6_hereis(prod);
 
-    if (error && DOWN6_UNWANTED != error && DOWN6_PQ_BIG != error) {
-        (void) svcerr_systemerr(rqstp->rq_xprt);
-        svc_destroy(rqstp->rq_xprt);
-        exit(error);
+        if (error && DOWN6_UNWANTED != error && DOWN6_PQ_BIG != error) {
+            (void) svcerr_systemerr(rqstp->rq_xprt);
+            svc_destroy(rqstp->rq_xprt);
+            exit(error);
+        }
     }
 
     return NULL ; /* don't reply */
