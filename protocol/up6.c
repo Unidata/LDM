@@ -317,33 +317,40 @@ static int feed(
     return 0;
 }
 
-/*
- * Flushes the connection by sending a NULLPROC message and receiving the
- * (nil) acknowledgement.  Sets "_lastSendTime".
+/**
+ * Flushes the connection. Sets "_lastSendTime".
  *
- * Returns:
- *      NULL    Success.
- *      else    Error object.
+ * @retval NULL     Success.
+ * @return          Error object.
  */
 static ErrorObj*
 flushConnection(
         void)
 {
-    ErrorObj* errObj;
-
+#if 0
+    static struct timeval ZERO_TIMEOUT = { 0, 0 };
+    /*
+     * Flush the connection by forcing the RPC layer to send a nil data-product
+     * via an asynchronous HEREIS message and then return immediately, rather
+     * than by sending a synchronous NULLPROC message, which would necessitate
+     * waiting for a response. (The "xdr_void" and "ZERO_TIMEOUT" cause the
+     * HEREIS message to be sent, the connection flushed, and an immediate
+     * return.)
+     */
+	if (clnt_call(_clnt, HEREIS, (xdrproc_t)xdr_product, (caddr_t)dp_getNil(),
+    		(xdrproc_t)xdr_void, (caddr_t)NULL, ZERO_TIMEOUT) == RPC_TIMEDOUT) {
+#else
     if (nullproc_6(NULL, _clnt)) {
+#endif
         _lastSendTime = time(NULL );
         _flushNeeded = 0;
-        errObj = NULL; /* success */
-        udebug("flushConnection(): nullproc_6 roundtrip");
-    }
-    else {
-        errObj = ERR_NEW2(up6_error(clnt_stat(_clnt)), NULL,
-                "nullproc_6() failure to %s: %s",
-                _downName, clnt_errmsg(_clnt));
+        udebug("flushConnection() success");
+        return NULL;
     }
 
-    return errObj;
+    return ERR_NEW2(up6_error(clnt_stat(_clnt)), NULL,
+                "flushConnection() failure to %s: %s",
+                _downName, clnt_errmsg(_clnt));
 }
 
 /*
