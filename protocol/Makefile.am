@@ -6,7 +6,8 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-builtHeaders	= acl.h forn.h globals.h ldmfork.h LdmProxy.h timer.h uldb.h
+builtHeaders	= acl.h data_prod.h forn.h globals.h ldmfork.h LdmProxy.h \
+		timer.h uldb.h
 BUILT_SOURCES	= ../registry/registry.h ldm6_svc.c $(builtHeaders)
 CLEANFILES		= $(builtHeaders) *.i
 EXTRA_DIST		= \
@@ -56,6 +57,7 @@ lib_la_SOURCES		= \
     atofeedt.c \
     autoshift.c \
     child_process_set.c \
+    data_prod.c \
     down6.c \
     DownHelp.c \
     forn.c \
@@ -112,6 +114,7 @@ dist_man3_MANS		= uldb.3
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 acl.h:		acl.hin acl.c
+data_prod.h:	data_prod.hin data_prod.c
 forn.h:		forn.hin forn.c
 globals.h:	globals.hin globals.c
 ldmfork.h:	ldmfork.hin ldmfork.c
@@ -180,7 +183,19 @@ ldm6_clnt.c:	ldm.x fix_clnt.pl
     
 if HAVE_CUNIT
 
-check_PROGRAMS		= testuldb
+check_PROGRAMS		= test_data_prod testuldb
+test_data_prod_CPPFLAGS	= \
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/protocol \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/registry \
+    @CPPFLAGS_CUNIT@
+
+test_data_prod_LDADD		= \
+    $(top_builddir)/lib/libldm.la \
+    $(top_builddir)/libxml2/libxml2.la \
+    @LIBS_CUNIT@
+    
 testuldb_CPPFLAGS	= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/protocol \
@@ -193,7 +208,7 @@ testuldb_LDADD		= \
     $(top_builddir)/libxml2/libxml2.la \
     @LIBS_CUNIT@
 
-TESTS			= testuldb
+TESTS			= test_data_prod testuldb
 
 valgrind:	testuldb
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \

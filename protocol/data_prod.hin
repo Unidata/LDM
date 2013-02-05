@@ -1,0 +1,22 @@
+/*
+ * A countdown timer.
+ *
+ * See ../COPYRIGHT file for copying and redistribution conditions.
+ */
+#ifndef DATA_PROD_H
+#define DATA_PROD_H
+
+#include "config.h"
+#include "ldm.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

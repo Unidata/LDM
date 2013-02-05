@@ -25,6 +25,16 @@ pi_setOrigin(
     prod_info* const		info,
     const char* const		origin);
 
+/**
+ * Returns the amount of data in the data-product.
+ *
+ * @param info  [in] Information on the data-product.
+ * @return      The amount of data in bytes.
+ */
+unsigned
+pi_getSize(
+        const prod_info* const  info);
+
 int
 pi_copy(
     prod_info* const		dest,
