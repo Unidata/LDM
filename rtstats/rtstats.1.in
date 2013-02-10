@@ -12,7 +12,6 @@ rtstats
 \%[-h\ \fIremote host\fP]
 \%[-P\ \fIport\fP]
 \%[-l\ \fIlogfile\fP]
-\%[-d\ \fIlogdir\fP]
 \%[-f\ \fIfeedtype\fP]
 \%[-p\ \fIpattern\fP]
 \%[-q\ \fIqueue\fP]
@@ -35,22 +34,22 @@ be compared to ascertain the performance of the network. This program is
 similar to \fBpqbinstats\fP(1) with the addition of the delivery of
 the statistics via LDM protocol to a specified host.
 
-A separate statistic product will be sent for each FEEDTYPE and LDM product origin.
+A separate statistic product will be sent for each feedtype and LDM product origin.
 That is, each LDM product will be named as follows:
 
 .RS +4
   rtstats-LDMVERSION/LDMHOST/FEEDTYPE/PRODUCT_ORIGIN
 .RE
 
-where LDMVERSION is the release number of the LDM distribution,
-LDMHOST is the machine where rtstats is running, FEEDTYPE is
-the class of the incoming data, and PRODUCT_ORIGIN is the assigned
+where \fILDMVERSION\fP is the release number of the LDM distribution,
+\fILDMHOST\fP is the machine where \fBrtstats\fP(1) is running, \fIFEEDTYPE\fP
+is the class of the incoming data, and \fIPRODUCT_ORIGIN\fP is the assigned
 identifier denoting the original injection host of the data
 and upstream host identifier if available (LDM 5.2 and later).
 In addition to cumulative statistics for the individual feeds,
 the instantaneous product latency for the most recent product received 
 is provided. The arriving statistics may be processed through
-( \fBpqact\fP(1)).
+\fBpqact\fP(1).
 
 .SH REPORTED STATISTICS
 .TP
@@ -89,20 +88,18 @@ identifier.
 Debugging information is also emitted.
 .TP
 .BI "-h " remote
-Requests that the statistic products be delivered to the LDM  server on remote.
+Requests that the statistic products be delivered to the LDM  server on
+\fIremote\fP.
 Defaults to localhost if not specified.
 .TP
 .BI "-l " logfile
-The path name of a file to be used as the log file for the process.  The
-default is to use syslogd(8).
-.TP
-.BI "-d " logdir
-The path name of a directory that the process should change directory to
-before writing the stats file.
+The path name of a file to be used as the log file for the process.
+If \fIlogfile\fP is "\fB-\fP", then the standard error stream will be used. The
+default is to use the system logging daemon (e.g., \fBsyslogd\fP(8)).
 .TP
 .BI \-f " feedtype"
 Reads from the product queue only products that have a feedtype that is a
-member of the \fIfeedtype\fP set.  The default is `ANY', specifying all
+member of the \fIfeedtype\fP set.  The default is "\fBANY\fP", specifying all
 feed types.  See \fBpqact\fP(1) for a list of basic feed types
 and the use of feedtype expressions to specify combinations of basic
 feed types.
@@ -110,7 +107,7 @@ feed types.
 .BI \-p " pattern"
 Reads from the product queue only products whose identifier
 matches the regular expression \fIpattern\fP.
-The default is `\fB.*\fP', specifying all products.
+The default is "\fB.*\fP", specifying all products.
 .TP
 .BI "-q " queue
 The pathname of the data product queue.
@@ -126,10 +123,10 @@ Polling interval, in seconds.  When the end of the queue is reached, the
 program sleeps and
 checks for new products in the product queue every \fIinterval\fP seconds.
 When
-.B rtstats
+\fBrtstats\fP(1)
 is run in the same process group as the programs that insert products into
 the product queue, a signal informs
-.B rtstats
+\fBrtstats\fP(1)
 and all other interested processes in the process group
 whenever a new product is available.
 In this case, the interval should be set so that polling timer rarely expires.
@@ -142,7 +139,7 @@ seconds earlier than the current time.
 The default is to begin just after the time stamp of the oldest product
 in the queue at startup.
 .TP
-.BI \-p " port"
+.BI \-P " port"
 Port on the remote system to which to connect.  The well-known LDM port is
 388.
 .SH SIGNALS
@@ -158,14 +155,11 @@ Toggle logging of verbose messages.
 
 .SH EXAMPLE
 The following line may be added to the ldmd.conf file to automatically
-start rtstats when the LDM is started and deliver statistics to
+start \fBrtstats\fP(1) when the LDM is started and deliver statistics to
 the collection server at the Unidata Program Center.
 .RS +4
   exec    "rtstats -h rtstats.unidata.ucar.edu"
 .RE
-
-.SH FILES
-.LP
 
 .SH "SEE ALSO"
 .LP
