@@ -1,14 +1,16 @@
-/*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
- */
-/* $Id: rtstats.c,v 1.2.10.1.2.7 2008/04/15 16:34:12 steve Exp $ */
-
-/* 
- *
+/**
+ *   Copyright 2013, University Corporation for Atmospheric Research
+ *   All rights reserved.
+ *   <p>
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
+ *   <p>
+ *   This file contains the program rtstats(1), which reports performance
+ *   statistics on the product-queue to an LDM server.
  */
 
 #include <config.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -23,7 +25,7 @@
 #include "globals.h"
 #include "remote.h"
 #include "ldmprint.h"
-#include "ulog.h"
+#include "log.h"
 #include "pq.h"
 #ifndef HAVE_SETENV
     #include "setenv.h"
@@ -76,27 +78,30 @@ addtostats(const prod_info *infop, const void *datap,
 static void
 usage(const char *av0) /*  id string */
 {
-        (void)fprintf(stderr,
-                "Usage: %s [options]\n\tOptions:\n", av0);
-        (void)fprintf(stderr,
-                "\t-v           Verbose, tell me about each product\n");
-        (void)fprintf(stderr,
-                "\t-l logfile   Log to a file rather than syslog\n");
-        (void)fprintf(stderr,
-                "\t-f feedtype  Scan for data of type \"feedtype\", defaults to \"ANY - EXP\"\n");
-                /* NB: above line used s_feedtypet(DEFAULT_FEEDTYPE)...however this looks ugly for ANY - EXP */
-        (void)fprintf(stderr,
-                "\t-p pattern   Interested in products matching \"pattern\" (default \".*\")\n") ;
-        (void)fprintf(stderr,
-                "\t-q queue     Default \"%s\"\n", getQueuePath());
-        (void)fprintf(stderr,
-                "\t-o offset    The oldest product we will consider is \"offset\" secs before now (default: most recent in queue)\n");
-        (void)fprintf(stderr,
-                "\t-i interval  Poll queue after \"interval\" secs (default %d)\n",
-                DEFAULT_INTERVAL);
-        (void)fprintf(stderr,
-                "\t-h hostname   The LDM server which will accept these statistics. Default is LOCALHOST\n");
-        exit(1);
+    uerror("Usage: %s [options]", av0);
+    uerror("where:");
+    uerror("    -v           Log INFO-level messages (log each product).");
+    uerror("    -x           Log DEBUG-level messages.");
+    uerror("    -l logfile   Log to file \"logfile\" rather than syslogd(8).");
+    uerror("                 \"-\" means standard error.");
+    /*
+     * NB: Don't use "s_feedtypet(DEFAULT_FEEDTYPE)" in the following because
+     * it looks ugly for "ANY - EXP".
+     */
+    uerror("    -f feedtype  Scan for data of type \"feedtype\" (default: ");
+    uerror("                 \"ANY - EXP\").");
+    uerror("    -p pattern   Interested in products matching \"pattern\"");
+    uerror("                 (default: \".*\").") ;
+    uerror("    -q queue     Use file \"queue\" as product-queue (default: ");
+    uerror("                 \"%s\").", getQueuePath());
+    uerror("    -o offset    Oldest product to consider is \"offset\"");
+    uerror("                 seconds before now (default: 0).");
+    uerror("    -i interval  Poll queue every \"interval\" seconds (default:");
+    uerror("                 %d).", DEFAULT_INTERVAL);
+    uerror("    -h hostname  Send to LDM server on host \"hostname\"");
+    uerror("                 (default: LOCALHOST).");
+    uerror("    -P port      Send to port \"port\" (default: %d).", LDM_PORT);
+    exit(1);
 }
 
 
@@ -179,18 +184,23 @@ set_sigactions(void)
 int main(int ac, char *av[])
 {
         const char* const       pqfname = getQueuePath();
-        const char *progname = ubasename(av[0]);
-        char *logfname;
+        const char* const       progname = ubasename(av[0]);
+        char *logfname = NULL; /* log to syslogd(8) */
+        int logmask = LOG_UPTO(LOG_NOTICE);
         prod_class_t clss;
         prod_spec spec;
         int status = 0;
         int interval = DEFAULT_INTERVAL;
         int fterr;
-        int logoptions = (LOG_CONS|LOG_PID) ;
+        int logoptions = (logfname == NULL) ? (LOG_CONS|LOG_PID) : LOG_NOTIME;
         int toffset = TOFFSET_NONE;
         extern const char *remote;
 
-        logfname = "";
+        /*
+         * Setup default logging before anything else.
+         */
+        (void) openulog(progname, logoptions, LOG_LDM, logfname);
+        (void) setulogmask(logmask);
 
         remote = "localhost";
 
@@ -216,8 +226,7 @@ int main(int ac, char *av[])
         if(setenv("TZ", "UTC0",1))
         {
                 int errnum = errno;
-                fprintf(stderr, "%s: setenv: Couldn't set TZ: %s\n",
-                        progname, strerror(errnum));
+                uerror("setenv: Couldn't set TZ: %s", strerror(errnum));
                 exit(1);        
         }
 
@@ -225,21 +234,25 @@ int main(int ac, char *av[])
         extern int opterr;
         extern char *optarg;
         int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | 
-            LOG_MASK(LOG_NOTICE));
 
-        opterr = 1;
+        opterr = 0; /* stops getopt() from printing to stderr */
 
-        while ((ch = getopt(ac, av, "vxl:p:f:q:o:i:h:P:")) != EOF)
+        while ((ch = getopt(ac, av, ":vxl:p:f:q:o:i:h:P:")) != EOF)
                 switch (ch) {
                 case 'v':
                         logmask |= LOG_MASK(LOG_INFO);
+                        (void) setulogmask(logmask);
                         break;
                 case 'x':
                         logmask |= LOG_MASK(LOG_DEBUG);
+                        (void) setulogmask(logmask);
                         break;
                 case 'l':
                         logfname = optarg;
+                        if (strcmp(logfname, "") == 0)
+                            logfname = NULL;
+                        logoptions = (logfname == NULL) ? (LOG_CONS|LOG_PID) : LOG_NOTIME;
+                        openulog(progname, logoptions, LOG_LDM, logfname);
                         break;
                 case 'h':
                         remote = optarg;
@@ -251,8 +264,8 @@ int main(int ac, char *av[])
                         fterr = strfeedtypet(optarg, &spec.feedtype) ;
                         if(fterr != FEEDTYPE_OK)
                         {
-                                fprintf(stderr, "Bad feedtype \"%s\", %s\n",
-                                        optarg, strfeederr(fterr)) ;
+                                uerror("Bad feedtype \"%s\", %s", optarg,
+                                        strfeederr(fterr)) ;
                                 usage(progname);        
                         }
                         break;
@@ -263,8 +276,7 @@ int main(int ac, char *av[])
                         toffset = atoi(optarg);
                         if(toffset == 0 && *optarg != '0')
                         {
-                                fprintf(stderr, "%s: invalid offset %s\n",
-                                         av[0], optarg);
+                                uerror("Invalid offset %s", optarg);
                                 usage(av[0]);   
                         }
                         break;
@@ -278,8 +290,7 @@ int main(int ac, char *av[])
                     if (0 != errno || 0 != *suffix ||
                         0 >= port || 0xffff < port) {
 
-                        (void)fprintf(stderr, "%s: invalid port %s\n",
-                             av[0], optarg);
+                        uerror("Invalid port %s", optarg);
                         usage(av[0]);   
                     }
 
@@ -291,22 +302,23 @@ int main(int ac, char *av[])
                         interval = atoi(optarg);
                         if(interval == 0 && *optarg != '0')
                         {
-                                fprintf(stderr, "%s: invalid interval %s",
-                                        av[0], optarg);
+                                uerror("Invalid interval %s", optarg);
                                 usage(av[0]);
                         }
                         break;
                 case '?':
+                        uerror("Invalid option \"%c\"", optopt);
+                        usage(progname);
+                        break;
+                case ':':
+                        uerror("No argument for option \"%c\"", optopt);
                         usage(progname);
                         break;
                 }
 
-        (void) setulogmask(logmask);
-
         if (re_isPathological(spec.pattern))
         {
-                fprintf(stderr, 
-                        "Adjusting pathological regular-expression \"%s\"\n",
+                unotice("Adjusting pathological regular-expression \"%s\"",
                         spec.pattern);
                 re_vetSpec(spec.pattern);
         }
@@ -315,18 +327,12 @@ int main(int ac, char *av[])
                 REG_EXTENDED|REG_NOSUB);
         if(status != 0)
         {
-                fprintf(stderr, "Bad regular expression \"%s\"\n",
-                        spec.pattern);
+                uerror("Bad regular expression \"%s\"\n", spec.pattern);
                 usage(av[0]);
         }
 
         }
 
-        /*
-         * Set up error logging.
-         */
-        (void) openulog(progname,
-                logoptions, LOG_LDM, logfname);
         unotice("Starting Up (%d)", getpgrp());
 
         /*
