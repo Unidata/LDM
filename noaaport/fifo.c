@@ -1,16 +1,15 @@
 /*
- *   Copyright 2011, University Corporation for Atmospheric Research.
+ *   Copyright 2013, University Corporation for Atmospheric Research.
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
-#define _XOPEN_SOURCE 500
+#include "config.h"
+#include "log.h"
+#include "fifo.h"                   /* Eat own dog food */
 
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "log.h"
-#include "fifo.h"                   /* Eat own dog food */
 
 struct fifo {
     unsigned char*      buf;        /**< Pointer to start of buffer */

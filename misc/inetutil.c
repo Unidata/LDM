@@ -32,7 +32,7 @@
 #include <registry.h>
 
 /*
- * Host names are limited to 255 bytes by the The Single UNIX®
+ * Host names are limited to 255 bytes by the The Single UNIXï¿½
  * Specification, Version 2, for the function gethostname().  MAXHOSTNAMELEN
  * is not required by that specification to be defined.
  */
@@ -115,7 +115,7 @@ ghostname(void)
                         ? log_clear()
                         : log_log(LOG_ERR);
                 }
-                if(cp != NULL)
+                else
                 {
                         (void)strncpy(hostname, cp, MAXHOSTNAMELEN);
                         free(cp);

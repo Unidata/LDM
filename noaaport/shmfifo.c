@@ -19,7 +19,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#define _XOPEN_SOURCE 500
+#include "config.h"
+#include "shmfifo.h"
+#include "log.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -33,10 +35,6 @@
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-
-#include "shmfifo.h"
-
-#include "log.h"
 
 #define DVBS_ID 43210000
 

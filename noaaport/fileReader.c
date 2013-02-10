@@ -1,8 +1,11 @@
 /*
- *   Copyright 2011, University Corporation for Atmospheric Research.
+ *   Copyright 2013, University Corporation for Atmospheric Research.
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
-#define _XOPEN_SOURCE 500
+#include "config.h"
+#include "log.h"
+#include "fifo.h"
+#include "fileReader.h" /* Eat own dog food */
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -10,10 +13,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include "log.h"
-#include "fifo.h"
-#include "fileReader.h" /* Eat own dog food */
 
 /**
  * Returns a new file-reader.

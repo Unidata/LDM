@@ -1,10 +1,11 @@
-# Copyright 2011 University Corporation for Atmospheric Research
+# Copyright 2013 University Corporation for Atmospheric Research
+# All rights reserved.
 #
-# This file is part of the UDUNITS-2 package.  See the file LICENSE
+# This file is part of the LDM package.  See the file LICENSE
 # in the top-level source-directory of the package for copying and
 # redistribution conditions.
 #
-## Process this file with automake to produce Makefile.in
+# Process this file with automake(1) to produce Makefile.in
 EXTRA_DIST	= redo_results.tab results.tab
 distId		= $(PACKAGE)-$(VERSION)
 distName	= $(distId).tar.gz
@@ -17,11 +18,12 @@ HOSTS		= \
     buddy \
     flip \
     gilda \
+    grizzard \
+    harpo \
+    hydro2 \
     imogene \
-    rip \
-    sid \
-    tweety \
-    zasu
+    moe \
+    spock
 
 $(distPath):
 	cd .. && $(MAKE) dist

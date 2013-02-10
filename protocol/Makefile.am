@@ -64,6 +64,7 @@ lib_la_SOURCES		= \
     forn5_svc.c \
     globals.c \
     h_clnt.c \
+    LdmProxy.c \
     ldm4_svc.c \
     ldm5_svc.c \
     ldm6_svc.c \
@@ -74,7 +75,6 @@ lib_la_SOURCES		= \
     ldm6_server.c \
     ldmfork.c \
     ldmprint.c \
-    LdmProxy.c \
     ldm_clnt.c \
     md5c.c \
     one_svc_run.c \

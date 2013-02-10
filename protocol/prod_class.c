@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "ldm.h"        /* prod_class */
+#include "ldmprint.h"
 #include "prod_class.h"
 #include "timestamp.h" 
 #include "RegularExpressions.h"

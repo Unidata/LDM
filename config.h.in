@@ -291,7 +291,7 @@
    #define below would cause a syntax error. */
 #undef _UINT64_T
 
-/* Needed for MAP_FAILED and EOVERFLOW on OSF1 systems */
+/* Level of XOPEN compliance */
 #undef _XOPEN_SOURCE
 
 /* rpcgen(1) typedef */

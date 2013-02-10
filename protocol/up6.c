@@ -334,7 +334,7 @@ flushConnection(
      * via an asynchronous HEREIS message and then return immediately, rather
      * than by sending a synchronous NULLPROC message, which would necessitate
      * waiting for a response. (The "xdr_void" and "ZERO_TIMEOUT" cause the
-     * HEREIS message to be sent, the connection flushed, and an immediate
+     * HEREIS message to be buffered, the buffer flushed, and an immediate
      * return.)
      */
 	if (clnt_call(_clnt, HEREIS, (xdrproc_t)xdr_product, (caddr_t)dp_getNil(),

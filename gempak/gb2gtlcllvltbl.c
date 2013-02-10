@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE 500
+#include "config.h"
 
 #include "gb2def.h"
 #include <proto_gemlib.h>

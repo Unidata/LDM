@@ -1,5 +1,11 @@
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64
+# /usr/xpg4/bin/make crashes on the autoconf-generated makefiles
+#
+PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc
+PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc
+
+# configure: WARNING: errno.h: present but cannot be compiled
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
 
 PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m32
 #
@@ -7,19 +13,11 @@ PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gma
 #
 #PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m64
 
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc -m64
+
 PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m32
 PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m64
-
-#"xmllint.c", line 2334: argument #2 is incompatible with prototype:
-#	prototype: unsigned int : "/usr/include/sys/mman.h", line 170
-#	argument : union  {double _d, array[2] of int _l}
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
-
-# /usr/xpg4/bin/make crashes on the autoconf-generated makefiles
-#
-PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/xpg4/bin/make,/opt/SUNWspro/bin/c89
-PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/xpg4/bin/make,/opt/SUNWspro/bin/c89
 
 # /lib/cpp doesn't work
 PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99

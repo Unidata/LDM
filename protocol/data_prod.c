@@ -13,6 +13,8 @@
 #include "data_prod.h"
 #include "prod_info.h"
 
+#include <string.h>
+
 
 /**
  * The nil data-product. Relies on the fact that static initialization of all

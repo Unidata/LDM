@@ -1,17 +1,16 @@
 /*
- *   Copyright 2011, University Corporation for Atmospheric Research.
+ *   Copyright 2013, University Corporation for Atmospheric Research.
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
-#define _XOPEN_SOURCE 500
+#include "config.h"
+#include "log.h"
+#include "fifo.h"
+#include "reader.h"     /* Eat own dog food */
 
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "log.h"
-#include "fifo.h"
-#include "reader.h"     /* Eat own dog food */
 
 struct reader {
     Fifo*           fifo;           /**< Pointer to FIFO into which to put data

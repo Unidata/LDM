@@ -1,12 +1,11 @@
 /*
- * A countdown timer.
+ * The data-product abstraction.
  *
- * See ../COPYRIGHT file for copying and redistribution conditions.
+ * See file ../COPYRIGHT for copying and redistribution conditions.
  */
 #ifndef DATA_PROD_H
 #define DATA_PROD_H
 
-#include "config.h"
 #include "ldm.h"
 
 #ifdef __cplusplus

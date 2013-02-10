@@ -4,10 +4,14 @@ dnl
 AC_PREREQ(2.59)
 AC_INIT([LDM], [6.11.3.11], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
+
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
+    
+AC_USE_SYSTEM_EXTENSIONS
+AC_PROG_CC([c99 c89 gcc cc])
 
 YEAR=`date +%Y`
 AC_SUBST([YEAR])
@@ -15,14 +19,105 @@ AC_SUBST([YEAR])
 #UD_CPPFLAGS
 #AC_DEFINE([_POSIX_C_SOURCE], [1], [Level of POSIX compliance])
 AC_DEFINE([CONFIG_H], [1], [Header-file lockout])
-AC_DEFINE([_XOPEN_SOURCE], [600], [Level of POSIX compliance])
 #AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
-AC_USE_SYSTEM_EXTENSIONS
+
+AM_PROG_CC_C_O
+if test -z "$CC"; then
+    AC_MSG_ERROR([no C compiler found])
+else
+    case "$CC" in
+        *c99*) AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance]);;
+        *) AC_DEFINE([_XOPEN_SOURCE], [500], [Level of XOPEN compliance])
+    esac
+    AC_MSG_CHECKING(the C compiler)
+    AC_COMPILE_IFELSE([int foo;], 
+	AC_MSG_RESULT(works),
+	AC_MSG_FAILURE($CC failed to compile test code))
+fi
+
+case "$CC" in
+*c[[89]]9*)
+    ARFLAGS=-cru
+    if test "$max_size" = yes
+    then
+        AC_MSG_NOTICE([checking how to maximize the (long, void*, off_t) 
+                programming environment])
+        success=no
+        AC_MSG_CHECKING([if the system supports _XBS5_LPBIG_OFFBIG])
+        avail=`getconf _XBS5_LPBIG_OFFBIG 2>/dev/null`
+        if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
+        then
+            if cflags=`getconf XBS5_LPBIG_OFFBIG_CFLAGS 2>/dev/null`
+            then
+                if ldflags=`getconf XBS5_LPBIG_OFFBIG_LDFLAGS 2>/dev/null`
+                then
+                    if libs=`getconf XBS5_LPBIG_OFFBIG_LIBS 2>/dev/null`
+                    then
+                        success=yes
+                    fi
+                fi
+            fi
+        fi
+        AC_MSG_RESULT($success)
+        if test "$success" = no
+        then
+            AC_MSG_CHECKING([if the system supports _XBS5_LP64_OFF64])
+            avail=`getconf _XBS5_LP64_OFF64 2>/dev/null`
+            if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
+            then
+                if cflags=`getconf XBS5_LP64_OFF64_CFLAGS 2>/dev/null`
+                then
+                    if ldflags=`getconf XBS5_LP64_OFF64_LDFLAGS 2>/dev/null`
+                    then
+                        if libs=`getconf XBS5_LP64_OFF64_LIBS 2>/dev/null`
+                        then
+                            success=yes
+                        fi
+                    fi
+                fi
+            fi
+            AC_MSG_RESULT($success)
+        fi
+        if test "$success" = no
+        then
+            AC_MSG_CHECKING([if the system supports _XBS5_ILP32_OFFBIG])
+            avail=`getconf _XBS5_ILP32_OFFBIG 2>/dev/null`
+            if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
+            then
+                if cflags=`getconf XBS5_ILP32_OFFBIG_CFLAGS 2>/dev/null`
+                then
+                    if ldflags=`getconf XBS5_ILP32_OFFBIG_LDFLAGS 2>/dev/null`
+                    then
+                        if libs=`getconf XBS5_ILP32_OFFBIG_LIBS 2>/dev/null`
+                        then
+                            success=yes
+                        fi
+                    fi
+                fi
+            fi
+            AC_MSG_RESULT($success)
+        fi
+        if test "$success" = yes
+        then
+            test -n "$cflags"  && CFLAGS="$CFLAGS${CFLAGS+ }$cflags"
+            test -n "$ldflags" && LDFLAGS="$LDFLAGS${LDFLAGS+ }$ldflags"
+            test -n "$libs"    && LIBS="$LIBS${LIBS+ }$libs"
+            test `uname` = AIX && ARFLAGS='-cru -X 32_64'
+            AC_MSG_NOTICE([cflags="\"$cflags\""])
+            AC_MSG_NOTICE([ldflags="\"$ldflags\""])
+            AC_MSG_NOTICE([libs="\"$libs\""])
+            AC_MSG_NOTICE([ARFLAGS="\"$ARFLAGS\""])
+            AC_MSG_CHECKING([the C compiler (again)])
+            AC_COMPILE_IFELSE([int foo;], 
+                AC_MSG_RESULT(works),
+                AC_MSG_FAILURE($CC failed to compile test code))
+        fi
+    fi
+    AC_SUBST(ARFLAGS);;
+esac
 
 case `uname -s` in
     OSF1)
-        AC_DEFINE([_XOPEN_SOURCE], [500],
-                [Needed for MAP_FAILED and EOVERFLOW on OSF1 systems])
         AC_DEFINE([_OSF_SOURCE], [1],
                 [Needed for "struct mreq" on OSF1 systems])
         ;;
@@ -208,98 +303,6 @@ AM_COND_IF([HAVE_CUNIT],
     [AC_MSG_NOTICE([CUNIT not found.  Disabling unit-tests.])])
 
 AC_SUBST(PATH)
-
-AC_PROG_CC(c89 cc gcc)
-AM_PROG_CC_C_O
-if test -z "$CC"; then
-    AC_MSG_ERROR([no C compiler found])
-else
-    AC_MSG_CHECKING(the C compiler)
-    AC_COMPILE_IFELSE([int foo;], 
-	AC_MSG_RESULT(works),
-	AC_MSG_FAILURE($CC failed to compile test code))
-fi
-
-case "$CC" in
-*c[[89]]9*)
-    ARFLAGS=-cru
-    if test "$max_size" = yes
-    then
-        AC_MSG_NOTICE([checking how to maximize the (long, void*, off_t) 
-                programming environment])
-        success=no
-        AC_MSG_CHECKING([if the system supports _XBS5_LPBIG_OFFBIG])
-        avail=`getconf _XBS5_LPBIG_OFFBIG 2>/dev/null`
-        if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
-        then
-            if cflags=`getconf XBS5_LPBIG_OFFBIG_CFLAGS 2>/dev/null`
-            then
-                if ldflags=`getconf XBS5_LPBIG_OFFBIG_LDFLAGS 2>/dev/null`
-                then
-                    if libs=`getconf XBS5_LPBIG_OFFBIG_LIBS 2>/dev/null`
-                    then
-                        success=yes
-                    fi
-                fi
-            fi
-        fi
-        AC_MSG_RESULT($success)
-        if test "$success" = no
-        then
-            AC_MSG_CHECKING([if the system supports _XBS5_LP64_OFF64])
-            avail=`getconf _XBS5_LP64_OFF64 2>/dev/null`
-            if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
-            then
-                if cflags=`getconf XBS5_LP64_OFF64_CFLAGS 2>/dev/null`
-                then
-                    if ldflags=`getconf XBS5_LP64_OFF64_LDFLAGS 2>/dev/null`
-                    then
-                        if libs=`getconf XBS5_LP64_OFF64_LIBS 2>/dev/null`
-                        then
-                            success=yes
-                        fi
-                    fi
-                fi
-            fi
-            AC_MSG_RESULT($success)
-        fi
-        if test "$success" = no
-        then
-            AC_MSG_CHECKING([if the system supports _XBS5_ILP32_OFFBIG])
-            avail=`getconf _XBS5_ILP32_OFFBIG 2>/dev/null`
-            if test $? = 0 -a "$avail" \!= -1 -a "$avail" \!= "undefined"
-            then
-                if cflags=`getconf XBS5_ILP32_OFFBIG_CFLAGS 2>/dev/null`
-                then
-                    if ldflags=`getconf XBS5_ILP32_OFFBIG_LDFLAGS 2>/dev/null`
-                    then
-                        if libs=`getconf XBS5_ILP32_OFFBIG_LIBS 2>/dev/null`
-                        then
-                            success=yes
-                        fi
-                    fi
-                fi
-            fi
-            AC_MSG_RESULT($success)
-        fi
-        if test "$success" = yes
-        then
-            test -n "$cflags"  && CFLAGS="$CFLAGS${CFLAGS+ }$cflags"
-            test -n "$ldflags" && LDFLAGS="$LDFLAGS${LDFLAGS+ }$ldflags"
-            test -n "$libs"    && LIBS="$LIBS${LIBS+ }$libs"
-            test `uname` = AIX && ARFLAGS='-cru -X 32_64'
-            AC_MSG_NOTICE([cflags="\"$cflags\""])
-            AC_MSG_NOTICE([ldflags="\"$ldflags\""])
-            AC_MSG_NOTICE([libs="\"$libs\""])
-            AC_MSG_NOTICE([ARFLAGS="\"$ARFLAGS\""])
-            AC_MSG_CHECKING([the C compiler (again)])
-            AC_COMPILE_IFELSE([int foo;], 
-                AC_MSG_RESULT(works),
-                AC_MSG_FAILURE($CC failed to compile test code))
-        fi
-    fi
-    AC_SUBST(ARFLAGS);;
-esac
 
 AC_MSG_CHECKING([the installation prefix]);
 test -z "$prefix" -o "$prefix" = NONE && prefix=`(cd .. && pwd)`

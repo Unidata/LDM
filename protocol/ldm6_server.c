@@ -1,12 +1,11 @@
-/*
+/**
  * This module contains the server-side functions that are invoked by the
  * "ldm6_svc" module.  Because RPC assumes a client/server structure, this
  * module contains code for both upstream and downstream LDM-s.
- *
+ * <p>
  * From a design-pattern perspective, this module is a combination fa�ade and
  * adapter for the "up6" and "down6" modules.
  */
-/* $Id: ldm6_server.c,v 1.13.8.2.2.3.2.18 2009/06/18 23:37:22 steve Exp $ */
 
 #include "config.h"
 
@@ -27,6 +26,7 @@
 #include "acl.h"         /* acl_product_intersection(), acl_check_hiya() */
 #include "autoshift.h"
 #include "child_process_set.h"       /* cps_contains() */
+#include "data_prod.h"
 #include "down6.h"       /* the pure "downstream" LDM module */
 #include "error.h"
 #include "forn.h"

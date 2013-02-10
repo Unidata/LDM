@@ -7,7 +7,7 @@
 
 /* @(#) $Id: gzio.c,v 1.1.1.1 2004/12/23 19:21:11 chiz Exp $ */
 
-#define _XOPEN_SOURCE 500
+#include "config.h"
 
 #include <stdio.h>
 

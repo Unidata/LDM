@@ -278,8 +278,8 @@ s_process(
             newestEntry->wasAccepted = accepted;
 
             if ((status = q_add(newestEntry)) == 0) {
-                const void* const*  elt;
-                const double        period = d_diff_timestamp(&now, &s_prevCompTime);
+                void* const*    elt;
+                const double    period = d_diff_timestamp(&now, &s_prevCompTime);
 
                 /*
                  * Reduce memory usage by purging the queue of entries that are

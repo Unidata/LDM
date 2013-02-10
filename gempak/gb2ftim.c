@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE 500
+#include "config.h"
 
 #include "gbcmn.h"
 #include "gb2def.h"

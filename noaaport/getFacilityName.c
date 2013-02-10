@@ -1,14 +1,12 @@
 /*
- *   Copyright 2011, University Corporation for Atmospheric Research.
+ *   Copyright 2013, University Corporation for Atmospheric Research.
  *   See COPYRIGHT file for copying and redistribution conditions.
  */
-#define _XOPEN_SOURCE 500
+#include "config.h"
+#include "getFacilityName.h"      /* eat own dog food */
 
 #include <stddef.h>
 #include <syslog.h>
-
-#include "config.h"
-#include "getFacilityName.h"      /* eat own dog food */
 
 typedef struct _code {
     char*   c_name;

@@ -4,19 +4,19 @@
  * See file ../COPYRIGHT for copying and redistribution conditions.
  */
 
-#include <config.h>
+#include "config.h"
+#include "error.h"
+#include "ldm.h"
+#include "ldm_clnt.h"
+#include "ldmprint.h"
+#include "log.h"
+#include "prod_class.h"
+#include "rpc/rpc.h"
+#include "rpcutil.h"
+#include "LdmProxy.h"
 
 #include <stddef.h>
 #include <string.h>
-
-#include <error.h>
-#include <ldm.h>
-#include <ldm_clnt.h>
-#include <log.h>
-#include <prod_class.h>
-#include <rpc/rpc.h>
-
-#include "LdmProxy.h"
 
 struct ldmProxy {
     LdmProxyStatus      (*hiya)(LdmProxy* proxy, prod_class_t* offer, 

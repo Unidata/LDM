@@ -2,14 +2,13 @@
  *   Copyright 2004, University Corporation for Atmospheric Research
  *   See COPYRIGHT file for copying and redistribution conditions.
  */
-#define _XOPEN_SOURCE 500
+#include "config.h"
+#include "gempak/gb2def.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#include "gempak/gb2def.h"
 
 const char *s_pds_center(unsigned char center, unsigned char subcenter);
 const char *s_pds_model(unsigned char center, unsigned char model);

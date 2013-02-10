@@ -6,8 +6,8 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST	        = child_map.hin ip_multicast.hin semRWLock.hin
-BUILT_SOURCES		= ../registry/registry.h child_map.h ip_multicast.h semRWLock.h
+EXTRA_DIST	        = child_map.hin semRWLock.hin ip_multicast.c ip_multicast.hin
+BUILT_SOURCES		= ../registry/registry.h child_map.h semRWLock.h
 CLEANFILES		    = child_map.h semRWLock.h ip_multicast.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
@@ -29,7 +29,6 @@ lib_la_SOURCES	= \
 	fdnb.c \
 	fsStats.c \
 	inetutil.c \
-    ip_multicast.c ip_multicast.h \
 	mkdirs_open.c \
 	pattern.c \
 	RegularExpressions.c \

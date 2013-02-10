@@ -137,6 +137,9 @@ log4(size_t n)
 static volatile sig_atomic_t initialized = 0;
 
 
+/**
+ * Resets the random number generator.
+ */
 void
 pq_reset_random(void)
 {
