@@ -197,6 +197,7 @@ getulogpath(void) {
  *      facility        Logging facility.  One of LOG_LOCAL1...LOG_LOCAL7.
  *      logfilename     Pathname of the log file:
  *          NULL        Log to syslogd(8).
+ *          ""          Log to syslogd(8)
  *          "-"         Log to the standard error stream.
  *          else        Log to the named file.  The client shall not modify or
  *                      free.
