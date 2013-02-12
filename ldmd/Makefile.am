@@ -55,7 +55,7 @@ if MAINTAINER
 parser.c:	parser.y
 	status=1; \
 	$(YACC) parser.y && \
-	    cat y.tab.c >>parser.c && \
+	    mv y.tab.c parser.c && \
 	    status=0; \
 	rm -f y.tab.c conf.tab.c; \
 	test $$status -ne 0 && rm -f $@; \

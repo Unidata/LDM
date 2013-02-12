@@ -10,7 +10,10 @@ AC_CONFIG_SRCDIR([config.h.in])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
     
-AC_USE_SYSTEM_EXTENSIONS
+#AC_USE_SYSTEM_EXTENSIONS
+case "`uname -sr`" in
+    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
+esac
 AC_PROG_CC([c99 c89 gcc cc])
 
 YEAR=`date +%Y`
@@ -25,10 +28,10 @@ AM_PROG_CC_C_O
 if test -z "$CC"; then
     AC_MSG_ERROR([no C compiler found])
 else
-    case "$CC" in
-        *c99*) AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance]);;
-        *) AC_DEFINE([_XOPEN_SOURCE], [500], [Level of XOPEN compliance])
-    esac
+   case "$CC" in
+       *c99*) AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance]);;
+       *) AC_DEFINE([_XOPEN_SOURCE], [500], [Level of XOPEN compliance])
+   esac
     AC_MSG_CHECKING(the C compiler)
     AC_COMPILE_IFELSE([int foo;], 
 	AC_MSG_RESULT(works),

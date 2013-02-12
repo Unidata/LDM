@@ -503,10 +503,6 @@ char *yytext;
  * Lexical scanner for LDM configuration-file.
  */
 
-#ifndef CONFIG_H
-#include <config.h>
-#endif
-
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
@@ -527,7 +523,7 @@ extern int yydebug;
 #endif
 /* a string has no white space */
 /* pretty much anything can be in a quoted string */
-#line 531 "lex.yy.c"
+#line 527 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -712,10 +708,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 51 "scanner.l"
+#line 47 "scanner.l"
 
 
-#line 719 "lex.yy.c"
+#line 715 "lex.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -801,12 +797,12 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 53 "scanner.l"
+#line 49 "scanner.l"
 {/*comment */;}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 56 "scanner.l"
+#line 52 "scanner.l"
 {
 #if YYDEBUG
     if(yydebug)
@@ -817,7 +813,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 65 "scanner.l"
+#line 61 "scanner.l"
 {
 #if YYDEBUG
     if(yydebug)
@@ -828,7 +824,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 74 "scanner.l"
+#line 70 "scanner.l"
 {
 #if YYDEBUG
     if(yydebug)
@@ -839,7 +835,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 83 "scanner.l"
+#line 79 "scanner.l"
 {
 #if YYDEBUG
     if(yydebug)
@@ -850,7 +846,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 92 "scanner.l"
+#line 88 "scanner.l"
 {
 #if YYDEBUG
     if(yydebug)
@@ -861,7 +857,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 101 "scanner.l"
+#line 97 "scanner.l"
 {
     int	status;
 
@@ -882,7 +878,7 @@ YY_RULE_SETUP
 case 8:
 /* rule 8 can match eol */
 YY_RULE_SETUP
-#line 119 "scanner.l"
+#line 115 "scanner.l"
 {
     int         status;
 
@@ -937,21 +933,21 @@ YY_RULE_SETUP
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 172 "scanner.l"
+#line 168 "scanner.l"
 {/* whitespace */;}
 	YY_BREAK
 case 10:
 /* rule 10 can match eol */
 YY_RULE_SETUP
-#line 175 "scanner.l"
+#line 171 "scanner.l"
 { line++; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 177 "scanner.l"
+#line 173 "scanner.l"
 ECHO;
 	YY_BREAK
-#line 955 "lex.yy.c"
+#line 951 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1952,7 +1948,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 177 "scanner.l"
+#line 173 "scanner.l"
 
 
 

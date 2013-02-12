@@ -135,7 +135,7 @@ old_postuninstall_cmds=""
 lock_old_archive_extraction=no
 
 # A C compiler.
-LTCC="gcc"
+LTCC="c99"
 
 # LTCC compiler flags.
 LTCFLAGS="-g"
@@ -267,7 +267,7 @@ reload_cmds="\$LD\$reload_flag -o \$output\$reload_objs"
 old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs~\$RANLIB \$oldlib"
 
 # A language specific compiler.
-CC="gcc"
+CC="c99"
 
 # Is the compiler the GNU compiler?
 with_gcc=yes

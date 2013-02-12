@@ -14,10 +14,6 @@
  * Lexical scanner for LDM configuration-file.
  */
 
-#ifndef CONFIG_H
-#include <config.h>
-#endif
-
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>

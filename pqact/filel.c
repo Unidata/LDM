@@ -24,6 +24,16 @@
 #include <signal.h>
 #include <errno.h>
 
+#if !defined(_DARWIN_C_SOURCE)
+union semun {
+    int              val;    /* Value for SETVAL */
+    struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */
+    unsigned short  *array;  /* Array for GETALL, SETALL */
+    struct seminfo  *__buf;  /* Buffer for IPC_INFO
+                                (Linux specific) */
+};
+#endif
+
 #if defined(_AIX) && defined(HAVE_WAITPID)
 /*
  * Use POSIX wait macros, not _BSD
