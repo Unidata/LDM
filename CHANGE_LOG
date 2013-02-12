@@ -1,153 +1,131 @@
-6.11.3.11 	2013-01-31 10:19:42-07:00
-    Improved description of LDM behavior.
+6.11.3 	2013-02-12 12:49:41-07:00
+    General:
+        Ported to all available in-house systems. Unfortunately, this means
+        only certain versions of Linux (Fedora and CentOS), SunOS, and Darwin.
 
-    Improved internal documentation in protocol/abbr.c
+    Installation:
+        Fix creation of ~/data if it already exists and isn't a link
 
-    ldm6_server.c:
-        Replaced exit() with done=1 in feed_or_notify().
-    
-        Also improved freeing of ULDB-determined product-class.
+    Downstream LDM 6:
+        Added the reduction of REQUEST subscriptions based on previous
+        REQUEST subscriptions. This means that, for example, the second
+        subscription in the following:
 
-6.11.3.10 	2013-01-29 13:54:09-07:00
-    Eliminated same transfer-mode requirement for termination in ULDB because
-    the downstream LDM can alternate between transfer-modes, the previous
-    upstream LDM should be terminated regardless of its transfer-mode.
+            REQUEST IDS|DDPLUS .* idd.unidata.ucar.edu
+            REQUEST UNIDATA .* idd.unidata.ucar.edu
 
-    Redocumented IS_ALIVE use by downstream LDM.
+        will, effectively, become
 
-6.11.3.9 	2013-01-29 10:19:46-07:00
-    Re-enabled IS_ALIVE capability.  Otherwise, a downstream 6.11.3 LDM could
-    cause multiple orphaned upstream LDM-s at a apre-6.11.3 site.
+            REQUEST HDS|UNIWISC .* idd.unidata.ucar.edu
 
-    Improved internal commentary.
+        This was done in order to reduce bandwidth usage and because many
+        sites have such inefficient REQUEST entries.
 
-    Returned client RPC timeout to 60 seconds from 25.  This should be OK as
-    the upstream LDM now terminates obsolete, previous LDM processes.
+        THIS MIGHT CAUSE A PROBLEM IF YOU HAVE SEVERAL DOWNSTREAM LDM-s BEHIND
+        A NAT THAT REQUEST OVERLAPPING DATA FROM THE SAME UPSTREAM LDM. This is
+        because the upstream LDM will see all the requests as coming from the
+        same NAT device and so will reduce them to non-overlapping requests.
+        The best solution is to have only one downstream LDM request all the
+        data and to have the other downstream LDM-s request their subset of the
+        data from it. (There are other solutions. Contact
+        <support-ldm@unidata.ucar.edu> if you need them).
 
-    Removed primary-mode condition for termination of previous process
+        Improved the API of the auto-shift module (which is responsible for
+        switching between primary and alternate transfer modes) and refactored
+        the module in order to improve its performance. Adapted the rest of the
+        LDM to the changes (in particular, an upstream LDM no longer
+        initializes the autoshift module).
 
-6.11.3.8 	2013-01-25 12:57:23-07:00
-    Made ULDB kill obsolete feeder in alternate mode (not just primary mode).
+        Added checking for nil HEREIS data-product (does nothing).
 
-    Removed use of IS_ALIVE functionality and undocumented use of IS_ALIVE and
-    removed state-transition diagrams
+    Upstream LDM 6:
+        Modified to no longer reject a subscription by a downstream LDM 6 based
+        on existing subscriptions from the same downstream host.  Instead, the
+        upstream LDM checks the new subscription against all previous
+        subscriptions from the same downstream host. If the new subscription is
+        a superset (either proper or improper) of an existing subscription from
+        the same downstream host, then the other upstream LDM 6 process is
+        terminated; otherwise, the new subscription is reduced by all previous
+        subscriptions (which would normally do nothing).
 
-6.11.3.7 	2013-01-24 10:29:27-07:00
-    ldmd(1):
-        Added reduction of subscriptions by downstream LDM.
+        Eliminated the requirement that an upstream LDM that's sending the same
+        data-products must be in the same transfer-mode (PRIMARY or ALTERNATE)
+        in order to be terminated. This is because the downstream LDM can
+        alternate between the transfer-modes and the previous upstream LDM
+        should be terminated regardless of its transfer-mode.
 
-6.11.3.6 	2013-01-16 14:26:04-07:00
-    ULDB:
-        Modified termination and re-enabled subscription reduction.  Another
-        process is terminated only if the new process and the old process are
-        both feeders in primary mode.  Re-enabled subscription reduction for
-        feeders in primary mode of a subscription that isn't equal to or a
-        superset of an existing subscription.
+        Added the ability to flush the connection by use of a nil (i.e., empty)
+        data-product in order to improve performance over the current method of
+        using a NULLPROC message, which requires a round-trip.  This feature is
+        currently disabled.  It can be enabled once all downstream LDM-s are
+        version 6.11.3 or later.
 
-6.11.3.5 	2013-01-16 09:09:04-07:00
-    Upstream LDM Database:
-        Made ULDB module kill any other, obsolete LDM process rather than the
-        current process but only if the other process is like the current
-        process in type (feeder, notifier) and mode (primary, alternate) and
-        its subscription is a (possibly improper) subset of the current
-        process.
+        Replaced use of exit() with done=1 in feed_or_notify().
 
-        Made system error unconditional if the shared database can't be
-        unlocked.
+        Improved free(3)ing of upstream LDM database (ULDB)-determined
+        product-class.
 
-    LDM Server:
-        Added restart of system logging if execvp() fails so that the reason
-        for the failure of an EXEC entry will be logged.
+        Eliminated use of the auto-shift module because that capability is only
+        meaningful to a downstream LDM.
+
+    Top-level LDM Server:
+        Added restart of system logging if an EXEC-initiated execvp(2) fails so
+        that the reason for the failure will be logged.
 
         Ensured resource deallocation in upFilter_addComponent().
 
+    pqact(1):
+        Added printing of product-identifier to debug message.
+
+        Added "pipe_put(): write error: ..." error-message.
+
+    rtstats(1):
+        Replaced initial use of standard error stream with use of the LDM
+        logging module, ulog(3).
+
+        Corrected documentation on "-P port" option.
+    
+        Made miscellaneous improvements.
+
     System Logging:
         Logging library (ulog(3)):
-            Added getter functions for ulog(3) parameters to support the above
-            ldmd(1) modfication.
+            Added getter functions for ulog(3) parameters to support the top-level
+            LDM server logging the reason for an EXEC failure.
 
-            Created program "test_gmtime" for testing the gmtime() system
-            function as an aid is diagnosing why some systems log messages
-            using local timestamps.
-
-        Modification of system logging configuration-file during installation:
+        Modified how the system logging configuration-file is modified during 
+        package installation:
             Replaced ".debug" with ".*" in LDM entry to get logging to work on
             most systems.
 
             Added addition and use of template on systems that use version 5 or
             later of rsyslogd(8) so that the timestamps will be in UTC.
 
-    Added an unused module for IP multicast in preparation for testing that
-    possibility.
-
-6.11.3.4 	2013-01-08 11:14:44-07:00
-    Removed as_process() calls by upstream LDM to eliminate error return.
-
-6.11.3.3 	2013-01-08 10:12:30-07:00
-    ldmd(1):
-        Improved the API of the autoshift module (which is responsible for
-        switching between primary and alternate transfer modes) and refactored
-        the module in order to improve its performance. Adapted the rest of the
-        LDM to the changes (in particular, an upstream LDM no longer
-        initializes the autoshift module).
-
-        Changed the client timeout from 60 seconds to the RPC-default of 25
-        seconds in order to ensure that the upstream LDM from a previous
-        primary-mode connection will have terminated before the downstream LDM
-        attempts another primary-mode connection.
-
-6.11.3.2 	2012-12-27 13:19:00-07:00
-    uldb(3) (upstream LDM database module):
-        Changed rejection by ULDB.
-
-        Replaced ULDB rejection by ULDB reduction
-
-        The upstream LDM database no longer rejects a subscription by a
-        downstream LDM based on existing subscriptions from the same downstream
-        host but, rather, reduces the subscription by the existing
-        subscriptions (which might result in an empty subscrption -- which is,
-        effectively, the same thing).
-
-        Now, the ULDB only modifies the subscription by a downstream LDM if the
-        transfer mode is primary. This is done because the ULDB feature
-        interacts with the autoswitching feature. An autoswitch from alternate
-        mode to primary mode risks receiving many products that won't make it
-        into the product-queue because they've already been received due to the
-        delay in termination of the (previous) upstream LDM in alternate mode.
-
-    pqact(1):
-        Added printing of product-ID to debug message
-
-    ulog/log.c:
-        Eliminated setting of _XOPEN_SOURCE to 500.  Necessary in order to
-        build on SunOS 5.11 system using /opt/solstudio12.2/bin/c99.
-
-    Installation:
-        Adapted extractDecls(1) to SunOS 5.11's /usr/bin/awk.
-
-        Fix creation of ~/data if it already exists and isn't a link
-
     Documentation:
-        Added "pipe_put(): write error: ..." error-message
+        Improved description of LDM behavior.
 
         Documented "-p pattern" option in pqsend(1).
 
-        Documented use of uldbutil(1) for monitoring upstream LDM-s
+        Documented use of uldbutil(1) for monitoring upstream LDM-s.
 
-        Updated to 2012 workshop:
+        Updated 2012 workshop:
             Made break-times indefinite in workshop web pages.
 
-            Corrected class times
+            Corrected class times.
 
-            Changed domain-name from guest.ucar.edu to fl-guest.ucar.edu
+            Changed domain-name from guest.ucar.edu to fl-guest.ucar.edu.
 
-            Added configuration variable YEAR to workshop-specifics
+            Added configuration variable YEAR to workshop-specifics.
 
-        Replaced 6.9.8 with @VERSION@
+        Replaced "6.9.8" with "@VERSION@".
 
     Misc:
-        Makefile:
-            Corrected "git status -a" to "git status -u"
+        Created a data-product module and a nil data-product.
+
+        Improved internal documentation.
+
+        Adapted extractDecls(1) to SunOS 5.11's /usr/bin/awk.
+
+        Corrected "git status -a" to "git status -u" in makefile.
 
 6.11.2 	2012-12-17 11:11:20-07:00
     HOTFIX!
