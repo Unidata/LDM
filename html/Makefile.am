@@ -83,7 +83,7 @@ ALPHADIR	= /web/content/staff/steve/ldm
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
 commit-check:	Makefile
-	if git status -u >/dev/null; then \
+	if ! git status -u >/dev/null; then \
 	    echo 1>&2 'Package needs "git commit -a"'; \
 	    exit 1; \
 	fi
