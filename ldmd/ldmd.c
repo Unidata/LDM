@@ -713,7 +713,7 @@ static void handle_connection(
     /*
      *  handle rpc requests
      */
-    status = one_svc_run(xp_sock, inactive_timeo);
+    status = one_svc_run(xp_sock, 2*interval);
 
     (void) exitIfDone(0);
 
