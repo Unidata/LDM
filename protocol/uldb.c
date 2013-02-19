@@ -1296,8 +1296,9 @@ static uldb_Status sm_addUpstreamLdm(
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host.
- * @retval ULDB_SUCCESS     Success
+ *                      same host. The client should free when it's no longer
+ *                      needed.
+ * @retval ULDB_SUCCESS     Success. "*allowed" is set.
  * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
  * @retval ULDB_SYSTEM      System error. log_add() called.
  */
@@ -1380,10 +1381,11 @@ static uldb_Status sm_vetUpstreamLdm(
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host.
- * @retval ULDB_SUCCESS     Success. If the resulting subscription is the empty
- *                          set, however, then the shared-memory will not have
- *                          been modified.
+ *                      same host. The client should free when it's no longer
+ *                      needed.
+ * @retval ULDB_SUCCESS     Success. "*allowed" is set. If the resulting
+ *                          subscription is the empty set, however, then the
+ *                          shared-memory will not have been modified.
  * @retval ULDB_INIT        Module not initialized. log_add() called.
  * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
  * @retval ULDB_SYSTEM      System error. log_add() called.
@@ -1398,16 +1400,26 @@ static uldb_Status sm_add(
         const prod_class* const desired,
         prod_class** const allowed)
 {
-    int status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier, isPrimary,
-            sockAddr, desired, allowed);
+    prod_class* sub;
+    int         status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier,
+            isPrimary, sockAddr, desired, &sub);
 
-    if (0 == status && 0 < (*allowed)->psa.psa_len) {
-        if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier,
-                isPrimary, sockAddr, *allowed)) {
-            LOG_ADD1("Couldn't add request from %s",
-                    inet_ntoa(sockAddr->sin_addr));
+    if (0 == status) {
+        if (0 < sub->psa.psa_len) {
+            if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier,
+                    isPrimary, sockAddr, sub)) {
+                LOG_ADD1("Couldn't add request from %s",
+                        inet_ntoa(sockAddr->sin_addr));
+            }
         }
-    }
+
+        if (status) {
+            free_prod_class(sub);
+        }
+        else {
+            *allowed = sub;
+        }
+    } /* "sub" allocated */
 
     return status;
 }
@@ -1931,10 +1943,11 @@ uldb_Status uldb_getSize(
  * @param isNotifier    [in] Whether the upstream LDM is a notifier or a feeder
  * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
  *                      mode or not
- * @retval ULDB_SUCCESS     Success. The database is unmodified, however, if
- *                          the allowed subscription is the empty set. The
- *                          client should call "free_prod_class(*allowed)" when
- *                          the allowed subscription is no longer needed.
+ * @retval ULDB_SUCCESS     Success. "*allowed" is set. The database is
+ *                          unmodified, however, if the allowed subscription is
+ *                          the empty set. The client should call
+ *                          "free_prod_class(*allowed)" when the allowed
+ *                          subscription is no longer needed.
  * @retval ULDB_INIT        Module not initialized. log_add() called.
  * @retval ULDB_ARG         Invalid PID. log_add() called.
  * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
@@ -1964,13 +1977,22 @@ uldb_Status uldb_addProcess(
                 LOG_ADD0("Couldn't lock database");
             }
             else {
+                prod_class* sub = NULL;
+
                 status = sm_add(&database.sharedMemory, pid, protoVers,
-                        isNotifier, isPrimary, sockAddr, desired, allowed);
+                        isNotifier, isPrimary, sockAddr, desired, &sub);
 
                 if (db_unlock(&database)) {
                     LOG_ADD0("Couldn't unlock database");
 
                     status = ULDB_SYSTEM;
+                }
+
+                if (status) {
+                    free_prod_class(sub); /* NULL safe */
+                }
+                else {
+                    *allowed = sub;
                 }
             } /* database is locked */
         } /* module is initialized */
