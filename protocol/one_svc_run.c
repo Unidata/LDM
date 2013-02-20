@@ -1,8 +1,9 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2013, University Corporation for Atmospheric Research
+ *   All rights reserved.
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: one_svc_run.c,v 5.7.18.10 2007/02/22 19:43:16 steve Exp $ */
 
 /* 
  * ldm server mainline program module
@@ -25,30 +26,28 @@
 #include "remote.h"
 
 
-/*
- * Like svc_run(3RPC) except that it runs on one socket until one of the 
- * following occurs:
- *   1) The socket gets closed;
- *   2) The timeout expires without any activity;
- *   3) as_shouldSwitch() returns true;
+/**
+ * Run an RPC server on a single socket (similar to svc_run(3RPC)). Runs until:
+ *   1) The socket gets closed; or
+ *   2) The timeout expires without any activity; or
+ *   3) as_shouldSwitch() returns true; or
  *   4) An error occurs.
- *
+ * <p>
  * This function uses the "log" module to accumulate messages.
  *
- * Arguments:
- *      xp_sock         The connected socket.
- *      inactive_timeo  The maximum amount of time to wait with no activity on
- *                      the socket in seconds.
+ * @param xp_sock           The connected socket.
+ * @param inactive_timeo    The maximum amount of time to wait with no activity
+ *                          on the socket in seconds.
  *
- * Returns:
- *      0               Success.  as_shouldSwitch() is true.
- *      EBADF           The socket isn't open.
- *      EINVAL          Invalid timeout value.
- *      ECONNRESET      RPC layer closed socket.  The RPC layer also
- *                      destroyed the associated SVCXPRT structure; therefore,
- *                      that object must not be subsequently dereferenced.
- *      ETIMEDOUT       "inactive_timeo" time passed without any activity on 
- *                      the socket.
+ * @retval 0                Success.  as_shouldSwitch() is true.
+ * @retval EBADF            The socket isn't open.
+ * @retval EINVAL           Invalid timeout value.
+ * @retval ECONNRESET       RPC layer closed socket.  The RPC layer also
+ *                          destroyed the associated SVCXPRT structure;
+ *                          therefore, that object must not be subsequently
+ *                          dereferenced.
+ * @retval ETIMEDOUT        "inactive_timeo" time passed without any activity on
+ *                          the socket.
  */ 
 int
 one_svc_run(
