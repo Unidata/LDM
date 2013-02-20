@@ -548,7 +548,7 @@ adjustByLastInfo(
  *                              exchange-mode should use HEREIS or
  *                              COMINGSOON/BLKDATA messages.
  * Returns:
- *      NULL                    Success.  as_shouldSwitch() is true.
+ *      NULL                    Success.  as_shouldSwitch() might be true.
  *      else                    Error.  err_code() values:
  *                                 REQ6_TIMED_OUT
  *                                      The connection timed-out.
@@ -606,8 +606,6 @@ req6_new(
             ldm_clnttcp_create_vers(upName, port, SIX, &clnt, &requestSocket,
                 &upAddr);
 
-        (void)exitIfDone(0);
-
         if (errObj) {
             switch (err_code(errObj)) {
                 case LDM_CLNT_UNKNOWN_HOST:
@@ -626,13 +624,8 @@ req6_new(
                     errObj = ERR_NEW(REQ6_NO_CONNECT, errObj, NULL);
                     break;
 
-                case LDM_CLNT_SYSTEM_ERROR:
+                default: /* LDM_CLNT_SYSTEM_ERROR */
                     errObj = ERR_NEW(REQ6_SYSTEM_ERROR, errObj, NULL);
-                    break;
-
-                case LDM_CLNT_DONE:
-                    err_free(errObj);
-                    errObj = NULL;
                     break;
             }
         }                               /* no connection */
