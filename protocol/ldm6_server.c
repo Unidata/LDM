@@ -306,7 +306,7 @@ feed_or_notify(
                 { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
 
             theReply.fornme_reply_t_u.prod_class = &noSub;
-            done = 1; /* downstream will reconnect, so we need to exit */
+            done = 1; /* terminate because downstream will close socket */
         }
 
         reply = &theReply;
