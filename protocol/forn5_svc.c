@@ -407,8 +407,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
             return NULL;
         }
         if (logIfReduced(remote->clssp, uldbSub, "existing subscriptions")) {
-            free_prod_class(remote->clssp);
-
             if (set_remote_class(uldbSub)) {
                 LOG_ADD0("Couldn't set remote subscription to reduced subscription");
                 svcerr_systemerr(rqstp->rq_xprt);
@@ -435,7 +433,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                     { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
 
                 theReply.ldm_replyt_u.newclssp = &noSub;
-                done = 1; /* downstream will exit, so we need to */
+                done = 1; /* terminate because downstream will close socket */
             }
 
             return &theReply;
