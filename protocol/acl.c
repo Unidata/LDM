@@ -932,27 +932,14 @@ requester_exec(
             savedInfo_reset();
 
             /*
-             * Try LDM version 6.
+             * Try LDM version 6. Potentially lengthy operation.
              */
+            exitIfDone(0);
             errObj = req6_new(source, port, clssp, maxSilence, getQueuePath(),
                 pq, isPrimary);
 
-            exitIfDone(0);
-
             if (!errObj) {
                 errCode = 0;
-
-                /*
-                 * as_shouldSwitch() must be true.  Switch data-product
-                 * transfer-mode.
-                 */
-                err_log_and_free(
-                    ERR_NEW1(0, NULL,
-                        "Switching data-product transfer-mode to %s",
-                            isPrimary
-                                ? "alternate"
-                                : "primary"),
-                    ERR_NOTICE);
 
                 /*
                  * NB: If the selection-criteria is modified at this point by
@@ -963,7 +950,14 @@ requester_exec(
                  * Eastern and Western HQs (same data but disjoint sets).
                  */
 
-                isPrimary = !isPrimary;
+                if (as_shouldSwitch()) {
+                    isPrimary = !isPrimary;
+
+                    LOG_ADD1("Switching data-product transfer-mode to %s",
+                                isPrimary ? "primary" : "alternate");
+                    log_log(LOG_NOTICE);
+                }
+
                 sleepAmount = 0;        /* immediate retry */
             }                           /* req6_new() success */
             else {
@@ -1012,6 +1006,7 @@ requester_exec(
                          */
                         peer_info*      remote = get_remote();
 
+                        exitIfDone(0);
                         errCode = forn5(FEEDME, source, &remote->clssp,
                             rpctimeo, inactive_timeo, ldmprog_5);
 
@@ -1047,7 +1042,7 @@ requester_exec(
                 err_free(errObj);
             }                       /* req6_new() error */
 
-            if (!errCode && exitIfDone(0)) {
+            if (!errCode) {
                 /*
                  * Pause before reconnecting if appropriate.
                  */
@@ -1059,6 +1054,7 @@ requester_exec(
                     sleepAmount = 1;    /* for next time */
                 }
                 else {
+                    exitIfDone(0);
                     uinfo("Sleeping %d seconds before retrying...",
                         sleepAmount);
                     (void)sleep(sleepAmount);
