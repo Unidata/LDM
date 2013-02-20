@@ -225,28 +225,28 @@ static void eps_remove_prod_spec(
         const EntryProdSpec* const entryProdSpec,
         prod_spec* const prodSpec)
 {
-    if ((entryProdSpec->feedtype & prodSpec->feedtype)
-            && strcmp(entryProdSpec->pattern, prodSpec->pattern) == 0) {
+    if (strcmp(entryProdSpec->pattern, prodSpec->pattern) == 0)
         prodSpec->feedtype &= ~entryProdSpec->feedtype;
-    }
 }
 
+#if 0
 /**
- * Indicates if an entry's product-specification is a subset of a given
- * product-specification.
+ * Indicates if an entry's product-specification is a superset (proper or
+ * improper) of a given product-specification.
  *
  * @param eps       [in] The entry's product-specification
  * @param ps        [in] The given product-specification
- * @retval 0        The entry's product-specification isn't a subset
- * @retval 1        The entry's product-specification is a subset
+ * @retval 0        The entry's product-specification isn't a superset
+ * @retval 1        The entry's product-specification is a superset
  */
-static int eps_isSubsetOf(
+static int eps_isSupersetOf(
         const EntryProdSpec* const  eps,
         const prod_spec* const      ps)
 {
-    return ((eps->feedtype & ~ps->feedtype) == 0)
+    return ((ps->feedtype & ~eps->feedtype) == 0)
             && (strcmp(eps->pattern, ps->pattern) == 0);
 }
+#endif
 
 /**
  * Returns the product-specification of an entry's product-specification.
@@ -375,38 +375,40 @@ static void epc_remove_prod_specs(
     }
 }
 
+#if 0
 /**
- * Indicates if the subscription of an entry is a subset of a given
- * subscription. The time-limits of the subscriptions are ignored.
+ * Indicates if the subscription of an entry is a superset (proper or improper)
+ * of a given subscription. The time-limits of the subscriptions are ignored.
  *
  * @param entrySub      [in] Pointer to the entry's subscription
  * @param givenSub      [in] Pointer to the given subscription
- * @retval 0            The entry's subscription isn't a subset
- * @retval 1            The entry's subscription is a subset
+ * @retval 0            The entry's subscription isn't a superset
+ * @retval 1            The entry's subscription is a superset
  */
-static int epc_isSubsetOf(
+static int epc_isSupersetOf(
         const EntryProdClass* const entrySub,
         const prod_class* const     givenSub)
 {
-    const EntryProdSpec* eps;
+    int i;
 
-    for (eps = epc_firstProdSpec(entrySub); eps != NULL;
-            eps = epc_nextProdSpec(entrySub, eps)) {
-        int i;
+    for (i = 0; i < givenSub->psa.psa_len; i++) {
+        prod_spec* prodSpec = givenSub->psa.psa_val + i;
+        const EntryProdSpec* eps;
 
-        for (i = 0; i < givenSub->psa.psa_len; i++) {
-            prod_spec* prodSpec = givenSub->psa.psa_val + i;
+        for (eps = epc_firstProdSpec(entrySub); eps != NULL;
+                eps = epc_nextProdSpec(entrySub, eps)) {
 
-            if (eps_isSubsetOf(eps, prodSpec))
+            if (eps_isSupersetOf(eps, prodSpec))
                 break;
         }
 
-        if (i >= givenSub->psa.psa_len)
+        if (eps == NULL)
             return 0;
     }
 
     return 1;
 }
+#endif
 
 /**
  * Returns the size that an entry will have.
@@ -565,21 +567,23 @@ static uldb_Status entry_getProdClass(
     return status;
 }
 
+#if 0
 /**
- * Indicates if the subscription of an entry is a subset of a given
- * subscription. The time-limits of the subscriptions are ignored.
+ * Indicates if the subscription of an entry is a superset (proper or improper)
+ * of a given subscription. The time-limits of the subscriptions are ignored.
  *
  * @param entry         [in] Pointer to the entry
  * @param givenSub      [in] Pointer to the given subscription
- * @retval 0            The entry's subscription isn't a subset
- * @retval 1            The entry's subscription is a subset
+ * @retval 0            The entry's subscription isn't a superset
+ * @retval 1            The entry's subscription is a superset
  */
-static int entry_isSubsetOf(
+static int entry_isSupersetOf(
         const uldb_Entry* const entry,
         const prod_class* const givenSub)
 {
-    return epc_isSubsetOf(&entry->prodClass, givenSub);
+    return epc_isSupersetOf(&entry->prodClass, givenSub);
 }
+#endif
 
 /**
  * Removes an entry's subscription from a given subscription. The time-limits
@@ -593,8 +597,10 @@ static void entry_removeSubscriptionFrom(
         prod_class* const       sub)
 {
     epc_remove_prod_specs(&entry->prodClass, sub);
+    clss_scrunch(sub);
 }
 
+#if 0
 /**
  * Returns the string encoding of an entry.
  *
@@ -634,6 +640,7 @@ static int entry_toString(
 
     return nbytes;
 }
+#endif
 
 /**
  * Returns the size of a segment given the amount of space for entries.
@@ -1296,11 +1303,12 @@ static uldb_Status sm_addUpstreamLdm(
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host. The client should free when it's no longer
- *                      needed.
- * @retval ULDB_SUCCESS     Success. "*allowed" is set.
- * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
- * @retval ULDB_SYSTEM      System error. log_add() called.
+ *                      same host. Might specify an empty subscription. The
+ *                      client should free when it's no longer needed.
+ * @retval 0            Success. "*allowed" is set. Might specify an empty
+ *                      subscription.
+ * @retval ULDB_EXIST   Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_vetUpstreamLdm(
         SharedMemory* const sm,
@@ -1312,7 +1320,7 @@ static uldb_Status sm_vetUpstreamLdm(
         const prod_class* const desired,
         prod_class** const allowed)
 {
-    int status = 0;
+    int status = 0; /* success */
     const Segment* const segment = sm->segment;
     const uldb_Entry* entry;
     prod_class_t* allow = dup_prod_class(desired);
@@ -1331,28 +1339,12 @@ static uldb_Status sm_vetUpstreamLdm(
             }
 
             if (ipAddressesAreEqual(sockAddr, entry_getSockAddr(entry))
-                    && !isNotifier && !entry_isNotifier(entry)) {
-                if (entry_isSubsetOf(entry, allow)) {
-                    char    buf[1024];
+                    && !isNotifier && !entry_isNotifier(entry)
+                    && (isPrimary == entry_isPrimary(entry))) {
+                entry_removeSubscriptionFrom(entry, allow);
 
-                    (void)entry_toString(entry, buf, sizeof(buf));
-
-                    LOG_ADD1("Terminating obsolete upstream LDM %s", buf);
-                    log_log(LOG_NOTICE);
-
-                    if (kill(entry_getPid(entry), SIGTERM)) {
-                        LOG_SERROR1("Couldn't terminate obsolete upstream LDM %s",
-                            buf);
-                        log_log(LOG_WARNING);
-                    }
-                }
-                else {
-                    entry_removeSubscriptionFrom(entry, allow);
-                    clss_scrunch(allow);
-
-                    if (0 >= allow->psa.psa_len)
-                        break;
-                }
+                if (0 >= allow->psa.psa_len)
+                    break;
             } /* upstream LDM matches entry */
         } /* entry loop */
 
@@ -1381,14 +1373,14 @@ static uldb_Status sm_vetUpstreamLdm(
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host. The client should free when it's no longer
- *                      needed.
- * @retval ULDB_SUCCESS     Success. "*allowed" is set. If the resulting
- *                          subscription is the empty set, however, then the
- *                          shared-memory will not have been modified.
- * @retval ULDB_INIT        Module not initialized. log_add() called.
- * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
- * @retval ULDB_SYSTEM      System error. log_add() called.
+ *                      same host. Might specify an empty subscription. The
+ *                      client should free when it's no longer needed.
+ * @retval 0            Success. "*allowed" is set. If the resulting
+ *                      subscription is the empty set, however, then the
+ *                      shared-memory will not have been modified.
+ * @retval ULDB_INIT    Module not initialized. log_add() called.
+ * @retval ULDB_EXIST   Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_add(
         SharedMemory* const sm,
@@ -1929,7 +1921,7 @@ uldb_Status uldb_getSize(
 }
 
 /**
- * Adds an upstream LDM process to the database.
+ * Adds an upstream LDM process to the database, if appropriate.
  *
  * @param pid           [in] PID of upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
@@ -1937,21 +1929,21 @@ uldb_Status uldb_getSize(
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host. Upon successful return, the client should
- *                      call "free_prod_class(*allowed)" when the allowed
+ *                      same host. Might specify an empty subscription. Upon
+ *                      successful return, the client should call
+ *                      "free_prod_class(*allowed)" when the allowed
  *                      subscription is no longer needed.
  * @param isNotifier    [in] Whether the upstream LDM is a notifier or a feeder
  * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
  *                      mode or not
- * @retval ULDB_SUCCESS     Success. "*allowed" is set. The database is
- *                          unmodified, however, if the allowed subscription is
- *                          the empty set. The client should call
- *                          "free_prod_class(*allowed)" when the allowed
- *                          subscription is no longer needed.
- * @retval ULDB_INIT        Module not initialized. log_add() called.
- * @retval ULDB_ARG         Invalid PID. log_add() called.
- * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
- * @retval ULDB_SYSTEM      System error. log_add() called.
+ * @retval 0            Success. "*allowed" is set. The database is unmodified,
+ *                      however, if the allowed subscription is the empty set.
+ *                      The client should call "free_prod_class(*allowed)" when
+ *                      the allowed subscription is no longer needed.
+ * @retval ULDB_INIT    Module not initialized. log_add() called.
+ * @retval ULDB_ARG     Invalid PID. log_add() called.
+ * @retval ULDB_EXIST   Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 uldb_Status uldb_addProcess(
         const pid_t pid,
