@@ -139,33 +139,19 @@ following:
     
     <li><p>If the subsequent request is a
 	<a href="glindex.html#FEEDME">FEEDME</a>
-        request, then
-        
-        <ul>
-            <li><p>If the request duplicates or is a superset of a previous
-        	<a href="glindex.html#FEEDME">FEEDME</a>
-                request from the same downstream site that is currently being
-                handled by another
-                <a href="glindex.html#upstream LDM">upstream LDM</a> process,
-                then that other process is sent a termination signal
-                (a request is a superset of another if its
-                <a href="glindex.html#identifier">data-product identifier</a>-matching
-                <a href="glindex.html#ERE">ERE</a> pattern is 
-                identical to the other and its
-                <a href="glindex.html#feedtype">feedtype</a> specification is a
-                superset of the other); otherwise,
-                
-            <li><p>The request is further reduced by existing 
-        	<a href="glindex.html#FEEDME">FEEDME</a>
-                requests from the same downstream host.
-        </ul>
+        request, then the request is further reduced by existing 
+    	FEEDME requests from the same downstream host that are being serviced
+    	using the same
+        <a href="glindex.html#transfer-mode">transfer-mode</a>.
 
     <li><p>If the subsequent request is
 	not equal to the original request, then the process informs
 	the <a href="glindex.html#downstream LDM">downstream LDM</a> about
 	the reduced request via a
 	<a href="glindex.html#RECLASS">RECLASS</a>
-	message.
+	message, which will specify an empty 
+        <a href="glindex.html#criteria">data-product selection-criteria</a>
+        if the downstream site is already receiving all the requested data.
 	
     <li><p>If the subsequent request is empty, then the process terminates;
         otherwise,
