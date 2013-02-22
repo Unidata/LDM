@@ -1,3 +1,31 @@
+6.11.4.1 	2013-02-22 10:22:58-07:00
+    Major Change:
+        Reverted how an upstream LDM handles a request to send the same data to
+        the same downstream site as another upstream LDM. LDM 6.11.3 would
+        terminate the earlier upstream LDM process; now, the later upstream LDM
+        process terminates itself (similar to version 6.11.2,1,0). This was
+        done because downstream LDM-s that were behind a Network Translation
+        Table (NAT) device could, under some circumstances, cause an explosion
+        in the number of upstream LDM processes.
+
+    ldmd(1):
+        See "Major Change" above.
+
+        Eliminated redundant and dangerous free_prod_class() before
+        set_prod_class() in LDM-5 module.
+
+        Improved places where an LDM process might terminate.
+
+        Improved decision on when a downstream LDM would change its
+        transfer-mode.
+
+        Made establishing a connection more efficient.
+
+        Decreased timeout of forked server from 12 minutes to 1 minute.
+
+    Misc:
+        Improved some internal documentation and log messages.
+
 6.11.3 	2013-02-12 13:11:20-07:00
     General:
         Ported to all available in-house systems. Unfortunately, this means
