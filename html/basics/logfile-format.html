@@ -856,6 +856,22 @@ fields are shown.
 		<a href="glindex.html#data-product">data-product</a>s
 		and the set of allowed data-products is the empty set.
 	</ul>
+    
+    <dt><tt><b>Request not allowed. Does it overlap with another?</b></tt>
+    <dd>The 
+	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
+        reduced the
+	<a href="glindex.html#criteria">data-product selection-criteria</a>
+        given to it to an empty subscription after first reducing it by the
+        relevant <a href="glindex.html#ALLOW entry">ALLOW entries</a>
+	in the upstream LDM's configuration-file and then by the subscriptions
+        from other, existing
+	<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>s
+        that are executing on the same host. You should check your
+	LDM configuration-file,
+	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>, for overlapping
+	<a href="glindex.html#REQUEST entry"><tt>REQUEST</tt>s</a> entries
+	to the upstream host.
 
     <dt><tt><b>Previous product-information file "<i>path</i>" doesn't exist
 	</b></tt>
@@ -1238,6 +1254,44 @@ or "<tt>(noti)</tt>" in the
 	<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.
 	The upstream LDM will use the rest of the selection-criteria
 	to determine which data-products to send.
+
+</dl>
+</blockquote>
+
+<h4>Warnings</h4>
+
+<blockquote>
+<dl>
+
+    <dt><tt><b>
+        Subscription reduced by one or more ALLOW entries: 
+        <i>desired</i> -> <i>allowed</i>
+	</b></tt>
+    <dd>The 
+	<a href="glindex.html#criteria">data-product selection-criteria</a>
+        from the 
+	<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>
+        was reduced by the ALLOW entries in the
+	LDM configuration-file,
+	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>.
+        If the
+        subscription was reduced to the empty set, then the 
+	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
+	will terminate.
+
+    <dt><tt><b>
+        Subscription reduced by one or more existing subscriptions: 
+        <i>desired</i> -> <i>allowed</i>
+	</b></tt>
+    <dd>The 
+	<a href="glindex.html#criteria">data-product selection-criteria</a>
+        from the 
+	<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>
+        was reduced by existing previous subscriptions from the same host.
+        in order to reduce bandwidth usage by the upstream site. If the
+        subscription was reduced to the empty set, then the 
+	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
+	will terminate.
 
 </dl>
 </blockquote>
