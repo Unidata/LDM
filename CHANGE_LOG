@@ -1,3 +1,9 @@
+6.11.4.2 	2013-02-25 11:21:30-07:00
+    Documented log messages associated with subscription reduction by upstream
+    LDM.
+
+    Improved internal documentation.
+
 6.11.4.1 	2013-02-22 10:22:58-07:00
     Major Change:
         Reverted how an upstream LDM handles a request to send the same data to
