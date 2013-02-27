@@ -90,6 +90,52 @@ static up6_error_t up6_error(
     return error;
 }
 
+/**
+ * Returns the logging-level appropriate to an upstream LDM 6 error-code.
+ *
+ * @param errCode       [in] Upstream LDM 6 error-code.
+ * @return              The logging-level corresponding to the error-code.
+ */
+static int loggingLevel(
+        const up6_error_t   errCode)
+{
+    /*
+     * A failure due to a closed connection or time-out is not unusual because
+     * a downstream LDM being fed is expected to auto-shift its transmission-
+     * mode and one being notified is expected to be manually terminated.
+     */
+    return (errCode == UP6_TIME_OUT || errCode == UP6_CLOSED)
+            ? ERR_INFO
+            : ERR_NOTICE;
+}
+
+/**
+ * Logs a failure to transmit to the downstream LDM 6.
+ *
+ * @param msg           [in] The log message.
+ * @param errObj        [in] The error-object or NULL, in which case nothing is
+ *                      logged.
+ * @retval 0            The error-object is NULL.
+ * @return              The error-code of the error-object.
+ */
+static up6_error_t logFailure(
+        const char* const   msg,
+        ErrorObj* const     errObj)
+{
+    const up6_error_t   errCode;
+
+    if (NULL == errObj) {
+        errCode = 0;
+    }
+    else {
+        errCode = (up6_error_t)err_code(errObj);
+
+        err_log_and_free(ERR_NEW(0, errObj, msg), loggingLevel(errCode));
+    }
+
+    return errCode;
+}
+
 /*
  * Arguments:
  *      info    Pointer to the data-product's metadata.
@@ -432,22 +478,15 @@ static up6_error_t up6_run(
         }
         else {
             while (UP6_SUCCESS == errCode && exitIfDone(0)) {
-                ErrorObj* errObj = NULL;
-                int err = pq_sequence(_pq, _mt, _class,
+                ErrorObj*   errObj = NULL;
+                const int   err = pq_sequence(_pq, _mt, _class,
                         _mode == FEED ? feed : notify, &errObj);
-
-                (void) exitIfDone(0);
 
                 if (NULL != errObj) {
                     /*
-                     * The feed() or notify() function reports a
-                     * problem.
+                     * feed() or notify() reports a problem.
                      */
-                    errCode = (up6_error_t) err_code(errObj);
-
-                    err_log_and_free(
-                            ERR_NEW(0, errObj, "feed or notify failure"),
-                            ERR_NOTICE);
+                    errCode = logFailure(errObj, "Failure");
                 }
                 else if (err) {
                     /*
@@ -455,32 +494,26 @@ static up6_error_t up6_run(
                      */
                     if (err == PQUEUE_END || err == EAGAIN || err == EACCES) {
                         if (_flushNeeded) {
-                            errObj = flushConnection();
-
-                            if (NULL != errObj) {
-                                errCode = (up6_error_t) err_code(errObj);
-
-                                err_log_and_free(ERR_NEW(0, errObj,
-                                        "Couldn't flush connection"),
-                                        ERR_NOTICE);
-                            }
-
                             (void) exitIfDone(0);
+
+                            errObj = flushConnection();
+                            errCode = logFailure("Couldn't flush connection",
+                                    errObj); /* NULL safe */
                         }
 
                         if (errCode == UP6_SUCCESS) {
                             time_t timeSinceLastSend = time(NULL )
                                     - _lastSendTime;
 
-                            udebug(
-                                    err == PQUEUE_END ?
-                                            "End of product-queue" :
-                                            "Hit a lock");
+                            udebug(err == PQUEUE_END
+                                    ? "End of product-queue"
+                                    : "Hit a lock");
 
                             if (_interval <= timeSinceLastSend) {
                                 _flushNeeded = 1;
                             }
                             else {
+                                (void) exitIfDone(0);
                                 (void) pq_suspend(
                                         _interval - timeSinceLastSend);
                             }
