@@ -122,7 +122,7 @@ static up6_error_t logFailure(
         const char* const   msg,
         ErrorObj* const     errObj)
 {
-    const up6_error_t   errCode;
+    up6_error_t errCode;
 
     if (NULL == errObj) {
         errCode = 0;
@@ -486,7 +486,7 @@ static up6_error_t up6_run(
                     /*
                      * feed() or notify() reports a problem.
                      */
-                    errCode = logFailure(errObj, "Failure");
+                    errCode = logFailure("Failure", errObj);
                 }
                 else if (err) {
                     /*
