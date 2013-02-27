@@ -199,12 +199,7 @@ static void cleanup(
 {
     const char* const pqfname = getQueuePath();
 
-    if (done) {
-        unotice("Exiting");
-    }
-    else {
-        uinfo("Exiting");
-    }
+    unotice("Exiting");
 
     savePreviousProdInfo();
 
