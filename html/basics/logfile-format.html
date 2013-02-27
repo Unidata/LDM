@@ -856,22 +856,6 @@ fields are shown.
 		<a href="glindex.html#data-product">data-product</a>s
 		and the set of allowed data-products is the empty set.
 	</ul>
-    
-    <dt><tt><b>Request not allowed. Does it overlap with another?</b></tt>
-    <dd>The 
-	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
-        reduced the
-	<a href="glindex.html#criteria">data-product selection-criteria</a>
-        given to it to an empty subscription after first reducing it by the
-        relevant <a href="glindex.html#ALLOW entry">ALLOW entries</a>
-	in the upstream LDM's configuration-file and then by the subscriptions
-        from other, existing
-	<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>s
-        that are executing on the same host. You should check your
-	LDM configuration-file,
-	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>, for overlapping
-	<a href="glindex.html#REQUEST entry"><tt>REQUEST</tt>s</a> entries
-	to the upstream host.
 
     <dt><tt><b>Previous product-information file "<i>path</i>" doesn't exist
 	</b></tt>
@@ -1099,6 +1083,22 @@ grep -F 'WARN: Future' ldmd.log.1 | sort -u -t ' ' -k 10,10
 	couldn't make a copy of a
 	<a href="glindex.html#metadata">data-product's metadata</a>
 	due to <i>reason</i>.
+    
+    <dt><tt><b>Request not allowed. Does it overlap with another?</b></tt>
+    <dd>The 
+	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
+        reduced the
+	<a href="glindex.html#criteria">data-product selection-criteria</a>
+        given to it to an empty subscription after first reducing it by the
+        relevant <a href="glindex.html#ALLOW entry">ALLOW entries</a>
+	in the upstream LDM's configuration-file and then by the subscriptions
+        from other, existing
+	<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>s
+        that are executing on the same host. You should check your
+	LDM configuration-file,
+	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>, for overlapping
+	<a href="glindex.html#REQUEST entry"><tt>REQUEST</tt>s</a> entries
+	to the upstream host.
 
     <dt><tt><b>Product too big: 
 	<a href="#metadata"><i>metadata</i></a></b></tt>
@@ -1445,8 +1445,7 @@ or "<tt>(noti)</tt>" in the
 	due to <i>reason</i>.
 
     <dt><tt><b>
-	feed or notify failure:
-	<i>reason</i>
+	Failure: <i>reason</i>
 	</b></tt>
     <dd>The
 	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
