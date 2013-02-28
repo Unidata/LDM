@@ -145,7 +145,7 @@ superuser in order to complete the installation process." \
 endif
 
 ensure-ldmhome-links:
-	$(srcdir)/ensureLdmhomeLinks $(LDMHOME) $(distName)
+	$(srcdir)/ensureLdmhomeLinks $(DESTDIR)$(LDMHOME) $(distName)
 
 ensure-var:	$(DESTDIR)$(localstatedir)
 	$(srcdir)/ensureVar $(DESTDIR)$(LDMHOME)
