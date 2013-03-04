@@ -76,7 +76,7 @@ one_svc_run(
 
         selectStatus = select(width, &readFds, 0, 0, &stimeo);
 
-        (void)exitIfDone(0);
+        (void)exitIfDone(0); /* handles SIGTERM reception */
 
         if (selectStatus == 0) {
             retCode = ETIMEDOUT;
