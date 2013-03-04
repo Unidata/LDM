@@ -417,9 +417,9 @@ static up6_error_t up6_run(
     up6_error_t errCode = UP6_SUCCESS; /* success */
     int flags;
     char buf[64];
-    char* sig =
-            _signature == NULL ?
-                    "NONE" : s_signaturet(buf, sizeof(buf), *_signature);
+    char* sig = _signature == NULL
+            ? "NONE"
+            : s_signaturet(buf, sizeof(buf), *_signature);
 
     assert(_mode == FEED || _mode == NOTIFY);
     assert(_class != NULL);
@@ -502,7 +502,7 @@ static up6_error_t up6_run(
                         }
 
                         if (errCode == UP6_SUCCESS) {
-                            time_t timeSinceLastSend = time(NULL )
+                            time_t timeSinceLastSend = time(NULL)
                                     - _lastSendTime;
 
                             udebug(err == PQUEUE_END
