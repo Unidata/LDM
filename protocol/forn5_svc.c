@@ -433,7 +433,6 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                     { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
 
                 theReply.ldm_replyt_u.newclssp = &noSub;
-                done = 1; /* terminate because downstream will close socket */
             }
 
             return &theReply;

@@ -206,7 +206,6 @@ feed_or_notify(
                 hostbyaddr(&downAddr));
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
         goto return_or_exit;
     }
 
@@ -218,7 +217,6 @@ feed_or_notify(
     if (errObj = separateProductClass(want, &origSub, &signature)) {
         err_log_and_free(errObj, ERR_FAILURE);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_down_name;
     }
 
@@ -231,7 +229,6 @@ feed_or_notify(
         err_log_and_free(ERR_NEW(0, errObj,
                 "Couldn't get \"upstream\" filter"), ERR_FAILURE);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_orig_sub;
     }
     if (NULL == upFilter) {
@@ -253,7 +250,6 @@ feed_or_notify(
         LOG_SERROR0("Couldn't compute wanted/allowed product intersection");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_up_filter;
     }
     if (status == EINVAL) {
@@ -282,7 +278,6 @@ feed_or_notify(
         LOG_ADD0("Couldn't add this process to the upstream LDM database");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_allow_sub;
     }
     (void) logIfReduced(allowSub, uldbSub, "existing subscriptions");
@@ -306,7 +301,6 @@ feed_or_notify(
                 { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
 
             theReply.fornme_reply_t_u.prod_class = &noSub;
-            done = 1; /* terminate because downstream will close socket */
         }
 
         reply = &theReply;
@@ -318,7 +312,6 @@ feed_or_notify(
         LOG_SERROR1("Couldn't duplicate socket %d", xprt->xp_sock);
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_allow_sub;
     }
 
@@ -331,7 +324,6 @@ feed_or_notify(
         LOG_ADD0("svc_sendreply(...) failure");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
         goto close_sock;
     }
 
