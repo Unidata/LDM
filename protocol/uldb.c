@@ -229,24 +229,22 @@ static void eps_remove_prod_spec(
         prodSpec->feedtype &= ~entryProdSpec->feedtype;
 }
 
-#if 0
 /**
- * Indicates if an entry's product-specification is a superset (proper or
+ * Indicates if an entry's product-specification is a subset (proper or
  * improper) of a given product-specification.
  *
  * @param eps       [in] The entry's product-specification
  * @param ps        [in] The given product-specification
- * @retval 0        The entry's product-specification isn't a superset
- * @retval 1        The entry's product-specification is a superset
+ * @retval 0        The entry's product-specification isn't a subset
+ * @retval 1        The entry's product-specification is a subset
  */
-static int eps_isSupersetOf(
+static int eps_isSubsetOf(
         const EntryProdSpec* const  eps,
         const prod_spec* const      ps)
 {
-    return ((ps->feedtype & ~eps->feedtype) == 0)
+    return ((eps->feedtype & ~ps->feedtype) == 0)
             && (strcmp(eps->pattern, ps->pattern) == 0);
 }
-#endif
 
 /**
  * Returns the product-specification of an entry's product-specification.
@@ -375,40 +373,38 @@ static void epc_remove_prod_specs(
     }
 }
 
-#if 0
 /**
- * Indicates if the subscription of an entry is a superset (proper or improper)
+ * Indicates if the subscription of an entry is a subset (proper or improper)
  * of a given subscription. The time-limits of the subscriptions are ignored.
  *
  * @param entrySub      [in] Pointer to the entry's subscription
  * @param givenSub      [in] Pointer to the given subscription
- * @retval 0            The entry's subscription isn't a superset
- * @retval 1            The entry's subscription is a superset
+ * @retval 0            The entry's subscription isn't a subset
+ * @retval 1            The entry's subscription is a subset
  */
-static int epc_isSupersetOf(
+static int epc_isSubsetOf(
         const EntryProdClass* const entrySub,
         const prod_class* const     givenSub)
 {
-    int i;
+    const EntryProdSpec* eps;
 
-    for (i = 0; i < givenSub->psa.psa_len; i++) {
-        prod_spec* prodSpec = givenSub->psa.psa_val + i;
-        const EntryProdSpec* eps;
+    for (eps = epc_firstProdSpec(entrySub); eps != NULL;
+            eps = epc_nextProdSpec(entrySub, eps)) {
+        int i;
 
-        for (eps = epc_firstProdSpec(entrySub); eps != NULL;
-                eps = epc_nextProdSpec(entrySub, eps)) {
+        for (i = 0; i < givenSub->psa.psa_len; i++) {
+            prod_spec* prodSpec = givenSub->psa.psa_val + i;
 
-            if (eps_isSupersetOf(eps, prodSpec))
+            if (eps_isSubsetOf(eps, prodSpec))
                 break;
         }
 
-        if (eps == NULL)
+        if (i >= givenSub->psa.psa_len)
             return 0;
     }
 
     return 1;
 }
-#endif
 
 /**
  * Returns the size that an entry will have.
@@ -567,23 +563,21 @@ static uldb_Status entry_getProdClass(
     return status;
 }
 
-#if 0
 /**
- * Indicates if the subscription of an entry is a superset (proper or improper)
+ * Indicates if the subscription of an entry is a subset (proper or improper)
  * of a given subscription. The time-limits of the subscriptions are ignored.
  *
  * @param entry         [in] Pointer to the entry
  * @param givenSub      [in] Pointer to the given subscription
- * @retval 0            The entry's subscription isn't a superset
- * @retval 1            The entry's subscription is a superset
+ * @retval 0            The entry's subscription isn't a subset
+ * @retval 1            The entry's subscription is a subset
  */
-static int entry_isSupersetOf(
+static int entry_isSubsetOf(
         const uldb_Entry* const entry,
         const prod_class* const givenSub)
 {
-    return epc_isSupersetOf(&entry->prodClass, givenSub);
+    return epc_isSubsetOf(&entry->prodClass, givenSub);
 }
-#endif
 
 /**
  * Removes an entry's subscription from a given subscription. The time-limits
@@ -600,7 +594,6 @@ static void entry_removeSubscriptionFrom(
     clss_scrunch(sub);
 }
 
-#if 0
 /**
  * Returns the string encoding of an entry.
  *
@@ -640,7 +633,6 @@ static int entry_toString(
 
     return nbytes;
 }
-#endif
 
 /**
  * Returns the size of a segment given the amount of space for entries.
@@ -1339,12 +1331,28 @@ static uldb_Status sm_vetUpstreamLdm(
             }
 
             if (ipAddressesAreEqual(sockAddr, entry_getSockAddr(entry))
-                    && !isNotifier && !entry_isNotifier(entry)
-                    && (isPrimary == entry_isPrimary(entry))) {
-                entry_removeSubscriptionFrom(entry, allow);
+                    && !isNotifier && !entry_isNotifier(entry)) {
+                if (entry_isSubsetOf(entry, allow)) {
+                    char    buf[1024];
 
-                if (0 >= allow->psa.psa_len)
-                    break;
+                    (void)entry_toString(entry, buf, sizeof(buf));
+
+                    if (kill(entry_getPid(entry), SIGTERM)) {
+                        LOG_SERROR1("Couldn't terminate obsolete upstream LDM %s",
+                            buf);
+                        log_log(LOG_WARNING);
+                    }
+                    else {
+                        LOG_ADD1("Terminated obsolete upstream LDM %s", buf);
+                        log_log(LOG_NOTICE);
+                    }
+                }
+                else {
+                    entry_removeSubscriptionFrom(entry, allow);
+
+                    if (0 >= allow->psa.psa_len)
+                        break;
+                }
             } /* upstream LDM matches entry */
         } /* entry loop */
 
