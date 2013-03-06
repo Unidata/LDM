@@ -327,7 +327,7 @@ feed_or_notify(
         goto close_sock;
     }
 
-    svc_destroy(xprt);
+    svc_destroy(xprt); /* closes "sock" */
 
     /*
      * Wait a second before sending anything to the downstream LDM.
