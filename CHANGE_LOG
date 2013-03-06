@@ -1,3 +1,34 @@
+6.11.4.3 	2013-03-06 11:12:08-07:00
+    ldmd(1):
+        Made "Exiting" an unconditional NOTICE.
+
+        Upstream LDM:
+            Changed policy on duplicate incoming requests from 6.11.3 to terminate
+            the earlier upstream LDM rather than current upstream LDM.
+
+            Eliminated some closings of the connection by the upstream LDM to
+            favor closing by the downstream LDM in order to avoid the upstream
+            LDM going into the TCP TIME_WAIT state.
+
+            Improved handling of errors.
+
+            Demoted logging-level of transmission failure to INFO.
+
+            Improved some log messages.
+
+    Installation:
+        Added $(DESTDIR) to "ensure-ldmhome-links" rule.
+
+    RPM generation (still don't know if it works):
+        Improved support:
+            requtil(1) makefile:
+                Made rules involving ETC_DIR honor DESTDIR.
+
+                Corrected definition of ETC_DIR.
+
+            ldm.spec.in:
+                Added DESTDIR=%{buildroot} to "make" invocations.
+
 6.11.4.2 	2013-02-25 11:21:30-07:00
     Documented log messages associated with subscription reduction by upstream
     LDM.
