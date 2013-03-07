@@ -718,7 +718,7 @@ static void handle_connection(
     }
     else if (status == ETIMEDOUT) {
         log_add("Connection from client LDM silent for %d seconds",
-                inactive_timeo);
+                2*interval);
         log_log(LOG_NOTICE);
     }
     else { /* connection to client lost */
