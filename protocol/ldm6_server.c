@@ -286,16 +286,21 @@ feed_or_notify(
      * Send a RECLASS reply to the downstream LDM if appropriate.
      */
     if (!clss_eq(origSub, uldbSub)) {
-        (void)uldb_remove(getpid()); /* maybe next time */
-
         theReply.code = RECLASS;
 
         if (0 < uldbSub->psa.psa_len) {
+            /*
+             * The downstream LDM is allowed less than it requested and was
+             * entered into the upstream LDM database.
+             */
+            (void)uldb_remove(getpid()); /* maybe next time */
+
             theReply.fornme_reply_t_u.prod_class = uldbSub;
         }
         else {
             /*
-             * The downstream LDM isn't allowed anything.
+             * The downstream LDM isn't allowed anything and wasn't entered
+             * into the upstream LDM database.
              */
             static prod_class noSub = { { 0, 0 }, /* TS_ZERO */
                 { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
