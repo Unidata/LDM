@@ -198,7 +198,8 @@ static int          s_switch = 0;      /* LDM process should switch mode? */
 
 
 /**
- * Indicates whether or not this LDM process is in primary receive-mode.
+ * Indicates whether or not this LDM process is in primary receive-mode. The
+ * default is true.
  *
  * @retval 0    The LDM is not in primary mode
  * @retval 1    The LDM is in primary mode
@@ -208,7 +209,7 @@ static int          s_switch = 0;      /* LDM process should switch mode? */
 
 /**
  * Returns the number of LDM processes that are receiving the same data. The
- * number is initially 0.
+ * default is 1.
  *
  * @return      The number of LDM processes receiving the same data
  */
