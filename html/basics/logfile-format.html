@@ -1201,6 +1201,13 @@ or "<tt>(noti)</tt>" in the
 	consequently, restricted the
 	<a href="glindex.html#criteria">data-product selection-criteria</a>
 	to that specified.
+	
+    <dt><tt><b>Terminated obsolete upstream LDM <i>LDM_spec</i></b></tt>
+    <dd>The newly-created
+	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
+        process determined that an earlier upstream LDM process was supplying
+        a subset (either proper or improper) of the requested data to the same
+        downstream host; consequently, the other process was terminated. 
 
     <dt><tt><b>
 	topo:
@@ -1262,6 +1269,13 @@ or "<tt>(noti)</tt>" in the
 
 <blockquote>
 <dl>
+    <dt><tt><b>
+        Couldn't terminate obsolete upstream LDM <i>LDM_spec</i></b></tt>
+    <dd>The newly-created 
+	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
+        process was unable to terminate an earlier upstream LDM 6 process that
+        was supplying a subset (either proper or improper) of the requested
+        data to the same downstream host.
 
     <dt><tt><b>
         Subscription reduced by one or more ALLOW entries: 
@@ -1274,10 +1288,6 @@ or "<tt>(noti)</tt>" in the
         was reduced by the ALLOW entries in the
 	LDM configuration-file,
 	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>.
-        If the
-        subscription was reduced to the empty set, then the 
-	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
-	will terminate.
 
     <dt><tt><b>
         Subscription reduced by one or more existing subscriptions: 
@@ -1288,10 +1298,7 @@ or "<tt>(noti)</tt>" in the
         from the 
 	<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>
         was reduced by existing previous subscriptions from the same host.
-        in order to reduce bandwidth usage by the upstream site. If the
-        subscription was reduced to the empty set, then the 
-	<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
-	will terminate.
+        in order to reduce bandwidth usage by the upstream site.
 
 </dl>
 </blockquote>
