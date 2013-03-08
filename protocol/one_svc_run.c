@@ -35,8 +35,8 @@
  * <p>
  * This function uses the "log" module to accumulate messages.
  *
- * @param xp_sock           The connected socket.
- * @param inactive_timeo    The maximum amount of time to wait with no activity
+ * @param sock              The connected socket.
+ * @param timeout           The maximum amount of time to wait with no activity
  *                          on the socket in seconds.
  *
  * @retval 0                Success.  as_shouldSwitch() is true.
@@ -46,35 +46,34 @@
  *                          destroyed the associated SVCXPRT structure;
  *                          therefore, that object must not be subsequently
  *                          dereferenced.
- * @retval ETIMEDOUT        "inactive_timeo" time passed without any activity on
+ * @retval ETIMEDOUT        "timeout" time passed without any activity on
  *                          the socket.
  */ 
 int
 one_svc_run(
-    const int                   xp_sock,
-    const unsigned              inactive_timeo) 
+    const int       sock,
+    const unsigned  timeout) 
 {
-    timestampt                  timeout;
-    timestampt                  stimeo;
-    fd_set                      fds;
-    int                         retCode;
+    timestampt      canonicalTimeout;
+    timestampt      selectTimeout;
+    fd_set          fds;
+    int             retCode;
 
-    timeout.tv_sec = inactive_timeo;
-    timeout.tv_usec = 0;
-    stimeo = timeout;
+    canonicalTimeout.tv_sec = timeout;
+    canonicalTimeout.tv_usec = 0;
+    selectTimeout = canonicalTimeout;
 
     FD_ZERO(&fds);
-    FD_SET(xp_sock, &fds);
+    FD_SET(sock, &fds);
 
     for (;;) {
         fd_set          readFds = fds;
-        int             width = xp_sock + 1;
         timestampt      before;
         int             selectStatus;
 
         (void)set_timestamp(&before);
 
-        selectStatus = select(width, &readFds, 0, 0, &stimeo);
+        selectStatus = select(sock+1, &readFds, 0, 0, &selectTimeout);
 
         (void)exitIfDone(0); /* handles SIGTERM reception */
 
@@ -87,11 +86,11 @@ one_svc_run(
             /*
              * The socket is ready for reading.
              */
-            svc_getreqsock(xp_sock);    /* process socket input */
+            svc_getreqsock(sock);    /* process socket input */
 
             (void)exitIfDone(0);
 
-            if (!FD_ISSET(xp_sock, &svc_fdset)) {
+            if (!FD_ISSET(sock, &svc_fdset)) {
                 /*
                  * The RPC layer closed the socket and destroyed the associated
                  * SVCXPRT structure.
@@ -101,7 +100,7 @@ one_svc_run(
                  break;
             }
 
-            stimeo = timeout;   /* reset select(2) timeout */
+            selectTimeout = canonicalTimeout;   /* reset select(2) timeout */
 
             if (as_shouldSwitch()) {    /* always false for upstream LDM-s */
                 retCode = 0;
@@ -111,7 +110,7 @@ one_svc_run(
         else {
             if (errno != EINTR) {
                 log_errno();
-                log_add("one_svc_run(): select() error on socket %d", xp_sock);
+                log_add("one_svc_run(): select() error on socket %d", sock);
                 retCode = errno;
                 break;
             }
@@ -126,7 +125,7 @@ one_svc_run(
                  * Adjust select(2) timeout.
                  */
                 diff = diff_timestamp(&after, &before);
-                stimeo = diff_timestamp(&timeout, &diff);
+                selectTimeout = diff_timestamp(&canonicalTimeout, &diff);
             }
         } 
     }                                   /* indefinite loop */
