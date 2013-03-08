@@ -708,23 +708,27 @@ static void handle_connection(
     /*
      *  handle rpc requests
      */
-    status = one_svc_run(xp_sock, 2*interval);
+    {
+        const unsigned  TIMEOUT = 2*interval;
 
-    (void) exitIfDone(0);
+        status = one_svc_run(xp_sock, TIMEOUT);
 
-    if (status == 0) {
-        log_add("Done");
-        log_log(LOG_INFO);
-    }
-    else if (status == ETIMEDOUT) {
-        log_add("Connection from client LDM silent for %d seconds",
-                2*interval);
-        log_log(LOG_NOTICE);
-    }
-    else { /* connection to client lost */
-        log_add("Connection with client LDM closed");
-        log_log(LOG_INFO);
-        status = 0; /* EXIT_SUCCESS */
+        (void) exitIfDone(0);
+
+        if (status == 0) {
+            log_add("Done");
+            log_log(LOG_INFO);
+        }
+        else if (status == ETIMEDOUT) {
+            log_add("Connection from client LDM silent for %u seconds",
+                    TIMEOUT);
+            log_log(LOG_NOTICE);
+        }
+        else { /* connection to client lost */
+            log_add("Connection with client LDM closed");
+            log_log(LOG_INFO);
+            status = 0; /* EXIT_SUCCESS */
+        }
     }
 
     /* svc_destroy(xprt);  done by svc_getreqset() */
