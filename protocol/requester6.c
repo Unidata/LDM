@@ -582,8 +582,8 @@ req6_new(
     pqueue* const                       pq,
     const int                           isPrimary)
 {
-    prod_class_t* prodClass;
-    ErrorObj*    errObj = adjustByLastInfo(request, &prodClass);
+    prod_class_t*   prodClass;
+    ErrorObj*       errObj = adjustByLastInfo(request, &prodClass);
 
     assert(upName != NULL);
     assert(request != NULL);
@@ -602,9 +602,8 @@ req6_new(
         unotice("LDM-6 desired product-class: %s",
             s_prod_class(NULL, 0, prodClass));
 
-        errObj =
-            ldm_clnttcp_create_vers(upName, port, SIX, &clnt, &requestSocket,
-                &upAddr);
+        errObj = ldm_clnttcp_create_vers(upName, port, SIX, &clnt,
+                &requestSocket, &upAddr);
 
         if (errObj) {
             switch (err_code(errObj)) {
@@ -628,7 +627,7 @@ req6_new(
                     errObj = ERR_NEW(REQ6_SYSTEM_ERROR, errObj, NULL);
                     break;
             }
-        }                               /* no connection */
+        } /* failed "ldm_clnttcp_create_vers()" */
         else {
             /*
              * "clnt" and "requestSocket" have resources.
@@ -668,8 +667,8 @@ req6_new(
       
                     (void)close(dataSocket);/* might be closed already */
                     dataSocket = -1;
-                }                       /* socket duplicated */
-            }                           /* make_request() success */
+                } /* "dataSocket" open */
+            } /* successful "make_request()" */
 
             /*
              * Ensure release of client resources.
@@ -686,10 +685,10 @@ req6_new(
                 (void)close(requestSocket);
                 requestSocket = -1;
             }
-        }                               /* ldm_clnttcp_create_vers() success */
+        } /* "clnt" and "requestSocket" allocated */
 
         free_prod_class(prodClass);     /* NULL safe */
-    }                                   /* "prodClass" allocated */
+    } /* "prodClass" allocated */
 
     return errObj;
 }
