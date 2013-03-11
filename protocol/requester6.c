@@ -38,7 +38,6 @@
 
 #include "requester6.h"
 
-static int      requestSocket = -1;
 static int      dataSocket = -1;
 static int      isAliveSocket = -1;
 
@@ -603,7 +602,7 @@ req6_new(
             s_prod_class(NULL, 0, prodClass));
 
         errObj = ldm_clnttcp_create_vers(upName, port, SIX, &clnt,
-                &requestSocket, &upAddr);
+                &dataSocket, &upAddr);
 
         if (errObj) {
             switch (err_code(errObj)) {
@@ -630,7 +629,7 @@ req6_new(
         } /* failed "ldm_clnttcp_create_vers()" */
         else {
             /*
-             * "clnt" and "requestSocket" have resources.
+             * "clnt" and "dataSocket" have resources.
              */
             unsigned    id;
 
@@ -640,54 +639,26 @@ req6_new(
             errObj = make_request(upName, prodClass, isPrimary, clnt, &id);
 
             if (!errObj) {
-                /*
-                 * Duplicate the socket to allow destruction of the client
-                 * handle.
-                 */
-                dataSocket = dup(requestSocket);
+                udebug("%s:%d: Calling run_service()", __FILE__, __LINE__);
 
-                if (-1 == dataSocket) {
-                    errObj = ERR_NEW1(REQ6_SYSTEM_ERROR,
-                        ERR_NEW(errno, NULL, strerror(errno)),
-                        "Couldn't duplicate socket %d", requestSocket);
-                }
-                else {
-                    auth_destroy(clnt->cl_auth);
-                    clnt_destroy(clnt);
-                    clnt = NULL;
-
-                    (void)close(requestSocket);
-                    requestSocket = -1;
-
-                    udebug("%s:%d: Calling run_service()",
-                        __FILE__, __LINE__);
-
-                    errObj = run_service(dataSocket, inactiveTimeout, upName,
-                            &upAddr, id, pqPathname, prodClass, pq, isPrimary);
-      
-                    (void)close(dataSocket);/* might be closed already */
-                    dataSocket = -1;
-                } /* "dataSocket" open */
+                errObj = run_service(dataSocket, inactiveTimeout, upName,
+                        &upAddr, id, pqPathname, prodClass, pq, isPrimary);
             } /* successful "make_request()" */
 
             /*
              * Ensure release of client resources.
              */
-            if (NULL != clnt) {
-                auth_destroy(clnt->cl_auth);
-                clnt_destroy(clnt);
-            }
+            auth_destroy(clnt->cl_auth);
+            clnt_destroy(clnt);
 
             /*
              * Ensure release of socket resources.
              */
-            if (-1 != requestSocket) {
-                (void)close(requestSocket);
-                requestSocket = -1;
-            }
+            (void)close(dataSocket); /* might already be closed */
+            dataSocket = -1;
         } /* "clnt" and "requestSocket" allocated */
 
-        free_prod_class(prodClass);     /* NULL safe */
+        free_prod_class(prodClass); /* NULL safe */
     } /* "prodClass" allocated */
 
     return errObj;
@@ -701,11 +672,6 @@ req6_new(
 void
 req6_close()
 {
-    if (requestSocket >= 0) {
-        (void)close(requestSocket);
-        requestSocket = -1;
-    }
-
     if (dataSocket >= 0) {
         (void)close(dataSocket);
         dataSocket = -1;
