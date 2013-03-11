@@ -1,3 +1,20 @@
+6.11.4.4 	2013-03-11 14:48:07-06:00
+    Upstream LDM:
+        Corrected time amount in "silent client" log message.
+
+    Downstream LDM:
+        Removed duplication of downstream socket.
+
+        Made the autoshifting default "don't switch" in order to correctly
+        handle out-of-the-blue HIYA messages.
+
+    Misc:
+        Improved some internal commentary.
+
+        Improved some log messages.
+
+        Documented log message about terminating an obsolete upstream LDM process.
+
 6.11.4.3 	2013-03-06 11:12:08-07:00
     ldmd(1):
         Made "Exiting" an unconditional NOTICE.
