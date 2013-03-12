@@ -180,7 +180,6 @@ feed_or_notify(
     struct sockaddr_in downAddr = *svc_getcaller(xprt);
     ErrorObj* errObj;
     int status;
-    int sock;
     char* downName = NULL;
     prod_class_t* origSub = NULL;
     prod_class_t* allowSub = NULL;
@@ -312,14 +311,6 @@ feed_or_notify(
         goto free_allow_sub;
     }
 
-    sock = dup(xprt->xp_sock);
-    if (sock == -1) {
-        LOG_SERROR1("Couldn't duplicate socket %d", xprt->xp_sock);
-        log_log(LOG_ERR);
-        svcerr_systemerr(xprt);
-        goto free_allow_sub;
-    }
-
     /*
      * Reply to the downstream LDM that the subscription will be honored.
      */
@@ -329,10 +320,8 @@ feed_or_notify(
         LOG_ADD0("svc_sendreply(...) failure");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        goto close_sock;
+        goto free_allow_sub;
     }
-
-    svc_destroy(xprt); /* closes "sock" */
 
     /*
      * Wait a second before sending anything to the downstream LDM.
@@ -340,20 +329,18 @@ feed_or_notify(
     (void) sleep(1);
 
     status = isNotifier
-            ? up6_new_notifier(sock, downName, &downAddr, uldbSub,
+            ? up6_new_notifier(xprt->xp_sock, downName, &downAddr, uldbSub,
                     signature, getQueuePath(), interval, upFilter)
-            : up6_new_feeder(sock, downName, &downAddr, uldbSub,
+            : up6_new_feeder(xprt->xp_sock, downName, &downAddr, uldbSub,
                     signature, getQueuePath(), interval, upFilter,
                     isPrimary);
 
+    svc_destroy(xprt); /* closes the socket */
     exit(status);
 
     /*
      * Reply and error handling:
      */
-    close_sock:
-        (void)close(sock);
-
     free_allow_sub:
         free_prod_class(allowSub);
 
