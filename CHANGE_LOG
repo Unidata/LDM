@@ -1,3 +1,10 @@
+6.11.4.5 	2013-03-12 10:51:25-06:00
+    pqact(1):
+        Improved clarity of buffer-toggling code in processProduct().
+
+    Upstream LDM:
+        Reduced resource usage by eliminating duplication of upstream socket.
+
 6.11.4.4 	2013-03-11 14:48:07-06:00
     Upstream LDM:
         Corrected time amount in "silent client" log message.
