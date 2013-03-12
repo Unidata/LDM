@@ -1160,26 +1160,34 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
          * The following are static in case _POSIX_ARG_MAX is large enough
          * to blow the stack.
          */
-        static char    buf1[_POSIX_ARG_MAX];
-        static char    buf2[_POSIX_ARG_MAX];
+        static char    bufs[2][_POSIX_ARG_MAX];
         static char*   argv[1 + _POSIX_ARG_MAX/2];
+        int            inBuf = 0;
+#define INBUF   bufs[inBuf]
+#define OUTBUF  bufs[!inBuf]
+#define SWITCH_BUFS (inBuf = !inBuf)
 
-        regsub(pal, prod->info.ident, buf1);
-        buf1[sizeof(buf1)-1] = 0;
+        regsub(pal, prod->info.ident, OUTBUF);
+        OUTBUF[sizeof(OUTBUF)-1] = 0;
+        SWITCH_BUFS;
 
-        gm_strftime(buf2, sizeof(buf2), buf1, prod->info.arrival.tv_sec);
-        buf2[sizeof(buf2)-1] = 0;
+        gm_strftime(OUTBUF, sizeof(OUTBUF), INBUF, prod->info.arrival.tv_sec);
+        OUTBUF[sizeof(OUTBUF)-1] = 0;
+        SWITCH_BUFS;
 
-        date_sub(buf2, buf1, prod->info.arrival.tv_sec);
-        buf1[sizeof(buf1)-1] = 0;
+        date_sub(INBUF, OUTBUF, prod->info.arrival.tv_sec);
+        OUTBUF[sizeof(OUTBUF)-1] = 0;
+        SWITCH_BUFS;
 
-        seq_sub(buf1, buf2, prod->info.seqno);
-        buf2[sizeof(buf2)-1] = 0;
+        seq_sub(INBUF, OUTBUF, prod->info.seqno);
+        OUTBUF[sizeof(OUTBUF)-1] = 0;
+        SWITCH_BUFS;
 
         if (ulogIsVerbose())
-            uinfo("               %s: %s and the ident is %s", s_actiont(&pal->action), buf2, prod->info.ident);
+            uinfo("               %s: %s and the ident is %s",
+                    s_actiont(&pal->action), INBUF, prod->info.ident);
 
-        argc = tokenize(buf2, argv, ARRAYLEN(argv));
+        argc = tokenize(INBUF, argv, ARRAYLEN(argv));
 
         if (argc < ARRAYLEN(argv))
         {
@@ -1188,7 +1196,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         }
         else
         {
-            uerror("Too many PIPE arguments: \"%s\"", buf2);
+            uerror("Too many PIPE arguments: \"%s\"", INBUF);
             status = -1;
         }
     }
