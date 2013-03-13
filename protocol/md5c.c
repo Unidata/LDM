@@ -315,6 +315,12 @@ unsigned int len;
 
 /* Begin code added by UCAR/Unidata */
 
+/**
+ * Returns a new MD5 context.
+ *
+ * @retval NULL     Failure. "errno" will be ENOMEM.
+ * @return Pointer to the MD5 context.
+ */
 MD5_CTX *
 new_MD5_CTX(void)
 {

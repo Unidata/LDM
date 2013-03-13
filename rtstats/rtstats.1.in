@@ -9,6 +9,7 @@ rtstats
 .nh
 \%[-v]
 \%[-x]
+\%[-H\ \fIhostname\fP]
 \%[-h\ \fIremote host\fP]
 \%[-P\ \fIport\fP]
 \%[-l\ \fIlogfile\fP]
@@ -86,6 +87,11 @@ identifier.
 .TP
 .B -x
 Debugging information is also emitted.
+.TP
+.BI "-H " hostname
+Report as host \fIhostname\fP. The default is to report as the value of
+registry parameter \fBregpath{HOSTNAME}\fP, if it is set, or the return value
+of the \fBgethostname\fP(3) function, otherwise.
 .TP
 .BI "-h " remote
 Requests that the statistic products be delivered to the LDM  server on

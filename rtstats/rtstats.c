@@ -23,6 +23,7 @@
 #include "ldm.h"
 #include "atofeedt.h"
 #include "globals.h"
+#include "inetutil.h"
 #include "remote.h"
 #include "ldmprint.h"
 #include "log.h"
@@ -52,7 +53,7 @@ extern int binstats(const prod_info *infop,
         const struct timeval *reftimep);
 
 extern void dump_statsbins(void);
-extern void syncbinstats(void);
+extern void syncbinstats(const char* hostname);
 
 unsigned remotePort = LDM_PORT;
 
@@ -195,6 +196,7 @@ int main(int ac, char *av[])
         int logoptions = (logfname == NULL) ? (LOG_CONS|LOG_PID) : LOG_NOTIME;
         int toffset = TOFFSET_NONE;
         extern const char *remote;
+        char* hostname = ghostname();
 
         /*
          * Setup default logging before anything else.
@@ -237,7 +239,7 @@ int main(int ac, char *av[])
 
         opterr = 0; /* stops getopt() from printing to stderr */
 
-        while ((ch = getopt(ac, av, ":vxl:p:f:q:o:i:h:P:")) != EOF)
+        while ((ch = getopt(ac, av, ":vxl:p:f:q:o:i:H:h:P:")) != EOF)
                 switch (ch) {
                 case 'v':
                         logmask |= LOG_MASK(LOG_INFO);
@@ -253,6 +255,9 @@ int main(int ac, char *av[])
                             logfname = NULL;
                         logoptions = (logfname == NULL) ? (LOG_CONS|LOG_PID) : LOG_NOTIME;
                         openulog(progname, logoptions, LOG_LDM, logfname);
+                        break;
+                case 'H':
+                        hostname = optarg;
                         break;
                 case 'h':
                         remote = optarg;
@@ -413,7 +418,7 @@ int main(int ac, char *av[])
                         break;
                 }
 
-                syncbinstats();
+                syncbinstats(hostname);
 
                 if(interval == 0)
                 {
