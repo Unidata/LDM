@@ -175,8 +175,9 @@ the collection server at the Unidata Program Center.
 .BR pqbinstats (1),
 .BR ulog (3),
 .BR pq (3),
+.BR gethostbyname (3),
 .BR syslogd (8),
-WWW URL \fBhttp://www.unidata.ucar.edu/software/ldm/\fP.
+\fBhttp://www.unidata.ucar.edu/software/ldm/\fP.
 
 .SH SUPPORT
 .LP
