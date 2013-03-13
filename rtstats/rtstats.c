@@ -233,8 +233,6 @@ int main(int ac, char *av[])
         }
 
         {
-        extern int opterr;
-        extern char *optarg;
         int ch;
 
         opterr = 0; /* stops getopt() from printing to stderr */
