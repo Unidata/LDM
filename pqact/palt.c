@@ -1,10 +1,9 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
- */
-/* $Id: palt.c,v 1.114.10.2.2.21 2009/01/06 20:44:09 steve Exp $ */
-
-/* 
+ *   Copyright 2013, University Corporation for Atmospheric Research
+ *   All rights reserved.
+ *
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
 
 #include <config.h>
