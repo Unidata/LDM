@@ -321,23 +321,19 @@ int main(int ac, char *av[])
                             break;
                     }
 
-            if (re_isPathological(spec.pattern))
-            {
-                    unotice("Adjusting pathological regular-expression \"%s\"",
-                            spec.pattern);
-                    re_vetSpec(spec.pattern);
-            }
-            status = regcomp(&spec.rgx,
-                    spec.pattern,
-                    REG_EXTENDED|REG_NOSUB);
-            if(status != 0)
-            {
-                    uerror("Bad regular expression \"%s\"\n", spec.pattern);
-                    usage(progname);
-            }
-
             if (optind != ac) {
                 uerror("Invalid operand: \"%s\"", av[optind]);
+                usage(progname);
+            }
+
+            if (re_isPathological(spec.pattern)) {
+                unotice("Adjusting pathological regular-expression \"%s\"",
+                        spec.pattern);
+                re_vetSpec(spec.pattern);
+            }
+
+            if (regcomp(&spec.rgx, spec.pattern, REG_EXTENDED|REG_NOSUB)) {
+                uerror("Bad regular expression \"%s\"\n", spec.pattern);
                 usage(progname);
             }
         }
