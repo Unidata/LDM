@@ -1160,12 +1160,12 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
          * The following are static in case _POSIX_ARG_MAX is large enough
          * to blow the stack.
          */
-        static char    bufs[2][_POSIX_ARG_MAX];
-        static char*   argv[1 + _POSIX_ARG_MAX/2];
-        int            inBuf = 0;
-#define INBUF   bufs[inBuf]
-#define OUTBUF  bufs[!inBuf]
-#define SWITCH_BUFS (inBuf = !inBuf)
+        static char     bufs[2][_POSIX_ARG_MAX];
+        static char*    argv[1 + _POSIX_ARG_MAX/2];
+        int             inBuf = 0;
+#define INBUF           bufs[inBuf]
+#define OUTBUF          bufs[!inBuf]
+#define SWITCH_BUFS     (inBuf = !inBuf)
 
         regsub(pal, prod->info.ident, OUTBUF);
         OUTBUF[sizeof(OUTBUF)-1] = 0;
