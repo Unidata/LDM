@@ -160,16 +160,16 @@ static int is_upstream_alive(
 #endif
 
 
-/*
- * On return, the socket might or might not be closed.
+/**
+ * Runs the downstream LDM server. On return, the socket might or might not be
+ * closed.
  *
- * Returns:
- *      NULL    Success.  as_shouldSwitch() is true.
- *      else    Error.  err_code() values:
- *                  REQ6_SYSTEM_ERROR
- *                      err_cause() will be system error.
- *                  REQ6_DISCONNECT (died or closed 
- *                      connection). err_cause() will be NULL.
+ * @retval NULL     Success.
+ * @return          Error object. err_code() values:
+ *                      REQ6_SYSTEM_ERROR
+ *                          err_cause() will be system error.
+ *                      REQ6_DISCONNECT (died or closed 
+ *                          connection). err_cause() will be NULL.
  */
 static ErrorObj*
 run_service(
@@ -183,7 +183,7 @@ run_service(
     pqueue                *const pq,
     const int              isPrimary)
 {
-    ErrorObj*    error = NULL;           /* success */
+    ErrorObj*   error = NULL; /* success */
     SVCXPRT*    xprt;
 
     assert(socket >= 0);
