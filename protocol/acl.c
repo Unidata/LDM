@@ -964,15 +964,18 @@ requester_exec(
                 int feedCode = err_code(errObj);
 
                 if (feedCode != REQ6_BAD_VERSION) {
-                    int logLevel = LOG_ERR; /* default */
+                    int             logLevel = LOG_ERR; /* default */
+                    enum err_level  errLevel = ERR_ERROR; /* default */
 
                     errCode = 0; /* default: retry */
 
                     if (feedCode == REQ6_DISCONNECT) {
                         logLevel = LOG_NOTICE;
+                        errLevel = ERR_NOTICE;
                     }
                     else if (feedCode == REQ6_TIMED_OUT) {
                         logLevel = LOG_NOTICE;
+                        errLevel = ERR_NOTICE;
                         sleepAmount = 0; /* immediate retry */
                     }
                     else if (feedCode == REQ6_NOT_ALLOWED) {
@@ -983,6 +986,7 @@ requester_exec(
                     else if (feedCode == REQ6_UNKNOWN_HOST ||
                             feedCode == REQ6_NO_CONNECT) {
                         logLevel = LOG_WARNING;
+                        errLevel = ERR_WARNING;
                         sleepAmount = 2 * interval;
                     }
                     else if (feedCode == REQ6_BAD_PATTERN ||
@@ -1001,7 +1005,7 @@ requester_exec(
                     }
 
                     log_log(logLevel);
-                    err_log(errObj, logLevel);
+                    err_log(errObj, errLevel);
                 }
                 else {
                     /*
@@ -1049,7 +1053,7 @@ requester_exec(
 
                 log_clear();
                 err_free(errObj);
-            }                       /* req6_new() error */
+            }                       /* "errObj" allocated */
 
             if (!errCode) {
                 if (savedInfo_wasSet()) {
