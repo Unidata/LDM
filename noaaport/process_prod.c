@@ -1,8 +1,12 @@
-/*
- *   Copyright 2011, University Corporation for Atmospheric Research
- *
+/**
+ *   Copyright 2013, University Corporation for Atmospheric Research
+ *   All rights reserved
+ *   <p>
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
+ *   <p>
+ *   This file converts a NOAPORT SBN data-product into an LDM data-product
+ *   and inserts the result into the LDM product-queue.
  */
 #include <config.h>
 
