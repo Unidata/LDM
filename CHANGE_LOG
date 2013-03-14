@@ -1,3 +1,20 @@
+6.11.4.6 	2013-03-14 17:31:55-06:00
+    Downstream LDM:
+        Enabled logging of LDM-6 request errors.
+
+    NOAAPORT Ingester:
+        Allowed tabs in textual products.
+
+    rtstats(1):
+        Added "-H <hostname>" option to rtstats(1) program.
+
+        Added test for disallowed operands.
+
+        Added gethostbyname(3) to "See Also" section of manual-page.
+
+    Misc:
+        Improved some internal documentation.
+
 6.11.4.5 	2013-03-12 10:51:25-06:00
     pqact(1):
         Improved clarity of buffer-toggling code in processProduct().
