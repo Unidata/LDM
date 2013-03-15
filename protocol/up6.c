@@ -110,29 +110,19 @@ static int loggingLevel(
 }
 
 /**
- * Logs a failure to transmit to the downstream LDM 6 if a failure actually
- * occurred.
+ * Logs a failure to transmit to the downstream LDM 6.
  *
  * @param msg           [in] The log message.
- * @param errObj        [in] The error-object or NULL, in which case nothing is
- *                      logged.
- * @retval 0            The error-object is NULL.
+ * @param errObj        [in] The error-object.
  * @return              The error-code of the error-object.
  */
-static up6_error_t logIfFailure(
+static up6_error_t logFailure(
         const char* const   msg,
         ErrorObj* const     errObj)
 {
-    up6_error_t errCode;
+    up6_error_t errCode = (up6_error_t)err_code(errObj);
 
-    if (NULL == errObj) {
-        errCode = 0;
-    }
-    else {
-        errCode = (up6_error_t)err_code(errObj);
-
-        err_log_and_free(ERR_NEW(0, errObj, msg), loggingLevel(errCode));
-    }
+    err_log_and_free(ERR_NEW(0, errObj, msg), loggingLevel(errCode));
 
     return errCode;
 }
@@ -487,7 +477,7 @@ static up6_error_t up6_run(
                     /*
                      * feed() or notify() reports a problem.
                      */
-                    errCode = logIfFailure("Failure", errObj);
+                    errCode = logFailure("Failure", errObj);
                 }
                 else if (err) {
                     /*
@@ -497,9 +487,9 @@ static up6_error_t up6_run(
                         if (_flushNeeded) {
                             (void) exitIfDone(0);
 
-                            errObj = flushConnection();
-                            errCode = logIfFailure("Couldn't flush connection",
-                                    errObj); /* NULL safe */
+                            if (errObj = flushConnection())
+                                errCode = logFailure("Couldn't flush connection",
+                                        errObj);
                         }
 
                         if (errCode == UP6_SUCCESS) {
