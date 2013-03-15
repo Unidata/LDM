@@ -1,3 +1,13 @@
+6.11.4.8 	2013-03-15 15:58:32-06:00
+    Downstream LDM:
+        Assume upstream LDM is alive unless explicitly stated otherwise by
+        upstream LDM server.
+
+        Simplified sleeping (either 0 or 60 seconds)
+
+    Misc:
+        Cosmetic changes.
+
 6.11.4.7 	2013-03-15 11:17:25-06:00
     Cosmetic changes.
 
