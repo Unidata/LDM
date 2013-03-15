@@ -54,6 +54,9 @@ assume_alive(
     const enum clnt_stat stat,
     const int            err)
 {
+#if 1
+    return 1;
+#else
     return
         RPC_TIMEDOUT == stat ||
         RPC_CANTSEND == stat ||
@@ -63,6 +66,7 @@ assume_alive(
             ECONNRESET == err ||
             ETIMEDOUT == err ||
             ECONNABORTED == err));
+#endif
 }
 
 
@@ -237,14 +241,12 @@ run_service(
                         (void)exitIfDone(0);
 
                         if (err == ETIMEDOUT) {
-                            if (ulogIsVerbose())
-                                uinfo("Connection from upstream LDM silent for "
-                                        "%d seconds", inactiveTimeout);
+                            uinfo("Connection from upstream LDM silent for "
+                                    "%d seconds", inactiveTimeout);
 
 #if ENABLE_IS_ALIVE
                             if (is_upstream_alive(upName, upAddr, upId)) {
-                                if (ulogIsVerbose())
-                                    uinfo("Upstream LDM is alive.  Waiting...");
+                                uinfo("Upstream LDM is alive.  Waiting...");
 
                                 continue;
                             }
