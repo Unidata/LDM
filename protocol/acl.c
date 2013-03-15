@@ -921,7 +921,7 @@ requester_exec(
             errCode = EXIT_FAILURE;
         }
         else while (!errCode && exitIfDone(0)) {
-            static unsigned sleepAmount = 0;
+            int doSleep = 1; /* default */
 
             /*
              * Ensure that the "from" time in the data-class isn't too
@@ -934,13 +934,11 @@ requester_exec(
             /*
              * Try LDM version 6. Potentially lengthy operation.
              */
-            exitIfDone(0);
             errObj = req6_new(source, port, clssp, maxSilence, getQueuePath(),
                 pq, isPrimary);
+            exitIfDone(0);
 
             if (!errObj) {
-                errCode = 0;
-
                 /*
                  * NB: If the selection-criteria is modified at this point by
                  * taking into account the most-recently received data-product
@@ -952,14 +950,13 @@ requester_exec(
 
                 if (as_shouldSwitch()) {
                     isPrimary = !isPrimary;
+                    doSleep = 0; /* reconnect immediately */
 
                     LOG_ADD1("Switching data-product transfer-mode to %s",
                                 isPrimary ? "primary" : "alternate");
                     log_log(LOG_NOTICE);
                 }
-
-                sleepAmount = 0;        /* immediate retry */
-            }                           /* req6_new() success */
+            } /* req6_new() success */
             else {
                 int feedCode = err_code(errObj);
 
@@ -967,31 +964,26 @@ requester_exec(
                     int             logLevel = LOG_ERR; /* default */
                     enum err_level  errLevel = ERR_ERROR; /* default */
 
-                    errCode = 0; /* default: retry */
-
-                    if (feedCode == REQ6_DISCONNECT) {
+                    if (feedCode == REQ6_UNKNOWN_HOST ||
+                            feedCode == REQ6_NO_CONNECT) {
+                        logLevel = LOG_WARNING;
+                        errLevel = ERR_WARNING;
+                    }
+                    else if (feedCode == REQ6_NOT_ALLOWED) {
+                        errObj = ERR_NEW(0, errObj,
+                            "Request not allowed. Does it overlap with another?");
+                    }
+                    else if (feedCode == REQ6_BAD_PATTERN ||
+                            feedCode == REQ6_BAD_RECLASS) {
+                    }
+                    else if (feedCode == REQ6_DISCONNECT) {
                         logLevel = LOG_NOTICE;
                         errLevel = ERR_NOTICE;
                     }
                     else if (feedCode == REQ6_TIMED_OUT) {
                         logLevel = LOG_NOTICE;
                         errLevel = ERR_NOTICE;
-                        sleepAmount = 0; /* immediate retry */
-                    }
-                    else if (feedCode == REQ6_NOT_ALLOWED) {
-                        errObj = ERR_NEW(0, errObj,
-                            "Request not allowed. Does it overlap with another?");
-                        sleepAmount = 2 * interval;
-                    }
-                    else if (feedCode == REQ6_UNKNOWN_HOST ||
-                            feedCode == REQ6_NO_CONNECT) {
-                        logLevel = LOG_WARNING;
-                        errLevel = ERR_WARNING;
-                        sleepAmount = 2 * interval;
-                    }
-                    else if (feedCode == REQ6_BAD_PATTERN ||
-                            feedCode == REQ6_BAD_RECLASS) {
-                        sleepAmount = 2 * interval;
+                        doSleep = 0; /* reconnect immediately */
                     }
                     else if (feedCode == REQ6_SYSTEM_ERROR) {
                         errObj = ERR_NEW(0, errObj,
@@ -1006,7 +998,7 @@ requester_exec(
 
                     log_log(logLevel);
                     err_log(errObj, errLevel);
-                }
+                } /* don't need to try version 5 of the LDM */
                 else {
                     /*
                      * Try LDM version 5.
@@ -1023,10 +1015,9 @@ requester_exec(
                         int             feedCode;
                         peer_info*      remote = get_remote();
 
-                        exitIfDone(0);
                         feedCode = forn5(FEEDME, source, &remote->clssp,
                             rpctimeo, inactive_timeo, ldmprog_5);
-                        errCode = 0; /* default: retry */
+                        exitIfDone(0);
 
                         udebug("forn5(...) = %d", feedCode);
 
@@ -1038,7 +1029,7 @@ requester_exec(
                         }
                         else if (feedCode == ETIMEDOUT) {
                             unotice("Connection timed-out");
-                            sleepAmount = 0; /* immediate retry */
+                            doSleep = 0; /* reconnect immediately */
                         }
                         else if (feedCode == ECONNREFUSED) {
                             unotice("Connection refused");
@@ -1048,35 +1039,30 @@ requester_exec(
 
                             errCode = EXIT_FAILURE; /* terminate */
                         }
-                    }               /* remote product-class set */
-                }                   /* LDM-6 protocol not supported */
+                    } /* remote product-class set */
+                } /* LDM-6 protocol not supported */
 
                 log_clear();
                 err_free(errObj);
-            }                       /* "errObj" allocated */
+            } /* req6_new() error; "errObj" allocated */
 
             if (!errCode) {
+#if 0
                 if (savedInfo_wasSet()) {
                     savedInfo_reset();
-                    sleepAmount = 0;    /* got data => immediate retry */
+                    sleepAmount = 0; /* got data => reconnect immediately */
                 }
+#endif
 
-                if (0 == sleepAmount) {
-                    sleepAmount = 1;    /* for next time */
-                }
-                else {
+                if (doSleep) {
                     /*
-                     * Pause before retrying.
+                     * Pause before reconnecting.
                      */
-                    exitIfDone(0);
-                    uinfo("Sleeping %d seconds before retrying...",
-                        sleepAmount);
+                    const unsigned  sleepAmount = 2*interval;
+
+                    uinfo("Sleeping %u seconds before retrying...", sleepAmount);
                     (void)sleep(sleepAmount);
-
-                    /*
-                     * Exponential backoff for next time.
-                     */
-                    sleepAmount *= 2;
+                    exitIfDone(0);
 
                     /*
                      * Close any connection to the network host database so
@@ -1085,8 +1071,6 @@ requester_exec(
                      */
                     endhostent();
                 }
-                if (sleepAmount > interval)
-                    sleepAmount = interval;
             }                           /* no error and not done */
         }                               /* connection loop */
     }                                   /* savedInfo module initialized */
