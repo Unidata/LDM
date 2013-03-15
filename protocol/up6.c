@@ -110,7 +110,8 @@ static int loggingLevel(
 }
 
 /**
- * Logs a failure to transmit to the downstream LDM 6.
+ * Logs a failure to transmit to the downstream LDM 6 if a failure actually
+ * occurred.
  *
  * @param msg           [in] The log message.
  * @param errObj        [in] The error-object or NULL, in which case nothing is
@@ -118,7 +119,7 @@ static int loggingLevel(
  * @retval 0            The error-object is NULL.
  * @return              The error-code of the error-object.
  */
-static up6_error_t logFailure(
+static up6_error_t logIfFailure(
         const char* const   msg,
         ErrorObj* const     errObj)
 {
@@ -486,7 +487,7 @@ static up6_error_t up6_run(
                     /*
                      * feed() or notify() reports a problem.
                      */
-                    errCode = logFailure("Failure", errObj);
+                    errCode = logIfFailure("Failure", errObj);
                 }
                 else if (err) {
                     /*
@@ -497,7 +498,7 @@ static up6_error_t up6_run(
                             (void) exitIfDone(0);
 
                             errObj = flushConnection();
-                            errCode = logFailure("Couldn't flush connection",
+                            errCode = logIfFailure("Couldn't flush connection",
                                     errObj); /* NULL safe */
                         }
 
