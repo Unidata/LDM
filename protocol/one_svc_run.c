@@ -57,7 +57,6 @@ one_svc_run(
     timestampt      canonicalTimeout;
     timestampt      selectTimeout;
     fd_set          fds;
-    int             retCode;
 
     canonicalTimeout.tv_sec = timeout;
     canonicalTimeout.tv_usec = 0;
@@ -77,10 +76,8 @@ one_svc_run(
 
         (void)exitIfDone(0); /* handles SIGTERM reception */
 
-        if (selectStatus == 0) {
-            retCode = ETIMEDOUT;
-            break;
-        }
+        if (selectStatus == 0)
+            return ETIMEDOUT;
 
         if (selectStatus > 0) {
             /*
@@ -96,23 +93,19 @@ one_svc_run(
                  * SVCXPRT structure.
                  */
                  log_add("one_svc_run(): RPC layer closed connection");
-                 retCode = ECONNRESET;
-                 break;
+                 return ECONNRESET;
             }
 
             selectTimeout = canonicalTimeout;   /* reset select(2) timeout */
 
-            if (as_shouldSwitch()) {    /* always false for upstream LDM-s */
-                retCode = 0;
-                break;
-            }
-        }
+            if (as_shouldSwitch()) /* always false for upstream LDM-s */
+                return 0;
+        } /* socket is read-ready */
         else {
             if (errno != EINTR) {
                 log_errno();
                 log_add("one_svc_run(): select() error on socket %d", sock);
-                retCode = errno;
-                break;
+                return errno;
             }
 
             {
@@ -127,8 +120,6 @@ one_svc_run(
                 diff = diff_timestamp(&after, &before);
                 selectTimeout = diff_timestamp(&canonicalTimeout, &diff);
             }
-        } 
-    }                                   /* indefinite loop */
-
-    return retCode;
+        } /* select() returned -1 */
+    } /* indefinite loop */
 }
