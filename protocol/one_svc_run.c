@@ -83,8 +83,7 @@ one_svc_run(
             /*
              * The socket is ready for reading.
              */
-            svc_getreqsock(sock);    /* process socket input */
-
+            svc_getreqsock(sock); /* process socket input */
             (void)exitIfDone(0);
 
             if (!FD_ISSET(sock, &svc_fdset)) {
@@ -96,10 +95,10 @@ one_svc_run(
                  return ECONNRESET;
             }
 
-            selectTimeout = canonicalTimeout;   /* reset select(2) timeout */
-
             if (as_shouldSwitch()) /* always false for upstream LDM-s */
                 return 0;
+
+            selectTimeout = canonicalTimeout; /* reset select(2) timeout */
         } /* socket is read-ready */
         else {
             if (errno != EINTR) {
