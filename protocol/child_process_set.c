@@ -101,10 +101,7 @@ int
 cps_contains(
     pid_t pid)
 {
-    return
-        root == NULL
-            ? 0
-            : tfind(&pid, &root, compare) != NULL;
+    return tfind(&pid, &root, compare) != NULL;
 }
 
 
