@@ -4,7 +4,7 @@
  * <p>
  * See file COPYRIGHT in the top-level source-directory for copying and
  * redistribution conditions.
- *
+ * <p>
  * This module implements a set of child process identifiers -- so the LDM
  * can respond to IS_ALIVE inquiries.
  */
