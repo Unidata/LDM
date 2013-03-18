@@ -1,3 +1,13 @@
+6.11.4.9 	2013-03-18 16:57:49-06:00
+    Downstream LDM:
+        Converted status of a time-out due to death of upstream LDM from a
+        disconnect into a time-out.
+    
+        Added PID of upstream LDM to error-messages.
+
+    protocol/child_process_set.c:
+        Simplified some functions and added internal documentation.
+
 6.11.4.8 	2013-03-15 15:58:32-06:00
     Downstream LDM:
         Assume upstream LDM is alive unless explicitly stated otherwise by
