@@ -243,7 +243,7 @@ run_service(
 
                         if (err == ETIMEDOUT) {
                             uinfo("Connection from upstream LDM silent for "
-                                    "%d seconds", inactiveTimeout);
+                                    "%u seconds", inactiveTimeout);
 
 #if ENABLE_IS_ALIVE
                             if (is_upstream_alive(upName, upAddr, upId)) {
