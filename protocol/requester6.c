@@ -170,10 +170,11 @@ static int is_upstream_alive(
  *
  * @retval NULL     Success.
  * @return          Error object. err_code() values:
- *                      REQ6_SYSTEM_ERROR
- *                          err_cause() will be system error.
- *                      REQ6_DISCONNECT (died or closed 
- *                          connection). err_cause() will be NULL.
+ *                      REQ6_SYSTEM_ERROR   err_cause() will be the system error.
+ *                      REQ6_DISCONNECT     The upstream LDM closed the
+ *                                          connection. err_cause() will be NULL.
+ *                      REQ6_TIMED_OUT      The connection timed-out.
+ *                                          err_cause() will be NULL.
  */
 static ErrorObj*
 run_service(
@@ -252,12 +253,13 @@ run_service(
                             }
 #endif
 
-                            error = ERR_NEW(REQ6_DISCONNECT, NULL,
-                                "Upstream LDM died");
+                            error = ERR_NEW1(REQ6_TIMED_OUT, NULL,
+                                "Upstream LDM died: pid=%u", upId);
                         }
                         else if (err != 0) {
-                            error = ERR_NEW(REQ6_DISCONNECT, NULL,
-                                "Connection to upstream LDM closed");
+                            error = ERR_NEW1(REQ6_DISCONNECT, NULL,
+                                "Connection to upstream LDM closed: pid=%u",
+                                upId);
                             /*
                              * The service-transport was destroyed by
                              * one_svc_run().
