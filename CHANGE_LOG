@@ -1,3 +1,7 @@
+6.11.4.10 	2013-03-19 14:12:24-06:00
+    Upstream LDM:
+        Corrected PID in OK reply to version 6 FEEDME or NOTIFYME request.
+
 6.11.4.9 	2013-03-18 16:57:49-06:00
     Downstream LDM:
         Converted status of a time-out due to death of upstream LDM from a
