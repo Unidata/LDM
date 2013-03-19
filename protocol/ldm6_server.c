@@ -172,23 +172,23 @@ separateProductClass(
  */
 static fornme_reply_t*
 feed_or_notify(
-    SVCXPRT* const xprt,
-    const prod_class_t* const want,
-    const int isNotifier,
-    const max_hereis_t maxHereis)
+    SVCXPRT* const              xprt,
+    const prod_class_t* const   want,
+    const int                   isNotifier,
+    const max_hereis_t          maxHereis)
 {
-    struct sockaddr_in downAddr = *svc_getcaller(xprt);
-    ErrorObj* errObj;
-    int status;
-    char* downName = NULL;
-    prod_class_t* origSub = NULL;
-    prod_class_t* allowSub = NULL;
-    const signaturet* signature = NULL;
-    UpFilter* upFilter = NULL;
-    fornme_reply_t* reply = NULL;
-    int isPrimary;
-    static fornme_reply_t theReply;
-    static prod_class_t* uldbSub = NULL;
+    struct sockaddr_in      downAddr = *svc_getcaller(xprt);
+    ErrorObj*               errObj;
+    int                     status;
+    char*                   downName = NULL;
+    prod_class_t*           origSub = NULL;
+    prod_class_t*           allowSub = NULL;
+    const signaturet*       signature = NULL;
+    UpFilter*               upFilter = NULL;
+    fornme_reply_t*         reply = NULL;
+    int                     isPrimary;
+    static fornme_reply_t   theReply;
+    static prod_class_t*    uldbSub = NULL;
 
     /*
      * Clean-up from a (possibly) previous invocation
@@ -308,6 +308,7 @@ feed_or_notify(
         }
 
         reply = &theReply;
+
         goto free_allow_sub;
     }
 
@@ -316,7 +317,8 @@ feed_or_notify(
      */
     theReply.code = OK;
     theReply.fornme_reply_t_u.id = (unsigned) getpid();
-    if (!svc_sendreply(xprt, (xdrproc_t) xdr_fornme_reply_t, (caddr_t) &reply)) {
+    if (!svc_sendreply(xprt, (xdrproc_t)xdr_fornme_reply_t,
+            (caddr_t)&theReply)) {
         LOG_ADD0("svc_sendreply(...) failure");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
