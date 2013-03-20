@@ -323,10 +323,7 @@ make_request(
             else {
                 if (feedmeReply->code == 0) {
                     unotice("Upstream LDM-6 on %s is willing to be %s feeder",
-                        upName,
-                        feedpar.max_hereis == UINT_MAX
-                            ? "a primary"
-                            : "an alternate");
+                        upName, isPrimary ? "a primary" : "an alternate");
 
                     *id = feedmeReply->fornme_reply_t_u.id;
                     errObj = NULL;
