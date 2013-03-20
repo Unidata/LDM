@@ -283,15 +283,26 @@ run_service(
 }
 
 
+/**
+ * Makes a request for data to an upstream LDM.
+ *
+ * @param upName        [in] The name of the host running the upstream LDM.
+ * @param prodClass     [in] The desired class of data-products.
+ * @param isPrimary     [in] Whether or not the transmission-mode should be
+ *                      primary or alternate.
+ * @param clnt          [in] The client-side handle to the upstream LDM.
+ * @param id            [out] The PID of the upstream LDM.
+ * @return              NULL on success; otherwise, the error-object.
+ */
 static ErrorObj*
 make_request(
-    const char* const                   upName,
-    const prod_class_t* const           prodClass,
-    const int                           isPrimary,
-    CLIENT* const                       clnt,
-    unsigned* const                     id)
+    const char* const           upName,
+    const prod_class_t* const   prodClass,
+    const int                   isPrimary,
+    CLIENT* const               clnt,
+    unsigned* const             id)
 {
-    ErrorObj*    errObj = NULL;          /* no error */
+    ErrorObj*   errObj = NULL; /* no error */
     int         finished = 0;
     feedpar_t   feedpar;
 
