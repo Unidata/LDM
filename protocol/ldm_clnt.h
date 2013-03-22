@@ -36,6 +36,15 @@ ldm_clnttcp_create_vers(
     int* const                   socket,
     struct sockaddr_in*          upAddr);
 
+/**
+ * Print reply error information. This is derived from RPC 4.0 source.  It's
+ * here because at least one implementation of the RPC function clnt_sperror()
+ * results in a segmentation violation (SunOS 5.8).
+ *
+ * @param clnt      [in] The client-side handle.
+ */
+char* clnt_errmsg(CLIENT* clnt);
+
 #ifdef __cplusplus
 }
 #endif
