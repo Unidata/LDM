@@ -46,31 +46,6 @@ static int      isAliveSocket = -1;
 
 #if ENABLE_IS_ALIVE
 /*
- * Indicates if the upstream, sending LDM should be assumed to be alive based
- * on the failure mode of an IS_ALIVE inquiry.
- */
-static int
-assume_alive(
-    const enum clnt_stat stat,
-    const int            err)
-{
-#if 1
-    return 1;
-#else
-    return
-        RPC_TIMEDOUT == stat ||
-        RPC_CANTSEND == stat ||
-        RPC_CANTRECV == stat ||
-        (RPC_SYSTEMERROR == stat && (
-            ECONNREFUSED == err ||
-            ECONNRESET == err ||
-            ETIMEDOUT == err ||
-            ECONNABORTED == err));
-#endif
-}
-
-
-/*
  * @return !0 if upstream LDM is alive.
  * @return  0 if upstream LDM is dead.
  */
@@ -106,23 +81,23 @@ static int is_upstream_alive(
     else {
         CLIENT *clnt;
         /*
-         * In the following, an upstream LDM that is unavailable due to
-         * certain failure modes is, nevertheless, considered alive.  This
-         * prevents unnecessary reconnections due to network congestion.
+         * In the following, a definitive negative response from the upstream
+         * LDM server is necessary in order to consider the upstream LDM
+         * process dead. This prevents unnecessary reconnections due to network
+         * congestion.
          */
         isAliveSocket = RPC_ANYSOCK;
         clnt = clnttcp_create(upAddr, LDMPROG, SIX, &isAliveSocket, 0, 0);
 
         if(clnt == NULL) {
-            alive = assume_alive(rpc_createerr.cf_stat, 
-                rpc_createerr.cf_error.re_errno);
+            alive = 1;
 
             err_log_and_free(
-                ERR_NEW2(0, 
+                ERR_NEW1(0,
                     ERR_NEW(0, NULL, clnt_spcreateerror("")), 
                     "Couldn't connect to upstream LDM on %s; "
-                        "assuming sending LDM is %s",
-                    upName, alive ? "alive" : "dead"),
+                        "assuming sending LDM is alive",
+                    upName),
                 ERR_INFO);
         }
         else {
@@ -132,18 +107,14 @@ static int is_upstream_alive(
                 alive = *isAlive;
             }
             else {
-                struct rpc_err rpcErr;
-
-                clnt_geterr(clnt, &rpcErr);
-
-                alive = assume_alive(rpcErr.re_status, rpcErr.re_errno);
+                alive = 1;
 
                 err_log_and_free(
-                    ERR_NEW2(0, 
+                    ERR_NEW1(0,
                         ERR_NEW(0, NULL, clnt_errmsg(clnt)), 
                         "No IS_ALIVE reply from upstream LDM on %s; "
-                            "assuming sending LDM is %s",
-                        upName, alive ? "alive" : "dead"),
+                            "assuming sending LDM is alive",
+                        upName),
                     ERR_INFO);
             }
 
