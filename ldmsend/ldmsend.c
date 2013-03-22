@@ -308,6 +308,9 @@ ldmsend(
             }
         }                                       /* file loop */
 
+        if (lp_flush(ldmProxy))
+            log_add("Couldn't flush connection");
+
         free_prod_class(want);
     }                                           /* HIYA succeeded */
 
