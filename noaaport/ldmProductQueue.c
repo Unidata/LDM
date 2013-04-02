@@ -93,9 +93,10 @@ int lpqGet(
                 }
                 else {
                     pqueue* pq;
+                    int     err = pq_open(pathname, PQ_DEFAULT, &pq);
 
-                    if (pq_open(pathname, PQ_DEFAULT, &pq) != 0) {
-                        LOG_SERROR1("Couldn't open product-queue \"%s\"",
+                    if (err) {
+                        LOG_ERRNUM1(err, "Couldn't open product-queue \"%s\"",
                                 pathname);
                         status = 3;
                     }
