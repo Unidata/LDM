@@ -602,7 +602,7 @@ static up6_error_t up6_init(
         }
         else {
             uerror("Couldn't open product-queue \"%s\": %s", pqPath,
-                    strerror(errno));
+                    strerror(errCode));
         }
 
         errCode = UP6_PQ;
