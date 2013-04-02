@@ -1,8 +1,10 @@
-/*
- * See file ../COPYRIGHT for copying and redistribution conditions.
- *
+/**
+ * Copyright 2013 University Corporation for Atmospheric Research. All rights
+ * reserved. See file COPYRIGHT in the top-level source-directory for copying
+ * and redistribution conditions.
+ * <p>
  * This module hides the decision on what database system to use.
- *
+ * <p>
  * This module implements the runtime database backend database API via the
  * "libxml2" library.
  */
@@ -247,8 +249,7 @@ fileFree(
 }
 
 /**
- * Deletes a file and frees the file structure. The file must be exclusively
- * locked.
+ * Deletes a file. The file must be exclusively locked.
  *
  * Arguments
  *      file            Pointer to the file.
@@ -275,7 +276,7 @@ fileDelete(
             status = EIO;
         }
         else {
-            status = fileFree(file);
+            status = 0;
         }
     }
 
@@ -1003,8 +1004,7 @@ beRemove(
                 status = fileDelete(file);
             }
 
-            if (status)
-                fileFree(file);
+            fileFree(file);
         }                                       /* "file" allocated */
 
         free(path);
