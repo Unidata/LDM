@@ -1,87 +1,33 @@
-6.11.4.11 	2013-03-22 10:35:56-06:00
-    ldmsend(1):
-        Added flushing of connection when all files are sent.
+6.11.4 	2013-04-03 14:22:34-06:00
+    Installation:
+        Added $(DESTDIR) to "ensure-ldmhome-links" rule in the makefile.
 
-    Misc:
-        Improved internal documentation.
-
-        Made some cosmetic changes.
-
-6.11.4.10 	2013-03-19 14:12:24-06:00
-    Upstream LDM:
-        Corrected PID in OK reply to version 6 FEEDME or NOTIFYME request.
-
-6.11.4.9 	2013-03-18 16:57:49-06:00
-    Downstream LDM:
-        Converted status of a time-out due to death of upstream LDM from a
-        disconnect into a time-out.
-    
-        Added PID of upstream LDM to error-messages.
-
-    protocol/child_process_set.c:
-        Simplified some functions and added internal documentation.
-
-6.11.4.8 	2013-03-15 15:58:32-06:00
-    Downstream LDM:
-        Assume upstream LDM is alive unless explicitly stated otherwise by
-        upstream LDM server.
-
-        Simplified sleeping (either 0 or 60 seconds)
-
-    Misc:
-        Cosmetic changes.
-
-6.11.4.7 	2013-03-15 11:17:25-06:00
-    Cosmetic changes.
-
-6.11.4.6 	2013-03-14 17:31:55-06:00
-    Downstream LDM:
-        Enabled logging of LDM-6 request errors.
-
-    NOAAPORT Ingester:
-        Allowed tabs in textual products.
-
-    rtstats(1):
-        Added "-H <hostname>" option to rtstats(1) program.
-
-        Added test for disallowed operands.
-
-        Added gethostbyname(3) to "See Also" section of manual-page.
-
-    Misc:
-        Improved some internal documentation.
-
-6.11.4.5 	2013-03-12 10:51:25-06:00
-    pqact(1):
-        Improved clarity of buffer-toggling code in processProduct().
-
-    Upstream LDM:
-        Reduced resource usage by eliminating duplication of upstream socket.
-
-6.11.4.4 	2013-03-11 14:48:07-06:00
-    Upstream LDM:
-        Corrected time amount in "silent client" log message.
-
-    Downstream LDM:
-        Removed duplication of downstream socket.
-
-        Made the autoshifting default "don't switch" in order to correctly
-        handle out-of-the-blue HIYA messages.
-
-    Misc:
-        Improved some internal commentary.
-
-        Improved some log messages.
-
-        Documented log message about terminating an obsolete upstream LDM process.
-
-6.11.4.3 	2013-03-06 11:12:08-07:00
     ldmd(1):
-        Made "Exiting" an unconditional NOTICE.
+        Made the "Exiting" log message an unconditional NOTICE.
+
+        Eliminated redundant and dangerous free_prod_class() before
+        set_prod_class() in the LDM-5 module.
+
+        Improved places where an LDM process might terminate.
+
+        Made establishing a connection more efficient.
+
+        Decreased timeout if a forked server doesn't receive anything from 12
+        minutes to 1 minute.
 
         Upstream LDM:
-            Changed policy on duplicate incoming requests from 6.11.3 to terminate
-            the earlier upstream LDM rather than current upstream LDM.
+            Changed policy on duplicate incoming requests from 6.11.3 to
+            terminate the earlier upstream LDM rather than current upstream
+            LDM.
+
+            Corrected PID in OK reply to version 6 FEEDME or NOTIFYME request.
+
+            Reduced resource usage by eliminating duplication of upstream socket.
+
+            Corrected time amount in "silent client" log message.
+
+            Documented log message about terminating an obsolete upstream LDM
+            process.
 
             Eliminated some closings of the connection by the upstream LDM to
             favor closing by the downstream LDM in order to avoid the upstream
@@ -89,12 +35,53 @@
 
             Improved handling of errors.
 
-            Demoted logging-level of transmission failure to INFO.
+            Demoted logging-level of transmission failure to INFO because this
+            is expected when the downstream LDM switches its transfer-mode
+            between PRIMARY and ALTERNATE.
 
-            Improved some log messages.
+            Documented log messages associated with subscription reduction by
+            upstream LDM.
 
-    Installation:
-        Added $(DESTDIR) to "ensure-ldmhome-links" rule.
+            Simplified waiting for next data-product (sleep either 0 or 60
+            seconds).
+
+        Downstream LDM:
+            Assume upstream LDM is alive unless explicitly stated otherwise by
+            the upstream LDM server.
+
+            Convert status of a time-out due to death of upstream LDM from a
+            disconnect into a time-out.
+        
+            Added PID of upstream LDM to error-messages.
+
+            Enabled logging of LDM-6 request errors.
+
+            Removed duplication of downstream socket.
+
+            Made the autoshifting default "don't switch" in order to correctly
+            handle out-of-the-blue HIYA messages.
+
+            Improved decision on when a downstream LDM would change its
+            transfer-mode.
+
+    ldmsend(1):
+        Added flushing of connection when all files are sent.
+
+    protocol/child_process_set.c:
+        Simplified some functions and added internal documentation.
+
+    NOAAPORT Ingester:
+        Allowed tabs in textual products.
+
+    pqact(1):
+        Improved clarity of buffer-toggling code in processProduct().
+
+    rtstats(1):
+        Added "-H <hostname>" option to rtstats(1) program.
+
+        Added test for disallowed operands.
+
+        Added gethostbyname(3) to "See Also" section of manual-page.
 
     RPM generation (still don't know if it works):
         Improved support:
@@ -106,39 +93,12 @@
             ldm.spec.in:
                 Added DESTDIR=%{buildroot} to "make" invocations.
 
-6.11.4.2 	2013-02-25 11:21:30-07:00
-    Documented log messages associated with subscription reduction by upstream
-    LDM.
-
-    Improved internal documentation.
-
-6.11.4.1 	2013-02-22 10:22:58-07:00
-    Major Change:
-        Reverted how an upstream LDM handles a request to send the same data to
-        the same downstream site as another upstream LDM. LDM 6.11.3 would
-        terminate the earlier upstream LDM process; now, the later upstream LDM
-        process terminates itself (similar to version 6.11.2,1,0). This was
-        done because downstream LDM-s that were behind a Network Translation
-        Table (NAT) device could, under some circumstances, cause an explosion
-        in the number of upstream LDM processes.
-
-    ldmd(1):
-        See "Major Change" above.
-
-        Eliminated redundant and dangerous free_prod_class() before
-        set_prod_class() in LDM-5 module.
-
-        Improved places where an LDM process might terminate.
-
-        Improved decision on when a downstream LDM would change its
-        transfer-mode.
-
-        Made establishing a connection more efficient.
-
-        Decreased timeout of forked server from 12 minutes to 1 minute.
-
     Misc:
-        Improved some internal documentation and log messages.
+        Improved some log messages.
+
+        Improved some internal documentation.
+
+        Made some cosmetic changes.
 
 6.11.3 	2013-02-12 13:11:20-07:00
     General:
