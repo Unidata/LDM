@@ -8,7 +8,7 @@ LD_GEN			= @LD_GEN@
 LDMHOME			= $(DESTDIR)@LDMHOME@
 LOGS_DIR		= $(DESTDIR)@LOGS_DIR@
 QUEUE_DIR		= $(DESTDIR)@QUEUE_DIR@
-ETC_DIR			= $(DESTDIR)$(sysconfdir)
+ETC_DIR			= $(sysconfdir)
 DATA_DIR		= $(DESTDIR)@DATA_DIR@
 HOSTNAME		= @HOSTNAME@
 NTPDATE			= @NTPDATE@
@@ -99,11 +99,11 @@ endif
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
-install-exec-local:	regpar.tab regutil $(ETC_DIR)
+install-exec-local:	regpar.tab regutil $(DESTDIR)$(ETC_DIR)
 	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
-	    $(ETC_DIR)/ldmadmin-pl.conf $(ETC_DIR)
+	    $(ETC_DIR)/ldmadmin-pl.conf $(DESTDIR)$(ETC_DIR)
 
-$(ETC_DIR):
+$(DESTDIR)$(ETC_DIR):
 	mkdir $@
 
 if HAVE_CUNIT

@@ -150,7 +150,7 @@ following:
                 then that other process is sent a termination signal
                 (a request is a superset of another if its
                 <a href="glindex.html#identifier">data-product identifier</a>-matching
-                <a href="glindex.html#ERE">ERE</a> pattern is 
+                <a href="glindex.html#ERE">ERE</a> pattern is syntactically
                 identical to the other and its
                 <a href="glindex.html#feedtype">feedtype</a> specification is a
                 superset of the other); otherwise,
@@ -166,9 +166,6 @@ following:
 	the reduced request via a
 	<a href="glindex.html#RECLASS">RECLASS</a>
 	message.
-	
-    <li><p>If the subsequent request is empty, then the process terminates;
-        otherwise,
         
     <li><p>If the subsequent request is not equal to the original
         request, then the process continues to listen; otherwise,

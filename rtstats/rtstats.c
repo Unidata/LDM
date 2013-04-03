@@ -23,6 +23,7 @@
 #include "ldm.h"
 #include "atofeedt.h"
 #include "globals.h"
+#include "inetutil.h"
 #include "remote.h"
 #include "ldmprint.h"
 #include "log.h"
@@ -52,7 +53,7 @@ extern int binstats(const prod_info *infop,
         const struct timeval *reftimep);
 
 extern void dump_statsbins(void);
-extern void syncbinstats(void);
+extern void syncbinstats(const char* hostname);
 
 unsigned remotePort = LDM_PORT;
 
@@ -191,10 +192,10 @@ int main(int ac, char *av[])
         prod_spec spec;
         int status = 0;
         int interval = DEFAULT_INTERVAL;
-        int fterr;
         int logoptions = (logfname == NULL) ? (LOG_CONS|LOG_PID) : LOG_NOTIME;
         int toffset = TOFFSET_NONE;
         extern const char *remote;
+        char* hostname = ghostname();
 
         /*
          * Setup default logging before anything else.
@@ -231,106 +232,107 @@ int main(int ac, char *av[])
         }
 
         {
-        extern int opterr;
-        extern char *optarg;
-        int ch;
+            int ch;
 
-        opterr = 0; /* stops getopt() from printing to stderr */
+            opterr = 0; /* stops getopt() from printing to stderr */
 
-        while ((ch = getopt(ac, av, ":vxl:p:f:q:o:i:h:P:")) != EOF)
+            while ((ch = getopt(ac, av, ":vxl:p:f:q:o:i:H:h:P:")) != EOF) {
                 switch (ch) {
-                case 'v':
+                    case 'v':
                         logmask |= LOG_MASK(LOG_INFO);
                         (void) setulogmask(logmask);
                         break;
-                case 'x':
+                    case 'x':
                         logmask |= LOG_MASK(LOG_DEBUG);
                         (void) setulogmask(logmask);
                         break;
-                case 'l':
+                    case 'l':
                         logfname = optarg;
                         if (strcmp(logfname, "") == 0)
                             logfname = NULL;
-                        logoptions = (logfname == NULL) ? (LOG_CONS|LOG_PID) : LOG_NOTIME;
+                        logoptions = (logfname == NULL)
+                                ? (LOG_CONS|LOG_PID)
+                                : LOG_NOTIME;
                         openulog(progname, logoptions, LOG_LDM, logfname);
                         break;
-                case 'h':
+                    case 'H':
+                        hostname = optarg;
+                        break;
+                    case 'h':
                         remote = optarg;
                         break;
-                case 'p':
+                    case 'p':
                         spec.pattern = optarg;
-                        break;
-                case 'f':
-                        fterr = strfeedtypet(optarg, &spec.feedtype) ;
-                        if(fterr != FEEDTYPE_OK)
-                        {
-                                uerror("Bad feedtype \"%s\", %s", optarg,
-                                        strfeederr(fterr)) ;
-                                usage(progname);        
+                        if (re_isPathological(spec.pattern)) {
+                            unotice("Adjusting pathological regular-expression \"%s\"",
+                                    spec.pattern);
+                            re_vetSpec(spec.pattern);
                         }
                         break;
-                case 'q':
+                    case 'f': {
+                        int fterr = strfeedtypet(optarg, &spec.feedtype) ;
+                        if (fterr != FEEDTYPE_OK) {
+                            uerror("Bad feedtype \"%s\", %s", optarg,
+                                    strfeederr(fterr)) ;
+                            usage(progname);
+                        }
+                        break;
+                    }
+                    case 'q':
                         setQueuePath(optarg);
                         break;
-                case 'o':
+                    case 'o':
                         toffset = atoi(optarg);
-                        if(toffset == 0 && *optarg != '0')
-                        {
-                                uerror("Invalid offset %s", optarg);
-                                usage(av[0]);   
+                        if(toffset == 0 && *optarg != '0') {
+                            uerror("Invalid offset %s", optarg);
+                            usage(progname);
                         }
                         break;
-                case 'P': {
-                    char*       suffix = "";
-                    long        port;
+                    case 'P': {
+                        char*       suffix = "";
+                        long        port;
 
-                    errno = 0;
-                    port = strtol(optarg, &suffix, 0);
+                        errno = 0;
+                        port = strtol(optarg, &suffix, 0);
 
-                    if (0 != errno || 0 != *suffix ||
-                        0 >= port || 0xffff < port) {
+                        if (0 != errno || 0 != *suffix ||
+                            0 >= port || 0xffff < port) {
 
-                        uerror("Invalid port %s", optarg);
-                        usage(av[0]);   
+                            uerror("Invalid port %s", optarg);
+                            usage(progname);
+                        }
+
+                        remotePort = (unsigned)port;
+
+                        break;
                     }
-
-                    remotePort = (unsigned)port;
-
-                    break;
-                }
-                case 'i':
+                    case 'i':
                         interval = atoi(optarg);
-                        if(interval == 0 && *optarg != '0')
-                        {
-                                uerror("Invalid interval %s", optarg);
-                                usage(av[0]);
+                        if (interval == 0 && *optarg != '0') {
+                            uerror("Invalid interval %s", optarg);
+                            usage(progname);
                         }
                         break;
-                case '?':
+                    case '?':
                         uerror("Invalid option \"%c\"", optopt);
                         usage(progname);
                         break;
-                case ':':
+                    case ':':
                         uerror("No argument for option \"%c\"", optopt);
                         usage(progname);
                         break;
                 }
+            } /* getopt() loop */
 
-        if (re_isPathological(spec.pattern))
-        {
-                unotice("Adjusting pathological regular-expression \"%s\"",
-                        spec.pattern);
-                re_vetSpec(spec.pattern);
-        }
-        status = regcomp(&spec.rgx,
-                spec.pattern,
-                REG_EXTENDED|REG_NOSUB);
-        if(status != 0)
-        {
-                uerror("Bad regular expression \"%s\"\n", spec.pattern);
-                usage(av[0]);
-        }
+            if (optind != ac) {
+                uerror("Invalid operand: \"%s\"", av[optind]);
+                usage(progname);
+            }
+        } /* command-line decoding block */
 
+        if (regcomp(&spec.rgx, spec.pattern, REG_EXTENDED|REG_NOSUB)) {
+            uerror("Bad regular expression \"%s\"\n", spec.pattern);
+            usage(progname);
         }
 
         unotice("Starting Up (%d)", getpgrp());
@@ -351,7 +353,7 @@ int main(int ac, char *av[])
 
 
         /*
-         * Open the product que
+         * Open the product queue
          */
         status = pq_open(pqfname, PQ_READONLY, &pq);
         if(status)
@@ -413,7 +415,7 @@ int main(int ac, char *av[])
                         break;
                 }
 
-                syncbinstats();
+                syncbinstats(hostname);
 
                 if(interval == 0)
                 {

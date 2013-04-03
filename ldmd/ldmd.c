@@ -199,12 +199,7 @@ static void cleanup(
 {
     const char* const pqfname = getQueuePath();
 
-    if (done) {
-        unotice("Exiting");
-    }
-    else {
-        uinfo("Exiting");
-    }
+    unotice("Exiting");
 
     savePreviousProdInfo();
 
@@ -677,7 +672,7 @@ static void handle_connection(
 
     (void) close(sock);
 
-    /* Set the ulog identifer, optional. */
+    /* Set the ulog identifier, optional. */
     set_abbr_ident(remote_name(), NULL );
 
     uinfo("Connection from %s", remote_name());
@@ -713,23 +708,27 @@ static void handle_connection(
     /*
      *  handle rpc requests
      */
-    status = one_svc_run(xp_sock, inactive_timeo);
+    {
+        const unsigned  TIMEOUT = 2*interval;
 
-    (void) exitIfDone(0);
+        status = one_svc_run(xp_sock, TIMEOUT);
 
-    if (status == 0) {
-        log_add("Done");
-        log_log(LOG_INFO);
-    }
-    else if (status == ETIMEDOUT) {
-        log_add("Connection from client LDM silent for %d seconds",
-                inactive_timeo);
-        log_log(LOG_NOTICE);
-    }
-    else { /* connection to client lost */
-        log_add("Connection with client LDM closed");
-        log_log(LOG_INFO);
-        status = 0; /* EXIT_SUCCESS */
+        (void) exitIfDone(0);
+
+        if (status == 0) {
+            log_add("Done");
+            log_log(LOG_INFO);
+        }
+        else if (status == ETIMEDOUT) {
+            log_add("Connection from client LDM silent for %u seconds",
+                    TIMEOUT);
+            log_log(LOG_NOTICE);
+        }
+        else { /* connection to client lost */
+            log_add("Connection with client LDM closed");
+            log_log(LOG_INFO);
+            status = 0; /* EXIT_SUCCESS */
+        }
     }
 
     /* svc_destroy(xprt);  done by svc_getreqset() */

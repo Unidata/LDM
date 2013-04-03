@@ -15,8 +15,7 @@ typedef enum {
     LDM_CLNT_TIMED_OUT,
     LDM_CLNT_BAD_VERSION,
     LDM_CLNT_NO_CONNECT,
-    LDM_CLNT_SYSTEM_ERROR,
-    LDM_CLNT_DONE
+    LDM_CLNT_SYSTEM_ERROR
 } ldm_clnt_error_t;
 
 #ifdef __cplusplus

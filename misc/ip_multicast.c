@@ -1,6 +1,6 @@
 /**
- * Copyright 2013 University Corporation for Atmospheric Research. All rights
- * reserved.
+  * Copyright 2013 University Corporation for Atmospheric Research.
+ * All rights reserved.
  * <p>
  * See file COPYRIGHT in the top-level source-directory for legal conditions.
  *
@@ -9,23 +9,24 @@
  * Module for IPv4 multicast.
  * <p>
  * Examples:
- *      Create a blocking socket for sending IP multicast packets on the local
- *      subnet using the default multicast interface (the packets will not
- *      appear on the loopback interface):
+ *      Create a blocking socket for sending IPv4 multicast packets on the local
+ *      subnet using port 388000 and the default multicast interface (the
+ *      packets will not appear on the loopback interface):
  *
  *          #include <arpa/inet.h>
  *          #include <ip_multicast.h>
  *          ...
- *          int sock = ipm_create(inet_addr("224.1.1.1"), 0, 1, 0, 0)
+ *          int sock = ipm_create(inet_addr("224.1.1.1"), 38800, 0, 1, 0, 0);
  *
- *      Open a non-blocking socket for receiving IP multicast packets on a
- *      specific interface:
+ *      Open a non-blocking socket for receiving IPv4 multicast packets on port
+ *      38800 on a specific interface:
  *
  *           #include <arpa/inet.h>
  *           #include <ip_multicast.h>
  *           ...
  *           int sock = ipm_open(1);
- *           ipm_add(sock, inet_addr("224.1.1.1"), inet_addr("128.117.156.30"));
+ *           ipm_add(sock, inet_addr("224.1.1.1"), 38800,
+ *              inet_addr("128.117.156.30"));
  */
 
 #include "config.h"
@@ -43,11 +44,36 @@
 #include "ip_multicast.h"
 
 /**
- * Returns a socket configured for IP multicast.
+ * Returns the formatted representation of a binary IPv4 address.
+ *
+ * @param addr          [in] The IPv4 address in network byte order.
+ * @return              Pointer to the string representation of the IPv4 address.
+ *                      The client should free when it is no longer needed.
+ * @retval NULL         The address couldn't be formatted. "errno" will be
+ *                      ENOMEM.
+ */
+static char* ipaddr_format(
+    const in_addr_t addr)
+{
+    char* const buf = malloc(INET_ADDRSTRLEN);
+
+    if (buf != NULL) {
+        struct in_addr in_addr;
+
+        in_addr.s_addr = addr;
+
+        (void) inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
+    }
+
+    return buf;
+}
+
+/**
+ * Returns a socket configured for IPv4 multicast.
  * <p>
  * log_add() is called for all errors.
  *
- * @param iface_addr    [in] Internet address of interface for multicast
+ * @param iface_addr    [in] IPv4 address of interface for multicast
  *                      packets in network byte order. 0 means the default
  *                      interface for multicast packets.
  * @param ttl           [in] Time-to-live of outgoing packets:
@@ -65,6 +91,9 @@
  *                      interface.
  * @param nonblock      Whether or not the socket should be in non-blocking
  *                      mode.
+ * @param reuse_addr    Whether or not to reuse the IPv4 multicast address (i.e.,
+ *                      whether or not multiple processes on the same host can
+ *                      receive packets from the same multicast group).
  * @return              The configured socket.
  * @retval -1           Failure. "errno" will be one of the following:
  *                          EMFILE      No more file descriptors are available
@@ -81,7 +110,8 @@ static int ipm_new(
     const in_addr_t     iface_addr,
     const unsigned char ttl,
     const unsigned char loop,
-    const int           nonblock)
+    const int           nonblock,
+    const int           reuse_addr)
 {
     int success = 1;
     const int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
@@ -105,14 +135,15 @@ static int ipm_new(
             }
         }
         if (success && iface_addr != 0) {
-            struct in_addr addr;
+            char            buf[INET_ADDRSTRLEN];
+            struct in_addr  addr;
 
             addr.s_addr = iface_addr;
 
             if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &addr,
                     sizeof(addr)) == -1) {
-                LOG_SERROR1("Couldn't set outgoing IP multicast interface "
-                "to %s", inet_ntoa(addr));
+                LOG_SERROR1("Couldn't set outgoing IPv4 multicast interface "
+                "to %s", inet_ntop(AF_INET, &addr, buf, INET_ADDRSTRLEN));
                 success = 0;
             }
         }
@@ -128,6 +159,13 @@ static int ipm_new(
                 success = 0;
             }
         }
+        if(success && reuse_addr) {
+            if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse_addr,
+                    sizeof(reuse_addr)) == -1) {
+                LOG_SERROR0("Couldn't enable reuse of IPv4 multicast address");
+                success = 0;
+            }
+        }
 
         if (!success)
             (void) close(sock);
@@ -137,15 +175,17 @@ static int ipm_new(
 }
 
 /**
- * Returns a socket configured for sending IP multicast packets to an IP
- * multicast group. The originator of packets to a multicast group would
+ * Returns a socket configured for exclusive sending IPv4 multicast packets to
+ * an IPv4 multicast group. The originator of packets to a multicast group would
  * typically call this function.
  * <p>
  * log_add() is called for all errors.
  *
- * @param mcast_addr    [in] Internet address of IP multicast group in network
- *                      byte order.
- * @param iface_addr    [in] Internet address of interface for outgoing
+ * @param mcast_addr    [in] IPV4 address of multicast group in network byte
+ *                      order.
+ * @param port_num      [in] Port number used for the destination multicast
+                        group.
+ * @param iface_addr    [in] IPv4 address of interface for outgoing
  *                      multicast packets in network byte order. 0 means the
  *                      default interface for multicast packets.
  * @param ttl           [in] Time-to-live of outgoing packets:
@@ -163,7 +203,7 @@ static int ipm_new(
  *                      interface.
  * @param nonblock      Whether or not the socket should be in non-blocking
  *                      mode.
- * @retval 0            Success.
+ * @return              The configured socket.
  * @retval -1           Failure. "errno" will be one of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
@@ -177,7 +217,7 @@ static int ipm_new(
  *                          EADDRNOTAVAIL   The specified address is not
  *                                          available from the local machine.
  *                          EAFNOSUPPORT    The specified address is not a
- *                                          valid IP multicast address.
+ *                                          valid IPv4 multicast address.
  *                          ENETUNREACH No route to the network is present.
  *                          ENETDOWN    The local network interface used to
  *                                      reach the destination is down.
@@ -185,12 +225,13 @@ static int ipm_new(
  */
 int ipm_create(
     const in_addr_t     mcast_addr,
+    const int           port_num,
     const in_addr_t     iface_addr,
     const unsigned char ttl,
     const unsigned char loop,
     const int           nonblock)
 {
-    int sock = ipm_new(iface_addr, ttl, loop, nonblock);
+    int sock = ipm_new(iface_addr, ttl, loop, nonblock, 0);
 
     if (sock != -1) {
         struct sockaddr_in addr;
@@ -198,9 +239,10 @@ int ipm_create(
         (void) memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = mcast_addr;
+        addr.sin_port = htons(port_num);
 
         if (connect(sock, (struct sockaddr*) &addr, sizeof(addr)) == -1) {
-            LOG_SERROR1("Couldn't bind socket to IP multicast address %s",
+            LOG_SERROR1("Couldn't bind socket to IPv4 multicast address %s",
                     inet_ntoa(addr.sin_addr));
             (void) close(sock);
             sock = -1;
@@ -211,15 +253,16 @@ int ipm_create(
 }
 
 /**
- * Returns a socket configured for receiving IP multicast packets. The socket
- * will not receive any multicast packets until the client calls "ipm_add()".
- * Receivers of multicast packets would typically call this function.
+ * Returns a socket configured for non-exclusive reception of IPv4 multicast
+ * packets. The socket will not receive any multicast packets until the client
+ * calls "ipm_add()". Receivers of multicast packets would typically call this
+ * function.
  * <p>
  * log_add() is called for all errors.
  *
  * @param nonblock      Whether or not the socket should be in non-blocking
  *                      mode.
- * @retval 0            Succes.
+ * @return              The configured socked.
  * @retval -1           Failure. "errno" will be one of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
@@ -234,17 +277,17 @@ int ipm_create(
 int ipm_open(
     const int nonblock)
 {
-    return ipm_new(0, 1, 0, nonblock);
+    return ipm_new(0, 1, 0, nonblock, 1);
 }
 
 /**
- * Adds an IP multicast group to the set of multicast groups that a socket
+ * Adds an IPv4 multicast group to the set of multicast groups that a socket
  * receives. Multiple groups may be added.
  * <p>
  * log_add() is called for all errors.
  *
  * @param sock          [in] The socket to be configured.
- * @param mcast_addr    [in] Internet address of IP multicast group in network
+ * @param mcast_addr    [in] Internet address of IPv4 multicast group in network
  *                      byte order:
  *                          224.0.0.0 - 224.0.0.255     Reserved for local
  *                                                      purposes
@@ -252,6 +295,8 @@ int ipm_open(
  *                                                      addresses
  *                          239.0.0.0 - 239.255.255.255 Reserved for
  *                                                      administrative scoping
+ * @param port_num      [in] Port number used for the destination multicast
+                        group.
  * @param iface_addr    [in] Internet address of interface in network byte
  *                      order. 0 means the default interface for multicast
  *                      packets.
@@ -269,39 +314,56 @@ int ipm_open(
 int ipm_add(
     const int       sock,
     const in_addr_t mcast_addr,
+    const int       port_num,
     const in_addr_t iface_addr)
 {
-    int             status;
-    struct ip_mreq  group;
+    int                 status;
+    struct sockaddr_in  m_addr;
 
-    group.imr_multiaddr.s_addr = mcast_addr;
-    group.imr_interface.s_addr = iface_addr == 0 ? INADDR_ANY : iface_addr;
+    memset(&m_addr, 0, sizeof(m_addr));
+    m_addr.sin_family = AF_INET;
+    m_addr.sin_addr.s_addr = mcast_addr;
+    m_addr.sin_port = htons(port_num);
 
-    status = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &group,
-            sizeof(group));
+    if (bind(sock, (struct sockaddr*)&m_addr, sizeof(m_addr))) {
+        char* const mcastAddrString = ipaddr_format(mcast_addr);
 
-    if (status) {
-        char buf[INET_ADDRSTRLEN];
-        struct in_addr addr;
+        LOG_SERROR2("Couldn't bind socket to port %d of multicast address %s",
+                port_num, mcastAddrString);
+        free(mcastAddrString);
+        status = -1;
+    }
+    else {
+        struct ip_mreq      group;
 
-        addr.s_addr = iface_addr;
+        group.imr_multiaddr.s_addr = mcast_addr;
+        group.imr_interface.s_addr = iface_addr == 0 ? INADDR_ANY : iface_addr;
 
-        (void) inet_ntop(AF_INET, &mcast_addr, buf, sizeof(buf));
-        LOG_SERROR2("Couldn't add IP multicast group %s to interface %s", buf,
-                inet_ntoa(addr));
+        status = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &group,
+                sizeof(group));
+
+        if (status) {
+            char* const mcastAddrString = ipaddr_format(mcast_addr);
+            char* const ifaceAddrString = ipaddr_format(iface_addr);
+
+            LOG_SERROR2("Couldn't add IPv4 multicast group %s to interface %s",
+                    mcastAddrString, ifaceAddrString);
+            free(mcastAddrString);
+            free(ifaceAddrString);
+        }
     }
 
     return status;
 }
 
 /**
- * Removes an IP multicast group from the set of multicast groups that a socket
- * receives.
+ * Removes an IPv4 multicast group from the set of multicast groups that a
+ * socket receives.
  * <p>
  * log_add() is called for all errors.
  *
  * @param sock          [in] The socket to be configured.
- * @param mcast_addr    [in] Internet address of IP multicast group in network
+ * @param mcast_addr    [in] Internet address of IPv4 multicast group in network
  *                      byte order.
  * @param iface_addr    [in] Internet address of interface in network byte
  *                      order. 0 means the default interface for multicast
@@ -332,14 +394,13 @@ int ipm_drop(
             sizeof(group));
 
     if (status) {
-        char buf[INET_ADDRSTRLEN];
-        struct in_addr addr;
+        char* const mcastAddrString = ipaddr_format(mcast_addr);
+        char* const ifaceAddrString = ipaddr_format(iface_addr);
 
-        addr.s_addr = iface_addr;
-
-        (void) inet_ntop(AF_INET, &mcast_addr, buf, sizeof(buf));
-        LOG_SERROR2("Couldn't drop IP multicast group %s from interface %s",
-                buf, inet_ntoa(addr));
+        LOG_SERROR2("Couldn't drop IPv4 multicast group %s from interface %s",
+                mcastAddrString, ifaceAddrString);
+        free(mcastAddrString);
+        free(ifaceAddrString);
     }
 
     return status;

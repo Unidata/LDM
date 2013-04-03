@@ -1,8 +1,12 @@
-/*
- *   Copyright 2011, University Corporation for Atmospheric Research
- *
+/**
+ *   Copyright 2013, University Corporation for Atmospheric Research
+ *   All rights reserved
+ *   <p>
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
+ *   <p>
+ *   This file converts a NOAPORT SBN data-product into an LDM data-product
+ *   and inserts the result into the LDM product-queue.
  */
 #include <config.h>
 
@@ -71,7 +75,7 @@ prod_isascii (char *pname, char *prod, size_t psize)
   int i = 1;
 
 /* assume prod[0] is CTRL-A and prod[psize-1] is CTRL-C */
-/* within product, allow RS, CR, NL, \0 */
+/* within product, allow RS, HT, CR, NL, \0 */
 /* add a little leeway....accept ETX in last 8 bytes since some products do */
 /* this is only to keep HDS FOS category. Would rather use NOAAPORT types (SRC) */
   while (i < psize - 1)
@@ -80,8 +84,8 @@ prod_isascii (char *pname, char *prod, size_t psize)
 	{
 	  if ((prod[i] == 3) && (i < (psize - 9)))
 	    return (0);
-	  if ((prod[i] != 0) && (prod[i] != 30) && (prod[i] != 10)
-	      && (prod[i] != 13))
+	  if ((prod[i] != 0) && (prod[i] != 30) && (prod[i] != '\t') &&
+	          (prod[i] != '\n') && (prod[i] != '\r'))
 	    return (0);
 	}
       i++;

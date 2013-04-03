@@ -66,6 +66,19 @@ ldm_clnt_addr(const char* const name, struct sockaddr_in* addr)
 }
 
 
+/**
+ * Creates a TCP connection for an LDM client.
+ *
+ * @param addr      [in/out] Internet socket address of the LDM server. The
+ *                  port number is ignored.
+ * @param version   [in] Version of the LDM server to use.
+ * @param port      [in] The port number of the LDM server.
+ * @param client    [out] The client-side transport. Set upon success. The
+ *                  client should free when it is no longer needed.
+ * @param sock      [in] The socket to use for the connection.
+ * @retval NULL     Success. "*client" is set.
+ * @return          The error object. "*client" is not set.
+ */
 static ErrorObj*
 ldm_clnt_tcp_create(
     struct sockaddr_in* const addr,             /* modified <=> success */
@@ -77,7 +90,7 @@ ldm_clnt_tcp_create(
     struct sockaddr_in        ad;
     CLIENT*                   clnt;
     int                       sck;
-    ErrorObj*                  error;
+    ErrorObj*                 error;
 
     assert(NULL != addr);
     assert(NULL != client);
@@ -166,7 +179,7 @@ ldm_clnt_nullproc(CLIENT* const clnt)
  * Returns:
  *    NULL                 Success.  *vers_out, *client, *sock_out, and *upAddr
  *                         set.
- *   !NULL                 Error.  err_code(RETURN_VALUE):
+ *   !NULL                 Error. "*client" is not set. err_code(RETURN_VALUE):
  *       LDM_CLNT_UNKNOWN_HOST         Unknown upstream host.
  *       LDM_CLNT_TIMED_OUT            Call to upstream host timed-out.
  *       LDM_CLNT_BAD_VERSION          Upstream LDM isn't given version.
@@ -192,6 +205,7 @@ ldm_clnttcp_create_vers(
      * Get the IP address of the upstream LDM.  This is a potentially
      * lengthy operation.
      */
+    (void)exitIfDone(0);
     error = ldm_clnt_addr(upName, &addr);
 
     if (error) {
@@ -203,12 +217,11 @@ ldm_clnttcp_create_vers(
         int                     errCode;
         CLIENT*                 clnt = NULL;
 
-        (void)exitIfDone(0);
-
         /*
          * Connect to the remote port.  This is a potentially lengthy
          * operation.
          */
+        (void)exitIfDone(0);
         error = ldm_clnt_tcp_create(&addr, version, port, &clnt, &sock);
 
         if (error) {
@@ -229,14 +242,12 @@ ldm_clnttcp_create_vers(
                         version, upName, port),
                     ERR_INFO);
 
-                (void)exitIfDone(0);
-
                 /*
                  * Connect using the portmapper.  This is a
                  * potentially lengthy operation.
                  */
-                error = ldm_clnt_tcp_create(&addr, version, 0,
-                    &clnt, &sock);
+                (void)exitIfDone(0);
+                error = ldm_clnt_tcp_create(&addr, version, 0, &clnt, &sock);
 
                 if (error) {
                     error =
@@ -247,55 +258,17 @@ ldm_clnttcp_create_vers(
                 }                       /* portmapper failure */
             }                           /* non-fatal port failure */
         }                               /* port failure */
-
-        if (NULL != clnt) {
+        else {
             assert(!error);
-
-            (void)exitIfDone(0);
-
             /*
-             * Test the connection with a NULLPROC call.
-             * This is a potentially lengthy operation.
+             * Success.  Set the return arguments.
              */
-            error = ldm_clnt_nullproc(clnt);
+            *client = clnt;
 
-            if (error) {
-                errCode = err_code(error);
-
-                if (RPC_TIMEDOUT == errCode) {
-                    errCode = LDM_CLNT_TIMED_OUT;
-                }
-                else if (RPC_PROGVERSMISMATCH == errCode) {
-                    errCode = LDM_CLNT_BAD_VERSION;
-                }
-                else {
-                    errCode = LDM_CLNT_NO_CONNECT;
-                }
-
-                error = ERR_NEW2(errCode, error,
-                    "nullproc_%u failure to %s", version, upName);
-            }                       /* NULLPROC failure */
-            else {
-                /*
-                 * Success.  Set the return arguments.
-                 */
-                *client = clnt;
-                if (socket)
-                    *socket = sock;
-                if (upAddr)
-                    *upAddr = addr;
-            }
-
-            if (error) {
-                auth_destroy(clnt->cl_auth);
-                clnt_destroy(clnt);
-                clnt = NULL;
-                /*
-                 * The socket should have been closed by clnt_destroy()
-                 * -- but this can't hurt.
-                 */
-                (void)close(sock);
-            }
+            if (socket)
+                *socket = sock;
+            if (upAddr)
+                *upAddr = addr;
         }                                   /* clnt != NULL */
     }                                       /* got upstream IP address */
 

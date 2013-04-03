@@ -1,5 +1,6 @@
 /*
- * Copyright 2011 University Corporation for Atmospheric Research.
+ * Copyright 2013 University Corporation for Atmospheric Research.
+ * All rights reserved.
  * See file "COPYRIGHT" in the top-level source-directory for conditions.
  *
  * This module contains the "upstream" code for version 6 of the LDM.
@@ -88,6 +89,43 @@ static up6_error_t up6_error(
     }
 
     return error;
+}
+
+/**
+ * Returns the logging-level appropriate to an upstream LDM 6 error-code.
+ *
+ * @param errCode       [in] Upstream LDM 6 error-code.
+ * @return              The logging-level corresponding to the error-code.
+ */
+static int loggingLevel(
+        const up6_error_t   errCode)
+{
+    /*
+     * A failure due to a closed connection or time-out is not unusual because
+     * a downstream LDM being fed is expected to auto-shift its transmission-
+     * mode and one being notified is expected to be manually terminated.
+     */
+    return (errCode == UP6_TIME_OUT || errCode == UP6_CLOSED)
+            ? ERR_INFO
+            : ERR_NOTICE;
+}
+
+/**
+ * Logs a failure to transmit to the downstream LDM 6.
+ *
+ * @param msg           [in] The log message.
+ * @param errObj        [in] The error-object.
+ * @return              The error-code of the error-object.
+ */
+static up6_error_t logFailure(
+        const char* const   msg,
+        ErrorObj* const     errObj)
+{
+    up6_error_t errCode = (up6_error_t)err_code(errObj);
+
+    err_log_and_free(ERR_NEW(0, errObj, msg), loggingLevel(errCode));
+
+    return errCode;
 }
 
 /*
@@ -331,11 +369,11 @@ flushConnection(
     static struct timeval ZERO_TIMEOUT = { 0, 0 };
     /*
      * Flush the connection by forcing the RPC layer to send a nil data-product
-     * via an asynchronous HEREIS message and then return immediately, rather
+     * via an asynchronous HEREIS message and then return immediately (rather
      * than by sending a synchronous NULLPROC message, which would necessitate
-     * waiting for a response. (The "xdr_void" and "ZERO_TIMEOUT" cause the
+     * waiting for a response). The "xdr_void" and "ZERO_TIMEOUT" cause the
      * HEREIS message to be buffered, the buffer flushed, and an immediate
-     * return.)
+     * return.
      */
 	if (clnt_call(_clnt, HEREIS, (xdrproc_t)xdr_product, (caddr_t)dp_getNil(),
     		(xdrproc_t)xdr_void, (caddr_t)NULL, ZERO_TIMEOUT) == RPC_TIMEDOUT) {
@@ -371,9 +409,9 @@ static up6_error_t up6_run(
     up6_error_t errCode = UP6_SUCCESS; /* success */
     int flags;
     char buf[64];
-    char* sig =
-            _signature == NULL ?
-                    "NONE" : s_signaturet(buf, sizeof(buf), *_signature);
+    char* sig = _signature == NULL
+            ? "NONE"
+            : s_signaturet(buf, sizeof(buf), *_signature);
 
     assert(_mode == FEED || _mode == NOTIFY);
     assert(_class != NULL);
@@ -432,22 +470,15 @@ static up6_error_t up6_run(
         }
         else {
             while (UP6_SUCCESS == errCode && exitIfDone(0)) {
-                ErrorObj* errObj = NULL;
-                int err = pq_sequence(_pq, _mt, _class,
+                ErrorObj*   errObj = NULL;
+                const int   err = pq_sequence(_pq, _mt, _class,
                         _mode == FEED ? feed : notify, &errObj);
-
-                (void) exitIfDone(0);
 
                 if (NULL != errObj) {
                     /*
-                     * The feed() or notify() function reports a
-                     * problem.
+                     * feed() or notify() reports a problem.
                      */
-                    errCode = (up6_error_t) err_code(errObj);
-
-                    err_log_and_free(
-                            ERR_NEW(0, errObj, "feed or notify failure"),
-                            ERR_NOTICE);
+                    errCode = logFailure("Failure", errObj);
                 }
                 else if (err) {
                     /*
@@ -455,32 +486,26 @@ static up6_error_t up6_run(
                      */
                     if (err == PQUEUE_END || err == EAGAIN || err == EACCES) {
                         if (_flushNeeded) {
-                            errObj = flushConnection();
-
-                            if (NULL != errObj) {
-                                errCode = (up6_error_t) err_code(errObj);
-
-                                err_log_and_free(ERR_NEW(0, errObj,
-                                        "Couldn't flush connection"),
-                                        ERR_NOTICE);
-                            }
-
                             (void) exitIfDone(0);
+
+                            if (errObj = flushConnection())
+                                errCode = logFailure("Couldn't flush connection",
+                                        errObj);
                         }
 
                         if (errCode == UP6_SUCCESS) {
-                            time_t timeSinceLastSend = time(NULL )
+                            time_t timeSinceLastSend = time(NULL)
                                     - _lastSendTime;
 
-                            udebug(
-                                    err == PQUEUE_END ?
-                                            "End of product-queue" :
-                                            "Hit a lock");
+                            udebug(err == PQUEUE_END
+                                    ? "End of product-queue"
+                                    : "Hit a lock");
 
                             if (_interval <= timeSinceLastSend) {
                                 _flushNeeded = 1;
                             }
                             else {
+                                (void) exitIfDone(0);
                                 (void) pq_suspend(
                                         _interval - timeSinceLastSend);
                             }
@@ -578,7 +603,7 @@ static up6_error_t up6_init(
         }
         else {
             uerror("Couldn't open product-queue \"%s\": %s", pqPath,
-                    strerror(errno));
+                    strerror(errCode));
         }
 
         errCode = UP6_PQ;

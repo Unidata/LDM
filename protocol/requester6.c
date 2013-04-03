@@ -38,7 +38,6 @@
 
 #include "requester6.h"
 
-static int      requestSocket = -1;
 static int      dataSocket = -1;
 static int      isAliveSocket = -1;
 
@@ -46,27 +45,6 @@ static int      isAliveSocket = -1;
 
 
 #if ENABLE_IS_ALIVE
-/*
- * Indicates if the upstream, sending LDM should be assumed to be alive based
- * on the failure mode of an IS_ALIVE inquiry.
- */
-static int
-assume_alive(
-    const enum clnt_stat stat,
-    const int            err)
-{
-    return
-        RPC_TIMEDOUT == stat ||
-        RPC_CANTSEND == stat ||
-        RPC_CANTRECV == stat ||
-        (RPC_SYSTEMERROR == stat && (
-            ECONNREFUSED == err ||
-            ECONNRESET == err ||
-            ETIMEDOUT == err ||
-            ECONNABORTED == err));
-}
-
-
 /*
  * @return !0 if upstream LDM is alive.
  * @return  0 if upstream LDM is dead.
@@ -103,23 +81,23 @@ static int is_upstream_alive(
     else {
         CLIENT *clnt;
         /*
-         * In the following, an upstream LDM that is unavailable due to
-         * certain failure modes is, nevertheless, considered alive.  This
-         * prevents unnecessary reconnections due to network congestion.
+         * In the following, a definitive negative response from the upstream
+         * LDM server is necessary in order to consider the upstream LDM
+         * process dead. This prevents unnecessary reconnections due to network
+         * congestion.
          */
         isAliveSocket = RPC_ANYSOCK;
         clnt = clnttcp_create(upAddr, LDMPROG, SIX, &isAliveSocket, 0, 0);
 
         if(clnt == NULL) {
-            alive = assume_alive(rpc_createerr.cf_stat, 
-                rpc_createerr.cf_error.re_errno);
+            alive = 1;
 
             err_log_and_free(
-                ERR_NEW2(0, 
+                ERR_NEW1(0,
                     ERR_NEW(0, NULL, clnt_spcreateerror("")), 
                     "Couldn't connect to upstream LDM on %s; "
-                        "assuming sending LDM is %s",
-                    upName, alive ? "alive" : "dead"),
+                        "assuming sending LDM is alive",
+                    upName),
                 ERR_INFO);
         }
         else {
@@ -129,18 +107,14 @@ static int is_upstream_alive(
                 alive = *isAlive;
             }
             else {
-                struct rpc_err rpcErr;
-
-                clnt_geterr(clnt, &rpcErr);
-
-                alive = assume_alive(rpcErr.re_status, rpcErr.re_errno);
+                alive = 1;
 
                 err_log_and_free(
-                    ERR_NEW2(0, 
+                    ERR_NEW1(0,
                         ERR_NEW(0, NULL, clnt_errmsg(clnt)), 
                         "No IS_ALIVE reply from upstream LDM on %s; "
-                            "assuming sending LDM is %s",
-                        upName, alive ? "alive" : "dead"),
+                            "assuming sending LDM is alive",
+                        upName),
                     ERR_INFO);
             }
 
@@ -161,16 +135,17 @@ static int is_upstream_alive(
 #endif
 
 
-/*
- * On return, the socket might or might not be closed.
+/**
+ * Runs the downstream LDM server. On return, the socket might or might not be
+ * closed.
  *
- * Returns:
- *      NULL    Success.  as_shouldSwitch() is true.
- *      else    Error.  err_code() values:
- *                  REQ6_SYSTEM_ERROR
- *                      err_cause() will be system error.
- *                  REQ6_DISCONNECT (died or closed 
- *                      connection). err_cause() will be NULL.
+ * @retval NULL     Success.
+ * @return          Error object. err_code() values:
+ *                      REQ6_SYSTEM_ERROR   err_cause() will be the system error.
+ *                      REQ6_DISCONNECT     The upstream LDM closed the
+ *                                          connection. err_cause() will be NULL.
+ *                      REQ6_TIMED_OUT      The connection timed-out.
+ *                                          err_cause() will be NULL.
  */
 static ErrorObj*
 run_service(
@@ -184,7 +159,7 @@ run_service(
     pqueue                *const pq,
     const int              isPrimary)
 {
-    ErrorObj*    error = NULL;           /* success */
+    ErrorObj*   error = NULL; /* success */
     SVCXPRT*    xprt;
 
     assert(socket >= 0);
@@ -238,25 +213,24 @@ run_service(
                         (void)exitIfDone(0);
 
                         if (err == ETIMEDOUT) {
-                            if (ulogIsVerbose())
-                                uinfo("Connection from upstream LDM silent for "
-                                        "%d seconds", inactiveTimeout);
+                            uinfo("Connection from upstream LDM silent for "
+                                    "%u seconds", inactiveTimeout);
 
 #if ENABLE_IS_ALIVE
                             if (is_upstream_alive(upName, upAddr, upId)) {
-                                if (ulogIsVerbose())
-                                    uinfo("Upstream LDM is alive.  Waiting...");
+                                uinfo("Upstream LDM is alive.  Waiting...");
 
                                 continue;
                             }
 #endif
 
-                            error = ERR_NEW(REQ6_DISCONNECT, NULL,
-                                "Upstream LDM died");
+                            error = ERR_NEW1(REQ6_TIMED_OUT, NULL,
+                                "Upstream LDM died: pid=%u", upId);
                         }
                         else if (err != 0) {
-                            error = ERR_NEW(REQ6_DISCONNECT, NULL,
-                                "Connection to upstream LDM closed");
+                            error = ERR_NEW1(REQ6_DISCONNECT, NULL,
+                                "Connection to upstream LDM closed: pid=%u",
+                                upId);
                             /*
                              * The service-transport was destroyed by
                              * one_svc_run().
@@ -280,15 +254,26 @@ run_service(
 }
 
 
+/**
+ * Makes a request for data to an upstream LDM.
+ *
+ * @param upName        [in] The name of the host running the upstream LDM.
+ * @param prodClass     [in] The desired class of data-products.
+ * @param isPrimary     [in] Whether or not the transmission-mode should be
+ *                      primary or alternate.
+ * @param clnt          [in] The client-side handle to the upstream LDM.
+ * @param id            [out] The PID of the upstream LDM.
+ * @return              NULL on success; otherwise, the error-object.
+ */
 static ErrorObj*
 make_request(
-    const char* const                   upName,
-    const prod_class_t* const           prodClass,
-    const int                           isPrimary,
-    CLIENT* const                       clnt,
-    unsigned* const                     id)
+    const char* const           upName,
+    const prod_class_t* const   prodClass,
+    const int                   isPrimary,
+    CLIENT* const               clnt,
+    unsigned* const             id)
 {
-    ErrorObj*    errObj = NULL;          /* no error */
+    ErrorObj*   errObj = NULL; /* no error */
     int         finished = 0;
     feedpar_t   feedpar;
 
@@ -320,10 +305,7 @@ make_request(
             else {
                 if (feedmeReply->code == 0) {
                     unotice("Upstream LDM-6 on %s is willing to be %s feeder",
-                        upName,
-                        feedpar.max_hereis == UINT_MAX
-                            ? "a primary"
-                            : "an alternate");
+                        upName, isPrimary ? "a primary" : "an alternate");
 
                     *id = feedmeReply->fornme_reply_t_u.id;
                     errObj = NULL;
@@ -548,7 +530,7 @@ adjustByLastInfo(
  *                              exchange-mode should use HEREIS or
  *                              COMINGSOON/BLKDATA messages.
  * Returns:
- *      NULL                    Success.  as_shouldSwitch() is true.
+ *      NULL                    Success.  as_shouldSwitch() might be true.
  *      else                    Error.  err_code() values:
  *                                 REQ6_TIMED_OUT
  *                                      The connection timed-out.
@@ -582,8 +564,8 @@ req6_new(
     pqueue* const                       pq,
     const int                           isPrimary)
 {
-    prod_class_t* prodClass;
-    ErrorObj*    errObj = adjustByLastInfo(request, &prodClass);
+    prod_class_t*   prodClass;
+    ErrorObj*       errObj = adjustByLastInfo(request, &prodClass);
 
     assert(upName != NULL);
     assert(request != NULL);
@@ -602,11 +584,8 @@ req6_new(
         unotice("LDM-6 desired product-class: %s",
             s_prod_class(NULL, 0, prodClass));
 
-        errObj =
-            ldm_clnttcp_create_vers(upName, port, SIX, &clnt, &requestSocket,
-                &upAddr);
-
-        (void)exitIfDone(0);
+        errObj = ldm_clnttcp_create_vers(upName, port, SIX, &clnt,
+                &dataSocket, &upAddr);
 
         if (errObj) {
             switch (err_code(errObj)) {
@@ -626,19 +605,14 @@ req6_new(
                     errObj = ERR_NEW(REQ6_NO_CONNECT, errObj, NULL);
                     break;
 
-                case LDM_CLNT_SYSTEM_ERROR:
+                default: /* LDM_CLNT_SYSTEM_ERROR */
                     errObj = ERR_NEW(REQ6_SYSTEM_ERROR, errObj, NULL);
                     break;
-
-                case LDM_CLNT_DONE:
-                    err_free(errObj);
-                    errObj = NULL;
-                    break;
             }
-        }                               /* no connection */
+        } /* failed "ldm_clnttcp_create_vers()" */
         else {
             /*
-             * "clnt" and "requestSocket" have resources.
+             * "clnt" and "dataSocket" have resources.
              */
             unsigned    id;
 
@@ -648,55 +622,27 @@ req6_new(
             errObj = make_request(upName, prodClass, isPrimary, clnt, &id);
 
             if (!errObj) {
-                /*
-                 * Duplicate the socket to allow destruction of the client
-                 * handle.
-                 */
-                dataSocket = dup(requestSocket);
+                udebug("%s:%d: Calling run_service()", __FILE__, __LINE__);
 
-                if (-1 == dataSocket) {
-                    errObj = ERR_NEW1(REQ6_SYSTEM_ERROR,
-                        ERR_NEW(errno, NULL, strerror(errno)),
-                        "Couldn't duplicate socket %d", requestSocket);
-                }
-                else {
-                    auth_destroy(clnt->cl_auth);
-                    clnt_destroy(clnt);
-                    clnt = NULL;
-
-                    (void)close(requestSocket);
-                    requestSocket = -1;
-
-                    udebug("%s:%d: Calling run_service()",
-                        __FILE__, __LINE__);
-
-                    errObj = run_service(dataSocket, inactiveTimeout, upName,
-                            &upAddr, id, pqPathname, prodClass, pq, isPrimary);
-      
-                    (void)close(dataSocket);/* might be closed already */
-                    dataSocket = -1;
-                }                       /* socket duplicated */
-            }                           /* make_request() success */
+                errObj = run_service(dataSocket, inactiveTimeout, upName,
+                        &upAddr, id, pqPathname, prodClass, pq, isPrimary);
+            } /* successful "make_request()" */
 
             /*
              * Ensure release of client resources.
              */
-            if (NULL != clnt) {
-                auth_destroy(clnt->cl_auth);
-                clnt_destroy(clnt);
-            }
+            auth_destroy(clnt->cl_auth);
+            clnt_destroy(clnt);
 
             /*
              * Ensure release of socket resources.
              */
-            if (-1 != requestSocket) {
-                (void)close(requestSocket);
-                requestSocket = -1;
-            }
-        }                               /* ldm_clnttcp_create_vers() success */
+            (void)close(dataSocket); /* might already be closed */
+            dataSocket = -1;
+        } /* "clnt" and "requestSocket" allocated */
 
-        free_prod_class(prodClass);     /* NULL safe */
-    }                                   /* "prodClass" allocated */
+        free_prod_class(prodClass); /* NULL safe */
+    } /* "prodClass" allocated */
 
     return errObj;
 }
@@ -709,11 +655,6 @@ req6_new(
 void
 req6_close()
 {
-    if (requestSocket >= 0) {
-        (void)close(requestSocket);
-        requestSocket = -1;
-    }
-
     if (dataSocket >= 0) {
         (void)close(dataSocket);
         dataSocket = -1;

@@ -1,11 +1,12 @@
-/*
- *   Copyright 1994, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
- */
-/* $Id: binstats.c,v 1.12.8.1.2.3.2.3 2005/12/13 00:04:57 steve Exp $ */
-
-/* 
- *
+/**
+ *   Copyright 2013, University Corporation for Atmospheric Research
+ *   All rights reserved.
+ *   <p>
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
+ *   <p>
+ *   This file accumulates statistics for the rtstats(1) program and reports
+ *   them to an LDM server.
  */
 
 #include <config.h>
@@ -30,7 +31,7 @@
 #include "inetutil.h"
 #include "timestamp.h"
 
-extern int ldmsend_main(char *statsdata);
+extern int ldmsend_main(char *statsdata, const char* hostname);
 extern void ldmsend_clnt_destroy(void);
 
 #ifndef DEFAULT_INTERVAL
@@ -124,17 +125,21 @@ dump_statsbin(statsbin *sb)
 }
 
 
+/**
+ * Reports statistics to an LDM server.
+ *
+ * @param sb            [in] The statistics to be sent.
+ * @param myname        [in] The name of the local host.
+ */
 static void
-ldmsend_statsbin(statsbin *sb)
+ldmsend_statsbin(
+        statsbin*           sb,
+        const char* const   myname)
 {
         char buf[P_TIMET_LEN];
         char buf_a[P_TIMET_LEN];
         char stats_data[4096];
         int status;
-        static char myname[HOSTNAMESIZE] = "\0";
-
-        if ( myname[0] == '\0' )
-                (void) strcpy(myname, ghostname());
 
         if(sb->recent_a.tv_sec == -1) return;
 
@@ -152,7 +157,7 @@ ldmsend_statsbin(statsbin *sb)
                 s_time_abrv(sb->slowest_at),
                 PACKAGE_VERSION
         );
-        status = ldmsend_main(stats_data);
+        status = ldmsend_main(stats_data, myname);
         if ( status == 0 ) sb->needswrite = 0;
 }
 
@@ -464,8 +469,14 @@ binstats(const prod_info *infop,
 }
 
 
+/**
+ * Accumulates statistics and sends a report if the time is right.
+ *
+ * @param hostname      [in] The name of the local host.
+ */
 void
-syncbinstats(void)
+syncbinstats(
+        const char* const   hostname)
 {
         size_t ii;
         time_t tnow;
@@ -478,9 +489,10 @@ syncbinstats(void)
            {
            lastsent = tnow;
 
-           for(ii = 0; ii < nbins; ii++){
-               if(binList[ii]->needswrite) ldmsend_statsbin(binList[ii]);
-               }
+           for (ii = 0; ii < nbins; ii++) {
+               if (binList[ii]->needswrite)
+                   ldmsend_statsbin(binList[ii], hostname);
+           }
 
            /* Add a Random time offset from reporting interval so that
               sites contacting stats server don't converge to a single report time */

@@ -60,13 +60,13 @@ with the LDM and convert data into the forms required by various applications.
 LDMHOME=%{ldmhome}; export LDMHOME
 ./configure --prefix=%{ldmhome}/%{name}-%{version} --disable-root-actions \
     CC=%{?__cc}
-make
+DESTDIR=%{buildroot} make
 #make %%{?_smp_mflags}
 
 
 %install
 rm -rf %{buildroot}
-make install
+DESTDIR=%{buildroot} make install
 
 # Adjust pathnames in the LDM registry
 sed -e "s:%{ldmhome}:%{defhome}:g" \

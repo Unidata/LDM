@@ -173,8 +173,8 @@ typedef struct {
 
 
 static timestampt   s_prevCompTime;    /* time of previous computation */
-static unsigned     s_ldmCount = 0;    /* number of LDM-s receiving same data */
-static int          s_primary;         /* LDM uses HEREIS exclusively? */
+static unsigned     s_ldmCount = 1;    /* number of LDM-s receiving same data */
+static int          s_primary = 1;     /* LDM uses HEREIS exclusively? */
 static int          s_switch = 0;      /* LDM process should switch mode? */
 
 
@@ -198,7 +198,8 @@ static int          s_switch = 0;      /* LDM process should switch mode? */
 
 
 /**
- * Indicates whether or not this LDM process is in primary receive-mode.
+ * Indicates whether or not this LDM process is in primary receive-mode. The
+ * default is true.
  *
  * @retval 0    The LDM is not in primary mode
  * @retval 1    The LDM is in primary mode
@@ -208,7 +209,7 @@ static int          s_switch = 0;      /* LDM process should switch mode? */
 
 /**
  * Returns the number of LDM processes that are receiving the same data. The
- * number is initially 0.
+ * default is 1.
  *
  * @return      The number of LDM processes receiving the same data
  */
@@ -409,7 +410,6 @@ as_init(
  *                      product-queue
  * @param size          Size of the data-product in bytes
  * @retval 0            Success
- * @retval ENOSYS       "as_setLdmCount()" not yet called
  * @retval ENOMEM       Out of memory
  */
 int
@@ -417,9 +417,6 @@ as_process(
     const int           success,
     const size_t        size)
 {
-    if (s_getLdmCount() == 0)
-        return ENOSYS;
-
     if (s_getLdmCount() == 1)
         return 0;
 
@@ -429,7 +426,8 @@ as_process(
 
 /**
  * Indicates whether or not this LDM process should switch its data-product
- * receive-mode. Always returns 0 if "as_setLdmCount()" has not been called.
+ * receive-mode. Always returns 0 if "as_init()" and "as_setLdmCount()" have
+ * not been called.
  *
  * @retval 0       Don't switch
  * @retval 1       Do switch
@@ -438,9 +436,7 @@ int
 as_shouldSwitch(void)
 {
     return
-        (s_getLdmCount() == 0)             /* not a downstream LDM */
-            ? 0
-            : (s_getLdmCount() == 1)
+            (s_getLdmCount() == 1)
                 ? !s_isPrimary()
                 : s_getSwitch();
 }

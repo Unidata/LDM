@@ -9,7 +9,7 @@
 PQ_SUBDIR		= @PQ_SUBDIR@
 
 bin_PROGRAMS		= rtstats
-rtstats_SOURCES		= binstats.c filel.c ldmsend.c rtstats.c
+rtstats_SOURCES		= ldmsend.c binstats.c filel.c rtstats.c
 CPPFLAGS		= \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \

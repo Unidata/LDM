@@ -921,7 +921,7 @@ requester_exec(
             errCode = EXIT_FAILURE;
         }
         else while (!errCode && exitIfDone(0)) {
-            static unsigned sleepAmount = 0;
+            int doSleep = 1; /* default */
 
             /*
              * Ensure that the "from" time in the data-class isn't too
@@ -932,28 +932,13 @@ requester_exec(
             savedInfo_reset();
 
             /*
-             * Try LDM version 6.
+             * Try LDM version 6. Potentially lengthy operation.
              */
             errObj = req6_new(source, port, clssp, maxSilence, getQueuePath(),
                 pq, isPrimary);
-
             exitIfDone(0);
 
             if (!errObj) {
-                errCode = 0;
-
-                /*
-                 * as_shouldSwitch() must be true.  Switch data-product
-                 * transfer-mode.
-                 */
-                err_log_and_free(
-                    ERR_NEW1(0, NULL,
-                        "Switching data-product transfer-mode to %s",
-                            isPrimary
-                                ? "alternate"
-                                : "primary"),
-                    ERR_NOTICE);
-
                 /*
                  * NB: If the selection-criteria is modified at this point by
                  * taking into account the most-recently received data-product
@@ -963,41 +948,61 @@ requester_exec(
                  * Eastern and Western HQs (same data but disjoint sets).
                  */
 
-                isPrimary = !isPrimary;
-                sleepAmount = 0;        /* immediate retry */
-            }                           /* req6_new() success */
-            else {
-                errCode = err_code(errObj);
+                if (as_shouldSwitch()) {
+                    isPrimary = !isPrimary;
+                    doSleep = 0; /* reconnect immediately */
 
-                if (errCode == REQ6_TIMED_OUT) {
+                    LOG_ADD1("Switching data-product transfer-mode to %s",
+                                isPrimary ? "primary" : "alternate");
                     log_log(LOG_NOTICE);
-                    err_log(errObj, ERR_NOTICE);
-                    errCode = 0;
-                    sleepAmount = 0;
                 }
-                else if (errCode == REQ6_SYSTEM_ERROR) {
-                    log_log(LOG_ERR);
-                    errObj = ERR_NEW(0, errObj,
-                        "Terminating due to system failure");
-                    err_log(errObj, ERR_FAILURE);
-                    errCode = EXIT_FAILURE;
-                }
-                else if (errCode == REQ6_NOT_ALLOWED) {
-                    log_log(LOG_NOTICE);
-                    errObj = ERR_NEW(0, errObj,
-                        "Request not allowed. Does it overlap with another?");
-                    err_log(errObj, ERR_NOTICE);
-                    errCode = 0;
-                    sleepAmount = 2 * interval;
-                }
-                else if (errCode != REQ6_BAD_VERSION) {
-                    log_log(LOG_ERR);
-                    errObj = ERR_NEW(0, errObj,
-                        "Disconnecting due to LDM failure");
-                    err_log(errObj, ERR_FAILURE);
-                    errCode = 0;
-                }
+            } /* req6_new() success */
+            else {
+                int feedCode = err_code(errObj);
+
+                if (feedCode != REQ6_BAD_VERSION) {
+                    int             logLevel = LOG_ERR; /* default */
+                    enum err_level  errLevel = ERR_ERROR; /* default */
+
+                    if (feedCode == REQ6_UNKNOWN_HOST ||
+                            feedCode == REQ6_NO_CONNECT) {
+                        logLevel = LOG_WARNING;
+                        errLevel = ERR_WARNING;
+                    }
+                    else if (feedCode == REQ6_NOT_ALLOWED) {
+                        errObj = ERR_NEW(0, errObj,
+                            "Request not allowed. Does it overlap with another?");
+                    }
+                    else if (feedCode == REQ6_BAD_PATTERN ||
+                            feedCode == REQ6_BAD_RECLASS) {
+                    }
+                    else if (feedCode == REQ6_DISCONNECT) {
+                        logLevel = LOG_NOTICE;
+                        errLevel = ERR_NOTICE;
+                    }
+                    else if (feedCode == REQ6_TIMED_OUT) {
+                        logLevel = LOG_NOTICE;
+                        errLevel = ERR_NOTICE;
+                        doSleep = 0; /* reconnect immediately */
+                    }
+                    else if (feedCode == REQ6_SYSTEM_ERROR) {
+                        errObj = ERR_NEW(0, errObj,
+                            "Terminating due to system failure");
+                        errCode = EXIT_FAILURE; /* terminate */
+                    }
+                    else {
+                        errObj = ERR_NEW1(0, errObj,
+                            "Unexpected req6_new() return: %d", feedCode);
+                        errCode = EXIT_FAILURE; /* terminate */
+                    }
+
+                    log_log(logLevel);
+                    err_log(errObj, errLevel);
+                } /* don't need to try version 5 of the LDM */
                 else {
+                    /*
+                     * Try LDM version 5.
+                     */
                     log_log(LOG_NOTICE);
                     err_log(errObj, ERR_NOTICE);
                     free_remote_clss();
@@ -1007,77 +1012,65 @@ requester_exec(
                         errCode = EXIT_FAILURE;
                     }
                     else {
-                        /*
-                         * Try LDM version 5.
-                         */
+                        int             feedCode;
                         peer_info*      remote = get_remote();
 
-                        errCode = forn5(FEEDME, source, &remote->clssp,
+                        feedCode = forn5(FEEDME, source, &remote->clssp,
                             rpctimeo, inactive_timeo, ldmprog_5);
+                        exitIfDone(0);
 
-                        udebug("forn5(...) = %d", errCode);
+                        udebug("forn5(...) = %d", feedCode);
 
-                        if (errCode == ECONNABORTED) {
+                        if (feedCode == ECONNABORTED) {
                             unotice("Connection aborted");
-                            errCode = 0;
                         }
-                        else if (errCode == ECONNRESET) {
+                        else if (feedCode == ECONNRESET) {
                             unotice("Connection closed by upstream LDM");
-                            errCode = 0;
                         }
-                        else if (errCode == ETIMEDOUT) {
+                        else if (feedCode == ETIMEDOUT) {
                             unotice("Connection timed-out");
-                            sleepAmount = 0;
-                            errCode = 0;
+                            doSleep = 0; /* reconnect immediately */
                         }
-                        else if (errCode == ECONNREFUSED) {
+                        else if (feedCode == ECONNREFUSED) {
                             unotice("Connection refused");
-                            errCode = 0;
                         }
-                        else if (errCode != 0){
-                            uerror("Unexpected forn5() return: %d",
-                                errCode);
+                        else if (feedCode != 0){
+                            uerror("Unexpected forn5() return: %d", feedCode);
 
-                            errCode = EXIT_FAILURE;
+                            errCode = EXIT_FAILURE; /* terminate */
                         }
-                    }               /* remote product-class set */
-                }                   /* LDM-6 protocol not supported */
+                    } /* remote product-class set */
+                } /* LDM-6 protocol not supported */
 
                 log_clear();
                 err_free(errObj);
-            }                       /* req6_new() error */
+            } /* req6_new() error; "errObj" allocated */
 
-            if (!errCode && exitIfDone(0)) {
-                /*
-                 * Pause before reconnecting if appropriate.
-                 */
+            if (!errCode) {
+#if 0
                 if (savedInfo_wasSet()) {
                     savedInfo_reset();
-                    sleepAmount = 0;    /* immediate retry */
+                    sleepAmount = 0; /* got data => reconnect immediately */
                 }
-                if (0 == sleepAmount) {
-                    sleepAmount = 1;    /* for next time */
-                }
-                else {
-                    uinfo("Sleeping %d seconds before retrying...",
-                        sleepAmount);
+#endif
+
+                if (doSleep) {
+                    /*
+                     * Pause before reconnecting.
+                     */
+                    const unsigned  sleepAmount = 2*interval;
+
+                    uinfo("Sleeping %u seconds before retrying...", sleepAmount);
                     (void)sleep(sleepAmount);
+                    exitIfDone(0);
 
                     /*
-                     * Close any connection to the network host database
-                     * so that any name resolution starts from scratch next
-                     * time.  This allows DNS updates to have an effect on
-                     * a running downstream LDM.
+                     * Close any connection to the network host database so
+                     * that any name resolution starts from scratch. This
+                     * allows DNS updates to affect a running downstream LDM.
                      */
                     endhostent();
-
-                    /*
-                     * Golden ratio backoff for next time.
-                     */
-                    sleepAmount = (int)(1.618034 * sleepAmount + 0.5);
                 }
-                if (sleepAmount > interval)
-                    sleepAmount = interval;
             }                           /* no error and not done */
         }                               /* connection loop */
     }                                   /* savedInfo module initialized */

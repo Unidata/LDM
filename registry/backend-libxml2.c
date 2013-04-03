@@ -1,8 +1,10 @@
-/*
- * See file ../COPYRIGHT for copying and redistribution conditions.
- *
+/**
+ * Copyright 2013 University Corporation for Atmospheric Research. All rights
+ * reserved. See file COPYRIGHT in the top-level source-directory for copying
+ * and redistribution conditions.
+ * <p>
  * This module hides the decision on what database system to use.
- *
+ * <p>
  * This module implements the runtime database backend database API via the
  * "libxml2" library.
  */
@@ -247,8 +249,7 @@ fileFree(
 }
 
 /**
- * Deletes a file and frees the file structure. The file must be exclusively
- * locked.
+ * Deletes a file. The file must be exclusively locked.
  *
  * Arguments
  *      file            Pointer to the file.
@@ -275,7 +276,7 @@ fileDelete(
             status = EIO;
         }
         else {
-            status = fileFree(file);
+            status = 0;
         }
     }
 
@@ -304,15 +305,13 @@ static const char       DB_FILENAME[] = "registry.xml";
 static const char       REGISTRY_ELTNAME[] = "registry";
 
 /**
- * Returns the pathname of the XML file.
+ * Returns the pathname of the XML file given a directory pathname.
  *
- * Arguments
- *      dir             Pathname of the parent directory.
- *      path            Pathname of the XML file. Set upon return. User should
+ * @param dir           Pathname of the parent directory.
+ * @param path          Pathname of the XML file. Set upon return. User should
  *                      free when no longer needed.
- * Returns
- *      0               Success. "*path" is set.
- *      ENOMEM          Out-of-memory. "log_start()" called.
+ * @retval 0            Success. "*path" is set.
+ * @retval ENOMEM       Out-of-memory. "log_add()" called.
  */
 static RegStatus
 getXmlFilePath(
@@ -1003,8 +1002,7 @@ beRemove(
                 status = fileDelete(file);
             }
 
-            if (status)
-                fileFree(file);
+            fileFree(file);
         }                                       /* "file" allocated */
 
         free(path);

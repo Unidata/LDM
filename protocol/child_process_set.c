@@ -1,11 +1,10 @@
-/*
- *   Copyright 2011 University Corporation for Atmospheric Research
- *
- *   See file COPYRIGHT in the top-level source-directory for copying and
- *   redistribution conditions.
- */
-
-/* 
+/**
+ * Copyright 2013 University Corporation for Atmospheric Research
+ * All rights reserved
+ * <p>
+ * See file COPYRIGHT in the top-level source-directory for copying and
+ * redistribution conditions.
+ * <p>
  * This module implements a set of child process identifiers -- so the LDM
  * can respond to IS_ALIVE inquiries.
  */
@@ -41,9 +40,12 @@ static int compare(
 }
 
 
-/*
- * @return 0      if successful.
- * @return ENOMEM if out-of-memory.
+/**
+ * Adds a PID.
+ *
+ * @param pid       [in] The PID to be added.
+ * @retval 0        Success.
+ * @retval ENOMEM   Out-of-memory.
  */
 int
 cps_add(
@@ -55,9 +57,7 @@ cps_add(
         error = 0;
     }
     else {
-        pid_t *elt;
-
-        elt = (pid_t*)malloc(sizeof(pid_t));
+        pid_t *elt = malloc(sizeof(pid_t));
 
         if (elt == NULL) {
             error = ENOMEM;
@@ -72,44 +72,59 @@ cps_add(
                 ++count;
                 error = 0;
             }
-        }
-    }
+
+            if (error)
+                free(elt);
+        } /* "elt" allocated */
+    } /* "pid" doesn't exist */
 
     return error;
 }
 
 
+/**
+ * Ensures that a PID doesn't exist.
+ *
+ * @param pid       [in] The PID to not exist.
+ */
 void
 cps_remove(
     pid_t pid)
 {
-    if (root != NULL) {
-        void  *node = tfind(&pid, &root, compare);
+    void  *node = tfind(&pid, &root, compare);
 
-        if (node != NULL) {
-            pid_t *elt = *(pid_t**)node;
+    if (node != NULL) {
+        pid_t *elt = *(pid_t**)node;
 
-            (void)tdelete(&pid, &root, compare);
-            free(elt);
-            count--;
-        }
+        (void)tdelete(&pid, &root, compare);
+        free(elt);
+        count--;
     }
 }
 
 
+/**
+ * Indicates if a PID exists.
+ *
+ * @param pid       [in] The PID to check.
+ * @retval 0        The PID doesn't exist.
+ * @retval 1        The PID exists.
+ */
 int
 cps_contains(
     pid_t pid)
 {
-    return
-        root == NULL
-            ? 0
-            : tfind(&pid, &root, compare) != NULL;
+    return tfind(&pid, &root, compare) != NULL;
 }
 
 
+/**
+ * Returns the number of PID-s.
+ *
+ * @return The number of PID-s.
+ */
 unsigned
-cps_count()
+cps_count(void)
 {
     return count;
 }

@@ -1,5 +1,6 @@
 /*
- *   Copyright 2011, University Corporation for Atmospheric Research.
+ *   Copyright 2013, University Corporation for Atmospheric Research.
+ *   All rights reserved.
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
  */
@@ -93,9 +94,10 @@ int lpqGet(
                 }
                 else {
                     pqueue* pq;
+                    int     err = pq_open(pathname, PQ_DEFAULT, &pq);
 
-                    if (pq_open(pathname, PQ_DEFAULT, &pq) != 0) {
-                        LOG_SERROR1("Couldn't open product-queue \"%s\"",
+                    if (err) {
+                        LOG_ERRNUM1(err, "Couldn't open product-queue \"%s\"",
                                 pathname);
                         status = 3;
                     }

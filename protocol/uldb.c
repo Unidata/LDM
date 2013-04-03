@@ -225,15 +225,13 @@ static void eps_remove_prod_spec(
         const EntryProdSpec* const entryProdSpec,
         prod_spec* const prodSpec)
 {
-    if ((entryProdSpec->feedtype & prodSpec->feedtype)
-            && strcmp(entryProdSpec->pattern, prodSpec->pattern) == 0) {
+    if (strcmp(entryProdSpec->pattern, prodSpec->pattern) == 0)
         prodSpec->feedtype &= ~entryProdSpec->feedtype;
-    }
 }
 
 /**
- * Indicates if an entry's product-specification is a subset of a given
- * product-specification.
+ * Indicates if an entry's product-specification is a subset (proper or
+ * improper) of a given product-specification.
  *
  * @param eps       [in] The entry's product-specification
  * @param ps        [in] The given product-specification
@@ -376,8 +374,8 @@ static void epc_remove_prod_specs(
 }
 
 /**
- * Indicates if the subscription of an entry is a subset of a given
- * subscription. The time-limits of the subscriptions are ignored.
+ * Indicates if the subscription of an entry is a subset (proper or improper)
+ * of a given subscription. The time-limits of the subscriptions are ignored.
  *
  * @param entrySub      [in] Pointer to the entry's subscription
  * @param givenSub      [in] Pointer to the given subscription
@@ -566,8 +564,8 @@ static uldb_Status entry_getProdClass(
 }
 
 /**
- * Indicates if the subscription of an entry is a subset of a given
- * subscription. The time-limits of the subscriptions are ignored.
+ * Indicates if the subscription of an entry is a subset (proper or improper)
+ * of a given subscription. The time-limits of the subscriptions are ignored.
  *
  * @param entry         [in] Pointer to the entry
  * @param givenSub      [in] Pointer to the given subscription
@@ -593,6 +591,7 @@ static void entry_removeSubscriptionFrom(
         prod_class* const       sub)
 {
     epc_remove_prod_specs(&entry->prodClass, sub);
+    clss_scrunch(sub);
 }
 
 /**
@@ -1296,10 +1295,12 @@ static uldb_Status sm_addUpstreamLdm(
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host.
- * @retval ULDB_SUCCESS     Success
- * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
- * @retval ULDB_SYSTEM      System error. log_add() called.
+ *                      same host. Might specify an empty subscription. The
+ *                      client should free when it's no longer needed.
+ * @retval 0            Success. "*allowed" is set. Might specify an empty
+ *                      subscription.
+ * @retval ULDB_EXIST   Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_vetUpstreamLdm(
         SharedMemory* const sm,
@@ -1311,7 +1312,7 @@ static uldb_Status sm_vetUpstreamLdm(
         const prod_class* const desired,
         prod_class** const allowed)
 {
-    int status = 0;
+    int status = 0; /* success */
     const Segment* const segment = sm->segment;
     const uldb_Entry* entry;
     prod_class_t* allow = dup_prod_class(desired);
@@ -1336,18 +1337,18 @@ static uldb_Status sm_vetUpstreamLdm(
 
                     (void)entry_toString(entry, buf, sizeof(buf));
 
-                    LOG_ADD1("Terminating obsolete upstream LDM %s", buf);
-                    log_log(LOG_NOTICE);
-
                     if (kill(entry_getPid(entry), SIGTERM)) {
                         LOG_SERROR1("Couldn't terminate obsolete upstream LDM %s",
                             buf);
                         log_log(LOG_WARNING);
                     }
+                    else {
+                        LOG_ADD1("Terminated obsolete upstream LDM %s", buf);
+                        log_log(LOG_NOTICE);
+                    }
                 }
                 else {
                     entry_removeSubscriptionFrom(entry, allow);
-                    clss_scrunch(allow);
 
                     if (0 >= allow->psa.psa_len)
                         break;
@@ -1380,13 +1381,14 @@ static uldb_Status sm_vetUpstreamLdm(
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host.
- * @retval ULDB_SUCCESS     Success. If the resulting subscription is the empty
- *                          set, however, then the shared-memory will not have
- *                          been modified.
- * @retval ULDB_INIT        Module not initialized. log_add() called.
- * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
- * @retval ULDB_SYSTEM      System error. log_add() called.
+ *                      same host. Might specify an empty subscription. The
+ *                      client should free when it's no longer needed.
+ * @retval 0            Success. "*allowed" is set. If the resulting
+ *                      subscription is the empty set, however, then the
+ *                      shared-memory will not have been modified.
+ * @retval ULDB_INIT    Module not initialized. log_add() called.
+ * @retval ULDB_EXIST   Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_add(
         SharedMemory* const sm,
@@ -1398,16 +1400,26 @@ static uldb_Status sm_add(
         const prod_class* const desired,
         prod_class** const allowed)
 {
-    int status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier, isPrimary,
-            sockAddr, desired, allowed);
+    prod_class* sub;
+    int         status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier,
+            isPrimary, sockAddr, desired, &sub);
 
-    if (0 == status && 0 < (*allowed)->psa.psa_len) {
-        if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier,
-                isPrimary, sockAddr, *allowed)) {
-            LOG_ADD1("Couldn't add request from %s",
-                    inet_ntoa(sockAddr->sin_addr));
+    if (0 == status) {
+        if (0 < sub->psa.psa_len) {
+            if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier,
+                    isPrimary, sockAddr, sub)) {
+                LOG_ADD1("Couldn't add request from %s",
+                        inet_ntoa(sockAddr->sin_addr));
+            }
         }
-    }
+
+        if (status) {
+            free_prod_class(sub);
+        }
+        else {
+            *allowed = sub;
+        }
+    } /* "sub" allocated */
 
     return status;
 }
@@ -1917,7 +1929,7 @@ uldb_Status uldb_getSize(
 }
 
 /**
- * Adds an upstream LDM process to the database.
+ * Adds an upstream LDM process to the database, if appropriate.
  *
  * @param pid           [in] PID of upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
@@ -1925,20 +1937,21 @@ uldb_Status uldb_getSize(
  * @param desired       [in] The subscription desired by the downstream LDM
  * @param allowed       [out] The allowed subscription. Equal to the desired
  *                      subscription reduced by existing subscriptions from the
- *                      same host. Upon successful return, the client should
- *                      call "free_prod_class(*allowed)" when the allowed
+ *                      same host. Might specify an empty subscription. Upon
+ *                      successful return, the client should call
+ *                      "free_prod_class(*allowed)" when the allowed
  *                      subscription is no longer needed.
  * @param isNotifier    [in] Whether the upstream LDM is a notifier or a feeder
  * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
  *                      mode or not
- * @retval ULDB_SUCCESS     Success. The database is unmodified, however, if
- *                          the allowed subscription is the empty set. The
- *                          client should call "free_prod_class(*allowed)" when
- *                          the allowed subscription is no longer needed.
- * @retval ULDB_INIT        Module not initialized. log_add() called.
- * @retval ULDB_ARG         Invalid PID. log_add() called.
- * @retval ULDB_EXIST       Entry for PID already exists. log_add() called.
- * @retval ULDB_SYSTEM      System error. log_add() called.
+ * @retval 0            Success. "*allowed" is set. The database is unmodified,
+ *                      however, if the allowed subscription is the empty set.
+ *                      The client should call "free_prod_class(*allowed)" when
+ *                      the allowed subscription is no longer needed.
+ * @retval ULDB_INIT    Module not initialized. log_add() called.
+ * @retval ULDB_ARG     Invalid PID. log_add() called.
+ * @retval ULDB_EXIST   Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 uldb_Status uldb_addProcess(
         const pid_t pid,
@@ -1964,13 +1977,22 @@ uldb_Status uldb_addProcess(
                 LOG_ADD0("Couldn't lock database");
             }
             else {
+                prod_class* sub = NULL;
+
                 status = sm_add(&database.sharedMemory, pid, protoVers,
-                        isNotifier, isPrimary, sockAddr, desired, allowed);
+                        isNotifier, isPrimary, sockAddr, desired, &sub);
 
                 if (db_unlock(&database)) {
                     LOG_ADD0("Couldn't unlock database");
 
                     status = ULDB_SYSTEM;
+                }
+
+                if (status) {
+                    free_prod_class(sub); /* NULL safe */
+                }
+                else {
+                    *allowed = sub;
                 }
             } /* database is locked */
         } /* module is initialized */

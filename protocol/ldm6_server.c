@@ -172,24 +172,23 @@ separateProductClass(
  */
 static fornme_reply_t*
 feed_or_notify(
-    SVCXPRT* const xprt,
-    const prod_class_t* const want,
-    const int isNotifier,
-    const max_hereis_t maxHereis)
+    SVCXPRT* const              xprt,
+    const prod_class_t* const   want,
+    const int                   isNotifier,
+    const max_hereis_t          maxHereis)
 {
-    struct sockaddr_in downAddr = *svc_getcaller(xprt);
-    ErrorObj* errObj;
-    int status;
-    int sock;
-    char* downName = NULL;
-    prod_class_t* origSub = NULL;
-    prod_class_t* allowSub = NULL;
-    const signaturet* signature = NULL;
-    UpFilter* upFilter = NULL;
-    fornme_reply_t* reply = NULL;
-    int isPrimary;
-    static fornme_reply_t theReply;
-    static prod_class_t* uldbSub = NULL;
+    struct sockaddr_in      downAddr = *svc_getcaller(xprt);
+    ErrorObj*               errObj;
+    int                     status;
+    char*                   downName = NULL;
+    prod_class_t*           origSub = NULL;
+    prod_class_t*           allowSub = NULL;
+    const signaturet*       signature = NULL;
+    UpFilter*               upFilter = NULL;
+    fornme_reply_t*         reply = NULL;
+    int                     isPrimary;
+    static fornme_reply_t   theReply;
+    static prod_class_t*    uldbSub = NULL;
 
     /*
      * Clean-up from a (possibly) previous invocation
@@ -206,7 +205,6 @@ feed_or_notify(
                 hostbyaddr(&downAddr));
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
         goto return_or_exit;
     }
 
@@ -218,7 +216,6 @@ feed_or_notify(
     if (errObj = separateProductClass(want, &origSub, &signature)) {
         err_log_and_free(errObj, ERR_FAILURE);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_down_name;
     }
 
@@ -231,7 +228,6 @@ feed_or_notify(
         err_log_and_free(ERR_NEW(0, errObj,
                 "Couldn't get \"upstream\" filter"), ERR_FAILURE);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_orig_sub;
     }
     if (NULL == upFilter) {
@@ -253,7 +249,6 @@ feed_or_notify(
         LOG_SERROR0("Couldn't compute wanted/allowed product intersection");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_up_filter;
     }
     if (status == EINVAL) {
@@ -282,7 +277,6 @@ feed_or_notify(
         LOG_ADD0("Couldn't add this process to the upstream LDM database");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
         goto free_allow_sub;
     }
     (void) logIfReduced(allowSub, uldbSub, "existing subscriptions");
@@ -291,34 +285,30 @@ feed_or_notify(
      * Send a RECLASS reply to the downstream LDM if appropriate.
      */
     if (!clss_eq(origSub, uldbSub)) {
-        (void)uldb_remove(getpid()); /* maybe next time */
-
         theReply.code = RECLASS;
 
         if (0 < uldbSub->psa.psa_len) {
+            /*
+             * The downstream LDM is allowed less than it requested and was
+             * entered into the upstream LDM database.
+             */
+            (void)uldb_remove(getpid()); /* maybe next time */
+
             theReply.fornme_reply_t_u.prod_class = uldbSub;
         }
         else {
             /*
-             * The downstream LDM isn't allowed anything.
+             * The downstream LDM isn't allowed anything and wasn't entered
+             * into the upstream LDM database.
              */
             static prod_class noSub = { { 0, 0 }, /* TS_ZERO */
                 { 0, 0 }, /* TS_ZERO */ { 0, (prod_spec *) NULL } };
 
             theReply.fornme_reply_t_u.prod_class = &noSub;
-            done = 1; /* downstream will reconnect, so we need to exit */
         }
 
         reply = &theReply;
-        goto free_allow_sub;
-    }
 
-    sock = dup(xprt->xp_sock);
-    if (sock == -1) {
-        LOG_SERROR1("Couldn't duplicate socket %d", xprt->xp_sock);
-        log_log(LOG_ERR);
-        svcerr_systemerr(xprt);
-        done = 1;
         goto free_allow_sub;
     }
 
@@ -327,15 +317,13 @@ feed_or_notify(
      */
     theReply.code = OK;
     theReply.fornme_reply_t_u.id = (unsigned) getpid();
-    if (!svc_sendreply(xprt, (xdrproc_t) xdr_fornme_reply_t, (caddr_t) &reply)) {
+    if (!svc_sendreply(xprt, (xdrproc_t)xdr_fornme_reply_t,
+            (caddr_t)&theReply)) {
         LOG_ADD0("svc_sendreply(...) failure");
         log_log(LOG_ERR);
         svcerr_systemerr(xprt);
-        done = 1;
-        goto close_sock;
+        goto free_allow_sub;
     }
-
-    svc_destroy(xprt);
 
     /*
      * Wait a second before sending anything to the downstream LDM.
@@ -343,20 +331,18 @@ feed_or_notify(
     (void) sleep(1);
 
     status = isNotifier
-            ? up6_new_notifier(sock, downName, &downAddr, uldbSub,
+            ? up6_new_notifier(xprt->xp_sock, downName, &downAddr, uldbSub,
                     signature, getQueuePath(), interval, upFilter)
-            : up6_new_feeder(sock, downName, &downAddr, uldbSub,
+            : up6_new_feeder(xprt->xp_sock, downName, &downAddr, uldbSub,
                     signature, getQueuePath(), interval, upFilter,
                     isPrimary);
 
+    svc_destroy(xprt); /* closes the socket */
     exit(status);
 
     /*
      * Reply and error handling:
      */
-    close_sock:
-        (void)close(sock);
-
     free_allow_sub:
         free_prod_class(allowSub);
 

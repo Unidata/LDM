@@ -137,6 +137,14 @@ my_hiya_5(CLIENT *clnt, prod_class_t **clsspp)
         return 0;
 }
 
+/**
+ * Sends a HIYA message to an LDM-6 server.
+ *
+ * @param clnt          [in] The client-side handle.
+ * @param clsspp        [in] The class of data-products to be sent.
+ * @retval 0            Success.
+ * @retval ECONNABORTED Failure (for many possible reasons).
+ */
 static int
 my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
 {
@@ -294,8 +302,12 @@ send_product_5(
 }
 
 
-/*
- * Send a product to clnt using LDM-6 protocols.
+/**
+ * Sends a data-product to an LDM server using LDM-6 protocols.
+ *
+ * @param clnt      [in/out] The client-side handle.
+ * @param statsdata [in] The data portion of the data-product.
+ * @param infop     [in] The metadata portion of the data-product.
  */
 static void
 send_product_6(
@@ -368,6 +380,18 @@ send_product_6(
 }
 
 
+/**
+ * Sends a textual LDM data-product on an ONC RPC client handle.
+ *
+ * @param clnt          [in/out] The client handle.
+ * @param clssp         [in] The class of the data-product.
+ * @param origin        [in] The name of the host that created the data-product.
+ * @param seq_start     [in] The sequence number of the data-product.
+ * @param statsdata     [in] The data of the data-product.
+ * @retval 0            Success.
+ * @retval ENOMEM       Out-of-memory.
+ * @retval ECONNABORTED The transmission attempt failed for some reason.
+ */
 static int
 ldmsend(
     CLIENT*     clnt,
@@ -484,14 +508,26 @@ ldmsend(
     return status;
 }
 
-int ldmsend_main(char *statsdata)
+/**
+ * Sends textual data to an LDM server.
+ *
+ * @param statsdata     [in] The data to be sent.
+ * @param myname        [in] The name of the local host.
+ * @retval 0            Success.
+ * @retval -1           The LDM server couldn't be contacted. An error-message
+ *                      is logged.
+ * @retval ENOMEM       Out-of-memory.
+ * @retval ECONNABORTED The transmission attempt failed for some reason.
+ */
+int ldmsend_main(
+        char*               statsdata,
+        const char* const   myname)
 {
-    char         myname[HOSTNAMESIZE];
-    prod_class_t   clss;
-    prod_spec    spec;
-    static int   seq_start = 0;
-    int          status = 0;            /* success */
-    ErrorObj*     error;
+    prod_class_t    clss;
+    prod_spec       spec;
+    static int      seq_start = 0;
+    int             status = 0; /* success */
+    ErrorObj*       error;
     
     clss.from = TS_ZERO;
     clss.to = TS_ENDT;
@@ -499,8 +535,6 @@ int ldmsend_main(char *statsdata)
     clss.psa.psa_val = &spec;
     spec.feedtype = DEFAULT_FEEDTYPE;
     spec.pattern = ".*";
-
-    (void) strcpy(myname, ghostname());
 
     if (NULL == clnt) {
 
