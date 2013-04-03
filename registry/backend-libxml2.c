@@ -305,15 +305,13 @@ static const char       DB_FILENAME[] = "registry.xml";
 static const char       REGISTRY_ELTNAME[] = "registry";
 
 /**
- * Returns the pathname of the XML file.
+ * Returns the pathname of the XML file given a directory pathname.
  *
- * Arguments
- *      dir             Pathname of the parent directory.
- *      path            Pathname of the XML file. Set upon return. User should
+ * @param dir           Pathname of the parent directory.
+ * @param path          Pathname of the XML file. Set upon return. User should
  *                      free when no longer needed.
- * Returns
- *      0               Success. "*path" is set.
- *      ENOMEM          Out-of-memory. "log_start()" called.
+ * @retval 0            Success. "*path" is set.
+ * @retval ENOMEM       Out-of-memory. "log_add()" called.
  */
 static RegStatus
 getXmlFilePath(
