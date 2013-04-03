@@ -1,4 +1,4 @@
-6.11.4
+6.11.4 	2013-04-03 14:22:34-06:00
     Installation:
         Added $(DESTDIR) to "ensure-ldmhome-links" rule in the makefile.
 
