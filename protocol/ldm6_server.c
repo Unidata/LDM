@@ -231,8 +231,9 @@ feed_or_notify(
         goto free_orig_sub;
     }
     if (NULL == upFilter) {
-        err_log_and_free(ERR_NEW(0, NULL,
-                "Upstream filter prevents data-transfer"), ERR_FAILURE);
+        err_log_and_free(ERR_NEW1(0, NULL,
+                "Upstream filter prevents data-transfer: %s",
+                s_prod_class(NULL, 0, origSub)), ERR_FAILURE);
         svcerr_weakauth(xprt);
         goto free_orig_sub;
     }
