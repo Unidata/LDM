@@ -1,5 +1,7 @@
 /*
- * See file ../COPYRIGHT for copying and redistribution conditions.
+ * Copyright 2013 University Corporation for Atmospheric Research. All rights
+ * reserved. See file COPYRIGHT in the top-level source-directory for copying
+ * and redistribution conditions.
  */
 #include "config.h"
 
@@ -7,6 +9,7 @@
 #   define _XOPEN_SOURCE 500
 #endif
 
+#include <libgen.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
