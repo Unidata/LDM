@@ -1,0 +1,32 @@
+{
+   <CU_initialize_registry>
+   Memcheck:Leak
+   fun:malloc
+   fun:CU_create_new_registry
+   fun:CU_initialize_registry
+   ...
+}
+{
+   <CU_add_suite>
+   Memcheck:Leak
+   fun:malloc
+   fun:create_suite
+   fun:CU_add_suite
+   ...
+}
+{
+   <CU_add_test>
+   Memcheck:Leak
+   fun:malloc
+   fun:create_test
+   fun:CU_add_test
+   ...
+}
+{
+   <log_vadd>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:log_vadd
+   ...
+}

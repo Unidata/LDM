@@ -228,11 +228,16 @@ static pid_t spawn_upstream(
 
             free_prod_class(allowed);
 
-            status = uldb_remove(pid);
-            if (status) {
+            if (uldb_remove(pid)) {
                 LOG_ADD1("Couldn't remove upstream LDM process %d", pid);
                 log_log(LOG_ERR);
                 status = 3;
+            }
+
+            if (uldb_close()) {
+                LOG_ADD0("Couldn't close ULDB database");
+                log_log(LOG_ERR);
+                status = 4;
             }
         }
 
@@ -332,6 +337,7 @@ static pid_t set_uldb(
                 sizeof(*sockAddr)), 0);
         status = uldb_entry_getProdClass(entry, &allowed);
         CU_ASSERT_TRUE(clss_eq(&_clss_all, allowed));
+        free_prod_class(allowed);
     }
 
     uldb_iter_free(iter);

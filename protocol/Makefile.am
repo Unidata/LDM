@@ -211,7 +211,8 @@ testuldb_LDADD		= \
 TESTS			= test_data_prod testuldb
 
 valgrind:	testuldb
-	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./testuldb
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind -v \
+	    --suppressions=testuldb.supp --leak-check=full \
+	    --show-reachable=yes ./testuldb
 
 endif
