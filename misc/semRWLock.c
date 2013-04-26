@@ -325,8 +325,8 @@ srwl_Status srwl_delete(
         status = deleteSemSet(lock->semId);
 
         if (RWL_SUCCESS == status) {
-            free(lock);
             lock->isValid = NULL;
+            free(lock);
         }
     }
 
