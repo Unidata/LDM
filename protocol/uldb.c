@@ -141,6 +141,47 @@ static mode_t read_write;
  * Whether or not this module has been initialized.
  */
 static int moduleInitialized = 0;
+/**
+ * Signal set for critical sections.
+ */
+static sigset_t cs_blockedSigSet;
+
+/**
+ * Initializes the critical-section module.
+ */
+static void cs_init(void)
+{
+    (void)sigfillset(&cs_blockedSigSet);
+    (void)sigdelset(&cs_blockedSigSet, SIGABRT);
+    (void)sigdelset(&cs_blockedSigSet, SIGFPE);
+    (void)sigdelset(&cs_blockedSigSet, SIGILL);
+    (void)sigdelset(&cs_blockedSigSet, SIGSEGV);
+    (void)sigdelset(&cs_blockedSigSet, SIGBUS);
+}
+
+/**
+ * Enters a critical section.
+ *
+ * @param origSigSet    [out] Pointer to the place to store the original signal
+ *                      set.
+ */
+static void cs_enter(
+        sigset_t* const origSigSet)
+{
+    (void)pthread_sigmask(SIG_BLOCK, &cs_blockedSigSet, origSigSet);
+}
+
+/**
+ * Leaves a critical section.
+ *
+ * @param origSigSet    [in] Pointer to the original signal set given to the
+ *                      previous "cs_enter()".
+ */
+static void cs_leave(
+        const sigset_t* const   origSigSet)
+{
+    (void)pthread_sigmask(SIG_SETMASK, origSigSet, NULL);
+}
 
 /**
  * Returns the smallest multiple of a base value that is greater than or equal
@@ -160,7 +201,6 @@ static size_t roundUp(
  * Returns the alignment of a structure.
  *
  * @param size  The size of the structure as determined by "sizeof"
- * @retval 0    The alignment can't be found. log_add() called.
  * @return      The alignment parameter for the structure
  */
 static size_t getAlignment(
@@ -171,14 +211,8 @@ static size_t getAlignment(
             sizeof(short), sizeof(char), 0 };
 
     for (alignment = alignments; 0 != *alignment; alignment++) {
-        if ((size % *alignment) == 0) {
+        if ((size % *alignment) == 0)
             break;
-        }
-    }
-
-    if (0 == *alignment) {
-        LOG_ADD1("Couldn't determine alignment for %lu-byte structure",
-                (unsigned long)size);
     }
 
     return *alignment;
@@ -1614,47 +1648,24 @@ static uldb_Status db_unlock(
 
 /**
  * Ensures that this module is initialized.
- *
- * @retval ULDB_SUCCESS     Success
- * @retval ULDB_SYSTEM      System error. log_add() called.
  */
-static uldb_Status uldb_ensureModuleInitialized(
+static void uldb_ensureModuleInitialized(
         void)
 {
-    int status;
+    if (!moduleInitialized) {
+        mode_t um = umask(0);
 
-    if (moduleInitialized) {
-        status = ULDB_SUCCESS;
-    }
-    else {
+        umask(um);
+
+        read_only = 0444 & ~um;
+        read_write = 0666 & ~um;
         prodSpecAlignment = getAlignment(sizeof(EntryProdSpec));
+        entryAlignment = getAlignment(sizeof(uldb_Entry));
 
-        if (0 == prodSpecAlignment) {
-            LOG_ADD0(
-                    "Couldn't determine alignment of product-specification structure");
-            status = ULDB_SYSTEM;
-        }
-        else {
-            entryAlignment = getAlignment(sizeof(uldb_Entry));
+        cs_init();
 
-            if (0 == entryAlignment) {
-                LOG_ADD0("Couldn't determine alignment of entry structure");
-                status = ULDB_SYSTEM;
-            }
-            else {
-                mode_t um = umask(0);
-
-                umask(um);
-
-                read_only = 0444 & ~um;
-                read_write = 0666 & ~um;
-                moduleInitialized = 1;
-                status = ULDB_SUCCESS;
-            }
-        }
+        moduleInitialized = 1;
     }
-
-    return status;
 }
 
 /**
@@ -1709,12 +1720,11 @@ static uldb_Status uldb_init(
         const char* const path,
         key_t* const key)
 {
-    int status = uldb_ensureModuleInitialized();
+    int status;
 
-    if (status) {
-        LOG_ADD0("Couldn't initialize module");
-    }
-    else if (status = db_verifyClosed(&database)) {
+    uldb_ensureModuleInitialized();
+
+    if (status = db_verifyClosed(&database)) {
         LOG_ADD0("Database already open");
     }
     else if (status = uldb_getKey(path, key)) {
@@ -1808,25 +1818,22 @@ uldb_Status uldb_open(
 uldb_Status uldb_close(
         void)
 {
-    int status = uldb_ensureModuleInitialized();
+    int status;
+
+    uldb_ensureModuleInitialized();
+
+    status = db_verifyOpen(&database);
 
     if (status) {
-        LOG_ADD0("Couldn't initialize module");
+        LOG_ADD0("Database is not open");
+    }
+    else if (srwl_free(database.lock)) {
+        LOG_ADD0("Couldn't free lock component");
+        status = ULDB_SYSTEM;
     }
     else {
-        int status = db_verifyOpen(&database);
-
-        if (status) {
-            LOG_ADD0("Database is not open");
-        }
-        else if (srwl_free(database.lock)) {
-            LOG_ADD0("Couldn't free lock component");
-            status = ULDB_SYSTEM;
-        }
-        else {
-            database.lock = NULL;
-            database.validString = NULL;
-        }
+        database.lock = NULL;
+        database.validString = NULL;
     }
 
     return status;
@@ -1846,50 +1853,46 @@ uldb_Status uldb_close(
 uldb_Status uldb_delete(
         const char* const path)
 {
-    int status = uldb_ensureModuleInitialized();
+    int     status;
+    key_t   key;
+
+    uldb_ensureModuleInitialized();
+
+    status = uldb_getKey(path, &key);
 
     if (status) {
-        LOG_ADD0("Couldn't initialize module");
+        LOG_ADD0("Couldn't get IPC key for database");
     }
     else {
-        key_t key;
+        status = sm_deleteByKey(key);
 
-        status = uldb_getKey(path, &key);
-
-        if (status) {
-            LOG_ADD0("Couldn't get IPC key for database");
+        if (status && ULDB_EXIST != status) {
+            LOG_ADD0(
+                    "Couldn't delete existing shared-memory database by IPC key");
         }
         else {
-            status = sm_deleteByKey(key);
+            int lockStatus = srwl_deleteByKey(key);
 
-            if (status && ULDB_EXIST != status) {
-                LOG_ADD0(
-                        "Couldn't delete existing shared-memory database by IPC key");
-            }
-            else {
-                int lockStatus = srwl_deleteByKey(key);
+            if (status)
+                LOG_ADD0("Shared-memory database doesn't exist");
 
-                if (status)
-                    LOG_ADD0("Shared-memory database doesn't exist");
+            if (lockStatus) {
+                if (RWL_EXIST != lockStatus) {
+                    LOG_ADD0(
+                            "Couldn't delete existing semaphore-based read/write lock by IPC key");
 
-                if (lockStatus) {
-                    if (RWL_EXIST != lockStatus) {
-                        LOG_ADD0(
-                                "Couldn't delete existing semaphore-based read/write lock by IPC key");
+                    status = ULDB_SYSTEM;
+                }
+                else {
+                    LOG_ADD0(
+                            "Semaphore-based read/write lock doesn't exist");
 
-                        status = ULDB_SYSTEM;
-                    }
-                    else {
-                        LOG_ADD0(
-                                "Semaphore-based read/write lock doesn't exist");
-
-                        if (ULDB_SUCCESS == status)
-                            status = ULDB_EXIST;
-                    }
-                } /* couldn't delete lock */
-            } /* shared-memory deleted or doesn't exist */
-        } /* got IPC key */
-    } /* module initialized */
+                    if (ULDB_SUCCESS == status)
+                        status = ULDB_EXIST;
+                }
+            } /* couldn't delete lock */
+        } /* shared-memory deleted or doesn't exist */
+    } /* got IPC key */
 
     database.validString = NULL;
 
@@ -1907,29 +1910,28 @@ uldb_Status uldb_delete(
 uldb_Status uldb_getSize(
         unsigned* const size)
 {
-    int status = uldb_ensureModuleInitialized();
+    int status;
 
-    if (status) {
-        LOG_ADD0("Couldn't initialize module");
+    uldb_ensureModuleInitialized();
+
+    if (status = db_readLock(&database)) {
+        LOG_ADD0("Couldn't lock database for reading");
     }
     else {
-        if (status = db_readLock(&database)) {
-            LOG_ADD0("Couldn't lock database for reading");
-        }
-        else {
-            *size = sm_getSize(&database.sharedMemory);
+        *size = sm_getSize(&database.sharedMemory);
 
-            if (status = db_unlock(&database)) {
-                LOG_ADD0("Couldn't unlock database");
-            }
-        } /* database is locked */
-    }
+        if (status = db_unlock(&database)) {
+            LOG_ADD0("Couldn't unlock database");
+        }
+    } /* database is locked */
 
     return status;
 }
 
 /**
- * Adds an upstream LDM process to the database, if appropriate.
+ * Adds an upstream LDM process to the database, if appropriate. This is a
+ * potentially lengthy process. Most signals are blocked while this function
+ * operates.
  *
  * @param pid           [in] PID of upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
@@ -1969,40 +1971,43 @@ uldb_Status uldb_addProcess(
         status = ULDB_ARG;
     }
     else {
-        if (status = uldb_ensureModuleInitialized()) {
-            LOG_ADD0("Couldn't initialize module");
+        sigset_t    origSigSet;
+
+        uldb_ensureModuleInitialized();
+        cs_enter(&origSigSet);
+
+        if (status = db_writeLock(&database)) {
+            LOG_ADD0("Couldn't lock database");
         }
         else {
-            if (status = db_writeLock(&database)) {
-                LOG_ADD0("Couldn't lock database");
+            prod_class* sub = NULL;
+
+            status = sm_add(&database.sharedMemory, pid, protoVers,
+                    isNotifier, isPrimary, sockAddr, desired, &sub);
+
+            if (db_unlock(&database)) {
+                LOG_ADD0("Couldn't unlock database");
+
+                status = ULDB_SYSTEM;
+            }
+
+            if (status) {
+                free_prod_class(sub); /* NULL safe */
             }
             else {
-                prod_class* sub = NULL;
+                *allowed = sub;
+            }
+        } /* database is locked */
 
-                status = sm_add(&database.sharedMemory, pid, protoVers,
-                        isNotifier, isPrimary, sockAddr, desired, &sub);
-
-                if (db_unlock(&database)) {
-                    LOG_ADD0("Couldn't unlock database");
-
-                    status = ULDB_SYSTEM;
-                }
-
-                if (status) {
-                    free_prod_class(sub); /* NULL safe */
-                }
-                else {
-                    *allowed = sub;
-                }
-            } /* database is locked */
-        } /* module is initialized */
+        cs_leave(&origSigSet);
     } /* valid "pid" */
 
     return status;
 }
 
 /**
- * Removes an entry.
+ * Removes an entry. This is a potentially lengthy operation. Most signals
+ * are blocked while this function operates.
  *
  * @param pid                [in] PID of upstream LDM process
  * @retval ULDB_SUCCESS      Success. Corresponding entry found and removed.
@@ -2021,26 +2026,28 @@ uldb_Status uldb_remove(
         status = ULDB_ARG;
     }
     else {
-        if (status = uldb_ensureModuleInitialized()) {
-            LOG_ADD0("Couldn't initialize module");
+        sigset_t    origSigSet;
+
+        uldb_ensureModuleInitialized();
+        cs_enter(&origSigSet);
+
+        if (status = db_writeLock(&database)) {
+            LOG_ADD0("Couldn't lock database");
         }
         else {
-            if (status = db_writeLock(&database)) {
-                LOG_ADD0("Couldn't lock database");
+            if (status = sm_remove(&database.sharedMemory, pid)) {
+                LOG_ADD0("Couldn't remove process from database");
             }
-            else {
-                if (status = sm_remove(&database.sharedMemory, pid)) {
-                    LOG_ADD0("Couldn't remove process from database");
-                }
 
-                if (status = db_unlock(&database)) {
-                    LOG_ADD0("Couldn't unlock database");
+            if (status = db_unlock(&database)) {
+                LOG_ADD0("Couldn't unlock database");
 
-                    if (ULDB_SUCCESS == status)
-                        status = ULDB_SYSTEM;
-                }
-            } /* database is locked */
-        } /* module initialized */
+                if (ULDB_SUCCESS == status)
+                    status = ULDB_SYSTEM;
+            }
+        } /* database is locked */
+
+        cs_leave(&origSigSet);
     } /* valid "pid" */
 
     return status;
@@ -2062,47 +2069,43 @@ uldb_Status uldb_remove(
 uldb_Status uldb_getIterator(
         uldb_Iter** const iterator)
 {
-    int status = uldb_ensureModuleInitialized();
+    int         status;
+    size_t      nbytes = sizeof(uldb_Iter);
+    uldb_Iter*  iter = (uldb_Iter*) malloc(nbytes);
 
-    if (status) {
-        LOG_ADD0("Couldn't initialize module");
+    uldb_ensureModuleInitialized();
+
+    if (NULL == iter) {
+        LOG_SERROR1("Couldn't allocate %lu-bytes for iterator", nbytes);
+        status = ULDB_SYSTEM;
     }
     else {
-        size_t nbytes = sizeof(uldb_Iter);
-        uldb_Iter* iter = (uldb_Iter*) malloc(nbytes);
+        status = db_readLock(&database);
 
-        if (NULL == iter) {
-            LOG_SERROR1("Couldn't allocate %lu-bytes for iterator", nbytes);
-            status = ULDB_SYSTEM;
+        if (status) {
+            LOG_ADD0("Couldn't lock database");
         }
         else {
-            status = db_readLock(&database);
-
-            if (status) {
-                LOG_ADD0("Couldn't lock database");
+            if (status = seg_clone(database.sharedMemory.segment,
+                    &iter->segment)) {
+                LOG_ADD0("Couldn't copy database");
             }
             else {
-                if (status = seg_clone(database.sharedMemory.segment,
-                        &iter->segment)) {
-                    LOG_ADD0("Couldn't copy database");
-                }
-                else {
-                    iter->entry = NULL;
-                    *iterator = iter;
-                }
+                iter->entry = NULL;
+                *iterator = iter;
+            }
 
-                if (db_unlock(&database)) {
-                    LOG_ADD0("Couldn't unlock database");
+            if (db_unlock(&database)) {
+                LOG_ADD0("Couldn't unlock database");
 
-                    if (ULDB_SUCCESS == status)
-                        status = ULDB_SYSTEM;
-                }
-            } /* database is locked */
+                if (ULDB_SUCCESS == status)
+                    status = ULDB_SYSTEM;
+            }
+        } /* database is locked */
 
-            if (status)
-                free(iter);
-        } /* "iter" allocated */
-    } /* module initialized */
+        if (status)
+            free(iter);
+    } /* "iter" allocated */
 
     return status;
 }
