@@ -472,64 +472,57 @@ static void test_robustness(
      * error. On 2013-04-26 on Gilda, the limit was 465.
      */
 #define NCHILD 256
-    time_t      now;
-    int         ichild;
-    pid_t       pid;
-    int         status;
     unsigned    numChild = 0;
 
     clear();
 
-    for (ichild = 0; ichild < NCHILD; ichild++) {
-        pid = spawn_perf_upstream();
+    stop_time = time(NULL) + 5;
 
-        if (pid <= 0) {
-            LOG_ADD0("Couldn't spawn performance child");
-            log_log(LOG_ERR);
-            CU_ASSERT_TRUE(pid > 0);
-        }
-        else {
-            numChild++;
-        }
-    }
+    for (;;) {
+        int         status;
+        pid_t       pid;
+        int         done = time(NULL) >= stop_time;
+        int         didNothing = 1;
 
-    for (now = time(NULL), stop_time = now + 5; now < stop_time;
-            now = time(NULL)) {
-        int     spawned = 0;
-
-        while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-            CU_ASSERT_TRUE(WIFEXITED(status));
-            CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
-        }
-
-        CU_ASSERT_TRUE(pid != -1 || errno == ECHILD);
-
-        if (get_size() < NCHILD) {
+        if (!done && get_size() < NCHILD) {
             pid = spawn_perf_upstream();
 
             if (pid <= 0) {
                 LOG_ADD0("Couldn't spawn performance child");
                 log_log(LOG_ERR);
-                CU_ASSERT_TRUE(pid > 0);
+                CU_ASSERT_TRUE(0);
             }
             else {
                 numChild++;
+                didNothing = 0;
             }
-
-            spawned = 1;
         }
 
-        if (!spawned)
+        pid = waitpid(-1, &status, WNOHANG);
+        if (pid == -1) {
+            if (errno == ECHILD) {
+                /* No child processes left */
+                if (done) {
+                    LOG_ADD1("Number of spawned processes = %u", numChild);
+                    log_log(LOG_NOTICE);
+                    return;
+                }
+            }
+            else {
+                LOG_SERROR0("waitpid() failure");
+                log_log(LOG_ERR);
+                CU_ASSERT_TRUE(0);
+            }
+        }
+        else if (pid > 0) {
+            CU_ASSERT_TRUE(WIFEXITED(status));
+            CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
+            didNothing = 0;
+        }
+
+        if (didNothing)
             sleep(1);
     }
-
-    while ((pid = waitpid(-1, &status, 0)) > 0) {
-        CU_ASSERT_TRUE(WIFEXITED(status));
-        CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
-    }
-
-    LOG_ADD1("Number of spawned processes = %u", numChild);
-    log_log(LOG_NOTICE);
 }
 
 int main(
@@ -547,15 +540,17 @@ int main(
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
             if (NULL != testSuite) {
-                if (CU_ADD_TEST(testSuite, test_nil)
-                        && CU_ADD_TEST(testSuite, test_add_feeder)
-                        && CU_ADD_TEST(testSuite, test_add_same_feeder)
-                        && CU_ADD_TEST(testSuite, test_add_dup_feeder)
-                        && CU_ADD_TEST(testSuite, test_add_notifier)
-                        && CU_ADD_TEST(testSuite, test_add_same_notifier)
-                        && CU_ADD_TEST(testSuite, test_add_dup_notifier)
-                        && CU_ADD_TEST(testSuite, test_add_feeder_and_notifier)
-                        && CU_ADD_TEST(testSuite, test_robustness)) {
+                if (argc >= 2
+                        ? CU_ADD_TEST(testSuite, test_add_dup_feeder)
+                        : (CU_ADD_TEST(testSuite, test_nil) &&
+                           CU_ADD_TEST(testSuite, test_add_feeder) &&
+                           CU_ADD_TEST(testSuite, test_add_same_feeder) &&
+                           CU_ADD_TEST(testSuite, test_add_dup_feeder) &&
+                           CU_ADD_TEST(testSuite, test_add_notifier) &&
+                           CU_ADD_TEST(testSuite, test_add_same_notifier) &&
+                           CU_ADD_TEST(testSuite, test_add_dup_notifier) &&
+                           CU_ADD_TEST(testSuite, test_add_feeder_and_notifier) &&
+                           CU_ADD_TEST(testSuite, test_robustness))) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
                     exitCode = CU_get_error();
