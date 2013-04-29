@@ -50,7 +50,7 @@ const char* VALID_STRING = __FILE__;
  * Keep consonant with sm_getSizeofEntry().
  */
 typedef struct {
-    unsigned size; /* size of this structure in bytes */
+    size_t size; /* size of this structure in bytes */
     feedtypet feedtype; /* feedtype of the data-request */
     char pattern[1]; /* ERE pattern of the data-request */
 } EntryProdSpec;
@@ -62,16 +62,16 @@ typedef struct {
 typedef struct {
     timestampt from;
     timestampt to;
-    unsigned prodSpecsSize;
+    size_t prodSpecsSize; /* size, in bytes, of the product-specifications */
     EntryProdSpec prodSpecs[1];
 } EntryProdClass;
 
 /**
  * An entry.
- * Keep consonant with entry_getSizeofEntry().
+ * Keep consonant with entry_sizeof().
  */
 struct uldb_Entry {
-    unsigned size; /* size of this structure in bytes */
+    size_t size; /* size of this structure in bytes */
     struct sockaddr_in sockAddr;
     pid_t pid;
     int protoVers;
@@ -124,6 +124,10 @@ static Database database;
  * The alignment of an entry
  */
 static size_t entryAlignment;
+/**
+ * The alignment of an entry's product-class.
+ */
+static size_t prodClassAlignment;
 /**
  * The alignment of an entry's product-specification
  */
@@ -208,14 +212,14 @@ static size_t getAlignment(
 {
     size_t* alignment;
     static size_t alignments[] = { sizeof(double), sizeof(long), sizeof(int),
-            sizeof(short), sizeof(char), 0 };
+            sizeof(short), 1}; /* last one can't fail */
 
-    for (alignment = alignments; 0 != *alignment; alignment++) {
+    for (alignment = alignments;; alignment++) {
         if ((size % *alignment) == 0)
-            break;
+            return *alignment;
     }
 
-    return *alignment;
+    return 0;
 }
 
 /**
@@ -236,9 +240,10 @@ static int ipAddressesAreEqual(
 
 /**
  * Returns the size, in bytes, that a product-specification will occupy in an
- * entry.
+ * entry given the pattern that it will contain.
  *
- * @param pattern       [in] Pointer to the pattern of the product-specification
+ * @param pattern       [in] Pointer to the pattern that the
+ *                      product-specification will contain.
  * @return              The size, in bytes, of the corresponding
  *                      product-specification in an entry
  */
@@ -250,7 +255,41 @@ static size_t eps_sizeof(
 }
 
 /**
- * Removes an entry's product-specification from a given product-specification.
+ * Initializes an entry product-specification.
+ *
+ * @param eps           [in/out] Pointer to the entry product-specification to
+ *                      be initialized.
+ * @param feedtype      [in] The product-specification feedtype
+ *                      initialization-value.
+ * @param pattern       [in] The product-specification pattern
+ *                      initialization-value.
+ */
+static void eps_init(
+        EntryProdSpec* const    eps,
+        const feedtypet         feedtype,
+        const char* const       pattern)
+{
+    (void)strcpy(eps->pattern, pattern);
+    eps->feedtype = feedtype;
+    eps->size = eps_sizeof(pattern);
+}
+
+/**
+ * Returns a pointer to the next product-specification after a given one.
+ *
+ * @param prodSpec      [in] Pointer to the current product-specification.
+ * @return              Pointer to the next product-specification.
+ */
+static EntryProdSpec* eps_next(
+        const EntryProdSpec* const  prodSpec)
+{
+    return (EntryProdSpec*) ((char*)prodSpec + prodSpec->size);
+}
+
+/**
+ * Removes the feedtype of an entry's product-specification from a given
+ * product-specification if and only if the patterns of the two
+ * product-specifications are identical.
  *
  * @param entryProdSpec     [in] Pointer to a product-specification in an entry
  * @param prodSpec          [in/out] Pointer to the given product-specification
@@ -264,8 +303,9 @@ static void eps_remove_prod_spec(
 }
 
 /**
- * Indicates if an entry's product-specification is a subset (proper or
- * improper) of a given product-specification.
+ * Indicates if the patterns of two product-specifications are identical and if
+ * the feedtype of an entry's product-specification is a subset (proper or
+ * improper) of the feedtype of a given product-specification.
  *
  * @param eps       [in] The entry's product-specification
  * @param ps        [in] The given product-specification
@@ -281,17 +321,106 @@ static int eps_isSubsetOf(
 }
 
 /**
- * Returns the product-specification of an entry's product-specification.
+ * Returns the product-specification of an entry's product-specification. The
+ * product-specification is copied.
  *
- * @param eps       [in] Pointer to the entry's product-specification
- * @param ps        [out] Pointer to the product-specification
+ * @param eps           [in] Pointer to the entry's product-specification
+ * @param ps            [out] Pointer to the product-specification
+ * @retval 0            Success.
+ * @retval ULDB_SYSTEM  Failure. log_add() called.
  */
-static void eps_get(
-        EntryProdSpec* const eps,
-        prod_spec* const ps)
+static uldb_Status eps_get(
+        const EntryProdSpec* const  eps,
+        prod_spec* const            ps)
 {
-    ps->feedtype = eps->feedtype;
-    ps->pattern = eps->pattern;
+    prod_spec   tmp;
+
+    tmp.feedtype = eps->feedtype;
+    tmp.pattern = (char*)eps->pattern;
+
+    if (cp_prod_spec(ps, &tmp)) {
+        LOG_SERROR0("Couldn't copy product-specification");
+        return ULDB_SYSTEM;
+    }
+
+    return 0;
+}
+
+/**
+ * Returns the size, in bytes, of an entry product-class given the size, in
+ * bytes, of the product-specifications.
+ *
+ * @param epc           [in] Pointer to the entry product-class.
+ * @param prodSpecsSize [in] The size, in bytes, of the product-specifications.
+ * @return              The size, in bytes, of the entry product-class.
+ */
+static size_t epc_sizeof_internal(
+        const size_t    prodSpecsSize)
+{
+    return roundUp(sizeof(EntryProdClass) - sizeof(EntryProdSpec) +
+            prodSpecsSize, prodClassAlignment);
+}
+
+/**
+ * Returns the size, in bytes, of an entry product-class.
+ *
+ * @param epc       [in] Pointer to the entry product-class.
+ * @return          The size, in bytes, of the given entry product-class.
+ */
+static size_t epc_getSize(
+        const EntryProdClass* const epc)
+{
+    return epc_sizeof_internal(epc->prodSpecsSize);
+}
+
+/**
+ * Returns the size, in bytes, that an entry product-class will have given the
+ * product-class that it will contain.
+ *
+ * @param prodClass     [in] Pointer to the product-class.
+ * @return              The size, in bytes, of the entry product-class
+ *                      that will contain the given product-class.
+ */
+static size_t epc_sizeof(
+        const prod_class* const prodClass)
+{
+    const prod_spec*    prodSpec;
+    size_t              size = 0;
+
+    for (prodSpec = prodClass->psa.psa_val;
+            prodSpec < prodClass->psa.psa_val + prodClass->psa.psa_len;
+            prodSpec++) {
+        size += eps_sizeof(prodSpec->pattern);
+    }
+
+    return epc_sizeof_internal(size);
+}
+
+/**
+ * Initializes an entry product-class.
+ *
+ * @param epc           [in/out] Pointer to the entry product-class to be
+ *                      initialized.
+ * @param prodClass     [in] Pointer to the product-class to be mined for
+ *                      initialization values.
+ */
+static void epc_init(
+        EntryProdClass* const   epc,
+        const prod_class* const prodClass)
+{
+    EntryProdSpec*      eps = epc->prodSpecs;
+    const prod_spec*    prodSpec;
+
+    for (prodSpec = prodClass->psa.psa_val;
+            prodSpec < prodClass->psa.psa_val + prodClass->psa.psa_len;
+            prodSpec++) {
+        eps_init(eps, prodSpec->feedtype, prodSpec->pattern);
+        eps = eps_next(eps);
+    }
+
+    epc->from = prodClass->from;
+    epc->to = prodClass->to;
+    epc->prodSpecsSize = (size_t)((char*)eps - (char*)epc->prodSpecs);
 }
 
 /**
@@ -308,7 +437,7 @@ static const EntryProdSpec* epc_firstProdSpec(
 }
 
 /**
- * Returns a pointer to the next product-specification in a product-class
+ * Returns a pointer to the next product-specification or NULL.
  *
  * @param prodClass     [in] Pointer to the product-class
  * @param prodSpec      [in] Pointer to a product-specification in the
@@ -317,12 +446,11 @@ static const EntryProdSpec* epc_firstProdSpec(
  * @return              A pointer to the product-specification in the
  *                      product-class that's just after "prodSpec"
  */
-static const EntryProdSpec* epc_nextProdSpec(
+static EntryProdSpec* epc_nextProdSpec(
         const EntryProdClass* const prodClass,
         const EntryProdSpec* const prodSpec)
 {
-    EntryProdSpec* const nextProdSpec = (EntryProdSpec*) ((char*) prodSpec
-            + prodSpec->size);
+    EntryProdSpec* const nextProdSpec = eps_next(prodSpec);
 
     return ((char*) nextProdSpec
             < ((char*) prodClass->prodSpecs + prodClass->prodSpecsSize)) ?
@@ -343,7 +471,7 @@ static unsigned epc_numProdSpecs(
     const EntryProdSpec* prodSpec;
 
     for (prodSpec = epc_firstProdSpec(prodClass); NULL != prodSpec; prodSpec =
-            epc_nextProdSpec((EntryProdClass*) prodClass, prodSpec))
+            epc_nextProdSpec(prodClass, prodSpec))
         n++;
 
     return n;
@@ -385,7 +513,8 @@ static uldb_Status epc_getEverythingButProdSpecs(
 
 /**
  * Removes all product-specifications in an entry's subscription from a given
- * subscription. The time limits of the given subscription are not modified.
+ * subscription for all product-specifications for which the patterns are
+ * identical. The time limits of the given subscription are not modified.
  *
  * @param epc           [in] Pointer to an entry's product-class
  * @param givenSub      [in/out] The given subscription
@@ -441,28 +570,65 @@ static int epc_isSubsetOf(
 }
 
 /**
- * Returns the size that an entry will have.
+ * Returns the size of an entry, in bytes, given the size, in bytes, of its
+ * product-class.
  *
- * @param prodClass     [in] Data-request of the downstream LDM
- * @return              The size of the corresponding entry in bytes
+ * @param prodClassSize     [in] The size, in bytes, of the entry's
+ *                          product-class.
+ * @return                  The size, in bytes, of the corresponding entry.
  */
-static size_t entry_getSizeofEntry(
+static size_t entry_sizeof_internal(
+        const size_t    prodClassSize)
+{
+    return roundUp(sizeof(uldb_Entry) - sizeof(EntryProdClass) + prodClassSize,
+            entryAlignment);
+}
+
+/**
+ * Returns the size, in bytes, that an entry will have given the product-class
+ * that it will contain.
+ *
+ * @param prodClass     [in] Pointer to the product-class that the entry will
+ *                      contain.
+ * @return              The size, in bytes, of the corresponding entry.
+ */
+static size_t entry_sizeof(
         const prod_class* const prodClass)
 {
-    size_t size = sizeof(uldb_Entry);
-    const prod_spec* prodSpec = prodClass->psa.psa_val;
-    int i;
+    return entry_sizeof_internal(epc_sizeof(prodClass));
+}
 
-    for (i = 0; i < prodClass->psa.psa_len; i++) {
-        /*
-         * Keep consonant with type "EntryProdSpec" and sm_append().
-         */
-        size += eps_sizeof(prodSpec[i].pattern);
-    }
+/**
+ * Initializes an entry.
+ *
+ * @param entry             [in] Pointer to the entry.
+ * @param pid               [in] PID of the upstream LDM
+ * @param protoVers         [in] Protocol version number (e.g., 5 or 6)
+ * @param isNotifier        [in] Type of the upstream LDM
+ * @param isPrimary         [in] Whether the upstream LDM is in primary transfer
+ *                          mode or not
+ * @param sockAddr          [in] Socket Internet address of the downstream LDM
+ * @param prodClass         [in] Data-request of the downstream LDM
+ */
+static void entry_init(
+        uldb_Entry* const           entry,
+        const pid_t                 pid,
+        const int                   protoVers,
+        const int                   isNotifier,
+        const int                   isPrimary,
+        const struct sockaddr_in*   sockAddr,
+        const prod_class* const     prodClass)
+{
+    EntryProdClass* const   epc = &entry->prodClass;
 
-    size = roundUp(size, entryAlignment);
+    epc_init(epc, prodClass);
 
-    return size;
+    (void) memcpy(&entry->sockAddr, sockAddr, sizeof(*sockAddr));
+    entry->pid = pid;
+    entry->protoVers = protoVers;
+    entry->isNotifier = isNotifier;
+    entry->isPrimary = isPrimary;
+    entry->size = entry_sizeof_internal(epc_getSize(epc));
 }
 
 /**
@@ -575,13 +741,8 @@ static uldb_Status entry_getProdClass(
                 eps = epc_nextProdSpec(epc, eps)) {
             prod_spec prodSpec;
 
-            eps_get((EntryProdSpec*) eps, &prodSpec);
-
-            if (cp_prod_spec(ps, &prodSpec)) {
-                LOG_SERROR0("Couldn't copy product-specification");
-                status = ULDB_SYSTEM;
+            if (status = eps_get(eps, ps))
                 break;
-            }
 
             ps++;
         }
@@ -595,6 +756,18 @@ static uldb_Status entry_getProdClass(
     }
 
     return status;
+}
+
+/**
+ * Returns the size, in bytes, of an entry.
+ *
+ * @param entry         [in] Pointer to the entry.
+ * @return              The size, in bytes, of the entry.
+ */
+static size_t entry_getSize(
+        const uldb_Entry* const entry)
+{
+    return entry->size;
 }
 
 /**
@@ -1218,7 +1391,8 @@ static uldb_Status sm_ensureSpaceForEntry(
 }
 
 /**
- * Unconditionally appends an entry to the shared-memory segment.
+ * Unconditionally appends an entry to the shared-memory segment. The
+ * shared-memory segment must have sufficient room for the new entry.
  *
  * @param sm            [in/out] Pointer to the shared-memory structure
  * @param pid           [in] PID of the upstream LDM
@@ -1230,51 +1404,21 @@ static uldb_Status sm_ensureSpaceForEntry(
  * @param prodClass     [in] Data-request of the downstream LDM
  */
 static void sm_append(
-        SharedMemory* const sm,
-        const pid_t pid,
-        const int protoVers,
-        const int isNotifier,
-        const int isPrimary,
-        const struct sockaddr_in* sockAddr,
-        const prod_class* const prodClass)
+        SharedMemory* const         sm,
+        const pid_t                 pid,
+        const int                   protoVers,
+        const int                   isNotifier,
+        const int                   isPrimary,
+        const struct sockaddr_in*   sockAddr,
+        const prod_class* const     prodClass)
 {
-    size_t entrySize = sizeof(uldb_Entry);
-    Segment* const segment = sm->segment;
-    uldb_Entry* const entry = seg_tailEntry(segment);
-    EntryProdClass* const epc = &entry->prodClass;
-    EntryProdSpec* eps = epc->prodSpecs;
-    const prod_spec* prodSpec = prodClass->psa.psa_val;
-    unsigned numProdSpecs = prodClass->psa.psa_len;
-    size_t prodSpecsSize = 0;
-    unsigned i;
+    Segment* const      segment = sm->segment;
+    uldb_Entry* const   entry = seg_tailEntry(segment);
 
-    for (i = 0; i < numProdSpecs; i++) {
-        /*
-         * Keep consonant with type "EntryProdSpec" and entry_getSizeofEntry().
-         */
-        const prod_spec* const prodSpec = prodClass->psa.psa_val + i;
-        const char* const pattern = prodSpec->pattern;
-        size_t nbytes = eps_sizeof(pattern);
+    entry_init(entry, pid, protoVers, isNotifier, isPrimary, sockAddr,
+            prodClass);
 
-        eps->size = nbytes;
-        eps->feedtype = prodSpec->feedtype;
-        (void) strcpy(eps->pattern, pattern);
-        eps = (EntryProdSpec*) epc_nextProdSpec(epc, eps);
-        prodSpecsSize += nbytes;
-    }
-
-    entrySize = roundUp(entrySize + prodSpecsSize, entryAlignment);
-    entry->size = (unsigned) entrySize;
-    (void) memcpy(&entry->sockAddr, sockAddr, sizeof(*sockAddr));
-    entry->pid = pid;
-    entry->protoVers = protoVers;
-    entry->isNotifier = isNotifier;
-    entry->isPrimary = isPrimary;
-    entry->prodClass.from = prodClass->from;
-    entry->prodClass.to = prodClass->to;
-    entry->prodClass.prodSpecsSize = (unsigned) prodSpecsSize;
-
-    segment->entriesSize += entrySize;
+    segment->entriesSize += entry_getSize(entry);
     segment->numEntries++;
 }
 
@@ -1303,7 +1447,7 @@ static uldb_Status sm_addUpstreamLdm(
         const prod_class* const prodClass)
 {
     int status;
-    size_t size = entry_getSizeofEntry(prodClass);
+    size_t size = entry_sizeof(prodClass);
 
     if (status = sm_ensureSpaceForEntry(sm, size)) {
         LOG_ADD0("Couldn't ensure sufficient shared-memory");
@@ -1660,6 +1804,7 @@ static void uldb_ensureModuleInitialized(
         read_only = 0444 & ~um;
         read_write = 0666 & ~um;
         prodSpecAlignment = getAlignment(sizeof(EntryProdSpec));
+        prodClassAlignment = getAlignment(sizeof(EntryProdClass));
         entryAlignment = getAlignment(sizeof(uldb_Entry));
 
         cs_init();
