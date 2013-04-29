@@ -304,6 +304,14 @@ AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
 AM_COND_IF([HAVE_CUNIT], 
     [AC_MSG_NOTICE([CUNIT found.  Enabling unit-tests.])],
     [AC_MSG_NOTICE([CUNIT not found.  Disabling unit-tests.])])
+    
+# Check for the libxml2 header-files.
+AC_ARG_VAR([CPPFLAGS_LIBXML2],
+    [C preprocessor reference for libxml2 header-files (e.g., "-I/usr/local/libxml2")])
+AC_CHECK_FILE([/usr/include/libxml2],
+    [CPPFLAGS_LIBXML2=-I/usr/include/libxml2
+        AC_SUBST(CPPFLAGS_LIBXML2)],
+    [AC_MSG_ERROR([libxml2 header-files not found])])
 
 AC_SUBST(PATH)
 
@@ -540,8 +548,5 @@ AC_CONFIG_FILES([
 export CC
 
 AC_CONFIG_SUBDIRS([libpng])
-#AC_CONFIG_SUBDIRS([libxml2])
-
-(cd libxml2 && ./configure --prefix=$prefix --disable-ipv6 --without-c14n --without-catalog --without-debug --without-docbook --without-ftp --without-html --without-http --without-iconv --without-iso8859x --without-legacy --without-pattern --without-python --without-reader --without-readline --without-regexps --without-schemas --without-schematron --without-threads --without-valid --without-xinclude --without-xpath --without-xptr --without-zlib CC="$CC")
 
 AC_OUTPUT

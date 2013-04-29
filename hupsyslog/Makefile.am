@@ -9,5 +9,5 @@
 bin_PROGRAMS		= hupsyslog
 hupsyslog_LDADD		= \
   $(top_builddir)/lib/libldm.la \
-  $(top_builddir)/libxml2/libxml2.la \
+  -lxml2 \
   -lm

@@ -22,7 +22,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)
 LDADD			= \
     $(top_builddir)/lib/libldm.la \
-    $(top_builddir)/libxml2/libxml2.la \
+    -lxml2 \
     $(GDBMLIB) -lm
 dist_man1_MANS		= pqsurf.1
 TAGS_FILES		= \

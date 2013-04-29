@@ -30,7 +30,7 @@ TAGS_FILES              = \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/protocol/*.c \
-    $(top_srcdir)/libxml2/*.c \
+    -lxml2 \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 AM_CPPFLAGS		= \
@@ -38,10 +38,10 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
-    -I$(top_srcdir)/libxml2/include
+    -lxml2
 LDADD			= \
     $(top_builddir)/lib/libldm.la \
-    $(top_builddir)/libxml2/libxml2.la \
+    -lxml2 \
     $(LD_GEN)
 
 dist_man1_MANS		= regutil.1
@@ -113,12 +113,11 @@ testRegistry_CPPFLAGS	= \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/libxml2/include \
     @CPPFLAGS_CUNIT@
 
 testRegistry_LDADD		= \
     $(top_builddir)/lib/libldm.la \
-    $(top_builddir)/libxml2/libxml2.la \
+    -lxml2 \
     @LIBS_CUNIT@
 
 TESTS			= checkRegistry

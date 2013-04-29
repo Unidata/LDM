@@ -14,7 +14,7 @@ CPPFLAGS	= \
     -I$(top_srcdir)
 LDADD		= \
     ../lib/libldm.la \
-    ../libxml2/libxml2.la
+    -lxml2
 dist_man1_MANS	= feedme.1
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \

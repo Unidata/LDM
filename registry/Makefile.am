@@ -20,14 +20,13 @@ TAGS_FILES              = \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/protocol/*.c \
-    $(top_srcdir)/libxml2/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
-    -I$(top_srcdir)/libxml2/include
+    @CPPFLAGS_LIBXML2@
 
 if MAINTAINER
 backend.c:	backend-libxml2.c

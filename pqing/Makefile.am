@@ -39,7 +39,7 @@ pqing_LDADD		= \
     do_check.o \
     do_nocheck.o \
     $(top_builddir)/lib/libldm.la \
-    $(top_builddir)/libxml2/libxml2.la \
+    -lxml2 \
     -lm
 dist_man1_MANS		= pqing.1
 TAGS_FILES		= \

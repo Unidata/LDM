@@ -17,7 +17,7 @@ CPPFLAGS	= \
     -I$(top_srcdir)
 LDADD		= \
     $(top_builddir)/lib/libldm.la \
-    $(top_builddir)/libxml2/libxml2.la \
+    -lxml2 \
     -lm
 TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \

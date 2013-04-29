@@ -193,7 +193,7 @@ test_data_prod_CPPFLAGS	= \
 
 test_data_prod_LDADD		= \
     $(top_builddir)/lib/libldm.la \
-    $(top_builddir)/libxml2/libxml2.la \
+    -lxml2 \
     @LIBS_CUNIT@
     
 testuldb_CPPFLAGS	= \
@@ -205,7 +205,7 @@ testuldb_CPPFLAGS	= \
 
 testuldb_LDADD		= \
     $(top_builddir)/lib/libldm.la \
-    $(top_builddir)/libxml2/libxml2.la \
+    -lxml2 \
     @LIBS_CUNIT@
 
 TESTS			= test_data_prod testuldb

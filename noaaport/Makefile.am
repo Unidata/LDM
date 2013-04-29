@@ -90,7 +90,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	reader.c reader.h
 
 LDADD 			= \
-      $(top_builddir)/lib/libldm.la $(top_builddir)/libxml2/libxml2.la
+      $(top_builddir)/lib/libldm.la -lxml2
 
 TAGS_FILES		= \
 	*.c *.h \

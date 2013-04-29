@@ -19,7 +19,6 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 
 LIB_SUBDIRS	= \
-    libxml2 \
     rpc \
     ulog \
     misc \

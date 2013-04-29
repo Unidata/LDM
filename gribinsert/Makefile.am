@@ -21,8 +21,7 @@ CPPFLAGS		= \
 	-I$(top_srcdir) \
 	@CPPFLAGS@
 
-LDADD 			= \
-      $(top_builddir)/lib/libldm.la $(top_builddir)/libxml2/libxml2.la
+LDADD 			= $(top_builddir)/lib/libldm.la -lxml2
 
 check:			$(bin_PROGRAMS)
 	test -f /tmp/test.pq || pqcreate -s 2m /tmp/test.pq
