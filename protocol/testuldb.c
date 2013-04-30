@@ -463,20 +463,22 @@ static void test_add_feeder_and_notifier(void)
     log_log(LOG_ERR);
 }
 
-static void test_robustness(
-        void)
+/**
+ * @param nchild        [in] The number of child processes. Too large a value
+ *                      will bump into the {CHILD_MAX} limit (1024 on Gilda on
+ *                      2013-04-26), resulting in an EAGAIN error. On
+ *                      2013-04-26 on Gilda, the limit was 465.
+ * @param duration      [in] How long, in seconds, to run the test.
+ */
+static void test_random(
+        const unsigned  nchild,
+        const unsigned  duration)
 {
-    /*
-     * The number of child processes. Too large a value will bump into the
-     * {CHILD_MAX} limit (1024 on Gilda on 2013-04-26), resulting in an EAGAIN
-     * error. On 2013-04-26 on Gilda, the limit was 465.
-     */
-#define NCHILD 256
     unsigned    numChild = 0;
 
     clear();
 
-    stop_time = time(NULL) + 5;
+    stop_time = time(NULL) + duration;
 
     for (;;) {
         int         status;
@@ -484,7 +486,7 @@ static void test_robustness(
         int         done = time(NULL) >= stop_time;
         int         didNothing = 1;
 
-        if (!done && get_size() < NCHILD) {
+        if (!done && get_size() < nchild) {
             pid = spawn_perf_upstream();
 
             if (pid <= 0) {
@@ -525,6 +527,17 @@ static void test_robustness(
     }
 }
 
+static void test_robustness(void)
+{
+    test_random(256, 5);
+}
+
+static void test_valgrind(
+        void)
+{
+    test_random(5, 1);
+}
+
 int main(
         const int argc,
         const char* const * argv)
@@ -541,7 +554,7 @@ int main(
 
             if (NULL != testSuite) {
                 if (argc >= 2
-                        ? CU_ADD_TEST(testSuite, test_add_dup_feeder)
+                        ? CU_ADD_TEST(testSuite, test_valgrind)
                         : (CU_ADD_TEST(testSuite, test_nil) &&
                            CU_ADD_TEST(testSuite, test_add_feeder) &&
                            CU_ADD_TEST(testSuite, test_add_same_feeder) &&
