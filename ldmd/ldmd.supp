@@ -1,0 +1,233 @@
+{
+   <bash wrapper>
+   Memcheck:Leak
+   ...
+   obj:/bin/bash
+   ...
+}
+{
+   <because svc_unregister() fails>
+   Memcheck:Leak
+   fun:malloc
+   fun:my_svc_register
+   fun:run_service
+   fun:req6_new
+   ...
+}
+{
+   <scanner yyensure_buffer_stack>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:yyensure_buffer_stack
+   fun:yy_switch_to_buffer
+   fun:scannerPush
+   fun:read_conf
+   fun:main
+}
+{
+   <leftover EXEC entry>
+   Memcheck:Leak
+   fun:malloc
+   fun:proc_new
+   fun:exec_add
+   fun:yyparse
+   fun:read_conf
+   fun:main
+}
+{
+   <leftover prod_class in subEntry_startRequester()>
+   Memcheck:Leak
+   fun:malloc
+   fun:new_prod_class
+   fun:subEntry_startRequester
+   ...
+}
+{
+   <leftover downstream requester>
+   Memcheck:Leak
+   fun:malloc
+   fun:requester_new
+   fun:requester_add
+   fun:subEntry_startRequester
+   fun:subs_startRequesters
+   fun:invert_request_acl
+   fun:read_conf
+   fun:main
+}
+{
+   <leftover buffer in signature prod_class>
+   Memcheck:Leak
+   fun:malloc
+   fun:newSigClass
+   fun:adjustByLastInfo
+   fun:req6_new
+   ...
+}
+{
+   <interrupted downstream xdr_product>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:xdr_product
+   ...
+   fun:one_svc_run
+   ...
+   fun:req6_new
+   ...
+}
+{
+   <singleton authnone instance>
+   Memcheck:Leak
+   fun:calloc
+   fun:my_authnone_create
+   ...
+}
+{
+   <EXEC word expansion>
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   fun:wordexp
+   fun:yyparse
+   fun:read_conf
+   fun:main
+}
+{
+   <leftover prod_class in req6_new>
+   Memcheck:Leak
+   fun:malloc
+   fun:new_prod_class
+   fun:newSigClass
+   fun:adjustByLastInfo
+   fun:req6_new
+   ...
+}
+{
+   <leftover host-id in requester>
+   Memcheck:Leak
+   fun:malloc
+   fun:strdup
+   fun:requester_new
+   fun:requester_add
+   fun:subEntry_startRequester
+   fun:subs_startRequesters
+   fun:invert_request_acl
+   fun:read_conf
+   fun:main
+}
+{
+   <leftover pattern copy in requester>
+   Memcheck:Leak
+   fun:malloc
+   fun:strdup
+   fun:subEntry_startRequester
+   fun:subs_startRequesters
+   fun:invert_request_acl
+   fun:read_conf
+   fun:main
+}
+{
+   <leftover subEntry_startRequester stuff>
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   fun:regcomp
+   fun:subEntry_startRequester
+   ...
+}
+{
+   <leftover prod_class copy in req6_new>
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   fun:cp_prod_class
+   ...
+   fun:req6_new
+   ...
+}
+{
+   <downstream XDR buffer>
+   Memcheck:Leak
+   fun:malloc
+   fun:xd_getBuffer
+   ...
+   fun:req6_new
+   ...
+}
+{
+   <libxml2>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:parseXmlFile
+   ...
+}
+{
+   <leftover client stuff in req6_new 1>
+   Memcheck:Leak
+   fun:calloc
+   fun:my_authnone_create
+   fun:my_clnttcp_create
+   fun:local_portmapper_running
+   fun:create_ldm_tcp_svc
+   fun:main
+}
+{
+   <leftover client stuff in req6_new 2>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:my_clnttcp_create
+   fun:ldm_clnt_tcp_create
+   fun:ldm_clnttcp_create_vers
+   fun:req6_new
+   ...
+}
+
+{
+   <savedInfo-buffer>
+   Memcheck:Leak
+   fun:malloc
+   fun:pi_new
+   fun:pi_clone
+   fun:savedInfo_set
+   fun:initSavedInfo
+   ...
+}
+{
+   <autoshift-list>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:s_process
+   fun:as_process
+   ...
+}
+{
+   <log_vadd>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:log_vadd
+   ...
+}
+{
+   <svcfd_create>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:makefd_xprt
+   fun:my_svcfd_create
+   ...
+}
+{
+   <xd_getBuffer>
+   Memcheck:Leak
+   fun:malloc
+   fun:xd_getBuffer
+   fun:xdr_product
+   ...
+}
+
+
