@@ -1438,17 +1438,177 @@ sub_equal(
 
 
 /******************************************************************************
+ * Request Module
+ *
+ * A request contains a subscription and information on the source of the
+ * request (configuration-file pathname and line number). A request is also a
+ * member of a linked-list.
+ *****************************************************************************/
+
+typedef struct request {
+    struct request*     next;
+    Subscription*       subscription;
+    const Source*       source;
+} Request;
+
+/**
+ * Returns a new, uninitialized request object. The request is not a member of
+ * any list.
+ *
+ * @retval NULL     Failure. log_add() called.
+ * @return          A new, uninitialized request.
+ */
+static Request* req_alloc()
+{
+    static size_t   nbytes = sizeof(Request);
+    Request*        req = malloc(nbytes);
+
+    if (req == NULL) {
+        LOG_ADD1("Couldn't allocate %lu bytes for a new request object", nbytes);
+    }
+    else {
+        req->subscription = NULL;
+        req->source = NULL;
+        req->next = NULL;
+    }
+
+    return req;
+}
+
+/**
+ * Initializes a request.
+ *
+ * @param req           [in/out] Pointer to the request to be initialized.
+ * @param sub           [in] Pointer to the subscription. Copied.
+ * @param source        [in] Pointer to the source information. Copied.
+ * @param next          [in] Pointer to the next request in the linked-list or
+ *                      NULL.
+ * @retval 0            Success.
+ * @retval -1           Failure. log_add() called.
+ */
+static int req_init(
+    Request* const              req,
+    const Subscription* const   sub,
+    const Source* const         source,
+    const Request* const        next)
+{
+    Subscription*   subClone = sub_clone(sub);
+
+    if (subClone != NULL) {
+        const Source* sourceClone = source_clone(source);
+
+        if (sourceClone != NULL) {
+            req->subscription = subClone;
+            req->source = sourceClone;
+            req->next = next;
+
+            return 0;
+        } /* "sourceClone" allocated */
+
+        sub_free(subClone);
+    } /* "subClone" allocated */
+
+    return -1;
+}
+
+/**
+ * Frees a request.
+ *
+ * @param req       [in] Pointer to the request to be freed or NULL.
+ */
+static void req_free(
+        Request* const  req)
+{
+    if (req != NULL) {
+        if (req->subscription != NULL) {
+            sub_free(req->subscription);
+            req->subscription = NULL;
+        }
+
+        if (req->source != NULL) {
+            source_free(req->source);
+            req->source = NULL;
+        }
+
+        req->next = NULL;
+
+        free(req);
+    }
+}
+
+/**
+ * Creates a new request object.
+ *
+ * @param sub           [in] Pointer to the subscription. Copied.
+ * @param source        [in] Pointer to the source information. Copied.
+ * @param next          [in] Pointer to the next request in the linked-list or
+ *                      NULL.
+ * @retval 0            Success.
+ * @retval -1           Failure. log_add() called.
+ */
+static int req_new(
+    const Subscription* const   sub,
+    const Source* const         source,
+    Request* const              next)
+{
+    Request*    request = req_alloc();
+
+    if (request != NULL) {
+        if (req_init(request, sub, source, next)) {
+            req_free(request);
+            request = NULL;
+        }
+    }
+
+    return request;
+}
+
+/**
+ * Returns the subscription of a request.
+ *
+ * @param request       [in] Pointer to the request.
+ * @return              The request's subscription.
+ */
+static const Subscription* req_getSubscription(
+        const Request* const    request)
+{
+    return request->subscription;
+}
+
+/**
+ * Returns the source of a request.
+ *
+ * @param request       [in] Pointer to the request.
+ * @return              The request's source.
+ */
+static const Source* req_getSource(
+        const Request* const    request)
+{
+    return request->source;
+}
+
+/**
+ * Returns the next request in the linked-list.
+ *
+ * @param request       [in] Pointer to the request just before the request to
+ *                      be returned.
+ * @retval NULL         No more requests.
+ * @return              Pointer to the next request.
+ */
+static Request* req_getNext(
+        Request* const  request)
+{
+    return request->next;
+}
+
+/******************************************************************************
  * Server-Information Entry Module
  *****************************************************************************/
 
 struct serverEntry {
     struct serverEntry* next;
     const ServerInfo*   serverInfo;
-    struct request {
-        struct request*     next;
-        Subscription*       subscription;
-        const Source*       source;
-    }*                  requests;
+    Request*            requests;
 };
 typedef struct serverEntry    ServerEntry;
 
@@ -1498,8 +1658,13 @@ serverEntry_free(
 {
     struct request*  request;
 
-    for (request = entry->requests; request != NULL; request = request->next)
-        sub_free(request->subscription);
+    for (request = entry->requests; request != NULL;) {
+        Request*    next = req_getNext(request);
+
+        req_free(request);
+
+        request = next;
+    }
 
     serverInfo_free(entry->serverInfo);
     free(entry);
@@ -1541,8 +1706,8 @@ serverEntry_reduceSub(
     if (origSub != NULL) {
         struct request* req;
 
-        for (req = entry->requests; req != NULL; req = req->next) {
-            const Subscription* const   entrySub = req->subscription;
+        for (req = entry->requests; req != NULL; req = req_getNext(req)) {
+            const Subscription* const   entrySub = req_getSubscription(req);
 
             if (sub_remove(sub, entrySub)) {
                 char    buf[1024];
@@ -1552,7 +1717,7 @@ serverEntry_reduceSub(
                 source_toString_r(source, srcBuf, sizeof(srcBuf));
                 LOG_ADD4("Subscription %s at %s overlaps subscription %s at %s",
                         buf, srcBuf, sub_toString(entrySub),
-                        source_toString(req->source));
+                        source_toString(req_getSource(req)));
             }
         }
 
@@ -1587,43 +1752,26 @@ serverEntry_add(
         Subscription* const sub,
         const Source* const source)
 {
+    int     status = -1; /* failure */
+
     if (serverEntry_reduceSub(entry, sub, source)) {
         LOG_ADD0("Couldn't reduce subscription by previous subscriptions");
     }
     else {
-        Subscription*   subClone;
+        if (sub_isEmpty(sub)) {
+            status = 0;
+        }
+        else {
+            Request*    request = req_new(sub, source, entry->requests);
 
-        if (sub_isEmpty(sub))
-            return 0;
-
-        subClone = sub_clone(sub);
-
-        if (subClone != NULL) {
-            const Source* sourceClone = source_clone(source);
-
-            if (sourceClone != NULL) {
-                struct request* req = malloc(sizeof(struct request));
-
-                if (req == NULL) {
-                    LOG_SERROR0("Couldn't allocate request object");
-                }
-                else {
-                    req->subscription = subClone;
-                    req->source = sourceClone;
-                    req->next = entry->requests;
-                    entry->requests = req;
-
-                    return 0;
-                } /* "req" allocated */
-
-                source_free(sourceClone);
-            } /* "sourceClone" allocated */
-
-            sub_free(subClone);
-        } /* "subClone" allocated */
+            if (request != NULL) {
+                entry->requests = request;
+                status = 0;
+            }
+        }
     } /* subscription successfully reduced */
 
-    return -1;
+    return status;
 }
 
 
