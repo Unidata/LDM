@@ -244,6 +244,12 @@ run_service(
 
                 down6_destroy();
             }                           /* down6 module initialized */
+
+            /*
+             * svc_unregister(LDMPROG, SIX) should be called here, but it fails
+             * for some reason having to do with the portmapper (insufficient
+             * authority?).
+             */
         }                               /* RPC service registered */
 
         if (destroyTransport)
@@ -405,9 +411,9 @@ make_request(
  */
 static ErrorObj*
 newSigClass(
-    const prod_class_t* const     protoClass,
+    const prod_class_t* const   protoClass,
     const prod_info* const      info,
-    prod_class_t** const          newClass)
+    prod_class_t** const        newClass)
 {
     ErrorObj*    error = NULL;           /* success */
     prod_class_t* prodClass = new_prod_class(protoClass->psa.psa_len + 1);
