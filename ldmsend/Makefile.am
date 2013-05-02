@@ -9,6 +9,7 @@
 bin_PROGRAMS	= ldmsend
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
+    -I$(top_builddir)/protocol \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)

@@ -28,6 +28,7 @@ pqact_SOURCES		= \
 date_sub_SOURCES	= palt.c
 CPPFLAGS		= \
     -I$(top_srcdir)/ulog \
+    -I$(top_builddir)/protocol \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \

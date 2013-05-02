@@ -11,6 +11,7 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 bin_PROGRAMS	= pqsend
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
+    -I$(top_builddir)/protocol \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \

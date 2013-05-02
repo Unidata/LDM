@@ -27,6 +27,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
@@ -92,14 +93,14 @@ valgrind:	ldmd
 	    --show-reachable=yes --trace-children=no \
 	    --child-silent-after-fork=no ./ldmd -l-
 
-# The following doesn't work. If "--trace-children=no", then valgrind won't
-# examine the LDM and if "--trace-children=yes", then valgrind won't execute
-# the installed LDM because it's setuid and owned by root.
-installcheck-local:
-	valgrind --suppressions=ldmd.supp --gen-suppressions=all \
-	    --leak-check=full --show-reachable=yes --trace-children=no \
-	    --child-silent-after-fork=no ./valgrind-wrapper.sh \
-	    $(DESTDIR)$(bindir)/ldmd -l-
+## The following doesn't work. If "--trace-children=no", then valgrind won't
+## examine the LDM and if "--trace-children=yes", then valgrind won't execute
+## the installed LDM because it's setuid and owned by root.
+#installcheck-local:
+#	valgrind --suppressions=ldmd.supp --gen-suppressions=all \
+#	    --leak-check=full --show-reachable=yes --trace-children=no \
+#	    --child-silent-after-fork=no ./valgrind-wrapper.sh \
+#	    $(DESTDIR)$(bindir)/ldmd -l-
 
 debug:		ldmd
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb ./ldmd
