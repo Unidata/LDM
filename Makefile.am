@@ -241,7 +241,7 @@ tag:
 	git tag --force v$(VERSION)
 
 release:
-	test "`git status --porcelain`" && (echo Commit changes first!; exit 1)
+	test -z "`git status --porcelain`" || (echo Commit changes first!; exit 1)
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
 	git log --name-status --pretty=full $(LAST_VERSION).. >>CHANGE_LOG.tmp
 	echo '' >>CHANGE_LOG.tmp
