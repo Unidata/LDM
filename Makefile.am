@@ -233,7 +233,7 @@ commit-check:	Makefile
 	    exit 1; \
 	fi
 
-commitAndTag:	Makefile
+commitAndTag:
 	git commit --all --message="v$(VERSION)"
 	git tag --force "v$(VERSION)"
 
@@ -241,7 +241,7 @@ tag:
 	git tag --force v$(VERSION)
 
 release:
-	-git commit --all --verbose
+	test "`git status --porcelain`" && (echo Commit changes first!; exit 1)
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
 	git log --name-status --pretty=full $(LAST_VERSION).. >>CHANGE_LOG.tmp
 	echo '' >>CHANGE_LOG.tmp
@@ -253,7 +253,7 @@ release:
 	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
 	    >configure.ac.tmp
 	mv configure.ac.tmp configure.ac
-	$(MAKE) timestamp dist commitAndTag
+	$(MAKE) configure Makefile timestamp dist commitAndTag
 
 ftp-actual:		dist $(FTPDIR)
 	cp $(distArchive) $(FTPDIR)
