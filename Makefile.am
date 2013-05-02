@@ -233,7 +233,7 @@ commit-check:	Makefile
 	    exit 1; \
 	fi
 
-commitAndTag:
+commitAndTag:	Makefile
 	git commit --all --message="v$(VERSION)"
 	git tag --force "v$(VERSION)"
 
