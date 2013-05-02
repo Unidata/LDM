@@ -1,3 +1,59 @@
+6.11.5.1 	2013-05-02 15:18:34-06:00
+    Summary:
+        Elimination of the bundled "libxml2" package and improvements due to
+        vetting by valgrind(1) and investigating and testing the Upstream LDM
+        Database (ULDB).
+
+    Upstream LDM:
+        Added printing of the subscription (the request by the downstream LDM)
+        when filtering by the upstream LDM disallows it.
+
+        Corrected the error-message when unable to open the product-queue.
+
+    Access Control List (src/protocol/acl.c):
+        Improved layering by abstracting the linked-list of requests.
+
+    ULDB (Upstream LDM Database in src/uldb/):
+        Added blocking of signals to the public functions of the ULDB module
+        that modify the database.
+
+        Improved internal layering.
+
+        Improved valgrind(1)-using unit-test.
+
+        These changes were made because a 6.11.4 LDM appeared to have received
+        a SIGSEGV in the ULDB module (support ticket JVF-237504). Consequently,
+        the unit-test of that module was improved and a robustness test was
+        added (about 3000 upstream processes in 5 seconds).
+
+        Unfortunately, none of these changes appear to have been necessary: the
+        ULDB module passes the improved unit-tests even without the changes.
+
+    Semaphore-based Read/Write Lock (src/misc/semRWLock.c):
+        Corrected the order of invalidating and freeing the lock structure as
+        part of the ULDB investigation. Didn't make a difference.
+
+    LDM Registry (src/registry/):
+        Ensured that free() isn't called twice on the same file object.
+
+        Improved some internal documentation.
+
+    NOAAPORT:
+        Corrected error-message when unable to open the product-queue.
+
+    Documentation:
+        Added "libxml2" as a platform prerequisite.
+
+    Release Engineering:
+        Improved the "release" target in the top-level makefile.
+
+        Re-enabled "make distcheck".
+
+        Improved the "valgrind" target for ldmd(8).  Tried to add an
+        "installcheck-local" target, but valgrind(1) won't execute setuid
+        programs that are owned by root -- even adding a wrapper script doesn't
+        do what's needed.
+
 6.11.4 	2013-04-03 14:22:34-06:00
     Installation:
         Added $(DESTDIR) to "ensure-ldmhome-links" rule in the makefile.
