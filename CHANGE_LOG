@@ -1,8 +1,16 @@
 6.11.5.1 	2013-05-02 15:18:34-06:00
     Summary:
-        Elimination of the bundled "libxml2" package and improvements due to
-        vetting by valgrind(1) and investigating and testing the Upstream LDM
-        Database (ULDB).
+        Elimination of the bundled "libxml2" package and improvements due to 1)
+        vetting by valgrind(1); and 2) investigating and testing the Upstream
+        LDM Database (ULDB).
+        
+    libxml2:
+        Eliminated this package from the LDM distribution. This was done because
+        1) the libxml2 package has become ubiquitous -- it's on all platforms to
+        which I have access; 2) bundling it with the LDM distribution means that
+        an upgraded, more secure version can't be used; and 3) eliminating it
+        reduces the size of the distribution and the time-to-build by about a
+        factor of 1/2.
 
     Upstream LDM:
         Added printing of the subscription (the request by the downstream LDM)
