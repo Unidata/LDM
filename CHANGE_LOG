@@ -1,4 +1,4 @@
-6.11.5.1 	2013-05-02 15:18:34-06:00
+6.11.5 	2013-05-10 14:42:19-06:00
     Summary:
         Elimination of the bundled "libxml2" package and improvements due to 1)
         vetting by valgrind(1); and 2) investigating and testing the Upstream
@@ -9,8 +9,7 @@
         1) the libxml2 package has become ubiquitous -- it's on all platforms to
         which I have access; 2) bundling it with the LDM distribution means that
         an upgraded, more secure version can't be used; and 3) eliminating it
-        reduces the size of the distribution and the time-to-build by about a
-        factor of 1/2.
+        approximately halves the size of the distribution and the time-to-build.
 
     Upstream LDM:
         Added printing of the subscription (the request by the downstream LDM)
@@ -61,6 +60,8 @@
         "installcheck-local" target, but valgrind(1) won't execute setuid
         programs that are owned by root -- even adding a wrapper script doesn't
         do what's needed.
+
+        Removed "libdict" subdirectory because it wasn't used.
 
 6.11.4 	2013-04-03 14:22:34-06:00
     Installation:
