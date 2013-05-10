@@ -240,6 +240,8 @@ commitAndTag:
 tag:
 	git tag --force v$(VERSION)
 
+# Make this instead of "available" when the package won't be released to the
+# public
 release:
 	test -z "`git status --porcelain`" || (echo Commit changes first!; exit 1)
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
@@ -288,6 +290,8 @@ web-update:
 	cd html && $(MAKE) web-update
 	cd noaaport && $(MAKE) web-update
 
+# Make this instead of "release" when the package will be released to the
+# public
 available:	ftp web-update
 
 TOP_BUILD_DIR	= /tmp/rpmbuild

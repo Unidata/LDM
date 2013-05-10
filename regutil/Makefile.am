@@ -44,10 +44,9 @@ LDADD			= \
     -lxml2 \
     $(LD_GEN)
 
+BUILT_SOURCES		= regpar.tab
 dist_man1_MANS		= regutil.1
 CLEANFILES		= regutil.out regpar.tab
-
-all:		regpar.tab
 
 # "regpar.tab" fields:
 #
@@ -74,7 +73,7 @@ regpar.tab:	$(srcdir)/regpar.tab.in
 	mv $@.tmp $@
 
 if MAINTAINER
-BUILT_SOURCES		= substPaths
+BUILT_SOURCES		+= substPaths
 
 substPaths:	regpar.tab.in
 	$(AWK) -F : 'BEGIN {print "sed \\"} \
