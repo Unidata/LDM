@@ -1,9 +1,0 @@
-- Eliminate the use of recursion in hb_tree, wb_tree, and pr_tree code where
-  possible (almost everywhere thanks to parent ptrs).
-- Add code for 'remove' operation on iterators.
-- Add rot_rl() and rot_lr() which perform the same jobs as calling
-  rot_right/left or rot_left/right, but optimize the operation.
-- Maybe change the AVL tree to be configurable in terms of the balance factor
-  k in HB[k], although from my own testing performance _always_ degenerates
-  when relaxing this value.
-- Top-down splay tree?
