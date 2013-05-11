@@ -45,9 +45,13 @@
 
 	<LI><P STYLE="margin-bottom: 0in">Have the
 	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A> package installed
-	(look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt>). The
-	<tt>libxml2</tt> library is used by the LDM to parse the 
-	<a href="glindex.html#LDM registry">LDM registry</a>.</P>
+	(look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt> and the
+	file <tt>libxml/parser.h</tt>).
+	This package is used by the LDM to parse the 
+	<a href="glindex.html#LDM registry">LDM registry</a>. If this
+	package's library is installed but not its header-file, then you will
+	have to install the <em>development</em> version of this package (the
+	runtime version doesn't contain the necessary header-files).</P>
 
 	<LI><P STYLE="margin-bottom: 0in">
 	Have the
