@@ -16,7 +16,7 @@ SUDO		= @SUDO@
 SU		= @SU@
 PQ_SUBDIR	= @PQ_SUBDIR@
 
-DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
+DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions --with-noaaport --with-gribinsert
 
 LIB_SUBDIRS	= \
     rpc \
