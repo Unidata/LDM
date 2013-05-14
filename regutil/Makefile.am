@@ -30,15 +30,13 @@ TAGS_FILES              = \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/protocol/*.c \
-    -lxml2 \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/protocol \
-    -lxml2
+    -I$(top_srcdir)/protocol
 LDADD			= \
     $(top_builddir)/lib/libldm.la \
     -lxml2 \
