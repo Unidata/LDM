@@ -7,7 +7,7 @@
 #include <string.h>
 #include "nport.h"
 #include "log.h"
-#include "zlib/zlib.h"
+#include "zlib.h"
 
 int npunz (char *zstr, int *lenout, int *ioff);
 
