@@ -44,14 +44,28 @@
 	5 installed.</P>
 
 	<LI><P STYLE="margin-bottom: 0in">Have the
-	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A> package installed
-	(look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt> and the
+	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A> <em>development</em>
+	package installed
+	(look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt>
+	<em>and</em> the
 	file <tt>libxml/parser.h</tt>).
 	This package is used by the LDM to parse the 
 	<a href="glindex.html#LDM registry">LDM registry</a>. If this
-	package's library is installed but not its header-file, then you will
-	have to install the <em>development</em> version of this package (the
-	runtime version doesn't contain the necessary header-files).</P>
+	package's library is installed but not its header-file, then you must
+	install the <em>development</em> package (the
+	runtime package doesn't contain the necessary header-files).</P>
+
+	<LI><P STYLE="margin-bottom: 0in">Have the
+	<A HREF="http://zlib.net/"><tt>zlib</tt></A> <em>development</em>
+	package installed
+	(look for the file <tt>libz.a</tt> or <tt>libz.so</tt> <em>and</em> the
+	file <tt>zlib.h</tt>).
+	This package is used by the
+	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A>  package.
+	If this
+	package's library is installed but not its header-file, then you must
+	install the <em>development</em> package (the
+	runtime package doesn't contain the necessary header-files).</P>
 
 	<LI><P STYLE="margin-bottom: 0in">
 	Have the

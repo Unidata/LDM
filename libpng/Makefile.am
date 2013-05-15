@@ -1,10 +1,9 @@
 # test
 check_PROGRAMS= pngtest
 pngtest_SOURCES = pngtest.c
-pngtest_LDADD = libpng.la
+pngtest_LDADD = libpng.la -lz
 TESTS = test-pngtest.sh
 TESTS_ENVIRONMENT= srcdir=$(srcdir) 
-AM_CPPFLAGS	= -I$(srcdir)/../zlib
 #dist_man_MANS= libpng.3 libpngpf.3 png.5
 #include_HEADERS= png.h pngconf.h 
 #bin_SCRIPTS=libpng-config libpng12-config 

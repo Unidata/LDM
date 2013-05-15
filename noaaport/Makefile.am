@@ -44,7 +44,6 @@ CLEANFILES		= $(BUILT_SOURCES)
 CPPFLAGS		= \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
-	-I$(top_srcdir)/zlib \
 	-I$(top_srcdir)/ulog \
 	-I$(top_srcdir)/protocol \
 	-I$(top_srcdir)/pq \
@@ -90,7 +89,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	reader.c reader.h
 
 LDADD 			= \
-      $(top_builddir)/lib/libldm.la -lxml2
+      $(top_builddir)/lib/libldm.la -lxml2 -lz
 
 TAGS_FILES		= \
 	*.c *.h \

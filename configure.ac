@@ -542,7 +542,6 @@ AC_CONFIG_FILES([
     uldbutil/Makefile
     ulogger/Makefile
     ulog/Makefile
-    zlib/Makefile
 ])
 
 export CC

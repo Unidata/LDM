@@ -21,8 +21,7 @@ if WANT_NOAAPORT
     libldm_la_LIBADD	+= \
 	$(top_builddir)/grib2/lib.la \
 	$(top_builddir)/gempak/lib.la \
-	$(top_builddir)/libpng/libpng.la \
-	$(top_builddir)/zlib/lib.la
+	$(top_builddir)/libpng/libpng.la
 else
 if WANT_GRIBINSERT
     libldm_la_LIBADD	+= \
