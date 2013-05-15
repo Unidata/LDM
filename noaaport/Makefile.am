@@ -42,6 +42,7 @@ BUILT_SOURCES		= \
 CLEANFILES		= $(BUILT_SOURCES)
 
 CPPFLAGS		= \
+	-I$(top_srcdir) \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
 	-I$(top_srcdir)/ulog \
