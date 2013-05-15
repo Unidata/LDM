@@ -80,7 +80,8 @@ lib_la_SOURCES		= \
 lib_la_CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
 			  -I$(top_srcdir)/grib2 \
 			  -I$(top_srcdir)/ulog \
-			  -I$(top_srcdir)/protocol
+			  -I$(top_srcdir)/protocol \
+			  -I$(top_srcdir)/rpc
 
 TAGS_FILES		= \
 	*.c *.h \
