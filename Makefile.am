@@ -301,7 +301,7 @@ rpm:		dist ldm.spec
 	cp $(distArchive) $(TOP_BUILD_DIR)/SOURCES 
 	mkdir $(TOP_BUILD_DIR)/SPECS
 	cp ldm.spec $(TOP_BUILD_DIR)/SPECS
-	rpmbuild --define '_topdir $(TOP_BUILD_DIR)' -v -bs ldm.spec
+	rpmbuild -
 endif
 
 .PHONY:		\

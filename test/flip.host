@@ -1,4 +1,5 @@
-# /usr/bin/c89: illegal option -- p (when compiling SAX.c)
+# libtool: compile:  /usr/bin/c89 -DHAVE_CONFIG_H -I. -I.. -g -O2 -c auth_none.c -Wp,-MD,.deps/auth_none.TPlo -o auth_none.o
+# i686-apple-darwin11-llvm-gcc-4.2: HAVE_CONFIG_H: No such file or directory
 PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/c89
 PATH=/usr/bin:/bin,--disable-max-size,/usr/bin/make,/usr/bin/c89
 

@@ -15,7 +15,6 @@ topTmpDir	= /tmp/$(distId)
 if MAINTAINER
 
 HOSTS		= \
-    buddy \
     flip \
     gilda \
     grizzard \

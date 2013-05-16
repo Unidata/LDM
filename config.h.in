@@ -239,6 +239,9 @@
 /* Needed for "u_int" and the like on IRIX systems */
 #undef _BSD_TYPES
 
+/* Needed for "struct ip_mreq" */
+#undef _DARWIN_C_SOURCE
+
 /* Define if the file /dev/conslog exists */
 #undef _DEV_CONSLOG
 
@@ -262,7 +265,7 @@
 /* Level of XOPEN compliance */
 #undef _XOPEN_SOURCE
 
-/* Needed for "struct ip_mreq" on SunOS 5 */
+/* Needed for "struct ip_mreq" */
 #undef __EXTENSIONS__
 
 /* rpcgen(1) typedef */
