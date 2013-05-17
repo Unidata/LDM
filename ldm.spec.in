@@ -14,9 +14,9 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Excludeos:      windows
 
 %ifos linux
-BuildRequires:  make sed perl gcc bash gawk libpthread.so.0
+BuildRequires:  make sed perl gcc bash gawk libxml2.so libz.so libpthread.so.0
 %else
-BuildRequires:  make sed perl c89 sh awk libpthread.so.0
+BuildRequires:  make sed perl c99 sh awk libxml2.so libz.so libpthread.so.0
 %endif
 
 Requires:	perl ntpdate netstat top
