@@ -1,3 +1,23 @@
+6.11.6.2 	2013-05-17 11:16:16-06:00
+    Summary:
+        Removed the bundled ZLIB package. This package's library was in the LDM
+        shared-library and, on some systems, it conflicted with the system ZLIB
+        library referenced by the system XML2 library (which was removed from
+        the LDM in version 6.11.5).
+
+    RPM support (such as it is):
+        Changed "c89" requirement to "c99" & added XML2 and ZLIB requirements.
+
+    Mac OS/X support:
+        Added definition of _DARWIN_C_SOURCE to have "struct ip_mreq" defined
+        on that system (that definition is needed by the NOAAPORT module).
+
+        Don't define "union semun" on that system because it's defined by a
+        system header-file.
+
+    NOAAPORT module:
+        Added "-I$(top_srcdir)" to obtain bundled <rpc/rpc.h>.
+
 6.11.6.1 	2013-05-13 14:29:01-06:00
     Removed html/tutorial/tutorial/* from git(1) repository.
 
