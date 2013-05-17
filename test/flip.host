@@ -10,7 +10,8 @@ PATH=/usr/bin:/bin,--disable-max-size,/usr/bin/make,/usr/bin/c89
 # Multicast isn't supported, so "--with-noaaport" fails
 PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/cc
 
-# /usr/bin/c99: illegal option -- p (when compiling SAX.c)
+# libtool: link: /usr/bin/c99 -dynamiclib ...
+# /usr/bin/c99: illegal option -- d
 PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/c99
 PATH=/usr/bin:/bin,--disable-max-size,/usr/bin/make,/usr/bin/c99
 
