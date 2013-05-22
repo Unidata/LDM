@@ -37,10 +37,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol
-LDADD			= \
-    $(top_builddir)/lib/libldm.la \
-    -lxml2 \
-    $(LD_GEN)
+LDADD			= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
 BUILT_SOURCES		= regpar.tab
 dist_man1_MANS		= regutil.1
@@ -112,10 +109,7 @@ testRegistry_CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     @CPPFLAGS_CUNIT@
 
-testRegistry_LDADD		= \
-    $(top_builddir)/lib/libldm.la \
-    -lxml2 \
-    @LIBS_CUNIT@
+testRegistry_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
 TESTS			= checkRegistry
 
