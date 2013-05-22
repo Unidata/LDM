@@ -1,3 +1,10 @@
+6.11.6.3 	2013-05-22 11:07:21-06:00
+    Misc:
+        Added testing on more SunOS hosts.
+
+    More release work.  Added icon file.  Created autoconf(1) macro for finding
+    libxml2 and zlib headers.  More work on RPM spec-file.
+
 6.11.6.2 	2013-05-17 11:16:16-06:00
     Summary:
         Removed the bundled ZLIB package. This package's library was in the LDM
