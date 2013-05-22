@@ -306,13 +306,18 @@ AM_COND_IF([HAVE_CUNIT],
     [AC_MSG_NOTICE([CUNIT found.  Enabling unit-tests.])],
     [AC_MSG_NOTICE([CUNIT not found.  Disabling unit-tests.])])
     
-# Check for the libxml2 header-files.
-AC_ARG_VAR([CPPFLAGS_LIBXML2],
-    [C preprocessor reference for libxml2 header-files (e.g., "-I/usr/local/libxml2")])
-AC_CHECK_FILE([/usr/include/libxml2],
-    [CPPFLAGS_LIBXML2=-I/usr/include/libxml2
-        AC_SUBST(CPPFLAGS_LIBXML2)],
-    [AC_MSG_ERROR([libxml2 header-files not found])])
+# Check for the libxml2 header-file.
+UD_CHECK_HEADER([LIBXML2],
+    [C preprocessor reference for libxml2 header-file "libxml/parser.h" (e.g., "-I/opt/include/libxml2")],
+    [/usr/include/libxml2 /opt/include/libxml2 /usr/local/include/libxml2 \
+        /opt/csw/include/libxml2 /usr/local/csw/include/libxml2],
+    [libxml/parser.h])
+    
+# Check for the zlib header-file.
+UD_CHECK_HEADER([ZLIB],
+    [C preprocessor reference for zlib header-file "zlib.h" (e.g., "-I/opt/include")],
+    [/usr/include /opt/include /usr/local/include /opt/csw/include /usr/local/csw/include],
+    [zlib.h])
 
 AC_SUBST(PATH)
 

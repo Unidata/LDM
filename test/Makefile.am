@@ -21,8 +21,11 @@ HOSTS		= \
     harpo \
     hydro2 \
     imogene \
+    laraine \
     moe \
-    spock
+    spock \
+    sol \
+    zero
 
 $(distPath):
 	cd .. && $(MAKE) dist

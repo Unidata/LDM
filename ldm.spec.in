@@ -1,87 +1,112 @@
-Name:		@PACKAGE@
+Name:		ldm
 Version:	@VERSION@
+%define pkgid   %{name}-%{version}
 Release:	1%{?dist}
-Summary:	Subscribes to, receives, relays, and processes data-products
+Summary:	A system for subscribing-to, receiving, relaying, and processing data-products
 
 Group:		Applications/Internet
 Vendor:         University Corporation for Atmospheric Research
 Packager:       LDM Support <support-ldm@unidata.ucar.edu>
 License:	NCSA-ish
 URL:		http://www.unidata.ucar.edu/software/ldm
-Source:	        %{name}-%{version}.tar.gz
-BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+Source:	        %{pkgid}.tar.gz
+Icon:           ldm-50x50.xpm
+Exclusiveos:    linux
 
-Excludeos:      windows
+# The default home-directory of the LDM user.
+#
+%define defhome /usr/local/ldm
 
-%ifos linux
-BuildRequires:  make sed perl gcc bash gawk libxml2.so libz.so libpthread.so.0
-%else
-BuildRequires:  make sed perl c99 sh awk libxml2.so libz.so libpthread.so.0
-%endif
+# The actual home-directory of the LDM user. May be overridden by rpm(1)'s
+# "--prefix" option.
+#
+Prefix:         ${defhome}
 
-Requires:	perl ntpdate netstat top
+# The version-specific installation-directory of this package.
+#
+%define versdir %{_prefix/%{pkgid}
 
-Prefix:         /usr
+BuildRequires:  %{__make} ${__sed} ${__perl} %{__cc} %{__awk} sh libxml2.so \
+                libz.so libpthread.so.0
+Requires:	%{__awk} cat echo fmt gnuplot grep libxml2.so libz.so ls mv \
+                netstat ntpdate perl sed sh su test top
 
-%define user    %(awk -F : 'substr($6,1,length("%{_prefix}"))=="%{_prefix}" \
-        {print $1; exit}' /etc/passwd)
-%define defhome /home/ldm
-%define ldmhome $RPM_BUILD_ROOT%{_prefix}
+# Only a virtual file and a few high-value files are mentioned. rpmbuild(1)
+# automatically adds the LDM shared-library.
+#
+Provides:       %{name} ldmd notifyme pqact
+        
 %define debug_package   %{nil}
 
-
 %description
-Unidata's Local Data Manager (LDM) software acquires data and shares them with
-other networked computers. A data product is treated as a opaque unit, thus
-nearly any data can be relayed. In particular, the LDM can handle data from
-National Weather Service "NOAAport channel 3" data streams, including gridded
-data from the numerical forecast models. It also handles NEXRAD radar data,
-lightning data from the National Lightning Detection Network, and GOES
+Unidata's Local Data Manager (LDM) acquires data-products and shares them with
+other networked computers. A data-product is treated as a opaque unit, thus
+nearly any finite-sized data can be relayed. In particular, the LDM can handle
+data from the National Weather Service's NOAAport data streams, including
+gridded data from the numerical forecast models. It also handles NEXRAD radar
+data, lightning data from the National Lightning Detection Network, and GOES
 satellite imagery.
 
-Data can either be ingested directly from a data source by a client ingester,
-or the LDM server can talk to other LDM servers to either receive or send
-data. Ingesters scan the data stream, determine product boundaries, and
-extract products, passing those products on to the server product queue.
-These data, in turn, can be processed locally and/or passed on to other
-LDM servers.
+The flow of data-products in an LDM system centers around the LDM product-queue,
+This queue receives data-products extracted from local data sources as well as
+products received from other LDM servers. Once in the queue, a product is
+immediately transmitted to other LDM-s that have subscribed to that data.
 
-Data passed to the LDM server are processed in a variety of ways; how specific
-data are processed is determined by data identifiers and a configuration file.
-Processing actions include placing the data in files and running arbitrary
-programs on the data. Decoders are also available from Unidata that interface
-with the LDM and convert data into the forms required by various applications.
+Data-products in the queue are selected for local processing by product-matching
+predicates in a configuration file. Processing actions include writing the
+product to a file and piping the product to an arbitrary program. Programs are
+available from Unidata that interface with the LDM and convert products into
+the forms required by various applications.
 
+###############################################################################
 %prep
-%setup -q -n %{name}-%{version}
 
+%setup -q -n %{pkgid}
 
+###############################################################################
 %build
-LDMHOME=%{ldmhome}; export LDMHOME
-./configure --prefix=%{ldmhome}/%{name}-%{version} --disable-root-actions \
-    CC=%{?__cc}
+
+LDMHOME=%{_prefix}; export LDMHOME
+
+# The configure(1) script's "prefix" has slightly different semantics than
+# rpm(1)'s "prefix".
+#
+# Because this is a generic RPM, everything is built.
+#
+./configure --prefix=%{versdir} --disable-root-actions --with-noaaport \
+    --with-gribinsert
 DESTDIR=%{buildroot} make
-#make %%{?_smp_mflags}
 
-
+###############################################################################
 %install
+
 rm -rf %{buildroot}
 DESTDIR=%{buildroot} make install
 
-# Adjust pathnames in the LDM registry
-sed -e "s:%{ldmhome}:%{defhome}:g" \
-    %{ldmhome}/etc/registry.xml >%{ldmhome}/etc/registry.xml.new && 
-mv -f %{ldmhome}/etc/registry.xml.new %{ldmhome}/etc/registry.xml || exit 1
-
-
+###############################################################################
 %clean
+
 rm -rf %{buildroot}
 
+###############################################################################
+%pre
 
+# The LDM user is the user associated with the %%{_prefix} home-directory or
+# "ldm" if that home-directory doesn't exist.
+#
+%define user    %(awk -F : 'substr($6,1,length("%{_prefix}"))=="%{_prefix}" \
+        {print $1;exit}END{exit 1}' /etc/passwd || echo ldm)
+
+if ! grep -q '^%{user}:' /etc/passwd; then
+    useradd -d %{_prefix} -m %{user} || exit 1
+fi
+
+    shell=`awk -F : '$1=="%{user}"{}`
+
+###############################################################################
 %files
-%defattr(-,%{user},root,-)
 
-%define versdir %{_prefix}/%{name}-%{version}
+%defattr(-,%{user},root,-)
 
 %attr(04755,root,root) %{versdir}/bin/ldmd
 %attr(04755,root,root) %{versdir}/bin/hupsyslog
@@ -96,16 +121,17 @@ rm -rf %{buildroot}
 %{versdir}/lib
 %{versdir}/share
 
-#%%docdir %{versdir}/share
-#%%doc CHANGE_LOG COPYRIGHT README
+%docdir %{versdir}/share
+%doc CHANGE_LOG COPYRIGHT README
 
 %config(noreplace) %{_prefix}/etc/ldmd.conf
 %config(noreplace) %{_prefix}/etc/pqact.conf
 %config(noreplace) %{_prefix}/etc/registry.xml
 %config(noreplace) %{_prefix}/etc/scour.conf
 
-
+###############################################################################
 %post
+
 # Find the configuration-file for the system logging daemon
 if test -e /etc/rsyslog.conf; then
     SYSLOG_CONF=/etc/rsyslog.conf
@@ -123,7 +149,7 @@ LOG_LDM=`awk '$1 !~ /^#/ && $2 ~ /\/ldmd\.log$/ {print $1; exit}' \
     $SYSLOG_CONF | sed 's/\..*//'`
 if test -z "$LOG_LDM"; then
     for LOG_LDM_NO in 0 1 2 3 4 5 6 7; do
-        fgrep -q local$LOG_LDM_NO $SYSLOG_CONF && continue
+        grep -F -q local$LOG_LDM_NO $SYSLOG_CONF && continue
         LOG_LDM=local$LOG_LDM_NO
         break
     done
@@ -150,48 +176,27 @@ else
 fi
 
 # Perform superuser actions
-%{_prefix}/%{name}-%{version}/bin/ensureSyslogEntry \
-    $LOG_LDM $SYSLOG_CONF $LDM_LOGFILE &&
-%{_prefix}/%{name}-%{version}/bin/ensureRpcEntry &&
-%{_prefix}/%{name}-%{version}/bin/ensureServicesEntry || exit 1
+%{versdir}/bin/ensureSyslogEntry $LOG_LDM $SYSLOG_CONF $LDM_LOGFILE &&
+    %{versdir}/bin/ensureRpcEntry &&
+    %{versdir}/bin/ensureServicesEntry || exit 1
 
 # Perform LDM user actions
 su - %{user} <<SU_EOF
-%{_prefix}/%{name}-%{version}/bin/ensureLdmhomeLinks %{_prefix} \
-    %{name}-%{version} &&
-%{_prefix}/%{name}-%{version}/bin/ensureVar %{_prefix} %{_prefix}/var/queues \
+%{versdir}/bin/ensureLdmhomeLinks %{_prefix} %{pkgid} &&
+%{versdir}/bin/ensureVar %{_prefix} %{_prefix}/var/queues \
     %{_prefix}/var/logs ${DATA_DIR} || exit 1
 
 # Adjust pathnames in the LDM registry
-sed "s;%{defhome};%{_prefix};g" %{_prefix}/etc/registry.xml \
+sed -e "s;%{defhome};%{_prefix};g" %{_prefix}/etc/registry.xml \
     >%{_prefix}/etc/registry.xml.new && 
-mv %{_prefix}/etc/registry.xml %{_prefix}/etc/registry.xml.old &&
-mv %{_prefix}/etc/registry.xml.new %{_prefix}/etc/registry.xml || exit 1
-
-# Set the LDM system logging facility
-isSet=false
-if test -e .bash_profile; then
-    echo "export ULOG_FACILITY_OVERRIDE=$LOG_LDM_NO" >>.bash_profile
-    isSet=true
-fi
-if test -e .profile; then
-    echo "ULOG_FACILITY_OVERRIDE=$LOG_LDM_NO; " \
-        "export ULOG_FACILITY_OVERRIDE" >>.profile
-    isSet=true
-fi
-if test -e .login; then
-    echo "setenv ULOG_FACILITY_OVERRIDE $LOG_LDM_NO" >>.login
-    isSet=true
-fi
-if test $isSet = false; then
-    cat <<CAT_EOF | fmt 1>&2
-Could not find a user-shell profile-file for the LDM user in which to set the
-environment variable ULOG_FACILITY_OVERRIDE to $LOG_LDM_NO. Consequently, the
-LDM system will likely log messages incorrectly, if at all.
-CAT_EOF
-    exit 1
-fi
+    mv %{_prefix}/etc/registry.xml %{_prefix}/etc/registry.xml.old &&
+    mv %{_prefix}/etc/registry.xml.new %{_prefix}/etc/registry.xml || exit 1
+    
+case `awk -F : '$1==%{user}{print $7;exit}'` in
+    
+esac
+    
 SU_EOF
 
-
+###############################################################################
 %changelog

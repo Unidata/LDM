@@ -889,5 +889,28 @@ AC_DEFUN([UD_MAKEWHATIS],
     AC_MSG_CHECKING(for manual-page index command)
     AC_MSG_RESULT($MAKEWHATIS_CMD)
 ])
+    
+dnl Check for a header-file.
+dnl     $1  Name component (e.g., "LIBXML2")
+dnl     $2  Description
+dnl     $3  Space-separated list of directories
+dnl     $4  Name of the header-file (may contain "/")
+AC_DEFUN([UD_CHECK_HEADER],
+[
+    AC_ARG_VAR([CPPFLAGS_$1], [$2])
+    AC_CACHE_CHECK([for header-file $4], [ac_cv_header_$1],
+        [for dir in $3; do
+            if test -r $dir/$4; then
+                ac_cv_header_$1="-I $dir"
+                break
+            fi
+        done])
+    if test -z "$ac_cv_header_$1"; then
+        AC_MSG_ERROR([Header-file $4 not found])
+    else
+        CPPFLAGS_$1="$ac_cv_header_$1"
+        AC_MSG_RESULT([$CPPFLAGS_$1])
+    fi
+])
 
 divert(diversion_number)dnl
