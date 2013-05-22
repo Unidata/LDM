@@ -89,8 +89,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
-LDADD 			= \
-      $(top_builddir)/lib/libldm.la -lxml2 -lz
+LDADD 			= $(top_builddir)/lib/libldm.la
 
 TAGS_FILES		= \
 	*.c *.h \
