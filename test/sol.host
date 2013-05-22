@@ -1,0 +1,20 @@
+PATH=/opt/SUNWspro/bin:/usr/xpg6/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/bin/make,/opt/SUNWspro/bin/cc
+PATH=/opt/SUNWspro/bin:/usr/xpg6/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/bin/make,/opt/SUNWspro/bin/cc
+
+PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/bin/make,/opt/SUNWspro/bin/cc
+PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/bin/make,/opt/SUNWspro/bin/cc
+
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/bin/make,/opt/SUNWspro/bin/c89
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/bin/make,/opt/SUNWspro/bin/c89
+
+PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m32
+PATH=/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gmake,/opt/csw/gcc3/bin/gcc -m64
+
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/bin/make,/opt/SUNWspro/bin/cc -m32
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/bin/make,/opt/SUNWspro/bin/cc -m64
+
+PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/bin/gmake,/opt/csw/gcc4/bin/gcc -m32
+PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/bin/gmake,/opt/csw/gcc4/bin/gcc -m64
+
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/bin/make,/opt/SUNWspro/bin/c99
+PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/bin/make,/opt/SUNWspro/bin/c99
