@@ -1,3 +1,10 @@
+6.11.6.4 	2013-05-23 09:57:59-06:00
+    Removed 64-bit gcc-v3 test-build on SunOS 5.11 because the compiler doesn't
+    support it.
+
+    Added references to libxml2 and zlib to the build of the LDM library and
+    removed them from all others.
+
 6.11.6.3 	2013-05-22 11:07:21-06:00
     Misc:
         Added testing on more SunOS hosts.
