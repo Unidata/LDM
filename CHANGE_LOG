@@ -1,3 +1,6 @@
+6.11.6.5 	2013-05-24 10:00:59-06:00
+    Improved XML2 and ZLIB discovery and use.
+
 6.11.6.4 	2013-05-23 09:57:59-06:00
     Removed 64-bit gcc-v3 test-build on SunOS 5.11 because the compiler doesn't
     support it.
