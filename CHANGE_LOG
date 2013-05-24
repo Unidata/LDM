@@ -1,3 +1,7 @@
+6.11.6.7 	2013-05-24 11:40:38-06:00
+    Adapted configure(1) to older tr(1)-s that don't extend the second
+    character set.
+
 6.11.6.6 	2013-05-24 11:27:00-06:00
     Corrected $$ expansion in configure(1).
 
