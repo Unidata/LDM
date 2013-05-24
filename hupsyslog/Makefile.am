@@ -7,7 +7,4 @@
 ## Process this file with automake to produce Makefile.in
 
 bin_PROGRAMS		= hupsyslog
-hupsyslog_LDADD		= \
-  $(top_builddir)/lib/libldm.la \
-  -lxml2 \
-  -lm
+hupsyslog_LDADD		= $(top_builddir)/lib/libldm.la

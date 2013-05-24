@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.11.6.1], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.11.6.7], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([.])
@@ -305,14 +305,6 @@ AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
 AM_COND_IF([HAVE_CUNIT], 
     [AC_MSG_NOTICE([CUNIT found.  Enabling unit-tests.])],
     [AC_MSG_NOTICE([CUNIT not found.  Disabling unit-tests.])])
-    
-# Check for the libxml2 header-files.
-AC_ARG_VAR([CPPFLAGS_LIBXML2],
-    [C preprocessor reference for libxml2 header-files (e.g., "-I/usr/local/libxml2")])
-AC_CHECK_FILE([/usr/include/libxml2],
-    [CPPFLAGS_LIBXML2=-I/usr/include/libxml2
-        AC_SUBST(CPPFLAGS_LIBXML2)],
-    [AC_MSG_ERROR([libxml2 header-files not found])])
 
 AC_SUBST(PATH)
 
@@ -455,6 +447,17 @@ AC_CHECK_HEADERS([stropts.h], ,
     AC_CHECK_HEADERS([sys/ioctl.h], ,
 	AC_MSG_ERROR("Missing necessary header-file"))
 ])
+    
+# Ensure that CPPFLAGS and LIBS reference the ZLIB library.
+UD_SEARCH_HEADER([ZLIB], [zlib.h], [/usr/include /opt/include \
+        /usr/local/include /opt/csw/include /usr/local/csw/include])
+UD_SEARCH_LIB([z], [deflate], [/opt/lib /opt/csw/lib])
+    
+# Ensure that CPPFLAGS and LIBS reference the XML2 library.
+UD_SEARCH_HEADER([XML2], [libxml/parser.h],
+    [/usr/include/libxml2 /opt/include/libxml2 /usr/local/include/libxml2 \
+        /opt/csw/include/libxml2 /usr/local/csw/include/libxml2])
+UD_SEARCH_LIB([xml2], [xmlInitParser], [/opt/lib /opt/csw/lib])
 
 AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
 AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])

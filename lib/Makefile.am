@@ -29,3 +29,4 @@ if WANT_GRIBINSERT
 	$(top_builddir)/gempak/lib.la
 endif
 endif
+libldm_la_LIBADD	+= $(LIBS)

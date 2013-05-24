@@ -890,4 +890,75 @@ AC_DEFUN([UD_MAKEWHATIS],
     AC_MSG_RESULT($MAKEWHATIS_CMD)
 ])
 
+dnl Check for a header-file directory
+dnl     $1  Name component (e.g., "LIBXML2")
+dnl     $2  Description
+dnl     $3  Space-separated list of directories
+dnl     $4  Name of the header-file (may contain "/")
+AC_DEFUN([UD_CHECK_HEADER],
+[
+    AC_ARG_VAR([CPPFLAGS_$1], [$2])
+    AC_CACHE_CHECK([for header-file <$4>], [ac_cv_header_$1],
+        [for dir in $3; do
+            if test -r $dir/$4; then
+                ac_cv_header_$1="-I $dir"
+                break
+            fi
+        done])
+    if test -z "$ac_cv_header_$1"; then
+        AC_MSG_ERROR([Header-file <$4> not found])
+    else
+        CPPFLAGS_$1="$ac_cv_header_$1"
+    fi
+])
+
+dnl Ensure that CPPFLAGS references a header-file directory
+dnl     $1  Name component (e.g., "XML2")
+dnl     $2  Name of the header-file (may contain "/")
+dnl     $3  Space-separated list of directories
+AC_DEFUN([UD_SEARCH_HEADER],
+[
+    AC_MSG_NOTICE([Searching for the "$1" header-file(s)])
+    origCppFlags="$CPPFLAGS"
+    cacheVarName=ac_cv_header_`echo "$2" | tr ./ __`
+    for dir in "" $3; do
+        CPPFLAGS="${dir:+-I$dir}${CPPFLAGS:+ $CPPFLAGS}"
+        #AC_MSG_NOTICE([CPPFLAGS = "$CPPFLAGS"])
+        AC_CHECK_HEADER([$2], [break])
+        CPPFLAGS="$origCppFlags"
+        unset $cacheVarName
+    done
+    test "$CPPFLAGS" || unset CPPFLAGS
+    if eval test x\$$cacheVarName = xno; then
+        AC_MSG_ERROR(["$1" header-file(s) not found])
+    else
+        AC_MSG_NOTICE(["$1" header-file(s) found in "$dir"])
+    fi
+])
+
+dnl Ensure that LIBS references a library
+dnl     $1  Name component (e.g., "XML2")
+dnl     $2  Name of a function
+dnl     $3  Space-separated list of directories
+AC_DEFUN([UD_SEARCH_LIB],
+[
+    AC_MSG_NOTICE([Searching for the "$1" library])
+    AC_SEARCH_LIBS([$2], [$1], ,
+        [origLibs="$LIBS"
+        for dir in "" $3; do
+            LIBS="${dir:+-L$dir }-l$1${LIBS:+ $LIBS}"
+            #AC_MSG_NOTICE([LIBS = "$LIBS"])
+            AC_CHECK_FUNC([$2], [break])
+            LIBS="$origLibs"
+            unset ac_cv_func_$2
+        done
+        test "$LIBS" || unset LIBS
+        if test "x$ac_cv_func_$2" = xno; then
+            AC_MSG_ERROR(["$1" library not found])
+        else
+            AC_MSG_NOTICE(["$1" library found in "$dir"])
+        fi]
+    )
+])
+
 divert(diversion_number)dnl
