@@ -280,7 +280,7 @@ clnt_broadcast(
 		goto done_broad;
 	}
 #ifdef SO_BROADCAST
-	if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &on, sizeof (on)) < 0) {
+	if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (const void*)&on, sizeof (on)) < 0) {
 		perror("Cannot set socket option SO_BROADCAST");
 		stat = RPC_CANTSEND;
 		goto done_broad;
