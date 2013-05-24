@@ -920,7 +920,7 @@ AC_DEFUN([UD_SEARCH_HEADER],
 [
     AC_MSG_NOTICE([Searching for the "$1" header-file(s)])
     origCppFlags="$CPPFLAGS"
-    cacheVarName=ac_cv_header_`echo "$2" | tr ./ _`
+    cacheVarName=ac_cv_header_`echo "$2" | tr ./ __`
     for dir in "" $3; do
         CPPFLAGS="${dir:+-I$dir}${CPPFLAGS:+ $CPPFLAGS}"
         #AC_MSG_NOTICE([CPPFLAGS = "$CPPFLAGS"])
