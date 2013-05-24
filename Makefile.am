@@ -31,7 +31,7 @@ else
     LIB_SUBDIRS	+= pq
 endif
 if WANT_NOAAPORT
-    LIB_SUBDIRS	+= grib2 gempak libpng
+    LIB_SUBDIRS	+= grib2 gempak
 else
 if WANT_GRIBINSERT
     LIB_SUBDIRS	+= grib2 gempak
