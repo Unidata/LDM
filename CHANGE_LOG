@@ -1,3 +1,8 @@
+6.11.6.6 	2013-05-24 11:27:00-06:00
+    Corrected $$ expansion in configure(1).
+
+    Removed trailing comma from enum definitions in "ldm.h".
+
 6.11.6.5 	2013-05-24 10:00:59-06:00
     Improved XML2 and ZLIB discovery and use.
 
