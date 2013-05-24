@@ -25,8 +25,7 @@ TAGS_FILES              = \
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/protocol \
-    @CPPFLAGS_LIBXML2@
+    -I$(top_srcdir)/protocol
 
 if MAINTAINER
 backend.c:	backend-libxml2.c
