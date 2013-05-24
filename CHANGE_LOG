@@ -1,3 +1,8 @@
+6.11.6.8 	2013-05-24 14:10:01-06:00
+    Remove bundled-in "libpng" package.
+
+    Removed some lint(1).
+
 6.11.6.7 	2013-05-24 11:40:38-06:00
     Adapted configure(1) to older tr(1)-s that don't extend the second
     character set.
