@@ -10,5 +10,4 @@
 bin_PROGRAMS           = ulogger
 dist_bin_SCRIPTS       = newlog
 ulogger_CPPFLAGS       = -I$(top_srcdir)/ulog
-ulogger_LDADD          = $(top_builddir)/lib/libldm.la \
-			 -lxml2 -lm
+ulogger_LDADD          = $(top_builddir)/lib/libldm.la

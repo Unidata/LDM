@@ -71,7 +71,6 @@ test_child_map_CPPFLAGS	= \
 
 test_child_map_LDADD	= \
     $(top_builddir)/lib/libldm.la \
-    -lxml2 \
     @LIBS_CUNIT@
 
 testSemRWLock_CPPFLAGS	= \
@@ -83,7 +82,6 @@ testSemRWLock_CPPFLAGS	= \
 
 testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
-    -lxml2 \
     @LIBS_CUNIT@
 
 TESTS			= test_child_map testSemRWLock
