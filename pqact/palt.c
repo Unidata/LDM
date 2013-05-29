@@ -591,12 +591,13 @@ seq_sub(
    }
 
    for (is = istring; regexec(&seqprog, is, 1, seqpmatch, 0) == 0; is = e2) {
+      const char*   s0;
+      int printed;
       /*
        * Process the next date indicator in "istring".
        */
       printf("%d, %d\n", seqpmatch[0].rm_so, seqpmatch[0].rm_eo);
-      const char *const       s0 = &is[seqpmatch[0].rm_so];
-                                      /* start of entire substring match */
+      s0 = &is[seqpmatch[0].rm_so]; /* start of entire substring match */
 
       e2 = &is[seqpmatch[0].rm_eo];      /* points to last char of substring */
 
@@ -608,7 +609,7 @@ seq_sub(
             *ostring++ = *is++;
       }
 
-      int printed =  sprintf(ostring, "%d", seqnum);
+      printed =  sprintf(ostring, "%d", seqnum);
       ostring+=printed;
    }
    (void)strcpy(ostring, is);          /* copy rest of input to output */

@@ -1133,7 +1133,7 @@ static uldb_Status sm_detach(
     int status;
 
     if (NULL != sm->segment) {
-        if (shmdt((const void*)sm->segment)) {
+        if (shmdt((void*)sm->segment)) {
             LOG_SERROR2(
                     "Couldn't detach shared-memory segment %d at address %p",
                     sm->shmId, sm->segment);
