@@ -1,11 +1,17 @@
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin:/opt/csw/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
+# regutil(1) hangs in twalk()
+#PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin:/opt/csw/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89
 
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin:/opt/csw/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc
+# regutil(1) hangs in twalk()
+#PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin:/opt/csw/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/cc
 
-PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin:/opt/csw/bin,,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc
+# /tmp/remoteCheck: line 46: 26103 Segmentation Fault      (core dumped) MAKEFLAGS= $make install uninstall
+#PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin:/opt/csw/bin,,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc
 
-PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin:/opt/csw/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99
+# c99 utility unavailable SunOS 5.6
+#PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin:/opt/csw/bin,,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99
 
-PATH=/opt/gnu/bin:/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/gnu/bin/make,/opt/csw/gcc3/bin/gcc -m32
+# ld.so.1: /opt/csw/gcc3/bin/gcc: fatal: libc.so.1: version `SUNW_1.18.1' not found (required by file /opt/csw/gcc3/bin/gcc)
+#PATH=/opt/gnu/bin:/opt/csw/gcc3/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/gnu/bin/make,/opt/csw/gcc3/bin/gcc -m32
 
-PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m32
+# ld.so.1: /opt/csw/gcc4/bin/gcc: fatal: libc.so.1: version `SUNW_1.18.1' not found (required by file /opt/csw/gcc4/bin/gcc)
+#PATH=/opt/csw/gcc4/bin:/opt/csw/bin:/usr/ccs/bin:/usr/bin:/bin,,/opt/csw/bin/gmake,/opt/csw/gcc4/bin/gcc -m32
