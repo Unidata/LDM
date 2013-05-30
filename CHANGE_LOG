@@ -1,3 +1,12 @@
+6.11.6.10 	2013-05-30 14:36:30-06:00
+    Removed Laraine from the set of testing hosts.
+
+    Added "-v|-x" option to regutil(1) and some debug-level messages.
+
+    Removed lint(1).
+
+    Enhanced verification of GRIB2 message structure.
+
 6.11.6.9 	2013-05-24 14:39:06-06:00
     Removed "libpng" from LDM library makefile.
 
