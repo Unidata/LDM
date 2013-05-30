@@ -281,6 +281,10 @@ AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
 AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
 AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
+# Ensure that LIBS references the math library if such functions aren't
+# available by default.
+UD_SEARCH_LIB([m], [log10], [/opt/csw/lib /opt/lib])
+
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUNIT unit-testing package.])
 AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
