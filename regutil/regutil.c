@@ -34,11 +34,11 @@ static void printUsage(const char* progname)
 {
     (void)fprintf(stderr,
         "Usages:\n"
-        "  Create Registry:     %s [-d dir] -c\n"
-        "  Reset Registry:      %s [-d dir] -R\n"
-        "  Print Parameters:    %s [-d dir] [-q] [path ...]\n"
-        "  Remove Parameter(s): %s [-d dir] [-q] -r path ...\n"
-        "  Set Parameter:       %s [-d dir] (-h sig|-s string|-t time|-u uint) "
+        "  Create Registry:     %s [-v|-x] [-d dir] -c\n"
+        "  Reset Registry:      %s [-v|-x] [-d dir] -R\n"
+        "  Print Parameters:    %s [-v|-x] [-d dir] [-q] [path ...]\n"
+        "  Remove Parameter(s): %s [-v|-x] [-d dir] [-q] -r path ...\n"
+        "  Set Parameter:       %s [-v|-x] [-d dir] (-h sig|-s string|-t time|-u uint) "
             "valpath\n"
         "where:\n"
         "  -d dir       Path name of registry directory\n"
@@ -47,6 +47,8 @@ static void printUsage(const char* progname)
         "  -s string    String registry value\n"
         "  -t time      Time registry value as YYYYMMDDThhmmss[.uuuuuu]\n"
         "  -u uint      Unsigned integer registry value\n"
+        "  -v           Log INFO messages\n"
+        "  -x           Log DEBUG messages\n"
         "  path         Absolute path name of registry node or value\n"
         "  valpath      Absolute path name of value\n",
         progname, progname, progname, progname, progname);
@@ -143,7 +145,7 @@ static int printNodeValues(
  *      quiet           Whether or not to be quiet about a pathname not
  *                      existing.
  * Returns:
- *      0               Sucess
+ *      0               Success
  *      NO_SUCH_ENTRY   No such value or node.  "log_log()" called iff "quiet
  *                      == 0".
  *      SYSTEM_ERROR    Failure.  "log_log()" called.
@@ -155,6 +157,8 @@ static Status printPath(
     Status      status = 0;             /* success */
     RegStatus   regStatus;
     char*       value;
+
+    udebug("%s printing path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
 
     /*
      * The path name is first assumed to reference an existing value;
@@ -217,6 +221,8 @@ static Status createRegistry(void)
 {
     RegNode*    rootNode;
 
+    udebug("Creating registry");
+
     if (0 != reg_getNode("/", &rootNode, 1)) {
         LOG_ADD0("Couldn't create registry");
         log_log(LOG_ERR);
@@ -235,6 +241,8 @@ static Status createRegistry(void)
  */
 static Status resetRegistry(void)
 {
+    udebug("Resetting registry");
+
     if (0 != reg_reset()) {
         LOG_ADD0("Couldn't reset registry");
         log_log(LOG_ERR);
@@ -263,6 +271,8 @@ static Status deletePath(
     const char* const   path,
     const int           quiet)
 {
+    udebug("%s deleting path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
+
     switch (reg_deleteValue(path)) {
         case 0:
             return 0;
@@ -360,6 +370,7 @@ int main(
     const char* const   progname = basename(argv[0]);
 
     (void) openulog(progname, LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
+    (void) setulogmask(LOG_UPTO(LOG_NOTICE));
 
     if (status = sb_new(&_valuePath, 80)) {
         LOG_ADD0("Couldn't initialize utility");
@@ -387,7 +398,7 @@ int main(
 
         opterr = 0;                     /* supress getopt(3) error messages */
 
-        while (0 == status && (ch = getopt(argc, argv, ":cd:h:qRrs:t:u:"))
+        while (0 == status && (ch = getopt(argc, argv, ":cd:h:qRrs:t:u:vx"))
                 != -1) {
             switch (ch) {
             case 'c': {
@@ -491,6 +502,14 @@ int main(
                 }
                 break;
             }
+            case 'v': {
+                (void) setulogmask(getulogmask() | LOG_MASK(LOG_INFO));
+                break;
+            }
+            case 'x': {
+                (void) setulogmask(getulogmask() | LOG_MASK(LOG_DEBUG));
+                break;
+            }
             case ':': {
                 LOG_START1("Option \"-%c\" requires an operand", optopt);
                 status = COMMAND_SYNTAX;
@@ -550,12 +569,14 @@ int main(
                         status = COMMAND_SYNTAX;
                     }
                     else {
+                        udebug("Removing registry");
                         status = actUponPathList(argv + optind, deletePath,
                             quiet);
                     }
                     break;
                 }
                 case PRINT: {
+                    udebug("Printing registry");
                     status = (0 == argCount)
                         ? printPath("/", quiet)
                         : actUponPathList(argv + optind, printPath, quiet);
