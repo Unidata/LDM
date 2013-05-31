@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "libpng/png.h"
+#include "png.h"
 #include "md5.h"
 
 int pngcount=0;

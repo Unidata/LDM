@@ -461,7 +461,7 @@ UD_SEARCH_LIB([z], [deflate], [/opt/csw/lib /opt/lib])
 # Ensure that CPPFLAGS and LIBS reference the PNG library, which is used by the
 # LDM GRIB2 module.
 UD_SEARCH_HEADER([PNG], [png.h],
-    [/opt/csw/include /usr/local/csw/include /opt/include /usr/local/include])
+    [/opt/csw/include /usr/local/csw/include /opt/include /usr/local/include /user/sfw/include])
 UD_SEARCH_LIB([png], [png_create_read_struct], [/opt/csw/lib /opt/lib])
     
 # Ensure that CPPFLAGS and LIBS reference the XML2 library, which is used
