@@ -338,3 +338,5 @@ zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/
 zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99,--disable-shared --disable-max-size,0
 zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99,--with-noaaport --with-gribinsert --disable-max-size,0
 zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c99,--with-noaaport --with-gribinsert --disable-shared --disable-max-size,0
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89,,0
+zero,SunOS 5.9,sun4u,PATH=/opt/SUNWspro/bin:/usr/ccs/bin:/usr/bin:/bin,/usr/ccs/bin/make,/opt/SUNWspro/bin/c89,,0

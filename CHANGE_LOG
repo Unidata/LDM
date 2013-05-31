@@ -1,3 +1,9 @@
+6.11.6.13 	2013-05-31 16:17:46-06:00
+    Eliminated removal of remote test-directory to enable "make singleCheck"
+    diagnosis.
+
+    Added "/usr/local/lib" after some "/opt/lib" library searches.
+
 6.11.6.12 	2013-05-31 14:40:39-06:00
     Converted LDADD in program Makefile.am-s to <program>_LDADD.
 
