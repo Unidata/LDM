@@ -1,3 +1,11 @@
+6.11.6.12 	2013-05-31 14:40:39-06:00
+    Converted LDADD in program Makefile.am-s to <program>_LDADD.
+
+    Corrected "png.h" inclusion.
+
+    Changed "libpng.h/png.h" to just "png.h" and added "/user/sfw/include"
+    to "png.h" search-path.
+
 6.11.6.11 	2013-05-30 17:39:16-06:00
     Ensured that LIBS references the math library if necessary.
 
