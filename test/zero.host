@@ -1,3 +1,4 @@
+# /tmp/remoteCheck: line 46: 23518 Segmentation Fault      (core dumped) MAKEFLAGS= $make install uninstall
 PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc
 PATH=/opt/SUNWspro/bin:/usr/xpg4/bin:/usr/ccs/bin:/usr/bin:/bin,--disable-max-size,/usr/xpg4/bin/make,/opt/SUNWspro/bin/cc
 

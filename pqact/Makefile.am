@@ -35,7 +35,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)
 date_sub_CPPFLAGS	= $(CPPFLAGS) -UNDEBUG -DTEST_DATE_SUB
-LDADD			= \
+pqact_LDADD		= \
     $(top_builddir)/lib/libldm.la \
     $(GDBMLIB)
 dist_man1_MANS		= pqact.1

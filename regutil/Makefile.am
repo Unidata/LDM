@@ -37,7 +37,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/protocol
-LDADD			= $(top_builddir)/lib/libldm.la $(LD_GEN)
+regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
 BUILT_SOURCES		= regpar.tab
 dist_man1_MANS		= regutil.1
