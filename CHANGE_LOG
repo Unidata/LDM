@@ -1,3 +1,6 @@
+6.11.6.15 	2013-06-03 13:45:11-06:00
+    Removed Zero from portability-testing platforms because it's EOL.
+
 6.11.6.14 	2013-06-03 11:26:24-06:00
     Improved configure(1) search for header-files and libraries.
 
