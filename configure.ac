@@ -455,21 +455,21 @@ AC_CHECK_HEADERS([stropts.h], ,
 # Ensure that CPPFLAGS and LIBS reference the ZLIB library, which is used by
 # the LDM GRIB2 module and by the XML2 library.
 UD_SEARCH_HEADER([ZLIB], [zlib.h], [/usr/include /opt/csw/include \
-    /usr/local/csw/include /opt/include /usr/local/include])
-UD_SEARCH_LIB([z], [deflate], [/opt/csw/lib /opt/lib /usr/local/lib])
+    /usr/local/csw/include /opt/include /opt/local/include /usr/local/include])
+UD_SEARCH_LIB([z], [deflate], [/opt/csw/lib /opt/lib /opt/local/lib /usr/local/lib])
 
 # Ensure that CPPFLAGS and LIBS reference the PNG library, which is used by the
 # LDM GRIB2 module.
 UD_SEARCH_HEADER([PNG], [png.h],
-    [/opt/csw/include /usr/local/csw/include /opt/include /usr/local/include /user/sfw/include])
-UD_SEARCH_LIB([png], [png_create_read_struct], [/opt/csw/lib /opt/lib /usr/local/lib])
+    [/opt/csw/include /usr/local/csw/include /opt/include /opt/local/include /usr/local/include /user/sfw/include])
+UD_SEARCH_LIB([png], [png_create_read_struct], [/opt/csw/lib /opt/lib /opt/local/lib /usr/local/lib])
     
 # Ensure that CPPFLAGS and LIBS reference the XML2 library, which is used
 # by the LDM registry module.
 UD_SEARCH_HEADER([XML2], [libxml/parser.h],
-    [/usr/include/libxml2 /opt/include/libxml2 /usr/local/include/libxml2 \
+    [/usr/include/libxml2 /opt/include/libxml2 /opt/local/libxml2 /usr/local/include/libxml2 \
         /opt/csw/include/libxml2 /usr/local/csw/include/libxml2])
-UD_SEARCH_LIB([xml2], [xmlInitParser], [/opt/csw/lib /opt/lib /usr/local/lib])
+UD_SEARCH_LIB([xml2], [xmlInitParser], [/opt/csw/lib /opt/lib /opt/local/lib /usr/local/lib])
 
 AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
 AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])

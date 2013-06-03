@@ -23,8 +23,7 @@ HOSTS		= \
     imogene \
     moe \
     spock \
-    sol \
-    zero
+    sol
 
 $(distPath):
 	cd .. && $(MAKE) dist
