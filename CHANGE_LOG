@@ -1,3 +1,6 @@
+6.11.6.17 	2013-06-04 10:41:53-06:00
+    Made search for PNG library dependent on --with-noaaport.
+
 6.11.6.16 	2013-06-04 09:23:59-06:00
     Adapted to opaque "struct png_struct" of PNG 1.5 and later.
 

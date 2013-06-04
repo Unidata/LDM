@@ -540,7 +540,6 @@ utcToEpochTime(
         serror("utcToEpochTime(): timegm() failure");
 
 #else
-
     /*
      * Get timezone information.
      */
