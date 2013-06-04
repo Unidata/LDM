@@ -1,3 +1,8 @@
+6.11.6.18 	2013-06-04 11:44:47-06:00
+    Added LDM library to pqact(1) "make check" program.
+
+    Made search for PNG library dependent on --with-noaaport.
+
 6.11.6.17 	2013-06-04 10:41:53-06:00
     Made search for PNG library dependent on --with-noaaport.
 
