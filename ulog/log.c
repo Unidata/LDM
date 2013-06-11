@@ -268,6 +268,9 @@ int log_vadd(
                         msg->string = string;
                         msg->size = size;
                         status = EAGAIN;
+
+                        if (NULL != list->last)
+                            list->last->next = msg;
                     }
                 }
                 else {
