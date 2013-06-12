@@ -1,3 +1,23 @@
+6.11.6.19 	2013-06-12 15:02:58-06:00
+    Added "Unidata Local Data Manager" for LDM-user comment-field in
+    /etc/passwd.
+
+    Replaced copyright with BSD 3-Clause + patent protection.
+
+    Squashed bug in pqinsert(1) that caused a segmentation violation when given
+    an unknown option.
+
+    Made binary RPM relocatable.
+
+    Made requtil(1) "usage" message use LDM logging facility.
+
+    Added setting of LDMHOME to LDM user's profile-files by %post section of
+    binary RPM installation.
+
+    Squashed bug that cased log(3) facility to drop a new, long message.
+
+    Documented need for PNG package if NOAAPORT system built.
+
 6.11.6.18 	2013-06-04 11:44:47-06:00
     Added LDM library to pqact(1) "make check" program.
 
