@@ -4,6 +4,7 @@ dnl
 AC_PREREQ(2.59)
 AC_INIT([LDM], [6.11.6.18], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
+LT_INIT
 
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -334,8 +335,8 @@ AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
         [Root directory of the LDM installation])
 #
 # Certain installation directories are changed if they have default values
-# because an LDM installation has both version-dependent and
-# version-independent installation directories.
+# because an LDM installation has both version-dependent and version-independent
+# installation directories.
 test "$sysconfdir" = '${prefix}/etc' && sysconfdir='$(LDMHOME)/etc'
 test "$localstatedir" = '${prefix}/var' && localstatedir='$(LDMHOME)/var'
 AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
@@ -502,8 +503,6 @@ AC_COMPILE_IFELSE(
         AC_MSG_RESULT([not found])
     ]
 )
-    
-AC_PROG_LIBTOOL
 
 AC_CONFIG_FILES([
     fauxPq/Makefile

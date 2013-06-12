@@ -1,23 +1,29 @@
 LDMHOME=${1?LDM home directory not set}
 
-DATA_DIR=$LDMHOME/var/data
-QUEUE_DIR=$LDMHOME/var/queues
-LOGS_DIR=$LDMHOME/var/logs
+cd $LDMHOME || exit 1
 
-if test -d $LDMHOME/data; then
-    test -e $DATA_DIR || ln -s $LDMHOME/data $DATA_DIR
-    test -e $QUEUE_DIR || ln -s $LDMHOME/data $QUEUE_DIR
+# If "data" is a symbolic link to a directory then "test -d data" is true but
+# "test -d data a- ! -h data" is false.
+#
+if test -d data -a ! -h data; then
+    # "$HOME/data" is a directory and not a symbolic link -- probably from an
+    # older LDM installation
+    test -e var/data || (cd var && ln -s ../data data)
+    test -e var/queues || (cd var && ln -s ../data queues)
 else
-    test -e $QUEUE_DIR || mkdir -p $QUEUE_DIR
-    test -e $DATA_DIR || mkdir -p $DATA_DIR
-    rm -f $LDMHOME/data
-    ln -s $DATA_DIR $LDMHOME/data
+    # "$HOME/data" doesn't exist or is a symbolic link
+    test -e var/queues || mkdir -p var/queues
+    test -e var/data || mkdir -p var/data
+    rm -f data
+    ln -s var/data data # for convenience
 fi
 
-if test -d $LDMHOME/logs; then
-    test -e $LOGS_DIR || ln -s $LDMHOME/logs $LOGS_DIR
+if test -d logs -a ! -h logs; then
+    # "$HOME/logs" is a directory and not a symbolic link -- probably from an
+    # older LDM installation
+    test -e var/logs || (cd var && ln -s ../logs logs)
 else
-    test -e $LOGS_DIR || mkdir -p $LOGS_DIR
-    rm -f $LDMHOME/logs
-    ln -s $LOGS_DIR $LDMHOME/logs
+    test -e var/logs || mkdir -p var/logs
+    rm -f logs
+    ln -s var/logs logs
 fi

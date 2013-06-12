@@ -89,8 +89,11 @@ nobase_include_HEADERS		= \
     rpc/svc_auth.h \
     rpc/pmap_clnt.h \
     rpc/pmap_prot.h
+    
+LDM_ICON_FILE		= ldm-50x50.xpm
 
 EXTRA_DIST = \
+    $(LDM_ICON_FILE) \
     CHANGE_LOG \
     COPYRIGHT \
     extractDecls \
@@ -103,7 +106,8 @@ dist_bin_SCRIPTS	= \
     ensureVar \
     ensureSyslogEntry \
     ensureRpcEntry \
-    ensureServicesEntry
+    ensureServicesEntry \
+    rpmUserActions
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
@@ -196,6 +200,16 @@ ensure-rpc-entry:
 
 ensure-services-entry:
 	$(srcdir)/ensureServicesEntry
+
+install-data-local:	$(DESTDIR)$(docdir)/CHANGE_LOG \
+                	$(DESTDIR)$(docdir)/COPYRIGHT \
+                	$(DESTDIR)$(docdir)/README
+$(DESTDIR)$(docdir)/CHANGE_LOG:	CHANGE_LOG
+	cp $? $@
+$(DESTDIR)$(docdir)/COPYRIGHT:	COPYRIGHT
+	cp $? $@
+$(DESTDIR)$(docdir)/README:	README
+	cp $? $@
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
@@ -294,14 +308,19 @@ web-update:
 # public
 available:	ftp web-update
 
-TOP_BUILD_DIR	= /tmp/rpmbuild
+RPM_BUILDDIR	= $$HOME/rpmbuild
 rpm:		dist ldm.spec
-	rm -rf $(TOP_BUILD_DIR)
-	mkdir -p $(TOP_BUILD_DIR)/SOURCES
-	cp $(distArchive) $(TOP_BUILD_DIR)/SOURCES 
-	mkdir $(TOP_BUILD_DIR)/SPECS
-	cp ldm.spec $(TOP_BUILD_DIR)/SPECS
-	rpmbuild -
+	mkdir -p $(RPM_BUILDDIR)/SOURCES
+	cp $(distArchive) $(LDM_ICON_FILE) $(RPM_BUILDDIR)/SOURCES 
+	mkdir -p $(RPM_BUILDDIR)/SPECS
+	cp ldm.spec $(RPM_BUILDDIR)/SPECS
+	rpmbuild -bb $(RPM_BUILDDIR)/SPECS/ldm.spec
+    
+rpmlint:
+	rpmlint $(RPM_BUILDDIR)/SPECS/ldm.spec \
+    	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
+    	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
+    	
 endif
 
 .PHONY:		\
@@ -323,6 +342,7 @@ endif
     remote-checks \
     root-actions \
     rpm \
+    rpmlint \
     tag \
     timestamp \
     web-update
