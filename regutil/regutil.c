@@ -33,7 +33,7 @@ static StringBuf*       _valuePath;
 
 static void printUsage(const char* progname)
 {
-    LOG_ADD6(
+    log_add(
 "Usages:\n"
 "  Create Registry:     %s [-v|-x] [-d dir] -c\n"
 "  Reset Registry:      %s [-v|-x] [-d dir] -R\n"
