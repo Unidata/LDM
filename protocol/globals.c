@@ -340,17 +340,13 @@ const char* getLdmHomePath(void)
         ldmHomePath = getenv("LDMHOME");
 
         if (NULL == ldmHomePath) {
-            ldmHomePath = getenv("HOME");
-
-            if (NULL == ldmHomePath) {
-                /*
-                 * LDMHOME is guaranteed by the configure(1) script to be a
-                 * non-empty string. If the LDM installation is from a
-                 * relocated RPM binary, however, then LDMHOME might be
-                 * incorrect.
-                 */
-                ldmHomePath = LDMHOME;
-            }
+            /*
+             * LDMHOME is guaranteed by the configure(1) script to be a
+             * non-empty string. If the LDM installation is from a
+             * relocated RPM binary, however, then LDMHOME might be
+             * incorrect.
+             */
+            ldmHomePath = LDMHOME;
         }
     }
 
