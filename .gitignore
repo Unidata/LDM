@@ -66,3 +66,4 @@ ldm.spec
 configure
 Makefile.in
 ldm-6.*
+awips2-ldm.spec
