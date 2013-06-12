@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "globals.h"
 #include "registry.h"
 #include "ulog.h"
 #include "log.h"
@@ -32,26 +33,27 @@ static StringBuf*       _valuePath;
 
 static void printUsage(const char* progname)
 {
-    (void)fprintf(stderr,
-        "Usages:\n"
-        "  Create Registry:     %s [-v|-x] [-d dir] -c\n"
-        "  Reset Registry:      %s [-v|-x] [-d dir] -R\n"
-        "  Print Parameters:    %s [-v|-x] [-d dir] [-q] [path ...]\n"
-        "  Remove Parameter(s): %s [-v|-x] [-d dir] [-q] -r path ...\n"
-        "  Set Parameter:       %s [-v|-x] [-d dir] (-h sig|-s string|-t time|-u uint) "
-            "valpath\n"
-        "where:\n"
-        "  -d dir       Path name of registry directory\n"
-        "  -h sig       Data-product signature as 32 hexadecimal characters\n"
-        "  -q           Be quiet about missing values or nodes\n"
-        "  -s string    String registry value\n"
-        "  -t time      Time registry value as YYYYMMDDThhmmss[.uuuuuu]\n"
-        "  -u uint      Unsigned integer registry value\n"
-        "  -v           Log INFO messages\n"
-        "  -x           Log DEBUG messages\n"
-        "  path         Absolute path name of registry node or value\n"
-        "  valpath      Absolute path name of value\n",
-        progname, progname, progname, progname, progname);
+    LOG_ADD6(
+"Usages:\n"
+"  Create Registry:     %s [-v|-x] [-d dir] -c\n"
+"  Reset Registry:      %s [-v|-x] [-d dir] -R\n"
+"  Print Parameters:    %s [-v|-x] [-d dir] [-q] [path ...]\n"
+"  Remove Parameter(s): %s [-v|-x] [-d dir] [-q] -r path ...\n"
+"  Set Parameter:       %s [-v|-x] [-d dir] (-h sig|-s string|-t time|-u uint) "
+    "valpath\n"
+"Where:\n"
+"  -d dir       Path name of registry directory. Default=\"%s\"\n"
+"  -h sig       Data-product signature as 32 hexadecimal characters\n"
+"  -q           Be quiet about missing values or nodes\n"
+"  -s string    String registry value\n"
+"  -t time      Time registry value as YYYYMMDDThhmmss[.uuuuuu]\n"
+"  -u uint      Unsigned integer registry value\n"
+"  -v           Log INFO messages\n"
+"  -x           Log DEBUG messages\n"
+"  path         Absolute path name of registry node or value\n"
+"  valpath      Absolute path name of value\n",
+        progname, progname, progname, progname, progname, getRegistryDirPath());
+    log_log(LOG_ERR);
 }
 
 /*
@@ -513,9 +515,8 @@ int main(
             case ':': {
                 LOG_START1("Option \"-%c\" requires an operand", optopt);
                 status = COMMAND_SYNTAX;
+                break;
             }
-            /*FALLTHROUGH*/
-            /* no break */
             default:
                 LOG_START1("Unknown option: \"%c\"", optopt);
                 status = COMMAND_SYNTAX;
