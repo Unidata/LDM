@@ -99,7 +99,7 @@ then
     fi
 else
     # The LDM user doesn't exist. Create them.
-    useradd -d $RPM_INSTALL_PREFIX -m %{ldmUser} || exit 1
+    useradd -c "Unidata Local Data Manager" -d $RPM_INSTALL_PREFIX -m %{ldmUser} || exit 1
 fi
 mkdir -p $RPM_INSTALL_PREFIX
 chown %{ldmUser} $RPM_INSTALL_PREFIX || exit 1
