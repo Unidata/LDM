@@ -323,7 +323,7 @@ rpm:		dist ldm.spec
 	mkdir -p $(RPM_BUILDDIR)/SPECS
 	cp ldm.spec $(RPM_BUILDDIR)/SPECS
 	rpmbuild -bb $(RPM_BUILDDIR)/SPECS/ldm.spec
-	mv $(RPM_BUILDDIR)/RPMS/`uname -m`/$(distName)-*.rpm .
+	mv $(RPM_BUILDDIR)/RPMS/`uname -m`/$(PACKAGE)*-$(VERSION)-*.rpm .
     
 rpmlint:
 	rpmlint $(RPM_BUILDDIR)/SPECS/ldm.spec \

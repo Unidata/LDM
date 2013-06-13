@@ -32,7 +32,6 @@ Exclusiveos:    linux
 #
 Provides:       ldmd notifyme pqact
         
-%define debug_package   %{nil}
 %define ldmUser         ldm
 
 %description
@@ -487,8 +486,6 @@ chown %{ldmUser} $RPM_INSTALL_PREFIX || exit 1
 %config(noreplace) %attr(0755,ldm,-) %{_prefix}/lib
 %config(noreplace) %attr(0755,ldm,-) %{_prefix}/share
 %config(noreplace) %attr(0755,ldm,-) %{_prefix}/runtime
-%config(noreplace) %attr(0755,ldm,-) %{_prefix}/logs
-%config(noreplace) %attr(0755,ldm,-) %{_prefix}/data
 
 ###############################################################################
 %post
