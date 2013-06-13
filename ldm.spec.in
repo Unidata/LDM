@@ -520,5 +520,5 @@ su - %{ldmUser} -c "$RPM_INSTALL_PREFIX/bin/rpmUserActions %{_prefix} %{pkgid} $
 ###############################################################################
 %changelog
 
-* Thu Jun 13 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.1.6.20
+* Thu Jun 13 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.21
 - Initial RPM release

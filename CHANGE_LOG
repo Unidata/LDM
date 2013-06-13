@@ -1,4 +1,7 @@
-6.1.6.20 	2013-06-13 14:15:26-06:00
+6.11.6.21 	2013-06-13 14:33:25-06:00
+    Corrected date format in %changelog
+
+6.11.6.20 	2013-06-13 14:15:26-06:00
     Added generation of RPM to "make release".
 
     Documented RPM installation.
