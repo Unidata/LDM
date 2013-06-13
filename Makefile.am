@@ -268,10 +268,10 @@ release:
 	newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
 	echo $$newVersion | egrep '^[0-9]+(\.[0-9]+)*$$' >/dev/null || exit 1; \
         echo >>ldm.spec.in; \
-        echo "* `date --rfc-3339=seconds` Steve Emmerson" \
+        echo "* `date '+%a %b %e %Y'` Steve Emmerson" \
         	"<support-ldm@unidata.ucar.edu> $$newVersion" >>ldm.spec.in; \
         echo "- PUT SUMMARY HERE" >>ldm.spec.in; \
-	vi ldm.spec.in; \
+	vi "+/PUT SUMMARY HERE/" ldm.spec.in; \
 	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
 	    >configure.ac.tmp; \
 	mv configure.ac.tmp configure.ac

@@ -1,3 +1,8 @@
+6.1.6.20 	2013-06-13 14:15:26-06:00
+    Added generation of RPM to "make release".
+
+    Documented RPM installation.
+
 6.11.6.19 	2013-06-12 15:02:58-06:00
     Added "Unidata Local Data Manager" for LDM-user comment-field in
     /etc/passwd.
