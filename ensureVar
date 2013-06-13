@@ -7,15 +7,14 @@ cd $LDMHOME || exit 1
 #
 if test -d data -a ! -h data; then
     # "$HOME/data" is a directory and not a symbolic link -- probably from an
-    # older LDM installation
+    # older LDM installation. Symbolically link to it.
     test -e var/data || (cd var && ln -s ../data data)
     test -e var/queues || (cd var && ln -s ../data queues)
 else
     # "$HOME/data" doesn't exist or is a symbolic link
     test -e var/queues || mkdir -p var/queues
     test -e var/data || mkdir -p var/data
-    rm -f data
-    ln -s var/data data # for convenience
+    rm -f data # obsolete
 fi
 
 if test -d logs -a ! -h logs; then
@@ -24,6 +23,5 @@ if test -d logs -a ! -h logs; then
     test -e var/logs || (cd var && ln -s ../logs logs)
 else
     test -e var/logs || mkdir -p var/logs
-    rm -f logs
-    ln -s var/logs logs
+    rm -f logs # obsolete
 fi
