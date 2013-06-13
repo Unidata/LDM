@@ -98,6 +98,7 @@ EXTRA_DIST = \
     COPYRIGHT \
     extractDecls \
     ldm.spec \
+    ldm.spec.in \
     macros.make.in \
     README
 
@@ -266,10 +267,15 @@ release:
 	mv CHANGE_LOG.tmp CHANGE_LOG
 	newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
 	echo $$newVersion | egrep '^[0-9]+(\.[0-9]+)*$$' >/dev/null || exit 1; \
+        echo >>ldm.spec.in; \
+        echo "* `date --rfc-3339=seconds` Steve Emmerson" \
+        	"<support-ldm@unidata.ucar.edu> $$newVersion" >>ldm.spec.in; \
+        echo "- PUT SUMMARY HERE" >>ldm.spec.in; \
+	vi ldm.spec.in; \
 	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
-	    >configure.ac.tmp
+	    >configure.ac.tmp; \
 	mv configure.ac.tmp configure.ac
-	$(MAKE) configure Makefile timestamp dist commitAndTag
+	$(MAKE) configure Makefile timestamp dist rpm commitAndTag
 
 ftp-actual:		dist $(FTPDIR)
 	cp $(distArchive) $(FTPDIR)
@@ -309,12 +315,15 @@ web-update:
 available:	ftp web-update
 
 RPM_BUILDDIR	= $$HOME/rpmbuild
+#
+# Create a binary RPM file in this directory
 rpm:		dist ldm.spec
 	mkdir -p $(RPM_BUILDDIR)/SOURCES
 	cp $(distArchive) $(LDM_ICON_FILE) $(RPM_BUILDDIR)/SOURCES 
 	mkdir -p $(RPM_BUILDDIR)/SPECS
 	cp ldm.spec $(RPM_BUILDDIR)/SPECS
 	rpmbuild -bb $(RPM_BUILDDIR)/SPECS/ldm.spec
+	mv $(RPM_BUILDDIR)/RPMS/`uname -m`/$(distName)-*.rpm .
     
 rpmlint:
 	rpmlint $(RPM_BUILDDIR)/SPECS/ldm.spec \

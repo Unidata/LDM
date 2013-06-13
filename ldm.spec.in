@@ -309,6 +309,7 @@ chown %{ldmUser} $RPM_INSTALL_PREFIX || exit 1
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/huge-queues.html
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/ldmConfigInstallList.html
 %attr(0755,ldm,-) %{versdir}/share/doc/ldm/basics
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/rpm-install-steps.html
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/source-install-steps.html
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/tips.html
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/ldmd.conf.html
@@ -519,5 +520,5 @@ su - %{ldmUser} -c "$RPM_INSTALL_PREFIX/bin/rpmUserActions %{_prefix} %{pkgid} $
 ###############################################################################
 %changelog
 
-* Fri Jun  7 2013 Steve Emmerson <steve@unidata.ucar.edu> @VERSION@
+* 2013-06-13 Steve Emmerson <steve@unidata.ucar.edu> @VERSION@
 - Initial binary RPM
