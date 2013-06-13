@@ -316,7 +316,7 @@ available:	ftp web-update
 
 RPM_BUILDDIR	= $$HOME/rpmbuild
 #
-# Create a binary RPM file in this directory
+# Create binary RPM files in this directory
 rpm:		dist ldm.spec
 	mkdir -p $(RPM_BUILDDIR)/SOURCES
 	cp $(distArchive) $(LDM_ICON_FILE) $(RPM_BUILDDIR)/SOURCES 
