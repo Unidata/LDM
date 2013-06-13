@@ -5,8 +5,8 @@ Summary:        A system for subscribing-to, receiving, relaying, and processing
 
 # The default home-directory of the installed LDM package.
 #
-%define _prefix /usr/local/ldm
-Prefix:         /usr/local/ldm
+%define _prefix /opt/ldm
+Prefix:         /opt/ldm
 
 License:        BSD 3-Clause + patent protection
 URL:            http://www.unidata.ucar.edu/software/ldm
