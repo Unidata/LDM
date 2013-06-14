@@ -11,7 +11,7 @@ Prefix:         /opt/ldm
 License:        BSD 3-Clause + patent protection
 URL:            http://www.unidata.ucar.edu/software/ldm
 %define pkgid   %{name}-%{version}
-Source:         %{name}-%{version}.tar.gz
+Source:         ftp://ftp.unidata.ucar.edu/pub/ldm/%{name}-%{version}.tar.gz
 
 BuildRequires:  %{__make} coreutils perl %{__cc} gawk libxml2-devel
 BuildRequires:  zlib-devel libpng-devel glibc-devel
