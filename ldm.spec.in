@@ -84,24 +84,23 @@ make install DESTDIR=%{?buildroot}
 ###############################################################################
 %pre
 
-# Vet the LDM user.
+# Vet the LDM user: check consistency of user-name and home-directory.
 #
-if home=`awk -F : 'BEGIN{status=1}$1=="'%{ldmUser}'"{print $6;status=0;exit}END{exit status}' /etc/passwd`
+if home=`getent passwd | awk -F : 'BEGIN{status=1}$1=="'%{ldmUser}'"{print $6;status=0;exit}END{exit status}'`
 then
     # The following doesn't work: the package is still installed under
     # %%{_prefix}.
     # RPM_INSTALL_PREFIX="$home"
-    if test "$home" != $RPM_INSTALL_PREFIX; then
-        echo "LDM user's home-directory isn't $RPM_INSTALL_PREFIX" 1>&2
+    if test "$home" != "$RPM_INSTALL_PREFIX"; then
+        echo "The LDM user's home-directory isn't \"$RPM_INSTALL_PREFIX\"" 1>&2
         exit 1
-        %{error}
     fi
 else
     # The LDM user doesn't exist. Create them.
-    useradd -c "Unidata Local Data Manager" -d $RPM_INSTALL_PREFIX -m %{ldmUser} || exit 1
+    useradd -c "Unidata Local Data Manager" -d "$RPM_INSTALL_PREFIX" -m %{ldmUser} || exit 1
 fi
-mkdir -p $RPM_INSTALL_PREFIX
-chown %{ldmUser} $RPM_INSTALL_PREFIX || exit 1
+mkdir -p "$RPM_INSTALL_PREFIX"
+chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
 
 ###############################################################################
 %files
@@ -496,7 +495,7 @@ chown %{ldmUser} $RPM_INSTALL_PREFIX || exit 1
     
     # Ensure logging
     $VERSBINDIR/ensureSyslogEntry local0 /etc/rsyslog.conf \
-        $RPM_INSTALL_PREFIX/var/logs/ldmd.log || exit 1
+        "$RPM_INSTALL_PREFIX/var/logs/ldmd.log" || exit 1
 
     # Ensure an RPC entry
     $VERSBINDIR/ensureRpcEntry || exit 1
@@ -508,11 +507,11 @@ chown %{ldmUser} $RPM_INSTALL_PREFIX || exit 1
     #
     # According to the ldconfig(1) manual-page, "ldconfig -X -n 
     # $RPM_INSTALL_PREFIX/lib" should work. It doesn't. The following does.
-    ldconfig -X $RPM_INSTALL_PREFIX/lib
+    ldconfig -X "$RPM_INSTALL_PREFIX/lib"
 
 # Perform LDM user actions
 #
-su - %{ldmUser} -c "$RPM_INSTALL_PREFIX/bin/rpmUserActions %{_prefix} %{pkgid} $RPM_INSTALL_PREFIX"
+su - %{ldmUser} -c "$RPM_INSTALL_PREFIX/bin/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTALL_PREFIX\""
 
 ###############################################################################
 %changelog
