@@ -28,8 +28,12 @@ source. In particular, the following constraints apply:
     the name of the RPM file. </li>
     
     <li>If the <a href="glindex.html#LDM user">LDM user</a> doesn't exist, then
-    they will be created with the name "ldm" and with default user and group
-    ID-s. </li>
+    they will be created with the name "ldm", with default user and group
+    ID-s, and with the value of <tt>rpm(1)</tt>'s <tt>prefix</tt> option as
+    their home-directory. </li>
+    
+    <li>All utilities will be dynamically linked and only the sharable LDM
+    library will be installed.
     
     <li>The top-level <a href="glindex.html#LDM">LDM</a> server,
     <a href="glindex.html#ldmd"><tt>ldmd</tt></a>, will listen on port 388.</li>
