@@ -13,8 +13,7 @@ URL:            http://www.unidata.ucar.edu/software/ldm
 %define pkgid   %{name}-%{version}
 Source:         ftp://ftp.unidata.ucar.edu/pub/ldm/%{name}-%{version}.tar.gz
 
-BuildRequires:  %{__make} coreutils perl %{__cc} gawk libxml2-devel
-BuildRequires:  zlib-devel libpng-devel glibc-devel
+BuildRequires:  perl libxml2-devel zlib-devel libpng-devel glibc-devel
 Requires:       gawk coreutils net-tools bash procps gnuplot ntpdate perl
 Requires:       libxml2-devel zlib-devel libpng-devel glibc-devel
 
