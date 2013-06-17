@@ -506,7 +506,7 @@ chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
     #
     # According to the ldconfig(1) manual-page, "ldconfig -X -n 
     # $RPM_INSTALL_PREFIX/lib" should work. It doesn't. The following does.
-    ldconfig -X "$RPM_INSTALL_PREFIX/lib"
+    ldconfig -X "$RPM_INSTALL_PREFIX"/lib
     
     VERSBINDIR="$RPM_INSTALL_PREFIX/%{pkgid}/bin"
     
@@ -514,11 +514,11 @@ chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
         # Ensure that the system logging-daemon configuration-file has the
         # appropriate entries
         $VERSBINDIR/ensureSyslogEntry local0 /etc/rsyslog.conf \
-            "$RPM_INSTALL_PREFIX/var/logs/ldmd.log" || exit 1
+            "$RPM_INSTALL_PREFIX"/var/logs/ldmd.log || exit 1
             
         # Ensure that the LDM logging directory has the same SELINUX security
         # context as the system logging directory
-        chcon --reference=/var/log -L "$RPM_INSTALL_PREFIX/var/logs" 
+        chcon --reference=/var/log -L "$RPM_INSTALL_PREFIX"/var/logs 
 
     # Ensure an entry in the RPC file
     $VERSBINDIR/ensureRpcEntry || exit 1
@@ -528,8 +528,7 @@ chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
 
 # Perform LDM user actions
 #
-su - %{ldmUser} -c "$RPM_INSTALL_PREFIX/bin/rpmUserActions %{_prefix} %{pkgid} \
-        \"$RPM_INSTALL_PREFIX\""
+su - %{ldmUser} -c "$VERSBINDIR/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTALL_PREFIX\""
 
 ###############################################################################
 %changelog
