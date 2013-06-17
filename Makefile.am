@@ -265,13 +265,16 @@ release:
 	cat CHANGE_LOG >>CHANGE_LOG.tmp
 	vi CHANGE_LOG.tmp
 	mv CHANGE_LOG.tmp CHANGE_LOG
+	sed -n '1,/^%changelog/p' ldm.spec.in ldm.spec.in >ldm.spec.in.tmp
+	echo >>ldm.spec.in.tmp
 	newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
 	echo $$newVersion | egrep '^[0-9]+(\.[0-9]+)*$$' >/dev/null || exit 1; \
-        echo >>ldm.spec.in; \
         echo "* `date '+%a %b %e %Y'` Steve Emmerson" \
-        	"<support-ldm@unidata.ucar.edu> $$newVersion" >>ldm.spec.in; \
-        echo "- PUT SUMMARY HERE" >>ldm.spec.in; \
-	vi "+/PUT SUMMARY HERE/" ldm.spec.in; \
+        	"<support-ldm@unidata.ucar.edu> $$newVersion" >>ldm.spec.in.tmp; \
+        echo "- PUT SUMMARY HERE" >>ldm.spec.in.tmp; \
+	sed '1,/^%changelog/d' ldm.spec.in >>ldm.spec.in.tmp; \
+	vi "+/PUT SUMMARY HERE/" ldm.spec.in.tmp; \
+	mv ldm.spec.in.tmp ldm.spec.in; \
 	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
 	    >configure.ac.tmp; \
 	mv configure.ac.tmp configure.ac
