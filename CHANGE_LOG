@@ -1,3 +1,19 @@
+6.11.6.22 	2013-06-17 15:56:29-06:00
+    Much RPM-related stuff.
+
+    Added security context setting of LDM log directory.
+
+    Documented that "--disable-static" is in effect for RPM.
+
+    "$LDMHOME/logs" and "$LDMHOME/var" recreated only if are symbolic links.
+
+    Changed default installation-directory from "/usr/local/ldm" to
+    "/opt/ldm" following the FHS guidelines.
+
+    Added creation of "debuginfo" RPM.
+
+    Removed creation of "data" and "logs" symbolic links in home-directory.
+
 6.11.6.21 	2013-06-13 14:33:25-06:00
     Corrected date format in %changelog
 
