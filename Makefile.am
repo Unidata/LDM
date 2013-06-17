@@ -275,7 +275,7 @@ release:
 	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
 	    >configure.ac.tmp; \
 	mv configure.ac.tmp configure.ac
-	$(MAKE) configure Makefile timestamp dist rpm commitAndTag
+	$(MAKE) configure Makefile timestamp dist commitAndTag
 
 ftp-actual:		dist $(FTPDIR)
 	cp $(distArchive) $(FTPDIR)
@@ -319,7 +319,7 @@ RPM_BUILDDIR	= $$HOME/rpmbuild
 # Create binary RPM files in this directory
 rpm:		dist ldm.spec
 	mkdir -p $(RPM_BUILDDIR)/SOURCES
-	cp $(distArchive) $(LDM_ICON_FILE) $(RPM_BUILDDIR)/SOURCES 
+	cp -p $(distArchive) $(LDM_ICON_FILE) $(RPM_BUILDDIR)/SOURCES 
 	mkdir -p $(RPM_BUILDDIR)/SPECS
 	cp ldm.spec $(RPM_BUILDDIR)/SPECS
 	rpmbuild -bb $(RPM_BUILDDIR)/SPECS/ldm.spec
