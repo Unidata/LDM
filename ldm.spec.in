@@ -5,33 +5,40 @@ Summary:        A system for subscribing-to, receiving, relaying, and processing
 
 # The default home-directory of the installed LDM package.
 #
-%define _prefix /opt/ldm
+%global _prefix /opt/ldm
 Prefix:         /opt/ldm
 
 License:        BSD 3-Clause + patent protection
 URL:            http://www.unidata.ucar.edu/software/ldm
-%define pkgid   %{name}-%{version}
-Source:         ftp://ftp.unidata.ucar.edu/pub/ldm/%{name}-%{version}.tar.gz
+%global pkgid   %{name}-%{version}
+#Source:         ftp://ftp.unidata.ucar.edu/pub/ldm/%{name}-%{version}.tar.gz
+Source:         %{name}-%{version}.tar.gz
 
 BuildRequires:  perl libxml2-devel zlib-devel libpng-devel glibc-devel
 Requires:       gawk coreutils net-tools bash procps gnuplot ntpdate perl
-Requires:       libxml2-devel zlib-devel libpng-devel glibc-devel
+Requires:       libxml2 zlib libpng glibc-common
 
 Group:          Applications/Internet
 Vendor:         University Corporation for Atmospheric Research
 Icon:           ldm-50x50.xpm
 Exclusiveos:    linux
 
-# The version-specific installation-directory of this package.
+# The default, version-specific installation-directory of this package.
 #
-%define versdir %{_prefix}/%{pkgid}
+%global versdir %{_prefix}/%{pkgid}
 
 # Only a virtual file and a few high-value files are mentioned. rpmbuild(1)
 # automatically adds the LDM shared-library.
 #
 Provides:       ldmd notifyme pqact
         
-%define ldmUser         ldm
+%global ldmUser         ldm
+
+# Enable PIE compiler flags for security (because long running, setuid, & root)
+%global _hardened_build 1
+
+# No "-devel" subpackage is defined because doing so would only reduce the size
+# of the base package by about 7%.
 
 %description
 Unidata's Local Data Manager (LDM) acquires data-products and shares them with
@@ -69,10 +76,16 @@ LDMHOME=%{_prefix}; export LDMHOME
 #
 # Don't use "--libdir=%%{_libdir}" in the following because this package only
 # has "$HOME/lib" and not "$HOME/lib64".
-#
-./configure --prefix=%{versdir} --disable-root-actions \
+# "--disable-static" is specified by convention.
+./configure --prefix=%{versdir} --disable-root-actions --disable-static \
         --with-noaaport --with-gribinsert
-make DESTDIR=%{?buildroot}
+        
+# Removing the RPATH dependency with the following causes the use of regutil(1)
+# to fail when adjusting the registry values.
+#sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
+#sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
+
+make %{?_smp_mflags} DESTDIR=%{?buildroot}
 
 ###############################################################################
 %install
@@ -224,7 +237,6 @@ chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
 %attr(0755,ldm,-) %{versdir}/lib/libldm.so.0
 %attr(0755,ldm,-) %{versdir}/lib/libldm.la
 %attr(0755,ldm,-) %{versdir}/lib/libldm.so
-%attr(0644,ldm,-) %{versdir}/lib/libldm.a
 
 %attr(0755,ldm,-) %{versdir}/share
 %attr(0755,ldm,-) %{versdir}/share/doc
@@ -490,27 +502,34 @@ chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
 
 # Perform superuser actions
 #
-    VERSBINDIR="$RPM_INSTALL_PREFIX/%{pkgid}/bin"
-    
-    # Ensure logging
-    $VERSBINDIR/ensureSyslogEntry local0 /etc/rsyslog.conf \
-        "$RPM_INSTALL_PREFIX/var/logs/ldmd.log" || exit 1
-
-    # Ensure an RPC entry
-    $VERSBINDIR/ensureRpcEntry || exit 1
-
-    # Ensure a services entry
-    $VERSBINDIR/ensureServicesEntry || exit 1
-    
     # Ensure that the LDM library can be found.
     #
     # According to the ldconfig(1) manual-page, "ldconfig -X -n 
     # $RPM_INSTALL_PREFIX/lib" should work. It doesn't. The following does.
     ldconfig -X "$RPM_INSTALL_PREFIX/lib"
+    
+    VERSBINDIR="$RPM_INSTALL_PREFIX/%{pkgid}/bin"
+    
+    # Ensure logging
+        # Ensure that the system logging-daemon configuration-file has the
+        # appropriate entries
+        $VERSBINDIR/ensureSyslogEntry local0 /etc/rsyslog.conf \
+            "$RPM_INSTALL_PREFIX/var/logs/ldmd.log" || exit 1
+            
+        # Ensure that the LDM logging directory has the same SELINUX security
+        # context as the system logging directory
+        chcon --reference=/var/log -L "$RPM_INSTALL_PREFIX/var/logs" 
+
+    # Ensure an entry in the RPC file
+    $VERSBINDIR/ensureRpcEntry || exit 1
+
+    # Ensure an entry in the services file
+    $VERSBINDIR/ensureServicesEntry || exit 1
 
 # Perform LDM user actions
 #
-su - %{ldmUser} -c "$RPM_INSTALL_PREFIX/bin/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTALL_PREFIX\""
+su - %{ldmUser} -c "$RPM_INSTALL_PREFIX/bin/rpmUserActions %{_prefix} %{pkgid} \
+        \"$RPM_INSTALL_PREFIX\""
 
 ###############################################################################
 %changelog
