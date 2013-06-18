@@ -280,11 +280,29 @@ release:
 	mv configure.ac.tmp configure.ac
 	$(MAKE) configure Makefile timestamp dist commitAndTag rpm
 
-ftp-actual:		dist $(FTPDIR)
-	cp $(distArchive) $(FTPDIR)
+RPM_BUILDDIR	= $$HOME/rpmbuild
+#
+# Create binary RPM files in this directory
+rpm:		dist ldm.spec
+	mkdir -p $(RPM_BUILDDIR)/SOURCES
+	cp -p $(distArchive) $(LDM_ICON_FILE) $(RPM_BUILDDIR)/SOURCES 
+	mkdir -p $(RPM_BUILDDIR)/SPECS
+	cp ldm.spec $(RPM_BUILDDIR)/SPECS
+	rpmbuild -bb $(RPM_BUILDDIR)/SPECS/ldm.spec
+	mv $(RPM_BUILDDIR)/RPMS/`uname -m`/$(PACKAGE)*-$(VERSION)-*.rpm .
+    
+rpmlint:
+	rpmlint $(RPM_BUILDDIR)/SPECS/ldm.spec \
+    	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
+    	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
+
+ftp-actual:		dist rpm $(FTPDIR)
+	cp -p $(distArchive) $(FTPDIR)
 	chmod u+rw,g+rw,o=r $(FTPDIR)/$(distArchive)
 	rm -f $(FTPDIR)/$(PACKAGE).tar.gz
 	$(LN_S) $(distArchive) $(FTPDIR)/$(PACKAGE).tar.gz
+	cp -p $(PACKAGE)*-$(VERSION)-*.rpm $(FTPDIR)
+	chmod u+rw,g+rw,o=r $(FTPDIR)/$(PACKAGE)*-$(VERSION)-*.rpm 
 
 download_update:
 	previous=`sed -n 's/.*"%current%" value="\(.*\)".*/\1/p' \
@@ -316,22 +334,6 @@ web-update:
 # Make this instead of "release" when the package will be released to the
 # public
 available:	ftp web-update
-
-RPM_BUILDDIR	= $$HOME/rpmbuild
-#
-# Create binary RPM files in this directory
-rpm:		dist ldm.spec
-	mkdir -p $(RPM_BUILDDIR)/SOURCES
-	cp -p $(distArchive) $(LDM_ICON_FILE) $(RPM_BUILDDIR)/SOURCES 
-	mkdir -p $(RPM_BUILDDIR)/SPECS
-	cp ldm.spec $(RPM_BUILDDIR)/SPECS
-	rpmbuild -bb $(RPM_BUILDDIR)/SPECS/ldm.spec
-	mv $(RPM_BUILDDIR)/RPMS/`uname -m`/$(PACKAGE)*-$(VERSION)-*.rpm .
-    
-rpmlint:
-	rpmlint $(RPM_BUILDDIR)/SPECS/ldm.spec \
-    	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
-    	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
     	
 endif
 
