@@ -1,3 +1,11 @@
+6.11.6.23 	2013-06-18 10:56:55-06:00
+    Disabled parallel make(1) builds because it sometimes failed.
+
+    Removed creation of "runtime" link during installation because it
+    causes a conflict with RPM upgrading.
+
+    Corrected order of %changelog entries.
+
 6.11.6.22 	2013-06-17 15:56:29-06:00
     Much RPM-related stuff.
 

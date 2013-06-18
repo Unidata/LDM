@@ -533,6 +533,14 @@ su - %{ldmUser} -c "$VERSBINDIR/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTAL
 ###############################################################################
 %changelog
 
+* Tue Jun 18 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.23
+- Disabled parallel make(1) builds because it sometimes failed.
+
+- Removed creation of "runtime" link during installation because it
+- causes a conflict with RPM upgrading.
+
+- Corrected order of %changelog entries.
+
 * Mon Jun 17 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.22
 - Much RPM-related stuff.
 
