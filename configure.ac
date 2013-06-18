@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.11.6.25], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.11.6.26], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 LT_INIT
 

@@ -535,6 +535,9 @@ su - %{ldmUser} -c "$VERSBINDIR/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTAL
 ###############################################################################
 %changelog
 
+* Tue Jun 18 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.26
+- Added comment to ldm.spec about directories not replacing symlinks.
+
 * Tue Jun 18 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.25
 - Corrected logic behind var/ directories and symbolic links.
 
