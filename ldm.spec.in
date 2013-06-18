@@ -38,7 +38,7 @@ Provides:       ldmd notifyme pqact
 %global _hardened_build 1
 
 # No "-devel" subpackage is defined because doing so would only reduce the size
-# of the base package by about 7%.
+# of the base package by about 7 percent.
 
 %description
 Unidata's Local Data Manager (LDM) acquires data-products and shares them with
