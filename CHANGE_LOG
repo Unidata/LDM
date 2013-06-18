@@ -1,3 +1,6 @@
+6.11.6.24 	2013-06-18 12:33:16-06:00
+    Added RPM-s to "ftp" and "release" targets.
+
 6.11.6.23 	2013-06-18 10:56:55-06:00
     Disabled parallel make(1) builds because it sometimes failed.
 

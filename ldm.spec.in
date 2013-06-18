@@ -533,6 +533,9 @@ su - %{ldmUser} -c "$VERSBINDIR/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTAL
 ###############################################################################
 %changelog
 
+* Tue Jun 18 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.24
+- Added RPM-s to "ftp" and "release" targets.
+
 * Tue Jun 18 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.23
 - Disabled parallel make(1) builds because it sometimes failed.
 
