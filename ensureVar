@@ -1,5 +1,8 @@
 LDMHOME=${1?LDM home directory not set}
 
+# This script assumes that $LDMHOME/var exists. "make install" should have
+# created it.
+
 cd $LDMHOME || exit 1
 
 # If "data" is a symbolic link to a directory then "test -d data" is true but
@@ -8,12 +11,12 @@ cd $LDMHOME || exit 1
 if test -d data -a ! -h data; then
     # "data" is a directory and not a symbolic link -- probably from an
     # older LDM installation. Symbolically link to it.
-    test -e var/data || (cd var && ln -s ../data data)
-    test -e var/queues || (cd var && ln -s ../data queues)
+    (cd var && (rm -f data 2>/dev/null || rmdir data) && ln -s ../data data) || exit 1
+    (cd var && (rm -f queues 2>/dev/null || rmdir queues) && ln -s ../data queues) || exit 1
 else
-    # "data" doesn't exist or is a symbolic link
-    test -e var/queues || mkdir -p var/queues
-    test -e var/data || mkdir -p var/data
+    # "data" isn't a directory or is a symbolic link
+    test -e var/data || mkdir var/data || exit 1
+    test -e var/queues || mkdir var/queues || exit 1
     if test -h data; then
         # "data" is a symbolic link
         rm -f data
@@ -24,9 +27,10 @@ fi
 if test -d logs -a ! -h logs; then
     # "logs" is a directory and not a symbolic link -- probably from an
     # older LDM installation
-    test -e var/logs || (cd var && ln -s ../logs logs)
+    (cd var && (rm -f logs 2>/dev/null || rmdir logs) && ln -s ../logs logs) || exit 1
 else
-    test -e var/logs || mkdir -p var/logs
+    # "logs" isn't a directory or is a symbolic link
+    test -e var/logs || mkdir var/logs || exit 1
     if test -h logs; then
         # "logs" is a symbolic link
         rm -f logs
