@@ -278,7 +278,7 @@ release:
 	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
 	    >configure.ac.tmp; \
 	mv configure.ac.tmp configure.ac
-	$(MAKE) configure Makefile timestamp dist commitAndTag
+	$(MAKE) configure Makefile timestamp dist commitAndTag rpm
 
 ftp-actual:		dist $(FTPDIR)
 	cp $(distArchive) $(FTPDIR)
