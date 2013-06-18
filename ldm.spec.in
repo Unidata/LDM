@@ -485,6 +485,8 @@ chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
 %config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/pqact.conf
 
 %attr(0755,ldm,-) %{_prefix}/var
+# The following 3 directories did not replace the existing 3 eponymous symbolic
+# links during an RPM install (which is good).
 %attr(0755,ldm,-) %{_prefix}/var/queues
 %attr(0755,ldm,-) %{_prefix}/var/data
 %attr(0755,ldm,-) %{_prefix}/var/logs
