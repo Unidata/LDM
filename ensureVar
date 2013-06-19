@@ -6,15 +6,15 @@ LDMHOME=${1?LDM home directory not set}
 cd $LDMHOME || exit 1
 
 if test -e data; then
-    test -e var/data || (cd var && ln -s ../data data) || exit 1
-    test -e var/queues || (cd var && ln -s ../data queues) || exit 1
+    test -e var/data || ln -s $LDMHOME/data var/data || exit 1
+    test -e var/queues || ln -s $LDMHOME/data var/queues || exit 1
 else
     test -e var/data || mkdir var/data || exit 1
     test -e var/queues || mkdir var/queues || exit 1
 fi
 
 if test -e logs; then
-    test -e var/logs || (cd var && ln -s ../logs logs) || exit 1
+    test -e var/logs || ln -s $LDMHOME/logs var/logs || exit 1
 else
     test -e var/logs || mkdir var/logs || exit 1
 fi
