@@ -1,3 +1,6 @@
+6.11.6.27 	2013-06-19 13:11:16-06:00
+    Simplify and ensure that ~ldm/{,var/}{data,logs} aren't circular
+
 6.11.6.26 	2013-06-18 16:21:40-06:00
     Commented that directories don't replace symbolic links during install.
 
