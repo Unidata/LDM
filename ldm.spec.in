@@ -535,6 +535,9 @@ su - %{ldmUser} -c "$VERSBINDIR/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTAL
 ###############################################################################
 %changelog
 
+* Wed Jun 19 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.28
+- Replace relative symlinks with absolute ones in ensureVar(1).
+
 * Wed Jun 19 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.27
 - Ensure that ~ldm/{,var/}{data,logs} references aren't circular.
 
