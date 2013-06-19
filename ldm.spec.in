@@ -132,9 +132,9 @@ chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
 %attr(0755,ldm,-) %{versdir}/bin/dvbs_nwstg2
 %attr(0755,ldm,-) %{versdir}/bin/dvbs_oconus
 %attr(0755,ldm,-) %{versdir}/bin/ensureLdmhomeLinks
-%attr(04755,root,root) %{versdir}/bin/ensureRpcEntry
-%attr(04755,root,root) %{versdir}/bin/ensureServicesEntry
-%attr(04755,root,root) %{versdir}/bin/ensureSyslogEntry
+%attr(0755,ldm,-) %{versdir}/bin/ensureRpcEntry
+%attr(0755,ldm,-) %{versdir}/bin/ensureServicesEntry
+%attr(0755,ldm,-) %{versdir}/bin/ensureSyslogEntry
 %attr(0755,ldm,-) %{versdir}/bin/ensureVar
 %attr(0755,ldm,-) %{versdir}/bin/feedme
 %attr(0755,ldm,-) %{versdir}/bin/feedtest
