@@ -665,7 +665,7 @@ sub start
     print "Checking LDM configuration-file ($ldmd_conf)...\n";
     my $prev_line_prefix = $line_prefix;
     $line_prefix .= "    ";
-    ( @output ) = `$cmd_line -nl- $ldmd_conf 2>&1` ;
+    ( @output ) = `$cmd_line -nvl- $ldmd_conf 2>&1` ;
     if ($?) {
         errmsg("start(): Problem with LDM configuration-file:\n".
             "@output");
