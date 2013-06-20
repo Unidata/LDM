@@ -1,5 +1,5 @@
 6.11.6.29 	2013-06-19 14:34:21-06:00
-    Made ensure{SyslogEntry,RpcEntry,ServicesEntry} LDM-owned and not suid
+    Made ensure{SyslogEntry,RpcEntry,ServicesEntry} LDM-owned and not setuid
 
 6.11.6.28 	2013-06-19 13:35:39-06:00
     Replaced relative symlinks with absolute in ensureVar(1).
