@@ -535,6 +535,12 @@ su - %{ldmUser} -c "$VERSBINDIR/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTAL
 ###############################################################################
 %changelog
 
+* Thu Jun 20 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.30
+- Added verbose logging to ldmd(1)-check of its configuration-file by
+- ldmadmin(1).
+
+- Documented ldmd(1)'s "-n" option.
+
 * Wed Jun 19 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6.29
 - Made ensure{SyslogEntry,RpcEntry,ServicesEntry} LDM-owned and not suid
 

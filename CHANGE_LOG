@@ -1,3 +1,9 @@
+6.11.6.30 	2013-06-20 15:52:29-06:00
+    Added verbose logging to ldmd(1)-check of its configuration-file by
+    ldmadmin(1).
+
+    Documented ldmd(1)'s "-n" option.
+
 6.11.6.29 	2013-06-19 14:34:21-06:00
     Made ensure{SyslogEntry,RpcEntry,ServicesEntry} LDM-owned and not setuid
 
