@@ -1,3 +1,9 @@
+6.11.6.31 	2013-06-21 13:58:02-06:00
+    Corrected return-type of req_new() to squash SIGSEGV raising bug on 64-bit
+    Darwin.
+
+    Eliminated "doNothing" memory leak in LDM configuration-file word parsing.
+
 6.11.6.30 	2013-06-20 15:52:29-06:00
     Added verbose logging to ldmd(1)-check of its configuration-file by
     ldmadmin(1).
