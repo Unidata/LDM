@@ -1,201 +1,109 @@
-6.11.6.31 	2013-06-21 13:58:02-06:00
-    Corrected return-type of req_new() to squash SIGSEGV raising bug on 64-bit
-    Darwin.
-
-    Eliminated "doNothing" memory leak in LDM configuration-file word parsing.
-
-6.11.6.30 	2013-06-20 15:52:29-06:00
-    Added verbose logging to ldmd(1)-check of its configuration-file by
-    ldmadmin(1).
-
-    Documented ldmd(1)'s "-n" option.
-
-6.11.6.29 	2013-06-19 14:34:21-06:00
-    Made ensure{SyslogEntry,RpcEntry,ServicesEntry} LDM-owned and not setuid
-
-6.11.6.28 	2013-06-19 13:35:39-06:00
-    Replaced relative symlinks with absolute in ensureVar(1).
-
-6.11.6.27 	2013-06-19 13:11:16-06:00
-    Simplify and ensure that ~ldm/{,var/}{data,logs} aren't circular
-
-6.11.6.26 	2013-06-18 16:21:40-06:00
-    Commented that directories don't replace symbolic links during install.
-
-6.11.6.25 	2013-06-18 15:08:52-06:00
-    Corrected logic behind var/ directories and symbolic links.
-
-6.11.6.24 	2013-06-18 12:33:16-06:00
-    Added RPM-s to "ftp" and "release" targets.
-
-6.11.6.23 	2013-06-18 10:56:55-06:00
-    Disabled parallel make(1) builds because it sometimes failed.
-
-    Removed creation of "runtime" link during installation because it
-    causes a conflict with RPM upgrading.
-
-    Corrected order of %changelog entries.
-
-6.11.6.22 	2013-06-17 15:56:29-06:00
-    Much RPM-related stuff.
-
-    Added security context setting of LDM log directory.
-
-    Documented that "--disable-static" is in effect for RPM.
-
-    "$LDMHOME/logs" and "$LDMHOME/var" recreated only if are symbolic links.
-
-    Changed default installation-directory from "/usr/local/ldm" to
-    "/opt/ldm" following the FHS guidelines.
-
-    Added creation of "debuginfo" RPM.
-
-    Removed creation of "data" and "logs" symbolic links in home-directory.
-
-6.11.6.21 	2013-06-13 14:33:25-06:00
-    Corrected date format in %changelog
-
-6.11.6.20 	2013-06-13 14:15:26-06:00
-    Added generation of RPM to "make release".
-
-    Documented RPM installation.
-
-6.11.6.19 	2013-06-12 15:02:58-06:00
-    Added "Unidata Local Data Manager" for LDM-user comment-field in
-    /etc/passwd.
-
-    Replaced copyright with BSD 3-Clause + patent protection.
-
-    Squashed bug in pqinsert(1) that caused a segmentation violation when given
-    an unknown option.
-
-    Made binary RPM relocatable.
-
-    Made requtil(1) "usage" message use LDM logging facility.
-
-    Added setting of LDMHOME to LDM user's profile-files by %post section of
-    binary RPM installation.
-
-    Squashed bug that cased log(3) facility to drop a new, long message.
-
-    Documented need for PNG package if NOAAPORT system built.
-
-6.11.6.18 	2013-06-04 11:44:47-06:00
-    Added LDM library to pqact(1) "make check" program.
-
-    Made search for PNG library dependent on --with-noaaport.
-
-6.11.6.17 	2013-06-04 10:41:53-06:00
-    Made search for PNG library dependent on --with-noaaport.
-
-6.11.6.16 	2013-06-04 09:23:59-06:00
-    Adapted to opaque "struct png_struct" of PNG 1.5 and later.
-
-    Added /opt/X11 to library search directories for Darwin.
-
-6.11.6.15 	2013-06-03 13:45:11-06:00
-    Removed Zero from portability-testing platforms because it's EOL.
-
-6.11.6.14 	2013-06-03 11:26:24-06:00
-    Improved configure(1) search for header-files and libraries.
-
-6.11.6.13 	2013-05-31 16:17:46-06:00
-    Eliminated removal of remote test-directory to enable "make singleCheck"
-    diagnosis.
-
-    Added "/usr/local/lib" after some "/opt/lib" library searches.
-
-6.11.6.12 	2013-05-31 14:40:39-06:00
-    Converted LDADD in program Makefile.am-s to <program>_LDADD.
-
-    Corrected "png.h" inclusion.
-
-    Changed "libpng.h/png.h" to just "png.h" and added "/user/sfw/include"
-    to "png.h" search-path.
-
-6.11.6.11 	2013-05-30 17:39:16-06:00
-    Ensured that LIBS references the math library if necessary.
-
-6.11.6.10 	2013-05-30 14:36:30-06:00
-    Removed Laraine from the set of testing hosts.
-
-    Added "-v|-x" option to regutil(1) and some debug-level messages.
-
-    Removed lint(1).
-
-    Enhanced verification of GRIB2 message structure.
-
-6.11.6.9 	2013-05-24 14:39:06-06:00
-    Removed "libpng" from LDM library makefile.
-
-6.11.6.8 	2013-05-24 14:10:01-06:00
-    Remove bundled-in "libpng" package.
-
-    Removed some lint(1).
-
-6.11.6.7 	2013-05-24 11:40:38-06:00
-    Adapted configure(1) to older tr(1)-s that don't extend the second
-    character set.
-
-6.11.6.6 	2013-05-24 11:27:00-06:00
-    Corrected $$ expansion in configure(1).
-
-    Removed trailing comma from enum definitions in "ldm.h".
-
-6.11.6.5 	2013-05-24 10:00:59-06:00
-    Improved XML2 and ZLIB discovery and use.
-
-6.11.6.4 	2013-05-23 09:57:59-06:00
-    Removed 64-bit gcc-v3 test-build on SunOS 5.11 because the compiler doesn't
-    support it.
-
-    Added references to libxml2 and zlib to the build of the LDM library and
-    removed them from all others.
-
-6.11.6.3 	2013-05-22 11:07:21-06:00
-    Misc:
-        Added testing on more SunOS hosts.
-
-    More release work.  Added icon file.  Created autoconf(1) macro for finding
-    libxml2 and zlib headers.  More work on RPM spec-file.
-
-6.11.6.2 	2013-05-17 11:16:16-06:00
-    Summary:
-        Removed the bundled ZLIB package. This package's library was in the LDM
-        shared-library and, on some systems, it conflicted with the system ZLIB
-        library referenced by the system XML2 library (which was removed from
-        the LDM in version 6.11.5).
-
-    RPM support (such as it is):
-        Changed "c89" requirement to "c99" & added XML2 and ZLIB requirements.
-
-    Mac OS/X support:
-        Added definition of _DARWIN_C_SOURCE to have "struct ip_mreq" defined
-        on that system (that definition is needed by the NOAAPORT module).
-
-        Don't define "union semun" on that system because it's defined by a
-        system header-file.
-
-    NOAAPORT module:
-        Added "-I$(top_srcdir)" to obtain bundled <rpc/rpc.h>.
-
-6.11.6.1 	2013-05-13 14:29:01-06:00
-    Removed html/tutorial/tutorial/* from git(1) repository.
-
-    Added "--with-noaaport" and "--with-gribinsert" to "distcheck" target.
-
-    Mentioned that the libxml2 development package (as opposed to the
-    runtime package) is necessary.
-
-    Improved "release" and "available" make(1) targets.
-
-    v6.11.5
-
-    Removed "libdict" subdirectory because it wasn't used.
-
-    Also added files to a couple of .gitignore-s.
-
-    Improved documentation.
+    SUMMARY OF SIGNIFICANT CHANGES:
+        * Eliminated the bundled PNG library;
+        * Squashed bugs;
+        * Improved the portability, release-engineering, and installation
+          process;
+        * Created a binary RPM for fc14.x86_64.
+        
+    Installation:
+        Configure(1) Script:
+            Made the search for the PNG library dependent on the
+            "--with-noaaport" option.
+ 
+            Improved the search for the XML2 and ZLIB header-files and
+            libraries. In particular, added "/usr/local/lib", "/opt/lib",  and
+            "/user/sfw/include" for general searches.
+            
+            Adapted to older tr(1)-s that don't extend the second character
+            set.
+                   
+        Mac OS/X support:
+            Added definition of _DARWIN_C_SOURCE to have "struct ip_mreq"
+            defined on that system (that definition is needed by the NOAAPORT
+            module).
+        
+            Don't define "union semun" on that system because it's defined by a
+            system header-file.
+            
+            Added "opt/X11" to library search-path.
+                    
+        SunOS Support:
+            Removed SunOS 5.6 and 5.9 from portability-testing platforms
+            because they're end-of-life.
+            
+            Added testing on other SunOS environments.
+                
+        Misc:
+            Removed the bundled ZLIB package. This package's library was in the
+            LDM shared-library and, on some systems, it conflicted with the
+            system ZLIB library referenced by the system XML2 library (which was
+            removed from the LDM in version 6.11.5).
+
+            Created a relocatable binary RPM for fc14.x86_64.
+    
+            Made the creation of the contents of the ~/var directory more
+            robust when relevant symbolic links already exist.
+        
+            Changed the default installation-directory from "/usr/local/ldm"
+            to "/opt/ldm" following the Filesystem Hierarchy Standards. This
+            is the default for the RPM installation. Use the "--prefix=..."
+            option of rpm(1) if you want a different home-directory for the
+            LDM user.
+    
+            Eliminated the creation of the "data" and "logs" symbolic links in
+            the LDM user's home-directory. If they exist, however, then they
+            won't be removed.
+    
+            Removed the bundled "libpng" package.
+                               
+    ldmadmin(1):
+        Added verbose logging to the check of the LDM configuration-file by
+        the "start" command.
+    
+    LDM server (ldmd):
+        Squashed a bug that caused a segmentation violation (SIGSEGV) on 64-bit
+        Darwin.
+    
+        Eliminated a minor memory leak in the parsing of LDM configuration-file
+        when the "-n" (do nothing) option is specified.
+    
+        Documented the "-n" (do nothing) option.
+
+    Logging:
+        Added setting of the SELINUX security context for the LDM log
+        directory. This should allow the LDM to log when SELINUX is enabled.
+
+        Squashed a bug that caused the log(3) module to drop a long new message.
+
+    pqinsert(1):
+        Squashed a bug that caused a segmentation violation (SIGSEGV) when given
+        an unknown option.
+
+    requtil(1):
+        Made the "usage" message use the LDM logging facility.
+        
+        Added the "-v|-x" options and some debug-level messages.
+
+    NOAAPORT:
+        Enhanced the verification of the structure of a GRIB2 message.
+
+        Adapted code to the opaque "struct png_struct" of PNG 1.5 and later.
+
+        Corrected the inclusion of the "png.h" header-file.
+            
+    Documentation:
+        HTML:
+            Documented the RPM installation.
+    
+            Documented the dependency on the PNG package if the NOAAPORT
+            system is built.
+        
+            Documented that the XML2 development and PNG development packages
+            (as opposed to the runtime packages) are necessary.
+                    
+        Misc:
+            Replaced the license with the BSD 3-Clause license enhanced with
+            patent protection.
 
 6.11.5 	2013-05-10 14:42:19-06:00
     Summary:
