@@ -1,3 +1,4 @@
+6.11.6 	2013-06-24 17:04:55-06:00
     SUMMARY OF SIGNIFICANT CHANGES:
         * Eliminated the bundled PNG library;
         * Squashed bugs;
@@ -17,7 +18,7 @@
             Adapted to older tr(1)-s that don't extend the second character
             set.
                    
-        Mac OS/X support:
+        Mac OS/X Support:
             Added definition of _DARWIN_C_SOURCE to have "struct ip_mreq"
             defined on that system (that definition is needed by the NOAAPORT
             module).
