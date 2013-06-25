@@ -26,6 +26,7 @@ extern "C" {
 #define LOG_ADD3(fmt,a,b,c)         log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c)
 #define LOG_ADD4(fmt,a,b,c,d)       log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d)
 #define LOG_ADD5(fmt,a,b,c,d,e)     log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d,e)
+#define LOG_ADD6(fmt,a,b,c,d,e,f)   log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d,e,f)
 #define LOG_SERROR0(fmt)            log_serror(LOG_FMT(fmt),__FILE__,__LINE__)
 #define LOG_SERROR1(fmt,a)          log_serror(LOG_FMT(fmt),__FILE__,__LINE__,a)
 #define LOG_SERROR2(fmt,a,b)        log_serror(LOG_FMT(fmt),__FILE__,__LINE__,a,b)

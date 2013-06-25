@@ -890,8 +890,9 @@ AC_DEFUN([UD_MAKEWHATIS],
     AC_MSG_RESULT($MAKEWHATIS_CMD)
 ])
 
-dnl Check for a header-file directory
-dnl     $1  Name component (e.g., "LIBXML2")
+dnl Set an output variable to a C-preprocessor reference for a C header-file
+dnl if necessary.
+dnl     $1  Name component (e.g., "XML2")
 dnl     $2  Description
 dnl     $3  Space-separated list of directories
 dnl     $4  Name of the header-file (may contain "/")
@@ -920,20 +921,22 @@ AC_DEFUN([UD_SEARCH_HEADER],
 [
     AC_MSG_NOTICE([Searching for the "$1" header-file(s)])
     origCppFlags="$CPPFLAGS"
-    cacheVarName=ac_cv_header_`echo "$2" | tr ./ __`
+    found=no
+    cacheName=ac_cv_header_`echo $2 | tr '/.' '__'`
     for dir in "" $3; do
         CPPFLAGS="${dir:+-I$dir}${CPPFLAGS:+ $CPPFLAGS}"
         #AC_MSG_NOTICE([CPPFLAGS = "$CPPFLAGS"])
-        AC_CHECK_HEADER([$2], [break])
+        AC_CHECK_HEADER([$2], [found=yes; break])
+        unset $cacheName
         CPPFLAGS="$origCppFlags"
-        unset $cacheVarName
     done
     test "$CPPFLAGS" || unset CPPFLAGS
-    if eval test x\$$cacheVarName = xno; then
+    if test $found != yes; then
         AC_MSG_ERROR(["$1" header-file(s) not found])
     else
         AC_MSG_NOTICE(["$1" header-file(s) found in "$dir"])
     fi
+    unset found
 ])
 
 dnl Ensure that LIBS references a library
@@ -945,19 +948,21 @@ AC_DEFUN([UD_SEARCH_LIB],
     AC_MSG_NOTICE([Searching for the "$1" library])
     AC_SEARCH_LIBS([$2], [$1], ,
         [origLibs="$LIBS"
+        found=no
         for dir in "" $3; do
             LIBS="${dir:+-L$dir }-l$1${LIBS:+ $LIBS}"
             #AC_MSG_NOTICE([LIBS = "$LIBS"])
-            AC_CHECK_FUNC([$2], [break])
+            AC_CHECK_FUNC([$2], [found=yes; break])
             LIBS="$origLibs"
             unset ac_cv_func_$2
         done
         test "$LIBS" || unset LIBS
-        if test "x$ac_cv_func_$2" = xno; then
+        if test $found != yes; then
             AC_MSG_ERROR(["$1" library not found])
         else
             AC_MSG_NOTICE(["$1" library found in "$dir"])
-        fi]
+        fi
+        unset found]
     )
 ])
 

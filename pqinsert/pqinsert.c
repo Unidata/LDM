@@ -28,7 +28,7 @@
 #include "atofeedt.h"
 #include "ldmprint.h"
 #include "inetutil.h"
-#include "ulog.h"
+#include "log.h"
 #include "md5.h"
 
 #ifdef NO_ATEXIT
@@ -45,10 +45,10 @@ static feedtypet        feedtype = EXP;
 
 static void
 usage(
-        char *av0 /*  id string */
+        const char* const   progname /*  id string */
 )
 {
-        (void)fprintf(stderr,
+    LOG_ADD2(
 "Usage: %s [options] filename ...\n"
 "    Options:\n"
 "    -v            Verbose, tell me about each product\n"
@@ -62,8 +62,9 @@ usage(
 "                  filename. With multiple files, product-ID becomes\n"
 "                  <productID>.<seqno>\n"
 "    -i            Compute product signature (MD5 checksum) from product ID\n",
-            basename(av0), getQueuePath());
-        exit(1);
+            progname, getQueuePath());
+    log_log(LOG_ERR);
+    exit(1);
 }
 
 
@@ -188,8 +189,7 @@ int main(
 )
 {
         const char* const       pqfname = getQueuePath();
-        char *progname = av[0];
-        char *logfname;
+        const char* const progname = ubasename(av[0]);
         int useProductID = FALSE;
         int signatureFromId = FALSE;
         char *productID = NULL;
@@ -209,65 +209,65 @@ int main(
 #ifndef HAVE_MMAP
         pqeIndex = PQE_NONE;
 #endif
-        logfname = "-";
 
         {
-        extern int optind;
-        extern int opterr;
-        extern char *optarg;
-        int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
+            extern int optind;
+            extern int opterr;
+            extern char *optarg;
+            int ch;
 
-        opterr = 1;
+            (void) openulog(progname, LOG_NOTIME, LOG_LDM, "-");
+            (void) setulogmask(LOG_UPTO(LOG_NOTICE));
 
-        while ((ch = getopt(ac, av, "ivxl:q:f:s:p:")) != EOF)
-                switch (ch) {
-                case 'i':
-                        signatureFromId = 1;
-                        break;
-                case 'v':
-                        logmask |= LOG_MASK(LOG_INFO);
-                        break;
-                case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG);
-                        break;
-                case 'l':
-                        logfname = optarg;
-                        break;
-                case 'q':
-                        setQueuePath(optarg);
-                        break;
-                case 's':
-                        seq_start = atoi(optarg);
-                        break;
-                case 'f':
-                        feedtype = atofeedtypet(optarg);
-                        if(feedtype == NONE)
-                        {
-                            fprintf(stderr, "Unknown feedtype \"%s\"\n", optarg);
-                                usage(progname);        
-                        }
-                        break;
-                case 'p':
-                        useProductID = TRUE;
-                        productID = optarg;
-                        break;
-                case '?':
+            opterr = 0; /* Suppress getopt(3) error messages */
+
+            while ((ch = getopt(ac, av, ":ivxl:q:f:s:p:")) != EOF)
+                    switch (ch) {
+                    case 'i':
+                            signatureFromId = 1;
+                            break;
+                    case 'v':
+                            (void) setulogmask(getulogmask() | LOG_MASK(LOG_INFO));
+                            break;
+                    case 'x':
+                            (void) setulogmask(getulogmask() | LOG_MASK(LOG_DEBUG));
+                            break;
+                    case 'l':
+                            openulog(progname, ulog_get_options(), LOG_LDM, optarg);
+                            break;
+                    case 'q':
+                            setQueuePath(optarg);
+                            break;
+                    case 's':
+                            seq_start = atoi(optarg);
+                            break;
+                    case 'f':
+                            feedtype = atofeedtypet(optarg);
+                            if(feedtype == NONE)
+                            {
+                                fprintf(stderr, "Unknown feedtype \"%s\"\n", optarg);
+                                    usage(progname);
+                            }
+                            break;
+                    case 'p':
+                            useProductID = TRUE;
+                            productID = optarg;
+                            break;
+                    case ':': {
+                        LOG_ADD1("Option \"-%c\" requires an operand", optopt);
                         usage(progname);
-                        break;
-                }
+                    }
+                    /* no break */
+                    default:
+                        LOG_ADD1("Unknown option: \"%c\"", optopt);
+                        usage(progname);
+                        /* no break */
+                    }
 
-        ac -= optind; av += optind ;
+            ac -= optind; av += optind ;
 
-        if(ac < 1) usage(progname);
-        (void) setulogmask(logmask);
-        }
-
-        /*
-         * Set up error logging
-         */
-        (void) openulog(ubasename(progname), LOG_NOTIME, LOG_LDM, logfname);
+            if(ac < 1) usage(progname);
+            }
 
         /*
          * register exit handler

@@ -1490,7 +1490,7 @@ static int req_init(
     Request* const              req,
     const Subscription* const   sub,
     const Source* const         source,
-    const Request* const        next)
+    Request* const              next)
 {
     Subscription*   subClone = sub_clone(sub);
 
@@ -1546,7 +1546,7 @@ static void req_free(
  * @retval 0            Success.
  * @retval -1           Failure. log_add() called.
  */
-static int req_new(
+static Request* req_new(
     const Subscription* const   sub,
     const Source* const         source,
     Request* const              next)

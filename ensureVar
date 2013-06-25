@@ -1,23 +1,20 @@
 LDMHOME=${1?LDM home directory not set}
 
-DATA_DIR=$LDMHOME/var/data
-QUEUE_DIR=$LDMHOME/var/queues
-LOGS_DIR=$LDMHOME/var/logs
+# This script assumes that $LDMHOME/var exists. "make install" should ensure
+# that.
 
-if test -d $LDMHOME/data; then
-    test -e $DATA_DIR || ln -s $LDMHOME/data $DATA_DIR
-    test -e $QUEUE_DIR || ln -s $LDMHOME/data $QUEUE_DIR
+cd $LDMHOME || exit 1
+
+if test -e data; then
+    test -e var/data || ln -s $LDMHOME/data var/data || exit 1
+    test -e var/queues || ln -s $LDMHOME/data var/queues || exit 1
 else
-    test -e $QUEUE_DIR || mkdir -p $QUEUE_DIR
-    test -e $DATA_DIR || mkdir -p $DATA_DIR
-    rm -f $LDMHOME/data
-    ln -s $DATA_DIR $LDMHOME/data
+    test -e var/data || mkdir var/data || exit 1
+    test -e var/queues || mkdir var/queues || exit 1
 fi
 
-if test -d $LDMHOME/logs; then
-    test -e $LOGS_DIR || ln -s $LDMHOME/logs $LOGS_DIR
+if test -e logs; then
+    test -e var/logs || ln -s $LDMHOME/logs var/logs || exit 1
 else
-    test -e $LOGS_DIR || mkdir -p $LOGS_DIR
-    rm -f $LDMHOME/logs
-    ln -s $LOGS_DIR $LDMHOME/logs
+    test -e var/logs || mkdir var/logs || exit 1
 fi

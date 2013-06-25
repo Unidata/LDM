@@ -31,7 +31,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
-LDADD			= \
+ldmd_LDADD		= \
     $(top_builddir)/lib/libldm.la \
     $(LD_GEN)
 dist_man1_MANS		= ldmd.1

@@ -1,9 +1,9 @@
-#include "config.h"
+#include <config.h>
+#include <ldm.h>
+#include <globals.h>
 
 #include "geminc.h"
 #include "gemprm.h"
-
-#include "ldm.h"
 #undef PACKAGE
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
@@ -91,7 +91,7 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
      *	Check to see if the file is in LDMHOME/etc.
      */
     if ( found == G_FALSE) {
-	cfl_inqr (filepart, LDM_ETC_PATH, &lfsize, actualpath, iret );
+	cfl_inqr (filepart, getSysConfDirPath(), &lfsize, actualpath, iret );
 	if ( *iret == 0 ) {
 	    found = G_TRUE;
 	}

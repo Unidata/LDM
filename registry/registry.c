@@ -1093,6 +1093,8 @@ RegStatus reg_putUint(
     const char* const   path,
     const unsigned      value)
 {
+    udebug("Putting unsigned int %lu into \"%s\"", value, path);
+
     return putValue(path, &value, &uintStruct);
 }
 
@@ -1118,7 +1120,11 @@ RegStatus reg_putString(
     const char* const   path,
     const char* const   value)
 {
-    RegStatus   status = putValue(path, value, &stringStruct);
+    RegStatus   status;
+
+    udebug("Putting string \"%s\" into \"%s\"", value, path);
+
+    status = putValue(path, value, &stringStruct);
 
     if (status) {
         LOG_ADD2("Couldn't store value \"%s\" in parameter \"%s\"",
@@ -1150,6 +1156,11 @@ RegStatus reg_putTime(
     const char* const           path,
     const timestampt* const     value)
 {
+    static char buf[80];
+
+    (void)sprint_timestampt(buf, sizeof(buf), value);
+    udebug("Putting time %s into \"%s\"", value, path);
+
     return putValue(path, value, &timeStruct);
 }
 
@@ -1175,6 +1186,9 @@ RegStatus reg_putSignature(
     const char* const   path,
     const signaturet    value)
 {
+    udebug("Putting signature %s into \"%s\"", s_signaturet(NULL, 0, value),
+            path);
+
     return putValue(path, value, &signatureStruct);
 }
 

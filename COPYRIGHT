@@ -1,27 +1,32 @@
 Copyright 2013 University Corporation for Atmospheric Research. All rights
 reserved.
 
-Portions of this software were developed by the Unidata Program at the
-University Corporation for Atmospheric Research (UCAR).
+Most of this software was developed by the Unidata Program Center of the
+University Corporation for Atmospheric Research (UCAR)
+<http://www.unidata.ucar.edu>.
 
-Access and use of this software shall impose the following obligations and
-understandings on the user. The user is granted the right, without any fee or
-cost, to use, copy, modify, alter, enhance and distribute this software, and
-any derivative works thereof, and its supporting documentation for any purpose
-whatsoever, provided that this entire notice appears in all copies of the
-software, derivative works and supporting documentation. The names UCAR and/or
-Unidata, however, may not be used in any advertising or publicity to endorse or
-promote any products or commercial entity unless specific written permission is
-obtained from UCAR/Unidata. The user also understands that UCAR/Unidata is not
-obligated to provide the user with any support, consulting, training or
-assistance of any kind with regard to the use, operation and performance of
-this software nor to provide the user with any updates, revisions, new versions
-or "bug fixes."
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
 
-THIS SOFTWARE IS PROVIDED BY UCAR/UNIDATA "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
-EVENT SHALL UCAR/UNIDATA BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
-WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
-OUT OF OR IN CONNECTION WITH THE ACCESS, USE OR PERFORMANCE OF THIS SOFTWARE.
+   1) Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+   2) Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+   3) Neither the names of the development group, the copyright holder, nor the
+      names of contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+   4) This license shall terminate automatically and you may no longer exercise
+      any of the rights granted to you by this license as of the date you
+      commence an action, including a cross-claim or counterclaim, against
+      the copyright holder or any contributor alleging that this software
+      infringes a patent. This termination provision shall not apply for an
+      action alleging patent infringement by combinations of this software with
+      other software or hardware.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS
+OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.

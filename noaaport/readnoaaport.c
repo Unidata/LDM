@@ -18,11 +18,11 @@
 #include "globals.h"
 #include "md5.h"
 #include "setenv.h"
-#include "libpng/png.h"
 #include "log.h"
 #include "dvbs.h"
 #include "ldmProductQueue.h"
 
+#include <png.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>

@@ -33,7 +33,6 @@ static char             ldmdConfigPath[PATH_MAX];
 static char             pqactDataDirPath[PATH_MAX];
 static char             pqsurfDataDirPath[PATH_MAX];
 static char             surfQueuePath[PATH_MAX];
-static char             sysConfDirPath[PATH_MAX];
 
 /*
  * Timeout for rpc calls:
@@ -343,7 +342,9 @@ const char* getLdmHomePath(void)
         if (NULL == ldmHomePath) {
             /*
              * LDMHOME is guaranteed by the configure(1) script to be a
-             * non-empty string.
+             * non-empty string. If the LDM installation is from a
+             * relocated RPM binary, however, then LDMHOME might be
+             * incorrect.
              */
             ldmHomePath = LDMHOME;
         }
@@ -361,6 +362,8 @@ const char* getLdmHomePath(void)
  */
 const char* getSysConfDirPath(void)
 {
+    static char sysConfDirPath[PATH_MAX];
+
     if (strlen(sysConfDirPath) == 0) {
         const char*            ldmHome = getLdmHomePath();
         static const char      subdir[] = "/etc";

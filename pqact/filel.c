@@ -918,6 +918,9 @@ int unio_prodput(
             prodp->info.ident);
 
     if (entry != NULL ) {
+        size_t sz;
+        void* data;
+
         if (entry->flags & FL_EDEX) {
             if (shared_id == -1) {
                 uerror(
@@ -928,14 +931,13 @@ int unio_prodput(
                         0);
                 strncpy(queue[queue_counter].filename, entry->path, 4096);
                 strncpy(queue[queue_counter].ident, prodp->info.ident, 256);
-                if (shmdt(queue) == -1) {
+                if (shmdt((void*)queue) == -1) {
                     uerror("Detaching shared memory failed.");
                 }
             }
         }
-        size_t sz = prodp->info.sz;
-        void* data =
-                (entry->flags & FL_STRIP) ?
+        sz = prodp->info.sz;
+        data = (entry->flags & FL_STRIP) ?
                         dupstrip(prodp->data, prodp->info.sz, &sz) : prodp->data;
 
         if (data != NULL ) {
@@ -969,7 +971,7 @@ int unio_prodput(
                                 s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
                     if ((entry->flags & FL_EDEX) && shared_id != -1) {
                         semarg.val = queue_counter;
-                        int semreturn = semctl(sem_id, 1, SETVAL, semarg);
+                        (void)semctl(sem_id, 1, SETVAL, semarg);
                         queue_counter =
                                 (queue_counter == largest_queue_element) ?
                                         queue_counter = 0 : queue_counter + 1;

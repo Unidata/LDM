@@ -401,6 +401,7 @@ static void usage(
                     "\t                \"max_latency\", below)\n"
                     "\t-m max_latency  The maximum acceptable data-product latency in\n"
                     "\t                seconds (default is %d)\n"
+                    "\t-n              Do nothing other than check the configuration-file\n"
                     "\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
                     "\t                (default is %d)\n", av0,
             getLdmdConfigPath(), LDM_PORT, getQueuePath(), DEFAULT_OLDEST,

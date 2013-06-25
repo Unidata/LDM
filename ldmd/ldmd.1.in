@@ -10,6 +10,7 @@ ldmd
 \fP[\fB-l\ \fIlogpath\fR]
 \fP[\fB-M\ \fImax_clients\fR]
 \fP[\fB-m\ \fImax_latency\fR]
+\fP[\fB-n\fP]
 \fP[\fB-o\ \fItoffset\fR]
 \fP[\fB-P\ \fIport\fR]
 \fP[\fB-q\ \fIpqfname\fR]
@@ -82,6 +83,10 @@ sender to skip ahead in it's queue. If \fItoffset\fP was specified, then
 the "from" time of the RECLASS response is \fItoffset\fP seconds before now,
 otherwise, \fImax_latency\fP is used.  The default is printed by the
 command "regutil regpath{MAX_LATENCY}".
+.TP
+.BI "-n"
+Do nothing other than check the invocation arguments and check the
+configuration-file for errors.
 .TP
 .BI "-o " toffset
 No products older than \fItoffset\fP seconds are requested.

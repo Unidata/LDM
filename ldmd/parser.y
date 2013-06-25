@@ -511,9 +511,11 @@ exec_entry:     EXEC_K STRING
                                         "on or before line %d, file \"%s\": %s",
                                         line, scannerGetPath(),
                                         strerror(errno));
-                                wordfree(&words);
                             }
                         }
+                        
+                        if (!execute || error)
+                            wordfree(&words);
                     }                   /* "words" set */
 
                     if (error)

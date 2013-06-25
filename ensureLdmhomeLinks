@@ -9,6 +9,4 @@ cd $LDMHOME &&
 ( test -d bin -o -h bin || ln -s runtime/bin bin ) &&
 ( test -d include -o -h include || ln -s runtime/include include ) &&
 ( test -d lib -o -h lib || ln -s runtime/lib lib ) &&
-( test -d share -o -h share || ln -s runtime/share share ) &&
-( test ! -e $distName ||
-    ( test -e runtime || ln -s $distName runtime ) )
+( test -d share -o -h share || ln -s runtime/share share )

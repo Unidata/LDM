@@ -128,18 +128,6 @@ LDM installation process:
     <dd>Library directory:
     <br><br>
         <dl>
-            <dt><tt>libdb-4.x.a</tt>
-            <dd>Static Berkeley-DB library
-            <dt><tt>libdb-4.x.la</tt>
-            <dd>Berkeley-DB libtool(1) library
-            <dt><tt>libdb-4.x.so</tt>
-            <dd>Dynamic Berkeley-DB library
-            <dt><tt>libdb-4.so</tt>
-            <dd>Link to dynamic Berkeley-DB library
-            <dt><tt>libdb.a</tt>
-            <dd>Link to static Berkeley-DB library
-            <dt><tt>libdb.so</tt>
-            <dd>Link to dynamic Berkeley-DB library
             <dt><tt>libldm.a</tt>
             <dd>Static LDM library
             <dt><tt>libldm.la</tt>

@@ -21,7 +21,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)/pqing \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)
-LDADD			= $(top_builddir)/lib/libldm.la $(GDBMLIB)
+pqsurf_LDADD		= $(top_builddir)/lib/libldm.la $(GDBMLIB)
 dist_man1_MANS		= pqsurf.1
 TAGS_FILES		= \
     ../pqing/*.c ../pqing/*.h \

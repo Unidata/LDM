@@ -12,7 +12,7 @@ CPPFLAGS	= \
     -I$(top_srcdir)/protocol \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
-LDADD		= ../lib/libldm.la
+feedme_LDADD	= ../lib/libldm.la
 dist_man1_MANS	= feedme.1
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \

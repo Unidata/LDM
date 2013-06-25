@@ -347,6 +347,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         timestampt now;
         const int keepalive_interval = (int)(inactive_timeo/2 - 2 * interval);
         peer_info*      remote = get_remote();
+        struct sockaddr_in* downAddr;
         static prod_class_t*    uldbSub = NULL;
 
         /* assert(keepalive_interval > 0); */
@@ -388,7 +389,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         /*
          * According to the access control list, the request is valid.
          */
-        const struct sockaddr_in* downAddr = &rqstp->rq_xprt->xp_raddr;
+        downAddr = &rqstp->rq_xprt->xp_raddr;
 
         /*
          * Reduce the subscription according to existing subscriptions from the
