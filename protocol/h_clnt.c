@@ -583,8 +583,9 @@ get_addr(h_clnt *hcp, struct timeval timeo)
         CLR_ALRM();
 
         if (error != NULL) {
-                (void)sprintf(hcp->errmsg, "ldm_clnt_addr(%s): %s",
+                (void)sprintf(hcp->errmsg, sizeof(hcp->errmsg), "ldm_clnt_addr(%s): %s",
                         hcp->remote, err_message(error));
+                hcp->errmsg[sizeof(hcp->errmsg)-1] = 0;
                 err_free(error);
 
                 hcp->rpcerr.re_status = rpc_createerr.cf_stat = RPC_UNKNOWNHOST;
@@ -848,8 +849,9 @@ get_clnt(h_clnt *hcp, struct timeval timeo)
         if(clnt == NULL)
         {
                 hcp->rpcerr.re_status = rpc_createerr.cf_stat;
-                (void)sprintf(hcp->errmsg, "h_clnt_create(%s): %s",
+                (void)snprintf(hcp->errmsg, sizeof(hcp->errmsg), "h_clnt_create(%s): %s",
                         hcp->remote, strerror(rpc_createerr.cf_error.re_errno));
+                hcp->errmsg[sizeof(hcp->errmsg)-1] = 0;
                 /* force (at least) portmap lookup again */
                 hcp->port = 0;
                 if(hcp->pmap_clnt != NULL)
@@ -1183,8 +1185,9 @@ h_xprt_turn(h_clnt *hcp,
         {
                 int errnum = errno;
                 hcp->rpcerr.re_status = RPC_SYSTEMERROR;
-                (void)sprintf(hcp->errmsg, "h_xprt_turn(%s): %s",
+                (void)snprintf(hcp->errmsg, sizeof(hcp->errmsg), "h_xprt_turn(%s): %s",
                         hcp->remote, strerror(errnum));
+                hcp->errmsg[sizeof(hcp->errmsg)-1] = 0;
                 return hcp->state;
         }
 
@@ -1195,8 +1198,9 @@ h_xprt_turn(h_clnt *hcp,
         if(clnt == NULL)
         {
                 hcp->rpcerr.re_status = rpc_createerr.cf_stat;
-                (void)sprintf(hcp->errmsg, "h_xprt_turn(%s): %s",
+                (void)snprintf(hcp->errmsg, sizeof(hcp->errmsg), "h_xprt_turn(%s): %s",
                         hcp->remote, strerror(rpc_createerr.cf_error.re_errno));
+                hcp->errmsg[sizeof(hcp->errmsg)-1] = 0;
                 return hcp->state;
         }
 #ifdef CLSET_FD_CLOSE
