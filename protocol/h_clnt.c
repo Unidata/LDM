@@ -1,23 +1,10 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *
- *  Permission to use, copy, modify, and distribute this software and its
- * documentation for any purpose without fee is hereby granted, provided
- * that the above copyright notice appear in all copies, that both that
- * copyright notice and this permission notice appear in supporting
- * documentation, and that the name of UCAR/Unidata not be used in
- * advertising or publicity pertaining to distribution of the software
- * without specific, written prior permission.  UCAR makes no
- * representations about the suitability of this software for any purpose.
- * It is provided "as is" without express or implied warranty.  It is
- * provided with no support and without obligation on the part of UCAR
- * Unidata, to assist in its use, correction, modification, or enhancement.
- *
+ * Copyright 2013 University Corporation for Atmospheric Research. All rights
+ * reserved. See the file COPYRIGHT in the top-level source directory for the
+ * license.
  */
-/* $Id: h_clnt.c,v 1.88.2.2.2.1.4.8 2007/02/12 20:38:54 steve Exp $ */
 
 /* 
- * 
  * Implementation
  */
 
@@ -156,11 +143,14 @@ auth_errmsg(enum auth_stat stat)
 
 /* End  clnt_perror.c Excerpt */
 
-/*
- * Copy up from string 's' and various
- * error string sources into 'str', without exceeding 'len'.
- * Sort of like clnt_sperror(),
+/**
+ * Constructs a client-side error message. Sort of like clnt_sperror() but
  * hopefully safer.
+ *
+ * @param rpch      Pointer to the client-side structure.
+ * @param s         Pointer to the string that will be the initial label.
+ * @param str       Pointer to the output buffer.
+ * @param len       Size of the output buffer, including the terminating NUL.
  */
 static void
 c_sperror(CLIENT *rpch, const char *s, char *str, size_t len)
@@ -221,9 +211,10 @@ c_sperror(CLIENT *rpch, const char *s, char *str, size_t len)
         case RPC_VERSMISMATCH:
                 if(len <= 48)
                         return;
-                (void) sprintf(str,
+                (void) snprintf(str, len,
                         "; low version = %lu, high version = %lu", 
                         e.re_vers.low, e.re_vers.high);
+                str[len-1] = 0;
                 break;
 
         case RPC_AUTHERROR:
@@ -250,17 +241,19 @@ c_sperror(CLIENT *rpch, const char *s, char *str, size_t len)
         case RPC_PROGVERSMISMATCH:
                 if(len <= 48)
                         return;
-                (void) sprintf(str, 
+                (void) snprintf(str, len,
                         "; low version = %lu, high version = %lu", 
                         e.re_vers.low, e.re_vers.high);
+                str[len-1] = 0;
                 break;
 
         default:        /* unknown */
                 if(len <= 36)
                         return;
-                (void) sprintf(str, 
+                (void) snprintf(str, len,
                         "; s1 = %lu, s2 = %lu", 
                         (unsigned long)e.re_lb.s1, (unsigned long)e.re_lb.s2);
+                str[len-1] = 0;
                 break;
         }
 }
@@ -531,7 +524,8 @@ init_h_clnt(
         unsigned long version,
         unsigned int protocol)
 {
-        (void)strcpy(hcp->remote, remote);
+        (void)strncpy(hcp->remote, remote, sizeof(hcp->remote));
+        hcp->remote[sizeof(hcp->remote)-1] = 0;
         hcp->prog = program;
         hcp->vers = version;
         hcp->prot = protocol;
