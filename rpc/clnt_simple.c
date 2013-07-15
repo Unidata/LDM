@@ -40,6 +40,7 @@ static char sccsid[] = "@(#)clnt_simple.c 1.35 87/08/11 Copyr 1984 Sun Micro";
 
 #include "config.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -100,6 +101,10 @@ callrpc(
 			return ((int) RPC_UNKNOWNHOST);
 		timeout.tv_usec = 0;
 		timeout.tv_sec = 5;
+        if (hp->h_length > sizeof(server_addr.sin_addr)) {
+    		errno = EOVERFLOW;
+            return RPC_SYSTEMERROR;
+        }
 		bcopy(hp->h_addr_list[0], (char *)&server_addr.sin_addr,
 		    hp->h_length);
 		server_addr.sin_family = AF_INET;
