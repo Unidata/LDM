@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <rpc/rpc.h>
 #include <signal.h>
 #include <stdio.h>
@@ -332,7 +333,7 @@ main(
     int         ac,
     char*       av[])
 {
-    char            myname[HOSTNAMESIZE];
+    char            myname[_POSIX_HOST_NAME_MAX];
     char*           progname = av[0];
     char*           logfname;
     prod_class_t    clss;
@@ -434,7 +435,8 @@ main(
      */
     set_sigactions();
 
-    (void) strcpy(myname, ghostname());
+    (void) strncpy(myname, sizeof(myname), ghostname());
+    myname[sizeof(myname)-1] = 0;
 
     (void)exitIfDone(INTERRUPTED);
 
