@@ -77,10 +77,13 @@ sprint_timestampt(char *buf, size_t bufsize, const timestampt *tvp)
         
         len = sprint_time_t(buf, bufsize, (time_t)tvp->tv_sec);
         /* assert(len == 14) */
-        /* we are only printing the microsecs to millisec accuracy */
-        (void)sprintf(&buf[len],".%03d", (int)(tvp->tv_usec/1000));
+        if (len < bufsize) {
+            /* we are only printing the microsecs to millisec accuracy */
+            len += snprintf(buf+len, bufsize-len, ".%03d", (int)(tvp->tv_usec/1000));
+            if (len > bufsize)
+                len = bufsize;
+        }
                         
-        len += 4;
         return len;
 }
 
@@ -140,7 +143,8 @@ sprint_feedtypet(char *buf, size_t bufsize, feedtypet feedtype)
 
         if (feedtype) {
             /* handle error, some unnamed bits in there */
-            (void)sprintf(sp, "0x%08x|", (unsigned)feedtype);
+            ptrdiff_t   left = buf + bufsize - sp;
+            (void)snprintf(sp, left, "0x%08x|", (unsigned)feedtype);
         }
 
         len = (int)strlen(buf)-1;
