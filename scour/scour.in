@@ -116,7 +116,7 @@ while read dir age pattern; do
         # causes the read(1) of the enclosing while-loop to return EOF if the
         # directory doesn't exist.
 	#
-	if edir=`echo "cd $dir && /bin/pwd" | csh -f`; then
+	if edir=`cd "$dir" && /bin/pwd`; then
 	    : true
 	else
 	    $LOGGER "directory $dir does not exist, skipping"
