@@ -58,7 +58,6 @@ share
 .cproject
 .project
 .settings
-libxml2
 macros.make
 TAGS
 Makefile.in
