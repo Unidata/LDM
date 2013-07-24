@@ -286,7 +286,8 @@ int main(
         /*
          * who am i, anyway
          */
-        (void) strcpy(myname, ghostname());
+        (void) strncpy(myname, ghostname(), sizeof(myname));
+        myname[sizeof(myname)-1] = 0;
 
         /*
          * open the product queue
