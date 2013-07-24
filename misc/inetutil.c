@@ -88,9 +88,13 @@ host_err_str(void)
 }
 
 
-/*
- * convenience wrapper around gethostname(2)
- * !NO_INET_FQ_KLUDGE ==> try to make sure it is "fully qualified"
+/**
+ * Returns the name of the local host. Checks the registry first. Tries to make
+ * the name fully-qualified.
+ *
+ * @return      Pointer to a static buffer containing the NUL-terminated name
+ *              of the local host. The length of the string, excluding the
+ *              terminating NUL, will not be greater than _POSIX_HOST_NAME_MAX.
  */
 char *
 ghostname(void)
@@ -127,6 +131,7 @@ ghostname(void)
 
         if(gethostname(hostname, sizeof(hostname)) < 0)
                 return NULL;
+/* !NO_INET_FQ_KLUDGE ==> try to make sure it is "fully qualified" */
 #ifndef NO_INET_FQ_KLUDGE
         if(strchr(hostname, '.') == NULL)
         {
