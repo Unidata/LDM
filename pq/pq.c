@@ -2771,7 +2771,7 @@ riul_add(riul **riulpp, size_t growby,
 {
         riu *rp;
         riul *rl = *riulpp;
-        riu *end = &rl->rp[rl->nelems];
+        riu *end;
 
         if(!riul_HasSpace(rl))
         {
@@ -2783,6 +2783,13 @@ riul_add(riul **riulpp, size_t growby,
                 riul_init(nriulp, nriulp->nelems, newsz);
                 *riulpp = rl = nriulp;
         }
+
+        /*
+         * "end" should be set after any potential reallocation of the
+         * regions-in-use structure to ensure that "rp" and "end" point into
+         * the same array.
+         */
+        end = &rl->rp[rl->nelems];
 
 #if !defined(NDEBUG)
         {
