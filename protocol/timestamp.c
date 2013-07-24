@@ -222,13 +222,13 @@ d_diff_timestamp(const timestampt *const afta,
 #define USEC_FORMAT     "%06ld"
 
 
-/*
+/**
  * Formats a timestamp.
  *
- * Arguments:
- *      timestamp       Pointer to the timestamp to be formatted.
- * Returns:
- *      Pointer to a static buffer containing the formatted timestamp.
+ * @param timestamp     Pointer to the timestamp to be formatted.
+ * @retval NULL         The timestamp couldn't be formatted.
+ * @return              Pointer to a static buffer containing the formatted
+ *                      timestamp.
  */
 char*
 tsFormat(
@@ -236,9 +236,14 @@ tsFormat(
 {
     static char         string[80];
     const struct tm*    tm = gmtime(&timestamp->tv_sec);
+    size_t              nbytes = strftime(string, sizeof(string),
+            STRFTIME_FORMAT, tm);
 
-    strftime(string, sizeof(string), STRFTIME_FORMAT, tm);
-    sprintf(string + strlen(string), USEC_FORMAT, (long)timestamp->tv_usec);
+    if (nbytes == 0)
+        return NULL;
+    (void)snprintf(string+nbytes, sizeof(string)-nbytes, USEC_FORMAT,
+            (long)timestamp->tv_usec);
+    string[sizeof(string)-1] = 0;
 
     return string;
 }
