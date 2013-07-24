@@ -580,7 +580,7 @@ main(int ac, char *av[])
                     LOG_ADD1("Wrong number of operands: %d", ac - optind);
                     usage(progname);
             }
-            strncat(feedfname,av[optind], sizeof(feedfname) - 6 );
+            (void)strncat(feedfname, av[optind], sizeof(feedfname)-6);
         }
 
         unotice("Starting Up");
@@ -627,7 +627,8 @@ main(int ac, char *av[])
         /*
          * who am i, anyway
          */
-        (void) strcpy(myname, ghostname());
+        (void) strncpy(myname, ghostname(), sizeof(myname));
+        myname[sizeof(myname)-1] = 0;
 
         /*
          * open the feed
