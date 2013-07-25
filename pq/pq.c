@@ -2786,8 +2786,8 @@ riul_add(riul **riulpp, size_t growby,
 
         /*
          * "end" should be set after any potential reallocation of the
-         * regions-in-use structure to ensure that "rp" and "end" point into
-         * the same array.
+         * regions-in-use structure to ensure that "end" points into the
+         * (possibly new) "rl->rp" array.
          */
         end = &rl->rp[rl->nelems];
 
