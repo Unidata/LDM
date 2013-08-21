@@ -1408,12 +1408,18 @@ static int pipe_open(
                     }
 
                     if (STDIN_FILENO == pfd[0]) {
+                        const unsigned  ulogOptions = ulog_get_options();
+                        const char*     ulogIdent = getulogident();
+                        const unsigned  ulogFacility = getulogfacility();
+                        const char*     ulogPath = getulogpath();
+
                         endpriv();
                         if (ulogIsVerbose()) {
                             LOG_ADD1("Executing decoder \"%s\"", av[0]);
                             log_log(LOG_INFO);
                         }
                         (void) execvp(av[0], &av[0]);
+                        openulog(ulogIdent, ulogOptions, ulogFacility, ulogPath);
                         LOG_SERROR1("Couldn't execute decoder \"%s\"", av[0]);
                         log_log(LOG_ERR);
                     }

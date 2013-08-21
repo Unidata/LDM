@@ -126,6 +126,11 @@ run_child(int argc, char *argv[])
 
         if(pid == 0)
         {       /* child */
+                const unsigned  ulogOptions = ulog_get_options();
+                const char*     ulogIdent = getulogident();
+                const unsigned  ulogFacility = getulogfacility();
+                const char*     ulogPath = getulogpath();
+
                 (void)signal(SIGCHLD, SIG_DFL);
                 (void)signal(SIGTERM, SIG_DFL);
 
@@ -135,6 +140,7 @@ run_child(int argc, char *argv[])
                 endpriv();
 
                 (void) execvp(argv[0], &argv[0]);
+                openulog(ulogIdent, ulogOptions, ulogFacility, ulogPath);
                 serror("run_child: execvp: %s", argv[0]);
                 _exit(127);
         }

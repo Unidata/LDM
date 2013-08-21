@@ -98,6 +98,10 @@ exec_prodput(
                  *
                  * (void) setpgid(0,0);
                  */
+                const unsigned  ulogOptions = ulog_get_options();
+                const char*     ulogIdent = getulogident();
+                const unsigned  ulogFacility = getulogfacility();
+                const char*     ulogPath = getulogpath();
 
                 (void)signal(SIGTERM, SIG_DFL);
                 (void)pq_close(pq);
@@ -114,6 +118,7 @@ exec_prodput(
                 endpriv();
 
                 (void) execvp(argv[0], argv);
+                openulog(ulogIdent, ulogOptions, ulogFacility, ulogPath);
                 LOG_SERROR1("Couldn't execute command \"%s\"", argv[0]);
                 log_log(LOG_ERR);
                 exit(EXIT_FAILURE);

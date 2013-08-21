@@ -2465,7 +2465,6 @@ proc_exec(Process *proc)
 
         if(proc->pid == 0)
         {       /* child */
-                const unsigned  ulogMask = getulogmask();
                 const unsigned  ulogOptions = ulog_get_options();
                 const char*     ulogIdent = getulogident();
                 const unsigned  ulogFacility = getulogfacility();
