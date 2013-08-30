@@ -195,9 +195,9 @@ EXEC "pqact"
       for example, you use the 
       <a href="glindex.html#pqact.conf"><tt>pqact</tt> configuration-file</a>s
         that come with the 
-        <a href="/projects/gempak/index.html">
+        <a href="/software/gempak/index.html">
         GEMPAK</a> or
-        <a href="/projects/mcidas/index.html">
+        <a href="/software/mcidas/index.html">
         McIDAS</a> packages.  For example
        <blockquote><pre>
 # Exec GEMPAK specific pqact(1) processing
@@ -271,7 +271,7 @@ locally, then you don't need to edit this file.
 
 <ul>
     <LI><A
-        HREF="/projects/decoders/index.html">
+        HREF="/software/decoders/index.html">
         Unidata Decoders home page </A> 
 </ul>
 
@@ -279,7 +279,7 @@ locally, then you don't need to edit this file.
 
 <ul>
     <LI>See the link "Site Configuration for Products" on the 
-        <A HREF="/projects/gempak/">
+        <A HREF="/software/gempak/">
         GEMPAK homepage</A> .
 </ul>
 
@@ -288,7 +288,7 @@ locally, then you don't need to edit this file.
 <ul>
     <LI>See the link "Using LDM-McIDAS Decoders" on the 
     <A HREF=
-        "/projects/mcidas/mcidd/index.html">
+        "/software/mcidas/mcidd/index.html">
         McIDAS decoders</A> webpage.
 </ul>
 
