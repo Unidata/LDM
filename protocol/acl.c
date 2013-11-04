@@ -189,100 +189,6 @@ sus_getUnsigned(
 
 
 /******************************************************************************
- * Source Module
- ******************************************************************************/
-
-typedef SUS Source;
-
-
-/**
- * Returns a new source object.
- *
- * @param pathname      [in] Pathname of the configuration-file. Client may
- *                      free upon return.
- * @param lineNo        [in] Line number in the configuration-file
- * @retval NULL         Failure. log_add() called.
- * @return              Pointer to the new source object.
- */
-static const Source*
-source_new(
-        const char*     pathname,
-        const unsigned  lineNo)
-{
-    return sus_new(pathname, lineNo);
-}
-
-
-/**
- * Clones a source object.
- *
- * @param source        [in] The source object to be cloned.
- * @retval NULL         Failure. log_add() called.
- * @return              Pointer to the clone.
- */
-static const Source*
-source_clone(
-        const Source* const source)
-{
-    return sus_clone(source);
-}
-
-
-/**
- * Frees a source object.
- *
- * @param source        [in/out] The source object to be freed.
- */
-static void
-source_free(
-        const Source* const source)
-{
-    sus_free((Source*)source); /* cast away "const" */
-}
-
-
-/**
- * Returns the formatted encoding of a source object suitable for the phrase
- * "at _____".
- *
- * @param sub       [in] Pointer to the source object to be formatted.
- * @param buf       [in/out] The buffer into which to format the subscription.
- * @param size      [in] The size of the buffer in bytes.
- * @return          The number of bytes that would have been written to the
- *                  buffer if it was sufficiently capacious.
- */
-static int
-source_toString_r(
-        const Source* const source,
-        char* const         buf,
-        const size_t        size)
-{
-    return snprintf(buf, size, "line %u of file \"%s\"",
-            source->integer, source->string);
-}
-
-
-/**
- * Returns the formatted encoding of a source object suitable for the phrase
- * "at _____".
- *
- * @param source        [in] The source object.
- * @return              Pointer to a static buffer containing the formatted
- *                      encoding of the source object.
- */
-static const char*
-source_toString(
-        const Source* const source)
-{
-    static char buf[1024];
-
-    (void)source_toString_r(source, buf, sizeof(buf));
-
-    return buf;
-}
-
-
-/******************************************************************************
  * Server Information Module
  *****************************************************************************/
 
@@ -1440,15 +1346,13 @@ sub_equal(
 /******************************************************************************
  * Request Module
  *
- * A request contains a subscription and information on the source of the
- * request (configuration-file pathname and line number). A request is also a
- * member of a linked-list.
+ * A request contains a subscription. A request is also a member of a
+ * linked-list.
  *****************************************************************************/
 
 typedef struct request {
     struct request*     next;
     Subscription*       subscription;
-    const Source*       source;
 } Request;
 
 /**
@@ -1468,7 +1372,6 @@ static Request* req_alloc()
     }
     else {
         req->subscription = NULL;
-        req->source = NULL;
         req->next = NULL;
     }
 
@@ -1480,7 +1383,6 @@ static Request* req_alloc()
  *
  * @param req           [in/out] Pointer to the request to be initialized.
  * @param sub           [in] Pointer to the subscription. Copied.
- * @param source        [in] Pointer to the source information. Copied.
  * @param next          [in] Pointer to the next request in the linked-list or
  *                      NULL.
  * @retval 0            Success.
@@ -1489,23 +1391,15 @@ static Request* req_alloc()
 static int req_init(
     Request* const              req,
     const Subscription* const   sub,
-    const Source* const         source,
     Request* const              next)
 {
     Subscription*   subClone = sub_clone(sub);
 
     if (subClone != NULL) {
-        const Source* sourceClone = source_clone(source);
+        req->subscription = subClone;
+        req->next = next;
 
-        if (sourceClone != NULL) {
-            req->subscription = subClone;
-            req->source = sourceClone;
-            req->next = next;
-
-            return 0;
-        } /* "sourceClone" allocated */
-
-        sub_free(subClone);
+        return 0;
     } /* "subClone" allocated */
 
     return -1;
@@ -1525,11 +1419,6 @@ static void req_free(
             req->subscription = NULL;
         }
 
-        if (req->source != NULL) {
-            source_free(req->source);
-            req->source = NULL;
-        }
-
         req->next = NULL;
 
         free(req);
@@ -1540,7 +1429,6 @@ static void req_free(
  * Creates a new request object.
  *
  * @param sub           [in] Pointer to the subscription. Copied.
- * @param source        [in] Pointer to the source information. Copied.
  * @param next          [in] Pointer to the next request in the linked-list or
  *                      NULL.
  * @retval 0            Success.
@@ -1548,13 +1436,12 @@ static void req_free(
  */
 static Request* req_new(
     const Subscription* const   sub,
-    const Source* const         source,
     Request* const              next)
 {
     Request*    request = req_alloc();
 
     if (request != NULL) {
-        if (req_init(request, sub, source, next)) {
+        if (req_init(request, sub, next)) {
             req_free(request);
             request = NULL;
         }
@@ -1573,18 +1460,6 @@ static const Subscription* req_getSubscription(
         const Request* const    request)
 {
     return request->subscription;
-}
-
-/**
- * Returns the source of a request.
- *
- * @param request       [in] Pointer to the request.
- * @return              The request's source.
- */
-static const Source* req_getSource(
-        const Request* const    request)
-{
-    return request->source;
 }
 
 /**
@@ -1691,15 +1566,13 @@ serverEntry_getServerInfo(
  *
  * @param entry         [in] The server-entry.
  * @param sub           [in/out] The subscription to be reduced.
- * @param source        [in] Source of the subscription.
  * @retval 0            Success.
  * @retval -1           Failure. log_add() called.
  */
 static int
 serverEntry_reduceSub(
         const ServerEntry* const    entry,
-        Subscription* const         sub,
-        const Source* const         source)
+        Subscription* const         sub)
 {
     Subscription*   origSub = sub_clone(sub);
 
@@ -1711,13 +1584,10 @@ serverEntry_reduceSub(
 
             if (sub_remove(sub, entrySub)) {
                 char    buf[1024];
-                char    srcBuf[1024];
 
                 (void)sub_toString_r(buf, sizeof(buf), origSub);
-                source_toString_r(source, srcBuf, sizeof(srcBuf));
-                LOG_ADD4("Subscription %s at %s overlaps subscription %s at %s",
-                        buf, srcBuf, sub_toString(entrySub),
-                        source_toString(req_getSource(req)));
+                LOG_ADD2("Subscription %s overlaps subscription %s",
+                        buf, sub_toString(entrySub));
             }
         }
 
@@ -1740,8 +1610,6 @@ serverEntry_reduceSub(
  *                      an empty specification, in which case the subscription
  *                      is ignored (i.e., not added). The client may free upon
  *                      return.
- * @param source        [in] Source of the subscription. Client may free upon
- *                      return.
  * @retval 0            Success. log_add() is called if the subscription was
  *                      reduced.
  * @retval -1           Failure. log_add() called.
@@ -1749,12 +1617,11 @@ serverEntry_reduceSub(
 static int
 serverEntry_add(
         ServerEntry* const  entry,
-        Subscription* const sub,
-        const Source* const source)
+        Subscription* const sub)
 {
     int     status = -1; /* failure */
 
-    if (serverEntry_reduceSub(entry, sub, source)) {
+    if (serverEntry_reduceSub(entry, sub)) {
         LOG_ADD0("Couldn't reduce subscription by previous subscriptions");
     }
     else {
@@ -1762,7 +1629,7 @@ serverEntry_add(
             status = 0;
         }
         else {
-            Request*    request = req_new(sub, source, entry->requests);
+            Request*    request = req_new(sub, entry->requests);
 
             if (request != NULL) {
                 entry->requests = request;
@@ -2686,8 +2553,6 @@ exec_getCommandLine(
  *
  * @param sub           [in] Subscription to be added. Client may free upon
  *                      return.
- * @param source        [in] Source of the subscription. Client may free upon
- *                      return.
  * @param serverEntry   [in/out] Server entry to which to add the subscription.
  * @return 0            Success.
  * @return -1           Failure. log_add() called.
@@ -2695,20 +2560,19 @@ exec_getCommandLine(
 static int
 addRequest(
         Subscription* const sub,
-        const Source* const source,
         ServerEntry* const  serverEntry)
 {
     int             status = -1; /* failure */
     Subscription*   origSub = sub_clone(sub);
 
     if (origSub != NULL) {
-        if (serverEntry_add(serverEntry, sub, source)) {
+        if (serverEntry_add(serverEntry, sub)) {
             LOG_ADD0("Couldn't add subscription to server entry");
         }
         else if (sub_isEmpty(sub)) {
-            LOG_ADD2("Ignoring subscription %s at %s because it "
+            LOG_ADD1("Ignoring subscription %s because it "
                     "duplicates previous subscriptions or specifies nothing",
-                    sub_toString(origSub), source_toString(source));
+                    sub_toString(origSub));
             log_log(LOG_WARNING);
             status = 0;
         }
@@ -2720,9 +2584,8 @@ addRequest(
 
                 (void)sub_toString_r(buf, sizeof(buf), origSub);
 
-                LOG_ADD3("Subscription %s at %s reduced to %s by previous "
-                        "subscriptions", buf, source_toString(source),
-                        sub_toString(sub));
+                LOG_ADD2("Subscription %s reduced to %s by previous "
+                        "subscriptions", buf, sub_toString(sub));
                 log_log(LOG_WARNING);
             }
 
@@ -2757,8 +2620,6 @@ addRequest(
  * @param pattern       [in] Pattern. Client may free upon return.
  * @param hostId        [in] Host identifier. Client may free upon return.
  * @param port          [in] Port number.
- * @param lineNo        [in] Line number of entry.
- * @param pathname      [in] Pathname of the configuration-file.
  * @retval 0            Success.
  * @retval -1           System error. log_add() called.
  */
@@ -2767,9 +2628,7 @@ acl_addRequest(
     const feedtypet     feedtype,
     const char* const   pattern,
     const char* const   hostId,
-    const unsigned      port,
-    const unsigned      lineNo,
-    const char* const   pathname)
+    const unsigned      port)
 {
     int                 status = -1; /* failure */
     const ServerInfo*   server = serverInfo_new(hostId, port);
@@ -2778,32 +2637,23 @@ acl_addRequest(
         LOG_ADD0("Couldn't create new server-information object");
     }
     else {
-        const Source* const source = source_new(pathname, lineNo);
+        ServerEntry*  serverEntry = servers_addIfAbsent(server);
 
-        if (source == NULL) {
-            LOG_ADD0("Couldn't create new source object");
+        if (serverEntry == NULL) {
+            LOG_ADD0("Couldn't get server entry");
         }
         else {
-            ServerEntry*  serverEntry = servers_addIfAbsent(server);
+            Subscription*   sub = sub_new(feedtype, pattern);
 
-            if (serverEntry == NULL) {
-                LOG_ADD0("Couldn't get server entry");
+            if (sub == NULL) {
+                LOG_ADD0("Couldn't create new subscription object");
             }
             else {
-                Subscription*   sub = sub_new(feedtype, pattern);
+                status = addRequest(sub, serverEntry);
 
-                if (sub == NULL) {
-                    LOG_ADD0("Couldn't create new subscription object");
-                }
-                else {
-                    status = addRequest(sub, source, serverEntry);
-
-                    sub_free(sub);
-                } /* "sub" allocated */
-            } /* got server-information entry */
-
-            source_free(source);
-        } /* "source" allocated */
+                sub_free(sub);
+            } /* "sub" allocated */
+        } /* got server-information entry */
 
         serverInfo_free(server);
     } /* "server" allocated */

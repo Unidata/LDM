@@ -2047,14 +2047,3 @@ scannerPop(void)
 
     return currentFileEntry == NULL;
 }
-
-
-static const char*
-scannerGetPath(void)
-{
-    return
-	currentFileEntry == NULL
-	    ? NULL
-	    : currentFileEntry->path;
-}
-
