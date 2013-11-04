@@ -10,3 +10,4 @@ redo-results
 *.results.*
 Makefile.in
 redo_results.tab
+lockExp
