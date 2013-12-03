@@ -134,9 +134,7 @@ case `uname -s` in
         ;;
 esac
 
-AM_CONDITIONAL([MAINTAINER],
-    [test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu &&
-    test `/bin/pwd` = /machine/steve/ldm/src])
+AM_CONDITIONAL([MAINTAINER], [test "$USER" = steve])
 
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
@@ -556,7 +554,8 @@ AC_CONFIG_FILES([
     rtstats/Makefile
     scour/Makefile
     scour/scour
-    scripts/ldmadmin
+    scour/scour.conf
+    scripts/ldmadmin.pl
     scripts/ldmfail
     scripts/Makefile
     scripts/netcheck

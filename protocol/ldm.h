@@ -295,7 +295,7 @@ typedef struct ldm_addr_ip ldm_addr_ip;
 enum ldm_addrt {
 	LDM_ADDR_NONE = 0,
 	LDM_ADDR_RPC = 1,
-	LDM_ADDR_IP = 2
+	LDM_ADDR_IP = 2,
 };
 typedef enum ldm_addrt ldm_addrt;
 
@@ -470,7 +470,7 @@ enum ldm_errt {
 	RESEND = 4,
 	RESTART = 5,
 	REDIRECT = 6,
-	RECLASS = 7
+	RECLASS = 7,
 };
 typedef enum ldm_errt ldm_errt;
 
