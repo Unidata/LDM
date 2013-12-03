@@ -5,5 +5,4 @@ regutil.out
 stringBuf.h
 testRegistry
 regpar.tab
-substPaths
 vgcore.*
