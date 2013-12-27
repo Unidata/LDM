@@ -83,7 +83,7 @@
         Squashed a bug that caused a segmentation violation (SIGSEGV) when given
         an unknown option.
 
-    requtil(1):
+    regutil(1):
         Made the "usage" message use the LDM logging facility.
         
         Added the "-v|-x" options and some debug-level messages.
@@ -152,7 +152,8 @@
         part of the ULDB investigation. Didn't make a difference.
 
     LDM Registry (src/registry/):
-        Ensured that free() isn't called twice on the same file object.
+        Ensured that free() isn't called twice on the same file object, which
+        could result in a SIGSEGV.
 
         Improved some internal documentation.
 
