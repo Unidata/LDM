@@ -68,3 +68,4 @@ ldm-6.*
 awips2-ldm.spec
 *.rpm
 gmon.out
+/test-driver
