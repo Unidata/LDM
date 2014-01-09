@@ -165,7 +165,7 @@ c_sperror(CLIENT *rpch, const char *s, char *str, size_t len)
 
         if(s && *s)
         {
-                (void) sprintf(str, "%s: ", s);  
+                (void) snprintf(str, len, "%s: ", s);
                 sl = strlen(str);
                 str += sl;
                 len -= sl;
@@ -202,8 +202,7 @@ c_sperror(CLIENT *rpch, const char *s, char *str, size_t len)
                                 sl = strlen(err);
                                 if(len <= sl +10)
                                         return;
-                                (void) sprintf(str, "; errno = %s",
-                                        err); 
+                                (void) snprintf(str, len, "; errno = %s", err);
                         }
                 }
                 break;
@@ -219,7 +218,7 @@ c_sperror(CLIENT *rpch, const char *s, char *str, size_t len)
 
         case RPC_AUTHERROR:
                 err = auth_errmsg(e.re_why);
-                (void) sprintf(str,"; why = ");
+                (void) snprintf(str, len, "; why = ");
                 sl = strlen(str);
                 str += sl;
                 len -= sl;
@@ -230,9 +229,9 @@ c_sperror(CLIENT *rpch, const char *s, char *str, size_t len)
                 } else if (len <= 36)
                         return;
                 if (err != NULL) {
-                        (void) sprintf(str, "%s",err);
+                        (void) snprintf(str, len, "%s",err);
                 } else {
-                        (void) sprintf(str,
+                        (void) snprintf(str, len,
                                 "(unknown authentication error - %d)",
                                 (int) e.re_why);
                 }
@@ -583,7 +582,7 @@ get_addr(h_clnt *hcp, struct timeval timeo)
         CLR_ALRM();
 
         if (error != NULL) {
-                (void)sprintf(hcp->errmsg, sizeof(hcp->errmsg), "ldm_clnt_addr(%s): %s",
+                (void)snprintf(hcp->errmsg, sizeof(hcp->errmsg), "ldm_clnt_addr(%s): %s",
                         hcp->remote, err_message(error));
                 hcp->errmsg[sizeof(hcp->errmsg)-1] = 0;
                 err_free(error);
@@ -613,8 +612,8 @@ get_addr(h_clnt *hcp, struct timeval timeo)
         return hcp->state;
 get_addr_timeo :
         /* ALRM, longjmp, goto => timed out */
-        (void)sprintf(hcp->errmsg, "ldm_clnt_addr(%s): lookup Timed out",
-                hcp->remote);
+        (void)snprintf(hcp->errmsg, sizeof(hcp->errmsg),
+                "ldm_clnt_addr(%s): lookup Timed out", hcp->remote);
         hcp->rpcerr.re_status = rpc_createerr.cf_stat = RPC_UNKNOWNHOST;
         hcp->state = NAMED;
         return NAMED;
@@ -668,7 +667,8 @@ get_pmap_clnt(h_clnt *hcp, struct timeval timeo)
                 RPCSMALLMSGSIZE, RPCSMALLMSGSIZE);
         if(pmap_clnt == NULL)
         {
-                (void)sprintf(hcp->errmsg, "can't connect to portmapper : %s",
+                (void)snprintf(hcp->errmsg, sizeof(hcp->errmsg),
+                        "can't connect to portmapper : %s",
                         strerror(rpc_createerr.cf_error.re_errno));
                 hcp->rpcerr.re_status = rpc_createerr.cf_stat;
                 /* force another address lookup */
@@ -880,7 +880,7 @@ get_clnt_timeo:
                 (void) close(sock);
         }
         hcp->rpcerr.re_status = rpc_createerr.cf_stat = RPC_TIMEDOUT;
-        (void)sprintf(hcp->errmsg,
+        (void)snprintf(hcp->errmsg, sizeof(hcp->errmsg),
                         "h_clnt_create(%s): Timed out while creating connection",
                         hcp->remote);
         /* force (at least) portmap lookup again */
