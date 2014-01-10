@@ -15,10 +15,7 @@ CPPFLAGS	= \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
-LDADD		= \
-    $(top_builddir)/lib/libldm.la \
-    -lxml2 \
-    -lm
+pqcheck_LDADD	= $(top_builddir)/lib/libldm.la
 dist_man1_MANS	= pqcheck.1
 TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \

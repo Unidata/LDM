@@ -26,7 +26,6 @@
 #include "ldm.h"
 #include "pq.h"
 #include "fbits.h"
-#include "globals.h"
 #include "remote.h"
 #include "lcm.h"
 #include "ulog.h"
@@ -44,6 +43,7 @@
  * of a "signature" data-product in order to determine the initial
  * start-time for a search of the data-product in the time-queue.
  */
+extern unsigned int     interval;
 #define SEARCH_BACKOFF  interval
 
 /*
@@ -2771,7 +2771,7 @@ riul_add(riul **riulpp, size_t growby,
 {
         riu *rp;
         riul *rl = *riulpp;
-        riu *end = &rl->rp[rl->nelems];
+        riu *end;
 
         if(!riul_HasSpace(rl))
         {
@@ -2783,6 +2783,13 @@ riul_add(riul **riulpp, size_t growby,
                 riul_init(nriulp, nriulp->nelems, newsz);
                 *riulpp = rl = nriulp;
         }
+
+        /*
+         * "end" should be set after any potential reallocation of the
+         * regions-in-use structure to ensure that "end" points into the
+         * (possibly new) "rl->rp" array.
+         */
+        end = &rl->rp[rl->nelems];
 
 #if !defined(NDEBUG)
         {

@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include "grib2.h"
 
-/* S. Chiswell modified to pass message size to ensure reading doesn't go past message length */
 g2int g2_info(unsigned char *cgrib,int sz,g2int *listsec0,g2int *listsec1,
             g2int *numfields,g2int *numlocal)
 /*$$$  SUBPROGRAM DOCUMENTATION BLOCK
@@ -18,11 +17,18 @@ g2int g2_info(unsigned char *cgrib,int sz,g2int *listsec0,g2int *listsec1,
 //
 // PROGRAM HISTORY LOG:
 // 2002-10-28  Gilbert
+// ????-??-??  S. Chiswell modified to pass message size to ensure reading
+//             doesn't go past message length
+// 2013-05-28  Steve Emmerson modified to increase the level of verification of
+//             the GRIB2 message structure.
 //
-// USAGE:   int g2_info(unsigned char *cgrib,g2int *listsec0,g2int *listsec1,
-//            g2int *numfields,g2int *numlocal)
-//   INPUT ARGUMENT:
-//     cgrib    - Character pointer to the GRIB2 message
+// USAGE:   int g2_info(unsigned char *cgrib, g2int sz, g2int *listsec0,
+//            g2int *listsec1, g2int *numfields,g2int *numlocal)
+//   INPUT ARGUMENTS:
+//     cgrib    - Character pointer to the GRIB2 message. May have junk in the
+//                first 100 bytes before the "GRIB" sentinel and may have junk
+//                after the valid GRIB message.
+//     sz       - Length of "cgrib" data in bytes
 //
 //   OUTPUT ARGUMENTS:      
 //     listsec0 - pointer to an array containing information decoded from 
@@ -58,12 +64,13 @@ g2int g2_info(unsigned char *cgrib,int sz,g2int *listsec0,g2int *listsec1,
 //                0 = no error
 //                1 = Beginning characters "GRIB" not found.
 //                2 = GRIB message is not Edition 2.
-//                3 = Could not find Section 1, where expected.
-//                4 = End string "7777" found, but not where expected.
+//                3 = Could not find Section 1 where expected.
+//                4 = End string "7777" found prematurely
 //                5 = End string "7777" not found at end of message.
 //                6 = Invalid section number found.
+//                7 = Invalid total or section length parameter in message
 //
-// REMARKS: None
+// REMARKS: This function ASSUMES that "CHAR_BIT == 8"
 //
 // ATTRIBUTES:
 //   LANGUAGE: C
@@ -71,20 +78,24 @@ g2int g2_info(unsigned char *cgrib,int sz,g2int *listsec0,g2int *listsec1,
 //
 //$$$*/
 {
- 
-      g2int ierr,mapsec1len=13;
-      g2int mapsec1[13]={2,2,1,1,1,2,1,1,1,1,1,1,1};
-      g2int  i,j,istart,iofst,lengrib,lensec0,lensec1;
-      g2int ipos,isecnum,nbits,lensec;
+      /*
+       * NB: The following 3 parameters must be kept consonant.
+       */
+#     define MAP_SEC1_LEN 13
+      const g2int mapsec1[MAP_SEC1_LEN]={2,2,1,1,1,2,1,1,1,1,1,1,1};
+      const int MIN_LEN_SEC_1 = 16; /* minimum length, in bytes, of section 1 */
 
-      ierr=0;
+      g2int  i,j,istart,iofst,lengrib,lensec1;
+      g2int ipos,isecnum,nbits,lensec;
+      long remaining; /* number of bytes remaining to be decoded */
+
       *numlocal=0;
       *numfields=0;
 /*
 //  Check for beginning of GRIB message in the first 100 bytes
 //  S. Chiswell, constrain to j<sz too*/
       istart=-1;
-      for (j=0;j<sz,j<100;j++) {
+      for (j=0;j<sz-3 && j<100;j++) {
         if (cgrib[j]=='G' && cgrib[j+1]=='R' &&cgrib[j+2]=='I' &&
             cgrib[j+3]=='B') {
           istart=j;
@@ -92,13 +103,20 @@ g2int g2_info(unsigned char *cgrib,int sz,g2int *listsec0,g2int *listsec1,
         }
       }
       if (istart == -1) {
-        printf("g2_info:  Beginning characters GRIB not found.");
-        ierr=1;
-        return(ierr);
+        printf("g2_info:  Beginning characters GRIB not found.\n");
+        return 1;
       }
-/*
-//  Unpack Section 0 - Indicator Section 
-*/
+      remaining = sz - istart;
+
+      /*
+       *  Unpack Section 0 - Indicator Section
+       */
+#     define LEN_SEC_0 16 /* The length, in bytes, of section 0. */
+      if (LEN_SEC_0 > remaining) {
+        printf("g2_info: Sanity check, bulletin too small to contain section 0: %ld\n",
+                remaining);
+        return 7;
+      }
       iofst=8*(istart+6);
       gbit(cgrib,listsec0+0,iofst,8);     /* Discipline*/
       iofst=iofst+8;
@@ -108,93 +126,139 @@ g2int g2_info(unsigned char *cgrib,int sz,g2int *listsec0,g2int *listsec1,
       gbit(cgrib,&lengrib,iofst,32);        /* Length of GRIB message*/
       iofst=iofst+32;
       listsec0[2]=lengrib;
-      lensec0=16;
-      ipos=istart+lensec0;
 
-/*
-//  Check for length of grib message against bulletin size
-//  S. Chiswell*/
-      if ( istart + lengrib > sz + 1 ) {
-        printf("g2_info: Sanity check, grib length past bullein size");
-        ierr=7;
-        return(ierr);
+      /*
+       * Validate length of GRIB message. S. Chiswell & S. Emmerson.
+       */
+      if (lengrib < LEN_SEC_0 || lengrib > remaining) {
+        printf("g2_info: Sanity check, grib length too big or too small: %ld\n",
+                (long)lengrib);
+        return 7;
       }
-/*
-//  Currently handles only GRIB Edition 2.
-*/  
+
+      ipos=istart+LEN_SEC_0;
+      remaining = lengrib - LEN_SEC_0;
+
+      /*
+       *  Currently handles only GRIB Edition 2.
+       */
       if (listsec0[1] != 2) {
-        printf("g2_info: can only decode GRIB edition 2.");
-        ierr=2;
-        return(ierr);
+        printf("g2_info: can only decode GRIB edition 2.\n");
+        return 2;
       }
-/*
-//  Unpack Section 1 - Identification Section
-*/
+
+      /*
+       *  Unpack Section 1 - Identification Section
+       */
+      if (MIN_LEN_SEC_1 > remaining) {
+          printf("g2_info: Sanity check, bulletin too small to contain section 1: %ld\n",
+                  remaining);
+      }
       gbit(cgrib,&lensec1,iofst,32);        /* Length of Section 1*/
       iofst=iofst+32;
-      gbit(cgrib,&isecnum,iofst,8);         /* Section number ( 1 )*/
+
+      /*
+       * Validate length of section 1. S. Emmerson.
+       */
+      if (lensec1 < MIN_LEN_SEC_1 || lensec1 > remaining) {
+        printf("g2_info: Sanity check, section 1 length too big or too small: %ld\n",
+                (long)lensec1);
+        return 7;
+      }
+
+      /*
+       * Decode and validate the section number.
+       */
+      gbit(cgrib,&isecnum,iofst,8);
       iofst=iofst+8;
       if (isecnum != 1) {
-        printf("g2_info: Could not find section 1.");
-        ierr=3;
-        return(ierr);
+        printf("g2_info: Could not find section 1.\n");
+        return 3;
       }
+
       /*
-      //   Unpack each input value in array listsec1 into the
-      //   the appropriate number of octets, which are specified in
-      //   corresponding entries in array mapsec1.
-      */
-      for (i=0;i<mapsec1len;i++) {
+       *   Unpack each input value in array listsec1 into the
+       *   the appropriate number of octets, which are specified in
+       *   corresponding entries in array mapsec1.
+       */
+      for (i=0;i<MAP_SEC1_LEN;i++) {
         nbits=mapsec1[i]*8;
         gbit(cgrib,listsec1+i,iofst,nbits);
         iofst=iofst+nbits;
       }
-      ipos=ipos+lensec1;
-/*
-//  Loop through the remaining sections to see if they are valid.
-//  Also count the number of times Section 2
-//  and Section 4 appear.
-*/
-      for (;;) {
+
+      ipos += lensec1;
+      remaining -= lensec1;
+
+      /*
+       *  Loop through the remaining sections to see if they are valid.
+       *  Also count the number of times Section 2
+       *  and Section 4 appear.
+       */
+      while (remaining >= 4) {
         if (cgrib[ipos]=='7' && cgrib[ipos+1]=='7' && cgrib[ipos+2]=='7' &&
             cgrib[ipos+3]=='7') {
-          ipos=ipos+4;
-          if (ipos != (istart+lengrib)) {
+          remaining -= 4;
+          if (remaining) {
             printf("g2_info: '7777' found, but not where expected.\n");
-            ierr=4;
-            return(ierr);
+            return 4;
           }
-          break;
+          return 0;
+        }
+
+        /*
+         * Minimum length of a section in bytes (section length & section number)
+         */
+#       define MIN_LEN_SEC 5
+        if (remaining < MIN_LEN_SEC) {
+            printf("g2_info: Sanity check, section too small: %ld\n",
+                    remaining);
+            return 7;
         }
         
         iofst=ipos*8;
-        gbit(cgrib,&lensec,iofst,32);        /* Get Length of Section*/
+
+        /*
+         * Decode and validate the section length.
+         */
+        gbit(cgrib,&lensec,iofst,32);
         iofst=iofst+32;
-        gbit(cgrib,&isecnum,iofst,8);         /* Get Section number*/
-        iofst=iofst+8;
-        ipos=ipos+lensec;                 /* Update beginning of section pointer*/
-        if (ipos > (istart+lengrib)) {
-          printf("g2_info: '7777'  not found at end of GRIB message.\n");
-          ierr=5;
-          return(ierr);
+        if (lensec < MIN_LEN_SEC || lensec > remaining) {
+          printf("g2_info: Sanity check, section length too big or too small: %ld\n",
+                  (long)lensec);
+          return 7;
         }
+
+        /*
+         * Decode and validate the section number.
+         */
+        gbit(cgrib,&isecnum,iofst,8);
+        iofst=iofst+8;
         if ( isecnum>=2 && isecnum<=7 ) {
-           if (isecnum == 2)      /* Local Section 2*/
+           if (isecnum == 2) {    /* Local Section 2*/
               /*   increment counter for total number of local sections found*/
               (*numlocal)++;
-            
-           else if (isecnum == 4)
+           }
+           else if (isecnum == 4) {
               /*   increment counter for total number of fields found*/
               (*numfields)++;
+           }
         }
         else {
-           printf("g2_info: Invalid section number found in GRIB message: %ld\n"                   ,isecnum);
-           ierr=6;
-           return(ierr);
+           printf("g2_info: Invalid section number found in GRIB message: %ld\n",
+                   (long)isecnum);
+           return 6;
         }
-        
+
+        ipos += lensec;                 /* Update beginning of section pointer*/
+        remaining -= lensec;
+      } /* while sufficient bytes remain */
+
+      if (remaining) {
+        printf("g2_info: '7777'  not found at end of GRIB message.\n");
+        return 5;
       }
 
-      return(0);
+      return 0;
 
 }

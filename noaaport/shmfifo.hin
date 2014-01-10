@@ -46,12 +46,12 @@ struct shmbh /* shmem block header */
    unsigned canary;
 };
 
-#if ! ( _NO_XOPEN4 && _NO_XOPEN5 )
+#if ! ( _NO_XOPEN4 && _NO_XOPEN5 ) && !defined(_DARWIN_C_SOURCE)
 union semun {
-int val;
-struct semid_ds *buf;
-unsigned short int *array;
-struct seminfo *__buf;
+    int                 val;
+    struct semid_ds*    buf;
+    unsigned short int* array;
+    struct seminfo*     __buf;
 };
 #endif
 

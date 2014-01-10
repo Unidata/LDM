@@ -38,9 +38,7 @@ CPPFLAGS		= \
 pqing_LDADD		= \
     do_check.o \
     do_nocheck.o \
-    $(top_builddir)/lib/libldm.la \
-    -lxml2 \
-    -lm
+    $(top_builddir)/lib/libldm.la
 dist_man1_MANS		= pqing.1
 TAGS_FILES		= \
 	do.c \

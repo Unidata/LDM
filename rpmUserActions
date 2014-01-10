@@ -1,0 +1,44 @@
+defaultHome=${1?Default home-directory not set}
+pkgid=${2?Package ID not set}
+actualHome=${3?Actual home-directory not set}
+
+bindir=${actualHome}/$pkgid/bin
+
+# Ensure that the necessary symbolic links in the LDM user's home-directory
+# exist.
+#
+${bindir}/ensureLdmhomeLinks ${actualHome} ${pkgid} || exit 1
+    
+# Ensure that the $HOME/var directory has the necessary structure.
+#
+${bindir}/ensureVar ${actualHome} || exit 1
+    
+# Adjust the installation pathnames in the LDM registry
+#
+sed -e "s;${defaultHome}/etc/;${actualHome}/etc/;" \
+    -e "s;${defaultHome}/var/;${actualHome}/var/;" \
+        ${actualHome}/etc/registry.xml >${actualHome}/etc/registry.xml.new && 
+    mv ${actualHome}/etc/registry.xml ${actualHome}/etc/registry.xml.dist &&
+    mv ${actualHome}/etc/registry.xml.new ${actualHome}/etc/registry.xml || exit 1
+    
+# Ensure that all profile-files for the LDM user correctly set the PATH, 
+# MANPATH, and LDMHOME environment variables.
+#
+# csh(1):
+    grep -F -q '$HOME/bin' ${actualHome}/.login 2>/dev/null ||
+        echo 'set path=($HOME/bin $path)' >>${actualHome}/.login || exit 1
+    grep -F -q '$HOME/share/man' ${actualHome}/.login 2>/dev/null ||
+        echo 'setenv MANPATH $HOME/share/man:/usr/share/man' \
+            >>${actualHome}/.login || exit 1
+    grep -F -q 'LDMHOME' ${actualHome}/.login 2>/dev/null ||
+        echo 'setenv LDMHOME $HOME' >>${actualHome}/.login || exit 1
+# bash(1) & sh(1):
+    for profilePath in ${actualHome}/.bash_profile ${actualHome}/.profile; do
+        grep -F -q '$HOME/bin' $profilePath 2>/dev/null ||
+            echo 'export PATH=$HOME/bin:$PATH' >>$profilePath || exit 1
+        grep -F -q '$HOME/share/man' $profilePath 2>/dev/null ||
+            echo 'export MANPATH=$HOME/share/man:${MANPATH:-/usr/share/man}' \
+                >>$profilePath || exit 1
+        grep -F -q 'LDMHOME' $profilePath 2>/dev/null ||
+            echo 'export LDMHOME=$HOME' >>$profilePath || exit 1
+    done

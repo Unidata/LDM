@@ -26,7 +26,6 @@ CLEANFILES		= ldmadmin
 
 all:		ldmadmin
 
-if MAINTAINER
 ldmadmin:	ldmadmin.pl
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
@@ -34,7 +33,6 @@ ldmadmin:	ldmadmin.pl
 ldmadmin.1:	ldmadmin.1.in
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif
 
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/netcheck.conf

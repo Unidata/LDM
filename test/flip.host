@@ -1,21 +1,19 @@
-# /usr/bin/c89: illegal option -- p (when compiling SAX.c)
+# libtool: compile:  /usr/bin/c89 -DHAVE_CONFIG_H -I. -I.. -g -O2 -c auth_none.c -Wp,-MD,.deps/auth_none.TPlo -o auth_none.o
+# i686-apple-darwin11-llvm-gcc-4.2: HAVE_CONFIG_H: No such file or directory
 PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/c89
-PATH=/usr/bin:/bin,--disable-max-size,/usr/bin/make,/usr/bin/c89
 
 # "liby.a" wasn't compiled in 32-bit mode. Apparently, there's no
 # 32-bit support
 #PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/cc -m32
 
-# Multicast isn't supported, so "--with-noaaport" fails
 PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/cc
 
-# /usr/bin/c99: illegal option -- p (when compiling SAX.c)
+# libtool: link: /usr/bin/c99 -dynamiclib ...
+# /usr/bin/c99: illegal option -- d
 PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/c99
-PATH=/usr/bin:/bin,--disable-max-size,/usr/bin/make,/usr/bin/c99
 
 # "liby.a" wasn't compiled in 32-bit mode. Apparently, there's no
 # 32-bit support
 #PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/gcc -m32
 
-# Multicast isn't supported, so "--with-noaaport" fails
 PATH=/usr/bin:/bin,,/usr/bin/make,/usr/bin/gcc

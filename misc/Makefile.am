@@ -6,9 +6,16 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST	        = child_map.hin semRWLock.hin ip_multicast.c ip_multicast.hin
-BUILT_SOURCES		= ../registry/registry.h child_map.h semRWLock.h
-CLEANFILES		    = child_map.h semRWLock.h ip_multicast.h
+BUILT_SOURCES		= \
+        child_map.h \
+        ip_multicast.h \
+        semRWLock.h
+EXTRA_DIST	        = \
+        child_map.hin \
+        semRWLock.hin \
+        ip_multicast.c \
+        ip_multicast.hin
+DISTCLEANFILES		= child_map.h ip_multicast.h semRWLock.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
 	ldmalloc.h \
@@ -50,9 +57,6 @@ TAGS_FILES	= \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 
-../registry/registry.h:
-	cd ../registry && $(MAKE) $@
-
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
@@ -71,7 +75,6 @@ test_child_map_CPPFLAGS	= \
 
 test_child_map_LDADD	= \
     $(top_builddir)/lib/libldm.la \
-    -lxml2 \
     @LIBS_CUNIT@
 
 testSemRWLock_CPPFLAGS	= \
@@ -83,7 +86,6 @@ testSemRWLock_CPPFLAGS	= \
 
 testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
-    -lxml2 \
     @LIBS_CUNIT@
 
 TESTS			= test_child_map testSemRWLock

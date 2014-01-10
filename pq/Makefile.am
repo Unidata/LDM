@@ -6,8 +6,9 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES		= pq.h
 EXTRA_DIST		= pq.hin
+BUILT_SOURCES		= pq.h
+DISTCLEANFILES          = $(BUILT_SOURCES)
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= pq.h fbits.h lcm.h
 lib_la_SOURCES		= pq.c lcm.c

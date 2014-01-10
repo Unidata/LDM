@@ -30,24 +30,18 @@ TAGS_FILES              = \
     $(top_srcdir)/*.h \
     $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
     $(top_srcdir)/protocol/*.c \
-    -lxml2 \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/protocol \
-    -lxml2
-LDADD			= \
-    $(top_builddir)/lib/libldm.la \
-    -lxml2 \
-    $(LD_GEN)
+    -I$(top_srcdir)/protocol
+regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
+BUILT_SOURCES		= regpar.tab
 dist_man1_MANS		= regutil.1
 CLEANFILES		= regutil.out regpar.tab
-
-all:		regpar.tab
 
 # "regpar.tab" fields:
 #
@@ -74,7 +68,7 @@ regpar.tab:	$(srcdir)/regpar.tab.in
 	mv $@.tmp $@
 
 if MAINTAINER
-BUILT_SOURCES		= substPaths
+BUILT_SOURCES		+= substPaths
 
 substPaths:	regpar.tab.in
 	$(AWK) -F : 'BEGIN {print "sed \\"} \
@@ -115,10 +109,7 @@ testRegistry_CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     @CPPFLAGS_CUNIT@
 
-testRegistry_LDADD		= \
-    $(top_builddir)/lib/libldm.la \
-    -lxml2 \
-    @LIBS_CUNIT@
+testRegistry_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
 TESTS			= checkRegistry
 

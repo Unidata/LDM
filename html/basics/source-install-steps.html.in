@@ -105,7 +105,7 @@ using the <code>gunzip(1)</code> and <code>pax(1)</code>
 utilities.
 For example:
 <blockquote><pre>
-cd                                                  # go to the LDM user's home-directory
+cd                                                    # go to the LDM user's home-directory
 mkdir @PACKAGE@-@VERSION@                                   # make a version-specific subdirectory
 cd @PACKAGE@-@VERSION@                                      # go to the version-specific subdirectory
 gunzip -c $HOME/@PACKAGE@-@VERSION@.tar.gz | pax -r         # unpack the distribution
@@ -171,7 +171,7 @@ example:
 	<th>User Shell</th>
 	<th>Example</th>
     </tr>
-	<td>Standard UNIX<sup>®</sup> (e.g. <code>sh, ksh, bash</code>)</td>
+	<td>Standard UNIX<sup>ï¿½</sup> (e.g. <code>sh, ksh, bash</code>)</td>
 	<td nowrap><code>export PATH=/usr/gnu/bin:/usr/bin:/bin</code></td>
     </tr>
     <tr>
@@ -229,10 +229,11 @@ options and arguments, when and if appropriate:
         and <tt><b>LDFLAGS</b></tt> variables are used verbatim. 
 
     <dt><code>--with-noaaport</code>
-    <dd>Include support for ingesting data-products from a NOAAPORT receiver.
+    <dd>Include support for ingesting data-products from a
+        <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
         This option is disabled by default because most sites don't have a
-        NOAAPORT receiver.
-        <a href="../../noaaport/index.html">NOAAPORT ingestion webpages</a>.
+        <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
+        <a href="../noaaport/index.html">NOAAPORT ingestion webpages</a>.
 
     <dt><code>--with-gribinsert</code>
     <dd>Include support for converting GRIB2 messages in a file into LDM
@@ -282,7 +283,7 @@ For example:
 	<th>User Shell</th>
 	<th>Example</th>
     </tr>
-	<td>Standard UNIX<sup>®</sup> (e.g. <code>sh, ksh, bash</code>)</td>
+	<td>Standard UNIX<sup>ï¿½</sup> (e.g. <code>sh, ksh, bash</code>)</td>
 	<td><code>./configure&nbsp;...&nbsp;>configure.log&nbsp;2>&1</code><br>
 	</td>
     </tr>
@@ -327,7 +328,7 @@ The relevant command depends on your user shell.  For example:
 	<th>User Shell</th>
 	<th>Command</th>
     </tr>
-	<td>Standard UNIX<sup>®</sup> (e.g. <code>sh, ksh, bash</code>)</td>
+	<td>Standard UNIX<sup>ï¿½</sup> (e.g. <code>sh, ksh, bash</code>)</td>
 	<td nowrap><code><a href="glindex.html#make">make</a> install
 	    &gt;make.log 2>&1</code></td>
     </tr>

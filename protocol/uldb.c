@@ -210,16 +210,16 @@ static size_t roundUp(
 static size_t getAlignment(
         size_t size)
 {
-    size_t* alignment;
-    static size_t alignments[] = { sizeof(double), sizeof(long), sizeof(int),
-            sizeof(short), 1}; /* last one can't fail */
+    int             i;
+    static size_t   alignments[] = { sizeof(double), sizeof(long), sizeof(int),
+            sizeof(short)};
 
-    for (alignment = alignments;; alignment++) {
-        if ((size % *alignment) == 0)
-            return *alignment;
+    for (i = 0; i < sizeof(alignments)/sizeof(alignments[0]); i++) {
+        if ((size % alignments[i]) == 0)
+            return alignments[i];
     }
 
-    return 0;
+    return size; /* equivalent to byte-alignment */
 }
 
 /**
@@ -1133,7 +1133,7 @@ static uldb_Status sm_detach(
     int status;
 
     if (NULL != sm->segment) {
-        if (shmdt(sm->segment)) {
+        if (shmdt((void*)sm->segment)) {
             LOG_SERROR2(
                     "Couldn't detach shared-memory segment %d at address %p",
                     sm->shmId, sm->segment);

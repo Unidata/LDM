@@ -1,11 +1,12 @@
 /*
- *   Copyright 2004, University Corporation for Atmospheric Research
- *   See COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2013, University Corporation for Atmospheric Research. All
+ *   rights reserved. See file COPYRIGHT in the top-level source-directory
+ *   for copying and redistribution conditions.
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "libpng/png.h"
+#include <png.h>
 #include "md5.h"
 
 int pngcount=0;
@@ -87,7 +88,7 @@ if(!info_ptr)
    return;
    }
 
-if(setjmp(png_ptr->jmpbuf))
+if(setjmp(png_jmpbuf(png_ptr)))
    {
    png_destroy_write_struct(&png_ptr,&info_ptr);
    return;
@@ -108,7 +109,7 @@ void pngout_end()
 {
 /* try this, we get core dumps if try to shut down before any writes take place */
 /*if(PNG_write_calls > 0) */
-if ((png_ptr->mode & 0x04/* PNG_HAVE_IDAT */))
+if (PNG_write_calls)
    png_write_end(png_ptr,NULL);
 
 

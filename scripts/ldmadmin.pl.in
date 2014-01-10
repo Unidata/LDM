@@ -17,10 +17,17 @@ use POSIX;
 #                            received data-product
 ###############################################################################
 
+# Set the $ldmhome variable from the LDMHOME environment variable if available;
+# otherwise, use the configure(1)-determined value. This is necessary for
+# relocated binary RPM installations.
+$ldmhome = "$ENV{'LDMHOME'}";
+if (!$ldmhome) {
+    $ldmhome = "@LDMHOME@";
+}
+
 srand;	# called once at start
 
 # Some parameters used by this script:
-$ldmhome = "@LDMHOME@";
 $progname = "ldmadmin";
 $feedset = "ANY";
 chop($os = `uname -s`);
@@ -29,12 +36,11 @@ $begin = 19700101;
 $end = 30000101;
 $lock_file = "$ldmhome/.ldmadmin.lck";
 $pid_file = "$ldmhome/ldmd.pid";
-$bin_path = "@prefix@/bin";
 $line_prefix = "";
 $pqact_conf_option = 0;
 
-# Ensure that some environment variables are set.
-$ENV{'PATH'} = "$bin_path:$ENV{'PATH'}";
+# Ensure that the utilities of this version are favored
+$ENV{'PATH'} = "$ldmhome/ldm-@PACKAGE_VERSION@/bin:$ENV{'PATH'}";
 
 # we want a flush after every print statement
 $| = 1;
@@ -659,7 +665,7 @@ sub start
     print "Checking LDM configuration-file ($ldmd_conf)...\n";
     my $prev_line_prefix = $line_prefix;
     $line_prefix .= "    ";
-    ( @output ) = `$cmd_line -nl- $ldmd_conf 2>&1` ;
+    ( @output ) = `$cmd_line -nvl- $ldmd_conf 2>&1` ;
     if ($?) {
         errmsg("start(): Problem with LDM configuration-file:\n".
             "@output");

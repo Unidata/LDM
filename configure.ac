@@ -1,8 +1,8 @@
 dnl Process this file with automake to produce a configure script
-dnl Requires ./aclocal.m4
+dnl Requires ./aclocal.
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.11.5], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.11.6], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([.])
@@ -13,7 +13,8 @@ AC_CONFIG_HEADERS([config.h])
     
 #AC_USE_SYSTEM_EXTENSIONS
 case "`uname -sr`" in
-    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
+    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq"]);;
+    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq"]);;
 esac
 AC_PROG_CC([c99 c89 gcc cc])
 
@@ -26,6 +27,7 @@ AC_DEFINE([CONFIG_H], [1], [Header-file lockout])
 #AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
 
 AM_PROG_AR
+LT_INIT
 AM_PROG_CC_C_O
 if test -z "$CC"; then
     AC_MSG_ERROR([no C compiler found])
@@ -134,9 +136,7 @@ case `uname -s` in
         ;;
 esac
 
-AM_CONDITIONAL([MAINTAINER],
-    [test "$USER" = steve && test `uname -n` = gilda.unidata.ucar.edu &&
-    test `/bin/pwd` = /machine/steve/ldm/src])
+AM_CONDITIONAL([MAINTAINER], [test "$USER" = steve])
 
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
@@ -282,6 +282,10 @@ AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
 AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
 AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
+# Ensure that LIBS references the math library if such functions aren't
+# available by default.
+UD_SEARCH_LIB([m], [log10], [/opt/csw/lib /opt/lib])
+
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUnit unit-testing package.])
 AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
@@ -315,14 +319,6 @@ AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
 AM_COND_IF([HAVE_CUNIT], 
     [AC_MSG_NOTICE([CUnit found.  Enabling unit-tests.])],
     [AC_MSG_NOTICE([CUnit not found.  Disabling unit-tests.])])
-    
-# Check for the libxml2 header-files.
-AC_ARG_VAR([CPPFLAGS_LIBXML2],
-    [C preprocessor reference for libxml2 header-files (e.g., "-I/usr/local/libxml2")])
-AC_CHECK_FILE([/usr/include/libxml2],
-    [CPPFLAGS_LIBXML2=-I/usr/include/libxml2
-        AC_SUBST(CPPFLAGS_LIBXML2)],
-    [AC_MSG_ERROR([libxml2 header-files not found])])
 
 AC_SUBST(PATH)
 
@@ -348,8 +344,8 @@ AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
         [Root directory of the LDM installation])
 #
 # Certain installation directories are changed if they have default values
-# because an LDM installation has both version-dependent and
-# version-independent installation directories.
+# because an LDM installation has both version-dependent and version-independent
+# installation directories.
 test "$sysconfdir" = '${prefix}/etc' && sysconfdir='$(LDMHOME)/etc'
 test "$localstatedir" = '${prefix}/var' && localstatedir='$(LDMHOME)/var'
 AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
@@ -465,6 +461,33 @@ AC_CHECK_HEADERS([stropts.h], ,
     AC_CHECK_HEADERS([sys/ioctl.h], ,
 	AC_MSG_ERROR("Missing necessary header-file"))
 ])
+    
+# Ensure that CPPFLAGS and LIBS reference the ZLIB library, which is used by
+# the PNG library and by the XML2 library.
+UD_SEARCH_HEADER([ZLIB], [zlib.h], [/usr/include /opt/csw/include \
+    /usr/local/csw/include /opt/include /opt/X11/include /opt/local/include \
+        /usr/local/include])
+UD_SEARCH_LIB([z], [deflate], [/opt/csw/lib /opt/lib /opt/X11/lib \
+    /opt/local/lib /usr/local/lib])
+
+AM_COND_IF([WANT_NOAAPORT], [
+    # Ensure that CPPFLAGS and LIBS reference the PNG library, which is used by the
+    # LDM NOAAPORT module.
+    UD_SEARCH_HEADER([PNG], [png.h],
+        [/opt/csw/include /usr/local/csw/include /opt/include /opt/X11/include \
+            /opt/local/include /usr/local/include /user/sfw/include])
+    UD_SEARCH_LIB([png], [png_create_read_struct], [/opt/csw/lib /opt/lib \
+        /opt/X11/lib /opt/local/lib /usr/local/lib])
+])
+        
+# Ensure that CPPFLAGS and LIBS reference the XML2 library, which is used
+# by the LDM registry module.
+UD_SEARCH_HEADER([XML2], [libxml/parser.h],
+    [/usr/include/libxml2 /opt/include/libxml2 /opt/X11/include/libxml2 \
+        /opt/local/include/libxml2 /usr/local/include/libxml2 \
+        /opt/csw/include/libxml2 /usr/local/csw/include/libxml2])
+UD_SEARCH_LIB([xml2], [xmlInitParser], [/opt/csw/lib /opt/lib /opt/X11/lib \
+    /opt/local/lib /usr/local/lib])
 
 AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
 AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])
@@ -489,8 +512,6 @@ AC_COMPILE_IFELSE(
         AC_MSG_RESULT([not found])
     ]
 )
-    
-AC_PROG_LIBTOOL
 
 AC_CONFIG_FILES([
     fauxPq/Makefile
@@ -502,6 +523,7 @@ AC_CONFIG_FILES([
     html/basics/activating.html
     html/basics/index.html
     html/basics/Makefile
+    html/basics/rpm-install-steps.html
     html/basics/source-install-steps.html
     html/basics/what-gets-installed.html
     html/index.html
@@ -543,6 +565,7 @@ AC_CONFIG_FILES([
     rtstats/Makefile
     scour/Makefile
     scour/scour
+    scour/scour.conf
     scripts/ldmadmin.pl
     scripts/ldmfail
     scripts/Makefile
@@ -553,11 +576,8 @@ AC_CONFIG_FILES([
     uldbutil/Makefile
     ulogger/Makefile
     ulog/Makefile
-    zlib/Makefile
 ])
 
 export CC
-
-AC_CONFIG_SUBDIRS([libpng])
 
 AC_OUTPUT

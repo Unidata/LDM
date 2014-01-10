@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
 /*
  * On FreeBSD 4.10-RELEASE-p2 the following order is necessary.
  */
@@ -87,15 +88,19 @@ host_err_str(void)
 }
 
 
-/*
- * convenience wrapper around gethostname(2)
- * !NO_INET_FQ_KLUDGE ==> try to make sure it is "fully qualified"
+/**
+ * Returns the name of the local host. Checks the registry first. Tries to make
+ * the name fully-qualified.
+ *
+ * @return      Pointer to a static buffer containing the NUL-terminated name
+ *              of the local host. The length of the string, excluding the
+ *              terminating NUL, will not be greater than _POSIX_HOST_NAME_MAX.
  */
 char *
 ghostname(void)
 {
 
-        static char hostname[MAXHOSTNAMELEN+1];
+        static char hostname[_POSIX_HOST_NAME_MAX+1];
 
         if (hostname[0])
                 return hostname;
@@ -117,14 +122,16 @@ ghostname(void)
                 }
                 else
                 {
-                        (void)strncpy(hostname, cp, MAXHOSTNAMELEN);
+                        (void)strncpy(hostname, cp, sizeof(hostname));
+                        hostname[sizeof(hostname)-1] = 0;
                         free(cp);
                         return hostname;
                 }
         }
 
-        if(gethostname(hostname, MAXHOSTNAMELEN) < 0)
+        if(gethostname(hostname, sizeof(hostname)) < 0)
                 return NULL;
+/* !NO_INET_FQ_KLUDGE ==> try to make sure it is "fully qualified" */
 #ifndef NO_INET_FQ_KLUDGE
         if(strchr(hostname, '.') == NULL)
         {
@@ -134,7 +141,8 @@ ghostname(void)
                 if(hp != NULL && hp->h_addrtype == AF_INET) 
                 {
                         /* hopefully hp->h_name is fully qualified */
-                        (void)strncpy(hostname, hp->h_name, MAXHOSTNAMELEN);
+                        (void)strncpy(hostname, hp->h_name, sizeof(hostname));
+                        hostname[sizeof(hostname)-1] = 0;
                 }
         }
         /* 
@@ -148,7 +156,8 @@ ghostname(void)
 #ifdef HARDWIRED_LOCAL_DOMAIN
         if(strchr(hostname, '.') == NULL)
         {
-                strcat(hostname, HARDWIRED_LOCAL_DOMAIN);
+                (void)strncat(hostname, HARDWIRED_LOCAL_DOMAIN,
+                        sizeof(hostname)-strlen(hostname));
         }
 #endif /* HARDWIRED_LOCAL_DOMAIN */
 #endif

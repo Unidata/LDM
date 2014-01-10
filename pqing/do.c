@@ -235,6 +235,14 @@ int peek_ahead(xbuf *buf);
 		state	= CR_;
 	    } else {
 		    if (ESC == ch) {
+			/*
+			 * I assume the ESC character is deleted because the
+			 * character sequence CR CR NL is a control sequence.
+			 * Marking such a sequence that occurs naturally in the
+			 * body of a binary bulletin by inserting a trailing ESC
+			 * character allows the sequence's control aspect to be
+			 * vitiated. Steve Emmerson 2013-12-26
+			 */
 			xbuf_rubout(buf);
 #		if defined(SCAN_CHECK)
 			crc	= prev_crc;

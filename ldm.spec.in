@@ -1,197 +1,539 @@
-Name:		@PACKAGE@
-Version:	@VERSION@
-Release:	1%{?dist}
-Summary:	Subscribes to, receives, relays, and processes data-products
+Name:           ldm
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        A system for subscribing-to, receiving, relaying, and processing data-products
 
-Group:		Applications/Internet
+# The default home-directory of the installed LDM package.
+#
+%global _prefix /opt/ldm
+Prefix:         /opt/ldm
+
+License:        BSD 3-Clause + patent protection
+URL:            http://www.unidata.ucar.edu/software/ldm
+%global pkgid   %{name}-%{version}
+#Source:         ftp://ftp.unidata.ucar.edu/pub/ldm/%{name}-%{version}.tar.gz
+Source:         %{name}-%{version}.tar.gz
+
+BuildRequires:  perl libxml2-devel zlib-devel libpng-devel glibc-devel
+Requires:       gawk coreutils net-tools bash procps gnuplot ntpdate perl
+Requires:       libxml2 zlib libpng glibc-common
+
+Group:          Applications/Internet
 Vendor:         University Corporation for Atmospheric Research
-Packager:       LDM Support <support-ldm@unidata.ucar.edu>
-License:	NCSA-ish
-URL:		http://www.unidata.ucar.edu/software/ldm
-Source:	        %{name}-%{version}.tar.gz
-BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+Icon:           ldm-50x50.xpm
+Exclusiveos:    linux
 
-Excludeos:      windows
+# The default, version-specific installation-directory of this package.
+#
+%global versdir %{_prefix}/%{pkgid}
 
-%ifos linux
-BuildRequires:  make sed perl gcc bash gawk libpthread.so.0
-%else
-BuildRequires:  make sed perl c89 sh awk libpthread.so.0
-%endif
+# Only a virtual file and a few high-value files are mentioned. rpmbuild(1)
+# automatically adds the LDM shared-library.
+#
+Provides:       ldmd notifyme pqact
+        
+%global ldmUser         ldm
 
-Requires:	perl ntpdate netstat top
+# Enable PIE compiler flags for security (because long running, setuid, & root)
+%global _hardened_build 1
 
-Prefix:         /usr
-
-%define user    %(awk -F : 'substr($6,1,length("%{_prefix}"))=="%{_prefix}" \
-        {print $1; exit}' /etc/passwd)
-%define defhome /home/ldm
-%define ldmhome $RPM_BUILD_ROOT%{_prefix}
-%define debug_package   %{nil}
-
+# No "-devel" subpackage is defined because doing so would only reduce the size
+# of the base package by about 7 percent.
 
 %description
-Unidata's Local Data Manager (LDM) software acquires data and shares them with
-other networked computers. A data product is treated as a opaque unit, thus
-nearly any data can be relayed. In particular, the LDM can handle data from
-National Weather Service "NOAAport channel 3" data streams, including gridded
-data from the numerical forecast models. It also handles NEXRAD radar data,
-lightning data from the National Lightning Detection Network, and GOES
+Unidata's Local Data Manager (LDM) acquires data-products and shares them with
+other networked computers. A data-product is treated as a opaque unit, thus
+nearly any finite-sized data can be relayed. In particular, the LDM can handle
+data from the National Weather Service's NOAAport data streams, including
+gridded data from the numerical forecast models. It also handles NEXRAD radar
+data, lightning data from the National Lightning Detection Network, and GOES
 satellite imagery.
 
-Data can either be ingested directly from a data source by a client ingester,
-or the LDM server can talk to other LDM servers to either receive or send
-data. Ingesters scan the data stream, determine product boundaries, and
-extract products, passing those products on to the server product queue.
-These data, in turn, can be processed locally and/or passed on to other
-LDM servers.
+The flow of data-products in an LDM system centers around the LDM product-queue,
+This queue receives data-products extracted from local data sources as well as
+products received from other LDM servers. Once in the queue, a product is
+immediately transmitted to other LDM-s that have subscribed to that data.
 
-Data passed to the LDM server are processed in a variety of ways; how specific
-data are processed is determined by data identifiers and a configuration file.
-Processing actions include placing the data in files and running arbitrary
-programs on the data. Decoders are also available from Unidata that interface
-with the LDM and convert data into the forms required by various applications.
+Data-products in the queue are selected for local processing by product-matching
+predicates in a configuration file. Processing actions include writing the
+product to a file and piping the product to an arbitrary program. Programs are
+available from Unidata that interface with the LDM and convert products into
+the forms required by various applications.
 
 %prep
-%setup -q -n %{name}-%{version}
 
+%setup -q
 
+###############################################################################
 %build
-LDMHOME=%{ldmhome}; export LDMHOME
-./configure --prefix=%{ldmhome}/%{name}-%{version} --disable-root-actions \
-    CC=%{?__cc}
-DESTDIR=%{buildroot} make
-#make %%{?_smp_mflags}
 
+LDMHOME=%{_prefix}; export LDMHOME
 
+# The configure(1) script's "prefix" has slightly different semantics than
+# rpm(1)'s "prefix".
+#
+# Because this is a generic RPM, everything is built.
+#
+# Don't use "--libdir=%%{_libdir}" in the following because this package only
+# has "$HOME/lib" and not "$HOME/lib64".
+# "--disable-static" is specified by convention.
+./configure --prefix=%{versdir} --disable-root-actions --disable-static \
+        --with-noaaport --with-gribinsert
+        
+# Removing the RPATH dependency with the following causes the use of regutil(1)
+# to fail when adjusting the registry values.
+#sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
+#sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
+
+# "%%{?_smp_mflags}" in the following causes problems with parallel make(1)s.
+make DESTDIR=%{?buildroot}
+
+###############################################################################
 %install
-rm -rf %{buildroot}
-DESTDIR=%{buildroot} make install
 
-# Adjust pathnames in the LDM registry
-sed -e "s:%{ldmhome}:%{defhome}:g" \
-    %{ldmhome}/etc/registry.xml >%{ldmhome}/etc/registry.xml.new && 
-mv -f %{ldmhome}/etc/registry.xml.new %{ldmhome}/etc/registry.xml || exit 1
+rm -rf $RPM_BUILD_ROOT
+make install DESTDIR=%{?buildroot}
 
+###############################################################################
+%pre
 
-%clean
-rm -rf %{buildroot}
-
-
-%files
-%defattr(-,%{user},root,-)
-
-%define versdir %{_prefix}/%{name}-%{version}
-
-%attr(04755,root,root) %{versdir}/bin/ldmd
-%attr(04755,root,root) %{versdir}/bin/hupsyslog
-%attr(04755,root,root) %{versdir}/bin/ensureSyslogEntry
-%attr(04755,root,root) %{versdir}/bin/ensureRpcEntry
-%attr(04755,root,root) %{versdir}/bin/ensureServicesEntry
-
-%{_prefix}/etc
-%{_prefix}/var
-%{versdir}/bin
-%{versdir}/include
-%{versdir}/lib
-%{versdir}/share
-
-#%%docdir %{versdir}/share
-#%%doc CHANGE_LOG COPYRIGHT README
-
-%config(noreplace) %{_prefix}/etc/ldmd.conf
-%config(noreplace) %{_prefix}/etc/pqact.conf
-%config(noreplace) %{_prefix}/etc/registry.xml
-%config(noreplace) %{_prefix}/etc/scour.conf
-
-
-%post
-# Find the configuration-file for the system logging daemon
-if test -e /etc/rsyslog.conf; then
-    SYSLOG_CONF=/etc/rsyslog.conf
-else
-    if test -e /etc/syslog.conf; then
-        SYSLOG_CONF=/etc/syslog.conf
-    else
-        echo 1>&2 system logging configuration-file not found
+# Vet the LDM user: check consistency of user-name and home-directory.
+#
+if home=`getent passwd | awk -F : 'BEGIN{status=1}$1=="'%{ldmUser}'"{print $6;status=0;exit}END{exit status}'`
+then
+    # The following doesn't work: the package is still installed under
+    # %%{_prefix}.
+    # RPM_INSTALL_PREFIX="$home"
+    if test "$home" != "$RPM_INSTALL_PREFIX"; then
+        echo "The LDM user's home-directory isn't \"$RPM_INSTALL_PREFIX\"" 1>&2
         exit 1
     fi
-fi
-
-# Find the logging facility for the LDM
-LOG_LDM=`awk '$1 !~ /^#/ && $2 ~ /\/ldmd\.log$/ {print $1; exit}' \
-    $SYSLOG_CONF | sed 's/\..*//'`
-if test -z "$LOG_LDM"; then
-    for LOG_LDM_NO in 0 1 2 3 4 5 6 7; do
-        fgrep -q local$LOG_LDM_NO $SYSLOG_CONF && continue
-        LOG_LDM=local$LOG_LDM_NO
-        break
-    done
-fi
-if test -z "$LOG_LDM"; then
-    cat <<CAT_EOF | fmt 1>&2
-Could not discover a local logging facility for the LDM system
-CAT_EOF
-    exit 1
-fi
-
-# Find the pathname of the LDM log file
-if test -e %{_prefix}/logs; then
-    LDM_LOGFILE=%{_prefix}/logs/ldmd.log
 else
-    LDM_LOGFILE=%{_prefix}/var/logs/ldmd.log
+    # The LDM user doesn't exist. Create them.
+    useradd -c "Unidata Local Data Manager" -d "$RPM_INSTALL_PREFIX" -m %{ldmUser} || exit 1
 fi
+mkdir -p "$RPM_INSTALL_PREFIX"
+chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
 
-# Find the LDM data directory
-if ls %{_prefix}/data >/dev/null 2>&1; then
-    DATA_DIR=%{_prefix}
-else
-    DATA_DIR=%{_prefix}}/var/data
-fi
+###############################################################################
+%files
+
+%attr(0755,ldm,-) %{_prefix}/etc
+
+%attr(0755,ldm,-) %{versdir}
+
+%attr(0755,ldm,-) %{versdir}/bin
+%attr(0755,ldm,-) %{versdir}/bin/afos
+%attr(0755,ldm,-) %{versdir}/bin/ddplus
+%attr(0755,ldm,-) %{versdir}/bin/dds
+%attr(0755,ldm,-) %{versdir}/bin/dvbs_goes
+%attr(04755,root,root) %{versdir}/bin/dvbs_multicast
+%attr(0755,ldm,-) %{versdir}/bin/dvbs_nwstg
+%attr(0755,ldm,-) %{versdir}/bin/dvbs_nwstg2
+%attr(0755,ldm,-) %{versdir}/bin/dvbs_oconus
+%attr(0755,ldm,-) %{versdir}/bin/ensureLdmhomeLinks
+%attr(0755,ldm,-) %{versdir}/bin/ensureRpcEntry
+%attr(0755,ldm,-) %{versdir}/bin/ensureServicesEntry
+%attr(0755,ldm,-) %{versdir}/bin/ensureSyslogEntry
+%attr(0755,ldm,-) %{versdir}/bin/ensureVar
+%attr(0755,ldm,-) %{versdir}/bin/feedme
+%attr(0755,ldm,-) %{versdir}/bin/feedtest
+%attr(0755,ldm,-) %{versdir}/bin/gribinsert
+%attr(0755,ldm,-) %{versdir}/bin/hds
+%attr(0755,ldm,-) %{versdir}/bin/hrs
+%attr(04755,root,root) %{versdir}/bin/hupsyslog
+%attr(0755,ldm,-) %{versdir}/bin/ids
+%attr(0755,ldm,-) %{versdir}/bin/ldmadmin
+%attr(04755,root,root) %{versdir}/bin/ldmd
+%attr(0755,ldm,-) %{versdir}/bin/ldmfail
+%attr(0755,ldm,-) %{versdir}/bin/ldmping
+%attr(0755,ldm,-) %{versdir}/bin/ldmsend
+%attr(0755,ldm,-) %{versdir}/bin/netcheck
+%attr(0755,ldm,-) %{versdir}/bin/newlog
+%attr(04755,root,root) %{versdir}/bin/noaaportIngester
+%attr(0755,ldm,-) %{versdir}/bin/notifyme
+%attr(0755,ldm,-) %{versdir}/bin/nplog_rotate
+%attr(0755,ldm,-) %{versdir}/bin/plotMetrics
+%attr(0755,ldm,-) %{versdir}/bin/pps
+%attr(0755,ldm,-) %{versdir}/bin/pqact
+%attr(0755,ldm,-) %{versdir}/bin/pqcat
+%attr(0755,ldm,-) %{versdir}/bin/pqcheck
+%attr(0755,ldm,-) %{versdir}/bin/pqcopy
+%attr(0755,ldm,-) %{versdir}/bin/pqcreate
+%attr(0755,ldm,-) %{versdir}/bin/pqexpire
+%attr(0755,ldm,-) %{versdir}/bin/pqing
+%attr(0755,ldm,-) %{versdir}/bin/pqinsert
+%attr(0755,ldm,-) %{versdir}/bin/pqmon
+%attr(0755,ldm,-) %{versdir}/bin/pqsend
+%attr(0755,ldm,-) %{versdir}/bin/pqsurf
+%attr(0755,ldm,-) %{versdir}/bin/pqutil
+%attr(0755,ldm,-) %{versdir}/bin/readnoaaport
+%attr(0755,ldm,-) %{versdir}/bin/regex
+%attr(0755,ldm,-) %{versdir}/bin/regutil
+%attr(0755,ldm,-) %{versdir}/bin/rpmUserActions
+%attr(0755,ldm,-) %{versdir}/bin/rtstats
+%attr(0755,ldm,-) %{versdir}/bin/scour
+%attr(0755,ldm,-) %{versdir}/bin/syscheck
+%attr(0755,ldm,-) %{versdir}/bin/uldbutil
+%attr(0755,ldm,-) %{versdir}/bin/ulogger
+%attr(0755,ldm,-) %{versdir}/bin/wasReceived
+
+%attr(0755,ldm,-) %{versdir}/include
+%attr(0644,ldm,-) %{versdir}/include/ldm.h
+%attr(0644,ldm,-) %{versdir}/include/md5.h
+%attr(0644,ldm,-) %{versdir}/include/ulog.h
+%attr(0644,ldm,-) %{versdir}/include/timestamp.h
+%attr(0644,ldm,-) %{versdir}/include/peer_info.h
+%attr(0644,ldm,-) %{versdir}/include/down6.h
+%attr(0644,ldm,-) %{versdir}/include/feedTime.h
+%attr(0644,ldm,-) %{versdir}/include/remote.h
+%attr(0644,ldm,-) %{versdir}/include/DownHelp.h
+%attr(0755,ldm,-) %{versdir}/include/rpc
+%attr(0644,ldm,-) %{versdir}/include/rpc/types.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/auth_unix.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/pmap_prot.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/svc.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/rpc.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/clnt.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/xdr.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/svc_auth.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/pmap_clnt.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/rpc_msg.h
+%attr(0644,ldm,-) %{versdir}/include/rpc/auth.h
+%attr(0644,ldm,-) %{versdir}/include/statsMath.h
+%attr(0644,ldm,-) %{versdir}/include/pq.h
+%attr(0644,ldm,-) %{versdir}/include/fbits.h
+%attr(0644,ldm,-) %{versdir}/include/h_clnt.h
+%attr(0644,ldm,-) %{versdir}/include/inetutil.h
+%attr(0644,ldm,-) %{versdir}/include/UpFilter.h
+%attr(0644,ldm,-) %{versdir}/include/acl.h
+%attr(0644,ldm,-) %{versdir}/include/ldmprint.h
+%attr(0644,ldm,-) %{versdir}/include/alrm.h
+%attr(0644,ldm,-) %{versdir}/include/fdnb.h
+%attr(0644,ldm,-) %{versdir}/include/fsStats.h
+%attr(0644,ldm,-) %{versdir}/include/lcm.h
+%attr(0644,ldm,-) %{versdir}/include/RegularExpressions.h
+%attr(0644,ldm,-) %{versdir}/include/autoshift.h
+%attr(0644,ldm,-) %{versdir}/include/prod_class.h
+%attr(0644,ldm,-) %{versdir}/include/abbr.h
+%attr(0644,ldm,-) %{versdir}/include/pattern.h
+%attr(0644,ldm,-) %{versdir}/include/requester6.h
+%attr(0644,ldm,-) %{versdir}/include/ldm_xlen.h
+%attr(0644,ldm,-) %{versdir}/include/mkdirs_open.h
+%attr(0644,ldm,-) %{versdir}/include/globals.h
+%attr(0644,ldm,-) %{versdir}/include/atofeedt.h
+%attr(0644,ldm,-) %{versdir}/include/setenv.h
+%attr(0644,ldm,-) %{versdir}/include/ldmalloc.h
+%attr(0644,ldm,-) %{versdir}/include/rpcutil.h
+%attr(0644,ldm,-) %{versdir}/include/xdr_data.h
+%attr(0644,ldm,-) %{versdir}/include/error.h
+%attr(0644,ldm,-) %{versdir}/include/ldm_clnt.h
+%attr(0644,ldm,-) %{versdir}/include/uldb.h
+%attr(0644,ldm,-) %{versdir}/include/ldm5_clnt.h
+%attr(0644,ldm,-) %{versdir}/include/savedInfo.h
+%attr(0644,ldm,-) %{versdir}/include/priv.h
+
+%attr(0755,ldm,-) %{versdir}/lib
+%attr(0755,ldm,-) %{versdir}/lib/libldm.so.0.0.0
+%attr(0755,ldm,-) %{versdir}/lib/libldm.so.0
+%attr(0755,ldm,-) %{versdir}/lib/libldm.la
+%attr(0755,ldm,-) %{versdir}/lib/libldm.so
+
+%attr(0755,ldm,-) %{versdir}/share
+%attr(0755,ldm,-) %{versdir}/share/doc
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/README
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/LDM_icon.GIF
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/index.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/compatibility.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/subscribe_ldm-users.html
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/troubleshooting
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/reclassDoc.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/index.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/networkTrouble.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/pqmon.html
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/troubleshooting
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/manageLDM.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/addpart.jpg
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/newclass.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/managepage.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/addpolicy.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/addpolicy.jpg
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/newclass.jpg
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/manageLDM.jpg
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/packetshaper.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/traffictest.jpg
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/newclass2.jpg
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/managepage.jpg
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/traffictest.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/addpart.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/newclass2.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/CHANGE_LOG
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/LDM_Development_Steps.html
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/noaaport
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tab_l.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/index.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/open.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/jquery.js
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/readnoaaport_8c.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/doxygen.css
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tab_s.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/globals.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/globals_func.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tab_b.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tab_a.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tab_h.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/mainpage_8h_source.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tabs.css
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/nav_h.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/dvbs__multicast_8c.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tab_r.gif
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/noaaport/installdox
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tab_b.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/bc_s.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/closed.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/noaaportIngester_8c.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/files.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/doxygen.png
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/noaaport/search
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/all_6d.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/close.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/all_72.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/search_m.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/files_64.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/mag_sel.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/search.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/files_72.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/all_64.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/functions_6d.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/files_6e.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/all_6e.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/search.js
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/nomatches.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/search.css
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/search_r.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/search/search_l.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/nav_f.png
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/generalHelp.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/manindex.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/huge-queues.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/ldmConfigInstallList.html
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/basics
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/rpm-install-steps.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/source-install-steps.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/tips.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/ldmd.conf.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/scour.conf.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/index.html
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/index.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/nogaps_coamps.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/public_bulletins.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/ngrid.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/nimage.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/fnexrad.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/ngraph.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/howto-nnexrad.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/wsi.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/gem.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/hds.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/conduit.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/nexrad-fonx.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/feedtypes/ntext.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/tradeoffs.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/versionId.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/programs.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/activating.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/product-queue.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/noaaport.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/generic-LDM.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/downstream6.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/monitoring.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/configuring.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/startStop.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/data-product.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/LDM-registry.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/cluster.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/protocol.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/platform.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/preinstallation.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/generic-LDM.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/Downstream_6.4_Primary.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/Upstream_6.4_Alternate.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/logfile-format.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/pqact.conf.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/upstream6.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/behavior.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/source_or_binary.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/Upstream_6.4_Primary.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/newlog.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/multiple_ldms.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/successes.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/ERE.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/become_ldm.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/Downstream_6.4_Alternate.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/support.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/glindex.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/logfile.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/what-gets-installed.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/failures.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/basics/LDM-user.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/ldmfaq.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/networkSecurityAndSetup.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/rtstats-description.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/LDM_and_CVS.html
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/tutorial
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/default.css
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/index.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/mainindex.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/fulltoc.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/imageindex.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/understand.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/NextArrow.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/Play16.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/blueline.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/Index.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/Frames.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/TopArrow.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/PreviousArrow.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/Help16.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/Glossary.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/Images.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/blankdart.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/NextArrowDisabled.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/PreviousArrowDisabled.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/dart.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/TOCIcon.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/images/Schedule.gif
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/activate.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/toc.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/whatis.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/configure.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/help.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/install.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/introduction.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/frameleft.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/frames.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/stylesheet.css
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/tutorial/monitor.html
+%attr(0755,ldm,-) %{versdir}/share/doc/ldm/workshop
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/workshop/index.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/workshop/evaluation.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/workshop/specifics.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/workshop/handout.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/COPYRIGHT
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/glossary.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/factsheet.html
+%attr(0644,ldm,-) %{versdir}/share/doc/ldm/known-problems.html
+%attr(0755,ldm,-) %{versdir}/share/man
+%attr(0755,ldm,-) %{versdir}/share/man/man1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqcopy.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/uldbutil.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/ldmadmin.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqing.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqutil.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/regex.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqmon.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqcat.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/notifyme.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/rtstats.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/netcheck.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqcheck.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqact.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/syscheck.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqsend.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/ldmsend.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqcreate.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/ldmping.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqexpire.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqinsert.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/ldmd.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/feedme.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/wasReceived.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/regutil.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/ldmfail.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/pqsurf.1
+%attr(0644,ldm,-) %{versdir}/share/man/man1/scour.1
+%attr(0755,ldm,-) %{versdir}/share/man/man3
+%attr(0644,ldm,-) %{versdir}/share/man/man3/ulog.3
+%attr(0644,ldm,-) %{versdir}/share/man/man3/pq.3
+%attr(0644,ldm,-) %{versdir}/share/man/man3/uldb.3
+
+%attr(0755,ldm,-) %{_prefix}/etc
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2varswmo6.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2varswmo1.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2varsncep.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2vcrdwmo1.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2varsncep1.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2varswmo3.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2varswmo2.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2vcrdwmo2.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/ldmd.conf
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/netcheck.conf
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2vcrdwmo6.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/registry.xml
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/grdnav.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2vcrdwmo.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2varswmo.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2varsncep0.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/wmocenter.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2vcrdncep1.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2vcrdncep.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2vcrdncep0.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/g2vcrdwmo3.tbl
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/scour.conf
+%config(noreplace) %attr(0644,ldm,-) %{_prefix}/etc/pqact.conf
+
+%attr(0755,ldm,-) %{_prefix}/var
+# The following 3 directories did not replace the existing 3 eponymous symbolic
+# links during an RPM install (which is good).
+%attr(0755,ldm,-) %{_prefix}/var/queues
+%attr(0755,ldm,-) %{_prefix}/var/data
+%attr(0755,ldm,-) %{_prefix}/var/logs
+
+%config(noreplace) %attr(0755,ldm,-) %{_prefix}/src
+%config(noreplace) %attr(0755,ldm,-) %{_prefix}/bin
+%config(noreplace) %attr(0755,ldm,-) %{_prefix}/include
+# Don't use "%%{_libdir}" in the following because this package only has
+# "$HOME/lib" and not "$HOME/lib64".
+%config(noreplace) %attr(0755,ldm,-) %{_prefix}/lib
+%config(noreplace) %attr(0755,ldm,-) %{_prefix}/share
+
+###############################################################################
+%post
 
 # Perform superuser actions
-%{_prefix}/%{name}-%{version}/bin/ensureSyslogEntry \
-    $LOG_LDM $SYSLOG_CONF $LDM_LOGFILE &&
-%{_prefix}/%{name}-%{version}/bin/ensureRpcEntry &&
-%{_prefix}/%{name}-%{version}/bin/ensureServicesEntry || exit 1
+#
+    # Ensure that the LDM library can be found.
+    #
+    # According to the ldconfig(1) manual-page, "ldconfig -X -n 
+    # $RPM_INSTALL_PREFIX/lib" should work. It doesn't. The following does.
+    ldconfig -X "$RPM_INSTALL_PREFIX"/lib
+    
+    VERSBINDIR="$RPM_INSTALL_PREFIX/%{pkgid}/bin"
+    
+    # Ensure logging
+        # Ensure that the system logging-daemon configuration-file has the
+        # appropriate entries
+        $VERSBINDIR/ensureSyslogEntry local0 /etc/rsyslog.conf \
+            "$RPM_INSTALL_PREFIX"/var/logs/ldmd.log || exit 1
+            
+        # Ensure that the LDM logging directory has the same SELINUX security
+        # context as the system logging directory
+        chcon --reference=/var/log -L "$RPM_INSTALL_PREFIX"/var/logs 
+
+    # Ensure an entry in the RPC file
+    $VERSBINDIR/ensureRpcEntry || exit 1
+
+    # Ensure an entry in the services file
+    $VERSBINDIR/ensureServicesEntry || exit 1
 
 # Perform LDM user actions
-su - %{user} <<SU_EOF
-%{_prefix}/%{name}-%{version}/bin/ensureLdmhomeLinks %{_prefix} \
-    %{name}-%{version} &&
-%{_prefix}/%{name}-%{version}/bin/ensureVar %{_prefix} %{_prefix}/var/queues \
-    %{_prefix}/var/logs ${DATA_DIR} || exit 1
+#
+su - %{ldmUser} -c "$VERSBINDIR/rpmUserActions %{_prefix} %{pkgid} \"$RPM_INSTALL_PREFIX\""
 
-# Adjust pathnames in the LDM registry
-sed "s;%{defhome};%{_prefix};g" %{_prefix}/etc/registry.xml \
-    >%{_prefix}/etc/registry.xml.new && 
-mv %{_prefix}/etc/registry.xml %{_prefix}/etc/registry.xml.old &&
-mv %{_prefix}/etc/registry.xml.new %{_prefix}/etc/registry.xml || exit 1
-
-# Set the LDM system logging facility
-isSet=false
-if test -e .bash_profile; then
-    echo "export ULOG_FACILITY_OVERRIDE=$LOG_LDM_NO" >>.bash_profile
-    isSet=true
-fi
-if test -e .profile; then
-    echo "ULOG_FACILITY_OVERRIDE=$LOG_LDM_NO; " \
-        "export ULOG_FACILITY_OVERRIDE" >>.profile
-    isSet=true
-fi
-if test -e .login; then
-    echo "setenv ULOG_FACILITY_OVERRIDE $LOG_LDM_NO" >>.login
-    isSet=true
-fi
-if test $isSet = false; then
-    cat <<CAT_EOF | fmt 1>&2
-Could not find a user-shell profile-file for the LDM user in which to set the
-environment variable ULOG_FACILITY_OVERRIDE to $LOG_LDM_NO. Consequently, the
-LDM system will likely log messages incorrectly, if at all.
-CAT_EOF
-    exit 1
-fi
-SU_EOF
-
-
+###############################################################################
 %changelog
+
+* Mon Jun 24 2013 Steve Emmerson <support-ldm@unidata.ucar.edu> 6.11.6
+- Initial RPM release

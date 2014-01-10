@@ -540,7 +540,6 @@ utcToEpochTime(
         serror("utcToEpochTime(): timegm() failure");
 
 #else
-
     /*
      * Get timezone information.
      */
@@ -565,53 +564,66 @@ utcToEpochTime(
     return epochTime;
 }
 
+/**
+ * Substitutes the sequence number of a data-product into a string. If the size
+ * of the output buffer is not zero, then the output string will be
+ * NUL-terminated.
+ *
+ * @param istring       [in] Pointer to the input string, possibly including
+ *                      sequence indicators to be expanded.
+ * @param ostring       [out] Pointer to the output buffer, with sequence
+ *                      indicators expanded.
+ * @param size          [in] The size of the output buffer in bytes.
+ * @param seqnum        [in] The sequence number of a data-product.
+ */
 static void
 seq_sub(
-   const char* istring,        /* input string, possibly including
-                                  indicators to be expanded */
-   char*       ostring,        /* output string, with date indicators
-                                  expanded */
-   u_int       seqnum)     /* UTC-based product-time (might be "now") */
+   const char*  istring,
+   char*        ostring,
+   size_t       size,
+   u_int        seqnum)
 {
-   static int          seqfirst = 1;      /* true only first time called */
-   static regex_t      seqprog;           /* compiled regexp for date indicator */
-   static regmatch_t   seqpmatch[1];      /* substring matching information */
-   const char*         e2;             /* pointer to last character of seq
-                                        * indicator substring */
-   const char*         is;             /* pointer to next input character */
-   /*
-    * Compile regular-expression on first call.
-    */
-   if (seqfirst) {
-      static char     seq_exp[] = "\\(seq\\)";
+    if (size > 0) {
+        static int          seqfirst = 1;   /* true only first time called */
+        static regex_t      seqprog;        /* compiled regexp for sequence indicator */
+        static regmatch_t   seqpmatch[1];   /* substring matching information */
+        const char*         e2;             /* just beyond indicator substring */
+        const char*         is;             /* pointer to next input character */
+        /*
+         * Compile regular-expression on first call.
+         */
+        if (seqfirst) {
+           static char     seq_exp[] = "\\(seq\\)";
 
-      if (regcomp(&seqprog, seq_exp, REG_EXTENDED) != 0)
-         serror("Bad regular expression or out of memory: %s", seq_exp);
-      seqfirst = 0;
-   }
+           if (regcomp(&seqprog, seq_exp, REG_EXTENDED) != 0)
+              serror("Bad regular expression or out of memory: %s", seq_exp);
+           seqfirst = 0;
+        }
 
-   for (is = istring; regexec(&seqprog, is, 1, seqpmatch, 0) == 0; is = e2) {
-      /*
-       * Process the next date indicator in "istring".
-       */
-      printf("%d, %d\n", seqpmatch[0].rm_so, seqpmatch[0].rm_eo);
-      const char *const       s0 = &is[seqpmatch[0].rm_so];
-                                      /* start of entire substring match */
+        for (is = istring; regexec(&seqprog, is, 1, seqpmatch, 0) == 0; is = e2) {
+           int          nbytes = seqpmatch[0].rm_so; /* offset to indicator substring */
+           const char*  s0 = is + nbytes; /* start of indicator substring */
+           /*
+            * Process the next date indicator in "istring".
+            */
+           printf("%d, %d\n", seqpmatch[0].rm_so, seqpmatch[0].rm_eo);
+           e2 = is + seqpmatch[0].rm_eo;
 
-      e2 = &is[seqpmatch[0].rm_eo];      /* points to last char of substring */
+           /*
+            * Copy stuff before match.
+            */
+           nbytes = nbytes <= size ? nbytes : size;
+           (void)strncpy(ostring, is, (size_t)nbytes);
+           size -= nbytes;
 
-      /*
-       * Copy stuff before match.
-       */
-      {
-         while (is < s0)
-            *ostring++ = *is++;
-      }
-
-      int printed =  sprintf(ostring, "%d", seqnum);
-      ostring+=printed;
-   }
-   (void)strcpy(ostring, is);          /* copy rest of input to output */
+           nbytes =  snprintf(ostring, size, "%u", seqnum);
+           nbytes = nbytes <= size ? nbytes : size;
+           ostring += nbytes;
+           size -= nbytes;
+        }
+        (void)strncpy(ostring, is, size); /* copy rest of input to output */
+        ostring[size-1] = 0;
+    }
 }
 
 /*
@@ -1073,20 +1085,28 @@ main()
 #else
 
 
-/*
- - regsub - perform substitutions after a regcomp match
+/**
+ * Performs string substitutions after a regcomp(3) match. If the size of the
+ * output buffer is not zero, then the output string will be NUL-terminated.
+ *
+ * @param pal       [in] Pointer to the pattern/action entry.
+ * @param ident     [in] Pointer to the product-identifier.
+ * @param dest      [out] Pointer to the output buffer.
+ * @param size      [in] Size of the output buffer in bytes.
  */
 static void
-regsub(palt *pal, const char *ident, char *dest)
+regsub(const palt* const pal, const char *ident, char *dest, size_t size)
 {
-        register const char *src;
-        register char *dst;
+    if (size == 0) {
+        uerror("Zero-length output buffer");
+    }
+    else {
+        register const char *src = pal->private;
+        register char *dst = dest;
+        char* const out = dest + size;
         register char c;
         register int no;
-        register int len;
 
-        src = pal->private;
-        dst = dest;
         while ((c = *src++) != '\0') {
                 if (c == '&')
                         no = 0;
@@ -1098,14 +1118,16 @@ regsub(palt *pal, const char *ident, char *dest)
                                 '0' <= src[1] && '9' >= src[1]) {
 
                                 int     i;
+                                int     nbytes;
 
-                                if (sscanf(src+1, "%d)", &i) == EOF || i < 0) {
-                                    uerror("damaged match string: %s",
-                                            strerror(errno));
+                                if (sscanf(src+1, "%d%n)", &i, &nbytes) != 1 ||
+                                        i < 0 || src[1+nbytes] != ')') {
+                                    uerror("Invalid parenthetical backreference: \"%s\"",
+                                            src);
                                     break;
                                 }
                                 no = i;
-                                src = strchr(src, ')') + 1;
+                                src += 1 + nbytes + 1;
                         }
                         else {
                             no = -1;
@@ -1117,23 +1139,34 @@ regsub(palt *pal, const char *ident, char *dest)
                 if (no < 0) {   /* Ordinary character. */
                         if (c == '\\' && (*src == '\\' || *src == '&'))
                                 c = *src++;
-                        *dst++ = c;
+                        if (dst < out)
+                            *dst++ = c;
                 } else if (no <= pal->prog.re_nsub &&
-                        pal->pmatchp[no].rm_so >= 0 &&
-                        pal->pmatchp[no].rm_eo > pal->pmatchp[no].rm_so) {
+                            pal->pmatchp[no].rm_so >= 0 &&
+                            pal->pmatchp[no].rm_eo > pal->pmatchp[no].rm_so) {
+                        int len = pal->pmatchp[no].rm_eo - pal->pmatchp[no].rm_so;
 
-                        len = pal->pmatchp[no].rm_eo - pal->pmatchp[no].rm_so;
+                        len = len <= (out - dst) ? len : (out - dst);
+
                         (void) strncpy(dst, &ident[pal->pmatchp[no].rm_so],
                                 len);
                         dst += len;
                         if (len != 0 && *(dst-1) == '\0') {
                                 /* strncpy hit NUL. */
-                                uerror("damaged match string");
+                                uerror("Invalid match string: \"%s\"",
+                                        &ident[pal->pmatchp[no].rm_so]);
                                 return;
                         }
                 }
         }
-        *dst++ = '\0';
+        if (dst < out) {
+            *dst++ = '\0';
+        }
+        else {
+            uerror("Output buffer too small: \"%.*s\"", (int)size, dest);
+            dest[size-1] = 0;
+        }
+    }
 }
 
 
@@ -1166,7 +1199,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
 #define OUTBUF          bufs[!inBuf]
 #define SWITCH_BUFS     (inBuf = !inBuf)
 
-        regsub(pal, prod->info.ident, OUTBUF);
+        regsub(pal, prod->info.ident, OUTBUF, sizeof(OUTBUF));
         OUTBUF[sizeof(OUTBUF)-1] = 0;
         SWITCH_BUFS;
 
@@ -1178,7 +1211,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         OUTBUF[sizeof(OUTBUF)-1] = 0;
         SWITCH_BUFS;
 
-        seq_sub(INBUF, OUTBUF, prod->info.seqno);
+        seq_sub(INBUF, OUTBUF, sizeof(OUTBUF), prod->info.seqno);
         OUTBUF[sizeof(OUTBUF)-1] = 0;
         SWITCH_BUFS;
 

@@ -78,6 +78,7 @@ lib_la_SOURCES		= \
 	timdif.c
 
 lib_la_CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
+			  -I$(top_srcdir) \
 			  -I$(top_srcdir)/grib2 \
 			  -I$(top_srcdir)/ulog \
 			  -I$(top_srcdir)/protocol

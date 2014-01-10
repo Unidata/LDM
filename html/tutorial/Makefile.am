@@ -73,7 +73,7 @@ all:		$(EXTRA_DIST)
 
 $(EXTRA_DIST):
 	rm -rf tutorial
-	tclsh ~/java/metapps/auxdata/docs/build/generate.tcl -verbose \
+	tclsh generate/generate.tcl -verbose \
 	    -target tutorial \
 	    -noglossary \
 	    -notclevaluation

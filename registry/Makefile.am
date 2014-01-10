@@ -2,13 +2,20 @@
 #
 # Process this file with automake to produce Makefile.in
 
-noinst_LTLIBRARIES	= lib.la
 EXTRA_DIST              = \
+    backend.hin \
+    misc.hin \
+    node.hin \
+    registry.hin \
+    stringBuf.hin
+BUILT_SOURCES           = \
     backend.h \
     misc.h \
     node.h \
     registry.h \
     stringBuf.h
+DISTCLEANFILES          = $(BUILT_SOURCES)
+noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES          = \
     backend.c \
     misc.c \
@@ -25,10 +32,8 @@ TAGS_FILES              = \
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/protocol \
-    @CPPFLAGS_LIBXML2@
+    -I$(top_srcdir)/protocol
 
-if MAINTAINER
 backend.c:	backend-libxml2.c
 	$(LN_S) backend-libxml2.c $@
 
@@ -50,7 +55,6 @@ backend.h:	backend.hin backend.c
 misc.h:		misc.hin misc.c
 node.h:		node.hin node.c
 stringBuf.h:	stringBuf.hin stringBuf.c
-endif
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<

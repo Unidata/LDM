@@ -205,6 +205,7 @@ static srwl_Status initLock(
         srwl_Lock** const lock /**< [out] address of pointer to lock */)
 {
     srwl_Status status;
+    srwl_Lock* lck;
 
     if (!isInitialized) {
         struct sembuf acquireLock;
@@ -247,7 +248,7 @@ static srwl_Status initLock(
         isInitialized = 1;
     }
 
-    srwl_Lock* lck = (srwl_Lock*) malloc(sizeof(srwl_Lock));
+    lck = (srwl_Lock*) malloc(sizeof(srwl_Lock));
 
     if (NULL == lck) {
         LOG_SERROR1("Couldn't allocate %lu bytes for lock",

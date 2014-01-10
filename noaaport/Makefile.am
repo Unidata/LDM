@@ -28,7 +28,6 @@ EXTRA_DIST 		= \
 	productMaker.hin \
 	reader.hin \
 	shmfifo.hin
-
 BUILT_SOURCES		= \
 	fifo.h \
 	fileReader.h \
@@ -38,13 +37,12 @@ BUILT_SOURCES		= \
 	productMaker.h \
 	reader.h \
 	shmfifo.h
-
-CLEANFILES		= $(BUILT_SOURCES)
+DISTCLEANFILES		= $(BUILT_SOURCES)
 
 CPPFLAGS		= \
+	-I$(top_srcdir) \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
-	-I$(top_srcdir)/zlib \
 	-I$(top_srcdir)/ulog \
 	-I$(top_srcdir)/protocol \
 	-I$(top_srcdir)/pq \
@@ -82,15 +80,17 @@ dvbs_multicast_SOURCES	= dvbs_multicast.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 readnoaaport_SOURCES	= readnoaaport.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
 noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
+        acq_shm_lib.h \
 	fifo.c fifo.h \
 	fileReader.c fileReader.h \
 	getFacilityName.c getFacilityName.h \
 	multicastReader.c multicastReader.h \
 	productMaker.c productMaker.h \
-	reader.c reader.h
+	reader.c reader.h \
+        retrans.c retrans.h \
+        shmem_lib.c
 
-LDADD 			= \
-      $(top_builddir)/lib/libldm.la -lxml2
+LDADD 			= $(top_builddir)/lib/libldm.la
 
 TAGS_FILES		= \
 	*.c *.h \

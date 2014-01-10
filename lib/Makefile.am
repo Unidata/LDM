@@ -1,8 +1,8 @@
-# Copyright 2011 University Corporation for Atmospheric Research
+# Copyright 2013 University Corporation for Atmospheric Research. All rights
+# reserved. See the file COPYRIGHT in the top-level source-directory of the
+# package for copying and redistribution conditions.
 #
-# This file is part of the LDM package.  See the file COPYRIGHT
-# in the top-level source-directory of the package for copying and
-# redistribution conditions.
+# This file is part of the LDM package.
 #
 ## Process this file with automake to produce Makefile.in
 
@@ -20,9 +20,7 @@ libldm_la_LIBADD	= \
 if WANT_NOAAPORT
     libldm_la_LIBADD	+= \
 	$(top_builddir)/grib2/lib.la \
-	$(top_builddir)/gempak/lib.la \
-	$(top_builddir)/libpng/libpng.la \
-	$(top_builddir)/zlib/lib.la
+	$(top_builddir)/gempak/lib.la
 else
 if WANT_GRIBINSERT
     libldm_la_LIBADD	+= \
@@ -30,3 +28,4 @@ if WANT_GRIBINSERT
 	$(top_builddir)/gempak/lib.la
 endif
 endif
+#libldm_la_LIBADD	+= $(LIBS)

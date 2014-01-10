@@ -6,10 +6,18 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-builtHeaders	= acl.h data_prod.h forn.h globals.h ldmfork.h LdmProxy.h \
-		timer.h uldb.h
-BUILT_SOURCES	= ../registry/registry.h ldm6_svc.c $(builtHeaders)
-CLEANFILES		= $(builtHeaders) *.i
+builtHeaders	        = \
+    acl.h \
+    data_prod.h \
+    forn.h \
+    globals.h \
+    ldmfork.h \
+    LdmProxy.h \
+    timer.h \
+    uldb.h
+BUILT_SOURCES	        = ldm6_svc.c $(builtHeaders)
+CLEANFILES		= *.i
+DISTCLEANFILES		= $(builtHeaders)
 EXTRA_DIST		= \
     $(builtHeaders:.h=.hin) \
     child_process_set.h \
@@ -107,9 +115,6 @@ TAGS_FILES		= \
     ../registry/*.c
 dist_man3_MANS		= uldb.3
 
-../registry/registry.h:
-	cd ../registry && $(MAKE) $@
-
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
@@ -191,10 +196,7 @@ test_data_prod_CPPFLAGS	= \
     -I$(top_srcdir)/registry \
     @CPPFLAGS_CUNIT@
 
-test_data_prod_LDADD		= \
-    $(top_builddir)/lib/libldm.la \
-    -lxml2 \
-    @LIBS_CUNIT@
+test_data_prod_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
     
 testuldb_CPPFLAGS	= \
     -I$(top_srcdir) \
@@ -205,7 +207,6 @@ testuldb_CPPFLAGS	= \
 
 testuldb_LDADD		= \
     $(top_builddir)/lib/libldm.la \
-    -lxml2 \
     @LIBS_CUNIT@
 
 TESTS			= test_data_prod testuldb

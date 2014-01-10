@@ -297,7 +297,8 @@ init_options(pqueue     *pq,
 
 /* set up the product information record */
     
-    strcpy(orighost,ghostname());
+    strncpy(orighost, ghostname(), sizeof(orighost));
+    orighost[sizeof(orighost)-1] = 0;
     prod->info.origin = orighost;
     parse_time("NOW", &tv);
     prod->info.arrival = tv;
@@ -871,15 +872,15 @@ read_file(pqueue *pq,
 
 
         while ((ch = getc(stdin)) != '\004') {
-            *((char *)prodrec->data + bufcnt) = ch;
-            bufcnt++;
-
-            if (bufcnt > DBUFMAX) {
+            if (bufcnt >= DBUFMAX) {
                 uerror("\nProduct must be smaller than %d bytes", DBUFMAX);
                 uerror("Read operation aborted");
                 free(prodrec->data);
                 return;
             }
+
+            *((char *)prodrec->data + bufcnt) = ch;
+            bufcnt++;
         }
 
         prodrec->info.sz = bufcnt;

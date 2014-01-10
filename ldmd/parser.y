@@ -36,15 +36,13 @@ static int      line = 0;
 static unsigned ldmPort = LDM_PORT;
 static int      execute = 1;
 
-static const char*      scannerGetPath(void);
 static int              scannerPush(const char* const path);
 static int              scannerPop(void);
 
 static void
 yyerror(const char *msg)
 {
-    log_add("Error on or before line %d, file \"%s\": %s", line,
-            scannerGetPath(), msg);
+    log_add("Error in LDM configuration-file: %s", msg);
 }
 
 #if __STDC__
@@ -70,8 +68,7 @@ decodeFeedtype(
         error = 0;
     }
     else {
-        log_start("Invalid feedtype expression \"%s\" on or before line %d, "
-            "file \"%s\": %s", string, line, scannerGetPath(),
+        log_start("Invalid feedtype expression \"%s\": %s", string,
             strfeederr(status));
 
         error = 1;
@@ -89,34 +86,30 @@ decodeRegEx(
     int         error = 1;              /* failure */
 
     if (strlen(string) == 0) {
-        LOG_START2("Empty regular-expression on or before line %d of file "
-                "\"%s\"", line, scannerGetPath());
+        LOG_START0("Empty regular-expression");
         log_log(LOG_ERR);
     }
     else {
         char* const     clone = strdup(string);
 
         if (NULL == clone) {
-            log_start("Couldn't clone regular-expression \"%s\" on or before "
-                    "line %d, " "file \"%s\": %s", string, line,
-                    scannerGetPath(), strerror(errno));
+            log_start("Couldn't clone regular-expression \"%s\": %s", string,
+                    strerror(errno));
         }
         else {
             regex_t*    regexp = (regex_t*)malloc(sizeof(regex_t));
 
             if (NULL == regexp) {
-                log_start("Couldn't allocate %lu bytes for \"regex_t\" "
-                    "on or before line %d, file \"%s\"",
-                    (unsigned long)sizeof(regex_t), line, scannerGetPath());
+                log_start("Couldn't allocate %lu bytes for \"regex_t\"",
+                    (unsigned long)sizeof(regex_t));
             }
             else {
                 if (re_vetSpec(clone)) {
                     /*
                      * Pathological regular expression.
                      */
-                    log_start("Adjusted pathological regular expression \"%s\" "
-                        "on or before line %d, file \"%s\"", string, line,
-                        scannerGetPath());
+                    log_start("Adjusted pathological regular expression \"%s\"",
+                        string);
                     log_log(LOG_WARNING);
                 }
 
@@ -130,9 +123,8 @@ decodeRegEx(
                     char        buf[132];
 
                     (void)regerror(error, regexp, buf, sizeof(buf));
-                    log_start("Couldn't compile regular-expression \"%s\" "
-                            "on or before line %d, file \"%s\": %s", clone,
-                            line, scannerGetPath(), buf);
+                    log_start("Couldn't compile regular-expression \"%s\": %s",
+                            clone, buf);
                 }
 
                 if (error)
@@ -159,17 +151,15 @@ decodeHostSet(
         char* dup = strdup(string);
 
         if (NULL == dup) {
-            log_start("Couldn't clone string \"%s\" on or before line %d, "
-                "file \"%s\": %s", string, line, scannerGetPath(),
+            log_start("Couldn't clone string \"%s\": %s", string,
                 strerror(errno));
         }
         else {
             host_set*   hsp = new_host_set(HS_REGEXP, dup, regexp);
 
             if (NULL == hsp) {
-                log_start("Couldn't create host-set for "
-                    "\"%s\" on or before line %d, file \"%s\": %s", dup, line,
-                    scannerGetPath(), strerror(errno));
+                log_start("Couldn't create host-set for \"%s\": %s", dup,
+                        strerror(errno));
 
                 error = 1;
             }
@@ -232,8 +222,7 @@ warnIfPathological(
         /*
          * Pathological regular expression.
          */
-        log_start("Pathological regular expression \"%s\" "
-            "on or before line %d, file \"%s\"", re, line, scannerGetPath());
+        log_start("Pathological regular expression \"%s\"", re);
         log_log(LOG_WARNING);
     }
 }
@@ -282,8 +271,9 @@ decodeAllowEntry(
             errObj = acl_addAllow(ft, hsp, okPattern, notPattern);
 
             if (errObj) {
-                log_start("Couldn't add ALLOW entry on or before line %d, "
-                        "file \"%s\"", line, scannerGetPath());
+                log_start("Couldn't add ALLOW entry: feedSet=%s, hostPat=%s, "
+                        "okPat=\"%s\", notPat=\"%s\"",
+                        feedtypeSpec, hostPattern, okPattern, notPattern);
                 free_host_set(hsp);
                 errCode = -1;
             }
@@ -309,8 +299,7 @@ decodeRequestEntry(
         const char*    hostId = strtok(hostSpec, ":");
     
         if (NULL == hostId) {
-            log_start("Invalid hostname specification \"%s\" on or before "
-                    "line %d, file \"%s\"", hostSpec, line, scannerGetPath());
+            log_start("Invalid hostname specification \"%s\"", hostSpec);
     
             errCode = EINVAL;
         }
@@ -332,9 +321,7 @@ decodeRequestEntry(
                     localPort = (unsigned)port;
                 }
                 else {
-                    log_start("Invalid port specification \"%s\" "
-                            "on or before line %d, file \"%s\"", portSpec,
-                            line, scannerGetPath());
+                    log_start("Invalid port specification \"%s\"", portSpec);
         
                     errCode = EINVAL;
                 }
@@ -342,9 +329,7 @@ decodeRequestEntry(
         
             if (0 == errCode) {
                 if (errCode = acl_addRequest(feedtype, prodPattern, hostId,
-                        localPort, line, scannerGetPath())) {
-                    LOG_ADD2("Couldn't process request on or before line %d, "
-                            " file \"%s\"", line, scannerGetPath());
+                        localPort)) {
                 }
             } /* "localPort" set */
         } /* valid hostname */
@@ -352,6 +337,10 @@ decodeRequestEntry(
         regfree(regexp);
         free(regexp);
     } /* "regexp" allocated */
+    
+    if (errCode)
+        LOG_ADD3("Couldn't process REQUEST: host=%s, feedSet=%s, "
+                "prodPat=\"%s\"", hostSpec, feedtypeSpec, prodPattern);
 
     return errCode;
 }
@@ -428,10 +417,8 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                             char*       patp = strdup($3);
 
                             if (NULL == patp) {
-                                log_start("Couldn't clone string \"%s\" "
-                                    "on or before line %d, file \"%s\": %s",
-                                    $3, line, scannerGetPath(),
-                                    strerror(errno));
+                                log_start("Couldn't clone string \"%s\": %s",
+                                    $3, strerror(errno));
 
                                 error = 1;
                             }
@@ -445,10 +432,6 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                                     regexp = NULL;  /* abandon */
                                 }
                                 else {
-                                    log_start("Couldn't add ACCEPT entry "
-                                        "on or before line %d, file \"%s\": %s",
-                                        line, scannerGetPath(),
-                                        strerror(error));
                                     free(patp);
                                 }
                             }           /* "patp" allocated */
@@ -463,8 +446,11 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                         }
                     }                   /* "regexp" allocated */
 
-                    if (error)
+                    if (error) {
+                        LOG_ADD3("Couldn't process ACCEPT: feedSet=\"%s\""
+                                "prodPat=\"%s\", hostPat=\"%s\"", $2, $3, $4);
                         return error;
+                    }
                 }
                 ;
 
@@ -494,30 +480,25 @@ exec_entry:     EXEC_K STRING
                     error = wordexp($2, &words, 0);
 
                     if (error) {
-                        log_start("Couldn't decode command \"%s\" on or before "
-                            " line %d, file \"%s\": %s", $2, line,
-                            scannerGetPath(), strerror(errno));
+                        log_start("Couldn't decode command \"%s\": %s",
+                            strerror(errno));
                     }
                     else {
 #if YYDEBUG
                         if(yydebug)
                             udebug("command: \"%s\"", $2);
 #endif
-                        if (execute) {
+                        if (execute)
                             error = exec_add(&words);
-
-                            if (error) {
-                                log_start("Couldn't add EXEC entry "
-                                        "on or before line %d, file \"%s\": %s",
-                                        line, scannerGetPath(),
-                                        strerror(errno));
-                                wordfree(&words);
-                            }
-                        }
+                        
+                        if (!execute || error)
+                            wordfree(&words);
                     }                   /* "words" set */
 
-                    if (error)
+                    if (error) {
+                        LOG_ADD1("Couldn't process EXEC: cmd=\"%s\"", $2);
                         return error;
+                    }
                 }
                 ;
 

@@ -1,3 +1,118 @@
+6.11.7
+    Changed "software/idd" in UPC hyperlinks to "projects/idd".
+    
+    Squashed a bug in the LDM 5 client library -- which is used by notifyme(1)
+    -- that would cause a segmentation violation if the upstream hostname
+    couldn't be resolved into an IP address.
+
+6.11.6 	2013-06-24 17:04:55-06:00
+    SUMMARY OF SIGNIFICANT CHANGES:
+        * Eliminated the bundled PNG library;
+        * Squashed bugs;
+        * Improved the portability, release-engineering, and installation
+          process;
+        * Created a binary RPM for fc14.x86_64.
+        
+    Installation:
+        Configure(1) Script:
+            Made the search for the PNG library dependent on the
+            "--with-noaaport" option.
+ 
+            Improved the search for the XML2 and ZLIB header-files and
+            libraries. In particular, added "/usr/local/lib", "/opt/lib",  and
+            "/user/sfw/include" for general searches.
+            
+            Adapted to older tr(1)-s that don't extend the second character
+            set.
+                   
+        Mac OS/X Support:
+            Added definition of _DARWIN_C_SOURCE to have "struct ip_mreq"
+            defined on that system (that definition is needed by the NOAAPORT
+            module).
+        
+            Don't define "union semun" on that system because it's defined by a
+            system header-file.
+            
+            Added "opt/X11" to library search-path.
+                    
+        SunOS Support:
+            Removed SunOS 5.6 and 5.9 from portability-testing platforms
+            because they're end-of-life.
+            
+            Added testing on other SunOS environments.
+                
+        Misc:
+            Removed the bundled ZLIB package. This package's library was in the
+            LDM shared-library and, on some systems, it conflicted with the
+            system ZLIB library referenced by the system XML2 library (which was
+            removed from the LDM in version 6.11.5).
+
+            Created a relocatable binary RPM for fc14.x86_64.
+    
+            Made the creation of the contents of the ~/var directory more
+            robust when relevant symbolic links already exist.
+        
+            Changed the default installation-directory from "/usr/local/ldm"
+            to "/opt/ldm" following the Filesystem Hierarchy Standards. This
+            is the default for the RPM installation. Use the "--prefix=..."
+            option of rpm(1) if you want a different home-directory for the
+            LDM user.
+    
+            Eliminated the creation of the "data" and "logs" symbolic links in
+            the LDM user's home-directory. If they exist, however, then they
+            won't be removed.
+    
+            Removed the bundled "libpng" package.
+                               
+    ldmadmin(1):
+        Added verbose logging to the check of the LDM configuration-file by
+        the "start" command.
+    
+    LDM server (ldmd):
+        Squashed a bug that caused a segmentation violation (SIGSEGV) on 64-bit
+        Darwin.
+    
+        Eliminated a minor memory leak in the parsing of LDM configuration-file
+        when the "-n" (do nothing) option is specified.
+    
+        Documented the "-n" (do nothing) option.
+
+    Logging:
+        Added setting of the SELINUX security context for the LDM log
+        directory. This should allow the LDM to log when SELINUX is enabled.
+
+        Squashed a bug that caused the log(3) module to drop a long new message.
+
+    pqinsert(1):
+        Squashed a bug that caused a segmentation violation (SIGSEGV) when given
+        an unknown option.
+
+    regutil(1):
+        Made the "usage" message use the LDM logging facility.
+        
+        Added the "-v|-x" options and some debug-level messages.
+
+    NOAAPORT:
+        Enhanced the verification of the structure of a GRIB2 message.
+
+        Adapted code to the opaque "struct png_struct" of PNG 1.5 and later.
+
+        Corrected the inclusion of the "png.h" header-file.
+            
+    Documentation:
+        HTML:
+            Documented the RPM installation.
+    
+            Documented the dependency on the PNG package if the NOAAPORT
+            system is built.
+        
+            Documented that the XML2 development and PNG development packages
+            (as opposed to the runtime packages) are necessary.
+                    
+        Misc:
+            Replaced the license with the BSD 3-Clause license enhanced with
+            patent protection.
+
 6.11.5 	2013-05-10 14:42:19-06:00
     Summary:
         Elimination of the bundled "libxml2" package and improvements due to 1)
@@ -41,7 +156,8 @@
         part of the ULDB investigation. Didn't make a difference.
 
     LDM Registry (src/registry/):
-        Ensured that free() isn't called twice on the same file object.
+        Ensured that free() isn't called twice on the same file object, which
+        could result in a SIGSEGV.
 
         Improved some internal documentation.
 

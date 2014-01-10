@@ -26,6 +26,7 @@ EXTRA_DIST	= \
     programs.html \
     protocol.html \
     regpar-top.html \
+    rpm-install-steps.html.in \
     scour.conf.html \
     source-install-steps.html.in \
     source_or_binary.html \
@@ -84,6 +85,7 @@ html_DATA	= \
     product-queue.html \
     programs.html \
     protocol.html \
+    rpm-install-steps.html \
     scour.conf.html \
     source-install-steps.html \
     source_or_binary.html \

@@ -44,10 +44,39 @@
 	5 installed.</P>
 
 	<LI><P STYLE="margin-bottom: 0in">Have the
-	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A> package installed
-	(look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt>). The
-	<tt>libxml2</tt> library is used by the LDM to parse the 
-	<a href="glindex.html#LDM registry">LDM registry</a>.</P>
+	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A> <em>development</em>
+	package installed
+	(look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt>
+	<em>and</em> the
+	file <tt>libxml/parser.h</tt>).
+	This package is used by the LDM to parse the 
+	<a href="glindex.html#LDM registry">LDM registry</a>. If this
+	package's library is installed but not its header-file, then you must
+	install the <em>development</em> package (the
+	runtime package doesn't contain the necessary header-files).</P>
+    
+	<LI><P STYLE="margin-bottom: 0in">Have the
+	<A HREF="http://www.libpng.org/pub/png/"><tt>PNG</tt></A>
+	<em>development</em> package installed
+	(look for the file <tt>libpng.a</tt> or <tt>libpng.so</tt> <em>and</em>
+	the file <tt>png.h</tt>). This is only necessary if you intend to ingest
+	data via the LDM <a href="glindex.html#NOAAPORT">NOAAPORT</a> system.
+	If the PNG
+	package's library is installed but not its header-file, then you must
+	install the <em>development</em> package (the
+	runtime package doesn't contain the necessary header-files).</P>
+    
+	<LI><P STYLE="margin-bottom: 0in">Have the
+	<A HREF="http://zlib.net/"><tt>zlib</tt></A> <em>development</em>
+	package installed
+	(look for the file <tt>libz.a</tt> or <tt>libz.so</tt> <em>and</em> the
+	file <tt>zlib.h</tt>).
+	This package is used by the
+	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A>  package.
+	If this
+	package's library is installed but not its header-file, then you must
+	install the <em>development</em> package (the
+	runtime package doesn't contain the necessary header-files).</P>
 
 	<LI><P STYLE="margin-bottom: 0in">
 	Have the
@@ -116,8 +145,9 @@ Known Operating System Issues</a>.
 
 <H2><A NAME="development"></A>Requirements for Installing from
 Source-Code</H2>
-<P>You must have a UNIX<SUP>&reg;</SUP> development-environment. In
-particular, your platform must have: 
+<p>You may ignore this section if you install from a binary RPM file.</p>
+<P>To install from source, you must have a UNIX<SUP>&reg;</SUP>
+development-environment. In particular, your platform must have: 
 </P>
 <UL>
 	<LI><P STYLE="margin-bottom: 0in">A Standard C compiler (<i>e.g.</i>,

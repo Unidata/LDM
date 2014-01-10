@@ -58,19 +58,18 @@ static char           _dotAddr[DOTTEDQUADLEN];  /* dotted-quad IP address */
  ******************************************************************************/
 
 
-/*
- * Initializes new this module from an upstream hostname, the pathname of the
- * product-queue, and a flag to watch.  The "arrival" time of the most-recently
- * received product is initialized to TS_NONE.  This function prints diagnostic
+/**
+ * Initializes this module. The "arrival" time of the most-recently-received
+ * product is initialized to TS_NONE.  This function prints diagnostic
  * messages via the ulog(3) module.  This function may be called multiple times
  * without calling down6_destroy().
  *
  * @param upName                 Name of upstream host.
- * @param *upAddr                Address of upstream host.
+ * @param upAddr                 Address of upstream host.
  * @param pqPath                 Pathname of product-queue.
- * @param *pq                    Product-queue.
- * @return 0                     if success.
- * @return DOWN6_SYSTEM_ERROR    if system-error occurred (check errno or see
+ * @param pq                     Product-queue.
+ * @retval 0                     if success.
+ * @retval DOWN6_SYSTEM_ERROR    if system-error occurred (check errno or see
  *                               log).
  */
 int down6_init(

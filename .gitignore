@@ -58,7 +58,6 @@ share
 .cproject
 .project
 .settings
-libxml2
 macros.make
 TAGS
 Makefile.in
@@ -66,3 +65,7 @@ ldm.spec
 configure
 Makefile.in
 ldm-6.*
+awips2-ldm.spec
+*.rpm
+gmon.out
+/test-driver

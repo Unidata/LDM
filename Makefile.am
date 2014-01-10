@@ -1,4 +1,4 @@
-# Copyright 2011 University Corporation for Atmospheric Research
+# Copyright 2013 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -16,22 +16,23 @@ SUDO		= @SUDO@
 SU		= @SU@
 PQ_SUBDIR	= @PQ_SUBDIR@
 
-DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
+DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions --with-noaaport --with-gribinsert
 
 LIB_SUBDIRS	= \
     rpc \
     ulog \
-    misc \
-    pqinglib \
-    protocol \
-    registry
+    pqinglib
 if WANT_FAUX_PQ
     LIB_SUBDIRS	+= fauxPq
 else
     LIB_SUBDIRS	+= pq
 endif
+LIB_SUBDIRS	+= \
+    registry \
+    misc \
+    protocol
 if WANT_NOAAPORT
-    LIB_SUBDIRS	+= grib2 gempak libpng zlib
+    LIB_SUBDIRS	+= grib2 gempak
 else
 if WANT_GRIBINSERT
     LIB_SUBDIRS	+= grib2 gempak
@@ -89,12 +90,16 @@ nobase_include_HEADERS		= \
     rpc/svc_auth.h \
     rpc/pmap_clnt.h \
     rpc/pmap_prot.h
+    
+LDM_ICON_FILE		= ldm-50x50.xpm
 
 EXTRA_DIST = \
+    $(LDM_ICON_FILE) \
     CHANGE_LOG \
     COPYRIGHT \
     extractDecls \
     ldm.spec \
+    ldm.spec.in \
     macros.make.in \
     README
 
@@ -103,7 +108,8 @@ dist_bin_SCRIPTS	= \
     ensureVar \
     ensureSyslogEntry \
     ensureRpcEntry \
-    ensureServicesEntry
+    ensureServicesEntry \
+    rpmUserActions
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
@@ -198,6 +204,16 @@ ensure-rpc-entry:
 ensure-services-entry:
 	$(srcdir)/ensureServicesEntry
 
+install-data-local:	$(DESTDIR)$(docdir)/CHANGE_LOG \
+                	$(DESTDIR)$(docdir)/COPYRIGHT \
+                	$(DESTDIR)$(docdir)/README
+$(DESTDIR)$(docdir)/CHANGE_LOG:	CHANGE_LOG
+	cp $? $@
+$(DESTDIR)$(docdir)/COPYRIGHT:	COPYRIGHT
+	cp $? $@
+$(DESTDIR)$(docdir)/README:	README
+	cp $? $@
+
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 	@if test "$(MAKEWHATIS_CMD)"; then \
@@ -241,6 +257,8 @@ commitAndTag:
 tag:
 	git tag --force v$(VERSION)
 
+# Make this instead of "available" when the package won't be released to the
+# public
 release:
 	test -z "`git status --porcelain`" || (echo Commit changes first!; exit 1)
 	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
@@ -249,18 +267,44 @@ release:
 	cat CHANGE_LOG >>CHANGE_LOG.tmp
 	vi CHANGE_LOG.tmp
 	mv CHANGE_LOG.tmp CHANGE_LOG
+	sed -n '1,/^%changelog/p' ldm.spec.in ldm.spec.in >ldm.spec.in.tmp
+	echo >>ldm.spec.in.tmp
 	newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
 	echo $$newVersion | egrep '^[0-9]+(\.[0-9]+)*$$' >/dev/null || exit 1; \
+        echo "* `date '+%a %b %e %Y'` Steve Emmerson" \
+        	"<support-ldm@unidata.ucar.edu> $$newVersion" >>ldm.spec.in.tmp; \
+        echo "- PUT SUMMARY HERE" >>ldm.spec.in.tmp; \
+	sed '1,/^%changelog/d' ldm.spec.in >>ldm.spec.in.tmp; \
+	vi "+/PUT SUMMARY HERE/" ldm.spec.in.tmp; \
+	mv ldm.spec.in.tmp ldm.spec.in; \
 	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
-	    >configure.ac.tmp
+	    >configure.ac.tmp; \
 	mv configure.ac.tmp configure.ac
-	$(MAKE) configure Makefile timestamp dist commitAndTag
+	$(MAKE) configure Makefile timestamp dist commitAndTag rpm
 
-ftp-actual:		dist $(FTPDIR)
-	cp $(distArchive) $(FTPDIR)
+RPM_BUILDDIR	= $$HOME/rpmbuild
+#
+# Create binary RPM files in this directory
+rpm:		dist ldm.spec
+	mkdir -p $(RPM_BUILDDIR)/SOURCES
+	cp -p $(distArchive) $(LDM_ICON_FILE) $(RPM_BUILDDIR)/SOURCES 
+	mkdir -p $(RPM_BUILDDIR)/SPECS
+	cp ldm.spec $(RPM_BUILDDIR)/SPECS
+	rpmbuild -bb $(RPM_BUILDDIR)/SPECS/ldm.spec
+	mv $(RPM_BUILDDIR)/RPMS/`uname -m`/$(PACKAGE)*-$(VERSION)-*.rpm .
+    
+rpmlint:
+	rpmlint $(RPM_BUILDDIR)/SPECS/ldm.spec \
+    	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
+    	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
+
+ftp-actual:		dist rpm $(FTPDIR)
+	cp -p $(distArchive) $(FTPDIR)
 	chmod u+rw,g+rw,o=r $(FTPDIR)/$(distArchive)
 	rm -f $(FTPDIR)/$(PACKAGE).tar.gz
 	$(LN_S) $(distArchive) $(FTPDIR)/$(PACKAGE).tar.gz
+	cp -p $(PACKAGE)*-$(VERSION)-*.rpm $(FTPDIR)
+	chmod u+rw,g+rw,o=r $(FTPDIR)/$(PACKAGE)*-$(VERSION)-*.rpm 
 
 download_update:
 	previous=`sed -n 's/.*"%current%" value="\(.*\)".*/\1/p' \
@@ -289,16 +333,10 @@ web-update:
 	cd html && $(MAKE) web-update
 	cd noaaport && $(MAKE) web-update
 
+# Make this instead of "release" when the package will be released to the
+# public
 available:	ftp web-update
-
-TOP_BUILD_DIR	= /tmp/rpmbuild
-rpm:		dist ldm.spec
-	rm -rf $(TOP_BUILD_DIR)
-	mkdir -p $(TOP_BUILD_DIR)/SOURCES
-	cp $(distArchive) $(TOP_BUILD_DIR)/SOURCES 
-	mkdir $(TOP_BUILD_DIR)/SPECS
-	cp ldm.spec $(TOP_BUILD_DIR)/SPECS
-	rpmbuild --define '_topdir $(TOP_BUILD_DIR)' -v -bs ldm.spec
+    	
 endif
 
 .PHONY:		\
@@ -320,6 +358,7 @@ endif
     remote-checks \
     root-actions \
     rpm \
+    rpmlint \
     tag \
     timestamp \
     web-update

@@ -15,7 +15,6 @@ topTmpDir	= /tmp/$(distId)
 if MAINTAINER
 
 HOSTS		= \
-    buddy \
     flip \
     gilda \
     grizzard \
@@ -23,7 +22,8 @@ HOSTS		= \
     hydro2 \
     imogene \
     moe \
-    spock
+    spock \
+    sol
 
 $(distPath):
 	cd .. && $(MAKE) dist

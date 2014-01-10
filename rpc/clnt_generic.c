@@ -76,6 +76,11 @@ clnt_create(
 	sin.sin_family = h->h_addrtype;
 	sin.sin_port = 0;
 	bzero(sin.sin_zero, sizeof(sin.sin_zero));
+    if (h->h_length > sizeof(sin.sin_addr)) {
+		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+		rpc_createerr.cf_error.re_errno = EOVERFLOW;
+        return NULL;
+    }
 	bcopy(h->h_addr_list[0], (char*)&sin.sin_addr, h->h_length);
 	p = getprotobyname(proto);
 	if (p == NULL) {

@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zlib.h>
 #include "nport.h"
 #include "log.h"
-#include "zlib/zlib.h"
 
 int npunz (char *zstr, int *lenout, int *ioff);
 

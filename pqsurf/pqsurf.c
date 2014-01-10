@@ -96,18 +96,23 @@ run_child(int argc, char *argv[])
         if(ulogIsDebug())
         {
                 char command[1024];
-                char *cp = command;
-                int ii = 0;
+                size_t left = sizeof(command) - 1;
+                int ii;
+
                 command[0] = 0;
 
-                while (ii < argc)
+                for (ii = 0; ii < argc; ++ii)
                 {
-                        strcpy(cp, argv[ii]);   
-                        cp += strlen(argv[ii]);
-                        if(++ii == argc)
-                                break;
-                        *cp++ = ' ';
-                        *cp = 0;
+                        size_t  nbytes;
+
+                        if (ii > 0) {
+                                (void)strncat(command, " ", left);
+                                left -= (1 <= left) ? 1 : left;
+                        }
+
+                        (void)strncat(command, argv[ii], left);
+                        nbytes = strlen(argv[ii]);
+                        left -= (nbytes <= left) ? nbytes : left;
                 }
                 udebug("exec'ing: \"%s\"", command);
         }
@@ -121,6 +126,11 @@ run_child(int argc, char *argv[])
 
         if(pid == 0)
         {       /* child */
+                const unsigned  ulogOptions = ulog_get_options();
+                const char*     ulogIdent = getulogident();
+                const unsigned  ulogFacility = getulogfacility();
+                const char*     ulogPath = getulogpath();
+
                 (void)signal(SIGCHLD, SIG_DFL);
                 (void)signal(SIGTERM, SIG_DFL);
 
@@ -130,6 +140,7 @@ run_child(int argc, char *argv[])
                 endpriv();
 
                 (void) execvp(argv[0], &argv[0]);
+                openulog(ulogIdent, ulogOptions, ulogFacility, ulogPath);
                 serror("run_child: execvp: %s", argv[0]);
                 _exit(127);
         }

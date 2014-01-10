@@ -40,6 +40,7 @@ static char sccsid[] = "@(#)get_myaddress.c 1.4 87/08/11 Copyr 1984 Sun Micro";
 
 #include "config.h"
 
+#include <errno.h>
 #include <sys/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -121,6 +122,11 @@ get_myaddress(
 		exit(1);
 	}
 
+    if (entry->h_length > sizeof(addr->sin_addr)) {
+        errno = EOVERFLOW;
+		perror("get_myaddress: entry->h_length > sizeof(addr->sin_addr)");
+        abort();
+    }
 	(void) memcpy(&addr->sin_addr, entry->h_addr_list[0],
 		(size_t)entry->h_length);
 	addr->sin_family= AF_INET;
