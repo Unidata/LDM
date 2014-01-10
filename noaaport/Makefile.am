@@ -222,7 +222,7 @@ commit-check:	Makefile
 $(WEB_DESTDIR):
 	mkdir -p $@
 
-web-update:	commit-check $(WEB_DESTDIR)
+web-update:	$(WEB_DESTDIR)
 	cp -R html/* $(WEB_DESTDIR)
 endif
 

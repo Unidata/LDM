@@ -7,6 +7,7 @@ AC_INIT([LDM], [6.11.5], [support-ldm@unidata.ucar.edu],,
 
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
     
@@ -24,6 +25,7 @@ AC_SUBST([YEAR])
 AC_DEFINE([CONFIG_H], [1], [Header-file lockout])
 #AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
 
+AM_PROG_AR
 AM_PROG_CC_C_O
 if test -z "$CC"; then
     AC_MSG_ERROR([no C compiler found])
@@ -33,7 +35,7 @@ else
        *) AC_DEFINE([_XOPEN_SOURCE], [500], [Level of XOPEN compliance])
    esac
     AC_MSG_CHECKING(the C compiler)
-    AC_COMPILE_IFELSE([int foo;], 
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
 	AC_MSG_RESULT(works),
 	AC_MSG_FAILURE($CC failed to compile test code))
 fi
@@ -111,7 +113,7 @@ case "$CC" in
             AC_MSG_NOTICE([libs="\"$libs\""])
             AC_MSG_NOTICE([ARFLAGS="\"$ARFLAGS\""])
             AC_MSG_CHECKING([the C compiler (again)])
-            AC_COMPILE_IFELSE([int foo;], 
+            AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
                 AC_MSG_RESULT(works),
                 AC_MSG_FAILURE($CC failed to compile test code))
         fi
@@ -281,7 +283,7 @@ AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
 AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
 # Check for the CUNIT unit-testing package
-AC_MSG_NOTICE([checking for the CUNIT unit-testing package.])
+AC_MSG_NOTICE([checking for the CUnit unit-testing package.])
 AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
     [CPPFLAGS_CUNIT=-I/opt/include
     AC_SUBST(CPPFLAGS_CUNIT)
@@ -299,11 +301,20 @@ AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
             AC_SUBST(LIBS_CUNIT)],
             [AC_CHECK_FILE([/usr/local/lib/libcunit.a],
                 [LIBS_CUNIT='-L/usr/local/lib -lcunit'
-                AC_SUBST(LIBS_CUNIT)])])])])
+                AC_SUBST(LIBS_CUNIT)])])],
+        [AC_CHECK_FILE([/usr/include/CUnit/CUnit.h],
+            [CPPFLAGS_CUNIT=-I/usr/include
+            AC_SUBST(CPPFLAGS_CUNIT)
+            AC_CHECK_FILE([/usr/lib/libcunit.so],
+                [LIBS_CUNIT='-L/usr/lib -lcunit'
+                AC_SUBST(LIBS_CUNIT)],
+                [AC_CHECK_FILE([/usr/lib/libcunit.a],
+                    [LIBS_CUNIT='-L/usr/lib -lcunit'
+                    AC_SUBST(LIBS_CUNIT)])])])])])
 AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
 AM_COND_IF([HAVE_CUNIT], 
-    [AC_MSG_NOTICE([CUNIT found.  Enabling unit-tests.])],
-    [AC_MSG_NOTICE([CUNIT not found.  Disabling unit-tests.])])
+    [AC_MSG_NOTICE([CUnit found.  Enabling unit-tests.])],
+    [AC_MSG_NOTICE([CUnit not found.  Disabling unit-tests.])])
     
 # Check for the libxml2 header-files.
 AC_ARG_VAR([CPPFLAGS_LIBXML2],
@@ -532,7 +543,7 @@ AC_CONFIG_FILES([
     rtstats/Makefile
     scour/Makefile
     scour/scour
-    scripts/ldmadmin
+    scripts/ldmadmin.pl
     scripts/ldmfail
     scripts/Makefile
     scripts/netcheck

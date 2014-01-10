@@ -110,6 +110,7 @@ distArchive = $(distName).tar.gz
 CLEANFILES	= *.log
 distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
 LAST_VERSION	= $$(git tag -l v\* | sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | tail -1)
+ACLOCAL_AMFLAGS = -I m4
 
 all:
 

@@ -7,7 +7,7 @@
 ## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST		= \
-    ldmadmin.in \
+    ldmadmin.pl.in \
     ldmfail.in \
     netcheck.in \
     netcheck.conf \
@@ -27,7 +27,7 @@ CLEANFILES		= ldmadmin
 all:		ldmadmin
 
 if MAINTAINER
-ldmadmin.in:	ldmadmin.in.pl
+ldmadmin:	ldmadmin.pl
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 
