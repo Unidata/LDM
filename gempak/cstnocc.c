@@ -3,7 +3,7 @@
 #include "geminc.h"
 #include "gemprm.h"
 
-void cst_nocc ( char *str, char srchc, int fndocc, int sstate, 
+void cst_nocc ( const char *str, char srchc, int fndocc, int sstate,
 						int *nocc, int *iret )
 /************************************************************************
  * cst_nocc								*
@@ -36,9 +36,9 @@ void cst_nocc ( char *str, char srchc, int fndocc, int sstate,
  * S. Jacobs/NCEP	 2/98	Changed to return position as an integer*
  ***********************************************************************/
 {
-int	last_occ;
-char	*ptr;
-char	tmpsc;
+int	        last_occ;
+const char	*ptr;
+char	        tmpsc;
 
 /*---------------------------------------------------------------------*/
 	*iret = 0;

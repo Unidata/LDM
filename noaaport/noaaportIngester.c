@@ -15,6 +15,7 @@
 #include "log.h"
 #include "fifo.h"
 #include "fileReader.h"
+#include "getFacilityName.h"
 #include "ldmProductQueue.h"
 #include "multicastReader.h"
 #include "productMaker.h"

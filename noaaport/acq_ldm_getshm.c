@@ -9,10 +9,13 @@ DESCRIPTION
 RETURNS
 
 *******************************************************************************/
+#include <config.h>
+
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include <errno.h>
 #include <ctype.h>
@@ -79,6 +82,8 @@ void VAR_LEAN_GET_SHMEM(char *a,ACQ_TABLE ss, int z, int k, int r) {
 
 char	PNAME[40];
 int MaxLinks;
+
+int
 main(argc, argv)	/* argument #1 is a test SHMnumber */
 int argc;
 char **argv;

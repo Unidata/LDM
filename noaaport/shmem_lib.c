@@ -7,6 +7,8 @@ DESCRIPTION
 RETURNS
 
 *******************************************************************************/
+#include <config.h>
+
 #include <stdio.h>
 #include <signal.h>
 #include <sys/types.h>

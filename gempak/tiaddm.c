@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "proto_gemlib.h"
+
 void ti_addm ( int *idtarr, int *imin, int *outarr, int *iret)
 {
 int iyear, imonth, iday, ihour, iminut;

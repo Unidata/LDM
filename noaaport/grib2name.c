@@ -10,8 +10,13 @@
 #include <string.h>
 #include <time.h>
 
-const char *s_pds_center(unsigned char center, unsigned char subcenter);
-const char *s_pds_model(unsigned char center, unsigned char model);
+/*
+ * The following are declared here because they're not declared elsewhere.
+ */
+extern const char*      s_pds_center(unsigned char center, unsigned char subcenter);
+extern const char*      s_pds_model(unsigned char center, unsigned char model);
+extern int              decode_g2gnum(gribfield *gfld);
+extern int              wmo_to_gridid (char *TT, char *AA );
 
 void	grib2name ( char *data, size_t sz, char *wmohead, char *ident )
 {

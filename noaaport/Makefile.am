@@ -49,7 +49,12 @@ CPPFLAGS		= \
 	-I$(top_srcdir)/misc \
 	@CPPFLAGS@
 
-bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester
+bin_PROGRAMS		= \
+        acq_ldm_freeshm \
+        acq_ldm_getshm \
+        dvbs_multicast \
+        noaaportIngester \
+        readnoaaport
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
@@ -79,8 +84,9 @@ dvbs_multicast_SOURCES	= dvbs_multicast.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
 readnoaaport_SOURCES	= readnoaaport.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
+COMMON_RETRANS_SOURCES	= acq_shm_lib.h shmem_lib.c shmem_lib.h
+
 noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
-        acq_shm_lib.h \
 	fifo.c fifo.h \
 	fileReader.c fileReader.h \
 	getFacilityName.c getFacilityName.h \
@@ -88,7 +94,10 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h \
         retrans.c retrans.h \
-        shmem_lib.c
+        $(COMMON_RETRANS_SOURCES)
+
+acq_ldm_freeshm_SOURCES =  acq_ldm_freeshm.c $(COMMON_RETRANS_SOURCES)
+acq_ldm_getshm_SOURCES  =  acq_ldm_getshm.c $(COMMON_RETRANS_SOURCES)
 
 LDADD 			= $(top_builddir)/lib/libldm.la
 

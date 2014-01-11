@@ -132,6 +132,11 @@
 #ifndef PROTO_CGEMLIB
 #define PROTO_CGEMLIB
 
+#include <dirent.h>
+
+#include "gemprm.h"
+#include "proto.h"
+
 /*
  *  cbf prototypes
  */
@@ -229,7 +234,7 @@ void 	cfl_dopn ( 	char 	*filnam,
 
 void 	cfl_ffil (	char	*dir, 
 			char	*ref_file, 
-			char	*fname, 
+			char	*fname,
 			int	*iret);
 
 int 	cfl_gfil ( 	int     sortby,
@@ -239,7 +244,7 @@ int 	cfl_gfil ( 	int     sortby,
 			char    flist[][FILE_NAMESZ] );
 
 void 	cfl_inqr ( 	char 	*filnam, 
-			char 	*defdir, 
+			char 	*defdir,
 			long 	*flen, 
 			char 	*newfil,
                 	int  	*iret );
@@ -1243,7 +1248,7 @@ void  	css_date ( 	int	*itype,
 			char    *zone,
 			int	*iret );
 
-void 	css_envr ( 	char 	*filnam, 
+void 	css_envr ( 	char 	*filnam,
 			char 	*file, 
 			int 	*iret );
 
@@ -1391,11 +1396,11 @@ void 	cst_ncat ( 	char	*str1,
 			int	*iret );
 
 void 	cst_ncpy ( 	char	*str1,
-			char	*str2,
+			const char	*str2,
 			int	len,
 			int	*iret );
 
-void    cst_nocc ( 	char	*str,
+void    cst_nocc ( 	const char	*str,
 			char	srchc,
 			int	fndocc,
 			int	sstate,

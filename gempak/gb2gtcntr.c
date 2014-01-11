@@ -2,6 +2,11 @@
 
 #include "gb2def.h"
 
+/*
+ * The following is declared here because it isn't declared elsewhere.
+ */
+extern void ctb_g2rdcntr(char *tbname, G2wmocntrs *cntrtbl, int *iret);
+
 void  gb2_gtcntr( int cntrid, char *tblnam, char *wmocntr, int *iret)
 /************************************************************************
  * gb2_gtcntr								*

@@ -27,6 +27,30 @@
 #include "retrans.h"
 #include "acq_shm_lib.h"
 
+/*
+ * The following functions are declared here because they're not declared in
+ * header-files:
+ */
+extern void     ds_free();
+extern void     pngout_end();
+extern void     ds_init(int nfrags);
+extern size_t   prodalloc(long int nfrags, long int dbsize, char **heap);
+extern void     pngwrite(char *memheap);
+extern void     png_set_memheap(char *memheap, MD5_CTX *md5ctxp);
+extern void     png_header(char *memheap, int length);
+extern void     pngout_init(int width, int height);
+extern int      png_get_prodlen();
+extern int      prod_isascii(char *pname, char *prod, size_t psize);
+extern void     process_prod(
+    prodstore                   nprod,
+    char*                       PROD_NAME,
+    char*                       memheap,
+    size_t                      heapsize,
+    MD5_CTX*                    md5try,
+    LdmProductQueue* const      lpq,
+    psh_struct*                 psh,
+    sbn_struct*                 sbn);
+
 extern CPIO_TABLE cpio_tbl;
 
 struct productMaker {
@@ -109,6 +133,7 @@ int pmNew(
  * @retval (void*)0    The FIFO was closed.
  * @retval (void*)1    Usage failure. \c log_start() called.
  * @retval (void*)2    O/S failure. \c log_start() called.
+ * @retval (void*)-1   Retransmission failure. \c log_start() called.
  */
 void* pmStart(
     void* const         arg)          /**< [in/out] Pointer to the
@@ -163,8 +188,7 @@ void* pmStart(
  	              udebug("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",global_cpio_addr,global_cpio_fd);
                 }else{
                     uerror("Invalid multicast address provided");
-                    status = -1;
-	  	    return status;	
+	  	    return (void*)-1;
                  }
 
 		 retrans_tbl_size = sizeof(PROD_RETRANS_TABLE);
@@ -186,16 +210,14 @@ void* pmStart(
 		p_prod_retrans_table = (PROD_RETRANS_TABLE *) malloc (retrans_tbl_size);
 		if(p_prod_retrans_table == NULL){
 		   uerror("Unable to allocate memory for retrans table..Quitting.\n");
-                   status = -1;
-	  	   return status;	
+	  	   return (void*)-1;
 		}
 
 		if( init_retrans(&p_prod_retrans_table) < 0 ){
 		  uerror("Error in initializing retrans table \n");
 		  if(p_prod_retrans_table)
 			free(p_prod_retrans_table);
-                  status = -1;
-	  	  return status;	
+	  	  return (void*)-1;
 		}	
 
        GET_SHMPTR(global_acq_tbl,ACQ_TABLE,ACQ_TABLE_SHMKEY,DEBUGGETSHM);
@@ -222,8 +244,7 @@ void* pmStart(
 			free(acq_tbl);
 		if(p_prod_retrans_table)
 		  free(p_prod_retrans_table);
-                status = -1;
-	  	return status;	
+	  	return (void*)-1;
 	 }
 
 	 acq_tbl->pid = getpid();

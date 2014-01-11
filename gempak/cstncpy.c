@@ -3,7 +3,7 @@
 #include "geminc.h"
 #include "gemprm.h"
 
-void cst_ncpy ( char *str1, char *str2, int len, int *iret )
+void cst_ncpy ( char *str1, const char *str2, int len, int *iret )
 /************************************************************************
  * cst_ncpy								*
  *									*

@@ -43,7 +43,7 @@ int cmd_line(int argc, char *argv[], INPUT *p_input);
 
 char	PNAME[40];
 
-main(argc, argv)	
+int main(argc, argv)	
 int argc;
 char **argv;
 {
@@ -87,7 +87,6 @@ char **argv;
 	exit(0);
 } /* end main */
 
-
 /******************************************************************************
 	Name
 		cmd_line

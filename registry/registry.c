@@ -18,6 +18,7 @@
 #include <search.h>
 
 #include "backend.h"
+#include "globals.h"
 #include <ldmprint.h>
 #include <log.h>
 #include "misc.h"

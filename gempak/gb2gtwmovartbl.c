@@ -4,7 +4,12 @@
 #include "gb2def.h"
 #include "proto_gemlib.h"
 
-void  gb2_gtwmovartbl( char *wmovartbl, int iver, G2vars_t **g2vartbl, 
+/*
+ * The following is declared here because it isn't declared elsewhere.
+ */
+extern void     ctb_g2rdvar(char *tbname, G2vars_t *vartbl, int *iret);
+
+void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
                        int *iret)
 /************************************************************************
  * gb2_gtwmovartbl							*

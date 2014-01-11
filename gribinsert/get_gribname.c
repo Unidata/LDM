@@ -19,8 +19,9 @@
 #include "gempak/gb2def.h"
 
 /* wgrib prototypes used */
-char *k5toa(unsigned char *pds);
-char *levels(int, int, int);
+extern char*    k5toa(unsigned char *pds);
+extern char*    levels(int, int, int);
+extern int      verf_time(unsigned char *pds, int *year, int *month, int *day, int *hour);
 
 void	grib1name ( char *filename, int seqno,  char *data, char *ident )
 {

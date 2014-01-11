@@ -2,6 +2,11 @@
 #include "stdlib.h"
 #include "string.h"
 
+/*
+ * The following is declared here because it isn't declared elsewhere.
+ */
+extern void     cfl_trln(FILE *fptr, int bufsiz, char *buffer, int *iret);
+
 void cfl_tbnr ( FILE *fp, int *nr, int *iret )
 /************************************************************************
  * cfl_tbnr								*
