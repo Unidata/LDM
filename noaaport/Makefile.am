@@ -50,11 +50,11 @@ CPPFLAGS		= \
 	@CPPFLAGS@
 
 bin_PROGRAMS		= \
-        acq_ldm_freeshm \
-        acq_ldm_getshm \
-        dvbs_multicast \
-        noaaportIngester \
-        readnoaaport
+	acq_ldm_freeshm \
+	acq_ldm_getshm \
+	dvbs_multicast \
+	noaaportIngester \
+	readnoaaport
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
@@ -93,8 +93,8 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	multicastReader.c multicastReader.h \
 	productMaker.c productMaker.h \
 	reader.c reader.h \
-        retrans.c retrans.h \
-        $(COMMON_RETRANS_SOURCES)
+	retrans.c retrans.h \
+	$(COMMON_RETRANS_SOURCES)
 
 acq_ldm_freeshm_SOURCES =  acq_ldm_freeshm.c $(COMMON_RETRANS_SOURCES)
 acq_ldm_getshm_SOURCES  =  acq_ldm_getshm.c $(COMMON_RETRANS_SOURCES)
