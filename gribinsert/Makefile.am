@@ -15,7 +15,8 @@ CPPFLAGS		= \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
 	-I$(top_srcdir)/ulog \
-	-I$(top_srcdir)/protocol \
+	-I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+	-I$(top_builddir)/registry -I$(top_srcdir)/registry \
 	-I$(top_srcdir)/pq \
 	-I$(top_srcdir)/misc \
 	-I$(top_srcdir) \
@@ -24,7 +25,7 @@ CPPFLAGS		= \
 gribinsert_LDADD 	= $(top_builddir)/lib/libldm.la
 
 check:			$(bin_PROGRAMS)
-	test -f /tmp/test.pq || pqcreate -s 2m /tmp/test.pq
+	test -f /tmp/test.pq || ../pqcreate/pqcreate -s 2m /tmp/test.pq
 	./$(bin_PROGRAMS) -f CONDUIT -q /tmp/test.pq -v -l - \
 	    testdata/fh.0000_tl.press_gr.0p5deg
 	cd .. && gribinsert/$(bin_PROGRAMS) -f CONDUIT -q /tmp/test.pq -v -l - \

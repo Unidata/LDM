@@ -14,12 +14,11 @@ pqsurf_SOURCES		= pqsurf.c surf_split.c
 CPPFLAGS		= \
     -I$(top_srcdir)/pqinglib \
     -I$(top_srcdir)/ulog \
-    -I$(top_builddir)/protocol \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)/pqing \
-    -I$(top_srcdir)/registry \
     -I$(top_srcdir)
 pqsurf_LDADD		= $(top_builddir)/lib/libldm.la $(GDBMLIB)
 dist_man1_MANS		= pqsurf.1
@@ -27,12 +26,13 @@ TAGS_FILES		= \
     ../pqing/*.c ../pqing/*.h \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
+    ../registry/*.c ../registry/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
 if MAINTAINER
-pqsurf.1:	pqsurf.1.in
+pqsurf.1:	$(srcdir)/pqsurf.1.in
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 endif

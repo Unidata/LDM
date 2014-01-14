@@ -11,7 +11,8 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 bin_PROGRAMS	= pqcreate
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
@@ -19,6 +20,7 @@ pqcreate_LDADD	= $(top_builddir)/lib/libldm.la
 TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
+    ../registry/*.c ../registry/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
@@ -26,7 +28,7 @@ dist_man1_MANS	= pqcreate.1
 CLEANFILES	= *.i
 
 if MAINTAINER
-pqcreate.1:	pqcreate.1.in
+pqcreate.1:	$(srcdir)/pqcreate.1.in
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 endif

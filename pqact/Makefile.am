@@ -28,11 +28,10 @@ pqact_SOURCES		= \
 date_sub_SOURCES	= palt.c
 CPPFLAGS		= \
     -I$(top_srcdir)/ulog \
-    -I$(top_builddir)/protocol \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir)/registry \
     -I$(top_srcdir)
 date_sub_CPPFLAGS	= $(CPPFLAGS) -UNDEBUG -DTEST_DATE_SUB
 pqact_LDADD		= \
@@ -43,16 +42,16 @@ dist_man1_MANS		= pqact.1
 TAGS_FILES		= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
+    ../registry/*.c ../registry/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h \
-    ../registry/*.c ../registry/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 CLEANFILES		= *.i
 
 if MAINTAINER
-pqact.1:	pqact.1.in
+pqact.1:	$(srcdir)/pqact.1.in
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 endif

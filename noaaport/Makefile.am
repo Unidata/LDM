@@ -44,7 +44,8 @@ CPPFLAGS		= \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
 	-I$(top_srcdir)/ulog \
-	-I$(top_srcdir)/protocol \
+	-I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+	-I$(top_builddir)/registry -I$(top_srcdir)/registry \
 	-I$(top_srcdir)/pq \
 	-I$(top_srcdir)/misc \
 	@CPPFLAGS@
@@ -84,7 +85,7 @@ dvbs_multicast_SOURCES	= dvbs_multicast.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
 readnoaaport_SOURCES	= readnoaaport.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
-COMMON_RETRANS_SOURCES	= acq_shm_lib.h shmem_lib.c shmem_lib.h
+COMMON_RETRANS_SOURCES	= acq_shm_lib.h shmem_lib.c
 
 noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	fifo.c fifo.h \
@@ -105,13 +106,15 @@ TAGS_FILES		= \
 	*.c *.h \
 	../grib2/*.c ../grib2/*.h \
 	../gempak/*.c ../gempak/*.h \
-	$(top_srcdir)/pq/*.c $(top_srcdir)/pq/*.h \
-	$(top_srcdir)/protocol/*.c $(top_srcdir)/protocol/*.h \
-	$(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
-	$(top_srcdir)/misc/*.c $(top_srcdir)/misc/*.h \
-	$(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
-	$(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h
+	../pq/*.c ../pq/*.h \
+	../protocol/*.c ../protocol/*.h \
+	../registry/*.c ../registry/*.h \
+	../ulog/*.c ../ulog/*.h \
+	../misc/*.c ../misc/*.h \
+	../registry/*.c ../registry/*.h \
+	../rpc/*.c ../rpc/*.h
 
+$(srcdir)/html \
 $(srcdir)/html/index.html:	\
 	    $(srcdir)/mainpage.h \
 	    $(srcdir)/Doxyfile
@@ -133,19 +136,19 @@ getFacilityName.h:	getFacilityName.c getFacilityName.hin extractDecls
 	$(COMPILE) -E $< >$@
 
 installcheck-local:
-	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	$(DESTDIR)$(bindir)/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	$(DESTDIR)$(bindir)/readnoaaport -l- -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
 
 check-local:		check-readnoaaport check-noaaportIngester
 check-readnoaaport:	readnoaaport
-	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	../pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	./readnoaaport -nl- -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
 check-noaaportIngester:	noaaportIngester
-	pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-ck
 	rm /tmp/noaaportIngester-test.pq
 
@@ -156,7 +159,7 @@ root-ni-ck:
 valgrind:		valgrind-readnoaaport valgrind-noaaportIngester
 
 valgrind-readnoaaport:		readnoaaport
-	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	../pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
 	    readnoaaport -l- -q /tmp/readnoaaport-test.pq nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
@@ -174,7 +177,7 @@ endif
 endif
 	
 valgrind-noaaportIngester:	noaaportIngester
-	pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-vg
 	rm /tmp/noaaportIngester-test.pq
 
@@ -184,7 +187,7 @@ root-ni-vg:
 		<$(srcdir)/nwstgdump.data
 
 debug-readnoaaport:	readnoaaport
-	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	../pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	echo 'handle SIGCONT pass noprint nostop' >/tmp/readnoaaport.gdb
 	echo 'b 617' >>/tmp/readnoaaport.gdb
 	echo 'run -l- -q /tmp/readnoaaport-test.pq nwstgdump.data' \
@@ -193,7 +196,7 @@ debug-readnoaaport:	readnoaaport
 	rm /tmp/readnoaaport-test.pq /tmp/readnoaaport.gdb
 
 debug-noaaportIngester:	noaaportIngester
-	pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	echo 'handle SIGCONT pass noprint nostop' >/tmp/noaaportIngester.gdb
 	echo 'handle SIGTERM pass nostop' >>/tmp/noaaportIngester.gdb
 	echo 'run -q /tmp/noaaportIngester-test.pq -n -m 224.0.1.1' \

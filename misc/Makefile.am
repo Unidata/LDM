@@ -45,15 +45,15 @@ lib_la_SOURCES	= \
 	statsMath.c \
 	StringBuf.c StringBuf.h
 lib_la_CPPFLAGS	= \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/registry \
     -I$(top_srcdir)
 TAGS_FILES	= \
-    $(top_srcdir)/protocol/*.c $(top_srcdir)/protocol/*.h \
-    $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
-    $(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
-    $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h \
+    ../protocol/*.c ../protocol/*.h \
+    ../registry/*.c ../registry/*.h \
+    ../ulog/*.c ../ulog/*.h \
+    ../rpc/*.c ../rpc/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 
@@ -67,9 +67,9 @@ semRWLock.h:	semRWLock.hin semRWLock.c
 if HAVE_CUNIT
 check_PROGRAMS		= test_child_map testSemRWLock
 test_child_map_CPPFLAGS	= \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/registry \
     -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
 
@@ -78,9 +78,9 @@ test_child_map_LDADD	= \
     @LIBS_CUNIT@
 
 testSemRWLock_CPPFLAGS	= \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/registry \
     -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
 

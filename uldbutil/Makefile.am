@@ -9,12 +9,14 @@
 bin_PROGRAMS	= uldbutil
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
 uldbutil_LDADD	= $(top_builddir)/lib/libldm.la
 dist_man1_MANS	= uldbutil.1
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \
+    ../registry/*.c ../registry/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h

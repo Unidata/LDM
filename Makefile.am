@@ -76,7 +76,8 @@ endif
 SUBDIRS		= \
     $(LIB_SUBDIRS) \
     $(PROG_SUBDIRS) \
-    html test
+    html \
+    test
 
 nobase_include_HEADERS		= \
     rpc/rpc.h \
@@ -110,6 +111,8 @@ dist_bin_SCRIPTS	= \
     ensureRpcEntry \
     ensureServicesEntry \
     rpmUserActions
+
+dist_doc_data		= CHANGE_LOG COPYRIGHT README
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
@@ -203,16 +206,6 @@ ensure-rpc-entry:
 
 ensure-services-entry:
 	$(srcdir)/ensureServicesEntry
-
-install-data-local:	$(DESTDIR)$(docdir)/CHANGE_LOG \
-                	$(DESTDIR)$(docdir)/COPYRIGHT \
-                	$(DESTDIR)$(docdir)/README
-$(DESTDIR)$(docdir)/CHANGE_LOG:	CHANGE_LOG
-	cp $? $@
-$(DESTDIR)$(docdir)/COPYRIGHT:	COPYRIGHT
-	cp $? $@
-$(DESTDIR)$(docdir)/README:	README
-	cp $? $@
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
