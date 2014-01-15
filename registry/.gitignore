@@ -7,3 +7,6 @@ testRegistry
 regpar.tab
 vgcore.*
 globals.h
+backend.h
+misc.h
+node.h

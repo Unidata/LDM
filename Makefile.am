@@ -97,7 +97,6 @@ EXTRA_DIST = \
     extractDecls \
     ldm.spec \
     ldm.spec.in \
-    macros.make.in \
     README
 
 dist_bin_SCRIPTS	= \
@@ -326,14 +325,6 @@ web-update:
 # public
 available:	ftp web-update
 
-TOP_BUILD_DIR	= /tmp/rpmbuild
-rpm:		dist ldm.spec
-	rm -rf $(TOP_BUILD_DIR)
-	mkdir -p $(TOP_BUILD_DIR)/SOURCES
-	cp $(distArchive) $(TOP_BUILD_DIR)/SOURCES 
-	mkdir $(TOP_BUILD_DIR)/SPECS
-	cp ldm.spec $(TOP_BUILD_DIR)/SPECS
-	rpmbuild --define '_topdir $(TOP_BUILD_DIR)' -v -bs ldm.spec
 endif
 
 .PHONY:		\

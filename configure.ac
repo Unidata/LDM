@@ -548,7 +548,6 @@ AC_CONFIG_FILES([
     ldmsend/Makefile
     ldm.spec
     lib/Makefile
-    macros.make
     Makefile
     misc/Makefile
     noaaport/Makefile
@@ -576,7 +575,6 @@ AC_CONFIG_FILES([
     rtstats/Makefile
     scour/Makefile
     scour/scour
-    scour/scour.conf
     scripts/ldmadmin.pl
     scripts/ldmfail
     scripts/Makefile
