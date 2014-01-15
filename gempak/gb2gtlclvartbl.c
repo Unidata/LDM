@@ -4,6 +4,11 @@
 #include "gb2def.h"
 #include "proto_gemlib.h"
 
+/*
+ * The following is declared here because it isn't declared elsewhere.
+ */
+extern void ctb_g2rdvar(char *tbname, G2vars_t *vartbl, int *iret);
+
 void  gb2_gtlclvartbl( char *lclvartbl, char *cntr, int lclver,
                        G2vars_t **g2vartbl, int *iret)
 /************************************************************************

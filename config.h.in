@@ -265,7 +265,7 @@
 /* Level of XOPEN compliance */
 #undef _XOPEN_SOURCE
 
-/* Needed for "struct ip_mreq" */
+/* Needed for "struct ip_mreq" on SunOS 5 */
 #undef __EXTENSIONS__
 
 /* rpcgen(1) typedef */

@@ -6,7 +6,7 @@ dnl
 dnl This is just like AC_HAVE_FUNCS except that the sense is reversed.
 dnl
 define(diversion_number, divnum)dnl
-divert(-1)
+divert([-1])
 
 AC_DEFUN([UD_REGPAR], [
     AC_DEFINE([REG_$1], ["$2"], [$3])

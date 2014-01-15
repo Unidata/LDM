@@ -26,7 +26,6 @@
 #include "ldm.h"
 #include "pq.h"
 #include "fbits.h"
-#include "globals.h"
 #include "remote.h"
 #include "lcm.h"
 #include "ulog.h"
@@ -44,6 +43,7 @@
  * of a "signature" data-product in order to determine the initial
  * start-time for a search of the data-product in the time-queue.
  */
+extern unsigned int     interval;
 #define SEARCH_BACKOFF  interval
 
 /*

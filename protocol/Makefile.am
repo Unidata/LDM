@@ -6,10 +6,17 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-builtHeaders	= acl.h data_prod.h forn.h globals.h ldmfork.h LdmProxy.h \
-		timer.h uldb.h
-BUILT_SOURCES	= ../registry/registry.h ldm6_svc.c $(builtHeaders)
-CLEANFILES		= $(builtHeaders) *.i
+builtHeaders	        = \
+    acl.h \
+    data_prod.h \
+    forn.h \
+    ldmfork.h \
+    LdmProxy.h \
+    timer.h \
+    uldb.h
+BUILT_SOURCES	        = ldm6_svc.c $(builtHeaders)
+CLEANFILES		= *.i
+DISTCLEANFILES		= $(builtHeaders)
 EXTRA_DIST		= \
     $(builtHeaders:.h=.hin) \
     child_process_set.h \
@@ -33,7 +40,6 @@ include_HEADERS		= \
     down6.h \
     DownHelp.h \
     feedTime.h \
-    globals.h \
     h_clnt.h \
     ldm.h \
     ldm5_clnt.h \
@@ -62,7 +68,6 @@ lib_la_SOURCES		= \
     DownHelp.c \
     forn.c \
     forn5_svc.c \
-    globals.c \
     h_clnt.c \
     LdmProxy.c \
     ldm4_svc.c \
@@ -94,10 +99,10 @@ lib_la_SOURCES		= \
 lib_la_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/pq \
-    -I$(top_srcdir)/registry
+    -I$(top_srcdir)/pq
 TAGS_FILES		= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
@@ -107,16 +112,12 @@ TAGS_FILES		= \
     ../registry/*.c
 dist_man3_MANS		= uldb.3
 
-../registry/registry.h:
-	cd ../registry && $(MAKE) $@
-
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 acl.h:		acl.hin acl.c
 data_prod.h:	data_prod.hin data_prod.c
 forn.h:		forn.hin forn.c
-globals.h:	globals.hin globals.c
 ldmfork.h:	ldmfork.hin ldmfork.c
 LdmProxy.h:	LdmProxy.hin LdmProxy.c
 timer.h:	timer.hin timer.c
@@ -186,18 +187,18 @@ if HAVE_CUNIT
 check_PROGRAMS		= test_data_prod testuldb
 test_data_prod_CPPFLAGS	= \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/registry \
     @CPPFLAGS_CUNIT@
 
 test_data_prod_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
     
 testuldb_CPPFLAGS	= \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/registry \
     @CPPFLAGS_CUNIT@
 
 testuldb_LDADD		= \

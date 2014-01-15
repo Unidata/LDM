@@ -1,5 +1,5 @@
 /*
- *   Copyright © 2011, University Corporation for Atmospheric Research.
+ *   Copyright © 2014, University Corporation for Atmospheric Research.
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
 #include <config.h>
@@ -23,6 +23,39 @@
 #include "ldmProductQueue.h"
 #include "nport.h"
 #include "productMaker.h"     /* Eat own dog food */
+
+#ifdef RETRANS_SUPPORT
+#include "retrans.h"
+#include "acq_shm_lib.h"
+#endif
+
+/*
+ * The following functions are declared here because they're not declared in
+ * header-files:
+ */
+extern void     ds_free();
+extern void     pngout_end();
+extern void     ds_init(int nfrags);
+extern size_t   prodalloc(long int nfrags, long int dbsize, char **heap);
+extern void     pngwrite(char *memheap);
+extern void     png_set_memheap(char *memheap, MD5_CTX *md5ctxp);
+extern void     png_header(char *memheap, int length);
+extern void     pngout_init(int width, int height);
+extern int      png_get_prodlen();
+extern int      prod_isascii(char *pname, char *prod, size_t psize);
+extern void     process_prod(
+    prodstore                   nprod,
+    char*                       PROD_NAME,
+    char*                       memheap,
+    size_t                      heapsize,
+    MD5_CTX*                    md5try,
+    LdmProductQueue* const      lpq,
+    psh_struct*                 psh,
+    sbn_struct*                 sbn);
+
+#ifdef RETRANS_SUPPORT
+extern CPIO_TABLE cpio_tbl;
+#endif
 
 struct productMaker {
     Fifo*                   fifo;           /**< Pointer to FIFO from which to
@@ -104,6 +137,7 @@ int pmNew(
  * @retval (void*)0    The FIFO was closed.
  * @retval (void*)1    Usage failure. \c log_start() called.
  * @retval (void*)2    O/S failure. \c log_start() called.
+ * @retval (void*)-1   Retransmission failure. \c log_start() called.
  */
 void* pmStart(
     void* const         arg)          /**< [in/out] Pointer to the
@@ -126,8 +160,109 @@ void* pmStart(
     int                 logResync = 1;
     prodstore           prod;
 
+#ifdef RETRANS_SUPPORT
+    long cpio_addr_tmp;
+    int cpio_fd_tmp;
+ /*   char transfer_type[10]={0};*/
+    int retrans_val,idx;
+    long retrans_tbl_size;
+    time_t orig_arrive_time;
+    int new_key; /* shm key */
+    ACQ_TABLE *acq_tbl = NULL;
+    long num_prod_discards=0;
+    int save_prod = 1;
+    int discard_prod = 0;
+    long proc_orig_prod_seqno_last_save=0;
+#endif
+
+
     prod.head = NULL;
     prod.tail = NULL;
+
+	/*** For Retranmission Purpose  ***/
+#ifdef RETRANS_SUPPORT
+	if (ulogIsDebug())
+         udebug(" retrans_xmit_enable = %d   transfer_type = %s sbn_channel_name=%s \n",retrans_xmit_enable,transfer_type,sbn_channel_name);
+
+       if((retrans_xmit_enable == OPTION_ENABLE) && (!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs"))){
+                idx = get_cpio_addr(mcastAddr);
+                if( idx >= 0 && idx < NUM_CPIO_ENTRIES){
+                    global_cpio_fd = cpio_tbl[idx].cpio_fd;
+                    global_cpio_addr = cpio_tbl[idx].cpio_addr;
+	            if (ulogIsDebug())
+ 	              udebug("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",global_cpio_addr,global_cpio_fd);
+                }else{
+                    uerror("Invalid multicast address provided");
+	  	    return (void*)-1;
+                 }
+
+		 retrans_tbl_size = sizeof(PROD_RETRANS_TABLE);
+
+		/** Modified to setup retrans table on per channel basis - Sathya - 14-Mar'2013 **/
+
+		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * GET_RETRANS_CHANNEL_ENTRIES(sbn_type));
+
+                /****   
+		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NMC);
+		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NMC1);
+		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NMC2);
+		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NMC3);
+		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_GOES_EAST);
+		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NOAAPORT_OPT);
+		****/
+
+
+		p_prod_retrans_table = (PROD_RETRANS_TABLE *) malloc (retrans_tbl_size);
+		if(p_prod_retrans_table == NULL){
+		   uerror("Unable to allocate memory for retrans table..Quitting.\n");
+	  	   return (void*)-1;
+		}
+
+		if( init_retrans(&p_prod_retrans_table) < 0 ){
+		  uerror("Error in initializing retrans table \n");
+		  if(p_prod_retrans_table)
+			free(p_prod_retrans_table);
+	  	  return (void*)-1;
+		}	
+
+       GET_SHMPTR(global_acq_tbl,ACQ_TABLE,ACQ_TABLE_SHMKEY,DEBUGGETSHM);
+
+	if (ulogIsDebug())
+	  udebug("Global acquisition table = 0x%x cpio_fd = %d \n",global_acq_tbl,global_cpio_fd);
+	acq_tbl = &global_acq_tbl[global_cpio_fd];
+
+	if (ulogIsDebug())
+	    udebug("Obtained acquisition table = 0x%x \n",acq_tbl);
+
+	/* ACQ_TABLE already initialized in acq_ldm_getshm */
+	/*
+	if(init_acq_table(acq_tbl) < 0){
+		uerror("Unable to initialize acq table\n");
+		exit(-1);
+	}
+	*/
+	
+	 buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
+	 if(init_buff_hdr(buff_hdr) < 0){
+		uerror("Unalbe to initialize buffer header \n");
+		if(acq_tbl)
+			free(acq_tbl);
+		if(p_prod_retrans_table)
+		  free(p_prod_retrans_table);
+	  	return (void*)-1;
+	 }
+
+	 acq_tbl->pid = getpid();
+	 acq_tbl->link_id = global_cpio_fd;
+	 acq_tbl->link_addr = global_cpio_addr;
+	 if(ulogIsVerbose()){
+ 	  uinfo("Initialized acq_tbl  = 0x%x & buff_hdr = 0x%x pid = %d \n",acq_tbl,buff_hdr,acq_tbl->pid);
+	  uinfo("Global link id = %d  Global link addr = %ld \n",acq_tbl->link_id,acq_tbl->link_addr);
+	  uinfo("acq_tbl->read_distrib_enable = 0x%x \n",acq_tbl->read_distrib_enable);
+	 }
+    }
+	   /*** For Retranmission Purpose  ***/
+#endif
 
     for (;;) {
         unsigned char       b1;
@@ -209,6 +344,14 @@ void* pmStart(
             continue;
         }
 
+#ifdef RETRANS_SUPPORT
+		/* Update acq table stats - Begin */
+		if(retrans_xmit_enable == OPTION_ENABLE){
+			buff_hdr->read_channel_type = sbn->datastream;
+		}
+		/* Update acq table stats - End */
+#endif
+
         if (ulogIsDebug())
             udebug("***********************************************");
         if (last_sbn_runno != sbn->runno) {
@@ -259,6 +402,11 @@ void* pmStart(
         case 7:       /* test */
         case 6:       /* was reserved...now nwstg2 */
         case 5:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        case 13:
             NWSTG = 1;
             GOES = 0;
             break;
@@ -328,6 +476,12 @@ void* pmStart(
             continue;
         }
 
+#ifdef RETRANS_SUPPORT
+		/** Update acquisition table statistics  **/
+		if(retrans_xmit_enable == OPTION_ENABLE){
+				acq_tbl->read_tot_buff_read++;
+		}
+#endif
         if (pdh->pshlen != 0) {
             if (fifoRead(fifo, buf + sbn->len + pdh->len,
                         pdh->pshlen) != 0) {
@@ -388,10 +542,108 @@ void* pmStart(
                 udebug("run ID %ld", psh->runid);
             if (ulogIsDebug())
                 udebug("original run id %ld", psh->origrunid);
+
+#ifdef RETRANS_SUPPORT
+				/* Update acq table stats - Begin */
+			if(retrans_xmit_enable == OPTION_ENABLE){
+			
+				buff_hdr->buff_data_length = pdh->dbsize;
+				if(pdh->dbno == 0) {
+						/* Assume first block */
+					acq_tbl->proc_base_prod_type_last = psh->ptype;
+					acq_tbl->proc_base_prod_cat_last = psh->pcat;
+					acq_tbl->proc_base_prod_code_last = psh->pcode;
+					acq_tbl->proc_prod_NCF_rcv_time = (time_t)psh->rectime;
+					acq_tbl->proc_prod_NCF_xmit_time = (time_t)psh->transtime;
+					if(psh->hflag & XFR_PROD_RETRANSMIT){
+					   acq_tbl->proc_orig_prod_seqno_last = psh->seqno;
+					   acq_tbl->proc_orig_prod_run_id = psh->origrunid;
+					   if(ulogIsDebug())
+					     udebug("ORIG SEQ# = %ld	CURR SEQ#: %ld \n",acq_tbl->proc_orig_prod_seqno_last,pdh->seqno);
+						}else{
+						   acq_tbl->proc_orig_prod_seqno_last = 0;
+						   acq_tbl->proc_orig_prod_run_id = 0;
+						}
+					acq_tbl->proc_prod_run_id = psh->runid;
+					buff_hdr->buff_datahdr_length = psh->psdl;
+					time(&acq_tbl->proc_prod_start_time);
+					acq_tbl->proc_tot_prods_handled++;
+				}else{
+						buff_hdr->buff_datahdr_length = 0;
+				 }
+				buff_hdr->proc_prod_seqno= pdh->seqno;
+				buff_hdr->proc_blkno = pdh->dbno;
+				buff_hdr->proc_sub_code = 0;
+				buff_hdr->proc_prod_flag = pdh->transtype;
+					
+				acq_tbl->proc_base_channel_type_last = buff_hdr->read_channel_type;
+				buff_hdr->proc_prod_type = acq_tbl->proc_base_prod_type_last;
+				buff_hdr->proc_prod_code = acq_tbl->proc_base_prod_code_last;
+				buff_hdr->proc_prod_cat = acq_tbl->proc_base_prod_cat_last;
+					
+				acq_tbl->proc_prod_bytes_read = buff_hdr->buff_data_length;
+						
+				/* Check prod_seqno for lost products */
+				if((buff_hdr->proc_prod_seqno - acq_tbl->proc_base_prod_seqno_last) != 1){
+					do_prod_lost(buff_hdr,acq_tbl);
+				}
+				retrans_val = prod_retrans_ck(acq_tbl, buff_hdr, &orig_arrive_time);
+				log_buff[0] = '\0'; 		
+				if((retrans_val == PROD_DUPLICATE_DISCARD) ||
+					((retrans_val == PROD_DUPLICATE_MATCH) &&
+					(acq_tbl->proc_retransmit_ctl_flag & ENABLE_RETRANS_DUP_MATCH_DISCARD)) ||
+					((retrans_val == PROD_DUPLICATE_NOMATCH) &&
+					(acq_tbl->proc_retransmit_ctl_flag & ENABLE_RETRANS_DUP_NOMATCH_DISCARD))){
+						/* Log product details and discard the product */
+						strcpy(log_buff,"DISCARD");
+						if(acq_tbl->proc_orig_prod_seqno_last != 0){
+							strcat(log_buff, "/RETRANS");
+						}
+								
+						log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last,
+									buff_hdr->proc_prod_seqno,buff_hdr->proc_blkno,
+									buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,orig_arrive_time);
+						save_prod = 0;
+						acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+						/* Current prod discarded and continue with next */
+						/*continue; */
+					}else{
+						if(retrans_val == PROD_DUPLICATE_NOMATCH){
+							strcpy(log_buff,"SAVE RETRANS");
+							log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last,
+							buff_hdr->proc_prod_seqno,buff_hdr->proc_blkno,
+							buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,acq_tbl->proc_prod_start_time);
+					  }
+				   }
+			  }
+#endif
+
             if (prod.head != NULL) {
                 uerror("OOPS, start of new product [%ld ] with unfinished "
                     "product %ld", pdh->seqno, prod.seqno);
 
+#ifdef RETRANS_SUPPORT
+				/* Request retrans when prod is partially received but before completion */
+				/* if there is frame error and continue with different prod then, we need */
+				/* to abort the old prod and clear retrans table. */
+				if((retrans_xmit_enable == OPTION_ENABLE) /*&& (pdh->dbno != 0)*/){
+				 acq_tbl->proc_acqtab_prodseq_errs++;
+				 if(proc_orig_prod_seqno_last_save != acq_tbl->proc_orig_prod_seqno_last){
+				 /* Clear retrans table for the orig prod if the previous prod is retrans */
+				 /* of original prod  */
+				   prod_retrans_abort_entry(acq_tbl, proc_orig_prod_seqno_last_save, RETRANS_RQST_CAUSE_RCV_ERR);
+				 }
+				 prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+				 /* Update Statistics */
+				 acq_tbl->proc_tot_prods_lost_errs++;
+				  /* For now, generate retrans request only for non-imagery products */
+				 if(!((buff_hdr->proc_prod_cat == PROD_CAT_IMAGE) && 
+					   (PROD_TYPE_NESDIS_HDR_TRUE(buff_hdr->proc_prod_type)))){
+				       generate_retrans_rqst(acq_tbl,prod.seqno , prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+				 }
+				   acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+				}
+#endif
                 ds_free();
 
                 prod.head = NULL;
@@ -517,6 +769,26 @@ void* pmStart(
 
             if (ulogIsDebug())
                 udebug("continuation record");
+
+#ifdef RETRANS_SUPPORT
+			if(retrans_xmit_enable == OPTION_ENABLE){
+					 buff_hdr->buff_data_length = pdh->dbsize;
+					 buff_hdr->buff_datahdr_length = 0;
+					 buff_hdr->proc_prod_seqno= pdh->seqno;
+					 buff_hdr->proc_blkno = pdh->dbno;
+					 buff_hdr->proc_sub_code = 0;
+					 buff_hdr->proc_prod_flag = pdh->transtype;
+					 
+					 acq_tbl->proc_base_channel_type_last = buff_hdr->read_channel_type;
+					 buff_hdr->proc_prod_type = acq_tbl->proc_base_prod_type_last;
+					 buff_hdr->proc_prod_code = acq_tbl->proc_base_prod_code_last;
+					 buff_hdr->proc_prod_cat = acq_tbl->proc_base_prod_cat_last;
+				 
+					 acq_tbl->proc_prod_bytes_read += buff_hdr->buff_data_length;
+					 
+			  }
+#endif
+
             if ((pdh->transtype & 4) > 0) {
                 psh->frags = 0;
             }
@@ -554,7 +826,16 @@ void* pmStart(
                     uerror("Missing GOES fragment in sequence, "
                         "last %d/%d this %d/%d\0", prod.tail->fragnum,
                         prod.seqno, pfrag->fragnum, pfrag->seqno);
-                    ds_free();
+
+#ifdef RETRANS_SUPPORT
+					if(retrans_xmit_enable == OPTION_ENABLE){
+					  acq_tbl->proc_acqtab_prodseq_errs++;
+					  do_prod_mismatch(acq_tbl,buff_hdr);
+					  acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+					}
+#endif
+
+					ds_free();
 
                     prod.head = NULL;
                     prod.tail = NULL;
@@ -630,7 +911,15 @@ void* pmStart(
                 unotice("pshname %s", psh->pname);
             }
             deflen = 0;
-        }
+#ifdef RETRANS_SUPPORT
+			if(retrans_xmit_enable == OPTION_ENABLE){
+			   if(buff_hdr->proc_blkno != 0){
+		          /*acq_tbl->proc_prod_bytes_read += buff_hdr->buff_data_length;*/
+				  acq_tbl->proc_prod_bytes_read += datalen;
+	           }
+            }
+#endif
+       	}
         else {
             /* If the product already has a FOS trailer, don't add
              * another....this will match what pqing(SDI) sees
@@ -641,6 +930,18 @@ void* pmStart(
                     uerror("Missing fragment in sequence, last %d/%d this "
                         "%d/%d\0", prod.tail->fragnum, prod.seqno,
                         pfrag->fragnum, pfrag->seqno);
+
+#ifdef RETRANS_SUPPORT
+                                      if(retrans_xmit_enable == OPTION_ENABLE){
+                                         acq_tbl->proc_acqtab_prodseq_errs++;
+                                         if(ulogIsDebug())
+                                            udebug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
+					                                    acq_tbl->proc_base_prod_seqno_last);
+                                            do_prod_mismatch(acq_tbl,buff_hdr);
+                                            acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+                                      }
+#endif
+
                     ds_free();
 
                     prod.head = NULL;
@@ -673,6 +974,26 @@ void* pmStart(
                  */
                 uerror("Error in heapsize %d product size %d [%d %d], Punt!\0",
                     heapsize, (heapcount + datalen), heapcount, datalen);
+				
+#ifdef RETRANS_SUPPORT
+				if(retrans_xmit_enable == OPTION_ENABLE){ 	
+			      /* Update Statistics */
+					acq_tbl->proc_tot_prods_lost_errs++;
+					/*  Abort entry and request retransmission */
+					prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+					generate_retrans_rqst(acq_tbl, prod.seqno, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+					if(acq_tbl->proc_orig_prod_seqno_last != 0){
+						strcpy(log_buff, "RETRANS");
+					}
+					log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last,
+								 buff_hdr->proc_prod_seqno,buff_hdr->proc_blkno,
+								 buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,
+								 acq_tbl->proc_prod_start_time);
+
+		      		acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+	      		}
+#endif
+
                 continue;
             }
 
@@ -682,6 +1003,15 @@ void* pmStart(
 
             MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount),
                 deflen);
+
+#ifdef RETRANS_SUPPORT
+			if(retrans_xmit_enable == OPTION_ENABLE){
+	  		  if(buff_hdr->proc_blkno != 0){
+				/*acq_tbl->proc_prod_bytes_read += buff_hdr->buff_data_length;*/
+				acq_tbl->proc_prod_bytes_read += datalen;
+			  }
+	  		}
+#endif
         }
 
         pfrag->recsiz = deflen;
@@ -695,8 +1025,19 @@ void* pmStart(
             prod.tail->next = pfrag;
             prod.tail = pfrag;
         }
-
-        if ((prod.nfrag == 0) || (prod.nfrag == (pfrag->fragnum + 1))) {
+ 
+#ifdef RETRANS_SUPPORT
+		 if(((prod.nfrag == 0) || (prod.nfrag >= (pfrag->fragnum +1))) && (save_prod == 0)){
+		   if(ulogIsVerbose())
+			  uinfo("Do not save prod [seqno=%ld] as its retrans dup fragnum/total fragments =[%d of %d] save_prod=[%d] \n",
+			   prod.seqno,pfrag->fragnum,prod.nfrag,save_prod);
+		   ds_free ();
+		   prod.head = NULL;
+		   prod.tail = NULL;
+		   PNGINIT = 0;
+		}else{
+#endif
+          if ((prod.nfrag == 0) || (prod.nfrag == (pfrag->fragnum + 1))) {
             if (GOES == 1) {
                 if (PNGINIT == 1) {
                     pngout_end();
@@ -737,8 +1078,34 @@ void* pmStart(
                 }
             }
 
-            process_prod(prod, PROD_NAME, memheap, heapcount,
-                md5ctxp, productMaker->ldmProdQueue, psh, sbn);
+#ifdef RETRANS_SUPPORT
+			if((retrans_xmit_enable == OPTION_ENABLE) && (acq_tbl->read_distrib_enable & READ_CTL_DISCARD)){
+						num_prod_discards++;
+						/* Set discard_prod to 1; Otherwise already stored prod may be requested for retransmit */
+						discard_prod=1;
+						if(ulogIsVerbose())
+						  uinfo("No of products discarded = %ld prod.seqno=%ld \n ",num_prod_discards,prod.seqno);
+						prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+						acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno -1 ;
+						ds_free ();
+						prod.head = NULL;
+						prod.tail = NULL;
+						PNGINIT = 0;
+			}else{
+				/* Do not insert prod into queue if its a duplicate product */
+				if(save_prod != 0)
+#endif
+                                   process_prod(prod, PROD_NAME, memheap, heapcount,
+                                                md5ctxp, productMaker->ldmProdQueue, psh, sbn);
+#ifdef RETRANS_SUPPORT
+				/* Update acq table with last processed seqno -Begin */
+				if(retrans_xmit_enable == OPTION_ENABLE){
+					acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+					uinfo(" prod with seqno processed = %ld\n",acq_tbl->proc_base_prod_seqno_last);
+				}
+				/* Update acq table with last processed seqno -End */
+#endif
+
             ds_free();
 
             prod.head = NULL;
@@ -748,7 +1115,10 @@ void* pmStart(
             (void)pthread_mutex_lock(&productMaker->mutex);
             productMaker->nprods++;
             (void)pthread_mutex_unlock(&productMaker->mutex);
+#ifdef RETRANS_SUPPORT
         }
+#endif
+       }
         else {
             if (ulogIsDebug())
                 udebug("processing record %ld [%ld %ld]", prod.seqno,
@@ -759,11 +1129,39 @@ void* pmStart(
             }
         }
 
+#ifdef RETRANS_SUPPORT
+	   if(retrans_xmit_enable == OPTION_ENABLE){
+	     if(!(acq_tbl->read_distrib_enable & READ_CTL_DISCARD))
+	   	  if(!discard_prod){
+		    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+		    discard_prod = 0;
+	      }
+	   }  
+#endif
+		
+#ifdef RETRANS_SUPPORT
+	}
+
+        save_prod = 1;
+#endif
         IOFF += (sbn->len + pdh->len + pdh->pshlen + pdh->dbsize);
 
         if (ulogIsDebug())
             udebug("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen,
                 deflen);
+#ifdef RETRANS_SUPPORT
+		if(retrans_xmit_enable == OPTION_ENABLE){
+		  total_prods_retrans_rcvd = acq_tbl->proc_tot_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
+		  total_prods_retrans_rcvd_lost = acq_tbl->proc_tot_prods_retrans_rcvd_lost; /* prods retrans rcvd lost */
+		  total_prods_retrans_rcvd_notlost = acq_tbl->proc_tot_prods_retrans_rcvd_notlost; /* prods rcvd not lost */
+		  total_prods_retrans_rqstd = acq_tbl->proc_tot_prods_retrans_rqstd;    /* prods retrans requested */
+		  total_prods_handled = acq_tbl->proc_tot_prods_handled;    /* prods retrans requested */
+		  total_prods_lost_err = acq_tbl->proc_tot_prods_lost_errs;    /* prods retrans requested */
+		  total_frame_cnt = acq_tbl->read_tot_buff_read;
+		  total_frame_err = acq_tbl->read_frame_tot_lost_errs;
+		  proc_orig_prod_seqno_last_save = acq_tbl->proc_orig_prod_seqno_last;
+        }
+#endif
     }
 
     if (NULL != memheap)

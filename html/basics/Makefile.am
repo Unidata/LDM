@@ -145,7 +145,7 @@ if MAINTAINER
 
 all:	$(srcdir)/successes.html $(srcdir)/failures.html
 
-configuring.html:	configuring.html.in
+configuring.html:	$(srcdir)/configuring.html.in
 	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 

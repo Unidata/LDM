@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "proto_gemlib.h"
+
 void ti_itoj ( int idtarr[], int *jyear, int *jday, int *iret)
 {
 int iyear, imonth, iday;

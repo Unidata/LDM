@@ -24,19 +24,19 @@ EXTRA_DIST              = \
     regutil.txt \
     substPaths
 TAGS_FILES              = \
-    *.c \
-    $(top_srcdir)/registry/*.c \
-    $(top_srcdir)/registry/*.h \
-    $(top_srcdir)/*.h \
-    $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
-    $(top_srcdir)/protocol/*.c \
+    *.c ../*.h \
+    ../ulog/*.c ../ulog/*.h \
+    ../protocol/*.c ../protocol/*.h \
+    ../registry/*.c ../registry/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/registry \
+    -I$(top_builddir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/protocol
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry
 regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
 BUILT_SOURCES		= regpar.tab
@@ -70,18 +70,18 @@ regpar.tab:	$(srcdir)/regpar.tab.in
 if MAINTAINER
 BUILT_SOURCES		+= substPaths
 
-substPaths:	regpar.tab.in
+substPaths:	$(srcdir)/regpar.tab.in
 	$(AWK) -F : 'BEGIN {print "sed \\"} \
 	    {print "    -e '\''s:regpath{" $$1 "}:" $$2 ":g'\'' \\"} \
-	    END {print ""}' regpar.tab.in >$@.tmp
+	    END {print ""}' $(srcdir)/regpar.tab.in >$@.tmp
 	mv $@.tmp $@
 	chmod +x $@
 
-registry.h:	registry.hin registry.c regpar.tab.in
+registry.h:	registry.hin registry.c $(srcdir)/regpar.tab.in
 	$(AWK) '/@PARAMETER_NAME_DEFINITIONS@/{exit}{print}' \
 	    $(srcdir)/registry.hin >$@.tmp1
 	$(AWK) -F : '{print "#define REG_" $$1 " \"" $$2 "\""}' \
-	    <regpar.tab.in >>$@.tmp1
+	    <$(srcdir)/regpar.tab.in >>$@.tmp1
 	$(AWK) '{if (doPrint)print}/@PARAMETER_NAME_DEFINITIONS@/{doPrint=1}' \
 	    $(srcdir)/registry.hin >>$@.tmp1
 	$(top_srcdir)/extractDecls $@.tmp1 $(srcdir)/registry.c >$@.tmp2
@@ -104,8 +104,8 @@ if HAVE_CUNIT
 check_PROGRAMS		= testRegistry
 testRegistry_CPPFLAGS	= \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     @CPPFLAGS_CUNIT@
 

@@ -1,4 +1,4 @@
-# Copyright 2013 University Corporation for Atmospheric Research
+# Copyright 2014 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -16,66 +16,64 @@ SUDO		= @SUDO@
 SU		= @SU@
 PQ_SUBDIR	= @PQ_SUBDIR@
 
-DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions --with-noaaport --with-gribinsert
+DISTCHECK_CONFIGURE_FLAGS	= \
+        --disable-root-actions \
+        --with-gribinsert \
+        --with-noaaport \
+        --with-retrans
 
-LIB_SUBDIRS	= \
-    rpc \
-    ulog \
-    misc \
-    pqinglib \
-    protocol \
-    registry
+# Order is important in the following because of compile and link dependencies
+# amongst the subdirectories.
+SUBDIRS		= rpc ulog pqinglib
 if WANT_FAUX_PQ
-    LIB_SUBDIRS	+= fauxPq
+    SUBDIRS	+= fauxPq
 else
-    LIB_SUBDIRS	+= pq
+    SUBDIRS	+= pq
 endif
+SUBDIRS		+= registry misc protocol
 if WANT_NOAAPORT
-    LIB_SUBDIRS	+= grib2 gempak
+    SUBDIRS	+= grib2 gempak
 else
 if WANT_GRIBINSERT
-    LIB_SUBDIRS	+= grib2 gempak
+    SUBDIRS	+= grib2 gempak
 endif
 endif
-LIB_SUBDIRS	+= lib
-
-PROG_SUBDIRS	= \
-    feedme \
-    hupsyslog \
-    ldmd \
-    ldmping \
-    ldmsend \
-    notifyme \
-    pqact \
-    pqcat \
-    pqcheck \
-    pqcopy \
-    pqcreate \
-    pqexpire \
-    pqing \
-    pqinsert \
-    pqmon \
-    pqsend \
-    pqsurf \
-    pqutil \
-    regex \
-    regutil \
-    rtstats \
-    scour \
-    scripts \
-    uldbutil \
-    ulogger
+if WANT_RETRANS
+    SUBDIRS	+= noaaport/retrans
+endif
+SUBDIRS 	+= lib
 if WANT_NOAAPORT
-    PROG_SUBDIRS	+= noaaport
+    SUBDIRS	+= noaaport
 endif
+SUBDIRS 	+= feedme \
+                   hupsyslog \
+                   ldmd \
+                   ldmping \
+                   ldmsend \
+                   notifyme \
+                   pqact \
+                   pqcat \
+                   pqcheck \
+                   pqcopy \
+                   pqcreate \
+                   pqexpire \
+                   pqing \
+                   pqinsert \
+                   pqmon \
+                   pqsend \
+                   pqsurf \
+                   pqutil \
+                   regex \
+                   regutil \
+                   rtstats \
+                   scour \
+                   scripts \
+                   uldbutil \
+                   ulogger
 if WANT_GRIBINSERT
-    PROG_SUBDIRS	+= gribinsert
+    SUBDIRS	+= gribinsert
 endif
-
-SUBDIRS		= \
-    $(LIB_SUBDIRS) \
-    $(PROG_SUBDIRS) \
-    html test
+SUBDIRS		+= html test
 
 nobase_include_HEADERS		= \
     rpc/rpc.h \
@@ -110,11 +108,14 @@ dist_bin_SCRIPTS	= \
     ensureServicesEntry \
     rpmUserActions
 
+dist_doc_data		= CHANGE_LOG COPYRIGHT README
+
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
 CLEANFILES	= *.log
 distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
 LAST_VERSION	= $$(git tag -l v\* | sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | tail -1)
+ACLOCAL_AMFLAGS = -I m4
 
 all:
 
@@ -201,16 +202,6 @@ ensure-rpc-entry:
 
 ensure-services-entry:
 	$(srcdir)/ensureServicesEntry
-
-install-data-local:	$(DESTDIR)$(docdir)/CHANGE_LOG \
-                	$(DESTDIR)$(docdir)/COPYRIGHT \
-                	$(DESTDIR)$(docdir)/README
-$(DESTDIR)$(docdir)/CHANGE_LOG:	CHANGE_LOG
-	cp $? $@
-$(DESTDIR)$(docdir)/COPYRIGHT:	COPYRIGHT
-	cp $? $@
-$(DESTDIR)$(docdir)/README:	README
-	cp $? $@
 
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
@@ -334,7 +325,15 @@ web-update:
 # Make this instead of "release" when the package will be released to the
 # public
 available:	ftp web-update
-    	
+
+TOP_BUILD_DIR	= /tmp/rpmbuild
+rpm:		dist ldm.spec
+	rm -rf $(TOP_BUILD_DIR)
+	mkdir -p $(TOP_BUILD_DIR)/SOURCES
+	cp $(distArchive) $(TOP_BUILD_DIR)/SOURCES 
+	mkdir $(TOP_BUILD_DIR)/SPECS
+	cp ldm.spec $(TOP_BUILD_DIR)/SPECS
+	rpmbuild --define '_topdir $(TOP_BUILD_DIR)' -v -bs ldm.spec
 endif
 
 .PHONY:		\

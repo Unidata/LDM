@@ -1,5 +1,5 @@
 /**
- *   Copyright 2013, University Corporation for Atmospheric Research
+ *   Copyright 2014, University Corporation for Atmospheric Research
  *   All rights reserved
  *   <p>
  *   See file COPYRIGHT in the top-level source-directory for copying and
@@ -24,6 +24,11 @@
 #include "md5.h"
 #include "inetutil.h"
 #include "log.h"
+
+/*
+ * The following is declared here because it isn't declared elsewhere.
+ */
+extern void     grib2name(char *data, size_t sz, char *wmohead, char *ident);
 
 datastore *dataheap=NULL;
 int nextfrag = 0, MAXFRAGS=1000;

@@ -3,6 +3,11 @@
 #include "gb2def.h"
 #include "proto_gemlib.h"
 
+/*
+ * The following is declared here because it isn't declared elsewhere.
+ */
+extern void ctb_g2rdlvl(char *tbname, G2lvls *lvltbl, int *iret);
+
 void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl, int *iret)
 /************************************************************************
  * gb2_gtwmolvltbl							*

@@ -19,7 +19,6 @@ extern "C" {
 extern const char *conf_path;
 extern volatile sig_atomic_t done;
 extern const char *logfname;
-extern struct pqueue *pq;
 
 /* timeout for rpc calls */
 #ifndef DEFAULT_RPCTIMEO

@@ -18,9 +18,9 @@
 #include <search.h>
 
 #include "backend.h"
+#include "globals.h"
 #include <ldmprint.h>
 #include <log.h>
-#include "globals.h"
 #include "misc.h"
 #include "node.h"
 #include "registry.h"

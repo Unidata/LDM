@@ -91,7 +91,11 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
      *	Check to see if the file is in LDMHOME/etc.
      */
     if ( found == G_FALSE) {
-	cfl_inqr (filepart, getSysConfDirPath(), &lfsize, actualpath, iret );
+        /*
+         * Casting getSysConfDirPath() is safe because the string will not be
+         * modified.
+         */
+	cfl_inqr (filepart, (char*)getSysConfDirPath(), &lfsize, actualpath, iret );
 	if ( *iret == 0 ) {
 	    found = G_TRUE;
 	}

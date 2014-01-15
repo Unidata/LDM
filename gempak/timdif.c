@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "proto_gemlib.h"
+
 void ti_mdif ( int idtar1[], int idtar2[], int *nmin, int *iret)
 {
 int jyear, jday1, jday2;

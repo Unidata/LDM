@@ -20,6 +20,7 @@
  *
  */
 #include "config.h"
+
 #include "shmfifo.h"
 #include "log.h"
 
@@ -35,6 +36,11 @@
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+
+/*
+ * The following is declared here because it isn't declared elsewhere.
+ */
+extern int getpagesize(void);
 
 #define DVBS_ID 43210000
 

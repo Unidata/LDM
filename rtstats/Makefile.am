@@ -12,7 +12,8 @@ bin_PROGRAMS		= rtstats
 rtstats_SOURCES		= ldmsend.c binstats.c filel.c rtstats.c
 CPPFLAGS		= \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
@@ -21,12 +22,13 @@ dist_man1_MANS		= rtstats.1
 TAGS_FILES		= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
+    ../registry/*.c ../registry/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
 if MAINTAINER
-rtstats.1:	rtstats.1.in
+rtstats.1:	$(srcdir)/rtstats.1.in
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 endif

@@ -533,6 +533,7 @@ utcToEpochTime(
     struct tm                   localTime = *tm;
 
 #ifdef HAVE_TIMEGM
+    extern time_t       timegm(struct tm *tm);
 
     epochTime = timegm(&localTime);
 
@@ -1078,7 +1079,7 @@ main()
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, may31);
     assert(strcmp(buf, "2007-05-02") == 0);
-    seq_sub("/tmp/(seq).txt", buf, 1234);
+    seq_sub("/tmp/(seq).txt", buf, 1234, 999);
 
     exit(0);
 }

@@ -1,19 +1,19 @@
 dnl Process this file with automake to produce a configure script
-dnl Requires ./aclocal.
+dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
 AC_INIT([LDM], [6.11.6], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
-LT_INIT
 
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_SRCDIR([config.h.in])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
     
 #AC_USE_SYSTEM_EXTENSIONS
 case "`uname -sr`" in
-    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq"]);;
+    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
     Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq"]);;
 esac
 AC_PROG_CC([c99 c89 gcc cc])
@@ -26,6 +26,8 @@ AC_SUBST([YEAR])
 AC_DEFINE([CONFIG_H], [1], [Header-file lockout])
 #AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
 
+AM_PROG_AR
+LT_INIT
 AM_PROG_CC_C_O
 if test -z "$CC"; then
     AC_MSG_ERROR([no C compiler found])
@@ -35,7 +37,7 @@ else
        *) AC_DEFINE([_XOPEN_SOURCE], [500], [Level of XOPEN compliance])
    esac
     AC_MSG_CHECKING(the C compiler)
-    AC_COMPILE_IFELSE([int foo;], 
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
 	AC_MSG_RESULT(works),
 	AC_MSG_FAILURE($CC failed to compile test code))
 fi
@@ -113,7 +115,7 @@ case "$CC" in
             AC_MSG_NOTICE([libs="\"$libs\""])
             AC_MSG_NOTICE([ARFLAGS="\"$ARFLAGS\""])
             AC_MSG_CHECKING([the C compiler (again)])
-            AC_COMPILE_IFELSE([int foo;], 
+            AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
                 AC_MSG_RESULT(works),
                 AC_MSG_FAILURE($CC failed to compile test code))
         fi
@@ -143,6 +145,14 @@ AC_ARG_WITH([noaaport],
     [],
     [with_noaaport=no])
 AM_CONDITIONAL([WANT_NOAAPORT], [test "x$with_noaaport" != xno])
+
+AC_ARG_WITH([retrans],
+    AS_HELP_STRING([--with-retrans],
+        [enable support for retransmission from a NOAAPORT receiver
+        [[default=without]]]),
+    [],
+    [with_retrans=no])
+AM_CONDITIONAL([WANT_RETRANS], [test "x$with_retrans" != xno])
 
 AC_ARG_WITH([gribinsert],
     AS_HELP_STRING([--with-gribinsert],
@@ -285,7 +295,7 @@ AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 UD_SEARCH_LIB([m], [log10], [/opt/csw/lib /opt/lib])
 
 # Check for the CUNIT unit-testing package
-AC_MSG_NOTICE([checking for the CUNIT unit-testing package.])
+AC_MSG_NOTICE([checking for the CUnit unit-testing package.])
 AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
     [CPPFLAGS_CUNIT=-I/opt/include
     AC_SUBST(CPPFLAGS_CUNIT)
@@ -303,11 +313,20 @@ AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
             AC_SUBST(LIBS_CUNIT)],
             [AC_CHECK_FILE([/usr/local/lib/libcunit.a],
                 [LIBS_CUNIT='-L/usr/local/lib -lcunit'
-                AC_SUBST(LIBS_CUNIT)])])])])
+                AC_SUBST(LIBS_CUNIT)])])],
+        [AC_CHECK_FILE([/usr/include/CUnit/CUnit.h],
+            [CPPFLAGS_CUNIT=-I/usr/include
+            AC_SUBST(CPPFLAGS_CUNIT)
+            AC_CHECK_FILE([/usr/lib/libcunit.so],
+                [LIBS_CUNIT='-L/usr/lib -lcunit'
+                AC_SUBST(LIBS_CUNIT)],
+                [AC_CHECK_FILE([/usr/lib/libcunit.a],
+                    [LIBS_CUNIT='-L/usr/lib -lcunit'
+                    AC_SUBST(LIBS_CUNIT)])])])])])
 AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
 AM_COND_IF([HAVE_CUNIT], 
-    [AC_MSG_NOTICE([CUNIT found.  Enabling unit-tests.])],
-    [AC_MSG_NOTICE([CUNIT not found.  Disabling unit-tests.])])
+    [AC_MSG_NOTICE([CUnit found.  Enabling unit-tests.])],
+    [AC_MSG_NOTICE([CUnit not found.  Disabling unit-tests.])])
 
 AC_SUBST(PATH)
 
@@ -450,7 +469,7 @@ AC_CHECK_HEADERS([stropts.h], ,
     AC_CHECK_HEADERS([sys/ioctl.h], ,
 	AC_MSG_ERROR("Missing necessary header-file"))
 ])
-    
+
 # Ensure that CPPFLAGS and LIBS reference the ZLIB library, which is used by
 # the PNG library and by the XML2 library.
 UD_SEARCH_HEADER([ZLIB], [zlib.h], [/usr/include /opt/csw/include \
@@ -502,6 +521,8 @@ AC_COMPILE_IFELSE(
     ]
 )
 
+AC_PROG_LIBTOOL
+
 AC_CONFIG_FILES([
     fauxPq/Makefile
     feedme/Makefile
@@ -531,6 +552,7 @@ AC_CONFIG_FILES([
     Makefile
     misc/Makefile
     noaaport/Makefile
+    noaaport/retrans/Makefile
     notifyme/Makefile
     pqact/Makefile
     pqcat/Makefile

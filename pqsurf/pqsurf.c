@@ -31,7 +31,7 @@
 #include "registry.h"
 #include "remote.h"
 #include "ldmprint.h"
-#include "ulog.h"
+#include "log.h"
 #include "pq.h"
 #include "surface.h"
 #include "RegularExpressions.h"

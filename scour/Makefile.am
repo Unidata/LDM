@@ -12,7 +12,7 @@ dist_man1_MANS		= scour.1
 DISTCLEANFILES		= scour
 
 if MAINTAINER
-scour.1:	scour.1.in
+scour.1:	$(srcdir)/scour.1.in
 	$(top_srcdir)/registry/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 

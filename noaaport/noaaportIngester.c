@@ -1,5 +1,5 @@
 /*
- *   Copyright © 2011, University Corporation for Atmospheric Research.
+ *   Copyright © 2014, University Corporation for Atmospheric Research.
  *   See COPYRIGHT file for copying and redistribution conditions.
  */
 /**
@@ -15,6 +15,7 @@
 #include "log.h"
 #include "fifo.h"
 #include "fileReader.h"
+#include "getFacilityName.h"
 #include "ldmProductQueue.h"
 #include "multicastReader.h"
 #include "productMaker.h"
@@ -34,6 +35,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+/*********** For Retransmission ****************/
+#ifdef RETRANS_SUPPORT
+#include "retrans.h" 
+#endif
+/*********** For Retransmission ****************/
+
 
 static pthread_t        readerThread;
 static Reader*          reader;
@@ -62,6 +70,7 @@ static void usage(
 "%s\n"
 "\n"
 "Usage: %s [-n|v|x] [-l log] [-u n] [-m addr] [-q queue] [-b npages] [-I iface]\n"
+"          [-r <1|0>] [-t] [-s channel-name]                                   \n"
 "where:\n"
 "   -b npages   Allocate \"npages\" pages of memory for the internal buffer.\n"
 "               Default is %lu pages.\n"
@@ -78,6 +87,11 @@ static void usage(
 "               default LDM logging facility, %s.\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
+#ifdef RETRANS_SUPPORT
+"   -r <1|0>    Enable(1)/Disable(0) Retransmission [ Default: 0 => Disabled ] \n"
+"   -t          Transfer mechanism [Default = MHS]. \n"
+"   -s          Channel Name [Default = NMC]. \n"
+#endif
 "\n"
 "If neither \"-n\", \"-v\", nor \"-x\" is specified, then only levels ERROR\n"
 "and WARN are logged.\n"
@@ -498,6 +512,16 @@ static void reportStats(void)
     log_add("        Products:");
     log_add("            Inserted      %lu", totalProdCount);
     log_add("            Mean Rate     %g/s", totalProdCount/interval);
+
+#ifdef RETRANS_SUPPORT
+   if(retrans_xmit_enable == OPTION_ENABLE){
+    log_add("       Retransmissions:");	
+    log_add("           Requested     %lu", total_prods_retrans_rqstd);	
+    log_add("           Received      %lu", total_prods_retrans_rcvd);	
+    log_add("           Duplicates    %lu", total_prods_retrans_rcvd_notlost);	
+    log_add("           No duplicates %lu", total_prods_retrans_rcvd_lost);	
+    }
+#endif 
     log_add("----------------------------------------");
 
     log_log(LOG_NOTICE);
@@ -602,6 +626,7 @@ int main(
     Fifo*               fifo;
     int                 ttyFd = open("/dev/tty", O_RDONLY);
     int                 processPriority = 0;
+    int                 idx;
     const char*         logPath = (-1 == ttyFd)
         ? NULL                          /* log to system logging daemon */
         : "-";                          /* log to standard error stream */
@@ -612,7 +637,7 @@ int main(
     status = initLogging(progName, logOptions, logFacility, logPath);
     opterr = 0;                         /* no error messages from getopt(3) */
 
-    while (0 == status && (ch = getopt(argc, argv, "b:I:l:m:np:q:u:vx")) != -1)
+    while (0 == status && (ch = getopt(argc, argv, "b:I:l:m:np:q:r:s:t:u:vx")) != -1)
     {
         switch (ch) {
             extern char*    optarg;
@@ -667,6 +692,93 @@ int main(
             }
             case 'q':
                 prodQueuePath = optarg;
+                break;
+            case 'r':
+#ifdef RETRANS_SUPPORT
+                retrans_xmit_enable = atoi(optarg);
+                if(retrans_xmit_enable == 1)
+                  retrans_xmit_enable = OPTION_ENABLE;
+                else
+                  retrans_xmit_enable = OPTION_DISABLE;
+#endif
+                break;
+           case 's': {
+#ifdef RETRANS_SUPPORT
+			strcpy(sbn_channel_name, optarg);
+                        if(!strcmp(optarg,NAME_SBN_TYP_GOES)) {
+                                sbn_type = SBN_TYP_GOES;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_NOAAPORT_OPT)) {
+                                sbn_type = SBN_TYP_NOAAPORT_OPT;
+                                break;
+                        }
+                        if(!strcmp(optarg,"NWSTG")) {
+                                sbn_type = SBN_TYP_NMC;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_NMC)) {
+                                sbn_type = SBN_TYP_NMC;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_NMC2)) {
+                                sbn_type = SBN_TYP_NMC2;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_NMC3)) {
+                                sbn_type = SBN_TYP_NMC3;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_NWWS)) {
+                                sbn_type = SBN_TYP_NWWS;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_ADD)) {
+                                sbn_type = SBN_TYP_ADD;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_ENC)) {
+                                sbn_type = SBN_TYP_ENC;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_EXP)) {
+                                sbn_type = SBN_TYP_EXP;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_GRW)) {
+                                sbn_type = SBN_TYP_GRW;
+                                break;
+                        }
+                        if(!strcmp(optarg,NAME_SBN_TYP_GRE)) {
+                                sbn_type = SBN_TYP_GRE;
+                                break;
+                        }
+                        printf("Operator input: UNKNOWN type must be\n");
+                        printf(" %s, %s, %s, %s, %s, %s, %s, %s, %s, %s  or %s \n",
+                                NAME_SBN_TYP_NMC,
+                                NAME_SBN_TYP_GOES,
+                                NAME_SBN_TYP_NOAAPORT_OPT,
+                                NAME_SBN_TYP_NMC2,
+                                NAME_SBN_TYP_NMC3,
+                                NAME_SBN_TYP_NWWS,
+                                NAME_SBN_TYP_ADD,
+                                NAME_SBN_TYP_ENC,
+                                NAME_SBN_TYP_EXP,
+                                NAME_SBN_TYP_GRW,
+                                NAME_SBN_TYP_GRE);
+#endif
+                break;
+              }
+            case 't':
+#ifdef RETRANS_SUPPORT
+                strcpy(transfer_type, optarg);
+                if(!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs")){
+                     /** Using MHS for communication with NCF  **/
+                }else{
+                     uerror("No other mechanism other than MHS is currently supported\n");
+                     status  = 1;
+                 }
+#endif
                 break;
             case 'u': {
                 int         i = atoi(optarg);
@@ -774,6 +886,12 @@ int main(
                         (void)pthread_attr_setscope(&attr,
                                 PTHREAD_SCOPE_SYSTEM);
 #endif
+#ifdef RETRANS_SUPPORT
+                        if (retrans_xmit_enable == OPTION_ENABLE){
+                         /* Copy mcastAddress needed to obtain the cpio entries */
+                         strcpy(mcastAddr, mcastSpec);
+                        }
+#endif
                         if (0 == (status = spawnProductMaker(&attr, fifo,
                                         prodQueue, &productMaker,
                                         &productMakerThread))) {
@@ -783,6 +901,7 @@ int main(
 #endif
                             status = spawnMulticastReader(&attr, mcastSpec,
                                     interface, fifo, &reader, &readerThread);
+
                         }                       /* product-maker spawned */
                     }                           /* "attr" initialized */
                 }                               /* reading multicast packets */
@@ -816,6 +935,12 @@ int main(
 
                     reportStats();
                     readerFree(reader);
+#ifdef RETRANS_SUPPORT
+					/** Release buffer allocated for retransmission **/
+					if(retrans_xmit_enable == OPTION_ENABLE){
+					  freeRetransMem();
+					}
+#endif
                 }               /* "reader" spawned */
 
                 (void)lpqClose(prodQueue);

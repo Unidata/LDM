@@ -81,7 +81,8 @@ lib_la_CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
 			  -I$(top_srcdir) \
 			  -I$(top_srcdir)/grib2 \
 			  -I$(top_srcdir)/ulog \
-			  -I$(top_srcdir)/protocol
+			  -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+			  -I$(top_builddir)/registry -I$(top_srcdir)/registry
 
 TAGS_FILES		= \
 	*.c *.h \

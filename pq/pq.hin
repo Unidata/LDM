@@ -26,6 +26,7 @@
 #define PQ_NOTFOUND	-3	/* no such data-product */
 
 typedef struct pqueue pqueue; /* private, implemented in pq.c */
+extern struct pqueue *pq;
 
 typedef struct pqe_index pqe_index;
 

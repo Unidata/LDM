@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011, University Corporation for Atmospheric Research.
+ *   Copyright 2014, University Corporation for Atmospheric Research.
  *   See COPYRIGHT file for copying and redistribution conditions.
  */
 /**

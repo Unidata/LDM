@@ -21,6 +21,9 @@ if WANT_NOAAPORT
     libldm_la_LIBADD	+= \
 	$(top_builddir)/grib2/lib.la \
 	$(top_builddir)/gempak/lib.la
+if WANT_RETRANS
+    libldm_la_LIBADD	+= $(top_builddir)/noaaport/retrans/lib.la
+endif
 else
 if WANT_GRIBINSERT
     libldm_la_LIBADD	+= \
@@ -28,4 +31,3 @@ if WANT_GRIBINSERT
 	$(top_builddir)/gempak/lib.la
 endif
 endif
-#libldm_la_LIBADD	+= $(LIBS)

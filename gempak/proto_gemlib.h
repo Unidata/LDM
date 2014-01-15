@@ -72,6 +72,7 @@
  ***********************************************************************/
 
 #include <log.h>
+#include "proto.h"
 
 /* AW library */
 void awrfil ( char fname[], int *nbytes, unsigned char barr[], int *iret );
@@ -437,7 +438,7 @@ void ti_c2i  ( char*, int*, int*, int*, int *iret, size_t );
 void ti_ccnt ( char*, char*, int *iret, size_t, size_t );
 void ti_cdtm ( int*, int*, char *dattim, int *iret, size_t );
 void ti_ctoi ( char*, int*, int *iret, size_t );
-void ti_daym ( int*, int*, int*, int *iret );
+void ti_daym ( int, int, int *iret );
 void ti_dayw ( int*, int*, int *iret );
 void ti_difd ( char*, char*, float*, int *iret, size_t, size_t );
 void ti_diff ( char*, char*, int*, int *iret, size_t, size_t );
