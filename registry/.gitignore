@@ -7,3 +7,4 @@ testRegistry
 regpar.tab
 vgcore.*
 /globals.h
+globals.h
