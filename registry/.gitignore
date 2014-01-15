@@ -6,3 +6,4 @@ stringBuf.h
 testRegistry
 regpar.tab
 vgcore.*
+globals.h
