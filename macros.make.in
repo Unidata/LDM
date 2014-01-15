@@ -1,4 +1,0 @@
-# This file contains make(1) macro definitions for the readnoaaport(1) and
-# gribinsert(1) packages.
-CC	        = @CC@
-CFLAGS	        = @CFLAGS@

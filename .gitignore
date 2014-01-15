@@ -15,7 +15,6 @@ macros.make
 *.o
 *.swp
 .dirstamp
-config.guess config.sub
 *.la
 stamp-h1
 config.guess
@@ -69,3 +68,11 @@ awips2-ldm.spec
 *.rpm
 gmon.out
 /test-driver
+aclocal.m4
+ar-lib
+compile
+depcomp
+install-sh
+ltmain.sh
+m4
+missing
