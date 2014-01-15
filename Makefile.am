@@ -24,19 +24,13 @@ DISTCHECK_CONFIGURE_FLAGS	= \
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
-SUBDIRS		= \
-    rpc \
-    ulog \
-    pqinglib
+SUBDIRS		= rpc ulog pqinglib
 if WANT_FAUX_PQ
     SUBDIRS	+= fauxPq
 else
     SUBDIRS	+= pq
 endif
-SUBDIRS	+= \
-    registry \
-    misc \
-    protocol
+SUBDIRS		+= registry misc protocol
 if WANT_NOAAPORT
     SUBDIRS	+= grib2 gempak
 else
@@ -47,43 +41,39 @@ endif
 if WANT_RETRANS
     SUBDIRS	+= noaaport/retrans
 endif
-SUBDIRS += \
-    lib
+SUBDIRS 	+= lib
 if WANT_NOAAPORT
     SUBDIRS	+= noaaport
 endif
-SUBDIRS += \
-    feedme \
-    hupsyslog \
-    ldmd \
-    ldmping \
-    ldmsend \
-    notifyme \
-    pqact \
-    pqcat \
-    pqcheck \
-    pqcopy \
-    pqcreate \
-    pqexpire \
-    pqing \
-    pqinsert \
-    pqmon \
-    pqsend \
-    pqsurf \
-    pqutil \
-    regex \
-    regutil \
-    rtstats \
-    scour \
-    scripts \
-    uldbutil \
-    ulogger
+SUBDIRS 	+= feedme \
+                   hupsyslog \
+                   ldmd \
+                   ldmping \
+                   ldmsend \
+                   notifyme \
+                   pqact \
+                   pqcat \
+                   pqcheck \
+                   pqcopy \
+                   pqcreate \
+                   pqexpire \
+                   pqing \
+                   pqinsert \
+                   pqmon \
+                   pqsend \
+                   pqsurf \
+                   pqutil \
+                   regex \
+                   regutil \
+                   rtstats \
+                   scour \
+                   scripts \
+                   uldbutil \
+                   ulogger
 if WANT_GRIBINSERT
     SUBDIRS	+= gribinsert
 endif
-SUBDIRS	+= \
-    html \
-    test
+SUBDIRS		+= html test
 
 nobase_include_HEADERS		= \
     rpc/rpc.h \
