@@ -1,5 +1,5 @@
 /*
- *   Copyright © 2011, University Corporation for Atmospheric Research.
+ *   Copyright © 2014, University Corporation for Atmospheric Research.
  *   See COPYRIGHT file for copying and redistribution conditions.
  */
 /**
@@ -37,7 +37,9 @@
 #include <unistd.h>
 
 /*********** For Retransmission ****************/
+#ifdef RETRANS_SUPPORT
 #include "retrans.h" 
+#endif
 /*********** For Retransmission ****************/
 
 
@@ -85,9 +87,11 @@ static void usage(
 "               default LDM logging facility, %s.\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
+#ifdef RETRANS_SUPPORT
 "   -r <1|0>    Enable(1)/Disable(0) Retransmission [ Default: 0 => Disabled ] \n"
 "   -t          Transfer mechanism [Default = MHS]. \n"
 "   -s          Channel Name [Default = NMC]. \n"
+#endif
 "\n"
 "If neither \"-n\", \"-v\", nor \"-x\" is specified, then only levels ERROR\n"
 "and WARN are logged.\n"
@@ -509,6 +513,7 @@ static void reportStats(void)
     log_add("            Inserted      %lu", totalProdCount);
     log_add("            Mean Rate     %g/s", totalProdCount/interval);
 
+#ifdef RETRANS_SUPPORT
    if(retrans_xmit_enable == OPTION_ENABLE){
     log_add("       Retransmissions:");	
     log_add("           Requested     %lu", total_prods_retrans_rqstd);	
@@ -516,6 +521,7 @@ static void reportStats(void)
     log_add("           Duplicates    %lu", total_prods_retrans_rcvd_notlost);	
     log_add("           No duplicates %lu", total_prods_retrans_rcvd_lost);	
     }
+#endif 
     log_add("----------------------------------------");
 
     log_log(LOG_NOTICE);
@@ -688,13 +694,16 @@ int main(
                 prodQueuePath = optarg;
                 break;
             case 'r':
+#ifdef RETRANS_SUPPORT
                 retrans_xmit_enable = atoi(optarg);
                 if(retrans_xmit_enable == 1)
                   retrans_xmit_enable = OPTION_ENABLE;
                 else
                   retrans_xmit_enable = OPTION_DISABLE;
+#endif
                 break;
            case 's': {
+#ifdef RETRANS_SUPPORT
 			strcpy(sbn_channel_name, optarg);
                         if(!strcmp(optarg,NAME_SBN_TYP_GOES)) {
                                 sbn_type = SBN_TYP_GOES;
@@ -757,9 +766,11 @@ int main(
                                 NAME_SBN_TYP_EXP,
                                 NAME_SBN_TYP_GRW,
                                 NAME_SBN_TYP_GRE);
+#endif
                 break;
               }
             case 't':
+#ifdef RETRANS_SUPPORT
                 strcpy(transfer_type, optarg);
                 if(!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs")){
                      /** Using MHS for communication with NCF  **/
@@ -767,6 +778,7 @@ int main(
                      uerror("No other mechanism other than MHS is currently supported\n");
                      status  = 1;
                  }
+#endif
                 break;
             case 'u': {
                 int         i = atoi(optarg);
@@ -874,10 +886,12 @@ int main(
                         (void)pthread_attr_setscope(&attr,
                                 PTHREAD_SCOPE_SYSTEM);
 #endif
+#ifdef RETRANS_SUPPORT
                         if (retrans_xmit_enable == OPTION_ENABLE){
                          /* Copy mcastAddress needed to obtain the cpio entries */
                          strcpy(mcastAddr, mcastSpec);
                         }
+#endif
                         if (0 == (status = spawnProductMaker(&attr, fifo,
                                         prodQueue, &productMaker,
                                         &productMakerThread))) {
@@ -921,10 +935,12 @@ int main(
 
                     reportStats();
                     readerFree(reader);
+#ifdef RETRANS_SUPPORT
 					/** Release buffer allocated for retransmission **/
 					if(retrans_xmit_enable == OPTION_ENABLE){
 					  freeRetransMem();
 					}
+#endif
                 }               /* "reader" spawned */
 
                 (void)lpqClose(prodQueue);

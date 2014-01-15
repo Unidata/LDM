@@ -1,4 +1,4 @@
-# Copyright 2013 University Corporation for Atmospheric Research
+# Copyright 2014 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -16,31 +16,43 @@ SUDO		= @SUDO@
 SU		= @SU@
 PQ_SUBDIR	= @PQ_SUBDIR@
 
-DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions --with-noaaport --with-gribinsert
+DISTCHECK_CONFIGURE_FLAGS	= \
+        --disable-root-actions \
+        --with-gribinsert \
+        --with-noaaport \
+        --with-retrans
 
-LIB_SUBDIRS	= \
+# Order is important in the following because of compile and link dependencies
+# amongst the subdirectories.
+SUBDIRS		= \
     rpc \
     ulog \
     pqinglib
 if WANT_FAUX_PQ
-    LIB_SUBDIRS	+= fauxPq
+    SUBDIRS	+= fauxPq
 else
-    LIB_SUBDIRS	+= pq
+    SUBDIRS	+= pq
 endif
-LIB_SUBDIRS	+= \
+SUBDIRS	+= \
     registry \
     misc \
     protocol
 if WANT_NOAAPORT
-    LIB_SUBDIRS	+= grib2 gempak
+    SUBDIRS	+= grib2 gempak
 else
 if WANT_GRIBINSERT
-    LIB_SUBDIRS	+= grib2 gempak
+    SUBDIRS	+= grib2 gempak
 endif
 endif
-LIB_SUBDIRS	+= lib
-
-PROG_SUBDIRS	= \
+if WANT_RETRANS
+    SUBDIRS	+= noaaport/retrans
+endif
+SUBDIRS += \
+    lib
+if WANT_NOAAPORT
+    SUBDIRS	+= noaaport
+endif
+SUBDIRS += \
     feedme \
     hupsyslog \
     ldmd \
@@ -66,16 +78,10 @@ PROG_SUBDIRS	= \
     scripts \
     uldbutil \
     ulogger
-if WANT_NOAAPORT
-    PROG_SUBDIRS	+= noaaport
-endif
 if WANT_GRIBINSERT
-    PROG_SUBDIRS	+= gribinsert
+    SUBDIRS	+= gribinsert
 endif
-
-SUBDIRS		= \
-    $(LIB_SUBDIRS) \
-    $(PROG_SUBDIRS) \
+SUBDIRS	+= \
     html \
     test
 
@@ -329,7 +335,15 @@ web-update:
 # Make this instead of "release" when the package will be released to the
 # public
 available:	ftp web-update
-    	
+
+TOP_BUILD_DIR	= /tmp/rpmbuild
+rpm:		dist ldm.spec
+	rm -rf $(TOP_BUILD_DIR)
+	mkdir -p $(TOP_BUILD_DIR)/SOURCES
+	cp $(distArchive) $(TOP_BUILD_DIR)/SOURCES 
+	mkdir $(TOP_BUILD_DIR)/SPECS
+	cp ldm.spec $(TOP_BUILD_DIR)/SPECS
+	rpmbuild --define '_topdir $(TOP_BUILD_DIR)' -v -bs ldm.spec
 endif
 
 .PHONY:		\

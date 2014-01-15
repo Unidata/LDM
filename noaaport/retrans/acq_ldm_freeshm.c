@@ -9,30 +9,26 @@ DESCRIPTION
 RETURNS
 
 *******************************************************************************/
-
-#include <config.h>
-
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <sys/types.h>
-
-#include <errno.h>
-#include <ctype.h>
+#include "config.h"
 #include "retrans.h"
 #include "acq_shm_lib.h"
 
+#include <ctype.h>
+#include <errno.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #define DEBUG(x) printf("service: x = %d\n", (x))
 
-extern	char	*optarg;
-extern char *com_shmAttach(key_t new_key);
+extern char*    com_shmAttach(int SHMnumber);
+extern int      com_shmFree(int SHMnumber);
 
 typedef struct	input 	{		/* user input options */
 	int		verbose;			/* verbose mode with debug */
 	int		memory_region;		/* memory region */
-
-
 } INPUT;
 
 #define NAME_ACQ_TABLE "ACQ_TABLE"
@@ -43,7 +39,8 @@ int cmd_line(int argc, char *argv[], INPUT *p_input);
 
 char	PNAME[40];
 
-int main(argc, argv)	
+int
+main(argc, argv)	
 int argc;
 char **argv;
 {
@@ -87,6 +84,7 @@ char **argv;
 	exit(0);
 } /* end main */
 
+
 /******************************************************************************
 	Name
 		cmd_line

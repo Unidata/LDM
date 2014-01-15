@@ -48,14 +48,14 @@ CPPFLAGS		= \
 	-I$(top_builddir)/registry -I$(top_srcdir)/registry \
 	-I$(top_srcdir)/pq \
 	-I$(top_srcdir)/misc \
-	@CPPFLAGS@
+	-I$(srcdir)/retrans \
+	@CPPFLAGS@ 
 
-bin_PROGRAMS		= \
-	acq_ldm_freeshm \
-	acq_ldm_getshm \
-	dvbs_multicast \
-	noaaportIngester \
-	readnoaaport
+if WANT_RETRANS
+    DEFS		+= -DRETRANS_SUPPORT
+endif 
+
+bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
@@ -85,20 +85,13 @@ dvbs_multicast_SOURCES	= dvbs_multicast.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
 readnoaaport_SOURCES	= readnoaaport.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
-COMMON_RETRANS_SOURCES	= acq_shm_lib.h shmem_lib.c
-
 noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	fifo.c fifo.h \
 	fileReader.c fileReader.h \
 	getFacilityName.c getFacilityName.h \
 	multicastReader.c multicastReader.h \
 	productMaker.c productMaker.h \
-	reader.c reader.h \
-	retrans.c retrans.h \
-	$(COMMON_RETRANS_SOURCES)
-
-acq_ldm_freeshm_SOURCES =  acq_ldm_freeshm.c $(COMMON_RETRANS_SOURCES)
-acq_ldm_getshm_SOURCES  =  acq_ldm_getshm.c $(COMMON_RETRANS_SOURCES)
+	reader.c reader.h
 
 LDADD 			= $(top_builddir)/lib/libldm.la
 
@@ -113,11 +106,12 @@ TAGS_FILES		= \
 	../misc/*.c ../misc/*.h \
 	../registry/*.c ../registry/*.h \
 	../rpc/*.c ../rpc/*.h
+if WANT_RETRANS
+    TAGS_FILES		+= retrans/*.c retrans/*.h
+endif
 
 $(srcdir)/html \
-$(srcdir)/html/index.html:	\
-	    $(srcdir)/mainpage.h \
-	    $(srcdir)/Doxyfile
+$(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
 	cd $(srcdir) && doxygen Doxyfile
 
 .hin.h:

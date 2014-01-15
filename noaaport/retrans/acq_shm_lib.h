@@ -38,7 +38,6 @@ RETURNS
 char *get_shm_ptr(int SHMnumber, char *name, int flag);
 char *com_shmAlloc(int size, int SHMnumber);
 int com_shmIsAlloc(int SHMnumber);
-int com_shmFree(int SHMnumber);
 int  com_shmDetach(char *address);
 
 

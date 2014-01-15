@@ -1,5 +1,5 @@
 dnl Process this file with automake to produce a configure script
-dnl Requires ./aclocal.
+dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
 AC_INIT([LDM], [6.11.6], [support-ldm@unidata.ucar.edu],,
@@ -13,7 +13,7 @@ AC_CONFIG_HEADERS([config.h])
     
 #AC_USE_SYSTEM_EXTENSIONS
 case "`uname -sr`" in
-    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq"]);;
+    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
     Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq"]);;
 esac
 AC_PROG_CC([c99 c89 gcc cc])
@@ -145,6 +145,14 @@ AC_ARG_WITH([noaaport],
     [],
     [with_noaaport=no])
 AM_CONDITIONAL([WANT_NOAAPORT], [test "x$with_noaaport" != xno])
+
+AC_ARG_WITH([retrans],
+    AS_HELP_STRING([--with-retrans],
+        [enable support for retransmission from a NOAAPORT receiver
+        [[default=without]]]),
+    [],
+    [with_retrans=no])
+AM_CONDITIONAL([WANT_RETRANS], [test "x$with_retrans" != xno])
 
 AC_ARG_WITH([gribinsert],
     AS_HELP_STRING([--with-gribinsert],
@@ -461,7 +469,7 @@ AC_CHECK_HEADERS([stropts.h], ,
     AC_CHECK_HEADERS([sys/ioctl.h], ,
 	AC_MSG_ERROR("Missing necessary header-file"))
 ])
-    
+
 # Ensure that CPPFLAGS and LIBS reference the ZLIB library, which is used by
 # the PNG library and by the XML2 library.
 UD_SEARCH_HEADER([ZLIB], [zlib.h], [/usr/include /opt/csw/include \
@@ -513,6 +521,8 @@ AC_COMPILE_IFELSE(
     ]
 )
 
+AC_PROG_LIBTOOL
+
 AC_CONFIG_FILES([
     fauxPq/Makefile
     feedme/Makefile
@@ -542,6 +552,7 @@ AC_CONFIG_FILES([
     Makefile
     misc/Makefile
     noaaport/Makefile
+    noaaport/retrans/Makefile
     notifyme/Makefile
     pqact/Makefile
     pqcat/Makefile

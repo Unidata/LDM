@@ -7,7 +7,7 @@ DESCRIPTION
 RETURNS
 
 *******************************************************************************/
-#include <config.h>
+#include "config.h"
 
 #include <stdio.h>
 #include <signal.h>
