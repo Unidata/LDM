@@ -14,7 +14,7 @@ AC_CONFIG_HEADERS([config.h])
 #AC_USE_SYSTEM_EXTENSIONS
 case "`uname -sr`" in
     "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
-    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq"]);;
+    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
 esac
 AC_PROG_CC([c99 c89 gcc cc])
 
