@@ -8,8 +8,7 @@ set -e  # exit if error
 #
 # Build and test the package and create a source-distribution.
 #
-rm -rf *
-mkdir m4
+mkdir -p m4
 autoreconf -i --force
 ./configure --disable-root-actions --with-noaaport --with-retrans \
         --with-gribinsert &>configure.log
