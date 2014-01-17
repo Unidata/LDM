@@ -28,11 +28,11 @@ CLEANFILES              = ldmadmin.1 ldmadmin
 all:		ldmadmin
 
 ldmadmin:	ldmadmin.pl
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 
 ldmadmin.1:	$(srcdir)/ldmadmin.1.in
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 
 install-data-local:	\

@@ -45,7 +45,9 @@ SUBDIRS 	+= lib
 if WANT_NOAAPORT
     SUBDIRS	+= noaaport
 endif
-SUBDIRS 	+= feedme \
+SUBDIRS 	+= \
+                   regutil \
+                   feedme \
                    hupsyslog \
                    ldmd \
                    ldmping \
@@ -64,7 +66,6 @@ SUBDIRS 	+= feedme \
                    pqsurf \
                    pqutil \
                    regex \
-                   regutil \
                    rtstats \
                    scour \
                    scripts \

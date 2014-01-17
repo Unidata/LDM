@@ -28,5 +28,5 @@ TAGS_FILES	= \
 nodist_man1_MANS	= pqexpire.1
 
 pqexpire.1:	$(srcdir)/pqexpire.1.in
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@

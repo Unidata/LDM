@@ -28,5 +28,5 @@ TAGS_FILES	= \
     ../rpc/*.c ../rpc/*.h
 
 pqsend.1:	$(srcdir)/pqsend.1.in
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@

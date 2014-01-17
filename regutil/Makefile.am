@@ -21,8 +21,7 @@ EXTRA_DIST              = \
     checkRegistry \
     installRegistry \
     regpar.tab.in \
-    regutil.txt \
-    substPaths
+    regutil.txt
 TAGS_FILES              = \
     *.c ../*.h \
     ../ulog/*.c ../ulog/*.h \
@@ -41,7 +40,7 @@ regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
 BUILT_SOURCES		= regpar.tab
 dist_man1_MANS		= regutil.1
-CLEANFILES		= regutil.out regpar.tab
+CLEANFILES		= regutil.out regpar.tab substPaths registry.h
 
 # "regpar.tab" fields:
 #
@@ -67,7 +66,6 @@ regpar.tab:	$(srcdir)/regpar.tab.in
 	    $(srcdir)/regpar.tab.in >$@.tmp
 	mv $@.tmp $@
 
-if MAINTAINER
 BUILT_SOURCES		+= substPaths
 
 substPaths:	$(srcdir)/regpar.tab.in
@@ -87,8 +85,6 @@ registry.h:	registry.hin registry.c $(srcdir)/regpar.tab.in
 	$(top_srcdir)/extractDecls $@.tmp1 $(srcdir)/registry.c >$@.tmp2
 	mv -f $@.tmp2 $@
 	rm -f $@.tmp1 $@.sed
-
-endif
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<

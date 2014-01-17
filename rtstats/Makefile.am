@@ -29,5 +29,5 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h
 
 rtstats.1:	$(srcdir)/rtstats.1.in
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@

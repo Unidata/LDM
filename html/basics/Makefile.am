@@ -146,7 +146,7 @@ if MAINTAINER
 all:	$(srcdir)/successes.html $(srcdir)/failures.html
 
 configuring.html:	$(srcdir)/configuring.html.in
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 
 registry-check:	$(top_srcdir)/configure.ac

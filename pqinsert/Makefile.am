@@ -28,5 +28,5 @@ TAGS_FILES	= \
 nodist_man1_MANS	= pqinsert.1
 
 pqinsert.1:	$(srcdir)/pqinsert.1.in
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@

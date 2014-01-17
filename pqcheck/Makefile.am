@@ -28,7 +28,7 @@ TAGS_FILES	= \
     ../rpc/*.c ../rpc/*.h
 
 pqcheck.1:	$(srcdir)/pqcheck.1.in
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 
 valgrind:	pqcheck

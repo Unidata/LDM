@@ -53,7 +53,7 @@ TAGS_FILES		= \
 	../rpc/*.c ../rpc/*.h
 
 pqing.1:	$(srcdir)/pqing.1.in
-	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
 
 do_check.o:	do.c
