@@ -239,7 +239,7 @@
 /* Needed for "u_int" and the like on IRIX systems */
 #undef _BSD_TYPES
 
-/* Needed for "struct ip_mreq" */
+/* Needed for "struct ip_mreq on Darwin" */
 #undef _DARWIN_C_SOURCE
 
 /* Define if the file /dev/conslog exists */

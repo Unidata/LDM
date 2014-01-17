@@ -77,3 +77,4 @@ ltmain.sh
 m4
 missing
 libtool
+/config.h.in
