@@ -26,7 +26,6 @@ AC_SUBST([YEAR])
 AC_DEFINE([CONFIG_H], [1], [Header-file lockout])
 #AC_DEFINE([_ALL_SOURCE], [1], [Additional POSIX functionality under AIX])
 
-AM_PROG_AR
 LT_INIT
 AM_PROG_CC_C_O
 if test -z "$CC"; then
