@@ -1599,7 +1599,7 @@ RegStatus reg_deleteNodeValue(
 }
 
 /*
- * Visits a node and all its descendents in the natural order of their path
+ * Visits a node and all its descendants in the natural order of their path
  * names.
  *
  * Arguments:
