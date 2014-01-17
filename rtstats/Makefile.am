@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+CLEANFILES      = rtstats.1
 PQ_SUBDIR		= @PQ_SUBDIR@
 
 bin_PROGRAMS		= rtstats
@@ -18,7 +19,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
 rtstats_LDADD		= $(top_builddir)/lib/libldm.la
-dist_man1_MANS		= rtstats.1
+nodist_man1_MANS	= rtstats.1
 TAGS_FILES		= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
@@ -27,8 +28,6 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
-if MAINTAINER
 rtstats.1:	$(srcdir)/rtstats.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif

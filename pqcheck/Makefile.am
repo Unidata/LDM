@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+CLEANFILES      = pqcheck.1
 PQ_SUBDIR	= @PQ_SUBDIR@
 
 bin_PROGRAMS	= pqcheck
@@ -17,7 +18,7 @@ CPPFLAGS	= \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
 pqcheck_LDADD	= $(top_builddir)/lib/libldm.la
-dist_man1_MANS	= pqcheck.1
+nodist_man1_MANS	= pqcheck.1
 TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
@@ -26,11 +27,9 @@ TAGS_FILES	= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
-if MAINTAINER
 pqcheck.1:	$(srcdir)/pqcheck.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif
 
 valgrind:	pqcheck
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \

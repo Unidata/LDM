@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+CLEANFILES      = pqinsert.1
 PQ_SUBDIR	= @PQ_SUBDIR@
 
 bin_PROGRAMS	= pqinsert
@@ -24,10 +25,8 @@ TAGS_FILES	= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
-dist_man1_MANS	= pqinsert.1
+nodist_man1_MANS	= pqinsert.1
 
-if MAINTAINER
 pqinsert.1:	$(srcdir)/pqinsert.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif

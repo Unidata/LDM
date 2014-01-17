@@ -38,7 +38,7 @@ pqact_LDADD		= \
     $(top_builddir)/lib/libldm.la \
     $(GDBMLIB)
 date_sub_LDADD		= $(top_builddir)/lib/libldm.la
-dist_man1_MANS		= pqact.1
+nodist_man1_MANS	= pqact.1
 TAGS_FILES		= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
@@ -48,13 +48,11 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
-CLEANFILES		= *.i
+CLEANFILES              = pqact.1 *.i 
 
-if MAINTAINER
 pqact.1:	$(srcdir)/pqact.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif
 
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/pqact.conf

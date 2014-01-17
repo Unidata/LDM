@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+CLEANFILES      = pqing.1
 EXTRA_DIST		= \
     afos_message.h \
     do.c \
@@ -40,7 +41,7 @@ pqing_LDADD		= \
     do_check.o \
     do_nocheck.o \
     $(top_builddir)/lib/libldm.la
-dist_man1_MANS		= pqing.1
+nodist_man1_MANS	= pqing.1
 TAGS_FILES		= \
 	do.c \
 	../pqinglib/*.c ../pqinglib/*.h \
@@ -51,11 +52,9 @@ TAGS_FILES		= \
 	../misc/*.c ../misc/*.h \
 	../rpc/*.c ../rpc/*.h
 
-if MAINTAINER
 pqing.1:	$(srcdir)/pqing.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif
 
 do_check.o:	do.c
 	$(COMPILE) -DSCAN_CHECK -c $(srcdir)/do.c && mv do.o $@;

@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+CLEANFILES              = pqsurf.1
 EXTRA_DIST		= surface.h
 GDBMLIB			= @GDBMLIB@
 PQ_SUBDIR		= @PQ_SUBDIR@
@@ -21,7 +22,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)/pqing \
     -I$(top_srcdir)
 pqsurf_LDADD		= $(top_builddir)/lib/libldm.la $(GDBMLIB)
-dist_man1_MANS		= pqsurf.1
+nodist_man1_MANS	= pqsurf.1
 TAGS_FILES		= \
     ../pqing/*.c ../pqing/*.h \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
@@ -31,8 +32,6 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
-if MAINTAINER
 pqsurf.1:	$(srcdir)/pqsurf.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif

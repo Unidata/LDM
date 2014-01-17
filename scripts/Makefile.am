@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+BUILT_SOURCES           = ldmadmin
 EXTRA_DIST		= \
     ldmadmin.pl.in \
     ldmfail.in \
@@ -20,9 +21,9 @@ dist_bin_SCRIPTS	= \
     ldmfail \
     wasReceived
 nodist_bin_SCRIPTS	= plotMetrics
-dist_man1_MANS		= ldmadmin.1 netcheck.1 syscheck.1 ldmfail.1 \
-			  wasReceived.1
-CLEANFILES		= ldmadmin
+nodist_man1_MANS	= ldmadmin.1
+dist_man1_MANS	        = netcheck.1 syscheck.1 ldmfail.1 wasReceived.1
+CLEANFILES              = ldmadmin.1 ldmadmin
 
 all:		ldmadmin
 

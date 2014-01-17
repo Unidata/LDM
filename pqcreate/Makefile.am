@@ -24,14 +24,12 @@ TAGS_FILES	= \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
-dist_man1_MANS	= pqcreate.1
-CLEANFILES	= *.i
+nodist_man1_MANS	= pqcreate.1
+CLEANFILES	= pqcreate.1 *.i
 
-if MAINTAINER
 pqcreate.1:	$(srcdir)/pqcreate.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif
 
 .c.i:
 	$(COMPILE) $(AM_CPPFLAGS) $(CPPFLAGS) -E $< >$@

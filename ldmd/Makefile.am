@@ -6,8 +6,8 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES   = parser.c scanner.c
-CLEANFILES		= *.i .*.info ldmd.1
+BUILT_SOURCES           = parser.c scanner.c
+CLEANFILES		= ldmd.1 *.i .*.info
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
 EXTRA_DIST		= \
@@ -76,9 +76,6 @@ $(DESTDIR)$(sysconfdir)/ldmd.conf:
 
 $(DESTDIR)$(sysconfdir):
 	mkdir $@
-
-uninstall-local:
-	rm -f $(DESTDIR)$(mandir)/man1/ldmd.1
 
 valgrind:	ldmd
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
