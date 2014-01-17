@@ -143,12 +143,9 @@ check-readnoaaport:	readnoaaport
 	rm /tmp/readnoaaport-test.pq
 check-noaaportIngester:	noaaportIngester
 	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-ck
-	rm /tmp/noaaportIngester-test.pq
-
-root-ni-ck:
 	./noaaportIngester -b 3 -q /tmp/noaaportIngester-test.pq \
 	    <$(srcdir)/nwstgdump.data
+	rm /tmp/noaaportIngester-test.pq
 
 valgrind:		valgrind-readnoaaport valgrind-noaaportIngester
 
