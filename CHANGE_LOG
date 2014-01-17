@@ -1,15 +1,16 @@
 6.11.7
     noaaportIngester(1):
         Incorporated Ratheon's latest modifications to support retransmission
-        requests. This feature can only be used by NWS sites.
+        requests. This feature can only be used by NWS sites -- so don't even
+        think about it.
 
     notifyme(1):
-        Squashed a bug in the LDM 5 client library -- which is used by
-        notifyme(1) -- that would cause a segmentation violation if the upstream
+        Squashed a bug in the LDM 5 client library (which is used by
+        notifyme(1)) that would cause a segmentation violation if the upstream
         hostname couldn't be resolved into an IP address.
 
     Documentation:
-            Changed "software/idd" in UPC hyperlinks to "projects/idd".
+        Corrected URL for the IDD.
 
 6.11.6 	2013-06-24 17:04:55-06:00
     SUMMARY OF SIGNIFICANT CHANGES:
