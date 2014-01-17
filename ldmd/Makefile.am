@@ -7,11 +7,11 @@
 ## Process this file with automake to produce Makefile.in
 
 BUILT_SOURCES   = parser.c scanner.c
-CLEANFILES		= *.i .*.info
+CLEANFILES		= *.i .*.info ldmd.1
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
 EXTRA_DIST		= \
-    ldmd.1 \
+    ldmd.1.in \
     ldmd.conf \
     parser.y \
     scanner.c \
@@ -35,7 +35,7 @@ CPPFLAGS		= \
 ldmd_LDADD		= \
     $(top_builddir)/lib/libldm.la \
     $(LD_GEN)
-dist_man1_MANS		= ldmd.1
+nodist_man1_MANS	= ldmd.1
 TAGS_FILES		= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
@@ -44,13 +44,9 @@ TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
-if MAINTAINER
 ldmd.1:		$(srcdir)/ldmd.1.in
-	$(top_srcdir)/registry/substPaths <$< >$@.tmp
+	$(top_srcdir)/regutil/substPaths <$< >$@.tmp
 	mv $@.tmp $@
-endif
-
-if MAINTAINER
 
 parser.c:	parser.y
 	status=1; \
@@ -67,8 +63,6 @@ parser.c:	parser.y
 scanner.c:	scanner.l
 	flex scanner.l
 	mv lex.yy.c scanner.c
-
-endif
 
 SUFFIXES:	.h .hin
 .hin.h:
