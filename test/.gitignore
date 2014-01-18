@@ -1,13 +1,10 @@
 hostchecks
 *.log
-redo-results
 *.results
 Makefile
 *.log
 *.results
 hostchecks
-redo-results
 *.results.*
 Makefile.in
-redo_results.tab
 lockExp

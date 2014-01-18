@@ -6,7 +6,7 @@
 # redistribution conditions.
 #
 # Process this file with automake(1) to produce Makefile.in
-EXTRA_DIST	= redo_results.tab results.tab
+EXTRA_DIST	= results.tab
 distId		= $(PACKAGE)-$(VERSION)
 distName	= $(distId).tar.gz
 distPath	= $(top_srcdir)/$(distName)
@@ -87,7 +87,6 @@ singleCheck:
 	    echo "$(env),$(make),$(cc),$(configOpts),0" >>$(host).results; \
 	fi
 	ssh -x $(host) rm /tmp/remoteCheck /tmp/$(distName)
-	touch redo_results.tab
 
 # The following rule executes multiple synchronous build processes on a
 # remote system for a single make(1) and cc(1) pair.
@@ -135,7 +134,7 @@ hostchecks:
 # the build on a remote system.
 #
 # FIELDS: hostname,os,cpu,make,cc,config_opts,exit_status
-results.tab:	redo_results.tab
+results.tab:
 	for host in $(HOSTS); do \
 	    (ssh -x $$host 'if test `uname` = AIX; then uname -srv; \
 		    else uname -sr; fi; uname -m'; \
