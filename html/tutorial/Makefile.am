@@ -68,9 +68,6 @@ nobase_html_DATA	= \
     tutorial/images/TOCIcon.gif \
     tutorial/images/TopArrow.gif
 
-if MAINTAINER
-all:		$(EXTRA_DIST)
-
 $(EXTRA_DIST):
 	rm -rf tutorial
 	tclsh generate/generate.tcl -verbose \
@@ -89,4 +86,3 @@ clean-local:
 	rm -rf tutorial
 
 .PHONY:		web-update tutorial
-endif
