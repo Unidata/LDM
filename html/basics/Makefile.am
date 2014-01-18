@@ -140,8 +140,6 @@ LDM-registry.html:	$(srcdir)/regpar-top.html ../../regutil/regpar.tab
 	echo '</blockquote></BODY></HTML>' >>$@.tmp
 	mv $@.tmp $@
 
-if MAINTAINER
-
 all:	$(srcdir)/successes.html $(srcdir)/failures.html
 
 configuring.html:	$(srcdir)/configuring.html.in
@@ -261,5 +259,3 @@ web-update:
 	    >$(WEB_DESTDIR)/basics/LDM-registry.html.new
 	mv $(WEB_DESTDIR)/basics/LDM-registry.html.new \
 	    $(WEB_DESTDIR)/basics/LDM-registry.html 
-
-endif
