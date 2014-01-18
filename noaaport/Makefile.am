@@ -211,7 +211,6 @@ uninstall-hook:
 	chmod -R +w $(DESTDIR)$(docdir)
 	rm -rf $(DESTDIR)$(docdir)
 
-if MAINTAINER
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)/noaaport
 
 commit-check:	Makefile
@@ -227,7 +226,6 @@ $(WEB_DESTDIR):
 
 web-update:	$(WEB_DESTDIR)
 	cp -R html/* $(WEB_DESTDIR)
-endif
 
 .PHONY:	\
 	install-html \

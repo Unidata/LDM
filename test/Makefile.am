@@ -12,8 +12,6 @@ distName	= $(distId).tar.gz
 distPath	= $(top_srcdir)/$(distName)
 topTmpDir	= /tmp/$(distId)
 
-if MAINTAINER
-
 HOSTS		= \
     flip \
     gilda \
@@ -176,8 +174,6 @@ portability.csv:	results.tab
 remote-checks:	hostchecks results.tab portability.csv
 
 .PHONY:	singleCheck multiCheck hostchecks hostcheck remote-checks
-
-endif
 
 ## The following entries are necessary to stop make(1)s that don't
 ## understand the .PHONY target from trying to create the given files.

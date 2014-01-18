@@ -9,12 +9,9 @@ DISTCLEANFILES	= specifics.html
 
 EXTRA_DIST	= $(html_DATA)
 
-if MAINTAINER
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
 web-update:
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    *.html \
 	    $(WEB_DESTDIR)/workshop
-
-endif

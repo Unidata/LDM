@@ -78,7 +78,6 @@ EXTRA_DIST	= \
 BUILT_SOURCES	= CHANGE_LOG COPYRIGHT
 CLEANFILES	= CHANGE_LOG COPYRIGHT
 
-if MAINTAINER
 ALPHADIR	= /web/content/staff/steve/ldm
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
@@ -104,7 +103,6 @@ alpha:
 	$(MAKE) web-update WEB_DESTDIR=$(ALPHADIR)
 
 .PHONY:		commit-check alpha web-update
-endif
 
 CHANGE_LOG COPYRIGHT:
 	ln -s $(top_srcdir)/$@ $@

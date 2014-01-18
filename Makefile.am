@@ -211,7 +211,6 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 		echo 1>&2 "Couldn't build manual-page database"; \
 	fi
 
-if MAINTAINER
 FTPDIR	= /web/ftp/pub/$(PACKAGE)
 
 $(FTPDIR):
@@ -325,8 +324,6 @@ web-update:
 # Make this instead of "release" when the package will be released to the
 # public
 available:	ftp web-update
-
-endif
 
 .PHONY:		\
     alpha \
