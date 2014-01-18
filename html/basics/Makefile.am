@@ -4,7 +4,7 @@ EXTRA_DIST	= \
     become_ldm.html \
     behavior.html \
     cluster.html \
-    configuring.html \
+    configuring.html.in \
     data-product.html \
     ERE.html \
     failures.html \
@@ -118,8 +118,7 @@ nobase_html_DATA	= \
     feedtypes/ntext.html \
     feedtypes/public_bulletins.html \
     feedtypes/wsi.html
-BUILT_SOURCES		= LDM-registry.html
-DISTCLEANFILES		= LDM-registry.html
+CLEANFILES              = configuring.html LDM-registry.html
 
 LDM-registry.html:	$(srcdir)/regpar-top.html ../../regutil/regpar.tab
 	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
