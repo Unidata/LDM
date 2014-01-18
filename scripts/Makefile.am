@@ -6,8 +6,8 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES           = ldmadmin
 EXTRA_DIST		= \
+    ldmadmin.1.in \
     ldmadmin.pl.in \
     ldmfail.in \
     netcheck.in \
@@ -15,17 +15,16 @@ EXTRA_DIST		= \
     plotMetrics.in \
     syscheck.in
 dist_bin_SCRIPTS	= \
-    netcheck \
-    syscheck \
+    wasReceived
+nodist_bin_SCRIPTS	= \
     ldmadmin \
     ldmfail \
-    wasReceived
-nodist_bin_SCRIPTS	= plotMetrics
+    netcheck \
+    plotMetrics \
+    syscheck
 nodist_man1_MANS	= ldmadmin.1
 dist_man1_MANS	        = netcheck.1 syscheck.1 ldmfail.1 wasReceived.1
-CLEANFILES              = ldmadmin.1 ldmadmin
-
-all:		ldmadmin
+CLEANFILES              = ldmadmin ldmadmin.1
 
 ldmadmin:	ldmadmin.pl
 	../regutil/substPaths <$< >$@.tmp

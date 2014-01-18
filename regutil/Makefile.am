@@ -38,7 +38,7 @@ AM_CPPFLAGS		= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry
 regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
-BUILT_SOURCES		= regpar.tab
+BUILT_SOURCES		= regpar.tab substPaths
 dist_man1_MANS		= regutil.1
 CLEANFILES		= regutil.out regpar.tab substPaths registry.h
 
@@ -65,8 +65,6 @@ regpar.tab:	$(srcdir)/regpar.tab.in
 	    -e 's;@''ETC_DIR@;$(ETC_DIR);g' \
 	    $(srcdir)/regpar.tab.in >$@.tmp
 	mv $@.tmp $@
-
-BUILT_SOURCES		+= substPaths
 
 substPaths:	$(srcdir)/regpar.tab.in
 	$(AWK) -F : 'BEGIN {print "sed \\"} \
