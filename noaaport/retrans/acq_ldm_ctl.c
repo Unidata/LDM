@@ -261,12 +261,14 @@ int 	acqctl_do_action(int flag, INPUT *p_input, ACQ_TABLE *p_acqtable);
 
 
 
+#if 0
 static 	int	acqctl_do_caution(char *in_command, INPUT *p_input);
 static 	int	acqctl_do_confirm(char *in_command, INPUT *p_input);
+static int acqctl_get_pid(int host_id, pid_t client_pid);
+#endif
 static 	int	acqctl_get_response(INPUT *p_input, char *in_command, int in_question, 
 			int *rtn_code);
 
-static int acqctl_get_pid(int host_id, pid_t client_pid);
 
 int do_new_menu();
 
@@ -454,6 +456,7 @@ char **argv;
 
 }
 
+#if 0
 /******************************************************************************
 	Name
 		acqctl_do_confirm
@@ -488,7 +491,9 @@ static int acqctl_do_confirm(char *in_command, INPUT *p_input)
 		PNAME, in_command);
 	return(0);
 } /* end routine acqctl_do_confirm() */
+#endif
 
+#if 0
 /******************************************************************************
 	Name
 		acqctl_do_caution
@@ -525,6 +530,7 @@ static int acqctl_do_caution(char *in_command, INPUT *p_input)
 		PNAME, in_command);
 	return(0);
 } /* end routine acqctl_do_caution() */
+#endif
 
 /******************************************************************************
 	Name
@@ -945,7 +951,7 @@ acqctl_do_action(
 
 
 
-
+#if 0
 /*****************************************************************************
 	Name
 		acqctl_get_pid
@@ -1007,7 +1013,8 @@ acqctl_get_pid(
 	return last_pid;
 
 } /* end routine acqctl_get_pid */
-
+#endif
+
 /******************************************************************************
 	Name  
 		cmd_line
