@@ -42,7 +42,7 @@ private:
 	int sock_fd;
 
 
-	void SysError(char* info);
+	void SysError(const char* info);
 };
 
 #endif /* TCPCLIENT_H_ */

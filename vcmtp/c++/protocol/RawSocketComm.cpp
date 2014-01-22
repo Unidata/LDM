@@ -97,7 +97,7 @@ void RawSocketComm::WaitForNewToken() {
 }
 
 
-int RawSocketComm::SendData(const void* buff, size_t len, int flags, void* dst_addr) {
+ssize_t RawSocketComm::SendData(const void* buff, size_t len, int flags, void* dst_addr) {
 	// set the destination address
 	memcpy(dest_address.sll_addr, dst_addr, ETH_ALEN);
 	// set the frame header
@@ -145,7 +145,7 @@ int RawSocketComm::SendFrame(void* buffer, size_t length) {
 
 
 
-int RawSocketComm::RecvData(void* buff, size_t len, int flags, SA* from, socklen_t* from_len) {
+ssize_t RawSocketComm::RecvData(void* buff, size_t len, int flags, SA* from, socklen_t* from_len) {
 	size_t remained_len = len;
 	size_t received_bytes = 0;
 	char* ptr = (char*)buff;

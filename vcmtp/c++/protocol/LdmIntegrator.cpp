@@ -109,6 +109,7 @@ int LdmIntegrator::GetFilesInDirectory(vector<string> &files)
 //======================= Receive files from a remote source =======================
 void* LdmIntegrator::StartReceiveThread(void* ptr) {
 	((LdmIntegrator*)ptr)->RunReceiveThread();
+	return NULL;
 }
 
 
@@ -179,7 +180,7 @@ void LdmIntegrator::RunReceiveThread() {
 }
 
 
-void LdmIntegrator::SendMessage(char* msg) {
+void LdmIntegrator::SendMessage(const char* msg) {
 	pthread_mutex_lock(&send_mutex);
 	proxy->SendMessageLocal(INFORMATIONAL, msg);
 	pthread_mutex_unlock(&send_mutex);

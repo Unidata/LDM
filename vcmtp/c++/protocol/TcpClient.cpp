@@ -82,7 +82,7 @@ int TcpClient::Receive(void* buffer, size_t length) {
 //	return length;
 }
 
-void TcpClient::SysError(char* info) {
+void TcpClient::SysError(const char* info) {
 	perror(info);
 	exit(-1);
 }

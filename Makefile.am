@@ -25,6 +25,9 @@ DISTCHECK_CONFIGURE_FLAGS	= \
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
 SUBDIRS		= rpc ulog pqinglib
+if WANT_VCMTP
+    SUBDIRS	+= vcmtp
+endif
 if WANT_FAUX_PQ
     SUBDIRS	+= fauxPq
 else

@@ -56,7 +56,7 @@ private:
 
 	static void* StartServerThread(void* ptr);
 	void AcceptClients();
-	void SysError(char* info);
+	void SysError(const char* info);
 };
 
 #endif /* TCPSERVER_H_ */

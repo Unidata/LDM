@@ -59,7 +59,7 @@ private:
 	static void* StartSendThread(void* ptr);
 	void RunSendThread();
 
-	void SendMessage(char* msg);
+	void SendMessage(const char* msg);
 };
 
 #endif /* LDMINTEGRATOR_H_ */

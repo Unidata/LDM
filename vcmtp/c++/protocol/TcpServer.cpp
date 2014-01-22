@@ -176,7 +176,7 @@ int TcpServer::Receive(int sock_fd, void* buffer, size_t length) {
 }
 
 
-void TcpServer::SysError(char* info) {
+void TcpServer::SysError(const char* info) {
 	perror(info);
 	exit(-1);
 }
