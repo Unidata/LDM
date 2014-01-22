@@ -17,6 +17,7 @@ case "`uname -sr`" in
     Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
 esac
 AC_PROG_CC([c99 c89 gcc cc])
+AC_PROG_CXX()
 
 YEAR=`date +%Y`
 AC_SUBST([YEAR])
@@ -136,6 +137,15 @@ case `uname -s` in
 esac
 
 AM_CONDITIONAL([MAINTAINER], [test "$USER" = steve])
+
+# The following is for Virtual Circuit Multicast Transport Protocol. DO NOT USE!
+AC_ARG_WITH([vcmtp],
+    AS_HELP_STRING([--with-vcmtp],
+	[enable support for VCMTP. DO NOT USE!]
+        [[default=without]]]),
+    [],
+    [with_vcmtp=no])
+AM_CONDITIONAL([WANT_VCMTP], [test "x$with_vcmtp" != xno])
 
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
@@ -584,6 +594,10 @@ AC_CONFIG_FILES([
     uldbutil/Makefile
     ulogger/Makefile
     ulog/Makefile
+    vcmtp/Makefile
+    vcmtp/c++/Makefile
+    vcmtp/c++/CommUtil/Makefile
+    vcmtp/c++/protocol/Makefile
 ])
 
 export CC
