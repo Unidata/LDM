@@ -1,16 +1,16 @@
 /*
- * MvctpSenderMetadata.h
+ * VcmtpSenderMetadata.h
  *
  *  Created on: Jul 1, 2012
  *      Author: jie
  */
 
-#ifndef MVCTPSENDERMETADATA_H_
-#define MVCTPSENDERMETADATA_H_
+#ifndef VCMTPSENDERMETADATA_H_
+#define VCMTPSENDERMETADATA_H_
 
 #include <pthread.h>
 #include <set>
-#include "mvctp.h"
+#include "vcmtp.h"
 
 using namespace std;
 
@@ -41,7 +41,7 @@ enum MsgTransferStatus {BOF_NOT_RECEIVED, IN_NORMAL_TRANSFER, FINISHED};
 
 /*struct MessageMetadata {
 	MsgTransferStatus 	status;
-	MvctpMessageInfo 	msg_info;
+	VcmtpMessageInfo 	msg_info;
 };
 */
 
@@ -93,10 +93,10 @@ struct MemoryMessageMetadata: public MessageMetadata {
 
 
 
-class MvctpSenderMetadata {
+class VcmtpSenderMetadata {
 public:
-	MvctpSenderMetadata();
-	~MvctpSenderMetadata();
+	VcmtpSenderMetadata();
+	~VcmtpSenderMetadata();
 
 	void 	AddMessageMetadata(MessageMetadata* ptr_meta);
 	void 	RemoveMessageMetadata(uint msg_id);
@@ -112,4 +112,4 @@ private:
 	pthread_rwlock_t 	metadata_lock;
 };
 
-#endif /* MVCTPSENDERMETADATA_H_ */
+#endif /* VCMTPSENDERMETADATA_H_ */

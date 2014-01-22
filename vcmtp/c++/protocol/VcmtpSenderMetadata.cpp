@@ -1,17 +1,17 @@
 /*
- * MvctpSenderMetadata.cpp
+ * VcmtpSenderMetadata.cpp
  *
  *  Created on: Jul 1, 2012
  *      Author: jie
  */
 
-#include "MvctpSenderMetadata.h"
+#include "VcmtpSenderMetadata.h"
 
-MvctpSenderMetadata::MvctpSenderMetadata() {
+VcmtpSenderMetadata::VcmtpSenderMetadata() {
 	pthread_rwlock_init(&map_lock, NULL);
 }
 
-MvctpSenderMetadata::~MvctpSenderMetadata() {
+VcmtpSenderMetadata::~VcmtpSenderMetadata() {
 	for (map<uint, MessageMetadata*>::iterator it = metadata_map.begin(); it != metadata_map.end(); it++) {
 		delete (it->second);
 	}
@@ -20,14 +20,14 @@ MvctpSenderMetadata::~MvctpSenderMetadata() {
 }
 
 
-void MvctpSenderMetadata::AddMessageMetadata(MessageMetadata* ptr_meta) {
+void VcmtpSenderMetadata::AddMessageMetadata(MessageMetadata* ptr_meta) {
 	pthread_rwlock_wrlock(&map_lock);
 	metadata_map[ptr_meta->msg_id] = ptr_meta;
 	pthread_rwlock_unlock(&map_lock);
 }
 
 
-void MvctpSenderMetadata::RemoveMessageMetadata(uint msg_id) {
+void VcmtpSenderMetadata::RemoveMessageMetadata(uint msg_id) {
 	pthread_rwlock_wrlock(&map_lock);
 	map<uint, MessageMetadata*>::iterator it = metadata_map.find(msg_id);
 	if (it != metadata_map.end()) {
@@ -37,7 +37,7 @@ void MvctpSenderMetadata::RemoveMessageMetadata(uint msg_id) {
 	pthread_rwlock_unlock(&map_lock);
 }
 
-void MvctpSenderMetadata::ClearAllMetadata() {
+void VcmtpSenderMetadata::ClearAllMetadata() {
 	pthread_rwlock_wrlock(&map_lock);
 	for (map<uint, MessageMetadata*>::iterator it = metadata_map.begin(); it != metadata_map.end(); it++) {
 		delete (it->second);
@@ -46,7 +46,7 @@ void MvctpSenderMetadata::ClearAllMetadata() {
 	pthread_rwlock_unlock(&map_lock);
 }
 
-MessageMetadata* MvctpSenderMetadata::GetMetadata(uint msg_id) {
+MessageMetadata* VcmtpSenderMetadata::GetMetadata(uint msg_id) {
 	MessageMetadata* temp = NULL;
 	map<uint, MessageMetadata*>::iterator it;
 	pthread_rwlock_rdlock(&map_lock);
@@ -57,7 +57,7 @@ MessageMetadata* MvctpSenderMetadata::GetMetadata(uint msg_id) {
 }
 
 
-bool MvctpSenderMetadata::IsTransferFinished(uint msg_id) {
+bool VcmtpSenderMetadata::IsTransferFinished(uint msg_id) {
 	bool is_finished = true;
 	map<uint, MessageMetadata*>::iterator it;
 	pthread_rwlock_rdlock(&map_lock);
@@ -71,7 +71,7 @@ bool MvctpSenderMetadata::IsTransferFinished(uint msg_id) {
 }
 
 
-int MvctpSenderMetadata::GetFileDescriptor(uint msg_id) {
+int VcmtpSenderMetadata::GetFileDescriptor(uint msg_id) {
 	int res = -1;
 	map<uint, MessageMetadata*>::iterator it;
 	pthread_rwlock_rdlock(&map_lock);
@@ -95,7 +95,7 @@ int MvctpSenderMetadata::GetFileDescriptor(uint msg_id) {
 }
 
 
-void MvctpSenderMetadata::RemoveFinishedReceiver(uint msg_id, int sock_fd) {
+void VcmtpSenderMetadata::RemoveFinishedReceiver(uint msg_id, int sock_fd) {
 	map<uint, MessageMetadata*>::iterator it;
 	pthread_rwlock_wrlock(&map_lock);
 	if ( (it = metadata_map.find(msg_id)) != metadata_map.end())

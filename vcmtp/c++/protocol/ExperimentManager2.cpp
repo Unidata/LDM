@@ -63,7 +63,7 @@ void ExperimentManager2::GenerateFile(string file_name, int size) {
 static const int 	NUM_EXPERIMENTS = 5;
 static const int 	FILE_COUNT = 500;
 static const int 	SLOW_RECEIVER_RATIO = 40;  // in percent
-void ExperimentManager2::StartExperiment2(SenderStatusProxy* sender_proxy, MVCTPSender* sender) {
+void ExperimentManager2::StartExperiment2(SenderStatusProxy* sender_proxy, VCMTPSender* sender) {
 	this->sender_proxy = sender_proxy;
 	this->sender = sender;
 
@@ -229,7 +229,7 @@ void ExperimentManager2::HandleExpResults(string msg) {
 
 
 
-void ExperimentManager2::StartExperiment(SenderStatusProxy* sender_proxy, MVCTPSender* sender) {
+void ExperimentManager2::StartExperiment(SenderStatusProxy* sender_proxy, VCMTPSender* sender) {
 	// Randomly generate FILE_COUNT files for the sample
 	sender_proxy->SendMessageLocal(INFORMATIONAL, "Generating files...\n");
 	system("mkdir /tmp/temp");

@@ -15,7 +15,7 @@
 #include <stdio.h>
 
 class SenderStatusProxy;
-class MVCTPSender;
+class VCMTPSender;
 
 
 const int HIGH_SPEED_EXP = 1;
@@ -27,9 +27,9 @@ public:
 	ExperimentManager();
 	~ExperimentManager();
 
-	void StartExperiment(SenderStatusProxy* sender_proxy, MVCTPSender* sender);
-	void StartExperimentRetrans(SenderStatusProxy* sender_proxy, MVCTPSender* sender);
-	void StartExperimentLowSpeed(SenderStatusProxy* sender_proxy, MVCTPSender* sender);
+	void StartExperiment(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
+	void StartExperimentRetrans(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
+	void StartExperimentLowSpeed(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
 
 	void HandleExpResults(string msg);
 
@@ -49,8 +49,8 @@ private:
 	int num_retrans_thread;
 	int exp_type;
 
-	void DoSpeedTest(SenderStatusProxy* sender_proxy, MVCTPSender* sender);
-	void DoLowSpeedExperiment(SenderStatusProxy* sender_proxy, MVCTPSender* sender);
+	void DoSpeedTest(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
+	void DoLowSpeedExperiment(SenderStatusProxy* sender_proxy, VCMTPSender* sender);
 };
 
 

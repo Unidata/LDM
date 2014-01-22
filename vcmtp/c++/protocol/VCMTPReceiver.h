@@ -1,24 +1,24 @@
 /*
- * MVCTPReceiver.h
+ * VCMTPReceiver.h
  *
  *  Created on: Jul 21, 2011
  *      Author: jie
  */
 
-#ifndef MVCTPRECEIVER_H_
-#define MVCTPRECEIVER_H_
+#ifndef VCMTPRECEIVER_H_
+#define VCMTPRECEIVER_H_
 
-#include "mvctp.h"
-#include "MVCTPComm.h"
+#include "vcmtp.h"
+#include "VCMTPComm.h"
 #include "TcpClient.h"
-#include "MvctpSenderMetadata.h"
+#include "VcmtpSenderMetadata.h"
 #include "../CommUtil/PerformanceCounter.h"
 #include "../CommUtil/StatusProxy.h"
 
 typedef	void (*VCMTP_BOF_Function)();
 typedef void (*VCMTP_Recv_Complete_Function)();
 
-struct MvctpReceiverStats {
+struct VcmtpReceiverStats {
 	uint	current_msg_id;
 	uint 	total_recv_packets;
 	uint	total_recv_bytes;
@@ -65,7 +65,7 @@ struct MessageReceiveStatus {
 };
 
 
-struct MvctpReceiverConfig {
+struct VcmtpReceiverConfig {
 	string 	multicast_addr;
 	string  sender_ip_addr;
 	int		sender_tcp_port;
@@ -75,11 +75,11 @@ struct MvctpReceiverConfig {
 };
 
 
-// MVCTPReceiver is the main class that communicates with the MVCTP Sender
-class MVCTPReceiver : public MVCTPComm {
+// VCMTPReceiver is the main class that communicates with the VCMTP Sender
+class VCMTPReceiver : public VCMTPComm {
 public:
-	MVCTPReceiver(int buf_size);
-	virtual ~MVCTPReceiver();
+	VCMTPReceiver(int buf_size);
+	virtual ~VCMTPReceiver();
 
 	int 	JoinGroup(string addr, u_short port);
 	int		ConnectSenderOnTCP();
@@ -98,7 +98,7 @@ public:
 	void	SendSessionStatisticsToSender();
 	void	ExecuteCommand(char* command);
 	void 	SetStatusProxy(StatusProxy* proxy);
-	const struct MvctpReceiverStats GetBufferStats();
+	const struct VcmtpReceiverStats GetBufferStats();
 
 
 private:
@@ -112,7 +112,7 @@ private:
 
 	int 				packet_loss_rate;
 	uint				session_id;
-	MvctpReceiverStats 	recv_stats;
+	VcmtpReceiverStats 	recv_stats;
 	CpuCycleCounter		cpu_counter, global_timer;
 	StatusProxy*		status_proxy;
 
@@ -123,22 +123,22 @@ private:
 	void 	ReconnectSender();
 
 	// Memory-to-memory data tranfer
-	void 	ReceiveMemoryData(const MvctpSenderMessage & msg, char* mem_data);
-	void 	DoMemoryDataRetransmission(char* mem_data, const list<MvctpNackMessage>& nack_list);
+	void 	ReceiveMemoryData(const VcmtpSenderMessage & msg, char* mem_data);
+	void 	DoMemoryDataRetransmission(char* mem_data, const list<VcmtpNackMessage>& nack_list);
 	// Disk-to-disk data transfer
-	void 	ReceiveFileBufferedIO(const MvctpSenderMessage & transfer_msg);
-	void 	ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfer_msg);
-	void 	DoFileRetransmission(int fd, const list<MvctpNackMessage>& nack_list);
+	void 	ReceiveFileBufferedIO(const VcmtpSenderMessage & transfer_msg);
+	void 	ReceiveFileMemoryMappedIO(const VcmtpSenderMessage & transfer_msg);
+	void 	DoFileRetransmission(int fd, const list<VcmtpNackMessage>& nack_list);
 
 	void 	DoAsynchronousWrite(int fd, size_t offset, char* data_buffer, size_t length);
 	static void HandleAsyncWriteCompletion(sigval_t sigval);
 	void	CheckReceivedFile(const char* file_name, size_t length);
-	void	SendNackMessages(const list<MvctpNackMessage>& nack_list);
-	void 	HandleMissingPackets(list<MvctpNackMessage>& nack_list, uint current_offset, uint received_seq);
+	void	SendNackMessages(const list<VcmtpNackMessage>& nack_list);
+	void 	HandleMissingPackets(list<VcmtpNackMessage>& nack_list, uint current_offset, uint received_seq);
 
 	// Functions related to TCP data transfer
-	void 	TcpReceiveMemoryData(const MvctpSenderMessage & msg, char* mem_data);
-	void 	TcpReceiveFile(const MvctpSenderMessage & transfer_msg);
+	void 	TcpReceiveMemoryData(const VcmtpSenderMessage & msg, char* mem_data);
+	void 	TcpReceiveFile(const VcmtpSenderMessage & transfer_msg);
 
 
 	// Receive status map for all active files
@@ -147,8 +147,8 @@ private:
 	// File descriptor map for the main RECEIVING thread. Format: <msg_id, file_descriptor>
 	map<uint, int> 	recv_file_map;
 
-	char read_ahead_buffer[MVCTP_PACKET_LEN];
-	MvctpHeader* read_ahead_header;
+	char read_ahead_buffer[VCMTP_PACKET_LEN];
+	VcmtpHeader* read_ahead_header;
 	char* read_ahead_data;
 
 
@@ -160,10 +160,10 @@ private:
 	void	RunReceivingThread();
 	void	HandleMulticastPacket();
 	void	HandleUnicastPacket();
-	void	HandleBofMessage(MvctpSenderMessage& sender_msg);
+	void	HandleBofMessage(VcmtpSenderMessage& sender_msg);
 	void  	HandleEofMessage(uint msg_id);
-	void	PrepareForFileTransfer(MvctpSenderMessage& sender_msg);
-	void	HandleSenderMessage(MvctpSenderMessage& sender_msg);
+	void	PrepareForFileTransfer(VcmtpSenderMessage& sender_msg);
+	void	HandleSenderMessage(VcmtpSenderMessage& sender_msg);
 	void	AddRetxRequest(uint msg_id, uint current_offset, uint received_seq);
 
 	//*********************** Retransmission thread functions ***********************
@@ -173,9 +173,9 @@ private:
 	pthread_t			retrans_thread;
 	pthread_mutex_t 	retrans_list_mutex;
 	bool				keep_retrans_alive;
-	list<MvctpRetransRequest> 	retrans_list;
+	list<VcmtpRetransRequest> 	retrans_list;
 
-	int		mvctp_seq_num;
+	int		vcmtp_seq_num;
 	size_t	total_missing_bytes;
 	size_t	received_retrans_bytes;
 	bool	is_multicast_finished;
@@ -183,4 +183,4 @@ private:
 
 };
 
-#endif /* MVCTPRECEIVER_H_ */
+#endif /* VCMTPRECEIVER_H_ */

@@ -1,24 +1,24 @@
 /*
- * MVCTPSender.h
+ * VCMTPSender.h
  *
  *  Created on: Jul 21, 2011
  *      Author: jie
  */
 
-#ifndef MVCTPSENDER_H_
-#define MVCTPSENDER_H_
+#ifndef VCMTPSENDER_H_
+#define VCMTPSENDER_H_
 
-#include "mvctp.h"
-#include "MVCTPComm.h"
+#include "vcmtp.h"
+#include "VCMTPComm.h"
 #include "TcpServer.h"
-#include "MvctpSenderMetadata.h"
-#include "MvctpEventQueueManager.h"
+#include "VcmtpSenderMetadata.h"
+#include "VcmtpEventQueueManager.h"
 #include "../CommUtil/PerformanceCounter.h"
 #include "../CommUtil/StatusProxy.h"
 #include "../CommUtil/RateShaper.h"
 #include <pthread.h>
 
-struct MvctpSenderStats {
+struct VcmtpSenderStats {
 	uint	cpu_usage;		// in percentage
 	uint 	total_sent_packets;
 	uint	total_sent_bytes;
@@ -35,7 +35,7 @@ struct MvctpSenderStats {
 };
 
 
-struct MvctpSenderConfig {
+struct VcmtpSenderConfig {
 	string 	multicast_addr;
 	int 	send_rate;
 	int 	max_num_receivers;
@@ -44,7 +44,7 @@ struct MvctpSenderConfig {
 
 enum TransferType  {MEMORY_TO_MEMORY_TRANSFER = 1, DISK_TO_DISK_TRANSFER};
 
-struct MvctpMulticastTaskInfo {
+struct VcmtpMulticastTaskInfo {
 	TransferType	type;
 	char*	ptr_memory_data;
 	char 	file_name[256];
@@ -52,30 +52,30 @@ struct MvctpMulticastTaskInfo {
 
 
 #define	BUFFER_PACKET_SIZE	5480
-struct MvctpRetransBuffer {
-	char 	buffer[BUFFER_PACKET_SIZE * MVCTP_PACKET_LEN];  // 8MB buffer size
+struct VcmtpRetransBuffer {
+	char 	buffer[BUFFER_PACKET_SIZE * VCMTP_PACKET_LEN];  // 8MB buffer size
 	char*	cur_pos;
 	char*	end_pos;
 
-	MvctpRetransBuffer() {
+	VcmtpRetransBuffer() {
 		cur_pos = buffer;
-		end_pos = buffer + BUFFER_PACKET_SIZE * MVCTP_PACKET_LEN;
+		end_pos = buffer + BUFFER_PACKET_SIZE * VCMTP_PACKET_LEN;
 	}
 };
 
 
 struct StartRetransThreadInfo {
-	MVCTPSender* sender_ptr;
+	VCMTPSender* sender_ptr;
 	int	sock_fd;
 	map<uint, int>* ptr_retrans_fd_map;		// Opened file descriptor map for the retransmission.  Format: <msg_id, file_descriptor>
 	set<uint>* 		ptr_timeout_set;		// A set that includes the unique id of all timeout messages
 };
 
 
-class MVCTPSender : public MVCTPComm {
+class VCMTPSender : public VCMTPComm {
 public:
-	MVCTPSender(int buf_size);
-	virtual ~MVCTPSender();
+	VCMTPSender(int buf_size);
+	virtual ~VCMTPSender();
 
 	void 	SetSchedRR(bool is_rr);
 	void 	SetStatusProxy(StatusProxy* proxy);
@@ -113,7 +113,7 @@ public:
 private:
 	TcpServer*			retrans_tcp_server;
 	u_int32_t			cur_session_id;		// the session ID for a new transfer
-	MvctpSenderStats	send_stats;			// data transfer statistics
+	VcmtpSenderStats	send_stats;			// data transfer statistics
 	CpuCycleCounter		cpu_counter, global_timer;		// counter for elapsed CPU cycles
 	StatusProxy*		status_proxy;
 	RateShaper			rate_shaper;
@@ -122,11 +122,11 @@ private:
 	int					num_retrans_threads;
 
 
-	MvctpSenderMetadata			metadata;
+	VcmtpSenderMetadata			metadata;
 	//map<uint, int> 				retrans_fd_map;		// Format: <msg_id, file_descriptor>
-	MvctpMulticastTaskInfo 		multicast_task_info;
+	VcmtpMulticastTaskInfo 		multicast_task_info;
 	map<int, StartRetransThreadInfo*> thread_info_map;
-	//MvctpEventQueueManager* 	event_queue_manager;
+	//VcmtpEventQueueManager* 	event_queue_manager;
 
 	static void* StartRetransThread(void* ptr);
 	void RunRetransThread(int sock_fd, map<uint, int>& retrans_fd_map, set<uint>& timeout_set);
@@ -163,4 +163,4 @@ private:
 	void	RunTcpSendThread(const char* file_name, int sock_fd);
 };
 
-#endif /* MVCTPSENDER_H_ */
+#endif /* VCMTPSENDER_H_ */

@@ -6,9 +6,9 @@
  */
 
 #include "TcpServer.h"
-#include "MVCTPSender.h"
+#include "VCMTPSender.h"
 
-TcpServer::TcpServer(int port, MVCTPSender* sender) {
+TcpServer::TcpServer(int port, VCMTPSender* sender) {
 	port_num = port;
 	ptr_sender = sender;
 
@@ -76,7 +76,7 @@ int TcpServer::Accept() {
 	conn_sock_list.push_back(conn_sock);
 	pthread_mutex_unlock(&sock_list_mutex);
 
-	// start the retransmission thread in the MVCTPSender process
+	// start the retransmission thread in the VCMTPSender process
 	ptr_sender->StartNewRetransThread(conn_sock);
 
 	return conn_sock;

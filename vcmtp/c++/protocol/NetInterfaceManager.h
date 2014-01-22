@@ -8,7 +8,7 @@
 #ifndef NETINTERFACEMANAGER_H_
 #define NETINTERFACEMANAGER_H_
 
-#include "mvctp.h"
+#include "vcmtp.h"
 
 #define IFI_NAME 	16		// same as IFNAMSIZ in <net/if.h>
 #define	IFI_HADDR	8		// allow for 64-bit EUI-64 in future

@@ -15,12 +15,12 @@ lib_la_SOURCES		= \
     InetComm.cpp \
     LdmIntegrator.cpp \
     MulticastComm.cpp \
-    MVCTPComm.cpp \
-    mvctp.cpp \
-    MvctpEventQueueManager.cpp \
-    MVCTPReceiver.cpp \
-    MVCTPSender.cpp \
-    MvctpSenderMetadata.cpp \
+    VCMTPComm.cpp \
+    vcmtp.cpp \
+    VcmtpEventQueueManager.cpp \
+    VCMTPReceiver.cpp \
+    VCMTPSender.cpp \
+    VcmtpSenderMetadata.cpp \
     NetInterfaceManager.cpp \
     RawSocketComm.cpp \
     ReceiverStatusProxy.cpp \

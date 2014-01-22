@@ -24,7 +24,7 @@ ExperimentManager::~ExperimentManager() {
 
 }
 
-void ExperimentManager::DoSpeedTest(SenderStatusProxy* sender_proxy, MVCTPSender* sender) {
+void ExperimentManager::DoSpeedTest(SenderStatusProxy* sender_proxy, VCMTPSender* sender) {
 	int test_file_size = 256;
 	if (exp_type == LOW_SPEED_EXP)
 		test_file_size = 100;
@@ -47,7 +47,7 @@ void ExperimentManager::DoSpeedTest(SenderStatusProxy* sender_proxy, MVCTPSender
 	sender_proxy->SendMessageLocal(INFORMATIONAL, "File transfer test finished.");
 }
 
-void ExperimentManager::StartExperiment(SenderStatusProxy* sender_proxy, MVCTPSender* sender) {
+void ExperimentManager::StartExperiment(SenderStatusProxy* sender_proxy, VCMTPSender* sender) {
 	exp_type = HIGH_SPEED_EXP;
 
 	// Experiment parameters
@@ -131,7 +131,7 @@ void ExperimentManager::StartExperiment(SenderStatusProxy* sender_proxy, MVCTPSe
 }
 
 
-void ExperimentManager::StartExperimentRetrans(SenderStatusProxy* sender_proxy, MVCTPSender* sender) {
+void ExperimentManager::StartExperimentRetrans(SenderStatusProxy* sender_proxy, VCMTPSender* sender) {
 	exp_type = HIGH_SPEED_RETRANS_EXP;
 	system("sudo sysctl -w net.ipv4.udp_mem=\"4096 8192 16384\"");
 
@@ -195,7 +195,7 @@ void ExperimentManager::StartExperimentRetrans(SenderStatusProxy* sender_proxy, 
 
 
 ////
-void ExperimentManager::StartExperimentLowSpeed(SenderStatusProxy* sender_proxy, MVCTPSender* sender) {
+void ExperimentManager::StartExperimentLowSpeed(SenderStatusProxy* sender_proxy, VCMTPSender* sender) {
 	exp_type = LOW_SPEED_EXP;
 
 	sender->ExecuteCommandOnReceivers("sudo killall double &", 1, num_test_nodes);
@@ -261,7 +261,7 @@ void ExperimentManager::StartExperimentLowSpeed(SenderStatusProxy* sender_proxy,
 
 
 
-void ExperimentManager::DoLowSpeedExperiment(SenderStatusProxy* sender_proxy, MVCTPSender* sender) {
+void ExperimentManager::DoLowSpeedExperiment(SenderStatusProxy* sender_proxy, VCMTPSender* sender) {
 	const int NUM_RUNS_PER_SETUP = 10; //30;
 	const int NUM_FILE_SIZES = 1;
 	const int NUM_UDP_BUFF_SIZES = 1;

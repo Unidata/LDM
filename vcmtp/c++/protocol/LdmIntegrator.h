@@ -25,7 +25,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "MVCTPSender.h"
+#include "VCMTPSender.h"
 
 using namespace std;
 
@@ -36,13 +36,13 @@ class SenderStatusProxy;
 
 class LdmIntegrator {
 public:
-	LdmIntegrator(MVCTPSender* s, string save_path, SenderStatusProxy* p);
+	LdmIntegrator(VCMTPSender* s, string save_path, SenderStatusProxy* p);
 	void Start();
 	void Stop();
 	~LdmIntegrator();
 
 private:
-	MVCTPSender* sender;
+	VCMTPSender* sender;
 	string save_dir;
 	bool keep_alive;
 	bool recv_thread_exited;

@@ -9,7 +9,7 @@
 #define SENDERSTATUSPROXY_H_
 
 #include "../CommUtil/StatusProxy.h"
-#include "MVCTPSender.h"
+#include "VCMTPSender.h"
 #include "ExperimentManager.h"
 #include "ExperimentManager2.h"
 #include "LdmIntegrator.h"
@@ -36,7 +36,7 @@ struct TransferMessage {
 
 class SenderStatusProxy : public StatusProxy {
 public:
-	SenderStatusProxy(string addr, int port, string group_addr, int mvctp_port, int buff_size);
+	SenderStatusProxy(string addr, int port, string group_addr, int vcmtp_port, int buff_size);
 	~SenderStatusProxy();
 
 	virtual int HandleCommand(const char* command);
@@ -64,9 +64,9 @@ protected:
 	virtual void InitializeExecutionProcess();
 
 private:
-	MVCTPSender* ptr_sender;
-	string 		mvctp_group_addr;
-	int			mvctp_port_num;
+	VCMTPSender* ptr_sender;
+	string 		vcmtp_group_addr;
+	int			vcmtp_port_num;
 	int			buffer_size;
 	LdmIntegrator* integrator;
 	// experiment specific parameters

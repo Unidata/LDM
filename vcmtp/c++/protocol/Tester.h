@@ -8,9 +8,9 @@
 #ifndef TESTER_H_
 #define TESTER_H_
 
-#include "mvctp.h"
-#include "MVCTPSender.h"
-#include "MVCTPReceiver.h"
+#include "vcmtp.h"
+#include "VCMTPSender.h"
+#include "VCMTPReceiver.h"
 #include "SenderStatusProxy.h"
 #include "ReceiverStatusProxy.h"
 
@@ -23,8 +23,8 @@ public:
 
 private:
 	StatusProxy* 	ptr_status_proxy;
-	MVCTPSender* 	ptr_mvctp_sender;
-	MVCTPReceiver* 	ptr_mvctp_receiver;
+	VCMTPSender* 	ptr_vcmtp_sender;
+	VCMTPReceiver* 	ptr_vcmtp_receiver;
 
 	bool IsSender();
 	string ExecSysCommand(char* cmd);

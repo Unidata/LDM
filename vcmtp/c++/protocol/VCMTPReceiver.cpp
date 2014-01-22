@@ -1,14 +1,14 @@
 /*
- * MVCTPReceiver.cpp
+ * VCMTPReceiver.cpp
  *
  *  Created on: Jul 21, 2011
  *      Author: jie
  */
 
-#include "MVCTPReceiver.h"
+#include "VCMTPReceiver.h"
 
 
-MVCTPReceiver::MVCTPReceiver(int buf_size) {
+VCMTPReceiver::VCMTPReceiver(int buf_size) {
 	//ptr_multicast_comm->SetBufferSize(10000000);
 	retrans_tcp_client = NULL;
 	multicast_sock = ptr_multicast_comm->GetSocket();
@@ -18,11 +18,11 @@ MVCTPReceiver::MVCTPReceiver(int buf_size) {
 	bzero(&recv_stats, sizeof(recv_stats));
 
 	keep_retrans_alive = false;
-	mvctp_seq_num = 0;
+	vcmtp_seq_num = 0;
 	retrans_switch = true;
 
-	read_ahead_header = (MvctpHeader*) read_ahead_buffer;
-	read_ahead_data = read_ahead_buffer + MVCTP_HLEN;
+	read_ahead_header = (VcmtpHeader*) read_ahead_buffer;
+	read_ahead_data = read_ahead_buffer + VCMTP_HLEN;
 	read_ahead_header->session_id = -1;
 
 	AccessCPUCounter(&global_timer.hi, &global_timer.lo);
@@ -30,17 +30,17 @@ MVCTPReceiver::MVCTPReceiver(int buf_size) {
 	time_diff = 0;
 }
 
-MVCTPReceiver::~MVCTPReceiver() {
+VCMTPReceiver::~VCMTPReceiver() {
 	delete retrans_tcp_client;
 	pthread_mutex_destroy(&retrans_list_mutex);
 }
 
 
-const struct MvctpReceiverStats MVCTPReceiver::GetBufferStats() {
+const struct VcmtpReceiverStats VCMTPReceiver::GetBufferStats() {
 	return recv_stats;
 }
 
-void MVCTPReceiver::SetPacketLossRate(int rate) {
+void VCMTPReceiver::SetPacketLossRate(int rate) {
 	packet_loss_rate = rate;
 
 	char msg[150];
@@ -58,19 +58,19 @@ void MVCTPReceiver::SetPacketLossRate(int rate) {
 //	system(command);
 }
 
-int MVCTPReceiver::GetPacketLossRate() {
+int VCMTPReceiver::GetPacketLossRate() {
 	return packet_loss_rate;
 }
 
-void MVCTPReceiver::SetBufferSize(size_t size) {
+void VCMTPReceiver::SetBufferSize(size_t size) {
 	ptr_multicast_comm->SetBufferSize(size);
 }
 
-void MVCTPReceiver::SetStatusProxy(StatusProxy* proxy) {
+void VCMTPReceiver::SetStatusProxy(StatusProxy* proxy) {
 	status_proxy = proxy;
 }
 
-void MVCTPReceiver::SendSessionStatistics() {
+void VCMTPReceiver::SendSessionStatistics() {
 	char buf[512];
 	double send_rate = (recv_stats.session_recv_bytes + recv_stats.session_retrans_bytes)
 						/ 1000.0 / 1000.0 * 8 / recv_stats.session_total_time * SEND_RATE_RATIO;
@@ -92,7 +92,7 @@ void MVCTPReceiver::SendSessionStatistics() {
 
 
 
-void MVCTPReceiver::SendHistoryStats() {
+void VCMTPReceiver::SendHistoryStats() {
 	char buf[1024];
 	double retx_rate = recv_stats.total_recv_packets == 0 ? 0 :
 							(recv_stats.total_retrans_packets * 100.0 / recv_stats.total_recv_packets);
@@ -106,7 +106,7 @@ void MVCTPReceiver::SendHistoryStats() {
 }
 
 
-void MVCTPReceiver::ResetHistoryStats() {
+void VCMTPReceiver::ResetHistoryStats() {
 	recv_stats.total_recv_bytes = 0;
 	recv_stats.total_recv_packets = 0;
 	recv_stats.total_retrans_bytes = 0;
@@ -130,7 +130,7 @@ void MVCTPReceiver::ResetHistoryStats() {
 
 // Format of a report entry:
 // host_name, msg_id, file_size, transfer_time, retx bytes, success (1 or 0), is_slow_receiver
-void MVCTPReceiver::AddSessionStatistics(uint msg_id) {
+void VCMTPReceiver::AddSessionStatistics(uint msg_id) {
 	if (recv_status_map.find(msg_id) == recv_status_map.end())
 		return;
 
@@ -154,7 +154,7 @@ void MVCTPReceiver::AddSessionStatistics(uint msg_id) {
 }
 
 
-void MVCTPReceiver::SendHistoryStatsToSender() {
+void VCMTPReceiver::SendHistoryStatsToSender() {
 	/*char buf[1024];
 	double avg_throughput = recv_stats.total_recv_bytes / 1000.0 / 1000.0 * 8 / recv_stats.last_file_recv_time;
 	double robustness = 100.0 - recv_stats.num_failed_files * 100.0 / recv_stats.num_recved_files;  // in percentage
@@ -174,16 +174,16 @@ void MVCTPReceiver::SendHistoryStatsToSender() {
 		res += recv_stats.session_stats_vec[i];
 	}
 
-	char* msg_packet = new char[MVCTP_HLEN + res.size()];
+	char* msg_packet = new char[VCMTP_HLEN + res.size()];
 
-	MvctpHeader* header = (MvctpHeader*)msg_packet;
+	VcmtpHeader* header = (VcmtpHeader*)msg_packet;
 	header->session_id = 0;
 	header->seq_number = 0;
 	header->data_len = res.size();
-	header->flags = MVCTP_HISTORY_STATISTICS;
+	header->flags = VCMTP_HISTORY_STATISTICS;
 
-	memcpy(msg_packet + MVCTP_HLEN, res.c_str(), res.size());
-	retrans_tcp_client->Send(msg_packet, MVCTP_HLEN + res.size());
+	memcpy(msg_packet + VCMTP_HLEN, res.c_str(), res.size());
+	retrans_tcp_client->Send(msg_packet, VCMTP_HLEN + res.size());
 
 	delete[] msg_packet;
 }
@@ -191,7 +191,7 @@ void MVCTPReceiver::SendHistoryStatsToSender() {
 
 
 // Clear session related statistics
-void MVCTPReceiver::ResetSessionStatistics() {
+void VCMTPReceiver::ResetSessionStatistics() {
 	recv_stats.session_recv_packets = 0;
 	recv_stats.session_recv_bytes = 0;
 	recv_stats.session_retrans_packets = 0;
@@ -209,7 +209,7 @@ void MVCTPReceiver::ResetSessionStatistics() {
 
 
 // Send session statistics to the sender through TCP connection
-void MVCTPReceiver::SendSessionStatisticsToSender() {
+void VCMTPReceiver::SendSessionStatisticsToSender() {
 	char buf[512];
 	double send_rate = (recv_stats.session_recv_bytes + recv_stats.session_retrans_bytes)
 							/ 1000.0 / 1000.0 * 8 / recv_stats.session_total_time * SEND_RATE_RATIO;
@@ -230,7 +230,7 @@ void MVCTPReceiver::SendSessionStatisticsToSender() {
 
 
 
-void MVCTPReceiver::ExecuteCommand(char* command) {
+void VCMTPReceiver::ExecuteCommand(char* command) {
 	string comm = command;
 	if (comm.compare("SetSchedRR") == 0) {
 		SetSchedRR(true);
@@ -244,7 +244,7 @@ void MVCTPReceiver::ExecuteCommand(char* command) {
 
 
 // Set the process scheduling mode to SCHED_RR or SCHED_OTHER (the default process scheduling mode in linux)
-void MVCTPReceiver::SetSchedRR(bool is_rr) {
+void VCMTPReceiver::SetSchedRR(bool is_rr) {
 	static int normal_priority = getpriority(PRIO_PROCESS, 0);
 
 	struct sched_param sp;
@@ -260,13 +260,13 @@ void MVCTPReceiver::SetSchedRR(bool is_rr) {
 
 
 
-int MVCTPReceiver::JoinGroup(string addr, ushort port) {
-	MVCTPComm::JoinGroup(addr, port);
+int VCMTPReceiver::JoinGroup(string addr, ushort port) {
+	VCMTPComm::JoinGroup(addr, port);
 	ConnectSenderOnTCP();
 	return 1;
 }
 
-int MVCTPReceiver::ConnectSenderOnTCP() {
+int VCMTPReceiver::ConnectSenderOnTCP() {
 	status_proxy->SendMessageLocal(INFORMATIONAL, "Connecting TCP server at the sender...");
 
 	if (retrans_tcp_client != NULL)
@@ -288,8 +288,8 @@ int MVCTPReceiver::ConnectSenderOnTCP() {
 }
 
 
-void MVCTPReceiver::ReconnectSender() {
-	//SysError("MVCTPReceiver::Start()::recv() error");
+void VCMTPReceiver::ReconnectSender() {
+	//SysError("VCMTPReceiver::Start()::recv() error");
 	status_proxy->SendMessageToManager(INFORMATIONAL, "Connection to the sender TCP server has broken. Reconnecting...");
 	retrans_tcp_client->Connect();
 	status_proxy->SendMessageToManager(INFORMATIONAL, "TCP server reconnected.");
@@ -303,24 +303,24 @@ void MVCTPReceiver::ReconnectSender() {
 }
 
 
-void MVCTPReceiver::Start() {
+void VCMTPReceiver::Start() {
 	StartReceivingThread();
 }
 
 
 // Main receiving thread functions
-void MVCTPReceiver::StartReceivingThread() {
-	pthread_create(&recv_thread, NULL, &MVCTPReceiver::StartReceivingThread, this);
+void VCMTPReceiver::StartReceivingThread() {
+	pthread_create(&recv_thread, NULL, &VCMTPReceiver::StartReceivingThread, this);
 }
 
-void* MVCTPReceiver::StartReceivingThread(void* ptr) {
-	((MVCTPReceiver*)ptr)->RunReceivingThread();
+void* VCMTPReceiver::StartReceivingThread(void* ptr) {
+	((VCMTPReceiver*)ptr)->RunReceivingThread();
 	return NULL;
 }
 
 
 // Main file receiving function
-void MVCTPReceiver::RunReceivingThread() {
+void VCMTPReceiver::RunReceivingThread() {
 	fd_set 	read_set;
 	while (true) {
 		read_set = read_sock_set;
@@ -342,25 +342,25 @@ void MVCTPReceiver::RunReceivingThread() {
 
 
 // Handle the receive of a single multicast packet
-void MVCTPReceiver::HandleMulticastPacket() {
-	static char packet_buffer[MVCTP_PACKET_LEN];
-	static MvctpHeader* header = (MvctpHeader*) packet_buffer;
-	static char* packet_data = packet_buffer + MVCTP_HLEN;
+void VCMTPReceiver::HandleMulticastPacket() {
+	static char packet_buffer[VCMTP_PACKET_LEN];
+	static VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
+	static char* packet_data = packet_buffer + VCMTP_HLEN;
 
-	static MvctpSenderMessage *ptr_sender_msg = (MvctpSenderMessage *) packet_data;
+	static VcmtpSenderMessage *ptr_sender_msg = (VcmtpSenderMessage *) packet_data;
 	static map<uint, MessageReceiveStatus>::iterator it;
 
-	if (ptr_multicast_comm->RecvData(packet_buffer, MVCTP_PACKET_LEN, 0, NULL, NULL) < 0)
-		SysError("MVCTPReceiver::RunReceivingThread() multicast recv error");
+	if (ptr_multicast_comm->RecvData(packet_buffer, VCMTP_PACKET_LEN, 0, NULL, NULL) < 0)
+		SysError("VCMTPReceiver::RunReceivingThread() multicast recv error");
 
 	// Check for BOF and EOF
-	if (header->flags & MVCTP_BOF) {
+	if (header->flags & VCMTP_BOF) {
 		HandleBofMessage(*ptr_sender_msg);
-	} else if (header->flags & MVCTP_EOF) {
+	} else if (header->flags & VCMTP_EOF) {
 		HandleEofMessage(header->session_id);
-	} else if (header->flags == MVCTP_DATA) {
+	} else if (header->flags == VCMTP_DATA) {
 		if ((it = recv_status_map.find(header->session_id)) == recv_status_map.end()) {
-			//cout << "[MVCTP_DATA] Could not find the message ID in recv_status_map: " << header->session_id << endl;
+			//cout << "[VCMTP_DATA] Could not find the message ID in recv_status_map: " << header->session_id << endl;
 			return;
 		}
 
@@ -374,13 +374,13 @@ void MVCTPReceiver::HandleMulticastPacket() {
 				AddRetxRequest(header->session_id, recv_status.current_offset, header->seq_number);
 				if (lseek(recv_status.file_descriptor, header->seq_number, SEEK_SET) < 0) {
 					cout << "Error in file " << header->session_id << ":  " << endl;
-					SysError("MVCTPReceiver::RunReceivingThread()::lseek() error on multicast data");
+					SysError("VCMTPReceiver::RunReceivingThread()::lseek() error on multicast data");
 				}
 			}
 
 			if (recv_status.file_descriptor > 0 &&
 					write(recv_status.file_descriptor, packet_data, header->data_len) < 0)
-				SysError("MVCTPReceiver::RunReceivingThread()::write() error on multicast data");
+				SysError("VCMTPReceiver::RunReceivingThread()::write() error on multicast data");
 
 			recv_status.current_offset = header->seq_number + header->data_len;
 
@@ -395,27 +395,27 @@ void MVCTPReceiver::HandleMulticastPacket() {
 
 
 // Handle the receive of a single TCP packet
-void MVCTPReceiver::HandleUnicastPacket() {
-	static char packet_buffer[MVCTP_PACKET_LEN];
-	static MvctpHeader* header = (MvctpHeader*) packet_buffer;
-	static char* packet_data = packet_buffer + MVCTP_HLEN;
+void VCMTPReceiver::HandleUnicastPacket() {
+	static char packet_buffer[VCMTP_PACKET_LEN];
+	static VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
+	static char* packet_data = packet_buffer + VCMTP_HLEN;
 
-	static MvctpSenderMessage sender_msg;
+	static VcmtpSenderMessage sender_msg;
 	static map<uint, MessageReceiveStatus>::iterator it;
 
-	if (retrans_tcp_client->Receive(header, MVCTP_HLEN) < 0) {
-		SysError("MVCTPReceiver::RunReceivingThread()::recv() error");
+	if (retrans_tcp_client->Receive(header, VCMTP_HLEN) < 0) {
+		SysError("VCMTPReceiver::RunReceivingThread()::recv() error");
 	}
 
-	if (header->flags & MVCTP_SENDER_MSG_EXP) {
+	if (header->flags & VCMTP_SENDER_MSG_EXP) {
 		if (retrans_tcp_client->Receive(&sender_msg, header->data_len) < 0) {
 			ReconnectSender();
 			return;
 		}
 		HandleSenderMessage(sender_msg);
-	} else if (header->flags & MVCTP_RETRANS_DATA) {
+	} else if (header->flags & VCMTP_RETRANS_DATA) {
 		if (retrans_tcp_client->Receive(packet_data, header->data_len) < 0)
-			SysError("MVCTPReceiver::RunningReceivingThread()::receive error on TCP");
+			SysError("VCMTPReceiver::RunningReceivingThread()::receive error on TCP");
 
 		if ((it = recv_status_map.find(header->session_id)) == recv_status_map.end()) {
 			return;
@@ -425,16 +425,16 @@ void MVCTPReceiver::HandleUnicastPacket() {
 		if (recv_status.retx_file_descriptor == -1) {
 			recv_status.retx_file_descriptor = dup(recv_status.file_descriptor);
 			if (recv_status.retx_file_descriptor < 0)
-				SysError("MVCTPReceiver::RunReceivingThread() open file error");
+				SysError("VCMTPReceiver::RunReceivingThread() open file error");
 		}
 
 		if (lseek(recv_status.retx_file_descriptor, header->seq_number, SEEK_SET) == -1) {
-			SysError("MVCTPReceiver::RunReceivingThread()::lseek() error on retx data");
+			SysError("VCMTPReceiver::RunReceivingThread()::lseek() error on retx data");
 		}
 
 		if (write(recv_status.retx_file_descriptor, packet_data, header->data_len) < 0) {
-			//SysError("MVCTPReceiver::ReceiveFile()::write() error");
-			cout << "MVCTPReceiver::RunReceivingThread()::write() error on retx data" << endl;
+			//SysError("VCMTPReceiver::ReceiveFile()::write() error");
+			cout << "VCMTPReceiver::RunReceivingThread()::write() error on retx data" << endl;
 		}
 
 		// Update statistics
@@ -445,10 +445,10 @@ void MVCTPReceiver::HandleUnicastPacket() {
 		recv_stats.total_retrans_packets++;
 		recv_stats.total_retrans_bytes += header->data_len;
 
-	} else if (header->flags & MVCTP_RETRANS_END) {
+	} else if (header->flags & VCMTP_RETRANS_END) {
 		it = recv_status_map.find(header->session_id);
 		if (it == recv_status_map.end()) {
-			cout << "[MVCTP_RETRANS_END] Could not find the message ID in recv_status_map: " << header->session_id << endl;
+			cout << "[VCMTP_RETRANS_END] Could not find the message ID in recv_status_map: " << header->session_id << endl;
 			return;
 		} else {
 			MessageReceiveStatus& recv_status = it->second;
@@ -462,7 +462,7 @@ void MVCTPReceiver::HandleUnicastPacket() {
 			recv_stats.last_file_recv_time = GetElapsedSeconds(recv_stats.reset_cpu_timer);
 			AddSessionStatistics(header->session_id);
 		}
-	} else if (header->flags & MVCTP_RETRANS_TIMEOUT) {
+	} else if (header->flags & VCMTP_RETRANS_TIMEOUT) {
 		//cout << "I have received a timeout message for file " << header->session_id << endl;
 		it = recv_status_map.find(header->session_id);
 		if (it != recv_status_map.end()) {
@@ -482,7 +482,7 @@ void MVCTPReceiver::HandleUnicastPacket() {
 			}
 		}
 		else {
-			cout << "[MVCTP_RETRANS_TIMEOUT] Could not find message in recv_status_map for file " << header->session_id << endl;
+			cout << "[VCMTP_RETRANS_TIMEOUT] Could not find message in recv_status_map for file " << header->session_id << endl;
 		}
 	}
 }
@@ -491,7 +491,7 @@ void MVCTPReceiver::HandleUnicastPacket() {
 /**
  * Handle a BOF message for a new file
  */
-void MVCTPReceiver::HandleBofMessage(MvctpSenderMessage& sender_msg) {
+void VCMTPReceiver::HandleBofMessage(VcmtpSenderMessage& sender_msg) {
 	switch (sender_msg.msg_type) {
 	case MEMORY_TRANSFER_START: {
 		char* buf = (char*) malloc(sender_msg.data_len);
@@ -518,7 +518,7 @@ void MVCTPReceiver::HandleBofMessage(MvctpSenderMessage& sender_msg) {
 
 
 // Create metadata for a new file that is to be received
-void MVCTPReceiver::PrepareForFileTransfer(MvctpSenderMessage& sender_msg) {
+void VCMTPReceiver::PrepareForFileTransfer(VcmtpSenderMessage& sender_msg) {
 	// First reset all session related counters
 	ResetSessionStatistics();
 
@@ -536,7 +536,7 @@ void MVCTPReceiver::PrepareForFileTransfer(MvctpSenderMessage& sender_msg) {
 	status.retx_file_descriptor = -1;
 	status.file_descriptor = open(sender_msg.text, O_RDWR | O_CREAT | O_TRUNC);
 	if (status.file_descriptor < 0)
-		SysError("MVCTPReceiver::PrepareForFileTransfer open file error");
+		SysError("VCMTPReceiver::PrepareForFileTransfer open file error");
 
 	// resolve the timestamp difference between the sender and receiver
 	if (!time_diff_measured) {
@@ -551,7 +551,7 @@ void MVCTPReceiver::PrepareForFileTransfer(MvctpSenderMessage& sender_msg) {
 	if (read_ahead_header->session_id == sender_msg.session_id)
 	{
 		if (write(status.file_descriptor, read_ahead_data, read_ahead_header->data_len) < 0)
-			SysError("MVCTPReceiver::ReceiveFileBufferedIO() write multicast data error");
+			SysError("VCMTPReceiver::ReceiveFileBufferedIO() write multicast data error");
 
 		status.current_offset = read_ahead_header->seq_number + read_ahead_header->data_len;
 		status.multicast_packets++;
@@ -576,7 +576,7 @@ void MVCTPReceiver::PrepareForFileTransfer(MvctpSenderMessage& sender_msg) {
 /**
  * Handle a command message from the sender
  */
-void MVCTPReceiver::HandleSenderMessage(MvctpSenderMessage& sender_msg) {
+void VCMTPReceiver::HandleSenderMessage(VcmtpSenderMessage& sender_msg) {
 	switch (sender_msg.msg_type) {
 		case SPEED_TEST:
 			if (recv_stats.session_retrans_percentage > 0.3) {
@@ -604,7 +604,7 @@ void MVCTPReceiver::HandleSenderMessage(MvctpSenderMessage& sender_msg) {
 /**
  * Take actions after receiving an EOF message for a specific file
  */
-void MVCTPReceiver::HandleEofMessage(uint msg_id) {
+void VCMTPReceiver::HandleEofMessage(uint msg_id) {
 	map<uint, MessageReceiveStatus>::iterator it = recv_status_map.find(msg_id);
 	if (it != recv_status_map.end()) {
 		MessageReceiveStatus& status = it->second;
@@ -630,8 +630,8 @@ void MVCTPReceiver::HandleEofMessage(uint msg_id) {
 /**
  * Insert a new retransmission request to the request list
  */
-void MVCTPReceiver::AddRetxRequest(uint msg_id, uint current_offset, uint received_seq) {
-	MvctpRetransRequest req;
+void VCMTPReceiver::AddRetxRequest(uint msg_id, uint current_offset, uint received_seq) {
+	VcmtpRetransRequest req;
 	req.msg_id = msg_id;
 	req.seq_num = current_offset;
 	req.data_len = received_seq - current_offset;
@@ -646,39 +646,39 @@ void MVCTPReceiver::AddRetxRequest(uint msg_id, uint current_offset, uint receiv
 
 
 //************************** Functions for the retransmission thread **************************
-void MVCTPReceiver::StartRetransmissionThread() {
+void VCMTPReceiver::StartRetransmissionThread() {
 	keep_retrans_alive = true;
 	pthread_mutex_init(&retrans_list_mutex, NULL);
-	pthread_create(&retrans_thread, NULL, &MVCTPReceiver::StartRetransmissionThread, this);
+	pthread_create(&retrans_thread, NULL, &VCMTPReceiver::StartRetransmissionThread, this);
 }
 
 
-void* MVCTPReceiver::StartRetransmissionThread(void* ptr) {
-	((MVCTPReceiver*)ptr)->RunRetransmissionThread();
+void* VCMTPReceiver::StartRetransmissionThread(void* ptr) {
+	((VCMTPReceiver*)ptr)->RunRetransmissionThread();
 	return NULL;
 }
 
 
-void MVCTPReceiver::RunRetransmissionThread() {
-	char buf[MVCTP_PACKET_LEN];
-	MvctpHeader* header = (MvctpHeader*)buf;
-	header->data_len = sizeof(MvctpRetransRequest);
+void VCMTPReceiver::RunRetransmissionThread() {
+	char buf[VCMTP_PACKET_LEN];
+	VcmtpHeader* header = (VcmtpHeader*)buf;
+	header->data_len = sizeof(VcmtpRetransRequest);
 
-	char* data = (buf + MVCTP_HLEN);
-	MvctpRetransRequest* request = (MvctpRetransRequest*)data;
+	char* data = (buf + VCMTP_HLEN);
+	VcmtpRetransRequest* request = (VcmtpRetransRequest*)data;
 	while (keep_retrans_alive) {
 		pthread_mutex_lock(&retrans_list_mutex);
 			while (!retrans_list.empty()) {
-				MvctpRetransRequest& req = retrans_list.front();
+				VcmtpRetransRequest& req = retrans_list.front();
 				request->msg_id = req.msg_id;
 				request->seq_num = req.seq_num;
 				request->data_len = req.data_len;
 
 				header->session_id = req.msg_id;
 				header->seq_number = 0;
-				header->flags = (request->data_len == 0) ? MVCTP_RETRANS_END : MVCTP_RETRANS_REQ;
+				header->flags = (request->data_len == 0) ? VCMTP_RETRANS_END : VCMTP_RETRANS_REQ;
 
-				retrans_tcp_client->Send(buf, MVCTP_HLEN + header->data_len);
+				retrans_tcp_client->Send(buf, VCMTP_HLEN + header->data_len);
 				retrans_list.pop_front();
 			}
 		pthread_mutex_unlock(&retrans_list_mutex);
@@ -700,7 +700,7 @@ void MVCTPReceiver::RunRetransmissionThread() {
 //************************************* Old unused functions ********************************
 
 // Receive memory data from the sender
-void MVCTPReceiver::ReceiveMemoryData(const MvctpSenderMessage & transfer_msg, char* mem_data) {
+void VCMTPReceiver::ReceiveMemoryData(const VcmtpSenderMessage & transfer_msg, char* mem_data) {
 	retrans_info.open("retrans_info.txt", ofstream::out | ofstream::trunc);
 	ResetSessionStatistics();
 
@@ -711,11 +711,11 @@ void MVCTPReceiver::ReceiveMemoryData(const MvctpSenderMessage & transfer_msg, c
 	AccessCPUCounter(&cpu_counter.hi, &cpu_counter.lo);
 
 	uint32_t session_id = transfer_msg.session_id;
-	list<MvctpNackMessage> nack_list;
+	list<VcmtpNackMessage> nack_list;
 
-	char packet_buffer[MVCTP_PACKET_LEN];
-	MvctpHeader* header = (MvctpHeader*)packet_buffer;
-	char* packet_data = packet_buffer + MVCTP_HLEN;
+	char packet_buffer[VCMTP_PACKET_LEN];
+	VcmtpHeader* header = (VcmtpHeader*)packet_buffer;
+	char* packet_data = packet_buffer + VCMTP_HLEN;
 
 	int recv_bytes;
 	uint32_t offset = 0;
@@ -723,14 +723,14 @@ void MVCTPReceiver::ReceiveMemoryData(const MvctpSenderMessage & transfer_msg, c
 	while (true) {
 		read_set = read_sock_set;
 		if (select(max_sock_fd + 1, &read_set, NULL, NULL, NULL) == -1) {
-			SysError("MVCTPReceiver::ReceiveMemoryData()::select() error");
+			SysError("VCMTPReceiver::ReceiveMemoryData()::select() error");
 		}
 
 		if (FD_ISSET(multicast_sock, &read_set)) {
 			recv_bytes = ptr_multicast_comm->RecvData(packet_buffer,
-					MVCTP_PACKET_LEN, 0, NULL, NULL);
+					VCMTP_PACKET_LEN, 0, NULL, NULL);
 			if (recv_bytes < 0) {
-				SysError("MVCTPReceiver::ReceiveMemoryData()::RecvData() error");
+				SysError("VCMTPReceiver::ReceiveMemoryData()::RecvData() error");
 			}
 
 			if (header->session_id != session_id || header->seq_number < offset) {
@@ -761,9 +761,9 @@ void MVCTPReceiver::ReceiveMemoryData(const MvctpSenderMessage & transfer_msg, c
 			continue;
 
 		} else if (FD_ISSET(retrans_tcp_sock, &read_set)) {
-			struct MvctpSenderMessage t_msg;
+			struct VcmtpSenderMessage t_msg;
 			if (recv(retrans_tcp_sock, &t_msg, sizeof(t_msg), 0) < 0) {
-				SysError("MVCTPReceiver::ReceiveMemoryData()::recv() error");
+				SysError("VCMTPReceiver::ReceiveMemoryData()::recv() error");
 			}
 
 			switch (t_msg.msg_type) {
@@ -771,7 +771,7 @@ void MVCTPReceiver::ReceiveMemoryData(const MvctpSenderMessage & transfer_msg, c
 				//cout << "MEMORY_TRANSFER_FINISH signal received." << endl;
 				usleep(10000);
 				while ((recv_bytes = ptr_multicast_comm->RecvData(
-						packet_buffer, MVCTP_PACKET_LEN, MSG_DONTWAIT,
+						packet_buffer, VCMTP_PACKET_LEN, MSG_DONTWAIT,
 						NULL, NULL)) > 0) {
 					//cout << "Received a new packet. Seq No.: " << header->seq_number << "    Length: "
 					//		<< header->data_len << endl;
@@ -820,11 +820,11 @@ void MVCTPReceiver::ReceiveMemoryData(const MvctpSenderMessage & transfer_msg, c
 
 
 // Handle missing packets by inserting retransmission requests into the request list
-void MVCTPReceiver::HandleMissingPackets(list<MvctpNackMessage>& nack_list, uint current_offset, uint received_seq) {
+void VCMTPReceiver::HandleMissingPackets(list<VcmtpNackMessage>& nack_list, uint current_offset, uint received_seq) {
 	retrans_info << GetElapsedSeconds(cpu_counter) << "    Start Seq. #: " << current_offset << "    End Seq. #: " << (received_seq - 1)
 			     << "    Missing Block Size: " << (received_seq - current_offset) << endl;
 
-	MvctpRetransRequest req;
+	VcmtpRetransRequest req;
 	req.seq_num = current_offset;
 	req.data_len = received_seq - current_offset;
 	total_missing_bytes += req.data_len;
@@ -835,9 +835,9 @@ void MVCTPReceiver::HandleMissingPackets(list<MvctpNackMessage>& nack_list, uint
 
 //	uint pos_start = current_offset;
 //	while (pos_start < received_seq) {
-//		uint len = (received_seq - pos_start) < MVCTP_DATA_LEN ?
-//					(received_seq - pos_start) : MVCTP_DATA_LEN;
-//		MvctpNackMessage msg;
+//		uint len = (received_seq - pos_start) < VCMTP_DATA_LEN ?
+//					(received_seq - pos_start) : VCMTP_DATA_LEN;
+//		VcmtpNackMessage msg;
 //		msg.seq_num = pos_start;
 //		msg.data_len = len;
 //		nack_list.push_back(msg);
@@ -847,16 +847,16 @@ void MVCTPReceiver::HandleMissingPackets(list<MvctpNackMessage>& nack_list, uint
 
 
 //
-void MVCTPReceiver::DoMemoryDataRetransmission(char* mem_data, const list<MvctpNackMessage>& nack_list) {
+void VCMTPReceiver::DoMemoryDataRetransmission(char* mem_data, const list<VcmtpNackMessage>& nack_list) {
 	SendNackMessages(nack_list);
 
 	// Receive packets from the sender
-	MvctpHeader header;
-	char packet_data[MVCTP_DATA_LEN];
+	VcmtpHeader header;
+	char packet_data[VCMTP_DATA_LEN];
 	int size = nack_list.size();
 	int bytes;
 	for (int i = 0; i < size; i++) {
-		bytes = retrans_tcp_client->Receive(&header, MVCTP_HLEN);
+		bytes = retrans_tcp_client->Receive(&header, VCMTP_HLEN);
 		bytes = retrans_tcp_client->Receive(packet_data, header.data_len);
 		memcpy(mem_data+header.seq_number, packet_data, header.data_len);
 
@@ -874,11 +874,11 @@ void MVCTPReceiver::DoMemoryDataRetransmission(char* mem_data, const list<MvctpN
 
 
 // Send retransmission requests to the sender through tcp connection
-void MVCTPReceiver::SendNackMessages(const list<MvctpNackMessage>& nack_list) {
-	MvctpRetransMessage msg;
+void VCMTPReceiver::SendNackMessages(const list<VcmtpNackMessage>& nack_list) {
+	VcmtpRetransMessage msg;
 	bzero(&msg, sizeof(msg));
 
-	list<MvctpNackMessage>::const_iterator it;
+	list<VcmtpNackMessage>::const_iterator it;
 	for (it = nack_list.begin(); it != nack_list.end(); it++) {
 		msg.seq_numbers[msg.num_requests] = it->seq_num;
 		msg.data_lens[msg.num_requests] = it->data_len;
@@ -901,7 +901,7 @@ void MVCTPReceiver::SendNackMessages(const list<MvctpNackMessage>& nack_list) {
 }
 
 
-void MVCTPReceiver::ReceiveFileBufferedIO(const MvctpSenderMessage & transfer_msg) {
+void VCMTPReceiver::ReceiveFileBufferedIO(const VcmtpSenderMessage & transfer_msg) {
 	retrans_info.open("retrans_info.txt", ofstream::out | ofstream::trunc);
 
 	MessageReceiveStatus status;
@@ -927,13 +927,13 @@ void MVCTPReceiver::ReceiveFileBufferedIO(const MvctpSenderMessage & transfer_ms
 	// Create the disk file
 	int fd = open(transfer_msg.text, O_RDWR | O_CREAT | O_TRUNC);
 	if (fd < 0) {
-		SysError("MVCTPReceiver::ReceiveFile()::creat() error");
+		SysError("VCMTPReceiver::ReceiveFile()::creat() error");
 	}
 
-	list<MvctpNackMessage> nack_list;
-	char packet_buffer[MVCTP_PACKET_LEN];
-	MvctpHeader* header = (MvctpHeader*) packet_buffer;
-	char* packet_data = packet_buffer + MVCTP_HLEN;
+	list<VcmtpNackMessage> nack_list;
+	char packet_buffer[VCMTP_PACKET_LEN];
+	VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
+	char* packet_data = packet_buffer + VCMTP_HLEN;
 
 	int recv_bytes;
 	uint32_t offset = 0;
@@ -946,9 +946,9 @@ void MVCTPReceiver::ReceiveFileBufferedIO(const MvctpSenderMessage & transfer_ms
 
 		if (FD_ISSET(multicast_sock, &read_set)) {
 			recv_bytes = ptr_multicast_comm->RecvData(packet_buffer,
-					MVCTP_PACKET_LEN, 0, NULL, NULL);
+					VCMTP_PACKET_LEN, 0, NULL, NULL);
 			if (recv_bytes < 0) {
-				SysError("MVCTPReceiver::ReceiveMemoryData()::RecvData() error");
+				SysError("VCMTPReceiver::ReceiveMemoryData()::RecvData() error");
 			}
 
 			if (header->session_id != session_id || header->seq_number < offset) {
@@ -964,7 +964,7 @@ void MVCTPReceiver::ReceiveFileBufferedIO(const MvctpSenderMessage & transfer_ms
 					//		<< header->seq_number << "    Lost bytes: " << (header->seq_number - offset) << endl;
 					HandleMissingPackets(nack_list, offset, header->seq_number);
 					if (lseek(fd, header->seq_number, SEEK_SET) == -1) {
-						SysError("MVCTPReceiver::ReceiveFileBufferedIO()::lseek() error");
+						SysError("VCMTPReceiver::ReceiveFileBufferedIO()::lseek() error");
 					}
 				}
 
@@ -981,9 +981,9 @@ void MVCTPReceiver::ReceiveFileBufferedIO(const MvctpSenderMessage & transfer_ms
 			continue;
 		}
 		else if (FD_ISSET(retrans_tcp_sock, &read_set)) {
-			struct MvctpSenderMessage msg;
+			struct VcmtpSenderMessage msg;
 			if (recv(retrans_tcp_sock, &msg, sizeof(msg), 0) < 0) {
-				SysError("MVCTPReceiver::ReceiveFileBufferedIO()::recv() error");
+				SysError("VCMTPReceiver::ReceiveFileBufferedIO()::recv() error");
 			}
 
 			switch (msg.msg_type) {
@@ -1029,9 +1029,9 @@ void MVCTPReceiver::ReceiveFileBufferedIO(const MvctpSenderMessage & transfer_ms
 }
 
 // Receive a file from the sender
-void MVCTPReceiver::ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfer_msg) {
+void VCMTPReceiver::ReceiveFileMemoryMappedIO(const VcmtpSenderMessage & transfer_msg) {
 	// NOTE: the length of the memory mapped buffer should be a multiple of the page size
-	static const int MAPPED_BUFFER_SIZE = MVCTP_DATA_LEN * 4096;
+	static const int MAPPED_BUFFER_SIZE = VCMTP_DATA_LEN * 4096;
 
 	retrans_info.open("retrans_info.txt", ofstream::out | ofstream::trunc);
 
@@ -1065,13 +1065,13 @@ void MVCTPReceiver::ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfe
 	// Create the disk file
 	int recv_fd = open(transfer_msg.text, O_RDWR | O_CREAT | O_TRUNC);
 	if (recv_fd < 0) {
-		SysError("MVCTPReceiver::ReceiveFile()::creat() error");
+		SysError("VCMTPReceiver::ReceiveFile()::creat() error");
 	}
 	if (lseek(recv_fd, transfer_msg.data_len - 1, SEEK_SET) == -1) {
-		SysError("MVCTPReceiver::ReceiveFile()::lseek() error");
+		SysError("VCMTPReceiver::ReceiveFile()::lseek() error");
 	}
 	if (write(recv_fd, "", 1) != 1) {
-		SysError("MVCTPReceiver::ReceiveFile()::write() error");
+		SysError("VCMTPReceiver::ReceiveFile()::write() error");
 	}
 
 	// Initialize the memory mapped file buffer
@@ -1081,14 +1081,14 @@ void MVCTPReceiver::ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfe
 	char* file_buffer = (char*) mmap(0, mapped_size, PROT_READ | PROT_WRITE,
 			MAP_FILE | MAP_SHARED, recv_fd, file_start_pos);
 	if (file_buffer == MAP_FAILED) {
-		SysError("MVCTPReceiver::ReceiveFile()::mmap() error");
+		SysError("VCMTPReceiver::ReceiveFile()::mmap() error");
 	}
 	//char* data_buffer = (char*)malloc(mapped_size);
 
-	list<MvctpNackMessage> nack_list;
-	char packet_buffer[MVCTP_PACKET_LEN];
-	MvctpHeader* header = (MvctpHeader*) packet_buffer;
-	char* packet_data = packet_buffer + MVCTP_HLEN;
+	list<VcmtpNackMessage> nack_list;
+	char packet_buffer[VCMTP_PACKET_LEN];
+	VcmtpHeader* header = (VcmtpHeader*) packet_buffer;
+	char* packet_data = packet_buffer + VCMTP_HLEN;
 
 	cout << "Start receiving file..." << endl;
 	int recv_bytes;
@@ -1101,9 +1101,9 @@ void MVCTPReceiver::ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfe
 		}
 
 		if (FD_ISSET(multicast_sock, &read_set)) {
-			recv_bytes = ptr_multicast_comm->RecvData(packet_buffer, MVCTP_PACKET_LEN, 0, NULL, NULL);
+			recv_bytes = ptr_multicast_comm->RecvData(packet_buffer, VCMTP_PACKET_LEN, 0, NULL, NULL);
 			if (recv_bytes < 0) {
-				SysError("MVCTPReceiver::ReceiveMemoryData()::RecvData() error");
+				SysError("VCMTPReceiver::ReceiveMemoryData()::RecvData() error");
 			}
 
 			if (header->session_id != session_id || header->seq_number < offset) {
@@ -1137,7 +1137,7 @@ void MVCTPReceiver::ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfe
 							PROT_READ | PROT_WRITE, MAP_FILE | MAP_SHARED, recv_fd,
 							file_start_pos);
 					if (file_buffer == MAP_FAILED) {
-						SysError("MVCTPReceiver::ReceiveFile()::mmap() error");
+						SysError("VCMTPReceiver::ReceiveFile()::mmap() error");
 					}
 
 					pos = header->seq_number - file_start_pos;
@@ -1155,11 +1155,11 @@ void MVCTPReceiver::ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfe
 
 			continue;
 		} else if (FD_ISSET(retrans_tcp_sock, &read_set)) {
-			if (recv(retrans_tcp_sock, header, sizeof(MvctpHeader), 0) <= 0) {
-				SysError("MVCTPReceiver::ReceiveFile()::recv() error");
+			if (recv(retrans_tcp_sock, header, sizeof(VcmtpHeader), 0) <= 0) {
+				SysError("VCMTPReceiver::ReceiveFile()::recv() error");
 			}
 
-			if (header->flags & MVCTP_EOF) {
+			if (header->flags & VCMTP_EOF) {
 				munmap(file_buffer, mapped_size);
 				if (transfer_msg.data_len > offset) {
 					cout << "Missing packets in the end of transfer. Final offset: "
@@ -1180,15 +1180,15 @@ void MVCTPReceiver::ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfe
 				else
 					cout << "There are more retransmission packets to come." << endl;
 			}
-			else if (header->flags & MVCTP_RETRANS_DATA) {
+			else if (header->flags & VCMTP_RETRANS_DATA) {
 				retrans_tcp_client->Receive(packet_data, header->data_len);
 
 				if (lseek(recv_fd, header->seq_number, SEEK_SET) == -1) {
-					SysError("MVCTPReceiver::ReceiveFile()::lseek() error");
+					SysError("VCMTPReceiver::ReceiveFile()::lseek() error");
 				}
 				if (write(recv_fd, packet_data, header->data_len) < 0) {
-					//SysError("MVCTPReceiver::ReceiveFile()::write() error");
-					cout << "MVCTPReceiver::ReceiveFile()::write() error" << endl;
+					//SysError("VCMTPReceiver::ReceiveFile()::write() error");
+					cout << "VCMTPReceiver::ReceiveFile()::write() error" << endl;
 				}
 
 				// Update statistics
@@ -1233,16 +1233,16 @@ void MVCTPReceiver::ReceiveFileMemoryMappedIO(const MvctpSenderMessage & transfe
 }
 
 
-void MVCTPReceiver::DoFileRetransmission(int fd, const list<MvctpNackMessage>& nack_list) {
+void VCMTPReceiver::DoFileRetransmission(int fd, const list<VcmtpNackMessage>& nack_list) {
 	SendNackMessages(nack_list);
 
 	// Receive packets from the sender
-	MvctpHeader header;
-	char packet_data[MVCTP_DATA_LEN];
+	VcmtpHeader header;
+	char packet_data[VCMTP_DATA_LEN];
 	int size = nack_list.size();
 	int bytes;
 	for (int i = 0; i < size; i++) {
-		bytes = retrans_tcp_client->Receive(&header, MVCTP_HLEN);
+		bytes = retrans_tcp_client->Receive(&header, VCMTP_HLEN);
 		bytes = retrans_tcp_client->Receive(packet_data, header.data_len);
 
 		lseek(fd, header.seq_number, SEEK_SET);
@@ -1257,7 +1257,7 @@ void MVCTPReceiver::DoFileRetransmission(int fd, const list<MvctpNackMessage>& n
 }
 
 
-void MVCTPReceiver::CheckReceivedFile(const char* file_name, size_t length) {
+void VCMTPReceiver::CheckReceivedFile(const char* file_name, size_t length) {
 	int fd = open(file_name, O_RDWR);
 	char buffer[256];
 	int read_bytes;
@@ -1287,7 +1287,7 @@ struct aio_info {
 };
 
 
-void MVCTPReceiver::DoAsynchronousWrite(int fd, size_t offset, char* data_buffer, size_t length) {
+void VCMTPReceiver::DoAsynchronousWrite(int fd, size_t offset, char* data_buffer, size_t length) {
 	struct aiocb * my_aiocb = (struct aiocb *)malloc(sizeof(aiocb));
 	struct aio_info* info = (struct aio_info*)malloc(sizeof(aio_info));
 	info->ptr_aiocb = my_aiocb;
@@ -1312,7 +1312,7 @@ void MVCTPReceiver::DoAsynchronousWrite(int fd, size_t offset, char* data_buffer
 }
 
 
-void MVCTPReceiver::HandleAsyncWriteCompletion(sigval_t sigval) {
+void VCMTPReceiver::HandleAsyncWriteCompletion(sigval_t sigval) {
 	struct aio_info *info = (struct aio_info *)sigval.sival_ptr;
 	cout << "Async write completed. fd: " << info->ptr_aiocb->aio_fildes << "    Offset: "
 				<< info->ptr_aiocb->aio_offset << "    Length: " << info->ptr_aiocb->aio_nbytes << endl;
@@ -1345,7 +1345,7 @@ void MVCTPReceiver::HandleAsyncWriteCompletion(sigval_t sigval) {
 
 
 // ============ Functions related to TCP data transfer =============
-void MVCTPReceiver::TcpReceiveMemoryData(const MvctpSenderMessage & msg, char* mem_data) {
+void VCMTPReceiver::TcpReceiveMemoryData(const VcmtpSenderMessage & msg, char* mem_data) {
 	char str[256];
 	sprintf(str, "Started memory-to-memory transfer using TCP. Size: %d", msg.data_len);
 	status_proxy->SendMessageLocal(INFORMATIONAL, str);
@@ -1363,9 +1363,9 @@ void MVCTPReceiver::TcpReceiveMemoryData(const MvctpSenderMessage & msg, char* m
 }
 
 
-void MVCTPReceiver::TcpReceiveFile(const MvctpSenderMessage & transfer_msg) {
+void VCMTPReceiver::TcpReceiveFile(const VcmtpSenderMessage & transfer_msg) {
 	// NOTE: the length of the memory mapped buffer should be a multiple of the page size
-	static const size_t RECV_BUFFER_SIZE = MVCTP_DATA_LEN * 4096;
+	static const size_t RECV_BUFFER_SIZE = VCMTP_DATA_LEN * 4096;
 
 	char str[256];
 	sprintf(str, "Started disk-to-disk file transfer using TCP. Size: %u",
@@ -1378,7 +1378,7 @@ void MVCTPReceiver::TcpReceiveFile(const MvctpSenderMessage & transfer_msg) {
 	char* buffer = (char*)malloc(RECV_BUFFER_SIZE);
 	int fd = open(transfer_msg.text, O_RDWR | O_CREAT | O_TRUNC);
 	if (fd < 0) {
-		SysError("MVCTPReceiver::ReceiveFile()::creat() error");
+		SysError("VCMTPReceiver::ReceiveFile()::creat() error");
 	}
 
 	size_t remained_size = transfer_msg.data_len;

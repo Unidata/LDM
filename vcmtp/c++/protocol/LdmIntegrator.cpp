@@ -8,7 +8,7 @@
 #include "LdmIntegrator.h"
 #include "SenderStatusProxy.h"
 
-LdmIntegrator::LdmIntegrator(MVCTPSender* s, string save_path, SenderStatusProxy* p) {
+LdmIntegrator::LdmIntegrator(VCMTPSender* s, string save_path, SenderStatusProxy* p) {
 	sender = s;
 	if (save_path.size() > 0 && save_path[save_path.size() - 1] == '/')
 		save_dir = save_path;

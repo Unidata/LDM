@@ -8,7 +8,7 @@
 #ifndef MULTICASTCOMM_H_
 #define MULTICASTCOMM_H_
 
-#include "mvctp.h"
+#include "vcmtp.h"
 #include "InetComm.h"
 #include <pthread.h>
 

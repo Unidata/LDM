@@ -8,7 +8,7 @@
 #ifndef INETCOMM_H_
 #define INETCOMM_H_
 
-#include "mvctp.h"
+#include "vcmtp.h"
 
 class InetComm {
 public:

@@ -43,7 +43,7 @@ RawSocketComm::RawSocketComm(const char* if_name) {
 	dest_address.sll_addr[7] = 0x00;/*not used*/
 
 	memcpy(send_frame.src_addr, mac_addr, ETH_ALEN);
-	send_frame.proto = htons(MVCTP_PROTO_TYPE);
+	send_frame.proto = htons(VCMTP_PROTO_TYPE);
 }
 
 
@@ -122,9 +122,9 @@ ssize_t RawSocketComm::SendPacket(PacketBuffer* buffer, int flags, void* dst_add
 	ethhdr* eth_header = (ethhdr*)buffer->eth_header;
 	memcpy(eth_header->h_source, mac_addr, ETH_ALEN);
 	memcpy(eth_header->h_dest, dst_addr, ETH_ALEN);
-	eth_header->h_proto = htons(MVCTP_PROTO_TYPE);
+	eth_header->h_proto = htons(VCMTP_PROTO_TYPE);
 
-	return SendFrame(buffer->eth_header, buffer->data_len + MVCTP_HLEN + ETH_HLEN);
+	return SendFrame(buffer->eth_header, buffer->data_len + VCMTP_HLEN + ETH_HLEN);
 }
 
 
@@ -184,7 +184,7 @@ int RawSocketComm::ReceiveFrame(void* buffer) {
 
 bool RawSocketComm::IsMyPacket() {
 	if (memcmp(recv_frame.dst_addr, bind_mac_addr, 6) == 0
-		&& recv_frame.proto == htons(MVCTP_PROTO_TYPE)) {
+		&& recv_frame.proto == htons(VCMTP_PROTO_TYPE)) {
 		return true;
 	}
 	else

@@ -26,11 +26,11 @@
 
 using namespace std;
 
-class MVCTPSender;
+class VCMTPSender;
 
 class TcpServer {
 public:
-	TcpServer(int port, MVCTPSender* sender);
+	TcpServer(int port, VCMTPSender* sender);
 	~TcpServer();
 
 	void 	Start();
@@ -49,7 +49,7 @@ private:
 	list<int> 	conn_sock_list;
 	int 		max_conn_sock;
 	fd_set 		master_read_fds;
-	MVCTPSender* ptr_sender;
+	VCMTPSender* ptr_sender;
 
 	pthread_t server_thread;
 	pthread_mutex_t sock_list_mutex;

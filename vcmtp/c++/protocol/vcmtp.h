@@ -1,12 +1,12 @@
 /*
- * mvctp.h
+ * vcmtp.h
  *
  *  Created on: Jun 28, 2011
  *      Author: jie
  */
 
-#ifndef MVCTP_H_
-#define MVCTP_H_
+#ifndef VCMTP_H_
+#define VCMTP_H_
 
 
 #define _LARGEFILE_SOURCE 1
@@ -51,7 +51,7 @@ using namespace std;
 
 
 //global functions
-void MVCTPInit();
+void VCMTPInit();
 void SysError(string s);
 void Log(char* format, ...);
 void CreateNewLogFile(const char* file_name);
@@ -60,27 +60,27 @@ void CreateNewLogFile(const char* file_name);
 typedef struct sockaddr SA;
 typedef struct ifreq	IFREQ;
 
-typedef struct MvctpHeader {
+typedef struct VcmtpHeader {
 	u_int16_t	src_port;
 	u_int16_t	dest_port;
 	u_int32_t 	session_id;
 	u_int32_t	seq_number;
 	u_int32_t	data_len;
 	u_int32_t	flags;
-} MVCTP_HEADER, *PTR_MVCTP_HEADER;
+} VCMTP_HEADER, *PTR_VCMTP_HEADER;
 
 
-// MVCTP Header Flags
-const u_int32_t MVCTP_DATA = 0x00000000;			// data packet
-const u_int32_t MVCTP_BOF = 0x00000001;				// begin of file
-const u_int32_t MVCTP_EOF = 0x00000002;				// end of file
-const u_int32_t MVCTP_SENDER_MSG_EXP = 0x00000004;	// sender messages used for experiment
-const u_int32_t MVCTP_RETRANS_REQ = 0x00000008;		// retransmission request
-const u_int32_t MVCTP_RETRANS_DATA = 0x00000010; 	// retransmission data
-const u_int32_t MVCTP_RETRANS_END = 0x00000020;
-const u_int32_t MVCTP_RETRANS_TIMEOUT = 0x00000040; // retransmission timeout message
-const u_int32_t MVCTP_BOF_REQ = 0x00000080;     	// BOF request
-const u_int32_t MVCTP_HISTORY_STATISTICS = 0x00000100;
+// VCMTP Header Flags
+const u_int32_t VCMTP_DATA = 0x00000000;			// data packet
+const u_int32_t VCMTP_BOF = 0x00000001;				// begin of file
+const u_int32_t VCMTP_EOF = 0x00000002;				// end of file
+const u_int32_t VCMTP_SENDER_MSG_EXP = 0x00000004;	// sender messages used for experiment
+const u_int32_t VCMTP_RETRANS_REQ = 0x00000008;		// retransmission request
+const u_int32_t VCMTP_RETRANS_DATA = 0x00000010; 	// retransmission data
+const u_int32_t VCMTP_RETRANS_END = 0x00000020;
+const u_int32_t VCMTP_RETRANS_TIMEOUT = 0x00000040; // retransmission timeout message
+const u_int32_t VCMTP_BOF_REQ = 0x00000080;     	// BOF request
+const u_int32_t VCMTP_HISTORY_STATISTICS = 0x00000100;
 
 
 /************ The BOF/EOF message data types ****************/
@@ -92,7 +92,7 @@ const u_int32_t MVCTP_HISTORY_STATISTICS = 0x00000100;
 #define DISK_TO_DISK		2
 
 // message information
-struct MvctpMessageInfo {
+struct VcmtpMessageInfo {
 	u_int16_t 	transfer_type;
 	u_int32_t 	msg_id;
 	long long 	msg_length;
@@ -106,12 +106,12 @@ typedef struct PacketBuffer {
 	size_t		packet_len;
 	size_t		data_len;
 	char*		eth_header;
-	char*		mvctp_header;
+	char*		vcmtp_header;
 	char*		data;
 	char* 		packet_buffer;
 } BUFFER_ENTRY, * PTR_BUFFER_ENTRY;
 
-struct MvctpNackMsg {
+struct VcmtpNackMsg {
 	int32_t 	proto;
 	int32_t 	packet_id;
 };
@@ -139,7 +139,7 @@ const static bool is_debug = true;
 // Constant values used for the protocol
 const static string group_id = "224.1.2.3";
 const static unsigned char group_mac_addr[6] = {0x01, 0x00, 0x5e, 0x01, 0x02, 0x03};
-const static ushort mvctp_port = 123;
+const static ushort vcmtp_port = 123;
 const static ushort BUFFER_UDP_SEND_PORT = 12345;
 const static ushort BUFFER_UDP_RECV_PORT = 12346;
 const static ushort BUFFER_TCP_SEND_PORT = 12347;
@@ -147,29 +147,29 @@ const static ushort BUFFER_TCP_RECV_PORT = 12348;
 const static int PORT_NUM = 11001;
 const static int BUFF_SIZE = 10000;
 
-const static ushort MVCTP_PROTO_TYPE = 0x0001;
-// Force maximum MVCTP packet length to be 1460 bytes so that it won't cause fragmentation
+const static ushort VCMTP_PROTO_TYPE = 0x0001;
+// Force maximum VCMTP packet length to be 1460 bytes so that it won't cause fragmentation
 // when using TCP for packet retransmission
-const static int MVCTP_ETH_FRAME_LEN = 1460 + ETH_HLEN;
-const static int MVCTP_PACKET_LEN = 1460; //ETH_FRAME_LEN - ETH_HLEN;
-const static int MVCTP_HLEN = sizeof(MVCTP_HEADER);
-const static int MVCTP_DATA_LEN = MVCTP_PACKET_LEN - sizeof(MVCTP_HEADER); //ETH_FRAME_LEN - ETH_HLEN - sizeof(MVCTP_HEADER);
+const static int VCMTP_ETH_FRAME_LEN = 1460 + ETH_HLEN;
+const static int VCMTP_PACKET_LEN = 1460; //ETH_FRAME_LEN - ETH_HLEN;
+const static int VCMTP_HLEN = sizeof(VCMTP_HEADER);
+const static int VCMTP_DATA_LEN = VCMTP_PACKET_LEN - sizeof(VCMTP_HEADER); //ETH_FRAME_LEN - ETH_HLEN - sizeof(VCMTP_HEADER);
 
-// parameters for MVCTP over UDP
-static const int UDP_MVCTP_PACKET_LEN = 1460;
-static const int UDP_MVCTP_HLEN = sizeof(MVCTP_HEADER);
-static const int UDP_MVCTP_DATA_LEN = 1200 - sizeof(MVCTP_HEADER);
+// parameters for VCMTP over UDP
+static const int UDP_VCMTP_PACKET_LEN = 1460;
+static const int UDP_VCMTP_HLEN = sizeof(VCMTP_HEADER);
+static const int UDP_VCMTP_DATA_LEN = 1200 - sizeof(VCMTP_HEADER);
 static const int UDP_PACKET_LEN = ETH_DATA_LEN;
 
 static const int INIT_RTT	= 50;		// in milliseconds
 
 
 // parameters for data transfer
-static const double SEND_RATE_RATIO = (MVCTP_PACKET_LEN + 8 + ETH_HLEN) * 1.0 / MVCTP_DATA_LEN;
+static const double SEND_RATE_RATIO = (VCMTP_PACKET_LEN + 8 + ETH_HLEN) * 1.0 / VCMTP_DATA_LEN;
 static const int MAX_NUM_RECEIVERS = 200;
-static const int MAX_MAPPED_MEM_SIZE = 4096 * MVCTP_DATA_LEN;
+static const int MAX_MAPPED_MEM_SIZE = 4096 * VCMTP_DATA_LEN;
 
-// message types for MVCTP data transfer
+// message types for VCMTP data transfer
 static const int STRING_TRANSFER_START = 1;
 static const int STRING_TRANSFER_FINISH = 2;
 static const int MEMORY_TRANSFER_START = 3;
@@ -190,7 +190,7 @@ static const int RESET_HISTORY_STATISTICS = 15;
 static const int SET_LOSS_RATE = 16;
 
 
-struct MvctpSenderMessage {
+struct VcmtpSenderMessage {
 	int32_t		msg_type;
 	uint32_t	session_id;
 	uint32_t 	data_len;
@@ -198,7 +198,7 @@ struct MvctpSenderMessage {
 	double		time_stamp;
 };
 
-struct MvctpRetransRequest {
+struct VcmtpRetransRequest {
 	u_int32_t	msg_id;
 	u_int32_t 	seq_num;
 	u_int32_t	data_len;
@@ -206,13 +206,13 @@ struct MvctpRetransRequest {
 
 
 const int MAX_NUM_NACK_REQ = 50;
-struct MvctpRetransMessage {
+struct VcmtpRetransMessage {
 	int32_t		num_requests;
 	u_int32_t	seq_numbers[MAX_NUM_NACK_REQ];
 	u_int32_t	data_lens[MAX_NUM_NACK_REQ];
 };
 
-typedef struct MvctpNackMessage {
+typedef struct VcmtpNackMessage {
 	u_int32_t 	seq_num;
 	u_int32_t	data_len;
 } NACK_MSG, * PTR_NACK_MSG;
@@ -225,14 +225,14 @@ static const int RETRANS_SERIAL_RR = 2;  	// single retransmission thread, send 
 static const int RETRANS_PARALLEL = 3;		// parallel retransmission threads
 
 
-bool operator==(const MvctpNackMessage& l, const MvctpNackMessage& r);
-bool operator<(const MvctpNackMessage& l, const MvctpNackMessage& r);
+bool operator==(const VcmtpNackMessage& l, const VcmtpNackMessage& r);
+bool operator<(const VcmtpNackMessage& l, const VcmtpNackMessage& r);
 
 
-class MVCTP {
+class VCMTP {
 public:
 	static FILE*  log_file;
 	static bool is_log_enabled;
 };
 
-#endif /* MVCTP_H_ */
+#endif /* VCMTP_H_ */

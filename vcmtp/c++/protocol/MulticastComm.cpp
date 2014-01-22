@@ -118,7 +118,7 @@ ssize_t MulticastComm::SendData(const void* buff, size_t len, int flags, void* d
 }
 
 ssize_t MulticastComm::SendPacket(PacketBuffer* buffer, int flags, void* dst_addr) {
-	return sendto(sock_fd, buffer->mvctp_header, buffer->data_len + MVCTP_HLEN,
+	return sendto(sock_fd, buffer->vcmtp_header, buffer->data_len + VCMTP_HLEN,
 					flags, &this->dst_addr, sizeof(sockaddr_in));
 }
 
