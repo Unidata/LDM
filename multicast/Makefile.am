@@ -6,6 +6,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
+EXTRA_DIST              = downMcastLdm.hin
 BUILT_SOURCES		= downMcastLdm.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= downMcastLdm.c
