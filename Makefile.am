@@ -20,13 +20,14 @@ DISTCHECK_CONFIGURE_FLAGS	= \
         --disable-root-actions \
         --with-gribinsert \
         --with-noaaport \
-        --with-retrans
+        --with-retrans \
+        --with-multicast
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
 SUBDIRS		= rpc ulog pqinglib
-if WANT_VCMTP
-    SUBDIRS	+= vcmtp
+if WANT_MULTICAST
+    SUBDIRS	+= multicast vcmtp
 endif
 if WANT_FAUX_PQ
     SUBDIRS	+= fauxPq

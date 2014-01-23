@@ -139,13 +139,13 @@ esac
 AM_CONDITIONAL([MAINTAINER], [test "$USER" = steve])
 
 # The following is for Virtual Circuit Multicast Transport Protocol. DO NOT USE!
-AC_ARG_WITH([vcmtp],
-    AS_HELP_STRING([--with-vcmtp],
-	[enable support for VCMTP. DO NOT USE!]
+AC_ARG_WITH([multicast],
+    AS_HELP_STRING([--with-multicast],
+	[enable support for multicast. DO NOT USE!]
         [[default=without]]]),
     [],
-    [with_vcmtp=no])
-AM_CONDITIONAL([WANT_VCMTP], [test "x$with_vcmtp" != xno])
+    [with_multicast=no])
+AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
 
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
@@ -559,6 +559,7 @@ AC_CONFIG_FILES([
     lib/Makefile
     Makefile
     misc/Makefile
+    multicast/Makefile
     noaaport/Makefile
     noaaport/retrans/Makefile
     notifyme/Makefile

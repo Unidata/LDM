@@ -31,3 +31,6 @@ if WANT_GRIBINSERT
 	$(top_builddir)/gempak/lib.la
 endif
 endif
+if WANT_MULTICAST
+    libldm_la_LIBADD	+= ../multicast/lib.la
+endif
