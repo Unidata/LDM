@@ -8,24 +8,24 @@
 
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= \
-    ConfigInfo.cpp \
-    EventQueue.cpp \
-    ExperimentManager2.cpp \
-    ExperimentManager.cpp \
-    InetComm.cpp \
-    LdmIntegrator.cpp \
-    MulticastComm.cpp \
-    VCMTPComm.cpp \
-    vcmtp.cpp \
-    VcmtpEventQueueManager.cpp \
-    VCMTPReceiver.cpp \
-    VCMTPSender.cpp \
-    VcmtpSenderMetadata.cpp \
-    NetInterfaceManager.cpp \
-    RawSocketComm.cpp \
-    ReceiverStatusProxy.cpp \
-    SenderStatusProxy.cpp \
-    TcpClient.cpp \
-    TcpServer.cpp \
-    Tester.cpp \
-    UdpComm.cpp
+    ConfigInfo.cpp ConfigInfo.h \
+    EventQueue.cpp EventQueue.h \
+    ExperimentManager2.cpp ExperimentManager2.h \
+    ExperimentManager.cpp ExperimentManager.h \
+    InetComm.cpp InetComm.h \
+    LdmIntegrator.cpp LdmIntegrator.h \
+    MulticastComm.cpp MulticastComm.h \
+    NetInterfaceManager.cpp NetInterfaceManager.h \
+    RawSocketComm.cpp RawSocketComm.h \
+    ReceiverStatusProxy.cpp ReceiverStatusProxy.h \
+    SenderStatusProxy.cpp SenderStatusProxy.h \
+    TcpClient.cpp TcpClient.h \
+    TcpServer.cpp TcpServer.h \
+    Tester.cpp Tester.h \
+    UdpComm.cpp UdpComm.h \
+    VCMTPComm.cpp VCMTPComm.h \
+    vcmtp.cpp vcmtp.h \
+    VcmtpEventQueueManager.cpp VcmtpEventQueueManager.h \
+    VCMTPReceiver.cpp VCMTPReceiver.h \
+    VCMTPSender.cpp VCMTPSender.h \
+    VcmtpSenderMetadata.cpp VcmtpSenderMetadata.h

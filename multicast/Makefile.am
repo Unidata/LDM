@@ -11,6 +11,7 @@ BUILT_SOURCES		= downMcastLdm.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= downMcastLdm.c
 lib_la_CPPFLAGS		= -I$(top_srcdir) -I$(top_srcdir)/ulog
+DISTCLEANFILES          = $(BUILT_SOURCES)
 
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp

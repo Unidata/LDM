@@ -8,8 +8,8 @@
 
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= \
-    CommUtil.cpp \
-    PerformanceCounter.cpp \
-    RateShaper.cpp \
-    StatusProxy.cpp \
-    Timer.cpp
+    CommUtil.cpp CommUtil.h \
+    PerformanceCounter.cpp PerformanceCounter.h \
+    RateShaper.cpp RateShaper.h \
+    StatusProxy.cpp StatusProxy.h \
+    Timer.cpp Timer.h
