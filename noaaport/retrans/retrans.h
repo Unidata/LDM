@@ -5,6 +5,7 @@
 
 #include <time.h>
 #include <string.h>
+#include <sys/types.h>
 
 #define SUCCESS		0
 #define	ERROR		-1
