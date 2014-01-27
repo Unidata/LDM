@@ -331,11 +331,39 @@ AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
                 AC_SUBST(LIBS_CUNIT)],
                 [AC_CHECK_FILE([/usr/lib/libcunit.a],
                     [LIBS_CUNIT='-L/usr/lib -lcunit'
+                    AC_SUBST(LIBS_CUNIT)])])],
+            [AC_CHECK_FILE([/usr/lib64/libcunit.so],
+                [LIBS_CUNIT='-L/usr/lib64 -lcunit'
+                AC_SUBST(LIBS_CUNIT)],
+                [AC_CHECK_FILE([/usr/lib64/libcunit.a],
+                    [LIBS_CUNIT='-L/usr/lib64 -lcunit'
                     AC_SUBST(LIBS_CUNIT)])])])])])
 AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
 AM_COND_IF([HAVE_CUNIT], 
     [AC_MSG_NOTICE([CUnit found.  Enabling unit-tests.])],
     [AC_MSG_NOTICE([CUnit not found.  Disabling unit-tests.])])
+
+# Check for the Opmock unit-testing and mocking package
+AC_MSG_NOTICE([checking for the Opmock mocking package.])
+AC_CHECK_FILE(
+    [/usr/local/include/opmock.h],
+    [   OPMOCK_CPPFLAGS=-I/usr/local/include
+        AC_SUBST([OPMOCK_CPPFLAGS])
+        libs_prev=$LIBS
+        LIBS="-L/usr/local/lib64 -lopmock${LIBS:+ $LIBS}"
+        AC_LINK_IFELSE(
+            [   AC_LANG_PROGRAM(
+                    [void opmock_test_suite_reset();],
+                    [opmock_test_suite_reset();]) ],
+            [   OPMOCK_LDFLAGS='-rpath /usr/local/lib64'
+                OPMOCK_LDADD='-L/usr/local/lib64 -lopmock'
+                AC_SUBST([OPMOCK_LDFLAGS])
+                AC_SUBST([OPMOCK_LDADD]) ])
+        LIBS=$libs_prev])
+AM_CONDITIONAL([HAVE_OPMOCK], [test "$OPMOCK_LDADD"])
+AM_COND_IF([HAVE_OPMOCK], 
+    [AC_MSG_NOTICE([Opmock found. Enabling mocking-tests.])],
+    [AC_MSG_NOTICE([Opmock not found. Disabling mocking-tests.])])
 
 AC_SUBST(PATH)
 
