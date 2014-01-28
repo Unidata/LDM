@@ -461,7 +461,7 @@ ldmsend(
 
         if(status == 0) {
             /* These members are constant over the loop. */
-            info.origin = origin;
+            info.origin = (char*)origin; /* safe because "info.origin" isn't modified */
             info.feedtype = clssp->psa.psa_val->feedtype;
 
             info.seqno = *seq_start;
