@@ -396,7 +396,7 @@ static int
 ldmsend(
     CLIENT*     clnt,
     prod_class_t* clssp,
-    char*       origin,
+    const char* origin,
     int*        seq_start,
     char*       statsdata)
 {
