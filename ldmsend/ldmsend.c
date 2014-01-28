@@ -435,7 +435,7 @@ main(
      */
     set_sigactions();
 
-    (void) strncpy(myname, sizeof(myname), ghostname());
+    (void) strncpy(myname, ghostname(), sizeof(myname));
     myname[sizeof(myname)-1] = 0;
 
     (void)exitIfDone(INTERRUPTED);
