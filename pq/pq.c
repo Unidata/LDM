@@ -6214,7 +6214,7 @@ pq_ctimestamp(const pqueue *pq, timestampt *tvp)
  * the arrival times.)
  */
 int
-pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class *clssp)
+pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class_t *clssp)
 {
         int status = ENOERR;
         pq_match otherway = TV_LT;
@@ -6638,7 +6638,7 @@ pq_setCursorFromSignature(
  */
 int
 pq_sequence(pqueue *pq, pq_match mt,
-        const prod_class *clss, pq_seqfunc *ifMatch, void *otherargs)
+        const prod_class_t *clss, pq_seqfunc *ifMatch, void *otherargs)
 {
         int status = ENOERR;
         tqelem *tqep;
@@ -6830,7 +6830,7 @@ unwind_ctl:
  * Returns non-zero if this is the case, zero if not.
  */
 int
-pq_ctimeck(const pqueue *pq, pq_match mt, const prod_class *clssp,
+pq_ctimeck(const pqueue *pq, pq_match mt, const prod_class_t *clssp,
         const timestampt *maxlatencyp)
 {
         if(clssp == NULL || tvIsNone(pq->cursor))
@@ -6865,7 +6865,7 @@ pq_ctimeck(const pqueue *pq, pq_match mt, const prod_class *clssp,
 /*ARGSUSED*/
 int
 pq_seqdel(pqueue *pq, pq_match mt,
-        const prod_class *clss, int wait,
+        const prod_class_t *clss, int wait,
         size_t *extentp, timestampt *timestampp) 
 {
         int status = ENOERR;
@@ -7051,7 +7051,7 @@ didmatch(const prod_info *infop, const void *datap,
  */
 int
 pq_last(pqueue *pq,
-        const prod_class *clssp,
+        const prod_class_t *clssp,
         timestampt *tsp) /* modified upon return */
 {
         int status = ENOERR;
