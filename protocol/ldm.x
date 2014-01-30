@@ -14,6 +14,9 @@
 %#include <signal.h>     /* sig_atomic_t */
 %#include <stdlib.h>     /* at least malloc() */
 %#include <sys/time.h>   /* timeval */
+%#ifndef __USE_BSD
+%    #define __USE_BSD  /* to get "u_int", for example */
+%#endif
 %#include <sys/types.h>
 %#include <regex.h>
 %

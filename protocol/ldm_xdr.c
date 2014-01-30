@@ -232,7 +232,7 @@ xdr_feedpar (XDR *xdrs, feedpar *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_pointer (xdrs, (void **)&objp->prod_class, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
+	 if (!xdr_pointer (xdrs, (char **)&objp->prod_class, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
 		 return FALSE;
 	 if (!xdr_max_hereis_t (xdrs, &objp->max_hereis))
 		 return FALSE;
@@ -286,7 +286,7 @@ xdr_comingsoon_args (XDR *xdrs, comingsoon_args *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_pointer (xdrs, (void **)&objp->infop, sizeof (prod_info), (xdrproc_t) xdr_prod_info))
+	 if (!xdr_pointer (xdrs, (char **)&objp->infop, sizeof (prod_info), (xdrproc_t) xdr_prod_info))
 		 return FALSE;
 	 if (!xdr_u_int (xdrs, &objp->pktsz))
 		 return FALSE;
@@ -304,7 +304,7 @@ xdr_datapkt (XDR *xdrs, datapkt *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_pointer (xdrs, (void **)&objp->signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
+	 if (!xdr_pointer (xdrs, (char **)&objp->signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
 		 return FALSE;
 	 if (!xdr_u_int (xdrs, &objp->pktnum))
 		 return FALSE;
@@ -323,7 +323,7 @@ xdr_datapktd (XDR *xdrs, datapktd *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_pointer (xdrs, (void **)&objp->signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
+	 if (!xdr_pointer (xdrs, (char **)&objp->signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
 		 return FALSE;
 	 if (!xdr_u_int (xdrs, &objp->pktnum))
 		 return FALSE;
@@ -365,19 +365,19 @@ xdr_ldm_replyt (XDR *xdrs, ldm_replyt *objp)
 	case DONT_SEND:
 		break;
 	case RESEND:
-		 if (!xdr_pointer (xdrs, (void **)&objp->ldm_replyt_u.dpktdp, sizeof (datapktd), (xdrproc_t) xdr_datapktd))
+		 if (!xdr_pointer (xdrs, (char **)&objp->ldm_replyt_u.dpktdp, sizeof (datapktd), (xdrproc_t) xdr_datapktd))
 			 return FALSE;
 		break;
 	case RESTART:
-		 if (!xdr_pointer (xdrs, (void **)&objp->ldm_replyt_u.signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
+		 if (!xdr_pointer (xdrs, (char **)&objp->ldm_replyt_u.signaturep, sizeof (signaturet), (xdrproc_t) xdr_signaturet))
 			 return FALSE;
 		break;
 	case REDIRECT:
-		 if (!xdr_pointer (xdrs, (void **)&objp->ldm_replyt_u.alternatep, sizeof (rendezvoust), (xdrproc_t) xdr_rendezvoust))
+		 if (!xdr_pointer (xdrs, (char **)&objp->ldm_replyt_u.alternatep, sizeof (rendezvoust), (xdrproc_t) xdr_rendezvoust))
 			 return FALSE;
 		break;
 	case RECLASS:
-		 if (!xdr_pointer (xdrs, (void **)&objp->ldm_replyt_u.newclssp, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
+		 if (!xdr_pointer (xdrs, (char **)&objp->ldm_replyt_u.newclssp, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
 			 return FALSE;
 		break;
 	default:
@@ -425,7 +425,7 @@ xdr_fornme_reply_t (XDR *xdrs, fornme_reply_t *objp)
 	case BADPATTERN:
 		break;
 	case RECLASS:
-		 if (!xdr_pointer (xdrs, (void **)&objp->fornme_reply_t_u.prod_class, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
+		 if (!xdr_pointer (xdrs, (char **)&objp->fornme_reply_t_u.prod_class, sizeof (prod_class_t), (xdrproc_t) xdr_prod_class_t))
 			 return FALSE;
 		break;
 	default:
