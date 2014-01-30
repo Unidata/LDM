@@ -3,16 +3,20 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: downMcastLdm.hin
+ *   @file: mcastDownLdm.hin
  * @author: Steven R. Emmerson
  *
- * This file specifies the API for the downstream multicast LDM.
+ * This file specifies the API for the multicast downstream LDM.
  */
 
-#ifndef DOWN_MCAST_LDM_H
-#define DOWN_MCAST_LDM_H
+#ifndef MCAST_DOWN_LDM_H
+#define MCAST_DOWN_LDM_H
 
-typedef struct downMcastLdm     DownMcastLdm;
+#include "ldm.h"
+#include "pq.h"
+
+typedef struct mdl_struct       mdl_obj;
+typedef                         void (*mdl_missed_product)(void*, signaturet);
 
 #ifdef __cplusplus
 extern "C" {

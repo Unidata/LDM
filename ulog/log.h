@@ -39,6 +39,7 @@ extern "C" {
 #define LOG_ERRNUM3(err,fmt,a,b,c)  log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,a,b,c)
 #define LOG_ERRNUM4(err,fmt,a,b,c,d)    log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d)
 #define LOG_ERRNUM5(err,fmt,a,b,c,d,e)  log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d,e)
+#define LOG_MALLOC(nbytes,msg)      log_malloc(nbytes, msg, __FILE__, __LINE__)
 
 void log_clear();
 void log_start(
@@ -92,6 +93,23 @@ void log_errnum(
     const char* const   fmt,    /**< The higher-level message format or NULL
                                   *  for no higher-level message */
     ...)                        /**< Arguments referenced by the format */;
+
+/**
+ * Allocates memory.
+ *
+ * @param nbytes        Number of bytes to allocate.
+ * @param msg           Message to print on error. Should complete the sentence
+ *                      "Couldn't allocate <n> bytes for ...".
+ * @param file          Name of the file.
+ * @param line          Line number in the file.
+ * @retval NULL         Out of memory. \c log_add() called.
+ * @return              Pointer to the allocated memory.
+ */
+void* log_malloc(
+    const size_t        nbytes,
+    const char* const   msg,
+    const char* const   file,
+    const int           line);
 
 #ifdef __cplusplus
 }

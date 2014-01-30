@@ -138,7 +138,8 @@ esac
 
 AM_CONDITIONAL([MAINTAINER], [test "$USER" = steve])
 
-# The following is for Virtual Circuit Multicast Transport Protocol. DO NOT USE!
+# The following is for multicast data distribution using the Virtual Circuit
+# Multicast Transport Protocol. DO NOT USE!
 AC_ARG_WITH([multicast],
     AS_HELP_STRING([--with-multicast],
 	[enable support for multicast. DO NOT USE!]
@@ -146,6 +147,7 @@ AC_ARG_WITH([multicast],
     [],
     [with_multicast=no])
 AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
+AM_COND_IF([WANT_MULTICAST], [LIBS="-lstdc++ -lrt${LIBS:+ $LIBS}"])
 
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
@@ -588,6 +590,11 @@ AC_CONFIG_FILES([
     Makefile
     misc/Makefile
     multicast/Makefile
+    multicast/vcmtp/Makefile
+    multicast/vcmtp/c/Makefile
+    multicast/vcmtp/c++/Makefile
+    multicast/vcmtp/c++/CommUtil/Makefile
+    multicast/vcmtp/c++/protocol/Makefile
     noaaport/Makefile
     noaaport/retrans/Makefile
     notifyme/Makefile
@@ -623,10 +630,6 @@ AC_CONFIG_FILES([
     uldbutil/Makefile
     ulogger/Makefile
     ulog/Makefile
-    vcmtp/Makefile
-    vcmtp/c++/Makefile
-    vcmtp/c++/CommUtil/Makefile
-    vcmtp/c++/protocol/Makefile
 ])
 
 export CC

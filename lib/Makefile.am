@@ -1,4 +1,4 @@
-# Copyright 2013 University Corporation for Atmospheric Research. All rights
+# Copyright 2014 University Corporation for Atmospheric Research. All rights
 # reserved. See the file COPYRIGHT in the top-level source-directory of the
 # package for copying and redistribution conditions.
 #

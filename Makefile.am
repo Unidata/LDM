@@ -26,9 +26,6 @@ DISTCHECK_CONFIGURE_FLAGS	= \
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
 SUBDIRS		= rpc ulog pqinglib
-if WANT_MULTICAST
-    SUBDIRS	+= multicast vcmtp
-endif
 if WANT_FAUX_PQ
     SUBDIRS	+= fauxPq
 else
@@ -44,6 +41,9 @@ endif
 endif
 if WANT_RETRANS
     SUBDIRS	+= noaaport/retrans
+endif
+if WANT_MULTICAST
+    SUBDIRS	+= multicast
 endif
 SUBDIRS 	+= lib
 if WANT_NOAAPORT
@@ -122,6 +122,9 @@ LAST_VERSION	= $$(git tag -l v\* | sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 |
 ACLOCAL_AMFLAGS = -I m4
 
 all:
+
+multicast-check:
+	cd multicast && $(MAKE) check
 
 install-data-hook:	ensure-ldmhome-links ensure-var
 if INCLUDE_ROOT_ACTIONS
@@ -344,6 +347,7 @@ available:	ftp web-update
     ftp \
     ftp-actual \
     install_setuids \
+    multicast-check \
     release \
     remote-checks \
     root-actions \

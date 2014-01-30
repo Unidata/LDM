@@ -443,3 +443,29 @@ void log_log(
         log_clear();
     }                               /* have messages */
 }
+
+/**
+ * Allocates memory.
+ *
+ * @param nbytes        Number of bytes to allocate.
+ * @param msg           Message to print on error. Should complete the sentence
+ *                      "Couldn't allocate <n> bytes for ...".
+ * @param file          Name of the file.
+ * @param line          Line number in the file.
+ * @retval NULL         Out of memory. \c log_add() called.
+ * @return              Pointer to the allocated memory.
+ */
+void* log_malloc(
+    const size_t        nbytes,
+    const char* const   msg,
+    const char* const   file,
+    const int           line)
+{
+    void* obj = malloc(nbytes);
+
+    if (obj == NULL)
+        log_serror(LOG_FMT("Couldn't allocate %lu bytes for %s"), file, line,
+                nbytes, msg);
+
+    return obj;
+}
