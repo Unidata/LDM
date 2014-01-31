@@ -117,7 +117,8 @@ static int execute(
  * @retval 0                    The multicast downstream LDM terminated
  *                              successfully.
  * @retval ENOMEM               Out of memory. \c log_add() called.
- * @retval EINVAL               @code{pq == NULL}. \c log_add() called.
+ * @retval EINVAL               @code{pq == NULL || missed_product == NULL}.
+ *                              \c log_add() called.
  */
 int mdl_create_and_execute(
     pqueue* const       pq,
