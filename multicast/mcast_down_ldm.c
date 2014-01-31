@@ -33,10 +33,9 @@ struct mdl_struct {
 /**
  * Initializes a multicast downstream LDM.
  *
- * @param mdl                   [in/out] The multicast downstream LDM to
- *                              initialize.
- * @param pq                    [in] The product-queue to use.
- * @param missed_product        [in] Missed-product callback function.
+ * @param[out] mdl              The multicast downstream LDM to initialize.
+ * @param[in] pq                The product-queue to use.
+ * @param[in] missed_product    Missed-product callback function.
  * @retval 0                    Success.
  * @retval EINVAL               @code{pq == NULL || missed_product == NULL}.
  *                              \c log_add() called.
@@ -63,9 +62,9 @@ static int init(
 /**
  * Returns a new multicast downstream LDM object.
  *
- * @param mdl                   [out] The pointer to be set.
- * @param pq                    [in] The product-queue to use.
- * @param missed_product        [in] Missed-product callback function.
+ * @param[out] mdl              The pointer to be set.
+ * @param[in] pq                The product-queue to use.
+ * @param[in] missed_product    Missed-product callback function.
  * @retval 0                    Success.
  * @retval ENOMEM               Out of memory. \c log_add() called.
  * @retval EINVAL               @code{pq == NULL || missed_product == NULL}.
@@ -99,7 +98,7 @@ static int mdl_new(
  * Executes a multicast downstream LDM. Doesn't return until the multicast
  * downstream LDM terminates.
  *
- * @param mdl           The multicast downstream LDM to execute.
+ * @param[in,out] mdl   The multicast downstream LDM to execute.
  * @retval 0            Success. The multicast downstream LDM terminated
  *                      successfully.
  */
@@ -113,8 +112,8 @@ static int execute(
  * Creates and executes a multicast downstream LDM for an indefinite amount of
  * time. Will not return until the multicast downstream LDM terminates.
  *
- * @param pq                    [in] The product-queue to use.
- * @param missed_product        [in] Missed-product callback function.
+ * @param[in] pq                The product-queue to use.
+ * @param[in] missed_product    Missed-product callback function.
  * @retval 0                    The multicast downstream LDM terminated
  *                              successfully.
  * @retval ENOMEM               Out of memory. \c log_add() called.
