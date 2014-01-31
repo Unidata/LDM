@@ -30,22 +30,25 @@ mcast_down_ldm.h:	mcast_down_ldm.hin mcast_down_ldm.c
 if HAVE_OPMOCK
 vcmtp_c_api_stubs	= vcmtp_c_api_stub.c vcmtp_c_api_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
-DISTCLEANFILES		+= $(vcmtp_c_api_stubs) $(pq_stubs) TEST-test.xml
+all_stubs		= $(vcmtp_c_api_stubs) $(pq_stubs)
+BUILT_SOURCES		+= $(all_stubs)
+DISTCLEANFILES		+= $(all_stubs) TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.2/include \
                           -I/usr/local/include \
                           -I/usr/include
-$(vcmtp_c_api_stubs):	vcmtp/c/vcmtp_c_api.h
+$(vcmtp_c_api_stubs):	$(srcdir)/vcmtp/c/vcmtp_c_api.h
 	opmock2 -i $(srcdir)/vcmtp/c/vcmtp_c_api.h -o . $(OPMOCK_INCLUDES)
-$(pq_stubs):		../pq/pq.h
-	opmock2 -i $(srcdir)/../pq/pq.h -o . $(lib_la_CPPFLAGS) \
+$(pq_stubs):		$(builddir)/../pq/pq.h
+	opmock2 -i $(builddir)/../pq/pq.h -o . $(lib_la_CPPFLAGS) \
 		$(OPMOCK_INCLUDES)
 
 check_PROGRAMS			= mcast_down_ldm_test
 mcast_down_ldm_test_SOURCES 	= mcast_down_ldm_test.c \
 				  mcast_down_ldm.c \
-				  $(vcmtp_c_api_stubs) \
-				  $(pq_stubs)
-mcast_down_ldm_test_CPPFLAGS	= $(lib_la_CPPFLAGS) @OPMOCK_CPPFLAGS@
+				  $(all_stubs)
+mcast_down_ldm_test_CPPFLAGS	= -I$(builddir) \
+				  $(lib_la_CPPFLAGS) \
+				  @OPMOCK_CPPFLAGS@
 mcast_down_ldm_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mcast_down_ldm_test_LDADD	= $(top_builddir)/lib/libldm.la @OPMOCK_LDADD@
 TESTS				= mcast_down_ldm_test

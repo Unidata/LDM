@@ -29,7 +29,7 @@ EXTRA_DIST		= \
     prod_info.h \
     fix_clnt.pl \
     up6.h
-RPCGEN			= @RPCGEN@
+RPCGEN			= @RPCGEN@ -C
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \

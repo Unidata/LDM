@@ -4,6 +4,8 @@ dnl
 AC_PREREQ(2.59)
 AC_INIT([LDM], [6.11.7], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
+    
+AC_USE_SYSTEM_EXTENSIONS
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([config.h.in])
