@@ -8,6 +8,11 @@
 #include "VCMTPReceiver.h"
 
 
+/**
+ * Constructs a VCMTP receiver.
+ *
+ * @param buf_size      Size of the receiving buffer. Ignored.
+ */
 VCMTPReceiver::VCMTPReceiver(const int buf_size)
 :   retrans_tcp_client(NULL),
     max_sock_fd(0),
