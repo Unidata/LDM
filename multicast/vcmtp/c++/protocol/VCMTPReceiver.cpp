@@ -8,26 +8,33 @@
 #include "VCMTPReceiver.h"
 
 
-VCMTPReceiver::VCMTPReceiver(int buf_size) {
+VCMTPReceiver::VCMTPReceiver(int buf_size)
+:   retrans_tcp_client(NULL),
+    max_sock_fd(0),
+    multicast_sock(ptr_multicast_comm->GetSocket()),
+    retrans_tcp_sock(0),
+    packet_loss_rate(0),
+    session_id(0),
+    status_proxy(NULL),
+    cpu_info(),
+    time_diff_measured(false),
+    time_diff(0),
+    read_ahead_header((VcmtpHeader*)read_ahead_buffer),
+    read_ahead_data(read_ahead_buffer + VCMTP_HLEN),
+    keep_retrans_alive(false),
+    vcmtp_seq_num(0),
+    retrans_switch(true)
+{
 	//ptr_multicast_comm->SetBufferSize(10000000);
-	retrans_tcp_client = NULL;
-	multicast_sock = ptr_multicast_comm->GetSocket();
 
 	srand(time(NULL));
-	packet_loss_rate = 0;
 	bzero(&recv_stats, sizeof(recv_stats));
+	bzero(&cpu_counter, sizeof(cpu_counter));
+	bzero(&global_timer, sizeof(global_timer));
 
-	keep_retrans_alive = false;
-	vcmtp_seq_num = 0;
-	retrans_switch = true;
-
-	read_ahead_header = (VcmtpHeader*) read_ahead_buffer;
-	read_ahead_data = read_ahead_buffer + VCMTP_HLEN;
 	read_ahead_header->session_id = -1;
 
 	AccessCPUCounter(&global_timer.hi, &global_timer.lo);
-	time_diff_measured = false;
-	time_diff = 0;
 }
 
 VCMTPReceiver::~VCMTPReceiver() {
