@@ -8,7 +8,7 @@
 #include "VCMTPReceiver.h"
 
 
-VCMTPReceiver::VCMTPReceiver(int buf_size)
+VCMTPReceiver::VCMTPReceiver(const int buf_size)
 :   retrans_tcp_client(NULL),
     max_sock_fd(0),
     multicast_sock(ptr_multicast_comm->GetSocket()),
@@ -21,8 +21,13 @@ VCMTPReceiver::VCMTPReceiver(int buf_size)
     time_diff(0),
     read_ahead_header((VcmtpHeader*)read_ahead_buffer),
     read_ahead_data(read_ahead_buffer + VCMTP_HLEN),
+    recv_thread(0),
+    retrans_thread(0),
     keep_retrans_alive(false),
     vcmtp_seq_num(0),
+    total_missing_bytes(0),
+    received_retrans_bytes(0),
+    is_multicast_finished(false),
     retrans_switch(true)
 {
 	//ptr_multicast_comm->SetBufferSize(10000000);
