@@ -8,5 +8,5 @@
 
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= vcmtp_c_api.cpp vcmtp_c_api.h
-lib_la_CPPFLAGS		= -I$(builddir)/../c++/protocol \
-			  -I$(srcdir)/../c++/protocol
+lib_la_CPPFLAGS		= -I$(builddir)/../protocol \
+			  -I$(srcdir)/../protocol

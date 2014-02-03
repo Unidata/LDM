@@ -593,10 +593,9 @@ AC_CONFIG_FILES([
     misc/Makefile
     multicast/Makefile
     multicast/vcmtp/Makefile
-    multicast/vcmtp/c/Makefile
-    multicast/vcmtp/c++/Makefile
-    multicast/vcmtp/c++/CommUtil/Makefile
-    multicast/vcmtp/c++/protocol/Makefile
+    multicast/vcmtp/C_API/Makefile
+    multicast/vcmtp/CommUtil/Makefile
+    multicast/vcmtp/protocol/Makefile
     noaaport/Makefile
     noaaport/retrans/Makefile
     notifyme/Makefile
