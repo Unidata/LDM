@@ -7,7 +7,21 @@
 
 #include "TcpClient.h"
 
-TcpClient::TcpClient(string serv_addr, int port)
+#include <errno.h>
+#include <system_error>
+
+/**
+ * Constructs a client-side TCP connection to the VCMTP Sender for the
+ * Retransmission Requester.
+ *
+ * @param[in] serv_addr         Address of multicast sender as hostname or
+ *                              dotted-quad IPv4 address
+ * @param[in] port              Port number on @code{serv_addr} to which to
+ *                              connect
+ * @throws    std::system_error @code{serv_addr} cannot be converted to IP
+ *                              address
+ */
+TcpClient::TcpClient(const string serv_addr, const int port)
 :   server_port(port),
     sock_fd(-1)
 {
@@ -18,12 +32,13 @@ TcpClient::TcpClient(string serv_addr, int port)
 	in_addr_t temp_addr = inet_addr(serv_addr.c_str());
 	if (temp_addr == -1) {
 		struct hostent* ptrhost = gethostbyname(serv_addr.c_str());
-		if (ptrhost != NULL) {
-			temp_addr = ((in_addr*)ptrhost->h_addr_list[0])->s_addr;
+		if (ptrhost == NULL) {
+		    throw std::system_error(errno, std::generic_category(),
+		            "serv_addr=\"" + serv_addr + "\"");
 		}
+                temp_addr = ((in_addr*)ptrhost->h_addr_list[0])->s_addr;
 	}
 	server_addr.sin_addr.s_addr = temp_addr;
-
 }
 
 TcpClient::~TcpClient() {
