@@ -92,7 +92,7 @@ install-exec-local:	regpar.tab regutil $(DESTDIR)$(sysconfdir)
 	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(DESTDIR)$(sysconfdir)
 
 $(DESTDIR)$(sysconfdir):
-	mkdir $@
+	mkdir -p $@
 
 if HAVE_CUNIT
 check_PROGRAMS		= testRegistry
