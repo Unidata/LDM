@@ -7,10 +7,10 @@
 
 #include "TcpClient.h"
 
-TcpClient::TcpClient(string serv_addr, int port) {
-	server_port = port;
-	sock_fd = -1;
-
+TcpClient::TcpClient(string serv_addr, int port)
+:   server_port(port),
+    sock_fd(-1)
+{
 	bzero(&server_addr, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(server_port);
