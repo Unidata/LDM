@@ -6,22 +6,21 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-LDMHOME		= @LDMHOME@
-LOGS_DIR	= @LOGS_DIR@
-QUEUE_DIR	= @QUEUE_DIR@
-LOG_LDM		= @LOG_LDM@
-SYSLOG_CONF	= @SYSLOG_CONF@
-LDM_LOGFILE	= @LDM_LOGFILE@
-SUDO		= @SUDO@
-SU		= @SU@
-PQ_SUBDIR	= @PQ_SUBDIR@
+LDMHOME				= @LDMHOME@
+LOGS_DIR			= @LOGS_DIR@
+QUEUE_DIR			= @QUEUE_DIR@
+LOG_LDM				= @LOG_LDM@
+SYSLOG_CONF			= @SYSLOG_CONF@
+LDM_LOGFILE			= @LDM_LOGFILE@
+SUDO				= @SUDO@
+SU				= @SU@
+PQ_SUBDIR			= @PQ_SUBDIR@
 
-DISTCHECK_CONFIGURE_FLAGS	= \
-        --disable-root-actions \
-        --with-gribinsert \
-        --with-noaaport \
-        --with-retrans \
-        --with-multicast
+AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
+DISTCHECK_CONFIGURE_FLAGS	= --with-gribinsert \
+                                  --with-noaaport \
+                                  --with-retrans \
+                                  --with-multicast
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
