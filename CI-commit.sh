@@ -13,7 +13,7 @@ autoreconf -i --force
 ./configure --disable-root-actions --with-noaaport --with-retrans \
         --with-gribinsert --with-multicast &>configure.log
 make distcheck DISTCHECK_CONFIGURE_FLAGS=''
-#make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
-#make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert'
-#make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport'
-#make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport --with-retrans'
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert'
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport'
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport --with-retrans'
