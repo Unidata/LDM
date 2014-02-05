@@ -593,7 +593,6 @@ AC_CONFIG_FILES([
     misc/Makefile
     multicast/Makefile
     multicast/vcmtp/Makefile
-    multicast/vcmtp/C_API/Makefile
     multicast/vcmtp/CommUtil/Makefile
     multicast/vcmtp/protocol/Makefile
     noaaport/Makefile

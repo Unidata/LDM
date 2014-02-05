@@ -6,4 +6,4 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS 		= CommUtil protocol C_API
+SUBDIRS 		= CommUtil protocol

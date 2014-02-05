@@ -10,14 +10,14 @@ SUBDIRS			= vcmtp
 EXTRA_DIST              = mcast_down_ldm.hin
 BUILT_SOURCES           = mcast_down_ldm.h
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= mcast_down_ldm.c
+lib_la_SOURCES		= mcast_down_ldm.c \
+                          vcmtp_c_api.cpp vcmtp_c_api.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
-                          -I$(builddir)/vcmtp/C_API -I$(srcdir)/vcmtp/C_API
-lib_la_LIBADD		= vcmtp/C_API/lib.la \
-                          vcmtp/CommUtil/lib.la \
+                          -I$(builddir)/vcmtp/protocol -I$(srcdir)/vcmtp/protocol
+lib_la_LIBADD		= vcmtp/CommUtil/lib.la \
                           vcmtp/protocol/lib.la
 CLEANFILES		=
 DISTCLEANFILES          = $(BUILT_SOURCES)
@@ -36,7 +36,7 @@ DISTCLEANFILES		+= $(all_stubs) TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.2/include \
                           -I/usr/local/include \
                           -I/usr/include
-$(vcmtp_c_api_stubs):	vcmtp/C_API/vcmtp_c_api.h
+$(vcmtp_c_api_stubs):	vcmtp_c_api.h
 	opmock2 -i $? -o . $(OPMOCK_INCLUDES)
 $(pq_stubs):		../pq/pq.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
