@@ -20,8 +20,6 @@ case "`uname -sr`" in
 esac
 AC_PROG_CC([c99 c89 gcc cc])
 AC_PROG_CXX()
-# The following is necessary because VCMTP depends on C++11's <system_error>
-test "$GXX" = "yes" && AC_SUBST([AM_CXXFLAGS], [-std=c++11])
 
 YEAR=`date +%Y`
 AC_SUBST([YEAR])
