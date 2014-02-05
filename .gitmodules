@@ -1,0 +1,3 @@
+[submodule "multicast/vcmtp"]
+	path = multicast/vcmtp
+	url = git://github.com/Unidata/vcmtp.git

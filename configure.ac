@@ -12,8 +12,7 @@ AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
-    
-#AC_USE_SYSTEM_EXTENSIONS
+
 case "`uname -sr`" in
     "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
     Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
@@ -592,9 +591,6 @@ AC_CONFIG_FILES([
     Makefile
     misc/Makefile
     multicast/Makefile
-    multicast/vcmtp/Makefile
-    multicast/vcmtp/CommUtil/Makefile
-    multicast/vcmtp/protocol/Makefile
     noaaport/Makefile
     noaaport/retrans/Makefile
     notifyme/Makefile
@@ -631,6 +627,10 @@ AC_CONFIG_FILES([
     ulogger/Makefile
     ulog/Makefile
 ])
+
+if test "x$with_multicast" != xno; then
+    AC_CONFIG_SUBDIRS([multicast/vcmtp])
+fi
 
 export CC
 
