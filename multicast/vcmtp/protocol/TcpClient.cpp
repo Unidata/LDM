@@ -19,8 +19,8 @@
  *                                  or dotted-quad IPv4 address
  * @param[in] port                  Port number on @code{serv_addr} to which to
  *                                  connect
- * @throws    std::invalid_argument Hostname @code{serv_addr} doesn't resolve
- *                                  to IP address
+ * @throws    std::invalid_argument @code{serv_addr} is a hostname and doesn't
+ *                                  resolve to an IP address
  */
 TcpClient::TcpClient(const string serv_addr, const int port)
 :   server_port(port),
