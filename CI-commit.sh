@@ -9,9 +9,8 @@ set -e  # exit if error
 # Build and test the package and create a source-distribution.
 #
 mkdir -p m4
-autoreconf -i --force
-./configure --disable-root-actions --with-noaaport --with-retrans \
-        --with-gribinsert --with-multicast &>configure.log
+autoreconf -i
+./configure --disable-root-actions &>configure.log
 make distcheck DISTCHECK_CONFIGURE_FLAGS=''
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert'
