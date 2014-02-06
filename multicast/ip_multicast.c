@@ -1,5 +1,5 @@
 /**
-  * Copyright 2013 University Corporation for Atmospheric Research.
+ * Copyright 2014 University Corporation for Atmospheric Research.
  * All rights reserved.
  * <p>
  * See file COPYRIGHT in the top-level source-directory for legal conditions.
@@ -46,10 +46,10 @@
 /**
  * Returns the formatted representation of a binary IPv4 address.
  *
- * @param addr          [in] The IPv4 address in network byte order.
+ * @param[in] addr      The IPv4 address in network byte order.
  * @return              Pointer to the string representation of the IPv4 address.
  *                      The client should free when it is no longer needed.
- * @retval NULL         The address couldn't be formatted. "errno" will be
+ * @retval    NULL      The address couldn't be formatted. "errno" will be
  *                      ENOMEM.
  */
 static char* ipaddr_format(
@@ -73,10 +73,10 @@ static char* ipaddr_format(
  * <p>
  * log_add() is called for all errors.
  *
- * @param iface_addr    [in] IPv4 address of interface for multicast
- *                      packets in network byte order. 0 means the default
- *                      interface for multicast packets.
- * @param ttl           [in] Time-to-live of outgoing packets:
+ * @param[in] iface_addr IPv4 address of interface for multicast
+ *                       packets in network byte order. 0 means the default
+ *                       interface for multicast packets.
+ * @param[in] ttl        Time-to-live of outgoing packets:
  *                           0       Restricted to same host. Won't be output
  *                                   by any interface.
  *                           1       Restricted to the same subnet. Won't be
@@ -86,16 +86,16 @@ static char* ipaddr_format(
  *                         <64       Restricted to the same region.
  *                        <128       Restricted to the same continent.
  *                        <255       Unrestricted in scope. Global.
- * @param loop          [in] Whether packets sent to the multicast group should
- *                      be received by the sending host via the loopback
- *                      interface.
- * @param nonblock      Whether or not the socket should be in non-blocking
- *                      mode.
- * @param reuse_addr    Whether or not to reuse the IPv4 multicast address (i.e.,
- *                      whether or not multiple processes on the same host can
- *                      receive packets from the same multicast group).
- * @return              The configured socket.
- * @retval -1           Failure. "errno" will be one of the following:
+ * @param[in] loop       Whether packets sent to the multicast group should
+ *                       be received by the sending host via the loopback
+ *                       interface.
+ * @param[in] nonblock   Whether or not the socket should be in non-blocking
+ *                       mode.
+ * @param[in] reuse_addr Whether or not to reuse the IPv4 multicast address (i.e.,
+ *                       whether or not multiple processes on the same host can
+ *                       receive packets from the same multicast group).
+ * @return               The configured socket.
+ * @retval    -1         Failure. "errno" will be one of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
  *                          ENFILE      No more file descriptors are available
@@ -181,14 +181,14 @@ static int ipm_new(
  * <p>
  * log_add() is called for all errors.
  *
- * @param mcast_addr    [in] IPV4 address of multicast group in network byte
- *                      order.
- * @param port_num      [in] Port number used for the destination multicast
-                        group.
- * @param iface_addr    [in] IPv4 address of interface for outgoing
- *                      multicast packets in network byte order. 0 means the
- *                      default interface for multicast packets.
- * @param ttl           [in] Time-to-live of outgoing packets:
+ * @param[in] mcast_addr IPV4 address of multicast group in network byte
+ *                       order.
+ * @param[in] port_num   Port number used for the destination multicast
+                         group.
+ * @param[in] iface_addr IPv4 address of interface for outgoing
+ *                       multicast packets in network byte order. 0 means the
+ *                       default interface for multicast packets.
+ * @param[in] ttl        Time-to-live of outgoing packets:
  *                           0       Restricted to same host. Won't be output
  *                                   by any interface.
  *                           1       Restricted to the same subnet. Won't be
@@ -198,13 +198,13 @@ static int ipm_new(
  *                         <64       Restricted to the same region.
  *                        <128       Restricted to the same continent.
  *                        <255       Unrestricted in scope. Global.
- * @param loop          [in] Whether packets sent to the multicast group should
- *                      also be received by the sending host via the loopback
- *                      interface.
- * @param nonblock      Whether or not the socket should be in non-blocking
- *                      mode.
- * @return              The configured socket.
- * @retval -1           Failure. "errno" will be one of the following:
+ * @param[in] loop       Whether packets sent to the multicast group should
+ *                       also be received by the sending host via the loopback
+ *                       interface.
+ * @param[in] nonblock   Whether or not the socket should be in non-blocking
+ *                       mode.
+ * @return               The configured socket.
+ * @retval    -1           Failure. "errno" will be one of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
  *                          ENFILE      No more file descriptors are available
@@ -260,10 +260,10 @@ int ipm_create(
  * <p>
  * log_add() is called for all errors.
  *
- * @param nonblock      Whether or not the socket should be in non-blocking
+ * @param[in] nonblock  Whether or not the socket should be in non-blocking
  *                      mode.
  * @return              The configured socked.
- * @retval -1           Failure. "errno" will be one of the following:
+ * @retval    -1        Failure. "errno" will be one of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
  *                          ENFILE      No more file descriptors are available
@@ -286,22 +286,22 @@ int ipm_open(
  * <p>
  * log_add() is called for all errors.
  *
- * @param sock          [in] The socket to be configured.
- * @param mcast_addr    [in] Internet address of IPv4 multicast group in network
- *                      byte order:
+ * @param[in] sock       The socket to be configured.
+ * @param[in] mcast_addr Internet address of IPv4 multicast group in network
+ *                       byte order:
  *                          224.0.0.0 - 224.0.0.255     Reserved for local
  *                                                      purposes
  *                          224.0.1.0 - 238.255.255.255 User-defined multicast
  *                                                      addresses
  *                          239.0.0.0 - 239.255.255.255 Reserved for
  *                                                      administrative scoping
- * @param port_num      [in] Port number used for the destination multicast
-                        group.
- * @param iface_addr    [in] Internet address of interface in network byte
- *                      order. 0 means the default interface for multicast
- *                      packets.
- * @retval 0            Success.
- * @retval -1           Failure. "errno" will be one of the following:
+ * @param[in] port_num   Port number used for the destination multicast
+                         group.
+ * @param[in] iface_addr Internet address of interface in network byte
+ *                       order. 0 means the default interface for multicast
+ *                       packets.
+ * @retval    0          Success.
+ * @retval    -1         Failure. "errno" will be one of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.
  *                          EINVAL      The socket has been shut down.
@@ -362,14 +362,14 @@ int ipm_add(
  * <p>
  * log_add() is called for all errors.
  *
- * @param sock          [in] The socket to be configured.
- * @param mcast_addr    [in] Internet address of IPv4 multicast group in network
- *                      byte order.
- * @param iface_addr    [in] Internet address of interface in network byte
- *                      order. 0 means the default interface for multicast
- *                      packets.
- * @retval 0            Success.
- * @retval -1           Failure. "errno" will be one of the following:
+ * @param[in] sock       The socket to be configured.
+ * @param[in] mcast_addr Internet address of IPv4 multicast group in network
+ *                       byte order.
+ * @param[in] iface_addr Internet address of interface in network byte
+ *                       order. 0 means the default interface for multicast
+ *                       packets.
+ * @retval    0          Success.
+ * @retval    -1         Failure. "errno" will be one of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.
  *                          EINVAL      The socket has been shut down.

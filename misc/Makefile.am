@@ -8,14 +8,11 @@
 
 BUILT_SOURCES		= \
         child_map.h \
-        ip_multicast.h \
         semRWLock.h
 EXTRA_DIST	        = \
         child_map.hin \
-        semRWLock.hin \
-        ip_multicast.c \
-        ip_multicast.hin
-DISTCLEANFILES		= child_map.h ip_multicast.h semRWLock.h
+        semRWLock.hin
+DISTCLEANFILES		= child_map.h semRWLock.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
 	ldmalloc.h \
@@ -61,7 +58,6 @@ TAGS_FILES	= \
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 child_map.h:	child_map.hin child_map.c
-ip_multicast.h:	ip_multicast.hin ip_multicast.c
 semRWLock.h:	semRWLock.hin semRWLock.c
 
 if HAVE_CUNIT
