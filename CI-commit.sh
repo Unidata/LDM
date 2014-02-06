@@ -3,14 +3,15 @@
 #     2. Tests the package; and
 #     3. Creates a source-distribution.
 
-set -e  # exit if error
+set -ex  # exit if error
 
 #
 # Build and test the package and create a source-distribution.
 #
 mkdir -p m4
 autoreconf -i
-./configure --disable-root-actions &>configure.log
+./configure --disable-root-actions &cceleration
+>configure.log
 make distcheck DISTCHECK_CONFIGURE_FLAGS=''
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert'
