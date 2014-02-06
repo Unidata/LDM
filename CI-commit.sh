@@ -8,9 +8,9 @@ set -ex  # exit if error
 #
 # Build and test the package and create a source-distribution.
 #
-#mkdir -p m4
-autoreconf -i
-./configure --disable-root-actions &cceleration
+mkdir -p m4 multicast/vcmtp/m4
+autoreconf -iv
+./configure --disable-root-actions >configure.log 2>&1
 >configure.log
 make distcheck DISTCHECK_CONFIGURE_FLAGS=''
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
