@@ -628,9 +628,9 @@ AC_CONFIG_FILES([
     ulog/Makefile
 ])
 
-if test "x$with_multicast" != xno; then
-    AC_CONFIG_SUBDIRS([multicast/vcmtp])
-fi
+dnl The VCMTP subsystem is unconditionally configured to enable, for example,
+dnl "make distclean" to work.
+AC_CONFIG_SUBDIRS([multicast/vcmtp])
 
 export CC
 

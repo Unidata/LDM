@@ -11,7 +11,6 @@ set -ex  # exit if error
 mkdir -p m4 multicast/vcmtp/m4
 autoreconf -iv
 ./configure --disable-root-actions >configure.log 2>&1
->configure.log
 make distcheck DISTCHECK_CONFIGURE_FLAGS=''
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert'
