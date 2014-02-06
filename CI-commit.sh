@@ -8,7 +8,7 @@ set -ex  # exit if error
 #
 # Build and test the package and create a source-distribution.
 #
-mkdir -p m4
+#mkdir -p m4
 autoreconf -i
 ./configure --disable-root-actions &cceleration
 >configure.log
