@@ -69,9 +69,156 @@ static char* ipaddr_format(
 }
 
 /**
+ * Sets whether packets written to a multicast socket are received on the
+ * loopback interface.
+ *
+ * @param[in] sock      The socket.
+ * @param[in] loop      Whether or not packets should be received on the
+ *                      loopback interface.
+ * @retval    0         Success.
+ * @retval    -1        Failure. @code{log_add()} called. "errno" will be one
+ *                      of the following:
+ *                          EACCES      The process does not have appropriate
+ *                                      privileges.
+ *                          ENOBUFS     Insufficient resources were available
+ */
+static int set_loopback(
+    const int   sock,
+    const int   loop)
+{
+    if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop))) {
+        LOG_SERROR1("Couldn't %s loopback", loop ? "enable" : "disable");
+        return -1;
+    }
+    return 0;
+}
+
+/**
+ * Sets the time-to-live for multicast packets written to a socket.
+ *
+ * @param[in] sock      The socket.
+ * @param[in] ttl       Time-to-live of outgoing packets:
+ *                           0       Restricted to same host. Won't be output
+ *                                   by any interface.
+ *                           1       Restricted to the same subnet. Won't be
+ *                                   forwarded by a router.
+ *                         <32       Restricted to the same site, organization
+ *                                   or department.
+ *                         <64       Restricted to the same region.
+ *                        <128       Restricted to the same continent.
+ *                        <255       Unrestricted in scope. Global.
+ * @retval    0         Success.
+ * @retval    -1        Failure. @code{log_add()} called. "errno" will be one
+ *                      of the following:
+ *                          EACCES      The process does not have appropriate
+ *                                      privileges.
+ *                          ENOBUFS     Insufficient resources were available
+ */
+static int set_ttl(
+    const int           sock,
+    const unsigned char ttl)
+{
+    if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl))) {
+        LOG_SERROR1("Couldn't set time-to-live to %u", ttl);
+        return -1;
+    }
+    return 0;
+}
+
+/**
+ * Sets the interface to use for multicast packets.
+ *
+ * @param[in] sock       The socket.
+ * @param[in] iface_addr IPv4 address of interface for multicast
+ *                       packets in network byte order. 0 means the default
+ *                       interface for multicast packets.
+ * @retval    0          Success.
+ * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ *                       of the following:
+ *                          EACCES      The process does not have appropriate
+ *                                      privileges.
+ *                          ENOBUFS     Insufficient resources were available
+ */
+static int set_iface(
+    const int           sock,
+    const in_addr_t     iface_addr)
+{
+    char            buf[INET_ADDRSTRLEN];
+    struct in_addr  addr;
+
+    addr.s_addr = iface_addr == 0 ? htonl(INADDR_ANY) : iface_addr;
+
+    if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr))) {
+        LOG_SERROR1("Couldn't set outgoing IPv4 multicast interface "
+                "to %s", inet_ntop(AF_INET, &addr, buf, INET_ADDRSTRLEN));
+        return -1;
+    }
+    return 0;
+}
+
+/**
+ * Sets the blocking-mode of a socket.
+ *
+ * @param[in] sock      The socket.
+ * @param[in] nonblock  Whether or not the socket should be in non-blocking
+ *                      mode.
+ * @retval    0         Success.
+ * @retval    -1        Failure. @code{log_add()} called. "errno" will be one
+ *                      of the following:
+ *                          EACCES      The process does not have appropriate
+ *                                      privileges.
+ *                          ENOBUFS     Insufficient resources were available
+ */
+static int set_blocking_mode(
+    const int           sock,
+    const int           nonblock)
+{
+    int flags = fcntl(sock, F_GETFL);
+
+    if (flags == -1) {
+        LOG_SERROR1("Couldn't get status flags of socket %d", sock);
+        return -1;
+    }
+    if (fcntl(sock, F_SETFL,
+            nonblock ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK))) {
+        LOG_SERROR2("Couldn't set socket %d to %s", sock,
+                nonblock ? "non-blocking" : "blocking");
+        return -1;
+    }
+    return 0;
+}
+
+/**
+ * Sets whether or not to re-use the multicast address of a socket.
+ *
+ * @param[in] sock       The socket.
+ * @param[in] reuse_addr Whether or not to reuse the IPv4 multicast address (i.e.,
+ *                       whether or not multiple processes on the same host can
+ *                       receive packets from the same multicast group).
+ * @retval    0          Success.
+ * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ *                       of the following:
+ *                          EACCES      The process does not have appropriate
+ *                                      privileges.
+ *                          ENOBUFS     Insufficient resources were available
+ */
+static int set_address_reuse(
+    const int           sock,
+    const int           reuse_addr)
+{
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse_addr,
+            sizeof(reuse_addr))) {
+        LOG_SERROR1("Couldn't %s reuse of IPv4 multicast address",
+                reuse_addr ? "enable" : "disable");
+        return -1;
+    }
+    return 0;
+}
+
+/**
  * Returns a socket configured for IPv4 multicast.
  * <p>
- * log_add() is called for all errors.
+ * @code{log_add()} is called for all errors.
  *
  * @param[in] iface_addr IPv4 address of interface for multicast
  *                       packets in network byte order. 0 means the default
@@ -95,7 +242,8 @@ static char* ipaddr_format(
  *                       whether or not multiple processes on the same host can
  *                       receive packets from the same multicast group).
  * @return               The configured socket.
- * @retval    -1         Failure. "errno" will be one of the following:
+ * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ *                       of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
  *                          ENFILE      No more file descriptors are available
@@ -113,73 +261,28 @@ static int ipm_new(
     const int           nonblock,
     const int           reuse_addr)
 {
-    int success = 1;
-    const int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    const int   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
     if (sock == -1) {
         LOG_SERROR0("Couldn't create UDP socket");
-        success = 0;
+        return -1;
     }
-    else {
-        if (!loop
-                && setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop,
-                        sizeof(loop) == -1)) {
-            LOG_SERROR0("Couldn't disable loopback");
-            success = 0;
-        }
-        if (success && ttl != 1) {
-            if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl,
-                    sizeof(ttl)) == -1) {
-                LOG_SERROR1("Couldn't set time-to-live to %u", ttl);
-                success = 0;
-            }
-        }
-        if (success && iface_addr != 0) {
-            char            buf[INET_ADDRSTRLEN];
-            struct in_addr  addr;
+    if (set_loopback(sock, loop) ||
+            set_ttl(sock, ttl) ||
+            set_iface(sock, iface_addr) ||
+            set_blocking_mode(sock, nonblock) ||
+            set_address_reuse(sock, reuse_addr)) {
+        (void)close(sock);
+        return -1;
+    }
 
-            addr.s_addr = iface_addr;
-
-            if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &addr,
-                    sizeof(addr)) == -1) {
-                LOG_SERROR1("Couldn't set outgoing IPv4 multicast interface "
-                "to %s", inet_ntop(AF_INET, &addr, buf, INET_ADDRSTRLEN));
-                success = 0;
-            }
-        }
-        if (success && nonblock) {
-            int flags = fcntl(sock, F_GETFL);
-
-            if (flags == -1) {
-                LOG_SERROR1("Couldn't get status flags of socket %d", sock);
-                success = 0;
-            }
-            else if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) == -1) {
-                LOG_SERROR1("Couldn't set socket %d to non-blocking", sock);
-                success = 0;
-            }
-        }
-        if(success && reuse_addr) {
-            if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse_addr,
-                    sizeof(reuse_addr)) == -1) {
-                LOG_SERROR0("Couldn't enable reuse of IPv4 multicast address");
-                success = 0;
-            }
-        }
-
-        if (!success)
-            (void) close(sock);
-    } /* "sock" allocated */
-
-    return success ? sock : -1;
+    return sock;
 }
 
 /**
- * Returns a socket configured for exclusive sending IPv4 multicast packets to
- * an IPv4 multicast group. The originator of packets to a multicast group would
+ * Returns a socket configured for sending IPv4 multicast packets to an IPv4
+ * multicast group. The originator of packets to a multicast group would
  * typically call this function.
- * <p>
- * log_add() is called for all errors.
  *
  * @param[in] mcast_addr IPV4 address of multicast group in network byte
  *                       order.
@@ -204,7 +307,8 @@ static int ipm_new(
  * @param[in] nonblock   Whether or not the socket should be in non-blocking
  *                       mode.
  * @return               The configured socket.
- * @retval    -1           Failure. "errno" will be one of the following:
+ * @retval    -1         Failure. @code{log_add()} called. "errno" will be
+ *                       one of the following:
  *                          EMFILE      No more file descriptors are available
  *                                      for this process.
  *                          ENFILE      No more file descriptors are available
