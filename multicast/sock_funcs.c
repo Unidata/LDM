@@ -84,7 +84,7 @@ static char* ipaddr_print(
 static char* ipaddr_format(
     const in_addr_t addr)
 {
-    char* const buf = malloc(INET_ADDRSTRLEN);
+    char* const buf = LOG_MALLOC(INET_ADDRSTRLEN, "IP address buffer");
 
     if (buf != NULL)
         (void)ipaddr_print(buf, INET_ADDRSTRLEN, addr);
@@ -106,7 +106,7 @@ static char* sockaddr_format(
     const struct sockaddr_in* const     sockaddr)
 {
     const size_t        bufsize = INET_ADDRSTRLEN + 7;
-    char* const         buf = malloc(bufsize);
+    char* const         buf = LOG_MALLOC(bufsize, "socket address buffer");
 
     if (buf != NULL) {
         size_t          len;
