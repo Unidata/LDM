@@ -43,6 +43,11 @@
 #include "log.h"
 #include "ip_multicast.h"
 
+/*
+ * The following bit must not duplicate any in Ipm_flags.
+ */
+static const int        ipm_reuse_addr = 256;
+
 /**
  * Returns the formatted representation of a binary IPv4 address.
  *
@@ -82,7 +87,7 @@ static char* ipaddr_format(
  *                                      privileges.
  *                          ENOBUFS     Insufficient resources were available
  */
-static int set_loopback(
+static int set_loopback_reception(
     const int   sock,
     const int   loop)
 {
@@ -115,7 +120,7 @@ static int set_loopback(
  *                                      privileges.
  *                          ENOBUFS     Insufficient resources were available
  */
-static int set_ttl(
+static int set_time_to_live(
     const int           sock,
     const unsigned char ttl)
 {
@@ -141,7 +146,7 @@ static int set_ttl(
  *                                      privileges.
  *                          ENOBUFS     Insufficient resources were available
  */
-static int set_iface(
+static int set_interface(
     const int           sock,
     const in_addr_t     iface_addr)
 {
@@ -235,14 +240,9 @@ static int set_address_reuse(
  *                         <64       Restricted to the same region.
  *                        <128       Restricted to the same continent.
  *                        <255       Unrestricted in scope. Global.
- * @param[in] loop       Whether packets sent to the multicast group should
- *                       be received by the sending host via the loopback
- *                       interface.
- * @param[in] nonblock   Whether or not the socket should be in non-blocking
- *                       mode.
- * @param[in] reuse_addr Whether or not to reuse the IPv4 multicast address (i.e.,
- *                       whether or not multiple processes on the same host can
- *                       receive packets from the same multicast group).
+ * @param[in] flags      Configuration flags. Bitwise OR of zero or more of
+ *                       @code{ipm_loopback}, @code{ipm_nonblock}, and
+ *                       @code{ipm_reuse_addr}.
  * @return               The configured socket.
  * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
  *                       of the following:
@@ -259,9 +259,7 @@ static int set_address_reuse(
 static int ipm_new(
     const in_addr_t     iface_addr,
     const unsigned char ttl,
-    const unsigned char loop,
-    const int           nonblock,
-    const int           reuse_addr)
+    const Ipm_flags     flags)
 {
     const int   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
@@ -269,11 +267,11 @@ static int ipm_new(
         LOG_SERROR0("Couldn't create UDP socket");
         return -1;
     }
-    if (set_loopback(sock, loop) ||
-            set_ttl(sock, ttl) ||
-            set_iface(sock, iface_addr) ||
-            set_blocking_mode(sock, nonblock) ||
-            set_address_reuse(sock, reuse_addr)) {
+    if (       set_loopback_reception(sock, flags & ipm_loopback != 0)
+            || set_time_to_live(sock, ttl)
+            || set_interface(sock, iface_addr)
+            || set_blocking_mode(sock, flags & ipm_nonblock != 0)
+            || set_address_reuse(sock, flags & ipm_reuse_addr != 0)) {
         LOG_ADD1("Couldn't configure socket %d", sock);
         (void)close(sock);
         return -1;
@@ -288,13 +286,11 @@ static int ipm_new(
  * able to send to the given multicast address. The originator of packets to a
  * multicast group would typically call this function.
  *
- * @param[in] mcast_addr IPV4 address of multicast group in network byte
- *                       order.
- * @param[in] port_num   Port number used for the destination multicast
-                         group.
- * @param[in] iface_addr IPv4 address of interface for outgoing
- *                       multicast packets in network byte order. 0 means the
- *                       default interface for multicast packets.
+ * @param[in] mcast_addr IPV4 address of multicast group in network byte order.
+ * @param[in] port_num   Port number used for the destination multicast group.
+ * @param[in] iface_addr IPv4 address of interface for outgoing multicast
+ *                       packets in network byte order. 0 means the default
+ *                       interface for multicast packets.
  * @param[in] ttl        Time-to-live of outgoing packets:
  *                           0       Restricted to same host. Won't be output
  *                                   by any interface.
@@ -305,11 +301,8 @@ static int ipm_new(
  *                         <64       Restricted to the same region.
  *                        <128       Restricted to the same continent.
  *                        <255       Unrestricted in scope. Global.
- * @param[in] loop       Whether packets sent to the multicast group should
- *                       also be received by the sending host via the loopback
- *                       interface.
- * @param[in] nonblock   Whether or not the socket should be in non-blocking
- *                       mode.
+ * @param[in] flags      Configuration flags. Bitwise OR of zero or more of
+ *                       @code{ipm_loopback} and @code{ipm_nonblock}.
  * @return               The configured socket.
  * @retval    -1         Failure. @code{log_add()} called. "errno" will be
  *                       one of the following:
@@ -336,10 +329,9 @@ int ipm_create(
     const int           port_num,
     const in_addr_t     iface_addr,
     const unsigned char ttl,
-    const unsigned char loop,
-    const int           nonblock)
+    const Ipm_flags     flags)
 {
-    int sock = ipm_new(iface_addr, ttl, loop, nonblock, 0);
+    int sock = ipm_new(iface_addr, ttl, flags & ~ipm_reuse_addr);
 
     if (sock != -1) {
         struct sockaddr_in addr;
@@ -384,7 +376,7 @@ int ipm_create(
 int ipm_open(
     const int nonblock)
 {
-    return ipm_new(0, 1, 0, nonblock, 1);
+    return ipm_new(0, 1, (nonblock ? ipm_nonblock : 0) | ipm_reuse_addr);
 }
 
 /**

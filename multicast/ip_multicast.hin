@@ -1,12 +1,17 @@
 /*
- * Copyright 2012 University Corporation for Atmospheric Research. All rights
- * reserved.
- *
- * See file COPYRIGHT in the top-level source-directory for legal conditions.
+ * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * reserved. See file COPYRIGHT in the top-level source-directory for legal
+ * conditions.
  */
 
 #ifndef IP_MULTICAST_H
 #define IP_MULTICAST_H
+
+typedef enum ipm_flags {
+    ipm_loopback = 1,   /* Have outgoing multicast packets appear on loopback
+                         * interface */
+    ipm_nonblock = 2    /* Set socket to non-blocking */
+}       Ipm_flags;
 
 #ifdef __cplusplus
 extern "C" {
