@@ -26,7 +26,7 @@
  */
 struct mdl_struct {
     pqueue*             pq;             /* product-queue to use */
-    mdl_missed_product  missed_product; /* missed-product callback function */
+    mdl_missed_product_func  missed_product; /* missed-product callback function */
     vcmtp_receiver*     receiver;       /* the VCMTP receiver */
 };
 
@@ -43,7 +43,7 @@ struct mdl_struct {
 static int init(
     mdl_obj* const              mdl,
     pqueue* const               pq,
-    const mdl_missed_product    missed_product)
+    const mdl_missed_product_func    missed_product)
 {
     if (pq == NULL || missed_product == NULL) {
         LOG_ADD2("NULL argument: pq=%p, missed_product=%p", pq, missed_product);
@@ -62,18 +62,18 @@ static int init(
 /**
  * Returns a new multicast downstream LDM object.
  *
- * @param[out] mdl              The pointer to be set.
- * @param[in] pq                The product-queue to use.
- * @param[in] missed_product    Missed-product callback function.
- * @retval 0                    Success.
- * @retval ENOMEM               Out of memory. \c log_add() called.
- * @retval EINVAL               @code{pq == NULL || missed_product == NULL}.
+ * @param[out]  mdl             The pointer to be set.
+ * @param[in]   pq              The product-queue to use.
+ * @param[in]   missed_product  Missed-product callback function.
+ * @retval      0               Success.
+ * @retval      ENOMEM          Out of memory. \c log_add() called.
+ * @retval      EINVAL          @code{pq == NULL || missed_product == NULL}.
  *                              \c log_add() called.
  */
 static int mdl_new(
     mdl_obj** const             mdl,
     pqueue* const               pq,
-    const mdl_missed_product    missed_product)
+    const mdl_missed_product_func    missed_product)
 {
     int                 status;
     mdl_obj* const      obj = LOG_MALLOC(sizeof(mdl_obj),
@@ -122,7 +122,7 @@ static int execute(
  */
 int mdl_create_and_execute(
     pqueue* const       pq,
-    mdl_missed_product  missed_product)
+    mdl_missed_product_func  missed_product)
 {
     mdl_obj*    mdl;
     int         status = mdl_new(&mdl, pq, missed_product);
