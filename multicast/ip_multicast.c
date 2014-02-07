@@ -16,7 +16,7 @@
  *          #include <arpa/inet.h>
  *          #include <ip_multicast.h>
  *          ...
- *          int sock = ipm_create(inet_addr("224.1.1.1"), 38800, 0, 1, 0, 0);
+ *          int sock = ipm_create(inet_addr("224.1.1.1"), 38800, 0, 1, 0);
  *
  *      Open a non-blocking socket for receiving IPv4 multicast packets on port
  *      38800 on a specific interface:
@@ -47,6 +47,48 @@
  * The following bit must not duplicate any in Ipm_flags.
  */
 static const int        ipm_reuse_addr = 256;
+
+/**
+ * Indicates if a given bit is set in a value.
+ *
+ * @param[in] value     The value.
+ * @param[in] mask      The bit-mask with one bit set.
+ * @return              @code{value & mask != 0}.
+ */
+static unsigned is_set(
+    const unsigned      value,
+    const unsigned      mask)
+{
+    return value & mask != 0;
+}
+
+/**
+ * Returns a value with a given bit set.
+ *
+ * @param[in] value     The value.
+ * @param[in] mask      The bit-mask with one bit set.
+ * @return              @code{value | mask}.
+ */
+static unsigned set(
+    const unsigned      value,
+    const unsigned      mask)
+{
+    return value | mask;
+}
+
+/**
+ * Returns a value with a given bit unset.
+ *
+ * @param[in] value     The value.
+ * @param[in] mask      The bit-mask with one bit set.
+ * @return              @code{value | ~mask}.
+ */
+static unsigned unset(
+    const unsigned      value,
+    const unsigned      mask)
+{
+    return value | ~mask;
+}
 
 /**
  * Returns the formatted representation of a binary IPv4 address.
@@ -189,7 +231,7 @@ static int set_blocking_mode(
         return -1;
     }
     if (fcntl(sock, F_SETFL,
-            nonblock ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK))) {
+            nonblock ? set(flags, O_NONBLOCK) : unset(flags, O_NONBLOCK))) {
         LOG_SERROR2("Couldn't set socket %d to %s", sock,
                 nonblock ? "non-blocking" : "blocking");
         return -1;
@@ -267,11 +309,11 @@ static int ipm_new(
         LOG_SERROR0("Couldn't create UDP socket");
         return -1;
     }
-    if (       set_loopback_reception(sock, flags & ipm_loopback != 0)
+    if (       set_loopback_reception(sock, is_set(flags, ipm_loopback))
             || set_time_to_live(sock, ttl)
             || set_interface(sock, iface_addr)
-            || set_blocking_mode(sock, flags & ipm_nonblock != 0)
-            || set_address_reuse(sock, flags & ipm_reuse_addr != 0)) {
+            || set_blocking_mode(sock, is_set(flags, ipm_nonblock))
+            || set_address_reuse(sock, is_set(flags, ipm_reuse_addr))) {
         LOG_ADD1("Couldn't configure socket %d", sock);
         (void)close(sock);
         return -1;
@@ -331,7 +373,7 @@ int ipm_create(
     const unsigned char ttl,
     const Ipm_flags     flags)
 {
-    int sock = ipm_new(iface_addr, ttl, flags & ~ipm_reuse_addr);
+    int sock = ipm_new(iface_addr, ttl, unset(flags, ipm_reuse_addr));
 
     if (sock != -1) {
         struct sockaddr_in addr;
