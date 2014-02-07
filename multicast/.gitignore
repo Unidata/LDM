@@ -1,6 +1,6 @@
 mcast_down_ldm.h
-TEST-test.xml
 mcast_down_ldm_test
 mcast_down_ldm_test.trs
+sock_funcs.h
 *_stub.*
-/ip_multicast.h
+TEST-test.xml

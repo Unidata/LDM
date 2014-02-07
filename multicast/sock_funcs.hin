@@ -7,11 +7,7 @@
 #ifndef IP_MULTICAST_H
 #define IP_MULTICAST_H
 
-typedef enum ipm_flags {
-    ipm_loopback = 1,   /* Have outgoing multicast packets appear on loopback
-                         * interface */
-    ipm_nonblock = 2    /* Set socket to non-blocking */
-}       Ipm_flags;
+#include <netinet/in.h>
 
 #ifdef __cplusplus
 extern "C" {

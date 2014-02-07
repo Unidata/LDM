@@ -1,93 +1,74 @@
 /**
  * Copyright 2014 University Corporation for Atmospheric Research.
- * All rights reserved.
- * <p>
- * See file COPYRIGHT in the top-level source-directory for legal conditions.
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory
+ * for legal conditions.
  *
- * @file ip_multicast.c
+ * @file sock_funcs.c
  *
- * Module for IPv4 multicast.
- * <p>
+ * Module of socket functions.
+ * @par
  * Examples:
+ *      Error-handling is omitted from the examples for concision.
+ *      @par
  *      Create a blocking socket for sending IPv4 multicast packets on the local
- *      subnet using port 388000 and the default multicast interface (the
- *      packets will not appear on the loopback interface):
- *
+ *      subnet using port 388000 and the default multicast interface. The
+ *      packets will not appear on the loopback interface and no other process
+ *      will be able to send to that address.
+ *      @code
  *          #include <arpa/inet.h>
- *          #include <ip_multicast.h>
+ *          #include <sock_funcs.h>
  *          ...
- *          int sock = ipm_create(inet_addr("224.1.1.1"), 38800, 0, 1, 0);
- *
+ *          int sock = sf_create_multicast(inet_addr("224.1.1.1"), 38800);
+ *          (void)sf_set_time_to_live(sock, 1);
+ *      @endcode
+ *      @par
  *      Open a non-blocking socket for receiving IPv4 multicast packets on port
  *      38800 on a specific interface:
- *
+ *      @code
  *           #include <arpa/inet.h>
- *           #include <ip_multicast.h>
+ *           #include <sock_funcs.h>
  *           ...
- *           int sock = ipm_open(1);
- *           ipm_add(sock, inet_addr("224.1.1.1"), 38800,
- *              inet_addr("128.117.156.30"));
+ *           in_addr_t addr = inet_addr("224.1.1.1");
+ *           int sock = sf_open_multicast(addr, 38800);
+ *           sf_add_multicast_group(sock, addr, inet_addr("128.117.156.30"));
+ *      @endcode
  */
 
 #include "config.h"
 
+#include "log.h"
+#include "sock_funcs.h"
+
 #include <unistd.h>
 #include <fcntl.h>
-#include <string.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include "log.h"
-#include "ip_multicast.h"
-
-/*
- * The following bit must not duplicate any in Ipm_flags.
- */
-static const int        ipm_reuse_addr = 256;
-
 /**
- * Indicates if a given bit is set in a value.
+ * Prints the formatted representation of a binary IPv4 address into a buffer.
  *
- * @param[in] value     The value.
- * @param[in] mask      The bit-mask with one bit set.
- * @return              @code{value & mask != 0}.
+ * @param[out] buf      The output buffer for the formatted string. It should
+ *                      be at least INET_ADDRSTRLEN bytes in size.
+ * @param[in]  size     The size of the buffer in bytes.
+ * @param[in]  addr     The IPv4 address in network byte order.
+ * @return              Pointer to the buffer.
  */
-static unsigned is_set(
-    const unsigned      value,
-    const unsigned      mask)
+static char* ipaddr_print(
+    char* const         buf,
+    const size_t        size,
+    const in_addr_t     addr)
 {
-    return value & mask != 0;
-}
+    struct in_addr in_addr;
 
-/**
- * Returns a value with a given bit set.
- *
- * @param[in] value     The value.
- * @param[in] mask      The bit-mask with one bit set.
- * @return              @code{value | mask}.
- */
-static unsigned set(
-    const unsigned      value,
-    const unsigned      mask)
-{
-    return value | mask;
-}
+    in_addr.s_addr = addr;
+    (void)inet_ntop(AF_INET, &in_addr, buf, size);
 
-/**
- * Returns a value with a given bit unset.
- *
- * @param[in] value     The value.
- * @param[in] mask      The bit-mask with one bit set.
- * @return              @code{value | ~mask}.
- */
-static unsigned unset(
-    const unsigned      value,
-    const unsigned      mask)
-{
-    return value | ~mask;
+    return buf;
 }
 
 /**
@@ -104,12 +85,34 @@ static char* ipaddr_format(
 {
     char* const buf = malloc(INET_ADDRSTRLEN);
 
+    if (buf != NULL)
+        (void)ipaddr_print(buf, INET_ADDRSTRLEN, addr);
+
+    return buf;
+}
+
+/**
+ * Returns the formatted representation of a binary IPv4 socket address (IP
+ * address and port number).
+ *
+ * @param[in] sockaddr  IPv4 socket address.
+ * @return              String representation of the socket address. The client
+ *                      should free when it's no longer needed.
+ * @retval    NULL      The address couldn't be formatted. "errno" will be
+ *                      ENOMEM.
+ */
+static char* sockaddr_format(
+    const struct sockaddr_in* const     sockaddr)
+{
+    const size_t        bufsize = INET_ADDRSTRLEN + 7;
+    char* const         buf = malloc(bufsize);
+
     if (buf != NULL) {
-        struct in_addr in_addr;
+        size_t          len;
 
-        in_addr.s_addr = addr;
-
-        (void) inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
+        (void)ipaddr_print(buf, bufsize, sockaddr->sin_addr.s_addr);
+        len = strlen(buf);
+        (void)snprintf(buf+len, bufsize-len, ":%d", ntohs(sockaddr->sin_port));
     }
 
     return buf;
@@ -129,7 +132,7 @@ static char* ipaddr_format(
  *                                      privileges.
  *                          ENOBUFS     Insufficient resources were available
  */
-static int set_loopback_reception(
+int sf_set_loopback_reception(
     const int   sock,
     const int   loop)
 {
@@ -162,7 +165,7 @@ static int set_loopback_reception(
  *                                      privileges.
  *                          ENOBUFS     Insufficient resources were available
  */
-static int set_time_to_live(
+int sf_set_time_to_live(
     const int           sock,
     const unsigned char ttl)
 {
@@ -175,12 +178,11 @@ static int set_time_to_live(
 }
 
 /**
- * Sets the interface to use for multicast packets.
+ * Sets the interface that a socket uses.
  *
  * @param[in] sock       The socket.
- * @param[in] iface_addr IPv4 address of interface for multicast
- *                       packets in network byte order. 0 means the default
- *                       interface for multicast packets.
+ * @param[in] iface_addr IPv4 address of interface in network byte order. 0
+ *                       means the default interface.
  * @retval    0          Success.
  * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
  *                       of the following:
@@ -188,7 +190,7 @@ static int set_time_to_live(
  *                                      privileges.
  *                          ENOBUFS     Insufficient resources were available
  */
-static int set_interface(
+int sf_set_interface(
     const int           sock,
     const in_addr_t     iface_addr)
 {
@@ -220,7 +222,7 @@ static int set_interface(
  *                                      privileges.
  *                          ENOBUFS     Insufficient resources were available
  */
-static int set_blocking_mode(
+int sf_set_nonblocking(
     const int           sock,
     const int           nonblock)
 {
@@ -240,7 +242,8 @@ static int set_blocking_mode(
 }
 
 /**
- * Sets whether or not to re-use the multicast address of a socket.
+ * Sets whether or not the multicast address of a socket can be used by other
+ * processes.
  *
  * @param[in] sock       The socket.
  * @param[in] reuse_addr Whether or not to reuse the IPv4 multicast address (i.e.,
@@ -253,7 +256,7 @@ static int set_blocking_mode(
  *                                      privileges.
  *                          ENOBUFS     Insufficient resources were available
  */
-static int set_address_reuse(
+int sf_set_address_reuse(
     const int           sock,
     const int           reuse_addr)
 {
@@ -267,142 +270,9 @@ static int set_address_reuse(
 }
 
 /**
- * Returns a socket configured for IPv4 multicast.
+ * Returns a socket configured multicast packets.
  *
- * @param[in] iface_addr IPv4 address of interface for multicast
- *                       packets in network byte order. 0 means the default
- *                       interface for multicast packets.
- * @param[in] ttl        Time-to-live of outgoing packets:
- *                           0       Restricted to same host. Won't be output
- *                                   by any interface.
- *                           1       Restricted to the same subnet. Won't be
- *                                   forwarded by a router.
- *                         <32       Restricted to the same site, organization
- *                                   or department.
- *                         <64       Restricted to the same region.
- *                        <128       Restricted to the same continent.
- *                        <255       Unrestricted in scope. Global.
- * @param[in] flags      Configuration flags. Bitwise OR of zero or more of
- *                       @code{ipm_loopback}, @code{ipm_nonblock}, and
- *                       @code{ipm_reuse_addr}.
- * @return               The configured socket.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
- *                       of the following:
- *                          EMFILE      No more file descriptors are available
- *                                      for this process.
- *                          ENFILE      No more file descriptors are available
- *                                      for the system.
- *                          EACCES      The process does not have appropriate
- *                                      privileges.
- *                          ENOBUFS     Insufficient resources were available
- *                                      in the system.
- *                          ENOMEM      Insufficient memory was available.
- */
-static int ipm_new(
-    const in_addr_t     iface_addr,
-    const unsigned char ttl,
-    const Ipm_flags     flags)
-{
-    const int   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-
-    if (sock == -1) {
-        LOG_SERROR0("Couldn't create UDP socket");
-        return -1;
-    }
-    if (       set_loopback_reception(sock, is_set(flags, ipm_loopback))
-            || set_time_to_live(sock, ttl)
-            || set_interface(sock, iface_addr)
-            || set_blocking_mode(sock, is_set(flags, ipm_nonblock))
-            || set_address_reuse(sock, is_set(flags, ipm_reuse_addr))) {
-        LOG_ADD1("Couldn't configure socket %d", sock);
-        (void)close(sock);
-        return -1;
-    }
-
-    return sock;
-}
-
-/**
- * Returns a socket configured for exclusive sending of IPv4 multicast packets
- * to an IPv4 multicast group. "Exclusive" means that no other process will be
- * able to send to the given multicast address. The originator of packets to a
- * multicast group would typically call this function.
- *
- * @param[in] mcast_addr IPV4 address of multicast group in network byte order.
- * @param[in] port_num   Port number used for the destination multicast group.
- * @param[in] iface_addr IPv4 address of interface for outgoing multicast
- *                       packets in network byte order. 0 means the default
- *                       interface for multicast packets.
- * @param[in] ttl        Time-to-live of outgoing packets:
- *                           0       Restricted to same host. Won't be output
- *                                   by any interface.
- *                           1       Restricted to the same subnet. Won't be
- *                                   forwarded by a router.
- *                         <32       Restricted to the same site, organization
- *                                   or department.
- *                         <64       Restricted to the same region.
- *                        <128       Restricted to the same continent.
- *                        <255       Unrestricted in scope. Global.
- * @param[in] flags      Configuration flags. Bitwise OR of zero or more of
- *                       @code{ipm_loopback} and @code{ipm_nonblock}.
- * @return               The configured socket.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be
- *                       one of the following:
- *                          EMFILE          No more file descriptors are
- *                                          available for this process.
- *                          ENFILE          No more file descriptors are
- *                                          available for the system.
- *                          EACCES          The process does not have
- *                                          appropriate privileges.
- *                          ENOBUFS         Insufficient resources were
- *                                          available in the system.
- *                          ENOMEM          Insufficient memory was available.
- *                          EADDRNOTAVAIL   The specified address is not
- *                                          available from the local machine.
- *                          EAFNOSUPPORT    The specified address is not a
- *                                          valid IPv4 multicast address.
- *                          ENETUNREACH     No route to the network is present.
- *                          ENETDOWN        The local network interface used to
- *                                          reach the destination is down.
- *                          ENOBUFS         No buffer space is available.
- */
-int ipm_create(
-    const in_addr_t     mcast_addr,
-    const int           port_num,
-    const in_addr_t     iface_addr,
-    const unsigned char ttl,
-    const Ipm_flags     flags)
-{
-    int sock = ipm_new(iface_addr, ttl, unset(flags, ipm_reuse_addr));
-
-    if (sock != -1) {
-        struct sockaddr_in addr;
-
-        (void) memset(&addr, 0, sizeof(addr));
-        addr.sin_family = AF_INET;
-        addr.sin_addr.s_addr = mcast_addr;
-        addr.sin_port = htons(port_num);
-
-        if (connect(sock, (struct sockaddr*) &addr, sizeof(addr)) == -1) {
-            LOG_SERROR2("Couldn't bind socket %d to IPv4 multicast address %s",
-                    sock, inet_ntoa(addr.sin_addr));
-            (void) close(sock);
-            sock = -1;
-        }
-    }
-
-    return sock;
-}
-
-/**
- * Returns a socket configured for non-exclusive reception of IPv4 multicast
- * packets. The socket will not receive any multicast packets until the client
- * calls "ipm_add()". Receivers of multicast packets would typically call this
- * function.
- *
- * @param[in] nonblock  Whether or not the socket should be in non-blocking
- *                      mode.
- * @return              The configured socked.
+ * @return              The socket.
  * @retval    -1        Failure. @code{log_add()} called. "errno" will be one
  *                      of the following:
  *                          EMFILE      No more file descriptors are available
@@ -415,17 +285,108 @@ int ipm_create(
  *                                      in the system.
  *                          ENOMEM      Insufficient memory was available.
  */
-int ipm_open(
-    const int nonblock)
+static int new_multicast(void)
 {
-    return ipm_new(0, 1, (nonblock ? ipm_nonblock : 0) | ipm_reuse_addr);
+    const int   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    if (sock == -1)
+        LOG_SERROR0("Couldn't create UDP socket");
+
+    return sock;
 }
 
 /**
- * Adds an IPv4 multicast group to the set of multicast groups that a socket
- * receives. Multiple groups may be added.
+ * Returns a socket.
  *
- * @param[in] sock       The socket to be configured.
+ * @param[in] mcast_addr IPV4 address of multicast group in network byte order.
+ * @param[in] port_num   Port number used for the destination multicast group.
+ * @param[in] create     Whether or not to create a new multicast address or
+ *                       open a connection to an existing one.
+ * @return               The created multicast socket.
+ * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ *                       of the following:
+ *                          EMFILE      No more file descriptors are available
+ *                                      for this process.
+ *                          ENFILE      No more file descriptors are available
+ *                                      for the system.
+ *                          EACCES      The process does not have appropriate
+ *                                      privileges.
+ *                          ENOBUFS     Insufficient resources were available
+ *                                      in the system.
+ *                          ENOMEM      Insufficient memory was available.
+ * @see sf_set_loopback_reception(int sock, int loop)
+ * @see sf_set_time_to_live(int sock, unsigned char ttl)
+ * @see sf_set_interface(int sock, in_addr_t iface_addr)
+ * @see sf_set_nonblocking(int sock, int nonblocking)
+ * @see sf_set_address_reuse(int sock, int reuse)
+ */
+static int create_or_open_multicast(
+    const in_addr_t             mcast_addr,
+    const unsigned short        port_num,
+    const int                   create)
+{
+    int                         sock = new_multicast();
+
+    if (sock != -1) {
+        struct sockaddr_in      addr;
+
+        (void)memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = mcast_addr;
+        addr.sin_port = htons(port_num);
+
+        if ((create ? connect : bind)(sock, (struct sockaddr*) &addr,
+                sizeof(addr)) == -1) {
+            char* const mcastAddrString = sockaddr_format(&addr);
+
+            LOG_SERROR3("Couldn't %s socket %d to multicast address %s",
+                    create ? "connect" : "bind", sock, mcastAddrString);
+            free(mcastAddrString);
+            (void)close(sock);
+            sock = -1;
+        }
+    }
+
+    return sock;
+}
+
+/**
+ * Returns a socket for sending to a given IPv4 multicast address. Senders of
+ * multicast packets would typically call this function.
+ *
+ * @param[in] mcast_addr IPV4 address of multicast group in network byte order.
+ * @param[in] port_num   Port number used for the destination multicast group.
+ * @return               The created multicast socket.
+ * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ *                       of the following:
+ *                          EMFILE      No more file descriptors are available
+ *                                      for this process.
+ *                          ENFILE      No more file descriptors are available
+ *                                      for the system.
+ *                          EACCES      The process does not have appropriate
+ *                                      privileges.
+ *                          ENOBUFS     Insufficient resources were available
+ *                                      in the system.
+ *                          ENOMEM      Insufficient memory was available.
+ * @see sf_set_loopback_reception(int sock, int loop)
+ * @see sf_set_time_to_live(int sock, unsigned char ttl)
+ * @see sf_set_interface(int sock, in_addr_t iface_addr)
+ * @see sf_set_nonblocking(int sock, int nonblocking)
+ * @see sf_set_address_reuse(int sock, int reuse)
+ */
+int sf_create_multicast(
+    const in_addr_t             mcast_addr,
+    const unsigned short        port_num)
+{
+    return create_or_open_multicast(mcast_addr, port_num, 1);
+}
+
+/**
+ * Returns a socket configured for non-exclusive reception of IPv4 multicast
+ * packets. The socket will not receive any multicast packets until the client
+ * calls "sf_add_multicast_group()". Receivers of multicast packets would
+ * typically call this function.
+ *
  * @param[in] mcast_addr Internet address of IPv4 multicast group in network
  *                       byte order:
  *                          224.0.0.0 - 224.0.0.255     Reserved for local
@@ -436,6 +397,101 @@ int ipm_open(
  *                                                      administrative scoping
  * @param[in] port_num   Port number used for the destination multicast
                          group.
+ * @return               The socket.
+ * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ *                       of the following:
+ *                          EMFILE      No more file descriptors are available
+ *                                      for this process.
+ *                          ENFILE      No more file descriptors are available
+ *                                      for the system.
+ *                          EACCES      The process does not have appropriate
+ *                                      privileges.
+ *                          ENOBUFS     Insufficient resources were available
+ *                                      in the system.
+ *                          ENOMEM      Insufficient memory was available.
+ * @see sf_set_interface(int sock, in_addr_t iface_addr)
+ * @see sf_set_nonblocking(int sock, int nonblocking)
+ * @see sf_set_address_reuse(int sock, int reuse)
+ */
+int sf_open_multicast(
+    const in_addr_t             mcast_addr,
+    const unsigned short        port_num)
+{
+    return create_or_open_multicast(mcast_addr, port_num, 0);
+}
+
+/**
+ * Adds to or drops from an interface an IPv4 multicast group.
+ *
+ * @param[in] sock       The associated multicast socket.
+ * @param[in] mcast_addr Internet address of IPv4 multicast group in network
+ *                       byte order:
+ *                          224.0.0.0 - 224.0.0.255     Reserved for local
+ *                                                      purposes
+ *                          224.0.1.0 - 238.255.255.255 User-defined multicast
+ *                                                      addresses
+ *                          239.0.0.0 - 239.255.255.255 Reserved for
+ *                                                      administrative scoping
+ * @param[in] iface_addr Internet address of interface in network byte
+ *                       order. 0 means the default interface for multicast
+ *                       packets.
+ * @param[in] add        Whether to add or drop the multicast group (0 => drop).
+ * @retval    0          Success.
+ * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ *                       of the following:
+ *                          EBADF       The socket argument is not a valid file
+ *                                      descriptor.
+ *                          EINVAL      The socket has been shut down.
+ *                          ENOTSOCK    The socket argument does not refer to a
+ *                                      socket.
+ *                          ENOMEM      There was insufficient memory available.
+ *                          ENOBUFS     Insufficient resources are available in
+ *                                      the system.
+ */
+static int add_or_drop_multicast_group(
+    const int           sock,
+    const in_addr_t     mcast_addr,
+    const in_addr_t     iface_addr,
+    const int           add)
+{
+    int                 status;
+    struct ip_mreq      group;
+
+    group.imr_multiaddr.s_addr = mcast_addr;
+    group.imr_interface.s_addr = iface_addr == 0 ? INADDR_ANY : iface_addr;
+
+    status = setsockopt(sock, IPPROTO_IP,
+            add ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP, &group,
+            sizeof(group));
+
+    if (status) {
+        char* const mcastAddrString = ipaddr_format(mcast_addr);
+        char* const ifaceAddrString = ipaddr_format(iface_addr);
+
+        LOG_SERROR5("Couldn't %s IPv4 multicast group %s %s interface %s "
+                "for socket %d", add ? "add" : "drop", mcastAddrString,
+                add ? "to" : "from", ifaceAddrString, sock);
+        free(mcastAddrString);
+        free(ifaceAddrString);
+    }
+
+    return status;
+}
+
+/**
+ * Adds an IPv4 multicast group to the set of multicast groups that a socket
+ * receives. Multiple groups may be added. A group may be associated with a
+ * particular interface.
+ *
+ * @param[in] sock       The multicast socket to be configured.
+ * @param[in] mcast_addr Internet address of IPv4 multicast group in network
+ *                       byte order:
+ *                          224.0.0.0 - 224.0.0.255     Reserved for local
+ *                                                      purposes
+ *                          224.0.1.0 - 238.255.255.255 User-defined multicast
+ *                                                      addresses
+ *                          239.0.0.0 - 239.255.255.255 Reserved for
+ *                                                      administrative scoping
  * @param[in] iface_addr Internet address of interface in network byte
  *                       order. 0 means the default interface for multicast
  *                       packets.
@@ -451,49 +507,12 @@ int ipm_open(
  *                          ENOBUFS     Insufficient resources are available in
  *                                      the system.
  */
-int ipm_add(
+int sf_add_multicast_group(
     const int       sock,
     const in_addr_t mcast_addr,
-    const int       port_num,
     const in_addr_t iface_addr)
 {
-    int                 status;
-    struct sockaddr_in  m_addr;
-
-    memset(&m_addr, 0, sizeof(m_addr));
-    m_addr.sin_family = AF_INET;
-    m_addr.sin_addr.s_addr = mcast_addr;
-    m_addr.sin_port = htons(port_num);
-
-    if (bind(sock, (struct sockaddr*)&m_addr, sizeof(m_addr))) {
-        char* const mcastAddrString = ipaddr_format(mcast_addr);
-
-        LOG_SERROR3("Couldn't bind socket %d to port %d of multicast address %s",
-                sock, port_num, mcastAddrString);
-        free(mcastAddrString);
-        status = -1;
-    }
-    else {
-        struct ip_mreq      group;
-
-        group.imr_multiaddr.s_addr = mcast_addr;
-        group.imr_interface.s_addr = iface_addr == 0 ? INADDR_ANY : iface_addr;
-
-        status = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &group,
-                sizeof(group));
-
-        if (status) {
-            char* const mcastAddrString = ipaddr_format(mcast_addr);
-            char* const ifaceAddrString = ipaddr_format(iface_addr);
-
-            LOG_SERROR3("Couldn't add IPv4 multicast group %s to interface %s "
-                    "for socket %d", mcastAddrString, ifaceAddrString, sock);
-            free(mcastAddrString);
-            free(ifaceAddrString);
-        }
-    }
-
-    return status;
+    return add_or_drop_multicast_group(sock, mcast_addr, iface_addr, 1);
 }
 
 /**
@@ -518,29 +537,10 @@ int ipm_add(
  *                          ENOBUFS     Insufficient resources are available in
  *                                      the system.
  */
-int ipm_drop(
+int ipm_drop_multicast_group(
     const int       sock,
     const in_addr_t mcast_addr,
     const in_addr_t iface_addr)
 {
-    int             status;
-    struct ip_mreq  group;
-
-    group.imr_multiaddr.s_addr = mcast_addr;
-    group.imr_interface.s_addr = iface_addr == 0 ? INADDR_ANY : iface_addr;
-
-    status = setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &group,
-            sizeof(group));
-
-    if (status) {
-        char* const mcastAddrString = ipaddr_format(mcast_addr);
-        char* const ifaceAddrString = ipaddr_format(iface_addr);
-
-        LOG_SERROR3("Couldn't drop IPv4 multicast group %s from interface %s "
-                "for socket %d", mcastAddrString, ifaceAddrString, sock);
-        free(mcastAddrString);
-        free(ifaceAddrString);
-    }
-
-    return status;
+    return add_or_drop_multicast_group(sock, mcast_addr, iface_addr, 0);
 }

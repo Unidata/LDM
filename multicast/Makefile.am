@@ -8,10 +8,10 @@
 
 SUBDIRS			= vcmtp
 EXTRA_DIST              = mcast_down_ldm.hin \
-                          ip_multicast.c \
-                          ip_multicast.hin
+                          sock_funcs.c \
+                          sock_funcs.hin
 BUILT_SOURCES           = mcast_down_ldm.h \
-                          ip_multicast.h
+                          sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mcast_down_ldm.c \
                           vcmtp_c_api.cpp vcmtp_c_api.h
@@ -29,7 +29,7 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 mcast_down_ldm.h:	mcast_down_ldm.hin mcast_down_ldm.c
-ip_multicast.h:		ip_multicast.hin ip_multicast.c
+sock_funcs.h:		sock_funcs.hin sock_funcs.c
 
 if HAVE_OPMOCK
 vcmtp_c_api_stubs	= vcmtp_c_api_stub.c vcmtp_c_api_stub.h
