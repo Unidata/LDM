@@ -14,6 +14,7 @@ BUILT_SOURCES           = mcast_down_ldm.h \
                           sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mcast_down_ldm.c \
+			  PerFileNotifier.cpp PerFileNotifier.h \
                           vcmtp_c_api.cpp vcmtp_c_api.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \

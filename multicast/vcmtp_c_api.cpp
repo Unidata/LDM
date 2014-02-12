@@ -11,30 +11,17 @@
  * @author: Steven R. Emmerson
  */
 
-#include <vcmtp_c_api.h>
+#include "vcmtp_c_api.h"
+#include "PerFileNotifier.h"
 #include <VCMTPReceiver.h>
 
-/**
- * Returns a new VCMTP receiver.
- *
- * @retval A new VCMTP receiver.
- */
-vcmtp_receiver* vcmtp_receiver_new(void)
-{
-    return new VCMTPReceiver(0);
+vcmtp_receiver* vcmtp_receiver_new(BofFunc bof_func, EofFunc eof_func,
+        MissedFileFunc missed_file_func, void* extra_arg) {
+    return new VCMTPReceiver(PerFileNotifier::get_instance(bof_func, eof_func,
+            missed_file_func, extra_arg));
 }
 
-/**
- * Joins a multicast group for receiving data.
- *
- * @param addr  Address of the multicast group.
- * @param port  Port number of the multicast group.
- * @retval 1    Success.
- */
-int vcmtp_receiver_join_group(
-    vcmtp_receiver* const       self,
-    const char* const           addr,
-    const unsigned short        port)
-{
+int vcmtp_receiver_join_group(vcmtp_receiver* const self,
+        const char* const addr, const unsigned short port) {
     return static_cast<VCMTPReceiver*>(self)->JoinGroup(std::string(addr), port);
 }

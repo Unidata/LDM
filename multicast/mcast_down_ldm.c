@@ -18,43 +18,91 @@
 #include "vcmtp_c_api.h"
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 
-/*
+/**
  * The multicast downstream LDM data-structure:
  */
-struct mdl_struct {
-    pqueue*             pq;             /* product-queue to use */
-    mdl_missed_product_func  missed_product; /* missed-product callback function */
-    vcmtp_receiver*     receiver;       /* the VCMTP receiver */
+struct mdl {
+    pqueue*                     pq;             /* product-queue to use */
+    mdl_missed_product_func     missed_product; /* missed-product callback function */
+    vcmtp_receiver*             receiver;       /* VCMTP receiver */
 };
+
+/**
+ * Accepts notification of the beginning of a file from the VCMTP layer and
+ * indicates if the file should be received
+ *
+ * @param[in,out]  extra_arg    Pointer to the associated multicast downstream
+ *                              LDM object.
+ * @param[in]      metadata     Metadata of the file in question.
+ * @retval         false        if and only if the file should not be received.
+ */
+static bool bof_func(
+    void*                       extra_arg,
+    const file_metadata*        metadata)
+{
+    Mdl* const  mdl = (Mdl*)extra_arg;
+
+    return false;
+}
+
+/**
+ * Accepts notification from the VCMTP layer of the complete reception of a
+ * file.
+ *
+ * @param[in,out]  extra_arg    Pointer to the associated multicast downstream
+ *                              LDM object.
+ * @param[in]      metadata     Metadata of the file in question.
+ */
+static void eof_func(
+    void*                       extra_arg,
+    const file_metadata*        metadata)
+{
+    Mdl* const  mdl = (Mdl*)extra_arg;
+}
+
+/**
+ * Accepts notification from the VCMTP layer of the missed reception of a
+ * file.
+ *
+ * @param[in,out]  extra_arg    Pointer to the associated multicast downstream
+ *                              LDM object.
+ * @param[in]      metadata     Metadata of the file in question.
+ */
+static void missed_file_func(
+    void*                       extra_arg,
+    const file_metadata*        metadata)
+{
+    Mdl* const  mdl = (Mdl*)extra_arg;
+}
 
 /**
  * Initializes a multicast downstream LDM.
  *
  * @param[out] mdl              The multicast downstream LDM to initialize.
- * @param[in] pq                The product-queue to use.
- * @param[in] missed_product    Missed-product callback function.
- * @retval 0                    Success.
- * @retval EINVAL               @code{pq == NULL || missed_product == NULL}.
+ * @param[in]  pq               The product-queue to use.
+ * @param[in]  missed_product   Missed-product callback function.
+ * @retval     0                Success.
+ * @retval     EINVAL           @code{pq == NULL || missed_product == NULL}.
  *                              \c log_add() called.
  */
 static int init(
-    mdl_obj* const              mdl,
-    pqueue* const               pq,
-    const mdl_missed_product_func    missed_product)
+    Mdl* const                          mdl,
+    pqueue* const                       pq,
+    const mdl_missed_product_func       missed_product)
 {
     if (pq == NULL || missed_product == NULL) {
         LOG_ADD2("NULL argument: pq=%p, missed_product=%p", pq, missed_product);
         return EINVAL;
     }
 
-    /* VcmtpReceiverParams */
-
     mdl->pq = pq;
     mdl->missed_product = missed_product;
-    mdl->receiver = vcmtp_receiver_new();
+    mdl->receiver =
+            vcmtp_receiver_new(bof_func, eof_func, missed_file_func, mdl);
 
     return 0;
 }
@@ -62,7 +110,7 @@ static int init(
 /**
  * Returns a new multicast downstream LDM object.
  *
- * @param[out]  mdl             The pointer to be set.
+ * @param[out]  mdl             The pointer to be set to a new instance.
  * @param[in]   pq              The product-queue to use.
  * @param[in]   missed_product  Missed-product callback function.
  * @retval      0               Success.
@@ -71,12 +119,12 @@ static int init(
  *                              \c log_add() called.
  */
 static int mdl_new(
-    mdl_obj** const             mdl,
-    pqueue* const               pq,
-    const mdl_missed_product_func    missed_product)
+    Mdl** const                         mdl,
+    pqueue* const                       pq,
+    const mdl_missed_product_func       missed_product)
 {
-    int                 status;
-    mdl_obj* const      obj = LOG_MALLOC(sizeof(mdl_obj),
+    int             status;
+    Mdl* const      obj = LOG_MALLOC(sizeof(Mdl),
             "multicast downstream LDM object");
 
     if (NULL == obj) {
@@ -103,7 +151,7 @@ static int mdl_new(
  *                      successfully.
  */
 static int execute(
-    mdl_obj* const      mdl)
+    Mdl* const  mdl)
 {
     return 0;
 }
@@ -121,10 +169,10 @@ static int execute(
  *                              \c log_add() called.
  */
 int mdl_create_and_execute(
-    pqueue* const       pq,
-    mdl_missed_product_func  missed_product)
+    pqueue* const               pq,
+    mdl_missed_product_func     missed_product)
 {
-    mdl_obj*    mdl;
+    Mdl*    mdl;
     int         status = mdl_new(&mdl, pq, missed_product);
 
     if (0 == status) {
