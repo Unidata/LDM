@@ -24,11 +24,11 @@ PerFileNotifier& PerFileNotifier::get_instance(BofFunc bof_func,
 
 PerFileNotifier::PerFileNotifier(BofFunc bof_func, EofFunc eof_func,
         MissedFileFunc missed_file_func, void* extra_arg)
-:
-        bof_func(bof_func),
-        eof_func(eof_func),
-        missed_file_func(missed_file_func),
-        extra_arg(extra_arg) {
+:   bof_func(bof_func),
+    eof_func(eof_func),
+    missed_file_func(missed_file_func),
+    extra_arg(extra_arg)
+{
     if (!bof_func)
         throw std::invalid_argument("Null argument: bof_func");
     if (!eof_func)
