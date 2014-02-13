@@ -90,24 +90,35 @@ static void missed_file_func(
         LOG_ADD1("Filename is not an LDM signature: \"%s\"", metadata->name);
     }
     else {
-        ((Mdl*)extra_arg)->missed_product(&signature);
+        ((Mdl*)extra_arg)->missed_product(extra_arg, &signature);
     }
 }
 
 /**
  * Initializes a multicast downstream LDM.
  *
- * @param[out] mdl              The multicast downstream LDM to initialize.
- * @param[in]  pq               The product-queue to use.
- * @param[in]  missed_product   Missed-product callback function.
- * @retval     0                Success.
- * @retval     EINVAL           @code{pq == NULL || missed_product == NULL}.
- *                              \c log_add() called.
+ * @param[out] mdl            The multicast downstream LDM to initialize.
+ * @param[in]  pq             The product-queue to use.
+ * @param[in]  missed_product Missed-product callback function.
+ * @param[in]  addr           Address of the multicast group.
+ *                              224.0.0.0 - 224.0.0.255     Reserved for local
+ *                                                          purposes
+ *                              224.0.1.0 - 238.255.255.255 User-defined
+ *                                                          multicast addresses
+ *                              239.0.0.0 - 239.255.255.255 Reserved for
+ *                                                          administrative
+ *                                                          scoping
+ * @param[in] port            Port number of the multicast group.
+ * @retval    0               Success.
+ * @retval    EINVAL          @code{pq == NULL || missed_product == NULL}.
+ *                            \c log_add() called.
  */
 static int init(
     Mdl* const                          mdl,
     pqueue* const                       pq,
-    const mdl_missed_product_func       missed_product)
+    const mdl_missed_product_func       missed_product,
+    const char* const                   addr,
+    const unsigned short                port)
 {
     if (pq == NULL || missed_product == NULL) {
         LOG_ADD2("NULL argument: pq=%p, missed_product=%p", pq, missed_product);
@@ -116,8 +127,8 @@ static int init(
 
     mdl->pq = pq;
     mdl->missed_product = missed_product;
-    mdl->receiver =
-            vcmtp_receiver_new(bof_func, eof_func, missed_file_func, mdl);
+    mdl->receiver = vcmtp_receiver_new(bof_func, eof_func, missed_file_func,
+            addr, port, mdl);
 
     return 0;
 }
@@ -125,18 +136,29 @@ static int init(
 /**
  * Returns a new multicast downstream LDM object.
  *
- * @param[out]  mdl             The pointer to be set to a new instance.
- * @param[in]   pq              The product-queue to use.
- * @param[in]   missed_product  Missed-product callback function.
- * @retval      0               Success.
- * @retval      ENOMEM          Out of memory. \c log_add() called.
- * @retval      EINVAL          @code{pq == NULL || missed_product == NULL}.
- *                              \c log_add() called.
+ * @param[out] mdl            The pointer to be set to a new instance.
+ * @param[in]  pq             The product-queue to use.
+ * @param[in]  missed_product Missed-product callback function.
+ * @param[in]  addr           Address of the multicast group.
+ *                              224.0.0.0 - 224.0.0.255     Reserved for local
+ *                                                          purposes
+ *                              224.0.1.0 - 238.255.255.255 User-defined
+ *                                                          multicast addresses
+ *                              239.0.0.0 - 239.255.255.255 Reserved for
+ *                                                          administrative
+ *                                                          scoping
+ * @param[in]  port           Port number of the multicast group.
+ * @retval     0              Success.
+ * @retval     ENOMEM         Out of memory. \c log_add() called.
+ * @retval     EINVAL         @code{pq == NULL || missed_product == NULL}.
+ *                            \c log_add() called.
  */
 static int mdl_new(
     Mdl** const                         mdl,
     pqueue* const                       pq,
-    const mdl_missed_product_func       missed_product)
+    const mdl_missed_product_func       missed_product,
+    const char* const                   addr,
+    const unsigned short                port)
 {
     int             status;
     Mdl* const      obj = LOG_MALLOC(sizeof(Mdl),
@@ -146,7 +168,7 @@ static int mdl_new(
         status = ENOMEM;
     }
     else {
-        if (status = init(obj, pq, missed_product)) {
+        if (status = init(obj, pq, missed_product, addr, port)) {
             free(obj);
         }
         else {
@@ -187,20 +209,31 @@ static int execute(
  * Creates and executes a multicast downstream LDM for an indefinite amount of
  * time. Will not return until the multicast downstream LDM terminates.
  *
- * @param[in] pq                The product-queue to use.
- * @param[in] missed_product    Missed-product callback function.
- * @retval 0                    The multicast downstream LDM terminated
- *                              successfully.
- * @retval ENOMEM               Out of memory. \c log_add() called.
- * @retval EINVAL               @code{pq == NULL || missed_product == NULL}.
- *                              \c log_add() called.
+ * @param[in] pq             The product-queue to use.
+ * @param[in] missed_product Missed-product callback function.
+ * @param[in] addr           Address of the multicast group.
+ *                              224.0.0.0 - 224.0.0.255     Reserved for local
+ *                                                          purposes
+ *                              224.0.1.0 - 238.255.255.255 User-defined
+ *                                                          multicast addresses
+ *                              239.0.0.0 - 239.255.255.255 Reserved for
+ *                                                          administrative
+ *                                                          scoping
+ * @param[in] port           Port number of the multicast group.
+ * @retval 0                 The multicast downstream LDM terminated
+ *                           successfully.
+ * @retval ENOMEM            Out of memory. \c log_add() called.
+ * @retval EINVAL            @code{pq == NULL || missed_product == NULL}.
+ *                           \c log_add() called.
  */
 int mdl_create_and_execute(
     pqueue* const               pq,
-    mdl_missed_product_func     missed_product)
+    mdl_missed_product_func     missed_product,
+    const char* const           addr,
+    const unsigned short        port)
 {
     Mdl*        mdl;
-    int         status = mdl_new(&mdl, pq, missed_product);
+    int         status = mdl_new(&mdl, pq, missed_product, addr, port);
 
     if (0 == status) {
         status = execute(mdl);

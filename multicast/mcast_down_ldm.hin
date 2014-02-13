@@ -16,7 +16,7 @@
 #include "pq.h"
 
 typedef struct mdl      Mdl;
-typedef                 void (*mdl_missed_product_func)(signaturet*);
+typedef                 void (*mdl_missed_product_func)(Mdl*, signaturet*);
 
 #ifdef __cplusplus
 extern "C" {

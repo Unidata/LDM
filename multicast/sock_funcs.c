@@ -42,6 +42,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -273,7 +274,9 @@ int sf_set_address_reuse(
 /**
  * Returns a multicast socket.
  *
- * @param[in] mIpAddr    IPv4 address of multicast group in network byte order:
+ * @param[in] mIpAddr    Either \c htonl(INADDR_ANY) for receiving multicast
+ *                       packets or the IPv4 address of the multicast group in
+ *                       network byte order for sending multicast packets:
  *                          224.0.0.0 - 224.0.0.255     Reserved for local
  *                                                      purposes
  *                          224.0.1.0 - 238.255.255.255 User-defined multicast
@@ -281,8 +284,6 @@ int sf_set_address_reuse(
  *                          239.0.0.0 - 239.255.255.255 Reserved for
  *                                                      administrative scoping
  * @param[in] port       Port number of multicast group.
- * @param[in] create     Whether or not to create a new multicast group or
- *                       open a connection to an existing one.
  * @retval    >=0        The multicast socket.
  * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
  *                       of the following:
@@ -322,8 +323,7 @@ int sf_set_address_reuse(
  */
 static int create_or_open_multicast(
     const in_addr_t             mIpAddr,
-    const unsigned short        port,
-    const int                   create)
+    const unsigned short        port)
 {
     int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
@@ -332,18 +332,19 @@ static int create_or_open_multicast(
     }
     else {
         struct sockaddr_in      addr;
+        const bool              receive = mIpAddr == htonl(INADDR_ANY);
 
         (void)memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = mIpAddr;
         addr.sin_port = htons(port);
 
-        if ((create ? connect : bind)(sock, (struct sockaddr*) &addr,
-                sizeof(addr)) == -1) {
+        if ((receive ? bind : connect)(sock,
+                (struct sockaddr*) &addr, sizeof(addr)) == -1) {
             char* const mcastAddrString = sockaddr_format(&addr);
 
             LOG_SERROR3("Couldn't %s socket %d to multicast group %s",
-                    create ? "connect" : "bind", sock, mcastAddrString);
+                    receive ? "bind" : "connect", sock, mcastAddrString);
             free(mcastAddrString);
             (void)close(sock);
             sock = -1;
@@ -405,20 +406,13 @@ int sf_create_multicast(
     const in_addr_t             mIpAddr,
     const unsigned short        port)
 {
-    return create_or_open_multicast(mIpAddr, port, 1);
+    return create_or_open_multicast(mIpAddr, port);
 }
 
 /**
  * Returns a socket for receiving multicast packets. The socket will not receive
  * any multicast packets until the client calls "sf_add_multicast_group()".
  *
- * @param[in] mIpAddr    IPv4 address of multicast group in network byte order:
- *                          224.0.0.0 - 224.0.0.255     Reserved for local
- *                                                      purposes
- *                          224.0.1.0 - 238.255.255.255 User-defined multicast
- *                                                      addresses
- *                          239.0.0.0 - 239.255.255.255 Reserved for
- *                                                      administrative scoping
  * @param[in] port       Port number of multicast group.
  * @retval    >=0        The socket.
  * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
@@ -454,10 +448,9 @@ int sf_create_multicast(
  * @see sf_set_address_reuse(int sock, int reuse)
  */
 int sf_open_multicast(
-    const in_addr_t             mIpAddr,
     const unsigned short        port)
 {
-    return create_or_open_multicast(mIpAddr, port, 0);
+    return create_or_open_multicast(htonl(INADDR_ANY), port);
 }
 
 /**
@@ -471,9 +464,8 @@ int sf_open_multicast(
  *                                                      addresses
  *                          239.0.0.0 - 239.255.255.255 Reserved for
  *                                                      administrative scoping
- * @param[in] ifaceAddr  IPv4 address of interface in network byte
- *                       order. 0 means the default interface for multicast
- *                       packets.
+ * @param[in] ifaceAddr  IPv4 address of interface in network byte order. 0
+ *                       means the default interface for multicast packets.
  * @param[in] add        Whether to add or drop the multicast group (0 => drop).
  * @retval    0          Success.
  * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
@@ -497,7 +489,7 @@ static int add_or_drop_multicast_group(
     struct ip_mreq      group;
 
     group.imr_multiaddr.s_addr = mIpAddr;
-    group.imr_interface.s_addr = ifaceAddr == 0 ? INADDR_ANY : ifaceAddr;
+    group.imr_interface.s_addr = ifaceAddr == 0 ? htonl(INADDR_ANY) : ifaceAddr;
 
     status = setsockopt(sock, IPPROTO_IP,
             add ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP, &group,

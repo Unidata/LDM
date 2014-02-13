@@ -23,9 +23,9 @@
 #include <opmock.h>
 #include <stdlib.h>
 
-static void missed_product(
-    void* const arg,
-    signaturet signature)
+static void missed_product_func(
+    Mdl* const                  mdl,
+    const signaturet* const     signature)
 {
 }
 
@@ -49,7 +49,7 @@ void test_create_and_execute()
     OP_ASSERT_EQUAL_LONG(EINVAL, status);
     log_clear();
 
-    status = mdl_create_and_execute(pq, missed_product);
+    status = mdl_create_and_execute(pq, missed_product_func, );
     OP_ASSERT_EQUAL_LONG(0, status);
 
     OP_VERIFY();

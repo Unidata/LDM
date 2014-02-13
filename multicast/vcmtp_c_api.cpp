@@ -15,6 +15,7 @@
 #include "PerFileNotifier.h"
 #include <exception>
 #include <stdlib.h>
+#include <string>
 #include <VCMTPReceiver.h>
 
 /**
@@ -34,29 +35,42 @@ struct vcmtp_c_receiver {
 /**
  * Initializes a VCMTP C Receiver.
  *
- * @param[in,out] cReceiver         The VCMTP C Receiver to initialize.
- * @param[in]     bof_func          Function to call when the VCMTP layer has
- *                                  seen a beginning-of-file.
- * @param[in]     eof_func          Function to call when the VCMTP layer has
- *                                  completely received a file.
- * @param[in]     missed_file_func  Function to call when a file is missed by
- *                                  the VCMTP layer.
- * @param[in]     extra_arg         Extra argument to pass to the above
- *                                  functions. May be 0.
- * @throws        std:exception     If the VCMTP C Receiver can't be
- *                                  initialized.
+ * @param[in,out] cReceiver        The VCMTP C Receiver to initialize.
+ * @param[in]     bof_func         Function to call when the VCMTP layer has
+ *                                 seen a beginning-of-file.
+ * @param[in]     eof_func         Function to call when the VCMTP layer has
+ *                                 completely received a file.
+ * @param[in]     missed_file_func Function to call when a file is missed by
+ *                                 the VCMTP layer.
+ * @param[in]     addr             Address of the multicast group.
+ *                                  224.0.0.0 - 224.0.0.255     Reserved for
+ *                                                              local purposes
+ *                                  224.0.1.0 - 238.255.255.255 User-defined
+ *                                                              multicast
+ *                                                              addresses
+ *                                  239.0.0.0 - 239.255.255.255 Reserved for
+ *                                                              administrative
+ *                                                              scoping
+ * @param[in]     port             Port number of the multicast group.
+ * @param[in]     extra_arg        Extra argument to pass to the above
+ *                                 functions. May be 0.
+ * @throws        std:exception    If the VCMTP C Receiver can't be
+ *                                 initialized.
  */
 static void vcmtp_receiver_init(
     VcmtpCReceiver* const cReceiver,
     const BofFunc         bof_func,
     const EofFunc         eof_func,
     const MissedFileFunc  missed_file_func,
+    const char* const     addr,
+    const unsigned short  port,
     void* const           extra_arg)
 {
     cReceiver->notifier = new PerFileNotifier(bof_func, eof_func,
             missed_file_func, extra_arg);
     try {
         cReceiver->receiver = new VCMTPReceiver(*cReceiver->notifier);
+        cReceiver->receiver->JoinGroup(std::string(addr), port);
     }
     catch (const std::exception& e) {
         delete cReceiver->notifier;
@@ -68,6 +82,8 @@ VcmtpCReceiver* vcmtp_receiver_new(
     const BofFunc               bof_func,
     const EofFunc               eof_func,
     const MissedFileFunc        missed_file_func,
+    const char* const           addr,
+    const unsigned short        port,
     void* const                 extra_arg)
 {
     VcmtpCReceiver*      cReceiver =
@@ -76,7 +92,7 @@ VcmtpCReceiver* vcmtp_receiver_new(
     if (cReceiver) {
         try {
             vcmtp_receiver_init(cReceiver, bof_func, eof_func, missed_file_func,
-                    extra_arg);
+                    addr, port, extra_arg);
             return cReceiver;
         }
         catch (const std::exception& e) {
