@@ -13,6 +13,7 @@
 
 #include "mcast_down_ldm.h"
 #include "ldm.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "pq.h"
 #include "vcmtp_c_api.h"
@@ -28,7 +29,7 @@
 struct mdl {
     pqueue*                     pq;             /* product-queue to use */
     mdl_missed_product_func     missed_product; /* missed-product callback function */
-    vcmtp_receiver*             receiver;       /* VCMTP receiver */
+    VcmtpCReceiver*             receiver;       /* VCMTP C Receiver */
 };
 
 /**
@@ -65,6 +66,13 @@ static void eof_func(
 }
 
 /**
+ * Initializes an LDM signature from a formatted string.
+ *
+ * @param[
+ * @param metadata
+ */
+
+/**
  * Accepts notification from the VCMTP layer of the missed reception of a
  * file.
  *
@@ -76,7 +84,14 @@ static void missed_file_func(
     void*                       extra_arg,
     const file_metadata*        metadata)
 {
-    Mdl* const  mdl = (Mdl*)extra_arg;
+    signaturet  signature;
+
+    if (sigParse(metadata->name, &signature) == -1) {
+        LOG_ADD1("Filename is not an LDM signature: \"%s\"", metadata->name);
+    }
+    else {
+        ((Mdl*)extra_arg)->missed_product(&signature);
+    }
 }
 
 /**
@@ -143,6 +158,18 @@ static int mdl_new(
 }
 
 /**
+ * Frees the resources of a multicast downstream LDM object.
+ *
+ * @param[in,out] mdl   The multicast downstream LDM object.
+ */
+static void mdl_free(
+    Mdl* const  mdl)
+{
+    vcmtp_receiver_free(mdl->receiver);
+    free(mdl);
+}
+
+/**
  * Executes a multicast downstream LDM. Doesn't return until the multicast
  * downstream LDM terminates.
  *
@@ -172,12 +199,12 @@ int mdl_create_and_execute(
     pqueue* const               pq,
     mdl_missed_product_func     missed_product)
 {
-    Mdl*    mdl;
+    Mdl*        mdl;
     int         status = mdl_new(&mdl, pq, missed_product);
 
     if (0 == status) {
         status = execute(mdl);
-        free(mdl);
+        mdl_free(mdl);
     }
 
     return status;

@@ -17,24 +17,24 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     char        name[256];      // keep consonant with VcmtpSenderMessage */
     double      time;
     size_t      length;
 }       file_metadata;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef void    vcmtp_receiver;
+typedef struct vcmtp_c_receiver   VcmtpCReceiver;
 
 typedef bool    (*BofFunc)(void* extra_arg, const file_metadata* metadata);
 typedef void    (*EofFunc)(void* extra_arg, const file_metadata* metadata);
 typedef void    (*MissedFileFunc)(void* extra_arg, const file_metadata* metadata);
 
 /**
- * Returns a new VCMTP receiver.
+ * Returns a new VCMTP C Receiver.
  *
  * @param[in] bof_func          Function to call when the VCMTP layer has seen
  *                              a beginning-of-file.
@@ -45,34 +45,36 @@ typedef void    (*MissedFileFunc)(void* extra_arg, const file_metadata* metadata
  * @param[in] extra_arg         Extra argument to pass to the above functions.
  *                              May be NULL.
  * @retval    NULL              Failure.
- * @retval    !NULL             A new VCMTP receiver. The client should call
+ * @retval    !NULL             A new VCMTP C Receiver. The client should call
  *                              vcmtp_receiver_free() when the receiver is no
  *                              longer needed.
  */
-vcmtp_receiver* vcmtp_receiver_new(
+VcmtpCReceiver* vcmtp_receiver_new(
     BofFunc             bof_func,
     EofFunc             eof_func,
     MissedFileFunc      missed_file_func,
     void*               extra_arg);
 
 /**
- * Joins a multicast group for receiving data.
+ * Frees the resources of a VCMTP C Receiver.
  *
- * @param[in]   addr    Address of the multicast group.
- * @param[in]   port    Port number of the multicast group.
- * @retval      1       Success.
- */
-int vcmtp_receiver_join_group(
-    const char* const           addr,
-    const unsigned short        port);
-
-/**
- * Releases the resources of a VCMTP receiver.
- *
- * @param receiver      The VCMTP receiver.
+ * @param cReceiver      The VCMTP C Receiver.
  */
 void vcmtp_receiver_free(
-    vcmtp_receiver*     receiver);
+    VcmtpCReceiver*     cReceiver);
+
+/**
+ * Joins a multicast group for receiving data.
+ *
+ * @param[in]   cReceiver       The VCMTP C Receiver.
+ * @param[in]   addr            Address of the multicast group.
+ * @param[in]   port            Port number of the multicast group.
+ * @retval      1               Success.
+ */
+int vcmtp_receiver_join_group(
+    VcmtpCReceiver*             cReceiver,
+    const char* const           addr,
+    const unsigned short        port);
 
 #ifdef __cplusplus
 }

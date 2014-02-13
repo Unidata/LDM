@@ -16,12 +16,6 @@
 #include <stdexcept>
 #include <strings.h>
 
-PerFileNotifier& PerFileNotifier::get_instance(BofFunc bof_func,
-        EofFunc eof_func, MissedFileFunc missed_file_func, void* extra_arg) {
-    return *new PerFileNotifier(bof_func, eof_func, missed_file_func,
-            extra_arg);
-}
-
 PerFileNotifier::PerFileNotifier(BofFunc bof_func, EofFunc eof_func,
         MissedFileFunc missed_file_func, void* extra_arg)
 :   bof_func(bof_func),
