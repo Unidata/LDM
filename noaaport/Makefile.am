@@ -169,7 +169,9 @@ endif
 	
 valgrind-noaaportIngester:	noaaportIngester
 	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-vg
+	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
+	    noaaportIngester -n -q /tmp/noaaportIngester-test.pq \
+		<$(srcdir)/nwstgdump.data
 	rm /tmp/noaaportIngester-test.pq
 
 root-ni-vg:

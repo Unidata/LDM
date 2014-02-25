@@ -18,7 +18,10 @@ case "`uname -sr`" in
     Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
 esac
 AC_PROG_CC([c99 c89 gcc cc])
-AC_PROG_CXX()
+AC_PROG_CXX
+if test "$GXX" = "yes"; then
+    AC_SUBST([AM_CXXFLAGS], [-std=c++11])
+fi
 
 YEAR=`date +%Y`
 AC_SUBST([YEAR])
