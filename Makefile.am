@@ -264,9 +264,9 @@ release:
 	echo >>ldm.spec.in.tmp
 	newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
 	echo $$newVersion | egrep '^[0-9]+(\.[0-9]+)*$$' >/dev/null || exit 1; \
-        echo "* `date '+%a %b %e %Y'` Steve Emmerson" \
-        	"<support-ldm@unidata.ucar.edu> $$newVersion" >>ldm.spec.in.tmp; \
-        echo "- PUT SUMMARY HERE" >>ldm.spec.in.tmp; \
+	echo "* `date '+%a %b %e %Y'` Steve Emmerson" \
+	    "<support-ldm@unidata.ucar.edu> $$newVersion" >>ldm.spec.in.tmp; \
+	echo "- PUT SUMMARY HERE" >>ldm.spec.in.tmp; \
 	sed '1,/^%changelog/d' ldm.spec.in >>ldm.spec.in.tmp; \
 	vi "+/PUT SUMMARY HERE/" ldm.spec.in.tmp; \
 	mv ldm.spec.in.tmp ldm.spec.in; \
@@ -285,11 +285,11 @@ rpm:		dist ldm.spec
 	cp ldm.spec $(RPM_BUILDDIR)/SPECS
 	rpmbuild -bb $(RPM_BUILDDIR)/SPECS/ldm.spec
 	mv $(RPM_BUILDDIR)/RPMS/`uname -m`/$(PACKAGE)*-$(VERSION)-*.rpm .
-    
+
 rpmlint:
 	rpmlint $(RPM_BUILDDIR)/SPECS/ldm.spec \
-    	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
-    	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
+	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
+	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
 
 ftp-actual:		dist rpm $(FTPDIR)
 	cp -p $(distArchive) $(FTPDIR)
