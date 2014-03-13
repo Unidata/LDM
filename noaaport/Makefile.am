@@ -150,11 +150,12 @@ check-readnoaaport:	readnoaaport
 noaaportIngester.out:		noaaportIngester
 	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	-./noaaportIngester -b 3 -n -q /tmp/noaaportIngester-test.pq \
-	    <$(srcdir)/nwstgdump.data 2>&1 | cut -d ' ' -f 5- >$@
+	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 
 noaaportIngester.log:		noaaportIngester.out
-	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^ERROR: /d' <$? >$@
+	    cut -d ' ' -f 5- <$? | \
+	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^ERROR: /d' >$@
 
 check-noaaportIngester:		noaaportIngester.log
 	diff $(srcdir)/noaaportIngester.log.good $?
