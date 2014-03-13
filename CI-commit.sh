@@ -1,4 +1,5 @@
-# This script does the following:
+# This script is intended to be executed on the continuous-integration server
+# and does the following:
 #     1. Builds the package;
 #     2. Tests the package; and
 #     3. Creates a source-distribution.
