@@ -149,7 +149,7 @@ check-readnoaaport:	readnoaaport
 
 noaaportIngester.out:		noaaportIngester
 	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-	-./noaaportIngester -b 3 -n -q /tmp/noaaportIngester-test.pq \
+	-./noaaportIngester -l- -b 3 -n -q /tmp/noaaportIngester-test.pq \
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 
