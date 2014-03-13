@@ -154,11 +154,10 @@ noaaportIngester.out:		noaaportIngester
 	rm /tmp/noaaportIngester-test.pq
 
 noaaportIngester.log:		noaaportIngester.out
-	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^ERROR: /d' \
-	    $? >$@
+	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^ERROR: /d' <$? >$@
 
 check-noaaportIngester:		noaaportIngester.log
-	diff $(srcdir)/noaaportIngester.log.good noaaportIngester.log
+	diff $(srcdir)/noaaportIngester.log.good $?
 
 valgrind:		valgrind-readnoaaport valgrind-noaaportIngester
 
