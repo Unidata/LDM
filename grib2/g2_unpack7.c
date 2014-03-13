@@ -5,8 +5,9 @@
 #include "grib2.h"
 
 
-g2int g2_unpack7(unsigned char *cgrib,g2int *iofst,g2int igdsnum,g2int *igdstmpl,
-               g2int idrsnum,g2int *idrstmpl,g2int ndpts,g2float **fld)
+g2int g2_unpack7(unsigned char *cgrib,size_t sz,g2int *iofst,g2int igdsnum,
+        g2int *igdstmpl, g2int idrsnum,g2int *idrstmpl,g2int ndpts,
+        g2float **fld)
 /*$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    g2_unpack7 
@@ -25,12 +26,16 @@ g2int g2_unpack7(unsigned char *cgrib,g2int *iofst,g2int igdsnum,g2int *igdstmpl
 //                        PNG now allowed to use WMO Template no. 5.41
 // 2004-12-16  Taylor   - Added check on comunpack return code.
 // 2008-12-23  Wesley   - Initialize Number of data points unpacked
+// 2014-02-25  Steve Emmerson (UCAR/Unidata)  Add length-checking of "cgrib"
+//                                            array
 //
-// USAGE:    int g2_unpack7(unsigned char *cgrib,g2int *iofst,g2int igdsnum,
+// USAGE:    int g2_unpack7(unsigned char *cgrib,size_t sz,g2int *iofst,
+//                          g2int igdsnum,
 //                          g2int *igdstmpl, g2int idrsnum,
 //                          g2int *idrstmpl, g2int ndpts,g2float **fld)
 //   INPUT ARGUMENTS:
 //     cgrib    - char array containing Section 7 of the GRIB2 message
+//     sz       - Size of "cgrib" array in bytes
 //     iofst    - Bit offset of the beginning of Section 7 in cgrib.
 //     igdsnum  - Grid Definition Template Number ( see Code Table 3.0)
 //                ( Only used for DRS Template 5.51 )
@@ -72,10 +77,13 @@ g2int g2_unpack7(unsigned char *cgrib,g2int *iofst,g2int igdsnum,g2int *igdstmpl
       g2int ierr,isecnum;
       g2int ipos,lensec;
       g2float *lfld;
+      size_t bitsz = sz * 8;
 
       ierr=0;
       *fld=0;     /*NULL*/
 
+      if (*iofst + 40 > bitsz)
+          return 2;
       gbit(cgrib,&lensec,*iofst,32);        /* Get Length of Section*/
       *iofst=*iofst+32;    
       gbit(cgrib,&isecnum,*iofst,8);         /* Get Section Number*/
@@ -97,15 +105,21 @@ g2int g2_unpack7(unsigned char *cgrib,g2int *iofst,g2int igdsnum,g2int *igdstmpl
          *fld=lfld;
       }
 
-      if (idrsnum == 0) 
-        simunpack(cgrib+ipos,idrstmpl,ndpts,lfld);
+      if (idrsnum == 0)  {
+        ierr = simunpack(cgrib+ipos,sz-ipos,idrstmpl,ndpts,lfld);
+        if (ierr)
+          return ierr == 1 ? 6 : 7;
+      }
       else if (idrsnum == 2 || idrsnum == 3) {
-        if (comunpack(cgrib+ipos,lensec,idrsnum,idrstmpl,ndpts,lfld) != 0) {
+        if (comunpack(cgrib+ipos,sz-ipos,lensec,idrsnum,idrstmpl,ndpts,lfld)
+                != 0) {
           return 7;
         }
       }
       else if (idrsnum == 50) {            /* Spectral Simple*/
-        simunpack(cgrib+ipos,idrstmpl,ndpts-1,lfld+1);
+        ierr = simunpack(cgrib+ipos,sz-ipos,idrstmpl,ndpts-1,lfld+1);
+        if (ierr)
+          return ierr == 1 ? 6 : 7;
         g2_rdieee(idrstmpl+4,lfld+0,1);
       }
       else if (idrsnum == 51)              /*  Spectral complex*/

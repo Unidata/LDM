@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include "grib2.h"
 
-g2int g2_unpack2(unsigned char *cgrib,g2int *iofst,g2int *lencsec2,unsigned char **csec2)
+g2int g2_unpack2(unsigned char *cgrib, size_t sz, g2int *iofst,g2int *lencsec2,
+        unsigned char **csec2)
 /*//$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    g2_unpack2 
@@ -14,11 +15,13 @@ g2int g2_unpack2(unsigned char *cgrib,g2int *iofst,g2int *lencsec2,unsigned char
 // PROGRAM HISTORY LOG:
 // 2002-10-31  Gilbert
 // 2008-12-23  Wesley   - Initialize lencsec2 Length of Local Use data
+// 2014-02-25  Steve Emmerson - Add length-checking of "cgrib"
 //
-// USAGE:    int g2_unpack2(unsigned char *cgrib,g2int *iofst,g2int *lencsec2,
-//                          unsigned char **csec2)
+// USAGE:    int g2_unpack2(unsigned char *cgrib, size_t sz, g2int *iofst,
+//                      g2int *lencsec2, unsigned char **csec2)
 //   INPUT ARGUMENT LIST:
 //     cgrib    - char array containing Section 2 of the GRIB2 message
+//     sz       - size of "cgrib" array in bytes
 //     iofst    - Bit offset for the beginning of Section 2 in cgrib.
 //
 //   OUTPUT ARGUMENT LIST:      
@@ -43,11 +46,18 @@ g2int g2_unpack2(unsigned char *cgrib,g2int *iofst,g2int *lencsec2,unsigned char
 
       g2int ierr,isecnum;
       g2int lensec,ipos,j;
+      size_t bitsz = sz * 8;
 
       ierr=0;
       *lencsec2=0;
       *csec2=0;    /* NULL*/
 
+      if (*iofst + 40 > bitsz) {
+          fprintf(stderr, "Section too short to contain length and section "
+                  "number");
+          ierr=2;
+          return(ierr);
+      }
       gbit(cgrib,&lensec,*iofst,32);        /* Get Length of Section*/
       *iofst=*iofst+32;
       *lencsec2=lensec-5;
@@ -70,6 +80,11 @@ g2int g2_unpack2(unsigned char *cgrib,g2int *iofst,g2int *lencsec2,unsigned char
       }
       
       /*printf(" SAGIPO %d \n",(int)ipos);*/
+      if (ipos + *lencsec2 > sz) {
+          fprintf(stderr, "Section too short to contain required data");
+          ierr=2;
+          return(ierr);
+      }
       for (j=0;j<*lencsec2;j++) {
          *(*csec2+j)=cgrib[ipos+j];
       }

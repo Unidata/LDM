@@ -3,8 +3,8 @@
 #include "grib2.h"
 
 
-g2int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,g2int **ipdstmpl,
-               g2int *mappdslen,g2float **coordlist,g2int *numcoord)
+g2int g2_unpack4(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ipdsnum,
+        g2int **ipdstmpl, g2int *mappdslen,g2float **coordlist,g2int *numcoord)
 /*//$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    g2_unpack4 
@@ -16,12 +16,16 @@ g2int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,g2int **ipdstm
 // PROGRAM HISTORY LOG:
 // 2002-10-31  Gilbert
 // 2009-01-14  Vuong     Changed structure name template to gtemplate
+// 2014-02-25  Steve Emmerson (UCAR/Unidata) Add length-checking of "cgrib"
+//                                           array
 //
-// USAGE:    int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,
+// USAGE:    int g2_unpack4(unsigned char *cgrib,size_t sz,g2int *iofst,
+//                          g2int *ipdsnum,
 //                          g2int **ipdstmpl,g2int *mappdslen,
 //                          g2float **coordlist,g2int *numcoord)
 //   INPUT ARGUMENTS:
 //     cgrib    - Char array containing Section 4 of the GRIB2 message
+//     sz       - Size of "cgrib" array in bytes
 //     iofst    - Bit offset of the beginning of Section 4 in cgrib.
 //
 //   OUTPUT ARGUMENTS:      
@@ -63,11 +67,14 @@ g2int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,g2int **ipdstm
       g2int *lipdstmpl=0;
       g2float *lcoordlist;
       gtemplate *mappds;
+      size_t bitsz = sz * 8;
 
       ierr=0;
       *ipdstmpl=0;    /* NULL*/
       *coordlist=0;    /* NULL*/
 
+      if (*iofst + 40 > bitsz)
+          return 2;
       gbit(cgrib,&lensec,*iofst,32);        /* Get Length of Section*/
       *iofst=*iofst+32;
       gbit(cgrib,&isecnum,*iofst,8);         /* Get Section Number*/
@@ -81,6 +88,8 @@ g2int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,g2int **ipdstm
          return(ierr);
       }
 
+      if (*iofst + 32 > bitsz)
+          return 2;
       gbit(cgrib,numcoord,*iofst,16);    /* Get num of coordinate values*/
       *iofst=*iofst+16;
       gbit(cgrib,ipdsnum,*iofst,16);    /* Get Prod. Def Template num.*/
@@ -114,9 +123,13 @@ g2int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,g2int **ipdstm
       for (i=0;i<mappds->maplen;i++) {
         nbits=abs(mappds->map[i])*8;
         if ( mappds->map[i] >= 0 ) {
+          if (*iofst + nbits > bitsz)
+            return 2;
           gbit(cgrib,lipdstmpl+i,*iofst,nbits);
         }
         else {
+          if (*iofst + nbits > bitsz)
+            return 2;
           gbit(cgrib,&isign,*iofst,1);
           gbit(cgrib,lipdstmpl+i,*iofst+1,nbits-1);
           if (isign == 1) lipdstmpl[i]=-1*lipdstmpl[i];
@@ -141,9 +154,13 @@ g2int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,g2int **ipdstm
         for (i=*mappdslen;i<newlen;i++) {
           nbits=abs(mappds->ext[j])*8;
           if ( mappds->ext[j] >= 0 ) {
+            if (*iofst + nbits > bitsz)
+              return 2;
             gbit(cgrib,lipdstmpl+i,*iofst,nbits);
           }
           else {
+            if (*iofst + nbits > bitsz)
+              return 2;
             gbit(cgrib,&isign,*iofst,1);
             gbit(cgrib,lipdstmpl+i,*iofst+1,nbits-1);
             if (isign == 1) lipdstmpl[i]=-1*lipdstmpl[i];
@@ -174,6 +191,8 @@ g2int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,g2int **ipdstm
          else {
             *coordlist=lcoordlist;
          }
+        if (*iofst + 32**numcoord > bitsz)
+          return 2;
         gbits(cgrib,coordieee,*iofst,32,0,*numcoord);
         g2_rdieee(coordieee,*coordlist,*numcoord);
         free(coordieee);

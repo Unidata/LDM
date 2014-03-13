@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include "grib2.h"
 
-g2int g2_unpack6(unsigned char *cgrib,g2int *iofst,g2int ngpts,g2int *ibmap,
-               g2int **bmap)
+g2int g2_unpack6(unsigned char *cgrib,size_t sz,g2int *iofst,g2int ngpts,
+        g2int *ibmap, g2int **bmap)
 /*$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    g2_unpack6 
@@ -14,11 +14,14 @@ g2int g2_unpack6(unsigned char *cgrib,g2int *iofst,g2int ngpts,g2int *ibmap,
 //
 // PROGRAM HISTORY LOG:
 // 2002-10-31  Gilbert
+// 2014-02-25  Steve Emmerson (UCAR/Unidata)  Add length-checking of "cgrib"
+//                                            array
 //
-// USAGE:    int g2_unpack6(unsigned char *cgrib,g2int *iofst,g2int ngpts,
-//                          g2int *ibmap,g2int **bmap)
+// USAGE:    int g2_unpack6(unsigned char *cgrib,size_t sz, g2int *iofst,
+//                      g2int ngpts, g2int *ibmap,g2int **bmap)
 //   INPUT ARGUMENTS:
 //     cgrib    - char array containing Section 6 of the GRIB2 message
+//     sz       - Size of "cgrib" array in bytes
 //     iofst    - Bit offset of the beginning of Section 6 in cgrib.
 //     ngpts    - Number of grid points specified in the bit-map
 //
@@ -50,10 +53,13 @@ g2int g2_unpack6(unsigned char *cgrib,g2int *iofst,g2int ngpts,g2int *ibmap,
       g2int j,ierr,isecnum;
       g2int *lbmap=0;
       g2int *intbmap;
+      size_t bitsz = sz * 8;
 
       ierr=0;
       *bmap=0;    /*NULL*/
 
+      if (*iofst + 40 > bitsz)
+          return 2;
       *iofst=*iofst+32;    /* skip Length of Section*/
       gbit(cgrib,&isecnum,*iofst,8);         /* Get Section Number*/
       *iofst=*iofst+8; 
@@ -64,6 +70,8 @@ g2int g2_unpack6(unsigned char *cgrib,g2int *iofst,g2int ngpts,g2int *ibmap,
          return(ierr);
       }
 
+      if (*iofst + 8 > bitsz)
+          return 2;
       gbit(cgrib,ibmap,*iofst,8);    /* Get bit-map indicator*/
       *iofst=*iofst+8;
 
@@ -77,6 +85,8 @@ g2int g2_unpack6(unsigned char *cgrib,g2int *iofst,g2int ngpts,g2int *ibmap,
             *bmap=lbmap;
          }
          intbmap=(g2int *)calloc(ngpts,sizeof(g2int));  
+         if (*iofst + ngpts > bitsz)
+           return 2;
          gbits(cgrib,intbmap,*iofst,1,0,ngpts);
          *iofst=*iofst+ngpts;
          for (j=0;j<ngpts;j++) {

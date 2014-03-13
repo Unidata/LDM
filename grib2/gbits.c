@@ -1,6 +1,6 @@
 #include "grib2.h"
 
-void gbit(unsigned char *in,g2int *iout,g2int iskip,g2int nbyte)
+void gbit(const unsigned char *in,g2int *iout,g2int iskip,g2int nbyte)
 {
       gbits(in,iout,iskip,nbyte,(g2int)0,(g2int)1);
 }
@@ -11,7 +11,7 @@ void sbit(unsigned char *out,g2int *in,g2int iskip,g2int nbyte)
 }
 
 
-void gbits(unsigned char *in,g2int *iout,g2int iskip,g2int nbyte,g2int nskip,
+void gbits(const unsigned char *in,g2int *iout,g2int iskip,g2int nbyte,g2int nskip,
            g2int n)
 /*          Get bits - unpack bits:  Extract arbitrary size values from a
 /          packed bit string, right justifying each value in the unpacked

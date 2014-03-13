@@ -2,22 +2,25 @@
 #include <stdlib.h>
 #include "grib2.h"
 
-g2int g2_unpack1(unsigned char *cgrib,g2int *iofst,g2int **ids,g2int *idslen)
+g2int g2_unpack1(unsigned char *cgrib,size_t sz,g2int *iofst,g2int **ids,
+        g2int *idslen)
 /*//$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    g2_unpack1 
-//   PRGMMR: Gilbert         ORG: W/NP11    DATE: 2002-10-29
+//   PRGMMR: Gilbert         ORG: W/NP11       DATE: 2002-10-29
 //
 // ABSTRACT: This subroutine unpacks Section 1 (Identification Section)
 //           as defined in GRIB Edition 2.
 //
 // PROGRAM HISTORY LOG:
 // 2002-10-29  Gilbert
+// 2014-02-25  Steven Emmerson (UCAR/Unidata) Added length-checking of "cgrib"
 //
 // USAGE:    int g2_unpack1(unsigned char *cgrib,g2int *iofst,g2int **ids,
 //                          g2int *idslen)
 //   INPUT ARGUMENTS:
 //     cgrib    - char array containing Section 1 of the GRIB2 message
+//     sz       - Size of "cgrib" array in bytes
 //     iofst    - Bit offset for the beginning of Section 1 in cgrib.
 //
 //   OUTPUT ARGUMENTS:      
@@ -61,11 +64,17 @@ g2int g2_unpack1(unsigned char *cgrib,g2int *iofst,g2int **ids,g2int *idslen)
 
       g2int i,lensec,nbits,ierr,isecnum;
       g2int mapid[13]={2,2,1,1,1,2,1,1,1,1,1,1,1};
+      size_t bitsz = sz * 8;
 
       ierr=0;
       *idslen=13;
       *ids=0;
 
+      if (*iofst + 40 > bitsz) {
+         ierr=2;
+         fprintf(stderr,"g2_unpack1: Data is too short for Section 1.\n");
+         return(ierr);
+      }
       gbit(cgrib,&lensec,*iofst,32);        /* Get Length of Section*/
       *iofst=*iofst+32;
       gbit(cgrib,&isecnum,*iofst,8);         /* Get Section Number*/
@@ -91,6 +100,11 @@ g2int g2_unpack1(unsigned char *cgrib,g2int *iofst,g2int **ids,g2int *idslen)
       
       for (i=0;i<*idslen;i++) {
         nbits=mapid[i]*8;
+        if (*iofst + nbits > bitsz) {
+         ierr=2;
+         fprintf(stderr,"g2_unpack1: Data is too short for Section 1.\n");
+         return(ierr);
+        }
         gbit(cgrib,*ids+i,*iofst,nbits);
         *iofst=*iofst+nbits;
       }

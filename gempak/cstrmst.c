@@ -3,7 +3,7 @@
 #include "geminc.h"
 #include "gemprm.h"
 
-void cst_rmst ( char *str, char *substr, int *pos, 
+void cst_rmst ( char *str, const char *substr, int *pos,
 					char *outstr, int *iret )
 /************************************************************************
  * cst_rmst								*

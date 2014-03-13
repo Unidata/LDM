@@ -17,6 +17,7 @@ METRICS_FILE		= $(LOGS_DIR)/metrics.txt
 NETSTAT			= @NETSTAT@
 TOP			= @TOP@
 bin_PROGRAMS		= regutil
+sysconf_DATA		= registry.xml
 EXTRA_DIST              = \
     checkRegistry \
     installRegistry \
@@ -40,7 +41,8 @@ regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
 BUILT_SOURCES		= regpar.tab substPaths
 dist_man1_MANS		= regutil.1
-CLEANFILES		= regutil.out regpar.tab substPaths registry.h
+CLEANFILES		= regutil.out regpar.tab substPaths registry.h \
+			  registry.xml
 
 # "regpar.tab" fields:
 #
@@ -87,12 +89,13 @@ registry.h:	registry.hin registry.c $(srcdir)/regpar.tab.in
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
 
+registry.xml:	regpar.tab regutil
+	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
+	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf .
+
 install-exec-local:	regpar.tab regutil $(DESTDIR)$(sysconfdir)
 	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
 	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(DESTDIR)$(sysconfdir)
-
-$(DESTDIR)$(sysconfdir):
-	mkdir -p $@
 
 if HAVE_CUNIT
 check_PROGRAMS		= testRegistry

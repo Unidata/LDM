@@ -9,8 +9,9 @@
 
 struct StringBuf {
     char*       buf;
-    size_t      len;
-    size_t      max;
+    size_t      len;      /**< Number of characters in buffer including
+                               terminating NUL */
+    size_t      max;      /**< Size of buffer */
     int         errCode;
 };
 
@@ -32,7 +33,8 @@ strBuf_new(
     StringBuf*  strBuf = (StringBuf*)malloc(sizeof(StringBuf));
 
     if (NULL != strBuf) {
-        char*   buf = (char*)malloc(initMax+1);
+        size_t  max = initMax + 1; /* plus terminating NUL */
+        char*   buf = (char*)malloc(max);
 
         if (NULL == buf) {
             free(strBuf);
@@ -41,8 +43,8 @@ strBuf_new(
         else {
             *buf = 0;
             strBuf->buf = buf;
-            strBuf->len = 0;
-            strBuf->max = initMax;
+            strBuf->len = 1; /* terminating NUL */
+            strBuf->max = max;
             strBuf->errCode = 0;
         }
     }
@@ -74,32 +76,31 @@ strBuf_appendString(
         errCode = EINVAL;
     }
     else {
-        if (0 != strBuf->errCode) {
-            errCode = EINVAL;
+        size_t      newLen = strBuf->len + strlen(string);
+
+        if (newLen > strBuf->max) {
+            size_t      newMax = strBuf->max * 2;
+            char*       newBuf;
+
+            while (newLen > newMax)
+                newMax *= 2;
+
+            newBuf = (char*)realloc(strBuf->buf, newMax);
+
+            if (NULL == newBuf) {
+                strBuf->errCode = errno;
+                errCode = ENOMEM;
+            }
+            else {
+                strBuf->buf = newBuf;
+                strBuf->max = newMax;
+            }
         }
-        else {
-            size_t      len = strlen(string);
-            size_t      newLen = strBuf->len + len;
 
-            if (newLen > strBuf->max) {
-                size_t  newMax = (size_t)(1.618034*newLen + 0.5);
-                char*   newBuf = (char*)realloc(strBuf->buf, newMax+1);
+        if (0 == errCode) {
+            (void)strcpy(strBuf->buf+strBuf->len-1, string);
 
-                if (NULL == newBuf) {
-                    strBuf->errCode = errno;
-                    errCode = ENOMEM;
-                }
-                else {
-                    strBuf->buf = newBuf;
-                    strBuf->max = newMax;
-                }
-            }
-
-            if (0 == errCode) {
-                (void)strcpy(strBuf->buf+strBuf->len, string);
-
-                strBuf->len += len;
-            }
+            strBuf->len = newLen;
         }
     }
 
@@ -128,7 +129,7 @@ strBuf_clear(
     }
     else {
         strBuf->buf[0] = 0;
-        strBuf->len = 0;
+        strBuf->len = 1; /* terminating NUL */
         errCode = 0;
     }
 
@@ -159,6 +160,22 @@ strBuf_setToString(
         errCode = strBuf_appendString(strBuf, string);
 
     return errCode;
+}
+
+
+/**
+ * Returns the number of characters in a string-buffer excluding the terminating
+ * NUL.
+ *
+ * @param[in] strBuf  Pointer to the string-buffer.
+ * @return            The number of characters in the string-buffer excluding
+ *                    the terminating NUL.
+ */
+size_t
+strBuf_getLength(
+    const StringBuf* const strBuf)
+{
+    return strBuf->len - 1;
 }
 
 

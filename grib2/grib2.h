@@ -1,6 +1,7 @@
 #ifndef _grib2_H
 #define _grib2_H
 #include<stdio.h>
+#include <stddef.h>
 
 #define G2_VERSION "g2clib-1.2.0"
 /*                .      .    .                                       .
@@ -211,24 +212,25 @@ int dec_jpeg2000(char *injpc, g2int bufsize, g2int *outfld);
 int dec_png(unsigned char *pngbuf, g2int *width, g2int *height, char *cout);
 void seekgb(FILE *,g2int ,g2int ,g2int *,g2int *);
 g2int g2_info(unsigned char *,int,g2int *,g2int *,g2int *,g2int *);
-g2int g2_getfld(unsigned char *,g2int ,g2int ,g2int ,gribfield **);
+g2int g2_getfld(unsigned char *, size_t, g2int ,g2int ,g2int ,gribfield **);
 void g2_free(gribfield *);
-g2int g2_unpack1(unsigned char *cgrib,g2int *iofst,g2int **ids,g2int *idslen);
-g2int g2_unpack2(unsigned char *cgrib,g2int *iofst,g2int *lencsec2,
+g2int g2_unpack1(unsigned char *cgrib,size_t sz, g2int *iofst,g2int **ids,g2int *idslen);
+g2int g2_unpack2(unsigned char *cgrib, size_t, g2int *iofst,g2int *lencsec2,
                                 unsigned char **csec2);
-g2int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,g2int **igdstmpl,
+g2int g2_unpack3(unsigned char *cgrib, size_t sz, g2int *iofst,g2int **igds,g2int **igdstmpl,
                          g2int *mapgridlen,g2int **ideflist,g2int *idefnum);
-g2int g2_unpack4(unsigned char *cgrib,g2int *iofst,g2int *ipdsnum,g2int **ipdstmpl,
-               g2int *mappdslen,g2float **coordlist,g2int *numcoord);
-g2int g2_unpack5(unsigned char *cgrib,g2int *iofst,g2int *ndpts,g2int *idrsnum,
-               g2int **idrstmpl,g2int *mapdrslen);
-g2int g2_unpack6(unsigned char *cgrib,g2int *iofst,g2int ngpts,g2int *ibmap,
-               g2int **bmap);
-g2int g2_unpack7(unsigned char *cgrib,g2int *iofst,g2int igdsnum,g2int *igdstmpl,
+g2int g2_unpack4(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ipdsnum,
+               g2int **ipdstmpl, g2int *mappdslen,g2float **coordlist,
+               g2int *numcoord);
+g2int g2_unpack5(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ndpts,
+               g2int *idrsnum, g2int **idrstmpl,g2int *mapdrslen);
+g2int g2_unpack6(unsigned char *cgrib,size_t sz,g2int *iofst,g2int ngpts,
+               g2int *ibmap, g2int **bmap);
+g2int g2_unpack7(unsigned char *cgrib, size_t sz, g2int *iofst,g2int igdsnum,g2int *igdstmpl,
                g2int idrsnum,g2int *idrstmpl,g2int ndpts,g2float **fld);
 g2int jpcunpack(unsigned char *,g2int,g2int *,g2int, g2float *);
 g2int pngunpack(unsigned char *,g2int,g2int *,g2int, g2float *);
-g2int simunpack(unsigned char *,g2int *, g2int,g2float *);
+g2int simunpack(unsigned char *,size_t sz, g2int *, g2int,g2float *);
 g2int specunpack(unsigned char *,g2int *,g2int,g2int,g2int, g2int, g2float *);
 
 /*  Prototypes for packing API  */
@@ -239,7 +241,7 @@ int enc_png(char *,g2int ,g2int ,g2int ,char *);
 g2int g2_create(unsigned char *,g2int *,g2int *);
 g2int g2_addlocal(unsigned char *,unsigned char *,g2int );
 g2int g2_addgrid(unsigned char *,g2int *,g2int *,g2int *,g2int ); 
-g2int g2_addfield(unsigned char *,g2int ,g2int *,
+g2int g2_addfield(unsigned char *, size_t sz, g2int, g2int *,
                        g2float *,g2int ,g2int ,g2int *,
                        g2float *,g2int ,g2int ,g2int *);
 g2int g2_gribend(unsigned char *);
@@ -252,10 +254,9 @@ void specpack(g2float *,g2int,g2int,g2int,g2int,g2int *,unsigned char *,
 /*  Prototypes for supporting routines  */
 void cmplxpack(g2float *fld, g2int ndpts, g2int idrsnum, g2int *idrstmpl,
                                 unsigned char *cpack, g2int *lcpack);
-int comunpack(unsigned char *cpack, g2int lensec, g2int idrsnum,
+int comunpack(unsigned char *cpack, size_t sz, g2int lensec, g2int idrsnum,
                         g2int *idrstmpl, g2int ndpts, g2float *fld);
-g2int getdim(unsigned char *,g2int *,g2int *,g2int *);
-g2int getpoly(unsigned char *,g2int *,g2int *,g2int *);
+g2int getpoly(unsigned char *,size_t,g2int *,g2int *,g2int *);
 extern double int_power(double, g2int );
 extern void mkieee(g2float *,g2int *,g2int);
 int g2_reduce(g2int *, g2int *, g2int *, g2int *, g2int *,
@@ -271,9 +272,9 @@ extern gtemplate *extgridtemplate(g2int,g2int *);
 extern void simpack(g2float *,g2int,g2int *,unsigned char *,g2int *);
 extern void compack(g2float *,g2int,g2int,g2int *,unsigned char *,g2int *);
 void misspack(g2float *,g2int ,g2int ,g2int *, unsigned char *, g2int *);
-void gbit(unsigned char *,g2int *,g2int ,g2int );
+void gbit(const unsigned char *,g2int *,g2int ,g2int );
 void sbit(unsigned char *,g2int *,g2int ,g2int );
-void gbits(unsigned char *,g2int *,g2int ,g2int ,g2int ,g2int );
+void gbits(const unsigned char *,g2int *,g2int ,g2int ,g2int ,g2int );
 void sbits(unsigned char *,g2int *,g2int ,g2int ,g2int ,g2int );
 
 int g2_pack_gp(g2int *, g2int *, g2int *,

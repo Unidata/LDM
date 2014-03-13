@@ -28,7 +28,8 @@
 /*
  * The following is declared here because it isn't declared elsewhere.
  */
-extern void     grib2name(char *data, size_t sz, char *wmohead, char *ident);
+extern void     grib2name(char *data, size_t sz, char *wmohead, char *ident,
+        size_t identSize);
 
 datastore *dataheap=NULL;
 int nextfrag = 0, MAXFRAGS=1000;
@@ -109,161 +110,120 @@ process_prod(
     char*                       memheap,
     size_t                      heapsize,
     MD5_CTX*                    md5try,
-    LdmProductQueue* const      lpq,            /**< Pointer to LDM
-                                                 *   product-queue object */
+    LdmProductQueue* const      lpq,       /**< Pointer to LDM product-queue */
     psh_struct*                 psh,
     sbn_struct*                 sbn)
 {
-  int status;
-  product prod;
+    int              status;
+    product          prod;
+    char             prodId[1024];
 
-  static char myname[HOSTNAMESIZE];
-  static char _nohead[] = "_NOHEAD";
-  static feedtypet feedtext = IDS | DDPLUS;
-  static feedtypet feednonascii = HDS;
-  static feedtypet feedgraphic = HDS;
-  static feedtypet feedpoint = HDS;
-  static feedtypet feedgrid = HDS;
-/*
-static feedtypet feedtext = NTEXT;
-static feedtypet feedgraphic = NGRAPH;
-static feedtypet feedpoint = NPOINT;
-*/
-  static feedtypet feedngrid = NGRID;
+    if ((strcmp(psh->metadata, " !grib2/") == 0) &&
+            (psh->metaoff > 0) && (psh->metaoff < (heapsize - 16))) {
+        char*         cpos;
+        size_t        lengrib;
+        unsigned char b1, b2, b3, b4;
 
-  static feedtypet feedother = NOTHER;
-  static feedtypet feednids = NEXRAD;
-  static feedtypet feedtype = NIMAGE;
-  char PRODID[1024];
+        cpos = &memheap[psh->metaoff];
 
-  if ( ( strcmp(psh->metadata, " !grib2/") == 0 ) && 
-       ( psh->metaoff > 0 ) && ( psh->metaoff < ( heapsize - 16 ) ) )
-    {
-    char *cpos;
-    size_t lengrib;
-    unsigned char b1, b2, b3, b4;
-    static char GRIBstr[]="GRIB";
-
-    cpos = &memheap[psh->metaoff];
-
-    if ( memcmp ( cpos, GRIBstr, (size_t)4 ) == 0)
-       {
-       b1 = (unsigned char) cpos[12];
-       b2 = (unsigned char) cpos[13];
-       b3 = (unsigned char) cpos[14];
-       b4 = (unsigned char) cpos[15];
-       lengrib = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
-       grib2name(cpos, lengrib, PROD_NAME, &psh->metadata[2]);
-       udebug("%d PRODname %s meta %s",psh->metaoff,PROD_NAME,psh->metadata); 
-       }
+        if (memcmp(cpos, "GRIB", (size_t)4) == 0) {
+             b1 = (unsigned char) cpos[12];
+             b2 = (unsigned char) cpos[13];
+             b3 = (unsigned char) cpos[14];
+             b4 = (unsigned char) cpos[15];
+             lengrib = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
+             (void)grib2name(cpos, lengrib, PROD_NAME, &psh->metadata[2],
+                     sizeof(psh->metadata)-2);
+             udebug("%d PRODname %s meta %s",psh->metaoff,PROD_NAME,psh->metadata);
+        }
     }
 
-  sprintf (PRODID, "%s%s\0", PROD_NAME, psh->metadata);
+    (void)snprintf(prodId, sizeof(prodId), "%s%s", PROD_NAME, psh->metadata);
 
-  (void) strcpy (myname, ghostname ());
+    prod.info.origin = ghostname();
 
-  prod.info.origin = myname;
-
-  if (sbn->datastream == 6)	/* dvbs broadcast */
-    {
-      switch (psh->ptype)
-	{
-	case 1:
-	case 2:
-	case 3:
-	  prod.info.feedtype = feedtype;
-	  break;
-	case 4:
-	  prod.info.feedtype = feedngrid;
-	  /*switch ( psh->pcat )
-	     {
-	     case 4:
-	     prod.info.feedtype = feedngrid;
-	     break;
-	     case 5:
-	     prod.info.feedtype = feedpoint;
-	     break;
-	     default:
-	     prod.info.feedtype = feedother;
-	     } */
-	  break;
-	default:
-	  prod.info.feedtype = feedother;
-	}
+    if (sbn->datastream == 6) { /* dvbs broadcast */
+        switch (psh->ptype) {
+            case 1:
+            case 2:
+            case 3:
+                prod.info.feedtype = NIMAGE;
+                break;
+            case 4:
+                prod.info.feedtype = NGRID;
+                break;
+            default:
+                prod.info.feedtype = NOTHER;
+        }
     }
-  else if (psh->ptype < 4)
-    prod.info.feedtype = feedtype;
-  else
-    {
-      /* generally left with NWSTG data */
-      switch (psh->pcat)
-	{
-	case 1:
-	case 7:
-	  prod.info.feedtype = feedtext;
-	  break;
-	case 101:
-	case 107:
-	  prod.info.feedtype = feednonascii;
-	  break;
-	case 2:
-	  prod.info.feedtype = feedgraphic;
-	  break;
-	case 4:
-	  prod.info.feedtype = feedgrid;
-	  break;
-	case 5:
-	  prod.info.feedtype = feedpoint;
-	  break;
-	case 99:
-	  prod.info.feedtype = feednids;
-	  break;
-	default:
-	  prod.info.feedtype = feedother;
-	}
+    else if (psh->ptype < 4) {
+        prod.info.feedtype = NIMAGE;
     }
-  prod.info.seqno = nprod.seqno;
-  prod.data = memheap;
-  prod.info.sz = heapsize;
-  prod.info.ident = PRODID;
+    else {
+        /* Generally left with NWSTG data */
+        switch (psh->pcat) {
+            case 1:
+            case 7:
+                prod.info.feedtype = IDS | DDPLUS;
+                break;
+            case 101:
+            case 107:
+                prod.info.feedtype = HDS;
+                break;
+            case 2:
+                prod.info.feedtype = HDS;
+                break;
+            case 4:
+                prod.info.feedtype = HDS;
+                break;
+            case 5:
+                prod.info.feedtype = HDS;
+                break;
+            case 99:
+                prod.info.feedtype = NEXRAD;
+                break;
+            default:
+                prod.info.feedtype = NOTHER;
+        }
+    }
+    prod.info.seqno = nprod.seqno;
+    prod.data = memheap;
+    prod.info.sz = heapsize;
+    prod.info.ident = prodId;
 
-  if (prod.info.sz <= 0)
-    {
-      uerror ("heapsize is invalid %ld for prod %s\0", prod.info.sz,
-	      prod.info.ident);
-      return;
+    if (prod.info.sz == 0) {
+        uerror("heapsize is invalid %ld for prod %s", prod.info.sz,
+                prod.info.ident);
+        return;
     }
 
+    MD5Final (prod.info.signature, md5try);
+    uinfo("md5 checksum final");
 
-  MD5Final (prod.info.signature, md5try);
-  uinfo ("md5 checksum final\0");
-
-  if (strlen (prod.info.ident) == 0)
-    {
-      prod.info.ident = _nohead;
-      unotice ("strange header %s (%d) size %d %d\0", prod.info.ident,
-	       psh->ptype, prod.info.sz, prod.info.seqno);
+    if (strlen (prod.info.ident) == 0) {
+        prod.info.ident = "_NOHEAD";
+        unotice("strange header %s (%d) size %d %d", prod.info.ident,
+                 psh->ptype, prod.info.sz, prod.info.seqno);
     }
 
-  status = set_timestamp (&prod.info.arrival);
-  uinfo ("timestamp %ld\0", prod.info.arrival);
+    status = set_timestamp (&prod.info.arrival);
+    uinfo("timestamp %ld", prod.info.arrival);
 
-  status = lpqInsert(lpq, &prod);
-  if (status == 0) {
-      unotice ("%s inserted [cat %d type %d ccb %d/%d seq %d size %d]\0",
-	       prod.info.ident, psh->pcat, psh->ptype, psh->ccbmode,
-	       psh->ccbsubmode, prod.info.seqno, prod.info.sz);
-      return;
-  }
-  else if (3 == status) {
-    unotice ("%s already in queue [%d]\0", prod.info.ident, prod.info.seqno);
-  }
-  else {
-    uerror ("pqinsert failed [%d] %s\0", status, prod.info.ident);
-  }
+    status = lpqInsert(lpq, &prod);
+    if (status == 0) {
+        unotice("%s inserted [cat %d type %d ccb %d/%d seq %d size %d]",
+                 prod.info.ident, psh->pcat, psh->ptype, psh->ccbmode,
+                 psh->ccbsubmode, prod.info.seqno, prod.info.sz);
+        return;
+    }
+    else if (3 == status) {
+        unotice("%s already in queue [%d]", prod.info.ident, prod.info.seqno);
+    }
+    else {
+        uerror("pqinsert failed [%d] %s", status, prod.info.ident);
+    }
 
-
-  return;
+    return;
 }
 
 

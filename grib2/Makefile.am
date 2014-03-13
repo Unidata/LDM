@@ -25,6 +25,7 @@
 
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= \
+	ByteBuf.c ByteBuf.h \
 	cmplxpack.c \
 	compack.c \
 	comunpack.c \
@@ -54,7 +55,6 @@ lib_la_SOURCES		= \
 	g2_unpack6.c \
 	g2_unpack7.c \
 	gbits.c \
-	getdim.c \
 	getpoly.c \
 	grib2.h \
 	gridtemplates.c \

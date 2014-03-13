@@ -277,7 +277,7 @@ switch (sector)
 return s_byte(sector);
 }
 
-int wmo_to_gridid (char *TT, char *AA )
+int wmo_to_gridid (const char *TT, const char *AA )
 {
 int aval;
 

@@ -3,8 +3,8 @@
 #include "grib2.h"
 
 
-g2int g2_unpack5(unsigned char *cgrib,g2int *iofst,g2int *ndpts,g2int *idrsnum,
-               g2int **idrstmpl,g2int *mapdrslen)
+g2int g2_unpack5(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ndpts,
+        g2int *idrsnum,g2int **idrstmpl,g2int *mapdrslen)
 /*//$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    g2_unpack5 
@@ -16,11 +16,15 @@ g2int g2_unpack5(unsigned char *cgrib,g2int *iofst,g2int *ndpts,g2int *idrsnum,
 // PROGRAM HISTORY LOG:
 // 2002-10-31  Gilbert
 // 2009-01-14  Vuong     Changed structure name template to gtemplate
+// 2014-02-25  Steve Emmerson (UCAR/Unidata)   Add length-checking of "cgrib"
+//                                             array
 //
-// USAGE:    int g2_unpack5(unsigned char *cgrib,g2int *iofst,g2int *ndpts,
-//                          g2int *idrsnum,g2int **idrstmpl,g2int *mapdrslen)
+// USAGE:    int g2_unpack5(unsigned char *cgrib,size_t sz,g2int *iofst,
+//                      g2int *ndpts, g2int *idrsnum,g2int **idrstmpl,
+//                      g2int *mapdrslen)
 //   INPUT ARGUMENTS:
 //     cgrib    - char array containing Section 5 of the GRIB2 message
+//     sz       - Size of "cgrib" array in bytes
 //     iofst    - Bit offset for the beginning of Section 5 in cgrib.
 //
 //   OUTPUT ARGUMENTS:      
@@ -55,10 +59,13 @@ g2int g2_unpack5(unsigned char *cgrib,g2int *iofst,g2int *ndpts,g2int *idrsnum,
       g2int lensec,isign,newlen;
       g2int *lidrstmpl=0;
       gtemplate *mapdrs;
+      size_t bitsz = sz * 8;
 
       ierr=0;
       *idrstmpl=0;       /*NULL*/
 
+      if (*iofst + 40 > bitsz)
+          return 2;
       gbit(cgrib,&lensec,*iofst,32);        /* Get Length of Section*/
       *iofst=*iofst+32;
       gbit(cgrib,&isecnum,*iofst,8);         /* Get Section Number*/
@@ -72,6 +79,8 @@ g2int g2_unpack5(unsigned char *cgrib,g2int *iofst,g2int *ndpts,g2int *idrsnum,
          return(ierr);
       }
 
+      if (*iofst + 48 > bitsz)
+          return 2;
       gbit(cgrib,ndpts,*iofst,32);    /* Get num of data points*/
       *iofst=*iofst+32;
       gbit(cgrib,idrsnum,*iofst,16);     /* Get Data Rep Template Num.*/
@@ -105,9 +114,13 @@ g2int g2_unpack5(unsigned char *cgrib,g2int *iofst,g2int *ndpts,g2int *idrsnum,
       for (i=0;i<mapdrs->maplen;i++) {
         nbits=abs(mapdrs->map[i])*8;
         if ( mapdrs->map[i] >= 0 ) {
+          if (*iofst + nbits > bitsz)
+            return 2;
           gbit(cgrib,lidrstmpl+i,*iofst,nbits);
         }
         else {
+          if (*iofst + nbits > bitsz)
+            return 2;
           gbit(cgrib,&isign,*iofst,1);
           gbit(cgrib,lidrstmpl+i,*iofst+1,nbits-1);
           if (isign == 1) lidrstmpl[i]=-1*lidrstmpl[i];
@@ -132,9 +145,13 @@ g2int g2_unpack5(unsigned char *cgrib,g2int *iofst,g2int *ndpts,g2int *idrsnum,
         for (i=*mapdrslen;i<newlen;i++) {
           nbits=abs(mapdrs->ext[j])*8;
           if ( mapdrs->ext[j] >= 0 ) {
+            if (*iofst + nbits > bitsz)
+              return 2;
             gbit(cgrib,lidrstmpl+i,*iofst,nbits);
           }
           else {
+            if (*iofst + nbits > bitsz)
+              return 2;
             gbit(cgrib,&isign,*iofst,1);
             gbit(cgrib,lidrstmpl+i,*iofst+1,nbits-1);
             if (isign == 1) lidrstmpl[i]=-1*lidrstmpl[i];

@@ -148,7 +148,8 @@ if ( ( ier = g2_info ( curr_g2.cgrib2, curr_g2.mlength, listsec0,listsec1, &(cur
 prods[0] = '\0';
 for ( n=0; n < curr_g2.field_tot; n++)
    {
-   ier=g2_getfld( curr_g2.cgrib2, n+1, unpack, expand, &curr_g2.gfld);
+   ier=g2_getfld( curr_g2.cgrib2, curr_g2.mlength, n+1, unpack, expand,
+           &curr_g2.gfld);
 
    /* initialize strings in geminfo structure */
    memset ( curr_gem.cproj, 0, sizeof(curr_gem.cproj));

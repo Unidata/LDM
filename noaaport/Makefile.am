@@ -24,6 +24,7 @@ EXTRA_DIST 		= \
 	ldmProductQueue.hin \
 	mainpage.h \
 	multicastReader.hin \
+	noaaportIngester.log.good \
 	nwstgdump.data \
 	productMaker.hin \
 	reader.hin \
@@ -110,6 +111,8 @@ if WANT_RETRANS
     TAGS_FILES		+= retrans/*.c retrans/*.h
 endif
 
+CLEANFILES	= *.out *.log
+
 $(srcdir)/html \
 $(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
 	cd $(srcdir) && doxygen Doxyfile
@@ -117,14 +120,16 @@ $(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
 .hin.h:
 	./extractDecls $*.hin $*.c >$@.tmp
 	mv -f $@.tmp $@
-shmfifo.h:		shmfifo.c shmfifo.hin extractDecls
-ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin extractDecls
+
 fifo.h:			fifo.c fifo.hin extractDecls
-reader.h:		reader.c reader.hin extractDecls
 fileReader.h:		fileReader.c fileReader.hin extractDecls
+getFacilityName.h:	getFacilityName.c getFacilityName.hin extractDecls
+Grib2Decoder.h:		Grib2Decoder.c Grib2Decoder.hin extractDecls
+ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin extractDecls
 multicastReader.h:	multicastReader.c multicastReader.hin extractDecls
 productMaker.h:		productMaker.c productMaker.hin extractDecls
-getFacilityName.h:	getFacilityName.c getFacilityName.hin extractDecls
+reader.h:		reader.c reader.hin extractDecls
+shmfifo.h:		shmfifo.c shmfifo.hin extractDecls
 
 .c.i:
 	$(COMPILE) -E $< >$@
@@ -141,11 +146,19 @@ check-readnoaaport:	readnoaaport
 	./readnoaaport -nl- -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
-check-noaaportIngester:	noaaportIngester
+
+noaaportIngester.out:		noaaportIngester
 	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-	./noaaportIngester -b 3 -q /tmp/noaaportIngester-test.pq \
-	    <$(srcdir)/nwstgdump.data
+	-./noaaportIngester -b 3 -n -q /tmp/noaaportIngester-test.pq \
+	    <$(srcdir)/nwstgdump.data 2>&1 | cut -d ' ' -f 5- >$@
 	rm /tmp/noaaportIngester-test.pq
+
+noaaportIngester.log:		noaaportIngester.out
+	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^ERROR: /d' \
+	    $? >$@
+
+check-noaaportIngester:		noaaportIngester.log
+	diff $(srcdir)/noaaportIngester.log.good noaaportIngester.log
 
 valgrind:		valgrind-readnoaaport valgrind-noaaportIngester
 
@@ -166,7 +179,7 @@ if HAVE_SU
 	@echo >/dev/tty
 endif
 endif
-	
+
 valgrind-noaaportIngester:	noaaportIngester
 	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \

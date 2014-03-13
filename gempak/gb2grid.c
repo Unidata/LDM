@@ -81,7 +81,7 @@ void gb2_grid ( Gribmsg *g2, int iuscal,
     tmpfld=g2->gfld;
     num=g2->gfld->ifldnum;
 
-    iret2 = (int)g2_getfld( g2->cgrib2, num, unpack, expand, &g2->gfld);
+    iret2 = (int)g2_getfld( g2->cgrib2, g2->mlength, num, unpack, expand, &g2->gfld);
     if ( iret2 != 0 ) {
        *iret=-33;
        g2->gfld=tmpfld;

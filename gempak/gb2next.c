@@ -76,7 +76,7 @@ void gb2_next( Gribmsg *cmsg, int *ivers , int *iret )
 
     if ( prev == 1  &&  n < (int)cmsg->field_tot ) {
          n++;
-	 *iret=(int)g2_getfld(cmsg->cgrib2,n,unpack,expand,&(cmsg->gfld));
+	 *iret=(int)g2_getfld(cmsg->cgrib2,cmsg->mlength,n,unpack,expand,&(cmsg->gfld));
          if ( *iret != 0 ) *iret=-25;
          return;
     }
@@ -136,7 +136,8 @@ void gb2_next( Gribmsg *cmsg, int *ivers , int *iret )
              *  unpack metadata for first field.
              */
             n=1;
-            *iret=(int)g2_getfld(cmsg->cgrib2,n,unpack,expand,&(cmsg->gfld));
+            *iret=(int)g2_getfld(cmsg->cgrib2,cmsg->mlength,n,unpack,expand,
+                    &(cmsg->gfld));
             if ( *iret != 0 ) *iret=-25;
         }
         else {

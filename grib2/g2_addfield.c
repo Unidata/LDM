@@ -3,7 +3,7 @@
 #include "grib2.h"
 
 
-g2int g2_addfield(unsigned char *cgrib,g2int ipdsnum,g2int *ipdstmpl,
+g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
                 g2float *coordlist,g2int numcoord,g2int idrsnum,g2int *idrstmpl,
                 g2float *fld,g2int ngrdpts,g2int ibmap,g2int *bmap)
 /*$$$  SUBPROGRAM DOCUMENTATION BLOCK
@@ -319,7 +319,7 @@ g2int g2_addfield(unsigned char *cgrib,g2int ipdsnum,g2int *ipdstmpl,
         mkieee(pfld+0,idrstmpl+4,1);  /* ensure RE(0,0) value is IEEE format*/
       }
       else if (idrsnum == 51) {         /*  Sperical Harmonic Complex Packing */
-        getpoly(cgrib+lpos3,&JJ,&KK,&MM);
+        getpoly(cgrib+lpos3,sz-lpos3,&JJ,&KK,&MM);
         if ( JJ!=0 && KK!=0 && MM!=0 )
            specpack(pfld,ndpts,JJ,KK,MM,idrstmpl,cpack,&lcpack);
         else {

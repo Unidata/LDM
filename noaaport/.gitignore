@@ -40,3 +40,5 @@ configure
 configure
 acq_ldm_getshm
 acq_ldm_freeshm
+Grib2Decoder.h
+*.out

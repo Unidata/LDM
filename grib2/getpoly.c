@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include "grib2.h"
 
-g2int g2_unpack3(unsigned char *,g2int *,g2int **,g2int **,
+g2int g2_unpack3(unsigned char *,size_t,g2int *,g2int **,g2int **,
                          g2int *,g2int **,g2int *);
 
-g2int getpoly(unsigned char *csec3,g2int *jj,g2int *kk,g2int *mm)
+g2int getpoly(unsigned char *csec3,size_t sz,g2int *jj,g2int *kk,g2int *mm)
 /*$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    getpoly 
@@ -17,10 +17,13 @@ g2int getpoly(unsigned char *csec3,g2int *jj,g2int *kk,g2int *mm)
 //
 // PROGRAM HISTORY LOG:
 // 2002-12-11  Gilbert
+// 2014-02-25  Steve Emmerson   Add length-checking of "csec3" array
 //
-// USAGE:    int getpoly(unsigned char *csec3,g2int *jj,g2int *kk,g2int *mm)
+// USAGE:    int getpoly(unsigned char *csec3,size_t sz,g2int *jj,g2int *kk,
+//                      g2int *mm)
 //   INPUT ARGUMENTS:
 //     csec3    - Character array that contains the packed GRIB2 GDS
+//     sz       - Size of "csec3" array in bytes
 //
 //   OUTPUT ARGUMENTS:      
 //         JJ   = J - pentagonal resolution parameter
@@ -42,7 +45,7 @@ g2int getpoly(unsigned char *csec3,g2int *jj,g2int *kk,g2int *mm)
       g2int   iofst,igdtlen,num_opt,jerr;
 
       iofst=0;       /* set offset to beginning of section*/
-      jerr=g2_unpack3(csec3,&iofst,&igds,&igdstmpl,
+      jerr=g2_unpack3(csec3,sz,&iofst,&igds,&igdstmpl,
                       &igdtlen,&list_opt,&num_opt);
       if (jerr == 0) {
          switch ( igds[4] )     /*  Template number*/

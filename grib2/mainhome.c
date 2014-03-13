@@ -81,7 +81,7 @@ int main(void)
 //    iret=g2_unpack2(mug,&iof,&idslen,&cout);
 //    iret=g2_unpack3(mug,&iof,&ids,&igdt,&igdtlen,&def,&deflen);
 //    iret=g2_unpack4(mug,&iof,&ip,&ipdt,&ipdtlen,&crd,&crdlen);
-    iret=g2_unpack5(mug,&iof,&ndpts,&drtnum,&idrt,&idrtlen);
+    iret=g2_unpack5(mug,sizeof(mug),&iof,&ndpts,&drtnum,&idrt,&idrtlen);
     printf(" SAGRET = %d %d %d %d\n",iret,(int)ndpts,(int)idrtlen,(int)drtnum);
 //    tmp=*ids;
 //    for (j=0;j<5;j++) {

@@ -1449,14 +1449,14 @@ void 	cst_rmbl ( 	char	*str,
 			int	*length,
 			int	*iret );
 
-void 	cst_rmst ( 	char	*str,
-			char	*substr,
-			int	*pos,
-			char	*outstr,
-			int	*iret );
+void 	cst_rmst ( 	char	        *str,
+			const char	*substr,
+			int	        *pos,
+			char	        *outstr,
+			int	        *iret );
 
 void	cst_rmtag(	const char	*tag,
-			char		*str,
+			const char	*str,
 			int		*iret );
 
 void 	cst_rnan ( 	char    *string,

@@ -3,8 +3,8 @@
 #include "grib2.h"
 
 
-g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
-                gribfield **gfld)
+g2int g2_getfld(unsigned char *cgrib,size_t sz,g2int ifldnum,g2int unpack,
+        g2int expand, gribfield **gfld)
 /*$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    g2_getfld 
@@ -24,12 +24,14 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
 //
 // PROGRAM HISTORY LOG:
 // 2002-10-28  Gilbert
+// 2014-02-27  Steve Emmerson (UCAR/Unidata)  Added length-checking of data
 //
 // USAGE:    #include "grib2.h"
-//           int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,
-//                         g2int expand,gribfield **gfld)
+//           int g2_getfld(unsigned char *cgrib,size_t sz,g2int ifldnum,
+//                      g2int unpack, g2int expand,gribfield **gfld)
 //   INPUT ARGUMENTS:
 //     cgrib    - Character pointer to the GRIB2 message
+//     sz       - Length of "cgrib" data in bytes
 //     ifldnum  - Specifies which field in the GRIB2 message to return.
 //     unpack   - Boolean value indicating whether to unpack bitmap/data field
 //                1 = unpack bitmap (if present) and data values
@@ -273,10 +275,12 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
         return(ierr);
       }
 /*
-//  Check for beginning of GRIB message in the first 100 bytes
-*/
+ *  Check for beginning of GRIB message in the first 100 bytes or until the
+ *  end of the GRIB2 message, whichever comes first.
+ */
       istart=-1;
-      for (j=0;j<100;j++) {
+      n = 100 < sz ? 100 : sz;
+      for (j=0;j<n;j++) {
         if (cgrib[j]=='G' && cgrib[j+1]=='R' &&cgrib[j+2]=='I' && 
             cgrib[j+3]=='B') {
           istart=j;
@@ -291,6 +295,12 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
 /*
 //  Unpack Section 0 - Indicator Section 
 */
+      lensec0=16;
+      if (istart + lensec0 > sz) {
+        printf("g2_getfld:  GRIB message is too small to have a Section 0.\n");
+        ierr=1;
+        return(ierr);
+      }
       iofst=8*(istart+6);
       gbit(cgrib,&disc,iofst,8);     /* Discipline*/
       iofst=iofst+8;
@@ -299,7 +309,6 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
       iofst=iofst+32;
       gbit(cgrib,&lengrib,iofst,32);        /* Length of GRIB message*/
       iofst=iofst+32;
-      lensec0=16;
       ipos=istart+lensec0;
 /*
 //  Currently handles only GRIB Edition 2.
@@ -316,6 +325,11 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
 */
       for (;;) {
         /*    Check to see if we are at end of GRIB message*/
+        if (ipos + 4 > sz) {
+          printf("g2_getfld: GRIB2 message too short to have ending '7777'.\n");
+          ierr=7;
+          return(ierr);
+        }
         if (cgrib[ipos]=='7' && cgrib[ipos+1]=='7' && cgrib[ipos+2]=='7' && 
             cgrib[ipos+3]=='7') {
           ipos=ipos+4;
@@ -328,7 +342,12 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
           break;
         }
         /*     Get length of Section and Section number*/
-        iofst=(ipos-1)*8;
+        if (ipos + 5 > sz) {
+          printf("g2_getfld: GRIB2 message too short to have Section length "
+                  "and number.\n");
+          ierr=7;
+          return(ierr);
+        }
         iofst=ipos*8;
         gbit(cgrib,&lensec,iofst,32);        /* Get Length of Section*/
         iofst=iofst+32;
@@ -348,7 +367,7 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
         */
         if (isecnum == 1) {
           iofst=iofst-40;       /* reset offset to beginning of section*/
-          jerr=g2_unpack1(cgrib,&iofst,&lgfld->idsect,&lgfld->idsectlen);
+          jerr=g2_unpack1(cgrib,sz,&iofst,&lgfld->idsect,&lgfld->idsectlen);
           if (jerr !=0 ) {
             ierr=15;
             return(ierr);
@@ -361,7 +380,7 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
         if (isecnum == 2) {
           iofst=iofst-40;       /* reset offset to beginning of section*/
           if (lgfld->local!=0) free(lgfld->local);
-          jerr=g2_unpack2(cgrib,&iofst,&lgfld->locallen,&lgfld->local);
+          jerr=g2_unpack2(cgrib,sz,&iofst,&lgfld->locallen,&lgfld->local);
           if (jerr != 0) {
             ierr=16;
             return(ierr);
@@ -376,7 +395,7 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
           iofst=iofst-40;       /* reset offset to beginning of section*/
           if (lgfld->igdtmpl!=0) free(lgfld->igdtmpl);
           if (lgfld->list_opt!=0) free(lgfld->list_opt);
-          jerr=g2_unpack3(cgrib,&iofst,&igds,&lgfld->igdtmpl,
+          jerr=g2_unpack3(cgrib,sz,&iofst,&igds,&lgfld->igdtmpl,
                           &lgfld->igdtlen,&lgfld->list_opt,&lgfld->num_opt);
           if (jerr == 0) {
             have3=1;
@@ -404,7 +423,7 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
             lgfld->unpacked=unpack;
             lgfld->expanded=0;
             iofst=iofst-40;       /* reset offset to beginning of section*/
-            jerr=g2_unpack4(cgrib,&iofst,&lgfld->ipdtnum,
+            jerr=g2_unpack4(cgrib,sz,&iofst,&lgfld->ipdtnum,
                             &lgfld->ipdtmpl,&lgfld->ipdtlen,&lgfld->coord_list,
                             &lgfld->num_coord);
             if (jerr == 0)
@@ -421,7 +440,7 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
         */
         if (isecnum == 5 && numfld == ifldnum) {
           iofst=iofst-40;       /* reset offset to beginning of section*/
-          jerr=g2_unpack5(cgrib,&iofst,&lgfld->ndpts,&lgfld->idrtnum,
+          jerr=g2_unpack5(cgrib,sz,&iofst,&lgfld->ndpts,&lgfld->idrtnum,
                           &lgfld->idrtmpl,&lgfld->idrtlen);
           if (jerr == 0)
             have5=1;
@@ -439,7 +458,7 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
           if (unpack) {   /* unpack bitmap*/
             iofst=iofst-40;           /* reset offset to beginning of section*/
             bmpsave=lgfld->bmap;      /* save pointer to previous bitmap*/
-            jerr=g2_unpack6(cgrib,&iofst,lgfld->ngrdpts,&lgfld->ibmap,
+            jerr=g2_unpack6(cgrib,sz,&iofst,lgfld->ngrdpts,&lgfld->ibmap,
                          &lgfld->bmap);
             if (jerr == 0) {
               have6=1;
@@ -460,6 +479,8 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
             }
           }
           else {    /* do not unpack bitmap*/
+            if (iofst + 8 > sz*8)
+              return 7;
             gbit(cgrib,&lgfld->ibmap,iofst,8);      /* Get BitMap Indicator*/
             have6=1;
           }
@@ -470,7 +491,7 @@ g2int g2_getfld(unsigned char *cgrib,g2int ifldnum,g2int unpack,g2int expand,
         */
         if (isecnum==7 && numfld==ifldnum && unpack) {
           iofst=iofst-40;       /* reset offset to beginning of section*/
-          jerr=g2_unpack7(cgrib,&iofst,lgfld->igdtnum,lgfld->igdtmpl,
+          jerr=g2_unpack7(cgrib,sz,&iofst,lgfld->igdtnum,lgfld->igdtmpl,
                           lgfld->idrtnum,lgfld->idrtmpl,lgfld->ndpts,
                           &lgfld->fld);
           if (jerr == 0) {

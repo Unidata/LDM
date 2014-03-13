@@ -3,8 +3,8 @@
 #include "grib2.h"
 
 
-g2int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,g2int **igdstmpl,
-                         g2int *mapgridlen,g2int **ideflist,g2int *idefnum)
+g2int g2_unpack3(unsigned char *cgrib, size_t sz, g2int *iofst,g2int **igds,
+        g2int **igdstmpl, g2int *mapgridlen,g2int **ideflist,g2int *idefnum)
 /*//$$$  SUBPROGRAM DOCUMENTATION BLOCK
 //                .      .    .                                       .
 // SUBPROGRAM:    g2_unpack3 
@@ -16,12 +16,15 @@ g2int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,g2int **igdstmpl
 // PROGRAM HISTORY LOG:
 // 2002-10-31  Gilbert
 // 2009-01-14  Vuong     Changed structure name template to gtemplate
+// 2014-02-25  Steve Emmerson  Add length-checking to "cgrib" array
 //
-// USAGE:    int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,
+// USAGE:    int g2_unpack3(unsigned char *cgrib, size_t sz, g2int *iofst,
+//                          g2int **igds,
 //                          g2int **igdstmpl,g2int *mapgridlen,
 //                          g2int **ideflist,g2int *idefnum)
 //   INPUT ARGUMENTS:
 //     cgrib    - Char array ontaining Section 3 of the GRIB2 message
+//     sz       - Size of "cgrib" array in bytes
 //     iofst    - Bit offset for the beginning of Section 3 in cgrib.
 //
 //   OUTPUT ARGUMENTS:      
@@ -72,12 +75,15 @@ g2int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,g2int **igdstmpl
       g2int lensec,ibyttem=0,isign,newlen;
       g2int *ligds,*ligdstmpl=0,*lideflist=0;
       gtemplate *mapgrid;
+      size_t bitsz = sz * 8;
 
       ierr=0;
       *igds=0;       /* NULL*/
       *igdstmpl=0;       /* NULL*/
       *ideflist=0;       /* NULL*/
 
+      if (*iofst + 40 > bitsz)
+          return 2;
       gbit(cgrib,&lensec,*iofst,32);        /* Get Length of Section*/
       *iofst=*iofst+32;
       gbit(cgrib,&isecnum,*iofst,8);         /* Get Section Number*/
@@ -94,6 +100,8 @@ g2int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,g2int **igdstmpl
       ligds=(g2int *)calloc(5,sizeof(g2int));
       *igds=ligds;
 
+      if (*iofst + 72 > bitsz)
+          return 2;
       gbit(cgrib,ligds+0,*iofst,8);     /* Get source of Grid def.*/
       *iofst=*iofst+8;
       gbit(cgrib,ligds+1,*iofst,32);    /* Get number of grid pts.*/
@@ -136,9 +144,13 @@ g2int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,g2int **igdstmpl
         for (i=0;i<*mapgridlen;i++) {
           nbits=abs(mapgrid->map[i])*8;
           if ( mapgrid->map[i] >= 0 ) {
+            if (*iofst + nbits > bitsz)
+                return 2;
             gbit(cgrib,ligdstmpl+i,*iofst,nbits);
           }
           else {
+            if (*iofst + nbits > bitsz)
+                return 2;
             gbit(cgrib,&isign,*iofst,1);
             gbit(cgrib,ligdstmpl+i,*iofst+1,nbits-1);
             if (isign == 1) ligdstmpl[i]=-1*ligdstmpl[i];
@@ -164,9 +176,13 @@ g2int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,g2int **igdstmpl
           for (i=*mapgridlen;i<newlen;i++) {
             nbits=abs(mapgrid->ext[j])*8;
             if ( mapgrid->ext[j] >= 0 ) {
+              if (*iofst + nbits > bitsz)
+                return 2;
               gbit(cgrib,ligdstmpl+i,*iofst,nbits);
             }
             else {
+              if (*iofst + nbits > bitsz)
+                return 2;
               gbit(cgrib,&isign,*iofst,1);
               gbit(cgrib,ligdstmpl+i,*iofst+1,nbits-1);
               if (isign == 1) ligdstmpl[i]=-1*ligdstmpl[i];
@@ -202,6 +218,8 @@ g2int g2_unpack3(unsigned char *cgrib,g2int *iofst,g2int **igds,g2int **igdstmpl
          else {
             *ideflist=lideflist;
          }
+         if (*iofst + nbits**idefnum > bitsz)
+            return 2;
          gbits(cgrib,lideflist,*iofst,nbits,0,*idefnum);
          *iofst=*iofst+(nbits*(*idefnum));
       }

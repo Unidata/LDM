@@ -100,7 +100,7 @@ strBuf_strerror(
 
 
 /*
- * Releases any resouces associated with a StringBuf.
+ * Releases any resources associated with a StringBuf.
  *
  * Arguments:
  *	strBuf		Point to the SringBuf or NULL.
