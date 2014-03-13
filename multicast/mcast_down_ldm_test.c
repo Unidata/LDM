@@ -24,33 +24,41 @@
 #include <stdlib.h>
 
 static void missed_product_func(
-    Mdl* const                  mdl,
-    const signaturet* const     signature)
+    Mdl* const  mdl,
+    const void* file_entry)
 {
 }
 
-void test_create_and_execute()
+void test_mdl_createAndExecute()
 {
-    int status;
-    pqueue*     pq = (pqueue*)1;
+    int                 status;
+    pqueue*             pq = (pqueue*)1;
+    const char* const   addr = "224.0.0.1";
+    const int           port = 1;
+    int                 (*int_func)() = (int(*)())1;
+    void                (*void_func)() = (void(*)())2;
 
-#if 0
-    do_sound_ExpectAndReturn("FIZZ", 0, cmp_cstr /*or NULL*/); /* limit 100 */
-#endif
-    status = mdl_create_and_execute(NULL, NULL);
-    OP_ASSERT_EQUAL_LONG(EINVAL, status);
+    status = mdl_createAndExecute(NULL, (void*)1, addr, 0);
+    OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
-    status = mdl_create_and_execute(NULL, (void*)1);
-    OP_ASSERT_EQUAL_LONG(EINVAL, status);
+    status = mdl_createAndExecute((void*)1, NULL, (void*)1, 0);
+    OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
-    status = mdl_create_and_execute((void*)1, NULL);
-    OP_ASSERT_EQUAL_LONG(EINVAL, status);
+    vcmtpReceiver_new_ExpectAndReturn(
+            NULL, int_func, int_func, void_func, addr, port,      NULL,  EINVAL,
+            NULL, NULL,     NULL,     NULL,      NULL, cmp_short, NULL);
+    status = mdl_createAndExecute((void*)1, (void*)1, NULL, port);
+    OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
-    status = mdl_create_and_execute(pq, missed_product_func, );
-    OP_ASSERT_EQUAL_LONG(0, status);
+    vcmtpReceiver_new_ExpectAndReturn(
+            NULL, int_func, int_func, void_func, addr,     port,      NULL,  0,
+            NULL, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
+    vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
+    status = mdl_createAndExecute(pq, missed_product_func, addr, port);
+    OP_ASSERT_EQUAL_INT(0, status);
 
     OP_VERIFY();
 }
@@ -60,7 +68,7 @@ int main(
     char**	argv)
 {
     opmock_test_suite_reset();
-    opmock_register_test(test_create_and_execute, "test_create_and_execute");
+    opmock_register_test(test_mdl_createAndExecute, "test_mdl_createAndExecute");
     opmock_test_suite_run();
-    return 0;
+    return opmock_get_number_of_errors() != 0;
 }

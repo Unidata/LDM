@@ -13,15 +13,24 @@
 
 #include "PerFileNotifier.h"
 #include "vcmtp_c_api.h"
+#include "log.h"
+
+#include <vcmtp.h>
+
+#include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>
 
-PerFileNotifier::PerFileNotifier(BofFunc bof_func, EofFunc eof_func,
-        MissedFileFunc missed_file_func, void* extra_arg)
-:   bof_func(bof_func),
+PerFileNotifier::PerFileNotifier(
+    BofFunc             bof_func,
+    EofFunc             eof_func,
+    MissedFileFunc      missed_file_func,
+    void*               obj)
+:
+    bof_func(bof_func),
     eof_func(eof_func),
     missed_file_func(missed_file_func),
-    extra_arg(extra_arg)
+    obj(obj)
 {
     if (!bof_func)
         throw std::invalid_argument("Null argument: bof_func");
@@ -31,29 +40,34 @@ PerFileNotifier::PerFileNotifier(BofFunc bof_func, EofFunc eof_func,
         throw std::invalid_argument("Null argument: missed_file_func");
 }
 
-static const file_metadata* file_metadata_init(file_metadata& info,
-        const VcmtpSenderMessage& msg) {
-    info.length = msg.data_len;
-    info.time = msg.time_stamp;
-    (void)strncpy(info.name, msg.text, sizeof(info.name));
-    info.name[sizeof(info.name)-1] = 0;
-    return &info;
+/**
+ * Notifies the receiving application about a file that is about to be received
+ * by the VCMTP layer.
+ *
+ * @param[in,out] file_entry            The VCMTP file-entry.
+ * @retval        0                     Success.
+ * @throws        std::runtime_error    if the receiving application indicates
+ *                                      an error.
+ */
+void PerFileNotifier::notify_of_bof(VcmtpFileEntry& file_entry) const
+{
+    if (bof_func(obj, &file_entry)) {
+        throw std::runtime_error(std::string(
+                "Error notifying receiving application of beginning of "
+                "file \"") + file_entry.getName() + "\"");
+    }
 }
 
-bool PerFileNotifier::notify_of_bof(VcmtpSenderMessage& msg) {
-    file_metadata       info;
-
-    return bof_func(extra_arg, file_metadata_init(info, msg));
+void PerFileNotifier::notify_of_eof(VcmtpFileEntry& file_entry) const
+{
+    if (eof_func(obj, &file_entry)) {
+        throw std::runtime_error(std::string(
+                "Error notifying receiving application of end of "
+                "file \"") + file_entry.getName() + "\"");
+    }
 }
 
-void PerFileNotifier::notify_of_eof(VcmtpSenderMessage& msg) {
-    file_metadata       info;
-
-    eof_func(extra_arg, file_metadata_init(info, msg));
-}
-
-void PerFileNotifier::notify_of_missed_file(VcmtpSenderMessage& msg) {
-    file_metadata       info;
-
-    missed_file_func(extra_arg, file_metadata_init(info, msg));
+void PerFileNotifier::notify_of_missed_file(VcmtpFileEntry& file_entry) const
+{
+    missed_file_func(obj, &file_entry);
 }

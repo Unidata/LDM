@@ -1,13 +1,17 @@
-6.11.7	2014-02-25T11:40:52-0700
-    noaaportIngester(1):
-        Incorporated Ratheon's latest modifications to support retransmission
-        requests. This feature can only be used by NWS sites -- so don't even
-        think about it.
+6.11.7	2014-03-13T10:30:24-0600
+    NOAAPORT Ingestion:
+        noaaportIngester(1):
+            Incorporated Ratheon's latest modifications to support
+            retransmission requests. This feature can only be used by NWS sites
+            -- so don't even think about it.
+
+        Improved the code in the NOAAPORT, GRIB-2, and GEMPAK libraries to
+        reduce the chance a segmentation violation (SIGSEGV).
 
     notifyme(1):
         Squashed a bug in the LDM 5 client library (which is used by
-        notifyme(1)) that would cause a segmentation violation if the upstream
-        hostname couldn't be resolved into an IP address.
+        notifyme(1)) that would cause a segmentation violation (SIGSEGV) if the
+        upstream hostname couldn't be resolved into an IP address.
 
     Documentation:
         Corrected URL for the IDD.

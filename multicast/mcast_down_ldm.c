@@ -28,41 +28,57 @@
  */
 struct mdl {
     pqueue*                     pq;             /* product-queue to use */
+    unsigned char*              buf;            /* file-receiving buffer */
     mdl_missed_product_func     missed_product; /* missed-product callback function */
     VcmtpCReceiver*             receiver;       /* VCMTP C Receiver */
 };
 
 /**
- * Accepts notification of the beginning of a file from the VCMTP layer and
- * indicates if the file should be received
+ * Sets the response attribute of a file-entry in response to being notified by
+ * the VCMTP layer about the beginning of a file
  *
- * @param[in,out]  extra_arg    Pointer to the associated multicast downstream
+ * @param[in,out]  obj          Pointer to the associated multicast downstream
  *                              LDM object.
- * @param[in]      metadata     Metadata of the file in question.
- * @retval         false        if and only if the file should not be received.
+ * @param[in]      file_entry   Metadata of the file in question.
+ * @retval         0            Success.
+ * @retval         ENOMEM       Out-of-memory. \c log_add() called.
  */
-static bool bof_func(
-    void*                       extra_arg,
-    const file_metadata*        metadata)
+static int bof_func(
+    void* const obj,
+    void* const file_entry)
 {
-    Mdl* const  mdl = (Mdl*)extra_arg;
+    if (!vcmtpFileEntry_isMemoryTransfer(file_entry)) {
+        vcmtpFileEntry_setBofResponseToIgnore(file_entry);
+        return 0;
+    }
 
-    return false;
+    Mdl* const      mdl = (Mdl*)obj;
+    unsigned char*  buf = realloc(mdl->buf, vcmtpFileEntry_getSize(file_entry));
+
+    if (vcmtpFileEntry_setMemoryBofResponse(file_entry, buf))
+        return ENOMEM;
+
+    mdl->buf = buf;
+
+    return 0;
 }
 
 /**
  * Accepts notification from the VCMTP layer of the complete reception of a
  * file.
  *
- * @param[in,out]  extra_arg    Pointer to the associated multicast downstream
+ * @param[in,out]  obj          Pointer to the associated multicast downstream
  *                              LDM object.
- * @param[in]      metadata     Metadata of the file in question.
+ * @param[in]      file_entry   Metadata of the file in question.
+ * @retval         0            Success.
  */
-static void eof_func(
-    void*                       extra_arg,
-    const file_metadata*        metadata)
+static int eof_func(
+    void*               obj,
+    const void* const   file_entry)
 {
-    Mdl* const  mdl = (Mdl*)extra_arg;
+    Mdl* const  mdl = (Mdl*)obj;
+
+    return 0;
 }
 
 /**
@@ -76,21 +92,22 @@ static void eof_func(
  * Accepts notification from the VCMTP layer of the missed reception of a
  * file.
  *
- * @param[in,out]  extra_arg    Pointer to the associated multicast downstream
+ * @param[in,out]  obj          Pointer to the associated multicast downstream
  *                              LDM object.
  * @param[in]      metadata     Metadata of the file in question.
  */
 static void missed_file_func(
-    void*                       extra_arg,
-    const file_metadata*        metadata)
+    void*               obj,
+    const void* const   file_entry)
 {
     signaturet  signature;
+    const char* name = vcmtpFileEntry_getName(file_entry);
 
-    if (sigParse(metadata->name, &signature) == -1) {
-        LOG_ADD1("Filename is not an LDM signature: \"%s\"", metadata->name);
+    if (sigParse(name, &signature) == -1) {
+        LOG_ADD1("Filename is not an LDM signature: \"%s\"", name);
     }
     else {
-        ((Mdl*)extra_arg)->missed_product(extra_arg, &signature);
+        ((Mdl*)obj)->missed_product(obj, &signature);
     }
 }
 
@@ -110,8 +127,10 @@ static void missed_file_func(
  *                                                          scoping
  * @param[in] port            Port number of the multicast group.
  * @retval    0               Success.
- * @retval    EINVAL          @code{pq == NULL || missed_product == NULL}.
+ * @retval    EINVAL          if @code{!mdl || !pq || !missed_product}.
  *                            \c log_add() called.
+ * @retval    ENOMEM          Out of memory. \c log_add() called.
+ * @retval    -1              Other failure. \c log_add() called.
  */
 static int init(
     Mdl* const                          mdl,
@@ -120,15 +139,33 @@ static int init(
     const char* const                   addr,
     const unsigned short                port)
 {
-    if (pq == NULL || missed_product == NULL) {
-        LOG_ADD2("NULL argument: pq=%p, missed_product=%p", pq, missed_product);
+    int                 status;
+    VcmtpCReceiver*     receiver;
+
+    if (mdl == NULL) {
+        LOG_ADD0("NULL multicast-downstream-LDM argument");
+        return EINVAL;
+    }
+    if (pq == NULL) {
+        LOG_ADD0("NULL product-queue argument");
+        return EINVAL;
+    }
+    if (missed_product == NULL) {
+        LOG_ADD0("NULL missed-product-function argument");
         return EINVAL;
     }
 
+    status = vcmtpReceiver_new(&receiver, bof_func, eof_func, missed_file_func,
+            addr, port, mdl);
+    if (status) {
+        LOG_ADD0("Couldn't create VCMTP receiver");
+        return status;
+    }
+
+    mdl->receiver = receiver;
     mdl->pq = pq;
     mdl->missed_product = missed_product;
-    mdl->receiver = vcmtp_receiver_new(bof_func, eof_func, missed_file_func,
-            addr, port, mdl);
+    mdl->buf = NULL;
 
     return 0;
 }
@@ -150,7 +187,8 @@ static int init(
  * @param[in]  port           Port number of the multicast group.
  * @retval     0              Success.
  * @retval     ENOMEM         Out of memory. \c log_add() called.
- * @retval     EINVAL         @code{pq == NULL || missed_product == NULL}.
+ * @retval     EINVAL         @code{pq == NULL || missed_product == NULL ||
+ *                            addr == NULL}.
  *                            \c log_add() called.
  */
 static int mdl_new(
@@ -187,7 +225,7 @@ static int mdl_new(
 static void mdl_free(
     Mdl* const  mdl)
 {
-    vcmtp_receiver_free(mdl->receiver);
+    vcmtpReceiver_free(mdl->receiver);
     free(mdl);
 }
 
@@ -196,13 +234,19 @@ static void mdl_free(
  * downstream LDM terminates.
  *
  * @param[in,out] mdl   The multicast downstream LDM to execute.
- * @retval 0            Success. The multicast downstream LDM terminated
- *                      successfully.
+ * @retval 0            Success. The multicast downstream LDM terminated.
+ * @retval EINVAL       @code{mdl == NULL}. \c log_add() called.
+ * @retval -1           Failure. \c log_add() called.
  */
 static int execute(
     Mdl* const  mdl)
 {
-    return 0;
+    if (NULL == mdl) {
+        LOG_ADD0("NULL multicast-downstream-LDM argument");
+        return EINVAL;
+    }
+
+    return vcmtpReceiver_execute(mdl->receiver);
 }
 
 /**
@@ -223,10 +267,11 @@ static int execute(
  * @retval 0                 The multicast downstream LDM terminated
  *                           successfully.
  * @retval ENOMEM            Out of memory. \c log_add() called.
- * @retval EINVAL            @code{pq == NULL || missed_product == NULL}.
- *                           \c log_add() called.
+ * @retval EINVAL            @code{pq == NULL || missed_product == NULL ||
+ *                           addr == NULL}. \c log_add() called.
+ * @retval -1                Failure. \c log_add() called.
  */
-int mdl_create_and_execute(
+int mdl_createAndExecute(
     pqueue* const               pq,
     mdl_missed_product_func     missed_product,
     const char* const           addr,
