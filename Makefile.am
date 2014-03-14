@@ -100,7 +100,9 @@ EXTRA_DIST = \
     extractDecls \
     ldm.spec \
     ldm.spec.in \
-    README
+    puppet \
+    README \
+    Vagrantfile
 
 dist_bin_SCRIPTS	= \
     ensureLdmhomeLinks \
