@@ -17,7 +17,6 @@ METRICS_FILE		= $(LOGS_DIR)/metrics.txt
 NETSTAT			= @NETSTAT@
 TOP			= @TOP@
 bin_PROGRAMS		= regutil
-sysconf_DATA		= registry.xml
 EXTRA_DIST              = \
     checkRegistry \
     installRegistry \

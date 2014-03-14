@@ -6,13 +6,13 @@
 #
 # where:
 #       thisScript      This script
-#       regpar          Pathname of the input registry parameters.  The file
+#       parPath         Pathname of the input registry parameters.  The file
 #                       must exist.
-#       regutil         Pathname of the regutil(1) utility.  The file must
+#       utilPath        Pathname of the regutil(1) utility.  The file must
 #                       exist.
 #       confPath        Pathname of the ldmadmin(1) configuration-file.  The
 #                       file needn't exist.
-#       regdir          Pathname of the installation registry directory
+#       dirPath         Pathname of the installation registry directory
 
 if ($#ARGV != 3) {
     die "4 (and only 4) arguments not specified";
