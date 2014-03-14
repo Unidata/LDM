@@ -50,8 +50,7 @@ vagrant ssh $VM_NAME -c "make all check install"
 
 #
 # Create a distribution of the documentation in case it's needed by a
-# subsequent job. NB: The top-level directory
-# is "share/".
+# subsequent job. NB: "basics/" is in the top-level.
 #
 pkgId=`basename $SOURCE_DISTRO .tar.gz | sed 's/^\([^-]*-[0-9.]*\).*/\1/'`
 vagrant ssh $VM_NAME -c \
