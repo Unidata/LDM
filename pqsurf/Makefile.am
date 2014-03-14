@@ -7,7 +7,7 @@
 ## Process this file with automake to produce Makefile.in
 
 CLEANFILES              = pqsurf.1
-EXTRA_DIST		= surface.h
+EXTRA_DIST		= surface.h pqsurf.1.in
 GDBMLIB			= @GDBMLIB@
 PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS		= pqsurf

@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+EXTRA_DIST 	= pqcreate.1.in
 PQ_SUBDIR	= @PQ_SUBDIR@
 
 bin_PROGRAMS	= pqcreate

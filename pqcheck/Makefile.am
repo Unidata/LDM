@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+EXTRA_DIST	= pqcheck.1.in
 CLEANFILES      = pqcheck.1
 PQ_SUBDIR	= @PQ_SUBDIR@
 

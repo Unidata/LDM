@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+EXTRA_DIST 	= pqmon.1.in
 CLEANFILES      = pqmon.1
 PQ_SUBDIR	= @PQ_SUBDIR@
 

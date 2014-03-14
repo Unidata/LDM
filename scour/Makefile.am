@@ -6,7 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST		= scour.conf.in
+EXTRA_DIST		= scour.conf.in scour.1.in
 nodist_sysconf_DATA     = scour.conf
 dist_bin_SCRIPTS	= scour
 nodist_man1_MANS	= scour.1

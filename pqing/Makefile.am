@@ -13,6 +13,7 @@ EXTRA_DIST		= \
     crc_tab.h \
     faa604_message.h \
     feed.h \
+    pqing.1.in \
     rawfile.h \
     wmo_message.h \
     wmo_start.h

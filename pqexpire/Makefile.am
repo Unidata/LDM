@@ -6,6 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+EXTRA_DIST 	= pqexpire.1.in
 CLEANFILES      = pqexpire.1
 PQ_SUBDIR	= @PQ_SUBDIR@
 
