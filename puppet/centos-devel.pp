@@ -5,7 +5,15 @@ group { "puppet":
 File { owner => 0, group => 0, mode => 0644 }
 Exec { path => ['/usr/bin', '/bin', '/usr/sbin', '/sbin'], }
 
-package {'expat-devel':
+package {'libxml2-devel':
+  ensure  => present,
+}
+
+package {'libpng-devel':
+  ensure  => present,
+}
+
+package {'zlib-devel':
   ensure  => present,
 }
 
@@ -15,14 +23,6 @@ package {'gcc':
 
 package {'CUnit-devel':
   ensure  => present,
-}
-
-package {'rpm-build':
-  ensure  => present,
-}
-
-package {'ruby':
-  ensure => present,
 }
 
 exec {'bashrc':
