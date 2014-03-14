@@ -49,7 +49,7 @@ set -e
 
 # Unpack the source distribution.
 #
-pax -zr -s:/:/src/: <`basename $SOURCE_DISTRO`
+pax -zr -s:/:/src/: </vagrant/`basename $SOURCE_DISTRO`
 
 # Make the source directory the current working directory because that's where
 # the "configure" script is.
