@@ -11,6 +11,7 @@ EXTRA_DIST		= \
     filel.h \
     palt.h \
     pbuf.h \
+    pqact.1.in \
     pqact.conf \
     SharedCounter.h \
     state.h
