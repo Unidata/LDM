@@ -6,7 +6,8 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-CLEANFILES      = rtstats.1
+EXTRA_DIST		= rtstats.1.in
+CLEANFILES      	= rtstats.1
 PQ_SUBDIR		= @PQ_SUBDIR@
 
 bin_PROGRAMS		= rtstats
