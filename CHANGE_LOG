@@ -1,8 +1,8 @@
-6.11.7	2014-03-18T16:06:06-0600
+6.11.7	2014-03-18T16:17:35-0600
     Downstream LDM:
         Squashed a bug that could result in an assertion failure if a remote
-        LDM server was contacted via the remote site's portmapper (thanks
-        Gilbert).
+        site's portmapper was successfully used to connect to a remote LDM
+        server (thanks Gilbert).
 
     NOAAPORT Ingestion:
         noaaportIngester(1):
