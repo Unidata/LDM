@@ -258,8 +258,8 @@ ldm_clnttcp_create_vers(
                 }                       /* portmapper failure */
             }                           /* non-fatal port failure */
         }                               /* port failure */
-        else {
-            assert(!error);
+
+        if (!error) {
             /*
              * Success.  Set the return arguments.
              */
@@ -269,7 +269,7 @@ ldm_clnttcp_create_vers(
                 *socket = sock;
             if (upAddr)
                 *upAddr = addr;
-        }                                   /* clnt != NULL */
+        }
     }                                       /* got upstream IP address */
 
     return error;
