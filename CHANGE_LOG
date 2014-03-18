@@ -1,4 +1,9 @@
-6.11.7	2014-03-18T10:47:19-0600
+6.11.7	2014-03-18T11:15:45-0600
+    Downstream LDM:
+        Squashed a bug that could result in an assertion failure if a remote
+        LDM server was contacted via the remote site's portmapper (thanks
+        Gilbert).
+
     NOAAPORT Ingestion:
         noaaportIngester(1):
             Incorporated Ratheon's latest modifications to support
@@ -15,6 +20,11 @@
 
     Documentation:
         Corrected URL for the IDD.
+
+        Added missing manual-page precursor files to the source distribution.
+
+    Misc:
+        Implemeted a continuous-delivery pipeline for the project.
 
 6.11.6 	2013-06-24 17:04:55-06:00
     SUMMARY OF SIGNIFICANT CHANGES:
