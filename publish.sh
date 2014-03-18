@@ -7,7 +7,7 @@
 # upstream job.
 #
 # Usage:
-#     $0 pipeId nJobs srcDistroFile docDistroFile pkgName indexHtml
+#     $0 pipeId nJobs srcDistroFile docDistroFile pkgName
 #
 # where:
 #     pipeId                Unique identifier for the parent delivery pipeline
@@ -16,8 +16,6 @@
 #     srcDistroFile         Pathname of the source distribution file
 #     docDistroFile         Pathname of the documentation distribution file
 #     pkgName               Name of the package (e.g., "udunits")
-#     indexHtml             Name of the top-level HTML documentation file (e.g.,
-#                           "udunits2.html")
 
 set -e  # exit on failure
 
@@ -26,7 +24,6 @@ nJobs=${2:?Number of upstream jobs not specified}
 srcDistroFile=${4:?Source distribution file not specified}
 docDistroFile=${6:?Documentation distribution file not specified}
 pkgName=${7:?Package name not specified}
-indexHtml=${8:?Top-level HTML documentation-file not specified}
 
 srcRepoHost=webserver            # Name of computer hosting source repository
 srcRepoDir=/web/ftp/pub/$pkgName # Pathname of source repository
@@ -91,4 +88,4 @@ fi
 pkgId=`basename $docDistroFile | sed 's/^\([^-]*-[0-9.]*\).*/\1/'`
 version=`echo $pkgId | sed 's/^[^-]*-//'`
 pkgWebDir=/web/content/software/$pkgName
-ssh -T $webHost bash -x $pkgWebDir/upload $version $indexHtml <$docDistroFile
+ssh -T $webHost bash -x $pkgWebDir/upload $version <$docDistroFile
