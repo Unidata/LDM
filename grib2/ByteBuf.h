@@ -16,6 +16,7 @@
 #include "grib2.h"
 
 #include <stddef.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
