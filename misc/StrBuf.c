@@ -14,38 +14,7 @@
 struct strBuf {
     char*       buf;    /* NUL-terminated string */
     size_t      len;    /* length of string (excluding terminating NUL) */
-    size_t      max;    /* size of buffer (including terminating NUL) */
 };
-
-/**
- * Returns a new string-buffer. The buffer's string will be the empty string.
- *
- * Returns
- *      NULL            Out-of-memory. "log_start()" called.
- *      else            Pointer to the string-buffer.
- */      
-StrBuf* sbNew(void)
-{
-    size_t      nbytes = sizeof(StrBuf);
-    StrBuf*     sb = (StrBuf*)malloc(1);
-
-    if (NULL == sb) {
-        log_serror("sbNew(): Couldn't allocate %lu bytes for a new instance",
-            nbytes);
-    }
-    else {
-        sb->buf = NULL;
-        sb->len = 0;
-        sb->max = 0;
-
-        if (NULL == sbEnsure(sb, 0)) {
-            sbFree(sb);
-            sb = NULL;
-        }
-    }                                   /* "sb" allocated */
-
-    return sb;
-}
 
 /**
  * Ensures that a string-buffer can hold a given number of characters.
@@ -60,23 +29,52 @@ StrBuf* sbNew(void)
  *      else            Pointer to the string-buffer.
  */
 StrBuf* sbEnsure(
-    StrBuf*             buf
+    StrBuf*             buf,
     const size_t        n)
 {
     if (NULL != buf) {
-        char*   newBuf = realloc(buf->buf, n+1);
+        size_t  newMax = n + 1;
+        char*   newBuf = realloc(buf->buf, newMax);
 
         if (NULL == newBuf) {
-            log_serror("sbEnsure(): Couldn't reallocate %lu bytes", n+1);
+            log_serror("sbEnsure(): Couldn't reallocate %lu bytes", newMax);
             buf = NULL;
         }
         else {
             buf->buf = newBuf;
-            buf->max = n
         }
     }
 
     return buf;
+}
+
+/**
+ * Returns a new string-buffer. The buffer's string will be the empty string.
+ *
+ * Returns
+ *      NULL            Out-of-memory. "log_start()" called.
+ *      else            Pointer to the string-buffer.
+ */      
+StrBuf* sbNew(void)
+{
+    size_t      nbytes = sizeof(StrBuf);
+    StrBuf*     sb = (StrBuf*)malloc(nbytes);
+
+    if (NULL == sb) {
+        log_serror("sbNew(): Couldn't allocate %lu bytes for a new instance",
+            nbytes);
+    }
+    else {
+        sb->buf = NULL;
+        sb->len = 0;
+
+        if (NULL == sbEnsure(sb, 0)) {
+            sbFree(sb);
+            sb = NULL;
+        }
+    }                                   /* "sb" allocated */
+
+    return sb;
 }
 
 /**
@@ -95,9 +93,8 @@ StrBuf* sbTrim(
     StrBuf* const       buf,
     const size_t        n)
 {
-    if (NULL != buf && n < buf->len) {
+    if (NULL != buf && n < buf->len)
         buf->buf[n] = 0;
-    }
 
     return buf;
 }
