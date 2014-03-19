@@ -278,8 +278,10 @@ g2int g2_getfld(unsigned char *cgrib,size_t sz,g2int ifldnum,g2int unpack,
  *  Check for beginning of GRIB message in the first 100 bytes or until the
  *  end of the GRIB2 message, whichever comes first.
  */
+      if (sz < 4)
+          return 1;
       istart=-1;
-      n = 100 < sz ? 100 : sz;
+      n = 100 < (sz-3) ? 100 : (sz-3);
       for (j=0;j<n;j++) {
         if (cgrib[j]=='G' && cgrib[j+1]=='R' &&cgrib[j+2]=='I' && 
             cgrib[j+3]=='B') {
