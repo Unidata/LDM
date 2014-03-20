@@ -821,11 +821,11 @@ int grib2name (
 
                 if (gemInfo.level[1] == -1)
                     (void)snprintf(levelstmp, sizeof(levelstmp), "%d %s %s",
-                            gemInfo.level[0], gemInfo.unit, *strptr);
+                            gemInfo.level[0], gemInfo.unit, strptr);
                 else
                     (void)snprintf(levelstmp, sizeof(levelstmp), "%d-%d %s %s",
                             gemInfo.level[0], gemInfo.level[1], gemInfo.unit,
-                            *strptr);
+                            strptr);
             }
         }
 
