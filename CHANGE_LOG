@@ -1,4 +1,4 @@
-6.11.7	2014-03-20T14:26:56-0600
+6.11.7	2014-03-20T15:48:53-0600
     Downstream LDM:
         Squashed a bug that could result in an assertion failure if a remote
         site's portmapper was successfully used to connect to a remote LDM
