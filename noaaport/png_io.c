@@ -88,7 +88,12 @@ if(!info_ptr)
    return;
    }
 
+#if (PNG_LIBPNG_VER < 10400 || PNG_LIBPNG_VER >= 10500)
 if(setjmp(png_jmpbuf(png_ptr)))
+#else
+/* Warning is unavoidable if #define PNG_DEPSTRUCT is not present */
+if (setjmp(png_ptr->jmpbuf))
+#endif
    {
    png_destroy_write_struct(&png_ptr,&info_ptr);
    return;
