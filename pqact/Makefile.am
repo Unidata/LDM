@@ -52,7 +52,7 @@ TAGS_FILES		= \
 CLEANFILES              = pqact.1 *.i 
 
 pqact.1:	$(srcdir)/pqact.1.in
-	../regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
 install-data-local:	\

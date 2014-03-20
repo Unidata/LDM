@@ -29,7 +29,7 @@ nodist_man1_MANS	= pqcreate.1
 CLEANFILES	= pqcreate.1 *.i
 
 pqcreate.1:	$(srcdir)/pqcreate.1.in
-	../regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
 .c.i:

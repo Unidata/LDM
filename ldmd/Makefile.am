@@ -45,7 +45,7 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h
 
 ldmd.1:		$(srcdir)/ldmd.1.in
-	../regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
 parser.c:	parser.y

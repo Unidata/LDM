@@ -29,7 +29,7 @@ TAGS_FILES	= \
     ../rpc/*.c ../rpc/*.h
 
 pqmon.1:	$(srcdir)/pqmon.1.in
-	../regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
 debug:		pqmon

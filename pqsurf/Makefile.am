@@ -33,5 +33,5 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h
 
 pqsurf.1:	$(srcdir)/pqsurf.1.in
-	../regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@

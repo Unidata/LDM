@@ -143,7 +143,7 @@ LDM-registry.html:	$(srcdir)/regpar-top.html ../../regutil/regpar.tab
 all:	$(srcdir)/successes.html $(srcdir)/failures.html
 
 configuring.html:	$(srcdir)/configuring.html.in
-	../../regutil/substPaths <$< >$@.tmp
+	../../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
 registry-check:	$(top_srcdir)/configure.ac
@@ -167,7 +167,7 @@ registry-check:	$(top_srcdir)/configure.ac
 .PHONY:	registry-check
 
 successes.html:	$(top_srcdir)/test/results.tab
-	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $< \
+	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $? \
 	| awk -F , 'BEGIN { \
 		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
 		print "<html>"; \
@@ -207,7 +207,7 @@ successes.html:	$(top_srcdir)/test/results.tab
 	    }' >$@
 
 failures.html:	$(top_srcdir)/test/results.tab
-	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $< \
+	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $? \
 	| awk -F , 'BEGIN { \
 		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
 		print "<html>"; \

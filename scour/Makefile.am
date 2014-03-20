@@ -14,9 +14,9 @@ CLEANFILES              = scour.1 scour.conf
 DISTCLEANFILES		= scour
 
 scour.1:	$(srcdir)/scour.1.in
-	../regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
 scour.conf:	scour.conf.in
-	../regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@

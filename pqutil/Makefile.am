@@ -29,5 +29,5 @@ TAGS_FILES	= \
     ../rpc/*.c ../rpc/*.h
 
 pqutil.1:	$(srcdir)/pqutil.1.in
-	../regutil/substPaths <$< >$@.tmp
+	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
