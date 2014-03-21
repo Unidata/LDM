@@ -5,6 +5,8 @@ group { "puppet":
 File { owner => 0, group => 0, mode => 0644 }
 Exec { path => ['/usr/bin', '/bin', '/usr/sbin', '/sbin'], }
 
+exec {'update': command => 'yum update', }
+
 package {'libxml2-devel':
   ensure  => present,
 }

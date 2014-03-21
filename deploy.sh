@@ -22,6 +22,10 @@ pkgName=`basename $srcDistroName .tar.gz`
 scp $srcDistroPath ldm@$host:
 trap "ssh -T ldm@$host rm -f $srcDistroName; `trap -p ERR`" ERR
 
+# bash(1) is explicitly used for remote executions because 1) not all LDM users
+# have the same user-shell; and 2) not all sh(1)-s behave the same -- especially
+# in the handling of substitutions, quotes, and escapes.
+
 # As the LDM user on the remote host, unpack, build, and install the package.
 #
 ssh -T ldm@$host bash --login -x -e <<EOF
