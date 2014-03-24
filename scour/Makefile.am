@@ -24,7 +24,7 @@ scour.conf:	scour.conf.in
 install-data-local:    \
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/scour.conf
 $(DESTDIR)$(sysconfdir)/scour.conf:
-	$(INSTALL_DATA) $(srcdir)/scour.conf $@
+	$(INSTALL_DATA) scour.conf $@
 
 $(DESTDIR)$(sysconfdir):
 	mkdir $@
