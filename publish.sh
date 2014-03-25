@@ -19,6 +19,8 @@
 
 set -e  # exit on failure
 
+false # this script doesn't work yet
+
 pipeId=${1:?Group ID not specified}
 nJobs=${2:?Number of upstream jobs not specified}
 srcDistroFile=${4:?Source distribution file not specified}
@@ -82,6 +84,20 @@ if ! ssh $srcRepoHost test -e $srcDistroPath; then
     trap "ssh $srcRepoHost rm -f $srcDistroPath; `trap -p ERR`" ERR
     scp $srcDistroFile $srcRepoHost:$srcDistroPath
 fi
+
+# Make a documentation distribution for possible installation on the
+# website. NB: The top-level directory will be "$pkgId" and "$pkgId/basics" will
+# be one of the subdirectories.
+#
+make distclean >distclean.log 2>&1
+. package.properties
+pkgId=${PKG_NAME}-${PKG_VERSION}
+mkdir -p $pkgId
+./configure --prefix=$PWD/$pkgId --disable-root-actions >configure.log 2>&1
+make install >install.log 2>&1
+pax -zw -s ";$pkgId/share/doc/ldm;$pkgId;" "$pkgId/share/doc/ldm" \
+    >"$pkgId-doc.tar.gz"
+make distclean >distclean.log 2>&1
 
 # Upload the documentation to the package's website.
 #

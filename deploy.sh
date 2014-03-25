@@ -10,7 +10,7 @@
 
 set -e # terminate on error
 
-srcDistroPath=${1:?Source distribution not specified}
+srcDistroPath=${1:?Path of source distribution not specified}
 host=${2:?Host name not specified}
 configOpts=$3
 
@@ -29,30 +29,30 @@ trap "ssh -T ldm@$host rm -f $srcDistroName; `trap -p ERR`" ERR
 # As the LDM user on the remote host, unpack, build, and install the package.
 #
 ssh -T ldm@$host bash --login <<EOF
-set -x -e
-gunzip -c $srcDistroName | pax -r '-s:/:/src/:'
-trap "rm -rf \$HOME/$pkgName; \`trap -p ERR\`" ERR
-rm $srcDistroName
-cd $pkgName/src
-./configure --disable-root-actions ${configOpts} CFLAGS=-g >configure.log 2>&1
-make install >install.log 2>&1
+    set -x -e
+    gunzip -c $srcDistroName | pax -r '-s:/:/src/:'
+    trap "rm -rf \$HOME/$pkgName; \`trap -p ERR\`" ERR
+    rm $srcDistroName
+    cd $pkgName/src
+    ./configure --disable-root-actions ${configOpts} CFLAGS=-g >configure.log 2>&1
+    make install >install.log 2>&1
 EOF
 
 # As the superuser on the remote host, perform the root actions.
 #
 ssh -T root@$host bash --login <<EOF
-set -x -e
-ldmHome=\`awk -F: '\$1~/^ldm$/{print \$6}' /etc/passwd\`
-cd \$ldmHome/$pkgName/src
-make root-actions >root-actions.log 2>&1
+    set -x -e
+    ldmHome=\`awk -F: '\$1~/^ldm$/{print \$6}' /etc/passwd\`
+    cd \$ldmHome/$pkgName/src
+    make root-actions >root-actions.log 2>&1
 EOF
 
 # As the LDM user on the remote host, execute the new package.
 #
 ssh -T ldm@$host bash --login <<EOF
-set -x -e
-ldmadmin isrunning && ldmadmin stop
-rm -f runtime
-ln -s $pkgName runtime
-ldmadmin start
+    set -x -e
+    ldmadmin isrunning && ldmadmin stop
+    rm -f runtime
+    ln -s $pkgName runtime
+    ldmadmin start
 EOF

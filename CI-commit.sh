@@ -4,10 +4,14 @@
 #     2. Tests the package; and
 #     3. Creates a source-distribution.
 
-set -ex  # exit if error
+set -e  # exit if error
+
+# Remove any artifacts left over from a previous invocation.
+#
+rm -f *.tar.gz
 
 #
-# Build and test the package and create a source-distribution.
+# Build and test the package and create a source distribution.
 #
 mkdir -p m4 multicast/vcmtp/m4
 autoreconf -iv

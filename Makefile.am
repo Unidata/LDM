@@ -98,11 +98,7 @@ EXTRA_DIST = \
     CHANGE_LOG \
     COPYRIGHT \
     extractDecls \
-    ldm.spec \
-    ldm.spec.in \
-    puppet \
-    README \
-    Vagrantfile
+    README
 
 dist_bin_SCRIPTS	= \
     ensureLdmhomeLinks \
