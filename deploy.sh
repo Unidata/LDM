@@ -10,8 +10,8 @@
 
 set -e # terminate on error
 
-host=${2:?Host name not specified}
-configOpts=$3
+host=${1:?Host name not specified}
+configOpts=$2
 
 # For convenience, make the directory that contains this script be the current
 # working directory.
