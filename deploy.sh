@@ -1,25 +1,28 @@
-# Deploys the LDM to a remote host.
+# Deploys the LDM to a remote host. Assumes that this script is in the top-level
+# development source-directory and that the necessary files already exist.
 #
 # Usage:
-#       $0 srcDistroPath host [configOpts]
+#       $0 host [configOpts]
 #
 # where:
-#       srcDistroPath    Path of compressed tar(1) file containing the source
 #       host             Name of the remote computer on which to deploy the LDM
 #       configOpts       Optional configure(1) script options
 
 set -e # terminate on error
 
-srcDistroPath=${1:?Path of source distribution not specified}
 host=${2:?Host name not specified}
 configOpts=$3
 
-srcDistroName=`basename $srcDistroPath`
+# For convenience, make the directory that contains this script be the current
+# working directory.
+cd `dirname $0`
+
+srcDistroName=`ls *.tar.gz`
 pkgName=`basename $srcDistroName .tar.gz`
 
 # Copy the source-distribution to the remote host.
 #
-scp $srcDistroPath ldm@$host:
+scp $srcDistroName ldm@$host:
 trap "ssh -T ldm@$host rm -f $srcDistroName; `trap -p ERR`" ERR
 
 # bash(1) is explicitly used for remote executions because 1) not all LDM users
