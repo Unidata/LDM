@@ -17,13 +17,10 @@ configOpts=$2
 # working directory.
 cd `dirname $0`
 
-srcDistroName=`ls *.tar.gz`
-pkgName=`basename $srcDistroName .tar.gz`
-
 # Copy the source-distribution to the remote host.
 #
-scp $srcDistroName ldm@$host:
-trap "ssh -T ldm@$host rm -f $srcDistroName; `trap -p ERR`" ERR
+scp $SOURCE_DISTRO_NAME $USER_NAME@$host:
+trap "ssh -T $USER_NAME@$host rm -f $SOURCE_DISTRO_NAME; `trap -p ERR`" ERR
 
 # bash(1) is explicitly used for remote executions because 1) not all LDM users
 # have the same user-shell; and 2) not all sh(1)-s behave the same -- especially
@@ -31,12 +28,12 @@ trap "ssh -T ldm@$host rm -f $srcDistroName; `trap -p ERR`" ERR
 
 # As the LDM user on the remote host, unpack, build, and install the package.
 #
-ssh -T ldm@$host bash --login <<EOF
+ssh -T $USER_NAME@$host bash --login <<EOF
     set -x -e
-    gunzip -c $srcDistroName | pax -r '-s:/:/src/:'
-    trap "rm -rf \$HOME/$pkgName; \`trap -p ERR\`" ERR
-    rm $srcDistroName
-    cd $pkgName/src
+    gunzip -c $SOURCE_DISTRO_NAME | pax -r '-s:/:/src/:'
+    trap "rm -rf \$HOME/$PKG_ID; \`trap -p ERR\`" ERR
+    rm $SOURCE_DISTRO_NAME
+    cd $RELPATH_DISTRO_SOURCE_DIR
     ./configure --disable-root-actions ${configOpts} CFLAGS=-g >configure.log 2>&1
     make install >install.log 2>&1
 EOF
@@ -45,17 +42,17 @@ EOF
 #
 ssh -T root@$host bash --login <<EOF
     set -x -e
-    ldmHome=\`awk -F: '\$1~/^ldm$/{print \$6}' /etc/passwd\`
-    cd \$ldmHome/$pkgName/src
+    ldmHome=\`awk -F: '\$1~/^$USER_NAME\$/{print \$6}' /etc/passwd\`
+    cd \$ldmHome/$RELPATH_DISTRO_SOURCE_DIR
     make root-actions >root-actions.log 2>&1
 EOF
 
 # As the LDM user on the remote host, execute the new package.
 #
-ssh -T ldm@$host bash --login <<EOF
+ssh -T $USER_NAME@$host bash --login <<EOF
     set -x -e
     ldmadmin isrunning && ldmadmin stop
     rm -f runtime
-    ln -s $pkgName runtime
+    ln -s $PKG_ID runtime
     ldmadmin start
 EOF

@@ -1,107 +1,84 @@
-# Copies a source distribution to the download area and adds the version to the
-# website. Does this if and only if all the upstream jobs in the delivery
-# pipeline were successful. An upstream job is considered successful if its
-# documentation distribution exists.
-#
-# This script is complicated by the fact that it will be invoked by every
-# upstream job.
+# Copies an LDM source distribution to the public download directory and ensures
+# the existence of that version's documentation on the package's website. The
+# package is built and installed in the current working directory to extract the
+# documentation.
 #
 # Usage:
-#     $0 pipeId nJobs srcDistroFile docDistroFile pkgName
-#
-# where:
-#     pipeId                Unique identifier for the parent delivery pipeline
-#                           instance (e.g., top-of-the-pipe job number)
-#     nJobs                 Number of upstream jobs
-#     srcDistroFile         Pathname of the source distribution file
-#     docDistroFile         Pathname of the documentation distribution file
-#     pkgName               Name of the package (e.g., "udunits")
+#       $0
 
 set -e  # exit on failure
 
-false # this script doesn't work yet
-
-pipeId=${1:?Group ID not specified}
-nJobs=${2:?Number of upstream jobs not specified}
-srcDistroFile=${4:?Source distribution file not specified}
-docDistroFile=${6:?Documentation distribution file not specified}
-pkgName=${7:?Package name not specified}
-
-srcRepoHost=webserver            # Name of computer hosting source repository
-srcRepoDir=/web/ftp/pub/$pkgName # Pathname of source repository
-webHost=webserver                # Name of computer hosting package website
-
-# Indicates if the outcome of the upstream jobs is decidable.
-#
-decidable() {
-    test `ls $jobId.success $jobId.failure 2>/dev/null | wc -w` -ge $nJobs
-}
-
-# Indicates if the upstream jobs were successful.
-#
-success() {
-    test `ls $jobId.success 2>/dev/null | wc -w` -ge $nJobs
-}
-
-# Ensure valid pathnames.
-#
-srcDistroFile=`ls $srcDistroFile`
-
-
-# Form a unique identifier for this invocation.
-#
-jobId=$pipeId-`basename $srcDistroFile`
-
-# Remove any leftovers from an earlier delivery pipeline.
-#
-ls *.success *.failure 2>/dev/null | grep -v ^$jobId | xargs rm -rf
-
-# Make known to all invocations of this script in the delivery pipeline the
-# outcome of the upstream job associated with this invocation.
-#
-if test -e $docDistroFile; then
-    touch $jobId.success
-else
-    touch $jobId.failure
-fi
-
-# Wait until the outcome of all the upstream jobs can be decided.
-#
-while ! decidable; do
-    sleep 3
-done
-
-# Set the absolute path to the public source distribution file.
-#
-srcDistroPath=/web/ftp/pub/$pkgName/`basename $srcDistroFile`
+test $# -eq 0
 
 # If the source repository doesn't have the source distribution,
 #
-if ! ssh $srcRepoHost test -e $srcDistroPath; then
+if ! ssh $SOURCE_REPO_HOST test -e $ABSPATH_SOURCE_DISTRO; then
     #
     # Copy the source distribution to the source repository.
     #
-    trap "ssh $srcRepoHost rm -f $srcDistroPath; `trap -p ERR`" ERR
-    scp $srcDistroFile $srcRepoHost:$srcDistroPath
+    trap "ssh $SOURCE_REPO_HOST rm -f $ABSPATH_SOURCE_DISTRO; `trap -p ERR`" ERR
+    scp $SOURCE_DISTRO_NAME $SOURCE_REPO_HOST:$ABSPATH_SOURCE_DISTRO
 fi
 
-# Make a documentation distribution for possible installation on the
-# website. NB: The top-level directory will be "$pkgId" and "$pkgId/basics" will
-# be one of the subdirectories.
+# Make a documentation installation for copying to the website.
 #
-make distclean >distclean.log 2>&1
-. package.properties
-pkgId=${PKG_NAME}-${PKG_VERSION}
-mkdir -p $pkgId
-./configure --prefix=$PWD/$pkgId --disable-root-actions >configure.log 2>&1
-make install >install.log 2>&1
-pax -zw -s ";$pkgId/share/doc/ldm;$pkgId;" "$pkgId/share/doc/ldm" \
-    >"$pkgId-doc.tar.gz"
-make distclean >distclean.log 2>&1
+pax -zr <$SOURCE_DISTRO_NAME
+trap "rm -rf $PKG_ID; `trap -p EXIT`" EXIT
+cd $PKG_ID
+./configure --prefix=$ABSPATH_DEFAULT_INSTALL_PREFIX --disable-root-actions \
+        >configure.log 2>&1
+make install DESTDIR=$PKG_ID >install.log 2>&1
 
-# Upload the documentation to the package's website.
+# Copy the documentation to the package's website.
 #
-pkgId=`basename $docDistroFile | sed 's/^\([^-]*-[0-9.]*\).*/\1/'`
-version=`echo $pkgId | sed 's/^[^-]*-//'`
-pkgWebDir=/web/content/software/$pkgName
-ssh -T $webHost bash -x $pkgWebDir/upload $version <$docDistroFile
+versionWebDirTmp=$ABSPATH_VERSION_WEB_DIR.tmp
+ssh -T $WEB_HOST rm -rf $versionWebDirTmp
+trap "ssh -T $WEB_HOST rm -rf $versionWebDirTmp; `trap -p ERR`" ERR
+scp -Br $PKG_ID/$ABSPATH_DEFAULT_INSTALL_PREFIX/$RELPATH_DOC_DIR
+        $WEB_HOST:$versionWebDirTmp
+ssh -T $WEB_HOST mv -f $versionWebDirTmp $ABSPATH_VERSION_WEB_DIR
+
+# Ensure that the package's home-page references the just-installed
+# documentation.
+ssh -T $WEB_HOST bash --login <<EOF
+    set -ex  # Exit on error
+
+    version=`echo $PKG_ID | sed 's/.*-//'`
+    indexHtml=index.html
+
+    # Go to the top-level of the package's web-pages.
+    #
+    cd $ABSPATH_PKG_WEB_DIR
+
+    # Allow group write access to all created files.
+    #
+    umask 02
+
+    # Set the hyperlink references in the top-level HTML file. For a given major
+    # and minor version, keep only the latest bug-fix.
+    #
+    ls -d $PKG_ID_GLOB |
+        sed "s/$PKG_NAME-//" |
+        sort -t. -k 1nr,1 -k 2nr,2 -k 3nr,3 |
+        awk -F. '\$1!=ma||\$2!=mi{print}{ma=\$1;mi=\$2}' >versions
+    sed -n '1,/$BEGIN_VERSION_LINKS/p' index.html >index.html.new
+    for vers in \`cat versions\`; do
+        href=\`find $PKG_NAME-\$vers -name index.html\`
+        test "\$href" || href=\`find $PKG_NAME-\$vers -name \$indexHtml\`
+        echo "            <li><a href=\"\$href\">\$vers</a>" >>index.html.new
+    done
+    sed -n '/$END_VERSION_LINKS/,\$p' index.html >>index.html.new
+    cp index.html index.html.old
+    mv index.html.new index.html
+
+    # Delete all versions not referenced in the top-level HTML file.
+    #
+    for vers in \`ls -d $PKG_ID_GLOB | sed "s/$PKG_NAME-//"\`; do
+        fgrep -s \$vers versions || rm -rf $PKG_NAME-\$vers
+    done
+
+    # Set the symbolic link to the current version
+    #
+    rm -f $PKG_NAME-current
+    ln -s $PKG_ID $PKG_NAME-current
+EOF

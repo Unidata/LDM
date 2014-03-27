@@ -8,7 +8,7 @@ set -e  # exit if error
 
 # Remove any artifacts left over from a previous invocation.
 #
-rm -f *.tar.gz
+rm -f *.$SOURCE_DISTRO_EXT
 
 #
 # Build and test the package and create a source distribution.
