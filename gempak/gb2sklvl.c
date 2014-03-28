@@ -2,7 +2,6 @@
 
 #include "gb2def.h"
 #include "proto_gemlib.h"
-#include <log.h>
 
 void  gb2_sklvl( int lvl1, int lvl2, G2lvls *lvltbl,
                  G2level *g2lev, int *iret)
@@ -55,12 +54,5 @@ void  gb2_sklvl( int lvl1, int lvl2, G2lvls *lvltbl,
             break;
         }
         n++;
-    }
-
-    if (*iret < 0) {
-        LOG_START4("lvl1, lvl2, lvltbl->info[n].id1, lvltbl->info[n].id: "
-            "%d %d %d %d",
-            lvl1, lvl2, lvltbl->info[n-1].id1, lvltbl->info[n-1].id2);
-        log_log(LOG_INFO);
     }
 }
