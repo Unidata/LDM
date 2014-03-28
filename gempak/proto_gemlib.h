@@ -127,7 +127,7 @@ void er_wbuf ( int *iret );
 void er_wmsg ( char *errgrp, int *numerr, char *errstr, int *iret, size_t, size_t );
 
 #define ER_WMSG(grp,ier,msg,iret,i1,i2) { \
-    LOG_START3("[%s %d] %s", grp, *(ier), msg); \
+    LOG_ADD3("[%s %d] %s", grp, *(ier), msg); \
     log_log(LOG_ERR); \
     *(iret) = 0; \
 }
