@@ -108,7 +108,7 @@ dist_bin_SCRIPTS	= \
     ensureServicesEntry \
     rpmUserActions
 
-dist_doc_data		= CHANGE_LOG COPYRIGHT README
+dist_doc_DATA		= CHANGE_LOG COPYRIGHT README
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
