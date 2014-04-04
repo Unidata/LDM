@@ -22,26 +22,32 @@ fi
 
 # Make a documentation installation for copying to the website.
 #
+rm -rf $PKG_ID
 pax -zr <$SOURCE_DISTRO_NAME
 trap "rm -rf $PKG_ID; `trap -p EXIT`" EXIT
 cd $PKG_ID
 ./configure --prefix=$ABSPATH_DEFAULT_INSTALL_PREFIX --disable-root-actions \
         --with-noaaport >configure.log 2>&1
-make install DESTDIR=$PKG_ID >install.log 2>&1
+rm -rf DESTDIR
+make install DESTDIR=`pwd`/DESTDIR >install.log 2>&1
 
 # Copy the documentation to the package's website.
 #
 versionWebDirTmp=$ABSPATH_VERSION_WEB_DIR.tmp
 ssh -T $WEB_HOST rm -rf $versionWebDirTmp
 trap "ssh -T $WEB_HOST rm -rf $versionWebDirTmp; `trap -p ERR`" ERR
-scp -Br $PKG_ID/$ABSPATH_DEFAULT_INSTALL_PREFIX/$RELPATH_DOC_DIR
+scp -Br DESTDIR$ABSPATH_DEFAULT_INSTALL_PREFIX/$RELPATH_DOC_DIR \
         $WEB_HOST:$versionWebDirTmp
-ssh -T $WEB_HOST mv -f $versionWebDirTmp $ABSPATH_VERSION_WEB_DIR
 
 # Ensure that the package's home-page references the just-installed
 # documentation.
 ssh -T $WEB_HOST bash --login <<EOF
     set -ex  # Exit on error
+
+    # Install the just-copied documentation.
+    #
+    rm -rf $ABSPATH_VERSION_WEB_DIR
+    mv -f $versionWebDirTmp $ABSPATH_VERSION_WEB_DIR
 
     # Go to the top-level of the package's web-pages.
     #
@@ -60,11 +66,11 @@ ssh -T $WEB_HOST bash --login <<EOF
         awk -F. '\$1!=ma||\$2!=mi{print}{ma=\$1;mi=\$2}' >versions
     sed -n '1,/$BEGIN_VERSION_LINKS/p' index.html >index.html.new
     for vers in \`cat versions\`; do
-        href=\`find $PKG_NAME-\$vers -name index.html\`
-        test "\$href"
+        href=$PKG_NAME-\$vers
         echo "            <li><a href=\"\$href\">\$vers</a>" >>index.html.new
     done
     sed -n '/$END_VERSION_LINKS/,\$p' index.html >>index.html.new
+    rm -f index.html.old
     cp index.html index.html.old
     mv index.html.new index.html
 
