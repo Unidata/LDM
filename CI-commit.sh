@@ -16,8 +16,8 @@ rm -f *.$SOURCE_DISTRO_EXT
 mkdir -p m4 multicast/vcmtp/m4
 autoreconf -iv
 ./configure --disable-root-actions >configure.log 2>&1
-make distcheck DISTCHECK_CONFIGURE_FLAGS=''
-#make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
+make distcheck
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert'
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport'
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport --with-retrans'

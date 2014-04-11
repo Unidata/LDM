@@ -17,10 +17,6 @@ SU				= @SU@
 PQ_SUBDIR			= @PQ_SUBDIR@
 
 AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
-DISTCHECK_CONFIGURE_FLAGS	= --with-gribinsert \
-                                  --with-noaaport \
-                                  --with-retrans \
-                                  --with-multicast
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.

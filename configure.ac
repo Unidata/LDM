@@ -632,7 +632,7 @@ AC_CONFIG_FILES([
 ])
 
 dnl The VCMTP subsystem is unconditionally configured to enable, for example,
-dnl "make distclean" to work.
+dnl "make dist" to work.
 AC_CONFIG_SUBDIRS([multicast/vcmtp])
 
 export CC
