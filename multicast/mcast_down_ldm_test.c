@@ -23,6 +23,10 @@
 #include <opmock.h>
 #include <stdlib.h>
 
+#ifndef __BASE_FILE__
+    #define __BASE_FILE__ "BASE_FILE_REPLACEMENT"
+#endif
+
 static void missed_product_func(
     Mdl* const  mdl,
     const void* file_entry)
@@ -53,12 +57,15 @@ void test_mdl_createAndExecute()
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
+#if 0
     vcmtpReceiver_new_ExpectAndReturn(
             NULL, int_func, int_func, void_func, addr,     port,      NULL,  0,
             NULL, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
     vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
+    vcmtpReceiver_execute_ExpectAndReturn(NULL, NULL);
     status = mdl_createAndExecute(pq, missed_product_func, addr, port);
     OP_ASSERT_EQUAL_INT(0, status);
+#endif
 
     OP_VERIFY();
 }
@@ -70,5 +77,5 @@ int main(
     opmock_test_suite_reset();
     opmock_register_test(test_mdl_createAndExecute, "test_mdl_createAndExecute");
     opmock_test_suite_run();
-    return opmock_get_number_of_errors() != 0;
+    return opmock_get_number_of_errors();
 }

@@ -58,7 +58,10 @@
  *                      be at least INET_ADDRSTRLEN bytes in size.
  * @param[in]  size     The size of the buffer in bytes.
  * @param[in]  addr     The IPv4 address in network byte order.
- * @return              Pointer to the buffer.
+ * @retval     -1       Error. \c log_add() called. \c errno will be
+ *                          ENOSPC      The size of the buffer is inadequate.
+ * @return              The number of bytes written to the buffer excluding the
+ *                      terminating NUL.
  */
 static char* ipaddr_print(
     char* const         buf,
@@ -68,29 +71,10 @@ static char* ipaddr_print(
     struct in_addr in_addr;
 
     in_addr.s_addr = addr;
-    (void)inet_ntop(AF_INET, &in_addr, buf, size);
 
-    return buf;
-}
-
-/**
- * Returns the formatted representation of a binary IPv4 address.
- *
- * @param[in] addr      The IPv4 address in network byte order.
- * @retval    !NULL     Pointer to the string representation of the IPv4 address.
- *                      The client should free when it's no longer needed.
- * @retval    NULL      The address couldn't be formatted. "errno" will be
- *                      ENOMEM.
- */
-static char* ipaddr_format(
-    const in_addr_t addr)
-{
-    char* const buf = LOG_MALLOC(INET_ADDRSTRLEN, "IP address buffer");
-
-    if (buf != NULL)
-        (void)ipaddr_print(buf, INET_ADDRSTRLEN, addr);
-
-    return buf;
+    return inet_ntop(AF_INET, &in_addr, buf, size) == NULL
+            ? -1
+            : strlen(buf);
 }
 
 /**
@@ -100,7 +84,7 @@ static char* ipaddr_format(
  * @param[in] sockaddr  IPv4 socket address.
  * @retval    !NULL     String representation of the socket address. The client
  *                      should free when it's no longer needed.
- * @retval    NULL      The socket address couldn't be formatted. "errno" will
+ * @retval    NULL      The socket address couldn't be formatted. \c errno will
  *                      be ENOMEM.
  */
 static char* sockaddr_format(
@@ -110,10 +94,8 @@ static char* sockaddr_format(
     char* const         buf = LOG_MALLOC(bufsize, "socket address buffer");
 
     if (buf != NULL) {
-        size_t          len;
+        size_t len = ipaddr_print(buf, bufsize, sockaddr->sin_addr.s_addr);
 
-        (void)ipaddr_print(buf, bufsize, sockaddr->sin_addr.s_addr);
-        len = strlen(buf);
         (void)snprintf(buf+len, bufsize-len, ":%d", ntohs(sockaddr->sin_port));
     }
 
@@ -128,7 +110,7 @@ static char* sockaddr_format(
  * @param[in] loop      Whether or not packets should be received on the
  *                      loopback interface.
  * @retval    0         Success.
- * @retval    -1        Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1        Failure. @code{log_add()} called. \c errno will be one
  *                      of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -161,7 +143,7 @@ int sf_set_loopback_reception(
  *                        <128       Restricted to the same continent.
  *                        <255       Unrestricted in scope. Global.
  * @retval    0         Success.
- * @retval    -1        Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1        Failure. @code{log_add()} called. \c errno will be one
  *                      of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -186,7 +168,7 @@ int sf_set_time_to_live(
  * @param[in] ifaceAddr  IPv4 address of interface in network byte order. 0
  *                       means the default interface.
  * @retval    0          Success.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -218,7 +200,7 @@ int sf_set_interface(
  * @param[in] nonblock  Whether or not the socket should be in non-blocking
  *                      mode.
  * @retval    0         Success.
- * @retval    -1        Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1        Failure. @code{log_add()} called. \c errno will be one
  *                      of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -252,7 +234,7 @@ int sf_set_nonblocking(
  *                       whether or not multiple processes on the same host can
  *                       receive packets from the same multicast group).
  * @retval    0          Success.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -285,7 +267,7 @@ int sf_set_address_reuse(
  *                                                      administrative scoping
  * @param[in] port       Port number of multicast group.
  * @retval    >=0        The multicast socket.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES        The process does not have appropriate
  *                                        privileges.
@@ -366,7 +348,7 @@ static int create_or_open_multicast(
  *                                                      administrative scoping
  * @param[in] port       Port number used for the destination multicast group.
  * @retval    >=0        The created multicast socket.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES        The process does not have appropriate
  *                                        privileges.
@@ -415,7 +397,7 @@ int sf_create_multicast(
  *
  * @param[in] port       Port number of multicast group.
  * @retval    >=0        The socket.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES        The process does not have appropriate
  *                                        privileges.
@@ -468,7 +450,7 @@ int sf_open_multicast(
  *                       means the default interface for multicast packets.
  * @param[in] add        Whether to add or drop the multicast group (0 => drop).
  * @retval    0          Success.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.
@@ -496,14 +478,14 @@ static int add_or_drop_multicast_group(
             sizeof(group));
 
     if (status) {
-        char* const mcastAddrString = ipaddr_format(mIpAddr);
-        char* const ifaceAddrString = ipaddr_format(ifaceAddr);
+        char mcastAddrString[INET_ADDRSTRLEN];
+        char ifaceAddrString[INET_ADDRSTRLEN];
 
+        (void)ipaddr_print(mcastAddrString, sizeof(mcastAddrString), mIpAddr);
+        (void)ipaddr_print(ifaceAddrString, sizeof(ifaceAddrString), ifaceAddr);
         LOG_SERROR5("Couldn't %s IPv4 multicast group %s %s interface %s "
                 "for socket %d", add ? "add" : "drop", mcastAddrString,
                 add ? "to" : "from", ifaceAddrString, sock);
-        free(mcastAddrString);
-        free(ifaceAddrString);
     }
 
     return status;
@@ -525,7 +507,7 @@ static int add_or_drop_multicast_group(
  * @param[in] ifaceAddr  IPv4 address of interface in network byte order. 0
  *                       means the default interface for multicast packets.
  * @retval    0          Success.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.
@@ -553,7 +535,7 @@ int sf_add_multicast_group(
  * @param[in] ifaceAddr  IPv4 address of interface in network byte order. 0
  *                       means the default interface for multicast packets.
  * @retval    0          Success.
- * @retval    -1         Failure. @code{log_add()} called. "errno" will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.

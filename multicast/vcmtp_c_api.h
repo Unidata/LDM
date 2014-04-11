@@ -51,6 +51,9 @@ const char* vcmtpFileEntry_getName(
 size_t vcmtpFileEntry_getSize(
     const void*                 file_entry);
 
+void vcmtpFileEntry_setBofResponseToIgnore(
+    void*                       file_entry);
+
 int vcmtpFileEntry_setMemoryBofResponse(
     void*                       file_entry,
     unsigned char*              buf);

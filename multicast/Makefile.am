@@ -34,7 +34,7 @@ sock_funcs.h:		sock_funcs.hin sock_funcs.c
 
 if HAVE_OPMOCK
 VCMTPReceiver_stubs	= VCMTPReceiver_stub.cpp VCMTPReceiver_stub.hpp
-vcmtp_c_api_stubs	= vcmtp_c_api_stub.cpp vcmtp_c_api_stub.h
+vcmtp_c_api_stubs	= vcmtp_c_api_stub.c vcmtp_c_api_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
 all_stubs		= $(VCMTPReceiver_stubs) $(vcmtp_c_api_stubs) $(pq_stubs)
 BUILT_SOURCES		+= $(all_stubs)

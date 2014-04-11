@@ -19,8 +19,8 @@ PQ_SUBDIR			= @PQ_SUBDIR@
 AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
 DISTCHECK_CONFIGURE_FLAGS	= --with-gribinsert \
                                   --with-noaaport \
-                                  --with-retrans
-#                                  --with-multicast
+                                  --with-retrans \
+                                  --with-multicast
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
@@ -38,11 +38,11 @@ if WANT_GRIBINSERT
     SUBDIRS	+= grib2 gempak
 endif
 endif
-if WANT_RETRANS
-    SUBDIRS	+= noaaport/retrans
-endif
 if WANT_MULTICAST
     SUBDIRS	+= multicast
+endif
+if WANT_RETRANS
+    SUBDIRS	+= noaaport/retrans
 endif
 SUBDIRS 	+= lib
 if WANT_NOAAPORT

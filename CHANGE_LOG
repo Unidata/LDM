@@ -1,3 +1,9 @@
+6.11.8	2014-04-11T13:31:39-0600
+    "multicast/" directory:
+        Improved beginning-of-file responses.
+        
+        Got directory to build without errors.
+
 6.11.7	2014-04-04T15:37:47-0600
     Downstream LDM:
         Squashed a bug that could result in an assertion failure if a remote

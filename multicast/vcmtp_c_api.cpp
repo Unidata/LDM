@@ -241,7 +241,7 @@ size_t vcmtpFileEntry_getSize(
  * @param[in,out] file_entry    The VCMTP file-entry in which to set the
  *                              response.
  */
-void vcmtpFileEntry_ignoreFile(
+void vcmtpFileEntry_setBofResponseToIgnore(
     void* const                 file_entry)
 {
     ((VcmtpFileEntry*)file_entry)->setBofResponseToIgnore();
@@ -263,7 +263,7 @@ int vcmtpFileEntry_setMemoryBofResponse(
     unsigned char* const        buf)
 {
     try {
-        std::shared_ptr<BofResponse> bofResponse(new MemoryBofResponse(buf));
+        BofResponse bofResponse(new MemoryBofResponse(buf));
 
         ((VcmtpFileEntry*)file_entry)->setBofResponse(bofResponse);
         return 0;

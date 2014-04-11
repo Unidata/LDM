@@ -9,7 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define __USE_MISC          /* To get "struct ip_mreq" on Linux. Don't move! */
+#ifndef __USE_MISC
+    #define __USE_MISC          /* To get "struct ip_mreq" on Linux. Don't move! */
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
