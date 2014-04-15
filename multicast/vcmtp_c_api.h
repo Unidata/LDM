@@ -56,7 +56,8 @@ void vcmtpFileEntry_setBofResponseToIgnore(
 
 int vcmtpFileEntry_setMemoryBofResponse(
     void*                       file_entry,
-    unsigned char*              buf);
+    unsigned char*              buf,
+    size_t                      size);
 
 #ifdef __cplusplus
 }

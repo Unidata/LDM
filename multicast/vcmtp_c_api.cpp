@@ -254,16 +254,18 @@ void vcmtpFileEntry_setBofResponseToIgnore(
  * @param[in,out] file_entry    The VCMTP file-entry in which to set the
  *                              response.
  * @param[in]     buf           The receiving buffer for the file.
+ * @param[in]     size          The size of the receiving buffer in bytes.
  * @retval        0             Success.
  * @retval        EINVAL        if @code{buf == NULL}. \c log_add() called.
  * @retval        ENOMEM        Out of memory. \c log_add() called.
  */
 int vcmtpFileEntry_setMemoryBofResponse(
     void* const                 file_entry,
-    unsigned char* const        buf)
+    unsigned char* const        buf,
+    const size_t                size)
 {
     try {
-        BofResponse bofResponse(new MemoryBofResponse(buf));
+        BofResponse bofResponse(new MemoryBofResponse(buf, size));
 
         ((VcmtpFileEntry*)file_entry)->setBofResponse(bofResponse);
         return 0;
