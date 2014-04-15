@@ -53,9 +53,10 @@ static int bof_func(
     }
 
     Mdl* const      mdl = (Mdl*)obj;
-    unsigned char*  buf = realloc(mdl->buf, vcmtpFileEntry_getSize(file_entry));
+    size_t          size = vcmtpFileEntry_getSize(file_entry);
+    unsigned char*  buf = realloc(mdl->buf, size);
 
-    if (vcmtpFileEntry_setMemoryBofResponse(file_entry, buf))
+    if (vcmtpFileEntry_setMemoryBofResponse(file_entry, buf, size))
         return ENOMEM;
 
     mdl->buf = buf;
