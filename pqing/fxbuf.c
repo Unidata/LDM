@@ -95,7 +95,7 @@ feedTheXbuf(const int ifd)
 		if (theBuf->bufsiz >= maxProductSize) {
 			LOG_ADD1("Data-product would exceed %lu bytes. Resetting input buffer.",
 				maxProductSize);
-            log_log(LOG_WARNING);
+			log_log(LOG_WARNING);
 			justify_xbuf(theBuf, 0);
 		}
 
@@ -109,7 +109,7 @@ feedTheXbuf(const int ifd)
 			serror("expand_xbuf");
 			return status;
 		}
-    }
+	}
 
 	status = (*read_feed)(ifd, (char *)theBuf->put, CHUNKSIZE, &nn);
 	if(status != ENOERR)

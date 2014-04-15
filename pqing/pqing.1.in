@@ -6,16 +6,17 @@ pqing, dds, pps, ddplus, ids, hds, afos \- product queue ingester for Unidata LD
 .ft B
 pqing
 .nh
-\%[-v]
-\%[-r\ \fIrawfile\fR]
-\%[-l\ \fIlogfile\fR] 
-\%[-f\ \fIfeedtype\fR]
+\%[-5]
+\%[-c]
 \%[-b\ \fIbaud\fR]
+\%[-f\ \fIfeedtype\fR]
+\%[-l\ \fIlogfile\fR] 
+\%[-n]
 \%[-q\ \fIq_path\fP]
 \%[-p\ \fIparity\fR]
-\%[-c]
-\%[-n]
-\%[-5]
+\%[-r\ \fIrawfile\fR]
+\%[-s\ \fIsize\fR]
+\%[-v]
 \fIfeedname\fR
 .hy
 .ft
