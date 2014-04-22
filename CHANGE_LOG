@@ -1,4 +1,8 @@
-6.11.8	2014-04-15T10:27:04-0600
+6.11.8	2014-04-22T16:46:34-0600
+    NOAAPORT Ingestion:
+        Incorporated Raytheon's support for extracting NOAA Weather Wire
+        Service (NWWS) products from the broadcast.
+
     "multicast/" directory:
         Improved beginning-of-file responses.
         

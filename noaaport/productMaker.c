@@ -399,20 +399,21 @@ void* pmStart(
         }
 
         switch (sbn->datastream) {
-        case 7:       /* test */
-        case 6:       /* was reserved...now nwstg2 */
-        case 5:
+        case 5:       /* nwstg */
+        case 6:       /* nwtg2 */
+        case 7:       /* polarsat */
+        case 8:       /* NOAA Weather Wire Service (NWWS) */
         case 9:
         case 10:
         case 11:
-        case 12:
-        case 13:
+        case 12:      /* GOES-R */
+        case 13:      /* GOES-R */
             NWSTG = 1;
             GOES = 0;
             break;
-        case 1:
-        case 2:
-        case 4:
+        case 1:       /* GINI GOES */
+        case 2:       /* GINI GOES */
+        case 4:       /* OCONUS */
             NWSTG = 0;
             GOES = 1;
             break;
