@@ -303,14 +303,13 @@ char* s_signaturet(char *buf, size_t bufsize, const signaturet signaturep)
 }
 
 
-/*
+/**
  * Parses a formatted signature.
  *
- * Arguments:
- *      string  Pointer to the formatted signature.
- * Returns:
- *      -1      Failure.  log_errno() called.
- *      else    Number of bytes parsed.
+ * @param[in]  string     Pointer to the formatted signature.
+ * @param[out] signature  Pointer to the data-product MD5 signature.
+ * @retval     -1         Failure. \c log_add() called.
+ * @return                Number of bytes parsed.
  */
 int
 sigParse(
@@ -333,7 +332,7 @@ sigParse(
     }
 
     if (i != sizeof(signaturet)) {
-        log_errno();
+        LOG_SERROR0();
         nbytes = -1;
     }
     else {
