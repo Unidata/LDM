@@ -396,14 +396,14 @@ int mdl_createAndExecute(
     Mdl*        mdl;
     int         status = mdl_new(&mdl, pq, missed_product, addr, port);
 
-    if (0 == status) {
-        status = execute(mdl);
-        mdl_free(mdl);
+    if (status) {
+        LOG_ADD0("Couldn't create new multicast downstream LDM");
     }
-
-    if (status)
-        LOG_ADD2("Multicast downstream LDM failure: IP address %s, port %u",
-                addr, port);
+    else {
+        if (status = execute(mdl))
+            LOG_ADD0("Failure executing multicast downstream LDM");
+        mdl_free(mdl);
+    } /* "mdl" allocated */
 
     return status;
 }
