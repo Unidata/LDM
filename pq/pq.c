@@ -5218,8 +5218,23 @@ pq_pagesize(const pqueue *pq)
 }
 
 
-/*
- * Returns a region into which to accumulate a data-product.
+/**
+ * Returns the size of the data portion of a product-queue.
+ *
+ * @param[in] pq  Pointer to the product-queue object.
+ * @return        The size, in bytes, of the data portion of the product-queue.
+ */
+size_t
+pq_getDataSize(
+    pqueue* const       pq)
+{
+    return pq->ixo - pq->datao;
+}
+
+
+/**
+ * Returns an allocated region into which to write a data-product based on
+ * data-product metadata.
  *
  * Arguments:
  *      pq              Pointer to the product-queue object.
@@ -5227,7 +5242,10 @@ pq_pagesize(const pqueue *pq)
  *      ptrp            Pointer to the pointer to the region into which to 
  *                      write the data-product.  Set upon successful return.
  *      indexp          Pointer to the handle to identify the region.  Set
- *                      upon successful return.
+ *                      upon successful return. The client must call \c
+ *                      pqe_insert() when all the data has been written or \c
+ *                      pqe_discard() to abort the writing and release the
+ *                      region.
  * Returns:
  *      0               Success.  "*ptrp" and "*indexp" are set.
  *      else            <errno.h> error code.
@@ -5252,8 +5270,9 @@ pqe_new(pqueue *pq,
                 return EINVAL;  
         }
 
-        if (infop->sz > (pq->ixo - pq->datao)) {
-                uerror("pqe_new(): product too big");
+        if (infop->sz > pq_getDataSize(pq)) {
+                uerror("Product too big: product=%u bytes; queue=%lu bytes",
+                    infop->sz, (unsigned long)pq_getDataSize(pq));
                 return PQUEUE_BIG;  
         }
 
@@ -5269,7 +5288,6 @@ pqe_new(pqueue *pq,
                 return status;
         }
 
-/* */
         extent = xlen_prod_i(infop);
         status = rpqe_new(pq, extent, infop->signature, &vp, &sxep);
         if(status != ENOERR) {
@@ -5298,8 +5316,95 @@ unwind_ctl:
 }
 
 
-/*
- * Discards a region obtained from "pqe_new()".
+/**
+ * Returns an allocated region into which to write an XDR-encoded data-product.
+ *
+ * This function is thread-compatible but not thread-safe.
+ *
+ * @param[in]  pq         Pointer to the product-queue.
+ * @param[in]  size       Size of the XDR-encoded data-product in bytes --
+ *                        including the data-product metadata.
+ * @param[in]  signature  The data-product's MD5 checksum.
+ * @param[out] ptrp       Pointer to the pointer to the region into which to
+ *                        write the XDR-encoded data-product -- starting with
+ *                        the data-product metadata. The client must begin
+ *                        writing at \c *ptrp and not write more than \c size
+ *                        bytes of data.
+ * @param[out] indexp     Pointer to the handle to identify the region. The
+ *                        client must call \c pqe_insert() when all the data has
+ *                        been written or \c pqe_discard() to abort the writing
+ *                        and release the region.
+ * @retval     0          Success.  \c *ptrp and \c *indexp are set.
+ * @retval     EINVAL     @code{pq == NULL || ptrp == NULL || indexp == NULL}. \c
+ *                        log_add() called.
+   @retval     EACCES     Product-queue is read-only. \c log_add() called.
+ * @retval     PQUEUE_BIG Data-product is too large for product-queue. \c
+ *                        log_add() called.
+ * @retval     PQUEUE_DUP If a data-product with the same signature already
+ *                        exists in the product-queue.
+ * @return                <errno.h> error code. \c log_add() called.
+ */
+int
+pqe_newDirect(
+    pqueue* const     pq,
+    const size_t      size,
+    const signaturet  signature,
+    char** const      ptrp,
+    pqe_index* const  indexp)
+{
+    int               status;
+
+    /*
+     * Vet arguments.
+     */
+    if (pq == NULL || ptrp == NULL || indexp == NULL) {
+        LOG_ADD0("NULL pointer argument");
+        status = EINVAL;
+    }
+    else if (size > pq_getDataSize(pq)) {
+        LOG_ADD2("Product too big: product=%lu bytes; queue=%lu bytes",
+                (unsigned long)size, (unsigned long)pq_getDataSize(pq));
+        status = PQUEUE_BIG;
+    }
+    else if (fIsSet(pq->pflags, PQ_READONLY)) {
+        LOG_ADD0("Product-queue is read-only");
+        status = EACCES;
+    }
+    else {
+        /*
+         * Write-lock the product-queue control-section.
+         */
+        if (status = ctl_get(pq, RGN_WRITE)) {
+            LOG_ADD0("ctl_get() failure");
+        }
+        else {
+            sxelem* sxep;
+
+            /*
+             * Obtain a new region.
+             */
+            if (status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep)) {
+                LOG_ADD0("rpqe_new() failure");
+            }
+            else {
+                /*
+                 * Save the region information in the client-supplied index
+                 * structure.
+                 */
+                indexp->offset = sxep->offset;
+                (void)memcpy(indexp->signature, sxep->sxi, sizeof(signaturet));
+            }
+
+            (void)ctl_rel(pq, RGN_MODIFIED);
+        } /* product-queue control-section locked */
+    } /* arguments vetted */
+
+    return status;
+}
+
+
+/**
+ * Discards a region obtained from \c pqe_new() or \c pqe_newWithNoInfo().
  *
  * Arguments:
  *      pq              Pointer to the product-queue.  Shall not be NULL.
@@ -5580,7 +5685,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 return EACCES;
         }
 
-        if (prod->info.sz > (pq->ixo - pq->datao)) {
+        if (prod->info.sz > pq_getDataSize(pq)) {
                 udebug("pq_insertNoSig(): product is too big");
                 return PQUEUE_BIG;
         }
@@ -5939,21 +6044,6 @@ pq_stats(pqueue *pq,
     (void) ctl_rel(pq, 0);
 
     return status;
-}
-
-/*
- * Returns the size of the data portion of a product-queue.
- *
- * Arguments:
- *      pq              Pointer to the product-queue object.
- * Returns:
- *      The size, in bytes, of the data portion of the product-queue.
- */
-size_t
-pq_getDataSize(
-    pqueue* const       pq)
-{
-    return pq->ixo - pq->datao;
 }
 
 /*
@@ -6711,7 +6801,7 @@ pq_sequence(pqueue *pq, pq_match mt,
         status = rl_r_find(pq->rlp, tqep->offset, &rp);
         if(status == 0
                  || rp->offset != tqep->offset
-                 || Extent(rp) > pq->ixo - pq->datao
+                 || Extent(rp) > pq_getDataSize(pq)
                 )
         {
                 char ts[20];
@@ -6930,7 +7020,7 @@ pq_seqdel(pqueue *pq, pq_match mt,
         assert(rlix != RL_NONE);
         rp = pq->rlp->rp + rlix;
         assert(rp->offset == tqep->offset);
-        assert(Extent(rp) <= (pq->ixo - pq->datao));
+        assert(Extent(rp) <= pq_getDataSize(pq));
         status = rgn_get(pq, rp->offset, Extent(rp), rflags, &vp);
         if(status != ENOERR)
         {

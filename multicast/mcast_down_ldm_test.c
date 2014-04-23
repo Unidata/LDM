@@ -42,14 +42,17 @@ void test_mdl_createAndExecute()
     int                 (*int_func)() = (int(*)())1;
     void                (*void_func)() = (void(*)())2;
 
+    /* Invalid product-queue argument */
     status = mdl_createAndExecute(NULL, (void*)1, addr, 0);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
-    status = mdl_createAndExecute((void*)1, NULL, (void*)1, 0);
+    /* Invalid missed-product-function argument */
+    status = mdl_createAndExecute((void*)1, NULL, addr, 0);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
+    /* Invalid multicast IP address argument */
     vcmtpReceiver_new_ExpectAndReturn(
             NULL, int_func, int_func, void_func, addr, port,      NULL,  EINVAL,
             NULL, NULL,     NULL,     NULL,      NULL, cmp_short, NULL);
@@ -57,15 +60,14 @@ void test_mdl_createAndExecute()
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
-#if 0
+    /* Trivial execution */
     vcmtpReceiver_new_ExpectAndReturn(
             NULL, int_func, int_func, void_func, addr,     port,      NULL,  0,
             NULL, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
+    vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
-    vcmtpReceiver_execute_ExpectAndReturn(NULL, NULL);
     status = mdl_createAndExecute(pq, missed_product_func, addr, port);
     OP_ASSERT_EQUAL_INT(0, status);
-#endif
 
     OP_VERIFY();
 }

@@ -37,47 +37,47 @@ struct vcmtp_c_receiver {
 /**
  * Initializes a VCMTP C Receiver.
  *
- * @param[in,out] cReceiver              The VCMTP C Receiver to initialize.
- * @param[in]     bof_func               Function to call when the VCMTP layer
- *                                       has seen a beginning-of-file.
- * @param[in]     eof_func               Function to call when the VCMTP layer
- *                                       has completely received a file.
- * @param[in]     missed_file_func       Function to call when a file is missed
- *                                       by the VCMTP layer.
- * @param[in]     addr                   Address of the multicast group.
- *                                        224.0.0.0-224.0.0.255 Reserved for
- *                                                              local purposes
- *                                        224.0.1.0-238.255.255.255
- *                                                              User-defined
- *                                                              multicast
- *                                                              addresses
- *                                        239.0.0.0-239.255.255.255
- *                                                              Reserved for
- *                                                              administrative
- *                                                              scoping
- * @param[in]     port                   Port number of the multicast group.
- * @param[in]     obj                    Relevant object in the receiving
- *                                       application to pass to the above
- *                                       functions. May be NULL.
- * @throws        std::invalid_argument  if @code{0==buf_func || 0==eof_func ||
- *                                       0==missed_file_func || 0==addr}.
- * @throws        std::invalid_argument  if \c addr couldn't be converted into a
- *                                       binary IPv4 address.
- * @throws        std::runtime_error     if the IP address of the PA interface
- *                                       couldn't be obtained. (The PA address
- *                                       seems to be specific to Linux and might
- *                                       cause problems.)
- * @throws        std::runtime_error     if the socket couldn't be bound to the
- *                                       interface.
- * @throws        std::runtime_error     if the socket couldn't be bound to the
- *                                       Internet address.
- * @throws        std::runtime_error     if the multicast group couldn't be
- *                                       added to the socket.
- * @throws        std::exception         If the VCMTP C Receiver can't be
- *                                       initialized.
+ * @param[out] receiver               The VCMTP C Receiver to initialize.
+ * @param[in]  bof_func               Function to call when the VCMTP layer
+ *                                    has seen a beginning-of-file.
+ * @param[in]  eof_func               Function to call when the VCMTP layer
+ *                                    has completely received a file.
+ * @param[in]  missed_file_func       Function to call when a file is missed
+ *                                    by the VCMTP layer.
+ * @param[in]  addr                   Address of the multicast group:
+ *                                     224.0.0.0-224.0.0.255 Reserved for
+ *                                                           local purposes
+ *                                     224.0.1.0-238.255.255.255
+ *                                                           User-defined
+ *                                                           multicast
+ *                                                           addresses
+ *                                     239.0.0.0-239.255.255.255
+ *                                                           Reserved for
+ *                                                           administrative
+ *                                                           scoping
+ * @param[in]  port                   Port number of the multicast group.
+ * @param[in]  obj                    Relevant object in the receiving
+ *                                    application to pass to the above
+ *                                    functions. May be NULL.
+ * @throws     std::invalid_argument  if @code{0==buf_func || 0==eof_func ||
+ *                                    0==missed_file_func || 0==addr}.
+ * @throws     std::invalid_argument  if \c addr couldn't be converted into a
+ *                                    binary IPv4 address.
+ * @throws     std::runtime_error     if the IP address of the PA interface
+ *                                    couldn't be obtained. (The PA address
+ *                                    seems to be specific to Linux and might
+ *                                    cause problems.)
+ * @throws     std::runtime_error     if the socket couldn't be bound to the
+ *                                    interface.
+ * @throws     std::runtime_error     if the socket couldn't be bound to the
+ *                                    Internet address.
+ * @throws     std::runtime_error     if the multicast group couldn't be
+ *                                    added to the socket.
+ * @throws     std::exception         If the VCMTP C Receiver can't be
+ *                                    initialized.
  */
 static void vcmtpReceiver_init(
-    VcmtpCReceiver* const cReceiver,
+    VcmtpCReceiver* const receiver,
     const BofFunc         bof_func,
     const EofFunc         eof_func,
     const MissedFileFunc  missed_file_func,
@@ -92,7 +92,7 @@ static void vcmtpReceiver_init(
         if (0 == addr)
             throw std::invalid_argument(std::string("NULL address argument"));
         rec->JoinGroup(std::string(addr), port);
-        cReceiver->receiver = rec;
+        receiver->receiver = rec;
     }
     catch (const std::exception& e) {
         delete rec;
@@ -103,13 +103,14 @@ static void vcmtpReceiver_init(
 /**
  * Returns a new VCMTP C Receiver.
  *
- * @param[in] bof_func          Function to call when the VCMTP layer has seen
- *                              a beginning-of-file.
- * @param[in] eof_func          Function to call when the VCMTP layer has
- *                              completely received a file.
- * @param[in] missed_file_func  Function to call when a file is missed by the
- *                              VCMTP layer.
- * @param[in] addr              Address of the multicast group.
+ * @param[out] receiver          Pointer to returned VCMTP receiver.
+ * @param[in]  bof_func          Function to call when the VCMTP layer has seen
+ *                               a beginning-of-file.
+ * @param[in]  eof_func          Function to call when the VCMTP layer has
+ *                               completely received a file.
+ * @param[in]  missed_file_func  Function to call when a file is missed by the
+ *                               VCMTP layer.
+ * @param[in]  addr              Address of the multicast group.
  *                               224.0.0.0 - 224.0.0.255     Reserved for local
  *                                                           purposes
  *                               224.0.1.0 - 238.255.255.255 User-defined
@@ -117,19 +118,19 @@ static void vcmtpReceiver_init(
  *                               239.0.0.0 - 239.255.255.255 Reserved for
  *                                                           administrative
  *                                                           scoping
- * @param[in] port              Port number of the multicast group.
- * @param[in] obj               Relevant object in the receiving application to
- *                              pass to the above functions. May be NULL.
- * @retval    0                 Success. The client should call
- *                              vcmtp_receiver_free() when the receiver is no
- *                              longer needed.
- * @retval    EINVAL            if @code{0==buf_func || 0==eof_func ||
- *                              0==missed_file_func || 0==addr}.
- * @retval    ENOMEM            Out of memory. \c log_add() called.
- * @retval    -1                Other failure. \c log_add() called.
+ * @param[in]  port              Port number of the multicast group.
+ * @param[in]  obj               Relevant object in the receiving application to
+ *                               pass to the above functions. May be NULL.
+ * @retval     0                 Success. The client should call \c
+ *                               vcmtp_receiver_free(*receiver) when the
+ *                               receiver is no longer needed.
+ * @retval     EINVAL            if @code{0==buf_func || 0==eof_func ||
+ *                               0==missed_file_func || 0==addr}.
+ * @retval     ENOMEM            Out of memory. \c log_add() called.
+ * @retval     -1                Other failure. \c log_add() called.
  */
 int vcmtpReceiver_new(
-    VcmtpCReceiver** const      cReceiver,
+    VcmtpCReceiver** const      receiver,
     const BofFunc               bof_func,
     const EofFunc               eof_func,
     const MissedFileFunc        missed_file_func,
@@ -137,26 +138,26 @@ int vcmtpReceiver_new(
     const unsigned short        port,
     void* const                 obj)
 {
-    VcmtpCReceiver*      rec = (VcmtpCReceiver*)LOG_MALLOC(sizeof(VcmtpCReceiver),
+    VcmtpCReceiver* rcvr = (VcmtpCReceiver*)LOG_MALLOC(sizeof(VcmtpCReceiver),
             "VCMTP receiver");
 
-    if (0 == rec)
+    if (0 == rcvr)
         return ENOMEM;
 
     try {
-        vcmtpReceiver_init(rec, bof_func, eof_func, missed_file_func,
-                addr, port, obj);
-        *cReceiver = rec;
+        vcmtpReceiver_init(rcvr, bof_func, eof_func, missed_file_func, addr,
+                port, obj);
+        *receiver = rcvr;
         return 0;
     }
     catch (const std::invalid_argument& e) {
         log_add("%s", e.what());
-        free(rec);
+        free(rcvr);
         return EINVAL;
     }
     catch (const std::exception& e) {
         log_add("%s", e.what());
-        free(rec);
+        free(rcvr);
         return -1;
     }
 }
@@ -164,39 +165,52 @@ int vcmtpReceiver_new(
 /**
  * Frees the resources of a VCMTP C Receiver.
  *
- * @param[in,out] cReceiver      The VCMTP C Receiver.
+ * @param[in,out] receiver      The VCMTP C Receiver.
  */
 void vcmtpReceiver_free(
-    VcmtpCReceiver* const       cReceiver)
+    VcmtpCReceiver* const       receiver)
 {
-    delete cReceiver->receiver;
-    free(cReceiver);
+    delete receiver->receiver;
+    free(receiver);
 }
 
 /**
  * Executes a VCMTP C Receiver. Returns when the receiver terminates.
  *
- * @param[in,out] cReceiver     The VCMTP C Receiver.
+ * @param[in,out] receiver      The VCMTP C Receiver.
  * @retval        0             Success.
- * @retval        EINVAL        @code{cReceiver == NULL}. \c log_add() called.
+ * @retval        EINVAL        @code{receiver == NULL}. \c log_add() called.
  * @retval        -1            Other failure. \c log_add() called.
  */
 int vcmtpReceiver_execute(
-    const VcmtpCReceiver* const cReceiver)
+    const VcmtpCReceiver* const receiver)
 {
-    if (0 == cReceiver) {
+    if (0 == receiver) {
         LOG_ADD0("NULL receiver argument");
         return EINVAL;
     }
 
     try {
-        cReceiver->receiver->RunReceivingThread();
+        receiver->receiver->RunReceivingThread();
         return 0;
     }
     catch (const std::exception& e) {
         LOG_ADD1("%s", e.what());
         return -1;
     }
+}
+
+/**
+ * Indicates if the VCMTP file is wanted or not.
+ *
+ * @param[in] file_entry  VCMTP file metadata.
+ * @return    1           The file is wanted.
+ * @retval    0           The file is not wanted.
+ */
+int vcmtpFileEntry_isWanted(
+    const void* const file_entry)
+{
+    return ((VcmtpFileEntry*)file_entry)->isWanted();
 }
 
 /**
@@ -248,35 +262,41 @@ void vcmtpFileEntry_setBofResponseToIgnore(
 }
 
 /**
- * Sets the response in a file-entry to a beginning-of-file notification of
- * a memory transfer.
+ * Sets the beginning-of-file response in a file-entry.
  *
- * @param[in,out] file_entry    The VCMTP file-entry in which to set the
- *                              response.
- * @param[in]     buf           The receiving buffer for the file.
- * @param[in]     size          The size of the receiving buffer in bytes.
+ * @param[in,out] fileEntry     The VCMTP file-entry in which to set the
+ *                              BOF response.
+ * @param[in]     bofResponse   Pointer to the beginning-of-file response.
  * @retval        0             Success.
- * @retval        EINVAL        if @code{buf == NULL}. \c log_add() called.
- * @retval        ENOMEM        Out of memory. \c log_add() called.
+ * @retval        EINVAL        if @code{fileEntry == NULL || bofResponse ==
+ *                              NULL}. \c log_add() called.
  */
-int vcmtpFileEntry_setMemoryBofResponse(
-    void* const                 file_entry,
-    unsigned char* const        buf,
-    const size_t                size)
+int vcmtpFileEntry_setBofResponse(
+    void* const       fileEntry,
+    const void* const bofResponse)
 {
-    try {
-        BofResponse bofResponse(new MemoryBofResponse(buf, size));
+    VcmtpFileEntry* const    entry = (VcmtpFileEntry*)fileEntry;
+    const BofResponse* const bof = (const BofResponse*)bofResponse;
 
-        ((VcmtpFileEntry*)file_entry)->setBofResponse(bofResponse);
-        return 0;
-    }
-    catch (const std::invalid_argument& e) {
-        LOG_ADD1("%s", e.what());
+    if (fileEntry == NULL || bofResponse == NULL) {
+        LOG_ADD0("NULL argument");
         return EINVAL;
     }
-    catch (const std::bad_alloc& e) {
-        LOG_ADD1("Couldn't allocate BOF response for memory transfer: %s",
-                e.what());
-        return ENOMEM;
-    }
+
+    entry->setBofResponse(bof);
+    return 0;
+}
+
+/**
+ * Returns the beginning-of-file response from the receiving application
+ * associated with a VCMTP file.
+ *
+ * @param[in] file_entry  The entry for the VCMTP file.
+ * @return                The corresponding BOF response from the receiving
+ *                        application. May be NULL.
+ */
+const void* vcmtpFileEntry_getBofResponse(
+    const void* const file_entry)
+{
+    return ((VcmtpFileEntry*)file_entry)->getBofResponse();
 }

@@ -42,6 +42,9 @@ void vcmtpReceiver_free(
 int vcmtpReceiver_execute(
     const VcmtpCReceiver*       cReceiver);
 
+int vcmtpFileEntry_isWanted(
+    const void*                 file_entry);
+
 bool vcmtpFileEntry_isMemoryTransfer(
     const void*                 file_entry);
 
@@ -54,10 +57,15 @@ size_t vcmtpFileEntry_getSize(
 void vcmtpFileEntry_setBofResponseToIgnore(
     void*                       file_entry);
 
-int vcmtpFileEntry_setMemoryBofResponse(
-    void*                       file_entry,
-    unsigned char*              buf,
-    size_t                      size);
+int vcmtpFileEntry_setBofResponse(
+    void*                       fileEntry,
+    const void*                 bofResponse);
+
+const void* vcmtpFileEntry_getBofResponse(
+    const void*                 file_entry);
+
+void* bofResponse_getPointer(
+    const void*                 bofResponse);
 
 #ifdef __cplusplus
 }

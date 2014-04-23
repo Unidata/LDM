@@ -15,14 +15,15 @@ BUILT_SOURCES           = mcast_down_ldm.h \
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mcast_down_ldm.c \
 			  PerFileNotifier.cpp PerFileNotifier.h \
+			  LdmBofResponse.cpp LdmBofResponse.h \
                           vcmtp_c_api.cpp vcmtp_c_api.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
-                          -I$(builddir)/vcmtp/protocol -I$(srcdir)/vcmtp/protocol
-lib_la_LIBADD		= vcmtp/CommUtil/lib.la \
-                          vcmtp/protocol/lib.la
+                          -I$(builddir)/vcmtp/protocol -I$(srcdir)/vcmtp/protocol \
+                          -I$(top_srcdir)/rpc
+lib_la_LIBADD		= vcmtp/libvcmtp.la
 CLEANFILES		=
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
