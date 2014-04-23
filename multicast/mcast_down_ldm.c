@@ -29,9 +29,9 @@
  * The multicast downstream LDM data-structure:
  */
 struct mdl {
-    pqueue*                     pq;             /* product-queue to use */
-    mdl_missed_product_func     missed_product; /* missed-product callback function */
-    VcmtpCReceiver*             receiver;       /* VCMTP C Receiver */
+    pqueue*                 pq;             /* product-queue to use */
+    mdl_missed_product_func missed_product; /* missed-product callback function */
+    VcmtpCReceiver*         receiver;       /* VCMTP C Receiver */
 };
 
 /**
@@ -80,7 +80,9 @@ static int allocateSpaceAndSetBofResponse(
 
 /**
  * Sets the response attribute of a VCMTP file-entry in response to being
- * notified by the VCMTP layer about the beginning of a file
+ * notified by the VCMTP layer about the beginning of a file. Allocates a
+ * region in the LDM product-queue to receive the VCMTP file, which is an
+ * XDR-encoded LDM data-product.
  *
  * @param[in,out]  obj          Pointer to the associated multicast downstream
  *                              LDM object.
@@ -207,7 +209,7 @@ static int eof_func(
 
 /**
  * Accepts notification from the VCMTP layer of the missed reception of a
- * file.
+ * file. Queues the file to be received via LDM-6 protocols.
  *
  * @param[in,out]  obj          Pointer to the associated multicast downstream
  *                              LDM object.
@@ -224,7 +226,9 @@ static void missed_file_func(
         LOG_ADD1("Filename is not an LDM signature: \"%s\"", name);
     }
     else {
-        ((Mdl*)obj)->missed_product(obj, &signature);
+        Mdl* const mdl = (Mdl*)obj;
+
+        mdl->missed_product(mdl, &signature);
     }
 }
 
@@ -244,8 +248,8 @@ static void missed_file_func(
  *                                                          scoping
  * @param[in] port            Port number of the multicast group.
  * @retval    0               Success.
- * @retval    EINVAL          if @code{!mdl || !pq || !missed_product}.
- *                            \c log_add() called.
+ * @retval    EINVAL          if @code{mdl==NULL || pq==NULL ||
+ *                            missed_product==NULL}. \c log_add() called.
  * @retval    ENOMEM          Out of memory. \c log_add() called.
  * @retval    -1              Other failure. \c log_add() called.
  */

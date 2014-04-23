@@ -1,12 +1,15 @@
-6.11.8	2014-04-23T14:13:55-0600
+6.11.8	2014-04-23T16:50:31-0600
     NOAAPORT Ingestion:
         Incorporated Raytheon's support for extracting NOAA Weather Wire
-        Service (NWWS) products from the broadcast.
+        Service (NWWS) products from the broadcast (basically a new numbered
+        datastream).
 
     "multicast/" directory:
         Improved beginning-of-file responses.
-        
-        Got directory to build without errors.
+
+        Made VCMTP reception of a file zero-copy: the file is read from the
+        socket directly into an allocated region in the LDM product-queue. This
+        is only possible if the VCMTP file is an XDR-encoded LDM data-product.
 
 6.11.7	2014-04-04T15:37:47-0600
     Downstream LDM:
