@@ -209,7 +209,7 @@ static int eof_func(
 
 /**
  * Accepts notification from the VCMTP layer of the missed reception of a
- * file. Queues the file to be received via LDM-6 protocols.
+ * file. Queues the file for reception by other means. Returns immediately.
  *
  * @param[in,out]  obj          Pointer to the associated multicast downstream
  *                              LDM object.

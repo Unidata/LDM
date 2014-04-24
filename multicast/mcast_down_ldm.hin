@@ -16,7 +16,15 @@
 #include "pq.h"
 
 typedef struct mdl      Mdl;
-typedef                 void (*mdl_missed_product_func)(Mdl*, signaturet*);
+/**
+ * Callback-function for notifying the upper layer about a missed file. Queues
+ * the file for reception by other means. Returns immediately.
+ *
+ * @param[in] mdl  Pointer to the multicast downstream LDM.
+ * @param[in] sig  LDM signature (i.e., MD5 checksum) of the missed file.
+ */
+typedef                 void (*mdl_missed_product_func)(Mdl* mdl,
+        const signaturet* sig);
 
 #ifdef __cplusplus
 extern "C" {
