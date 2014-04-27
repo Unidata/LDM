@@ -1,0 +1,30 @@
+/**
+ * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
+ *
+ *   @file: request_queue.hin
+ * @author: Steven R. Emmerson
+ *
+ * This file declares the API for the multicast information returned by a
+ * server.
+ */
+
+#ifndef MULTICAST_INFO_H
+#define MULTICAST_INFO_H
+
+#include "ldm.h"
+
+typedef struct multicast_info  MulticastInfo;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

@@ -7,15 +7,23 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 SUBDIRS			= vcmtp
-EXTRA_DIST              = mcast_down_ldm.hin \
-                          sock_funcs.c \
+EXTRA_DIST              = down_ldm.hin \
+			  mcast_down_ldm.hin \
+                          multicast_info.hin \
+                          request_queue.hin \
                           sock_funcs.hin
-BUILT_SOURCES           = mcast_down_ldm.h \
+BUILT_SOURCES           = down_ldm.h \
+			  mcast_down_ldm.h \
+                          multicast_info.h \
+                          request_queue.h \
                           sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= mcast_down_ldm.c \
+lib_la_SOURCES		= down_ldm.c \
+			  mcast_down_ldm.c \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
+			  multicast_info.c \
+			  request_queue.c \
                           vcmtp_c_api.cpp vcmtp_c_api.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
@@ -30,7 +38,10 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
+down_ldm.h:		down_ldm.hin down_ldm.c
 mcast_down_ldm.h:	mcast_down_ldm.hin mcast_down_ldm.c
+multicast_info.h:	multicast_info.hin multicast_info.c
+request_queue.h:	request_queue.hin request_queue.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 
 if HAVE_OPMOCK
@@ -51,7 +62,7 @@ $(pq_stubs):		../pq/pq.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
 #check_PROGRAMS			= vcmtp_c_api_test mcast_down_ldm_test
-check_PROGRAMS			= mcast_down_ldm_test
+opmock_check_progs		= mcast_down_ldm_test
 test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
 # "*_stub.*" files aren't included here because all "_SOURCES" files are
@@ -72,5 +83,18 @@ mcast_down_ldm_test_LDADD	= vcmtp_c_api_stub.o \
 				  pq_stub.o \
 				  $(top_builddir)/lib/libldm.la \
 				  @OPMOCK_LDADD@
-TESTS				= $(check_PROGRAMS)
+opmock_tests			= $(opmock_check_progs)
 endif
+
+if HAVE_CUNIT
+cunit_check_progs		= test_request_queue
+test_request_queue_SOURCES	= test_request_queue.c request_queue.c
+test_request_queue_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+test_request_queue_LDADD	= \
+    $(top_builddir)/lib/libldm.la \
+    @LIBS_CUNIT@
+cunit_tests			= $(cunit_check_progs)
+endif
+
+check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs)
+TESTS				= $(opmock_tests) $(cunit_tests)

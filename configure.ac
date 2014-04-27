@@ -311,39 +311,41 @@ UD_SEARCH_LIB([m], [log10], [/opt/csw/lib /opt/lib])
 
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUnit unit-testing package.])
+CPPFLAGS_CUNIT=
 AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
-    [CPPFLAGS_CUNIT=-I/opt/include
-    AC_SUBST(CPPFLAGS_CUNIT)
-    AC_CHECK_FILE([/opt/lib/libcunit.so],
-        [LIBS_CUNIT='-L/opt/lib -lcunit'
-        AC_SUBST(LIBS_CUNIT)],
-        [AC_CHECK_FILE([/opt/lib/libcunit.a],
-            [LIBS_CUNIT='-L/opt/lib -lcunit'
-            AC_SUBST(LIBS_CUNIT)])])],
+    [CPPFLAGS_CUNIT=-I/opt/include],
     [AC_CHECK_FILE([/usr/local/include/CUnit/CUnit.h],
-        [CPPFLAGS_CUNIT=-I/usr/local/include
-        AC_SUBST(CPPFLAGS_CUNIT)
-        AC_CHECK_FILE([/usr/local/lib/libcunit.so],
-            [LIBS_CUNIT='-L/usr/local/lib -lcunit'
-            AC_SUBST(LIBS_CUNIT)],
-            [AC_CHECK_FILE([/usr/local/lib/libcunit.a],
-                [LIBS_CUNIT='-L/usr/local/lib -lcunit'
-                AC_SUBST(LIBS_CUNIT)])])],
+        [CPPFLAGS_CUNIT=-I/usr/local/include],
         [AC_CHECK_FILE([/usr/include/CUnit/CUnit.h],
-            [CPPFLAGS_CUNIT=-I/usr/include
-            AC_SUBST(CPPFLAGS_CUNIT)
-            AC_CHECK_FILE([/usr/lib/libcunit.so],
-                [LIBS_CUNIT='-L/usr/lib -lcunit'
-                AC_SUBST(LIBS_CUNIT)],
-                [AC_CHECK_FILE([/usr/lib/libcunit.a],
-                    [LIBS_CUNIT='-L/usr/lib -lcunit'
-                    AC_SUBST(LIBS_CUNIT)])])],
-            [AC_CHECK_FILE([/usr/lib64/libcunit.so],
-                [LIBS_CUNIT='-L/usr/lib64 -lcunit'
-                AC_SUBST(LIBS_CUNIT)],
-                [AC_CHECK_FILE([/usr/lib64/libcunit.a],
-                    [LIBS_CUNIT='-L/usr/lib64 -lcunit'
-                    AC_SUBST(LIBS_CUNIT)])])])])])
+            [CPPFLAGS_CUNIT=-I/usr/include])
+        ])
+    ])
+test "$CPPFLAGS_CUNIT" && AC_SUBST(CPPFLAGS_CUNIT)
+LIBS_CUNIT=
+AC_CHECK_FILE([/opt/lib/libcunit.so],
+    [ LIBS_CUNIT='-L/opt/lib -lcunit' ],
+    [ AC_CHECK_FILE([/opt/lib/libcunit.a],
+        [ LIBS_CUNIT='-L/opt/lib -lcunit' ],
+        [ AC_CHECK_FILE([/usr/local/lib/libcunit.so],
+            [ LIBS_CUNIT='-L/usr/local/lib -lcunit' ],
+            [ AC_CHECK_FILE([/usr/local/lib/libcunit.a],
+                [ LIBS_CUNIT='-L/usr/local/lib -lcunit' ],
+                [ AC_CHECK_FILE([/usr/lib64/libcunit.so],
+                    [ LIBS_CUNIT='-L/usr/lib64 -lcunit' ],
+                    [ AC_CHECK_FILE([/usr/lib64/libcunit.a],
+                        [ LIBS_CUNIT='-L/usr/lib64 -lcunit' ],
+                        [ AC_CHECK_FILE([/usr/lib/libcunit.so],
+                            [ LIBS_CUNIT='-L/usr/lib -lcunit' ],
+                            [ AC_CHECK_FILE([/usr/lib/libcunit.a],
+                                [ LIBS_CUNIT='-L/usr/lib -lcunit' ])
+                            ])
+                        ])
+                    ])
+                ])
+            ])
+        ])
+    ])
+test "$LIBS_CUNIT" && AC_SUBST(LIBS_CUNIT)
 AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
 AM_COND_IF([HAVE_CUNIT], 
     [AC_MSG_NOTICE([CUnit found.  Enabling unit-tests.])],
