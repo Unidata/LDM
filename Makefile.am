@@ -16,7 +16,10 @@ SUDO				= @SUDO@
 SU				= @SU@
 PQ_SUBDIR			= @PQ_SUBDIR@
 
-AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions
+AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions \
+				  --with-noaaport \
+				  --with-gribinsert \
+				  --with-multicast
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.

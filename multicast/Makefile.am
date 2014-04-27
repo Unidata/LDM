@@ -11,7 +11,7 @@ EXTRA_DIST              = down_ldm.hin \
 			  mcast_down_ldm.hin \
                           multicast_info.hin \
                           request_queue.hin \
-                          sock_funcs.hin
+                          sock_funcs.c sock_funcs.hin
 BUILT_SOURCES           = down_ldm.h \
 			  mcast_down_ldm.h \
                           multicast_info.h \
