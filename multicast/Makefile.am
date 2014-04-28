@@ -11,12 +11,14 @@ EXTRA_DIST              = down_ldm.hin \
 			  mcast_down_ldm.hin \
                           multicast_info.hin \
                           request_queue.hin \
-                          sock_funcs.c sock_funcs.hin
+                          sock_funcs.c sock_funcs.hin \
+                          up_ldm.hin
 BUILT_SOURCES           = down_ldm.h \
 			  mcast_down_ldm.h \
                           multicast_info.h \
                           request_queue.h \
-                          sock_funcs.h
+                          sock_funcs.h \
+                          up_ldm.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= down_ldm.c \
 			  mcast_down_ldm.c \
@@ -24,6 +26,7 @@ lib_la_SOURCES		= down_ldm.c \
 			  LdmBofResponse.cpp LdmBofResponse.h \
 			  multicast_info.c \
 			  request_queue.c \
+			  up_ldm.c \
                           vcmtp_c_api.cpp vcmtp_c_api.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
@@ -31,7 +34,7 @@ CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
                           -I$(builddir)/vcmtp/protocol -I$(srcdir)/vcmtp/protocol \
                           -I$(top_srcdir)/rpc
-lib_la_LIBADD		= vcmtp/libvcmtp.la
+lib_la_LIBADD		= vcmtp/libvcmtp.la -lpthread
 CLEANFILES		=
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
@@ -43,6 +46,7 @@ mcast_down_ldm.h:	mcast_down_ldm.hin mcast_down_ldm.c
 multicast_info.h:	multicast_info.hin multicast_info.c
 request_queue.h:	request_queue.hin request_queue.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
+up_ldm.h:		up_ldm.hin up_ldm.c
 
 if HAVE_OPMOCK
 VCMTPReceiver_stubs	= VCMTPReceiver_stub.cpp VCMTPReceiver_stub.hpp
@@ -94,6 +98,10 @@ test_request_queue_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
 cunit_tests			= $(cunit_check_progs)
+
+test_request_queue_valgrind:	test_request_queue
+	$(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./test_request_queue
 endif
 
 check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs)

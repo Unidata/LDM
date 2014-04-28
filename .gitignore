@@ -80,3 +80,4 @@ libtool
 /config.h.in
 build-aux
 TEST-test.xml
+*.trs

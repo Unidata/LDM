@@ -17,6 +17,9 @@
 #include "multicast_info.h"
 #include "request_queue.h"
 
+#include <errno.h>
+#include <unistd.h>
+
 /**
  * The queue of requests for files (i.e., data-products) missed by the VCMTP
  * layer.
@@ -31,25 +34,26 @@ static RequestQueue* requestQueue;
  * @param[in] mdl  Pointer to the multicast downstream LDM that missed the file.
  * @param[in] sig  LDM signature (i.e., MD5 checksum) of the missed file.
  */
-static void missedProd(
-    Mdl* const              mdl,
-    const signaturet* const sig)
+static void missedProdFunc(
+    Mdl* const        mdl,
+    signaturet* const sig)
 {
     rq_add(requestQueue, sig);
 }
 
 /**
- * Returns the multicast information obtained from a server.
+ * Returns multicast information obtained from a server.
  *
  * @param[in]  serverId   Identifier of server from which to obtain multicast
  *                        information. May be hostname or IP address.
  * @param[in]  port       Number of port on server to which to connect.
  * @param[in]  feedPat    Feedtype pattern of desired data.
  * @param[out] mcastInfo  Multicast information obtained from server. Set only
- *                        upon success. The client should call
- *                        @code{mcastInfo_free(*mcastInfo)} when it is no longer
+ *                        upon success. The client should call \c
+ *                        mcastInfo_free(*mcastInfo) when it is no longer
  *                        needed.
  * @retval     0          Success.
+ * @retval     EINTR      A signal was delivered.
  */
 static int getMulticastInfo(
     const char* const     serverId,
@@ -57,8 +61,15 @@ static int getMulticastInfo(
     const feedtypet       feedPat,
     MulticastInfo** const mcastInfo)
 {
-    // TODO
-    return -1;
+    int                   status;
+    static const unsigned timeout = 30;
+
+    while (EAGAIN == (status = ul7_getMulticastInfo(serverId, port, feedPat,
+            mcastInfo, timeout))) {
+        if (sleep(timeout))
+            return EINTR;
+    }
+    return status;
 }
 
 /**
@@ -97,7 +108,7 @@ int dl7_createAndExecute(
             &mcastInfo);
 
     if (status == 0) {
-        status = execute(mcastInfo, missedProd);
+        status = execute(mcastInfo, missedProdFunc);
         mcastInfo_free(mcastInfo);
     }
 

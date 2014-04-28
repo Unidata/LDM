@@ -29,7 +29,7 @@
 
 static void missed_product_func(
     Mdl* const  mdl,
-    const void* file_entry)
+    signaturet* sig)
 {
 }
 
