@@ -31,8 +31,7 @@ trap "ssh -T $USER_NAME@$host rm -f $SOURCE_DISTRO_NAME; `trap -p ERR`" ERR
 ssh -T $USER_NAME@$host bash --login <<EOF
     set -x -e
     gunzip -c $SOURCE_DISTRO_NAME | (mkdir -p $PKG_ID &&
-        cd $PKG_ID && tar -xf - && rm -rf src && mv $PKG_ID src)
-    trap "rm -rf \$HOME/$PKG_ID; \`trap -p ERR\`" ERR
+        cd $PKG_ID && tar -xf - && rm -rf src && mv -f $PKG_ID src)
     rm $SOURCE_DISTRO_NAME
     cd $RELPATH_DISTRO_SOURCE_DIR
     ./configure --disable-root-actions ${configOpts} CFLAGS=-g >configure.log 2>&1

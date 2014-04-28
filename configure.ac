@@ -320,7 +320,7 @@ AC_CHECK_FILE([/opt/include/CUnit/CUnit.h],
             [CPPFLAGS_CUNIT=-I/usr/include])
         ])
     ])
-test "$CPPFLAGS_CUNIT" && AC_SUBST(CPPFLAGS_CUNIT)
+AC_SUBST([CPPFLAGS_CUNIT])
 LIBS_CUNIT=
 AC_CHECK_FILE([/opt/lib/libcunit.so],
     [ LIBS_CUNIT='-L/opt/lib -lcunit' ],
@@ -345,7 +345,7 @@ AC_CHECK_FILE([/opt/lib/libcunit.so],
             ])
         ])
     ])
-test "$LIBS_CUNIT" && AC_SUBST(LIBS_CUNIT)
+AC_SUBST([LIBS_CUNIT])
 AM_CONDITIONAL([HAVE_CUNIT], [test "$CPPFLAGS_CUNIT" && test "$LIBS_CUNIT"])
 AM_COND_IF([HAVE_CUNIT], 
     [AC_MSG_NOTICE([CUnit found.  Enabling unit-tests.])],
