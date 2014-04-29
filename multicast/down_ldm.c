@@ -42,7 +42,8 @@ static void missedProdFunc(
 }
 
 /**
- * Returns multicast information obtained from a server.
+ * Returns multicast information obtained from a server. This is a potentially
+ * long operation.
  *
  * @param[in]  serverId   Identifier of server from which to obtain multicast
  *                        information. May be hostname or IP address.
@@ -64,8 +65,8 @@ static int getMulticastInfo(
     int                   status;
     static const unsigned timeout = 30;
 
-    while (EAGAIN == (status = ul7_getMulticastInfo(serverId, port, feedPat,
-            mcastInfo, timeout))) {
+    while (ETIMEDOUT == (status = ul7_getMulticastInfo(serverId, port, feedPat,
+            timeout, mcastInfo))) {
         if (sleep(timeout))
             return EINTR;
     }

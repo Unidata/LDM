@@ -863,12 +863,12 @@ program LDMPROG {
 %
 %error_t* ldm6_is_alive(
 %    ldm6_clnt_t*        ldm6_clnt,
-%    unsigned int*              pid,
+%    unsigned int*       pid,
 %    bool_t*             reply);
 %
 %error_t* ldm6_clnt_hiya(
 %    ldm6_clnt_t*        ldm6_clnt,
-%    prod_class_t*         offered,
+%    prod_class_t*       offered,
 %    hiya_reply_t*       reply);
 %
 %error_t* ldm6_notification(

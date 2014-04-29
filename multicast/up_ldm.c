@@ -23,19 +23,20 @@
  *                        multicast information. May be hostname or IP address.
  * @param[in]  port       Number of port on server to which to connect.
  * @param[in]  feedPat    Feedtype pattern of desired data.
+ * @param[in]  timeout    Timeout parameter in seconds.
  * @param[out] mcastInfo  Multicast information obtained from server. Set only
  *                        upon success. The client should call \c
  *                        mcastInfo_free(*mcastInfo) when it is no longer
  *                        needed.
- * @param[in]  timeout    Timeout parameter in seconds.
  * @retval     0          Success.
+ * @retval     ETIMEDOUT  The timeout lapsed.
  */
 int ul7_getMulticastInfo(
     const char* const     serverId,
     const unsigned short  port,
     const feedtypet       feedPat,
-    MulticastInfo** const mcastInfo,
-    const unsigned        timeout)
+    const unsigned        timeout,
+    MulticastInfo** const mcastInfo)
 {
     // TODO
     return -1;

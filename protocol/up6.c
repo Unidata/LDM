@@ -185,19 +185,17 @@ static int notify(
     return 0;
 }
 
-/*
- * Sets "_lastSendTime".
+/**
+ * Asynchronously sends a data-product to the downstream LDM.
  *
- * Arguments:
- *      infop           Pointer to the metadata of the data.
- *      datap           Pointer to beginning of data.
- * Returns:
- *      NULL            Success.
- *      else            Error object. err_code() values:
+ * @param[in] infop           Pointer to the metadata of the data.
+ * @param[in] datap           Pointer to beginning of data.
+ * @retval    NULL            Success.
+ * @return                    An error object. err_code() values:
  *          UP6_CLIENT_FAILURE      Client-side RPC transport couldn't be 
  *                                  created from Internet address and LDM 
  *                                  program number.
- *          UP6_VERSION_MISMATCH    Upstream LDM isn't version 6.
+ *          UP6_VERSION_MISMATCH    Downstream LDM isn't version 6.
  *          UP6_TIME_OUT            Communication timed-out.
  *          UP6_INTERRUPT           This function was interrupted.    
  *          UP6_UNKNOWN_HOST        Downstream host is unknown.
@@ -209,11 +207,11 @@ static int notify(
  */
 static ErrorObj*
 hereis(
-        const prod_info* infop,
-        const void* datap)
+    const prod_info* infop,
+    const void*      datap)
 {
     ErrorObj* errObj = NULL; /* success */
-    product prod;
+    product   prod;
 
     prod.info = *infop;
     prod.data = (void*) datap;
@@ -223,6 +221,9 @@ hereis(
                 "HEREIS: %s", clnt_errmsg(_clnt));
     }
     else {
+        /*
+         * NB: Sets "_lastSendTime".
+         */
         _lastSendTime = time(NULL);
         _flushNeeded = 1;
 
