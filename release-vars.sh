@@ -13,7 +13,7 @@ export ABSPATH_WEB_ROOT=/web/content
 
 # Derived definitions:
 export PKG_ID="$PKG_NAME-$PKG_VERSION"
-export PKG_ID_GLOB="$PKG_NAME-*.*.*"
+export PKG_ID_GLOB="$PKG_NAME-[0-9]*.*.*"
 export SOURCE_DISTRO_NAME="$PKG_ID.$SOURCE_DISTRO_EXT"
 export RELPATH_DISTRO_SOURCE_DIR="$PKG_ID/src"
 export ABSPATH_DEFAULT_INSTALL_PREFIX=/usr/local/"$PKG_NAME"

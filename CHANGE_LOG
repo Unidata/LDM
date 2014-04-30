@@ -1,4 +1,4 @@
-6.11.8	2014-04-29T15:17:30-0600
+6.11.8	2014-04-30T14:19:54-0600
     Installation:
         Improved robustness of check for CUnit package by configure(1) script.
 
