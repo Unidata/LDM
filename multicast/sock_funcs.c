@@ -162,7 +162,9 @@ int sf_set_time_to_live(
 }
 
 /**
- * Sets the interface that a socket uses.
+ * Sets the interface that a socket uses to send packets. If this functions is
+ * not called, then outgoing packets will be sent using the default multicast
+ * interface.
  *
  * @param[in] sock       The socket.
  * @param[in] ifaceAddr  IPv4 address of interface in network byte order. 0
@@ -337,7 +339,10 @@ static int create_or_open_multicast(
 }
 
 /**
- * Returns a socket for sending multicast packets.
+ * Returns a socket for sending multicast packets. The packets that the socket
+ * sends
+ *     * Will use the default interface; and
+ *     * Will have a time-to-live of 1.
  *
  * @param[in] mIpAddr    IPv4 address of multicast group in network byte order:
  *                          224.0.0.0 - 224.0.0.255     Reserved for local
@@ -493,19 +498,22 @@ static int add_or_drop_multicast_group(
 
 /**
  * Adds a multicast group to the set of multicast groups whose packets a socket
- * receives. Multiple groups may be added. A group may be associated with a
- * particular interface.
+ * receives. Multiple groups may be added up to IP_MAX_MEMBERSHIPS (in
+ * <netinet/in.h>). A group may be associated with a particular interface.
  *
  * @param[in] sock       The multicast socket to be configured.
- * @param[in] mIpAddr    IPv4 address of multicast group in network byte order:
+ * @param[in] mIpAddr    IPv4 address of multicast group to be received in
+ *                       network byte order:
  *                          224.0.0.0 - 224.0.0.255     Reserved for local
  *                                                      purposes
  *                          224.0.1.0 - 238.255.255.255 User-defined multicast
  *                                                      addresses
  *                          239.0.0.0 - 239.255.255.255 Reserved for
  *                                                      administrative scoping
- * @param[in] ifaceAddr  IPv4 address of interface in network byte order. 0
- *                       means the default interface for multicast packets.
+ * @param[in] ifaceAddr  IPv4 address of interface to associate with multicast
+ *                       group in network byte order. 0 means the default
+ *                       interface for multicast packets. The same multicast
+ *                       group can be joined using multiple interfaces.
  * @retval    0          Success.
  * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
