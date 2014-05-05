@@ -53,8 +53,7 @@ void PerFileNotifier::notify_of_bof(VcmtpFileEntry& file_entry) const
 {
     if (bof_func(obj, &file_entry)) {
         throw std::runtime_error(std::string(
-                "Error notifying receiving application of beginning of "
-                "file \"") + file_entry.getName() + "\"");
+                "Error notifying receiving application of beginning of file"));
     }
 }
 
@@ -62,8 +61,7 @@ void PerFileNotifier::notify_of_eof(VcmtpFileEntry& file_entry) const
 {
     if (eof_func(obj, &file_entry)) {
         throw std::runtime_error(std::string(
-                "Error notifying receiving application of end of "
-                "file \"") + file_entry.getName() + "\"");
+                "Error notifying receiving application of end of file"));
     }
 }
 

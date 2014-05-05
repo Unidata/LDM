@@ -8,15 +8,19 @@
 
 SUBDIRS			= vcmtp
 EXTRA_DIST              = down_ldm.hin \
+                          ldm7.x \
 			  mcast_down_ldm.hin \
-                          multicast_info.hin \
+                          mcast_info.hin \
                           request_queue.hin \
+                          server_info.hin \
                           sock_funcs.c sock_funcs.hin \
                           up_ldm.hin
 BUILT_SOURCES           = down_ldm.h \
+			  ldm7.c ldm7.h \
 			  mcast_down_ldm.h \
-                          multicast_info.h \
+                          mcast_info.h \
                           request_queue.h \
+                          server_info.h \
                           sock_funcs.h \
                           up_ldm.h
 noinst_LTLIBRARIES	= lib.la
@@ -24,8 +28,10 @@ lib_la_SOURCES		= down_ldm.c \
 			  mcast_down_ldm.c \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
-			  multicast_info.c \
+			  ldm7.c ldm7.h \
+			  mcast_info.c \
 			  request_queue.c \
+			  server_info.c \
 			  up_ldm.c \
                           vcmtp_c_api.cpp vcmtp_c_api.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
@@ -43,10 +49,17 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 	mv -f $@.tmp $@
 down_ldm.h:		down_ldm.hin down_ldm.c
 mcast_down_ldm.h:	mcast_down_ldm.hin mcast_down_ldm.c
-multicast_info.h:	multicast_info.hin multicast_info.c
+mcast_info.h:		mcast_info.hin mcast_info.c
 request_queue.h:	request_queue.hin request_queue.c
+server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up_ldm.h:		up_ldm.hin up_ldm.c
+
+ldm7.c:			ldm7.x
+	rpcgen -c $? >$@
+
+ldm7.h:			ldm7.x
+	rpcgen -h $? >$@
 
 if HAVE_OPMOCK
 VCMTPReceiver_stubs	= VCMTPReceiver_stub.cpp VCMTPReceiver_stub.hpp

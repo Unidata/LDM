@@ -13,8 +13,9 @@
 
 #include "config.h"
 
-#include "mcast_down_ldm.h"
+#include "ldm7.h"
 #include "log.h"
+#include "mcast_down_ldm.h"
 
 #include "vcmtp_c_api_stub.h"
 #include "pq_stub.h"
@@ -28,8 +29,8 @@
 #endif
 
 static void missed_product_func(
-    Mdl* const  mdl,
-    signaturet* sig)
+    Mdl* const   mdl,
+    const VcmtpFileId fileId)
 {
 }
 

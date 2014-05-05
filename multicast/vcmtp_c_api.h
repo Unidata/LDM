@@ -14,8 +14,11 @@
 #ifndef VCMTP_C_API_H
 #define VCMTP_C_API_H
 
+#include "ldm7.h"
+
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,7 +51,10 @@ int vcmtpFileEntry_isWanted(
 bool vcmtpFileEntry_isMemoryTransfer(
     const void*                 file_entry);
 
-const char* vcmtpFileEntry_getName(
+VcmtpFileId vcmtpFileEntry_getFileId(
+    const void*                 file_entry);
+
+const char* vcmtpFileEntry_getFileName(
     const void*                 file_entry);
 
 size_t vcmtpFileEntry_getSize(

@@ -22,6 +22,7 @@
 #include <exception>
 #include <stdexcept>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string>
 
 /**
@@ -226,15 +227,27 @@ bool vcmtpFileEntry_isMemoryTransfer(
 }
 
 /**
+ * Returns the identifier of the file.
+ *
+ * @param[in] file_entry        Metadata about the file.
+ * @return                      The identifier of the file.
+ */
+VcmtpFileId vcmtpFileEntry_getFileId(
+    const void*                 file_entry)
+{
+    return ((const VcmtpFileEntry*)file_entry)->getFileId();
+}
+
+/**
  * Returns the name of the file.
  *
  * @param[in] file_entry        Metadata about the file.
  * @return                      The name of the file.
  */
-const char* vcmtpFileEntry_getName(
+const char* vcmtpFileEntry_getFileName(
     const void*                 file_entry)
 {
-    return ((VcmtpFileEntry*)file_entry)->getName();
+    return ((const VcmtpFileEntry*)file_entry)->getName();
 }
 
 /**

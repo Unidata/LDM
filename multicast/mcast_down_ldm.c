@@ -15,6 +15,7 @@
 #include "ldm.h"
 #include "LdmBofResponse.h"
 #include "ldmprint.h"
+#include "ldm7.h"
 #include "log.h"
 #include "pq.h"
 #include "vcmtp_c_api.h"
@@ -24,6 +25,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 /**
  * The multicast downstream LDM data-structure:
@@ -104,7 +106,7 @@ static int bof_func(
     }
     else {
         signaturet        signature;
-        const char* const name = vcmtpFileEntry_getName(file_entry);
+        const char* const name = vcmtpFileEntry_getFileName(file_entry);
 
         if (sigParse(name, &signature) < 0) {
             LOG_ADD1("Couldn't parse filename \"%s\" into data-product "
@@ -193,7 +195,7 @@ static int eof_func(
         if (!xdr_prod_info(&xdrs, &info)) {
             LOG_SERROR2("Couldn't decode LDM product-metadata from %lu-byte "
                     "VCMTP file \"%s\"", fileSize,
-                    vcmtpFileEntry_getName(file_entry));
+                    vcmtpFileEntry_getFileId(file_entry));
             status = -1;
             pqe_discard(pq, *index);
         }
@@ -219,17 +221,11 @@ static void missed_file_func(
     void*               obj,
     const void* const   file_entry)
 {
-    signaturet  signature;
-    const char* name = vcmtpFileEntry_getName(file_entry);
+    const VcmtpFileId        fileId = vcmtpFileEntry_getFileId(file_entry);
 
-    if (sigParse(name, &signature) == -1) {
-        LOG_ADD1("Filename is not an LDM signature: \"%s\"", name);
-    }
-    else {
-        Mdl* const mdl = (Mdl*)obj;
+    Mdl* const mdl = (Mdl*)obj;
 
-        mdl->missed_product(mdl, &signature);
-    }
+    mdl->missed_product(mdl, fileId);
 }
 
 /**

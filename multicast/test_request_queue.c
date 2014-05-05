@@ -6,8 +6,9 @@
  */
 #include "config.h"
 
-#include "request_queue.h"
+#include "ldm7.h"
 #include "log.h"
+#include "request_queue.h"
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
@@ -37,8 +38,8 @@ teardown(void)
 static void
 test_invalid_get(void)
 {
-    signaturet sig;
-    int        status = rq_remove(NULL, &sig);
+    VcmtpFileId     fileId;
+    int        status = rq_remove(NULL, &fileId);
 
     CU_ASSERT_EQUAL_FATAL(status, EINVAL);
 
@@ -49,20 +50,17 @@ test_invalid_get(void)
 static void
 test_invalid_add(void)
 {
-    signaturet sig;
-    int        status = rq_add(rq, NULL);
+    VcmtpFileId     fileId;
+    int        status = rq_add(NULL, &fileId);
 
-    CU_ASSERT_EQUAL_FATAL(status, EINVAL);
-
-    status = rq_add(NULL, &sig);
     CU_ASSERT_EQUAL_FATAL(status, EINVAL);
 }
 
 static void
 test_get_empty(void)
 {
-    signaturet sig;
-    int        status = rq_remove(rq, &sig);
+    VcmtpFileId     fileId;
+    int        status = rq_remove(rq, &fileId);
 
     CU_ASSERT_EQUAL_FATAL(status, ENOENT);
 }
@@ -70,51 +68,45 @@ test_get_empty(void)
 static void
 test_add_get(void)
 {
-    signaturet sigA;
-    signaturet sigB;
+    VcmtpFileId     fileA = 1;
+    VcmtpFileId     fileB;
     int        status;
 
-    (void)memset(sigA, 1, sizeof(signaturet));
-
-    status = rq_add(rq, &sigA);
+    status = rq_add(rq, fileA);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = rq_remove(rq, &sigB);
+    status = rq_remove(rq, &fileB);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL_FATAL(memcmp(sigA, sigB, sizeof(signaturet)), 0);
+    CU_ASSERT_EQUAL_FATAL(fileB, fileA);
 }
 
 static void
 test_order(void)
 {
-    signaturet sigA;
-    signaturet sigB;
-    signaturet sigC;
-    signaturet sigD;
-    int        status;
+    VcmtpFileId fileA = 1;
+    VcmtpFileId fileB = 2;
+    VcmtpFileId fileC = 3;
+    VcmtpFileId fileD;
+    int    status;
 
-    (void)memset(sigA, 1, sizeof(signaturet));
-    (void)memset(sigB, 2, sizeof(signaturet));
-    (void)memset(sigC, 3, sizeof(signaturet));
-
-    status = rq_add(rq, &sigA);
+    status = rq_add(rq, fileA);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = rq_add(rq, &sigB);
+    status = rq_add(rq, fileB);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = rq_add(rq, &sigC);
+    status = rq_add(rq, fileC);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = rq_remove(rq, &sigD);
+    status = rq_remove(rq, &fileD);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL_FATAL(memcmp(sigA, sigD, sizeof(signaturet)), 0);
+    CU_ASSERT_EQUAL_FATAL(fileD, fileA);
 
-    status = rq_remove(rq, &sigD);
+    status = rq_remove(rq, &fileD);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL_FATAL(memcmp(sigB, sigD, sizeof(signaturet)), 0);
+    CU_ASSERT_EQUAL_FATAL(fileD, fileB);
 
-    status = rq_remove(rq, &sigD);
+    status = rq_remove(rq, &fileD);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL_FATAL(memcmp(sigC, sigD, sizeof(signaturet)), 0);
+    CU_ASSERT_EQUAL_FATAL(fileD, fileC);
 }
 
 int

@@ -13,16 +13,17 @@
 
 #include "up_ldm.h"
 #include "log.h"
-#include "multicast_info.h"
+#include "mcast_info.h"
 
 /**
  * Returns multicast information obtained from a remote server. This function
  * acts as a proxy for the remote server.
  *
  * @param[in]  serverId   Identifier of remote server from which to obtain
- *                        multicast information. May be hostname or IP address.
+ *                        multicast information. May be hostname or formatted IP
+ *                        address.
  * @param[in]  port       Number of port on server to which to connect.
- * @param[in]  feedPat    Feedtype pattern of desired data.
+ * @param[in]  mcastName  Name of the multicast group to receive.
  * @param[in]  timeout    Timeout parameter in seconds.
  * @param[out] mcastInfo  Multicast information obtained from server. Set only
  *                        upon success. The client should call \c
@@ -31,12 +32,12 @@
  * @retval     0          Success.
  * @retval     ETIMEDOUT  The timeout lapsed.
  */
-int ul7_getMulticastInfo(
-    const char* const     serverId,
-    const unsigned short  port,
-    const feedtypet       feedPat,
-    const unsigned        timeout,
-    MulticastInfo** const mcastInfo)
+int ul7_getMcastInfo(
+    const char* const      serverId,
+    const unsigned short   port,
+    const char* const      mcastName,
+    const unsigned         timeout,
+    McastGroupInfo** const mcastInfo)
 {
     // TODO
     return -1;

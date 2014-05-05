@@ -3,16 +3,19 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: up_ldm.hin
+ *   @file: request_queue.hin
  * @author: Steven R. Emmerson
  *
- * This file specifies the API for the multicast-capable upstream LDM.
+ * This file declares the API for the multicast information returned by a
+ * server.
  */
 
-#ifndef UP_LDM_H
-#define UP_LDM_H
+#ifndef MCAST_INFO_H
+#define MCAST_INFO_H
 
-#include "ldm7.h"
+#include "ldm.h"
+
+typedef struct mcast_info  McastInfo;
 
 #ifdef __cplusplus
 extern "C" {

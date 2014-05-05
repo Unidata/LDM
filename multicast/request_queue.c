@@ -13,37 +13,39 @@
 
 #include "config.h"
 
+#include "ldm7.h"
 #include "log.h"
 #include "request_queue.h"
 
 #include <errno.h>
 #include <pthread.h>
+#include <stdint.h>
 #include <string.h>
 
 /**
  * The type of an entry in a request-queue.
  */
 typedef struct entry {
-    struct entry* next; /* points to the next entry towards the tail */
-    signaturet    sig;
+    struct entry* next;   /* points to the next entry towards the tail */
+    VcmtpFileId        fileId; /* VCMTP file identifier of the file to be requested */
 } Entry;
 
 /**
  * Returns a new entry.
  *
- * @param[in] sig   Pointer to LDM signature. Not checked.
- * @retval    NULL  Error. \c log_add() called.
- * @return          Pointer to the new entry. The client should call \c
- *                  entry_fin() when it is no longer needed.
+ * @param[in] fileId  VCMTP file identifier of the file to be requested.
+ * @retval    NULL    Error. \c log_add() called.
+ * @return            Pointer to the new entry. The client should call \c
+ *                    entry_fin() when it is no longer needed.
  */
 static Entry*
 entry_new(
-    signaturet* const sig)
+    const VcmtpFileId fileId)
 {
     Entry* entry = LOG_MALLOC(sizeof(Entry), "request-queue entry");
 
     if (entry) {
-        (void)memcpy(entry->sig, sig, sizeof(signaturet));
+        entry->fileId = fileId;
         entry->next = NULL;
     }
 
@@ -65,16 +67,16 @@ entry_free(
 /**
  * Finalizes an entry.
  *
- * @param[in,out] entry  Pointer to the entry to be finalized. Not checked.
- * @param[out]    sig    Pointer to the LDM signature to be set to the value of
- *                       the entry. Not checked.
+ * @param[in,out] entry   Pointer to the entry to be finalized. Not checked.
+ * @param[out]    fileId  Pointer to the VCMTP file identifier to be set to the
+ *                        value of the entry. Not checked.
  */
 static void
 entry_fin(
-    Entry* const      entry,
-    signaturet* const sig)
+    Entry* const    entry,
+    VcmtpFileId* const   fileId)
 {
-    (void)memcpy(sig, entry->sig, sizeof(signaturet));
+    *fileId = entry->fileId;
     entry_free(entry);
 }
 
@@ -196,23 +198,23 @@ rq_removeHead(
  *
  * @param[in,out] rq      Pointer to the request-queue to which to add a
  *                        request.
- * @param[in]     sig     Pointer to the LDM signature of the data-product to be
+ * @param[in]     fileId  VCMTP file identifier of the data-product to be
  *                        requested.
  * @retval        0       Success.
- * @retval        EINVAL  @code{rq == NULL || sig == NULL}. \c log_add() called.
+ * @retval        EINVAL  @code{rq == NULL}. \c log_add() called.
  * @retval        ENOMEM  Out of memory. \c log_add() called.
  */
 int
 rq_add(
-    RequestQueue* const     rq,
-    signaturet* const       sig)
+    RequestQueue* const rq,
+    const VcmtpFileId        fileId)
 {
     Entry* entry;
 
-    if (!rq || !sig)
+    if (!rq)
         return EINVAL;
 
-    entry = entry_new(sig);
+    entry = entry_new(fileId);
     if (!entry)
         return ENOMEM;
 
@@ -225,26 +227,27 @@ rq_add(
  * Removes and returns the request at the head of the request-queue.
  *
  * @param[in,out] rq      Pointer to the request-queue.
- * @param[out]    sig     Pointer to the LDM signature to be set.
- * @retval        0       Success. \c *sig is set.
- * @retval        EINVAL  @code{rq == NULL || sig == NULL}. \c log_add() called.
+ * @param[out]    fileId  Pointer to the VCMTP file identifier to be set to
+ *                        that of the entry.
+ * @retval        0       Success. \c *fileId is set.
+ * @retval        EINVAL  @code{rq == NULL || fileId == NULL}. \c log_add() called.
  * @retval        ENOENT  The request-queue is empty.
  */
 int
 rq_remove(
     RequestQueue* const rq,
-    signaturet* const   sig)
+    VcmtpFileId* const       fileId)
 {
     Entry* entry;
 
-    if (!rq || !sig)
+    if (!rq || !fileId)
         return EINVAL;
 
     entry = rq_removeHead(rq);
     if (!entry)
         return ENOENT;
 
-    entry_fin(entry, sig);
+    entry_fin(entry, fileId);
 
     return 0;
 }

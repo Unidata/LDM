@@ -12,9 +12,9 @@
 #include "config.h"
 
 #include "down_ldm.h"
+#include "ldm7.h"
 #include "log.h"
 #include "mcast_down_ldm.h"
-#include "multicast_info.h"
 #include "request_queue.h"
 
 #include <errno.h>
@@ -31,41 +31,41 @@ static RequestQueue* requestQueue;
  * multicast downstream LDM. The file is queued for reception by other means.
  * This function returns immediately.
  *
- * @param[in] mdl  Pointer to the multicast downstream LDM that missed the file.
- * @param[in] sig  LDM signature (i.e., MD5 checksum) of the missed file.
+ * @param[in] mdl     Pointer to the multicast downstream LDM that missed the file.
+ * @param[in] fileId  VCMTP file identifier of the missed file.
  */
 static void missedProdFunc(
     Mdl* const        mdl,
-    signaturet* const sig)
+    VcmtpFileId            fileId)
 {
-    rq_add(requestQueue, sig);
+    rq_add(requestQueue, fileId);
 }
 
 /**
  * Returns multicast information obtained from a server. This is a potentially
- * long operation.
+ * slow operation.
  *
  * @param[in]  serverId   Identifier of server from which to obtain multicast
  *                        information. May be hostname or IP address.
  * @param[in]  port       Number of port on server to which to connect.
- * @param[in]  feedPat    Feedtype pattern of desired data.
- * @param[out] mcastInfo  Multicast information obtained from server. Set only
- *                        upon success. The client should call \c
+ * @param[in]  mcastName  Name of the multicast group to receive.
+ * @param[out] mcastInfo  Multicast group  information obtained from server. Set
+ *                        only upon success. The client should call \c
  *                        mcastInfo_free(*mcastInfo) when it is no longer
  *                        needed.
  * @retval     0          Success.
  * @retval     EINTR      A signal was delivered.
  */
-static int getMulticastInfo(
-    const char* const     serverId,
-    const unsigned short  port,
-    const feedtypet       feedPat,
-    MulticastInfo** const mcastInfo)
+static int getMcastInfo(
+    const char* const      serverId,
+    const unsigned short   port,
+    const char* const      mcastName,
+    McastGroupInfo** const mcastInfo)
 {
     int                   status;
     static const unsigned timeout = 30;
 
-    while (ETIMEDOUT == (status = ul7_getMulticastInfo(serverId, port, feedPat,
+    while (ETIMEDOUT == (status = ul7_getMcastInfo(serverId, port, mcastName,
             timeout, mcastInfo))) {
         if (sleep(timeout))
             return EINTR;
@@ -83,7 +83,7 @@ static int getMulticastInfo(
  * @retval    0                Success.
  */
 static int execute(
-    const MulticastInfo* const    mcastInfo,
+    const McastGroupInfo* const   mcastInfo,
     const mdl_missed_product_func missedProdFunc)
 {
     // TODO
@@ -94,18 +94,18 @@ static int execute(
  * Creates and executes a downstream LDM-7.
  *
  * @param[in] serverId    Identifier of server from which to obtain multicast
- *                        information. May be hostname or IP address.
+ *                        information. May be hostname or formatted IP address.
  * @param[in] port        Number of port on server to which to connect.
- * @param[in] feedPat     Feedtype pattern of desired data.
+ * @param[in] mcastName   Name of multicast group to receive.
  * @retval    0           Success. All desired data was received.
  */
 int dl7_createAndExecute(
     const char* const    serverId,
     const unsigned short port,
-    const feedtypet      feedPat)
+    const char* const    mcastName)
 {
-    MulticastInfo* mcastInfo;
-    int            status = getMulticastInfo(serverId, port, feedPat,
+    McastGroupInfo* mcastInfo;
+    int             status = getMcastInfo(serverId, port, mcastName,
             &mcastInfo);
 
     if (status == 0) {

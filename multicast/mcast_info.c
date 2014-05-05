@@ -11,22 +11,23 @@
 
 #include "config.h"
 
-#include "multicast_info.h"
+#include "ldm7.h"
+#include "mcast_info.h"
 
-/**
- * The definition of multicast information.
- */
-struct multicast_info {
-    // TODO
-};
+#include <stdlib.h>
+#include <xdr.h>
 
 /**
  * Frees multicast information.
  *
- * @param[in,out] mcastInfo  Pointer to multicast information to be freed.
+ * @param[in,out] mcastInfo  Pointer to multicast information to be freed or
+ *                           NULL.
  */
 void mcastInfo_free(
-    MulticastInfo* const mcastInfo)
+    McastGroupInfo* const mcastInfo)
 {
-    // TODO
+    if (mcastInfo) {
+        (void)xdr_free(xdr_McastGroupInfo, (char*)mcastInfo);
+        free(mcastInfo);
+    }
 }
