@@ -30,7 +30,7 @@
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"
-#include "ldm_clnt.h"
+#include "ldm_clnt_misc.h"
 #include "ldmprint.h"
 #include "md5.h"
 #include "prod_class.h"

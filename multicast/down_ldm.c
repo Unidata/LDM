@@ -12,7 +12,7 @@
 #include "config.h"
 
 #include "down_ldm.h"
-#include "ldm7.h"
+#include "ldm.h"
 #include "log.h"
 #include "mcast_down_ldm.h"
 #include "request_queue.h"

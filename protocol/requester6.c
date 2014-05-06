@@ -27,7 +27,7 @@
 #include "remote.h"
 #include "inetutil.h"    /* hostbyaddr() */
 #include "ldm.h"         /* client-side LDM functions */
-#include "ldm_clnt.h"    /* client-side LDM functions */
+#include "ldm_clnt_misc.h"    /* client-side LDM functions */
 #include "ldmprint.h"    /* s_prod_info() */
 #include "prod_class.h"  /* clss_eq() */
 #include "prod_info.h"

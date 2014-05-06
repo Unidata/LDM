@@ -11,7 +11,7 @@
 
 #include "config.h"
 
-#include "ldm7.h"
+#include "ldm.h"
 #include "mcast_info.h"
 
 #include <stdlib.h>

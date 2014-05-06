@@ -6,7 +6,7 @@
  */
 #include "config.h"
 
-#include "ldm7.h"
+#include "ldm.h"
 #include "log.h"
 #include "request_queue.h"
 

@@ -132,6 +132,51 @@ blkdata_6(datapkt *argp, CLIENT *clnt)
 	return ((void *)&clnt_res);
 }
 
+SubscriptionReply *
+subscribe_7(McastGroupName *argp, CLIENT *clnt)
+{
+	static SubscriptionReply clnt_res;
+
+	memset((char *)&clnt_res, 0, sizeof(clnt_res));
+	if (clnt_call (clnt, SUBSCRIBE,
+		(xdrproc_t) xdr_McastGroupName, (caddr_t) argp,
+		(xdrproc_t) xdr_SubscriptionReply, (caddr_t) &clnt_res,
+		TIMEOUT) != RPC_SUCCESS) {
+		return (NULL);
+	}
+	return (&clnt_res);
+}
+
+void *
+request_product_7(VcmtpFileId *argp, CLIENT *clnt)
+{
+	static char clnt_res;
+
+	memset((char *)&clnt_res, 0, sizeof(clnt_res));
+	if (clnt_call (clnt, REQUEST_PRODUCT,
+		(xdrproc_t) xdr_VcmtpFileId, (caddr_t) argp,
+		(xdrproc_t) xdr_void, (caddr_t) &clnt_res,
+		TIMEOUT) != RPC_SUCCESS) {
+		return (NULL);
+	}
+	return ((void *)&clnt_res);
+}
+
+void *
+deliver_product_7(product *argp, CLIENT *clnt)
+{
+	static char clnt_res;
+
+	memset((char *)&clnt_res, 0, sizeof(clnt_res));
+	if (clnt_call (clnt, DELIVER_PRODUCT,
+		(xdrproc_t) xdr_product, (caddr_t) argp,
+		(xdrproc_t) xdr_void, (caddr_t) &clnt_res,
+		TIMEOUT) != RPC_SUCCESS) {
+		return (NULL);
+	}
+	return ((void *)&clnt_res);
+}
+
 void*
 nullproc_6(void *argp, CLIENT *clnt)
 {

@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include "error.h"
-#include "ldm_clnt.h"
+#include "ldm_clnt_misc.h"
 #include "ldm5.h"       /* feedtypet */
 #include "ldmalloc.h"
 #include "alrm.h"

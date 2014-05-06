@@ -1,6 +1,6 @@
 /**
  * This module contains the server-side functions that are invoked by the
- * "ldm6_svc" module.  Because RPC assumes a client/server structure, this
+ * "ldm_svc" module.  Because RPC assumes a client/server structure, this
  * module contains code for both upstream and downstream LDM-s.
  * <p>
  * From a design-pattern perspective, this module is a combination fa�ade and
@@ -33,7 +33,7 @@
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"    /* hostbyaddr() */
-#include "ldm.h"         /* *_6_svc() functions */
+#include "ldm.h"         /* *_svc() functions */
 #include "ldmprint.h"    /* s_prod_class() */
 #include "pq.h"
 #include "prod_class.h"  /* free_prod_class() */
@@ -660,4 +660,60 @@ int ldmprog_6_freeresult(
     (void) xdr_free(xdr_result, result);
 
     return 1;
+}
+
+/**
+ * Processes a subscription request from a remote LDM.
+ *
+ * This function is thread-compatible but not thread-safe.
+ *
+ * @param[in] mcastName  Pointer to the name of the relevant multicast group.
+ * @param[in] rqstp      Pointer to the RPC service-request.
+ * @return               Pointer to the reply.
+ */
+SubscriptionReply*
+subscribe_7_svc(
+    char* const           mcastName,
+    struct svc_req* const rqstp)
+{
+    static SubscriptionReply  result;
+
+    /* TODO */
+
+    return &result;
+}
+
+/**
+ * Processes a request for a data-product that was missed by a remote LDM: adds
+ * the request to the queue; does not reply.
+ *
+ * @param[in] fileId  Pointer to the VCMTP file-identifier of the missed data-
+ *                    product.
+ * @param[in] rqstp   Pointer to the RPC service-request.
+ */
+void*
+request_product_7_svc(
+    VcmtpFileId* const    fileId,
+    struct svc_req* const rqstp)
+{
+    /* TODO */
+
+    return NULL ; /* don't reply */
+}
+
+/**
+ * Processes a data-product from a remote LDM that was previously requested
+ * because it was missed. Does not reply.
+ *
+ * @param[in] missedProd  Pointer to the missed data-product.
+ * @param[in] rqstp       Pointer to the RPC service-request.
+ */
+void*
+deliver_product_7_svc(
+    MissedProduct* const  missedProd,
+    struct svc_req* const rqstp)
+{
+    /* TODO */
+
+    return NULL ; /* don't reply */
 }

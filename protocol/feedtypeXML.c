@@ -33,7 +33,7 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "ldm_clnt.h"
+#include "ldm_clnt_misc.h"
 #include "rpcutil.h"
 #include "ulog.h"
 #include "xmlparse.h"

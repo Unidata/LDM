@@ -14,7 +14,7 @@ builtHeaders	        = \
     LdmProxy.h \
     timer.h \
     uldb.h
-BUILT_SOURCES	        = ldm6_svc.c $(builtHeaders)
+BUILT_SOURCES	        = ldm_svc.c $(builtHeaders)
 CLEANFILES		= *.i
 DISTCLEANFILES		= $(builtHeaders)
 EXTRA_DIST		= \
@@ -29,7 +29,11 @@ EXTRA_DIST		= \
     prod_info.h \
     fix_clnt.pl \
     up6.h
+if WANT_MULTICAST
+RPCGEN			= @RPCGEN@ -C -DWANT_MULTICAST
+else
 RPCGEN			= @RPCGEN@ -C
+endif
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
@@ -44,7 +48,7 @@ include_HEADERS		= \
     ldm.h \
     ldm5_clnt.h \
     ldmprint.h \
-    ldm_clnt.h \
+    ldm_clnt_misc.h \
     ldm_xlen.h \
     md5.h \
     peer_info.h \
@@ -72,15 +76,15 @@ lib_la_SOURCES		= \
     LdmProxy.c \
     ldm4_svc.c \
     ldm5_svc.c \
-    ldm6_svc.c \
+    ldm_svc.c \
     ldm_xdr.c \
     ldm_xlen.c \
     ldm5_clnt.c \
-    ldm6_clnt.c \
-    ldm6_server.c \
+    ldm_clnt.c \
+    ldm_server.c \
     ldmfork.c \
     ldmprint.c \
-    ldm_clnt.c \
+    ldm_clnt_misc.c \
     md5c.c \
     one_svc_run.c \
     priv.c \
@@ -140,7 +144,7 @@ ldm_xdr.c:	ldm.x
 #
 # Also, the target-file must be modified to be more portable.
 #
-ldm6_svc.c:	ldm.x
+ldm_svc.c:	ldm.x
 	(echo '#include "config.h"'; $(RPCGEN) -m ldm.x) | sed \
 	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
 	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
@@ -160,7 +164,7 @@ ldm6_svc.c:	ldm.x
 # The following rule is for completeness only because the target-file must be
 # manually modified to a great extent.
 #
-ldm6_server.c:	# ../protocol/ldm.x
+ldm_server.c:	# ../protocol/ldm.x
 	(echo '#include "config.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
 
 # The client-side code created by rpcgen(1) must be modified to ensure that
@@ -174,7 +178,7 @@ ldm6_server.c:	# ../protocol/ldm.x
 # course, it also uses "xdr_void" rather than NULL for the return-value
 # XDR-routine (sheesh!)).
 #
-ldm6_clnt.c:	ldm.x fix_clnt.pl
+ldm_clnt.c:	ldm.x fix_clnt.pl
 	(echo '#include "config.h"'; $(RPCGEN) -l ldm.x) > $@.tmp || \
 	    rm $@.tmp
 	$(PERL) fix_clnt.pl < $@.tmp > $@ && rm $@.tmp       # fix stuff

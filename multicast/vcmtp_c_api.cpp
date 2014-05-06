@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string>
+#include <xdr.h>
 
 /**
  * The VCMTP C Receiver data-object.

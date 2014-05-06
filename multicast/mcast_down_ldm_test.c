@@ -13,7 +13,7 @@
 
 #include "config.h"
 
-#include "ldm7.h"
+#include "ldm.h"
 #include "log.h"
 #include "mcast_down_ldm.h"
 

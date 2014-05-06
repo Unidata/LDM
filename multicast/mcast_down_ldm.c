@@ -15,7 +15,6 @@
 #include "ldm.h"
 #include "LdmBofResponse.h"
 #include "ldmprint.h"
-#include "ldm7.h"
 #include "log.h"
 #include "pq.h"
 #include "vcmtp_c_api.h"

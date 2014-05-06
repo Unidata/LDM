@@ -63,7 +63,7 @@
 %}
 %
 %static bool_t
-%xdr_referenceck(XDR *xdrs, void* *pp, unsigned int size, const xdrproc_t proc)
+%xdr_referenceck(XDR *xdrs, char* *pp, unsigned int size, const xdrproc_t proc)
 %{
 %	assert(pIf(xdrs->x_op == XDR_ENCODE, *pp != NULL));
 %	return(xdr_reference(xdrs, pp, size, proc));
@@ -692,16 +692,36 @@ program LDMPROG {
 		comingsoon_reply_t COMINGSOON(comingsoon_args) = 12;
 		void               BLKDATA(datapkt) = 13;
 	} = 6;
+#if WANT_MULTICAST
+        version SEVEN {
+            /*
+             * Downstream to upstream RPC messages:
+             */
+            SubscriptionReply SUBSCRIBE(char* mcastName) = 1;
+            void              REQUEST_PRODUCT(VcmtpFileId) = 2;
+            /*
+             * Upstream to downstream RPC messages:
+             */
+            void              DELIVER_PRODUCT(MissedProduct) = 3;
+        } = 7;
+#endif
 } = LDM_PROG; /* LDM = 300029, use 0x2ffffffe for experiments */
 
 
 #ifdef RPC_HDR
 %
 %#define MIN_LDM_VERSION 5
+#ifndef WANT_MULTICAST
 %#define MAX_LDM_VERSION 6
+#else
+%#define MAX_LDM_VERSION 7
+#endif
 %
 %void  ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp);
 %void  ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp);
+#ifdef WANT_MULTICAST
+%void  ldmprog_7(struct svc_req *rqstp, register SVCXPRT *transp);
+#endif
 %int   one_svc_run(const int xp_sock, const unsigned inactive_timeo);
 %void* nullproc_6(void *argp, CLIENT *clnt);
 %enum  clnt_stat clnt_stat(CLIENT *clnt);
@@ -803,6 +823,105 @@ program LDMPROG {
 %}
 
 #endif /* RPC_XDR */
+
+#if WANT_MULTICAST
+
+#if defined(RPC_SVC)
+%#include "../multicast/vcmtp_c_api.h"
+#endif
+
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+#if 0
+%
+%/*
+% * VCMTP file identifier:
+% */
+typedef uint32_t VcmtpFileId;
+#else
+%#include "../multicast/vcmtp_c_api.h"
+#endif
+#endif
+
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+%/*
+% * Successful multicast subscription return value:
+% */
+#endif
+struct McastGroupInfo {
+    /*
+     * Multicast group name:
+     */
+    string          mcastName<>;
+    /*
+     * Hostname or formatted IP address of associated LDM-7 server (for missed
+     * data-products).
+     */
+    string         serverAddr<>;
+    /*
+     * Port number of associated LDM-7 server in local byte order:
+     */
+    unsigned short serverPort;
+    /*
+     * Hostname or formatted IP address of associated multicast group.
+     */
+    string         groupAddr<>;
+    /*
+     * Port number of associated multicast group in local byte order:
+     */
+    unsigned short groupPort;
+};
+
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+%/*
+% * Discriminant for multicast subscription reply:
+% */
+#endif
+enum SubscriptionStatus {
+    LDM7_OK = 0, /* Success */
+    LDM7_INVAL,  /* Invalid argument */
+    LDM7_UNAUTH  /* Unauthorized */
+};
+
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+%/*
+% * Missed data-product:
+% */
+#endif
+struct MissedProduct {
+    /*
+     * The VCMTP file identifier of the missed data-product:
+     */
+    VcmtpFileId    fileId;
+    /*
+     * The missed LDM data-product:
+     */
+    product        prod;
+};
+
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+%/*
+% * Multicast subscription return values:
+% */
+#endif
+union SubscriptionReply switch (SubscriptionStatus status) {
+    case LDM7_OK:
+        McastGroupInfo groupInfo;
+    case LDM7_INVAL:
+        void;
+    case LDM7_UNAUTH:
+        void;
+};
+
+#endif /* WANT_MULTICAST */
 
 #ifdef RPC_CLNT
 %#include <string.h>

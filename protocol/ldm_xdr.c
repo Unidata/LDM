@@ -21,7 +21,7 @@ xdr_stringck(XDR *xdrs, char **cpp, unsigned int maxsize)
 }
 
 static bool_t
-xdr_referenceck(XDR *xdrs, void* *pp, unsigned int size, const xdrproc_t proc)
+xdr_referenceck(XDR *xdrs, char* *pp, unsigned int size, const xdrproc_t proc)
 {
  assert(pIf(xdrs->x_op == XDR_ENCODE, *pp != NULL));
  return(xdr_reference(xdrs, pp, size, proc));
@@ -520,4 +520,83 @@ xdr_dbuf(XDR* xdrs, dbuf* objp)
  }
 
  return FALSE;
+}
+#include "../multicast/vcmtp_c_api.h"
+
+/*
+ * Successful multicast subscription return value:
+ */
+
+bool_t
+xdr_McastGroupInfo (XDR *xdrs, McastGroupInfo *objp)
+{
+	register int32_t *buf;
+
+	 if (!xdr_string (xdrs, &objp->mcastName, ~0))
+		 return FALSE;
+	 if (!xdr_string (xdrs, &objp->serverAddr, ~0))
+		 return FALSE;
+	 if (!xdr_u_short (xdrs, &objp->serverPort))
+		 return FALSE;
+	 if (!xdr_string (xdrs, &objp->groupAddr, ~0))
+		 return FALSE;
+	 if (!xdr_u_short (xdrs, &objp->groupPort))
+		 return FALSE;
+	return TRUE;
+}
+
+/*
+ * Discriminant for multicast subscription reply:
+ */
+
+bool_t
+xdr_SubscriptionStatus (XDR *xdrs, SubscriptionStatus *objp)
+{
+	register int32_t *buf;
+
+	 if (!xdr_enum (xdrs, (enum_t *) objp))
+		 return FALSE;
+	return TRUE;
+}
+
+/*
+ * Missed data-product:
+ */
+
+bool_t
+xdr_MissedProduct (XDR *xdrs, MissedProduct *objp)
+{
+	register int32_t *buf;
+
+	 if (!xdr_VcmtpFileId (xdrs, &objp->fileId))
+		 return FALSE;
+	 if (!xdr_product (xdrs, &objp->prod))
+		 return FALSE;
+	return TRUE;
+}
+
+/*
+ * Multicast subscription return values:
+ */
+
+bool_t
+xdr_SubscriptionReply (XDR *xdrs, SubscriptionReply *objp)
+{
+	register int32_t *buf;
+
+	 if (!xdr_SubscriptionStatus (xdrs, &objp->status))
+		 return FALSE;
+	switch (objp->status) {
+	case LDM7_OK:
+		 if (!xdr_McastGroupInfo (xdrs, &objp->SubscriptionReply_u.groupInfo))
+			 return FALSE;
+		break;
+	case LDM7_INVAL:
+		break;
+	case LDM7_UNAUTH:
+		break;
+	default:
+		return FALSE;
+	}
+	return TRUE;
 }

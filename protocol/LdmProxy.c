@@ -7,7 +7,7 @@
 #include "config.h"
 #include "error.h"
 #include "ldm.h"
-#include "ldm_clnt.h"
+#include "ldm_clnt_misc.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "prod_class.h"

@@ -516,10 +516,11 @@ typedef struct fornme_reply_t fornme_reply_t;
 typedef ldm_errt comingsoon_reply_t;
 
 #define MIN_LDM_VERSION 5
-#define MAX_LDM_VERSION 6
+#define MAX_LDM_VERSION 7
 
 void ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp);
 void ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp);
+void ldmprog_7(struct svc_req *rqstp, register SVCXPRT *transp);
 int one_svc_run(const int xp_sock, const unsigned inactive_timeo);
 void* nullproc_6(void *argp, CLIENT *clnt);
 enum clnt_stat clnt_stat(CLIENT *clnt);
@@ -531,6 +532,53 @@ typedef struct product product;
 
 bool_t xdr_product(XDR *, product*);
 bool_t xdr_dbuf(XDR* xdrs, dbuf* objp);
+#include "../multicast/vcmtp_c_api.h"
+
+/*
+ * Successful multicast subscription return value:
+ */
+
+struct McastGroupInfo {
+	char *mcastName;
+	char *serverAddr;
+	u_short serverPort;
+	char *groupAddr;
+	u_short groupPort;
+};
+typedef struct McastGroupInfo McastGroupInfo;
+
+/*
+ * Discriminant for multicast subscription reply:
+ */
+
+enum SubscriptionStatus {
+	LDM7_OK = 0,
+	LDM7_INVAL = 0 + 1,
+	LDM7_UNAUTH = 0 + 2,
+};
+typedef enum SubscriptionStatus SubscriptionStatus;
+
+/*
+ * Missed data-product:
+ */
+
+struct MissedProduct {
+	VcmtpFileId fileId;
+	product prod;
+};
+typedef struct MissedProduct MissedProduct;
+
+/*
+ * Multicast subscription return values:
+ */
+
+struct SubscriptionReply {
+	SubscriptionStatus status;
+	union {
+		McastGroupInfo groupInfo;
+	} SubscriptionReply_u;
+};
+typedef struct SubscriptionReply SubscriptionReply;
 
 #define LDMPROG LDM_PROG
 #define FIVE 5
@@ -625,6 +673,32 @@ extern  void * blkdata_6();
 extern  void * blkdata_6_svc();
 extern int ldmprog_6_freeresult ();
 #endif /* K&R C */
+#define SEVEN 7
+
+#if defined(__STDC__) || defined(__cplusplus)
+#define SUBSCRIBE 1
+extern  SubscriptionReply * subscribe_7(char *, CLIENT *);
+extern  SubscriptionReply * subscribe_7_svc(char *, struct svc_req *);
+#define REQUEST_PRODUCT 2
+extern  void * request_product_7(VcmtpFileId *, CLIENT *);
+extern  void * request_product_7_svc(VcmtpFileId *, struct svc_req *);
+#define DELIVER_PRODUCT 3
+extern  void * deliver_product_7(MissedProduct *, CLIENT *);
+extern  void * deliver_product_7_svc(MissedProduct *, struct svc_req *);
+extern int ldmprog_7_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
+
+#else /* K&R C */
+#define SUBSCRIBE 1
+extern  SubscriptionReply * subscribe_7();
+extern  SubscriptionReply * subscribe_7_svc();
+#define REQUEST_PRODUCT 2
+extern  void * request_product_7();
+extern  void * request_product_7_svc();
+#define DELIVER_PRODUCT 3
+extern  void * deliver_product_7();
+extern  void * deliver_product_7_svc();
+extern int ldmprog_7_freeresult ();
+#endif /* K&R C */
 
 /* the xdr functions */
 
@@ -650,6 +724,10 @@ extern  bool_t xdr_ldm_replyt (XDR *, ldm_replyt*);
 extern  bool_t xdr_hiya_reply_t (XDR *, hiya_reply_t*);
 extern  bool_t xdr_fornme_reply_t (XDR *, fornme_reply_t*);
 extern  bool_t xdr_comingsoon_reply_t (XDR *, comingsoon_reply_t*);
+extern  bool_t xdr_McastGroupInfo (XDR *, McastGroupInfo*);
+extern  bool_t xdr_SubscriptionStatus (XDR *, SubscriptionStatus*);
+extern  bool_t xdr_MissedProduct (XDR *, MissedProduct*);
+extern  bool_t xdr_SubscriptionReply (XDR *, SubscriptionReply*);
 
 #else /* K&R C */
 extern bool_t xdr_feedtypet ();
@@ -673,6 +751,10 @@ extern bool_t xdr_ldm_replyt ();
 extern bool_t xdr_hiya_reply_t ();
 extern bool_t xdr_fornme_reply_t ();
 extern bool_t xdr_comingsoon_reply_t ();
+extern bool_t xdr_McastGroupInfo ();
+extern bool_t xdr_SubscriptionStatus ();
+extern bool_t xdr_MissedProduct ();
+extern bool_t xdr_SubscriptionReply ();
 
 #endif /* K&R C */
 

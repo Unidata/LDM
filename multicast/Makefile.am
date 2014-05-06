@@ -8,7 +8,6 @@
 
 SUBDIRS			= vcmtp
 EXTRA_DIST              = down_ldm.hin \
-                          ldm7.x \
 			  mcast_down_ldm.hin \
                           mcast_info.hin \
                           request_queue.hin \
@@ -16,7 +15,6 @@ EXTRA_DIST              = down_ldm.hin \
                           sock_funcs.c sock_funcs.hin \
                           up_ldm.hin
 BUILT_SOURCES           = down_ldm.h \
-			  ldm7.c ldm7.h \
 			  mcast_down_ldm.h \
                           mcast_info.h \
                           request_queue.h \
@@ -28,7 +26,6 @@ lib_la_SOURCES		= down_ldm.c \
 			  mcast_down_ldm.c \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
-			  ldm7.c ldm7.h \
 			  mcast_info.c \
 			  request_queue.c \
 			  server_info.c \
@@ -54,12 +51,6 @@ request_queue.h:	request_queue.hin request_queue.c
 server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up_ldm.h:		up_ldm.hin up_ldm.c
-
-ldm7.c:			ldm7.x
-	rpcgen -c $? >$@
-
-ldm7.h:			ldm7.x
-	rpcgen -h $? >$@
 
 if HAVE_OPMOCK
 VCMTPReceiver_stubs	= VCMTPReceiver_stub.cpp VCMTPReceiver_stub.hpp

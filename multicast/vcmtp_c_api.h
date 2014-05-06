@@ -14,8 +14,6 @@
 #ifndef VCMTP_C_API_H
 #define VCMTP_C_API_H
 
-#include "ldm7.h"
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,6 +22,8 @@
 extern "C" {
 #endif
 
+typedef unsigned long             VcmtpFileId;
+#define xdr_VcmtpFileId           xdr_u_long
 typedef struct vcmtp_c_receiver   VcmtpCReceiver;
 
 typedef int     (*BofFunc)(void* obj, void* file_entry);
