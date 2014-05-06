@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-my($nullReplyProc);
+my($nullResultsProc);
 my($zeroTimeout);
 
 while( <STDIN> ) {
@@ -14,7 +14,7 @@ while( <STDIN> ) {
     }
 
     if (/notification_6/ || /hereis_6/ || /blkdata_6/) {
-	$nullReplyProc = 1;
+	$nullResultsProc = 1;
 	$zeroTimeout = 1;
     }
 
@@ -22,7 +22,7 @@ while( <STDIN> ) {
 	$zeroTimeout = 1;
     }
 
-    if ($nullReplyProc) {
+    if ($nullResultsProc) {
 	s/xdr_void/NULL/;
     }
 
@@ -33,7 +33,7 @@ while( <STDIN> ) {
     print $_;
 
     if (/^}/) {
-	$nullReplyProc = 0;
+	$nullResultsProc = 0;
 	$zeroTimeout = 0;
     }
 }

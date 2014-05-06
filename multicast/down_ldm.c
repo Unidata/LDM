@@ -36,7 +36,7 @@ static RequestQueue* requestQueue;
  */
 static void missedProdFunc(
     Mdl* const        mdl,
-    VcmtpFileId            fileId)
+    VcmtpFileId       fileId)
 {
     rq_add(requestQueue, fileId);
 }
