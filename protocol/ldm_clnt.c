@@ -156,7 +156,7 @@ request_product_7(VcmtpFileId *argp, CLIENT *clnt)
 	if (clnt_call (clnt, REQUEST_PRODUCT,
 		(xdrproc_t) xdr_VcmtpFileId, (caddr_t) argp,
 		(xdrproc_t) xdr_void, (caddr_t) &clnt_res,
-		TIMEOUT) != RPC_SUCCESS) {
+		ZERO_TIMEOUT) != RPC_SUCCESS) {
 		return (NULL);
 	}
 	return ((void *)&clnt_res);
@@ -171,7 +171,7 @@ deliver_product_7(MissedProduct *argp, CLIENT *clnt)
 	if (clnt_call (clnt, DELIVER_PRODUCT,
 		(xdrproc_t) xdr_MissedProduct, (caddr_t) argp,
 		(xdrproc_t) xdr_void, (caddr_t) &clnt_res,
-		TIMEOUT) != RPC_SUCCESS) {
+		ZERO_TIMEOUT) != RPC_SUCCESS) {
 		return (NULL);
 	}
 	return ((void *)&clnt_res);

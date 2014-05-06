@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
-my($modify);
+my($nullReplyProc);
+my($zeroTimeout);
 
 while( <STDIN> ) {
 
@@ -13,19 +14,27 @@ while( <STDIN> ) {
     }
 
     if (/notification_6/ || /hereis_6/ || /blkdata_6/) {
-	$modify = 1;
+	$nullReplyProc = 1;
+	$zeroTimeout = 1;
     }
 
-    if ($modify) {
-	s/xdr_void/NULL/;
+    if (/request_product_7/ || /deliver_product_7/) {
+	$zeroTimeout = 1;
+    }
 
+    if ($nullReplyProc) {
+	s/xdr_void/NULL/;
+    }
+
+    if ($zeroTimeout) {
 	s/TIMEOUT/ZERO_TIMEOUT/
     }
 
     print $_;
 
     if (/^}/) {
-	$modify = 0;
+	$nullReplyProc = 0;
+	$zeroTimeout = 0;
     }
 }
 
