@@ -30,10 +30,9 @@ EXTRA_DIST		= \
     fix_clnt.pl \
     up6.h
 if WANT_MULTICAST
-RPCGEN			= @RPCGEN@ -C -DWANT_MULTICAST
-else
-RPCGEN			= @RPCGEN@ -C
+RPCGEN_OPTS		= -DWANT_MULTICAST
 endif
+RPCGEN			= @RPCGEN@ -C $(RPCGEN_OPTS)
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
@@ -165,7 +164,7 @@ ldm_svc.c:	ldm.x
 # manually modified to a great extent.
 #
 ldm_server.c:	# ../protocol/ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -Ss ../protocol/ldm.x) > $@
+	(echo '#include "config.h"'; $(RPCGEN) -Ss ldm.x) > $@
 
 # The client-side code created by rpcgen(1) must be modified to ensure that
 # certain functions use batched RPC by having: 
