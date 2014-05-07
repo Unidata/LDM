@@ -46,7 +46,7 @@ public:
     ~PerFileNotifier() {}
     void        notify_of_bof(VcmtpFileEntry& file_entry) const;
     void        notify_of_eof(VcmtpFileEntry& file_entry) const;
-    void        notify_of_missed_file(VcmtpFileEntry& file_entry) const;
+    void        notify_of_missed_file(VcmtpFileId fileId) const;
 
 private:
     /**

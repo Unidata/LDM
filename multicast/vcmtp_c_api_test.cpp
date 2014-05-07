@@ -31,7 +31,7 @@ int eof_func(void* obj, const void* file_entry)
 {
     return 0;
 }
-void missed_file_func(void* obj, const void* file_entry)
+void missed_file_func(void* obj, const VcmtpFileId fileId)
 {
 }
 

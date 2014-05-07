@@ -14,6 +14,7 @@
 
 #include "ldm.h"
 #include "pq.h"
+#include "vcmtp_c_api.h"
 
 typedef struct mdl      Mdl;
 /**
@@ -24,7 +25,7 @@ typedef struct mdl      Mdl;
  * @param[in] fileId  VCMTP file identifier of the missed file.
  */
 typedef                 void (*mdl_missed_product_func)(Mdl* mdl,
-        uint32_t fileId);
+        VcmtpFileId fileId);
 
 #ifdef __cplusplus
 extern "C" {

@@ -24,12 +24,6 @@
 #include "log.h"
 #include "prod_class.h"
 
-static const prod_spec spec_some = { ANY, "A", 0 };
-static const prod_class_t clss_some = { { 0, 0 }, /* TS_ZERO */
-{ 0x7fffffff, 999999 }, /* TS_ENDT */
-{ 1, (prod_spec *) &spec_some /* cast away const */
-} };
-
 static time_t   stop_time;
 static double   sleep_amount;
 
@@ -554,7 +548,7 @@ int main(
 
             if (NULL != testSuite) {
                 if (argc >= 2
-                        ? CU_ADD_TEST(testSuite, test_valgrind)
+                        ? (long)CU_ADD_TEST(testSuite, test_valgrind)
                         : (CU_ADD_TEST(testSuite, test_nil) &&
                            CU_ADD_TEST(testSuite, test_add_feeder) &&
                            CU_ADD_TEST(testSuite, test_add_same_feeder) &&

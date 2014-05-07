@@ -23,13 +23,13 @@ AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions \
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
-SUBDIRS		= rpc ulog pqinglib registry protocol
+SUBDIRS		= rpc ulog pqinglib
 if WANT_FAUX_PQ
     SUBDIRS	+= fauxPq
 else
     SUBDIRS	+= pq
 endif
-SUBDIRS		+= misc
+SUBDIRS		+= registry misc protocol
 if WANT_NOAAPORT
     SUBDIRS	+= grib2 gempak
 else

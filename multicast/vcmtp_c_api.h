@@ -28,7 +28,7 @@ typedef struct vcmtp_c_receiver   VcmtpCReceiver;
 
 typedef int     (*BofFunc)(void* obj, void* file_entry);
 typedef int     (*EofFunc)(void* obj, const void* file_entry);
-typedef void    (*MissedFileFunc)(void* obj, const void* file_entry);
+typedef void    (*MissedFileFunc)(void* obj, const VcmtpFileId fileId);
 
 int vcmtpReceiver_new(
     VcmtpCReceiver**            cReceiver,

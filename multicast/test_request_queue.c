@@ -9,6 +9,7 @@
 #include "ldm.h"
 #include "log.h"
 #include "request_queue.h"
+#include "vcmtp_c_api.h"
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>

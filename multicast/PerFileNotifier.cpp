@@ -65,7 +65,7 @@ void PerFileNotifier::notify_of_eof(VcmtpFileEntry& file_entry) const
     }
 }
 
-void PerFileNotifier::notify_of_missed_file(VcmtpFileEntry& file_entry) const
+void PerFileNotifier::notify_of_missed_file(const VcmtpFileId fileId) const
 {
-    missed_file_func(obj, &file_entry);
+    missed_file_func(obj, fileId);
 }

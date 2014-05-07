@@ -194,7 +194,7 @@ static int eof_func(
         if (!xdr_prod_info(&xdrs, &info)) {
             LOG_SERROR2("Couldn't decode LDM product-metadata from %lu-byte "
                     "VCMTP file \"%s\"", fileSize,
-                    vcmtpFileEntry_getFileId(file_entry));
+                    vcmtpFileEntry_getFileName(file_entry));
             status = -1;
             pqe_discard(pq, *index);
         }
@@ -214,14 +214,12 @@ static int eof_func(
  *
  * @param[in,out]  obj          Pointer to the associated multicast downstream
  *                              LDM object.
- * @param[in]      metadata     Metadata of the file in question.
+ * @param[in]      fileId       Identifier of the VCMTP file that was missed.
  */
 static void missed_file_func(
     void*               obj,
-    const void* const   file_entry)
+    const VcmtpFileId   fileId)
 {
-    const VcmtpFileId        fileId = vcmtpFileEntry_getFileId(file_entry);
-
     Mdl* const mdl = (Mdl*)obj;
 
     mdl->missed_product(mdl, fileId);
