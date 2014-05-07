@@ -677,23 +677,30 @@ int main(
             continue;
         }
 
-        switch (sbn->datastream) {
-        case 7:	      /* test */
-        case 6:       /* was reserved...now nwstg2 */
-        case 5:
-            NWSTG = 1;
-            GOES = 0;
-            break;
-        case 1:
-        case 2:
-        case 4:
-            NWSTG = 0;
-            GOES = 1;
-            break;
-        default:
-            uerror("Unknown NOAAport channel %d PUNT", sbn->datastream);
-            continue;
-        }
+	switch (sbn->datastream) {
+		case 1:		/* GINI GOES */
+		case 2:		/* GINI GOES (deprecated) */
+		case 4:		/* OCONUS */
+			NWSTG = 0;
+			GOES = 1;
+			break;
+		case 3:		/* NWSTG1 - not used */
+		case 5:		/* NWSTG */
+		case 6:		/* NWSTG2 */
+		case 7:		/* POLARSAT */
+		case 8:		/* NOAA Weather Wire Service (NWWS) */
+		case 9:		/* Reserved for NWS internal use - Data Delivery */
+		case 10:	/* Reserved for NWS internal use - Encrypted */
+		case 11:	/* Reserved for NWS internal use - Experimental */
+		case 12:	/* GOES-R West */
+		case 13:	/* GOES-R East */
+			NWSTG = 1;
+			GOES = 0;
+			break;
+		default:
+			uerror("Unknown NOAAport channel %d PUNT", sbn->datastream);
+			continue;
+	}
 
         /* End of SBN version low 4 bits */
 
