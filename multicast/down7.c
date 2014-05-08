@@ -66,13 +66,36 @@ static int execute(
 /**
  * Creates and executes a downstream LDM-7.
  *
- * @param[in] serverId    Identifier of server from which to obtain multicast
- *                        information. May be hostname or formatted IP address.
- * @param[in] port        Number of port on server to which to connect.
- * @param[in] mcastName   Name of multicast group to receive.
- * @retval    0           Success. All desired data was received.
- * @retval    EINTR       Execution was interrupted by a signal.
- * @retval    ETIMEDOUT   Timeout occurred.
+ * @param[in] serverId      Identifier of server from which to obtain multicast
+ *                          information. May be hostname or formatted IP
+ *                          address.
+ * @param[in] port          Number of port on server to which to connect.
+ * @param[in] mcastName     Name of multicast group to receive.
+ * @retval    0             Success. All desired data was received.
+ * @retval    ENOMEM        Insufficient memory was available to fulfill the
+ *                          request.
+ * @retval    EINTR         Execution was interrupted by a signal.
+ * @retval    ETIMEDOUT     Timeout occurred.
+ * @retval    EAFNOSUPPORT  The address family of \c serverId isn't supported.
+ * @retval    EMFILE        No more file descriptors are available for this
+ *                          process.
+ * @retval    ENFILE        No more file descriptors are available for the
+ *                          system.
+ * @retval    EACCES        The process does not have appropriate privileges.
+ * @retval    ENOBUFS       Insufficient resources were available in the system
+ *                          to perform the operation.
+ * @retval    EADDRNOTAVAIL The specified address is not available from the
+ *                          local machine.
+ * @retval    ECONNREFUSED  The target address was not listening for
+ *                          connections or refused the connection request.
+ * @retval    ENETUNREACH   No route to the network is present.
+ * @retval    ECONNRESET    Remote host reset the connection request.
+ * @retval    EHOSTUNREACH  The destination host cannot be reached (probably
+ *                          because the host is down or a remote router cannot
+ *                          reach it).
+ * @retval    ENETDOWN      The local network interface used to reach the
+ *                          destination is down.
+ * @retval    ENOBUFS       No buffer space is available.
  */
 int
 dl7_createAndExecute(
@@ -83,12 +106,12 @@ dl7_createAndExecute(
     UpLdm7Proxy* ul7Proxy;
     int          status = ul7Proxy_new(&ul7Proxy, serverId, port);
 
-    if (!status) {
+    if (status == 0) {
         McastGroupInfo* mcastInfo;
 
         status = ul7Proxy_subscribe(ul7Proxy, mcastName, &mcastInfo);
 
-        if (!status) {
+        if (status == 0) {
             status = execute(ul7Proxy, mcastInfo, missedProdFunc);
             mcastInfo_delete(mcastInfo);
         } /* "mcastInfo" allocated */
