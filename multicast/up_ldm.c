@@ -24,19 +24,21 @@ struct UpLdm7Proxy {
 };
 
 /**
- * Sets an Internet socket address from a host identifier and a port number.
+ * Returns an Internet TCP socket that's connected to a remote server.
  *
- * @param[out] inetSockAddr  Pointer to the Internet socket address object.
  * @param[in]  hostId        Identifier of the host. May be hostname or
  *                           formatted IP address.
  * @param[in]  port          Port number of the server on the host.
- * @retval     0             Success. \c *inetSockAddr is set.
+ * @param[out] socket        Pointer to the socket to be set.
+ * @param[out] sockAddr      Pointer to the socket address object to be set.
+ * @retval     0             Success. \c *socket and \c *sockAddr are set.
  */
 static int
-setInetSockAddr(
-    struct sockaddr_in* const inetSockAddr,
+getSocket(
     const char* const         hostId,
-    const unsigned short      port)
+    const unsigned short      port,
+    int* const                socket,
+    struct sockaddr_in* const sockAddr)
 {
     // TODO
     return -1;
@@ -47,16 +49,14 @@ setInetSockAddr(
  * for all errors.
  *
  * @param[out] client        Address of pointer to client-side handle. The
- *                           client should call \c
- *                           auth_destroy((*client)->cl_auth) and \c
- *                           clnt_destroy(*client) (in that order) when it is no
- *                           longer needed.
+ *                           client should call \c clnt_destroy(*client) when it
+ *                           is no longer needed.
  * @param[in]  hostId        Identifier of host from which to obtain multicast
  *                           information. May be hostname or formatted IP
  *                           address.
  * @param[in]  port          Port number of server on host to which to connect.
- * @param[out] socket        Pointer to memory to receive a copy of the socket
- *                           file descriptor. The client should never close it.
+ * @param[out] socket        Pointer to the socket to be set. The client should
+ *                           call \c close(*socket) when it's no longer needed.
  * @retval     0             Success. \c *client and \c *sock are set.
  * @retval     ENOMEM        Insufficient memory was available to fulfill the
  *                           request.
@@ -90,17 +90,18 @@ newClient(
     const unsigned short port,
     int* const           socket)
 {
-    struct sockaddr_in inetSockAddr;
-    int                status = setInetSockAddr(&inetSockAddr, hostId, port);
+    int             sock;
+    struct sockaddr sockAddr;
+    int             status = getSocket(hostId, port, &sock, &sockAddr);
 
     if (status == 0) {
-        int           sock = -1; /* -1 => create new socket & ensure closure */
-        CLIENT* const clnt = clnttcp_create(&inetSockAddr, LDMPROG, SEVEN,
+        CLIENT* const clnt = clnttcp_create(&sockAddr, LDMPROG, SEVEN,
                 &sock, 0, 0);
 
         if (clnt == NULL) {
             LOG_SERROR3("Couldn't create RPC client for host \"%s\", "
                     "port %u: %s", hostId, port, clnt_spcreateerror(""));
+            (void)close(sock);
             status = errno ? errno : -1; /* ensure non-zero return */
         }
         else {
@@ -108,7 +109,7 @@ newClient(
             *socket = sock;
             status = 0;
         }
-    }
+    } /* "sock" allocated */
 
     return status;
 }
@@ -168,10 +169,10 @@ ul7Proxy_new(
         }
         else {
             status = ENOMEM;
-            auth_destroy(clnt->cl_auth);
             clnt_destroy(clnt);
+            (void)close(sock);
         }
-    } /* "clnt" allocated */
+    } /* "clnt" and "sock" allocated */
 
     return status;
 }
@@ -186,8 +187,8 @@ void
 ul7Proxy_delete(
     UpLdm7Proxy* const ul7Proxy)
 {
-    auth_destroy(ul7Proxy->clnt->cl_auth);
     clnt_destroy(ul7Proxy->clnt);
+    (void)close(ul7Proxy->sock);
     free(ul7Proxy);
 }
 
