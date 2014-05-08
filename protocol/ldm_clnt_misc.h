@@ -2,8 +2,8 @@
  *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
 
-#ifndef LDM_CLNT_H
-#define LDM_CLNT_H
+#ifndef LDM_CLNT_MISC_H
+#define LDM_CLNT_MISC_H
 
 #include <signal.h>
 #include <rpc/rpc.h>
