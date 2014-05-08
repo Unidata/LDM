@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: down_ldm_7.c
+ *   @file: down7.c
  * @author: Steven R. Emmerson
  *
  * This file implements the downstream LDM-7.
@@ -11,10 +11,10 @@
 
 #include "config.h"
 
-#include "down_ldm.h"
+#include "down7.h"
 #include "ldm.h"
 #include "log.h"
-#include "mcast_down_ldm.h"
+#include "mcast_down.h"
 #include "request_queue.h"
 #include "up_ldm.h"
 

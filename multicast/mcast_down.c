@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mcast_down_ldm.c
+ *   @file: mcast_down.c
  * @author: Steven R. Emmerson
  *
  * This file implements the downstream multicast LDM.
@@ -11,7 +11,7 @@
 
 #include "config.h"
 
-#include "mcast_down_ldm.h"
+#include "mcast_down.h"
 #include "ldm.h"
 #include "LdmBofResponse.h"
 #include "ldmprint.h"

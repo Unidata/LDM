@@ -3,9 +3,9 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file mcast_down_ldm_test.c
+ * @file mcast_down_test.c
  *
- * This file performs a unit-test of the mcast_down_ldm module.
+ * This file performs a unit-test of the mcast_down module.
  *
  * @author: Steven R. Emmerson
  */
@@ -15,7 +15,7 @@
 
 #include "ldm.h"
 #include "log.h"
-#include "mcast_down_ldm.h"
+#include "mcast_down.h"
 
 #include "vcmtp_c_api_stub.h"
 #include "pq_stub.h"
