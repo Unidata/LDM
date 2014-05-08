@@ -16,6 +16,7 @@
 #include "log.h"
 #include "mcast_down_ldm.h"
 #include "request_queue.h"
+#include "up_ldm.h"
 
 #include <errno.h>
 #include <unistd.h>
@@ -42,47 +43,19 @@ static void missedProdFunc(
 }
 
 /**
- * Returns multicast information obtained from a server. This is a potentially
- * slow operation.
- *
- * @param[in]  serverId   Identifier of server from which to obtain multicast
- *                        information. May be hostname or IP address.
- * @param[in]  port       Number of port on server to which to connect.
- * @param[in]  mcastName  Name of the multicast group to receive.
- * @param[out] mcastInfo  Multicast group  information obtained from server. Set
- *                        only upon success. The client should call \c
- *                        mcastInfo_free(*mcastInfo) when it is no longer
- *                        needed.
- * @retval     0          Success.
- * @retval     EINTR      A signal was delivered.
- */
-static int getMcastInfo(
-    const char* const      serverId,
-    const unsigned short   port,
-    const char* const      mcastName,
-    McastGroupInfo** const mcastInfo)
-{
-    int                   status;
-    static const unsigned timeout = 30;
-
-    while (ETIMEDOUT == (status = ul7_getMcastInfo(serverId, port, mcastName,
-            timeout, mcastInfo))) {
-        if (sleep(timeout))
-            return EINTR;
-    }
-    return status;
-}
-
-/**
  * Receives data.
  *
+ * @param[in] ul7Proxy         Pointer to upstream LDM-7 proxy.
  * @param[in] mcastInfo        Pointer to multicast information.
  * @param[in] missedProdfunc   Pointer to function for receiving notices about
  *                             missed data-products from the multicast
  *                             downstream LDM.
  * @retval    0                Success.
+ * @retval    EINTR            Execution was interrupted by a signal.
+ * @retval    ETIMEDOUT        Timeout occurred.
  */
 static int execute(
+    UpLdm7Proxy* const            ul7Proxy,
     const McastGroupInfo* const   mcastInfo,
     const mdl_missed_product_func missedProdFunc)
 {
@@ -98,20 +71,30 @@ static int execute(
  * @param[in] port        Number of port on server to which to connect.
  * @param[in] mcastName   Name of multicast group to receive.
  * @retval    0           Success. All desired data was received.
+ * @retval    EINTR       Execution was interrupted by a signal.
+ * @retval    ETIMEDOUT   Timeout occurred.
  */
-int dl7_createAndExecute(
+int
+dl7_createAndExecute(
     const char* const    serverId,
     const unsigned short port,
     const char* const    mcastName)
 {
-    McastGroupInfo* mcastInfo;
-    int             status = getMcastInfo(serverId, port, mcastName,
-            &mcastInfo);
+    UpLdm7Proxy* ul7Proxy;
+    int          status = ul7Proxy_new(&ul7Proxy, serverId, port);
 
-    if (status == 0) {
-        status = execute(mcastInfo, missedProdFunc);
-        mcastInfo_free(mcastInfo);
-    }
+    if (!status) {
+        McastGroupInfo* mcastInfo;
+
+        status = ul7Proxy_subscribe(ul7Proxy, mcastName, &mcastInfo);
+
+        if (!status) {
+            status = execute(ul7Proxy, mcastInfo, missedProdFunc);
+            mcastInfo_delete(mcastInfo);
+        } /* "mcastInfo" allocated */
+
+        ul7Proxy_delete(ul7Proxy);
+    } /* "ul7Proxy" allocated */
 
     return status;
 }

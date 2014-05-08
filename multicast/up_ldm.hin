@@ -14,6 +14,8 @@
 
 #include "ldm.h"
 
+typedef struct UpLdm7Proxy UpLdm7Proxy;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

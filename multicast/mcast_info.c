@@ -23,7 +23,7 @@
  * @param[in,out] mcastInfo  Pointer to multicast information to be freed or
  *                           NULL.
  */
-void mcastInfo_free(
+void mcastInfo_delete(
     McastGroupInfo* const mcastInfo)
 {
     if (mcastInfo) {
