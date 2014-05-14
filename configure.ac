@@ -4,8 +4,6 @@ dnl
 AC_PREREQ(2.59)
 AC_INIT([LDM], [6.11.8], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
-    
-AC_USE_SYSTEM_EXTENSIONS
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -13,15 +11,18 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
 
-case "`uname -sr`" in
-    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
-    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
-esac
-AC_PROG_CC([c99 c89 gcc cc])
+: ${CC=c99}
+AC_USE_SYSTEM_EXTENSIONS
+AC_PROG_CC([c99 gcc])
+
 AC_PROG_CXX
 #if test "$GXX" = "yes"; then
     #AC_SUBST([AM_CXXFLAGS], [-std=c++11])
 #fi
+case "`uname -sr`" in
+    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
+    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
+esac
 
 YEAR=`date +%Y`
 AC_SUBST([YEAR])
@@ -36,10 +37,7 @@ AM_PROG_CC_C_O
 if test -z "$CC"; then
     AC_MSG_ERROR([no C compiler found])
 else
-   case "$CC" in
-       *c99*) AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance]);;
-       *) AC_DEFINE([_XOPEN_SOURCE], [500], [Level of XOPEN compliance])
-   esac
+    AC_DEFINE([_XOPEN_SOURCE], [700], [Level of XOPEN compliance])
     AC_MSG_CHECKING(the C compiler)
     AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
 	AC_MSG_RESULT(works),
@@ -542,10 +540,10 @@ UD_SEARCH_HEADER([XML2], [libxml/parser.h],
 UD_SEARCH_LIB([xml2], [xmlInitParser], [/opt/csw/lib /opt/lib /opt/X11/lib \
     /opt/local/lib /usr/local/lib])
 
-AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
-AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])
-AC_CHECK_TYPE([u_long],,[AC_DEFINE([u_long], [unsigned long], [rpcgen(1) typedef])])
-AC_CHECK_TYPE([caddr_t],,[AC_DEFINE([caddr_t], [void*], [rpcgen(1) typedef])])
+#AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
+#AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])
+#AC_CHECK_TYPE([u_long],,[AC_DEFINE([u_long], [unsigned long], [rpcgen(1) typedef])])
+#AC_CHECK_TYPE([caddr_t],,[AC_DEFINE([caddr_t], [void*], [rpcgen(1) typedef])])
 
 # HACKS:
 AC_CHECK_DECL([strtok_r], , [AC_DEFINE([_REENTRANT], [1], 
