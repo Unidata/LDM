@@ -14,3 +14,4 @@ ldm7.h
 server_info.h
 down7.h
 mcast_down.h
+mcast_down_test

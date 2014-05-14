@@ -13,6 +13,15 @@
 extern "C" {
 #endif
 
+/*
+ * The following types are defined here because rpcgen(1) generates output that
+ * uses them and they are not defined in the expected programming environment.
+ */
+typedef unsigned short u_short;
+typedef unsigned int u_int;
+typedef unsigned long u_long;
+typedef char* caddr_t;
+
 #include <signal.h> /* sig_atomic_t */
 #include <stdlib.h> /* at least malloc() */
 #include <sys/time.h> /* timeval */
@@ -521,6 +530,7 @@ typedef ldm_errt comingsoon_reply_t;
 void ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp);
 void ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp);
 void ldmprog_7(struct svc_req *rqstp, register SVCXPRT *transp);
+const char* ldm7_errmsg(int status);
 int one_svc_run(const int xp_sock, const unsigned inactive_timeo);
 void* nullproc_6(void *argp, CLIENT *clnt);
 enum clnt_stat clnt_stat(CLIENT *clnt);
@@ -548,15 +558,21 @@ struct McastGroupInfo {
 typedef struct McastGroupInfo McastGroupInfo;
 
 /*
- * Discriminant for multicast subscription reply:
+ * LDM-7 status values:
  */
 
-enum SubscriptionStatus {
+enum Ldm7Status {
 	LDM7_OK = 0,
-	LDM7_INVAL = 0 + 1,
-	LDM7_UNAUTH = 0 + 2,
+	LDM7_INTR = 0 + 1,
+	LDM7_TIMEDOUT = 0 + 2,
+	LDM7_RPC = 0 + 3,
+	LDM7_INVAL = 0 + 4,
+	LDM7_UNAUTH = 0 + 5,
+	LDM7_IPV6 = 0 + 6,
+	LDM7_REFUSED = 0 + 7,
+	LDM7_SYSTEM = 0 + 8,
 };
-typedef enum SubscriptionStatus SubscriptionStatus;
+typedef enum Ldm7Status Ldm7Status;
 
 /*
  * Missed data-product:
@@ -573,7 +589,7 @@ typedef struct MissedProduct MissedProduct;
  */
 
 struct SubscriptionReply {
-	SubscriptionStatus status;
+	Ldm7Status status;
 	union {
 		McastGroupInfo groupInfo;
 	} SubscriptionReply_u;
@@ -725,7 +741,7 @@ extern  bool_t xdr_hiya_reply_t (XDR *, hiya_reply_t*);
 extern  bool_t xdr_fornme_reply_t (XDR *, fornme_reply_t*);
 extern  bool_t xdr_comingsoon_reply_t (XDR *, comingsoon_reply_t*);
 extern  bool_t xdr_McastGroupInfo (XDR *, McastGroupInfo*);
-extern  bool_t xdr_SubscriptionStatus (XDR *, SubscriptionStatus*);
+extern  bool_t xdr_Ldm7Status (XDR *, Ldm7Status*);
 extern  bool_t xdr_MissedProduct (XDR *, MissedProduct*);
 extern  bool_t xdr_SubscriptionReply (XDR *, SubscriptionReply*);
 
@@ -752,7 +768,7 @@ extern bool_t xdr_hiya_reply_t ();
 extern bool_t xdr_fornme_reply_t ();
 extern bool_t xdr_comingsoon_reply_t ();
 extern bool_t xdr_McastGroupInfo ();
-extern bool_t xdr_SubscriptionStatus ();
+extern bool_t xdr_Ldm7Status ();
 extern bool_t xdr_MissedProduct ();
 extern bool_t xdr_SubscriptionReply ();
 

@@ -12,9 +12,11 @@
 #include "config.h"
 
 #include "ldm.h"
+#include "log.h"
 #include "mcast_info.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <xdr.h>
 
 /**
@@ -23,11 +25,49 @@
  * @param[in,out] mcastInfo  Pointer to multicast information to be freed or
  *                           NULL.
  */
-void mcastInfo_delete(
+void mcastInfo_free(
     McastGroupInfo* const mcastInfo)
 {
     if (mcastInfo) {
         (void)xdr_free(xdr_McastGroupInfo, (char*)mcastInfo);
         free(mcastInfo);
     }
+}
+
+/**
+ * Copies multicast information.
+ *
+ * @param[out] to           Destination.
+ * @param[in]  from         Source.
+ * @retval     0            Success.
+ * @retval     LDM7_SYSTEM  System error. \c log_add() called.
+ */
+int
+mcastInfo_copy(
+    McastGroupInfo* const restrict       to,
+    const McastGroupInfo* const restrict from)
+{
+    char* const restrict mcastName = strdup(from->mcastName);
+
+    if (mcastName == NULL) {
+        LOG_ADD1("Couldn't copy multicast group name \"%s\"", from->mcastName);
+    }
+    else {
+        char* const restrict groupAddr = strdup(from->groupAddr);
+
+        if (groupAddr == NULL) {
+            LOG_ADD1("Couldn't copy multicast group address \"%s\"",
+                    from->groupAddr);
+        }
+        else {
+            to->mcastName = mcastName;
+            to->groupAddr = groupAddr;
+            to->groupPort = from->groupPort;
+            return 0;
+        } /* "groupAddr" allocated */
+
+        free(mcastName);
+    } /* "mcastName allocated */
+
+    return LDM7_SYSTEM;
 }

@@ -11,6 +11,18 @@
  */
 
 #ifdef RPC_HDR
+%/*
+% * The following types are defined here because rpcgen(1) generates output that
+% * uses them and they are not defined in the expected programming environment.
+% */
+%typedef unsigned short u_short;
+%typedef unsigned int   u_int;
+%typedef unsigned long  u_long;
+%typedef char*          caddr_t;
+#endif /* RPC_HDR */
+
+#ifdef RPC_HDR
+%
 %#include <signal.h>     /* sig_atomic_t */
 %#include <stdlib.h>     /* at least malloc() */
 %#include <sys/time.h>   /* timeval */
@@ -721,6 +733,7 @@ program LDMPROG {
 %void  ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp);
 #ifdef WANT_MULTICAST
 %void  ldmprog_7(struct svc_req *rqstp, register SVCXPRT *transp);
+%const char* ldm7_errmsg(int status);
 #endif
 %int   one_svc_run(const int xp_sock, const unsigned inactive_timeo);
 %void* nullproc_6(void *argp, CLIENT *clnt);
@@ -878,14 +891,57 @@ struct McastGroupInfo {
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %
 %/*
-% * Discriminant for multicast subscription reply:
+% * LDM-7 status values:
 % */
 #endif
-enum SubscriptionStatus {
-    LDM7_OK = 0, /* Success */
-    LDM7_INVAL,  /* Invalid argument */
-    LDM7_UNAUTH  /* Unauthorized */
+enum Ldm7Status {
+    LDM7_OK = 0,   /* Success */
+    LDM7_INTR,     /* Interrupted by signal */
+    LDM7_TIMEDOUT, /* Timed out */
+    LDM7_RPC,      /* Other RPC error */
+    LDM7_INVAL,    /* Invalid argument */
+    LDM7_UNAUTH,   /* Unauthorized */
+    LDM7_IPV6,     /* IPv6 not supported */
+    LDM7_REFUSED,  /* Remote LDM-7 refused connection */
+    LDM7_SYSTEM    /* System error */
 };
+
+#if RPC_CLNT
+%
+%/**
+% * Returns the message associated with an LDM-7 status.
+% *
+% * @param[in] status  The LDM-7 status.
+% * @return            The associated message.
+% */
+%const char*
+%ldm7_errmsg(
+%    const int status)
+%{
+%    switch (status) {
+%    case LDM7_OK:
+%        return "Success";
+%    case LDM7_INTR:
+%        return "Interrupted by signal";
+%    case LDM7_TIMEDOUT:
+%        return "Transaction timed-out";
+%    case LDM7_RPC:
+%        return "RPC error";
+%    case LDM7_INVAL:
+%        return "Invalid argument";
+%    case LDM7_UNAUTH:
+%        return "Not authorized to receive multicast group";
+%    case LDM7_IPV6:
+%        return "IPv6 not supported";
+%    case LDM7_REFUSED:
+%        return "Connection refused by remote LDM-7";
+%    case LDM7_SYSTEM:
+%        return "System error";
+%    default:
+%        return "Unknown status";
+%    }
+%}
+#endif
 
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
@@ -912,7 +968,7 @@ struct MissedProduct {
 % * Multicast subscription return values:
 % */
 #endif
-union SubscriptionReply switch (SubscriptionStatus status) {
+union SubscriptionReply switch (Ldm7Status status) {
     case LDM7_OK:
         McastGroupInfo groupInfo;
     case LDM7_INVAL:

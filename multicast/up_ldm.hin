@@ -9,10 +9,19 @@
  * This file specifies the API for the multicast-capable upstream LDM.
  */
 
-#ifndef UP_LDM_H
-#define UP_LDM_H
+#ifndef UP_LDM7_H
+#define UP_LDM7_H
 
 #include "ldm.h"
+
+typedef enum {
+    UP_LDM7_SUCCESS = 0, /* success */
+    UP_LDM7_TIMEDOUT,    /* RPC call timed-out */
+    UP_LDM7_INTR,        /* RPC call was interrupted */
+    UP_LDM7_RPC,         /* Other RPC error */
+    UP_LDM7_UNAUTH,      /* unauthorized */
+    UP_LDM7_INVAL        /* invalid argument */
+} UpLdm7Status;
 
 typedef struct UpLdm7Proxy UpLdm7Proxy;
 

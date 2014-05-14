@@ -15,6 +15,7 @@
 #include "ldm.h"
 #include "log.h"
 #include "mcast_down.h"
+#include "mcast_info.h"
 #include "request_queue.h"
 #include "up_ldm.h"
 
@@ -107,13 +108,13 @@ dl7_createAndExecute(
     int          status = ul7Proxy_new(&ul7Proxy, serverId, port);
 
     if (status == 0) {
-        McastGroupInfo* mcastInfo;
+        McastGroupInfo mcastInfo;
 
         status = ul7Proxy_subscribe(ul7Proxy, mcastName, &mcastInfo);
 
         if (status == 0) {
-            status = execute(ul7Proxy, mcastInfo, missedProdFunc);
-            mcastInfo_delete(mcastInfo);
+            status = execute(ul7Proxy, &mcastInfo, missedProdFunc);
+            xdr_free(xdr_McastGroupInfo, (char*)&mcastInfo);
         } /* "mcastInfo" allocated */
 
         ul7Proxy_delete(ul7Proxy);

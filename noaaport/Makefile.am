@@ -67,7 +67,6 @@ dist_bin_SCRIPTS	= \
 COMMON_SOURCES		= \
 	dvbs.h \
 	grib2name.c \
-	gribid.c \
 	ldmProductQueue.c ldmProductQueue.h \
 	nport.h \
 	png_io.c \

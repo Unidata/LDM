@@ -8,7 +8,6 @@ gribinsert_SOURCES	= \
     gribinsert.c gribinsert.h \
     get_grib_info.c \
     get_gribname.c \
-    gribid.c \
     wgrib.c
 
 CPPFLAGS		= \

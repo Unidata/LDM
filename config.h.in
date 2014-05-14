@@ -300,9 +300,6 @@
 /* Needed for "struct ip_mreq" on SunOS 5 */
 #undef __EXTENSIONS__
 
-/* rpcgen(1) typedef */
-#undef caddr_t
-
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 
@@ -323,15 +320,6 @@
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef ssize_t
-
-/* rpcgen(1) typedef */
-#undef u_int
-
-/* rpcgen(1) typedef */
-#undef u_long
-
-/* rpcgen(1) typedef */
-#undef u_short
 
 /* Define to the type of an unsigned integer type of width exactly 64 bits if
    such a type exists and the standard includes do not define it. */

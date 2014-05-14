@@ -57,6 +57,7 @@ lib_la_SOURCES		= \
 	gbits.c \
 	getpoly.c \
 	grib2.h \
+	gribid.c \
 	gridtemplates.c \
 	gridtemplates.h \
 	int_power.c \

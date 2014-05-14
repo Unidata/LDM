@@ -9,7 +9,7 @@
  *   program reads NOAAPORT data from a shared-memory FIFO or a file, creates
  *   LDM data-products, and writes the data-products into an LDM product-queue.
  */
-#include <config.h>
+#include "config.h"
 
 #include "nport.h"
 #include "shmfifo.h"

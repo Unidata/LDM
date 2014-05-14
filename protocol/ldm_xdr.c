@@ -546,11 +546,11 @@ xdr_McastGroupInfo (XDR *xdrs, McastGroupInfo *objp)
 }
 
 /*
- * Discriminant for multicast subscription reply:
+ * LDM-7 status values:
  */
 
 bool_t
-xdr_SubscriptionStatus (XDR *xdrs, SubscriptionStatus *objp)
+xdr_Ldm7Status (XDR *xdrs, Ldm7Status *objp)
 {
 	register int32_t *buf;
 
@@ -584,7 +584,7 @@ xdr_SubscriptionReply (XDR *xdrs, SubscriptionReply *objp)
 {
 	register int32_t *buf;
 
-	 if (!xdr_SubscriptionStatus (xdrs, &objp->status))
+	 if (!xdr_Ldm7Status (xdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
 	case LDM7_OK:

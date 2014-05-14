@@ -6,6 +6,40 @@
 
 #include <memory.h> /* for memset */
 #include "ldm.h"
+
+/**
+ * Returns the message associated with an LDM-7 status.
+ *
+ * @param[in] status  The LDM-7 status.
+ * @return            The associated message.
+ */
+const char*
+ldm7_errmsg(
+ const int status)
+{
+ switch (status) {
+ case LDM7_OK:
+ return "Success";
+ case LDM7_INTR:
+ return "Interrupted by signal";
+ case LDM7_TIMEDOUT:
+ return "Transaction timed-out";
+ case LDM7_RPC:
+ return "RPC error";
+ case LDM7_INVAL:
+ return "Invalid argument";
+ case LDM7_UNAUTH:
+ return "Not authorized to receive multicast group";
+ case LDM7_IPV6:
+ return "IPv6 not supported";
+ case LDM7_REFUSED:
+ return "Connection refused by remote LDM-7";
+ case LDM7_SYSTEM:
+ return "System error";
+ default:
+ return "Unknown status";
+ }
+}
 #include <string.h>
 
 /* Default timeout can be changed using clnt_control() */
