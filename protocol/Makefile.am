@@ -16,7 +16,7 @@ builtHeaders	        = \
     uldb.h
 BUILT_SOURCES	        = ldm_svc.c $(builtHeaders)
 CLEANFILES		= *.i
-DISTCLEANFILES		= $(builtHeaders)
+DISTCLEANFILES		= $(BUILT_SOURCES)
 EXTRA_DIST		= \
     $(builtHeaders:.h=.hin) \
     child_process_set.h \

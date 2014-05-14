@@ -40,6 +40,19 @@ ldm7_errmsg(
  return "Unknown status";
  }
 }
+
+int
+clntStatusToLdm7Status(
+ const CLIENT* const clnt)
+{
+ int status = clnt_stat(clnt);
+
+ return (status == RPC_TIMEDOUT)
+ ? LDM7_TIMEDOUT
+ : (status == RPC_SYSTEMERROR)
+ ? LDM7_SYSTEM
+ : LDM7_RPC;
+}
 #include <string.h>
 
 /* Default timeout can be changed using clnt_control() */

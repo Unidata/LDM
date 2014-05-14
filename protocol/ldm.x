@@ -738,6 +738,9 @@ program LDMPROG {
 %int   one_svc_run(const int xp_sock, const unsigned inactive_timeo);
 %void* nullproc_6(void *argp, CLIENT *clnt);
 %enum  clnt_stat clnt_stat(CLIENT *clnt);
+#if WANT_MULTICAST
+%int   clntStatusToLdm7Status(const CLIENT* const clnt);
+#endif
 #endif
 
 /*
@@ -941,6 +944,21 @@ enum Ldm7Status {
 %        return "Unknown status";
 %    }
 %}
+#if WANT_MULTICAST
+%
+%int
+%clntStatusToLdm7Status(
+%    const CLIENT* const clnt)
+%{
+%    int status = clnt_stat(clnt);
+%
+%    return (status == RPC_TIMEDOUT)
+%        ? LDM7_TIMEDOUT
+%        : (status == RPC_SYSTEMERROR)
+%            ? LDM7_SYSTEM
+%            : LDM7_RPC;
+%}
+#endif
 #endif
 
 

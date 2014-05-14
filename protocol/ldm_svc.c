@@ -16,7 +16,6 @@
 #ifndef SIG_PF
 #define SIG_PF void(*)(int)
 #endif
-#include "../multicast/vcmtp_c_api.h"
 
 void
 ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp)
@@ -86,61 +85,6 @@ ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp)
 		_xdr_argument = (xdrproc_t) xdr_datapkt;
 		_xdr_result = (xdrproc_t) xdr_void;
 		local = (char *(*)(char *, struct svc_req *)) blkdata_6_svc;
-		break;
-
-	default:
-		svcerr_noproc (transp);
-		return;
-	}
-	memset ((char *)&argument, 0, sizeof (argument));
-	if (!svc_getargs (transp, (xdrproc_t) _xdr_argument, (caddr_t) &argument)) {
-		svcerr_decode (transp);
-		return;
-	}
-	result = (*local)((char *)&argument, rqstp);
-	if (result != NULL && !svc_sendreply(transp, (xdrproc_t) _xdr_result, result)) {
-		svcerr_systemerr (transp);
-	}
-	if (!svc_freeargs (transp, (xdrproc_t) _xdr_argument, (caddr_t) &argument)) {
-		fprintf (stderr, "%s", "unable to free arguments");
-		exit (1);
-	}
-	return;
-}
-
-void
-ldmprog_7(struct svc_req *rqstp, register SVCXPRT *transp)
-{
-	union {
-		char subscribe_7_arg;
-		VcmtpFileId request_product_7_arg;
-		MissedProduct deliver_product_7_arg;
-	} argument;
-	char *result;
-	xdrproc_t _xdr_argument, _xdr_result;
-	char *(*local)(char *, struct svc_req *);
-
-	switch (rqstp->rq_proc) {
-	case NULLPROC:
-		(void) svc_sendreply (transp, (xdrproc_t) xdr_void, (char *)NULL);
-		return;
-
-	case SUBSCRIBE:
-		_xdr_argument = (xdrproc_t) xdr_char;
-		_xdr_result = (xdrproc_t) xdr_SubscriptionReply;
-		local = (char *(*)(char *, struct svc_req *)) subscribe_7_svc;
-		break;
-
-	case REQUEST_PRODUCT:
-		_xdr_argument = (xdrproc_t) xdr_VcmtpFileId;
-		_xdr_result = (xdrproc_t) xdr_void;
-		local = (char *(*)(char *, struct svc_req *)) request_product_7_svc;
-		break;
-
-	case DELIVER_PRODUCT:
-		_xdr_argument = (xdrproc_t) xdr_MissedProduct;
-		_xdr_result = (xdrproc_t) xdr_void;
-		local = (char *(*)(char *, struct svc_req *)) deliver_product_7_svc;
 		break;
 
 	default:

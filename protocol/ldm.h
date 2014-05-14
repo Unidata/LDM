@@ -534,6 +534,7 @@ const char* ldm7_errmsg(int status);
 int one_svc_run(const int xp_sock, const unsigned inactive_timeo);
 void* nullproc_6(void *argp, CLIENT *clnt);
 enum clnt_stat clnt_stat(CLIENT *clnt);
+int clntStatusToLdm7Status(const CLIENT* const clnt);
 struct product {
  prod_info info;
  void *data;

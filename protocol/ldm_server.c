@@ -662,6 +662,8 @@ int ldmprog_6_freeresult(
     return 1;
 }
 
+#if WANT_MULTICAST
+
 /**
  * Processes a subscription request from a remote LDM.
  *
@@ -717,3 +719,5 @@ deliver_product_7_svc(
 
     return NULL ; /* don't reply */
 }
+
+#endif /* WANT_MULTICAST */

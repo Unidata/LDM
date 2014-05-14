@@ -150,6 +150,8 @@ AC_ARG_WITH([multicast],
     [with_multicast=no])
 AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
 AM_COND_IF([WANT_MULTICAST], [LIBS="-lstdc++ -lrt${LIBS:+ $LIBS}"])
+AM_COND_IF([WANT_MULTICAST], [AC_DEFINE([WANT_MULTICAST], [1],
+    [Package will have multicast capability])])
 
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
