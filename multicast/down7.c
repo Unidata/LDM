@@ -38,7 +38,8 @@ static RequestQueue* requestQueue;
  * multicast downstream LDM. The file is queued for reception by other means.
  * This function returns immediately.
  *
- * @param[in] mdl     Pointer to the multicast downstream LDM that missed the file.
+ * @param[in] mdl     Pointer to the multicast downstream LDM that missed the
+ *                    file.
  * @param[in] fileId  VCMTP file identifier of the missed file.
  */
 static void missedProdFunc(

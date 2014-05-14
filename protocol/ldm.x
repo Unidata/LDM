@@ -944,7 +944,6 @@ enum Ldm7Status {
 %        return "Unknown status";
 %    }
 %}
-#if WANT_MULTICAST
 %
 %int
 %clntStatusToLdm7Status(
@@ -958,7 +957,6 @@ enum Ldm7Status {
 %            ? LDM7_SYSTEM
 %            : LDM7_RPC;
 %}
-#endif
 #endif
 
 
