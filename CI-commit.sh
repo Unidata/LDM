@@ -17,7 +17,7 @@ mkdir -p m4 multicast/vcmtp/m4
 autoreconf -iv
 ./configure --disable-root-actions >configure.log 2>&1
 make distcheck
-make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast'
-make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert'
-make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport'
-make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport --with-retrans'
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-multicast'
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-gribinsert'
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-noaaport'
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-noaaport --with-retrans'
