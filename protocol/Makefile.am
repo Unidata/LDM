@@ -7,8 +7,7 @@
 ## Process this file with automake to produce Makefile.in
 
 BUILT_SOURCES	        =  ldm.h ldm_svc.c ldm_clnt.c ldm_xdr.c
-CLEANFILES		= *.i
-DISTCLEANFILES		= $(BUILT_SOURCES)
+CLEANFILES		= *.i $(BUILT_SOURCES)
 EXTRA_DIST		= ldm.x fix_clnt.pl 
 if WANT_MULTICAST
     RPCGEN_OPTS		= -DWANT_MULTICAST
@@ -31,6 +30,7 @@ ldm.h:		ldm.x
 ldm_xdr.c:	ldm.x
 	(echo '#include "config.h"'; $(RPCGEN) -c $(srcdir)/ldm.x) | \
 	sed \
+	  -e 's;'$(srcdir)'/ldm\.h;ldm.h;' \
 	  -e 's/xdr_opaque *( *xdrs, *objp, *16)/xdr_opaque(xdrs, (char*)objp, 16)/' \
 	  -e '/#if defined(_LP64)/,/#endif/d' > $@
 
@@ -43,6 +43,7 @@ ldm_xdr.c:	ldm.x
 #
 ldm_svc.c:	ldm.x
 	(echo '#include "config.h"'; $(RPCGEN) -m $(srcdir)/ldm.x) | sed \
+	    -e 's;'$(srcdir)'/ldm\.h;ldm.h;' \
 	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
 	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
 	    -e 's;notifyme_6\([^A-Za-z_]\);notifyme_6_svc\1;' \
