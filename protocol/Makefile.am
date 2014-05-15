@@ -16,8 +16,8 @@ endif
 RPCGEN			= @RPCGEN@ -C $(RPCGEN_OPTS)
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
-include_HEADERS		= ldm.h 
-lib_la_SOURCES		= ldm_svc.c ldm_xdr.c ldm_clnt.c 
+nodist_include_HEADERS	= ldm.h 
+nodist_lib_la_SOURCES	= ldm_svc.c ldm_xdr.c ldm_clnt.c 
 lib_la_CPPFLAGS		= -I$(top_srcdir) \
 			  -I$(top_srcdir)/rpc \
 			  -I$(top_srcdir)/ulog \
@@ -25,11 +25,11 @@ lib_la_CPPFLAGS		= -I$(top_srcdir) \
 TAGS_FILES		= ../rpc/*.c ../rpc/*.h
 
 ldm.h:		ldm.x
-	$(RPCGEN) -h ldm.x | \
+	$(RPCGEN) -h $(srcdir)/ldm.x | \
 	sed 's/typedef *char *signaturet/typedef unsigned char signaturet/' > $@
 
 ldm_xdr.c:	ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -c ldm.x) | \
+	(echo '#include "config.h"'; $(RPCGEN) -c $(srcdir)/ldm.x) | \
 	sed \
 	  -e 's/xdr_opaque *( *xdrs, *objp, *16)/xdr_opaque(xdrs, (char*)objp, 16)/' \
 	  -e '/#if defined(_LP64)/,/#endif/d' > $@
@@ -42,7 +42,7 @@ ldm_xdr.c:	ldm.x
 # Also, the target-file must be modified to be more portable.
 #
 ldm_svc.c:	ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -m ldm.x) | sed \
+	(echo '#include "config.h"'; $(RPCGEN) -m $(srcdir)/ldm.x) | sed \
 	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
 	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
 	    -e 's;notifyme_6\([^A-Za-z_]\);notifyme_6_svc\1;' \
@@ -70,9 +70,9 @@ ldm_svc.c:	ldm.x
 # XDR-routine (sheesh!)).
 #
 ldm_clnt.c:	ldm.x fix_clnt.pl
-	(echo '#include "config.h"'; $(RPCGEN) -l ldm.x) > $@.tmp || \
+	(echo '#include "config.h"'; $(RPCGEN) -l $(srcdir)/ldm.x) > $@.tmp || \
 	    rm $@.tmp
-	$(PERL) fix_clnt.pl < $@.tmp > $@ && rm $@.tmp       # fix stuff
+	$(PERL) $(srcdir)/fix_clnt.pl < $@.tmp > $@ && rm $@.tmp # fix stuff
 
 .c.i:
 	$(CPP) $(lib_la_CPPFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $< >$@
