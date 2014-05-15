@@ -14,6 +14,7 @@ libldm_la_LIBADD	= \
     $(top_builddir)/pqinglib/lib.la \
     $(top_builddir)/@PQ_SUBDIR@/lib.la \
     $(top_builddir)/protocol/lib.la \
+    $(top_builddir)/protocol2/lib.la \
     $(top_builddir)/registry/lib.la \
     $(top_builddir)/rpc/lib.la \
     $(top_builddir)/ulog/lib.la

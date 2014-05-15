@@ -614,6 +614,7 @@ AC_CONFIG_FILES([
     pqsurf/Makefile
     pqutil/Makefile
     protocol/Makefile
+    protocol2/Makefile
     regex/Makefile
     registry/Makefile
     regutil/Makefile

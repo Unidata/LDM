@@ -1,4 +1,4 @@
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2014 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -10,6 +10,7 @@ bin_PROGRAMS	= ldmping
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)
@@ -17,6 +18,7 @@ ldmping_LDADD	= $(top_builddir)/lib/libldm.la
 dist_man1_MANS	= ldmping.1
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \
+    ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../misc/*.c ../misc/*.h \

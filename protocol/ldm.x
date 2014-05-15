@@ -739,7 +739,7 @@ program LDMPROG {
 %void* nullproc_6(void *argp, CLIENT *clnt);
 %enum  clnt_stat clnt_stat(CLIENT *clnt);
 #if WANT_MULTICAST
-%int   clntStatusToLdm7Status(const CLIENT* const clnt);
+%int   clntStatusToLdm7Status(const enum clnt_stat status);
 #endif
 #endif
 
@@ -947,15 +947,17 @@ enum Ldm7Status {
 %
 %int
 %clntStatusToLdm7Status(
-%    const CLIENT* const clnt)
+%    const enum clnt_stat status)
 %{
-%    int status = clnt_stat(clnt);
-%
-%    return (status == RPC_TIMEDOUT)
-%        ? LDM7_TIMEDOUT
-%        : (status == RPC_SYSTEMERROR)
-%            ? LDM7_SYSTEM
-%            : LDM7_RPC;
+%    return (status == 0)
+%        ? 0
+%        : (status == RPC_TIMEDOUT)
+%            ? LDM7_TIMEDOUT
+%            : (status == RPC_SYSTEMERROR)
+%                ? LDM7_SYSTEM
+%                : (status == RPC_AUTHERROR)
+%                    ? LDM7_UNAUTH
+%                    : LDM7_RPC;
 %}
 #endif
 

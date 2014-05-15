@@ -191,9 +191,10 @@ getSocket(
  *                            log_add() called.
  * @retval     LDM7_REFUSED   Remote LDM-7 refused connection. \c log_add()
  *                            called.
- * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. \c log_add()
- *                            called.
+ * @retval     LDM7_RPC       RPC error. \c log_add() called.
  * @retval     LDM7_SYSTEM    System error. \c log_add() called.
+ * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. \c log_add() called.
+ * @retval     LDM7_UNAUTH    Not authorized. \c log_add() called.
  */
 static int
 newClient(
@@ -226,16 +227,11 @@ newClient(
             LOG_SERROR3("Couldn't create RPC client for host \"%s\", "
                     "port %u: %s", hostId, port, clnt_spcreateerror(""));
             (void)close(sock);
-            status = (errno == ETIMEDOUT)
-                    ? LDM7_TIMEDOUT
-                    : (errno == ECONNREFUSED)
-                      ? LDM7_REFUSED
-                      : LDM7_SYSTEM;
+            status = clntStatusToLdm7Status(rpc_createerr.cf_stat);
         }
         else {
             *client = clnt;
             *socket = sock;
-            status = 0;
         }
     } /* "sock" allocated */
 
@@ -288,7 +284,7 @@ subscribeAndExecute(
 
     if (reply == NULL) {
 	LOG_ADD1("%s", clnt_errmsg(clnt));
-	status = clntStatusToLdm7Status(clnt);
+	status = clntStatusToLdm7Status(clnt_stat(clnt));
     }
     else {
         if (reply->status == 0) {

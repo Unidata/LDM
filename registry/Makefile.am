@@ -34,6 +34,7 @@ TAGS_FILES              = \
     ../ulog/*.c ../ulog/*.h \
     ../pq/*.c ../pq/*.h \
     ../protocol/*.c \
+    ../protocol2/*.c \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
 AM_CPPFLAGS		= \
@@ -41,6 +42,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/pq \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry
 
 backend.c:	$(srcdir)/backend-libxml2.c

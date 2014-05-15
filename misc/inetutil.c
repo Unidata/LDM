@@ -29,7 +29,7 @@
 #include "ulog.h"
 #include "log.h"
 #include "inetutil.h"
-#include "../protocol/timestamp.h"
+#include "timestamp.h"
 #include <registry.h>
 
 /*

@@ -8,7 +8,6 @@
 
 EXTRA_DIST		= pq.hin
 BUILT_SOURCES		= pq.h
-DISTCLEANFILES          = $(BUILT_SOURCES)
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= pq.h fbits.h lcm.h
 lib_la_SOURCES		= pq.c lcm.c
@@ -17,16 +16,18 @@ lib_la_CPPFLAGS		= \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)
 TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../protocol/*.c ../protocol/*.h \
+    ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
 
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
-pq.h:	pq.hin pq.c
+pq.h:		pq.hin pq.c

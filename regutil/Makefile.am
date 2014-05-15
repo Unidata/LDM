@@ -26,6 +26,7 @@ TAGS_FILES              = \
     *.c ../*.h \
     ../ulog/*.c ../ulog/*.h \
     ../protocol/*.c ../protocol/*.h \
+    ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
@@ -35,6 +36,7 @@ AM_CPPFLAGS		= \
     -I$(top_builddir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry
 regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
@@ -104,6 +106,7 @@ check_PROGRAMS		= testRegistry
 testRegistry_CPPFLAGS	= \
     -I$(top_srcdir) \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     @CPPFLAGS_CUNIT@

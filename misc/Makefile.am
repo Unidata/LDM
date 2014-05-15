@@ -43,11 +43,13 @@ lib_la_SOURCES	= \
 	StringBuf.c StringBuf.h
 lib_la_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \
+    ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
     ../ulog/*.c ../ulog/*.h \
     ../rpc/*.c ../rpc/*.h \
@@ -64,6 +66,7 @@ if HAVE_CUNIT
 check_PROGRAMS		= test_child_map testSemRWLock
 test_child_map_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir) \
@@ -75,6 +78,7 @@ test_child_map_LDADD	= \
 
 testSemRWLock_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir) \

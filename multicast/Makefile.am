@@ -34,6 +34,7 @@ lib_la_SOURCES		= down7.c \
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+                          -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
                           -I$(builddir)/vcmtp/protocol -I$(srcdir)/vcmtp/protocol \
                           -I$(top_srcdir)/misc -I$(top_srcdir)/misc \
