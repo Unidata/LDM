@@ -17,6 +17,7 @@
 #include "mcast_down.h"
 #include "mcast_info.h"
 #include "request_queue.h"
+#include "rpcutil.h"
 #include "up_ldm.h"
 
 #include <errno.h>
@@ -323,9 +324,9 @@ dl7_createAndExecute(
     const unsigned short port,
     const char* const    mcastName)
 {
-    CLIENT* restrict clnt;
-    int              sock;
-    int              status = newClient(&clnt, hostId, port, &sock);
+    CLIENT* clnt;
+    int     sock;
+    int     status = newClient(&clnt, hostId, port, &sock);
 
     if (status == 0) {
         status = subscribeAndExecute(clnt, sock, mcastName);
