@@ -12,6 +12,7 @@ AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
 
 : ${CC=c99}
+AC_DEFINE([_XOPEN_SOURCE], [700], [Level of XOPEN compliance])
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC([c99 gcc])
 
@@ -37,7 +38,6 @@ AM_PROG_CC_C_O
 if test -z "$CC"; then
     AC_MSG_ERROR([no C compiler found])
 else
-    AC_DEFINE([_XOPEN_SOURCE], [700], [Level of XOPEN compliance])
     AC_MSG_CHECKING(the C compiler)
     AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
 	AC_MSG_RESULT(works),
