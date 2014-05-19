@@ -897,7 +897,7 @@ enum Ldm7Status {
     LDM7_UNAUTH,   /* Unauthorized */
     LDM7_IPV6,     /* IPv6 not supported */
     LDM7_REFUSED,  /* Remote LDM-7 refused connection */
-    LDM7_SYSTEM    /* System error */
+    LDM7_SYSTEM,   /* System error */
     LDM7_VCMTP     /* VCMTP error */
 };
 
@@ -932,6 +932,8 @@ enum Ldm7Status {
 %        return "Connection refused by remote LDM-7";
 %    case LDM7_SYSTEM:
 %        return "System error";
+%    case LDM7_VCMTP:
+%        return "VCMTP error";
 %    default:
 %        return "Unknown status";
 %    }
