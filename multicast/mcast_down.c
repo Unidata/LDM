@@ -229,51 +229,53 @@ static void missed_file_func(
  * Initializes a multicast downstream LDM.
  *
  * @param[out] mdl            The multicast downstream LDM to initialize.
+ * @param[in]  tcpAddr        Address of the TCP server from which to retrieve
+ *                            missed data-blocks. May be hostname or formatted
+ *                            IP address.
+ * @param[in]  tcpPort        Port number of the TCP server.
  * @param[in]  pq             The product-queue to use.
  * @param[in]  missed_product Missed-product callback function.
- * @param[in]  addr           Address of the multicast group.
- *                              224.0.0.0 - 224.0.0.255     Reserved for local
- *                                                          purposes
- *                              224.0.1.0 - 238.255.255.255 User-defined
- *                                                          multicast addresses
- *                              239.0.0.0 - 239.255.255.255 Reserved for
- *                                                          administrative
- *                                                          scoping
- * @param[in] port            Port number of the multicast group.
- * @retval    0               Success.
- * @retval    EINVAL          if @code{mdl==NULL || pq==NULL ||
- *                            missed_product==NULL}. \c log_add() called.
- * @retval    ENOMEM          Out of memory. \c log_add() called.
- * @retval    -1              Other failure. \c log_add() called.
+ * @param[in]  mcastInfo      Pointer to information on the multicast group.
+ * @retval     0              Success.
+ * @retval     LDM7_SYSTEM    System error. \c log_add() called.
+ * @retval     LDM7_INVAL     @code{tcpAddr == NULL || tcpPort == 0 ||
+ *                            pq == NULL || missed_product == NULL ||
+ *                            mcastInfo == NULL}. \c log_add() called.
+ * @retval     LDM7_VCMTP     VCMTP error. \c log_add() called.
  */
 static int init(
     Mdl* const                          mdl,
+    const char* const                   tcpAddr,
+    const unsigned short                tcpPort,
     pqueue* const                       pq,
     const mdl_missed_product_func       missed_product,
-    const char* const                   addr,
-    const unsigned short                port)
+    const McastGroupInfo* const         mcastInfo)
 {
     int                 status;
     VcmtpCReceiver*     receiver;
 
     if (mdl == NULL) {
         LOG_ADD0("NULL multicast-downstream-LDM argument");
-        return EINVAL;
+        return LDM7_INVAL;
     }
     if (pq == NULL) {
         LOG_ADD0("NULL product-queue argument");
-        return EINVAL;
+        return LDM7_INVAL;
     }
     if (missed_product == NULL) {
         LOG_ADD0("NULL missed-product-function argument");
-        return EINVAL;
+        return LDM7_INVAL;
+    }
+    if (mcastInfo == NULL) {
+        LOG_ADD0("NULL multicast-group-information argument");
+        return LDM7_INVAL;
     }
 
-    status = vcmtpReceiver_new(&receiver, bof_func, eof_func, missed_file_func,
-            addr, port, mdl);
+    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
+            missed_file_func, mcastInfo->mcastAddr, mcastInfo->mcastPort, mdl);
     if (status) {
         LOG_ADD0("Couldn't create VCMTP receiver");
-        return status;
+        return LDM7_VCMTP;
     }
 
     mdl->receiver = receiver;
@@ -287,39 +289,37 @@ static int init(
  * Returns a new multicast downstream LDM object.
  *
  * @param[out] mdl            The pointer to be set to a new instance.
+ * @param[in]  tcpAddr        Address of the TCP server from which to retrieve
+ *                            missed data-blocks. May be hostname or formatted
+ *                            IP address.
+ * @param[in]  tcpPort        Port number of TCP server.
  * @param[in]  pq             The product-queue to use.
  * @param[in]  missed_product Missed-product callback function.
- * @param[in]  addr           Address of the multicast group.
- *                              224.0.0.0 - 224.0.0.255     Reserved for local
- *                                                          purposes
- *                              224.0.1.0 - 238.255.255.255 User-defined
- *                                                          multicast addresses
- *                              239.0.0.0 - 239.255.255.255 Reserved for
- *                                                          administrative
- *                                                          scoping
- * @param[in]  port           Port number of the multicast group.
+ * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @retval     0              Success.
- * @retval     ENOMEM         Out of memory. \c log_add() called.
- * @retval     EINVAL         @code{pq == NULL || missed_product == NULL ||
- *                            addr == NULL}.
- *                            \c log_add() called.
+ * @retval     LDM7_SYSTEM    System error. \c log_add() called.
+ * @retval     LDM7_INVAL     @code{tcpAddr == NULL || tcpPort == 0 ||
+ *                            pq == NULL || missed_product == NULL ||
+ *                            mcastInfo == NULL}. \c log_add() called.
  */
 static int mdl_new(
     Mdl** const                         mdl,
+    const char* const                   tcpAddr,
+    const unsigned short                tcpPort,
     pqueue* const                       pq,
     const mdl_missed_product_func       missed_product,
-    const char* const                   addr,
-    const unsigned short                port)
+    const McastGroupInfo* const         mcastInfo)
 {
     int             status;
     Mdl* const      obj = LOG_MALLOC(sizeof(Mdl),
             "multicast downstream LDM object");
 
     if (NULL == obj) {
-        status = ENOMEM;
+        status = LDM7_SYSTEM;
     }
     else {
-        if (status = init(obj, pq, missed_product, addr, port)) {
+        if (status = init(obj, tcpAddr, tcpPort, pq, missed_product,
+                mcastInfo)) {
             free(obj);
         }
         else {
@@ -366,32 +366,30 @@ static int execute(
  * Creates and executes a multicast downstream LDM for an indefinite amount of
  * time. Will not return until the multicast downstream LDM terminates.
  *
+ * @param[in] tcpAddr        Address of the TCP server from which to retrieve
+ *                           missed data-blocks. May be groupname or formatted
+ *                           IP address.
+ * @param[in] tcpPort        Port number of the TCP server.
  * @param[in] pq             The product-queue to use.
  * @param[in] missed_product Missed-product callback function.
- * @param[in] addr           Address of the multicast group.
- *                              224.0.0.0 - 224.0.0.255     Reserved for local
- *                                                          purposes
- *                              224.0.1.0 - 238.255.255.255 User-defined
- *                                                          multicast addresses
- *                              239.0.0.0 - 239.255.255.255 Reserved for
- *                                                          administrative
- *                                                          scoping
- * @param[in] port           Port number of the multicast group.
+ * @param[in] mcastInfo      Pointer to multicast information.
  * @retval 0                 The multicast downstream LDM terminated
  *                           successfully.
- * @retval ENOMEM            Out of memory. \c log_add() called.
- * @retval EINVAL            @code{pq == NULL || missed_product == NULL ||
- *                           addr == NULL}. \c log_add() called.
- * @retval -1                Failure. \c log_add() called.
+ * @retval LDM7_SYSTEM       System error. \c log_add() called.
+ * @retval LDM7_INVAL        @code{tcpAddr == NULL || tcpPort == 0 ||
+ *                           pq == NULL || missed_product == NULL ||
+ *                           mcastInfo == NULL}. \c log_add() called.
  */
 int mdl_createAndExecute(
+    const char* const           tcpAddr,
+    const unsigned short        tcpPort,
     pqueue* const               pq,
     mdl_missed_product_func     missed_product,
-    const char* const           addr,
-    const unsigned short        port)
+    const McastGroupInfo* const mcastInfo)
 {
     Mdl*        mdl;
-    int         status = mdl_new(&mdl, pq, missed_product, addr, port);
+    int         status = mdl_new(&mdl, tcpAddr, tcpPort, pq, missed_product,
+            mcastInfo);
 
     if (status) {
         LOG_ADD0("Couldn't create new multicast downstream LDM");

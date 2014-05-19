@@ -14,7 +14,6 @@
 #include "ldm.h"
 #include "up_ldm.h"
 #include "log.h"
-#include "mcast_info.h"
 #include "rpcutil.h"
 
 #include <arpa/inet.h>

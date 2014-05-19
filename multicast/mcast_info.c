@@ -19,6 +19,13 @@
 #include <string.h>
 #include <xdr.h>
 
+/*
+ * Multicast address categories:
+ *     224.0.0.0 - 224.0.0.255     Reserved for local purposes
+ *     224.0.1.0 - 238.255.255.255 User-defined multicast addresses
+ *     239.0.0.0 - 239.255.255.255 Reserved for administrative scoping
+ */
+
 /**
  * Frees multicast information.
  *

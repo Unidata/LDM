@@ -9,27 +9,21 @@
 SUBDIRS			= vcmtp
 EXTRA_DIST              = down7.hin \
 			  mcast_down.hin \
-                          mcast_info.hin \
                           request_queue.hin \
                           server_info.hin \
-                          sock_funcs.c sock_funcs.hin \
-                          up_ldm.hin
+                          sock_funcs.c sock_funcs.hin
 BUILT_SOURCES           = down7.h \
 			  mcast_down.h \
-                          mcast_info.h \
                           request_queue.h \
                           server_info.h \
-                          sock_funcs.h \
-                          up_ldm.h
+                          sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= down7.c \
 			  mcast_down.c \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
-			  mcast_info.c \
 			  request_queue.c \
 			  server_info.c \
-			  up_ldm.c \
                           vcmtp_c_api.cpp vcmtp_c_api.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \

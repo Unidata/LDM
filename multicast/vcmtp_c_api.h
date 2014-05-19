@@ -32,11 +32,13 @@ typedef void    (*MissedFileFunc)(void* obj, const VcmtpFileId fileId);
 
 int vcmtpReceiver_new(
     VcmtpCReceiver**            cReceiver,
+    const char* const           tcpAddr,
+    const unsigned short        tcpPort,
     BofFunc                     bof_func,
     EofFunc                     eof_func,
     MissedFileFunc              missed_file_func,
-    const char* const           addr,
-    const unsigned short        port,
+    const char* const           mcastAddr,
+    const unsigned short        mcastPort,
     void*                       obj);
 
 void vcmtpReceiver_free(

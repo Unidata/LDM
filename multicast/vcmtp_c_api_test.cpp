@@ -41,30 +41,32 @@ void test_vcmtpReceiver_new()
     VcmtpCReceiver*             receiver;
     const char*                 addr = "224.0.0.1";
     const unsigned short        port = 1;
+    const char* const           tcpAddr = "127.0.0.1";
+    const unsigned short        tcpPort = 38800;
 
-    status = vcmtpReceiver_new(NULL, bof_func, eof_func, missed_file_func,
-            addr, port, NULL);
+    status = vcmtpReceiver_new(NULL, tcpAddr, tcpPort, bof_func, eof_func,
+            missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
-    status = vcmtpReceiver_new(&receiver, NULL, eof_func, missed_file_func,
-            addr, port, NULL);
+    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, NULL, eof_func,
+            missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
-    status = vcmtpReceiver_new(&receiver, bof_func, NULL, missed_file_func,
-            addr, port, NULL);
+    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, NULL,
+            missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
-    status = vcmtpReceiver_new(&receiver, bof_func, eof_func, NULL,
-            addr, port, NULL);
+    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
+            NULL, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
-    status = vcmtpReceiver_new(&receiver, bof_func, eof_func, missed_file_func,
-            NULL, port, NULL);
+    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
+            missed_file_func, NULL, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
-    status = vcmtpReceiver_new(&receiver, bof_func, eof_func, missed_file_func,
-            addr, port, NULL);
+    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
+            missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(0, status);
     log_clear();
 

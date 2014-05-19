@@ -51,8 +51,8 @@ test_invalid_get(void)
 static void
 test_invalid_add(void)
 {
-    VcmtpFileId     fileId;
-    int        status = rq_add(NULL, &fileId);
+    VcmtpFileId fileId;
+    int         status = rq_add(NULL, fileId);
 
     CU_ASSERT_EQUAL_FATAL(status, EINVAL);
 }

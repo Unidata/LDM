@@ -13,6 +13,7 @@
 #define DOWN7_H
 
 #include <ldm.h>
+#include <pq.h>
 
 #ifdef __cplusplus
 extern "C" {

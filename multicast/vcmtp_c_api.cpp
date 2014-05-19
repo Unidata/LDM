@@ -40,31 +40,27 @@ struct vcmtp_c_receiver {
  * Initializes a VCMTP C Receiver.
  *
  * @param[out] receiver               The VCMTP C Receiver to initialize.
+ * @param[in]  tcpAddr                Address of the TCP server from which to
+ *                                    retrieve missed data-blocks. May be
+ *                                    hostname or IP address.
+ * @param[in]  tcpPort                Port number of the TCP server to which to
+ *                                    connect.
  * @param[in]  bof_func               Function to call when the VCMTP layer
  *                                    has seen a beginning-of-file.
  * @param[in]  eof_func               Function to call when the VCMTP layer
  *                                    has completely received a file.
  * @param[in]  missed_file_func       Function to call when a file is missed
  *                                    by the VCMTP layer.
- * @param[in]  addr                   Address of the multicast group:
- *                                     224.0.0.0-224.0.0.255 Reserved for
- *                                                           local purposes
- *                                     224.0.1.0-238.255.255.255
- *                                                           User-defined
- *                                                           multicast
- *                                                           addresses
- *                                     239.0.0.0-239.255.255.255
- *                                                           Reserved for
- *                                                           administrative
- *                                                           scoping
- * @param[in]  port                   Port number of the multicast group.
+ * @param[in]  mcastAddr              Address of the multicast group to receive.
+ *                                    May be groupname or formatted IP address.
+ * @param[in]  mcastPort              Port number of the multicast group.
  * @param[in]  obj                    Relevant object in the receiving
  *                                    application to pass to the above
  *                                    functions. May be NULL.
  * @throws     std::invalid_argument  if @code{0==buf_func || 0==eof_func ||
  *                                    0==missed_file_func || 0==addr}.
- * @throws     std::invalid_argument  if \c addr couldn't be converted into a
- *                                    binary IPv4 address.
+ * @throws     std::invalid_argument  if the multicast group address couldn't be
+ *                                    converted into a binary IPv4 address.
  * @throws     std::runtime_error     if the IP address of the PA interface
  *                                    couldn't be obtained. (The PA address
  *                                    seems to be specific to Linux and might
@@ -79,65 +75,69 @@ struct vcmtp_c_receiver {
  *                                    initialized.
  */
 static void vcmtpReceiver_init(
-    VcmtpCReceiver* const receiver,
-    const BofFunc         bof_func,
-    const EofFunc         eof_func,
-    const MissedFileFunc  missed_file_func,
-    const char* const     addr,
-    const unsigned short  port,
-    void* const           obj)
+    VcmtpCReceiver* const       receiver,
+    const char* const           tcpAddr,
+    const unsigned short        tcpPort,
+    const BofFunc               bof_func,
+    const EofFunc               eof_func,
+    const MissedFileFunc        missed_file_func,
+    const char* const           mcastAddr,
+    const unsigned short        mcastPort,
+    void* const                 obj)
 {
-    VCMTPReceiver*      rec = new VCMTPReceiver(
+    std:string          hostId(tcpAddr);
+    VCMTPReceiver*      rcvr = new VCMTPReceiver(hostId, tcpPort,
             PerFileNotifier(bof_func, eof_func, missed_file_func, obj));
 
     try {
-        if (0 == addr)
-            throw std::invalid_argument(std::string("NULL address argument"));
-        rec->JoinGroup(std::string(addr), port);
-        receiver->receiver = rec;
+        rcvr->JoinGroup(std::string(mcastAddr), mcastPort);
+        receiver->receiver = rcvr;
     }
     catch (const std::exception& e) {
-        delete rec;
+        delete rcvr;
         throw;
-    }
+    } /* "rcvr" allocated */
 }
 
 /**
  * Returns a new VCMTP C Receiver.
  *
  * @param[out] receiver          Pointer to returned VCMTP receiver.
+ * @param[in]  tcpAddr           Address of the TCP server from which to
+ *                               retrieve missed data-blocks. May be hostname or
+ *                               IP address.
+ * @param[in]  tcpPort           Port number of the TCP server to which to
+ *                               connect.
  * @param[in]  bof_func          Function to call when the VCMTP layer has seen
  *                               a beginning-of-file.
  * @param[in]  eof_func          Function to call when the VCMTP layer has
  *                               completely received a file.
  * @param[in]  missed_file_func  Function to call when a file is missed by the
  *                               VCMTP layer.
- * @param[in]  addr              Address of the multicast group.
- *                               224.0.0.0 - 224.0.0.255     Reserved for local
- *                                                           purposes
- *                               224.0.1.0 - 238.255.255.255 User-defined
- *                                                           multicast addresses
- *                               239.0.0.0 - 239.255.255.255 Reserved for
- *                                                           administrative
- *                                                           scoping
- * @param[in]  port              Port number of the multicast group.
+ * @param[in]  mcastAddr         Address of the multicast group to receive. May
+ *                               be groupname or formatted IP address.
+ * @param[in]  mcastPort         Port number of the multicast group.
  * @param[in]  obj               Relevant object in the receiving application to
  *                               pass to the above functions. May be NULL.
  * @retval     0                 Success. The client should call \c
  *                               vcmtp_receiver_free(*receiver) when the
  *                               receiver is no longer needed.
  * @retval     EINVAL            if @code{0==buf_func || 0==eof_func ||
- *                               0==missed_file_func || 0==addr}.
+ *                               0==missed_file_func || 0==addr} or the
+ *                               multicast group address couldn't be converted
+ *                               into a binary IP address.
  * @retval     ENOMEM            Out of memory. \c log_add() called.
  * @retval     -1                Other failure. \c log_add() called.
  */
 int vcmtpReceiver_new(
     VcmtpCReceiver** const      receiver,
+    const char* const           tcpAddr,
+    const unsigned short        tcpPort,
     const BofFunc               bof_func,
     const EofFunc               eof_func,
     const MissedFileFunc        missed_file_func,
-    const char* const           addr,
-    const unsigned short        port,
+    const char* const           mcastAddr,
+    const unsigned short        mcastPort,
     void* const                 obj)
 {
     VcmtpCReceiver* rcvr = (VcmtpCReceiver*)LOG_MALLOC(sizeof(VcmtpCReceiver),
@@ -147,8 +147,8 @@ int vcmtpReceiver_new(
         return ENOMEM;
 
     try {
-        vcmtpReceiver_init(rcvr, bof_func, eof_func, missed_file_func, addr,
-                port, obj);
+        vcmtpReceiver_init(rcvr, tcpAddr, tcpPort, bof_func, eof_func,
+                missed_file_func, mcastAddr, mcastPort, obj);
         *receiver = rcvr;
         return 0;
     }

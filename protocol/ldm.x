@@ -870,24 +870,15 @@ struct McastGroupInfo {
     /*
      * Multicast group name:
      */
-    string          mcastName<>;
-    /*
-     * Hostname or formatted IP address of associated LDM-7 server (for missed
-     * data-products).
-     */
-    string         serverAddr<>;
-    /*
-     * Port number of associated LDM-7 server in local byte order:
-     */
-    unsigned short serverPort;
+    string         mcastName<>;
     /*
      * Hostname or formatted IP address of associated multicast group.
      */
-    string         groupAddr<>;
+    string         mcastAddr<>;
     /*
      * Port number of associated multicast group in local byte order:
      */
-    unsigned short groupPort;
+    unsigned short mcastPort;
 };
 
 
@@ -907,6 +898,7 @@ enum Ldm7Status {
     LDM7_IPV6,     /* IPv6 not supported */
     LDM7_REFUSED,  /* Remote LDM-7 refused connection */
     LDM7_SYSTEM    /* System error */
+    LDM7_VCMTP     /* VCMTP error */
 };
 
 #if RPC_CLNT

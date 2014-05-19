@@ -207,7 +207,7 @@ rq_removeHead(
 int
 rq_add(
     RequestQueue* const rq,
-    const VcmtpFileId        fileId)
+    const VcmtpFileId   fileId)
 {
     Entry* entry;
 
