@@ -3,19 +3,18 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: request_queue.hin
+ *   @file: file_id_queue.hin
  * @author: Steven R. Emmerson
  *
- * This file declares the API for a queue of requests for files missed by the
- * VCMTP layer.
+ * This file declares the API for a queue of VCMTP file identifiers.
  */
 
-#ifndef REQUEST_QUEUE_H
-#define REQUEST_QUEUE_H
+#ifndef FILE_ID_QUEUE_H
+#define FILE_ID_QUEUE_H
 
 #include "ldm.h"
 
-typedef struct request_queue  RequestQueue;
+typedef struct file_id_queue  FileIdQueue;
 
 #ifdef __cplusplus
 extern "C" {

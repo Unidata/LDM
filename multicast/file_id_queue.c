@@ -3,19 +3,17 @@
  * All rights reserved. See file COPYRIGHT in the top-level source-directory
  * for legal conditions.
  *
- *   @file request_queue.c
+ *   @file file_id_queue.c
  * @author Steven R. Emmerson
  *
- * This file implements a queue of requests for files missed by the VCMTP layer.
- *
- * The implementation is thread-safe.
+ * This file implements a thread-safe queue of VCMTP file identifiers.
  */
 
 #include "config.h"
 
 #include "ldm.h"
 #include "log.h"
-#include "request_queue.h"
+#include "file_id_queue.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -23,17 +21,17 @@
 #include <string.h>
 
 /**
- * The type of an entry in a request-queue.
+ * The type of an entry in a file-identifier queue.
  */
 typedef struct entry {
     struct entry* next;   /* points to the next entry towards the tail */
-    VcmtpFileId        fileId; /* VCMTP file identifier of the file to be requested */
+    VcmtpFileId   fileId; /* VCMTP identifier of the file */
 } Entry;
 
 /**
  * Returns a new entry.
  *
- * @param[in] fileId  VCMTP file identifier of the file to be requested.
+ * @param[in] fileId  VCMTP file identifier of the file.
  * @retval    NULL    Error. \c log_add() called.
  * @return            Pointer to the new entry. The client should call \c
  *                    entry_fin() when it is no longer needed.
@@ -42,7 +40,7 @@ static Entry*
 entry_new(
     const VcmtpFileId fileId)
 {
-    Entry* entry = LOG_MALLOC(sizeof(Entry), "request-queue entry");
+    Entry* entry = LOG_MALLOC(sizeof(Entry), "file-identifier queue-entry");
 
     if (entry) {
         entry->fileId = fileId;
@@ -73,7 +71,7 @@ entry_free(
  */
 static void
 entry_fin(
-    Entry* const    entry,
+    Entry* const         entry,
     VcmtpFileId* const   fileId)
 {
     *fileId = entry->fileId;
@@ -81,48 +79,59 @@ entry_fin(
 }
 
 /**
- * The definition of a request-queue object.
+ * The definition of a file-identifier queue object.
  */
-struct request_queue {
+struct file_id_queue {
     Entry*          head;
     Entry*          tail;
     pthread_mutex_t mutex;
+    pthread_cond_t  cond;
 };
 
 /**
- * Returns a new request-queue.
+ * Returns a new file-identifier queue.
  *
  * @retval NULL  Failure. \c log_add() called.
- * @return       Pointer to a new request-queue. The client should call \c
- *               rq_free() when it is no longer needed.
+ * @return       Pointer to a new file-identifier queue. The client should call
+ *               \c rq_free() when it is no longer needed.
  */
-RequestQueue*
-rq_new(void)
+FileIdQueue*
+fiq_new(void)
 {
-    RequestQueue* rq = LOG_MALLOC(sizeof(RequestQueue),
-            "missed-file request-queue");
-    if (rq) {
-        rq->head = rq->tail = NULL;
+    FileIdQueue* rq = LOG_MALLOC(sizeof(FileIdQueue),
+            "missed-file file-identifier queue");
 
+    if (rq) {
         if (pthread_mutex_init(&rq->mutex, NULL)) {
-            LOG_ADD0("Couldn't initialize mutex of request-queue");
+            LOG_SERROR0("Couldn't initialize mutex of file-identifier queue");
             free(rq);
             rq = NULL;
         }
-    }
+        else {
+            if (pthread_cond_init(&rq->cond, NULL)) {
+                LOG_SERROR0("Couldn't initialize condition-variable of file-identifier queue");
+                (void)pthread_mutex_destroy(&rq->mutex);
+                free(rq);
+                rq = NULL;
+            }
+            else {
+                rq->head = rq->tail = NULL;
+            }
+        } /* "rq->mutex" allocated */
+    } /* "rq" allocated */
 
     return rq;
 }
 
 /**
- * Frees a request-queue. Accessing the queue after calling this function
+ * Frees a file-identifier queue. Accessing the queue after calling this function
  * results in undefined behavior.
  *
- * @param[in] rq  Pointer to the request-queue to be freed or NULL.
+ * @param[in] rq  Pointer to the file-identifier queue to be freed or NULL.
  */
 void
-rq_free(
-    RequestQueue* const rq)
+fiq_free(
+    FileIdQueue* const rq)
 {
     if (rq) {
         Entry* entry;
@@ -139,6 +148,7 @@ rq_free(
         }
 
         (void)pthread_mutex_unlock(&rq->mutex);
+        (void)pthread_cond_destroy(&rq->cond);
         (void)pthread_mutex_destroy(&rq->mutex);
         free(rq);
     }
@@ -151,8 +161,8 @@ rq_free(
  * @param[in]     entry  Pointer to the entry to be added. Not checked.
  */
 static void
-rq_addTail(
-    RequestQueue* const rq,
+fiq_addTail(
+    FileIdQueue* const rq,
     Entry* const        entry)
 {
     (void)pthread_mutex_lock(&rq->mutex);
@@ -163,30 +173,31 @@ rq_addTail(
         rq->tail->next = entry;
     rq->tail = entry;
 
+    (void)pthread_cond_broadcast(&rq->cond);
     (void)pthread_mutex_unlock(&rq->mutex);
 }
 
 /**
- * Removes the entry at the head of the queue.
+ * Removes the entry at the head of the queue. Blocks until that entry exists.
  *
- * @param[in,out] rq    Pointer to the queue. Not checked.
- * @retval        NULL  The queue is empty.
- * @return              Pointer to the entry that was at the head of the queue.
+ * @param[in,out] rq         Pointer to the queue. Not checked.
+ * @return                   Pointer to what was the head entry.
  */
 static Entry*
-rq_removeHead(
-    RequestQueue* const rq)
+fiq_removeHead(
+    FileIdQueue* const rq)
 {
     Entry* entry;
 
     (void)pthread_mutex_lock(&rq->mutex);
 
+    while (rq->head == NULL)
+        pthread_cond_wait(&rq->cond, &rq->mutex);
+
     entry = rq->head;
-    if (entry) {
-        rq->head = entry->next;
-        if (rq->tail == entry)
-            rq->tail = NULL;
-    }
+    rq->head = entry->next;
+    if (rq->tail == entry)
+        rq->tail = NULL;
 
     (void)pthread_mutex_unlock(&rq->mutex);
 
@@ -194,19 +205,18 @@ rq_removeHead(
 }
 
 /**
- * Adds a request to a queue.
+ * Adds a file-identifier to a queue.
  *
- * @param[in,out] rq      Pointer to the request-queue to which to add a
- *                        request.
- * @param[in]     fileId  VCMTP file identifier of the data-product to be
- *                        requested.
+ * @param[in,out] rq      Pointer to the file-identifier queue to which to add a
+ *                        file-identifier.
+ * @param[in]     fileId  VCMTP file identifier of the data-product.
  * @retval        0       Success.
  * @retval        EINVAL  @code{rq == NULL}. \c log_add() called.
  * @retval        ENOMEM  Out of memory. \c log_add() called.
  */
 int
-rq_add(
-    RequestQueue* const rq,
+fiq_add(
+    FileIdQueue* const rq,
     const VcmtpFileId   fileId)
 {
     Entry* entry;
@@ -218,35 +228,32 @@ rq_add(
     if (!entry)
         return ENOMEM;
 
-    rq_addTail(rq, entry);
+    fiq_addTail(rq, entry);
 
     return 0;
 }
 
 /**
- * Removes and returns the request at the head of the request-queue.
+ * Removes and returns the file-identifier at the head of the file-identifier
+ * queue. Blocks until such an entry is available.
  *
- * @param[in,out] rq      Pointer to the request-queue.
+ * @param[in,out] rq      Pointer to the file-identifier queue.
  * @param[out]    fileId  Pointer to the VCMTP file identifier to be set to
  *                        that of the entry.
  * @retval        0       Success. \c *fileId is set.
- * @retval        EINVAL  @code{rq == NULL || fileId == NULL}. \c log_add() called.
- * @retval        ENOENT  The request-queue is empty.
+ * @retval        EINVAL  @code{rq == NULL || fileId == NULL}.
  */
 int
-rq_remove(
-    RequestQueue* const rq,
-    VcmtpFileId* const       fileId)
+fiq_remove(
+    FileIdQueue* const rq,
+    VcmtpFileId* const  fileId)
 {
     Entry* entry;
 
     if (!rq || !fileId)
         return EINVAL;
 
-    entry = rq_removeHead(rq);
-    if (!entry)
-        return ENOENT;
-
+    entry = fiq_removeHead(rq);
     entry_fin(entry, fileId);
 
     return 0;

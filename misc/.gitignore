@@ -3,3 +3,5 @@
 StrBuf.h
 testSemRWLock
 test_child_map
+doubly_linked_stack.h
+executor.h

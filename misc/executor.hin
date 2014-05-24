@@ -1,0 +1,25 @@
+/*
+ *   Copyright 2014, University Corporation for Atmospheric Research.
+ *
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
+ */
+
+#ifndef EXECUTOR_H
+#define EXECUTOR_H
+
+#include <pthread.h>
+
+typedef struct Executor Executor;
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+    }
+#endif
+
+#endif

@@ -246,9 +246,7 @@ run_service(
             }                           /* down6 module initialized */
 
             /*
-             * svc_unregister(LDMPROG, SIX) should be called here, but it fails
-             * for some reason having to do with the portmapper (insufficient
-             * authority?).
+             * svc_destroy() calls svc_unregister(LDMPROG, SIX).
              */
         }                               /* RPC service registered */
 

@@ -70,6 +70,10 @@ ldm_svc.c:	ldm.x
 # course, it also uses "xdr_void" rather than NULL for the return-value
 # XDR-routine (sheesh!)).
 #
+# For LDM-7, some functions must use "message passing" (i.e., they must be sent
+# immediately with no reply expected). This is done by having a zero timeout but
+# an `xdr_void()` function for the (non-existant) return value.
+#
 ldm_clnt.c:	ldm.x fix_clnt.pl
 	(echo '#include "config.h"'; $(RPCGEN) -l $(srcdir)/ldm.x) > $@.tmp || \
 	    rm $@.tmp

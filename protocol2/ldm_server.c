@@ -704,6 +704,19 @@ request_product_7_svc(
 }
 
 /**
+ * Processes a no-op used for testing the connection. Does not reply.
+ *
+ * @param[in] rqstp   Pointer to the RPC service-request.
+ */
+void*
+test_connection_7_svc(
+    void* const           no_op,
+    struct svc_req* const rqstp)
+{
+    return NULL ; /* don't reply */
+}
+
+/**
  * Processes a data-product from a remote LDM that was previously requested
  * because it was missed. Does not reply.
  *

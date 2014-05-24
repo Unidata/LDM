@@ -30,7 +30,6 @@
 #endif
 
 static void missed_product_func(
-    Mdl* const   mdl,
     const VcmtpFileId fileId)
 {
 }
@@ -39,7 +38,7 @@ void test_mdl_createAndExecute()
 {
     int                  status;
     pqueue*              pq = (pqueue*)1;
-    const char* const    tcpAddr = "127.0.0.1";
+    char* const          tcpAddr = "127.0.0.1";
     const unsigned short tcpPort = 38800;
     char* const          addr = "224.0.0.1";
     const unsigned short port = 1;
@@ -49,21 +48,23 @@ void test_mdl_createAndExecute()
 
     mcastInfo.mcastAddr = addr;
     mcastInfo.mcastPort = port;
+    mcastInfo.tcpAddr = tcpAddr;
+    mcastInfo.tcpPort = tcpPort;
 
     /* Invalid product-queue argument */
-    status = mdl_createAndExecute(tcpAddr, tcpPort, NULL, (void*)1, &mcastInfo);
+    status = mdl_createAndExecute(NULL, (void*)1, &mcastInfo);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
 
     /* Invalid missed-product-function argument */
-    status = mdl_createAndExecute(tcpAddr, tcpPort, (void*)1, NULL, &mcastInfo);
+    status = mdl_createAndExecute((void*)1, NULL, &mcastInfo);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
 
     /* Invalid multicast IP address argument */
-    status = mdl_createAndExecute(tcpAddr, tcpPort, (void*)1, (void*)1, NULL);
+    status = mdl_createAndExecute((void*)1, (void*)1, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
@@ -74,8 +75,7 @@ void test_mdl_createAndExecute()
             NULL, cmp_cstr, cmp_short, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
     vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
-    status = mdl_createAndExecute(tcpAddr, tcpPort, pq, missed_product_func,
-            &mcastInfo);
+    status = mdl_createAndExecute(pq, missed_product_func, &mcastInfo);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(0, status);
     log_clear();

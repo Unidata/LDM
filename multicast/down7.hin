@@ -12,8 +12,11 @@
 #ifndef DOWN7_H
 #define DOWN7_H
 
+#include <inetutil.h>
 #include <ldm.h>
 #include <pq.h>
+
+typedef struct Down7 Down7;
 
 #ifdef __cplusplus
 extern "C" {

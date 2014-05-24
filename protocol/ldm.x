@@ -711,10 +711,11 @@ program LDMPROG {
              */
             SubscriptionReply SUBSCRIBE(char* mcastName) = 1;
             void              REQUEST_PRODUCT(VcmtpFileId) = 2;
+            void              TEST_CONNECTION() = 3;
             /*
              * Upstream to downstream RPC messages:
              */
-            void              DELIVER_PRODUCT(MissedProduct) = 3;
+            void              DELIVER_PRODUCT(MissedProduct) = 4;
         } = 7;
 #endif
 } = LDM_PROG; /* LDM = 300029, use 0x2ffffffe for experiments */
@@ -879,6 +880,14 @@ struct McastGroupInfo {
      * Port number of associated multicast group in local byte order:
      */
     unsigned short mcastPort;
+    /*
+     * Hostname or formatted IP address of associated TCP server.
+     */
+    string         tcpAddr<>;
+    /*
+     * Port number of associated TCP server in local byte order:
+     */
+    unsigned short tcpPort;
 };
 
 

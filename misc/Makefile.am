@@ -8,11 +8,19 @@
 
 BUILT_SOURCES		= \
         child_map.h \
+        doubly_linked_stack.h \
+        executor.h \
         semRWLock.h
 EXTRA_DIST	        = \
         child_map.hin \
+        doubly_linked_stack.hin \
+        executor.hin \
         semRWLock.hin
-DISTCLEANFILES		= child_map.h semRWLock.h
+DISTCLEANFILES		= \
+	child_map.h \
+	doubly_linked_stack.hin \
+	executor.hin \
+	semRWLock.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
 	ldmalloc.h \
@@ -29,7 +37,9 @@ include_HEADERS		= \
 	statsMath.h
 lib_la_SOURCES	= \
 	child_map.c child_map.h \
+        doubly_linked_stack.c doubly_linked_stack.h \
 	error.c \
+        executor.c executor.h \
 	fdnb.c \
 	fsStats.c \
 	inetutil.c \
@@ -38,7 +48,7 @@ lib_la_SOURCES	= \
 	RegularExpressions.c \
 	rpcutil.c \
 	setenv.c \
-    semRWLock.c semRWLock.h \
+	semRWLock.c semRWLock.h \
 	statsMath.c \
 	StringBuf.c StringBuf.h
 lib_la_CPPFLAGS	= \
@@ -46,6 +56,7 @@ lib_la_CPPFLAGS	= \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/rpc \
     -I$(top_srcdir)
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \
@@ -59,8 +70,10 @@ TAGS_FILES	= \
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
-child_map.h:	child_map.hin child_map.c
-semRWLock.h:	semRWLock.hin semRWLock.c
+child_map.h:		child_map.hin child_map.c
+doubly_linked_stack.h:	doubly_linked_stack.hin doubly_linked_stack.c
+executor.h:		executor.hin executor.c
+semRWLock.h:		semRWLock.hin semRWLock.c
 
 if HAVE_CUNIT
 check_PROGRAMS		= test_child_map testSemRWLock

@@ -32,6 +32,7 @@
 struct mdl {
     pqueue*                 pq;             /* product-queue to use */
     mdl_missed_product_func missed_product; /* missed-product callback function */
+    void*                   missedProdArg;  /* optional missed-product argument */
     VcmtpCReceiver*         receiver;       /* VCMTP C Receiver */
 };
 
@@ -48,7 +49,8 @@ struct mdl {
  *                        product-queue.
  * @retval    -1          Failure. \c log_add() called.
  */
-static int allocateSpaceAndSetBofResponse(
+static int
+allocateSpaceAndSetBofResponse(
     pqueue* const     pq,
     const char* const name,
     const size_t      size,
@@ -93,7 +95,8 @@ static int allocateSpaceAndSetBofResponse(
  *                              product-queue.
  * @retval         -1           Failure. \c log_add() called.
  */
-static int bof_func(
+static int
+bof_func(
     void* const    obj,
     void* const    file_entry)
 {
@@ -133,7 +136,8 @@ static int bof_func(
  * @return    -1           Error. \c log_add() called. The allocated region in
  *                         the product-queue was released.
  */
-static int insertFileAsProduct(
+static int
+insertFileAsProduct(
     pqueue* const          pq,
     const pqe_index* const index,
     const prod_info* const info,
@@ -170,7 +174,8 @@ static int insertFileAsProduct(
  * @retval         -1           Error. \c log_add() called. The allocated space
  *                              in the LDM product-queue was released.
  */
-static int eof_func(
+static int
+eof_func(
     void*               obj,
     const void* const   file_entry)
 {
@@ -216,40 +221,37 @@ static int eof_func(
  *                              LDM object.
  * @param[in]      fileId       Identifier of the VCMTP file that was missed.
  */
-static void missed_file_func(
+static void
+missed_file_func(
     void*               obj,
     const VcmtpFileId   fileId)
 {
     Mdl* const mdl = (Mdl*)obj;
 
-    mdl->missed_product(mdl, fileId);
+    mdl->missed_product(fileId, mdl->missedProdArg);
 }
 
 /**
  * Initializes a multicast downstream LDM.
  *
  * @param[out] mdl            The multicast downstream LDM to initialize.
- * @param[in]  tcpAddr        Address of the TCP server from which to retrieve
- *                            missed data-blocks. May be hostname or formatted
- *                            IP address.
- * @param[in]  tcpPort        Port number of the TCP server.
  * @param[in]  pq             The product-queue to use.
- * @param[in]  missed_product Missed-product callback function.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
+ * @param[in]  missed_product Missed-product callback function.
+ * @param[in]  arg            Optional argument to pass to \c missed_product.
  * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. \c log_add() called.
- * @retval     LDM7_INVAL     @code{tcpAddr == NULL || tcpPort == 0 ||
- *                            pq == NULL || missed_product == NULL ||
+ * @retval     LDM7_INVAL     @code{pq == NULL || missed_product == NULL ||
  *                            mcastInfo == NULL}. \c log_add() called.
  * @retval     LDM7_VCMTP     VCMTP error. \c log_add() called.
  */
-static int init(
+static int
+init(
     Mdl* const                          mdl,
-    const char* const                   tcpAddr,
-    const unsigned short                tcpPort,
     pqueue* const                       pq,
+    const McastGroupInfo* const         mcastInfo,
     const mdl_missed_product_func       missed_product,
-    const McastGroupInfo* const         mcastInfo)
+    void* const                         arg)
 {
     int                 status;
     VcmtpCReceiver*     receiver;
@@ -271,8 +273,9 @@ static int init(
         return LDM7_INVAL;
     }
 
-    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
-            missed_file_func, mcastInfo->mcastAddr, mcastInfo->mcastPort, mdl);
+    status = vcmtpReceiver_new(&receiver, mcastInfo->tcpAddr,
+            mcastInfo->tcpPort, bof_func, eof_func, missed_file_func,
+            mcastInfo->mcastAddr, mcastInfo->mcastPort, mdl);
     if (status) {
         LOG_ADD0("Couldn't create VCMTP receiver");
         return LDM7_VCMTP;
@@ -281,6 +284,7 @@ static int init(
     mdl->receiver = receiver;
     mdl->pq = pq;
     mdl->missed_product = missed_product;
+    mdl->missedProdArg = arg;
 
     return 0;
 }
@@ -289,37 +293,32 @@ static int init(
  * Returns a new multicast downstream LDM object.
  *
  * @param[out] mdl            The pointer to be set to a new instance.
- * @param[in]  tcpAddr        Address of the TCP server from which to retrieve
- *                            missed data-blocks. May be hostname or formatted
- *                            IP address.
- * @param[in]  tcpPort        Port number of TCP server.
  * @param[in]  pq             The product-queue to use.
- * @param[in]  missed_product Missed-product callback function.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
+ * @param[in]  missed_product Missed-product callback function.
+ * @param[in]  arg            Optional pointer to an object to be passed to \c
+ *                            missed_product().
  * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. \c log_add() called.
- * @retval     LDM7_INVAL     @code{tcpAddr == NULL || tcpPort == 0 ||
- *                            pq == NULL || missed_product == NULL ||
+ * @retval     LDM7_INVAL     @code{pq == NULL || missed_product == NULL ||
  *                            mcastInfo == NULL}. \c log_add() called.
  */
-static int mdl_new(
-    Mdl** const                         mdl,
-    const char* const                   tcpAddr,
-    const unsigned short                tcpPort,
-    pqueue* const                       pq,
-    const mdl_missed_product_func       missed_product,
-    const McastGroupInfo* const         mcastInfo)
+static int
+mdl_new(
+    Mdl* restrict* const restrict        mdl,
+    pqueue* const restrict               pq,
+    const McastGroupInfo* const restrict mcastInfo,
+    const mdl_missed_product_func        missed_product,
+    void* const                          arg)
 {
-    int             status;
-    Mdl* const      obj = LOG_MALLOC(sizeof(Mdl),
-            "multicast downstream LDM object");
+    int        status;
+    Mdl* const obj = LOG_MALLOC(sizeof(Mdl), "multicast downstream LDM object");
 
     if (NULL == obj) {
         status = LDM7_SYSTEM;
     }
     else {
-        if (status = init(obj, tcpAddr, tcpPort, pq, missed_product,
-                mcastInfo)) {
+        if (status = init(obj, pq, mcastInfo, missed_product, arg)) {
             free(obj);
         }
         else {
@@ -335,7 +334,8 @@ static int mdl_new(
  *
  * @param[in,out] mdl   The multicast downstream LDM object.
  */
-static void mdl_free(
+static void
+mdl_free(
     Mdl* const  mdl)
 {
     vcmtpReceiver_free(mdl->receiver);
@@ -346,17 +346,18 @@ static void mdl_free(
  * Executes a multicast downstream LDM. Doesn't return until the multicast
  * downstream LDM terminates.
  *
- * @param[in,out] mdl   The multicast downstream LDM to execute.
- * @retval 0            Success. The multicast downstream LDM terminated.
- * @retval EINVAL       @code{mdl == NULL}. \c log_add() called.
- * @retval -1           Failure. \c log_add() called.
+ * @param[in] mdl          The multicast downstream LDM to execute.
+ * @retval    0            Success. The multicast downstream LDM terminated.
+ * @retval    LDM7_INVAL   @code{mdl == NULL}. \c log_add() called.
+ * @retval    -1           Failure. \c log_add() called.
  */
-static int execute(
+static int
+execute(
     Mdl* const  mdl)
 {
     if (NULL == mdl) {
         LOG_ADD0("NULL multicast-downstream-LDM argument");
-        return EINVAL;
+        return LDM7_INVAL;
     }
 
     return vcmtpReceiver_execute(mdl->receiver);
@@ -364,32 +365,28 @@ static int execute(
 
 /**
  * Creates and executes a multicast downstream LDM for an indefinite amount of
- * time. Will not return until the multicast downstream LDM terminates.
+ * time. Returns when the multicast downstream LDM terminates.
  *
- * @param[in] tcpAddr        Address of the TCP server from which to retrieve
- *                           missed data-blocks. May be groupname or formatted
- *                           IP address.
- * @param[in] tcpPort        Port number of the TCP server.
+ * @param[in] mcastInfo      Pointer to multicast information.
  * @param[in] pq             The product-queue to use.
  * @param[in] missed_product Missed-product callback function.
- * @param[in] mcastInfo      Pointer to multicast information.
- * @retval 0                 The multicast downstream LDM terminated
+ * @param[in] obj            Optional pointer to an object to be passed to \c
+ *                           missed_product().
+ * @retval    0              The multicast downstream LDM terminated
  *                           successfully.
- * @retval LDM7_SYSTEM       System error. \c log_add() called.
- * @retval LDM7_INVAL        @code{tcpAddr == NULL || tcpPort == 0 ||
- *                           pq == NULL || missed_product == NULL ||
+ * @retval    LDM7_SYSTEM    System error. \c log_add() called.
+ * @retval    LDM7_INVAL     @code{pq == NULL || missed_product == NULL ||
  *                           mcastInfo == NULL}. \c log_add() called.
  */
-int mdl_createAndExecute(
-    const char* const           tcpAddr,
-    const unsigned short        tcpPort,
-    pqueue* const               pq,
-    mdl_missed_product_func     missed_product,
-    const McastGroupInfo* const mcastInfo)
+int
+mdl_createAndExecute(
+    const McastGroupInfo* const restrict mcastInfo,
+    pqueue* const restrict               pq,
+    mdl_missed_product_func              missed_product,
+    void* const                          obj)
 {
     Mdl*        mdl;
-    int         status = mdl_new(&mdl, tcpAddr, tcpPort, pq, missed_product,
-            mcastInfo);
+    int         status = mdl_new(&mdl, pq, mcastInfo, missed_product, obj);
 
     if (status) {
         LOG_ADD0("Couldn't create new multicast downstream LDM");

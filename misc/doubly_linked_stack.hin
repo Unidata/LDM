@@ -1,0 +1,27 @@
+/*
+ * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * reserved.
+ *
+ * See file COPYRIGHT in the top-level source-directory for legal conditions.
+ */
+
+#ifndef DOUBLY_LINKED_STACK_H
+#define DOUBLY_LINKED_STACK_H
+
+/**
+ * Opaque types for this module.
+ */
+typedef struct Dls    Dls;
+typedef struct DlsElt DlsElt;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

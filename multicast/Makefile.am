@@ -9,12 +9,12 @@
 SUBDIRS			= vcmtp
 EXTRA_DIST              = down7.hin \
 			  mcast_down.hin \
-                          request_queue.hin \
+                          file_id_queue.hin \
                           server_info.hin \
                           sock_funcs.c sock_funcs.hin
 BUILT_SOURCES           = down7.h \
 			  mcast_down.h \
-                          request_queue.h \
+                          file_id_queue.h \
                           server_info.h \
                           sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
@@ -22,7 +22,7 @@ lib_la_SOURCES		= down7.c \
 			  mcast_down.c \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
-			  request_queue.c \
+			  file_id_queue.c \
 			  server_info.c \
                           vcmtp_c_api.cpp vcmtp_c_api.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
@@ -43,7 +43,7 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 down7.h:		down7.hin down7.c
 mcast_down.h:		mcast_down.hin mcast_down.c
 mcast_info.h:		mcast_info.hin mcast_info.c
-request_queue.h:	request_queue.hin request_queue.c
+file_id_queue.h:	file_id_queue.hin file_id_queue.c
 server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up_ldm.h:		up_ldm.hin up_ldm.c
@@ -91,17 +91,17 @@ opmock_tests			= $(opmock_check_progs)
 endif
 
 if HAVE_CUNIT
-cunit_check_progs		= test_request_queue
-test_request_queue_SOURCES	= test_request_queue.c request_queue.c
-test_request_queue_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
-test_request_queue_LDADD	= \
+cunit_check_progs		= test_file_id_queue
+test_file_id_queue_SOURCES	= test_file_id_queue.c file_id_queue.c
+test_file_id_queue_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+test_file_id_queue_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
 cunit_tests			= $(cunit_check_progs)
 
-test_request_queue_valgrind:	test_request_queue
+test_file_id_queue_valgrind:	test_file_id_queue
 	$(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./test_request_queue
+	    --leak-check=full --show-reachable=yes ./test_file_id_queue
 endif
 
 check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs)

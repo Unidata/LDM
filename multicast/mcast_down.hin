@@ -22,10 +22,11 @@ typedef struct mdl      Mdl;
  * the file for reception by other means. Returns immediately.
  *
  * @param[in] mdl     Pointer to the multicast downstream LDM.
+ * @param[in] obj     Optional pointer to an object.
  * @param[in] fileId  VCMTP file identifier of the missed file.
  */
-typedef                 void (*mdl_missed_product_func)(Mdl* mdl,
-        VcmtpFileId fileId);
+typedef                 void (*mdl_missed_product_func)(VcmtpFileId fileId,
+        void *obj);
 
 #ifdef __cplusplus
 extern "C" {

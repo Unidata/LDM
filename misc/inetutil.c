@@ -1,11 +1,10 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2014, University Corporation for Atmospheric Research
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: inetutil.c,v 1.41.2.1.6.10 2009/07/23 23:18:31 steve Exp $ */
 
 /* 
- * Miscellaneous functions to make dealing with internet addresses easier.
+ * Miscellaneous functions to make dealing with Internet addresses easier.
  */
 
 #include <config.h>
@@ -31,6 +30,7 @@
 #include "inetutil.h"
 #include "timestamp.h"
 #include <registry.h>
+#include <xdr.h>
 
 /*
  * Host names are limited to 255 bytes by the The Single UNIX�
@@ -912,3 +912,148 @@ err0 :
 }
 
 #endif /* !TIRPC */
+
+/**
+ * Internet address of a server:
+ */
+struct ServAddr {
+    /**
+     * Identifier of the host on which the server runs. May be hostname or
+     * formatted IP address.
+     */
+    char*          hostId;
+    /**
+     * Port number of the server.
+     */
+    unsigned short port;
+};
+
+/**
+ * Returns a new server address.
+ *
+ * @param[in] hostId  Identifier of the host on which the server runs. May be
+ *                    hostname or formatted IP address. Client may free upon
+ *                    return.
+ * @param[in] port    Port number of the server.
+ * @retval    NULL    Failure. \c errno will be ENOMEM.
+ * @return            Pointer to a new server address object corresponding to
+ *                    the input.
+ */
+ServAddr*
+sa_new(
+    const char* const    hostId,
+    const unsigned short port)
+{
+    ServAddr* sa = LOG_MALLOC(sizeof(ServAddr), "server address");
+
+    if (sa != NULL) {
+        char* id = strdup(hostId);
+
+        if (id == NULL) {
+            LOG_SERROR1("Couldn't duplicate host ID \"%s\"", hostId);
+            free(sa);
+            sa = NULL;
+        }
+        else {
+            sa->hostId = id;
+            sa->port = port;
+        }
+    } /* "sa" allocated */
+
+    return sa;
+}
+
+/**
+ * Frees a server address.
+ *
+ * @param[in] sa  Pointer to the server address to be freed or NULL.
+ */
+void
+sa_free(
+    ServAddr* const sa)
+{
+    if (sa != NULL) {
+        free(sa->hostId);
+        free(sa);
+    }
+}
+
+/**
+ * Clones a server address.
+ *
+ * @param[in] sa    Pointer to the server address to be cloned.
+ * @retval    NULL  Failure. \c log_add() called.
+ * @return          Pointer to a clone of the server address.
+ */
+ServAddr*
+sa_clone(
+    const ServAddr* const sa)
+{
+    return sa_new(sa->hostId, sa->port);
+}
+
+/**
+ * Returns the host identifier of a server address.
+ *
+ * @param[in] sa  Pointer to the server address.
+ * @return        Pointer to the associated host identifier.
+ */
+const char*
+sa_getHostId(
+    const ServAddr* const sa)
+{
+    return sa->hostId;
+}
+
+/**
+ * Returns the port number of a server address.
+ *
+ * @param[in] sa  Pointer to the server address.
+ * @return        The associated port number.
+ */
+unsigned short
+sa_getPort(
+    const ServAddr* const sa)
+{
+    return sa->port;
+}
+
+/**
+ * Returns the formatted representation of a server address.
+ *
+ * @param[in]  sa   Pointer to the server address.
+ * @param[out] buf  Pointer to the buffer into which to write the formatted
+ *                  representation.
+ * @param[in]  len  The size of the buffer in bytes.
+ * @return          The number of bytes that would be written to the buffer --
+ *                  excluding the terminating NUL character. If the returned
+ *                  number of bytes is equal to or greater than the size of the
+ *                  buffer, then the string will not be NUL-terminated.
+ */
+int
+sa_format(
+    const ServAddr* const sa,
+    char* const           buf,
+    const size_t          len)
+{
+    const char* const format = strchr(sa->hostId, ':')
+            ? "[%s]:%u"
+            : "%s:%u";
+
+    return snprintf(buf, len, format, sa->hostId, sa->port);
+}
+
+/**
+ * XDR-s a server address.
+ *
+ * @param[in] xdrs  Pointer to the XDR structure.
+ * @param     sa    Pointer to the server address.
+ */
+bool_t
+xdr_ServAddr(
+    XDR* const xdrs,
+    ServAddr*  sa)
+{
+    return xdr_string(xdrs, &sa->hostId, UINT_MAX) &&
+            xdr_u_short(xdrs, &sa->port);
+}
