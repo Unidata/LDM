@@ -21,12 +21,10 @@ typedef struct mdl      Mdl;
  * Callback-function for notifying the upper layer about a missed file. Queues
  * the file for reception by other means. Returns immediately.
  *
- * @param[in] mdl     Pointer to the multicast downstream LDM.
- * @param[in] obj     Optional pointer to an object.
  * @param[in] fileId  VCMTP file identifier of the missed file.
+ * @param[in] obj     Optional pointer to an object.
  */
-typedef                 void (*mdl_missed_product_func)(VcmtpFileId fileId,
-        void *obj);
+typedef          void (*mdl_missed_product_func)(VcmtpFileId fileId, void *obj);
 
 #ifdef __cplusplus
 extern "C" {

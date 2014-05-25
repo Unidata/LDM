@@ -52,19 +52,19 @@ void test_mdl_createAndExecute()
     mcastInfo.tcpPort = tcpPort;
 
     /* Invalid product-queue argument */
-    status = mdl_createAndExecute(NULL, (void*)1, &mcastInfo);
+    status = mdl_createAndExecute(&mcastInfo, NULL, (void*)1, (void*)2);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
 
     /* Invalid missed-product-function argument */
-    status = mdl_createAndExecute((void*)1, NULL, &mcastInfo);
+    status = mdl_createAndExecute(&mcastInfo, (void*)1, NULL, (void*)2);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
 
-    /* Invalid multicast IP address argument */
-    status = mdl_createAndExecute((void*)1, (void*)1, NULL);
+    /* Invalid multicast information argument */
+    status = mdl_createAndExecute(NULL, (void*)1, (void*)1, (void*)2);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
@@ -75,7 +75,7 @@ void test_mdl_createAndExecute()
             NULL, cmp_cstr, cmp_short, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
     vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
-    status = mdl_createAndExecute(pq, missed_product_func, &mcastInfo);
+    status = mdl_createAndExecute(&mcastInfo, pq, missed_product_func, (void*)2);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(0, status);
     log_clear();
