@@ -8,8 +8,11 @@
 #ifndef EXECUTOR_H
 #define EXECUTOR_H
 
+#include "doubly_linked_list.h"
+
 #include <pthread.h>
 
+typedef struct Task     Task;
 typedef struct Executor Executor;
 
 #ifdef __cplusplus

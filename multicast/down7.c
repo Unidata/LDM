@@ -12,6 +12,7 @@
 #include "config.h"
 
 #include "down7.h"
+#include "executor.h"
 #include "inetutil.h"
 #include "ldm.h"
 #include "log.h"
@@ -280,13 +281,14 @@ newClient(
 
 /**
  * Start requesting missed data-products. Entries from the request-queue are
- * removed and requests for missed data-products are made to the remote LDM-7.
+ * removed and converted into requests for missed data-products, which are
+ * asynchronously sent to the remote LDM-7.
  *
  * @param[in] arg       Pointer to the downstream LDM-7 object.
  * @retval    LDM7_RPC  Error in RPC layer. \c log_add() called.
  */
 static void*
-startRequestThead(
+startRequestThread(
     void* const arg)
 {
     Down7* const down7 = (Down7*)arg;
@@ -506,13 +508,55 @@ startMcastThread(
             missedProdFunc, down7);
 }
 
+/**
+ * Starts concurrent tasks.
+ *
+ * @param[in] down7        Pointer to the downstream LDM-7.
+ * @param[in] executor     Pointer to the execution service to use.
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  Error. `log_add()` called.
+ */
 static int
-waitOnThreads(
-    Down7* const down7,
-    pthread_t    requestThread,
-    pthread_t    mcastThread)
+startTasks(
+    Down7* const    down7,
+    Executor* const executor)
 {
-            // TODO
+    int       status;
+
+    if (ex_submit(executor, startRequestThread, down7, NULL) == NULL) {
+        LOG_ADD0("Couldn't start task that requests data-products that were "
+                "missed by the multicast receiver task");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        if (ex_submit(executor, startMcastThread, down7, NULL) == NULL) {
+            Task* task;
+
+            LOG_SERROR0("Couldn't start task that receives multicast "
+                    "data-products");
+            ex_cancel(executor);
+            while ((task = ex_take(executor)) != NULL)
+                task_free(task);
+            status = LDM7_SYSTEM;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Waits for a task to complete and then cancels all remaining tasks.
+ *
+ * @param[in] down7     Pointer to the downstream LDM-7.
+ * @param[in] executor  Pointer to the execution service being used.
+ * @return              Status code of the first task to complete.
+ */
+static int
+waitOnTasks(
+    Down7* const    down7,
+    Executor* const executor)
+{
+    // TODO
     return 0;
 }
 
@@ -525,9 +569,32 @@ waitOnThreads(
  * @retval    LDM7_TIMEDOUT    Timeout occurred.
  * @retval    LDM7_SYSTEM      System error. \c log_add() called.
  */
-static int execute(
+static int
+execute(
     Down7* const down7)
 {
+    int             status;
+    Executor* const executor = ex_new();
+
+    if (executor == NULL) {
+        LOG_ADD0("Couldn't create new execution service");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = startTasks(down7, executor);
+
+        if (status) {
+            LOG_ADD0("Couldn't start concurrent tasks");
+        }
+        else {
+            status = waitOnTasks(down7, executor);
+        }
+
+        ex_free(executor);
+    } // "executor" allocated */
+
+    return status;
+#if 0
     pthread_t requestThread;
     int       status = pthread_create(&requestThread, NULL, startRequestThead,
             down7);
@@ -556,6 +623,7 @@ static int execute(
     } /* "requestThread" allocated */
 
     return status;
+#endif
 }
 
 /**

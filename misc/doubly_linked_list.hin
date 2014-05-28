@@ -1,0 +1,29 @@
+/*
+ * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * reserved.
+ *
+ * See file COPYRIGHT in the top-level source-directory for legal conditions.
+ */
+
+#ifndef DOUBLY_LINKED_LIST_H
+#define DOUBLY_LINKED_LIST_H
+
+#include <sys/types.h>
+
+/**
+ * Opaque types for this module.
+ */
+typedef struct Dll    Dll;
+typedef struct DllElt DllElt;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

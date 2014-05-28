@@ -8,16 +8,19 @@
 
 BUILT_SOURCES		= \
         child_map.h \
+        doubly_linked_list.h \
         doubly_linked_stack.h \
         executor.h \
         semRWLock.h
 EXTRA_DIST	        = \
         child_map.hin \
+        doubly_linked_list.hin \
         doubly_linked_stack.hin \
         executor.hin \
         semRWLock.hin
 DISTCLEANFILES		= \
 	child_map.h \
+	doubly_linked_list.hin \
 	doubly_linked_stack.hin \
 	executor.hin \
 	semRWLock.h
@@ -37,6 +40,7 @@ include_HEADERS		= \
 	statsMath.h
 lib_la_SOURCES	= \
 	child_map.c child_map.h \
+        doubly_linked_list.c doubly_linked_list.h \
         doubly_linked_stack.c doubly_linked_stack.h \
 	error.c \
         executor.c executor.h \
@@ -71,6 +75,7 @@ TAGS_FILES	= \
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 child_map.h:		child_map.hin child_map.c
+doubly_linked_list.h:	doubly_linked_list.hin doubly_linked_list.c
 doubly_linked_stack.h:	doubly_linked_stack.hin doubly_linked_stack.c
 executor.h:		executor.hin executor.c
 semRWLock.h:		semRWLock.hin semRWLock.c
