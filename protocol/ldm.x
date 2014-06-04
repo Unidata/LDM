@@ -907,7 +907,8 @@ enum Ldm7Status {
     LDM7_IPV6,     /* IPv6 not supported */
     LDM7_REFUSED,  /* Remote LDM-7 refused connection */
     LDM7_SYSTEM,   /* System error */
-    LDM7_VCMTP     /* VCMTP error */
+    LDM7_VCMTP,    /* VCMTP error */
+    LDM7_CANCELED  /* LDM-7 was canceled */
 };
 
 #if RPC_CLNT
@@ -943,6 +944,8 @@ enum Ldm7Status {
 %        return "System error";
 %    case LDM7_VCMTP:
 %        return "VCMTP error";
+%    case LDM7_CANCELED:
+%        return "LDM-7 was canceled";
 %    default:
 %        return "Unknown status";
 %    }

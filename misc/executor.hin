@@ -1,8 +1,8 @@
 /*
- *   Copyright 2014, University Corporation for Atmospheric Research.
+ * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * reserved.
  *
- *   See file COPYRIGHT in the top-level source-directory for copying and
- *   redistribution conditions.
+ * See file COPYRIGHT in the top-level source-directory for legal conditions.
  */
 
 #ifndef EXECUTOR_H
@@ -12,17 +12,20 @@
 
 #include <pthread.h>
 
-typedef struct Task     Task;
-typedef struct Executor Executor;
-
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif
+
+/**
+ * Opaque type for this module.
+ */
+typedef struct Executor Executor;
+typedef struct Task     Task;
 
 @FUNCTION_DECLARATIONS@
 
 #ifdef __cplusplus
-    }
+}
 #endif
 
 #endif

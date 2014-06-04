@@ -189,7 +189,7 @@ svctcp_create(
 }
 
 /*
- * Like svtcp_create(), except the routine takes any *open* UNIX file
+ * Like svctcp_create(), except the routine takes any *open* UNIX file
  * descriptor as its first input.
  */
 SVCXPRT *

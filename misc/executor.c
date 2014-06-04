@@ -17,28 +17,32 @@
 #include "log.h"
 
 #include <pthread.h>
+#include <signal.h>
 #include <stdlib.h>
 
 struct Task {
-    void*         (*start)(void*); ///< client's start function
-    void*           arg;           ///< argument for start function
-    void*           result;        ///< result of submitted task
-    Executor*       executor;      ///< the associated executor
-    DllElt*         elt;           ///< the containing list element
-    pthread_t       thread;        ///< thread that runs the task
+    void*         (*start)(void*);   ///< callers's start function
+    void*           arg;             ///< argument for start function
+    void*           result;          ///< result of submitted task
+    Executor*       executor;        ///< the associated executor
+    DllElt*         elt;             ///< the containing list element
+    pthread_t       thread;          ///< thread that runs the task
+    pthread_mutex_t mutex;           ///< to keep the task consistent
+    int             isExecuting;     ///< whether or not the task is running
 };
 
 struct Executor {
-    Dll*            running;   ///< list of running threads
-    Dll*            completed; ///< list of completed threads
-    pthread_mutex_t mutex;     ///< to maintain the consistency of the executor
-    pthread_cond_t  cond;      ///< for signaling the completion of a thread
+    Dll*            running;         ///< list of running threads
+    Dll*            completed;       ///< list of completed threads
+    pthread_mutex_t mutex;           ///< to maintain the consistency of the executor
+    pthread_cond_t  cond;            ///< for signaling the completion of a thread
+    int             isShutdown;      ///< whether or not the executor is shutdown
 };
 
 /**
- * Returns a new task that wraps a client-submitted task.
+ * Returns a new task that wraps a callers-submitted task.
  *
- * @param[in] start  Pointer to the start function of the client-submitted task.
+ * @param[in] start  Pointer to the start function of the callers-submitted task.
  * @param[in] arg    Pointer to the argument for the start function.
  * @retval    NULL   Error. `log_add()` called.
  * @return           Pointer to the new corresponding task.
@@ -57,15 +61,30 @@ task_new(
         task->arg = arg;
         task->result = NULL;
         task->elt = NULL;
+        task->isExecuting = 0;
     }
 
     return task;
 }
 
+static void
+task_lock(
+    Task* const task)
+{
+    pthread_mutex_lock(&task->mutex);
+}
+
+static void
+task_unlock(
+    Task* const task)
+{
+    pthread_mutex_unlock(&task->mutex);
+}
+
 /**
  * Frees a task.
  *
- * @param[in] task  Pointer to the task to be freed.
+ * @param[in] task    Pointer to the task to be freed.
  */
 void
 task_free(
@@ -86,9 +105,15 @@ task_cleanup(
 {
     Task* const task = (Task*)arg;
 
+    task_lock(task);
     if (ex_moveToCompleted(task->executor, task->elt)) {
+        task_unlock(task);
         LOG_ADD0("Couldn't move task from running list to completed list");
         log_log(LOG_ERR);
+    }
+    else {
+        task->isExecuting = 0;
+        task_unlock(task);
     }
 }
 
@@ -102,15 +127,21 @@ task_start(
     void* const arg)
 {
     Task* const task = (Task*)arg;
-    int         status = ex_addToRunning(task->executor, task);
+    int         status;
 
+    task_lock(task);
+
+    status = ex_addToRunning(task->executor, task);
     if (status) {
+        task_unlock(task);
         LOG_ADD0("Couldn't add task to list of executing tasks");
         log_log(LOG_ERR);
     }
     else {
         pthread_cleanup_push(task_cleanup, task);
-        task->result = task->start(task->arg);
+        task->isExecuting = 1;
+        task_unlock(task);
+        task->result = task->start(task->arg); // should have cancellation point
         pthread_cleanup_pop(1);
     }
 
@@ -138,8 +169,8 @@ task_execute(
     }
     else {
         /*
-         * The following makes the thread unjoinable and ensures destruction of
-         * all thread resources.
+         * The following makes the thread unjoinable and ensures eventual
+         * destruction of all thread resources.
          */
         (void)pthread_detach(task->thread);
     }
@@ -148,7 +179,34 @@ task_execute(
 }
 
 /**
+ * Attempts to deliver a signal to a task.
+ *
+ * @param[in] task    The task to be signaled.
+ * @param[in] sig     The signal to be delivered. If 0, then error-checking is
+ *                    performed but no signal is delivered.
+ * @retval    ESRCH   The task has already terminated.
+ * @retval    EINVAL  The value of the `sig` argument is an invalid or
+ *                    unsupported signal number.
+ */
+int
+task_kill(
+    Task* const task,
+    const int   sig)
+{
+    int status;
+
+    task_lock(task);
+    status = pthread_kill(task->thread, sig);
+    task_unlock(task);
+
+    return status;
+}
+
+/**
  * Cancels a task.
+ *
+ * NB: All allocated task-visible resources (e.g., mutexes, file descriptors)
+ * that do not have corresponding cancellation cleanup functions will leak.
  *
  * @param[in] task  Pointer to the task to be cancelled.
  */
@@ -156,7 +214,10 @@ void
 task_cancel(
     Task* const task)
 {
-    (void)pthread_cancel(task->thread);
+    task_lock(task);
+    if (task->isExecuting)
+        (void)pthread_cancel(task->thread);
+    task_unlock(task);
 }
 
 /**
@@ -192,6 +253,8 @@ ex_new(void)
         goto free_mutex;
     }
 
+    ex->isShutdown = 0;
+
     return ex;
 
 free_mutex:
@@ -215,17 +278,59 @@ void
 ex_free(
     Executor* const ex)
 {
-    // TODO
+    pthread_cond_destroy(&ex->cond);
+    pthread_mutex_destroy(&ex->mutex);
+    dll_free(ex->completed);
+    dll_free(ex->running);
+    free(ex);
 }
 
 /**
- * Submits a client task to be run on a separate thread.
+ * Locks an executor.
+ *
+ * @param[in] ex  Pointer to the executor to be locked.
+ */
+static void
+ex_lock(
+    Executor* const ex)
+{
+    (void)pthread_mutex_lock(&ex->mutex);
+}
+
+/**
+ * Unlocks an executor.
+ *
+ * @param[in] ex  Pointer to the executor to be Unlocked.
+ */
+static void
+ex_unlock(
+    Executor* const ex)
+{
+    (void)pthread_mutex_unlock(&ex->mutex);
+}
+
+/**
+ * Unlocks an executor as a cancellation cleanup handler.
+ *
+ * @param[in] arg  Pointer to the executor to be unlocked.
+ */
+static void
+ex_cleanup_unlock(
+    void* const arg)
+{
+    ex_unlock((Executor*)arg);
+}
+
+/**
+ * Submits a caller's task to be run on a separate thread.
  *
  * @param[in]  start    Pointer to the start function to be executed on a
- *                      separate thread.
+ *                      separate thread. Must have a thread cancellation point
+ *                      if the caller will call `ex_shutdownNow()` or
+ *                      `task_cancel()` on the returned task.
  * @param[in]  arg      Pointer to the argument to be passed to the function.
  * @retval     NULL     Failure. `log_add()` called.
- * @return              Pointer to the submitted task. The client should either
+ * @return              Pointer to the submitted task. The caller should either
  *                      leave it alone or call `task_cancel()` on it.
  */
 Task*
@@ -263,9 +368,9 @@ ex_addToRunning(
     Executor* const ex,
     Task* const     task)
 {
-    (void)pthread_mutex_lock(&ex->mutex);
-    task->elt = dll_add(ex->running, task);
-    (void)pthread_mutex_unlock(&ex->mutex);
+    ex_lock(ex);
+    task->elt = dll_add(ex->running, task); // not a thread cancellation point
+    ex_unlock(ex);
 
     return task->elt
             ? 0
@@ -290,18 +395,18 @@ ex_moveToCompleted(
     int     status;
     Task*   task;
 
-    (void)pthread_mutex_lock(&ex->mutex);
-    task = dll_remove(ex->running, elt);
+    ex_lock(ex);
+    task = dll_remove(ex->running, elt); // not a thread cancellation point
     if (dll_add(ex->completed, task) == NULL) {
         LOG_ADD0("Couldn't add task to list of completed tasks");
         status = ENOMEM;
     }
     else {
         task->elt = NULL;
-        (void)pthread_cond_broadcast(&ex->cond);
+        (void)pthread_cond_broadcast(&ex->cond); // not a thread cancellation point
         status = 0;
     }
-    (void)pthread_mutex_unlock(&ex->mutex);
+    ex_unlock(ex);
 
     return status;
 }
@@ -310,9 +415,11 @@ ex_moveToCompleted(
  * Retrieves and removes the next completed task, waiting if none are yet
  * present. Returns immediately if there are no completed or running tasks.
  *
+ * This is a thread cancellation point.
+ *
  * @param[in]  ex      Pointer to the executor.
  * @retval     NULL    There are no completed or running tasks.
- * @return             Pointer to the next completed task. The client should
+ * @return             Pointer to the next completed task. The caller should
  *                     call `task_free()` when it's no longer needed.
  */
 Task*
@@ -321,32 +428,59 @@ ex_take(
 {
     Task* task;
 
-    (void)pthread_mutex_lock(&ex->mutex);
+    ex_lock(ex); // acquires the mutex
     if (dll_size(ex->completed) == 0 && dll_size(ex->running) == 0) {
         task = NULL;
     }
     else {
+        /*
+         * An unlocking function is pushed as a cancellation cleanup handler to
+         * ensure that the mutex is released if the current thread is cancelled.
+         */
+        pthread_cleanup_push(ex_cleanup_unlock, ex);
         while ((task = dll_getFirst(ex->completed)) == NULL)
-            pthread_cond_wait(&ex->cond, &ex->mutex);
+            pthread_cond_wait(&ex->cond, &ex->mutex); // cancellation point
+        pthread_cleanup_pop(0); // doesn't release the mutex
     }
-    (void)pthread_mutex_unlock(&ex->mutex);
+    ex_unlock(ex); // releases the mutex
     return task;
 }
 
 /**
- * Cancels all executing tasks. The client should subsequently drain the
- * executor of completed tasks by calling `ex_take()` until it returns `NULL`.
+ * Shuts down an executor by canceling the threads of all executing tasks. The
+ * caller should subsequently drain the executor of terminated tasks by calling
+ * `ex_awaitTermination()`.
+ *
+ * Idempotent.
  *
  * @param[in]  ex  Pointer to the executor.
  */
 void
-ex_cancel(
+ex_shutdownNow(
     Executor* const ex)
 {
     Task* task;
 
-    (void)pthread_mutex_lock(&ex->mutex);
+    ex_lock(ex);
+    ex->isShutdown = 1;
     while ((task = dll_getFirst(ex->running)) != NULL)
-        task_cancel(task);
-    (void)pthread_mutex_unlock(&ex->mutex);
+        task_cancel(task); // not a thread cancellation point
+    ex_unlock(ex);
+}
+
+/**
+ * Blocks until all tasks have terminated.
+ *
+ * This is a thread cancellation point.
+ *
+ * @param[in] ex  Pointer to the executor.
+ */
+void
+ex_awaitTermination(
+    Executor* const ex)
+{
+    Task* task;
+
+    while ((task = ex_take(ex)) != NULL)
+        task_free(task);
 }

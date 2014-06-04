@@ -146,6 +146,34 @@ pq_getDataSize(
     pqueue* const       pq);
 
 /**
+ * Locks a product-queue for access by multiple threads in the current process.
+ * Blocks until the lock can be acquired. May be called multiple times by the
+ * same thread but each call must eventually be paired with a corresponding call
+ * to `pq_unlock()`.
+ *
+ * @param[in] pq        Pointer to the product-queue to be locked.
+ * @retval    0         Success.
+ * @retval    EAGAIN    The lock could not be acquired because the maximum
+ *                      number of recursive calls has been exceeded.
+ * @retval    EDEADLK   A deadlock condition was detected.
+ */
+int
+pq_lock(
+    pqueue* const pq);
+
+/**
+ * Unlocks a product-queue for access by multiple threads in the current
+ * process. Each call must correspond to a previous call to `pq_lock()`.
+ *
+ * @param[in] pq        Pointer to the product-queue to be unlocked.
+ * @retval    0         Success.
+ * @retval    EPERM     The current thread does not own the lock.
+ */
+int
+pq_unlock(
+    pqueue* const pq);
+
+/**
  * Returns an allocated region into which to write a data-product based on
  * data-product metadata.
  *

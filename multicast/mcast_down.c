@@ -25,6 +25,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+#include <pthread.h>
 
 /**
  * The multicast downstream LDM data-structure:
@@ -37,10 +39,50 @@ struct mdl {
 };
 
 /**
- * Allocates space in a product-queue for a VCMTP file and set the
+ * Locks the product-queue of a multicast downstream LDM.
+ *
+ * @param[in] mdl       Pointer to the multicast downstream LDM.
+ * @retval    0         Success.
+ * @retval    EAGAIN    The lock could not be acquired because the maximum
+ *                      number of recursive calls has been exceeded.
+ * @retval    EDEADLK   A deadlock condition was detected.
+ */
+static int
+lockPq(
+    Mdl* const mdl)
+{
+    int status = pq_lock(mdl->pq);
+
+    if (status)
+        LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
+
+    return status;
+}
+
+/**
+ * Unlocks the product-queue of a multicast downstream LDM.
+ *
+ * @param[in] mdl       Pointer to the multicast downstream LDM.
+ * @retval    0         Success.
+ * @retval    EPERM     The current thread does not own the lock.
+ */
+static int
+unlockPq(
+    Mdl* const mdl)
+{
+    int status = pq_unlock(mdl->pq);
+
+    if (status)
+        LOG_ADD1("Couldn't unlock product-queue: %s", strerror(status));
+
+    return status;
+}
+
+/**
+ * Allocates space in a product-queue for a VCMTP file and sets the
  * beginning-of-file response in a VCMTP file-entry.
  *
- * @param[in] pq          The product-queue.
+ * @param[in] mdl         Pointer to the multicast downstream LDM.
  * @param[in] name        The name of the VCMTP file.
  * @param[in] size        Size of the XDR-encoded LDM data-product in bytes.
  * @param[in] signature   The MD5 checksum of the LDM data-product.
@@ -51,32 +93,40 @@ struct mdl {
  */
 static int
 allocateSpaceAndSetBofResponse(
-    pqueue* const     pq,
-    const char* const name,
-    const size_t      size,
-    const signaturet  signature,
-    void* const       file_entry)
+    Mdl* const restrict        mdl,
+    const char* const restrict name,
+    const size_t               size,
+    const signaturet           signature,
+    void* const                file_entry)
 {
     int               status;
     char*             buf;
     pqe_index         index;
 
-    if (status = pqe_newDirect(pq, size, signature, &buf, &index)) {
-        if (status == PQUEUE_DUP) {
-            vcmtpFileEntry_setBofResponseToIgnore(file_entry);
-            status = 0;
-        }
-        else {
-            LOG_ADD2("Couldn't allocate region for %lu-byte file \"%s\"", size,
-                    name);
-            status = -1;
-        }
+    if (lockPq(mdl)) {
+        LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
+        status = -1;
     }
     else {
-        (void)vcmtpFileEntry_setBofResponse(file_entry,
-                ldmBofResponse_new(buf, size, &index));
-        status = 0;
-    } /* region allocated in product-queue */
+        if ((status = pqe_newDirect(mdl->pq, size, signature, &buf, &index)) != 0) {
+            if (status == PQUEUE_DUP) {
+                vcmtpFileEntry_setBofResponseToIgnore(file_entry);
+                status = 0;
+            }
+            else {
+                LOG_ADD2("Couldn't allocate region for %lu-byte file \"%s\"",
+                        size, name);
+                status = -1;
+            }
+        }
+        else {
+            (void)vcmtpFileEntry_setBofResponse(file_entry,
+                    ldmBofResponse_new(buf, size, &index));
+            status = 0;
+        } /* region allocated in product-queue */
+
+        (void)unlockPq(mdl);
+    } // product-queue locked
 
     return status;
 }
@@ -116,7 +166,7 @@ bof_func(
             status = -1;
         }
         else {
-            status = allocateSpaceAndSetBofResponse(((Mdl*)obj)->pq, name,
+            status = allocateSpaceAndSetBofResponse((Mdl*)obj, name,
                     vcmtpFileEntry_getSize(file_entry), signature, file_entry);
         } /* filename is data-product signature */
     } /* transfer is to memory */
@@ -128,7 +178,7 @@ bof_func(
  * Finishes inserting a received VCMTP file into an LDM product-queue as an LDM
  * data-product.
  *
- * @param[in] pq           The LDM product-queue.
+ * @param[in] mdl          Pointer to the multicast downstream LDM.
  * @param[in] index        Index of the allocated region in the product-queue.
  * @param[in] info         LDM data-product metadata.
  * @param[in] dataSize     Actual size of the data portion in bytes.
@@ -138,25 +188,31 @@ bof_func(
  */
 static int
 insertFileAsProduct(
-    pqueue* const          pq,
-    const pqe_index* const index,
-    const prod_info* const info,
-    const size_t           dataSize)
+    Mdl* const restrict             mdl,
+    const pqe_index* const restrict index,
+    const prod_info* const restrict info,
+    const size_t                    dataSize)
 {
-    int                    status;
+    int status;
 
     if (info->sz > dataSize) {
         LOG_ADD3("Size of LDM data-product > actual amount of data in \"%s\": "
                 "LDM size=%u bytes; actual data=%lu bytes", info->ident,
                 info->sz, (unsigned long)dataSize);
         status = -1;
-        (void)pqe_discard(pq, *index);
+        lockPq(mdl);
+        (void)pqe_discard(mdl->pq, *index);
+        unlockPq(mdl);
     }
-    else if (status = pqe_insert(pq, *index)) {
-        LOG_ADD3("Couldn't finish inserting %u-byte data-product \"%s\" into "
-                "product-queue: status=%d", info->sz, info->ident, status);
-        status = -1;
-        (void)pqe_discard(pq, *index);
+    else {
+        lockPq(mdl);
+        if ((status = pqe_insert(mdl->pq, *index)) != 0) {
+            LOG_ADD3("Couldn't finish inserting %u-byte data-product \"%s\" into "
+                    "product-queue: status=%d", info->sz, info->ident, status);
+            status = -1;
+            (void)pqe_discard(mdl->pq, *index);
+        }
+        unlockPq(mdl);
     }
     return status;
 }
@@ -191,7 +247,8 @@ eof_func(
         const size_t           fileSize = vcmtpFileEntry_getSize(file_entry);
         const void* const      bofResponse = vcmtpFileEntry_getBofResponse(file_entry);
         const pqe_index* const index = ldmBofResponse_getIndex(bofResponse);
-        pqueue* const          pq = ((Mdl*)obj)->pq;
+        Mdl* const             mdl = (Mdl*)obj;
+        pqueue* const          pq = mdl->pq;
 
         xdrmem_create(&xdrs, (char*)ldmBofResponse_getBuf(bofResponse),
                 fileSize, XDR_DECODE); /* (char*) is safe because decoding */
@@ -201,11 +258,15 @@ eof_func(
                     "VCMTP file \"%s\"", fileSize,
                     vcmtpFileEntry_getFileName(file_entry));
             status = -1;
+            lockPq(mdl);
             pqe_discard(pq, *index);
+            unlockPq(mdl);
         }
         else {
+            lockPq(mdl);
             status = insertFileAsProduct(pq, index, &info,
                     fileSize-(xdrs.x_private-xdrs.x_base));
+            unlockPq(mdl);
             xdr_free(xdr_prod_info, (char*)&info);
         } /* "info" allocated */
     } /* region in product-queue was allocated */
@@ -247,11 +308,11 @@ missed_file_func(
  */
 static int
 init(
-    Mdl* const                          mdl,
-    pqueue* const                       pq,
-    const McastGroupInfo* const         mcastInfo,
-    const mdl_missed_product_func       missed_product,
-    void* const                         arg)
+    Mdl* const restrict                  mdl,
+    pqueue* const restrict               pq,
+    const McastGroupInfo* const restrict mcastInfo,
+    const mdl_missed_product_func        missed_product,
+    void* const restrict                 arg)
 {
     int                 status;
     VcmtpCReceiver*     receiver;
@@ -289,6 +350,10 @@ init(
     return 0;
 }
 
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
 /**
  * Returns a new multicast downstream LDM object.
  *
@@ -303,7 +368,7 @@ init(
  * @retval     LDM7_INVAL     @code{pq == NULL || missed_product == NULL ||
  *                            mcastInfo == NULL}. \c log_add() called.
  */
-static int
+int
 mdl_new(
     Mdl* restrict* const restrict        mdl,
     pqueue* const restrict               pq,
@@ -318,7 +383,7 @@ mdl_new(
         status = LDM7_SYSTEM;
     }
     else {
-        if (status = init(obj, pq, mcastInfo, missed_product, arg)) {
+        if ((status = init(obj, pq, mcastInfo, missed_product, arg)) != 0) {
             free(obj);
         }
         else {
@@ -334,7 +399,7 @@ mdl_new(
  *
  * @param[in,out] mdl   The multicast downstream LDM object.
  */
-static void
+void
 mdl_free(
     Mdl* const  mdl)
 {
@@ -351,51 +416,19 @@ mdl_free(
  * @retval    LDM7_INVAL   @code{mdl == NULL}. \c log_add() called.
  * @retval    -1           Failure. \c log_add() called.
  */
-static int
-execute(
+int
+mdl_start(
     Mdl* const  mdl)
 {
+    int         status;
+
     if (NULL == mdl) {
         LOG_ADD0("NULL multicast-downstream-LDM argument");
-        return LDM7_INVAL;
+        status = LDM7_INVAL;
     }
-
-    return vcmtpReceiver_execute(mdl->receiver);
-}
-
-/**
- * Creates and executes a multicast downstream LDM for an indefinite amount of
- * time. Returns when the multicast downstream LDM terminates.
- *
- * @param[in] mcastInfo      Pointer to multicast information.
- * @param[in] pq             The product-queue to use.
- * @param[in] missed_product Missed-product callback function.
- * @param[in] obj            Optional pointer to an object to be passed to \c
- *                           missed_product().
- * @retval    0              The multicast downstream LDM terminated
- *                           successfully.
- * @retval    LDM7_SYSTEM    System error. \c log_add() called.
- * @retval    LDM7_INVAL     @code{pq == NULL || missed_product == NULL ||
- *                           mcastInfo == NULL}. \c log_add() called.
- */
-int
-mdl_createAndExecute(
-    const McastGroupInfo* const restrict mcastInfo,
-    pqueue* const restrict               pq,
-    mdl_missed_product_func              missed_product,
-    void* const                          obj)
-{
-    Mdl*        mdl;
-    int         status = mdl_new(&mdl, pq, mcastInfo, missed_product, obj);
-
-    if (status) {
-        LOG_ADD0("Couldn't create new multicast downstream LDM");
+    else if ((status = vcmtpReceiver_execute(mdl->receiver)) != 0) {
+        LOG_ADD0("Failure executing multicast downstream LDM");
     }
-    else {
-        if (status = execute(mdl))
-            LOG_ADD0("Failure executing multicast downstream LDM");
-        mdl_free(mdl);
-    } /* "mdl" allocated */
 
     return status;
 }

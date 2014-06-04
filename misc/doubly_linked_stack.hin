@@ -8,15 +8,15 @@
 #ifndef DOUBLY_LINKED_STACK_H
 #define DOUBLY_LINKED_STACK_H
 
-/**
- * Opaque types for this module.
- */
-typedef struct Dls    Dls;
-typedef struct DlsElt DlsElt;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * Opaque type for this module.
+ */
+typedef struct Dls    Dls;
+typedef struct DlsElt DlsElt;
 
 @FUNCTION_DECLARATIONS@
 

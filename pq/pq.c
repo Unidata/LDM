@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <math.h>
+#include <pthread.h>
 #include <time.h>
 #include <search.h>
 
@@ -2935,6 +2936,7 @@ struct pqueue {
         timestampt cursor;      /* private, current position in queue */
         off_t cursor_offset;    /* private, current offset in queue */
         sigset_t sav_set;
+        pthread_mutex_t mutex;  /* synchronizes multi-threaded access */
 };
 
 /* The total size of a product-queue in bytes: */
@@ -4076,6 +4078,28 @@ pq_new(
         }
     }
 #endif
+
+    {
+        pthread_mutexattr_t mutexAttr;
+
+        if (pthread_mutexattr_init(&mutexAttr)) {
+            unotice("Couldn't initialize product-queue mutex attributes");
+            free(pq);
+            return NULL;
+        }
+        else {
+            (void)pthread_mutexattr_settype(&mutexAttr,
+                    PTHREAD_MUTEX_RECURSIVE);
+
+            if (pthread_mutex_init(&pq->mutex, &mutexAttr)) {
+                unotice("Couldn't initialize product-queue mutex");
+                free(pq);
+                return NULL;
+            }
+
+            (void)pthread_mutexattr_destroy(&mutexAttr);
+        } // `mutexAttr` allocated
+    }
 
     pq->riulp = (riul*)malloc(pq->pagesz);
     if (pq->riulp == NULL) {
@@ -5233,6 +5257,42 @@ pq_getDataSize(
 
 
 /**
+ * Locks a product-queue for access by multiple threads in the current process.
+ * Blocks until the lock can be acquired. May be called multiple times by the
+ * same thread but each call must eventually be paired with a corresponding call
+ * to `pq_unlock()`.
+ *
+ * @param[in] pq        Pointer to the product-queue to be locked.
+ * @retval    0         Success.
+ * @retval    EAGAIN    The lock could not be acquired because the maximum
+ *                      number of recursive calls has been exceeded.
+ * @retval    EDEADLK   A deadlock condition was detected.
+ */
+int
+pq_lock(
+    pqueue* const pq)
+{
+    return pthread_mutex_lock(&pq->mutex);
+}
+
+
+/**
+ * Unlocks a product-queue for access by multiple threads in the current
+ * process. Each call must correspond to a previous call to `pq_lock()`.
+ *
+ * @param[in] pq        Pointer to the product-queue to be unlocked.
+ * @retval    0         Success.
+ * @retval    EPERM     The current thread does not own the lock.
+ */
+int
+pq_unlock(
+    pqueue* const pq)
+{
+    return pthread_mutex_unlock(&pq->mutex);
+}
+
+
+/**
  * Returns an allocated region into which to write a data-product based on
  * data-product metadata.
  *
@@ -5374,7 +5434,7 @@ pqe_newDirect(
         /*
          * Write-lock the product-queue control-section.
          */
-        if (status = ctl_get(pq, RGN_WRITE)) {
+        if ((status = ctl_get(pq, RGN_WRITE)) != 0) {
             LOG_ADD0("ctl_get() failure");
         }
         else {
@@ -5383,7 +5443,8 @@ pqe_newDirect(
             /*
              * Obtain a new region.
              */
-            if (status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep)) {
+            if ((status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep))
+                    != 0) {
                 LOG_ADD0("rpqe_new() failure");
             }
             else {

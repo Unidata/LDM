@@ -20,9 +20,9 @@ EXTRA_DIST	        = \
         semRWLock.hin
 DISTCLEANFILES		= \
 	child_map.h \
-	doubly_linked_list.hin \
-	doubly_linked_stack.hin \
-	executor.hin \
+	doubly_linked_list.h \
+	doubly_linked_stack.h \
+	executor.h \
 	semRWLock.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
