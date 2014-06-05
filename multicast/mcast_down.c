@@ -264,7 +264,7 @@ eof_func(
         }
         else {
             lockPq(mdl);
-            status = insertFileAsProduct(pq, index, &info,
+            status = insertFileAsProduct(mdl, index, &info,
                     fileSize-(xdrs.x_private-xdrs.x_base));
             unlockPq(mdl);
             xdr_free(xdr_prod_info, (char*)&info);
@@ -363,10 +363,11 @@ init(
  * @param[in]  missed_product Missed-product callback function.
  * @param[in]  arg            Optional pointer to an object to be passed to \c
  *                            missed_product().
- * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. \c log_add() called.
- * @retval     LDM7_INVAL     @code{pq == NULL || missed_product == NULL ||
- *                            mcastInfo == NULL}. \c log_add() called.
+ * @retval     LDM7_INVAL     @code{mdl == NULL || pq == NULL || missed_product
+ *                            == NULL || mcastInfo == NULL}. \c log_add()
+ *                            called.
+ * @retval     LDM7_VCMTP     VCMTP error. \c log_add() called.
  */
 int
 mdl_new(
@@ -377,18 +378,27 @@ mdl_new(
     void* const                          arg)
 {
     int        status;
-    Mdl* const obj = LOG_MALLOC(sizeof(Mdl), "multicast downstream LDM object");
 
-    if (NULL == obj) {
-        status = LDM7_SYSTEM;
+    if (mdl == NULL) {
+        LOG_ADD0("NULL multicast downstream LDM argument");
+        status = LDM7_INVAL;
     }
     else {
-        if ((status = init(obj, pq, mcastInfo, missed_product, arg)) != 0) {
-            free(obj);
-        }
-        else {
-            *mdl = obj;
-        }
+            Mdl* const obj = LOG_MALLOC(sizeof(Mdl),
+                    "multicast downstream LDM object");
+
+            if (NULL == obj) {
+                status = LDM7_SYSTEM;
+            }
+            else {
+                if ((status = init(obj, pq, mcastInfo, missed_product, arg))
+                        != 0) {
+                    free(obj);
+                }
+                else {
+                    *mdl = obj;
+                }
+            }
     }
 
     return status;
@@ -408,13 +418,13 @@ mdl_free(
 }
 
 /**
- * Executes a multicast downstream LDM. Doesn't return until the multicast
- * downstream LDM terminates.
+ * Executes a multicast downstream LDM. Blocks until the multicast
+ * downstream LDM is stopped.
  *
- * @param[in] mdl          The multicast downstream LDM to execute.
- * @retval    0            Success. The multicast downstream LDM terminated.
- * @retval    LDM7_INVAL   @code{mdl == NULL}. \c log_add() called.
- * @retval    -1           Failure. \c log_add() called.
+ * @param[in] mdl            The multicast downstream LDM to execute.
+ * @retval    LDM7_CANCELED  The multicast downstream LDM was stopped.
+ * @retval    LDM7_INVAL     @code{mdl == NULL}. \c log_add() called.
+ * @retval    LDM7_VCMTP     VCMTP error. \c log_add() called.
  */
 int
 mdl_start(
@@ -428,7 +438,23 @@ mdl_start(
     }
     else if ((status = vcmtpReceiver_execute(mdl->receiver)) != 0) {
         LOG_ADD0("Failure executing multicast downstream LDM");
+        status = LDM7_VCMTP;
+    }
+    else {
+        status = LDM7_CANCELED;
     }
 
     return status;
+}
+
+/**
+ * Cleanly stops an executing multicast downstream LDM.
+ *
+ * @param[in] mdl  Pointer to the muticast downstream LDM to stop.
+ */
+void
+mdl_stop(
+    Mdl* const mdl)
+{
+    // TODO
 }

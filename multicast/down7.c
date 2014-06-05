@@ -127,7 +127,7 @@ taskExit(
     if (down7->exitStatus < 0)
         down7->exitStatus = status;
     down7->taskExited = 1;
-    pthread_cond_signal(down7->waitCond);
+    pthread_cond_signal(&down7->waitCond);
     unlockWait(down7);
 }
 
@@ -474,7 +474,7 @@ request(
 
     lockClient(down7);
 
-    (void)request_product_7(&fileId, clnt); /* asynchronous send */
+    (void)request_product_7((VcmtpFileId*)&fileId, clnt); /* asynchronous send */
     if (clnt_stat(clnt) != RPC_TIMEDOUT) {
         /*
          * `request_product_7()` uses asynchronous message-passing, so the
@@ -524,6 +524,20 @@ startRequester(
     taskExit(down7, status);
 
     return (void*)status; // Eclipse IDE wants to see this
+}
+
+/**
+ * Cleanly stops an executing task that's requesting data-products that were
+ * missed by the multicast receiver.
+ *
+ * @param[in] down7  Pointer to the downstream LDM-7 whose requesting task is
+ *                   to be stopped.
+ */
+static void
+stopRequester(
+    Down7* const down7)
+{
+    // TODO
 }
 
 /**
@@ -578,13 +592,27 @@ startReceiver(
 }
 
 /**
+ * Cleanly stops an executing task that's receiving data-products that were
+ * missed by the multicast receiver.
+ *
+ * @param[in] down7  Pointer to the downstream LDM-7 whose receiving task is to
+ *                   be stopped.
+ */
+static void
+stopReceiver(
+    Down7* const down7)
+{
+    // TODO
+}
+
+/**
  * Starts the task of a downstream LDM-7 that receives data-products via
  * multicast.
  *
  * @param[in] arg            Pointer to the downstream LDM-7.
- * @retval    0              The multicast downstream LDM terminated
- *                           successfully.
+ * @retval    LDM7_CANCELED  The multicast downstream LDM was stopped.
  * @retval    LDM7_SYSTEM    System error. \c log_add() called.
+ * @retval    LDM7_VCMTP     VCMTP error. \c log_add() called.
  */
 static void*
 startMcaster(
@@ -593,7 +621,7 @@ startMcaster(
     Down7* const down7 = (Down7*)arg;
     int          status;
 
-    status = mdl_new(&down7->mdl, down7->mcastInfo, pq, missedProdFunc, down7);
+    status = mdl_new(&down7->mdl, pq, down7->mcastInfo, missedProdFunc, down7);
     if (status == 0)
         status = mdl_start(down7->mdl);
 
@@ -640,11 +668,11 @@ startTasks(
         LOG_ADD0("Couldn't start task that receives data-products that were "
                 "missed by the multicast receiver task");
     }
-    else if (pthread_create(&down7->requestThread, startRequester, down7)) {
+    else if (pthread_create(&down7->requestThread, NULL, startRequester, down7)) {
         LOG_ADD0("Couldn't start task that requests data-products that were "
                 "missed by the multicast receiver task");
     }
-    else if (pthread_create(&down7->mcastThread, startMcaster, down7)) {
+    else if (pthread_create(&down7->mcastThread, NULL, startMcaster, down7)) {
         LOG_ADD0("Couldn't start multicast receiver task");
     }
     else {
@@ -671,7 +699,7 @@ waitOnTasks(
 {
     lockWait(down7);
     while (!down7->canceled && !down7->taskExited)
-        pthread_cond_wait(down7->waitCond);
+        pthread_cond_wait(&down7->waitCond, &down7->waitMutex);
     unlockWait(down7);
 
     return terminateTasks(down7);
@@ -952,7 +980,7 @@ dl7_stop(
     Down7* const down7)
 {
     down7->canceled = 1;
-    (void)pthread_cond_signal(down7->waitCond);
+    (void)pthread_cond_signal(&down7->waitCond);
 }
 
 /**

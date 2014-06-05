@@ -45,40 +45,53 @@ void test_mdl_createAndExecute()
     int                  (*int_func)() = (int(*)())1;
     void                 (*void_func)() = (void(*)())2;
     McastGroupInfo       mcastInfo;
+    Mdl*                 mdl;
 
     mcastInfo.mcastAddr = addr;
     mcastInfo.mcastPort = port;
     mcastInfo.tcpAddr = tcpAddr;
     mcastInfo.tcpPort = tcpPort;
 
-    /* Invalid product-queue argument */
-    status = mdl_createAndExecute(&mcastInfo, NULL, (void*)1, (void*)2);
+    // Invalid multicast downstream LDM argument
+    status = mdl_new(NULL, pq, &mcastInfo, void_func, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
 
-    /* Invalid missed-product-function argument */
-    status = mdl_createAndExecute(&mcastInfo, (void*)1, NULL, (void*)2);
+    /* Invalid product-queue argument */
+    status = mdl_new(&mdl, NULL, &mcastInfo, void_func, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
 
     /* Invalid multicast information argument */
-    status = mdl_createAndExecute(NULL, (void*)1, (void*)1, (void*)2);
+    status = mdl_new(&mdl, pq, NULL, void_func, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
     log_clear();
 
-    vcmtpReceiver_new_ExpectAndReturn(
+    /* Invalid missed-product-function argument */
+    status = mdl_new(&mdl, pq, &mcastInfo, NULL, NULL);
+    log_log(LOG_INFO);
+    OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
+    log_clear();
+
     /* Trivial execution */
+    vcmtpReceiver_new_ExpectAndReturn(
             NULL, tcpAddr,  tcpPort,   int_func, int_func, void_func, addr,     port,      NULL,   0,
             NULL, cmp_cstr, cmp_short, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
-    vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
-    vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
-    status = mdl_createAndExecute(&mcastInfo, pq, missed_product_func, (void*)2);
+    status = mdl_new(&mdl, pq, &mcastInfo, void_func, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(0, status);
-    log_clear();
+
+    vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
+    status = mdl_start(mdl);
+    log_log(LOG_INFO);
+    OP_ASSERT_EQUAL_INT(LDM7_CANCELED, status);
+
+    vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
+    mdl_free(mdl);
+    log_log(LOG_INFO);
 
     OP_VERIFY();
 }

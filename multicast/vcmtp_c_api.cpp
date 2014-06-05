@@ -177,10 +177,10 @@ void vcmtpReceiver_free(
 }
 
 /**
- * Executes a VCMTP C Receiver. Returns when the receiver terminates.
+ * Executes a VCMTP C Receiver. Blocks until the receiver is stopped.
  *
  * @param[in,out] receiver      The VCMTP C Receiver.
- * @retval        0             Success.
+ * @retval        0             Success. The receiver was stopped.
  * @retval        EINVAL        @code{receiver == NULL}. \c log_add() called.
  * @retval        -1            Other failure. \c log_add() called.
  */

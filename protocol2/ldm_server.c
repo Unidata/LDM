@@ -716,21 +716,4 @@ test_connection_7_svc(
     return NULL ; /* don't reply */
 }
 
-/**
- * Processes a data-product from a remote LDM that was previously requested
- * because it was missed. Does not reply.
- *
- * @param[in] missedProd  Pointer to the missed data-product.
- * @param[in] rqstp       Pointer to the RPC service-request.
- */
-void*
-deliver_product_7_svc(
-    MissedProduct* const  missedProd,
-    struct svc_req* const rqstp)
-{
-    /* TODO */
-
-    return NULL ; /* don't reply */
-}
-
 #endif /* WANT_MULTICAST */
