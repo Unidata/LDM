@@ -52,37 +52,31 @@ void test_mdl_createAndExecute()
     mcastInfo.tcpAddr = tcpAddr;
     mcastInfo.tcpPort = tcpPort;
 
-    // Invalid multicast downstream LDM argument
-    status = mdl_new(NULL, pq, &mcastInfo, void_func, NULL);
-    log_log(LOG_INFO);
-    OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
-    log_clear();
-
     /* Invalid product-queue argument */
-    status = mdl_new(&mdl, NULL, &mcastInfo, void_func, NULL);
+    mdl = mdl_new(NULL, &mcastInfo, void_func, NULL);
     log_log(LOG_INFO);
-    OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
+    OP_ASSERT_TRUE(mdl == NULL);
     log_clear();
 
     /* Invalid multicast information argument */
-    status = mdl_new(&mdl, pq, NULL, void_func, NULL);
+    mdl = mdl_new(pq, NULL, void_func, NULL);
     log_log(LOG_INFO);
-    OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
+    OP_ASSERT_TRUE(mdl == NULL);
     log_clear();
 
     /* Invalid missed-product-function argument */
-    status = mdl_new(&mdl, pq, &mcastInfo, NULL, NULL);
+    mdl = mdl_new(pq, &mcastInfo, NULL, NULL);
     log_log(LOG_INFO);
-    OP_ASSERT_EQUAL_INT(LDM7_INVAL, status);
+    OP_ASSERT_TRUE(mdl == NULL);
     log_clear();
 
     /* Trivial execution */
     vcmtpReceiver_new_ExpectAndReturn(
             NULL, tcpAddr,  tcpPort,   int_func, int_func, void_func, addr,     port,      NULL,   0,
             NULL, cmp_cstr, cmp_short, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
-    status = mdl_new(&mdl, pq, &mcastInfo, void_func, NULL);
+    mdl = mdl_new(pq, &mcastInfo, void_func, NULL);
     log_log(LOG_INFO);
-    OP_ASSERT_EQUAL_INT(0, status);
+    OP_ASSERT_FALSE(mdl == NULL);
 
     vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     status = mdl_start(mdl);

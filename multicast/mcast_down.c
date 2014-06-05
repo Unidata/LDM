@@ -357,51 +357,34 @@ init(
 /**
  * Returns a new multicast downstream LDM object.
  *
- * @param[out] mdl            The pointer to be set to a new instance.
  * @param[in]  pq             The product-queue to use.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  missed_product Missed-product callback function.
  * @param[in]  arg            Optional pointer to an object to be passed to \c
  *                            missed_product().
- * @retval     LDM7_SYSTEM    System error. \c log_add() called.
- * @retval     LDM7_INVAL     @code{mdl == NULL || pq == NULL || missed_product
- *                            == NULL || mcastInfo == NULL}. \c log_add()
- *                            called.
- * @retval     LDM7_VCMTP     VCMTP error. \c log_add() called.
+ * @retval     NULL           Failure. `log_add()` called.
+ * @return                    Pointer to a new multicast downstream LDM object.
+ *                            The caller should call `ldm_free()` when it's no
+ *                            longer needed.
  */
-int
+Mdl*
 mdl_new(
-    Mdl* restrict* const restrict        mdl,
     pqueue* const restrict               pq,
     const McastGroupInfo* const restrict mcastInfo,
     const mdl_missed_product_func        missed_product,
     void* const                          arg)
 {
-    int        status;
+    Mdl* mdl = LOG_MALLOC(sizeof(Mdl), "multicast downstream LDM object");
 
-    if (mdl == NULL) {
-        LOG_ADD0("NULL multicast downstream LDM argument");
-        status = LDM7_INVAL;
-    }
-    else {
-            Mdl* const obj = LOG_MALLOC(sizeof(Mdl),
-                    "multicast downstream LDM object");
-
-            if (NULL == obj) {
-                status = LDM7_SYSTEM;
-            }
-            else {
-                if ((status = init(obj, pq, mcastInfo, missed_product, arg))
-                        != 0) {
-                    free(obj);
-                }
-                else {
-                    *mdl = obj;
-                }
-            }
+    if (mdl) {
+        if (init(mdl, pq, mcastInfo, missed_product, arg)) {
+            LOG_ADD0("Couldn't initialize multicast downstream LDM");
+            free(mdl);
+            mdl = NULL;
+        }
     }
 
-    return status;
+    return mdl;
 }
 
 /**

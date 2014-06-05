@@ -607,12 +607,11 @@ stopReceiver(
 
 /**
  * Starts the task of a downstream LDM-7 that receives data-products via
- * multicast.
+ * multicast. Blocks until the multicast downstream LDM is stopped
  *
  * @param[in] arg            Pointer to the downstream LDM-7.
  * @retval    LDM7_CANCELED  The multicast downstream LDM was stopped.
  * @retval    LDM7_SYSTEM    System error. \c log_add() called.
- * @retval    LDM7_VCMTP     VCMTP error. \c log_add() called.
  */
 static void*
 startMcaster(
@@ -620,10 +619,16 @@ startMcaster(
 {
     Down7* const down7 = (Down7*)arg;
     int          status;
+    Mdl* const   mdl = mdl_new(pq, down7->mcastInfo, missedProdFunc, down7);
 
-    status = mdl_new(&down7->mdl, pq, down7->mcastInfo, missedProdFunc, down7);
-    if (status == 0)
+    if (mdl == NULL) {
+        LOG_ADD0("Couldn't create a new multicast downstream LDM");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        down7->mdl = mdl;
         status = mdl_start(down7->mdl);
+    }
 
     taskExit(down7, status);
 
@@ -901,6 +906,7 @@ dl7_new(
     down7->canceled = 0;
     down7->taskExited = 0;
     down7->exitStatus = -1;
+    down7->mdl = NULL;
 
     return down7;
 
