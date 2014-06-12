@@ -68,6 +68,8 @@ nobase_html_DATA	= \
     tutorial/images/TOCIcon.gif \
     tutorial/images/TopArrow.gif
 
+all:
+
 $(EXTRA_DIST):
 	rm -rf tutorial
 	tclsh generate/generate.tcl -verbose \
