@@ -1,5 +1,5 @@
-/*
- *   Copyright © 2011, University Corporation for Atmospheric Research
+/**
+ *   Copyright © 2014, University Corporation for Atmospheric Research
  *   See file ../COPYRIGHT for copying and redistribution conditions.
  *
  * Provides for the accumulation of log-messages and the printing of all,
@@ -8,6 +8,8 @@
  * This module uses the ulog(3) module.
  *
  * This module is thread-safe.
+ *
+ * @author Steven R. Emmerson
  */
 #include <config.h>
 
@@ -26,7 +28,7 @@
 
 
 /**
- * A log-message.  Such structures accumulate.
+ * A log-message.  Such structures accumulate in a thread-specific message-list.
  */
 typedef struct message {
     struct message*     next;   /**< pointer to next message */
@@ -49,7 +51,7 @@ typedef struct list {
 static pthread_key_t    listKey;
 
 /**
- * Whether or not the key has been created.
+ * Whether or not the thread-specific key has been created.
  */
 static int              keyCreated = 0;
 
@@ -155,9 +157,7 @@ static List* getList(void)
 
 
 /**
- * Clears the accumulated log-messages.
- *
- * This function is thread-safe.
+ * Clears the accumulated log-messages of the current thread.
  */
 void log_clear()
 {
@@ -170,8 +170,8 @@ void log_clear()
 /**
  * Adds a variadic log-message to the message-list for the current thread.
  *
- * This function is thread-safe.
- *
+ * @param[in] fmt       Formatting string.
+ * @param[in] args      Formatting arguments.
  * @retval 0            Success
  * @retval EAGAIN       Failure due to the buffer being too small for the
  *                      message.  The buffer has been expanded and the client
@@ -286,11 +286,9 @@ int log_vadd(
     return status;
 }
 
-/*
+/**
  * DEPRECATED: Use log_add() instead.
- * Sets the first log-message.
- *
- * This function is thread-safe.
+ * Sets the first log-message for the current thread.
  */
 void log_start(
     const char* const fmt,  /**< The message format */
@@ -310,10 +308,11 @@ void log_start(
     va_end(args);
 }
 
-/*
- * Adds a log-message.
+/**
+ * Adds a log-message for the current thread.
  *
- * This function is thread-safe.
+ * @param[in] fmt  Formatting string for the message.
+ * @param[in] ...  Arguments for the formatting string.
  */
 void log_add(
     const char* const fmt,  /**< The message format */
@@ -332,21 +331,17 @@ void log_add(
     va_end(args);
 }
 
-/*
- * Adds a system error-message.
- *
- * This function is thread-safe.
+/**
+ * Adds a system error-message for the current thread.
  */
 void log_errno(void)
 {
     log_start("%s", strerror(errno));
 }
 
-/*
- * Adds a system error-message based on the current value of "errno" and a
- * higher-level error-message.
- *
- * This function is thread-safe.
+/**
+ * Adds a system error-message for the current thread based on the current value
+ * of "errno" and a higher-level error-message.
  */
 void log_serror(
     const char* const fmt,  /**< The higher-level message format */
@@ -366,11 +361,9 @@ void log_serror(
     va_end(args);
 }
 
-/*
- * Adds a system error-message based on a error number and a higher-level
- * error-message.
- *
- * This function is thread-safe.
+/**
+ * Adds a system error-message for the current thread based on a error number
+ * and a higher-level error-message.
  */
 void log_errnum(
     const int           errnum, /**< The "errno" error number */
@@ -395,11 +388,9 @@ void log_errnum(
     }
 }
 
-/*
- * Logs the currently-accumulated log-messages and resets the message-list for
- * the current thread.
- *
- * This function is thread-safe.
+/**
+ * Logs the currently-accumulated log-messages of the current thread and resets
+ * the message-list for the current thread.
  */
 void log_log(
     const int   level)  /**< The level at which to log the messages.  One of
@@ -445,7 +436,7 @@ void log_log(
 }
 
 /**
- * Allocates memory.
+ * Allocates memory. Thread safe.
  *
  * @param nbytes        Number of bytes to allocate.
  * @param msg           Message to print on error. Should complete the sentence
@@ -468,4 +459,26 @@ void* log_malloc(
                 nbytes, msg);
 
     return obj;
+}
+
+/**
+ * Frees the log-message resources of the current thread.
+ */
+void
+log_free(void)
+{
+    List*   list = getList();
+
+    if (list) {
+        Message* msg;
+        Message* next;
+
+        for (msg = list->first; msg; msg = next) {
+            next = msg->next;
+            free(msg->string);
+            free(msg);
+        }
+        free(list);
+        (void)pthread_setspecific(listKey, NULL);
+    }
 }

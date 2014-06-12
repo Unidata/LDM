@@ -111,6 +111,11 @@ void* log_malloc(
     const char* const   file,
     const int           line);
 
+/**
+ * Frees the log-message resources of the current thread.
+ */
+void log_free(void);
+
 #ifdef __cplusplus
 }
 #endif
