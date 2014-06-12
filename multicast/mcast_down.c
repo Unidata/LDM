@@ -431,13 +431,14 @@ mdl_start(
 }
 
 /**
- * Cleanly stops an executing multicast downstream LDM.
+ * Cleanly stops an executing multicast downstream LDM. Undefined behavior
+ * results if called from a signal handler.
  *
- * @param[in] mdl  Pointer to the muticast downstream LDM to stop.
+ * @param[in] mdl  Pointer to the multicast downstream LDM to stop.
  */
 void
 mdl_stop(
     Mdl* const mdl)
 {
-    // TODO
+    vcmtpReceiver_stop(mdl->receiver);
 }

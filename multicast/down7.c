@@ -15,6 +15,7 @@
 #include "executor.h"
 #include "inetutil.h"
 #include "ldm.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "mcast_down.h"
 #include "file_id_queue.h"
@@ -33,6 +34,9 @@
 #include <time.h>
 #include <unistd.h>
 
+/**
+ * The data structure of a downstream LDM-7:
+ */
 struct Down7 {
     ServAddr*             servAddr;        ///< socket address of remote LDM-7
     char*                 mcastName;       ///< name of multicast group
@@ -56,7 +60,7 @@ struct Down7 {
 };
 
 /**
- * Locks a wait-lock for exclusive access.
+ * Locks the wait-lock of a downstream LDM-7 for exclusive access.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 to have its wait-lock
  *                   locked.
@@ -69,7 +73,7 @@ lockWait(
 }
 
 /**
- * Unlocks a wait-lock.
+ * Unlocks the wait-lock of a downstream LDM-7.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 to have its wait-lock
  *                   unlocked.
@@ -82,20 +86,23 @@ unlockWait(
 }
 
 /**
- * Locks a client-side handle for exclusive access.
+ * Locks the client-side handle of a downstream LDM-7 for exclusive access.
  *
- * @param[in] down7  Pointer to the downstream LDM-7 to have its client-side
- *                   handle locked.
+ * @param[in] down7    Pointer to the downstream LDM-7 to have its client-side
+ *                     handle locked.
+ * @retval    0        Success.
+ * @retval    EDEADLK  A deadlock condition was detected or the current thread
+ *                     already owns the mutex.
  */
-static void
+static int
 lockClient(
     Down7* const down7)
 {
-    (void)pthread_mutex_lock(&down7->clntMutex);
+    return pthread_mutex_lock(&down7->clntMutex);
 }
 
 /**
- * Unlocks a client-side handle.
+ * Unlocks the client-side handle of a downstream LDM-7.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 to have its client-side
  *                   handle unlocked.
@@ -110,8 +117,9 @@ unlockClient(
 /**
  * Performs common exit actions for a task of a downstream LDM-7:
  *   -# Logs outstanding error messages if the downstream LDM-7 wasn't canceled;
+ *   -# Frees log-message resources of the current thread;
  *   -# Sets the status of the first task to exit a downstream LDM-7;
- *   -# Sets the task-exited boolean of the downstream LDM-7; and
+ *   -# Sets the task-exited flag of the downstream LDM-7; and
  *   -# Signals the wait condition-variable.
  *
  * @param[in] arg     Pointer to the downstream LDM-7.
@@ -122,8 +130,16 @@ taskExit(
     Down7* const down7,
     int const    status)
 {
-    lockWait(down7);
+    /*
+     * Finish with logging.
+     */
     down7->canceled ? log_clear() : log_log(LOG_ERR);
+    log_free();
+
+    /*
+     * Inform the managing thread.
+     */
+    lockWait(down7);
     if (down7->exitStatus < 0)
         down7->exitStatus = status;
     down7->taskExited = 1;
@@ -354,7 +370,7 @@ testConnection(
 {
     int status;
 
-    lockClient(down7);
+    (void)lockClient(down7);
     test_connection_7(NULL, down7->clnt);
 
     if (clnt_stat(down7->clnt) == RPC_TIMEDOUT) {
@@ -375,8 +391,8 @@ testConnection(
 }
 
 /**
- * Runs an RPC service. Continues as long as an RPC message arrives before the
- * timeout occurs.
+ * Runs an RPC service. Doesn't return until no RPC message arrives within the
+ * timeout interval or an error occurs.
  *
  * @param[in] xprt           Pointer to the RPC service transport.
  * @retval    LDM7_TIMEDOUT  Timeout occurred.
@@ -395,7 +411,7 @@ run_down7(
 
         FD_ZERO(&fds);
         FD_SET(sock, &fds);
-        timeout.tv_sec = 60;
+        timeout.tv_sec = 3600;
         timeout.tv_usec = 0;
 
         status = select(sock+1, &fds, 0, 0, &timeout); // cancellation point
@@ -424,7 +440,7 @@ run_down7(
          return LDM7_RPC;
     }
 
-    return 0; // Eclipse IDE wants to see this
+    return 0; // Eclipse IDE wants to see a return
 }
 
 /**
@@ -442,17 +458,19 @@ run_svc(
     Down7* const restrict   down7,
     SVCXPRT* const restrict xprt)
 {
+    int status;
+
     for (;;) {
-        int status = run_down7(xprt);
+        status = run_down7(xprt);
 
         if (status == LDM7_TIMEDOUT && (status = testConnection(down7)) == 0)
             continue; // connection is still good
 
         LOG_ADD0("Connection to upstream LDM-7 is broken");
-        return status;
+        break;
     }
 
-    return 0; // Eclipse IDE wants to see this
+    return status; // Eclipse IDE wants to see a return
 }
 
 /**
@@ -472,7 +490,7 @@ request(
     int               status;
     CLIENT* const     clnt = down7->clnt;
 
-    lockClient(down7);
+    (void)lockClient(down7);
 
     (void)request_product_7((VcmtpFileId*)&fileId, clnt); /* asynchronous send */
     if (clnt_stat(clnt) != RPC_TIMEDOUT) {
@@ -513,22 +531,21 @@ startRequester(
     do {
         VcmtpFileId    fileId;
 
-        if (fiq_remove(down7->reqQ, &fileId)) {
-            status = LDM7_CANCELED;
-        }
-        else {
-            status = request(down7, fileId);
-        }
+        status = fiq_remove(down7->reqQ, &fileId)
+            ? LDM7_CANCELED
+            : request(down7, fileId);
     } while (status == 0);
 
     taskExit(down7, status);
 
-    return (void*)status; // Eclipse IDE wants to see this
+    return (void*)status; // Eclipse IDE wants to see a return
 }
 
 /**
- * Cleanly stops an executing task that's requesting data-products that were
- * missed by the multicast receiver.
+ * Cleanly stops the executing task of a downstream LDM-7 that's requesting
+ * data-products that were missed by the multicast receiver by canceling the
+ * queue of missed files and shutting down the socket to the remote LDM-7 for
+ * writing.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 whose requesting task is
  *                   to be stopped.
@@ -537,7 +554,8 @@ static void
 stopRequester(
     Down7* const down7)
 {
-    // TODO
+    (void)fiq_cancel(down7->reqQ);
+    (void)shutdown(down7->sock, SHUT_WR);
 }
 
 /**
@@ -593,7 +611,8 @@ startReceiver(
 
 /**
  * Cleanly stops an executing task that's receiving data-products that were
- * missed by the multicast receiver.
+ * missed by the multicast receiver by shutting down the socket to the remote
+ * LDM-7 for reading.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 whose receiving task is to
  *                   be stopped.
@@ -602,7 +621,7 @@ static void
 stopReceiver(
     Down7* const down7)
 {
-    // TODO
+    (void)shutdown(down7->sock, SHUT_RD);
 }
 
 /**
@@ -636,7 +655,8 @@ startMcaster(
 }
 
 /**
- * Terminates all tasks of a downstream LDM-7.
+ * Terminates all tasks of a downstream LDM-7. Undefined behavior results if
+ * called from a signal handler.
  *
  * @param[in] down7  Pointer to the downstream LDM-7.
  * @return           The status of the first task to exit.
@@ -695,19 +715,24 @@ startTasks(
  * terminates or the downstream LDM-7 is canceled, then terminates all remaining
  * tasks and returns.
  *
- * @param[in] down7  Pointer to the downstream LDM-7.
- * @return           The status of the first task to exit.
+ * @param[in] down7          Pointer to the downstream LDM-7.
+ * @retval    LDM7_CANCELED  The downstream LDM-7 was canceled.
+ * @return                   The status of the first task to exit.
  */
 static int
 waitOnTasks(
     Down7* const down7)
 {
+    int status;
+
     lockWait(down7);
     while (!down7->canceled && !down7->taskExited)
         pthread_cond_wait(&down7->waitCond, &down7->waitMutex);
     unlockWait(down7);
 
-    return terminateTasks(down7);
+    status = terminateTasks(down7);
+
+    return down7->canceled ? LDM7_CANCELED : status;
 }
 
 /**
@@ -716,7 +741,9 @@ waitOnTasks(
  *
  * @param[in] down7            Pointer to the downstream LDM-7.
  * @retval    LDM7_SYSTEM      System error. \c log_add() called.
- * @return                     The status of the first task to exit.
+ * @retval    LDM7_CANCELED    The downstream LDM-7 was canceled.
+ * @retval    LDM7_RPC         RPC error. \c log_add() called.
+ * @retval    LDM7_TIMEDOUT    A timeout occurred. `log_add()` called.
  */
 static int
 execute(
@@ -736,7 +763,7 @@ execute(
 
 /**
  * Subscribes a downstream LDM-7 to a multicast group and receives the data.
- * Blocks until the LDM-7 is canceled or an unrecoverable error occurs.
+ * Blocks until the LDM-7 is canceled or an error occurs.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    LDM7_CANCELED  LDM-7 was canceled.
@@ -746,7 +773,6 @@ execute(
  * @retval    LDM7_INVAL     Invalid multicast group name.
  * @retval    LDM7_UNAUTH    Not authorized to receive multicast group.
  * @retval    LDM7_SYSTEM    System error. \c log_add() called.
- * @return                   The status of the first task to exit.
  */
 static int
 subscribeAndExecute(
@@ -755,7 +781,7 @@ subscribeAndExecute(
     int                status;
     SubscriptionReply* reply;
 
-    lockClient(down7);
+    (void)lockClient(down7);
     reply = subscribe_7(down7->mcastName, down7->clnt);
 
     if (reply == NULL) {
@@ -784,7 +810,7 @@ subscribeAndExecute(
 
 /**
  * Executes a downstream LDM-7. Blocks until the LDM-7 is canceled or an
- * unrecoverable error occurs.
+ * error occurs.
  *
  * @param[in] down7          Pointer to the downstream LDM-7 to be executed.
  * @retval    LDM7_CANCELED  LDM-7 was canceled.
@@ -799,7 +825,6 @@ subscribeAndExecute(
  * @retval    LDM7_INVAL     Invalid multicast group name. `log_add()` called.
  * @retval    LDM7_UNAUTH    Not authorized to receive multicast group.
  *                           `log_add()` called.
- * @return                   The status of the first task to exit.
  */
 static int
 runDown7Once(
@@ -818,18 +843,21 @@ runDown7Once(
 }
 
 /**
- * Waits a short time for cancellation of a downstream LDM-7.
+ * Waits a short time. Blocks until the time period is up or the downstream
+ * LDM-7 is canceled.
  *
- * @param[in] down7  Pointer to the downstream LDM-7.
+ * @param[in] down7          Pointer to the downstream LDM-7.
+ * @retval    0              Timeout occurred.
+ * @retval    LDM7_CANCELED  The downstream LDM-7 was canceled.
  */
-static void
-waitAwhileForCancellation(
+static int
+nap(
     Down7* const down7)
 {
     struct timespec absTime;
 
-    absTime.tv_nsec = 0;
     absTime.tv_sec = time(NULL) + 60; // a time in the future
+    absTime.tv_nsec = 0;
 
     lockWait(down7);
     while (!down7->canceled) {
@@ -838,6 +866,39 @@ waitAwhileForCancellation(
             break;
     }
     unlockWait(down7);
+
+    return down7->canceled ? LDM7_CANCELED : 0;
+}
+
+/**
+ * Inserts a data-product into the product-queue and then unlocks the
+ * product-queue. Logs any errors directly.
+ *
+ * @param[in] pq    Pointer to the product-queue. Must be locked.
+ * @param[in] prod  Pointer to the data-product to be inserted into the product-
+ *                  queue.
+ */
+static void
+insertAndUnlock(
+    pqueue* const restrict  pq,
+    product* const restrict prod)
+{
+    int status = pq_insert(pq, prod);
+
+    (void)pq_unlock(pq);
+
+    if (status) {
+        char buf[256];
+
+        if (status == PQUEUE_DUP) {
+            uinfo("Duplicate data-product: %s",
+                s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug()));
+        }
+        else {
+            uwarn("Product too big for queue: %s",
+                s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug()));
+        }
+    }
 }
 
 /******************************************************************************
@@ -931,35 +992,35 @@ return_NULL:
  * an unrecoverable error occurs.
  *
  * @param[in] down7        Pointer to the downstream LDM-7 to be started.
- * @retval    LDM_CANCELED LDM-7 was canceled.
+ * @retval    LDM_CANCELED LDM-7 was canceled. `log_clear()` called.
  * @retval    LDM_SYSTEM   System error. `log_add()` called.
  */
 int
 dl7_start(
     Down7* const down7)
 {
-    int             status;
+    int status;
 
-    while (!down7->canceled) {
-        if ((status = runDown7Once(down7)) == LDM7_SYSTEM)
+    do {
+        status = runDown7Once(down7);
+
+        if (status == LDM7_SYSTEM || status == LDM7_CANCELED)
             break;
-        waitAwhileForCancellation(down7);
-    }
 
-    if (down7->canceled) {
+        log_log(LOG_WARNING);
+    } while ((status = nap(down7)) == 0);
+
+    if (status == LDM7_CANCELED)
         log_clear();
-        status = LDM7_CANCELED;
-    }
-    else {
-        LOG_ADD0("Couldn't start downstream LDM-7");
-    }
 
-    return status;
+    return status; // Eclipse IDE wants to see a return
 }
 
 /**
- * Processes a data-product from a remote LDM that was previously requested
- * because it was missed. Does not reply. Called by the RPC dispatcher
+ * Processes a data-product from a remote LDM-7 by attempting to add the
+ * data-product to the product-queue. The data-product should have been
+ * previously requested from the remote LDM-7 because it was missed by the
+ * multicast receiver. Does not reply. Called by the RPC dispatcher
  * `svc_getreqsock()`.
  *
  * @param[in] missedProd  Pointer to the missed data-product.
@@ -970,14 +1031,22 @@ deliver_product_7_svc(
     MissedProduct* const restrict  missedProd,
     struct svc_req* const restrict rqstp)
 {
-    /* TODO */
+    int status = pq_lock(pq);
+
+    if (status) {
+        LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
+        log_log(LOG_ERR);
+    }
+    else {
+        insertAndUnlock(pq, &missedProd->prod);
+    } // product-queue is locked
 
     return NULL; /* don't reply */
 }
 
 /**
  * Stops a downstream LDM-7 cleanly. Returns immediately. Idempotent. Undefined
- * behavior results if called by a signal handler.
+ * behavior results if called from a signal handler.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 to be stopped.
  */

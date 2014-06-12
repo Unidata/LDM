@@ -47,6 +47,9 @@ void vcmtpReceiver_free(
 int vcmtpReceiver_execute(
     const VcmtpCReceiver*       cReceiver);
 
+void vcmtpReceiver_stop(
+    VcmtpCReceiver* const       receiver);
+
 int vcmtpFileEntry_isWanted(
     const void*                 file_entry);
 

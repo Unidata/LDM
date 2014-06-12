@@ -203,6 +203,19 @@ int vcmtpReceiver_execute(
 }
 
 /**
+ * Stops a VCMTP C Receiver. Returns immediately. Undefined behavior results if
+ * called from a signal handler.
+ *
+ * @param[in] receiver  Pointer to the VCMTP C receiver to be stopped.
+ */
+void
+vcmtpReceiver_stop(
+    VcmtpCReceiver* const receiver)
+{
+    receiver->receiver->stop();
+}
+
+/**
  * Indicates if the VCMTP file is wanted or not.
  *
  * @param[in] file_entry  VCMTP file metadata.
