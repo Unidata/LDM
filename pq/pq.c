@@ -5259,7 +5259,7 @@ pq_getDataSize(
 /**
  * Locks a product-queue for access by multiple threads in the current process.
  * Blocks until the lock can be acquired. May be called multiple times by the
- * same thread but each call must eventually be paired with a corresponding call
+ * same thread but each call must eventually be undone by a corresponding call
  * to `pq_unlock()`.
  *
  * @param[in] pq        Pointer to the product-queue to be locked.
