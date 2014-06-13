@@ -213,7 +213,7 @@ feed_or_notify(
     /*
      * Remove any "signature" specification from the subscription.
      */
-    if (errObj = separateProductClass(want, &origSub, &signature)) {
+    if ((errObj = separateProductClass(want, &origSub, &signature)) != NULL) {
         err_log_and_free(errObj, ERR_FAILURE);
         svcerr_systemerr(xprt);
         goto free_down_name;
@@ -265,9 +265,10 @@ feed_or_notify(
 
     /*
      * Reduce the subscription according to existing subscriptions from the
-     * same downstream host.
-     */
-    /*
+     * same downstream host and terminate every previously-existing upstream
+     * LDM process that's feeding (not notifying) a subset of the subscription
+     * to the same IP address.
+     *
      * The following relies on atexit()-registered cleanup for removal of the
      * entry from the upstream LDM database.
      */

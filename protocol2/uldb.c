@@ -728,7 +728,7 @@ static uldb_Status entry_getProdClass(
     const EntryProdClass* const epc = &entry->prodClass;
     prod_class* pc;
 
-    if (status = epc_getEverythingButProdSpecs(epc, &pc)) {
+    if ((status = epc_getEverythingButProdSpecs(epc, &pc)) != 0) {
         LOG_ADD0("Couldn't get most of product-class from entry");
     }
     else {
@@ -741,7 +741,7 @@ static uldb_Status entry_getProdClass(
                 eps = epc_nextProdSpec(epc, eps)) {
             prod_spec prodSpec;
 
-            if (status = eps_get(eps, ps))
+            if ((status = eps_get(eps, ps)) != 0)
                 break;
 
             ps++;
@@ -965,7 +965,7 @@ static uldb_Status seg_clone(
     else {
         seg_init(copy, nbytes);
 
-        if (status = seg_copy(copy, segment)) {
+        if ((status = seg_copy(copy, segment)) != 0) {
             LOG_ADD0("Couldn't copy entries into clone-buffer");
         }
         else {
@@ -1171,10 +1171,10 @@ static uldb_Status sm_init(
 
     sm->key = key;
 
-    if (status = sm_attach(sm)) {
+    if ((status = sm_attach(sm)) != 0) {
         LOG_ADD0("Couldn't attach shared-memory segment");
     }
-    else if (status = sm_detach(sm)) {
+    else if ((status = sm_detach(sm)) != 0) {
         LOG_ADD0("Couldn't detach shared-memory segment");
     }
 
@@ -1309,7 +1309,7 @@ static uldb_Status sm_create(
          */
         sm->key = key;
 
-        if (status = sm_attach(sm)) {
+        if ((status = sm_attach(sm)) != 0) {
             LOG_ADD0("Couldn't attach shared-memory segment");
 
             (void) sm_delete(sm);
@@ -1317,7 +1317,7 @@ static uldb_Status sm_create(
         else {
             seg_init(sm->segment, nbytes);
 
-            if (status = sm_detach(sm)) {
+            if ((status = sm_detach(sm)) != 0) {
                 LOG_ADD0("Couldn't detach shared-memory segment");
             }
         }
@@ -1360,24 +1360,24 @@ static uldb_Status sm_ensureSpaceForEntry(
     else {
         Segment* clone;
 
-        if (status = seg_clone(segment, &clone)) {
+        if ((status = seg_clone(segment, &clone)) != 0) {
             LOG_ADD0("Couldn't clone shared-memory segment");
         }
         else {
-            if (status = sm_detach(sm)) {
+            if ((status = sm_detach(sm)) != 0) {
                 LOG_ADD0("Couldn't detach old shared-memory");
             }
-            else if (status = sm_delete(sm)) {
+            else if ((status = sm_delete(sm)) != 0) {
                 LOG_ADD0("Couldn't delete old shared-memory");
             }
             else {
-                if (status = sm_create(sm, sm->key, PHI * neededCapacity)) {
+                if ((status = sm_create(sm, sm->key, PHI * neededCapacity)) != 0) {
                     LOG_ADD0("Couldn't create new shared-memory segment");
                 }
-                else if (status = sm_attach(sm)) {
+                else if ((status = sm_attach(sm)) != 0) {
                     LOG_ADD0( "Couldn't attach new shared-memory segment");
                 }
-                else if (status = seg_copy(sm->segment, clone)) {
+                else if ((status = seg_copy(sm->segment, clone)) != 0) {
                     LOG_ADD0(
                             "Couldn't copy clone-buffer into new shared-memory segment");
                 }
@@ -1449,7 +1449,7 @@ static uldb_Status sm_addUpstreamLdm(
     int status;
     size_t size = entry_sizeof(prodClass);
 
-    if (status = sm_ensureSpaceForEntry(sm, size)) {
+    if ((status = sm_ensureSpaceForEntry(sm, size)) != 0) {
         LOG_ADD0("Couldn't ensure sufficient shared-memory");
     }
     else {
@@ -1461,7 +1461,10 @@ static uldb_Status sm_addUpstreamLdm(
 }
 
 /**
- * Vets an upstream LDM.
+ * Vets a new upstream LDM. Reduces the subscription according to existing
+ * subscriptions from the same downstream host and terminates every
+ * previously-existing upstream LDM process that's feeding (not notifying) a
+ * subset of the subscription to the same IP address.
  *
  * @param sm            [in/out] Pointer to shared-memory structure
  * @param myPid         [in] PID of the upstream LDM process
@@ -1547,7 +1550,10 @@ static uldb_Status sm_vetUpstreamLdm(
 
 /**
  * Adds an upstream LDM entry to shared-memory. Increases the amount of
- * shared-memory if necessary.
+ * shared-memory if necessary. Reduces the subscription according to existing
+ * subscriptions from the same downstream host and terminates every
+ * previously-existing upstream LDM process that's feeding (not notifying) a
+ * subset of the subscription to the same IP address.
  *
  * @param sm            [in/out] Pointer to shared-memory structure
  * @param pid           [in] PID of the upstream LDM process
@@ -1584,8 +1590,8 @@ static uldb_Status sm_add(
 
     if (0 == status) {
         if (0 < sub->psa.psa_len) {
-            if (status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier,
-                    isPrimary, sockAddr, sub)) {
+            if ((status = sm_addUpstreamLdm(sm, pid, protoVers, isNotifier,
+                    isPrimary, sockAddr, sub)) != 0) {
                 LOG_ADD1("Couldn't add request from %s",
                         inet_ntoa(sockAddr->sin_addr));
             }
@@ -1716,11 +1722,11 @@ static uldb_Status db_lock(
 
     if (ULDB_SUCCESS == status) {
         if (forWriting) {
-            if (status = srwl_writeLock(db->lock))
+            if ((status = srwl_writeLock(db->lock)) != 0)
                 LOG_ADD0("Couldn't lock database for writing");
         }
         else {
-            if (status = srwl_readLock(db->lock))
+            if ((status = srwl_readLock(db->lock)) != 0)
                 LOG_ADD0("Couldn't lock database for reading");
         }
 
@@ -1728,7 +1734,7 @@ static uldb_Status db_lock(
             status = ULDB_SYSTEM;
         }
         else {
-            if (status = sm_attach(&db->sharedMemory)) {
+            if ((status = sm_attach(&db->sharedMemory)) != 0) {
                 LOG_ADD0("Couldn't attach shared-memory");
                 (void) srwl_unlock(db->lock);
             }
@@ -1869,10 +1875,10 @@ static uldb_Status uldb_init(
 
     uldb_ensureModuleInitialized();
 
-    if (status = db_verifyClosed(&database)) {
+    if ((status = db_verifyClosed(&database)) != 0) {
         LOG_ADD0("Database already open");
     }
-    else if (status = uldb_getKey(path, key)) {
+    else if ((status = uldb_getKey(path, key)) != 0) {
         LOG_SERROR0("Couldn't get IPC key");
     }
 
@@ -1901,7 +1907,7 @@ uldb_Status uldb_create(
     if (status) {
         LOG_ADD0("Couldn't initialize database");
     }
-    else if (status = sm_create(&database.sharedMemory, key, capacity)) {
+    else if ((status = sm_create(&database.sharedMemory, key, capacity)) != 0) {
         LOG_ADD0("Couldn't create shared-memory component");
     }
     else if (srwl_create(key, &database.lock)) {
@@ -1936,7 +1942,7 @@ uldb_Status uldb_open(
     if (status) {
         LOG_ADD0("Couldn't initialize database");
     }
-    else if (status = sm_init(&database.sharedMemory, key)) {
+    else if ((status = sm_init(&database.sharedMemory, key)) != 0) {
         LOG_ADD0("Couldn't initialize shared-memory component");
     }
     else if (srwl_get(key, &database.lock)) {
@@ -2059,13 +2065,13 @@ uldb_Status uldb_getSize(
 
     uldb_ensureModuleInitialized();
 
-    if (status = db_readLock(&database)) {
+    if ((status = db_readLock(&database)) != 0) {
         LOG_ADD0("Couldn't lock database for reading");
     }
     else {
         *size = sm_getSize(&database.sharedMemory);
 
-        if (status = db_unlock(&database)) {
+        if ((status = db_unlock(&database)) != 0) {
             LOG_ADD0("Couldn't unlock database");
         }
     } /* database is locked */
@@ -2076,7 +2082,10 @@ uldb_Status uldb_getSize(
 /**
  * Adds an upstream LDM process to the database, if appropriate. This is a
  * potentially lengthy process. Most signals are blocked while this function
- * operates.
+ * operates. Reduces the subscription according to existing subscriptions from
+ * the same downstream host and terminates every previously-existing upstream
+ * LDM process that's feeding (not notifying) a subset of the subscription to
+ * the same IP address.
  *
  * @param pid           [in] PID of upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
@@ -2121,7 +2130,7 @@ uldb_Status uldb_addProcess(
         uldb_ensureModuleInitialized();
         cs_enter(&origSigSet);
 
-        if (status = db_writeLock(&database)) {
+        if ((status = db_writeLock(&database)) != 0) {
             LOG_ADD0("Couldn't lock database");
         }
         else {
@@ -2176,15 +2185,15 @@ uldb_Status uldb_remove(
         uldb_ensureModuleInitialized();
         cs_enter(&origSigSet);
 
-        if (status = db_writeLock(&database)) {
+        if ((status = db_writeLock(&database)) != 0) {
             LOG_ADD0("Couldn't lock database");
         }
         else {
-            if (status = sm_remove(&database.sharedMemory, pid)) {
+            if ((status = sm_remove(&database.sharedMemory, pid)) != 0) {
                 LOG_ADD0("Couldn't remove process from database");
             }
 
-            if (status = db_unlock(&database)) {
+            if ((status = db_unlock(&database)) != 0) {
                 LOG_ADD0("Couldn't unlock database");
 
                 if (ULDB_SUCCESS == status)
@@ -2231,8 +2240,8 @@ uldb_Status uldb_getIterator(
             LOG_ADD0("Couldn't lock database");
         }
         else {
-            if (status = seg_clone(database.sharedMemory.segment,
-                    &iter->segment)) {
+            if ((status = seg_clone(database.sharedMemory.segment,
+                    &iter->segment)) != 0) {
                 LOG_ADD0("Couldn't copy database");
             }
             else {
