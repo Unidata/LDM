@@ -1,9 +1,18 @@
-6.11.8	2014-06-13T12:42:52-0600
+6.11.8	2014-06-14T13:56:47-0600
     Installation:
         Improved robustness:
             * Check for CUnit package by configure(1) script;
             * Creation of "runtime" symbolic link;
             * Non-creation of LDM tutorial.
+
+    LDM server, ldmd(1):
+        Added the ability to disable the anti denial-of-service (DOS) feature
+        of the LDM server. The anti-DOS feature ensures that the data streams
+        that are beeing feed to a downstream host are disjoint by reducing
+        subscription requests from downstream LDM-s and terminating duplicate
+        upstream LDM proceses. This feature is disabled if the value of the
+        registry parameter "/server/enable-anti-denial-of-service" is "FALSE".
+        The default is to enable the feature.
 
     NOAAPORT Ingestion:
         Incorporated Raytheon's support for extracting NOAA Weather Wire

@@ -2,6 +2,7 @@
 /fooSignature_key : 0102030405060708090a0b0c0d0e0f10
 /fooTime_key : 19700101T000000.000000
 /foo_key : foo value
+/test_node/subnode/bool_key : TRUE
 /test_node/subnode/sig_key : 01000000000000000000000000000000
 /test_node/subnode/time_key : 19700101T000000.000000
 /test_node/subnode/uint_key : 5

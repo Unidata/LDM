@@ -103,6 +103,50 @@ test_regString(void)
 }
 
 static void
+test_regBool(void)
+{
+    RegStatus   status;
+    int         value;
+
+    status = reg_putBool("/fooBool_key", 0);
+    if (status) {
+        log_add("test_regBool(): Couldn't add boolean");
+        log_log(LOG_ERR);
+    }
+    else {
+        CU_ASSERT_EQUAL(status, 0);
+    }
+
+    status = reg_putBool("/fooBool_key", 1);
+    if (status) {
+        log_add("test_regBool(): Couldn't replace boolean");
+        log_log(LOG_ERR);
+    }
+    else {
+        CU_ASSERT_EQUAL(status, 0);
+    }
+
+    status = reg_getBool("/fooBool_key", &value);
+    if (status) {
+        log_add("test_regBool(): Couldn't get boolean");
+        log_log(LOG_ERR);
+    }
+    else {
+        CU_ASSERT_EQUAL(status, 0);
+        CU_ASSERT_EQUAL(value, 2);
+    }
+
+    status = reg_getBool("/barBool_key", &value);
+    if (status && ENOENT != status) {
+        log_add("test_regBool(): Couldn't put second boolean");
+        log_log(LOG_ERR);
+    }
+    else {
+        CU_ASSERT_EQUAL(status, ENOENT);
+    }
+}
+
+static void
 test_regInt(void)
 {
     RegStatus   status;
@@ -392,6 +436,7 @@ test_regNode(void)
     char*       string;
     const char* constString;
     unsigned    uint;
+    int         boolean;
     timestampt  time;
     signaturet  defSig1 = {0};
     signaturet  defSig2 = {1};
@@ -440,6 +485,34 @@ test_regNode(void)
         CU_ASSERT_EQUAL(status, 0);
         CU_ASSERT_STRING_EQUAL(string, "string value");
         free(string);
+    }
+
+    status = reg_getNodeBool(subnode, "bool_key", &boolean);
+    if (status && ENOENT != status) {
+        log_add("test_regNode(): Couldn't verify non-existant subnode boolean");
+        log_log(LOG_ERR);
+    }
+    else {
+        CU_ASSERT_EQUAL(status, ENOENT);
+    }
+
+    status = reg_putNodeBool(subnode, "bool_key", 1);
+    if (0 != status) {
+        log_add("test_regNode(): Couldn't put subnode boolean");
+        log_log(LOG_ERR);
+    }
+    else {
+        CU_ASSERT_EQUAL(status, 0);
+    }
+
+    status = reg_getNodeBool(subnode, "bool_key", &boolean);
+    if (status) {
+        log_add("test_regNode(): Couldn't get subnode boolean");
+        log_log(LOG_ERR);
+    }
+    else {
+        CU_ASSERT_EQUAL(status, 0);
+        CU_ASSERT_EQUAL(boolean, 1);
     }
 
     status = reg_getNodeUint(subnode, "uint_key", &uint);

@@ -39,9 +39,10 @@ static void printUsage(const char* progname)
 "  Reset Registry:      %s [-v|-x] [-d dir] -R\n"
 "  Print Parameters:    %s [-v|-x] [-d dir] [-q] [path ...]\n"
 "  Remove Parameter(s): %s [-v|-x] [-d dir] [-q] -r path ...\n"
-"  Set Parameter:       %s [-v|-x] [-d dir] (-h sig|-s string|-t time|-u uint) "
+"  Set Parameter:       %s [-v|-x] [-d dir] (-h sig|-s string|-t time|-u uint|-b bool) "
     "valpath\n"
 "Where:\n"
+"  -b bool      Boolean registry value: TRUE, FALSE\n"
 "  -d dir       Path name of registry directory. Default=\"%s\"\n"
 "  -h sig       Data-product signature as 32 hexadecimal characters\n"
 "  -q           Be quiet about missing values or nodes\n"
@@ -384,6 +385,7 @@ int main(
             UNKNOWN,
             CREATE,
             PRINT,
+            PUT_BOOL,
             PUT_STRING,
             PUT_UINT,
             PUT_SIGNATURE,
@@ -395,6 +397,7 @@ int main(
         signaturet      signature;
         timestampt      timestamp;
         unsigned long   uint;
+        int             boolean;
         int             ch;
         int             quiet = 0;
 
@@ -403,6 +406,26 @@ int main(
         while (0 == status && (ch = getopt(argc, argv, ":cd:h:qRrs:t:u:vx"))
                 != -1) {
             switch (ch) {
+            case 'b': {
+                if (strcasecmp(optarg, "TRUE") == 0) {
+                    boolean = 1;
+                }
+                else if (strcasecmp(optarg, "FALSE") == 0) {
+                    boolean = 0;
+                }
+                else {
+                    LOG_START1("Not a boolean value: \"%s\"", optarg);
+                    status = COMMAND_SYNTAX;
+                }
+
+                if (status == 0) {
+                    if (CREATE == usage) {
+                        LOG_START0("Create option ignored");
+                        log_log(LOG_INFO);
+                    }
+                    usage = PUT_BOOL;
+                }
+            }
             case 'c': {
                 if (UNKNOWN != usage) {
                     LOG_START0("Can't mix create action with other actions");
@@ -595,6 +618,9 @@ int main(
                     }
                     else {
                         switch (usage) {
+                        case PUT_BOOL:
+                            status = reg_putBool(argv[optind], boolean);
+                            break;
                         case PUT_UINT:
                             status = reg_putUint(argv[optind], uint);
                             break;

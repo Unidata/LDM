@@ -1575,18 +1575,26 @@ static uldb_Status sm_vetUpstreamLdm(
  * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_add(
-        SharedMemory* const sm,
-        const pid_t pid,
-        const int protoVers,
-        const int isNotifier,
-        const int isPrimary,
-        const struct sockaddr_in* sockAddr,
-        const prod_class* const desired,
-        prod_class** const allowed)
+    SharedMemory* const restrict       sm,
+    const pid_t                        pid,
+    const int                          protoVers,
+    const int                          isNotifier,
+    const int                          isPrimary,
+    const struct sockaddr_in* restrict sockAddr,
+    const prod_class* const restrict   desired,
+    prod_class** const restrict        allowed)
 {
+    int         status;
     prod_class* sub;
-    int         status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier,
-            isPrimary, sockAddr, desired, &sub);
+
+    if (isAntiDosEnabled()) {
+        status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier, isPrimary,
+                sockAddr, desired, &sub);
+    }
+    else if ((sub = dup_prod_class(desired)) == NULL) {
+        LOG_ADD0("Couldn't duplicate desired subscription");
+        status = ULDB_SYSTEM;
+    }
 
     if (0 == status) {
         if (0 < sub->psa.psa_len) {

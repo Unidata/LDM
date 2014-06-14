@@ -392,3 +392,41 @@ const char* getRegistryDirPath(void)
 {
     return getSysConfDirPath();
 }
+
+/**
+ * Indicates whether or not the anti-denial-of-service attack feature is
+ * enabled.
+ *
+ * @retval 0  The feature is disabled.
+ * @retval 1  The feature is enabled.
+ */
+int
+isAntiDosEnabled(void)
+{
+    static int isEnabled;
+    static int isSet = 0;
+
+    if (!isSet) {
+        const char*    parName = "/server/enable-anti-denial-of-service";
+        int            status = reg_getBool(parName, &isEnabled);
+
+        if (status) {
+            isEnabled = 1;
+            LOG_ADD1("Couldn't get value of anti-denial-of-service registry "
+                    "parameter \"%s\"", parName);
+            LOG_ADD0("Using default value: TRUE");
+            if (status == ENOENT) {
+                log_log(LOG_WARNING);
+                isSet = 1;
+            }
+            else {
+                log_log(LOG_ERR);
+            }
+        }
+        else {
+            isSet = 1;
+        }
+    }
+
+    return isEnabled;
+}

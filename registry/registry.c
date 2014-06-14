@@ -60,6 +60,7 @@ typedef RegStatus (*Formatter)(const void* value, StringBuf* strBuf);
 typedef enum {
     /* Start with 0 to enable use as an index: */
     REG_STRING = 0,
+    REG_BOOL,
     REG_UINT,
     REG_TIME,
     REG_SIGNATURE,
@@ -239,6 +240,75 @@ static RegStatus formatString(
 }
 
 /*
+ * Parses a string into a boolean.
+ *
+ * Arguments:
+ *      string          Pointer to the string to be parsed.  Shall not be NULL.
+ *      value           Pointer to the value.  Shall not be NULL.
+ * Returns:
+ *      0               Success
+ *      EILSEQ          The string doesn't represent a boolean.
+ *                      "log_start()" called.
+ */
+static RegStatus parseBool(
+    const char* const   string,
+    void* const         value)
+{
+    RegStatus           status;
+
+    if (strcasecmp(string, "TRUE") == 0 || strcasecmp(string, "YES") == 0 ||
+            strcasecmp(string, "AFIRMATIVE") == 0) {
+        *(int*)value = 1;
+    }
+    else {
+        if (strcasecmp(string, "FALSE") == 0 || strcasecmp(string, "NO") == 0 ||
+                strcasecmp(string, "NEGATIVE") == 0) {
+            *(int*)value = 0;
+        }
+        else {
+            char* end;
+            int   val;
+
+            errno = 0;
+            val = strtol(string, &end, 0);
+
+            if (0 != *end || (0 == val && 0 != errno)) {
+                LOG_ADD1("Not a boolean: \"%s\"", string);
+                status = EILSEQ;
+            }
+            else {
+                *(int*)value = val != 0;
+                status = 0;
+            }
+        }
+    }
+
+    return status;
+}
+
+/*
+ * Formats a boolean into a string.
+ *
+ * Arguments:
+ *      value           Pointer to the boolean to be formatted
+ *      strBuf          Pointer to a string-buffer to receive the formatted
+ *                      representation of the value.  Shall not be NULL.
+ * Returns:
+ *      0               Success.  "*value" is not NULL.
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+static RegStatus formatBool(
+    const void* const   value,
+    StringBuf* const    strBuf)
+{
+    static char buf[6];
+
+    (void)snprintf(buf, sizeof(buf)-1, "%s", *(int*)value ? "TRUE" : "FALSE");
+
+    return sb_set(strBuf, buf, NULL);
+}
+
+/*
  * Parses a string into an unsigned integer.
  *
  * Arguments:
@@ -397,6 +467,7 @@ static RegStatus formatSignature(
 }
 
 static const TypeStruct  stringStruct = {parseString, formatString};
+static const TypeStruct  boolStruct = {parseBool, formatBool};
 static const TypeStruct  uintStruct = {parseUint, formatUint};
 static const TypeStruct  timeStruct = {parseTime, formatTime};
 static const TypeStruct  signatureStruct = {parseSignature, formatSignature};
@@ -998,6 +1069,30 @@ RegStatus reg_getString(
 }
 
 /*
+ * Returns a value from the registry as a boolean.
+ *
+ * Arguments:
+ *      path            Pointer to the absolute path name of the value to be
+ *                      returned.  Shall not be NULL. Shall not contain a space.
+ *      value           Pointer to memory to hold the value.  Shall not be
+ *                      NULL.
+ * Returns:
+ *      0               Success.  Value found and put in "*value".
+ *      ENOENT          No such value.  "log_start()" called.
+ *      EINVAL          The path name isn't absolute.  "log_start()" called.
+ *      EINVAL          "path" contains a space.
+ *      EILSEQ          The value found isn't a boolean. "log_start()" called.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ */
+RegStatus reg_getBool(
+    const char* const   path,
+    unsigned* const     value)
+{
+    return getValue(path, value,  &boolStruct);
+}
+
+/*
  * Returns a value from the registry as an unsigned integer.
  *
  * Arguments:
@@ -1070,6 +1165,32 @@ RegStatus reg_getSignature(
     signaturet* const           value)
 {
     return getValue(path, value, &signatureStruct);
+}
+
+/*
+ * Puts a boolean value into the registry.
+ *
+ * Arguments:
+ *      path            Pointer to the absolute path name of the value.  Shall
+ *                      not be NULL.  Ancestral nodes are created if they
+ *                      don't exist. Shall not contain a space.
+ *      value           The value to be written to the registry.
+ * Returns:
+ *      0               Success.
+ *      EINVAL          "path" contains a space.
+ *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          A node or value would have to be created with the same
+ *                      absolute path name as an existing value or node.
+ *                      "log_start()" called.
+ */
+RegStatus reg_putBool(
+    const char* const   path,
+    const int           value)
+{
+    udebug("Putting boolean %s into \"%s\"", value ? "TRUE" : "FALSE", path);
+
+    return putValue(path, &value, &boolStruct);
 }
 
 /*
@@ -1395,6 +1516,30 @@ RegStatus reg_putNodeString(
 }
 
 /*
+ * Adds a boolean value to a node.
+ *
+ * Arguments:
+ *      node            Pointer to the parent node.  Shall not be NULL.
+ *      name            Pointer to the name of the value-node.  Shall not be
+ *                      NULL.  The client may free upon return. Shall not
+ *                      contain a space.
+ *      value           The boolean value
+ * Returns:
+ *      0               Success
+ *      EINVAL          "path" contains a space.
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EEXIST          The value would have the same absolute path name as an
+ *                      existing node.  "log_start()" called.
+ */
+RegStatus reg_putNodeBool(
+    RegNode*            node,
+    const char*         name,
+    int                 value)
+{
+    return putNodeValue(node, name, &value, &boolStruct);
+}
+
+/*
  * Adds an unsigned integer value to a node.
  *
  * Arguments:
@@ -1493,6 +1638,32 @@ RegStatus reg_getNodeString(
     char** const                value)
 {
     return getNodeValue(node, name, value, &stringStruct);
+}
+
+/*
+ * Returns an boolean value of a node.
+ *
+ * Arguments:
+ *      node            Pointer to the node whose value is to be returned.
+ *                      Shall not be NULL.
+ *      name            Pointer to the name of the value.  Shall not be NULL.
+ *                      Shall not contain a space.
+ *      value           Pointer to an integer.  Set upon success.
+ *                      Shall not be NULL.
+ * Returns:
+ *      0               Success.  "*value" is set.
+ *      EINVAL          "path" contains a space.
+ *      ENOENT          No such value
+ *      ENOMEM          System error.  "log_start()" called.
+ *      EILSEQ          The value isn't a boolean.  "log_start()"
+ *                      called.
+ */
+RegStatus reg_getNodeBool(
+    const RegNode* const        node,
+    const char* const           name,
+    int* const                  value)
+{
+    return getNodeValue(node, name, value, &boolStruct);
 }
 
 /*
