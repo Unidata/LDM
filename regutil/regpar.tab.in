@@ -30,5 +30,6 @@ MAX_CLIENTS:/server/max-clients:The maximum number of remotely-initiated connect
 MAX_LATENCY:/server/max-latency:The maximum acceptible <a href="glindex.html#data-product latency">data-product latency</a> in seconds.  Arriving data-products with greater latency will be discarded.  This also defines the <a href="glindex.html#minimum virtual residence time">minimum virtual residence time</a> for detecting duplicate data-products.:3600:max_latency
 PORT:/server/port:The number of the port on which the LDM server should listen for incoming connections.:388:port
 TIME_OFFSET:/server/time-offset:A cold-started LDM server will request data from this many seconds ago.:3600:offset
+ANTI_DOS:/server/enable-anti-DOS:Whether or not to enable the anti-denial-of-service feature, which ensures non-overlapping feeds to each downstream host.:TRUE
 SURFQUEUE_PATH:/surf-queue/path:The pathname of the <tt>pqsurf(1)</tt> product-queue.  The default is set by the <tt>configure(1)</tt> script.:@QUEUE_DIR@/pqsurf.pq
 SURFQUEUE_SIZE:/surf-queue/size:The size of the <a href="glindex.html#pqsurf">pqsurf</a> queue in bytes.  The suffixes <tt>K</tt>, <tt>M</tt>, and <tt>G</tt> may be used for multiplying by 1e3, 1e6, and 1e9, respectively.:2M:surf_size

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011, University Corporation for Atmospheric Research
+ *   Copyright 2014, University Corporation for Atmospheric Research
  *
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
@@ -407,13 +407,12 @@ isAntiDosEnabled(void)
     static int isSet = 0;
 
     if (!isSet) {
-        const char*    parName = "/server/enable-anti-DOS";
-        int            status = reg_getBool(parName, &isEnabled);
+        int status = reg_getBool(REG_ANTI_DOS, &isEnabled);
 
         if (status) {
             isEnabled = 1;
             LOG_ADD1("Couldn't get value of anti-denial-of-service registry "
-                    "parameter \"%s\"", parName);
+                    "parameter \"%s\"", REG_ANTI_DOS);
             LOG_ADD0("Using default value: TRUE");
             if (status == ENOENT) {
                 log_log(LOG_WARNING);
