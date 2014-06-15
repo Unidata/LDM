@@ -72,3 +72,25 @@ stringBuf.h:	$(srcdir)/stringBuf.hin $(srcdir)/stringBuf.c
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
+
+if HAVE_CUNIT
+check_PROGRAMS		= testRegistry
+testRegistry_CPPFLAGS	= \
+    -I$(top_srcdir) \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
+    -I$(top_srcdir)/ulog \
+    @CPPFLAGS_CUNIT@
+
+testRegistry_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+
+TESTS			= testRegistry
+
+debug:		testRegistry
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb testRegistry
+
+valgrind:	testRegistry
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./testRegistry
+endif

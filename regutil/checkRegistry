@@ -1,7 +1,7 @@
 regdir=/tmp/testRegistry
 rm -rf $regdir
 echo "Testing registry library..."
-if ! ./testRegistry; then
+if ! ../registry/testRegistry; then
     echo 1>&2 "Failure testing library"
     status=1
 else

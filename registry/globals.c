@@ -385,7 +385,7 @@ const char* getSysConfDirPath(void)
  * Returns the pathname of the registry directory.
  *
  * Returns:
- *      else            Pointer to the pathname.  Might be absolute or relative
+ *      else            Pointer to the pathname. Might be absolute or relative
  *                      to the current working directory.
  */
 const char* getRegistryDirPath(void)
@@ -407,7 +407,7 @@ isAntiDosEnabled(void)
     static int isSet = 0;
 
     if (!isSet) {
-        const char*    parName = "/server/enable-anti-denial-of-service";
+        const char*    parName = "/server/enable-anti-DOS";
         int            status = reg_getBool(parName, &isEnabled);
 
         if (status) {
