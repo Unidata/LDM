@@ -58,6 +58,15 @@ additional information">
       and indicates what 
       <a href="glindex.html#data-product">data-product</a>s it
       is allowed to receive.
+      
+  <dt><a name="anti-DOS">anti-DOS feature</a>
+  <dd>A feature of the LDM that mitigates deliberate or accidental
+      denial-of-service attacks by ensuring non-overlapping feeds to every
+      downstream host. This feature is enabled by default but can be disabled
+      through the <a href="LDM-registry.html#anti-DOS">enable-anti-DOS</a>
+      parameter of the <a href="#LDM registry">LDM registry</a>. See the
+      description of the <a href="behavior.html#upstream">behavior of an
+      upstream LDM process</a> for details.
 
     <dt> <a name="asynchronous"></a>asynchronous
     <dd> Describes something that does not

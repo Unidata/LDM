@@ -1,4 +1,4 @@
-6.11.8	2014-06-15T11:16:37-0600
+6.12.0	2014-06-16T10:24:28-0600
     Installation:
         Improved robustness:
             * Check for CUnit package by configure(1) script;
@@ -6,25 +6,24 @@
             * Non-creation of LDM tutorial.
 
     LDM server, ldmd(1):
-        Added the ability to disable the anti denial-of-service (DOS) feature
-        of the LDM server. The anti-DOS feature ensures that the data streams
-        that are beeing feed to a downstream host are disjoint by reducing
-        subscription requests from downstream LDM-s and terminating duplicate
-        upstream LDM proceses. This feature is disabled if the value of the
-        registry parameter "/server/enable-anti-DOS" is "FALSE". The feature is
-        enabled by default.
+        Added the ability to disable the anti denial-of-service (DOS) feature of
+        the LDM server. The anti-DOS feature ensures non-overlapping feeds to
+        every downstream host by reducing subscription requests from downstream
+        LDM-s and terminating duplicate upstream LDM proceses. This feature is
+        disabled if the value of the registry parameter
+        "/server/enable-anti-DOS" is "FALSE". The feature is enabled by default.
+
+        The anti-DOS feature should only be disabled by sites that know and 
+        trust *all* downstream LDM-s that the site can feed. Note that
+        accidental denial-of-service attacks have occurred (due to incorrect
+        network configuration) from trusted downstream sites.
+
+        Here's your rope, now go hang yourself. :-)
 
     NOAAPORT Ingestion:
         Incorporated Raytheon's support for extracting NOAA Weather Wire
         Service (NWWS) products from the broadcast (basically a new numbered
         datastream).
-
-    "multicast/" directory:
-        Improved beginning-of-file responses.
-
-        Made VCMTP reception of a file zero-copy: the file is read from the
-        socket directly into an allocated region in the LDM product-queue. This
-        is only possible if the VCMTP file is an XDR-encoded LDM data-product.
 
 6.11.7	2014-04-04T15:37:47-0600
     Downstream LDM:
