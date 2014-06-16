@@ -1,4 +1,4 @@
-6.12.0	2014-06-16T10:24:28-0600
+6.12.0	2014-06-16T10:48:23-0600
     Installation:
         Improved robustness:
             * Check for CUnit package by configure(1) script;
@@ -6,17 +6,17 @@
             * Non-creation of LDM tutorial.
 
     LDM server, ldmd(1):
-        Added the ability to disable the anti denial-of-service (DOS) feature of
-        the LDM server. The anti-DOS feature ensures non-overlapping feeds to
-        every downstream host by reducing subscription requests from downstream
-        LDM-s and terminating duplicate upstream LDM proceses. This feature is
-        disabled if the value of the registry parameter
-        "/server/enable-anti-DOS" is "FALSE". The feature is enabled by default.
+        Added the ability to disable the anti-denial-of-service (anti-DOS)
+        feature of upstream LDM-s. The anti-DOS feature ensures non-overlapping
+        feeds to every downstream host by reducing subscription requests from
+        downstream LDM-s and terminating duplicate upstream LDM proceses. The
+        anti-DOS feature is enabled by default. To disable it, set the value of
+        the registry parameter "/server/enable-anti-DOS" to "FALSE".
 
         The anti-DOS feature should only be disabled by sites that know and 
-        trust *all* downstream LDM-s that the site can feed. Note that
-        accidental denial-of-service attacks have occurred (due to incorrect
-        network configuration) from trusted downstream sites.
+        trust *all* downstream LDM-s that can feed from it. Note that accidental
+        denial-of-service attacks have occurred from trusted downstream sites
+        due to incorrect network configuration.
 
         Here's your rope, now go hang yourself. :-)
 
