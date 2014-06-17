@@ -303,7 +303,7 @@ static RegStatus formatBool(
 {
     static char buf[6];
 
-    (void)snprintf(buf, sizeof(buf)-1, "%s", *(int*)value ? "TRUE" : "FALSE");
+    (void)snprintf(buf, sizeof(buf), "%s", *(int*)value ? "TRUE" : "FALSE");
 
     return sb_set(strBuf, buf, NULL);
 }
@@ -359,7 +359,7 @@ static RegStatus formatUint(
 {
     static char buf[80];
 
-    (void)snprintf(buf, sizeof(buf)-1, "%u", *(unsigned*)value);
+    (void)snprintf(buf, sizeof(buf), "%u", *(unsigned*)value);
 
     return sb_set(strBuf, buf, NULL);
 }

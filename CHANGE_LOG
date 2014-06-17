@@ -1,4 +1,4 @@
-6.12.0	2014-06-16T10:48:23-0600
+6.12.0	2014-06-17T15:00:31-0600
     Installation:
         Improved robustness:
             * Check for CUnit package by configure(1) script;
@@ -9,9 +9,15 @@
         Added the ability to disable the anti-denial-of-service (anti-DOS)
         feature of upstream LDM-s. The anti-DOS feature ensures non-overlapping
         feeds to every downstream host by reducing subscription requests from
-        downstream LDM-s and terminating duplicate upstream LDM proceses. The
+        downstream LDM-s running on the same host and terminating duplicate
+        upstream LDM proceses. This action can cause problems if multiple
+        downstream hosts are behind a NAT device or are connecting via ssh(1)
+        tunnels because the downstream host will appear to be the same. The
         anti-DOS feature is enabled by default. To disable it, set the value of
-        the registry parameter "/server/enable-anti-DOS" to "FALSE".
+        the registry parameter "/server/enable-anti-DOS" to "FALSE" via the
+        command
+        
+            regutil -b FALSE /server/enable-anti-DOS
 
         The anti-DOS feature should only be disabled by sites that know and 
         trust *all* downstream LDM-s that can feed from it. Note that accidental
@@ -51,7 +57,7 @@
         Added missing manual-page precursor files to the source distribution.
 
     Misc:
-        Implemeted a continuous-delivery pipeline for the project.
+        Implemented a continuous-delivery pipeline for the project.
 
 6.11.6 	2013-06-24 17:04:55-06:00
     SUMMARY OF SIGNIFICANT CHANGES:
@@ -420,8 +426,8 @@
 
     System Logging:
         Logging library (ulog(3)):
-            Added getter functions for ulog(3) parameters to support the top-level
-            LDM server logging the reason for an EXEC failure.
+            Added getter functions for ulog(3) parameters to support the
+            top-level LDM server logging the reason for an EXEC failure.
 
         Modified how the system logging configuration-file is modified during 
         package installation:

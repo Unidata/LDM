@@ -42,7 +42,7 @@ regutil
 regutil
 .nh
 \fR[\fB-d \fIdir\fR]
-\fR(\fB-h \fIsig\fR|\fB-s \fIstring\fR|\fB-t \fItime\fR|\fB-u \fIuint\fR)
+\fR(\fB-b \fIbool\fR|\fB-h \fIsig\fR|\fB-s \fIstring\fR|\fB-t \fItime\fR|\fB-u \fIuint\fR)
 \fIvalpath\fR
 .hy
 .ft
@@ -64,10 +64,14 @@ The fourth execution form removes from the registry all
 pathname/value pairs that have one of the \fIpath\fP arguments
 as a prefix.
 .PP
-The last execution form sets a pathname/value pair in the registry.  One of
-the options \fB-h\fP, \fB-s\fP, \fB-t\fP, or \fB-u\fP must be specified.
+The last execution form sets a pathname/value pair in the registry.  One of the
+options \fB-b\fP, \fB-h\fP, \fB-s\fP, \fB-t\fP, or \fB-u\fP must be specified.
 \fIvalpath\fP is the absolute pathname of the parameter to be set.
 .SH OPTIONS
+.TP
+.BI "-b " bool
+The boolean value to which to set the parameter. One of \fBTRUE\fP, or 
+\fBFALSE\fP.
 .TP
 .BI "-c"
 Create the registry if it doesn't already exist.

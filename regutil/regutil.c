@@ -39,7 +39,7 @@ static void printUsage(const char* progname)
 "  Reset Registry:      %s [-v|-x] [-d dir] -R\n"
 "  Print Parameters:    %s [-v|-x] [-d dir] [-q] [path ...]\n"
 "  Remove Parameter(s): %s [-v|-x] [-d dir] [-q] -r path ...\n"
-"  Set Parameter:       %s [-v|-x] [-d dir] (-h sig|-s string|-t time|-u uint|-b bool) "
+"  Set Parameter:       %s [-v|-x] [-d dir] (-b bool|-h sig|-s string|-t time|-u uint) "
     "valpath\n"
 "Where:\n"
 "  -b bool      Boolean registry value: TRUE, FALSE\n"
@@ -403,7 +403,7 @@ int main(
 
         opterr = 0;                     /* supress getopt(3) error messages */
 
-        while (0 == status && (ch = getopt(argc, argv, ":cd:h:qRrs:t:u:vx"))
+        while (0 == status && (ch = getopt(argc, argv, ":b:cd:h:qRrs:t:u:vx"))
                 != -1) {
             switch (ch) {
             case 'b': {
@@ -425,6 +425,7 @@ int main(
                     }
                     usage = PUT_BOOL;
                 }
+                break;
             }
             case 'c': {
                 if (UNKNOWN != usage) {
