@@ -16,7 +16,8 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC([c99 gcc])
 if test "$GCC" = "yes"; then
     AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
-    AC_SUBST([AM_CPPFLAGS], [-std=c99]) # needed by configure script
+    CFLAGS="$CFLAGS${CFLAGS+ }-std=c99" # needed by configure script
+#    AC_SUBST([AM_CPPFLAGS], [-std=c99]) # doesn't work
 fi
 
 AC_PROG_CXX
