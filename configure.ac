@@ -11,10 +11,10 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
 
-AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance])
-AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC([c99 gcc])
 AC_PROG_CC_C99
+AC_USE_SYSTEM_EXTENSIONS
+AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance])
 #if test "$GCC" = "yes"; then
 #    AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
 #    CFLAGS="$CFLAGS${CFLAGS+ }-std=c99" # needed by configure script
