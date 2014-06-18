@@ -15,7 +15,8 @@ AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance])
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC([c99 gcc])
 if test "$GCC" = "yes"; then
-    AC_SUBST([AM_CFLAGS], [-std=c99])
+    AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
+    AC_SUBST([AM_CPPFLAGS], [-std=c99]) # needed by configure script
 fi
 
 AC_PROG_CXX
