@@ -11,10 +11,12 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
 
-: ${CC=c99}
 AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance])
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC([c99 gcc])
+if test "$GCC" = "yes"; then
+    AC_SUBST([AM_CFLAGS], [-std=c99])
+fi
 
 AC_PROG_CXX
 #if test "$GXX" = "yes"; then

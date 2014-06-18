@@ -1,9 +1,12 @@
-6.12.0	2014-06-17T15:00:31-0600
+6.12.0	2014-06-18T13:04:27-0600
     Installation:
         Improved robustness:
             * Check for CUnit package by configure(1) script;
             * Creation of "runtime" symbolic link;
             * Non-creation of LDM tutorial.
+
+        Now requires that the C compiler supports the c99 standard (GNU's
+        gcc(1) does, as should any c99(1) compiler).
 
     LDM server, ldmd(1):
         Added the ability to disable the anti-denial-of-service (anti-DOS)
