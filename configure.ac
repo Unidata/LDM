@@ -13,6 +13,9 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_PROG_CC([c99 gcc])
 AC_PROG_CC_C99
+if test "$ac_cv_prog_cc_c99" = "no"; then
+    AC_MSG_ERROR([No c99-conforming compiler found. Install one (e.g., gcc) and retry.])
+fi
 AC_USE_SYSTEM_EXTENSIONS
 AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance])
 #if test "$GCC" = "yes"; then

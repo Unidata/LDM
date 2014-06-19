@@ -1,7 +1,6 @@
 # Copies an LDM source distribution to the public download directory and ensures
 # the existence of that version's documentation on the package's website. The
-# package is built and installed in the current working directory to extract the
-# documentation.
+# package is built and installed in "/tmp/$PKG_ID" to extract the documentation.
 #
 # Usage:
 #       $0
@@ -35,7 +34,10 @@ ssh -T $SOURCE_REPO_HOST bash --login <<EOF
     done
 EOF
 
-# Make a documentation installation for copying to the website.
+# Install the package so that the documentation can be copied to the website.
+# "/tmp/$PKG_ID" is used as the installation point rather than anything under
+# the current directory because the current directory might have spaces in its
+# name and that causes problems for libtool(1).
 #
 rm -rf $PKG_ID
 pax -zr <$SOURCE_DISTRO_NAME
@@ -43,19 +45,20 @@ trap "rm -rf $PKG_ID; `trap -p EXIT`" EXIT
 cd $PKG_ID
 ./configure --prefix=$ABSPATH_DEFAULT_INSTALL_PREFIX --disable-root-actions \
         --with-noaaport >configure.log 2>&1
-rm -rf DESTDIR
-make install DESTDIR=`pwd`/DESTDIR >install.log 2>&1
+DESTDIR=/tmp/$PKG_ID
+rm -rf $DESTDIR
+make install DESTDIR=$DESTDIR >install.log 2>&1
 
-# Copy the documentation to the package's website.
+# Copy the documentation to the package's website and delete the installation.
 #
 versionWebDirTmp=$ABSPATH_VERSION_WEB_DIR.tmp
 ssh -T $WEB_HOST rm -rf $versionWebDirTmp
 trap "ssh -T $WEB_HOST rm -rf $versionWebDirTmp; `trap -p ERR`" ERR
-scp -Br DESTDIR$ABSPATH_DEFAULT_INSTALL_PREFIX/$RELPATH_DOC_DIR \
+scp -Br $DESTDIR$ABSPATH_DEFAULT_INSTALL_PREFIX/$RELPATH_DOC_DIR \
         $WEB_HOST:$versionWebDirTmp
+rm -r $DESTDIR
 
-# Ensure that the package's home-page references the just-installed
-# documentation.
+# Ensure that the package's home-page references the just-copied documentation.
 ssh -T $WEB_HOST bash --login <<EOF
     set -ex  # Exit on error
 
