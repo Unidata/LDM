@@ -11,6 +11,7 @@
 
 #include "config.h"
 
+#include "down7.h"
 #include "mcast_down.h"
 #include "ldm.h"
 #include "LdmBofResponse.h"
@@ -32,10 +33,9 @@
  * The multicast downstream LDM data-structure:
  */
 struct mdl {
-    pqueue*                 pq;             /* product-queue to use */
-    mdl_missed_product_func missed_product; /* missed-product callback function */
-    void*                   missedProdArg;  /* optional missed-product argument */
-    VcmtpCReceiver*         receiver;       /* VCMTP C Receiver */
+    pqueue*         pq;       // product-queue to use */
+    Down7*          down7;    // pointer to associated downstream LDM-7
+    VcmtpCReceiver* receiver; // VCMTP C Receiver
 };
 
 /**
@@ -79,8 +79,8 @@ unlockPq(
 }
 
 /**
- * Allocates space in a product-queue for a VCMTP file and sets the
- * beginning-of-file response in a VCMTP file-entry.
+ * Allocates space in a product-queue for a VCMTP file if it's not a duplicate
+ * and sets the beginning-of-file response in a VCMTP file-entry.
  *
  * @param[in] mdl         Pointer to the multicast downstream LDM.
  * @param[in] name        The name of the VCMTP file.
@@ -88,8 +88,9 @@ unlockPq(
  * @param[in] signature   The MD5 checksum of the LDM data-product.
  * @param[in] file_entry  The corresponding VCMTP file-entry.
  * @retval    0           Success or the data-product is already in the LDM
- *                        product-queue.
- * @retval    -1          Failure. \c log_add() called.
+ *                        product-queue. BOF-response set.
+ * @retval    -1          Failure. \c log_add() called. BOF-response set to
+ *                        ignore the file.
  */
 static int
 allocateSpaceAndSetBofResponse(
@@ -105,12 +106,17 @@ allocateSpaceAndSetBofResponse(
 
     if (lockPq(mdl)) {
         LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
+        vcmtpFileEntry_setBofResponseToIgnore(file_entry);
         status = -1;
     }
     else {
-        if ((status = pqe_newDirect(mdl->pq, size, signature, &buf, &index)) != 0) {
+        status = pqe_newDirect(mdl->pq, size, signature, &buf, &index);
+        (void)unlockPq(mdl);
+
+        if (status) {
+            vcmtpFileEntry_setBofResponseToIgnore(file_entry);
+
             if (status == PQUEUE_DUP) {
-                vcmtpFileEntry_setBofResponseToIgnore(file_entry);
                 status = 0;
             }
             else {
@@ -124,8 +130,6 @@ allocateSpaceAndSetBofResponse(
                     ldmBofResponse_new(buf, size, &index));
             status = 0;
         } /* region allocated in product-queue */
-
-        (void)unlockPq(mdl);
     } // product-queue locked
 
     return status;
@@ -175,19 +179,66 @@ bof_func(
 }
 
 /**
+ * Finishes inserting a data-product into the allocated product-queue region
+ * associated with a multicast downstream LDM or discards the region.
+ *
+ * @param[in] mdl    Pointer to the multicast downstream LDM.
+ * @param[in] index  Pointer to the allocated region.
+ * @retval    0      Success.
+ * @retval    -1     Error. `log_add()` called.
+ */
+static int
+insertOrDiscard(
+    Mdl* const restrict             mdl,
+    const pqe_index* const restrict index)
+{
+    int status;
+
+    lockPq(mdl);
+    if ((status = pqe_insert(mdl->pq, *index)) != 0)
+        (void)pqe_discard(mdl->pq, *index);
+    unlockPq(mdl);
+
+    if (status) {
+        LOG_ADD("Couldn't insert data-product into product-queue: status=%d",
+                status);
+        status = -1;
+    }
+
+    return status;
+}
+
+/**
+ * Tracks the last data-product to be successfully received.
+ *
+ * @param[in] mdl   Pointer to the multicast downstream LDM.
+ * @param[in] info  Pointer to the metadata of the last data-product to be
+ *                  successfully received. Caller may free when it's no longer
+ *                  needed.
+ */
+inline static void
+lastReceived(
+    Mdl* const restrict             mdl,
+    const prod_info* const restrict info)
+{
+    dl7_lastReceived(mdl->down7, info);
+}
+
+/**
  * Finishes inserting a received VCMTP file into an LDM product-queue as an LDM
  * data-product.
  *
  * @param[in] mdl          Pointer to the multicast downstream LDM.
  * @param[in] index        Index of the allocated region in the product-queue.
- * @param[in] info         LDM data-product metadata.
- * @param[in] dataSize     Actual size of the data portion in bytes.
- * @return    0            Success.
- * @return    -1           Error. \c log_add() called. The allocated region in
+ * @param[in] info         LDM data-product metadata. Caller may free when it
+ *                         is no longer needed.
+ * @param[in] dataSize     Actual number of bytes received.
+ * @retval    0            Success.
+ * @retval    -1           Error. \c log_add() called. The allocated region in
  *                         the product-queue was released.
  */
 static int
-insertFileAsProduct(
+finishInsertion(
     Mdl* const restrict             mdl,
     const pqe_index* const restrict index,
     const prod_info* const restrict info,
@@ -205,14 +256,15 @@ insertFileAsProduct(
         unlockPq(mdl);
     }
     else {
-        lockPq(mdl);
-        if ((status = pqe_insert(mdl->pq, *index)) != 0) {
-            LOG_ADD3("Couldn't finish inserting %u-byte data-product \"%s\" into "
-                    "product-queue: status=%d", info->sz, info->ident, status);
-            status = -1;
-            (void)pqe_discard(mdl->pq, *index);
+        status = insertOrDiscard(mdl, index);
+
+        if (status) {
+            LOG_ADD("Couldn't finish inserting %u-byte data-product \"%s\"",
+                    info->sz, info->ident);
         }
-        unlockPq(mdl);
+        else {
+            lastReceived(mdl, info);
+        }
     }
     return status;
 }
@@ -263,10 +315,8 @@ eof_func(
             unlockPq(mdl);
         }
         else {
-            lockPq(mdl);
-            status = insertFileAsProduct(mdl, index, &info,
+            status = finishInsertion(mdl, index, &info,
                     fileSize-(xdrs.x_private-xdrs.x_base));
-            unlockPq(mdl);
             xdr_free(xdr_prod_info, (char*)&info);
         } /* "info" allocated */
     } /* region in product-queue was allocated */
@@ -276,7 +326,8 @@ eof_func(
 
 /**
  * Accepts notification from the VCMTP layer of the missed reception of a
- * file. Queues the file for reception by other means. Returns immediately.
+ * file. Queues the file for reception by other means. This function must and
+ * does return immediately.
  *
  * @param[in,out]  obj          Pointer to the associated multicast downstream
  *                              LDM object.
@@ -287,9 +338,7 @@ missed_file_func(
     void*               obj,
     const VcmtpFileId   fileId)
 {
-    Mdl* const mdl = (Mdl*)obj;
-
-    mdl->missed_product(fileId, mdl->missedProdArg);
+    dl7_missedProduct(((Mdl*)obj)->down7, fileId);
 }
 
 /**
@@ -298,8 +347,7 @@ missed_file_func(
  * @param[out] mdl            The multicast downstream LDM to initialize.
  * @param[in]  pq             The product-queue to use.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
- * @param[in]  missed_product Missed-product callback function.
- * @param[in]  arg            Optional argument to pass to \c missed_product.
+ * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. \c log_add() called.
  * @retval     LDM7_INVAL     @code{pq == NULL || missed_product == NULL ||
@@ -311,8 +359,7 @@ init(
     Mdl* const restrict                  mdl,
     pqueue* const restrict               pq,
     const McastGroupInfo* const restrict mcastInfo,
-    const mdl_missed_product_func        missed_product,
-    void* const restrict                 arg)
+    Down7* const restrict                down7)
 {
     int                 status;
     VcmtpCReceiver*     receiver;
@@ -325,12 +372,12 @@ init(
         LOG_ADD0("NULL product-queue argument");
         return LDM7_INVAL;
     }
-    if (missed_product == NULL) {
-        LOG_ADD0("NULL missed-product-function argument");
-        return LDM7_INVAL;
-    }
     if (mcastInfo == NULL) {
         LOG_ADD0("NULL multicast-group-information argument");
+        return LDM7_INVAL;
+    }
+    if (down7 == NULL) {
+        LOG_ADD0("NULL downstream LDM-7 argument");
         return LDM7_INVAL;
     }
 
@@ -344,8 +391,7 @@ init(
 
     mdl->receiver = receiver;
     mdl->pq = pq;
-    mdl->missed_product = missed_product;
-    mdl->missedProdArg = arg;
+    mdl->down7 = down7;
 
     return 0;
 }
@@ -359,9 +405,7 @@ init(
  *
  * @param[in]  pq             The product-queue to use.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
- * @param[in]  missed_product Missed-product callback function.
- * @param[in]  arg            Optional pointer to an object to be passed to \c
- *                            missed_product().
+ * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     NULL           Failure. `log_add()` called.
  * @return                    Pointer to a new multicast downstream LDM object.
  *                            The caller should call `ldm_free()` when it's no
@@ -371,13 +415,12 @@ Mdl*
 mdl_new(
     pqueue* const restrict               pq,
     const McastGroupInfo* const restrict mcastInfo,
-    const mdl_missed_product_func        missed_product,
-    void* const                          arg)
+    Down7* const restrict                down7)
 {
     Mdl* mdl = LOG_MALLOC(sizeof(Mdl), "multicast downstream LDM object");
 
     if (mdl) {
-        if (init(mdl, pq, mcastInfo, missed_product, arg)) {
+        if (init(mdl, pq, mcastInfo, down7)) {
             LOG_ADD0("Couldn't initialize multicast downstream LDM");
             free(mdl);
             mdl = NULL;

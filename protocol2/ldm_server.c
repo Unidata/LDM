@@ -705,6 +705,25 @@ request_product_7_svc(
 }
 
 /**
+ * Processes a request for the backlog of data-products that were missed by a
+ * remote LDM due to the ending of a session and the starting of another.
+ * Does not reply.
+ *
+ * @param[in] fileId  Pointer to the specification of the backlog of
+ *                    data-products.
+ * @param[in] rqstp   Pointer to the RPC service-request.
+ */
+void*
+request_backlog_7_svc(
+    BacklogSpec* const    spec,
+    struct svc_req* const rqstp)
+{
+    /* TODO */
+
+    return NULL ; /* don't reply */
+}
+
+/**
  * Processes a no-op used for testing the connection. Does not reply.
  *
  * @param[in] rqstp   Pointer to the RPC service-request.

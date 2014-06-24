@@ -24,6 +24,7 @@
  * The type of an entry in a file-identifier queue.
  */
 typedef struct entry {
+    struct entry* prev;   /* points to the previous entry towards the head */
     struct entry* next;   /* points to the next entry towards the tail */
     VcmtpFileId   fileId; /* VCMTP identifier of the file */
 } Entry;
@@ -44,7 +45,7 @@ entry_new(
 
     if (entry) {
         entry->fileId = fileId;
-        entry->next = NULL;
+        entry->prev = entry->next = NULL;
     }
 
     return entry;
@@ -53,9 +54,9 @@ entry_new(
 /**
  * Frees an entry.
  *
- * @param[in,out] entry  Pointer to the entry to be freed.
+ * @param[in,out] entry  Pointer to the entry to be freed or NULL.
  */
-static void
+inline static void
 entry_free(
     Entry* const entry)
 {
@@ -63,19 +64,16 @@ entry_free(
 }
 
 /**
- * Finalizes an entry.
+ * Returns the file identifier of an entry.
  *
- * @param[in,out] entry   Pointer to the entry to be finalized. Not checked.
- * @param[out]    fileId  Pointer to the VCMTP file identifier to be set to the
- *                        value of the entry. Not checked.
+ * @param[in] entry  Pointer to the entry.
+ * @return           The file identifier of the entry.
  */
-static void
-entry_fin(
-    Entry* const         entry,
-    VcmtpFileId* const   fileId)
+inline static VcmtpFileId
+entry_getFileId(
+    const Entry* const entry)
 {
-    *fileId = entry->fileId;
-    entry_free(entry);
+    return entry->fileId;
 }
 
 /**
@@ -88,6 +86,141 @@ struct file_id_queue {
     pthread_cond_t  cond;
     int             isCancelled;
 };
+
+inline static void
+lock(
+    FileIdQueue* const fiq)
+{
+    (void)pthread_mutex_lock(&fiq->mutex);
+}
+
+inline static void
+unlock(
+    FileIdQueue* const fiq)
+{
+    (void)pthread_mutex_unlock(&fiq->mutex);
+}
+
+/**
+ * Adds an entry to the tail of the queue. Does nothing if the queue has been
+ * canceled. The queue must be locked.
+ *
+ * @param[in,out] fiq        Pointer to the queue. Not checked.
+ * @param[in]     tail       Pointer to the entry to be added. Not checked.
+ *                           Must have NULL "previous" and "next" pointers.
+ * @retval        0          Success.
+ * @retval        ECANCELED  The queue has been canceled.
+ */
+static int
+addTail(
+    FileIdQueue* const fiq,
+    Entry* const       tail)
+{
+    int status;
+
+    if (fiq->isCancelled) {
+        status = ECANCELED;
+    }
+    else {
+        if (fiq->head == NULL) {
+            fiq->head = fiq->tail = tail;
+        }
+        else {
+            tail->prev = fiq->tail;
+            fiq->tail->next = tail;
+            fiq->tail = tail;
+        }
+        status = 0;
+
+        (void)pthread_cond_broadcast(&fiq->cond);
+    }
+
+    return status;
+}
+
+/**
+ * Returns the entry at the head of the queue. Blocks until that entry exists or
+ * the queue is canceled. The queue must be locked.
+ *
+ * @param[in,out] fiq        Pointer to the queue. Not checked.
+ * @param[out]    entry      Pointer to the pointer to the head entry.
+ * @retval        0          Success.
+ * @retval        ECANCELED  The queue has been canceled.
+ */
+static int
+getHead(
+    FileIdQueue* const restrict fiq,
+    Entry** const restrict      entry)
+{
+    int    status;
+
+    while (fiq->head == NULL && !fiq->isCancelled)
+        pthread_cond_wait(&fiq->cond, &fiq->mutex); // cancellation point
+
+    if (fiq->isCancelled) {
+        status = ECANCELED;
+    }
+    else {
+        *entry = fiq->head;
+        status = 0;
+    }
+
+    return status;
+}
+
+/**
+ * Removes the entry at the head of the queue. If the queue is empty, then no
+ * action is performed. The queue must be locked.
+ *
+ * @param[in,out] fiq        Pointer to the queue. Not checked.
+ * @retval        NULL       The queue is empty.
+ * @return                   Pointer to what was the head entry.
+ */
+static Entry*
+removeHead(
+    FileIdQueue* const fiq)
+{
+    Entry* entry = fiq->head;
+
+    if (entry) {
+        fiq->head = entry->next;
+        if (fiq->head)
+            fiq->head->prev = NULL;
+        if (fiq->tail == entry)
+            fiq->tail = NULL;
+    }
+
+    return entry;
+}
+
+/**
+ * Removes the entry at the tail of the queue. If the queue is empty, then no
+ * action is performed. The queue must be locked.
+ *
+ * @param[in,out] fiq        Pointer to the queue. Not checked.
+ * @retval        NULL       The queue is empty.
+ * @return                   Pointer to what was the tail entry.
+ */
+static Entry*
+removeTail(
+    FileIdQueue* const fiq)
+{
+    Entry* entry = fiq->tail;
+
+    if (entry) {
+        fiq->tail = entry->prev;
+        if (fiq->tail)
+            fiq->tail->next = NULL;
+        if (fiq->head == entry)
+            fiq->head = NULL;
+    }
+
+    return entry;
+}
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
 
 /**
  * Returns a new file-identifier queue.
@@ -125,27 +258,6 @@ fiq_new(void)
     return fiq;
 }
 
-static void
-fiq_lock(
-    FileIdQueue* const fiq)
-{
-    (void)pthread_mutex_lock(&fiq->mutex);
-}
-
-static void
-fiq_unlock(
-    FileIdQueue* const fiq)
-{
-    (void)pthread_mutex_unlock(&fiq->mutex);
-}
-
-static void
-fiq_cleanup_unlock(
-    void* const arg)
-{
-    fiq_unlock((FileIdQueue*)arg);
-}
-
 /**
  * Frees a file-identifier queue. Accessing the queue after calling this function
  * results in undefined behavior.
@@ -173,83 +285,6 @@ fiq_free(
 }
 
 /**
- * Adds an entry to the tail of the queue. Does nothing if the queue has been
- * canceled.
- *
- * @param[in,out] fiq        Pointer to the queue. Not checked.
- * @param[in]     entry      Pointer to the entry to be added. Not checked.
- * @retval        0          Success.
- * @retval        ECANCELED  The queue has been canceled.
- */
-static int
-fiq_addTail(
-    FileIdQueue* const fiq,
-    Entry* const        entry)
-{
-    int status;
-
-    fiq_lock(fiq);
-    if (fiq->isCancelled) {
-        status = ECANCELED;
-    }
-    else {
-        if (!fiq->head)
-            fiq->head = entry;
-        if (fiq->tail)
-            fiq->tail->next = entry;
-        fiq->tail = entry;
-        status = 0;
-
-        (void)pthread_cond_broadcast(&fiq->cond);
-    }
-    fiq_unlock(fiq);
-
-    return status;
-}
-
-/**
- * Removes the entry at the head of the queue. Blocks until that entry exists or
- * the queue is canceled.
- *
- * This is a thread cancellation point.
- *
- * @param[in,out] fiq        Pointer to the queue. Not checked.
- * @param[out]    entry      Pointer to the pointer to what was the head entry.
- * @retval        0          Success.
- * @retval        ECANCELED  The queue has been canceled.
- */
-static int
-fiq_removeHead(
-    FileIdQueue* const fiq,
-    Entry** const      entry)
-{
-    int    status;
-
-    fiq_lock(fiq);
-    pthread_cleanup_push(fiq_cleanup_unlock, fiq); // to ensure mutex release
-
-    while (fiq->head == NULL && !fiq->isCancelled)
-        pthread_cond_wait(&fiq->cond, &fiq->mutex); // cancellation point
-
-    if (fiq->isCancelled) {
-        status = ECANCELED;
-    }
-    else {
-        Entry* ent = fiq->head;
-
-        fiq->head = ent->next;
-        if (fiq->tail == ent)
-            fiq->tail = NULL;
-        *entry = ent;
-        status = 0;
-    }
-
-    pthread_cleanup_pop(1); // releases mutex
-
-    return status;
-}
-
-/**
  * Adds a file-identifier to a queue.
  *
  * @param[in,out] fiq        Pointer to the file-identifier queue to which to
@@ -263,7 +298,7 @@ fiq_removeHead(
 int
 fiq_add(
     FileIdQueue* const fiq,
-    const VcmtpFileId   fileId)
+    const VcmtpFileId  fileId)
 {
     Entry* entry;
     int    status;
@@ -275,7 +310,9 @@ fiq_add(
     if (!entry)
         return ENOMEM;
 
-    status = fiq_addTail(fiq, entry);
+    lock(fiq);
+    status = addTail(fiq, entry);
+    unlock(fiq);
     if (status)
         entry_free(entry);
 
@@ -283,10 +320,87 @@ fiq_add(
 }
 
 /**
+ * Returns (but does not remove) the file-identifier at the head of the
+ * file-identifier queue. Blocks until such an entry is available or the queue
+ * is canceled.
+ *
+ * @param[in,out] fiq        Pointer to the file-identifier queue.
+ * @param[out]    fileId     Pointer to the VCMTP file identifier to be set to
+ *                           that of the entry.
+ * @retval        0          Success. \c *fileId is set.
+ * @retval        EINVAL     @code{fiq == NULL || fileId == NULL}.
+ * @retval        ECANCELED  Operation of the queue has been canceled.
+ */
+int
+fiq_peek(
+    FileIdQueue* const fiq,
+    VcmtpFileId* const fileId)
+{
+    if (!fiq || !fileId)
+        return EINVAL;
+
+    lock(fiq);
+
+    Entry* entry;
+    int    status = getHead(fiq, &entry);
+
+    if (status == 0)
+        *fileId = entry_getFileId(entry);
+
+    unlock(fiq);
+
+    return status;
+}
+
+/**
+ * Removes the head of the queue. If the queue is empty then no action is
+ * performed.
+ *
+ * @param[in,out] fiq        Pointer to the file-identifier queue.
+ * @retval        0          Success. \c *fileId is set.
+ * @retval        EINVAL     @code{fiq == NULL || fileId == NULL}.
+ */
+int
+fiq_removeHead(
+    FileIdQueue* const fiq)
+{
+
+    if (!fiq)
+        return EINVAL;
+
+    lock(fiq);
+    entry_free(removeHead(fiq));
+    unlock(fiq);
+
+    return 0;
+}
+
+/**
+ * Removes the tail of the queue. If the queue is empty then no action is
+ * performed.
+ *
+ * @param[in,out] fiq        Pointer to the file-identifier queue.
+ * @retval        0          Success. \c *fileId is set.
+ * @retval        EINVAL     @code{fiq == NULL || fileId == NULL}.
+ */
+int
+fiq_removeTail(
+    FileIdQueue* const fiq)
+{
+
+    if (!fiq)
+        return EINVAL;
+
+    lock(fiq);
+    entry_free(removeTail(fiq));
+    unlock(fiq);
+
+    return 0;
+}
+
+/**
  * Removes and returns the file-identifier at the head of the file-identifier
  * queue. Blocks until such an entry is available or the queue is canceled.
- *
- * This is a thread cancellation point.
  *
  * @param[in,out] fiq        Pointer to the file-identifier queue.
  * @param[out]    fileId     Pointer to the VCMTP file identifier to be set to
@@ -300,15 +414,21 @@ fiq_remove(
     FileIdQueue* const fiq,
     VcmtpFileId* const fileId)
 {
-    Entry* entry;
-    int    status;
 
     if (!fiq || !fileId)
         return EINVAL;
 
-    status = fiq_removeHead(fiq, &entry); // cancellation point
-    if (status == 0)
-        entry_fin(entry, fileId);
+    lock(fiq);
+
+    Entry* entry;
+    int    status = getHead(fiq, &entry);
+
+    if (status == 0) {
+        *fileId = entry_getFileId(entry);
+        entry_free(removeHead(fiq));
+    }
+
+    unlock(fiq);
 
     return status;
 }
@@ -327,10 +447,10 @@ fiq_cancel(
     if (!fiq)
         return EINVAL;
 
-    fiq_lock(fiq);
+    lock(fiq);
     fiq->isCancelled = 1;
     (void)pthread_cond_broadcast(&fiq->cond); // not a cancellation point
-    fiq_unlock(fiq);
+    unlock(fiq);
 
     return 0;
 }

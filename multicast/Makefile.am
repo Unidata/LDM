@@ -66,7 +66,7 @@ $(pq_stubs):		../pq/pq.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
 #check_PROGRAMS			= vcmtp_c_api_test mcast_down
-opmock_check_progs		= mcast_down_test
+#opmock_check_progs		= mcast_down_test
 test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
 # "*_stub.*" files aren't included here because all "_SOURCES" files are

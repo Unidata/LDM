@@ -711,11 +711,13 @@ program LDMPROG {
              */
             SubscriptionReply SUBSCRIBE(char* mcastName) = 1;
             void              REQUEST_PRODUCT(VcmtpFileId) = 2;
-            void              TEST_CONNECTION() = 3;
+            void              REQUEST_BACKLOG(BacklogSpec) = 3;
+            void              TEST_CONNECTION() = 4;
             /*
              * Upstream to downstream RPC messages:
              */
-            void              DELIVER_PRODUCT(MissedProduct) = 4;
+            void              DELIVER_PRODUCT(MissedProduct) = 5;
+            void              DELIVER_BACKLOG(product) = 6;
         } = 7;
 #endif
 } = LDM_PROG; /* LDM = 300029, use 0x2ffffffe for experiments */
@@ -983,6 +985,31 @@ struct MissedProduct {
      * The missed LDM data-product:
      */
     product        prod;
+};
+
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+%/*
+% * Data-product backlog specification:
+% */
+#endif
+struct BacklogSpec {
+    /*
+     * The signature of the last data-product received by the multicast
+     * downstream LDM during the previous session.
+     */
+    signaturet   after;
+    /*
+     * The signature of the first data-product received by the multicast
+     * downstream LDM during the current session.
+     */
+    signaturet   before;
+    /*
+     * The time-offset, in seconds, from the current time to go back if the
+     * "after" data-product isn't found.
+     */
+    unsigned int timeOffset;
 };
 
 

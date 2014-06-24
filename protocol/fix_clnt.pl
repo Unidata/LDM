@@ -22,7 +22,8 @@ while( <STDIN> ) {
 	$zeroTimeout = 1;
     }
 
-    if (/request_product_7/ || /deliver_product_7/ || /test_connection_7/) {
+    if (/request_product_7/ || /request_backlog_7/ || /deliver_product_7/ ||
+            /test_connection_7/) {
 	$zeroTimeout = 1;
     }
 
