@@ -259,11 +259,13 @@ static RegStatus parseBool(
     if (strcasecmp(string, "TRUE") == 0 || strcasecmp(string, "YES") == 0 ||
             strcasecmp(string, "AFIRMATIVE") == 0) {
         *(int*)value = 1;
+        status = 0;
     }
     else {
         if (strcasecmp(string, "FALSE") == 0 || strcasecmp(string, "NO") == 0 ||
                 strcasecmp(string, "NEGATIVE") == 0) {
             *(int*)value = 0;
+            status = 0;
         }
         else {
             char* end;
@@ -1089,7 +1091,7 @@ RegStatus reg_getBool(
     const char* const   path,
     unsigned* const     value)
 {
-    return getValue(path, value,  &boolStruct);
+    return getValue(path, value, &boolStruct);
 }
 
 /*

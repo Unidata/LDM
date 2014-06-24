@@ -113,37 +113,64 @@ test_regBool(void)
         log_add("test_regBool(): Couldn't add boolean");
         log_log(LOG_ERR);
     }
-    else {
-        CU_ASSERT_EQUAL(status, 0);
-    }
-
-    status = reg_putBool("/fooBool_key", 1);
-    if (status) {
-        log_add("test_regBool(): Couldn't replace boolean");
-        log_log(LOG_ERR);
-    }
-    else {
-        CU_ASSERT_EQUAL(status, 0);
-    }
+    CU_ASSERT_EQUAL(status, 0);
 
     status = reg_getBool("/fooBool_key", &value);
     if (status) {
         log_add("test_regBool(): Couldn't get boolean");
         log_log(LOG_ERR);
     }
-    else {
-        CU_ASSERT_EQUAL(status, 0);
-        CU_ASSERT_EQUAL(value, 2);
+    CU_ASSERT_EQUAL(value, 0);
+
+    status = reg_putString("/fooBool_key", "FALSE");
+    if (status) {
+        log_add("test_regBool(): Couldn't add boolean");
+        log_log(LOG_ERR);
     }
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = reg_getBool("/fooBool_key", &value);
+    if (status) {
+        log_add("test_regBool(): Couldn't get boolean");
+        log_log(LOG_ERR);
+    }
+    CU_ASSERT_EQUAL(value, 0);
+
+    status = reg_putBool("/fooBool_key", 1);
+    if (status) {
+        log_add("test_regBool(): Couldn't replace boolean");
+        log_log(LOG_ERR);
+    }
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = reg_getBool("/fooBool_key", &value);
+    if (status) {
+        log_add("test_regBool(): Couldn't get boolean");
+        log_log(LOG_ERR);
+    }
+    CU_ASSERT_EQUAL(value, 1);
+
+    status = reg_putString("/fooBool_key", "TRUE");
+    if (status) {
+        log_add("test_regBool(): Couldn't replace boolean");
+        log_log(LOG_ERR);
+    }
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = reg_getBool("/fooBool_key", &value);
+    if (status) {
+        log_add("test_regBool(): Couldn't get boolean");
+        log_log(LOG_ERR);
+    }
+    CU_ASSERT_EQUAL(value, 1);
 
     status = reg_getBool("/barBool_key", &value);
     if (status && ENOENT != status) {
-        log_add("test_regBool(): Couldn't put second boolean");
+        log_add("test_regBool(): Bad status getting non-existent boolean: %d",
+                status);
         log_log(LOG_ERR);
     }
-    else {
-        CU_ASSERT_EQUAL(status, ENOENT);
-    }
+    CU_ASSERT_EQUAL(status, ENOENT);
 }
 
 static void
@@ -765,6 +792,7 @@ main(
                     CU_ADD_TEST(testSuite, test_regMissing);
                     CU_ADD_TEST(testSuite, test_keyWithSpace);
                     CU_ADD_TEST(testSuite, test_regString);
+                    CU_ADD_TEST(testSuite, test_regBool);
                     CU_ADD_TEST(testSuite, test_regInt);
                     CU_ADD_TEST(testSuite, test_regTime);
                     CU_ADD_TEST(testSuite, test_regSignature);

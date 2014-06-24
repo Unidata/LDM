@@ -1,3 +1,4 @@
+/fooBool_key : TRUE
 /fooInt_key : 2
 /fooSignature_key : 0102030405060708090a0b0c0d0e0f10
 /fooTime_key : 19700101T000000.000000

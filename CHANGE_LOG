@@ -1,3 +1,12 @@
+6.12.1	2014-06-24T09:49:27-0600
+    LDM registry:
+        Fixed a bug in the decoding of boolean values that was introduced in
+        the previous version.
+
+    LDM server, ldmd(1):
+        The ability to disable the anti-denial-of-service (anti-DOS) feature
+        should now work.
+
 6.12.0	2014-06-19T16:11:23-0600
     Installation:
         Improved robustness:
