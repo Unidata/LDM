@@ -25,7 +25,7 @@ sed '/@FUNCTION_DECLARATIONS@/,$d' $templateFile \
     declStarted != 0 {
         lines[++lineCount] = $0;
     }
-    /static/ { 
+    /^(static|inline)/ { 
         lineCount = 0; 
         declStarted = 0; 
     }' $cFile \

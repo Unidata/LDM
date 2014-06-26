@@ -1,3 +1,9 @@
+6.12.2	2014-06-26T17:49:53-0600
+    Fixed a bug in the extraction of function declarations from C source files
+    into header files that caused the function `getSysConfDirPath()` to be
+    undeclared and, consequently, to have its `char*` return value interpreted
+    as an `int` -- with possibly catastrophic consequences on 64-bit systems.
+
 6.12.1	2014-06-24T09:50:11-0600
     LDM registry:
         Fixed a bug in the decoding of boolean values that was introduced in
