@@ -1484,19 +1484,19 @@ static uldb_Status sm_addUpstreamLdm(
  * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_vetUpstreamLdm(
-        SharedMemory* const sm,
-        const pid_t myPid,
-        const int protoVers,
-        const int isNotifier,
-        const int isPrimary,
-        const struct sockaddr_in* sockAddr,
-        const prod_class* const desired,
-        prod_class** const allowed)
+    SharedMemory* const restrict       sm,
+    const pid_t                        myPid,
+    const int                          protoVers,
+    const int                          isNotifier,
+    const int                          isPrimary,
+    const struct sockaddr_in* restrict sockAddr,
+    const prod_class* const restrict   desired,
+    prod_class** const restrict        allowed)
 {
-    int status = 0; /* success */
+    int                  status = 0; /* success */
     const Segment* const segment = sm->segment;
-    const uldb_Entry* entry;
-    prod_class_t* allow = dup_prod_class(desired);
+    const uldb_Entry*    entry;
+    prod_class_t*        allow = dup_prod_class(desired);
 
     if (NULL == allow) {
         LOG_ADD0("Couldn't duplicate desired subscription");
@@ -1591,9 +1591,14 @@ static uldb_Status sm_add(
         status = sm_vetUpstreamLdm(sm, pid, protoVers, isNotifier, isPrimary,
                 sockAddr, desired, &sub);
     }
-    else if ((sub = dup_prod_class(desired)) == NULL) {
-        LOG_ADD0("Couldn't duplicate desired subscription");
-        status = ULDB_SYSTEM;
+    else {
+        if ((sub = dup_prod_class(desired)) == NULL) {
+            LOG_ADD0("Couldn't duplicate desired subscription");
+            status = ULDB_SYSTEM;
+        }
+        else {
+            status = 0;
+        }
     }
 
     if (0 == status) {
@@ -2118,13 +2123,13 @@ uldb_Status uldb_getSize(
  * @retval ULDB_SYSTEM  System error. log_add() called.
  */
 uldb_Status uldb_addProcess(
-        const pid_t pid,
-        const int protoVers,
-        const struct sockaddr_in* const sockAddr,
-        const prod_class* const desired,
-        prod_class** const allowed,
-        const int isNotifier,
-        const int isPrimary)
+    const pid_t                              pid,
+    const int                                protoVers,
+    const struct sockaddr_in* const restrict sockAddr,
+    const prod_class* const restrict         desired,
+    prod_class** const restrict              allowed,
+    const int                                isNotifier,
+    const int                                isPrimary)
 {
     int status;
 
@@ -2149,7 +2154,6 @@ uldb_Status uldb_addProcess(
 
             if (db_unlock(&database)) {
                 LOG_ADD0("Couldn't unlock database");
-
                 status = ULDB_SYSTEM;
             }
 

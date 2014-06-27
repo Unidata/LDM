@@ -1,3 +1,7 @@
+6.12.3	2014-06-27T16:12:08-0600
+    Fixed a bug in the upstream LDM database that prevented disabling of the
+    anti-DOS feature from taking effect and telling the user why.
+
 6.12.2	2014-06-26T17:49:53-0600
     Fixed a bug in the extraction of function declarations from C source files
     into header files that caused the function `getSysConfDirPath()` to be
