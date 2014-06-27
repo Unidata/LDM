@@ -152,7 +152,7 @@ void setQueuePath(
  *                      Might be absolute or relative to the current working
  *                      directory.
  */
-const char* getQueuePath()
+const char* getQueuePath(void)
 {
     return getPath(REG_QUEUE_PATH, queuePath, "product-queue");
 }
@@ -179,7 +179,7 @@ void setPqactConfigPath(
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
-const char* getPqactConfigPath()
+const char* getPqactConfigPath(void)
 {
     return getPath(REG_PQACT_CONFIG_PATH, pqactConfigPath,
         "default pqact(1) configuration-file");
@@ -207,7 +207,7 @@ void setLdmdConfigPath(
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
-const char* getLdmdConfigPath()
+const char* getLdmdConfigPath(void)
 {
     return getPath(REG_LDMD_CONFIG_PATH, ldmdConfigPath,
         "ldmd(1) configuration-file");
@@ -235,7 +235,7 @@ void setPqactDataDirPath(
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
-const char* getPqactDataDirPath()
+const char* getPqactDataDirPath(void)
 {
     return getPath(REG_PQACT_DATADIR_PATH, pqactDataDirPath,
         "default pqact(1) data-directory");
@@ -263,7 +263,7 @@ void setPqsurfDataDirPath(
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
-const char* getPqsurfDataDirPath()
+const char* getPqsurfDataDirPath(void)
 {
     return getPath(REG_PQSURF_DATADIR_PATH, pqsurfDataDirPath,
         "default pqsurf(1) data-directory");
@@ -291,7 +291,7 @@ void setSurfQueuePath(
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
-const char* getSurfQueuePath()
+const char* getSurfQueuePath(void)
 {
     return getPath(REG_SURFQUEUE_PATH, surfQueuePath,
         "default pqsurf(1) output product-queue");
@@ -413,7 +413,7 @@ isAntiDosEnabled(void)
             isEnabled = 1;
             LOG_ADD1("Couldn't get value of anti-denial-of-service registry "
                     "parameter \"%s\"", REG_ANTI_DOS);
-            LOG_ADD0("Using default value: TRUE");
+            LOG_ADD1("Using default value: %s", isEnabled ? "TRUE" : "FALSE");
             if (status == ENOENT) {
                 log_log(LOG_WARNING);
                 isSet = 1;
@@ -428,4 +428,40 @@ isAntiDosEnabled(void)
     }
 
     return isEnabled;
+}
+
+/**
+ * Returns the backlog time-offset for making requests of an upstream LDM.
+ *
+ * @return  The backlog time-offset, in seconds, for making requests of an
+ *          upstream LDM.
+ */
+unsigned
+getTimeOffset(void)
+{
+    static unsigned timeOffset;
+    static int      isSet = 0;
+
+    if (!isSet) {
+        int status = reg_getUint(REG_TIME_OFFSET, &timeOffset);
+
+        if (status) {
+            timeOffset = 3600;
+            LOG_ADD1("Couldn't get value of time-offset registry parameter "
+                    "\"%s\"", REG_TIME_OFFSET);
+            LOG_ADD1("Using default value: %u seconds", timeOffset);
+            if (status == ENOENT) {
+                log_log(LOG_WARNING);
+                isSet = 1;
+            }
+            else {
+                log_log(LOG_ERR);
+            }
+        }
+        else {
+            isSet = 1;
+        }
+    }
+
+    return timeOffset;
 }

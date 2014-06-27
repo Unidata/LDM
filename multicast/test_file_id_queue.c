@@ -37,27 +37,6 @@ teardown(void)
 }
 
 static void
-test_invalid_get(void)
-{
-    VcmtpFileId  fileId;
-    int          status = fiq_remove(NULL, &fileId);
-
-    CU_ASSERT_EQUAL_FATAL(status, EINVAL);
-
-    status = fiq_remove(rq, NULL);
-    CU_ASSERT_EQUAL_FATAL(status, EINVAL);
-}
-
-static void
-test_invalid_add(void)
-{
-    VcmtpFileId fileId;
-    int         status = fiq_add(NULL, fileId);
-
-    CU_ASSERT_EQUAL_FATAL(status, EINVAL);
-}
-
-static void
 test_add_get(void)
 {
     VcmtpFileId     fileA = 1;
@@ -67,7 +46,7 @@ test_add_get(void)
     status = fiq_add(rq, fileA);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = fiq_remove(rq, &fileB);
+    status = fiq_poll(rq, &fileB);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileB, fileA);
 }
@@ -88,15 +67,15 @@ test_order(void)
     status = fiq_add(rq, fileC);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = fiq_remove(rq, &fileD);
+    status = fiq_poll(rq, &fileD);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileA);
 
-    status = fiq_remove(rq, &fileD);
+    status = fiq_poll(rq, &fileD);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileB);
 
-    status = fiq_remove(rq, &fileD);
+    status = fiq_poll(rq, &fileD);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileC);
 }
@@ -117,8 +96,6 @@ main(
                 teardown);
 
             if (NULL != testSuite) {
-                CU_ADD_TEST(testSuite, test_invalid_get);
-                CU_ADD_TEST(testSuite, test_invalid_add);
                 CU_ADD_TEST(testSuite, test_add_get);
                 CU_ADD_TEST(testSuite, test_order);
 

@@ -184,7 +184,7 @@ endif
 valgrind-noaaportIngester:	noaaportIngester
 	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
-	    .libs/noaaportIngester -q /tmp/noaaportIngester-test.pq \
+	    .libs/noaaportIngester -b 1 -q /tmp/noaaportIngester-test.pq \
 		<$(srcdir)/nwstgdump.data
 	rm /tmp/noaaportIngester-test.pq
 

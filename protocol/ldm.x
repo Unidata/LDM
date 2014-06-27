@@ -716,8 +716,8 @@ program LDMPROG {
             /*
              * Upstream to downstream RPC messages:
              */
-            void              DELIVER_PRODUCT(MissedProduct) = 5;
-            void              DELIVER_BACKLOG(product) = 6;
+            void              DELIVER_MISSED_PRODUCT(MissedProduct) = 5;
+            void              DELIVER_BACKLOG_PRODUCT(product) = 6;
         } = 7;
 #endif
 } = LDM_PROG; /* LDM = 300029, use 0x2ffffffe for experiments */

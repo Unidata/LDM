@@ -121,4 +121,6 @@ one_svc_run(
             }
         } /* select() returned -1 */
     } /* indefinite loop */
+
+    return 0; // Eclipse wants to see a return
 }

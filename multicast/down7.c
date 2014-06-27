@@ -13,6 +13,7 @@
 
 #include "down7.h"
 #include "executor.h"
+#include "globals.h"
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
@@ -36,9 +37,20 @@
 #include <unistd.h>
 
 /**
+ * Key for getting the pointer to a downstream LDM-7 that's associated with a
+ * thread:
+ */
+static pthread_key_t  down7Key;
+/**
+ * Lockout for initializing `down7Key`:
+ */
+static pthread_once_t down7KeyControl = PTHREAD_ONCE_INIT;
+
+/**
  * The data structure of a downstream LDM-7:
  */
 struct Down7 {
+    pqueue*               pq;            ///< pointer to the product-queue
     ServAddr*             servAddr;      ///< socket address of remote LDM-7
     char*                 mcastName;     ///< name of multicast group
     /** Queue of missed-but-not-yet-requested data-products: */
@@ -388,8 +400,8 @@ testConnection(
 }
 
 /**
- * Runs an RPC service. Doesn't return until no RPC message arrives within the
- * timeout interval or an error occurs.
+ * Runs an RPC-based server. Doesn't return until no RPC message arrives within
+ * the timeout interval or an error occurs.
  *
  * @param[in] xprt           Pointer to the RPC service transport.
  * @retval    LDM7_TIMEDOUT  Timeout occurred.
@@ -397,7 +409,7 @@ testConnection(
  * @retval    LDM7_SYSTEM    System error. `log_add()` called.
  */
 static int
-run_down7(
+run_svc(
     SVCXPRT* const xprt)
 {
     for (;;) {
@@ -411,7 +423,7 @@ run_down7(
         timeout.tv_sec = 3600;
         timeout.tv_usec = 0;
 
-        status = select(sock+1, &fds, 0, 0, &timeout); // cancellation point
+        status = select(sock+1, &fds, 0, 0, &timeout);
 
         if (status == 0)
             return LDM7_TIMEDOUT;
@@ -441,8 +453,8 @@ run_down7(
 }
 
 /**
- * Runs the data-product receiving service. Blocks until an unrecoverable error
- * occurs.
+ * Runs the RPC-based data-product receiving service of a downstream LDM-7.
+ * Executes until an unrecoverable error occurs.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @param[in] xprt           Pointer to the server-side transport object.
@@ -451,20 +463,32 @@ run_down7(
  * @retval    LDM7_SYSTEM    System error. `log_add()` called.
  */
 static int
-run_svc(
+run_down7_svc(
     Down7* const restrict   down7,
     SVCXPRT* const restrict xprt)
 {
-    int status;
+    /*
+     * The RPC-based server doesn't know its associated downstream LDM-7;
+     * therefore, a thread-specific pointer to the downstream LDM-7 is set to
+     * provide context to the server.
+     */
+    int status = pthread_setspecific(down7Key, down7);
 
-    for (;;) {
-        status = run_down7(xprt);
+    if (status) {
+        LOG_ERRNUM0(status,
+                "Couldn't set thread-specific pointer to downstream LDM-7");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        for (;;) {
+            status = run_svc(xprt);
 
-        if (status == LDM7_TIMEDOUT && (status = testConnection(down7)) == 0)
-            continue; // connection is still good
+            if (status == LDM7_TIMEDOUT && (status = testConnection(down7)) == 0)
+                continue; // connection is still good
 
-        LOG_ADD0("Connection to upstream LDM-7 is broken");
-        break;
+            LOG_ADD0("Connection to upstream LDM-7 is broken");
+            break;
+        }
     }
 
     return status; // Eclipse IDE wants to see a return
@@ -497,6 +521,9 @@ requestProduct(
         LOG_ADD1("%s", clnt_errmsg(clnt));
         status = LDM7_RPC;
     }
+    else {
+        status = 0;
+    }
 
     unlockClient(down7);
 
@@ -511,12 +538,15 @@ requestProduct(
  * multicast downstream LDM of this session (or the current time if that product
  * isn't found).
  *
- * NB: If this session ends before all backlog products are received, then the
- * backlog products that weren't received will never be received.
+ * NB: If the current session ends before all backlog products have been
+ * received, then the backlog products that weren't received will never be
+ * received.
  *
  * This function blocks until the client-side handle is available.
  *
- * @param[in] arg  Pointer to downstream LDM-7.
+ * @param[in] arg       Pointer to downstream LDM-7.
+ * @retval    0         Success.
+ * @retval    LDM7_RPC  Error in RPC layer. `log_log()` called.
  */
 static void*
 requestSessionBacklog(
@@ -524,16 +554,29 @@ requestSessionBacklog(
 {
     Down7* const down7 = (Down7*)arg;
     BacklogSpec  spec;
+    int          status;
 
     (void)memcpy(spec.after, down7->lastPrevMcast, sizeof(signaturet));
     (void)memcpy(spec.before, down7->firstMcast, sizeof(signaturet));
-    // TODO spec.timeOffset =
+    spec.timeOffset = getTimeOffset();
 
     (void)lockClient(down7);
-    (void)request_backlog_7(&spec, down7->clnt); // asynchronous message passing
+    (void)request_backlog_7(&spec, down7->clnt);
+    if (clnt_stat(down7->clnt) != RPC_TIMEDOUT) {
+        /*
+         * The status will always be RPC_TIMEDOUT unless an error occurs
+         * because `request_backlog_7()` uses asynchronous message-passing.
+         */
+        LOG_ADD1("%s", clnt_errmsg(down7->clnt));
+        log_log(LOG_ERR);
+        status = LDM7_RPC;
+    }
+    else {
+        status = 0;
+    }
     (void)unlockClient(down7);
 
-    return NULL;
+    return (void*)status;
 }
 
 /**
@@ -568,16 +611,12 @@ makeRequest(
             status = LDM7_SYSTEM;
         }
         else {
-            if ((status = requestProduct(down7, fileId)) != 0) {
+            (void)fiq_poll(down7->missedQ, &fileId); // can't be empty
+
+            if ((status = requestProduct(down7, fileId)) != 0)
                 LOG_ADD0("Couldn't request missed data-product");
-                (void)fiq_removeTail(down7->requestedQ);
-            }
-            else {
-                (void)fiq_removeHead(down7->missedQ);
-                status = 0;
-            } // product successfully requested
-        } // file-ID added to requested-but-unreceived queue
-    } // have a peeked-at file-ID from the missed-queue
+        } // file-ID added to requested-but-not-received queue
+    } // have a peeked-at file-ID from the missed-but-not-requested queue
 
     return status;
 }
@@ -628,8 +667,9 @@ stopRequester(
 }
 
 /**
- * Starts the task of a downstream LDM-7 that receives data-products that were
- * missed by the VCMTP layer.
+ * Starts the task of a downstream LDM-7 that receives unicast data-products
+ * from the upstream LDM-7 -- either because they were missed by the VCMTP
+ * layer or because they are part of the backlog.
  *
  * NB: When this function returns, the TCP socket will have been closed.
  *
@@ -640,7 +680,7 @@ stopRequester(
  * @retval    LDM7_SYSTEM    System error. `log_add()` called.
  */
 static void*
-startReceiver(
+startUnicastProductReceiver(
     void* const arg)
 {
     Down7* const    down7 = (Down7*)arg;
@@ -663,7 +703,7 @@ startReceiver(
             status = LDM7_RPC;
         }
         else {
-            status = run_svc(down7, xprt); // indefinite execution
+            status = run_down7_svc(down7, xprt); // indefinite execution
         }
 
         /*
@@ -679,15 +719,15 @@ startReceiver(
 }
 
 /**
- * Cleanly stops an executing task that's receiving data-products that were
- * missed by the multicast receiver by shutting down the socket to the remote
- * LDM-7 for reading.
+ * Cleanly stops the task of a downstream LDM-7 that's receiving unicast
+ * data-products from an upstream LDM-7 by shutting down the socket to the
+ * remote LDM-7 for reading.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 whose receiving task is to
  *                   be stopped.
  */
 static void
-stopReceiver(
+stopUnicastProductReceiver(
     Down7* const down7)
 {
     (void)shutdown(down7->sock, SHUT_RD);
@@ -702,7 +742,7 @@ stopReceiver(
  * @retval    LDM7_SYSTEM    System error. \c log_add() called.
  */
 static void*
-startMcaster(
+startMulticastProductReceiver(
     void* const arg)
 {
     Down7* const down7 = (Down7*)arg;
@@ -736,7 +776,7 @@ terminateTasks(
 {
     mdl_stop(down7->mdl);
     stopRequester(down7);
-    stopReceiver(down7);
+    stopUnicastProductReceiver(down7);
 
     (void)pthread_join(down7->mcastThread, NULL);
     (void)pthread_join(down7->requestThread, NULL);
@@ -758,15 +798,18 @@ startTasks(
 {
     int       status = LDM7_SYSTEM;
 
-    if (pthread_create(&down7->receiveThread, NULL, startReceiver, down7)) {
+    if (pthread_create(&down7->receiveThread, NULL, startUnicastProductReceiver,
+            down7)) {
         LOG_ADD0("Couldn't start task that receives data-products that were "
                 "missed by the multicast receiver task");
     }
-    else if (pthread_create(&down7->requestThread, NULL, startRequester, down7)) {
+    else if (pthread_create(&down7->requestThread, NULL, startRequester,
+            down7)) {
         LOG_ADD0("Couldn't start task that requests data-products that were "
                 "missed by the multicast receiver task");
     }
-    else if (pthread_create(&down7->mcastThread, NULL, startMcaster, down7)) {
+    else if (pthread_create(&down7->mcastThread, NULL,
+            startMulticastProductReceiver, down7)) {
         LOG_ADD0("Couldn't start multicast receiver task");
     }
     else {
@@ -943,11 +986,16 @@ nap(
  * Inserts a data-product into the product-queue and then unlocks the
  * product-queue. Logs any errors directly.
  *
- * @param[in] pq    Pointer to the product-queue. Must be locked.
- * @param[in] prod  Pointer to the data-product to be inserted into the product-
- *                  queue.
+ * @param[in] pq          Pointer to the product-queue. Must be locked.
+ * @param[in] prod        Pointer to the data-product to be inserted into the product-
+ *                        queue.
+ * @retval    0           Success.
+ * @retval    EINVAL      Invalid argument. `uerror()` called.
+ * @retval    PQUEUE_DUP  Product already exists in the queue. `uinfo()` called.
+ * @retval    PQUEUE_BIG  Product is too large to insert in the queue. `uwarn()`
+ *                        called.
  */
-static void
+static int
 insertAndUnlock(
     pqueue* const restrict  pq,
     product* const restrict prod)
@@ -957,17 +1005,24 @@ insertAndUnlock(
     (void)pq_unlock(pq);
 
     if (status) {
-        char buf[256];
-
-        if (status == PQUEUE_DUP) {
-            uinfo("Duplicate data-product: %s",
-                s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug()));
+        if (status == EINVAL) {
+            uerror("Invalid argument");
         }
         else {
-            uwarn("Product too big for queue: %s",
-                s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug()));
+            char buf[256];
+
+            (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
+
+            if (status == PQUEUE_DUP) {
+                uinfo("Duplicate data-product: %s", buf);
+            }
+            else {
+                uerror("Product too big for queue: %s", buf);
+            }
         }
     }
+
+    return status;
 }
 
 /**
@@ -999,21 +1054,70 @@ getLastPrevMcast(
  * data-product to the product-queue. The data-product should have been
  * previously requested from the remote LDM-7.
  *
- * @param[in] prod  Pointer to the data-product.
+ * @param[in] pq           Pointer to the product-queue.
+ * @param[in] prod         Pointer to the data-product.
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
-static void
+static int
 deliver_product(
+    pqueue* const restrict  pq,
     product* const restrict prod)
 {
     int status = pq_lock(pq);
 
     if (status) {
-        LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
-        log_log(LOG_ERR);
+        LOG_ERRNUM0(status, "Couldn't lock product-queue");
+        status = LDM7_SYSTEM;
     }
     else {
-        insertAndUnlock(pq, prod);
+        status = insertAndUnlock(pq, prod);
+
+        if (status) {
+            status = (status == EINVAL)
+                    ? LDM7_SYSTEM
+                    : 0; // either too big or duplicate data-product
+        }
     } // product-queue is locked
+
+    return status;
+}
+
+/**
+ * Ensures that the thread-specific data-key for the downstream LDM pointer
+ * exists.
+ */
+static void
+createDown7Key(void)
+{
+    int status = pthread_key_create(&down7Key, NULL);
+
+    if (status) {
+        LOG_ERRNUM0(status,
+                "Couldn't create thread-specific data-key for downstream LDM-7");
+    }
+}
+
+/**
+ * Handles failure of delivery of a data-product by logging the fact and
+ * destroying the server-side RPC transport.
+ *
+ * @param[in] msg    The log message.
+ * @param[in] info   The product metadata.
+ * @param[in] rqstp  The service request.
+ */
+static void
+deliveryFailure(
+    const char* restrict            msg,
+    const prod_info* const restrict info,
+    struct svc_req* const restrict  rqstp)
+{
+    char buf[256];
+
+    LOG_ADD2("%s: %s", msg, s_prod_info(buf, sizeof(buf), info, ulogIsDebug()));
+    log_log(LOG_ERR);
+    (void)svcerr_systemerr(rqstp->rq_xprt);
+    svc_destroy(rqstp->rq_xprt);
 }
 
 /******************************************************************************
@@ -1029,15 +1133,18 @@ deliver_product(
  *                       upon return.
  * @param[in] mcastName  Name of multicast group to receive. The client may free
  *                       upon return.
+ * @param[in] pq         Pointer to the product-queue.
  * @retval    NULL       Failure. \c log_add() called.
  * @return               Pointer to the new downstream LDM-7.
  */
 Down7*
 dl7_new(
     const ServAddr* const restrict servAddr,
-    const char* const restrict     mcastName)
+    const char* const restrict     mcastName,
+    pqueue* const restrict         pq)
 {
     Down7* const down7 = LOG_MALLOC(sizeof(Down7), "downstream LDM-7");
+    int          status;
 
     if (down7 == NULL)
         goto return_NULL;
@@ -1076,11 +1183,16 @@ dl7_new(
         goto free_waitCond;
     }
 
-    if (pthread_mutex_init(&down7->clntMutex, NULL)) {
-        LOG_SERROR0("Couldn't initialize mutex for client-side handle");
+    if ((status = pthread_mutex_init(&down7->clntMutex, NULL)) != 0) {
+        LOG_ERRNUM0(status, "Couldn't initialize mutex for client-side handle");
         goto free_waitMutex;
     }
 
+    if ((status = pthread_once(&down7KeyControl, createDown7Key)) != 0) {
+        goto free_clntMutex;
+    }
+
+    down7->pq = pq;
     down7->clnt = NULL;
     down7->sock = -1;
     down7->mcastInfo = NULL;
@@ -1094,6 +1206,8 @@ dl7_new(
 
     return down7;
 
+free_clntMutex:
+    pthread_mutex_destroy(&down7->clntMutex);
 free_waitMutex:
     pthread_mutex_destroy(&down7->waitMutex);
 free_waitCond:
@@ -1155,7 +1269,7 @@ dl7_missedProduct(
     const VcmtpFileId fileId)
 {
     /*
-     * Cancellation of the operation of the VCMTP file-identifier queue is
+     * Cancellation of the operation of the missed-but-not-requested queue is
      * ignored because nothing can be done about it at this point and no harm
      * should result.
      */
@@ -1166,6 +1280,11 @@ dl7_missedProduct(
  * Tracks the last data-product to be successfully received by the multicast
  * downstream LDM associated with a downstream LDM-7. Called by the multicast
  * downstream LDM. This function must not and doesn't block.
+ *
+ * The first time this function is called for a given downstream LDM-7, it
+ * starts a detached thread that requests the backlog of data-products that
+ * were missed due to the passage of time from the end of the previous session
+ * to the reception of the first multicast data-product.
  *
  * @param[in] down7  Pointer to the downstream LDM-7.
  * @param[in] last   Pointer to the metadata of the last data-product to be
@@ -1179,51 +1298,79 @@ dl7_lastReceived(
 {
     (void)memcpy(down7->lastMcast, last->signature, sizeof(signaturet));
     if (!down7->mcastWorking) {
-        pthread_t backlogThread;
-
-        (void)memcpy(down7->firstMcast, last->signature, sizeof(signaturet));
         down7->mcastWorking = true;
-        pthread_create(&backlogThread, NULL, requestSessionBacklog, down7);
-        pthread_detach(backlogThread);
+        (void)memcpy(down7->firstMcast, last->signature, sizeof(signaturet));
+        pthread_t backlogThread;
+        int status = pthread_create(&backlogThread, NULL, requestSessionBacklog,
+                down7);
+        if (status) {
+            LOG_ERRNUM0(status, "Couldn't create backlog-requesting thread");
+            log_log(LOG_ERR);
+        }
+        else {
+            (void)pthread_detach(backlogThread);
+        }
     }
 }
 
 /**
- * Processes a data-product from a remote LDM-7 by attempting to add the
+ * Processes a missed data-product from a remote LDM-7 by attempting to add the
  * data-product to the product-queue. The data-product should have been
  * previously requested from the remote LDM-7 because it was missed by the
- * multicast receiver. Does not reply. Called by the RPC dispatcher
- * `svc_getreqsock()`.
+ * multicast receiver. Destroys the server-side RPC transport if the
+ * data-product isn't expected or can't be inserted into the product-queue. Does
+ * not reply. Called by the RPC dispatcher `svc_getreqsock()`.
  *
  * @param[in] missedProd  Pointer to the missed data-product.
  * @param[in] rqstp       Pointer to the RPC service-request.
+ * @retval    NULL        Always.
  */
 void*
-deliver_product_7_svc(
+deliver_missed_product_7_svc(
     MissedProduct* const restrict  missedProd,
     struct svc_req* const restrict rqstp)
 {
-    deliver_product(&missedProd->prod);
-    return NULL; /* don't reply */
+    Down7*                 down7 = pthread_getspecific(down7Key);
+    VcmtpFileId            fileId;
+    int                    status = fiq_element(down7->requestedQ, &fileId);
+    const prod_info* const info = &missedProd->prod.info;
+
+    if (status == ENOENT || fileId != missedProd->fileId) {
+        deliveryFailure("Unexpected product received", info, rqstp);
+    }
+    else {
+        (void)fiq_poll(down7->requestedQ, &fileId); // can't be empty
+
+        if ((status = deliver_product(down7->pq, &missedProd->prod)) != 0)
+            deliveryFailure("Couldn't insert missed product", info, rqstp);
+    }
+
+    return NULL; // causes RPC dispatcher to not reply
 }
 
 /**
  * Processes a backlog data-product from a remote LDM-7 by attempting to add the
  * data-product to the product-queue. The data-product should have been
  * previously requested from the remote LDM-7 because it was missed during the
- * previous session. Does not reply. Called by the RPC dispatcher
- * `svc_getreqsock()`.
+ * previous session. Destroys the server-side RPC transport if the data-product
+ * can't be inserted into the product-queue. Does not reply. Called by the RPC
+ * dispatcher `svc_getreqsock()`.
  *
  * @param[in] prod        Pointer to the backlog data-product.
  * @param[in] rqstp       Pointer to the RPC service-request.
+ * @retval    NULL        Always.
  */
 void*
-deliver_backlog_7_svc(
+deliver_backlog_product_7_svc(
     product* const restrict        prod,
     struct svc_req* const restrict rqstp)
 {
-    deliver_product(prod);
-    return NULL; /* don't reply */
+    Down7* down7 = pthread_getspecific(down7Key);
+
+    if (deliver_product(down7->pq, prod))
+        deliveryFailure("Couldn't insert backlog product", &prod->info, rqstp);
+
+    return NULL; // causes RPC dispatcher to not reply
 }
 
 /**

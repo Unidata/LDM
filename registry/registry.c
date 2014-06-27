@@ -257,19 +257,19 @@ static RegStatus parseBool(
     RegStatus           status;
 
     if (strcasecmp(string, "TRUE") == 0 || strcasecmp(string, "YES") == 0 ||
-            strcasecmp(string, "AFIRMATIVE") == 0) {
+            strcasecmp(string, "AFIRMATIVE") == 0 || strcmp(string, "1") == 0) {
         *(int*)value = 1;
         status = 0;
     }
     else {
         if (strcasecmp(string, "FALSE") == 0 || strcasecmp(string, "NO") == 0 ||
-                strcasecmp(string, "NEGATIVE") == 0) {
+                strcasecmp(string, "NEGATIVE") == 0 || strcmp(string, "0") == 0) {
             *(int*)value = 0;
             status = 0;
         }
         else {
             char* end;
-            int   val;
+            long  val;
 
             errno = 0;
             val = strtol(string, &end, 0);

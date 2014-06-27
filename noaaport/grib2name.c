@@ -726,8 +726,8 @@ int grib2name (
     g2Msg.gfld = NULL;
     g2Msg.field_tot = 0;
 
-    if (status = g2_info(g2Msg.cgrib2, g2Msg.mlength, listsec0, listsec1,
-            &(g2Msg.field_tot), &numlocal))
+    if ((status = g2_info(g2Msg.cgrib2, g2Msg.mlength, listsec0, listsec1,
+            &(g2Msg.field_tot), &numlocal)) != 0)
         return (2 == status) ? 2 : 1;
 
     if (g2Msg.field_tot <= 0) {
