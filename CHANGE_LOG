@@ -1,3 +1,5 @@
+6.12.4	2014-07-07T09:40:00-0600
+
 6.12.3	2014-06-27T16:12:47-0600
     Fixed a bug in the upstream LDM database that prevented disabling of the
     anti-DOS feature from taking effect and telling the user why.

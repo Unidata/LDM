@@ -287,7 +287,6 @@ int log_vadd(
 }
 
 /**
- * DEPRECATED: Use log_add() instead.
  * Sets the first log-message for the current thread.
  */
 void log_start(
@@ -296,7 +295,7 @@ void log_start(
 {
     va_list     args;
 
-    /* log_clear(); */
+    log_clear();
     va_start(args, fmt);
 
     if (EAGAIN == log_vadd(fmt, args)) {

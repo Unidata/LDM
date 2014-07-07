@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.3], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.4], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -411,6 +411,8 @@ test "$sysconfdir" = '${prefix}/etc' && sysconfdir='$(LDMHOME)/etc'
 test "$localstatedir" = '${prefix}/var' && localstatedir='$(LDMHOME)/var'
 AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
+AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$LDMHOME/var/logs"],
+    [Path to LDM logging directory])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
 # The following accomodates pre-6.9 LDM installations:
 if test -d $LDMHOME/data -a ! -h $LDMHOME/data; then
@@ -540,7 +542,17 @@ AM_COND_IF([WANT_NOAAPORT], [
     UD_SEARCH_LIB([png], [png_create_read_struct], [/opt/csw/lib /opt/lib \
         /opt/X11/lib /opt/local/lib /usr/local/lib])
 ])
-        
+
+AM_COND_IF([WANT_MULTICAST], [
+    # Ensure that CPPFLAGS and LIBS reference the YAML library, which is used by
+    # the LDM-7 multicast module.
+    UD_SEARCH_HEADER([YAML], [yaml.h],
+        [/opt/csw/include /usr/local/csw/include /opt/include /opt/X11/include \
+            /opt/local/include /usr/local/include /user/sfw/include])
+    UD_SEARCH_LIB([yaml], [yaml_emitter_dump], [/opt/csw/lib /opt/lib \
+        /opt/X11/lib /opt/local/lib /usr/local/lib])
+])
+
 # Ensure that CPPFLAGS and LIBS reference the XML2 library, which is used
 # by the LDM registry module.
 UD_SEARCH_HEADER([XML2], [libxml/parser.h],
