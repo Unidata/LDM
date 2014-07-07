@@ -9,22 +9,117 @@
  */
 #include <config.h>
 
-#include <assert.h>
-#include <errno.h>
-#include <stdio.h>
-#include <time.h>
-#include <string.h>
-#include <ctype.h>
-#include <rpc/rpc.h>
-#include <netinet/in.h>
-
 #include "ldm.h"
 #include "ldmprint.h"
 #include "atofeedt.h"           /* for fassoc[] */
 #include "log.h"
 
+#include <assert.h>
+#include <errno.h>
+#include <stdio.h>
+#include <time.h>
+#include <stdarg.h>
+#include <string.h>
+#include <ctype.h>
+#include <rpc/rpc.h>
+#include <netinet/in.h>
+
 static char tprintbuf[1984];
 static const char nada[] = "(null)";
+
+/**
+ * Returns an attempt at formatting arguments.
+ *
+ * @param[in]  initSize  The size to allocate for the formatting buffer,
+ *                       including the terminating NUL character.
+ * @param[in]  fmt       The format for the arguments.
+ * @param[in]  args      The arguments to be formatted. Must have been
+ *                       initialized by `va_start()` or `va_copy()`.
+ * @param[out] nbytes    The number of bytes that would be written to the
+ *                       buffer -- excluding the terminating NUL character --
+ *                       if it was sufficiently capacious.
+ * @retval     NULL      Error. `log_add()` called.
+ * @return               Pointer to the NUL-terminated string buffer containing
+ *                       the formatted arguments. The caller should free when
+ *                       it's no longer needed.
+ */
+static char*
+tryFormat(
+    const size_t               size,
+    const char* const restrict fmt,
+    va_list                    args,
+    int* const restrict        nbytes)
+{
+    char* buf = LOG_MALLOC(size, "formatting buffer");
+
+    if (buf)
+        *nbytes = vsnprintf(buf, size, fmt, args);
+
+    return buf;
+}
+
+/**
+ * Returns formatted arguments.
+ *
+ * @param[in] initSize  The initial size of the formatting buffer, including the
+ *                      terminating NUL character.
+ * @param[in] fmt       The format for the arguments.
+ * @param[in] args      The arguments to be formatted. Must have been
+ *                      initialized by `va_start()` or `va_copy()`.
+ * @retval    NULL      Error. `log_add()` called.
+ * @return              Pointer to the string buffer containing the formatted
+ *                      arguments. The caller should free when it's no longer
+ *                      needed.
+ */
+char*
+ldm_vformat(
+    const size_t      initSize,
+    const char* const fmt,
+    va_list           args)
+{
+    int     nbytes;
+    va_list ap;
+
+    va_copy(ap, args);
+
+    char* buf = tryFormat(initSize, fmt, args, &nbytes);
+    if (buf) {
+        if (nbytes >= initSize) {
+            free(buf);
+            buf = tryFormat(nbytes, fmt, ap, &nbytes);
+        }
+    }
+
+    va_end(ap);
+
+    return buf;
+}
+
+/**
+ * Returns formatted arguments.
+ *
+ * @param[in] initSize  The initial size of the formatting buffer, including the
+ *                      terminating NUL character.
+ * @param[in] fmt       The format for the arguments.
+ * @param[in] ...       The arguments to be formatted.
+ * @retval    NULL      Error. `log_add()` called.
+ * @return              Pointer to the string buffer containing the formatted
+ *                      arguments. The caller should free when it's no longer
+ *                      needed.
+ */
+char*
+ldm_format(
+    const size_t               initSize,
+    const char* const restrict fmt,
+    ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    char* buf = ldm_vformat(initSize, fmt, args);
+    va_end(args);
+    return buf;
+}
 
 
 /*
