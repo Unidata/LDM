@@ -37,12 +37,35 @@ extern int            udpopen(const char *hostname, const char *servicename);
 extern int            isMe(const char *remote);
 extern int            local_sockaddr_in(struct sockaddr_in* addr);
 extern int            sockbind(const char *type, unsigned short port);
+/**
+ * Returns a new server address.
+ *
+ * @param[in] hostId  Identifier of the host on which the server runs. May be
+ *                    hostname or formatted IP address. Client may free upon
+ *                    return.
+ * @param[in] port    Port number of the server.
+ * @retval    NULL    Failure. \c errno will be ENOMEM.
+ * @return            Pointer to a new server address object corresponding to
+ *                    the input.
+ */
+extern ServAddr*      sa_new(const char* const hostId, const unsigned short port);
 extern void           sa_free(ServAddr* const sa);
 extern ServAddr*      sa_clone(const ServAddr* const sa);
 extern const char*    sa_getHostId(const ServAddr* const sa);
 extern unsigned short sa_getPort(const ServAddr* const sa);
-extern int            sa_format(const ServAddr* restrict sa, char* restrict buf,
+extern int            sa_snprint(const ServAddr* restrict sa, char* restrict buf,
                             size_t len);
+/**
+ * Returns the formatted representation of a server address.
+ *
+ * This function is thread-safe.
+ *
+ * @param[in]  sa    Pointer to the server address.
+ * @retval     NULL  Failure. `log_add()` called.
+ * @return           Pointer to the formatted representation. The caller should
+ *                   free when it's no longer needed.
+ */
+extern char*          sa_format(const ServAddr* const sa);
 extern bool_t         xdr_ServAddr(XDR* const xdrs, ServAddr* sa);
 
 #endif /* !_INETUTIL_H_ */

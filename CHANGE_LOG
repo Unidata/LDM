@@ -1,4 +1,4 @@
-6.12.4	2014-07-07T09:54:38-0600
+6.12.4	2014-07-07T09:57:22-0600
 
 6.12.3	2014-06-27T16:12:47-0600
     Fixed a bug in the upstream LDM database that prevented disabling of the
