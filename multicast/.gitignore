@@ -17,3 +17,6 @@ mcast_down.h
 mcast_down_test
 file_id_queue.h
 test_file_id_queue
+*.yaml
+mcast_session_memory.h
+test_mcast_session_memory

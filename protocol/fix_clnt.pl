@@ -24,7 +24,7 @@ while( <STDIN> ) {
 
     if (/request_product_7/ || /request_backlog_7/ ||
             /deliver_missed_product_7/ || /deliver_backlog_product_7/ ||
-            /test_connection_7/) {
+            /end_backlog_7/ || /test_connection_7/) {
 	$zeroTimeout = 1;
     }
 

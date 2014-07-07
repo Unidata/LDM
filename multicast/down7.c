@@ -690,14 +690,14 @@ startUnicastProductReceiver(
     char            buf[256];
 
     if (xprt == NULL) {
-        (void)sa_format(servAddr, buf, sizeof(buf));
+        (void)sa_snprint(servAddr, buf, sizeof(buf));
         LOG_ADD1("Couldn't create RPC service for receiving data-products from "
                 "upstream LDM-7 at \"%s\"", buf);
         status = LDM7_RPC;
     }
     else {
         if (!svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
-            (void)sa_format(servAddr, buf, sizeof(buf));
+            (void)sa_snprint(servAddr, buf, sizeof(buf));
             LOG_ADD1("Couldn't register RPC service for receiving "
                     "data-products from upstream LDM-7 at \"%s\"", buf);
             status = LDM7_RPC;
@@ -1152,7 +1152,7 @@ dl7_new(
     if ((down7->servAddr = sa_clone(servAddr)) == NULL) {
         char buf[256];
 
-        (void)sa_format(servAddr, buf, sizeof(buf));
+        (void)sa_snprint(servAddr, buf, sizeof(buf));
         LOG_ADD1("Couldn't clone server address \"%s\"", buf);
         goto free_down7;
     }
@@ -1369,6 +1369,29 @@ deliver_backlog_product_7_svc(
 
     if (deliver_product(down7->pq, prod))
         deliveryFailure("Couldn't insert backlog product", &prod->info, rqstp);
+
+    return NULL; // causes RPC dispatcher to not reply
+}
+
+/**
+ * Accepts notification that the downstream LDM-7 associated with the current
+ * thread has received all backlog data-products from its upstream LDM-7. From
+ * now on, the current process may be terminated for a time period that is less
+ * than the minimum residence time of the upstream LDM-7's product-queue without
+ * loss of data.
+ *
+ * @param[in] rqstp  Pointer to the RPC server-request.
+ */
+void*
+end_backlog_7_svc(
+    void* restrict                 noArg,
+    struct svc_req* const restrict rqstp)
+{
+    char   buf[512];
+    Down7* down7 = pthread_getspecific(down7Key);
+
+    unotice("All backlog data-products received: mcastName=%s, server=%s",
+            down7->mcastName, sa_snprint(down7->servAddr, buf, sizeof(buf)));
 
     return NULL; // causes RPC dispatcher to not reply
 }

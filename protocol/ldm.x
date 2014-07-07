@@ -718,6 +718,7 @@ program LDMPROG {
              */
             void              DELIVER_MISSED_PRODUCT(MissedProduct) = 5;
             void              DELIVER_BACKLOG_PRODUCT(product) = 6;
+            void              END_BACKLOG() = 7;
         } = 7;
 #endif
 } = LDM_PROG; /* LDM = 300029, use 0x2ffffffe for experiments */

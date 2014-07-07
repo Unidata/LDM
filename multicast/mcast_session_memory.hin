@@ -1,0 +1,32 @@
+/**
+ * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
+ *
+ *   @file: mcast_session_memory.hin
+ * @author: Steven R. Emmerson
+ *
+ * This file specifies the API for persistent memory between multicast sessions
+ */
+
+#ifndef MCAST_SESSION_MEMORY_H
+#define MCAST_SESSION_MEMORY_H
+
+#include "inetutil.h"
+#include "ldm.h"
+
+#include <stdbool.h>
+
+typedef struct McastSessionMemory McastSessionMemory;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+@FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

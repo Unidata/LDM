@@ -9,17 +9,20 @@
 SUBDIRS			= vcmtp
 EXTRA_DIST              = down7.hin \
 			  mcast_down.hin \
+			  mcast_session_memory.hin \
                           file_id_queue.hin \
                           server_info.hin \
                           sock_funcs.c sock_funcs.hin
 BUILT_SOURCES           = down7.h \
 			  mcast_down.h \
+			  mcast_session_memory.h \
                           file_id_queue.h \
                           server_info.h \
                           sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= down7.c \
 			  mcast_down.c \
+			  mcast_session_memory.c \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
 			  file_id_queue.c \
@@ -44,6 +47,7 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 down7.h:		down7.hin down7.c
 mcast_down.h:		mcast_down.hin mcast_down.c
 mcast_info.h:		mcast_info.hin mcast_info.c
+mcast_session_memory.h:	mcast_session_memory.c mcast_session_memory.hin
 file_id_queue.h:	file_id_queue.hin file_id_queue.c
 server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
@@ -53,7 +57,11 @@ if HAVE_OPMOCK
 VCMTPReceiver_stubs	= VCMTPReceiver_stub.cpp VCMTPReceiver_stub.hpp
 vcmtp_c_api_stubs	= vcmtp_c_api_stub.c vcmtp_c_api_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
-all_stubs		= $(VCMTPReceiver_stubs) $(vcmtp_c_api_stubs) $(pq_stubs)
+globals_stubs		= globals_stub.c globals_stub.h
+all_stubs		= $(VCMTPReceiver_stubs) \
+                          $(vcmtp_c_api_stubs) \
+                          $(pq_stubs) \
+                          $(globals_stubs)
 BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= $(all_stubs) TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.2/include \
@@ -65,9 +73,11 @@ $(vcmtp_c_api_stubs):	vcmtp_c_api.h
 	opmock2 -i $? -o . $(OPMOCK_INCLUDES)
 $(pq_stubs):		../pq/pq.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+$(globals_stubs):	../registry/globals.h
+	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
 #check_PROGRAMS			= vcmtp_c_api_test mcast_down
-#opmock_check_progs		= mcast_down_test
+opmock_check_progs		= test_mcast_session_memory #mcast_down_test
 test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
 # "*_stub.*" files aren't included here because all "_SOURCES" files are
@@ -79,6 +89,10 @@ test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 mcast_down_test_SOURCES 	= mcast_down_test.c mcast_down.c
 mcast_down_test_CPPFLAGS	= $(test_cppflags)
 mcast_down_test_LDFLAGS		= @OPMOCK_LDFLAGS@
+
+test_mcast_session_memory_SOURCES 	= test_mcast_session_memory.c
+test_mcast_session_memory_CPPFLAGS	= $(test_cppflags)
+test_mcast_session_memory_LDFLAGS	= @OPMOCK_LDFLAGS@
 #
 # The stubs are included here because they can't be in "_SOURCES" above.
 #vcmtp_c_api_test_LDADD		= VCMTPReceiver_stub.o \
@@ -86,6 +100,10 @@ mcast_down_test_LDFLAGS		= @OPMOCK_LDFLAGS@
 #				  @OPMOCK_LDADD@
 mcast_down_test_LDADD		= vcmtp_c_api_stub.o \
 				  pq_stub.o \
+				  $(top_builddir)/lib/libldm.la \
+				  @OPMOCK_LDADD@
+test_mcast_session_memory_LDADD	= mcast_session_memory.lo \
+				  globals_stub.o \
 				  $(top_builddir)/lib/libldm.la \
 				  @OPMOCK_LDADD@
 opmock_tests			= $(opmock_check_progs)
