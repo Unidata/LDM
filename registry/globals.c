@@ -465,3 +465,14 @@ getTimeOffset(void)
 
     return timeOffset;
 }
+
+/**
+ * Returns the absolute path of the directory for LDM log files.
+ *
+ * @return The absolute path of the LDM log file directory.
+ */
+const char*
+getLdmLogDir(void)
+{
+    return LDM_LOG_DIR;
+}
