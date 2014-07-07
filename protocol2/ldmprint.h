@@ -1,13 +1,49 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2014, University Corporation for Atmospheric Research.
+ *   All rights reserved. See file COPYRIGHT in the top-level source-directory
+ *   for copying and redistribution conditions.
  */
-/* $Id: ldmprint.h,v 1.28.18.3 2008/04/15 16:34:11 steve Exp $ */
 
 #ifndef _LDMPRINT_H_
 #define _LDMPRINT_H_
+#include "ldm.h"
 #include <stddef.h>	/* size_t */
+#include <stdarg.h>	/* size_t */
 #if defined(__cplusplus) || defined(__STDC__)
+
+/**
+ * Returns formatted arguments.
+ *
+ * @param[in] initSize  The initial size of the formatting buffer.
+ * @param[in] fmt       The format for the arguments.
+ * @param[in] args      The arguments to be formatted.
+ * @retval    NULL      Error. `log_add()` called.
+ * @return              Pointer to the string buffer containing the formatted
+ *                      arguments. The caller should free when it's no longer
+ *                      needed.
+ */
+char*
+ldm_vformat(
+    const size_t      initSize,
+    const char* const fmt,
+    va_list           args);
+
+/**
+ * Returns formatted arguments.
+ *
+ * @param[in] initSize  The initial size of the formatting buffer.
+ * @param[in] fmt       The format for the arguments.
+ * @param[in] ...       The arguments to be formatted.
+ * @retval    NULL      Error. `log_add()` called.
+ * @return              Pointer to the string buffer containing the formatted
+ *                      arguments. The caller should free when it's no longer
+ *                      needed.
+ */
+char*
+ldm_format(
+    const size_t               initSize,
+    const char* const restrict fmt,
+    ...);
 
 extern int
 sprint_time_t(char *buf, size_t bufsize, time_t ts); /* obsolete ? */
