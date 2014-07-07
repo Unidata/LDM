@@ -130,6 +130,9 @@
 /* Root directory of the LDM installation */
 #undef LDMHOME
 
+/* Path to LDM logging directory */
+#undef LDM_LOG_DIR
+
 /* Port on which LDM server listens */
 #undef LDM_PORT
 
