@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include "error.h"
 #include "ulog.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "inetutil.h"
 #include "timestamp.h"
@@ -1019,28 +1020,56 @@ sa_getPort(
 }
 
 /**
+ * Returns the formatting string appropriate to a server address.
+ *
+ * @param[in] sa  The server address.
+ * @return        The formatting string appropriate for the server address.
+ */
+static const char*
+getFormat(
+    const ServAddr* const sa)
+{
+    return strchr(sa->hostId, ':')
+            ? "[%s]:%u"
+            : "%s:%u";
+}
+
+/**
  * Returns the formatted representation of a server address.
  *
  * @param[in]  sa   Pointer to the server address.
  * @param[out] buf  Pointer to the buffer into which to write the formatted
- *                  representation.
+ *                  representation. Will always be NUL-terminated.
  * @param[in]  len  The size of the buffer in bytes.
  * @return          The number of bytes that would be written to the buffer --
  *                  excluding the terminating NUL character. If the returned
  *                  number of bytes is equal to or greater than the size of the
- *                  buffer, then the string will not be NUL-terminated.
+ *                  buffer, then some characters weren't written.
  */
 int
-sa_format(
+sa_snprint(
     const ServAddr* const sa,
     char* const           buf,
     const size_t          len)
 {
-    const char* const format = strchr(sa->hostId, ':')
-            ? "[%s]:%u"
-            : "%s:%u";
+    return snprintf(buf, len, getFormat(sa), sa->hostId, sa->port);
+}
 
-    return snprintf(buf, len, format, sa->hostId, sa->port);
+/**
+ * Returns the formatted representation of a server address.
+ *
+ * This function is thread-safe.
+ *
+ * @param[in]  sa    Pointer to the server address.
+ * @retval     NULL  Failure. `log_add()` called.
+ * @return           Pointer to the formatted representation. The caller should
+ *                   free when it's no longer needed.
+ */
+char*
+sa_format(
+    const ServAddr* const sa)
+{
+    return ldm_format(128, getFormat(sa), sa->hostId, sa->port);
 }
 
 /**
