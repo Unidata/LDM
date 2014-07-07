@@ -38,7 +38,7 @@ CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_srcdir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc
 lib_la_LIBADD		= vcmtp/libvcmtp.la -lpthread
-CLEANFILES		=
+CLEANFILES		= *.yaml
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 .hin.h:

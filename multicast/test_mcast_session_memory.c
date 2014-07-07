@@ -76,6 +76,7 @@ static void test_last_mcast_prod()
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
 
+#if 0
     // Verify the data in the new file
 
     openMsm(&msm);
@@ -88,6 +89,7 @@ static void test_last_mcast_prod()
     status = msm_close(msm);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(msm_close(msm));
+#endif
 
     OP_VERIFY();
 }
