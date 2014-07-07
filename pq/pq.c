@@ -4795,10 +4795,7 @@ pq_del_oldest(pqueue *pq)
         /*
          * Remove the corresponding entry from the signature-list.
          */
-#ifndef XLEN_TIMESTAMPT
-#  define XLEN_TIMESTAMPT 8
-#endif
-        signature = (unsigned char*)vp + XLEN_TIMESTAMPT;
+        signature = infoBuf.info.signature;
 
         if (sx_find_delete(pq->sxp, signature) == 0) {
             uerror("pq_del_oldest: signature %s: Not Found\n",
