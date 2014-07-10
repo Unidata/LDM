@@ -467,7 +467,7 @@ mdl_start(
         status = LDM7_VCMTP;
     }
     else {
-        status = LDM7_CANCELED;
+        status = LDM7_SHUTDOWN;
     }
 
     return status;

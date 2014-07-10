@@ -330,16 +330,13 @@ readtcp(
 
 		if (status <= 0) {
 			if (status == 0) {
-			    log_add("readtcp(): select() timeout on socket %d",
-				sock);
+			    LOG_START1("select() timeout on socket %d", sock);
 			}
 			else {
 			    if (errno == EINTR)
 				    continue;
 
-			    log_errno();
-			    log_add("readtcp(): select() error on socket %d",
-				sock);
+			    LOG_SERROR1("select() error on socket %d", sock);
 			}
 
 			goto fatal_err;
@@ -353,11 +350,10 @@ readtcp(
 		return (len);
 	}
 	if (len == 0) {
-	    log_start("readtcp(): EOF on socket %d", sock);
+	    LOG_START1("EOF on socket %d", sock);
 	}
 	else {
-	    log_errno();
-	    log_add("readtcp(): read() error on socket %d", sock);
+	    LOG_SERROR1("read() error on socket %d", sock);
 	}
 fatal_err:
 	((struct tcp_conn *)(xprt->xp_p1))->strm_stat = XPRT_DIED;
@@ -378,8 +374,7 @@ writetcp(
 
 	for (cnt = len; cnt > 0; cnt -= i, buf += i) {
 		if ((i = (int)write(xprt->xp_sock, buf, cnt)) < 0) {
-			log_errno();
-			log_add("writetcp(): write() error on socket %d", 
+			LOG_SERROR1("writetcp(): write() error on socket %d",
 			    xprt->xp_sock);
 			((struct tcp_conn *)(xprt->xp_p1))->strm_stat =
 			    XPRT_DIED;

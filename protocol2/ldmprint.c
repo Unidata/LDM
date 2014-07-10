@@ -38,7 +38,7 @@ static const char nada[] = "(null)";
  * @param[out] nbytes    The number of bytes that would be written to the
  *                       buffer -- excluding the terminating NUL character --
  *                       if it was sufficiently capacious.
- * @retval     NULL      Error. `log_add()` called.
+ * @retval     NULL      Error. `log_start()` called.
  * @return               Pointer to the NUL-terminated string buffer containing
  *                       the formatted arguments. The caller should free when
  *                       it's no longer needed.
@@ -66,7 +66,7 @@ tryFormat(
  * @param[in] fmt       The format for the arguments.
  * @param[in] args      The arguments to be formatted. Must have been
  *                      initialized by `va_start()` or `va_copy()`.
- * @retval    NULL      Error. `log_add()` called.
+ * @retval    NULL      Error. `log_start()` called.
  * @return              Pointer to the string buffer containing the formatted
  *                      arguments. The caller should free when it's no longer
  *                      needed.
@@ -102,7 +102,7 @@ ldm_vformat(
  *                      terminating NUL character.
  * @param[in] fmt       The format for the arguments.
  * @param[in] ...       The arguments to be formatted.
- * @retval    NULL      Error. `log_add()` called.
+ * @retval    NULL      Error. `log_start()` called.
  * @return              Pointer to the string buffer containing the formatted
  *                      arguments. The caller should free when it's no longer
  *                      needed.
@@ -403,7 +403,7 @@ char* s_signaturet(char *buf, size_t bufsize, const signaturet signaturep)
  *
  * @param[in]  string     Pointer to the formatted signature.
  * @param[out] signature  Pointer to the data-product MD5 signature.
- * @retval     -1         Failure. \c log_add() called.
+ * @retval     -1         Failure. \c log_start() called.
  * @return                Number of bytes parsed.
  */
 int

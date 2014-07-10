@@ -85,6 +85,7 @@ struct file_id_queue {
     pthread_mutex_t mutex;
     pthread_cond_t  cond;
     int             isCancelled;
+    size_t          count;
 };
 
 static inline void
@@ -122,7 +123,7 @@ addTail(
         status = ECANCELED;
     }
     else {
-        if (fiq->head == NULL) {
+        if (fiq->count == 0) {
             fiq->head = fiq->tail = tail;
         }
         else {
@@ -130,6 +131,7 @@ addTail(
             fiq->tail->next = tail;
             fiq->tail = tail;
         }
+        fiq->count++;
         status = 0;
 
         (void)pthread_cond_broadcast(&fiq->cond);
@@ -180,15 +182,17 @@ static Entry*
 removeHead(
     FileIdQueue* const fiq)
 {
+    if (fiq->count == 0)
+        return NULL;
+
     Entry* entry = fiq->head;
 
-    if (entry) {
-        fiq->head = entry->next;
-        if (fiq->head)
-            fiq->head->prev = NULL;
-        if (fiq->tail == entry)
-            fiq->tail = NULL;
-    }
+    fiq->head = entry->next;
+    if (fiq->head)
+        fiq->head->prev = NULL;
+    if (fiq->tail == entry)
+        fiq->tail = NULL;
+    fiq->count--;
 
     return entry;
 }
@@ -225,12 +229,40 @@ fiq_new(void)
             }
             else {
                 fiq->head = fiq->tail = NULL;
+                fiq->count = 0;
                 fiq->isCancelled = 0;
             }
         } /* "fiq->mutex" allocated */
     } /* "fiq" allocated */
 
     return fiq;
+}
+
+/**
+ * Clears a file-identifier queue of all entries.
+ *
+ * @param[in] fiq  The file-identifier queue to be cleared.
+ * @return         The number of entries removed.
+ */
+size_t
+fiq_clear(
+    FileIdQueue* const fiq)
+{
+    lock(fiq);
+
+    size_t count = fiq->count;
+
+    for (Entry *next, *entry = fiq->head; entry; entry = next) {
+        next = entry->next;
+        entry_free(entry);
+    }
+
+    fiq->head = fiq->tail = NULL;
+    fiq->count = 0;
+
+    unlock(fiq);
+
+    return count;
 }
 
 /**
@@ -244,15 +276,7 @@ fiq_free(
     FileIdQueue* const fiq)
 {
     if (fiq) {
-        Entry* entry = fiq->head;
-
-        while (entry) {
-            Entry* next = entry->next;
-
-            entry_free(entry);
-            entry = next;
-        }
-
+        fiq_clear(fiq);
         (void)pthread_cond_destroy(&fiq->cond);
         (void)pthread_mutex_destroy(&fiq->mutex);
         free(fiq);
@@ -303,7 +327,7 @@ fiq_add(
  * @retval        ECANCELED  Operation of the queue has been canceled.
  */
 int
-fiq_peek(
+fiq_peekWait(
     FileIdQueue* const fiq,
     VcmtpFileId* const fileId)
 {
@@ -331,7 +355,7 @@ fiq_peek(
  * @retval        ENOENT     The queue is empty.
  */
 int
-fiq_poll(
+fiq_removeNoWait(
     FileIdQueue* const fiq,
     VcmtpFileId* const fileId)
 {
@@ -365,7 +389,7 @@ fiq_poll(
  * @retval        ENOENT     The queue is empty.
  */
 int
-fiq_element(
+fiq_peekNoWait(
     FileIdQueue* const fiq,
     VcmtpFileId* const fileId)
 {
@@ -385,6 +409,25 @@ fiq_element(
     unlock(fiq);
 
     return status;
+}
+
+/**
+ * Returns the number of entries currently in a file-identifier queue.
+ *
+ * @param[in] fiq  The file-identifier queue.
+ * @return         The number of identifiers in the queue.
+ */
+size_t
+fiq_count(
+    FileIdQueue* const fiq)
+{
+    size_t count;
+
+    lock(fiq);
+    count = fiq->count;
+    unlock(fiq);
+
+    return count;
 }
 
 /**

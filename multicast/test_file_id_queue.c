@@ -44,11 +44,15 @@ test_add_get(void)
     int        status;
 
     status = fiq_add(rq, fileA);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(fiq_count(rq), 1);
 
-    status = fiq_poll(rq, &fileB);
+    status = fiq_removeNoWait(rq, &fileB);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileB, fileA);
+    CU_ASSERT_EQUAL(fiq_count(rq), 0);
 }
 
 static void
@@ -61,23 +65,35 @@ test_order(void)
     int    status;
 
     status = fiq_add(rq, fileA);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(fiq_count(rq), 1);
     status = fiq_add(rq, fileB);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(fiq_count(rq), 2);
     status = fiq_add(rq, fileC);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(fiq_count(rq), 3);
 
-    status = fiq_poll(rq, &fileD);
+    status = fiq_removeNoWait(rq, &fileD);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileA);
+    CU_ASSERT_EQUAL(fiq_count(rq), 2);
 
-    status = fiq_poll(rq, &fileD);
+    status = fiq_removeNoWait(rq, &fileD);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileB);
+    CU_ASSERT_EQUAL(fiq_count(rq), 1);
 
-    status = fiq_poll(rq, &fileD);
+    status = fiq_removeNoWait(rq, &fileD);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileC);
+    CU_ASSERT_EQUAL(fiq_count(rq), 0);
 }
 
 int

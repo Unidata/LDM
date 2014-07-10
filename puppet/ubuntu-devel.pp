@@ -22,6 +22,11 @@ package {'libpng-dev':
   require => Exec['update'],
 }
 
+package {'libyaml-devel':
+  ensure  => present,
+  require => Exec['update'],
+}
+
 exec {'bashrc':
   command => 'echo "set -o vi" >>/home/vagrant/.bashrc',
   unless  => 'grep "set *-o" /home/vagrant/.bashrc',

@@ -17,7 +17,16 @@
 
 #include <stdbool.h>
 
+/**
+ * Multicast session memory:
+ */
 typedef struct McastSessionMemory McastSessionMemory;
+
+/**
+ * Iterator over files that were missed by the multicast receiver for a
+ * multicast session memory:
+ */
+typedef struct MissedFileIterator MissedFileIterator;
 
 #ifdef __cplusplus
 extern "C" {

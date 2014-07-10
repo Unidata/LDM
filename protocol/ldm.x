@@ -911,7 +911,7 @@ enum Ldm7Status {
     LDM7_REFUSED,  /* Remote LDM-7 refused connection */
     LDM7_SYSTEM,   /* System error */
     LDM7_VCMTP,    /* VCMTP error */
-    LDM7_CANCELED  /* LDM-7 was canceled */
+    LDM7_SHUTDOWN  /* LDM-7 was shut down */
 };
 
 #if RPC_CLNT
@@ -947,8 +947,8 @@ enum Ldm7Status {
 %        return "System error";
 %    case LDM7_VCMTP:
 %        return "VCMTP error";
-%    case LDM7_CANCELED:
-%        return "LDM-7 was canceled";
+%    case LDM7_SHUTDOWN:
+%        return "LDM-7 was shut down";
 %    default:
 %        return "Unknown status";
 %    }
@@ -1001,6 +1001,10 @@ struct BacklogSpec {
      * downstream LDM during the previous session.
      */
     signaturet   after;
+    /*
+     * Whether `after` is set.
+     */
+    int          afterIsSet;
     /*
      * The signature of the first data-product received by the multicast
      * downstream LDM during the current session.

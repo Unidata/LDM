@@ -25,6 +25,10 @@ package {'CUnit-devel':
   ensure  => present,
 }
 
+package {'libyaml-devel':
+  ensure  => present,
+}
+
 exec {'bashrc':
   command => 'echo "set -o vi" >>/home/vagrant/.bashrc',
   unless  => 'grep "set *-o" /home/vagrant/.bashrc',

@@ -3,30 +3,28 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: down7.c
+ *   @file: mcast_session_memory.c
  * @author: Steven R. Emmerson
  *
- * This file implements a downstream LDM-7.
+ * This file implements the persistent, session-to-session memory for a
+ * multicast-capable LDM.
  */
 
 #include "config.h"
 
+#include "file_id_queue.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "mcast_session_memory.h"
 #include "ldmprint.h"
 #include "log.h"
 
+#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <yaml.h>
-
-typedef struct MissedFileBlock {
-    struct MissedFileBlock* next;
-    VcmtpFileId*            fileIds;
-    size_t                  count;
-} MissedFileBlock;
 
 /**
  * The data structure of a multicast session memory:
@@ -44,12 +42,23 @@ struct McastSessionMemory {
      * Signature of the last data-product received via multicast:
      */
     signaturet       lastMcastProd;
-    bool             sigSet; ///< whether or not `lastMcastProd` is set
     /**
-     * The start of the list of identifiers of files that were missed by the
-     * multicast receiver:
+     * Whether or not `lastMcastProd` is set:
      */
-    MissedFileBlock* head;
+    bool             sigSet;
+    /**
+     * Queue of missed-but-not-yet-requested data-products:
+     */
+    FileIdQueue*     missedQ;
+    /**
+     * Queue of requested-but-not-yet-received data-products:
+     */
+    FileIdQueue*     requestedQ;
+    /**
+     * Whether or not the multicast session memory has been modified by the
+     * user.
+     */
+    bool             modified;
 };
 
 /**
@@ -71,7 +80,8 @@ static const char* const MISSED_MCAST_FILES_KEY = "Missed Multicast File Identif
  *                      group.
  * @param[in] mcastId   The multicast group.
  * @retval    NULL      Failure. `log_start()` called.
- * @return              The path of the corresponding memory-file.
+ * @return              The path of the corresponding memory-file. The caller
+ *                      should free when it's no longer needed.
  */
 static char*
 getSessionPath(
@@ -91,6 +101,434 @@ getSessionPath(
 }
 
 /**
+ * Returns the path of the temporary memory-file corresponding to the path of a
+ * canonical memory-file.
+ *
+ * @param[in] path  The path of a canonical memory-file. The caller may free
+ *                  when it's no longer needed.
+ * @retval    NULL  Failure. `log_start()` called.
+ * @return          The path of the corresponding temporary memory-file. The
+ *                  caller should free when it's no longer needed.
+ */
+static char*
+makeTempPath(
+    char* const restrict path)
+{
+    char* const tmpPath = ldm_format(256, "%s%s", path, ".new");
+
+    if (tmpPath == NULL)
+        LOG_ADD0("Couldn't create path of temporary memory-file");
+
+    return tmpPath;
+}
+
+static inline const char*
+yamlParserErrMsg(
+    const yaml_parser_t* const parser)
+{
+    return parser->problem;
+}
+
+static inline unsigned long
+yamlParserLine(
+    const yaml_parser_t* const parser)
+{
+    return parser->problem_mark.line;
+}
+
+static inline unsigned long
+yamlParserColumn(
+    const yaml_parser_t* const parser)
+{
+    return parser->problem_mark.column;
+}
+
+/**
+ * Returns the value-node of a document that corresponds to the value associated
+ * with a mapping key.
+ *
+ * @param[in] document  The document.
+ * @param[in] start     The first mapping pair.
+ * @param[in] end       The last mapping pair.
+ * @param[in] keyStr    The key whose value-node is to be returned.
+ * @retval    NULL      The value-node doesn't exist.
+ * @return              The value-node associated with the given key.
+ */
+static yaml_node_t*
+getValueNode(
+    yaml_document_t* const restrict    document,
+    yaml_node_pair_t* const            start,
+    yaml_node_pair_t* const            end,
+    const char* const restrict         keyStr)
+{
+    /*
+     * ASSUMPTIONS:
+     *   1) `start` is NULL for an empty mapping;
+     *   2) `end` points to the last, valid entry.
+     */
+    for (yaml_node_pair_t* pair = start; pair && pair <= end; pair++) {
+        yaml_node_t* const keyNode = yaml_document_get_node(document,
+                pair->key);
+
+        if (keyNode != NULL && keyNode->type == YAML_SCALAR_NODE &&
+                strcmp(keyNode->data.scalar.value, keyStr) == 0)
+            return yaml_document_get_node(document, pair->value);
+    }
+
+    return NULL;
+}
+
+/**
+ * Initializes the last, multicast data-product signature in a multicast session
+ * memory from a YAML mapping-node.
+ *
+ * @param[in] msm       The multicast session memory to initialize.
+ * @param[in] document  The YAML document to use.
+ * @param[in] start     The first node-pair of the mapping.
+ * @param[in] end       The last node-pair of the mapping.
+ * @retval    true      Success or the parameter doesn't exist.
+ * @retval    false     Error. `log_start()` called.
+ */
+static bool
+initLastMcastProd(
+    McastSessionMemory* const restrict msm,
+    yaml_document_t* const restrict    document,
+    yaml_node_pair_t* const restrict   start,
+    yaml_node_pair_t* const restrict   end)
+{
+    yaml_node_t* const valueNode = getValueNode(document, start, end,
+            LAST_MCAST_PROD_KEY);
+
+    if (valueNode == NULL)
+        return true;
+
+    if (valueNode->type != YAML_SCALAR_NODE) {
+        LOG_START1("Unexpected node-type for value associated with key \"%s\"",
+                LAST_MCAST_PROD_KEY);
+        return false;
+    }
+
+    const char* sigStr = valueNode->data.scalar.value;
+
+    if (sigParse(sigStr, &msm->lastMcastProd) == -1) {
+        LOG_ADD1("Unable to parse last multicast data-product signature \"%s\"",
+                sigStr);
+        return false;
+    }
+
+    msm->sigSet = true;
+
+    return true;
+}
+
+/**
+ * Initializes a multicast session memory's list of files that were missed by
+ * the multicast receiver during the previous session from a YAML sequence.
+ *
+ * @param[in] msm       The multicast session memory to initialize.
+ * @param[in] document  The YAML document to use.
+ * @param[in] start     The first item of the sequence.
+ * @param[in] end       The last item of the sequence.
+ * @retval    true      Success.
+ * @retval    false     Error. `log_start()` called.
+ */
+static bool
+initMissedFilesFromSequence(
+    McastSessionMemory* const restrict     msm,
+    yaml_document_t* const restrict        document,
+    const yaml_node_item_t* const restrict start,
+    const yaml_node_item_t* const restrict end)
+{
+    for (const yaml_node_item_t* item = start; item && item <= end; item++) {
+        yaml_node_t* itemNode = yaml_document_get_node(document, *item);
+
+        if (itemNode == NULL) {
+            LOG_START0("yaml_document_get_node() failure");
+            return false;
+        }
+        if (itemNode->type != YAML_SCALAR_NODE) {
+            LOG_START0("Unexpected node-type for missed-file item");
+            return false;
+        }
+        unsigned long fileId;
+        if (sscanf(itemNode->data.scalar.value, "%lu", &fileId) != 1) {
+            LOG_SERROR1("Couldn't decode missed-file identifier \"%s\"",
+                    itemNode->data.scalar.value);
+            return false;
+        }
+        if (fiq_add(msm->missedQ, fileId) != 0)
+            return false;
+    }
+
+    return true;
+}
+
+/**
+ * Initializes a multicast session memory's list of files that were missed by
+ * the multicast receiver during the previous session from a YAML mapping-node.
+ *
+ * @param[in] msm       The multicast session memory to initialize.
+ * @param[in] document  The YAML document to use.
+ * @param[in] start     The first node-pair of the mapping.
+ * @param[in] end       The last node-pair of the mapping.
+ * @retval    true      Success or the information doesn't exist.
+ * @retval    false     Error. `log_start()` called.
+ */
+static bool
+initMissedFiles(
+    McastSessionMemory* const restrict msm,
+    yaml_document_t* const restrict    document,
+    yaml_node_pair_t* const restrict   start,
+    yaml_node_pair_t* const restrict   end)
+{
+    yaml_node_t* const valueNode = getValueNode(document, start, end,
+            MISSED_MCAST_FILES_KEY);
+
+    if (valueNode == NULL)
+        return true;
+
+    if (valueNode->type != YAML_SEQUENCE_NODE) {
+        LOG_START1("Unexpected node-type for value associated with key \"%s\"",
+                MISSED_MCAST_FILES_KEY);
+        return false;
+    }
+
+    return initMissedFilesFromSequence(msm, document,
+            valueNode->data.sequence.items.start,
+            valueNode->data.sequence.items.end);
+}
+
+/**
+ * Initializes a multicast session memory from a YAML node.
+ *
+ * @param[in] msm       The multicast session memory to initialize.
+ * @param[in] document  The YAML document to use.
+ * @param[in] node      The YAML node to use.
+ * @retval    true      Success.
+ * @retval    false     Failure. `log_start()` called.
+ */
+static bool
+initFromNode(
+    McastSessionMemory* const restrict msm,
+    yaml_document_t* const restrict    document,
+    yaml_node_t* const restrict        node)
+{
+    if (node->type != YAML_MAPPING_NODE) {
+        LOG_START1("Unexpected YAML node: %d", node->type);
+        return false;
+    }
+
+    yaml_node_pair_t* const start = node->data.mapping.pairs.start;
+    yaml_node_pair_t* const end = node->data.mapping.pairs.end;
+
+    return initLastMcastProd(msm, document, start, end) &&
+            initMissedFiles(msm, document, start, end);
+}
+
+/**
+ * Initializes a multicast session memory from a YAML document.
+ *
+ * @param[in] msm       The multicast session memory to initialize.
+ * @param[in] document  The YAML document to use.
+ * @retval    true      Success.
+ * @retval    false     Failure. `log_start()` called.
+ */
+static bool
+initFromDocument(
+    McastSessionMemory* const restrict msm,
+    yaml_document_t* const restrict    document)
+{
+    yaml_node_t* rootNode = yaml_document_get_root_node(document);
+
+    if (rootNode == NULL) {
+        LOG_START0("YAML document is empty");
+        return false;
+    }
+
+    return initFromNode(msm, document, rootNode);
+}
+
+/**
+ * Initializes a multicast session memory from a YAML stream. Only the first
+ * document is used.
+ *
+ * @param[in] msm     The multicast session memory to be initialized.
+ * @param[in] parser  The YAML parser.
+ * @retval    true    Success.
+ * @retval    false   Error. `log_start()` called.
+ */
+static bool
+initFromStream(
+    McastSessionMemory* const restrict msm,
+    yaml_parser_t* const restrict      parser)
+{
+    yaml_document_t document;
+
+    (void)memset(&document, 0, sizeof(document));
+
+    if (!yaml_parser_load(parser, &document)) {
+        LOG_START3("YAML parser failure at line=%lu, column=%lu: %s:",
+                yamlParserLine(parser), yamlParserColumn(parser),
+                yamlParserErrMsg(parser));
+        return false;
+    }
+
+    bool success = initFromDocument(msm, &document);
+
+    yaml_document_delete(&document);
+
+    return success;
+}
+
+/**
+ * Initializes a multicast session memory from a YAML file.
+ *
+ * @param[in] msm   The multicast session memory to initialize.
+ * @param[in] file  The YAML file to parse.
+ * @retval    0     Success.
+ * @retval    1     System error. `log_start()` called.
+ * @retval    2     Parse error. `log_start()` called.
+ */
+static int
+initFromYamlFile(
+    McastSessionMemory* const restrict msm,
+    FILE* const restrict               file)
+{
+    int           status;
+    yaml_parser_t parser;
+
+    if (!yaml_parser_initialize(&parser)) {
+        LOG_SERROR0("Couldn't initialize YAML parser");
+        status = 1;
+    }
+    else {
+        yaml_parser_set_input_file(&parser, file);
+
+        if (!initFromStream(msm, &parser)) {
+            LOG_ADD0("Error parsing memory-file. Delete or correct it.");
+            status = 2;
+        }
+        else {
+            status = 0;
+        }
+
+        yaml_parser_delete(&parser);
+    }
+
+    return status;
+}
+
+/**
+ * Initializes a multicast session memory from a memory-file.
+ *
+ * @param[in] msm           The multicast session memory to initialize.
+ * @param[in] path          The path of the memory-file. Caller must not modify
+ *                          or free.
+ * @retval    0             Success.
+ * @retval    1             System error. `log_start()` called.
+ * @retval    2             Memory-file doesn't exist.
+ */
+static int
+initFromFile(
+    McastSessionMemory* const restrict msm,
+    char* const restrict               path)
+{
+    int   status;
+    FILE* file = fopen(path, "r");
+
+
+    if (file == NULL) {
+        if (errno == ENOENT) {
+            status = 2;
+        }
+        else {
+            LOG_SERROR1("Couldn't open memory-file \"%s\"", path);
+            status = 1;
+        }
+    }
+    else {
+        status = initFromYamlFile(msm, file);
+
+        if (status)
+            LOG_ADD1("Couldn't initialize multicast-memory from file \"%s\"",
+                    path);
+
+        (void)fclose(file); // don't care because open for reading only
+    } // `file` open
+
+    return status;
+}
+
+/**
+ * Initializes a multicast session memory from scratch.
+ *
+ * @param[in] msm    The multicast session memory to initialize.
+ * @param[in] path   The path of the canonical memory-file. Caller must not
+ *                   modify or free.
+ * @param[in] path   The path of the temporary memory-file. Caller must not
+ *                   modify or free.
+ * @retval    true   Success.
+ * @retval    false  Failure. `log_start()` called.
+ */
+static bool
+initFromScratch(
+    McastSessionMemory* const restrict msm,
+    char* const restrict               path)
+{
+    bool        success = false;
+    char* const tmpPath = makeTempPath(path);
+
+    if (tmpPath != NULL) {
+        if ((msm->missedQ = fiq_new()) == NULL) {
+            LOG_ADD0("Couldn't create queue of missed data-products");
+        }
+        else {
+            if ((msm->requestedQ = fiq_new()) == NULL) {
+                LOG_ADD0("Couldn't create queue of requested data-products");
+            }
+            else {
+                msm->path = path;
+                msm->tmpPath = tmpPath;
+                msm->sigSet = false;
+                msm->modified = false;
+                success = true;
+            } // `msm->requestedQ` allocated
+
+            if (!success)
+                fiq_free(msm->missedQ);
+        } // `msm->missedQ` allocated
+
+        if (!success)
+            free(tmpPath);
+    } // `tmpPath` allocated
+
+    return true;
+}
+
+/**
+ * Initializes a multicast session memory from a pre-existing memory-file or
+ * from scratch if the memory-file doesn't exist.
+ *
+ * @param[in] msm       The multicast session memory to initialize.
+ * @param[in] path      The path of the canonical memory-file. Caller must not
+ *                      modify or free.
+ * @retval    true      Success.
+ * @retval    false     Failure. `log_add()` called.
+ */
+static bool
+initFromScratchOrFile(
+    McastSessionMemory* const restrict msm,
+    char* const restrict               path)
+{
+    if (!initFromScratch(msm, path))
+        return false;
+
+    int status = initFromFile(msm, path);
+
+    return (status == 0) || (status == 2); // success or file doesn't exist
+}
+
+/**
  * Initializes a multicast session memory.
  *
  * @param[in] msm       The muticast session memory to initialize.
@@ -105,22 +543,16 @@ init(
     const ServAddr* const restrict     servAddr,
     const char* const restrict         mcastId)
 {
-    bool        success = false;
+    bool        success;
     char* const path = getSessionPath(servAddr, mcastId);
 
-    if (path != NULL) {
-        char* const tmpPath = ldm_format(256, "%s%s", path, ".new");
-
-        if (tmpPath != NULL) {
-            msm->path = path;
-            msm->tmpPath = tmpPath;
-            msm->sigSet = false;
-            msm->head = NULL;
-            success = true;
-        }
+    if (path == NULL) {
+        success = false;
     }
-
-    // TODO: Load from existing memory-file
+    else {
+        if (!(success = initFromScratchOrFile(msm, path)))
+            free(path);
+    } // `path` allocated
 
     return success;
 }
@@ -133,7 +565,7 @@ init(
  * @return           A memory-file open for writing.
  */
 static FILE*
-openMemoryFile(
+openTempMemoryFile(
     McastSessionMemory* const msm)
 {
     FILE* file = fopen(msm->tmpPath, "w");
@@ -145,8 +577,50 @@ openMemoryFile(
 }
 
 /**
- * Adds to a YAML sequence-node the list of files that were missed by the
- * multicast receiver associated with a multicast session memory.
+ * Appends to a YAML sequence-node the list of files contained in a file-
+ * identifier queue.
+ *
+ * @param[in] document  The YAML document.
+ * @param[in] seq       The identifier of the YAML sequence-node.
+ * @param[in] fiq       The file-identifier queue.
+ * @retval    true      Success.
+ * @retval    false     Failure. `log_start()` called.
+ */
+static bool
+appendFileIds(
+    yaml_document_t* const restrict document,
+    const int                       seq,
+    FileIdQueue* const restrict     fiq)
+{
+    VcmtpFileId fileId;
+
+    while (fiq_removeNoWait(fiq, &fileId) == 0) {
+        char          buf[sizeof(fileId)*4+1]; // overly capacious
+
+        (void)snprintf(buf, sizeof(buf), "%lu", (unsigned long)fileId);
+
+        int  scalarNode = yaml_document_add_scalar(document, NULL, buf, -1,
+                YAML_PLAIN_SCALAR_STYLE);
+
+        if (!scalarNode) {
+            LOG_START0("yaml_document_add_scalar() failure");
+            return false;
+        }
+        else {
+            if (!yaml_document_append_sequence_item(document, seq, scalarNode)) {
+                LOG_START0("yaml_document_append_sequence_item() failure");
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
+/**
+ * Appends to a YAML sequence-node the current list of files that were missed by
+ * the multicast receiver associated with a multicast session memory. Both the
+ * "missed" and "requested" queues are used.
  *
  * @param[in] msm       The multicast session memory.
  * @param[in] document  The YAML document.
@@ -160,33 +634,11 @@ addMissedFiles(
     yaml_document_t* const restrict          document,
     const int                                seq)
 {
-    bool success = false;
-
-    for (MissedFileBlock* block = msm->head; block; block = block->next) {
-        for (VcmtpFileId* fileId = block->fileIds;
-                fileId < block->fileIds + block->count; fileId++) {
-            unsigned long id;
-            char          buf[sizeof(id)*4+1]; // overly capacious
-
-            (void)snprintf(buf, sizeof(buf), "%lu", id);
-
-            int  item = yaml_document_add_scalar(document, NULL, buf, -1,
-                    YAML_PLAIN_SCALAR_STYLE);
-
-            if (!item) {
-                LOG_START0("yaml_document_add_scalar() failure");
-                return false;
-            }
-            else {
-                if (!yaml_document_append_sequence_item(document, seq, item)) {
-                    LOG_START0("yaml_document_append_sequence_item() failure");
-                    return false;
-                }
-            }
-        }
-    }
-
-    return true;
+    bool        success = false;
+    VcmtpFileId fileId;
+    
+    return appendFileIds(document, seq, msm->requestedQ) &&
+            appendFileIds(document, seq, msm->missedQ);
 }
 
 /**
@@ -350,7 +802,9 @@ addData(
     }
     else {
         success = (!msm->sigSet || addLastMcastProd(msm, document, root)) &&
-                (msm->head == NULL || addMissedMcastFiles(msm, document, root));
+                ((fiq_count(msm->requestedQ) == 0 &&
+                        fiq_count(msm->missedQ) == 0) ||
+                addMissedMcastFiles(msm, document, root));
     }
 
     return success;
@@ -458,7 +912,8 @@ dumpMemory(
 }
 
 /**
- * Closes the memory-file of a multicast session memory.
+ * Closes the temporary memory-file of a multicast session memory and renames
+ * it to the canonical memory-file.
  *
  * @param[in] msm       The multicast session memory.
  * @param[in] goodDump  Was the dump of memory successful?
@@ -466,7 +921,7 @@ dumpMemory(
  * @retval    false     Failure. `log_start()` called.
  */
 static bool
-closeMemoryFile(
+closeAndRenameTempMemoryFile(
     McastSessionMemory* const msm,
     FILE* const               file,
     const bool                goodDump)
@@ -498,15 +953,39 @@ dump(
     McastSessionMemory* const msm)
 {
     bool  success = false;
-    FILE* file = openMemoryFile(msm);
+    FILE* file = openTempMemoryFile(msm);
 
     if (file) {
         if (dumpMemory(msm, file))
             success = true;
 
-        if (!closeMemoryFile(msm, file, success))
+        if (!closeAndRenameTempMemoryFile(msm, file, success))
             success = false;
     }
+
+    return success;
+}
+
+/**
+ * Adds an identifier of a file that was missed by the multicast receiver to one
+ * of the queues of a multicast session memory.
+ *
+ * @param[in] msm    The multicast session memory.
+ * @param[in] fiq    The queue to use.
+ * @param[in] id     The file identifier to add.
+ * @retval    true   Success.
+ * @retval    false  Error. `log_start()` called.
+ */
+static bool
+addFile(
+    McastSessionMemory* const restrict msm,
+    FileIdQueue* const restrict        fiq,
+    const VcmtpFileId                  fileId)
+{
+    bool success = fiq_add(fiq, fileId) == 0;
+
+    if (success)
+        msm->modified = true;
 
     return success;
 }
@@ -514,6 +993,46 @@ dump(
 /******************************************************************************
  * Public API
  ******************************************************************************/
+
+/**
+ * Deletes a multicast-session memory-file.
+ *
+ * @param[in] servAddr  Address of the server.
+ * @param[in] mcastId   Identifier of the multicast group.
+ * @retval    true      Success or the file doesn't exist.
+ * @retval    false     Error. `log_start()` called.
+ */
+bool
+msm_delete(
+    const ServAddr* const servAddr,
+    const char* const     mcastId)
+{
+    bool        success;
+    char* const path = getSessionPath(servAddr, mcastId);
+
+    if (!path) {
+        success = false;
+    }
+    else {
+        if (unlink(path)) {
+            if (errno == ENOENT) {
+                success = true;
+            }
+            else {
+                LOG_SERROR1("Couldn't remove multicast-session memory-file \"%s\"",
+                        path);
+                success = false;
+            }
+        }
+        else {
+            success = true;
+        }
+
+        free(path);
+    }
+
+    return success;
+}
 
 /**
  * Opens a multicast session memory.
@@ -557,15 +1076,11 @@ bool
 msm_close(
     McastSessionMemory* const msm)
 {
-    if (!dump(msm))
+    if (msm->modified && !dump(msm))
         return false;
 
-    for (MissedFileBlock *next, *block = msm->head; block; block = next) {
-        next = block->next;
-        free(block->fileIds);
-        free(block);
-    }
-
+    fiq_free(msm->requestedQ);
+    fiq_free(msm->missedQ);
     free(msm->path);
     free(msm->tmpPath);
     free(msm);
@@ -591,6 +1106,7 @@ msm_setLastMcastProd(
 {
     (void)memcpy(&msm->lastMcastProd, sig, sizeof(signaturet));
     msm->sigSet = true;
+    msm->modified = true;
     return true;
 }
 
@@ -601,19 +1117,186 @@ msm_setLastMcastProd(
  * @param[in]  msm    The multicast session memory.
  * @param[out] sig    Signature of the last data-product received via multicast.
  * @retval     true   Success. `sig` is set.
- * @retval     false  Failure. `log_start()` called. `sig` is unaltered.
+ * @retval     false  The signature doesn't exist. `sig` is unaltered.
  */
 bool
 msm_getLastMcastProd(
     McastSessionMemory* const restrict msm,
     signaturet                         sig)
 {
-    if (msm->sigSet) {
+    if (msm->sigSet)
         (void)memcpy(sig, &msm->lastMcastProd, sizeof(signaturet));
-        return true;
-    }
 
-    LOG_START1("Signature of last multicast product not set for \"%s\"",
-            msm->path);
-    return false;
+    return msm->sigSet;
+}
+
+/**
+ * Clears the list of files in a multicast session memory that were missed by
+ * the multicast receiver: both the missed-but-not-requested and
+ * requested-but-not-received queues are cleared. Idempotent.
+ *
+ * @param[in] msm  The multicast session memory.
+ */
+void
+msm_clearAllMissedFiles(
+    McastSessionMemory* const restrict msm)
+{
+    msm->modified = fiq_clear(msm->requestedQ) != 0 ||
+            fiq_clear(msm->missedQ) != 0;
+}
+
+/**
+ * Removes and returns the identifier of a file that has not been received by
+ * the multicast receiver associated with a multicast session memory. The
+ * requested-but-not-received queue is tried first; then the
+ * missed-but-not-requested queue.
+ *
+ * @param[in] msm     The multicast session memory.
+ * @param[in] fileId  The identifier of the missed file.
+ * @retval    true    Such an identifier exists. `*fileId` is set.
+ * @retval    false   No such identifier (the queues are empty).
+ */
+bool
+msm_getAnyMissedFileNoWait(
+    McastSessionMemory* const restrict msm,
+    VcmtpFileId* const restrict        fileId)
+{
+    return fiq_removeNoWait(msm->requestedQ, fileId) == 0 ||
+            fiq_removeNoWait(msm->missedQ, fileId) == 0;
+}
+
+/**
+ * Adds an identifier of a file that was missed by the multicast receiver but
+ * has not yet been requested to the current list of such files in a multicast
+ * session memory.
+ *
+ * @param[in] msm    The multicast session memory.
+ * @param[in] id     The file identifier to add.
+ * @retval    true   Success.
+ * @retval    false  Error. `log_start()` called.
+ */
+bool
+msm_addMissedFile(
+    McastSessionMemory* const restrict msm,
+    const VcmtpFileId                  fileId)
+{
+    return addFile(msm, msm->missedQ, fileId);
+}
+
+/**
+ * Adds an identifier of a file that was missed by the multicast receiver and
+ * has been requested from the upstream LDM-7 to the current list of such files
+ * in a multicast session memory.
+ *
+ * @param[in] msm    The multicast session memory.
+ * @param[in] id     The file identifier to add.
+ * @retval    true   Success.
+ * @retval    false  Error. `log_start()` called.
+ */
+bool
+msm_addRequestedFile(
+    McastSessionMemory* const restrict msm,
+    const VcmtpFileId                  fileId)
+{
+    return addFile(msm, msm->requestedQ, fileId);
+}
+
+/**
+ * Returns (but doesn't remove) the next file-identifier from the
+ * missed-but-not-requested queue of a multicast session memory. Blocks until
+ * such a file is available.
+ *
+ * @param[in] msm     The multicast session memory.
+ * @param[in] fileId  The file-identifier.
+ * @retval    true    Success. `*fileId` is set.
+ * @retval    false   The queue has been shutdown.
+ */
+bool
+msm_peekMissedFileWait(
+    McastSessionMemory* const restrict msm,
+    VcmtpFileId* const restrict        fileId)
+{
+    return fiq_peekWait(msm->missedQ, fileId) == 0;
+}
+
+/**
+ * Returns (but doesn't remove) the next file-identifier from the
+ * missed-but-not-requested queue of a multicast session memory.
+ *
+ * @param[in] msm     The multicast session memory.
+ * @param[in] fileId  The file-identifier.
+ * @retval    true    The identifier exists. `*fileId` is set.
+ * @retval    false   No such identifier (the queue is empty).
+ */
+bool
+msm_peekMissedFileNoWait(
+    McastSessionMemory* const restrict msm,
+    VcmtpFileId* const restrict        fileId)
+{
+    return fiq_peekNoWait(msm->missedQ, fileId) == 0;
+}
+
+/**
+ * Removes and returns the next file-identifier from the
+ * missed-but-not-requested queue of a multicast session memory.
+ *
+ * @param[in] msm     The multicast session memory.
+ * @param[in] fileId  The file-identifier.
+ * @retval    true    The identifier exists. `*fileId` is set.
+ * @retval    false   No such identifier (the queue is empty).
+ */
+bool
+msm_removeMissedFileNoWait(
+    McastSessionMemory* const restrict msm,
+    VcmtpFileId* const restrict        fileId)
+{
+    return fiq_removeNoWait(msm->missedQ, fileId) == 0;
+}
+
+/**
+ * Returns (but doesn't remove) the next file-identifier from the
+ * requested-but-not-received queue of a multicast session memory. Doesn't
+ * block.
+ *
+ * @param[in] msm     The multicast session memory.
+ * @param[in] fileId  The file-identifier.
+ * @retval    true    Success. `*fileId` is set.
+ * @retval    false   No such identifier (the queue is empty).
+ */
+bool
+msm_peekRequestedFileNoWait(
+    McastSessionMemory* const restrict msm,
+    VcmtpFileId* const restrict        fileId)
+{
+    return fiq_peekNoWait(msm->requestedQ, fileId) == 0;
+}
+
+/**
+ * Removes and returns the next file-identifier from the
+ * requested-but-not-received queue of a multicast session memory.
+ *
+ * @param[in] msm     The multicast session memory.
+ * @param[in] fileId  The file-identifier.
+ * @retval    true    The identifier exists. `*fileId` is set.
+ * @retval    false   No such identifier (the queue is empty).
+ */
+bool
+msm_removeRequestedFileNoWait(
+    McastSessionMemory* const restrict msm,
+    VcmtpFileId* const restrict        fileId)
+{
+    return fiq_removeNoWait(msm->requestedQ, fileId) == 0;
+}
+
+/**
+ * Shuts down the queue of missed-but-not-requested files in a multicast session
+ * memory.
+ *
+ * @param[in] msm     The multicast session memory.
+ */
+void
+msm_shutDownMissedFiles(
+    McastSessionMemory* const restrict msm)
+{
+    (void)fiq_cancel(msm->missedQ);
 }

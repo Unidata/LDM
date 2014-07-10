@@ -29,10 +29,12 @@
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT"
 #endif
 
+#if 0
 static void missed_product_func(
     const VcmtpFileId fileId)
 {
 }
+#endif
 
 void test_mdl_createAndExecute()
 {
@@ -81,7 +83,7 @@ void test_mdl_createAndExecute()
     vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     status = mdl_start(mdl);
     log_log(LOG_INFO);
-    OP_ASSERT_EQUAL_INT(LDM7_CANCELED, status);
+    OP_ASSERT_EQUAL_INT(LDM7_SHUTDOWN, status);
 
     vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
     mdl_free(mdl);

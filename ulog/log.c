@@ -331,7 +331,8 @@ void log_add(
 }
 
 /**
- * Adds a system error-message for the current thread.
+ * Sets a system error-message as the first error-message for the current
+ * thread.
  */
 void log_errno(void)
 {
@@ -339,8 +340,8 @@ void log_errno(void)
 }
 
 /**
- * Adds a system error-message for the current thread based on the current value
- * of "errno" and a higher-level error-message.
+ * Sets a system error-message as the first error-message for the current thread
+ * based on the current value of "errno" and a higher-level error-message.
  */
 void log_serror(
     const char* const fmt,  /**< The higher-level message format */
@@ -442,7 +443,7 @@ void log_log(
  *                      "Couldn't allocate <n> bytes for ...".
  * @param file          Name of the file.
  * @param line          Line number in the file.
- * @retval NULL         Out of memory. \c log_add() called.
+ * @retval NULL         Out of memory. \c log_start() called.
  * @return              Pointer to the allocated memory.
  */
 void* log_malloc(
