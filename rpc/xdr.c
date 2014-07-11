@@ -596,13 +596,27 @@ xdr_union(
  */
 
 
-/*
- * XDR null terminated ASCII strings
- * xdr_string deals with "C strings" - arrays of bytes that are
- * terminated by a NULL character.  The parameter cpp references a
- * pointer to storage; If the pointer is null, then the necessary
- * storage is allocated.  The last parameter is the max allowed length
- * of the string as specified by a protocol.
+/**
+ * XDR NUL-terminated ASCII strings. A successfully decoded string will always
+ * have a terminating NUL character.
+ *
+ * @param[in]     xdrs     The XDR structure.
+ * @param[in,out] cpp      ENCODE: Address of pointer to character array.
+ *                         DECODE: Address of pointer to character array.  If
+ *                             `*cpp` is NULL, then space is allocated for the
+ *                             decoded string and `xdr_string(xdrs, cpp,
+ *                             XDR_FREE)` should be called; otherwise, the
+ *                             length of the character array should be at least
+ *                             `maxsize + 1` bytes. On success, the decoded
+ *                             string will be NUL-terminated.
+ *                         FREE:   Address of pointer to character array alloced
+ *                             because `*cpp` was NULL when the string was
+ *                             decoded.
+ * @param[in]     maxsize  The maximum allowed length of the string -- excluding
+ *                         the terminating NUL character -- as specified by a
+ *                         protocol.
+ * @retval        0        Success.
+ * @retval        1        Failure.
  */
 bool_t
 xdr_string(

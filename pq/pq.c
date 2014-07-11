@@ -5757,7 +5757,6 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 return status;
         }
 
-/* */
         extent = xlen_product(prod);
         status = rpqe_new(pq, extent, prod->info.signature, &vp, &sxep);
         if(status != ENOERR) {
