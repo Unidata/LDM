@@ -22,7 +22,7 @@ package {'libpng-dev':
   require => Exec['update'],
 }
 
-package {'libyaml-devel':
+package {'libyaml-dev':
   ensure  => present,
   require => Exec['update'],
 }
