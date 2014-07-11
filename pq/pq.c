@@ -16,6 +16,7 @@
 #include <unistd.h> /* sysconf */
 #include <limits.h>
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>  /* DEBUG */
 #include <errno.h>
 #include <signal.h>
@@ -4683,36 +4684,170 @@ rpqe_free(pqueue *pq, off_t offset, signaturet signature)
 }
 
 
-/*
+/**
+ * Set the minimum virtual residence time metrics if appropriate.
+ *
+ * @param[in] pq    The product-queue.
+ * @param[in] tqep  The associated time-queue entry.
+ * @param[in] info  The information-buffer containing the data-product
+ *                  metadata.
+ */
+static void
+pq_set_mvrt(
+    pqueue* const restrict    pq,
+    tqelem* const restrict    tqep,
+    prod_info* const restrict info)
+{
+    const timestampt*           creationTime = &info->arrival;
+    const timestampt* const     receptionTime = &tqep->tv;
+    timestampt                  now;
+
+    /*
+     * If the product was received before it was created, then use the product's
+     * reception-time as its creation-time in the computation of the product's
+     * virtual residence-time.
+     */
+    if (TV_CMP_LT(*receptionTime, *creationTime))
+        creationTime = receptionTime;
+
+    (void)set_timestamp(&now);
+
+    /*
+     * Compute the product's residence time only if the product was
+     * created before now.
+     */
+    if (TV_CMP_LT(*creationTime, now)) {
+        timestampt      virtResTime = diff_timestamp(&now, creationTime);
+
+        if (tvIsNone(pq->ctlp->minVirtResTime) ||
+                TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime)) {
+            uinfo("pq_del_oldest(): MVRT product: %s",
+                    s_prod_info(NULL, 0, info, ulogIsDebug()));
+            pq->ctlp->minVirtResTime = virtResTime;
+            pq->ctlp->mvrtSize = pq->rlp->nbytes;
+            pq->ctlp->mvrtSlots = pq->rlp->nelems;
+        }
+    }
+}
+
+
+/**
+ * Delete the entries associated with a data-product.
+ *
+ * @param[in] pq    The product-queue.
+ * @param[in] tqep  The entry in the time-list.
+ * @param[in] rlix  The region index.
+ * @param[in] sig   The data-product signature.
+ */
+static inline void // inlined because only called by one function
+pq_del_prod_entries(
+    pqueue* const restrict pq,
+    tqelem* const          tqep,
+    const size_t           rlix,
+    const signaturet       sig)
+{
+    /*
+     * Remove the corresponding entry from the time-list.
+     */
+    tq_delete(pq->tqp, tqep);
+
+    /*
+     * Remove the corresponding entry from the signature-list.
+     */
+    if (sx_find_delete(pq->sxp, sig) == 0)
+        uerror("pq_del_oldest: signature %s: Not Found",
+                s_signaturet(NULL, 0, sig));
+
+    /*
+     * Remove the corresponding entry from the region-list.
+     */
+    rl_free(pq->rlp, rlix);
+}
+
+
+/**
+ * Attempts to delete a data-product.
+ *
+ * @param[in] pq     The product-queue.
+ * @param[in] tqep   Pointer to the entry in the time-list.
+ * @param[in] rlix   Index of the data-region.
+ * @retval    true   Success.
+ * @retval    false  The data-region is locked.
+ */
+static inline bool // inlined because only called by one function
+pq_try_del_prod(
+    pqueue* const restrict pq,
+    tqelem* const          tqep,
+    size_t                 rlix)
+{
+    region* const rep = pq->rlp->rp + rlix;
+    void*         vp;
+    int           status = rgn_get(pq, rep->offset, Extent(rep),
+            RGN_WRITE|RGN_NOWAIT, &vp);
+
+    if (status)
+        return false;
+
+    /* Get the metadata of the data-product. */
+    InfoBuf infoBuf;
+    if (xinfo_i(vp, Extent(rep), XDR_DECODE, ib_init(&infoBuf)) == NULL) {
+        LOG_START0("Couldn't XDR_DECODE data-product metadata");
+        log_log(LOG_ERR);
+    }
+    else {
+        /* Adjust the minimum virtual residence time. */
+        pq_set_mvrt(pq, tqep, &infoBuf.info);
+    }
+
+    /* Release the entries associated with the data-product. */
+    pq_del_prod_entries(pq, tqep, rlix, infoBuf.info.signature);
+
+    /* Release the data-region. */
+    (void)rgn_rel(pq, rep->offset, 0);
+
+    return true;
+}
+
+
+/**
  * Deletes the oldest product in a product queue that is not locked.  In the
  * unlikely event that all the products in the queue are locked or a deadlock
  * is detected, returns an error status other than ENOERR.  Sets the "isFull",
  * "minVirtResTime", "mvrtSize", and "mvrtSlots" members of the product-queue
  * control block on success.
  *
- * Arguments:
- *      pq              Pointer to the product-queue object.  Shall not be
- *                      NULL.
- * Returns:
- *      0               Success.  "pq->ctlp->isFull" set to true.
- *      else            <errno.h> error code.
+ * @param[in] pq  Pointer to the product-queue object.  Shall not be NULL.
+ * @retval    0   Success.  "pq->ctlp->isFull" set to true.
+ * @return        <errno.h> error code.
  */
 static int
-pq_del_oldest(pqueue *pq)
+pq_del_oldest(
+    pqueue* const pq)
 {
-    tqelem*             tqep;
-    int                 status = ENOERR;
-    size_t              rlix;
-    region*             rep = NULL;
-    void*               vp = NULL;
-
     assert(pq != NULL);
     assert(pq->ctlp != NULL && pq->tqp != NULL);
 
-    /*
-     * Get the data region corresponding to the oldest, unlocked data-product.
-     */
-    tqep = tqe_first(pq->tqp);
+    /* Delete the oldest unlocked data-product. */
+    size_t  rlix;
+    for (tqelem* tqep = tqe_first(pq->tqp);
+            (rlix = rl_find(pq->rlp, tqep->offset)) != RL_NONE;
+            tqep = tq_next(pq->tqp, tqep)) {
+
+        if (pq_try_del_prod(pq, tqep, rlix))
+            return 0;
+    }
+
+    pq->ctlp->isFull = 1; // Mark the queue as full.
+
+    return EACCES; // all products likely locked
+
+#if 0
+    tqelem*             tqep;
+    int                 status = ENOERR;
+    void*               vp = NULL;
+    region*             rep = NULL;
+    size_t              rlix;
+
     rlix = rl_find(pq->rlp, tqep->offset);
     assert(rlix != RL_NONE);
     rep = pq->rlp->rp + rlix;
@@ -4820,6 +4955,7 @@ pq_del_oldest(pqueue *pq)
     }                                   /* got data region */
 
     return status;
+#endif
 }
 
 
