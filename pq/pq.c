@@ -4721,7 +4721,7 @@ pq_set_mvrt(
 
         if (tvIsNone(pq->ctlp->minVirtResTime) ||
                 TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime)) {
-            uinfo("pq_del_oldest(): MVRT product: %s",
+            uinfo("pq_set_mvrt(): MVRT product: %s",
                     s_prod_info(NULL, 0, info, ulogIsDebug()));
             pq->ctlp->minVirtResTime = virtResTime;
             pq->ctlp->mvrtSize = pq->rlp->nbytes;
@@ -4742,7 +4742,7 @@ pq_set_mvrt(
 static inline void // inlined because only called by one function
 pq_del_prod_entries(
     pqueue* const restrict pq,
-    tqelem* const          tqep,
+    tqelem* const restrict tqep,
     const size_t           rlix,
     const signaturet       sig)
 {
@@ -4755,7 +4755,7 @@ pq_del_prod_entries(
      * Remove the corresponding entry from the signature-list.
      */
     if (sx_find_delete(pq->sxp, sig) == 0)
-        uerror("pq_del_oldest: signature %s: Not Found",
+        uerror("pq_del_prod_entries(): signature %s: Not Found",
                 s_signaturet(NULL, 0, sig));
 
     /*
@@ -4772,17 +4772,18 @@ pq_del_prod_entries(
  * @param[in] tqep   Pointer to the entry in the time-list.
  * @param[in] rlix   Index of the data-region.
  * @retval    true   Success.
- * @retval    false  The data-region is locked.
+ * @retval    false  The data-region is locked by something.
  */
 static inline bool // inlined because only called by one function
 pq_try_del_prod(
     pqueue* const restrict pq,
-    tqelem* const          tqep,
+    tqelem* const restrict tqep,
     size_t                 rlix)
 {
     region* const rep = pq->rlp->rp + rlix;
+    const off_t   offset = rep->offset;
     void*         vp;
-    int           status = rgn_get(pq, rep->offset, Extent(rep),
+    int           status = rgn_get(pq, offset, Extent(rep),
             RGN_WRITE|RGN_NOWAIT, &vp);
 
     if (status)
@@ -4799,11 +4800,14 @@ pq_try_del_prod(
         pq_set_mvrt(pq, tqep, &infoBuf.info);
     }
 
-    /* Release the entries associated with the data-product. */
+    /*
+     * Release the entries associated with the data-product. NB: Don't use
+     * `tqep` or `rep` after this.
+     */
     pq_del_prod_entries(pq, tqep, rlix, infoBuf.info.signature);
 
     /* Release the data-region. */
-    (void)rgn_rel(pq, rep->offset, 0);
+    (void)rgn_rel(pq, offset, 0);
 
     return true;
 }
@@ -4816,9 +4820,9 @@ pq_try_del_prod(
  * "minVirtResTime", "mvrtSize", and "mvrtSlots" members of the product-queue
  * control block on success.
  *
- * @param[in] pq  Pointer to the product-queue object.  Shall not be NULL.
- * @retval    0   Success.  "pq->ctlp->isFull" set to true.
- * @return        <errno.h> error code.
+ * @param[in] pq      Pointer to the product-queue object.  Shall not be NULL.
+ * @retval    0       Success.  "pq->ctlp->isFull" set to true.
+ * @return    EACESS  No unlocked products left to delete. Error-message logged.
  */
 static int
 pq_del_oldest(
@@ -4837,12 +4841,13 @@ pq_del_oldest(
             return 0;
     }
 
+    uerror("pq_del_oldest(): no unlocked products left to delete!");
     pq->ctlp->isFull = 1; // Mark the queue as full.
 
-    return EACCES; // all products likely locked
+    return EACCES;
 
 #if 0
-    tqelem*             tqep;
+    tqelem*             tqep = tqe_first(pq->tqp);
     int                 status = ENOERR;
     void*               vp = NULL;
     region*             rep = NULL;
