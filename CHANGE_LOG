@@ -1,11 +1,12 @@
-6.12.4	2014-07-13T10:34:09-0600
+6.12.4	2014-07-14T09:45:40-0600
     Product-queue library (pq.c):
         Modified the product-insertion logic to continue rather than
         error-return if the signature of a product that's being deleted to make
         room for the new product can't be found in the signature-list. An
         error-message will be logged instead. This was done because we've seen
-        this occur three times over the past two decades. Our working hypothesis
-        is that a cosmic ray corrupted a bit.
+        this occur at least three times over the past couple of years --
+        resulting in the LDM ceasing to receive data. Our working hypothesis is
+        that a cosmic ray corrupted a bit.
 
 6.12.3	2014-06-27T16:12:47-0600
     Fixed a bug in the upstream LDM database that prevented disabling of the
