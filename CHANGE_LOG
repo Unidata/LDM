@@ -1,4 +1,4 @@
-6.12.4	2014-07-16T13:01:15-0600
+6.12.4	2014-07-16T13:05:21-0600
     Product-queue library (pq.c):
         Modified the product-insertion logic to continue rather than
         error-return if the signature of a product that's being deleted to make

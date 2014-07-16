@@ -413,7 +413,7 @@ isAntiDosEnabled(void)
             isEnabled = 1;
             LOG_ADD1("Using default value: %s", isEnabled ? "TRUE" : "FALSE");
             if (status == ENOENT) {
-                log_log(LOG_NOTE);
+                log_log(LOG_INFO);
                 isSet = 1;
             }
             else {
