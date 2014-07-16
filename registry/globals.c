@@ -411,11 +411,9 @@ isAntiDosEnabled(void)
 
         if (status) {
             isEnabled = 1;
-            LOG_ADD1("Couldn't get value of anti-denial-of-service registry "
-                    "parameter \"%s\"", REG_ANTI_DOS);
             LOG_ADD1("Using default value: %s", isEnabled ? "TRUE" : "FALSE");
             if (status == ENOENT) {
-                log_log(LOG_WARNING);
+                log_log(LOG_NOTE);
                 isSet = 1;
             }
             else {
@@ -447,11 +445,9 @@ getTimeOffset(void)
 
         if (status) {
             timeOffset = 3600;
-            LOG_ADD1("Couldn't get value of time-offset registry parameter "
-                    "\"%s\"", REG_TIME_OFFSET);
             LOG_ADD1("Using default value: %u seconds", timeOffset);
             if (status == ENOENT) {
-                log_log(LOG_WARNING);
+                log_log(LOG_INFO);
                 isSet = 1;
             }
             else {

@@ -1,4 +1,4 @@
-6.12.4	2014-07-14T09:45:40-0600
+6.12.4	2014-07-16T13:01:15-0600
     Product-queue library (pq.c):
         Modified the product-insertion logic to continue rather than
         error-return if the signature of a product that's being deleted to make
@@ -6,7 +6,7 @@
         error-message will be logged instead. This was done because we've seen
         this occur at least three times over the past couple of years --
         resulting in the LDM ceasing to receive data. Our working hypothesis is
-        that a cosmic ray corrupted a bit.
+        that a bit (either on-disk or in-memory) was somehow corrupted.
 
 6.12.3	2014-06-27T16:12:47-0600
     Fixed a bug in the upstream LDM database that prevented disabling of the
