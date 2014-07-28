@@ -3,18 +3,20 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: up_ldm.hin
+ *   @file: mldm_sender.hin
  * @author: Steven R. Emmerson
  *
- * This file specifies the API for the multicast-capable upstream LDM.
+ * This file specifies the API for the multicast upstream LDM.
  */
 
-#ifndef UP_LDM7_H
-#define UP_LDM7_H
+#ifndef MCAST_UP_H
+#define MCAST_UP_H
 
 #include "ldm.h"
+#include "pq.h"
+#include "mcast.h"
 
-typedef struct UpLdm7Proxy UpLdm7Proxy;
+typedef struct mul      Mul;
 
 #ifdef __cplusplus
 extern "C" {

@@ -9,15 +9,8 @@
  */
 
 #include <config.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <rpc/rpc.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <errno.h>
-#include <regex.h>
+
+#include "ldm.h"
 #include "ldm5.h"
 #include "globals.h"
 #include "remote.h"
@@ -27,6 +20,16 @@
 #include "inetutil.h"
 #include "ldm5_clnt.h"
 #include "RegularExpressions.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <rpc/rpc.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <regex.h>
 
 #ifdef NO_ATEXIT
 #include "atexit.h"

@@ -11,6 +11,7 @@
 
 #include "config.h"
 
+#include "inetutil.h"
 #include "log.h"
 #include "server_info.h"
 

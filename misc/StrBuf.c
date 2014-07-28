@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,6 +15,7 @@
 struct strBuf {
     char*       buf;    /* NUL-terminated string */
     size_t      len;    /* length of string (excluding terminating NUL) */
+    size_t      max;    /* the size of the allocated buffer */
 };
 
 /**
@@ -28,20 +30,25 @@ struct strBuf {
  *                      NULL.
  *      else            Pointer to the string-buffer.
  */
-StrBuf* sbEnsure(
+StrBuf*
+sbEnsure(
     StrBuf*             buf,
     const size_t        n)
 {
     if (NULL != buf) {
         size_t  newMax = n + 1;
-        char*   newBuf = realloc(buf->buf, newMax);
 
-        if (NULL == newBuf) {
-            log_serror("sbEnsure(): Couldn't reallocate %lu bytes", newMax);
-            buf = NULL;
-        }
-        else {
-            buf->buf = newBuf;
+        if (newMax > buf->max) {
+            char*   newBuf = realloc(buf->buf, newMax);
+
+            if (NULL == newBuf) {
+                log_serror("sbEnsure(): Couldn't reallocate %lu bytes", newMax);
+                buf = NULL;
+            }
+            else {
+                buf->buf = newBuf;
+                buf->max = newMax;
+            }
         }
     }
 
@@ -55,7 +62,8 @@ StrBuf* sbEnsure(
  *      NULL            Out-of-memory. "log_start()" called.
  *      else            Pointer to the string-buffer.
  */      
-StrBuf* sbNew(void)
+StrBuf*
+sbNew(void)
 {
     size_t      nbytes = sizeof(StrBuf);
     StrBuf*     sb = (StrBuf*)malloc(nbytes);
@@ -67,6 +75,7 @@ StrBuf* sbNew(void)
     else {
         sb->buf = NULL;
         sb->len = 0;
+        sb->max = 1;
 
         if (NULL == sbEnsure(sb, 0)) {
             sbFree(sb);
@@ -89,7 +98,8 @@ StrBuf* sbNew(void)
  *      NULL            "buf" is NULL.
  *      else            Pointer to the string-buffer.
  */
-StrBuf* sbTrim(
+StrBuf*
+sbTrim(
     StrBuf* const       buf,
     const size_t        n)
 {
@@ -97,6 +107,71 @@ StrBuf* sbTrim(
         buf->buf[n] = 0;
 
     return buf;
+}
+
+/**
+ * Appends a variadic list of strings to the string-buffer.
+ *
+ * Arguments
+ *      buf             Pointer to the string-buffer to append to or NULL.
+ *      strings         Pointers to the strings to be appended. The last
+ *                      pointer must be NULL.
+ * Returns
+ *      NULL            Out-of-memory ("log_start()" called) or "buf" is
+ *                      NULL.
+ *      else            Pointer to the string-buffer.
+ */
+StrBuf*
+sbCatV(
+    StrBuf* const       buf,
+    va_list             strings)
+{
+    if (buf != NULL) {
+        const char* string;
+
+        for (string = (const char*)va_arg(strings, const char*); NULL != string;
+                string = (const char*)va_arg(strings, const char*)) {
+            size_t  newLen = buf->len + strlen(string);
+
+            if (NULL == sbEnsure(buf, newLen))
+                return NULL;
+
+            (void)strcpy(buf->buf + buf->len, string);
+
+            buf->len = newLen;
+        }
+    }
+
+    return buf;
+}
+
+/**
+ * Appends a list of strings to the string-buffer.
+ *
+ * Arguments
+ *      buf             Pointer to the string-buffer to append to or NULL.
+ *      ...             Pointers to the strings to be appended. The last
+ *                      pointer must be NULL.
+ * Returns
+ *      NULL            Out-of-memory ("log_start()" called) or "buf" is
+ *                      NULL.
+ *      else            Pointer to the string-buffer.
+ */
+StrBuf*
+sbCatL(
+    StrBuf* const       buf,
+    ...)
+{
+    StrBuf*             sb;
+    va_list             ap;
+
+    va_start(ap, buf);
+
+    sb = sbCatV(buf, ap);
+
+    va_end(ap);
+
+    return sb;
 }
 
 /**
@@ -110,9 +185,10 @@ StrBuf* sbTrim(
  *                      NULL.
  *      else            Pointer to the string-buffer.
  */
-StrBuf* sbCat(
-    StrBuf* const       buf,
-    const char* const   string)
+StrBuf*
+sbCat(
+    StrBuf* const restrict     buf,
+    const char* const restrict string)
 {
     return sbCatL(buf, string, NULL);
 }
@@ -130,72 +206,71 @@ StrBuf* sbCat(
  *                      NULL.
  *      else            Pointer to the string-buffer.
  */
-StrBuf* sbCatN(
-    StrBuf* const       buf,
-    const char*         string,
-    const size_t        n)
+StrBuf*
+sbCatN(
+    StrBuf* const restrict buf,
+    const char* restrict   string,
+    const size_t           n)
 {
     return sbTrim(sbCatL(buf, string, NULL), n);
 }
 
 /**
- * Appends a list of strings to the string-buffer.
+ * Formats a stdarg argument list.
  *
- * Arguments
- *      buf             Pointer to the string-buffer to append to or NULL.
- *      ...             Pointers to the strings to be appended. The last
- *                      pointer must be NULL.
- * Returns
- *      NULL            Out-of-memory ("log_start()" called) or "buf" is
- *                      NULL.
- *      else            Pointer to the string-buffer.
+ * @param[in] buf   The string-buffer into which to format the argument list
+ *                  according to the given format.
+ * @param[in] fmt   The format to use.
+ * @param[in] args  The stdarg argument list.
+ * @retval    NULL  Out-of-memory ("log_start()" called) or "buf" is NULL.
+ * @return          `buf`.
  */
-StrBuf* sbCatL(
-    StrBuf* const       buf,
-    ...)
+StrBuf*
+sbPrintV(
+    StrBuf* restrict           buf,
+    const char* const restrict fmt,
+    va_list                    args)
 {
-    StrBuf*             sb;
-    va_list             ap;
+    if (buf != NULL) {
+        va_list ap;
+        va_copy(ap, args);
 
-    va_start(ap, buf);
+        int nbytes = vsnprintf(buf->buf, buf->max, fmt, args);
 
-    sb = sbCatV(buf, ap);
+        if (nbytes >= buf->max) {
+            buf = sbEnsure(buf, nbytes);
 
-    va_end(ap);
+            if (buf != NULL)
+                (void)vsnprintf(buf->buf, buf->max, fmt, ap);
+        }
 
-    return sb;
+        va_end(ap);
+    }
+
+    return buf;
 }
 
 /**
- * Appends a variadic list of strings to the string-buffer.
+ * Formats arguments.
  *
- * Arguments
- *      buf             Pointer to the string-buffer to append to or NULL.
- *      strings         Pointers to the strings to be appended. The last 
- *                      pointer must be NULL.
- * Returns
- *      NULL            Out-of-memory ("log_start()" called) or "buf" is
- *                      NULL.
- *      else            Pointer to the string-buffer.
+ * @param[in] buf   The string-buffer into which to format the arguments
+ *                  according to the given format.
+ * @param[in] fmt   The format to use.
+ * @param[in] ...   The arguments to format.
+ * @retval    NULL  Out-of-memory ("log_start()" called) or "buf" is NULL.
+ * @return          `buf`.
  */
-StrBuf* sbCatV(
-    StrBuf* const       buf,
-    va_list             strings)
+StrBuf*
+sbPrint(
+    StrBuf* const restrict     buf,
+    const char* const restrict fmt,
+    ...)
 {
-    StrBuf* const       sb = buf;
-    const char*         string;
+    va_list args;
 
-    for (string = (const char*)va_arg(strings, const char*); NULL != string;
-            string = (const char*)va_arg(strings, const char*)) {
-        size_t  newLen = sb->len + strlen(string);
-
-        if (NULL == sbEnsure(sb, newLen))
-            return NULL;
-
-        (void)strcpy(sb->buf + sb->len, string);
-
-        sb->len = newLen;
-    }
+    va_start(args, fmt);
+    StrBuf* const sb = sbPrintV(buf, fmt, args);
+    va_end(args);
 
     return sb;
 }
@@ -210,7 +285,8 @@ StrBuf* sbCatV(
  *      NULL            "buf" is NULL.
  *      else            Pointer to the string-buffer.
  */
-StrBuf* sbClear(
+StrBuf*
+sbClear(
     StrBuf* const       buf)
 {
     if (NULL != buf) {
@@ -230,7 +306,8 @@ StrBuf* sbClear(
  *      NULL            "buf" is NULL.
  *      else            Pointer to the string of the string-buffer.
  */
-const char* sbString(
+const char*
+sbString(
     const StrBuf* const buf)
 {
     return NULL == buf
@@ -244,7 +321,8 @@ const char* sbString(
  * Arguments
  *      buf             Pointer to the string-buffer or NULL.
  */
-void sbFree(
+void
+sbFree(
     StrBuf* const       buf)
 {
     if (NULL != buf) {

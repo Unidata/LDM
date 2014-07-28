@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mcast_down.c
+ *   @file: mldm_receiver.c
  * @author: Steven R. Emmerson
  *
  * This file implements the downstream multicast LDM.
@@ -12,13 +12,13 @@
 #include "config.h"
 
 #include "down7.h"
-#include "mcast_down.h"
+#include "mldm_receiver.h"
 #include "ldm.h"
 #include "LdmBofResponse.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "pq.h"
-#include "vcmtp_c_api.h"
+#include "mcast.h"
 #include "xdr.h"
 
 #include <errno.h>
@@ -35,7 +35,7 @@
 struct mdl {
     pqueue*         pq;       // product-queue to use */
     Down7*          down7;    // pointer to associated downstream LDM-7
-    VcmtpCReceiver* receiver; // VCMTP C Receiver
+    McastReceiver* receiver; // VCMTP C Receiver
 };
 
 /**
@@ -106,7 +106,7 @@ allocateSpaceAndSetBofResponse(
 
     if (lockPq(mdl)) {
         LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
-        vcmtpFileEntry_setBofResponseToIgnore(file_entry);
+        mcastFileEntry_setBofResponseToIgnore(file_entry);
         status = -1;
     }
     else {
@@ -114,7 +114,7 @@ allocateSpaceAndSetBofResponse(
         (void)unlockPq(mdl);
 
         if (status) {
-            vcmtpFileEntry_setBofResponseToIgnore(file_entry);
+            mcastFileEntry_setBofResponseToIgnore(file_entry);
 
             if (status == PQUEUE_DUP) {
                 status = 0;
@@ -126,7 +126,7 @@ allocateSpaceAndSetBofResponse(
             }
         }
         else {
-            (void)vcmtpFileEntry_setBofResponse(file_entry,
+            (void)mcastFileEntry_setBofResponse(file_entry,
                     ldmBofResponse_new(buf, size, &index));
             status = 0;
         } /* region allocated in product-queue */
@@ -156,13 +156,13 @@ bof_func(
 {
     int            status;
 
-    if (!vcmtpFileEntry_isMemoryTransfer(file_entry)) {
-        vcmtpFileEntry_setBofResponseToIgnore(file_entry);
+    if (!mcastFileEntry_isMemoryTransfer(file_entry)) {
+        mcastFileEntry_setBofResponseToIgnore(file_entry);
         status = 0;
     }
     else {
         signaturet        signature;
-        const char* const name = vcmtpFileEntry_getFileName(file_entry);
+        const char* const name = mcastFileEntry_getFileName(file_entry);
 
         if (sigParse(name, &signature) < 0) {
             LOG_ADD1("Couldn't parse filename \"%s\" into data-product "
@@ -171,7 +171,7 @@ bof_func(
         }
         else {
             status = allocateSpaceAndSetBofResponse((Mdl*)obj, name,
-                    vcmtpFileEntry_getSize(file_entry), signature, file_entry);
+                    mcastFileEntry_getSize(file_entry), signature, file_entry);
         } /* filename is data-product signature */
     } /* transfer is to memory */
 
@@ -289,15 +289,15 @@ eof_func(
 {
     int                 status;
 
-    if (!vcmtpFileEntry_isWanted(file_entry) ||
-            !vcmtpFileEntry_isMemoryTransfer(file_entry)) {
+    if (!mcastFileEntry_isWanted(file_entry) ||
+            !mcastFileEntry_isMemoryTransfer(file_entry)) {
         status = 0;
     }
     else {
         prod_info              info;
         XDR                    xdrs;
-        const size_t           fileSize = vcmtpFileEntry_getSize(file_entry);
-        const void* const      bofResponse = vcmtpFileEntry_getBofResponse(file_entry);
+        const size_t           fileSize = mcastFileEntry_getSize(file_entry);
+        const void* const      bofResponse = mcastFileEntry_getBofResponse(file_entry);
         const pqe_index* const index = ldmBofResponse_getIndex(bofResponse);
         Mdl* const             mdl = (Mdl*)obj;
         pqueue* const          pq = mdl->pq;
@@ -308,7 +308,7 @@ eof_func(
         if (!xdr_prod_info(&xdrs, &info)) {
             LOG_SERROR2("Couldn't decode LDM product-metadata from %lu-byte "
                     "VCMTP file \"%s\"", fileSize,
-                    vcmtpFileEntry_getFileName(file_entry));
+                    mcastFileEntry_getFileName(file_entry));
             status = -1;
             lockPq(mdl);
             pqe_discard(pq, *index);
@@ -336,7 +336,7 @@ eof_func(
 static void
 missed_file_func(
     void*               obj,
-    const VcmtpFileId   fileId)
+    const McastFileId   fileId)
 {
     dl7_missedProduct(((Mdl*)obj)->down7, fileId);
 }
@@ -358,11 +358,11 @@ static int
 init(
     Mdl* const restrict                  mdl,
     pqueue* const restrict               pq,
-    const McastGroupInfo* const restrict mcastInfo,
+    const McastInfo* const restrict mcastInfo,
     Down7* const restrict                down7)
 {
     int                 status;
-    VcmtpCReceiver*     receiver;
+    McastReceiver*     receiver;
 
     if (mdl == NULL) {
         LOG_ADD0("NULL multicast-downstream-LDM argument");
@@ -381,12 +381,12 @@ init(
         return LDM7_INVAL;
     }
 
-    status = vcmtpReceiver_new(&receiver, mcastInfo->tcpAddr,
-            mcastInfo->tcpPort, bof_func, eof_func, missed_file_func,
-            mcastInfo->mcastAddr, mcastInfo->mcastPort, mdl);
+    status = mcastReceiver_new(&receiver, mcastInfo->server.addr,
+            mcastInfo->server.port, bof_func, eof_func, missed_file_func,
+            mcastInfo->mcast.addr, mcastInfo->mcast.port, mdl);
     if (status) {
-        LOG_ADD0("Couldn't create VCMTP receiver");
-        return LDM7_VCMTP;
+        LOG_ADD0("Couldn't create FMTP receiver");
+        return LDM7_MCAST;
     }
 
     mdl->receiver = receiver;
@@ -414,7 +414,7 @@ init(
 Mdl*
 mdl_new(
     pqueue* const restrict               pq,
-    const McastGroupInfo* const restrict mcastInfo,
+    const McastInfo* const restrict mcastInfo,
     Down7* const restrict                down7)
 {
     Mdl* mdl = LOG_MALLOC(sizeof(Mdl), "multicast downstream LDM object");
@@ -439,7 +439,7 @@ void
 mdl_free(
     Mdl* const  mdl)
 {
-    vcmtpReceiver_free(mdl->receiver);
+    mcastReceiver_free(mdl->receiver);
     free(mdl);
 }
 
@@ -462,9 +462,9 @@ mdl_start(
         LOG_ADD0("NULL multicast-downstream-LDM argument");
         status = LDM7_INVAL;
     }
-    else if ((status = vcmtpReceiver_execute(mdl->receiver)) != 0) {
+    else if ((status = mcastReceiver_execute(mdl->receiver)) != 0) {
         LOG_ADD0("Failure executing multicast downstream LDM");
-        status = LDM7_VCMTP;
+        status = LDM7_MCAST;
     }
     else {
         status = LDM7_SHUTDOWN;
@@ -483,5 +483,5 @@ void
 mdl_stop(
     Mdl* const mdl)
 {
-    vcmtpReceiver_stop(mdl->receiver);
+    mcastReceiver_stop(mdl->receiver);
 }

@@ -11,13 +11,15 @@ BUILT_SOURCES		= \
         doubly_linked_list.h \
         doubly_linked_stack.h \
         executor.h \
-        semRWLock.h
+        semRWLock.h \
+        StrBuf.h
 EXTRA_DIST	        = \
         child_map.hin \
         doubly_linked_list.hin \
         doubly_linked_stack.hin \
         executor.hin \
-        semRWLock.hin
+        semRWLock.hin \
+        StrBuf.hin
 DISTCLEANFILES		= \
 	child_map.h \
 	doubly_linked_list.h \
@@ -54,6 +56,7 @@ lib_la_SOURCES	= \
 	setenv.c \
 	semRWLock.c semRWLock.h \
 	statsMath.c \
+	StrBuf.c \
 	StringBuf.c StringBuf.h
 lib_la_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -79,9 +82,22 @@ doubly_linked_list.h:	doubly_linked_list.hin doubly_linked_list.c
 doubly_linked_stack.h:	doubly_linked_stack.hin doubly_linked_stack.c
 executor.h:		executor.hin executor.c
 semRWLock.h:		semRWLock.hin semRWLock.c
+StrBuf.h:		StrBuf.hin StrBuf.c
 
 if HAVE_CUNIT
-check_PROGRAMS		= test_child_map testSemRWLock
+check_PROGRAMS		= test_inetutil test_child_map testSemRWLock
+
+test_inetutil_CPPFLAGS	= \
+    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
+    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir) \
+    @CPPFLAGS_CUNIT@
+
+test_inetutil_LDADD	= \
+    $(top_builddir)/lib/libldm.la \
+    @LIBS_CUNIT@
+
 test_child_map_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
@@ -106,10 +122,13 @@ testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
 
-TESTS			= test_child_map testSemRWLock
+TESTS			= test_inetutil test_child_map testSemRWLock
 
 debug:		test_child_map
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb test_child_map
+
+debug_inetutil:		test_inetutil
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb test_inetutil
 
 valgrind:	test_child_map
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \

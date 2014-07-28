@@ -60,6 +60,9 @@
  */
 #ifdef RPC_XDR
 %
+%#include "inetutil.h"
+%#include "ldmprint.h"
+%
 %#include <string.h>
 %
 %#ifndef NDEBUG
@@ -497,8 +500,8 @@ typedef unsigned max_hereis_t;
 % */
 #endif
 struct feedpar {
-    prod_class_t  *prod_class;  /* class of products */
-    max_hereis_t max_hereis;  /* HEREIS/COMINGSOON threshold in bytes */
+    prod_class_t* prod_class;  /* class of products */
+    max_hereis_t  max_hereis;  /* HEREIS/COMINGSOON threshold in bytes */
 };
 typedef struct feedpar feedpar_t;
 
@@ -710,7 +713,7 @@ program LDMPROG {
              * Downstream to upstream RPC messages:
              */
             SubscriptionReply SUBSCRIBE(char* mcastName) = 1;
-            void              REQUEST_PRODUCT(VcmtpFileId) = 2;
+            void              REQUEST_PRODUCT(McastFileId) = 2;
             void              REQUEST_BACKLOG(BacklogSpec) = 3;
             void              TEST_CONNECTION() = 4;
             /*
@@ -847,7 +850,7 @@ program LDMPROG {
 #if WANT_MULTICAST
 
 #if defined(RPC_SVC)
-%#include "../multicast/vcmtp_c_api.h"
+%#include "../multicast/mcast.h"
 #endif
 
 
@@ -855,43 +858,13 @@ program LDMPROG {
 #if 0
 %
 %/*
-% * VCMTP file identifier:
+% * Multicast file identifier:
 % */
-typedef uint32_t VcmtpFileId;
+typedef uint32_t McastFileId;
 #else
-%#include "../multicast/vcmtp_c_api.h"
+%#include "../multicast/mcast.h"
 #endif
 #endif
-
-
-#if defined(RPC_HDR) || defined(RPC_XDR)
-%
-%/*
-% * Successful multicast subscription return value:
-% */
-#endif
-struct McastGroupInfo {
-    /*
-     * Multicast group name:
-     */
-    string         mcastName<>;
-    /*
-     * Hostname or formatted IP address of associated multicast group.
-     */
-    string         mcastAddr<>;
-    /*
-     * Port number of associated multicast group in local byte order:
-     */
-    unsigned short mcastPort;
-    /*
-     * Hostname or formatted IP address of associated TCP server.
-     */
-    string         tcpAddr<>;
-    /*
-     * Port number of associated TCP server in local byte order:
-     */
-    unsigned short tcpPort;
-};
 
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
@@ -910,8 +883,9 @@ enum Ldm7Status {
     LDM7_IPV6,     /* IPv6 not supported */
     LDM7_REFUSED,  /* Remote LDM-7 refused connection */
     LDM7_SYSTEM,   /* System error */
-    LDM7_VCMTP,    /* VCMTP error */
-    LDM7_SHUTDOWN  /* LDM-7 was shut down */
+    LDM7_MCAST,    /* multicast error */
+    LDM7_SHUTDOWN, /* LDM-7 was shut down */
+    LDM7_NOENT     /* no such entry */
 };
 
 #if RPC_CLNT
@@ -945,8 +919,8 @@ enum Ldm7Status {
 %        return "Connection refused by remote LDM-7";
 %    case LDM7_SYSTEM:
 %        return "System error";
-%    case LDM7_VCMTP:
-%        return "VCMTP error";
+%    case LDM7_MCAST:
+%        return "Multicast error";
 %    case LDM7_SHUTDOWN:
 %        return "LDM-7 was shut down";
 %    default:
@@ -968,7 +942,7 @@ enum Ldm7Status {
 %                    ? LDM7_UNAUTH
 %                    : LDM7_RPC;
 %}
-#endif
+#endif // RPC_CLNT
 
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
@@ -979,13 +953,13 @@ enum Ldm7Status {
 #endif
 struct MissedProduct {
     /*
-     * The VCMTP file identifier of the missed data-product:
+     * The multicast file identifier of the missed data-product:
      */
-    VcmtpFileId    fileId;
+    McastFileId   fileId;
     /*
      * The missed LDM data-product:
      */
-    product        prod;
+    product       prod;
 };
 
 
@@ -1017,6 +991,98 @@ struct BacklogSpec {
     unsigned int timeOffset;
 };
 
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+/**
+ * Address of an Internet TCP service:
+ */
+struct ServiceAddr {
+    /* Internet address of the service. May be hostname or IP address. */
+    string         addr<>;
+    /* Port number of the service. */
+    unsigned short port;
+};
+#endif
+#if defined(RPC_HDR)
+%
+%/**
+% * Information on a multicast group:
+% */
+%struct McastInfo {
+%    /*
+%     * Multicast group name:
+%     */
+%    char*         mcastName;
+%    /*
+%     * Address of associated multicast group.
+%     */
+%    ServiceAddr   mcast;
+%    /*
+%     * Address of associated server for blocks and files missed by a multicast
+%     * receiver.
+%     */
+%    ServiceAddr   server;
+%    /*
+%     * String representation suitable for a filename. Transient: not XDR'ed.
+%     */
+%    char*         toString;
+%};
+%typedef struct McastInfo McastInfo;
+%
+%/**
+% * XDR-s multicast information.
+% *
+% * @param[in] xdrs  The XDR structure.
+% * @param[in] info  The multicast information.
+% * @retval    1     Success.
+% * @retval    0     Failure.
+% */
+%bool_t
+%xdr_McastInfo (XDR *xdrs, McastInfo *info);
+#    endif
+#if defined(RPC_XDR)
+%
+%/**
+% * XDR-s multicast information.
+% *
+% * @param[in] xdrs  The XDR structure.
+% * @param[in] info  The multicast information.
+% * @retval    1     Success.
+% * @retval    0     Failure.
+% */
+%bool_t
+%xdr_McastInfo (XDR *xdrs, McastInfo *info)
+%{
+%    if (!xdr_string (xdrs, &info->mcastName, ~0))
+%        return FALSE;
+%    if (!xdr_ServiceAddr (xdrs, &info->mcast))
+%        return FALSE;
+%    if (!xdr_ServiceAddr (xdrs, &info->server))
+%        return FALSE;
+%    if (xdrs->x_op == XDR_DECODE) {
+%        char* const restrict serverStr = sa_format(&info->server);
+%        if (serverStr == NULL)
+%            return FALSE;
+%        char* const restrict mcastStr = sa_format(&info->mcast);
+%        if (mcastStr == NULL) {
+%            free(serverStr);
+%            return FALSE;
+%        }
+%        char* const restrict filename = ldm_format(128, "%s_%s_%s",
+%                mcastStr, serverStr, info->mcastName);
+%        if (mcastStr == NULL) {
+%            free(serverStr);
+%            free(mcastStr);
+%            return FALSE;
+%        }
+%        info->toString = filename;
+%    }
+%    if (xdrs->x_op == XDR_FREE && info->toString != NULL)
+%        free(&info->toString);
+%    return TRUE;
+%}
+#endif
+
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %
@@ -1026,7 +1092,7 @@ struct BacklogSpec {
 #endif
 union SubscriptionReply switch (Ldm7Status status) {
     case LDM7_OK:
-        McastGroupInfo groupInfo;
+        McastInfo mgi;
     case LDM7_INVAL:
         void;
     case LDM7_UNAUTH:

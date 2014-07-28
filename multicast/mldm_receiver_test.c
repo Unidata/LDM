@@ -3,9 +3,9 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file mcast_down_test.c
+ * @file mldm_receiver_test.c
  *
- * This file performs a unit-test of the mcast_down module.
+ * This file performs a unit-test of the mldm_receiver module.
  *
  * @author: Steven R. Emmerson
  */
@@ -15,7 +15,7 @@
 
 #include "ldm.h"
 #include "log.h"
-#include "mcast_down.h"
+#include "mldm_receiver.h"
 
 #include "vcmtp_c_api_stub.h"
 #include "pq_stub.h"
@@ -46,13 +46,13 @@ void test_mdl_createAndExecute()
     const unsigned short port = 1;
     int                  (*int_func)() = (int(*)())1;
     void                 (*void_func)() = (void(*)())2;
-    McastGroupInfo       mcastInfo;
+    McastInfo       mcastInfo;
     Mdl*                 mdl;
 
-    mcastInfo.mcastAddr = addr;
-    mcastInfo.mcastPort = port;
-    mcastInfo.tcpAddr = tcpAddr;
-    mcastInfo.tcpPort = tcpPort;
+    mcastInfo.mcast.addr = addr;
+    mcastInfo.mcast.port = port;
+    mcastInfo.server.addr = tcpAddr;
+    mcastInfo.server.port = tcpPort;
 
     /* Invalid product-queue argument */
     mdl = mdl_new(NULL, &mcastInfo, void_func, NULL);

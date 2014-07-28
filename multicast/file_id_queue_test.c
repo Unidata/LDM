@@ -9,7 +9,7 @@
 #include "ldm.h"
 #include "log.h"
 #include "file_id_queue.h"
-#include "vcmtp_c_api.h"
+#include "mcast.h"
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
@@ -39,8 +39,8 @@ teardown(void)
 static void
 test_add_get(void)
 {
-    VcmtpFileId     fileA = 1;
-    VcmtpFileId     fileB;
+    McastFileId     fileA = 1;
+    McastFileId     fileB;
     int        status;
 
     status = fiq_add(rq, fileA);
@@ -58,10 +58,10 @@ test_add_get(void)
 static void
 test_order(void)
 {
-    VcmtpFileId fileA = 1;
-    VcmtpFileId fileB = 2;
-    VcmtpFileId fileC = 3;
-    VcmtpFileId fileD;
+    McastFileId fileA = 1;
+    McastFileId fileB = 2;
+    McastFileId fileC = 3;
+    McastFileId fileD;
     int    status;
 
     status = fiq_add(rq, fileA);

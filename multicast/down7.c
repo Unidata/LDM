@@ -18,13 +18,13 @@
 #include "ldm.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mcast_down.h"
-#include "mcast_session_memory.h"
+#include "mldm_receiver.h"
+#include "mldm_receiver_memory.h"
 #include "file_id_queue.h"
 #include "rpc/rpc.h"
 #include "rpcutil.h"
 #include "timestamp.h"
-#include "vcmtp_c_api.h"
+#include "mcast.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -52,10 +52,10 @@ static pthread_once_t down7KeyControl = PTHREAD_ONCE_INIT;
  */
 struct Down7 {
     pqueue*               pq;            ///< pointer to the product-queue
-    ServAddr*             servAddr;      ///< socket address of remote LDM-7
+    ServiceAddr*          servAddr;      ///< socket address of remote LDM-7
     char*                 mcastName;     ///< name of multicast group
     CLIENT*               clnt;          ///< client-side RPC handle
-    McastGroupInfo*       mcastInfo;     ///< information on multicast group
+    McastInfo*       mcastInfo;     ///< information on multicast group
     Mdl*                  mdl;           ///< multicast downstream LDM
     McastSessionMemory*   msm;           ///< persistent multicast session memory
     pthread_t             receiveThread; ///< thread for receiving products
@@ -178,7 +178,8 @@ taskExit(
  * Sets a socket address to correspond to a TCP connection to a server on
  * an Internet host
  *
- * @param[out] sockAddr      Pointer to the socket address object to be set.
+ * @param[out] sockAddr      Pointer to the socket Internet address object to be
+ *                           set.
  * @param[in]  useIPv6       Whether or not to use IPv6.
  * @param[in]  servAddr      Pointer to the address of the server.
  * @retval     0             Success. \c *sockAddr is set.
@@ -189,9 +190,9 @@ taskExit(
  */
 static int
 getSockAddr(
-    struct sockaddr* const restrict sockAddr,
-    const int                       useIPv6,
-    const ServAddr* const restrict  servAddr)
+    struct sockaddr_in* const restrict  sockAddr,
+    const int                           useIPv6,
+    const ServiceAddr* const restrict   servAddr)
 {
     int            status;
     char           servName[6];
@@ -234,7 +235,7 @@ getSockAddr(
                       : LDM7_SYSTEM;
         }
         else {
-            *sockAddr = *addrInfo->ai_addr;
+            *sockAddr = *(struct sockaddr_in*)addrInfo->ai_addr;
             freeaddrinfo(addrInfo);
         } /* "addrInfo" allocated */
     } /* valid port number */
@@ -262,17 +263,19 @@ getSockAddr(
  */
 static int
 getSocket(
-    const int                       useIPv6,
-    const ServAddr* const           servAddr,
-    int* const restrict             sock,
-    struct sockaddr* const restrict sockAddr)
+    const ServiceAddr* const restrict       servAddr,
+    int* const restrict                     sock,
+    struct sockaddr_storage* const restrict sockAddr)
 {
-    struct sockaddr addr;
-    int             status = getSockAddr(&addr, useIPv6, servAddr);
+    struct sockaddr_storage addr;
+    socklen_t               sockLen;
+    int                     status = sa_getInetSockAddr(servAddr, false, &addr,
+            &sockLen);
 
     if (status == 0) {
+        const int         useIPv6 = addr.ss_family == AF_INET6;
         const char* const addrFamilyId = useIPv6 ? "IPv6" : "IPv4";
-        const int         fd = socket(addr.sa_family, SOCK_STREAM, IPPROTO_TCP);
+        const int         fd = socket(addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
 
         if (fd == -1) {
             LOG_SERROR1("Couldn't create %s TCP socket", addrFamilyId);
@@ -281,7 +284,7 @@ getSocket(
                     : LDM7_SYSTEM;
         }
         else {
-            if (connect(fd, &addr, sizeof(addr))) {
+            if (connect(fd, (struct sockaddr*)&addr, sockLen)) {
                 LOG_SERROR3("Couldn't connect %s TCP socket to host "
                         "\"%s\", port %u", addrFamilyId, sa_getHostId(servAddr),
                         sa_getPort(servAddr));
@@ -323,19 +326,13 @@ getSocket(
  */
 static int
 newClient(
-    CLIENT** const restrict        client,
-    const ServAddr* const restrict servAddr,
-    int* const restrict            socket)
+    CLIENT** const restrict           client,
+    const ServiceAddr* const restrict servAddr,
+    int* const restrict               socket)
 {
-    int             sock;
-    struct sockaddr sockAddr;
-    /* Try IPv6 first */
-    int             status = getSocket(1, servAddr, &sock, &sockAddr);
-
-    if (status == LDM7_IPV6) {
-        /* Try IPv4 */
-        status = getSocket(0, servAddr, &sock, &sockAddr);
-    }
+    int                     sock;
+    struct sockaddr_storage sockAddr;
+    int                     status = getSocket(servAddr, &sock, &sockAddr);
 
     if (status == 0) {
         /*
@@ -502,13 +499,13 @@ run_down7_svc(
 static int
 requestProduct(
     Down7* const      down7,
-    VcmtpFileId const fileId)
+    McastFileId const fileId)
 {
     int               status;
     CLIENT* const     clnt = down7->clnt;
 
     (void)lockClient(down7);
-    (void)request_product_7((VcmtpFileId*)&fileId, clnt); // asynchronous send
+    (void)request_product_7((McastFileId*)&fileId, clnt); // asynchronous send
 
     if (clnt_stat(clnt) != RPC_TIMEDOUT) {
         /*
@@ -594,7 +591,7 @@ makeRequest(
     Down7* const down7)
 {
     int            status;
-    VcmtpFileId    fileId;
+    McastFileId    fileId;
 
     /*
      * The semantics and order of the following actions are necessary to
@@ -684,11 +681,11 @@ static void*
 startUnicastProductReceiver(
     void* const arg)
 {
-    Down7* const    down7 = (Down7*)arg;
-    ServAddr* const servAddr = down7->servAddr;
-    SVCXPRT*        xprt = svcfd_create(down7->sock, 0, MAX_RPC_BUF_NEEDED);
-    int             status;
-    char            buf[256];
+    Down7* const       down7 = (Down7*)arg;
+    ServiceAddr* const servAddr = down7->servAddr;
+    SVCXPRT*           xprt = svcfd_create(down7->sock, 0, MAX_RPC_BUF_NEEDED);
+    int                status;
+    char               buf[256];
 
     if (xprt == NULL) {
         (void)sa_snprint(servAddr, buf, sizeof(buf));
@@ -915,7 +912,7 @@ subscribeAndExecute(
              * Otherwise, something like "mcastInfo_clone()" would have to be
              * created and used.
              */
-            down7->mcastInfo = &reply->SubscriptionReply_u.groupInfo;
+            down7->mcastInfo = &reply->SubscriptionReply_u.mgi;
             status = execute(down7);
         }
         xdr_free(xdr_SubscriptionReply, (char*)reply);
@@ -1164,9 +1161,9 @@ deliveryFailure(
  */
 Down7*
 dl7_new(
-    const ServAddr* const restrict servAddr,
-    const char* const restrict     mcastName,
-    pqueue* const restrict         pq)
+    const ServiceAddr* const restrict servAddr,
+    const char* const restrict        mcastName,
+    pqueue* const restrict            pq)
 {
     Down7* const down7 = LOG_MALLOC(sizeof(Down7), "downstream LDM-7");
     int          status;
@@ -1276,7 +1273,7 @@ dl7_start(
 void
 dl7_missedProduct(
     Down7* const      down7,
-    const VcmtpFileId fileId)
+    const McastFileId fileId)
 {
     /*
      * Cancellation of the operation of the missed-but-not-requested queue is
@@ -1345,7 +1342,7 @@ deliver_missed_product_7_svc(
 {
     const prod_info* const info = &missedProd->prod.info;
     Down7*                 down7 = pthread_getspecific(down7Key);
-    VcmtpFileId            fileId;
+    McastFileId            fileId;
 
     if (!msm_peekRequestedFileNoWait(down7->msm, &fileId) ||
             fileId != missedProd->fileId) {

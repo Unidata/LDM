@@ -1,4 +1,5 @@
-#ifndef LOG_H
+#ifndef LDM_LOG_H
+#define LDM_LOG_H
 
 #include <errno.h>
 #include <stdarg.h>
@@ -11,15 +12,13 @@ extern "C" {
 
 #define LOG_FMT(fmt)                 "[%s:%d] " fmt
 #define LOG_ERRNO()                 log_start(LOG_FMT("%s"),__FILE__,__LINE__,strerror(errno))
-/*
- * The LOG_STARTn() macros are deprecated. Use the LOG_ADDn() macros instead.
- */
 #define LOG_START0(fmt)             log_start(LOG_FMT(fmt),__FILE__,__LINE__)
 #define LOG_START1(fmt,a)           log_start(LOG_FMT(fmt),__FILE__,__LINE__,a)
 #define LOG_START2(fmt,a,b)         log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b)
 #define LOG_START3(fmt,a,b,c)       log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c)
 #define LOG_START4(fmt,a,b,c,d)     log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d)
 #define LOG_START5(fmt,a,b,c,d,e)   log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b,c,d,e)
+#define LOG_START(fmt,...)          log_start(LOG_FMT(fmt),__FILE__,__LINE__,__VA_ARGS__)
 #define LOG_ADD0(fmt)               log_add(LOG_FMT(fmt),__FILE__,__LINE__)
 #define LOG_ADD1(fmt,a)             log_add(LOG_FMT(fmt),__FILE__,__LINE__,a)
 #define LOG_ADD2(fmt,a,b)           log_add(LOG_FMT(fmt),__FILE__,__LINE__,a,b)

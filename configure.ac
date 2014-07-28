@@ -413,6 +413,8 @@ AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$LDMHOME/var/logs"],
     [Path to LDM logging directory])
+AC_DEFINE_UNQUOTED([LDM_VAR_RUN_DIR], ["$LDMHOME/var/run"],
+    [Path to LDM var/run directory])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
 # The following accomodates pre-6.9 LDM installations:
 if test -d $LDMHOME/data -a ! -h $LDMHOME/data; then

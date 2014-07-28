@@ -10,12 +10,13 @@
 #ifndef _INETUTIL_H_
 #define _INETUTIL_H_
 
-#include <netinet/in.h>
 #include "error.h"
+#include "ldm.h"
 #include "rpc/types.h"
 #include "rpc/xdr.h"
 
-typedef struct ServAddr ServAddr;
+#include <stdbool.h>
+#include <netinet/in.h>
 
 #ifdef IPPROTO_IP /* we included netinet/in.h, so struct sockaddr_in is */
 extern const char*    hostbyaddr(
@@ -38,34 +39,70 @@ extern int            isMe(const char *remote);
 extern int            local_sockaddr_in(struct sockaddr_in* addr);
 extern int            sockbind(const char *type, unsigned short port);
 /**
- * Returns a new server address.
+ * Returns a new service address.
  *
- * @param[in] hostId  Identifier of the host on which the server runs. May be
- *                    hostname or formatted IP address. Client may free upon
- *                    return.
- * @param[in] port    Port number of the server.
+ * @param[in] addr    Address of the service. May be hostname or formatted IP
+ *                    address. Client may free upon return.
+ * @param[in] port    Port number of the service.
  * @retval    NULL    Failure. \c errno will be ENOMEM.
- * @return            Pointer to a new server address object corresponding to
+ * @return            Pointer to a new service address object corresponding to
  *                    the input.
  */
-extern ServAddr*      sa_new(const char* const hostId, const unsigned short port);
-extern void           sa_free(ServAddr* const sa);
-extern ServAddr*      sa_clone(const ServAddr* const sa);
-extern const char*    sa_getHostId(const ServAddr* const sa);
-extern unsigned short sa_getPort(const ServAddr* const sa);
-extern int            sa_snprint(const ServAddr* restrict sa, char* restrict buf,
-                            size_t len);
+extern ServiceAddr*   sa_new(const char* const addr, const unsigned short port);
+extern void           sa_free(ServiceAddr* const sa);
 /**
- * Returns the formatted representation of a server address.
+ * Copies a service address.
+ *
+ * @param[out] dest   The destination.
+ * @param[in]  src    The source. The caller may free.
+ * @retval     true   Success. `*dest` is set.
+ * @retval     false  Failure. `log_start()` called.
+ */
+extern bool           sa_copy(
+    ServiceAddr* const restrict       dest,
+    const ServiceAddr* const restrict src);
+extern ServiceAddr*   sa_clone(const ServiceAddr* const sa);
+extern const char*    sa_getHostId(const ServiceAddr* const sa);
+extern unsigned short sa_getPort(const ServiceAddr* const sa);
+extern int            sa_snprint(const ServiceAddr* restrict sa,
+                          char* restrict buf, size_t len);
+/**
+ * Returns the formatted representation of a service address.
  *
  * This function is thread-safe.
  *
- * @param[in]  sa    Pointer to the server address.
+ * @param[in]  sa    Pointer to the service address.
  * @retval     NULL  Failure. `log_add()` called.
  * @return           Pointer to the formatted representation. The caller should
  *                   free when it's no longer needed.
  */
-extern char*          sa_format(const ServAddr* const sa);
-extern bool_t         xdr_ServAddr(XDR* const xdrs, ServAddr* sa);
+extern char*          sa_format(const ServiceAddr* const sa);
+/**
+ * Returns the Internet socket address that corresponds to a service address.
+ *
+ * @param[in]  serviceAddr   The service address.
+ * @param[in]  serverSide    Whether or not the returned socket address should be
+ *                           suitable for a server's `bind()` operation.
+ * @param[out] inetSockAddr  The corresponding Internet socket address. The
+ *                           socket type will be `SOCK_STREAM` and the protocol
+ *                           will be `IPPROTO_TCP`.
+ * @param[out] sockLen       The size of the returned socket address in bytes.
+ *                           Suitable for use in a `bind()` or `connect()` call.
+ * @retval     0             Success.
+ * @retval     EAGAIN        A necessary resource is temporarily unavailable.
+ *                           `log_start()` called.
+ * @retval     EINVAL        Invalid port number. `log_start()` called.
+ * @retval     ENOENT        The service address doesn't resolve into an IP
+ *                           address.
+ * @retval     ENOMEM        Out-of-memory. `log_start()` called.
+ * @retval     ENOSYS        A non-recoverable error occurred when attempting to
+ *                           resolve the name. `log_start()` called.
+ */
+int
+sa_getInetSockAddr(
+    const ServiceAddr* const       servAddr,
+    const bool                     serverSide,
+    struct sockaddr_storage* const inetSockAddr,
+    socklen_t* const               sockLen);
 
 #endif /* !_INETUTIL_H_ */

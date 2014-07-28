@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mcast_session_memory.c
+ *   @file: mldm_receiver_memory.c
  * @author: Steven R. Emmerson
  *
  * This file implements the persistent, session-to-session memory for a
@@ -15,7 +15,7 @@
 #include "file_id_queue.h"
 #include "globals.h"
 #include "inetutil.h"
-#include "mcast_session_memory.h"
+#include "mldm_receiver_memory.h"
 #include "ldmprint.h"
 #include "log.h"
 
@@ -85,8 +85,8 @@ static const char* const MISSED_MCAST_FILES_KEY = "Missed Multicast File Identif
  */
 static char*
 getSessionPath(
-    const ServAddr* const servAddr,
-    const char* const     mcastId)
+    const ServiceAddr* const servAddr,
+    const char* const        mcastId)
 {
     char*       path;
     char* const servAddrStr = sa_format(servAddr);
@@ -539,9 +539,9 @@ initFromScratchOrFile(
  */
 static bool
 init(
-    McastSessionMemory* const restrict msm,
-    const ServAddr* const restrict     servAddr,
-    const char* const restrict         mcastId)
+    McastSessionMemory* const restrict    msm,
+    const ServiceAddr* const restrict     servAddr,
+    const char* const restrict            mcastId)
 {
     bool        success;
     char* const path = getSessionPath(servAddr, mcastId);
@@ -592,7 +592,7 @@ appendFileIds(
     const int                       seq,
     FileIdQueue* const restrict     fiq)
 {
-    VcmtpFileId fileId;
+    McastFileId fileId;
 
     while (fiq_removeNoWait(fiq, &fileId) == 0) {
         char          buf[sizeof(fileId)*4+1]; // overly capacious
@@ -635,7 +635,7 @@ addMissedFiles(
     const int                                seq)
 {
     bool        success = false;
-    VcmtpFileId fileId;
+    McastFileId fileId;
     
     return appendFileIds(document, seq, msm->requestedQ) &&
             appendFileIds(document, seq, msm->missedQ);
@@ -980,7 +980,7 @@ static bool
 addFile(
     McastSessionMemory* const restrict msm,
     FileIdQueue* const restrict        fiq,
-    const VcmtpFileId                  fileId)
+    const McastFileId                  fileId)
 {
     bool success = fiq_add(fiq, fileId) == 0;
 
@@ -1004,8 +1004,8 @@ addFile(
  */
 bool
 msm_delete(
-    const ServAddr* const servAddr,
-    const char* const     mcastId)
+    const ServiceAddr* const servAddr,
+    const char* const        mcastId)
 {
     bool        success;
     char* const path = getSessionPath(servAddr, mcastId);
@@ -1044,8 +1044,8 @@ msm_delete(
  */
 McastSessionMemory*
 msm_open(
-    const ServAddr* const servAddr,
-    const char* const     mcastId)
+    const ServiceAddr* const servAddr,
+    const char* const        mcastId)
 {
     McastSessionMemory* msm = LOG_MALLOC(sizeof(McastSessionMemory),
             "multicast session memory");
@@ -1159,7 +1159,7 @@ msm_clearAllMissedFiles(
 bool
 msm_getAnyMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    VcmtpFileId* const restrict        fileId)
+    McastFileId* const restrict        fileId)
 {
     return fiq_removeNoWait(msm->requestedQ, fileId) == 0 ||
             fiq_removeNoWait(msm->missedQ, fileId) == 0;
@@ -1178,7 +1178,7 @@ msm_getAnyMissedFileNoWait(
 bool
 msm_addMissedFile(
     McastSessionMemory* const restrict msm,
-    const VcmtpFileId                  fileId)
+    const McastFileId                  fileId)
 {
     return addFile(msm, msm->missedQ, fileId);
 }
@@ -1196,7 +1196,7 @@ msm_addMissedFile(
 bool
 msm_addRequestedFile(
     McastSessionMemory* const restrict msm,
-    const VcmtpFileId                  fileId)
+    const McastFileId                  fileId)
 {
     return addFile(msm, msm->requestedQ, fileId);
 }
@@ -1214,7 +1214,7 @@ msm_addRequestedFile(
 bool
 msm_peekMissedFileWait(
     McastSessionMemory* const restrict msm,
-    VcmtpFileId* const restrict        fileId)
+    McastFileId* const restrict        fileId)
 {
     return fiq_peekWait(msm->missedQ, fileId) == 0;
 }
@@ -1231,7 +1231,7 @@ msm_peekMissedFileWait(
 bool
 msm_peekMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    VcmtpFileId* const restrict        fileId)
+    McastFileId* const restrict        fileId)
 {
     return fiq_peekNoWait(msm->missedQ, fileId) == 0;
 }
@@ -1248,7 +1248,7 @@ msm_peekMissedFileNoWait(
 bool
 msm_removeMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    VcmtpFileId* const restrict        fileId)
+    McastFileId* const restrict        fileId)
 {
     return fiq_removeNoWait(msm->missedQ, fileId) == 0;
 }
@@ -1266,7 +1266,7 @@ msm_removeMissedFileNoWait(
 bool
 msm_peekRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
-    VcmtpFileId* const restrict        fileId)
+    McastFileId* const restrict        fileId)
 {
     return fiq_peekNoWait(msm->requestedQ, fileId) == 0;
 }
@@ -1283,7 +1283,7 @@ msm_peekRequestedFileNoWait(
 bool
 msm_removeRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
-    VcmtpFileId* const restrict        fileId)
+    McastFileId* const restrict        fileId)
 {
     return fiq_removeNoWait(msm->requestedQ, fileId) == 0;
 }

@@ -14,14 +14,18 @@
 #include "config.h"
 
 #include "log.h"
-#include "mcast_down_ldm.h"
-#include "vcmtp_c_api.h"
+#include "mldm_receiver.h"
+#include "mcast.h"
 #include "VCMTPReceiver_stub.hpp"
 
 #include <errno.h>
 #include <opmock.h>
 #include <stdbool.h>
 #include <stdlib.h>
+
+#ifndef __BASE_FILE__
+    #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed by OpMock
+#endif
 
 int bof_func(void* obj, void* file_entry)
 {
@@ -31,41 +35,41 @@ int eof_func(void* obj, const void* file_entry)
 {
     return 0;
 }
-void missed_file_func(void* obj, const VcmtpFileId fileId)
+void missed_file_func(void* obj, const McastFileId fileId)
 {
 }
 
 void test_vcmtpReceiver_new()
 {
     int                         status;
-    VcmtpCReceiver*             receiver;
+    McastReceiver*             receiver;
     const char*                 addr = "224.0.0.1";
     const unsigned short        port = 1;
     const char* const           tcpAddr = "127.0.0.1";
     const unsigned short        tcpPort = 38800;
 
-    status = vcmtpReceiver_new(NULL, tcpAddr, tcpPort, bof_func, eof_func,
+    status = mcastReceiver_new(NULL, tcpAddr, tcpPort, bof_func, eof_func,
             missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
-    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, NULL, eof_func,
+    status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, NULL, eof_func,
             missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
-    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, NULL,
+    status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, NULL,
             missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
-    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
+    status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
             NULL, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
-    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
+    status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
             missed_file_func, NULL, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
     log_clear();
 
-    status = vcmtpReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
+    status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
             missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(0, status);
     log_clear();

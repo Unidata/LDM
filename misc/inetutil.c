@@ -9,7 +9,18 @@
 
 #include <config.h>
 
+#include "error.h"
+#include "ulog.h"
+#include "ldm.h"
+#include "ldmprint.h"
+#include "log.h"
+#include "inetutil.h"
+#include "timestamp.h"
+#include "registry.h"
+#include "xdr.h"
+
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
@@ -24,14 +35,6 @@
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
-#include "error.h"
-#include "ulog.h"
-#include "ldmprint.h"
-#include "log.h"
-#include "inetutil.h"
-#include "timestamp.h"
-#include <registry.h>
-#include <xdr.h>
 
 /*
  * Host names are limited to 255 bytes by the The Single UNIX�
@@ -915,48 +918,32 @@ err0 :
 #endif /* !TIRPC */
 
 /**
- * Internet address of a server:
- */
-struct ServAddr {
-    /**
-     * Identifier of the host on which the server runs. May be hostname or
-     * formatted IP address.
-     */
-    char*          hostId;
-    /**
-     * Port number of the server.
-     */
-    unsigned short port;
-};
-
-/**
- * Returns a new server address.
+ * Returns a new service address.
  *
- * @param[in] hostId  Identifier of the host on which the server runs. May be
- *                    hostname or formatted IP address. Client may free upon
- *                    return.
- * @param[in] port    Port number of the server.
+ * @param[in] addr    Address of the service. May be a hostname or formatted IP
+ *                    address. Client may free upon return.
+ * @param[in] port    Port number of the service.
  * @retval    NULL    Failure. \c errno will be ENOMEM.
- * @return            Pointer to a new server address object corresponding to
+ * @return            Pointer to a new service address object corresponding to
  *                    the input.
  */
-ServAddr*
+ServiceAddr*
 sa_new(
-    const char* const    hostId,
+    const char* const    addr,
     const unsigned short port)
 {
-    ServAddr* sa = LOG_MALLOC(sizeof(ServAddr), "server address");
+    ServiceAddr* sa = LOG_MALLOC(sizeof(ServiceAddr), "service address");
 
     if (sa != NULL) {
-        char* id = strdup(hostId);
+        char* id = strdup(addr);
 
         if (id == NULL) {
-            LOG_SERROR1("Couldn't duplicate host ID \"%s\"", hostId);
+            LOG_SERROR1("Couldn't duplicate service address \"%s\"", addr);
             free(sa);
             sa = NULL;
         }
         else {
-            sa->hostId = id;
+            sa->addr = id;
             sa->port = port;
         }
     } /* "sa" allocated */
@@ -965,79 +952,106 @@ sa_new(
 }
 
 /**
- * Frees a server address.
+ * Frees a service address.
  *
- * @param[in] sa  Pointer to the server address to be freed or NULL.
+ * @param[in] sa  Pointer to the service address to be freed or NULL.
  */
 void
 sa_free(
-    ServAddr* const sa)
+    ServiceAddr* const sa)
 {
     if (sa != NULL) {
-        free(sa->hostId);
+        free(sa->addr);
         free(sa);
     }
 }
 
 /**
- * Clones a server address.
+ * Copies a service address.
  *
- * @param[in] sa    Pointer to the server address to be cloned.
- * @retval    NULL  Failure. \c log_add() called.
- * @return          Pointer to a clone of the server address.
+ * @param[out] dest   The destination.
+ * @param[in]  src    The source. The caller may free.
+ * @retval     true   Success. `*dest` is set.
+ * @retval     false  Failure. `log_start()` called.
  */
-ServAddr*
-sa_clone(
-    const ServAddr* const sa)
+bool
+sa_copy(
+    ServiceAddr* const restrict       dest,
+    const ServiceAddr* const restrict src)
 {
-    return sa_new(sa->hostId, sa->port);
+    char* const addr = strdup(src->addr);
+
+    if (addr == NULL) {
+        LOG_SERROR0("Couldn't copy Internet address");
+        return false;
+    }
+
+    dest->addr = addr;
+    dest->port = src->port;
+
+    return true;
 }
 
 /**
- * Returns the host identifier of a server address.
+ * Clones a service address.
  *
- * @param[in] sa  Pointer to the server address.
- * @return        Pointer to the associated host identifier.
+ * @param[in] sa    Pointer to the service address to be cloned.
+ * @retval    NULL  Failure. \c log_add() called.
+ * @return          Pointer to a clone of the service address.
+ */
+ServiceAddr*
+sa_clone(
+    const ServiceAddr* const sa)
+{
+    return sa_new(sa->addr, sa->port);
+}
+
+/**
+ * Returns the address of a service address.
+ *
+ * @param[in] sa  Pointer to the service address.
+ * @return        Pointer to the associated address. May be a hostname or
+ *                formatted IP address.
  */
 const char*
 sa_getHostId(
-    const ServAddr* const sa)
+    const ServiceAddr* const sa)
 {
-    return sa->hostId;
+    return sa->addr;
 }
 
 /**
- * Returns the port number of a server address.
+ * Returns the port number of a service address.
  *
- * @param[in] sa  Pointer to the server address.
+ * @param[in] sa  Pointer to the service address.
  * @return        The associated port number.
  */
 unsigned short
 sa_getPort(
-    const ServAddr* const sa)
+    const ServiceAddr* const sa)
 {
     return sa->port;
 }
 
 /**
- * Returns the formatting string appropriate to a server address.
+ * Returns the formatting string appropriate to a service address.
  *
- * @param[in] sa  The server address.
- * @return        The formatting string appropriate for the server address.
+ * @param[in] sa  The service address.
+ * @return        The formatting string appropriate for the service address.
  */
 static const char*
 getFormat(
-    const ServAddr* const sa)
+    const ServiceAddr* const sa)
 {
-    return strchr(sa->hostId, ':')
+    return strchr(sa->addr, ':')
             ? "[%s]:%u"
             : "%s:%u";
 }
 
 /**
- * Returns the formatted representation of a server address.
+ * Returns the formatted representation of a service address.
  *
- * @param[in]  sa   Pointer to the server address.
+ * @param[in]  sa   Pointer to the service address.
  * @param[out] buf  Pointer to the buffer into which to write the formatted
  *                  representation. Will always be NUL-terminated.
  * @param[in]  len  The size of the buffer in bytes.
@@ -1048,41 +1062,123 @@ getFormat(
  */
 int
 sa_snprint(
-    const ServAddr* const sa,
+    const ServiceAddr* const sa,
     char* const           buf,
     const size_t          len)
 {
-    return snprintf(buf, len, getFormat(sa), sa->hostId, sa->port);
+    return snprintf(buf, len, getFormat(sa), sa->addr, sa->port);
 }
 
 /**
- * Returns the formatted representation of a server address.
+ * Returns the formatted representation of a service address.
  *
  * This function is thread-safe.
  *
- * @param[in]  sa    Pointer to the server address.
+ * @param[in]  sa    Pointer to the service address.
  * @retval     NULL  Failure. `log_add()` called.
  * @return           Pointer to the formatted representation. The caller should
  *                   free when it's no longer needed.
  */
 char*
 sa_format(
-    const ServAddr* const sa)
+    const ServiceAddr* const sa)
 {
-    return ldm_format(128, getFormat(sa), sa->hostId, sa->port);
+    return ldm_format(128, getFormat(sa), sa->addr, sa->port);
 }
 
 /**
- * XDR-s a server address.
+ * Returns the Internet socket address that corresponds to a service address.
  *
- * @param[in] xdrs  Pointer to the XDR structure.
- * @param     sa    Pointer to the server address.
+ * @param[in]  serviceAddr   The service address.
+ * @param[in]  serverSide    Whether or not the returned socket address should be
+ *                           suitable for a server's `bind()` operation.
+ * @param[out] inetSockAddr  The corresponding Internet socket address. The
+ *                           socket type will be `SOCK_STREAM` and the protocol
+ *                           will be `IPPROTO_TCP`.
+ * @param[out] sockLen       The size of the returned socket address in bytes.
+ *                           Suitable for use in a `bind()` or `connect()` call.
+ * @retval     0             Success.
+ * @retval     EAGAIN        A necessary resource is temporarily unavailable.
+ *                           `log_start()` called.
+ * @retval     EINVAL        Invalid port number. `log_start()` called.
+ * @retval     ENOENT        The service address doesn't resolve into an IP
+ *                           address.
+ * @retval     ENOMEM        Out-of-memory. `log_start()` called.
+ * @retval     ENOSYS        A non-recoverable error occurred when attempting to
+ *                           resolve the name. `log_start()` called.
  */
-bool_t
-xdr_ServAddr(
-    XDR* const xdrs,
-    ServAddr*  sa)
+int
+sa_getInetSockAddr(
+    const ServiceAddr* const       servAddr,
+    const bool                     serverSide,
+    struct sockaddr_storage* const inetSockAddr,
+    socklen_t* const               sockLen)
 {
-    return xdr_string(xdrs, &sa->hostId, UINT_MAX) &&
-            xdr_u_short(xdrs, &sa->port);
+    int            status;
+    char           servName[6];
+    unsigned short port = sa_getPort(servAddr);
+    struct sockaddr_in foo;
+
+    if (port == 0 || snprintf(servName, sizeof(servName), "%u", port) >=
+            sizeof(servName)) {
+        LOG_START1("Invalid port number: %u", port);
+        status = EINVAL;
+    }
+    else {
+        struct addrinfo   hints;
+        struct addrinfo*  addrInfo;
+        const char* const hostId = sa_getHostId(servAddr);
+
+        (void)memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_protocol = IPPROTO_TCP;
+        hints.ai_socktype = SOCK_STREAM;
+        /*
+         * AI_NUMERICSERV  `servName` is a port number.
+         * AI_PASSIVE      The returned socket address is suitable for a
+         *                 `bind()` operation.
+         * AI_ADDRCONFIG   The local system must be configured with an
+         *                 IP address of the specified family.
+         */
+        hints.ai_flags = serverSide
+            ? AI_NUMERICSERV | AI_PASSIVE
+            : AI_NUMERICSERV | AI_ADDRCONFIG;
+
+        status = getaddrinfo(hostId, servName, &hints, &addrInfo);
+
+        if (status != 0) {
+            /*
+             * Possible values: EAI_FAMILY, EAI_AGAIN, EAI_FAIL, EAI_MEMORY,
+             * EAI_NONAME, EAI_SYSTEM, EAI_OVERFLOW
+             */
+            if (status = EAI_NONAME) {
+                status = ENOENT;
+            }
+            else if (status = EAI_SYSTEM) {
+                LOG_SERROR3("Couldn't get IP address of host \"%s\", port %u. "
+                        "Status=%d", hostId, port, status);
+                status = ENOSYS;
+            }
+            else {
+                LOG_START3("Couldn't get IP address of host \"%s\", port %u. "
+                        "Status=%d", hostId, port, status);
+                if (status == EAI_AGAIN) {
+                    status = EAGAIN;
+                }
+                else if (status == EAI_MEMORY) {
+                    status = ENOMEM;
+                }
+                else {
+                    status = ENOSYS;
+                }
+            }
+        }
+        else {
+            *sockLen = addrInfo->ai_addrlen;
+            (void)memcpy(inetSockAddr, addrInfo->ai_addr, *sockLen);
+            freeaddrinfo(addrInfo);
+        } /* "addrInfo" allocated */
+    } /* valid port number */
+
+    return status;
 }

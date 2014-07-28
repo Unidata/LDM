@@ -37,7 +37,7 @@ typedef uint32_t VcmtpFileId;
 % * Successful multicast subscription return value:
 % */
 #endif
-struct McastGroupInfo {
+struct McastInfo {
     /*
      * Multicast group name:
      */
@@ -83,7 +83,7 @@ enum SubscriptionStatus {
 #endif
 union SubscriptionReply switch (SubscriptionStatus status) {
     case LDM7_OK:
-        McastGroupInfo groupInfo;
+        McastInfo groupInfo;
     case LDM7_INVAL:
         void;
     case LDM7_UNAUTH:

@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mcast_down.hin
+ *   @file: mldm_receiver.hin
  * @author: Steven R. Emmerson
  *
  * This file specifies the API for the multicast downstream LDM.
@@ -15,17 +15,17 @@
 #include "down7.h"
 #include "ldm.h"
 #include "pq.h"
-#include "vcmtp_c_api.h"
+#include "mcast.h"
 
 typedef struct mdl      Mdl;
 /**
  * Callback-function for notifying the upper layer about a missed file. Queues
  * the file for reception by other means. Returns immediately.
  *
- * @param[in] fileId  VCMTP file identifier of the missed file.
+ * @param[in] fileId  FMTP file identifier of the missed file.
  * @param[in] obj     Optional pointer to an object.
  */
-typedef          void (*mdl_missed_product_func)(VcmtpFileId fileId, void *obj);
+typedef          void (*mdl_missed_product_func)(McastFileId fileId, void *obj);
 
 #ifdef __cplusplus
 extern "C" {

@@ -696,7 +696,7 @@ subscribe_7_svc(
  */
 void*
 request_product_7_svc(
-    VcmtpFileId* const    fileId,
+    McastFileId* const    fileId,
     struct svc_req* const rqstp)
 {
     /* TODO */

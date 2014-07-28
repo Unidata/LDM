@@ -20,7 +20,11 @@ nodist_lib_la_SOURCES	= ldm_svc.c ldm_xdr.c ldm_clnt.c
 lib_la_CPPFLAGS		= -I$(top_srcdir) \
 			  -I$(top_srcdir)/rpc \
 			  -I$(top_srcdir)/ulog \
-			  -I$(top_srcdir)/protocol2
+			  -I$(top_srcdir)/protocol2 \
+			  -I$(top_srcdir)/misc
+if WANT_MULTICAST
+lib_la_CPPFLAGS		+= -I$(top_srcdir)/multicast
+endif
 TAGS_FILES		= ../rpc/*.c ../rpc/*.h
 
 ldm.h:		ldm.x

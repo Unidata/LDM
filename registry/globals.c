@@ -472,3 +472,15 @@ getLdmLogDir(void)
 {
     return LDM_LOG_DIR;
 }
+
+/**
+ * Returns the absolute path of the directory for information on the system
+ * since the last boot.
+ *
+ * @return The absolute path of the LDM var/run directory.
+ */
+const char*
+getLdmVarRunDir(void)
+{
+    return LDM_VAR_RUN_DIR;
+}

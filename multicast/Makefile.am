@@ -8,26 +8,33 @@
 
 SUBDIRS			= vcmtp
 EXTRA_DIST              = down7.hin \
-			  mcast_down.hin \
-			  mcast_session_memory.hin \
+			  mldm_receiver.hin \
+			  mldm_sender.hin \
+			  mldm_sender_memory.hin \
+			  mldm_receiver_memory.hin \
                           file_id_queue.hin \
                           server_info.hin \
                           sock_funcs.c sock_funcs.hin
 BUILT_SOURCES           = down7.h \
-			  mcast_down.h \
-			  mcast_session_memory.h \
+			  mldm_receiver.h \
+			  mldm_sender.h \
+			  mldm_sender_memory.h \
+			  mldm_receiver_memory.h \
                           file_id_queue.h \
                           server_info.h \
                           sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= down7.c \
-			  mcast_down.c \
-			  mcast_session_memory.c \
+			  mldm_receiver.c \
+			  mcast_info.c \
+			  mldm_sender.c \
+			  mldm_sender_memory.c \
+			  mldm_receiver_memory.c \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
 			  file_id_queue.c \
 			  server_info.c \
-                          vcmtp_c_api.cpp vcmtp_c_api.h
+                          mcast.cpp mcast.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -35,7 +42,7 @@ CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
                           -I$(builddir)/vcmtp/protocol -I$(srcdir)/vcmtp/protocol \
-                          -I$(top_srcdir)/misc -I$(top_srcdir)/misc \
+                          -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc
 lib_la_LIBADD		= vcmtp/libvcmtp.la -lpthread
 CLEANFILES		= *.yaml
@@ -45,64 +52,77 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 down7.h:		down7.hin down7.c
-mcast_down.h:		mcast_down.hin mcast_down.c
-mcast_info.h:		mcast_info.hin mcast_info.c
-mcast_session_memory.h:	mcast_session_memory.c mcast_session_memory.hin
+mldm_receiver.h:		mldm_receiver.hin mldm_receiver.c
+mldm_sender.h:		mldm_sender.hin mldm_sender.c
+mldm_sender_memory.h:	mldm_sender_memory.hin mldm_sender_memory.c
+mldm_receiver_memory.h:	mldm_receiver_memory.c mldm_receiver_memory.hin
 file_id_queue.h:	file_id_queue.hin file_id_queue.c
 server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
-up_ldm.h:		up_ldm.hin up_ldm.c
+up7.h:		up7.hin up7.c
 
 if HAVE_OPMOCK
 VCMTPReceiver_stubs	= VCMTPReceiver_stub.cpp VCMTPReceiver_stub.hpp
-vcmtp_c_api_stubs	= vcmtp_c_api_stub.c vcmtp_c_api_stub.h
+mcast_stubs	= mcast_stub.c mcast_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
 globals_stubs		= globals_stub.c globals_stub.h
+mldm_sender_memory_stubs	= mldm_sender_memory_stub.c mldm_sender_memory_stub.h
 all_stubs		= $(VCMTPReceiver_stubs) \
-                          $(vcmtp_c_api_stubs) \
+                          $(mcast_stubs) \
                           $(pq_stubs) \
-                          $(globals_stubs)
+                          $(globals_stubs) \
+                          $(mldm_sender_memory_stubs)
 BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= $(all_stubs) TEST-test.xml
-OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.2/include \
+OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
                           -I/usr/local/include \
                           -I/usr/include
 $(VCMTPReceiver_stubs):	vcmtp/protocol/VCMTPReceiver.h
 	opmock2 -cpp -i $? -o . $(OPMOCK_INCLUDES)
-$(vcmtp_c_api_stubs):	vcmtp_c_api.h
+$(mcast_stubs):	mcast.h
 	opmock2 -i $? -o . $(OPMOCK_INCLUDES)
 $(pq_stubs):		../pq/pq.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(globals_stubs):	../registry/globals.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+$(mldm_sender_memory_stubs):	mldm_sender_memory.h
+	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
-#check_PROGRAMS			= vcmtp_c_api_test mcast_down
-opmock_check_progs		= test_mcast_session_memory #mcast_down_test
+#check_PROGRAMS			= mcast_test mldm_receiver mldm_sender
+opmock_check_progs		= mldm_receiver_memory_test mldm_sender_test #mldm_receiver_test
 test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
 # "*_stub.*" files aren't included here because all "_SOURCES" files are
 # expected by "make distcheck" and they won't exist on a system that doesn't
 # have Opmock.
-#vcmtp_c_api_test_SOURCES	= vcmtp_c_api_test.cpp vcmtp_c_api.cpp
-#vcmtp_c_api_test_CPPFLAGS	= $(test_cppflags)
-#vcmtp_c_api_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mcast_down_test_SOURCES 	= mcast_down_test.c mcast_down.c
-mcast_down_test_CPPFLAGS	= $(test_cppflags)
-mcast_down_test_LDFLAGS		= @OPMOCK_LDFLAGS@
+#mcast_test_SOURCES	= mcast_test.cpp mcast.cpp
+#mcast_test_CPPFLAGS	= $(test_cppflags)
+#mcast_test_LDFLAGS	= @OPMOCK_LDFLAGS@
+mldm_receiver_test_SOURCES 	= mldm_receiver_test.c mldm_receiver.c
+mldm_receiver_test_CPPFLAGS	= $(test_cppflags)
+mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
+mldm_sender_test_SOURCES 		= mldm_sender_test.c mldm_sender.c mcast_info.c
+mldm_sender_test_CPPFLAGS		= $(test_cppflags)
+mldm_sender_test_LDFLAGS		= @OPMOCK_LDFLAGS@
 
-test_mcast_session_memory_SOURCES 	= test_mcast_session_memory.c
-test_mcast_session_memory_CPPFLAGS	= $(test_cppflags)
-test_mcast_session_memory_LDFLAGS	= @OPMOCK_LDFLAGS@
+mldm_receiver_memory_test_SOURCES 	= mldm_receiver_memory_test.c
+mldm_receiver_memory_test_CPPFLAGS	= $(test_cppflags)
+mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 #
 # The stubs are included here because they can't be in "_SOURCES" above.
-#vcmtp_c_api_test_LDADD		= VCMTPReceiver_stub.o \
+#mcast_test_LDADD		= VCMTPReceiver_stub.o \
 #				  $(top_builddir)/lib/libldm.la \
 #				  @OPMOCK_LDADD@
-mcast_down_test_LDADD		= vcmtp_c_api_stub.o \
+mldm_receiver_test_LDADD		= mcast_stub.o \
 				  pq_stub.o \
 				  $(top_builddir)/lib/libldm.la \
 				  @OPMOCK_LDADD@
-test_mcast_session_memory_LDADD	= mcast_session_memory.lo \
+mldm_sender_test_LDADD		= mcast_stub.o \
+				  pq_stub.o \
+				  mldm_sender_memory_stub.o \
+				  $(top_builddir)/lib/libldm.la \
+				  @OPMOCK_LDADD@
+mldm_receiver_memory_test_LDADD	= mldm_receiver_memory.lo \
 				  globals_stub.o \
 				  $(top_builddir)/lib/libldm.la \
 				  @OPMOCK_LDADD@
@@ -110,17 +130,17 @@ opmock_tests			= $(opmock_check_progs)
 endif
 
 if HAVE_CUNIT
-cunit_check_progs		= test_file_id_queue
-test_file_id_queue_SOURCES	= test_file_id_queue.c file_id_queue.c
-test_file_id_queue_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
-test_file_id_queue_LDADD	= \
+cunit_check_progs		= file_id_queue_test
+file_id_queue_test_SOURCES	= file_id_queue_test.c file_id_queue.c
+file_id_queue_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+file_id_queue_test_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
 cunit_tests			= $(cunit_check_progs)
 
-test_file_id_queue_valgrind:	test_file_id_queue
+file_id_queue_test_valgrind:	file_id_queue_test
 	$(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./test_file_id_queue
+	    --leak-check=full --show-reachable=yes ./file_id_queue_test
 endif
 
 check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs)

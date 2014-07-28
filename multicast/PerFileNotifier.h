@@ -14,7 +14,7 @@
 #ifndef PER_FILE_NOTIFIER_H_
 #define PER_FILE_NOTIFIER_H_
 
-#include "vcmtp_c_api.h"
+#include "mcast.h"
 #include <ReceivingApplicationNotifier.h>
 #include <vcmtp.h>
 #include <VcmtpFileEntry.h>
@@ -46,7 +46,7 @@ public:
     ~PerFileNotifier() {}
     void        notify_of_bof(VcmtpFileEntry& file_entry) const;
     void        notify_of_eof(VcmtpFileEntry& file_entry) const;
-    void        notify_of_missed_file(VcmtpFileId fileId) const;
+    void        notify_of_missed_file(McastFileId fileId) const;
 
 private:
     /**

@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: up_ldm_7.c
+ *   @file: up7.c
  * @author: Steven R. Emmerson
  *
  * This file implements the upstream LDM-7.
@@ -12,7 +12,7 @@
 #include "config.h"
 
 #include "ldm.h"
-#include "up_ldm.h"
+#include "up7.h"
 #include "log.h"
 #include "rpcutil.h"
 

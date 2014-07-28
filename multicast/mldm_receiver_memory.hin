@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mcast_session_memory.hin
+ *   @file: mldm_receiver_memory.hin
  * @author: Steven R. Emmerson
  *
  * This file specifies the API for persistent memory between multicast sessions

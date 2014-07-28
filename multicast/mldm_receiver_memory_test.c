@@ -3,10 +3,10 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: test_mcast_session_memory.c
+ *   @file: mldm_receiver_memory_test.c
  * @author: Steven R. Emmerson
  *
- * This file performs a unit-test of the mcast_session_memory module.
+ * This file performs a unit-test of the mldm_receiver_memory module.
  */
 
 #include "config.h"
@@ -15,7 +15,7 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "log.h"
-#include "mcast_session_memory.h"
+#include "mldm_receiver_memory.h"
 
 #include <errno.h>
 #include <libgen.h>
@@ -32,7 +32,7 @@
 static const char* const     MCAST_GROUP_ID = "mcast-group-id";
 static const char* const     HOSTNAME = "hostname";
 static const unsigned short  PORT = 38800;
-static const ServAddr*       SERV_ADDR;
+static const ServiceAddr*    SERVICE_ADDR;
 static const char*           CWD;
 
 static void init()
@@ -42,8 +42,8 @@ static void init()
     if (!initialized) {
         char buf[265];
 
-        SERV_ADDR = sa_new(HOSTNAME, PORT);
-        OP_ASSERT_TRUE(SERV_ADDR != NULL);
+        SERVICE_ADDR = sa_new(HOSTNAME, PORT);
+        OP_ASSERT_TRUE(SERVICE_ADDR != NULL);
         CWD = getcwd(buf, sizeof(buf));
         OP_ASSERT_TRUE(CWD != NULL);
         initialized = true;
@@ -54,7 +54,7 @@ static void openMsm(
     McastSessionMemory** msm)
 {
     getLdmLogDir_ExpectAndReturn(CWD);
-    *msm = msm_open(SERV_ADDR , MCAST_GROUP_ID);
+    *msm = msm_open(SERVICE_ADDR , MCAST_GROUP_ID);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(*msm != NULL);
 }
@@ -63,7 +63,7 @@ static void test_missed_mcast_files()
 {
     McastSessionMemory* msm;
     int                 status;
-    VcmtpFileId         fileId;
+    McastFileId         fileId;
 
     openMsm(&msm);
     msm_clearAllMissedFiles(msm);
@@ -132,7 +132,7 @@ static void test_last_mcast_prod()
     int                 status;
 
     getLdmLogDir_ExpectAndReturn(CWD);
-    OP_ASSERT_TRUE(msm_delete(SERV_ADDR, MCAST_GROUP_ID));
+    OP_ASSERT_TRUE(msm_delete(SERVICE_ADDR, MCAST_GROUP_ID));
 
     openMsm(&msm);
 

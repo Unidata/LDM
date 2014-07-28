@@ -25,6 +25,7 @@
 #include <libxml/parser.h>
 #include "backend.h"
 #include "registry.h"
+#include "stringBuf.h"
 #include <log.h>
 
 typedef struct {
@@ -523,7 +524,7 @@ recursiveAddDescendants(
         if (XML_ELEMENT_NODE == childNode->type) {
             nextElt->xmlNode = childNode;
 
-            if (0 == (status = sb_new(&nextElt->key, PATH_MAX)) && 
+            if (0 == (status = sb_new(&nextElt->key, PATH_MAX)) &&
                 0 == (status = sb_cat(nextElt->key, prefix, REG_SEP,
                         childNode->name, NULL))) {
                 int     nelt;

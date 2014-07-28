@@ -12,7 +12,7 @@
  */
 
 #include "PerFileNotifier.h"
-#include "vcmtp_c_api.h"
+#include "mcast.h"
 #include "log.h"
 
 #include <vcmtp.h>
@@ -65,7 +65,7 @@ void PerFileNotifier::notify_of_eof(VcmtpFileEntry& file_entry) const
     }
 }
 
-void PerFileNotifier::notify_of_missed_file(const VcmtpFileId fileId) const
+void PerFileNotifier::notify_of_missed_file(const McastFileId fileId) const
 {
     missed_file_func(obj, fileId);
 }

@@ -5,7 +5,6 @@ sock_funcs.h
 *_stub.*
 TEST-test.xml
 down_ldm.h
-mcast_info.h
 request_queue.h
 test_request_queue
 up_ldm.h
@@ -20,3 +19,12 @@ test_file_id_queue
 *.yaml
 mcast_session_memory.h
 test_mcast_session_memory
+file_id_queue_test
+mldm_receiver.h
+mldm_receiver_memory.h.h
+mldm_receiver_memory.h
+mldm_receiver_memory_test
+mldm_sender.h
+mldm_sender_memory.h
+mldm_sender_test
+up7.h

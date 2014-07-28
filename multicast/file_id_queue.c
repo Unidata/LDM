@@ -26,7 +26,7 @@
 typedef struct entry {
     struct entry* prev;   /* points to the previous entry towards the head */
     struct entry* next;   /* points to the next entry towards the tail */
-    VcmtpFileId   fileId; /* VCMTP identifier of the file */
+    McastFileId   fileId; /* VCMTP identifier of the file */
 } Entry;
 
 /**
@@ -39,7 +39,7 @@ typedef struct entry {
  */
 static Entry*
 entry_new(
-    const VcmtpFileId fileId)
+    const McastFileId fileId)
 {
     Entry* entry = LOG_MALLOC(sizeof(Entry), "file-identifier queue-entry");
 
@@ -69,7 +69,7 @@ entry_free(
  * @param[in] entry  Pointer to the entry.
  * @return           The file identifier of the entry.
  */
-static inline VcmtpFileId
+static inline McastFileId
 entry_getFileId(
     const Entry* const entry)
 {
@@ -296,7 +296,7 @@ fiq_free(
 int
 fiq_add(
     FileIdQueue* const fiq,
-    const VcmtpFileId  fileId)
+    const McastFileId  fileId)
 {
     Entry* entry = entry_new(fileId);
     int    status;
@@ -329,7 +329,7 @@ fiq_add(
 int
 fiq_peekWait(
     FileIdQueue* const fiq,
-    VcmtpFileId* const fileId)
+    McastFileId* const fileId)
 {
     lock(fiq);
 
@@ -357,7 +357,7 @@ fiq_peekWait(
 int
 fiq_removeNoWait(
     FileIdQueue* const fiq,
-    VcmtpFileId* const fileId)
+    McastFileId* const fileId)
 {
     lock(fiq);
 
@@ -391,7 +391,7 @@ fiq_removeNoWait(
 int
 fiq_peekNoWait(
     FileIdQueue* const fiq,
-    VcmtpFileId* const fileId)
+    McastFileId* const fileId)
 {
     lock(fiq);
 
