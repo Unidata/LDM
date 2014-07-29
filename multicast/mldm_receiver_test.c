@@ -49,8 +49,8 @@ void test_mdl_createAndExecute()
     McastInfo       mcastInfo;
     Mdl*                 mdl;
 
-    mcastInfo.mcast.addr = addr;
-    mcastInfo.mcast.port = port;
+    mcastInfo.group.addr = addr;
+    mcastInfo.group.port = port;
     mcastInfo.server.addr = tcpAddr;
     mcastInfo.server.port = tcpPort;
 

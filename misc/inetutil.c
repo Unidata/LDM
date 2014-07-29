@@ -917,12 +917,114 @@ err0 :
 
 #endif /* !TIRPC */
 
+/**
+ * Returns the first address information structure corresponding to given
+ * information.
+ *
+ * @param[in]  nodeName  The Internet identifier. May be a name or a formatted
+ *                       IP address.
+ * @param[in]  servName  The service name or NULL. May be a formatted port
+ *                       number.
+ * @param[in]  hints     Hints for retrieving address information.
+ * @param[out] addrInfo  The first address information structure corresponding
+ *                       to the input.
+ * @retval     0         Success. `*addrInfo` is set.
+ * @retval     EAGAIN    A necessary resource is temporarily unavailable.
+ *                       `log_start()` called.
+ * @retval     EINVAL    Invalid Internet identifier or address family.
+ *                       `log_start()` called.
+ * @retval     ENOENT    The Internet identifier doesn't resolve to an IP
+ *                       address.
+ * @retval     ENOMEM    Out-of-memory. `log_start()` called.
+ * @retval     ENOSYS    A non-recoverable error occurred when attempting to
+ *                       resolve the name. `log_start()` called.
+ */
+static int
+getAddrInfo(
+    const char* const restrict            nodeName,
+    const char* const restrict            servName,
+    const struct addrinfo* const restrict hints,
+    struct addrinfo* const restrict       addrInfo)
+{
+    int status = getaddrinfo(nodeName, NULL, &hints, &addrInfo);
+
+    if (status == 0)
+        return 0;
+
+    /*
+     * Possible values: EAI_FAMILY, EAI_AGAIN, EAI_FAIL, EAI_MEMORY,
+     * EAI_NONAME, EAI_SYSTEM, EAI_OVERFLOW
+     */
+    if (status = EAI_NONAME)
+        return ENOENT;
+
+    LOG_SERROR2("Couldn't get IP address of \"%s\". Status=%d",
+            nodeName, status);
+
+    if (status == EAI_AGAIN)
+        return EAGAIN;
+    if (status == EAI_FAMILY)
+        return EINVAL;
+    if (status == EAI_MEMORY)
+        return ENOMEM;
+
+    return ENOSYS;
+}
+
+/**
+ * Returns the IPv4 dotted-decimal form of an Internet identifier.
+ *
+ * @param[in]  inetId  The Internet identifier. May be a name or a formatted
+ *                     IPv4 address in dotted-decimal format.
+ * @param[out] out     The corresponding form of the Internet identifier in
+ *                     dotted-decimal format. The caller should free when it's
+ *                     no longer needed.
+ * @retval     0       Success. `*out` is set.
+ * @retval     EAGAIN  A necessary resource is temporarily unavailable.
+ *                     `log_start()` called.
+ * @retval     EINVAL  The identifier cannot be converted to an IPv4
+ *                     dotted-decimal format. `log_start()` called.
+ * @retval     ENOENT  No IPv4 address corresponds to the given Internet
+ *                     identifier.
+ * @retval     ENOMEM  Out-of-memory. `log_start()` called.
+ * @retval     ENOSYS  A non-recoverable error occurred when attempting to
+ *                     resolve the identifier. `log_start()` called.
+ */
+int
+getDottedDecimal(
+    const char* const     inetId,
+    char** const restrict out)
+{
+    struct addrinfo  hints;
+    struct addrinfo* addrInfo;
+
+    (void)memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET; // IPv4
+
+    int status = getAddrInfo(inetId, NULL, &hints, &addrInfo);
+
+    if (status == 0) {
+        char buf[INET_ADDRSTRLEN];
+
+        if (inet_ntop(AF_INET,
+                &((struct sockaddr_in*)addrInfo->ai_addr)->sin_addr.s_addr,
+                buf, sizeof(buf)) == NULL) {
+            LOG_SERROR0("Couldn't format IPv4 address");
+            status = ENOSYS;
+        }
+
+        freeaddrinfo(addrInfo);
+    } // `addrInfo` allocated
+
+    return status;
+}
+
 #if WANT_MULTICAST
 /**
  * Returns a new service address.
  *
- * @param[in] addr    Address of the service. May be a hostname or formatted IP
- *                    address. Client may free upon return.
+ * @param[in] addr    Identifier of the service. May be a hostname or formatted
+ *                    IP address. Client may free upon return.
  * @param[in] port    Port number of the service.
  * @retval    NULL    Failure. \c errno will be ENOMEM.
  * @return            Pointer to a new service address object corresponding to
@@ -983,7 +1085,7 @@ sa_copy(
     char* const addr = strdup(src->addr);
 
     if (addr == NULL) {
-        LOG_SERROR0("Couldn't copy Internet address");
+        LOG_SERROR0("Couldn't copy Internet identifier");
         return false;
     }
 
@@ -1008,14 +1110,14 @@ sa_clone(
 }
 
 /**
- * Returns the address of a service address.
+ * Returns the Internet identifier of a service.
  *
  * @param[in] sa  Pointer to the service address.
- * @return        Pointer to the associated address. May be a hostname or
+ * @return        Pointer to the associated identifier. May be a hostname or
  *                formatted IP address.
  */
 const char*
-sa_getHostId(
+sa_getInetId(
     const ServiceAddr* const sa)
 {
     return sa->addr;
@@ -1098,10 +1200,12 @@ sa_format(
  *                           will be `IPPROTO_TCP`.
  * @param[out] sockLen       The size of the returned socket address in bytes.
  *                           Suitable for use in a `bind()` or `connect()` call.
- * @retval     0             Success.
+ * @retval     0             Success. `inetSockAddr` and `sockLen` are set.
  * @retval     EAGAIN        A necessary resource is temporarily unavailable.
  *                           `log_start()` called.
- * @retval     EINVAL        Invalid port number. `log_start()` called.
+ * @retval     EINVAL        Invalid port number or the Internet identifier
+ *                           cannot be resolved to an IP address. `log_start()`
+ *                           called.
  * @retval     ENOENT        The service address doesn't resolve into an IP
  *                           address.
  * @retval     ENOMEM        Out-of-memory. `log_start()` called.
@@ -1118,7 +1222,6 @@ sa_getInetSockAddr(
     int            status;
     char           servName[6];
     unsigned short port = sa_getPort(servAddr);
-    struct sockaddr_in foo;
 
     if (port == 0 || snprintf(servName, sizeof(servName), "%u", port) >=
             sizeof(servName)) {
@@ -1128,7 +1231,7 @@ sa_getInetSockAddr(
     else {
         struct addrinfo   hints;
         struct addrinfo*  addrInfo;
-        const char* const hostId = sa_getHostId(servAddr);
+        const char* const inetId = sa_getInetId(servAddr);
 
         (void)memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_UNSPEC;
@@ -1145,36 +1248,9 @@ sa_getInetSockAddr(
             ? AI_NUMERICSERV | AI_PASSIVE
             : AI_NUMERICSERV | AI_ADDRCONFIG;
 
-        status = getaddrinfo(hostId, servName, &hints, &addrInfo);
+        status = getAddrInfo(inetId, servName, &hints, &addrInfo);
 
-        if (status != 0) {
-            /*
-             * Possible values: EAI_FAMILY, EAI_AGAIN, EAI_FAIL, EAI_MEMORY,
-             * EAI_NONAME, EAI_SYSTEM, EAI_OVERFLOW
-             */
-            if (status = EAI_NONAME) {
-                status = ENOENT;
-            }
-            else if (status = EAI_SYSTEM) {
-                LOG_SERROR3("Couldn't get IP address of host \"%s\", port %u. "
-                        "Status=%d", hostId, port, status);
-                status = ENOSYS;
-            }
-            else {
-                LOG_START3("Couldn't get IP address of host \"%s\", port %u. "
-                        "Status=%d", hostId, port, status);
-                if (status == EAI_AGAIN) {
-                    status = EAGAIN;
-                }
-                else if (status == EAI_MEMORY) {
-                    status = ENOMEM;
-                }
-                else {
-                    status = ENOSYS;
-                }
-            }
-        }
-        else {
+        if (status == 0) {
             *sockLen = addrInfo->ai_addrlen;
             (void)memcpy(inetSockAddr, addrInfo->ai_addr, *sockLen);
             freeaddrinfo(addrInfo);

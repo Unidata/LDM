@@ -175,78 +175,8 @@ taskExit(
 }
 
 /**
- * Sets a socket address to correspond to a TCP connection to a server on
- * an Internet host
- *
- * @param[out] sockAddr      Pointer to the socket Internet address object to be
- *                           set.
- * @param[in]  useIPv6       Whether or not to use IPv6.
- * @param[in]  servAddr      Pointer to the address of the server.
- * @retval     0             Success. \c *sockAddr is set.
- * @retval     LDM7_INVAL    Invalid port number or host identifier. \c
- *                           log_start() called.
- * @retval     LDM7_IPV6     IPv6 not supported. \c log_start() called.
- * @retval     LDM7_SYSTEM   System error. \c log_start() called.
- */
-static int
-getSockAddr(
-    struct sockaddr_in* const restrict  sockAddr,
-    const int                           useIPv6,
-    const ServiceAddr* const restrict   servAddr)
-{
-    int            status;
-    char           servName[6];
-    unsigned short port = sa_getPort(servAddr);
-
-    if (port == 0 || snprintf(servName, sizeof(servName), "%u", port) >=
-            sizeof(servName)) {
-        LOG_START1("Invalid port number: %u", port);
-        status = LDM7_INVAL;
-    }
-    else {
-        struct addrinfo   hints;
-        struct addrinfo*  addrInfo;
-        const char* const hostId = sa_getHostId(servAddr);
-
-        (void)memset(&hints, 0, sizeof(hints));
-        hints.ai_family = useIPv6 ? AF_INET6 : AF_INET;
-        hints.ai_protocol = IPPROTO_TCP;
-        hints.ai_socktype = SOCK_STREAM;
-        /*
-         * AI_ADDRCONFIG means that the local system must be configured with an
-         * IP address of the specified family.
-         */
-        hints.ai_flags = AI_NUMERICSERV | AI_ADDRCONFIG;
-
-        status = getaddrinfo(hostId, servName, &hints, &addrInfo);
-
-        if (status != 0) {
-            /*
-             * Possible values: EAI_FAMILY, EAI_AGAIN, EAI_FAIL, EAI_MEMORY,
-             * EAI_NONAME, EAI_SYSTEM, EAI_OVERFLOW
-             */
-            LOG_START4("Couldn't get %s address for host \"%s\", port %u. "
-                    "Status=%d", useIPv6 ? "IPv6" : "IPv4", hostId, port,
-                    status);
-            status = (useIPv6 && status == EAI_FAMILY)
-                    ? LDM7_IPV6
-                    : (status == EAI_NONAME)
-                      ? LDM7_INVAL
-                      : LDM7_SYSTEM;
-        }
-        else {
-            *sockAddr = *(struct sockaddr_in*)addrInfo->ai_addr;
-            freeaddrinfo(addrInfo);
-        } /* "addrInfo" allocated */
-    } /* valid port number */
-
-    return status;
-}
-
-/**
  * Returns a socket that's connected to an Internet server via TCP.
  *
- * @param[in]  useIPv6        Whether or not to use IPv6.
  * @param[in]  servAddr       Pointer to the address of the server.
  * @param[out] sock           Pointer to the socket to be set. The client should
  *                            call \c close(*sock) when it's no longer needed.
@@ -285,8 +215,8 @@ getSocket(
         }
         else {
             if (connect(fd, (struct sockaddr*)&addr, sockLen)) {
-                LOG_SERROR3("Couldn't connect %s TCP socket to host "
-                        "\"%s\", port %u", addrFamilyId, sa_getHostId(servAddr),
+                LOG_SERROR3("Couldn't connect %s TCP socket to \"%s\", port %u",
+                        addrFamilyId, sa_getInetId(servAddr),
                         sa_getPort(servAddr));
                 (void)close(fd);
                 status = (errno == ETIMEDOUT)
@@ -299,7 +229,7 @@ getSocket(
                 *sock = fd;
                 *sockAddr = addr;
             }
-        } /* "fd" allocated */
+        } /* "fd" is open */
     } /* "addr" is set */
 
     return status;
@@ -346,7 +276,7 @@ newClient(
 
         if (clnt == NULL) {
             LOG_SERROR3("Couldn't create RPC client for host \"%s\", "
-                    "port %u: %s", sa_getHostId(servAddr), sa_getPort(servAddr),
+                    "port %u: %s", sa_getInetId(servAddr), sa_getPort(servAddr),
                     clnt_spcreateerror(""));
             (void)close(sock);
             status = clntStatusToLdm7Status(rpc_createerr.cf_stat);

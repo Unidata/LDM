@@ -229,7 +229,7 @@ struct mcast_sender {
 };
 
 /**
- * Returns a new multicast sender. The sender is immediately active. This method
+ * Returns a new multicast sender. Starts the sender's TCP server. This method
  * doesn't block.
  *
  * @param[out] sender            Pointer to returned sender. Caller should call
@@ -265,10 +265,7 @@ mcastSender_new(
         return ENOMEM;
 
     try {
-        std::string         hostId(tcpAddr);
-        std::string         mcastId(mcastAddr);
-
-        sndr->sender = new VCMTPSender(mcastId, mcastPort, hostId, tcpPort);
+        sndr->sender = new VCMTPSender(std::string(tcpAddr), tcpPort);
 
         try {
             sndr->sender->JoinGroup(std::string(mcastAddr), mcastPort);
@@ -278,7 +275,7 @@ mcastSender_new(
         catch (const std::exception& e) {
             delete sndr->sender;
             throw;
-        } /* "sndrImpl" allocated */
+        } // `sndr->sender` allocated
     } // `sndr` allocated
     catch (const std::invalid_argument& e) {
         LOG_START1("%s", e.what());

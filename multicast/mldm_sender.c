@@ -81,7 +81,7 @@ mls_createMulticastSender(
 {
     McastSender* sndr;
     int          status = mcastSender_new(&sndr, info->server.addr,
-            info->server.port, info->mcast.addr, info->mcast.port);
+            info->server.port, info->group.addr, info->group.port);
 
     if (status == EINVAL)
         return LDM7_INVAL;

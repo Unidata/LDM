@@ -383,7 +383,7 @@ init(
 
     status = mcastReceiver_new(&receiver, mcastInfo->server.addr,
             mcastInfo->server.port, bof_func, eof_func, missed_file_func,
-            mcastInfo->mcast.addr, mcastInfo->mcast.port, mdl);
+            mcastInfo->group.addr, mcastInfo->group.port, mdl);
     if (status) {
         LOG_ADD0("Couldn't create FMTP receiver");
         return LDM7_MCAST;

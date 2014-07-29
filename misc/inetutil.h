@@ -10,6 +10,8 @@
 #ifndef _INETUTIL_H_
 #define _INETUTIL_H_
 
+#include "config.h"
+
 #include "error.h"
 #include "ldm.h"
 #include "rpc/types.h"

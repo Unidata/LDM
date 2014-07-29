@@ -1016,7 +1016,7 @@ struct ServiceAddr {
 %    /*
 %     * Address of associated multicast group.
 %     */
-%    ServiceAddr   mcast;
+%    ServiceAddr   group;
 %    /*
 %     * Address of associated server for blocks and files missed by a multicast
 %     * receiver.
@@ -1055,7 +1055,7 @@ struct ServiceAddr {
 %{
 %    if (!xdr_string (xdrs, &info->mcastName, ~0))
 %        return FALSE;
-%    if (!xdr_ServiceAddr (xdrs, &info->mcast))
+%    if (!xdr_ServiceAddr (xdrs, &info->group))
 %        return FALSE;
 %    if (!xdr_ServiceAddr (xdrs, &info->server))
 %        return FALSE;
@@ -1063,7 +1063,7 @@ struct ServiceAddr {
 %        char* const restrict serverStr = sa_format(&info->server);
 %        if (serverStr == NULL)
 %            return FALSE;
-%        char* const restrict mcastStr = sa_format(&info->mcast);
+%        char* const restrict mcastStr = sa_format(&info->group);
 %        if (mcastStr == NULL) {
 %            free(serverStr);
 %            return FALSE;

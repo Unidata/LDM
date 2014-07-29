@@ -62,21 +62,21 @@ mi_init(
     ServiceAddr uni;
     char*       nam;
 
-    if (!sa_copy(&info->mcast, mcast)) {
+    if (!sa_copy(&info->group, mcast)) {
         LOG_ADD0("Couldn't copy multicast address");
         return false;
     }
 
     if (!sa_copy(&info->server, ucast)) {
         LOG_ADD0("Couldn't copy unicast address");
-        xdr_free(xdr_ServiceAddr, (char*)&info->mcast);
+        xdr_free(xdr_ServiceAddr, (char*)&info->group);
         return false;
     }
 
     if ((info->mcastName = strdup(name)) == NULL) {
         LOG_SERROR0("Couldn't copy multicast group name");
         xdr_free(xdr_ServiceAddr, (char*)&info->server);
-        xdr_free(xdr_ServiceAddr, (char*)&info->mcast);
+        xdr_free(xdr_ServiceAddr, (char*)&info->group);
         return false;
     }
 
@@ -146,7 +146,7 @@ mi_copy(
     McastInfo* const restrict       to,
     const McastInfo* const restrict from)
 {
-    return mi_init(to, from->mcastName, &from->mcast, &from->server);
+    return mi_init(to, from->mcastName, &from->group, &from->server);
 }
 
 /**
