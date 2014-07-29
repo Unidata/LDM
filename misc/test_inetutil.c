@@ -30,6 +30,7 @@ teardown(void)
     return 0;
 }
 
+#if WANT_MULTICAST
 static void
 test_sa_getInetSockAddr(void)
 {
@@ -81,6 +82,8 @@ test_sa_getInet6SockAddr(void)
     CU_ASSERT_EQUAL(sockLen, sizeof(struct sockaddr_in6));
 }
 
+#endif // WANT_MULTICAST
+
 int
 main(
     const int     argc,
@@ -92,8 +95,10 @@ main(
         CU_Suite*       testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            CU_ADD_TEST(testSuite, test_sa_getInetSockAddr);
-            CU_ADD_TEST(testSuite, test_sa_getInet6SockAddr);
+#           if WANT_MULTICAST
+                CU_ADD_TEST(testSuite, test_sa_getInetSockAddr);
+                CU_ADD_TEST(testSuite, test_sa_getInet6SockAddr);
+#           endif
 
             if (-1 == openulog(basename(argv[0]), 0, LOG_LOCAL0, "-")) {
                 (void)fprintf(stderr, "Couldn't open logging system\n");

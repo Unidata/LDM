@@ -1,4 +1,4 @@
-6.12.4	2014-07-29T11:13:40-0600
+6.12.4	2014-07-29T12:47:42-0600
     Product-queue library (pq.c):
         Modified the product-insertion logic to continue rather than
         error-return (and, consequently, terminate the downstream LDM process)

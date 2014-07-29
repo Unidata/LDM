@@ -38,6 +38,8 @@ extern int            udpopen(const char *hostname, const char *servicename);
 extern int            isMe(const char *remote);
 extern int            local_sockaddr_in(struct sockaddr_in* addr);
 extern int            sockbind(const char *type, unsigned short port);
+
+#if WANT_MULTICAST
 /**
  * Returns a new service address.
  *
@@ -104,5 +106,6 @@ sa_getInetSockAddr(
     const bool                     serverSide,
     struct sockaddr_storage* const inetSockAddr,
     socklen_t* const               sockLen);
+#endif // WANT_MULTICAST
 
 #endif /* !_INETUTIL_H_ */

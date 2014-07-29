@@ -917,6 +917,7 @@ err0 :
 
 #endif /* !TIRPC */
 
+#if WANT_MULTICAST
 /**
  * Returns a new service address.
  *
@@ -1182,3 +1183,4 @@ sa_getInetSockAddr(
 
     return status;
 }
+#endif // WANT_MULTICAST
