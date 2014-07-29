@@ -229,17 +229,18 @@ struct mcast_sender {
 };
 
 /**
- * Returns a new multicast sender.
+ * Returns a new multicast sender. The sender is immediately active. This method
+ * doesn't block.
  *
  * @param[out] sender            Pointer to returned sender. Caller should call
  *                               `mcastSender_free(*sender)` when it's no longer
  *                               needed.
- * @param[in]  tcpAddr           IP address of the interface on which the TCP
- *                               server will listen for connections from
+ * @param[in]  tcpAddr           Internet address of the interface on which the
+ *                               TCP server will listen for connections from
  *                               receivers for retrieving missed data-blocks.
- *                               May be hostname or IP address.
+ *                               May be hostname or formatted IP address.
  * @param[in]  tcpPort           Port number of the TCP server.
- * @param[in]  mcastAddr         Address of the multicast group. May be
+ * @param[in]  mcastAddr         Internet Address of the multicast group. May be
  *                               groupname or formatted IP address.
  * @param[in]  mcastPort         Port number of the multicast group.
  * @retval     0                 Success. `*sender` is set.
@@ -264,9 +265,10 @@ mcastSender_new(
         return ENOMEM;
 
     try {
-        std:string         hostId(tcpAddr);
+        std::string         hostId(tcpAddr);
+        std::string         mcastId(mcastAddr);
 
-        sndr->sender = new VCMTPSender(0);
+        sndr->sender = new VCMTPSender(mcastId, mcastPort, hostId, tcpPort);
 
         try {
             sndr->sender->JoinGroup(std::string(mcastAddr), mcastPort);

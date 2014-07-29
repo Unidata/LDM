@@ -20,12 +20,7 @@ EXTRA_DIST	        = \
         executor.hin \
         semRWLock.hin \
         StrBuf.hin
-DISTCLEANFILES		= \
-	child_map.h \
-	doubly_linked_list.h \
-	doubly_linked_stack.h \
-	executor.h \
-	semRWLock.h
+DISTCLEANFILES		= $(BUILT_SOURCES)
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
 	ldmalloc.h \

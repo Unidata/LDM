@@ -100,7 +100,7 @@ int main(
     opmock_test_suite_reset();
     opmock_register_test(test_running, "test_running");
     opmock_register_test(test_not_running, "test_not_running");
-    opmock_register_test(test_mls_execute, "test_mls_execute");
+    // opmock_register_test(test_mls_execute, "test_mls_execute");
     init();
     opmock_test_suite_run();
     return opmock_get_number_of_errors();

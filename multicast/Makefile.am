@@ -26,7 +26,7 @@ BUILT_SOURCES           = down7.h \
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= down7.c \
 			  mldm_receiver.c \
-			  mcast_info.c \
+			  mcast_info.c mcast_info.h \
 			  mldm_sender.c \
 			  mldm_sender_memory.c \
 			  mldm_receiver_memory.c \
