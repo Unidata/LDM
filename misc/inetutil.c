@@ -934,7 +934,7 @@ err0 :
  * @retval     EINVAL    Invalid Internet identifier or address family.
  *                       `log_start()` called.
  * @retval     ENOENT    The Internet identifier doesn't resolve to an IP
- *                       address.
+ *                       address. `log_start()` called.
  * @retval     ENOMEM    Out-of-memory. `log_start()` called.
  * @retval     ENOSYS    A non-recoverable error occurred when attempting to
  *                       resolve the name. `log_start()` called.
@@ -944,23 +944,24 @@ getAddrInfo(
     const char* const restrict            nodeName,
     const char* const restrict            servName,
     const struct addrinfo* const restrict hints,
-    struct addrinfo* const restrict       addrInfo)
+    struct addrinfo** const restrict      addrInfo)
 {
-    int status = getaddrinfo(nodeName, NULL, &hints, &addrInfo);
+    int status = getaddrinfo(nodeName, servName, hints, addrInfo);
 
     if (status == 0)
         return 0;
+
+    LOG_START3("Couldn't get %s address of \"%s\": %s",
+            hints->ai_family == AF_INET ? "IPv4" :
+                    hints->ai_family == AF_INET6 ? "IPv6" : "IP",
+            nodeName, gai_strerror(status));
 
     /*
      * Possible values: EAI_FAMILY, EAI_AGAIN, EAI_FAIL, EAI_MEMORY,
      * EAI_NONAME, EAI_SYSTEM, EAI_OVERFLOW
      */
-    if (status = EAI_NONAME)
+    if (status == EAI_NONAME)
         return ENOENT;
-
-    LOG_SERROR2("Couldn't get IP address of \"%s\". Status=%d",
-            nodeName, status);
-
     if (status == EAI_AGAIN)
         return EAGAIN;
     if (status == EAI_FAMILY)
@@ -977,9 +978,10 @@ getAddrInfo(
  * @param[in]  inetId  The Internet identifier. May be a name or a formatted
  *                     IPv4 address in dotted-decimal format.
  * @param[out] out     The corresponding form of the Internet identifier in
- *                     dotted-decimal format. The caller should free when it's
- *                     no longer needed.
- * @retval     0       Success. `*out` is set.
+ *                     dotted-decimal format. It's the caller's responsibility
+ *                     to ensure that the buffer can hold at least
+ *                     `INET_ADDRSTRLEN` (from `<netinet/in.h>`) bytes.
+ * @retval     0       Success. `out` is set.
  * @retval     EAGAIN  A necessary resource is temporarily unavailable.
  *                     `log_start()` called.
  * @retval     EINVAL  The identifier cannot be converted to an IPv4
@@ -992,8 +994,8 @@ getAddrInfo(
  */
 int
 getDottedDecimal(
-    const char* const     inetId,
-    char** const restrict out)
+    const char* const    inetId,
+    char* const restrict out)
 {
     struct addrinfo  hints;
     struct addrinfo* addrInfo;
@@ -1004,11 +1006,9 @@ getDottedDecimal(
     int status = getAddrInfo(inetId, NULL, &hints, &addrInfo);
 
     if (status == 0) {
-        char buf[INET_ADDRSTRLEN];
-
         if (inet_ntop(AF_INET,
                 &((struct sockaddr_in*)addrInfo->ai_addr)->sin_addr.s_addr,
-                buf, sizeof(buf)) == NULL) {
+                out, INET_ADDRSTRLEN) == NULL) {
             LOG_SERROR0("Couldn't format IPv4 address");
             status = ENOSYS;
         }
@@ -1023,8 +1023,8 @@ getDottedDecimal(
 /**
  * Returns a new service address.
  *
- * @param[in] addr    Identifier of the service. May be a hostname or formatted
- *                    IP address. Client may free upon return.
+ * @param[in] addr    Identifier of the service. May be a name or formatted IP
+ *                    address. Client may free upon return.
  * @param[in] port    Port number of the service.
  * @retval    NULL    Failure. \c errno will be ENOMEM.
  * @return            Pointer to a new service address object corresponding to
@@ -1046,7 +1046,7 @@ sa_new(
             sa = NULL;
         }
         else {
-            sa->addr = id;
+            sa->inetId = id;
             sa->port = port;
         }
     } /* "sa" allocated */
@@ -1064,7 +1064,7 @@ sa_free(
     ServiceAddr* const sa)
 {
     if (sa != NULL) {
-        free(sa->addr);
+        free(sa->inetId);
         free(sa);
     }
 }
@@ -1082,14 +1082,14 @@ sa_copy(
     ServiceAddr* const restrict       dest,
     const ServiceAddr* const restrict src)
 {
-    char* const addr = strdup(src->addr);
+    char* const inetId = strdup(src->inetId);
 
-    if (addr == NULL) {
+    if (inetId == NULL) {
         LOG_SERROR0("Couldn't copy Internet identifier");
         return false;
     }
 
-    dest->addr = addr;
+    dest->inetId = inetId;
     dest->port = src->port;
 
     return true;
@@ -1106,7 +1106,7 @@ ServiceAddr*
 sa_clone(
     const ServiceAddr* const sa)
 {
-    return sa_new(sa->addr, sa->port);
+    return sa_new(sa->inetId, sa->port);
 }
 
 /**
@@ -1120,7 +1120,7 @@ const char*
 sa_getInetId(
     const ServiceAddr* const sa)
 {
-    return sa->addr;
+    return sa->inetId;
 }
 
 /**
@@ -1143,10 +1143,10 @@ sa_getPort(
  * @return        The formatting string appropriate for the service address.
  */
 static const char*
-getFormat(
+sa_getFormat(
     const ServiceAddr* const sa)
 {
-    return strchr(sa->addr, ':')
+    return strchr(sa->inetId, ':')
             ? "[%s]:%u"
             : "%s:%u";
 }
@@ -1169,7 +1169,7 @@ sa_snprint(
     char* const           buf,
     const size_t          len)
 {
-    return snprintf(buf, len, getFormat(sa), sa->addr, sa->port);
+    return snprintf(buf, len, sa_getFormat(sa), sa->inetId, sa->port);
 }
 
 /**
@@ -1186,11 +1186,12 @@ char*
 sa_format(
     const ServiceAddr* const sa)
 {
-    return ldm_format(128, getFormat(sa), sa->addr, sa->port);
+    return ldm_format(128, sa_getFormat(sa), sa->inetId, sa->port);
 }
 
 /**
- * Returns the Internet socket address that corresponds to a service address.
+ * Returns the Internet socket address corresponding to a TCP service address.
+ * Supports both IPv4 and IPv6.
  *
  * @param[in]  serviceAddr   The service address.
  * @param[in]  serverSide    Whether or not the returned socket address should be

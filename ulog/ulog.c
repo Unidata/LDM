@@ -163,10 +163,12 @@ getulogfacility(void) {
 
 
 /**
- * Returns the pathname of the log file.
+ * Returns the identifier of the log file.
  *
- * @return      the pathname of the log file. If "-", then the standard error
- *              stream is used. If NULL, then the system logging daemon is used.
+ * @return Identifier of log file. One of
+ *           NULL => System logging daemon;
+ *           "-"  => Standard error stream; or
+ *           Pathname of a file.
  */
 const char*
 getulogpath(void) {
@@ -838,19 +840,23 @@ syslog(pri, fmt, va_alist)
 #endif /* NO_REPLACE_SYSLOG */
 
 
-/*
- * Set the ulog mask, return the old mask.
- * Analogous to setlogmask(), execept it actually does something.
+/**
+ * Sets the `ulog(3)` mask and returns the previous mask. Analogous to
+ * setlogmask(), execept it actually does something.
+ *
+ * @param[in] newMask  New `ulog(3)` mask or 0. If 0, then the `ulog(3)` mask is
+ *                     not modified.
+ * @retval             The previous `ulog(3)` mask.
  */
 unsigned int
-setulogmask(unsigned int pmask)
+setulogmask(unsigned int newMask)
 {
-        unsigned int omask;
-        
-        omask = logMask;
-        if (pmask != 0)
-                logMask = pmask;
-        return (omask);
+    unsigned int oldMask = logMask;
+
+    if (newMask != 0)
+        logMask = newMask;
+
+    return oldMask;
 }
 
 

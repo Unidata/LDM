@@ -850,7 +850,7 @@ program LDMPROG {
 #if WANT_MULTICAST
 
 #if defined(RPC_SVC)
-%#include "../multicast/mcast.h"
+%#include "../mcast_lib/mcast.h"
 #endif
 
 
@@ -862,7 +862,7 @@ program LDMPROG {
 % */
 typedef uint32_t McastFileId;
 #else
-%#include "../multicast/mcast.h"
+%#include "../mcast_lib/mcast.h"
 #endif
 #endif
 
@@ -998,7 +998,7 @@ struct BacklogSpec {
  */
 struct ServiceAddr {
     /* Internet address of the service. May be hostname or IP address. */
-    string         addr<>;
+    string         inetId<>;
     /* Port number of the service. */
     unsigned short port;
 };

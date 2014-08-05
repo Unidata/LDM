@@ -150,8 +150,8 @@ int sf_set_loopback_reception(
  *                          ENOBUFS     Insufficient resources were available
  */
 int sf_set_time_to_live(
-    const int           sock,
-    const unsigned char ttl)
+    const int      sock,
+    const unsigned ttl)
 {
     if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl))) {
         LOG_SERROR2("Couldn't set time-to-live for multicast packets on socket "

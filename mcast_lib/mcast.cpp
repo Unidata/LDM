@@ -206,8 +206,9 @@ mcastReceiver_execute(
 }
 
 /**
- * Stops a multicast receiver. Returns immediately. Undefined behavior results if
- * called from a signal handler.
+ * Stops a multicast receiver. Returns immediately. Undefined behavior will
+ * result if called from a signal handler that was invoked by the delivery
+ * of a signal during execution of an async-signal-unsafe function.
  *
  * @param[in] receiver  Pointer to the multicast receiver to be stopped.
  */
@@ -232,31 +233,40 @@ struct mcast_sender {
  * Returns a new multicast sender. Starts the sender's TCP server. This method
  * doesn't block.
  *
- * @param[out] sender            Pointer to returned sender. Caller should call
- *                               `mcastSender_free(*sender)` when it's no longer
- *                               needed.
- * @param[in]  tcpAddr           Internet address of the interface on which the
- *                               TCP server will listen for connections from
- *                               receivers for retrieving missed data-blocks.
- *                               May be hostname or formatted IP address.
- * @param[in]  tcpPort           Port number of the TCP server.
- * @param[in]  mcastAddr         Internet Address of the multicast group. May be
- *                               groupname or formatted IP address.
- * @param[in]  mcastPort         Port number of the multicast group.
- * @retval     0                 Success. `*sender` is set.
- * @retval     EINVAL            if @code{0==addr} or the multicast group
- *                               address couldn't be converted into a binary IP
- *                               address. `log_start()` called.
- * @retval     ENOMEM            Out of memory. \c log_start() called.
- * @retval     -1                Other failure. \c log_start() called.
+ * @param[out] sender      Pointer to returned sender. Caller should call
+ *                         `mcastSender_free(*sender)` when it's no longer
+ *                         needed.
+ * @param[in]  serverAddr  Dotted-decimal IPv4 address of the interface on which
+ *                         the TCP server will listen for connections from
+ *                         receivers for retrieving missed data-blocks.
+ * @param[in]  serverPort  Port number of the TCP server.
+ * @param[in]  groupAddr   Dotted-decimal IPv4 address address of the multicast
+ *                         group.
+ * @param[in]  groupPort   Port number of the multicast group.
+ * @param[out] ttl         Time-to-live of outgoing packets.
+ *                               0  Restricted to same host. Won't be output by
+ *                                  any interface.
+ *                               1  Restricted to the same subnet. Won't be
+ *                                  forwarded by a router (default).
+ *                             <32  Restricted to the same site, organization or
+ *                                  department.
+ *                             <64  Restricted to the same region.
+ *                            <128  Restricted to the same continent.
+ *                            <255  Unrestricted in scope. Global.
+ * @retval     0           Success. `*sender` is set.
+ * @retval     EINVAL      One of the address couldn't  be converted into a
+ *                         binary IP address. `log_start()` called.
+ * @retval     ENOMEM      Out of memory. \c log_start() called.
+ * @retval     -1          Other failure. \c log_start() called.
  */
 int
 mcastSender_new(
     McastSender** const  sender,
-    const char* const    tcpAddr,
-    const unsigned short tcpPort,
-    const char* const    mcastAddr,
-    const unsigned short mcastPort)
+    const char* const    serverAddr,
+    const unsigned short serverPort,
+    const char* const    groupAddr,
+    const unsigned short groupPort,
+    const unsigned       ttl)
 {
     McastSender* sndr = (McastSender*)LOG_MALLOC(sizeof(McastSender),
             "multicast sender");
@@ -265,10 +275,10 @@ mcastSender_new(
         return ENOMEM;
 
     try {
-        sndr->sender = new VCMTPSender(std::string(tcpAddr), tcpPort);
+        sndr->sender = new VCMTPSender(std::string(serverAddr), serverPort);
 
         try {
-            sndr->sender->JoinGroup(std::string(mcastAddr), mcastPort);
+            sndr->sender->JoinGroup(std::string(groupAddr), groupPort);
             *sender = sndr;
             return 0;
         }
@@ -287,6 +297,19 @@ mcastSender_new(
         free(sndr);
         return -1;
     }
+}
+
+/**
+ * Frees a multicast sender's resources.
+ *
+ * @param[in] sender  The multicast sender whose resources are to be freed.
+ */
+void
+mcastSender_free(
+    McastSender* const sender)
+{
+    delete sender->sender;
+    free(sender);
 }
 
 /**

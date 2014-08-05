@@ -60,7 +60,6 @@ mi_init(
 {
     ServiceAddr multi;
     ServiceAddr uni;
-    char*       nam;
 
     if (!sa_copy(&info->group, mcast)) {
         LOG_ADD0("Couldn't copy multicast address");

@@ -38,7 +38,7 @@ if WANT_GRIBINSERT
 endif
 endif
 if WANT_MULTICAST
-    SUBDIRS	+= multicast
+    SUBDIRS	+= mcast_lib
 endif
 if WANT_RETRANS
     SUBDIRS	+= noaaport/retrans
@@ -74,6 +74,9 @@ SUBDIRS 	+= regutil \
                    ulogger
 if WANT_GRIBINSERT
     SUBDIRS	+= gribinsert
+endif
+if WANT_MULTICAST
+    SUBDIRS	+= mcast_ldm
 endif
 SUBDIRS		+= html test
 
@@ -119,7 +122,8 @@ ACLOCAL_AMFLAGS = -I m4
 all:
 
 multicast-check:
-	cd multicast && $(MAKE) check
+	cd mcast_lib && $(MAKE) check
+	cd mcast_ldm && $(MAKE) check
 
 install-data-hook:	ensure-ldmhome-links ensure-var
 if INCLUDE_ROOT_ACTIONS

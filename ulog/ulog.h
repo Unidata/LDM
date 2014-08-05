@@ -128,11 +128,6 @@ void udebug(const char *fmt, ...);
 const char *ubasename(const char *av0);
 void _uassert( const char *ex, const char *file, int line);
 
-#ifndef HAVE_STRERROR
-    extern char *
-    strerror(int);
-#endif
-
 #ifdef __cplusplus
 }
 #endif

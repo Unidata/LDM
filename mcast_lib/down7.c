@@ -215,7 +215,7 @@ getSocket(
         }
         else {
             if (connect(fd, (struct sockaddr*)&addr, sockLen)) {
-                LOG_SERROR3("Couldn't connect %s TCP socket to \"%s\", port %u",
+                LOG_SERROR3("Couldn't connect %s TCP socket to \"%s\", port %hu",
                         addrFamilyId, sa_getInetId(servAddr),
                         sa_getPort(servAddr));
                 (void)close(fd);
@@ -276,8 +276,8 @@ newClient(
 
         if (clnt == NULL) {
             LOG_SERROR3("Couldn't create RPC client for host \"%s\", "
-                    "port %u: %s", sa_getInetId(servAddr), sa_getPort(servAddr),
-                    clnt_spcreateerror(""));
+                    "port %hu: %s", sa_getInetId(servAddr),
+                    sa_getPort(servAddr), clnt_spcreateerror(""));
             (void)close(sock);
             status = clntStatusToLdm7Status(rpc_createerr.cf_stat);
         }

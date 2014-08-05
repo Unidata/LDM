@@ -13,6 +13,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 #include <libgen.h>
+#include <netinet/in.h>
 #include <stdbool.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -29,6 +30,34 @@ teardown(void)
 {
     return 0;
 }
+
+static void
+test_getDottedDecimal(void)
+{
+    int status;
+    const char* const localDottedDecimal = "127.0.0.1";
+    const char* const localName = "localhost";
+    const char* const zeroName = "zero.unidata.ucar.edu";
+    const char* const zeroDottedDecimal = "128.117.140.56";
+    char              buf[INET_ADDRSTRLEN];
+
+    status = getDottedDecimal(localDottedDecimal, buf);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_STRING_EQUAL(buf, localDottedDecimal);
+
+    status = getDottedDecimal(localName, buf);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_STRING_EQUAL(buf, localDottedDecimal);
+
+    status = getDottedDecimal(zeroName, buf);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_STRING_EQUAL(buf, zeroDottedDecimal);
+
+    status = getDottedDecimal(zeroDottedDecimal, buf);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_STRING_EQUAL(buf, zeroDottedDecimal);
+}
+
 
 #if WANT_MULTICAST
 static void
@@ -95,6 +124,7 @@ main(
         CU_Suite*       testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
+            CU_ADD_TEST(testSuite, test_getDottedDecimal);
 #           if WANT_MULTICAST
                 CU_ADD_TEST(testSuite, test_sa_getInetSockAddr);
                 CU_ADD_TEST(testSuite, test_sa_getInet6SockAddr);

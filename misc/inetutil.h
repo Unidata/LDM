@@ -40,6 +40,30 @@ extern int            udpopen(const char *hostname, const char *servicename);
 extern int            isMe(const char *remote);
 extern int            local_sockaddr_in(struct sockaddr_in* addr);
 extern int            sockbind(const char *type, unsigned short port);
+/**
+ * Returns the IPv4 dotted-decimal form of an Internet identifier.
+ *
+ * @param[in]  inetId  The Internet identifier. May be a name or a formatted
+ *                     IPv4 address in dotted-decimal format.
+ * @param[out] out     The corresponding form of the Internet identifier in
+ *                     dotted-decimal format. It's the caller's responsibility
+ *                     to ensure that the buffer can hold at least
+ *                     `INET_ADDRSTRLEN` (from `<netinet/in.h>`) bytes.
+ * @retval     0       Success. `out` is set.
+ * @retval     EAGAIN  A necessary resource is temporarily unavailable.
+ *                     `log_start()` called.
+ * @retval     EINVAL  The identifier cannot be converted to an IPv4
+ *                     dotted-decimal format. `log_start()` called.
+ * @retval     ENOENT  No IPv4 address corresponds to the given Internet
+ *                     identifier.
+ * @retval     ENOMEM  Out-of-memory. `log_start()` called.
+ * @retval     ENOSYS  A non-recoverable error occurred when attempting to
+ *                     resolve the identifier. `log_start()` called.
+ */
+int
+getDottedDecimal(
+    const char* const    inetId,
+    char* const restrict out);
 
 #if WANT_MULTICAST
 /**

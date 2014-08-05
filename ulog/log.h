@@ -1,10 +1,11 @@
 #ifndef LDM_LOG_H
 #define LDM_LOG_H
 
+#include "ulog.h"
+
 #include <errno.h>
 #include <stdarg.h>
 #include <string.h>
-#include "ulog.h"
 
 #ifdef __cplusplus
 extern "C" {

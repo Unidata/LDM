@@ -33,5 +33,5 @@ if WANT_GRIBINSERT
 endif
 endif
 if WANT_MULTICAST
-    libldm_la_LIBADD	+= $(top_builddir)/multicast/lib.la
+    libldm_la_LIBADD	+= $(top_builddir)/mcast_lib/lib.la
 endif

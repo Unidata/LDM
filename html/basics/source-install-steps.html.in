@@ -21,10 +21,7 @@ autoconf-based package-installation. If you're not, then follow the long
 installation instructions in the next section. 
 
 <p>
-First, vet your build environment against the table of
-<a href="successes.html">successful build environments</a> and
-<a href="failures.html">unsuccessful build environments</a>.
-Choose a 64-bit environment if possible.
+First, enable a 64-bit environment if possible.
 Then, do the following:
 
 <pre>
@@ -150,13 +147,8 @@ Don't worry if this command fails or even fails to execute.</li>
 <a name="PATH"></a>
 <li><p>(Optional) If necessary, adjust the <tt>PATH</tt> environment variable
 to obtain the necessary utilities.
-This step can be necessary due to the vagaries of build environments.  You
-should compare your build environment against the table of
-<a href="successes.html">successful build environments</a>
-and also against the table of
-<a href="failures.html">unsuccessful build environments</a>
-to determine if you need to perform this step.
-Note that some of the computer
+This step can be necessary due to the vagaries of build environments.
+Note that some computer
 systems can build both a 32-bit and a 64-bit LDM system.  We strongly 
 recommend that you choose a 64-bit build environment whenever possible so
 that the
@@ -261,10 +253,7 @@ options and arguments, when and if appropriate:
 </blockquote>
 
 <p>Use of the above can be necessary due to the vagaries of build environments.
-You should compare your build environment against the table of <a
-href="successes.html">successful build environments</a> and also against the
-table of <a href="failures.html">unsuccessful build environments</a> to
-determine if you need particular arguments.  Note that some of the computer
+Note that some of the computer
 systems can build both a 32-bit and a 64-bit LDM system.  We strongly recommend
 that you choose a 64-bit build environment whenever possible so that the <a
 href="glindex.html#product-queue">product-queue</a> isn't unnecessarilly
@@ -316,9 +305,8 @@ problem with this step, be sure to enclose the files <code>configure.log</code>
 and <code>config.log</code>.</p>
 
 <li>
-<p>Use a
-<a href="successes.html"><code>make(1)</code> utility
-appropriate for your system</a> to build and install the package,
+<p>Use a <code>make(1)</code> utility
+appropriate for your system to build and install the package,
 redirecting <em>both</em> standard output
 and standard error to the file <code>make.log</code>.
 The relevant command depends on your user shell.  For example:

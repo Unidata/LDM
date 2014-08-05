@@ -99,18 +99,27 @@ pq_create(const char *path, mode_t mode,
         size_t nproducts, /* initial rl->nalloc, ... */
         pqueue **pqp);
 
-/*
- * Arguments:
- *      path    Pathname of product-queue.
- *      pflags  File-open bit-flags.
- *      pqp     Memory location to receive pointer to product-queue structure.
- * Returns:
- *      0           Success. *pqp set.
- *      EACCESS     Permission denied. pflags doesn't contain PQ_READONLY and 
- *                  the product-queue is already open by the maximum number of
- *                  writers.
- *      PQ_CORRUPT  The  product-queue is internally inconsistent.
- *      else        Other <errno.h> error-code.
+/**
+ * Opens an existing product-queue.
+ *
+ * @param[in] path         Pathname of product-queue.
+ * @param[in] pflags       File-open bit-flags:
+ *                           PQ_READONLY   Default is read/write
+ *                           PQ_NOLOCK     Disable locking
+ *                           PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`,
+ *                                         default is `MAP_SHARED`
+ *                           PQ_NOMAP      Use `malloc/read/write/free` instead
+ *                                         of `mmap()`
+ *                           PQ_MAPRGNS    Map region by region, default whole
+ *                                         file
+ * @param[out] pqp         Memory location to receive pointer to product-queue
+ *                         structure.
+ * @retval     0           Success. *pqp set.
+ * @retval     EACCESS     Permission denied. pflags doesn't contain PQ_READONLY
+ *                         and the product-queue is already open by the maximum
+ *                         number of writers.
+ * @retval     PQ_CORRUPT  The  product-queue is internally inconsistent.
+ * @return                 Other <errno.h> error-code.
  */
 int
 pq_open(

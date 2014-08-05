@@ -53,23 +53,33 @@ void mcastReceiver_stop(
 /**
  * Returns a new multicast sender.
  *
- * @param[out] sender            Pointer to returned sender.
- * @param[in]  tcpAddr           IP address of the interface on which the TCP
- *                               server will listen for connections from
- *                               receivers for retrieving missed data-blocks.
- *                               May be hostname or IP address.
- * @param[in]  tcpPort           Port number of the TCP server.
- * @param[in]  mcastAddr         Address of the multicast group. May be
- *                               groupname or formatted IP address.
- * @param[in]  mcastPort         Port number of the multicast group.
- * @retval     0                 Success. The client should call \c
- *                               mcastSender_free(*sender) when the sender is no
- *                               longer needed.
- * @retval     EINVAL            if @code{0==addr} or the multicast group
- *                               address couldn't be converted into a binary IP
- *                               address.
- * @retval     ENOMEM            Out of memory. \c log_add() called.
- * @retval     -1                Other failure. \c log_add() called.
+ * @param[out] sender      Pointer to returned sender.
+ * @param[in]  tcpAddr     IP address of the interface on which the TCP
+ *                         server will listen for connections from
+ *                         receivers for retrieving missed data-blocks.
+ *                         May be hostname or IP address.
+ * @param[in]  tcpPort     Port number of the TCP server.
+ * @param[in]  mcastAddr   Address of the multicast group. May be
+ *                         groupname or formatted IP address.
+ * @param[in]  mcastPort   Port number of the multicast group.
+ * @param[out] ttl         Time-to-live of outgoing packets.
+ *                               0  Restricted to same host. Won't be output by
+ *                                  any interface.
+ *                               1  Restricted to the same subnet. Won't be
+ *                                  forwarded by a router (default).
+ *                             <32  Restricted to the same site, organization or
+ *                                  department.
+ *                             <64  Restricted to the same region.
+ *                            <128  Restricted to the same continent.
+ *                            <255  Unrestricted in scope. Global.
+ * @retval     0           Success. The client should call \c
+ *                         mcastSender_free(*sender) when the sender is no
+ *                         longer needed.
+ * @retval     EINVAL      if @code{0==addr} or the multicast group
+ *                         address couldn't be converted into a binary IP
+ *                         address.
+ * @retval     ENOMEM      Out of memory. \c log_add() called.
+ * @retval     -1          Other failure. \c log_add() called.
  */
 int
 mcastSender_new(
@@ -77,7 +87,17 @@ mcastSender_new(
     const char* const    tcpAddr,
     const unsigned short tcpPort,
     const char* const    mcastAddr,
-    const unsigned short mcastPort);
+    const unsigned short mcastPort,
+    const unsigned       ttl);
+
+/**
+ * Frees a multicast sender's resources.
+ *
+ * @param[in] sender  The multicast sender whose resources are to be freed.
+ */
+void
+mcastSender_free(
+    McastSender* const sender);
 
 int mcastFileEntry_isWanted(
     const void*                 file_entry);

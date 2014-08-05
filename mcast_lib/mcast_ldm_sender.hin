@@ -9,8 +9,8 @@
  * This file specifies the API for the multicast upstream LDM.
  */
 
-#ifndef MCAST_UP_H
-#define MCAST_UP_H
+#ifndef MCAST_LDM_SENDER_H
+#define MCAST_LDM_SENDER_H
 
 #include "ldm.h"
 #include "pq.h"
