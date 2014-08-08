@@ -220,16 +220,6 @@ mcastReceiver_stop(
 }
 
 /**
- * The multicast sender:
- */
-struct mcast_sender {
-    /**
-     * The multicast-layer sender.
-     */
-    VCMTPSender*      sender;
-};
-
-/**
  * Returns a new multicast sender. Starts the sender's TCP server. This method
  * doesn't block.
  *
@@ -261,40 +251,32 @@ struct mcast_sender {
  */
 int
 mcastSender_new(
-    McastSender** const  sender,
+    void** const         sender,
     const char* const    serverAddr,
     const unsigned short serverPort,
     const char* const    groupAddr,
     const unsigned short groupPort,
     const unsigned       ttl)
 {
-    McastSender* sndr = (McastSender*)LOG_MALLOC(sizeof(McastSender),
-            "multicast sender");
-
-    if (0 == sndr)
-        return ENOMEM;
-
     try {
-        sndr->sender = new VCMTPSender(std::string(serverAddr), serverPort);
+        VCMTPSender* sndr = new VCMTPSender(std::string(serverAddr), serverPort);
 
         try {
-            sndr->sender->JoinGroup(std::string(groupAddr), groupPort);
+            sndr->JoinGroup(std::string(groupAddr), groupPort);
             *sender = sndr;
             return 0;
         }
         catch (const std::exception& e) {
-            delete sndr->sender;
+            delete sndr;
             throw;
         } // `sndr->sender` allocated
     } // `sndr` allocated
     catch (const std::invalid_argument& e) {
         LOG_START1("%s", e.what());
-        free(sndr);
         return EINVAL;
     }
     catch (const std::exception& e) {
         LOG_START1("%s", e.what());
-        free(sndr);
         return -1;
     }
 }
@@ -306,10 +288,25 @@ mcastSender_new(
  */
 void
 mcastSender_free(
-    McastSender* const sender)
+    void* const sender)
 {
-    delete sender->sender;
-    free(sender);
+    delete (VCMTPSender*)sender;
+}
+
+/**
+ * Multicasts memory data.
+ *
+ * @param[in] sender  VCMTP sender.
+ * @param[in] data    Data to send.
+ * @param[in] size    Amount of data in bytes.
+ */
+void
+mcastSender_send(
+    void* const  sender,
+    void* const  data,
+    const size_t size)
+{
+    ((VCMTPSender*)sender)->SendMemoryData(data, size);
 }
 
 /**

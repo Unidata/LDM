@@ -264,8 +264,9 @@ free_prod_class(prod_class_t *clssp)
  *      psa_len         The size of the product-specification array.
  * Returns:
  *      NULL            Out-of-memory. "log_start()" called.
- *      else            Pointer to the new product-class structure. The elements
- *                      of the product-specification array will be NULL.
+ *      else            Pointer to the new product-class structure. The length
+ *                      of the product-spcficiation array will be set but its
+ *                      elements will be NULL.
  */
 prod_class_t *
 new_prod_class(
@@ -580,6 +581,11 @@ void clss_remove_prod_specs(
 }
 
 
+/**
+ * Compiles all product-identifier patterns in a product-class.
+ *
+ * @param[in] clssp  The product-class.
+ */
 void
 clss_regcomp(prod_class_t *clssp)
 {

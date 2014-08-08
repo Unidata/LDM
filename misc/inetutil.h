@@ -90,7 +90,7 @@ extern bool           sa_copy(
     ServiceAddr* const restrict       dest,
     const ServiceAddr* const restrict src);
 extern ServiceAddr*   sa_clone(const ServiceAddr* const sa);
-extern const char*    sa_getHostId(const ServiceAddr* const sa);
+extern const char*    sa_getInetId(const ServiceAddr* const sa);
 extern unsigned short sa_getPort(const ServiceAddr* const sa);
 extern int            sa_snprint(const ServiceAddr* restrict sa,
                           char* restrict buf, size_t len);

@@ -4172,7 +4172,7 @@ ctl_rel(pqueue *const pq, const int rflags)
                 (void)sigemptyset(&pq->sav_set);
                 fClr(pq->pflags, PQ_SIGSBLOCKED);
 
-                (void) sigprocmask(SIG_SETMASK, &sav_set, NULL);
+                (void) pthread_sigmask(SIG_SETMASK, &sav_set, NULL);
         }
 
         return status;
@@ -4202,7 +4202,7 @@ ctl_init(pqueue *const pq, size_t const align)
 
         /*
          * You might well ask why this is not a
-         * sigprocmask(SIG_BLOCK,...) critical section.
+         * pthread_sigmask(SIG_BLOCK,...) critical section.
          * The answer is that that EINTR (and any other
          * error) unlinks the file we create.
          */
@@ -4461,7 +4461,7 @@ ctl_get(pqueue *const pq, int const rflags)
                 (void) sigdelset(&set, SIGILL);
                 (void) sigdelset(&set, SIGSEGV);
                 (void) sigdelset(&set, SIGBUS);
-                if(sigprocmask(SIG_BLOCK, &set, &pq->sav_set) < 0)
+                if(pthread_sigmask(SIG_BLOCK, &set, &pq->sav_set) < 0)
                 {
                         status = errno;
                         return status;
@@ -4508,7 +4508,7 @@ unwind_mask:
 
             (void) sigemptyset(&pq->sav_set);
             fClr(pq->pflags, PQ_SIGSBLOCKED);
-            (void) sigprocmask(SIG_SETMASK, &set, NULL);
+            (void) pthread_sigmask(SIG_SETMASK, &set, NULL);
         }
         return status;
 }
@@ -6910,7 +6910,7 @@ pq_setCursorFromSignature(
 }
 
 
-/*
+/**
  * Step thru the time sorted inventory according to 'mt',
  * and the current cursor value.
  *
@@ -6932,6 +6932,11 @@ pq_setCursorFromSignature(
  * Otherwise, if the product info matches class,
  * execute ifMatch(xprod, len, otherargs) and return the
  * return value from ifMatch().
+ *
+ * @retval 0           Success.
+ * @retval PQUEUE_END  No matching data-product.
+ * @return             <errno.h> error-code.
+ * @return             The return-value of `ifMatch()`.
  */
 int
 pq_sequence(pqueue *pq, pq_match mt,
@@ -7444,16 +7449,17 @@ hndlr_noop(int sig)
 }
 
 
-/*
- * Suspend yourself (sleep) until
- * one of the following events occurs:
- *   You recieve a signal that you handle.
- *   You recieve SIGCONT (sent from an insert proc indicating
- *      data is available).
- *   "maxsleep" seconds elapse.
- *   If "maxsleep" is zero, you could sleep forever. 
- * Returns the requested amount of suspension-time minus the amount of time 
- * actually suspended.
+/**
+ * Suspends execution until
+ *   - A signal is delivered whose action is to execute a signal-catching
+ *     function;
+ *   - SIGCONT is received, indicating another data-product is available; or
+ *   - The given amount of time elapses.
+ *
+ * @param[in] maxsleep  Number of seconds to suspend or 0 for an indefinite
+ *                      suspension.
+ * @return              Requested amount of suspension-time minus the amount of
+ *                      time actually suspended.
  */
 unsigned
 pq_suspend(unsigned int maxsleep)
@@ -7468,7 +7474,7 @@ pq_suspend(unsigned int maxsleep)
         sigaddset(&mask, SIGCONT);
         if(maxsleep)
                 sigaddset(&mask, SIGALRM);
-        (void) sigprocmask(SIG_BLOCK, &mask, &savmask);
+        (void) pthread_sigmask(SIG_BLOCK, &mask, &savmask);
 
         /*
          * Set up handlers for CONT and ALRM, stashing old
@@ -7505,7 +7511,7 @@ pq_suspend(unsigned int maxsleep)
         }
         (void) sigaction(SIGCONT, &csavact, NULL );
         
-        (void) sigprocmask(SIG_SETMASK, &savmask, NULL);
+        (void) pthread_sigmask(SIG_SETMASK, &savmask, NULL);
 
         if (sigalrm_received) {
             unused = 0;

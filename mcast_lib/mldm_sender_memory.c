@@ -28,6 +28,7 @@
 struct MldmSenderMemory {
 };
 
+#if 0
 /**
  * Returns the process-ID that's contained in a file.
  *
@@ -139,6 +140,7 @@ getPidFromInfo(
 
     return pid;
 }
+#endif
 
 /******************************************************************************
  * Public API:

@@ -849,23 +849,9 @@ program LDMPROG {
 
 #if WANT_MULTICAST
 
-#if defined(RPC_SVC)
+#if defined(RPC_SVC) || defined(RPC_HDR) || defined(RPC_XDR)
 %#include "../mcast_lib/mcast.h"
 #endif
-
-
-#if defined(RPC_HDR) || defined(RPC_XDR)
-#if 0
-%
-%/*
-% * Multicast file identifier:
-% */
-typedef uint32_t McastFileId;
-#else
-%#include "../mcast_lib/mcast.h"
-#endif
-#endif
-
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %

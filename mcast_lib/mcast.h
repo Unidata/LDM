@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file:   vcmtp.h
+ * @file:   mcast.h
  * @author: Steven R. Emmerson
  *
  * This file declares the C API for the Virtual Circuit Multicast Transport
@@ -18,13 +18,12 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-extern "C" {
+    extern "C" {
 #endif
 
 typedef unsigned long            McastFileId;
 #define xdr_McastFileId          xdr_u_long
 typedef struct mcast_receiver    McastReceiver;
-typedef struct mcast_sender      McastSender;
 
 typedef int     (*BofFunc)(void* obj, void* file_entry);
 typedef int     (*EofFunc)(void* obj, const void* file_entry);
@@ -83,7 +82,7 @@ void mcastReceiver_stop(
  */
 int
 mcastSender_new(
-    McastSender** const  sender,
+    void** const         sender,
     const char* const    tcpAddr,
     const unsigned short tcpPort,
     const char* const    mcastAddr,
@@ -97,7 +96,20 @@ mcastSender_new(
  */
 void
 mcastSender_free(
-    McastSender* const sender);
+    void* const sender);
+
+/**
+ * Multicasts memory data.
+ *
+ * @param[in] sender  VCMTP sender.
+ * @param[in] data    Data to send.
+ * @param[in] size    Amount of data in bytes.
+ */
+void
+mcastSender_send(
+    void* const  sender,
+    void* const  data,
+    const size_t size);
 
 int mcastFileEntry_isWanted(
     const void*                 file_entry);

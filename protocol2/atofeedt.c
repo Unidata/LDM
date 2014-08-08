@@ -372,13 +372,17 @@ atofeedtypet(const char *str)
 }
 
  
-/*
- * Given the string str, representing a feedtype expression, and a pointer
- * to a feedtypet, stores the feedtype specified by the expression.  The
- * return value of the function indicates whether an error was encountered
- * parsing the expression.  FEEDTYPE_OK is returned in case there were no
- * errors.  If an error is encountered, the value of the feedtypet pointed
- * at is not changed. 
+/**
+ * Returns the binary representation of a formatted feedtype expression.
+ *
+ * @param[in]  str                 Formatted feedtype.
+ * @param[out] result              Binary feedtype.
+ * @retval     0                   Success. `*result` is set.
+ * @retval     FEEDTYPE_ERR_RP     Right parenthesis expected
+ * @retval     FEEDTYPE_ERR_PRIM   Syntax error, incomplete expression
+ * @retval     FEEDTYPE_ERR_GARB   Garbage at end of expression
+ * @retval     FEEDTYPE_ERR_UKFT   Unknown feedtype
+ * @retval     FEEDTYPE_ERR_OTHER  Other error
  */
 int 
 strfeedtypet(

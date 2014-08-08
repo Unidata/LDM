@@ -489,7 +489,7 @@ static up6_error_t up6_run(
                         if (_flushNeeded) {
                             (void) exitIfDone(0);
 
-                            if (errObj = flushConnection())
+                            if ((errObj = flushConnection()))
                                 errCode = logFailure("Couldn't flush connection",
                                         errObj);
                         }
@@ -598,7 +598,7 @@ static up6_error_t up6_init(
     /*
      * Open the product-queue read-only.
      */
-    if (errCode = pq_open(pqPath, PQ_READONLY, &_pq)) {
+    if ((errCode = pq_open(pqPath, PQ_READONLY, &_pq))) {
         if (PQ_CORRUPT == errCode) {
             uerror("The product-queue \"%s\" is inconsistent", pqPath);
         }

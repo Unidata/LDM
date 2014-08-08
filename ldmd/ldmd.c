@@ -999,7 +999,7 @@ int main(
          * Verify that the product-queue can be open for writing.
          */
         udebug("main(): Opening product-queue");
-        if (status = pq_open(pqfname, PQ_DEFAULT, &pq)) {
+        if ((status = pq_open(pqfname, PQ_DEFAULT, &pq))) {
             if (PQ_CORRUPT == status) {
                 uerror("The product-queue \"%s\" is inconsistent", pqfname);
             }
@@ -1015,7 +1015,7 @@ int main(
          * Create the sharable database of upstream LDM metadata.
          */
         udebug("main(): Creating shared upstream LDM database");
-        if (status = uldb_delete(NULL)) {
+        if ((status = uldb_delete(NULL))) {
             if (ULDB_EXIST == status) {
                 log_clear();
             }

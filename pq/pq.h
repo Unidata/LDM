@@ -631,7 +631,7 @@ pq_setCursorFromSignature(
     pqueue* const       pq,
     const signaturet    signature);
 
-/*
+/**
  * Step thru the time sorted inventory according to 'mt',
  * and the current cursor value.
  *
@@ -653,6 +653,11 @@ pq_setCursorFromSignature(
  * Otherwise, if the product info matches class,
  * execute ifMatch(xprod, len, otherargs) and return the
  * return value from ifMatch().
+ *
+ * @retval 0           Success.
+ * @retval PQUEUE_END  No matching data-product.
+ * @return             <errno.h> error-code.
+ * @return             The return-value of `ifMatch()`.
  */
 int
 pq_sequence(pqueue *pq, pq_match mt,
@@ -714,16 +719,17 @@ int
 pq_clss_setfrom(pqueue *pq,
          prod_class_t *clssp)     /* modified upon return */;
 
-/*
- * Suspend yourself (sleep) until
- * one of the following events occurs:
- *   You recieve a signal that you handle.
- *   You recieve SIGCONT (sent from an insert proc indicating
- *      data is available).
- *   "maxsleep" seconds elapse.
- *   If "maxsleep" is zero, you could sleep forever. 
- * Returns the requested amount of suspension-time minus the amount of time 
- * actually suspended.
+/**
+ * Suspends execution until
+ *   - A signal is delivered whose action is to execute a signal-catching
+ *     function;
+ *   - SIGCONT is received, indicating another data-product is available; or
+ *   - The given amount of time elapses.
+ *
+ * @param[in] maxsleep  Number of seconds to suspend or 0 for an indefinite
+ *                      suspension.
+ * @return              Requested amount of suspension-time minus the amount of
+ *                      time actually suspended.
  */
 unsigned
 pq_suspend(unsigned int maxsleep);
