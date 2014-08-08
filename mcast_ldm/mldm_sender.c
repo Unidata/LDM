@@ -15,6 +15,7 @@
 
 #include "atofeedt.h"
 #include "globals.h"
+#include "inetutil.h"
 #include "ldm.h"
 #include "log.h"
 #include "mcast.h"
@@ -45,21 +46,58 @@ typedef struct {
     volatile sig_atomic_t done;
 } McastLdmSender;
 
-static sigset_t termSignals;
-static sigset_t pqSignals;
+static sigset_t termSigSet;
+static sigset_t pqSigSet;
+
+/**
+ * Initializes logging.
+ *
+ * @param[in] progName  Name of the program.
+ */
+static void
+mls_initLogging(
+    const char* const progName)
+{
+    unsigned logmask =  LOG_UPTO(LOG_NOTICE); // logging level
+    unsigned logoptions = LOG_CONS | LOG_PID; // console last resort, PID
+
+    if (isatty(fileno(stderr))) {
+        /* Interactive execution. Modify logging defaults. */
+        logfname = "-"; // log to `stderr`
+        logoptions = 0; // timestamp, UTC, no console, no PID
+    }
+    (void)setulogmask(logmask);
+    (void)openulog(progName, logoptions, LOG_LDM, logfname);
+}
+
+/**
+ * Initializes the sets of signals that are used to ensure that only certain
+ * threads receive certain signals.
+ */
+static void
+mls_initSignalSets(void)
+{
+    (void)sigemptyset(&termSigSet);
+    (void)sigaddset(&termSigSet, SIGTERM);
+    (void)sigaddset(&termSigSet, SIGINT);
+
+    (void)sigemptyset(&pqSigSet);
+    (void)sigaddset(&pqSigSet, SIGCONT);
+    (void)sigaddset(&pqSigSet, SIGALRM);
+}
 
 /**
  * Logs a usage message.
  */
 static void
-usage(void)
+mls_usage(void)
 {
-    log_start(
+    log_add(
 "Usage: %s [options] groupName groupId:groupPort serverPort\n"
 "Options:\n"
 "    -I serverIface    Interface on which the TCP server will listen. Default\n"
 "                      is all interfaces.\n"
-"    -l logfile        Log to file <logfile> ("-" => standard error stream).\n"
+"    -l logfile        Log to file <logfile> ('-' => standard error stream).\n"
 "                      Defaults are standard error stream if interactive and\n"
 "                      system logging daemon if not.\n"
 "    -q queue          Use product-queue <queue>. Default is \"%s\".\n"
@@ -108,7 +146,7 @@ usage(void)
  * @retval     1            Invalid options. `log_start()` called.
  */
 static int
-decodeOptions(
+mls_decodeOptions(
     int                         argc,
     char* const* const restrict argv,
     const char** const restrict serverIface,
@@ -121,7 +159,7 @@ decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":l:q:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":I:l:q:t:vx")) != EOF)
         switch (ch) {
         case 'I': {
             *serverIface = optarg;
@@ -137,7 +175,9 @@ decodeOptions(
         }
         case 't': {
             unsigned t;
-            if (sscanf(optarg, "%u", &t) != 1) {
+            int      nbytes;
+            if (1 != sscanf(optarg, "%u %n", &t, &nbytes) ||
+                    0 != optarg[nbytes]) {
                 log_start("Couldn't decode time-to-live option-argument \"%s\"",
                         optarg);
                 return 1;
@@ -159,75 +199,17 @@ decodeOptions(
         }
         case ':': {
             LOG_START1("Option \"%c\" requires an argument", optopt);
-            usage();
+            mls_usage();
             return 1;
         }
         default: {
             LOG_ADD1("Unknown option: \"%c\"", optopt);
-            usage();
+            mls_usage();
             return 1;
         }
         }
 
     return 0;
-}
-
-/**
- * Decodes an Internet service address. An Internet service address has the form
- * `[id:]port`, where `id` is the Internet identifier (either a name or a
- * dotted-decimal IPv4 address) and `port` is the port number.
- *
- * @param[in,out] arg    String containing the specification. A NUL character
- *                       will replace the colon if it exists. Caller must not
- *                       free until `*ident` is no longer needed.
- * @param[in]     desc   Description of the service address suitable for the
- *                       phrase "Couldn't decode Internet service address of
- *                       ...". Caller may free.
- * @param[out]    ident  Internet identifier of the Internet service address.
- *                       Will be set to NULL if and only if the argument doesn't
- *                       contain an identifier.
- * @param[out]    port   Port number of the Internet service address.
- * @retval        0      Success. `*ident` and `*port` are set.
- * @retval        1      `arg == NULL` or invalid specifier. `log_start()`
- *                       called.
- */
-static int
-decodeServiceAddr(
-    char* restrict              arg,
-    const char* const restrict  desc,
-    const char** const restrict ident,
-    unsigned short* restrict    port)
-{
-    int         status;
-
-    if (arg == NULL) {
-        log_start("NULL argument");
-        status = 1;
-    }
-    else {
-        char* const colon = strchr(arg, ':');
-        char*       id;
-
-        if (colon == NULL) {
-            id = NULL;
-        }
-        else {
-            *colon = 0;
-            id = arg;
-            arg = colon + 1;
-        }
-
-        if (sscanf(arg, "%hu", port) != 1) {
-            log_start("Couldn't decode port number of %s", desc);
-            status = 1;
-        }
-        else {
-            *ident = id;
-            status = 0;
-        }
-    }
-
-    return status;
 }
 
 /**
@@ -241,7 +223,7 @@ decodeServiceAddr(
  * @retval     2            System failure. `log_start()` called.
  */
 static int
-setServiceAddr(
+mls_setServiceAddr(
     const char* const    id,
     const unsigned short port,
     ServiceAddr** const  serviceAddr)
@@ -267,23 +249,21 @@ setServiceAddr(
  * @retval     2          System failure. `log_start()` called.
  */
 static int
-decodeGroupAddr(
+mls_decodeGroupAddr(
     char* const restrict         arg,
     ServiceAddr** const restrict groupAddr)
 {
-    const char*    id;
-    unsigned short port;
+    ServiceAddr*   sa;
+    int            status = sa_parse(&sa, arg);
 
-    int status = decodeServiceAddr(arg, "multicast group", &id, &port);
-
-    if (status == 0) {
-        if (id == NULL) {
-            log_start("Internet identifier of multicast group not specified");
-            status = 1;
-        }
-        else {
-            status = setServiceAddr(id, port, groupAddr);
-        }
+    if (ENOMEM == status) {
+        status = 2;
+    }
+    else if (status) {
+        log_add("Invalid multicast group specification");
+    }
+    else {
+        *groupAddr = sa;
     }
 
     return status;
@@ -304,7 +284,7 @@ decodeGroupAddr(
  * @retval     2            System failure. `log_start()` called.
  */
 static int
-decodeServerAddr(
+mls_decodeServerAddr(
     char* const restrict          arg,
     const char* const restrict    serverIface,
     ServiceAddr** const restrict  serverAddr)
@@ -317,13 +297,14 @@ decodeServerAddr(
     }
     else {
         unsigned short port;
+        int            nbytes;
 
-        if (sscanf(arg, "%hu", port) != 1) {
+        if (1 != sscanf(arg, "%hu %n", &port, &nbytes) || 0 != arg[nbytes]) {
             log_start("Couldn't decode port number \"%s\"", arg);
             status = 1;
         }
         else {
-            status = setServiceAddr(serverIface, port, serverAddr);
+            status = mls_setServiceAddr(serverIface, port, serverAddr);
         }
     }
 
@@ -334,7 +315,7 @@ decodeServerAddr(
  * Decodes the operands of the command-line.
  *
  * @param[in]  argc         Number of operands.
- * @param[in]  argv         Operands. Caller must not modify.
+ * @param[in]  argv         Operands.
  * @param[in]  serverIface  Interface on which the TCP server should listen. May
  *                          be a name or a formatted IP address. Caller may
  *                          free.
@@ -349,41 +330,39 @@ decodeServerAddr(
  * @retval     2            System failure. `log_start()` called.
  */
 static int
-decodeOperands(
+mls_decodeOperands(
     int                           argc,
     char* const* restrict         argv,
     const char* const restrict    serverIface,
     ServiceAddr** const restrict  groupAddr,
     ServiceAddr** const restrict  serverAddr,
-    char** const restrict         groupName)
+    const char** const restrict   groupName)
 {
     int status;
 
     if (argc < 1) {
         log_start("Unspecified name of multicast group");
-        usage();
+        mls_usage();
         status = 1;
     }
     else {
-        char* grpName = *argv;
+        const char* grpName = *argv;
 
         argc--; argv++;
 
         ServiceAddr* grpAddr;
         ServiceAddr* srvrAddr;
 
-        if ((status = decodeGroupAddr(*argv, &grpAddr))) {
-            log_start("Internet service address of multicast group unspecified "
-                    "or invalid");
-            usage();
+        if ((status = mls_decodeGroupAddr(*argv, &grpAddr))) {
+            mls_usage();
             status = 1;
         }
         else {
             argc--; argv++;
 
-            if ((status = decodeServerAddr(*argv, serverIface, &srvrAddr))) {
+            if ((status = mls_decodeServerAddr(*argv, serverIface, &srvrAddr))) {
                 log_start("Port number of TCP server unspecified or invalid");
-                usage();
+                mls_usage();
                 status = 1;
             }
             else {
@@ -418,25 +397,25 @@ decodeOperands(
  * @retval     2           System failure. `log_start()` called.
  */
 static int
-decodeCommandLine(
+mls_decodeCommandLine(
     int                         argc,
     char* const* restrict       argv,
     McastInfo** const restrict  groupInfo,
     unsigned* const restrict    ttl)
 {
     const char*  serverIface = "0.0.0.0"; // default: all interfaces
-    int          status = decodeOptions(argc, argv, &serverIface, ttl);
+    int          status = mls_decodeOptions(argc, argv, &serverIface, ttl);
     extern int   optind;
 
-    if (status == 0) {
+    if (0 == status) {
         argc -= optind;
         argv += optind;
 
         ServiceAddr* groupAddr;
         ServiceAddr* serverAddr;
-        char*        groupName;
+        const char*  groupName;
 
-        status = decodeOperands(argc, argv, serverIface, &groupAddr,
+        status = mls_decodeOperands(argc, argv, serverIface, &groupAddr,
                 &serverAddr, &groupName);
 
         if (status == 0) {
@@ -478,7 +457,7 @@ decodeCommandLine(
  *                          address due to a system error. `log_start()` called.
  */
 static Ldm7Status
-getIpv4Addr(
+mls_getIpv4Addr(
     const char* const restrict inetId,
     const char* const restrict desc,
     char* const restrict       buf)
@@ -526,7 +505,7 @@ mls_init(
     const char* const restrict      pqPathname)
 {
     char         serverInetAddr[INET_ADDRSTRLEN];
-    int          status = getIpv4Addr(info->server.inetId, "server",
+    int          status = mls_getIpv4Addr(info->server.inetId, "server",
             serverInetAddr);
 
     if (status)
@@ -534,7 +513,7 @@ mls_init(
 
     char groupInetAddr[INET_ADDRSTRLEN];
 
-    if ((status = getIpv4Addr(info->group.inetId, "multicast-group",
+    if ((status = mls_getIpv4Addr(info->group.inetId, "multicast-group",
             groupInetAddr)))
         return status;
 
@@ -687,7 +666,7 @@ mls_tryMulticast(
         /*
          * No matching data-product. Block for a short time or until a SIGCONT
          * is received by this thread. NB: `ps_suspend()` ensures that SIGCONT
-         * is unblocked.
+         * is unblocked for it.
          */
         (void)pq_suspend(30);
         status = 0;           // no problems here
@@ -697,20 +676,83 @@ mls_tryMulticast(
 }
 
 /**
- * Multicasts the data-products of a multicast LDM sender. Called by a new
- * thread.
+ * Blocks external termination signals for the current thread.
+ */
+static inline void
+mls_blockTermSignals(void)
+{
+    (void)pthread_sigmask(SIG_BLOCK, &termSigSet, NULL);
+}
+
+/**
+ * Blocks signals used by the product-queue for the current thread.
+ */
+static inline void
+mls_blockPqSignals(void)
+{
+    (void)pthread_sigmask(SIG_BLOCK, &pqSigSet, NULL);
+}
+
+/**
+ * Waits for a termination signal and then stops a multicast LDM sender. Start
+ * routine for a new thread.
  *
- * @param[in] arg          Multicast LDM sender.
- * @retval    0            Success. Multicast LDM sender was terminated
- *                         normally.
- * @retval    LDM7_INVAL   Invalid parameter. `log_log(LOG_ERR)` called.
- * @retval    LDM7_SYSTEM  System error. `log_log(LOG_ERR)` called.
+ * @param[in] arg   Multicast LDM sender.
+ * @return    NULL  Always.
+ * @pre             `termSigSet` signals are blocked.
  */
 static void*
-mls_multicast(
+mls_waitForTermSig(
     void* const arg)
 {
     McastLdmSender* const mls = arg;
+    int                   sig;
+
+    (void)sigwait(&termSigSet, &sig);
+    mls->done = 1;
+    (void)pthread_kill(mls->mcastThread, SIGCONT); // likely in `pq_suspend()`
+
+    return NULL;
+}
+
+/**
+ * Starts a new thread that will stop a multicast LDM sender when it receives a
+ * termination signal.
+ *
+ * @param[in] mls          Multicast LDM sender.
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  System failure. `log_start()` called.
+ */
+static Ldm7Status
+mls_startTermSigWaiter(
+    McastLdmSender* const mls)
+{
+    pthread_t thread;
+    int       status = pthread_create(&thread, NULL, mls_waitForTermSig, mls);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't start termination-waiting thread");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        (void)pthread_detach(thread);
+    }
+
+    return status;
+}
+
+/**
+ * Starts multicasting data-products.
+ *
+ * @param[in]  mls          Multicast LDM sender.
+ * @retval     0            Success. `mls->thread` is set.
+ * @retval     LDM7_SYSTEM  Error. `log_start()` called.
+ * @pre                     `mls_init(mls)` was called.
+ */
+static Ldm7Status
+mls_startMulticasting(
+    McastLdmSender* const mls)
+{
     prod_class*           prodClass;
     int                   status = mls_setProdClass(mls, &prodClass);
 
@@ -728,88 +770,7 @@ mls_multicast(
     if (status)
         log_log(LOG_ERR);
 
-    return (void*)status;
-}
-
-/**
- * Blocks external termination signals for the current thread.
- */
-static inline void
-mls_blockTerminateSignals(void)
-{
-    (void)pthread_sigmask(SIG_BLOCK, &termSignals, NULL);
-}
-
-/**
- * Blocks signals used by the product-queue for the current thread.
- */
-static inline void
-mls_blockPqSignals(void)
-{
-    (void)pthread_sigmask(SIG_BLOCK, &pqSignals, NULL);
-}
-
-/**
- * Starts multicasting data-products on a new thread. Saves the thread-ID in
- * the multicast LDM sender.
- *
- * @param[in]  mls          Multicast LDM sender.
- * @retval     0            Success. `mls->thread` is set.
- * @retval     LDM7_SYSTEM  Error. `log_start()` called.
- * @pre                     `mls_init(mls)` was called.
- */
-static Ldm7Status
-mls_startMulticasting(
-    McastLdmSender* const mls)
-{
-    pthread_t thread;
-    int       status = pthread_create(&thread, NULL, mls_multicast, mls);
-
-    if (status) {
-        LOG_ERRNUM0(status, "Couldn't start multicasting thread");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        mls->mcastThread = thread;
-    }
-
     return status;
-}
-
-/**
- * Stops a multicast LDM sender.
- *
- * @param[in] mls         Multicast LDM sender to be stopped.
- * @retval    0           Multicast LDM was successful.
- * @retval    LDM7_INVAL  Multicast LDM was given an invalid parameter.
- * @pre                   `mls_startMulticasting(mls)` has been called.
- */
-static inline Ldm7Status
-mls_stopMulticasting(
-    McastLdmSender* const mls)
-{
-    void* result;
-
-    mls->done = 1;
-    (void)pthread_kill(mls->mcastThread, SIGCONT); // likely in `pq_suspend()`
-    (void)pthread_join(mls->mcastThread, &result);
-
-    return (Ldm7Status)result;
-}
-
-/**
- * Waits for an external signal to terminate the process. Blocks until that
- * signal is received. The current thread should be the only one that can
- * receive such a signal.
- *
- * @pre `terminateSignals` are blocked.
- */
-static inline void
-mls_waitForTermSignal()
-{
-    int sig;
-
-    (void)sigwait(&termSignals, &sig);
 }
 
 /**
@@ -846,23 +807,27 @@ mls_execute(
     else {
         /*
          * Block all external signals that would, otherwise, terminate this
-         * process to ensure that only this thread receives that signal. VCMTP
-         * uses multiple threads and which thread receives a signal isn't
+         * process to ensure that only the proper thread receives that signal.
+         * VCMTP uses multiple threads and which thread receives a signal isn't
          * deterministic -- so I think this is the way to go.
          */
-        mls_blockTerminateSignals();
+        mls_blockTermSignals();
         /*
-         * Block signals used by the product-queue so that only the multicasting
-         * thread, which access the product queue, will receive them.
+         * Block signals used by the product-queue so that they will only be
+         * received by a thread that's accessing the product queue.
          */
         mls_blockPqSignals();
 
-        status = mls_startMulticasting(&mls);
+        /*
+         * Data-products are multicast on the current (main) thread so that the
+         * process will terminate if something goes wrong.
+         */
 
-        if (status == 0) {
-            mls_waitForTermSignal();
-            status = mls_stopMulticasting(&mls);
-        }
+        mls.mcastThread = pthread_self(); // needed by termination-waiter
+        status = mls_startTermSigWaiter(&mls);
+
+        if (status == 0)
+            status = mls_startMulticasting(&mls);
 
         mls_destroy(&mls);
     } // `mls` initialized
@@ -875,39 +840,16 @@ main(
     const int    argc,
     char** const argv)
 {
-    /*
-     * Initialize logging. Done first in case something happens.
-     */
-    {
-        unsigned logmask =  LOG_UPTO(LOG_NOTICE); // logging level
-        unsigned logoptions = LOG_CONS | LOG_PID; // console last resort, PID
+    /* Initialize logging. Done first in case something happens. */
+    mls_initLogging(basename(argv[0]));
 
-        if (isatty(fileno(stderr))) {
-            /* Interactive execution. Modify logging defaults. */
-            logfname = "-"; // log to `stderr`
-            logoptions = 0; // timestamp, UTC, no console, no PID
-        }
-        (void)setulogmask(logmask);
-        (void)openulog(basename(argv[0]), logoptions, LOG_LDM, logfname);
-    }
+    /* Initialize sets of signals that will be used later. */
+    mls_initSignalSets();
 
-    /*
-     * Initialize sets of signals that will be used later.
-     */
-    (void)sigemptyset(&termSignals);
-    (void)sigaddset(&termSignals, SIGTERM);
-    (void)sigaddset(&termSignals, SIGINT);
-
-    (void)sigemptyset(&pqSignals);
-    (void)sigaddset(&pqSignals, SIGCONT);
-    (void)sigaddset(&pqSignals, SIGALRM);
-
-    /*
-     * Decode the command-line.
-     */
+    /* Decode the command-line. */
     McastInfo*   groupInfo;  // multicast group information
     unsigned     ttl = 1;    // Restricted to same subnet. Won't be forwarded.
-    int          status = decodeCommandLine(argc, argv, &groupInfo, &ttl);
+    int          status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl);
 
     if (status) {
         log_log(LOG_ERR);

@@ -106,6 +106,23 @@ extern int            sa_snprint(const ServiceAddr* restrict sa,
  */
 extern char*          sa_format(const ServiceAddr* const sa);
 /**
+ * Parses a formatted Internet service address. An Internet service address has
+ * the general form `id:port`, where `id` is the Internet identifier (either a
+ * name, a formatted IPv4 address, or a formatted IPv6 address enclosed in
+ * square brackets) and `port` is the port number.
+ *
+ * @param[out] serviceAddr  Internet service address. Caller should call
+ *                          `sa_free(*sa)` when it's no longer needed.
+ * @param[in]  spec         String containing the specification.
+ * @retval     0            Success. `*sa` is set.
+ * @retval     EINVAL       Invalid specification. `log_start()` called.
+ * @retval     ENOMEM       Out of memory. `log_start()` called.
+ */
+int
+sa_parse(
+    ServiceAddr** const restrict serviceAddr,
+    const char* restrict         spec);
+/**
  * Returns the Internet socket address that corresponds to a service address.
  *
  * @param[in]  serviceAddr   The service address.

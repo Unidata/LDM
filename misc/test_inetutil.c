@@ -7,6 +7,7 @@
 #include "config.h"
 
 #include "inetutil.h"
+#include "ldmprint.h"
 #include "log.h"
 
 #include <arpa/inet.h>
@@ -111,6 +112,33 @@ test_sa_getInet6SockAddr(void)
     CU_ASSERT_EQUAL(sockLen, sizeof(struct sockaddr_in6));
 }
 
+static void
+sa_parse_test(
+    const char* const inetId,
+    const unsigned short port)
+{
+    ServiceAddr* sa;
+    char*        buf = ldm_format(80, strchr(inetId, ':') ? "[%s]:%d" : "%s:%d",
+            inetId, port);
+    int          status;
+
+    CU_ASSERT_PTR_NOT_NULL_FATAL(buf);
+    status = sa_parse(&sa, buf);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_STRING_EQUAL(sa_getInetId(sa), inetId);
+    CU_ASSERT_EQUAL(sa_getPort(sa), port);
+    sa_free(sa);
+}
+
+static void
+test_sa_parse(void)
+{
+    sa_parse_test("zero.unidata.ucar.edu", 1);
+    sa_parse_test("128.117.140.56", 2);
+    sa_parse_test("A0:12::F3", 3);
+}
+
 #endif // WANT_MULTICAST
 
 int
@@ -128,6 +156,7 @@ main(
 #           if WANT_MULTICAST
                 CU_ADD_TEST(testSuite, test_sa_getInetSockAddr);
                 CU_ADD_TEST(testSuite, test_sa_getInet6SockAddr);
+                CU_ADD_TEST(testSuite, test_sa_parse);
 #           endif
 
             if (-1 == openulog(basename(argv[0]), 0, LOG_LOCAL0, "-")) {

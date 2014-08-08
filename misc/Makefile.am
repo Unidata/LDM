@@ -20,7 +20,7 @@ EXTRA_DIST	        = \
         executor.hin \
         semRWLock.hin \
         StrBuf.hin
-DISTCLEANFILES		= $(BUILT_SOURCES)
+CLEANFILES		= $(BUILT_SOURCES) *.i
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
 	ldmalloc.h \
@@ -68,6 +68,10 @@ TAGS_FILES	= \
     ../rpc/*.c ../rpc/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
+
+.c.i:
+	$(CPP) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) \
+	    $(AM_CPPFLAGS) $(CPPFLAGS) $< >$@
 
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp

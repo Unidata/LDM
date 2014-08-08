@@ -19,6 +19,7 @@
 #include "registry.h"
 #include "xdr.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -1187,6 +1188,71 @@ sa_format(
     const ServiceAddr* const sa)
 {
     return ldm_format(128, sa_getFormat(sa), sa->inetId, sa->port);
+}
+
+/**
+ * Parses a formatted Internet service address. An Internet service address has
+ * the general form `id:port`, where `id` is the Internet identifier (either a
+ * name, a formatted IPv4 address, or a formatted IPv6 address enclosed in
+ * square brackets) and `port` is the port number.
+ *
+ * @param[out] serviceAddr  Internet service address. Caller should call
+ *                          `sa_free(*sa)` when it's no longer needed.
+ * @param[in]  spec         String containing the specification.
+ * @retval     0            Success. `*sa` is set.
+ * @retval     EINVAL       Invalid specification. `log_start()` called.
+ * @retval     ENOMEM       Out of memory. `log_start()` called.
+ */
+int
+sa_parse(
+    ServiceAddr** const restrict serviceAddr,
+    const char* restrict         spec)
+{
+    int         status = EINVAL;
+
+    if (NULL == spec) {
+        log_start("NULL argument");
+    }
+    else {
+#       if defined(HOST_NAME_MAX) && HOST_NAME_MAX > _POSIX_HOST_NAME_MAX
+#           define INET_ID_MAX  HOST_NAME_MAX
+#       else
+#           define INET_ID_MAX  _POSIX_HOST_NAME_MAX
+#       endif
+#       define STRING1(x)    #x
+#       define STRING2(x)    STRING1(x)
+#       define INET_ID_WIDTH STRING2(INET_ID_MAX)
+        char                 inetId[INET_ID_MAX+1];
+        unsigned short       port;
+        const char*          formats[] = {
+            "[%" INET_ID_WIDTH "[0-9A-Fa-f:]]:%hu %n",
+            "%" INET_ID_WIDTH "[0-9.]:%hu %n",
+            "%" INET_ID_WIDTH "[A-Za-z0-9._]:%hu %n"
+        };
+
+        for (int i = 0; i < sizeof(formats)/sizeof(formats[0]); i++) {
+            int nbytes;
+            int n = sscanf(spec, formats[i], inetId, &port, &nbytes);
+
+            if (2 == n && 0 == spec[nbytes]) {
+                ServiceAddr* sa = sa_new(inetId, port);
+
+                if (NULL == sa) {
+                    status = ENOMEM;
+                }
+                else {
+                    *serviceAddr = sa;
+                    status = 0;
+                }
+                break;
+            }
+        }
+
+        if (EINVAL == status)
+            log_start("Invalid Internet service address: \"%s\"", spec);
+    }
+
+    return status;
 }
 
 /**
