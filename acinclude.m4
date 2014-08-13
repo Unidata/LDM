@@ -440,20 +440,26 @@ dnl Set ulog parameters
 dnl
 AC_DEFUN([UD_ULOG], [dnl
     AC_MSG_CHECKING([for system logging daemon])
-    if ps -e | grep syslog >/dev/null; then
-	AC_MSG_RESULT([found])
-    elif ps -A | grep syslog >/dev/null; then
-	AC_MSG_RESULT([found])
+    if ps -e | grep -q syslog-ng; then
+	AC_MSG_RESULT([syslog-ng])
+        AC_CHECK_FILE([/etc/syslog-ng/syslog-ng.conf],
+            [SYSLOG_CONF=/etc/syslog-ng/syslog-ng.conf],
+            [AC_MSG_ERROR([system logging configuration-file not found or not readable])])
+    elif ps -e | grep -q rsyslog; then
+	AC_MSG_RESULT([rsyslog])
+        AC_CHECK_FILE([/etc/rsyslog.conf],
+            [SYSLOG_CONF=/etc/rsyslog.conf],
+            [AC_MSG_ERROR([system logging configuration-file not found or not readable])])
+    elif ps -e | grep -q syslog; then
+	AC_MSG_RESULT([syslog])
+        AC_CHECK_FILE([/etc/syslog.conf],
+            [SYSLOG_CONF=/etc/syslog.conf],
+            [AC_MSG_ERROR([system logging configuration-file not found or not readable])])
     else
 	AC_MSG_ERROR([system logging daemon not running], 1)
     fi
-
-    AC_CHECK_FILE([/etc/rsyslog.conf],
-	[SYSLOG_CONF=/etc/rsyslog.conf],
-	[AC_CHECK_FILE([/etc/syslog.conf],
-	    [SYSLOG_CONF=/etc/syslog.conf],
-	    [AC_MSG_ERROR([system logging configuration-file not found or not readable])])])
     AC_SUBST([SYSLOG_CONF])
+
     if test -e $LDMHOME/logs; then
         AC_SUBST([LDM_LOGFILE], [$LDMHOME/logs/ldmd.log])
     else

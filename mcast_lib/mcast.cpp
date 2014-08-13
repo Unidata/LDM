@@ -18,6 +18,7 @@
 #include <VCMTPSender.h>
 #include <VcmtpFileEntry.h>
 
+#include <errno.h>
 #include <exception>
 #include <stdexcept>
 #include <stdlib.h>
@@ -298,15 +299,24 @@ mcastSender_free(
  *
  * @param[in] sender  VCMTP sender.
  * @param[in] data    Data to send.
- * @param[in] size    Amount of data in bytes.
+ * @param[in] nbytes  Amount of data in bytes.
+ * @retval    0       Success.
+ * @retval    EIO     Failure. `log_start()` called.
  */
-void
+int
 mcastSender_send(
     void* const  sender,
     void* const  data,
-    const size_t size)
+    const size_t nbytes)
 {
-    ((VCMTPSender*)sender)->SendMemoryData(data, size);
+    try {
+        ((VCMTPSender*)sender)->SendMemoryData(data, nbytes);
+        return 0;
+    }
+    catch (const std::exception& e) {
+        LOG_START1("%s", e.what());
+        return EIO;
+    }
 }
 
 /**

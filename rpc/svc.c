@@ -43,15 +43,15 @@ static char sccsid[] = "@(#)svc.c 1.41 87/10/13 Copyr 1984 Sun Micro";
 
 #include "config.h"
 
+#include "rpc.h"
+#include "pmap_clnt.h"
+
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/errno.h>
 #include <sys/time.h>		/* FD_SET, FD_CLR */
-
-#include "rpc.h"
-#include "pmap_clnt.h"
 
 #ifdef FD_SETSIZE
 static SVCXPRT **xports;

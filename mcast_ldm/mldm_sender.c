@@ -572,7 +572,8 @@ mls_destroy(
  *                   and metadata).
  * @param[in] size   Size, in bytes, of the XDR-encoded version.
  * @param[in] arg    Pointer to associated multicast LDM sender object.
- * @retval    0      Always.
+ * @retval    0      Success.
+ * @retval    EIO    I/O failure. `log_start()` called.
  */
 static int
 mls_multicastProduct(
@@ -582,11 +583,7 @@ mls_multicastProduct(
     const size_t                    size,
     void* const restrict            arg)
 {
-    McastLdmSender* mls = arg;
-
-    mcastSender_send(mls->mcastSender, xprod, size);
-
-    return 0;
+    return mcastSender_send(((McastLdmSender*)arg)->mcastSender, xprod, size);
 }
 
 /**
@@ -607,7 +604,8 @@ mls_setProdClass(
     prod_class** const restrict    prodClass)
 {
     int         status;
-    prod_class* pc = new_prod_class(1); // `psa_len` set but patterns are NULL
+    /* The following sets `pc->psa.psa_len` but all the patterns are NULL */
+    prod_class* pc = new_prod_class(1);
 
     if (pc == NULL) {
         status = LDM7_SYSTEM;
@@ -820,10 +818,10 @@ mls_execute(
 
         /*
          * Data-products are multicast on the current (main) thread so that the
-         * process will terminate if something goes wrong.
+         * process will automatically terminate if something goes wrong.
          */
 
-        mls.mcastThread = pthread_self(); // needed by termination-waiter
+        mls.mcastThread = pthread_self(); // needed by termination-signal waiter
         status = mls_startTermSigWaiter(&mls);
 
         if (status == 0)
@@ -840,7 +838,10 @@ main(
     const int    argc,
     char** const argv)
 {
-    /* Initialize logging. Done first in case something happens. */
+    /*
+     * Initialize logging. Done first in case something happens that needs to
+     * be reported.
+     */
     mls_initLogging(basename(argv[0]));
 
     /* Initialize sets of signals that will be used later. */

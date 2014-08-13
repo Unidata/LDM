@@ -103,13 +103,15 @@ mcastSender_free(
  *
  * @param[in] sender  VCMTP sender.
  * @param[in] data    Data to send.
- * @param[in] size    Amount of data in bytes.
+ * @param[in] nbytes  Amount of data in bytes.
+ * @retval    0       Success.
+ * @retval    EIO     Failure. `log_start()` called.
  */
-void
+int
 mcastSender_send(
     void* const  sender,
     void* const  data,
-    const size_t size);
+    const size_t nbytes);
 
 int mcastFileEntry_isWanted(
     const void*                 file_entry);

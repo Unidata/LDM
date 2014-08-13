@@ -1,20 +1,46 @@
+set -e # terminate on error
+
 LOG_LDM=${1?LDM logging facility not set}
 SYSLOG_CONF=${2?System logging configuration-file not set}
 LDM_LOGFILE=${3?LDM log file pathname not set}
 
-if grep ${LOG_LDM} ${SYSLOG_CONF} >/dev/null; then
-    : true
-else
+# Modifies a syslog-ng.conf(5) file.
+#
+modifySyslogNg() {
+    sed "s/\(and not facility([^)]*\))/\1,$LOG_LDM)/" "$SYSLOG_CONF" \
+            >"$SYSLOG_CONF".new
+    cat >>"$SYSLOG_CONF".new <<EOF
+
+# Unidata LDM:
+destination d_ldm { file("$LDM_LOGFILE"); };
+filter      f_ldm { facility($LOG_LDM); };
+log               { source(s_sys); filter(f_ldm); destination(d_ldm); };
+EOF
+    cp "$SYSLOG_CONF" "$SYSLOG_CONF".old
+    mv -f "$SYSLOG_CONF".new "$SYSLOG_CONF"
+}
+
+# Modifies a syslog.conf(5) or rsyslog.conf(5) file.
+#
+modifySyslog() {
     awk '
         {print}
         NF == 2 && ($1 ~ /\.none/ || $2 ~ /\/var\/log\/messages/ || 
                 $2 ~ /\/var\/log\/syslog/) {
-            print "'${LOG_LDM}'.none	" $2;
-        }
-    ' ${SYSLOG_CONF} >${SYSLOG_CONF}.new &&
-    echo >>${SYSLOG_CONF}.new &&
-    echo '# Unidata LDM:' >>${SYSLOG_CONF}.new &&
-    echo "${LOG_LDM}.*	${LDM_LOGFILE}" >>${SYSLOG_CONF}.new &&
-    cp ${SYSLOG_CONF} ${SYSLOG_CONF}.old &&
-    mv -f ${SYSLOG_CONF}.new ${SYSLOG_CONF}
+            print "'$LOG_LDM'.none	" $2;
+        }' "$SYSLOG_CONF" >"$SYSLOG_CONF".new
+    echo >>"$SYSLOG_CONF".new
+    echo '# Unidata LDM:' >>"$SYSLOG_CONF".new
+    echo "$LOG_LDM.*	$LDM_LOGFILE" >>"$SYSLOG_CONF".new
+    cp "$SYSLOG_CONF" "$SYSLOG_CONF".old
+    mv -f "$SYSLOG_CONF".new "$SYSLOG_CONF"
+}
+
+if grep -Fq "$LDM_LOGFILE" "$SYSLOG_CONF"; then
+    : true
+else
+    case "$SYSLOG_CONF" in
+        *syslog-ng*) modifySyslogNg;;
+        *)           modifySyslog;;
+    esac
 fi
