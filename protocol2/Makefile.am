@@ -94,6 +94,9 @@ lib_la_CPPFLAGS		= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
     -I$(top_srcdir)/pq
+if WANT_MULTICAST
+lib_la_CPPFLAGS		+= -I$(top_builddir)/mcast_lib -I$(top_srcdir)/mcast_lib
+endif
 TAGS_FILES		= \
     ../ulog/*.c ../ulog/*.h \
     ../protocol/*.c ../protocol/*.h \

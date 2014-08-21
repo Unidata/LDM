@@ -18,7 +18,7 @@
 #define LOG_NOTIME 0x200u		/* don't put on the timestamp */
 #define LOG_LOCALTIME 0x100u  /* use localtime. default is gmt */
 
-#define LOG_IDENT 0x400u		/* don't add the facility identifier */
+#define LOG_IDENT 0x400u		/* add the facility identifier */
 
 /*
  * This set of #defines allows this to work even with a

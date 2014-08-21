@@ -173,7 +173,7 @@ msm_free(
 }
 
 /**
- * Locks a multicast sender memory file against access by another process.
+ * Locks a multicast sender memory against access by another process.
  * Blocks until the lock is acquired. The lock is not inherited by the child
  * process of a `fork()`.
  *
@@ -189,7 +189,7 @@ msm_lock(
 }
 
 /**
- * Unlocks a multicast sender memory file against access by another process.
+ * Unlocks a multicast sender memory against access by another process.
  *
  * @param[in] msm          The multicast sender memory object.
  * @retval    0            Success.

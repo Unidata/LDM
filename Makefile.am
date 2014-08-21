@@ -76,7 +76,7 @@ if WANT_GRIBINSERT
     SUBDIRS	+= gribinsert
 endif
 if WANT_MULTICAST
-    SUBDIRS	+= mcast_ldm
+    SUBDIRS	+= mldm_sender
 endif
 SUBDIRS		+= html test
 
@@ -123,7 +123,7 @@ all:
 
 multicast-check:
 	cd mcast_lib && $(MAKE) check
-	cd mcast_ldm && $(MAKE) check
+	cd mldm_sender && $(MAKE) check
 
 install-data-hook:	ensure-ldmhome-links ensure-var
 if INCLUDE_ROOT_ACTIONS

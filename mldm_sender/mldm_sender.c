@@ -50,7 +50,36 @@ static sigset_t termSigSet;
 static sigset_t pqSigSet;
 
 /**
- * Initializes logging.
+ * Returns the logging options appropriate to a log-file specification.
+ *
+ * @param[in] logFileSpec  Log-file specification:
+ *                             NULL  Use syslog(3)
+ *                             ""    Use syslog(3)
+ *                             "-"   Log to `stderr`
+ *                             else  Pathname of log-file
+ * @return                 Logging options appropriate to the log-file
+ *                         specification.
+ */
+static unsigned
+mls_getLogOpts(
+    const char* const logFileSpec)
+{
+    return (logFileSpec && 0 == strcmp(logFileSpec, "-"))
+        /*
+         * Interactive invocation. Use ID, timestamp, UTC, no PID, and no
+         * console.
+         */
+        ? LOG_IDENT
+        /*
+         * Non-interactive invocation. Use ID, timestamp, UTC, PID, and the
+         * console as a last resort.
+         */
+        : LOG_IDENT | LOG_PID | LOG_CONS;
+}
+
+/**
+ * Initializes logging. This should be called before the command-line is
+ * decoded.
  *
  * @param[in] progName  Name of the program.
  */
@@ -58,16 +87,18 @@ static void
 mls_initLogging(
     const char* const progName)
 {
-    unsigned logmask =  LOG_UPTO(LOG_NOTICE); // logging level
-    unsigned logoptions = LOG_CONS | LOG_PID; // console last resort, PID
+    char* logFileSpec;
 
     if (isatty(fileno(stderr))) {
-        /* Interactive execution. Modify logging defaults. */
-        logfname = "-"; // log to `stderr`
-        logoptions = 0; // timestamp, UTC, no console, no PID
+        /* Interactive execution. */
+        logFileSpec = "-"; // log to `stderr`
     }
-    (void)setulogmask(logmask);
-    (void)openulog(progName, logoptions, LOG_LDM, logfname);
+    else {
+        logFileSpec = NULL; // use syslog(3)
+    }
+
+    (void)setulogmask(LOG_UPTO(LOG_NOTICE));
+    (void)openulog(progName, mls_getLogOpts(logFileSpec), LOG_LDM, logFileSpec);
 }
 
 /**
@@ -93,7 +124,7 @@ static void
 mls_usage(void)
 {
     log_add(
-"Usage: %s [options] groupName groupId:groupPort serverPort\n"
+"Usage: %s [options] feed groupId:groupPort serverPort\n"
 "Options:\n"
 "    -I serverIface    Interface on which the TCP server will listen. Default\n"
 "                      is all interfaces.\n"
@@ -114,7 +145,7 @@ mls_usage(void)
 "    -v                Verbose logging: log INFO level messages.\n"
 "    -x                Debug logging: log DEBUG level messages.\n"
 "Operands:\n"
-"    groupName         The name of the multicast group in the form of a\n"
+"    feed              Identifier of the multicast group in the form of a\n"
 "                      feedtype expression\n"
 "    groupId:groupPort Internet service address of multicast group, where\n"
 "                      <groupId> is either a group-name or a dotted-decimal\n"
@@ -166,7 +197,7 @@ mls_decodeOptions(
             break;
         }
         case 'l': {
-            (void)openulog(NULL, ulog_get_options(), LOG_LDM, optarg);
+            (void)openulog(NULL, mls_getLogOpts(optarg), LOG_LDM, optarg);
             break;
         }
         case 'q': {
@@ -323,8 +354,8 @@ mls_decodeServerAddr(
  *                          Caller should free when it's no longer needed.
  * @param[out] serverAddr   Internet service address of the TCP server. Caller
  *                          should free when it's no longer needed.
- * @param[out] groupName    Name of the multicast group.
- * @retval     0            Success. `*groupAddr`, `serverAddr`, and `groupName`
+ * @param[out] feed         Feedtype of the multicast group.
+ * @retval     0            Success. `*groupAddr`, `*serverAddr`, and `*feed`
  *                          are set.
  * @retval     1            Invalid operands. `log_start()` called.
  * @retval     2            System failure. `log_start()` called.
@@ -336,39 +367,44 @@ mls_decodeOperands(
     const char* const restrict    serverIface,
     ServiceAddr** const restrict  groupAddr,
     ServiceAddr** const restrict  serverAddr,
-    const char** const restrict   groupName)
+    feedtypet* const restrict     feed)
 {
     int status;
 
     if (argc < 1) {
-        log_start("Unspecified name of multicast group");
+        log_start("Multicast group not specified");
         mls_usage();
         status = 1;
     }
     else {
-        const char* grpName = *argv;
+        feedtypet ft;
 
-        argc--; argv++;
-
-        ServiceAddr* grpAddr;
-        ServiceAddr* srvrAddr;
-
-        if ((status = mls_decodeGroupAddr(*argv, &grpAddr))) {
-            mls_usage();
-            status = 1;
+        if (strfeedtypet(*argv, &ft)) {
+            log_start("Invalid feed expression: \"%s\"", *argv);
         }
         else {
             argc--; argv++;
 
-            if ((status = mls_decodeServerAddr(*argv, serverIface, &srvrAddr))) {
-                log_start("Port number of TCP server unspecified or invalid");
+            ServiceAddr* grpAddr;
+            ServiceAddr* srvrAddr;
+
+            if ((status = mls_decodeGroupAddr(*argv, &grpAddr))) {
                 mls_usage();
                 status = 1;
             }
             else {
-                *groupName = grpName;
-                *groupAddr = grpAddr;
-                *serverAddr = srvrAddr;
+                argc--; argv++;
+
+                if ((status = mls_decodeServerAddr(*argv, serverIface, &srvrAddr))) {
+                    log_start("Port number of TCP server unspecified or invalid");
+                    mls_usage();
+                    status = 1;
+                }
+                else {
+                    *feed = ft;
+                    *groupAddr = grpAddr;
+                    *serverAddr = srvrAddr;
+                }
             }
         }
     }
@@ -413,13 +449,13 @@ mls_decodeCommandLine(
 
         ServiceAddr* groupAddr;
         ServiceAddr* serverAddr;
-        const char*  groupName;
+        feedtypet    feed;
 
         status = mls_decodeOperands(argc, argv, serverIface, &groupAddr,
-                &serverAddr, &groupName);
+                &serverAddr, &feed);
 
         if (status == 0) {
-            McastInfo* gi = mi_new(groupName, groupAddr, serverAddr);
+            McastInfo* gi = mi_new(feed, groupAddr, serverAddr);
 
             if (gi == NULL) {
                 status = 2;
@@ -614,25 +650,18 @@ mls_setProdClass(
         (void)set_timestamp(&pc->from); // from now
         pc->to = TS_ENDT;               // until the end-of-time
 
-        if (strfeedtypet(mls->mcastInfo.mcastName,
-                &pc->psa.psa_val->feedtype)) {
-            LOG_START1("Couldn't decode feedtype expression \"%s\"",
-                    mls->mcastInfo.mcastName);
-            status = LDM7_INVAL;
+        pc->psa.psa_val->feedtype = mls->mcastInfo.feed;
+        pc->psa.psa_val->pattern = strdup(".*");
+
+        if (pc->psa.psa_val->pattern == NULL) {
+            LOG_SERROR0("Couldn't duplicate pattern \".*\"");
+            status = LDM7_SYSTEM;
         }
         else {
-            pc->psa.psa_val->pattern = strdup(".*");
-
-            if (pc->psa.psa_val->pattern == NULL) {
-                LOG_SERROR0("Couldn't duplicate pattern \".*\"");
-                status = LDM7_SYSTEM;
-            }
-            else {
-                clss_regcomp(pc);
-                *prodClass = pc;
-                status = 0;
-            } // `pc->psa.psa_val->pattern` allocated
-        } // feedtype expression decoded
+            clss_regcomp(pc);
+            *prodClass = pc;
+            status = 0;
+        } // `pc->psa.psa_val->pattern` allocated
 
         if (status)
             free_prod_class(pc); // won't free NULL patterns

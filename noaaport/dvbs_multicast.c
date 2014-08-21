@@ -256,7 +256,12 @@ int main(
     struct sockaddr_in  cliAddr, servAddr;
     struct in_addr      mcastAddr;
     struct hostent*     h;
-    int                 pid_channel, dumpflag = 0;
+    /*
+     * The following is *not* the DVB PID: it's the least significant byte of
+     * the IPv4 multicast address (e.g., the "3" in "224.0.1.3").
+     */
+    int                 pid_channel;
+    int                 dumpflag = 0;
     char*               imr_interface = NULL;
     FILE*               f = stdout;
     extern int          optind;

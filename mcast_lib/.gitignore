@@ -30,3 +30,4 @@ mldm_sender_test
 up7.h
 mcast_ldm_sender_test
 mcast_ldm_sender.h
+mldm_sender_manager_test

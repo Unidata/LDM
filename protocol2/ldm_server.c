@@ -665,19 +665,21 @@ int ldmprog_6_freeresult(
 
 #if WANT_MULTICAST
 
+#include "mldm_sender_manager.h"
+
 /**
- * Processes a subscription request from a remote LDM.
+ * Processes a multicast subscription request from a remote LDM.
  *
  * This function is thread-compatible but not thread-safe.
  *
- * @param[in] mcastName  Pointer to the name of the relevant multicast group.
- * @param[in] rqstp      Pointer to the RPC service-request.
- * @return               Pointer to the reply.
+ * @param[in] feedtype   Feedtype of multicast group.
+ * @param[in] rqstp      RPC service-request.
+ * @return               Reply.
  */
 SubscriptionReply*
 subscribe_7_svc(
-    char* const           mcastName,
-    struct svc_req* const rqstp)
+    feedtypet* const restrict       feedtype,
+    struct svc_req* const restrict  rqstp)
 {
     static SubscriptionReply  result;
 

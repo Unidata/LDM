@@ -133,10 +133,6 @@ static size_t prodClassAlignment;
  */
 static size_t prodSpecAlignment;
 /**
- * Golden ratio:
- */
-static const double PHI = 1.6180339;
-/**
  * Protection modes for the shared-memory segment.
  */
 static mode_t read_only;
@@ -601,14 +597,14 @@ static size_t entry_sizeof(
 /**
  * Initializes an entry.
  *
- * @param entry             [in] Pointer to the entry.
- * @param pid               [in] PID of the upstream LDM
- * @param protoVers         [in] Protocol version number (e.g., 5 or 6)
- * @param isNotifier        [in] Type of the upstream LDM
- * @param isPrimary         [in] Whether the upstream LDM is in primary transfer
- *                          mode or not
- * @param sockAddr          [in] Socket Internet address of the downstream LDM
- * @param prodClass         [in] Data-request of the downstream LDM
+ * @param[out] entry       Pointer to the entry.
+ * @param[in]  pid         PID of the upstream LDM
+ * @param[in]  protoVers   Protocol version number (e.g., 5 or 6)
+ * @param[in]  isNotifier  Type of the upstream LDM
+ * @param[in]  isPrimary   Whether the upstream LDM is in primary transfer
+ *                         mode or not
+ * @param[in]  sockAddr    Socket Internet address of the downstream LDM
+ * @param[in]  prodClass   Data-request of the downstream LDM
  */
 static void entry_init(
         uldb_Entry* const           entry,
@@ -1371,7 +1367,7 @@ static uldb_Status sm_ensureSpaceForEntry(
                 LOG_ADD0("Couldn't delete old shared-memory");
             }
             else {
-                if ((status = sm_create(sm, sm->key, PHI * neededCapacity)) != 0) {
+                if ((status = sm_create(sm, sm->key, 2 * neededCapacity)) != 0) {
                     LOG_ADD0("Couldn't create new shared-memory segment");
                 }
                 else if ((status = sm_attach(sm)) != 0) {
@@ -2217,6 +2213,44 @@ uldb_Status uldb_remove(
     } /* valid "pid" */
 
     return status;
+}
+
+/**
+ * Locks the upstream LDM database for reading. The caller should call
+ * `uldb_unlock()` when the lock is no longer needed.
+ *
+ * @retval 0                Success. Database is locked for reading.
+ * @retval ULDB_INIT        Database is not open. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
+ */
+uldb_Status uldb_readLock(void)
+{
+    return db_readLock(&database);
+}
+
+/**
+ * Locks the upstream LDM database for writing. The caller should call
+ * `uldb_unlock()` when the lock is no longer needed.
+ *
+ * @retval 0                Success. Database is locked for writing.
+ * @retval ULDB_INIT        Database is not open. log_add() called.
+ * @retval ULDB_SYSTEM      System error. log_add() called.
+ */
+uldb_Status uldb_writeLock(void)
+{
+    return db_writeLock(&database);
+}
+
+/**
+ * Unlocks the upstream LDM database.
+ *
+ * @retval 0                Success. Database is locked for writing.
+ * @retval ULDB_SUCCESS     Success
+ * @retval ULDB_SYSTEM      System error. log_add() called.
+ */
+uldb_Status uldb_unlock(void)
+{
+    return db_unlock(&database);
 }
 
 /**

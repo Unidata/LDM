@@ -23,7 +23,7 @@ extern "C" {
 /**
  * Returns a new multicast information object.
  *
- * @param[in] name       The name of the multicast group. The caller may free.
+ * @param[in] feed       The feedtype of the multicast group.
  * @param[in] mcast      The Internet address of the multicast group. The caller
  *                       may free.
  * @param[in] ucast      The Internet address of the unicast service for blocks
@@ -34,7 +34,7 @@ extern "C" {
  */
 McastInfo*
 mi_new(
-    const char* const restrict        name,
+    const feedtypet                   feed,
     const ServiceAddr* const restrict mcast,
     const ServiceAddr* const restrict ucast);
 
@@ -61,6 +61,64 @@ int
 mi_copy(
     McastInfo* const restrict       to,
     const McastInfo* const restrict from);
+
+/**
+ * Clones a multicast information object.
+ *
+ * @param[in] info  Multicast information object to be cloned.
+ * @retval    NULL  Failure. `log_start()` called.
+ * @return          Clone of multicast information object. Caller should call
+ *                  `mi_free()` when the clone is no longer needed.
+ */
+McastInfo*
+mi_clone(
+    const McastInfo* const info);
+
+/**
+ * Returns the feedtype of a multicast information object.
+ *
+ * @param[in] info  Multicast information object.
+ * @return          Feedtype of the object.
+ */
+feedtypet
+mi_getFeedtype(
+        const McastInfo* const info);
+
+/**
+ * Compares the server information of two multicast information objects. Returns
+ * a value less than, equal to, or greater than zero as the server information
+ * in the first object is considered less than, equal to, or greater than the
+ * server information in the second object, respectively. Server informations
+ * are considered equal if their TCP server Internet identifiers and port
+ * numbers are equal.
+ *
+ * @param[in] info1  First multicast information object.
+ * @param[in] info2  Second multicast information object.
+ * @return
+ */
+int
+mi_compareServers(
+    const McastInfo* const restrict info1,
+    const McastInfo* const restrict info2);
+
+/**
+ * Compares the multicast group information of two multicast information
+ * objects. Returns a value less than, equal to, or greater than zero as the
+ * server information in the first object is considered less than, equal to, or
+ * greater than the server information in the second object, respectively.
+ * Multicast group informations are considered equal if their Internet
+ * identifiers and port numbers are equal.
+ *
+ * @param[in] info1  First multicast group information object.
+ * @param[in] info2  Second multicast group information object.
+ * @retval    -1     First object is less than second.
+ * @retval     0     Objects are equal.
+ * @retval    +1     First object is greater than second.
+ */
+int
+mi_compareGroups(
+    const McastInfo* const restrict info1,
+    const McastInfo* const restrict info2);
 
 /**
  * Returns a formatted representation of a multicast information object that's

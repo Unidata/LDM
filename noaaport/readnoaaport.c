@@ -452,6 +452,10 @@ int main(
     MD5_CTX*            md5ctxp = NULL;
     /*unsigned char *compr;
     long                comprLen = 10000 * sizeof (int);*/
+    /*
+     * The following is *not* the DVB PID: it's the least significant byte of
+     * the IPv4 multicast address (e.g., the "3" in "224.0.1.3").
+     */
     int                 pid_channel = -1;
 
     /*compr = (unsigned char *) calloc (comprLen, 1);*/

@@ -46,7 +46,11 @@ int multicastReaderNew(
                                       *  returned reader */
 {
     int status = 0;                 /* default success */
-    int pidChannel;                 /* NOAAPORT PID channel to use */
+    /*
+     * The following is *not* the DVB PID: it's the least significant byte of
+     * the IPv4 multicast address (e.g., the "3" in "224.0.1.3").
+     */
+    int pidChannel;
 
     if (sscanf(mcastSpec, "%*d.%*d.%*d.%d", &pidChannel) != 1) {
         LOG_START1("Couldn't decode multicast specification \"%s\"", mcastSpec);

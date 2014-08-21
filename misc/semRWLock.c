@@ -445,6 +445,7 @@ srwl_Status srwl_writeLock(
 
 /**
  * Locks a read/write lock for reading. Waits until the lock is available.
+ * Reentrant.
  *
  * @retval RWL_SUCCESS  Success
  * @retval RWL_INVALID  Lock structure is invalid. log_add() called.

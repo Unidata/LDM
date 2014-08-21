@@ -53,7 +53,7 @@ static pthread_once_t down7KeyControl = PTHREAD_ONCE_INIT;
 struct Down7 {
     pqueue*               pq;            ///< pointer to the product-queue
     ServiceAddr*          servAddr;      ///< socket address of remote LDM-7
-    char*                 mcastName;     ///< name of multicast group
+    feedtypet             feedtype;      ///< feed-expression of multicast group
     CLIENT*               clnt;          ///< client-side RPC handle
     McastInfo*       mcastInfo;     ///< information on multicast group
     Mdl*                  mdl;           ///< multicast downstream LDM
@@ -825,7 +825,7 @@ subscribeAndExecute(
     SubscriptionReply* reply;
 
     (void)lockClient(down7);
-    reply = subscribe_7(down7->mcastName, down7->clnt);
+    reply = subscribe_7(&down7->feedtype, down7->clnt);
 
     if (reply == NULL) {
 	LOG_START1("subscribe_7() failure: %s", clnt_errmsg(down7->clnt));
@@ -908,7 +908,7 @@ runDown7Once(
 {
     int status;
 
-    down7->msm = msm_open(down7->servAddr, down7->mcastName);
+    down7->msm = msm_open(down7->servAddr, down7->feedtype);
 
     if (down7->msm == NULL) {
         LOG_ADD0("Couldn't open multicast session memory");
@@ -1083,8 +1083,7 @@ deliveryFailure(
  *                       obtain multicast information, backlog files, and
  *                       files missed by the VCMTP layer. The client may free
  *                       upon return.
- * @param[in] mcastName  Name of multicast group to receive. The client may free
- *                       upon return.
+ * @param[in] feedtype   Feedtype of multicast group to receive.
  * @param[in] pq         Pointer to the product-queue.
  * @retval    NULL       Failure. \c log_start() called.
  * @return               Pointer to the new downstream LDM-7.
@@ -1092,7 +1091,7 @@ deliveryFailure(
 Down7*
 dl7_new(
     const ServiceAddr* const restrict servAddr,
-    const char* const restrict        mcastName,
+    const feedtypet                   feedtype,
     pqueue* const restrict            pq)
 {
     Down7* const down7 = LOG_MALLOC(sizeof(Down7), "downstream LDM-7");
@@ -1109,16 +1108,10 @@ dl7_new(
         goto free_down7;
     }
 
-    if ((down7->mcastName = strdup(mcastName)) == NULL) {
-        LOG_SERROR1("Couldn't duplicate multicast group name \"%s\"",
-                mcastName);
-        goto free_servAddr;
-    }
-
     if ((status = pthread_cond_init(&down7->waitCond, NULL)) != 0) {
         LOG_ERRNUM0(status,
                 "Couldn't initialize condition-variable for waiting");
-        goto free_mcastName;
+        goto free_servAddr;
     }
 
     if ((status = pthread_mutex_init(&down7->waitMutex, NULL)) != 0) {
@@ -1135,6 +1128,7 @@ dl7_new(
         goto free_clntMutex;
     }
 
+    down7->feedtype = feedtype;
     down7->pq = pq;
     down7->clnt = NULL;
     down7->sock = -1;
@@ -1155,8 +1149,6 @@ free_waitMutex:
     pthread_mutex_destroy(&down7->waitMutex);
 free_waitCond:
     pthread_cond_destroy(&down7->waitCond);
-free_mcastName:
-    free(down7->mcastName);
 free_servAddr:
     sa_free(down7->servAddr);
 free_down7:
@@ -1328,11 +1320,12 @@ end_backlog_7_svc(
     void* restrict                 noArg,
     struct svc_req* const restrict rqstp)
 {
-    char   buf[512];
+    char   saStr[512];
     Down7* down7 = pthread_getspecific(down7Key);
 
-    unotice("All backlog data-products received: mcastName=%s, server=%s",
-            down7->mcastName, sa_snprint(down7->servAddr, buf, sizeof(buf)));
+    unotice("All backlog data-products received: feedtype=%s, server=%s",
+            s_feedtypet(down7->feedtype),
+            sa_snprint(down7->servAddr, saStr, sizeof(saStr)));
 
     return NULL; // causes RPC dispatcher to not reply
 }
@@ -1364,7 +1357,6 @@ dl7_free(
         (void)pthread_mutex_destroy(&down7->clntMutex);
         (void)pthread_mutex_destroy(&down7->waitMutex);
         (void)pthread_cond_destroy(&down7->waitCond);
-        free(down7->mcastName);
         sa_free(down7->servAddr);
         free(down7);
     }

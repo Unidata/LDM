@@ -149,6 +149,23 @@ sa_getInetSockAddr(
     const bool                     serverSide,
     struct sockaddr_storage* const inetSockAddr,
     socklen_t* const               sockLen);
+
+/**
+ * Compares two service address objects. Returns a value less than, equal to, or
+ * greater than zero as the first object is considered less than, equal to, or
+ * greater than the second object, respectively. Service addresses are
+ * considered equal if their Internet identifiers and port numbers are equal.
+ *
+ * @param[in] sa1  First service address object.
+ * @param[in] sa2  Second service address object.
+ * @retval    -1   First object is less than second.
+ * @retval     0   Objects are equal.
+ * @retval    +1   First object is greater than second.
+ */
+int
+sa_compare(
+    const ServiceAddr* const sa1,
+    const ServiceAddr* const sa2);
 #endif // WANT_MULTICAST
 
 #endif /* !_INETUTIL_H_ */

@@ -712,7 +712,7 @@ program LDMPROG {
             /*
              * Downstream to upstream RPC messages:
              */
-            SubscriptionReply SUBSCRIBE(char* mcastName) = 1;
+            SubscriptionReply SUBSCRIBE(feedtypet feedtype) = 1;
             void              REQUEST_PRODUCT(McastFileId) = 2;
             void              REQUEST_BACKLOG(BacklogSpec) = 3;
             void              TEST_CONNECTION() = 4;
@@ -871,7 +871,8 @@ enum Ldm7Status {
     LDM7_SYSTEM,   /* System error */
     LDM7_MCAST,    /* multicast error */
     LDM7_SHUTDOWN, /* LDM-7 was shut down */
-    LDM7_NOENT     /* no such entry */
+    LDM7_NOENT,    /* no such entry */
+    LDM7_DUP       /* duplicate entry */
 };
 
 #if RPC_CLNT
@@ -996,9 +997,9 @@ struct ServiceAddr {
 % */
 %struct McastInfo {
 %    /*
-%     * Multicast group name:
+%     * Multicast group feedtype:
 %     */
-%    char*         mcastName;
+%    feedtypet     feed;
 %    /*
 %     * Address of associated multicast group.
 %     */
@@ -1039,11 +1040,11 @@ struct ServiceAddr {
 %bool_t
 %xdr_McastInfo (XDR *xdrs, McastInfo *info)
 %{
-%    if (!xdr_string (xdrs, &info->mcastName, ~0))
+%    if (!xdr_feedtypet(xdrs, &info->feed))
 %        return FALSE;
-%    if (!xdr_ServiceAddr (xdrs, &info->group))
+%    if (!xdr_ServiceAddr(xdrs, &info->group))
 %        return FALSE;
-%    if (!xdr_ServiceAddr (xdrs, &info->server))
+%    if (!xdr_ServiceAddr(xdrs, &info->server))
 %        return FALSE;
 %    if (xdrs->x_op == XDR_DECODE) {
 %        char* const restrict serverStr = sa_format(&info->server);
@@ -1054,8 +1055,10 @@ struct ServiceAddr {
 %            free(serverStr);
 %            return FALSE;
 %        }
+%        char buf[512];
+%        (void)sprint_feedtypet(buf, sizeof(buf), info->feed);
 %        char* const restrict filename = ldm_format(128, "%s_%s_%s",
-%                mcastStr, serverStr, info->mcastName);
+%                mcastStr, serverStr, buf);
 %        if (mcastStr == NULL) {
 %            free(serverStr);
 %            free(mcastStr);

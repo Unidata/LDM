@@ -1326,4 +1326,33 @@ sa_getInetSockAddr(
 
     return status;
 }
+
+/**
+ * Compares two service address objects. Returns a value less than, equal to, or
+ * greater than zero as the first object is considered less than, equal to, or
+ * greater than the second object, respectively. Service addresses are
+ * considered equal if their Internet identifiers and port numbers are equal.
+ *
+ * @param[in] sa1  First service address object.
+ * @param[in] sa2  Second service address object.
+ * @retval    -1   First object is less than second.
+ * @retval     0   Objects are equal.
+ * @retval    +1   First object is greater than second.
+ */
+int
+sa_compare(
+    const ServiceAddr* const sa1,
+    const ServiceAddr* const sa2)
+{
+    int cmp = strcmp(sa1->inetId, sa2->inetId);
+
+    if (0 == cmp)
+        cmp = (sa1->port < sa2->port)
+                ? -1
+                : (sa1->port == sa2->port)
+                      ? 0
+                      : 1;
+
+    return cmp;
+}
 #endif // WANT_MULTICAST

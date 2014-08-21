@@ -127,10 +127,12 @@ closeulog(void)
 }
 
 
-/*
- * Set the ident field.
- * Use this instead of closeulog() followed by openulog()
- * to change the ident in a child proc.
+/**
+ * Sets the process-identifier field. Use this instead of closeulog() followed
+ * by openulog() to change the identifier in a child proc.
+ *
+ * @param[in] ident  The new identifier or NULL. If NULL, then the identifier
+ *                   isn't changed.
  */
 void
 setulogident(const char *ident)
@@ -176,36 +178,36 @@ getulogpath(void) {
 }
 
 
-/* 
- * Like Berkeley 'openlog(3)' - initialize syslog system.
- * But: 
- *  Always attempts to open the log connection if there is none,
- *  even if the LOG_NDELAY option bit is cleared.
- *  Returns the descriptor (socket) of the logger or -1 on system call error.
- *  If ULOG_FACILITY_OVERRIDE environment variable is set, overrides facility.
+/**
+ * Initializes syslog(3) system. Like Berkeley 'openlog(3)', but:
+ *   - Always attempts to open the log connection if there is none,
+ *     even if the LOG_NDELAY option bit is cleared.
+ *   - Returns the descriptor (socket) of the logger or -1 on system call error.
+ *   - If ULOG_FACILITY_OVERRIDE environment variable is set, overrides
+ *     facility.
  * 
- * N.B. multiple calls without an intervening 'closeulog()' simply reinitialize
- * ident, options, and facility.
- * The data referred to by 'ident' and 'filename' should have process lifetime.
+ * NB: Multiple calls without an intervening 'closeulog()' simply reinitialize
+ * ident, options, and facility. The data referred to by 'ident' and
+ * 'logfilename' should have process lifetime.
  *
- * ARGUMENTS:
- *      ident           Pointer to the name of the program.  The client
- *                      shall not modify or free.
- *      options         Logging options.  Bitwise or of
- *          LOG_NOTIME      Don't add a timestamp
- *          LOG_LOCALTIME   Use localtime rather than UTC.
- *          LOG_CONS        Log to the console as a last resort.
- *          LOG_PID         Add the process-identifier.
- *      facility        Logging facility.  One of LOG_LOCAL1...LOG_LOCAL7.
- *      logfilename     Pathname of the log file:
- *          NULL        Log to syslogd(8).
- *          ""          Log to syslogd(8)
- *          "-"         Log to the standard error stream.
- *          else        Log to the named file.  The client shall not modify or
- *                      free.
- * RETURNS:
- *      -1              System error.  See "errno".
- *      else            File descriptor of the logging system.
+ * @param[in] ident        Pointer to the name of the process or NULL. The
+ *                         caller shall not modify or free. If NULL, then the
+ *                         identifier isn't changed.
+ * @param[in] options      Logging options.  Bitwise or of
+ *                             LOG_NOTIME      Don't add timestamp
+ *                             LOG_LOCALTIME   Use localtime rather than UTC.
+ *                             LOG_CONS        Log to console as last resort.
+ *                             LOG_PID         Add process-identifier.
+ * @param[in] facility     Logging facility to use.  One of LOG_LOCAL1 to
+ *                         LOG_LOCAL7.
+ * @param[in] logfilename  Pathname of the log file:
+ *                             NULL        Use syslog(3).
+ *                             ""          Use syslogd(3)
+ *                             "-"         Log to `stderr`.
+ *                             else        Log to the named file.  The caller
+ *                                         shall not modify or free.
+ * @retval    -1           System error.  See "errno".
+ * @return                 File descriptor of logging system.
  */
 int
 openulog(

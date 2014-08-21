@@ -78,7 +78,7 @@ static const char* const MISSED_MCAST_FILES_KEY = "Missed Multicast File Identif
  *
  * @param[in] servAddr  The address of the server associated with the multicast
  *                      group.
- * @param[in] mcastId   The multicast group.
+ * @param[in] feedtype  Feedtype of multicast group.
  * @retval    NULL      Failure. `log_start()` called.
  * @return              The path of the corresponding memory-file. The caller
  *                      should free when it's no longer needed.
@@ -86,14 +86,14 @@ static const char* const MISSED_MCAST_FILES_KEY = "Missed Multicast File Identif
 static char*
 getSessionPath(
     const ServiceAddr* const servAddr,
-    const char* const        mcastId)
+    const feedtypet          feedtype)
 {
     char*       path;
     char* const servAddrStr = sa_format(servAddr);
 
     if (servAddrStr) {
         path = ldm_format(256, "%s/%s_%s.yaml", getLdmLogDir(), servAddrStr,
-                mcastId);
+                s_feedtypet(feedtype));
         free(servAddrStr);
     }
 
@@ -533,18 +533,18 @@ initFromScratchOrFile(
  *
  * @param[in] msm       The muticast session memory to initialize.
  * @param[in] servAddr  Address of the server.
- * @param[in] mcastId   Identifier of the multicast group.
+ * @param[in] feedtype  Feedtype of the multicast group.
  * @retval    true      Success.
  * @retval    false     Failure. `log_add()` called.
  */
 static bool
 init(
-    McastSessionMemory* const restrict    msm,
-    const ServiceAddr* const restrict     servAddr,
-    const char* const restrict            mcastId)
+    McastSessionMemory* const restrict msm,
+    const ServiceAddr* const restrict  servAddr,
+    const feedtypet                    feedtype)
 {
     bool        success;
-    char* const path = getSessionPath(servAddr, mcastId);
+    char* const path = getSessionPath(servAddr, feedtype);
 
     if (path == NULL) {
         success = false;
@@ -998,17 +998,17 @@ addFile(
  * Deletes a multicast-session memory-file.
  *
  * @param[in] servAddr  Address of the server.
- * @param[in] mcastId   Identifier of the multicast group.
+ * @param[in] feedtype  Feedtype of the multicast group.
  * @retval    true      Success or the file doesn't exist.
  * @retval    false     Error. `log_start()` called.
  */
 bool
 msm_delete(
     const ServiceAddr* const servAddr,
-    const char* const        mcastId)
+    const feedtypet          feedtype)
 {
     bool        success;
-    char* const path = getSessionPath(servAddr, mcastId);
+    char* const path = getSessionPath(servAddr, feedtype);
 
     if (!path) {
         success = false;
@@ -1038,20 +1038,20 @@ msm_delete(
  * Opens a multicast session memory.
  *
  * @param[in] servAddr  Address of the server.
- * @param[in] mcastId   Identifier of the multicast group.
+ * @param[in] feedtype  Feedtype of the multicast group.
  * @retval    NULL      Error. `log_add()` called.
  * @return              Pointer to a multicast session memory object.
  */
 McastSessionMemory*
 msm_open(
     const ServiceAddr* const servAddr,
-    const char* const        mcastId)
+    const feedtypet          feedtype)
 {
     McastSessionMemory* msm = LOG_MALLOC(sizeof(McastSessionMemory),
             "multicast session memory");
 
     if (msm) {
-        if (!init(msm, servAddr, mcastId)) {
+        if (!init(msm, servAddr, feedtype)) {
             free(msm);
             msm = NULL;
         }
