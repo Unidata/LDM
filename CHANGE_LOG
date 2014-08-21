@@ -1,7 +1,11 @@
-6.12.5	2014-08-21T09:36:50-0600
+6.12.5	2014-08-21T10:08:25-0600
     Installation:
         Added support for syslog-ng(8) as the system logging daemon rather than
         rsyslog(8) or syslog(8).
+
+    NOAAPORT:
+        Added port numbers for the two new channels that are part of the
+        NOAAPORT SBN upgrade.
 
     Documentation:
         Removed from the HTML documentation, links to the web pages that listed
