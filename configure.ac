@@ -616,9 +616,9 @@ AC_CONFIG_FILES([
     ldm.spec
     lib/Makefile
     Makefile
-    misc/Makefile
-    mcast_ldm/Makefile
     mcast_lib/Makefile
+    misc/Makefile
+    mldm_sender/Makefile
     noaaport/Makefile
     noaaport/retrans/Makefile
     notifyme/Makefile

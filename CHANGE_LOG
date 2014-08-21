@@ -1,4 +1,4 @@
-6.12.5	2014-08-13T12:56:47-0600
+6.12.5	2014-08-21T09:36:50-0600
     Installation:
         Added support for syslog-ng(8) as the system logging daemon rather than
         rsyslog(8) or syslog(8).
