@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.5], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.6], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -412,10 +412,12 @@ test "$localstatedir" = '${prefix}/var' && localstatedir='$(LDMHOME)/var'
 AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$LDMHOME/var/logs"],
-    [Path to LDM logging directory])
+    [Pathname of LDM logging directory])
 AC_DEFINE_UNQUOTED([LDM_VAR_RUN_DIR], ["$LDMHOME/var/run"],
-    [Path to LDM var/run directory])
+    [Pathname of LDM var/run directory])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
+AC_DEFINE_UNQUOTED([LDM_QUEUE_DIR], ["$LDMHOME/var/queues"],
+    [Pathname of LDM product-queue directory])
 # The following accomodates pre-6.9 LDM installations:
 if test -d $LDMHOME/data -a ! -h $LDMHOME/data; then
     DATA_DIR=$LDMHOME

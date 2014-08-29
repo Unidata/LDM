@@ -58,6 +58,7 @@ if(center == 7)
         case  10: return "NOW";
         case  11: return "GMGWM";
         case  12: return "SURGE";
+        case  14: return "ESTOFS";
         case  19: return "LFM";
         case  25: return "SNO";
 	case  30: return "FORECASTER";
@@ -84,6 +85,7 @@ if(center == 7)
         case  80: return "SPEC62MRF";
         case  81: return "SSIGFS";
         case  82: return "SSIGDAS";
+        case  83: return "HRRR";
         case  84: return s_model_id("NAM",model);
         case  86: return "RUC";
         case  87: return "ENSMB";
