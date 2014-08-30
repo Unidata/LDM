@@ -1,4 +1,4 @@
-6.12.6	2014-08-30T11:08:06-0600
+6.12.6	2014-08-30T17:14:06-0600
     pqcreate(1):
         Changed the assumed mean product size (which is used to compute the
         default number of slots in the product-queue) from 4096 to 51000

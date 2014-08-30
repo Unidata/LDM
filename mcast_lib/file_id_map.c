@@ -181,7 +181,7 @@ unlockMap(void)
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-lockMapAndBlockSigs(void)
+lockMapAndBlockSignals(void)
 {
     int status = lockMap(true);
 
@@ -200,7 +200,7 @@ lockMapAndBlockSigs(void)
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 static inline Ldm7Status
-restoreSigsAndUnlockMap(void)
+restoreSignalsAndUnlockMap(void)
 {
     restoreSigs();
 
@@ -509,7 +509,6 @@ clearMap(void)
 {
     mmo->numSigs = 0;
     mmo->oldSig = 0;
-    mmo->fileId0 = 0;
 }
 
 /**
@@ -690,24 +689,24 @@ fim_put(
         const McastFileId       fileId,
         const signaturet* const sig)
 {
-    int status = lockMapAndBlockSigs();
+    int status = lockMapAndBlockSignals();
 
     if (0 == status) {
         clearMapIfUnexpected(fileId);
 
-        (void)memcpy(mmo->sigs +
-                (mmo->oldSig + mmo->numSigs) % maxSigs,
-                sig, SIG_SIZE);
+        (void)memcpy(mmo->sigs + (mmo->oldSig + mmo->numSigs) % maxSigs, sig,
+                SIG_SIZE);
 
         if (mmo->numSigs < maxSigs) {
-            mmo->numSigs++;
+            if (0 == mmo->numSigs++)
+                mmo->fileId0 = fileId;
         }
         else {
             mmo->oldSig = (mmo->oldSig + 1) % maxSigs;
             mmo->fileId0++;
         }
 
-        status = restoreSigsAndUnlockMap();
+        status = restoreSignalsAndUnlockMap();
     }
 
     return status;
