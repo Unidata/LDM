@@ -1,3 +1,4 @@
+#if 0
 /**
  * Copyright 2014 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
@@ -236,3 +237,5 @@ msm_setPid(
 {
     return LDM7_SYSTEM; // TODO
 }
+
+#endif

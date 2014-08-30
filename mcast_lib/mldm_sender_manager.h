@@ -16,6 +16,8 @@
 #include "pq.h"
 #include "mcast.h"
 
+#include <sys/types.h>
+
 typedef struct mul               Mul;
 
 #ifdef __cplusplus
@@ -50,6 +52,21 @@ mlsm_addPotentialSender(
 Ldm7Status
 mlsm_ensureRunning(
         const feedtypet feedtype);
+
+/**
+ * Handles the termination of a multicast LDM sender process. This function
+ * should be called by the top-level LDM server when it notices that a child
+ * process has terminated.
+ *
+ * @param[in] pid          Process-ID of the terminated multicast LDM sender
+ *                         process.
+ * @retval    0            Success.
+ * @retval    LDM7_NOENT   PID doesn't correspond to known process.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+mlsm_terminated(
+        const pid_t pid);
 
 #ifdef __cplusplus
 }

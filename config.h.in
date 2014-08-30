@@ -130,7 +130,7 @@
 /* Root directory of the LDM installation */
 #undef LDMHOME
 
-/* Path to LDM logging directory */
+/* Pathname of LDM logging directory */
 #undef LDM_LOG_DIR
 
 /* Port on which LDM server listens */
@@ -139,7 +139,10 @@
 /* RPC program-number of LDM server */
 #undef LDM_PROG
 
-/* Path to LDM var/run directory */
+/* Pathname of LDM product-queue directory */
+#undef LDM_QUEUE_DIR
+
+/* Pathname of LDM var/run directory */
 #undef LDM_VAR_RUN_DIR
 
 /* Define if the system log file is a socket */

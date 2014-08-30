@@ -23,12 +23,13 @@ BUILT_SOURCES           = down7.h \
                           sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= down7.c \
+			  file_id_map.c file_id_map.h \
 			  mcast_info.c mcast_info.h \
 			  mldm_receiver.c \
 			  mldm_receiver_memory.c \
 			  mldm_sender_manager.c mldm_sender_manager.h \
 			  mldm_sender_memory.c \
-			  mldm_sender_pids.c mldm_sender_pids.h \
+			  mldm_sender_map.c mldm_sender_map.h \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
 			  file_id_queue.c \
@@ -51,7 +52,7 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 down7.h:		down7.hin down7.c
-mldm_receiver.h:		mldm_receiver.hin mldm_receiver.c
+mldm_receiver.h:	mldm_receiver.hin mldm_receiver.c
 mldm_sender_memory.h:	mldm_sender_memory.hin mldm_sender_memory.c
 mldm_receiver_memory.h:	mldm_receiver_memory.c mldm_receiver_memory.hin
 file_id_queue.h:	file_id_queue.hin file_id_queue.c
@@ -64,13 +65,13 @@ VCMTPReceiver_stubs	= VCMTPReceiver_stub.cpp VCMTPReceiver_stub.hpp
 mcast_stubs		= mcast_stub.c mcast_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
 globals_stubs		= globals_stub.c globals_stub.h
-mldm_sender_pids_stubs	= mldm_sender_pids_stub.c mldm_sender_pids_stub.h
+mldm_sender_map_stubs	= mldm_sender_map_stub.c mldm_sender_map_stub.h
 unistd_stubs		= unistd_stub.c unistd_stub.h
 all_stubs		= $(VCMTPReceiver_stubs) \
                           $(mcast_stubs) \
                           $(pq_stubs) \
                           $(globals_stubs) \
-                          $(mldm_sender_pids_stubs) \
+                          $(mldm_sender_map_stubs) \
                           $(unistd_stubs)
 BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= $(all_stubs) TEST-test.xml
@@ -85,7 +86,7 @@ $(pq_stubs):			../pq/pq.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(globals_stubs):		../registry/globals.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
-$(mldm_sender_pids_stubs):	mldm_sender_pids.h
+$(mldm_sender_map_stubs):	mldm_sender_map.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(unistd_stubs):		/usr/include/unistd.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES) -k fork
@@ -105,7 +106,7 @@ mldm_sender_manager_test_CPPFLAGS	= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_sender_manager_test_LDADD	= mcast_stub.o \
 				  pq_stub.o \
-				  mldm_sender_pids_stub.o \
+				  mldm_sender_map_stub.o \
 				  $(top_builddir)/lib/libldm.la \
 				  unistd_stub.o \
 				  @OPMOCK_LDADD@
@@ -133,7 +134,19 @@ opmock_tests			= $(opmock_check_progs)
 endif
 
 if HAVE_CUNIT
-cunit_check_progs		= file_id_queue_test
+cunit_check_progs		= file_id_map_test \
+                                  mldm_sender_map_test \
+                                  file_id_queue_test
+mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
+mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+mldm_sender_map_test_LDADD	= \
+    $(top_builddir)/lib/libldm.la \
+    @LIBS_CUNIT@
+file_id_map_test_SOURCES	= file_id_map_test.c file_id_map.c
+file_id_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+file_id_map_test_LDADD	= \
+    $(top_builddir)/lib/libldm.la \
+    @LIBS_CUNIT@
 file_id_queue_test_SOURCES	= file_id_queue_test.c file_id_queue.c
 file_id_queue_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 file_id_queue_test_LDADD	= \
@@ -141,6 +154,9 @@ file_id_queue_test_LDADD	= \
     @LIBS_CUNIT@
 cunit_tests			= $(cunit_check_progs)
 
+file_id_map_test_valgrind:	file_id_map_test
+	$(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./file_id_map_test
 file_id_queue_test_valgrind:	file_id_queue_test
 	$(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./file_id_queue_test

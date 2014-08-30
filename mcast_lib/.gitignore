@@ -31,3 +31,5 @@ up7.h
 mcast_ldm_sender_test
 mcast_ldm_sender.h
 mldm_sender_manager_test
+file_id_map_test
+mldm_sender_map_test

@@ -176,7 +176,7 @@ int main(int ac, char *av[])
         }
         else
         {
-#define PQ_AVG_PRODUCT_SIZE 4096
+#define PQ_AVG_PRODUCT_SIZE 51000 // approximate mean size on 2014-08-21
                 /* For default number of product slots, use average product size estimate */
                 nproducts = initialsz/PQ_AVG_PRODUCT_SIZE;
         }

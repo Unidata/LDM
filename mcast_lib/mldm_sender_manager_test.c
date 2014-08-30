@@ -19,7 +19,7 @@
 #include "mcast_info.h"
 #include "mldm_sender_manager.h"
 
-#include "mldm_sender_pids_stub.h"
+#include "mldm_sender_map_stub.h"
 #include "mcast_stub.h"
 #include "pq_stub.h"
 #include "unistd_stub.h"
@@ -73,7 +73,7 @@ cmp_bool(void *a, void *b, const char * name, char * message)
     return -1;
 }
 
-static int msp_get_callback(
+static int msm_getPid_callback(
     const feedtypet feedtype,
     pid_t* const    pid,
     const int       callCount)
@@ -98,12 +98,12 @@ static void test_conflict()
 
 static void test_not_running()
 {
-    msp_lock_ExpectAndReturn(true, 0, cmp_bool);
+    msm_lock_ExpectAndReturn(true, 0, cmp_bool);
     mcastPid = 1; // kill(1, 0) will return -1 -- emulating no-such-process
-    msp_get_MockWithCallback(msp_get_callback);
+    msm_getPid_MockWithCallback(msm_getPid_callback);
     fork_ExpectAndReturn(1);
-    msp_put_ExpectAndReturn(feedtype, mcastPid, 0, cmp_int, cmp_int);
-    msp_unlock_ExpectAndReturn(0);
+    msm_put_ExpectAndReturn(feedtype, mcastPid, 0, cmp_int, cmp_int);
+    msm_unlock_ExpectAndReturn(0);
     OP_ASSERT_TRUE(mlsm_ensureRunning(feedtype) == 0);
     log_log(LOG_ERR);
     OP_VERIFY();
@@ -111,10 +111,10 @@ static void test_not_running()
 
 static void test_running()
 {
-    msp_lock_ExpectAndReturn(true, 0, cmp_bool);
+    msm_lock_ExpectAndReturn(true, 0, cmp_bool);
     mcastPid = getpid(); // emulate running process
-    msp_get_MockWithCallback(msp_get_callback);
-    msp_unlock_ExpectAndReturn(0);
+    msm_getPid_MockWithCallback(msm_getPid_callback);
+    msm_unlock_ExpectAndReturn(0);
     OP_ASSERT_TRUE(mlsm_ensureRunning(feedtype) == 0);
     log_log(LOG_ERR);
     OP_VERIFY();

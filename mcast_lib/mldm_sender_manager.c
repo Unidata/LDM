@@ -19,7 +19,7 @@
 #include "mcast.h"
 #include "mcast_info.h"
 #include "mldm_sender_manager.h"
-#include "mldm_sender_pids.h"
+#include "mldm_sender_map.h"
 #include "ldmprint.h"
 #include "pq.h"
 #include "StrBuf.h"
@@ -38,6 +38,7 @@ static void* mcastInfoSet;
 /**
  * Indicates if a particular multicast LDM sender is running.
  *
+ * @pre                    {Multicast LDM sender PID map is locked for writing}.
  * @param[in] feedtype     Feed-type of multicast group.
  * @retval    0            The multicast LDM sender associated with the given
  *                         multicast group is running.
@@ -49,7 +50,7 @@ mlsm_isRunning(
         const feedtypet feedtype)
 {
     pid_t pid;
-    int   status = msp_get(feedtype, &pid);
+    int   status = msm_getPid(feedtype, &pid);
 
     if (status == 0) {
         if (kill(pid, 0) == 0) {
@@ -63,6 +64,7 @@ mlsm_isRunning(
                     "process can't be signaled by this process. I'll assume "
                     "the relevant multicast LDM sender is not running.",
                     s_feedtypet(feedtype), pid);
+            (void)msm_removePid(pid);
             status = LDM7_NOENT;
         }
     }
@@ -179,7 +181,7 @@ mlsm_execute(
     int             status = mlsm_spawn(info, &pid);
 
     if (0 == status) {
-        if ((status = msp_put(feedtype, pid)) != 0) {
+        if ((status = msm_put(feedtype, pid)) != 0) {
             const char* const id = mi_asFilename(info);
 
             LOG_ADD("Terminating just-started multicast LDM sender for "
@@ -339,15 +341,40 @@ mlsm_ensureRunning(
         status = LDM7_NOENT;
     }
     else {
-        if (0 == (status = msp_lock(true))) {
+        if (0 == (status = msm_lock(true))) {
             status = mlsm_isRunning(feedtype);
 
             if (status == LDM7_NOENT)
                 status = mlsm_execute(*(McastInfo**)node);
 
-            (void)msp_unlock();
+            (void)msm_unlock();
         } // multicast LDM sender PID map is locked
     } // feedtype maps to potential multicast LDM sender
+
+    return status;
+}
+
+/**
+ * Handles the termination of a multicast LDM sender process. This function
+ * should be called by the top-level LDM server when it notices that a child
+ * process has terminated.
+ *
+ * @param[in] pid          Process-ID of the terminated multicast LDM sender
+ *                         process.
+ * @retval    0            Success.
+ * @retval    LDM7_NOENT   PID doesn't correspond to known process.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+mlsm_terminated(
+        const pid_t pid)
+{
+    int status = msm_lock(true);
+
+    if (0 == status) {
+        status = msm_removePid(pid);
+        (void)msm_unlock();
+    }
 
     return status;
 }
