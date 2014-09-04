@@ -34,8 +34,8 @@ ssh -T $USER_NAME@$host bash --login <<EOF
         cd $PKG_ID && tar -xf - && rm -rf src && mv -f $PKG_ID src)
     rm $SOURCE_DISTRO_NAME
     cd $RELPATH_DISTRO_SOURCE_DIR
-    ./configure --disable-root-actions ${configOpts} CFLAGS=-g >configure.log 2>&1
-    make install >install.log 2>&1
+    ./configure --disable-root-actions ${configOpts} CFLAGS=-g
+    make install
 EOF
 
 # As the superuser on the remote host, perform the root actions.
@@ -44,7 +44,7 @@ ssh -T root@$host bash --login <<EOF
     set -x -e
     ldmHome=\`awk -F: '\$1~/^$USER_NAME\$/{print \$6}' /etc/passwd\`
     cd \$ldmHome/$RELPATH_DISTRO_SOURCE_DIR
-    make root-actions >root-actions.log 2>&1
+    make root-actions
 EOF
 
 # As the LDM user on the remote host, execute the new package.
