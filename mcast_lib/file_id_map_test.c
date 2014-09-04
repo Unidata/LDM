@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 static const char* const pathname = "file_id.map";
+static const signaturet  signatures[] = {{1}, {2}, {3}, {4}};
 
 /**
  * Only called once.
@@ -38,7 +39,17 @@ static int teardown(void)
     return 0;
 }
 
-static void test_fim_openForWriting_0(
+static void closeMap(void)
+{
+    CU_ASSERT_EQUAL_FATAL(fim_close(), 0);
+}
+
+static void unlinkMap(void)
+{
+    CU_ASSERT_EQUAL_FATAL(unlink(pathname), 0);
+}
+
+static void test_openForWriting_0(
         void)
 {
     (void)unlink(pathname);
@@ -47,19 +58,141 @@ static void test_fim_openForWriting_0(
     CU_ASSERT_EQUAL_FATAL(status, LDM7_INVAL);
 }
 
-static void test_fim_openForWriting_3(
+static void test_openForWriting_3(
         void)
 {
-    signaturet signature1 = {1};
+    int status;
 
-    int status = fim_openForWriting(pathname, 3);
+    (void)unlink(pathname);
+    status = fim_openForWriting(pathname, 3);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    CU_ASSERT_EQUAL(fim_put(1, &signature1), 0);
+    closeMap();
+    unlinkMap();
+}
 
-    CU_ASSERT_EQUAL_FATAL(fim_close(), 0);
+static void openForWriting(
+        unsigned maxSigs)
+{
+    int status = fim_openForWriting(pathname, maxSigs);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+}
+
+static void openForReading(void)
+{
+    int status = fim_openForReading(pathname);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+}
+
+static void openNew(
+        unsigned maxSigs)
+{
     (void)unlink(pathname);
+    openForWriting(maxSigs);
+}
+
+static void closeAndUnlink(void)
+{
+    closeMap();
+    unlinkMap();
+}
+
+static void exists(
+        const McastFileId fileId,
+        const signaturet* signature)
+{
+    signaturet sig;
+
+    CU_ASSERT_EQUAL_FATAL(fim_get(fileId, &sig), 0);
+    CU_ASSERT_NSTRING_EQUAL(sig, signature, sizeof(signaturet));
+}
+
+static void doesNotExist(
+        const McastFileId fileId)
+{
+    signaturet sig;
+
+    CU_ASSERT_EQUAL(fim_get(fileId, &sig), LDM7_NOENT);
+}
+
+static void test_put(
+        void)
+{
+    openNew(1);
+
+    CU_ASSERT_EQUAL_FATAL(fim_put(0, &signatures[0]), 0);
+    exists(0, &signatures[0]);
+
+    closeAndUnlink();
+}
+
+static void put4(void)
+{
+    for (int i = 0; i < 4; i++)
+        CU_ASSERT_EQUAL_FATAL(fim_put(i, &signatures[i]), 0);
+}
+
+static void get4(void)
+{
+    signaturet sig;
+
+    doesNotExist(0);
+
+    exists(1, &signatures[1]);
+    exists(2, &signatures[2]);
+    exists(3, &signatures[3]);
+
+    doesNotExist(4);
+}
+
+static void test_get(
+        void)
+{
+    openNew(3);
+    put4();
+    get4();
+    closeAndUnlink();
+}
+
+static void test_persistence(void)
+{
+    openNew(3);
+    put4();
+    closeMap();
+    openForReading();
+    get4();
+    closeAndUnlink();
+}
+
+static void test_decrease(void)
+{
+    openNew(3);
+    put4();
+    closeMap();
+    openForWriting(2);
+
+    doesNotExist(1);
+    exists(2, &signatures[2]);
+    exists(3, &signatures[3]);
+    doesNotExist(4);
+
+    closeAndUnlink();
+}
+
+static void test_putNonSequential(void)
+{
+    openNew(3);
+    put4();
+    CU_ASSERT_EQUAL(fim_put(10, &signatures[0]), 0);
+    doesNotExist(1);
+    doesNotExist(2);
+    doesNotExist(3);
+    exists(10, &signatures[0]);
+    doesNotExist(11);
+    closeAndUnlink();
 }
 
 int main(
@@ -78,8 +211,14 @@ int main(
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
             if (NULL != testSuite) {
-                if (    CU_ADD_TEST(testSuite, test_fim_openForWriting_0) &&
-                        CU_ADD_TEST(testSuite, test_fim_openForWriting_3)) {
+                if (    CU_ADD_TEST(testSuite, test_openForWriting_0) &&
+                        CU_ADD_TEST(testSuite, test_openForWriting_3) &&
+                        CU_ADD_TEST(testSuite, test_put) &&
+                        CU_ADD_TEST(testSuite, test_get) &&
+                        CU_ADD_TEST(testSuite, test_persistence) &&
+                        CU_ADD_TEST(testSuite, test_decrease) &&
+                        CU_ADD_TEST(testSuite, test_putNonSequential)
+                        ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
                 }

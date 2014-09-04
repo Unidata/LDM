@@ -55,10 +55,10 @@ typedef struct {
     /*
      * Keep consonant with `fileSizeFromNumSigs()` and `numSigsFromFileSize()`
      */
-    size_t      numSigs; ///< Number of signatures
-    size_t      oldSig;  ///< Offset of oldest signature
-    McastFileId fileId0; ///< File-Id of oldest signature
-    signaturet  sigs[1]; ///< Data-products signatures
+    size_t      numSigs;   ///< Number of signatures
+    size_t      oldSig;    ///< Offset of oldest signature
+    McastFileId oldFileId; ///< File-Id of oldest signature
+    signaturet  sigs[1];   ///< Data-products signatures
 } Mmo;
 static Mmo*         mmo;
 /**
@@ -86,6 +86,10 @@ static size_t       fileSize;
  * Signal mask for saved signals.
  */
 static sigset_t     saveSet;
+/**
+ * Whether or not the file-identifier map is open for writing:
+ */
+static bool         forWriting;
 
 /**
  * Initializes some static members of this module.
@@ -231,7 +235,7 @@ fileSizeFromNumSigs(
  *                  in the file.
  */
 static inline size_t
-numSigsFromFileSize(
+maxSigsFromFileSize(
         const size_t size)
 {
     return (size < sizeof(*mmo))
@@ -265,15 +269,15 @@ fileSizeFromFile(void)
 /**
  * Memory-maps the file containing the file-identifier map.
  *
- * @pre                 {`fd` is open and `pathname` is set}
+ * @pre                 {`forWriting`, `fd`, and `pathname` are set}
  * @retval 0            Success.
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 mapMap(void)
 {
-    void* const ptr = mmap(NULL, fileSize, PROT_READ|PROT_WRITE, MAP_SHARED,
-            fd, 0);
+    void* const ptr = mmap(NULL, fileSize,
+            forWriting ? PROT_READ|PROT_WRITE : PROT_READ, MAP_SHARED, fd, 0);
 
     if (MAP_FAILED == ptr) {
         LOG_SERROR2("Couldn't memory-map %s (\"%s\")", MMO_DESC, pathname);
@@ -288,7 +292,7 @@ mapMap(void)
 /**
  * Un-memory-maps the file containing the file-identifier map.
  *
- * @pre                 {`fd` is open and `pathname` is set}
+ * @pre                 {`fd` and `pathname` are set}
  * @retval 0            Success.
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  * @return
@@ -327,10 +331,10 @@ truncateMap(
 }
 
 /**
- * Consolidates the contents of the file-identifier map in the unadjusted file
- * into one contiguous segment.
+ * Consolidates the contents of the file-identifier map into one contiguous
+ * segment.
  *
- * @param[in] max          Maximum number of signatures in the unadjusted file.
+ * @param[in] max          Maximum number of signatures in the file.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
@@ -339,13 +343,13 @@ consolidateMap(
         const size_t max)
 {
     /*
-     * In general, the signatures in the (unadjusted) circular buffer will be in
-     * two contiguous segments: a "new" segment and an "old" segment. The "new"
+     * In general, the signatures in the circular buffer will be in two
+     * contiguous segments: a "new" segment and an "old" segment. The "new"
      * segment comprises the more recent signatures from the beginning of the
      * buffer to just before `oldSeg`; the "old" segment comprises the older
-     * signatures from `oldSeg` to the end of the (unadjusted) buffer. The goal
-     * of this function is to consolidate the two segments into one contiguous
-     * segment with the oldest signature at the beginning of the buffer.
+     * signatures from `oldSeg` to the end of the buffer. This function
+     * consolidates the two segments into one contiguous segment with the oldest
+     * signature at the beginning of the buffer.
      */
     int          status;
     const size_t newCount = mmo->oldSig;
@@ -412,7 +416,7 @@ shiftMapDown(
 
         (void)memmove(mmo->sigs, mmo->sigs + delta, max*SIG_SIZE);
         mmo->numSigs = max;
-        mmo->fileId0 += delta;
+        mmo->oldFileId += delta;
     }
 
     maxSigs = max;
@@ -439,7 +443,7 @@ expandMapAndMap(
 
     if (0 == status) {
         if (0 == (status = mapMap())) {
-            consolidateMap(numSigsFromFileSize(oldSize));
+            consolidateMap(maxSigsFromFileSize(oldSize));
         } // file is memory-mapped
     } // file size was increased
 
@@ -468,7 +472,7 @@ contractMapAndMap(
 
     (status = mapMap()) ||
     (status = consolidateMap(maxSigs)) ||
-    (status = shiftMapDown(numSigsFromFileSize(newSize))) ||
+    (status = shiftMapDown(maxSigsFromFileSize(newSize))) ||
     (status = unmapMap()) ||
     (status = truncateMap(newSize)) ||
     (status = mapMap());
@@ -562,21 +566,19 @@ initMapAndMap(
 }
 
 /**
- * Opens the file containing the file-identifier map for reading and writing.
+ * Opens a file containing a file-identifier map.
  *
- * @param[in]  path         Pathname of the file. Caller may free.
- * @param[out] isNew        Whether or not the file was created.
- * @retval     0            Success. `pathname`, `fd`, and `*isNew` are set.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @param[in] path         Pathname of file.
+ * @return    0            Success. `fd` and `pathname` are set.
+ * @return    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-openMapForWriting(
-        const char* const restrict path,
-        bool* const restrict       isNew)
+openMap(
+        const char* const restrict path)
 {
     int status;
 
-    fd = open(path, O_RDWR|O_CREAT, 0666);
+    fd = open(path, forWriting ? O_RDWR|O_CREAT : O_RDONLY, 0666);
 
     if (-1 == fd) {
         LOG_SERROR2("Couldn't open %s (\"%s\")", MMO_DESC, path);
@@ -584,10 +586,57 @@ openMapForWriting(
     }
     else {
         strncpy(pathname, path, sizeof(pathname))[sizeof(pathname)-1] = 0;
+        status = 0;
+    }
 
+    return status;
+}
+
+/**
+ * Opens the file containing the file-identifier map for reading and writing.
+ *
+ * @param[in]  path         Pathname of the file. Caller may free.
+ * @param[out] isNew        Whether or not the file was created.
+ * @retval     0            Success. `forWriting`, `pathname`, `fd`, and
+ *                          `*isNew` are set.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ */
+static Ldm7Status
+openMapForWriting(
+        const char* const restrict path,
+        bool* const restrict       isNew)
+{
+    forWriting = true;
+
+    int status = openMap(path);
+
+    if (0 == status) {
         if (0 == (status = fileSizeFromFile()))
             *isNew = 0 == fileSize;
     }
+
+    return status;
+}
+
+/**
+ * Opens the file containing the file-identifier map for reading.
+ *
+ * @param[in]  path         Pathname of the file. Caller may free.
+ * @retval     0            Success. `forWriting`, `pathname`, `fd`, `fileSize`,
+ *                          and `maxSigs` are set.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ */
+static Ldm7Status
+openMapForReading(
+        const char* const restrict path)
+{
+    forWriting = false;
+
+    int status = openMap(path);
+
+    if (0 == status)
+        if (0 == (status = fileSizeFromFile()))
+            maxSigs = maxSigsFromFileSize(fileSize);
 
     return status;
 }
@@ -603,14 +652,14 @@ static inline void
 clearMapIfUnexpected(
         const McastFileId fileId)
 {
-    if (mmo->numSigs && (fileId != mmo->fileId0 + mmo->numSigs))
+    if (mmo->numSigs && (fileId != mmo->oldFileId + mmo->numSigs))
         clearMap();
 }
 
 /**
- * Initializes this module for read and write access to a  file-identifier map
- * contained in a file. Creates the file (with an empty map) if it doesn't
- * exist.
+ * Opens the file-identifier map for writing. Creates the associated file (with
+ * an empty map) if it doesn't exist. A process should call this function
+ * at most once.
  *
  * @param[in] pathname     Pathname of the file. Caller may free.
  * @param[in] maxSigs      Maximum number of data-product signatures. Must be
@@ -634,10 +683,10 @@ fim_openForWriting(
         status = LDM7_INVAL;
     }
     else {
-        initModule();
-
         bool isNew;
-        int  status = openMapForWriting(pathname, &isNew);
+
+        initModule();
+        status = openMapForWriting(pathname, &isNew);
 
         if (0 == status) {
             if ((status = initMapAndMap(maxSigs, isNew))) {
@@ -647,7 +696,36 @@ fim_openForWriting(
                     (void)unlink(pathname);
             }
         } // `fd` open
-    }
+    } // `maxSigs > 0`
+
+    return status;
+}
+
+/**
+ * Opens the file-identifier map for reading. A process should call this
+ * function at most once.
+ *
+ * @param[in] pathname     Pathname of the file. Caller may free.
+ * @retval    0            Success.
+ * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
+ *                         `log_add()` called. The file wasn't opened or
+ *                         created.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ *                         file is unspecified.
+ */
+Ldm7Status
+fim_openForReading(
+        const char* const pathname)
+{
+    int status;
+
+    initModule();
+    status = openMapForReading(pathname);
+
+    if (0 == status) {
+        if ((status = mapMap()))
+            (void)close(fd);
+    } // `fd` open
 
     return status;
 }
@@ -699,15 +777,52 @@ fim_put(
 
         if (mmo->numSigs < maxSigs) {
             if (0 == mmo->numSigs++)
-                mmo->fileId0 = fileId;
+                mmo->oldFileId = fileId;
         }
         else {
             mmo->oldSig = (mmo->oldSig + 1) % maxSigs;
-            mmo->fileId0++;
+            mmo->oldFileId++;
         }
 
         status = restoreSignalsAndUnlockMap();
     }
+
+    return status;
+}
+
+/**
+ * Returns the data-product signature to which a file-identifier maps.
+ *
+ * @param[in]  fileId       File-identifier.
+ * @param[out] sig          Data-product signature mapped-to by `fileId`.
+ * @return     0            Success.
+ * @retval     LDM7_NOENT   File-identifier is unknown.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+fim_get(
+        const McastFileId fileId,
+        signaturet* const sig)
+{
+    int status = lockMap(0); // shared lock
+
+    if (0 == status) {
+        const McastFileId delta = fileId - mmo->oldFileId;
+
+        if (delta >= mmo->numSigs) {
+            status = LDM7_NOENT;
+        }
+        else {
+            (void)memcpy(sig, mmo->sigs + (mmo->oldSig + delta) % maxSigs,
+                    SIG_SIZE);
+            status = 0;
+        }
+
+        int stat = unlockMap();
+
+        if (stat)
+            status = stat;
+    } // map is locked
 
     return status;
 }

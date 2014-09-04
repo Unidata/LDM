@@ -34,6 +34,22 @@ fim_openForWriting(
         const size_t      maxSigs);
 
 /**
+ * Opens the file-identifier map for reading. A process should call this
+ * function at most once.
+ *
+ * @param[in] pathname     Pathname of the file. Caller may free.
+ * @retval    0            Success.
+ * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
+ *                         `log_add()` called. The file wasn't opened or
+ *                         created.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ *                         file is unspecified.
+ */
+Ldm7Status
+fim_openForReading(
+        const char* const pathname);
+
+/**
  * Closes the file-identifier map.
  *
  * @retval 0            Success.
@@ -57,6 +73,20 @@ Ldm7Status
 fim_put(
         const McastFileId       fileId,
         const signaturet* const sig);
+
+/**
+ * Returns the data-product signature to which a file-identifier maps.
+ *
+ * @param[in]  fileId       File-identifier.
+ * @param[out] sig          Data-product signature mapped-to by `fileId`.
+ * @return     0            Success.
+ * @retval     LDM7_NOENT   File-identifier is unknown.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+fim_get(
+        const McastFileId fileId,
+        signaturet* const sig);
 
 #ifdef __cplusplus
     }

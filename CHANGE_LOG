@@ -1,8 +1,12 @@
-6.12.6	2014-09-04T12:17:07-0600
+6.12.6	2014-09-04T13:27:54-0600
     pqcreate(1):
         Changed the assumed mean product size (which is used to compute the
         default number of slots in the product-queue) from 4096 to 51000
         bytes to better match current reality.
+        
+    NOAAPORT:
+        Enhanced GRIB2 decoding by adding "ESTOFS" and "HRRR" model codes for
+        the NCEP "center".
 
 6.12.5	2014-08-21T13:57:50-0600
     Installation:
