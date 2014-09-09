@@ -1,3 +1,6 @@
+6.12.7	2014-09-09T17:08:39-0600
+    Not released.
+
 6.12.6	2014-09-04T13:56:41-0600
     pqcreate(1):
         Changed the assumed mean product size (which is used to compute the
@@ -6,7 +9,7 @@
         
     NOAAPORT:
         Enhanced GRIB2 decoding by adding "ESTOFS" and "HRRR" model codes for
-        the NCEP "center".
+        the NCEP center.
 
 6.12.5	2014-08-21T13:57:50-0600
     Installation:

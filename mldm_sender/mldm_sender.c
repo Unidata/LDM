@@ -14,9 +14,11 @@
 #include "config.h"
 
 #include "atofeedt.h"
+#include "file_id_map.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "ldm.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "mcast.h"
 #include "mcast_info.h"
@@ -40,9 +42,9 @@
 
 typedef struct {
     void*                 mcastSender;
-    pqueue*               pq;
     McastInfo             mcastInfo;
     pthread_t             mcastThread;
+    McastFileId           fileId;
     volatile sig_atomic_t done;
 } McastLdmSender;
 
@@ -150,7 +152,7 @@ mls_usage(void)
 "    groupId:groupPort Internet service address of multicast group, where\n"
 "                      <groupId> is either a group-name or a dotted-decimal\n"
 "                      IPv4 address and <groupPort> is the port number.\n"
-"    serverPort        Port number of TCP server.",
+"    serverPort        Port number for VCMTP TCP server.",
             getulogident(), getQueuePath());
 }
 
@@ -511,6 +513,52 @@ mls_getIpv4Addr(
 }
 
 /**
+ * Opens the file-identifier map for updating.
+ *
+ * @param[in] mls          Multicast LDM sender object.
+ * @param[in] feed         Feedtype to be multicast.
+ * @param[in] maxSigs      Maximum number of signatures that the file-identifier
+ *                         must contain.
+ * @retval    0            Success.
+ * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
+ *                         `log_add()` called. The file wasn't opened or
+ *                         created.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+static Ldm7Status
+mls_openFileIdMap(
+        McastLdmSender* const restrict  mls,
+        const feedtypet                 feed,
+        const size_t                    maxSigs)
+{
+    int         status;
+    /* Queue pathname is cloned because `dirname()` may alter its argument */
+    char* const queuePathname = strdup(getQueuePath());
+
+    if (NULL == queuePathname) {
+        LOG_SERROR0("Couldn't duplicate product-queue pathname");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        char* const mapPathname = ldm_format(256, "%s/%s.map",
+                dirname(queuePathname), s_feedtypet(feed));
+
+        if (NULL == mapPathname) {
+            LOG_ADD0("Couldn't construct pathname of file-identifier map");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            status = fim_openForWriting(mapPathname, maxSigs);
+            free(mapPathname);
+        } // `mapPathname` allocated
+
+        free(queuePathname);
+    } // `queuePathname` allocated
+
+    return status;
+}
+
+/**
  * Initializes a multicast LDM sender.
  *
  * @param[in]  mls          The multicast LDM sender.
@@ -545,38 +593,48 @@ mls_init(
             serverInetAddr);
 
     if (status)
-        return status;
+        goto return_status;
 
     char groupInetAddr[INET_ADDRSTRLEN];
 
     if ((status = mls_getIpv4Addr(info->group.inetId, "multicast-group",
             groupInetAddr)))
-        return status;
-
-    if ((status = mcastSender_new(&mls->mcastSender, serverInetAddr,
-            info->server.port, groupInetAddr, info->group.port, ttl)))
-        return (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
+        goto return_status;
 
     if (pq_open(pqPathname, PQ_READONLY, &pq)) {
         LOG_START1("Couldn't open product-queue \"%s\"", pqPathname);
         status = LDM7_SYSTEM;
-        goto free_mcastSender;
+        goto return_status;
+    }
+
+    if ((status = mls_openFileIdMap(mls, info->feed, pq_getSlotCount(pq))))
+        goto close_pq;
+
+    if ((status = fim_getNextFileId(&mls->fileId)))
+        goto close_fileId_map;
+
+    if ((status = mcastSender_new(&mls->mcastSender, serverInetAddr,
+            info->server.port, groupInetAddr, info->group.port, ttl))) {
+        status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
+        goto close_fileId_map;
     }
 
     if (mi_copy(&mls->mcastInfo, info)) {
         status = LDM7_SYSTEM;
-        goto close_pq;
+        goto free_mcastSender;
     }
 
-    mls->pq = pq;
     mls->done = 0;
 
     return 0;
 
-close_pq:
-    (void)pq_close(pq);
 free_mcastSender:
     mcastSender_free(mls->mcastSender);
+close_fileId_map:
+    (void)fim_close();
+close_pq:
+    (void)pq_close(pq);
+return_status:
     return status;
 }
 
@@ -594,13 +652,12 @@ mls_destroy(
 {
     /* Releasing fields but not the object is what `xdr_free()` does. */
     (void)xdr_free(xdr_McastInfo, (char*)&mls->mcastInfo);
-    (void)pq_close(mls->pq);
+    (void)pq_close(pq);
     mcastSender_free(mls->mcastSender);
 }
 
 /**
- * Multicasts a single data-product of a multicast LDM sender. Called by
- * `pq_sequence()`.
+ * Multicasts a single data-product. Called by `pq_sequence()`.
  *
  * @param[in] info   Pointer to the data-product's metadata.
  * @param[in] data   Pointer to the data-product's data.
@@ -619,7 +676,29 @@ mls_multicastProduct(
     const size_t                    size,
     void* const restrict            arg)
 {
-    return mcastSender_send(((McastLdmSender*)arg)->mcastSender, xprod, size);
+    McastLdmSender* const mls = arg;
+    int                   status = mcastSender_send(mls->mcastSender, xprod,
+            size);
+
+    if (0 == status) {
+        prod_info info;
+        XDR       xdrs;
+
+        xdrmem_create(&xdrs, xprod, size, XDR_DECODE);
+
+        if (!xdr_prod_info(&xdrs, &info)) {
+            LOG_SERROR0("Couldn't decode LDM product-metadata");
+            status = EIO;
+        }
+        else {
+            status = fim_put(mls->fileId++, &info.signature);
+            xdr_free(xdr_prod_info, (char*)&info);
+        }
+
+        xdr_destroy(&xdrs);
+    }
+
+    return status;
 }
 
 /**
@@ -686,8 +765,7 @@ mls_tryMulticast(
     McastLdmSender* const restrict mls,
     prod_class* const restrict     prodClass)
 {
-    int status = pq_sequence(mls->pq, TV_GT, prodClass, mls_multicastProduct,
-            mls);
+    int status = pq_sequence(pq, TV_GT, prodClass, mls_multicastProduct, mls);
 
     if (status == PQUEUE_END) {
         /*
@@ -771,31 +849,27 @@ mls_startTermSigWaiter(
 /**
  * Starts multicasting data-products.
  *
+ * @pre                     {`mls_init(mls)` was called.}
  * @param[in]  mls          Multicast LDM sender.
  * @retval     0            Success. `mls->thread` is set.
  * @retval     LDM7_SYSTEM  Error. `log_start()` called.
- * @pre                     `mls_init(mls)` was called.
  */
 static Ldm7Status
 mls_startMulticasting(
-    McastLdmSender* const mls)
+        McastLdmSender* const mls)
 {
-    prod_class*           prodClass;
-    int                   status = mls_setProdClass(mls, &prodClass);
+    prod_class* prodClass;
+    int         status = mls_setProdClass(mls, &prodClass);
 
     if (status == 0) {
-        pq_cset(mls->pq, &prodClass->from);
+        pq_cset(pq, &prodClass->from);
 
         do {
-            if ((status = mls_tryMulticast(mls, prodClass)))
-                break;
-        } while (!mls->done);
+            status = mls_tryMulticast(mls, prodClass);
+        } while (0 == status && !mls->done);
 
         free_prod_class(prodClass);
     } // `prodClass` allocated
-
-    if (status)
-        log_log(LOG_ERR);
 
     return status;
 }

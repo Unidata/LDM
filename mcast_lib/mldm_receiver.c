@@ -319,6 +319,8 @@ eof_func(
                     fileSize-(xdrs.x_private-xdrs.x_base));
             xdr_free(xdr_prod_info, (char*)&info);
         } /* "info" allocated */
+
+        xdr_destroy(&xdrs);
     } /* region in product-queue was allocated */
 
     return status;

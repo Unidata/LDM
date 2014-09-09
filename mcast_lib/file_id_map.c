@@ -31,7 +31,7 @@
 
 #ifndef _XOPEN_PATH_MAX
 /* For some reason, the following isn't defined by gcc(1) 4.8.3 on Fedora 19 */
-#   define _XOPEN_PATH_MAX 1024
+#   define _XOPEN_PATH_MAX 1024 // value mandated by XPG6; includes NUL
 #endif
 
 /**
@@ -679,7 +679,7 @@ fim_openForWriting(
     int status;
 
     if (0 == maxSigs) {
-        LOG_ADD0("Maximum number of signatures must be positive");
+        LOG_START0("Maximum number of signatures must be positive");
         status = LDM7_INVAL;
     }
     else {
@@ -819,7 +819,6 @@ fim_get(
         }
 
         int stat = unlockMap();
-
         if (stat)
             status = stat;
     } // map is locked
@@ -827,158 +826,27 @@ fim_get(
     return status;
 }
 
-#if 0
-
 /**
- * Locks the map. Idempotent. Blocks until the lock is acquired or an error
- * occurs.
+ * Returns the next file-identifier that should be put into the file-identifier
+ * map. The file-identifier will be zero if the map is empty.
  *
- * @param[in] exclusive    Lock for exclusive access?
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @param[out] fileId       Next file-identifier.
+ * @retval     0            Success. `*fileId` is set.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-fim_lock(
-        const bool exclusive)
+fim_getNextFileId(
+        McastFileId* const fileId)
 {
-    lock.l_type = exclusive ? F_RDLCK : F_WRLCK;
+    int status = lockMap(0); // shared lock
 
-    if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        LOG_SERROR1("Couldn't lock %s", SMO_NAME);
-        return LDM7_SYSTEM;
-    }
+    if (0 == status) {
+        *fileId = mmo->oldFileId + mmo->numSigs;
 
-    return 0;
-}
-
-/**
- * Adds a mapping between a feed-type and a multicast LDM sender process-ID.
- *
- * @param[in] feedtype     Feed-type.
- * @param[in] pid          Multicast LDM sender process-ID.
- * @retval    0            Success.
- * @retval    LDM7_DUP     Process identifier duplicates existing entry.
- *                         `log_add()` called.
- * @retval    LDM7_DUP     Feed-type overlaps with feed-type being sent by
- *                         another process. `log_add()` called.
- */
-Ldm7Status
-fim_put(
-        const feedtypet feedtype,
-        const pid_t     pid)
-{
-    unsigned  ibit;
-    feedtypet mask;
-
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
-        if ((feedtype & mask) && pids[ibit]) {
-            LOG_START2("Feed-type %s is already being sent by process %ld",
-                    s_feedtypet(mask), (long)pids[ibit]);
-            return LDM7_DUP;
-        }
-        if (pid == pids[ibit]) {
-            LOG_START2("Process %ld is already sending feed-type %s",
-                    (long)pids[ibit], s_feedtypet(mask));
-            return LDM7_DUP;
-        }
-    }
-
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++)
-        if (feedtype & mask)
-            pids[ibit] = pid;
-
-    return 0;
-}
-
-/**
- * Returns the process-ID associated with a feed-type.
- *
- * @param[in]  feedtype     Feed-type.
- * @param[out] pid          Associated feed-type.
- * @retval     0            Success. `*pid` is set.
- * @retval     LDM7_NOENT   No PID associated with feed-type.
- */
-Ldm7Status
-fim_getPid(
-        const feedtypet feedtype,
-        pid_t* const    pid)
-{
-    unsigned  ibit;
-    feedtypet mask;
-
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
-        if ((mask & feedtype) && pids[ibit]) {
-            *pid = pids[ibit];
-            return 0;
-        }
-    }
-
-    return LDM7_NOENT;
-}
-
-/**
- * Unlocks the map.
- *
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
- */
-Ldm7Status
-fim_unlock(void)
-{
-    lock.l_type = F_UNLCK;
-
-    if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        LOG_SERROR1("Couldn't unlock %s", SMO_NAME);
-        return LDM7_SYSTEM;
-    }
-
-    return 0;
-}
-
-/**
- * Removes the entry corresponding to a process identifier.
- *
- * @param[in] pid          Process identifier.
- * @retval    0            Success. `msp_getPid()` for the associated feed-type
- *                         will return LDM7_NOENT.
- * @retval    LDM7_NOENT   No entry corresponding to given process identifier.
- *                         Database is unchanged.
- */
-Ldm7Status
-fim_removePid(
-        const pid_t pid)
-{
-    int       status = LDM7_NOENT;
-    unsigned  ibit;
-    feedtypet mask;
-
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
-        if (pid == pids[ibit]) {
-            pids[ibit] = 0;
-            status = 0;
-        }
-    }
+        int stat = unlockMap();
+        if (stat)
+            status = stat;
+    } // map is locked
 
     return status;
 }
-
-/**
- * Destroys this module. Should be called only once per LDM session.
- *
- * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
- */
-Ldm7Status
-fim_destroy(void)
-{
-    if (close(fileDes)) {
-        LOG_SERROR1("Couldn't close %s", SMO_NAME);
-        return LDM7_SYSTEM;
-    }
-
-    (void)shm_unlink(SMO_FILENAME);
-
-    return 0;
-}
-
-#endif

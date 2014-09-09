@@ -88,6 +88,18 @@ fim_get(
         const McastFileId fileId,
         signaturet* const sig);
 
+/**
+ * Returns the next file-identifier that should be put into the file-identifier
+ * map. The file-identifier will be zero if the map is empty.
+ *
+ * @param[out] fileId       Next file-identifier.
+ * @retval     0            Success. `*fileId` is set.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+fim_getNextFileId(
+        McastFileId* const fileId);
+
 #ifdef __cplusplus
     }
 #endif

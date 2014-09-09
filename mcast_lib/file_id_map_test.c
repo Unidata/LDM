@@ -102,12 +102,12 @@ static void closeAndUnlink(void)
 
 static void exists(
         const McastFileId fileId,
-        const signaturet* signature)
+        const int         iSig)
 {
     signaturet sig;
 
     CU_ASSERT_EQUAL_FATAL(fim_get(fileId, &sig), 0);
-    CU_ASSERT_NSTRING_EQUAL(sig, signature, sizeof(signaturet));
+    CU_ASSERT_NSTRING_EQUAL(sig, signatures[iSig], sizeof(signaturet));
 }
 
 static void doesNotExist(
@@ -124,7 +124,7 @@ static void test_put(
     openNew(1);
 
     CU_ASSERT_EQUAL_FATAL(fim_put(0, &signatures[0]), 0);
-    exists(0, &signatures[0]);
+    exists(0, 0);
 
     closeAndUnlink();
 }
@@ -141,9 +141,9 @@ static void get4(void)
 
     doesNotExist(0);
 
-    exists(1, &signatures[1]);
-    exists(2, &signatures[2]);
-    exists(3, &signatures[3]);
+    exists(1, 1);
+    exists(2, 2);
+    exists(3, 3);
 
     doesNotExist(4);
 }
@@ -175,8 +175,8 @@ static void test_decrease(void)
     openForWriting(2);
 
     doesNotExist(1);
-    exists(2, &signatures[2]);
-    exists(3, &signatures[3]);
+    exists(2, 2);
+    exists(3, 3);
     doesNotExist(4);
 
     closeAndUnlink();
@@ -190,8 +190,27 @@ static void test_putNonSequential(void)
     doesNotExist(1);
     doesNotExist(2);
     doesNotExist(3);
-    exists(10, &signatures[0]);
+    exists(10, 0);
     doesNotExist(11);
+    closeAndUnlink();
+}
+
+static void test_getNextFileId(void)
+{
+    McastFileId fileId;
+
+    openNew(3);
+    CU_ASSERT_EQUAL(fim_getNextFileId(&fileId), 0);
+    CU_ASSERT_EQUAL(fileId, 0);
+    CU_ASSERT_EQUAL(fim_put(0, &signatures[0]), 0);
+    CU_ASSERT_EQUAL(fim_getNextFileId(&fileId), 0);
+    CU_ASSERT_EQUAL(fileId, 1);
+    closeAndUnlink();
+
+    openNew(3);
+    put4();
+    CU_ASSERT_EQUAL(fim_getNextFileId(&fileId), 0);
+    CU_ASSERT_EQUAL(fileId, 4);
     closeAndUnlink();
 }
 
@@ -217,7 +236,8 @@ int main(
                         CU_ADD_TEST(testSuite, test_get) &&
                         CU_ADD_TEST(testSuite, test_persistence) &&
                         CU_ADD_TEST(testSuite, test_decrease) &&
-                        CU_ADD_TEST(testSuite, test_putNonSequential)
+                        CU_ADD_TEST(testSuite, test_putNonSequential) &&
+                        CU_ADD_TEST(testSuite, test_getNextFileId)
                         ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
