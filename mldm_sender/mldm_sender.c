@@ -614,7 +614,8 @@ mls_init(
         goto close_fileId_map;
 
     if ((status = mcastSender_new(&mls->mcastSender, serverInetAddr,
-            info->server.port, groupInetAddr, info->group.port, ttl))) {
+            info->server.port, groupInetAddr, info->group.port, ttl,
+            mls->fileId))) {
         status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
         goto close_fileId_map;
     }
@@ -936,6 +937,15 @@ mls_execute(
     return status;
 }
 
+/**
+ * Multicasts data-products to a multicast group.
+ *
+ * @param[in] argc  Number of arguments.
+ * @param[in] argv  Arguments. See [mls_usage()](@ref mls_usage)
+ * @retval    0     Success.
+ * @retval    1     Invalid command line. `log_log(LOG_ERR)` called.
+ * @retval    2     System failure. `log_log(LOG_ERR)` called.
+ */
 int
 main(
     const int    argc,
@@ -952,17 +962,17 @@ main(
 
     /* Decode the command-line. */
     McastInfo*   groupInfo;  // multicast group information
-    unsigned     ttl = 1;    // Restricted to same subnet. Won't be forwarded.
+    unsigned     ttl = 1;    // Restrict to same subnet. Won't be forwarded.
     int          status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl);
 
     if (status) {
         log_log(LOG_ERR);
     }
     else {
-        status = mls_execute(groupInfo, ttl, getQueuePath());
-
-        if (status)
+        if (mls_execute(groupInfo, ttl, getQueuePath())) {
             log_log(LOG_ERR);
+            status = 2;
+        }
 
         mi_free(groupInfo);
     } // `groupInfo` allocated

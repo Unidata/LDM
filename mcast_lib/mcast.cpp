@@ -234,7 +234,7 @@ mcastReceiver_stop(
  * @param[in]  groupAddr   Dotted-decimal IPv4 address address of the multicast
  *                         group.
  * @param[in]  groupPort   Port number of the multicast group.
- * @param[out] ttl         Time-to-live of outgoing packets.
+ * @param[in]  ttl         Time-to-live of outgoing packets.
  *                               0  Restricted to same host. Won't be output by
  *                                  any interface.
  *                               1  Restricted to the same subnet. Won't be
@@ -244,6 +244,8 @@ mcastReceiver_stop(
  *                             <64  Restricted to the same region.
  *                            <128  Restricted to the same continent.
  *                            <255  Unrestricted in scope. Global.
+ * @param[in]  fileId      Initial file-identifier. The first multicast data-
+ *                         product will have this as its file-identifier.
  * @retval     0           Success. `*sender` is set.
  * @retval     EINVAL      One of the address couldn't  be converted into a
  *                         binary IP address. `log_start()` called.
@@ -257,10 +259,12 @@ mcastSender_new(
     const unsigned short serverPort,
     const char* const    groupAddr,
     const unsigned short groupPort,
-    const unsigned       ttl)
+    const unsigned       ttl,
+    const McastFileId    fileId)
 {
     try {
-        VCMTPSender* sndr = new VCMTPSender(std::string(serverAddr), serverPort);
+        VCMTPSender* sndr = new VCMTPSender(std::string(serverAddr), serverPort,
+                fileId);
 
         try {
             sndr->JoinGroup(std::string(groupAddr), groupPort);

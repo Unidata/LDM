@@ -16,12 +16,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
     extern "C" {
 #endif
 
-typedef unsigned long            McastFileId;
+typedef u_int32_t                McastFileId;
 #define xdr_McastFileId          xdr_u_long
 typedef struct mcast_receiver    McastReceiver;
 
@@ -61,7 +62,7 @@ void mcastReceiver_stop(
  * @param[in]  mcastAddr   Address of the multicast group. May be
  *                         groupname or formatted IP address.
  * @param[in]  mcastPort   Port number of the multicast group.
- * @param[out] ttl         Time-to-live of outgoing packets.
+ * @param[in]  ttl         Time-to-live of outgoing packets.
  *                               0  Restricted to same host. Won't be output by
  *                                  any interface.
  *                               1  Restricted to the same subnet. Won't be
@@ -71,6 +72,8 @@ void mcastReceiver_stop(
  *                             <64  Restricted to the same region.
  *                            <128  Restricted to the same continent.
  *                            <255  Unrestricted in scope. Global.
+ * @param[in]  fileId      Initial file-identifier. The first multicast data-
+ *                         product will have this as its file-identifier.
  * @retval     0           Success. The client should call \c
  *                         mcastSender_free(*sender) when the sender is no
  *                         longer needed.
@@ -87,7 +90,8 @@ mcastSender_new(
     const unsigned short tcpPort,
     const char* const    mcastAddr,
     const unsigned short mcastPort,
-    const unsigned       ttl);
+    const unsigned       ttl,
+    const McastFileId    fileId);
 
 /**
  * Frees a multicast sender's resources.
