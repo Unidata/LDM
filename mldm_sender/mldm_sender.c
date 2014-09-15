@@ -159,7 +159,7 @@ mls_usage(void)
 /**
  * Decodes the options of the command-line.
  *
- * @pre                     `openulog()` has already been called.
+ * @pre                     {`openulog()` has already been called.}
  * @param[in]  argc         Number of arguments.
  * @param[in]  argv         Arguments.
  * @param[out] serverIface  Interface on which TCP server should listen. Caller
@@ -644,8 +644,8 @@ return_status:
  * object's fields but doesn't release the object itself.
  *
  * @param[in]  mls          The multicast LDM sender.
- * @pre                     `mls_startMulticasting(mls)` was never called or
- *                          `mls_stopMulticasting(mls)` was called.
+ * @pre                     {`mls_startMulticasting(mls)` was never called or
+ *                          `mls_stopMulticasting(mls)` was called.}
  */
 static inline void
 mls_destroy(
@@ -805,7 +805,7 @@ mls_blockPqSignals(void)
  *
  * @param[in] arg   Multicast LDM sender.
  * @return    NULL  Always.
- * @pre             `termSigSet` signals are blocked.
+ * @pre             {`termSigSet` signals are blocked.}
  */
 static void*
 mls_waitForTermSig(
@@ -816,7 +816,11 @@ mls_waitForTermSig(
 
     (void)sigwait(&termSigSet, &sig);
     mls->done = 1;
-    (void)pthread_kill(mls->mcastThread, SIGCONT); // likely in `pq_suspend()`
+    /*
+     * A SIGCONT is sent to the multicast thread in case it's blocked in
+     * `pq_suspend()`.
+     */
+    (void)pthread_kill(mls->mcastThread, SIGCONT);
 
     return NULL;
 }
