@@ -776,6 +776,10 @@ int grib2name (
         gb2_2gem(&g2Msg, &gemInfo, tbllist, &status);
 
         if (status) {
+            LOG_ADD1("Couldn't decode GRIB2 message. WMO header=\"%s\"",
+                    wmohead);
+            log_log(LOG_ERR);
+
             if (lastField) {
                 (void)strcpy(fdats, "FHRS"); /* safe */
                 (void)strcpy(levelstmp, "LVL"); /* safe */
