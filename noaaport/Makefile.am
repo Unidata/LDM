@@ -41,7 +41,7 @@ BUILT_SOURCES		= \
 	shmfifo.h
 
 DISTCLEANFILES		= $(BUILT_SOURCES)
-CLEANFILES		= $(BUILT_SOURCES)
+CLEANFILES		= $(BUILT_SOURCES) *.out *.log
 
 CPPFLAGS		= \
 	-I$(top_srcdir) \
@@ -119,8 +119,6 @@ TAGS_FILES		= \
 if WANT_RETRANS
     TAGS_FILES		+= retrans/*.c retrans/*.h
 endif
-
-CLEANFILES	= *.out *.log
 
 $(srcdir)/html \
 $(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
