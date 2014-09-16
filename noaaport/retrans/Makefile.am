@@ -35,4 +35,4 @@ install_setuids:
 
 TAGS_FILES		= *.c *.h \
                           $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
-                          $(top_builddir)/ulog/*.c $(top_builddir)/ulog/*.h \
+                          $(top_builddir)/ulog/*.c $(top_builddir)/ulog/*.h

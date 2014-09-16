@@ -18,6 +18,7 @@ PQ_SUBDIR			= @PQ_SUBDIR@
 
 AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions \
 				  --with-noaaport \
+				  --with-retrans \
 				  --with-gribinsert \
 				  --with-multicast
 
