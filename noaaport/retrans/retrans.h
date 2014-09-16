@@ -42,7 +42,7 @@
 #define DEFAULT_RETRANS_ENTRIES_GOES 2000
 #define DEFAULT_RETRANS_ENTRIES_GOES_EAST 2000
 #define DEFAULT_RETRANS_ENTRIES_GOES_WEST 2000
-#define DEFAULT_RETRANS_ENTRIES_NMC 200
+#define DEFAULT_RETRANS_ENTRIES_NMC 20000
 #define DEFAULT_RETRANS_ENTRIES_NMC2 100000
 #define DEFAULT_RETRANS_ENTRIES_NOAAPORT_OPT 50000
 #define DEFAULT_RETRANS_ENTRIES_NMC3 5000
@@ -556,7 +556,7 @@ int log_prod_end(char *end_msg,
 		int 	in_prod_blkno,
 		int 	in_prod_code,
 		int 	in_prod_bytes,
-		long	in_prod_start_time);
+		time_t	in_prod_start_time);
 
 int do_prod_mismatch(ACQ_TABLE *acq_tbl, BUFF_HDR *buff_hdr);
 

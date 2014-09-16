@@ -137,7 +137,6 @@ int pmNew(
  * @retval (void*)0    The FIFO was closed.
  * @retval (void*)1    Usage failure. \c log_start() called.
  * @retval (void*)2    O/S failure. \c log_start() called.
- * @retval (void*)-1   Retransmission failure. \c log_start() called.
  */
 void* pmStart(
     void* const         arg)          /**< [in/out] Pointer to the
@@ -193,7 +192,8 @@ void* pmStart(
  	              udebug("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",global_cpio_addr,global_cpio_fd);
                 }else{
                     uerror("Invalid multicast address provided");
-	  	    return (void*)-1;
+                    status = -1;
+	  	    return NULL;	
                  }
 
 		 retrans_tbl_size = sizeof(PROD_RETRANS_TABLE);
@@ -215,14 +215,16 @@ void* pmStart(
 		p_prod_retrans_table = (PROD_RETRANS_TABLE *) malloc (retrans_tbl_size);
 		if(p_prod_retrans_table == NULL){
 		   uerror("Unable to allocate memory for retrans table..Quitting.\n");
-	  	   return (void*)-1;
+                   status = -1;
+	  	   return NULL;	
 		}
 
 		if( init_retrans(&p_prod_retrans_table) < 0 ){
 		  uerror("Error in initializing retrans table \n");
 		  if(p_prod_retrans_table)
 			free(p_prod_retrans_table);
-	  	  return (void*)-1;
+                  status = -1;
+	  	  return NULL;	
 		}	
 
        GET_SHMPTR(global_acq_tbl,ACQ_TABLE,ACQ_TABLE_SHMKEY,DEBUGGETSHM);
@@ -249,7 +251,8 @@ void* pmStart(
 			free(acq_tbl);
 		if(p_prod_retrans_table)
 		  free(p_prod_retrans_table);
-	  	return (void*)-1;
+                status = -1;
+	  	return NULL;	
 	 }
 
 	 acq_tbl->pid = getpid();

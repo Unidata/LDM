@@ -39,8 +39,7 @@ char *get_shm_ptr(int SHMnumber, char *name, int flag);
 char *com_shmAlloc(int size, int SHMnumber);
 int com_shmIsAlloc(int SHMnumber);
 int  com_shmDetach(char *address);
-
-
+char* com_shmAttach(int new_key);
 
 #define GET_SHMEM(a,b,c,d)	LEAN_GET_SHMEM(a,b,c,d,SHM_REUSE_FLAG)
 

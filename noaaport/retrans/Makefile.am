@@ -19,10 +19,20 @@ lib_la_CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
 			  -I$(top_srcdir)/ulog
 
 bin_PROGRAMS            = acq_ldm_getshm acq_ldm_ctl acq_ldm_freeshm
+ACQ_SHM_SOURCES         = shmem_lib.c \
+			  acq_shm_lib.h
+acq_ldm_getshm_SOURCES  = acq_ldm_getshm.c $(ACQ_SHM_SOURCES)
+acq_ldm_freeshm_SOURCES = acq_ldm_freeshm.c $(ACQ_SHM_SOURCES)
+acq_ldm_ctl_SOURCES     = acq_ldm_ctl.c $(ACQ_SHM_SOURCES)
 
-acq_ldm_getshm_SOURCES  = acq_ldm_getshm.c shmem_lib.c
-acq_ldm_freeshm_SOURCES = acq_ldm_freeshm.c shmem_lib.c
-acq_ldm_ctl_SOURCES     = acq_ldm_ctl.c shmem_lib.c
+install_setuids:
+	chown $(DESTDIR)$(bindir)/acq_ldm_getshm
+	chmod 4755 $(DESTDIR)$(bindir)/acq_ldm_getshm
+	chown $(DESTDIR)$(bindir)/acq_ldm_ctl
+	chmod 4755 $(DESTDIR)$(bindir)/acq_ldm_ctl
+	chown $(DESTDIR)$(bindir)/acq_ldm_freeshm
+	chmod 4755 $(DESTDIR)$(bindir)/acq_ldm_freeshm
 
 TAGS_FILES		= *.c *.h \
-                          $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h
+                          $(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
+                          $(top_builddir)/ulog/*.c $(top_builddir)/ulog/*.h \

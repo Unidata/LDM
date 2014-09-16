@@ -109,10 +109,10 @@ int SHMnumber;		/* shared memory segment key */
 		logError(errbuf);
 		return((char *)0);
 	}
-	
+
 	/* attach a shared memory area */
 	/* convert the identifier to an address */
-	if ((address = shmat(shmid, (char *)0, 0)) == (char *)-1) {
+	if ((address = (char *)shmat(shmid, (char *)0, 0)) == (char *)-1) {
 		sprintf(errbuf, "com_shmAttach() shmat - %s", strerror(errno));
 		logError(errbuf);
 		return((char *)0);

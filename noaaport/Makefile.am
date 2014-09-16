@@ -29,6 +29,7 @@ EXTRA_DIST 		= \
 	productMaker.hin \
 	reader.hin \
 	shmfifo.hin
+
 BUILT_SOURCES		= \
 	fifo.h \
 	fileReader.h \
@@ -38,16 +39,20 @@ BUILT_SOURCES		= \
 	productMaker.h \
 	reader.h \
 	shmfifo.h
+
 DISTCLEANFILES		= $(BUILT_SOURCES)
+CLEANFILES		= $(BUILT_SOURCES)
 
 CPPFLAGS		= \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
+	-I$(top_srcdir)/zlib \
 	-I$(top_srcdir)/ulog \
 	-I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
 	-I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
 	-I$(top_builddir)/registry -I$(top_srcdir)/registry \
+	-I$(top_srcdir)/protocol \
 	-I$(top_srcdir)/pq \
 	-I$(top_srcdir)/misc \
 	-I$(srcdir)/retrans \
@@ -94,20 +99,23 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
-LDADD 			= $(top_builddir)/lib/libldm.la
+LDADD 			= $(top_builddir)/lib/libldm.la -lxml2
+if WANT_RETRANS
+  LDADD 	+= retrans/lib.la
+endif
 
 TAGS_FILES		= \
 	*.c *.h \
-	../grib2/*.c ../grib2/*.h \
-	../gempak/*.c ../gempak/*.h \
-	../pq/*.c ../pq/*.h \
-	../protocol/*.c ../protocol/*.h \
-	../protocol2/*.c ../protocol2/*.h \
-	../registry/*.c ../registry/*.h \
-	../ulog/*.c ../ulog/*.h \
-	../misc/*.c ../misc/*.h \
-	../registry/*.c ../registry/*.h \
-	../rpc/*.c ../rpc/*.h
+	$(top_srcdir)/grib2/*.c $(top_srcdir)/grib2/*.h \
+	$(top_srcdir)/gempak/*.c $(top_srcdir)/gempak/*.h \
+	$(top_srcdir)/pq/*.c $(top_srcdir)/pq/*.h \
+	$(top_srcdir)/protocol/*.c $(top_srcdir)/protocol/*.h \
+	$(top_srcdir)/protocol2/*.c $(top_srcdir)/protocol2/*.h \
+	$(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
+	$(top_srcdir)/ulog/*.c $(top_srcdir)/ulog/*.h \
+	$(top_srcdir)/misc/*.c $(top_srcdir)/misc/*.h \
+	$(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
+	$(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h
 if WANT_RETRANS
     TAGS_FILES		+= retrans/*.c retrans/*.h
 endif
@@ -121,16 +129,16 @@ $(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
 .hin.h:
 	./extractDecls $*.hin $*.c >$@.tmp
 	mv -f $@.tmp $@
-
+shmfifo.h:		shmfifo.c shmfifo.hin extractDecls
+ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin extractDecls
 fifo.h:			fifo.c fifo.hin extractDecls
+reader.h:		reader.c reader.hin extractDecls
 fileReader.h:		fileReader.c fileReader.hin extractDecls
 getFacilityName.h:	getFacilityName.c getFacilityName.hin extractDecls
 Grib2Decoder.h:		Grib2Decoder.c Grib2Decoder.hin extractDecls
 ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin extractDecls
 multicastReader.h:	multicastReader.c multicastReader.hin extractDecls
 productMaker.h:		productMaker.c productMaker.hin extractDecls
-reader.h:		reader.c reader.hin extractDecls
-shmfifo.h:		shmfifo.c shmfifo.hin extractDecls
 
 .c.i:
 	$(COMPILE) -E $< >$@
@@ -143,28 +151,26 @@ installcheck-local:
 
 check-local:		check-readnoaaport check-noaaportIngester
 check-readnoaaport:	readnoaaport
-	../pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	./readnoaaport -nl- -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
 
 noaaportIngester.out:		noaaportIngester
-	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	-./noaaportIngester -l- -b 3 -n -q /tmp/noaaportIngester-test.pq \
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
-
 noaaportIngester.log:		noaaportIngester.out
 	    cut -d ' ' -f 5- <$? | \
 	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^ERROR: /d' >$@
-
 check-noaaportIngester:		noaaportIngester.log
 	diff $(srcdir)/noaaportIngester.log.good $?
 
 valgrind:		valgrind-readnoaaport valgrind-noaaportIngester
 
 valgrind-readnoaaport:		readnoaaport
-	../pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
 	    readnoaaport -l- -q /tmp/readnoaaport-test.pq nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
@@ -182,7 +188,7 @@ endif
 endif
 
 valgrind-noaaportIngester:	noaaportIngester
-	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
 	    .libs/noaaportIngester -b 1 -q /tmp/noaaportIngester-test.pq \
 		<$(srcdir)/nwstgdump.data
@@ -194,7 +200,7 @@ root-ni-vg:
 		<$(srcdir)/nwstgdump.data
 
 debug-readnoaaport:	readnoaaport
-	../pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	echo 'handle SIGCONT pass noprint nostop' >/tmp/readnoaaport.gdb
 	echo 'b 617' >>/tmp/readnoaaport.gdb
 	echo 'run -l- -q /tmp/readnoaaport-test.pq nwstgdump.data' \
@@ -203,7 +209,7 @@ debug-readnoaaport:	readnoaaport
 	rm /tmp/readnoaaport-test.pq /tmp/readnoaaport.gdb
 
 debug-noaaportIngester:	noaaportIngester
-	../pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	echo 'handle SIGCONT pass noprint nostop' >/tmp/noaaportIngester.gdb
 	echo 'handle SIGTERM pass nostop' >>/tmp/noaaportIngester.gdb
 	echo 'run -q /tmp/noaaportIngester-test.pq -n -m 224.0.1.1' \
@@ -227,6 +233,7 @@ uninstall-hook:
 	chmod -R +w $(DESTDIR)$(docdir)
 	rm -rf $(DESTDIR)$(docdir)
 
+if MAINTAINER
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)/noaaport
 
 commit-check:	Makefile
@@ -242,6 +249,7 @@ $(WEB_DESTDIR):
 
 web-update:	$(WEB_DESTDIR)
 	cp -R html/* $(WEB_DESTDIR)
+endif
 
 .PHONY:	\
 	install-html \

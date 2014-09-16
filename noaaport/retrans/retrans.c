@@ -747,7 +747,7 @@ int log_prod_end(char *end_msg,
 		int	 	in_prod_blkno,
 		int 	in_prod_code,
 		int	 	in_prod_bytes,
-		long	in_prod_start_time)
+		time_t	in_prod_start_time)
 
 {
 	static const char FNAME[40+1]="log_prod_end";
@@ -769,39 +769,39 @@ static long log_eop_count;  /* counter to track number of log EOP entries */
 	time(&now_time);
 
 	tmtime = (struct tm *)gmtime(&now_time);   /* time */
-	sprintf(prod_log_buff, "%s %s", "END",
+	snprintf(prod_log_buff, sizeof(prod_log_buff), "%s %s", "END",
 			get_date_time(tmtime, global_time_zone));
 
 
 	if(in_orig_prod_seqno != 0) {
 		/* Assume have an original SBN prod seqno */
-		sprintf(prod_log_buff, "%s #%ld/%d orig(#%ld)", 
+		snprintf(prod_log_buff, sizeof(prod_log_buff), "%s #%ld/%d orig(#%ld)", 
 				prod_log_buff,
 				in_prod_seqno,
 				in_prod_blkno,
 				in_orig_prod_seqno);
 	} else {
-		sprintf(prod_log_buff, "%s #%ld/%d", 
+		snprintf(prod_log_buff, sizeof(prod_log_buff), "%s #%ld/%d", 
 				prod_log_buff,
 				in_prod_seqno,
 				in_prod_blkno);
 	}
 
-	sprintf(prod_log_buff, "%s bytes(%d)", 
+	snprintf(prod_log_buff, sizeof(prod_log_buff), "%s bytes(%d)", 
 			prod_log_buff,
 			in_prod_bytes);
 	
-	sprintf(prod_log_buff, "%s c(%d)",
+	snprintf(prod_log_buff, sizeof(prod_log_buff), "%s c(%d)",
 			prod_log_buff, in_prod_code);
 
 	if((now_time - in_prod_start_time) > 0){
-		sprintf(prod_log_buff, "%s +%lds", 
-			prod_log_buff, (now_time - in_prod_start_time));
+		snprintf(prod_log_buff, sizeof(prod_log_buff), "%s +%lds ", 
+			prod_log_buff, (long)(now_time - in_prod_start_time));
 		
 	}
 
 	if(end_msg[0] != '\0') {
-		sprintf(prod_log_buff, "%s %s", 
+		snprintf(prod_log_buff, sizeof(prod_log_buff), "%s %s", 
 			prod_log_buff, end_msg);
 	}
 
@@ -826,7 +826,7 @@ char *get_date_time(const  struct tm *p_tm, char *tz)
 				/* Skip the GMT or UTC label for time */
 			} else {
 				ptr = (char *)(buf + strlen(buf));
-				sprintf (ptr, " %s", tz);
+				snprintf(ptr, buf+sizeof(buf)-ptr, " %s", tz);
 			}
 		} else {
 			strftime (buf, sizeof (buf), "%m/%d/%Y %T %Z", p_tm);
@@ -934,7 +934,7 @@ int log_prod_lost(long in_prod_errors, long in_tot_prods_lost_errs, long in_prod
 	struct tm *tmtime;          /* time */
 
 	/* "STATUS LOST %ld product(s) total(%ld) before prod(%ld)", */
-	sprintf(prod_log_buff, "STATUS LOST %ld product(s) before prod(%ld) total(%ld)",
+	snprintf(prod_log_buff, sizeof(prod_log_buff), "STATUS LOST %ld product(s) before prod(%ld) total(%ld)",
 		in_prod_errors,
 		in_prod_seqno,
 		in_tot_prods_lost_errs);
@@ -942,7 +942,7 @@ int log_prod_lost(long in_prod_errors, long in_tot_prods_lost_errs, long in_prod
 	time(&now_time);
 
 	tmtime = (struct tm *)gmtime(&now_time);   /* time */
-	sprintf(prod_log_buff, "%s %s", prod_log_buff,
+	snprintf(prod_log_buff, sizeof(prod_log_buff), "%s %s", prod_log_buff,
 			get_date_time(tmtime, global_time_zone));
 
 	uinfo("%s %s \n",get_date_time(tmtime, global_time_zone),prod_log_buff);

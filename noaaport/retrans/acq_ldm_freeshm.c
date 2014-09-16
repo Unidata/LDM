@@ -23,12 +23,11 @@ RETURNS
 
 #define DEBUG(x) printf("service: x = %d\n", (x))
 
-extern char*    com_shmAttach(int SHMnumber);
-extern int      com_shmFree(int SHMnumber);
+extern	char	*optarg;
 
 typedef struct	input 	{		/* user input options */
-	int		verbose;			/* verbose mode with debug */
-	int		memory_region;		/* memory region */
+	int		verbose;	/* verbose mode with debug */
+	int		memory_region;	/* memory region */
 } INPUT;
 
 #define NAME_ACQ_TABLE "ACQ_TABLE"
@@ -41,8 +40,8 @@ char	PNAME[40];
 
 int
 main(argc, argv)	
-int argc;
-char **argv;
+        int argc;
+        char **argv;
 {
 	INPUT   input;          /* user input options */
 	int SHMnumber;
@@ -51,8 +50,8 @@ char **argv;
 	long	new_shmem;	/* new amount of shared memory */
 	int	shm_region;	/* shm region */
 	int	new_key;	/* shm key */
-	
-
+	ACQ_TABLE *acq_table;
+	int link;
 
 	strcpy(PNAME, "acq_freeshm");
 	/* get operator command line inputs */
@@ -67,17 +66,14 @@ char **argv;
 
 /* 	ACQ_TABLE         acquisition table */
 
-		ACQ_TABLE *acq_table;
-		int link;
-		printf("acq_freeshm get shmem for acq_table\n");
-		FIND_SHMKEY_REGION(new_key,ACQ_TABLE_SHMKEY,shm_region);
-		if (acq_table = (ACQ_TABLE *) com_shmAttach(new_key)) {
-			for (link = 0; link < acq_table[0].max_links; link++) {
-				acq_table[link].link_id = 0xff; 
-			}
-		}
-		FREE_SHMEM(new_key);
-
+        printf("acq_freeshm get shmem for acq_table\n");
+        FIND_SHMKEY_REGION(new_key,ACQ_TABLE_SHMKEY,shm_region);
+        if ((acq_table = (ACQ_TABLE *) com_shmAttach(new_key)) != NULL) {
+                for (link = 0; link < acq_table[0].max_links; link++) {
+                        acq_table[link].link_id = 0xff; 
+                }
+        }
+        FREE_SHMEM(new_key);
 
 	printf("acq_freeshm Done OK\n" );
 

@@ -81,6 +81,7 @@ void VAR_LEAN_GET_SHMEM(char *a,ACQ_TABLE ss, int z, int k, int r) {
 
 char	PNAME[40];
 int MaxLinks;
+
 int
 main(argc, argv)	/* argument #1 is a test SHMnumber */
 int argc;
