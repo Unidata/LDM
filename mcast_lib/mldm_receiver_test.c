@@ -47,7 +47,7 @@ void test_mdl_createAndExecute()
     int                  (*int_func)() = (int(*)())1;
     void                 (*void_func)() = (void(*)())2;
     McastInfo       mcastInfo;
-    Mdl*                 mdl;
+    Mlr*                 mdl;
 
     mcastInfo.group.addr = addr;
     mcastInfo.group.port = port;
@@ -55,19 +55,19 @@ void test_mdl_createAndExecute()
     mcastInfo.server.port = tcpPort;
 
     /* Invalid product-queue argument */
-    mdl = mdl_new(NULL, &mcastInfo, void_func, NULL);
+    mdl = mlr_new(NULL, &mcastInfo, void_func, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_TRUE(mdl == NULL);
     log_clear();
 
     /* Invalid multicast information argument */
-    mdl = mdl_new(pq, NULL, void_func, NULL);
+    mdl = mlr_new(pq, NULL, void_func, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_TRUE(mdl == NULL);
     log_clear();
 
     /* Invalid missed-product-function argument */
-    mdl = mdl_new(pq, &mcastInfo, NULL, NULL);
+    mdl = mlr_new(pq, &mcastInfo, NULL, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_TRUE(mdl == NULL);
     log_clear();
@@ -76,17 +76,17 @@ void test_mdl_createAndExecute()
     vcmtpReceiver_new_ExpectAndReturn(
             NULL, tcpAddr,  tcpPort,   int_func, int_func, void_func, addr,     port,      NULL,   0,
             NULL, cmp_cstr, cmp_short, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
-    mdl = mdl_new(pq, &mcastInfo, void_func, NULL);
+    mdl = mlr_new(pq, &mcastInfo, void_func, NULL);
     log_log(LOG_INFO);
     OP_ASSERT_FALSE(mdl == NULL);
 
     vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
-    status = mdl_start(mdl);
+    status = mlr_start(mdl);
     log_log(LOG_INFO);
     OP_ASSERT_EQUAL_INT(LDM7_SHUTDOWN, status);
 
     vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
-    mdl_free(mdl);
+    mlr_free(mdl);
     log_log(LOG_INFO);
 
     OP_VERIFY();

@@ -55,8 +55,8 @@ struct Down7 {
     ServiceAddr*          servAddr;      ///< socket address of remote LDM-7
     feedtypet             feedtype;      ///< feed-expression of multicast group
     CLIENT*               clnt;          ///< client-side RPC handle
-    McastInfo*       mcastInfo;     ///< information on multicast group
-    Mdl*                  mdl;           ///< multicast downstream LDM
+    McastInfo*            mcastInfo;     ///< information on multicast group
+    Mlr*                  mlr;           ///< multicast LDM receiver
     McastSessionMemory*   msm;           ///< persistent multicast session memory
     pthread_t             receiveThread; ///< thread for receiving products
     pthread_t             requestThread; ///< thread for requesting products
@@ -72,12 +72,12 @@ struct Down7 {
     bool                  mcastWorking;  ///< product received via multicast?
     /**
      * Signature of the first data-product received by the associated multicast
-     * LDM during the current session.
+     * LDM receiver during the current session.
      */
     signaturet            firstMcast;
     /**
      * Signature of the last data-product received by the associated multicast
-     * LDM during the previous session.
+     * LDM receiver during the previous session.
      */
     signaturet            prevLastMcast;
     /**
@@ -419,7 +419,7 @@ run_down7_svc(
 }
 
 /**
- * Requests a data-product that was missed by the multicast downstream LDM.
+ * Requests a data-product that was missed by the multicast LDM receiver.
  *
  * @param[in] down7       Pointer to the downstream LDM-7.
  * @param[in] fileId      VCMTP file-ID of missed data-product.
@@ -457,9 +457,9 @@ requestProduct(
 /**
  * Requests the backlog of data-products from the previous session. The backlog
  * comprises all products since the last product received by the associated
- * multicast downstream LDM from the previous session (or the time-offset if
+ * multicast LDM receiver from the previous session (or the time-offset if
  * that product isn't found) to the first product received by the associated
- * multicast downstream LDM of this session (or the current time if that product
+ * multicast LDM receiver of this session (or the current time if that product
  * isn't found).
  *
  * NB: If the current session ends before all backlog products have been
@@ -551,7 +551,7 @@ makeRequest(
 
 /**
  * Starts the task of a downstream LDM-7 that requests data-products that were
- * missed by the downstream multicast receiver. Entries from the
+ * missed by the multicast LDM receiver. Entries from the
  * missed-bug-not-requested queue are removed and converted into requests for
  * missed data-products, which are asynchronously sent to the remote LDM-7.
  * Blocks until the request-queue is shut down or an unrecoverable error occurs.
@@ -579,9 +579,9 @@ startRequester(
 
 /**
  * Cleanly stops the executing task of a downstream LDM-7 that's requesting
- * data-products that were missed by the multicast receiver by shutting down the
- * queue of missed files and shutting down the socket to the remote LDM-7 for
- * writing.
+ * data-products that were missed by the multicast LDM receiver by shutting down
+ * the queue of missed files and shutting down the socket to the remote LDM-7
+ * for writing.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 whose requesting task is
  *                   to be stopped.
@@ -597,7 +597,7 @@ stopRequester(
 /**
  * Starts the task of a downstream LDM-7 that receives unicast data-products
  * from the associated upstream LDM-7 -- either because they were missed by the
- * multicast receiver or because they are part of the backlog.
+ * multicast LDM receiver or because they are part of the backlog.
  *
  * NB: When this function returns, the TCP socket will have been closed.
  *
@@ -663,10 +663,10 @@ stopUnicastProductReceiver(
 
 /**
  * Starts the task of a downstream LDM-7 that receives data-products via
- * multicast. Blocks until the multicast downstream LDM is stopped
+ * multicast. Blocks until the multicast LDM receiver is stopped
  *
  * @param[in] arg            Pointer to the downstream LDM-7.
- * @retval    LDM7_SHUTDOWN  The multicast downstream LDM was stopped.
+ * @retval    LDM7_SHUTDOWN  The multicast LDM receiver was stopped.
  * @retval    LDM7_SYSTEM    System error. \c log_start() called.
  */
 static void*
@@ -675,15 +675,15 @@ startMulticastProductReceiver(
 {
     Down7* const down7 = (Down7*)arg;
     int          status;
-    Mdl* const   mdl = mdl_new(pq, down7->mcastInfo, down7);
+    Mlr* const   mlr = mlr_new(pq, down7->mcastInfo, down7);
 
-    if (mdl == NULL) {
-        LOG_ADD0("Couldn't create a new multicast downstream LDM");
+    if (mlr == NULL) {
+        LOG_ADD0("Couldn't create a new multicast LDM receiver");
         status = LDM7_SYSTEM;
     }
     else {
-        down7->mdl = mdl;
-        status = mdl_start(down7->mdl);
+        down7->mlr = mlr;
+        status = mlr_start(down7->mlr);
     }
 
     taskExit(down7, status);
@@ -702,7 +702,7 @@ static int
 terminateTasks(
     Down7* const down7)
 {
-    mdl_stop(down7->mdl);
+    mlr_stop(down7->mlr);
     stopRequester(down7);
     stopUnicastProductReceiver(down7);
 
@@ -729,18 +729,18 @@ startTasks(
     if ((status = pthread_create(&down7->receiveThread, NULL,
             startUnicastProductReceiver, down7)) != 0) {
         LOG_ERRNUM0(status, "Couldn't start task that receives data-products "
-                "that were missed by the multicast receiver task");
+                "that were missed by the multicast LDM receiver task");
         status = LDM7_SYSTEM;
     }
     else if ((status = pthread_create(&down7->requestThread, NULL,
             startRequester, down7)) != 0) {
         LOG_ERRNUM0(status, "Couldn't start task that requests data-products "
-                "that were missed by the multicast receiver task");
+                "that were missed by the multicast LDM receiver task");
         status = LDM7_SYSTEM;
     }
     else if ((status = pthread_create(&down7->mcastThread, NULL,
             startMulticastProductReceiver, down7)) != 0) {
-        LOG_ERRNUM0(status, "Couldn't start multicast receiver task");
+        LOG_ERRNUM0(status, "Couldn't start multicast LDM receiver task");
         status = LDM7_SYSTEM;
     }
     else {
@@ -1136,7 +1136,7 @@ dl7_new(
     down7->shutdown = 0;
     down7->taskExited = 0;
     down7->exitStatus = -1;
-    down7->mdl = NULL;
+    down7->mlr = NULL;
     down7->mcastWorking = false;
     (void)memset(down7->firstMcast, 0, sizeof(signaturet));
     (void)memset(down7->prevLastMcast, 0, sizeof(signaturet));
@@ -1184,10 +1184,10 @@ dl7_start(
 }
 
 /**
- * Queues a data-product that that was missed by the multicast downstream LDM
+ * Queues a data-product that that was missed by the multicast LDM receiver
  * associated with a downstream LDM-7 for reception via unicast TCP from the
  * associated upstream LDM-7. This function must and does return immediately.
- * Called by the multicast downstream LDM.
+ * Called by the multicast LDM receiver.
  *
  * @param[in] down7   Pointer to the downstream LDM-7.
  * @param[in] fileId  VCMTP file identifier of the missed file.
@@ -1207,8 +1207,8 @@ dl7_missedProduct(
 
 /**
  * Tracks the last data-product to be successfully received by the multicast
- * downstream LDM associated with a downstream LDM-7. Called by the multicast
- * downstream LDM. This function must not and doesn't block.
+ * LDM receiver associated with a downstream LDM-7. Called by the multicast
+ * LDM receiver. This function must not and doesn't block.
  *
  * The first time this function is called for a given downstream LDM-7, it
  * starts a detached thread that requests the backlog of data-products that
@@ -1218,7 +1218,7 @@ dl7_missedProduct(
  * @param[in] down7  Pointer to the downstream LDM-7.
  * @param[in] last   Pointer to the metadata of the last data-product to be
  *                   successfully received by the associated multicast
- *                   downstream LDM. Caller may free when it's no longer needed.
+ *                   LDM receiver. Caller may free when it's no longer needed.
  */
 void
 dl7_lastReceived(
@@ -1249,7 +1249,7 @@ dl7_lastReceived(
  * Processes a missed data-product from a remote LDM-7 by attempting to add the
  * data-product to the product-queue. The data-product should have been
  * previously requested from the remote LDM-7 because it was missed by the
- * multicast receiver. Destroys the server-side RPC transport if the
+ * multicast LDM receiver. Destroys the server-side RPC transport if the
  * data-product isn't expected or can't be inserted into the product-queue. Does
  * not reply. Called by the RPC dispatcher `svc_getreqsock()`.
  *

@@ -658,8 +658,8 @@ clearMapIfUnexpected(
 
 /**
  * Opens the file-identifier map for writing. Creates the associated file (with
- * an empty map) if it doesn't exist. A process should call this function
- * at most once.
+ * an empty map) if it doesn't exist. A process should call this function at
+ * most once.
  *
  * @param[in] pathname     Pathname of the file. Caller may free.
  * @param[in] maxSigs      Maximum number of data-product signatures. Must be

@@ -513,7 +513,9 @@ mls_getIpv4Addr(
 }
 
 /**
- * Opens the file-identifier map for updating.
+ * Opens the file-identifier map for updating. Creates the associated file if it
+ * doesn't exist. The parent directory of the associated file is the parent
+ * directory of the LDM product-queue.
  *
  * @param[in] mls          Multicast LDM sender object.
  * @param[in] feed         Feedtype to be multicast.
@@ -588,15 +590,14 @@ mls_init(
     const unsigned                  ttl,
     const char* const restrict      pqPathname)
 {
-    char         serverInetAddr[INET_ADDRSTRLEN];
-    int          status = mls_getIpv4Addr(info->server.inetId, "server",
-            serverInetAddr);
+    int status;
 
-    if (status)
+    char serverInetAddr[INET_ADDRSTRLEN];
+    if ((status = mls_getIpv4Addr(info->server.inetId, "server",
+            serverInetAddr)))
         goto return_status;
 
     char groupInetAddr[INET_ADDRSTRLEN];
-
     if ((status = mls_getIpv4Addr(info->group.inetId, "multicast-group",
             groupInetAddr)))
         goto return_status;

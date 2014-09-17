@@ -6,7 +6,7 @@
  *   @file: mldm_receiver.c
  * @author: Steven R. Emmerson
  *
- * This file implements the downstream multicast LDM.
+ * This file implements the multicast LDM receiver.
  */
 
 #include "config.h"
@@ -30,18 +30,18 @@
 #include <pthread.h>
 
 /**
- * The multicast downstream LDM data-structure:
+ * The multicast LDM receiver data-structure:
  */
-struct mdl {
+struct mlr {
     pqueue*         pq;       // product-queue to use */
     Down7*          down7;    // pointer to associated downstream LDM-7
     McastReceiver* receiver; // VCMTP C Receiver
 };
 
 /**
- * Locks the product-queue of a multicast downstream LDM.
+ * Locks the product-queue of a multicast LDM receiver.
  *
- * @param[in] mdl       Pointer to the multicast downstream LDM.
+ * @param[in] mlr       Pointer to the multicast LDM receiver.
  * @retval    0         Success.
  * @retval    EAGAIN    The lock could not be acquired because the maximum
  *                      number of recursive calls has been exceeded.
@@ -49,9 +49,9 @@ struct mdl {
  */
 static int
 lockPq(
-    Mdl* const mdl)
+    Mlr* const mlr)
 {
-    int status = pq_lock(mdl->pq);
+    int status = pq_lock(mlr->pq);
 
     if (status)
         LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
@@ -60,17 +60,17 @@ lockPq(
 }
 
 /**
- * Unlocks the product-queue of a multicast downstream LDM.
+ * Unlocks the product-queue of a multicast LDM receiver.
  *
- * @param[in] mdl       Pointer to the multicast downstream LDM.
+ * @param[in] mlr       Pointer to the multicast LDM receiver.
  * @retval    0         Success.
  * @retval    EPERM     The current thread does not own the lock.
  */
 static int
 unlockPq(
-    Mdl* const mdl)
+    Mlr* const mlr)
 {
-    int status = pq_unlock(mdl->pq);
+    int status = pq_unlock(mlr->pq);
 
     if (status)
         LOG_ADD1("Couldn't unlock product-queue: %s", strerror(status));
@@ -82,7 +82,7 @@ unlockPq(
  * Allocates space in a product-queue for a VCMTP file if it's not a duplicate
  * and sets the beginning-of-file response in a VCMTP file-entry.
  *
- * @param[in] mdl         Pointer to the multicast downstream LDM.
+ * @param[in] mlr         Pointer to the multicast LDM receiver.
  * @param[in] name        The name of the VCMTP file.
  * @param[in] size        Size of the XDR-encoded LDM data-product in bytes.
  * @param[in] signature   The MD5 checksum of the LDM data-product.
@@ -94,7 +94,7 @@ unlockPq(
  */
 static int
 allocateSpaceAndSetBofResponse(
-    Mdl* const restrict        mdl,
+    Mlr* const restrict        mlr,
     const char* const restrict name,
     const size_t               size,
     const signaturet           signature,
@@ -104,14 +104,14 @@ allocateSpaceAndSetBofResponse(
     char*             buf;
     pqe_index         index;
 
-    if (lockPq(mdl)) {
+    if (lockPq(mlr)) {
         LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
         mcastFileEntry_setBofResponseToIgnore(file_entry);
         status = -1;
     }
     else {
-        status = pqe_newDirect(mdl->pq, size, signature, &buf, &index);
-        (void)unlockPq(mdl);
+        status = pqe_newDirect(mlr->pq, size, signature, &buf, &index);
+        (void)unlockPq(mlr);
 
         if (status) {
             mcastFileEntry_setBofResponseToIgnore(file_entry);
@@ -141,8 +141,8 @@ allocateSpaceAndSetBofResponse(
  * region in the LDM product-queue to receive the VCMTP file, which is an
  * XDR-encoded LDM data-product.
  *
- * @param[in,out]  obj          Pointer to the associated multicast downstream
- *                              LDM object.
+ * @param[in,out]  obj          Pointer to the associated multicast LDM receiver
+ *                              object.
  * @param[in]      file_entry   Metadata of the file in question.
  * @retval         0            Success, the transfer isn't to memory, or the
  *                              data-product is already in the LDM
@@ -170,7 +170,7 @@ bof_func(
             status = -1;
         }
         else {
-            status = allocateSpaceAndSetBofResponse((Mdl*)obj, name,
+            status = allocateSpaceAndSetBofResponse((Mlr*)obj, name,
                     mcastFileEntry_getSize(file_entry), signature, file_entry);
         } /* filename is data-product signature */
     } /* transfer is to memory */
@@ -180,24 +180,24 @@ bof_func(
 
 /**
  * Finishes inserting a data-product into the allocated product-queue region
- * associated with a multicast downstream LDM or discards the region.
+ * associated with a multicast LDM receiver or discards the region.
  *
- * @param[in] mdl    Pointer to the multicast downstream LDM.
+ * @param[in] mlr    Pointer to the multicast LDM receiver.
  * @param[in] index  Pointer to the allocated region.
  * @retval    0      Success.
  * @retval    -1     Error. `log_add()` called.
  */
 static int
 insertOrDiscard(
-    Mdl* const restrict             mdl,
+    Mlr* const restrict             mlr,
     const pqe_index* const restrict index)
 {
     int status;
 
-    lockPq(mdl);
-    if ((status = pqe_insert(mdl->pq, *index)) != 0)
-        (void)pqe_discard(mdl->pq, *index);
-    unlockPq(mdl);
+    lockPq(mlr);
+    if ((status = pqe_insert(mlr->pq, *index)) != 0)
+        (void)pqe_discard(mlr->pq, *index);
+    unlockPq(mlr);
 
     if (status) {
         LOG_ADD("Couldn't insert data-product into product-queue: status=%d",
@@ -211,24 +211,24 @@ insertOrDiscard(
 /**
  * Tracks the last data-product to be successfully received.
  *
- * @param[in] mdl   Pointer to the multicast downstream LDM.
+ * @param[in] mlr   Pointer to the multicast LDM receiver.
  * @param[in] info  Pointer to the metadata of the last data-product to be
  *                  successfully received. Caller may free when it's no longer
  *                  needed.
  */
 inline static void
 lastReceived(
-    Mdl* const restrict             mdl,
+    Mlr* const restrict             mlr,
     const prod_info* const restrict info)
 {
-    dl7_lastReceived(mdl->down7, info);
+    dl7_lastReceived(mlr->down7, info);
 }
 
 /**
  * Finishes inserting a received VCMTP file into an LDM product-queue as an LDM
  * data-product.
  *
- * @param[in] mdl          Pointer to the multicast downstream LDM.
+ * @param[in] mlr          Pointer to the multicast LDM receiver.
  * @param[in] index        Index of the allocated region in the product-queue.
  * @param[in] info         LDM data-product metadata. Caller may free when it
  *                         is no longer needed.
@@ -239,7 +239,7 @@ lastReceived(
  */
 static int
 finishInsertion(
-    Mdl* const restrict             mdl,
+    Mlr* const restrict             mlr,
     const pqe_index* const restrict index,
     const prod_info* const restrict info,
     const size_t                    dataSize)
@@ -251,19 +251,19 @@ finishInsertion(
                 "LDM size=%u bytes; actual data=%lu bytes", info->ident,
                 info->sz, (unsigned long)dataSize);
         status = -1;
-        lockPq(mdl);
-        (void)pqe_discard(mdl->pq, *index);
-        unlockPq(mdl);
+        lockPq(mlr);
+        (void)pqe_discard(mlr->pq, *index);
+        unlockPq(mlr);
     }
     else {
-        status = insertOrDiscard(mdl, index);
+        status = insertOrDiscard(mlr, index);
 
         if (status) {
             LOG_ADD("Couldn't finish inserting %u-byte data-product \"%s\"",
                     info->sz, info->ident);
         }
         else {
-            lastReceived(mdl, info);
+            lastReceived(mlr, info);
         }
     }
     return status;
@@ -274,8 +274,8 @@ finishInsertion(
  * file. Finishes inserting the VCMTP file (which is an XDR-encoded
  * data-product) into the associated LDM product-queue.
  *
- * @param[in,out]  obj          Pointer to the associated multicast downstream
- *                              LDM object.
+ * @param[in,out]  obj          Pointer to the associated multicast LDM
+ *                              receiver object.
  * @param[in]      file_entry   Metadata of the VCMTP file in question.
  * @retval         0            Success, the file-transfer wasn't to memory,
  *                              or the data wasn't wanted.
@@ -299,8 +299,8 @@ eof_func(
         const size_t           fileSize = mcastFileEntry_getSize(file_entry);
         const void* const      bofResponse = mcastFileEntry_getBofResponse(file_entry);
         const pqe_index* const index = ldmBofResponse_getIndex(bofResponse);
-        Mdl* const             mdl = (Mdl*)obj;
-        pqueue* const          pq = mdl->pq;
+        Mlr* const             mlr = (Mlr*)obj;
+        pqueue* const          pq = mlr->pq;
 
         xdrmem_create(&xdrs, (char*)ldmBofResponse_getBuf(bofResponse),
                 fileSize, XDR_DECODE); /* (char*) is safe because decoding */
@@ -310,12 +310,12 @@ eof_func(
                     "VCMTP file \"%s\"", fileSize,
                     mcastFileEntry_getFileName(file_entry));
             status = -1;
-            lockPq(mdl);
+            lockPq(mlr);
             pqe_discard(pq, *index);
-            unlockPq(mdl);
+            unlockPq(mlr);
         }
         else {
-            status = finishInsertion(mdl, index, &info,
+            status = finishInsertion(mlr, index, &info,
                     fileSize-(xdrs.x_private-xdrs.x_base));
             xdr_free(xdr_prod_info, (char*)&info);
         } /* "info" allocated */
@@ -331,8 +331,8 @@ eof_func(
  * file. Queues the file for reception by other means. This function must and
  * does return immediately.
  *
- * @param[in,out]  obj          Pointer to the associated multicast downstream
- *                              LDM object.
+ * @param[in,out]  obj          Pointer to the associated multicast LDM receiver
+ *                              object.
  * @param[in]      fileId       Identifier of the VCMTP file that was missed.
  */
 static void
@@ -340,13 +340,13 @@ missed_file_func(
     void*               obj,
     const McastFileId   fileId)
 {
-    dl7_missedProduct(((Mdl*)obj)->down7, fileId);
+    dl7_missedProduct(((Mlr*)obj)->down7, fileId);
 }
 
 /**
- * Initializes a multicast downstream LDM.
+ * Initializes a multicast LDM receiver.
  *
- * @param[out] mdl            The multicast downstream LDM to initialize.
+ * @param[out] mlr            The multicast LDM receiver to initialize.
  * @param[in]  pq             The product-queue to use.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
@@ -358,7 +358,7 @@ missed_file_func(
  */
 static int
 init(
-    Mdl* const restrict                  mdl,
+    Mlr* const restrict                  mlr,
     pqueue* const restrict               pq,
     const McastInfo* const restrict mcastInfo,
     Down7* const restrict                down7)
@@ -366,8 +366,8 @@ init(
     int                 status;
     McastReceiver*     receiver;
 
-    if (mdl == NULL) {
-        LOG_ADD0("NULL multicast-downstream-LDM argument");
+    if (mlr == NULL) {
+        LOG_ADD0("NULL multicast-LDM-receiver argument");
         return LDM7_INVAL;
     }
     if (pq == NULL) {
@@ -385,15 +385,15 @@ init(
 
     status = mcastReceiver_new(&receiver, mcastInfo->server.inetId,
             mcastInfo->server.port, bof_func, eof_func, missed_file_func,
-            mcastInfo->group.inetId, mcastInfo->group.port, mdl);
+            mcastInfo->group.inetId, mcastInfo->group.port, mlr);
     if (status) {
         LOG_ADD0("Couldn't create FMTP receiver");
         return LDM7_MCAST;
     }
 
-    mdl->receiver = receiver;
-    mdl->pq = pq;
-    mdl->down7 = down7;
+    mlr->receiver = receiver;
+    mlr->pq = pq;
+    mlr->down7 = down7;
 
     return 0;
 }
@@ -403,69 +403,69 @@ init(
  ******************************************************************************/
 
 /**
- * Returns a new multicast downstream LDM object.
+ * Returns a new multicast LDM receiver object.
  *
  * @param[in]  pq             The product-queue to use.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     NULL           Failure. `log_add()` called.
- * @return                    Pointer to a new multicast downstream LDM object.
- *                            The caller should call `ldm_free()` when it's no
+ * @return                    Pointer to a new multicast LDM receiver object.
+ *                            The caller should call `mlr_free()` when it's no
  *                            longer needed.
  */
-Mdl*
-mdl_new(
+Mlr*
+mlr_new(
     pqueue* const restrict               pq,
     const McastInfo* const restrict mcastInfo,
     Down7* const restrict                down7)
 {
-    Mdl* mdl = LOG_MALLOC(sizeof(Mdl), "multicast downstream LDM object");
+    Mlr* mlr = LOG_MALLOC(sizeof(Mlr), "multicast LDM receiver object");
 
-    if (mdl) {
-        if (init(mdl, pq, mcastInfo, down7)) {
-            LOG_ADD0("Couldn't initialize multicast downstream LDM");
-            free(mdl);
-            mdl = NULL;
+    if (mlr) {
+        if (init(mlr, pq, mcastInfo, down7)) {
+            LOG_ADD0("Couldn't initialize multicast LDM receiver");
+            free(mlr);
+            mlr = NULL;
         }
     }
 
-    return mdl;
+    return mlr;
 }
 
 /**
- * Frees the resources of a multicast downstream LDM object.
+ * Frees the resources of a multicast LDM receiver object.
  *
- * @param[in,out] mdl   The multicast downstream LDM object.
+ * @param[in,out] mlr   The multicast LDM receiver object.
  */
 void
-mdl_free(
-    Mdl* const  mdl)
+mlr_free(
+    Mlr* const  mlr)
 {
-    mcastReceiver_free(mdl->receiver);
-    free(mdl);
+    mcastReceiver_free(mlr->receiver);
+    free(mlr);
 }
 
 /**
- * Executes a multicast downstream LDM. Blocks until the multicast
- * downstream LDM is stopped.
+ * Executes a multicast LDM receiver. Blocks until the multicast
+ * LDM receiver is stopped.
  *
- * @param[in] mdl            The multicast downstream LDM to execute.
- * @retval    LDM7_CANCELED  The multicast downstream LDM was stopped.
- * @retval    LDM7_INVAL     @code{mdl == NULL}. \c log_add() called.
+ * @param[in] mlr            The multicast LDM receiver to execute.
+ * @retval    LDM7_CANCELED  The multicast LDM receiver was stopped.
+ * @retval    LDM7_INVAL     @code{mlr == NULL}. \c log_add() called.
  * @retval    LDM7_VCMTP     VCMTP error. \c log_add() called.
  */
 int
-mdl_start(
-    Mdl* const  mdl)
+mlr_start(
+    Mlr* const  mlr)
 {
     int         status;
 
-    if (NULL == mdl) {
-        LOG_ADD0("NULL multicast-downstream-LDM argument");
+    if (NULL == mlr) {
+        LOG_ADD0("NULL multicast-LDM- receiver argument");
         status = LDM7_INVAL;
     }
-    else if ((status = mcastReceiver_execute(mdl->receiver)) != 0) {
-        LOG_ADD0("Failure executing multicast downstream LDM");
+    else if ((status = mcastReceiver_execute(mlr->receiver)) != 0) {
+        LOG_ADD0("Failure executing multicast LDM receiver");
         status = LDM7_MCAST;
     }
     else {
@@ -476,14 +476,14 @@ mdl_start(
 }
 
 /**
- * Cleanly stops an executing multicast downstream LDM. Undefined behavior
+ * Cleanly stops an executing multicast LDM receiver. Undefined behavior
  * results if called from a signal handler.
  *
- * @param[in] mdl  Pointer to the multicast downstream LDM to stop.
+ * @param[in] mlr  Pointer to the multicast LDM receiver to stop.
  */
 void
-mdl_stop(
-    Mdl* const mdl)
+mlr_stop(
+    Mlr* const mlr)
 {
-    mcastReceiver_stop(mdl->receiver);
+    mcastReceiver_stop(mlr->receiver);
 }
