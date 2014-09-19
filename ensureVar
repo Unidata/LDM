@@ -1,20 +1,20 @@
 LDMHOME=${1?LDM home directory not set}
+localstatedir=${2-$LDMHOME/var}
 
-# This script assumes that $LDMHOME/var exists. "make install" should ensure
-# that.
+set -e # exit upon error
 
-cd $LDMHOME || exit 1
+cd $localstatedir  # "make install" should create this directory.
 
-if test -e data; then
-    test -e var/data || ln -s $LDMHOME/data var/data || exit 1
-    test -e var/queues || ln -s $LDMHOME/data var/queues || exit 1
+if test -d $LDMHOME/data -o -h $LDMHOME/data; then
+    test -d data   -o -h data   || ln -s $LDMHOME/data data 
+    test -d queues -o -h queues || ln -s $LDMHOME/data queues 
 else
-    test -e var/data || mkdir var/data || exit 1
-    test -e var/queues || mkdir var/queues || exit 1
+    test -d data   -o -h data   || mkdir data 
+    test -d queues -o -h queues || mkdir queues 
 fi
 
-if test -e logs; then
-    test -e var/logs || ln -s $LDMHOME/logs var/logs || exit 1
+if test -d $LDMHOME/logs -o -h $LDMHOME/logs; then
+    test -d logs   -o -h logs   || ln -s $LDMHOME/logs logs 
 else
-    test -e var/logs || mkdir var/logs || exit 1
+    test -d logs   -o -h logs   || mkdir logs 
 fi
