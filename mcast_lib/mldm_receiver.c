@@ -6,7 +6,8 @@
  *   @file: mldm_receiver.c
  * @author: Steven R. Emmerson
  *
- * This file implements the multicast LDM receiver.
+ * This file implements the multicast LDM receiver, which uses a VCMTP receiver
+ * to receive LDM data-products sent to a multicast group via a VCMTP sender.
  */
 
 #include "config.h"
@@ -35,7 +36,7 @@
 struct mlr {
     pqueue*         pq;       // product-queue to use */
     Down7*          down7;    // pointer to associated downstream LDM-7
-    McastReceiver* receiver; // VCMTP C Receiver
+    McastReceiver*  receiver; // VCMTP C Receiver
 };
 
 /**
@@ -89,7 +90,7 @@ unlockPq(
  * @param[in] file_entry  The corresponding VCMTP file-entry.
  * @retval    0           Success or the data-product is already in the LDM
  *                        product-queue. BOF-response set.
- * @retval    -1          Failure. \c log_add() called. BOF-response set to
+ * @retval    -1          Failure. `log_add()` called. BOF-response set to
  *                        ignore the file.
  */
 static int
@@ -147,7 +148,7 @@ allocateSpaceAndSetBofResponse(
  * @retval         0            Success, the transfer isn't to memory, or the
  *                              data-product is already in the LDM
  *                              product-queue.
- * @retval         -1           Failure. \c log_add() called.
+ * @retval         -1           Failure. `log_add()` called.
  */
 static int
 bof_func(
@@ -221,7 +222,7 @@ lastReceived(
     Mlr* const restrict             mlr,
     const prod_info* const restrict info)
 {
-    dl7_lastReceived(mlr->down7, info);
+    down7_lastReceived(mlr->down7, info);
 }
 
 /**
@@ -234,7 +235,7 @@ lastReceived(
  *                         is no longer needed.
  * @param[in] dataSize     Actual number of bytes received.
  * @retval    0            Success.
- * @retval    -1           Error. \c log_add() called. The allocated region in
+ * @retval    -1           Error. `log_add()` called. The allocated region in
  *                         the product-queue was released.
  */
 static int
@@ -279,7 +280,7 @@ finishInsertion(
  * @param[in]      file_entry   Metadata of the VCMTP file in question.
  * @retval         0            Success, the file-transfer wasn't to memory,
  *                              or the data wasn't wanted.
- * @retval         -1           Error. \c log_add() called. The allocated space
+ * @retval         -1           Error. `log_add()` called. The allocated space
  *                              in the LDM product-queue was released.
  */
 static int
@@ -340,7 +341,7 @@ missed_file_func(
     void*               obj,
     const McastFileId   fileId)
 {
-    dl7_missedProduct(((Mlr*)obj)->down7, fileId);
+    down7_missedProduct(((Mlr*)obj)->down7, fileId);
 }
 
 /**
@@ -351,10 +352,10 @@ missed_file_func(
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     0              Success.
- * @retval     LDM7_SYSTEM    System error. \c log_add() called.
- * @retval     LDM7_INVAL     @code{pq == NULL || missed_product == NULL ||
- *                            mcastInfo == NULL}. \c log_add() called.
- * @retval     LDM7_VCMTP     VCMTP error. \c log_add() called.
+ * @retval     LDM7_SYSTEM    System error. `log_add()` called.
+ * @retval     LDM7_INVAL     `pq == NULL || missed_product == NULL ||
+ *                            mcastInfo == NULL`. `log_add()` called.
+ * @retval     LDM7_VCMTP     VCMTP error. `log_add()` called.
  */
 static int
 init(
@@ -451,8 +452,8 @@ mlr_free(
  *
  * @param[in] mlr            The multicast LDM receiver to execute.
  * @retval    LDM7_CANCELED  The multicast LDM receiver was stopped.
- * @retval    LDM7_INVAL     @code{mlr == NULL}. \c log_add() called.
- * @retval    LDM7_VCMTP     VCMTP error. \c log_add() called.
+ * @retval    LDM7_INVAL     `mlr == NULL`. `log_add()` called.
+ * @retval    LDM7_VCMTP     VCMTP error. `log_add()` called.
  */
 int
 mlr_start(

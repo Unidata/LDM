@@ -6,8 +6,8 @@
  *   @file: mldm_receiver_memory.c
  * @author: Steven R. Emmerson
  *
- * This file implements the persistent, session-to-session memory for a
- * multicast-capable LDM.
+ * This file implements the persistent, session-to-session memory for the
+ * receiving side of a multicast-capable LDM.
  */
 
 #include "config.h"

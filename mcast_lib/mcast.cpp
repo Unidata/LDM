@@ -86,9 +86,11 @@ mcastReceiver_init(
     const unsigned short        mcastPort,
     void* const                 obj)
 {
-    std:string          hostId(tcpAddr);
-    VCMTPReceiver*      rcvr = new VCMTPReceiver(hostId, tcpPort,
-            PerFileNotifier(bof_func, eof_func, missed_file_func, obj));
+    std:string             hostId(tcpAddr);
+    // Following object will be deleted by `VCMTPReceiver` destructor
+    PerFileNotifier* const notifier =
+            new PerFileNotifier(bof_func, eof_func, missed_file_func, obj);
+    VCMTPReceiver*         rcvr = new VCMTPReceiver(hostId, tcpPort, notifier);
 
     try {
         rcvr->JoinGroup(std::string(mcastAddr), mcastPort);

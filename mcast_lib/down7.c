@@ -328,48 +328,48 @@ testConnection(
  * the timeout interval or an error occurs.
  *
  * @param[in] xprt           Pointer to the RPC service transport.
+ * @param[in] timeout        Timeout interval in seconds.
  * @retval    LDM7_TIMEDOUT  Timeout occurred.
  * @retval    LDM7_RPC       Error in RPC layer. `log_start()` called.
  * @retval    LDM7_SYSTEM    System error. `log_start()` called.
  */
 static int
 run_svc(
-    SVCXPRT* const xprt)
+    SVCXPRT* const xprt,
+    const unsigned timeout)
 {
-    for (;;) {
-        const int      sock = xprt->xp_sock;
-        fd_set         fds;
-        struct timeval timeout;
-        int            status;
+    #define SOCK (xprt->xp_sock)
 
+    for (;;) {
+        fd_set fds;
         FD_ZERO(&fds);
-        FD_SET(sock, &fds);
-        timeout.tv_sec = 3600;
+        FD_SET(SOCK, &fds);
+
+        struct timeval timeout;
+        timeout.tv_sec = timeout;
         timeout.tv_usec = 0;
 
-        status = select(sock+1, &fds, 0, 0, &timeout);
-
-        if (status == 0)
+        const int status = select(SOCK+1, &fds, 0, 0, &timeout);
+        if (0 == status)
             return LDM7_TIMEDOUT;
-
-        if (status < 0) {
-            LOG_SERROR1("select() error on socket %d", sock);
+        if (0 > status) {
+            LOG_SERROR1("select() error on socket %d", SOCK);
             return LDM7_SYSTEM;
         }
 
         /*
          * The socket is ready for reading.
          */
-        svc_getreqsock(sock); /* process RPC message */
+        svc_getreqsock(SOCK); /* Process RPC message. Calls ldmprog_7() */
 
-        if (FD_ISSET(sock, &svc_fdset))
+        if (FD_ISSET(SOCK, &svc_fdset))
             continue;
 
         /*
          * The RPC layer closed the socket and destroyed the associated
          * SVCXPRT structure.
          */
-         LOG_START0("svc_run(): RPC layer closed connection");
+         LOG_START0("RPC layer closed connection");
          return LDM7_RPC;
     }
 
@@ -405,7 +405,7 @@ run_down7_svc(
     }
     else {
         for (;;) {
-            status = run_svc(xprt);
+            status = run_svc(xprt, 3600);
 
             if (status == LDM7_TIMEDOUT && (status = testConnection(down7)) == 0)
                 continue; // connection is still good
@@ -413,9 +413,9 @@ run_down7_svc(
             LOG_ADD0("Connection to upstream LDM-7 is broken");
             break;
         }
-    }
+    } // thread-specific pointer to downstream LDM-7 is set
 
-    return status; // Eclipse IDE wants to see a return
+    return status;
 }
 
 /**
@@ -1089,7 +1089,7 @@ deliveryFailure(
  * @return               Pointer to the new downstream LDM-7.
  */
 Down7*
-dl7_new(
+down7_new(
     const ServiceAddr* const restrict servAddr,
     const feedtypet                   feedtype,
     pqueue* const restrict            pq)
@@ -1166,7 +1166,7 @@ return_NULL:
  * @retval    LDM_SHUTDOWN LDM-7 was shut down. `log_clear()` called.
  */
 int
-dl7_start(
+down7_start(
     Down7* const down7)
 {
     while (!down7->shutdown) {
@@ -1180,7 +1180,39 @@ dl7_start(
 
     log_clear();
 
-    return LDM7_SHUTDOWN; // Eclipse IDE wants to see a return
+    return LDM7_SHUTDOWN;
+}
+
+/**
+ * Stops a downstream LDM-7 cleanly. Returns immediately. Idempotent. Undefined
+ * behavior results if called from a signal handler.
+ *
+ * @param[in] down7  Pointer to the downstream LDM-7 to be stopped.
+ */
+void
+down7_stop(
+    Down7* const down7)
+{
+    down7->shutdown = 1;
+    (void)pthread_cond_signal(&down7->waitCond);
+}
+
+/**
+ * Frees a downstream LDM-7.
+ *
+ * @param[in] down7  Pointer to the downstream LDM-7 object to be freed or NULL.
+ */
+void
+down7_free(
+    Down7* const down7)
+{
+    if (down7) {
+        (void)pthread_mutex_destroy(&down7->clntMutex);
+        (void)pthread_mutex_destroy(&down7->waitMutex);
+        (void)pthread_cond_destroy(&down7->waitCond);
+        sa_free(down7->servAddr);
+        free(down7);
+    }
 }
 
 /**
@@ -1193,7 +1225,7 @@ dl7_start(
  * @param[in] fileId  VCMTP file identifier of the missed file.
  */
 void
-dl7_missedProduct(
+down7_missedProduct(
     Down7* const      down7,
     const McastFileId fileId)
 {
@@ -1221,7 +1253,7 @@ dl7_missedProduct(
  *                   LDM receiver. Caller may free when it's no longer needed.
  */
 void
-dl7_lastReceived(
+down7_lastReceived(
     Down7* const restrict           down7,
     const prod_info* const restrict last)
 {
@@ -1328,36 +1360,4 @@ end_backlog_7_svc(
             sa_snprint(down7->servAddr, saStr, sizeof(saStr)));
 
     return NULL; // causes RPC dispatcher to not reply
-}
-
-/**
- * Stops a downstream LDM-7 cleanly. Returns immediately. Idempotent. Undefined
- * behavior results if called from a signal handler.
- *
- * @param[in] down7  Pointer to the downstream LDM-7 to be stopped.
- */
-void
-dl7_stop(
-    Down7* const down7)
-{
-    down7->shutdown = 1;
-    (void)pthread_cond_signal(&down7->waitCond);
-}
-
-/**
- * Frees a downstream LDM-7.
- *
- * @param[in] down7  Pointer to the downstream LDM-7 object to be freed or NULL.
- */
-void
-dl7_free(
-    Down7* const down7)
-{
-    if (down7) {
-        (void)pthread_mutex_destroy(&down7->clntMutex);
-        (void)pthread_mutex_destroy(&down7->waitMutex);
-        (void)pthread_cond_destroy(&down7->waitCond);
-        sa_free(down7->servAddr);
-        free(down7);
-    }
 }

@@ -6,7 +6,7 @@
  *   @file: mldm_receiver.hin
  * @author: Steven R. Emmerson
  *
- * This file specifies the API for the multicast downstream LDM.
+ * This file specifies the API for the multicast LDM receiver.
  */
 
 #ifndef MCAST_DOWN_H
