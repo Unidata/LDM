@@ -58,6 +58,8 @@ struct Down7 {
     McastInfo*            mcastInfo;     ///< information on multicast group
     Mlr*                  mlr;           ///< multicast LDM receiver
     McastSessionMemory*   msm;           ///< persistent multicast session memory
+    /** Starts other threads and waits on them */
+    pthread_t             masterThread;
     pthread_t             receiveThread; ///< thread for receiving products
     pthread_t             requestThread; ///< thread for requesting products
     pthread_t             mcastThread;   ///< thread for multicast reception
@@ -67,7 +69,7 @@ struct Down7 {
     pthread_mutex_t       clntMutex;
     int                   exitStatus;    ///< status of first exited task
     int                   sock;          ///< socket with remote LDM-7
-    volatile sig_atomic_t shutdown;      ///< whether shutdown
+    volatile sig_atomic_t shutdown;      ///< whether shutdown requested
     volatile sig_atomic_t taskExited;    ///< whether a task exited
     bool                  mcastWorking;  ///< product received via multicast?
     /**
@@ -336,7 +338,7 @@ testConnection(
 static int
 run_svc(
     SVCXPRT* const xprt,
-    const unsigned timeout)
+    const time_t timeout)
 {
     #define SOCK (xprt->xp_sock)
 
@@ -345,11 +347,11 @@ run_svc(
         FD_ZERO(&fds);
         FD_SET(SOCK, &fds);
 
-        struct timeval timeout;
-        timeout.tv_sec = timeout;
-        timeout.tv_usec = 0;
+        struct timeval selectTimeout;
+        selectTimeout.tv_sec = timeout;
+        selectTimeout.tv_usec = 0;
 
-        const int status = select(SOCK+1, &fds, 0, 0, &timeout);
+        const int status = select(SOCK+1, &fds, 0, 0, &selectTimeout);
         if (0 == status)
             return LDM7_TIMEDOUT;
         if (0 > status) {
@@ -574,7 +576,7 @@ startRequester(
 
     taskExit(down7, status);
 
-    return (void*)status; // Eclipse IDE wants to see a return
+    return (void*)status;
 }
 
 /**
@@ -846,7 +848,7 @@ subscribeAndExecute(
             status = execute(down7);
         }
         xdr_free(xdr_SubscriptionReply, (char*)reply);
-    } /* "reply" allocated */
+    } /* `reply` allocated */
 
     return status;
 }
@@ -1070,25 +1072,19 @@ deliveryFailure(
     svc_destroy(rqstp->rq_xprt);
 }
 
-/******************************************************************************
- * Public API:
- ******************************************************************************/
-
 /**
  * Returns a new downstream LDM-7.
  *
- * This function is public in order to support `dl7_stop()`.
- *
  * @param[in] servAddr   Pointer to the address of the server from which to
  *                       obtain multicast information, backlog files, and
- *                       files missed by the VCMTP layer. The client may free
+ *                       files missed by the VCMTP layer. Caller may free
  *                       upon return.
  * @param[in] feedtype   Feedtype of multicast group to receive.
  * @param[in] pq         Pointer to the product-queue.
  * @retval    NULL       Failure. \c log_start() called.
  * @return               Pointer to the new downstream LDM-7.
  */
-Down7*
+static Down7*
 down7_new(
     const ServiceAddr* const restrict servAddr,
     const feedtypet                   feedtype,
@@ -1158,51 +1154,11 @@ return_NULL:
 }
 
 /**
- * Starts a downstream LDM-7. Blocks until the downstream LDM-7 is shut down.
- * NB: This means that errors (even severe ones like malloc() failures) will
- * cause periodic log messages but will not stop the downstream LDM-7.
- *
- * @param[in] down7        Pointer to the downstream LDM-7 to be started.
- * @retval    LDM_SHUTDOWN LDM-7 was shut down. `log_clear()` called.
- */
-int
-down7_start(
-    Down7* const down7)
-{
-    while (!down7->shutdown) {
-        (void)runDown7Once(down7);
-
-        if (!down7->shutdown) {
-            log_log(LOG_ERR);
-            (void)nap(down7);
-        }
-    }
-
-    log_clear();
-
-    return LDM7_SHUTDOWN;
-}
-
-/**
- * Stops a downstream LDM-7 cleanly. Returns immediately. Idempotent. Undefined
- * behavior results if called from a signal handler.
- *
- * @param[in] down7  Pointer to the downstream LDM-7 to be stopped.
- */
-void
-down7_stop(
-    Down7* const down7)
-{
-    down7->shutdown = 1;
-    (void)pthread_cond_signal(&down7->waitCond);
-}
-
-/**
  * Frees a downstream LDM-7.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 object to be freed or NULL.
  */
-void
+static void
 down7_free(
     Down7* const down7)
 {
@@ -1213,6 +1169,106 @@ down7_free(
         sa_free(down7->servAddr);
         free(down7);
     }
+}
+
+/**
+ * Executes a downstream LDM-7. Called by `pthread_create()`.
+ *
+ * @param[in] arg            Pointer to downstream LDM-7 object.
+ * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
+ * @retval    LDM7_SYSTEM    System error. \c log_start() called.
+ */
+static void*
+down7_execute(
+        void* const arg)
+{
+    int          status;
+    Down7* const down7 = arg;
+
+    do {
+        status = runDown7Once(down7);
+
+        if (LDM7_SYSTEM == status) {
+            log_log(LOG_ERR);
+            break;
+        }
+        log_log(LOG_NOTICE); // might log nothing
+
+        status = nap(down7);
+        log_log(LOG_ERR); // will log nothing if `nap()` returned 0
+    } while (LDM7_SHUTDOWN != status);
+
+    return (void*)status;
+}
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
+/**
+ * Starts a downstream LDM-7 on a new thread. Doesn't block.
+ *
+ * @param[in] servAddr   Pointer to the address of the server from which to
+ *                       obtain multicast information, backlog files, and
+ *                       files missed by the VCMTP layer. Caller may free
+ *                       upon return.
+ * @param[in] feedtype   Feedtype of multicast group to receive.
+ * @param[in] pq         Pointer to the product-queue.
+ * @retval    NULL       Failure. `log_add()` called.
+ * @return               Pointer to the executing downstream LDM-7. Caller
+ *                       should call `down7_stop()` when the downstream LDM-7 is
+ *                       no longer needed.
+ */
+Down7*
+down7_start(
+    const ServiceAddr* const restrict servAddr,
+    const feedtypet                   feedtype,
+    pqueue* const restrict            pq)
+{
+    /*
+     * A child process is not forked because it is assumed that the current
+     * process is a child process of the top-level server.
+     */
+    Down7* down7 = down7_new(servAddr, feedtype, pq);
+
+    if (down7) {
+        int status = pthread_create(&down7->masterThread, NULL, down7_execute,
+                down7);
+
+        if (status) {
+            LOG_ERRNUM0(status, "Couldn't create thread for downstream LDM-7");
+            down7_free(down7);
+            down7 = NULL;
+        }
+    } // `down7` allocated
+
+    return down7;
+}
+
+/**
+ * Stops a downstream LDM-7 cleanly and returns its status. Blocks until the
+ * downstream LDM-7 terminates. Undefined behavior results if called from a
+ * signal handler.
+ *
+ * @param[in] down7        Pointer to downstream LDM-7 to be stopped.
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  Downstream LDM-7 terminated due to system error.
+ */
+Ldm7Status
+down7_stop(
+    Down7* const down7)
+{
+    down7->shutdown = 1;
+    (void)pthread_cond_signal(&down7->waitCond);
+
+    void* returnPtr;
+    pthread_join(down7->masterThread, &returnPtr);
+
+    down7_free(down7);
+
+    int status = (Ldm7Status)returnPtr;
+
+    return LDM7_SHUTDOWN == status ? 0 : status;
 }
 
 /**
