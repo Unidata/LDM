@@ -20,7 +20,6 @@ cd `dirname $0`
 # Copy the source-distribution to the remote host.
 #
 scp $SOURCE_DISTRO_NAME $USER_NAME@$host:
-trap "ssh -T $USER_NAME@$host rm -f $SOURCE_DISTRO_NAME; `trap -p ERR`" ERR
 
 # bash(1) is explicitly used for remote executions because 1) not all LDM users
 # have the same user-shell; and 2) not all sh(1)-s behave the same -- especially
@@ -32,7 +31,6 @@ ssh -T $USER_NAME@$host bash --login <<EOF
     set -x -e
     gunzip -c $SOURCE_DISTRO_NAME | (mkdir -p $PKG_ID &&
         cd $PKG_ID && tar -xf - && rm -rf src && mv -f $PKG_ID src)
-    rm $SOURCE_DISTRO_NAME
     cd $RELPATH_DISTRO_SOURCE_DIR
     ./configure --disable-root-actions ${configOpts} CFLAGS=-g
     make install

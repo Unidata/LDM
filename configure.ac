@@ -146,7 +146,8 @@ case `uname -s` in
         ;;
 esac
 
-AM_CONDITIONAL([MAINTAINER], [test "$USER" = steve])
+AM_CONDITIONAL([MAINTAINER],
+        [test "$USER" = steve -a "$PWD" = /home/steve/Projects/ldm/ldm/src])
 
 # The following is for multicast data distribution using the Virtual Circuit
 # Multicast Transport Protocol. DO NOT USE!
