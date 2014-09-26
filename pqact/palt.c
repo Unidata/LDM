@@ -579,17 +579,16 @@ utcToEpochTime(
  */
 static void
 seq_sub(
-   const char*  istring,
-   char*        ostring,
-   size_t       size,
-   u_int        seqnum)
+   const char* restrict istring,
+   char* restrict       ostring,
+   size_t               size,
+   u_int                seqnum)
 {
     if (size > 0) {
         static int          seqfirst = 1;   /* true only first time called */
         static regex_t      seqprog;        /* compiled regexp for sequence indicator */
         static regmatch_t   seqpmatch[1];   /* substring matching information */
-        const char*         e2;             /* just beyond indicator substring */
-        const char*         is;             /* pointer to next input character */
+        const char*         nextStart;      // start position for next match
         /*
          * Compile regular-expression on first call.
          */
@@ -601,28 +600,29 @@ seq_sub(
            seqfirst = 0;
         }
 
-        for (is = istring; regexec(&seqprog, is, 1, seqpmatch, 0) == 0; is = e2) {
-           int          nbytes = seqpmatch[0].rm_so; /* offset to indicator substring */
-           const char*  s0 = is + nbytes; /* start of indicator substring */
-           /*
-            * Process the next date indicator in "istring".
-            */
-           printf("%d, %d\n", seqpmatch[0].rm_so, seqpmatch[0].rm_eo);
-           e2 = is + seqpmatch[0].rm_eo;
+        for (; regexec(&seqprog, istring, 1, seqpmatch, 0) == 0;
+                istring = nextStart) {
+           int nbytes = seqpmatch[0].rm_so; /* offset to indicator substring */
+
+           nextStart = istring + seqpmatch[0].rm_eo;
 
            /*
             * Copy stuff before match.
             */
            nbytes = nbytes <= size ? nbytes : size;
-           (void)strncpy(ostring, is, (size_t)nbytes);
+           (void)strncpy(ostring, istring, (size_t)nbytes);
+           ostring += nbytes;
            size -= nbytes;
 
-           nbytes =  snprintf(ostring, size, "%u", seqnum);
+           /*
+            * Append sequence number.
+            */
+           nbytes = snprintf(ostring, size, "%u", seqnum);
            nbytes = nbytes <= size ? nbytes : size;
            ostring += nbytes;
            size -= nbytes;
         }
-        (void)strncpy(ostring, is, size); /* copy rest of input to output */
+        (void)strncpy(ostring, istring, size); /* copy rest of input to output */
         ostring[size-1] = 0;
     }
 }

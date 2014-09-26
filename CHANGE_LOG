@@ -1,4 +1,4 @@
-6.12.7	2014-09-23T10:26:43-0600
+6.12.7	2014-09-26T10:03:07-0600
     NOAAPORT:
         Merged changes to the retransmit-request capability from Raytheon for
         the AWIPS-II system. This capability is only for the use of weather
