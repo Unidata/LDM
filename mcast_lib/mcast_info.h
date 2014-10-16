@@ -3,11 +3,10 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: file_id_queue.hin
+ *   @file: mcast_info.h
  * @author: Steven R. Emmerson
  *
- * This file declares the API for the multicast information returned by a
- * server.
+ * This file declares the API for information on a multicast group.
  */
 
 #ifndef MCAST_INFO_H
@@ -23,17 +22,19 @@ extern "C" {
 /**
  * Returns a new multicast information object.
  *
- * @param[in] feed       The feedtype of the multicast group.
- * @param[in] mcast      The Internet address of the multicast group. The caller
- *                       may free.
- * @param[in] ucast      The Internet address of the unicast service for blocks
- *                       and files that are missed by the multicast receiver.
- *                       The caller may free.
- * @retval    NULL       Failure. `log_start()` called.
- * @return               The new, initialized multicast information object.
+ * @param[out] mcastInfo  Initialized multicast information object.
+ * @param[in]  feed       The feedtype of the multicast group.
+ * @param[in]  mcast      The Internet address of the multicast group. The caller
+ *                        may free.
+ * @param[in]  ucast      The Internet address of the unicast service for blocks
+ *                        and files that are missed by the multicast receiver.
+ *                        The caller may free.
+ * @retval     0          Success. `*info` is set.
+ * @retval     ENOMEM     Out-of-memory error. `log_start()` called.
  */
-McastInfo*
+int
 mi_new(
+    McastInfo** const                 mcastInfo,
     const feedtypet                   feed,
     const ServiceAddr* const restrict mcast,
     const ServiceAddr* const restrict ucast);
@@ -57,7 +58,7 @@ mi_free(
  * @retval     0            Success.
  * @retval     LDM7_SYSTEM  System error. \c log_add() called.
  */
-int
+Ldm7Status
 mi_copy(
     McastInfo* const restrict       to,
     const McastInfo* const restrict from);
@@ -73,6 +74,20 @@ mi_copy(
 McastInfo*
 mi_clone(
     const McastInfo* const info);
+
+/**
+ * Replaces the Internet identifier of the TCP server.
+ *
+ * @param[in,out] info         Multicast information to be modified.
+ * @param[in]     id           Replacement Internet identifier.
+ * @retval        0            Success. `info->server.inetId` was freed and now
+ *                             points to a copy of `id`.
+ * @retval        LDM7_SYSTEM  System failure. `log_add()` called.
+ */
+Ldm7Status
+mi_replaceServerId(
+        McastInfo* const  info,
+        const char* const id);
 
 /**
  * Returns the feedtype of a multicast information object.

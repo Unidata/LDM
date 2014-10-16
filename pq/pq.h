@@ -26,6 +26,7 @@
 #define PQ_END		-1	/* at end of product-queue */
 #define PQ_CORRUPT	-2	/* the product-queue is corrupt */
 #define PQ_NOTFOUND	-3	/* no such data-product */
+#define PQ_SYSTEM  	-4	/* system error */
 
 typedef struct pqueue pqueue; /* private, implemented in pq.c */
 extern struct pqueue *pq;
@@ -630,6 +631,26 @@ int
 pq_setCursorFromSignature(
     pqueue* const       pq,
     const signaturet    signature);
+
+/**
+ * Process the data-product with a given signature.
+ *
+ * @param[in] pq           Product-queue.
+ * @param[in] sig          Signature of data-product to process.
+ * @param[in] func         Function to process data-product.
+ * @param[in] optArg       Optional `func` argument.
+ * @retval    PQ_SYSTEM    System error. `log_add()` called.
+ * @retval    PQ_CORRUPT   The product-queue is corrupt. `log_add()` called.
+ * @retval    PQ_NOTFOUND  A data-product with the given signature was not found
+ *                         in the product-queue.
+ * @return                 Return-code of `func`.
+ */
+int
+pq_processProduct(
+        pqueue* const     pq,
+        signaturet  const sig,
+        pq_seqfunc* const func,
+        void* const       optArg);
 
 /**
  * Step thru the time sorted inventory according to 'mt',

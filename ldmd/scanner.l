@@ -67,6 +67,24 @@ qstring		([^"]|{escquote})*
 }
 
 
+^[Mm][Uu][Ll][Tt][Ii][Cc][Aa][Ss][Tt] {
+#if YYDEBUG
+    if(yydebug)
+	udebug("TRANSMIT");
+#endif
+    return (TRANSMIT_K);
+}
+
+
+^[Rr][Ee][Cc][Ee][Ii][Vv][Ee] {
+#if YYDEBUG
+    if(yydebug)
+	udebug("RECEIVE");
+#endif
+    return (RECEIVE_K);
+}
+
+
 ^[Rr][Ee][Qq][Uu][Ee][Ss][Tt]|POLL|poll {
 #if YYDEBUG
     if(yydebug)

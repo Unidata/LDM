@@ -33,3 +33,4 @@ mcast_ldm_sender.h
 mldm_sender_manager_test
 file_id_map_test
 mldm_sender_map_test
+prod_index_queue.h

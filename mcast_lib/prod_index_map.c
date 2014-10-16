@@ -3,10 +3,10 @@
  * reserved. See the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: file_id_map.c
+ *   @file: prod_index_map.c
  * @author: Steven R. Emmerson
  *
- * This file implements a singleton mapping from VCMTP file identifiers to LDM
+ * This file implements a singleton mapping from product indexes to LDM
  * data-product signatures (i.e., MD5 checksums). The same mapping is accessible
  * from multiple processes and persists between LDM sessions.
  *
@@ -17,7 +17,7 @@
 
 #include "ldm.h"
 #include "log.h"
-#include "file_id_map.h"
+#include "prod_index_map.h"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -37,7 +37,7 @@
 /**
  * Description of the memory-mapped object:
  */
-static const char*  MMO_DESC = "file-identifier map";
+static const char*  MMO_DESC = "product-index map";
 /**
  * Pathname of the file containing the memory-mapped object:
  */
@@ -55,10 +55,10 @@ typedef struct {
     /*
      * Keep consonant with `fileSizeFromNumSigs()` and `numSigsFromFileSize()`
      */
-    size_t      numSigs;   ///< Number of signatures
-    size_t      oldSig;    ///< Offset of oldest signature
-    McastFileId oldFileId; ///< File-Id of oldest signature
-    signaturet  sigs[1];   ///< Data-products signatures
+    size_t         numSigs;   ///< Number of signatures
+    size_t         oldSig;    ///< Offset of oldest signature
+    McastProdIndex oldIProd;  ///< Product-index of oldest signature
+    signaturet     sigs[1];   ///< Data-products signatures
 } Mmo;
 static Mmo*         mmo;
 /**
@@ -87,7 +87,7 @@ static size_t       fileSize;
  */
 static sigset_t     saveSet;
 /**
- * Whether or not the file-identifier map is open for writing:
+ * Whether or not the product-index map is open for writing:
  */
 static bool         forWriting;
 
@@ -134,7 +134,7 @@ restoreSigs(void)
 }
 
 /**
- * Locks the file-identifier map. Blocks until the lock is acquired.
+ * Locks the product-index map. Blocks until the lock is acquired.
  *
  * @pre                 {`fd` is open and `pathname` is set}
  * @param  exclusive    Whether or not the lock should be exclusive.
@@ -157,7 +157,7 @@ lockMap(
 }
 
 /**
- * Unlocks the file-identifier map.
+ * Unlocks the product-index map.
  *
  * @pre                    {`lockMap()` was previous called}
  * @retval    0            Success.
@@ -177,7 +177,7 @@ unlockMap(void)
 }
 
 /**
- * Locks the file-identifier map for writing and blocks most signals. Calls
+ * Locks the product-index map for writing and blocks most signals. Calls
  * `blockSigs()`.
  *
  * @pre                 {`fd` is open and `pathname` is set}
@@ -197,7 +197,7 @@ lockMapAndBlockSignals(void)
 
 /**
  * Restores the signal mask to what it was when `blockSigs()` was called and
- * unblocks the file-identifier map.
+ * unblocks the product-index map.
  *
  * @pre                 {`lockMapAndBlockSigs` was previously called}
  * @retval 0            Success.
@@ -267,7 +267,7 @@ fileSizeFromFile(void)
 }
 
 /**
- * Memory-maps the file containing the file-identifier map.
+ * Memory-maps the file containing the product-index map.
  *
  * @pre                 {`forWriting`, `fd`, and `pathname` are set}
  * @retval 0            Success.
@@ -290,7 +290,7 @@ mapMap(void)
 }
 
 /**
- * Un-memory-maps the file containing the file-identifier map.
+ * Un-memory-maps the file containing the product-index map.
  *
  * @pre                 {`fd` and `pathname` are set}
  * @retval 0            Success.
@@ -309,7 +309,7 @@ unmapMap(void)
 }
 
 /**
- * Sets the size of the file containing the file-identifier map.
+ * Sets the size of the file containing the product-index map.
  *
  * @param[in] size         The new size for the file in bytes.
  * @retval    0            Success.
@@ -331,7 +331,7 @@ truncateMap(
 }
 
 /**
- * Consolidates the contents of the file-identifier map into one contiguous
+ * Consolidates the contents of the product-index map into one contiguous
  * segment.
  *
  * @param[in] max          Maximum number of signatures in the file.
@@ -398,7 +398,7 @@ consolidateMap(
 }
 
 /**
- * Shifts the signatures in a (consolidated) file-identifier map towards lower
+ * Shifts the signatures in a (consolidated) product-index map towards lower
  * offsets, reducing the number of signatures to a given maximum -- adjusting
  * the map parameters as necessary. Does nothing if the given maximum is greater
  * than or equal to the actual number of signatures.
@@ -416,7 +416,7 @@ shiftMapDown(
 
         (void)memmove(mmo->sigs, mmo->sigs + delta, max*SIG_SIZE);
         mmo->numSigs = max;
-        mmo->oldFileId += delta;
+        mmo->oldIProd += delta;
     }
 
     maxSigs = max;
@@ -425,7 +425,7 @@ shiftMapDown(
 }
 
 /**
- * Expands the size of the file containing the file-identifier map and
+ * Expands the size of the file containing the product-index map and
  * memory-maps it.
  *
  * @param[in] newSize      New size for the file in bytes. Must be greater than
@@ -451,7 +451,7 @@ expandMapAndMap(
 }
 
 /**
- * Contracts the size of the file containing the file-identifier map and
+ * Contracts the size of the file containing the product-index map and
  * memory-maps it.
  *
  * @param[in] newSize      New size for the file in bytes. Must be less than
@@ -482,7 +482,7 @@ contractMapAndMap(
 
 /**
  * Adjusts, if necessary, the size of the previously-existing file containing
- * the file-identifier map and memory-maps it.
+ * the product-index map and memory-maps it.
  *
  * @param[in]  maxSigs      Maximum number of data-product signatures.
  * @retval     0            Success.
@@ -504,7 +504,7 @@ vetMapSizeAndMap(
 }
 
 /**
- * Clears the file-identifier map, which must be open for writing and locked.
+ * Clears the product-index map, which must be open for writing and locked.
  *
  * @pre {`lockMapAndBlockSigs()` has been called}
  */
@@ -517,7 +517,7 @@ clearMap(void)
 
 /**
  * Initializes and memory-maps the newly-created file that will contain the
- * file-identifier map for reading and writing.
+ * product-index map for reading and writing.
  *
  * @param[in]  max          Maximum number of data-product signatures for the
  *                          map.
@@ -545,7 +545,7 @@ initNewMapAndMap(
 }
 
 /**
- * Initializes and memory-maps the file containing the file-identifier map for
+ * Initializes and memory-maps the file containing the product-index map for
  * reading and writing.
  *
  * @param[in]  maxSigs      Maximum number of data-product signatures for the
@@ -566,7 +566,7 @@ initMapAndMap(
 }
 
 /**
- * Opens a file containing a file-identifier map.
+ * Opens a file containing a product-index map.
  *
  * @param[in] path         Pathname of file.
  * @return    0            Success. `fd` and `pathname` are set.
@@ -593,7 +593,7 @@ openMap(
 }
 
 /**
- * Opens the file containing the file-identifier map for reading and writing.
+ * Opens the file containing the product-index map for reading and writing.
  *
  * @param[in]  path         Pathname of the file. Caller may free.
  * @param[out] isNew        Whether or not the file was created.
@@ -619,7 +619,7 @@ openMapForWriting(
 }
 
 /**
- * Opens the file containing the file-identifier map for reading.
+ * Opens the file containing the product-index map for reading.
  *
  * @param[in]  path         Pathname of the file. Caller may free.
  * @retval     0            Success. `forWriting`, `pathname`, `fd`, `fileSize`,
@@ -642,22 +642,22 @@ openMapForReading(
 }
 
 /**
- * Clears the file-identifier map if the given file-identifier is not the
+ * Clears the product-index map if the given product-index is not the
  * expected one.
  *
  * @pre               {`lockMapAndBlockSigs()` has been called}
- * @param[in] fileId  File-identifier.
+ * @param[in] iProd   Product-index.
  */
 static inline void
 clearMapIfUnexpected(
-        const McastFileId fileId)
+        const McastProdIndex iProd)
 {
-    if (mmo->numSigs && (fileId != mmo->oldFileId + mmo->numSigs))
+    if (mmo->numSigs && (iProd != mmo->oldIProd + mmo->numSigs))
         clearMap();
 }
 
 /**
- * Opens the file-identifier map for writing. Creates the associated file (with
+ * Opens the product-index map for writing. Creates the associated file (with
  * an empty map) if it doesn't exist. A process should call this function at
  * most once.
  *
@@ -702,7 +702,7 @@ fim_openForWriting(
 }
 
 /**
- * Opens the file-identifier map for reading. A process should call this
+ * Opens the product-index map for reading. A process should call this
  * function at most once.
  *
  * @param[in] pathname     Pathname of the file. Caller may free.
@@ -731,7 +731,7 @@ fim_openForReading(
 }
 
 /**
- * Closes the file-identifier map.
+ * Closes the product-index map.
  *
  * @retval 0            Success.
  * @retval LDM7_SYSTEM  SYSTEM error. `log_add()` called. The state of the map
@@ -753,35 +753,35 @@ fim_close(void)
 }
 
 /**
- * Adds a mapping from a file-identifier to a data-product signature to the
- * file-identifier map. Clears the map first if the given file-identifier is
- * not one greater than the previous file-identifier.
+ * Adds a mapping from a product-index to a data-product signature to the
+ * product-index map. Clears the map first if the given product-index is
+ * not one greater than the previous product-index.
  *
- * @param[in] fileId       File-identifier.
+ * @param[in] iProd        Product-index.
  * @param[in] sig          Data-product signature.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 fim_put(
-        const McastFileId       fileId,
+        const McastProdIndex    iProd,
         const signaturet* const sig)
 {
     int status = lockMapAndBlockSignals();
 
     if (0 == status) {
-        clearMapIfUnexpected(fileId);
+        clearMapIfUnexpected(iProd);
 
         (void)memcpy(mmo->sigs + (mmo->oldSig + mmo->numSigs) % maxSigs, sig,
                 SIG_SIZE);
 
         if (mmo->numSigs < maxSigs) {
             if (0 == mmo->numSigs++)
-                mmo->oldFileId = fileId;
+                mmo->oldIProd = iProd;
         }
         else {
             mmo->oldSig = (mmo->oldSig + 1) % maxSigs;
-            mmo->oldFileId++;
+            mmo->oldIProd++;
         }
 
         status = restoreSignalsAndUnlockMap();
@@ -791,23 +791,23 @@ fim_put(
 }
 
 /**
- * Returns the data-product signature to which a file-identifier maps.
+ * Returns the data-product signature to which a product-index maps.
  *
- * @param[in]  fileId       File-identifier.
- * @param[out] sig          Data-product signature mapped-to by `fileId`.
+ * @param[in]  iProd        Product index.
+ * @param[out] sig          Data-product signature mapped-to by `iProd`.
  * @return     0            Success.
- * @retval     LDM7_NOENT   File-identifier is unknown.
+ * @retval     LDM7_NOENT   Product-index is unknown.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 fim_get(
-        const McastFileId fileId,
-        signaturet* const sig)
+        const McastProdIndex iProd,
+        signaturet* const    sig)
 {
     int status = lockMap(0); // shared lock
 
     if (0 == status) {
-        const McastFileId delta = fileId - mmo->oldFileId;
+        const McastProdIndex delta = iProd - mmo->oldIProd;
 
         if (delta >= mmo->numSigs) {
             status = LDM7_NOENT;
@@ -827,21 +827,21 @@ fim_get(
 }
 
 /**
- * Returns the next file-identifier that should be put into the file-identifier
- * map. The file-identifier will be zero if the map is empty.
+ * Returns the next product-index that should be put into the product-index
+ * map. The product-index will be zero if the map is empty.
  *
- * @param[out] fileId       Next file-identifier.
- * @retval     0            Success. `*fileId` is set.
+ * @param[out] iProd        Next product-index.
+ * @retval     0            Success. `*iProd` is set.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-fim_getNextFileId(
-        McastFileId* const fileId)
+fim_getNextProdIndex(
+        McastProdIndex* const iProd)
 {
     int status = lockMap(0); // shared lock
 
     if (0 == status) {
-        *fileId = mmo->oldFileId + mmo->numSigs;
+        *iProd = mmo->oldIProd + mmo->numSigs;
 
         int stat = unlockMap();
         if (stat)

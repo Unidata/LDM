@@ -44,13 +44,15 @@ public:
             void*           obj);
 
     ~PerFileNotifier() {}
-    void        notify_of_bof(VcmtpFileEntry& file_entry) const;
-    void        notify_of_eof(VcmtpFileEntry& file_entry) const;
-    void        notify_of_missed_file(McastFileId fileId) const;
+    void notify_of_bof(VcmtpMessageInfo& info);
+    void notify_of_bomd(VcmtpMessageInfo& info);
+    void notify_of_eof(VcmtpMessageInfo& info);
+    void notify_of_eomd(VcmtpMessageInfo& info);
+    void notify_of_missed_product(uint32_t prodId);
 
 private:
     /**
-     * Function to call when a beginning-of-file has been seen by the VCMTP
+     * Function to call when a beginning-of-product has been seen by the VCMTP
      * layer.
      */
     BofFunc             bof_func;

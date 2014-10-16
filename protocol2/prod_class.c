@@ -360,15 +360,12 @@ cp_prod_class(
 }
 
 
-/*
+/**
  * Returns a deep copy of a product-class.
  *
- * Arguments:
- *      class           Pointer to the product-class to be duplicated.
- *
- * Returns:
- *      NULL            Out-of-memory. "log_start()" called.
- *      else            Pointer to the duplicate product-class.
+ * @param[in] class           Pointer to the product-class to be duplicated.
+ * @retval    NULL            Out-of-memory. "log_start()" called.
+ * @return                    Pointer to the duplicate product-class.
  */
 prod_class_t *
 dup_prod_class(

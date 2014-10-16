@@ -69,14 +69,21 @@ getDottedDecimal(
 /**
  * Returns a new service address.
  *
- * @param[in] addr    Address of the service. May be hostname or formatted IP
- *                    address. Client may free upon return.
- * @param[in] port    Port number of the service.
- * @retval    NULL    Failure. \c errno will be ENOMEM.
- * @return            Pointer to a new service address object corresponding to
- *                    the input.
+ * @param[out] svcAddr  Service address. Caller should call
+ *                      `sa_free(*serviceAddr)` when it's no longer needed.
+ * @param[in]  addr     Identifier of the service. May be a name or formatted IP
+ *                      address. Client may free upon return.
+ * @param[in]  port     Port number of the service. Must be non-negative.
+ * @retval     0        Success. `*svcAddr` is set.
+ * @retval     EINVAL   Invalid Internet address or port number. `log_start()`
+ *                      called.
+ * @retval     ENOMEM   Out-of-memory. `log_start()` called.
  */
-extern ServiceAddr*   sa_new(const char* const addr, const unsigned short port);
+int
+sa_new(
+    ServiceAddr** const  svcAddr,
+    const char* const    addr,
+    const int            port);
 extern void           sa_free(ServiceAddr* const sa);
 /**
  * Copies a service address.
@@ -122,6 +129,30 @@ int
 sa_parse(
     ServiceAddr** const restrict serviceAddr,
     const char* restrict         spec);
+/**
+ * Like `sa_parse()` but with default values for the Internet identifier and
+ * port number. If a field in the specification doesn't exist, then the
+ * corresponding default value is used, if possible.
+ *
+ * @param[out] svcAddr      Internet service address. Caller should call
+ *                          `sa_free(*sa)` when it's no longer needed.
+ * @param[in]  spec         String containing the specification. Caller may
+ *                          free.
+ * @param[in]  defId        Default Internet identifier or NULL. If NULL, then
+ *                          Internet ID must exist in specification. Caller may
+ *                          free.
+ * @param[in]  defPort      Default port number. If negative, then port number
+ *                          must exist in specification.
+ * @retval     0            Success. `*sa` is set.
+ * @retval     EINVAL       Invalid specification. `log_start()` called.
+ * @retval     ENOMEM       Out of memory. `log_start()` called.
+ */
+int
+sa_parseWithDefaults(
+        ServiceAddr** const restrict svcAddr,
+        const char* restrict         spec,
+        const char* restrict         defId,
+        const int                    defPort);
 /**
  * Returns the Internet socket address that corresponds to a service address.
  *

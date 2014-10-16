@@ -1020,39 +1020,55 @@ getDottedDecimal(
     return status;
 }
 
-#if WANT_MULTICAST
 /**
  * Returns a new service address.
  *
- * @param[in] addr    Identifier of the service. May be a name or formatted IP
- *                    address. Client may free upon return.
- * @param[in] port    Port number of the service.
- * @retval    NULL    Failure. \c errno will be ENOMEM.
- * @return            Pointer to a new service address object corresponding to
- *                    the input.
+ * @param[out] svcAddr  Service address. Caller should call
+ *                      `sa_free(*serviceAddr)` when it's no longer needed.
+ * @param[in]  addr     Identifier of the service. May be a name or formatted IP
+ *                      address. Client may free upon return.
+ * @param[in]  port     Port number of the service. Must be non-negative.
+ * @retval     0        Success. `*svcAddr` is set.
+ * @retval     EINVAL   Invalid Internet address or port number. `log_start()`
+ *                      called.
+ * @retval     ENOMEM   Out-of-memory. `log_start()` called.
  */
-ServiceAddr*
+int
 sa_new(
+    ServiceAddr** const  svcAddr,
     const char* const    addr,
-    const unsigned short port)
+    const int            port)
 {
-    ServiceAddr* sa = LOG_MALLOC(sizeof(ServiceAddr), "service address");
+    int status;
 
-    if (sa != NULL) {
-        char* id = strdup(addr);
+    if (NULL == addr || 0 > port) {
+        LOG_START0("Invalid Internet ID or port number");
+        status = EINVAL;
+    }
+    else {
+        ServiceAddr* sa = LOG_MALLOC(sizeof(ServiceAddr), "service address");
 
-        if (id == NULL) {
-            LOG_SERROR1("Couldn't duplicate service address \"%s\"", addr);
-            free(sa);
-            sa = NULL;
+        if (sa == NULL) {
+            status = ENOMEM;
         }
         else {
-            sa->inetId = id;
-            sa->port = port;
-        }
-    } /* "sa" allocated */
+            char* id = strdup(addr);
 
-    return sa;
+            if (id == NULL) {
+                LOG_SERROR1("Couldn't duplicate service address \"%s\"", addr);
+                free(sa);
+                status = ENOMEM;
+            }
+            else {
+                sa->inetId = id;
+                sa->port = port;
+                *svcAddr = sa;
+                status = 0;
+            }   // `id` allocated
+        }       // "sa" allocated
+    }           // valid input arguments
+
+    return status;
 }
 
 /**
@@ -1107,7 +1123,9 @@ ServiceAddr*
 sa_clone(
     const ServiceAddr* const sa)
 {
-    return sa_new(sa->inetId, sa->port);
+    ServiceAddr* svcAddr;
+
+    return sa_new(&svcAddr, sa->inetId, sa->port) ? NULL : svcAddr;
 }
 
 /**
@@ -1147,9 +1165,7 @@ static const char*
 sa_getFormat(
     const ServiceAddr* const sa)
 {
-    return strchr(sa->inetId, ':')
-            ? "[%s]:%u"
-            : "%s:%u";
+    return strchr(sa->inetId, ':') ? "[%s]:%u" : "%s:%u";
 }
 
 /**
@@ -1190,44 +1206,51 @@ sa_format(
     return ldm_format(128, sa_getFormat(sa), sa->inetId, sa->port);
 }
 
+#if defined(HOST_NAME_MAX) && HOST_NAME_MAX > _POSIX_HOST_NAME_MAX
+#   define HOSTNAME_MAX  HOST_NAME_MAX
+#else
+#   define HOSTNAME_MAX  _POSIX_HOST_NAME_MAX
+#endif
+#define STRING1(x)      #x
+#define STRING2(x)      STRING1(x)
+#define HOSTNAME_WIDTH  STRING2(HOSTNAME_MAX)
+#define IPV6_WIDTH      STRING2(INET6_ADDRSTRLEN)
+#define IPV4_WIDTH      STRING2(INET_ADDRSTRLEN)
+#define IPV6_FORMAT     "%" IPV6_WIDTH "[0-9A-Fa-f:]"
+#define IPV4_FORMAT     "%" IPV4_WIDTH "[0-9.]"
+#define HOSTNAME_FORMAT "%" HOSTNAME_WIDTH "[A-Za-z0-9._]"
+
 /**
  * Parses a formatted Internet service address. An Internet service address has
  * the general form `id:port`, where `id` is the Internet identifier (either a
  * name, a formatted IPv4 address, or a formatted IPv6 address enclosed in
  * square brackets) and `port` is the port number.
  *
- * @param[out] serviceAddr  Internet service address. Caller should call
+ * @param[out] svcAddr      Internet service address. Caller should call
  *                          `sa_free(*sa)` when it's no longer needed.
- * @param[in]  spec         String containing the specification.
+ * @param[in]  spec         String containing the specification. Caller may
+ *                          free.
  * @retval     0            Success. `*sa` is set.
  * @retval     EINVAL       Invalid specification. `log_start()` called.
  * @retval     ENOMEM       Out of memory. `log_start()` called.
  */
 int
 sa_parse(
-    ServiceAddr** const restrict serviceAddr,
+    ServiceAddr** const restrict svcAddr,
     const char* restrict         spec)
 {
-    int         status = EINVAL;
+    int status = EINVAL;
 
     if (NULL == spec) {
-        log_start("NULL argument");
+        LOG_START0("NULL argument");
     }
     else {
-#       if defined(HOST_NAME_MAX) && HOST_NAME_MAX > _POSIX_HOST_NAME_MAX
-#           define INET_ID_MAX  HOST_NAME_MAX
-#       else
-#           define INET_ID_MAX  _POSIX_HOST_NAME_MAX
-#       endif
-#       define STRING1(x)    #x
-#       define STRING2(x)    STRING1(x)
-#       define INET_ID_WIDTH STRING2(INET_ID_MAX)
-        char                 inetId[INET_ID_MAX+1];
+        char                 inetId[HOSTNAME_MAX+1];
         unsigned short       port;
         const char*          formats[] = {
-            "[%" INET_ID_WIDTH "[0-9A-Fa-f:]]:%hu %n",
-            "%" INET_ID_WIDTH "[0-9.]:%hu %n",
-            "%" INET_ID_WIDTH "[A-Za-z0-9._]:%hu %n"
+            "[" IPV6_FORMAT "]" ":%hu %n",
+                IPV4_FORMAT     ":%hu %n",
+                HOSTNAME_FORMAT ":%hu %n"
         };
 
         for (int i = 0; i < sizeof(formats)/sizeof(formats[0]); i++) {
@@ -1235,21 +1258,66 @@ sa_parse(
             int n = sscanf(spec, formats[i], inetId, &port, &nbytes);
 
             if (2 == n && 0 == spec[nbytes]) {
-                ServiceAddr* sa = sa_new(inetId, port);
-
-                if (NULL == sa) {
-                    status = ENOMEM;
-                }
-                else {
-                    *serviceAddr = sa;
-                    status = 0;
-                }
+                status = sa_new(svcAddr, inetId, port);
                 break;
             }
         }
 
         if (EINVAL == status)
             log_start("Invalid Internet service address: \"%s\"", spec);
+    }
+
+    return status;
+}
+
+/**
+ * Like `sa_parse()` but with default values for the Internet identifier and
+ * port number. If a field in the specification doesn't exist, then the
+ * corresponding default value is used, if possible.
+ *
+ * @param[out] svcAddr      Internet service address. Caller should call
+ *                          `sa_free(*sa)` when it's no longer needed.
+ * @param[in]  spec         String containing the specification. Caller may
+ *                          free.
+ * @param[in]  defId        Default Internet identifier or NULL. If NULL, then
+ *                          Internet ID must exist in specification. Caller may
+ *                          free.
+ * @param[in]  defPort      Default port number. If negative, then port number
+ *                          must exist in specification.
+ * @retval     0            Success. `*sa` is set.
+ * @retval     EINVAL       Invalid specification. `log_start()` called.
+ * @retval     ENOMEM       Out of memory. `log_start()` called.
+ */
+int
+sa_parseWithDefaults(
+        ServiceAddr** const restrict svcAddr,
+        const char* restrict         spec,
+        const char* restrict         defId,
+        const int                    defPort)
+{
+    int status;
+
+    if (strchr(spec, ':')) {
+        status = sa_parse(svcAddr, spec);
+    }
+    else {
+        unsigned short port;
+        int            nbytes;
+        char           buf[HOSTNAME_MAX+1];
+
+        if (sscanf(spec, "%hu %n", &port, &nbytes) == 1 && spec[nbytes] == 0) {
+            status = sa_new(svcAddr, defId, port);
+        }
+        else if ((scanf(spec, HOSTNAME_FORMAT " %n", buf, &nbytes) == 1 ||
+                 (scanf(spec, IPV6_FORMAT     " %n", buf, &nbytes) == 1) ||
+                 (scanf(spec, IPV4_FORMAT     " %n", buf, &nbytes) == 1)) &&
+                 0 == spec[nbytes]) {
+            status = sa_new(svcAddr, buf, defPort);
+        }
+        else {
+            LOG_START1("Invalid service address specification: \"%s\"", spec);
+            status = EINVAL;
+        }
     }
 
     return status;
@@ -1355,4 +1423,3 @@ sa_compare(
 
     return cmp;
 }
-#endif // WANT_MULTICAST

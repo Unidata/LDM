@@ -49,23 +49,39 @@ PerFileNotifier::PerFileNotifier(
  * @throws        std::runtime_error    if the receiving application indicates
  *                                      an error.
  */
-void PerFileNotifier::notify_of_bof(VcmtpFileEntry& file_entry) const
+void PerFileNotifier::notify_of_bof(VcmtpMessageInfo& info)
 {
-    if (bof_func(obj, &file_entry)) {
+    if (bof_func(obj, &info)) {
         throw std::runtime_error(std::string(
                 "Error notifying receiving application of beginning of file"));
     }
 }
 
-void PerFileNotifier::notify_of_eof(VcmtpFileEntry& file_entry) const
+void PerFileNotifier::notify_of_bomd(VcmtpMessageInfo& info)
 {
-    if (eof_func(obj, &file_entry)) {
+    if (bof_func(obj, &info)) {
+        throw std::runtime_error(std::string(
+                "Error notifying receiving application of beginning of memory-data"));
+    }
+}
+
+void PerFileNotifier::notify_of_eof(VcmtpMessageInfo& info)
+{
+    if (eof_func(obj, &info)) {
         throw std::runtime_error(std::string(
                 "Error notifying receiving application of end of file"));
     }
 }
 
-void PerFileNotifier::notify_of_missed_file(const McastFileId fileId) const
+void PerFileNotifier::notify_of_eomd(VcmtpMessageInfo& info)
 {
-    missed_file_func(obj, fileId);
+    if (eof_func(obj, &info)) {
+        throw std::runtime_error(std::string(
+                "Error notifying receiving application of end of memory-data"));
+    }
+}
+
+void PerFileNotifier::notify_of_missed_product(const McastProdIndex iProd)
+{
+    missed_file_func(obj, iProd);
 }

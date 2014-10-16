@@ -13,6 +13,7 @@ include_HEADERS		= pq.h fbits.h lcm.h
 lib_la_SOURCES		= pq.c lcm.c
 dist_man3_MANS		= pq.3
 lib_la_CPPFLAGS		= \
+    -I$(top_srcdir)/rpc \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \

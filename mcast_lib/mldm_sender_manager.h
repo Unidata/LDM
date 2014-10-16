@@ -43,15 +43,18 @@ mlsm_addPotentialSender(
  * Ensures that the multicast LDM sender process that's responsible for a
  * particular multicast group is running. Doesn't block.
  *
- * @param[in] feedtype     Multicast group feed-type.
- * @retval    0            Success. The group is being multicast.
- * @retval    LDM7_NOENT   No corresponding potential sender was added via
- *                         `mlsm_addPotentialSender()`. `log_start() called`.
- * @retval    LDM7_SYSTEM  System error. `log_start()` called.
+ * @param[in]  feedtype     Multicast group feed-type.
+ * @param[out] mcastInfo    Information on corresponding multicast group.
+ * @retval     0            Success. The group is being multicast and
+ *                          `*mcastInfo` is set.
+ * @retval     LDM7_NOENT   No corresponding potential sender was added via
+ *                          `mlsm_addPotentialSender()`. `log_start() called`.
+ * @retval     LDM7_SYSTEM  System error. `log_start()` called.
  */
 Ldm7Status
 mlsm_ensureRunning(
-        const feedtypet feedtype);
+        const feedtypet         feedtype,
+        const McastInfo** const mcastInfo);
 
 /**
  * Handles the termination of a multicast LDM sender process. This function

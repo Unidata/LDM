@@ -3,18 +3,18 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: file_id_queue.hin
+ *   @file: prod_index_queue.hin
  * @author: Steven R. Emmerson
  *
- * This file declares the API for a queue of VCMTP file identifiers.
+ * This file declares the API for a queue of product indexes.
  */
 
-#ifndef FILE_ID_QUEUE_H
-#define FILE_ID_QUEUE_H
+#ifndef PROD_INDEX_QUEUE_H
+#define PROD_INDEX_QUEUE_H
 
 #include "ldm.h"
 
-typedef struct file_id_queue  FileIdQueue;
+typedef struct prod_index_queue  ProdIndexQueue;
 
 #ifdef __cplusplus
 extern "C" {

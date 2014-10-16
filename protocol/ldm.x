@@ -720,8 +720,9 @@ program LDMPROG {
              * Upstream to downstream RPC messages:
              */
             void              DELIVER_MISSED_PRODUCT(MissedProduct) = 5;
-            void              DELIVER_BACKLOG_PRODUCT(product) = 6;
-            void              END_BACKLOG() = 7;
+            void              NO_SUCH_PRODUCT(McastFileId) = 6;
+            void              DELIVER_BACKLOG_PRODUCT(product) = 7;
+            void              END_BACKLOG() = 8;
         } = 7;
 #endif
 } = LDM_PROG; /* LDM = 300029, use 0x2ffffffe for experiments */
@@ -872,7 +873,8 @@ enum Ldm7Status {
     LDM7_MCAST,    /* multicast error */
     LDM7_SHUTDOWN, /* LDM-7 was shut down */
     LDM7_NOENT,    /* no such entry */
-    LDM7_DUP       /* duplicate entry */
+    LDM7_DUP,      /* duplicate entry */
+    LDM7_EXISTS    /* something exists */
 };
 
 #if RPC_CLNT
@@ -942,11 +944,11 @@ struct MissedProduct {
     /*
      * The multicast file identifier of the missed data-product:
      */
-    McastFileId   fileId;
+    McastFileId fileId;
     /*
      * The missed LDM data-product:
      */
-    product       prod;
+    product     prod;
 };
 
 
@@ -1005,7 +1007,7 @@ struct ServiceAddr {
 %     */
 %    ServiceAddr   group;
 %    /*
-%     * Address of associated server for blocks and files missed by a multicast
+%     * Address of associated TCP server for data-blocks missed by a multicast
 %     * receiver.
 %     */
 %    ServiceAddr   server;

@@ -25,6 +25,7 @@
 #define PQ_END		-1	/* at end of product-queue */
 #define PQ_CORRUPT	-2	/* the product-queue is corrupt */
 #define PQ_NOTFOUND	-3	/* no such data-product */
+#define PQ_SYSTEM  	-4	/* system error */
 
 typedef struct pqueue pqueue; /* private, implemented in pq.c */
 extern struct pqueue *pq;

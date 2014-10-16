@@ -3,10 +3,10 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: file_id_map_test.c
+ *   @file: prod_index_map_test.c
  * @author: Steven R. Emmerson
  *
- * This file performs a unit-test of the `file_id_map` module.
+ * This file performs a unit-test of the `prod_index_map` module.
  */
 
 
@@ -14,13 +14,13 @@
 
 #include "ldm.h"
 #include "log.h"
-#include "file_id_map.h"
+#include "prod_index_map.h"
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 #include <unistd.h>
 
-static const char* const pathname = "file_id.map";
+static const char* const pathname = "prod_index.map";
 static const signaturet  signatures[] = {{1}, {2}, {3}, {4}};
 
 /**
@@ -101,21 +101,21 @@ static void closeAndUnlink(void)
 }
 
 static void exists(
-        const McastFileId fileId,
-        const int         iSig)
+        const McastProdIndex iProd,
+        const int            iSig)
 {
     signaturet sig;
 
-    CU_ASSERT_EQUAL_FATAL(fim_get(fileId, &sig), 0);
+    CU_ASSERT_EQUAL_FATAL(fim_get(iProd, &sig), 0);
     CU_ASSERT_NSTRING_EQUAL(sig, signatures[iSig], sizeof(signaturet));
 }
 
 static void doesNotExist(
-        const McastFileId fileId)
+        const McastProdIndex iProd)
 {
     signaturet sig;
 
-    CU_ASSERT_EQUAL(fim_get(fileId, &sig), LDM7_NOENT);
+    CU_ASSERT_EQUAL(fim_get(iProd, &sig), LDM7_NOENT);
 }
 
 static void test_put(
@@ -197,20 +197,20 @@ static void test_putNonSequential(void)
 
 static void test_getNextFileId(void)
 {
-    McastFileId fileId;
+    McastProdIndex iProd;
 
     openNew(3);
-    CU_ASSERT_EQUAL(fim_getNextFileId(&fileId), 0);
-    CU_ASSERT_EQUAL(fileId, 0);
+    CU_ASSERT_EQUAL(fim_getNextProdIndex(&iProd), 0);
+    CU_ASSERT_EQUAL(iProd, 0);
     CU_ASSERT_EQUAL(fim_put(0, &signatures[0]), 0);
-    CU_ASSERT_EQUAL(fim_getNextFileId(&fileId), 0);
-    CU_ASSERT_EQUAL(fileId, 1);
+    CU_ASSERT_EQUAL(fim_getNextProdIndex(&iProd), 0);
+    CU_ASSERT_EQUAL(iProd, 1);
     closeAndUnlink();
 
     openNew(3);
     put4();
-    CU_ASSERT_EQUAL(fim_getNextFileId(&fileId), 0);
-    CU_ASSERT_EQUAL(fileId, 4);
+    CU_ASSERT_EQUAL(fim_getNextProdIndex(&iProd), 0);
+    CU_ASSERT_EQUAL(iProd, 4);
     closeAndUnlink();
 }
 

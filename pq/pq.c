@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <search.h>
+#include <xdr.h>
 
 #include "ldm.h"
 #include "pq.h"
@@ -4730,41 +4731,6 @@ pq_set_mvrt(
     }
 }
 
-
-/**
- * Delete the entries associated with a data-product.
- *
- * @param[in] pq    The product-queue.
- * @param[in] tqep  The entry in the time-list.
- * @param[in] rlix  The region index.
- * @param[in] sig   The data-product signature.
- */
-static inline void // inlined because only called by one function
-pq_del_prod_entries(
-    pqueue* const restrict pq,
-    tqelem* const restrict tqep,
-    const size_t           rlix,
-    const signaturet       sig)
-{
-    /*
-     * Remove the corresponding entry from the time-list.
-     */
-    tq_delete(pq->tqp, tqep);
-
-    /*
-     * Remove the corresponding entry from the signature-list.
-     */
-    if (sx_find_delete(pq->sxp, sig) == 0)
-        uerror("pq_del_prod_entries(): signature %s: Not Found",
-                s_signaturet(NULL, 0, sig));
-
-    /*
-     * Remove the corresponding entry from the region-list.
-     */
-    rl_free(pq->rlp, rlix);
-}
-
-
 /**
  * Attempts to delete a data-product.
  *
@@ -4790,21 +4756,39 @@ pq_try_del_prod(
         return false;
 
     /* Get the metadata of the data-product. */
-    InfoBuf infoBuf;
-    if (xinfo_i(vp, Extent(rep), XDR_DECODE, ib_init(&infoBuf)) == NULL) {
+    prod_info info;
+    XDR       xdrs;
+
+    xdrmem_create(&xdrs, vp, Extent(rep), XDR_DECODE);
+    (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
+
+    if (!xdr_prod_info(&xdrs, &info)) {
         LOG_START0("Couldn't XDR_DECODE data-product metadata");
         log_log(LOG_ERR);
     }
     else {
         /* Adjust the minimum virtual residence time. */
-        pq_set_mvrt(pq, tqep, &infoBuf.info);
+        pq_set_mvrt(pq, tqep, &info);
+
+        /*
+         * Remove the corresponding entry from the signature-list.
+         */
+        if (sx_find_delete(pq->sxp, info.signature) == 0)
+            uerror("pq_try_del_prod(): signature %s: Not Found",
+                    s_signaturet(NULL, 0, info.signature));
+
+        xdr_free(xdr_prod_info, (char*)&info);
     }
 
     /*
-     * Release the entries associated with the data-product. NB: Don't use
-     * `tqep` or `rep` after this.
+     * Remove the corresponding entry from the time-list.
      */
-    pq_del_prod_entries(pq, tqep, rlix, infoBuf.info.signature);
+    tq_delete(pq->tqp, tqep);
+
+    /*
+     * Remove the corresponding entry from the region-list.
+     */
+    rl_free(pq->rlp, rlix);
 
     /* Release the data-region. */
     (void)rgn_rel(pq, offset, 0);
@@ -6657,25 +6641,26 @@ getMetadataFromOffset(
                     "data-region in product-queue");
         }
         else {
-            prod_info* const    info = &infoBuf->info;
-            XDR                 xdrs[1];
+            prod_info info;
+            XDR       xdrs;
 
-            xdrmem_create(xdrs, vp, extent, XDR_DECODE);
-            ib_init(infoBuf);
+            xdrmem_create(&xdrs, vp, extent, XDR_DECODE);
+            (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
 
             /*
              * Decode the data-product's metadata.
              */
-            if (!xdr_prod_info(xdrs, info)) {
+            if (!xdr_prod_info(&xdrs, &info)) {
                 uerror("getMetadataFromOffset(): xdr_prod_info() failed");
 
                 status = EIO;
             }
             else {
+                xdr_free(xdr_prod_info, (char*)&info);
                 status = 0;             /* success */
             }
 
-            xdr_destroy(xdrs);
+            xdr_destroy(&xdrs);
 
             (void)rgn_rel(pq, offset, 0);
         }                               /* data-product region locked */
@@ -6909,6 +6894,127 @@ pq_setCursorFromSignature(
     return status;
 }
 
+/**
+ * Process the data-product with a given signature.
+ *
+ * @param[in] pq           Product-queue.
+ * @param[in] sig          Signature of data-product to process.
+ * @param[in] func         Function to process data-product.
+ * @param[in] optArg       Optional `func` argument.
+ * @retval    PQ_SYSTEM    System error. `log_add()` called.
+ * @retval    PQ_CORRUPT   The product-queue is corrupt. `log_add()` called.
+ * @retval    PQ_NOTFOUND  A data-product with the given signature was not found
+ *                         in the product-queue.
+ * @return                 Return-code of `func`.
+ */
+int
+pq_processProduct(
+        pqueue* const     pq,
+        signaturet  const sig,
+        pq_seqfunc* const func,
+        void* const       optArg)
+{
+    int status;
+
+    /*
+     * Read-lock the control-region of the product-queue to prevent concurrent
+     * write-access by another process.
+     */
+    if (ctl_get(pq, 0)) {
+        LOG_SERROR0("Couldn't lock control-region of product-queue");
+        status = PQ_SYSTEM;
+    }
+    else {
+        bool controlRegionLocked = true;
+
+        /*
+         * Find the relevant entry in the signature-map.
+         */
+        const sxelem* sigEntry;
+        if (!sx_find(pq->sxp, sig, (sxelem**)&sigEntry)) {
+            status = PQ_NOTFOUND;
+        }
+        else {
+            /*
+             * Find the region-entry corresponding to the signature-entry.
+             */
+            const regionl* const rlp = pq->rlp;
+            const size_t         offset = sigEntry->offset;
+            const size_t         rlix = rl_find(rlp, offset);
+
+            if (RL_NONE == rlix) {
+                LOG_START0("Signature-entry has no corresponding region-entry");
+                status = PQ_CORRUPT;
+            }
+            else {
+                /*
+                 * Lock the corresponding data-product's data-region to prevent
+                 * it from being modified while being processed.
+                 */
+                void*               vp;
+                const region* const rp = rlp->rp + rlix;
+                const size_t        extent = Extent(rp);
+
+                if (rgn_get(pq, offset, extent, 0, &vp)) {
+                    LOG_START0("Couldn't lock data-product's data-region");
+                    status = PQ_SYSTEM;
+                }
+                else {
+                    /*
+                     * Unlocked the control-region to allow concurrent
+                     * write-access by another process. This may safely be done
+                     * because the data-product's data-region is locked,
+                     */
+                    if (ctl_rel(pq, 0)) {
+                        LOG_START0("Couldn't unlock control-region");
+                        status = PQ_SYSTEM;
+                    }
+                    else {
+                        controlRegionLocked = false;
+
+                        /*
+                         * Decode the data-product's metadata to pass to the
+                         * processing function.
+                         */
+                        prod_info info;
+                        XDR       xdrs;
+
+                        xdrmem_create(&xdrs, vp, extent, XDR_DECODE);
+                        (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
+
+                        if (!xdr_prod_info(&xdrs, &info)) {
+                            LOG_START0("xdr_prod_info() failed");
+                            status = PQ_SYSTEM;
+                        }
+                        else {
+                            /*
+                             * Process the data-product while its data-region
+                             * is locked.
+                             */
+                            status = func(&info, xdrs.x_private, vp, extent,
+                                    optArg);
+                            xdr_free(xdr_prod_info, (char*)&info);
+                        }
+
+                        xdr_destroy(&xdrs);
+                    }                   // control-region unlocked
+
+                    (void)rgn_rel(pq, offset, 0);
+                }                       // data-product region locked
+            }                           // corresponding region-entry exists
+        }                               // signature-entry found
+
+        /*
+         * Release the control-region of the product-queue to allow write-access
+         * by another process.
+         */
+        if (controlRegionLocked)
+            (void)ctl_rel(pq, 0);
+    }                                   // control region locked
+
+    return status;
+}
+
 
 /**
  * Step thru the time sorted inventory according to 'mt',
@@ -6956,7 +7062,7 @@ pq_sequence(pqueue *pq, pq_match mt,
         } buf; /* static ??? */
         prod_info *info ;
         void *datap;
-        XDR xdrs[1] ;
+        XDR xdrs;
         timestampt pq_time;
 
         if(pq == NULL)
@@ -6985,7 +7091,7 @@ pq_sequence(pqueue *pq, pq_match mt,
         if(status != ENOERR)
                 return status;
 
-        /* find the specified que element */
+        /* find the specified queue element */
         tqep = tqe_find(pq->tqp, &pq->cursor, mt);
         if(tqep == NULL)
         {
@@ -7056,22 +7162,22 @@ pq_sequence(pqueue *pq, pq_match mt,
         /*
          * Decode it
          */
-        xdrmem_create(xdrs, vp, (u_int)extent, XDR_DECODE) ;
+        xdrmem_create(&xdrs, vp, (u_int)extent, XDR_DECODE) ;
 
-        if(!xdr_prod_info(xdrs, info))
+        if(!xdr_prod_info(&xdrs, info))
         {
                 uerror("pq_sequence: xdr_prod_info() failed\n") ;
                 status = EIO;
                 goto unwind_rgn;
         }
 
-        assert(info->sz <= xdrs->x_handy);
+        assert(info->sz <= xdrs.x_handy);
         /* rather than copy the data, just use the existing buffer */
-        datap = xdrs->x_private;
+        datap = xdrs.x_private;
 
 #if PQ_SEQ_TRACE
         udebug("%s %u",
-                s_prod_info(NULL, 0, info, 1), xdrs->x_handy) ;
+                s_prod_info(NULL, 0, info, 1), xdrs.x_handy) ;
 #endif
 
         /*
@@ -7093,9 +7199,9 @@ pq_sequence(pqueue *pq, pq_match mt,
                 {
                         /* change extent into xlen_product */
                         const size_t xsz = _RNDUP(info->sz, 4);
-                        if(xdrs->x_handy > xsz)
+                        if(xdrs.x_handy > xsz)
                         {
-                                extent -= (xdrs->x_handy - xsz);
+                                extent -= (xdrs.x_handy - xsz);
                         }
                 }
                 status =  (*ifMatch)(info, datap,
@@ -7183,7 +7289,7 @@ pq_seqdel(pqueue *pq, pq_match mt,
                 char b_ident[KEYSIZE + 1];
         } buf; /* static ??? */
         prod_info *info ;
-        XDR xdrs[1] ;
+        XDR xdrs;
         int const rflags = wait ? RGN_WRITE : (RGN_WRITE | RGN_NOWAIT);
         size_t rlix;
 
@@ -7252,15 +7358,15 @@ pq_seqdel(pqueue *pq, pq_match mt,
         /*
          * Decode it
          */
-        xdrmem_create(xdrs, vp, (u_int)extent, XDR_DECODE) ;
+        xdrmem_create(&xdrs, vp, (u_int)extent, XDR_DECODE) ;
 
-        if(!xdr_prod_info(xdrs, info))
+        if(!xdr_prod_info(&xdrs, info))
         {
                 uerror("pq_seqdel: xdr_prod_info() failed\n") ;
                 status = EIO;
                 goto unwind_rgn;
         }
-        assert(info->sz <= xdrs->x_handy);
+        assert(info->sz <= xdrs.x_handy);
                 
         /* return timestamp value even if we don't delete it */
         if(timestampp)

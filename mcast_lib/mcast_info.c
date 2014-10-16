@@ -84,17 +84,19 @@ mi_init(
 /**
  * Returns a new multicast information object.
  *
- * @param[in] feed       The feedtype of the multicast group.
- * @param[in] mcast      The Internet address of the multicast group. The caller
- *                       may free.
- * @param[in] ucast      The Internet address of the unicast service for blocks
- *                       and files that are missed by the multicast receiver.
- *                       The caller may free.
- * @retval    NULL       Failure. `log_start()` called.
- * @return               The new, initialized multicast information object.
+ * @param[out] mcastInfo  Initialized multicast information object.
+ * @param[in]  feed       The feedtype of the multicast group.
+ * @param[in]  mcast      The Internet address of the multicast group. The caller
+ *                        may free.
+ * @param[in]  ucast      The Internet address of the unicast service for blocks
+ *                        and files that are missed by the multicast receiver.
+ *                        The caller may free.
+ * @retval     0          Success. `*info` is set.
+ * @retval     ENOMEM     Out-of-memory error. `log_start()` called.
  */
-McastInfo*
+int
 mi_new(
+    McastInfo** const                 mcastInfo,
     const feedtypet                   feed,
     const ServiceAddr* const restrict mcast,
     const ServiceAddr* const restrict ucast)
@@ -102,12 +104,15 @@ mi_new(
     McastInfo* const info = LOG_MALLOC(sizeof(McastInfo),
             "multicast information");
 
+    if (NULL == info)
+        return ENOMEM;
+
     if (mi_init(info, feed, mcast, ucast))
-        return info;
+        return 0;
 
     free(info);
 
-    return NULL;
+    return ENOMEM;
 }
 
 /**
@@ -128,14 +133,15 @@ mi_free(
 }
 
 /**
- * Copies multicast information. Performs a deep copy.
+ * Copies multicast information. Performs a deep copy. Destination fields are
+ * not freed prior to copying.
  *
  * @param[out] to           Destination.
  * @param[in]  from         Source. The caller may free.
  * @retval     0            Success.
  * @retval     LDM7_SYSTEM  System error. \c log_add() called.
  */
-int
+Ldm7Status
 mi_copy(
     McastInfo* const restrict       to,
     const McastInfo* const restrict from)
@@ -155,7 +161,39 @@ McastInfo*
 mi_clone(
     const McastInfo* const info)
 {
-    return mi_new(info->feed, &info->group, &info->server);
+    McastInfo* clone;
+
+    return mi_new(&clone, info->feed, &info->group, &info->server)
+            ? NULL
+            : clone;
+}
+
+/**
+ * Replaces the Internet identifier of the TCP server. The previous identifier
+ * is freed.
+ *
+ * @param[in,out] info         Multicast information to be modified.
+ * @param[in]     id           Replacement Internet identifier.
+ * @retval        0            Success. `info->server.inetId` was freed and now
+ *                             points to a copy of `id`.
+ * @retval        LDM7_SYSTEM  System failure. `log_add()` called.
+ */
+Ldm7Status
+mi_replaceServerId(
+        McastInfo* const restrict  info,
+        const char* const restrict id)
+{
+    char* const dup = strdup(id);
+
+    if (NULL == dup) {
+        LOG_SERROR0("Couldn't duplicate Internet identifier of TCP server");
+        return LDM7_SYSTEM;
+    }
+
+    free(info->server.inetId);
+    info->server.inetId = dup;
+
+    return 0;
 }
 
 /**

@@ -12,7 +12,7 @@
 
 #include "config.h"
 
-#include "file_id_queue.h"
+#include "prod_index_queue.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "mldm_receiver_memory.h"
@@ -49,11 +49,11 @@ struct McastSessionMemory {
     /**
      * Queue of missed-but-not-yet-requested data-products:
      */
-    FileIdQueue*     missedQ;
+    ProdIndexQueue*     missedQ;
     /**
      * Queue of requested-but-not-yet-received data-products:
      */
-    FileIdQueue*     requestedQ;
+    ProdIndexQueue*     requestedQ;
     /**
      * Whether or not the multicast session memory has been modified by the
      * user.
@@ -582,7 +582,7 @@ openTempMemoryFile(
  *
  * @param[in] document  The YAML document.
  * @param[in] seq       The identifier of the YAML sequence-node.
- * @param[in] fiq       The file-identifier queue.
+ * @param[in] fiq       The product-index queue.
  * @retval    true      Success.
  * @retval    false     Failure. `log_start()` called.
  */
@@ -590,14 +590,14 @@ static bool
 appendFileIds(
     yaml_document_t* const restrict document,
     const int                       seq,
-    FileIdQueue* const restrict     fiq)
+    ProdIndexQueue* const restrict     fiq)
 {
-    McastFileId fileId;
+    McastProdIndex iProd;
 
-    while (fiq_removeNoWait(fiq, &fileId) == 0) {
-        char          buf[sizeof(fileId)*4+1]; // overly capacious
+    while (fiq_removeNoWait(fiq, &iProd) == 0) {
+        char          buf[sizeof(iProd)*4+1]; // overly capacious
 
-        (void)snprintf(buf, sizeof(buf), "%lu", (unsigned long)fileId);
+        (void)snprintf(buf, sizeof(buf), "%lu", (unsigned long)iProd);
 
         int  scalarNode = yaml_document_add_scalar(document, NULL, buf, -1,
                 YAML_PLAIN_SCALAR_STYLE);
@@ -634,8 +634,8 @@ addMissedFiles(
     yaml_document_t* const restrict          document,
     const int                                seq)
 {
-    bool        success = false;
-    McastFileId fileId;
+    bool           success = false;
+    McastProdIndex iProd;
     
     return appendFileIds(document, seq, msm->requestedQ) &&
             appendFileIds(document, seq, msm->missedQ);
@@ -967,22 +967,22 @@ dump(
 }
 
 /**
- * Adds an identifier of a file that was missed by the multicast receiver to one
+ * Adds an index of a prodct that was missed by the multicast receiver to one
  * of the queues of a multicast session memory.
  *
  * @param[in] msm    The multicast session memory.
  * @param[in] fiq    The queue to use.
- * @param[in] id     The file identifier to add.
+ * @param[in] id     The product index to add.
  * @retval    true   Success.
  * @retval    false  Error. `log_start()` called.
  */
 static bool
 addFile(
     McastSessionMemory* const restrict msm,
-    FileIdQueue* const restrict        fiq,
-    const McastFileId                  fileId)
+    ProdIndexQueue* const restrict        fiq,
+    const McastProdIndex               iProd)
 {
-    bool success = fiq_add(fiq, fileId) == 0;
+    bool success = fiq_add(fiq, iProd) == 0;
 
     if (success)
         msm->modified = true;
@@ -1146,146 +1146,146 @@ msm_clearAllMissedFiles(
 }
 
 /**
- * Removes and returns the identifier of a file that has not been received by
+ * Removes and returns the index of a product that has not been received by
  * the multicast receiver associated with a multicast session memory. The
  * requested-but-not-received queue is tried first; then the
  * missed-but-not-requested queue.
  *
  * @param[in] msm     The multicast session memory.
- * @param[in] fileId  The identifier of the missed file.
- * @retval    true    Such an identifier exists. `*fileId` is set.
- * @retval    false   No such identifier (the queues are empty).
+ * @param[in] iProd   The index of the missed product.
+ * @retval    true    Such an index exists. `*iProd` is set.
+ * @retval    false   No such index (the queues are empty).
  */
 bool
 msm_getAnyMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastFileId* const restrict        fileId)
+    McastProdIndex* const restrict     iProd)
 {
-    return fiq_removeNoWait(msm->requestedQ, fileId) == 0 ||
-            fiq_removeNoWait(msm->missedQ, fileId) == 0;
+    return fiq_removeNoWait(msm->requestedQ, iProd) == 0 ||
+            fiq_removeNoWait(msm->missedQ, iProd) == 0;
 }
 
 /**
- * Adds an identifier of a file that was missed by the multicast receiver but
+ * Adds an index of a product that was missed by the multicast receiver but
  * has not yet been requested to the current list of such files in a multicast
  * session memory.
  *
  * @param[in] msm    The multicast session memory.
- * @param[in] id     The file identifier to add.
+ * @param[in] id     The product-index to add.
  * @retval    true   Success.
  * @retval    false  Error. `log_start()` called.
  */
 bool
 msm_addMissedFile(
     McastSessionMemory* const restrict msm,
-    const McastFileId                  fileId)
+    const McastProdIndex               iProd)
 {
-    return addFile(msm, msm->missedQ, fileId);
+    return addFile(msm, msm->missedQ, iProd);
 }
 
 /**
- * Adds an identifier of a file that was missed by the multicast receiver and
- * has been requested from the upstream LDM-7 to the current list of such files
- * in a multicast session memory.
+ * Adds an index of a product that was missed by the multicast receiver and
+ * has been requested from the upstream LDM-7 to the current list of such
+ * products in a multicast session memory.
  *
  * @param[in] msm    The multicast session memory.
- * @param[in] id     The file identifier to add.
+ * @param[in] id     The product-index to add.
  * @retval    true   Success.
  * @retval    false  Error. `log_start()` called.
  */
 bool
 msm_addRequestedFile(
     McastSessionMemory* const restrict msm,
-    const McastFileId                  fileId)
+    const McastProdIndex               iProd)
 {
-    return addFile(msm, msm->requestedQ, fileId);
+    return addFile(msm, msm->requestedQ, iProd);
 }
 
 /**
- * Returns (but doesn't remove) the next file-identifier from the
+ * Returns (but doesn't remove) the next product-index from the
  * missed-but-not-requested queue of a multicast session memory. Blocks until
  * such a file is available.
  *
  * @param[in] msm     The multicast session memory.
- * @param[in] fileId  The file-identifier.
- * @retval    true    Success. `*fileId` is set.
+ * @param[in] iProd   The product-index.
+ * @retval    true    Success. `*iProd` is set.
  * @retval    false   The queue has been shutdown.
  */
 bool
 msm_peekMissedFileWait(
     McastSessionMemory* const restrict msm,
-    McastFileId* const restrict        fileId)
+    McastProdIndex* const restrict     iProd)
 {
-    return fiq_peekWait(msm->missedQ, fileId) == 0;
+    return fiq_peekWait(msm->missedQ, iProd) == 0;
 }
 
 /**
- * Returns (but doesn't remove) the next file-identifier from the
+ * Returns (but doesn't remove) the next product-index from the
  * missed-but-not-requested queue of a multicast session memory.
  *
  * @param[in] msm     The multicast session memory.
- * @param[in] fileId  The file-identifier.
- * @retval    true    The identifier exists. `*fileId` is set.
- * @retval    false   No such identifier (the queue is empty).
+ * @param[in] iProd   The product-index.
+ * @retval    true    The index exists. `*iProd` is set.
+ * @retval    false   No such index (the queue is empty).
  */
 bool
 msm_peekMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastFileId* const restrict        fileId)
+    McastProdIndex* const restrict     iProd)
 {
-    return fiq_peekNoWait(msm->missedQ, fileId) == 0;
+    return fiq_peekNoWait(msm->missedQ, iProd) == 0;
 }
 
 /**
- * Removes and returns the next file-identifier from the
+ * Removes and returns the next product-index from the
  * missed-but-not-requested queue of a multicast session memory.
  *
  * @param[in] msm     The multicast session memory.
- * @param[in] fileId  The file-identifier.
- * @retval    true    The identifier exists. `*fileId` is set.
- * @retval    false   No such identifier (the queue is empty).
+ * @param[in] iProd   The product-index.
+ * @retval    true    The index exists. `*iProd` is set.
+ * @retval    false   No such index (the queue is empty).
  */
 bool
 msm_removeMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastFileId* const restrict        fileId)
+    McastProdIndex* const restrict     iProd)
 {
-    return fiq_removeNoWait(msm->missedQ, fileId) == 0;
+    return fiq_removeNoWait(msm->missedQ, iProd) == 0;
 }
 
 /**
- * Returns (but doesn't remove) the next file-identifier from the
+ * Returns (but doesn't remove) the next product-index from the
  * requested-but-not-received queue of a multicast session memory. Doesn't
  * block.
  *
  * @param[in] msm     The multicast session memory.
- * @param[in] fileId  The file-identifier.
- * @retval    true    Success. `*fileId` is set.
+ * @param[in] iProd   The product-index.
+ * @retval    true    Success. `*iProd` is set.
  * @retval    false   No such identifier (the queue is empty).
  */
 bool
 msm_peekRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastFileId* const restrict        fileId)
+    McastProdIndex* const restrict     iProd)
 {
-    return fiq_peekNoWait(msm->requestedQ, fileId) == 0;
+    return fiq_peekNoWait(msm->requestedQ, iProd) == 0;
 }
 
 /**
- * Removes and returns the next file-identifier from the
+ * Removes and returns the next product-index from the
  * requested-but-not-received queue of a multicast session memory.
  *
  * @param[in] msm     The multicast session memory.
- * @param[in] fileId  The file-identifier.
- * @retval    true    The identifier exists. `*fileId` is set.
- * @retval    false   No such identifier (the queue is empty).
+ * @param[in] iProd   The product-index.
+ * @retval    true    The index exists. `*iProd` is set.
+ * @retval    false   No such index (the queue is empty).
  */
 bool
 msm_removeRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastFileId* const restrict        fileId)
+    McastProdIndex* const restrict     iProd)
 {
-    return fiq_removeNoWait(msm->requestedQ, fileId) == 0;
+    return fiq_removeNoWait(msm->requestedQ, iProd) == 0;
 }
 
 /**

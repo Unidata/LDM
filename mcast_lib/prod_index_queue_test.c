@@ -8,7 +8,7 @@
 
 #include "ldm.h"
 #include "log.h"
-#include "file_id_queue.h"
+#include "prod_index_queue.h"
 #include "mcast.h"
 
 #include <CUnit/CUnit.h>
@@ -17,7 +17,7 @@
 #include <string.h>
 #include <unistd.h>
 
-static FileIdQueue* rq;
+static ProdIndexQueue* rq;
 
 static int
 setup(void)
@@ -39,9 +39,9 @@ teardown(void)
 static void
 test_add_get(void)
 {
-    McastFileId     fileA = 1;
-    McastFileId     fileB;
-    int        status;
+    McastProdIndex     fileA = 1;
+    McastProdIndex     fileB;
+    int                status;
 
     status = fiq_add(rq, fileA);
     log_log(LOG_ERR);
@@ -58,11 +58,11 @@ test_add_get(void)
 static void
 test_order(void)
 {
-    McastFileId fileA = 1;
-    McastFileId fileB = 2;
-    McastFileId fileC = 3;
-    McastFileId fileD;
-    int    status;
+    McastProdIndex fileA = 1;
+    McastProdIndex fileB = 2;
+    McastProdIndex fileC = 3;
+    McastProdIndex fileD;
+    int            status;
 
     status = fiq_add(rq, fileA);
     log_log(LOG_ERR);

@@ -3,48 +3,50 @@
  * All rights reserved. See file COPYRIGHT in the top-level source-directory
  * for legal conditions.
  *
- *   @file file_id_queue.c
+ *   @file prod_index_queue.c
  * @author Steven R. Emmerson
  *
- * This file implements a thread-safe queue of VCMTP file identifiers.
+ * This file implements a non-persistent, thread-safe FIFO queue of product
+ * indexes.
  */
 
 #include "config.h"
 
 #include "ldm.h"
 #include "log.h"
-#include "file_id_queue.h"
+#include "prod_index_queue.h"
 
 #include <errno.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
 /**
- * The type of an entry in a file-identifier queue.
+ * The type of an entry in a product-index queue.
  */
 typedef struct entry {
-    struct entry* prev;   /* points to the previous entry towards the head */
-    struct entry* next;   /* points to the next entry towards the tail */
-    McastFileId   fileId; /* VCMTP identifier of the file */
+    struct entry*  prev;   ///< points to the previous entry towards the head
+    struct entry*  next;   ///< points to the next entry towards the tail
+    McastProdIndex iProd;  ///< index of the product
 } Entry;
 
 /**
  * Returns a new entry.
  *
- * @param[in] fileId  VCMTP file identifier of the file.
+ * @param[in] iProd   Index of the product.
  * @retval    NULL    Error. \c log_add() called.
  * @return            Pointer to the new entry. The client should call \c
- *                    entry_fin() when it is no longer needed.
+ *                    entry_free() when it is no longer needed.
  */
 static Entry*
 entry_new(
-    const McastFileId fileId)
+    const McastProdIndex iProd)
 {
-    Entry* entry = LOG_MALLOC(sizeof(Entry), "file-identifier queue-entry");
+    Entry* entry = LOG_MALLOC(sizeof(Entry), "product-index queue-entry");
 
     if (entry) {
-        entry->fileId = fileId;
+        entry->iProd = iProd;
         entry->prev = entry->next = NULL;
     }
 
@@ -64,22 +66,22 @@ entry_free(
 }
 
 /**
- * Returns the file identifier of an entry.
+ * Returns the product-index of an entry.
  *
  * @param[in] entry  Pointer to the entry.
- * @return           The file identifier of the entry.
+ * @return           The product-index of the entry.
  */
-static inline McastFileId
-entry_getFileId(
+static inline McastProdIndex
+entry_getProductIndex(
     const Entry* const entry)
 {
-    return entry->fileId;
+    return entry->iProd;
 }
 
 /**
- * The definition of a file-identifier queue object.
+ * The definition of a product-index queue object.
  */
-struct file_id_queue {
+struct prod_index_queue {
     Entry*          head;
     Entry*          tail;
     pthread_mutex_t mutex;
@@ -90,14 +92,14 @@ struct file_id_queue {
 
 static inline void
 lock(
-    FileIdQueue* const fiq)
+    ProdIndexQueue* const fiq)
 {
     (void)pthread_mutex_lock(&fiq->mutex);
 }
 
 static inline void
 unlock(
-    FileIdQueue* const fiq)
+    ProdIndexQueue* const fiq)
 {
     (void)pthread_mutex_unlock(&fiq->mutex);
 }
@@ -106,6 +108,7 @@ unlock(
  * Adds an entry to the tail of the queue. Does nothing if the queue has been
  * canceled. The queue must be locked.
  *
+ * @pre                      {`lock(fiq)` has been called}
  * @param[in,out] fiq        Pointer to the queue. Not checked.
  * @param[in]     tail       Pointer to the entry to be added. Not checked.
  *                           Must have NULL "previous" and "next" pointers.
@@ -114,7 +117,7 @@ unlock(
  */
 static int
 addTail(
-    FileIdQueue* const fiq,
+    ProdIndexQueue* const fiq,
     Entry* const       tail)
 {
     int status;
@@ -151,7 +154,7 @@ addTail(
  */
 static int
 getHead(
-    FileIdQueue* const restrict fiq,
+    ProdIndexQueue* const restrict fiq,
     Entry** const restrict      entry)
 {
     int    status;
@@ -180,7 +183,7 @@ getHead(
  */
 static Entry*
 removeHead(
-    FileIdQueue* const fiq)
+    ProdIndexQueue* const fiq)
 {
     if (fiq->count == 0)
         return NULL;
@@ -197,56 +200,105 @@ removeHead(
     return entry;
 }
 
+/**
+ * Initializes a mutex.
+ *
+ * @param[in] mutex  Mutex to be initialized.
+ * @retval    true   Success.
+ * @retval    false  Failure. `log_start()` called.
+ */
+static bool
+fiq_initMutex(
+        pthread_mutex_t* const mutex)
+{
+    pthread_mutexattr_t mutexAttr;
+    int                 status = pthread_mutexattr_init(&mutexAttr);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
+    }
+    else {
+        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
+
+        if ((status = pthread_mutexattr_settype(&mutexAttr,
+                PTHREAD_MUTEX_RECURSIVE))) {
+            LOG_ERRNUM0(status, "Couldn't set recursive mutex attribute");
+        }
+        else if ((status = pthread_mutex_init(mutex, &mutexAttr))) {
+            LOG_SERROR0("Couldn't initialize mutex");
+        }
+
+        (void)pthread_mutexattr_destroy(&mutexAttr);
+    } // `mutexAttr` initialized
+
+    return status == 0;
+}
+
+/**
+ * Initializes the locking mechanism of a product-index queue.
+ *
+ * @param[in] fiq    The product-index queue.
+ * @retval    true   Success.
+ * @retval    false  Failure. `log_start()` called.
+ */
+static bool
+fiq_initLock(
+        ProdIndexQueue* const fiq)
+{
+    if (fiq_initMutex(&fiq->mutex)) {
+        int status;
+
+        if (0 == (status = pthread_cond_init(&fiq->cond, NULL)))
+            return true;
+
+        LOG_ERRNUM0(status, "Couldn't initialize condition-variable");
+        (void)pthread_mutex_destroy(&fiq->mutex);
+    }
+
+    return false;
+}
+
 /******************************************************************************
  * Public API:
  ******************************************************************************/
 
 /**
- * Returns a new file-identifier queue.
+ * Returns a new product-index queue.
  *
  * @retval NULL  Failure. \c log_add() called.
- * @return       Pointer to a new file-identifier queue. The client should call
+ * @return       Pointer to a new product-index queue. The client should call
  *               \c fiq_free() when it is no longer needed.
  */
-FileIdQueue*
+ProdIndexQueue*
 fiq_new(void)
 {
-    FileIdQueue* fiq = LOG_MALLOC(sizeof(FileIdQueue),
-            "missed-file file-identifier queue");
+    ProdIndexQueue* fiq = LOG_MALLOC(sizeof(ProdIndexQueue),
+            "missed-product product-index queue");
 
     if (fiq) {
-        if (pthread_mutex_init(&fiq->mutex, NULL)) {
-            LOG_SERROR0("Couldn't initialize mutex of file-identifier queue");
+        if (fiq_initLock(fiq)) {
+            fiq->head = fiq->tail = NULL;
+            fiq->count = 0;
+            fiq->isCancelled = 0;
+        }
+        else {
             free(fiq);
             fiq = NULL;
         }
-        else {
-            if (pthread_cond_init(&fiq->cond, NULL)) {
-                LOG_SERROR0("Couldn't initialize condition-variable of file-identifier queue");
-                (void)pthread_mutex_destroy(&fiq->mutex);
-                free(fiq);
-                fiq = NULL;
-            }
-            else {
-                fiq->head = fiq->tail = NULL;
-                fiq->count = 0;
-                fiq->isCancelled = 0;
-            }
-        } /* "fiq->mutex" allocated */
     } /* "fiq" allocated */
 
     return fiq;
 }
 
 /**
- * Clears a file-identifier queue of all entries.
+ * Clears a product-index queue of all entries.
  *
- * @param[in] fiq  The file-identifier queue to be cleared.
+ * @param[in] fiq  The product-index queue to be cleared.
  * @return         The number of entries removed.
  */
 size_t
 fiq_clear(
-    FileIdQueue* const fiq)
+    ProdIndexQueue* const fiq)
 {
     lock(fiq);
 
@@ -266,14 +318,14 @@ fiq_clear(
 }
 
 /**
- * Frees a file-identifier queue. Accessing the queue after calling this
+ * Frees a product-index queue. Accessing the queue after calling this
  * function results in undefined behavior.
  *
- * @param[in] fiq  Pointer to the file-identifier queue to be freed or NULL.
+ * @param[in] fiq  Pointer to the product-index queue to be freed or NULL.
  */
 void
 fiq_free(
-    FileIdQueue* const fiq)
+    ProdIndexQueue* const fiq)
 {
     if (fiq) {
         fiq_clear(fiq);
@@ -284,21 +336,21 @@ fiq_free(
 }
 
 /**
- * Adds a file-identifier to a queue.
+ * Adds a product-index to a queue.
  *
- * @param[in,out] fiq        Pointer to the file-identifier queue to which to
- *                           add a file-identifier.
- * @param[in]     fileId     VCMTP file identifier of the data-product.
+ * @param[in,out] fiq        Pointer to the product-index queue to which to
+ *                           add a product-index.
+ * @param[in]     iProd      Index of the data-product.
  * @retval        0          Success.
  * @retval        ENOMEM     Out of memory. \c log_add() called.
  * @retval        ECANCELED  The queue has been canceled.
  */
 int
 fiq_add(
-    FileIdQueue* const fiq,
-    const McastFileId  fileId)
+    ProdIndexQueue* const   fiq,
+    const McastProdIndex iProd)
 {
-    Entry* entry = entry_new(fileId);
+    Entry* entry = entry_new(iProd);
     int    status;
 
     if (!entry) {
@@ -316,20 +368,20 @@ fiq_add(
 }
 
 /**
- * Returns (but does not remove) the file-identifier at the head of the
- * file-identifier queue. Blocks until such an entry is available or
+ * Returns (but does not remove) the product-index at the head of the
+ * product-index queue. Blocks until such an entry is available or
  * the queue is canceled.
  *
- * @param[in,out] fiq        Pointer to the file-identifier queue.
- * @param[out]    fileId     Pointer to the VCMTP file identifier to be set to
+ * @param[in,out] fiq        Pointer to the product-index queue.
+ * @param[out]    iProd      Pointer to the product-index to be set to
  *                           that of the head of the queue.
- * @retval        0          Success. \c *fileId is set.
+ * @retval        0          Success. \c *iProd is set.
  * @retval        ECANCELED  Operation of the queue has been canceled.
  */
 int
 fiq_peekWait(
-    FileIdQueue* const fiq,
-    McastFileId* const fileId)
+    ProdIndexQueue* const fiq,
+    McastProdIndex* const iProd)
 {
     lock(fiq);
 
@@ -337,7 +389,7 @@ fiq_peekWait(
     Entry* entry;
 
     if ((status = getHead(fiq, &entry)) == 0)
-        *fileId = entry_getFileId(entry);
+        *iProd = entry_getProductIndex(entry);
 
     unlock(fiq);
 
@@ -345,19 +397,19 @@ fiq_peekWait(
 }
 
 /**
- * Immediately removes and returns the file-identifier at the head of a
- * file-identifier queue. Doesn't block.
+ * Immediately removes and returns the product-index at the head of a
+ * product-index queue. Doesn't block.
  *
- * @param[in,out] fiq        Pointer to the file-identifier queue.
- * @param[out]    fileId     Pointer to the VCMTP file identifier to be set to
+ * @param[in,out] fiq        Pointer to the product-index queue.
+ * @param[out]    iprod      Pointer to the product-index to be set to
  *                           that of the head of the queue.
- * @retval        0          Success. \c *fileId is set.
+ * @retval        0          Success. \c *iProd is set.
  * @retval        ENOENT     The queue is empty.
  */
 int
 fiq_removeNoWait(
-    FileIdQueue* const fiq,
-    McastFileId* const fileId)
+    ProdIndexQueue* const fiq,
+    McastProdIndex* const iProd)
 {
     lock(fiq);
 
@@ -368,7 +420,7 @@ fiq_removeNoWait(
         status = ENOENT;
     }
     else {
-        *fileId = entry_getFileId(entry);
+        *iProd = entry_getProductIndex(entry);
         entry_free(entry);
         status = 0;
     }
@@ -379,19 +431,19 @@ fiq_removeNoWait(
 }
 
 /**
- * Immediately returns (but does not remove) the file-identifier at the head of
- * the file-identifier queue.
+ * Immediately returns (but does not remove) the product-index at the head of
+ * the product-index queue.
  *
- * @param[in,out] fiq        Pointer to the file-identifier queue.
- * @param[out]    fileId     Pointer to the VCMTP file identifier to be set to
+ * @param[in,out] fiq        Pointer to the product-index queue.
+ * @param[out]    iProd      Pointer to the product-index to be set to
  *                           that of the head of the queue.
- * @retval        0          Success. \c *fileId is set.
+ * @retval        0          Success. \c *iProd is set.
  * @retval        ENOENT     The queue is empty.
  */
 int
 fiq_peekNoWait(
-    FileIdQueue* const fiq,
-    McastFileId* const fileId)
+    ProdIndexQueue* const    fiq,
+    McastProdIndex* const iProd)
 {
     lock(fiq);
 
@@ -402,7 +454,7 @@ fiq_peekNoWait(
         status = ENOENT;
     }
     else {
-        *fileId = entry_getFileId(entry);
+        *iProd = entry_getProductIndex(entry);
         status = 0;
     }
 
@@ -412,14 +464,14 @@ fiq_peekNoWait(
 }
 
 /**
- * Returns the number of entries currently in a file-identifier queue.
+ * Returns the number of entries currently in a product-index queue.
  *
- * @param[in] fiq  The file-identifier queue.
+ * @param[in] fiq  The product-index queue.
  * @return         The number of identifiers in the queue.
  */
 size_t
 fiq_count(
-    FileIdQueue* const fiq)
+    ProdIndexQueue* const fiq)
 {
     size_t count;
 
@@ -431,7 +483,7 @@ fiq_count(
 }
 
 /**
- * Cancels the operation of a VCMTP file-identifier queue. Idempotent.
+ * Cancels the operation of a VCMTP product-index queue. Idempotent.
  *
  * @param[in] fiq     Pointer to the queue to be canceled.
  * @retval    0       Success.
@@ -439,7 +491,7 @@ fiq_count(
  */
 int
 fiq_cancel(
-    FileIdQueue* const fiq)
+    ProdIndexQueue* const fiq)
 {
     if (!fiq)
         return EINVAL;
@@ -453,15 +505,15 @@ fiq_cancel(
 }
 
 /**
- * Indicates if a file-identifier queue has been canceled.
+ * Indicates if a product-index queue has been canceled.
  *
- * @param[in] fiq    Pointer to the file-identifier queue.
+ * @param[in] fiq    Pointer to the product-index queue.
  * @retval    false  The queue has not been canceled.
  * @retval    true   The queue has been canceled.
  */
 bool
 fiq_isCanceled(
-    FileIdQueue* const fiq)
+    ProdIndexQueue* const fiq)
 {
     bool isCanceled;
 

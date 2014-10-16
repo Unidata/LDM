@@ -50,7 +50,7 @@ struct mlr {
  */
 static int
 lockPq(
-    Mlr* const mlr)
+        Mlr* const mlr)
 {
     int status = pq_lock(mlr->pq);
 
@@ -69,7 +69,7 @@ lockPq(
  */
 static int
 unlockPq(
-    Mlr* const mlr)
+        Mlr* const mlr)
 {
     int status = pq_unlock(mlr->pq);
 
@@ -95,11 +95,11 @@ unlockPq(
  */
 static int
 allocateSpaceAndSetBofResponse(
-    Mlr* const restrict        mlr,
-    const char* const restrict name,
-    const size_t               size,
-    const signaturet           signature,
-    void* const                file_entry)
+        Mlr* const restrict        mlr,
+        const char* const restrict name,
+        const size_t               size,
+        const signaturet           signature,
+        void* const                file_entry)
 {
     int               status;
     char*             buf;
@@ -152,8 +152,8 @@ allocateSpaceAndSetBofResponse(
  */
 static int
 bof_func(
-    void* const    obj,
-    void* const    file_entry)
+        void* const    obj,
+        void* const    file_entry)
 {
     int            status;
 
@@ -190,8 +190,8 @@ bof_func(
  */
 static int
 insertOrDiscard(
-    Mlr* const restrict             mlr,
-    const pqe_index* const restrict index)
+        Mlr* const restrict             mlr,
+        const pqe_index* const restrict index)
 {
     int status;
 
@@ -217,10 +217,10 @@ insertOrDiscard(
  *                  successfully received. Caller may free when it's no longer
  *                  needed.
  */
-inline static void
+static inline void
 lastReceived(
-    Mlr* const restrict             mlr,
-    const prod_info* const restrict info)
+        Mlr* const restrict             mlr,
+        const prod_info* const restrict info)
 {
     down7_lastReceived(mlr->down7, info);
 }
@@ -240,10 +240,10 @@ lastReceived(
  */
 static int
 finishInsertion(
-    Mlr* const restrict             mlr,
-    const pqe_index* const restrict index,
-    const prod_info* const restrict info,
-    const size_t                    dataSize)
+        Mlr* const restrict             mlr,
+        const pqe_index* const restrict index,
+        const prod_info* const restrict info,
+        const size_t                    dataSize)
 {
     int status;
 
@@ -285,8 +285,8 @@ finishInsertion(
  */
 static int
 eof_func(
-    void*               obj,
-    const void* const   file_entry)
+        void*               obj,
+        const void* const   file_entry)
 {
     int                 status;
 
@@ -304,7 +304,8 @@ eof_func(
         pqueue* const          pq = mlr->pq;
 
         xdrmem_create(&xdrs, (char*)ldmBofResponse_getBuf(bofResponse),
-                fileSize, XDR_DECODE); /* (char*) is safe because decoding */
+                fileSize, XDR_DECODE);          // decoding => (char*) is safe
+        (void)memset(&info, 0, sizeof(info));   // for `xdr_prod_info()`
 
         if (!xdr_prod_info(&xdrs, &info)) {
             LOG_SERROR2("Couldn't decode LDM product-metadata from %lu-byte "
@@ -319,29 +320,29 @@ eof_func(
             status = finishInsertion(mlr, index, &info,
                     fileSize-(xdrs.x_private-xdrs.x_base));
             xdr_free(xdr_prod_info, (char*)&info);
-        } /* "info" allocated */
+        }                                       // "info" allocated
 
         xdr_destroy(&xdrs);
-    } /* region in product-queue was allocated */
+    }                                           // product-queue region allocated
 
     return status;
 }
 
 /**
  * Accepts notification from the VCMTP layer of the missed reception of a
- * file. Queues the file for reception by other means. This function must and
- * does return immediately.
+ * product. Queues the product for reception by other means. This function must
+ * and does return immediately.
  *
  * @param[in,out]  obj          Pointer to the associated multicast LDM receiver
  *                              object.
- * @param[in]      fileId       Identifier of the VCMTP file that was missed.
+ * @param[in]      iProd        Index of the product that was missed.
  */
 static void
 missed_file_func(
-    void*               obj,
-    const McastFileId   fileId)
+        void*                obj,
+        const McastProdIndex iProd)
 {
-    down7_missedProduct(((Mlr*)obj)->down7, fileId);
+    down7_missedProduct(((Mlr*)obj)->down7, iProd);
 }
 
 /**
@@ -359,10 +360,10 @@ missed_file_func(
  */
 static int
 init(
-    Mlr* const restrict                  mlr,
-    pqueue* const restrict               pq,
-    const McastInfo* const restrict mcastInfo,
-    Down7* const restrict                down7)
+        Mlr* const restrict                  mlr,
+        pqueue* const restrict               pq,
+        const McastInfo* const restrict mcastInfo,
+        Down7* const restrict                down7)
 {
     int                 status;
     McastReceiver*     receiver;
@@ -416,9 +417,9 @@ init(
  */
 Mlr*
 mlr_new(
-    pqueue* const restrict               pq,
-    const McastInfo* const restrict mcastInfo,
-    Down7* const restrict                down7)
+        pqueue* const restrict               pq,
+        const McastInfo* const restrict mcastInfo,
+        Down7* const restrict                down7)
 {
     Mlr* mlr = LOG_MALLOC(sizeof(Mlr), "multicast LDM receiver object");
 
@@ -440,29 +441,29 @@ mlr_new(
  */
 void
 mlr_free(
-    Mlr* const  mlr)
+        Mlr* const  mlr)
 {
     mcastReceiver_free(mlr->receiver);
     free(mlr);
 }
 
 /**
- * Executes a multicast LDM receiver. Blocks until the multicast
- * LDM receiver is stopped.
+ * Executes a multicast LDM receiver. Blocks until the multicast LDM receiver is
+ * stopped.
  *
  * @param[in] mlr            The multicast LDM receiver to execute.
- * @retval    LDM7_CANCELED  The multicast LDM receiver was stopped.
+ * @retval    LDM7_SHUTDOWN  The multicast LDM receiver was stopped.
  * @retval    LDM7_INVAL     `mlr == NULL`. `log_add()` called.
- * @retval    LDM7_VCMTP     VCMTP error. `log_add()` called.
+ * @retval    LDM7_MCAST     Multicast error. `log_add()` called.
  */
 int
 mlr_start(
-    Mlr* const  mlr)
+        Mlr* const  mlr)
 {
-    int         status;
+    int status;
 
     if (NULL == mlr) {
-        LOG_ADD0("NULL multicast-LDM- receiver argument");
+        LOG_ADD0("NULL multicast-LDM-receiver argument");
         status = LDM7_INVAL;
     }
     else if ((status = mcastReceiver_execute(mlr->receiver)) != 0) {
@@ -484,7 +485,7 @@ mlr_start(
  */
 void
 mlr_stop(
-    Mlr* const mlr)
+        Mlr* const mlr)
 {
     mcastReceiver_stop(mlr->receiver);
 }

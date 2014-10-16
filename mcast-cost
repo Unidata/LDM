@@ -1,0 +1,1 @@
+sloccount `(find mldm_sender -name \*.c -o -name \*.h && find mcast_lib -path ./mcast_lib/vcmtp -prune -o -name \*.c -o -name \*.cpp -o -name \*.h) | fgrep -v _stub`

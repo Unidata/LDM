@@ -139,3 +139,15 @@ local_portmapper_running()
 
     return status;
 }
+
+/**
+ * Returns an identifier of the remote client.
+ *
+ * @param[in] rqstp  Client-request object.
+ */
+const char*
+rpc_getClientId(
+    struct svc_req* const rqstp)
+{
+    return hostbyaddr(svc_getcaller(rqstp->rq_xprt));
+}

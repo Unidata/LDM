@@ -11,19 +11,23 @@
 
 #include "acl.h"
 #include "atofeedt.h"
+#include "down7_manager.h"
 #include "error.h"
 #include "globals.h"
+#include "inetutil.h"
 #include "remote.h"
+#include "mcast_info.h"
+#include "mldm_sender_manager.h"
 #include "ldm.h"
 #include "ldmprint.h"
 #include "RegularExpressions.h"
-#include "ulog.h"
 #include "log.h"
 #include "wordexp.h"
 
 #include <limits.h>
 #include <regex.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <errno.h>
@@ -346,6 +350,104 @@ decodeRequestEntry(
 }
 
 
+#if WANT_MULTICAST
+/**
+ * Decodes a TRANSMIT entry.
+ *
+ * @param[in] feedtypeSpec    Specification of the feedtype.
+ * @param[in] mcastGroupSpec  Specification of the multicast group.
+ * @param[in] tcpServerSpec   Specfication of the VCMTP TCP server.
+ * @retval    0               Success.
+ * @retval    EINVAL          Invalid specification. `log_start()` called.
+ * @retval    ENOMEM          Out-of-memory. `log_start()` called.
+ */
+static int
+decodeTransmitEntry(
+    const char* const   feedtypeSpec,
+    const char* const   mcastGroupSpec,
+    const char* const   tcpServerSpec)
+{
+    int         status;
+    feedtypet   feedtype;
+
+    status = decodeFeedtype(&feedtype, feedtypeSpec);
+    
+    if (0 == status) {
+        ServiceAddr* mcastGroupSa = NULL;
+        
+        if ((status = sa_parseWithDefaults(&mcastGroupSa, mcastGroupSpec, NULL,
+                ldmPort))) {
+            LOG_START1("Couldn't parse multicast group specification: \"%s\"", 
+                    mcastGroupSpec);
+        }
+        else {
+            ServiceAddr* tcpServerSa = NULL;
+
+            if ((status = sa_parseWithDefaults(&tcpServerSa, tcpServerSpec,
+                    "0.0.0.0", -1))) {
+                LOG_START1("Couldn't parse TCP server specification: \"%s\"", 
+                        tcpServerSpec);
+            }
+            else {
+                McastInfo* mcastInfo;
+
+                status = mi_new(&mcastInfo, feedtype, mcastGroupSa,
+                        tcpServerSa);
+                            
+                if (0 == status) {
+                    status = mlsm_addPotentialSender(mcastInfo);
+                    if (status)
+                        status = (LDM7_DUP == status) ? EINVAL : ENOMEM;
+                    mi_free(mcastInfo);
+                } // `mcastInfo` allocated
+            } // `tcpServerSa` is good
+
+            sa_free(tcpServerSa);       // NULL ok
+        } // `mcastGroupSa` is good
+
+        sa_free(mcastGroupSa);          // NULL ok
+    } // `feedtype` set
+    
+    if (status)
+        LOG_ADD0("Couldn't process TRANSMIT entry");
+    
+    return status;
+}
+
+/**
+ * Decodes a RECEIVE entry.
+ *
+ * @param[in] feedtypeSpec   Specification of the feedtype.
+ * @param[in] LdmServerSpec  Specification of the remote LDM server.
+ * @retval    0              Success.
+ * @retval    EINVAL         Invalid specification. `log_start()` called.
+ * @retval    ENOMEM         Out-of-memory. `log_start()` called.
+ */
+static int
+decodeReceiveEntry(
+        const char* const restrict feedtypeSpec,
+        const char* const restrict ldmServerSpec)
+{
+    feedtypet   feedtype;
+    int         status = decodeFeedtype(&feedtype, feedtypeSpec);
+
+    if (0 == status) {
+        ServiceAddr* ldmSvcAddr;
+
+        status = sa_parseWithDefaults(&ldmSvcAddr, ldmServerSpec, NULL,
+                ldmPort);       // Internet ID must exist; port is optional
+
+        if (0 == status) {
+            status = d7mgr_add(feedtype, ldmSvcAddr);
+            sa_free(ldmSvcAddr);
+        }       // `ldmSvcAddr` allocated
+    }           // `feedtype` set
+
+    return status;
+}
+#endif // WANT_MULTICAST
+
+
 #if YYDEBUG
 #define printf udebug
 #endif
@@ -357,11 +459,13 @@ decodeRequestEntry(
         }
 
 
-%token ALLOW_K
 %token ACCEPT_K
-%token REQUEST_K
+%token ALLOW_K
 %token EXEC_K
 %token INCLUDE_K
+%token RECEIVE_K
+%token REQUEST_K
+%token TRANSMIT_K
 
 %token <string> STRING
 
@@ -372,34 +476,12 @@ table:          /* empty */
                 | table entry
                 ;
 
-entry:            allow_entry
-                | accept_entry
-                | request_entry
+entry:            accept_entry
+                | allow_entry
                 | exec_entry
                 | include_stmt
-                ;
-
-allow_entry:    ALLOW_K STRING STRING
-                {
-                    int errCode = decodeAllowEntry($2, $3, ".*", NULL);
-
-                    if (errCode)
-                        return errCode;
-                }
-                | ALLOW_K STRING STRING STRING
-                {
-                    int errCode = decodeAllowEntry($2, $3, $4, NULL);
-
-                    if (errCode)
-                        return errCode;
-                }
-                | ALLOW_K STRING STRING STRING STRING
-                {
-                    int errCode = decodeAllowEntry($2, $3, $4, $5);
-
-                    if (errCode)
-                        return errCode;
-                }
+                | request_entry
+                | transmit_entry
                 ;
 
 accept_entry:   ACCEPT_K STRING STRING STRING
@@ -454,16 +536,23 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                 }
                 ;
 
-request_entry:  REQUEST_K STRING STRING STRING
+allow_entry:    ALLOW_K STRING STRING
                 {
-                    int errCode = decodeRequestEntry($2, $3, $4);
+                    int errCode = decodeAllowEntry($2, $3, ".*", NULL);
 
                     if (errCode)
                         return errCode;
                 }
-                | REQUEST_K STRING STRING STRING STRING
+                | ALLOW_K STRING STRING STRING
                 {
-                    int errCode = decodeRequestEntry($2, $3, $4);
+                    int errCode = decodeAllowEntry($2, $3, $4, NULL);
+
+                    if (errCode)
+                        return errCode;
+                }
+                | ALLOW_K STRING STRING STRING STRING
+                {
+                    int errCode = decodeAllowEntry($2, $3, $4, $5);
 
                     if (errCode)
                         return errCode;
@@ -508,6 +597,44 @@ include_stmt:   INCLUDE_K STRING
                         return -1;
                 }
 
+receive_entry:        RECEIVE_K STRING STRING
+                {
+                #if WANT_MULTICAST
+                    int errCode = decodeReceiveEntry($2, $3);
+
+                    if (errCode)
+                        return errCode;
+                #endif
+                }
+                ;
+
+request_entry:  REQUEST_K STRING STRING STRING
+                {
+                    int errCode = decodeRequestEntry($2, $3, $4);
+
+                    if (errCode)
+                        return errCode;
+                }
+                | REQUEST_K STRING STRING STRING STRING
+                {
+                    int errCode = decodeRequestEntry($2, $3, $4);
+
+                    if (errCode)
+                        return errCode;
+                }
+                ;
+
+transmit_entry:        TRANSMIT_K STRING STRING STRING
+                {
+                #if WANT_MULTICAST
+                    int errCode = decodeTransmitEntry($2, $3, $4);
+
+                    if (errCode)
+                        return errCode;
+                #endif
+                }
+                ;
+
 %%
 
 #include "scanner.c"
@@ -521,6 +648,33 @@ int
 yywrap(void)
 {
     return scannerPop();
+}
+
+/**
+ * Acts upon the parsed entries of the configuration-file.
+ *
+ * @retval 0  Success
+ * @return    System error code.
+ */
+static int
+actUponEntries(
+        const unsigned defaultPort)
+{
+    int status = invert_request_acl(defaultPort);
+
+    if (status) {
+        LOG_ADD0("Problem starting downstream LDM-s");
+    }
+    else {
+        status = d7mgr_startAllAndFree();
+
+        if (status) {
+            LOG_ADD0("Problem starting receiving LDM-s");
+            d7mgr_free();
+        }
+    }
+    
+    return status;
 }
 
 /*
@@ -550,16 +704,11 @@ read_conf(
         execute = doSomething;
         status = yyparse();
 
-        if (status != 0) {
-            log_add("Error reading LDM configuration-file \"%s\"", conf_path);
+        if (status) {
+            LOG_ADD1("Error reading LDM configuration-file \"%s\"", conf_path);
         }
         else {
-            if (doSomething) {
-                status = invert_request_acl(defaultPort);
-
-                if (status != 0)
-                    log_serror("Problem requesting data");
-            }
+            status = doSomething ? actUponEntries(defaultPort) : 0;
         }
     }
 

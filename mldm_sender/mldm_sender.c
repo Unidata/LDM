@@ -14,7 +14,7 @@
 #include "config.h"
 
 #include "atofeedt.h"
-#include "file_id_map.h"
+#include "prod_index_map.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "ldm.h"
@@ -40,16 +40,18 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-typedef struct {
-    void*                 mcastSender;
-    McastInfo             mcastInfo;
-    pthread_t             mcastThread;
-    McastFileId           fileId;
-    volatile sig_atomic_t done;
-} McastLdmSender;
-
-static sigset_t termSigSet;
-static sigset_t pqSigSet;
+/**
+ * C-callable multicast sender.
+ */
+static void*       mcastSender;
+/**
+ * Information on the multicast group.
+ */
+static McastInfo   mcastInfo;
+/**
+ * Product-index of the next data-product to be multicast.
+ */
+static McastProdIndex fileId;
 
 /**
  * Returns the logging options appropriate to a log-file specification.
@@ -64,7 +66,7 @@ static sigset_t pqSigSet;
  */
 static unsigned
 mls_getLogOpts(
-    const char* const logFileSpec)
+        const char* const logFileSpec)
 {
     return (logFileSpec && 0 == strcmp(logFileSpec, "-"))
         /*
@@ -87,7 +89,7 @@ mls_getLogOpts(
  */
 static void
 mls_initLogging(
-    const char* const progName)
+        const char* const progName)
 {
     char* logFileSpec;
 
@@ -101,22 +103,6 @@ mls_initLogging(
 
     (void)setulogmask(LOG_UPTO(LOG_NOTICE));
     (void)openulog(progName, mls_getLogOpts(logFileSpec), LOG_LDM, logFileSpec);
-}
-
-/**
- * Initializes the sets of signals that are used to ensure that only certain
- * threads receive certain signals.
- */
-static void
-mls_initSignalSets(void)
-{
-    (void)sigemptyset(&termSigSet);
-    (void)sigaddset(&termSigSet, SIGTERM);
-    (void)sigaddset(&termSigSet, SIGINT);
-
-    (void)sigemptyset(&pqSigSet);
-    (void)sigaddset(&pqSigSet, SIGCONT);
-    (void)sigaddset(&pqSigSet, SIGALRM);
 }
 
 /**
@@ -180,10 +166,10 @@ mls_usage(void)
  */
 static int
 mls_decodeOptions(
-    int                         argc,
-    char* const* const restrict argv,
-    const char** const restrict serverIface,
-    unsigned* const restrict    ttl)
+        int                         argc,
+        char* const* const restrict argv,
+        const char** const restrict serverIface,
+        unsigned* const restrict    ttl)
 {
     int          ch;
     extern int   opterr;
@@ -232,12 +218,10 @@ mls_decodeOptions(
         }
         case ':': {
             LOG_START1("Option \"%c\" requires an argument", optopt);
-            mls_usage();
             return 1;
         }
         default: {
             LOG_ADD1("Unknown option: \"%c\"", optopt);
-            mls_usage();
             return 1;
         }
         }
@@ -253,22 +237,22 @@ mls_decodeOptions(
  * @param[in]  port         The port number.
  * @param[out] serviceAddr  The Internet service address to be set.
  * @retval     0            Success. `*serviceAddr` is set.
+ * @retval     1            Invalid argument. `log_start()` called.
  * @retval     2            System failure. `log_start()` called.
  */
 static int
 mls_setServiceAddr(
-    const char* const    id,
-    const unsigned short port,
-    ServiceAddr** const  serviceAddr)
+        const char* const    id,
+        const unsigned short port,
+        ServiceAddr** const  serviceAddr)
 {
-    ServiceAddr* sa = sa_new(id, port);
+    int status = sa_new(serviceAddr, id, port);
 
-    if (sa == NULL)
-        return 2;
-
-    *serviceAddr = sa;
-
-    return 0;
+    return (0 == status)
+            ? 0
+            : (EINVAL == status)
+              ? 1
+              : 2;
 }
 
 /**
@@ -283,11 +267,11 @@ mls_setServiceAddr(
  */
 static int
 mls_decodeGroupAddr(
-    char* const restrict         arg,
-    ServiceAddr** const restrict groupAddr)
+        char* const restrict         arg,
+        ServiceAddr** const restrict groupAddr)
 {
-    ServiceAddr*   sa;
-    int            status = sa_parse(&sa, arg);
+    ServiceAddr* sa;
+    int          status = sa_parse(&sa, arg);
 
     if (ENOMEM == status) {
         status = 2;
@@ -318,11 +302,11 @@ mls_decodeGroupAddr(
  */
 static int
 mls_decodeServerAddr(
-    char* const restrict          arg,
-    const char* const restrict    serverIface,
-    ServiceAddr** const restrict  serverAddr)
+        char* const restrict         arg,
+        const char* const restrict   serverIface,
+        ServiceAddr** const restrict serverAddr)
 {
-    int            status;
+    int status;
 
     if (arg == NULL) {
         log_start("NULL argument");
@@ -364,18 +348,17 @@ mls_decodeServerAddr(
  */
 static int
 mls_decodeOperands(
-    int                           argc,
-    char* const* restrict         argv,
-    const char* const restrict    serverIface,
-    ServiceAddr** const restrict  groupAddr,
-    ServiceAddr** const restrict  serverAddr,
-    feedtypet* const restrict     feed)
+        int                          argc,
+        char* const* restrict        argv,
+        const char* const restrict   serverIface,
+        ServiceAddr** const restrict groupAddr,
+        ServiceAddr** const restrict serverAddr,
+        feedtypet* const restrict    feed)
 {
     int status;
 
     if (argc < 1) {
         log_start("Multicast group not specified");
-        mls_usage();
         status = 1;
     }
     else {
@@ -391,7 +374,6 @@ mls_decodeOperands(
             ServiceAddr* srvrAddr;
 
             if ((status = mls_decodeGroupAddr(*argv, &grpAddr))) {
-                mls_usage();
                 status = 1;
             }
             else {
@@ -399,7 +381,6 @@ mls_decodeOperands(
 
                 if ((status = mls_decodeServerAddr(*argv, serverIface, &srvrAddr))) {
                     log_start("Port number of TCP server unspecified or invalid");
-                    mls_usage();
                     status = 1;
                 }
                 else {
@@ -436,14 +417,14 @@ mls_decodeOperands(
  */
 static int
 mls_decodeCommandLine(
-    int                         argc,
-    char* const* restrict       argv,
-    McastInfo** const restrict  groupInfo,
-    unsigned* const restrict    ttl)
+        int                        argc,
+        char* const* restrict      argv,
+        McastInfo** const restrict groupInfo,
+        unsigned* const restrict   ttl)
 {
-    const char*  serverIface = "0.0.0.0"; // default: all interfaces
-    int          status = mls_decodeOptions(argc, argv, &serverIface, ttl);
-    extern int   optind;
+    const char* serverIface = "0.0.0.0"; // default: all interfaces
+    int         status = mls_decodeOptions(argc, argv, &serverIface, ttl);
+    extern int  optind;
 
     if (0 == status) {
         argc -= optind;
@@ -457,22 +438,64 @@ mls_decodeCommandLine(
                 &serverAddr, &feed);
 
         if (status == 0) {
-            McastInfo* gi = mi_new(feed, groupAddr, serverAddr);
-
-            if (gi == NULL) {
-                status = 2;
-            }
-            else {
-                *groupInfo = gi;
-                status  = 0;
-            }
-
+            status = mi_new(groupInfo, feed, groupAddr, serverAddr) ? 2 : 0;
             sa_free(groupAddr);
             sa_free(serverAddr);
         }
     }
 
     return status;
+}
+
+/**
+ * Handles a signal by rotating the logging level.
+ *
+ * @param[in] sig  Signal to be handled. Ignored.
+ */
+static void
+mls_rotateLoggingLevel(
+        const int sig)
+{
+    rollulogpri();
+}
+
+/**
+ * Handles a signal by setting the `done` flag.
+ *
+ * @param[in] sig  Signal to be handled. Ignored.
+ */
+static void
+mls_setDoneFlag(
+        const int sig)
+{
+    done = 1;
+}
+
+/**
+ * Sets signal handling.
+ */
+static void
+mls_setSignalHandling(void)
+{
+    struct sigaction sigact;
+
+    (void)sigemptyset(&sigact.sa_mask);
+
+    /*
+     * Register logging signal-handler. Ensure that it only affects logging by
+     * restarting the system call.
+     */
+    sigact.sa_flags |= SA_RESTART;
+    sigact.sa_handler = mls_rotateLoggingLevel;
+    (void)sigaction(SIGUSR2, &sigact, NULL);
+
+    /*
+     * Register termination signal-handler.
+     */
+    sigact.sa_flags = 0;
+    sigact.sa_handler = mls_setDoneFlag;
+    (void)sigaction(SIGINT, &sigact, NULL );
+    (void)sigaction(SIGTERM, &sigact, NULL );
 }
 
 /**
@@ -496,9 +519,9 @@ mls_decodeCommandLine(
  */
 static Ldm7Status
 mls_getIpv4Addr(
-    const char* const restrict inetId,
-    const char* const restrict desc,
-    char* const restrict       buf)
+        const char* const restrict inetId,
+        const char* const restrict desc,
+        char* const restrict       buf)
 {
     int status = getDottedDecimal(inetId, buf);
 
@@ -513,13 +536,12 @@ mls_getIpv4Addr(
 }
 
 /**
- * Opens the file-identifier map for updating. Creates the associated file if it
+ * Opens the product-index map for updating. Creates the associated file if it
  * doesn't exist. The parent directory of the associated file is the parent
  * directory of the LDM product-queue.
  *
- * @param[in] mls          Multicast LDM sender object.
  * @param[in] feed         Feedtype to be multicast.
- * @param[in] maxSigs      Maximum number of signatures that the file-identifier
+ * @param[in] maxSigs      Maximum number of signatures that the product-index
  *                         must contain.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
@@ -529,13 +551,12 @@ mls_getIpv4Addr(
  */
 static Ldm7Status
 mls_openFileIdMap(
-        McastLdmSender* const restrict  mls,
-        const feedtypet                 feed,
-        const size_t                    maxSigs)
+        const feedtypet feed,
+        const size_t    maxSigs)
 {
-    int         status;
     /* Queue pathname is cloned because `dirname()` may alter its argument */
     char* const queuePathname = strdup(getQueuePath());
+    int         status;
 
     if (NULL == queuePathname) {
         LOG_SERROR0("Couldn't duplicate product-queue pathname");
@@ -546,7 +567,7 @@ mls_openFileIdMap(
                 dirname(queuePathname), s_feedtypet(feed));
 
         if (NULL == mapPathname) {
-            LOG_ADD0("Couldn't construct pathname of file-identifier map");
+            LOG_ADD0("Couldn't construct pathname of product-index map");
             status = LDM7_SYSTEM;
         }
         else {
@@ -561,9 +582,8 @@ mls_openFileIdMap(
 }
 
 /**
- * Initializes a multicast LDM sender.
+ * Initializes the resources of this module
  *
- * @param[in]  mls          The multicast LDM sender.
  * @param[in]  info         Information on the multicast group.
  * @param[in]  ttl          Time-to-live of outgoing packets.
  *                               0  Restricted to same host. Won't be output by
@@ -585,16 +605,15 @@ mls_openFileIdMap(
  */
 static Ldm7Status
 mls_init(
-    McastLdmSender* const restrict  mls,
     const McastInfo* const restrict info,
     const unsigned                  ttl,
     const char* const restrict      pqPathname)
 {
-    int status;
-
     char serverInetAddr[INET_ADDRSTRLEN];
-    if ((status = mls_getIpv4Addr(info->server.inetId, "server",
-            serverInetAddr)))
+    int  status = mls_getIpv4Addr(info->server.inetId, "server",
+            serverInetAddr);
+
+    if (status)
         goto return_status;
 
     char groupInetAddr[INET_ADDRSTRLEN];
@@ -608,30 +627,29 @@ mls_init(
         goto return_status;
     }
 
-    if ((status = mls_openFileIdMap(mls, info->feed, pq_getSlotCount(pq))))
+    if ((status = mls_openFileIdMap(info->feed, pq_getSlotCount(pq))))
         goto close_pq;
 
-    if ((status = fim_getNextFileId(&mls->fileId)))
+    if ((status = fim_getNextProdIndex(&fileId)))
         goto close_fileId_map;
 
-    if ((status = mcastSender_new(&mls->mcastSender, serverInetAddr,
-            info->server.port, groupInetAddr, info->group.port, ttl,
-            mls->fileId))) {
+    if ((status = mcastSender_new(&mcastSender, serverInetAddr,
+            info->server.port, groupInetAddr, info->group.port, ttl, fileId))) {
         status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
         goto close_fileId_map;
     }
 
-    if (mi_copy(&mls->mcastInfo, info)) {
+    if (mi_copy(&mcastInfo, info)) {
         status = LDM7_SYSTEM;
         goto free_mcastSender;
     }
 
-    mls->done = 0;
+    done = 0;
 
     return 0;
 
 free_mcastSender:
-    mcastSender_free(mls->mcastSender);
+    mcastSender_free(mcastSender);
 close_fileId_map:
     (void)fim_close();
 close_pq:
@@ -641,21 +659,14 @@ return_status:
 }
 
 /**
- * Destroys a multicast LDM sender. Releases the resources associated with the
- * object's fields but doesn't release the object itself.
- *
- * @param[in]  mls          The multicast LDM sender.
- * @pre                     {`mls_startMulticasting(mls)` was never called or
- *                          `mls_stopMulticasting(mls)` was called.}
+ * Ensures that the resources of this module are released.
  */
-static inline void
-mls_destroy(
-    McastLdmSender* const restrict  mls)
+static inline void      // inlined because small and only called in one place
+mls_destroy(void)
 {
-    /* Releasing fields but not the object is what `xdr_free()` does. */
-    (void)xdr_free(xdr_McastInfo, (char*)&mls->mcastInfo);
+    (void)xdr_free(xdr_McastInfo, (char*)&mcastInfo);
     (void)pq_close(pq);
-    mcastSender_free(mls->mcastSender);
+    mcastSender_free(mcastSender);
 }
 
 /**
@@ -666,34 +677,38 @@ mls_destroy(
  * @param[in] xprod  Pointer to an XDR-encoded version of the data-product (data
  *                   and metadata).
  * @param[in] size   Size, in bytes, of the XDR-encoded version.
- * @param[in] arg    Pointer to associated multicast LDM sender object.
+ * @param[in] arg    Optional last `pq_sequence()` argument. Ignored.
  * @retval    0      Success.
  * @retval    EIO    I/O failure. `log_start()` called.
  */
 static int
 mls_multicastProduct(
-    const prod_info* const restrict info,
-    const void* const restrict      data,
-    void* const restrict            xprod,
-    const size_t                    size,
-    void* const restrict            arg)
+        const prod_info* const restrict info,
+        const void* const restrict      data,
+        void* const restrict            xprod,
+        const size_t                    size,
+        void* const restrict            arg)
 {
-    McastLdmSender* const mls = arg;
-    int                   status = mcastSender_send(mls->mcastSender, xprod,
-            size);
+    int status = mcastSender_send(mcastSender, xprod, size);
 
     if (0 == status) {
         prod_info info;
         XDR       xdrs;
 
         xdrmem_create(&xdrs, xprod, size, XDR_DECODE);
+        (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
 
         if (!xdr_prod_info(&xdrs, &info)) {
             LOG_SERROR0("Couldn't decode LDM product-metadata");
             status = EIO;
         }
         else {
-            status = fim_put(mls->fileId++, &info.signature);
+            status = fim_put(fileId++, (const signaturet*)&info.signature);
+
+            if (ulogIsVerbose())
+                uinfo("Multicasted: %s",
+                        s_prod_info(NULL, 0, &info, ulogIsDebug()));
+
             xdr_free(xdr_prod_info, (char*)&info);
         }
 
@@ -707,7 +722,6 @@ mls_multicastProduct(
  * Returns a new product-class for a multicast LDM sender for selecting
  * data-products from the sender's associated product-queue.
  *
- * @param[in]  mls          Multicast LDM sender.
  * @param[out] prodClass    Product-class for selecting data-products. Caller
  *                          should call `free_prod_class(*prodClass)` when it's
  *                          no longer needed.
@@ -717,35 +731,21 @@ mls_multicastProduct(
  */
 static int
 mls_setProdClass(
-    McastLdmSender* const restrict mls,
-    prod_class** const restrict    prodClass)
+        prod_class** const restrict prodClass)
 {
     int         status;
-    /* The following sets `pc->psa.psa_len` but all the patterns are NULL */
-    prod_class* pc = new_prod_class(1);
+    /* PQ_CLASS_ALL has feedtype=ANY, pattern=".*", from=BOT, to=EOT */
+    prod_class* pc = dup_prod_class(PQ_CLASS_ALL);
 
     if (pc == NULL) {
         status = LDM7_SYSTEM;
     }
     else {
         (void)set_timestamp(&pc->from); // from now
-        pc->to = TS_ENDT;               // until the end-of-time
-
-        pc->psa.psa_val->feedtype = mls->mcastInfo.feed;
-        pc->psa.psa_val->pattern = strdup(".*");
-
-        if (pc->psa.psa_val->pattern == NULL) {
-            LOG_SERROR0("Couldn't duplicate pattern \".*\"");
-            status = LDM7_SYSTEM;
-        }
-        else {
-            clss_regcomp(pc);
-            *prodClass = pc;
-            status = 0;
-        } // `pc->psa.psa_val->pattern` allocated
-
-        if (status)
-            free_prod_class(pc); // won't free NULL patterns
+        pc->psa.psa_val->feedtype = mcastInfo.feed;
+        clss_regcomp(pc);
+        *prodClass = pc;
+        status = 0;
     } // `pc` allocated
 
     return status;
@@ -756,24 +756,24 @@ mls_setProdClass(
  * product-queue. Will block for a short time or until a SIGCONT is received if
  * the next data-product doesn't exist.
  *
- * @param[in] mls        Multicast LDM sender.
  * @param[in] prodClass  Class of data-products to multicast.
  * @retval    0          Success.
  * @return               `<errno.h>` error-code from `pq_sequence()`.
  * @return               Return-code from `mls_multicastProduct()`.
  */
-static inline int
+static int
 mls_tryMulticast(
-    McastLdmSender* const restrict mls,
-    prod_class* const restrict     prodClass)
+        prod_class* const restrict prodClass)
 {
-    int status = pq_sequence(pq, TV_GT, prodClass, mls_multicastProduct, mls);
+    // TODO: Keep product locked until VCMTP notification, then release
+
+    int status = pq_sequence(pq, TV_GT, prodClass, mls_multicastProduct, NULL);
 
     if (status == PQUEUE_END) {
         /*
-         * No matching data-product. Block for a short time or until a SIGCONT
-         * is received by this thread. NB: `ps_suspend()` ensures that SIGCONT
-         * is unblocked for it.
+         * No matching data-product. Block for a short time, or until a signal
+         * handler is called, or until a SIGCONT is received by this thread. NB:
+         * `pq_suspend()` ensures that SIGCONT is unblocked for it.
          */
         (void)pq_suspend(30);
         status = 0;           // no problems here
@@ -783,96 +783,39 @@ mls_tryMulticast(
 }
 
 /**
- * Blocks external termination signals for the current thread.
- */
-static inline void
-mls_blockTermSignals(void)
-{
-    (void)pthread_sigmask(SIG_BLOCK, &termSigSet, NULL);
-}
-
-/**
  * Blocks signals used by the product-queue for the current thread.
  */
-static inline void
+static inline void      // inlined because small and only called in one place
 mls_blockPqSignals(void)
 {
+    static sigset_t pqSigSet;
+
+    (void)sigemptyset(&pqSigSet);
+    (void)sigaddset(&pqSigSet, SIGCONT);
+    (void)sigaddset(&pqSigSet, SIGALRM);
+
     (void)pthread_sigmask(SIG_BLOCK, &pqSigSet, NULL);
-}
-
-/**
- * Waits for a termination signal and then stops a multicast LDM sender. Start
- * routine for a new thread.
- *
- * @param[in] arg   Multicast LDM sender.
- * @return    NULL  Always.
- * @pre             {`termSigSet` signals are blocked.}
- */
-static void*
-mls_waitForTermSig(
-    void* const arg)
-{
-    McastLdmSender* const mls = arg;
-    int                   sig;
-
-    (void)sigwait(&termSigSet, &sig);
-    mls->done = 1;
-    /*
-     * A SIGCONT is sent to the multicast thread in case it's blocked in
-     * `pq_suspend()`.
-     */
-    (void)pthread_kill(mls->mcastThread, SIGCONT);
-
-    return NULL;
-}
-
-/**
- * Starts a new thread that will stop a multicast LDM sender when it receives a
- * termination signal.
- *
- * @param[in] mls          Multicast LDM sender.
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `log_start()` called.
- */
-static Ldm7Status
-mls_startTermSigWaiter(
-    McastLdmSender* const mls)
-{
-    pthread_t thread;
-    int       status = pthread_create(&thread, NULL, mls_waitForTermSig, mls);
-
-    if (status) {
-        LOG_ERRNUM0(status, "Couldn't start termination-waiting thread");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        (void)pthread_detach(thread);
-    }
-
-    return status;
 }
 
 /**
  * Starts multicasting data-products.
  *
- * @pre                     {`mls_init(mls)` was called.}
- * @param[in]  mls          Multicast LDM sender.
- * @retval     0            Success. `mls->thread` is set.
+ * @pre                     {`mls_init()` was called.}
+ * @retval     0            Success.
  * @retval     LDM7_SYSTEM  Error. `log_start()` called.
  */
 static Ldm7Status
-mls_startMulticasting(
-        McastLdmSender* const mls)
+mls_startMulticasting(void)
 {
     prod_class* prodClass;
-    int         status = mls_setProdClass(mls, &prodClass);
+    int         status = mls_setProdClass(&prodClass);
 
     if (status == 0) {
-        pq_cset(pq, &prodClass->from);
+        pq_cset(pq, &prodClass->from);  // sets product-queue cursor
 
         do {
-            status = mls_tryMulticast(mls, prodClass);
-        } while (0 == status && !mls->done);
+            status = mls_tryMulticast(prodClass);
+        } while (0 == status && !done);
 
         free_prod_class(prodClass);
     } // `prodClass` allocated
@@ -901,26 +844,18 @@ mls_startMulticasting(
  */
 static Ldm7Status
 mls_execute(
-    const McastInfo* const restrict info,
-    const unsigned                  ttl,
-    const char* const restrict      pqPathname)
+        const McastInfo* const restrict info,
+        const unsigned                  ttl,
+        const char* const restrict      pqPathname)
 {
-    McastLdmSender mls;
-    int            status = mls_init(&mls, info, ttl, pqPathname);
+    int status = mls_init(info, ttl, pqPathname);
 
     if (status) {
         LOG_ADD0("Couldn't initialize multicast LDM sender");
     }
     else {
         /*
-         * Block all external signals that would, otherwise, terminate this
-         * process to ensure that only the proper thread receives that signal.
-         * VCMTP uses multiple threads and which thread receives a signal isn't
-         * deterministic -- so I think this is the way to go.
-         */
-        mls_blockTermSignals();
-        /*
-         * Block signals used by the product-queue so that they will only be
+         * Block signals used by `pq_sequence()` so that they will only be
          * received by a thread that's accessing the product queue.
          */
         mls_blockPqSignals();
@@ -929,15 +864,10 @@ mls_execute(
          * Data-products are multicast on the current (main) thread so that the
          * process will automatically terminate if something goes wrong.
          */
+        status = mls_startMulticasting();
 
-        mls.mcastThread = pthread_self(); // needed by termination-signal waiter
-        status = mls_startTermSigWaiter(&mls);
-
-        if (status == 0)
-            status = mls_startMulticasting(&mls);
-
-        mls_destroy(&mls);
-    } // `mls` initialized
+        mls_destroy();
+    } // module initialized
 
     return status;
 }
@@ -953,8 +883,8 @@ mls_execute(
  */
 int
 main(
-    const int    argc,
-    char** const argv)
+        const int    argc,
+        char** const argv)
 {
     /*
      * Initialize logging. Done first in case something happens that needs to
@@ -962,24 +892,32 @@ main(
      */
     mls_initLogging(basename(argv[0]));
 
-    /* Initialize sets of signals that will be used later. */
-    mls_initSignalSets();
-
-    /* Decode the command-line. */
-    McastInfo*   groupInfo;  // multicast group information
-    unsigned     ttl = 1;    // Restrict to same subnet. Won't be forwarded.
-    int          status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl);
+    /*
+     * Decode the command-line.
+     */
+    McastInfo* groupInfo;  // multicast group information
+    unsigned   ttl = 1;    // Restrict to same subnet. Won't be forwarded.
+    int        status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl);
 
     if (status) {
+        if (1 == status)
+            mls_usage();
         log_log(LOG_ERR);
     }
     else {
+        unotice("Starting up: groupInfo=%s, ttl=%u", mi_asFilename(groupInfo),
+                ttl);
+
+        mls_setSignalHandling();
+
         if (mls_execute(groupInfo, ttl, getQueuePath())) {
             log_log(LOG_ERR);
             status = 2;
         }
 
         mi_free(groupInfo);
+
+        unotice("Terminating");
     } // `groupInfo` allocated
 
     return status;

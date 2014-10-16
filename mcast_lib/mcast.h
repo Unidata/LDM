@@ -22,13 +22,13 @@
     extern "C" {
 #endif
 
-typedef u_int32_t                McastFileId;
+typedef u_int32_t                McastProdIndex;
 #define xdr_McastFileId          xdr_u_long
 typedef struct mcast_receiver    McastReceiver;
 
-typedef int     (*BofFunc)(void* obj, void* file_entry);
-typedef int     (*EofFunc)(void* obj, const void* file_entry);
-typedef void    (*MissedFileFunc)(void* obj, const McastFileId fileId);
+typedef int     (*BofFunc)(void* obj, void* info);
+typedef int     (*EofFunc)(void* obj, const void* info);
+typedef void    (*MissedFileFunc)(void* obj, const McastProdIndex iProd);
 
 int mcastReceiver_new(
     McastReceiver**             receiver,
@@ -72,8 +72,8 @@ void mcastReceiver_stop(
  *                             <64  Restricted to the same region.
  *                            <128  Restricted to the same continent.
  *                            <255  Unrestricted in scope. Global.
- * @param[in]  fileId      Initial file-identifier. The first multicast data-
- *                         product will have this as its file-identifier.
+ * @param[in]  iProd       Initial product-index. The first multicast data-
+ *                         product will have this as its index.
  * @retval     0           Success. The client should call \c
  *                         mcastSender_free(*sender) when the sender is no
  *                         longer needed.
@@ -91,7 +91,7 @@ mcastSender_new(
     const char* const    mcastAddr,
     const unsigned short mcastPort,
     const unsigned       ttl,
-    const McastFileId    fileId);
+    const McastProdIndex iProd);
 
 /**
  * Frees a multicast sender's resources.
@@ -123,7 +123,7 @@ int mcastFileEntry_isWanted(
 bool mcastFileEntry_isMemoryTransfer(
     const void*                 file_entry);
 
-McastFileId mcastFileEntry_getFileId(
+McastProdIndex mcastFileEntry_getProductIndex(
     const void*                 file_entry);
 
 const char* mcastFileEntry_getFileName(

@@ -40,7 +40,7 @@ struct mcast_receiver {
  * Initializes a multicast receiver.
  *
  * @param[out] receiver               The receiver to initialize.
- * @param[in]  tcpAddr                Address of the TCP server from which to
+ * @param[in]  hostId                 Address of the TCP server from which to
  *                                    retrieve missed data-blocks. May be
  *                                    hostname or IP address.
  * @param[in]  tcpPort                Port number of the TCP server to which to
@@ -90,13 +90,16 @@ mcastReceiver_init(
     // Following object will be deleted by `VCMTPReceiver` destructor
     PerFileNotifier* const notifier =
             new PerFileNotifier(bof_func, eof_func, missed_file_func, obj);
+    // VCMTP call
     VCMTPReceiver*         rcvr = new VCMTPReceiver(hostId, tcpPort, notifier);
 
     try {
+        // VCMTP call
         rcvr->JoinGroup(std::string(mcastAddr), mcastPort);
         receiver->receiver = rcvr;
     }
     catch (const std::exception& e) {
+        // VCMTP call
         delete rcvr;
         throw;
     } /* "rcvr" allocated */
@@ -177,15 +180,15 @@ void
 mcastReceiver_free(
     McastReceiver* const       receiver)
 {
+    // VCMTP call
     delete receiver->receiver;
     free(receiver);
 }
 
 /**
- * Executes a multicast receiver. Blocks until the receiver is stopped.
+ * Executes a multicast receiver. Only returns when an error occurs.
  *
  * @param[in,out] receiver      The receiver.
- * @retval        0             Success. The receiver was stopped.
  * @retval        EINVAL        @code{receiver == NULL}. \c log_add() called.
  * @retval        -1            Other failure. \c log_add() called.
  */
@@ -199,19 +202,19 @@ mcastReceiver_execute(
     }
 
     try {
+        // VCMTP call
         receiver->receiver->RunReceivingThread();
-        return 0;
     }
     catch (const std::exception& e) {
         LOG_ADD1("%s", e.what());
-        return -1;
     }
+    return -1;
 }
 
 /**
- * Stops a multicast receiver. Returns immediately. Undefined behavior will
- * result if called from a signal handler that was invoked by the delivery
- * of a signal during execution of an async-signal-unsafe function.
+ * Stops a multicast receiver. Blocks until the receiver stops. Undefined
+ * behavior will result if called from a signal handler that was invoked by the
+ * delivery of a signal during execution of an async-signal-unsafe function.
  *
  * @param[in] receiver  Pointer to the multicast receiver to be stopped.
  */
@@ -219,6 +222,7 @@ void
 mcastReceiver_stop(
     McastReceiver* const receiver)
 {
+    // VCMTP call
     receiver->receiver->stop();
 }
 
@@ -246,8 +250,8 @@ mcastReceiver_stop(
  *                             <64  Restricted to the same region.
  *                            <128  Restricted to the same continent.
  *                            <255  Unrestricted in scope. Global.
- * @param[in]  fileId      Initial file-identifier. The first multicast data-
- *                         product will have this as its file-identifier.
+ * @param[in]  iProd       Initial product-index. The first multicast data-
+ *                         product will have this as its index.
  * @retval     0           Success. `*sender` is set.
  * @retval     EINVAL      One of the address couldn't  be converted into a
  *                         binary IP address. `log_start()` called.
@@ -262,18 +266,21 @@ mcastSender_new(
     const char* const    groupAddr,
     const unsigned short groupPort,
     const unsigned       ttl,
-    const McastFileId    fileId)
+    const McastProdIndex iProd)
 {
     try {
+        // VCMTP call
         VCMTPSender* sndr = new VCMTPSender(std::string(serverAddr), serverPort,
-                fileId);
+                iProd);
 
         try {
+            // VCMTP call
             sndr->JoinGroup(std::string(groupAddr), groupPort);
             *sender = sndr;
             return 0;
         }
         catch (const std::exception& e) {
+            // VCMTP call
             delete sndr;
             throw;
         } // `sndr->sender` allocated
@@ -297,6 +304,7 @@ void
 mcastSender_free(
     void* const sender)
 {
+    // VCMTP call
     delete (VCMTPSender*)sender;
 }
 
@@ -316,6 +324,7 @@ mcastSender_send(
     const size_t nbytes)
 {
     try {
+        // VCMTP call
         ((VCMTPSender*)sender)->SendMemoryData(data, nbytes);
         return 0;
     }
@@ -336,6 +345,7 @@ int
 mcastFileEntry_isWanted(
     const void* const file_entry)
 {
+    // VCMTP call
     return ((VcmtpFileEntry*)file_entry)->isWanted();
 }
 
@@ -349,6 +359,7 @@ bool
 mcastFileEntry_isMemoryTransfer(
     const void* const           file_entry)
 {
+    // VCMTP call
     return ((VcmtpFileEntry*)file_entry)->isMemoryTransfer();
 }
 
@@ -358,10 +369,11 @@ mcastFileEntry_isMemoryTransfer(
  * @param[in] file_entry        Metadata about the file.
  * @return                      The identifier of the file.
  */
-McastFileId
-mcastFileEntry_getFileId(
+McastProdIndex
+mcastFileEntry_getProductIndex(
     const void*                 file_entry)
 {
+    // VCMTP call
     return ((const VcmtpFileEntry*)file_entry)->getFileId();
 }
 
@@ -375,6 +387,7 @@ const char*
 mcastFileEntry_getFileName(
     const void*                 file_entry)
 {
+    // VCMTP call
     return ((const VcmtpFileEntry*)file_entry)->getName();
 }
 
@@ -388,6 +401,7 @@ size_t
 mcastFileEntry_getSize(
     const void*                 file_entry)
 {
+    // VCMTP call
     return ((VcmtpFileEntry*)file_entry)->getSize();
 }
 
@@ -401,6 +415,7 @@ void
 mcastFileEntry_setBofResponseToIgnore(
     void* const                 file_entry)
 {
+    // VCMTP call
     ((VcmtpFileEntry*)file_entry)->setBofResponseToIgnore();
 }
 
@@ -427,6 +442,7 @@ mcastFileEntry_setBofResponse(
         return EINVAL;
     }
 
+    // VCMTP call
     entry->setBofResponse(bof);
     return 0;
 }
@@ -443,5 +459,6 @@ const void*
 mcastFileEntry_getBofResponse(
     const void* const file_entry)
 {
+    // VCMTP call
     return ((VcmtpFileEntry*)file_entry)->getBofResponse();
 }

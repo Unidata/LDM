@@ -51,7 +51,7 @@ init()
     OP_ASSERT_TRUE(groupAddr != NULL);
     ServiceAddr* serverAddr = sa_new(SERVER_ADDR, SERVER_PORT);
     OP_ASSERT_TRUE(serverAddr != NULL);
-    mcastInfo = mi_new(feedtype, groupAddr, serverAddr);
+    OP_ASSERT_TRUE(mi_new(&mcastInfo, feedtype, groupAddr, serverAddr) == 0);
     OP_ASSERT_TRUE(mcastInfo != NULL);
     sa_free(groupAddr);
     sa_free(serverAddr);

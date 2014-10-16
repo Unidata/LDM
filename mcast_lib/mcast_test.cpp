@@ -35,7 +35,7 @@ int eof_func(void* obj, const void* file_entry)
 {
     return 0;
 }
-void missed_file_func(void* obj, const McastFileId fileId)
+void missed_file_func(void* obj, const McastProdIndex iProd)
 {
 }
 

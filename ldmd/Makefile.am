@@ -24,6 +24,7 @@ ldmd_SOURCES	= \
     ldmd.c \
     wordexp.c
 CPPFLAGS		= \
+    -I$(top_srcdir)/mcast_lib \
     -I$(top_srcdir)/registry \
     -I$(top_builddir)/registry \
     -I$(top_srcdir)/ulog \

@@ -11,19 +11,21 @@ EXTRA_DIST              = down7.hin \
 			  mldm_receiver.hin \
 			  mldm_sender_memory.hin \
 			  mldm_receiver_memory.hin \
-                          file_id_queue.hin \
+                          prod_index_queue.hin \
                           server_info.hin \
                           sock_funcs.c sock_funcs.hin
 BUILT_SOURCES           = down7.h \
 			  mldm_receiver.h \
 			  mldm_sender_memory.h \
 			  mldm_receiver_memory.h \
-                          file_id_queue.h \
+                          prod_index_queue.h \
                           server_info.h \
                           sock_funcs.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= down7.c \
-			  file_id_map.c file_id_map.h \
+                          down7_manager.c \
+			  up7.c \
+			  prod_index_map.c prod_index_map.h \
 			  mcast_info.c mcast_info.h \
 			  mldm_receiver.c \
 			  mldm_receiver_memory.c \
@@ -32,7 +34,7 @@ lib_la_SOURCES		= down7.c \
 			  mldm_sender_map.c mldm_sender_map.h \
 			  PerFileNotifier.cpp PerFileNotifier.h \
 			  LdmBofResponse.cpp LdmBofResponse.h \
-			  file_id_queue.c \
+			  prod_index_queue.c \
 			  server_info.c \
                           mcast.cpp mcast.h
 CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
@@ -55,7 +57,7 @@ down7.h:		down7.hin down7.c
 mldm_receiver.h:	mldm_receiver.hin mldm_receiver.c
 mldm_sender_memory.h:	mldm_sender_memory.hin mldm_sender_memory.c
 mldm_receiver_memory.h:	mldm_receiver_memory.c mldm_receiver_memory.hin
-file_id_queue.h:	file_id_queue.hin file_id_queue.c
+prod_index_queue.h:	prod_index_queue.hin prod_index_queue.c
 server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up7.h:		up7.hin up7.c
@@ -134,32 +136,32 @@ opmock_tests			= $(opmock_check_progs)
 endif
 
 if HAVE_CUNIT
-cunit_check_progs		= file_id_map_test \
+cunit_check_progs		= prod_index_map_test \
                                   mldm_sender_map_test \
-                                  file_id_queue_test
+                                  prod_index_queue_test
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
-file_id_map_test_SOURCES	= file_id_map_test.c file_id_map.c
-file_id_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
-file_id_map_test_LDADD	= \
+prod_index_map_test_SOURCES	= prod_index_map_test.c prod_index_map.c
+prod_index_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+prod_index_map_test_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
-file_id_queue_test_SOURCES	= file_id_queue_test.c file_id_queue.c
-file_id_queue_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
-file_id_queue_test_LDADD	= \
+prod_index_queue_test_SOURCES	= prod_index_queue_test.c prod_index_queue.c
+prod_index_queue_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+prod_index_queue_test_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
 cunit_tests			= $(cunit_check_progs)
 
-file_id_map_test_valgrind:	file_id_map_test
+prod_index_map_test_valgrind:	prod_index_map_test
 	$(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./file_id_map_test
-file_id_queue_test_valgrind:	file_id_queue_test
+	    --leak-check=full --show-reachable=yes ./prod_index_map_test
+prod_index_queue_test_valgrind:	prod_index_queue_test
 	$(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./file_id_queue_test
+	    --leak-check=full --show-reachable=yes ./prod_index_queue_test
 endif
 
 check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs)

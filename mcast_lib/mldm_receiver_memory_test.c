@@ -63,12 +63,12 @@ static void test_missed_mcast_files()
 {
     McastSessionMemory* msm;
     int                 status;
-    McastFileId         fileId;
+    McastProdIndex      iProd;
 
     openMsm(&msm);
     msm_clearAllMissedFiles(msm);
 
-    status = msm_getAnyMissedFileNoWait(msm, &fileId);
+    status = msm_getAnyMissedFileNoWait(msm, &iProd);
     log_log(LOG_ERR);
     OP_ASSERT_FALSE(status);
 
@@ -79,27 +79,27 @@ static void test_missed_mcast_files()
     status = msm_addMissedFile(msm, 3);
     OP_ASSERT_TRUE(status);
 
-    status = msm_peekMissedFileNoWait(msm, &fileId);
+    status = msm_peekMissedFileNoWait(msm, &iProd);
     OP_ASSERT_TRUE(status);
-    OP_ASSERT_TRUE(fileId == 1);
+    OP_ASSERT_TRUE(iProd == 1);
 
-    status = msm_addRequestedFile(msm, fileId);
-    OP_ASSERT_TRUE(status);
-
-    status = msm_removeMissedFileNoWait(msm, &fileId);
-    OP_ASSERT_TRUE(status);
-    OP_ASSERT_TRUE(fileId == 1);
-
-    status = msm_removeMissedFileNoWait(msm, &fileId);
-    OP_ASSERT_TRUE(status);
-    OP_ASSERT_TRUE(fileId == 2);
-
-    status = msm_addRequestedFile(msm, fileId);
+    status = msm_addRequestedFile(msm, iProd);
     OP_ASSERT_TRUE(status);
 
-    status = msm_removeRequestedFileNoWait(msm, &fileId);
+    status = msm_removeMissedFileNoWait(msm, &iProd);
     OP_ASSERT_TRUE(status);
-    OP_ASSERT_TRUE(fileId == 1);
+    OP_ASSERT_TRUE(iProd == 1);
+
+    status = msm_removeMissedFileNoWait(msm, &iProd);
+    OP_ASSERT_TRUE(status);
+    OP_ASSERT_TRUE(iProd == 2);
+
+    status = msm_addRequestedFile(msm, iProd);
+    OP_ASSERT_TRUE(status);
+
+    status = msm_removeRequestedFileNoWait(msm, &iProd);
+    OP_ASSERT_TRUE(status);
+    OP_ASSERT_TRUE(iProd == 1);
 
     msm_close(msm);
     log_log(LOG_ERR);
@@ -107,17 +107,17 @@ static void test_missed_mcast_files()
 
     openMsm(&msm);
 
-    status = msm_getAnyMissedFileNoWait(msm, &fileId);
+    status = msm_getAnyMissedFileNoWait(msm, &iProd);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
-    OP_ASSERT_TRUE(fileId = 2);
+    OP_ASSERT_TRUE(iProd = 2);
 
-    status = msm_getAnyMissedFileNoWait(msm, &fileId);
+    status = msm_getAnyMissedFileNoWait(msm, &iProd);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
-    OP_ASSERT_TRUE(fileId = 3);
+    OP_ASSERT_TRUE(iProd = 3);
 
-    status = msm_getAnyMissedFileNoWait(msm, &fileId);
+    status = msm_getAnyMissedFileNoWait(msm, &iProd);
     log_log(LOG_ERR);
     OP_ASSERT_FALSE(status);
 

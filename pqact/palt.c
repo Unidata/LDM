@@ -1229,7 +1229,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         }
         else
         {
-            uerror("Too many PIPE arguments: \"%s\"", INBUF);
+            uerror("Too many arguments: \"%s\"", INBUF);
             status = -1;
         }
     }
