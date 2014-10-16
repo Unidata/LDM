@@ -29,7 +29,7 @@
  *                         file is unspecified.
  */
 Ldm7Status
-fim_openForWriting(
+pim_openForWriting(
         const char* const pathname,
         const size_t      maxSigs);
 
@@ -46,7 +46,7 @@ fim_openForWriting(
  *                         file is unspecified.
  */
 Ldm7Status
-fim_openForReading(
+pim_openForReading(
         const char* const pathname);
 
 /**
@@ -57,7 +57,7 @@ fim_openForReading(
  *                      is unspecified.
  */
 Ldm7Status
-fim_close(void);
+pim_close(void);
 
 /**
  * Adds a mapping from a product-index to a data-product signature to the
@@ -70,7 +70,7 @@ fim_close(void);
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-fim_put(
+pim_put(
         const McastProdIndex    iProd,
         const signaturet* const sig);
 
@@ -84,7 +84,7 @@ fim_put(
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-fim_get(
+pim_get(
         const McastProdIndex iProd,
         signaturet* const    sig);
 
@@ -97,7 +97,7 @@ fim_get(
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-fim_getNextProdIndex(
+pim_getNextProdIndex(
         McastProdIndex* const iProd);
 
 #ifdef __cplusplus

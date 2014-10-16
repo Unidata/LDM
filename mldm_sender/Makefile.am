@@ -8,7 +8,7 @@
 
 bin_PROGRAMS	= mldm_sender
 CPPFLAGS	= \
-    -I$(top_builddir)/mcast_lib  -I$(top_srcdir)/mcast_lib \
+    -I$(top_builddir)/mcast_lib -I$(top_srcdir)/mcast_lib \
     -I$(top_builddir)/ulog      -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol  -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \

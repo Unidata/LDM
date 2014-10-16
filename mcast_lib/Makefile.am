@@ -43,7 +43,9 @@ CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
-                          -I$(builddir)/vcmtp/protocol -I$(srcdir)/vcmtp/protocol \
+                          -I$(srcdir)/vcmtp/protocol/shawn \
+                          -I$(srcdir)/vcmtp/protocol/shawn/recv \
+                          -I$(srcdir)/vcmtp/protocol/shawn/send \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc
 lib_la_LIBADD		= vcmtp/libvcmtp.la -lpthread

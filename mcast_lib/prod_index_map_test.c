@@ -41,7 +41,7 @@ static int teardown(void)
 
 static void closeMap(void)
 {
-    CU_ASSERT_EQUAL_FATAL(fim_close(), 0);
+    CU_ASSERT_EQUAL_FATAL(pim_close(), 0);
 }
 
 static void unlinkMap(void)
@@ -53,7 +53,7 @@ static void test_openForWriting_0(
         void)
 {
     (void)unlink(pathname);
-    int status = fim_openForWriting(pathname, 0);
+    int status = pim_openForWriting(pathname, 0);
     log_clear();
     CU_ASSERT_EQUAL_FATAL(status, LDM7_INVAL);
 }
@@ -64,7 +64,7 @@ static void test_openForWriting_3(
     int status;
 
     (void)unlink(pathname);
-    status = fim_openForWriting(pathname, 3);
+    status = pim_openForWriting(pathname, 3);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -75,14 +75,14 @@ static void test_openForWriting_3(
 static void openForWriting(
         unsigned maxSigs)
 {
-    int status = fim_openForWriting(pathname, maxSigs);
+    int status = pim_openForWriting(pathname, maxSigs);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
 static void openForReading(void)
 {
-    int status = fim_openForReading(pathname);
+    int status = pim_openForReading(pathname);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
@@ -106,7 +106,7 @@ static void exists(
 {
     signaturet sig;
 
-    CU_ASSERT_EQUAL_FATAL(fim_get(iProd, &sig), 0);
+    CU_ASSERT_EQUAL_FATAL(pim_get(iProd, &sig), 0);
     CU_ASSERT_NSTRING_EQUAL(sig, signatures[iSig], sizeof(signaturet));
 }
 
@@ -115,7 +115,7 @@ static void doesNotExist(
 {
     signaturet sig;
 
-    CU_ASSERT_EQUAL(fim_get(iProd, &sig), LDM7_NOENT);
+    CU_ASSERT_EQUAL(pim_get(iProd, &sig), LDM7_NOENT);
 }
 
 static void test_put(
@@ -123,7 +123,7 @@ static void test_put(
 {
     openNew(1);
 
-    CU_ASSERT_EQUAL_FATAL(fim_put(0, &signatures[0]), 0);
+    CU_ASSERT_EQUAL_FATAL(pim_put(0, &signatures[0]), 0);
     exists(0, 0);
 
     closeAndUnlink();
@@ -132,7 +132,7 @@ static void test_put(
 static void put4(void)
 {
     for (int i = 0; i < 4; i++)
-        CU_ASSERT_EQUAL_FATAL(fim_put(i, &signatures[i]), 0);
+        CU_ASSERT_EQUAL_FATAL(pim_put(i, &signatures[i]), 0);
 }
 
 static void get4(void)
@@ -186,7 +186,7 @@ static void test_putNonSequential(void)
 {
     openNew(3);
     put4();
-    CU_ASSERT_EQUAL(fim_put(10, &signatures[0]), 0);
+    CU_ASSERT_EQUAL(pim_put(10, &signatures[0]), 0);
     doesNotExist(1);
     doesNotExist(2);
     doesNotExist(3);
@@ -200,16 +200,16 @@ static void test_getNextFileId(void)
     McastProdIndex iProd;
 
     openNew(3);
-    CU_ASSERT_EQUAL(fim_getNextProdIndex(&iProd), 0);
+    CU_ASSERT_EQUAL(pim_getNextProdIndex(&iProd), 0);
     CU_ASSERT_EQUAL(iProd, 0);
-    CU_ASSERT_EQUAL(fim_put(0, &signatures[0]), 0);
-    CU_ASSERT_EQUAL(fim_getNextProdIndex(&iProd), 0);
+    CU_ASSERT_EQUAL(pim_put(0, &signatures[0]), 0);
+    CU_ASSERT_EQUAL(pim_getNextProdIndex(&iProd), 0);
     CU_ASSERT_EQUAL(iProd, 1);
     closeAndUnlink();
 
     openNew(3);
     put4();
-    CU_ASSERT_EQUAL(fim_getNextProdIndex(&iProd), 0);
+    CU_ASSERT_EQUAL(pim_getNextProdIndex(&iProd), 0);
     CU_ASSERT_EQUAL(iProd, 4);
     closeAndUnlink();
 }

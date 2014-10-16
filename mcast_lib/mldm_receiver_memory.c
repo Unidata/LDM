@@ -256,7 +256,7 @@ initMissedFilesFromSequence(
                     itemNode->data.scalar.value);
             return false;
         }
-        if (fiq_add(msm->missedQ, fileId) != 0)
+        if (piq_add(msm->missedQ, fileId) != 0)
             return false;
     }
 
@@ -479,11 +479,11 @@ initFromScratch(
     char* const tmpPath = makeTempPath(path);
 
     if (tmpPath != NULL) {
-        if ((msm->missedQ = fiq_new()) == NULL) {
+        if ((msm->missedQ = piq_new()) == NULL) {
             LOG_ADD0("Couldn't create queue of missed data-products");
         }
         else {
-            if ((msm->requestedQ = fiq_new()) == NULL) {
+            if ((msm->requestedQ = piq_new()) == NULL) {
                 LOG_ADD0("Couldn't create queue of requested data-products");
             }
             else {
@@ -495,7 +495,7 @@ initFromScratch(
             } // `msm->requestedQ` allocated
 
             if (!success)
-                fiq_free(msm->missedQ);
+                piq_free(msm->missedQ);
         } // `msm->missedQ` allocated
 
         if (!success)
@@ -594,7 +594,7 @@ appendFileIds(
 {
     McastProdIndex iProd;
 
-    while (fiq_removeNoWait(fiq, &iProd) == 0) {
+    while (piq_removeNoWait(fiq, &iProd) == 0) {
         char          buf[sizeof(iProd)*4+1]; // overly capacious
 
         (void)snprintf(buf, sizeof(buf), "%lu", (unsigned long)iProd);
@@ -802,8 +802,8 @@ addData(
     }
     else {
         success = (!msm->sigSet || addLastMcastProd(msm, document, root)) &&
-                ((fiq_count(msm->requestedQ) == 0 &&
-                        fiq_count(msm->missedQ) == 0) ||
+                ((piq_count(msm->requestedQ) == 0 &&
+                        piq_count(msm->missedQ) == 0) ||
                 addMissedMcastFiles(msm, document, root));
     }
 
@@ -982,7 +982,7 @@ addFile(
     ProdIndexQueue* const restrict        fiq,
     const McastProdIndex               iProd)
 {
-    bool success = fiq_add(fiq, iProd) == 0;
+    bool success = piq_add(fiq, iProd) == 0;
 
     if (success)
         msm->modified = true;
@@ -1079,8 +1079,8 @@ msm_close(
     if (msm->modified && !dump(msm))
         return false;
 
-    fiq_free(msm->requestedQ);
-    fiq_free(msm->missedQ);
+    piq_free(msm->requestedQ);
+    piq_free(msm->missedQ);
     free(msm->path);
     free(msm->tmpPath);
     free(msm);
@@ -1141,8 +1141,8 @@ void
 msm_clearAllMissedFiles(
     McastSessionMemory* const restrict msm)
 {
-    msm->modified = fiq_clear(msm->requestedQ) != 0 ||
-            fiq_clear(msm->missedQ) != 0;
+    msm->modified = piq_clear(msm->requestedQ) != 0 ||
+            piq_clear(msm->missedQ) != 0;
 }
 
 /**
@@ -1161,8 +1161,8 @@ msm_getAnyMissedFileNoWait(
     McastSessionMemory* const restrict msm,
     McastProdIndex* const restrict     iProd)
 {
-    return fiq_removeNoWait(msm->requestedQ, iProd) == 0 ||
-            fiq_removeNoWait(msm->missedQ, iProd) == 0;
+    return piq_removeNoWait(msm->requestedQ, iProd) == 0 ||
+            piq_removeNoWait(msm->missedQ, iProd) == 0;
 }
 
 /**
@@ -1216,7 +1216,7 @@ msm_peekMissedFileWait(
     McastSessionMemory* const restrict msm,
     McastProdIndex* const restrict     iProd)
 {
-    return fiq_peekWait(msm->missedQ, iProd) == 0;
+    return piq_peekWait(msm->missedQ, iProd) == 0;
 }
 
 /**
@@ -1233,7 +1233,7 @@ msm_peekMissedFileNoWait(
     McastSessionMemory* const restrict msm,
     McastProdIndex* const restrict     iProd)
 {
-    return fiq_peekNoWait(msm->missedQ, iProd) == 0;
+    return piq_peekNoWait(msm->missedQ, iProd) == 0;
 }
 
 /**
@@ -1250,7 +1250,7 @@ msm_removeMissedFileNoWait(
     McastSessionMemory* const restrict msm,
     McastProdIndex* const restrict     iProd)
 {
-    return fiq_removeNoWait(msm->missedQ, iProd) == 0;
+    return piq_removeNoWait(msm->missedQ, iProd) == 0;
 }
 
 /**
@@ -1268,7 +1268,7 @@ msm_peekRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
     McastProdIndex* const restrict     iProd)
 {
-    return fiq_peekNoWait(msm->requestedQ, iProd) == 0;
+    return piq_peekNoWait(msm->requestedQ, iProd) == 0;
 }
 
 /**
@@ -1285,7 +1285,7 @@ msm_removeRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
     McastProdIndex* const restrict     iProd)
 {
-    return fiq_removeNoWait(msm->requestedQ, iProd) == 0;
+    return piq_removeNoWait(msm->requestedQ, iProd) == 0;
 }
 
 /**
@@ -1298,5 +1298,5 @@ void
 msm_shutDownMissedFiles(
     McastSessionMemory* const restrict msm)
 {
-    (void)fiq_cancel(msm->missedQ);
+    (void)piq_cancel(msm->missedQ);
 }

@@ -571,7 +571,7 @@ mls_openFileIdMap(
             status = LDM7_SYSTEM;
         }
         else {
-            status = fim_openForWriting(mapPathname, maxSigs);
+            status = pim_openForWriting(mapPathname, maxSigs);
             free(mapPathname);
         } // `mapPathname` allocated
 
@@ -630,7 +630,7 @@ mls_init(
     if ((status = mls_openFileIdMap(info->feed, pq_getSlotCount(pq))))
         goto close_pq;
 
-    if ((status = fim_getNextProdIndex(&fileId)))
+    if ((status = pim_getNextProdIndex(&fileId)))
         goto close_fileId_map;
 
     if ((status = mcastSender_new(&mcastSender, serverInetAddr,
@@ -651,7 +651,7 @@ mls_init(
 free_mcastSender:
     mcastSender_free(mcastSender);
 close_fileId_map:
-    (void)fim_close();
+    (void)pim_close();
 close_pq:
     (void)pq_close(pq);
 return_status:
@@ -703,7 +703,7 @@ mls_multicastProduct(
             status = EIO;
         }
         else {
-            status = fim_put(fileId++, (const signaturet*)&info.signature);
+            status = pim_put(fileId++, (const signaturet*)&info.signature);
 
             if (ulogIsVerbose())
                 uinfo("Multicasted: %s",

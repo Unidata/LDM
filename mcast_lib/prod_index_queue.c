@@ -208,7 +208,7 @@ removeHead(
  * @retval    false  Failure. `log_start()` called.
  */
 static bool
-fiq_initMutex(
+piq_initMutex(
         pthread_mutex_t* const mutex)
 {
     pthread_mutexattr_t mutexAttr;
@@ -242,10 +242,10 @@ fiq_initMutex(
  * @retval    false  Failure. `log_start()` called.
  */
 static bool
-fiq_initLock(
+piq_initLock(
         ProdIndexQueue* const fiq)
 {
-    if (fiq_initMutex(&fiq->mutex)) {
+    if (piq_initMutex(&fiq->mutex)) {
         int status;
 
         if (0 == (status = pthread_cond_init(&fiq->cond, NULL)))
@@ -270,13 +270,13 @@ fiq_initLock(
  *               \c fiq_free() when it is no longer needed.
  */
 ProdIndexQueue*
-fiq_new(void)
+piq_new(void)
 {
     ProdIndexQueue* fiq = LOG_MALLOC(sizeof(ProdIndexQueue),
             "missed-product product-index queue");
 
     if (fiq) {
-        if (fiq_initLock(fiq)) {
+        if (piq_initLock(fiq)) {
             fiq->head = fiq->tail = NULL;
             fiq->count = 0;
             fiq->isCancelled = 0;
@@ -297,7 +297,7 @@ fiq_new(void)
  * @return         The number of entries removed.
  */
 size_t
-fiq_clear(
+piq_clear(
     ProdIndexQueue* const fiq)
 {
     lock(fiq);
@@ -324,11 +324,11 @@ fiq_clear(
  * @param[in] fiq  Pointer to the product-index queue to be freed or NULL.
  */
 void
-fiq_free(
+piq_free(
     ProdIndexQueue* const fiq)
 {
     if (fiq) {
-        fiq_clear(fiq);
+        piq_clear(fiq);
         (void)pthread_cond_destroy(&fiq->cond);
         (void)pthread_mutex_destroy(&fiq->mutex);
         free(fiq);
@@ -346,7 +346,7 @@ fiq_free(
  * @retval        ECANCELED  The queue has been canceled.
  */
 int
-fiq_add(
+piq_add(
     ProdIndexQueue* const   fiq,
     const McastProdIndex iProd)
 {
@@ -379,7 +379,7 @@ fiq_add(
  * @retval        ECANCELED  Operation of the queue has been canceled.
  */
 int
-fiq_peekWait(
+piq_peekWait(
     ProdIndexQueue* const fiq,
     McastProdIndex* const iProd)
 {
@@ -407,7 +407,7 @@ fiq_peekWait(
  * @retval        ENOENT     The queue is empty.
  */
 int
-fiq_removeNoWait(
+piq_removeNoWait(
     ProdIndexQueue* const fiq,
     McastProdIndex* const iProd)
 {
@@ -441,7 +441,7 @@ fiq_removeNoWait(
  * @retval        ENOENT     The queue is empty.
  */
 int
-fiq_peekNoWait(
+piq_peekNoWait(
     ProdIndexQueue* const    fiq,
     McastProdIndex* const iProd)
 {
@@ -470,7 +470,7 @@ fiq_peekNoWait(
  * @return         The number of identifiers in the queue.
  */
 size_t
-fiq_count(
+piq_count(
     ProdIndexQueue* const fiq)
 {
     size_t count;
@@ -490,7 +490,7 @@ fiq_count(
  * @retval    EINVAL  `fiq == NULL`
  */
 int
-fiq_cancel(
+piq_cancel(
     ProdIndexQueue* const fiq)
 {
     if (!fiq)
@@ -512,7 +512,7 @@ fiq_cancel(
  * @retval    true   The queue has been canceled.
  */
 bool
-fiq_isCanceled(
+piq_isCanceled(
     ProdIndexQueue* const fiq)
 {
     bool isCanceled;

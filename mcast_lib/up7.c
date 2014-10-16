@@ -282,7 +282,7 @@ up7_sendProduct(
         McastProdIndex iProd)
 {
     signaturet sig;
-    int        status = fim_get(iProd, &sig);
+    int        status = pim_get(iProd, &sig);
 
     if (LDM7_NOENT == status) {
         LOG_START1("No signature corresponding to product-index %lu",

@@ -22,7 +22,7 @@ static ProdIndexQueue* rq;
 static int
 setup(void)
 {
-    if (NULL == (rq = fiq_new())) {
+    if (NULL == (rq = piq_new())) {
         (void)fprintf(stderr, "Couldn't create request-queue\n");
         return -1;
     }
@@ -32,7 +32,7 @@ setup(void)
 static int
 teardown(void)
 {
-    fiq_free(rq);
+    piq_free(rq);
     return 0;
 }
 
@@ -43,16 +43,16 @@ test_add_get(void)
     McastProdIndex     fileB;
     int                status;
 
-    status = fiq_add(rq, fileA);
+    status = piq_add(rq, fileA);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL(fiq_count(rq), 1);
+    CU_ASSERT_EQUAL(piq_count(rq), 1);
 
-    status = fiq_removeNoWait(rq, &fileB);
+    status = piq_removeNoWait(rq, &fileB);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileB, fileA);
-    CU_ASSERT_EQUAL(fiq_count(rq), 0);
+    CU_ASSERT_EQUAL(piq_count(rq), 0);
 }
 
 static void
@@ -64,36 +64,36 @@ test_order(void)
     McastProdIndex fileD;
     int            status;
 
-    status = fiq_add(rq, fileA);
+    status = piq_add(rq, fileA);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL(fiq_count(rq), 1);
-    status = fiq_add(rq, fileB);
+    CU_ASSERT_EQUAL(piq_count(rq), 1);
+    status = piq_add(rq, fileB);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL(fiq_count(rq), 2);
-    status = fiq_add(rq, fileC);
+    CU_ASSERT_EQUAL(piq_count(rq), 2);
+    status = piq_add(rq, fileC);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL(fiq_count(rq), 3);
+    CU_ASSERT_EQUAL(piq_count(rq), 3);
 
-    status = fiq_removeNoWait(rq, &fileD);
+    status = piq_removeNoWait(rq, &fileD);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileA);
-    CU_ASSERT_EQUAL(fiq_count(rq), 2);
+    CU_ASSERT_EQUAL(piq_count(rq), 2);
 
-    status = fiq_removeNoWait(rq, &fileD);
+    status = piq_removeNoWait(rq, &fileD);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileB);
-    CU_ASSERT_EQUAL(fiq_count(rq), 1);
+    CU_ASSERT_EQUAL(piq_count(rq), 1);
 
-    status = fiq_removeNoWait(rq, &fileD);
+    status = piq_removeNoWait(rq, &fileD);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileC);
-    CU_ASSERT_EQUAL(fiq_count(rq), 0);
+    CU_ASSERT_EQUAL(piq_count(rq), 0);
 }
 
 int
