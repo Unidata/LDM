@@ -480,6 +480,7 @@ entry:            accept_entry
                 | allow_entry
                 | exec_entry
                 | include_stmt
+                | receive_entry
                 | request_entry
                 | send_entry
                 ;

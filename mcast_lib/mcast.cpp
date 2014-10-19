@@ -5,7 +5,7 @@
  *
  * This file defines the C API to the multicasting layer.
  *
- *   @file: mcast.c
+ *   @file: mcast.cpp
  * @author: Steven R. Emmerson
  */
 
@@ -33,7 +33,8 @@ struct mcast_receiver {
      */
     vcmtpRecvv3*      receiver;
     /**
-     * The per-product notifier passed to the VCMTP receiver.
+     * The per-product notifier passed to the VCMTP receiver. Pointer kept so
+     * that the object can be deleted when it's no longer needed.
      */
     PerProdNotifier*  notifier;
 };
@@ -94,7 +95,7 @@ mcastReceiver_init(
     receiver->notifier =
             new PerProdNotifier(bop_func, eop_func, missed_prod_func, obj);
     vcmtpRecvv3*         rcvr = new vcmtpRecvv3(hostId, tcpPort, groupId,
-            mcastPort, *receiver->notifier);
+            mcastPort, receiver->notifier);
 }
 
 /**
@@ -106,11 +107,11 @@ mcastReceiver_init(
  *                               IP address.
  * @param[in]  tcpPort           Port number of the TCP server to which to
  *                               connect.
- * @param[in]  bof_func          Function to call when the multicast layer has
- *                               seen a beginning-of-file.
- * @param[in]  eof_func          Function to call when the multicast layer has
- *                               completely received a file.
- * @param[in]  missed_file_func  Function to call when a file is missed by the
+ * @param[in]  bop_func          Function to call when the multicast layer has
+ *                               seen a beginning-of-product.
+ * @param[in]  eop_func          Function to call when the multicast layer has
+ *                               completely received a product.
+ * @param[in]  missed_prod_func  Function to call when a product is missed by the
  *                               multicast layer.
  * @param[in]  mcastAddr         Address of the multicast group to receive. May
  *                               be groupname or formatted IP address.
@@ -121,7 +122,7 @@ mcastReceiver_init(
  *                               mcastReceiver_free(*receiver) when the
  *                               receiver is no longer needed.
  * @retval     EINVAL            if @code{0==buf_func || 0==eof_func ||
- *                               0==missed_file_func || 0==addr} or the
+ *                               0==missed_prod_func || 0==addr} or the
  *                               multicast group address couldn't be converted
  *                               into a binary IP address.
  * @retval     ENOMEM            Out of memory. \c log_add() called.
@@ -132,9 +133,9 @@ mcastReceiver_new(
     McastReceiver** const       receiver,
     const char* const           tcpAddr,
     const unsigned short        tcpPort,
-    const BopFunc               bof_func,
-    const EopFunc               eof_func,
-    const MissedProdFunc        missed_file_func,
+    const BopFunc               bop_func,
+    const EopFunc               eop_func,
+    const MissedProdFunc        missed_prod_func,
     const char* const           mcastAddr,
     const unsigned short        mcastPort,
     void* const                 obj)
@@ -146,8 +147,8 @@ mcastReceiver_new(
         return ENOMEM;
 
     try {
-        mcastReceiver_init(rcvr, tcpAddr, tcpPort, bof_func, eof_func,
-                missed_file_func, mcastAddr, mcastPort, obj);
+        mcastReceiver_init(rcvr, tcpAddr, tcpPort, bop_func, eop_func,
+                missed_prod_func, mcastAddr, mcastPort, obj);
         *receiver = rcvr;
         return 0;
     }
