@@ -15,7 +15,6 @@
 #include "down7.h"
 #include "mldm_receiver.h"
 #include "ldm.h"
-#include "LdmBofResponse.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "pq.h"
@@ -37,6 +36,9 @@ struct mlr {
     pqueue*         pq;       // product-queue to use */
     Down7*          down7;    // pointer to associated downstream LDM-7
     McastReceiver*  receiver; // VCMTP C Receiver
+    void*           prod;     // Start of product in product-queue
+    size_t          prodSize; // Size of VCMTP product in bytes
+    pqe_index*      index;    // Product-queue index of reserved region
 };
 
 /**
@@ -80,101 +82,98 @@ unlockPq(
 }
 
 /**
- * Allocates space in a product-queue for a VCMTP file if it's not a duplicate
- * and sets the beginning-of-file response in a VCMTP file-entry.
+ * Allocates space in a product-queue for a VCMTP product if it's not a
+ * duplicate and returns the starting memory-location for the data.
  *
- * @param[in] mlr         Pointer to the multicast LDM receiver.
- * @param[in] name        The name of the VCMTP file.
- * @param[in] size        Size of the XDR-encoded LDM data-product in bytes.
- * @param[in] signature   The MD5 checksum of the LDM data-product.
- * @param[in] file_entry  The corresponding VCMTP file-entry.
- * @retval    0           Success or the data-product is already in the LDM
- *                        product-queue. BOF-response set.
- * @retval    -1          Failure. `log_add()` called. BOF-response set to
- *                        ignore the file.
+ * @param[in]  mlr        Pointer to the multicast LDM receiver.
+ * @param[in]  signature  The MD5 checksum of the LDM data-product.
+ * @param[in]  size       Size of the XDR-encoded LDM data-product in bytes.
+ * @param[out] prod       Starting memory location for data-product.
+ * @retval     0          Success. `*data` is set. If NULL, then data-product is
+ *                        already in LDM product-queue.
+ * @retval    -1          Failure. `log_add()` called.
  */
 static int
-allocateSpaceAndSetBofResponse(
+allocateSpace(
         Mlr* const restrict        mlr,
-        const char* const restrict name,
-        const size_t               size,
         const signaturet           signature,
-        void* const                file_entry)
+        const size_t               prodSize,
+        void** const               prod)
 {
-    int               status;
-    char*             buf;
-    pqe_index         index;
+    int status;
 
     if (lockPq(mlr)) {
         LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
-        mcastFileEntry_setBofResponseToIgnore(file_entry);
         status = -1;
     }
     else {
-        status = pqe_newDirect(mlr->pq, size, signature, &buf, &index);
+        status = pqe_newDirect(mlr->pq, prodSize, signature, &mlr->prod,
+                &mlr->index);
         (void)unlockPq(mlr);
 
         if (status) {
-            mcastFileEntry_setBofResponseToIgnore(file_entry);
+            *prod = NULL;
 
             if (status == PQUEUE_DUP) {
                 status = 0;
             }
             else {
-                LOG_ADD2("Couldn't allocate region for %lu-byte file \"%s\"",
-                        size, name);
+                LOG_ADD1("Couldn't allocate region for %lu-byte data-product",
+                        prodSize);
                 status = -1;
             }
         }
         else {
-            (void)mcastFileEntry_setBofResponse(file_entry,
-                    ldmBofResponse_new(buf, size, &index));
+            *prod = mlr->prod;
+            mlr->prodSize = prodSize;
             status = 0;
         } /* region allocated in product-queue */
-    } // product-queue locked
+    } // product-queue locked successfully
 
     return status;
 }
 
 /**
- * Sets the response attribute of a VCMTP file-entry in response to being
- * notified by the VCMTP layer about the beginning of a file. Allocates a
- * region in the LDM product-queue to receive the VCMTP file, which is an
+ * Accepts notification of the beginning of a VCMTP product. Allocates a region
+ * in the LDM product-queue to receive the VCMTP product, which is an
  * XDR-encoded LDM data-product.
  *
  * @param[in,out]  obj          Pointer to the associated multicast LDM receiver
  *                              object.
- * @param[in]      file_entry   Metadata of the file in question.
- * @retval         0            Success, the transfer isn't to memory, or the
- *                              data-product is already in the LDM
- *                              product-queue.
+ * @param[in]      prodSize     Size of the product in bytes.
+ * @param[in]      metadata     Information about the product.
+ * @param[in]      metaSize     Size of the information.
+ * @param[out]     prod         Starting location for product.
+ * @retval         0            Success. `*prod` is set. If NULL, then
+ *                              data-product is already in LDM product-queue.
  * @retval         -1           Failure. `log_add()` called.
  */
 static int
-bof_func(
-        void* const    obj,
-        void* const    file_entry)
+bop_func(
+        void* const       obj,
+        const size_t      prodSize,
+        const void* const metadata,
+        const unsigned    metaSize,
+        void** const      prod)
 {
-    int            status;
+    int               status;
 
-    if (!mcastFileEntry_isMemoryTransfer(file_entry)) {
-        mcastFileEntry_setBofResponseToIgnore(file_entry);
-        status = 0;
+    if (sizeof(signaturet) > metaSize) {
+        LOG_START1("Product metadata too small for signature: %u bytes",
+                metaSize);
+        status = -1;
     }
     else {
-        signaturet        signature;
-        const char* const name = mcastFileEntry_getFileName(file_entry);
+        Mlr* mlr = obj;
 
-        if (sigParse(name, &signature) < 0) {
-            LOG_ADD1("Couldn't parse filename \"%s\" into data-product "
-                    "signature", name);
-            status = -1;
+        if (mlr->prod ) {
+            uerror("Premature product arrival. Discarding previous product.");
+            (void)pqe_discard(mlr->pq, *mlr->index);
+            mlr->prod  = NULL;
         }
-        else {
-            status = allocateSpaceAndSetBofResponse((Mlr*)obj, name,
-                    mcastFileEntry_getSize(file_entry), signature, file_entry);
-        } /* filename is data-product signature */
-    } /* transfer is to memory */
+
+        status = allocateSpace((Mlr*)obj, metadata, prodSize, prod);
+    }
 
     return status;
 }
@@ -184,20 +183,18 @@ bof_func(
  * associated with a multicast LDM receiver or discards the region.
  *
  * @param[in] mlr    Pointer to the multicast LDM receiver.
- * @param[in] index  Pointer to the allocated region.
  * @retval    0      Success.
  * @retval    -1     Error. `log_add()` called.
  */
 static int
 insertOrDiscard(
-        Mlr* const restrict             mlr,
-        const pqe_index* const restrict index)
+        Mlr* const restrict mlr)
 {
     int status;
 
     lockPq(mlr);
-    if ((status = pqe_insert(mlr->pq, *index)) != 0)
-        (void)pqe_discard(mlr->pq, *index);
+    if ((status = pqe_insert(mlr->pq, *mlr->index)) != 0)
+        (void)pqe_discard(mlr->pq, *mlr->index);
     unlockPq(mlr);
 
     if (status) {
@@ -226,11 +223,10 @@ lastReceived(
 }
 
 /**
- * Finishes inserting a received VCMTP file into an LDM product-queue as an LDM
- * data-product.
+ * Finishes inserting a received VCMTP product into an LDM product-queue as an
+ * LDM data-product.
  *
  * @param[in] mlr          Pointer to the multicast LDM receiver.
- * @param[in] index        Index of the allocated region in the product-queue.
  * @param[in] info         LDM data-product metadata. Caller may free when it
  *                         is no longer needed.
  * @param[in] dataSize     Actual number of bytes received.
@@ -241,23 +237,22 @@ lastReceived(
 static int
 finishInsertion(
         Mlr* const restrict             mlr,
-        const pqe_index* const restrict index,
         const prod_info* const restrict info,
         const size_t                    dataSize)
 {
     int status;
 
     if (info->sz > dataSize) {
-        LOG_ADD3("Size of LDM data-product > actual amount of data in \"%s\": "
-                "LDM size=%u bytes; actual data=%lu bytes", info->ident,
-                info->sz, (unsigned long)dataSize);
+        LOG_ADD3("LDM product size > VCMTP product size: "
+                "LDM=%u, VCMTP=%lu, ident=\"%s\"",
+                info->sz, (unsigned long)dataSize, info->ident);
         status = -1;
         lockPq(mlr);
-        (void)pqe_discard(mlr->pq, *index);
+        (void)pqe_discard(mlr->pq, *mlr->index);
         unlockPq(mlr);
     }
     else {
-        status = insertOrDiscard(mlr, index);
+        status = insertOrDiscard(mlr);
 
         if (status) {
             LOG_ADD("Couldn't finish inserting %u-byte data-product \"%s\"",
@@ -272,58 +267,44 @@ finishInsertion(
 
 /**
  * Accepts notification from the VCMTP layer of the complete reception of a
- * file. Finishes inserting the VCMTP file (which is an XDR-encoded
+ * product. Finishes inserting the VCMTP product (which is an XDR-encoded
  * data-product) into the associated LDM product-queue.
  *
  * @param[in,out]  obj          Pointer to the associated multicast LDM
  *                              receiver object.
- * @param[in]      file_entry   Metadata of the VCMTP file in question.
- * @retval         0            Success, the file-transfer wasn't to memory,
- *                              or the data wasn't wanted.
+ * @retval         0            Success.
  * @retval         -1           Error. `log_add()` called. The allocated space
  *                              in the LDM product-queue was released.
  */
 static int
-eof_func(
-        void*               obj,
-        const void* const   file_entry)
+eop_func(
+        void* const obj)
 {
-    int                 status;
+    int                    status;
+    prod_info              info;
+    XDR                    xdrs;
+    Mlr* const             mlr = (Mlr*)obj;
+    pqueue* const          pq = mlr->pq;
 
-    if (!mcastFileEntry_isWanted(file_entry) ||
-            !mcastFileEntry_isMemoryTransfer(file_entry)) {
-        status = 0;
+    xdrmem_create(&xdrs, mlr->prod, mlr->prodSize, XDR_DECODE);
+    (void)memset(&info, 0, sizeof(info));   // for `xdr_prod_info()`
+
+    if (!xdr_prod_info(&xdrs, &info)) {
+        LOG_SERROR1("Couldn't decode LDM product metadata from %lu-byte "
+                "VCMTP product", mlr->prodSize);
+        status = -1;
+        lockPq(mlr);
+        pqe_discard(pq, *mlr->index);
+        unlockPq(mlr);
     }
     else {
-        prod_info              info;
-        XDR                    xdrs;
-        const size_t           fileSize = mcastFileEntry_getSize(file_entry);
-        const void* const      bofResponse = mcastFileEntry_getBofResponse(file_entry);
-        const pqe_index* const index = ldmBofResponse_getIndex(bofResponse);
-        Mlr* const             mlr = (Mlr*)obj;
-        pqueue* const          pq = mlr->pq;
+        status = finishInsertion(mlr, &info,
+                mlr->prodSize-(xdrs.x_private-xdrs.x_base));
+        xdr_free(xdr_prod_info, (char*)&info);
+    }                                       // "info" allocated
 
-        xdrmem_create(&xdrs, (char*)ldmBofResponse_getBuf(bofResponse),
-                fileSize, XDR_DECODE);          // decoding => (char*) is safe
-        (void)memset(&info, 0, sizeof(info));   // for `xdr_prod_info()`
-
-        if (!xdr_prod_info(&xdrs, &info)) {
-            LOG_SERROR2("Couldn't decode LDM product-metadata from %lu-byte "
-                    "VCMTP file \"%s\"", fileSize,
-                    mcastFileEntry_getFileName(file_entry));
-            status = -1;
-            lockPq(mlr);
-            pqe_discard(pq, *index);
-            unlockPq(mlr);
-        }
-        else {
-            status = finishInsertion(mlr, index, &info,
-                    fileSize-(xdrs.x_private-xdrs.x_base));
-            xdr_free(xdr_prod_info, (char*)&info);
-        }                                       // "info" allocated
-
-        xdr_destroy(&xdrs);
-    }                                           // product-queue region allocated
+    xdr_destroy(&xdrs);
+    mlr->prod  = NULL;
 
     return status;
 }
@@ -338,10 +319,17 @@ eof_func(
  * @param[in]      iProd        Index of the product that was missed.
  */
 static void
-missed_file_func(
+missed_prod_func(
         void*                obj,
         const McastProdIndex iProd)
 {
+    Mlr* mlr = obj;
+
+    if (mlr->prod ) {
+        (void)pqe_discard(mlr->pq, *mlr->index);
+        mlr->prod  = NULL;
+    }
+
     down7_missedProduct(((Mlr*)obj)->down7, iProd);
 }
 
@@ -386,7 +374,7 @@ init(
     }
 
     status = mcastReceiver_new(&receiver, mcastInfo->server.inetId,
-            mcastInfo->server.port, bof_func, eof_func, missed_file_func,
+            mcastInfo->server.port, bop_func, eop_func, missed_prod_func,
             mcastInfo->group.inetId, mcastInfo->group.port, mlr);
     if (status) {
         LOG_ADD0("Couldn't create FMTP receiver");
@@ -396,6 +384,7 @@ init(
     mlr->receiver = receiver;
     mlr->pq = pq;
     mlr->down7 = down7;
+    mlr->prod  = NULL;
 
     return 0;
 }
@@ -417,9 +406,9 @@ init(
  */
 Mlr*
 mlr_new(
-        pqueue* const restrict               pq,
+        pqueue* const restrict          pq,
         const McastInfo* const restrict mcastInfo,
-        Down7* const restrict                down7)
+        Down7* const restrict           down7)
 {
     Mlr* mlr = LOG_MALLOC(sizeof(Mlr), "multicast LDM receiver object");
 

@@ -47,11 +47,15 @@ static feedtypet            feedtype = 1;
 static void
 init()
 {
-    ServiceAddr* groupAddr = sa_new(GROUP_ADDR, GROUP_PORT);
+    ServiceAddr* groupAddr;
+    int          status = sa_new(&groupAddr, GROUP_ADDR, GROUP_PORT);
+    OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_TRUE(groupAddr != NULL);
-    ServiceAddr* serverAddr = sa_new(SERVER_ADDR, SERVER_PORT);
+    ServiceAddr* serverAddr;
+    status = sa_new(&serverAddr, SERVER_ADDR, SERVER_PORT);
+    OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_TRUE(serverAddr != NULL);
-    OP_ASSERT_TRUE(mi_new(&mcastInfo, feedtype, groupAddr, serverAddr) == 0);
+    OP_ASSERT_EQUAL_INT(0, mi_new(&mcastInfo, feedtype, groupAddr, serverAddr));
     OP_ASSERT_TRUE(mcastInfo != NULL);
     sa_free(groupAddr);
     sa_free(serverAddr);
@@ -84,27 +88,32 @@ static int msm_getPid_callback(
 
 static void test_noPotentialSender()
 {
-    OP_ASSERT_TRUE(mlsm_ensureRunning(feedtype) == LDM7_NOENT);
+    McastInfo* mcastInfo;
+    OP_ASSERT_EQUAL_INT(LDM7_NOENT, mlsm_ensureRunning(feedtype, &mcastInfo));
     log_clear();
     OP_VERIFY();
 }
 
 static void test_conflict()
 {
-    OP_ASSERT_TRUE(mlsm_addPotentialSender(mcastInfo) == 0);
-    OP_ASSERT_TRUE(mlsm_addPotentialSender(mcastInfo) == LDM7_DUP);
+    // Depends on `init()`
+    OP_ASSERT_EQUAL_INT(0, mlsm_addPotentialSender(mcastInfo));
+    OP_ASSERT_EQUAL_INT(LDM7_DUP, mlsm_addPotentialSender(mcastInfo));
     OP_VERIFY();
 }
 
 static void test_not_running()
 {
+    // Depends on `test_conflict()`
     msm_lock_ExpectAndReturn(true, 0, cmp_bool);
     mcastPid = 1; // kill(1, 0) will return -1 -- emulating no-such-process
     msm_getPid_MockWithCallback(msm_getPid_callback);
+    msm_removePid_ExpectAndReturn(mcastPid, 0, cmp_bool);
     fork_ExpectAndReturn(1);
     msm_put_ExpectAndReturn(feedtype, mcastPid, 0, cmp_int, cmp_int);
     msm_unlock_ExpectAndReturn(0);
-    OP_ASSERT_TRUE(mlsm_ensureRunning(feedtype) == 0);
+    McastInfo* mcastInfo;
+    OP_ASSERT_EQUAL_INT(0, mlsm_ensureRunning(feedtype, &mcastInfo));
     log_log(LOG_ERR);
     OP_VERIFY();
 }
@@ -115,7 +124,8 @@ static void test_running()
     mcastPid = getpid(); // emulate running process
     msm_getPid_MockWithCallback(msm_getPid_callback);
     msm_unlock_ExpectAndReturn(0);
-    OP_ASSERT_TRUE(mlsm_ensureRunning(feedtype) == 0);
+    McastInfo* mcastInfo;
+    OP_ASSERT_EQUAL_INT(0, mlsm_ensureRunning(feedtype, &mcastInfo));
     log_log(LOG_ERR);
     OP_VERIFY();
 }

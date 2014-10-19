@@ -19,13 +19,14 @@
 
 typedef struct mlr Mlr;
 /**
- * Callback-function for notifying the upper layer about a missed file. Queues
- * the file for reception by other means. Returns immediately.
+ * Callback-function for notifying the upper layer about a product that was
+ * not received via multicast. Queues the product for reception by other means.
+ * Returns immediately.
  *
- * @param[in] fileId  FMTP file identifier of the missed file.
+ * @param[in] iProd   Index of the missed product.
  * @param[in] obj     Optional pointer to an object.
  */
-typedef          void (*mlr_missed_product_func)(McastFileId fileId, void *obj);
+typedef void (*mlr_missed_product_func)(McastProdIndex iProd, void *obj);
 
 #ifdef __cplusplus
 extern "C" {

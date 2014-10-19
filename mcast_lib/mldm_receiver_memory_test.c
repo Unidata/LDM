@@ -41,8 +41,9 @@ static void init()
 
     if (!initialized) {
         char buf[265];
+        int status = sa_new(&SERVICE_ADDR, HOSTNAME, PORT);
 
-        SERVICE_ADDR = sa_new(HOSTNAME, PORT);
+        OP_ASSERT_TRUE(0 == status);
         OP_ASSERT_TRUE(SERVICE_ADDR != NULL);
         CWD = getcwd(buf, sizeof(buf));
         OP_ASSERT_TRUE(CWD != NULL);

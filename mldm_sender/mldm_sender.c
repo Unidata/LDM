@@ -48,10 +48,6 @@ static void*       mcastSender;
  * Information on the multicast group.
  */
 static McastInfo   mcastInfo;
-/**
- * Product-index of the next data-product to be multicast.
- */
-static McastProdIndex fileId;
 
 /**
  * Returns the logging options appropriate to a log-file specification.
@@ -550,7 +546,7 @@ mls_getIpv4Addr(
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-mls_openFileIdMap(
+mls_openProdIndexMap(
         const feedtypet feed,
         const size_t    maxSigs)
 {
@@ -627,16 +623,17 @@ mls_init(
         goto return_status;
     }
 
-    if ((status = mls_openFileIdMap(info->feed, pq_getSlotCount(pq))))
+    if ((status = mls_openProdIndexMap(info->feed, pq_getSlotCount(pq))))
         goto close_pq;
 
-    if ((status = pim_getNextProdIndex(&fileId)))
-        goto close_fileId_map;
+    McastProdIndex iProd;
+    if ((status = pim_getNextProdIndex(&iProd)))
+        goto close_prod_index_map;
 
     if ((status = mcastSender_new(&mcastSender, serverInetAddr,
-            info->server.port, groupInetAddr, info->group.port, ttl, fileId))) {
+            info->server.port, groupInetAddr, info->group.port, ttl, iProd))) {
         status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
-        goto close_fileId_map;
+        goto close_prod_index_map;
     }
 
     if (mi_copy(&mcastInfo, info)) {
@@ -650,7 +647,7 @@ mls_init(
 
 free_mcastSender:
     mcastSender_free(mcastSender);
-close_fileId_map:
+close_prod_index_map:
     (void)pim_close();
 close_pq:
     (void)pq_close(pq);
@@ -689,7 +686,9 @@ mls_multicastProduct(
         const size_t                    size,
         void* const restrict            arg)
 {
-    int status = mcastSender_send(mcastSender, xprod, size);
+    McastProdIndex iProd;
+    int            status = mcastSender_send(mcastSender, xprod, size,
+            (void*)info->signature, sizeof(signaturet), &iProd);
 
     if (0 == status) {
         prod_info info;
@@ -703,7 +702,7 @@ mls_multicastProduct(
             status = EIO;
         }
         else {
-            status = pim_put(fileId++, (const signaturet*)&info.signature);
+            status = pim_put(iProd, (const signaturet*)&info.signature);
 
             if (ulogIsVerbose())
                 uinfo("Multicasted: %s",

@@ -67,12 +67,12 @@ test_sa_getInetSockAddr(void)
     static const char* const    IP_ADDR = "127.0.0.1";
     static const unsigned short PORT = 1;
 
-    ServiceAddr* const serviceAddr = sa_new(IP_ADDR, PORT);
+    ServiceAddr* serviceAddr;
+    int          status = sa_new(&serviceAddr, IP_ADDR, PORT);
 
-    CU_ASSERT_PTR_NOT_NULL_FATAL(serviceAddr);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
 
     struct sockaddr_storage inetSockAddr;
-    int                     status;
     socklen_t               sockLen;
 
     status = sa_getInetSockAddr(serviceAddr, true, &inetSockAddr, &sockLen);
@@ -91,12 +91,12 @@ test_sa_getInet6SockAddr(void)
     static const char* const    IP_ADDR = "::1";
     static const unsigned short PORT = 1;
 
-    ServiceAddr* const serviceAddr = sa_new(IP_ADDR, PORT);
+    ServiceAddr* serviceAddr;
+    int          status = sa_new(&serviceAddr, IP_ADDR, PORT);
 
-    CU_ASSERT_PTR_NOT_NULL_FATAL(serviceAddr);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
 
     struct sockaddr_storage inetSockAddr;
-    int                     status;
     socklen_t               sockLen;
 
     status = sa_getInetSockAddr(serviceAddr, true, &inetSockAddr, &sockLen);

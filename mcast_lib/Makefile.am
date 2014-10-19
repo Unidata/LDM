@@ -13,17 +13,19 @@ EXTRA_DIST              = down7.hin \
 			  mldm_receiver_memory.hin \
                           prod_index_queue.hin \
                           server_info.hin \
-                          sock_funcs.c sock_funcs.hin
+                          sock_funcs.c sock_funcs.hin \
+                          up7.hin
 BUILT_SOURCES           = down7.h \
 			  mldm_receiver.h \
 			  mldm_sender_memory.h \
 			  mldm_receiver_memory.h \
                           prod_index_queue.h \
                           server_info.h \
-                          sock_funcs.h
+                          sock_funcs.h \
+                          up7.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= down7.c \
-                          down7_manager.c \
+                          down7_manager.c down7_manager.h \
 			  up7.c \
 			  prod_index_map.c prod_index_map.h \
 			  mcast_info.c mcast_info.h \
@@ -32,8 +34,7 @@ lib_la_SOURCES		= down7.c \
 			  mldm_sender_manager.c mldm_sender_manager.h \
 			  mldm_sender_memory.c \
 			  mldm_sender_map.c mldm_sender_map.h \
-			  PerFileNotifier.cpp PerFileNotifier.h \
-			  LdmBofResponse.cpp LdmBofResponse.h \
+			  PerProdNotifier.cpp PerProdNotifier.h \
 			  prod_index_queue.c \
 			  server_info.c \
                           mcast.cpp mcast.h
@@ -43,9 +44,10 @@ CPPFLAGS		= -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
-                          -I$(srcdir)/vcmtp/protocol/shawn \
-                          -I$(srcdir)/vcmtp/protocol/shawn/recv \
-                          -I$(srcdir)/vcmtp/protocol/shawn/send \
+                          -I$(srcdir)/vcmtp/VCMTPv3 \
+                          -I$(srcdir)/vcmtp/VCMTPv3/fatma \
+                          -I$(srcdir)/vcmtp/VCMTPv3/shawn \
+                          -I$(srcdir)/vcmtp/VCMTPv3/shawn/recv \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc
 lib_la_LIBADD		= vcmtp/libvcmtp.la -lpthread
@@ -62,10 +64,10 @@ mldm_receiver_memory.h:	mldm_receiver_memory.c mldm_receiver_memory.hin
 prod_index_queue.h:	prod_index_queue.hin prod_index_queue.c
 server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
-up7.h:		up7.hin up7.c
+up7.h:			up7.hin up7.c
 
 if HAVE_OPMOCK
-VCMTPReceiver_stubs	= VCMTPReceiver_stub.cpp VCMTPReceiver_stub.hpp
+VCMTPReceiver_stubs	= vcmtpRecvv3_stub.cpp vcmtpRecvv3_stub.hpp
 mcast_stubs		= mcast_stub.c mcast_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
 globals_stubs		= globals_stub.c globals_stub.h
@@ -80,9 +82,10 @@ all_stubs		= $(VCMTPReceiver_stubs) \
 BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= $(all_stubs) TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
+			  -I/usr/include/c++/4.8.3 \
                           -I/usr/local/include \
                           -I/usr/include
-$(VCMTPReceiver_stubs):		vcmtp/protocol/VCMTPReceiver.h
+$(VCMTPReceiver_stubs):		vcmtp/VCMTPv3/shawn/recv/vcmtpRecvv3.h
 	opmock2 -cpp -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mcast_stubs):	mcast.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
@@ -105,7 +108,8 @@ test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 #mcast_test_SOURCES	= mcast_test.cpp mcast.cpp
 #mcast_test_CPPFLAGS	= $(test_cppflags)
 #mcast_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c
+mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c \
+					  mcast_info.c mcast_info.h
 mldm_sender_manager_test_CPPFLAGS	= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_sender_manager_test_LDADD	= mcast_stub.o \

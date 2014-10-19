@@ -352,7 +352,7 @@ decodeRequestEntry(
 
 #if WANT_MULTICAST
 /**
- * Decodes a TRANSMIT entry.
+ * Decodes a SEND entry.
  *
  * @param[in] feedtypeSpec    Specification of the feedtype.
  * @param[in] mcastGroupSpec  Specification of the multicast group.
@@ -362,7 +362,7 @@ decodeRequestEntry(
  * @retval    ENOMEM          Out-of-memory. `log_start()` called.
  */
 static int
-decodeTransmitEntry(
+decodeSendEntry(
     const char* const   feedtypeSpec,
     const char* const   mcastGroupSpec,
     const char* const   tcpServerSpec)
@@ -409,7 +409,7 @@ decodeTransmitEntry(
     } // `feedtype` set
     
     if (status)
-        LOG_ADD0("Couldn't process TRANSMIT entry");
+        LOG_ADD0("Couldn't process SEND entry");
     
     return status;
 }
@@ -465,7 +465,7 @@ decodeReceiveEntry(
 %token INCLUDE_K
 %token RECEIVE_K
 %token REQUEST_K
-%token TRANSMIT_K
+%token SEND_K
 
 %token <string> STRING
 
@@ -481,7 +481,7 @@ entry:            accept_entry
                 | exec_entry
                 | include_stmt
                 | request_entry
-                | transmit_entry
+                | send_entry
                 ;
 
 accept_entry:   ACCEPT_K STRING STRING STRING
@@ -624,10 +624,10 @@ request_entry:  REQUEST_K STRING STRING STRING
                 }
                 ;
 
-transmit_entry:        TRANSMIT_K STRING STRING STRING
+send_entry:        SEND_K STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeTransmitEntry($2, $3, $4);
+                    int errCode = decodeSendEntry($2, $3, $4);
 
                     if (errCode)
                         return errCode;

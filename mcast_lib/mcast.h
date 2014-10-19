@@ -26,17 +26,18 @@ typedef u_int32_t                McastProdIndex;
 #define xdr_McastFileId          xdr_u_long
 typedef struct mcast_receiver    McastReceiver;
 
-typedef int     (*BofFunc)(void* obj, void* info);
-typedef int     (*EofFunc)(void* obj, const void* info);
-typedef void    (*MissedFileFunc)(void* obj, const McastProdIndex iProd);
+typedef int     (*BopFunc)(void* obj, size_t prodSize, void* metadata,
+        unsigned metaSize, void** data);
+typedef int     (*EopFunc)(void* obj);
+typedef void    (*MissedProdFunc)(void* obj, const McastProdIndex iProd);
 
 int mcastReceiver_new(
     McastReceiver**             receiver,
     const char* const           tcpAddr,
     const unsigned short        tcpPort,
-    BofFunc                     bof_func,
-    EofFunc                     eof_func,
-    MissedFileFunc              missed_file_func,
+    BopFunc                     bof_func,
+    EopFunc                     eof_func,
+    MissedProdFunc              missed_file_func,
     const char* const           mcastAddr,
     const unsigned short        mcastPort,
     void*                       obj);
@@ -103,47 +104,23 @@ mcastSender_free(
     void* const sender);
 
 /**
- * Multicasts memory data.
+ * Sends a product.
  *
- * @param[in] sender  VCMTP sender.
- * @param[in] data    Data to send.
- * @param[in] nbytes  Amount of data in bytes.
- * @retval    0       Success.
- * @retval    EIO     Failure. `log_start()` called.
+ * @param[in]  sender  VCMTP sender.
+ * @param[in]  data    Data to send.
+ * @param[in]  nbytes  Amount of data in bytes.
+ * @param[out] iProd   Index of the sent product.
+ * @retval     0       Success.
+ * @retval     EIO     Failure. `log_start()` called.
  */
 int
 mcastSender_send(
-    void* const  sender,
-    void* const  data,
-    const size_t nbytes);
-
-int mcastFileEntry_isWanted(
-    const void*                 file_entry);
-
-bool mcastFileEntry_isMemoryTransfer(
-    const void*                 file_entry);
-
-McastProdIndex mcastFileEntry_getProductIndex(
-    const void*                 file_entry);
-
-const char* mcastFileEntry_getFileName(
-    const void*                 file_entry);
-
-size_t mcastFileEntry_getSize(
-    const void*                 file_entry);
-
-void mcastFileEntry_setBofResponseToIgnore(
-    void*                       file_entry);
-
-int mcastFileEntry_setBofResponse(
-    void*                       fileEntry,
-    const void*                 bofResponse);
-
-const void* mcastFileEntry_getBofResponse(
-    const void*                 file_entry);
-
-void* bofResponse_getPointer(
-    const void*                 bofResponse);
+    void* const           sender,
+    const void* const     data,
+    const size_t          nbytes,
+    const void* const     metadata,
+    const unsigned        metaSize,
+    McastProdIndex* const iProd);
 
 #ifdef __cplusplus
 }

@@ -11,12 +11,10 @@
 
 #include "log.h"
 #include "mcast.h"
-#include "PerFileNotifier.h"
+#include "PerProdNotifier.h"
 
-#include <BofResponse.h>
-#include <VCMTPReceiver.h>
-#include <VCMTPSender.h>
-#include <VcmtpFileEntry.h>
+#include <vcmtpRecvv3.h>
+#include <vcmtpSendv3.h>
 
 #include <errno.h>
 #include <exception>
@@ -33,7 +31,11 @@ struct mcast_receiver {
     /**
      * The multicast-layer receiver.
      */
-    VCMTPReceiver*      receiver;
+    vcmtpRecvv3*      receiver;
+    /**
+     * The per-product notifier passed to the VCMTP receiver.
+     */
+    PerProdNotifier*  notifier;
 };
 
 /**
@@ -45,11 +47,11 @@ struct mcast_receiver {
  *                                    hostname or IP address.
  * @param[in]  tcpPort                Port number of the TCP server to which to
  *                                    connect.
- * @param[in]  bof_func               Function to call when the multicast layer
- *                                    has seen a beginning-of-file.
- * @param[in]  eof_func               Function to call when the multicast layer
- *                                    has completely received a file.
- * @param[in]  missed_file_func       Function to call when a file is missed
+ * @param[in]  bop_func               Function to call when the multicast layer
+ *                                    has seen a beginning-of-product.
+ * @param[in]  eop_func               Function to call when the multicast layer
+ *                                    has completely received a product.
+ * @param[in]  missed_prod_func       Function to call when a product is missed
  *                                    by the multicast layer.
  * @param[in]  mcastAddr              Address of the multicast group to receive.
  *                                    May be groupname or formatted IP address.
@@ -58,7 +60,7 @@ struct mcast_receiver {
  *                                    application to pass to the above
  *                                    functions. May be NULL.
  * @throws     std::invalid_argument  if @code{0==buf_func || 0==eof_func ||
- *                                    0==missed_file_func || 0==addr}.
+ *                                    0==missed_prod_func || 0==addr}.
  * @throws     std::invalid_argument  if the multicast group address couldn't be
  *                                    converted into a binary IPv4 address.
  * @throws     std::runtime_error     if the IP address of the PA interface
@@ -79,30 +81,20 @@ mcastReceiver_init(
     McastReceiver* const        receiver,
     const char* const           tcpAddr,
     const unsigned short        tcpPort,
-    const BofFunc               bof_func,
-    const EofFunc               eof_func,
-    const MissedFileFunc        missed_file_func,
+    const BopFunc               bop_func,
+    const EopFunc               eop_func,
+    const MissedProdFunc        missed_prod_func,
     const char* const           mcastAddr,
     const unsigned short        mcastPort,
     void* const                 obj)
 {
-    std:string             hostId(tcpAddr);
-    // Following object will be deleted by `VCMTPReceiver` destructor
-    PerFileNotifier* const notifier =
-            new PerFileNotifier(bof_func, eof_func, missed_file_func, obj);
-    // VCMTP call
-    VCMTPReceiver*         rcvr = new VCMTPReceiver(hostId, tcpPort, notifier);
-
-    try {
-        // VCMTP call
-        rcvr->JoinGroup(std::string(mcastAddr), mcastPort);
-        receiver->receiver = rcvr;
-    }
-    catch (const std::exception& e) {
-        // VCMTP call
-        delete rcvr;
-        throw;
-    } /* "rcvr" allocated */
+    std::string             hostId(tcpAddr);
+    std::string             groupId(mcastAddr);
+    // Following object will be deleted by `vcmtpRecvv3` destructor
+    receiver->notifier =
+            new PerProdNotifier(bop_func, eop_func, missed_prod_func, obj);
+    vcmtpRecvv3*         rcvr = new vcmtpRecvv3(hostId, tcpPort, groupId,
+            mcastPort, *receiver->notifier);
 }
 
 /**
@@ -140,9 +132,9 @@ mcastReceiver_new(
     McastReceiver** const       receiver,
     const char* const           tcpAddr,
     const unsigned short        tcpPort,
-    const BofFunc               bof_func,
-    const EofFunc               eof_func,
-    const MissedFileFunc        missed_file_func,
+    const BopFunc               bof_func,
+    const EopFunc               eof_func,
+    const MissedProdFunc        missed_file_func,
     const char* const           mcastAddr,
     const unsigned short        mcastPort,
     void* const                 obj)
@@ -182,6 +174,7 @@ mcastReceiver_free(
 {
     // VCMTP call
     delete receiver->receiver;
+    delete receiver->notifier;
     free(receiver);
 }
 
@@ -203,7 +196,7 @@ mcastReceiver_execute(
 
     try {
         // VCMTP call
-        receiver->receiver->RunReceivingThread();
+        receiver->receiver->Start();
     }
     catch (const std::exception& e) {
         LOG_ADD1("%s", e.what());
@@ -223,7 +216,7 @@ mcastReceiver_stop(
     McastReceiver* const receiver)
 {
     // VCMTP call
-    receiver->receiver->stop();
+    receiver->receiver->Stop();
 }
 
 /**
@@ -269,22 +262,9 @@ mcastSender_new(
     const McastProdIndex iProd)
 {
     try {
-        // VCMTP call
-        VCMTPSender* sndr = new VCMTPSender(std::string(serverAddr), serverPort,
-                iProd);
-
-        try {
-            // VCMTP call
-            sndr->JoinGroup(std::string(groupAddr), groupPort);
-            *sender = sndr;
-            return 0;
-        }
-        catch (const std::exception& e) {
-            // VCMTP call
-            delete sndr;
-            throw;
-        } // `sndr->sender` allocated
-    } // `sndr` allocated
+        vcmtpSendv3* sndr = new vcmtpSendv3(serverAddr, serverPort, groupAddr,
+                groupPort, iProd);
+    }
     catch (const std::invalid_argument& e) {
         LOG_START1("%s", e.what());
         return EINVAL;
@@ -305,160 +285,39 @@ mcastSender_free(
     void* const sender)
 {
     // VCMTP call
-    delete (VCMTPSender*)sender;
+    delete (vcmtpSendv3*)sender;
 }
 
 /**
- * Multicasts memory data.
+ * Sends a product.
  *
- * @param[in] sender  VCMTP sender.
- * @param[in] data    Data to send.
- * @param[in] nbytes  Amount of data in bytes.
- * @retval    0       Success.
- * @retval    EIO     Failure. `log_start()` called.
+ * @param[in]  sender  VCMTP sender.
+ * @param[in]  data    Data to send.
+ * @param[in]  nbytes  Amount of data in bytes.
+ * @param[out] iProd   Index of the sent product.
+ * @retval     0       Success.
+ * @retval     EIO     Failure. `log_start()` called.
  */
 int
 mcastSender_send(
-    void* const  sender,
-    void* const  data,
-    const size_t nbytes)
+    void* const           sender,
+    const void* const     data,
+    const size_t          nbytes,
+    const void* const     metadata,
+    const unsigned        metaSize,
+    McastProdIndex* const iProd)
 {
     try {
-        // VCMTP call
-        ((VCMTPSender*)sender)->SendMemoryData(data, nbytes);
+        /*
+         * The signature of the product is sent to the receiver as metadata in
+         * order to allow duplicate rejection.
+         */
+        *iProd = ((vcmtpSendv3*)sender)->sendProduct((void*)data, nbytes,
+                (void*)metadata, metaSize);     //  safe to cast away `const`s
         return 0;
     }
     catch (const std::exception& e) {
         LOG_START1("%s", e.what());
         return EIO;
     }
-}
-
-/**
- * Indicates if the multicast file is wanted or not.
- *
- * @param[in] file_entry  multicast file metadata.
- * @return    1           The file is wanted.
- * @retval    0           The file is not wanted.
- */
-int
-mcastFileEntry_isWanted(
-    const void* const file_entry)
-{
-    // VCMTP call
-    return ((VcmtpFileEntry*)file_entry)->isWanted();
-}
-
-/**
- * Indicates if the transfer mode of a file being received is to memory.
- *
- * @param[in] file_entry        Metadata about the file.
- * @return    true              if and only if the transfer mode is to memory.
- */
-bool
-mcastFileEntry_isMemoryTransfer(
-    const void* const           file_entry)
-{
-    // VCMTP call
-    return ((VcmtpFileEntry*)file_entry)->isMemoryTransfer();
-}
-
-/**
- * Returns the identifier of the file.
- *
- * @param[in] file_entry        Metadata about the file.
- * @return                      The identifier of the file.
- */
-McastProdIndex
-mcastFileEntry_getProductIndex(
-    const void*                 file_entry)
-{
-    // VCMTP call
-    return ((const VcmtpFileEntry*)file_entry)->getFileId();
-}
-
-/**
- * Returns the name of the file.
- *
- * @param[in] file_entry        Metadata about the file.
- * @return                      The name of the file.
- */
-const char*
-mcastFileEntry_getFileName(
-    const void*                 file_entry)
-{
-    // VCMTP call
-    return ((const VcmtpFileEntry*)file_entry)->getName();
-}
-
-/**
- * Returns the size of the file in bytes.
- *
- * @param[in] file_entry        Metadata about the file.
- * @return                      The size of the file in bytes.
- */
-size_t
-mcastFileEntry_getSize(
-    const void*                 file_entry)
-{
-    // VCMTP call
-    return ((VcmtpFileEntry*)file_entry)->getSize();
-}
-
-/**
- * Sets the beginning-of-file response in a file-entry to ignore the file.
- *
- * @param[in,out] file_entry    The multicast file-entry in which to set the
- *                              response.
- */
-void
-mcastFileEntry_setBofResponseToIgnore(
-    void* const                 file_entry)
-{
-    // VCMTP call
-    ((VcmtpFileEntry*)file_entry)->setBofResponseToIgnore();
-}
-
-/**
- * Sets the beginning-of-file response in a file-entry.
- *
- * @param[in,out] fileEntry     The multicast file-entry in which to set the
- *                              BOF response.
- * @param[in]     bofResponse   Pointer to the beginning-of-file response.
- * @retval        0             Success.
- * @retval        EINVAL        if @code{fileEntry == NULL || bofResponse ==
- *                              NULL}. \c log_add() called.
- */
-int
-mcastFileEntry_setBofResponse(
-    void* const       fileEntry,
-    const void* const bofResponse)
-{
-    VcmtpFileEntry* const    entry = (VcmtpFileEntry*)fileEntry;
-    const BofResponse* const bof = (const BofResponse*)bofResponse;
-
-    if (fileEntry == NULL || bofResponse == NULL) {
-        LOG_ADD0("NULL argument");
-        return EINVAL;
-    }
-
-    // VCMTP call
-    entry->setBofResponse(bof);
-    return 0;
-}
-
-/**
- * Returns the beginning-of-file response from the receiving application
- * associated with a multicast file.
- *
- * @param[in] file_entry  The entry for the multicast file.
- * @return                The corresponding BOF response from the receiving
- *                        application. May be NULL.
- */
-const void*
-mcastFileEntry_getBofResponse(
-    const void* const file_entry)
-{
-    // VCMTP call
-    return ((VcmtpFileEntry*)file_entry)->getBofResponse();
 }

@@ -1349,15 +1349,15 @@ deliver_missed_product_7_svc(
 {
     prod_info* const info = &missedProd->prod.info;
     Down7*           down7 = pthread_getspecific(down7Key);
-    McastProdIndex      fileId;
+    McastProdIndex   iProd;
 
-    if (!msm_peekRequestedFileNoWait(down7->msm, &fileId) ||
-            fileId != missedProd->iProd) {
+    if (!msm_peekRequestedFileNoWait(down7->msm, &iProd) ||
+            iProd != missedProd->iProd) {
         deliveryFailure("Unexpected product received", info, rqstp);
     }
     else {
         // The queue can't be empty
-        (void)msm_removeRequestedFileNoWait(down7->msm, &fileId);
+        (void)msm_removeRequestedFileNoWait(down7->msm, &iProd);
 
         if (deliver_product(down7->pq, &missedProd->prod) != 0)
             deliveryFailure("Couldn't insert missed product", info, rqstp);

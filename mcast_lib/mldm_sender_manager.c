@@ -64,7 +64,7 @@ mlsm_isRunning(
                     "process can't be signaled by this process. I'll assume "
                     "the relevant multicast LDM sender is not running.",
                     s_feedtypet(feedtype), pid);
-            (void)msm_removePid(pid);
+            (void)msm_removePid(pid);   // don't care if it exists or not
             status = LDM7_NOENT;
         }
     }
@@ -328,8 +328,8 @@ mlsm_addPotentialSender(
  */
 Ldm7Status
 mlsm_ensureRunning(
-        const feedtypet         feedtype,
-        const McastInfo** const mcastInfo)
+        const feedtypet   feedtype,
+        McastInfo** const mcastInfo)
 {
     McastInfo key;
     int       status;

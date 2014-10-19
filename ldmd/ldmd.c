@@ -706,6 +706,12 @@ static void handle_connection(
         goto unwind_sock;
     }
 
+    if (!svc_register(xprt, LDMPROG, SIX, ldmprog_7, 0)) {
+        uerror("unable to register LDM-7 service.");
+        svc_destroy(xprt);
+        goto unwind_sock;
+    }
+
     /*
      *  handle rpc requests
      */

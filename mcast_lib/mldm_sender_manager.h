@@ -53,8 +53,8 @@ mlsm_addPotentialSender(
  */
 Ldm7Status
 mlsm_ensureRunning(
-        const feedtypet         feedtype,
-        const McastInfo** const mcastInfo);
+        const feedtypet   feedtype,
+        McastInfo** const mcastInfo);
 
 /**
  * Handles the termination of a multicast LDM sender process. This function

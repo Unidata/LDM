@@ -713,14 +713,14 @@ program LDMPROG {
              * Downstream to upstream RPC messages:
              */
             SubscriptionReply SUBSCRIBE(feedtypet feedtype) = 1;
-            void              REQUEST_PRODUCT(McastFileId) = 2;
+            void              REQUEST_PRODUCT(McastProdIndex) = 2;
             void              REQUEST_BACKLOG(BacklogSpec) = 3;
             void              TEST_CONNECTION() = 4;
             /*
              * Upstream to downstream RPC messages:
              */
             void              DELIVER_MISSED_PRODUCT(MissedProduct) = 5;
-            void              NO_SUCH_PRODUCT(McastFileId) = 6;
+            void              NO_SUCH_PRODUCT(McastProdIndex) = 6;
             void              DELIVER_BACKLOG_PRODUCT(product) = 7;
             void              END_BACKLOG() = 8;
         } = 7;
@@ -933,6 +933,7 @@ enum Ldm7Status {
 %}
 #endif // RPC_CLNT
 
+typedef uint32_t McastProdIndex;
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %
@@ -944,11 +945,11 @@ struct MissedProduct {
     /*
      * The multicast file identifier of the missed data-product:
      */
-    McastFileId fileId;
+    McastProdIndex iProd;
     /*
      * The missed LDM data-product:
      */
-    product     prod;
+    product        prod;
 };
 
 

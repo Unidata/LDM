@@ -840,9 +840,9 @@ YY_RULE_SETUP
 {
 #if YYDEBUG
     if(yydebug)
-	udebug("TRANSMIT");
+	udebug("SEND");
 #endif
-    return (TRANSMIT_K);
+    return (SEND_K);
 }
 	YY_BREAK
 case 5:

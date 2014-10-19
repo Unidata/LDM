@@ -101,18 +101,25 @@ mi_new(
     const ServiceAddr* const restrict mcast,
     const ServiceAddr* const restrict ucast)
 {
+    int              status;
     McastInfo* const info = LOG_MALLOC(sizeof(McastInfo),
             "multicast information");
 
-    if (NULL == info)
-        return ENOMEM;
+    if (NULL == info) {
+        status = ENOMEM;
+    }
+    else {
+        if (!mi_init(info, feed, mcast, ucast)) {
+            free(info);
+            status = ENOMEM;
+        }
+        else {
+            *mcastInfo = info;
+            status = 0;
+        }
+    }   // `info` allocated
 
-    if (mi_init(info, feed, mcast, ucast))
-        return 0;
-
-    free(info);
-
-    return ENOMEM;
+    return status;
 }
 
 /**
