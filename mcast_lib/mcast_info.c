@@ -73,6 +73,7 @@ mi_init(
     }
 
     info->feed = feed;
+    info->toString = NULL;
 
     return true; // success
 }
@@ -263,7 +264,7 @@ mi_compareGroups(
 
 /**
  * Returns a formatted representation of a multicast information object that's
- * suitable as a filename.
+ * suitable for use as a filename.
  *
  * @param[in] info  The multicast information object.
  * @retval    NULL  Failure. `log_add()` called.
@@ -271,7 +272,40 @@ mi_compareGroups(
  */
 const char*
 mi_asFilename(
-    const McastInfo* const info)
+    McastInfo* const info)
 {
+    if (NULL == info->toString) {
+        const char* feedStr = s_feedtypet(info->feed);
+        char*       grpStr = sa_format(&info->group);
+        char*       svrStr = sa_format(&info->server);
+
+        info->toString = ldm_format(256, "%s_%s_%s", feedStr, grpStr, svrStr);
+
+        free(grpStr);
+        free(svrStr);
+    }
     return info->toString;
+}
+
+/**
+ * Returns a formatted representation of a multicast information object.
+ *
+ * @param[in] info  The multicast information object.
+ * @retval    NULL  Failure. `log_add()` called.
+ * @return          A string representation of `info`.
+ */
+const char*
+mi_toString(
+    McastInfo* const info)
+{
+    const char* feedStr = s_feedtypet(info->feed);
+    char*       grpStr = sa_format(&info->group);
+    char*       svrStr = sa_format(&info->server);
+    char*       string = ldm_format(256, "{feed=%s, group=%s, server=%s}",
+            feedStr, grpStr, svrStr);
+
+    free(grpStr);
+    free(svrStr);
+
+    return string;
 }

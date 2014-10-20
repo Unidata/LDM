@@ -904,7 +904,7 @@ main(
         log_log(LOG_ERR);
     }
     else {
-        unotice("Starting up: groupInfo=%s, ttl=%u", mi_asFilename(groupInfo),
+        unotice("Starting up: groupInfo=%s, ttl=%u", mi_toString(groupInfo),
                 ttl);
 
         mls_setSignalHandling();

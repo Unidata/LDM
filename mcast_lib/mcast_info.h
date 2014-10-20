@@ -145,7 +145,18 @@ mi_compareGroups(
  */
 const char*
 mi_asFilename(
-    const McastInfo* const info);
+    McastInfo* const info);
+
+/**
+ * Returns a formatted representation of a multicast information object.
+ *
+ * @param[in] info  The multicast information object.
+ * @retval    NULL  Failure. `log_add()` called.
+ * @return          A string representation of `info`.
+ */
+const char*
+mi_toString(
+    McastInfo* const info);
 
 #ifdef __cplusplus
 }

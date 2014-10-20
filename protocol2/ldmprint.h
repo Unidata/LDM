@@ -54,7 +54,7 @@ sprint_timestampt(char *buf, size_t bufsize, const timestampt *tvp);
 extern int
 sprint_feedtypet(char *buf, size_t bufsize, feedtypet feedtype);
 
-extern char *
+extern const char *
 s_feedtypet(feedtypet feedtype);
 
 extern char *

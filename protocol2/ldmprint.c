@@ -247,7 +247,13 @@ sprint_feedtypet(char *buf, size_t bufsize, feedtypet feedtype)
         return len;
 }
 
-char *
+/**
+ * Returns the formatted representation of a feedtype.
+ *
+ * @param[in] feedtype  Feedtype.
+ * @return              String representation of feedtype. Caller must not free.
+ */
+const char *
 s_feedtypet(feedtypet feedtype)
 {
         static char buf[FDTT_SBUF_SIZE +1];
