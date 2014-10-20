@@ -153,7 +153,8 @@ mi_copy(
     McastInfo* const restrict       to,
     const McastInfo* const restrict from)
 {
-    return mi_init(to, from->feed, &from->group, &from->server);
+    return mi_init(to, from->feed, &from->group, &from->server)
+            ? 0 : LDM7_SYSTEM;
 }
 
 /**
