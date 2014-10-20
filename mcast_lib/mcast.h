@@ -22,14 +22,14 @@
     extern "C" {
 #endif
 
-typedef u_int32_t                McastProdIndex;
+typedef u_int32_t                VcmtpProdIndex;
 #define xdr_McastFileId          xdr_u_long
 typedef struct mcast_receiver    McastReceiver;
 
-typedef int     (*BopFunc)(void* obj, size_t prodSize, void* metadata,
+typedef int     (*BopFunc)(void* obj, size_t prodSize, const void* metadata,
         unsigned metaSize, void** data);
 typedef int     (*EopFunc)(void* obj);
-typedef void    (*MissedProdFunc)(void* obj, const McastProdIndex iProd);
+typedef void    (*MissedProdFunc)(void* obj, const VcmtpProdIndex iProd);
 
 int mcastReceiver_new(
     McastReceiver**             receiver,
@@ -92,7 +92,7 @@ mcastSender_new(
     const char* const    mcastAddr,
     const unsigned short mcastPort,
     const unsigned       ttl,
-    const McastProdIndex iProd);
+    const VcmtpProdIndex iProd);
 
 /**
  * Frees a multicast sender's resources.
@@ -120,7 +120,7 @@ mcastSender_send(
     const size_t          nbytes,
     const void* const     metadata,
     const unsigned        metaSize,
-    McastProdIndex* const iProd);
+    VcmtpProdIndex* const iProd);
 
 #ifdef __cplusplus
 }

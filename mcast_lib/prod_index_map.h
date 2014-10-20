@@ -71,7 +71,7 @@ pim_close(void);
  */
 Ldm7Status
 pim_put(
-        const McastProdIndex    iProd,
+        const VcmtpProdIndex    iProd,
         const signaturet* const sig);
 
 /**
@@ -85,7 +85,7 @@ pim_put(
  */
 Ldm7Status
 pim_get(
-        const McastProdIndex iProd,
+        const VcmtpProdIndex iProd,
         signaturet* const    sig);
 
 /**
@@ -98,7 +98,7 @@ pim_get(
  */
 Ldm7Status
 pim_getNextProdIndex(
-        McastProdIndex* const iProd);
+        VcmtpProdIndex* const iProd);
 
 #ifdef __cplusplus
     }

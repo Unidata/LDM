@@ -64,7 +64,7 @@ static void test_missed_mcast_files()
 {
     McastSessionMemory* msm;
     int                 status;
-    McastProdIndex      iProd;
+    VcmtpProdIndex      iProd;
 
     openMsm(&msm);
     msm_clearAllMissedFiles(msm);

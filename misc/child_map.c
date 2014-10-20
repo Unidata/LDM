@@ -186,13 +186,13 @@ int cm_add_string(
  * @retval 2    O/S failure. \c log_start() called.
  */
 int cm_add_argv(
-    ChildMap* const       map,    /**< [in/out] Pointer to the child-map */
-    const pid_t           pid,    /**< [in] Process ID of the child.
-                                   *   Must not already exist in map. */
-    const char** const    argv)   /**< [in] Command-line of the child in
-                                   *   argument vector form. Last pointer
-                                   *   must be NULL. The strings are
-                                   *   defensively copied. */
+    ChildMap* const map,    /**< [in/out] Pointer to the child-map */
+    const pid_t     pid,    /**< [in] Process ID of the child.
+                             *   Must not already exist in map. */
+    char** const    argv)   /**< [in] Command-line of the child in
+                             *   argument vector form. Last pointer
+                             *   must be NULL. The strings are
+                             *   defensively copied. */
 {
     int                 status = 0;     /* success */
 

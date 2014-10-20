@@ -67,7 +67,7 @@ void PerProdNotifier::notify_of_eop()
     }
 }
 
-void PerProdNotifier::notify_of_missed_prod(const McastProdIndex iProd)
+void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex iProd)
 {
     missed_prod_func(obj, iProd);
 }

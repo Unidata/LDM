@@ -36,9 +36,9 @@ struct mlr {
     pqueue*         pq;       // product-queue to use */
     Down7*          down7;    // pointer to associated downstream LDM-7
     McastReceiver*  receiver; // VCMTP C Receiver
-    void*           prod;     // Start of product in product-queue
+    char*           prod;     // Start of product in product-queue
     size_t          prodSize; // Size of VCMTP product in bytes
-    pqe_index*      index;    // Product-queue index of reserved region
+    pqe_index       index;    // Product-queue index of reserved region
 };
 
 /**
@@ -168,7 +168,7 @@ bop_func(
 
         if (mlr->prod ) {
             uerror("Premature product arrival. Discarding previous product.");
-            (void)pqe_discard(mlr->pq, *mlr->index);
+            (void)pqe_discard(mlr->pq, mlr->index);
             mlr->prod  = NULL;
         }
 
@@ -193,8 +193,8 @@ insertOrDiscard(
     int status;
 
     lockPq(mlr);
-    if ((status = pqe_insert(mlr->pq, *mlr->index)) != 0)
-        (void)pqe_discard(mlr->pq, *mlr->index);
+    if ((status = pqe_insert(mlr->pq, mlr->index)) != 0)
+        (void)pqe_discard(mlr->pq, mlr->index);
     unlockPq(mlr);
 
     if (status) {
@@ -248,7 +248,7 @@ finishInsertion(
                 info->sz, (unsigned long)dataSize, info->ident);
         status = -1;
         lockPq(mlr);
-        (void)pqe_discard(mlr->pq, *mlr->index);
+        (void)pqe_discard(mlr->pq, mlr->index);
         unlockPq(mlr);
     }
     else {
@@ -294,7 +294,7 @@ eop_func(
                 "VCMTP product", mlr->prodSize);
         status = -1;
         lockPq(mlr);
-        pqe_discard(pq, *mlr->index);
+        pqe_discard(pq, mlr->index);
         unlockPq(mlr);
     }
     else {
@@ -321,12 +321,12 @@ eop_func(
 static void
 missed_prod_func(
         void*                obj,
-        const McastProdIndex iProd)
+        const VcmtpProdIndex iProd)
 {
     Mlr* mlr = obj;
 
     if (mlr->prod ) {
-        (void)pqe_discard(mlr->pq, *mlr->index);
+        (void)pqe_discard(mlr->pq, mlr->index);
         mlr->prod  = NULL;
     }
 

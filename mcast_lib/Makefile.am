@@ -79,7 +79,6 @@ all_stubs		= $(VCMTPReceiver_stubs) \
                           $(globals_stubs) \
                           $(mldm_sender_map_stubs) \
                           $(unistd_stubs)
-BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= $(all_stubs) TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \

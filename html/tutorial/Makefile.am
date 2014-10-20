@@ -70,6 +70,8 @@ nobase_html_DATA	= \
 
 all:
 
+if MAINTAINER
+
 $(EXTRA_DIST):
 	rm -rf tutorial
 	tclsh generate/generate.tcl -verbose \
@@ -84,7 +86,6 @@ web-update:	$(EXTRA_DIST)
 	    tutorial/ \
 	    $(WEB_DESTDIR)/tutorial
 
-clean-local:
-	rm -rf tutorial
-
 .PHONY:		web-update tutorial
+
+endif

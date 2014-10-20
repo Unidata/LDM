@@ -260,20 +260,25 @@ mcastSender_new(
     const char* const    groupAddr,
     const unsigned short groupPort,
     const unsigned       ttl,
-    const McastProdIndex iProd)
+    const VcmtpProdIndex iProd)
 {
+    int status;
+
     try {
         vcmtpSendv3* sndr = new vcmtpSendv3(serverAddr, serverPort, groupAddr,
                 groupPort, iProd);
+        status = 0;
     }
     catch (const std::invalid_argument& e) {
         LOG_START1("%s", e.what());
-        return EINVAL;
+        status = EINVAL;
     }
     catch (const std::exception& e) {
         LOG_START1("%s", e.what());
-        return -1;
+        status = -1;
     }
+
+    return status;      // Eclipse wants to see a return
 }
 
 /**
@@ -306,7 +311,7 @@ mcastSender_send(
     const size_t          nbytes,
     const void* const     metadata,
     const unsigned        metaSize,
-    McastProdIndex* const iProd)
+    VcmtpProdIndex* const iProd)
 {
     try {
         /*

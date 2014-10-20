@@ -57,7 +57,7 @@ typedef struct {
      */
     size_t         numSigs;   ///< Number of signatures
     size_t         oldSig;    ///< Offset of oldest signature
-    McastProdIndex oldIProd;  ///< Product-index of oldest signature
+    VcmtpProdIndex oldIProd;  ///< Product-index of oldest signature
     signaturet     sigs[1];   ///< Data-products signatures
 } Mmo;
 static Mmo*         mmo;
@@ -650,7 +650,7 @@ openMapForReading(
  */
 static inline void
 clearMapIfUnexpected(
-        const McastProdIndex iProd)
+        const VcmtpProdIndex iProd)
 {
     if (mmo->numSigs && (iProd != mmo->oldIProd + mmo->numSigs))
         clearMap();
@@ -764,7 +764,7 @@ pim_close(void)
  */
 Ldm7Status
 pim_put(
-        const McastProdIndex    iProd,
+        const VcmtpProdIndex    iProd,
         const signaturet* const sig)
 {
     int status = lockMapAndBlockSignals();
@@ -801,13 +801,13 @@ pim_put(
  */
 Ldm7Status
 pim_get(
-        const McastProdIndex iProd,
+        const VcmtpProdIndex iProd,
         signaturet* const    sig)
 {
     int status = lockMap(0); // shared lock
 
     if (0 == status) {
-        const McastProdIndex delta = iProd - mmo->oldIProd;
+        const VcmtpProdIndex delta = iProd - mmo->oldIProd;
 
         if (delta >= mmo->numSigs) {
             status = LDM7_NOENT;
@@ -836,7 +836,7 @@ pim_get(
  */
 Ldm7Status
 pim_getNextProdIndex(
-        McastProdIndex* const iProd)
+        VcmtpProdIndex* const iProd)
 {
     int status = lockMap(0); // shared lock
 

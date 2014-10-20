@@ -592,7 +592,7 @@ appendFileIds(
     const int                       seq,
     ProdIndexQueue* const restrict     fiq)
 {
-    McastProdIndex iProd;
+    VcmtpProdIndex iProd;
 
     while (piq_removeNoWait(fiq, &iProd) == 0) {
         char          buf[sizeof(iProd)*4+1]; // overly capacious
@@ -635,7 +635,7 @@ addMissedFiles(
     const int                                seq)
 {
     bool           success = false;
-    McastProdIndex iProd;
+    VcmtpProdIndex iProd;
     
     return appendFileIds(document, seq, msm->requestedQ) &&
             appendFileIds(document, seq, msm->missedQ);
@@ -980,7 +980,7 @@ static bool
 addFile(
     McastSessionMemory* const restrict msm,
     ProdIndexQueue* const restrict        fiq,
-    const McastProdIndex               iProd)
+    const VcmtpProdIndex               iProd)
 {
     bool success = piq_add(fiq, iProd) == 0;
 
@@ -1159,7 +1159,7 @@ msm_clearAllMissedFiles(
 bool
 msm_getAnyMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastProdIndex* const restrict     iProd)
+    VcmtpProdIndex* const restrict     iProd)
 {
     return piq_removeNoWait(msm->requestedQ, iProd) == 0 ||
             piq_removeNoWait(msm->missedQ, iProd) == 0;
@@ -1178,7 +1178,7 @@ msm_getAnyMissedFileNoWait(
 bool
 msm_addMissedFile(
     McastSessionMemory* const restrict msm,
-    const McastProdIndex               iProd)
+    const VcmtpProdIndex               iProd)
 {
     return addFile(msm, msm->missedQ, iProd);
 }
@@ -1196,7 +1196,7 @@ msm_addMissedFile(
 bool
 msm_addRequestedFile(
     McastSessionMemory* const restrict msm,
-    const McastProdIndex               iProd)
+    const VcmtpProdIndex               iProd)
 {
     return addFile(msm, msm->requestedQ, iProd);
 }
@@ -1214,7 +1214,7 @@ msm_addRequestedFile(
 bool
 msm_peekMissedFileWait(
     McastSessionMemory* const restrict msm,
-    McastProdIndex* const restrict     iProd)
+    VcmtpProdIndex* const restrict     iProd)
 {
     return piq_peekWait(msm->missedQ, iProd) == 0;
 }
@@ -1231,7 +1231,7 @@ msm_peekMissedFileWait(
 bool
 msm_peekMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastProdIndex* const restrict     iProd)
+    VcmtpProdIndex* const restrict     iProd)
 {
     return piq_peekNoWait(msm->missedQ, iProd) == 0;
 }
@@ -1248,7 +1248,7 @@ msm_peekMissedFileNoWait(
 bool
 msm_removeMissedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastProdIndex* const restrict     iProd)
+    VcmtpProdIndex* const restrict     iProd)
 {
     return piq_removeNoWait(msm->missedQ, iProd) == 0;
 }
@@ -1266,7 +1266,7 @@ msm_removeMissedFileNoWait(
 bool
 msm_peekRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastProdIndex* const restrict     iProd)
+    VcmtpProdIndex* const restrict     iProd)
 {
     return piq_peekNoWait(msm->requestedQ, iProd) == 0;
 }
@@ -1283,7 +1283,7 @@ msm_peekRequestedFileNoWait(
 bool
 msm_removeRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
-    McastProdIndex* const restrict     iProd)
+    VcmtpProdIndex* const restrict     iProd)
 {
     return piq_removeNoWait(msm->requestedQ, iProd) == 0;
 }

@@ -156,8 +156,8 @@ up7_subscribe(
         struct SVCXPRT* const restrict    xprt,
         SubscriptionReply* const restrict reply)
 {
-    const McastInfo* mcastInfo;
-    int              status = mlsm_ensureRunning(feedtype, &mcastInfo);
+    McastInfo* mcastInfo;
+    int        status = mlsm_ensureRunning(feedtype, &mcastInfo);
 
     if (LDM7_SYSTEM == status)
         return status;
@@ -246,7 +246,7 @@ up7_deliverProduct(
 {
     MissedProduct missedProd;
 
-    missedProd.iProd = *(McastProdIndex*)optArg;
+    missedProd.iProd = *(VcmtpProdIndex*)optArg;
     missedProd.prod.info = *info;
     missedProd.prod.data = (void*)data; // cast away `const`
 
@@ -279,7 +279,7 @@ up7_deliverProduct(
  */
 static Ldm7Status
 up7_sendProduct(
-        McastProdIndex iProd)
+        VcmtpProdIndex iProd)
 {
     signaturet sig;
     int        status = pim_get(iProd, &sig);
@@ -318,7 +318,7 @@ up7_sendProduct(
  */
 static bool
 up7_findAndSendProduct(
-    const McastProdIndex iProd)
+    VcmtpProdIndex iProd)       // not `cont` because of `no_such_product_7()`
 {
     int status = up7_sendProduct(iProd);
 
@@ -611,7 +611,7 @@ subscribe_7_svc(
  */
 void*
 request_product_7_svc(
-    McastProdIndex* const iProd,
+    VcmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;

@@ -443,13 +443,13 @@ run_down7_svc(
 static int
 requestProduct(
     Down7* const      down7,
-    McastProdIndex const fileId)
+    VcmtpProdIndex const fileId)
 {
     int    status;
 #   define CLNT (down7->clnt)
 
     (void)lockClient(down7);
-    (void)request_product_7((McastProdIndex*)&fileId, CLNT); // asynchronous send
+    (void)request_product_7((VcmtpProdIndex*)&fileId, CLNT); // asynchronous send
 
     if (clnt_stat(CLNT) != RPC_TIMEDOUT) {
         /*
@@ -537,7 +537,7 @@ makeRequest(
     Down7* const down7)
 {
     int            status;
-    McastProdIndex    fileId;
+    VcmtpProdIndex    fileId;
 
     /*
      * The semantics and order of the following actions are necessary to
@@ -1278,7 +1278,7 @@ down7_run(
 void
 down7_missedProduct(
     Down7* const      down7,
-    const McastProdIndex fileId)
+    const VcmtpProdIndex fileId)
 {
     /*
      * Cancellation of the operation of the missed-but-not-requested queue is
@@ -1349,7 +1349,7 @@ deliver_missed_product_7_svc(
 {
     prod_info* const info = &missedProd->prod.info;
     Down7*           down7 = pthread_getspecific(down7Key);
-    McastProdIndex   iProd;
+    VcmtpProdIndex   iProd;
 
     if (!msm_peekRequestedFileNoWait(down7->msm, &iProd) ||
             iProd != missedProd->iProd) {
@@ -1375,7 +1375,7 @@ deliver_missed_product_7_svc(
  */
 void*
 no_such_product_7_svc(
-    McastProdIndex* const    fileId,
+    VcmtpProdIndex* const    fileId,
     struct svc_req* const rqstp)
 {
     uwarn("Upstream LDM-7 says requested product doesn't exist: %lu",

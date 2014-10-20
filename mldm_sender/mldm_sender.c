@@ -626,7 +626,7 @@ mls_init(
     if ((status = mls_openProdIndexMap(info->feed, pq_getSlotCount(pq))))
         goto close_pq;
 
-    McastProdIndex iProd;
+    VcmtpProdIndex iProd;
     if ((status = pim_getNextProdIndex(&iProd)))
         goto close_prod_index_map;
 
@@ -686,7 +686,7 @@ mls_multicastProduct(
         const size_t                    size,
         void* const restrict            arg)
 {
-    McastProdIndex iProd;
+    VcmtpProdIndex iProd;
     int            status = mcastSender_send(mcastSender, xprod, size,
             (void*)info->signature, sizeof(signaturet), &iProd);
 

@@ -28,7 +28,7 @@
 typedef struct entry {
     struct entry*  prev;   ///< points to the previous entry towards the head
     struct entry*  next;   ///< points to the next entry towards the tail
-    McastProdIndex iProd;  ///< index of the product
+    VcmtpProdIndex iProd;  ///< index of the product
 } Entry;
 
 /**
@@ -41,7 +41,7 @@ typedef struct entry {
  */
 static Entry*
 entry_new(
-    const McastProdIndex iProd)
+    const VcmtpProdIndex iProd)
 {
     Entry* entry = LOG_MALLOC(sizeof(Entry), "product-index queue-entry");
 
@@ -71,7 +71,7 @@ entry_free(
  * @param[in] entry  Pointer to the entry.
  * @return           The product-index of the entry.
  */
-static inline McastProdIndex
+static inline VcmtpProdIndex
 entry_getProductIndex(
     const Entry* const entry)
 {
@@ -348,7 +348,7 @@ piq_free(
 int
 piq_add(
     ProdIndexQueue* const   fiq,
-    const McastProdIndex iProd)
+    const VcmtpProdIndex iProd)
 {
     Entry* entry = entry_new(iProd);
     int    status;
@@ -381,7 +381,7 @@ piq_add(
 int
 piq_peekWait(
     ProdIndexQueue* const fiq,
-    McastProdIndex* const iProd)
+    VcmtpProdIndex* const iProd)
 {
     lock(fiq);
 
@@ -409,7 +409,7 @@ piq_peekWait(
 int
 piq_removeNoWait(
     ProdIndexQueue* const fiq,
-    McastProdIndex* const iProd)
+    VcmtpProdIndex* const iProd)
 {
     lock(fiq);
 
@@ -443,7 +443,7 @@ piq_removeNoWait(
 int
 piq_peekNoWait(
     ProdIndexQueue* const    fiq,
-    McastProdIndex* const iProd)
+    VcmtpProdIndex* const iProd)
 {
     lock(fiq);
 

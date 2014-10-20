@@ -11,17 +11,6 @@
  */
 
 #ifdef RPC_HDR
-%/*
-% * The following types are defined here because rpcgen(1) generates output that
-% * uses them and they are not defined in the expected programming environment.
-% */
-%typedef unsigned short u_short;
-%typedef unsigned int   u_int;
-%typedef unsigned long  u_long;
-%typedef char*          caddr_t;
-#endif /* RPC_HDR */
-
-#ifdef RPC_HDR
 %
 %#include <signal.h>     /* sig_atomic_t */
 %#include <stdlib.h>     /* at least malloc() */
