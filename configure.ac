@@ -620,6 +620,8 @@ AC_CONFIG_FILES([
     lib/Makefile
     Makefile
     mcast_lib/Makefile
+    mcast_lib/C/Makefile
+    mcast_lib/C++/Makefile
     misc/Makefile
     mldm_sender/Makefile
     noaaport/Makefile

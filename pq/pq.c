@@ -4821,12 +4821,13 @@ pq_del_oldest(
             (rlix = rl_find(pq->rlp, tqep->offset)) != RL_NONE;
             tqep = tq_next(pq->tqp, tqep)) {
 
-        if (pq_try_del_prod(pq, tqep, rlix))
+        if (pq_try_del_prod(pq, tqep, rlix)) {
+            pq->ctlp->isFull = 1; // Mark the queue as full.
             return 0;
+        }
     }
 
     uerror("pq_del_oldest(): no unlocked products left to delete!");
-    pq->ctlp->isFull = 1; // Mark the queue as full.
 
     return EACCES;
 
