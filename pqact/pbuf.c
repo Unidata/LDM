@@ -159,6 +159,17 @@ flush_timeo:
     return EAGAIN;
 }
 
+/**
+ * Writes to a pipe-buffer.
+ *
+ * @param[in] buf     Pipe buffer.
+ * @param[in] ptr     Data to write.
+ * @param[in] nbytes  Number of bytes to write.
+ * @param[in] timeo   How long to wait in seconds.
+ * @param[in] id      Command string.
+ * @retval    0       Success.
+ * @return            `errno` error-code.
+ */
 int
 pbuf_write(
     pbuf*               buf,

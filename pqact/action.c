@@ -34,9 +34,11 @@ ChildMap*        execMap = NULL;
 /*ARGSUSED*/
 static int
 prod_noop(
-        const product *prod,
-        int argc, char **argv,
-        const void *xprod, size_t xlen)
+        const product* const restrict prod,
+        const int                     argc,
+        char** const restrict         argv,
+        const void*                   xprod,
+        const size_t                  xlen)
 {
         return 0;
 }
@@ -58,11 +60,11 @@ prod_noop(
 /*ARGSUSED*/
 static int
 exec_prodput(
-     const product*     prod,
-     int                argc,
-     char**             argv,
-     const void*        xprod,
-     size_t             xlen)
+     const product* const restrict prod,
+     int                           argc,
+     char** restrict               argv,
+     const void* const restrict    xprod,
+     const size_t                  xlen)
 {
     pid_t       pid = 0;
 

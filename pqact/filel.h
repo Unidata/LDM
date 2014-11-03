@@ -41,8 +41,8 @@ extern int ldmdb_prodput( const product *prod, int argc, char **argv,
 #endif /* !NO_DB */
 extern pid_t reap(pid_t pid, int options);
 extern void fl_sync(int nentries, int block);
-extern void close_lru(int skipflags);
-extern void fl_close_all(void);
+extern void fl_closeLru(int skipflags);
+extern void fl_closeAll(void);
 extern void endpriv(void);
 extern int set_avail_fd_count(unsigned fdCount);
 extern int set_shared_space(int shid, int semid, unsigned size);

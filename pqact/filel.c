@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 University Corporation for Atmoserpheric Research
+ *   Copyright 2014 University Corporation for Atmospheric Research
  *
  *   See file "COPYRIGHT" in the top-level source-directory for copying and
  *   redistribution conditions.
@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <limits.h> /* PATH_MAX */
 #include <inttypes.h>
+#include <stdbool.h>
 #ifndef PATH_MAX
 #define PATH_MAX 255                    /* _POSIX_PATH_MAX */
 #endif /* !PATH_MAX */
@@ -57,20 +58,20 @@ union semun {
 #include "pbuf.h"
 #include "pq.h"
 
-extern pqueue* pq;
-extern ChildMap* execMap;
-
-static unsigned maxEntries = 0;
-static int shared_id = -1;
-static int sem_id = -1;
-static unsigned shared_size;
-static unsigned queue_counter = 0;
-static unsigned largest_queue_element = 0;
-static union semun semarg;
+extern pqueue*     pq;
+extern ChildMap*   execMap;
 /*
  * Defined in pqcat.c
  */
-extern int pipe_timeo;
+extern int         pipe_timeo;
+
+static unsigned    maxEntries = 0;
+static int         shared_id = -1;
+static int         sem_id = -1;
+static unsigned    shared_size;
+static unsigned    queue_counter = 0;
+static unsigned    largest_queue_element = 0;
+static union semun semarg;
 
 #ifndef NO_DB
 
@@ -100,13 +101,21 @@ extern int pipe_timeo;
  * The types of entries in the list. Keep consonant with TYPE_NAME.
  */
 typedef enum {
-    FT_NONE = 0, UNIXIO, STDIO, PIPE, FT_DB
+    FT_NONE = 0,
+    UNIXIO,
+    STDIO,
+    PIPE,
+    FT_DB
 } ft_t;
 
 /*
  * Converts "ft_t" into ASCII. Keep consonant with "ft_t".
  */
-static const char* const TYPE_NAME[] = { "NOOP", "FILE", "STDIOFILE", "PIPE",
+static const char* const TYPE_NAME[] = {
+        "NOOP",
+        "FILE",
+        "STDIOFILE",
+        "PIPE",
         "DBFILE" };
 
 /*
@@ -114,78 +123,97 @@ static const char* const TYPE_NAME[] = { "NOOP", "FILE", "STDIOFILE", "PIPE",
  * REASON_STRING.
  */
 typedef enum {
-    DR_TERMINATED = 0, /**< Child terminated */
-    DR_CLOSE, /**< entry contained "-close" option */
-    DR_LRU, /**< Close least-recently-used entry */
-    DR_ERROR /**< I/O error */
+    DR_TERMINATED = 0,  ///< Child terminated
+    DR_CLOSE,           ///< entry contained "-close" option
+    DR_LRU,             ///< Close least-recently-used entry
+    DR_ERROR            ///< I/O error
 } DeleteReason;
 
 /*
  * Printable versions of "DeleteReason". Keep consonant with that type.
  */
-static const char* const REASON_STRING[] = { "terminated", "closed",
-        "least-recently-used", "failed" };
+static const char* const REASON_STRING[] = {
+        "terminated",
+        "closed",
+        "least-recently-used",
+        "failed" };
 
 union f_handle {
-    int fd;
-    FILE *stream;
-    pbuf *pbuf;
+    int       fd;
+    FILE*     stream;
+    pbuf*     pbuf;
 #ifndef NO_DB
 # ifdef USE_GDBM
     GDBM_FILE db;
 # else
-    DBM *db;
+    DBM*      db;
 # endif
 #endif /*!NO_DB*/
 };
 typedef union f_handle f_handle;
 
+/**
+ * An entry in a list of entries, each of which has a open output.
+ */
 struct fl_entry {
     struct fl_entry* next;
     struct fl_entry* prev;
-    struct fl_ops* ops;
-    f_handle handle;
-    unsigned long private; /* pid, hstat*, R/W flg */
-    int flags;
-    int isClosed; /* if entry can't be used for writing */
-    ft_t type;
-    char path[PATH_MAX]; /* PATH_MAX includes NUL */
+    struct fl_ops*   ops;
+    f_handle         handle;
+    unsigned long    private;           // pid, hstat*, R/W flg
+    int              flags;
+    ft_t             type;
+    char             path[PATH_MAX];    // PATH_MAX includes NUL
 };
 typedef struct fl_entry fl_entry;
 
-#if defined(__cplusplus) || defined(__STDC__)
+/**
+ * The operations that can performed on an entry.
+ */
 struct fl_ops {
     int (*cmp)(
-            fl_entry *,
-            int,
-            char**);
+            fl_entry* entry,
+            int       argc,
+            char**    argv);
+    /**
+     * Opens the file of an entry. Does not add the entry to the open-file list.
+     *
+     * @param[in] entry  The entry.
+     * @param[in] argc   Number of arguments in the command.
+     * @param[in] argv   Command arguments.
+     * @retval    -1     Failure.
+     * @return           File-descriptor of the open file.
+     */
     int (*open)(
-            fl_entry *,
-            int,
-            char**);
+            fl_entry* entry,
+            int       argc,
+            char**    argv);
+    /**
+     * Closes the output of an entry.
+     *
+     * @param[in] entry  The entry.
+     */
     void (*close)(
-            fl_entry *);
+            fl_entry* entry);
+    /**
+     * Flushes any outstanding I/O of an entry to the associated output.
+     *
+     * @param[in] entry  The open-file entry.
+     * @param[in] block  Whether or not the I/O should block.
+     * @retval    0      Success.
+     * @retval    -1     Failure. Entry is removed from the open-file list and
+     *                   its resources freed.
+     * @return           `errno` error-code. Entry is removed from the open-file
+     *                   list and its resources freed.
+     */
     int (*sync)(
-            fl_entry *,
-            int);
-    int (*put)(
-            fl_entry *,
-            const char *,
-            const void *,
-            size_t);
+            fl_entry* entry,
+            int       block);
 };
-#else /* Old Style C */
-struct fl_ops {
-    int (*cmp)();
-    int (*open)();
-    void (*close)();
-    int (*sync)();
-    int (*dbufput)();
-};
-#endif
 
-/*
- * the one global list of of open files
+/**
+ * The one global list of entries. INVARIANT: entry is in list <=> entry's
+ * output is open.
  */
 static struct fl {
     int size;
@@ -194,48 +222,99 @@ static struct fl {
 } thefl[] = { 0, NULL, NULL };
 
 #define TO_HEAD(entry) \
-        if(thefl->head != entry) to_head(entry)
+        if(thefl->head != entry) fl_makeHead(entry)
 
-static void to_head(
+/**
+ * Frees an open-file entry -- releasing all resources including closing the
+ * associated output.
+ *
+ * @param[in] entry  The entry to be freed or `NULL`.
+ */
+static void
+entry_free(
         fl_entry *entry)
 {
-    if (thefl->head == entry)
-        return;
+    if (entry != NULL) {
+        if (entry->ops != NULL)
+            entry->ops->close(entry);
 
+        free(entry);
+    }
+}
+
+/*
+ * Forward reference
+ */
+static fl_entry* entry_new(
+        ft_t         type,
+        int          argc,
+        char** const argv);
+
+/**
+ * Removes an entry from the open-file list.
+ *
+ * @param[in] entry  The entry to be removed.
+ * @pre              {The entry is in the list.}
+ */
+static void
+fl_remove(
+        fl_entry* const entry)
+{
     if (entry->prev != NULL )
         entry->prev->next = entry->next;
     if (entry->next != NULL )
         entry->next->prev = entry->prev;
 
-    if (thefl->head != NULL )
-        thefl->head->prev = entry;
+    if (thefl->head == entry )
+        thefl->head = entry->next;
     if (thefl->tail == entry)
         thefl->tail = entry->prev;
+
+    entry->prev = NULL;
+    entry->next = NULL;
+
+    thefl->size--;
+}
+
+/**
+ * Adds an entry to the head of the open-file list.
+ *
+ * @param[in] entry  The entry to be added.
+ * @pre              {The entry is not in the list.}
+ */
+static void
+fl_addToHead(
+        fl_entry* const entry)
+{
+    if (thefl->head != NULL )
+        thefl->head->prev = entry;
 
     entry->next = thefl->head;
     entry->prev = NULL;
     thefl->head = entry;
-    if (thefl->tail == NULL )
+
+    if (thefl->tail == NULL)
         thefl->tail = entry;
+
+    thefl->size++;
 }
 
-static void free_fl_entry(
+/**
+ * Moves an entry in the open-file list to the head of the list.
+ *
+ * @param[in] entry  The entry to be moved.
+ * @pre              {The entry is in the list.}
+ */
+static void
+fl_makeHead(
         fl_entry *entry)
 {
-    if (entry == NULL )
+    if (thefl->head == entry)
         return;
 
-    if (entry->ops != NULL ) {
-        entry->ops->close(entry);
-    }
-    free(entry);
+    fl_remove(entry);
+    fl_addToHead(entry);
 }
-
-/* forward reference */
-static fl_entry * new_fl_entry(
-        ft_t type,
-        int argc,
-        char **argv);
 
 #ifdef FL_DEBUG
 static void
@@ -274,174 +353,195 @@ dump_fl(void)
 }
 #endif
 
-static fl_entry *
-lookup_fl_entry(
-        ft_t type,
-        int argc,
-        char **argv)
+/**
+ * Finds the entry in the list corresponding to a given type of entry and
+ * command arguments.
+ *
+ * @param[in] type  Type of entry.
+ * @param[in] argc  Number of command arguments.
+ * @param[in] argv  Command arguments.
+ * @retval    NULL  No such entry.
+ * @return          Corresponding entry.
+ */
+static fl_entry*
+fl_find(
+        const ft_t   type,
+        const int    argc,
+        char** const argv)
 {
     fl_entry *entry = NULL;
 
     for (entry = thefl->head; entry != NULL ; entry = entry->next) {
-        if (entry->isClosed)
-            continue;
         if (entry->type == type && entry->ops->cmp(entry, argc, argv) == 0)
             break;
     }
+
     return entry;
 }
 
-static void delete_entry(
-        fl_entry* const entry, /**< [in/out] Pointer to the entry to be
-         *  deleted. May be \c NULL. */
-        const DeleteReason dr) /**< [in] The reason for the deletion */
+/**
+ * Removes an entry in the open-file list and frees the entry's resources.
+ *
+ * NB: Dereferencing the entry after this call results in undefined behavior.
+ *
+ * @param[in] entry Pointer to the entry to be deleted or NULL.
+ * @param[in] dr    The reason for the deletion.
+ * @pre             {If `entry != NULL`, then the entry is in the list.}
+ */
+static void
+fl_removeAndFree(
+        fl_entry* const    entry,
+        const DeleteReason dr)
 {
-    /* assert(thefl->size >= 1); */
+    // assert(thefl->size >= 1);
 
-    if (entry != NULL ) {
-        PIPE == entry->type ?
-                LOG_START4("Deleting %s %s entry: pid=%lu, cmd=\"%s\"",
-                        REASON_STRING[dr], TYPE_NAME[entry->type], entry->private,
-                        entry->path) :
-                        LOG_START3("Deleting %s %s entry \"%s\"", REASON_STRING[dr],
-                                TYPE_NAME[entry->type], entry->path);
-        log_log(DR_ERROR == dr ? LOG_ERR : LOG_INFO);
+    if (entry != NULL) {
+        int logLevel = (DR_ERROR == dr) ? LOG_ERR : LOG_INFO;
 
-        if (entry->prev != NULL )
-            entry->prev->next = entry->next;
-        if (entry->next != NULL )
-            entry->next->prev = entry->prev;
-        if (thefl->head == entry)
-            thefl->head = entry->next;
-        if (thefl->tail == entry)
-            thefl->tail = entry->prev;
+        if (PIPE == entry->type) {
+            ulog(logLevel, "Deleting %s PIPE entry: pid=%lu, cmd=\"%s\"",
+                    REASON_STRING[dr], entry->private, entry->path);
+        }
+        else {
+            ulog(logLevel, "Deleting %s %s entry \"%s\"", REASON_STRING[dr],
+                    TYPE_NAME[entry->type], entry->path);
+        }
 
-        thefl->size--;
-
-        free_fl_entry(entry);
+        fl_remove(entry);
+        entry_free(entry);
     }
 }
 
-/*
- * sync up to nentries entries, tail to head.
+/**
+ * Flushes outstanding I/O of entries in the list starting with the tail of the
+ * list and moving to the head.
+ *
+ * @param[in] nentries  Number of entries to flush or `-1` to flush all entries.
+ * @param[in] block     Whether or not the I/O should block.
  */
-void fl_sync(
-        int nentries,
-        int block) /* bool_t, FALSE => nonblocking */
+void
+fl_sync(
+        int       nentries,
+        const int block)
 {
-    fl_entry *entry, *prev;
-
-    /*      udebug("  fl_sync"); */
+    // udebug("  fl_sync");
 
     if (thefl->size <= 0)
         return;
+
     if (nentries == -1) /* sync everyone */
         nentries = thefl->size;
 
+    fl_entry *entry, *prev;
     for (entry = thefl->tail; entry != NULL && nentries >= 0;
             entry = prev, nentries--) {
         prev = entry->prev;
-        if (entry->flags & FL_NEEDS_SYNC) {
-            if (entry->ops->sync(entry, block) == -1)
-                delete_entry(entry, DR_ERROR);
-        }
+
+        if (entry->flags & FL_NEEDS_SYNC)
+            (void)entry->ops->sync(entry, block);
     }
 }
 
-/*
- * close the "least recently used" entry
+/**
+ * Closes, removes, and frees the "least recently used" entry that doesn't have
+ * certain flags set. Starts with the tail of the list.
+ *
+ * @param[in] skipflags  Flags that will cause the entry to be skipped.
  */
-void close_lru(
-        int skipflags)
+void
+fl_closeLru(
+        const int skipflags)
 {
-    fl_entry *entry, *prev;
-
     if (thefl->size <= 0)
         return;
 
+    fl_entry *entry, *prev;
     for (entry = thefl->tail; entry != NULL ; entry = prev) {
         prev = entry->prev;
         /* twisted logic */
         if (entry->flags & skipflags)
             continue;
         /* else */
-        delete_entry(entry, DR_LRU);
+        fl_removeAndFree(entry, DR_LRU);
         return;
     }
 }
 
-void fl_close_all(
+/**
+ * Closes, removes, and frees all entries from the list.
+ */
+void
+fl_closeAll(
         void)
 {
-    while (thefl->size > 0) {
-        close_lru(0);
-    }
+    while (thefl->size > 0)
+        fl_closeLru(0);
 }
 
-/*
- * Look for an fl_entry in the list.
- * If there isn't one there that matches what you need, make a new one.
+/**
+ * Returns the entry in the list corresponding to a given type and command.
+ * Creates the entry if it doesn't exist. INVARIANT: An entry in the list has
+ * its output open.
+ *
+ * @param[in]  type     Type of entry.
+ * @param[in]  argc     Number of command arguments.
+ * @param[in]  argv     Command arguments.
+ * @param[out] isNew    Whether or not a new entry was created or `NULL`.
+ * @retval     NULL     Couldn't create new entry.
+ * @return              Corresponding entry. `*isNew` is set if possible.
  */
-static fl_entry *
-get_fl_entry(
-        ft_t type,
-        int argc,
-        char **argv)
+static fl_entry*
+fl_getEntry(
+        const ft_t            type,
+        const int             argc,
+        char** const restrict argv,
+        bool* const restrict  isNew)
 {
-    fl_entry *entry;
+    fl_entry* entry = fl_find(type, argc, argv);
+    bool      wasCreated;
 
-    entry = lookup_fl_entry(type, argc, argv);
-    if (entry != NULL ) {
+    if (NULL != entry) {
         TO_HEAD(entry);
 #ifdef FL_DEBUG
         dump_fl();
 #endif
-        return entry;
+        wasCreated = false;
     }
-    /* else */
+    else {
+        assert(maxEntries > 0);
 
-    assert(maxEntries > 0);
+        if (thefl->size >= maxEntries)
+            fl_closeLru(0);
 
-    if (thefl->size >= maxEntries)
-        close_lru(0);
-
-    entry = new_fl_entry(type, argc, argv);
-    if (entry == NULL ) {
-        return NULL ; /* malloc or open failed */
-    }
-
-    /* to front */
-    if (thefl->head != NULL )
-        thefl->head->prev = entry;
-    entry->next = thefl->head;
-    entry->prev = NULL;
-    thefl->head = entry;
-    if (thefl->tail == NULL )
-        thefl->tail = entry;
-    thefl->size++;
-
+        entry = entry_new(type, argc, argv);
+        if (NULL != entry) {
+            fl_addToHead(entry);
 #ifdef FL_DEBUG
-    dump_fl();
+            dump_fl();
 #endif
+            wasCreated = true;
+        }
+    }
+
+    if (entry)
+        *isNew = wasCreated;
+
     return entry;
 }
 
-/*
- * Returns the file-list entry associated with a PID. Note that only PIPE
- * entries have a PID.
+/**
+ * Returns the PIPE entry in the list corresponding to a PID (only PIPE entries
+ * have PID-s).
  *
- * Arguments:
- *      pid             The PID of the file-list entry to return.
- * Returns:
- *      NULL            The file-list doesn't contain an entry with the given
- *                      PID.
- *      else            A pointer to the associated file-list entry.
+ * @param[in] pid   PID of the PIPE entry to return.
+ * @retval    NULL  No such entry.
+ * @return          Corresponding entry.
  */
 static fl_entry*
 fl_findByPid(
         const pid_t pid)
 {
-    fl_entry* entry = NULL; /* entry not found */
+    fl_entry* entry;
 
     for (entry = thefl->tail; entry != NULL ; entry = entry->prev) {
         if (pid == entry->private)
@@ -451,15 +551,13 @@ fl_findByPid(
     return entry;
 }
 
-/*
+/**
  * Ensures that a given file descriptor will be closed upon execution of an
  * exec(2) family function.
  *
- * Arguments:
- *      fd      The file descriptor to be set to close-on-exec.
- * Returns:
- *      NULL    Success.
- *      else    Error object.
+ * @param[in] fd      The file descriptor to be set to close-on-exec.
+ * @retval    NULL    Success.
+ * @return            Error object.
  */
 static ErrorObj*
 ensureCloseOnExec(
@@ -483,14 +581,30 @@ ensureCloseOnExec(
     return errObj;
 }
 
-static int atFinishedArgs(
-        int ac,
-        char *av[],
-        fl_entry *entry)
+/**
+ * Performs optional actions at the end of a product.
+ *
+ * NB: If the `-close` option is specified, then the entry is removed from the
+ * list and its resources are freed. Consequently, the caller must not
+ * dereference it.
+ *
+ * @param[in] ac     Number of arguments.
+ * @param[in] av     Arguments.
+ * @param[in] entry  Entry.
+ * @retval    0      Success. Entry was removed from list and freed if
+ *                   arguments contained `-close` option.
+ * @return           `errno` error-code. `uerror()` called. Entry was not
+ *                   removed or freed.
+ */
+static int finishProduct(
+        int                      ac,
+        char** restrict          av,
+        fl_entry* const restrict entry)
 {
-    int status = 0;
+    int status;
     int syncflag = 0;
     int closeflag = 0;
+
     for (; ac > 1 && *av[0] == '-'; ac--, av++) {
         if (strncmp(*av, "-close", 3) == 0) {
             closeflag = 1;
@@ -499,28 +613,38 @@ static int atFinishedArgs(
             syncflag = 1;
         }
     }
-    if (syncflag)
-        status = (*entry->ops->sync)(entry, syncflag);
-    if (closeflag)
-        delete_entry(entry, 0 == status ? DR_CLOSE : DR_ERROR);
+
+    status = syncflag
+            ? (*entry->ops->sync)(entry, syncflag)
+            : 0;
+
+    if (0 == status && closeflag)
+        fl_removeAndFree(entry, DR_CLOSE);
+
     return status;
 }
 
-/*
- * Given a dbuf, return a copy with the non '\n'
- * control characters removed.
- * Remember to free the result.
+/**
+ * Returns a copy of a character array with all control characters removed
+ * except newlines. Remember to free the result.
+ *
+ * @param[in] in       Input character array.
+ * @param[in] len      Input size in bytes.
+ * @param[in] outlenp  Output size in bytes.
+ * @retval    NULL     System failure. `serror()` called.
+ * @return             Pointer to new character array. Caller should free when
+ *                     it's no longer needed.
  */
 static void *
 dupstrip(
-        const void *in,
-        size_t len,
-        size_t *outlenp)
+        const void*            in,
+        const size_t           len,
+        size_t* const restrict outlenp)
 {
-    void *out;
-    size_t blen;
-    const unsigned char *ip;
-    unsigned char *op;
+    void*                out;
+    size_t               blen;
+    const unsigned char* ip;
+    unsigned char*       op;
 
     if (in == NULL || len == 0)
         return NULL ;
@@ -544,11 +668,11 @@ dupstrip(
 
 /* Begin UNIXIO */
 static int str_cmp(
-        fl_entry *entry,
-        int argc,
-        char **argv)
+        fl_entry*             entry,
+        const int             argc,
+        char** const restrict argv)
 {
-    char *path;
+    const char* path;
 
     assert(argc > 0);
     assert(argv[argc -1] != NULL);
@@ -567,7 +691,7 @@ static int str_cmp(
  *      av      Pointer to pointers to arguments.
  * Returns:
  *      -1      Failure.  An error-message is logged.
- *      else    The file descriptor for the output-file.
+ *      else    The file descriptor of the output-file.
  */
 static int unio_open(
         fl_entry *entry,
@@ -611,8 +735,8 @@ static int unio_open(
             /*
              * Too many open files.
              */
-            close_lru(0);
-            close_lru(0);
+            fl_closeLru(0);
+            fl_closeLru(0);
         }
 
         serror("unio_open: %s", path);
@@ -667,7 +791,7 @@ static void unio_close(
             serror("close: %s", entry->path);
         }
     }
-    entry->isClosed = 1;
+
     entry->handle.fd = -1;
 }
 
@@ -740,15 +864,13 @@ static int unio_put(
              * Don't waste time syncing an errored entry.
              */
             entry->flags &= ~FL_NEEDS_SYNC;
-            delete_entry(entry, DR_ERROR);
         }
     }
 
     return errCode;
 }
 
-static struct fl_ops unio_ops = { str_cmp, unio_open, unio_close, unio_sync,
-        unio_put, };
+static struct fl_ops unio_ops = { str_cmp, unio_open, unio_close, unio_sync};
 
 /*
  * Writes the data-product creation-time to the file as
@@ -905,14 +1027,14 @@ static int unio_out(
 
 /*ARGSUSED*/
 int unio_prodput(
-        const product* prodp,
-        int argc,
-        char** argv,
-        const void* ignored,
-        size_t also_ignored)
+        const product* const restrict prodp,
+        const int                     argc,
+        char** const restrict         argv,
+        const void*                   ignored,
+        const size_t                  also_ignored)
 {
     int status = -1; /* failure */
-    fl_entry* entry = get_fl_entry(UNIXIO, argc, argv);
+    fl_entry* entry = fl_getEntry(UNIXIO, argc, argv, NULL);
 
     udebug("    unio_prodput: %d %s", entry == NULL ? -1 : entry->handle.fd,
             prodp->info.ident);
@@ -941,8 +1063,6 @@ int unio_prodput(
                         dupstrip(prodp->data, prodp->info.sz, &sz) : prodp->data;
 
         if (data != NULL ) {
-            status = 0; /* success */
-
             if (entry->flags & FL_OVERWRITE) {
                 if (lseek(entry->handle.fd, 0, SEEK_SET) < 0) {
                     /*
@@ -958,18 +1078,19 @@ int unio_prodput(
                 if (entry->flags & FL_OVERWRITE)
                     (void) ftruncate(entry->handle.fd, sz);
 
-                status = atFinishedArgs(argc, argv, entry);
+                /*
+                 * The `flags` field is saved because `finishProduct()` might
+                 * free the entry.
+                 */
+                int flags = entry->flags;
 
-                /*                if ((status == 0) && (entry->flags & FL_LOG))
-             unotice("Filed in \"%s\": %s",
-             argv[argc-1],
-             s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
-             }                       /* data written */
+                status = finishProduct(argc, argv, entry); // might free entry
+
                 if (status == 0) {
-                    if (entry->flags & FL_LOG)
+                    if (flags & FL_LOG)
                         unotice("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
-                    if ((entry->flags & FL_EDEX) && shared_id != -1) {
+                    if ((flags & FL_EDEX) && shared_id != -1) {
                         semarg.val = queue_counter;
                         (void)semctl(sem_id, 1, SETVAL, semarg);
                         queue_counter =
@@ -982,9 +1103,11 @@ int unio_prodput(
             if (data != prodp->data)
                 free(data);
         } /* data != NULL */
+
+        if (status)
+            fl_removeAndFree(entry, DR_ERROR);
     } /* entry != NULL */
-    udebug("    unio_prodput: complete for %s at location %s", prodp->info.ident,
-            entry->path);
+
     return status;
 }
 
@@ -1000,7 +1123,7 @@ int unio_prodput(
  *      av      Pointer to pointers to arguments.
  * Returns:
  *      -1      Failure.  An error-message is logged.
- *      else    File descriptor for the output-file.
+ *      else    File descriptor of the output-file.
  */
 static int stdio_open(
         fl_entry *entry,
@@ -1041,8 +1164,8 @@ static int stdio_open(
             /*
              * Too many open files.
              */
-            close_lru(0);
-            close_lru(0);
+            fl_closeLru(0);
+            fl_closeLru(0);
         }
 
         serror("mkdirs_open: %s", path);
@@ -1102,7 +1225,6 @@ static void stdio_close(
             serror("fclose: %s", entry->path);
         }
     }
-    entry->isClosed = 1;
     entry->handle.stream = NULL;
 }
 
@@ -1142,7 +1264,6 @@ static int stdio_put(
 
         /* don't waste time syncing an errored entry */
         entry->flags &= ~FL_NEEDS_SYNC;
-        delete_entry(entry, DR_ERROR);
         return -1;
     }
     /* else */
@@ -1150,19 +1271,18 @@ static int stdio_put(
     return 0;
 }
 
-static struct fl_ops stdio_ops = { str_cmp, stdio_open, stdio_close, stdio_sync,
-        stdio_put, };
+static struct fl_ops stdio_ops = { str_cmp, stdio_open, stdio_close, stdio_sync};
 
 /*ARGSUSED*/
 int stdio_prodput(
-        const product* prodp,
-        int argc,
-        char** argv,
-        const void* ignored,
-        size_t also_ignored)
+        const product* const restrict prodp,
+        const int                     argc,
+        char** const restrict         argv,
+        const void* const restrict    ignored,
+        const size_t                  also_ignored)
 {
     int status = -1; /* failure */
-    fl_entry* entry = get_fl_entry(STDIO, argc, argv);
+    fl_entry* entry = fl_getEntry(STDIO, argc, argv, NULL);
 
     udebug("    stdio_prodput: %d %s",
             entry == NULL ? -1 : fileno(entry->handle.stream), prodp->info.ident);
@@ -1190,9 +1310,15 @@ int stdio_prodput(
                 if (entry->flags & FL_OVERWRITE)
                     (void) ftruncate(fileno(entry->handle.stream), sz);
 
-                status = atFinishedArgs(argc, argv, entry);
+                /*
+                 * The `flags` field is saved because `finishProduct()` might
+                 * free the entry.
+                 */
+                int flags = entry->flags;
 
-                if ((status == 0) && (entry->flags & FL_LOG))
+                status = finishProduct(argc, argv, entry); // might free entry
+
+                if ((status == 0) && (flags & FL_LOG))
                     unotice("StdioFiled in \"%s\": %s", argv[argc - 1],
                             s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
             } /* data written */
@@ -1200,6 +1326,9 @@ int stdio_prodput(
             if (data != prodp->data)
                 free(data);
         } /* data != NULL */
+
+        if (status)
+            fl_removeAndFree(entry, DR_ERROR);
     } /* entry != NULL */
 
     return status;
@@ -1292,7 +1421,7 @@ void endpriv(
  *              command.
  * Returns:
  *      -1      Failure.  An error-message is logged.
- *      else    File descriptor for the write-end of the pipe.
+ *      else    File descriptor of the write-end of the pipe.
  */
 static int pipe_open(
         fl_entry *entry,
@@ -1339,8 +1468,8 @@ static int pipe_open(
             /*
              * Too many open files.
              */
-            close_lru(0);
-            close_lru(0);
+            fl_closeLru(0);
+            fl_closeLru(0);
         }
 
         LOG_SERROR0("Couldn't create pipe");
@@ -1354,7 +1483,7 @@ static int pipe_open(
          * of an exec(2) family function because no child processes should
          * inherit it.
          */
-        if (errObj = ensureCloseOnExec(pfd[1])) {
+        if ((errObj = ensureCloseOnExec(pfd[1]))) {
             err_log_and_free(ERR_NEW(0, errObj,
                     "Couldn't set write-end of pipe to close on exec()"),
                     ERR_FAILURE);
@@ -1476,10 +1605,37 @@ static int pipe_sync(
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                     block ? "" : "non-block");
     status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo, entry->path);
-    if (status != ENOERR && status != EINTR) {
-        entry->flags &= ~FL_NEEDS_SYNC;
-        uerror("pipe_sync(): pid=%lu, cmd=(%s)", entry->private, entry->path);
+    if (status) {
+        if (block) {
+            if (status != EINTR) {
+                uerror("pipe_sync(): pid=%lu, cmd=(%s)", entry->private,
+                        entry->path);
+                /*
+                 * Don't waste time syncing an errored entry.
+                 */
+                entry->flags &= ~FL_NEEDS_SYNC;
+            }
+        }
+        else {
+            if (status == EAGAIN) {
+                status = 0;
+            }
+            else {
+                if (status != EINTR) {
+                    uerror("pipe_sync(): pid=%lu, cmd=(%s)", entry->private,
+                            entry->path);
+                    /*
+                     * Don't waste time syncing an errored entry.
+                     */
+                    entry->flags &= ~FL_NEEDS_SYNC;
+                }
+            }
+        }
     }
+    else {
+        entry->flags &= ~FL_NEEDS_SYNC;
+    }
+
     return status;
 }
 
@@ -1508,7 +1664,6 @@ static void pipe_close(
          * upon synchronously in a loop in main().
          */
     }
-    entry->isClosed = 1;
     entry->handle.pbuf = NULL;
 }
 
@@ -1538,16 +1693,14 @@ static int pipe_put(
                     entry->path);
             /* don't waste time syncing an errored entry */
             entry->flags &= ~FL_NEEDS_SYNC;
-            delete_entry(entry, DR_ERROR);
             return status;
         }
     }
     entry->flags |= FL_NEEDS_SYNC;
-    return ENOERR;
+    return status;
 }
 
-static struct fl_ops pipe_ops = { argcat_cmp, pipe_open, pipe_close, pipe_sync,
-        pipe_put, };
+static struct fl_ops pipe_ops = { argcat_cmp, pipe_open, pipe_close, pipe_sync};
 
 /*
  * Writes the data-product creation-time to the pipe as
@@ -1599,22 +1752,28 @@ static int pipe_putcreation(
     return status;
 }
 
-/*
+/**
  * Writes the data-product metadata to the pipe as:
- *      metadata-length in bytes                                 uint32_t
- *      data-product signature (MD5 checksum)                    uchar[16]
- *      data-product size in bytes                               uint32_t
- *      product creation-time in seconds since the epoch:
- *              integer portion                                  uint64_t
- *              microseconds portion                             int32_t
- *      data-product feedtype                                    uint32_t
- *      data-product sequence number                             uint32_t
- *      product-identifier:
- *              length in bytes (excluding NUL)                  uint32_t
- *              non-NUL-terminated string                        char[]
- *      product-origin:
- *              length in bytes (excluding NUL)                  uint32_t
- *              non-NUL-terminated string                        char[]
+ *    - metadata-length in bytes                                 uint32_t
+ *    - data-product signature (MD5 checksum)                    uchar[16]
+ *    - data-product size in bytes                               uint32_t
+ *    - product creation-time in seconds since the epoch:
+ *            - integer portion                                  uint64_t
+ *            - microseconds portion                             int32_t
+ *    - data-product feedtype                                    uint32_t
+ *    - data-product sequence number                             uint32_t
+ *    - product-identifier:
+ *            - length in bytes (excluding NUL)                  uint32_t
+ *            - non-NUL-terminated string                        char[]
+ *    - product-origin:
+ *            - length in bytes (excluding NUL)                  uint32_t
+ *            - non-NUL-terminated string                        char[]
+ *
+ * @param[in] entry  Open-file list entry.
+ * @param[in] info   Data-product metadata.
+ * @param[in] sz     Size of the data in bytes.
+ * @retval    0      Success.
+ * @return           `errno` error-code.
  */
 static int pipe_putmeta(
         fl_entry* entry,
@@ -1687,79 +1846,119 @@ static int pipe_putmeta(
     return status;
 }
 
+/**
+ * Writes a data-product to the file of an open-file list entry.
+ *
+ * @param[in] entry  Open-file list entry.
+ * @param[in] info   Data-product metadata.
+ * @param[in] data   Data to write.
+ * @param[in] sz     Amount of data in bytes.
+ * @retval    0      Success.
+ * @return           `errno` error-code.
+ */
 static int pipe_out(
-        fl_entry* entry,
-        const product* prodp,
-        const void* data,
-        const uint32_t sz)
+        fl_entry* const restrict        entry,
+        const prod_info* const restrict info,
+        const void* restrict            data,
+        const uint32_t                  sz)
 {
     int status = ENOERR;
 
     if (entry->flags & FL_METADATA) {
-        status = pipe_putmeta(entry, &prodp->info, sz);
+        status = pipe_putmeta(entry, info, sz);
     }
     if (status == ENOERR && !(entry->flags & FL_NODATA)) {
-        status = pipe_put(entry, prodp->info.ident, data, sz);
+        status = pipe_put(entry, info->ident, data, sz);
     }
 
     return status;
 }
 
+/**
+ * Sends a data-product to a decoder via a pipe.
+ *
+ * @param[in] prodp         Data-product to be sent.
+ * @param[in] argc          Number of decoder command arguments.
+ * @param[in] argv          Decoder command arguments.
+ * @param[in] ignored       Ignored.
+ * @param[in] also_ignored  Ignored.
+ * @retval    0             Success.
+ * @retval    -1            Couldn't create relevant entry.
+ * @retval    -1            Couldn't strip control-characters from data.
+ * @return                  `errno` error code.
+ */
 /*ARGSUSED*/
 int pipe_prodput(
-        const product *prodp,
-        int argc,
-        char **argv,
-        const void *ignored,
-        size_t also_ignored)
+        const product* const restrict prodp,
+        const int                     argc,
+        char** const restrict         argv,
+        const void* const restrict    ignored,
+        const size_t                  also_ignored)
 {
-    int status = 0;
-    void *data = prodp->data;
-    size_t sz = prodp->info.sz;
-    fl_entry *entry = get_fl_entry(PIPE, argc, argv);
+    int       status;
+    size_t    sz = prodp->info.sz;
+    bool      isNew;
+    fl_entry* entry = fl_getEntry(PIPE, argc, argv, &isNew);
 
-    udebug("    pipe_prodput: %d %s",
-            (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
-                    prodp->info.ident);
-
-    if (entry == NULL )
-        return -1;
-
-    if (entry->flags & FL_STRIP) {
-        data = dupstrip(prodp->data, prodp->info.sz, &sz);
-        if (data == NULL )
-            return -1;
+    if (entry == NULL ) {
+        udebug("    pipe_prodput: %s", prodp->info.ident);
+        status = -1;
     }
+    else {
+        udebug("    pipe_prodput: %d %s",
+                entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
+                prodp->info.ident);
 
-    status = pipe_out(entry, prodp, data, sz);
-    if (status == EPIPE) {
-        /*
-         * In case the decoder exited and we haven't yet reaped,
-         * try again once.
-         */
-        uerror("pipe_prodput: trying again: %s",
-                s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
-        entry = get_fl_entry(PIPE, argc, argv);
-        if (entry == NULL )
-            return -1;
-        status = pipe_out(entry, prodp, data, sz);
-    }
-    if (data != prodp->data)
-        free(data);
+        void *data;
 
-    if (status != ENOERR)
-        return -1;
+        if (entry->flags & FL_STRIP) {
+            data = dupstrip(prodp->data, prodp->info.sz, &sz);
+            status = (NULL == data) ? -1 : 0;
+        }
+        else {
+            data = prodp->data;
+            status = 0;
+        }
 
-    return atFinishedArgs(argc, argv, entry);
+        if (0 == status) {
+            status = pipe_out(entry, &prodp->info, data, sz);
+
+            if (EPIPE == status && !isNew) {
+                /*
+                 * The entry's decoder was started by a previous invocation
+                 * and it terminated (which shouldn't have happened). Remove the
+                 * entry, free its resources, and try again -- once.
+                 */
+                uerror("pipe_prodput: trying again: %s",
+                        s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
+                fl_removeAndFree(entry, DR_ERROR);
+                entry = fl_getEntry(PIPE, argc, argv, &isNew);
+                status = entry
+                        ? pipe_out(entry, &prodp->info, data, sz)
+                        : -1;
+            }
+
+            if (0 == status)
+                status = finishProduct(argc, argv, entry); // might free entry
+
+            if (data != prodp->data)
+                free(data);
+        }       // `data` possibly allocated
+
+        if (status && entry)
+            fl_removeAndFree(entry, DR_ERROR);
+    }   // `entry != NULL`
+
+    return status;
 }
 
 /*ARGSUSED*/
 int spipe_prodput(
-        const product *prod,
-        int argc,
-        char **argv,
-        const void *ignored,
-        size_t also_ignored)
+        const product* const restrict prod,
+        const int                     argc,
+        char** const restrict         argv,
+        const void* const restrict    ignored,
+        const size_t                  also_ignored)
 {
     fl_entry *entry;
     char *buffer;
@@ -1775,7 +1974,7 @@ int spipe_prodput(
     conv data_len;
     conv sync;
 
-    entry = get_fl_entry(PIPE, argc, argv);
+    entry = fl_getEntry(PIPE, argc, argv, NULL);
     udebug("    spipe_prodput: %d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
@@ -1861,7 +2060,7 @@ int spipe_prodput(
          * try again once.
          */
         uerror("spipe_prodput: trying again");
-        entry = get_fl_entry(PIPE, argc, argv);
+        entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
             return -1;
         status = pipe_put(entry, prod->info.ident, buffer, len);
@@ -1870,21 +2069,21 @@ int spipe_prodput(
     if (status != ENOERR)
         return -1;
 
-    return atFinishedArgs(argc, argv, entry);
+    return finishProduct(argc, argv, entry);
 
 }
 
 int xpipe_prodput(
-        const product *prod,
-        int argc,
-        char **argv,
-        const void *xprod,
-        size_t xlen)
+        const product* const restrict prod,
+        const int                     argc,
+        char** const restrict         argv,
+        const void* const restrict    xprod,
+        const size_t                  xlen)
 {
     int status = ENOERR;
     fl_entry *entry;
 
-    entry = get_fl_entry(PIPE, argc, argv);
+    entry = fl_getEntry(PIPE, argc, argv, NULL);
     udebug("    xpipe_prodput: %d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
@@ -1898,7 +2097,7 @@ int xpipe_prodput(
          * try again once.
          */
         uerror("xpipe_prodput: trying again");
-        entry = get_fl_entry(PIPE, argc, argv);
+        entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
             return -1;
         status = pipe_put(entry, prod->info.ident, xprod, xlen);
@@ -1907,7 +2106,7 @@ int xpipe_prodput(
     if (status != ENOERR)
         return -1;
 
-    return atFinishedArgs(argc, argv, entry);
+    return finishProduct(argc, argv, entry);
 }
 /* End PIPE */
 
@@ -1975,8 +2174,8 @@ static int ldmdb_open(
     if (db == NULL ) {
         if (errno == EMFILE || errno == ENFILE) {
             /* Too many open files */
-            close_lru(0);
-            close_lru(0);
+            fl_closeLru(0);
+            fl_closeLru(0);
         }
         serror("gdbm_open: %s", path);
         return -1;
@@ -1996,7 +2195,6 @@ static void ldmdb_close(
     if (entry->handle.db != NULL )
         gdbm_close(entry->handle.db);
     entry->private = 0;
-    entry->isClosed = 1;
     entry->handle.db = NULL;
 }
 
@@ -2149,10 +2347,10 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
         if(errno == EMFILE || errno == ENFILE)
         {
             /* Too many open files */
-            close_lru(0);
-            close_lru(0);
-            close_lru(0);
-            close_lru(0);
+            fl_closeLru(0);
+            fl_closeLru(0);
+            fl_closeLru(0);
+            fl_closeLru(0);
         }
         serror("ldmdb_open: %s", path);
         return -1;
@@ -2170,7 +2368,6 @@ ldmdb_close(fl_entry *entry)
     if(entry->handle.db != NULL)
         dbm_close(entry->handle.db);
     entry->private = 0;
-    entry->isClosed = 1;
     entry->handle.db = NULL;
 }
 
@@ -2251,7 +2448,7 @@ ldmdb_put(fl_entry *entry, const char *keystr,
 # endif /*USE_GDBM*/
 
 static struct fl_ops ldmdb_ops = { ldmdb_cmp, ldmdb_open, ldmdb_close,
-        ldmdb_sync, ldmdb_put, };
+        ldmdb_sync};
 
 /*ARGSUSED*/
 int ldmdb_prodput(
@@ -2291,7 +2488,7 @@ int ldmdb_prodput(
         if (dblocksizep != NULL )
             argv[argc++] = dblocksizep;
         argv[argc] = NULL;
-        entry = get_fl_entry(FT_DB, argc, argv);
+        entry = fl_getEntry(FT_DB, argc, argv);
         udebug("    ldmdb_prodput: %s %s", entry == NULL ? "" : entry->path,
                 prod->info.ident);
         if (entry == NULL )
@@ -2321,7 +2518,7 @@ int ldmdb_prodput(
                 keystr);
     }
     if (closeflag || status == -1) {
-        delete_entry(entry, -1 == status ? DR_ERROR : DR_CLOSE);
+        fl_removeAndFree(entry, -1 == status ? DR_ERROR : DR_CLOSE);
     }
 
     return status;
@@ -2330,19 +2527,18 @@ int ldmdb_prodput(
 #endif /* !NO_DB */
 
 static fl_entry *
-new_fl_entry(
-        ft_t type,
-        int argc,
-        char **argv)
+entry_new(
+        const ft_t   type,
+        const int    argc,
+        char** const argv)
 {
-    fl_entry *entry = NULL;
+    fl_entry *entry;
 
     entry = Alloc(1, fl_entry);
     if (entry == NULL ) {
-        serror("new_fl_entry: malloc");
+        serror("entry_new: malloc");
         return NULL ;
     }
-    entry->path[0] = 0;
 
     switch (type) {
     case UNIXIO:
@@ -2358,13 +2554,13 @@ new_fl_entry(
 #ifndef NO_DB
         entry->ops = &ldmdb_ops;
 #else
-        uerror("new_fl_entry: DB type not enabled");
+        uerror("entry_new: DB type not enabled");
         goto err;
         /*NOTREACHED*/
 #endif /* !NO_DB */
         break;
     default:
-        uerror("new_fl_entry: unknown type %d", type);
+        uerror("entry_new: unknown type %d", type);
         goto err;
     }
 
@@ -2374,26 +2570,26 @@ new_fl_entry(
     entry->prev = NULL;
     entry->path[0] = 0;
     entry->private = 0;
-    entry->isClosed = 0;
 
     if (entry->ops->open(entry, argc, argv) == -1)
         goto err;
 
     return entry;
-    err: free_fl_entry(entry);
+
+err:
+    free(entry);
     return NULL ;
 }
 
-/*
- * Set the number of available file descriptors.
+/**
+ * Sets the number of available file descriptors.
  *
- * Parameters:
- *      fdCount         The number of available file descriptors.
- * Returns:
- *      0               Success.
- *      -1              Failure.  Reason is logged.
+ * @param[in] fdCount         The number of available file descriptors.
+ * @retval    0               Success.
+ * @retval    -1              Failure.  Reason is logged.
  */
-int set_avail_fd_count(
+int
+set_avail_fd_count(
         unsigned fdCount)
 {
     int error;
@@ -2503,15 +2699,20 @@ pid_t reap(
     }
     else if (wpid != 0) {
         fl_entry* const entry = fl_findByPid(wpid);
-        const char* cmd;
-        const char* childType;
-        int isExec = 0;
+        const char*     cmd;
+        const char*     childType;
+        int             isExec = 0;
 
         /*
-         * "entry" will be NULL if it was in the list but a write to the file
-         * or pipe resulted in an I/O error (in which case an error message
-         * should be logged) or if it's a PIPE entry with the "-close" option
-         * (in which case no error message will be logged by pqact(1)).
+         * "entry" will be NULL if
+         *     * The process corresponding to `wpid` is not a `PIPE` decoder;
+         *       or
+         *     * The corresponding process is a `PIPE` decoder and
+         *       `fl_removeAndFree()` was called on the corresponding entry
+         *       because
+         *         - The `-close` option was specified; or
+         *         - `fl_closeLru()` was called on the entry; or
+         *         - An I/O error occurred writing to the pipe.
          */
         if (NULL != entry) {
             cmd = entry->path;
@@ -2530,36 +2731,40 @@ pid_t reap(
         }
 
         if (WIFSTOPPED(status)) {
-            unotice(
-                    cmd ? "child %d stopped by signal %d (%s %s)" : "child %d stopped by signal %d",
-                            wpid, WSTOPSIG(status), childType, cmd);
+            unotice(cmd
+                        ? "child %d stopped by signal %d (%s %s)"
+                        : "child %d stopped by signal %d",
+                    wpid, WSTOPSIG(status), childType, cmd);
         }
         else if (WIFSIGNALED(status)) {
-            uwarn(
-                    cmd ? "child %d terminated by signal %d (%s %s)" : "child %d terminated by signal %d",
-                            wpid, WTERMSIG(status), childType, cmd);
+            uwarn(cmd
+                        ? "child %d terminated by signal %d (%s %s)"
+                        : "child %d terminated by signal %d",
+                    wpid, WTERMSIG(status), childType, cmd);
             if (isExec) {
                 (void) cm_remove(execMap, wpid);
             }
             else {
-                delete_entry(entry, DR_ERROR); /* NULL safe */
+                fl_removeAndFree(entry, DR_ERROR); /* NULL safe */
             }
         }
         else if (WIFEXITED(status)) {
             /*
              * NB: A PIPE-entry command-string will not be printed if the
-             * corresponding "thefl" entry was deleted by close_lru().
+             * corresponding list entry was deleted by fl_closeLru().
              */
             if (WEXITSTATUS(status) != 0)
-                uerror(
-                        cmd ? "child %d exited with status %d (%s %s)" : "child %d exited with status %d",
-                                wpid, WEXITSTATUS(status), childType, cmd);
+                uerror(cmd
+                            ? "child %d exited with status %d (%s %s)"
+                            : "child %d exited with status %d",
+                        wpid, WEXITSTATUS(status), childType, cmd);
             if (isExec) {
                 (void) cm_remove(execMap, wpid);
             }
             else {
-                delete_entry(entry,
-                        0 == WEXITSTATUS(status) ? DR_TERMINATED : DR_ERROR); /* NULL safe */
+                fl_removeAndFree(entry, 0 == WEXITSTATUS(status)
+                                        ? DR_TERMINATED
+                                        : DR_ERROR); /* NULL safe */
             }
         }
     } /* wpid != -1 && wpid != 0 */

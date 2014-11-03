@@ -95,7 +95,7 @@ cleanup(void)
          * We are not in the interrupt context, so these can
          * be performed safely.
          */
-        fl_close_all();
+        fl_closeAll();
 
         if (pq)
             (void)pq_close(pq);
@@ -706,7 +706,7 @@ main(int ac, char *av[])
                     /*
                      * Close the least recently used file descriptor.
                      */
-                    close_lru(FL_NOTRANSIENT);
+                    fl_closeLru(FL_NOTRANSIENT);
                 }
                 else if (status == EDEADLK
 #if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
@@ -717,7 +717,7 @@ main(int ac, char *av[])
                     /*
                      * Close the least recently used file descriptor.
                      */
-                    close_lru(FL_NOTRANSIENT);
+                    fl_closeLru(FL_NOTRANSIENT);
                 }
                 else {
                     uerror("pq_sequence failed: %s (errno = %d)",
