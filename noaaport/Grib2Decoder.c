@@ -354,7 +354,7 @@ static int g2s_validate(
     int        status;
     int        i = section->type - SEC_MIN_TYPE;
 
-    if (status = funcs[i](section))
+    if ((status = funcs[i](section)))
         return status;
 
     return 0;
@@ -473,10 +473,10 @@ static int g2s_decodeStart(
     g2int                       secLen;
     g2int                       secType;
 
-    if (status = g2s_isLastSection(buf, bufLen))
+    if ((status = g2s_isLastSection(buf, bufLen)))
         return status;
 
-    if (status = g2s_decodeLengthAndType(sec, buf, bufLen))
+    if ((status = g2s_decodeLengthAndType(sec, buf, bufLen)))
         return status;
 
     return 0;
@@ -507,10 +507,10 @@ static int g2s_init(
     size_t       secLen;
     g2int        secType;
 
-    if (status = g2s_decodeStart(sec, buf, bufLen))
+    if ((status = g2s_decodeStart(sec, buf, bufLen)))
         return status;
 
-    if (status = g2s_validate(sec))
+    if ((status = g2s_validate(sec)))
         return status;
 
     return 0;
@@ -600,7 +600,7 @@ static int sl_init(
         Grib2Section sec;
         size_t       secLen;
 
-        if (status = g2s_init(&sec, buf, len)) {
+        if ((status = g2s_init(&sec, buf, len))) {
             if (G2D_END == status)
                 status = 0;
             break;
@@ -612,7 +612,7 @@ static int sl_init(
         }
         isFirst = 0;
 
-        if (status = list_append(list, &sec))
+        if ((status = list_append(list, &sec)))
             break;
 
         secLen = g2s_getLength(&sec);
@@ -736,7 +736,7 @@ static int g2d_initSections(
     if (status)
         return status;
 
-    if (status = sl_init(&decoded->sections, buf, bufLen)) {
+    if ((status = sl_init(&decoded->sections, buf, bufLen))) {
         sl_clear(&decoded->sections);
         return status;
     }
@@ -798,10 +798,10 @@ static int g2d_initFieldList(
             int         status;
             Grib2Field  field;
 
-            if (status = g2f_init(&field, secs, decoded))
+            if ((status = g2f_init(&field, secs, decoded)))
                 return status;
 
-            if (status = list_append(fields, &field))
+            if ((status = list_append(fields, &field)))
                 return status;
         }
     }
@@ -846,12 +846,12 @@ static int g2d_initFields(
     /*
      * At least one field.
      */
-    if (status = list_init(&decoded->fields, sizeof(Grib2Field), 1)) {
+    if ((status = list_init(&decoded->fields, sizeof(Grib2Field), 1))) {
         LOG_ADD0("Couldn't initialize list of fields");
         return status;
     }
 
-    if (status = g2d_initFieldList(decoded)) {
+    if ((status = g2d_initFieldList(decoded))) {
         g2d_clearFieldList(&decoded->fields);
         return status;
     }
@@ -901,7 +901,7 @@ static int g2d_init(
     int    status;
     size_t secLen;
 
-    if (status = sec0_init(&decoded->sec0, &secLen, buf, bufLen)) {
+    if ((status = sec0_init(&decoded->sec0, &secLen, buf, bufLen))) {
         LOG_ADD0("Couldn't decode section 0 of GRIB-2 message");
         return status;
     }
@@ -912,13 +912,13 @@ static int g2d_init(
     buf += secLen;
     bufLen -= secLen;
 
-    if (status = g2d_initSections(decoded, buf, bufLen)) {
+    if ((status = g2d_initSections(decoded, buf, bufLen))) {
         LOG_ADD0("Couldn't decode sections of GRIB-2 message after section 0");
         sec0_clear(&decoded->sec0);
         return status;
     }
 
-    if (status = g2d_initFields(decoded)) {
+    if ((status = g2d_initFields(decoded))) {
         LOG_ADD0("Couldn't create fields of GRIB-2 message");
         g2d_clearSections(decoded);
         sec0_clear(&decoded->sec0);
@@ -978,7 +978,7 @@ int g2d_new(
     if (!msg)
         return G2D_SYSERR;
 
-    if (status = g2d_init(msg, buf, bufLen)) {
+    if ((status = g2d_init(msg, buf, bufLen))) {
         free(msg);
         return status;
     }
