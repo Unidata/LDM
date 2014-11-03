@@ -201,10 +201,8 @@ struct fl_ops {
      * @param[in] entry  The open-file entry.
      * @param[in] block  Whether or not the I/O should block.
      * @retval    0      Success.
-     * @retval    -1     Failure. Entry is removed from the open-file list and
-     *                   its resources freed.
-     * @return           `errno` error-code. Entry is removed from the open-file
-     *                   list and its resources freed.
+     * @retval    -1     Failure.
+     * @return           `errno` error-code.
      */
     int (*sync)(
             fl_entry* entry,
@@ -437,8 +435,10 @@ fl_sync(
             entry = prev, nentries--) {
         prev = entry->prev;
 
-        if (entry->flags & FL_NEEDS_SYNC)
-            (void)entry->ops->sync(entry, block);
+        if (entry->flags & FL_NEEDS_SYNC) {
+            if (entry->ops->sync(entry, block))
+                fl_removeAndFree(entry, DR_ERROR); // public so remove
+        }
     }
 }
 
