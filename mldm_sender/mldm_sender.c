@@ -8,7 +8,7 @@
  *
  * This file implements the multicast LDM sender, which is a program for
  * multicasting LDM data-products from the LDM product-queue to a multicast
- * group.
+ * group using VCMTP.
  */
 
 #include "config.h"
@@ -102,7 +102,7 @@ mls_initLogging(
 }
 
 /**
- * Logs a usage message.
+ * Appends a usage message to the pending log messages.
  */
 static void
 mls_usage(void)
@@ -110,30 +110,31 @@ mls_usage(void)
     log_add(
 "Usage: %s [options] feed groupId:groupPort serverPort\n"
 "Options:\n"
-"    -I serverIface    Interface on which the TCP server will listen. Default\n"
-"                      is all interfaces.\n"
+"    -I serverIface    Interface on which VCMTP TCP server will listen.\n"
+"                      Default is all interfaces.\n"
 "    -l logfile        Log to file <logfile> ('-' => standard error stream).\n"
-"                      Defaults are standard error stream if interactive and\n"
-"                      system logging daemon if not.\n"
+"                      Default depends on standard error stream:\n"
+"                          is tty     => use standard error stream\n"
+"                          is not tty => use system logging daemon.\n"
 "    -q queue          Use product-queue <queue>. Default is \"%s\".\n"
 "    -t ttl            Time-to-live of outgoing packets (default is 1):\n"
 "                           0  Restricted to same host. Won't be output by\n"
 "                              any interface.\n"
-"                           1  Restricted to the same subnet. Won't be\n"
+"                           1  Restricted to same subnet. Won't be\n"
 "                              forwarded by a router (default).\n"
-"                         <32  Restricted to the same site, organization or\n"
+"                         <32  Restricted to same site, organization or\n"
 "                              department.\n"
-"                         <64  Restricted to the same region.\n"
-"                        <128  Restricted to the same continent.\n"
+"                         <64  Restricted to same region.\n"
+"                        <128  Restricted to same continent.\n"
 "                        <255  Unrestricted in scope. Global.\n"
 "    -v                Verbose logging: log INFO level messages.\n"
 "    -x                Debug logging: log DEBUG level messages.\n"
 "Operands:\n"
-"    feed              Identifier of the multicast group in the form of a\n"
-"                      feedtype expression\n"
+"    feed              Identifier of multicast group in form of feedtype\n"
+"                      expression\n"
 "    groupId:groupPort Internet service address of multicast group, where\n"
-"                      <groupId> is either a group-name or a dotted-decimal\n"
-"                      IPv4 address and <groupPort> is the port number.\n"
+"                      <groupId> is either group-name or dotted-decimal IPv4\n"
+"                      address and <groupPort> is port number.\n"
 "    serverPort        Port number for VCMTP TCP server.",
             getulogident(), getQueuePath());
 }
@@ -198,7 +199,8 @@ mls_decodeOptions(
                 return 1;
             }
             if (t >= 255) {
-                log_start("Invalid time-to-live option-argument \"%s\"", optarg);
+                log_start("Invalid time-to-live option-argument \"%s\"",
+                        optarg);
                 return 1;
             }
             *ttl = t;
