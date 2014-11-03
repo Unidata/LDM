@@ -38,6 +38,9 @@
 #include <stdlib.h>
 
 #ifndef makedev /* ie, we haven't already included it */
+#   ifndef __USE_BSD
+#       define __USE_BSD
+#   endif
 #include <sys/types.h>
 #endif
 #if defined(_BSD_TYPES)
