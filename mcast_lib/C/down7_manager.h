@@ -48,7 +48,7 @@ d7mgr_free(void);
  *                      manager is in an indeterminate state.
  */
 int
-d7mgr_startAllAndFree(void);
+d7mgr_startAll(void);
 
 #ifdef __cplusplus
     }

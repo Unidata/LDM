@@ -103,7 +103,9 @@ execMldmSender(
         args[i++] = "-x";
     args[i++] = "-q";
     args[i++] = (char*)getQueuePath(); // safe cast
-    args[i++] = s_feedtypet(info->feed); // multicast group identifier
+    char feedtypeBuf[256];
+    (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
+    args[i++] = feedtypeBuf; // multicast group identifier
     arg = ldm_format(128, "%s:%hu", info->group.inetId, info->group.port);
     if (arg == NULL) {
         LOG_ADD0("Couldn't create multicast group argument");
@@ -142,9 +144,10 @@ mlsm_spawn(
     pid_t child = fork();
 
     if (child == -1) {
-        const char* const id = mi_asFilename(info);
+        char* const id = mi_asFilename(info);
 
         LOG_SERROR("Couldn't fork() multicast LDM sender for \"%s\"", id);
+        free(id);
         status = LDM7_SYSTEM;
     }
     else if (child == 0) {
@@ -182,10 +185,11 @@ mlsm_execute(
 
     if (0 == status) {
         if ((status = msm_put(feedtype, pid)) != 0) {
-            const char* const id = mi_asFilename(info);
+            char* const id = mi_asFilename(info);
 
             LOG_ADD("Terminating just-started multicast LDM sender for "
                     "\"%s\"", id);
+            free(id);
             (void)kill(pid, SIGTERM);
         }
     }
@@ -301,8 +305,10 @@ mlsm_addPotentialSender(
             mi_free(elt);
         }
         else if (*(McastInfo**)node != elt) {
+            char* const id = mi_asFilename(info);
             LOG_START1("Multicast information conflicts with earlier addition: "
-                    "%s", mi_asFilename(info));
+                    "%s", id);
+            free(id);
             status = LDM7_DUP;
             mi_free(elt);
         }

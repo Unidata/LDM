@@ -3,20 +3,19 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: down7.hin
+ *   @file: prod_index_queue.hin
  * @author: Steven R. Emmerson
  *
- * This file specifies the API for the multicast-capable downstream LDM.
+ * This file declares the API for a queue of product indexes.
  */
 
-#ifndef DOWN7_H
-#define DOWN7_H
+#ifndef PROD_INDEX_QUEUE_H
+#define PROD_INDEX_QUEUE_H
 
-#include <inetutil.h>
-#include <ldm.h>
-#include <pq.h>
+#include "ldm.h"
+#include "mcast.h"
 
-typedef struct Down7 Down7;
+typedef struct prod_index_queue  ProdIndexQueue;
 
 #ifdef __cplusplus
 extern "C" {

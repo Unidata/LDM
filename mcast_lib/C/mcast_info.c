@@ -73,7 +73,6 @@ mi_init(
     }
 
     info->feed = feed;
-    info->toString = NULL;
 
     return true; // success
 }
@@ -268,23 +267,22 @@ mi_compareGroups(
  *
  * @param[in] info  The multicast information object.
  * @retval    NULL  Failure. `log_add()` called.
- * @return          A filename representation of `info`.
+ * @return          A filename representation of `info`. Caller should free when
+ *                  it's no longer needed.
  */
-const char*
+char*
 mi_asFilename(
-    McastInfo* const info)
+    const McastInfo* const info)
 {
-    if (NULL == info->toString) {
-        const char* feedStr = s_feedtypet(info->feed);
-        char*       grpStr = sa_format(&info->group);
-        char*       svrStr = sa_format(&info->server);
+    const char* feedStr = s_feedtypet(info->feed);
+    char*       grpStr = sa_format(&info->group);
+    char*       svrStr = sa_format(&info->server);
+    char*       toString = ldm_format(256, "%s_%s_%s", feedStr, grpStr, svrStr);
 
-        info->toString = ldm_format(256, "%s_%s_%s", feedStr, grpStr, svrStr);
+    free(grpStr);
+    free(svrStr);
 
-        free(grpStr);
-        free(svrStr);
-    }
-    return info->toString;
+    return toString;
 }
 
 /**
@@ -292,11 +290,12 @@ mi_asFilename(
  *
  * @param[in] info  The multicast information object.
  * @retval    NULL  Failure. `log_add()` called.
- * @return          A string representation of `info`.
+ * @return          A string representation of `info`. Caller should free when
+ *                  it's no longer needed.
  */
-const char*
-mi_toString(
-    McastInfo* const info)
+char*
+mi_format(
+    const McastInfo* const info)
 {
     const char* feedStr = s_feedtypet(info->feed);
     char*       grpStr = sa_format(&info->group);

@@ -484,21 +484,23 @@ contractMapAndMap(
  * Adjusts, if necessary, the size of the previously-existing file containing
  * the product-index map and memory-maps it.
  *
- * @param[in]  maxSigs      Maximum number of data-product signatures.
+ * @param[in]  maxNumSigs   Maximum number of data-product signatures.
  * @retval     0            Success.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called. The state of the
  *                          file is unspecified.
  */
 static Ldm7Status
 vetMapSizeAndMap(
-        const size_t  maxSigs)
+        const size_t  maxNumSigs)
 {
-    const size_t newSize = fileSizeFromNumSigs(maxSigs);
+    const size_t newSize = fileSizeFromNumSigs(maxNumSigs);
     int          status = (newSize > fileSize)
         ? expandMapAndMap(newSize)
         : (newSize < fileSize)
             ? contractMapAndMap(newSize)
             : mapMap();
+
+    maxSigs = maxNumSigs;
 
     return status;
 }
@@ -662,7 +664,7 @@ clearMapIfUnexpected(
  * most once.
  *
  * @param[in] pathname     Pathname of the file. Caller may free.
- * @param[in] maxSigs      Maximum number of data-product signatures. Must be
+ * @param[in] maxNumSigs   Maximum number of data-product signatures. Must be
  *                         positive.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
@@ -674,11 +676,11 @@ clearMapIfUnexpected(
 Ldm7Status
 pim_openForWriting(
         const char* const pathname,
-        const size_t      maxSigs)
+        const size_t      maxNumSigs)
 {
     int status;
 
-    if (0 == maxSigs) {
+    if (0 == maxNumSigs) {
         LOG_START0("Maximum number of signatures must be positive");
         status = LDM7_INVAL;
     }
@@ -689,7 +691,7 @@ pim_openForWriting(
         status = openMapForWriting(pathname, &isNew);
 
         if (0 == status) {
-            if ((status = initMapAndMap(maxSigs, isNew))) {
+            if ((status = initMapAndMap(maxNumSigs, isNew))) {
                 (void)close(fd);
 
                 if (isNew)

@@ -14,6 +14,7 @@
 
 #include "inetutil.h"
 #include "ldm.h"
+#include "mcast.h"
 
 #include <stdbool.h>
 

@@ -29,10 +29,10 @@
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed due to OpMock
 #endif
 
-static const char* const     MCAST_GROUP_ID = "mcast-group-id";
+static const char* const     MCAST_FEEDTYPE = ANY;
 static const char* const     HOSTNAME = "hostname";
 static const unsigned short  PORT = 38800;
-static const ServiceAddr*    SERVICE_ADDR;
+static ServiceAddr*          SERVICE_ADDR;
 static const char*           CWD;
 
 static void init()
@@ -55,7 +55,7 @@ static void openMsm(
     McastSessionMemory** msm)
 {
     getLdmLogDir_ExpectAndReturn(CWD);
-    *msm = msm_open(SERVICE_ADDR , MCAST_GROUP_ID);
+    *msm = msm_open(SERVICE_ADDR, MCAST_FEEDTYPE);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(*msm != NULL);
 }
@@ -133,7 +133,7 @@ static void test_last_mcast_prod()
     int                 status;
 
     getLdmLogDir_ExpectAndReturn(CWD);
-    OP_ASSERT_TRUE(msm_delete(SERVICE_ADDR, MCAST_GROUP_ID));
+    OP_ASSERT_TRUE(msm_delete(SERVICE_ADDR, MCAST_FEEDTYPE));
 
     openMsm(&msm);
 

@@ -14,6 +14,7 @@
 #include "config.h"
 
 #include "globals.h"
+#include "inetutil.h"
 #include "ldm.h"
 #include "log.h"
 #include "mcast_info.h"

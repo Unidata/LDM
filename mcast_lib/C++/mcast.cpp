@@ -265,7 +265,7 @@ mcastSender_new(
     int status;
 
     try {
-        vcmtpSendv3* sndr = new vcmtpSendv3(serverAddr, serverPort, groupAddr,
+        *sender = new vcmtpSendv3(serverAddr, serverPort, groupAddr,
                 groupPort, iProd);
         status = 0;
     }

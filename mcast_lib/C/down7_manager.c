@@ -163,14 +163,14 @@ d7mgr_free(void)
 
 /**
  * Starts all multicast-receiving LDM-7s as individual child processes of the
- * current process and frees the downstream LDM-7 manager.
+ * current process.
  *
  * @retval 0            Success.
  * @retval LDM7_SYSTEM  System error. `log_start()` called. Downstream LDM-7
  *                      manager is in an indeterminate state.
  */
 int
-d7mgr_startAllAndFree(void)
+d7mgr_startAll(void)
 {
     for (Elt* elt = top; elt != NULL; elt = elt->next) {
         int status = elt_start(elt);
@@ -178,8 +178,6 @@ d7mgr_startAllAndFree(void)
         if (status)
             return status;
     }
-
-    d7mgr_free();
 
     return 0;
 }

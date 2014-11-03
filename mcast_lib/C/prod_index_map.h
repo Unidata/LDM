@@ -12,6 +12,7 @@
 #ifndef FILE_ID_MAP_H_
 #define FILE_ID_MAP_H_
 
+#include "mcast.h"
 #include "ldm.h"
 
 #ifdef __cplusplus
