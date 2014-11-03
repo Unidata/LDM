@@ -11,6 +11,9 @@
  */
 
 #ifdef RPC_HDR
+%#ifndef __USE_BSD
+%#   define __USE_BSD    // to get `u_int`
+%#endif
 %
 %#include <signal.h>     /* sig_atomic_t */
 %#include <stdlib.h>     /* at least malloc() */
@@ -51,6 +54,7 @@
 %
 %#include "inetutil.h"
 %#include "ldmprint.h"
+%#include "xdr.h"
 %
 %#include <string.h>
 %
@@ -839,10 +843,6 @@ program LDMPROG {
 
 #if WANT_MULTICAST
 
-#if defined(RPC_SVC) || defined(RPC_HDR) || defined(RPC_XDR)
-%#include "../mcast_lib/mcast.h"
-#endif
-
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %
 %/*
@@ -982,86 +982,26 @@ struct ServiceAddr {
     unsigned short port;
 };
 #endif
-#if defined(RPC_HDR)
+#if defined(RPC_HDR) || defined(RPC_XDR)
 %
-%/**
-% * Information on a multicast group:
-% */
-%struct McastInfo {
-%    /*
-%     * Multicast group feedtype:
-%     */
-%    feedtypet     feed;
-%    /*
-%     * Address of associated multicast group.
-%     */
-%    ServiceAddr   group;
-%    /*
-%     * Address of associated TCP server for data-blocks missed by a multicast
-%     * receiver.
-%     */
-%    ServiceAddr   server;
-%    /*
-%     * String representation suitable for a filename. Transient: not XDR'ed.
-%     */
-%    char*         toString;
-%};
-%typedef struct McastInfo McastInfo;
-%
-%/**
-% * XDR-s multicast information.
-% *
-% * @param[in] xdrs  The XDR structure.
-% * @param[in] info  The multicast information.
-% * @retval    1     Success.
-% * @retval    0     Failure.
-% */
-%bool_t
-%xdr_McastInfo (XDR *xdrs, McastInfo *info);
-#    endif
-#if defined(RPC_XDR)
-%
-%/**
-% * XDR-s multicast information.
-% *
-% * @param[in] xdrs  The XDR structure.
-% * @param[in] info  The multicast information.
-% * @retval    1     Success.
-% * @retval    0     Failure.
-% */
-%bool_t
-%xdr_McastInfo (XDR *xdrs, McastInfo *info)
-%{
-%    if (!xdr_feedtypet(xdrs, &info->feed))
-%        return FALSE;
-%    if (!xdr_ServiceAddr(xdrs, &info->group))
-%        return FALSE;
-%    if (!xdr_ServiceAddr(xdrs, &info->server))
-%        return FALSE;
-%    if (xdrs->x_op == XDR_DECODE) {
-%        char* const restrict serverStr = sa_format(&info->server);
-%        if (serverStr == NULL)
-%            return FALSE;
-%        char* const restrict mcastStr = sa_format(&info->group);
-%        if (mcastStr == NULL) {
-%            free(serverStr);
-%            return FALSE;
-%        }
-%        char buf[512];
-%        (void)sprint_feedtypet(buf, sizeof(buf), info->feed);
-%        char* const restrict filename = ldm_format(128, "%s_%s_%s",
-%                mcastStr, serverStr, buf);
-%        if (mcastStr == NULL) {
-%            free(serverStr);
-%            free(mcastStr);
-%            return FALSE;
-%        }
-%        info->toString = filename;
-%    }
-%    if (xdrs->x_op == XDR_FREE && info->toString != NULL)
-%        free(&info->toString);
-%    return TRUE;
-%}
+/**
+ * Information on a multicast group:
+ */
+struct McastInfo {
+    /*
+     * Multicast group feedtype:
+     */
+    feedtypet     feed;
+    /*
+     * Address of associated multicast group.
+     */
+    ServiceAddr   group;
+    /*
+     * Address of associated TCP server for data-blocks missed by a multicast
+     * receiver.
+     */
+    ServiceAddr   server;
+};
 #endif
 
 
