@@ -23,7 +23,7 @@
 #include <unistd.h>      /* getpid() */
 
 #include "abbr.h"
-#include "acl.h"         /* acl_product_intersection(), acl_check_hiya() */
+#include "ldm_config_file.h"         /* acl_product_intersection(), acl_check_hiya() */
 #include "autoshift.h"
 #include "child_process_set.h"       /* cps_contains() */
 #include "data_prod.h"
@@ -222,7 +222,7 @@ feed_or_notify(
     /*
      * Get the upstream filter
      */
-    errObj = acl_getUpstreamFilter(downName, &downAddr.sin_addr, origSub,
+    errObj = lcf_getUpstreamFilter(downName, &downAddr.sin_addr, origSub,
             &upFilter);
     if (errObj) {
         err_log_and_free(ERR_NEW(0, errObj,
@@ -244,7 +244,7 @@ feed_or_notify(
      * Reduce the subscription according to what the downstream host is allowed
      * to receive.
      */
-    status = acl_product_intersection(downName, &downAddr.sin_addr, origSub,
+    status = lcf_reduceToAllowed(downName, &downAddr.sin_addr, origSub,
             &allowSub);
     if (status == ENOMEM) {
         LOG_SERROR0("Couldn't compute wanted/allowed product intersection");
@@ -503,7 +503,7 @@ hiya_6_svc(
         accept = NULL;
     }
 
-    error = acl_check_hiya(upName, inet_ntoa(upAddr->sin_addr), offered,
+    error = lcf_reduceToAcceptable(upName, inet_ntoa(upAddr->sin_addr), offered,
             &accept, &isPrimary);
 
     maxHereis = isPrimary ? UINT_MAX : 0;

@@ -18,7 +18,7 @@
 
 #include "ldm.h"
 
-#include "acl.h"
+#include "ldm_config_file.h"
 #include "down6.h"
 #include "DownHelp.h"
 #include "error.h"
@@ -217,7 +217,7 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
 
                 free_remote_clss();
 
-                switch(hiya_acl_ck(remote, offerd)) {
+                switch(lcf_isHiyaAllowed(remote, offerd)) {
                 case ENOERR:
                         break;
                 case EINVAL:

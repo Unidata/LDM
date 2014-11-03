@@ -7,9 +7,9 @@
 ## Process this file with automake to produce Makefile.in
 
 hinHeaders	        = \
-    acl.h \
     data_prod.h \
     forn.h \
+    ldm_config_file.h \
     ldmfork.h \
     LdmProxy.h \
     timer.h \
@@ -29,7 +29,6 @@ EXTRA_DIST		= \
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
     abbr.h \
-    acl.h \
     atofeedt.h \
     autoshift.h \
     down6.h \
@@ -53,7 +52,6 @@ include_HEADERS		= \
     xdr_data.h
 lib_la_SOURCES		= \
     abbr.c \
-    acl.c \
     atofeedt.c \
     autoshift.c \
     child_process_set.c \
@@ -72,6 +70,7 @@ lib_la_SOURCES		= \
     ldmfork.c \
     ldmprint.c \
     ldm_clnt_misc.c \
+    ldm_config_file.c \
     md5c.c \
     one_svc_run.c \
     priv.c \
@@ -93,7 +92,8 @@ lib_la_CPPFLAGS		= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/ulog \
-    -I$(top_srcdir)/pq
+    -I$(top_srcdir)/pq \
+    -I$(top_srcdir)/mcast_lib/C++
 if WANT_MULTICAST
 lib_la_CPPFLAGS		+= -I$(top_builddir)/mcast_lib -I$(top_srcdir)/mcast_lib
 endif
@@ -110,13 +110,13 @@ dist_man3_MANS		= uldb.3
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
-acl.h:		acl.hin acl.c
-data_prod.h:	data_prod.hin data_prod.c
-forn.h:		forn.hin forn.c
-ldmfork.h:	ldmfork.hin ldmfork.c
-LdmProxy.h:	LdmProxy.hin LdmProxy.c
-timer.h:	timer.hin timer.c
-uldb.h:		uldb.hin uldb.c
+data_prod.h:		data_prod.hin data_prod.c
+forn.h:			forn.hin forn.c
+ldm_config_file.h:	ldm_config_file.hin ldm_config_file.c
+ldmfork.h:		ldmfork.hin ldmfork.c
+LdmProxy.h:		LdmProxy.hin LdmProxy.c
+timer.h:		timer.hin timer.c
+uldb.h:			uldb.hin uldb.c
 
 # The following rule is for completeness only because the target-file must be
 # manually modified to a great extent.

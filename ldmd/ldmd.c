@@ -40,7 +40,7 @@
 #endif
 #include "priv.h"
 #include "abbr.h"
-#include "acl.h"
+#include "ldm_config_file.h"                // LDM configuration-file
 #include "down6.h"              /* down6_destroy() */
 #include "globals.h"
 #include "child_process_set.h"
@@ -94,7 +94,7 @@ static pid_t reap(
 
 #if defined(WIFSTOPPED)
         if (WIFSTOPPED(status)) {
-            int n = exec_getCommandLine(wpid, command, sizeof(command));
+            int n = lcf_getCommandLine(wpid, command, sizeof(command));
 
             if (n == -1) {
                 log_add("Couldn't get command-line of EXEC process "
@@ -112,11 +112,11 @@ static pid_t reap(
 #endif /*WIFSTOPPED*/
 #if defined(WIFSIGNALED)
         if (WIFSIGNALED(status)) {
-            int n = exec_getCommandLine(wpid, command, sizeof(command));
+            int n = lcf_getCommandLine(wpid, command, sizeof(command));
 
             cps_remove(wpid); /* upstream LDM processes */
 
-            exec_free(wpid); /* EXEC processes */
+            lcf_freeExec(wpid); /* EXEC processes */
 
             if (n == -1) {
                 log_add("Couldn't get command-line of EXEC process "
@@ -165,10 +165,10 @@ static pid_t reap(
 #if defined(WIFEXITED)
         if (WIFEXITED(status)) {
             int exitStatus = WEXITSTATUS(status);
-            int n = exec_getCommandLine(wpid, command, sizeof(command));
+            int n = lcf_getCommandLine(wpid, command, sizeof(command));
 
             cps_remove(wpid); /* upstream LDM processes */
-            exec_free(wpid); /* EXEC processes */
+            lcf_freeExec(wpid); /* EXEC processes */
 
             if (n == -1) {
                 log_add("Couldn't get command-line of EXEC process "
@@ -201,7 +201,7 @@ static void cleanup(
 
     unotice("Exiting");
 
-    savePreviousProdInfo();
+    lcf_savePreviousProdInfo();
 
     free_remote_clss();
 
@@ -285,7 +285,7 @@ static void cleanup(
     /*
      * Free access-control-list resources.
      */
-    acl_free();
+    lcf_free();
 
     /*
      * Close registry.
@@ -639,9 +639,9 @@ static void handle_connection(
     setremote(&raddr, xp_sock);
 
     /* Access control */
-    if (!host_ok(remote)) {
+    if (!lcf_isHostOk(remote)) {
         ensureRemoteName(&raddr);
-        if (!host_ok(remote)) {
+        if (!lcf_isHostOk(remote)) {
             if (remote->printname == remote->astr) {
                 unotice("Denying connection from [%s] because not "
                         "allowed", remote->astr);
@@ -746,7 +746,7 @@ static void handle_connection(
 }
 
 static void sock_svc(
-        int sock)
+        const int  sock)
 {
     const int width = sock + 1;
 
@@ -793,7 +793,6 @@ int main(
         char* av[])
 {
     const char* pqfname = getQueuePath();
-    int sock = -1;
     int status;
     int doSomething = 1;
     in_addr_t locIpAddr = (in_addr_t) htonl(INADDR_ANY );
@@ -978,28 +977,31 @@ int main(
     (void) fclose(stdout);
     (void) fclose(stdin);
 
-    if (!doSomething) {
-        /*
-         * Vet the configuration file.
-         */
-        udebug("main(): Vetting configuration-file");
-        if (read_conf(getLdmdConfigPath(), doSomething, ldmPort) != 0) {
-            log_log(LOG_ERR);
-            exit(1);
-        }
+    /*
+     * Vet the configuration file.
+     */
+    udebug("main(): Vetting configuration-file");
+    if (read_conf(getLdmdConfigPath(), 0, ldmPort) != 0) {
+        log_log(LOG_ERR);
+        exit(1);
     }
-    else {
-        /*
-         * Create a service portal. This should be done before anything is
-         * created because this is the function that relinquishes superuser
-         * privileges.
-         */
-        udebug("main(): Creating service portal");
-        if (create_ldm_tcp_svc(&sock, locIpAddr, ldmPort) != ENOERR) {
-            /* error reports are emitted from create_ldm_tcp_svc() */
-            exit(1);
+
+    if (doSomething) {
+        int sock = -1;
+
+        if (lcf_isServerNeeded()) {
+            /*
+             * Create a service portal. This should be done before anything is
+             * created because this is the function that relinquishes superuser
+             * privileges.
+             */
+            udebug("main(): Creating service portal");
+            if (create_ldm_tcp_svc(&sock, locIpAddr, ldmPort) != ENOERR) {
+                /* error reports are emitted from create_ldm_tcp_svc() */
+                exit(1);
+            }
+            udebug("tcp sock: %d", sock);
         }
-        udebug("tcp sock: %d", sock);
 
         /*
          * Verify that the product-queue can be open for writing.
@@ -1041,18 +1043,28 @@ int main(
         /*
          * Read the configuration file (downstream LDM-s are started).
          */
+        lcf_free();
         udebug("main(): Reading configuration-file");
-        if (read_conf(getLdmdConfigPath(), doSomething, ldmPort) != 0) {
+        if (read_conf(getLdmdConfigPath(), 1, ldmPort) != 0) {
             log_log(LOG_ERR);
             exit(1);
         }
 
-        /*
-         * Serve
-         */
-        udebug("main(): Serving socket");
-        sock_svc(sock);
-    } /* "doSomething" is true */
+        if (lcf_isServerNeeded()) {
+            /*
+             * Serve
+             */
+            udebug("main(): Serving socket");
+            sock_svc(sock);
+        }
+        else {
+            /*
+             * Wait until all child processes have terminated.
+             */
+            while (reap(-1, 0) > 0)
+                /* empty */;
+        }
+    }   // configuration-file will be executed
 
     return (0);
 }

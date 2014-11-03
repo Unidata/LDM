@@ -25,7 +25,7 @@
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"
-#include "acl.h"
+#include "ldm_config_file.h"
 #include "timestamp.h"
 
 /* global */
@@ -244,7 +244,7 @@ update_remote_clss(prod_class_t *want)
 
                 free_remote_clss();
 
-                status = forn_acl_ck(&remote, want);
+                status = lcf_okToFeedOrNotify(&remote, want);
         }
         else
         {

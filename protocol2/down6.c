@@ -15,7 +15,6 @@
 #include <stdlib.h>      /* NULL, malloc() */
 #include <string.h>      /* strerror(), ... */
 
-#include "acl.h"
 #include "autoshift.h"
 #include "DownHelp.h"
 #include "error.h"

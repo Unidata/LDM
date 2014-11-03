@@ -9,7 +9,7 @@
 
 #include "config.h"
 
-#include "acl.h"
+#include "ldm_config_file.h"
 #include "atofeedt.h"
 #include "down7_manager.h"
 #include "error.h"
@@ -22,6 +22,7 @@
 #include "ldmprint.h"
 #include "RegularExpressions.h"
 #include "log.h"
+#include "stdbool.h"
 #include "wordexp.h"
 
 #include <limits.h>
@@ -39,9 +40,8 @@ extern int yydebug;
 static int      line = 0;
 static unsigned ldmPort = LDM_PORT;
 static int      execute = 1;
-
-static int              scannerPush(const char* const path);
-static int              scannerPop(void);
+static int      scannerPush(const char* const path);
+static int      scannerPop(void);
 
 static void
 yyerror(const char *msg)
@@ -159,7 +159,7 @@ decodeHostSet(
                 strerror(errno));
         }
         else {
-            host_set*   hsp = new_host_set(HS_REGEXP, dup, regexp);
+            host_set*   hsp = lcf_newHostSet(HS_REGEXP, dup, regexp);
 
             if (NULL == hsp) {
                 log_start("Couldn't create host-set for \"%s\": %s", dup,
@@ -272,13 +272,13 @@ decodeAllowEntry(
             if (notPattern)
                 warnIfPathological(notPattern);
 
-            errObj = acl_addAllow(ft, hsp, okPattern, notPattern);
+            errObj = lcf_addAllow(ft, hsp, okPattern, notPattern);
 
             if (errObj) {
                 log_start("Couldn't add ALLOW entry: feedSet=%s, hostPat=%s, "
                         "okPat=\"%s\", notPat=\"%s\"",
                         feedtypeSpec, hostPattern, okPattern, notPattern);
-                free_host_set(hsp);
+                lcf_freeHostSet(hsp);
                 errCode = -1;
             }
         }                               /* "hsp" allocated */
@@ -332,7 +332,7 @@ decodeRequestEntry(
             } /* have port specification */
         
             if (0 == errCode) {
-                if (errCode = acl_addRequest(feedtype, prodPattern, hostId,
+                if (errCode = lcf_addRequest(feedtype, prodPattern, hostId,
                         localPort)) {
                 }
             } /* "localPort" set */
@@ -507,7 +507,7 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                             }
                             else {
                                 error =
-                                    accept_acl_add(ft, patp, regexp, hsp, 1);
+                                    lcf_addAccept(ft, patp, regexp, hsp, 1);
 
                                 if (!error) {
                                     patp = NULL;    /* abandon */
@@ -520,7 +520,7 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                             }           /* "patp" allocated */
 
                             if (error)
-                                free_host_set(hsp);
+                                lcf_freeHostSet(hsp);
                         }               /* "*hsp" allocated */
 
                         if (error && regexp) {
@@ -579,7 +579,7 @@ exec_entry:     EXEC_K STRING
                             udebug("command: \"%s\"", $2);
 #endif
                         if (execute)
-                            error = exec_add(&words);
+                            error = lcf_addExec(&words);
                         
                         if (!execute || error)
                             wordfree(&words);
@@ -652,7 +652,7 @@ yywrap(void)
 }
 
 /**
- * Acts upon the parsed entries of the configuration-file.
+ * Acts upon parsed REQUEST and RECEIVE entries of the configuration-file.
  *
  * @retval 0  Success
  * @return    System error code.
@@ -661,13 +661,13 @@ static int
 actUponEntries(
         const unsigned defaultPort)
 {
-    int status = invert_request_acl(defaultPort);
+    int status = lcf_startRequesters(defaultPort);
 
     if (status) {
         LOG_ADD0("Problem starting downstream LDM-s");
     }
     else {
-        status = d7mgr_startAllAndFree();
+        status = d7mgr_startAll();
 
         if (status) {
             LOG_ADD0("Problem starting receiving LDM-s");
@@ -678,38 +678,39 @@ actUponEntries(
     return status;
 }
 
-/*
- * Arguments:
- *      conf_path       Pathname of configuration-file.
- *      doSomething     Whether or not to actually do something or just
- *                      parse the configuration-file.
- *      defaultPort     The default LDM port.
- * Returns:
- *      0               Success.
- *      !0              Failure.  "log_start()" called.
+/**
+ * Parses an LDM configuration-file and optionally executes the entries.
+ * 
+ * @param[in] pathname        Pathname of configuration-file.
+ * @param[in] execEntries     Whether or not to execute the entries.
+ * @param[in] defaultPort     The default LDM port.
+ * @retval    0               Success.
+ * @retval    -1              Failure.  `log_start()` called.
  */
 int
 read_conf(
-    const char* const   conf_path,
-    int                 doSomething,
+    const char* const   pathname,
+    int                 execEntries,
     unsigned            defaultPort)
 {
-    int                 status = -1;    /* failure */
+    int status;
 
-    if (scannerPush(conf_path)) {
-        log_add("Couldn't open LDM configuration-file");
+    if (scannerPush(pathname)) {
+        LOG_ADD1("Couldn't open LDM configuration-file \"%s\"", pathname);
+        status = -1;
     }
     else {
-        /* yydebug = 1; */
         ldmPort = defaultPort;
-        execute = doSomething;
+        execute = execEntries;
+        // yydebug = 1;
         status = yyparse();
 
         if (status) {
-            LOG_ADD1("Error reading LDM configuration-file \"%s\"", conf_path);
+            LOG_ADD1("Couldn't parse LDM configuration-file \"%s\"", pathname);
+            status = -1;
         }
-        else {
-            status = doSomething ? actUponEntries(defaultPort) : 0;
+        else if (execute) {
+            status = actUponEntries(defaultPort) ? -1 : 0;
         }
     }
 

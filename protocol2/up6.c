@@ -23,7 +23,7 @@
 #include <time.h>
 
 #include "abbr.h"        /* set_abbr_ident() */
-#include "acl.h"
+#include "ldm_config_file.h"
 #include "autoshift.h"
 #include "error.h"
 #include "ldm.h"         /* LDM version 6 client-side functions */
