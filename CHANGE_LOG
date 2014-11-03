@@ -1,18 +1,26 @@
-6.12.7	2014-11-03T08:46:18-0700
-    NOAAPORT:
-        Merged changes to the retransmit-request capability from Raytheon for
-        the AWIPS-II system. This capability is only for the use of weather
-        forecast offices.
-
-        Added printing of WMO header of GRIB2 data-products with unknown
-        parameters.
-        
+6.12.7	2014-11-03T10:20:14-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
         This change makes it easier to run downstream-only LDM instances that
         don't interfere with an LDM server on the same computer.
 
+    Product Queue (pq.c):
+        Corrected bug in setting of "isFull" flag introduced in LDM 6.12.4.
+        This bug caused the command "ldmadmin vetqueuesize" to work
+        incorrectly: the queue size or maximum acceptible latency parameters
+        would *not* be adjusted if the registry parameter
+        "/reconciliation-mode" were set to "increase queue" or "decrease
+        maximum latency", respectively.
+
+    NOAAPORT (noaaportIngester):
+        Merged changes to the retransmit-request capability from Raytheon for
+        the AWIPS-II system. This capability is only for use by NOAA's weather
+        forecast offices.
+
+        Added printing of WMO header of GRIB2 data-products with unknown
+        parameters.
+        
 6.12.6	2014-09-04T13:56:41-0600
     pqcreate(1):
         Changed the assumed mean product size (which is used to compute the
