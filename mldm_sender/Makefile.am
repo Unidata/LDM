@@ -15,8 +15,11 @@ CPPFLAGS	= \
     -I$(top_builddir)/registry  -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_builddir)/misc      -I$(top_srcdir)/misc \
-    -I$(top_srcdir)
-mldm_sender_LDADD	= $(top_builddir)/lib/libldm.la
+    -I$(top_srcdir) \
+    -I$(top_builddir)/mcast_lib/C -I$(top_srcdir)/mcast_lib/C \
+    -I$(top_srcdir)/mcast_lib/C++
+mldm_sender_LDADD	= $(top_builddir)/lib/libldm.la \
+		          -lstdc++
 TAGS_FILES	= \
     ../mcast_lib/*.c ../mcast_lib/*.h \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \

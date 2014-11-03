@@ -191,7 +191,7 @@ mls_decodeOptions(
         case 't': {
             unsigned t;
             int      nbytes;
-            if (1 != sscanf(optarg, "%u %n", &t, &nbytes) ||
+            if (1 != sscanf(optarg, "%3u %n", &t, &nbytes) ||
                     0 != optarg[nbytes]) {
                 log_start("Couldn't decode time-to-live option-argument \"%s\"",
                         optarg);
@@ -312,7 +312,7 @@ mls_decodeServerAddr(
         unsigned short port;
         int            nbytes;
 
-        if (1 != sscanf(arg, "%hu %n", &port, &nbytes) || 0 != arg[nbytes]) {
+        if (1 != sscanf(arg, "%5hu %n", &port, &nbytes) || 0 != arg[nbytes]) {
             log_start("Couldn't decode port number \"%s\"", arg);
             status = 1;
         }
@@ -705,7 +705,8 @@ mls_multicastProduct(
             status = pim_put(iProd, (const signaturet*)&info.signature);
 
             if (ulogIsVerbose())
-                uinfo("Multicasted: %s",
+                uinfo("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                        (unsigned long)iProd,
                         s_prod_info(NULL, 0, &info, ulogIsDebug()));
 
             xdr_free(xdr_prod_info, (char*)&info);
@@ -734,15 +735,14 @@ mls_setProdClass(
 {
     int         status;
     /* PQ_CLASS_ALL has feedtype=ANY, pattern=".*", from=BOT, to=EOT */
-    prod_class* pc = dup_prod_class(PQ_CLASS_ALL);
+    prod_class* pc = dup_prod_class(PQ_CLASS_ALL);      // compiles ERE
 
     if (pc == NULL) {
         status = LDM7_SYSTEM;
     }
     else {
-        (void)set_timestamp(&pc->from); // from now
+        // (void)set_timestamp(&pc->from); // from now
         pc->psa.psa_val->feedtype = mcastInfo.feed;
-        clss_regcomp(pc);
         *prodClass = pc;
         status = 0;
     } // `pc` allocated
@@ -768,7 +768,7 @@ mls_tryMulticast(
 
     int status = pq_sequence(pq, TV_GT, prodClass, mls_multicastProduct, NULL);
 
-    if (status == PQUEUE_END) {
+    if (PQUEUE_END == status) {
         /*
          * No matching data-product. Block for a short time, or until a signal
          * handler is called, or until a SIGCONT is received by this thread. NB:
@@ -904,8 +904,10 @@ main(
         log_log(LOG_ERR);
     }
     else {
-        unotice("Starting up: groupInfo=%s, ttl=%u", mi_toString(groupInfo),
-                ttl);
+        char* miStr = mi_format(groupInfo);
+
+        unotice("Starting up: groupInfo=%s, ttl=%u", miStr, ttl);
+        free(miStr);
 
         mls_setSignalHandling();
 
