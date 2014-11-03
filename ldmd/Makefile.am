@@ -10,13 +10,12 @@ BUILT_SOURCES           = parser.c scanner.c
 CLEANFILES		= ldmd.1 *.i .*.info
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
-EXTRA_DIST		= \
-    ldmd.1.in \
-    ldmd.conf \
-    parser.y \
-    scanner.c \
-    scanner.l \
-    wordexp.h
+EXTRA_DIST		= ldmd.1.in \
+                          ldmd.conf \
+                          parser.y \
+                          scanner.c \
+                          scanner.l \
+                          wordexp.h
 PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS	= ldmd
 ldmd_SOURCES	= \
@@ -33,7 +32,9 @@ CPPFLAGS		= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir)
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/mcast_lib/C \
+    -I$(top_srcdir)/mcast_lib/C++
 ldmd_LDADD		= \
     $(top_builddir)/lib/libldm.la \
     $(LD_GEN)

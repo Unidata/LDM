@@ -19,7 +19,8 @@ lib_la_CPPFLAGS		= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/mcast_lib/C++
 TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
     ../ulog/*.c ../ulog/*.h \

@@ -16,7 +16,8 @@ CPPFLAGS	= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir)
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/mcast_lib/C++
 pqcopy_LDADD	= $(top_builddir)/lib/libldm.la
 dist_man1_MANS	= pqcopy.1
 TAGS_FILES	= \

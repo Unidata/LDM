@@ -21,7 +21,8 @@ CPPFLAGS		= \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)/pqing \
-    -I$(top_srcdir)
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/mcast_lib/C++
 pqsurf_LDADD		= $(top_builddir)/lib/libldm.la $(GDBMLIB)
 nodist_man1_MANS	= pqsurf.1
 TAGS_FILES		= \

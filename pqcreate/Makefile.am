@@ -17,7 +17,8 @@ CPPFLAGS	= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir)
+    -I$(top_srcdir) \
+    -I$(top_srcdir)/mcast_lib/C++
 pqcreate_LDADD	= $(top_builddir)/lib/libldm.la
 TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \

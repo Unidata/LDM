@@ -43,7 +43,8 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/pq \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
-    -I$(top_builddir)/registry -I$(top_srcdir)/registry
+    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
+    -I$(top_srcdir)/mcast_lib/C++
 
 backend.c:	$(srcdir)/backend-libxml2.c
 	$(LN_S) $(srcdir)/backend-libxml2.c $@
