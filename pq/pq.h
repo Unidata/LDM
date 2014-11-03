@@ -6,11 +6,11 @@
 #ifndef _PQ_H
 #define _PQ_H
 
-#include <sys/types.h>	/* off_t, mode_t */
-#include <stddef.h>	/* size_t */
-
 #include "ldm.h"        /* prod_class_t */
 #include "prod_class.h"
+
+#include <sys/types.h>	/* off_t, mode_t */
+#include <stddef.h>	/* size_t */
 
 
 /*
