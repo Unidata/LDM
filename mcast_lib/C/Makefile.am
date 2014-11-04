@@ -77,6 +77,7 @@ all_stubs		= $(VCMTPReceiver_stubs) \
                           $(globals_stubs) \
                           $(mldm_sender_map_stubs) \
                           $(unistd_stubs)
+BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \
@@ -100,29 +101,29 @@ opmock_check_progs			= mldm_sender_manager_test \
                                           #mldm_receiver_test
 test_cppflags				= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
+mldm_sender_manager_test_stub_objs	= mcast_stub.o mldm_sender_map_stub.o \
+	pq_stub.o unistd_stub.o globals_stub.o
 mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c \
                                           mcast_info.c mcast_info.h
-mldm_sender_manager_test_CPPFLAGS	= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
+mldm_sender_manager_test_CPPFLAGS	= $(test_cppflags)
 mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mldm_sender_manager_test_LDADD		= mcast_stub.o \
-					  mldm_sender_map_stub.o \
-					  pq_stub.o \
-					  unistd_stub.o \
-					  globals_stub.o \
+mldm_sender_manager_test_LDADD		= $(mldm_sender_manager_test_stub_objs) \
 					  $(top_builddir)/lib/libldm.la \
 				  	  @OPMOCK_LDADD@
 
+mldm_receiver_test_stub_objs		= mcast_stub.o pq_stub.o
 mldm_receiver_test_SOURCES 		= mldm_receiver_test.c mldm_receiver.c
 mldm_receiver_test_CPPFLAGS		= $(test_cppflags)
 mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
-mldm_receiver_test_LDADD  		= mcast_stub.o pq_stub.o \
+mldm_receiver_test_LDADD  		= $(mldm_receiver_test_stub_objs) \
                                           $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
 
+mldm_receiver_memory_test_stub_objs	= globals_stub.o
 mldm_receiver_memory_test_SOURCES 	= mldm_receiver_memory_test.c
 mldm_receiver_memory_test_CPPFLAGS	= $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mldm_receiver_memory_test_LDADD  	= globals_stub.o \
+mldm_receiver_memory_test_LDADD  	= $(mldm_receiver_memory_test_stub_objs) \
                                           $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
 
