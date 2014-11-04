@@ -13,8 +13,7 @@ EXTRA_DIST              = down7.hin \
                           prod_index_queue.hin \
                           server_info.hin \
                           sock_funcs.c sock_funcs.hin \
-                          up7.hin \
-                          $(all_stubs)
+                          up7.hin
 BUILT_SOURCES           = down7.h \
 			  mldm_receiver.h \
 			  mldm_sender_memory.h \
@@ -65,6 +64,7 @@ server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up7.h:			up7.hin up7.c
 
+if HAVE_OPMOCK
 VCMTPReceiver_stubs	= vcmtpRecvv3_stub.cpp vcmtpRecvv3_stub.hpp
 mcast_stubs		= mcast_stub.c mcast_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
@@ -95,8 +95,9 @@ $(mldm_sender_map_stubs):	mldm_sender_map.h
 $(unistd_stubs):		/usr/include/unistd.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES) -k fork
 
-if HAVE_OPMOCK
-opmock_check_progs		= mldm_sender_manager_test mldm_receiver_memory_test #mldm_receiver_test
+opmock_check_progs		= mldm_sender_manager_test \
+				  mldm_receiver_memory_test \
+				  #mldm_receiver_test
 test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
 mldm_sender_manager_test_SOURCES = mldm_sender_manager_test.c \
