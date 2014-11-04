@@ -11,12 +11,12 @@
 
 #include "ldm_config_file.h"
 #include "atofeedt.h"
-#include "down7_manager.h"
 #include "error.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "remote.h"
 #if WANT_MULTICAST
+    #include "down7_manager.h"
     #include "mcast_info.h"
     #include "mldm_sender_manager.h"
 #endif
@@ -668,6 +668,7 @@ actUponEntries(
     if (status) {
         LOG_ADD0("Problem starting downstream LDM-s");
     }
+#if WANT_MULTICAST
     else {
         status = d7mgr_startAll();
 
@@ -676,6 +677,7 @@ actUponEntries(
             d7mgr_free();
         }
     }
+#endif
     
     return status;
 }
