@@ -13,7 +13,8 @@ EXTRA_DIST              = down7.hin \
                           prod_index_queue.hin \
                           server_info.hin \
                           sock_funcs.c sock_funcs.hin \
-                          up7.hin
+                          up7.hin \
+                          $(all_stubs)
 BUILT_SOURCES           = down7.h \
 			  mldm_receiver.h \
 			  mldm_sender_memory.h \
@@ -64,7 +65,6 @@ server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up7.h:			up7.hin up7.c
 
-if HAVE_OPMOCK
 VCMTPReceiver_stubs	= vcmtpRecvv3_stub.cpp vcmtpRecvv3_stub.hpp
 mcast_stubs		= mcast_stub.c mcast_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
@@ -77,12 +77,12 @@ all_stubs		= $(VCMTPReceiver_stubs) \
                           $(globals_stubs) \
                           $(mldm_sender_map_stubs) \
                           $(unistd_stubs)
-DISTCLEANFILES		+= $(all_stubs) TEST-test.xml
+DISTCLEANFILES		+= TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \
                           -I/usr/local/include \
                           -I/usr/include
-$(VCMTPReceiver_stubs):		vcmtp/VCMTPv3/shawn/recv/vcmtpRecvv3.h
+$(VCMTPReceiver_stubs):		../vcmtp/VCMTPv3/shawn/recv/vcmtpRecvv3.h
 	opmock2 -cpp -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mcast_stubs):			../C++/mcast.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
@@ -94,28 +94,29 @@ $(mldm_sender_map_stubs):	mldm_sender_map.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(unistd_stubs):		/usr/include/unistd.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES) -k fork
+all_stubs	= $(VCMTPReceiver_stubs) \
+		  $(mcast_stubs) \
+		  $(pq_stubs) \
+		  $(globals_stubs) \
+		  $(mldm_sender_map_stubs) \
+		  $(unistd_stubs)
 
+if HAVE_OPMOCK
 opmock_check_progs		= mldm_sender_manager_test mldm_receiver_memory_test #mldm_receiver_test
 test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
-# "*_stub.*" files aren't included here because all "_SOURCES" files are
-# expected by "make distcheck" and they won't exist on a system that doesn't
-# have Opmock.
-mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c \
-					  mcast_info.c mcast_info.h \
-                                $(mldm_sender_map_stubs) $(mcast_stubs) \
-				$(pq_stubs) $(unistd_stubs) $(globals_stubs)
+mldm_sender_manager_test_SOURCES = mldm_sender_manager_test.c \
+				  mcast_info.c mcast_info.h \
+				  $(mldm_sender_map_stubs) \
+				  $(mcast_stubs) \
+				  $(pq_stubs) \
+				  $(unistd_stubs) \
+				  $(globals_stubs)
 mldm_sender_manager_test_CPPFLAGS	= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-#mldm_sender_manager_test_LDADD	= mcast_stub.o \
-#				  pq_stub.o \
-#				  mldm_sender_map_stub.o \
-#				  unistd_stub.o
 mldm_sender_manager_test_LDADD	= \
 				  $(top_builddir)/lib/libldm.la \
 				  @OPMOCK_LDADD@
-#mldm_sender_manager_test:	$(mldm_sender_map_stubs) $(mcast_stubs) \
-#				$(pq_stubs) $(unistd_stubs) $(globals_stubs)
 mldm_receiver_test_SOURCES 	= mldm_receiver_test.c mldm_receiver.c
 mldm_receiver_test_CPPFLAGS	= $(test_cppflags)
 mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
