@@ -94,12 +94,6 @@ $(mldm_sender_map_stubs):	mldm_sender_map.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(unistd_stubs):		/usr/include/unistd.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES) -k fork
-all_stubs	= $(VCMTPReceiver_stubs) \
-		  $(mcast_stubs) \
-		  $(pq_stubs) \
-		  $(globals_stubs) \
-		  $(mldm_sender_map_stubs) \
-		  $(unistd_stubs)
 
 if HAVE_OPMOCK
 opmock_check_progs		= mldm_sender_manager_test mldm_receiver_memory_test #mldm_receiver_test
