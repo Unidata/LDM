@@ -49,7 +49,7 @@ CPPFLAGS		= -I$(builddir) -I$(srcdir) \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc \
                           -I$(top_srcdir)/mcast_lib/C++
-CLEANFILES		= *.yaml
+CLEANFILES		= *.yaml *_stub*
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 .hin.h:
@@ -95,41 +95,38 @@ $(mldm_sender_map_stubs):	mldm_sender_map.h
 $(unistd_stubs):		/usr/include/unistd.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES) -k fork
 
-opmock_check_progs		= mldm_sender_manager_test \
-				  mldm_receiver_memory_test \
-				  #mldm_receiver_test
-test_cppflags			= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
+opmock_check_progs			= mldm_sender_manager_test \
+                                          mldm_receiver_memory_test \
+                                          #mldm_receiver_test
+test_cppflags				= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
-mldm_sender_manager_test_SOURCES = mldm_sender_manager_test.c \
-				  mcast_info.c mcast_info.h \
-				  $(mldm_sender_map_stubs) \
-				  $(mcast_stubs) \
-				  $(pq_stubs) \
-				  $(unistd_stubs) \
-				  $(globals_stubs)
+mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c \
+                                          mcast_info.c mcast_info.h
 mldm_sender_manager_test_CPPFLAGS	= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mldm_sender_manager_test_LDADD	= \
-				  $(top_builddir)/lib/libldm.la \
-				  @OPMOCK_LDADD@
-mldm_receiver_test_SOURCES 	= mldm_receiver_test.c mldm_receiver.c
-mldm_receiver_test_CPPFLAGS	= $(test_cppflags)
+mldm_sender_manager_test_LDADD		= mcast_stub.o \
+					  mldm_sender_map_stub.o \
+					  pq_stub.o \
+					  unistd_stub.o \
+					  globals_stub.o \
+					  $(top_builddir)/lib/libldm.la \
+				  	  @OPMOCK_LDADD@
+
+mldm_receiver_test_SOURCES 		= mldm_receiver_test.c mldm_receiver.c
+mldm_receiver_test_CPPFLAGS		= $(test_cppflags)
 mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
+mldm_receiver_test_LDADD  		= mcast_stub.o pq_stub.o \
+                                          $(top_builddir)/lib/libldm.la \
+                                          @OPMOCK_LDADD@
 
 mldm_receiver_memory_test_SOURCES 	= mldm_receiver_memory_test.c
 mldm_receiver_memory_test_CPPFLAGS	= $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-#
-# The stubs are included here because they can't be in "_SOURCES" above.
-mldm_receiver_test_LDADD	= mcast_stub.o \
-				  pq_stub.o \
-				  $(top_builddir)/lib/libldm.la \
-				  @OPMOCK_LDADD@
-mldm_receiver_memory_test_LDADD	= mldm_receiver_memory.lo \
-				  globals_stub.o \
-				  $(top_builddir)/lib/libldm.la \
-				  @OPMOCK_LDADD@
-opmock_tests			= $(opmock_check_progs)
+mldm_receiver_memory_test_LDADD  	= globals_stub.o \
+                                          $(top_builddir)/lib/libldm.la \
+                                          @OPMOCK_LDADD@
+
+opmock_tests				= $(opmock_check_progs)
 endif
 
 if HAVE_CUNIT
