@@ -841,6 +841,19 @@ program LDMPROG {
 
 #endif /* RPC_XDR */
 
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+/**
+ * Address of an Internet TCP service:
+ */
+struct ServiceAddr {
+    /* Internet address of the service. May be hostname or IP address. */
+    string         inetId<>;
+    /* Port number of the service. */
+    unsigned short port;
+};
+#endif
+
 #if WANT_MULTICAST
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
@@ -970,18 +983,6 @@ struct BacklogSpec {
     unsigned int timeOffset;
 };
 
-#if defined(RPC_HDR) || defined(RPC_XDR)
-%
-/**
- * Address of an Internet TCP service:
- */
-struct ServiceAddr {
-    /* Internet address of the service. May be hostname or IP address. */
-    string         inetId<>;
-    /* Port number of the service. */
-    unsigned short port;
-};
-#endif
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %
 /**
