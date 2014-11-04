@@ -16,8 +16,10 @@
 #include "globals.h"
 #include "inetutil.h"
 #include "remote.h"
-#include "mcast_info.h"
-#include "mldm_sender_manager.h"
+#if WANT_MULTICAST
+    #include "mcast_info.h"
+    #include "mldm_sender_manager.h"
+#endif
 #include "ldm.h"
 #include "ldmprint.h"
 #include "RegularExpressions.h"
