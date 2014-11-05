@@ -1,17 +1,23 @@
-6.12.7	2014-11-04T17:04:44-0700
+6.12.7	2014-11-05T08:55:28-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
         This change makes it easier to run downstream-only LDM instances that
         don't interfere with an LDM server on the same computer.
 
+    pqact(1) (filel.c):
+        Hopefully corrected a bug that rarely caused a pqact(1) process to 
+        receive a SIGSEGV -- causing it to crash and, consequently the LDM
+        process group to terminate. I wrote "hopefully" because the source of 
+        the bug wasn't found; instead, the suspect region of code was simplified
+        and its logic clarified.
+
     Product Queue (pq.c):
-        Corrected bug in setting of "isFull" flag introduced in LDM 6.12.4.
-        This bug caused the command "ldmadmin vetqueuesize" to work
-        incorrectly: the queue size or maximum acceptible latency parameters
-        would *not* be adjusted if the registry parameter
-        "/reconciliation-mode" were set to "increase queue" or "decrease
-        maximum latency", respectively.
+        Corrected bug introduced in LDM 6.12.4 that caused the command "ldmadmin
+        vetqueuesize" to work incorrectly: the queue size parameter or maximum
+        acceptible latency parameter would *not* be adjusted if the registry
+        parameter "/reconciliation-mode" were set to "increase queue" or
+        "decrease maximum latency", respectively.
 
     NOAAPORT (noaaportIngester):
         Merged changes to the retransmit-request capability from Raytheon for
