@@ -523,7 +523,7 @@ fl_getEntry(
         }
     }
 
-    if (entry)
+    if (entry && isNew)
         *isNew = wasCreated;
 
     return entry;
@@ -2120,7 +2120,7 @@ int xpipe_prodput(
  * message and call exit(-1).
  */
 static void ldmdb_fatal(
-        char * str)
+        const char * str)
 {
     serror("ldmdb_fatal(): %s", str);
 }
@@ -2488,7 +2488,7 @@ int ldmdb_prodput(
         if (dblocksizep != NULL )
             argv[argc++] = dblocksizep;
         argv[argc] = NULL;
-        entry = fl_getEntry(FT_DB, argc, argv);
+        entry = fl_getEntry(FT_DB, argc, argv, NULL);
         udebug("    ldmdb_prodput: %s %s", entry == NULL ? "" : entry->path,
                 prod->info.ident);
         if (entry == NULL )
