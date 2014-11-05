@@ -97,32 +97,36 @@ execMldmSender(
     if (arg == NULL)
         arg = "";
     args[i++] = arg;
-    if (ulogIsVerbose())
-        args[i++] = "-v";
-    if (ulogIsDebug())
-        args[i++] = "-x";
-    args[i++] = "-q";
-    args[i++] = (char*)getQueuePath(); // safe cast
-    char feedtypeBuf[256];
-    (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
-    args[i++] = feedtypeBuf; // multicast group identifier
-    arg = ldm_format(128, "%s:%hu", info->group.inetId, info->group.port);
-    if (arg == NULL) {
-        LOG_ADD0("Couldn't create multicast group argument");
+    args[i++] = "-P";
+    char* serverPortOptArg = ldm_format(12, "%hu", info->server.port);
+    if (serverPortOptArg == NULL) {
+        LOG_ADD0("Couldn't create server-port option-argument");
     }
     else {
-        args[i++] = arg;
-        arg = ldm_format(12, "%hu", info->server.port);
-        if (arg == NULL) {
-            LOG_ADD0("Couldn't create server port argument");
+        args[i++] = serverPortOptArg;
+        if (ulogIsVerbose())
+            args[i++] = "-v";
+        if (ulogIsDebug())
+            args[i++] = "-x";
+        args[i++] = "-q";
+        args[i++] = (char*)getQueuePath(); // safe cast
+        char feedtypeBuf[256];
+        (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
+        args[i++] = feedtypeBuf; // multicast group identifier
+        char* mcastGroupOperand = ldm_format(128, "%s:%hu", info->group.inetId, info->group.port);
+        if (mcastGroupOperand == NULL) {
+            LOG_ADD0("Couldn't create multicast group operand");
         }
         else {
-            args[i++] = arg;
+            args[i++] = mcastGroupOperand;
             args[i++] = NULL;
             execvp(args[0], args);
             LOG_SERROR1("Couldn't execvp() multicast LDM sender \"%s\"",
                     args[0]);
+            free(mcastGroupOperand);
         }
+
+        free(serverPortOptArg);
     }
 }
 
@@ -144,7 +148,7 @@ mlsm_spawn(
     pid_t child = fork();
 
     if (child == -1) {
-        char* const id = mi_asFilename(info);
+        char* const id = mi_format(info);
 
         LOG_SERROR("Couldn't fork() multicast LDM sender for \"%s\"", id);
         free(id);

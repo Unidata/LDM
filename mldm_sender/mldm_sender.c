@@ -108,10 +108,12 @@ static void
 mls_usage(void)
 {
     log_add(
-"Usage: %s [options] feed groupId:groupPort serverPort\n"
+"Usage: %s [options] feed groupId:groupPort\n"
 "Options:\n"
 "    -I serverIface    Interface on which VCMTP TCP server will listen.\n"
 "                      Default is all interfaces.\n"
+"    -P serverPort     Port number for VCMTP TCP server. Default is chosen by",
+"                      operating system."
 "    -l logfile        Log to file <logfile> ('-' => standard error stream).\n"
 "                      Default depends on standard error stream:\n"
 "                          is tty     => use standard error stream\n"
@@ -134,8 +136,7 @@ mls_usage(void)
 "                      expression\n"
 "    groupId:groupPort Internet service address of multicast group, where\n"
 "                      <groupId> is either group-name or dotted-decimal IPv4\n"
-"                      address and <groupPort> is port number.\n"
-"    serverPort        Port number for VCMTP TCP server.",
+"                      address and <groupPort> is port number.",
             getulogident(), getQueuePath());
 }
 
@@ -145,8 +146,9 @@ mls_usage(void)
  * @pre                     {`openulog()` has already been called.}
  * @param[in]  argc         Number of arguments.
  * @param[in]  argv         Arguments.
- * @param[out] serverIface  Interface on which TCP server should listen. Caller
- *                          must not free.
+ * @param[out] serverIface  Interface on which VCMTP TCP server should listen.
+ *                          Caller must not free.
+ * @param[out] serverPort   Port number for VCMTP TCP server.
  * @param[out] ttl          Time-to-live of outgoing packets.
  *                               0  Restricted to same host. Won't be output by
  *                                  any interface.
@@ -163,10 +165,11 @@ mls_usage(void)
  */
 static int
 mls_decodeOptions(
-        int                         argc,
-        char* const* const restrict argv,
-        const char** const restrict serverIface,
-        unsigned* const restrict    ttl)
+        int                            argc,
+        char* const* const restrict    argv,
+        const char** const restrict    serverIface,
+        unsigned short* const restrict serverPort,
+        unsigned* const restrict       ttl)
 {
     int          ch;
     extern int   opterr;
@@ -175,7 +178,7 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":I:l:q:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":I:l:P:q:t:vx")) != EOF)
         switch (ch) {
         case 'I': {
             *serverIface = optarg;
@@ -183,6 +186,19 @@ mls_decodeOptions(
         }
         case 'l': {
             (void)openulog(NULL, mls_getLogOpts(optarg), LOG_LDM, optarg);
+            break;
+        }
+        case 'P': {
+            unsigned short port;
+            int            nbytes;
+
+            if (1 != sscanf(optarg, "%hu %n", &port, &nbytes) ||
+                    0 != optarg[nbytes]) {
+                log_start("Couldn't decode TCP-server port-number option-argument "
+                        "\"%s\"", optarg);
+                return 1;
+            }
+            *serverPort = port;
             break;
         }
         case 'q': {
@@ -285,59 +301,12 @@ mls_decodeGroupAddr(
 }
 
 /**
- * Decodes the Internet service address of the TCP server.
- *
- * @param[in]  arg          Relevant operand.
- * @param[in]  serverIface  Interface on which the TCP server should listen. May
- *                          be a name or a formatted IP address. Caller may
- *                          free.
- * @param[out] serverAddr   Internet service address of the TCP server. Caller
- *                          should free when it's no longer needed.
- * @retval     0            Success. `*serverAddr` is set.
- * @retval     1            `arg == NULL` or invalid operand. `log_start()`
- *                          called.
- * @retval     2            System failure. `log_start()` called.
- */
-static int
-mls_decodeServerAddr(
-        char* const restrict         arg,
-        const char* const restrict   serverIface,
-        ServiceAddr** const restrict serverAddr)
-{
-    int status;
-
-    if (arg == NULL) {
-        log_start("NULL argument");
-        status = 1;
-    }
-    else {
-        unsigned short port;
-        int            nbytes;
-
-        if (1 != sscanf(arg, "%5hu %n", &port, &nbytes) || 0 != arg[nbytes]) {
-            log_start("Couldn't decode port number \"%s\"", arg);
-            status = 1;
-        }
-        else {
-            status = mls_setServiceAddr(serverIface, port, serverAddr);
-        }
-    }
-
-    return status;
-}
-
-/**
  * Decodes the operands of the command-line.
  *
  * @param[in]  argc         Number of operands.
  * @param[in]  argv         Operands.
- * @param[in]  serverIface  Interface on which the TCP server should listen. May
- *                          be a name or a formatted IP address. Caller may
- *                          free.
  * @param[out] groupAddr    Internet service address of the multicast group.
  *                          Caller should free when it's no longer needed.
- * @param[out] serverAddr   Internet service address of the TCP server. Caller
- *                          should free when it's no longer needed.
  * @param[out] feed         Feedtype of the multicast group.
  * @retval     0            Success. `*groupAddr`, `*serverAddr`, and `*feed`
  *                          are set.
@@ -348,9 +317,7 @@ static int
 mls_decodeOperands(
         int                          argc,
         char* const* restrict        argv,
-        const char* const restrict   serverIface,
         ServiceAddr** const restrict groupAddr,
-        ServiceAddr** const restrict serverAddr,
         feedtypet* const restrict    feed)
 {
     int status;
@@ -369,25 +336,44 @@ mls_decodeOperands(
             argc--; argv++;
 
             ServiceAddr* grpAddr;
-            ServiceAddr* srvrAddr;
 
-            if ((status = mls_decodeGroupAddr(*argv, &grpAddr))) {
+            if ((status = mls_decodeGroupAddr(*argv, &grpAddr)))
                 status = 1;
-            }
-            else {
-                argc--; argv++;
-
-                if ((status = mls_decodeServerAddr(*argv, serverIface, &srvrAddr))) {
-                    log_start("Port number of TCP server unspecified or invalid");
-                    status = 1;
-                }
-                else {
-                    *feed = ft;
-                    *groupAddr = grpAddr;
-                    *serverAddr = srvrAddr;
-                }
-            }
         }
+    }
+
+    return status;
+}
+
+/**
+ * Sets runtime parameters from command-line arguments.
+ *
+ * @param[in]  serverIface  Interface on which VCMTP TCP server should listen.
+ *                          Caller must not free.
+ * @param[in]  serverPort   Port number for VCMTP TCP server.
+ * @param[in]  feed         Feedtype of multicast group.
+ * @param[in]  groupAddr    Internet service address of multicast group.
+ *                          Caller should free when it's no longer needed.
+ * @param[out] mcastInfo    Information on multicast group.
+ * @retval     0            Success. `*mcastInfo` is set.
+ * @retval     1            Invalid argument. `log_start()` called.
+ * @retval     2            System failure. `log_start()` called.
+ */
+static int
+mls_setRuntimeParameters(
+        const char* const restrict        serverIface,
+        const unsigned short              serverPort,
+        const feedtypet                   feed,
+        const ServiceAddr* const restrict groupAddr,
+        McastInfo** const restrict        mcastInfo)
+{
+    ServiceAddr* serverAddr;
+    int          status = mls_setServiceAddr(serverIface, serverPort,
+            &serverAddr);
+
+    if (0 == status) {
+        status = mi_new(mcastInfo, feed, groupAddr, serverAddr) ? 2 : 0;
+        sa_free(serverAddr);
     }
 
     return status;
@@ -396,51 +382,50 @@ mls_decodeOperands(
 /**
  * Decodes the command line.
  *
- * @param[in]  argc        Number of arguments.
- * @param[in]  argv        Arguments.
- * @param[out] groupInfo   Multicast group information.
- * @param[out] ttl         Time-to-live of outgoing packets.
- *                               0  Restricted to same host. Won't be output by
- *                                  any interface.
- *                               1  Restricted to the same subnet. Won't be
- *                                  forwarded by a router (default).
- *                             <32  Restricted to the same site, organization or
- *                                  department.
- *                             <64  Restricted to the same region.
- *                            <128  Restricted to the same continent.
- *                            <255  Unrestricted in scope. Global.
- * @retval     0           Success. `*groupInfo` is set. `*ttl` might be set.
- * @retval     1           Invalid command line. `log_start()` called.
- * @retval     2           System failure. `log_start()` called.
+ * @param[in]  argc       Number of arguments.
+ * @param[in]  argv       Arguments.
+ * @param[out] mcastInfo  Multicast group information.
+ * @param[out] ttl        Time-to-live of outgoing packets.
+ *                              0  Restricted to same host. Won't be output by
+ *                                 any interface.
+ *                              1  Restricted to the same subnet. Won't be
+ *                                 forwarded by a router (default).
+ *                            <32  Restricted to the same site, organization or
+ *                                 department.
+ *                            <64  Restricted to the same region.
+ *                           <128  Restricted to the same continent.
+ *                           <255  Unrestricted in scope. Global.
+ * @retval    0           Success. `*mcastInfo` is set. `*ttl` might be set.
+ * @retval    1           Invalid command line. `log_start()` called.
+ * @retval    2           System failure. `log_start()` called.
  */
 static int
 mls_decodeCommandLine(
         int                        argc,
         char* const* restrict      argv,
-        McastInfo** const restrict groupInfo,
+        McastInfo** const restrict mcastInfo,
         unsigned* const restrict   ttl)
 {
-    const char* serverIface = "0.0.0.0"; // default: all interfaces
-    int         status = mls_decodeOptions(argc, argv, &serverIface, ttl);
-    extern int  optind;
+    const char*    serverIface = "0.0.0.0";     // default: all interfaces
+    unsigned short serverPort = 0;              // default: chosen by O/S
+    int            status = mls_decodeOptions(argc, argv, &serverIface,
+            &serverPort, ttl);
+    extern int     optind;
 
     if (0 == status) {
-        argc -= optind;
-        argv += optind;
-
         ServiceAddr* groupAddr;
-        ServiceAddr* serverAddr;
         feedtypet    feed;
 
-        status = mls_decodeOperands(argc, argv, serverIface, &groupAddr,
-                &serverAddr, &feed);
+        argc -= optind;
+        argv += optind;
+        status = mls_decodeOperands(argc, argv, &groupAddr, &feed);
 
-        if (status == 0) {
-            status = mi_new(groupInfo, feed, groupAddr, serverAddr) ? 2 : 0;
+        if (0 == status) {
+            status = mls_setRuntimeParameters(serverIface, serverPort, feed,
+                    groupAddr, mcastInfo);
             sa_free(groupAddr);
-            sa_free(serverAddr);
         }
-    }
+    } // options decoded
 
     return status;
 }
@@ -632,23 +617,24 @@ mls_init(
     if ((status = pim_getNextProdIndex(&iProd)))
         goto close_prod_index_map;
 
-    if ((status = mcastSender_new(&mcastSender, serverInetAddr,
-            info->server.port, groupInetAddr, info->group.port, ttl, iProd))) {
-        status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
+    if (mi_copy(&mcastInfo, info)) {
+        status = LDM7_SYSTEM;
         goto close_prod_index_map;
     }
 
-    if (mi_copy(&mcastInfo, info)) {
-        status = LDM7_SYSTEM;
-        goto free_mcastSender;
+    if ((status = mcastSender_new(&mcastSender, serverInetAddr,
+            &mcastInfo.server.port, groupInetAddr, info->group.port, ttl,
+            iProd))) {
+        status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
+        goto free_mcastInfo;
     }
 
     done = 0;
 
     return 0;
 
-free_mcastSender:
-    mcastSender_free(mcastSender);
+free_mcastInfo:
+    xdr_free(xdr_McastInfo, (char*)&mcastInfo);
 close_prod_index_map:
     (void)pim_close();
 close_pq:
@@ -856,6 +842,13 @@ mls_execute(
     }
     else {
         /*
+         * Print the port number of the TCP server to the standard output
+         * stream in case it wasn't specified by the user and was, instead,
+         * chosen by the operating system.
+         */
+        (void)printf("%hu\n", mcastInfo.server.port);
+
+        /*
          * Block signals used by `pq_sequence()` so that they will only be
          * received by a thread that's accessing the product queue.
          */
@@ -879,8 +872,8 @@ mls_execute(
  * @param[in] argc  Number of arguments.
  * @param[in] argv  Arguments. See [mls_usage()](@ref mls_usage)
  * @retval    0     Success.
- * @retval    1     Invalid command line. `log_log(LOG_ERR)` called.
- * @retval    2     System failure. `log_log(LOG_ERR)` called.
+ * @retval    1     Invalid command line. ERROR-level message logged.
+ * @retval    2     System failure. ERROR-level message logged.
  */
 int
 main(
@@ -901,6 +894,7 @@ main(
     int        status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl);
 
     if (status) {
+        log_add("Couldn't decode command-line");
         if (1 == status)
             mls_usage();
         log_log(LOG_ERR);
@@ -918,9 +912,8 @@ main(
             status = 2;
         }
 
-        mi_free(groupInfo);
-
         unotice("Terminating");
+        mi_free(groupInfo);
     } // `groupInfo` allocated
 
     return status;

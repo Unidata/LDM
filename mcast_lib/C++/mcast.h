@@ -34,7 +34,7 @@ typedef void    (*MissedProdFunc)(void* obj, const VcmtpProdIndex iProd);
 int mcastReceiver_new(
     McastReceiver**             receiver,
     const char* const           tcpAddr,
-    const unsigned short        tcpPort,
+    unsigned short              tcpPort,
     BopFunc                     bof_func,
     EopFunc                     eof_func,
     MissedProdFunc              missed_file_func,
@@ -86,13 +86,13 @@ void mcastReceiver_stop(
  */
 int
 mcastSender_new(
-    void** const         sender,
-    const char* const    tcpAddr,
-    const unsigned short tcpPort,
-    const char* const    mcastAddr,
-    const unsigned short mcastPort,
-    const unsigned       ttl,
-    const VcmtpProdIndex iProd);
+    void** const          sender,
+    const char* const     tcpAddr,
+    unsigned short*       tcpPort,
+    const char* const     mcastAddr,
+    const unsigned short  mcastPort,
+    const unsigned        ttl,
+    const VcmtpProdIndex  iProd);
 
 /**
  * Frees a multicast sender's resources.
