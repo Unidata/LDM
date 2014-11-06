@@ -565,7 +565,9 @@ mls_openProdIndexMap(
 }
 
 /**
- * Initializes the resources of this module
+ * Initializes the resources of this module. Sets `mcastInfo`; in particular,
+ * sets `mcastInfo.server.port` to the actual port number used by the VCMTP
+ * TCP server (in case the number was chosen by the operating-system).
  *
  * @param[in]  info         Information on the multicast group.
  * @param[in]  ttl          Time-to-live of outgoing packets.
@@ -623,7 +625,7 @@ mls_init(
     }
 
     if ((status = mcastSender_new(&mcastSender, serverInetAddr,
-            &mcastInfo.server.port, groupInetAddr, info->group.port, ttl,
+            &mcastInfo.server.port, groupInetAddr, mcastInfo->group.port, ttl,
             iProd))) {
         status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
         goto free_mcastInfo;
@@ -835,7 +837,7 @@ mls_execute(
         const unsigned                  ttl,
         const char* const restrict      pqPathname)
 {
-    int status = mls_init(info, ttl, pqPathname);
+    int status = mls_init(info, ttl, pqPathname); // sets `mcastInfo`
 
     if (status) {
         LOG_ADD0("Couldn't initialize multicast LDM sender");
