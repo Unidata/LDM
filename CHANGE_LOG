@@ -1,4 +1,4 @@
-6.12.7	2014-11-05T17:09:04-0700
+6.12.7	2014-11-06T13:07:15-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -6,8 +6,8 @@
         don't interfere with an LDM server on the same computer.
 
     pqact(1) (filel.c):
-        Hopefully corrected a bug that rarely caused a pqact(1) process to 
-        receive a SIGSEGV -- causing it to crash and, consequently the LDM
+        Hopefully, corrected a bug that rarely caused a pqact(1) process to 
+        receive a SIGSEGV -- causing it to crash and, consequently, the LDM
         process group to terminate. I wrote "hopefully" because the source of 
         the bug wasn't found; instead, the suspect region of code was simplified
         and its logic clarified.
@@ -16,12 +16,12 @@
         Corrected bug introduced in LDM 6.12.4 that caused the command "ldmadmin
         vetqueuesize" to work incorrectly: the queue size parameter or maximum
         acceptible latency parameter would *not* be adjusted if the registry
-        parameter "/reconciliation-mode" were set to "increase queue" or
+        parameter "/reconciliation-mode" was set to "increase queue" or
         "decrease maximum latency", respectively.
 
     NOAAPORT (noaaportIngester):
         Merged changes to the retransmit-request capability from Raytheon for
-        the AWIPS-II system. This capability is only for use by NOAA's weather
+        the AWIPS-II system. This capability can only be used by NOAA's weather
         forecast offices.
 
         Added printing of WMO header of GRIB2 data-products with unknown
