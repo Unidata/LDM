@@ -673,7 +673,7 @@ actUponEntries(
         status = d7mgr_startAll();
 
         if (status) {
-            LOG_ADD0("Problem starting receiving LDM-s");
+            LOG_ADD0("Couldn't start all multicast LDM receivers");
             d7mgr_free();
         }
     }

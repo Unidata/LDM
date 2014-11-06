@@ -19,6 +19,7 @@
 #include "ldmfork.h"
 #include "log.h"
 
+#include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -26,6 +27,7 @@ typedef struct elt {
     struct elt*  next;
     ServiceAddr* ul7;
     feedtypet    ft;
+    pid_t        pid;
 } Elt;
 
 /**
@@ -55,6 +57,7 @@ elt_new(
         }
         else {
             elt->ft = ft;
+            elt->pid = -1;
         }
     }
 
@@ -88,11 +91,17 @@ static Ldm7Status
 elt_start(
         Elt* const elt)
 {
+    int   status;
     pid_t pid = ldmfork();
 
-    if (0 == pid) {
+    if (-1 == pid) {
+        /* System error */
+        LOG_ADD0("Couldn't fork downstream LDM-7 child process");
+        status = LDM7_SYSTEM;
+    }
+    else if (0 == pid) {
         /* Child process */
-        int status = down7_run(elt->ul7, elt->ft, getQueuePath());
+        status = down7_run(elt->ul7, elt->ft, getQueuePath());
 
         if (status == LDM7_SHUTDOWN) {
             log_log(LOG_NOTICE);
@@ -102,14 +111,27 @@ elt_start(
         log_log(LOG_ERR);
         exit(status);
     }
-
-    if (-1 == pid) {
-        /* System error */
-        LOG_ADD0("Couldn't fork downstream LDM-7 child process");
-        return LDM7_SYSTEM;
+    else {
+        /* Parent process */
+        elt->pid = pid;
     }
 
-    return 0;
+    return status;
+}
+
+/**
+ * Stops a downstream LDM-7 child process by sending it a SIGTERM. Idempotent.
+ *
+ * @param[in] elt          Element whose downstream LDM-7 is to be stopped.
+ */
+static void
+elt_stop(
+        Elt* const elt)
+{
+    if (0 < elt->pid) {
+        (void)kill(elt->pid, SIGTERM);
+        elt->pid = -1;
+    }
 }
 
 /*******************************************************************************
@@ -166,18 +188,23 @@ d7mgr_free(void)
  * current process.
  *
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_start()` called. Downstream LDM-7
- *                      manager is in an indeterminate state.
+ * @retval LDM7_SYSTEM  System error. `log_start()` called. All started
+ *                      multicast LDM receivers were stopped.
  */
 int
 d7mgr_startAll(void)
 {
-    for (Elt* elt = top; elt != NULL; elt = elt->next) {
-        int status = elt_start(elt);
+    int  status;
 
-        if (status)
-            return status;
+    for (Elt* elt = top; elt != NULL; elt = elt->next) {
+        status = elt_start(elt);
+
+        if (status) {
+            for (Elt* elt2 = top; elt2 != elt; elt2 = elt2->next)
+                elt_stop(elt2);
+            break;
+        }
     }
 
-    return 0;
+    return status;
 }

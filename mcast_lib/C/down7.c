@@ -567,7 +567,7 @@ makeRequest(
 
 /**
  * Requests data-products that were missed by the multicast LDM receiver.
- * Entries from the missed-bug-not-requested queue are removed and converted
+ * Entries from the missed-but-not-requested queue are removed and converted
  * into requests for missed data-products, which are asynchronously sent to the
  * remote LDM-7. Blocks until the request-queue is shut down or an unrecoverable
  * error occurs. Called by `pthread_create()`.
@@ -734,7 +734,8 @@ terminateTasks(
  *
  * @param[in] down7        Pointer to the downstream LDM-7.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  Error. `log_start()` called.
+ * @retval    LDM7_SYSTEM  Error. `log_start()` called. All tasks were
+ *                         terminated.
  */
 static int
 startTasks(

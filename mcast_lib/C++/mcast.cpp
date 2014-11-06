@@ -248,7 +248,7 @@ mcastReceiver_stop(
  * @param[in]     iProd       Initial product-index. The first multicast data-
  *                            product will have this as its index.
  * @retval        0           Success. `*sender` is set. `*serverPort` is set if
- *                            the port number wasn't 0.
+ *                            the initial port number was 0.
  * @retval        EINVAL      One of the address couldn't  be converted into a
  *                            binary IP address. `log_start()` called.
  * @retval        ENOMEM      Out of memory. \c log_start() called.
@@ -269,6 +269,7 @@ mcastSender_new(
     try {
         *sender = new vcmtpSendv3(serverAddr, *serverPort, groupAddr,
                 groupPort, iProd);
+        // TODO: Set `*serverPort` to actual port-number used by TCP server
         status = 0;
     }
     catch (const std::invalid_argument& e) {
