@@ -442,14 +442,14 @@ run_down7_svc(
  */
 static int
 requestProduct(
-    Down7* const      down7,
-    VcmtpProdIndex const fileId)
+    Down7* const         down7,
+    VcmtpProdIndex const iProd)
 {
     int    status;
 #   define CLNT (down7->clnt)
 
     (void)lockClient(down7);
-    (void)request_product_7((VcmtpProdIndex*)&fileId, CLNT); // asynchronous send
+    (void)request_product_7((VcmtpProdIndex*)&iProd, CLNT); // asynchronous send
 
     if (clnt_stat(CLNT) != RPC_TIMEDOUT) {
         /*
@@ -521,8 +521,8 @@ requestSessionBacklog(
 }
 
 /**
- * Requests from the associated upstream LDM-7, the next file in a downstream
- * LDM-7's missed-but-not-requested queue. Blocks until the queue has a file,
+ * Requests from the associated upstream LDM-7, the next product in a downstream
+ * LDM-7's missed-but-not-requested queue. Blocks until the queue has a product,
  * or the queue is shut down, or an error occurs.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
@@ -537,30 +537,30 @@ makeRequest(
     Down7* const down7)
 {
     int            status;
-    VcmtpProdIndex    fileId;
+    VcmtpProdIndex iProd;
 
     /*
      * The semantics and order of the following actions are necessary to
      * preserve the meaning of the two queues and to ensure that all missed
      * data-products are received following a restart.
      */
-    if (msm_peekMissedFileWait(down7->msm, &fileId)) {
+    if (msm_peekMissedFileWait(down7->msm, &iProd)) {
         udebug("The queue of missed data-products has been shutdown");
         status = LDM7_SHUTDOWN;
     }
     else {
-        if (msm_addRequestedFile(down7->msm, fileId)) {
-            LOG_ADD0("Couldn't add VCMTP file-ID to requested-queue");
+        if (msm_addRequestedFile(down7->msm, iProd)) {
+            LOG_ADD0("Couldn't add VCMTP product-index to requested-queue");
             status = LDM7_SYSTEM;
         }
         else {
             /* The queue can't be empty */
-            (void)msm_removeMissedFileNoWait(down7->msm, &fileId);
+            (void)msm_removeMissedFileNoWait(down7->msm, &iProd);
 
-            if ((status = requestProduct(down7, fileId)) != 0)
+            if ((status = requestProduct(down7, iProd)) != 0)
                 LOG_ADD0("Couldn't request missed data-product");
-        } // file-ID added to requested-but-not-received queue
-    } // have a peeked-at file-ID from the missed-but-not-requested queue
+        } // product-index added to requested-but-not-received queue
+    } // have a peeked-at product-index from the missed-but-not-requested queue
 
     return status;
 }
@@ -596,7 +596,7 @@ startRequester(
 /**
  * Cleanly stops the executing task of a downstream LDM-7 that's requesting
  * data-products that were missed by the multicast LDM receiver by shutting down
- * the queue of missed files and shutting down the socket to the remote LDM-7
+ * the queue of missed products and shutting down the socket to the remote LDM-7
  * for writing.
  *
  * @param[in] down7  Pointer to the downstream LDM-7 whose requesting task is
@@ -1094,8 +1094,8 @@ deliveryFailure(
  * Returns a new downstream LDM-7.
  *
  * @param[in] servAddr    Pointer to the address of the server from which to
- *                        obtain multicast information, backlog files, and
- *                        files missed by the VCMTP layer. Caller may free
+ *                        obtain multicast information, backlog products, and
+ *                        products missed by the VCMTP layer. Caller may free
  *                        upon return.
  * @param[in] feedtype    Feedtype of multicast group to receive.
  * @param[in] pqPathname  Pathname of the product-queue.
@@ -1233,8 +1233,8 @@ down7_execute(
  * a non-recoverable error occurs.
  *
  * @param[in] servAddr       Pointer to the address of the server from which to
- *                           obtain multicast information, backlog files, and
- *                           files missed by the VCMTP layer. Caller may free
+ *                           obtain multicast information, backlog products, and
+ *                           products missed by the VCMTP layer. Caller may free
  *                           upon return.
  * @param[in] feedtype       Feedtype of multicast group to receive.
  * @param[in] pqPathname     Pathname of the product-queue.
@@ -1274,20 +1274,20 @@ down7_run(
  * return immediately so that the multicast LDM receiver can continue.
  *
  * @param[in] down7   Pointer to the downstream LDM-7.
- * @param[in] fileId  VCMTP file identifier of the missed file.
+ * @param[in] iProd   Index of the missed VCMTP product.
  */
 void
 down7_missedProduct(
-    Down7* const      down7,
-    const VcmtpProdIndex fileId)
+    Down7* const         down7,
+    const VcmtpProdIndex iProd)
 {
     /*
      * Cancellation of the operation of the missed-but-not-requested queue is
      * ignored because nothing can be done about it at this point and no harm
      * should result.
      */
-    udebug("Down-7 missed file: %lu", (unsigned long)fileId);
-    (void)msm_addMissedFile(down7->msm, fileId);
+    udebug("Down-7 missed product: %lu", (unsigned long)iProd);
+    (void)msm_addMissedFile(down7->msm, iProd);
 }
 
 /**
@@ -1371,16 +1371,16 @@ deliver_missed_product_7_svc(
  * Accepts notification from the upstream LDM-7 that a requested data-product
  * doesn't exist. Called by the RPC dispatch routine `ldmprog_7()`.
  *
- * @param[in] fileId  Product-index of the data-product.
+ * @param[in] iProd   Index of the data-product.
  * @param[in] rqstp   Pointer to the RPC service-request.
  */
 void*
 no_such_product_7_svc(
-    VcmtpProdIndex* const    fileId,
+    VcmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
     uwarn("Upstream LDM-7 says requested product doesn't exist: %lu",
-            (unsigned long)fileId);
+            (unsigned long)iProd);
 
     return NULL ; /* don't reply */
 }
