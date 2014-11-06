@@ -625,7 +625,7 @@ mls_init(
     }
 
     if ((status = mcastSender_new(&mcastSender, serverInetAddr,
-            &mcastInfo.server.port, groupInetAddr, mcastInfo->group.port, ttl,
+            &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port, ttl,
             iProd))) {
         status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
         goto free_mcastInfo;
