@@ -1,4 +1,4 @@
-6.12.7	2014-11-05T16:43:33-0700
+6.12.7	2014-11-05T17:09:04-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
