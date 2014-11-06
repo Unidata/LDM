@@ -192,7 +192,7 @@ mls_decodeOptions(
             unsigned short port;
             int            nbytes;
 
-            if (1 != sscanf(optarg, "%hu %n", &port, &nbytes) ||
+            if (1 != sscanf(optarg, "%5hu %n", &port, &nbytes) ||
                     0 != optarg[nbytes]) {
                 log_start("Couldn't decode TCP-server port-number option-argument "
                         "\"%s\"", optarg);
@@ -890,7 +890,7 @@ main(
      * Decode the command-line.
      */
     McastInfo* groupInfo;  // multicast group information
-    unsigned   ttl = 1;    // Restrict to same subnet. Won't be forwarded.
+    unsigned   ttl = 1;    // Won't be forwarded by any router.
     int        status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl);
 
     if (status) {
