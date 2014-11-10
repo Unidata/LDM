@@ -1,5 +1,5 @@
 /*
- *   Copyright 2013, University Corporation for Atmospheric Research.
+ *   Copyright 2014, University Corporation for Atmospheric Research.
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
 #include "config.h"
@@ -159,26 +159,25 @@ int fifoNew(
  *
  * This function is thread-safe.
  *
- * @retval 0    Success. \c *bytes points to at least \c nbytes of memory.
- * @retval 1    Usage error. \c log_start() called.
- * @retval 2    O/S error. \c log_start() called.
- * @retval 3    FIFO is closed.
+ * @param[in]  fifo    Pointer to the FIFO.
+ * @param[in]  nbytes  The amount of space to reserve.
+ * @param[out] buf     Pointer to the pointer to be set to the address of the
+ *                     reserved space.
+ * @param[out] size    Amount of data, in bytes, that can be initially
+ *                     transferred. If less than `nbytes`, then the user must
+ *                     subsequently call `fifoCopy()`; otherwise, the user may
+ *                     call `fifoCopy()` or write into `buf` and then call
+ *                     `fifoWriteUpdate()`.
+ * @retval     0       Success. `*bytes` points to at least `nbytes` of memory.
+ * @retval     1       Usage error. `log_start()` called.
+ * @retval     2       O/S error. `log_start()` called.
+ * @retval     3       FIFO is closed.
  */
 int fifoWriteReserve(
-    Fifo* const             fifo,       /**< [in/out] Pointer to the FIFO */
-    const size_t            nbytes,     /**< [in] The amount of space to
-                                         *   reserve */
-    unsigned char** const   buf,        /**< [out] Pointer to the pointer to be
-                                         *   set to the address of the reserved
-                                         *   space */
-    size_t* const           size)       /**< [out] Amount of data, in bytes, 
-                                         *   that can be initially transferred.
-                                         *   If less than \e nbytes, then the
-                                         *   user must subsequently call
-                                         *   \c fifoCopy(); otherwise, the user
-                                         *   may call \c fifoCopy() or \c
-                                         *   write into \e buf and then call
-                                         *   \c fifoWriteUpdate(). */
+    Fifo* const             fifo,
+    const size_t            nbytes,
+    unsigned char** const   buf,
+    size_t* const           size)
 {
     int             status;
 

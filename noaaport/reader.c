@@ -1,5 +1,5 @@
 /*
- *   Copyright 2013, University Corporation for Atmospheric Research.
+ *   Copyright 2014, University Corporation for Atmospheric Research.
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
 #include "config.h"
@@ -20,10 +20,8 @@ struct reader {
     unsigned long   byteCount;      /**< Number of bytes received */
     size_t          maxSize;        /**< Maximum amount to read in a single
                                       *  call in bytes */
-    size_t          nbytes;         /**< Amount of data in buffer in bytes */
     int             fd;             /**< File-descriptor to read from */
     volatile int    status;         /**< Termination status */
-
 };
 
 /**
