@@ -58,7 +58,7 @@ ftp://ftp.unidata.ucar.edu/pub/ldm/</tt></a>.</li>
 <blockquote><pre>
 rpm --install [--prefix=<em>ldmhome</em>] <em>rpm-file</em>
 </pre></blockquote>
-where <em>rpm-file</em> is the RPM file that you just downloded.
+where <em>rpm-file</em> is the RPM file that you just downloaded.
 The square brackets denote an optional argument in which <em>ldmhome</em> is the
 home-directory of the <a href="glindex.html#LDM user">LDM user</a>. The default
 home-directory is <tt>/opt/ldm</tt>.
