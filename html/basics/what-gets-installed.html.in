@@ -118,7 +118,7 @@ LDM installation process:
             <dt><tt>registry</tt>
             <dd>LDM registry directory
             <dt><tt>scour.conf</tt>
-            <dd>Scour((1) configuration file
+            <dd>Scour(1) configuration file
         </dl>
 <br><br>
     <dt><tt>$HOME/@PACKAGE@-@VERSION@/include/</tt>
