@@ -1,4 +1,4 @@
-6.12.7	2014-11-11T13:28:09-0700
+6.12.7	2014-11-11T13:31:49-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -26,6 +26,8 @@
 
         Added printing of WMO header of GRIB2 data-products with unknown
         parameters.
+        
+        Slightly improved the performance of the multicast reading.
         
 6.12.6	2014-09-04T13:56:41-0600
     pqcreate(1):
