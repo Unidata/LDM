@@ -97,67 +97,36 @@ void readerFree(
  * @return NULL
  * @see \link readerStatus() \endlink
  */
-void* readerStart(
-    void* const     arg)        /**< Pointer to the reader to be executed */
+void*
+readerStart(
+        void* const arg)        /**< Pointer to the reader to be executed */
 {
-    Reader* const   reader = (Reader*)arg;
-    int             status = 0; /* default success */
+    Reader* const reader = (Reader*)arg;
+    int           status;
 
     for (;;) {
-        unsigned char*  buf;
-        size_t          size;
+        size_t nbytes;
 
-        if (fifoWriteReserve(reader->fifo, reader->maxSize, &buf, &size) != 0) {
-            LOG_ADD1("Couldn't reserve %lu bytes in FIFO", reader->maxSize);
-            log_log(LOG_ERR);
+        status = fifo_readFd(reader->fifo, reader->fd, reader->maxSize,
+                &nbytes);
+
+        if (status) {
             status = 2;
             break;
         }
+        else if (0 == nbytes) {
+            break;
+        }
         else {
-            ssize_t   nbytes;
-
-            if (size < reader->maxSize)
-                buf = reader->buf;  /* read into internal buffer */
-
-            nbytes = read(reader->fd, buf, reader->maxSize);
-
-            if (0 == nbytes) {
-                break;              /* end of input */
-            }
-            if (-1 == nbytes) {
-                LOG_SERROR0("read() failure");
-                log_log(LOG_ERR);
-                status = 2;
-                break;
-            }
-
-            if (buf == reader->buf) {
-                if (fifoCopy(reader->fifo, buf, nbytes) != 0) {
-                    LOG_ADD1("Couldn't copy %l bytes of data into FIFO", 
-                            (long)nbytes);
-                    log_log(LOG_ERR);
-                    status = 2;
-                    break;
-                }
-            }
-            else {
-                if (fifoWriteUpdate(reader->fifo, nbytes) != 0) {
-                    LOG_ADD1("Couldn't update FIFO with %l bytes of data",
-                            (long)nbytes);
-                    log_log(LOG_ERR);
-                    status = 2;
-                    break;
-                }
-                else {
-                    (void)pthread_mutex_lock(&reader->mutex);
-                    reader->byteCount += nbytes;
-                    (void)pthread_mutex_unlock(&reader->mutex);
-                }
-            }
-        }                                   /* FIFO space reserved */
+            (void)pthread_mutex_lock(&reader->mutex);
+            reader->byteCount += nbytes;
+            (void)pthread_mutex_unlock(&reader->mutex);
+        }
     }                                       /* I/O loop */
 
+    (void)pthread_mutex_lock(&reader->mutex);
     reader->status = status;
+    (void)pthread_mutex_unlock(&reader->mutex);
 
     return NULL;
 }

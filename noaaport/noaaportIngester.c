@@ -837,7 +837,7 @@ int main(
         unotice("Starting Up %s", PACKAGE_VERSION);
         unotice("%s", COPYRIGHT_NOTICE);
 
-        if ((status = fifoNew(npages, &fifo)) != 0) {
+        if ((status = fifo_new(npages, &fifo)) != 0) {
             LOG_ADD0("Couldn't create FIFO");
             log_log(LOG_ERR);
         }
@@ -928,7 +928,7 @@ int main(
 
                     (void)pthread_cancel(statThread);
                     (void)pthread_join(statThread, NULL);
-                    (void)fifoCloseWhenEmpty(fifo);
+                    (void)fifo_closeWhenEmpty(fifo);
                     (void)pthread_join(productMakerThread, NULL);
 
                     if (0 != status)

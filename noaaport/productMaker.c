@@ -285,7 +285,7 @@ void* pmStart(
         int                 cnt;
 
         /* Look for first byte == 255  and a valid SBN checksum */
-        if ((status = fifoRead(fifo, buf, 1)) != 0) {
+        if ((status = fifo_getBytes(fifo, buf, 1)) != 0) {
             if (3 == status)
                 status = 0;
             break;
@@ -299,7 +299,7 @@ void* pmStart(
         }
         logResync = 1;
 
-        if (fifoRead(fifo, buf + 1, 15) != 0) {
+        if (fifo_getBytes(fifo, buf + 1, 15) != 0) {
             if (ulogIsDebug())
                 udebug("couldn't read 16 bytes for sbn");
             continue;
@@ -324,7 +324,7 @@ void* pmStart(
                 for (ch = IOFF; ch < 16; ch++)
                     buf[ch - IOFF] = buf[ch];
 
-                if (fifoRead(fifo, buf + 16 - IOFF, IOFF)
+                if (fifo_getBytes(fifo, buf + 16 - IOFF, IOFF)
                         != 0) {
                     if (ulogIsDebug())
                         udebug("Couldn't read bytes for SBN, resync");
@@ -341,7 +341,7 @@ void* pmStart(
 
         IOFF = 0;
 
-        if (fifoRead(fifo, buf + 16, 16) != 0) {
+        if (fifo_getBytes(fifo, buf + 16, 16) != 0) {
             if (ulogIsDebug())
                 udebug("error reading Product Definition Header");
             continue;
@@ -432,7 +432,7 @@ void* pmStart(
             continue;
         }
         if (pdh->len > 16) {
-            if (fifoRead(fifo, buf + sbn->len + 16,
+            if (fifo_getBytes(fifo, buf + sbn->len + 16,
                         pdh->len - 16) != 0)
                 continue;
         }
@@ -487,7 +487,7 @@ void* pmStart(
 		}
 #endif
         if (pdh->pshlen != 0) {
-            if (fifoRead(fifo, buf + sbn->len + pdh->len,
+            if (fifo_getBytes(fifo, buf + sbn->len + pdh->len,
                         pdh->pshlen) != 0) {
                 uerror("problem reading psh");
                 continue;
@@ -698,7 +698,7 @@ void* pmStart(
 
             /* NWSTG CCB = dataoff, WMO = dataoff + 24 */
 
-            if (fifoRead(fifo, buf + sbn->len + pdh->len + 
+            if (fifo_getBytes(fifo, buf + sbn->len + pdh->len + 
                         pdh->pshlen, pdh->dbsize) != 0) {
                 uerror("problem reading datablock");
                 continue;
@@ -796,7 +796,7 @@ void* pmStart(
             if ((pdh->transtype & 4) > 0) {
                 psh->frags = 0;
             }
-            if (fifoRead(fifo, buf + sbn->len + pdh->len + 
+            if (fifo_getBytes(fifo, buf + sbn->len + pdh->len + 
                         pdh->pshlen, pdh->dbsize) != 0) {
                 uerror("problem reading datablock (cont)");
                 continue;
