@@ -256,7 +256,7 @@ options and arguments, when and if appropriate:
 Note that some of the computer
 systems can build both a 32-bit and a 64-bit LDM system.  We strongly recommend
 that you choose a 64-bit build environment whenever possible so that the <a
-href="glindex.html#product-queue">product-queue</a> isn't unnecessarilly
+href="glindex.html#product-queue">product-queue</a> isn't unnecessarily
 restricted to small sizes only. Note that, by default, the
 <tt><b>configure</b>(1)</tt> script will attempt to support a large <a
 href="glindex.html#product-queue">product-queue</a> if the C compiler is
@@ -286,10 +286,10 @@ For example:
 
 <p>Because certain aspects of the LDM require root privileges
 (<i>e.g.</i>, listening on port 388, using the system logging daemon), the
-configure script will acertain if you can access those privileges.  <b>The
+configure script will ascertain if you can access those privileges.  <b>The
 script will ask you for your password and, possibly, the superuser's 
 (<i>i.e.</i> root's) password.</b>  The script doesn't store or transmit this
-information, it simply uses the passwords to acertain if you have access to
+information, it simply uses the passwords to ascertain if you have access to
 the necessary privileges.
 
 <p>If you don't have access to root privileges (or don't trust the configure
