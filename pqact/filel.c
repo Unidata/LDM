@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <limits.h> /* PATH_MAX */
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #ifndef PATH_MAX
 #define PATH_MAX 255                    /* _POSIX_PATH_MAX */
@@ -210,8 +211,7 @@ struct fl_ops {
 };
 
 /**
- * The one global list of entries. INVARIANT: entry is in list <=> entry's
- * output is open.
+ * The one global list of entries.
  */
 static struct fl {
     int size;
@@ -247,6 +247,30 @@ static fl_entry* entry_new(
         ft_t         type,
         int          argc,
         char** const argv);
+
+static inline void
+entry_setFlag(
+        fl_entry* const entry,
+        const int       flag)
+{
+    entry->flags |= flag;
+}
+
+static inline void
+entry_unsetFlag(
+        fl_entry* const entry,
+        const int       flag)
+{
+    entry->flags &= ~flag;
+}
+
+static inline bool
+entry_isFlagSet(
+        fl_entry* const entry,
+        const int       flag)
+{
+    return entry->flags & flag;
+}
 
 /**
  * Removes an entry from the open-file list.
@@ -435,9 +459,9 @@ fl_sync(
             entry = prev, nentries--) {
         prev = entry->prev;
 
-        if (entry->flags & FL_NEEDS_SYNC) {
+        if (entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
             if (entry->ops->sync(entry, block))
-                fl_removeAndFree(entry, DR_ERROR); // public so remove
+                fl_removeAndFree(entry, DR_ERROR); // public function so remove
         }
     }
 }
@@ -459,7 +483,7 @@ fl_closeLru(
     for (entry = thefl->tail; entry != NULL ; entry = prev) {
         prev = entry->prev;
         /* twisted logic */
-        if (entry->flags & skipflags)
+        if (entry_isFlagSet(entry, skipflags))
             continue;
         /* else */
         fl_removeAndFree(entry, DR_LRU);
@@ -502,9 +526,9 @@ fl_getEntry(
 
     if (NULL != entry) {
         TO_HEAD(entry);
-#ifdef FL_DEBUG
-        dump_fl();
-#endif
+        #ifdef FL_DEBUG
+            dump_fl();
+        #endif
         wasCreated = false;
     }
     else {
@@ -516,9 +540,9 @@ fl_getEntry(
         entry = entry_new(type, argc, argv);
         if (NULL != entry) {
             fl_addToHead(entry);
-#ifdef FL_DEBUG
-            dump_fl();
-#endif
+            #ifdef FL_DEBUG
+                dump_fl();
+            #endif
             wasCreated = true;
         }
     }
@@ -582,46 +606,18 @@ ensureCloseOnExec(
 }
 
 /**
- * Performs optional actions at the end of a product.
+ * Flushes the I/O buffers of an entry if the FL_FLUSH flag is set.
  *
- * NB: If the `-close` option is specified, then the entry is removed from the
- * list and its resources are freed. Consequently, the caller must not
- * dereference it.
- *
- * @param[in] ac     Number of arguments.
- * @param[in] av     Arguments.
  * @param[in] entry  Entry.
- * @retval    0      Success. Entry was removed from list and freed if
- *                   arguments contained `-close` option.
- * @return           `errno` error-code. `uerror()` called. Entry was not
- *                   removed or freed.
+ * @retval    0      Success.
+ * @return           `errno` error-code. `uerror()` called.
  */
-static int finishProduct(
-        int                      ac,
-        char** restrict          av,
+static inline int flushIfAppropriate(
         fl_entry* const restrict entry)
 {
-    int status;
-    int syncflag = 0;
-    int closeflag = 0;
-
-    for (; ac > 1 && *av[0] == '-'; ac--, av++) {
-        if (strncmp(*av, "-close", 3) == 0) {
-            closeflag = 1;
-        }
-        else if (strncmp(*av, "-flush", 3) == 0) {
-            syncflag = 1;
-        }
-    }
-
-    status = syncflag
-            ? (*entry->ops->sync)(entry, syncflag)
+    return entry_isFlagSet(entry, FL_FLUSH)
+            ? entry->ops->sync(entry, 1)
             : 0;
-
-    if (0 == status && closeflag)
-        fl_removeAndFree(entry, DR_CLOSE);
-
-    return status;
 }
 
 /**
@@ -666,6 +662,42 @@ dupstrip(
     return out;
 }
 
+typedef struct {
+    const char*  name;
+    void       (*action)(fl_entry*, int);
+    const int    flag;
+} Option;
+static Option OPT_CLOSE       = {"close",     entry_setFlag,   FL_CLOSE};
+static Option OPT_EDEX        = {"edex",      entry_setFlag,   FL_EDEX};
+static Option OPT_FLUSH       = {"flush",     entry_setFlag,   FL_FLUSH};
+static Option OPT_LOG         = {"log",       entry_setFlag,   FL_LOG};
+static Option OPT_METADATA    = {"metadata",  entry_setFlag,   FL_METADATA};
+static Option OPT_NODATA      = {"nodata",    entry_setFlag,   FL_NODATA};
+static Option OPT_OVERWRITE   = {"overwrite", entry_setFlag,   FL_OVERWRITE};
+static Option OPT_STRIP       = {"strip",     entry_setFlag,   FL_STRIP};
+static Option OPT_TRANSIENT   = {"transient", entry_unsetFlag, FL_NOTRANSIENT};
+
+static void
+decodeOptions(
+        fl_entry* const entry,
+        int             argc,
+        char** restrict argv,
+        ...)
+{
+    va_list opts;
+
+    va_start(opts, argv);
+
+    for (; argc > 1 && *argv[0] == '-'; argc--, argv++)
+        for (const Option* opt = va_arg(opts, const Option*); opt;
+                opt = va_arg(opts, const Option*)) {
+            if (strncmp(*argv+1, opt->name, 2) == 0)
+                opt->action(entry, opt->flag);
+        }
+
+    va_end(opts);
+}
+
 /* Begin UNIXIO */
 static int str_cmp(
         fl_entry*             entry,
@@ -706,24 +738,11 @@ static int unio_open(
     assert(av[ac -1] != NULL);
     assert(*av[ac -1] != 0);
 
-    for (; ac > 1 && *av[0] == '-'; ac--, av++) {
-        if (0 == strncmp(*av, "-overwrite", 3)) {
-            entry->flags |= FL_OVERWRITE;
+    decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP, &OPT_METADATA,
+            &OPT_LOG, &OPT_EDEX, &OPT_FLUSH, &OPT_CLOSE, NULL);
+
+    if (entry_isFlagSet(entry, FL_OVERWRITE))
             flags |= O_TRUNC;
-        }
-        else if (0 == strncmp(*av, "-strip", 3)) {
-            entry->flags |= FL_STRIP;
-        }
-        else if (strncmp(*av, "-metadata", 3) == 0) {
-            entry->flags |= FL_METADATA;
-        }
-        else if (0 == strncmp(*av, "-log", 4)) {
-            entry->flags |= FL_LOG;
-        }
-        else if (0 == strncmp(*av, "-edex", 3)) {
-            entry->flags |= FL_EDEX;
-        }
-    }
 
     path = av[ac - 1];
     entry->handle.fd = -1;
@@ -799,24 +818,22 @@ static int unio_sync(
         fl_entry *entry,
         int block)
 {
-    /*
-     * Some systems may not have an fsync(2) call.
-     * The best you can do then would be to make this
-     * routine a noop which returns 0.
-     */
-    int status = 0;
     udebug("    unio_sync: %d %s", entry->handle.fd, block ? "" : "non-block");
-    if (block) {
-#ifdef HAVE_FSYNC
-        if (entry->handle.fd != -1)
-            status = fsync(entry->handle.fd);
-        if (status == -1) {
-            serror("fsync: %s", entry->path);
-        }
-#endif
-        entry->flags &= ~FL_NEEDS_SYNC;
+
+    if (0 == fsync(entry->handle.fd)) {
+        entry_unsetFlag(entry, FL_NEEDS_SYNC);
+        return 0;
     }
-    return status;
+    if (!block && EAGAIN == errno) {
+        return 0;
+    }
+    if (EINTR != errno) {
+        serror("fsync: %s", entry->path);
+        // disable flushing on I/O error
+        entry_unsetFlag(entry, FL_NEEDS_SYNC);
+    }
+
+    return -1;
 }
 
 /*ARGSUSED*/
@@ -826,9 +843,7 @@ static int unio_put(
         const void *data,
         size_t sz)
 {
-    int errCode = 0; /* success */
-
-    if (0 < sz) {
+    if (sz) {
         TO_HEAD(entry);
         udebug("    unio_dbufput: %d", entry->handle.fd);
 
@@ -837,37 +852,23 @@ static int unio_put(
 
             if (-1 != nwrote) {
                 sz -= nwrote;
-                data = (char*) data + nwrote;
+                data = (char*)data + nwrote;
             }
             else {
                 if (EINTR != errno) {
-                    /*
-                     * According to the UNIX standard, errno should not be set
-                     * to EINTR because the SA_RESTART option was specified to
-                     * sigaction(3) for most signals that could occur.  The
-                     * OSF/1 operating system is non-conforming in this regard,
-                     * however.  For a discussion of the SA_RESTART option, see
-                     * http://www.opengroup.org/onlinepubs/007908799/xsh/sigaction.html
-                     */
                     serror("unio_put(): write() error: \"%s\"", entry->path);
-                    errCode = -1;
-                    break;
+                    // disable flushing on I/O error
+                    entry_unsetFlag(entry, FL_NEEDS_SYNC);
                 }
-            }
-        } while (0 < sz);
 
-        if (0 == errCode) {
-            entry->flags |= FL_NEEDS_SYNC;
-        }
-        else {
-            /*
-             * Don't waste time syncing an errored entry.
-             */
-            entry->flags &= ~FL_NEEDS_SYNC;
-        }
+                return -1;
+            }
+        } while (sz);
+
+        entry_setFlag(entry, FL_NEEDS_SYNC);
     }
 
-    return errCode;
+    return 0;
 }
 
 static struct fl_ops unio_ops = { str_cmp, unio_open, unio_close, unio_sync};
@@ -1015,10 +1016,10 @@ static int unio_out(
 {
     int status = ENOERR;
 
-    if (entry->flags & FL_METADATA) {
+    if (entry_isFlagSet(entry, FL_METADATA)) {
         status = unio_putmeta(entry, &prodp->info, sz);
     }
-    if (status == ENOERR && !(entry->flags & FL_NODATA)) {
+    if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
         status = unio_put(entry, prodp->info.ident, data, sz);
     }
 
@@ -1043,7 +1044,7 @@ int unio_prodput(
         size_t sz;
         void* data;
 
-        if (entry->flags & FL_EDEX) {
+        if (entry_isFlagSet(entry, FL_EDEX)) {
             if (shared_id == -1) {
                 uerror(
                         "Notification specified but shared memory is not available.");
@@ -1059,11 +1060,11 @@ int unio_prodput(
             }
         }
         sz = prodp->info.sz;
-        data = (entry->flags & FL_STRIP) ?
+        data = (entry_isFlagSet(entry, FL_STRIP)) ?
                         dupstrip(prodp->data, prodp->info.sz, &sz) : prodp->data;
 
         if (data != NULL ) {
-            if (entry->flags & FL_OVERWRITE) {
+            if (entry_isFlagSet(entry, FL_OVERWRITE)) {
                 if (lseek(entry->handle.fd, 0, SEEK_SET) < 0) {
                     /*
                      * The "file" must be a pipe or FIFO.
@@ -1075,22 +1076,17 @@ int unio_prodput(
             status = unio_out(entry, prodp, data, sz);
 
             if (status == 0) {
-                if (entry->flags & FL_OVERWRITE)
+                if (entry_isFlagSet(entry, FL_OVERWRITE))
                     (void) ftruncate(entry->handle.fd, sz);
 
-                /*
-                 * The `flags` field is saved because `finishProduct()` might
-                 * free the entry.
-                 */
-                int flags = entry->flags;
-
-                status = finishProduct(argc, argv, entry); // might free entry
+                status = flushIfAppropriate(entry);
 
                 if (status == 0) {
-                    if (flags & FL_LOG)
+                    if (entry_isFlagSet(entry, FL_LOG))
                         unotice("Filed in \"%s\": %s", argv[argc - 1],
-                                s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
-                    if ((flags & FL_EDEX) && shared_id != -1) {
+                                s_prod_info(NULL, 0, &prodp->info,
+                                        ulogIsDebug()));
+                    if (entry_isFlagSet(entry, FL_EDEX) && shared_id != -1) {
                         semarg.val = queue_counter;
                         (void)semctl(sem_id, 1, SETVAL, semarg);
                         queue_counter =
@@ -1104,8 +1100,8 @@ int unio_prodput(
                 free(data);
         } /* data != NULL */
 
-        if (status)
-            fl_removeAndFree(entry, DR_ERROR);
+        if (status || entry_isFlagSet(entry, FL_CLOSE))
+            fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
     } /* entry != NULL */
 
     return status;
@@ -1141,18 +1137,12 @@ static int stdio_open(
 
     entry->handle.stream = NULL;
 
-    for (; ac > 1 && *av[0] == '-'; ac--, av++) {
-        if (strncmp(*av, "-overwrite", 3) == 0) {
-            entry->flags |= FL_OVERWRITE;
-            flags |= O_TRUNC;
-            mode = "w";
-        }
-        else if (strncmp(*av, "-strip", 3) == 0) {
-            entry->flags |= FL_STRIP;
-        }
-        else if (0 == strncmp(*av, "-log", 4)) {
-            entry->flags |= FL_LOG;
-        }
+    decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP, &OPT_LOG,
+            &OPT_FLUSH, &OPT_CLOSE, NULL);
+
+    if (entry_isFlagSet(entry, FL_OVERWRITE)) {
+        flags |= O_TRUNC;
+        mode = "w";
     }
 
     path = av[ac - 1];
@@ -1190,7 +1180,7 @@ static int stdio_open(
                 serror("fdopen: %s", path);
             }
             else {
-                if (!(flags & O_TRUNC)) {
+                if (!entry_isFlagSet(entry, O_TRUNC)) {
                     if (fseek(entry->handle.stream, 0, SEEK_END) < 0) {
                         /*
                          * The "file" must be a pipe or FIFO.
@@ -1233,15 +1223,22 @@ static int stdio_sync(
         fl_entry *entry,
         int block)
 {
-    int status = 0;
     udebug("    stdio_sync: %d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
+
     if (fflush(entry->handle.stream) == EOF) {
-        serror("fflush: %s", entry->path);
-        status = -1;
+        if (EINTR != errno) {
+            serror("fflush: %s", entry->path);
+            // disable flushing on I/O error
+            entry_unsetFlag(entry, FL_NEEDS_SYNC);
+        }
+
+        return -1;
     }
-    entry->flags &= ~FL_NEEDS_SYNC;
-    return status;
+
+    entry_unsetFlag(entry, FL_NEEDS_SYNC);
+
+    return 0;
 }
 
 /*ARGSUSED*/
@@ -1251,23 +1248,23 @@ static int stdio_put(
         const void *data,
         size_t sz)
 {
-    size_t nwrote;
-
-    TO_HEAD(entry);
     udebug("    stdio_dbufput: %d", fileno(entry->handle.stream));
+    TO_HEAD(entry);
 
-    /* else */
-    nwrote = fwrite(data, 1, sz, entry->handle.stream);
+    size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
+
     if (nwrote != sz) {
-        if (errno != EINTR)
+        if (errno != EINTR) {
             serror("stdio_put(): fwrite() error: \"%s\"", entry->path);
+            // disable flushing on I/O error
+            entry_unsetFlag(entry, FL_NEEDS_SYNC);
+        }
 
-        /* don't waste time syncing an errored entry */
-        entry->flags &= ~FL_NEEDS_SYNC;
         return -1;
     }
-    /* else */
-    entry->flags |= FL_NEEDS_SYNC;
+
+    entry_setFlag(entry, FL_NEEDS_SYNC);
+
     return 0;
 }
 
@@ -1290,11 +1287,11 @@ int stdio_prodput(
     if (entry != NULL ) {
         size_t sz = prodp->info.sz;
         void* data =
-                (entry->flags & FL_STRIP) ?
+                (entry_isFlagSet(entry, FL_STRIP)) ?
                         dupstrip(prodp->data, prodp->info.sz, &sz) : prodp->data;
 
         if (data != NULL ) {
-            if (entry->flags & FL_OVERWRITE) {
+            if (entry_isFlagSet(entry, FL_OVERWRITE)) {
                 if (fseek(entry->handle.stream, 0, SEEK_SET) < 0) {
                     /*
                      * The "file" must be a pipe or FIFO.
@@ -1307,18 +1304,12 @@ int stdio_prodput(
             status = stdio_put(entry, prodp->info.ident, data, sz);
 
             if (status == 0) {
-                if (entry->flags & FL_OVERWRITE)
+                if (entry_isFlagSet(entry, FL_OVERWRITE))
                     (void) ftruncate(fileno(entry->handle.stream), sz);
 
-                /*
-                 * The `flags` field is saved because `finishProduct()` might
-                 * free the entry.
-                 */
-                int flags = entry->flags;
+                status = flushIfAppropriate(entry);
 
-                status = finishProduct(argc, argv, entry); // might free entry
-
-                if ((status == 0) && (flags & FL_LOG))
+                if ((status == 0) && entry_isFlagSet(entry, FL_LOG))
                     unotice("StdioFiled in \"%s\": %s", argv[argc - 1],
                             s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
             } /* data written */
@@ -1327,8 +1318,8 @@ int stdio_prodput(
                 free(data);
         } /* data != NULL */
 
-        if (status)
-            fl_removeAndFree(entry, DR_ERROR);
+        if (status || entry_isFlagSet(entry, FL_CLOSE))
+            fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
     } /* entry != NULL */
 
     return status;
@@ -1438,26 +1429,13 @@ static int pipe_open(
     assert(argv[argc] == NULL);
 
     entry->handle.pbuf = NULL;
-    entry->flags |= FL_NOTRANSIENT;
+    entry_setFlag(entry, FL_NOTRANSIENT);
 
-    /*
-     * Handle command-line options.
-     */
-    for (; ac > 1 && *av[0] == '-'; ac--, av++) {
-        if (strncmp(*av, "-transient", 3) == 0) {
-            entry->flags &= ~FL_NOTRANSIENT;
-        }
-        else if (strncmp(*av, "-strip", 3) == 0) {
-            entry->flags |= FL_STRIP;
-        }
-        else if (strncmp(*av, "-metadata", 3) == 0) {
-            entry->flags |= FL_METADATA;
-        }
-        else if (strncmp(*av, "-nodata", 3) == 0) {
-            entry->flags |= FL_NODATA;
-            entry->flags |= FL_METADATA;
-        }
-    }
+    decodeOptions(entry, ac, av, &OPT_TRANSIENT, &OPT_STRIP, &OPT_METADATA,
+            &OPT_NODATA, &OPT_FLUSH, &OPT_CLOSE, NULL);
+
+    if (entry_isFlagSet(entry, FL_NODATA))
+        entry_setFlag(entry, FL_METADATA);
 
     /*
      * Create a pipe into which the parent pqact(1) process will write one or
@@ -1567,11 +1545,12 @@ static int pipe_open(
                      * Create a pipe-buffer with pfd[1] as the output file
                      * descriptor.
                      */
-#ifdef PIPE_BUF
-                    entry->handle.pbuf = new_pbuf(pfd[1], PIPE_BUF);
-#else
-                    entry->handle.pbuf = new_pbuf(pfd[1], _POSIX_PIPE_BUF);
-#endif
+                    #ifdef PIPE_BUF
+                        entry->handle.pbuf = new_pbuf(pfd[1], PIPE_BUF);
+                    #else
+                        entry->handle.pbuf = new_pbuf(pfd[1], _POSIX_PIPE_BUF);
+                    #endif
+
                     if (NULL == entry->handle.pbuf) {
                         LOG_SERROR0("Couldn't create pipe-buffer");
                         log_log(LOG_ERR);
@@ -1600,43 +1579,27 @@ static int pipe_sync(
         fl_entry *entry,
         int block)
 {
-    int status = ENOERR;
     udebug("    pipe_sync: %d %s",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                     block ? "" : "non-block");
-    status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo, entry->path);
-    if (status) {
-        if (block) {
-            if (status != EINTR) {
-                uerror("pipe_sync(): pid=%lu, cmd=(%s)", entry->private,
-                        entry->path);
-                /*
-                 * Don't waste time syncing an errored entry.
-                 */
-                entry->flags &= ~FL_NEEDS_SYNC;
-            }
-        }
-        else {
-            if (status == EAGAIN) {
-                status = 0;
-            }
-            else {
-                if (status != EINTR) {
-                    uerror("pipe_sync(): pid=%lu, cmd=(%s)", entry->private,
-                            entry->path);
-                    /*
-                     * Don't waste time syncing an errored entry.
-                     */
-                    entry->flags &= ~FL_NEEDS_SYNC;
-                }
-            }
-        }
+
+    int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo, entry->path);
+
+    if (0 == status) {
+        entry_unsetFlag(entry, FL_NEEDS_SYNC);
+        return 0;
     }
-    else {
-        entry->flags &= ~FL_NEEDS_SYNC;
+    if (!block && EAGAIN == status) {
+        return 0;
+    }
+    if (EINTR != status) {
+        uerror("pipe_sync(): pid=%lu, cmd=\"%s\"", entry->private,
+                entry->path);
+        // disable flushing on I/O error
+        entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
 
-    return status;
+    return -1;
 }
 
 static void pipe_close(
@@ -1648,7 +1611,7 @@ static void pipe_close(
     udebug("    pipe_close: %d, %d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1, pid);
     if (entry->handle.pbuf != NULL ) {
-        if (pid >= 0 && (entry->flags & FL_NEEDS_SYNC)) {
+        if (pid >= 0 && entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
             (void) pipe_sync(entry, TRUE);
         }
         pfd = entry->handle.pbuf->pfd;
@@ -1678,23 +1641,32 @@ static int pipe_put(
         const void *data,
         size_t sz)
 {
-    int status = ENOERR;
+    int status;
 
-    udebug("    pipe_put: %d", entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
+    udebug("    pipe_put: %d",
+            entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
     TO_HEAD(entry);
-    if (entry->handle.pbuf == NULL )
-        return EINVAL;
 
-    if (!(entry->flags & FL_NODATA)) {
-        status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo, NULL);
+    if (entry->handle.pbuf == NULL ) {
+        status = EINVAL;
+    }
+    else {
+        if (entry_isFlagSet(entry, FL_NODATA)) {
+            status = 0;
+        }
+        else {
+            status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo, NULL);
 
-        if (status != ENOERR && status != EINTR) {
-            /* don't waste time syncing an errored entry */
-            entry->flags &= ~FL_NEEDS_SYNC;
-            return status;
+            if (status && status != EINTR) {
+                /* don't waste time syncing an errored entry */
+                entry_unsetFlag(entry, FL_NEEDS_SYNC);
+            }
+            else {
+                entry_setFlag(entry, FL_NEEDS_SYNC);
+            }
         }
     }
-    entry->flags |= FL_NEEDS_SYNC;
+
     return status;
 }
 
@@ -1862,10 +1834,10 @@ static int pipe_out(
 {
     int status = ENOERR;
 
-    if (entry->flags & FL_METADATA) {
+    if (entry_isFlagSet(entry, FL_METADATA)) {
         status = pipe_putmeta(entry, info, sz);
     }
-    if (status == ENOERR && !(entry->flags & FL_NODATA)) {
+    if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
         status = pipe_put(entry, info->ident, data, sz);
     }
 
@@ -1909,7 +1881,7 @@ int pipe_prodput(
 
         void *data;
 
-        if (entry->flags & FL_STRIP) {
+        if (entry_isFlagSet(entry, FL_STRIP)) {
             data = dupstrip(prodp->data, prodp->info.sz, &sz);
             status = (NULL == data) ? -1 : 0;
         }
@@ -1938,14 +1910,14 @@ int pipe_prodput(
             }
 
             if (0 == status)
-                status = finishProduct(argc, argv, entry); // might free entry
+                status = flushIfAppropriate(entry);
 
             if (data != prodp->data)
                 free(data);
         }       // `data` possibly allocated
 
-        if (status && entry)
-            fl_removeAndFree(entry, DR_ERROR);
+        if (entry && (status || entry_isFlagSet(entry, FL_CLOSE)))
+            fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
     }   // `entry != NULL`
 
     return status;
@@ -2058,6 +2030,7 @@ int spipe_prodput(
          * In case the decoder exited and we haven't yet reaped,
          * try again once.
          */
+        fl_removeAndFree(entry, DR_ERROR);
         uerror("spipe_prodput: trying again");
         entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
@@ -2065,11 +2038,14 @@ int spipe_prodput(
         status = pipe_put(entry, prod->info.ident, buffer, len);
     }
     free(buffer);
-    if (status != ENOERR)
-        return -1;
 
-    return finishProduct(argc, argv, entry);
+    if (0 == status)
+        status = flushIfAppropriate(entry);
 
+    if (status || entry_isFlagSet(entry, FL_CLOSE))
+        fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
+
+    return status;
 }
 
 int xpipe_prodput(
@@ -2095,6 +2071,7 @@ int xpipe_prodput(
          * In case the decoder exited and we haven't yet reaped,
          * try again once.
          */
+        fl_removeAndFree(entry, DR_ERROR);
         uerror("xpipe_prodput: trying again");
         entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
@@ -2102,10 +2079,13 @@ int xpipe_prodput(
         status = pipe_put(entry, prod->info.ident, xprod, xlen);
     }
 
-    if (status != ENOERR)
-        return -1;
+    if (0 == status)
+        status = flushIfAppropriate(entry);
 
-    return finishProduct(argc, argv, entry);
+    if (status || entry_isFlagSet(entry, FL_CLOSE))
+        fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
+
+    return status;
 }
 /* End PIPE */
 
@@ -2234,7 +2214,7 @@ static int ldmdb_sync(
 {
     /* there is no gdbm_sync */
     udebug("    ldmdb_sync: %s", entry->handle.db ? entry->path : "");
-    entry->flags &= ~FL_NEEDS_SYNC;
+    entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return (0);
 }
 
@@ -2313,18 +2293,11 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
 
     entry->handle.db = NULL;
 
-    for(; ac > 1 && *av[0] == '-'; ac-- , av++)
-    {
-        if( strncmp(*av,"-overwrite",3) == 0)
-        {
-            entry->flags |= FL_OVERWRITE;
-            flags |= O_TRUNC;
-        }
-        else if( strncmp(*av,"-strip",3) == 0)
-        {
-            entry->flags |= FL_STRIP;
-        }
-    }
+    decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP, &OPT_FLUSH,
+            &OPT_CLOSE, NULL);
+
+    if (entry_isFlagSet(entry, FL_OVERWRITE))
+        flags |= O_TRUNC;
 
     path = av[ac-1];
 
@@ -2383,7 +2356,7 @@ ldmdb_sync(fl_entry *entry, int block)
     /* there is no dbm_sync */
     udebug("    ldmdb_sync: %s",
             entry->handle.db ? entry->path : "");
-    entry->flags &= ~FL_NEEDS_SYNC;
+    entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return(0);
 }
 
@@ -2531,53 +2504,58 @@ entry_new(
         const int    argc,
         char** const argv)
 {
-    fl_entry *entry;
-
-    entry = Alloc(1, fl_entry);
-    if (entry == NULL ) {
-        serror("entry_new: malloc");
-        return NULL ;
-    }
+    fl_entry*      entry;
+    struct fl_ops* ops;
 
     switch (type) {
     case UNIXIO:
-        entry->ops = &unio_ops;
+        ops = &unio_ops;
         break;
     case STDIO:
-        entry->ops = &stdio_ops;
+        ops = &stdio_ops;
         break;
     case PIPE:
-        entry->ops = &pipe_ops;
+        ops = &pipe_ops;
         break;
     case FT_DB:
-#ifndef NO_DB
-        entry->ops = &ldmdb_ops;
-#else
-        uerror("entry_new: DB type not enabled");
-        goto err;
-        /*NOTREACHED*/
-#endif /* !NO_DB */
+        #ifndef NO_DB
+            ops = &ldmdb_ops;
+        #else
+            uerror("entry_new: DB type not enabled");
+            ops = NULL;
+        #endif
         break;
     default:
         uerror("entry_new: unknown type %d", type);
-        goto err;
+        ops = NULL;
     }
 
-    entry->flags = 0;
-    entry->type = type;
-    entry->next = NULL;
-    entry->prev = NULL;
-    entry->path[0] = 0;
-    entry->private = 0;
+    if (NULL == ops) {
+        entry = NULL;
+    }
+    else {
+        entry = Alloc(1, fl_entry);
 
-    if (entry->ops->open(entry, argc, argv) == -1)
-        goto err;
+        if (NULL == entry) {
+            serror("entry_new: malloc");
+        }
+        else {
+            entry->ops = ops;
+            entry->flags = 0;
+            entry->type = type;
+            entry->next = NULL;
+            entry->prev = NULL;
+            entry->path[0] = 0;
+            entry->private = 0;
+
+            if (entry->ops->open(entry, argc, argv) == -1) {
+                free(entry);
+                entry = NULL;
+            }
+        } // `entry` allocated
+    } // `ops` set
 
     return entry;
-
-err:
-    free(entry);
-    return NULL ;
 }
 
 /**
@@ -2706,11 +2684,11 @@ pid_t reap(
          * "entry" will be NULL if
          *     * The process corresponding to `wpid` is not a `PIPE` decoder;
          *       or
-         *     * The corresponding process is a `PIPE` decoder and
-         *       `fl_removeAndFree()` was called on the corresponding entry
+         *     * The corresponding process is a `PIPE` decoder and the
+         *       corresponding entry was removed by `fl_removeAndFree()`
          *       because
          *         - The `-close` option was specified; or
-         *         - `fl_closeLru()` was called on the entry; or
+         *         - The entry was deleted by `fl_closeLru()`; or
          *         - An I/O error occurred writing to the pipe.
          */
         if (NULL != entry) {

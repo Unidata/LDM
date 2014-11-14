@@ -20,6 +20,8 @@
 #define FL_METADATA 128	/* write data-product metadata */
 #define FL_NODATA 256 /* don't write data */
 #define FL_EDEX 512 /* send message to memory segment */
+#define FL_FLUSH 1024
+#define FL_CLOSE 2048
 
 #ifdef __cplusplus
 extern "C" {
