@@ -202,7 +202,6 @@ struct fl_ops {
      * @param[in] entry  The open-file entry.
      * @param[in] block  Whether or not the I/O should block.
      * @retval    0      Success.
-     * @retval    -1     Failure.
      * @return           `errno` error-code.
      */
     int (*sync)(
@@ -833,7 +832,7 @@ static int unio_sync(
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
 
-    return -1;
+    return errno;
 }
 
 /*ARGSUSED*/
@@ -1104,7 +1103,7 @@ int unio_prodput(
             fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
     } /* entry != NULL */
 
-    return status;
+    return status ? -1 : 0;
 }
 
 /* End UNIXIO */
@@ -1233,7 +1232,7 @@ static int stdio_sync(
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
 
-        return -1;
+        return errno;
     }
 
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
@@ -1322,7 +1321,7 @@ int stdio_prodput(
             fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
     } /* entry != NULL */
 
-    return status;
+    return status ? -1 : 0;
 }
 
 /* End STDIO */
@@ -1599,7 +1598,7 @@ static int pipe_sync(
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
 
-    return -1;
+    return status;
 }
 
 static void pipe_close(
@@ -1920,7 +1919,7 @@ int pipe_prodput(
             fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
     }   // `entry != NULL`
 
-    return status;
+    return status ? -1 : 0;
 }
 
 /*ARGSUSED*/
@@ -2045,7 +2044,7 @@ int spipe_prodput(
     if (status || entry_isFlagSet(entry, FL_CLOSE))
         fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
 
-    return status;
+    return status ? -1 : 0;
 }
 
 int xpipe_prodput(
@@ -2085,7 +2084,7 @@ int xpipe_prodput(
     if (status || entry_isFlagSet(entry, FL_CLOSE))
         fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
 
-    return status;
+    return status ? -1 : 0;
 }
 /* End PIPE */
 
@@ -2493,7 +2492,7 @@ int ldmdb_prodput(
         fl_removeAndFree(entry, -1 == status ? DR_ERROR : DR_CLOSE);
     }
 
-    return status;
+    return status ? -1 : 0;
 }
 
 #endif /* !NO_DB */
