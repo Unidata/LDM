@@ -60,8 +60,10 @@ the last successfully-processed data-product into a file.  The pathname
 of the file is that of the configuration-file with ".state" appended.
 This allows a subsequent \fBpqact\fP process that executes the same
 configuration-file to start processing where the previous process stopped.
-It also means that a configuration-file should have at most one \fBpqact\fPr
-process executing it as a time.
+It also means that a configuration-file should be associated with at most
+one \fBpqact\fP process. If you want to use the same configuration-file for
+multiple \fBpqact\fP processes, then create symbolic links to the
+configuration-file and execute each \fBpqact\fP with a unique link.
 .SH OPTIONS
 .TP
 .B -v
