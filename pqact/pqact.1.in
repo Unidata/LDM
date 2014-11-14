@@ -135,7 +135,8 @@ the product queue, a signal informs
 .B pqact
 and all other interested processes in the process group
 whenever a new product is available, so polling is not necessary in this
-case.  The default interval is 15 seconds.
+case.  The default interval is 15 seconds. If \fItime\fP is \fB0\fP, then
+the process will exit when it hits the end of the product-queue.
 .TP
 .BI \-o " time"
 Offset time, in seconds.
