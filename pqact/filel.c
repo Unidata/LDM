@@ -2713,34 +2713,30 @@ pid_t reap(
                     wpid, WSTOPSIG(status), childType, cmd);
         }
         else if (WIFSIGNALED(status)) {
-            uwarn(cmd
-                        ? "child %d terminated by signal %d (%s %s)"
-                        : "child %d terminated by signal %d",
-                    wpid, WTERMSIG(status), childType, cmd);
-            if (isExec) {
-                (void) cm_remove(execMap, wpid);
+            uwarn("Child %d terminated by signal %d", wpid, WTERMSIG(status));
+
+            if (!isExec) {
+                fl_removeAndFree(entry, DR_TERMINATED); // NULL `entry` safe
             }
             else {
-                fl_removeAndFree(entry, DR_ERROR); /* NULL safe */
+                uinfo("Deleting terminated EXEC entry \"%s\"", cmd);
+                (void)cm_remove(execMap, wpid);
             }
         }
         else if (WIFEXITED(status)) {
-            /*
-             * NB: A PIPE-entry command-string will not be printed if the
-             * corresponding list entry was deleted by fl_closeLru().
-             */
-            if (WEXITSTATUS(status) != 0)
-                uerror(cmd
-                            ? "child %d exited with status %d (%s %s)"
-                            : "child %d exited with status %d",
-                        wpid, WEXITSTATUS(status), childType, cmd);
-            if (isExec) {
-                (void) cm_remove(execMap, wpid);
+            const int          exitStatus = WEXITSTATUS(status);
+            const int          logLevel = exitStatus ? LOG_ERR : LOG_INFO;
+            const DeleteReason dr = exitStatus ? DR_ERROR : DR_TERMINATED;
+
+            ulog(logLevel, "Child %d exited with status %d", wpid, exitStatus);
+
+            if (!isExec) {
+                fl_removeAndFree(entry, dr);    // NULL `entry` safe
             }
             else {
-                fl_removeAndFree(entry, 0 == WEXITSTATUS(status)
-                                        ? DR_TERMINATED
-                                        : DR_ERROR); /* NULL safe */
+                ulog(logLevel, "Deleting %s EXEC entry \"%s\"",
+                        REASON_STRING[dr], cmd);
+                (void)cm_remove(execMap, wpid);
             }
         }
     } /* wpid != -1 && wpid != 0 */

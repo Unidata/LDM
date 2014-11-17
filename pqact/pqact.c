@@ -279,7 +279,7 @@ main(int ac, char *av[])
         spec.feedtype = DEFAULT_FEEDTYPE;
         spec.pattern = DEFAULT_PATTERN;
 
-        if(set_timestamp(&clss.from) != ENOERR) /* corrected by toffset below */
+        if(set_timestamp(&clss.from)) /* corrected by toffset below */
         {
                 int errnum = errno;
                 uerror("Couldn't set timestamp: %s", strerror(errnum));
