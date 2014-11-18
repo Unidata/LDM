@@ -58,9 +58,6 @@ mi_init(
     const ServiceAddr* const restrict mcast,
     const ServiceAddr* const restrict ucast)
 {
-    ServiceAddr multi;
-    ServiceAddr uni;
-
     if (!sa_copy(&info->group, mcast)) {
         LOG_ADD0("Couldn't copy multicast address");
         return false;
