@@ -321,8 +321,8 @@ mcastSender_send(
          * The signature of the product is sent to the receiver as metadata in
          * order to allow duplicate rejection.
          */
-        *iProd = ((vcmtpSendv3*)sender)->sendProduct((void*)data, nbytes,
-                (void*)metadata, metaSize);     //  safe to cast away `const`s
+        *iProd = ((vcmtpSendv3*)sender)->sendProduct((char*)data, nbytes,
+                (char*)metadata, metaSize);     //  safe to cast away `const`s
         return 0;
     }
     catch (const std::exception& e) {

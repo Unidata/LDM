@@ -43,9 +43,8 @@ CPPFLAGS		= -I$(builddir) -I$(srcdir) \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
                           -I$(srcdir)/../vcmtp/VCMTPv3 \
-                          -I$(srcdir)/../vcmtp/VCMTPv3/fatma \
-                          -I$(srcdir)/../vcmtp/VCMTPv3/shawn \
-                          -I$(srcdir)/../vcmtp/VCMTPv3/shawn/recv \
+                          -I$(srcdir)/../vcmtp/VCMTPv3/receiver \
+                          -I$(srcdir)/../vcmtp/VCMTPv3/sender \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc \
                           -I$(top_srcdir)/mcast_lib/C++
@@ -83,7 +82,7 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \
                           -I/usr/local/include \
                           -I/usr/include
-$(VCMTPReceiver_stubs):		../vcmtp/VCMTPv3/shawn/recv/vcmtpRecvv3.h
+$(VCMTPReceiver_stubs):		../vcmtp/VCMTPv3/receiver/vcmtpRecvv3.h
 	opmock2 -cpp -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mcast_stubs):			../C++/mcast.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)

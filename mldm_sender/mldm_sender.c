@@ -465,8 +465,8 @@ mls_setSignalHandling(void)
     (void)sigemptyset(&sigact.sa_mask);
 
     /*
-     * Register logging signal-handler. Ensure that it only affects logging by
-     * restarting the system call.
+     * Register logging-level signal-handler. Ensure that it only affects
+     * logging by restarting any interrupted system call.
      */
     sigact.sa_flags |= SA_RESTART;
     sigact.sa_handler = mls_rotateLoggingLevel;
