@@ -529,7 +529,7 @@ static time_t
 utcToEpochTime(
     const struct tm* const      tm)
 {
-    time_t                      epochTime = -1; /* error */
+    time_t                      epochTime;
     struct tm                   localTime = *tm;
 
 #ifdef HAVE_TIMEGM
@@ -701,8 +701,6 @@ date_sub(
         int                     dom;    /* day-of-month in date indicator */
         char                    select[6];
                                         /* time component code: yyyy, mmm,... */
-        int                     year;
-        int                     month;
         const char *const       s0 = &is[pmatch[0].rm_so];
                                         /* start of entire substring match */
 
@@ -819,6 +817,9 @@ date_sub(
                     }                   /* valid "prevMonthClock" */
                 }                       /* valid "prodMonthClock" */
             }                           /* "adjProdTime" needs adjusting */
+
+            int year;
+            int month;
 
             if (strcmp(select,"yyyy") == 0) {
                 year = adjProdTime.tm_year + 1900;
