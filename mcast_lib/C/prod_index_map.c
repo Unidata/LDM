@@ -382,8 +382,6 @@ consolidateMap(
         status = LDM7_SYSTEM;
     }
     else {
-        sigset_t saveSet;
-
         (void)memcpy(tmpSigs, smallSeg, smallBytes); // copy segment
         (void)memmove(newBigSeg, bigSeg, bigBytes); // shift other segment
         (void)memcpy(newSmallSeg, tmpSigs, smallBytes); // restore segment
@@ -412,7 +410,6 @@ shiftMapDown(
 {
     if (max < mmo->numSigs) {
         const size_t delta = mmo->numSigs - max;
-        sigset_t     saveSet;
 
         (void)memmove(mmo->sigs, mmo->sigs + delta, max*SIG_SIZE);
         mmo->numSigs = max;

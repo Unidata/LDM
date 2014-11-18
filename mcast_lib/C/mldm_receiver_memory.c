@@ -15,6 +15,7 @@
 #include "prod_index_queue.h"
 #include "globals.h"
 #include "inetutil.h"
+#include "mcast.h"
 #include "mldm_receiver_memory.h"
 #include "ldmprint.h"
 #include "log.h"
@@ -91,7 +92,10 @@ getSessionPath(
     char*       path;
     char* const servAddrStr = sa_format(servAddr);
 
-    if (servAddrStr) {
+    if (NULL == servAddrStr) {
+        path = NULL;
+    }
+    else {
         path = ldm_format(256, "%s/%s_%s.yaml", getLdmLogDir(), servAddrStr,
                 s_feedtypet(feedtype));
         free(servAddrStr);
@@ -502,7 +506,7 @@ initFromScratch(
             free(tmpPath);
     } // `tmpPath` allocated
 
-    return true;
+    return success;
 }
 
 /**
@@ -634,9 +638,6 @@ addMissedFiles(
     yaml_document_t* const restrict          document,
     const int                                seq)
 {
-    bool           success = false;
-    VcmtpProdIndex iProd;
-    
     return appendFileIds(document, seq, msm->requestedQ) &&
             appendFileIds(document, seq, msm->missedQ);
 }
@@ -771,7 +772,6 @@ addLastMcastProd(
     yaml_document_t* const restrict          document,
     const int                                map)
 {
-    bool success = false;
     char sigStr[sizeof(signaturet)*2+1];
 
     (void)sprint_signaturet(sigStr, sizeof(sigStr), msm->lastMcastProd);

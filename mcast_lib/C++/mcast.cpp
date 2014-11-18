@@ -94,7 +94,7 @@ mcastReceiver_init(
     // Following object will be deleted by `vcmtpRecvv3` destructor
     receiver->notifier =
             new PerProdNotifier(bop_func, eop_func, missed_prod_func, obj);
-    vcmtpRecvv3*         rcvr = new vcmtpRecvv3(hostId, tcpPort, groupId,
+    receiver->receiver = new vcmtpRecvv3(hostId, tcpPort, groupId,
             mcastPort, receiver->notifier);
 }
 

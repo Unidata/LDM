@@ -71,9 +71,12 @@ static bool
 up7_ensureClientTransport(
         struct SVCXPRT* const xprt)
 {
-    bool status;
+    bool success;
 
-    if (NULL == clnt) {
+    if (clnt) {
+        success = true;
+    }
+    else {
         /*
          * Create a client-side RPC transport on the TCP connection.
          */
@@ -86,14 +89,14 @@ up7_ensureClientTransport(
         if (clnt == NULL ) {
             LOG_START2("Couldn't create client-side transport to downstream LDM-7 on "
                     "%s%s", hostbyaddr(&xprt->xp_raddr), clnt_spcreateerror(""));
-            status = false;
+            success = false;
         }
         else {
-            status = true;
+            success = true;
         }
     }
 
-    return status;
+    return success;
 }
 
 /**
