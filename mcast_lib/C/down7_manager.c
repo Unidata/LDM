@@ -114,6 +114,7 @@ elt_start(
     else {
         /* Parent process */
         elt->pid = pid;
+        status = 0;
     }
 
     return status;
