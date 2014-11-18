@@ -11,7 +11,6 @@ EXTRA_DIST              = down7.hin \
 			  mldm_sender_memory.hin \
 			  mldm_receiver_memory.hin \
                           prod_index_queue.hin \
-                          server_info.hin \
                           sock_funcs.c sock_funcs.hin \
                           up7.hin
 BUILT_SOURCES           = down7.h \
@@ -19,7 +18,6 @@ BUILT_SOURCES           = down7.h \
 			  mldm_sender_memory.h \
 			  mldm_receiver_memory.h \
                           prod_index_queue.h \
-                          server_info.h \
                           sock_funcs.h \
                           up7.h
 noinst_LTLIBRARIES	= lib.la
@@ -33,8 +31,7 @@ lib_la_SOURCES		= down7.c \
 			  mldm_sender_manager.c mldm_sender_manager.h \
 			  mldm_sender_memory.c \
 			  mldm_sender_map.c mldm_sender_map.h \
-			  prod_index_queue.c \
-			  server_info.c
+			  prod_index_queue.c
 CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 			  -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
@@ -59,7 +56,6 @@ mldm_receiver.h:	mldm_receiver.hin mldm_receiver.c
 mldm_sender_memory.h:	mldm_sender_memory.hin mldm_sender_memory.c
 mldm_receiver_memory.h:	mldm_receiver_memory.c mldm_receiver_memory.hin
 prod_index_queue.h:	prod_index_queue.hin prod_index_queue.c
-server_info.h:		server_info.hin server_info.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up7.h:			up7.hin up7.c
 
