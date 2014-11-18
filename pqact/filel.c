@@ -2115,18 +2115,18 @@ static int ldmdb_open(
 {
     char *path;
     GDBM_FILE db;
-    long tmp = 0;
-    int read_write = GDBM_WRCREAT;
     /* default: choose to optimize for space over time */
 #define DEFAULT_DBLOCKSIZE 512
     int dblocksize = DEFAULT_DBLOCKSIZE;
 
     entry->handle.db = NULL;
     path = argv[0];
-    read_write = atoi(argv[1]);
+    int read_write = atoi(argv[1]);
 
     if (argc > 2) {
-        if ((tmp = atoi(argv[2])) > 0) {
+        long tmp = atoi(argv[2]);
+
+        if (0 < tmp) {
             dblocksize = (int) tmp;
         }
         else {
