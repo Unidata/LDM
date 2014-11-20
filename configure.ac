@@ -25,9 +25,9 @@ AC_DEFINE([_XOPEN_SOURCE], [600], [Level of XOPEN compliance])
 #fi
 
 AC_PROG_CXX
-#if test "$GXX" = "yes"; then
-    #AC_SUBST([AM_CXXFLAGS], [-std=c++11])
-#fi
+if test "$GXX" = "yes"; then
+    AC_SUBST([AM_CXXFLAGS], [-std=c++11])
+fi
 case "`uname -sr`" in
     "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
     Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
