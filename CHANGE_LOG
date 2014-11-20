@@ -1,4 +1,4 @@
-6.12.7	2014-11-20T12:03:02-0700
+6.12.7	2014-11-20T13:22:36-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -6,11 +6,10 @@
         don't interfere with an LDM server on the same computer.
 
     pqact(1) (filel.c):
-        Hopefully, corrected a bug that rarely caused a pqact(1) process to 
-        receive a SIGSEGV -- causing it to crash and, consequently, the LDM
-        process group to terminate. I wrote "hopefully" because the source of 
-        the bug wasn't found; instead, the suspect region of code was simplified
-        and its logic clarified.
+        Refactored and generally improved the code in an attempt to stop
+        pqact(1) from receiving a SIGSEGV when executing regexec(3). This has
+        only occurred on one host and it's not clear if it's due to the code or
+        the host.
 
     Product Queue (pq.c):
         Corrected bug introduced in LDM 6.12.4 that caused the command "ldmadmin
