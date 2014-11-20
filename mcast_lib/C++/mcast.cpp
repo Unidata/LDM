@@ -267,10 +267,18 @@ mcastSender_new(
     int status;
 
     try {
-        *sender = new vcmtpSendv3(serverAddr, *serverPort, groupAddr,
+        vcmtpSendv3* send = new vcmtpSendv3(serverAddr, *serverPort, groupAddr,
                 groupPort, iProd);
-        // TODO: Set `*serverPort` to actual port-number used by TCP server
-        status = 0;
+        try {
+            if (0 == *serverPort)
+                *serverPort = send->getTcpPortNum();
+            *sender = send;
+            status = 0;
+        }
+        catch (const std::exception& e) {
+            delete send;
+            throw;
+        }
     }
     catch (const std::invalid_argument& e) {
         LOG_START1("%s", e.what());
