@@ -1,27 +1,22 @@
-# Performs an acceptance-test of a package on a Linux system.
+# Performs an acceptance-test of a package on a Linux system. Assumes that all
+# files are in the current working directory.
 #
 # Usage: $0 tarball vmName
 #
 # where:
-#       tarball         Pathname of source tarball.
+#       tarball         Filename of source tarball.
 #       vmName          Name of the Vagrant virtual machine (e.g.,
 #                       "centos64_64", "precise32")
 
 set -e
 
-tarball=${1:?Pathname of tarball not specified}
+tarball=${1:?Filename of tarball not specified}
 vmName=${2:?Name of Vagrant virtual-machine not specified}
 
-# Copy the tarball to the current working directory.
-#
-cp $tarball .
-
-# Start the virtual machine. Ensure that each virtual machine is started
-# separately because vagrant(1) doesn't support concurrent "vagrant up" 
-# invocations.
+# Start the virtual machine.
 #
 trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
-flock "$SOURCE_DISTRO_NAME" -c "vagrant up \"$vmName\""
+vagrant up "$vmName"
 
 # On the virtual machine,
 #
