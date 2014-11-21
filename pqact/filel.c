@@ -676,13 +676,24 @@ static Option OPT_OVERWRITE   = {"overwrite", entry_setFlag,   FL_OVERWRITE};
 static Option OPT_STRIP       = {"strip",     entry_setFlag,   FL_STRIP};
 static Option OPT_TRANSIENT   = {"transient", entry_unsetFlag, FL_NOTRANSIENT};
 
-static void
+/**
+ * Decodes action options.
+ *
+ * @param[in] entry  Associated action entry.
+ * @param[in] argc   Number of arguments.
+ * @param[in] argv   NULL-terminated list of arguments.
+ * @param[in] ...    NULL-terminated sequence of possible options (e.g.,
+ *                   `&OPT_CLOSE`).
+ * @retval           Number of options decoded.
+ */
+static unsigned
 decodeOptions(
         fl_entry* const entry,
         int             argc,
         char** restrict argv,
         ...)
 {
+    int     ac = argc;
     va_list opts;
 
     va_start(opts, argv);
@@ -695,6 +706,8 @@ decodeOptions(
         }
 
     va_end(opts);
+
+    return ac - argc;
 }
 
 /* Begin UNIXIO */
@@ -737,8 +750,10 @@ static int unio_open(
     assert(av[ac -1] != NULL);
     assert(*av[ac -1] != 0);
 
-    decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP, &OPT_METADATA,
-            &OPT_LOG, &OPT_EDEX, &OPT_FLUSH, &OPT_CLOSE, NULL);
+    unsigned nopt = decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP,
+            &OPT_METADATA, &OPT_LOG, &OPT_EDEX, &OPT_FLUSH, &OPT_CLOSE, NULL);
+    ac -= nopt;
+    av += nopt;
 
     if (entry_isFlagSet(entry, FL_OVERWRITE))
             flags |= O_TRUNC;
@@ -1136,8 +1151,10 @@ static int stdio_open(
 
     entry->handle.stream = NULL;
 
-    decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP, &OPT_LOG,
-            &OPT_FLUSH, &OPT_CLOSE, NULL);
+    unsigned nopt = decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP,
+            &OPT_LOG, &OPT_FLUSH, &OPT_CLOSE, NULL);
+    ac -= nopt;
+    av += nopt;
 
     if (entry_isFlagSet(entry, FL_OVERWRITE)) {
         flags |= O_TRUNC;
@@ -1418,10 +1435,10 @@ static int pipe_open(
         int argc,
         char **argv)
 {
-    int ac = argc;
+    int    ac = argc;
     char** av = argv;
-    int pfd[2];
-    int writeFd = -1; /* failure */
+    int    pfd[2];
+    int    writeFd = -1; /* failure */
 
     assert(argc >= 1);
     assert(argv[0] != NULL && *argv[0] != 0);
@@ -1430,8 +1447,10 @@ static int pipe_open(
     entry->handle.pbuf = NULL;
     entry_setFlag(entry, FL_NOTRANSIENT);
 
-    decodeOptions(entry, ac, av, &OPT_TRANSIENT, &OPT_STRIP, &OPT_METADATA,
-            &OPT_NODATA, &OPT_FLUSH, &OPT_CLOSE, NULL);
+    unsigned nopt = decodeOptions(entry, ac, av, &OPT_TRANSIENT, &OPT_STRIP,
+            &OPT_METADATA, &OPT_NODATA, &OPT_FLUSH, &OPT_CLOSE, NULL);
+    // ac -= nopt; // not used
+    av += nopt;
 
     if (entry_isFlagSet(entry, FL_NODATA))
         entry_setFlag(entry, FL_METADATA);
@@ -2292,8 +2311,10 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
 
     entry->handle.db = NULL;
 
-    decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP, &OPT_FLUSH,
-            &OPT_CLOSE, NULL);
+    unsigned nopt = decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP,
+            &OPT_FLUSH, &OPT_CLOSE, NULL);
+    ac -= nopt;
+    av += nopt;
 
     if (entry_isFlagSet(entry, FL_OVERWRITE))
         flags |= O_TRUNC;
