@@ -1,20 +1,20 @@
-# Performs an acceptance-test of a package on a Linux system. Assumes that
-# this script is in the top-level of the development source-directory and that
-# the necessary files already exist.
+# Performs an acceptance-test of a package on a Linux system.
 #
-# Usage: $0 vmName
+# Usage: $0 tarball vmName
 #
 # where:
+#       tarball         Pathname of source tarball.
 #       vmName          Name of the Vagrant virtual machine (e.g.,
 #                       "centos64_64", "precise32")
 
 set -e
 
-vmName=${1:?Name of Vagrant virtual-machine not specified}
+tarball=${1:?Pathname of tarball not specified}
+vmName=${2:?Name of Vagrant virtual-machine not specified}
 
-# Make the directory that contains this script be the current working directory.
+# Copy the tarball to the current working directory.
 #
-cd `dirname $0`
+cp $tarball .
 
 # Start the virtual machine. Ensure that each virtual machine is started
 # separately because vagrant(1) doesn't support concurrent "vagrant up" 
