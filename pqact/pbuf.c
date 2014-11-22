@@ -62,13 +62,23 @@ err:
         return NULL;
 }
 
-/* returns 0 or errno on error */
+/**
+ * Flushes data to the pipe.
+ *
+ * @param[in] buf        Pipe buffer.
+ * @param[in] block      Whether or not write should block.
+ * @param[in] timeo      Timeout in seconds. 0 means indefinite timeout.
+ * @retval    0          Success.
+ * @retval    EAGAIN     `block` is false and write would block.
+ * @retval    EINTR      Write to pipe was interrupted by signal.
+ * @retval    EPIPE      Pipe not open for reading. Reader likely terminated.
+ * @retval    ETIMEDOUT  Write to pipe timed-out.
+ */
 int
 pbuf_flush(
     pbuf*               buf,
     int                 block,          /* bool_t */
-    unsigned int        timeo,          /* N.B. Not a struct timeval */
-    const char* const   id)             /* destination identifier */
+    unsigned int        timeo)          /* N.B. Not a struct timeval */
 {
     size_t              len = (size_t)(buf->ptr - buf->base);
     int                 changed = 0;
@@ -102,17 +112,12 @@ pbuf_flush(
     if(nwrote == -1) {
         if((tmpErrno == EAGAIN) && (!block)) {
             udebug("         pbuf_flush: EAGAIN on %d bytes", len);
-
             nwrote = 0;
         }
         else {
-            status = tmpErrno;
-
-            serror(NULL == id
-                    ? "pbuf_flush(): fd=%d"
-                    : "pbuf_flush(): fd=%d, cmd=(%s)",
-                buf->pfd, id);
+            serror("pbuf_flush(): fd=%d", buf->pfd);
         }
+        status = tmpErrno;
     }
     else if(nwrote == len) {
         /* wrote the whole buffer */
@@ -140,10 +145,8 @@ pbuf_flush(
     duration = time(NULL) - start;
 
     if(duration > 5)
-        uwarn(id == NULL
-                ?  "pbuf_flush(): write(%d,,%d) to decoder took %lu s"
-                :  "pbuf_flush(): write(%d,,%d) to decoder took %lu s: %s",
-            buf->pfd, nwrote, (unsigned long)duration, id);
+        uwarn("pbuf_flush(): write(%d,,%d) to decoder took %lu s",
+            buf->pfd, nwrote, (unsigned long)duration);
 
     return status;
 
@@ -151,33 +154,32 @@ flush_timeo:
     if(changed)
         set_fd_nonblock(buf->pfd);
 
-    uerror(id == NULL
-            ?  "pbuf_flush(): write(%d,,%lu) to decoder timed-out (%lu s)"
-            :  "pbuf_flush(): write(%d,,%lu) to decoder timed-out (%lu s): %s",
-        buf->pfd, (unsigned long)len, (unsigned long)(time(NULL) - start), id);
+    uerror("pbuf_flush(): write(%d,,%lu) to decoder timed-out (%lu s)",
+        buf->pfd, (unsigned long)len, (unsigned long)(time(NULL) - start));
 
-    return EAGAIN;
+    return ETIMEDOUT;
 }
 
 /**
  * Writes to a pipe-buffer.
  *
- * @param[in] buf     Pipe buffer.
- * @param[in] ptr     Data to write.
- * @param[in] nbytes  Number of bytes to write.
- * @param[in] timeo   How long to wait in seconds.
- * @param[in] id      Command string.
- * @retval    0       Success.
- * @return            `errno` error-code.
+ * @param[in] buf        Pipe buffer.
+ * @param[in] ptr        Data to write.
+ * @param[in] nbytes     Number of bytes to write.
+ * @param[in] timeo      Timeout in seconds. 0 means indefinite timeout.
+ * @retval    0          Success.
+ * @retval    EINTR      Write to pipe was interrupted by signal.
+ * @retval    EPIPE      Pipe not open for reading. Reader likely terminated.
+ * @retval    ETIMEDOUT  Write to pipe timed-out.
  */
 int
 pbuf_write(
     pbuf*               buf,
     const char*         ptr,
     size_t              nbytes,
-    unsigned int        timeo,          /* N.B. Not a struct timeval */
-    const char* const   id)
+    unsigned int        timeo)          /* N.B. Not a struct timeval */
 {
+    int    status;
     size_t tlen;
 
     while (nbytes > 0) {
@@ -189,7 +191,7 @@ pbuf_write(
         buf->ptr += tlen;
 
         if(buf->ptr == buf->upperbound) {
-            const int   status = pbuf_flush(buf, 1, timeo, id);
+            status = pbuf_flush(buf, 1, timeo);
 
             if(status != ENOERR)
                 return status;
@@ -200,5 +202,7 @@ pbuf_write(
     }
 
     /* write what we can */
-    return pbuf_flush(buf, 0, 0, id);
+    status = pbuf_flush(buf, 0, 0);
+
+    return (EAGAIN == status) ? 0 : status;     // OK if write would block
 }

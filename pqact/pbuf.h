@@ -25,28 +25,24 @@ extern "C" pbuf * new_pbuf(int pfd, size_t bufsize);
 extern "C" int pbuf_flush(
     pbuf*               buf,
     int                 block,          /* bool_t */
-    unsigned int        timeo,          /* N.B. Not a struct timeval */
-    const char* const   id);
+    unsigned int        timeo);         /* N.B. Not a struct timeval */
 extern "C" int pbuf_write(
     pbuf*               buf,
     const char*         ptr,
     size_t              nbytes,
-    unsigned int        timeo,          /* N.B. Not a struct timeval */
-    const char* const   id);
+    unsigned int        timeo);         /* N.B. Not a struct timeval */
 #elif defined(__STDC__)
 extern void free_pbuf(pbuf *buf);
 extern pbuf * new_pbuf(int pfd, size_t bufsize);
 extern int pbuf_flush(
     pbuf*               buf,
     int                 block,          /* bool_t */
-    unsigned int        timeo,          /* N.B. Not a struct timeval */
-    const char* const   id);
+    unsigned int        timeo);         /* N.B. Not a struct timeval */
 extern int pbuf_write(
     pbuf*               buf,
     const char*         ptr,
     size_t              nbytes,
-    unsigned int        timeo,          /* N.B. Not a struct timeval */
-    const char* const   id);
+    unsigned int        timeo);         /* N.B. Not a struct timeval */
 #else /* Old Style C */
 extern void free_pbuf();
 extern pbuf * new_pbuf();

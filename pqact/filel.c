@@ -684,30 +684,31 @@ static Option OPT_TRANSIENT   = {"transient", entry_unsetFlag, FL_NOTRANSIENT};
  * @param[in] argv   NULL-terminated list of arguments.
  * @param[in] ...    NULL-terminated sequence of possible options (e.g.,
  *                   `&OPT_CLOSE`).
- * @retval           Number of options decoded.
+ * @return           Number of options decoded.
  */
 static unsigned
 decodeOptions(
-        fl_entry* const entry,
-        int             argc,
-        char** restrict argv,
+        fl_entry* const restrict entry,
+        int                      argc,
+        char** restrict          argv,
         ...)
 {
-    int     ac = argc;
-    va_list opts;
+    const int ac = argc;
 
-    va_start(opts, argv);
+    for (; argc > 1 && **argv == '-'; argc--, argv++) {
+        va_list opts;
 
-    for (; argc > 1 && *argv[0] == '-'; argc--, argv++)
+        va_start(opts, argv);
+
         for (const Option* opt = va_arg(opts, const Option*); opt;
-                opt = va_arg(opts, const Option*)) {
+                opt = va_arg(opts, const Option*))
             if (strncmp(*argv+1, opt->name, 2) == 0)
                 opt->action(entry, opt->flag);
-        }
 
-    va_end(opts);
+        va_end(opts);
+    }
 
-    return ac - argc;
+    return argc - ac;
 }
 
 /* Begin UNIXIO */
@@ -1601,18 +1602,17 @@ static int pipe_sync(
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                     block ? "" : "non-block");
 
-    int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo, entry->path);
+    int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo);
 
     if (0 == status) {
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
         return 0;
     }
-    if (!block && EAGAIN == status) {
+    if (EAGAIN == status) {
         return 0;
     }
     if (EINTR != status) {
-        uerror("pipe_sync(): pid=%lu, cmd=\"%s\"", entry->private,
-                entry->path);
+        uerror("pipe_sync(): pid=%lu, cmd=\"%s\"", entry->private, entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -1673,7 +1673,7 @@ static int pipe_put(
             status = 0;
         }
         else {
-            status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo, NULL);
+            status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo);
 
             if (status && status != EINTR) {
                 /* don't waste time syncing an errored entry */
@@ -1709,7 +1709,7 @@ static int pipe_putcreation(
 #if SIZEOF_UINT64_T*CHAR_BIT == 64
     uint64_t uint64 = (uint64_t) creation->tv_sec;
     status = pbuf_write(entry->handle.pbuf, (void*) &uint64,
-            (u_int) sizeof(uint64_t), pipe_timeo, NULL);
+            (u_int) sizeof(uint64_t), pipe_timeo);
 #else
     uint32_t lower32 = (uint32_t) creation->tv_sec;
 #   if SIZEOF_LONG*CHAR_BIT <= 32
@@ -1726,14 +1726,14 @@ static int pipe_putcreation(
     uint32_t second32 = upper32;
 #   endif
     status = pbuf_write(entry->handle.pbuf, (void*) &first32,
-            (u_int) sizeof(uint32_t), pipe_timeo, NULL);
+            (u_int) sizeof(uint32_t), pipe_timeo);
     if (status == ENOERR) {
         status = pbuf_write(entry->handle.pbuf, (void*) &second32,
-                (u_int) sizeof(uint32_t), pipe_timeo, NULL);
+                (u_int) sizeof(uint32_t), pipe_timeo);
         if (status == ENOERR) {
             int32_t int32 = (int32_t) creation->tv_usec;
             status = pbuf_write(entry->handle.pbuf, (void*) &int32,
-                    (u_int) sizeof(int32_t), pipe_timeo, NULL);
+                    (u_int) sizeof(int32_t), pipe_timeo);
         }
     }
 #endif
@@ -1777,17 +1777,17 @@ static int pipe_putmeta(
     int status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &totalLen,
-            (u_int) sizeof(totalLen), pipe_timeo, NULL);
+            (u_int) sizeof(totalLen), pipe_timeo);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &info->signature,
-            (u_int) sizeof(info->signature), pipe_timeo, NULL);
+            (u_int) sizeof(info->signature), pipe_timeo);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &sz, (u_int) sizeof(sz),
-            pipe_timeo, NULL);
+            pipe_timeo);
     if (status != ENOERR)
         return status;
 
@@ -1797,39 +1797,39 @@ static int pipe_putmeta(
 
     int32 = (int32_t) info->arrival.tv_usec;
     status = pbuf_write(entry->handle.pbuf, (void*) &int32, (u_int) sizeof(int32),
-            pipe_timeo, NULL);
+            pipe_timeo);
     if (status != ENOERR)
         return status;
 
     uint32 = (uint32_t) info->feedtype;
     status = pbuf_write(entry->handle.pbuf, (void*) &uint32, (u_int) sizeof(uint32),
-            pipe_timeo, NULL);
+            pipe_timeo);
     if (status != ENOERR)
         return status;
 
     uint32 = (uint32_t) info->seqno;
     status = pbuf_write(entry->handle.pbuf, (void*) &uint32, (u_int) sizeof(uint32),
-            pipe_timeo, NULL);
+            pipe_timeo);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &identLen,
-            (u_int) sizeof(identLen), pipe_timeo, NULL);
+            (u_int) sizeof(identLen), pipe_timeo);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) info->ident, identLen,
-            pipe_timeo, NULL);
+            pipe_timeo);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &originLen,
-            (u_int) sizeof(originLen), pipe_timeo, NULL);
+            (u_int) sizeof(originLen), pipe_timeo);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) info->origin, originLen,
-            pipe_timeo, NULL);
+            pipe_timeo);
 
     return status;
 }
