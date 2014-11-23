@@ -25,8 +25,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   #   win7.vm.box = "win7"
   # end
  
-  config.vm.boot_timeout = "600"
-
   # All Vagrant configuration is done here. The most common configuration
   # options are documented and commented below. For a complete reference,
   # please see the online documentation at vagrantup.com.
