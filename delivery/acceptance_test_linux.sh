@@ -1,17 +1,29 @@
-# Performs an acceptance-test of a package on a Linux system. Assumes that all
-# files are in the current working directory.
+# Performs an acceptance-test of a package on a Linux system. Builds the package
+# in the directory that contains this script and assumes that the tarball is one
+# directory level up.
 #
-# Usage: $0 tarball vmName
+# Usage: $0 vmName
 #
 # where:
-#       tarball         Filename of source tarball.
 #       vmName          Name of the Vagrant virtual machine (e.g.,
 #                       "centos64_64", "precise32")
 
-set -e
+set -e  # terminate on error
 
-tarball=${1:?Filename of tarball not specified}
-vmName=${2:?Name of Vagrant virtual-machine not specified}
+vmName=${1:?Name of Vagrant virtual-machine not specified}
+
+# Go to the build directory.
+#
+cd `dirname $0`
+
+# Move the tarball to the build directory so that it appears in the "/vagrant"
+# directory.
+#
+mv ../*.tar.gz .
+
+# Set the release variables.
+#
+. ./release-vars.sh
 
 # Start the virtual machine.
 #

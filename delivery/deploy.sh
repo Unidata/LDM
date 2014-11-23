@@ -1,5 +1,6 @@
-# Deploys the LDM to a remote host. Assumes that this script is in the top-level
-# development source-directory and that the necessary files already exist.
+# Deploys the LDM to a remote host. Assumes that the release scripts are in the
+# directory that contains this script and that the tarball is one directory
+# level up.
 #
 # Usage:
 #       $0 host [configOpts]
@@ -13,13 +14,17 @@ set -e # terminate on error
 host=${1:?Host name not specified}
 configOpts=$2
 
-# For convenience, make the directory that contains this script be the current
-# working directory.
+# Go to the directory that contains this script.
+#
 cd `dirname $0`
+
+# Get the release variables.
+#
+. ./release_vars.sh
 
 # Copy the source-distribution to the remote host.
 #
-scp $SOURCE_DISTRO_NAME $USER_NAME@$host:
+scp ../$SOURCE_DISTRO_NAME $USER_NAME@$host:
 
 # bash(1) is explicitly used for remote executions because 1) not all LDM users
 # have the same user-shell; and 2) not all sh(1)-s behave the same -- especially
