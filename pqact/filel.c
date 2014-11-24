@@ -222,8 +222,8 @@ static struct fl {
         if(thefl->head != entry) fl_makeHead(entry)
 
 /**
- * Frees an open-file entry -- releasing all resources including closing the
- * associated output.
+ * Frees an open-file entry -- releasing all resources including flushing and
+ * closing the associated output.
  *
  * @param[in] entry  The entry to be freed or `NULL`.
  */
