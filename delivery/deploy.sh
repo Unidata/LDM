@@ -20,7 +20,7 @@ cd `dirname $0`
 
 # Get the release variables.
 #
-. ./release_vars.sh
+. ./release-vars.sh
 
 # Copy the source-distribution to the remote host.
 #
