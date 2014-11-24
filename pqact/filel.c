@@ -708,7 +708,7 @@ decodeOptions(
         va_end(opts);
     }
 
-    return argc - ac;
+    return ac - argc;
 }
 
 /* Begin UNIXIO */
