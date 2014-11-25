@@ -19,6 +19,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#include "inetutil.h"
 #include "log.h"
 #include "dvbs.h"
 #include "fifo.h"
@@ -52,7 +53,7 @@ int multicastReaderNew(
      */
     int pidChannel;
 
-    if (sscanf(mcastSpec, "%*d.%*d.%*d.%d", &pidChannel) != 1) {
+    if (sscanf(mcastSpec, "%*3d.%*3d.%*3d.%d", &pidChannel) != 1) {
         LOG_START1("Couldn't decode multicast specification \"%s\"", mcastSpec);
         status = 1;
     }
@@ -94,7 +95,8 @@ int multicastReaderNew(
                     
                     if (bind(sock, (struct sockaddr*)&sockAddr,
                                 sizeof(sockAddr)) < 0) {
-                        LOG_SERROR1("Couldn't bind to port %d", port);
+                        LOG_SERROR2("Couldn't bind to %s:%d",
+                                hostbyaddr(&sockAddr), port);
                         status = 2;
                     }
                     else {
