@@ -132,6 +132,23 @@ readerStart(
 }
 
 /**
+ * Stops a reader cleanly. Closes the input and processes all remaining data.
+ * This function is idempotent and async-signal safe (it may be called by a
+ * signal-handler).
+ *
+ * @param[in] reader  Reader to be stopped.
+ */
+void
+readerStop(
+        Reader* const reader)
+{
+    fifo_closeWhenEmpty(reader->fifo);
+
+    if (close(reader->fd))
+        serror("Couldn't close file-descriptor %d of reader", reader->fd);
+}
+
+/**
  * Returns statistics since the last time this function was called or \link
  * readerStart() \endlink was called.
  */

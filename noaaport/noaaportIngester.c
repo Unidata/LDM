@@ -16,6 +16,7 @@
 #include "fifo.h"
 #include "fileReader.h"
 #include "getFacilityName.h"
+#include "globals.h"
 #include "ldmProductQueue.h"
 #include "multicastReader.h"
 #include "productMaker.h"
@@ -151,7 +152,8 @@ static void signal_handler(
         case SIGINT:
             exit(1);
         case SIGTERM:
-            (void)pthread_cancel(readerThread);
+            done = 1;
+            readerStop(reader);
             break;
         case SIGUSR1:
             if (NULL != reader) {
@@ -434,12 +436,9 @@ static void encodeDuration(
             (void)strncpy(buf, "T", size);
             buf++;
             size--;
-            tPrinted = 1;
         }
 
         nchar = snprintf(buf, size, "%fS", duration);
-        buf += nchar;
-        size -= nchar;
     }
 }
 
@@ -627,7 +626,6 @@ int main(
     Fifo*               fifo;
     int                 ttyFd = open("/dev/tty", O_RDONLY);
     int                 processPriority = 0;
-    int                 idx;
     const char*         logPath = (-1 == ttyFd)
         ? NULL                          /* log to system logging daemon */
         : "-";                          /* log to standard error stream */
@@ -647,7 +645,7 @@ int main(
             case 'b': {
                 unsigned long   n;
 
-                if (sscanf(optarg, "%lu", &n) != 1) {
+                if (sscanf(optarg, "%12lu", &n) != 1) {
                     LOG_SERROR1("Couldn't decode FIFO size in pages: \"%s\"",
                             optarg);
                     status = 1;

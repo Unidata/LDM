@@ -53,7 +53,7 @@ int multicastReaderNew(
      */
     int pidChannel;
 
-    if (sscanf(mcastSpec, "%*3d.%*3d.%*3d.%d", &pidChannel) != 1) {
+    if (sscanf(mcastSpec, "%*3d.%*3d.%*3d.3%d", &pidChannel) != 1) {
         LOG_START1("Couldn't decode multicast specification \"%s\"", mcastSpec);
         status = 1;
     }
@@ -95,8 +95,7 @@ int multicastReaderNew(
                     
                     if (bind(sock, (struct sockaddr*)&sockAddr,
                                 sizeof(sockAddr)) < 0) {
-                        LOG_SERROR2("Couldn't bind to %s:%d",
-                                hostbyaddr(&sockAddr), port);
+                        LOG_SERROR2("Couldn't bind to %s:%d", mcastSpec, port);
                         status = 2;
                     }
                     else {
