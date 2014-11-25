@@ -61,7 +61,6 @@ The LDM supports flexible, site-specific configuration.
 <ul>
     <li><p><a href="basics/index.html">LDM Reference</a>
     <li><p><a href="tutorial/index.html">LDM Tutorial</a>
-    <li><p><a href="workshop/index.html">Latest LDM Training Workshop</a>
     <li><p><a href="manindex.html">LDM <code>man(1)</code> pages</a>
     <li><p><a href="networkSecurityAndSetup.html">
         The LDM and Network Security</a>
