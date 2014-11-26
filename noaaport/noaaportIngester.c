@@ -926,7 +926,6 @@ int main(
 
                     (void)pthread_cancel(statThread);
                     (void)pthread_join(statThread, NULL);
-                    (void)fifo_noMoreInput(fifo);
                     (void)pthread_join(productMakerThread, NULL);
 
                     if (0 != status)

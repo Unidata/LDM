@@ -16,7 +16,6 @@
 struct reader {
     Fifo*                 fifo;           /**< Pointer to FIFO into which to put data
                                             */
-    unsigned char*        buf;            /**< Internal read buffer */
     pthread_mutex_t       mutex;          /**< Object access lock */
     unsigned long         byteCount;      /**< Number of bytes received */
     size_t                maxSize;        /**< Maximum amount to read in a single
@@ -27,23 +26,25 @@ struct reader {
 };
 
 /**
- * Returns a new reader. The client should call \link \c readerFree() \endlink
- * when the reader is no longer needed.
+ * Returns a new reader. The client should call `readerFree()` when the reader
+ * is no longer needed.
  *
  * This function is thread-safe.
  *
- * @retval 0    Success.
- * @retval 1    Precondition failure. \c log_start() called.
- * @retval 2    O/S failure. \c log_start() called.
+ * @param[in]  fd       File-descriptor to read from. Will be closed by
+ *                      `readerStop()`.
+ * @param[in]  fifo     Pointer to FIFO into which to put data.
+ * @param[in]  maxSize  Maximum amount to read in a single call in bytes.
+ * @param[out] reader   Returned reader.
+ * @retval     0        Success. `*reader` is set.
+ * @retval     1        Precondition failure. `log_start()` called.
+ * @retval     2        O/S failure. `log_start()` called.
  */
 int readerNew(
-    const int           fd,         /**< [in] File-descriptor to read from */
-    Fifo* const         fifo,       /**< [in] Pointer to FIFO into which to put
-                                     *   data */
-    const size_t        maxSize,    /**< [in] Maximum amount to read in a single
-                                     *   call in bytes */
-    Reader** const      reader)     /**< [out] Pointer to pointer to address of
-                                     *   reader */
+    const int           fd,
+    Fifo* const         fifo,
+    const size_t        maxSize,
+    Reader** const      reader)
 {
     int       status = 2;       /* default failure */
     Reader*   r = (Reader*)malloc(sizeof(Reader));
@@ -52,27 +53,18 @@ int readerNew(
         LOG_SERROR0("Couldn't allocate new reader");
     }
     else {
-        unsigned char*    buf = (unsigned char*)malloc(maxSize);
-
-        if (NULL == buf) {
-            LOG_SERROR1("Couldn't allocate %lu bytes for buffer", 
-                    (unsigned long)maxSize);
+        if ((status = pthread_mutex_init(&r->mutex, NULL)) != 0) {
+            LOG_ERRNUM0(status, "Couldn't initialize reader mutex");
+            status = 2;
         }
         else {
-            if ((status = pthread_mutex_init(&r->mutex, NULL)) != 0) {
-                LOG_ERRNUM0(status, "Couldn't initialize product-maker mutex");
-                status = 2;
-            }
-            else {
-                r->byteCount = 0;
-                r->fifo = fifo;
-                r->fd = fd;
-                r->maxSize = maxSize;
-                r->buf = buf;
-                r->status = 0;
-                r->isStopped = 0;
-                *reader = r;
-            }
+            r->byteCount = 0;
+            r->fifo = fifo;
+            r->fd = fd;
+            r->maxSize = maxSize;
+            r->status = 0;
+            r->isStopped = 0;
+            *reader = r;
         }
     }
 
@@ -80,26 +72,26 @@ int readerNew(
 }
 
 /**
- * Frees a reader.
+ * Frees a reader. Does not close the file descriptor or free the FIFO which
+ * were passed to `readerNew()`.
+ *
+ * @param[in] reader  Reader to be freed. May be NULL.
  */
 void readerFree(
-    Reader* const   reader)     /**< Pointer to the reader to be freed */
+    Reader* const   reader)
 {
-    if (NULL != reader) {
-        free(reader->buf);
-        free(reader);
-    }
+    free(reader);
 }
 
 /**
  * Executes a reader. Returns when end-of-input is encountered, `readerStop()`
- * is called, or an error occurs. Called by `pthread_create()`.
+ * is called, or an error occurs. Logs an error-message on error.
+ * `readerStatus()` will return execution status. Called by `pthread_create()`.
  *
  * This function is thread-safe.
  *
  * @param[in]  arg   Pointer to reader.
  * @retval     NULL  Always.
- * @see `readerStatus()`
  */
 void*
 readerStart(
@@ -144,9 +136,10 @@ readerStart(
 }
 
 /**
- * Stops a reader cleanly. Closes the input and allows outstanding data to be
- * read. This function is idempotent and async-signal safe (it may be called by
- * a signal-handler).
+ * Stops a reader cleanly. Closes the file descriptor passed to `readerNew()`
+ * and allows outstanding data to be read. An error-message is logged if the
+ * file descriptor could not be closed. This function is idempotent and
+ * async-signal safe (it may be called by a signal-handler).
  *
  * @param[in] reader  Reader to be stopped.
  */
@@ -162,8 +155,8 @@ readerStop(
 }
 
 /**
- * Returns statistics since the last time this function was called or \link
- * readerStart() \endlink was called.
+ * Returns statistics since the last time this function was called or
+ * `readerStart()` was called.
  */
 void readerGetStatistics(
     Reader* const           reader, /**< [in] Pointer to the reader */
