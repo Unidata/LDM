@@ -117,6 +117,7 @@ readerStart(
             break;
         }
         else if (0 == nbytes) {
+            fifo_noMoreInput(reader->fifo);
             status = 0;
             break;
         }
