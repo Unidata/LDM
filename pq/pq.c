@@ -195,13 +195,13 @@ static size_t
 fb_arena_sz(size_t nelems) 
 {
     int maxsize = log4(nelems) + 1;
-    int blksize;                /* size of fblk (number of levels) */
     int numblks;                /* blks to preallocate for each level */
     int level;
     size_t total=0;
     numblks = 0.75*nelems;      /* level 1 blks to preallocate */
     for (level = 0; level < maxsize; level++) {
-        blksize = level + 1;
+        int blksize = level + 1;        /* size of fblk (number of levels) */
+
         total += blksize*numblks;
         if(numblks >= 4)
             numblks /= 4;
@@ -557,11 +557,11 @@ tq_rel_tqelem(tqueue *const tq, int level, tqep_t p)
 
 #define TV_CMP_LT(tv, uv) \
         ((tv).tv_sec < (uv).tv_sec || \
-         (tv).tv_sec == (uv).tv_sec && (tv).tv_usec < (uv).tv_usec)
+        ((tv).tv_sec == (uv).tv_sec && (tv).tv_usec < (uv).tv_usec))
 
 #define TV_CMP_LE(tv, uv) \
         ((tv).tv_sec < (uv).tv_sec || \
-         (tv).tv_sec == (uv).tv_sec && (tv).tv_usec <= (uv).tv_usec)
+        ((tv).tv_sec == (uv).tv_sec && (tv).tv_usec <= (uv).tv_usec))
 
 #define TV_CMP_EQ(tv, uv) \
         ((tv).tv_sec == (uv).tv_sec && (tv).tv_usec == (uv).tv_usec)
@@ -620,7 +620,7 @@ tq_add(
                 /*
                  * while(q->key < key) {...}
                  */
-                while ((TV_CMP_LT(tqp->tv, tp->tv))) {
+                while (TV_CMP_LT(tqp->tv, tp->tv)) {
                     p = q;
                     tpp = tqp;
                     /*
@@ -733,7 +733,7 @@ tqe_find(const tqueue *const tq, const timestampt *const key, const pq_match mt)
         q = fbp->fblks[tpp->fblk + k];
         tqp = &tq->tqep[q];
         /* while(q->key < key) {...} */
-        while((TV_CMP_LT(tqp->tv, *key))) {
+        while(TV_CMP_LT(tqp->tv, *key)) {
             p = q;
             tpp = &tq->tqep[p];
             /* q = p->forward[k]; */
@@ -830,7 +830,7 @@ tq_delete(tqueue *const tq, tqelem *tqep)
         assert((q == TQ_NIL) || (TQ_HEAD < q && q < tq->nalloc + TQ_OVERHEAD_ELEMS));
         /* while(q->key < key) { */
         /* on fast machines distinct products may have equal timestamps */
-        while((TV_CMP_LT(tqp->tv, tqep->tv)) ||
+        while(TV_CMP_LT(tqp->tv, tqep->tv) ||
               (TV_CMP_EQ(tqp->tv, tqep->tv) && tqp->offset < tqep->offset)) {
             p = q;
             tpp = tqp;
@@ -1387,7 +1387,6 @@ rl_fext_prev(regionl *const rl, size_t rlix)
     region *rlrp = rl->rp;
     region *rep = rlrp + rlix;
     size_t spix;
-    size_t sqix;
     region *spp;
     region *sqp;
     int k;
@@ -1401,7 +1400,7 @@ rl_fext_prev(regionl *const rl, size_t rlix)
     k = rl->level_fext;
     do {
         /* q = p->forward[k]; */
-        sqix = fbp->fblks[spp->prev + k];
+        size_t sqix = fbp->fblks[spp->prev + k];
         sqp = rlrp + sqix;
         /*      while(q->key < key) { */
         while(sqp->extent < rep->extent 
@@ -1609,7 +1608,6 @@ rl_fext_find(regionl *rl, size_t extent)
         /* while(q->key < key) { */
         /* regions with equal extents may be on freelist, so need to find right one to delete */
         while(sqp->extent < extent) {
-            spix = sqix;
             spp = sqp;
             /* q = p->forward[k]; */
             sqix = fbp->fblks[spp->prev + k];
@@ -1631,14 +1629,11 @@ rl_get(regionl *const rl, size_t extent)
 {
     region *rlrp = rl->rp;
     region *rep;
-    size_t sqbest;              /* index of best fit */
 
     if(extent > rl->maxfextent)
         return RL_NONE;
 
-    sqbest = RL_NONE;
-
-    sqbest = rl_fext_find(rl, extent);
+    size_t sqbest = rl_fext_find(rl, extent);      /* index of best fit */
     if(sqbest == RL_FEXT_TL) {
         return RL_NONE;
     }
@@ -1671,11 +1666,10 @@ rlhash_del(regionl *const rl, size_t rlix)
     region *rlrp = rl->rp;
     region *rep = rlrp + rlix;
     size_t rpix = rep->prev;    /* previous element */
-    region *rpp;
     size_t rnix = rep->next;    /* next element */
 
     if(rpix != RL_NONE) {
-        rpp = rlrp + rpix;
+        region *rpp = rlrp + rpix;
         rpp->next = rnix;
     } else {                    /* deleting head of chain */
         size_t try;
@@ -1705,7 +1699,6 @@ rl_foff_add(regionl *const rl, size_t rlix)
     int k;
     size_t update[MAXLEVELS];
     size_t spix;
-    size_t sqix;
     region *spp;
     region *sqp;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
@@ -1716,7 +1709,7 @@ rl_foff_add(regionl *const rl, size_t rlix)
     k = rl->level_foff;
     do {
         /* q = p->forward[k]; */
-        sqix = fbp->fblks[spp->next + k];
+        size_t sqix = fbp->fblks[spp->next + k];
         sqp = rlrp + sqix;
         /*      while(q->key < key) { */
         while(sqp->offset < rep->offset) {
@@ -1762,7 +1755,6 @@ rl_fext_add(regionl *const rl, size_t rlix)
     int k;
     size_t update[MAXLEVELS];
     size_t spix;
-    size_t sqix;
     region *spp;
     region *sqp;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
@@ -1774,7 +1766,7 @@ rl_fext_add(regionl *const rl, size_t rlix)
     /* Can have multiple identical extents in list */
     do {
         /* q = p->forward[k]; */
-        sqix = fbp->fblks[spp->prev + k];
+        size_t sqix = fbp->fblks[spp->prev + k];
         sqp = rlrp + sqix;
         /*      while(q->key < key) { */
         while(sqp->extent < rep->extent
@@ -1903,7 +1895,6 @@ rl_foff_prev(regionl *const rl, size_t rlix)
     region *rlrp = rl->rp;
     region *rep = rlrp + rlix;
     size_t spix;
-    size_t sqix;
     region *spp;
     region *sqp;
     int k;
@@ -1917,7 +1908,7 @@ rl_foff_prev(regionl *const rl, size_t rlix)
     k = rl->level_foff;
     do {
         /* q = p->forward[k]; */
-        sqix = fbp->fblks[spp->next + k];
+        size_t sqix = fbp->fblks[spp->next + k];
         sqp = rlrp + sqix;
         /*      while(q->key < key) { */
         while(sqp->offset < rep->offset) {
@@ -2464,7 +2455,6 @@ static int
 sx_find_delete(sx *const sx, const signaturet sig) 
 {
     sxelem* sxep;
-    sxelem* osxep;
     size_t try;
     size_t next;
     sxhash *sxhp;
@@ -2487,7 +2477,7 @@ sx_find_delete(sx *const sx, const signaturet sig)
     }
     next = sxep->next;
     while (next != SX_NONE) {
-        osxep = sxep;
+        sxelem* osxep = sxep;
         sxep = &sx->sxep[next];
         if(sx_compare(sig, sxep->sxi)) { /* found */
             osxep->next = sxep->next;
@@ -4059,6 +4049,15 @@ pq_new(
     fSet(pq->pflags, PQ_NOGROW); /* always set for this version of pq! */
     setOffsetsAndSizes(pq, align, initialsz, maxProds);
 
+    if (pq->ixo < pq->datao) {
+        uerror("Queue-size not supported by environment: initialsz=%ld, "
+                "sizeof(off_t)=%lu, sizeof(size_t)=%lu", (long)initialsz,
+                (unsigned long)sizeof(off_t), (unsigned long)sizeof(size_t));
+        errno = EINVAL;
+        free(pq);
+        return NULL;
+    }
+
     if (isProductMappingNecessary(pq)) {
         /*
          * The entire product-queue can't be memory-mapped in one mmap(2)
@@ -4896,7 +4895,7 @@ pq_del_oldest(
              * Compute the product's residence time only if the product was
              * created before now.
              */
-            if ((TV_CMP_LT(*creationTime, now))) {
+            if (TV_CMP_LT(*creationTime, now)) {
                 timestampt      virtResTime =
                     diff_timestamp(&now, creationTime);
 
@@ -4956,7 +4955,6 @@ pq_del_oldest(
 static int
 rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
 {
-        int status = ENOERR;
         size_t rlix;
 
         udebug("Deleting oldest to make space %ld bytes", (long)extent);
@@ -4965,7 +4963,8 @@ rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
                 if(pq->rlp->nelems == 0)
                         return ENOMEM;
 
-                status = pq_del_oldest(pq);
+                int status = pq_del_oldest(pq);
+
                 if(status != ENOERR)
                         return status;
 
@@ -4985,15 +4984,14 @@ rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
 static int
 rpqe_mkslot(pqueue *const pq)
 {
-        int status = ENOERR;
-
         /* unotice("Deleting oldest to get a queue slot"); */
 
         do {
                 if(pq->rlp->nelems == 0)
                         return ENOMEM;
 
-                status = pq_del_oldest(pq);
+                int status = pq_del_oldest(pq);
+
                 if(status != ENOERR)
                         return status;
 
@@ -5318,11 +5316,11 @@ pq_close(pqueue *pq)
                 (void)ctl_rel(pq, 0);
         }
         else {
-            int rflags;
-
             status = ctl_get(pq, RGN_WRITE);
 
             if (!status) {
+                int rflags;
+
                 if (0 < pq->ctlp->write_count) {
                     pq->ctlp->write_count--;
                     rflags = RGN_MODIFIED;
