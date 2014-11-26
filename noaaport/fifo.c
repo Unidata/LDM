@@ -14,13 +14,13 @@
 #include <unistd.h>
 
 struct fifo {
-    unsigned char*      buf;        /**< Pointer to start of buffer */
-    size_t              nextWrite;  /**< Offset to next byte to write */
-    size_t              nbytes;     /**< Number of bytes in the buffer */
-    size_t              size;       /**< Size of buffer in bytes */
-    pthread_mutex_t     mutex;      /**< Concurrent access lock */
-    pthread_cond_t      cond;       /**< Condition variable */
-    bool                closeIfEmpty;   /**< Close the FIFO if empty? */
+    unsigned char*   buf;          ///< Pointer to start of buffer
+    size_t           nextWrite;    ///< Offset to next byte to write
+    size_t           nbytes;       ///< Number of bytes in the buffer
+    size_t           size;         ///< Size of buffer in bytes
+    pthread_mutex_t  mutex;        ///< Concurrent access lock
+    pthread_cond_t   cond;         ///< Condition variable
+    bool             noMoreInput;  ///< No more input?
 };
 
 /**
@@ -63,7 +63,7 @@ fifo_init(
                 fifo->nextWrite = 0;
                 fifo->nbytes = 0;  /* indicates startup */
                 fifo->size = size;
-                fifo->closeIfEmpty = false;
+                fifo->noMoreInput = false;
                 status = 0; /* success */
             }                   /* `fifo->cond` initialized */
 
@@ -103,13 +103,6 @@ fifo_wait(
         Fifo* const fifo)
 {
     (void)pthread_cond_wait(&fifo->cond, &fifo->mutex);
-}
-
-static inline void
-fifo_close(
-        Fifo* const fifo)
-{
-    fifo->closeIfEmpty = true;
 }
 
 /**
@@ -152,21 +145,6 @@ fifo_availableForReading(
         const Fifo* const restrict fifo)
 {
     return fifo->nbytes;
-}
-
-/**
- * Indicates if a FIFO is closed.
- *
- * @pre              {FIFO is locked}
- * @param[in] fifo   FIFO.
- * @retval    true   FIFO is closed.
- * @retval    false  FIFO isn't closed.
- */
-static inline bool
-fifo_isClosed(
-        const Fifo* const fifo)
-{
-    return fifo->closeIfEmpty && fifo_availableForReading(fifo) == 0;
 }
 
 /**
@@ -300,7 +278,8 @@ fifo_new(
 }
 
 /**
- * Transfers bytes from a file to a FIFO. Blocks until space is available.
+ * Transfers bytes from a file to a FIFO. Blocks until space is available. This
+ * function is thread-safe.
  *
  * @param[in]  fifo      FIFO.
  * @param[in]  fd        File descriptor from which to obtain bytes.
@@ -309,7 +288,6 @@ fifo_new(
  * @retval     0         Success.
  * @retval     1         Usage error. `log_start()` called.
  * @retval     2         System error. `log_start()` called.
- * @retval     3         FIFO is closed.
  */
 int
 fifo_readFd(
@@ -328,17 +306,11 @@ fifo_readFd(
         status = 1;
     }
     else {
-        while (!fifo_isClosed(fifo) &&
-                fifo_availableForWriting(fifo) < maxBytes)
+        while (fifo_availableForWriting(fifo) < maxBytes)
             fifo_wait(fifo);
+        status = fifo_transferFromFd(fifo, fd, maxBytes, nbytes);
 
-        if (fifo_isClosed(fifo)) {
-            status = 3;
-        }
-        else {
-            status = fifo_transferFromFd(fifo, fd, maxBytes, nbytes);
-            fifo_signal(fifo);
-        }
+        fifo_signal(fifo);
     }
 
     fifo_unlock(fifo);
@@ -347,7 +319,8 @@ fifo_readFd(
 }
 
 /**
- * Removes bytes from a FIFO. Blocks until the amount of requested data exists.
+ * Removes bytes from a FIFO. Blocks until the amount of requested data exists
+ * or `fifo_noMoreInput()` is called.
  *
  * This function is thread-safe.
  *
@@ -356,7 +329,7 @@ fifo_readFd(
  * @param[in[ nbytes  Number of bytes to remove.
  * @retval    0       Success.
  * @retval    1       Usage error. \c log_start() called.
- * @retval    3       FIFO is closed.
+ * @retval    3       End of input.
  */
 int
 fifo_getBytes(
@@ -374,10 +347,10 @@ fifo_getBytes(
         status = 1;
     }
     else {
-        while (!fifo_isClosed(fifo) && fifo_availableForReading(fifo) < nbytes)
+        while (!fifo->noMoreInput && fifo_availableForReading(fifo) < nbytes)
             fifo_wait(fifo);
 
-        if (fifo_isClosed(fifo)) {
+        if (fifo_availableForReading(fifo) < nbytes) {
             status = 3;
         }
         else {
@@ -393,21 +366,16 @@ fifo_getBytes(
 }
 
 /**
- * Causes a FIFO to close when it becomes empty. Attempting to write to or read
- * from a closed FIFO will result in an error.
+ * Tells a FIFO that no more input will be forthcoming.
  *
- * This function is thread-safe.
- *
- * @retval 0    Success
- * @retval 1    Usage error. `log_start()` called.
- * @retval 2    O/S error. `log_start()` called.
+ * This function is thread-safe and idempotent.
  */
 void
-fifo_closeWhenEmpty(
+fifo_noMoreInput(
     Fifo* const fifo)       /**< [in/out] Pointer to FIFO */
 {
     fifo_lock(fifo);
-    fifo_close(fifo);
+    fifo->noMoreInput = true;
     fifo_signal(fifo);
     fifo_unlock(fifo);
 }

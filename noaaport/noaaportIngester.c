@@ -149,9 +149,9 @@ static void signal_handler(
 #endif
 
     switch (sig) {
-        case SIGINT:
+        case SIGINT:    // stop now
             exit(1);
-        case SIGTERM:
+        case SIGTERM:   // stop gracefully
             done = 1;
             readerStop(reader);
             break;
@@ -926,7 +926,7 @@ int main(
 
                     (void)pthread_cancel(statThread);
                     (void)pthread_join(statThread, NULL);
-                    (void)fifo_closeWhenEmpty(fifo);
+                    (void)fifo_noMoreInput(fifo);
                     (void)pthread_join(productMakerThread, NULL);
 
                     if (0 != status)

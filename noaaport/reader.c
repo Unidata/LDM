@@ -8,20 +8,22 @@
 #include "reader.h"     /* Eat own dog food */
 
 #include <pthread.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 struct reader {
-    Fifo*           fifo;           /**< Pointer to FIFO into which to put data
-                                      */
-    unsigned char*  buf;            /**< Internal read buffer */
-    pthread_mutex_t mutex;          /**< Object access lock */
-    unsigned long   byteCount;      /**< Number of bytes received */
-    size_t          maxSize;        /**< Maximum amount to read in a single
-                                      *  call in bytes */
-    int             fd;             /**< File-descriptor to read from */
-    volatile int    status;         /**< Termination status */
+    Fifo*                 fifo;           /**< Pointer to FIFO into which to put data
+                                            */
+    unsigned char*        buf;            /**< Internal read buffer */
+    pthread_mutex_t       mutex;          /**< Object access lock */
+    unsigned long         byteCount;      /**< Number of bytes received */
+    size_t                maxSize;        /**< Maximum amount to read in a single
+                                            *  call in bytes */
+    int                   fd;             /**< File-descriptor to read from */
+    volatile int          status;         /**< Termination status */
+    volatile sig_atomic_t isStopped;       ///< Reader is stopped?
 };
 
 /**
@@ -68,6 +70,7 @@ int readerNew(
                 r->maxSize = maxSize;
                 r->buf = buf;
                 r->status = 0;
+                r->isStopped = 0;
                 *reader = r;
             }
         }
@@ -89,13 +92,14 @@ void readerFree(
 }
 
 /**
- * Executes a reader. Returns when end-of-input is encountered or an error
- * occurs.
+ * Executes a reader. Returns when end-of-input is encountered, `readerStop()`
+ * is called, or an error occurs. Called by `pthread_create()`.
  *
- * This function is thread-compatible but not thread-safe.
+ * This function is thread-safe.
  *
- * @return NULL
- * @see \link readerStatus() \endlink
+ * @param[in]  arg   Pointer to reader.
+ * @retval     NULL  Always.
+ * @see `readerStatus()`
  */
 void*
 readerStart(
@@ -111,10 +115,17 @@ readerStart(
                 &nbytes);
 
         if (status) {
-            status = 2;
+            if (reader->isStopped) {
+                log_clear();
+                status = 0;
+            }
+            else {
+                status = 2;
+            }
             break;
         }
         else if (0 == nbytes) {
+            status = 0;
             break;
         }
         else {
@@ -122,19 +133,20 @@ readerStart(
             reader->byteCount += nbytes;
             (void)pthread_mutex_unlock(&reader->mutex);
         }
-    }                                       /* I/O loop */
+    }                       /* I/O loop */
 
     (void)pthread_mutex_lock(&reader->mutex);
     reader->status = status;
     (void)pthread_mutex_unlock(&reader->mutex);
+    log_log(LOG_ERR);       // because end of thread
 
     return NULL;
 }
 
 /**
- * Stops a reader cleanly. Closes the input and processes all remaining data.
- * This function is idempotent and async-signal safe (it may be called by a
- * signal-handler).
+ * Stops a reader cleanly. Closes the input and allows outstanding data to be
+ * read. This function is idempotent and async-signal safe (it may be called by
+ * a signal-handler).
  *
  * @param[in] reader  Reader to be stopped.
  */
@@ -142,7 +154,8 @@ void
 readerStop(
         Reader* const reader)
 {
-    fifo_closeWhenEmpty(reader->fifo);
+    reader->isStopped = 1;
+    fifo_noMoreInput(reader->fifo);
 
     if (close(reader->fd))
         serror("Couldn't close file-descriptor %d of reader", reader->fd);
@@ -167,7 +180,7 @@ void readerGetStatistics(
 /**
  * Returns the termination status of a data-reader.
  *
- * @retval 0    Success. End-of-file encountered.
+ * @retval 0    Success. End-of-file encountered or `readerStop()` called.
  * @retval 1    Precondition failure. \c log_start() called.
  * @retval 2    O/S failure. \c log_start() called.
  */
