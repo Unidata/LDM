@@ -177,12 +177,10 @@ sudo:
 if HAVE_SUDO
 	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) $(TARGET) 2>/dev/tty
 else
-if HAVE_SU
 	@printf "Enter root's password (or don't): " >/dev/tty
-	@$(SU) root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) $(TARGET)' \
+	@su root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) $(TARGET)' \
 	    </dev/tty 2>/dev/tty
 	@echo >/dev/tty
-endif
 endif
 
 valgrind-noaaportIngester:	noaaportIngester
@@ -210,7 +208,7 @@ debug-noaaportIngester:	noaaportIngester
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	echo 'handle SIGCONT pass noprint nostop' >/tmp/noaaportIngester.gdb
 	echo 'handle SIGTERM pass nostop' >>/tmp/noaaportIngester.gdb
-	echo 'run -q /tmp/noaaportIngester-test.pq -n -m 224.0.1.1' \
+	echo 'run -q /tmp/noaaportIngester-test.pq -n <$(srcdir)/nwstgdump.data' \
 	    >>/tmp/noaaportIngester.gdb
 	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-db
 	rm /tmp/noaaportIngester-test.pq /tmp/noaaportIngester.gdb
