@@ -53,7 +53,7 @@ int multicastReaderNew(
      */
     int pidChannel;
 
-    if (sscanf(mcastSpec, "%*3d.%*3d.%*3d.3%d", &pidChannel) != 1) {
+    if (sscanf(mcastSpec, "%*3d.%*3d.%*3d.%3d", &pidChannel) != 1) {
         LOG_START1("Couldn't decode multicast specification \"%s\"", mcastSpec);
         status = 1;
     }
