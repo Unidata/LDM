@@ -20,7 +20,7 @@ struct fifo {
     size_t           size;         ///< Size of buffer in bytes
     pthread_mutex_t  mutex;        ///< Concurrent access lock
     pthread_cond_t   cond;         ///< Condition variable
-    bool             noMoreInput;  ///< No more input?
+    bool             isClosed;     ///< FIFO is closed?
 };
 
 /**
@@ -44,7 +44,7 @@ fifo_init(
         status = 2;
     }
     else {
-        // Recursive because of `fifo_closeWhenEmpty()`
+        // Recursive because of `fifo_close()`
         (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
 
         if ((status = pthread_mutex_init(&fifo->mutex, &mutexAttr)) != 0) {
@@ -63,7 +63,7 @@ fifo_init(
                 fifo->nextWrite = 0;
                 fifo->nbytes = 0;  /* indicates startup */
                 fifo->size = size;
-                fifo->noMoreInput = false;
+                fifo->isClosed = false;
                 status = 0; /* success */
             }                   /* `fifo->cond` initialized */
 
@@ -159,7 +159,7 @@ fifo_availableForReading(
  * @retval     0         Success.
  * @retval     2         O/S error. `log_start()` called.
  */
-static inline ssize_t // `inline` because only called in one place
+static inline int // `inline` because only called in one place
 fifo_transferFromFd(
         Fifo* const restrict   fifo,
         const int              fd,
@@ -283,11 +283,12 @@ fifo_new(
  *
  * @param[in]  fifo      FIFO.
  * @param[in]  fd        File descriptor from which to obtain bytes.
- * @param[in]  maxBytes  Maximum number of bytes to transfer from `fd` to `fifo`.
+ * @param[in]  maxBytes  Maximum number of bytes to transfer.
  * @param[out] nbytes    Actual number of bytes transferred.
- * @retval     0         Success.
+ * @retval     0         Success. `*nbytes` is set.
  * @retval     1         Usage error. `log_start()` called.
  * @retval     2         System error. `log_start()` called.
+ * @retval     3         `fifo_close()` was called.
  */
 int
 fifo_readFd(
@@ -306,11 +307,16 @@ fifo_readFd(
         status = 1;
     }
     else {
-        while (fifo_availableForWriting(fifo) < maxBytes)
+        while (!fifo->isClosed && fifo_availableForWriting(fifo) < maxBytes)
             fifo_wait(fifo);
-        status = fifo_transferFromFd(fifo, fd, maxBytes, nbytes);
 
-        fifo_signal(fifo);
+        if (fifo->isClosed) {
+            status = 3;
+        }
+        else {
+            status = fifo_transferFromFd(fifo, fd, maxBytes, nbytes);
+            fifo_signal(fifo);
+        }
     }
 
     fifo_unlock(fifo);
@@ -320,7 +326,7 @@ fifo_readFd(
 
 /**
  * Removes bytes from a FIFO. Blocks while insufficient data exists
- * and `fifo_noMoreInput()` hasn't been called. Returns data if possible.
+ * and `fifo_close()` hasn't been called. Returns data if possible.
  *
  * This function is thread-safe.
  *
@@ -329,7 +335,7 @@ fifo_readFd(
  * @param[in[ nbytes  Number of bytes to remove.
  * @retval    0       Success.
  * @retval    1       Usage error. \c log_start() called.
- * @retval    3       `fifo_noMoreInput()` was called and insufficient data
+ * @retval    3       `fifo_close()` was called and insufficient data
  *                    exists.
  */
 int
@@ -348,7 +354,7 @@ fifo_getBytes(
         status = 1;
     }
     else {
-        while (!fifo->noMoreInput && fifo_availableForReading(fifo) < nbytes)
+        while (!fifo->isClosed && fifo_availableForReading(fifo) < nbytes)
             fifo_wait(fifo);
 
         if (fifo_availableForReading(fifo) < nbytes) {
@@ -367,16 +373,18 @@ fifo_getBytes(
 }
 
 /**
- * Tells a FIFO that no more input will be forthcoming.
+ * Closes a FIFO.
  *
  * This function is thread-safe and idempotent.
+ *
+ * @param[in] fifo  FIFO to be closed.
  */
 void
-fifo_noMoreInput(
+fifo_close(
     Fifo* const fifo)       /**< [in/out] Pointer to FIFO */
 {
     fifo_lock(fifo);
-    fifo->noMoreInput = true;
+    fifo->isClosed = true;
     fifo_signal(fifo);
     fifo_unlock(fifo);
 }

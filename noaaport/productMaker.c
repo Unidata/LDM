@@ -324,8 +324,7 @@ void* pmStart(
                 for (ch = IOFF; ch < 16; ch++)
                     buf[ch - IOFF] = buf[ch];
 
-                if (fifo_getBytes(fifo, buf + 16 - IOFF, IOFF)
-                        != 0) {
+                if (fifo_getBytes(fifo, buf + 16 - IOFF, IOFF) != 0) {
                     if (ulogIsDebug())
                         udebug("Couldn't read bytes for SBN, resync");
                     break;
@@ -432,8 +431,7 @@ void* pmStart(
             continue;
         }
         if (pdh->len > 16) {
-            if (fifo_getBytes(fifo, buf + sbn->len + 16,
-                        pdh->len - 16) != 0)
+            if (fifo_getBytes(fifo, buf + sbn->len + 16, pdh->len - 16) != 0)
                 continue;
         }
 

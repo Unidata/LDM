@@ -86,6 +86,7 @@ void readerFree(
  *
  * @param[in]  arg   Pointer to reader.
  * @retval     &0    Success.
+ * @retval     &1    FIFO was closed.
  * @retval     &2    O/S failure. `log_log()` called.
  */
 void*
@@ -102,7 +103,14 @@ readerStart(
                 &nbytes);
 
         if (status) {
-            status = 2;
+            if (3 == status) {
+                // FIFO was closed
+                log_clear();
+                status = 1;
+            }
+            else {
+                status = 2;
+            }
             break;
         }
         if (0 == nbytes) {
@@ -115,8 +123,9 @@ readerStart(
         (void)pthread_mutex_unlock(&reader->mutex);
     }                       /* I/O loop */
 
-    static int returnPointer[] = {0, 1, 2};
+    log_log(LOG_ERR);
 
+    static int returnPointer[] = {0, 1, 2};
     return returnPointer + status;
 }
 
