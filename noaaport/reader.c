@@ -21,8 +21,6 @@ struct reader {
     size_t                maxSize;        /**< Maximum amount to read in a single
                                             *  call in bytes */
     int                   fd;             /**< File-descriptor to read from */
-    volatile int          status;         /**< Termination status */
-    volatile sig_atomic_t isStopped;       ///< Reader is stopped?
 };
 
 /**
@@ -31,8 +29,7 @@ struct reader {
  *
  * This function is thread-safe.
  *
- * @param[in]  fd       File-descriptor to read from. Will be closed by
- *                      `readerStop()`.
+ * @param[in]  fd       File-descriptor to read from.
  * @param[in]  fifo     Pointer to FIFO into which to put data.
  * @param[in]  maxSize  Maximum amount to read in a single call in bytes.
  * @param[out] reader   Returned reader.
@@ -62,8 +59,6 @@ int readerNew(
             r->fifo = fifo;
             r->fd = fd;
             r->maxSize = maxSize;
-            r->status = 0;
-            r->isStopped = 0;
             *reader = r;
         }
     }
@@ -84,14 +79,14 @@ void readerFree(
 }
 
 /**
- * Executes a reader. Returns when end-of-input is encountered, `readerStop()`
- * is called, or an error occurs. Logs an error-message on error.
- * `readerStatus()` will return execution status. Called by `pthread_create()`.
+ * Executes a reader. Returns when end-of-input is encountered or an error
+ * occurs. Logs a message on error. Called by `pthread_create()`.
  *
  * This function is thread-safe.
  *
  * @param[in]  arg   Pointer to reader.
- * @retval     NULL  Always.
+ * @retval     &0    Success.
+ * @retval     &2    O/S failure. `log_log()` called.
  */
 void*
 readerStart(
@@ -107,52 +102,22 @@ readerStart(
                 &nbytes);
 
         if (status) {
-            if (reader->isStopped) {
-                log_clear();
-                status = 0;
-            }
-            else {
-                status = 2;
-            }
+            status = 2;
             break;
         }
-        else if (0 == nbytes) {
-            fifo_noMoreInput(reader->fifo);
+        if (0 == nbytes) {
             status = 0;
             break;
         }
-        else {
-            (void)pthread_mutex_lock(&reader->mutex);
-            reader->byteCount += nbytes;
-            (void)pthread_mutex_unlock(&reader->mutex);
-        }
+
+        (void)pthread_mutex_lock(&reader->mutex);
+        reader->byteCount += nbytes;
+        (void)pthread_mutex_unlock(&reader->mutex);
     }                       /* I/O loop */
 
-    (void)pthread_mutex_lock(&reader->mutex);
-    reader->status = status;
-    (void)pthread_mutex_unlock(&reader->mutex);
-    log_log(LOG_ERR);       // because end of thread
+    static int returnPointer[] = {0, 1, 2};
 
-    return NULL;
-}
-
-/**
- * Stops a reader cleanly. Closes the file descriptor passed to `readerNew()`
- * and allows outstanding data to be read. An error-message is logged if the
- * file descriptor could not be closed. This function is idempotent and
- * async-signal safe (it may be called by a signal-handler).
- *
- * @param[in] reader  Reader to be stopped.
- */
-void
-readerStop(
-        Reader* const reader)
-{
-    reader->isStopped = 1;
-    fifo_noMoreInput(reader->fifo);
-
-    if (close(reader->fd))
-        serror("Couldn't close file-descriptor %d of reader", reader->fd);
+    return returnPointer + status;
 }
 
 /**
@@ -169,17 +134,4 @@ void readerGetStatistics(
     reader->byteCount = 0;
 
     (void)pthread_mutex_unlock(&reader->mutex);
-}
-
-/**
- * Returns the termination status of a data-reader.
- *
- * @retval 0    Success. End-of-file encountered or `readerStop()` called.
- * @retval 1    Precondition failure. \c log_start() called.
- * @retval 2    O/S failure. \c log_start() called.
- */
-int readerStatus(
-    Reader* const   reader) /**< [in] Pointer to the reader */
-{
-    return reader->status;
 }

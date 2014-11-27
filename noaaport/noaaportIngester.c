@@ -149,12 +149,6 @@ static void signal_handler(
 #endif
 
     switch (sig) {
-        case SIGINT:    // stop now
-            exit(1);
-        case SIGTERM:   // stop gracefully
-            done = 1;
-            readerStop(reader);
-            break;
         case SIGUSR1:
             if (NULL != reader) {
                 (void)pthread_mutex_lock(&mutex);
@@ -211,16 +205,8 @@ static void set_sigactions(void)
     sigact.sa_flags |= SA_RESTART;
 #endif
     sigact.sa_handler = signal_handler;
-    (void)sigaction(SIGTERM, &sigact, NULL);
     (void)sigaction(SIGUSR1, &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
-
-    /* Don't restart after interrupt */
-    sigact.sa_flags = 0;
-#ifdef SA_INTERRUPT /* SunOS 4.x */
-    sigact.sa_flags |= SA_INTERRUPT;
-#endif
-    (void)sigaction(SIGINT, &sigact, NULL);
 }
 
 /**
@@ -438,7 +424,7 @@ static void encodeDuration(
             size--;
         }
 
-        nchar = snprintf(buf, size, "%fS", duration);
+        (void)snprintf(buf, size, "%fS", duration);
     }
 }
 
@@ -920,13 +906,15 @@ int main(
 
                     set_sigactions();
 
-                    (void)pthread_join(readerThread, NULL);
+                    void* statusPtr;
+                    (void)pthread_join(readerThread, &statusPtr);
+                    status = *(int*)statusPtr;
 
-                    status = readerStatus(reader);
+                    fifo_noMoreInput(fifo);
+                    (void)pthread_join(productMakerThread, NULL);
 
                     (void)pthread_cancel(statThread);
                     (void)pthread_join(statThread, NULL);
-                    (void)pthread_join(productMakerThread, NULL);
 
                     if (0 != status)
                         status = pmStatus(productMaker);
