@@ -1918,9 +1918,8 @@ int pipe_prodput(
                  * happened). Remove the entry, free its resources, and try
                  * again -- once.
                  */
+                uerror("Decoder terminated prematurely");
                 fl_removeAndFree(entry, DR_ERROR);
-                unotice("pipe_prodput: trying again: %s",
-                        s_prod_info(NULL, 0, &prodp->info, ulogIsDebug()));
                 entry = fl_getEntry(PIPE, argc, argv, &isNew);
                 status = entry
                         ? pipe_out(entry, &prodp->info, data, sz)
