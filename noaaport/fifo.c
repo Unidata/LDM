@@ -77,6 +77,20 @@ fifo_init(
     return status;
 }
 
+/**
+ * Destroys (i.e., releases the resources of) a FIFO.
+ *
+ * @param[in] fifo  Pointer to FIFO to be destroyed.
+ */
+static void
+fifo_destroy(
+        Fifo* const fifo)
+{
+    (void)pthread_cond_destroy(&fifo->cond);
+    (void)pthread_mutex_destroy(&fifo->mutex);
+    free(fifo->buf);
+}
+
 static inline void
 fifo_lock(
         Fifo* const restrict fifo)
@@ -251,7 +265,7 @@ fifo_new(
     Fifo*               f = (Fifo*)malloc(sizeof(Fifo));
 
     if (NULL == f) {
-        LOG_SERROR0("Couldn't allocate FIFO");
+        LOG_SERROR0("Couldn't allocate FIFO object");
     }
     else {
         const long              pagesize = sysconf(_SC_PAGESIZE);
@@ -275,6 +289,21 @@ fifo_new(
     }                                   /* "f" allocated */
 
     return status;
+}
+
+/**
+ * Frees a FIFO.
+ *
+ * @param[in] fifo  Pointer to FIFO to be freed.
+ */
+void
+fifo_free(
+        Fifo* const fifo)
+{
+    if (fifo) {
+        fifo_destroy(fifo);
+        free(fifo);
+    }
 }
 
 /**

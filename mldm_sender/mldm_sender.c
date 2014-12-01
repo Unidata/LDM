@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <libgen.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -88,13 +89,15 @@ mls_initLogging(
         const char* const progName)
 {
     char* logFileSpec;
+    int   ttyFd = open("/dev/tty", O_RDONLY);
 
-    if (isatty(fileno(stderr))) {
-        /* Interactive execution. */
-        logFileSpec = "-"; // log to `stderr`
+    if (-1 == ttyFd) {
+        // No controlling terminal => daemon => use syslog(3)
     }
     else {
-        logFileSpec = NULL; // use syslog(3)
+        // Controlling terminal exists => interactive => log to `stderr`
+        (void)close(ttyFd);
+        logFileSpec = "-";
     }
 
     (void)setulogmask(LOG_UPTO(LOG_NOTICE));
@@ -463,6 +466,14 @@ mls_setSignalHandling(void)
     struct sigaction sigact;
 
     (void)sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+
+    /*
+     * Register termination signal-handler.
+     */
+    sigact.sa_handler = mls_setDoneFlag;
+    (void)sigaction(SIGINT, &sigact, NULL );
+   (void)sigaction(SIGTERM, &sigact, NULL );
 
     /*
      * Register logging-level signal-handler. Ensure that it only affects
@@ -471,14 +482,6 @@ mls_setSignalHandling(void)
     sigact.sa_flags |= SA_RESTART;
     sigact.sa_handler = mls_rotateLoggingLevel;
     (void)sigaction(SIGUSR2, &sigact, NULL);
-
-    /*
-     * Register termination signal-handler.
-     */
-    sigact.sa_flags = 0;
-    sigact.sa_handler = mls_setDoneFlag;
-    (void)sigaction(SIGINT, &sigact, NULL );
-    (void)sigaction(SIGTERM, &sigact, NULL );
 }
 
 /**

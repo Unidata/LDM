@@ -1,8 +1,7 @@
-/*
+/**
  *   Copyright © 2014, University Corporation for Atmospheric Research.
  *   See COPYRIGHT file for copying and redistribution conditions.
- */
-/**
+ *
  *   @file noaaportIngester.c
  *
  *   This file contains the code for the \c noaaportIngester(1) program. This
@@ -29,6 +28,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
@@ -43,21 +43,28 @@
 #endif
 /*********** For Retransmission ****************/
 
-
-static Fifo*            fifo;
-static pthread_t        readerThread;
-static Reader*          reader;
-static ProductMaker*    productMaker;
-static pthread_t        productMakerThread;
-static const size_t     DEFAULT_NPAGES = 5000;
-static unsigned         logFacility = LOG_LDM;  /* default LDM facility */
-static const char*      COPYRIGHT_NOTICE = \
-    "Copyright (C) 2011 University Corporation for Atmospheric Research";
-static struct timeval   startTime;      /**< Start of execution */
-static struct timeval   reportTime;     /**< Time of last report */
-static int              reportStatistics;
-static pthread_mutex_t  mutex;
-static pthread_cond_t   cond = PTHREAD_COND_INITIALIZER;
+static const int         USAGE_ERROR = 1;
+static const int         SYSTEM_FAILURE = 2;
+static const int         SCHED_POLICY = SCHED_FIFO;
+static size_t            npages = 5000;
+static const char*       prodQueuePath = NULL;
+static const char*       mcastSpec = NULL;
+static const char*       interface = NULL;
+static Fifo*             fifo;
+static Reader*           reader;
+#if OLD_STYLE
+    static pthread_t         readerThread;
+    static pthread_t         productMakerThread;
+#endif
+static ProductMaker*     productMaker;
+static unsigned          logFacility = LOG_LDM;  /* LDM facility */
+static const char* const COPYRIGHT_NOTICE = \
+    "Copyright (C) 2014 University Corporation for Atmospheric Research";
+static struct timeval    startTime;      /**< Start of execution */
+static struct timeval    reportTime;     /**< Time of last report */
+static int               reportStatistics;
+static pthread_mutex_t   mutex;
+static pthread_cond_t    cond = PTHREAD_COND_INITIALIZER;
 
 /**
  * Unconditionally logs a usage message.
@@ -75,7 +82,7 @@ static void usage(
 "          [-r <1|0>] [-t] [-s channel-name]                                   \n"
 "where:\n"
 "   -b npages   Allocate \"npages\" pages of memory for the internal buffer.\n"
-"               Default is %lu pages.\n"
+"               Default is %lu pages. \"getconf PAGESIZE\" reveals page-size.\n"
 "   -I iface    Listen for multicast packets on interface \"iface\".\n"
 "               Default is to listen on all available interfaces.\n"
 "   -l log      Log to file \"log\".  Default is to use the system logging\n"
@@ -102,13 +109,13 @@ static void usage(
 "SIGUSR1 causes statistics to be unconditionally logged at level NOTE.\n"
 "SIGUSR2 rotates the logging level.\n",
         progName, PACKAGE_VERSION, COPYRIGHT_NOTICE, progName, (unsigned
-        long)DEFAULT_NPAGES, lpqGetQueuePath(), getFacilityName(LOG_LDM));
+        long)npages, lpqGetQueuePath(), getFacilityName(logFacility));
 
     (void)setulogmask(logmask);
 }
 
 /**
- * Initializes logging.
+ * Initializes logging. Uses `logFacility`.
  *
  * @retval 0    Success
  * @retval 1    Usage error.
@@ -116,7 +123,6 @@ static void usage(
 static int initLogging(
     const char* const   progName,       /**< [in] Name of the program */
     const unsigned      logOptions,     /**< [in] Logging options */
-    const unsigned      logFacility,    /**< [in] Logging facility */
     const char* const   logPath)        /**< [in] Pathname of the log file,
                                           *  "-", or NULL */
 {
@@ -152,7 +158,8 @@ static void signal_handler(
     switch (sig) {
         case SIGTERM:
             done = 1;
-            fifo_close(fifo);
+            if (fifo)
+                fifo_close(fifo);
             break;
         case SIGUSR1:
             if (NULL != reader) {
@@ -220,11 +227,43 @@ static void set_sigactions(void)
 }
 
 /**
+ * Blocks termination signals (SIGINT, SIGTERM) for the current thread. This
+ * function is idempotent.
+ */
+static void
+blockTermSignals(void)
+{
+    static sigset_t sigSet;
+
+    (void)sigemptyset(&sigSet);
+    (void)sigaddset(&sigSet, SIGINT);
+    (void)sigaddset(&sigSet, SIGTERM);
+
+    (void)pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+}
+
+/**
+ * Unblocks termination signals (SIGINT, SIGTERM) for the current thread. This
+ * function is idempotent.
+ */
+static void
+unblockTermSignals(void)
+{
+    static sigset_t sigSet;
+
+    (void)sigemptyset(&sigSet);
+    (void)sigaddset(&sigSet, SIGINT);
+    (void)sigaddset(&sigSet, SIGTERM);
+
+    (void)pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
+}
+
+/**
  * Creates a product-maker and starts it in a new thread.
  *
- * @retval 0    Success.
- * @retval 1    Usage failure. \c log_start() called.
- * @retval 2    O/S failure. \c log_start() called.
+ * @retval 0               Success.
+ * @retval USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval SYSTEM_FAILURE  System failure. `log_start()` called.
  */
 static int spawnProductMaker(
     const pthread_attr_t* const attr,           /**< [in] Thread-creation
@@ -244,14 +283,15 @@ static int spawnProductMaker(
 
     if (0 != status) {
         LOG_ADD0("Couldn't create new LDM product-maker");
-        status = 1;
     }
     else {
         pthread_t   thrd;
 
-        if (0 != (status = pthread_create(&thrd, attr, pmStart, pm))) {
+        status = pthread_create(&thrd, attr, pmStart, pm);
+
+        if (status) {
             LOG_ERRNUM0(status, "Couldn't start product-maker thread");
-            status = 1;
+            status = SYSTEM_FAILURE;
         }
         else {
             *productMaker = pm;
@@ -262,6 +302,7 @@ static int spawnProductMaker(
     return status;
 }
 
+#if OLD_STYLE
 /**
  * Creates a file data-reader and starts it in a new thread.
  *
@@ -354,6 +395,7 @@ static int spawnMulticastReader(
 
     return status;
 }
+#endif
 
 /**
  * Returns the time interval between two timestamps.
@@ -554,6 +596,277 @@ static void* reportStatsWhenSignaled(void* arg)
 }
 
 /**
+ * Starts the statistics-reporting thread. The thread is detached.
+ */
+static void
+startReportingThread(void)
+{
+    pthread_t thread;
+
+    (void)gettimeofday(&startTime, NULL);
+    reportTime = startTime;
+    (void)pthread_create(&thread, NULL, reportStatsWhenSignaled, NULL);
+    (void)pthread_detach(thread);
+}
+
+/**
+ * Initializes thread attributes.
+ *
+ * @param[in] attr            Pointer to uninitialized thread attributes object.
+ *                            Caller should call `pthread_attr_destroy(*attr)`
+ *                            when it's no longer needed.
+ * @param[in] isMcastInput    Is input from multicast?
+ * @param[in] priority        Thread priority. Ignored if input isn't from
+ *                            multicast.
+ * @retval    0               Success. `*attr` is initialized.
+ * @retval    USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval    SYSTEM_FAILURE  System error. `log_start()` called.
+ */
+static int
+initThreadAttr(
+        pthread_attr_t* const attr,
+        const bool            isMcastInput,
+        const int             priority)
+{
+    int status = pthread_attr_init(attr);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't initialize thread attributes object");
+        status = (EBUSY == status) ? USAGE_ERROR : SYSTEM_FAILURE;
+    }
+    else if (isMcastInput) {
+        #ifndef _POSIX_THREAD_PRIORITY_SCHEDULING
+            uwarn("Can't adjust thread priorities due to lack of "
+                    "necessary support from environment");
+        #else
+            struct sched_param  param;
+
+            param.sched_priority = priority;
+
+            (void)pthread_attr_setinheritsched(attr, PTHREAD_EXPLICIT_SCHED);
+            (void)pthread_attr_setschedpolicy(attr, SCHED_POLICY);
+            (void)pthread_attr_setschedparam(attr, &param);
+            // System-wide scope because this process is crucial
+            (void)pthread_attr_setscope(attr, PTHREAD_SCOPE_SYSTEM);
+        #endif
+    }
+
+    return status;
+}
+
+/**
+ * Sets the attributes of the current thread if appropriate.
+ *
+ * @param[in] isMcastInput    Is input from multicast? This function does
+ *                            nothing if the input isn't from multicast.
+ * @param[in] priority        Thread priority. Ignored if input isn't from
+ *                            multicast.
+ * @retval    0               Success.
+ * @retval    SYSTEM_FAILURE  System failure. `log_start()` called.
+ * @retval    USAGE_ERROR     Usage error. `log_start()` called.
+ */
+static int
+setCurrentThreadAttr(
+        const bool isMcastInput,
+        const int  priority)
+{
+    int status;
+
+    if (!isMcastInput) {
+        status = 0;
+    }
+    else {
+        pthread_attr_t attr;
+
+        status = initThreadAttr(&attr, isMcastInput, priority);
+
+        if (0 == status) {
+            int                schedPolicy;
+            struct sched_param schedParam;
+
+            (void)pthread_attr_getschedpolicy(&attr, &schedPolicy);
+            (void)pthread_attr_getschedparam(&attr, &schedParam);
+
+            status = pthread_setschedparam(pthread_self(), schedPolicy,
+                    &schedParam);
+
+            if (status) {
+                LOG_SERROR0("Couldn't set attributes of current thread");
+                status = (ENOMEM == status) ? SYSTEM_FAILURE : USAGE_ERROR;
+            }
+
+            (void)pthread_attr_destroy(&attr);
+        } // `attr` initialized
+    } // is multicast input
+
+    return status;
+}
+
+/**
+ * Initialize support for retransmission requests. Does nothing if
+ * retransmission support isn't enabled at compile-time or if the input isn't
+ * from multicast UDP packets.
+ *
+ * @param[in] isMcastInput  Is the input from multicast UDP packets?
+ */
+static void
+initRetransSupport(
+        const bool isMcastInput)
+{
+    #ifdef RETRANS_SUPPORT
+        if (isMcastInput && retrans_xmit_enable == OPTION_ENABLE) {
+            // Copy mcastAddress needed to obtain the cpio entries
+            (void)strcpy(mcastAddr, mcastSpec);
+        }
+    #endif
+}
+
+/**
+ * Destroys support for retransmission requests. Does nothing if retransmission
+ * support isn't enabled at compile-time or if the input isn't from multicast
+ * UDP packets.
+ *
+ * @param[in] isMcastInput  Is the input from multicast UDP packets?
+ */
+static void
+destroyRetransSupport(
+        const bool isMcastInput)
+{
+    #ifdef RETRANS_SUPPORT
+        if (isMcastInput && retrans_xmit_enable == OPTION_ENABLE) {
+            // Release buffer allocated for retransmission
+            freeRetransMem();
+        }
+    #endif
+}
+
+/**
+ * Reads input and puts the data into `fifo`. If `mcastSpec` is non-NULL, then
+ * input is read from that multicast UDP address on `interface`; otherwise,
+ * input is read from the standard input stream. Sets `reader`. Reports
+ * statistics before returning.
+ *
+ * @retval    0               Success. `done` was set.
+ * @retval    SYSTEM_FAILURE  System failure. `log_log()` called.
+ * @retval    USAGE_ERROR     Usage error. `log_log()` called.
+ */
+static int
+readInput(void)
+{
+    int     status = mcastSpec
+            ? multicastReaderNew(mcastSpec, interface, fifo, &reader)
+            : fileReaderNew(NULL, fifo, &reader);
+
+    if (status) {
+        LOG_ADD0("Couldn't create input-reader");
+    }
+    else {
+        status = *(int*)(readerStart(reader));
+
+        if (done)
+            status = 0;
+
+        reportStats(); // requires `reader`
+        readerFree(reader);
+    }
+
+    return status;
+}
+
+/**
+ * Runs this program.
+ *
+ * @param[in] fifo            Pointer to FIFO object.
+ * @param[in] prodQueue       Pointer to LDM product-queue object.
+ * @retval    0               Success.
+ * @retval    USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval    SYSTEM_FAILURE  System failure. `log_start()` called.
+ */
+static int
+run(
+        Fifo* const restrict            fifo,
+        LdmProductQueue* const restrict prodQueue)
+{
+    int             status;
+    const bool      isMcastInput = NULL != mcastSpec;
+    pthread_attr_t  attr;
+    int             maxPriority = sched_get_priority_max(SCHED_POLICY);
+
+    /*
+     * If the input is multicast UDP packets, then the product-maker thread
+     * runs at a lower priority than the input thread to reduce the chance
+     * of the input thread missing a packet.
+     */
+    status = initThreadAttr(&attr, isMcastInput, maxPriority-1);
+
+    if (0 == status) {
+        initRetransSupport(isMcastInput); // initialize retransmission support
+
+        /*
+         * Termination signals are blocked for all other threads so that they
+         * are received on this, possibly higher-priority, input thread.
+         */
+        blockTermSignals();
+        startReportingThread();           // detached thread
+        pthread_t productMakerThread;
+        status = spawnProductMaker(&attr, fifo, prodQueue, &productMaker,
+                &productMakerThread);
+        unblockTermSignals();
+
+        if (0 == status) {
+            status = setCurrentThreadAttr(isMcastInput, maxPriority);
+
+            if (0 == status) {
+                status = readInput();
+
+                if (status)
+                    LOG_ADD0("Couldn't read input");
+            }
+
+            fifo_close(fifo); // shouldn't hurt
+            (void)pthread_join(productMakerThread, NULL);
+        }       // `productMakerThread` running
+
+        destroyRetransSupport(isMcastInput);
+        (void)pthread_attr_destroy(&attr);
+    }   // `attr` initialized
+
+    return status;
+}
+
+/**
+ * Executes this program.
+ *
+ * @retval    0               Success.
+ * @retval    USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval    SYSTEM_FAILURE  O/S failure. `log_start()` called.
+ */
+static int
+execute(void)
+{
+    int status = fifo_new(npages, &fifo);
+
+    if (0 == status) {
+        LdmProductQueue*    prodQueue;
+
+        set_sigactions();   // to ensure product-queue is closed cleanly
+        status = lpqGet(prodQueuePath, &prodQueue);
+
+        if (3 == status) {
+            status = USAGE_ERROR;
+        }
+        else if (0 == status) {
+            status = run(fifo, prodQueue);
+            (void)lpqClose(prodQueue);
+        }                       /* "prodQueue" open */
+
+        fifo_free(fifo);
+    }                           /* "fifo" created */
+
+    return status;
+}
+
+/**
  * Reads a NOAAPORT data stream, creates LDM data-products from the stream, and
  * inserts the data-products into an LDM product-queue.  The NOAAPORT data
  * stream can take the form of multicast UDP packets from (for example) a
@@ -613,12 +926,8 @@ int main(
     extern int          opterr;
     int                 ch;
     const char* const   progName = ubasename(argv[0]);
-    const char*         interface = NULL;
     int                 logmask = LOG_UPTO(LOG_WARNING);
     const unsigned      logOptions = LOG_CONS | LOG_PID;
-    const char*         mcastSpec = NULL;
-    const char*         prodQueuePath = NULL;
-    size_t              npages = DEFAULT_NPAGES;
     int                 ttyFd = open("/dev/tty", O_RDONLY);
     int                 processPriority = 0;
     const char*         logPath = (-1 == ttyFd)
@@ -628,7 +937,7 @@ int main(
     (void)close(ttyFd);
     (void)setulogmask(logmask);
 
-    status = initLogging(progName, logOptions, logFacility, logPath);
+    status = initLogging(progName, logOptions, logPath);
     opterr = 0;                         /* no error messages from getopt(3) */
 
     while (0 == status && (ch = getopt(argc, argv, "b:I:l:m:np:q:r:s:t:u:vx")) != -1)
@@ -655,8 +964,7 @@ int main(
                 break;
             case 'l':
                 logPath = optarg;
-                status = initLogging(progName, logOptions, logFacility,
-                        logPath);
+                status = initLogging(progName, logOptions, logPath);
                 break;
             case 'm':
                 mcastSpec = optarg;
@@ -788,8 +1096,7 @@ int main(
 
                     logFacility = logFacilities[i];
 
-                    status = initLogging(progName, logOptions, logFacility,
-                            logPath);
+                    status = initLogging(progName, logOptions, logPath);
                 }
 
                 break;
@@ -830,6 +1137,9 @@ int main(
         unotice("Starting Up %s", PACKAGE_VERSION);
         unotice("%s", COPYRIGHT_NOTICE);
 
+        status = execute();
+
+#if OLD_STYLE
         if ((status = fifo_new(npages, &fifo)) != 0) {
             LOG_ADD0("Couldn't create FIFO");
             log_log(LOG_ERR);
@@ -940,6 +1250,7 @@ int main(
                 (void)lpqClose(prodQueue);
             }                       /* "prodQueue" open */
         }                           /* "fifo" created */
+#endif
     }                               /* command line decoded */
 
     return status;
