@@ -89,8 +89,8 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
             char    ctemp[256];
             int     nbytes = sprintf(ctemp, "Couldn't get parameter info: "
                     "center=\"%.*s\", ver=%d, disc=%d, cat=%d, id=%d, pdtn=%d",
-                    sizeof(cmsg->origcntr), cmsg->origcntr, ver, disc, cat, id,
-                    pdtn);
+                    (int)sizeof(cmsg->origcntr), cmsg->origcntr, ver, disc, cat,
+                    id, pdtn);
 
             ER_WMSG("GB", &ier, ctemp, &ret, 2, nbytes);
             *iret = 1;
