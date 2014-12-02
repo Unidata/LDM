@@ -15,6 +15,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>   /* NULL */
@@ -481,4 +482,61 @@ log_free(void)
         free(list);
         (void)pthread_setspecific(listKey, NULL);
     }
+}
+
+/**
+ * Returns the logging options appropriate to a log-file specification.
+ *
+ * @param[in] logFileSpec  Log-file specification:
+ *                             NULL  Use syslog(3)
+ *                             ""    Use syslog(3)
+ *                             "-"   Log to `stderr`
+ *                             else  Pathname of log-file
+ * @return                 Logging options appropriate to the log-file
+ *                         specification.
+ */
+static unsigned
+log_getLogOpts(
+        const char* const logFileSpec)
+{
+    return (logFileSpec && 0 == strcmp(logFileSpec, "-"))
+        /*
+         * Interactive invocation. Use ID, timestamp, UTC, no PID, and no
+         * console.
+         */
+        ? LOG_IDENT
+        /*
+         * Non-interactive invocation. Use ID, timestamp, UTC, PID, and the
+         * console as a last resort.
+         */
+        : LOG_IDENT | LOG_PID | LOG_CONS;
+}
+
+/**
+ * Initializes logging. This should be called before the command-line is
+ * decoded.
+ *
+ * @param[in] progName  Name of the program.
+ */
+void
+log_initLogging(
+        const char* const progName,
+        const int         maxLogLevel,
+        const int         facility)
+{
+    char* logFileSpec;
+    int   ttyFd = open("/dev/tty", O_RDONLY);
+
+    if (-1 == ttyFd) {
+        // No controlling terminal => daemon => use syslog(3)
+    }
+    else {
+        // Controlling terminal exists => interactive => log to `stderr`
+        (void)close(ttyFd);
+        logFileSpec = "-";
+    }
+
+    (void)setulogmask(LOG_UPTO(maxLogLevel));
+    (void)openulog(progName, log_getLogOpts(logFileSpec), facility,
+            logFileSpec);
 }

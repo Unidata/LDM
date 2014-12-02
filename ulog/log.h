@@ -119,6 +119,18 @@ void* log_malloc(
  */
 void log_free(void);
 
+/**
+ * Initializes logging. This should be called before the command-line is
+ * decoded.
+ *
+ * @param[in] progName  Name of the program.
+ */
+void
+log_initLogging(
+        const char* const progName,
+        const int         maxLogLevel,
+        const int         facility);
+
 #ifdef __cplusplus
 }
 #endif
