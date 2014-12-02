@@ -59,6 +59,8 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     id=cmsg->gfld->ipdtmpl[1];
     pdtn=cmsg->gfld->ipdtnum;
 
+    int ver;
+
     if ((iver != 255) &&
         ((disc < 192   || disc == 255  ) && 
          (cat  < 192   || cat  == 255  ) &&
@@ -68,12 +70,14 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
         *  Get WMO Parameter table.
         */
         gb2_gtwmovartbl(wmovartbl, iver, &g2vartbl, &ier);
+        ver = iver;
     }
     else {
        /* 
         *  Get Local Parameter table.
         */
         gb2_gtlclvartbl(lclvartbl, cmsg->origcntr, lclver, &g2vartbl, &ier);
+        ver = lclver;
     }
     if (ier == 0) {
        /* 
@@ -84,8 +88,8 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
         if (ier != 0) {
             char    ctemp[256];
             int     nbytes = sprintf(ctemp, "Couldn't get parameter info: "
-                    "center=\"%.*s\", disc=%d, cat=%d, id=%d, pdtn=%d",
-                    sizeof(cmsg->origcntr), cmsg->origcntr, disc, cat, id,
+                    "center=\"%.*s\", ver=%d, disc=%d, cat=%d, id=%d, pdtn=%d",
+                    sizeof(cmsg->origcntr), cmsg->origcntr, ver, disc, cat, id,
                     pdtn);
 
             ER_WMSG("GB", &ier, ctemp, &ret, 2, nbytes);
