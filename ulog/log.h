@@ -120,6 +120,21 @@ void* log_malloc(
 void log_free(void);
 
 /**
+ * Returns the logging options appropriate to a log-file specification.
+ *
+ * @param[in] logFileSpec  Log-file specification:
+ *                             NULL  Use syslog(3)
+ *                             ""    Use syslog(3)
+ *                             "-"   Log to `stderr`
+ *                             else  Pathname of log-file
+ * @return                 Logging options appropriate to the log-file
+ *                         specification.
+ */
+unsigned
+log_getLogOpts(
+        const char* const logFileSpec);
+
+/**
  * Initializes logging. This should be called before the command-line is
  * decoded.
  *

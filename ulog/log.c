@@ -22,6 +22,7 @@
 #include <stdio.h>    /* vsnprintf(), snprintf() */
 #include <stdlib.h>   /* malloc(), free(), abort() */
 #include <string.h>
+#include <unistd.h>
 
 #include "ulog.h"
 
@@ -495,7 +496,7 @@ log_free(void)
  * @return                 Logging options appropriate to the log-file
  *                         specification.
  */
-static unsigned
+unsigned
 log_getLogOpts(
         const char* const logFileSpec)
 {
