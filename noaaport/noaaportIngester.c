@@ -859,7 +859,7 @@ run(
 
         /*
          * Termination signals are blocked for all other threads so that they
-         * are received on this, possibly higher-priority, input thread.
+         * are only received on this, possibly higher-priority, input thread.
          */
         blockTermSignals();
         startReportingThread();           // detached thread
@@ -881,6 +881,11 @@ run(
             fifo_close(fifo); // idempotent => can't hurt
             (void)pthread_join(productMakerThread, NULL);
 
+            /*
+             * Final statistics are reported only after the product-maker has
+             * terminated to prevent a race condition in logging and consequent
+             * variable output -- which can affect testing.
+             */
             if (reader)
                 reportStats(); // requires `reader`
             readerFree(reader);
