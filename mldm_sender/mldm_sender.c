@@ -51,60 +51,6 @@ static void*       mcastSender;
 static McastInfo   mcastInfo;
 
 /**
- * Returns the logging options appropriate to a log-file specification.
- *
- * @param[in] logFileSpec  Log-file specification:
- *                             NULL  Use syslog(3)
- *                             ""    Use syslog(3)
- *                             "-"   Log to `stderr`
- *                             else  Pathname of log-file
- * @return                 Logging options appropriate to the log-file
- *                         specification.
- */
-static unsigned
-mls_getLogOpts(
-        const char* const logFileSpec)
-{
-    return (logFileSpec && 0 == strcmp(logFileSpec, "-"))
-        /*
-         * Interactive invocation. Use ID, timestamp, UTC, no PID, and no
-         * console.
-         */
-        ? LOG_IDENT
-        /*
-         * Non-interactive invocation. Use ID, timestamp, UTC, PID, and the
-         * console as a last resort.
-         */
-        : LOG_IDENT | LOG_PID | LOG_CONS;
-}
-
-/**
- * Initializes logging. This should be called before the command-line is
- * decoded.
- *
- * @param[in] progName  Name of the program.
- */
-static void
-mls_initLogging(
-        const char* const progName)
-{
-    char* logFileSpec;
-    int   ttyFd = open("/dev/tty", O_RDONLY);
-
-    if (-1 == ttyFd) {
-        // No controlling terminal => daemon => use syslog(3)
-    }
-    else {
-        // Controlling terminal exists => interactive => log to `stderr`
-        (void)close(ttyFd);
-        logFileSpec = "-";
-    }
-
-    (void)setulogmask(LOG_UPTO(LOG_NOTICE));
-    (void)openulog(progName, mls_getLogOpts(logFileSpec), LOG_LDM, logFileSpec);
-}
-
-/**
  * Appends a usage message to the pending log messages.
  */
 static void
@@ -188,7 +134,7 @@ mls_decodeOptions(
             break;
         }
         case 'l': {
-            (void)openulog(NULL, mls_getLogOpts(optarg), LOG_LDM, optarg);
+            (void)openulog(NULL, log_getLogOpts(optarg), LOG_LDM, optarg);
             break;
         }
         case 'P': {
@@ -889,7 +835,7 @@ main(
      * Initialize logging. Done first in case something happens that needs to
      * be reported.
      */
-    mls_initLogging(basename(argv[0]));
+    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
 
     /*
      * Decode the command-line.
