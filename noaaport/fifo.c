@@ -354,8 +354,9 @@ fifo_readFd(
 }
 
 /**
- * Removes bytes from a FIFO. Blocks while insufficient data exists
- * and `fifo_close()` hasn't been called. Returns data if possible.
+ * Removes bytes from a FIFO. Blocks while insufficient data exists and
+ * `fifo_close()` hasn't been called. Returns data if possible -- even if
+ * `fifo_close()` has been called.
  *
  * This function is thread-safe.
  *
@@ -364,8 +365,7 @@ fifo_readFd(
  * @param[in[ nbytes  Number of bytes to remove.
  * @retval    0       Success.
  * @retval    1       Usage error. \c log_start() called.
- * @retval    3       `fifo_close()` was called and insufficient data
- *                    exists.
+ * @retval    3       `fifo_close()` was called and insufficient data exists.
  */
 int
 fifo_getBytes(
@@ -394,7 +394,7 @@ fifo_getBytes(
             fifo_signal(fifo);
             status = 0;
         }
-    } // `nbytes` < fifo-capacity
+    } // `nbytes` <= fifo-capacity
 
     fifo_unlock(fifo);
 

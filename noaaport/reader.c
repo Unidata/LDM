@@ -80,18 +80,18 @@ void readerFree(
 
 /**
  * Executes a reader. Returns when end-of-input is encountered or an error
- * occurs. Logs a message on error. Called by `pthread_create()`.
+ * occurs. Logs a message on error. May be called by `pthread_create()`.
  *
  * This function is thread-safe.
  *
  * @param[in]  arg   Pointer to reader.
- * @retval     &0    Success.
+ * @retval     &0    Success. End of input encountered.
  * @retval     &1    FIFO was closed.
  * @retval     &2    O/S failure. `log_log()` called.
  */
 void*
 readerStart(
-        void* const arg)        /**< Pointer to the reader to be executed */
+        void* const arg)
 {
     Reader* const reader = (Reader*)arg;
     int           status;
@@ -113,10 +113,8 @@ readerStart(
             }
             break;
         }
-        if (0 == nbytes) {
-            status = 0;
-            break;
-        }
+        if (0 == nbytes)
+            break; // EOF
 
         (void)pthread_mutex_lock(&reader->mutex);
         reader->byteCount += nbytes;

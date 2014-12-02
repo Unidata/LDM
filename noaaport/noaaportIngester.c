@@ -415,24 +415,24 @@ unblockTermSignals(void)
 }
 
 /**
- * Creates a product-maker and starts it in a new thread.
+ * Creates a product-maker and starts it on a new thread.
  *
- * @retval 0               Success.
- * @retval USAGE_ERROR     Usage error. `log_start()` called.
- * @retval SYSTEM_FAILURE  System failure. `log_start()` called.
+ * @param[in]  attr            Pointer to thread-creation attributes
+ * @param[in]  fifo            Pointer to FIFO from which to read data.
+ * @param[in]  productQueue    Pointer to product-queue into which to put
+ *                             created data-products.
+ * @param[out] productMaker    Pointer to pointer to created product-maker.
+ * @param[out] thread          Pointer to created thread.
+ * @retval     0               Success.
+ * @retval     USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_start()` called.
  */
 static int spawnProductMaker(
-    const pthread_attr_t* const attr,           /**< [in] Thread-creation
-                                                  *  attributes */
-    Fifo* const                 fifo,           /**< [in] Pointer to FIFO from
-                                                  *  which to get data */
-    LdmProductQueue* const      productQueue,   /**< [in] LDM product-queue into
-                                                  *  which to put data-products
-                                                  *  */
-    ProductMaker** const        productMaker,   /**< [out] Pointer to pointer to
-                                                  *  returned product-maker */
-    pthread_t* const            thread)         /**< [out] Pointer to pointer
-                                                  *  to created thread */
+    const pthread_attr_t* const restrict attr,
+    Fifo* const restrict                 fifo,
+    LdmProductQueue* const restrict      productQueue,
+    ProductMaker** const restrict        productMaker,
+    pthread_t* const restrict            thread)
 {
     ProductMaker*   pm;
     int             status = pmNew(fifo, productQueue, &pm);
@@ -441,9 +441,7 @@ static int spawnProductMaker(
         LOG_ADD0("Couldn't create new LDM product-maker");
     }
     else {
-        pthread_t   thrd;
-
-        status = pthread_create(&thrd, attr, pmStart, pm);
+        status = pthread_create(thread, attr, pmStart, pm);
 
         if (status) {
             LOG_ERRNUM0(status, "Couldn't start product-maker thread");
@@ -451,7 +449,6 @@ static int spawnProductMaker(
         }
         else {
             *productMaker = pm;
-            *thread = thrd;
         }
     }
 
@@ -804,10 +801,10 @@ destroyRetransSupport(
 /**
  * Reads input and puts the data into `fifo`. If `mcastSpec` is non-NULL, then
  * input is read from that multicast UDP address on `interface`; otherwise,
- * input is read from the standard input stream. Sets `reader`. Reports
- * statistics before returning.
+ * input is read from the standard input stream. Sets `reader`. Doesn't free
+ * `reader`.
  *
- * @retval    0               Success. `done` was set.
+ * @retval    0               Success. EOF encountered or `done` is set.
  * @retval    SYSTEM_FAILURE  System failure. `log_log()` called.
  * @retval    USAGE_ERROR     Usage error. `log_log()` called.
  */
@@ -826,9 +823,6 @@ readInput(void)
 
         if (done)
             status = 0;
-
-        reportStats(); // requires `reader`
-        readerFree(reader);
     }
 
     return status;
@@ -881,11 +875,15 @@ run(
                 status = readInput();
 
                 if (status)
-                    LOG_ADD0("Couldn't read input");
+                    LOG_ADD0("Error reading input");
             }
 
-            fifo_close(fifo); // shouldn't hurt
+            fifo_close(fifo); // idempotent => can't hurt
             (void)pthread_join(productMakerThread, NULL);
+
+            if (reader)
+                reportStats(); // requires `reader`
+            readerFree(reader);
         }       // `productMakerThread` running
 
         destroyRetransSupport(isMcastInput);
