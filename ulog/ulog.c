@@ -201,7 +201,7 @@ getulogpath(void) {
  * @param[in] facility     Logging facility to use.  One of LOG_LOCAL1 to
  *                         LOG_LOCAL7.
  * @param[in] logfilename  Pathname of the log file:
- *                             NULL        Use syslog(3).
+ *                             NULL        Use syslogd(3).
  *                             ""          Use syslogd(3)
  *                             "-"         Log to `stderr`.
  *                             else        Log to the named file.  The caller

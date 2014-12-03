@@ -215,7 +215,7 @@ decodeCommandLine(
                         LOG_LOCAL6, LOG_LOCAL7};
 
                     if (openulog(getulogident(), ulog_get_options(),
-                            logFacilities[i], optarg) == -1)
+                            logFacilities[i], getulogpath()) == -1)
                         status = 1;
                 }
 

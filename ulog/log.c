@@ -530,6 +530,7 @@ log_initLogging(
 
     if (-1 == ttyFd) {
         // No controlling terminal => daemon => use syslog(3)
+        logFileSpec = NULL;
     }
     else {
         // Controlling terminal exists => interactive => log to `stderr`
