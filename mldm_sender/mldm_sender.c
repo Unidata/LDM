@@ -134,7 +134,8 @@ mls_decodeOptions(
             break;
         }
         case 'l': {
-            (void)openulog(NULL, log_getLogOpts(optarg), LOG_LDM, optarg);
+            (void)openulog(getulogident(), log_getLogOpts(optarg),
+                    getulogfacility(), optarg);
             break;
         }
         case 'P': {
@@ -172,11 +173,11 @@ mls_decodeOptions(
             break;
         }
         case 'v': {
-            (void)setulogmask(setulogmask(0) | LOG_MASK(LOG_INFO));
+            (void)setulogmask(getulogmask() | LOG_MASK(LOG_INFO));
             break;
         }
         case 'x': {
-            (void)setulogmask(setulogmask(0) | LOG_MASK(LOG_DEBUG));
+            (void)setulogmask(getulogmask() | LOG_MASK(LOG_DEBUG));
             break;
         }
         case ':': {
