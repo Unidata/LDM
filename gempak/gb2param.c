@@ -86,10 +86,11 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
             char    ctemp[256];
 
             (void)sprintf(ctemp, "Couldn't get parameter info: "
-                    "center=%.*s, iver=%d, lclver=%d, file=%s, disc=%d, "
-                    "cat=%d, id=%d, pdtn=%d",
-                    (int)sizeof(cmsg->origcntr), cmsg->origcntr,
-                    iver, lclver, filename, disc, cat, id, pdtn);
+                    "iver=%d, disc=%d, cat=%d, id=%d, pdtn=%d, "
+                    "center=%.*s, lclver=%d, file=%s",
+                    iver, disc, cat, id, pdtn,
+                    (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver,
+                    filename);
 
             int     ret;
             ER_WMSG("GB", &ier, ctemp, &ret, 2, 0);
