@@ -39,8 +39,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
  * S. Gilbert/NCEP      10/05		Use new routines to read tables *
  ***********************************************************************/
 {
-    int     ret, ier, disc, cat, id, pdtn, iver, lclver, len;
-    char    blanks[13]="            ";
+    int     ier, disc, cat, id, pdtn, iver, lclver, len;
     const char* filename;
     G2Vinfo  g2var;
     G2vars_t  *g2vartbl;
@@ -60,8 +59,6 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     id=cmsg->gfld->ipdtmpl[1];
     pdtn=cmsg->gfld->ipdtnum;
 
-    int ver;
-
     if ((iver != 255) &&
         ((disc < 192   || disc == 255  ) && 
          (cat  < 192   || cat  == 255  ) &&
@@ -71,7 +68,6 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
         *  Get WMO Parameter table.
         */
         gb2_gtwmovartbl(wmovartbl, iver, &g2vartbl, &filename, &ier);
-        ver = iver;
     }
     else {
        /* 
@@ -79,7 +75,6 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
         */
         gb2_gtlclvartbl(lclvartbl, cmsg->origcntr, lclver, &g2vartbl,
                 &filename, &ier);
-        ver = lclver;
     }
     if (ier == 0) {
        /* 
@@ -89,12 +84,15 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
 
         if (ier != 0) {
             char    ctemp[256];
-            int     nbytes = sprintf(ctemp, "Couldn't get parameter info: "
-                    "center=%.*s, ver=%d, file=%s, disc=%d, cat=%d, id=%d, "
-                    "pdtn=%d", (int)sizeof(cmsg->origcntr), cmsg->origcntr,
-                    ver, filename, disc, cat, id, pdtn);
 
-            ER_WMSG("GB", &ier, ctemp, &ret, 2, nbytes);
+            (void)sprintf(ctemp, "Couldn't get parameter info: "
+                    "center=%.*s, iver=%d, lclver=%d, file=%s, disc=%d, "
+                    "cat=%d, id=%d, pdtn=%d",
+                    (int)sizeof(cmsg->origcntr), cmsg->origcntr,
+                    iver, lclver, filename, disc, cat, id, pdtn);
+
+            int     ret;
+            ER_WMSG("GB", &ier, ctemp, &ret, 2, 0);
             *iret = 1;
             return;
         }
@@ -129,6 +127,8 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     strncpy( param, g2var.gemname, 12);
     if ( len > 12 ) param[12]='\0';
     if ( len < 12 )  {     /*  pad gempak parameter name with blanks  */
+       char    blanks[13]="            ";
+
        strncat( param, blanks, 12-len );
     }
     *scal = g2var.scale;
