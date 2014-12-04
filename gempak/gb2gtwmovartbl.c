@@ -4,6 +4,8 @@
 #include "gb2def.h"
 #include "proto_gemlib.h"
 
+static char wmocurrtable[LLMXLN];
+
 /*
  * The following is declared here because it isn't declared elsewhere.
  */
@@ -39,7 +41,6 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
 
     char tmpname[LLMXLN];
     int  ier;
-    static char currtable[LLMXLN];
     static G2vars_t currvartbl={0,0};
 
 /*---------------------------------------------------------------------*/
@@ -59,7 +60,7 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
      *  Check if table has already been read in. 
      *  If different table, read new one in.
      */
-    if ( strcmp( tmpname, currtable ) != 0 ) {
+    if ( strcmp( tmpname, wmocurrtable ) != 0 ) {
         if ( currvartbl.info != 0 ) {
             free(currvartbl.info);
             currvartbl.info=0;
@@ -78,7 +79,7 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
             return;
         }
     }
-    strcpy( currtable, tmpname );
+    strcpy( wmocurrtable, tmpname );
     *g2vartbl = &currvartbl;
 
     /*
@@ -87,4 +88,10 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
     if ( ier == -1 )*iret=-32;
      */
 
+}
+
+const char*
+gb2_getwmocurrtable(void)
+{
+    return wmocurrtable;
 }

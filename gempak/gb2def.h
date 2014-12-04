@@ -112,6 +112,10 @@ void gb2_gtwmovartbl( char *, int, G2vars_t **, int *);
 
 void gb2_gtlclvartbl( char *, char *, int, G2vars_t **, int *);
 
+const char* gb2_getwmocurrtable(void);
+
+const char* gb2_getlclcurrtable(void);
+
 void gb2_lamb ( gribfield *, float *, int *, int *);
 
 void gb2_level2g2( int vcord, char *wmolvltbl, char *lcllvltbl,
