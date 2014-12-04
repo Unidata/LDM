@@ -37,6 +37,7 @@ void gb2_param2g2( char *param, char *wmovartbl, char *lclvartbl,
     int     ret, ier;
 
     G2vars_t  *g2vartbl;
+    const char* filename;
 
 /*---------------------------------------------------------------------*/
 
@@ -51,7 +52,7 @@ void gb2_param2g2( char *param, char *wmovartbl, char *lclvartbl,
         /*
          *  get WMO parameter Table
          */
-        gb2_gtwmovartbl ( wmovartbl, wmover, &g2vartbl, &ier);
+        gb2_gtwmovartbl ( wmovartbl, wmover, &g2vartbl, &filename, &ier);
         if ( ier == 0 ) {
             /*
              *  Check for desired parameter in table
@@ -68,7 +69,8 @@ void gb2_param2g2( char *param, char *wmovartbl, char *lclvartbl,
         /*
          *  get Local parameter Table
          */
-        gb2_gtlclvartbl ( lclvartbl, wmocntr, lclver, &g2vartbl, &ier);
+        gb2_gtlclvartbl ( lclvartbl, wmocntr, lclver, &g2vartbl, &filename,
+                &ier);
         if ( ier == 0 ) {
             /*
              *  Check for desired parameter in table

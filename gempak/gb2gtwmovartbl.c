@@ -4,15 +4,13 @@
 #include "gb2def.h"
 #include "proto_gemlib.h"
 
-static char wmocurrtable[LLMXLN];
-
 /*
  * The following is declared here because it isn't declared elsewhere.
  */
 extern void     ctb_g2rdvar(char *tbname, G2vars_t *vartbl, int *iret);
 
 void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
-                       int *iret)
+                       const char** const restrict filename, int *iret)
 /************************************************************************
  * gb2_gtwmovartbl							*
  *									*
@@ -22,7 +20,7 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
  *                                                                      *
  * If wmovartbl is NULL, the default table is read.                     *
  *									*
- * gb2_gtwmovartbl ( wmovartbl, iver, g2vartbl, iret )                  *
+ * gb2_gtwmovartbl ( wmovartbl, iver, g2vartbl, filename, iret )        *
  *									*
  * Input parameters:							*
  *      *wmovartbl      char            WMO GRIB2 Parameter table       *
@@ -31,16 +29,21 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
  *									*
  * Output parameters:							*
  *	*g2vartbl	G2vars_t        structure for the table entries *
+ *	**filename      char            Name of the file that contains  *
+ *	                                the table. May be changed by    *
+ *	                                next invocation.                *
  *	*iret		int		Return code			*
  *                                        -31 = Error reading table     *
  **									*
  * Log:									*
  * S. Gilbert/NCEP		 08/2005				*
+ * S. Emmerson/UCAR              11/2014
  ***********************************************************************/
 {
 
     char tmpname[LLMXLN];
     int  ier;
+    static char currtable[LLMXLN];
     static G2vars_t currvartbl={0,0};
 
 /*---------------------------------------------------------------------*/
@@ -60,7 +63,7 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
      *  Check if table has already been read in. 
      *  If different table, read new one in.
      */
-    if ( strcmp( tmpname, wmocurrtable ) != 0 ) {
+    if ( strcmp( tmpname, currtable ) != 0 ) {
         if ( currvartbl.info != 0 ) {
             free(currvartbl.info);
             currvartbl.info=0;
@@ -79,8 +82,9 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
             return;
         }
     }
-    strcpy( wmocurrtable, tmpname );
+    strcpy( currtable, tmpname );
     *g2vartbl = &currvartbl;
+    *filename = currtable;
 
     /*
      *  Search through table for id.
@@ -88,10 +92,4 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
     if ( ier == -1 )*iret=-32;
      */
 
-}
-
-const char*
-gb2_getwmocurrtable(void)
-{
-    return wmocurrtable;
 }

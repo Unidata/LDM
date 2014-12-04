@@ -41,7 +41,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
 {
     int     ret, ier, disc, cat, id, pdtn, iver, lclver, len;
     char    blanks[13]="            ";
-    const char* currtable;
+    const char* filename;
     G2Vinfo  g2var;
     G2vars_t  *g2vartbl;
 
@@ -70,17 +70,16 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
        /* 
         *  Get WMO Parameter table.
         */
-        gb2_gtwmovartbl(wmovartbl, iver, &g2vartbl, &ier);
+        gb2_gtwmovartbl(wmovartbl, iver, &g2vartbl, &filename, &ier);
         ver = iver;
-        currtable = gb2_getwmocurrtable();
     }
     else {
        /* 
         *  Get Local Parameter table.
         */
-        gb2_gtlclvartbl(lclvartbl, cmsg->origcntr, lclver, &g2vartbl, &ier);
+        gb2_gtlclvartbl(lclvartbl, cmsg->origcntr, lclver, &g2vartbl,
+                &filename, &ier);
         ver = lclver;
-        currtable = gb2_getlclcurrtable();
     }
     if (ier == 0) {
        /* 
@@ -92,7 +91,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
             char    ctemp[256];
             int     nbytes = sprintf(ctemp, "Couldn't get parameter info: "
                     "file=%s, disc=%d, cat=%d, id=%d, pdtn=%d",
-                    currtable, disc, cat, id, pdtn);
+                    filename, disc, cat, id, pdtn);
 
             ER_WMSG("GB", &ier, ctemp, &ret, 2, nbytes);
             *iret = 1;
