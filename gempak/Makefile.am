@@ -96,7 +96,7 @@ TAGS_FILES		= \
 
 if HAVE_OPMOCK
 
-DISTCLEANFILES		+= TEST-test.xml
+CLEANFILES		+= TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \
                           -I/usr/local/include \
