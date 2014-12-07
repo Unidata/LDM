@@ -8,14 +8,12 @@
 
 EXTRA_DIST              = down7.hin \
 			  mldm_receiver.hin \
-			  mldm_sender_memory.hin \
 			  mldm_receiver_memory.hin \
                           prod_index_queue.hin \
                           sock_funcs.c sock_funcs.hin \
                           up7.hin
 BUILT_SOURCES           = down7.h \
 			  mldm_receiver.h \
-			  mldm_sender_memory.h \
 			  mldm_receiver_memory.h \
                           prod_index_queue.h \
                           sock_funcs.h \
@@ -29,7 +27,6 @@ lib_la_SOURCES		= down7.c \
 			  mldm_receiver.c \
 			  mldm_receiver_memory.c \
 			  mldm_sender_manager.c mldm_sender_manager.h \
-			  mldm_sender_memory.c \
 			  mldm_sender_map.c mldm_sender_map.h \
 			  prod_index_queue.c
 CPPFLAGS		= -I$(builddir) -I$(srcdir) \
@@ -53,7 +50,6 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 	mv -f $@.tmp $@
 down7.h:		down7.hin down7.c
 mldm_receiver.h:	mldm_receiver.hin mldm_receiver.c
-mldm_sender_memory.h:	mldm_sender_memory.hin mldm_sender_memory.c
 mldm_receiver_memory.h:	mldm_receiver_memory.c mldm_receiver_memory.hin
 prod_index_queue.h:	prod_index_queue.hin prod_index_queue.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
@@ -73,7 +69,8 @@ all_stubs		= $(VCMTPReceiver_stubs) \
                           $(mldm_sender_map_stubs) \
                           $(unistd_stubs)
 BUILT_SOURCES		+= $(all_stubs)
-DISTCLEANFILES		+= TEST-test.xml
+DISTCLEANFILES		+= $(all_stubs)
+CLEANFILES		+= TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \
                           -I/usr/local/include \
@@ -96,30 +93,28 @@ opmock_check_progs			= mldm_sender_manager_test \
                                           #mldm_receiver_test
 test_cppflags				= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
-mldm_sender_manager_test_stub_objs	= mcast_stub.o mldm_sender_map_stub.o \
-	pq_stub.o unistd_stub.o globals_stub.o
-mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c \
-                                          mcast_info.c mcast_info.h
+mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c
+nodist_mldm_sender_manager_test_SOURCES = $(mcast_stubs) \
+					  $(mldm_sender_map_stubs) \
+					  $(pq_stubs) $(unistd_stubs) \
+					  $(globals_stubs)
 mldm_sender_manager_test_CPPFLAGS	= $(test_cppflags)
 mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mldm_sender_manager_test_LDADD		= $(mldm_sender_manager_test_stub_objs) \
-					  $(top_builddir)/lib/libldm.la \
+mldm_sender_manager_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  	  @OPMOCK_LDADD@
 
-mldm_receiver_test_stub_objs		= mcast_stub.o pq_stub.o
 mldm_receiver_test_SOURCES 		= mldm_receiver_test.c mldm_receiver.c
+nodist_mldm_receiver_test_SOURCES 	= $(mcast_stubs) $(pq_stubs)
 mldm_receiver_test_CPPFLAGS		= $(test_cppflags)
 mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
-mldm_receiver_test_LDADD  		= $(mldm_receiver_test_stub_objs) \
-                                          $(top_builddir)/lib/libldm.la \
+mldm_receiver_test_LDADD  		= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
 
-mldm_receiver_memory_test_stub_objs	= globals_stub.o
 mldm_receiver_memory_test_SOURCES 	= mldm_receiver_memory_test.c
+nodist_mldm_receiver_memory_test_SOURCES = $(globals_stubs)
 mldm_receiver_memory_test_CPPFLAGS	= $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mldm_receiver_memory_test_LDADD  	= $(mldm_receiver_memory_test_stub_objs) \
-                                          $(top_builddir)/lib/libldm.la \
+mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
 
 opmock_tests				= $(opmock_check_progs)
@@ -131,19 +126,16 @@ cunit_check_progs		= prod_index_map_test \
                                   prod_index_queue_test
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
-mldm_sender_map_test_LDADD	= \
-    $(top_builddir)/lib/libldm.la \
-    @LIBS_CUNIT@
+mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
+                                  @LIBS_CUNIT@
 prod_index_map_test_SOURCES	= prod_index_map_test.c prod_index_map.c
 prod_index_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
-prod_index_map_test_LDADD	= \
-    $(top_builddir)/lib/libldm.la \
-    @LIBS_CUNIT@
+prod_index_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
+                                  @LIBS_CUNIT@
 prod_index_queue_test_SOURCES	= prod_index_queue_test.c prod_index_queue.c
 prod_index_queue_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
-prod_index_queue_test_LDADD	= \
-    $(top_builddir)/lib/libldm.la \
-    @LIBS_CUNIT@
+prod_index_queue_test_LDADD	= $(top_builddir)/lib/libldm.la \
+                                  @LIBS_CUNIT@
 cunit_tests			= $(cunit_check_progs)
 
 prod_index_map_test_valgrind:	prod_index_map_test

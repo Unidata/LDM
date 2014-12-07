@@ -22,7 +22,6 @@
 #include "log.h"
 #include "mcast.h"
 #include "mcast_info.h"
-#include "mldm_sender_memory.h"
 #include "pq.h"
 #include "prod_class.h"
 #include "StrBuf.h"

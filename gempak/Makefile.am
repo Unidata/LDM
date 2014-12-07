@@ -102,16 +102,15 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
                           -I/usr/local/include \
                           -I/usr/include
 
-# Don't put "*_stub.*" files in "*_SOURCES" macros because such files are
-# expected by "make distcheck" and they won't exist on a system that doesn't
-# have Opmock.
-
 CTBG2RDVAR_STUBS	= ctbg2rdvar_stub.c ctbg2rdvar_stub.h
 BUILT_SOURCES		+= $(CTBG2RDVAR_STUBS)
 DISTCLEANFILES		+= $(CTBG2RDVAR_STUBS)
 
 $(CTBG2RDVAR_STUBS):	ctbg2rdvar.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+
+# Put "*_stub.*" files in "nodist_*_SOURCES" macros because "make distcheck"
+# expects "*_SOURCES" files without a "nodist_" prefix to exist.
 
 gb2gtvartbl_test_SOURCES 	= gb2gtvartbl_test.c
 nodist_gb2gtvartbl_test_SOURCES = $(CTBG2RDVAR_STUBS)
