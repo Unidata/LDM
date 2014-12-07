@@ -59,6 +59,21 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     id=cmsg->gfld->ipdtmpl[1];
     pdtn=cmsg->gfld->ipdtnum;
 
+    /*
+     * Some GRIB2 messages from NCEP *don't* have the Master Table Version
+     * number set to 255 (which is wrong). Consequently, the following hack sets
+     * things right.
+     */
+    if (iver != 255 && strcmp(cmsg->origcntr, "wmo")) {
+        log_add("Setting Master Table Version to 255 for non-WMO originating center "
+                "iver=%d, disc=%d, cat=%d, id=%d, pdtn=%d, "
+                "center=%.*s, lclver=%d",
+                iver, disc, cat, id, pdtn,
+                (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver);
+        log_log(LOG_WARNING);
+        cmsg->gfld->idsect[2] = iver = 255;
+    }
+
     if ((iver != 255) &&
         ((disc < 192   || disc == 255  ) && 
          (cat  < 192   || cat  == 255  ) &&

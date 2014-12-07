@@ -1,4 +1,4 @@
-6.12.7	2014-12-04T11:33:21-0700
+6.12.7	2014-12-07T09:15:35-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -19,6 +19,16 @@
         "decrease maximum latency", respectively.
 
     NOAAPORT (noaaportIngester):
+        Added code to ensure a correct Master Table Version number for GRIB2
+        products from NCEP. According to the GRIB2 specification, GRIB2
+        products that require the use of a local GRIB2 parameter table should
+        have the Master Table Version number set to 255. Some such GRIB2
+        products from NCEP violated that rule. As a consequence, their
+        parameters were not being found in the GEMPAK parameter tables.
+
+        Improved the performance of finding GRIB2 parameter information by
+        caching the GEMPAK parameter tables.
+
         Merged changes to the retransmit-request capability from Raytheon for
         the AWIPS-II system. This capability can only be used by NOAA's weather
         forecast offices.

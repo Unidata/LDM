@@ -114,6 +114,9 @@ void gb2_gtwmovartbl( char *, int, G2vars_t **,
 void gb2_gtlclvartbl( char *, char *, int, G2vars_t **,
         const char** const restrict, int *);
 
+void gb2_gtvartbl( char *, char *, int, G2vars_t **,
+        const char** const restrict, int *);
+
 void gb2_lamb ( gribfield *, float *, int *, int *);
 
 void gb2_level2g2( int vcord, char *wmolvltbl, char *lcllvltbl,

@@ -39,6 +39,7 @@ void  gb2_gtlclvartbl( char *lclvartbl, char *cntr, int lclver,
  **									*
  * Log:									*
  * S. Gilbert/NCEP		 08/2005				*
+ * S. Emmerson/UCAR              12/2014
  ***********************************************************************/
 {
 

@@ -37,7 +37,7 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
  **									*
  * Log:									*
  * S. Gilbert/NCEP		 08/2005				*
- * S. Emmerson/UCAR              11/2014
+ * S. Emmerson/UCAR              12/2014
  ***********************************************************************/
 {
 
