@@ -1,4 +1,5 @@
 Makefile Makefile.in
 Makefile
 gb2gtvartbl_test
-*_stub.{c,h}
+*_stub.c
+*_stub.h
