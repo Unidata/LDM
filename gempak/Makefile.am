@@ -9,8 +9,7 @@
 LDMHOME			= @LDMHOME@
 
 SUBDIRS			= tables
-DISTCLEANFILES		=
-BUILT_SOURCES		=
+CLEANFILES		=
 
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= \
@@ -108,7 +107,7 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 # have Opmock.
 
 CTBG2RDVAR_STUBS	= ctbg2rdvar_stub.c ctbg2rdvar_stub.h
-BUILT_SOURCES		+= $(CTBG2RDVAR_STUBS)
+CLEANFILES		+= $(CTBG2RDVAR_STUBS)
 
 $(CTBG2RDVAR_STUBS):	ctbg2rdvar.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
