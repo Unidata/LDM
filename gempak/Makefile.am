@@ -10,75 +10,76 @@ LDMHOME			= @LDMHOME@
 
 SUBDIRS			= tables
 CLEANFILES		=
+DISTCLEANFILES		=
+BUILT_SOURCES		=
 
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= \
-	cflclos.c \
-	cflinqr.c \
-	cfliret.c \
-	cflpath.c \
-	cflropn.c \
-	cfltbnr.c \
-	cfltbop.c \
-	cfltinq.c \
-	cfltrln.c \
-	cssenvr.c \
-	cstctoi.c \
-	cstinch.c \
-	cstitoc.c \
-	cstlcuc.c \
-	cstldsp.c \
-	cstlstr.c \
-	cstncat.c \
-	cstncpy.c \
-	cstnocc.c \
-	cstrmbl.c \
-	cstrmst.c \
-	cstrpst.c \
-	cstrxbl.c \
-	cstsplit.c \
-	cstuclc.c \
-	ctbcmn.h \
-	ctbg2gnam.c \
-	ctbg2gnum.c \
-	ctbg2rdcntr.c \
-	ctbg2rdlvl.c \
-	ctbg2rdvar.c \
-	ctbg2rdvar.h \
-	ctbg2read.c \
-	decode_g2gnum.c \
-	error.h \
-	erwmsg.c \
-	gb22gem.c \
-	gb2ctim.c \
-	gb2def.h \
-	gb2fcsm.c \
-	gb2ftim.c \
-	gb2gtcntr.c \
-	gb2gtlcllvltbl.c \
-	gb2gtlclvartbl.c \
-	gb2gtvartbl.c \
-	gb2gtwmolvltbl.c \
-	gb2gtwmovartbl.c \
-	gb2param.c \
-	gb2prob.c \
-	gb2proc.c \
-	gb2sklvl.c \
-	gb2skvar.c \
-	gb2vcrd.c \
-	gb2vlev.c \
-	gbcmn.h \
-	geminc.h \
-	gemprm.h \
-	lvcord.c \
-	proto_cgemlib.h \
-	proto_gemlib.h \
-	proto.h \
-	tgitoc.c \
-	tiaddm.c \
-	tidaym.c \
-	tiitoj.c \
-	timdif.c
+lib_la_SOURCES		= cflclos.c \
+                          cflinqr.c \
+                          cfliret.c \
+                          cflpath.c \
+                          cflropn.c \
+                          cfltbnr.c \
+                          cfltbop.c \
+                          cfltinq.c \
+                          cfltrln.c \
+                          cssenvr.c \
+                          cstctoi.c \
+                          cstinch.c \
+                          cstitoc.c \
+                          cstlcuc.c \
+                          cstldsp.c \
+                          cstlstr.c \
+                          cstncat.c \
+                          cstncpy.c \
+                          cstnocc.c \
+                          cstrmbl.c \
+                          cstrmst.c \
+                          cstrpst.c \
+                          cstrxbl.c \
+                          cstsplit.c \
+                          cstuclc.c \
+                          ctbcmn.h \
+                          ctbg2gnam.c \
+                          ctbg2gnum.c \
+                          ctbg2rdcntr.c \
+                          ctbg2rdlvl.c \
+                          ctbg2rdvar.c \
+                          ctbg2rdvar.h \
+                          ctbg2read.c \
+                          decode_g2gnum.c \
+                          error.h \
+                          erwmsg.c \
+                          gb22gem.c \
+                          gb2ctim.c \
+                          gb2def.h \
+                          gb2fcsm.c \
+                          gb2ftim.c \
+                          gb2gtcntr.c \
+                          gb2gtlcllvltbl.c \
+                          gb2gtlclvartbl.c \
+                          gb2gtvartbl.c \
+                          gb2gtwmolvltbl.c \
+                          gb2gtwmovartbl.c \
+                          gb2param.c \
+                          gb2prob.c \
+                          gb2proc.c \
+                          gb2sklvl.c \
+                          gb2skvar.c \
+                          gb2vcrd.c \
+                          gb2vlev.c \
+                          gbcmn.h \
+                          geminc.h \
+                          gemprm.h \
+                          lvcord.c \
+                          proto_cgemlib.h \
+                          proto_gemlib.h \
+                          proto.h \
+                          tgitoc.c \
+                          tiaddm.c \
+                          tidaym.c \
+                          tiitoj.c \
+                          timdif.c
 
 CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
 			  -I$(top_srcdir) \
@@ -89,10 +90,9 @@ CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
 			  -I$(top_builddir)/registry -I$(top_srcdir)/registry \
 			  -I$(top_builddir)/mcast_lib/C++ -I$(top_srcdir)/mcast_lib/C++
 
-TAGS_FILES		= \
-	*.c *.h \
-	../ulog/*.c ../ulog/*.h \
-	../grib2/*.c ../grib2/*.h
+TAGS_FILES		= *.c *.h \
+                          ../ulog/*.c ../ulog/*.h \
+                          ../grib2/*.c ../grib2/*.h
 
 if HAVE_OPMOCK
 
@@ -107,11 +107,14 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 # have Opmock.
 
 CTBG2RDVAR_STUBS	= ctbg2rdvar_stub.c ctbg2rdvar_stub.h
+BUILT_SOURCES		+= $(CTBG2RDVAR_STUBS)
+DISTCLEANFILES		+= $(CTBG2RDVAR_STUBS)
 
 $(CTBG2RDVAR_STUBS):	ctbg2rdvar.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
-gb2gtvartbl_test_SOURCES 	= gb2gtvartbl_test.c $(CTBG2RDVAR_STUBS)
+gb2gtvartbl_test_SOURCES 	= gb2gtvartbl_test.c
+nodist_gb2gtvartbl_test_SOURCES = $(CTBG2RDVAR_STUBS)
 gb2gtvartbl_test_CPPFLAGS	= $(lib_la_CPPFLAGS) $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 gb2gtvartbl_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 gb2gtvartbl_test_LDADD  	= $(top_builddir)/lib/libldm.la \

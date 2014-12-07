@@ -192,7 +192,7 @@ getVarTable(
  * @param[out] iret       Return code:
  *                              0 = Success. `*g2vartbl` and `*filename` are
  *                                  set.
- *                            -31 = Error getting table
+ *                            -31 = Error getting table. `log_log()` called.
  */
 void
 gb2_gtvartbl(
