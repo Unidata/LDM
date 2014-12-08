@@ -19,7 +19,7 @@ void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl,
  *                                                                      *
  * If wmolvltbl is NULL, the default table is read.                     *
  *									*
- * gb2_gtwmolvltbl ( wmolvltbl, iver, g2levtbl, iret )          	*
+ * gb2_gtwmolvltbl ( wmolvltbl, iver, g2levtbl, filename, iret  	*
  *									*
  * Input parameters:							*
  *      *wmolvltbl      char            WMO vertical coordinate table   *

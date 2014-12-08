@@ -19,7 +19,7 @@ void  gb2_gtlcllvltbl( char *lcllvltbl, char *cntr, int lclver,
  *                                                                      *
  * If lcllvltbl is NULL, the default table is read.                     *
  *									*
- * gb2_gtlcllvltbl ( lcllvltbl, cntr, lclver, g2levtbl, iret )	        *
+ * gb2_gtlcllvltbl ( lcllvltbl, cntr, lclver, g2levtbl, filename, iret) *
  *									*
  * Input parameters:							*
  *      *lcllvltbl      char            Local vertical coordinate table *
