@@ -184,8 +184,8 @@ getVarTable(
  *                        constructed using `cntr` and `ver`.
  * @param[in]  cntr       Abbreviation for the originating center. Ignored if
  *                        `vartbl && strlen(vartbl)`.
- * @param[in]  ver        Version number of the table. Ignored if
- *                        `vartbl && strlen(vartbl)`.
+ * @param[in]  ver        Version number of the table. Ignored if `vartbl !=
+ *                        NULL && vartbl[0] != 0`.
  * @param[out] g2vartbl   The returned table.
  * @param[out] filename   Filename associated with the returned table. May be
  *                        overwritten by the next invocation.

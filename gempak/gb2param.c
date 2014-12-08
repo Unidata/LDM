@@ -1,5 +1,7 @@
 #include "config.h"
 
+#include "ulog.h"
+
 #include <stdio.h>
 #include "gb2def.h"
 #include "proto_gemlib.h"
@@ -65,12 +67,11 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
      * things right.
      */
     if (iver != 255 && strcmp(cmsg->origcntr, "wmo")) {
-        log_add("Setting Master Table Version to 255 for non-WMO originating center "
+        uwarn("Setting Master Table Version to 255 for non-WMO originating center: "
                 "iver=%d, disc=%d, cat=%d, id=%d, pdtn=%d, "
                 "center=%.*s, lclver=%d",
                 iver, disc, cat, id, pdtn,
                 (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver);
-        log_log(LOG_WARNING);
         cmsg->gfld->idsect[2] = iver = 255;
     }
 
@@ -82,14 +83,14 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
        /* 
         *  Get WMO Parameter table.
         */
-        gb2_gtwmovartbl(wmovartbl, iver, &g2vartbl, &filename, &ier);
+        gb2_gtvartbl(wmovartbl, "wmo", iver, &g2vartbl, &filename, &ier);
     }
     else {
        /* 
         *  Get Local Parameter table.
         */
-        gb2_gtlclvartbl(lclvartbl, cmsg->origcntr, lclver, &g2vartbl,
-                &filename, &ier);
+        gb2_gtvartbl(lclvartbl, cmsg->origcntr, lclver, &g2vartbl, &filename,
+                &ier);
     }
     if (ier == 0) {
        /* 
