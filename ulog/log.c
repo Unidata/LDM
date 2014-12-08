@@ -517,7 +517,11 @@ log_getLogOpts(
  * Initializes logging. This should be called before the command-line is
  * decoded.
  *
- * @param[in] progName  Name of the program.
+ * @param[in] progName    Name of the program. Caller may modify on return.
+ * @param[in] maxLogLevel Initial maximum logging-level. One of LOG_ERR,
+ *                        LOG_WARNING, LOG_NOTICE, LOG_INFO, or LOG_DEBUG.
+ *                        Log messages up to this level will be logged.
+ * @param[in] facility    Logging facility. Typically LOG_LDM.
  */
 void
 log_initLogging(
