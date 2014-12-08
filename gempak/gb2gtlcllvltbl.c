@@ -9,7 +9,7 @@
 extern void ctb_g2rdlvl(char *tbname, G2lvls *lvltbl, int *iret);
 
 void  gb2_gtlcllvltbl( char *lcllvltbl, char *cntr, int lclver,
-                       G2lvls **g2levtbl, int *iret)
+                       G2lvls **g2levtbl, const char** filename, int *iret)
 /************************************************************************
  * gb2_gtlcllvltbl							*
  *									*
@@ -28,6 +28,7 @@ void  gb2_gtlcllvltbl( char *lcllvltbl, char *cntr, int lclver,
  *									*
  * Output parameters:							*
  *	**g2levtbl	G2lvls		struct for level table entries  *
+ *	**filename      char            Filename of the table
  *	*iret		int		Return code			*
  *                                        -29 = Error reading table     *
  **									*
@@ -75,6 +76,7 @@ void  gb2_gtlcllvltbl( char *lcllvltbl, char *cntr, int lclver,
         }
     }
     strcpy( currtable, tmpname );
+    *filename = currtable;
     *g2levtbl = &currlvltbl;
 
 }

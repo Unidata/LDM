@@ -8,7 +8,8 @@
  */
 extern void ctb_g2rdlvl(char *tbname, G2lvls *lvltbl, int *iret);
 
-void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl, int *iret)
+void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl,
+        const char** const filename, int *iret)
 /************************************************************************
  * gb2_gtwmolvltbl							*
  *									*
@@ -26,6 +27,7 @@ void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl, int *iret)
  *									*
  * Output parameters:							*
  *	**g2levtbl	G2lvls		struct for level table entries  *
+ *	**filename      char            Filename of the table.
  *	*iret		int		Return code			*
  *                                        -29 = Error reading table     *
  **									*
@@ -73,6 +75,7 @@ void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl, int *iret)
         }
     }
     strcpy( currtable, tmpname );
+    *filename = currtable;
     *g2levtbl = &currlvltbl;
 
 }

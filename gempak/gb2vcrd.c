@@ -39,6 +39,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
     char    vparm[12], ctemp[20];
     float   rlevel[2];
     double  sfact;
+    const char* filename;
 
 /*---------------------------------------------------------------------*/
 
@@ -57,7 +58,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
        /* 
         *  Get WMO vertical coordinate table.
         */
-        gb2_gtwmolvltbl( wmolvltbl, iver, &g2lvltbl, &ier);
+        gb2_gtwmolvltbl( wmolvltbl, iver, &g2lvltbl, &filename, &ier);
         if ( ier == 0 ) {
            /* 
             *  Get Level into from WMO vertical coordinate table.
@@ -69,7 +70,8 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
        /* 
         *  Get Local vertical coordinate table.
         */
-        gb2_gtlcllvltbl( lcllvltbl, cmsg->origcntr, lclver, &g2lvltbl, &ier);
+        gb2_gtlcllvltbl( lcllvltbl, cmsg->origcntr, lclver, &g2lvltbl,
+                &filename, &ier);
         if ( ier == 0 ) {
            /* 
             *  Get Level into from Local vertical coordinate table.
@@ -78,11 +80,11 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
         }
     }
     if ( ier != 0 ) {
+        unotice("Couldn't get parameter info: iver=%d, lvl1=%d, lvl2=%d, "
+                    "center=%.*s, lclver=%d, file=%s",
+                iver, lvl1, lvl2, (int)sizeof(cmsg->origcntr),
+                cmsg->origcntr, lclver, filename);
         *iret=ier;
-        if ( ier == -30 ) {
-            sprintf(ctemp,"%d|%d", lvl1, lvl2);
-            ER_WMSG("GB",&ier,ctemp,&ret,2,strlen(ctemp));
-        }
         return;
     }
 

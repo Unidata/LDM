@@ -104,9 +104,9 @@ void gb2_grid ( Gribmsg *, int ,
 
 void gb2_gtcntr( int , char *, char *, int *);
 
-void gb2_gtlcllvltbl( char *, char *, int, G2lvls **, int *);
+void gb2_gtlcllvltbl( char *, char *, int, G2lvls **, const char**, int *);
 
-void gb2_gtwmolvltbl( char *, int, G2lvls **, int *);
+void gb2_gtwmolvltbl( char *, int, G2lvls **, const char**, int *);
 
 void gb2_gtwmovartbl( char *, int, G2vars_t **,
         const char** const restrict, int *);
