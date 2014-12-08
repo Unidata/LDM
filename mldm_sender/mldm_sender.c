@@ -680,7 +680,7 @@ mls_setProdClass(
         status = LDM7_SYSTEM;
     }
     else {
-        // (void)set_timestamp(&pc->from); // from now
+        (void)set_timestamp(&pc->from); // from now
         pc->psa.psa_val->feedtype = mcastInfo.feed;
         *prodClass = pc;
         status = 0;
@@ -709,7 +709,7 @@ mls_tryMulticast(
 
     if (PQUEUE_END == status) {
         /*
-         * No matching data-product. Block for a short time, or until a signal
+         * No matching data-product. Block for a short time, until a signal
          * handler is called, or until a SIGCONT is received by this thread. NB:
          * `pq_suspend()` ensures that SIGCONT is unblocked for it.
          */
