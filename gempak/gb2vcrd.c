@@ -80,8 +80,8 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
         }
     }
     if ( ier != 0 ) {
-        unotice("Couldn't get parameter info: iver=%d, lvl1=%d, lvl2=%d, "
-                    "center=%.*s, lclver=%d, file=%s",
+        unotice("Couldn't get vertical coordinate info: "
+                    "iver=%d, lvl1=%d, lvl2=%d, center=%.*s, lclver=%d, file=%s",
                 iver, lvl1, lvl2, (int)sizeof(cmsg->origcntr),
                 cmsg->origcntr, lclver, filename);
         *iret=ier;
