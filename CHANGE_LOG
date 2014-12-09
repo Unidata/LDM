@@ -1,4 +1,4 @@
-6.12.7	2014-12-09T09:40:31-0700
+6.12.7	2014-12-09T10:04:43-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -28,6 +28,9 @@
 
         Improved the performance of finding GRIB2 parameter information by
         caching the GEMPAK parameter tables.
+        
+        Improved the error-message logged when information on a GRIB2 parameter
+        or vertical coordinate can not be found in the relevant GEMPAK table.
 
         Merged changes to the retransmit-request capability from Raytheon for
         the AWIPS-II system. This capability can only be used by NOAA's weather
