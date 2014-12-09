@@ -514,6 +514,20 @@ mls_openProdIndexMap(
 }
 
 /**
+ * Accepts notification that the multicast layer is finished with a
+ * data-product, and so any resources associated with the product may be
+ * released.
+ *
+ * @param[in] iProd  Index of the product.
+ */
+static void
+mls_doneWithProduct(
+    const VcmtpProdIndex iProd)
+{
+    // TODO
+}
+
+/**
  * Initializes the resources of this module. Sets `mcastInfo`; in particular,
  * sets `mcastInfo.server.port` to the actual port number used by the VCMTP
  * TCP server (in case the number was chosen by the operating-system).
@@ -575,7 +589,7 @@ mls_init(
 
     if ((status = mcastSender_new(&mcastSender, serverInetAddr,
             &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port, ttl,
-            iProd))) {
+            iProd, mls_doneWithProduct))) {
         status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
         goto free_mcastInfo;
     }
@@ -680,7 +694,7 @@ mls_setProdClass(
         status = LDM7_SYSTEM;
     }
     else {
-        (void)set_timestamp(&pc->from); // from now
+        (void)set_timestamp(&pc->from); // send products starting now
         pc->psa.psa_val->feedtype = mcastInfo.feed;
         *prodClass = pc;
         status = 0;

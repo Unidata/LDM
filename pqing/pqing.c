@@ -610,7 +610,7 @@ main(int ac, char *av[])
          */
         if(strcmp(progname, "feedtest") != 0)
         {
-                if(ready = pq_open(pqpath, PQ_DEFAULT, &pq))
+                if((ready = pq_open(pqpath, PQ_DEFAULT, &pq)))
                 {
                         if (PQ_CORRUPT == ready) {
                             uerror("The product-queue \"%s\" is inconsistent\n",

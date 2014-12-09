@@ -224,35 +224,39 @@ mcastReceiver_stop(
  * Returns a new multicast sender. Starts the sender's TCP server. This method
  * doesn't block.
  *
- * @param[out]    sender      Pointer to returned sender. Caller should call
- *                            `mcastSender_free(*sender)` when it's no longer
- *                            needed.
- * @param[in]     serverAddr  Dotted-decimal IPv4 address of the interface on
- *                            which the TCP server will listen for connections
- *                            from receivers for retrieving missed data-blocks.
- * @param[in,out] serverPort  Port number for TCP server or 0, in which case one
- *                            is chosen by the operating system.
- * @param[in]     groupAddr   Dotted-decimal IPv4 address address of the
- *                            multicast group.
- * @param[in]     groupPort   Port number of the multicast group.
- * @param[in]     ttl         Time-to-live of outgoing packets.
- *                                  0  Restricted to same host. Won't be output
- *                                     by any interface.
- *                                  1  Restricted to the same subnet. Won't be
- *                                     forwarded by a router (default).
- *                                <32  Restricted to the same site, organization
- *                                     or department.
- *                                <64  Restricted to the same region.
- *                               <128  Restricted to the same continent.
- *                               <255  Unrestricted in scope. Global.
- * @param[in]     iProd       Initial product-index. The first multicast data-
- *                            product will have this as its index.
- * @retval        0           Success. `*sender` is set. `*serverPort` is set if
- *                            the initial port number was 0.
- * @retval        EINVAL      One of the address couldn't  be converted into a
- *                            binary IP address. `log_start()` called.
- * @retval        ENOMEM      Out of memory. \c log_start() called.
- * @retval        -1          Other failure. \c log_start() called.
+ * @param[out]    sender        Pointer to returned sender. Caller should call
+ *                              `mcastSender_free(*sender)` when it's no longer
+ *                              needed.
+ * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
+ *                              which the TCP server will listen for connections
+ *                              from receivers for retrieving missed
+ *                              data-blocks.
+ * @param[in,out] serverPort    Port number for TCP server or 0, in which case
+ *                              one is chosen by the operating system.
+ * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
+ *                              multicast group.
+ * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     ttl           Time-to-live of outgoing packets.
+ *                                    0  Restricted to same host. Won't be
+ *                                       output by any interface.
+ *                                    1  Restricted to the same subnet. Won't be
+ *                                       forwarded by a router (default).
+ *                                  <32  Restricted to the same site,
+ *                                       organization or department.
+ *                                  <64  Restricted to the same region.
+ *                                 <128  Restricted to the same continent.
+ *                                 <255  Unrestricted in scope. Global.
+ * @param[in]     iProd         Initial product-index. The first multicast data-
+ *                              product will have this as its index.
+ * @param[in]     donwWithProd  Function to call when the VCMTP layer is done
+ *                              with a data-product and its resources may be
+ *                              released.
+ * @retval        0             Success. `*sender` is set. `*serverPort` is set
+ *                              if the initial port number was 0.
+ * @retval        EINVAL        One of the address couldn't  be converted into a
+ *                              binary IP address. `log_start()` called.
+ * @retval        ENOMEM        Out of memory. \c log_start() called.
+ * @retval        -1            Other failure. \c log_start() called.
  */
 int
 mcastSender_new(
@@ -262,7 +266,8 @@ mcastSender_new(
     const char* const      groupAddr,
     const unsigned short   groupPort,
     const unsigned         ttl,
-    const VcmtpProdIndex   iProd)
+    const VcmtpProdIndex   iProd,
+    void                  (*doneWithProd)(VcmtpProdIndex iProd))
 {
     int status;
 

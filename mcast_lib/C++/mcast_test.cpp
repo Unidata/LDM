@@ -42,7 +42,7 @@ void missed_file_func(void* obj, const VcmtpProdIndex iProd)
 void test_vcmtpReceiver_new()
 {
     int                         status;
-    McastReceiver*             receiver;
+    McastReceiver*              receiver;
     const char*                 addr = "224.0.0.1";
     const unsigned short        port = 1;
     const char* const           tcpAddr = "127.0.0.1";
