@@ -57,8 +57,4 @@ void  gb2_sklvl( int lvl1, int lvl2, G2lvls *lvltbl,
         }
         n++;
     }
-
-    if (*iret < 0)
-        LOG_START3("GRIB2 level table entry not found: lvl1=%d, lvl2=%d, "
-                "lvltbl->nlines=%d", lvl1, lvl2, lvltbl->nlines);
 }
