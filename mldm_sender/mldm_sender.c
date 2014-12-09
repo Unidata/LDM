@@ -524,7 +524,10 @@ static void
 mls_doneWithProduct(
     const VcmtpProdIndex iProd)
 {
-    // TODO
+    // TODO: Nothing is done yet because a product should reside in the queue
+    // much longer than it takes VCMTP to send it and the queue API will have to
+    // be modified to support holding a lock on a product until it's explicitly
+    // unlocked.
 }
 
 /**

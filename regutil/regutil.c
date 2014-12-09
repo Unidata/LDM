@@ -202,7 +202,7 @@ static Status printPath(
             else {
                 _pathPrefix = path;
 
-                if (0 != (regStatus = reg_visitNodes(node, printNodeValues))) {
+                if (0 != reg_visitNodes(node, printNodeValues)) {
                     log_log(LOG_ERR);
                     status = SYSTEM_ERROR;
                 }                       /* error visiting nodes */
@@ -375,7 +375,7 @@ int main(
     (void) openulog(progname, LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
     (void) setulogmask(LOG_UPTO(LOG_NOTICE));
 
-    if (status = sb_new(&_valuePath, 80)) {
+    if ((status = sb_new(&_valuePath, 80))) {
         LOG_ADD0("Couldn't initialize utility");
         log_log(LOG_ERR);
         status = SYSTEM_ERROR;
@@ -438,7 +438,7 @@ int main(
                 break;
             }
             case 'd': {
-                if (status = reg_setDirectory(optarg))
+                if ((status = reg_setDirectory(optarg)))
                     status = SYSTEM_ERROR;
                 break;
             }
