@@ -137,8 +137,6 @@ static void put4(void)
 
 static void get4(void)
 {
-    signaturet sig;
-
     doesNotExist(0);
 
     exists(1, 1);
