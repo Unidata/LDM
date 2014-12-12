@@ -306,7 +306,7 @@
    #define below would cause a syntax error. */
 #undef _UINT64_T
 
-/* Level of XOPEN compliance */
+/* Level of X/OPEN compliance */
 #undef _XOPEN_SOURCE
 
 /* Needed for "struct ip_mreq" on SunOS 5 */
