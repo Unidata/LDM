@@ -17,7 +17,8 @@ if test "$ac_cv_prog_cc_c99" = "no"; then
     AC_MSG_ERROR([No c99-conforming compiler found. Install one (e.g., gcc) and retry.])
 fi
 AC_USE_SYSTEM_EXTENSIONS
-AC_DEFINE([_XOPEN_SOURCE], [700], [Level of X/OPEN compliance])
+# NB: Solaris 10 doesn't support _XOPEN_SOURCE beyond 600
+AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
 #if test "$GCC" = "yes"; then
 #    AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
 #    CFLAGS="$CFLAGS${CFLAGS+ }-std=c99" # needed by configure script
