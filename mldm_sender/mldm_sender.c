@@ -515,14 +515,13 @@ mls_openProdIndexMap(
 
 /**
  * Accepts notification that the multicast layer is finished with a
- * data-product, and so any resources associated with the product may be
- * released.
+ * data-product and releases associated resources.
  *
- * @param[in] iProd  Index of the product.
+ * @param[in] prodIndex  Index of the product.
  */
 static void
 mls_doneWithProduct(
-    const VcmtpProdIndex iProd)
+    const VcmtpProdIndex prodIndex)
 {
     // TODO: Nothing is done yet because a product should reside in the queue
     // much longer than it takes VCMTP to send it and the queue API will have to

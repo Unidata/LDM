@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+typedef void McastSender;
+
 #ifdef __cplusplus
     extern "C" {
 #endif
@@ -91,7 +93,7 @@ void mcastReceiver_stop(
  */
 int
 mcastSender_new(
-    void** const           sender,
+    McastSender** const    sender,
     const char* const      serverAddr,
     unsigned short* const  serverPort,
     const char* const      groupAddr,

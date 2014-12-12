@@ -12,6 +12,7 @@
 #include "log.h"
 #include "mcast.h"
 #include "PerProdNotifier.h"
+#include "PerProdSendingNotifier.h"
 
 #include <vcmtpRecvv3.h>
 #include <vcmtpSendv3.h>
@@ -248,8 +249,8 @@ mcastReceiver_stop(
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
- * @param[in]     donwWithProd  Function to call when the VCMTP layer is done
- *                              with a data-product and its resources may be
+ * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
+ *                              with a data-product so that its resources may be
  *                              released.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
  *                              if the initial port number was 0.
@@ -260,7 +261,7 @@ mcastReceiver_stop(
  */
 int
 mcastSender_new(
-    void** const           sender,
+    McastSender** const    sender,
     const char* const      serverAddr,
     unsigned short* const  serverPort,
     const char* const      groupAddr,
@@ -272,22 +273,32 @@ mcastSender_new(
     int status;
 
     try {
-        vcmtpSendv3* send = new vcmtpSendv3(serverAddr, *serverPort, groupAddr,
-                groupPort, iProd);
+        PerProdSendingNotifier* notifier =
+                new PerProdSendingNotifier(doneWithProd);
+
         try {
-            if (0 == *serverPort)
-                *serverPort = send->getTcpPortNum();
-            *sender = send;
-            status = 0;
+            vcmtpSendv3* send = new vcmtpSendv3(serverAddr, *serverPort,
+                    groupAddr, groupPort, iProd, notifier);
+            try {
+                if (0 == *serverPort)
+                    *serverPort = send->getTcpPortNum();
+                *sender = send;
+                status = 0;
+            }
+            catch (const std::exception& e) {
+                delete send;
+                throw;
+            }
+        }
+        catch (const std::invalid_argument& e) {
+            LOG_START1("%s", e.what());
+            delete notifier;
+            status = EINVAL;
         }
         catch (const std::exception& e) {
-            delete send;
+            delete notifier;
             throw;
         }
-    }
-    catch (const std::invalid_argument& e) {
-        LOG_START1("%s", e.what());
-        status = EINVAL;
     }
     catch (const std::exception& e) {
         LOG_START1("%s", e.what());
@@ -304,7 +315,7 @@ mcastSender_new(
  */
 void
 mcastSender_free(
-    void* const sender)
+    McastSender* const sender)
 {
     // VCMTP call
     delete (vcmtpSendv3*)sender;
@@ -322,7 +333,7 @@ mcastSender_free(
  */
 int
 mcastSender_send(
-    void* const           sender,
+    McastSender* const    sender,
     const void* const     data,
     const size_t          nbytes,
     const void* const     metadata,
