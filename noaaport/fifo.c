@@ -109,7 +109,7 @@ static inline void
 fifo_signal(
         Fifo* const restrict fifo)
 {
-    (void)pthread_cond_signal(&fifo->cond);
+    (void)pthread_cond_broadcast(&fifo->cond);
 }
 
 static inline void

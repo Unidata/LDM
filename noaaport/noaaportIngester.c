@@ -811,7 +811,7 @@ destroyRetransSupport(
 static int
 readInput(void)
 {
-    int     status = mcastSpec
+    int status = mcastSpec
             ? multicastReaderNew(mcastSpec, interface, fifo, &reader)
             : fileReaderNew(NULL, fifo, &reader);
 

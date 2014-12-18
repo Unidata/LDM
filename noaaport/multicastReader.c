@@ -114,8 +114,9 @@ int multicastReaderNew(
                                     NULL == interface ? "ANY" : interface);
                         }
                         else {
-                            if ((status = readerNew(sock, fifo, 10000,
-                                            reader)) != 0) {
+                            // maximum size of UDP payload is 65507 bytes
+                            if ((status = readerNew(sock, fifo, 65507,
+                                    reader))) {
                                 LOG_ADD0("Couldn't create new reader object");
                             }           /* "*reader" set */
                         }               /* joined multicast group */
