@@ -25,8 +25,9 @@
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
-#include <stdio.h>
+#include <sched.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
@@ -668,14 +669,17 @@ startReportingThread(void)
 }
 
 /**
- * Initializes thread attributes.
+ * Initializes thread attributes. The scheduling inheritance mode will be
+ * explicit and the scheduling contention scope will be system-wide.
  *
  * @param[in] attr            Pointer to uninitialized thread attributes object.
  *                            Caller should call `pthread_attr_destroy(*attr)`
  *                            when it's no longer needed.
  * @param[in] isMcastInput    Is input from multicast?
- * @param[in] priority        Thread priority. Ignored if input isn't from
+ * @param[in] policy          Scheduling policy. Ignored if input isn't from
  *                            multicast.
+ * @param[in] priority        Thread priority. Ignored if input isn't from
+ *                            multicast. Must be consonant with `policy`.
  * @retval    0               Success. `*attr` is initialized.
  * @retval    USAGE_ERROR     Usage error. `log_start()` called.
  * @retval    SYSTEM_FAILURE  System error. `log_start()` called.
@@ -683,6 +687,7 @@ startReportingThread(void)
 static int
 initThreadAttr(
         pthread_attr_t* const attr,
+        const int             policy,
         const bool            isMcastInput,
         const int             priority)
 {
@@ -694,68 +699,23 @@ initThreadAttr(
     }
     else if (isMcastInput) {
         #ifndef _POSIX_THREAD_PRIORITY_SCHEDULING
-            uwarn("Can't adjust thread priorities due to lack of "
-                    "necessary support from environment");
+            uwarn("Can't adjust thread scheduling due to lack of support from "
+                    "the environment");
         #else
             struct sched_param  param;
 
             param.sched_priority = priority;
 
             (void)pthread_attr_setinheritsched(attr, PTHREAD_EXPLICIT_SCHED);
-            (void)pthread_attr_setschedpolicy(attr, SCHED_POLICY);
+            (void)pthread_attr_setschedpolicy(attr, policy);
             (void)pthread_attr_setschedparam(attr, &param);
-            // System-wide scope because this process is crucial
+            /*
+             * The scheduling contention scope is system-wide because data
+             * arrival can't be controlled.
+             */
             (void)pthread_attr_setscope(attr, PTHREAD_SCOPE_SYSTEM);
         #endif
     }
-
-    return status;
-}
-
-/**
- * Sets the attributes of the current thread if appropriate.
- *
- * @param[in] isMcastInput    Is input from multicast? This function does
- *                            nothing if the input isn't from multicast.
- * @param[in] priority        Thread priority. Ignored if input isn't from
- *                            multicast.
- * @retval    0               Success.
- * @retval    SYSTEM_FAILURE  System failure. `log_start()` called.
- * @retval    USAGE_ERROR     Usage error. `log_start()` called.
- */
-static int
-setCurrentThreadAttr(
-        const bool isMcastInput,
-        const int  priority)
-{
-    int status;
-
-    if (!isMcastInput) {
-        status = 0;
-    }
-    else {
-        pthread_attr_t attr;
-
-        status = initThreadAttr(&attr, isMcastInput, priority);
-
-        if (0 == status) {
-            int                schedPolicy;
-            struct sched_param schedParam;
-
-            (void)pthread_attr_getschedpolicy(&attr, &schedPolicy);
-            (void)pthread_attr_getschedparam(&attr, &schedParam);
-
-            status = pthread_setschedparam(pthread_self(), schedPolicy,
-                    &schedParam);
-
-            if (status) {
-                LOG_SERROR0("Couldn't set attributes of current thread");
-                status = (ENOMEM == status) ? SYSTEM_FAILURE : USAGE_ERROR;
-            }
-
-            (void)pthread_attr_destroy(&attr);
-        } // `attr` initialized
-    } // is multicast input
 
     return status;
 }
@@ -799,17 +759,18 @@ destroyRetransSupport(
 }
 
 /**
- * Reads input and puts the data into `fifo`. If `mcastSpec` is non-NULL, then
- * input is read from that multicast UDP address on `interface`; otherwise,
- * input is read from the standard input stream. Sets `reader`. Doesn't free
- * `reader`.
+ * Creates an input-reader and runs it in a new thread.
  *
- * @retval    0               Success. EOF encountered or `done` is set.
- * @retval    SYSTEM_FAILURE  System failure. `log_log()` called.
- * @retval    USAGE_ERROR     Usage error. `log_log()` called.
+ * @param[in]  attr            Pointer to thread-creation attributes
+ * @param[out] thread          Pointer to created thread.
+ * @retval     0               Success. `reader` is set.
+ * @retval     USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_start()` called.
  */
 static int
-readInput(void)
+spawnReader(
+    const pthread_attr_t* const restrict attr,
+    pthread_t* const restrict            thread)
 {
     int status = mcastSpec
             ? multicastReaderNew(mcastSpec, interface, fifo, &reader)
@@ -819,11 +780,56 @@ readInput(void)
         LOG_ADD0("Couldn't create input-reader");
     }
     else {
-        status = *(int*)(readerStart(reader));
+        status = pthread_create(thread, attr, readerStart, reader);
 
-        if (done)
-            status = 0;
-    }
+        if (status) {
+            LOG_ERRNUM0(status, "Couldn't create input-reader thread");
+            readerFree(reader);
+            reader = NULL;
+            status = SYSTEM_FAILURE;
+        }
+    } // `reader` is set
+
+    return status;
+}
+
+/**
+ * Starts an input-reader and waits for it to terminate.
+ *
+ * @param[in] isMcastInput    Is the input from multicast?
+ * @param[in] policy          Scheduling policy for the reader thread. Ignored
+ *                            if the input isn't from multicast.
+ * @param[in] priority        Scheduling priority for the reader thread. Ignored
+ *                            if the input isn't from multicast. Must be
+ *                            consonant with `policy`.
+ * @retval    0               Success.
+ * @retval    USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval    SYSTEM_FAILURE  System failure. `log_start()` called.
+ */
+static int
+startReaderAndWait(
+        const bool isMcastInput,
+        const int  policy,
+        const int  priority)
+{
+    pthread_attr_t attr;
+    int            status = initThreadAttr(&attr, isMcastInput, policy,
+            priority);
+
+    if (0 == status) {
+        pthread_t readerThread;
+        unblockTermSignals();
+        status = spawnReader(&attr, &readerThread); // sets `reader`
+        blockTermSignals();
+
+        if (0 == status) {
+            void* voidPtr;
+            (void)pthread_join(readerThread, &voidPtr);
+            status = done ? 0 : *(int*)voidPtr;
+        }
+
+        (void)pthread_attr_destroy(&attr);
+    } // `attr` initialized
 
     return status;
 }
@@ -831,7 +837,8 @@ readInput(void)
 /**
  * Runs this program.
  *
- * @param[in] fifo            Pointer to FIFO object.
+ * @param[in] fifo            Pointer to FIFO object. Will be closed upon
+ *                            return.
  * @param[in] prodQueue       Pointer to LDM product-queue object.
  * @retval    0               Success.
  * @retval    USAGE_ERROR     Usage error. `log_start()` called.
@@ -842,54 +849,44 @@ run(
         Fifo* const restrict            fifo,
         LdmProductQueue* const restrict prodQueue)
 {
-    int             status;
     const bool      isMcastInput = NULL != mcastSpec;
     pthread_attr_t  attr;
-    int             maxPriority = sched_get_priority_max(SCHED_POLICY);
-
     /*
      * If the input is multicast UDP packets, then the product-maker thread
      * runs at a lower priority than the input thread to reduce the chance
      * of the input thread missing a packet.
      */
-    status = initThreadAttr(&attr, isMcastInput, maxPriority-1);
+    int             maxPriority = sched_get_priority_max(SCHED_POLICY);
+    int             status = initThreadAttr(&attr, isMcastInput, SCHED_POLICY,
+            maxPriority-1);
 
     if (0 == status) {
         initRetransSupport(isMcastInput); // initialize retransmission support
 
         /*
-         * Termination signals are blocked for all other threads so that they
-         * are only received on this, possibly higher-priority, input thread.
+         * Termination signals are blocked for all threads except the
+         * input-reader thread, which might have the highest priority,
          */
         blockTermSignals();
         startReportingThread();           // detached thread
-        pthread_t productMakerThread;
+        pthread_t pmThread;
         status = spawnProductMaker(&attr, fifo, prodQueue, &productMaker,
-                &productMakerThread);
-        unblockTermSignals();
+                &pmThread);
 
-        if (0 == status) {
-            status = setCurrentThreadAttr(isMcastInput, maxPriority);
+        if (0 == status)
+            status = startReaderAndWait(isMcastInput, SCHED_POLICY, maxPriority);
 
-            if (0 == status) {
-                status = readInput();
+        fifo_close(fifo); // idempotent => can't hurt
+        (void)pthread_join(pmThread, NULL);
 
-                if (status)
-                    LOG_ADD0("Error reading input");
-            }
-
-            fifo_close(fifo); // idempotent => can't hurt
-            (void)pthread_join(productMakerThread, NULL);
-
-            /*
-             * Final statistics are reported only after the product-maker has
-             * terminated to prevent a race condition in logging and consequent
-             * variable output -- which can affect testing.
-             */
-            if (reader)
-                reportStats(); // requires `reader`
-            readerFree(reader);
-        }       // `productMakerThread` running
+        /*
+         * Final statistics are reported only after the product-maker has
+         * terminated to prevent a race condition in logging and consequent
+         * variable output -- which can affect testing.
+         */
+        if (reader)
+            reportStats(); // requires `reader`
+        readerFree(reader);
 
         destroyRetransSupport(isMcastInput);
         (void)pthread_attr_destroy(&attr);

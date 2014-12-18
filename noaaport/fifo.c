@@ -46,6 +46,8 @@ fifo_init(
     else {
         // Recursive because of `fifo_close()`
         (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
+        // Prevent priority inversion
+        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
 
         if ((status = pthread_mutex_init(&fifo->mutex, &mutexAttr)) != 0) {
             LOG_ERRNUM0(status, "Couldn't initialize mutex");
