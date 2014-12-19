@@ -42,36 +42,45 @@
 #endif
 /*********** For Retransmission ****************/
 
+typedef struct {
+    /** Maker of LDM data-products */
+    ProductMaker*     productMaker;
+    /** Reader of input */
+    Reader*           reader;
+    /** Time of start of execution */
+    struct timeval    startTime;
+    /** Time of last report */
+    struct timeval    reportTime;
+} StatsStruct;
+
 static const int         USAGE_ERROR = 1;
 static const int         SYSTEM_FAILURE = 2;
 static const int         SCHED_POLICY = SCHED_FIFO;
-static size_t            npages = 5000;
-static const char*       prodQueuePath = NULL;
-static const char*       mcastSpec = NULL;
-static const char*       interface = NULL;
 static Fifo*             fifo;
-static Reader*           reader;
-static ProductMaker*     productMaker;
-static const char* const COPYRIGHT_NOTICE = \
-    "Copyright (C) 2014 University Corporation for Atmospheric Research";
-static struct timeval    startTime;      /**< Start of execution */
-static struct timeval    reportTime;     /**< Time of last report */
-static int               reportStatistics;
+static bool              reportStatistics;
 static pthread_mutex_t   mutex;
 static pthread_cond_t    cond = PTHREAD_COND_INITIALIZER;
 
 /**
  * Decodes the command-line.
  *
- * @param[in] argc  Number of arguments.
- * @param[in] argv  Arguments.
- * @retval    0     Success.
- * @retval    1     Error. `log_start()` called.
+ * @param[in]  argc           Number of arguments.
+ * @param[in]  argv           Arguments.
+ * @param[out] npages         Size of input buffer in memory-pages.
+ * @param[out] prodQueuePath  Pathname of product-queue.
+ * @param[out] mcastSpec      Specification of multicast group.
+ * @param[out] interface      Specification of interface on which to listen.
+ * @retval     0              Success.
+ * @retval     1              Error. `log_start()` called.
  */
 static int
 decodeCommandLine(
-        int    argc,
-        char** argv)
+        int                   argc,
+        char** const restrict argv,
+        size_t* const         npages,
+        char** const restrict prodQueuePath,
+        char** const restrict mcastSpec,
+        char** const restrict interface)
 {
     int                 status = 0;
     extern int          optind;
@@ -95,12 +104,12 @@ decodeCommandLine(
                     status = 1;
                 }
                 else {
-                    npages = n;
+                    *npages = n;
                 }
                 break;
             }
             case 'I':
-                interface = optarg;
+                *interface = optarg;
                 break;
             case 'l':
                 if (openulog(getulogident(), ulog_get_options(),
@@ -108,13 +117,13 @@ decodeCommandLine(
                     status = 1;
                 break;
             case 'm':
-                mcastSpec = optarg;
+                *mcastSpec = optarg;
                 break;
             case 'n':
                 (void)setulogmask(getulogmask() | LOG_MASK(LOG_NOTICE));
                 break;
             case 'q':
-                prodQueuePath = optarg;
+                *prodQueuePath = optarg;
                 break;
             case 'r':
 #ifdef RETRANS_SUPPORT
@@ -252,9 +261,15 @@ decodeCommandLine(
 
 /**
  * Unconditionally logs a usage message.
+ *
+ * @param[in] progName   Name of the program.
+ * @param[in] npages     Default size of the input buffer in memory-pages.
+ * @param[in] copyright  Copyright notice.
  */
 static void usage(
-    const char* const   progName)       /**< [in] Program name */
+    const char* const          progName,
+    const size_t               npages,
+    const char* const restrict copyright)
 {
     int logmask = setulogmask(LOG_UPTO(LOG_NOTICE));
 
@@ -292,10 +307,28 @@ static void usage(
 "\n"
 "SIGUSR1 causes statistics to be unconditionally logged at level NOTE.\n"
 "SIGUSR2 rotates the logging level.\n",
-        progName, PACKAGE_VERSION, COPYRIGHT_NOTICE, progName, (unsigned
+        progName, PACKAGE_VERSION, copyright, progName, (unsigned
         long)npages, lpqGetQueuePath(), getFacilityName(getulogfacility()));
 
     (void)setulogmask(logmask);
+}
+
+/**
+ * Handles SIGUSR1 by reporting statistics.
+ *
+ * @param[in] sig  The signal. Should be SIGUSR1.
+ * @pre            {The input reader has been created.}
+ */
+static void
+sigusr1_handler(
+        const int sig)
+{
+    if (SIGUSR1 == sig) {
+        (void)pthread_mutex_lock(&mutex);
+        reportStatistics = true;
+        (void)pthread_cond_signal(&cond);
+        (void)pthread_mutex_unlock(&mutex);
+    }
 }
 
 /*
@@ -317,14 +350,6 @@ static void signal_handler(
             done = 1;
             if (fifo)
                 fifo_close(fifo);
-            break;
-        case SIGUSR1:
-            if (NULL != reader) {
-                (void)pthread_mutex_lock(&mutex);
-                reportStatistics = 1;
-                (void)pthread_cond_signal(&cond);
-                (void)pthread_mutex_unlock(&mutex);
-            }
             break;
         case SIGUSR2: {
             unsigned logMask = getulogmask();
@@ -351,8 +376,31 @@ static void signal_handler(
     return;
 }
 
-/*
- * Registers the signal_handler
+/**
+ * Registers the SIGUSR1 handler.
+ *
+ * @param[in] ignore  Whether or not to ignore or handle SIGUSR1.
+ */
+static void
+set_sigusr1Action(
+        const bool ignore)
+{
+    struct sigaction sigact;
+
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+    sigact.sa_handler = ignore ? SIG_IGN : sigusr1_handler;
+
+#ifdef SA_RESTART   /* SVR4, 4.3+ BSD */
+    /* Restart system calls for these */
+    sigact.sa_flags |= SA_RESTART;
+#endif
+
+    (void)sigaction(SIGUSR1, &sigact, NULL);
+}
+
+/**
+ * Registers the signal handler for most signals.
  */
 static void set_sigactions(void)
 {
@@ -379,7 +427,6 @@ static void set_sigactions(void)
     /* Restart system calls for these */
     sigact.sa_flags |= SA_RESTART;
 #endif
-    (void)sigaction(SIGUSR1, &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
 }
 
@@ -542,7 +589,11 @@ static void encodeDuration(
 /**
  * Reports statistics.
  */
-static void reportStats(void)
+static void reportStats(
+        ProductMaker* const restrict   productMaker,
+        struct timeval* const restrict startTime,
+        struct timeval* const restrict reportTime,
+        Reader* const restrict         reader)
 {
     struct timeval          now;
     double                  interval;
@@ -570,7 +621,7 @@ static void reportStats(void)
     log_start("----------------------------------------");
     log_add("Ingestion Statistics:");
     log_add("    Since Previous Report (or Start):");
-    interval = duration(&now, &reportTime);
+    interval = duration(&now, reportTime);
     encodeDuration(buf, sizeof(buf), interval);
     log_add("        Duration          %s", buf);
     log_add("        Raw Data:");
@@ -590,7 +641,7 @@ static void reportStats(void)
     log_add("            Inserted      %lu", prodCount);
     log_add("            Mean Rate     %g/s", prodCount/interval);
     log_add("    Since Start:");
-    interval = duration(&now, &startTime);
+    interval = duration(&now, startTime);
     encodeDuration(buf, sizeof(buf), interval);
     log_add("        Duration          %s", buf);
     log_add("        Raw Data:");
@@ -624,14 +675,19 @@ static void reportStats(void)
     log_log(LOG_NOTICE);
     (void)setulogmask(logmask);
 
-    reportTime = now;
+    *reportTime = now;
 }
 
 /**
- * Reports statistics when signaled.
+ * Reports statistics when signaled. May be called by `pthread_create()`.
+ *
+ * @param[in] arg   Pointer to the relevant `StatsStruct`. The caller must not
+ *                  modify or free.
+ * @retval    NULL  Always.
  */
 static void* reportStatsWhenSignaled(void* arg)
 {
+    StatsStruct         ss = *(StatsStruct*)arg;
     pthread_mutexattr_t attr;
     int                 oldType;
 
@@ -643,28 +699,52 @@ static void* reportStatsWhenSignaled(void* arg)
     (void)pthread_mutex_lock(&mutex);
 
     for (;;) {
-        while (!reportStatistics) {
+        while (!reportStatistics)
             (void)pthread_cond_wait(&cond, &mutex);
-        }
 
-        reportStats();
-        reportStatistics = 0;
+        reportStats(ss.productMaker, &ss.startTime, &ss.reportTime, ss.reader);
+        reportStatistics = false;
     }
+
+    (void)pthread_mutex_unlock(&mutex);
 
     return NULL;
 }
 
 /**
- * Starts the statistics-reporting thread. The thread is detached.
+ * Initializes a statistics-reporting structure. The `startTime` and
+ * `reportTime` fields are set to the current time.
+ *
+ * @param[in] ss            The structure.
+ * @param[in] productMaker  The maker of LDM data-products.
+ * @param[in] reader        The reader of input.
  */
 static void
-startReportingThread(void)
+ss_init(
+        StatsStruct* const restrict  ss,
+        ProductMaker* const restrict productMaker,
+        Reader* const restrict       reader)
 {
-    pthread_t thread;
+    ss->productMaker = productMaker;
+    ss->reader = reader;
+    (void)gettimeofday(&ss->startTime, NULL);
+    ss->reportTime = ss->startTime;
+}
 
-    (void)gettimeofday(&startTime, NULL);
-    reportTime = startTime;
-    (void)pthread_create(&thread, NULL, reportStatsWhenSignaled, NULL);
+/**
+ * Starts the statistics-reporting thread. The thread is detached.
+ *
+ * @param[in]  productMaker  Maker of LDM data-products.
+ * @param[in]  reader        Reader of input.
+ * @param[out] startTime     Time of start of execution.
+ */
+static inline void
+startReportingThread(
+        StatsStruct* const restrict ss)
+{
+    pthread_t   thread;
+
+    (void)pthread_create(&thread, NULL, reportStatsWhenSignaled, ss);
     (void)pthread_detach(thread);
 }
 
@@ -726,10 +806,13 @@ initThreadAttr(
  * from multicast UDP packets.
  *
  * @param[in] isMcastInput  Is the input from multicast UDP packets?
+ * @param[in] mcastSpec     Specification of multicast group. Ignored if
+ *                          `!isMcastInput`.
  */
 static void
 initRetransSupport(
-        const bool isMcastInput)
+        const bool                 isMcastInput,
+        const char* const restrict mcastSpec)
 {
     #ifdef RETRANS_SUPPORT
         if (isMcastInput && retrans_xmit_enable == OPTION_ENABLE) {
@@ -763,70 +846,86 @@ destroyRetransSupport(
  *
  * @param[in]  attr            Pointer to thread-creation attributes
  * @param[out] thread          Pointer to created thread.
- * @retval     0               Success. `reader` is set.
+ * @param[in]  mcastSpec       Specification of multicast group or NULL if
+ *                             input is from the standard input stream.
+ * @param[in]  interface       Specification of interface on which to listen or
+ *                             NULL to listen on all interfaces.
+ * @param[out] reader          Reader of input. Caller should call
+ *                             `readerFree(*reader)` when it's no longer needed.
+ * @retval     0               Success. `*reader` is set.
  * @retval     USAGE_ERROR     Usage error. `log_start()` called.
  * @retval     SYSTEM_FAILURE  System failure. `log_start()` called.
  */
 static int
 spawnReader(
     const pthread_attr_t* const restrict attr,
-    pthread_t* const restrict            thread)
+    pthread_t* const restrict            thread,
+    const char* const restrict           mcastSpec,
+    const char* const restrict           interface,
+    Reader** const restrict              reader)
 {
-    int status = mcastSpec
-            ? multicastReaderNew(mcastSpec, interface, fifo, &reader)
-            : fileReaderNew(NULL, fifo, &reader);
+    Reader* rdr;
+    int     status = mcastSpec
+            ? multicastReaderNew(mcastSpec, interface, fifo, &rdr)
+            : fileReaderNew(NULL, fifo, &rdr);
 
     if (status) {
         LOG_ADD0("Couldn't create input-reader");
     }
     else {
-        status = pthread_create(thread, attr, readerStart, reader);
+        status = pthread_create(thread, attr, readerStart, rdr);
 
         if (status) {
             LOG_ERRNUM0(status, "Couldn't create input-reader thread");
-            readerFree(reader);
-            reader = NULL;
+            readerFree(rdr);
             status = SYSTEM_FAILURE;
         }
-    } // `reader` is set
+        else {
+            *reader = rdr;
+        }
+    } // `rdr` is set
 
     return status;
 }
 
 /**
- * Starts an input-reader and waits for it to terminate.
+ * Creates and starts an input-reader on a separate thread.
  *
- * @param[in] isMcastInput    Is the input from multicast?
- * @param[in] policy          Scheduling policy for the reader thread. Ignored
- *                            if the input isn't from multicast.
- * @param[in] priority        Scheduling priority for the reader thread. Ignored
- *                            if the input isn't from multicast. Must be
- *                            consonant with `policy`.
- * @retval    0               Success.
- * @retval    USAGE_ERROR     Usage error. `log_start()` called.
- * @retval    SYSTEM_FAILURE  System failure. `log_start()` called.
+ * @param[in]  isMcastInput    Is the input from multicast?
+ * @param[in]  policy          Scheduling policy for the reader thread. Ignored
+ *                             if the input isn't from multicast.
+ * @param[in]  priority        Scheduling priority for the reader thread.
+ *                             Ignored if the input isn't from multicast. Must
+ *                             be consonant with `policy`.
+ * @param[in]  mcastSpec       Specification of multicast group or NULL if input
+ *                             is from the standard input stream.
+ * @param[in]  interface       Specification of interface on which to listen or
+ *                             NULL to listen on all interfaces.
+ * @param[out] reader          Reader of input. Caller should call
+ *                             `readerFree(*reader)` when it's no longer needed.
+ * @param[out] thread          Thread on which the input-reader is executing.
+ * @retval     0               Success. `*reader` and `*thread` are set.
+ * @retval     USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_start()` called.
  */
 static int
-startReaderAndWait(
-        const bool isMcastInput,
-        const int  policy,
-        const int  priority)
+startReader(
+        const bool                 isMcastInput,
+        const int                  policy,
+        const int                  priority,
+        const char* const restrict mcastSpec,
+        const char* const restrict interface,
+        Reader** const restrict    reader,
+        pthread_t* const restrict  thread)
 {
     pthread_attr_t attr;
     int            status = initThreadAttr(&attr, isMcastInput, policy,
             priority);
 
     if (0 == status) {
-        pthread_t readerThread;
         unblockTermSignals();
-        status = spawnReader(&attr, &readerThread); // sets `reader`
+        status = spawnReader(&attr, thread, mcastSpec, interface, reader);
         blockTermSignals();
-
-        if (0 == status) {
-            void* voidPtr;
-            (void)pthread_join(readerThread, &voidPtr);
-            status = done ? 0 : *(int*)voidPtr;
-        }
 
         (void)pthread_attr_destroy(&attr);
     } // `attr` initialized
@@ -835,19 +934,103 @@ startReaderAndWait(
 }
 
 /**
- * Runs this program.
+ * Waits for in input-reader to terminate.
+ *
+ * @param[in]  thread          Thread on which the reader is executing.
+ * @retval     0               Success. `*reader` is set.
+ * @retval     USAGE_ERROR     Usage error.
+ * @retval     SYSTEM_FAILURE  System failure.
+ */
+static inline int
+waitOnReader(
+        pthread_t const thread)
+{
+    void* voidPtr;
+    (void)pthread_join(thread, &voidPtr);
+    return done ? 0 : *(int*)voidPtr;
+}
+
+/**
+ * Runs the inner core of this program. The FIFO is closed on return and the
+ * product-maker thread is joined. Final statistics are reported on success.
+ *
+ * @param[in]  productMaker    The maker of LDM data-products.
+ * @param[in]  pmThread        The thread on which the product-maker is
+ *                             executing.
+ * @param[in]  isMcastInput    Is the input from multicast?
+ * @param[in]  policy          Scheduling policy for the reader thread. Ignored
+ *                             if the input isn't from multicast.
+ * @param[in]  priority        Scheduling priority for the reader thread.
+ *                             Ignored if the input isn't from multicast. Must
+ *                             be consonant with `policy`.
+ * @param[in]  mcastSpec       Specification of multicast group or NULL if input
+ *                             is from the standard input stream.
+ * @param[in]  interface       Specification of interface on which to listen or
+ *                             NULL to listen on all interfaces.
+ * @retval     0               Success.
+ * @retval     USAGE_ERROR     Usage error. `log_start()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_start()` called.
+ */
+static int
+runInner(
+        ProductMaker* const restrict productMaker,
+        pthread_t const              pmThread,
+        const bool                   isMcastInput,
+        const int                    policy,
+        const int                    priority,
+        const char* const restrict   mcastSpec,
+        const char* const restrict   interface)
+{
+    Reader*        reader;
+    pthread_t      readerThread;
+    int            status = startReader(isMcastInput, policy, priority, mcastSpec,
+            interface, &reader, &readerThread);
+    StatsStruct    ss;
+
+    if (0 == status) {
+        ss_init(&ss, productMaker, reader);
+        // Detached thread:
+        startReportingThread(&ss);
+        set_sigusr1Action(false);  // enable stats reporting; requires reader
+        status = waitOnReader(readerThread);
+    }
+
+    fifo_close(fifo); // ensures `pmThread` termination; idempotent => can't hurt
+    (void)pthread_join(pmThread, NULL);
+
+    /*
+     * Final statistics are reported only after the product-maker has
+     * terminated to prevent a race condition in logging and consequent
+     * variability in the output -- which can affect testing.
+     */
+    if (reader) {
+        reportStats(productMaker, &ss.startTime, &ss.reportTime, reader);
+        readerFree(reader);
+    }
+
+    return status;
+}
+
+/**
+ * Runs the outer core of this program.
  *
  * @param[in] fifo            Pointer to FIFO object. Will be closed upon
  *                            return.
  * @param[in] prodQueue       Pointer to LDM product-queue object.
+ * @param[in] mcastSpec       Specification of multicast group or NULL if
+ *                            input is from the standard input stream.
+ * @param[in] interface       Specification of interface on which to listen or
+ *                            NULL to listen on all interfaces.
  * @retval    0               Success.
  * @retval    USAGE_ERROR     Usage error. `log_start()` called.
  * @retval    SYSTEM_FAILURE  System failure. `log_start()` called.
  */
 static int
-run(
+runOuter(
         Fifo* const restrict            fifo,
-        LdmProductQueue* const restrict prodQueue)
+        LdmProductQueue* const restrict prodQueue,
+        const char* const restrict      mcastSpec,
+        const char* const restrict      interface)
 {
     const bool      isMcastInput = NULL != mcastSpec;
     pthread_attr_t  attr;
@@ -861,32 +1044,21 @@ run(
             maxPriority-1);
 
     if (0 == status) {
-        initRetransSupport(isMcastInput); // initialize retransmission support
+        initRetransSupport(isMcastInput, mcastSpec);
 
         /*
          * Termination signals are blocked for all threads except the
          * input-reader thread, which might have the highest priority,
          */
         blockTermSignals();
-        startReportingThread();           // detached thread
-        pthread_t pmThread;
+        ProductMaker* productMaker;
+        pthread_t     pmThread;
         status = spawnProductMaker(&attr, fifo, prodQueue, &productMaker,
                 &pmThread);
 
         if (0 == status)
-            status = startReaderAndWait(isMcastInput, SCHED_POLICY, maxPriority);
-
-        fifo_close(fifo); // idempotent => can't hurt
-        (void)pthread_join(pmThread, NULL);
-
-        /*
-         * Final statistics are reported only after the product-maker has
-         * terminated to prevent a race condition in logging and consequent
-         * variable output -- which can affect testing.
-         */
-        if (reader)
-            reportStats(); // requires `reader`
-        readerFree(reader);
+            status = runInner(productMaker, pmThread, isMcastInput,
+                    SCHED_POLICY, maxPriority, mcastSpec, interface);
 
         destroyRetransSupport(isMcastInput);
         (void)pthread_attr_destroy(&attr);
@@ -898,12 +1070,21 @@ run(
 /**
  * Executes this program.
  *
+ * @param[in] prodQueuePath   Pathname of product-queue.
+ * @param[in] mcastSpec       Specification of multicast group or NULL if input
+ *                            is from the standard input stream.
+ * @param[in] interface       Specification of interface on which to listen or
+ *                            NULL to listen on all interfaces.
  * @retval    0               Success.
  * @retval    USAGE_ERROR     Usage error. `log_start()` called.
  * @retval    SYSTEM_FAILURE  O/S failure. `log_start()` called.
  */
 static int
-execute(void)
+execute(
+        const size_t               npages,
+        const char* const restrict prodQueuePath,
+        const char* const restrict mcastSpec,
+        const char* const restrict interface)
 {
     int status = fifo_new(npages, &fifo);
 
@@ -917,7 +1098,7 @@ execute(void)
             status = USAGE_ERROR;
         }
         else if (0 == status) {
-            status = run(fifo, prodQueue);
+            status = runOuter(fifo, prodQueue, mcastSpec, interface);
             (void)lpqClose(prodQueue);
         }                       /* "prodQueue" open */
 
@@ -989,18 +1170,27 @@ int main(
     const char* const progname = basename(argv[0]);
     log_initLogging(progname, LOG_WARNING, LOG_LDM);
 
-    int status = decodeCommandLine(argc, argv);
+    set_sigusr1Action(true);  // ignore SIGUSR1 initially
+
+    size_t            npages = 5000;
+    char*             prodQueuePath = NULL;
+    char*             mcastSpec = NULL;
+    char*             interface = NULL;
+    const char* const COPYRIGHT_NOTICE = "Copyright (C) 2014 University "
+            "Corporation for Atmospheric Research";
+    int status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
+            &mcastSpec, &interface);
 
     if (status) {
         log_add("Couldn't decode command-line");
         log_log(LOG_ERR);
-        usage(progname);
+        usage(progname, npages, COPYRIGHT_NOTICE);
     }
     else {
         unotice("Starting Up %s", PACKAGE_VERSION);
         unotice("%s", COPYRIGHT_NOTICE);
 
-        status = execute();
+        status = execute(npages, prodQueuePath, mcastSpec, interface);
     }                               /* command line decoded */
 
     return status;
