@@ -1,8 +1,13 @@
-/*
- *   Copyright 2014, University Corporation for Atmospheric Research.
- *   See file COPYRIGHT for copying and redistribution conditions.
+/**
+ * Copyright 2014, University Corporation for Atmospheric Research. See file
+ * COPYRIGHT in the top-level source-directory for copying and redistribution
+ * conditions.
+ *
+ * This module implements a FIFO queue that is designed for *one* writer thread
+ * and *one* reader thread. Any other usage results in undefined behavior.
  */
 #include "config.h"
+
 #include "log.h"
 #include "fifo.h"                   /* Eat own dog food */
 
@@ -45,7 +50,7 @@ fifo_init(
     }
     else {
         // Recursive because of `fifo_close()`
-        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
+        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_ERRORCHECK);
         // Prevent priority inversion
         (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
 
@@ -97,28 +102,48 @@ static inline void
 fifo_lock(
         Fifo* const restrict fifo)
 {
-    (void)pthread_mutex_lock(&fifo->mutex);
+    int status = pthread_mutex_lock(&fifo->mutex);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't lock mutex");
+        exit(1);
+    }
 }
 
 static inline void
 fifo_unlock(
         Fifo* const restrict fifo)
 {
-    (void)pthread_mutex_unlock(&fifo->mutex);
+    int status = pthread_mutex_unlock(&fifo->mutex);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't unlock mutex");
+        exit(1);
+    }
 }
 
 static inline void
 fifo_signal(
         Fifo* const restrict fifo)
 {
-    (void)pthread_cond_broadcast(&fifo->cond);
+    int status = pthread_cond_signal(&fifo->cond);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't signal condition-variable");
+        exit(1);
+    }
 }
 
 static inline void
 fifo_wait(
         Fifo* const fifo)
 {
-    (void)pthread_cond_wait(&fifo->cond, &fifo->mutex);
+    int status = pthread_cond_wait(&fifo->cond, &fifo->mutex);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't wait on condition-variable");
+        exit(1);
+    }
 }
 
 /**
@@ -182,9 +207,12 @@ fifo_transferFromFd(
         const size_t           maxBytes,
         size_t* const restrict nbytes)
 {
-    ssize_t      nb;
-    const size_t extent = fifo->size - fifo->nextWrite;
-    void*        ptr = fifo->buf + fifo->nextWrite;
+    ssize_t              nb;
+    const size_t         extent = fifo->size - fifo->nextWrite;
+    unsigned char* const buf = fifo->buf;
+    void*                ptr = buf + fifo->nextWrite;
+
+    fifo_unlock(fifo); // allow concurrent writing to FIFO
 
     if (maxBytes <= extent) {
         nb = read(fd, ptr, maxBytes);
@@ -194,7 +222,7 @@ fifo_transferFromFd(
 
         iov[0].iov_base = ptr;
         iov[0].iov_len = extent;
-        iov[1].iov_base = fifo->buf;
+        iov[1].iov_base = buf;
         iov[1].iov_len = maxBytes - extent;
 
         nb = readv(fd, iov, 2);
@@ -206,8 +234,10 @@ fifo_transferFromFd(
         return 2;
     }
 
-    fifo->nbytes += nb;
     *nbytes = nb;
+
+    fifo_lock(fifo);
+    fifo->nbytes += nb;
     fifo->nextWrite = (fifo->nextWrite + nb) % fifo->size;
 
     return 0;
@@ -229,18 +259,22 @@ fifo_removeBytes(
         unsigned char* const restrict buf,
         const size_t                  nbytes)
 {
-    const size_t nextRead = (fifo->nextWrite + fifo->size - fifo->nbytes) %
-            fifo->size;
-    const size_t extent = fifo->size - nextRead;
+    const size_t         nextRead = (fifo->nextWrite + fifo->size -
+            fifo->nbytes) % fifo->size;
+    const size_t         extent = fifo->size - nextRead;
+    unsigned char* const fifoBuf = fifo->buf;
+
+    fifo_unlock(fifo); // allow concurrent writing
 
     if (extent >= nbytes) {
-        (void)memcpy(buf, fifo->buf + nextRead, nbytes);
+        (void)memcpy(buf, fifoBuf + nextRead, nbytes);
     }
     else {
-        (void)memcpy(buf, fifo->buf + nextRead, extent);
-        (void)memcpy(buf + extent, fifo->buf, nbytes - extent);
+        (void)memcpy(buf, fifoBuf + nextRead, extent);
+        (void)memcpy(buf + extent, fifoBuf, nbytes - extent);
     }
 
+    fifo_lock(fifo);
     fifo->nbytes -= nbytes;
 }
 
