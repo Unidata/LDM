@@ -32,8 +32,8 @@ struct fifo {
  * Initializes a FIFO
  *
  * @retval 0    Success
- * @retval 1    Usage error. \c log_start() called.
- * @retval 2    O/S failure. \c log_start() called.
+ * @retval 1    Usage error. `log_start()` called.
+ * @retval 2    O/S failure. `log_start()` called.
  */
 static int
 fifo_init(
@@ -41,7 +41,7 @@ fifo_init(
     unsigned char* const    buf,    /**< [in] The buffer */
     const size_t            size)   /**< [in] Size of the buffer in bytes */
 {
-    int                 status = 2; /* default failure */
+    int                 status;
     pthread_mutexattr_t mutexAttr;
 
     if ((status = pthread_mutexattr_init(&mutexAttr)) != 0) {
@@ -59,10 +59,8 @@ fifo_init(
             status = 2;
         }
         else {
-            if ((status = pthread_cond_init(&fifo->cond, NULL)) !=
-                    0) {
-                LOG_ERRNUM0(status,
-                    "Couldn't initialize condition variable");
+            if ((status = pthread_cond_init(&fifo->cond, NULL)) != 0) {
+                LOG_ERRNUM0(status, "Couldn't initialize condition variable");
                 status = 2;
             }
             else {
@@ -74,7 +72,7 @@ fifo_init(
                 status = 0; /* success */
             }                   /* `fifo->cond` initialized */
 
-            if (0 != status)
+            if (status)
                 (void)pthread_mutex_destroy(&fifo->mutex);
         }                       /* "fifo->mutex" initialized */
 
@@ -98,52 +96,68 @@ fifo_destroy(
     free(fifo->buf);
 }
 
+/**
+ * Locks a FIFO.
+ *
+ * @param[in] fifo  The FIFO to be locked.
+ */
 static inline void
 fifo_lock(
         Fifo* const restrict fifo)
 {
-    int status = pthread_mutex_lock(&fifo->mutex);
-
-    if (status) {
-        LOG_ERRNUM0(status, "Couldn't lock mutex");
-        exit(1);
-    }
+    /*
+     * Failure isn't possible because the mutex is valid and deadlock can't
+     * occur because this module doesn't make any "foreign" calls that acquire
+     * locks.
+     */
+    (void)pthread_mutex_lock(&fifo->mutex);
 }
 
+/**
+ * Unlocks a FIFO.
+ *
+ * @param[in] fifo  The FIFO to be unlocked.
+ */
 static inline void
 fifo_unlock(
         Fifo* const restrict fifo)
 {
-    int status = pthread_mutex_unlock(&fifo->mutex);
-
-    if (status) {
-        LOG_ERRNUM0(status, "Couldn't unlock mutex");
-        exit(1);
-    }
+    /*
+     * Failure isn't possible because `fifo->mutex` is locked by the current
+     * thread.
+     */
+    (void)pthread_mutex_unlock(&fifo->mutex);
 }
 
+/**
+ * Signals a change in a FIFO's state.
+ *
+ * @param[in] fifo  The FIFO.
+ */
 static inline void
 fifo_signal(
         Fifo* const restrict fifo)
 {
-    int status = pthread_cond_signal(&fifo->cond);
-
-    if (status) {
-        LOG_ERRNUM0(status, "Couldn't signal condition-variable");
-        exit(1);
-    }
+    /*
+     * Failure isn't possible because `fifo->cond` is valid.
+     */
+    (void)pthread_cond_signal(&fifo->cond);
 }
 
+/**
+ * Waits for a change in a FIFO's state.
+ *
+ * @param[in] fifo  The FIFO.
+ */
 static inline void
 fifo_wait(
         Fifo* const fifo)
 {
-    int status = pthread_cond_wait(&fifo->cond, &fifo->mutex);
-
-    if (status) {
-        LOG_ERRNUM0(status, "Couldn't wait on condition-variable");
-        exit(1);
-    }
+    /*
+     * Failure isn't possible because `fifo->cond` and `fifo->mutex` are valid
+     * and the mutex is locked by the current thread.
+     */
+    (void)pthread_cond_wait(&fifo->cond, &fifo->mutex);
 }
 
 /**
@@ -211,8 +225,9 @@ fifo_transferFromFd(
     const size_t         extent = fifo->size - fifo->nextWrite;
     unsigned char* const buf = fifo->buf;
     void*                ptr = buf + fifo->nextWrite;
+    int                  status;
 
-    fifo_unlock(fifo); // allow concurrent writing to FIFO
+    fifo_unlock(fifo); // allow concurrent writing
 
     if (maxBytes <= extent) {
         nb = read(fd, ptr, maxBytes);
@@ -231,16 +246,18 @@ fifo_transferFromFd(
     if (-1 == nb) {
         LOG_SERROR2("Couldn't read up to %lu bytes from file descriptor %d",
                 (unsigned long)maxBytes, (unsigned long)fd);
-        return 2;
+        status = 2;
+        fifo_lock(fifo); // was locked => deadlock not possible
+    }
+    else {
+        *nbytes = nb;
+        status = 0;
+        fifo_lock(fifo); // was locked => deadlock not possible
+        fifo->nbytes += nb;
+        fifo->nextWrite = (fifo->nextWrite + nb) % fifo->size;
     }
 
-    *nbytes = nb;
-
-    fifo_lock(fifo);
-    fifo->nbytes += nb;
-    fifo->nextWrite = (fifo->nextWrite + nb) % fifo->size;
-
-    return 0;
+    return status;
 }
 
 /**
@@ -251,7 +268,6 @@ fifo_transferFromFd(
  * @param[in] fifo    FIFO.
  * @param[in] buf     Buffer into which to put bytes.
  * @param[in] nbytes  Number of bytes to remove.
- * @retval    0       Success. `nbytes` bytes were removed.
  */
 static inline void // `inline` because only called in one place
 fifo_removeBytes(
@@ -274,7 +290,7 @@ fifo_removeBytes(
         (void)memcpy(buf + extent, fifoBuf, nbytes - extent);
     }
 
-    fifo_lock(fifo);
+    fifo_lock(fifo);  // was locked => deadlock not possible
     fifo->nbytes -= nbytes;
 }
 
@@ -297,11 +313,12 @@ fifo_new(
     Fifo** const        fifo)           /**< [out] Pointer to pointer to be set
                                          *   to address of FIFO */
 {
-    int                 status = 2;     /* default failure */
-    Fifo*               f = (Fifo*)malloc(sizeof(Fifo));
+    int   status;
+    Fifo* f = (Fifo*)malloc(sizeof(Fifo));
 
     if (NULL == f) {
         LOG_SERROR0("Couldn't allocate FIFO object");
+        status = 2;
     }
     else {
         const long              pagesize = sysconf(_SC_PAGESIZE);
@@ -311,16 +328,17 @@ fifo_new(
         if (NULL == buf) {
             LOG_SERROR1("Couldn't allocate %lu bytes for FIFO buffer",
                     (unsigned long)size);
+            status = 2;
         }
         else {
             if ((status = fifo_init(f, buf, size)) == 0)
                 *fifo = f;
 
-            if (0 != status)
+            if (status)
                 free(buf);
         }                               /* "buf" allocated */
 
-        if (0 != status)
+        if (status)
             free(f);
     }                                   /* "f" allocated */
 
@@ -400,7 +418,8 @@ fifo_readFd(
  * @param[in] buf     Buffer into which to put bytes.
  * @param[in[ nbytes  Number of bytes to remove.
  * @retval    0       Success.
- * @retval    1       Usage error. \c log_start() called.
+ * @retval    1       Usage error. `log_start()` called.
+ * @retval    2       System error. `log_start()` called.
  * @retval    3       `fifo_close()` was called and insufficient data exists.
  */
 int

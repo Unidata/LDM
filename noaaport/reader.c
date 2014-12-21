@@ -79,8 +79,9 @@ void readerFree(
 }
 
 /**
- * Executes a reader. Returns when end-of-input is encountered or an error
- * occurs. Logs a message on error. May be called by `pthread_create()`.
+ * Executes a reader. Returns when end-of-input is encountered, the FIFO queue
+ * is explicitly closed, or an error occurs. Logs a message on error. May be
+ * called by `pthread_create()`.
  *
  * This function is thread-safe.
  *
@@ -105,23 +106,27 @@ readerStart(
         if (status) {
             if (3 == status) {
                 // FIFO was closed
+                udebug("FIFO was closed");
                 log_clear();
                 status = 1;
             }
             else {
+                udebug("fifo_readFd() failure");
                 status = 2;
             }
             break;
         }
-        if (0 == nbytes)
+        if (0 == nbytes) {
+            udebug("FIFO EOF");
             break; // EOF
+        }
 
         (void)pthread_mutex_lock(&reader->mutex);
         reader->byteCount += nbytes;
         (void)pthread_mutex_unlock(&reader->mutex);
     }                       /* I/O loop */
 
-    log_log(LOG_ERR);
+    log_log(LOG_ERR);  // could be end of thread
 
     static int returnPointer[] = {0, 1, 2};
     return returnPointer + status;

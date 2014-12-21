@@ -140,9 +140,8 @@ int lpqGet(
             }                               /* "newArray" allocated */
         }                                   /* if new product-queue */
 
-        if (0 == status) {
+        if (0 == status)
             *lpq = queues[queueIndex];
-        }
 
         (void)pthread_mutex_unlock(&mutex);
     }                                       /* "mutex" locked */

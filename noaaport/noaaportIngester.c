@@ -485,7 +485,7 @@ static int spawnProductMaker(
     ProductMaker*   pm;
     int             status = pmNew(fifo, productQueue, &pm);
 
-    if (0 != status) {
+    if (status) {
         LOG_ADD0("Couldn't create new LDM product-maker");
     }
     else {
@@ -618,7 +618,7 @@ static void reportStats(
 
     logmask = setulogmask(LOG_UPTO(LOG_NOTICE));
 
-    log_start("----------------------------------------");
+    log_add("----------------------------------------");
     log_add("Ingestion Statistics:");
     log_add("    Since Previous Report (or Start):");
     interval = duration(&now, reportTime);
@@ -691,20 +691,16 @@ static void* reportStatsWhenSignaled(void* arg)
     pthread_mutexattr_t attr;
     int                 oldType;
 
-    (void)pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldType);
-    (void)pthread_mutexattr_init(&attr);
-    (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    (void)pthread_mutex_init(&mutex, &attr);
-
+    (void)pthread_mutex_init(&mutex, NULL);
     (void)pthread_mutex_lock(&mutex);
 
-    for (;;) {
+    do {
         while (!reportStatistics)
             (void)pthread_cond_wait(&cond, &mutex);
 
         reportStats(ss.productMaker, &ss.startTime, &ss.reportTime, ss.reader);
         reportStatistics = false;
-    }
+    } while (!done);
 
     (void)pthread_mutex_unlock(&mutex);
 
@@ -732,7 +728,7 @@ ss_init(
 }
 
 /**
- * Starts the statistics-reporting thread. The thread is detached.
+ * Starts the statistics-reporting thread.
  *
  * @param[in]  productMaker  Maker of LDM data-products.
  * @param[in]  reader        Reader of input.
@@ -740,12 +736,10 @@ ss_init(
  */
 static inline void
 startReportingThread(
+        pthread_t* const restrict   thread,
         StatsStruct* const restrict ss)
 {
-    pthread_t   thread;
-
     (void)pthread_create(&thread, NULL, reportStatsWhenSignaled, ss);
-    (void)pthread_detach(thread);
 }
 
 /**
@@ -934,20 +928,32 @@ startReader(
 }
 
 /**
- * Waits for in input-reader to terminate.
+ * Waits for an input-reader to terminate.
  *
  * @param[in]  thread          Thread on which the reader is executing.
- * @retval     0               Success. `*reader` is set.
+ * @retval     0               Success.
  * @retval     USAGE_ERROR     Usage error.
- * @retval     SYSTEM_FAILURE  System failure.
+ * @retval     SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static inline int
 waitOnReader(
         pthread_t const thread)
 {
     void* voidPtr;
-    (void)pthread_join(thread, &voidPtr);
-    return done ? 0 : *(int*)voidPtr;
+    int   status = pthread_join(thread, &voidPtr);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't join input-reader thread");
+        status = SYSTEM_FAILURE;
+    }
+    else {
+        status = done ? 0 : *(int*)voidPtr;
+
+        if (status)
+            LOG_ADD1("Input-reader thread returned %d", status);
+    }
+
+    return status;
 }
 
 /**
@@ -981,21 +987,26 @@ runInner(
         const char* const restrict   mcastSpec,
         const char* const restrict   interface)
 {
-    Reader*        reader;
-    pthread_t      readerThread;
-    int            status = startReader(isMcastInput, policy, priority, mcastSpec,
+    Reader*     reader;
+    pthread_t   readerThread;
+    int         status = startReader(isMcastInput, policy, priority, mcastSpec,
             interface, &reader, &readerThread);
-    StatsStruct    ss;
+    StatsStruct ss;
+    pthread_t   reportingThread;
 
-    if (0 == status) {
+    if (status) {
+        LOG_ADD0("Couldn't start input-reader");
+    }
+    else {
         ss_init(&ss, productMaker, reader);
-        // Detached thread:
-        startReportingThread(&ss);
+        (void)pthread_create(&reportingThread, NULL, reportStatsWhenSignaled,
+                &ss);
         set_sigusr1Action(false);  // enable stats reporting; requires reader
         status = waitOnReader(readerThread);
     }
 
-    fifo_close(fifo); // ensures `pmThread` termination; idempotent => can't hurt
+    // Ensures `pmThread` termination; idempotent => can't hurt
+    fifo_close(fifo);
     (void)pthread_join(pmThread, NULL);
 
     /*
@@ -1004,7 +1015,9 @@ runInner(
      * variability in the output -- which can affect testing.
      */
     if (reader) {
-        reportStats(productMaker, &ss.startTime, &ss.reportTime, reader);
+        done = 1;  // causes reporting thread to terminate
+        raise(SIGUSR1);  // reports statistics; requires reader
+        (void)pthread_join(reportingThread, NULL);
         readerFree(reader);
     }
 
@@ -1056,9 +1069,10 @@ runOuter(
         status = spawnProductMaker(&attr, fifo, prodQueue, &productMaker,
                 &pmThread);
 
-        if (0 == status)
+        if (0 == status) {
             status = runInner(productMaker, pmThread, isMcastInput,
                     SCHED_POLICY, maxPriority, mcastSpec, interface);
+        }
 
         destroyRetransSupport(isMcastInput);
         (void)pthread_attr_destroy(&attr);
@@ -1191,6 +1205,9 @@ int main(
         unotice("%s", COPYRIGHT_NOTICE);
 
         status = execute(npages, prodQueuePath, mcastSpec, interface);
+
+        if (status)
+            log_log(LOG_ERR);
     }                               /* command line decoded */
 
     return status;
