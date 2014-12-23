@@ -1,4 +1,4 @@
-6.12.7	2014-12-21T12:40:11-0700
+6.12.7	2014-12-23T11:28:42-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -28,27 +28,34 @@
 
         Improved the performance of finding GRIB2 parameter information by
         caching the GEMPAK parameter tables.
-        
+
         Improved the error-message logged when information on a GRIB2 parameter
         or vertical coordinate can not be found in the relevant GEMPAK table.
-
-        Merged changes to the retransmit-request capability from Raytheon for
-        the AWIPS-II system. This capability can only be used by NOAA's weather
-        forecast offices.
 
         Added printing of WMO header of GRIB2 data-products with unknown
         parameters.
 
         Added entries to the GEMPAK NCEP parameter table.
-        
-        Slightly improved the performance of the multicast reading.
-        
+
+        Slightly improved the performance of reading multicast input.
+
+        Added to the statistics report, instances when the data input thread
+        had to wait until sufficient space was available in the internal FIFO
+        queue. Ideally, no such instances should occur when reading NOAAPORT
+        multicast input. The statistics report is logged when the process
+        terminates or receives a SIGUSR1. Reporting statistics might interfere
+        with realtime data ingest.
+
+        Merged changes to the retransmit-request capability from Raytheon for
+        the AWIPS-II system. This capability can only be used by NOAA's weather
+        forecast offices.
+
 6.12.6	2014-09-04T13:56:41-0600
     pqcreate(1):
         Changed the assumed mean product size (which is used to compute the
         default number of slots in the product-queue) from 4096 to 51000
         bytes to better match current reality.
-        
+
     NOAAPORT:
         Enhanced GRIB2 decoding by adding "ESTOFS" and "HRRR" model codes for
         the NCEP center.
@@ -118,7 +125,7 @@
         anti-DOS feature is enabled by default. To disable it, set the value of
         the registry parameter "/server/enable-anti-DOS" to "FALSE" via the
         command
-        
+
             regutil -b FALSE /server/enable-anti-DOS
 
         The anti-DOS feature should only be disabled by sites that know and 
@@ -168,35 +175,35 @@
         * Improved the portability, release-engineering, and installation
           process;
         * Created a binary RPM for fc14.x86_64.
-        
+
     Installation:
         Configure(1) Script:
             Made the search for the PNG library dependent on the
             "--with-noaaport" option.
- 
+
             Improved the search for the XML2 and ZLIB header-files and
             libraries. In particular, added "/usr/local/lib", "/opt/lib",  and
             "/user/sfw/include" for general searches.
-            
+
             Adapted to older tr(1)-s that don't extend the second character
             set.
-                   
+
         Mac OS/X Support:
             Added definition of _DARWIN_C_SOURCE to have "struct ip_mreq"
             defined on that system (that definition is needed by the NOAAPORT
             module).
-        
+
             Don't define "union semun" on that system because it's defined by a
             system header-file.
-            
+
             Added "opt/X11" to library search-path.
-                    
+
         SunOS Support:
             Removed SunOS 5.6 and 5.9 from portability-testing platforms
             because they're end-of-life.
-            
+
             Added testing on other SunOS environments.
-                
+
         Misc:
             Removed the bundled ZLIB package. This package's library was in the
             LDM shared-library and, on some systems, it conflicted with the
@@ -204,33 +211,33 @@
             removed from the LDM in version 6.11.5).
 
             Created a relocatable binary RPM for fc14.x86_64.
-    
+
             Made the creation of the contents of the ~/var directory more
             robust when relevant symbolic links already exist.
-        
+
             Changed the default installation-directory from "/usr/local/ldm"
             to "/opt/ldm" following the Filesystem Hierarchy Standards. This
             is the default for the RPM installation. Use the "--prefix=..."
             option of rpm(1) if you want a different home-directory for the
             LDM user.
-    
+
             Eliminated the creation of the "data" and "logs" symbolic links in
             the LDM user's home-directory. If they exist, however, then they
             won't be removed.
-    
+
             Removed the bundled "libpng" package.
-                               
+
     ldmadmin(1):
         Added verbose logging to the check of the LDM configuration-file by
         the "start" command.
-    
+
     LDM server (ldmd):
         Squashed a bug that caused a segmentation violation (SIGSEGV) on 64-bit
         Darwin.
-    
+
         Eliminated a minor memory leak in the parsing of LDM configuration-file
         when the "-n" (do nothing) option is specified.
-    
+
         Documented the "-n" (do nothing) option.
 
     Logging:
@@ -245,7 +252,7 @@
 
     regutil(1):
         Made the "usage" message use the LDM logging facility.
-        
+
         Added the "-v|-x" options and some debug-level messages.
 
     NOAAPORT:
@@ -254,17 +261,17 @@
         Adapted code to the opaque "struct png_struct" of PNG 1.5 and later.
 
         Corrected the inclusion of the "png.h" header-file.
-            
+
     Documentation:
         HTML:
             Documented the RPM installation.
-    
+
             Documented the dependency on the PNG package if the NOAAPORT
             system is built.
-        
+
             Documented that the XML2 development and PNG development packages
             (as opposed to the runtime packages) are necessary.
-                    
+
         Misc:
             Replaced the license with the BSD 3-Clause license enhanced with
             patent protection.
@@ -274,7 +281,7 @@
         Elimination of the bundled "libxml2" package and improvements due to 1)
         vetting by valgrind(1); and 2) investigating and testing the Upstream
         LDM Database (ULDB).
-        
+
     libxml2:
         Eliminated this package from the LDM distribution. This was done because
         1) the libxml2 package has become ubiquitous -- it's on all platforms to
@@ -388,7 +395,7 @@
 
             Convert status of a time-out due to death of upstream LDM from a
             disconnect into a time-out.
-        
+
             Added PID of upstream LDM to error-messages.
 
             Enabled logging of LDM-6 request errors.
@@ -523,7 +530,7 @@
         logging module, ulog(3).
 
         Corrected documentation on "-P port" option.
-    
+
         Made miscellaneous improvements.
 
     System Logging:
@@ -587,7 +594,7 @@
     Makefile:
         Improved rules for releasing a new version:
             Removed targets "releaseCheck" and "ensureRelease".
-            
+
             Corrected how "release" rule sets version in AC_INIT().
 
             Made "release" mandatory to prevent bad CHANGE_LOG from being
@@ -950,7 +957,7 @@
 
             Correct a bug in the makefile rule that adds the LDM to the list
             of facilities that don't log to any system log files.
-            
+
             Generalize the makefile rule that ensures the LDM doesn't log to
             any system log files.
 
@@ -1019,7 +1026,7 @@
             Gnome's GCONF, and Java's preferences.  The registry can be
             accessed both from scripts and programatically.  A new utility,
             regutil(1), can access the registry from the command-line.
-            
+
             The registry is implemented as an XML file (etc/registry.xml) -- so
             it can be manually edited if no other process is writing to it.
 
@@ -2170,7 +2177,7 @@
         configuration-file.
 
         Ported package to
-            
+
                 Darwin (alias Mac OS X)
                 SunOS 5.10 (alias Solaris 10)
 
@@ -2521,7 +2528,7 @@
 6.0.2
         Restored use of "done" flag and removed atexit() registration of
         down6_destroy().
-        
+
         Removed child-process-termination loop from ldmd.c in attempt to
         keep product-queue consistent (pqcat -s).
 

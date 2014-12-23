@@ -135,14 +135,21 @@ readerStart(
 /**
  * Returns statistics since the last time this function was called or
  * `readerStart()` was called.
+ *
+ * @param[in]  reader         The reader of input data.
+ * @param[out] nbytes         Number of bytes read.
+ * @param[out] fullFifoCount  Number of times the reader-thread had to wait on a
+ *                            "full" FIFO.
  */
 void readerGetStatistics(
-    Reader* const           reader, /**< [in] Pointer to the reader */
-    unsigned long* const    nbytes) /**< [out] Number of bytes received */
+    Reader* const           reader,
+    unsigned long* const    nbytes,
+    unsigned long* const    fullFifoCount)
 {
     (void)pthread_mutex_lock(&reader->mutex);
 
     *nbytes = reader->byteCount;
+    *fullFifoCount = fifo_getFullCount(reader->fifo);
     reader->byteCount = 0;
 
     (void)pthread_mutex_unlock(&reader->mutex);

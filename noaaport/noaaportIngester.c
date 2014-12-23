@@ -588,6 +588,11 @@ static void encodeDuration(
 
 /**
  * Reports statistics.
+ *
+ * @param[in] productMaker  Maker of LDM data-products.
+ * @param[in] startTime     Time when this process started.
+ * @param[in] reportTime    Time of last report.
+ * @param[in] reader        Reader of data-input.
  */
 static void reportStats(
         ProductMaker* const restrict   productMaker,
@@ -602,19 +607,22 @@ static void reportStats(
     int                     logmask;
     unsigned long           byteCount;
     unsigned long           packetCount, missedPacketCount, prodCount;
+    unsigned long           fullFifoCount;
     static unsigned long    totalPacketCount;
     static unsigned long    totalMissedPacketCount;
     static unsigned long    totalProdCount;
     static unsigned long    totalByteCount;
+    static unsigned long    totalFullFifoCount;
 
     (void)gettimeofday(&now, NULL);
-    readerGetStatistics(reader, &byteCount);
+    readerGetStatistics(reader, &byteCount, &fullFifoCount);
     pmGetStatistics(productMaker, &packetCount, &missedPacketCount, &prodCount);
 
     totalByteCount += byteCount;
     totalPacketCount += packetCount;
     totalMissedPacketCount += missedPacketCount;
     totalProdCount += prodCount;
+    totalFullFifoCount += fullFifoCount;
 
     logmask = setulogmask(LOG_UPTO(LOG_NOTICE));
 
@@ -637,6 +645,10 @@ static void reportStats(
     log_add("            Number        %lu", missedPacketCount);
     log_add("            %%             %g",
             100.0 * missedPacketCount / (missedPacketCount + packetCount));
+    log_add("        Full FIFO:");
+    log_add("            Number        %lu", fullFifoCount);
+    log_add("            %%             %g",
+            100.0 * fullFifoCount / packetCount);
     log_add("        Products:");
     log_add("            Inserted      %lu", prodCount);
     log_add("            Mean Rate     %g/s", prodCount/interval);
@@ -657,6 +669,10 @@ static void reportStats(
     log_add("            Number        %lu", totalMissedPacketCount);
     log_add("            %%             %g", 100.0 * totalMissedPacketCount /
             (totalMissedPacketCount + totalPacketCount));
+    log_add("        Full FIFO:");
+    log_add("            Number        %lu", totalFullFifoCount);
+    log_add("            %%             %g",
+            100.0 * totalFullFifoCount / totalPacketCount);
     log_add("        Products:");
     log_add("            Inserted      %lu", totalProdCount);
     log_add("            Mean Rate     %g/s", totalProdCount/interval);
@@ -687,9 +703,7 @@ static void reportStats(
  */
 static void* reportStatsWhenSignaled(void* arg)
 {
-    StatsStruct         ss = *(StatsStruct*)arg;
-    pthread_mutexattr_t attr;
-    int                 oldType;
+    StatsStruct ss = *(StatsStruct*)arg;
 
     (void)pthread_mutex_init(&mutex, NULL);
     (void)pthread_mutex_lock(&mutex);
@@ -725,21 +739,6 @@ ss_init(
     ss->reader = reader;
     (void)gettimeofday(&ss->startTime, NULL);
     ss->reportTime = ss->startTime;
-}
-
-/**
- * Starts the statistics-reporting thread.
- *
- * @param[in]  productMaker  Maker of LDM data-products.
- * @param[in]  reader        Reader of input.
- * @param[out] startTime     Time of start of execution.
- */
-static inline void
-startReportingThread(
-        pthread_t* const restrict   thread,
-        StatsStruct* const restrict ss)
-{
-    (void)pthread_create(&thread, NULL, reportStatsWhenSignaled, ss);
 }
 
 /**
