@@ -14,14 +14,65 @@
 #include <unistd.h>
 
 struct reader {
-    Fifo*                 fifo;           /**< Pointer to FIFO into which to put data
-                                            */
-    pthread_mutex_t       mutex;          /**< Object access lock */
-    unsigned long         byteCount;      /**< Number of bytes received */
-    size_t                maxSize;        /**< Maximum amount to read in a single
-                                            *  call in bytes */
-    int                   fd;             /**< File-descriptor to read from */
+    /// Pointer to FIFO into which to put data
+    Fifo*                 fifo;
+    /// Object access lock
+    pthread_mutex_t       mutex;
+    /// Number of bytes received
+    unsigned long         byteCount;
+    /// Maximum amount to read in a single call in bytes
+    size_t                maxSize;
+    /// File-descriptor to read from
+    int                   fd;
 };
+
+/**
+ * Initializes a new reader.
+ *
+ * @param[in] reader   The reader to be initialized.
+ * @param[in] fd       File-descriptor to read from.
+ * @param[in] fifo     Pointer to FIFO into which to put data.
+ * @param[in] maxSize  Maximum amount to read in a single call in bytes.
+ * @retval    0        Success. `*reader` is set.
+ * @retval    2        O/S failure. `log_start()` called.
+ */
+static int reader_init(
+        Reader* const restrict reader,
+        const int              fd,
+        Fifo* const restrict   fifo,
+        const size_t           maxSize)
+{
+    pthread_mutexattr_t attr;
+    int                 status = pthread_mutexattr_init(&attr);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
+        status = 2;
+    }
+    else {
+        // At most one lock per thread
+        (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+        // Prevent priority inversion
+        (void)pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+
+        status = pthread_mutex_init(&reader->mutex, &attr);
+
+        if (status) {
+            LOG_ERRNUM0(status, "Couldn't initialize mutex");
+            status = 2;
+        }
+        else {
+            reader->byteCount = 0;
+            reader->fifo = fifo;
+            reader->fd = fd;
+            reader->maxSize = maxSize;
+        }
+
+        (void)pthread_mutexattr_destroy(&attr);
+    } // `attr` initialized
+
+    return status;
+}
 
 /**
  * Returns a new reader. The client should call `readerFree()` when the reader
@@ -43,25 +94,24 @@ int readerNew(
     const size_t        maxSize,
     Reader** const      reader)
 {
-    int       status = 2;       /* default failure */
+    int       status;
     Reader*   r = (Reader*)malloc(sizeof(Reader));
 
     if (NULL == r) {
         LOG_SERROR0("Couldn't allocate new reader");
+        status = 2;
     }
     else {
-        if ((status = pthread_mutex_init(&r->mutex, NULL)) != 0) {
-            LOG_ERRNUM0(status, "Couldn't initialize reader mutex");
-            status = 2;
+        status = reader_init(r, fd, fifo, maxSize);
+
+        if (status) {
+            LOG_ADD0("Couldn't initialize reader");
+            free(r);
         }
         else {
-            r->byteCount = 0;
-            r->fifo = fifo;
-            r->fd = fd;
-            r->maxSize = maxSize;
             *reader = r;
         }
-    }
+    } // `r` allocated
 
     return status;
 }
@@ -134,7 +184,7 @@ readerStart(
 
 /**
  * Returns statistics since the last time this function was called or
- * `readerStart()` was called.
+ * `readerStart()` was called. This function is thread-safe.
  *
  * @param[in]  reader         The reader of input data.
  * @param[out] nbytes         Number of bytes read.
