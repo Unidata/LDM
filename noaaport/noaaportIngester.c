@@ -349,7 +349,7 @@ static void signal_handler(
         case SIGTERM:
             done = 1;
             if (fifo)
-                fifo_close(fifo);
+                fifo_close(fifo); // will cause input-reader to terminate
             break;
         case SIGUSR2: {
             unsigned logMask = getulogmask();
@@ -626,69 +626,68 @@ static void reportStats(
 
     logmask = setulogmask(LOG_UPTO(LOG_NOTICE));
 
-    log_add("----------------------------------------");
-    log_add("Ingestion Statistics:");
-    log_add("    Since Previous Report (or Start):");
+    unotice("----------------------------------------");
+    unotice("Ingestion Statistics:");
+    unotice("    Since Previous Report (or Start):");
     interval = duration(&now, reportTime);
     encodeDuration(buf, sizeof(buf), interval);
-    log_add("        Duration          %s", buf);
-    log_add("        Raw Data:");
-    log_add("            Octets        %lu", CHAR_BIT*byteCount/8);
-    log_add("            Mean Rate:");
-    rate = (byteCount/interval)*(CHAR_BIT/8.0);
-    log_add("                Octets    %g/s", rate);
-    log_add("                Bits      %g/s", 8*rate);
-    log_add("        Received packets:");
-    log_add("            Number        %lu", packetCount);
-    log_add("            Mean Rate     %g/s", packetCount/interval);
-    log_add("        Missed packets:");
-    log_add("            Number        %lu", missedPacketCount);
-    log_add("            %%             %g",
+    unotice("        Duration          %s", buf);
+    unotice("        Raw Data:");
+    unotice("            Octets        %lu", byteCount);
+    unotice("            Mean Rate:");
+    rate = (byteCount/interval);
+    unotice("                Octets    %g/s", rate);
+    unotice("                Bits      %g/s", 8*rate);
+    unotice("        Received packets:");
+    unotice("            Number        %lu", packetCount);
+    unotice("            Mean Rate     %g/s", packetCount/interval);
+    unotice("        Missed packets:");
+    unotice("            Number        %lu", missedPacketCount);
+    unotice("            %%             %g",
             100.0 * missedPacketCount / (missedPacketCount + packetCount));
-    log_add("        Full FIFO:");
-    log_add("            Number        %lu", fullFifoCount);
-    log_add("            %%             %g",
+    unotice("        Full FIFO:");
+    unotice("            Number        %lu", fullFifoCount);
+    unotice("            %%             %g",
             100.0 * fullFifoCount / packetCount);
-    log_add("        Products:");
-    log_add("            Inserted      %lu", prodCount);
-    log_add("            Mean Rate     %g/s", prodCount/interval);
-    log_add("    Since Start:");
+    unotice("        Products:");
+    unotice("            Inserted      %lu", prodCount);
+    unotice("            Mean Rate     %g/s", prodCount/interval);
+    unotice("    Since Start:");
     interval = duration(&now, startTime);
     encodeDuration(buf, sizeof(buf), interval);
-    log_add("        Duration          %s", buf);
-    log_add("        Raw Data:");
-    log_add("            Octets        %lu", CHAR_BIT*totalByteCount/8);
-    log_add("            Mean Rate:");
-    rate = (totalByteCount/interval)*(CHAR_BIT/8.0);
-    log_add("                Octets    %g/s", rate);
-    log_add("                Bits      %g/s", 8*rate);
-    log_add("        Received packets:");
-    log_add("            Number        %lu", totalPacketCount);
-    log_add("            Mean Rate     %g/s", totalPacketCount/interval);
-    log_add("        Missed packets:");
-    log_add("            Number        %lu", totalMissedPacketCount);
-    log_add("            %%             %g", 100.0 * totalMissedPacketCount /
+    unotice("        Duration          %s", buf);
+    unotice("        Raw Data:");
+    unotice("            Octets        %lu", totalByteCount);
+    unotice("            Mean Rate:");
+    rate = (totalByteCount/interval);
+    unotice("                Octets    %g/s", rate);
+    unotice("                Bits      %g/s", 8*rate);
+    unotice("        Received packets:");
+    unotice("            Number        %lu", totalPacketCount);
+    unotice("            Mean Rate     %g/s", totalPacketCount/interval);
+    unotice("        Missed packets:");
+    unotice("            Number        %lu", totalMissedPacketCount);
+    unotice("            %%             %g", 100.0 * totalMissedPacketCount /
             (totalMissedPacketCount + totalPacketCount));
-    log_add("        Full FIFO:");
-    log_add("            Number        %lu", totalFullFifoCount);
-    log_add("            %%             %g",
+    unotice("        Full FIFO:");
+    unotice("            Number        %lu", totalFullFifoCount);
+    unotice("            %%             %g",
             100.0 * totalFullFifoCount / totalPacketCount);
-    log_add("        Products:");
-    log_add("            Inserted      %lu", totalProdCount);
-    log_add("            Mean Rate     %g/s", totalProdCount/interval);
+    unotice("        Products:");
+    unotice("            Inserted      %lu", totalProdCount);
+    unotice("            Mean Rate     %g/s", totalProdCount/interval);
 
 #ifdef RETRANS_SUPPORT
    if(retrans_xmit_enable == OPTION_ENABLE){
-    log_add("       Retransmissions:");
-    log_add("           Requested     %lu", total_prods_retrans_rqstd);
-    log_add("           Received      %lu", total_prods_retrans_rcvd);
-    log_add("           Duplicates    %lu", total_prods_retrans_rcvd_notlost);
-    log_add("           No duplicates %lu", total_prods_retrans_rcvd_lost);
+    unotice("       Retransmissions:");
+    unotice("           Requested     %lu", total_prods_retrans_rqstd);
+    unotice("           Received      %lu", total_prods_retrans_rcvd);
+    unotice("           Duplicates    %lu", total_prods_retrans_rcvd_notlost);
+    unotice("           No duplicates %lu", total_prods_retrans_rcvd_lost);
     }
 #endif 
-    log_add("----------------------------------------");
+    unotice("----------------------------------------");
 
-    log_log(LOG_NOTICE);
     (void)setulogmask(logmask);
 
     *reportTime = now;
