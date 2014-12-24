@@ -702,20 +702,34 @@ static void reportStats(
  */
 static void* reportStatsWhenSignaled(void* arg)
 {
-    StatsStruct ss = *(StatsStruct*)arg;
+    StatsStruct         ss = *(StatsStruct*)arg;
+    pthread_mutexattr_t attr;
+    int                 status = pthread_mutexattr_init(&attr);
 
-    (void)pthread_mutex_init(&mutex, NULL);
-    (void)pthread_mutex_lock(&mutex);
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
+    }
+    else {
+        // At most one lock per thread
+        (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+        // Prevent priority inversion
+        (void)pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
 
-    do {
-        while (!reportStatistics)
-            (void)pthread_cond_wait(&cond, &mutex);
+        (void)pthread_mutex_init(&mutex, &attr);
+        (void)pthread_mutex_lock(&mutex);
 
-        reportStats(ss.productMaker, &ss.startTime, &ss.reportTime, ss.reader);
-        reportStatistics = false;
-    } while (!done);
+        do {
+            while (!reportStatistics)
+                (void)pthread_cond_wait(&cond, &mutex);
 
-    (void)pthread_mutex_unlock(&mutex);
+            reportStats(ss.productMaker, &ss.startTime, &ss.reportTime,
+                    ss.reader);
+            reportStatistics = false;
+        } while (!done);
+
+        (void)pthread_mutex_unlock(&mutex);
+        (void)pthread_mutexattr_destroy(&attr);
+    } // `attr` initialized
 
     return NULL;
 }
