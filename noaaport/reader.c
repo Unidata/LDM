@@ -74,6 +74,10 @@ static int reader_init(
     return status;
 }
 
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
 /**
  * Returns a new reader. The client should call `readerFree()` when the reader
  * is no longer needed.
@@ -117,15 +121,19 @@ int readerNew(
 }
 
 /**
- * Frees a reader. Does not close the file descriptor or free the FIFO which
- * were passed to `readerNew()`.
+ * Frees a reader. Closes the file descriptor given to `readerNew()`. Does not
+ * free the FIFO given to `readerNew()`.
  *
  * @param[in] reader  Reader to be freed. May be NULL.
  */
 void readerFree(
     Reader* const   reader)
 {
-    free(reader);
+    if (reader) {
+        (void)close(reader->fd);
+        (void)pthread_mutex_destroy(&reader->mutex);
+        free(reader);
+    }
 }
 
 /**

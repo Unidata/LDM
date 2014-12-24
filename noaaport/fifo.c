@@ -340,7 +340,7 @@ fifo_isInvalidSize(
 }
 
 /**
- * Transfers bytes from a file to a FIFO.
+ * Transfers bytes from a file descriptor to a FIFO.
  *
  * @pre                  {FIFO is locked and not closed}
  * @pre                  {`availableForWriting(fifo) >= maxBytes`}
@@ -498,8 +498,8 @@ fifo_free(
 }
 
 /**
- * Transfers bytes from a file to a FIFO. Blocks until space is available. This
- * function is thread-safe with respect to `fifo_getBytes()`.
+ * Transfers bytes from a file descriptor to a FIFO. Blocks until space is
+ * available. This function is thread-safe with respect to `fifo_getBytes()`.
  *
  * @param[in]  fifo      FIFO.
  * @param[in]  fd        File descriptor from which to obtain bytes.
