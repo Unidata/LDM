@@ -84,7 +84,8 @@ static int reader_init(
  *
  * This function is thread-safe.
  *
- * @param[in]  fd       File-descriptor to read from.
+ * @param[in]  fd       File-descriptor to read from. Will be closed by
+ *                      `readerFree()`.
  * @param[in]  fifo     Pointer to FIFO into which to put data.
  * @param[in]  maxSize  Maximum amount to read in a single call in bytes.
  * @param[out] reader   Returned reader.

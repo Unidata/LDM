@@ -95,6 +95,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	fifo.c fifo.h \
 	fileReader.c fileReader.h \
 	getFacilityName.c getFacilityName.h \
+	lockProcessInMemory.c \
 	multicastReader.c multicastReader.h \
 	productMaker.c productMaker.h \
 	reader.c reader.h
@@ -161,7 +162,7 @@ noaaportIngester.out:		noaaportIngester
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:		noaaportIngester.out
 	    cut -d ' ' -f 5- <$? | \
-	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^ERROR: /d' >$@
+	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
 check-noaaportIngester:		noaaportIngester.log
 	diff $(srcdir)/noaaportIngester.log.good $?
 

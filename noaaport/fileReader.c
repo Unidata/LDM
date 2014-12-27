@@ -8,6 +8,7 @@
 #include "fileReader.h" /* Eat own dog food */
 
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -33,8 +34,9 @@ int fileReaderNew(
 {
     int status = 0;                 /* default success */
     int fd;                         /* input file descriptor */
+    bool isStandardInput = NULL == pathname;
 
-    if (NULL == pathname) {
+    if (isStandardInput) {
         if ((fd = fileno(stdin)) == -1) {
             LOG_SERROR0(
                     "Couldn't get file-descriptor of standard input stream");
@@ -52,6 +54,9 @@ int fileReaderNew(
         if ((status = readerNew(fd, fifo, sysconf(_SC_PAGESIZE), reader)) 
                 != 0) {
             LOG_ADD0("Couldn't create new reader object");
+
+            if (!isStandardInput)
+                (void)close(fd);
         }
     }
 

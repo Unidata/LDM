@@ -1,4 +1,4 @@
-6.12.7	2014-12-24T12:27:38-0700
+6.12.7	2014-12-27T14:16:33-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -38,6 +38,9 @@
         Added entries to the GEMPAK NCEP parameter table.
 
         Slightly improved the performance of reading multicast input.
+        
+        Added attempt to lock process in physical memory to increase
+        performance. The program will continue if this fails.
 
         Added to the statistics report, instances when the data input thread
         had to wait until sufficient space was available in the internal FIFO

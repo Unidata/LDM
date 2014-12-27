@@ -59,12 +59,6 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
         *  Get WMO vertical coordinate table.
         */
         gb2_gtwmolvltbl( wmolvltbl, iver, &g2lvltbl, &filename, &ier);
-        if ( ier == 0 ) {
-           /* 
-            *  Get Level into from WMO vertical coordinate table.
-            */
-            gb2_sklvl( lvl1, lvl2, g2lvltbl, &g2lev, &ier);
-        }
     }
     else {
        /* 
@@ -72,18 +66,24 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
         */
         gb2_gtlcllvltbl( lcllvltbl, cmsg->origcntr, lclver, &g2lvltbl,
                 &filename, &ier);
-        if ( ier == 0 ) {
-           /* 
-            *  Get Level into from Local vertical coordinate table.
-            */
-            gb2_sklvl( lvl1, lvl2, g2lvltbl, &g2lev, &ier);
-        }
     }
     if ( ier != 0 ) {
-        log_add("Couldn't get vertical coordinate info: iver=%d, lvl1=%d, "
-                    "lvl2=%d, center=%.*s, lclver=%d, file=%s",
+        log_add("Couldn't get vertical coordinate table: iver=%d, lvl1=%d, "
+                    "lvl2=%d, center=%.*s, lclver=%d",
                 iver, lvl1, lvl2, (int)sizeof(cmsg->origcntr), cmsg->origcntr,
-                lclver, filename);
+                lclver);
+        *iret=ier;
+        return;
+    }
+   /*
+    *  Get Level into from vertical coordinate table.
+    */
+    gb2_sklvl( lvl1, lvl2, g2lvltbl, &g2lev, &ier);
+    if ( ier != 0 ) {
+        log_add("Couldn't get vertical coordinate info: iver=%d,"
+                "lvl1=%d, lvl2=%d, center=%.*s, lclver=%d, file=%s",
+                iver, lvl1, lvl2, (int)sizeof(cmsg->origcntr),
+                cmsg->origcntr, lclver, filename);
         *iret=ier;
         return;
     }

@@ -36,6 +36,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+int lockProcessInMemory(void);
+
 /*********** For Retransmission ****************/
 #ifdef RETRANS_SUPPORT
 #include "retrans.h" 
@@ -311,6 +313,18 @@ static void usage(
         long)npages, lpqGetQueuePath(), getFacilityName(getulogfacility()));
 
     (void)setulogmask(logmask);
+}
+
+/**
+ * Tries to lock the current process in physical memory.
+ */
+static inline void
+tryLockingProcessInMemory(void)
+{
+    if (lockProcessInMemory()) {
+        LOG_ADD0("Couldn't lock process in physical memory");
+        log_log(LOG_WARNING);
+    }
 }
 
 /**
@@ -1081,10 +1095,9 @@ runOuter(
         status = spawnProductMaker(&attr, fifo, prodQueue, &productMaker,
                 &pmThread);
 
-        if (0 == status) {
+        if (0 == status)
             status = runInner(productMaker, pmThread, isMcastInput,
                     SCHED_POLICY, maxPriority, mcastSpec, interface);
-        }
 
         destroyRetransSupport(isMcastInput);
         (void)pthread_attr_destroy(&attr);
@@ -1216,6 +1229,7 @@ int main(
         unotice("Starting Up %s", PACKAGE_VERSION);
         unotice("%s", COPYRIGHT_NOTICE);
 
+        tryLockingProcessInMemory(); // because NOAAPORT is realtime
         status = execute(npages, prodQueuePath, mcastSpec, interface);
 
         if (status)
