@@ -714,36 +714,22 @@ static void reportStats(
  *                  modify or free.
  * @retval    NULL  Always.
  */
-static void* reportStatsWhenSignaled(void* arg)
+static void* startReporter(void* arg)
 {
     StatsStruct         ss = *(StatsStruct*)arg;
-    pthread_mutexattr_t attr;
-    int                 status = pthread_mutexattr_init(&attr);
 
-    if (status) {
-        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
-    }
-    else {
-        // At most one lock per thread
-        (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-        // Prevent priority inversion
-        (void)pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+    (void)pthread_mutex_lock(&mutex);
 
-        (void)pthread_mutex_init(&mutex, &attr);
-        (void)pthread_mutex_lock(&mutex);
+    do {
+        while (!reportStatistics)
+            (void)pthread_cond_wait(&cond, &mutex);
 
-        do {
-            while (!reportStatistics)
-                (void)pthread_cond_wait(&cond, &mutex);
+        reportStats(ss.productMaker, &ss.startTime, &ss.reportTime,
+                ss.reader);
+        reportStatistics = false;
+    } while (!done);
 
-            reportStats(ss.productMaker, &ss.startTime, &ss.reportTime,
-                    ss.reader);
-            reportStatistics = false;
-        } while (!done);
-
-        (void)pthread_mutex_unlock(&mutex);
-        (void)pthread_mutexattr_destroy(&attr);
-    } // `attr` initialized
+    (void)pthread_mutex_unlock(&mutex);
 
     return NULL;
 }
@@ -1017,19 +1003,35 @@ runInner(
     pthread_t   readerThread;
     int         status = startReader(isMcastInput, policy, priority, mcastSpec,
             interface, &reader, &readerThread);
-    StatsStruct ss;
-    pthread_t   reportingThread;
+    pthread_t   reporterThread;
+    bool        reporterRunning = false;
 
     if (status) {
         LOG_ADD0("Couldn't start input-reader");
     }
     else {
-        ss_init(&ss, productMaker, reader);
-        (void)pthread_create(&reportingThread, NULL, reportStatsWhenSignaled,
-                &ss);
-        set_sigusr1Action(false);  // enable stats reporting; requires reader
-        status = waitOnReader(readerThread);
-    }
+        pthread_mutexattr_t attr;
+        status = pthread_mutexattr_init(&attr);
+        if (status) {
+            LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
+        }
+        else {
+            // At most one lock per thread
+            (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+            // Prevent priority inversion
+            (void)pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+            (void)pthread_mutex_init(&mutex, &attr);
+            (void)pthread_mutexattr_destroy(&attr);
+
+            StatsStruct ss;
+            ss_init(&ss, productMaker, reader);
+            (void)pthread_create(&reporterThread, NULL, startReporter, &ss);
+            reporterRunning = true;
+
+            set_sigusr1Action(false);  // enable stats reporting; requires reader
+            status = waitOnReader(readerThread);
+        } // `attr` initialized
+    } // input-reader started
 
     // Ensures `pmThread` termination; idempotent => can't hurt
     fifo_close(fifo);
@@ -1040,10 +1042,10 @@ runInner(
      * terminated to prevent a race condition in logging and consequent
      * variability in the output -- which can affect testing.
      */
-    if (reader) {
+    if (reporterRunning) {
         done = 1;  // causes reporting thread to terminate
         raise(SIGUSR1);  // reports statistics; requires reader
-        (void)pthread_join(reportingThread, NULL);
+        (void)pthread_join(reporterThread, NULL);
         readerFree(reader);
     }
 
