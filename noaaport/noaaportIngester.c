@@ -518,13 +518,15 @@ static int spawnProductMaker(
 }
 
 /**
- * Returns the time interval between two timestamps.
+ * Returns the time interval between two times.
  *
- * @return the time interval, in seconds, between the two timestamps.
+ * @param[in] later    The later time
+ * @param[in] earlier  The earlier time.
+ * @return             The time interval, in seconds, between the two times.
  */
 static double duration(
-    const struct timeval*   later,      /**< [in] The later time */
-    const struct timeval*   earlier)    /**< [in] The earlier time */
+    const struct timeval*   later,
+    const struct timeval*   earlier)
 {
     return (later->tv_sec - earlier->tv_sec) +
         1e-6*(later->tv_usec - earlier->tv_usec);
@@ -533,13 +535,15 @@ static double duration(
 /**
  * Returns the string representation of a time interval.
  *
- * @return The string representation of the given time interval.
+ * @param[out] buf       Buffer into which to encode the interval.
+ * @param[in]  size      Size of the buffer in bytes.
+ * @param[in]  duration  The time interval in seconds.
+ * @return               The string representation of the given time interval.
  */
 static void encodeDuration(
-    char*       buf,        /**< [out] Buffer into which to encode the interval
-                              */
-    size_t      size,       /**< [in] Size of the buffer in bytes */
-    double      duration)   /**< [in] The time interval in seconds */
+    char*       buf,
+    size_t      size,
+    double      duration)
 {
     unsigned    value;
     int         nchar;
@@ -708,7 +712,8 @@ static void reportStats(
 }
 
 /**
- * Reports statistics when signaled. May be called by `pthread_create()`.
+ * Reports statistics when the condition-variable is signaled. May be called by
+ * `pthread_create()`.
  *
  * @param[in] arg   Pointer to the relevant `StatsStruct`. The caller must not
  *                  modify or free.
