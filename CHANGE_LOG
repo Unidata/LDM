@@ -1,4 +1,4 @@
-6.12.7	2014-12-28T12:16:32-0700
+6.12.7	2014-12-28T12:19:46-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -52,6 +52,11 @@
         Merged changes to the retransmit-request capability from Raytheon for
         the AWIPS-II system. This capability can only be used by NOAA's weather
         forecast offices.
+
+    Installation:
+        Reduced the likelyhood that the script that modifies the system logging
+        daemon's configuration-file would add an effectively duplicate entry
+        for the LDM.
 
 6.12.6	2014-09-04T13:56:41-0600
     pqcreate(1):

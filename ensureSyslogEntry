@@ -23,17 +23,29 @@ EOF
 # Modifies a syslog.conf(5) or rsyslog.conf(5) file.
 #
 modifySyslog() {
-    awk '
-        {print}
-        NF == 2 && ($1 ~ /\.none/ || $2 ~ /\/var\/log\/messages/ || 
-                $2 ~ /\/var\/log\/syslog/) {
-            print "'$LOG_LDM'.none	" $2;
-        }' "$SYSLOG_CONF" >"$SYSLOG_CONF".new
-    echo >>"$SYSLOG_CONF".new
-    echo '# Unidata LDM:' >>"$SYSLOG_CONF".new
-    echo "$LOG_LDM.*	$LDM_LOGFILE" >>"$SYSLOG_CONF".new
-    cp "$SYSLOG_CONF" "$SYSLOG_CONF".old
-    mv -f "$SYSLOG_CONF".new "$SYSLOG_CONF"
+    if grep -Fq $LOG_LDM.none "$SYSLOG_CONF"; then
+        cp "$SYSLOG_CONF" "$SYSLOG_CONF".new
+    else
+        awk '
+            {print}
+            NF >= 2 && ($1 ~ /\.none/ || $2 ~ /\/var\/log\/messages/ || 
+                    $2 ~ /\/var\/log\/syslog/) {
+                print "'$LOG_LDM'.none	" $2;
+            }' "$SYSLOG_CONF" >"$SYSLOG_CONF".new
+    fi
+    if grep -q "^$LOG_LDM\." "$SYSLOG_CONF"; then
+        : true
+    else
+        echo >>"$SYSLOG_CONF".new
+        echo '# Unidata LDM:' >>"$SYSLOG_CONF".new
+        echo "$LOG_LDM.*	$LDM_LOGFILE" >>"$SYSLOG_CONF".new
+    fi
+    if cmp -s "$SYSLOG_CONF" "$SYSLOG_CONF".new; then
+        rm "$SYSLOG_CONF".new
+    else
+        cp "$SYSLOG_CONF" "$SYSLOG_CONF".old
+        mv -f "$SYSLOG_CONF".new "$SYSLOG_CONF"
+    fi
 }
 
 if grep -Fq "$LDM_LOGFILE" "$SYSLOG_CONF"; then
