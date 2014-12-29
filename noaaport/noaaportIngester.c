@@ -279,12 +279,12 @@ static void usage(
 "%s version %s\n"
 "%s\n"
 "\n"
-"Usage: %s [-n|v|x] [-l log] [-u n] [-m addr] [-q queue] [-b npages] [-I iface]\n"
+"Usage: %s [-n|v|x] [-l log] [-u n] [-m addr] [-q queue] [-b npages] [-I ip_addr]\n"
 "          [-r <1|0>] [-t] [-s channel-name]                                   \n"
 "where:\n"
 "   -b npages   Allocate \"npages\" pages of memory for the internal buffer.\n"
 "               Default is %lu pages. \"getconf PAGESIZE\" reveals page-size.\n"
-"   -I iface    Listen for multicast packets on interface \"iface\".\n"
+"   -I ip_addr  Listen for multicast packets on interface \"ip_addr\".\n"
 "               Default is to listen on all available interfaces.\n"
 "   -l log      Log to file \"log\".  Default is to use the system logging\n"
 "               daemon if the current process is a daemon (i.e., doesn't\n"
@@ -1161,15 +1161,15 @@ execute(
  * Novra S300 DVB-S2 receiver or the standard input stream.
  *
  * Usage:
- *     noaaportIngester [-l <em>log</em>] [-n|-v|-x] [-q <em>queue</em>] [-u <em>n</em>] [-m <em>mcastAddr</em>] [-I <em>iface</em>] [-b <em>npages</em>]\n
+ *     noaaportIngester [-l <em>log</em>] [-n|-v|-x] [-q <em>queue</em>] [-u <em>n</em>] [-m <em>mcastAddr</em>] [-I <em>ip_addr</em>] [-b <em>npages</em>]\n
  *
  * Where:
  * <dl>
  *      <dt>-b <em>npages</em></dt>
  *      <dd>Allocate \e npages pages of memory for the internal buffer.</dd>
  *
- *      <dt>-I <em>iface</em></dt>
- *      <dd>Listen for multicast packets on interface \e iface.</dd>
+ *      <dt>-I <em>ip_addr</em></dt>
+ *      <dd>Listen for multicast packets on interface \e ip_addr.</dd>
  *
  *      <dt>-l <em>log</em></dt>
  *      <dd>Log to file \e log. The default is to use the system logging daemon
