@@ -489,26 +489,27 @@ readPatFile(const char *path)
 /* End readPatFile */
 
 
-/*
- * wrapper around c library strftime() call
- * that takes a time_t rather than a struct tm,
- * uses gmtime().
+/**
+ * Formats a UTC time into a buffer.
+ *
+ * @param[out] str      The buffer into which to format the time.
+ * @param[in]  maxsize  The size of the buffer in bytes (includes NUL).
+ * @param[in]  format   The `strftime()` format.
+ * @param[in]  arrival  The time to be formatted.
  */
 static size_t
 gm_strftime(char *str, size_t maxsize, char *format, time_t arrival)
 {
-        struct tm *atmp, atm;
-        atmp = gmtime(&arrival);
-        if(atmp == NULL)
-        {
-                udebug("gmtime returns NULL");
-                /* you should never really execute this */
-                strncpy(str, format, maxsize-1);
-                return strlen(str);
-        }
-        /* else */
-        atm = *atmp;
-        return strftime(str, maxsize, format, &atm);
+    struct tm atm;
+
+    if (gmtime_r(&arrival, &atm) == NULL) {
+        udebug("gmtime_r() returns NULL");
+        /* you should never really execute this */
+        strncpy(str, format, maxsize-1);
+        return strlen(str);
+    }
+
+    return strftime(str, maxsize, format, &atm);
 }
 
 #endif
@@ -684,14 +685,9 @@ date_sub(
     /*
      * Convert time argument to broken-down times.
      */
-    {
-        struct tm *tmp = gmtime(&prodClock);
+    if (gmtime_r(&prodClock, &utcProdTime) == NULL)
+        uerror("date_sub(): gmtime_r() returns NULL");
 
-        if(tmp == NULL)
-            uerror("date_sub(): gmtime() returns NULL");
-
-        utcProdTime = *tmp;
-    }
     tdom = utcProdTime.tm_mday;         /* UTC-based day-of-month */
 
     for (is = istring; regexec(&prog, is, 3, pmatch, 0) == 0; is = e2 + 1) {
@@ -805,14 +801,8 @@ date_sub(
                                     : prodMonthClock < maxTime
                                         ? prodMonthClock
                                         : prevMonthClock;
-                            struct tm*  adjTmTime = gmtime(&adjClock);
-
-                            if (adjTmTime == NULL) {
-                                uerror("date_sub(): gmtime() failure");
-                            }
-                            else {
-                                adjProdTime = *adjTmTime;
-                            }
+                            if (gmtime_r(&adjClock, &adjProdTime) == NULL)
+                                uerror("date_sub(): gmtime_r() failure");
                         }               /* valid "nextMonthClock" */
                     }                   /* valid "prevMonthClock" */
                 }                       /* valid "prodMonthClock" */
@@ -888,12 +878,13 @@ main()
 
     {
         time_t          unixTime = time(NULL);
-        struct tm       utc = *gmtime(&unixTime);
+        struct tm       utc;
 
+        (void)gmtime_r(&unixTime, &utc);
         assert(utcToEpochTime(&utc) == unixTime);
 
         unixTime = 86400;
-        utc = *gmtime(&unixTime);
+        (void)gmtime_r(&unixTime, &utc);
 
         assert(utcToEpochTime(&utc) == unixTime);
     }
