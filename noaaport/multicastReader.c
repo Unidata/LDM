@@ -30,21 +30,21 @@
  *
  * This function is thread-safe.
  *
- * @retval 0    Success.
- * @retval 1    Usage failure. \c log_start() called.
- * @retval 2    O/S failure. \c log_start() called.
+ * @param[in] mcastSpec  Multicast group in IPv4 dotted-quad format
+ * @param[in] interface  IPv4 address of interface on which to listen for
+ *                       multicast UDP packets in IPv4 dotted-quad format or
+ *                       NULL to listen on all available interfaces.
+ * @param[in] fifo       Pointer to FIFO into which to write data.
+ * @param[in] reader     Pointer to pointer to address of returned reader.
+ * @retval    0          Success.
+ * @retval    1          Usage failure. \c log_start() called.
+ * @retval    2          O/S failure. \c log_start() called.
  */
 int multicastReaderNew(
-    const char* const   mcastSpec,  /**< [in] Multicast group in IPv4 dotted-
-                                      *  quad format */
-    const char* const   interface,  /**< [in] IPv4 address of interface on which
-                                      *  to listen for multicast UDP packets
-                                      *  in IPv4 dotted-quad format or NULL to
-                                      *  listen on all available interfaces */
-    Fifo* const         fifo,       /**< [in] Pointer to FIFO into which to
-                                      *  write data */
-    Reader** const      reader)     /**< [out] Pointer to pointer to address of
-                                      *  returned reader */
+    const char* const   mcastSpec,
+    const char* const   interface,
+    Fifo* const         fifo,
+    Reader** const      reader)
 {
     int status = 0;                 /* default success */
     /*
@@ -88,9 +88,12 @@ int multicastReaderNew(
                 else {
                     short               port = s_port[pidChannel - 1];
                     struct sockaddr_in  sockAddr;
+                    uint32_t            ifaceAddr = (interface == NULL)
+                            ? htonl(INADDR_ANY)
+                            : inet_addr(interface);
 
                     sockAddr.sin_family = AF_INET;
-                    sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+                    sockAddr.sin_addr.s_addr = ifaceAddr;
                     sockAddr.sin_port = htons(port);
                     
                     if (bind(sock, (struct sockaddr*)&sockAddr,
@@ -102,9 +105,7 @@ int multicastReaderNew(
                         struct ip_mreq  mreq;
 
                         mreq.imr_multiaddr.s_addr = mcastAddr.s_addr;
-                        mreq.imr_interface.s_addr = (interface == NULL )
-                            ? htonl(INADDR_ANY)
-                            : inet_addr(interface);
+                        mreq.imr_interface.s_addr = ifaceAddr;
 
                         if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                                     (void*)&mreq, sizeof(mreq)) == -1) {
