@@ -61,6 +61,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     id=cmsg->gfld->ipdtmpl[1];
     pdtn=cmsg->gfld->ipdtnum;
 
+#if 0
     /*
      * Some GRIB2 messages from NCEP *don't* have the Master Table Version
      * number set to 255 (which is wrong). Consequently, the following hack sets
@@ -74,6 +75,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
                 (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver);
         cmsg->gfld->idsect[2] = iver = 255;
     }
+#endif
 
     if ((iver != 255) &&
         ((disc < 192   || disc == 255  ) && 
