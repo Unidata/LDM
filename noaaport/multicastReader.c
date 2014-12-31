@@ -26,46 +26,9 @@
 #include "multicastReader.h" /* Eat own dog food */
 
 /**
- * Initializes a NOAAPORT channel number from the IPv4 address of a NOAAPORT
- * multicast group.
- *
- * @param[out] channel    NOAAPORT channel number.
- * @param[in]  mcastSpec  IPv4 address of the multicast group.
- * @retval     0          Success. `*channel` is set.
- * @retval     1          Usage error. `log_start()` called.
- */
-static int
-initChannel(
-    unsigned* const restrict   channel,
-    const char* const restrict mcastSpec)
-{
-    /*
-     * The following is *not* the DVB PID: it's the least significant byte of
-     * the IPv4 multicast address specification (e.g., the "3" in "224.0.1.3").
-     */
-    unsigned chan;
-    int      status;
-
-    if (sscanf(mcastSpec, "%*3u.%*3u.%*3u.%3u", &chan) != 1) {
-        LOG_START1("Invalid IPv4 address specification: \"%s\"", mcastSpec);
-        status = 1;
-    }
-    else if ((chan < 1) || (chan > MAX_DVBS_PID)) {
-        LOG_START1("Invalid NOAAPORT channel number: %u", chan);
-        status = 1;
-    }
-    else {
-        *channel = chan;
-        status = 0;
-    }
-
-    return status;
-}
-
-/**
  * Initializes an IPv4 address from a string specification.
  *
- * @param[out] addr  The IPv4 address.
+ * @param[out] addr  The IPv4 address in network byte order.
  * @param[in]  spec  The specification or NULL to obtain INADDR_ANY.
  * @retval     0     Success. `*addr` is set.
  * @retval     1     Usage error. `log_start()` called.
@@ -98,34 +61,62 @@ initAddr(
 }
 
 /**
- * Initializes a multicast IPv4 socket address.
+ * Initializes a NOAAPORT channel number from the IPv4 address of a NOAAPORT
+ * multicast group. The channel number is the least significant byte of the
+ * multicast address (e.g., the "3" in "224.0.1.3").
  *
- * @param[out] mcastSockAddr  The multicast IPv4 socket address.
- * @param[in]  mcastSpec      The IPv4 address of the multicast group.
- * @param[in]  port           The port number of the multicast group in host
- *                            byte order.
- * @retval     0              Success. `*mcastSockAddr` is set.
- * @retval     1              Usage error. `log_start()` called.
+ * @param[out] channel    NOAAPORT channel number.
+ * @param[in]  mcastSpec  IPv4 address of the multicast group.
+ * @retval     0          Success. `*channel` is set.
+ * @retval     1          Usage error. `log_start()` called.
  */
 static int
-initMcastSockAddr(
-    struct sockaddr_in* const restrict mcastSockAddr,
-    const char* const restrict         mcastSpec,
-    const unsigned short               port)
+initChannel(
+    unsigned* const restrict   channel,
+    const char* const restrict mcastSpec)
 {
     in_addr_t addr;
     int       status = initAddr(&addr, mcastSpec);
 
     if (0 == status) {
-        if (!IN_MULTICAST(ntohl(addr))) {
-            LOG_START1("Not a multicast address: \"%s\"", mcastSpec);
+        unsigned  chan = ntohl(addr) & 0xFF;
+
+        if ((chan < 1) || (chan > MAX_DVBS_PID)) {
+            LOG_START1("Invalid NOAAPORT channel number: %u", chan);
             status = 1;
         }
         else {
-            (void)memset(mcastSockAddr, 0, sizeof(*mcastSockAddr));
-            mcastSockAddr->sin_family = AF_INET;
-            mcastSockAddr->sin_addr.s_addr = addr;
-            mcastSockAddr->sin_port = htons(port);
+            *channel = chan;
+            status = 0;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Initializes a multicast IPv4 address.
+ *
+ * @param[out] mcastAddr  The multicast IPv4 address in network byte order.
+ * @param[in]  mcastSpec  The IPv4 address of the multicast group.
+ * @retval     0          Success. `*mcastAddr` is set.
+ * @retval     1          Usage error. `log_start()` called.
+ */
+static int
+initMcastAddr(
+    in_addr_t* const restrict  mcastAddr,
+    const char* const restrict mcastSpec)
+{
+    in_addr_t addr;
+    int       status = initAddr(&addr, mcastSpec);
+
+    if (0 == status) {
+        if ((ntohl(addr) & 0xF0000000) != 0xE0000000) {
+            LOG_START1("Invalid multicast address: \"%s\"", mcastSpec);
+            status = 1;
+        }
+        else {
+            *mcastAddr = addr;
             status = 0;
         }
     }
@@ -153,6 +144,35 @@ initInetAddr(
     if (0 == status) {
         (void)memset(inetAddr, 0, sizeof(*inetAddr));
         inetAddr->s_addr = addr;
+    }
+
+    return status;
+}
+
+/**
+ * Initializes a multicast IPv4 socket address.
+ *
+ * @param[out] mcastSockAddr  The multicast IPv4 socket address.
+ * @param[in]  mcastSpec      The IPv4 address of the multicast group.
+ * @param[in]  port           The port number of the multicast group in host
+ *                            byte order.
+ * @retval     0              Success. `*mcastSockAddr` is set.
+ * @retval     1              Usage error. `log_start()` called.
+ */
+static int
+initMcastSockAddr(
+    struct sockaddr_in* const restrict mcastSockAddr,
+    const char* const restrict         mcastSpec,
+    const unsigned short               port)
+{
+    in_addr_t addr;
+    int       status = initMcastAddr(&addr, mcastSpec);
+
+    if (0 == status) {
+        (void)memset(mcastSockAddr, 0, sizeof(*mcastSockAddr));
+        mcastSockAddr->sin_family = AF_INET;
+        mcastSockAddr->sin_addr.s_addr = addr;
+        mcastSockAddr->sin_port = htons(port);
         status = 0;
     }
 
@@ -243,7 +263,7 @@ joinMcastGroup(
  * @retval     2              System failure. `log_start()` called.
  */
 static int
-initSocket(
+initMcastSocket(
     int* const restrict                      socket,
     const struct sockaddr_in* const restrict mcastSockAddr,
     const struct in_addr* const restrict     ifaceAddr)
@@ -258,11 +278,10 @@ initSocket(
         status = joinMcastGroup(sock, &mcastSockAddr->sin_addr, ifaceAddr);
         if (status) {
             LOG_ADD0("Couldn't have socket join multicast group");
-            close(sock);
+            (void)close(sock);
         }
         else {
             *socket = sock;
-            status = 0;
         }
     } // `sock` is open
 
@@ -270,78 +289,67 @@ initSocket(
 }
 
 /**
- * Initializes an Internet socket given an interface and an Internet multicast
- * group to join.
+ * Initializes the Internet socket address of a NOAAPORT multicast");
  *
- * @param[out] socket     The socket.
- * @param[in]  ifaceSpec  IPv4 address of interface on which to listen for
- *                        multicast UDP packets or NULL to listen on all
- *                        available interfaces.
- * @param[in]  mcastSpec  IPv4 address of multicast group.
- * @param[in]  port       Port number of multicast group in host byte order.
- * @retval     0          Success.
- * @retval     1          Usage failure. `log_start()` called.
- * @retval     2          System failure. `log_start()` called.
+ * @param[in] nportSockAddr  The Internet socket address.
+ * @param[in] nportSpec      The NOAAPORT multicast address.
+ * @retval    0              Success. `*nportSockAddr` is set.
+ * @retval    1              Usage error. `log_start()` called.
+ * @retval    2              System error. `log_start()` called.
  */
 static int
-initSocketFromSpecs(
-    int* const restrict        socket,
-    const char* const restrict ifaceSpec,
-    const char* const restrict mcastSpec,
-    const unsigned short       port)
+initNportSockAddr(
+    struct sockaddr_in* const restrict nportSockAddr,
+    const char* const restrict         nportSpec)
 {
-    struct sockaddr_in mcastSockAddr;
-    int                status = initMcastSockAddr(&mcastSockAddr, mcastSpec,
-            port);
+    unsigned channel;
+    int      status = initChannel(&channel, nportSpec);
 
     if (status) {
-        LOG_ADD0("Couldn't initialize socket address of multicast group");
+        LOG_ADD0("Couldn't initialize NOAAPORT channel");
     }
     else {
-        struct in_addr ifaceAddr;
-
-        status = initInetAddr(&ifaceAddr, ifaceSpec);
-        if (status) {
-            LOG_ADD0("Couldn't initialize address of interface");
-        }
-        else {
-            status = initSocket(socket, &mcastSockAddr, &ifaceAddr);
-        }
+        status = initMcastSockAddr(nportSockAddr, nportSpec, s_port[channel-1]);
+        if (status)
+            LOG_ADD0("Couldn't initialize socket address for NOAAPORT multicast");
     }
 
     return status;
 }
 
 /**
- * Returns a socket suitable for listening for multicast NOAAPORT packets.
+ * Initializes a socket for receiving a NOAAPORT multicast.
  *
  * @param[out] socket     The socket.
+ * @param[in]  nportSpec  IPv4 address of the NOAAPORT multicast.
  * @param[in]  ifaceSpec  IPv4 address of interface on which to listen for
  *                        multicast UDP packets or NULL to listen on all
  *                        available interfaces.
- * @param[in]  mcastSpec  IPv4 address of multicast group.
  * @retval     0          Success. `*socket` is set.
  * @retval     1          Usage failure. \c log_start() called.
  * @retval     2          O/S failure. \c log_start() called.
  */
 static int
-getSocket(
+initNportSocket(
     int* const restrict        socket,
-    const char* const restrict ifaceSpec,
-    const char* const restrict mcastSpec)
+    const char* const restrict nportSpec,
+    const char* const restrict ifaceSpec)
 {
-    unsigned       channel;
-    int            status = initChannel(&channel, mcastSpec);
+    struct sockaddr_in nportSockAddr;
+    int                status = initNportSockAddr(&nportSockAddr, nportSpec);
 
-    if (status) {
-        LOG_ADD0("Couldn't initialize NOAAPORT channel");
-    }
-    else {
-        status = initSocketFromSpecs(socket, ifaceSpec, mcastSpec,
-                s_port[channel-1]);
+    if (0 == status) {
+        struct in_addr ifaceAddr;
 
-        if (status)
-            LOG_ADD0("Couldn't initialize socket");
+        status = initInetAddr(&ifaceAddr, ifaceSpec);
+        if (status) {
+            LOG_ADD0("Couldn't initialize address of NOAAPORT interface");
+        }
+        else {
+            status = initMcastSocket(socket, &nportSockAddr, &ifaceAddr);
+            if (status)
+                LOG_ADD0("Couldn't initialize NOAAPORT socket");
+        }
     }
 
     return status;
@@ -373,12 +381,9 @@ int mcastReader_new(
     Fifo* const         fifo)
 {
     int socket;
-    int status = getSocket(&socket, ifaceSpec, mcastSpec);
+    int status = initNportSocket(&socket, mcastSpec, ifaceSpec);
 
-    if (status) {
-        LOG_START0("Couldn't create socket for NOAAPORT multicast");
-    }
-    else {
+    if (0 == status) {
         /*
          * The maximum IPv4 UDP payload is 65507 bytes. The maximum observed UDP
          * payload, however, should be 5232 bytes, which is the maximum amount
@@ -390,10 +395,9 @@ int mcastReader_new(
          * conservatively set to 10000 bytes. 2014-12-30.
          */
         status = readerNew(socket, fifo, 10000, reader);
-
         if (status) {
             LOG_ADD0("Couldn't create new reader object");
-            close(socket);
+            (void)close(socket);
         }
     } // `socket` set
 
