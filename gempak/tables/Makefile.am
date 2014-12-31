@@ -14,6 +14,7 @@ LINKS		= $(G2VARSNCEP_s) $(G2VARSWMO_s) $(G2VCRDNCEP_s) $(G2VCRDWMO_s)
 
 dist_sysconf_DATA	= \
 	g2varsncep.tbl \
+	g2varsncep-master.tbl \
 	g2varswmo.tbl \
 	g2vcrdncep.tbl \
 	g2vcrdwmo.tbl \
