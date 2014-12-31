@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #ifndef __USE_MISC
-    #define __USE_MISC          /* To get "struct ip_mreq" on Linux. Don't move! */
+    #define __USE_MISC  // To get `struct ip_mreq` on Linux. Don't move!
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -171,7 +171,8 @@ initUdpSocket(
         status = 2;
     }
     else {
-        if (bind(fd, (struct sockaddr*)sockAddr, sizeof(*sockAddr))) {
+        status = bind(fd, (struct sockaddr*)sockAddr, sizeof(*sockAddr));
+        if (status) {
             LOG_SERROR2("Couldn't bind UDP socket to %s:%d",
                     inet_ntoa(sockAddr->sin_addr), ntohs(sockAddr->sin_port));
             (void)close(fd);
@@ -179,7 +180,6 @@ initUdpSocket(
         }
         else {
             *sock = fd;
-            status = 0;
         }
     } // `fd` is open
 
@@ -203,19 +203,16 @@ joinMcastGroup(
     const struct in_addr* const restrict ifaceAddr)
 {
     struct ip_mreq  mreq;
-    int             status;
 
     mreq.imr_multiaddr = *mcastAddr;
     mreq.imr_interface = *ifaceAddr;
 
-    if (setsockopt(socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq,
-            sizeof(mreq)) == -1) {
+    int status = setsockopt(socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq,
+            sizeof(mreq));
+    if (status) {
         LOG_SERROR2("Couldn't join multicast group \"%s\" on interface \"%s\"",
                 inet_ntoa(*mcastAddr), inet_ntoa(*ifaceAddr));
         status = 2;
-    }
-    else {
-        status = 0;
     }
 
     return status;
