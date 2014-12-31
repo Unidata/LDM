@@ -64,8 +64,8 @@ struct productMaker {
                                               *  put data-products */
     MD5_CTX*                md5ctxp;
     pthread_mutex_t         mutex;          /**< Object access lock */
-    unsigned long           npackets;       /**< Number of packets received */
-    unsigned long           nmissed;        /**< Number of missed packets */
+    unsigned long           nframes;        /**< Number of frames received */
+    unsigned long           nmissed;        /**< Number of missed frames */
     unsigned long           nprods;         /**< Number of data-products
                                               *  successfully inserted */
     sbn_struct              sbn;
@@ -116,7 +116,7 @@ int pmNew(
             else {
                 w->fifo = fifo;
                 w->ldmProdQueue = lpq;
-                w->npackets = 0;
+                w->nframes = 0;
                 w->nmissed = 0;
                 w->nprods = 0;
                 w->md5ctxp = md5ctxp;
@@ -381,9 +381,9 @@ void* pmStart(
                 }
 
                 (void)pthread_mutex_lock(&productMaker->mutex);
-                productMaker->npackets++;
+                productMaker->nframes++;
                 (void)pthread_mutex_unlock(&productMaker->mutex);
-            }                           /* non-retrograde packet number */
+            }                           /* non-retrograde frame number */
         }                               /* "last_sbn_seqno" initialized */
         last_sbn_seqno = sbn->seqno;
 
@@ -1181,20 +1181,20 @@ void* pmStart(
 void pmGetStatistics(
     ProductMaker* const     productMaker,       /**< [in] Pointer to the
                                                   *  product-maker */
-    unsigned long* const    packetCount,        /**< [out] Number of packets */
-    unsigned long* const    missedPacketCount,  /**< [out] Number of missed
-                                                  *  packets */
+    unsigned long* const    frameCount,         /**< [out] Number of frames */
+    unsigned long* const    missedFrameCount,   /**< [out] Number of missed
+                                                  *  frames */
     unsigned long* const    prodCount)          /**< [out] Number of products 
                                                   *  inserted into the
                                                   *  product-queue */
 {
     (void)pthread_mutex_lock(&productMaker->mutex);
 
-    *packetCount = productMaker->npackets;
-    *missedPacketCount = productMaker->nmissed;
+    *frameCount = productMaker->nframes;
+    *missedFrameCount = productMaker->nmissed;
     *prodCount = productMaker->nprods;
 
-    productMaker->npackets = 0;
+    productMaker->nframes = 0;
     productMaker->nmissed = 0;
     productMaker->nprods = 0;
 

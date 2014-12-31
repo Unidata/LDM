@@ -624,21 +624,21 @@ static void reportStats(
     char                    buf[80];
     int                     logmask;
     unsigned long           byteCount;
-    unsigned long           packetCount, missedPacketCount, prodCount;
+    unsigned long           frameCount, missedFrameCount, prodCount;
     unsigned long           fullFifoCount;
-    static unsigned long    totalPacketCount;
-    static unsigned long    totalMissedPacketCount;
+    static unsigned long    totalFrameCount;
+    static unsigned long    totalMissedFrameCount;
     static unsigned long    totalProdCount;
     static unsigned long    totalByteCount;
     static unsigned long    totalFullFifoCount;
 
     (void)gettimeofday(&now, NULL);
     readerGetStatistics(reader, &byteCount, &fullFifoCount);
-    pmGetStatistics(productMaker, &packetCount, &missedPacketCount, &prodCount);
+    pmGetStatistics(productMaker, &frameCount, &missedFrameCount, &prodCount);
 
     totalByteCount += byteCount;
-    totalPacketCount += packetCount;
-    totalMissedPacketCount += missedPacketCount;
+    totalFrameCount += frameCount;
+    totalMissedFrameCount += missedFrameCount;
     totalProdCount += prodCount;
     totalFullFifoCount += fullFifoCount;
 
@@ -656,17 +656,17 @@ static void reportStats(
     rate = (byteCount/interval);
     unotice("                Octets    %g/s", rate);
     unotice("                Bits      %g/s", 8*rate);
-    unotice("        Received packets:");
-    unotice("            Number        %lu", packetCount);
-    unotice("            Mean Rate     %g/s", packetCount/interval);
-    unotice("        Missed packets:");
-    unotice("            Number        %lu", missedPacketCount);
+    unotice("        Received frames:");
+    unotice("            Number        %lu", frameCount);
+    unotice("            Mean Rate     %g/s", frameCount/interval);
+    unotice("        Missed frames:");
+    unotice("            Number        %lu", missedFrameCount);
     unotice("            %%             %g",
-            100.0 * missedPacketCount / (missedPacketCount + packetCount));
+            100.0 * missedFrameCount / (missedFrameCount + frameCount));
     unotice("        Full FIFO:");
     unotice("            Number        %lu", fullFifoCount);
     unotice("            %%             %g",
-            100.0 * fullFifoCount / packetCount);
+            100.0 * fullFifoCount / frameCount);
     unotice("        Products:");
     unotice("            Inserted      %lu", prodCount);
     unotice("            Mean Rate     %g/s", prodCount/interval);
@@ -680,17 +680,17 @@ static void reportStats(
     rate = (totalByteCount/interval);
     unotice("                Octets    %g/s", rate);
     unotice("                Bits      %g/s", 8*rate);
-    unotice("        Received packets:");
-    unotice("            Number        %lu", totalPacketCount);
-    unotice("            Mean Rate     %g/s", totalPacketCount/interval);
-    unotice("        Missed packets:");
-    unotice("            Number        %lu", totalMissedPacketCount);
-    unotice("            %%             %g", 100.0 * totalMissedPacketCount /
-            (totalMissedPacketCount + totalPacketCount));
+    unotice("        Received frames:");
+    unotice("            Number        %lu", totalFrameCount);
+    unotice("            Mean Rate     %g/s", totalFrameCount/interval);
+    unotice("        Missed frames:");
+    unotice("            Number        %lu", totalMissedFrameCount);
+    unotice("            %%             %g", 100.0 * totalMissedFrameCount /
+            (totalMissedFrameCount + totalFrameCount));
     unotice("        Full FIFO:");
     unotice("            Number        %lu", totalFullFifoCount);
     unotice("            %%             %g",
-            100.0 * totalFullFifoCount / totalPacketCount);
+            100.0 * totalFullFifoCount / totalFrameCount);
     unotice("        Products:");
     unotice("            Inserted      %lu", totalProdCount);
     unotice("            Mean Rate     %g/s", totalProdCount/interval);
