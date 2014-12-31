@@ -97,6 +97,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	getFacilityName.c getFacilityName.h \
 	lockProcessInMemory.c \
 	multicastReader.c multicastReader.h \
+	noaaport_socket.c noaaport_socket.h \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
