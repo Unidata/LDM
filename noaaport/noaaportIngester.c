@@ -877,7 +877,7 @@ spawnReader(
 {
     Reader* rdr;
     int     status = mcastSpec
-            ? multicastReaderNew(mcastSpec, interface, fifo, &rdr)
+            ? mcastReader_new(&rdr, mcastSpec, interface, fifo)
             : fileReaderNew(NULL, fifo, &rdr);
 
     if (status) {
