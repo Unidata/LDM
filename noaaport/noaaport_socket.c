@@ -333,8 +333,8 @@ initNportSockAddr(
  *                        multicast UDP packets or NULL to listen on all
  *                        available interfaces.
  * @retval     0          Success. `*socket` is set.
- * @retval     1          Usage failure. \c log_start() called.
- * @retval     2          O/S failure. \c log_start() called.
+ * @retval     1          Usage failure. `log_start()` called.
+ * @retval     2          O/S failure. `log_start()` called.
  */
 int
 ns_init(
