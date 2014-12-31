@@ -160,19 +160,17 @@ initInetAddr(
 }
 
 /**
- * Initializes a UDP multicast socket from the Internet socket address of a
- * multicast group.
+ * Initializes a UDP socket from an Internet socket address.
  *
- * @param[out] sock           The socket.
- * @param[in]  mcastSockAddr  The Internet socket address of the multicast
- *                            group.
- * @retval     0              Success.
- * @retval     2              System failure. `log_start()` called.
+ * @param[out] sock      The socket.
+ * @param[in]  sockAddr  The Internet socket address.
+ * @retval     0         Success.
+ * @retval     2         System failure. `log_start()` called.
  */
 static int
-initMcastSocket(
+initUdpSocket(
     int* const restrict                      sock,
-    const struct sockaddr_in* const restrict mcastSockAddr)
+    const struct sockaddr_in* const restrict sockAddr)
 {
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
     int status;
@@ -182,10 +180,9 @@ initMcastSocket(
         status = 2;
     }
     else {
-        if (bind(fd, (struct sockaddr*)mcastSockAddr, sizeof(*mcastSockAddr))) {
+        if (bind(fd, (struct sockaddr*)sockAddr, sizeof(*sockAddr))) {
             LOG_SERROR2("Couldn't bind UDP socket to %s:%d",
-                    inet_ntoa(mcastSockAddr->sin_addr),
-                    ntohs(mcastSockAddr->sin_port));
+                    inet_ntoa(sockAddr->sin_addr), ntohs(sockAddr->sin_port));
             (void)close(fd);
             status = 2;
         }
@@ -204,8 +201,7 @@ initMcastSocket(
  * @param[out] socket     The socket.
  * @param[in]  mcastAddr  IPv4 address of the multicast group.
  * @param[in]  ifaceAddr  IPv4 address of the interface on which to listen for
- *                        multicast UDP packets. May specify all available
- *                        interfaces.
+ *                        multicast UDP packets. May specify `INADDR_ANY`.
  * @retval     0          Success.
  * @retval     2          O/S failure. `log_start()` called.
  */
@@ -235,12 +231,13 @@ joinMcastGroup(
 }
 
 /**
- * Initializes an IPv4 socket given an interface and an IPv4 multicast
- * group to join.
+ * Initializes an IPv4 multicast socket.
  *
  * @param[out] socket         The socket.
- * @param[in]  mcastSockAddr  IPv4 socket address of the multicast group.
- * @param[in]  ifaceAddr      IPv4 address of the interface.
+ * @param[in]  mcastSockAddr  IPv4 socket address of the multicast group to
+ *                            join.
+ * @param[in]  ifaceAddr      IPv4 address of the interface. May specify
+ *                            `INADDR_ANY`.
  * @retval     0              Success.
  * @retval     1              Usage failure. `log_start()` called.
  * @retval     2              System failure. `log_start()` called.
@@ -252,7 +249,7 @@ initSocket(
     const struct in_addr* const restrict     ifaceAddr)
 {
     int sock;
-    int status = initMcastSocket(&sock, mcastSockAddr);
+    int status = initUdpSocket(&sock, mcastSockAddr);
 
     if (status) {
         LOG_ADD0("Couldn't initialize multicast socket");
@@ -260,7 +257,7 @@ initSocket(
     else {
         status = joinMcastGroup(sock, &mcastSockAddr->sin_addr, ifaceAddr);
         if (status) {
-            LOG_ADD0("Couldn't join multicast group");
+            LOG_ADD0("Couldn't have socket join multicast group");
             close(sock);
         }
         else {
