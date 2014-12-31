@@ -27,6 +27,12 @@
 232 255 High cloud bottom level           -                    HCBL     0
 233 255 High cloud top level              -                    HCTL     0
 234 255 High cloud layer                  -                    HCLY     0
+235 255 Ocean Isotherm Level (1/10C)      -                    OISO     0
+236 255 Layer between two ocean depths    -                    OLYR     0
+237 255 Bottom of Ocean mixed layer       -                    OMXB     0
+238 255 Bottom of Ocean isothermal layer  -                    OISO     0
+239 255 Layer ocean surface and 26C       -                    O26C     0
+240 255 Ocean mixed layer                 -                    OMXL     0
 241 255 Ordered Sequence of Data          -                    OSEQ     0
 242 255 Convective cloud bottom level     -                    CCBL     0
 243 255 Convective cloud top level        -                    CCTL     0
@@ -39,5 +45,5 @@
 249 255 Shallow convective cloud top lev  -                    SCTL     0
 251 255 Deep convective cloud bottom lev  -                    DCBL     0
 252 255 Deep convective cloud top level   -                    DCTL     0
-253 255 Low bottom lvl of supercool H2O   -                    LBSH     0
-254 255 High top lvl of supercool H2O     -                    HTSH     0
+253 255 Base of supercooled H2O layer     -                    H2OB     0
+254 255 Height of supercooled H2O layer   -                    H2OT     0
