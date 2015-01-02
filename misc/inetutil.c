@@ -573,7 +573,6 @@ hostent_new(
         int             num_aliases;
         int             num_addr;
         char            **from_alias;
-        char            **to_alias;
         char            *cp;
         size_t          nbytes;
         size_t          h_name_off;
@@ -581,7 +580,6 @@ hostent_new(
         size_t          addrs_off;
         size_t          h_addr_list_off;
         struct in_addr  **from_addr;
-        struct in_addr  **to_addr;
         struct in_addr  *addrp;
 
         /*
@@ -636,6 +634,7 @@ hostent_new(
             /* Copy aliases. */
             new->h_aliases = (char**)((char*)new + h_aliases_off);
             cp = (char *) (new->h_aliases + num_aliases);
+            char            **to_alias;
             for (from_alias = entry->h_aliases, to_alias = new->h_aliases;
                  NULL != *from_alias;
                  from_alias++, to_alias++)
@@ -649,6 +648,7 @@ hostent_new(
             /* Copy addresses. */
             new->h_addr_list = (char**)((char*)new + h_addr_list_off);
             addrp = (struct in_addr*)((char*)new + addrs_off);
+            struct in_addr  **to_addr;
             for (from_addr = (struct in_addr**)entry->h_addr_list,
                     to_addr = (struct in_addr**)new->h_addr_list;
                  NULL != *from_addr;
@@ -1027,7 +1027,8 @@ getDottedDecimal(
  * Initializes an IPv4 address from a string specification.
  *
  * @param[out] addr  The IPv4 address in network byte order.
- * @param[in]  spec  The specification or NULL to obtain INADDR_ANY.
+ * @param[in]  spec  The IPv4 address in Internet standard dot notation or NULL
+ *                   to obtain INADDR_ANY.
  * @retval     0     Success. `*addr` is set.
  * @retval     1     Usage error. `log_start()` called.
  */
@@ -1039,7 +1040,7 @@ addr_init(
     int       status;
 
     if (NULL == spec) {
-        *addr = htonl(INADDR_ANY);
+        *addr = INADDR_ANY;
         status = 0;
     }
     else {
@@ -1511,7 +1512,7 @@ sa_parseWithDefaults(
         int            nbytes;
         char           buf[HOSTNAME_MAX+1];
 
-        if (sscanf(spec, "%hu %n", &port, &nbytes) == 1 && spec[nbytes] == 0) {
+        if (sscanf(spec, "%5hu %n", &port, &nbytes) == 1 && spec[nbytes] == 0) {
             status = sa_new(svcAddr, defId, port);
         }
         else if ((scanf(spec, HOSTNAME_FORMAT " %n", buf, &nbytes) == 1 ||

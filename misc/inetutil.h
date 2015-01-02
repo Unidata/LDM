@@ -69,7 +69,8 @@ getDottedDecimal(
  * Initializes an IPv4 address from a string specification.
  *
  * @param[out] addr  The IPv4 address in network byte order.
- * @param[in]  spec  The specification or NULL to obtain INADDR_ANY.
+ * @param[in]  spec  The IPv4 address in Internet standard dot notation or NULL
+ *                   to obtain INADDR_ANY.
  * @retval     0     Success. `*addr` is set.
  * @retval     1     Usage error. `log_start()` called.
  */

@@ -1,4 +1,4 @@
-6.12.7	2015-01-02T11:24:52-0700
+6.12.7	2015-01-02T13:46:05-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
@@ -19,6 +19,9 @@
         "decrease maximum latency", respectively.
 
     NOAAPORT (noaaportIngester):
+        Got the option "-I <ifaceIpAddr>" working. A process can now be made to
+        receive from one interface only.
+
         Improved the performance of finding GRIB2 parameter information by
         caching the GEMPAK parameter tables.
 

@@ -33,7 +33,7 @@
  * @retval     2          O/S failure. \c log_start() called.
  */
 int
-ns_init(
+nportSock_init(
     int* const restrict        socket,
     const char* const restrict nportSpec,
     const char* const restrict ifaceSpec);

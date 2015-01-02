@@ -40,7 +40,7 @@ int mcastReader_new(
     Fifo* const         fifo)
 {
     int socket;
-    int status = ns_init(&socket, mcastSpec, ifaceSpec);
+    int status = nportSock_init(&socket, mcastSpec, ifaceSpec);
 
     if (0 == status) {
         /*
