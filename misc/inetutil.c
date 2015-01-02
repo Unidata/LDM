@@ -29,6 +29,9 @@
  * On FreeBSD 4.10-RELEASE-p2 the following order is necessary.
  */
 #include <sys/types.h>
+#ifndef __USE_MISC
+    #define __USE_MISC  // To get `struct ip_mreq` on Linux. Don't move!
+#endif
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
@@ -1016,6 +1019,209 @@ getDottedDecimal(
 
         freeaddrinfo(addrInfo);
     } // `addrInfo` allocated
+
+    return status;
+}
+
+/**
+ * Initializes an IPv4 address from a string specification.
+ *
+ * @param[out] addr  The IPv4 address in network byte order.
+ * @param[in]  spec  The specification or NULL to obtain INADDR_ANY.
+ * @retval     0     Success. `*addr` is set.
+ * @retval     1     Usage error. `log_start()` called.
+ */
+int
+addr_init(
+        in_addr_t* const restrict  addr,
+        const char* const restrict spec)
+{
+    int       status;
+
+    if (NULL == spec) {
+        *addr = htonl(INADDR_ANY);
+        status = 0;
+    }
+    else {
+        in_addr_t a = inet_addr(spec);
+
+        if ((in_addr_t)-1 == a) {
+            LOG_START1("Invalid IPv4 address: \"%s\"", spec);
+            status = 1;
+        }
+        else {
+            *addr = a;
+            status = 0;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Vets a multicast IPv4 address.
+ *
+ * @param[in] addr   The IPv4 address to be vetted in network byte order.
+ * @retval    true   The IPv4 address is a valid multicast address.
+ * @retval    false  The IPv4 address is not a valid multicast address.
+ */
+bool
+mcastAddr_isValid(
+        const in_addr_t addr)
+{
+    return (ntohl(addr) & 0xF0000000) == 0xE0000000;
+}
+
+/**
+ * Initializes an IPv4 address from an IPv4 address specification.
+ *
+ * @param[out] inetAddr   The IPv4 address.
+ * @param[in]  inetSpec   The IPv4 address specification. May be `NULL` to
+ *                        obtain `INADDR_ANY`.
+ * @retval     0          Success. `*inetAddr` is set.
+ * @retval     1          Usage error. `log_start()` called.
+ */
+int
+inetAddr_init(
+        struct in_addr* const restrict inetAddr,
+        const char* const restrict     spec)
+{
+    in_addr_t addr;
+    int       status = addr_init(&addr, spec);
+
+    if (0 == status) {
+        (void)memset(inetAddr, 0, sizeof(*inetAddr));
+        inetAddr->s_addr = addr;
+    }
+
+    return status;
+}
+
+/**
+ * Initializes an IPv4 socket address.
+ *
+ * @param[out] sockAddr  The IPv4 socket address to be initialized.
+ * @param[in]  addr      The IPv4 address in network byte order.
+ * @param[in]  port      The port number in host byte order.
+ * @retval     0         Success. `*sockAddr` is set.
+ * @retval     1         Usage error. `log_start()` called.
+ */
+void
+sockAddr_init(
+        struct sockaddr_in* const restrict sockAddr,
+        const in_addr_t                    addr,
+        const unsigned short               port)
+{
+    (void)memset(sockAddr, 0, sizeof(*sockAddr));
+    sockAddr->sin_family = AF_INET;
+    sockAddr->sin_addr.s_addr = addr;
+    sockAddr->sin_port = htons(port);
+}
+
+/**
+ * Initializes a UDP socket from an IPv4 socket address.
+ *
+ * @param[out] sock      The socket.
+ * @param[in]  sockAddr  The IPv4 socket address.
+ * @retval     0         Success.
+ * @retval     2         System failure. `log_start()` called.
+ */
+int
+udpSock_init(
+        int* const restrict                      sock,
+        const struct sockaddr_in* const restrict sockAddr)
+{
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    int status;
+
+    if (-1 == fd) {
+        LOG_SERROR0("Couldn't create UDP socket");
+        status = 2;
+    }
+    else {
+        status = bind(fd, (struct sockaddr*)sockAddr, sizeof(*sockAddr));
+        if (status) {
+            LOG_SERROR0("Couldn't bind UDP socket");
+            (void)close(fd);
+            status = 2;
+        }
+        else {
+            *sock = fd;
+        }
+    } // `fd` is open
+
+    return status;
+}
+
+/**
+ * Joins a socket to an IPv4 multicast group.
+ *
+ * @param[out] socket     The socket.
+ * @param[in]  mcastAddr  IPv4 address of the multicast group.
+ * @param[in]  ifaceAddr  IPv4 address of the interface on which to listen for
+ *                        multicast UDP packets. May specify `INADDR_ANY`.
+ * @retval     0          Success.
+ * @retval     2          O/S failure. `log_start()` called.
+ */
+int
+mcastSock_joinGroup(
+        const int                            socket,
+        const struct in_addr* const restrict mcastAddr,
+        const struct in_addr* const restrict ifaceAddr)
+{
+    struct ip_mreq  mreq;
+
+    mreq.imr_multiaddr = *mcastAddr;
+    mreq.imr_interface = *ifaceAddr;
+
+    int status = setsockopt(socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq,
+            sizeof(mreq));
+    if (status) {
+        LOG_ERRNO();
+        status = 2;
+    }
+
+    return status;
+}
+
+/**
+ * Initializes an IPv4 multicast socket.
+ *
+ * @param[out] socket         The socket.
+ * @param[in]  mcastSockAddr  IPv4 socket address of the multicast group to
+ *                            join.
+ * @param[in]  ifaceAddr      IPv4 address of the interface. May specify
+ *                            `INADDR_ANY`.
+ * @retval     0              Success.
+ * @retval     1              Usage failure. `log_start()` called.
+ * @retval     2              System failure. `log_start()` called.
+ */
+int
+mcastSock_init(
+        int* const restrict                      socket,
+        const struct sockaddr_in* const restrict mcastSockAddr,
+        const struct in_addr* const restrict     ifaceAddr)
+{
+    int sock;
+    int status = udpSock_init(&sock, mcastSockAddr);
+
+    if (status) {
+        LOG_ADD2("Couldn't initialize UDP socket %s:%u",
+                inet_ntoa(mcastSockAddr->sin_addr),
+                ntohs(mcastSockAddr->sin_port));
+    }
+    else {
+        status = mcastSock_joinGroup(sock, &mcastSockAddr->sin_addr, ifaceAddr);
+        if (status) {
+            LOG_ADD3("Couldn't join multicast group %s:%u on interface %s",
+                    inet_ntoa(mcastSockAddr->sin_addr),
+                    ntohs(mcastSockAddr->sin_port), inet_ntoa(*ifaceAddr));
+            (void)close(sock);
+        }
+        else {
+            *socket = sock;
+        }
+    } // `sock` is open
 
     return status;
 }
