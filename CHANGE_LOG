@@ -1,3 +1,7 @@
+6.12.7.196	2015-01-03T11:39:35-0700
+    Reverted NOAAPORT maximum read request from 10000 to 65507 bytes to see if
+    it decreases Chico's frame losses.
+
 6.12.7	2015-01-02T13:46:05-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the

@@ -52,8 +52,15 @@ int mcastReader_new(
          * maximum size of an ethernet jumbo frame is around 9000 bytes.
          * Consequently, the maximum amount to read in a single call is
          * conservatively set to 10000 bytes. 2014-12-30.
+         *
+         * Reverted to 65507 bytes because the number of frames missed by Chico
+         * increased greatly relative to Lenny after the maximum read size was
+         * changed from 65507 to 10000 bytes. Could it be that NOAAPORT is using
+         * large UDP packets and depending on IP fragmentation? That seems
+         * inconsistent, however, with dvbs_multicast(1) use of 10000 bytes in
+         * its call to recvfrom(2). 2015-01-3.
          */
-        status = readerNew(socket, fifo, 10000, reader);
+        status = readerNew(socket, fifo, 65507, reader);
         if (status) {
             LOG_ADD0("Couldn't create new reader object");
             (void)close(socket);
