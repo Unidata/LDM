@@ -1,4 +1,4 @@
-6.12.7.197	2015-01-06T16:16:50-0700
+6.12.7.197
     noaaportIngester(1):
         Ensured correct modulus arithmetic in computing number of skipped
         frames.
