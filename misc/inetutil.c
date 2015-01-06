@@ -1010,13 +1010,9 @@ getDottedDecimal(
     int status = getAddrInfo(inetId, NULL, &hints, &addrInfo);
 
     if (status == 0) {
-        if (inet_ntop(AF_INET,
+        (void)inet_ntop(AF_INET,
                 &((struct sockaddr_in*)addrInfo->ai_addr)->sin_addr.s_addr,
-                out, INET_ADDRSTRLEN) == NULL) {
-            LOG_SERROR0("Couldn't format IPv4 address");
-            status = ENOSYS;
-        }
-
+                out, INET_ADDRSTRLEN); // can't fail
         freeaddrinfo(addrInfo);
     } // `addrInfo` allocated
 
@@ -1123,7 +1119,8 @@ sockAddr_init(
  * Initializes a UDP socket from an IPv4 socket address.
  *
  * @param[out] sock      The socket.
- * @param[in]  sockAddr  The IPv4 socket address.
+ * @param[in]  sockAddr  The IPv4 socket address to which the socket will be
+ *                       bound.
  * @retval     0         Success.
  * @retval     2         System failure. `log_start()` called.
  */
@@ -1165,7 +1162,7 @@ udpSock_init(
  * @retval     2          O/S failure. `log_start()` called.
  */
 int
-mcastSock_joinGroup(
+mcastRecvSock_joinGroup(
         const int                            socket,
         const struct in_addr* const restrict mcastAddr,
         const struct in_addr* const restrict ifaceAddr)
@@ -1186,7 +1183,7 @@ mcastSock_joinGroup(
 }
 
 /**
- * Initializes an IPv4 multicast socket.
+ * Initializes a socket for receiving IPv4 multicast.
  *
  * @param[out] socket         The socket.
  * @param[in]  mcastSockAddr  IPv4 socket address of the multicast group to
@@ -1198,7 +1195,7 @@ mcastSock_joinGroup(
  * @retval     2              System failure. `log_start()` called.
  */
 int
-mcastSock_init(
+mcastRecvSock_init(
         int* const restrict                      socket,
         const struct sockaddr_in* const restrict mcastSockAddr,
         const struct in_addr* const restrict     ifaceAddr)
@@ -1212,7 +1209,7 @@ mcastSock_init(
                 ntohs(mcastSockAddr->sin_port));
     }
     else {
-        status = mcastSock_joinGroup(sock, &mcastSockAddr->sin_addr, ifaceAddr);
+        status = mcastRecvSock_joinGroup(sock, &mcastSockAddr->sin_addr, ifaceAddr);
         if (status) {
             LOG_ADD3("Couldn't join multicast group %s:%u on interface %s",
                     inet_ntoa(mcastSockAddr->sin_addr),

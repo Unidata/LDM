@@ -143,7 +143,7 @@ udpSock_init(
  * @retval     2          O/S failure. `log_start()` called.
  */
 int
-mcastSock_joinGroup(
+mcastRecvSock_joinGroup(
         const int                            socket,
         const struct in_addr* const restrict mcastAddr,
         const struct in_addr* const restrict ifaceAddr);
@@ -161,7 +161,7 @@ mcastSock_joinGroup(
  * @retval     2              System failure. `log_start()` called.
  */
 int
-mcastSock_init(
+mcastRecvSock_init(
         int* const restrict                      socket,
         const struct sockaddr_in* const restrict mcastSockAddr,
         const struct in_addr* const restrict     ifaceAddr);

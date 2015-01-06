@@ -360,8 +360,13 @@ void* pmStart(
             last_sbn_runno = sbn->runno;
         }
         else {
-            unsigned long   delta = sbn->seqno - last_sbn_seqno;
 #           define          MAX_SEQNO 0xFFFFFFFFu
+            /*
+             * The sequence number is 4 bytes and `& MAX_SEQNO` is necessary if
+             * `sizeof(unsigned long) > 4`
+             */
+            const unsigned long   delta =
+                    (unsigned long)(sbn->seqno - last_sbn_seqno) & MAX_SEQNO;
 
             if (0 == delta || MAX_SEQNO/2 < delta) {
                 uwarn("Retrograde packet number: previous=%lu, latest=%lu, "

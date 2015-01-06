@@ -87,7 +87,7 @@ nportSock_init(
             LOG_ADD0("Couldn't initialize address of interface");
         }
         else {
-            status = mcastSock_init(socket, &nportSockAddr, &ifaceAddr);
+            status = mcastRecvSock_init(socket, &nportSockAddr, &ifaceAddr);
             if (status)
                 LOG_ADD0("Couldn't initialize socket for multicast reception");
         }
