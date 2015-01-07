@@ -2,6 +2,10 @@
     noaaportIngester(1):
         Ensured correct modulus arithmetic in computing number of skipped
         frames.
+        
+    inetutil.c:
+        Renamed `mcastSock_*` functions to `mcastRecvSock_*` because they were
+        specific to sockets that receive multicast packets.
 
     Misc:
         Improved internal documentation.        
