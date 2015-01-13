@@ -144,8 +144,8 @@ fifo_signal(
 /**
  * Waits for a change in a FIFO's state.
  *
- * @param[in] fifo  The FIFO.
  * @pre             The FIFO's mutex is locked.
+ * @param[in] fifo  The FIFO.
  * @post            The FIFO's mutex is locked.
  */
 static inline void
@@ -162,12 +162,12 @@ fifo_wait(
 /**
  * Blocks while a FIFO is in a particular state.
  *
+ * @pre                   The FIFO is locked.
  * @param[in]  fifo       The FIFO.
  * @param[in]  whilePred  The predicate that defines the state.
  * @param[in]  nbytes     Number of bytes.
  * @retval     0          No waiting occurred.
  * @retval     1          Waiting occurred.
- * @pre                   The FIFO is locked.
  * @post                  The FIFO is locked.
  */
 static int
@@ -190,9 +190,9 @@ fifo_waitWhile(
  * Returns the capacity of a FIFO.
  *
  * @pre             FIFO is locked.
- * @post            FIFO is locked.
  * @param[in] fifo  FIFO.
  * @return          Capacity of FIFO in bytes.
+ * @post            FIFO is locked.
  */
 static inline size_t
 fifo_capacity(
@@ -205,9 +205,9 @@ fifo_capacity(
  * Returns the amount of space available for writing.
  *
  * @pre             FIFO is locked.
- * @post            FIFO is locked.
  * @param[in] fifo  FIFO.
  * @return          Amount of available space in bytes.
+ * @post            FIFO is locked.
  */
 static inline size_t
 fifo_availableForWriting(
@@ -220,9 +220,9 @@ fifo_availableForWriting(
  * Returns the amount of data available for reading.
  *
  * @pre             FIFO is locked.
- * @post            FIFO is locked.
  * @param[in] fifo  FIFO.
  * @return          Amount of available data in bytes.
+ * @post            FIFO is locked.
  */
 static inline size_t
 fifo_availableForReading(
@@ -234,10 +234,12 @@ fifo_availableForReading(
 /**
  * Indicates if a FIFO is open and not ready to be written.
  *
+ * @pre               FIFO is locked.
  * @param[in] fifo    The FIFO.
  * @param[in] nbytes  The number of bytes to write.
  * @retval    false   The FIFO is closed or sufficient space exists.
  * @retval    true    The FIFO is open and insufficient space exists.
+ * @post              FIFO is locked.
  */
 static inline bool
 fifo_isOpenAndNotWritable(
@@ -250,10 +252,12 @@ fifo_isOpenAndNotWritable(
 /**
  * Indicates if a FIFO is open and not ready to be read.
  *
+ * @pre               FIFO is locked.
  * @param[in] fifo    The FIFO.
  * @param[in] nbytes  The desired number of bytes to read.
  * @retval    false   The FIFO is closed or sufficient data exists.
  * @retval    true    The FIFO is open and insufficient data exists.
+ * @post              FIFO is locked.
  */
 static inline bool
 fifo_isOpenAndNotReadable(
@@ -267,13 +271,14 @@ fifo_isOpenAndNotReadable(
  * Indicates if a requested number of bytes is invalid (i.e., theoretically
  * impossible) for a FIFO.
  *
+ * @pre               FIFO is locked.
  * @param[in] fifo    The FIFO.
  * @param[in] nbytes  The number of bytes.
  * @retval    true    The number of bytes is theoretically impossible.
  *                    `log_add()` called.
  * @retval    false   The number of bytes is theoretically possible.
  * @pre               The FIFO is locked.
- * @post              The FIFO is locked.
+ * @post              FIFO is locked.
  */
 static bool
 fifo_isInvalidSize(
@@ -293,13 +298,13 @@ fifo_isInvalidSize(
  *
  * @pre                  FIFO is locked and not closed
  * @pre                  `availableForWriting(fifo) >= maxBytes`
- * @post                 FIFO is locked.
  * @param[in]  fifo      FIFO.
  * @param[in]  fd        File descriptor.
  * @param[in]  maxBytes  Maximum number of bytes to transfer.
  * @param[out] nbytes    Actual number of bytes transferred.
  * @retval     0         Success.
  * @retval     2         O/S error. `log_start()` called.
+ * @post                 FIFO is locked.
  */
 static inline int // `inline` because only called in one place
 fifo_transferFromFd(
@@ -352,10 +357,10 @@ fifo_transferFromFd(
  *
  * @pre               FIFO is locked
  * @pre               `fifo_availableForReading(fifo) >= nbytes`
- * @post              FIFO is locked
  * @param[in] fifo    FIFO.
  * @param[in] buf     Buffer into which to put bytes.
  * @param[in] nbytes  Number of bytes to remove.
+ * @post              FIFO is locked
  */
 static inline void // `inline` because only called in one place
 fifo_removeBytes(
