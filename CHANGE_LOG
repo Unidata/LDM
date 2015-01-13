@@ -1,4 +1,8 @@
-6.12.7.198
+6.12.7.199
+    Removed use of read/write lock from noaaportIngester(1) but kept support for
+    concurrent reads.
+
+6.12.7.198	2015-01-13T13:13:57-0700
     Improved internal commentary and adapted to very slightly modified VCMTP
     API (e.g., "void*" arguments instead of "char*").
 

@@ -9,7 +9,7 @@
 #include "config.h"
 
 #include "log.h"
-#include "fifo.h"                   /* Eat own dog food */
+#include "fifo.h"
 
 #include <pthread.h>
 #include <stdbool.h>
@@ -17,8 +17,6 @@
 #include <string.h>
 #include <sys/uio.h>
 #include <unistd.h>
-
-#define USE_RWLOCK 1
 
 struct fifo {
     unsigned char*   buf;          ///< Pointer to start of buffer
@@ -30,9 +28,6 @@ struct fifo {
      * available.
      */
     size_t           fullCount;
-#if USE_RWLOCK
-    pthread_rwlock_t rwlock;       ///< Read/Write lock
-#endif
     pthread_mutex_t  mutex;        ///< Mutual exclusion object
     pthread_cond_t   cond;         ///< Condition variable
     bool             isClosed;     ///< FIFO is closed?
@@ -74,24 +69,14 @@ fifo_init(
                 status = 2;
             }
             else {
-#if USE_RWLOCK
-                if ((status = pthread_rwlock_init(&fifo->rwlock, NULL))) {
-                    LOG_ERRNUM0(status, "Couldn't initialize read/write lock");
-                    status = 2;
-                }
-                else {
-#endif
-                    fifo->buf = buf;
-                    fifo->nextWrite = 0;
-                    fifo->nbytes = 0;  /* indicates startup */
-                    fifo->size = size;
-                    fifo->isClosed = false;
-                    fifo->fullCount = 0;
-                    status = 0; /* success */
-#if USE_RWLOCK
-                }
-#endif
-            }                   /* `fifo->cond` initialized */
+                fifo->buf = buf;
+                fifo->nextWrite = 0;
+                fifo->nbytes = 0;  // indicates startup
+                fifo->size = size;
+                fifo->isClosed = false;
+                fifo->fullCount = 0;
+                status = 0; // success
+            } // `fifo->cond` initialized
 
             if (status)
                 (void)pthread_mutex_destroy(&fifo->mutex);
@@ -114,42 +99,19 @@ fifo_destroy(
 {
     (void)pthread_cond_destroy(&fifo->cond);
     (void)pthread_mutex_destroy(&fifo->mutex);
-#if USE_RWLOCK
-    (void)pthread_rwlock_destroy(&fifo->rwlock);
-#endif
     free(fifo->buf);
 }
 
 /**
- * Read-locks a FIFO.
+ * Locks a FIFO.
  *
- * @param[in] fifo  The FIFO to be read-locked.
+ * @param[in] fifo  The FIFO to be locked.
  */
 static inline void
-fifo_readLock(
+fifo_lock(
         Fifo* const fifo)
 {
-#if USE_RWLOCK
-    (void)pthread_rwlock_rdlock(&fifo->rwlock);
-#else
-    (void)pthread_mutex_unlock(&fifo->mutex);
-#endif
-}
-
-/**
- * Write-locks a FIFO.
- *
- * @param[in] fifo  The FIFO to be write-locked.
- */
-static inline void
-fifo_writeLock(
-        Fifo* const fifo)
-{
-#if USE_RWLOCK
-    (void)pthread_rwlock_wrlock(&fifo->rwlock);
-#else
     (void)pthread_mutex_lock(&fifo->mutex);
-#endif
 }
 
 /**
@@ -161,11 +123,7 @@ static inline void
 fifo_unlock(
         Fifo* const fifo)
 {
-#if USE_RWLOCK
-    (void)pthread_rwlock_unlock(&fifo->rwlock);
-#else
     (void)pthread_mutex_unlock(&fifo->mutex);
-#endif
 }
 
 /**
@@ -187,7 +145,8 @@ fifo_signal(
  * Waits for a change in a FIFO's state.
  *
  * @param[in] fifo  The FIFO.
- * @pre             {The FIFO's mutex is locked.}
+ * @pre             The FIFO's mutex is locked.
+ * @post            The FIFO's mutex is locked.
  */
 static inline void
 fifo_wait(
@@ -208,8 +167,8 @@ fifo_wait(
  * @param[in]  nbytes     Number of bytes.
  * @retval     0          No waiting occurred.
  * @retval     1          Waiting occurred.
- * @pre                   {The FIFO is read-locked.}
- * @post                  {The FIFO is read-locked.}
+ * @pre                   The FIFO is locked.
+ * @post                  The FIFO is locked.
  */
 static int
 fifo_waitWhile(
@@ -219,24 +178,10 @@ fifo_waitWhile(
 {
     int didWait = 0;
 
-#if USE_RWLOCK
-    if (whilePred(fifo, nbytes)) {
-        (void)pthread_mutex_lock(&fifo->mutex);
-        (void)pthread_rwlock_unlock(&fifo->rwlock);
-        didWait = 1;
-#endif
-        while (whilePred(fifo, nbytes)) {
-           fifo_wait(fifo);
-#if !USE_RWLOCK
-           didWait = 1;
-#endif
-        }
-
-#if USE_RWLOCK
-        (void)pthread_rwlock_rdlock(&fifo->rwlock);
-        (void)pthread_mutex_unlock(&fifo->mutex);
+    while (whilePred(fifo, nbytes)) {
+       fifo_wait(fifo);
+       didWait = 1;
     }
-#endif
 
     return didWait;
 }
@@ -244,7 +189,8 @@ fifo_waitWhile(
 /**
  * Returns the capacity of a FIFO.
  *
- * @pre             {FIFO is locked.}
+ * @pre             FIFO is locked.
+ * @post            FIFO is locked.
  * @param[in] fifo  FIFO.
  * @return          Capacity of FIFO in bytes.
  */
@@ -258,7 +204,8 @@ fifo_capacity(
 /**
  * Returns the amount of space available for writing.
  *
- * @pre             {FIFO is locked.}
+ * @pre             FIFO is locked.
+ * @post            FIFO is locked.
  * @param[in] fifo  FIFO.
  * @return          Amount of available space in bytes.
  */
@@ -272,7 +219,8 @@ fifo_availableForWriting(
 /**
  * Returns the amount of data available for reading.
  *
- * @pre             {FIFO is locked.}
+ * @pre             FIFO is locked.
+ * @post            FIFO is locked.
  * @param[in] fifo  FIFO.
  * @return          Amount of available data in bytes.
  */
@@ -324,7 +272,8 @@ fifo_isOpenAndNotReadable(
  * @retval    true    The number of bytes is theoretically impossible.
  *                    `log_add()` called.
  * @retval    false   The number of bytes is theoretically possible.
- * @pre               {The FIFO is locked.}
+ * @pre               The FIFO is locked.
+ * @post              The FIFO is locked.
  */
 static bool
 fifo_isInvalidSize(
@@ -342,8 +291,9 @@ fifo_isInvalidSize(
 /**
  * Transfers bytes from a file descriptor to a FIFO.
  *
- * @pre                  {FIFO is locked and not closed}
- * @pre                  {`availableForWriting(fifo) >= maxBytes`}
+ * @pre                  FIFO is locked and not closed
+ * @pre                  `availableForWriting(fifo) >= maxBytes`
+ * @post                 FIFO is locked.
  * @param[in]  fifo      FIFO.
  * @param[in]  fd        File descriptor.
  * @param[in]  maxBytes  Maximum number of bytes to transfer.
@@ -384,12 +334,12 @@ fifo_transferFromFd(
         LOG_SERROR2("Couldn't read up to %lu bytes from file descriptor %d",
                 (unsigned long)maxBytes, (unsigned long)fd);
         status = 2;
-        fifo_writeLock(fifo); // was locked => deadlock not possible
+        fifo_lock(fifo); // was locked => deadlock not possible
     }
     else {
         *nbytes = nb;
         status = 0;
-        fifo_writeLock(fifo); // was locked => deadlock not possible
+        fifo_lock(fifo); // was locked => deadlock not possible
         fifo->nbytes += nb;
         fifo->nextWrite = (fifo->nextWrite + nb) % fifo->size;
     }
@@ -400,8 +350,9 @@ fifo_transferFromFd(
 /**
  * Removes bytes from a FIFO.
  *
- * @pre               {FIFO is locked}
- * @pre               {`fifo_availableForReading(fifo) >= nbytes`}
+ * @pre               FIFO is locked
+ * @pre               `fifo_availableForReading(fifo) >= nbytes`
+ * @post              FIFO is locked
  * @param[in] fifo    FIFO.
  * @param[in] buf     Buffer into which to put bytes.
  * @param[in] nbytes  Number of bytes to remove.
@@ -427,7 +378,7 @@ fifo_removeBytes(
         (void)memcpy(buf + extent, fifoBuf, nbytes - extent);
     }
 
-    fifo_writeLock(fifo);
+    fifo_lock(fifo);
     fifo->nbytes -= nbytes;
 }
 
@@ -519,7 +470,7 @@ fifo_readFd(
 {
     int status;
 
-    fifo_readLock(fifo);
+    fifo_lock(fifo);
 
     if (fifo_isInvalidSize(fifo, maxBytes)) {
         status = 1;
@@ -563,7 +514,7 @@ fifo_getBytes(
 {
     int status;
 
-    fifo_readLock(fifo);
+    fifo_lock(fifo);
 
     if (fifo_isInvalidSize(fifo, nbytes)) {
         status = 1;
@@ -599,7 +550,7 @@ fifo_getFullCount(
 {
     size_t count;
 
-    fifo_writeLock(fifo);
+    fifo_lock(fifo);
     count = fifo->fullCount;
     fifo->fullCount = 0;
     fifo_unlock(fifo);
@@ -618,7 +569,7 @@ void
 fifo_close(
     Fifo* const fifo)       /**< [in/out] Pointer to FIFO */
 {
-    fifo_writeLock(fifo);
+    fifo_lock(fifo);
     fifo->isClosed = true;
     fifo_signal(fifo);
     fifo_unlock(fifo);
