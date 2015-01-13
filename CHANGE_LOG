@@ -1,4 +1,8 @@
-6.12.7.197
+6.12.7.198
+    Improved internal commentary and adapted to very slightly modified VCMTP
+    API (e.g., "void*" arguments instead of "char*").
+
+6.12.7.197	2015-01-13T13:01:16-0700
     noaaportIngester(1):
         Ensured correct modulus arithmetic in computing number of skipped
         frames.
