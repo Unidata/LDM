@@ -1,4 +1,9 @@
-6.12.7.199	2015-01-13T14:55:49-0700
+6.12.7.200
+    Added support for running rsyslogd(8) on a Solaris system with
+    configuration-file "/etc/opt/csw/rsyslog.conf" and PID-file
+    "/var/run/rsyslogd.pid".
+
+6.12.7.199	2015-01-13T15:26:21-0700
     Removed use of read/write lock from noaaportIngester(1) but kept support for
     concurrent reads.
 

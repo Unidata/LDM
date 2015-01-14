@@ -449,7 +449,9 @@ AC_DEFUN([UD_ULOG], [dnl
 	AC_MSG_RESULT([rsyslog])
         AC_CHECK_FILE([/etc/rsyslog.conf],
             [SYSLOG_CONF=/etc/rsyslog.conf],
-            [AC_MSG_ERROR([system logging configuration-file not found or not readable])])
+            [AC_CHECK_FILE([/etc/opt/csw/rsyslog.conf],
+                [SYSLOG_CONF=/etc/opt/csw/rsyslog.conf],
+                [AC_MSG_ERROR([system logging configuration-file not found or not readable])])])
     elif ps -e | grep -q syslog; then
 	AC_MSG_RESULT([syslog])
         AC_CHECK_FILE([/etc/syslog.conf],
@@ -523,8 +525,8 @@ dnl Set syslog pid filename for hupsyslog
 dnl
 AC_DEFUN([UD_SYSLOG_PIDFILE], [dnl
     AC_MSG_CHECKING([system logging daemon PID file])
-    for path in /etc/syslog.pid /var/run/syslog.pid /var/run/syslogd.pid \
-	    /var/run/rsyslogd.pid; do
+    for path in /var/run/rsyslogd.pid /var/run/syslog.pid /var/run/syslogd.pid \
+	    /etc/syslog.pid; do
 	if test -f $path; then
 	    AC_DEFINE_UNQUOTED(SYSLOG_PIDFILE, "$path",
 		[Pathname of system logging daemon PID file])
