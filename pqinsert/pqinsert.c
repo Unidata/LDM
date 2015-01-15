@@ -7,13 +7,20 @@
  * Convert files to ldm "products" and insert in local que
  */
 #include <config.h>
+
+#if defined(NO_MMAP) || !defined(HAVE_MMAP)
+    #define USE_MMAP 0
+#else
+    #define USE_MMAP 1
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <rpc/rpc.h>
 #include <signal.h>
-#ifdef HAVE_MMAP
+#if USE_MMAP
     #include <sys/mman.h>
 #endif
 #include <sys/types.h>
@@ -38,7 +45,7 @@
         /* N.B.: assumes hostname doesn't change during program execution :-) */
 static char             myname[HOSTNAMESIZE];
 static feedtypet        feedtype = EXP;
-#ifndef HAVE_MMAP
+#if !USE_MMAP
     static struct pqe_index pqeIndex;
 #endif
 
@@ -72,7 +79,7 @@ void
 cleanup(void)
 {
     if (pq) {
-#ifndef HAVE_MMAP
+#if !USE_MMAP
         if (!pqeIsNone(pqeIndex))
             (void)pqe_discard(pq, pqeIndex);
 #endif
@@ -147,7 +154,7 @@ set_sigactions(void)
 }
 
 
-#ifdef NO_MMAP
+#if !USE_MMAP
 static int
 fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
 {
@@ -206,7 +213,7 @@ int main(
             exit_md5 = 6        /* couldn't initialize MD5 processing */
         } exitCode = exit_success;
 
-#ifndef HAVE_MMAP
+#if !USE_MMAP
         pqeIndex = PQE_NONE;
 #endif
 
@@ -379,7 +386,7 @@ int main(
                         continue;
                 }
 
-#ifdef HAVE_MMAP
+#if USE_MMAP
                 prod.data = mmap(0, prod.info.sz,
                         PROT_READ, MAP_PRIVATE, fd, 0);
                 if(prod.data == NULL)
@@ -456,7 +463,7 @@ int main(
                 }
 
                 (void) munmap(prod.data, prod.info.sz);
-#else /*HAVE_MMAP*/
+#else // USE_MMAP above; !USE_MMAP below
                 status = 
                     signatureFromId
                         ? mm_md5(md5ctxp, prod.info.ident,
@@ -467,7 +474,7 @@ int main(
                 (void)exitIfDone(1);
 
                 if (status != 0) {
-                        serror("fd_md5: %s", filename);
+                        serror("xx_md5: %s", filename);
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -481,8 +488,8 @@ int main(
                         continue;
                 }
 
-                index = PQE_NONE;
-                status = pqe_new(pq, &prod.info, &prod.data, &index);
+                pqeIndex = PQE_NONE;
+                status = pqe_new(pq, &prod.info, &prod.data, &pqeIndex);
 
                 if(status != ENOERR) {
                     serror("pqe_new: %s", filename);
@@ -498,8 +505,8 @@ int main(
                         status = EIO;
                     }
                     else {
-                        status = pqe_insert(pq, index);
-                        index = PQE_NONE;
+                        status = pqe_insert(pq, pqeIndex);
+                        pqeIndex = PQE_NONE;
 
                         switch (status) {
                         case ENOERR:
@@ -528,15 +535,15 @@ int main(
                             uerror("pq_insert: %s", status > 0
                                 ? strerror(status) : "Internal error");
                         }
-                    }                   /* data read into "index" region */
+                    }                   /* data read into `pqeIndex` region */
 
                     if (status != ENOERR) {
-                        (void)pqe_discard(pq, index);
-                        index = PQE_NONE;
+                        (void)pqe_discard(pq, pqeIndex);
+                        pqeIndex = PQE_NONE;
                     }
-                }                       /* "index" region allocated */
+                }                       /* `pqeIndex` region allocated */
 
-#endif /*HAVE_MMAP*/
+#endif
                 (void) close(fd);
         }                               /* input-file loop */
 

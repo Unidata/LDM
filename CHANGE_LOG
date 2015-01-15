@@ -1,4 +1,4 @@
-6.12.7.200
+6.12.7.200	2015-01-14T12:52:09-0700
     Added support for running rsyslogd(8) on a Solaris system with
     configuration-file "/etc/opt/csw/rsyslog.conf" and PID-file
     "/var/run/rsyslogd.pid".
