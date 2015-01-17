@@ -15,11 +15,11 @@
 #define PER_PROD_NOTIFIER_H_
 
 #include "mcast.h"
-#include "ReceivingApplicationNotifier.h"
+#include "RecvAppNotifier.h"
 
 #include <sys/types.h>
 
-class PerProdNotifier: public ReceivingApplicationNotifier {
+class PerProdNotifier: public RecvAppNotifier {
 public:
     /**
      * Constructs from the notification functions.

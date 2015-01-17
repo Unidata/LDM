@@ -15,11 +15,11 @@
 #define PER_PROD_SENDING_NOTIFIER_H_
 
 #include "mcast.h"
-#include "SendingApplicationNotifier.h"
+#include "SendAppNotifier.h"
 
 #include <sys/types.h>
 
-class PerProdSendingNotifier: public SendingApplicationNotifier {
+class PerProdSendingNotifier: public SendAppNotifier {
 public:
     /**
      * Constructs from the notification functions.
