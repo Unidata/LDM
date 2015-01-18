@@ -1,9 +1,14 @@
-6.12.7.2002
+6.12.7.203
+    Modfied "ldm.x" so that WANT_MULTICAST preprocessing conditionals take
+    effect during compilation rather than in rpcgen(1) so that the generated
+    files can be used for all configurations.
+
+6.12.7.202	2015-01-18T10:54:40-0700
     Added all rpcgen(1)-generated files to the distribution because the Mac OS X
     rpcgen(1) generates an "ldm_svc.c" that doesn't play well with the rest of
     the LDM code.
 
-6.12.7.2001	2015-01-17T11:49:31-0700
+6.12.7.201	2015-01-17T11:49:31-0700
     Adapted to "SendingApplicationNotifier" -> SendAppNotifier renaming and
     new VCMTP version with improved namespace control and use of "::bind()".
 
