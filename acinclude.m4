@@ -440,19 +440,19 @@ dnl Set ulog parameters
 dnl
 AC_DEFUN([UD_ULOG], [dnl
     AC_MSG_CHECKING([for system logging daemon])
-    if ps -e | grep -q syslog-ng; then
+    if ps -e | grep -v grep | grep -q syslog-ng; then
 	AC_MSG_RESULT([syslog-ng])
         AC_CHECK_FILE([/etc/syslog-ng/syslog-ng.conf],
             [SYSLOG_CONF=/etc/syslog-ng/syslog-ng.conf],
             [AC_MSG_ERROR([system logging configuration-file not found or not readable])])
-    elif ps -e | grep -q rsyslog; then
+    elif ps -e | grep -v grep | grep -q rsyslog; then
 	AC_MSG_RESULT([rsyslog])
         AC_CHECK_FILE([/etc/rsyslog.conf],
             [SYSLOG_CONF=/etc/rsyslog.conf],
             [AC_CHECK_FILE([/etc/opt/csw/rsyslog.conf],
                 [SYSLOG_CONF=/etc/opt/csw/rsyslog.conf],
                 [AC_MSG_ERROR([system logging configuration-file not found or not readable])])])
-    elif ps -e | grep -q syslog; then
+    elif ps -e | grep -v grep | grep -q syslog; then
 	AC_MSG_RESULT([syslog])
         AC_CHECK_FILE([/etc/syslog.conf],
             [SYSLOG_CONF=/etc/syslog.conf],

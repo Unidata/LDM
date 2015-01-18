@@ -6,9 +6,12 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES	        =  ldm.h ldm_svc.c ldm_clnt.c ldm_xdr.c
-CLEANFILES		= *.i $(BUILT_SOURCES)
-EXTRA_DIST		= ldm.x fix_clnt.pl 
+# rpcgen(1)-generated files are included in the distribution because on at least
+# one system (Max OS X) at least one file (ldm_svc.c) doesn't play well with the
+# rest of the LDM code.
+RPCGEN_FILES	        =  ldm.h ldm_svc.c ldm_clnt.c ldm_xdr.c
+CLEANFILES		= *.i
+EXTRA_DIST		= ldm.x fix_clnt.pl $(RPCGEN_FILES)
 if WANT_MULTICAST
     RPCGEN_OPTS		= -DWANT_MULTICAST
 endif

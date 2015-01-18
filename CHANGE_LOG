@@ -1,4 +1,9 @@
-6.12.7.2001
+6.12.7.2002
+    Added all rpcgen(1)-generated files to the distribution because the Mac OS X
+    rpcgen(1) generates an "ldm_svc.c" that doesn't play well with the rest of
+    the LDM code.
+
+6.12.7.2001	2015-01-17T11:49:31-0700
     Adapted to "SendingApplicationNotifier" -> SendAppNotifier renaming and
     new VCMTP version with improved namespace control and use of "::bind()".
 
