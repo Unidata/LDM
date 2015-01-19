@@ -700,7 +700,7 @@ program LDMPROG {
 		comingsoon_reply_t COMINGSOON(comingsoon_args) = 12;
 		void               BLKDATA(datapkt) = 13;
 	} = 6;
-%#if WANT_MULTICAST
+#if WANT_MULTICAST
         version SEVEN {
             /*
              * Downstream to upstream RPC messages:
@@ -717,31 +717,31 @@ program LDMPROG {
             void              DELIVER_BACKLOG_PRODUCT(product) = 7;
             void              END_BACKLOG() = 8;
         } = 7;
-%#endif
+#endif
 } = LDM_PROG; /* LDM = 300029, use 0x2ffffffe for experiments */
 
 
 #ifdef RPC_HDR
 %
 %#define MIN_LDM_VERSION 5
-%#if !WANT_MULTICAST
+#if !WANT_MULTICAST
 %#define MAX_LDM_VERSION 6
-%#else
+#else
 %#define MAX_LDM_VERSION 7
-%#endif
+#endif
 %
 %void  ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp);
 %void  ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp);
-%#if WANT_MULTICAST
+#if WANT_MULTICAST
 %void  ldmprog_7(struct svc_req *rqstp, register SVCXPRT *transp);
 %const char* ldm7_errmsg(int status);
-%#endif
+#endif
 %int   one_svc_run(const int xp_sock, const unsigned inactive_timeo);
 %void* nullproc_6(void *argp, CLIENT *clnt);
 %enum  clnt_stat clnt_stat(CLIENT *clnt);
-%#if WANT_MULTICAST
+#if WANT_MULTICAST
 %int   clntStatusToLdm7Status(const enum clnt_stat status);
-%#endif
+#endif
 #endif
 
 /*
@@ -854,7 +854,7 @@ struct ServiceAddr {
 };
 #endif
 
-%#if WANT_MULTICAST
+#if WANT_MULTICAST
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %
@@ -1021,7 +1021,7 @@ union SubscriptionReply switch (Ldm7Status status) {
         void;
 };
 
-%#endif /* WANT_MULTICAST */
+#endif /* WANT_MULTICAST */
 
 #ifdef RPC_CLNT
 %#include <string.h>
