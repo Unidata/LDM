@@ -1,4 +1,4 @@
-6.12.7.206
+6.12.7.206      2015-01-20T14:06:47-0700
     Changed MAINTAINER determination in configure script to having a ".git"
     directory.
 
