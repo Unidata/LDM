@@ -11,7 +11,9 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
 
-AC_PROG_CC([c99 gcc])
+ccList='c99 gcc'
+test `uname` = Darwin && ccList=gcc
+AC_PROG_CC([$ccList])
 AC_PROG_CC_C99
 if test "$ac_cv_prog_cc_c99" = "no"; then
     AC_MSG_ERROR([No c99-conforming compiler found. Install one (e.g., gcc) and retry.])

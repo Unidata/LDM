@@ -1,5 +1,9 @@
 6.12.7.206
-    Changed MAINTAINER determination in configure script.
+    Changed MAINTAINER determination in configure script to having a ".git"
+    directory.
+
+    Ported to Darwin's rpcgen(1): reverted its output files to BUILT_SOURCES
+    and added typedef for "rpc_uint".
 
 6.12.7.205	2015-01-19T22:56:54-0700
     Added "tomcat" to maintainer list.
