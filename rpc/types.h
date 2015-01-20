@@ -49,12 +49,13 @@
 #include <sys/time.h>
 
 /*
- * Needed by rpcgen(1)-generated code on FreeBSD.
+ * Needed by rpcgen(1)-generated code on BSD systems (including OS X).
  */
 #include <inttypes.h>
 typedef uint32_t	rpcprog_t;
 typedef uint32_t	rpcvers_t;
 typedef int32_t		rpc_inline_t;
+typedef unsigned        rpc_uint;
 
 #define	bool_t	int
 #define	enum_t	int

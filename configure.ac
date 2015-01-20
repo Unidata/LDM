@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.7.206], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.7.207], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -11,7 +11,9 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
 
-AC_PROG_CC([c99 gcc])
+ccList='c99 gcc'
+test `uname` = Darwin && ccList=gcc
+AC_PROG_CC([$ccList])
 AC_PROG_CC_C99
 if test "$ac_cv_prog_cc_c99" = "no"; then
     AC_MSG_ERROR([No c99-conforming compiler found. Install one (e.g., gcc) and retry.])

@@ -151,15 +151,11 @@
 /* Default LDM logging facility [LOG_LOCAL0] */
 #undef LOG_LDM
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
 /* Disables the DBFILE capability */
 #undef NO_DB
-
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-#undef NO_MINUS_C_MINUS_O
 
 /* Causes syslog(3) to not be defined in the ulog(3) module */
 #undef NO_REPLACE_SYSLOG
