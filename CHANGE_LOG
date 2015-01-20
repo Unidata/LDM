@@ -1,5 +1,7 @@
 6.12.7.207
     Merge with Dwarwin port.
+    
+    Add finding doxygen(1) to configure script.
 
 6.12.7.206	2015-01-20T11:35:21-0700
     Changed MAINTAINER determination in configure script to having a ".git"

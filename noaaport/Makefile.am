@@ -13,6 +13,7 @@ LDMSRC			= $(top_srcdir)
 SUDO			= @SUDO@
 SU			= @SU@
 docdir			= @docdir@/noaaport
+DOXYGEN			= @DOXYGEN@
 
 EXTRA_DIST 		= \
 	Doxyfile \
@@ -124,7 +125,7 @@ endif
 
 $(srcdir)/html \
 $(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
-	cd $(srcdir) && doxygen Doxyfile
+	cd $(srcdir) && $(DOXYGEN) Doxyfile
 
 .hin.h:
 	./extractDecls $*.hin $*.c >$@.tmp

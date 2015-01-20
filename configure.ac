@@ -435,9 +435,11 @@ AC_REVISION ($Revision: 1.47.18.22 $)
 UD_HPUX
 UD_PROG_CPP
 UD_PROG_PERL
-UD_PROG_SH
 AC_PROG_AWK
+UD_PROG_SH
 AC_PROG_YACC
+AC_CHECK_PROGS([DOXYGEN], [doxygen /Volumes/storage/local/bin/doxygen], [])
+test -z "$DOXYGEN" && AC_MSG_FAILURE([Doxygen utility not found])
 UD_PROG_RPCGEN
 UD_PROG_NTPDATE
 UD_PROG_NETSTAT
