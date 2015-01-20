@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.7.207], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.7.208], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -439,7 +439,6 @@ AC_PROG_AWK
 UD_PROG_SH
 AC_PROG_YACC
 AC_CHECK_PROGS([DOXYGEN], [doxygen /Volumes/storage/local/bin/doxygen], [])
-test -z "$DOXYGEN" && AC_MSG_FAILURE([Doxygen utility not found])
 UD_PROG_RPCGEN
 UD_PROG_NTPDATE
 UD_PROG_NETSTAT

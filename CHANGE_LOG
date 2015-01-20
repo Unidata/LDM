@@ -1,4 +1,7 @@
-6.12.7.207
+6.12.7.208
+    Configure script continues if doxygen not found.
+    
+6.12.7.207	2015-01-20T15:07:58-0700
     Merge with Dwarwin port.
     
     Add finding doxygen(1) to configure script.
