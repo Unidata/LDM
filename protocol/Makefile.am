@@ -6,9 +6,8 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-RPCGEN_FILES		=  ldm_svc.c ldm.h ldm_clnt.c ldm_xdr.c
-CLEANFILES		= *.i $(RPCGEN_FILES)
-BUILT_SOURCES           =  $(RPCGEN_FILES)
+BUILT_SOURCES		=  ldm_svc.c ldm.h ldm_clnt.c ldm_xdr.c
+CLEANFILES		= *.i $(BUILT_SOURCES)
 EXTRA_DIST		= ldm.x fix_clnt.pl
 if WANT_MULTICAST
     RPCGEN_OPTS		= -DWANT_MULTICAST
@@ -16,8 +15,8 @@ endif
 RPCGEN			= @RPCGEN@ -C $(RPCGEN_OPTS)
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
-include_HEADERS		= ldm.h
-lib_la_SOURCES		= $(RPCGEN_FILES)
+nodist_include_HEADERS	= ldm.h
+nodist_lib_la_SOURCES	= $(BUILT_SOURCES)
 lib_la_CPPFLAGS		= -I$(top_srcdir) \
 			  -I$(top_srcdir)/rpc \
 			  -I$(top_srcdir)/ulog \

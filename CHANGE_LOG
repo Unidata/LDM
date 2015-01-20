@@ -2,6 +2,8 @@
     Merge with Dwarwin port.
     
     Add finding doxygen(1) to configure script.
+    
+    Ensure rpcgen(1)-generated files aren't in the distribution.
 
 6.12.7.206	2015-01-20T11:35:21-0700
     Changed MAINTAINER determination in configure script to having a ".git"
