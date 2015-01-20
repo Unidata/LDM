@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.7.205], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.7.206], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -147,9 +147,7 @@ case `uname -s` in
         ;;
 esac
 
-AM_CONDITIONAL([MAINTAINER],
-    [test "$USER" = steve -a "$PWD" = /home/steve/Projects/ldm/ldm/src ||
-        test "$USER" = tomcat])
+AM_CONDITIONAL([MAINTAINER], [test -d .git])
 
 # The following is for multicast data distribution using the Virtual Circuit
 # Multicast Transport Protocol. DO NOT USE!

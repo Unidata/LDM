@@ -1,4 +1,7 @@
-6.12.7.205
+6.12.7.206
+    Changed MAINTAINER determination in configure script.
+
+6.12.7.205	2015-01-19T22:56:54-0700
     Added "tomcat" to maintainer list.
 
 6.12.7.204	2015-01-19T12:44:49-0700
