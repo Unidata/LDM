@@ -249,23 +249,23 @@ mlsm_execute(
     pid_t* const restrict           pid)
 {
     const feedtypet feedtype = mi_getFeedtype(info);
-    pid_t           id;
+    pid_t           procId;
     unsigned short  port;
-    int             status = mlsm_spawn(info, &id, &port);
+    int             status = mlsm_spawn(info, &procId, &port);
 
     if (0 == status) {
-        if ((status = msm_put(feedtype, id)) != 0) {
+        if ((status = msm_put(feedtype, procId)) != 0) {
             // preconditions => LDM7_DUP can't be returned
             char* const id = mi_format(info);
 
-            LOG_ADD("Terminating just-started multicast LDM sender for "
+            LOG_ADD1("Terminating just-started multicast LDM sender for "
                     "\"%s\"", id);
             free(id);
-            (void)kill(id, SIGTERM);
+            (void)kill(procId, SIGTERM);
         }
         else {
             *serverPort = port;
-            *pid = id;
+            *pid = procId;
         }
     }
 

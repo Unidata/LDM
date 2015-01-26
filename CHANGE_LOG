@@ -1,4 +1,10 @@
-6.12.7.209
+6.12.7.210
+    Moved mldm_sender_manager_test(1) to `make check-local` and added local
+    product-queue.
+    
+    Clean product-index mapping files (*.map) from "mcast_lib/C".
+
+6.12.7.209	2015-01-26T09:27:45-0700
     Debugged mldm_sender(1), mldm_sender_manager_test, and mldm_receiver_test
     and made appropriate changes.
 

@@ -631,6 +631,7 @@ static inline void      // inlined because small and only called in one place
 mls_destroy(void)
 {
     (void)xdr_free(xdr_McastInfo, (char*)&mcastInfo);
+    (void)pim_close();
     (void)pq_close(pq);
     mcastSender_free(mcastSender);
 }

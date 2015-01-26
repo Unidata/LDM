@@ -42,7 +42,10 @@ CPPFLAGS		= -I$(builddir) -I$(srcdir) \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc \
                           -I$(top_srcdir)/mcast_lib/C++
-CLEANFILES		= *.yaml *_stub*
+# mldm_sender_manager_test(1) calls mldm_sender(1), which calls
+# pim_openForWriting(3), which creates *.map files in the product-queue
+# directory
+CLEANFILES		= *.yaml *_stub* *.map
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 .hin.h:
@@ -110,10 +113,14 @@ mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
 
-# Enable execution of the multicast LDM sender program by
-# `mldm_sender_manager_test`.
-AM_TESTS_ENVIRONMENT			= PATH=$(top_builddir)/mldm_sender:$$PATH;
-opmock_tests				= $(opmock_check_progs)
+opmock_tests				= mldm_receiver_memory_test \
+                                          mldm_receiver_test
+
+check-local:	mldm_sender_manager_test
+	$(top_builddir)/pqcreate/pqcreate -c -s 1m mldm_sender_manager_test.pq
+	PATH=$(top_builddir)/mldm_sender:$$PATH \
+		./mldm_sender_manager_test mldm_sender_manager_test.pq 
+	rm mldm_sender_manager_test.pq *.map
 endif
 
 if HAVE_CUNIT

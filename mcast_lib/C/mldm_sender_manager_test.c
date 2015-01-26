@@ -164,14 +164,26 @@ main(
     int		argc,
     char**	argv)
 {
+    int status;
+
     (void) openulog(basename(argv[0]), LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
     (void) setulogmask(LOG_UPTO(LOG_NOTICE));
-    opmock_test_suite_reset();
-    opmock_register_test(test_noPotentialSender, "test_noPotentialSender");
-    opmock_register_test(test_conflict, "test_conflict");
-    opmock_register_test(test_not_running, "test_not_running");
-    opmock_register_test(test_running, "test_running");
-    init();
-    opmock_test_suite_run();
-    return opmock_test_error ? 1 : 0;
+
+    if (NULL == argv[1]) {
+        uerror("Product-queue pathname not given");
+        status = 1;
+    }
+    else {
+        setQueuePath(argv[1]);
+        opmock_test_suite_reset();
+        opmock_register_test(test_noPotentialSender, "test_noPotentialSender");
+        opmock_register_test(test_conflict, "test_conflict");
+        opmock_register_test(test_not_running, "test_not_running");
+        opmock_register_test(test_running, "test_running");
+        init();
+        opmock_test_suite_run();
+        status = opmock_test_error ? 1 : 0;
+    }
+
+    return status;
 }

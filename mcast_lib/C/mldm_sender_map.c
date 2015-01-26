@@ -93,8 +93,10 @@ msm_init(void)
             } // shared memory object memory-mapped
         } // size of shared memory object set
 
-        if (status)
+        if (status) {
             (void)close(fd);
+            (void)shm_unlink(SMO_FILENAME);
+        }
     } // `fd` open
 
     return status;

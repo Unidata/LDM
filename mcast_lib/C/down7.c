@@ -522,8 +522,8 @@ requestSessionBacklog(
 
 /**
  * Requests from the associated upstream LDM-7, the next product in a downstream
- * LDM-7's missed-but-not-requested queue. Blocks until the queue has a product,
- * or the queue is shut down, or an error occurs.
+ * LDM-7's missed-but-not-requested queue. Doesn't return until the queue has a
+ * product, or the queue is shut down, or an error occurs.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    0              Success.
@@ -569,8 +569,8 @@ makeRequest(
  * Requests data-products that were missed by the multicast LDM receiver.
  * Entries from the missed-but-not-requested queue are removed and converted
  * into requests for missed data-products, which are asynchronously sent to the
- * remote LDM-7. Blocks until the request-queue is shut down or an unrecoverable
- * error occurs. Called by `pthread_create()`.
+ * remote LDM-7. Doesn't return until the request-queue is shut down or an
+ * unrecoverable error occurs. Called by `pthread_create()`.
  *
  * @param[in] arg            Pointer to the downstream LDM-7 object.
  * @retval    LDM7_RPC       Error in RPC layer. \c log_start() called.
@@ -678,8 +678,8 @@ stopUnicastProductReceiver(
 }
 
 /**
- * Receives data-products via multicast. Blocks until the multicast LDM receiver
- * is stopped. Called by `pthread_create()`.
+ * Receives data-products via multicast. Doesn't return until the multicast LDM
+ * receiver is stopped. Called by `pthread_create()`.
  *
  * @param[in] arg            Pointer to the downstream LDM-7.
  * @retval    LDM7_SHUTDOWN  The multicast LDM receiver was stopped.
@@ -771,9 +771,9 @@ startTasks(
 }
 
 /**
- * Waits for all tasks of a downstream LDM-7 to complete. Blocks until one task
- * terminates or the downstream LDM-7 is shut down, then terminates all remaining
- * tasks and returns.
+ * Waits for all tasks of a downstream LDM-7 to complete. Doesn't return until
+ * one task terminates or the downstream LDM-7 is shut down, then terminates all
+ * remaining tasks and returns.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    LDM7_SHUTDOWN  The downstream LDM-7 was shut down.
@@ -796,8 +796,8 @@ waitOnTasks(
 }
 
 /**
- * Receives data for a downstream LDM-7. Blocks until the LDM-7 is shut down or
- * an unrecoverable error occurs.
+ * Receives data for a downstream LDM-7. Doesn't return until the LDM-7 is shut
+ * down or an unrecoverable error occurs.
  *
  * @param[in] down7            Pointer to the downstream LDM-7.
  * @retval    LDM7_SYSTEM      System error. \c log_start() called.
@@ -823,7 +823,7 @@ execute(
 
 /**
  * Subscribes a downstream LDM-7 to a multicast group and receives the data.
- * Blocks until the LDM-7 is shut down or an error occurs.
+ * Doesn't return until the LDM-7 is shut down or an error occurs.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
@@ -902,8 +902,8 @@ createClientAndExecute(
 }
 
 /**
- * Executes a downstream LDM-7. Blocks until the LDM-7 is shut down or an
- * error occurs.
+ * Executes a downstream LDM-7. Doesn't return until the LDM-7 is shut down or
+ * an error occurs.
  *
  * @param[in] down7          Pointer to the downstream LDM-7 to be executed.
  * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
@@ -946,8 +946,8 @@ runDown7Once(
 }
 
 /**
- * Waits a short time. Blocks until the time period is up or the downstream
- * LDM-7 is shut down. Returns immediately if the LDM-7 is shut down.
+ * Waits a short time. Doesn't return until the time period is up or the
+ * downstream LDM-7 is shut down. Returns immediately if the LDM-7 is shut down.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    0              Timeout occurred.
@@ -1229,8 +1229,8 @@ down7_execute(
  ******************************************************************************/
 
 /**
- * Runs a downstream LDM-7. Blocks until the process is externally terminated or
- * a non-recoverable error occurs.
+ * Runs a downstream LDM-7. Doesn't return until the process is externally
+ * terminated or a non-recoverable error occurs.
  *
  * @param[in] servAddr       Pointer to the address of the server from which to
  *                           obtain multicast information, backlog products, and

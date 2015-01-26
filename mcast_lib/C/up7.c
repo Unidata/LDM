@@ -160,9 +160,9 @@ up7_subscribe(
         struct SVCXPRT* const restrict    xprt,
         SubscriptionReply* const restrict reply)
 {
-    McastInfo* mcastInfo;
-    pid_t      pid;
-    int        status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid);
+    const McastInfo* mcastInfo;
+    pid_t            pid;
+    int              status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid);
 
     if (LDM7_SYSTEM == status)
         return status;

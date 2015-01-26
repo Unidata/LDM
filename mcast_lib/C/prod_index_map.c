@@ -655,6 +655,10 @@ clearMapIfUnexpected(
         clearMap();
 }
 
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
 /**
  * Opens the product-index map for writing. Creates the associated file (with
  * an empty map) if it doesn't exist. A process should call this function at
