@@ -1,4 +1,8 @@
-6.12.7.208	2015-01-20T16:12:09-0700
+6.12.7.209
+    Debugged mldm_sender(1), mldm_sender_manager_test, and mldm_receiver_test
+    and made appropriate changes.
+
+6.12.7.208	2015-01-25T18:06:24-0700
     Configure script continues if doxygen not found.
 
 6.12.7.207	2015-01-20T15:07:58-0700
