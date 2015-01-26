@@ -746,6 +746,29 @@ pq_clss_setfrom(pqueue *pq,
  *     function;
  *   - SIGCONT is received, indicating another data-product is available; or
  *   - The given amount of time elapses.
+ * Upon return, the signal mask is what it was on entry.
+ *
+ * @param[in] maxsleep     Number of seconds to suspend or 0 for an indefinite
+ *                         suspension.
+ * @param[in] unblockSigs  Additional signals to unblock during suspension.
+ * @param[in] numSigs      Number of additional signals to unblock. May be `0`,
+ *                         in which case `unblockSigs` is ignored.
+ * @return                 Requested amount of suspension-time minus the amount
+ *                         of time actually suspended.
+ */
+unsigned
+pq_suspendAndUnblock(
+        const unsigned int maxsleep,
+        const int* const   unblockSigs,
+        const int          numSigs);
+
+/**
+ * Suspends execution until
+ *   - A signal is delivered whose action is to execute a signal-catching
+ *     function;
+ *   - SIGCONT is received, indicating another data-product is available; or
+ *   - The given amount of time elapses.
+ * Upon return, the signal mask is what it was on entry.
  *
  * @param[in] maxsleep  Number of seconds to suspend or 0 for an indefinite
  *                      suspension.

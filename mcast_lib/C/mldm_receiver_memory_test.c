@@ -197,5 +197,5 @@ int main(
     opmock_register_test(test_missed_mcast_files, "test_missed_mcast_files");
     init();
     opmock_test_suite_run();
-    return opmock_get_number_of_errors();
+    return opmock_test_error ? 1 : 0;
 }

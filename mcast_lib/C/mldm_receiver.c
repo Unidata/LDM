@@ -343,18 +343,19 @@ missed_prod_func(
  * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. `log_add()` called.
  * @retval     LDM7_INVAL     `pq == NULL || missed_product == NULL ||
- *                            mcastInfo == NULL`. `log_add()` called.
+ *                            mcastInfo == NULL || down7 == NULL`. `log_add()`
+ *                            called.
  * @retval     LDM7_VCMTP     VCMTP error. `log_add()` called.
  */
 static int
 init(
-        Mlr* const restrict                  mlr,
-        pqueue* const restrict               pq,
+        Mlr* const restrict             mlr,
+        pqueue* const restrict          pq,
         const McastInfo* const restrict mcastInfo,
-        Down7* const restrict                down7)
+        Down7* const restrict           down7)
 {
-    int                 status;
-    McastReceiver*     receiver;
+    int            status;
+    McastReceiver* receiver;
 
     if (mlr == NULL) {
         LOG_ADD0("NULL multicast-LDM-receiver argument");

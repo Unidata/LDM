@@ -19,14 +19,14 @@
 #include <unistd.h>     /* sysconf */
 #include <errno.h>
 #ifndef ENOERR
-#define ENOERR 0
+    #define ENOERR 0
 #endif
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #ifdef HAVE_WAITPID
-#include <sys/wait.h>
+    #include <sys/wait.h>
 #endif 
 
 #include "ldm.h"
@@ -36,7 +36,7 @@
 #include "ulog.h"
 #include "pq.h"
 #ifndef HAVE_SETENV
-#include "setenv.h"
+    #include "setenv.h"
 #endif
 #include "priv.h"
 #include "abbr.h"
@@ -45,6 +45,9 @@
 #include "globals.h"
 #include "child_process_set.h"
 #include "inetutil.h"
+#if WANT_MULTICAST
+    #include "mldm_sender_map.h"
+#endif
 #include "registry.h"
 #include "remote.h"
 #include "requester6.h"
@@ -53,11 +56,11 @@
 #include "uldb.h"
 
 #ifdef NO_ATEXIT
-#include "atexit.h"
+    #include "atexit.h"
 #endif
 
 #ifndef LDM_SELECT_TIMEO
-#define LDM_SELECT_TIMEO  6
+    #define LDM_SELECT_TIMEO  6
 #endif
 
 static int portIsMapped = 0;
@@ -114,15 +117,19 @@ static pid_t reap(
         if (WIFSIGNALED(status)) {
             int n = lcf_getCommandLine(wpid, command, sizeof(command));
 
-            cps_remove(wpid); /* upstream LDM processes */
-
-            lcf_freeExec(wpid); /* EXEC processes */
-
             if (n == -1) {
                 log_add("Couldn't get command-line of EXEC process "
                         "%ld", wpid);
                 log_log(LOG_ERR);
             }
+
+            cps_remove(wpid); /* upstream LDM processes */
+
+            lcf_freeExec(wpid); /* EXEC processes */
+
+#if WANT_MULTICAST
+            (void)msm_removePid(wpid); // multicast LDM senders
+#endif
 
             unotice(
                     n <= 0 ?
@@ -280,6 +287,13 @@ static void cleanup(
          * Delete the upstream LDM database.
          */
         (void) uldb_delete(NULL);
+
+#if WANT_MULTICAST
+        /*
+         * Destroy the multicast LDM sender map.
+         */
+        msm_destroy();
+#endif
     }
 
     /*
@@ -1041,6 +1055,17 @@ int main(
             log_log(LOG_ERR);
             exit(1);
         }
+
+        /*
+         * Initialize the multicast sender map.
+         */
+#if WANT_MULTICAST
+        if (msm_init()) {
+            LOG_ADD0("Couldn't initialize multicast LDM sender map");
+            log_log(LOG_ERR);
+            exit(1);
+        }
+#endif
 
         /*
          * Read the configuration file (downstream LDM-s are started).

@@ -50,11 +50,11 @@ struct McastSessionMemory {
     /**
      * Queue of missed-but-not-yet-requested data-products:
      */
-    ProdIndexQueue*     missedQ;
+    ProdIndexQueue*  missedQ;
     /**
      * Queue of requested-but-not-yet-received data-products:
      */
-    ProdIndexQueue*     requestedQ;
+    ProdIndexQueue*  requestedQ;
     /**
      * Whether or not the multicast session memory has been modified by the
      * user.

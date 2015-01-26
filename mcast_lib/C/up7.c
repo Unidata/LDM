@@ -45,6 +45,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 /**
@@ -160,7 +161,8 @@ up7_subscribe(
         SubscriptionReply* const restrict reply)
 {
     McastInfo* mcastInfo;
-    int        status = mlsm_ensureRunning(feedtype, &mcastInfo);
+    pid_t      pid;
+    int        status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid);
 
     if (LDM7_SYSTEM == status)
         return status;
@@ -195,7 +197,7 @@ up7_ensureFree(
         void* const restrict reply)
 {
     if (reply)
-        xdr_free(xdr_SubscriptionReply, (char*)reply);
+        xdr_free(xdrProc, (char*)reply);
 }
 
 /**

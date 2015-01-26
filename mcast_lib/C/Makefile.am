@@ -61,13 +61,11 @@ mcast_stubs		= mcast_stub.c mcast_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
 globals_stubs		= globals_stub.c globals_stub.h
 mldm_sender_map_stubs	= mldm_sender_map_stub.c mldm_sender_map_stub.h
-unistd_stubs		= unistd_stub.c unistd_stub.h
 all_stubs		= $(VCMTPReceiver_stubs) \
                           $(mcast_stubs) \
                           $(pq_stubs) \
                           $(globals_stubs) \
-                          $(mldm_sender_map_stubs) \
-                          $(unistd_stubs)
+                          $(mldm_sender_map_stubs)
 BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= $(all_stubs)
 CLEANFILES		+= TEST-test.xml
@@ -85,19 +83,14 @@ $(globals_stubs):		$(top_srcdir)/registry/globals.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mldm_sender_map_stubs):	mldm_sender_map.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
-$(unistd_stubs):		/usr/include/unistd.h
-	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES) -k fork
 
 opmock_check_progs			= mldm_sender_manager_test \
                                           mldm_receiver_memory_test \
-                                          #mldm_receiver_test
+                                          mldm_receiver_test
 test_cppflags				= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
 mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c
-nodist_mldm_sender_manager_test_SOURCES = $(mcast_stubs) \
-					  $(mldm_sender_map_stubs) \
-					  $(pq_stubs) $(unistd_stubs) \
-					  $(globals_stubs)
+nodist_mldm_sender_manager_test_SOURCES = $(mcast_stubs)
 mldm_sender_manager_test_CPPFLAGS	= $(test_cppflags)
 mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_sender_manager_test_LDADD		= $(top_builddir)/lib/libldm.la \
@@ -117,6 +110,9 @@ mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
 
+# Enable execution of the multicast LDM sender program by
+# `mldm_sender_manager_test`.
+AM_TESTS_ENVIRONMENT			= PATH=$(top_builddir)/mldm_sender:$$PATH;
 opmock_tests				= $(opmock_check_progs)
 endif
 

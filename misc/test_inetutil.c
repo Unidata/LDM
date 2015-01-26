@@ -139,6 +139,22 @@ test_sa_parse(void)
     sa_parse_test("A0:12::F3", 3);
 }
 
+static void
+test_sa_parseWithDefaults(void)
+{
+    ServiceAddr* sa;
+    int          status;
+    const char*  hostId = "uni14.unidata.ucar.edu";
+    const short  port = 388;
+
+    status = sa_parseWithDefaults(&sa, hostId, NULL, 388);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_STRING_EQUAL(sa_getInetId(sa), hostId);
+    CU_ASSERT_EQUAL(sa_getPort(sa), port);
+    sa_free(sa);
+}
+
 #endif // WANT_MULTICAST
 
 int
@@ -157,6 +173,7 @@ main(
                 CU_ADD_TEST(testSuite, test_sa_getInetSockAddr);
                 CU_ADD_TEST(testSuite, test_sa_getInet6SockAddr);
                 CU_ADD_TEST(testSuite, test_sa_parse);
+                CU_ADD_TEST(testSuite, test_sa_parseWithDefaults);
 #           endif
 
             if (-1 == openulog(basename(argv[0]), 0, LOG_LOCAL0, "-")) {

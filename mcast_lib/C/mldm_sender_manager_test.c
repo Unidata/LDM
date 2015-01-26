@@ -19,18 +19,18 @@
 #include "log.h"
 #include "mcast_info.h"
 #include "mldm_sender_manager.h"
+#include "mldm_sender_map.h"
 
-#include "mldm_sender_map_stub.h"
 #include "mcast_stub.h"
-#include "pq_stub.h"
-#include "unistd_stub.h"
 
 #include <errno.h>
 #include <libgen.h>
 #include <opmock.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #ifndef __BASE_FILE__
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed by OpMock
@@ -38,100 +38,129 @@
 
 static const char* const    GROUP_ADDR = "224.0.0.1";
 static const unsigned short GROUP_PORT = 1;
-static const char* const    SERVER_ADDR = "192.168.0.1";
+static const char* const    SERVER_ADDR = "0.0.0.0";
 static const unsigned short SERVER_PORT = 38800;
 static McastInfo*           mcastInfo;
-static pid_t                mcastPid;
-static pqueue*              prodQ = (void*)2;
 static feedtypet            feedtype = 1;
+static ServiceAddr*         groupAddr;
+static ServiceAddr*         serverAddr;
 
 static void
 init()
 {
-    ServiceAddr* groupAddr;
     int          status = sa_new(&groupAddr, GROUP_ADDR, GROUP_PORT);
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_TRUE(groupAddr != NULL);
-    ServiceAddr* serverAddr;
     status = sa_new(&serverAddr, SERVER_ADDR, SERVER_PORT);
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_TRUE(serverAddr != NULL);
     OP_ASSERT_EQUAL_INT(0, mi_new(&mcastInfo, feedtype, groupAddr, serverAddr));
     OP_ASSERT_TRUE(mcastInfo != NULL);
-    sa_free(groupAddr);
-    sa_free(serverAddr);
-    prodQ = (void*)2;
+    status = msm_init();
+    OP_ASSERT_EQUAL_INT(0, status);
 }
 
-static int
-cmp_bool(void *a, void *b, const char * name, char * message)
+static void
+test_noPotentialSender()
 {
-    bool my_a = *(bool*)a;
-    bool my_b = *(bool*)b;
-
-    if (my_a == my_b)
-        return 0;
-
-    snprintf(message, OP_MATCHER_MESSAGE_LENGTH,
-                   " parameter '%s' has value '%d', was expecting '%d'",
-                   name, my_b, my_a);
-    return -1;
-}
-
-static int msm_getPid_callback(
-    const feedtypet feedtype,
-    pid_t* const    pid,
-    const int       callCount)
-{
-    *pid = mcastPid;
-    return 0;
-}
-
-static void test_noPotentialSender()
-{
-    McastInfo* mcastInfo;
-    OP_ASSERT_EQUAL_INT(LDM7_NOENT, mlsm_ensureRunning(feedtype, &mcastInfo));
+    const McastInfo* mcastInfo;
+    pid_t            pid;
+    OP_ASSERT_EQUAL_INT(LDM7_NOENT, mlsm_ensureRunning(feedtype, &mcastInfo,
+            &pid));
     log_clear();
     OP_VERIFY();
 }
 
-static void test_conflict()
+static void
+test_conflict()
 {
     // Depends on `init()`
     OP_ASSERT_EQUAL_INT(0, mlsm_addPotentialSender(mcastInfo));
     OP_ASSERT_EQUAL_INT(LDM7_DUP, mlsm_addPotentialSender(mcastInfo));
+    log_clear();
     OP_VERIFY();
 }
 
-static void test_not_running()
+static void
+test_not_running()
 {
     // Depends on `test_conflict()`
-    msm_lock_ExpectAndReturn(true, 0, cmp_bool);
-    mcastPid = 1; // kill(1, 0) will return -1 -- emulating no-such-process
-    msm_getPid_MockWithCallback(msm_getPid_callback);
-    msm_removePid_ExpectAndReturn(mcastPid, 0, cmp_bool);
-    fork_ExpectAndReturn(1);
-    msm_put_ExpectAndReturn(feedtype, mcastPid, 0, cmp_int, cmp_int);
-    msm_unlock_ExpectAndReturn(0);
-    McastInfo* mcastInfo;
-    OP_ASSERT_EQUAL_INT(0, mlsm_ensureRunning(feedtype, &mcastInfo));
+    const McastInfo* mcastInfo;
+    pid_t            pid;
+    int              status;
+
+    /* Start a multicast sender process */
+    status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid);
     log_log(LOG_ERR);
+    OP_ASSERT_EQUAL_INT(0, status);
+    OP_ASSERT_EQUAL_INT(feedtype, mcastInfo->feed);
+    OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr, &mcastInfo->group));
+    OP_ASSERT_EQUAL_INT(0, sa_compare(serverAddr, &mcastInfo->server));
+    OP_ASSERT_TRUE(pid > 0);
+
+    /* Terminate the multicast sender process */
+    status = kill(pid, SIGTERM);
+    OP_ASSERT_EQUAL_INT(0, status);
+    int childStatus;
+    status = waitpid(pid, &childStatus, 0);
+    OP_ASSERT_EQUAL_INT(pid, status);
+    if (WIFEXITED(childStatus)) {
+        OP_ASSERT_EQUAL_INT(0, WEXITSTATUS(childStatus));
+    }
+    else {
+        OP_ASSERT_TRUE(WIFSIGNALED(childStatus));
+        OP_ASSERT_EQUAL_INT(SIGTERM, WTERMSIG(childStatus));
+    }
+
     OP_VERIFY();
 }
 
-static void test_running()
+static void
+test_running()
 {
-    msm_lock_ExpectAndReturn(true, 0, cmp_bool);
-    mcastPid = getpid(); // emulate running process
-    msm_getPid_MockWithCallback(msm_getPid_callback);
-    msm_unlock_ExpectAndReturn(0);
-    McastInfo* mcastInfo;
-    OP_ASSERT_EQUAL_INT(0, mlsm_ensureRunning(feedtype, &mcastInfo));
+    // Depends on `test_conflict()`
+    const McastInfo* mcastInfo;
+    pid_t            pid;
+    int              status;
+
+    /* Start a multicast sender */
+    status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid);
     log_log(LOG_ERR);
+    OP_ASSERT_EQUAL_INT(0, status);
+    OP_ASSERT_EQUAL_INT(feedtype, mcastInfo->feed);
+    OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr, &mcastInfo->group));
+    OP_ASSERT_EQUAL_INT(0, sa_compare(serverAddr, &mcastInfo->server));
+    OP_ASSERT_TRUE(pid > 0);
+
+    /* Try starting a duplicate multicast sender */
+    pid_t      pid2;
+    status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid2);
+    log_log(LOG_ERR);
+    OP_ASSERT_EQUAL_INT(0, status);
+    OP_ASSERT_EQUAL_INT(feedtype, mcastInfo->feed);
+    OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr, &mcastInfo->group));
+    OP_ASSERT_EQUAL_INT(0, sa_compare(serverAddr, &mcastInfo->server));
+    OP_ASSERT_EQUAL_INT(pid, pid2);
+
+    /* Terminate the multicast sender */
+    status = kill(pid, SIGTERM);
+    OP_ASSERT_EQUAL_INT(0, status);
+    int childStatus;
+    status = waitpid(pid, &childStatus, 0);
+    OP_ASSERT_EQUAL_INT(pid, status);
+    if (WIFEXITED(childStatus)) {
+        OP_ASSERT_EQUAL_INT(0, WEXITSTATUS(childStatus));
+    }
+    else {
+        OP_ASSERT_TRUE(WIFSIGNALED(childStatus));
+        OP_ASSERT_EQUAL_INT(SIGTERM, WTERMSIG(childStatus));
+    }
+
     OP_VERIFY();
 }
 
-int main(
+int
+main(
     int		argc,
     char**	argv)
 {
@@ -144,5 +173,5 @@ int main(
     opmock_register_test(test_running, "test_running");
     init();
     opmock_test_suite_run();
-    return opmock_get_number_of_errors();
+    return opmock_test_error ? 1 : 0;
 }

@@ -40,6 +40,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define NELT(a) (sizeof(a)/sizeof((a)[0]))
+
 /**
  * C-callable multicast sender.
  */
@@ -48,6 +50,14 @@ static void*       mcastSender;
  * Information on the multicast group.
  */
 static McastInfo   mcastInfo;
+/**
+ * Termination signals.
+ */
+static const int   termSigs[] = {SIGINT, SIGTERM};
+/**
+ * Signal-set for termination signals.
+ */
+static sigset_t    termSigSet;
 
 /**
  * Appends a usage message to the pending log messages.
@@ -60,8 +70,8 @@ mls_usage(void)
 "Options:\n"
 "    -I serverIface    Interface on which VCMTP TCP server will listen.\n"
 "                      Default is all interfaces.\n"
-"    -P serverPort     Port number for VCMTP TCP server. Default is chosen by",
-"                      operating system."
+"    -P serverPort     Port number for VCMTP TCP server. Default is chosen by\n"
+"                      operating system.\n"
 "    -l logfile        Log to file <logfile> ('-' => standard error stream).\n"
 "                      Default depends on standard error stream:\n"
 "                          is tty     => use standard error stream\n"
@@ -233,17 +243,13 @@ mls_decodeGroupAddr(
         char* const restrict         arg,
         ServiceAddr** const restrict groupAddr)
 {
-    ServiceAddr* sa;
-    int          status = sa_parse(&sa, arg);
+    int          status = sa_parse(groupAddr, arg);
 
     if (ENOMEM == status) {
         status = 2;
     }
     else if (status) {
         log_add("Invalid multicast group specification");
-    }
-    else {
-        *groupAddr = sa;
     }
 
     return status;
@@ -284,9 +290,7 @@ mls_decodeOperands(
         else {
             argc--; argv++;
 
-            ServiceAddr* grpAddr;
-
-            if ((status = mls_decodeGroupAddr(*argv, &grpAddr)))
+            if ((status = mls_decodeGroupAddr(*argv, groupAddr)))
                 status = 1;
         }
     }
@@ -409,6 +413,16 @@ mls_setDoneFlag(
 static void
 mls_setSignalHandling(void)
 {
+    /*
+     * Initialize signal-set for termination signals.
+     */
+    (void)sigemptyset(&termSigSet);
+    for (int i = 0; i < NELT(termSigs); i++)
+        (void)sigaddset(&termSigSet, termSigs[i]);
+
+    /*
+     * Establish signal handlers.
+     */
     struct sigaction sigact;
 
     (void)sigemptyset(&sigact.sa_mask);
@@ -418,8 +432,8 @@ mls_setSignalHandling(void)
      * Register termination signal-handler.
      */
     sigact.sa_handler = mls_setDoneFlag;
-    (void)sigaction(SIGINT, &sigact, NULL );
-   (void)sigaction(SIGTERM, &sigact, NULL );
+    (void)sigaction(SIGINT, &sigact, NULL);
+    (void)sigaction(SIGTERM, &sigact, NULL);
 
     /*
      * Register logging-level signal-handler. Ensure that it only affects
@@ -706,8 +720,26 @@ mls_setProdClass(
 }
 
 /**
+ * Blocks termination signals for the current thread.
+ */
+static inline void
+blockTermSigs(void)
+{
+    (void)pthread_sigmask(SIG_BLOCK, &termSigSet, NULL);
+}
+
+/**
+ * Unblocks termination signals.
+ */
+static inline void
+unblockTermSigs(void)
+{
+    (void)pthread_sigmask(SIG_UNBLOCK, &termSigSet, NULL);
+}
+
+/**
  * Tries to multicast the next data-product from a multicast LDM sender's
- * product-queue. Will block for a short time or until a SIGCONT is received if
+ * product-queue. Will block for 30 seconds or until a SIGCONT is received if
  * the next data-product doesn't exist.
  *
  * @param[in] prodClass  Class of data-products to multicast.
@@ -724,13 +756,29 @@ mls_tryMulticast(
     int status = pq_sequence(pq, TV_GT, prodClass, mls_multicastProduct, NULL);
 
     if (PQUEUE_END == status) {
+        /* No matching data-product. */
         /*
-         * No matching data-product. Block for a short time, until a signal
-         * handler is called, or until a SIGCONT is received by this thread. NB:
-         * `pq_suspend()` ensures that SIGCONT is unblocked for it.
+         * The following code ensures that a termination signal isn't delivered
+         * between the time that the done flag is checked and the thread is
+         * suspended.
          */
-        (void)pq_suspend(30);
+        blockTermSigs();
+
+        if (!done) {
+            /*
+             * Block until a signal handler is called or the timeout occurs. NB:
+             * `pq_suspend()` unblocks SIGCONT and SIGALRM.
+             *
+             * Keep timeout duration consistent with function description.
+             */
+            (void)pq_suspendAndUnblock(30, termSigs, NELT(termSigs));
+        }
+
         status = 0;           // no problems here
+        unblockTermSigs();
+    }
+    else if (status) {
+        LOG_ERRNUM0(status, "Bad return from pq_sequence()");
     }
 
     return status;
@@ -767,9 +815,13 @@ mls_startMulticasting(void)
     if (status == 0) {
         pq_cset(pq, &prodClass->from);  // sets product-queue cursor
 
-        do {
+        /*
+         * The `done` flag is checked before `mls_tryMulticast()` is called
+         * because that function is potentially lengthy and a SIGTERM might
+         * have already been received.
+         */
+        while (0 == status && !done)
             status = mls_tryMulticast(prodClass);
-        } while (0 == status && !done);
 
         free_prod_class(prodClass);
     } // `prodClass` allocated
@@ -814,6 +866,7 @@ mls_execute(
          * chosen by the operating system.
          */
         (void)printf("%hu\n", mcastInfo.server.port);
+        (void)fflush(stdout);
 
         /*
          * Block signals used by `pq_sequence()` so that they will only be
@@ -876,7 +929,7 @@ main(
 
         if (mls_execute(groupInfo, ttl, getQueuePath())) {
             log_log(LOG_ERR);
-            status = 2;
+            status = done ? 0 : 2;
         }
 
         unotice("Terminating");

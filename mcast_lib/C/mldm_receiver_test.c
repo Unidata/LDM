@@ -15,9 +15,10 @@
 
 #include "ldm.h"
 #include "log.h"
+#include "mcast_info.h"
 #include "mldm_receiver.h"
 
-#include "vcmtp_c_api_stub.h"
+#include "mcast_stub.h"
 #include "pq_stub.h"
 
 #include <errno.h>
@@ -36,49 +37,97 @@ static void missed_product_func(
 }
 #endif
 
-void test_mdl_createAndExecute()
+static const char* const    mcastAddr = "224.0.0.1";
+static const unsigned short mcastPort = 1;
+static const char* const    ucastAddr = "127.0.0.1";
+static const unsigned short ucastPort = 38800;
+static ServiceAddr*         mcastSa;
+static ServiceAddr*         ucastSa;
+static McastInfo*           mcastInfo;
+static pqueue* const        prodQ = (pqueue*)1;
+static int                  (*const int_func)() = (int(*)())1;
+static void                 (*const void_func)() = (void(*)())2;
+static Down7* const         down7 = (Down7*)1;
+
+static void
+init(void)
+{
+    int status;
+
+    status = sa_new(&mcastSa, mcastAddr, mcastPort);
+    OP_ASSERT_EQUAL_INT(0, status);
+
+    status = sa_new(&ucastSa, ucastAddr, ucastPort);
+    OP_ASSERT_EQUAL_INT(0, status);
+
+    status = mi_new(&mcastInfo, IDS|DDPLUS, mcastSa, ucastSa);
+    OP_ASSERT_EQUAL_INT(0, status);
+}
+
+void
+test_invalidPq()
 {
     int                  status;
-    pqueue*              pq = (pqueue*)1;
-    char* const          tcpAddr = "127.0.0.1";
-    const unsigned short tcpPort = 38800;
-    char* const          addr = "224.0.0.1";
-    const unsigned short port = 1;
-    int                  (*int_func)() = (int(*)())1;
-    void                 (*void_func)() = (void(*)())2;
-    McastInfo       mcastInfo;
-    Mlr*                 mdl;
-
-    mcastInfo.group.addr = addr;
-    mcastInfo.group.port = port;
-    mcastInfo.server.addr = tcpAddr;
-    mcastInfo.server.port = tcpPort;
+    Mlr*                 mlr;
 
     /* Invalid product-queue argument */
-    mdl = mlr_new(NULL, &mcastInfo, void_func, NULL);
-    log_log(LOG_INFO);
-    OP_ASSERT_TRUE(mdl == NULL);
+    mlr = mlr_new(NULL, mcastInfo, down7);
     log_clear();
+    OP_ASSERT_TRUE(mlr == NULL);
+    OP_VERIFY();
+}
+
+void
+test_invalidMcastInfo()
+{
+    int                  status;
+    Mlr*                 mlr;
 
     /* Invalid multicast information argument */
-    mdl = mlr_new(pq, NULL, void_func, NULL);
-    log_log(LOG_INFO);
-    OP_ASSERT_TRUE(mdl == NULL);
+    mlr = mlr_new(prodQ, NULL, down7);
     log_clear();
+    OP_ASSERT_TRUE(mlr == NULL);
+    OP_VERIFY();
+}
 
-    /* Invalid missed-product-function argument */
-    mdl = mlr_new(pq, &mcastInfo, NULL, NULL);
-    log_log(LOG_INFO);
-    OP_ASSERT_TRUE(mdl == NULL);
+void
+test_invalidDown7()
+{
+    int                  status;
+    Mlr*                 mlr;
+
+    /* Invalid multicast information argument */
+    mlr = mlr_new(prodQ, mcastInfo, NULL);
     log_clear();
+    OP_ASSERT_TRUE(mlr == NULL);
+    OP_VERIFY();
+}
+
+void
+test_trivialExecution()
+{
+    int                  status;
+    Mlr*                 mlr;
 
     /* Trivial execution */
-    vcmtpReceiver_new_ExpectAndReturn(
-            NULL, tcpAddr,  tcpPort,   int_func, int_func, void_func, addr,     port,      NULL,   0,
-            NULL, cmp_cstr, cmp_short, NULL,     NULL,     NULL,      cmp_cstr, cmp_short, NULL);
-    mdl = mlr_new(pq, &mcastInfo, void_func, NULL);
-    log_log(LOG_INFO);
-    OP_ASSERT_FALSE(mdl == NULL);
+    mcastReceiver_new_ExpectAndReturn(
+            NULL, ucastAddr, ucastPort, int_func, int_func, void_func, mcastAddr, mcastPort, NULL,   0,
+            NULL, cmp_cstr,  cmp_short, NULL,     NULL,     NULL,      cmp_cstr,  cmp_short, NULL);
+    mlr = mlr_new(prodQ, mcastInfo, down7);
+    log_log(LOG_ERR);
+    OP_ASSERT_TRUE(mlr != NULL);
+    mcastReceiver_free_ExpectAndReturn(NULL, NULL);
+    mlr_free(mlr);
+    OP_VERIFY();
+}
+
+#if 0
+void
+test_mdl_createAndExecute()
+{
+    int                  status;
+    Mlr*                 mdl;
+
 
     vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     status = mlr_start(mdl);
@@ -91,6 +140,7 @@ void test_mdl_createAndExecute()
 
     OP_VERIFY();
 }
+#endif
 
 int main(
     int		argc,
@@ -99,7 +149,11 @@ int main(
     (void) openulog(basename(argv[0]), LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
     (void) setulogmask(LOG_UPTO(LOG_NOTICE));
     opmock_test_suite_reset();
-    opmock_register_test(test_mdl_createAndExecute, "test_mdl_createAndExecute");
+    opmock_register_test(test_invalidPq, "test_invalidPq");
+    opmock_register_test(test_invalidMcastInfo, "test_invalidMcastInfo");
+    opmock_register_test(test_trivialExecution, "test_trivialExecution");
+    //opmock_register_test(test_mdl_createAndExecute, "test_mdl_createAndExecute");
+    init();
     opmock_test_suite_run();
-    return opmock_get_number_of_errors();
+    return opmock_test_error ? 1 : 0;
 }

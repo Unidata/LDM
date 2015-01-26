@@ -165,7 +165,7 @@ msm_put(
  * Returns the process-ID associated with a feed-type.
  *
  * @param[in]  feedtype     Feed-type.
- * @param[out] pid          Associated feed-type.
+ * @param[out] pid          Associated process-ID.
  * @retval     0            Success. `*pid` is set.
  * @retval     LDM7_NOENT   No PID associated with feed-type.
  */

@@ -7560,6 +7560,77 @@ hndlr_noop(int sig)
  *     function;
  *   - SIGCONT is received, indicating another data-product is available; or
  *   - The given amount of time elapses.
+ * Upon return, the signal mask is what it was on entry.
+ *
+ * @param[in] maxsleep     Number of seconds to suspend or 0 for an indefinite
+ *                         suspension.
+ * @param[in] unblockSigs  Additional signals to unblock during suspension.
+ * @param[in] numSigs      Number of additional signals to unblock. May be `0`,
+ *                         in which case `unblockSigs` is ignored.
+ * @return                 Requested amount of suspension-time minus the amount
+ *                         of time actually suspended.
+ */
+unsigned
+pq_suspendAndUnblock(
+        const unsigned int maxsleep,
+        const int* const   unblockSigs,
+        const int          numSigs)
+{
+    struct sigaction sigact, csavact, asavact;
+    sigset_t         mask, savmask;
+    time_t           start;
+
+    /* Block SIGCONT and SIGALRM while we set up. */
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCONT);
+    if (maxsleep)
+        sigaddset(&mask, SIGALRM);
+    (void)pthread_sigmask(SIG_BLOCK, &mask, &savmask);
+
+    /* Set up handlers for SIGCONT and SIGALRM, stashing old. */
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+    sigact.sa_handler = hndlr_noop;
+    (void)sigaction(SIGCONT, &sigact, &csavact);
+    if (maxsleep) {
+        /* Set the alarm. */
+        (void) sigaction(SIGALRM, &sigact, &asavact);
+        (void) alarm(maxsleep);
+    }
+
+    /* Set the signal mask to be used during suspension. */
+    mask = savmask;
+    (void)sigdelset(&mask, SIGCONT);
+    if (maxsleep)
+        (void)sigdelset(&mask, SIGALRM);
+    for (int i = 0; i < numSigs; i++)
+        (void)sigdelset(&mask, unblockSigs[i]);
+
+    /* Nighty night... */
+    (void)time(&start);
+    sigalrm_received = 0;
+    (void)sigsuspend(&mask);
+
+    /* Now we are back, restore state */
+    if(maxsleep) {
+        (void)alarm(0);
+        (void)sigaction(SIGALRM, &asavact, NULL );
+    }
+    (void)sigaction(SIGCONT, &csavact, NULL );
+    (void)pthread_sigmask(SIG_SETMASK, &savmask, NULL);
+
+    return sigalrm_received
+        ? 0
+        : (unsigned)(time(NULL) - start);
+}
+
+/**
+ * Suspends execution until
+ *   - A signal is delivered whose action is to execute a signal-catching
+ *     function;
+ *   - SIGCONT is received, indicating another data-product is available; or
+ *   - The given amount of time elapses.
+ * Upon return, the signal mask is what it was on entry.
  *
  * @param[in] maxsleep  Number of seconds to suspend or 0 for an indefinite
  *                      suspension.
@@ -7569,63 +7640,7 @@ hndlr_noop(int sig)
 unsigned
 pq_suspend(unsigned int maxsleep)
 {
-        struct sigaction sigact, csavact, asavact;
-        sigset_t mask, savmask;
-        unsigned unused;
-        time_t start;
-
-        /* block CONT and ALRM while we set up */
-        sigemptyset(&mask);
-        sigaddset(&mask, SIGCONT);
-        if(maxsleep)
-                sigaddset(&mask, SIGALRM);
-        (void) pthread_sigmask(SIG_BLOCK, &mask, &savmask);
-
-        /*
-         * Set up handlers for CONT and ALRM, stashing old
-         */
-        sigemptyset(&sigact.sa_mask);
-        sigact.sa_flags = 0;
-        sigact.sa_handler = hndlr_noop;
-        (void) sigaction(SIGCONT, &sigact, &csavact);
-        if(maxsleep)
-        {
-                /* set the alarm */
-                (void) sigaction(SIGALRM, &sigact, &asavact);
-                (void) alarm(maxsleep);
-        }
-        
-        /*
-         * Unblock the signals.
-         */
-        mask = savmask;
-        sigdelset(&mask, SIGCONT);
-        if(maxsleep)
-                sigdelset(&mask, SIGALRM);
-
-        /* Nighty night... */
-        (void)time(&start);
-        sigalrm_received = 0;
-        (void) sigsuspend(&mask);
-
-        /* Now we are back, restore state */
-        if(maxsleep)
-        {
-                (void)alarm(0);
-                (void) sigaction(SIGALRM, &asavact, NULL );
-        }
-        (void) sigaction(SIGCONT, &csavact, NULL );
-        
-        (void) pthread_sigmask(SIG_SETMASK, &savmask, NULL);
-
-        if (sigalrm_received) {
-            unused = 0;
-        }
-        else {
-            unused = (unsigned)(time(NULL) - start);
-        }
-
-        return unused;
+    pq_suspendAndUnblock(maxsleep, NULL, 0);
 }
 
 

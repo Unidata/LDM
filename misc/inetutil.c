@@ -1512,9 +1512,9 @@ sa_parseWithDefaults(
         if (sscanf(spec, "%5hu %n", &port, &nbytes) == 1 && spec[nbytes] == 0) {
             status = sa_new(svcAddr, defId, port);
         }
-        else if ((scanf(spec, HOSTNAME_FORMAT " %n", buf, &nbytes) == 1 ||
-                 (scanf(spec, IPV6_FORMAT     " %n", buf, &nbytes) == 1) ||
-                 (scanf(spec, IPV4_FORMAT     " %n", buf, &nbytes) == 1)) &&
+        else if ((sscanf(spec, HOSTNAME_FORMAT " %n", buf, &nbytes) == 1 ||
+                  sscanf(spec, IPV6_FORMAT     " %n", buf, &nbytes) == 1 ||
+                  sscanf(spec, IPV4_FORMAT     " %n", buf, &nbytes) == 1) &&
                  0 == spec[nbytes]) {
             status = sa_new(svcAddr, buf, defPort);
         }

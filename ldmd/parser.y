@@ -411,7 +411,7 @@ decodeSendEntry(
     } // `feedtype` set
     
     if (status)
-        LOG_ADD0("Couldn't process SEND entry");
+        LOG_ADD0("Couldn't process MULTICAST entry");
     
     return status;
 }
@@ -441,6 +441,10 @@ decodeReceiveEntry(
 
         if (0 == status) {
             status = d7mgr_add(feedtype, ldmSvcAddr);
+            
+            if (status)
+                LOG_ADD0("Couldn't add downstream LDM-7 entry");
+
             sa_free(ldmSvcAddr);
         }       // `ldmSvcAddr` allocated
     }           // `feedtype` set
@@ -605,8 +609,10 @@ receive_entry:        RECEIVE_K STRING STRING
                 #if WANT_MULTICAST
                     int errCode = decodeReceiveEntry($2, $3);
 
-                    if (errCode)
+                    if (errCode) {
+                        LOG_ADD0("Couldn't decode receive entry");
                         return errCode;
+                    }
                 #endif
                 }
                 ;
@@ -632,8 +638,10 @@ send_entry:        SEND_K STRING STRING STRING
                 #if WANT_MULTICAST
                     int errCode = decodeSendEntry($2, $3, $4);
 
-                    if (errCode)
+                    if (errCode) {
+                        LOG_ADD0("Couldn't decode multicast entry");
                         return errCode;
+                    }
                 #endif
                 }
                 ;

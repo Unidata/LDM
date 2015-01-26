@@ -51,7 +51,9 @@ elt_new(
     Elt* elt = LOG_MALLOC(sizeof(Elt), "downstream LDM-7 element");
 
     if (elt) {
-        if ((elt->ul7 = sa_clone(ul7))) {
+        elt->ul7 = sa_clone(ul7);
+
+        if (NULL == elt->ul7) {
             free(elt);
             elt = NULL;
         }

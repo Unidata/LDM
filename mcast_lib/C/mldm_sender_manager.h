@@ -45,6 +45,7 @@ mlsm_addPotentialSender(
  *
  * @param[in]  feedtype     Multicast group feed-type.
  * @param[out] mcastInfo    Information on corresponding multicast group.
+ * @param[out] pid          Process ID of the multicast LDM sender.
  * @retval     0            Success. The group is being multicast and
  *                          `*mcastInfo` is set.
  * @retval     LDM7_NOENT   No corresponding potential sender was added via
@@ -53,8 +54,9 @@ mlsm_addPotentialSender(
  */
 Ldm7Status
 mlsm_ensureRunning(
-        const feedtypet   feedtype,
-        McastInfo** const mcastInfo);
+        const feedtypet         feedtype,
+        const McastInfo** const mcastInfo,
+        pid_t* const            pid);
 
 /**
  * Handles the termination of a multicast LDM sender process. This function
