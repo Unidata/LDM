@@ -730,7 +730,7 @@ blockTermSigs(void)
 }
 
 /**
- * Unblocks termination signals.
+ * Unblocks termination signals for the current thread.
  */
 static inline void
 unblockTermSigs(void)
@@ -879,6 +879,9 @@ mls_execute(
          * Data-products are multicast on the current (main) thread so that the
          * process will automatically terminate if something goes wrong.
          */
+        char* miStr = mi_format(&mcastInfo);
+        unotice("Starting up: mcastInfo=%s, ttl=%u", miStr, ttl);
+        mi_free(miStr);
         status = mls_startMulticasting();
 
         mls_destroy();
@@ -921,11 +924,6 @@ main(
         log_log(LOG_ERR);
     }
     else {
-        char* miStr = mi_format(groupInfo);
-
-        unotice("Starting up: groupInfo=%s, ttl=%u", miStr, ttl);
-        free(miStr);
-
         mls_setSignalHandling();
 
         if (mls_execute(groupInfo, ttl, getQueuePath())) {
