@@ -46,7 +46,7 @@ struct mcast_receiver {
  * @param[out] receiver               The receiver to initialize.
  * @param[in]  hostId                 Address of the TCP server from which to
  *                                    retrieve missed data-blocks. May be
- *                                    hostname or IP address.
+ *                                    hostname or IPv4 address.
  * @param[in]  tcpPort                Port number of the TCP server to which to
  *                                    connect.
  * @param[in]  bop_func               Function to call when the multicast layer
@@ -56,7 +56,7 @@ struct mcast_receiver {
  * @param[in]  missed_prod_func       Function to call when a product is missed
  *                                    by the multicast layer.
  * @param[in]  mcastAddr              Address of the multicast group to receive.
- *                                    May be groupname or formatted IP address.
+ *                                    May be groupname or IPv4 address.
  * @param[in]  mcastPort              Port number of the multicast group.
  * @param[in]  obj                    Relevant object in the receiving
  *                                    application to pass to the above
@@ -282,6 +282,7 @@ mcastSender_new(
             try {
                 if (0 == *serverPort)
                     *serverPort = send->getTcpPortNum();
+                send->startCoordinator();
                 *sender = send;
                 status = 0;
             }
