@@ -18,8 +18,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-typedef void McastSender;
-
 #ifdef __cplusplus
     extern "C" {
 #endif
@@ -27,6 +25,7 @@ typedef void McastSender;
 typedef u_int32_t                VcmtpProdIndex;
 #define xdr_McastFileId          xdr_u_long
 typedef struct mcast_receiver    McastReceiver;
+typedef struct mcast_sender      McastSender;
 
 typedef int     (*BopFunc)(void* obj, size_t prodSize, const void* metadata,
         unsigned metaSize, void** data);
@@ -109,7 +108,7 @@ mcastSender_new(
  */
 void
 mcastSender_free(
-    void* const sender);
+    McastSender* const sender);
 
 /**
  * Sends a product.
@@ -123,7 +122,7 @@ mcastSender_free(
  */
 int
 mcastSender_send(
-    void* const           sender,
+    McastSender* const    sender,
     const void* const     data,
     const size_t          nbytes,
     const void* const     metadata,

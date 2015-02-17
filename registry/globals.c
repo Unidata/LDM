@@ -143,14 +143,12 @@ void setQueuePath(
     setPath(path, queuePath);
 }
 
-/*
+/**
  * Returns the path name of the product-queue.
  *
- * Returns:
- *      NULL            Error.  "log_start()" called.
- *      else            Pointer to the pathname of the product-queue.
- *                      Might be absolute or relative to the current working
- *                      directory.
+ * @retval NULL  Error.  "log_start()" called.
+ * @return       Pointer to the pathname of the product-queue. Might be absolute
+ *               or relative to the current working directory.
  */
 const char* getQueuePath(void)
 {
@@ -463,7 +461,8 @@ getTimeOffset(void)
 }
 
 /**
- * Returns the absolute path of the directory for LDM log files.
+ * Returns the absolute path of the directory for LDM log files. This function
+ * is thread-safe.
  *
  * @return The absolute path of the LDM log file directory.
  */

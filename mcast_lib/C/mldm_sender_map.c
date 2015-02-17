@@ -27,10 +27,6 @@
 #include <unistd.h>
 
 /**
- * Name of the shared memory object:
- */
-static const char* SMO_NAME = "multicast LDM sender shared memory object";
-/**
  * filename of the shared memory object:
  */
 static const char* SMO_FILENAME = "/mldmSenderMap";
@@ -38,6 +34,10 @@ static const char* SMO_FILENAME = "/mldmSenderMap";
  * Number of feed-types:
  */
 static const size_t NUM_FEEDTYPES = sizeof(feedtypet)*CHAR_BIT;
+/**
+ * Number of PID-s:
+ */
+static const size_t NUM_PIDS = sizeof(feedtypet)*CHAR_BIT;
 /**
  * File descriptor for shared memory object for multicast LDM sender map:
  */
@@ -47,9 +47,117 @@ static int          fileDes;
  */
 static pid_t*       pids;
 /**
- * Locking structure:
+ * Locking structure for concurrent access to the shared PID array:
  */
 static struct flock lock;
+
+/**
+ * Opens a shared memory object. Creates it if it doesn't exist. The resulting
+ * shared memory object will have zero size.
+ *
+ * @retval 0            Success.
+ * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+smo_open(
+        const char* const restrict pathname,
+        int* const restrict        fileDes)
+{
+    int status;
+    int fd = shm_open(pathname, O_RDWR|O_CREAT|O_EXCL, 0666);
+
+    if (-1 < fd) {
+        *fileDes = fd;
+        status = 0;
+    }
+    else {
+        /* Shared memory object already exists. */
+        fd = shm_open(pathname, O_RDWR|O_CREAT|O_TRUNC, 0666);
+
+        if (-1 < fd) {
+            *fileDes = fd;
+            status = 0;
+        }
+        else {
+            LOG_SERROR1("Couldn't open shared memory object %s", pathname);
+            status = LDM7_SYSTEM;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Closes a shared memory object by closing the associated file descriptor and
+ * unlinking the pathname.
+ *
+ * @param[in] fd        The file-descriptor associated with the shared memory
+ *                      object.
+ * @param[in] pathname  The pathname of the shared memory object.
+ */
+static void
+smo_close(
+        const int fd,
+        const char* const pathname)
+{
+    (void)close(fd);
+    (void)shm_unlink(pathname);
+}
+
+/**
+ * Clears a shared PID array by setting all its elements to zero.
+ *
+ * @param[in] pids     The shared PID array.
+ * @param[in] numPids  The number of elements in the array.
+ */
+static void
+spa_clear(
+        pid_t* const pids,
+        const size_t numPids)
+{
+    (void)memset(pids, 0, sizeof(pid_t)*numPids);
+}
+
+/**
+ * Initializes a shared PID array from a shared memory object. All elements of
+ * the array will be zero.
+ *
+ * @param[in]  fd           File descriptor of the shared memory object.
+ * @param[in]  numPids      Number of PID-s in the array.
+ * @param[out] pids         The array of pids.
+ * @retval     0            Success. `*pids` is set.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+spa_init(
+        const int     fd,
+        const size_t  numPids,
+        pid_t** const pids)
+{
+    const size_t SIZE = sizeof(pid_t)*numPids;
+    int status = ftruncate(fd, SIZE);
+
+    if (status) {
+        LOG_SERROR0("Couldn't set size of shared PID array");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        void* const addr = mmap(NULL, SIZE, PROT_READ|PROT_WRITE, MAP_SHARED,
+                fd, 0);
+
+        if (MAP_FAILED == addr) {
+            LOG_SERROR0("Couldn't memory-map shared PID array");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            spa_clear(addr, numPids);
+            *pids = addr;
+            status = 0;
+        }
+    }
+
+    return status;
+}
 
 /**
  * Initializes this module. Shall be called only once per LDM session.
@@ -60,44 +168,23 @@ static struct flock lock;
 Ldm7Status
 msm_init(void)
 {
-    int status;
-    int fd = shm_open(SMO_FILENAME, O_RDWR|O_CREAT|O_TRUNC, 0666);
+    int fd;
+    int status = smo_open(SMO_FILENAME, &fd);
 
-    if (-1 == fd) {
-        LOG_SERROR1("Couldn't open %s", SMO_NAME);
-        status = LDM7_SYSTEM;
-    }
-    else {
-        const size_t SIZE = sizeof(pid_t)*NUM_FEEDTYPES;
-
-        if (0 != ftruncate(fd, SIZE)) {
-            LOG_SERROR1("Couldn't set size of %s", SMO_NAME);
-            status = LDM7_SYSTEM;
-        }
-        else {
-            void* const addr = mmap(NULL, SIZE, PROT_READ|PROT_WRITE,
-                    MAP_SHARED, fd, 0);
-
-            if (MAP_FAILED == addr) {
-                LOG_SERROR1("Couldn't memory-map %s", SMO_NAME);
-                status = LDM7_SYSTEM;
-            }
-            else {
-                (void)memset(addr, 0, SIZE);
-                lock.l_whence = SEEK_SET;
-                lock.l_start = 0;
-                lock.l_len = sizeof(pid_t); // locking first entry is sufficient
-                fileDes = fd;
-                pids = addr;
-                status = 0;
-            } // shared memory object memory-mapped
-        } // size of shared memory object set
+    if (0 == status) {
+        status = spa_init(fd, NUM_PIDS, &pids);
 
         if (status) {
-            (void)close(fd);
-            (void)shm_unlink(SMO_FILENAME);
+            smo_close(fd, SMO_FILENAME);
         }
-    } // `fd` open
+        else {
+            fileDes = fd;
+            lock.l_whence = SEEK_SET;
+            lock.l_start = 0;
+            lock.l_len = sizeof(pid_t); // locking first entry is sufficient
+            status = 0;
+        } // shared PID array initialized
+    } // `fd` is open
 
     return status;
 }
@@ -117,7 +204,7 @@ msm_lock(
     lock.l_type = exclusive ? F_RDLCK : F_WRLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        LOG_SERROR1("Couldn't lock %s", SMO_NAME);
+        LOG_SERROR0("Couldn't lock shared PID array");
         return LDM7_SYSTEM;
     }
 
@@ -151,7 +238,7 @@ msm_put(
         }
         if (pid == pids[ibit]) {
             LOG_START2("Process %ld is already sending feed-type %s",
-                    (long)pids[ibit], s_feedtypet(mask));
+                    (long)pid, s_feedtypet(mask));
             return LDM7_DUP;
         }
     }
@@ -201,7 +288,7 @@ msm_unlock(void)
     lock.l_type = F_UNLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        LOG_SERROR1("Couldn't unlock %s", SMO_NAME);
+        LOG_SERROR0("Couldn't unlock shared PID array");
         return LDM7_SYSTEM;
     }
 
@@ -212,7 +299,7 @@ msm_unlock(void)
  * Removes the entry corresponding to a process identifier.
  *
  * @param[in] pid          Process identifier.
- * @retval    0            Success. `msp_getPid()` for the associated feed-type
+ * @retval    0            Success. `msm_getPid()` for the associated feed-type
  *                         will return LDM7_NOENT.
  * @retval    LDM7_NOENT   No entry corresponding to given process identifier.
  *                         Database is unchanged.
@@ -223,9 +310,8 @@ msm_removePid(
 {
     int       status = LDM7_NOENT;
     unsigned  ibit;
-    feedtypet mask;
 
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
+    for (ibit = 0; ibit < NUM_FEEDTYPES; ibit++) {
         if (pid == pids[ibit]) {
             pids[ibit] = 0;
             status = 0;
@@ -233,6 +319,15 @@ msm_removePid(
     }
 
     return status;
+}
+
+/**
+ * Clears all entries.
+ */
+void
+msm_clear(void)
+{
+    spa_clear(pids, NUM_PIDS);
 }
 
 /**
@@ -244,12 +339,6 @@ msm_removePid(
 Ldm7Status
 msm_destroy(void)
 {
-    if (close(fileDes)) {
-        LOG_SERROR1("Couldn't close %s", SMO_NAME);
-        return LDM7_SYSTEM;
-    }
-
-    (void)shm_unlink(SMO_FILENAME);
-
+    smo_close(fileDes, SMO_FILENAME);
     return 0;
 }

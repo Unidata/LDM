@@ -121,6 +121,8 @@ main(
 
             CU_cleanup_registry();
         } /* CUnit registery allocated */
+
+        log_free();
     } /* logging system initialized */
 
     return exitCode;

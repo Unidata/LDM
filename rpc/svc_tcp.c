@@ -123,7 +123,7 @@ struct tcp_conn {  /* kept in xprt->xp_p1 */
  * see (svc.h, xprt_register).  This routine returns
  * a NULL if a problem occurred.
  *
- * If sock<0 then a socket is created, else sock is used.
+ * If sock==-1 then a socket is created, else sock is used.
  * If the socket, sock is not bound to a port then svctcp_create
  * binds it to an arbitrary port.  The routine then starts a tcp
  * listener on the socket's associated port.  In any (successful) case,

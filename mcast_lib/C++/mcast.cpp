@@ -32,7 +32,7 @@ struct mcast_receiver {
     /**
      * The multicast-layer receiver.
      */
-    vcmtpRecvv3*      receiver;
+    vcmtpRecvv3*      vcmtpReceiver;
     /**
      * The per-product notifier passed to the VCMTP receiver. Pointer kept so
      * that the object can be deleted when it's no longer needed.
@@ -95,7 +95,7 @@ mcastReceiver_init(
     // Following object will be deleted by `vcmtpRecvv3` destructor
     receiver->notifier =
             new PerProdNotifier(bop_func, eop_func, missed_prod_func, obj);
-    receiver->receiver = new vcmtpRecvv3(hostId, tcpPort, groupId,
+    receiver->vcmtpReceiver = new vcmtpRecvv3(hostId, tcpPort, groupId,
             mcastPort, receiver->notifier);
 }
 
@@ -175,7 +175,7 @@ mcastReceiver_free(
     McastReceiver* const       receiver)
 {
     // VCMTP call
-    delete receiver->receiver;
+    delete receiver->vcmtpReceiver;
     delete receiver->notifier;
     free(receiver);
 }
@@ -198,7 +198,7 @@ mcastReceiver_execute(
 
     try {
         // VCMTP call
-        receiver->receiver->Start();
+        receiver->vcmtpReceiver->Start();
     }
     catch (const std::exception& e) {
         LOG_ADD1("%s", e.what());
@@ -207,9 +207,9 @@ mcastReceiver_execute(
 }
 
 /**
- * Stops a multicast receiver. Blocks until the receiver stops. Undefined
- * behavior will result if called from a signal handler that was invoked by the
- * delivery of a signal during execution of an async-signal-unsafe function.
+ * Stops a multicast receiver. Undefined behavior results if called from a
+ * signal handler that was invoked by the delivery of a signal during execution
+ * of an async-signal-unsafe function. Idempotent.
  *
  * @param[in] receiver  Pointer to the multicast receiver to be stopped.
  */
@@ -217,8 +217,110 @@ void
 mcastReceiver_stop(
     McastReceiver* const receiver)
 {
-    // VCMTP call
-    receiver->receiver->~vcmtpRecvv3();
+    receiver->vcmtpReceiver->Stop();
+}
+
+/**
+ * The multicast sender:
+ */
+struct mcast_sender {
+    /**
+     * The VCMTP sender:
+     */
+    vcmtpSendv3*            vcmtpSender;
+    /**
+     * The per-product notifier passed to the VCMTP sender. Pointer kept so
+     * that the object can be deleted when it's no longer needed.
+     */
+    PerProdSendingNotifier* notifier;
+};
+
+/**
+ * Initializes a new multicast sender. Starts the sender's TCP server. This
+ * method doesn't block.
+ *
+ * @param[in]     sender        Pointer to sender to be initialized.
+ * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
+ *                              which the TCP server will listen for connections
+ *                              from receivers for retrieving missed
+ *                              data-blocks.
+ * @param[in,out] serverPort    Port number for TCP server or 0, in which case
+ *                              one is chosen by the operating system.
+ * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
+ *                              multicast group.
+ * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     ttl           Time-to-live of outgoing packets.
+ *                                    0  Restricted to same host. Won't be
+ *                                       output by any interface.
+ *                                    1  Restricted to the same subnet. Won't be
+ *                                       forwarded by a router (default).
+ *                                  <32  Restricted to the same site,
+ *                                       organization or department.
+ *                                  <64  Restricted to the same region.
+ *                                 <128  Restricted to the same continent.
+ *                                 <255  Unrestricted in scope. Global.
+ * @param[in]     iProd         Initial product-index. The first multicast data-
+ *                              product will have this as its index.
+ * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
+ *                              with a data-product so that its resources may be
+ *                              released.
+ * @retval        0             Success. `*sender` is set. `*serverPort` is set
+ *                              if the initial port number was 0.
+ * @retval        EINVAL        One of the address couldn't  be converted into a
+ *                              binary IP address. `log_start()` called.
+ * @retval        ENOMEM        Out of memory. \c log_start() called.
+ * @retval        -1            Other failure. \c log_start() called.
+ */
+static int
+mcastSender_init(
+    McastSender* const     sender,
+    const char* const      serverAddr,
+    unsigned short* const  serverPort,
+    const char* const      groupAddr,
+    const unsigned short   groupPort,
+    const unsigned         ttl,
+    const VcmtpProdIndex   iProd,
+    void                  (*doneWithProd)(VcmtpProdIndex iProd))
+{
+    int status;
+
+    try {
+        PerProdSendingNotifier* notifier =
+                new PerProdSendingNotifier(doneWithProd);
+
+        try {
+            vcmtpSendv3* vcmtpSender = new vcmtpSendv3(serverAddr, *serverPort,
+                    groupAddr, groupPort, iProd, notifier);
+            try {
+                if (0 == *serverPort)
+                    *serverPort = vcmtpSender->getTcpPortNum();
+                udebug("Starting sending co-ordinator");
+                vcmtpSender->startCoordinator();
+                sender->vcmtpSender = vcmtpSender;
+                sender->notifier = notifier;
+                status = 0;
+            }
+            catch (const std::exception& e) {
+                delete vcmtpSender;
+                throw;
+            }
+        }
+        catch (const std::invalid_argument& e) {
+            LOG_START1("%s", e.what());
+            delete notifier;
+            status = EINVAL;
+        }
+        catch (const std::exception& e) {
+            delete notifier;
+            throw;
+        }
+    }
+    catch (const std::exception& e) {
+        LOG_START1("%s", e.what());
+        status = -1;
+    }
+
+    return status;      // Eclipse wants to see a return
 }
 
 /**
@@ -270,40 +372,19 @@ mcastSender_new(
     const VcmtpProdIndex   iProd,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
 {
+    McastSender* const send = (McastSender*)LOG_MALLOC(sizeof(McastSender),
+            "multicast sender");
     int status;
 
-    try {
-        PerProdSendingNotifier* notifier =
-                new PerProdSendingNotifier(doneWithProd);
-
-        try {
-            vcmtpSendv3* send = new vcmtpSendv3(serverAddr, *serverPort,
-                    groupAddr, groupPort, iProd, notifier);
-            try {
-                if (0 == *serverPort)
-                    *serverPort = send->getTcpPortNum();
-                send->startCoordinator();
-                *sender = send;
-                status = 0;
-            }
-            catch (const std::exception& e) {
-                delete send;
-                throw;
-            }
-        }
-        catch (const std::invalid_argument& e) {
-            LOG_START1("%s", e.what());
-            delete notifier;
-            status = EINVAL;
-        }
-        catch (const std::exception& e) {
-            delete notifier;
-            throw;
-        }
+    if (sender == NULL) {
+        status = ENOMEM;
     }
-    catch (const std::exception& e) {
-        LOG_START1("%s", e.what());
-        status = -1;
+    else {
+        status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
+                groupPort, ttl, iProd, doneWithProd);
+
+        if (0 == status)
+            *sender = send;
     }
 
     return status;      // Eclipse wants to see a return
@@ -318,8 +399,8 @@ void
 mcastSender_free(
     McastSender* const sender)
 {
-    // VCMTP call
-    delete (vcmtpSendv3*)sender;
+    delete sender->vcmtpSender;
+    delete sender->notifier;
 }
 
 /**
@@ -346,7 +427,7 @@ mcastSender_send(
          * The signature of the product is sent to the receiver as metadata in
          * order to allow duplicate rejection.
          */
-        *iProd = ((vcmtpSendv3*)sender)->sendProduct((void*)data, nbytes,
+        *iProd = sender->vcmtpSender->sendProduct((void*)data, nbytes,
                 (void*)metadata, metaSize);     //  safe to cast away `const`s
         return 0;
     }

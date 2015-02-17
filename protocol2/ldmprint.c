@@ -28,7 +28,7 @@ static char tprintbuf[1984];
 static const char nada[] = "(null)";
 
 /**
- * Returns an attempt at formatting arguments.
+ * Returns an attempt at formatting arguments. This function is thread-safe.
  *
  * @param[in]  initSize  The size to allocate for the formatting buffer,
  *                       including the terminating NUL character.
@@ -59,7 +59,7 @@ tryFormat(
 }
 
 /**
- * Returns formatted arguments.
+ * Returns formatted arguments. This function is thread-safe.
  *
  * @param[in] initSize  The initial size of the formatting buffer, including the
  *                      terminating NUL character.
@@ -96,7 +96,7 @@ ldm_vformat(
 }
 
 /**
- * Returns formatted arguments.
+ * Returns formatted arguments. This function is thread-safe.
  *
  * @param[in] initSize  The initial size of the formatting buffer, including the
  *                      terminating NUL character.

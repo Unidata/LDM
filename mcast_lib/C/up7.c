@@ -162,7 +162,7 @@ up7_subscribe(
 {
     const McastInfo* mcastInfo;
     pid_t            pid;
-    int              status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid);
+    int              status = mlsm_ensureRunning(feed, &mcastInfo, &pid);
 
     if (LDM7_SYSTEM == status)
         return status;
@@ -345,6 +345,22 @@ up7_findAndSendProduct(
 }
 
 /**
+ * Ensures that the global product-queue is closed at process termination.
+ * Referenced by `atexit()`.
+ */
+static void
+closePq(void)
+{
+    if (pq) {
+        if (pq_close(pq)) {
+            LOG_START0("Couldn't close global product-queue");
+            log_log(LOG_ERR);
+        }
+        pq = NULL;
+    }
+}
+
+/**
  * Ensures that the product-queue is open for reading.
  *
  * @retval false  Failure. `log_start()` called.
@@ -353,7 +369,12 @@ up7_findAndSendProduct(
 static bool
 up7_ensureProductQueueOpen()
 {
-    if (NULL == pq) {
+    bool success;
+
+    if (pq) {
+        success = true;
+    }
+    else {
         const char* const pqPath = getQueuePath();
         int               status = pq_open(pqPath, PQ_READONLY, &pq);
 
@@ -365,12 +386,20 @@ up7_ensureProductQueueOpen()
                 LOG_ERRNUM1(status, "Couldn't open product-queue \"%s\": %s",
                         pqPath);
             }
-
-            return false;
+            success = false;
+        }
+        else {
+            if (atexit(closePq)) {
+                LOG_SERROR0("Couldn't register product-queue closing function");
+                success = false;
+            }
+            else {
+                success = true;
+            }
         }
     }
 
-    return true;
+    return success;
 }
 
 /**
@@ -587,8 +616,11 @@ subscribe_7_svc(
     static SubscriptionReply* reply;
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
+    const char*               ipv4spec = inet_ntoa(xprt->xp_raddr.sin_addr);
+    const char*               hostname = hostbyaddr(&xprt->xp_raddr);
+    const char*               feedspec = s_feedtypet(*feedtype);
 
-    unotice("Incoming subscription from %s for %s", hostbyaddr(&xprt->xp_raddr),
+    unotice("Incoming subscription from %s (%s) for %s", ipv4spec, hostname,
             s_feedtypet(*feedtype));
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
 

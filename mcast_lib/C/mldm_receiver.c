@@ -33,12 +33,13 @@
  * The multicast LDM receiver data-structure:
  */
 struct mlr {
-    pqueue*         pq;       // product-queue to use */
-    Down7*          down7;    // pointer to associated downstream LDM-7
-    McastReceiver*  receiver; // VCMTP C Receiver
-    char*           prod;     // Start of product in product-queue
-    size_t          prodSize; // Size of VCMTP product in bytes
-    pqe_index       index;    // Product-queue index of reserved region
+    pqueue*               pq;       // product-queue to use */
+    Down7*                down7;    // pointer to associated downstream LDM-7
+    McastReceiver*        receiver; // VCMTP C Receiver
+    char*                 prod;     // Start of product in product-queue
+    size_t                prodSize; // Size of VCMTP product in bytes
+    pqe_index             index;    // Product-queue index of reserved region
+    volatile sig_atomic_t done;
 };
 
 /**
@@ -386,6 +387,7 @@ init(
     mlr->pq = pq;
     mlr->down7 = down7;
     mlr->prod  = NULL;
+    mlr->done  = 0;
 
     return 0;
 }
@@ -438,11 +440,11 @@ mlr_free(
 }
 
 /**
- * Executes a multicast LDM receiver. Blocks until the multicast LDM receiver is
- * stopped.
+ * Executes a multicast LDM receiver. Doesn't return until `mlr_stop()` is
+ * called or an error occurs.
  *
  * @param[in] mlr            The multicast LDM receiver to execute.
- * @retval    LDM7_SHUTDOWN  The multicast LDM receiver was stopped.
+ * @retval    LDM7_SHUTDOWN  `mlr_stop()` was called.
  * @retval    LDM7_INVAL     `mlr == NULL`. `log_add()` called.
  * @retval    LDM7_MCAST     Multicast error. `log_add()` called.
  */
@@ -457,7 +459,7 @@ mlr_start(
         status = LDM7_INVAL;
     }
     else if ((status = mcastReceiver_execute(mlr->receiver)) != 0) {
-        LOG_ADD0("Failure executing multicast LDM receiver");
+        LOG_ADD0("Couldn't execute multicast LDM receiver");
         status = LDM7_MCAST;
     }
     else {
@@ -469,7 +471,7 @@ mlr_start(
 
 /**
  * Cleanly stops an executing multicast LDM receiver. Undefined behavior
- * results if called from a signal handler.
+ * results if called from a signal handler. Returns immediately.
  *
  * @param[in] mlr  Pointer to the multicast LDM receiver to stop.
  */
@@ -477,5 +479,6 @@ void
 mlr_stop(
         Mlr* const mlr)
 {
+    mlr->done = 1;
     mcastReceiver_stop(mlr->receiver);
 }

@@ -1,4 +1,7 @@
-6.12.7.210
+6.12.7.211
+    Got `up7_down7_test` working.
+
+6.12.7.210	2015-01-26T14:26:06-0700
     Moved mldm_sender_manager_test(1) to `make check-local` and added local
     product-queue.
     

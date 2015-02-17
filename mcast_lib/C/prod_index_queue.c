@@ -94,26 +94,32 @@ static inline void
 lock(
     ProdIndexQueue* const fiq)
 {
-    (void)pthread_mutex_lock(&fiq->mutex);
+    int status = pthread_mutex_lock(&fiq->mutex);
+
+    if (status)
+        serror("Couldn't lock mutex");
 }
 
 static inline void
 unlock(
     ProdIndexQueue* const fiq)
 {
-    (void)pthread_mutex_unlock(&fiq->mutex);
+    int status = pthread_mutex_unlock(&fiq->mutex);
+
+    if (status)
+        serror("Couldn't unlock mutex");
 }
 
 /**
  * Adds an entry to the tail of the queue. Does nothing if the queue has been
  * canceled. The queue must be locked.
  *
- * @pre                      {`lock(fiq)` has been called}
+ * @pre                      `lock(fiq)` has been called
  * @param[in,out] fiq        Pointer to the queue. Not checked.
  * @param[in]     tail       Pointer to the entry to be added. Not checked.
  *                           Must have NULL "previous" and "next" pointers.
  * @retval        0          Success.
- * @retval        ECANCELED  The queue has been canceled.
+ * @retval        ECANCELED  The queue has been canceled. `log_start()` called.
  */
 static int
 addTail(
@@ -123,6 +129,7 @@ addTail(
     int status;
 
     if (fiq->isCancelled) {
+        LOG_START0("The queue has been shutdown");
         status = ECANCELED;
     }
     else {
@@ -137,7 +144,7 @@ addTail(
         fiq->count++;
         status = 0;
 
-        (void)pthread_cond_broadcast(&fiq->cond);
+        (void)pthread_cond_signal(&fiq->cond);
     }
 
     return status;
@@ -147,6 +154,7 @@ addTail(
  * Returns the entry at the head of the queue. Blocks until that entry exists or
  * the queue is canceled. The queue must be locked.
  *
+ * @pre                      The queue is locked.
  * @param[in,out] fiq        Pointer to the queue. Not checked.
  * @param[out]    entry      Pointer to the pointer to the head entry.
  * @retval        0          Success.
@@ -246,9 +254,9 @@ piq_initLock(
         ProdIndexQueue* const fiq)
 {
     if (piq_initMutex(&fiq->mutex)) {
-        int status;
+        int status = pthread_cond_init(&fiq->cond, NULL);
 
-        if (0 == (status = pthread_cond_init(&fiq->cond, NULL)))
+        if (0 == status)
             return true;
 
         LOG_ERRNUM0(status, "Couldn't initialize condition-variable");
@@ -347,8 +355,8 @@ piq_free(
  */
 int
 piq_add(
-    ProdIndexQueue* const   fiq,
-    const VcmtpProdIndex iProd)
+    ProdIndexQueue* const fiq,
+    const VcmtpProdIndex  iProd)
 {
     Entry* entry = entry_new(iProd);
     int    status;
@@ -383,10 +391,10 @@ piq_peekWait(
     ProdIndexQueue* const fiq,
     VcmtpProdIndex* const iProd)
 {
-    lock(fiq);
-
     int    status;
     Entry* entry;
+
+    lock(fiq);
 
     if ((status = getHead(fiq, &entry)) == 0)
         *iProd = entry_getProductIndex(entry);
@@ -498,7 +506,7 @@ piq_cancel(
 
     lock(fiq);
     fiq->isCancelled = 1;
-    (void)pthread_cond_broadcast(&fiq->cond); // not a cancellation point
+    (void)pthread_cond_signal(&fiq->cond); // not a cancellation point
     unlock(fiq);
 
     return 0;

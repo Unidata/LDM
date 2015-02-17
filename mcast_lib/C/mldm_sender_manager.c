@@ -124,6 +124,7 @@ execMldmSender(
     const McastInfo* const restrict info,
     const int const                 pipe)
 {
+    // TODO: set time-to-live option
     char* args[14]; // Keep sufficiently capacious (search for `i\+\+`)
     int   i = 0;
 
@@ -170,6 +171,20 @@ execMldmSender(
 }
 
 /**
+ * Allows termination signals to be received by the current thread. Idempotent.
+ */
+static void
+allowTermSigs(void)
+{
+    sigset_t sigset;
+
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)pthread_sigmask(SIG_UNBLOCK, &sigset, NULL);
+}
+
+/**
  * Spawns a multicast LDM sender process that sends data-products to a
  * multicast group. Doesn't block.
  *
@@ -204,20 +219,22 @@ mlsm_spawn(
         }
         else if (child == 0) {
             /* Child process */
-            (void)close(fds[0]);                // read end of pipe
+            (void)close(fds[0]);                // read end of pipe unneeded
+            allowTermSigs();                    // so process will terminate
             execMldmSender(info, fds[1]);       // shouldn't return
             log_log(LOG_ERR);
             exit(1);
         }
         else {
             /* Parent process */
-            (void)close(fds[1]);                // write end of pipe
+            (void)close(fds[1]);                // write end of pipe unneeded
             status = mlsm_getServerPort(fds[0], serverPort);
             (void)close(fds[0]);                // no longer needed
 
             if (status) {
                 LOG_ADD0("Couldn't get port number of TCP server from "
-                        "multicast LDM sender process. Terminating that process.");
+                        "multicast LDM sender process. Terminating that "
+                        "process.");
                 (void)kill(child, SIGTERM);
             }
             else {
@@ -233,13 +250,13 @@ mlsm_spawn(
  * Starts executing the multicast LDM sender process that's responsible for a
  * particular multicast group. Doesn't block.
  *
- * @pre                     {Multicast LDM sender PID map is locked.}
- * @pre                     {Relevant multicast LDM sender isn't running.}
+ * @pre                     Multicast LDM sender PID map is locked.
+ * @pre                     Relevant multicast LDM sender isn't running.
  * @param[in]  info         Information on the multicast group.
  * @param[out] serverPort   Port number of VCMTP TCP server.
  * @param[out] pid          Process ID of multicast LDM sender.
- * @retval     0            Success. Multicast LDM sender spawned and
- *                          `*serverPort` is set.
+ * @retval     0            Success. Multicast LDM sender spawned. `*serverPort`
+ *                          and `*pid` are set.
  * @retval     LDM7_SYSTEM  System error. `log_start()` called.
  */
 static Ldm7Status
@@ -254,7 +271,8 @@ mlsm_execute(
     int             status = mlsm_spawn(info, &procId, &port);
 
     if (0 == status) {
-        if ((status = msm_put(feedtype, procId)) != 0) {
+        status = msm_put(feedtype, procId);
+        if (status) {
             // preconditions => LDM7_DUP can't be returned
             char* const id = mi_format(info);
 
@@ -349,16 +367,17 @@ searchMcastInfos(
 /**
  * Starts a multicast LDM sender process if necessary.
  *
- * @pre                     {Multicast LDM sender PID map is locked for writing}.
- * @param[in]  feedtype     Multicast group feed-type.
- * @param[in]  info         Information on the multicast group.
- * @param[out] pid          Process ID of the multicast LDM sender.
- * @retval     0            Success. The multicast LDM sender associated with
- *                          the given multicast group is running or was
- *                          successfully started. If `info->server.port` was 0,
- *                          then it has been set to the actual port number of
- *                          the TCP server. `*pid` is set.
- * @retval     LDM7_SYSTEM  System error. `log_start()` called.
+ * @pre                         Multicast LDM sender PID map is locked for
+ *                              writing.
+ * @param[in]      feedtype     Multicast group feed-type.
+ * @param[in,out]  info         Information on the multicast group.
+ * @param[out]     pid          Process ID of the multicast LDM sender.
+ * @retval         0            Success. The multicast LDM sender associated
+ *                              with the given multicast group is running or was
+ *                              successfully started. If `info->server.port` was
+ *                              0, then it has been set to the actual port
+ *                              number of the TCP server. `*pid` is set.
+ * @retval         LDM7_SYSTEM  System error. `log_start()` called.
  */
 static int
 mlsm_startIfNecessary(
@@ -501,6 +520,31 @@ mlsm_terminated(
         status = msm_removePid(pid);
         (void)msm_unlock();
     }
+
+    return status;
+}
+
+/**
+ * Clears all entries.
+ *
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+mlsm_clear(void)
+{
+    int status = msm_lock(true);
+
+    if (0 == status) {
+        while (mcastInfoSet) {
+            McastInfo* mcastInfo = *(McastInfo**)mcastInfoSet;
+            (void)tdelete(mcastInfo, &mcastInfoSet, searchMcastInfos);
+            mi_free(mcastInfo);
+        }
+        msm_clear();
+    }
+
+    (void)msm_unlock();
 
     return status;
 }

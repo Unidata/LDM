@@ -464,7 +464,8 @@ void* log_malloc(
 }
 
 /**
- * Frees the log-message resources of the current thread.
+ * Frees the log-message resources of the current thread. Should only be called
+ * when no more logging by the current will occur.
  */
 void
 log_free(void)

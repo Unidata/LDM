@@ -45,7 +45,7 @@
 /**
  * C-callable multicast sender.
  */
-static void*       mcastSender;
+static McastSender*       mcastSender;
 /**
  * Information on the multicast group.
  */
@@ -282,9 +282,7 @@ mls_decodeOperands(
         status = 1;
     }
     else {
-        feedtypet ft;
-
-        if (strfeedtypet(*argv, &ft)) {
+        if (strfeedtypet(*argv, feed)) {
             log_start("Invalid feed expression: \"%s\"", *argv);
         }
         else {
@@ -398,12 +396,21 @@ mls_rotateLoggingLevel(
 /**
  * Handles a signal by setting the `done` flag.
  *
- * @param[in] sig  Signal to be handled. Ignored.
+ * @param[in] sig  Signal to be handled.
  */
 static void
 mls_setDoneFlag(
         const int sig)
 {
+    if (sig == SIGTERM) {
+        udebug("SIGTERM");
+    }
+    else if (sig == SIGINT) {
+        udebug("SIGINT");
+    }
+    else {
+        udebug("Signal %d", sig);
+    }
     done = 1;
 }
 
@@ -881,7 +888,7 @@ mls_execute(
          */
         char* miStr = mi_format(&mcastInfo);
         unotice("Starting up: mcastInfo=%s, ttl=%u", miStr, ttl);
-        mi_free(miStr);
+        free(miStr);
         status = mls_startMulticasting();
 
         mls_destroy();

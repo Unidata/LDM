@@ -81,7 +81,9 @@ mi_init(
 /**
  * Returns a new multicast information object.
  *
- * @param[out] mcastInfo  Initialized multicast information object.
+ * @param[out] mcastInfo  Initialized multicast information object. The caller
+ *                        should call `mi_free(*mcastInfo)` when it's no longer
+ *                        needed.
  * @param[in]  feed       The feedtype of the multicast group.
  * @param[in]  mcast      The Internet address of the multicast group. The caller
  *                        may free.

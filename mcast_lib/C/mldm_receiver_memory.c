@@ -21,6 +21,7 @@
 #include "log.h"
 
 #include <errno.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -60,6 +61,10 @@ struct McastSessionMemory {
      * user.
      */
     bool             modified;
+    /**
+     * Concurrent access mutex.
+     */
+    pthread_mutex_t  mutex;
 };
 
 /**
@@ -75,7 +80,7 @@ static const char* const MISSED_MCAST_FILES_KEY = "Missed Multicast File Identif
 
 /**
  * Returns the path of the memory-file corresponding to a server and a multicast
- * group.
+ * group. This function is reentrant.
  *
  * @param[in] servAddr  The address of the server associated with the multicast
  *                      group.
@@ -96,9 +101,17 @@ getSessionPath(
         path = NULL;
     }
     else {
-        path = ldm_format(256, "%s/%s_%s.yaml", getLdmLogDir(), servAddrStr,
-                s_feedtypet(feedtype));
-        free(servAddrStr);
+        char ftBuf[256];
+
+        if (sprint_feedtypet(ftBuf, sizeof(ftBuf), feedtype) < 0) {
+            LOG_START0("sprint_feedtypet() failure");
+            path = NULL;
+        }
+        else {
+            path = ldm_format(256, "%s/%s_%s.yaml", getLdmLogDir(), servAddrStr,
+                    ftBuf);
+            free(servAddrStr);
+        }
     }
 
     return path;
@@ -106,7 +119,7 @@ getSessionPath(
 
 /**
  * Returns the path of the temporary memory-file corresponding to the path of a
- * canonical memory-file.
+ * canonical memory-file. This function is thread-safe.
  *
  * @param[in] path  The path of a canonical memory-file. The caller may free
  *                  when it's no longer needed.
@@ -149,7 +162,7 @@ yamlParserColumn(
 
 /**
  * Returns the value-node of a document that corresponds to the value associated
- * with a mapping key.
+ * with a mapping key. This function is reentrant.
  *
  * @param[in] document  The document.
  * @param[in] start     The first mapping pair.
@@ -182,9 +195,33 @@ getValueNode(
     return NULL;
 }
 
+static void
+lock(
+    McastSessionMemory* const msm)
+{
+    int status = pthread_mutex_lock(&msm->mutex);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't lock mutex");
+        log_log(LOG_ERR);
+    }
+}
+
+static void
+unlock(
+    McastSessionMemory* const msm)
+{
+    int status = pthread_mutex_unlock(&msm->mutex);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't unlock mutex");
+        log_log(LOG_ERR);
+    }
+}
+
 /**
  * Initializes the last, multicast data-product signature in a multicast session
- * memory from a YAML mapping-node.
+ * memory from a YAML mapping-node. This function is reentrant.
  *
  * @param[in] msm       The multicast session memory to initialize.
  * @param[in] document  The YAML document to use.
@@ -255,7 +292,7 @@ initMissedFilesFromSequence(
             return false;
         }
         unsigned long fileId;
-        if (sscanf(itemNode->data.scalar.value, "%lu", &fileId) != 1) {
+        if (sscanf(itemNode->data.scalar.value, "%80lu", &fileId) != 1) {
             LOG_SERROR1("Couldn't decode missed-file identifier \"%s\"",
                     itemNode->data.scalar.value);
             return false;
@@ -303,7 +340,8 @@ initMissedFiles(
 }
 
 /**
- * Initializes a multicast session memory from a YAML node.
+ * Initializes a multicast session memory from a YAML node. This function is
+ * reentrant.
  *
  * @param[in] msm       The multicast session memory to initialize.
  * @param[in] document  The YAML document to use.
@@ -330,7 +368,8 @@ initFromNode(
 }
 
 /**
- * Initializes a multicast session memory from a YAML document.
+ * Initializes a multicast session memory from a YAML document. This function is
+ * reentrant.
  *
  * @param[in] msm       The multicast session memory to initialize.
  * @param[in] document  The YAML document to use.
@@ -354,7 +393,7 @@ initFromDocument(
 
 /**
  * Initializes a multicast session memory from a YAML stream. Only the first
- * document is used.
+ * document is used. This function is reentrant.
  *
  * @param[in] msm     The multicast session memory to be initialized.
  * @param[in] parser  The YAML parser.
@@ -385,7 +424,8 @@ initFromStream(
 }
 
 /**
- * Initializes a multicast session memory from a YAML file.
+ * Initializes a multicast session memory from a YAML file. This function is
+ * reentrant.
  *
  * @param[in] msm   The multicast session memory to initialize.
  * @param[in] file  The YAML file to parse.
@@ -423,7 +463,8 @@ initFromYamlFile(
 }
 
 /**
- * Initializes a multicast session memory from a memory-file.
+ * Initializes a multicast session memory from a memory-file. This function is
+ * reentrant.
  *
  * @param[in] msm           The multicast session memory to initialize.
  * @param[in] path          The path of the memory-file. Caller must not modify
@@ -464,6 +505,40 @@ initFromFile(
 }
 
 /**
+ * Initializes the mutex of a multicast session memory.
+ *
+ * @param[in] msm    The multicast session memory.
+ * @retval    true   Success.
+ * @retval    false  Failure. `log_start()` called.
+ */
+static bool
+initMutex(
+    McastSessionMemory* const msm)
+{
+    pthread_mutexattr_t mutexAttr;
+    int                 status = pthread_mutexattr_init(&mutexAttr);
+
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
+    }
+    else {
+        // At most one lock per thread.
+        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_ERRORCHECK);
+        // Prevent priority inversion
+        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
+
+        status = pthread_mutex_init(&msm->mutex, &mutexAttr);
+
+        if (status)
+            LOG_ERRNUM0(status, "Couldn't initialize mutex");
+
+        (void)pthread_mutexattr_destroy(&mutexAttr);
+    } // `mutexAttr` initialized
+
+    return 0 == status;
+}
+
+/**
  * Initializes a multicast session memory from scratch.
  *
  * @param[in] msm    The multicast session memory to initialize.
@@ -491,11 +566,16 @@ initFromScratch(
                 LOG_ADD0("Couldn't create queue of requested data-products");
             }
             else {
-                msm->path = path;
-                msm->tmpPath = tmpPath;
-                msm->sigSet = false;
-                msm->modified = false;
-                success = true;
+                if (initMutex(msm)) {
+                    msm->path = path;
+                    msm->tmpPath = tmpPath;
+                    msm->sigSet = false;
+                    msm->modified = false;
+                    success = true;
+                }
+                else {
+                    piq_free(msm->requestedQ);
+                }
             } // `msm->requestedQ` allocated
 
             if (!success)
@@ -511,7 +591,7 @@ initFromScratch(
 
 /**
  * Initializes a multicast session memory from a pre-existing memory-file or
- * from scratch if the memory-file doesn't exist.
+ * from scratch if the memory-file doesn't exist. This function is reentrant.
  *
  * @param[in] msm       The multicast session memory to initialize.
  * @param[in] path      The path of the canonical memory-file. Caller must not
@@ -533,7 +613,7 @@ initFromScratchOrFile(
 }
 
 /**
- * Initializes a multicast session memory.
+ * Initializes a multicast session memory. This function is reentrant.
  *
  * @param[in] msm       The muticast session memory to initialize.
  * @param[in] servAddr  Address of the server.
@@ -967,7 +1047,7 @@ dump(
 }
 
 /**
- * Adds an index of a prodct that was missed by the multicast receiver to one
+ * Adds an index of a product that was missed by the multicast receiver to one
  * of the queues of a multicast session memory.
  *
  * @param[in] msm    The multicast session memory.
@@ -979,7 +1059,7 @@ dump(
 static bool
 addFile(
     McastSessionMemory* const restrict msm,
-    ProdIndexQueue* const restrict        fiq,
+    ProdIndexQueue* const restrict     fiq,
     const VcmtpProdIndex               iProd)
 {
     bool success = piq_add(fiq, iProd) == 0;
@@ -995,7 +1075,7 @@ addFile(
  ******************************************************************************/
 
 /**
- * Deletes a multicast-session memory-file.
+ * Deletes a multicast-session memory-file. This function is reentrant.
  *
  * @param[in] servAddr  Address of the server.
  * @param[in] feedtype  Feedtype of the multicast group.
@@ -1029,13 +1109,13 @@ msm_delete(
         }
 
         free(path);
-    }
+    } // `path` allocated
 
     return success;
 }
 
 /**
- * Opens a multicast session memory.
+ * Opens a multicast session memory. This function is reentrant.
  *
  * @param[in] servAddr  Address of the server.
  * @param[in] feedtype  Feedtype of the multicast group.
@@ -1064,11 +1144,12 @@ msm_open(
  * Closes a multicast session memory. Upon successful return, the multicast
  * session memory of a subsequent identical `msm_open()` will comprise that of
  * the previous `msm_open()` as subsequently modified prior to calling this
- * function.
+ * function. This function is thread-compatible but not thread-safe for the
+ * same argument.
  *
- * @param[in] msm    The multicast session memory to be closed. Use of this
- *                   object upon successful return from this function results in
- *                   undefined behavior.
+ * @param[in] msm    The multicast session memory, returned by `msm_open()`, to
+ *                   be closed. Use of this object upon successful return from
+ *                   this function results in undefined behavior.
  * @retval    true   Success.
  * @retval    false  Failure. `log_start()` called. `msm` is unmodified.
  */
@@ -1079,6 +1160,7 @@ msm_close(
     if (msm->modified && !dump(msm))
         return false;
 
+    (void)pthread_mutex_destroy(&msm->mutex);
     piq_free(msm->requestedQ);
     piq_free(msm->missedQ);
     free(msm->path);
@@ -1097,22 +1179,24 @@ msm_close(
  * @param[in] sig    Signature of the last data-product received via multicast.
  * @retval    true   Success.
  * @retval    false  Failure. `log_start()` called. The multicast session memory
- *                   is unmodified.
+ *                   is unmodified. Thread-safe.
  */
 bool
 msm_setLastMcastProd(
     McastSessionMemory* const restrict msm,
     const signaturet                   sig)
 {
+    lock(msm);
     (void)memcpy(&msm->lastMcastProd, sig, sizeof(signaturet));
     msm->sigSet = true;
     msm->modified = true;
+    unlock(msm);
     return true;
 }
 
 /**
  * Returns the signature of the last data-product received via multicast of a
- * multicast session memory.
+ * multicast session memory. Thread-safe.
  *
  * @param[in]  msm    The multicast session memory.
  * @param[out] sig    Signature of the last data-product received via multicast.
@@ -1124,16 +1208,19 @@ msm_getLastMcastProd(
     McastSessionMemory* const restrict msm,
     signaturet                         sig)
 {
-    if (msm->sigSet)
+    lock(msm);
+    bool sigSet = msm->sigSet;
+    if (sigSet)
         (void)memcpy(sig, &msm->lastMcastProd, sizeof(signaturet));
+    unlock(msm);
 
-    return msm->sigSet;
+    return sigSet;
 }
 
 /**
  * Clears the list of files in a multicast session memory that were missed by
  * the multicast receiver: both the missed-but-not-requested and
- * requested-but-not-received queues are cleared. Idempotent.
+ * requested-but-not-received queues are cleared. Idempotent. Thread-safe.
  *
  * @param[in] msm  The multicast session memory.
  */
@@ -1141,15 +1228,17 @@ void
 msm_clearAllMissedFiles(
     McastSessionMemory* const restrict msm)
 {
+    lock(msm);
     msm->modified = piq_clear(msm->requestedQ) != 0 ||
             piq_clear(msm->missedQ) != 0;
+    unlock(msm);
 }
 
 /**
  * Removes and returns the index of a product that has not been received by
  * the multicast receiver associated with a multicast session memory. The
  * requested-but-not-received queue is tried first; then the
- * missed-but-not-requested queue.
+ * missed-but-not-requested queue. Thread-safe.
  *
  * @param[in] msm     The multicast session memory.
  * @param[in] iProd   The index of the missed product.
@@ -1161,14 +1250,18 @@ msm_getAnyMissedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    return piq_removeNoWait(msm->requestedQ, iProd) == 0 ||
+    lock(msm);
+    bool exists = piq_removeNoWait(msm->requestedQ, iProd) == 0 ||
             piq_removeNoWait(msm->missedQ, iProd) == 0;
+    unlock(msm);
+
+    return exists;
 }
 
 /**
  * Adds an index of a product that was missed by the multicast receiver but
  * has not yet been requested to the current list of such files in a multicast
- * session memory.
+ * session memory. Thread-safe.
  *
  * @param[in] msm    The multicast session memory.
  * @param[in] id     The product-index to add.
@@ -1180,13 +1273,16 @@ msm_addMissedFile(
     McastSessionMemory* const restrict msm,
     const VcmtpProdIndex               iProd)
 {
-    return addFile(msm, msm->missedQ, iProd);
+    lock(msm);
+    bool success = addFile(msm, msm->missedQ, iProd);
+    unlock(msm);
+    return success;
 }
 
 /**
  * Adds an index of a product that was missed by the multicast receiver and
  * has been requested from the upstream LDM-7 to the current list of such
- * products in a multicast session memory.
+ * products in a multicast session memory. Thread-safe.
  *
  * @param[in] msm    The multicast session memory.
  * @param[in] id     The product-index to add.
@@ -1198,13 +1294,16 @@ msm_addRequestedFile(
     McastSessionMemory* const restrict msm,
     const VcmtpProdIndex               iProd)
 {
-    return addFile(msm, msm->requestedQ, iProd);
+    lock(msm);
+    bool success = addFile(msm, msm->requestedQ, iProd);
+    unlock(msm);
+    return success;
 }
 
 /**
  * Returns (but doesn't remove) the next product-index from the
  * missed-but-not-requested queue of a multicast session memory. Blocks until
- * such a file is available.
+ * such a file is available. Thread-safe.
  *
  * @param[in] msm     The multicast session memory.
  * @param[in] iProd   The product-index.
@@ -1216,12 +1315,15 @@ msm_peekMissedFileWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    return piq_peekWait(msm->missedQ, iProd) == 0;
+    lock(msm);
+    bool success = piq_peekWait(msm->missedQ, iProd) == 0;
+    unlock(msm);
+    return success;
 }
 
 /**
  * Returns (but doesn't remove) the next product-index from the
- * missed-but-not-requested queue of a multicast session memory.
+ * missed-but-not-requested queue of a multicast session memory. Thread-safe.
  *
  * @param[in] msm     The multicast session memory.
  * @param[in] iProd   The product-index.
@@ -1233,12 +1335,15 @@ msm_peekMissedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    return piq_peekNoWait(msm->missedQ, iProd) == 0;
+    lock(msm);
+    bool exists = piq_peekNoWait(msm->missedQ, iProd) == 0;
+    unlock(msm);
+    return exists;
 }
 
 /**
  * Removes and returns the next product-index from the
- * missed-but-not-requested queue of a multicast session memory.
+ * missed-but-not-requested queue of a multicast session memory. Thread-safe.
  *
  * @param[in] msm     The multicast session memory.
  * @param[in] iProd   The product-index.
@@ -1250,13 +1355,16 @@ msm_removeMissedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    return piq_removeNoWait(msm->missedQ, iProd) == 0;
+    lock(msm);
+    bool exists = piq_removeNoWait(msm->missedQ, iProd) == 0;
+    unlock(msm);
+    return exists;
 }
 
 /**
  * Returns (but doesn't remove) the next product-index from the
  * requested-but-not-received queue of a multicast session memory. Doesn't
- * block.
+ * block. Thread-safe.
  *
  * @param[in] msm     The multicast session memory.
  * @param[in] iProd   The product-index.
@@ -1268,12 +1376,15 @@ msm_peekRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    return piq_peekNoWait(msm->requestedQ, iProd) == 0;
+    lock(msm);
+    bool success = piq_peekNoWait(msm->requestedQ, iProd) == 0;
+    unlock(msm);
+    return success;
 }
 
 /**
  * Removes and returns the next product-index from the
- * requested-but-not-received queue of a multicast session memory.
+ * requested-but-not-received queue of a multicast session memory. Thread-safe.
  *
  * @param[in] msm     The multicast session memory.
  * @param[in] iProd   The product-index.
@@ -1285,12 +1396,15 @@ msm_removeRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    return piq_removeNoWait(msm->requestedQ, iProd) == 0;
+    lock(msm);
+    bool exists = piq_removeNoWait(msm->requestedQ, iProd) == 0;
+    unlock(msm);
+    return exists;
 }
 
 /**
  * Shuts down the queue of missed-but-not-requested files in a multicast session
- * memory.
+ * memory. Idempotent and thread-safe.
  *
  * @param[in] msm     The multicast session memory.
  */

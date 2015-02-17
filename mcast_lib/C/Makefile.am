@@ -45,7 +45,7 @@ CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 # mldm_sender_manager_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory
-CLEANFILES		= *.yaml *_stub* *.map
+CLEANFILES		= *.yaml *_stub* *.map *.log
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 .hin.h:
@@ -57,6 +57,9 @@ mldm_receiver_memory.h:	mldm_receiver_memory.c mldm_receiver_memory.hin
 prod_index_queue.h:	prod_index_queue.hin prod_index_queue.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up7.h:			up7.hin up7.c
+
+server_test_SOURCES	= server_test.c
+server_test_LDADD	= -lpthread
 
 if HAVE_OPMOCK
 VCMTPReceiver_stubs	= vcmtpRecvv3_stub.cpp vcmtpRecvv3_stub.hpp
@@ -126,7 +129,8 @@ endif
 if HAVE_CUNIT
 cunit_check_progs		= prod_index_map_test \
                                   mldm_sender_map_test \
-                                  prod_index_queue_test
+                                  prod_index_queue_test \
+                                  up7_down7_test
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
@@ -139,6 +143,10 @@ prod_index_queue_test_SOURCES	= prod_index_queue_test.c prod_index_queue.c
 prod_index_queue_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 prod_index_queue_test_LDADD	= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
+up7_down7_test_SOURCES		= up7_down7_test.c
+up7_down7_test_CPPFLAGS		= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
+                                  @LIBS_CUNIT@
 cunit_tests			= $(cunit_check_progs)
 
 prod_index_map_test_valgrind:	prod_index_map_test
@@ -147,7 +155,11 @@ prod_index_map_test_valgrind:	prod_index_map_test
 prod_index_queue_test_valgrind:	prod_index_queue_test
 	$(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./prod_index_queue_test
+up7_down7_test_valgrind:	up7_down7_test
+	$(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./up7_down7_test
 endif
 
-check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs)
-TESTS				= $(opmock_tests) $(cunit_tests)
+check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs) \
+				  server_test
+TESTS				= $(opmock_tests) $(cunit_tests) server_test

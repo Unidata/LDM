@@ -173,57 +173,63 @@ ghostname(void)
 }
 
 
-/*
- * Returns a string identifying the Internet host referred to by an Internet
- * address. If the hostname lookup fails, then the "dotted quad" form of the
- * address is returned.
- * Arguments:
- *      paddr   Pointer to the Internet address structure.
- * Returns:
- *      Pointer to static buffer containing the identifying string.
+/**
+ * Returns a string identifying the Internet host referred to by an IPv4 socket
+ * address. If the hostname lookup fails, then the "dotted decimal" form of the
+ * address is returned. Non-reentrant.
+ *
+ * @param[in] paddr  Pointer to the IPv4 socket address structure.
+ * @return           Pointer to static buffer containing the identifying string.
  */
 const char*
 hostbyaddr(
     const struct sockaddr_in* const     paddr)
 {
-    struct hostent*     hp;
+    in_addr_t           inAddr = paddr->sin_addr.s_addr;
     const char*         identifier;
-    struct in_addr      addr;
-    timestampt          start;
-    timestampt          stop;
-    double              elapsed;
-    ErrorObj*           error;
 
-    addr.s_addr = paddr->sin_addr.s_addr;
-
-    (void)set_timestamp(&start);
-    hp = gethostbyaddr((char *)&addr, sizeof (addr), AF_INET);
-    (void)set_timestamp(&stop);
-
-    elapsed = d_diff_timestamp(&stop, &start);
-
-    if(hp == NULL) {
-        identifier = inet_ntoa(paddr->sin_addr);
-        error = ERR_NEW2(0, NULL,
-            "Couldn't resolve \"%s\" to a hostname in %g seconds",
-            identifier, elapsed);
+    if (ntohl(inAddr) == 0) {
+        identifier = "localhost";
     }
     else {
-        identifier = hp->h_name;
+        struct hostent*     hp;
+        struct in_addr      addr;
+        timestampt          start;
+        timestampt          stop;
+        double              elapsed;
+        ErrorObj*           error;
 
-        if (elapsed < RESOLVER_TIME_THRESHOLD && !ulogIsVerbose()) {
-            error = NULL;
+        addr.s_addr = inAddr;
+
+        (void)set_timestamp(&start);
+        hp = gethostbyaddr((char *)&addr, sizeof (addr), AF_INET);
+        (void)set_timestamp(&stop);
+
+        elapsed = d_diff_timestamp(&stop, &start);
+
+        if(hp == NULL) {
+            identifier = inet_ntoa(paddr->sin_addr);
+            error = ERR_NEW2(0, NULL,
+                "Couldn't resolve \"%s\" to a hostname in %g seconds",
+                identifier, elapsed);
         }
         else {
-            error = ERR_NEW3(0, NULL,
-                "Resolving %s to %s took %g seconds",
-                inet_ntoa(paddr->sin_addr), identifier, elapsed);
-        }
-    }
+            identifier = hp->h_name;
 
-    if (error) {
-        err_log_and_free(error, 
-            elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO);
+            if (elapsed < RESOLVER_TIME_THRESHOLD && !ulogIsVerbose()) {
+                error = NULL;
+            }
+            else {
+                error = ERR_NEW3(0, NULL,
+                    "Resolving %s to %s took %g seconds",
+                    inet_ntoa(paddr->sin_addr), identifier, elapsed);
+            }
+        }
+
+        if (error) {
+            err_log_and_free(error,
+                elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO);
+        }
     }
 
     return identifier;

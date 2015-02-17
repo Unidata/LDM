@@ -96,6 +96,12 @@ msm_removePid(
         const pid_t pid);
 
 /**
+ * Clears all entries.
+ */
+void
+msm_clear(void);
+
+/**
  * Destroys this module. Should be called only once per LDM session.
  *
  * @retval 0            Success.

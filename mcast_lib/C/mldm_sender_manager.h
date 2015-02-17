@@ -73,6 +73,15 @@ Ldm7Status
 mlsm_terminated(
         const pid_t pid);
 
+/**
+ * Clears all entries.
+ *
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+mlsm_clear(void);
+
 #ifdef __cplusplus
 }
 #endif

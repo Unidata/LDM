@@ -5088,8 +5088,41 @@ const pqe_index _pqenone = {
 };
 
 
-/*
- * On success, the writer-counter of the created product-queue will be one.
+/**
+ * Creates a product-queue. On success, the writer-counter of the created
+ * product-queue will be one.
+ *
+ * @param[in] path        Pathname of the product-queue.
+ * @param[in] mode        File mode. Bitwise OR of
+ *                          S_IRWXU    Read, write, execute/search by owner.
+ *                            S_IRUSR  Read permission, owner.
+ *                            S_IWUSR  Write permission, owner.
+ *                          S_IRWXG    Read, write, execute/search by group.
+ *                            S_IRGRP  Read permission, group.
+ *                            S_IWGRP  Write permission, group.
+ *                          S_IRWXO    Read, write, execute/search by others.
+ *                            S_IROTH  Read permission, others.
+ *                            S_IWOTH  Write permission, others.
+ *                        The value is bitwise ANDed with the complement of the
+ *                        process' file mode creation mask.
+ * @param[in]  pflags     Product-queue flags. Bitwise AND of
+ *                          PQ_DEFAULT	  Default attributes (0).
+ *                          PQ_NOCLOBBER  Don't replace an existing
+ *                                        product-queue.
+ *                          PQ_READONLY   Read-only. Default is read/write
+ *                          PQ_NOLOCK     Disable locking
+ *                          PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
+ *                                        Default is `MAP_SHARED`.
+ *                          PQ_NOMAP      Use `malloc/read/write/free` instead
+ *                                        of `mmap()`
+ *                          PQ_MAPRGNS    Map region by region. Default is whole
+ *                                        file.
+ * @param[in]  align      Alignment parameter for file components or 0.
+ * @param[in]  initialsz  Size, in bytes, of the data portion of the product-
+ *                        queue.
+ * @param[in]  nproducts  Number of product slots to create.
+ * @param[out] pqp        Product-queue.
+ * @retval     0          Success. `*pqp` is set.
  */
 int
 pq_create(const char *path, mode_t mode,
