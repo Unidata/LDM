@@ -1,37 +1,36 @@
-# Performs an acceptance-test of a package on a Linux system. Builds the package
-# in the directory that contains this script and assumes that the tarball is one
-# directory level up.
+# Performs an acceptance-test of a package on a Linux system.  Terminates the
+# virtual machine.
 #
-# Usage: $0 vmName
+# Preconditions:
+#     - The current working directory contains:
+#         - the source-distribution tarball
+#         - release-vars.sh
+#         - Vagrantfile
+#     - The virtual machine is not running
+#
+# Usage: $0 tarball vmName
 #
 # where:
+#       tarball         Pathname of the source distribution file
 #       vmName          Name of the Vagrant virtual machine (e.g.,
 #                       "centos64_64", "precise32")
 
 set -e  # terminate on error
 
-vmName=${1:?Name of Vagrant virtual-machine not specified}
-
-# Go to the build directory.
+# Parse the command -line
 #
-cd `dirname $0`
+tarball=${1:?Pathname of tarball not specified}
+vmName=${2:?Name of Vagrant virtual-machine not specified}
 
-# Move the tarball to the build directory so that it appears in the "/vagrant"
-# directory.
-#
-mv ../*.tar.gz .
-
-# Set the release variables.
-#
+# Set the release-variables.
 . ./release-vars.sh
 
-# Start the virtual machine.
+# Start the virtual machine and execute commands.
 #
+(
+flock 9
 trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
-vagrant up "$vmName"
-
-# On the virtual machine,
-#
+vagrant up $vmName
 vagrant ssh $vmName -- -T <<EOF
     set -e
 
@@ -49,3 +48,4 @@ vagrant ssh $vmName -- -T <<EOF
     ./configure $ACCEPTANCE_CONFIGURE_OPTS
     make all check install
 EOF
+) 9>/tmp/`basename $0`-$USER

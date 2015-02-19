@@ -6,15 +6,15 @@
 
 set -e  # exit if error
 
-# Remove any artifacts left over from a previous invocation.
+# Get the static release variables
 #
-rm -f *.$SOURCE_DISTRO_EXT
+. ./release-vars.sh
 
 #
 # Build and test the package and create a source distribution.
 #
-mkdir -p m4 multicast/vcmtp/m4
-autoreconf -iv
+mkdir -p m4 mcast_lib/vcmtp/m4
+autoreconf -if
 ./configure --disable-root-actions >configure.log 2>&1
 make distcheck
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-multicast'
