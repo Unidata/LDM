@@ -54,7 +54,8 @@ init()
     status = sa_new(&serverAddr, SERVER_ADDR, SERVER_PORT);
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_TRUE(serverAddr != NULL);
-    OP_ASSERT_EQUAL_INT(0, mi_new(&mcastInfo, feedtype, groupAddr, serverAddr));
+    status = mi_new(&mcastInfo, feedtype, groupAddr, serverAddr);
+    OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_TRUE(mcastInfo != NULL);
     status = msm_init();
     OP_ASSERT_EQUAL_INT(0, status);
@@ -65,8 +66,9 @@ test_noPotentialSender()
 {
     const McastInfo* mcastInfo;
     pid_t            pid;
-    OP_ASSERT_EQUAL_INT(LDM7_NOENT, mlsm_ensureRunning(feedtype, &mcastInfo,
-            &pid));
+    int              status = mlsm_ensureRunning(feedtype, &mcastInfo,
+            &pid);
+    OP_ASSERT_EQUAL_INT(LDM7_NOENT, status);
     log_clear();
     OP_VERIFY();
 }
@@ -75,8 +77,10 @@ static void
 test_conflict()
 {
     // Depends on `init()`
-    OP_ASSERT_EQUAL_INT(0, mlsm_addPotentialSender(mcastInfo));
-    OP_ASSERT_EQUAL_INT(LDM7_DUP, mlsm_addPotentialSender(mcastInfo));
+    int status = mlsm_addPotentialSender(mcastInfo);
+    OP_ASSERT_EQUAL_INT(0, status);
+    status = mlsm_addPotentialSender(mcastInfo);
+    OP_ASSERT_EQUAL_INT(LDM7_DUP, status);
     log_clear();
     OP_VERIFY();
 }
@@ -138,8 +142,10 @@ test_running()
     log_log(LOG_ERR);
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_EQUAL_INT(feedtype, mcastInfo->feed);
-    OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr, &mcastInfo->group));
-    OP_ASSERT_EQUAL_INT(0, sa_compare(serverAddr, &mcastInfo->server));
+    status = sa_compare(groupAddr, &mcastInfo->group);
+    OP_ASSERT_EQUAL_INT(0, status);
+    status = sa_compare(serverAddr, &mcastInfo->server);
+    OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_EQUAL_INT(pid, pid2);
 
     /* Terminate the multicast sender */

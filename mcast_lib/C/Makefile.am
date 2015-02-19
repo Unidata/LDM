@@ -90,9 +90,9 @@ $(globals_stubs):		$(top_srcdir)/registry/globals.h
 $(mldm_sender_map_stubs):	mldm_sender_map.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
-opmock_check_progs			= mldm_sender_manager_test \
-                                          mldm_receiver_memory_test \
+opmock_check_progs			= mldm_receiver_memory_test \
                                           mldm_receiver_test
+                                          #mldm_sender_manager_test
 test_cppflags				= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
 mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c
@@ -119,18 +119,18 @@ mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
 opmock_tests				= mldm_receiver_memory_test \
                                           mldm_receiver_test
 
-check-local:	mldm_sender_manager_test
-	$(top_builddir)/pqcreate/pqcreate -c -s 1m mldm_sender_manager_test.pq
-	PATH=$(top_builddir)/mldm_sender:$$PATH \
-		./mldm_sender_manager_test mldm_sender_manager_test.pq 
-	rm mldm_sender_manager_test.pq *.map
+#check-local:			check-mldm_sender_manager
+#check-mldm_sender_manager:	mldm_sender_manager_test
+#	$(top_builddir)/pqcreate/pqcreate -c -s 1m mldm_sender_manager_test.pq
+#	PATH=$(top_builddir)/mldm_sender:$$PATH \
+#		./mldm_sender_manager_test mldm_sender_manager_test.pq 
+#	rm mldm_sender_manager_test.pq *.map
 endif
 
 if HAVE_CUNIT
 cunit_check_progs		= prod_index_map_test \
                                   mldm_sender_map_test \
-                                  prod_index_queue_test \
-                                  up7_down7_test
+                                  prod_index_queue_test
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
@@ -156,8 +156,13 @@ prod_index_queue_test_valgrind:	prod_index_queue_test
 	$(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./prod_index_queue_test
 up7_down7_test_valgrind:	up7_down7_test
-	$(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./up7_down7_test
+	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
+            --mode=execute valgrind --leak-check=full --show-reachable=yes \
+            ./up7_down7_test
+
+#check-local:		check-up7_down7_test
+#check-up7_down7_test:	up7_down7_test
+#	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
 endif
 
 check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs) \

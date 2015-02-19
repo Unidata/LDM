@@ -516,7 +516,7 @@ receiver_start(
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     /* Because at end of thread: */
-    log_clear(); // don't care about errors if termination requested
+    done ? log_clear() : log_log(LOG_ERR);
     log_free();
 
     static int staticStatus;
@@ -627,6 +627,7 @@ test_up7_down7(
     int      status;
 
     blockTermSigs();
+    done = 0;
 
     ServiceAddr* mcastServAddr;
     status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
@@ -687,6 +688,7 @@ test_down7(
     int      status;
 
     blockTermSigs();
+    done = 0;
 
     /* Starts a receiver on a new thread */
     status = receiver_spawn(&receiver, LOCAL_HOST, 38800);
@@ -709,6 +711,7 @@ test_up7(
     int      status;
 
     blockTermSigs();
+    done = 0;
 
     ServiceAddr* mcastServAddr;
     status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
