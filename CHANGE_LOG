@@ -1,4 +1,12 @@
-6.12.7.211	2015-02-19T14:52:49-0700
+6.12.7.212
+    Added "g2varsnssl.tbl".
+
+    Changed lockout during acceptance testing from sequential VM use to just
+    "vagrant up".
+
+    Added use of `poll()` to "server_test".
+
+6.12.7.211	2015-02-19T15:05:57-0700
     Got `up7_down7_test` working but removed it (and
     `mldm_sender_manager_test`) from "make check" because `vcmtpSendv3` doesn't
     yet terminate correctly.
