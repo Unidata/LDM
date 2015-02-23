@@ -25,12 +25,15 @@ vmName=${2:?Name of Vagrant virtual-machine not specified}
 # Set the release-variables.
 . ./release-vars.sh
 
-# Start the virtual machine and execute commands.
+# Start the virtual machine. Other instances of this script are blocked because
+# vagrant(1), apparently, has problems with concurrent "up" commands.
 #
-(
-flock 9
+#( flock 9; vagrant up $vmName
+flock /tmp/`basename $0`-$USER vagrant up $vmName
 trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
-vagrant up $vmName
+
+# On the virtual machine:
+#
 vagrant ssh $vmName -- -T <<EOF
     set -e
 
@@ -48,4 +51,4 @@ vagrant ssh $vmName -- -T <<EOF
     ./configure $ACCEPTANCE_CONFIGURE_OPTS
     make all check install
 EOF
-) 9>/tmp/`basename $0`-$USER
+#) 9>/tmp/`basename $0`-$USER
