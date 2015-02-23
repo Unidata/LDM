@@ -1,13 +1,25 @@
 #define _XOPEN_SOURCE 600
 
+#define SELECT   1
+#define PSELECT  2
+#define POLL     3
+#define SELECT_TYPE (POLLFUNC == SELECT || POLLFUNC == PSELECT)
+#define POLL_TYPE (POLLFUNC == POLL)
+#define POLLFUNC POLL
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
+#if POLL_TYPE
+#    include <poll.h>
+#endif
 #include <pthread.h>
+#if SELECT_TYPE
+#    include <sys/select.h>
+#endif
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -80,29 +92,57 @@ static void* server_serve(
     int           status;
 
     for (;;) {
+#if SELECT_TYPE
         fd_set readfds;
 
         FD_ZERO(&readfds);
         FD_SET(sock, &readfds);
         FD_SET(pipeIn, &readfds);
+#elif POLL_TYPE
+        struct pollfd pfds[2];
+        #define SOCK_PFD pfds[0]
+        #define PIPE_PFD pfds[1]
 
+        SOCK_PFD.fd = sock;
+        SOCK_PFD.events = POLLIN;
+        PIPE_PFD.fd = pipeIn;
+        PIPE_PFD.events = POLLIN;
+#endif
+
+#if POLLFUNC == SELECT
         (void)puts("Calling select()...");
         /* NULL timeout argument => indefinite wait */
-#if 1
-        status = pselect(width, &readfds, NULL, NULL, NULL, NULL);
-#else
         status = select(width, &readfds, NULL, NULL, NULL);
-#endif
         (void)puts("select() returned");
+#elif POLLFUNC == PSELECT
+        (void)puts("Calling pselect()...");
+        /* NULL timeout argument => indefinite wait */
+        status = pselect(width, &readfds, NULL, NULL, NULL, NULL);
+        (void)puts("pselect() returned");
+#else
+        (void)puts("Calling poll()...");
+        /* -1 timeout argument => indefinite wait */
+        status = poll(pfds, 2, -1);
+        (void)puts("poll() returned");
+#endif
 
         if (0 > status)
             break;
+#if SELECT_TYPE
         if (FD_ISSET(pipeIn, &readfds)) {
+#else
+        if (PIPE_PFD.revents & POLLIN || PIPE_PFD.revents & POLLHUP ||
+                SOCK_PFD.revents & POLLHUP) {
+#endif
             (void)close(pipeIn);
             status = 0;
             break;
         }
+#if SELECT_TYPE
         if (FD_ISSET(sock, &readfds)) {
+#else
+        if (SOCK_PFD.revents & POLLIN) {
+#endif
             (void)puts("Calling accept()...");
             const int     sock = accept(server->sock, NULL, NULL);
             (void)puts("accept() returned");
@@ -163,7 +203,7 @@ static int server_destroy(
             }
             else {
         #elif 1
-            if (close(server->fds[1])) { // (p)select() returns
+            if (close(server->fds[1])) { // (p)select() & poll() returns
                 status = errno;
             }
             else {
