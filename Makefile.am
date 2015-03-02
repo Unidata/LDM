@@ -7,10 +7,11 @@
 ## Process this file with automake(1) to produce file Makefile.in
 
 G2VARSNCEP_s	= g2varsncep0.tbl g2varsncep1.tbl
-G2VARSNSSL_s	= g2varsncep1.tbl
+G2VARSNSSL_s	= g2varsnssl1.tbl
 G2VARSWMO_s	= g2varswmo1.tbl g2varswmo2.tbl g2varswmo3.tbl g2varswmo6.tbl
 G2VCRDNCEP_s	= g2vcrdncep0.tbl g2vcrdncep1.tbl
-G2VCRDWMO_s	= g2vcrdwmo1.tbl g2vcrdwmo2.tbl g2vcrdwmo3.tbl g2vcrdwmo6.tbl
+G2VCRDWMO_s	= g2vcrdwmo1.tbl g2vcrdwmo2.tbl g2vcrdwmo3.tbl g2vcrdwmo6.tbl \
+		  g2vcrdwmo255.tbl 
 LINKS		= $(G2VARSNCEP_s) \
 		  $(G2VARSNSSL_s) \
 		  $(G2VARSWMO_s) \
@@ -31,7 +32,7 @@ install-data-hook:
 	if cd $(DESTDIR)$(sysconfdir); then \
 	    for link in $(LINKS); do \
 		rm -f $$link; \
-		file=`echo $$link | sed 's/[0-9]\.tbl/.tbl/'`; \
+		file=`echo $$link | sed 's/[0-9]*\.tbl/.tbl/'`; \
 		ln -s $$file $$link; \
 	    done; \
 	fi
