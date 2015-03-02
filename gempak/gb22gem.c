@@ -52,7 +52,7 @@ void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
 
         (void)snprintf(msg, sizeof(msg),
                 "Couldn't find originating center %d in table \"%s\"",
-                cntrid, tbls[4]);
+                cntrid, tbls[4] ? tbls[4] : "wmocenter.tbl");
         msg[sizeof(msg)-1] = 0;
         ER_WMSG("GB", &ier, msg, &itmp, 2, 1);
     }

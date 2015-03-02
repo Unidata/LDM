@@ -1,4 +1,19 @@
-6.12.7.212
+6.12.7.213
+    Changed g++ option from "-std=c++0x" to "-std=c++11" to obtain proper
+    header-file definitions.
+
+    Improved error-message in gb2_2gem() and gb2vcrd.c.
+
+    Commented-out printf() diagnostic message in gb2gtcntr.c, gb2gtlcllvltbl.c,
+    and gb2gtwmolvltbl.c.
+
+    Added installation of g2varsnssl1.tbl symbolic link.
+
+    Added check using MRMS data.
+
+    Cosmetics.
+
+6.12.7.212	2015-03-02T13:50:23-0700
     Added "g2varsnssl.tbl".
 
     Changed lockout during acceptance testing from sequential VM use to just

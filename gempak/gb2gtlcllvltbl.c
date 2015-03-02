@@ -65,7 +65,7 @@ void  gb2_gtlcllvltbl( char *lcllvltbl, char *cntr, int lclver,
             currlvltbl.info=0;
             currlvltbl.nlines=0;
         }
-        printf(" Opening Local GRIB2 Vertical Coordinate Table %s...\n",tmpname);
+        // printf(" Opening Local GRIB2 Vertical Coordinate Table %s...\n",tmpname);
         ctb_g2rdlvl( tmpname, &currlvltbl, &ier );
         if ( ier != 0 ) {
             currlvltbl.nlines=0;

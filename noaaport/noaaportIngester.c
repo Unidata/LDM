@@ -280,7 +280,7 @@ static void usage(
 "%s\n"
 "\n"
 "Usage: %s [-n|v|x] [-l log] [-u n] [-m addr] [-q queue] [-b npages] [-I ip_addr]\n"
-"          [-r <1|0>] [-t] [-s channel-name]                                   \n"
+"          [-r <1|0>] [-t] [-s channel-name]\n"
 "where:\n"
 "   -b npages   Allocate \"npages\" pages of memory for the internal buffer.\n"
 "               Default is %lu pages. \"getconf PAGESIZE\" reveals page-size.\n"

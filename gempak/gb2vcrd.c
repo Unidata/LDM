@@ -68,7 +68,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
                 &filename, &ier);
     }
     if ( ier != 0 ) {
-        log_add("Couldn't get vertical coordinate table: iver=%d, lvl1=%d, "
+        LOG_ADD6("Couldn't get vertical coordinate table: iver=%d, lvl1=%d, "
                     "lvl2=%d, center=%.*s, lclver=%d",
                 iver, lvl1, lvl2, (int)sizeof(cmsg->origcntr), cmsg->origcntr,
                 lclver);

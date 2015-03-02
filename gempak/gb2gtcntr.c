@@ -63,7 +63,7 @@ void  gb2_gtcntr( int cntrid, char *tblnam, char *wmocntr, int *iret)
             cntrtbl.info=0;
             cntrtbl.nlines=0;
         }
-        printf(" Opening WMO Originating Center Table %s...\n",tmpname);
+        // printf(" Opening WMO Originating Center Table %s...\n",tmpname);
         ctb_g2rdcntr( tmpname, &cntrtbl, &ier );
         if ( ier != 0 ) {
             cntrtbl.nlines=0;
