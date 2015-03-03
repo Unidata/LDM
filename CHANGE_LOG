@@ -1,4 +1,7 @@
-6.12.7.213
+6.12.7.214
+    Added parameter (0,19,193,9) (Snow-free albedo) to g2varsncep.tbl.
+
+6.12.7.213	2015-03-03T10:00:08-0700
     Corrected a bug in getting GRIB2 vertical coordinate table in GEMPAK
     library. The routines to get the WMO and local tables cleared the extant
     table if a new table needed to be read. They then forgot that they did this

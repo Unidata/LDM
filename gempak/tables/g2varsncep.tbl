@@ -351,6 +351,7 @@
 !
 000 019 192 000 Maximum snow albedo              %                    MXSALB           0  -9999.00
 000 019 193 000 Snow-free albedo                 %                    SNFALB           0  -9999.00
+000 019 193 009 Snow-free albedo                 %                    SNFALB           0  -9999.00
 000 019 194 000 Slight risk convective outlook   categorical          OLTKS            0  -9999.00
 000 019 194 008 Slight risk convective outlook   categorical          OLTKS            0  -9999.00
 000 019 195 000 Moderate risk convective outlook categorical          OTLKM            0  -9999.00
