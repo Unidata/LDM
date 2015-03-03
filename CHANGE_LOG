@@ -1,5 +1,7 @@
 6.12.7.216
-    New VCMTP with "-std=c++0x".
+    New VCMTP with "-std=c++0x" and #include for memset().
+
+    Change vcmtpSendv3.startCoordinator() to vcmtpSendv3.Start().
 
 6.12.7.215	2015-03-03T14:34:08-0700
     Reverted "-std=c++11" to "-std=c++0x" to accommodate Spock's g++.

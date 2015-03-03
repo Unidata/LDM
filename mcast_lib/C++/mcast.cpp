@@ -295,7 +295,7 @@ mcastSender_init(
                 if (0 == *serverPort)
                     *serverPort = vcmtpSender->getTcpPortNum();
                 udebug("Starting sending co-ordinator");
-                vcmtpSender->startCoordinator();
+                vcmtpSender->Start();
                 sender->vcmtpSender = vcmtpSender;
                 sender->notifier = notifier;
                 status = 0;
