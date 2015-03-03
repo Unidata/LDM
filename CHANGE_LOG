@@ -1,4 +1,4 @@
-6.12.7.216
+6.12.7.216	2015-03-03T15:11:32-0700
     New VCMTP with "-std=c++0x" and #include for memset().
 
     Change vcmtpSendv3.startCoordinator() to vcmtpSendv3.Start().
