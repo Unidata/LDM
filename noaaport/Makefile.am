@@ -27,6 +27,7 @@ EXTRA_DIST 		= \
 	mrms1.data \
 	multicastReader.hin \
 	noaaportIngester.log.good \
+	noaaportIngester-nssl.log.good \
 	nwstgdump.data \
 	productMaker.hin \
 	reader.hin \
@@ -165,11 +166,11 @@ noaaportIngester.out:		noaaportIngester
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:		noaaportIngester.out
-	    cut -d ' ' -f 5- <$? | \
-	    sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
+	cut -d ' ' -f 5- <$? | \
+	sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
 check-noaaportIngester:		noaaportIngester.log
 	diff $(srcdir)/noaaportIngester.log.good $?
-check-noaaportIngester-nssl:	noaaportIngester
+noaaportIngester-nssl.out:	noaaportIngester
 	-rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
@@ -177,9 +178,14 @@ check-noaaportIngester-nssl:	noaaportIngester
 	ln -s $(top_srcdir)/gempak/tables/g2varsnssl.tbl g2varsnssl1.tbl
 	ln -s $(top_srcdir)/gempak/tables/g2vcrdwmo.tbl g2vcrdwmo255.tbl
 	./noaaportIngester -nl- -q /tmp/noaaportIngester-test.pq \
-            <$(srcdir)/mrms1.data
+            <$(srcdir)/mrms1.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
+noaaportIngester-nssl.log:	noaaportIngester-nssl.out
+	cut -d ' ' -f 5- <$? | \
+	sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
+check-noaaportIngester-nssl:	noaaportIngester-nssl.log
+	diff $(srcdir)/noaaportIngester-nssl.log.good $?
 
 valgrind:		valgrind-readnoaaport valgrind-noaaportIngester
 
