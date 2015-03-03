@@ -223,6 +223,4 @@ gb2_gtvartbl(
         *filename = nameBuf;
         *iret = 0;
     }
-
-    return;
 }

@@ -176,7 +176,8 @@ check-noaaportIngester-nssl:	noaaportIngester
 	ln -s $(top_srcdir)/gempak/tables/wmocenter.tbl .
 	ln -s $(top_srcdir)/gempak/tables/g2varsnssl.tbl g2varsnssl1.tbl
 	ln -s $(top_srcdir)/gempak/tables/g2vcrdwmo.tbl g2vcrdwmo255.tbl
-	./noaaportIngester -nl- -q /tmp/noaaportIngester-test.pq <mrms1.data
+	./noaaportIngester -nl- -q /tmp/noaaportIngester-test.pq \
+            <$(srcdir)/mrms1.data
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
 

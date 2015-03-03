@@ -1,4 +1,9 @@
 6.12.7.213
+    Corrected a bug in getting GRIB2 vertical coordinate table in GEMPAK
+    library. The routines to get the WMO and local tables cleared the extant
+    table if a new table needed to be read. They then forgot that they did this
+    if reading-in the new table failed.
+
     Changed g++ option from "-std=c++0x" to "-std=c++11" to obtain proper
     header-file definitions.
 

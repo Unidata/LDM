@@ -59,22 +59,19 @@ void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl,
      *  If different table, read new one in.
      */
     if ( strcmp( tmpname, currtable ) != 0 ) {
-        if ( currlvltbl.info != 0 ) {
-            free(currlvltbl.info);
-            currlvltbl.info=0;
-            currlvltbl.nlines=0;
-        }
-        // printf(" Opening WMO GRIB2 Vertical Coordinate Table %s...\n",tmpname);
-        ctb_g2rdlvl( tmpname, &currlvltbl, &ier );
+        G2lvls tmptbl = {0,0};
+
+        ctb_g2rdlvl(tmpname, &tmptbl, &ier);
         if ( ier != 0 ) {
-            currlvltbl.nlines=0;
             *iret=-29;
             ER_WMSG("GB",iret,tmpname,&ier,2,strlen(tmpname));
-            *g2levtbl = &currlvltbl;
             return;
         }
+
+        currlvltbl = tmptbl;
+        (void)strcpy(currtable, tmpname);
     }
-    strcpy( currtable, tmpname );
+
     *filename = currtable;
     *g2levtbl = &currlvltbl;
 
