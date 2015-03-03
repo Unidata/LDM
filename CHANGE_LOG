@@ -1,4 +1,7 @@
-6.12.7.214
+6.12.7.215
+    Reverted "-std=c++11" to "-std=c++0x" to accommodate Spock's g++.
+
+6.12.7.214	2015-03-03T14:08:09-0700
     Added parameter (0,19,193,9) (Snow-free albedo) to g2varsncep.tbl.
 
 6.12.7.213	2015-03-03T10:00:08-0700

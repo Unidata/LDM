@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.7.214], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.7.215], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -29,7 +29,7 @@ AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
 
 AC_PROG_CXX
 if test "$GXX" = "yes"; then
-    AC_SUBST([AM_CXXFLAGS], [-std=c++11])
+    AC_SUBST([AM_CXXFLAGS], [-std=c++0x])
 fi
 case "`uname -sr`" in
     "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
