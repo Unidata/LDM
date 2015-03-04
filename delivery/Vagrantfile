@@ -5,13 +5,24 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  # Attempting to create a "bridged" rather than NATed network via entries like
+  # "centos64_64.vm.network :public_network" in order to solve the concurrent
+  # "vagrant up" problem results in the following failure:
+  #     ==> centos64_64: Available bridged network interfaces:
+  #     1) eth2
+  #     2) eth0
+  #     Vagrant is attempting to interface with the UI in a way that requires
+  #     a TTY. Most actions in Vagrant that require a TTY have configuration
+  #     switches to disable this requirement. Please do that or run Vagrant
+  #     with TTY.
+
   config.vm.define "centos64_64" do |centos64_64|
     centos64_64.vm.box = "centos-6.4-x86_64-devel"
     centos64_64.vm.provision :puppet do |puppet|
       puppet.manifests_path = "puppet"
       puppet.manifest_file = "centos-devel.pp"
     end
-    centos64_64.vm.network :public_network
   end
 
   config.vm.define "ubuntu12_32" do |ubuntu12_32|
@@ -20,10 +31,18 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       puppet.manifests_path = "puppet"
       puppet.manifest_file = "ubuntu-devel.pp"
     end
-    ubuntu12_32.vm.network :public_network
   end
- 
-#  config.ssh.timeout = 300 # this causes failure
+
+  # Attempting to set the ssh(1) timeout value via the entry
+  #     config.ssh.timeout = 300
+  # in order to solve the concurrent "vagrant up" problem results in the
+  # following failure:
+  #     Bringing machine 'centos64_64' up with 'virtualbox' provider...
+  #     There are errors in the configuration of this machine. Please fix
+  #     the following errors and try again:
+  #     
+  #     SSH:
+  #     * The following settings shouldn't exist: timeout
 
   # config.vm.define "win7" do |win7|
   #   win7.vm.box = "win7"

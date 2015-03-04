@@ -1,4 +1,8 @@
-6.12.7.219
+6.12.7.220
+    Make the acceptance VM-s execute sequentially in order to solve the 
+    concurrent "vagrant up" problem.
+
+6.12.7.219	2015-03-04T13:08:20-0700
     Removed "config.ssh.timeout = 300" from "Vagrantfile" because it caused
     failure.
 
