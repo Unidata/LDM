@@ -5,6 +5,8 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.ssh.timeout = 300
+
   config.vm.define "centos64_64" do |centos64_64|
     centos64_64.vm.box = "centos-6.4-x86_64-devel"
     centos64_64.vm.provision :puppet do |puppet|
