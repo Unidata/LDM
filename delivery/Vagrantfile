@@ -5,14 +5,13 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.ssh.timeout = 300
-
   config.vm.define "centos64_64" do |centos64_64|
     centos64_64.vm.box = "centos-6.4-x86_64-devel"
     centos64_64.vm.provision :puppet do |puppet|
       puppet.manifests_path = "puppet"
       puppet.manifest_file = "centos-devel.pp"
     end
+    centos64_64.vm.network :public_network
   end
 
   config.vm.define "ubuntu12_32" do |ubuntu12_32|
@@ -21,8 +20,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       puppet.manifests_path = "puppet"
       puppet.manifest_file = "ubuntu-devel.pp"
     end
+    ubuntu12_32.vm.network :public_network
   end
  
+#  config.ssh.timeout = 300 # this causes failure
+
   # config.vm.define "win7" do |win7|
   #   win7.vm.box = "win7"
   # end

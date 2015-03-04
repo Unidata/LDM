@@ -1,4 +1,11 @@
-6.12.7.218
+6.12.7.219
+    Removed "config.ssh.timeout = 300" from "Vagrantfile" because it caused
+    failure.
+
+    Added "<vm_name>.vm.network :public_network" to Vagrantfile because
+    StackOverflow reply implied that multiple NAT-ed VM-s don't work.
+
+6.12.7.218	2015-03-04T12:46:11-0700
     Added "config.ssh.timeout = 300" to "Vagrantfile".
 
 6.12.7.217	2015-03-04T11:24:44-0700
