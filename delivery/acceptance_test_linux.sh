@@ -28,8 +28,9 @@ vmName=${2:?Name of Vagrant virtual-machine not specified}
 # Start the virtual machine. Other instances of this script are blocked because
 # vagrant(1), apparently, has problems with concurrent "up" commands.
 #
-#( flock 9; vagrant up $vmName
-flock /tmp/`basename $0`-$USER vagrant up $vmName
+( flock 9; vagrant up $vmName
+) 9>/tmp/`basename $0`-$USER
+#flock /tmp/`basename $0`-$USER vagrant up $vmName
 trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
 
 # On the virtual machine:
