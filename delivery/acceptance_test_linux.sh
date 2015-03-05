@@ -29,6 +29,7 @@ vmName=${2:?Name of Vagrant virtual-machine not specified}
 # vagrant(1), apparently, has problems with concurrent "up" commands.
 #
 ( flock 9; vagrant up $vmName
+) 9>/tmp/`basename $0`-$USER
 #flock /tmp/`basename $0`-$USER vagrant up $vmName
 trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
 
@@ -51,4 +52,4 @@ vagrant ssh $vmName -- -T <<EOF
     ./configure $ACCEPTANCE_CONFIGURE_OPTS
     make all check install
 EOF
-) 9>/tmp/`basename $0`-$USER
+#) 9>/tmp/`basename $0`-$USER
