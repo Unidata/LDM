@@ -44,7 +44,7 @@ pax -zr <$SOURCE_DISTRO_NAME
 trap "rm -rf $PKG_ID; `trap -p EXIT`" EXIT
 cd $PKG_ID
 ./configure --prefix=$ABSPATH_DEFAULT_INSTALL_PREFIX --disable-root-actions \
-        --with-noaaport >configure.log 2>&1
+        --with-noaaport LDMHOME=$ABSPATH_DEFAULT_LDMHOME >configure.log 2>&1
 DESTDIR=/tmp/$PKG_ID
 rm -rf $DESTDIR
 make install DESTDIR=$DESTDIR >install.log 2>&1

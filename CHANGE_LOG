@@ -1,4 +1,9 @@
-6.12.7
+6.12.8.1
+    Modified installation to hopefully prevent installation subdirectories/links
+    from being created in tomcat@spock by what I assumed was the publishing
+    script.
+
+6.12.7	2015-03-06T09:39:26-0700
     LDM Server (ldmd):
         If the LDM configuration-file has no ALLOW or ACCEPT entries, then the
         top-level LDM process will no longer listen for incoming connections.
