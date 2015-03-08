@@ -20,7 +20,8 @@ AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions \
 				  --with-noaaport \
 				  --with-retrans \
 				  --with-gribinsert \
-				  --with-multicast
+				  --with-multicast \
+				  LDMHOME=/tmp/distcheck_LDMHOME
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
