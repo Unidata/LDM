@@ -32,8 +32,8 @@ vmName=${2:?Name of Vagrant virtual-machine not specified}
 # by a one-line flock(1) command or by an flock(1) block. Consequently,
 # the concurrent Vagrant/VirtualBox VM-s are serialized.
 #
-( flock 9; vagrant up $vmName
-#) 9>/tmp/`basename $0`-$USER
+( flock 9; vagrant up $vmName; sleep 30
+) 9>/tmp/`basename $0`-$USER
 #flock /tmp/`basename $0`-$USER vagrant up $vmName
 trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
 
@@ -56,4 +56,4 @@ vagrant ssh $vmName -- -T <<EOF
     ./configure $ACCEPTANCE_CONFIGURE_OPTS
     make all check install
 EOF
-) 9>/tmp/`basename $0`-$USER
+#) 9>/tmp/`basename $0`-$USER
