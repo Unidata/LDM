@@ -18,7 +18,7 @@ set -e  # exit if error
 # Build and test the package and create a source distribution.
 #
 mkdir -p m4 mcast_lib/vcmtp/m4
-autoreconf -if
+/usr/bin/autoreconf -if
 ./configure --disable-root-actions >configure.log 2>&1
 make distcheck
 # DISTCHECK_CONFIGURE_FLAGS appends to AM_DISTCHECK_CONFIGURE_FLAGS, which
