@@ -23,7 +23,7 @@ autoreconf -if
 make distcheck
 # DISTCHECK_CONFIGURE_FLAGS overrides AM_DISTCHECK_CONFIGURE_FLAGS.
 # Keep LDMHOME value consonant with that in `Makefile.am`:
-COM_OPTS=`--disable-root-actions 'LDMHOME=`cd ../_inst && pwd`
+COM_OPTS='--disable-root-actions 'LDMHOME=`cd ../_inst && pwd`
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast '$COM_OPTS
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert '$COM_OPTS
 make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport '$COM_OPTS
