@@ -21,7 +21,10 @@ mkdir -p m4 mcast_lib/vcmtp/m4
 autoreconf -if
 ./configure --disable-root-actions >configure.log 2>&1
 make distcheck
-make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-multicast'
-make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-gribinsert'
-make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-noaaport'
-make distcheck DISTCHECK_CONFIGURE_FLAGS='--disable-root-actions --with-noaaport --with-retrans'
+# DISTCHECK_CONFIGURE_FLAGS overrides AM_DISTCHECK_CONFIGURE_FLAGS.
+# Keep LDMHOME value consonant with that in `Makefile.am`:
+COM_OPTS=`--disable-root-actions 'LDMHOME=`cd ../_inst && pwd`
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-multicast '$COM_OPTS
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-gribinsert '$COM_OPTS
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport '$COM_OPTS
+make distcheck DISTCHECK_CONFIGURE_FLAGS='--with-noaaport --with-retrans '$COM_OPTS
