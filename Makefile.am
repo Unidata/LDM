@@ -21,7 +21,18 @@ AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions \
 				  --with-retrans \
 				  --with-gribinsert \
 				  --with-multicast \
-				  LDMHOME=/tmp/distcheck_LDMHOME
+				  LDMHOME=`cd ../_inst && pwd`
+# This works and doesn't result in `redefined` warnings but does rely
+# inappropriately on `../_inst` being the `make distcheck` installation
+# directory.
+				  LDMHOME=`cd ../_inst && pwd`
+# This works though it does result in LDMHOME being redefined because it's used
+# in `-D` compilation flags and is also in `config.h`
+				  LDMHOME='$$''(prefix)'
+# This results in '$$prefix'
+#				  LDMHOME='$$$$prefix'
+# This results in '$refix'
+#				  LDMHOME='$$$prefix'
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
