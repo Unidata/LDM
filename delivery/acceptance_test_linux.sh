@@ -34,6 +34,8 @@ vmName=${1:?Name of Vagrant virtual-machine not specified}
 flock . vagrant up $vmName
 trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
 
+vagrant ssh -c date $vmName || flock . vagrant reload $vmName
+
 # On the virtual machine:
 #
 vagrant ssh $vmName -- -T <<EOF

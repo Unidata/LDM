@@ -1,4 +1,4 @@
-6.12.8.1	2015-03-09T14:45:55-0600
+6.12.8.1	2015-03-10T09:53:00-0600
     Modified installation to hopefully prevent installation subdirectories/links
     from being created in the home directory by `make distcheck`.
 
