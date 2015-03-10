@@ -1,28 +1,25 @@
-# Performs an acceptance-test of a package on a Linux system.  Terminates the
-# virtual machine.
+# Performs an acceptance-test of a package on a Linux virtual-machine system.
 #
 # Preconditions:
-#     - The current working directory contains:
-#         - the source-distribution tarball
-#         - release-vars.sh
-#         - Vagrantfile
-#     - The virtual machine is not running
-#
-# Usage: $0 tarball vmName
+#       The current working directory contains the following:
+#           - The source-distribution tarball;
+#           - The release-variables file "release-vars.sh"; and
+#           - The Vagrant-file "Vagrantfile".
+
+# Usage: $0 vmName
 #
 # where:
-#       tarball         Pathname of the source distribution file
 #       vmName          Name of the Vagrant virtual machine (e.g.,
 #                       "centos64_64", "precise32")
 
 set -e  # terminate on error
 
-# Parse the command -line
+# Parse the command-line
 #
-tarball=${1:?Pathname of tarball not specified}
-vmName=${2:?Name of Vagrant virtual-machine not specified}
+vmName=${1:?Name of Vagrant virtual-machine not specified}
 
 # Set the release-variables.
+#
 . ./release-vars.sh
 
 # Start the virtual machine.
@@ -32,9 +29,9 @@ vmName=${2:?Name of Vagrant virtual-machine not specified}
 # by a one-line flock(1) command or by an flock(1) block. Consequently,
 # the concurrent Vagrant/VirtualBox VM-s are serialized.
 #
-( flock 9; vagrant up $vmName; sleep 30
-) 9>/tmp/`basename $0`-$USER
-#flock /tmp/`basename $0`-$USER vagrant up $vmName
+#( flock 9; vagrant up $vmName;
+#) 9>/tmp/`basename $0`-$USER
+flock . vagrant up $vmName
 trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
 
 # On the virtual machine:
@@ -44,7 +41,7 @@ vagrant ssh $vmName -- -T <<EOF
 
     # Unpack the source distribution.
     #
-    pax -zr -s:/:/src/: </vagrant/$SOURCE_DISTRO_NAME
+    pax -zr -s:/:/src/: </vagrant/*.tar.gz
 
     # Make the source directory of the unpacked distribution the current working
     # directory because that's where the "configure" script is.
