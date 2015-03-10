@@ -36,7 +36,7 @@ trap "vagrant destroy --force $vmName; `trap -p EXIT`" EXIT
 
 # Workaround for concurrent VMs
 #
-vagrant ssh -c date $vmName || flock . vagrant reload $vmName
+vagrant ssh -c date $vmName || flock . vagrant reload --provision $vmName
 
 # On the virtual machine:
 #
