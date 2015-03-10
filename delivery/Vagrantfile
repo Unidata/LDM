@@ -30,7 +30,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.define "ubuntu12_32" do |ubuntu12_32|
     ubuntu12_32.vm.box = "precise32"
-    ubuntu12_32.vm.network "forwarded_port", guest: 22, host: 2222
+    ubuntu12_32.vm.network "forwarded_port", guest: 22, host: 2201
     ubuntu12_32.vm.provision :puppet do |puppet|
       puppet.manifests_path = "puppet"
       puppet.manifest_file = "ubuntu-devel.pp"
