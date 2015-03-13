@@ -1,6 +1,13 @@
-6.12.8.1	2015-03-10T18:38:41-0600
-    Modified installation to hopefully prevent installation subdirectories/links
-    from being created in the home directory by `make distcheck`.
+6.12.8	2015-03-10T18:38:41-0600
+    Installation:
+        Modified to hopefully prevent installation subdirectories/links from
+        being created in the home directory of an LDM developer executing the
+        command `make distcheck`. This only affects LDM developers.
+
+    NOAAPORT (noaaportIngester):
+        Corrected code in the AWIPS-II retransmission-request layer that relied
+        on undefined behavior in formatting log messages. This only affects NWS
+        offices.
 
 6.12.7	2015-03-06T09:39:26-0700
     LDM Server (ldmd):

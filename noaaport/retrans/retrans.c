@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -741,6 +742,33 @@ int prod_retrans_get_addr(
 
 } /* end prod_retrans_get_addr routine */ 
 
+/**
+ * Prints to the end of a buffer. Does not print past the end of the buffer.
+ * Ensures a terminating NUL.
+ *
+ * @param[in] buf   The buffer to be printed/appended to.
+ * @param[in] size  The size of the buffer including the terminating NUL.
+ * @param[in] fmt   The format specification for the arguments.
+ * @param[in] ...   The arguments.
+ */
+static void catPrint(
+        char* const  restrict      buf,
+        const size_t               size,
+        const char* const restrict fmt,
+        ...)
+{
+    size_t        used = strlen(buf);
+    const ssize_t remaining = size - used;
+
+    if (remaining > 1) {
+        va_list ap;
+
+        va_start(ap, fmt);
+        (void)vsnprintf(buf+used, remaining, fmt, ap);
+        va_end(ap);
+    }
+}
+
 int log_prod_end(char *end_msg, 
 		long	in_orig_prod_seqno,
 		long 	in_prod_seqno,
@@ -769,40 +797,33 @@ static long log_eop_count;  /* counter to track number of log EOP entries */
 	time(&now_time);
 
 	tmtime = (struct tm *)gmtime(&now_time);   /* time */
-	snprintf(prod_log_buff, sizeof(prod_log_buff), "%s %s", "END",
+	catPrint(prod_log_buff, sizeof(prod_log_buff), "%s %s", "END",
 			get_date_time(tmtime, global_time_zone));
-
 
 	if(in_orig_prod_seqno != 0) {
 		/* Assume have an original SBN prod seqno */
-		snprintf(prod_log_buff, sizeof(prod_log_buff), "%s #%ld/%d orig(#%ld)", 
-				prod_log_buff,
+		catPrint(prod_log_buff, sizeof(prod_log_buff), " #%ld/%d orig(#%ld)",
 				in_prod_seqno,
 				in_prod_blkno,
 				in_orig_prod_seqno);
 	} else {
-		snprintf(prod_log_buff, sizeof(prod_log_buff), "%s #%ld/%d", 
-				prod_log_buff,
+		catPrint(prod_log_buff, sizeof(prod_log_buff), " #%ld/%d",
 				in_prod_seqno,
 				in_prod_blkno);
 	}
 
-	snprintf(prod_log_buff, sizeof(prod_log_buff), "%s bytes(%d)", 
-			prod_log_buff,
-			in_prod_bytes);
+	catPrint(prod_log_buff, sizeof(prod_log_buff), " bytes(%d)", in_prod_bytes);
 	
-	snprintf(prod_log_buff, sizeof(prod_log_buff), "%s c(%d)",
-			prod_log_buff, in_prod_code);
+	catPrint(prod_log_buff, sizeof(prod_log_buff), " c(%d)", in_prod_code);
 
 	if((now_time - in_prod_start_time) > 0){
-		snprintf(prod_log_buff, sizeof(prod_log_buff), "%s +%lds ", 
-			prod_log_buff, (long)(now_time - in_prod_start_time));
+		catPrint(prod_log_buff, sizeof(prod_log_buff), " +%lds ",
+			(long)(now_time - in_prod_start_time));
 		
 	}
 
 	if(end_msg[0] != '\0') {
-		snprintf(prod_log_buff, sizeof(prod_log_buff), "%s %s", 
-			prod_log_buff, end_msg);
+		catPrint(prod_log_buff, sizeof(prod_log_buff), " %s", end_msg);
 	}
 
 	/* Finally do the brief product logging */
@@ -942,7 +963,7 @@ int log_prod_lost(long in_prod_errors, long in_tot_prods_lost_errs, long in_prod
 	time(&now_time);
 
 	tmtime = (struct tm *)gmtime(&now_time);   /* time */
-	snprintf(prod_log_buff, sizeof(prod_log_buff), "%s %s", prod_log_buff,
+	catPrint(prod_log_buff, sizeof(prod_log_buff), " %s",
 			get_date_time(tmtime, global_time_zone));
 
 	uinfo("%s %s \n",get_date_time(tmtime, global_time_zone),prod_log_buff);
