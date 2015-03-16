@@ -1,4 +1,8 @@
-6.12.8	2015-03-10T18:38:41-0600
+6.12.9
+    Added to the configure(1) script, support for Solaris' non-standard grep(1),
+    which doesn't have the "-q" (quiet) option.
+
+6.12.8	2015-03-13T15:45:05-0600
     Installation:
         Modified to hopefully prevent installation subdirectories/links from
         being created in the home directory of an LDM developer executing the
