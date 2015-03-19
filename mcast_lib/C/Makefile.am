@@ -61,6 +61,8 @@ up7.h:			up7.hin up7.c
 server_test_SOURCES	= server_test.c
 server_test_LDADD	= -lpthread
 
+local_checks		=
+
 if HAVE_OPMOCK
 VCMTPReceiver_stubs	= vcmtpRecvv3_stub.cpp vcmtpRecvv3_stub.hpp
 mcast_stubs		= mcast_stub.c mcast_stub.h
@@ -90,9 +92,10 @@ $(globals_stubs):		$(top_srcdir)/registry/globals.h
 $(mldm_sender_map_stubs):	mldm_sender_map.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
-opmock_check_progs			= mldm_receiver_memory_test \
-                                          mldm_receiver_test
-                                          #mldm_sender_manager_test
+opmock_tests				= mldm_receiver_memory_test \
+                                          mldm_receiver_test \
+                                          mldm_sender_manager_test
+opmock_check_progs			= $(opmock_tests)
 test_cppflags				= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
 
 mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c
@@ -115,22 +118,14 @@ mldm_receiver_memory_test_CPPFLAGS	= $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
-
-opmock_tests				= mldm_receiver_memory_test \
-                                          mldm_receiver_test
-
-#check-local:			check-mldm_sender_manager
-#check-mldm_sender_manager:	mldm_sender_manager_test
-#	$(top_builddir)/pqcreate/pqcreate -c -s 1m mldm_sender_manager_test.pq
-#	PATH=$(top_builddir)/mldm_sender:$$PATH \
-#		./mldm_sender_manager_test mldm_sender_manager_test.pq 
-#	rm mldm_sender_manager_test.pq *.map
 endif
 
 if HAVE_CUNIT
-cunit_check_progs		= prod_index_map_test \
+cunit_tests			= prod_index_map_test \
                                   mldm_sender_map_test \
                                   prod_index_queue_test
+cunit_check_progs		= $(cunit_tests) \
+				  up7_down7_test
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
@@ -147,7 +142,6 @@ up7_down7_test_SOURCES		= up7_down7_test.c
 up7_down7_test_CPPFLAGS		= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
-cunit_tests			= $(cunit_check_progs)
 
 prod_index_map_test_valgrind:	prod_index_map_test
 	$(LIBTOOL) --mode=execute valgrind \
@@ -160,11 +154,12 @@ up7_down7_test_valgrind:	up7_down7_test
             --mode=execute valgrind --leak-check=full --show-reachable=yes \
             ./up7_down7_test
 
-#check-local:		check-up7_down7_test
-#check-up7_down7_test:	up7_down7_test
-#	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
+local_checks			+= check-up7_down7_test
+check-up7_down7_test:		up7_down7_test
+	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
 endif
 
+check-local:			$(local_checks)
 check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs) \
 				  server_test
 TESTS				= $(opmock_tests) $(cunit_tests) server_test

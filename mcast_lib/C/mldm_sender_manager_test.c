@@ -16,14 +16,17 @@
 #include "globals.h"
 #include "inetutil.h"
 #include "ldm.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
 #include "mldm_sender_manager.h"
 #include "mldm_sender_map.h"
+#include "pq.h"
 
 #include "mcast_stub.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <opmock.h>
 #include <signal.h>
@@ -31,6 +34,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #ifndef __BASE_FILE__
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed by OpMock
@@ -58,6 +62,20 @@ init()
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_TRUE(mcastInfo != NULL);
     status = msm_init();
+    OP_ASSERT_EQUAL_INT(0, status);
+    status = pq_create(getQueuePath(), S_IRUSR|S_IWUSR, 0, 0, 1000000, 1000, &pq);
+    OP_ASSERT_EQUAL_INT(0, status);
+    char* path = ldm_format(256, "%s:%s", "../../mldm_sender", getenv("PATH"));
+    OP_ASSERT_TRUE(path != NULL);
+    status = setenv("PATH", path, 1);
+    OP_ASSERT_EQUAL_INT(0, status);
+    free(path);
+}
+
+static void
+destroy(void)
+{
+    int status = unlink(getQueuePath());
     OP_ASSERT_EQUAL_INT(0, status);
 }
 
@@ -170,26 +188,20 @@ main(
     int		argc,
     char**	argv)
 {
-    int status;
+    (void)openulog(basename(argv[0]), LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
+    (void)setulogmask(LOG_UPTO(LOG_NOTICE));
 
-    (void) openulog(basename(argv[0]), LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
-    (void) setulogmask(LOG_UPTO(LOG_NOTICE));
+    setQueuePath("mldm_sender_manager_test.pq");
 
-    if (NULL == argv[1]) {
-        uerror("Product-queue pathname not given");
-        status = 1;
-    }
-    else {
-        setQueuePath(argv[1]);
-        opmock_test_suite_reset();
-        opmock_register_test(test_noPotentialSender, "test_noPotentialSender");
-        opmock_register_test(test_conflict, "test_conflict");
-        opmock_register_test(test_not_running, "test_not_running");
-        opmock_register_test(test_running, "test_running");
-        init();
-        opmock_test_suite_run();
-        status = opmock_test_error ? 1 : 0;
-    }
+    opmock_test_suite_reset();
+    opmock_register_test(test_noPotentialSender, "test_noPotentialSender");
+    opmock_register_test(test_conflict, "test_conflict");
+    opmock_register_test(test_not_running, "test_not_running");
+    opmock_register_test(test_running, "test_running");
 
-    return status;
+    init();
+    opmock_test_suite_run();
+    destroy();
+
+    return opmock_test_error ? 1 : 0;
 }

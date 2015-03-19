@@ -16,11 +16,12 @@
 
 #include "globals.h"
 #include "log.h"
+#include "ldmprint.h"
 #include "mcast.h"
 #include "mcast_info.h"
 #include "mldm_sender_manager.h"
 #include "mldm_sender_map.h"
-#include "ldmprint.h"
+#include "StrBuf.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -109,6 +110,22 @@ mlsm_getServerPort(
 }
 
 /**
+ * Concatenates arguments; inserts a single space between arguments.
+ *
+ * @param[in] args  The arguments to be concatenated.
+ * @return          A new string buffer. The caller should pass it to `sbFree()`
+ *                  when it's no longer needed.
+ */
+static StrBuf* catenateArgs(const char* const * args) {
+    StrBuf* buf = sbNew();
+
+    while (*args)
+        sbCatL(buf, *args++, " ", NULL);
+
+    return sbTrim(buf);
+}
+
+/**
  * Executes the process image of the multicast LDM sender program. If this
  * function returns, then an error occurred and `log_start()` was called. The
  * multicast LDM sender process inherits the following from this process:
@@ -131,11 +148,11 @@ execMldmSender(
     args[i++] = "mldm_sender";
     args[i++] = "-I";
     args[i++] = info->server.inetId;
-    args[i++] = "-l";
     char* arg = (char*)getulogpath(); // safe cast
-    if (arg == NULL)
-        arg = "";
-    args[i++] = arg;
+    if (arg != NULL) {
+        args[i++] = "-l";
+        args[i++] = arg;
+    }
     args[i++] = "-P";
     char* serverPortOptArg = ldm_format(12, "%hu", info->server.port);
     if (serverPortOptArg == NULL) {
@@ -152,13 +169,17 @@ execMldmSender(
         char feedtypeBuf[256];
         (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
         args[i++] = feedtypeBuf; // multicast group identifier
-        char* mcastGroupOperand = ldm_format(128, "%s:%hu", info->group.inetId, info->group.port);
+        char* mcastGroupOperand = ldm_format(128, "%s:%hu", info->group.inetId,
+                info->group.port);
         if (mcastGroupOperand == NULL) {
             LOG_ADD0("Couldn't create multicast group operand");
         }
         else {
             args[i++] = mcastGroupOperand;
             args[i++] = NULL;
+            StrBuf* command = catenateArgs(args);
+            unotice("Executing multicast sender: %s", sbString(command));
+            sbFree(command);
             (void)dup2(pipe, 1);
             execvp(args[0], args);
             LOG_SERROR1("Couldn't execvp() multicast LDM sender \"%s\"",

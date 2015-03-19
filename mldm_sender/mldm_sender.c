@@ -45,19 +45,41 @@
 /**
  * C-callable multicast sender.
  */
-static McastSender*       mcastSender;
+static McastSender*          mcastSender;
+/**
+ * The thread on which the multicast sender executes:
+ */
+static pthread_t             senderThread;
 /**
  * Information on the multicast group.
  */
-static McastInfo   mcastInfo;
+static McastInfo             mcastInfo;
 /**
  * Termination signals.
  */
-static const int   termSigs[] = {SIGINT, SIGTERM};
+static const int             termSigs[] = {SIGINT, SIGTERM};
 /**
  * Signal-set for termination signals.
  */
-static sigset_t    termSigSet;
+static sigset_t              termSigSet;
+
+/**
+ * Blocks termination signals for the current thread.
+ */
+static inline void
+blockTermSigs(void)
+{
+    (void)pthread_sigmask(SIG_BLOCK, &termSigSet, NULL);
+}
+
+/**
+ * Unblocks termination signals for the current thread.
+ */
+static inline void
+unblockTermSigs(void)
+{
+    (void)pthread_sigmask(SIG_UNBLOCK, &termSigSet, NULL);
+}
 
 /**
  * Appends a usage message to the pending log messages.
@@ -632,6 +654,72 @@ return_status:
 }
 
 /**
+ * Starts the multicast sender. Called by `pthread_create()`.
+ *
+ * @param[in] ignored       Ignored argument.
+ * @retval    &0            Success.
+ * @retval    &LDM7_MCAST   Runtime error. `log_start()` called.
+ * @retval    &LDM7_SYSTEM  System error. `log_start()` called.
+ */
+static void*
+msStart(
+        void* const ignored)
+{
+    int status = mcastSender_start(mcastSender);
+
+    log_log(LOG_ERR); // might log nothing
+    log_free();
+
+    blockTermSigs(); // this thread is done, so notify another
+    (void)raise(SIGTERM);
+
+    static int reason;
+    reason = status == 0
+            ? 0
+            : status == 1
+              ? LDM7_MCAST
+              : LDM7_SYSTEM;
+    return &reason;
+}
+
+/**
+ * Starts the multicast sender.
+ *
+ * @retval 0       Success.
+ * @retval EAGAIN  The system lacked the necessary resources to create another
+ *                 thread, or the system-imposed limit on the total number of
+ *                 threads in a process {PTHREAD_THREADS_MAX} would be exceeded.
+ *                 `log_start()` called.
+ */
+static inline int
+ms_start(void)
+{
+    int status = pthread_create(&senderThread, NULL, msStart, NULL);
+
+    if (status)
+        LOG_ERRNUM0(status, "Couldn't start multicast sender");
+
+    return status;
+}
+
+/**
+ * Stops the multicast sender, joins the sender thread, and returns the status
+ * of the sender.
+ *
+ * @retval 0            Success.
+ * @retval LDM7_MCAST   Runtime error. `log_start()` called.
+ * @retval LDM7_SYSTEM  System error. `log_start()` called.
+ */
+static int
+ms_stop(void)
+{
+    mcastSender_stop(mcastSender);
+    void* ptr;
+    (void)pthread_join(senderThread, &ptr);
+    return *(int*)ptr;
+}
+
+/**
  * Ensures that the resources of this module are released.
  */
 static inline void      // inlined because small and only called in one place
@@ -725,24 +813,6 @@ mls_setProdClass(
     } // `pc` allocated
 
     return status;
-}
-
-/**
- * Blocks termination signals for the current thread.
- */
-static inline void
-blockTermSigs(void)
-{
-    (void)pthread_sigmask(SIG_BLOCK, &termSigSet, NULL);
-}
-
-/**
- * Unblocks termination signals for the current thread.
- */
-static inline void
-unblockTermSigs(void)
-{
-    (void)pthread_sigmask(SIG_UNBLOCK, &termSigSet, NULL);
 }
 
 /**
@@ -854,6 +924,7 @@ mls_startMulticasting(void)
  *                            <255  Unrestricted in scope. Global.
  * @param[in]  pqPathname   Pathname of the product-queue.
  * @retval     0            Success. Termination was requested.
+ * @retval     LDM7_MCAST   Multicast sender failure. `log_start()` called.
  * @retval     LDM7_SYSTEM  System failure. `log_start()` called.
  */
 static Ldm7Status
@@ -882,14 +953,24 @@ mls_execute(
          */
         mls_blockPqSignals();
 
-        /*
-         * Data-products are multicast on the current (main) thread so that the
-         * process will automatically terminate if something goes wrong.
-         */
-        char* miStr = mi_format(&mcastInfo);
-        unotice("Starting up: mcastInfo=%s, ttl=%u", miStr, ttl);
-        free(miStr);
-        status = mls_startMulticasting();
+        // Activate the multicast sender
+        if (ms_start()) {
+            status = LDM7_SYSTEM;
+        }
+        else {
+            /*
+             * Data-products are multicast on the current (main) thread so that
+             * the process will automatically terminate if something goes wrong.
+             */
+            char* miStr = mi_format(&mcastInfo);
+            unotice("Starting up: mcastInfo=%s, ttl=%u", miStr, ttl);
+            free(miStr);
+            status = mls_startMulticasting();
+
+            int msStatus = ms_stop();
+            if (status == 0)
+                status = msStatus;
+        }
 
         mls_destroy();
     } // module initialized
@@ -904,7 +985,8 @@ mls_execute(
  * @param[in] argv  Arguments. See [mls_usage()](@ref mls_usage)
  * @retval    0     Success.
  * @retval    1     Invalid command line. ERROR-level message logged.
- * @retval    2     System failure. ERROR-level message logged.
+ * @retval    2     Runtime failure. ERROR-level message logged.
+ * @retval    3     System failure. ERROR-level message logged.
  */
 int
 main(
@@ -933,9 +1015,10 @@ main(
     else {
         mls_setSignalHandling();
 
-        if (mls_execute(groupInfo, ttl, getQueuePath())) {
+        status = mls_execute(groupInfo, ttl, getQueuePath());
+        if (status) {
             log_log(LOG_ERR);
-            status = done ? 0 : 2;
+            status = status == LDM7_MCAST ? 2 : 3;
         }
 
         unotice("Terminating");

@@ -1002,8 +1002,8 @@ execute(
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
  * @retval    LDM7_TIMEDOUT  Timeout occurred. `log_start()` called.
- * @retval    LDM7_RPC       RPC failure (including interrupt).
- *                           `log_start()` called.
+ * @retval    LDM7_RPC       RPC failure (including interrupt). `log_start()`
+ *                           called.
  * @retval    LDM7_INVAL     Invalid multicast group name.
  * @retval    LDM7_UNAUTH    Not authorized to receive multicast group.
  * @retval    LDM7_SYSTEM    System error. `log_start()` called.
@@ -1019,8 +1019,8 @@ subscribeAndExecute(
     reply = subscribe_7(&down7->feedtype, down7->clnt);
 
     if (reply == NULL) {
-	LOG_START1("subscribe_7() failure: %s", clnt_errmsg(down7->clnt));
-	status = clntStatusToLdm7Status(clnt_stat(down7->clnt));
+        LOG_START1("subscribe_7() failure: %s", clnt_errmsg(down7->clnt));
+        status = clntStatusToLdm7Status(clnt_stat(down7->clnt));
         unlockClient(down7);
     }
     else {
@@ -1424,7 +1424,9 @@ down7_run(
                 break;
 
             log_log(LOG_NOTICE); // might log nothing
-            nap(down7); // returns immediately if stop requested
+
+            if (LDM7_TIMEDOUT != status)
+                nap(down7); // returns immediately if stop requested
 
             if (getState(down7) == DOWN7_STOP_REQUESTED) {
                 status = 0;

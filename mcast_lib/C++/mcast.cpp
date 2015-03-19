@@ -236,8 +236,8 @@ struct mcast_sender {
 };
 
 /**
- * Initializes a new multicast sender. Starts the sender's TCP server. This
- * method doesn't block.
+ * Initializes a new multicast sender. The sender isn't active until
+ * `mcastSender_start()` is called.
  *
  * @param[in]     sender        Pointer to sender to be initialized.
  * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
@@ -294,8 +294,6 @@ mcastSender_init(
             try {
                 if (0 == *serverPort)
                     *serverPort = vcmtpSender->getTcpPortNum();
-                udebug("Starting sending co-ordinator");
-                vcmtpSender->Start();
                 sender->vcmtpSender = vcmtpSender;
                 sender->notifier = notifier;
                 status = 0;
@@ -324,8 +322,8 @@ mcastSender_init(
 }
 
 /**
- * Returns a new multicast sender. Starts the sender's TCP server. This method
- * doesn't block.
+ * Returns a new multicast sender. The sender isn't active until
+ * `mcastSender_start()` is called.
  *
  * @param[out]    sender        Pointer to returned sender. Caller should call
  *                              `mcastSender_free(*sender)` when it's no longer
@@ -374,9 +372,9 @@ mcastSender_new(
 {
     McastSender* const send = (McastSender*)LOG_MALLOC(sizeof(McastSender),
             "multicast sender");
-    int status;
+    int                status;
 
-    if (sender == NULL) {
+    if (send == NULL) {
         status = ENOMEM;
     }
     else {
@@ -391,6 +389,50 @@ mcastSender_new(
 }
 
 /**
+ * Starts a multicast sender. Doesn't return until `mcastSender_stop()` is
+ * called or an error occurs.
+ *
+ * @param[in] sender  The sender to be started.
+ * @retval    0       Success. `mcastSender_stop()` was called.
+ * @retval    1       Runtime error. `log_start()` called.
+ * @retval    2       System error. `log_start()` called.
+ */
+int
+mcastSender_start(
+        McastSender* const sender)
+{
+    int status;
+
+    udebug("Starting VCMTP sender");
+    try {
+        sender->vcmtpSender->Start();
+        status = 0;
+    }
+    catch (std::runtime_error& e) {
+        LOG_START1("%s", e.what());
+        status = 1;
+    }
+    catch (std::exception& e) {
+        LOG_START1("%s", e.what());
+        status = 2;
+    }
+
+    return status;
+}
+
+/**
+ * Stops a multicast sender.
+ *
+ * @param[in] sender  The sender to be stopped.
+ */
+void
+mcastSender_stop(
+        McastSender* const sender)
+{
+    sender->vcmtpSender->Stop();
+}
+
+/**
  * Frees a multicast sender's resources.
  *
  * @param[in] sender  The multicast sender whose resources are to be freed.
@@ -401,6 +443,7 @@ mcastSender_free(
 {
     delete sender->vcmtpSender;
     delete sender->notifier;
+    free(sender);
 }
 
 /**

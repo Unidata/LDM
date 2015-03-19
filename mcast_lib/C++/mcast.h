@@ -53,8 +53,8 @@ void mcastReceiver_stop(
     McastReceiver* const        receiver);
 
 /**
- * Returns a new multicast sender. Starts the sender's TCP server. This method
- * doesn't block.
+ * Returns a new multicast sender. The sender isn't active until
+ * `mcastSender_start()` is called.
  *
  * @param[out]    sender        Pointer to returned sender. Caller should call
  *                              `mcastSender_free(*sender)` when it's no longer
@@ -100,6 +100,28 @@ mcastSender_new(
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
     void                  (*doneWithProd)(VcmtpProdIndex iProd));
+
+/**
+ * Starts a multicast sender. Doesn't return until `mcastSender_stop()` is
+ * called or an error occurs.
+ *
+ * @param[in] sender  The sender to be started.
+ * @retval    0       Success. `mcastSender_stop()` was called.
+ * @retval    1       Runtime error. `log_start()` called.
+ * @retval    2       System error. `log_start()` called.
+ */
+int
+mcastSender_start(
+        McastSender* const sender);
+
+/**
+ * Stops a multicast sender.
+ *
+ * @param[in] sender  The sender to be stopped.
+ */
+void
+mcastSender_stop(
+        McastSender* const sender);
 
 /**
  * Frees a multicast sender's resources.

@@ -3,6 +3,7 @@
  */
 #include "config.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -87,7 +88,28 @@ sbNew(void)
 }
 
 /**
- * Trims the string of a string-buffer to a given length. If the length is
+ * Trims the string of a string-buffer by removing `isspace()` characters from
+ * the end.
+ *
+ * @param[in] buf  The string buffer.
+ * @return         The string buffer.
+ */
+StrBuf*
+sbTrim(
+        StrBuf* const buf)
+{
+    size_t i = buf->len;
+
+    for (; i > 0 && isspace(buf->buf[i-1]); --i)
+        ;
+    buf->buf[i] = 0;
+    buf->len = i;
+
+    return buf;
+}
+
+/**
+ * Truncates the string of a string-buffer to a given length. If the length is
  * larger than then current string, then nothing happens.
  *
  * Arguments
@@ -99,7 +121,7 @@ sbNew(void)
  *      else            Pointer to the string-buffer.
  */
 StrBuf*
-sbTrim(
+sbTruncate(
     StrBuf* const       buf,
     const size_t        n)
 {
@@ -212,7 +234,7 @@ sbCatN(
     const char* restrict   string,
     const size_t           n)
 {
-    return sbTrim(sbCatL(buf, string, NULL), n);
+    return sbTruncate(sbCatL(buf, string, NULL), n);
 }
 
 /**
