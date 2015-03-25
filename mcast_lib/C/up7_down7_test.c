@@ -14,11 +14,13 @@
 #include "down7.h"
 #include "globals.h"
 #include "inetutil.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
 #include "mldm_sender_manager.h"
 #include "mldm_sender_map.h"
 #include "pq.h"
+#include "timestamp.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -28,6 +30,7 @@
 #include <rpc/rpc.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -91,7 +94,8 @@ setup(void)
                 (void)sigaddset(&termSigSet, SIGTERM);
                 /*
                  * The following allows a SIGTERM to be sent to the process
-                 * group without affecting the parent process (e.g., a make(1)).
+                 * group without affecting the parent process (e.g., a
+                 * make(1)).
                  */
                 (void)setpgrp();
             }
@@ -204,7 +208,7 @@ up7_init(
         CU_ASSERT_EQUAL_FATAL(status, 0);
         CU_ASSERT_EQUAL_FATAL(addrLen, sizeof(addr));
         CU_ASSERT_EQUAL_FATAL(addr.sin_family, AF_INET);
-        (void)memcpy(&xprt->xp_raddr, &addr, addrLen);
+        xprt->xp_raddr = addr;
         xprt->xp_addrlen = addrLen;
     }
 
@@ -476,6 +480,63 @@ sender_getPort(
     return ntohs(addr.sin_port);
 }
 
+static void
+sender_insertProducts(
+        Sender* const sender)
+{
+#if 1
+    pqueue* pq;
+    int     status = pq_open(PQ_PATHNAME, 0, &pq);
+
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    product    prod;
+    prod_info* info = &prod.info;
+    char       ident[80];
+    void*      data = NULL;
+
+    info->feedtype = EXP;
+    info->ident = ident;
+    info->origin = "localhost";
+    (void)memset(info->signature, 0, sizeof(info->signature));
+    srand48(1234567890);
+
+    for (int i = 0; i < 1; i++) {
+        const unsigned size = 100000*drand48() + 0.5;
+        const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
+
+        CU_ASSERT_TRUE_FATAL(nbytes >= 0 && nbytes < sizeof(ident));
+        status = set_timestamp(&info->arrival);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+        info->seqno = i;
+        (void)memcpy(info->signature, &i, sizeof(i));
+        info->sz = size;
+
+        data = realloc(data, size);
+        CU_ASSERT_PTR_NOT_NULL(data);
+        prod.data = data;
+
+        status = pq_insert(pq, &prod);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+        char buf[1024];
+        uinfo("Inserted: prodInfo=\"%s\"",
+                s_prod_info(buf, sizeof(buf), info, 1));
+
+        status = usleep(1000);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+    }
+
+    status = pq_close(pq);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+#else
+    #if 1
+        sleep(1);
+    #else
+        (void)sigwait(&termSigSet, &status);
+    #endif
+#endif
+}
+
 static int
 sender_terminate(
         Sender* const sender)
@@ -619,91 +680,6 @@ terminateMcastSender(void)
 }
 
 static void
-test_up7_down7(
-        void)
-{
-    Sender   sender;
-    Receiver receiver;
-    int      status;
-
-    blockTermSigs();
-    done = 0;
-
-    ServiceAddr* mcastServAddr;
-    status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    ServiceAddr* ucastServAddr;
-    status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    McastInfo* mcastInfo;
-    status = mi_new(&mcastInfo, ANY, mcastServAddr, ucastServAddr);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    sa_free(ucastServAddr);
-    sa_free(mcastServAddr);
-
-    status = mlsm_addPotentialSender(mcastInfo);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    mi_free(mcastInfo);
-
-    /* Starts a sender on a new thread */
-    status = sender_spawn(&sender);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    /* Starts a receiver on a new thread */
-    status = receiver_spawn(&receiver, sender_getAddr(&sender),
-            sender_getPort(&sender));
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-#if 1
-    sleep(1);
-#else
-    (void)sigwait(&termSigSet, &status);
-#endif
-    done = 1;
-
-    status = receiver_terminate(&receiver);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-
-    status = sender_terminate(&sender);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-
-    terminateMcastSender();
-
-    status = mlsm_clear();
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-}
-
-static void
-test_down7(
-        void)
-{
-    Receiver receiver;
-    int      status;
-
-    blockTermSigs();
-    done = 0;
-
-    /* Starts a receiver on a new thread */
-    status = receiver_spawn(&receiver, LOCAL_HOST, 38800);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    sleep(1);
-    done = 1;
-
-    status = receiver_terminate(&receiver);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-}
-
-static void
 test_up7(
         void)
 {
@@ -748,13 +724,97 @@ test_up7(
     CU_ASSERT_EQUAL(status, 0);
 }
 
+static void
+test_down7(
+        void)
+{
+    Receiver receiver;
+    int      status;
+
+    blockTermSigs();
+    done = 0;
+
+    /* Starts a receiver on a new thread */
+    status = receiver_spawn(&receiver, LOCAL_HOST, 38800);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    sleep(1);
+    done = 1;
+
+    status = receiver_terminate(&receiver);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void
+test_up7_down7(
+        void)
+{
+    Sender   sender;
+    Receiver receiver;
+    int      status;
+
+    blockTermSigs();
+    done = 0;
+
+    ServiceAddr* mcastServAddr;
+    status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    ServiceAddr* ucastServAddr;
+    status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    McastInfo* mcastInfo;
+    status = mi_new(&mcastInfo, ANY, mcastServAddr, ucastServAddr);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    sa_free(ucastServAddr);
+    sa_free(mcastServAddr);
+
+    status = mlsm_addPotentialSender(mcastInfo);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    mi_free(mcastInfo);
+
+    /* Starts a sender on a new thread */
+    status = sender_spawn(&sender);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    /* Starts a receiver on a new thread */
+    status = receiver_spawn(&receiver, sender_getAddr(&sender),
+            sender_getPort(&sender));
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    (void)sleep(1);
+    sender_insertProducts(&sender);
+    (void)sleep(1);
+    (void)sigwait(&termSigSet, &status);
+    done = 1;
+
+    status = receiver_terminate(&receiver);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = sender_terminate(&sender);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, 0);
+
+    terminateMcastSender();
+
+    status = mlsm_clear();
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
 int main(
         const int argc,
         const char* const * argv)
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_DEBUG, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
