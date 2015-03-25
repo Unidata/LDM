@@ -876,7 +876,8 @@ enum Ldm7Status {
     LDM7_SHUTDOWN, /* LDM-7 was shut down */
     LDM7_NOENT,    /* no such entry */
     LDM7_DUP,      /* duplicate entry */
-    LDM7_EXISTS    /* something exists */
+    LDM7_EXISTS,   /* something exists */
+    LDM7_PQ        /* Error in product-queue */
 };
 
 #if RPC_CLNT
