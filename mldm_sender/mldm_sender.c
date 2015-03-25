@@ -31,7 +31,6 @@
 #include <getopt.h>
 #include <libgen.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -46,10 +45,6 @@
  * C-callable multicast sender.
  */
 static McastSender*          mcastSender;
-/**
- * The thread on which the multicast sender executes:
- */
-static pthread_t             senderThread;
 /**
  * Information on the multicast group.
  */
@@ -594,6 +589,7 @@ mls_doneWithProduct(
  * @retval     LDM7_INVAL   An Internet identifier couldn't be converted to an
  *                          IPv4 address because it's invalid or unknown.
  *                          `log_start()` called.
+ * @retval     LDM7_MCAST   Failure in multicast system. `log_start()` called.
  * @retval     LDM7_SYSTEM  System error. `log_start()` called.
  */
 static Ldm7Status
@@ -632,10 +628,14 @@ mls_init(
         goto close_prod_index_map;
     }
 
-    if ((status = mcastSender_new(&mcastSender, serverInetAddr,
+    if ((status = mcastSender_spawn(&mcastSender, serverInetAddr,
             &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port, ttl,
             iProd, mls_doneWithProduct))) {
-        status = (status == EINVAL) ? LDM7_INVAL : LDM7_SYSTEM;
+        status = (status == 1)
+                ? LDM7_INVAL
+                : (status == 2)
+                  ? LDM7_MCAST
+                  : LDM7_SYSTEM;
         goto free_mcastInfo;
     }
 
@@ -654,94 +654,40 @@ return_status:
 }
 
 /**
- * Starts the multicast sender. Called by `pthread_create()`.
- *
- * @param[in] ignored       Ignored argument.
- * @retval    &0            Success.
- * @retval    &LDM7_MCAST   Runtime error. `log_start()` called.
- * @retval    &LDM7_SYSTEM  System error. `log_start()` called.
- */
-static void*
-msStart(
-        void* const ignored)
-{
-    int status = mcastSender_start(mcastSender);
-
-    log_log(LOG_ERR); // might log nothing
-    log_free();
-
-    blockTermSigs(); // this thread is done, so notify another
-    (void)raise(SIGTERM);
-
-    static int reason;
-    reason = status == 0
-            ? 0
-            : status == 1
-              ? LDM7_MCAST
-              : LDM7_SYSTEM;
-    return &reason;
-}
-
-/**
- * Starts the multicast sender.
- *
- * @retval 0       Success.
- * @retval EAGAIN  The system lacked the necessary resources to create another
- *                 thread, or the system-imposed limit on the total number of
- *                 threads in a process {PTHREAD_THREADS_MAX} would be exceeded.
- *                 `log_start()` called.
- */
-static inline int
-ms_start(void)
-{
-    int status = pthread_create(&senderThread, NULL, msStart, NULL);
-
-    if (status)
-        LOG_ERRNUM0(status, "Couldn't start multicast sender");
-
-    return status;
-}
-
-/**
- * Stops the multicast sender, joins the sender thread, and returns the status
- * of the sender.
+ * Destroys the multicast LDM sender by stopping it and releasing its resources.
  *
  * @retval 0            Success.
- * @retval LDM7_MCAST   Runtime error. `log_start()` called.
- * @retval LDM7_SYSTEM  System error. `log_start()` called.
+ * @retval LDM7_MCAST   Multicast system failure. `log_add()` called.
+ * @retval LDM7_SYSTEM  System failure. `log_add()` called.
  */
-static int
-ms_stop(void)
-{
-    mcastSender_stop(mcastSender);
-    void* ptr;
-    (void)pthread_join(senderThread, &ptr);
-    return *(int*)ptr;
-}
-
-/**
- * Ensures that the resources of this module are released.
- */
-static inline void      // inlined because small and only called in one place
+static inline int       // inlined because small and only called in one place
 mls_destroy(void)
 {
+    int status = mcastSender_terminate(mcastSender);
+
     (void)xdr_free(xdr_McastInfo, (char*)&mcastInfo);
     (void)pim_close();
     (void)pq_close(pq);
-    mcastSender_free(mcastSender);
+
+    return (status == 0)
+            ? 0
+            : (status == 2)
+              ? LDM7_MCAST
+              : LDM7_SYSTEM;
 }
 
 /**
  * Multicasts a single data-product. Called by `pq_sequence()`.
  *
- * @param[in] info   Pointer to the data-product's metadata.
- * @param[in] data   Pointer to the data-product's data.
- * @param[in] xprod  Pointer to an XDR-encoded version of the data-product (data
- *                   and metadata).
- * @param[in] size   Size, in bytes, of the XDR-encoded version.
- * @param[in] arg    Optional last `pq_sequence()` argument. Ignored.
- * @retval    0      Success.
- * @retval    EIO    I/O failure. `log_start()` called.
+ * @param[in] info         Pointer to the data-product's metadata.
+ * @param[in] data         Pointer to the data-product's data.
+ * @param[in] xprod        Pointer to an XDR-encoded version of the data-product
+ *                         (data and metadata).
+ * @param[in] size         Size, in bytes, of the XDR-encoded version.
+ * @param[in] arg          Optional last `pq_sequence()` argument. Ignored.
+ * @retval    0            Success.
+ * @retval    LDM7_MCAST   Multicast layer error. `log_start()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_start()` called.
  */
 static int
 mls_multicastProduct(
@@ -755,29 +701,18 @@ mls_multicastProduct(
     int            status = mcastSender_send(mcastSender, xprod, size,
             (void*)info->signature, sizeof(signaturet), &iProd);
 
-    if (0 == status) {
-        prod_info info;
-        XDR       xdrs;
-
-        xdrmem_create(&xdrs, xprod, size, XDR_DECODE);
-        (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
-
-        if (!xdr_prod_info(&xdrs, &info)) {
-            LOG_SERROR0("Couldn't decode LDM product-metadata");
-            status = EIO;
-        }
-        else {
-            status = pim_put(iProd, (const signaturet*)&info.signature);
-
-            if (ulogIsVerbose())
-                uinfo("Sent: prodIndex=%lu, prodInfo=\"%s\"",
-                        (unsigned long)iProd,
-                        s_prod_info(NULL, 0, &info, ulogIsDebug()));
-
-            xdr_free(xdr_prod_info, (char*)&info);
+    if (status) {
+        status = LDM7_MCAST;
+    }
+    else {
+        if (ulogIsVerbose()) {
+            char buf[1024];
+            uinfo("Multicasted: prodIndex=%lu, prodInfo=\"%s\"",
+                    (unsigned long)iProd,
+                    s_prod_info(buf, sizeof(buf), info, 1));
         }
 
-        xdr_destroy(&xdrs);
+        status = pim_put(iProd, (const signaturet*)&info->signature);
     }
 
     return status;
@@ -820,10 +755,11 @@ mls_setProdClass(
  * product-queue. Will block for 30 seconds or until a SIGCONT is received if
  * the next data-product doesn't exist.
  *
- * @param[in] prodClass  Class of data-products to multicast.
- * @retval    0          Success.
- * @return               `<errno.h>` error-code from `pq_sequence()`.
- * @return               Return-code from `mls_multicastProduct()`.
+ * @param[in] prodClass    Class of data-products to multicast.
+ * @retval    0            Success.
+ * @retval    LDM7_MCAST   Multicast layer error. `log_start()` called.
+ * @retval    LDM7_PQ      Product-queue error. `log_start()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_start()` called.
  */
 static int
 mls_tryMulticast(
@@ -855,8 +791,9 @@ mls_tryMulticast(
         status = 0;           // no problems here
         unblockTermSigs();
     }
-    else if (status) {
-        LOG_ERRNUM0(status, "Bad return from pq_sequence()");
+    else if (status < 0) {
+        LOG_ERRNUM0(status, "Error in product-queue");
+        status = LDM7_PQ;
     }
 
     return status;
@@ -880,9 +817,11 @@ mls_blockPqSignals(void)
 /**
  * Starts multicasting data-products.
  *
- * @pre                     {`mls_init()` was called.}
- * @retval     0            Success.
- * @retval     LDM7_SYSTEM  Error. `log_start()` called.
+ * @pre                    `mls_init()` was called.
+ * @retval    0            Success.
+ * @retval    LDM7_PQ      Product-queue error. `log_start()` called.
+ * @retval    LDM7_MCAST   Multicast layer error. `log_start()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_start()` called.
  */
 static Ldm7Status
 mls_startMulticasting(void)
@@ -924,7 +863,9 @@ mls_startMulticasting(void)
  *                            <255  Unrestricted in scope. Global.
  * @param[in]  pqPathname   Pathname of the product-queue.
  * @retval     0            Success. Termination was requested.
+ * @retval     LDM7_INVAL.  Invalid argument. `log_start()` called.
  * @retval     LDM7_MCAST   Multicast sender failure. `log_start()` called.
+ * @retval     LDM7_PQ      Product-queue error. `log_start()` called.
  * @retval     LDM7_SYSTEM  System failure. `log_start()` called.
  */
 static Ldm7Status
@@ -933,7 +874,21 @@ mls_execute(
         const unsigned                  ttl,
         const char* const restrict      pqPathname)
 {
+
+    /*
+     * Block signals used by `pq_sequence()` so that they will only be
+     * received by a thread that's accessing the product queue. (The product-
+     * queue ensures signal reception.)
+     */
+    mls_blockPqSignals();
+
+    /*
+     * Prevent the multicast sender from receiving a term signal because
+     * this thread manages the multicast sender.
+     */
+    blockTermSigs();
     int status = mls_init(info, ttl, pqPathname); // sets `mcastInfo`
+    unblockTermSigs();
 
     if (status) {
         LOG_ADD0("Couldn't initialize multicast LDM sender");
@@ -948,31 +903,17 @@ mls_execute(
         (void)fflush(stdout);
 
         /*
-         * Block signals used by `pq_sequence()` so that they will only be
-         * received by a thread that's accessing the product queue.
+         * Data-products are multicast on the current (main) thread so that
+         * the process will automatically terminate if something goes wrong.
          */
-        mls_blockPqSignals();
+        char* miStr = mi_format(&mcastInfo);
+        unotice("Starting up: mcastInfo=%s, ttl=%u", miStr, ttl);
+        free(miStr);
+        status = mls_startMulticasting();
 
-        // Activate the multicast sender
-        if (ms_start()) {
-            status = LDM7_SYSTEM;
-        }
-        else {
-            /*
-             * Data-products are multicast on the current (main) thread so that
-             * the process will automatically terminate if something goes wrong.
-             */
-            char* miStr = mi_format(&mcastInfo);
-            unotice("Starting up: mcastInfo=%s, ttl=%u", miStr, ttl);
-            free(miStr);
-            status = mls_startMulticasting();
-
-            int msStatus = ms_stop();
-            if (status == 0)
-                status = msStatus;
-        }
-
-        mls_destroy();
+        int msStatus = mls_destroy();
+        if (status == 0)
+            status = msStatus;
     } // module initialized
 
     return status;
@@ -985,8 +926,9 @@ mls_execute(
  * @param[in] argv  Arguments. See [mls_usage()](@ref mls_usage)
  * @retval    0     Success.
  * @retval    1     Invalid command line. ERROR-level message logged.
- * @retval    2     Runtime failure. ERROR-level message logged.
- * @retval    3     System failure. ERROR-level message logged.
+ * @retval    2     System error. ERROR-level message logged.
+ * @retval    3     Product-queue error. ERROR-level message logged.
+ * @retval    4     Multicast layer error. ERROR-level message logged.
  */
 int
 main(
@@ -1018,7 +960,12 @@ main(
         status = mls_execute(groupInfo, ttl, getQueuePath());
         if (status) {
             log_log(LOG_ERR);
-            status = status == LDM7_MCAST ? 2 : 3;
+            switch (status) {
+                case LDM7_INVAL: status = 1; break;
+                case LDM7_PQ:    status = 3; break;
+                case LDM7_MCAST: status = 4; break;
+                default:         status = 2; break;
+            }
         }
 
         unotice("Terminating");
