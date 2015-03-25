@@ -671,7 +671,7 @@ static void handle_connection(
              */
             xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
             if (xprt != NULL ) {
-                (void) memcpy(&xprt->xp_raddr, &raddr, len);
+                xprt->xp_raddr = raddr;
                 xprt->xp_addrlen = (int) len;
                 svcerr_weakauth(xprt);
                 svc_destroy(xprt);
@@ -699,7 +699,7 @@ static void handle_connection(
     }
     /* hook up the remote address to the xprt. */
     /* xprt->xp_raddr = raddr; */
-    (void) memcpy(&xprt->xp_raddr, &raddr, len);
+    xprt->xp_raddr = raddr;
     xprt->xp_addrlen = (int) len;
 
     if (!svc_register(xprt, LDMPROG, 4, ldmprog_4, 0)) {
