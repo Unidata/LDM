@@ -244,7 +244,7 @@ struct mcast_sender {
  *                              which the TCP server will listen for connections
  *                              from receivers for retrieving missed
  *                              data-blocks.
- * @param[in,out] serverPort    Port number for TCP server or 0, in which case
+ * @param[in]     serverPort    Port number for TCP server or 0, in which case
  *                              one is chosen by the operating system.
  * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
  *                              multicast group.
@@ -264,18 +264,16 @@ struct mcast_sender {
  * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
- * @retval        0             Success. `*sender` is set. `*serverPort` is set
- *                              if the initial port number was 0.
- * @retval        EINVAL        One of the address couldn't  be converted into a
- *                              binary IP address. `log_start()` called.
- * @retval        ENOMEM        Out of memory. \c log_start() called.
- * @retval        -1            Other failure. \c log_start() called.
+ * @retval        0             Success. `*sender` is set.
+ * @retval        1             Invalid argument. `log_start()` called.
+ * @retval        2             Non-system runtime error. `log_start()` called.
+ * @retval        3             System error. `log_start()` called.
  */
 static int
 mcastSender_init(
     McastSender* const     sender,
     const char* const      serverAddr,
-    unsigned short* const  serverPort,
+    const unsigned short   serverPort,
     const char* const      groupAddr,
     const unsigned short   groupPort,
     const unsigned         ttl,
@@ -289,24 +287,16 @@ mcastSender_init(
                 new PerProdSendingNotifier(doneWithProd);
 
         try {
-            vcmtpSendv3* vcmtpSender = new vcmtpSendv3(serverAddr, *serverPort,
-                    groupAddr, groupPort, iProd, notifier);
-            try {
-                if (0 == *serverPort)
-                    *serverPort = vcmtpSender->getTcpPortNum();
-                sender->vcmtpSender = vcmtpSender;
-                sender->notifier = notifier;
-                status = 0;
-            }
-            catch (const std::exception& e) {
-                delete vcmtpSender;
-                throw;
-            }
+            vcmtpSendv3* vcmtpSender = new vcmtpSendv3(serverAddr, serverPort,
+                    groupAddr, groupPort, iProd, notifier, ttl);
+            sender->vcmtpSender = vcmtpSender;
+            sender->notifier = notifier;
+            status = 0;
         }
         catch (const std::invalid_argument& e) {
             LOG_START1("%s", e.what());
             delete notifier;
-            status = EINVAL;
+            status = 1;
         }
         catch (const std::exception& e) {
             delete notifier;
@@ -315,7 +305,7 @@ mcastSender_init(
     }
     catch (const std::exception& e) {
         LOG_START1("%s", e.what());
-        status = -1;
+        status = 3;
     }
 
     return status;      // Eclipse wants to see a return
@@ -328,6 +318,158 @@ mcastSender_init(
  * @param[out]    sender        Pointer to returned sender. Caller should call
  *                              `mcastSender_free(*sender)` when it's no longer
  *                              needed.
+ * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
+ *                              which the TCP server will listen for connections
+ *                              from receivers for retrieving missed
+ *                              data-blocks.
+ * @param[in]     serverPort    Port number for TCP server or 0, in which case
+ *                              one is chosen by the operating system.
+ * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
+ *                              multicast group.
+ * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     ttl           Time-to-live of outgoing packets.
+ *                                    0  Restricted to same host. Won't be
+ *                                       output by any interface.
+ *                                    1  Restricted to the same subnet. Won't be
+ *                                       forwarded by a router (default).
+ *                                  <32  Restricted to the same site,
+ *                                       organization or department.
+ *                                  <64  Restricted to the same region.
+ *                                 <128  Restricted to the same continent.
+ *                                 <255  Unrestricted in scope. Global.
+ * @param[in]     iProd         Initial product-index. The first multicast data-
+ *                              product will have this as its index.
+ * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
+ *                              with a data-product so that its resources may be
+ *                              released.
+ * @retval        0             Success. `*sender` is set.
+ * @retval        1             Invalid argument. `log_start()` called.
+ * @retval        2             Non-system runtime error. `log_start()` called.
+ * @retval        3             System error. `log_start()` called.
+ */
+static int
+mcastSender_new(
+    McastSender** const    sender,
+    const char* const      serverAddr,
+    const unsigned short   serverPort,
+    const char* const      groupAddr,
+    const unsigned short   groupPort,
+    const unsigned         ttl,
+    const VcmtpProdIndex   iProd,
+    void                  (*doneWithProd)(VcmtpProdIndex iProd))
+{
+    McastSender* const send = (McastSender*)LOG_MALLOC(sizeof(McastSender),
+            "multicast sender");
+    int                status;
+
+    if (send == NULL) {
+        status = 3;
+    }
+    else {
+        status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
+                groupPort, ttl, iProd, doneWithProd);
+
+        if (0 == status)
+            *sender = send;
+    }
+
+    return status;      // Eclipse wants to see a return
+}
+
+/**
+ * Starts a multicast sender. Returns immediately.
+ *
+ * @param[in]  sender      The sender to be started.
+ * @param[out] serverPort  Port number of the multicast TCP server in host
+ *                         byte-order.
+ * @retval     0           Success. `mcastSender_stop()` was called.
+ *                         `*serverPort` is set.
+ * @retval     2           Non-system runtime error. `log_start()` called.
+ * @retval     3           System error. `log_start()` called.
+ */
+static int
+mcastSender_start(
+        McastSender* const    sender,
+        unsigned short* const serverPort)
+{
+    int status;
+
+    udebug("Starting VCMTP sender");
+    try {
+        sender->vcmtpSender->Start();
+
+        try {
+            *serverPort = sender->vcmtpSender->getTcpPortNum();
+            status = 0;
+        }
+        catch(std::system_error& e) {
+            LOG_START1("%s", e.what());
+            sender->vcmtpSender->Stop();
+            status = 3;
+        }
+    }
+    catch (std::runtime_error& e) {
+        LOG_START1("%s", e.what());
+        status = 2;
+    }
+    catch (std::exception& e) {
+        LOG_START1("%s", e.what());
+        status = 3;
+    }
+
+    return status;
+}
+
+/**
+ * Stops a multicast sender. Blocks until the sender has stopped.
+ *
+ * @param[in] sender  The sender to be stopped.
+ * @retval    0       Success.
+ * @retval    2       Runtime error. `log_start()` called.
+ * @retval    3       System error. `log_start()` called.
+ */
+static int
+mcastSender_stop(
+        McastSender* const sender)
+{
+    int status;
+
+    try {
+        sender->vcmtpSender->Stop();
+        status = 0;
+    }
+    catch (std::runtime_error& e) {
+        LOG_START1("%s", e.what());
+        status = 2;
+    }
+    catch (std::exception& e) {
+        LOG_START1("%s", e.what());
+        status = 3;
+    }
+
+    return status;
+}
+
+/**
+ * Frees a multicast sender's resources.
+ *
+ * @param[in] sender  The multicast sender whose resources are to be freed.
+ */
+static void
+mcastSender_free(
+    McastSender* const sender)
+{
+    delete sender->vcmtpSender;
+    delete sender->notifier;
+    free(sender);
+}
+
+/**
+ * Spawns an active multicast sender.
+ *
+ * @param[out]    sender        Pointer to returned sender. Caller should call
+ *                              `mcastSender_terminate(*sender)` when it's no
+ *                              longer needed.
  * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
  *                              which the TCP server will listen for connections
  *                              from receivers for retrieving missed
@@ -354,13 +496,12 @@ mcastSender_init(
  *                              released.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
  *                              if the initial port number was 0.
- * @retval        EINVAL        One of the address couldn't  be converted into a
- *                              binary IP address. `log_start()` called.
- * @retval        ENOMEM        Out of memory. \c log_start() called.
- * @retval        -1            Other failure. \c log_start() called.
+ * @retval        1             Invalid argument. `log_start()` called.
+ * @retval        2             Non-system runtime error. `log_start()` called.
+ * @retval        3             System error. `log_start()` called.
  */
 int
-mcastSender_new(
+mcastSender_spawn(
     McastSender** const    sender,
     const char* const      serverAddr,
     unsigned short* const  serverPort,
@@ -370,80 +511,22 @@ mcastSender_new(
     const VcmtpProdIndex   iProd,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
 {
-    McastSender* const send = (McastSender*)LOG_MALLOC(sizeof(McastSender),
-            "multicast sender");
-    int                status;
+    McastSender* send;
+    int          status = mcastSender_new(&send, serverAddr, *serverPort,
+            groupAddr, groupPort, ttl, iProd, doneWithProd);
 
-    if (send == NULL) {
-        status = ENOMEM;
-    }
-    else {
-        status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
-                groupPort, ttl, iProd, doneWithProd);
+    if (0 == status) {
+        status = mcastSender_start(send, serverPort);
 
-        if (0 == status)
+        if (status) {
+            mcastSender_free(send);
+        }
+        else {
             *sender = send;
-    }
-
-    return status;      // Eclipse wants to see a return
-}
-
-/**
- * Starts a multicast sender. Doesn't return until `mcastSender_stop()` is
- * called or an error occurs.
- *
- * @param[in] sender  The sender to be started.
- * @retval    0       Success. `mcastSender_stop()` was called.
- * @retval    1       Runtime error. `log_start()` called.
- * @retval    2       System error. `log_start()` called.
- */
-int
-mcastSender_start(
-        McastSender* const sender)
-{
-    int status;
-
-    udebug("Starting VCMTP sender");
-    try {
-        sender->vcmtpSender->Start();
-        status = 0;
-    }
-    catch (std::runtime_error& e) {
-        LOG_START1("%s", e.what());
-        status = 1;
-    }
-    catch (std::exception& e) {
-        LOG_START1("%s", e.what());
-        status = 2;
+        }
     }
 
     return status;
-}
-
-/**
- * Stops a multicast sender.
- *
- * @param[in] sender  The sender to be stopped.
- */
-void
-mcastSender_stop(
-        McastSender* const sender)
-{
-    sender->vcmtpSender->Stop();
-}
-
-/**
- * Frees a multicast sender's resources.
- *
- * @param[in] sender  The multicast sender whose resources are to be freed.
- */
-void
-mcastSender_free(
-    McastSender* const sender)
-{
-    delete sender->vcmtpSender;
-    delete sender->notifier;
-    free(sender);
 }
 
 /**
@@ -478,4 +561,21 @@ mcastSender_send(
         LOG_START1("%s", e.what());
         return EIO;
     }
+}
+
+/**
+ * Terminates a multicast sender by stopping it and releasing its resources.
+ *
+ * @param[in] sender  The multicast sender to be terminated.
+ * @retval    0       Success.
+ * @retval    2       Non-system runtime error. `log_start()` called.
+ * @retval    3       System error. `log_start()` called.
+ */
+int
+mcastSender_terminate(
+    McastSender* const sender)
+{
+    int status = mcastSender_stop(sender);
+    mcastSender_free(sender);
+    return status;
 }
