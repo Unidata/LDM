@@ -156,7 +156,7 @@ up7_down7_test_valgrind:	up7_down7_test
 
 local_checks			+= check-up7_down7_test
 check-up7_down7_test:		up7_down7_test
-	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
+	PATH=../../mldm_sender:$$PATH ./up7_down7_test
 endif
 
 check-local:			$(local_checks)
