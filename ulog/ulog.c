@@ -1164,7 +1164,7 @@ udebug(fmt, va_alist)
         {
             unsigned    prevLogOptions = logOptions;
 
-            logOptions &= ~(unsigned)(LOG_NOTIME | LOG_IDENT | LOG_PID);
+            logOptions &= ~(unsigned)(LOG_NOTIME);
 
             (void)vulog(LOG_DEBUG, fmt, args);
 
