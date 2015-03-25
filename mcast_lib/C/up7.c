@@ -620,8 +620,8 @@ subscribe_7_svc(
     const char*               hostname = hostbyaddr(&xprt->xp_raddr);
     const char*               feedspec = s_feedtypet(*feedtype);
 
-    unotice("Incoming subscription from %s (%s) for %s", ipv4spec, hostname,
-            s_feedtypet(*feedtype));
+    unotice("Incoming subscription from %s (%s) port %u for %s", ipv4spec,
+            hostname, ntohs(xprt->xp_raddr.sin_port), s_feedtypet(*feedtype));
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
 
     if (up7_subscribe(*feedtype, xprt, &result)) {
