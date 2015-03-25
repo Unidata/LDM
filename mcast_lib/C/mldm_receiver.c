@@ -108,6 +108,8 @@ allocateSpace(
         status = -1;
     }
     else {
+        char sigStr[sizeof(signaturet)*2 + 1];
+
         status = pqe_newDirect(mlr->pq, prodSize, signature, &mlr->prod,
                 &mlr->index);
         (void)unlockPq(mlr);
@@ -116,6 +118,10 @@ allocateSpace(
             *prod = NULL;
 
             if (status == PQUEUE_DUP) {
+                if (ulogIsVerbose())
+                    uinfo("Duplicate product: sig=%s, size=%lu",
+                            sprint_signaturet(sigStr, sizeof(sigStr), signature),
+                            (unsigned long)prodSize);
                 status = 0;
             }
             else {
@@ -125,6 +131,10 @@ allocateSpace(
             }
         }
         else {
+            if (ulogIsDebug())
+                udebug("Allocated queue-space for product: sig=%s, size=%lu",
+                        sprint_signaturet(sigStr, sizeof(sigStr), signature),
+                        (unsigned long)prodSize);
             *prod = mlr->prod;
             mlr->prodSize = prodSize;
             status = 0;
@@ -260,6 +270,12 @@ finishInsertion(
                     info->sz, info->ident);
         }
         else {
+            if (ulogIsVerbose()) {
+                char infoStr[512];
+
+                uinfo("Inserted multicast product: %s", s_prod_info(infoStr,
+                        sizeof(infoStr), info, 1));
+            }
             lastReceived(mlr, info);
         }
     }
@@ -379,7 +395,7 @@ init(
             mcastInfo->server.port, bop_func, eop_func, missed_prod_func,
             mcastInfo->group.inetId, mcastInfo->group.port, mlr);
     if (status) {
-        LOG_ADD0("Couldn't create FMTP receiver");
+        LOG_ADD0("Couldn't create VCMTP receiver");
         return LDM7_MCAST;
     }
 
