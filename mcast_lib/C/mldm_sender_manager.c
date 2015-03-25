@@ -182,8 +182,8 @@ execMldmSender(
             sbFree(command);
             (void)dup2(pipe, 1);
             execvp(args[0], args);
-            LOG_SERROR1("Couldn't execvp() multicast LDM sender \"%s\"",
-                    args[0]);
+            LOG_SERROR2("Couldn't execvp() multicast LDM sender \"%s\"; "
+                    "PATH=%s", args[0], getenv("PATH"));
             free(mcastGroupOperand);
         }
 
