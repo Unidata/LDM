@@ -164,18 +164,6 @@ setState(
     return oldState;
 }
 
-static void
-testAndSetState(
-        Down7* const     down7,
-        const Down7State testValue,
-        const Down7State newValue)
-{
-    lockState(down7);
-    if (testValue == down7->state)
-        down7->state = newValue;
-    unlockState(down7);
-}
-
 /**
  * Locks the client-side handle of a downstream LDM-7 for exclusive access.
  *
@@ -253,7 +241,7 @@ taskExit(
  * @retval     LDM7_INVAL     Invalid port number or host identifier.
  *                            `log_start()` called.
  * @retval     LDM7_IPV6      IPv6 not supported. `log_start()` called.
- * @retval     LDM7_REFUSED   Remote LDM-7 refused connection. `log_start()`
+ * @retval     LDM7_REFUSED   Remote host refused connection. `log_start()`
  *                            called.
  * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()`
  *                            called.
@@ -315,7 +303,7 @@ getSocket(
  * @retval     0              Success. `*client` and `*sock` are set.
  * @retval     LDM7_INVAL     Invalid port number or host identifier.
  *                            `log_start()` called.
- * @retval     LDM7_REFUSED   Remote LDM-7 refused connection. `log_start()`
+ * @retval     LDM7_REFUSED   Remote host refused connection. `log_start()`
  *                            called.
  * @retval     LDM7_RPC       RPC error. `log_start()` called.
  * @retval     LDM7_SYSTEM    System error. `log_start()` called.
@@ -395,14 +383,14 @@ testConnection(
 #endif
 
 /**
- * Runs an RPC-based server. Doesn't return until an error occurs.
+ * Runs an RPC-based server. Destroys and unregisters the service transport.
+ * Doesn't return until an error occurs or termination is externally requested.
  *
- * @param[in]     xprt           Pointer to the RPC service transport.
+ * @param[in]     xprt           Pointer to the RPC service transport. Will be
+ *                               destroyed upon return.
  * @param[in,out] termFd         Termination file-descriptor. When this
  *                               descriptor is ready for reading, the function
  *                               returns.
- * @param[in]     timeout        Timeout interval or NULL for indefinite
- *                               timeout.
  * @retval        0              Success. `termFd` was ready for reading or
  *                               the RPC layer closed the connection..
  * @retval        LDM7_RPC       Error in RPC layer. `log_start()` called.
@@ -433,19 +421,21 @@ run_svc(
         if (0 > status) {
             LOG_SERROR2("down7.c:run_svc(): select() error on socket %d or "
                     "termination-pipe %d", sock, termFd);
+            svc_destroy(xprt);
             status = LDM7_SYSTEM;
             break;
         }
         if (FD_ISSET(termFd, &fds)) {
             /* Termination requested */
             (void)read(termFd, &status, sizeof(int));
+            svc_destroy(xprt);
             status = 0;
             break;
         }
         if (FD_ISSET(sock, &fds))
             svc_getreqsock(sock); // Process RPC message. Calls ldmprog_7()
         if (!FD_ISSET(sock, &svc_fdset)) {
-           /* The connection to the client was closed by the RPC layer */
+           /* The RPC layer destroyed the service transport */
             status = 0;
             break;
         }
@@ -456,10 +446,12 @@ run_svc(
 
 /**
  * Runs the RPC-based data-product receiving service of a downstream LDM-7.
- * Executes until the downstream LDM-7 is stopped or an error occurs.
+ * Destroys and unregisters the service transport. Doesn't return until an
+ * error occurs or termination is externally requested.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
- * @param[in] xprt           Pointer to the server-side transport object.
+ * @param[in] xprt           Pointer to the server-side transport object. Will
+ *                           be destroyed upon return.
  * @retval    LDM7_RPC       An RPC error occurred. `log_start()` called.
  * @retval    LDM7_SYSTEM    System error. `log_start()` called.
  */
@@ -478,16 +470,23 @@ run_down7_svc(
     if (status) {
         LOG_ERRNUM0(status,
                 "Couldn't set thread-specific pointer to downstream LDM-7");
+        svc_destroy(xprt);
         status = LDM7_SYSTEM;
     }
     else {
         if (status) {
             LOG_SERROR0("Couldn't create termination pipe(2)");
+            svc_destroy(xprt);
             status = LDM7_SYSTEM;
         }
         else {
+            /*
+             * The following executes until an error occurs or termination is
+             * externally requested. It destroys and unregisters the service
+             * transport, which will close the downstream LDM-7's client socket.
+             */
             status = run_svc(xprt, down7->fds[0]); // indefinite timeout
-            unotice("Downstream LDM-7 server is offline");
+            unotice("Downstream LDM-7 server terminated");
         }
     } // thread-specific pointer to downstream LDM-7 is set
 
@@ -711,7 +710,7 @@ createUcastRecvXprt(
              * Set the remote address of the server-side RPC transport because
              * `svcfd_create()` doesn't.
              */
-            (void)memcpy(&xprt->xp_raddr, &addr, addrLen);
+            xprt->xp_raddr = addr;
             xprt->xp_addrlen = addrLen;
             *rpcXprt = xprt;
             status = 0;
@@ -749,18 +748,18 @@ startUcastRecvTask(
             (void)sa_snprint(down7->servAddr, buf, sizeof(buf));
             LOG_ADD1("Couldn't register RPC server for receiving "
                     "data-products from upstream LDM-7 at \"%s\"", buf);
+            svc_destroy(xprt);
             status = LDM7_RPC;
         }
         else {
-            status = run_down7_svc(down7, xprt); // indefinite execution
+            /*
+             * The following executes until an error occurs or termination is
+             * externally requested. It destroys and unregisters the service
+             * transport, which will close the downstream LDM-7's client socket.
+             */
+            status = run_down7_svc(down7, xprt);
         }
-
-        /*
-         * The following closes the server socket in `xprt`, which is also the
-         * downstream LDM-7's client socket.
-         */
-        svc_destroy(xprt); // calls `xprt_unregister()`
-    } // `xprt` allocated
+    } // `xprt` initialized
 
     taskExit(down7, status);
 
@@ -908,7 +907,6 @@ startTasks(
                 "data-products that were missed by the multicast LDM "
                 "receiving task");
         (void)stopUcastRecvTask(down7);
-        log_clear();
         (void)pthread_join(down7->ucastRecvThread, NULL);
         status = LDM7_SYSTEM;
     }
@@ -918,7 +916,6 @@ startTasks(
         stopRequestTask(down7);
         (void)pthread_join(down7->requestThread, NULL);
         (void)stopUcastRecvTask(down7);
-        log_clear();
         (void)pthread_join(down7->ucastRecvThread, NULL);
         status = LDM7_SYSTEM;
     }
@@ -1049,7 +1046,7 @@ subscribeAndExecute(
  * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
  * @retval    LDM7_INVAL     Invalid port number or host identifier.
  *                           `log_start()` called.
- * @retval    LDM7_REFUSED   Remote LDM-7 refused connection. `log_start()`
+ * @retval    LDM7_REFUSED   Remote host refused connection. `log_start()`
  *                           called.
  * @retval    LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()` called.
  * @retval    LDM7_SYSTEM    System error. `log_start()` called.
@@ -1084,7 +1081,7 @@ createClientAndExecute(
  * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
  * @retval    LDM7_INVAL     Invalid port number or host identifier.
  *                           `log_start()` called.
- * @retval    LDM7_REFUSED   Remote LDM-7 refused connection. `log_start()`
+ * @retval    LDM7_REFUSED   Remote host refused connection. `log_start()`
  *                           called.
  * @retval    LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()` called.
  * @retval    LDM7_SYSTEM    System error. `log_start()` called.
@@ -1413,8 +1410,8 @@ down7_run(
         unlockState(down7);
 
         char* const addrStr = sa_format(down7->servAddr);
-        unotice("Downstream LDM-7 starting up: servAddr=%s, feedtype=%s, pq=%s",
-                addrStr, s_feedtypet(down7->feedtype), getQueuePath());
+        unotice("Downstream LDM-7 starting up: remoteAddr=%s, feedtype=%s,"
+                "pq=%s", addrStr, s_feedtypet(down7->feedtype), getQueuePath());
         free(addrStr);
 
         for (;;) {
