@@ -122,8 +122,14 @@ ldm_format(
 }
 
 
-/*
- * Fill in buf with a printed version of ts.
+/**
+ * Formats a timestamp.
+ *
+ * @param[out] buf      Buffer.
+ * @param[in]  bufsize  Size of buffer in bytes.
+ * @param[in]  ts       Timestamp.
+ * @retval     -1       Buffer is too small.
+ * @return              Number of bytes written excluding terminating NUL.
  */
 int
 sprint_time_t(char *buf, size_t bufsize, time_t ts)
@@ -136,12 +142,21 @@ sprint_time_t(char *buf, size_t bufsize, time_t ts)
                 return -1;
 
         tm_ts = *(gmtime(&ts));
-        len = strftime(buf, bufsize,
-                        "%Y%m%d%H%M%S", &tm_ts);
+        len = strftime(buf, bufsize, "%Y%m%d%H%M%S", &tm_ts);
         return (int)len;
 }
 
 
+/**
+ * Formats a timestamp.
+ *
+ * @param[out] buf      Buffer.
+ * @param[in]  bufsize  Size of buffer in bytes.
+ * @param[in]  tvp      Timestamp.
+ * @retval     -1       `buf == NULL`, buffer is too small, or `bufsize >
+ *                      {INT_MAX}`.
+ * @return              Number of bytes written excluding terminating NUL.
+ */
 int
 sprint_timestampt(char *buf, size_t bufsize, const timestampt *tvp)
 {
@@ -153,30 +168,35 @@ sprint_timestampt(char *buf, size_t bufsize, const timestampt *tvp)
 
         if(tvp->tv_sec == TS_NONE.tv_sec && tvp->tv_usec == TS_NONE.tv_usec)
         {
-                len = sprintf(buf, "TS_NONE");
+                len = snprintf(buf, bufsize, "TS_NONE");
                 return len;
         }
         /* else */
         if(tvp->tv_sec == TS_ZERO.tv_sec && tvp->tv_usec == TS_ZERO.tv_usec)
         {
-                len = sprintf(buf, "TS_ZERO");
+                len = snprintf(buf, bufsize, "TS_ZERO");
                 return len;
         }
         /* else */
         if(tvp->tv_sec == TS_ENDT.tv_sec && tvp->tv_usec == TS_ENDT.tv_usec)
         {
-                len = sprintf(buf, "TS_ENDT");
+                len = snprintf(buf, bufsize, "TS_ENDT");
                 return len;
         }
         /* else */
         
         len = sprint_time_t(buf, bufsize, (time_t)tvp->tv_sec);
+        if (len == -1)
+            return -1;
         /* assert(len == 14) */
-        if (len < bufsize) {
+        bufsize -= len;
+        if (bufsize) {
             /* we are only printing the microsecs to millisec accuracy */
-            len += snprintf(buf+len, bufsize-len, ".%03d", (int)(tvp->tv_usec/1000));
-            if (len > bufsize)
-                len = bufsize;
+            int nbytes = snprintf(buf+len, bufsize, ".%03d",
+                    (int)(tvp->tv_usec/1000));
+            if (nbytes < 0 || nbytes >= bufsize)
+                return -1;
+            len += nbytes;
         }
                         
         return len;
@@ -350,6 +370,15 @@ s_rendezvoust(char *buf, size_t bufsize, const rendezvoust *rdv)
 }
 
 
+/**
+ * Formats a signature.
+ *
+ * @param[out] buf        Buffer.
+ * @param[in]  bufsize    Size of buffer in bytes.
+ * @param[in]  signature  Signature to be formatted.
+ * @retval     0         `buf == NULL` or is too small.
+ * @return                Number of bytes written excluding terminating NUL.
+ */
 int
 sprint_signaturet(char *buf, size_t bufsize, const signaturet signature)
 {
@@ -561,9 +590,23 @@ s_prod_class(char *buf,
 }
 
 
+/**
+ * Formats product information.
+ *
+ * @param[out] buf          Output buffer or NULL, in which case a static buffer
+ *                          is used.
+ * @param[in]  bufsize      Size of buffer in bytes.
+ * @param[in]  infop        Product information.
+ * @param[in]  doSignature  Whether or not to format the signature.
+ * @retval     NULL         Buffer is too small.
+ * @return                  Number of bytes written excluding terminating NUL.
+ */
 char *
-s_prod_info(char *buf, size_t bufsize, const prod_info *infop,
-        int doSignature)
+s_prod_info(
+        char* restrict                  buf,
+        size_t                          bufsize,
+        const prod_info* const restrict infop,
+        const int                       doSignature)
 {
         int conv;
         size_t len = 0;
@@ -583,6 +626,8 @@ s_prod_info(char *buf, size_t bufsize, const prod_info *infop,
         if(doSignature)
         {
                 conv = sprint_signaturet(&buf[len], bufsize, infop->signature);
+                if (conv == 0)
+                    return NULL;
                 len += (size_t)conv;
                 bufsize -= (size_t)conv;
                 buf[len++] = ' ';
@@ -590,19 +635,22 @@ s_prod_info(char *buf, size_t bufsize, const prod_info *infop,
                 bufsize--;
         }
 
-        conv = sprintf(&buf[len],"%8u ", infop->sz);
+        conv = snprintf(&buf[len], bufsize, "%10u ", infop->sz);
+        if (conv >= bufsize)
+            return NULL;
         len += (size_t)conv;
         bufsize -= (size_t)conv;
 
         conv = sprint_timestampt(&buf[len], bufsize, &infop->arrival);
+        if (conv == -1)
+            return NULL;
         len += (size_t)conv;
         bufsize -= (size_t)conv;
                         
-        conv = sprintf(&buf[len]," %7s %03u  %s",
-                        s_feedtypet(infop->feedtype),
-                        infop->seqno,
+        conv = snprintf(&buf[len], bufsize, " %7s %03u  %s",
+                        s_feedtypet(infop->feedtype), infop->seqno,
                         infop->ident);
-        return buf;
+        return (conv >= bufsize) ? NULL : buf;
 }
 
 
