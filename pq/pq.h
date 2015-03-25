@@ -708,10 +708,16 @@ pq_processProduct(
  * execute ifMatch(xprod, len, otherargs) and return the
  * return value from ifMatch().
  *
- * @retval 0           Success.
- * @retval PQUEUE_END  No matching data-product.
- * @return             <errno.h> error-code.
- * @return             The return-value of `ifMatch()`.
+ * @param[in] pq          Product-queue.
+ * @param[in] mt          Direction from current position in queue to start
+ *                        matching.
+ * @param[in] clss        Class of data-products to match.
+ * @param[in] ifMatch     Function to call for matching products.
+ * @param[in] otherargs   Optional argument to `ifMatch`.
+ * @retval    0           Success.
+ * @retval    PQUEUE_END  No matching data-product.
+ * @return                <errno.h> error-code.
+ * @return                The return-value of `ifMatch()`.
  */
 int
 pq_sequence(pqueue *pq, pq_match mt,
