@@ -43,8 +43,8 @@ public:
             void*           obj);
 
     ~PerProdNotifier() {}
-    void notify_of_bop(size_t prodSize, void* metadata,
-            unsigned metaSize, void** data);
+    void notify_of_bop(size_t prodSize, void* metadata, unsigned metaSize,
+            void** data);
     void notify_of_eop();
     void notify_of_missed_prod(uint32_t prodIndex);
 
