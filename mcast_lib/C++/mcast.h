@@ -53,12 +53,11 @@ void mcastReceiver_stop(
     McastReceiver* const        receiver);
 
 /**
- * Returns a new multicast sender. The sender isn't active until
- * `mcastSender_start()` is called.
+ * Spawns an active multicast sender.
  *
  * @param[out]    sender        Pointer to returned sender. Caller should call
- *                              `mcastSender_free(*sender)` when it's no longer
- *                              needed.
+ *                              `mcastSender_terminate(*sender)` when it's no
+ *                              longer needed.
  * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
  *                              which the TCP server will listen for connections
  *                              from receivers for retrieving missed
@@ -80,18 +79,17 @@ void mcastReceiver_stop(
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
- * @param[in]     donwWithProd  Function to call when the VCMTP layer is done
- *                              with a data-product and its resources may be
+ * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
+ *                              with a data-product so that its resources may be
  *                              released.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
  *                              if the initial port number was 0.
- * @retval        EINVAL        One of the address couldn't  be converted into a
- *                              binary IP address. `log_start()` called.
- * @retval        ENOMEM        Out of memory. \c log_start() called.
- * @retval        -1            Other failure. \c log_start() called.
+ * @retval        1             Invalid argument. `log_start()` called.
+ * @retval        2             Non-system runtime error. `log_start()` called.
+ * @retval        3             System error. `log_start()` called.
  */
 int
-mcastSender_new(
+mcastSender_spawn(
     McastSender** const    sender,
     const char* const      serverAddr,
     unsigned short* const  serverPort,
@@ -100,37 +98,6 @@ mcastSender_new(
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
     void                  (*doneWithProd)(VcmtpProdIndex iProd));
-
-/**
- * Starts a multicast sender. Doesn't return until `mcastSender_stop()` is
- * called or an error occurs.
- *
- * @param[in] sender  The sender to be started.
- * @retval    0       Success. `mcastSender_stop()` was called.
- * @retval    1       Runtime error. `log_start()` called.
- * @retval    2       System error. `log_start()` called.
- */
-int
-mcastSender_start(
-        McastSender* const sender);
-
-/**
- * Stops a multicast sender.
- *
- * @param[in] sender  The sender to be stopped.
- */
-void
-mcastSender_stop(
-        McastSender* const sender);
-
-/**
- * Frees a multicast sender's resources.
- *
- * @param[in] sender  The multicast sender whose resources are to be freed.
- */
-void
-mcastSender_free(
-    McastSender* const sender);
 
 /**
  * Sends a product.
@@ -150,6 +117,18 @@ mcastSender_send(
     const void* const     metadata,
     const unsigned        metaSize,
     VcmtpProdIndex* const iProd);
+
+/**
+ * Terminates a multicast sender by stopping it and releasing its resources.
+ *
+ * @param[in] sender  The multicast sender to be terminated.
+ * @retval    0       Success.
+ * @retval    2       Runtime error. `log_start()` called.
+ * @retval    3       System error. `log_start()` called.
+ */
+int
+mcastSender_terminate(
+    McastSender* const sender);
 
 #ifdef __cplusplus
 }
