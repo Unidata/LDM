@@ -1,6 +1,6 @@
 6.12.10
-    Remove considerable lint identified by Coverity Scan. Some of it might have
-    been significant. See <https://scan.coverity.com/projects/4645>.
+    Removed considerable lint identified by Coverity Scan. Some of it was
+    significant. See <https://scan.coverity.com/projects/4645>.
 
 6.12.9	2015-03-16T11:11:30-0600
     Added to the configure(1) script, support for Solaris' non-standard grep(1),
