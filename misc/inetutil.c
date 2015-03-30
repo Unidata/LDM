@@ -455,55 +455,6 @@ getservport(
 
 
 /*
- * Attempt to connect to a unix domain socket.
- * Create & connect.
- * Returns (socket) descriptor or -1 on error.
- */
-int
-usopen(
-        const char *name /* name of socket */
-)
-{
-        int sock = -1;
-        struct sockaddr addr;   /* AF_UNIX address */
-        int logType = SOCK_DGRAM;
-
-
-        while(sock == -1)
-        {
-                sock = socket(AF_UNIX, logType, 0);
-                if(sock == -1)
-                        return -1;
-                /* else */
-
-                addr.sa_family = AF_UNIX;
-                (void) strncpy(addr.sa_data, name,
-                        sizeof(addr.sa_data));
-                if (connect(sock, &addr, sizeof(addr)) == -1)
-                {
-                        const int errnum = errno;
-                        (void) close(sock);
-                        sock = -1;
-#ifdef EPROTOTYPE /* Linux ulog */
-                        if(logType == SOCK_DGRAM && errnum == EPROTOTYPE)
-                        {
-                                /* retry with stream socket type */
-                                logType = SOCK_STREAM;
-                                errno = 0;
-                                continue;
-                        }
-                        /* else */
-#endif
-                        return -1;
-                }
-                break; /* normal loop exit */
-        }
-
-        return sock;
-}
-
-
-/*
  * Attempt to connect to a internet domain udp socket.
  * Create & connect.
  * Returns (socket) descriptor or -1 on error.
@@ -750,9 +701,9 @@ isMe(
 int
 local_sockaddr_in(struct sockaddr_in* addr)
 {
-    int                error;
-    static int         cached = 0;
-    struct sockaddr_in cachedAddr;
+    int                       error;
+    static int                cached = 0;
+    static struct sockaddr_in cachedAddr;
 
     if (cached) {
         (void)memcpy(addr, &cachedAddr, sizeof(cachedAddr));

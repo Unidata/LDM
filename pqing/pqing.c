@@ -588,6 +588,10 @@ main(int ac, char *av[])
 
         if(logpath == NULL || !(*logpath == '-' && logpath[1] == 0))
         {
+                if (logfd < 0) {
+                    uerror("logfd < 0");
+                    return 1;
+                }
                 setbuf(fdopen(logfd, "a"), NULL);
         }       
 

@@ -240,7 +240,6 @@ g2int g2_getfld(unsigned char *cgrib,size_t sz,g2int ifldnum,g2int unpack,
       g2int have3,have4,have5,have6,have7,ierr,jerr;
       g2int numfld,j,n,istart,iofst,ipos;
       g2int disc,ver,lensec0,lengrib,lensec,isecnum;
-      g2int  *igds;
       g2int *bmpsave;
       g2float *newfld;
       gribfield  *lgfld;
@@ -394,6 +393,7 @@ g2int g2_getfld(unsigned char *cgrib,size_t sz,g2int ifldnum,g2int unpack,
         //   grid before the requested field.
         */
         if (isecnum == 3) {
+          g2int  *igds = NULL;
           iofst=iofst-40;       /* reset offset to beginning of section*/
           if (lgfld->igdtmpl!=0) free(lgfld->igdtmpl);
           if (lgfld->list_opt!=0) free(lgfld->list_opt);
@@ -406,8 +406,11 @@ g2int g2_getfld(unsigned char *cgrib,size_t sz,g2int ifldnum,g2int unpack,
             lgfld->numoct_opt=igds[2];
             lgfld->interp_opt=igds[3];
             lgfld->igdtnum=igds[4];
+            free(igds);
           }
           else {
+            if (igds)
+                free(igds);
             ierr=10;
             return(ierr);
           }

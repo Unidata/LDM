@@ -10,14 +10,12 @@ BUILT_SOURCES		= \
         child_map.h \
         doubly_linked_list.h \
         doubly_linked_stack.h \
-        executor.h \
         semRWLock.h \
         StrBuf.h
 EXTRA_DIST	        = \
         child_map.hin \
         doubly_linked_list.hin \
         doubly_linked_stack.hin \
-        executor.hin \
         semRWLock.hin \
         StrBuf.hin
 CLEANFILES		= $(BUILT_SOURCES) *.i
@@ -40,7 +38,6 @@ lib_la_SOURCES	= \
         doubly_linked_list.c doubly_linked_list.h \
         doubly_linked_stack.c doubly_linked_stack.h \
 	error.c \
-        executor.c executor.h \
 	fdnb.c \
 	fsStats.c \
 	inetutil.c \
@@ -80,7 +77,6 @@ TAGS_FILES	= \
 child_map.h:		child_map.hin child_map.c
 doubly_linked_list.h:	doubly_linked_list.hin doubly_linked_list.c
 doubly_linked_stack.h:	doubly_linked_stack.hin doubly_linked_stack.c
-executor.h:		executor.hin executor.c
 semRWLock.h:		semRWLock.hin semRWLock.c
 StrBuf.h:		StrBuf.hin StrBuf.c
 

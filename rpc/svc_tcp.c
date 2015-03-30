@@ -169,6 +169,8 @@ svctcp_create(
 	r = (struct tcp_rendezvous *)mem_alloc(sizeof(*r));
 	if (r == NULL) {
 		(void) fprintf(stderr, "svctcp_create: out of memory\n");
+		if (madesock)
+		       (void)close(sock);
 		return (NULL);
 	}
 	r->sendsize = sendsize;
@@ -176,6 +178,9 @@ svctcp_create(
 	xprt = (SVCXPRT *)mem_alloc(sizeof(SVCXPRT));
 	if (xprt == NULL) {
 		(void) fprintf(stderr, "svctcp_create: out of memory\n");
+		mem_free(r, sizeof(*r));
+		if (madesock)
+		       (void)close(sock);
 		return (NULL);
 	}
 	xprt->xp_p2 = NULL;

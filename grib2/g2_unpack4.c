@@ -123,13 +123,17 @@ g2int g2_unpack4(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ipdsnum,
       for (i=0;i<mappds->maplen;i++) {
         nbits=abs(mappds->map[i])*8;
         if ( mappds->map[i] >= 0 ) {
-          if (*iofst + nbits > bitsz)
+          if (*iofst + nbits > bitsz) {
+            free(mappds);
             return 2;
+          }
           gbit(cgrib,lipdstmpl+i,*iofst,nbits);
         }
         else {
-          if (*iofst + nbits > bitsz)
+          if (*iofst + nbits > bitsz) {
+            free(mappds);
             return 2;
+          }
           gbit(cgrib,&isign,*iofst,1);
           gbit(cgrib,lipdstmpl+i,*iofst+1,nbits-1);
           if (isign == 1) lipdstmpl[i]=-1*lipdstmpl[i];
@@ -154,13 +158,17 @@ g2int g2_unpack4(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ipdsnum,
         for (i=*mappdslen;i<newlen;i++) {
           nbits=abs(mappds->ext[j])*8;
           if ( mappds->ext[j] >= 0 ) {
-            if (*iofst + nbits > bitsz)
+            if (*iofst + nbits > bitsz) {
+              free(mappds);
               return 2;
+            }
             gbit(cgrib,lipdstmpl+i,*iofst,nbits);
           }
           else {
-            if (*iofst + nbits > bitsz)
+            if (*iofst + nbits > bitsz) {
+              free(mappds);
               return 2;
+            }
             gbit(cgrib,&isign,*iofst,1);
             gbit(cgrib,lipdstmpl+i,*iofst+1,nbits-1);
             if (isign == 1) lipdstmpl[i]=-1*lipdstmpl[i];
@@ -171,7 +179,7 @@ g2int g2_unpack4(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ipdsnum,
         *mappdslen=newlen;
       }
       if( mappds->ext != 0 ) free(mappds->ext);
-      if( mappds != 0 ) free(mappds);
+      free(mappds);
       /*
       //   Get Optional list of vertical coordinate values
       //   after the Product Definition Template, if necessary.
@@ -191,8 +199,10 @@ g2int g2_unpack4(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ipdsnum,
          else {
             *coordlist=lcoordlist;
          }
-        if (*iofst + 32**numcoord > bitsz)
+        if (*iofst + 32**numcoord > bitsz) {
+          free(coordieee);
           return 2;
+        }
         gbits(cgrib,coordieee,*iofst,32,0,*numcoord);
         g2_rdieee(coordieee,*coordlist,*numcoord);
         free(coordieee);

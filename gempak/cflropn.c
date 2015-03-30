@@ -38,7 +38,7 @@ FILE *cfl_ropn ( char *filnam, char *defdir, int *iret )
     *iret = 0;
     fptr = NULL;
 
-    cfl_inqr ( filnam, defdir, &lflen, fullname, iret );
+    cfl_inqr ( filnam, defdir, &lflen, fullname, sizeof(fullname), iret );
 
     if ( *iret == 0 ) {
 	fptr = fopen ( fullname, "r" );

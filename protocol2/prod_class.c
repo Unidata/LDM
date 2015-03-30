@@ -595,7 +595,7 @@ clss_regcomp(prod_class_t *clssp)
         for(ii = 0; ii < clssp->psa.psa_len; ii++)
         {
                 (void)re_vetSpec(clssp->psa.psa_val[ii].pattern);
-                regcomp(&clssp->psa.psa_val[ii].rgx,
+                (void)regcomp(&clssp->psa.psa_val[ii].rgx,
                         clssp->psa.psa_val[ii].pattern, REG_EXTENDED);
         }
 }

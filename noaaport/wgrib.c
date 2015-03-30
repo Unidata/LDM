@@ -929,7 +929,7 @@ int wrtieee_header(unsigned int n, FILE *output) {
 	h4[0] = n & 255;
 	h4[1] = (n >> 8) & 255;
 	h4[2] = (n >> 16) & 255;
-	h4[2] = (n >> 24) & 255;
+	h4[3] = (n >> 24) & 255;
 
 	putc(h4[3],output);
 	putc(h4[2],output);
@@ -2706,6 +2706,7 @@ int setup_user_table(int center, int subcenter, int ptable) {
     /* scan for center & subcenter and ptable */
     for (;;) {
         if (fgets(line, 299, input) == NULL) {
+            fclose(input);
 	    status = not_found;
             return 0;
         }
@@ -2755,10 +2756,12 @@ int setup_user_table(int center, int subcenter, int ptable) {
 	line[c0] = 0;
 	line[c1] = 0;
 
-	parm_table_user[i].name = (char *) malloc(c1 - c0);
-	parm_table_user[i].comment = (char *) malloc(c2 - c1);
-	strcpy(parm_table_user[i].name, line+c0+1);
-	strcpy(parm_table_user[i].comment, line+c1+1);
+	if (i >= 0 && i < sizeof(parm_table_user)/sizeof(parm_table_user[0])) {
+            parm_table_user[i].name = (char *) malloc(c1 - c0);
+            parm_table_user[i].comment = (char *) malloc(c2 - c1);
+            strcpy(parm_table_user[i].name, line+c0+1);
+            strcpy(parm_table_user[i].comment, line+c1+1);
+	}
     }
 
     /* now to fill in undefined blanks */
@@ -2771,6 +2774,7 @@ int setup_user_table(int center, int subcenter, int ptable) {
         }
     }
     status = filled;
+    fclose(input);
     return 1;
 }
 

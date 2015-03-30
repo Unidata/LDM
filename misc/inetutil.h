@@ -35,7 +35,6 @@ extern int            gethostaddr_in(struct sockaddr_in *paddr);
 #endif
 extern int            getservport(const char *servicename, const char *proto);
 extern char*          ghostname(void);
-extern int            usopen(const char *name);
 extern int            udpopen(const char *hostname, const char *servicename);
 extern int            isMe(const char *remote);
 extern int            local_sockaddr_in(struct sockaddr_in* addr);

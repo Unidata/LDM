@@ -3,8 +3,10 @@
 #include "geminc.h"
 #include "gemprm.h"
 
+#include <string.h>
+
 void cfl_inqr ( char *filnam, char *defdir, long *flen, char *newfil,
-		int *iret )
+		size_t buflen, int *iret )
 /************************************************************************
  * cfl_inqr								*
  *									*
@@ -25,6 +27,7 @@ void cfl_inqr ( char *filnam, char *defdir, long *flen, char *newfil,
  * Output parameters:							*
  *	*flen		long		File size			*
  *	*newfil		char		Expanded file name		*
+ *	buflen          size_t          `newfile` buffer size in bytes  *
  *	*iret		int		Return code			*
  *					  0 = Normal, file exists	*
  *					 -1 = File does not exist	*
@@ -41,14 +44,14 @@ void cfl_inqr ( char *filnam, char *defdir, long *flen, char *newfil,
 	*iret = 0;
 	*flen = 0;
 
-	css_envr ( filnam, newname, &ier );
-	strcpy ( newfil, newname );
+	css_envr ( filnam, newname, sizeof(newname), &ier );
+	strncpy(newfil, newname, buflen)[buflen-1] = 0;
 	if ( (ier1 = stat ( newfil, &stbuf )) != 0 ) {
 /*
  *	    Try the DEFDIR directory.
  */
 	    if ( defdir != NULL ) {
-		css_envr ( defdir, newfil, &ier );
+		css_envr ( defdir, newfil, buflen, &ier );
 		strcat ( newfil, "/" );
 		strcat ( newfil, newname );
 		ier1 = stat ( newfil, &stbuf );

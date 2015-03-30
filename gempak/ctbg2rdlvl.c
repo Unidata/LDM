@@ -4,6 +4,7 @@
 #include "gemprm.h"
 #include "ctbcmn.h"
 
+#include <stdio.h>
 
 void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret ) 
 /************************************************************************
@@ -34,7 +35,7 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
  *                              GRIB2 level/layer Table.                *
  ***********************************************************************/
 {
-        FILE     *fp;
+        FILE     *fp = NULL;
         int      n, blen, id1, id2, scale, nr, ier;
         char     buffer[256]; 
         char     name[34], abbrev[5], unit[21];
@@ -48,6 +49,8 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
 
         fp = cfl_tbop( tbname, "grid", &ier);
         if ( fp == NULL  ||  ier != 0 )  {
+            if (fp)
+                fclose(fp);
             *iret = -1;
             return;
         }

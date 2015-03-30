@@ -82,3 +82,5 @@ TEST-test.xml
 t.t
 ulog/hupsyslog
 ulog/ulogger
+cov-int
+ldm.tgz

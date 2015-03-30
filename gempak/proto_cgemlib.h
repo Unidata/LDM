@@ -133,6 +133,7 @@
 #define PROTO_CGEMLIB
 
 #include <dirent.h>
+#include <sys/types.h>
 
 #include "gemprm.h"
 #include "proto.h"
@@ -247,6 +248,7 @@ void 	cfl_inqr ( 	char 	*filnam,
 			char 	*defdir,
 			long 	*flen, 
 			char 	*newfil,
+			size_t  buflen,
                 	int  	*iret );
 
 void 	cfl_iret ( 	int 	ierrno, 
@@ -1250,6 +1252,7 @@ void  	css_date ( 	int	*itype,
 
 void 	css_envr ( 	char 	*filnam,
 			char 	*file, 
+			size_t  filelen,
 			int 	*iret );
 
 void 	css_evtadvtime ( 	time_t 	*evtelapse, 

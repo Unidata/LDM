@@ -3,7 +3,9 @@
 #include "geminc.h"
 #include "gemprm.h"
 
-void css_envr ( char *filnam, char *file, int *iret )
+#include <string.h>
+
+void css_envr ( char *filnam, char *file, size_t filelen, int *iret )
 /************************************************************************
  * css_envr								*
  *									*
@@ -34,6 +36,7 @@ void css_envr ( char *filnam, char *file, int *iret )
  *									*
  * Output parameters:							*
  *	*file		char		Expanded file name		*
+ *	filelen         size_t          `filelen` size in bytes         *
  *	*iret		int		Return code			*
  *					  2 = Symbol not found		*
  **									*
@@ -56,7 +59,7 @@ void css_envr ( char *filnam, char *file, int *iret )
 	file[0]   = '\0';
 	symbol[0] = '\0';
 	filtmp[0] = '\0';
-	strcpy ( file, filnam );
+	strncpy ( file, filnam, filelen )[filelen-1] = 0;
 
 /*
  *	Handle '~' in file name.
@@ -76,7 +79,8 @@ void css_envr ( char *filnam, char *file, int *iret )
 		    cst_ncpy ( usernm, &filnam[1], ipos-1, &ier );
 		} else if ( ier == -5 ) {
 		    ipos = strlen ( filnam );
-		    strcpy ( usernm, &filnam[1] );
+		    strncpy(usernm, &filnam[1], sizeof(usernm));
+                    usernm[sizeof(usernm)-1] = 0;
 		}
 		pw = getpwnam ( usernm );
 		if ( pw ) {
@@ -106,8 +110,9 @@ void css_envr ( char *filnam, char *file, int *iret )
 		jj++;
 	    }
 	    if  ( getenv ( symbol ) != NULL ) {
-		strcpy ( file, getenv ( symbol ) );
-		strcat ( file, filtmp );
+		strncpy ( file, getenv ( symbol ),  filelen-1);
+		file[filelen-1] = 0;
+		strncat ( file, filtmp, filelen - strlen(file) - 1 );
 	    } else {
 		*iret = 2;
 	    }
@@ -126,9 +131,10 @@ void css_envr ( char *filnam, char *file, int *iret )
 		symbol[(cptr-filnam)] = '\0';
 
 	        if  ( getenv ( symbol ) != NULL ) {
-		    strcpy ( file, getenv ( symbol ) );
-		    strcat ( file, "/" );
-		    strcat ( file, (cptr+1) );
+		    strncpy ( file, getenv ( symbol ), filelen );
+                    file[filelen-1] = 0;
+		    strncat ( file, "/", filelen - strlen(file) - 1);
+		    strncat ( file, (cptr+1), filelen - strlen(file) - 1 );
 	        } else {
 		    *iret = 2;
 	        }

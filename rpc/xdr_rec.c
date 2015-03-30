@@ -253,6 +253,7 @@ xdrrec_create(
 	rstrm->the_buffer = mem_alloc(sendsize + recvsize + BYTES_PER_XDR_UNIT);
 	if (rstrm->the_buffer == NULL) {
 		(void)fprintf(stderr, "xdrrec_create: out of memory\n");
+		mem_free(rstrm, sizeof(*rstrm));
 		return;
 	}
 	rstrm->out_base = rstrm->the_buffer;

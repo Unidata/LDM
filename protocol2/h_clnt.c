@@ -440,6 +440,7 @@ time_remaining(
         struct timeval now, remaining;
 
         remaining.tv_sec = -1;
+        remaining.tv_usec = 0;
 
         if(gettimeofday(&now, 0) == 0)
         {

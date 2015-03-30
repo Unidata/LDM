@@ -180,41 +180,47 @@ g2int g2_addgrid(unsigned char *cgrib,g2int *igds,g2int *igdstmpl,g2int *ideflis
         if ( mapgrid->needext ) {
           free(mapgrid);
           mapgrid=extgridtemplate(igds[4],igdstmpl);
+          if (mapgrid == 0) {       /* undefined template*/
+            ierr=-5;
+            return(ierr);
+          }
         }
       }
-      /*
-      //   Pack up each input value in array igdstmpl into the
-      //   the appropriate number of octets, which are specified in
-      //   corresponding entries in array mapgrid.
-      */
-      for (i=0;i<mapgrid->maplen;i++) {
-        nbits=abs(mapgrid->map[i])*8;
-        if ( (mapgrid->map[i] >= 0) || (igdstmpl[i] >= 0) )
-          sbit(cgrib,igdstmpl+i,iofst,nbits);
-        else {
-          sbit(cgrib,&one,iofst,1);
-          temp=abs(igdstmpl[i]);
-          sbit(cgrib,&temp,iofst+1,nbits-1);
-        }
-        iofst=iofst+nbits;
+      if (mapgrid) {
+          /*
+          //   Pack up each input value in array igdstmpl into the
+          //   the appropriate number of octets, which are specified in
+          //   corresponding entries in array mapgrid.
+          */
+          for (i=0;i<mapgrid->maplen;i++) {
+            nbits=abs(mapgrid->map[i])*8;
+            if ( (mapgrid->map[i] >= 0) || (igdstmpl[i] >= 0) )
+              sbit(cgrib,igdstmpl+i,iofst,nbits);
+            else {
+              sbit(cgrib,&one,iofst,1);
+              temp=abs(igdstmpl[i]);
+              sbit(cgrib,&temp,iofst+1,nbits-1);
+            }
+            iofst=iofst+nbits;
+          }
+          /*  Pack template extension, if appropriate*/
+          j=mapgrid->maplen;
+          if ( mapgrid->needext && (mapgrid->extlen > 0) ) {
+             for (i=0;i<mapgrid->extlen;i++) {
+               nbits=abs(mapgrid->ext[i])*8;
+               if ( (mapgrid->ext[i] >= 0) || (igdstmpl[j] >= 0) )
+                 sbit(cgrib,igdstmpl+j,iofst,nbits);
+               else {
+                 sbit(cgrib,&one,iofst,1);
+                 temp=abs(igdstmpl[j]);
+                 sbit(cgrib,&temp,iofst+1,nbits-1);
+               }
+               iofst=iofst+nbits;
+               j++;
+             }
+          }
+          free(mapgrid);
       }
-      /*  Pack template extension, if appropriate*/
-      j=mapgrid->maplen;
-      if ( mapgrid->needext && (mapgrid->extlen > 0) ) {
-         for (i=0;i<mapgrid->extlen;i++) {
-           nbits=abs(mapgrid->ext[i])*8;
-           if ( (mapgrid->ext[i] >= 0) || (igdstmpl[j] >= 0) )
-             sbit(cgrib,igdstmpl+j,iofst,nbits);
-           else {
-             sbit(cgrib,&one,iofst,1);
-             temp=abs(igdstmpl[j]);
-             sbit(cgrib,&temp,iofst+1,nbits-1);
-           }
-           iofst=iofst+nbits;
-           j++;
-         }
-      }
-      free(mapgrid);
       /*
       //   If requested,
       //   Insert optional list of numbers defining number of points

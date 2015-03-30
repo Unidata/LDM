@@ -86,7 +86,7 @@ int down6_init(
 
     _initialized = 0;
 
-    (void)strcpy(_dotAddr, inet_ntoa(upAddr->sin_addr));
+    (void)strncpy(_dotAddr, inet_ntoa(upAddr->sin_addr), sizeof(_dotAddr)-1);
     (void)strncpy(_upName, upName, sizeof(_upName)-1);
 
     _upName[sizeof(_upName)-1] = 0;

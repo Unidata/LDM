@@ -114,13 +114,17 @@ g2int g2_unpack5(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ndpts,
       for (i=0;i<mapdrs->maplen;i++) {
         nbits=abs(mapdrs->map[i])*8;
         if ( mapdrs->map[i] >= 0 ) {
-          if (*iofst + nbits > bitsz)
+          if (*iofst + nbits > bitsz) {
+            free(mapdrs);
             return 2;
+          }
           gbit(cgrib,lidrstmpl+i,*iofst,nbits);
         }
         else {
-          if (*iofst + nbits > bitsz)
+          if (*iofst + nbits > bitsz) {
+            free(mapdrs);
             return 2;
+          }
           gbit(cgrib,&isign,*iofst,1);
           gbit(cgrib,lidrstmpl+i,*iofst+1,nbits-1);
           if (isign == 1) lidrstmpl[i]=-1*lidrstmpl[i];
@@ -145,13 +149,17 @@ g2int g2_unpack5(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ndpts,
         for (i=*mapdrslen;i<newlen;i++) {
           nbits=abs(mapdrs->ext[j])*8;
           if ( mapdrs->ext[j] >= 0 ) {
-            if (*iofst + nbits > bitsz)
+            if (*iofst + nbits > bitsz) {
+              free(mapdrs);
               return 2;
+            }
             gbit(cgrib,lidrstmpl+i,*iofst,nbits);
           }
           else {
-            if (*iofst + nbits > bitsz)
+            if (*iofst + nbits > bitsz) {
+              free(mapdrs);
               return 2;
+            }
             gbit(cgrib,&isign,*iofst,1);
             gbit(cgrib,lidrstmpl+i,*iofst+1,nbits-1);
             if (isign == 1) lidrstmpl[i]=-1*lidrstmpl[i];
@@ -162,7 +170,7 @@ g2int g2_unpack5(unsigned char *cgrib,size_t sz,g2int *iofst,g2int *ndpts,
         *mapdrslen=newlen;
       }
       if( mapdrs->ext != 0 ) free(mapdrs->ext);
-      if( mapdrs != 0 ) free(mapdrs);
+      free(mapdrs);
 
       return(ierr);    /* End of Section 5 processing*/
 

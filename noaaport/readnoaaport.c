@@ -755,7 +755,7 @@ int main(
 
         /* Stop here if no psh */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
-            IOFF = IOFF + sbn->len + pdh->len;
+            IOFF += sbn->len + pdh->len;
             continue;
         }
 

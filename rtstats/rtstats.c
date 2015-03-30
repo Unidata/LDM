@@ -187,12 +187,12 @@ int main(int ac, char *av[])
         const char* const       pqfname = getQueuePath();
         const char* const       progname = ubasename(av[0]);
         char *logfname = NULL; /* log to syslogd(8) */
+        int logoptions = LOG_CONS | LOG_PID;
         int logmask = LOG_UPTO(LOG_NOTICE);
         prod_class_t clss;
         prod_spec spec;
         int status = 0;
         int interval = DEFAULT_INTERVAL;
-        int logoptions = (logfname == NULL) ? (LOG_CONS|LOG_PID) : LOG_NOTIME;
         int toffset = TOFFSET_NONE;
         extern const char *remote;
         char* hostname = ghostname();

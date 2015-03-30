@@ -186,6 +186,9 @@ fscan_statsbin(FILE *fp, statsbin *sb)
         /* correct to tm representation */
         file_tm.tm_year -= 1900;
         file_tm.tm_mon--;
+        file_tm.tm_isdst = 0;
+        file_tm.tm_gmtoff = 0;
+        file_tm.tm_zone = "UTC";
 
         sb->recent.tv_sec = mktime(&file_tm); /* N.B. TZ must be UTC */
         sb->recent.tv_usec = 0;
@@ -195,7 +198,7 @@ fscan_statsbin(FILE *fp, statsbin *sb)
         interval_tm.tm_min = 0;
         sb->interval =  mktime(&interval_tm); /* N.B. TZ must be UTC */
 
-        nf = fscanf(fp, "%s %s %lf %lf %lf %lf@%2d%2d",
+        nf = fscanf(fp, "%31s %63s %15lf %15lf %15lf %15lf@%2d%2d",
                 feedtype_str,
                 sb->origin,
                 &sb->nprods,
@@ -298,9 +301,9 @@ node_compare(const void *p1, const void *p2)
                 return 1;
         /* else, same feedtype */
 
-        if(h2->origin == NULL || *h2->origin == 0)
+        if(*h2->origin == 0)
                 return 1;
-        if(h1->origin == NULL || *h1->origin == 0)
+        if(*h1->origin == 0)
                 return -1;
         return strcasecmp(h1->origin, h2->origin);      
 }

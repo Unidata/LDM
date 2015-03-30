@@ -277,7 +277,7 @@ clnt_broadcast(
 	if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 		perror("Cannot create socket for broadcast rpc");
 		stat = RPC_CANTSEND;
-		goto done_broad;
+		goto return_stat;
 	}
 #ifdef SO_BROADCAST
 	if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (const void*)&on, sizeof (on)) < 0) {
@@ -415,6 +415,7 @@ clnt_broadcast(
 	}
 done_broad:
 	(void)close(sock);
+return_stat:
 	AUTH_DESTROY(unix_auth);
 	return (stat);
 }

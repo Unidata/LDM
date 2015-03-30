@@ -163,11 +163,11 @@ get_faa604_message(xbuf *buf, faa604_message *mess)
 	{
 		udebug("new_faa604_message: Missing SOH");
 	}
-	if(mess->len < MIN_FAA604_MSG_LEN)
+	else if(mess->len < MIN_FAA604_MSG_LEN)
 	{
 		udebug("new_faa604_message: length %d too short", mess->len);
 	}
-	if(mess->msg[mess->len-1] != ETX )
+	else if(mess->msg[mess->len-1] != ETX )
 	{
 		udebug("new_faa604_message: Missing ETX");
 	}

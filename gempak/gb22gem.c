@@ -3,6 +3,8 @@
 #include "gb2def.h"
 #include <log.h>
 
+#include <string.h>
+
 void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
 /************************************************************************
  * gb2_2gem								*
@@ -62,8 +64,8 @@ void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
      *    Convert Date/Time information
      */
     gb2_ftim ( tg, gdattm1, &iaccm, iret );
-    strncpy( gem->gdattm1, gdattm1, DTTMSZ);
-    strncpy( gem->gdattm2, gdattm2, DTTMSZ);
+    strncpy( gem->gdattm1, gdattm1, DTTMSZ-1)[DTTMSZ-1] = 0;
+    strncpy( gem->gdattm2, gdattm2, DTTMSZ-1)[DTTMSZ-1] = 0;
     cmsg->tmrange=iaccm;
 
     /*

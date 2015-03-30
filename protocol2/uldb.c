@@ -963,12 +963,13 @@ static uldb_Status seg_clone(
 
         if ((status = seg_copy(copy, segment)) != 0) {
             LOG_ADD0("Couldn't copy entries into clone-buffer");
+            free(copy);
         }
         else {
             *clone = copy;
             status = ULDB_SUCCESS;
         }
-    }
+    } // `copy` allocated
 
     return status;
 }
@@ -1119,16 +1120,21 @@ static uldb_Status sm_attach(
  * "shmID" and "segment" members of the structure. Upon return, the
  * shared-memory segment cannot be accessed until sm_attach() is called.
  *
- * @param sm            [in] Pointer to the shared-memory structure
- * @retval ULDB_SUCCESS Success
- * @retval ULDB_SYSTEM  System error. log_add() called.
+ * Idempotent.
+ *
+ * @param[in] sm           Pointer to the shared-memory structure
+ * @retval    ULDB_SUCCESS Success
+ * @retval    ULDB_SYSTEM  System error. log_add() called.
  */
 static uldb_Status sm_detach(
         SharedMemory* const sm)
 {
     int status;
 
-    if (NULL != sm->segment) {
+    if (NULL == sm->segment) {
+        status = ULDB_SUCCESS;
+    }
+    else {
         if (shmdt((void*)sm->segment)) {
             LOG_SERROR2(
                     "Couldn't detach shared-memory segment %d at address %p",
@@ -2203,9 +2209,7 @@ uldb_Status uldb_remove(
 
             if ((status = db_unlock(&database)) != 0) {
                 LOG_ADD0("Couldn't unlock database");
-
-                if (ULDB_SUCCESS == status)
-                    status = ULDB_SYSTEM;
+                status = ULDB_SYSTEM;
             }
         } /* database is locked */
 

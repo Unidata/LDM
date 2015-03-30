@@ -34,7 +34,7 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
  *                              GRIB2 Parameter Table.                  *
  ***********************************************************************/
 {
-        FILE     *fp;
+        FILE     *fp = NULL;
         int      n, blen,  nr, ier;
         char     buffer[256]; 
         char     name[33], gname[13], unts[21];
@@ -52,6 +52,8 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
 
         fp = cfl_tbop( tbname, "grid", &ier);
         if ( fp == NULL  ||  ier != 0 )  {
+            if (fp)
+                fclose(fp);
             *iret = -1;
             return;
         }

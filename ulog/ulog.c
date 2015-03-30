@@ -358,7 +358,7 @@ openulog(
                         strerror(errno));
 
                     (void) close(logFd);
-                    return -1;
+                    logFd = -1;
             }
             /* else */
         }

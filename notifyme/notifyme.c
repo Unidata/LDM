@@ -179,7 +179,7 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
         switch (rqstp->rq_proc) {
 
         case NULLPROC:
-                svc_sendreply(transp, (xdrproc_t)xdr_void, (caddr_t)NULL);
+                (void)svc_sendreply(transp, (xdrproc_t)xdr_void, (caddr_t)NULL);
                 return;
 
         case NOTIFICATION:

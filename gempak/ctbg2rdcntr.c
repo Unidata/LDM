@@ -4,6 +4,7 @@
 #include "gemprm.h"
 #include "ctbcmn.h"
 
+#include <stdio.h>
 
 void ctb_g2rdcntr ( char *tbname, G2wmocntrs *cntrtbl, int *iret ) 
 /************************************************************************
@@ -37,7 +38,7 @@ void ctb_g2rdcntr ( char *tbname, G2wmocntrs *cntrtbl, int *iret )
  *                              Originating Center Table.               *
  ***********************************************************************/
 {
-        FILE     *fp;
+        FILE     *fp = NULL;
         int      n, blen, id, nr, ier;
         char     buffer[256]; 
         char     name[65], abbrev[9];
@@ -51,6 +52,8 @@ void ctb_g2rdcntr ( char *tbname, G2wmocntrs *cntrtbl, int *iret )
 
         fp = cfl_tbop( tbname, "grid", &ier);
         if ( fp == NULL  ||  ier != 0 )  {
+            if (fp)
+                fclose(fp);
             *iret = -1;
             return;
         }

@@ -1412,10 +1412,9 @@ L420:
 
     }
 
-    if ( misslx != 0 ) {
-         free(misslx);
-         misslx=0;
-    }
+     free(misslx); // already dereference on all paths leading here
+     misslx=0;
+
 /*     CALL TIMPR(KFILDO,KFILDO,'END   PACK_GP        ') */
     if (iersav != 0) {
 	*ier = iersav;

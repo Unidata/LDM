@@ -167,7 +167,7 @@ g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
       /*  Check if a previous defined bitmap exists*/
         if (isecnum == 6) {
           gbit(cgrib,&ibmprev,iofst,8);
-          iofst=iofst+8;
+          iofst+=8;
           if ((ibmprev >= 0) && (ibmprev <= 253)) isprevbmap=1;
         }
         len=len+ilen;
@@ -324,6 +324,9 @@ g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
            specpack(pfld,ndpts,JJ,KK,MM,idrstmpl,cpack,&lcpack);
         else {
            printf("g2_addfield: Cannot pack DRT 5.51.\n");
+           free(cpack);
+           free(pfld);
+           free(mapdrs);
            return (-9);
         }
       }
@@ -380,6 +383,9 @@ g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
 #endif  /* USE_PNG */
       else {
         printf("g2_addfield: Data Representation Template 5.%ld not yet implemented.\n",idrsnum);
+        if (fld != pfld) free(pfld);
+        free(cpack);
+        free(mapdrs);
         ierr=-7;
         return(ierr);
       }
@@ -388,6 +394,7 @@ g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
       }
       if ( lcpack < 0 ) {
         if( cpack != 0 ) free(cpack);
+        free(mapdrs);
         ierr=-10;
         return(ierr);
       }
@@ -450,6 +457,7 @@ g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
       if ((ibmap==254) && ( ! isprevbmap)) {
         printf("g2_addfield: Requested previously defined bitmap,");
         printf(" but one does not exist in the current GRIB message.\n");
+        if( cpack != 0 ) free(cpack);
         ierr=-8;
         return(ierr);
       }

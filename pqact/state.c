@@ -1,8 +1,7 @@
 /*
- *   Copyright 2007, University Corporation for Atmospheric Research
+ *   Copyright 2015, University Corporation for Atmospheric Research
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: state.c,v 1.1.2.6 2009/08/05 15:48:00 steve Exp $ */
 
 /*
  * Persists state (e.g., time of last-processed data-product) of pqact(1)
@@ -69,6 +68,7 @@ stateInit(
                 log_errno();
                 log_add("stateInit(): Couldn't allocate %lu-byte pathname",
                     (unsigned long)pathlen);
+                free(newPath);
                 status = -2;
             }
             else {
@@ -83,8 +83,8 @@ stateInit(
                 tmpStatePathname = newTmpPath;
 
                 status = 0;
-            }
-        }
+            } // `newTmpPath` allocated
+        } // `newpath` allocated
     }                                   /* configPathname != NULL */
 
     return status;

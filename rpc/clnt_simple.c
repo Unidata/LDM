@@ -91,7 +91,8 @@ callrpc(
 		strcmp(crp->oldhost, host) == 0)) {
 
 		crp->valid = 0;
-		(void)close(crp->socket);
+		if (crp->socket >= 0)
+                        (void)close(crp->socket);
 		crp->socket = RPC_ANYSOCK;
 		if (crp->client) {
 			clnt_destroy(crp->client);

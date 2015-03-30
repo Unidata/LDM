@@ -6,6 +6,8 @@
 /*#include <dccmn.h>*/
 #include "grib2.h"
 
+#include <stdio.h>
+
 typedef struct nav_list {
 	char id[10];
         int gnum;
@@ -69,9 +71,9 @@ void grdnav_init()
 	}
       }
     }
-  }
 
-  
+    fclose(fp);
+  } // `fp` is open
 }
 
 /* convenience routine to get grid number for grib2

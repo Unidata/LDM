@@ -74,7 +74,7 @@ g2int g2_unpack3(unsigned char *cgrib, size_t sz, g2int *iofst,g2int **igds,
       g2int ierr,i,j,nbits,isecnum;
       g2int lensec,ibyttem=0,isign,newlen;
       g2int *ligds,*ligdstmpl=0,*lideflist=0;
-      gtemplate *mapgrid;
+      gtemplate *mapgrid = 0;
       size_t bitsz = sz * 8;
 
       ierr=0;
@@ -144,13 +144,17 @@ g2int g2_unpack3(unsigned char *cgrib, size_t sz, g2int *iofst,g2int **igds,
         for (i=0;i<*mapgridlen;i++) {
           nbits=abs(mapgrid->map[i])*8;
           if ( mapgrid->map[i] >= 0 ) {
-            if (*iofst + nbits > bitsz)
+            if (*iofst + nbits > bitsz) {
+                free(mapgrid);
                 return 2;
+            }
             gbit(cgrib,ligdstmpl+i,*iofst,nbits);
           }
           else {
-            if (*iofst + nbits > bitsz)
+            if (*iofst + nbits > bitsz) {
+                if( mapgrid != 0 ) free(mapgrid);
                 return 2;
+            }
             gbit(cgrib,&isign,*iofst,1);
             gbit(cgrib,ligdstmpl+i,*iofst+1,nbits-1);
             if (isign == 1) ligdstmpl[i]=-1*ligdstmpl[i];
@@ -176,13 +180,17 @@ g2int g2_unpack3(unsigned char *cgrib, size_t sz, g2int *iofst,g2int **igds,
           for (i=*mapgridlen;i<newlen;i++) {
             nbits=abs(mapgrid->ext[j])*8;
             if ( mapgrid->ext[j] >= 0 ) {
-              if (*iofst + nbits > bitsz)
+              if (*iofst + nbits > bitsz) {
+                free(mapgrid);
                 return 2;
+              }
               gbit(cgrib,ligdstmpl+i,*iofst,nbits);
             }
             else {
-              if (*iofst + nbits > bitsz)
+              if (*iofst + nbits > bitsz) {
+                free(mapgrid);
                 return 2;
+              }
               gbit(cgrib,&isign,*iofst,1);
               gbit(cgrib,ligdstmpl+i,*iofst+1,nbits-1);
               if (isign == 1) ligdstmpl[i]=-1*ligdstmpl[i];
@@ -194,7 +202,7 @@ g2int g2_unpack3(unsigned char *cgrib, size_t sz, g2int *iofst,g2int **igds,
           *mapgridlen=newlen;
         }
         if( mapgrid->ext != 0 ) free(mapgrid->ext);
-        if( mapgrid != 0 ) free(mapgrid);
+        free(mapgrid);
       }
       else {              /* No Grid Definition Template*/
         *mapgridlen=0;

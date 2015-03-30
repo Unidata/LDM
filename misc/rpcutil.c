@@ -33,7 +33,8 @@ clnt_errmsg(CLIENT* clnt)
 
     clnt_geterr(clnt, &e);
 
-    (void) strcpy(str, clnt_sperrno(e.re_status));  
+    (void) strncpy(str, clnt_sperrno(e.re_status), sizeof(buf));
+    str[sizeof(buf)-1] = 0;
     str += strlen(str);
 
     switch (e.re_status) {

@@ -306,7 +306,10 @@ int cm_remove(
         status = 1;
     }
     else {
-        if (NULL != map->root) {
+        if (NULL == map->root) {
+            status = 2;
+        }
+        else {
             Entry               template;
             Entry* const*       node;
 

@@ -167,7 +167,8 @@ setremote(
          */
         (void)memset(&remote, 0, sizeof(remote));
         remote.addr.s_addr = paddr->sin_addr.s_addr;
-        (void)strcpy(remote.astr, inet_ntoa(remote.addr));
+        (void)strncpy(remote.astr, inet_ntoa(remote.addr), sizeof(remote.astr));
+        remote.astr[sizeof(remote.astr)-1] = 0;
         remote.printname = remote.astr;
 
         remote.sendsz = (u_int) so_buf(sock, SO_SNDBUF);

@@ -166,10 +166,11 @@ else
             udebug("levels %s strlen %d\0",levels((int)vcordid,(int)level[0],(int)level[1]),
 	      strlen(levels((int)vcordid,(int)level[0],(int)level[1])));*/
 
-            sprintf(wmometa,"grib/%s/%s/#%03d/%04d%02d%02d%02d%02d/F%03d/%s/%s/ \0",
+            sprintf(wmometa,"grib/%s/%s/#%03d/%04d%02u%02u%02u%02u/F%03ld/%s/%s/ ",
                 (char *)s_pds_center(center_id),(char *)s_pds_model(center_id,model_id),
 		   grid_id,
-                YYYY,dattim[1],dattim[2],dattim[3],dattim[4],(time2 - time1)/3600,
+                YYYY,dattim[1],dattim[2],dattim[3],dattim[4],
+                (long)((time2 - time1)/3600),
                 (char *)k5toa((unsigned char *)cpos+8),
                 levels((int)vcordid,(int)level[0],(int)level[1]));
 

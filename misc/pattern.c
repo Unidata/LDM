@@ -61,6 +61,7 @@ pat_new(
             if (NULL == ptr->string) {
                 errObj = ERR_NEW2(1, NULL, "Couldn't copy string \"%s\": %s",
                     ere, strerror(errno));
+                free(ptr);
             }
             else {
                 int     err;
@@ -76,18 +77,14 @@ pat_new(
 
                     errObj = ERR_NEW2((REG_ESPACE == err) ? 1 : 2, NULL,
                         "Couldn't compile ERE \"%s\": %s", ptr->string, buf);
+                    free(ptr->string);
+                    free(ptr);
                 }
                 else {
                     ptr->ignoreCase = ignoreCase;
                     *pat = ptr;
                 }                       /* ERE compiled */
-
-                if (errObj)
-                    free(ptr->string);
             }                           /* ptr->string allocated */
-
-            if (errObj)
-                free(ptr);
         }                               /* "ptr" allocated */
     }                                   /* non-trivial ERE */
 

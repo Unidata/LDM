@@ -497,11 +497,11 @@ void misspack(g2float *fld,g2int ndpts,g2int idrsnum,g2int *idrstmpl,
         *lcpack=iofst/8;
 
         if ( ifld != 0 ) free(ifld);
-        if ( jfld != 0 ) free(jfld);
+        free(jfld);
         if ( ifldmiss != 0 ) free(ifldmiss);
-        if ( gref != 0 ) free(gref);
-        if ( gwidth != 0 ) free(gwidth);
-        if ( glen != 0 ) free(glen);
+        free(gref);
+        free(gwidth);
+        free(glen);
       /*}
       //else {          //   Constant field ( max = min )
       //  nbits=0;

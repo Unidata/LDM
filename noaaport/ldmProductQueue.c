@@ -116,6 +116,7 @@ int lpqGet(
                                     0) {
                                 LOG_ERRNUM0(status,
                                         "Couldn't initialize mutex");
+                                free(path);
                                 status = 2;
                             }
                             else {
@@ -125,7 +126,7 @@ int lpqGet(
                                 newArray[queueCount++] = newLpq;
                                 queues = newArray;
                             }
-                        }
+                        } // `path` allocated
 
                         if (0 != status)
                             (void)pq_close(pq);

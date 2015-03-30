@@ -168,7 +168,7 @@ done:
             if((ich > 3) && (ich < 11))
             {
                 padchar = 0; ich--;
-                while(( pilstr[ich] == ' ') && (ich >= 0))
+                while((ich >= 0) && ( pilstr[ich] == ' '))
                 {
                     pilstr[ich] = '\0';
                     padchar++;

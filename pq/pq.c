@@ -166,7 +166,7 @@ fb_ranlev(fb *fbp)
     int         b;
     int         maxlevel = fbp->maxsize - 1;
     static int  randomsLeft;
-    static int  randomBits;
+    static long randomBits;
 
     if (initialized == 0) {
         srandom(1);
@@ -581,29 +581,91 @@ tq_add(
     tqueue* const       tq,
     const off_t         offset)
 {
-    int         status;
     fb*         fbp = (fb*)((char*)tq + tq->fbp_off);
-    tqep_t      tpix;
-    tqelem*     tp;
 
-    assert(fbp->magic == FB_MAGIC);     /* check for sanity */
+    assert(fbp->magic == FB_MAGIC); // check for sanity
     assert(tq->nalloc != 0);
     assert(tq_HasSpace(tq));
 
-    tpix = tq_get_tqelem(tq);           /* get new tqelem off of free list */
+    tqep_t      tpix = tq_get_tqelem(tq); // get new entry off of free list
     assert(tpix != TQ_NONE);
 
-    tp = &tq->tqep[tpix];
-    status = set_timestamp(&tp->tv);    /* set insertion-time to now */
+    tqelem*     tp = &tq->tqep[tpix]; // tp is entry to insert
+    int         status = set_timestamp(&tp->tv); // set insertion-time to now
 
     if (status == ENOERR) {
-        tqelem* tpp;
-        tqep_t  update[MAXLEVELS];
-        tqep_t  p = TQ_HEAD;
+        tqelem* update[MAXLEVELS];
+        tqelem* tpp = &tq->tqep[TQ_HEAD]; // entry whose insertion-time <= now
         int     k = tq->level;
 
-        tp->offset = offset;            /* tp is tqelem* to insert */
+        /*
+         * Find the entry whose insertion-time is the least less than the
+         * current time.
+         */
+        do {
+            /*
+             * Level `k` entry that follows `tpp`.
+             * q = p->forward[k]; same as *(fbp->fblks + tpp->fblk + k).
+             */
+            tqelem* tqp = &tq->tqep[fbp->fblks[tpp->fblk + k]];
 
+            // Advance through level `k` linked-list while(q->key < key) {...}
+            while (TV_CMP_LT(tqp->tv, tp->tv)) {
+                tpp = tqp;
+                tqp = &tq->tqep[fbp->fblks[tpp->fblk + k]]; // q = p->forward[k]
+            }
+
+            if (!TV_CMP_EQ(tqp->tv, tp->tv)) {
+                // The insertion-time of the new data-product is unique.
+                update[k--] = tpp;
+            }
+            else {
+                /*
+                 * A data-product with the same insertion-time as the current
+                 * time already exists in the time-queue. Because keys in the
+                 * time-queue must be unique, the current-time is incremented
+                 * and the search is restarted from the last highest-level
+                 * entry. This should be safe as long as the mean interval
+                 * between data-product insertions is much greater than the
+                 * timestamp resolution (ASSUMPTION).
+                 */
+                timestamp_incr(&tp->tv);
+                k = tq->level;
+                tpp = update[k];
+            } // found entry with same time
+        } while (k >= 0); // for each skiplist level
+
+        /*
+         * Found where to put the new element (just after `tpp`). Obtain a
+         * skip-list node to contain it.
+         *
+         * The following hack limits increments in level to 1.  This messes up
+         * the theoretical distribution of random levels slightly and could be
+         * left out for a "purist" implementation.
+         */
+        k = fb_ranlev(fbp);
+        if (k > tq->level) {
+            tq->level++;
+            k = tq->level;
+            update[k] = &tq->tqep[TQ_HEAD];
+        }
+
+        tp->offset = offset;
+        tp->fblk = fb_get(fbp, k);      /* Get new fblk of level k */
+
+        /*
+         * Insert the new element by having it reference the following element
+         * and having the immediately previous level-k element reference the new
+         * element for all level k.
+         */
+        do {
+            tpp = update[k];
+            // q->forward[k] = p->forward[k]
+            fbp->fblks[tp->fblk + k] = fbp->fblks[tpp->fblk + k];
+            // p->forward[k] = q;  forward pointer to new tqelem.
+            fbp->fblks[tpp->fblk + k] = tpix;
+        } while(--k >= 0);
+#if 0
         do {
             tpp = &tq->tqep[p];
 
@@ -677,6 +739,7 @@ tq_add(
             update[k] = TQ_HEAD;
         }
 
+        tp->offset = offset;
         tp->fblk = fb_get(fbp, k);      /* Get new fblk of level k */
 
         /*
@@ -696,6 +759,7 @@ tq_add(
              */
             fbp->fblks[tpp->fblk + k] = tpix;
         } while(--k >= 0);
+#endif
     }                                   /* insertion-time set */
 
     return status;
@@ -7437,10 +7501,8 @@ pq_seqdel(pqueue *pq, pq_match mt,
                 {
                         char ts[20];
                         (void) sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                        uerror("Que corrupt: pq_seqdel: %s %s at %ld",
-                                ts,
-                                found ? "invalid region" : "no signature",
-                                tqep->offset);
+                        uerror("Queue corrupt: pq_seqdel: %s no signature at %ld",
+                                ts, tqep->offset);
                 }
         }
         rl_free(pq->rlp, rlix);
@@ -7678,7 +7740,7 @@ pq_suspendAndUnblock(
 unsigned
 pq_suspend(unsigned int maxsleep)
 {
-    pq_suspendAndUnblock(maxsleep, NULL, 0);
+    return pq_suspendAndUnblock(maxsleep, NULL, 0);
 }
 
 

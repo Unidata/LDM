@@ -58,7 +58,8 @@ initEntry(
 {
     int status;
 
-    strncpy(entry->nameBuf, filename, LLMXLN)[LLMXLN-1] = 0;
+    strncpy(entry->nameBuf, filename, LLMXLN);
+    entry->nameBuf[LLMXLN-1] = 0;
     entry->filename = entry->nameBuf;
     entry->table.nlines = 0;
     entry->table.info = 0;
@@ -209,7 +210,8 @@ gb2_gtvartbl(
      * Check if user-supplied filename.  If not, then construct one.
      */
     if (vartbl && *vartbl) {
-        strncpy(nameBuf, vartbl, LLMXLN)[LLMXLN-1] = 0;
+        strncpy(nameBuf, vartbl, LLMXLN);
+        nameBuf[LLMXLN-1] = 0;
     }
     else {
         (void)snprintf(nameBuf, LLMXLN, "g2vars%s%d.tbl", cntr, ver);

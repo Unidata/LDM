@@ -371,14 +371,14 @@ clnttcp_create(
 		(void)fprintf(stderr, "clnttcp_create: out of memory\n");
 		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 		rpc_createerr.cf_error.re_errno = errno;
-		goto fooy;
+		goto return_null;
 	}
 	ct = (struct ct_data *)mem_alloc(sizeof(*ct));
 	if (ct == NULL) {
 		(void)fprintf(stderr, "clnttcp_create: out of memory\n");
 		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 		rpc_createerr.cf_error.re_errno = errno;
-		goto fooy;
+		goto free_h;
 	}
 
 	/*
@@ -399,10 +399,14 @@ clnttcp_create(
 	 */
 	if (*sockp < 0) {
 		*sockp = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if (*sockp < 0) {
+			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+			rpc_createerr.cf_error.re_errno = errno;
+			goto fooy;
+		}
 		(void)bindresvport(*sockp, (struct sockaddr_in *)0);
-		if ((*sockp < 0)
-		    || (connect(*sockp, (struct sockaddr *)raddr,
-		    sizeof(*raddr)) < 0)) {
+		if (connect(*sockp, (struct sockaddr *)raddr, sizeof(*raddr))
+                                < 0) {
 			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 			rpc_createerr.cf_error.re_errno = errno;
 			(void)close(*sockp);
@@ -463,6 +467,8 @@ fooy:
 	 * Something goofed, free stuff and barf
 	 */
 	mem_free((char*)ct, sizeof(struct ct_data));
+free_h:
 	mem_free((char*)h, sizeof(CLIENT));
+return_null:
 	return ((CLIENT *)NULL);
 }

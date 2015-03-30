@@ -1065,10 +1065,13 @@ int unio_prodput(
                         "Notification specified but shared memory is not available.");
             }
             else {
-                edex_message * queue = (edex_message *) shmat(shared_id, (void *) 0,
-                        0);
-                strncpy(queue[queue_counter].filename, entry->path, 4096);
-                strncpy(queue[queue_counter].ident, prodp->info.ident, 256);
+                edex_message* const queue =
+                        (edex_message*)shmat(shared_id, (void*)0, 0);
+                edex_message* const msg = queue + queue_counter;
+                strncpy(msg->filename, entry->path, 4096);
+                msg->filename[4096-1] = 0;
+                strncpy(msg->ident, prodp->info.ident, 256);
+                msg->ident[256-1] = 0;
                 if (shmdt((void*)queue) == -1) {
                     uerror("Detaching shared memory failed.");
                 }
@@ -1104,9 +1107,9 @@ int unio_prodput(
                     if (entry_isFlagSet(entry, FL_EDEX) && shared_id != -1) {
                         semarg.val = queue_counter;
                         (void)semctl(sem_id, 1, SETVAL, semarg);
-                        queue_counter =
-                                (queue_counter == largest_queue_element) ?
-                                        queue_counter = 0 : queue_counter + 1;
+                        queue_counter = (queue_counter == largest_queue_element)
+                                ? 0
+                                : queue_counter + 1;
                     }
                 }
             } /* data written */
@@ -1598,9 +1601,8 @@ static int pipe_sync(
         fl_entry *entry,
         int block)
 {
-    udebug("    pipe_sync: %d %s",
-            entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
-                    block ? "" : "non-block");
+    udebug("    pipe_sync: %d %s", entry->handle.pbuf->pfd, block ? "" :
+            "non-block");
 
     int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo);
 

@@ -107,10 +107,13 @@ int pmNew(
 
         if (NULL == md5ctxp) {
             LOG_SERROR0("Couldn't allocate MD5 object");
+            free(w);
         }
         else {
             if ((status = pthread_mutex_init(&w->mutex, NULL)) != 0) {
                 LOG_ERRNUM0(status, "Couldn't initialize product-maker mutex");
+                free(w);
+                free_MD5_CTX(md5ctxp);
                 status = 2;
             }
             else {
@@ -123,8 +126,8 @@ int pmNew(
                 w->status = 0;
                 *productMaker = w;
             }
-        }
-    }
+        } // `md5cctxp` allocated
+    } // `w` allocated
 
     return status;
 }

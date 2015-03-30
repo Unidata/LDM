@@ -1052,7 +1052,10 @@ shmfifo_get(
                 }
             }                           /* FIFO has data */
 
-            status = shmfifo_unlock(shm);
+            int tmpStatus = shmfifo_unlock(shm);
+
+            if (status == 0)
+                status = tmpStatus;
         }                               /* shared-memory FIFO locked */
     }
 
@@ -1140,9 +1143,12 @@ shmfifo_put(
                 }
             }
 
-            status = shmfifo_unlock(shm);
+            int tmpStatus = shmfifo_unlock(shm);
+
+            if (status == 0)
+                status = tmpStatus;
         }                               /* shared-memory FIFO locked */
-    }
+    } // `sz` is valid
 
     return status;
 }

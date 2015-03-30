@@ -145,16 +145,25 @@ svcudp_bufcreate(
 	xprt = (SVCXPRT *)mem_alloc(sizeof(SVCXPRT));
 	if (xprt == NULL) {
 		(void)fprintf(stderr, "svcudp_create: out of memory\n");
+		if (madesock)
+			(void)close(sock);
 		return (NULL);
 	}
 	su = (struct svcudp_data *)mem_alloc(sizeof(*su));
 	if (su == NULL) {
 		(void)fprintf(stderr, "svcudp_create: out of memory\n");
+		mem_free(xprt, sizeof(*xprt));
+		if (madesock)
+			(void)close(sock);
 		return (NULL);
 	}
 	su->su_iosz = ((MAX(sendsz, recvsz) + 3) / 4) * 4;
 	if ((rpc_buffer(xprt) = mem_alloc(su->su_iosz)) == NULL) {
 		(void)fprintf(stderr, "svcudp_create: out of memory\n");
+		mem_free(su, sizeof(*su));
+		mem_free(xprt, sizeof(*xprt));
+		if (madesock)
+			(void)close(sock);
 		return (NULL);
 	}
 	xdrmem_create(
@@ -240,7 +249,7 @@ svcudp_reply(
 		    (struct sockaddr *)&(xprt->xp_raddr), xprt->xp_addrlen)
 		    == (ssize_t)slen) {
 			stat = TRUE;
-			if (su->su_cache && slen >= 0) {
+			if (su->su_cache) {
 				cache_set(xprt, (unsigned long) slen);
 			}
 		}
@@ -378,11 +387,14 @@ svcudp_enablecache(
 	uc->uc_entries = ALLOC(cache_ptr, size * SPARSENESS);
 	if (uc->uc_entries == NULL) {
 		CACHE_PERROR("enablecache: could not allocate cache data");
+		mem_free(uc, sizeof(*uc));
 		return(0);
 	}
 	BZERO(uc->uc_entries, cache_ptr, size * SPARSENESS);
 	uc->uc_fifo = ALLOC(cache_ptr, size);
 	if (uc->uc_fifo == NULL) {
+		mem_free(uc->uc_entries, sizeof(*uc->entries)*size*SPARSENESS);
+		mem_free(uc, sizeof(*uc));
 		CACHE_PERROR("enablecache: could not allocate cache fifo");
 		return(0);
 	}
@@ -433,6 +445,7 @@ cache_set(
 		newbuf = mem_alloc(su->su_iosz);
 		if (newbuf == NULL) {
 			CACHE_PERROR("cache_set: could not allocate new rpc_buffer");
+			mem_free(victim, sizeof(*victim));
 			return;
 		}
 	}

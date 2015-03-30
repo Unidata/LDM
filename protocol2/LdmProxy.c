@@ -708,9 +708,9 @@ lp_new(
 
             if (error) {
                 LOG_START1("%s", err_message(error));
-                err_free(error);
                 free(proxy->host);
                 status = convertStatus(error);
+                err_free(error);
             }
             else {
                 proxy->clnt = clnt;

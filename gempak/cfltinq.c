@@ -2,6 +2,8 @@
 #include <ldm.h>
 #include <globals.h>
 
+#include <string.h>
+
 #include "geminc.h"
 #include "gemprm.h"
 #undef PACKAGE
@@ -64,11 +66,11 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
      *	Strip GEMTBL from beginning of the table file name if present.
      */
     if ( strstr (table, "$GEMTBL/") == table ) {
-	strcpy (pathfile, &table[8]);
+	strncpy (pathfile, &table[8], sizeof(pathfile)-1)[sizeof(pathfile)-1] = 0;
     } else if ( strstr (table, "GEMTBL:") == table ) {
-	strcpy (pathfile, &table[7]);
+	strncpy(pathfile, &table[7], sizeof(pathfile)-1)[sizeof(pathfile)-1] = 0;
     } else {
-	strcpy (pathfile, table);
+	strncpy(pathfile, table, sizeof(pathfile)-1)[sizeof(pathfile)-1] = 0;
     }
 
     /*
@@ -82,7 +84,7 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
     /*
      *	Check to see if the file is local.
      */
-    cfl_inqr (filepart, NULL, &lfsize, actualpath, iret );
+    cfl_inqr (filepart, NULL, &lfsize, actualpath, sizeof(actualpath), iret );
     if ( *iret == 0 ) {
 	found = G_TRUE;
     }
@@ -95,7 +97,8 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
          * Casting getSysConfDirPath() is safe because the string will not be
          * modified.
          */
-	cfl_inqr (filepart, (char*)getSysConfDirPath(), &lfsize, actualpath, iret );
+	cfl_inqr (filepart, (char*)getSysConfDirPath(), &lfsize, actualpath,
+	        sizeof(actualpath), iret );
 	if ( *iret == 0 ) {
 	    found = G_TRUE;
 	}
@@ -105,7 +108,8 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
      *	Check to see if the file is down a path.
      */
     if ( (found == G_FALSE) && ( lenp != 0 ) ) {
-	cfl_inqr (filepart, pathpart, &lfsize, actualpath, iret );
+	cfl_inqr (filepart, pathpart, &lfsize, actualpath, sizeof(actualpath),
+	        iret );
 	if ( *iret == 0 ) {
 	    found = G_TRUE;
 	}
@@ -119,7 +123,8 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
 	strcat (pathfile, type);
 	strcat (pathfile, "/");
 	strcat (pathfile, filepart);
-	cfl_inqr (pathfile, type, &lfsize, actualpath, iret );
+	cfl_inqr (pathfile, type, &lfsize, actualpath, sizeof(actualpath),
+	        iret );
 	if ( *iret == 0 ) {
 	    found = G_TRUE;
 	}
@@ -133,7 +138,7 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
 	strcat (pathfile, type);
 	strcat (pathfile, "/");
 	strcat (pathfile, filepart);
-	cfl_inqr (pathfile, type, &lfsize, actualpath, iret );
+	cfl_inqr (pathfile, type, &lfsize, actualpath, sizeof(actualpath), iret );
 	if ( *iret == 0 ) {
 	    found = G_TRUE;
 	}
@@ -147,7 +152,7 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
 	strcat (pathfile, type);
 	strcat (pathfile, "/");
 	strcat (pathfile, filepart);
-	cfl_inqr (pathfile, type, &lfsize, actualpath, iret );
+	cfl_inqr (pathfile, type, &lfsize, actualpath, sizeof(actualpath), iret );
 	if ( *iret == 0 ) {
 	    found = G_TRUE;
 	}

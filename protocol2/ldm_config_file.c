@@ -621,6 +621,7 @@ initSavedInfo(
         log_errno();
         log_add("initSavedInfo(): "
             "Couldn't allocate product-information structure");
+        status = -1;
     }
     else {
         /*
@@ -782,7 +783,7 @@ requester_exec(
              */
             ErrorObj* errObj = req6_new(source, port, clssp, maxSilence, getQueuePath(),
                 pq, isPrimary);
-            exitIfDone(0);
+            (void)exitIfDone(0);
 
             if (!errObj) {
                 /*
@@ -863,7 +864,7 @@ requester_exec(
 
                         feedCode = forn5(FEEDME, source, &remote->clssp,
                             rpctimeo, inactive_timeo, ldmprog_5);
-                        exitIfDone(0);
+                        (void)exitIfDone(0);
 
                         udebug("forn5(...) = %d", feedCode);
 
@@ -908,7 +909,7 @@ requester_exec(
 
                     uinfo("Sleeping %u seconds before retrying...", sleepAmount);
                     (void)sleep(sleepAmount);
-                    exitIfDone(0);
+                    (void)exitIfDone(0);
 
                     /*
                      * Close any connection to the network host database so
@@ -2653,8 +2654,8 @@ lcf_addAllow(
     const char* const           okEre,
     const char* const           notEre)
 {
-    ErrorObj*           errObj = NULL;  /* success */
-    AllowEntry* const   entry = (AllowEntry*)malloc(sizeof(AllowEntry));
+    ErrorObj*   errObj = NULL;  /* success */
+    AllowEntry* entry = (AllowEntry*)malloc(sizeof(AllowEntry));
 
     if (NULL == entry) {
         errObj = ERR_NEW1(0, NULL, "Couldn't allocate new allow-entry",
@@ -2667,6 +2668,7 @@ lcf_addAllow(
 
         if (errObj) {
             errObj = ERR_NEW(0, errObj, "Couldn't create OK-pattern");
+            free(entry);
         }
         else {
             Pattern*    notPattern;
@@ -2675,11 +2677,15 @@ lcf_addAllow(
                 notPattern = NULL;
             }
             else {
-                if ((errObj = pat_new(&notPattern, notEre, 0)))
+                if ((errObj = pat_new(&notPattern, notEre, 0))) {
                     errObj = ERR_NEW(0, errObj, "Couldn't create not-pattern");
+                    pat_free(okPattern);
+                    free(entry);
+                    entry = NULL;
+                }
             }
-            
-            if (!errObj) {
+
+            if (entry) {
                 entry->hsp = hostSet;
                 entry->okPattern = okPattern;
                 entry->notPattern = notPattern;
@@ -2696,15 +2702,9 @@ lcf_addAllow(
                 }
 
                 serverNeeded = true;
-            }
-
-            if (errObj)
-                pat_free(okPattern);
-        }                               /* "okPattern" allocated */
-        
-        if (errObj)
-            free(entry);
-    }                                   /* "entry" allocated */
+            }                           // `notPattern` set
+        }                               // "okPattern" allocated
+    }                                   // "entry" allocated
 
     return errObj;
 }
@@ -2762,7 +2762,8 @@ lcf_reduceToAllowed(
         AllowEntry*     entry;                  /* ACL entry */
         char            dotAddr[DOTTEDQUADLEN]; /* dotted-quad IP address */
 
-        (void)strcpy(dotAddr, inet_ntoa(*addr));
+        (void)strncpy(dotAddr, inet_ntoa(*addr), sizeof(dotAddr));
+        dotAddr[sizeof(dotAddr)-1] = 0;
 
         for(entry = allowEntryHead; entry != NULL; entry = entry->next) {
             if (contains(entry->hsp, name, dotAddr)) {
@@ -2922,7 +2923,8 @@ lcf_getUpstreamFilter(
         char            dotAddr[DOTTEDQUADLEN];
         AllowEntry*     entry;
 
-        (void)strcpy(dotAddr, inet_ntoa(*addr));
+        (void)strncpy(dotAddr, inet_ntoa(*addr), sizeof(dotAddr));
+        dotAddr[sizeof(dotAddr)-1] = 0;
 
         for (i = 0; i < want->psa.psa_len; ++i) {
             for (entry = allowEntryHead; entry != NULL; entry = entry->next) {

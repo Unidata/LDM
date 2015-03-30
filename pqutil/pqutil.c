@@ -276,7 +276,7 @@ init_options(pqueue     *pq,
 
     strcpy(pattern,".*");
     clssp->psa.psa_val->pattern = pattern;
-    regcomp(&clssp->psa.psa_val->rgx, clssp->psa.psa_val->pattern,
+    (void)regcomp(&clssp->psa.psa_val->rgx, clssp->psa.psa_val->pattern,
                 REG_EXTENDED|REG_NOSUB);
     uinfo("Pattern set to \".*\"");
 
@@ -304,7 +304,8 @@ init_options(pqueue     *pq,
     prod->info.arrival = tv;
     prod->info.feedtype = EXP;
     prod->info.seqno = seqnum++;
-    strcpy(prod_ident, "TEST PRODUCT");
+    strncpy(prod_ident, "TEST PRODUCT", sizeof(prod_ident)-1);
+    prod_ident[sizeof(prod_ident)-1] = 0;
     prod->info.ident = prod_ident;
     uinfo("info.origin: %s\n", prod->info.origin);
     uinfo("info.arrival: %s\n", ctime(&prod->info.arrival.tv_sec));
@@ -333,7 +334,11 @@ parse_command(char *cmd) {
 
     result = strtok(cmd," \n");
 
-    if (!strcmp(result,"set")) {
+    if (result == NULL) {
+        crec.cmd = CMD_HELP;
+    }
+
+    else if (!strcmp(result,"set")) {
         crec.cmd = CMD_SET;
 
         result = strtok(NULL," ");
@@ -375,8 +380,10 @@ parse_command(char *cmd) {
             crec.cmd = CMD_BAD;
             crec.cmd_opt = OPT_BAD;
         }
-        else
-            strcpy(crec.cmd_val,result);
+        else {
+            strncpy(crec.cmd_val, result, sizeof(crec.cmd_val)-1);
+            crec.cmd_val[sizeof(crec.cmd_val)-1] = 0;
+        }
     }
 
     else if (!strcmp(result,"show")) {
@@ -424,8 +431,10 @@ parse_command(char *cmd) {
                 uerror("read command must have a filename");
                 crec.cmd = CMD_BAD;
             }
-            else
-                strcpy(crec.cmd_val, result);
+            else {
+              strncpy(crec.cmd_val, result, sizeof(crec.cmd_val)-1);
+              crec.cmd_val[sizeof(crec.cmd_val)-1] = 0;
+            }
         }
 
         else if (!strcmp(result,"new")) {
@@ -434,8 +443,10 @@ parse_command(char *cmd) {
                 uerror("new command must have a product size");
                 crec.cmd = CMD_BAD;
             }
-            else
-                strcpy(crec.cmd_val, result);
+            else {
+                strncpy(crec.cmd_val, result, sizeof(crec.cmd_val)-1);
+                crec.cmd_val[sizeof(crec.cmd_val)-1] = 0;
+            }
         }
 
         else if (!strcmp(result,"put")) {
@@ -444,8 +455,10 @@ parse_command(char *cmd) {
                 uerror("put command must have a filename");
                 crec.cmd = CMD_BAD;
             }
-            else
-                strcpy(crec.cmd_val, result);
+            else {
+                strncpy(crec.cmd_val, result, sizeof(crec.cmd_val)-1);
+                crec.cmd_val[sizeof(crec.cmd_val)-1] = 0;
+            }
         }
 
         else if (!strcmp(result,"write"))
@@ -459,8 +472,10 @@ parse_command(char *cmd) {
                 uerror("display command must have a filename");
                 crec.cmd = CMD_BAD;
             }
-            else
-                strcpy(crec.cmd_val, result);
+            else {
+                strncpy(crec.cmd_val, result, sizeof(crec.cmd_val)-1);
+                crec.cmd_val[sizeof(crec.cmd_val)-1] = 0;
+            }
         }
 
         else if (!strcmp(result, "watch"))
@@ -472,8 +487,10 @@ parse_command(char *cmd) {
                 uerror("delete command must have an ending time");
                 crec.cmd = CMD_BAD;
             }
-            else
-                strcpy(crec.cmd_val, result);
+            else {
+                strncpy(crec.cmd_val, result, sizeof(crec.cmd_val));
+                crec.cmd_val[sizeof(crec.cmd_val)-1] = 0;
+            }
         }
 
         else if (!strcmp(result,"stats"))
@@ -781,7 +798,7 @@ read_file(pqueue *pq,
 
 /* how we handle this depends on the size */
 
-        fstat(fd, &f_stat);
+        (void)fstat(fd, &f_stat);
         udebug("read_file: File size is %d", f_stat.st_size);
 
         if (f_stat.st_size <= DBUFMAX) {                    /* small product */
@@ -792,6 +809,7 @@ read_file(pqueue *pq,
             if (status < 0) {
                 serror("Bad file read: %s", crec.cmd_val);
                 free(prodrec->data);
+                close(fd);
                 return;
             }
 
@@ -804,8 +822,9 @@ read_file(pqueue *pq,
 
             status = pq_insert(pq,prodrec);
             if (status) {
-                uerror("pq_insert: %s", strerror(status));
+                uerror("pq_insert() returned %d", status);
                 free(prodrec->data);
+                close(fd);
                 return;
             }
 
@@ -823,13 +842,15 @@ read_file(pqueue *pq,
             status = pqe_new(pq, &(prodrec->info),
                              (void **)&dbuf, &idx);
             if (status) {
-                uerror("pqe_new: %s", strerror(status));
+                uerror("pqe_new() returned %d", status);
+                close(fd);
                 return;
             }
 
             status = read(fd, dbuf, prodrec->info.sz);
             if (status < 0) {
                 serror("Bad file read: %s", crec.cmd_val);
+                close(fd);
                 return;
             }
 
@@ -841,7 +862,8 @@ read_file(pqueue *pq,
 
             status = pqe_insert(pq, idx);
             if (status) {
-                uerror("pqe_insert: %s", strerror(status));
+                uerror("pqe_insert() returned %d", status);
+                close(fd);
                 return;
             }
 
@@ -854,7 +876,7 @@ read_file(pqueue *pq,
 /* read from stdin - terminate with ^D */
 
     else {
-        char    ch;                                       /* input character */
+        int     ch;                                       /* input character */
         int     bufcnt = 0;                     /* number of bytes in buffer */
 
         if((prodrec->data = malloc(DBUFMAX)) == NULL) {
@@ -879,7 +901,7 @@ read_file(pqueue *pq,
                 return;
             }
 
-            *((char *)prodrec->data + bufcnt) = ch;
+            *((char *)prodrec->data + bufcnt) = (char)ch;
             bufcnt++;
         }
 
@@ -893,7 +915,7 @@ read_file(pqueue *pq,
 
         status = pq_insert(pq,prodrec);
         if (status != 0 && status != PQUEUE_DUP) {
-            uerror("pq_insert: %s", strerror(status));
+            uerror("pq_insert returned %d", status);
             free(prodrec->data);
             return;
         }
@@ -947,7 +969,7 @@ big_product(pqueue      *pq,
         prec->info.sz = prod_sz;
         status = pqe_new(pq, &(prec->info), (void **)&dbuf, &idx);
         if (status) {
-            uerror("pq_new: %s", strerror(status));
+            uerror("pq_new() returned %d", status);
             return;
         }
 
@@ -988,7 +1010,7 @@ big_product(pqueue      *pq,
                 return;
             }
 
-            fstat(fd, &f_stat);                     /* we need the file size */
+            (void)fstat(fd, &f_stat); /* we need the file size */
             udebug("big_product: File size is %d", f_stat.st_size);
 
             if ((prod_cnt + f_stat.st_size) > prod_sz) {  /* file is too big */
@@ -999,7 +1021,8 @@ big_product(pqueue      *pq,
 
             status = read(fd, prod_ptr, f_stat.st_size);
             if (status < 0) {
-                serror("Bad file read: %s", strerror(status));
+                serror("Bad file read: %s", strerror(errno));
+                close(fd);
                 return;
             }
 
@@ -1167,7 +1190,7 @@ display_watch(const prod_info   *infop,
 void
 watch_queue(pqueue      *pq,
             prod_class  *clssp) {
-    char        ch;
+    int         ch;
     int         status;
     int         keep_at_it = 1;
     timestampt  tvout;

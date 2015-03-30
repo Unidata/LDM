@@ -28,7 +28,7 @@ void ctb_g2read ( int *iret )
  * M. Li/SAIC		 4/04	added hzremap, and direction		*
  ***********************************************************************/
 {
-FILE     *fp;
+FILE     *fp = NULL;
 int      n, nr, blen, ier;
 char     buffer[256]; 
 int      disc, cat, parm, pdtn, scl, ihzrmp, idrct;
@@ -46,6 +46,8 @@ float    msng;
 
         fp = cfl_tbop( G2VARS_TBL, "grid", &ier);
         if ( fp == NULL  ||  ier != 0 )  {
+            if (fp)
+                fclose(fp);
             *iret = -1;
             return;
         }

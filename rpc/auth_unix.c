@@ -122,6 +122,7 @@ authunix_create(
 #ifndef KERNEL
 	if (au == NULL) {
 		(void)fprintf(stderr, "authunix_create: out of memory\n");
+		mem_free(auth, sizeof(*auth));
 		return (NULL);
 	}
 #endif
@@ -154,6 +155,8 @@ authunix_create(
 #else
 	if ((au->au_origcred.oa_base = mem_alloc((unsigned) len)) == NULL) {
 		(void)fprintf(stderr, "authunix_create: out of memory\n");
+		mem_free(au, sizeof(*au));
+		mem_free(auth, sizeof(*auth));
 		return (NULL);
 	}
 #endif

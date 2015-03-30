@@ -599,7 +599,7 @@ int main(
             while (shmfifo_empty(shm)) {
                 if (ulogIsVerbose())
                     uinfo("nothing in shmem, waiting...");
-                    usleep(500);
+                usleep(500);
             }
 
             if (shmfifo_get(shm, msg, MAX_MSG, &n) != 0) {

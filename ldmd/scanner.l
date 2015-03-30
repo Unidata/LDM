@@ -121,7 +121,8 @@ qstring		([^"]|{escquote})*
 	status = -1;
     }
     else {
-	(void)strcpy(yylval.string, yytext);
+	(void)strncpy(yylval.string, yytext, sizeof(yylval.string));
+	yylval.string[sizeof(yylval.string)-1] = 0;
 
 	status = STRING;
     }

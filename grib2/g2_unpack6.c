@@ -85,8 +85,10 @@ g2int g2_unpack6(unsigned char *cgrib,size_t sz,g2int *iofst,g2int ngpts,
             *bmap=lbmap;
          }
          intbmap=(g2int *)calloc(ngpts,sizeof(g2int));  
-         if (*iofst + ngpts > bitsz)
+         if (*iofst + ngpts > bitsz) {
+           if (intbmap) free(intbmap);
            return 2;
+         }
          gbits(cgrib,intbmap,*iofst,1,0,ngpts);
          *iofst=*iofst+ngpts;
          for (j=0;j<ngpts;j++) {

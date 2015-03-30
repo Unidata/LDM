@@ -199,7 +199,7 @@ doOne(const prod_info *infop, const void *datap)
         }
 
         /* else, error */
-        uerror("pq_insert: %s\n", strerror(status));
+        uerror("pq_insert() returned %d\n", status);
 
         return status;
 }
@@ -485,7 +485,7 @@ expire(pqueue *epq, const unsigned interval, const double age)
                 eclss.psa.psa_val = &spec;
                 spec.feedtype = ANY;
                 spec.pattern = ".*";
-                regcomp(&spec.rgx, spec.pattern, REG_EXTENDED|REG_NOSUB);
+                (void)regcomp(&spec.rgx, spec.pattern, REG_EXTENDED|REG_NOSUB);
         }
 
         (void) set_timestamp(&now);

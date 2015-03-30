@@ -129,6 +129,7 @@ upFilter_addComponent(
         else {
             if (errObj = pat_clone(&elt->okPattern, okPattern)) {
                 errObj = ERR_NEW(0, errObj, "Couldn't clone \"OK\" pattern");
+                free(elt);
             }
             else {
                 if (NULL == notPattern) {
@@ -138,13 +139,13 @@ upFilter_addComponent(
                     if (errObj = pat_clone(&elt->notPattern, notPattern)) {
                         errObj = ERR_NEW(0, errObj,
                             "Couldn't clone \"not\" pattern");
+                        pat_free(elt->okPattern);
+                        free(elt);
+                        elt = NULL;
                     }
                 }
 
-                if (errObj) {
-                    pat_free(elt->okPattern);
-                }
-                else {
+                if (elt) {
                     elt->ft = feedtype;
                     elt->next = upFilter->head;
                     upFilter->head = elt;
@@ -152,11 +153,8 @@ upFilter_addComponent(
                     upFilter->count++;
                 }
             }                           /* "elt->okPattern" allocated */
-
-            if (errObj)
-                free(elt);
         }                               /* "elt" allocated */
-    }
+    } // given feedtype is disjoint from those already in filter
 
     return errObj;
 }

@@ -69,7 +69,7 @@ void compack(g2float *fld,g2int ndpts,g2int idrsnum,g2int *idrstmpl,
       g2int  *jmin, *jmax, *lbit;
       g2int  i,j,n,nbits,imin,imax,left;
       g2int  isd,itemp,ilmax,ngwidthref=0,nbitsgwidth=0;
-      g2int  nglenref=0,nglenlast=0,iofst,ival1,ival2;
+      g2int  nglenref=0,nglenlast=0,iofst,ival1,ival2=0;
       g2int  minsd,nbitsd=0,maxorig,nbitorig,ngroups;
       g2int  lg,ng,igmax,iwmax,nbitsgref;
       g2int  glength,grpwidth,nbitsglen=0;
@@ -380,9 +380,9 @@ void compack(g2float *fld,g2int ndpts,g2int idrsnum,g2int *idrstmpl,
         *lcpack=iofst/8;
 
         if ( ifld!=0 ) free(ifld);
-        if ( gref!=0 ) free(gref);
-        if ( gwidth!=0 ) free(gwidth);
-        if ( glen!=0 ) free(glen);
+        free(gref); // already dereferenced on all paths leading here
+        free(gwidth); // already dereferenced on all paths leading here
+        free(glen); // already dereferenced on all paths leading here
       }
       else {          /*   Constant field ( max = min )*/
         nbits=0;

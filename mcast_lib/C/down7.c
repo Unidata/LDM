@@ -17,7 +17,6 @@
 #include "config.h"
 
 #include "down7.h"
-#include "executor.h"
 #include "prod_index_queue.h"
 #include "globals.h"
 #include "inetutil.h"

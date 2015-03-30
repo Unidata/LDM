@@ -175,10 +175,7 @@ void log_clear()
  * @param[in] fmt       Formatting string.
  * @param[in] args      Formatting arguments.
  * @retval 0            Success
- * @retval EAGAIN       Failure due to the buffer being too small for the
- *                      message.  The buffer has been expanded and the client
- *                      should call this function again.
- * @retval EINVAL       \a fmt or \a args is \c NULL. Error message logged.
+ * @retval EINVAL       `fmt` or `args` is `NULL`. Error message logged.
  * @retval EINVAL       There are insufficient arguments. Error message logged.
  * @retval EILSEQ       A wide-character code that doesn't correspond to a
  *                      valid character has been detected. Error message logged.
@@ -190,7 +187,7 @@ int log_vadd(
     const char* const   fmt,  /**< The message format */
     va_list             args) /**< The arguments referenced by the format. */
 {
-    int                 status;
+    int status;
 
     if (NULL == fmt) {
         lock();
@@ -202,11 +199,12 @@ int log_vadd(
     else {
         List*   list = getList();
 
-        if (NULL != list) {
+        if (NULL == list) {
+            status = ENOMEM;
+        }
+        else {
             Message*    msg = (NULL == list->last) ? list->first :
                 list->last->next;
-
-            status = 0;
 
             if (msg == NULL) {
                 msg = (Message*)malloc(sizeof(Message));
@@ -229,19 +227,24 @@ int log_vadd(
                         serror("log_vadd(): malloc(%lu) failure",
                             (unsigned long)DEFAULT_STRING_SIZE);
                         unlock();
+                        free(msg);
+                        msg = NULL;
                     }
                     else {
+                        *string = 0;
                         msg->string = string;
                         msg->size = DEFAULT_STRING_SIZE;
                         msg->next = NULL;
 
                         if (NULL == list->first)
                             list->first = msg;  /* very first message */
+                        if (NULL != list->last)
+                            list->last->next = msg;
                     }
-                }
-            }
+                } // `msg` allocated
+            } // need new message structure
 
-            if (0 == status) {
+            if (msg) {
                 int nbytes = vsnprintf(msg->string, msg->size, fmt, args);
 
                 if (0 > nbytes) {
@@ -251,7 +254,10 @@ int log_vadd(
                     serror("log_vadd(): vsnprintf() failure");
                     unlock();
                 }
-                else if (msg->size <= nbytes) {
+                else if (msg->size > nbytes) {
+                    status = 0;
+                }
+                else {
                     /* The buffer is too small for the message */
                     size_t  size = nbytes + 1;
                     char*   string = (char*)malloc(size);
@@ -269,13 +275,12 @@ int log_vadd(
 
                         msg->string = string;
                         msg->size = size;
-                        status = EAGAIN;
-
-                        if (NULL != list->last)
-                            list->last->next = msg;
+                        (void)vsnprintf(msg->string, msg->size, fmt, args);
+                        status = 0;
                     }
                 }
-                else {
+
+                if (0 == status) {
                     if (NULL != list->last)
                         list->last->next = msg;
 
