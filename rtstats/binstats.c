@@ -173,6 +173,8 @@ fscan_statsbin(FILE *fp, statsbin *sb)
         int min;
         int sec;
 
+        (void)memset(&file_tm, 0, sizeof(file_tm));
+
         nf = fscanf(fp, "%4d%2d%2d%2d%2d%d2",
                 &file_tm.tm_year,
                 &file_tm.tm_mon,
@@ -186,9 +188,6 @@ fscan_statsbin(FILE *fp, statsbin *sb)
         /* correct to tm representation */
         file_tm.tm_year -= 1900;
         file_tm.tm_mon--;
-        file_tm.tm_isdst = 0;
-        file_tm.tm_gmtoff = 0;
-        file_tm.tm_zone = "UTC";
 
         sb->recent.tv_sec = mktime(&file_tm); /* N.B. TZ must be UTC */
         sb->recent.tv_usec = 0;
