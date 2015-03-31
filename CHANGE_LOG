@@ -1,4 +1,4 @@
-6.12.10	2015-03-30T16:55:11-0600
+6.12.10	2015-03-31T11:30:10-0600
     Removed considerable lint identified by Coverity Scan. Some of it was
     significant. See <https://scan.coverity.com/projects/4645>.
 
