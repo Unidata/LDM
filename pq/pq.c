@@ -587,32 +587,47 @@ tq_add(
     assert(tq->nalloc != 0);
     assert(tq_HasSpace(tq));
 
-    tqep_t      tpix = tq_get_tqelem(tq); // get new entry off of free list
+    /*
+     * Index of the time-queue element that's to be inserted. Taken from the
+     * free list.
+     */
+    tqep_t      tpix = tq_get_tqelem(tq);
     assert(tpix != TQ_NONE);
 
-    tqelem*     tp = &tq->tqep[tpix]; // tp is entry to insert
+    // Pointer to the i-th element in the time-queue
+    #define TQE_PTR(i)              (tq->tqep + i)
+    /*
+     * Lvalue index of the time-queue element that's the next element after
+     * `elt` in the k-level linked-list.
+     */
+    #define TQE_INDEX_NEXT(elt, k)  fbp->fblks[(elt)->fblk + k]
+    /*
+     * Pointer to the time-queue element that's the next element after `elt` in
+     * the k-level linked-list.
+     */
+    #define TQE_GET_NEXT(elt, k)    TQE_PTR(TQE_INDEX_NEXT(elt, k))
+
+    tqelem*     tp = TQE_PTR(tpix); // pointer to element to be inserted
     int         status = set_timestamp(&tp->tv); // set insertion-time to now
 
     if (status == ENOERR) {
-        tqelem* update[MAXLEVELS];
-        tqelem* tpp = &tq->tqep[TQ_HEAD]; // entry whose insertion-time <= now
-        int     k = tq->level;
-
         /*
-         * Find the entry whose insertion-time is the least less than the
-         * current time.
+         * Element in the time-queue that's just before the element to be
+         * inserted for each linked-list level.
          */
+        tqelem* tpp = TQE_PTR(TQ_HEAD);
+        int     k = tq->level;
+        tqelem* update[MAXLEVELS];
+
+        // Find `tpp`
         do {
-            /*
-             * Level `k` entry that follows `tpp`.
-             * q = p->forward[k]; same as *(fbp->fblks + tpp->fblk + k).
-             */
-            tqelem* tqp = &tq->tqep[fbp->fblks[tpp->fblk + k]];
+            // Level `k` element that follows `tpp`.
+            tqelem* tqp = TQE_GET_NEXT(tpp, k);
 
             // Advance through level `k` linked-list while(q->key < key) {...}
             while (TV_CMP_LT(tqp->tv, tp->tv)) {
                 tpp = tqp;
-                tqp = &tq->tqep[fbp->fblks[tpp->fblk + k]]; // q = p->forward[k]
+                tqp = TQE_GET_NEXT(tpp, k);
             }
 
             if (!TV_CMP_EQ(tqp->tv, tp->tv)) {
@@ -625,14 +640,14 @@ tq_add(
                  * time already exists in the time-queue. Because keys in the
                  * time-queue must be unique, the current-time is incremented
                  * and the search is restarted from the last highest-level
-                 * entry. This should be safe as long as the mean interval
+                 * element. This should be safe as long as the mean interval
                  * between data-product insertions is much greater than the
                  * timestamp resolution (ASSUMPTION).
                  */
                 timestamp_incr(&tp->tv);
                 k = tq->level;
                 tpp = update[k];
-            } // found entry with same time
+            } // found element with same time
         } while (k >= 0); // for each skiplist level
 
         /*
@@ -647,11 +662,11 @@ tq_add(
         if (k > tq->level) {
             tq->level++;
             k = tq->level;
-            update[k] = &tq->tqep[TQ_HEAD];
+            update[k] = TQE_PTR(TQ_HEAD);
         }
 
         tp->offset = offset;
-        tp->fblk = fb_get(fbp, k);      /* Get new fblk of level k */
+        tp->fblk = fb_get(fbp, k);      // Get new fblk of level k
 
         /*
          * Insert the new element by having it reference the following element
@@ -660,10 +675,8 @@ tq_add(
          */
         do {
             tpp = update[k];
-            // q->forward[k] = p->forward[k]
-            fbp->fblks[tp->fblk + k] = fbp->fblks[tpp->fblk + k];
-            // p->forward[k] = q;  forward pointer to new tqelem.
-            fbp->fblks[tpp->fblk + k] = tpix;
+            TQE_INDEX_NEXT(tp, k) = TQE_INDEX_NEXT(tpp, k);
+            TQE_INDEX_NEXT(tpp, k) = tpix;
         } while(--k >= 0);
 #if 0
         do {
