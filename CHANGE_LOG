@@ -1,3 +1,9 @@
+6.12.11
+    Corrected a latent bug introduced in 6.12.10 in the product-queue module
+    (pq.c) in the logic dealing with adding a product whose insertion-time
+    matches that of an already existing product. This bug is very unlikely to be
+    activated.
+
 6.12.10	2015-03-31T13:00:00-0600
     Removed considerable lint identified by Coverity Scan. Some of it was
     significant. See <https://scan.coverity.com/projects/4645>.
