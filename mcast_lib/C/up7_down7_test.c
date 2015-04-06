@@ -703,7 +703,7 @@ test_up7(
     sa_free(ucastServAddr);
     sa_free(mcastServAddr);
 
-    status = mlsm_addPotentialSender(mcastInfo);
+    status = mlsm_addPotentialSender(mcastInfo, 2);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     mi_free(mcastInfo);
 
@@ -772,7 +772,7 @@ test_up7_down7(
     sa_free(ucastServAddr);
     sa_free(mcastServAddr);
 
-    status = mlsm_addPotentialSender(mcastInfo);
+    status = mlsm_addPotentialSender(mcastInfo, 2);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     mi_free(mcastInfo);
 
