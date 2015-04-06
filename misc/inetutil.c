@@ -1233,6 +1233,18 @@ sa_new(
 }
 
 /**
+ * Destroys a service address.
+ *
+ * @param[in] sa  Service address to be destroyed.
+ */
+void
+sa_destroy(
+        ServiceAddr* const sa)
+{
+    free(sa->inetId);
+}
+
+/**
  * Frees a service address.
  *
  * @param[in] sa  Pointer to the service address to be freed or NULL.
@@ -1242,7 +1254,7 @@ sa_free(
     ServiceAddr* const sa)
 {
     if (sa != NULL) {
-        free(sa->inetId);
+        sa_destroy(sa);
         free(sa);
     }
 }

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2014, University Corporation for Atmospheric Research
+ *   Copyright 2015, University Corporation for Atmospheric Research
  *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
 
@@ -196,6 +196,7 @@ extern void           sa_free(ServiceAddr* const sa);
 extern bool           sa_copy(
     ServiceAddr* const restrict       dest,
     const ServiceAddr* const restrict src);
+extern void           sa_destroy(ServiceAddr* sa);
 extern ServiceAddr*   sa_clone(const ServiceAddr* const sa);
 extern const char*    sa_getInetId(const ServiceAddr* const sa);
 extern unsigned short sa_getPort(const ServiceAddr* const sa);
