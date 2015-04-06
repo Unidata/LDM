@@ -645,8 +645,10 @@ tq_add(
                  * timestamp resolution (ASSUMPTION).
                  */
                 timestamp_incr(&tp->tv);
-                k = tq->level;
-                tpp = update[k];
+                if (k < tq->level) {
+                    k = tq->level;
+                    tpp = update[k];
+                }
             } // found element with same time
         } while (k >= 0); // for each skiplist level
 
