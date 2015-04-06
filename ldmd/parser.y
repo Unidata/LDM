@@ -359,6 +359,8 @@ decodeRequestEntry(
  * @param[in] feedtypeSpec    Specification of the feedtype.
  * @param[in] mcastGroupSpec  Specification of the multicast group.
  * @param[in] tcpServerSpec   Specfication of the VCMTP TCP server.
+ * @param[in] ttlSpec         Specification of the time-to-live for multicast
+ *                            packets.
  * @retval    0               Success.
  * @retval    EINVAL          Invalid specification. `log_start()` called.
  * @retval    ENOMEM          Out-of-memory. `log_start()` called.
@@ -367,7 +369,8 @@ static int
 decodeSendEntry(
     const char* const   feedtypeSpec,
     const char* const   mcastGroupSpec,
-    const char* const   tcpServerSpec)
+    const char* const   tcpServerSpec,
+    const char* const   ttlSpec)
 {
     int         status;
     feedtypet   feedtype;
@@ -397,10 +400,24 @@ decodeSendEntry(
                         tcpServerSa);
                             
                 if (0 == status) {
-                    status = mlsm_addPotentialSender(mcastInfo);
-                    if (status)
-                        status = (LDM7_DUP == status) ? EINVAL : ENOMEM;
-                    mi_free(mcastInfo);
+                    unsigned short ttl;
+                    int            nbytes;
+
+                    if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
+                            ttlSpec[nbytes-1] != 0) {
+                        LOG_START1("Couldn't parse TTL specification: \"%s\"", 
+                                ttlSpec);
+                    }
+                    else {
+                        status = mlsm_addPotentialSender(mcastInfo, ttl);
+                        if (status)
+                            status = (LDM7_DUP == status)
+                                    ? EINVAL
+                                    : (LDM7_INVAL == status)
+                                        ? EINVAL
+                                        : ENOMEM;
+                        mi_free(mcastInfo);
+                    }
                 } // `mcastInfo` allocated
             } // `tcpServerSa` is good
 
@@ -633,10 +650,10 @@ request_entry:  REQUEST_K STRING STRING STRING
                 }
                 ;
 
-send_entry:        SEND_K STRING STRING STRING
+send_entry:        SEND_K STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeSendEntry($2, $3, $4);
+                    int errCode = decodeSendEntry($2, $3, $4, $5);
 
                     if (errCode) {
                         LOG_ADD0("Couldn't decode multicast entry");
