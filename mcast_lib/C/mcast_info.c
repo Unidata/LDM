@@ -122,6 +122,19 @@ mi_new(
 }
 
 /**
+ * Destroys a multicast information object.
+ *
+ * @param[in] info  The multicast information object.
+ */
+void
+mi_destroy(
+    McastInfo* const info)
+{
+    sa_destroy(&info->group);
+    sa_destroy(&info->server);
+}
+
+/**
  * Frees multicast information.
  *
  * @param[in,out] mcastInfo  Pointer to multicast information to be freed or
@@ -133,7 +146,7 @@ mi_free(
     McastInfo* const mcastInfo)
 {
     if (mcastInfo) {
-        (void)xdr_free(xdr_McastInfo, (char*)mcastInfo);
+        mi_destroy(mcastInfo);
         free(mcastInfo);
     }
 }

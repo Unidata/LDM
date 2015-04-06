@@ -40,6 +40,15 @@ mi_new(
     const ServiceAddr* const restrict ucast);
 
 /**
+ * Destroys a multicast information object.
+ *
+ * @param[in] info  The multicast information object.
+ */
+void
+mi_destroy(
+    McastInfo* const info);
+
+/**
  * Frees multicast information.
  *
  * @param[in,out] mcastInfo  Pointer to multicast information to be freed or
