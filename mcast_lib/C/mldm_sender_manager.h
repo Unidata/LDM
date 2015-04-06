@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Copyright 2015 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -29,15 +29,27 @@ extern "C" {
  * function should be called for all potential senders before any child
  * process is forked so that all child processes will have this information.
  *
- * @param[in] info         Information on the multicast group.
+ * @param[in] info         Information on the multicast group. Caller may free.
+ * @param[in] ttl          Time-to-live for multicast packets:
+ *                                0  Restricted to same host. Won't be output by
+ *                                   any interface.
+ *                                1  Restricted to same subnet. Won't be
+ *                                   forwarded by a router.
+ *                              <32  Restricted to same site, organization or
+ *                                   department.
+ *                              <64  Restricted to same region.
+ *                             <128  Restricted to same continent.
+ *                             <255  Unrestricted in scope. Global.
  * @retval    0            Success.
+ * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
  *                         addition. Manager not modified. `log_add()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 mlsm_addPotentialSender(
-    const McastInfo* const restrict   info);
+    const McastInfo* const restrict   info,
+    const unsigned short              ttl);
 
 /**
  * Ensures that the multicast LDM sender process that's responsible for a

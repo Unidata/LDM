@@ -32,7 +32,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static void* mcastInfoSet;
+typedef struct {
+    McastInfo      info;
+    unsigned short ttl;
+} McastEntry;
+
+static void* mcastEntries;
 
 /**
  * Indicates if a particular multicast LDM sender is running.
@@ -134,60 +139,91 @@ static StrBuf* catenateArgs(const char* const * args) {
  *     - The LDM product-queue;
  *
  * @param[in] info  Information on the multicast group.
+ * @param[in] ttl   Time-to-live for the multicast packets:
+ *                          0  Restricted to same host. Won't be output by
+ *                             any interface.
+ *                          1  Restricted to same subnet. Won't be
+ *                             forwarded by a router.
+ *                        <32  Restricted to same site, organization or
+ *                             department.
+ *                        <64  Restricted to same region.
+ *                       <128  Restricted to same continent.
+ *                       <255  Unrestricted in scope. Global.
  * @param[in] pipe  Pipe for writing to parent process.
  */
 static void
 execMldmSender(
     const McastInfo* const restrict info,
+    const unsigned short            ttl,
     const int const                 pipe)
 {
     // TODO: set time-to-live option
-    char* args[14]; // Keep sufficiently capacious (search for `i\+\+`)
+    char* args[17]; // Keep sufficiently capacious (search for `i\+\+`)
     int   i = 0;
 
     args[i++] = "mldm_sender";
+
     args[i++] = "-I";
     args[i++] = info->server.inetId;
+
     char* arg = (char*)getulogpath(); // safe cast
     if (arg != NULL) {
         args[i++] = "-l";
         args[i++] = arg;
     }
+
     args[i++] = "-P";
-    char* serverPortOptArg = ldm_format(12, "%hu", info->server.port);
-    if (serverPortOptArg == NULL) {
-        LOG_ADD0("Couldn't create server-port option-argument");
+    char serverPortOptArg[12];
+    ssize_t nbytes = snprintf(serverPortOptArg, sizeof(serverPortOptArg), "%hu",
+            info->server.port);
+    if (nbytes < 0 || nbytes >= sizeof(serverPortOptArg)) {
+        LOG_ADD1("Couldn't create server-port option-argument \"%hu\"",
+                info->server.port);
     }
     else {
         args[i++] = serverPortOptArg;
+
         if (ulogIsVerbose())
             args[i++] = "-v";
         if (ulogIsDebug())
             args[i++] = "-x";
+
         args[i++] = "-q";
         args[i++] = (char*)getQueuePath(); // safe cast
+
         char feedtypeBuf[256];
         (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
         args[i++] = feedtypeBuf; // multicast group identifier
-        char* mcastGroupOperand = ldm_format(128, "%s:%hu", info->group.inetId,
-                info->group.port);
-        if (mcastGroupOperand == NULL) {
-            LOG_ADD0("Couldn't create multicast group operand");
+
+        args[i++] = "-t";
+        char ttlOptArg[4];
+        ssize_t nbytes = snprintf(ttlOptArg, sizeof(ttlOptArg), "%hu", ttl);
+        if (nbytes < 0 || nbytes >= sizeof(ttlOptArg)) {
+            LOG_ADD1("Couldn't create time-to-live option-argument \"%hu\"",
+                    ttl);
         }
         else {
-            args[i++] = mcastGroupOperand;
-            args[i++] = NULL;
-            StrBuf* command = catenateArgs(args);
-            unotice("Executing multicast sender: %s", sbString(command));
-            sbFree(command);
-            (void)dup2(pipe, 1);
-            execvp(args[0], args);
-            LOG_SERROR2("Couldn't execvp() multicast LDM sender \"%s\"; "
-                    "PATH=%s", args[0], getenv("PATH"));
-            free(mcastGroupOperand);
-        }
+            args[i++] = ttlOptArg;
 
-        free(serverPortOptArg);
+            char* mcastGroupOperand = ldm_format(128, "%s:%hu",
+                    info->group.inetId, info->group.port);
+            if (mcastGroupOperand == NULL) {
+                LOG_ADD0("Couldn't create multicast-group operand");
+            }
+            else {
+                args[i++] = mcastGroupOperand;
+                args[i++] = NULL;
+
+                StrBuf* command = catenateArgs(args);
+                unotice("Executing multicast sender: %s", sbString(command));
+                sbFree(command);
+                (void)dup2(pipe, 1);
+                execvp(args[0], args);
+                LOG_SERROR2("Couldn't execvp() multicast LDM sender \"%s\"; "
+                        "PATH=%s", args[0], getenv("PATH"));
+                free(mcastGroupOperand);
+            }
+        }
     }
 }
 
@@ -210,6 +246,7 @@ allowTermSigs(void)
  * multicast group. Doesn't block.
  *
  * @param[in]  info         Information on the multicast group.
+ * @param[in]  ttl          Time-to-live of multicast packets.
  * @param[out] pid          Process ID of the multicast LDM sender.
  * @param[out] serverPort   Port number of TCP server.
  * @retval     0            Success. `*pid` and `*serverPod` are set.
@@ -218,6 +255,7 @@ allowTermSigs(void)
 static Ldm7Status
 mlsm_spawn(
     const McastInfo* const restrict info,
+    const unsigned short            ttl,
     pid_t* const restrict           pid,
     unsigned short* const restrict  serverPort)
 {
@@ -242,7 +280,7 @@ mlsm_spawn(
             /* Child process */
             (void)close(fds[0]);                // read end of pipe unneeded
             allowTermSigs();                    // so process will terminate
-            execMldmSender(info, fds[1]);       // shouldn't return
+            execMldmSender(info, ttl, fds[1]);  // shouldn't return
             log_log(LOG_ERR);
             exit(1);
         }
@@ -274,6 +312,7 @@ mlsm_spawn(
  * @pre                     Multicast LDM sender PID map is locked.
  * @pre                     Relevant multicast LDM sender isn't running.
  * @param[in]  info         Information on the multicast group.
+ * @param[in]  ttl          Time-to-live of multicast packets.
  * @param[out] serverPort   Port number of VCMTP TCP server.
  * @param[out] pid          Process ID of multicast LDM sender.
  * @retval     0            Success. Multicast LDM sender spawned. `*serverPort`
@@ -283,13 +322,14 @@ mlsm_spawn(
 static Ldm7Status
 mlsm_execute(
     const McastInfo* const restrict info,
+    const unsigned short            ttl,
     unsigned short* const restrict  serverPort,
     pid_t* const restrict           pid)
 {
     const feedtypet feedtype = mi_getFeedtype(info);
     pid_t           procId;
     unsigned short  port;
-    int             status = mlsm_spawn(info, &procId, &port);
+    int             status = mlsm_spawn(info, ttl, &procId, &port);
 
     if (0 == status) {
         status = msm_put(feedtype, procId);
@@ -312,17 +352,114 @@ mlsm_execute(
 }
 
 /**
- * Indicates if two multicast information objects conflict (e.g., have
- * feed-types that overlap, specify the same TCP server IP address and port
- * number, etc.).
+ * Initializes a multicast entry.
  *
- * @param[in] info1  First multicast information object.
- * @param[in] info2  Second multicast information object.
- * @retval    true   The multicast information objects do conflict.
- * @retval    false  The multicast information objects do not conflict.
+ * @param[out] entry       Entry to be initialized.
+ * @param[in]  info        Multicast information. Caller may free.
+ * @param[in]  ttl         Time-to-live for multicast packets.
+ * @retval     0           Success. `*entry` is initialized. Caller should call
+ *                         `me_destroy(entry)` when it's no longer needed.
+ * @retval     LDM7_INVAL  `ttl` is too large. `log_start()` called.
+ */
+static Ldm7Status
+me_init(
+        McastEntry* const restrict entry,
+        const McastInfo* const      info,
+        unsigned short              ttl)
+{
+    int status;
+
+    if (ttl >= 255) {
+        LOG_START1("Time-to-live is too large: %hu >= 255", ttl);
+        status = LDM7_INVAL;
+    }
+    else {
+        if (mi_copy(&entry->info, info)) {
+            status = LDM7_SYSTEM;
+        }
+        else {
+            entry->ttl = ttl;
+            status = 0;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Destroys a multicast entry.
+ *
+ * @param[in] entry  The multicast entry to be destroyed.
+ */
+static void
+me_destroy(
+        McastEntry* const entry)
+{
+    mi_destroy(&entry->info);
+}
+
+/**
+ * Returns a new multicast entry.
+ *
+ * @param[out] entry       New, initialized entry.
+ * @param[in]  info        Multicast information. Caller may free.
+ * @param[in]  ttl         Time-to-live for multicast packets.
+ * @retval     0           Success. `*entry` is set. Caller should call
+ *                         `me_free(*entry)` when it's no longer needed.
+ * @retval     LDM7_INVAL  `ttl` is too large. `log_start()` called.
+ */
+static Ldm7Status
+me_new(
+        McastEntry** const restrict entry,
+        const McastInfo* const      info,
+        unsigned short              ttl)
+{
+    int         status;
+    McastEntry* ent = LOG_MALLOC(sizeof(McastEntry), "multicast entry");
+
+    if (ent == NULL) {
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = me_init(ent, info, ttl);
+
+        if (status) {
+            free(ent);
+        }
+        else {
+            *entry = ent;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Frees a multicast entry.
+ *
+ * @param[in]  The multicast entry to be freed or NULL.
+ */
+static void
+me_free(
+        McastEntry* const entry)
+{
+    if (entry) {
+        me_destroy(entry);
+        free(entry);
+    }
+}
+
+/**
+ * Indicates if two multicast entries conflict (e.g., have feed-types that
+ * overlap, specify the same TCP server IP address and port number, etc.).
+ *
+ * @param[in] info1  First multicast entry.
+ * @param[in] info2  Second multicast entry.
+ * @retval    true   The multicast entries do conflict.
+ * @retval    false  The multicast entries do not conflict.
  */
 static bool
-doConflict(
+me_doConflict(
         const McastInfo* const info1,
         const McastInfo* const info2)
 {
@@ -332,24 +469,24 @@ doConflict(
 }
 
 /**
- * Compares two multicast information objects and returns a value less than,
- * equal to, or greater than zero as the first object is considered less than,
- * equal to, or greater than the second object, respectively. Only the
- * feed-types are compared.
+ * Compares two multicast entries and returns a value less than, equal to, or
+ * greater than zero as the first entry is considered less than, equal to, or
+ * greater than the second entry, respectively. Only the feed-types are
+ * compared.
  *
- * @param[in] o1  First multicast information object.
- * @param[in] o2  Second multicast information object.
+ * @param[in] o1  First multicast entry object.
+ * @param[in] o2  Second multicast entry object.
  * @retval    -1  First object is less than second object.
  * @retval     0  First object equals second object.
  * @retval    +1  First object is greater than second object.
  */
 static int
-findMcastInfos(
+me_compareFeedtypes(
         const void* o1,
         const void* o2)
 {
-    const feedtypet f1 = mi_getFeedtype((McastInfo*)o1);
-    const feedtypet f2 = mi_getFeedtype((McastInfo*)o2);
+    const feedtypet f1 = mi_getFeedtype(&((McastEntry*)o1)->info);
+    const feedtypet f2 = mi_getFeedtype(&((McastEntry*)o2)->info);
 
     return (f1 < f2)
               ? -1
@@ -359,11 +496,11 @@ findMcastInfos(
 }
 
 /**
- * Compares two multicast information objects and returns a value less than,
- * equal to, or greater than zero as the first object is considered less than,
- * equal to, or greater than the second object, respectively. The objects are
- * considered equal if they conflict (e.g., have feed-types that overlap,
- * specify the same TCP server IP address and port number, etc.).
+ * Compares two multicast entries and returns a value less than, equal to, or
+ * greater than zero as the first entry is considered less than, equal to, or
+ * greater than the second entry, respectively. The entries are considered equal
+ * if they conflict (e.g., have feed-types that overlap, specify the same TCP
+ * server IP address and port number, etc.).
  *
  * @param[in] o1  First multicast information object.
  * @param[in] o2  Second multicast information object.
@@ -372,17 +509,17 @@ findMcastInfos(
  * @retval    +1  First object is greater than second object.
  */
 static int
-searchMcastInfos(
+me_compareOrConflict(
         const void* o1,
         const void* o2)
 {
     const McastInfo* const i1 = o1;
     const McastInfo* const i2 = o2;
 
-    if (doConflict(i1, i2))
+    if (me_doConflict(i1, i2))
         return 0;
 
-    return findMcastInfos(o1, o2);
+    return me_compareFeedtypes(o1, o2);
 }
 
 /**
@@ -391,6 +528,7 @@ searchMcastInfos(
  * @pre                         Multicast LDM sender PID map is locked for
  *                              writing.
  * @param[in]      feedtype     Multicast group feed-type.
+ * @param[in]      ttl          Time-to-live of multicast packets.
  * @param[in,out]  info         Information on the multicast group.
  * @param[out]     pid          Process ID of the multicast LDM sender.
  * @retval         0            Success. The multicast LDM sender associated
@@ -402,16 +540,17 @@ searchMcastInfos(
  */
 static int
 mlsm_startIfNecessary(
-        const feedtypet   feedtype,
-        McastInfo* const  info,
-        pid_t* const      pid)
+        const feedtypet      feedtype,
+        const unsigned short ttl,
+        McastInfo* const     info,
+        pid_t* const         pid)
 {
     int status = mlsm_isRunning(feedtype, pid);
 
     if (status == LDM7_NOENT) {
         unsigned short serverPort;
 
-        status = mlsm_execute(info, &serverPort, pid);
+        status = mlsm_execute(info, ttl, &serverPort, pid);
 
         if (0 == status && info->server.port != serverPort) {
             // Server port number was chosen by the operating-system
@@ -433,41 +572,48 @@ mlsm_startIfNecessary(
  * process is forked so that all child processes will have this information.
  *
  * @param[in] info         Information on the multicast group. Caller may free.
+ * @param[in] ttl          Time-to-live for multicast packets:
+ *                                0  Restricted to same host. Won't be output by
+ *                                   any interface.
+ *                                1  Restricted to same subnet. Won't be
+ *                                   forwarded by a router.
+ *                              <32  Restricted to same site, organization or
+ *                                   department.
+ *                              <64  Restricted to same region.
+ *                             <128  Restricted to same continent.
+ *                             <255  Unrestricted in scope. Global.
  * @retval    0            Success.
+ * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
  *                         addition. Manager not modified. `log_add()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 mlsm_addPotentialSender(
-    const McastInfo* const restrict   info)
+    const McastInfo* const restrict   info,
+    const unsigned short              ttl)
 {
-    int              status;
-    McastInfo* const elt = mi_clone(info);
+    McastEntry* entry;
+    int         status = me_new(&entry, info, ttl);
 
-    if (NULL == elt) {
-        status = LDM7_SYSTEM;
-    }
-    else {
-        const void* const node = tsearch(elt, &mcastInfoSet, searchMcastInfos);
+    if (0 == status) {
+        const void* const node = tsearch(entry, &mcastEntries,
+                me_compareOrConflict);
 
         if (NULL == node) {
-            LOG_SERROR0("Couldn't add to multicast information set");
+            LOG_SERROR0("Couldn't add to multicast entries");
             status = LDM7_SYSTEM;
-            mi_free(elt);
+            me_free(entry);
         }
-        else if (*(McastInfo**)node != elt) {
+        else if (*(McastEntry**)node != entry) {
             char* const id = mi_asFilename(info);
             LOG_START1("Multicast information conflicts with earlier addition: "
                     "%s", id);
             free(id);
             status = LDM7_DUP;
-            mi_free(elt);
+            me_free(entry);
         }
-        else {
-            status = 0;
-        }
-    } // `elt` allocated
+    } // `entry` allocated
 
     return status;
 }
@@ -492,12 +638,12 @@ mlsm_ensureRunning(
         const McastInfo** const mcastInfo,
         pid_t* const            pid)
 {
-    McastInfo key;
-    int       status;
+    McastEntry key;
+    int        status;
 
-    key.feed = feedtype;
+    key.info.feed = feedtype;
 
-    const void* const node = tfind(&key, &mcastInfoSet, findMcastInfos);
+    const void* const node = tfind(&key, &mcastEntries, me_compareFeedtypes);
 
     if (NULL == node) {
         LOG_START1("No multicast LDM sender is associated with feed-type %s",
@@ -506,9 +652,10 @@ mlsm_ensureRunning(
     }
     else {
         if (0 == (status = msm_lock(true))) {
-            McastInfo* info = *(McastInfo**)node;
+            McastEntry*      entry = *(McastEntry**)node;
+            McastInfo* const info = &entry->info;
 
-            status = mlsm_startIfNecessary(feedtype, info, pid);
+            status = mlsm_startIfNecessary(feedtype, entry->ttl, info, pid);
 
             if (0 == status)
                 *mcastInfo = info;
@@ -557,10 +704,10 @@ mlsm_clear(void)
     int status = msm_lock(true);
 
     if (0 == status) {
-        while (mcastInfoSet) {
-            McastInfo* mcastInfo = *(McastInfo**)mcastInfoSet;
-            (void)tdelete(mcastInfo, &mcastInfoSet, searchMcastInfos);
-            mi_free(mcastInfo);
+        while (mcastEntries) {
+            McastEntry* entry = *(McastEntry**)mcastEntries;
+            (void)tdelete(entry, &mcastEntries, me_compareOrConflict);
+            me_free(entry);
         }
         msm_clear();
     }
