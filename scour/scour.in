@@ -13,8 +13,8 @@
 # WARNING: scour follows symbolic links, so don't put symbolic links to
 # directories you don't want scoured under data directories.
 
-PATH=/bin:/usr/bin
-CONFFILE=/usr/local/ldm/etc/scour.conf			# default, if no args
+PATH=@bindir@:/bin:/usr/bin
+CONFFILE=`regutil /scour/config-path`  # default, if no args
 VERBOSEFLAG=
 DEBUGFLAG=
 ERRS=

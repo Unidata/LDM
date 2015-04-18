@@ -51,7 +51,7 @@ Turn on debugging.  This will produce extra debugging output in the log file.
 The path name of the configuration file containing the table of data
 directories to be scoured and data retention times in days.  If no
 configuration file is named, the default configuration file printed by the
-command "regutil regpath{PQACT_CONFIG_PATH}", is used.
+command "regutil regpath{SCOUR_CONFIG_PATH}", is used.
 
 .SH EXAMPLE
 The command
