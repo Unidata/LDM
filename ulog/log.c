@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stddef.h>   /* NULL */
 #include <stdio.h>    /* vsnprintf(), snprintf() */
@@ -62,6 +63,34 @@ static int              keyCreated = 0;
  * of the ulog(3) module thread-safe.
  */
 static pthread_mutex_t  mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * Blocks all signals for the current thread. This is done so that the
+ * functions of this module may be called by a signal handler.
+ *
+ * @param[out] prevset  The signal mask on entry to this function. The caller
+ *                      should call `restoreSigs(prevset)` to restore the
+ *                      original signal mask.
+ */
+static void blockSigs(
+        sigset_t* const prevset)
+{
+    sigset_t sigset;
+
+    (void)sigfillset(&sigset);
+    (void)pthread_sigmask(SIG_BLOCK, &sigset, prevset);
+}
+
+/**
+ * Restores the signal mask of the current thread.
+ *
+ * @param[in] sigset  The set of signals to be blocked.
+ */
+static void restoreSigs(
+        const sigset_t* const sigset)
+{
+    (void)pthread_sigmask(SIG_SETMASK, sigset, NULL);
+}
 
 /**
  * Locks this module's lock.
@@ -163,10 +192,15 @@ static List* getList(void)
  */
 void log_clear()
 {
+    sigset_t sigset;
+    blockSigs(&sigset);
+
     List*   list = getList();
 
     if (NULL != list)
         list->last = NULL;
+
+    restoreSigs(&sigset);
 }
 
 /**
@@ -187,6 +221,9 @@ int log_vadd(
     const char* const   fmt,  /**< The message format */
     va_list             args) /**< The arguments referenced by the format. */
 {
+    sigset_t sigset;
+    blockSigs(&sigset);
+
     int status;
 
     if (NULL == fmt) {
@@ -290,6 +327,7 @@ int log_vadd(
         }                                   /* message-list isn't NULL */
     }                                       /* arguments aren't NULL */
 
+    restoreSigs(&sigset);
     return status;
 }
 
@@ -300,6 +338,9 @@ void log_start(
     const char* const fmt,  /**< The message format */
     ...)                    /**< Arguments referenced by the format */
 {
+    sigset_t sigset;
+    blockSigs(&sigset);
+
     va_list     args;
 
     log_clear();
@@ -312,6 +353,7 @@ void log_start(
     }
 
     va_end(args);
+    restoreSigs(&sigset);
 }
 
 /**
@@ -324,6 +366,9 @@ void log_add(
     const char* const fmt,  /**< The message format */
     ...)                    /**< Arguments referenced by the format */
 {
+    sigset_t sigset;
+    blockSigs(&sigset);
+
     va_list     args;
 
     va_start(args, fmt);
@@ -335,6 +380,7 @@ void log_add(
     }
 
     va_end(args);
+    restoreSigs(&sigset);
 }
 
 /**
@@ -354,6 +400,9 @@ void log_serror(
     const char* const fmt,  /**< The higher-level message format */
     ...)                    /**< Arguments referenced by the format */
 {
+    sigset_t sigset;
+    blockSigs(&sigset);
+
     va_list     args;
 
     log_errno();
@@ -366,6 +415,7 @@ void log_serror(
     }
 
     va_end(args);
+    restoreSigs(&sigset);
 }
 
 /**
@@ -378,6 +428,9 @@ void log_errnum(
                                   *  for no higher-level message */
     ...)                        /**< Arguments referenced by the format */
 {
+    sigset_t sigset;
+    blockSigs(&sigset);
+
     log_start(strerror(errnum));
 
     if (NULL != fmt) {
@@ -393,6 +446,8 @@ void log_errnum(
 
         va_end(args);
     }
+
+    restoreSigs(&sigset);
 }
 
 /**
@@ -404,6 +459,9 @@ void log_log(
                           *  LOG_ERR, LOG_WARNING, LOG_NOTICE, LOG_INFO, or
                           *  LOG_DEBUG; otherwise, the behavior is undefined. */
 {
+    sigset_t sigset;
+    blockSigs(&sigset);
+
     List*   list = getList();
 
     if (NULL != list && NULL != list->last) {
@@ -440,6 +498,8 @@ void log_log(
         unlock();
         log_clear();
     }                               /* have messages */
+
+    restoreSigs(&sigset);
 }
 
 /**
@@ -470,11 +530,14 @@ void* log_malloc(
 
 /**
  * Frees the log-message resources of the current thread. Should only be called
- * when no more logging by the current will occur.
+ * when no more logging by the current thread will occur.
  */
 void
 log_free(void)
 {
+    sigset_t sigset;
+    blockSigs(&sigset);
+
     List*   list = getList();
 
     if (list) {
@@ -489,6 +552,8 @@ log_free(void)
         free(list);
         (void)pthread_setspecific(listKey, NULL);
     }
+
+    restoreSigs(&sigset);
 }
 
 /**
