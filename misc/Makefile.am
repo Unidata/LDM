@@ -50,7 +50,7 @@ lib_la_SOURCES	= \
 	statsMath.c \
 	StrBuf.c \
 	StringBuf.c StringBuf.h
-lib_la_CPPFLAGS	= \
+CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
@@ -81,7 +81,8 @@ semRWLock.h:		semRWLock.hin semRWLock.c
 StrBuf.h:		StrBuf.hin StrBuf.c
 
 if HAVE_CUNIT
-check_PROGRAMS		= test_inetutil test_child_map testSemRWLock
+check_PROGRAMS		= test_inetutil test_child_map testSemRWLock \
+			  executor_test
 
 test_inetutil_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -117,8 +118,12 @@ testSemRWLock_CPPFLAGS	= \
 testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
-
-TESTS			= test_inetutil test_child_map testSemRWLock
+    
+executor_test_SOURCES	= executor.c executor_test.c
+executor_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+    
+TESTS			= test_inetutil test_child_map testSemRWLock \
+			  executor_test
 
 debug:		test_child_map
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb test_child_map
