@@ -181,7 +181,7 @@ mcastReceiver_free(
 }
 
 /**
- * Executes a multicast receiver. Only returns when an error occurs.
+ * Executes a multicast receiver. Doesn't return until an error occurs.
  *
  * @param[in,out] receiver      The receiver.
  * @retval        EINVAL        @code{receiver == NULL}. \c log_add() called.
@@ -192,7 +192,7 @@ mcastReceiver_execute(
     const McastReceiver* const receiver)
 {
     if (0 == receiver) {
-        LOG_ADD0("NULL receiver argument");
+        LOG_START0("NULL receiver argument");
         return EINVAL;
     }
 
@@ -201,7 +201,7 @@ mcastReceiver_execute(
         receiver->vcmtpReceiver->Start();
     }
     catch (const std::exception& e) {
-        LOG_ADD1("%s", e.what());
+        LOG_START1("%s", e.what());
     }
     return -1;
 }
@@ -249,6 +249,9 @@ struct mcast_sender {
  * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
  *                              multicast group.
  * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     ifaceAddr     IP address of the interface to use to send
+ *                              multicast packets. "0.0.0.0" obtains the default
+ *                              multicast interface. Caller may free.
  * @param[in]     ttl           Time-to-live of outgoing packets.
  *                                    0  Restricted to same host. Won't be
  *                                       output by any interface.
@@ -276,6 +279,7 @@ mcastSender_init(
     const unsigned short   serverPort,
     const char* const      groupAddr,
     const unsigned short   groupPort,
+    const char* const      ifaceAddr,
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
@@ -288,7 +292,7 @@ mcastSender_init(
 
         try {
             vcmtpSendv3* vcmtpSender = new vcmtpSendv3(serverAddr, serverPort,
-                    groupAddr, groupPort, iProd, notifier, ttl);
+                    groupAddr, groupPort, notifier, ttl, ifaceAddr, iProd);
             sender->vcmtpSender = vcmtpSender;
             sender->notifier = notifier;
             status = 0;
@@ -327,6 +331,9 @@ mcastSender_init(
  * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
  *                              multicast group.
  * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     ifaceAddr     IP address of the interface to use to send
+ *                              multicast packets. "0.0.0.0" obtains the default
+ *                              multicast interface. Caller may free.
  * @param[in]     ttl           Time-to-live of outgoing packets.
  *                                    0  Restricted to same host. Won't be
  *                                       output by any interface.
@@ -354,6 +361,7 @@ mcastSender_new(
     const unsigned short   serverPort,
     const char* const      groupAddr,
     const unsigned short   groupPort,
+    const char* const      ifaceAddr,
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
@@ -367,7 +375,7 @@ mcastSender_new(
     }
     else {
         status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
-                groupPort, ttl, iProd, doneWithProd);
+                groupPort, ifaceAddr, ttl, iProd, doneWithProd);
 
         if (0 == status)
             *sender = send;
@@ -465,7 +473,8 @@ mcastSender_free(
 }
 
 /**
- * Spawns an active multicast sender.
+ * Spawns an active multicast sender. Upon return, a multicast sender is
+ * executing independently.
  *
  * @param[out]    sender        Pointer to returned sender. Caller should call
  *                              `mcastSender_terminate(*sender)` when it's no
@@ -479,6 +488,9 @@ mcastSender_free(
  * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
  *                              multicast group.
  * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     ifaceAddr     IP address of the interface to use to send
+ *                              multicast packets. "0.0.0.0" obtains the default
+ *                              multicast interface. Caller may free.
  * @param[in]     ttl           Time-to-live of outgoing packets.
  *                                    0  Restricted to same host. Won't be
  *                                       output by any interface.
@@ -507,13 +519,14 @@ mcastSender_spawn(
     unsigned short* const  serverPort,
     const char* const      groupAddr,
     const unsigned short   groupPort,
+    const char* const      ifaceAddr,
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
 {
     McastSender* send;
     int          status = mcastSender_new(&send, serverAddr, *serverPort,
-            groupAddr, groupPort, ttl, iProd, doneWithProd);
+            groupAddr, groupPort, ifaceAddr, ttl, iProd, doneWithProd);
 
     if (0 == status) {
         status = mcastSender_start(send, serverPort);

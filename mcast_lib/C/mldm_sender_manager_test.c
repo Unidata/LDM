@@ -95,9 +95,9 @@ static void
 test_conflict()
 {
     // Depends on `init()`
-    int status = mlsm_addPotentialSender(mcastInfo, 0);
+    int status = mlsm_addPotentialSender(mcastInfo, 0, NULL);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = mlsm_addPotentialSender(mcastInfo, 0);
+    status = mlsm_addPotentialSender(mcastInfo, 0, NULL);
     OP_ASSERT_EQUAL_INT(LDM7_DUP, status);
     log_clear();
     OP_VERIFY();

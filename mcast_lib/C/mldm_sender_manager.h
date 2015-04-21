@@ -40,6 +40,10 @@ extern "C" {
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
+ * @param[in] mcastIf      IP address of the interface from which multicast
+ *                         packets should be sent or NULL to have them sent from
+ *                         the system's default multicast interface. Caller may
+ *                         free.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
@@ -49,7 +53,8 @@ extern "C" {
 Ldm7Status
 mlsm_addPotentialSender(
     const McastInfo* const restrict   info,
-    const unsigned short              ttl);
+    const unsigned short              ttl,
+    const char* const restrict        mcastIf);
 
 /**
  * Ensures that the multicast LDM sender process that's responsible for a

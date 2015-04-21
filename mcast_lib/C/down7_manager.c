@@ -103,7 +103,7 @@ elt_start(
     }
     else if (0 == pid) {
         /* Child process */
-        status = down7_spawn(elt->ul7, elt->ft, getQueuePath());
+        status = down7_exec(elt->ul7, elt->ft, getQueuePath());
 
         if (status == LDM7_SHUTDOWN) {
             log_log(LOG_NOTICE);

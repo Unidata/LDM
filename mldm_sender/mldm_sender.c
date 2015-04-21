@@ -82,36 +82,38 @@ unblockTermSigs(void)
 static void
 mls_usage(void)
 {
-    log_add(
-"Usage: %s [options] feed groupId:groupPort\n"
-"Options:\n"
-"    -I serverIface    Interface on which VCMTP TCP server will listen.\n"
-"                      Default is all interfaces.\n"
-"    -P serverPort     Port number for VCMTP TCP server. Default is chosen by\n"
-"                      operating system.\n"
-"    -l logfile        Log to file <logfile> ('-' => standard error stream).\n"
-"                      Default depends on standard error stream:\n"
-"                          is tty     => use standard error stream\n"
-"                          is not tty => use system logging daemon.\n"
-"    -q queue          Use product-queue <queue>. Default is \"%s\".\n"
-"    -t ttl            Time-to-live of outgoing packets (default is 1):\n"
-"                           0  Restricted to same host. Won't be output by\n"
-"                              any interface.\n"
-"                           1  Restricted to same subnet. Won't be\n"
-"                              forwarded by a router (default).\n"
-"                         <32  Restricted to same site, organization or\n"
-"                              department.\n"
-"                         <64  Restricted to same region.\n"
-"                        <128  Restricted to same continent.\n"
-"                        <255  Unrestricted in scope. Global.\n"
-"    -v                Verbose logging: log INFO level messages.\n"
-"    -x                Debug logging: log DEBUG level messages.\n"
-"Operands:\n"
-"    feed              Identifier of multicast group in form of feedtype\n"
-"                      expression\n"
-"    groupId:groupPort Internet service address of multicast group, where\n"
-"                      <groupId> is either group-name or dotted-decimal IPv4\n"
-"                      address and <groupPort> is port number.",
+    log_add("\
+Usage: %s [options] groupId:groupPort\
+Options:\
+    -f feedExpr       Feedtype expression specifying data to send. Default\
+                      is ANY.\
+    -l logfile        Log file pathname or '-' for standard error stream.\
+                      Default depends on standard error stream:\
+                          is tty     => use standard error stream\
+                          is not tty => use system logging daemon.\
+    -m mcastIf        IP address of interface to use to send multicast\
+                      packets. Default is the default multicast interface\
+    -p serverPort     Port number for VCMTP TCP server. Default is chosen by\
+                      operating system.\
+    -q prodQueue      Pathname of product-queue. Default is \"%s\".\
+    -s serverIface    IP Address of interface on which VCMTP TCP server will\
+                      listen. Default is all interfaces.\
+    -t ttl            Time-to-live of outgoing packets (default is 1):\
+                           0  Restricted to same host. Won't be output by\
+                              any interface.\
+                           1  Restricted to same subnet. Won't be\
+                              forwarded by a router (default).\
+                         <32  Restricted to same site, organization or\
+                              department.\
+                         <64  Restricted to same region.\
+                        <128  Restricted to same continent.\
+                        <255  Unrestricted in scope. Global.\
+    -v                Verbose logging: log INFO level messages.\
+    -x                Debug logging: log DEBUG level messages.\
+Operands:\
+    groupId:groupPort Internet service address of multicast group, where\
+                      <groupId> is either group-name or dotted-decimal IPv4\
+                      address and <groupPort> is port number.",
             getulogident(), getQueuePath());
 }
 
@@ -121,6 +123,7 @@ mls_usage(void)
  * @pre                     {`openulog()` has already been called.}
  * @param[in]  argc         Number of arguments.
  * @param[in]  argv         Arguments.
+ * @param[out] feed         Feedtypes of data to be sent.
  * @param[out] serverIface  Interface on which VCMTP TCP server should listen.
  *                          Caller must not free.
  * @param[out] serverPort   Port number for VCMTP TCP server.
@@ -134,6 +137,8 @@ mls_usage(void)
  *                             <64  Restricted to the same region.
  *                            <128  Restricted to the same continent.
  *                            <255  Unrestricted in scope. Global.
+ * @param[out] ifaceAddr    IP address of the interface to use to send multicast
+ *                          packets.
  * @retval     0            Success. `*serverIface` or `*ttl` might not have
  *                          been set.
  * @retval     1            Invalid options. `log_start()` called.
@@ -142,9 +147,11 @@ static int
 mls_decodeOptions(
         int                            argc,
         char* const* const restrict    argv,
+        feedtypet* const restrict      feed,
         const char** const restrict    serverIface,
         unsigned short* const restrict serverPort,
-        unsigned* const restrict       ttl)
+        unsigned* const restrict       ttl,
+        const char** const restrict    ifaceAddr)
 {
     int          ch;
     extern int   opterr;
@@ -153,10 +160,13 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":I:l:P:q:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":f:l:m:p:q:s:t:vx")) != EOF)
         switch (ch) {
-        case 'I': {
-            *serverIface = optarg;
+        case 'f': {
+            if (strfeedtypet(optarg, feed)) {
+                log_start("Invalid feed expression: \"%s\"", optarg);
+                return 1;
+            }
             break;
         }
         case 'l': {
@@ -164,7 +174,11 @@ mls_decodeOptions(
                     getulogfacility(), optarg);
             break;
         }
-        case 'P': {
+        case 'm': {
+            *ifaceAddr = optarg;
+            break;
+        }
+        case 'p': {
             unsigned short port;
             int            nbytes;
 
@@ -179,6 +193,10 @@ mls_decodeOptions(
         }
         case 'q': {
             setQueuePath(optarg);
+            break;
+        }
+        case 's': {
+            *serverIface = optarg;
             break;
         }
         case 't': {
@@ -279,7 +297,6 @@ mls_decodeGroupAddr(
  * @param[in]  argv         Operands.
  * @param[out] groupAddr    Internet service address of the multicast group.
  *                          Caller should free when it's no longer needed.
- * @param[out] feed         Feedtype of the multicast group.
  * @retval     0            Success. `*groupAddr`, `*serverAddr`, and `*feed`
  *                          are set.
  * @retval     1            Invalid operands. `log_start()` called.
@@ -289,8 +306,7 @@ static int
 mls_decodeOperands(
         int                          argc,
         char* const* restrict        argv,
-        ServiceAddr** const restrict groupAddr,
-        feedtypet* const restrict    feed)
+        ServiceAddr** const restrict groupAddr)
 {
     int status;
 
@@ -299,22 +315,14 @@ mls_decodeOperands(
         status = 1;
     }
     else {
-        if (strfeedtypet(*argv, feed)) {
-            log_start("Invalid feed expression: \"%s\"", *argv);
-        }
-        else {
-            argc--; argv++;
-
-            if ((status = mls_decodeGroupAddr(*argv, groupAddr)))
-                status = 1;
-        }
+        status = mls_decodeGroupAddr(*argv, groupAddr);
     }
 
     return status;
 }
 
 /**
- * Sets runtime parameters from command-line arguments.
+ * Sets the multicast group information from command-line arguments.
  *
  * @param[in]  serverIface  Interface on which VCMTP TCP server should listen.
  *                          Caller must not free.
@@ -328,7 +336,7 @@ mls_decodeOperands(
  * @retval     2            System failure. `log_start()` called.
  */
 static int
-mls_setRuntimeParameters(
+mls_setMcastGroupInfo(
         const char* const restrict        serverIface,
         const unsigned short              serverPort,
         const feedtypet                   feed,
@@ -363,35 +371,43 @@ mls_setRuntimeParameters(
  *                            <64  Restricted to the same region.
  *                           <128  Restricted to the same continent.
  *                           <255  Unrestricted in scope. Global.
- * @retval    0           Success. `*mcastInfo` is set. `*ttl` might be set.
- * @retval    1           Invalid command line. `log_start()` called.
- * @retval    2           System failure. `log_start()` called.
+ * @param[out] ifaceAddr  IP address of the interface from which multicast
+ *                        packets should be sent or NULL to have them sent from
+ *                        the system's default multicast interface.
+ * @retval     0          Success. `*mcastInfo` is set. `*ttl` might be set.
+ * @retval     1          Invalid command line. `log_start()` called.
+ * @retval     2          System failure. `log_start()` called.
  */
 static int
 mls_decodeCommandLine(
-        int                        argc,
-        char* const* restrict      argv,
-        McastInfo** const restrict mcastInfo,
-        unsigned* const restrict   ttl)
+        int                         argc,
+        char* const* restrict       argv,
+        McastInfo** const restrict  mcastInfo,
+        unsigned* const restrict    ttl,
+        const char** const restrict ifaceAddr)
 {
+    feedtypet      feed = ANY;
     const char*    serverIface = "0.0.0.0";     // default: all interfaces
     unsigned short serverPort = 0;              // default: chosen by O/S
-    int            status = mls_decodeOptions(argc, argv, &serverIface,
-            &serverPort, ttl);
+    const char*    mcastIf = "0.0.0.0";         // default mcast interface
+    int            status = mls_decodeOptions(argc, argv, &feed, &serverIface,
+            &serverPort, ttl, &mcastIf);
     extern int     optind;
 
     if (0 == status) {
         ServiceAddr* groupAddr;
-        feedtypet    feed;
 
         argc -= optind;
         argv += optind;
-        status = mls_decodeOperands(argc, argv, &groupAddr, &feed);
+        status = mls_decodeOperands(argc, argv, &groupAddr);
 
         if (0 == status) {
-            status = mls_setRuntimeParameters(serverIface, serverPort, feed,
+            status = mls_setMcastGroupInfo(serverIface, serverPort, feed,
                     groupAddr, mcastInfo);
             sa_free(groupAddr);
+
+            if (0 == status)
+                *ifaceAddr = mcastIf;
         }
     } // options decoded
 
@@ -583,6 +599,9 @@ mls_doneWithProduct(
  *                             <64  Restricted to the same region.
  *                            <128  Restricted to the same continent.
  *                            <255  Unrestricted in scope. Global.
+ * @param[in]  ifaceAddr    IP address of the interface to use to send multicast
+ *                          packets. "0.0.0.0" obtains the default multicast
+ *                          interface. Caller may free.
  * @param[in]  pqPathname   Pathname of product queue from which to obtain
  *                          data-products.
  * @retval     0            Success. `*sender` is set.
@@ -596,6 +615,7 @@ static Ldm7Status
 mls_init(
     const McastInfo* const restrict info,
     const unsigned                  ttl,
+    const char*                     ifaceAddr,
     const char* const restrict      pqPathname)
 {
     char serverInetAddr[INET_ADDRSTRLEN];
@@ -629,8 +649,8 @@ mls_init(
     }
 
     if ((status = mcastSender_spawn(&mcastSender, serverInetAddr,
-            &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port, ttl,
-            iProd, mls_doneWithProduct))) {
+            &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port,
+            ifaceAddr, ttl, iProd, mls_doneWithProduct))) {
         status = (status == 1)
                 ? LDM7_INVAL
                 : (status == 2)
@@ -861,6 +881,9 @@ mls_startMulticasting(void)
  *                             <64  Restricted to the same region.
  *                            <128  Restricted to the same continent.
  *                            <255  Unrestricted in scope. Global.
+ * @param[in]  ifaceAddr    IP address of the interface to use to send multicast
+ *                          packets. "0.0.0.0" obtains the default multicast
+ *                          interface. Caller may free.
  * @param[in]  pqPathname   Pathname of the product-queue.
  * @retval     0            Success. Termination was requested.
  * @retval     LDM7_INVAL.  Invalid argument. `log_start()` called.
@@ -872,6 +895,7 @@ static Ldm7Status
 mls_execute(
         const McastInfo* const restrict info,
         const unsigned                  ttl,
+        const char* const restrict      ifaceAddr,
         const char* const restrict      pqPathname)
 {
 
@@ -887,7 +911,7 @@ mls_execute(
      * this thread manages the multicast sender.
      */
     blockTermSigs();
-    int status = mls_init(info, ttl, pqPathname); // sets `mcastInfo`
+    int status = mls_init(info, ttl, ifaceAddr, pqPathname); // sets `mcastInfo`
     unblockTermSigs();
 
     if (status) {
@@ -946,7 +970,9 @@ main(
      */
     McastInfo* groupInfo;  // multicast group information
     unsigned   ttl = 1;    // Won't be forwarded by any router.
-    int        status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl);
+    char*      ifaceAddr;  // IP address of multicast interface
+    int        status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
+            &ifaceAddr);
 
     if (status) {
         log_add("Couldn't decode command-line");
@@ -957,7 +983,7 @@ main(
     else {
         mls_setSignalHandling();
 
-        status = mls_execute(groupInfo, ttl, getQueuePath());
+        status = mls_execute(groupInfo, ttl, ifaceAddr, getQueuePath());
         if (status) {
             log_log(LOG_ERR);
             switch (status) {

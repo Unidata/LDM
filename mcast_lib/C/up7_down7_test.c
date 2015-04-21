@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <time.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -38,6 +39,8 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+
+#define USE_SIGWAIT 0
 
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))
@@ -63,6 +66,44 @@ typedef struct {
 static const char* const LOCAL_HOST = "127.0.0.1";
 static sigset_t          termSigSet;
 static const char* const PQ_PATHNAME = "up7_down7_test.pq";
+#if !USE_SIGWAIT
+static pthread_mutex_t   mutex;
+static pthread_cond_t    cond;
+
+static int
+initCondAndMutex(void)
+{
+    int                 status;
+    pthread_mutexattr_t mutexAttr;
+
+    status = pthread_mutexattr_init(&mutexAttr);
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
+    }
+    else {
+        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
+        /*
+         * Recursive in case `termSigHandler()` and `waitUntilDone()` execute
+         * on the same thread
+         */
+        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
+
+        if ((status = pthread_mutex_init(&mutex, &mutexAttr))) {
+            LOG_ERRNUM0(status, "Couldn't initialize mutex");
+        }
+        else {
+            if ((status = pthread_cond_init(&cond, NULL))) {
+                LOG_ERRNUM0(status, "Couldn't initialize condition variable");
+                (void)pthread_mutex_destroy(&mutex);
+            }
+        }
+
+        (void)pthread_mutexattr_destroy(&mutexAttr);
+    } // `mutexAttr` initialized
+
+    return status;
+}
+#endif
 
 /**
  * Only called once.
@@ -98,6 +139,10 @@ setup(void)
                  * make(1)).
                  */
                 (void)setpgrp();
+
+#if !USE_SIGWAIT
+                status = initCondAndMutex();
+#endif
             }
         }
     }
@@ -118,37 +163,75 @@ teardown(void)
         LOG_SERROR1("Couldn't delete product-queue \"%s\"", PQ_PATHNAME);
         log_log(LOG_ERR);
     }
+#if !USE_SIGWAIT
+    (void)pthread_cond_destroy(&cond);
+    (void)pthread_mutex_destroy(&mutex);
+#endif
 
     return status;
 }
 
-static void
-blockTermSigs(void)
+#if !USE_SIGWAIT
+
+static int
+lockMutex(void)
 {
-    (void)pthread_sigmask(SIG_BLOCK, &termSigSet, NULL);
+    udebug("Locking mutex");
+    int status = pthread_mutex_lock(&mutex);
+    if (status)
+        LOG_ERRNUM0(status, "Couldn't lock mutex");
+
+    return status;
 }
 
-#if 0
+static int
+unlockMutex(void)
+{
+    udebug("Unlocking mutex");
+    int status = pthread_mutex_unlock(&mutex);
+    if (status)
+        LOG_ERRNUM0(status, "Couldn't unlock mutex");
+
+    return status;
+}
+
+static int
+setDoneCondition(void)
+{
+    int status = lockMutex();
+
+    if (0 == status) {
+        done = 1;
+        udebug("Signaling condition variable");
+        int status = pthread_cond_broadcast(&cond);
+        if (status)
+            LOG_ERRNUM0(status, "Couldn't signal condition variable");
+        int tmpStatus = unlockMutex();
+        if (0 == status)
+            status = tmpStatus;
+    }
+
+    return status;
+}
+
 static void
 termSigHandler(
         const int sig)
 {
     udebug("Caught signal %d", sig);
+    if (setDoneCondition())
+        log_log(LOG_ERR);
 }
 
 static int
-setTermSigHandler(
+setTermSigHandling(
+        struct sigaction* newAction,
         struct sigaction* oldAction)
 {
-    struct sigaction newAction;
     int              status;
 
-    (void)sigemptyset(&newAction.sa_mask);
-    newAction.sa_flags = 0;
-    newAction.sa_handler = termSigHandler;
-
-    if (sigaction(SIGINT, &newAction, oldAction) ||
-            sigaction(SIGTERM, &newAction, oldAction)) {
+    if (sigaction(SIGINT, newAction, oldAction) ||
+            sigaction(SIGTERM, newAction, oldAction)) {
         LOG_SERROR0("sigaction() failure");
         status = errno;
     }
@@ -160,18 +243,45 @@ setTermSigHandler(
 }
 
 static int
-restoreTermSigHandling(
-        struct sigaction* oldAction)
+waitForDoneCondition(void)
 {
-    int              status;
+    int status = lockMutex();
 
-    if (sigaction(SIGINT, oldAction, NULL) ||
-            sigaction(SIGTERM, oldAction, NULL)) {
-        LOG_SERROR0("sigaction() failure");
-        status = errno;
+    if (0 == status) {
+        while (!done) {
+            udebug("Waiting on condition variable");
+            status = pthread_cond_wait(&cond, &mutex);
+            if (status) {
+                LOG_ERRNUM0(status, "Couldn't wait on condition variable");
+                break;
+            }
+        }
+        int tmpStatus = unlockMutex();
+        if (status == 0)
+            status = tmpStatus;
     }
-    else {
-        status = 0;
+
+    return status;
+}
+
+static int
+waitUntilDone(void)
+{
+    struct sigaction newAction;
+
+    (void)sigemptyset(&newAction.sa_mask);
+    newAction.sa_flags = 0;
+    newAction.sa_handler = termSigHandler;
+
+    struct sigaction oldAction;
+    int              status = setTermSigHandling(&newAction, &oldAction);
+
+    if (0 == status) {
+        status = waitForDoneCondition();
+
+        int tmpStatus = setTermSigHandling(&oldAction, NULL);
+        if (status == 0)
+            status = tmpStatus;
     }
 
     return status;
@@ -484,7 +594,6 @@ static void
 sender_insertProducts(
         Sender* const sender)
 {
-#if 1
     pqueue* pq;
     int     status = pq_open(PQ_PATHNAME, 0, &pq);
 
@@ -522,19 +631,15 @@ sender_insertProducts(
         uinfo("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
 
-        status = usleep(1000);
+        struct timespec duration;
+        duration.tv_sec = 0;
+        duration.tv_nsec = 1000000; // 1 ms
+        status = nanosleep(&duration, NULL);
         CU_ASSERT_EQUAL_FATAL(status, 0);
     }
 
     status = pq_close(pq);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-#else
-    #if 1
-        sleep(1);
-    #else
-        (void)sigwait(&termSigSet, &status);
-    #endif
-#endif
 }
 
 static int
@@ -543,11 +648,13 @@ sender_terminate(
 {
     int status = 0;
 
+    udebug("Writing to termination pipe");
     status = write(sender->fds[1], &status, sizeof(int));
     CU_ASSERT_NOT_EQUAL_FATAL(status, -1);
 
     void* statusPtr;
 
+    udebug("Joining sender thread");
     status = pthread_join(sender->thread, &statusPtr);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -572,17 +679,18 @@ receiver_start(
         void* const arg)
 {
     Receiver* const receiver = (Receiver*)arg;
-    int             status = down7_run(receiver->down7);
+    static int      status;
 
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = down7_start(receiver->down7);
+    CU_ASSERT_EQUAL(status, 0);
+
+    setDoneCondition();
 
     /* Because at end of thread: */
     done ? log_clear() : log_log(LOG_ERR);
     log_free();
 
-    static int staticStatus;
-    staticStatus = status;
-    return &staticStatus;
+    return &status;
 }
 
 /**
@@ -626,15 +734,20 @@ static int
 receiver_terminate(
         Receiver* const receiver)
 {
+    udebug("Calling down7_stop()");
     int status = down7_stop(receiver->down7);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     void* statusPtr;
+    udebug("Joining receiver thread");
     status = pthread_join(receiver->thread, &statusPtr);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(statusPtr);
+    CU_ASSERT_NOT_EQUAL_FATAL(statusPtr, PTHREAD_CANCELED);
     status = *(int*)statusPtr;
     CU_ASSERT_EQUAL(status, 0);
 
+    udebug("Calling down7_free()");
     status = down7_free(receiver->down7);
     CU_ASSERT_EQUAL(status, 0);
 
@@ -653,22 +766,26 @@ terminateMcastSender(void)
         struct sigaction oldSigact;
         struct sigaction newSigact;
         status = sigemptyset(&newSigact.sa_mask);
-
         CU_ASSERT_EQUAL_FATAL(status, 0);
+
+        udebug("Setting SIGTERM action to ignore");
         newSigact.sa_flags = 0;
         newSigact.sa_handler = SIG_IGN;
         status = sigaction(SIGTERM, &newSigact, &oldSigact);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
+        udebug("Sending SIGTERM to process group");
         status = kill(0, SIGTERM);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
+        udebug("Restoring SIGTERM action");
         status = sigaction(SIGTERM, &oldSigact, NULL);
         CU_ASSERT_EQUAL(status, 0);
     }
 
     /* Reap the terminated multicast sender. */
     {
+        udebug("Reaping multicast sender child process");
         const pid_t wpid = wait(&status);
         CU_ASSERT_TRUE_FATAL(wpid > 0);
         CU_ASSERT_TRUE(WIFEXITED(status));
@@ -686,7 +803,6 @@ test_up7(
     Sender   sender;
     int      status;
 
-    blockTermSigs();
     done = 0;
 
     ServiceAddr* mcastServAddr;
@@ -703,7 +819,7 @@ test_up7(
     sa_free(ucastServAddr);
     sa_free(mcastServAddr);
 
-    status = mlsm_addPotentialSender(mcastInfo, 2);
+    status = mlsm_addPotentialSender(mcastInfo, 2, "127.0.0.1");
     CU_ASSERT_EQUAL_FATAL(status, 0);
     mi_free(mcastInfo);
 
@@ -731,7 +847,6 @@ test_down7(
     Receiver receiver;
     int      status;
 
-    blockTermSigs();
     done = 0;
 
     /* Starts a receiver on a new thread */
@@ -755,24 +870,27 @@ test_up7_down7(
     Receiver receiver;
     int      status;
 
-    blockTermSigs();
     done = 0;
 
     ServiceAddr* mcastServAddr;
     status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     ServiceAddr* ucastServAddr;
     status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     McastInfo* mcastInfo;
     status = mi_new(&mcastInfo, ANY, mcastServAddr, ucastServAddr);
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     sa_free(ucastServAddr);
     sa_free(mcastServAddr);
 
-    status = mlsm_addPotentialSender(mcastInfo, 2);
+    status = mlsm_addPotentialSender(mcastInfo, 2, "127.0.0.1");
+    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     mi_free(mcastInfo);
 
@@ -788,21 +906,32 @@ test_up7_down7(
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     (void)sleep(1);
+
     sender_insertProducts(&sender);
-    (void)sleep(1);
+
+#if USE_SIGWAIT
     (void)sigwait(&termSigSet, &status);
     done = 1;
+#else
+    status = waitUntilDone();
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+#endif
 
+    udebug("Terminating receiver");
     status = receiver_terminate(&receiver);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
+    udebug("Terminating sender");
     status = sender_terminate(&sender);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
+    udebug("Terminating multicast sender");
     terminateMcastSender();
 
+    udebug("Clearing multicast LDM sender map");
     status = mlsm_clear();
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
@@ -814,7 +943,7 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_DEBUG, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);

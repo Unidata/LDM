@@ -487,7 +487,7 @@ mlr_start(
 
 /**
  * Cleanly stops an executing multicast LDM receiver. Undefined behavior
- * results if called from a signal handler. Returns immediately.
+ * results if called from a signal handler. Returns immediately. Idempotent.
  *
  * @param[in] mlr  Pointer to the multicast LDM receiver to stop.
  */

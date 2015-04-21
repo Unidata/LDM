@@ -203,7 +203,7 @@ static int server_destroy(
             }
             else {
         #elif 1
-            if (close(server->fds[1])) { // (p)select() & poll() returns
+            if (close(server->fds[1])) { // (p)select() & poll() return
                 status = errno;
             }
             else {

@@ -115,12 +115,21 @@ main(int argc, char *argv[])
         perror("inet_addr()");
         exit(1);
     }
+    if (connect(fd, &addr, sizeof(addr))) {
+        perror("connect()");
+        exit(1);
+    }
 
-    // Enter a send loop
+    // Enter a sending loop
     const char msg[] = "Hello, World!";
     for (;;) {
+#if 1
+        if (write(fd, msg, sizeof(msg)) < 0)
+#else
         if (sendto(fd, msg, sizeof(msg), 0, (struct sockaddr*)&addr,
-                sizeof(addr)) < 0) {
+                sizeof(addr)) < 0)
+#endif
+        {
              perror("sendto()");
              exit(1);
         }

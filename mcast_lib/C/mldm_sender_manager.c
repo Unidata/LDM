@@ -29,11 +29,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 typedef struct {
     McastInfo      info;
+    char*          mcastIf;
     unsigned short ttl;
 } McastEntry;
 
@@ -121,7 +123,9 @@ mlsm_getServerPort(
  * @return          A new string buffer. The caller should pass it to `sbFree()`
  *                  when it's no longer needed.
  */
-static StrBuf* catenateArgs(const char* const * args) {
+static StrBuf*
+catenateArgs(
+        const char** args) {
     StrBuf* buf = sbNew();
 
     while (*args)
@@ -138,33 +142,40 @@ static StrBuf* catenateArgs(const char* const * args) {
  *     - The logging level; and
  *     - The LDM product-queue;
  *
- * @param[in] info  Information on the multicast group.
- * @param[in] ttl   Time-to-live for the multicast packets:
- *                          0  Restricted to same host. Won't be output by
- *                             any interface.
- *                          1  Restricted to same subnet. Won't be
- *                             forwarded by a router.
- *                        <32  Restricted to same site, organization or
- *                             department.
- *                        <64  Restricted to same region.
- *                       <128  Restricted to same continent.
- *                       <255  Unrestricted in scope. Global.
- * @param[in] pipe  Pipe for writing to parent process.
+ * @param[in] info     Information on the multicast group.
+ * @param[in] ttl      Time-to-live for the multicast packets:
+ *                             0  Restricted to same host. Won't be output by
+ *                                any interface.
+ *                             1  Restricted to same subnet. Won't be
+ *                                forwarded by a router.
+ *                           <32  Restricted to same site, organization or
+ *                                department.
+ *                           <64  Restricted to same region.
+ *                          <128  Restricted to same continent.
+ *                          <255  Unrestricted in scope. Global.
+ * @param[in] mcastIf  IP address of the interface from which multicast packets
+ *                     should be sent or NULL to have them sent from the
+ *                     system's default multicast interface.
+ * @param[in] pipe     Pipe for writing to parent process.
  */
 static void
 execMldmSender(
     const McastInfo* const restrict info,
     const unsigned short            ttl,
+    const char* const restrict      mcastIf,
     const int const                 pipe)
 {
-    // TODO: set time-to-live option
-    char* args[17]; // Keep sufficiently capacious (search for `i\+\+`)
+    char* args[20]; // Keep sufficiently capacious (search for `i\+\+`)
     int   i = 0;
 
     args[i++] = "mldm_sender";
 
-    args[i++] = "-I";
-    args[i++] = info->server.inetId;
+    char feedtypeBuf[256];
+    if (info->feed != ANY) {
+        (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
+        args[i++] = "-f";
+        args[i++] = feedtypeBuf; // multicast group identifier
+    }
 
     char* arg = (char*)getulogpath(); // safe cast
     if (arg != NULL) {
@@ -172,59 +183,73 @@ execMldmSender(
         args[i++] = arg;
     }
 
-    args[i++] = "-P";
-    char serverPortOptArg[12];
-    ssize_t nbytes = snprintf(serverPortOptArg, sizeof(serverPortOptArg), "%hu",
-            info->server.port);
-    if (nbytes < 0 || nbytes >= sizeof(serverPortOptArg)) {
-        LOG_ADD1("Couldn't create server-port option-argument \"%hu\"",
-                info->server.port);
+    if (mcastIf && strcmp(mcastIf, "0.0.0.0")) {
+        args[i++] = "-m";
+        args[i++] = (char*)mcastIf; // safe cast
     }
-    else {
-        args[i++] = serverPortOptArg;
 
-        if (ulogIsVerbose())
-            args[i++] = "-v";
-        if (ulogIsDebug())
-            args[i++] = "-x";
+    char serverPortOptArg[6];
+    if (info->server.port != 0) {
+        ssize_t nbytes = snprintf(serverPortOptArg, sizeof(serverPortOptArg), "%hu",
+                info->server.port);
+        if (nbytes < 0 || nbytes >= sizeof(serverPortOptArg)) {
+            LOG_ADD1("Couldn't create server-port option-argument \"%hu\"",
+                    info->server.port);
+            goto failure;
+        }
+        else {
+            args[i++] = "-p";
+            args[i++] = serverPortOptArg;
+        }
+    }
 
-        args[i++] = "-q";
-        args[i++] = (char*)getQueuePath(); // safe cast
+    args[i++] = "-q";
+    args[i++] = (char*)getQueuePath(); // safe cast
 
-        char feedtypeBuf[256];
-        (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
-        args[i++] = feedtypeBuf; // multicast group identifier
+    if (info->server.inetId && strcmp(info->server.inetId, "0.0.0.0")) {
+        args[i++] = "-s";
+        args[i++] = info->server.inetId;
+    }
 
-        args[i++] = "-t";
+    if (ttl != 1) {
         char ttlOptArg[4];
         ssize_t nbytes = snprintf(ttlOptArg, sizeof(ttlOptArg), "%hu", ttl);
         if (nbytes < 0 || nbytes >= sizeof(ttlOptArg)) {
             LOG_ADD1("Couldn't create time-to-live option-argument \"%hu\"",
                     ttl);
+            goto failure;
         }
-        else {
-            args[i++] = ttlOptArg;
-
-            char* mcastGroupOperand = ldm_format(128, "%s:%hu",
-                    info->group.inetId, info->group.port);
-            if (mcastGroupOperand == NULL) {
-                LOG_ADD0("Couldn't create multicast-group operand");
-            }
-            else {
-                args[i++] = mcastGroupOperand;
-                args[i++] = NULL;
-
-                StrBuf* command = catenateArgs(args);
-                unotice("Executing multicast sender: %s", sbString(command));
-                sbFree(command);
-                (void)dup2(pipe, 1);
-                execvp(args[0], args);
-                LOG_SERROR2("Couldn't execvp() multicast LDM sender \"%s\"; "
-                        "PATH=%s", args[0], getenv("PATH"));
-                free(mcastGroupOperand);
-            }
-        }
+        args[i++] = "-t";
+        args[i++] = ttlOptArg;
     }
+
+    if (ulogIsVerbose())
+        args[i++] = "-v";
+    if (ulogIsDebug())
+        args[i++] = "-x";
+
+    char* mcastGroupOperand = ldm_format(128, "%s:%hu", info->group.inetId,
+            info->group.port);
+    if (mcastGroupOperand == NULL) {
+        LOG_ADD0("Couldn't create multicast-group operand");
+        goto failure;
+    }
+
+    args[i++] = mcastGroupOperand;
+    args[i++] = NULL;
+
+    StrBuf* command = catenateArgs(args);
+    unotice("Executing multicast sender: %s", sbString(command));
+    sbFree(command);
+
+    (void)dup2(pipe, 1);
+    execvp(args[0], args);
+
+    LOG_SERROR2("Couldn't execvp() multicast LDM sender \"%s\"; PATH=%s",
+            args[0], getenv("PATH"));
+    free(mcastGroupOperand);
+failure:
+    return;
 }
 
 /**
@@ -247,6 +272,10 @@ allowTermSigs(void)
  *
  * @param[in]  info         Information on the multicast group.
  * @param[in]  ttl          Time-to-live of multicast packets.
+ * @param[in]  mcastIf      IP address of the interface from which multicast
+ *                          packets should be sent or NULL to have them sent
+ *                          from the system's default multicast interface.
+ *                          Caller may free.
  * @param[out] pid          Process ID of the multicast LDM sender.
  * @param[out] serverPort   Port number of TCP server.
  * @retval     0            Success. `*pid` and `*serverPod` are set.
@@ -256,6 +285,7 @@ static Ldm7Status
 mlsm_spawn(
     const McastInfo* const restrict info,
     const unsigned short            ttl,
+    const char* const restrict      mcastIf,
     pid_t* const restrict           pid,
     unsigned short* const restrict  serverPort)
 {
@@ -280,7 +310,7 @@ mlsm_spawn(
             /* Child process */
             (void)close(fds[0]);                // read end of pipe unneeded
             allowTermSigs();                    // so process will terminate
-            execMldmSender(info, ttl, fds[1]);  // shouldn't return
+            execMldmSender(info, ttl, mcastIf, fds[1]);  // shouldn't return
             log_log(LOG_ERR);
             exit(1);
         }
@@ -313,6 +343,10 @@ mlsm_spawn(
  * @pre                     Relevant multicast LDM sender isn't running.
  * @param[in]  info         Information on the multicast group.
  * @param[in]  ttl          Time-to-live of multicast packets.
+ * @param[in]  mcastIf      IP address of the interface from which multicast
+ *                          packets should be sent or NULL to have them sent
+ *                          from the system's default multicast interface.
+ *                          Caller may free.
  * @param[out] serverPort   Port number of VCMTP TCP server.
  * @param[out] pid          Process ID of multicast LDM sender.
  * @retval     0            Success. Multicast LDM sender spawned. `*serverPort`
@@ -323,13 +357,14 @@ static Ldm7Status
 mlsm_execute(
     const McastInfo* const restrict info,
     const unsigned short            ttl,
+    const char* const restrict      mcastIf,
     unsigned short* const restrict  serverPort,
     pid_t* const restrict           pid)
 {
     const feedtypet feedtype = mi_getFeedtype(info);
     pid_t           procId;
     unsigned short  port;
-    int             status = mlsm_spawn(info, ttl, &procId, &port);
+    int             status = mlsm_spawn(info, ttl, mcastIf, &procId, &port);
 
     if (0 == status) {
         status = msm_put(feedtype, procId);
@@ -357,15 +392,22 @@ mlsm_execute(
  * @param[out] entry       Entry to be initialized.
  * @param[in]  info        Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
+ * @param[in]  mcastIf     IP address of the interface from which multicast
+ *                         packets should be sent or NULL to have them sent from
+ *                         the system's default multicast interface. Caller may
+ *                         free.
  * @retval     0           Success. `*entry` is initialized. Caller should call
  *                         `me_destroy(entry)` when it's no longer needed.
  * @retval     LDM7_INVAL  `ttl` is too large. `log_start()` called.
+ * @retval     LDM7_SYSTEM System error. `log_start()` called. The state of
+ *                         `*entry` is unspecified.
  */
 static Ldm7Status
 me_init(
         McastEntry* const restrict entry,
-        const McastInfo* const      info,
-        unsigned short              ttl)
+        const McastInfo* const     info,
+        unsigned short             ttl,
+        const char* const restrict mcastIf)
 {
     int status;
 
@@ -373,12 +415,26 @@ me_init(
         LOG_START1("Time-to-live is too large: %hu >= 255", ttl);
         status = LDM7_INVAL;
     }
+    else if (mi_copy(&entry->info, info)) {
+        status = LDM7_SYSTEM;
+    }
     else {
-        if (mi_copy(&entry->info, info)) {
-            status = LDM7_SYSTEM;
+        entry->ttl = ttl;
+
+        if (mcastIf) {
+            entry->mcastIf = strdup(mcastIf);
+
+            if (NULL == entry->mcastIf ) {
+                LOG_SERROR0("Couldn't copy IP address of multicast interface");
+                mi_destroy(&entry->info);
+                status = LDM7_SYSTEM;
+            }
+            else {
+                status = 0;
+            }
         }
         else {
-            entry->ttl = ttl;
+            entry->mcastIf = NULL;
             status = 0;
         }
     }
@@ -404,6 +460,10 @@ me_destroy(
  * @param[out] entry       New, initialized entry.
  * @param[in]  info        Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
+ * @param[in]  mcastIf     IP address of the interface from which multicast
+ *                         packets should be sent or NULL to have them sent from
+ *                         the system's default multicast interface. Caller may
+ *                         free.
  * @retval     0           Success. `*entry` is set. Caller should call
  *                         `me_free(*entry)` when it's no longer needed.
  * @retval     LDM7_INVAL  `ttl` is too large. `log_start()` called.
@@ -412,7 +472,8 @@ static Ldm7Status
 me_new(
         McastEntry** const restrict entry,
         const McastInfo* const      info,
-        unsigned short              ttl)
+        unsigned short              ttl,
+        const char* const restrict  mcastIf)
 {
     int         status;
     McastEntry* ent = LOG_MALLOC(sizeof(McastEntry), "multicast entry");
@@ -421,7 +482,7 @@ me_new(
         status = LDM7_SYSTEM;
     }
     else {
-        status = me_init(ent, info, ttl);
+        status = me_init(ent, info, ttl, mcastIf);
 
         if (status) {
             free(ent);
@@ -529,6 +590,10 @@ me_compareOrConflict(
  *                              writing.
  * @param[in]      feedtype     Multicast group feed-type.
  * @param[in]      ttl          Time-to-live of multicast packets.
+ * @param[in]      mcastIf      IP address of the interface from which multicast
+ *                              packets should be sent or NULL to have them sent
+ *                              from the system's default multicast interface.
+ *                              Caller may free.
  * @param[in,out]  info         Information on the multicast group.
  * @param[out]     pid          Process ID of the multicast LDM sender.
  * @retval         0            Success. The multicast LDM sender associated
@@ -540,17 +605,18 @@ me_compareOrConflict(
  */
 static int
 mlsm_startIfNecessary(
-        const feedtypet      feedtype,
-        const unsigned short ttl,
-        McastInfo* const     info,
-        pid_t* const         pid)
+        const feedtypet            feedtype,
+        const unsigned short       ttl,
+        const char* const restrict mcastIf,
+        McastInfo* const restrict  info,
+        pid_t* const restrict      pid)
 {
     int status = mlsm_isRunning(feedtype, pid);
 
     if (status == LDM7_NOENT) {
         unsigned short serverPort;
 
-        status = mlsm_execute(info, ttl, &serverPort, pid);
+        status = mlsm_execute(info, ttl, mcastIf, &serverPort, pid);
 
         if (0 == status && info->server.port != serverPort) {
             // Server port number was chosen by the operating-system
@@ -582,6 +648,10 @@ mlsm_startIfNecessary(
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
+ * @param[in] mcastIf      IP address of the interface from which multicast
+ *                         packets should be sent or NULL to have them sent from
+ *                         the system's default multicast interface. Caller may
+ *                         free.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
@@ -591,10 +661,11 @@ mlsm_startIfNecessary(
 Ldm7Status
 mlsm_addPotentialSender(
     const McastInfo* const restrict   info,
-    const unsigned short              ttl)
+    const unsigned short              ttl,
+    const char* const restrict        mcastIf)
 {
     McastEntry* entry;
-    int         status = me_new(&entry, info, ttl);
+    int         status = me_new(&entry, info, ttl, mcastIf);
 
     if (0 == status) {
         const void* const node = tsearch(entry, &mcastEntries,
@@ -655,7 +726,8 @@ mlsm_ensureRunning(
             McastEntry*      entry = *(McastEntry**)node;
             McastInfo* const info = &entry->info;
 
-            status = mlsm_startIfNecessary(feedtype, entry->ttl, info, pid);
+            status = mlsm_startIfNecessary(feedtype, entry->ttl, entry->mcastIf,
+                    info, pid);
 
             if (0 == status)
                 *mcastInfo = info;

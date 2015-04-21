@@ -17,6 +17,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,59 +26,74 @@
 #include <time.h>
 #include <unistd.h>
 
-static int
+/**
+ * Returns the context for running this program.
+ *
+ * @param[in]  argc       Number of command-line arguments.
+ * @param[in]  argv       Command-line arguments.
+ * @param[out] groupAddr  IP address of multicast group.
+ * @param[out] groupPort  Port number of multicast group in host byte-order.
+ * @param[out] ifaceAddr  IP address of interface on which to receive packets or
+ *                        `"0.0.0.0"` to use the default multicast interface.
+ * @retval     `true`     if and only if success.
+ */
+static bool
 get_context(
-        int                       argc,
-        char** const restrict     argv,
-        in_addr_t* const restrict groupAddr,
-        in_port_t* const restrict groupPort,
-        in_addr_t* const restrict ifaceAddr)
+        int                         argc,
+        char** const restrict       argv,
+        const char** const restrict groupAddr,
+        in_port_t* const restrict   groupPort,
+        const char** const restrict ifaceAddr)
 {
-    in_addr_t iface = htonl(INADDR_ANY); // use default multicast interface
-    int       ch;
-    int       status = 0;
+    char* iface = "0.0.0.0"; // use default multicast interface
+    int   ch;
+    bool  success = true;
 
-    while (0 == status && (ch = getopt(argc, argv, "i:")) != -1) {
+    while (success && (ch = getopt(argc, argv, "i:")) != -1) {
         switch (ch) {
         case 'i': {
-            iface = inet_addr(optarg);
-            if ((in_addr_t)-1 == iface) {
+            if (inet_addr(optarg) == (in_addr_t)-1) {
                 (void)fprintf(stderr, "Couldn't decode interface IP address\n");
-                status = -1;
+                success = false;
+            }
+            else {
+                iface = optarg;
             }
             break;
         }
         default:
-            status = -1;
+            success = false;
         }
     }
 
-    if (0 == status) {
-        *groupAddr = inet_addr(HELLO_GROUP);
+    if (success) {
+        *groupAddr = HELLO_GROUP;
         *groupPort = HELLO_PORT;
         *ifaceAddr = iface;
     }
 
-    return status;
+    return success;
 }
 
-static int
-create_socket(
+static bool
+create_udp_socket(
         int* const sock)
 {
-    int status;
+    bool success;
 
     // Create a UDP socket
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
         perror("Couldn't create socket");
-        status = -1;
+        success = false;
     }
     else {
         // Allow multiple sockets to use the same port number
         const int yes = 1;
-        status = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
-        if (status) {
+
+        success = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))
+                == 0;
+        if (!success) {
             perror("Couldn't reuse port number");
         }
         else {
@@ -85,63 +101,98 @@ create_socket(
         }
     }
 
-    return status;
+    return success;
 }
 
-static int
-join_group(
-        const int       sock,
-        const in_addr_t groupAddr,
-        const in_addr_t ifaceAddr)
-{
-    struct ip_mreq mreq;
-    int            status;
-
-    mreq.imr_multiaddr.s_addr = groupAddr;
-    mreq.imr_interface.s_addr = ifaceAddr;
-
-    status = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
-            sizeof(mreq));
-    if (status)
-        perror("Couldn't join multicast group");
-
-    return status;
-}
-
-static int
+/**
+ * Configures a socket for receiving multicast packets.
+ *
+ * @param[in] sock       Socket.
+ * @param[in] groupAddr  IP address of multicast group.
+ * @param[in] groupPort  Port number of multicast group in host byte-order.
+ * @param[in] ifaceAddr  IP address of interface on which to receive packets or
+ *                       `"0.0.0.0"` to use the default multicast interface.
+ * @retval    `true`     If and only if success.
+ */
+static bool
 configure_socket(
-        const int       sock,
-        const in_addr_t groupAddr,
-        const in_port_t groupPort,
-        const in_addr_t ifaceAddr)
+        const int                  sock,
+        const char* const restrict groupAddr,
+        const in_port_t            groupPort,
+        const char* const restrict ifaceAddr)
 {
     struct sockaddr_in addr;
+    bool               success;
 
     /*
-     * Bind the socket to the port number of the multicast group and to any IP
+     * Bind the socket to the port number of the multicast group and to an IP
      * address.
      */
     (void)memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY); // N.B.: all IP addresses
     addr.sin_port = htons(groupPort);
+    // Using `htonl(INADDR_ANY)` in the following also works
+    addr.sin_addr.s_addr = inet_addr(groupAddr);
 
-    int status = bind(sock, (struct sockaddr*)&addr, sizeof(addr));
-    if (status) {
+    success = bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0;
+    if (!success) {
         perror("Couldn't bind socket to IP address and port number");
     }
     else {
-        status = join_group(sock, groupAddr, ifaceAddr);
+        // Have the socket join a multicast group on a network adaptor.
+        struct ip_mreq mreq;
+
+        mreq.imr_multiaddr.s_addr = inet_addr(groupAddr);
+        mreq.imr_interface.s_addr = inet_addr(ifaceAddr);
+
+        success = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+                sizeof(mreq)) == 0;
+        if (!success)
+            perror("Couldn't join multicast group");
     }
 
-    return status;
+    return success;
 }
 
-static int
+/**
+ * Creates a socket for receiving multicast UDP packets.
+ *
+ * @param[in] sock       Socket.
+ * @param[in] groupAddr  IP address of multicast group.
+ * @param[in] groupPort  Port number of multicast group in host byte-order.
+ * @param[in] ifaceAddr  IP address of interface on which to receive packets or
+ *                       `"0.0.0.0"` to use the default multicast interface.
+ * @retval    `true`     If and only if success.
+ */
+static bool
+create_socket(
+        int* const                 sock,
+        const char* const restrict groupAddr,
+        const in_port_t            groupPort,
+        const char* const restrict ifaceAddr)
+{
+    int  fd;
+    bool success = create_udp_socket(&fd);
+
+    if (success) {
+        success = configure_socket(fd, groupAddr, groupPort, ifaceAddr);
+
+        if (!success) {
+            close(fd);
+        }
+        else {
+            *sock = fd;
+        }
+    }
+
+    return success;
+}
+
+static bool
 print_packets(
         const int sock)
 {
-    int status;
+    bool success;
 
     // Enter a receive-then-print loop
     for (;;) {
@@ -153,35 +204,35 @@ print_packets(
 
         if (nbytes < 0) {
             perror("Couldn't receive packet");
-            status = -1;
+            success = false;
             break;
         }
 
         (void)printf("%.*s\n", nbytes, msgbuf);
     }
 
-    return status;
+    return success; // Eclipse wants to see a return
 }
 
 int
 main(int argc, char *argv[])
 {
-    in_addr_t groupAddr, ifaceAddr;
-    in_port_t groupPort;
-    int       status =
-            get_context(argc, argv, &groupAddr, &groupPort, &ifaceAddr);
+    const char* ifaceAddr;
+    const char* groupAddr;
+    in_port_t   groupPort;
+    bool        success = get_context(argc, argv, &groupAddr, &groupPort,
+            &ifaceAddr);
 
-    if (0 == status) {
+    if (success) {
         int sock;
 
-        status = create_socket(&sock);
-        if (0 == status) {
-            status = configure_socket(sock, groupAddr, groupPort, ifaceAddr);
+        success = create_socket(&sock, groupAddr, groupPort, ifaceAddr);
 
-            if (0 == status)
-                status = print_packets(sock);
+        if (success) {
+            success = print_packets(sock);
+            (void)close(sock);
         }
     }
 
-    return status ? 1 : 0;
+    return success ? 0 : 1;
 }
