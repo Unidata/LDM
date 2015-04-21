@@ -119,11 +119,10 @@ testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
     
-executor_test_SOURCES	= executor.c executor_test.c
+executor_test_SOURCES	= executor.c executor_test.c executor.h
 executor_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
     
-TESTS			= test_inetutil test_child_map testSemRWLock \
-			  executor_test
+TESTS			= test_inetutil test_child_map testSemRWLock
 
 debug:		test_child_map
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb test_child_map
