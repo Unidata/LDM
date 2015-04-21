@@ -409,7 +409,7 @@ decodeSendEntry(
                                 ttlSpec);
                     }
                     else {
-                        status = mlsm_addPotentialSender(mcastInfo, ttl);
+                        status = mlsm_addPotentialSender(mcastInfo, ttl, NULL);
                         if (status)
                             status = (LDM7_DUP == status)
                                     ? EINVAL
