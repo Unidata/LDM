@@ -16,6 +16,7 @@
 #include "doubly_linked_list.h"
 #include "log.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <sys/types.h>
 
@@ -28,6 +29,9 @@ struct Dll {
     DllElt* head;
     DllElt* tail;
     size_t  size;
+};
+struct DllIter {
+    DllElt* elt;
 };
 
 /**
@@ -119,6 +123,63 @@ dll_getFirst(
     }
 
     return ptr;
+}
+
+/**
+ * Returns an iterator.
+ *
+ * @param[in] dll   The doubly-linked-list.
+ * @retval    NULL  Out-of-memory. `log_add()` called.
+ * @return          An iterator over the list.
+ */
+DllIter* dll_iter(
+        Dll* const dll)
+{
+    DllIter* const iter = LOG_MALLOC(sizeof(DllIter),
+            "doubly-linked-list iterator");
+
+    if (iter)
+        iter->elt = dll->head; // might be `NULL`
+
+    return iter;
+}
+
+/**
+ * Indicates if the next pointer exists.
+ *
+ * @param[in] iter    The iterator.
+ * @retval    `true`  if and only if the next pointer exits.
+ */
+bool dll_hasNext(
+        DllIter* const iter)
+{
+    return iter->elt != NULL;
+}
+
+/**
+ * Returns the next pointer.
+ *
+ * @pre             `dll_hasNext(iter) == true`
+ * @param[in] iter  The iterator.
+ * @return          The next pointer.
+ */
+void* dll_next(
+        DllIter* const iter)
+{
+    void *ptr = iter->elt->ptr;
+    iter->elt = iter->elt->next;
+    return ptr;
+}
+
+/**
+ * Frees an iterator.
+ *
+ * @param[in] iter  The iterator to be freed.
+ */
+void dll_freeIter(
+        DllIter* const iter)
+{
+    free(iter);
 }
 
 /**

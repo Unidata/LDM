@@ -8,17 +8,19 @@
 #ifndef DOUBLY_LINKED_LIST_H
 #define DOUBLY_LINKED_LIST_H
 
+#include <stdbool.h>
 #include <stddef.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * Opaque type for this module.
  */
-typedef struct Dll    Dll;
-typedef struct DllElt DllElt;
+typedef struct Dll     Dll;
+typedef struct DllElt  DllElt;
+typedef struct DllIter DllIter;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 @FUNCTION_DECLARATIONS@
 

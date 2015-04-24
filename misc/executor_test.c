@@ -72,8 +72,10 @@ static void test_exe_submit(void)
     CU_ASSERT_FALSE(job_wasCanceled(job));
     CU_ASSERT_EQUAL(job_status(job), 0);
     CU_ASSERT_PTR_EQUAL(job_result(job), &sleep1Result);
-    job_free(job);
-    exe_free(exe);
+    status = job_free(job);
+    CU_ASSERT_EQUAL(status, 0);
+    status = exe_free(exe);
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_exe_shutdown(void)
@@ -89,8 +91,10 @@ static void test_exe_shutdown(void)
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_PTR_EQUAL(completedJob, job);
     CU_ASSERT_TRUE(job_wasCanceled(job));
-    job_free(job);
-    exe_free(exe);
+    status = job_free(job);
+    CU_ASSERT_EQUAL(status, 0);
+    status = exe_free(exe);
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_submit_while_shutdown(void)
@@ -145,6 +149,8 @@ int main(
             CU_cleanup_registry();
         }
     }
+
+    log_free();
 
     return exitCode;
 }

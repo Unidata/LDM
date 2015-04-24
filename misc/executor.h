@@ -55,9 +55,12 @@ void* job_result(
 /**
  * Frees the resources of a job.
  *
- * @param[in] job  The job to be freed.
+ * @param[in] job     The job to be freed or NULL.
+ * @retval    0       Success.
+ * @retval    EBUSY   Logic error. `log_add()` called.
+ * @retval    EINVAL  Logic error. `log_add()` called.
  */
-void job_free(
+int job_free(
         Job* const job);
 
 /**
@@ -111,10 +114,13 @@ int exe_getCompleted(
  * Shuts down an executor. Calls the stop function or cancels the thread of all
  * active jobs. Blocks until all jobs have completed.
  *
- * @param[in] exe     The executor.
- * @retval    0       Success.
- * @retval    EAGAIN  Logic error. `log_add()` called.
- * @retval    EINVAL  The executor is already shut down. `log_add()` called.
+ * @param[in] exe      The executor.
+ * @retval    0        Success.
+ * @retval    EAGAIN   Logic error. `log_add()` called.
+ * @retval    EINVAL   The executor is already shut down. `log_add()` called.
+ * @retval    EINVAL   Logic error. `log_add()` called.
+ * @retval    EDEADLK  Logic error. `log_add()` called.
+ * @retval    ENOMEM   Out-of-memory. `log_add()` called.
  */
 int exe_shutdown(
         Executor* const restrict exe);
@@ -137,9 +143,14 @@ int exe_clear(
  * Frees an executor's resources. Shuts down the executor and clears it if
  * necessary.
  *
- * @param[in] exe  The excutor to be freed or NULL.
+ * @param[in] exe      The excutor to be freed or NULL.
+ * @retval    0        Success.
+ * @retval    EAGAIN   Logic error. `log_add()` called. `exe` in unknown state.
+ * @retval    EINVAL   Logic error. `log_add()` called. `exe` in unknown state.
+ * @retval    EDEADLK  Logic error. `log_add()` called. `exe` in unknown state.
+ * @retval    ENOMEM   Out-of-memory. `log_add()` called.
  */
-void exe_free(
+int exe_free(
         Executor* const exe);
 
 #ifdef __cplusplus

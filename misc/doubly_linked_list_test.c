@@ -84,6 +84,20 @@ static void test_dll_remove(void)
     dll_free(list);
 }
 
+static void test_dll_iter(void)
+{
+    Dll* list = dll_new();
+    #define NELT 2
+    int values[NELT];
+    for (int i = 0; i < NELT; i++)
+        (void)dll_add(list, values+i);
+    DllIter* iter = dll_iter(list);
+    for (int i = 0; dll_hasNext(iter); i++)
+        CU_ASSERT_PTR_EQUAL(dll_next(iter), values+i);
+    dll_freeIter(iter);
+    dll_free(list);
+}
+
 int main(
         const int argc,
         const char* const * argv)
@@ -104,7 +118,8 @@ int main(
                         CU_ADD_TEST(testSuite, test_dll_add_null) &&
                         CU_ADD_TEST(testSuite, test_dll_add) &&
                         CU_ADD_TEST(testSuite, test_dll_getFirst) &&
-                        CU_ADD_TEST(testSuite, test_dll_remove)) {
+                        CU_ADD_TEST(testSuite, test_dll_remove) &&
+                        CU_ADD_TEST(testSuite, test_dll_iter)) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
                 }
