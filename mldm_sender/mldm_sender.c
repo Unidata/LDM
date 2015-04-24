@@ -968,10 +968,10 @@ main(
     /*
      * Decode the command-line.
      */
-    McastInfo* groupInfo;  // multicast group information
-    unsigned   ttl = 1;    // Won't be forwarded by any router.
-    char*      ifaceAddr;  // IP address of multicast interface
-    int        status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
+    McastInfo*  groupInfo;  // multicast group information
+    unsigned    ttl = 1;    // Won't be forwarded by any router.
+    const char* ifaceAddr;  // IP address of multicast interface
+    int         status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
             &ifaceAddr);
 
     if (status) {

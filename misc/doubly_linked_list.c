@@ -6,7 +6,7 @@
  * @file doubly_linked_list.c
  *
  * This file implements a thread-compatible but not thread-safe doubly-linked
- * FIFO list of arbitrary pointers.
+ * FIFO list of arbitrary (but non-NULL) pointers.
  *
  * @author: Steven R. Emmerson
  */
@@ -55,7 +55,8 @@ dll_new(void)
  *
  * @param[in] dll   Pointer to the list to have a pointer added to it.
  * @param[in] ptr   The pointer to be added. Should not be `NULL`.
- * @retval    NULL  Error. `log_add()` called.
+ * @retval    NULL  Out-of-memory. `log_add()` called.
+ * @retval    NULL  `ptr == NULL`. `log_add()` called.
  * @return          Pointer to the list element that contains the pointer.
  */
 DllElt*
@@ -63,20 +64,61 @@ dll_add(
     Dll* const  dll,
     void* const ptr)
 {
-    DllElt* elt = LOG_MALLOC(sizeof(DllElt), "doubly-linked list element");
+    DllElt* elt;
 
-    if (elt) {
-        elt->next = NULL;
-        elt->prev = dll->tail;
-        dll->tail = elt;
-        if (elt->prev)
-            elt->prev->next = elt;
-        if (dll->head == NULL)
-            dll->head = elt;
-        dll->size++;
+    if (ptr == NULL) {
+        LOG_START0("Null pointer");
+        elt = NULL;
+    }
+    else {
+        elt = LOG_MALLOC(sizeof(DllElt), "doubly-linked list element");
+
+        if (elt) {
+            elt->ptr = ptr;
+            elt->next = NULL;
+            elt->prev = dll->tail;
+            if (dll->head == NULL)
+                dll->head = elt;
+            if (dll->tail)
+                dll->tail->next = elt;
+            dll->tail = elt;
+            dll->size++;
+        }
     }
 
     return elt;
+}
+
+/**
+ * Removes and returns the pointer at the head of a doubly-linked list.
+ *
+ * @param[in] dll   Pointer to the doubly-linked list.
+ * @return          The pointer that the head element contained.
+ * @retval    NULL  The list is empty.
+ */
+void*
+dll_getFirst(
+    Dll* const dll)
+{
+    void*         ptr;
+    DllElt* const first = dll->head;
+
+    if (first == NULL) {
+        ptr = NULL;
+    }
+    else {
+        if (first->next)
+            first->next->prev = NULL;
+        dll->head = first->next;
+        if (dll->tail == first)
+            dll->tail = NULL;
+        dll->size--;
+
+        ptr = first->ptr;
+        free(first);
+    }
+
+    return ptr;
 }
 
 /**
@@ -93,37 +135,12 @@ dll_size(
 }
 
 /**
- * Returns the pointer at the head of a doubly-linked list.
- *
- * @param[in] dll   Pointer to the doubly-linked list.
- * @return          The pointer that the head element contained.
- * @retval    NULL  The list is empty.
- */
-void*
-dll_getFirst(
-    Dll* const dll)
-{
-    DllElt* const first = dll->head;
-
-    if (first == NULL)
-        return NULL;
-
-    dll->head = first->next;
-    if (dll->head)
-        dll->head->prev = NULL;
-    if (dll->tail == first)
-        dll->tail = NULL;
-    dll->size--;
-
-    return first->ptr;
-}
-
-/**
  * Removes an element from a doubly-linked list.
  *
  * @param[in] dll  Pointer to the list to have an element removed.
  * @param[in] elt  Pointer to the element to be removed. Must have been returned
- *                 by `dll_push(dll)` and must be in the list.
+ *                 by `dll_add()` and must be in the list. The caller must not
+ *                 reference `elt` after this function.
  * @return         The pointer that the removed element contained.
  */
 void*
@@ -135,12 +152,19 @@ dll_remove(
     DllElt* next = elt->next;
 
     if (prev)
-        prev->next = elt->next;
-
+        prev->next = next;
     if (next)
-        next->prev = elt->prev;
+        next->prev = prev;
+    if (dll->head == elt)
+        dll->head = NULL;
+    if (dll->tail == elt)
+        dll->tail = NULL;
+    dll->size--;
 
-    return elt->ptr;
+    void* ptr = elt->ptr;
+    free(elt);
+
+    return ptr;
 }
 
 /**

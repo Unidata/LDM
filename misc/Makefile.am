@@ -82,7 +82,7 @@ StrBuf.h:		StrBuf.hin StrBuf.c
 
 if HAVE_CUNIT
 check_PROGRAMS		= test_inetutil test_child_map testSemRWLock \
-			  executor_test
+			  queue_test doubly_linked_list_test executor_test
 
 test_inetutil_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -118,10 +118,26 @@ testSemRWLock_CPPFLAGS	= \
 testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
-    
-executor_test_SOURCES	= executor.c executor_test.c executor.h
+
+queue_test_SOURCES	= queue.c queue_test.c queue.h
+queue_test_LDADD	= @LIBS_CUNIT@
+check-queue:		queue_test
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./queue_test
+
+doubly_linked_list_test_SOURCES	= doubly_linked_list_test.c 
+doubly_linked_list_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+check-doubly_linked_list:		doubly_linked_list_test
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./doubly_linked_list_test
+
+executor_test_SOURCES	= executor.c executor_test.c executor.h queue.c
 executor_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
-    
+
+check-executor:		executor_test
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./executor_test
+
 TESTS			= test_inetutil test_child_map testSemRWLock
 
 debug:		test_child_map

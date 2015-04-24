@@ -7,3 +7,4 @@ doubly_linked_stack.h
 doubly_linked_list.h
 test_inetutil
 executor_test
+doubly_linked_list_test

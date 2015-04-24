@@ -198,6 +198,7 @@ mcastReceiver_execute(
 
     try {
         // VCMTP call
+        uerror("receiver->vcmtpReceiver=%p", receiver->vcmtpReceiver);
         receiver->vcmtpReceiver->Start();
     }
     catch (const std::exception& e) {
