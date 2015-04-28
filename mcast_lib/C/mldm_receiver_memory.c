@@ -1050,11 +1050,13 @@ dump(
  * Adds an index of a product that was missed by the multicast receiver to one
  * of the queues of a multicast session memory.
  *
+ * @pre              The multicast session memory is unlocked.
  * @param[in] msm    The multicast session memory.
  * @param[in] fiq    The queue to use.
  * @param[in] id     The product index to add.
  * @retval    true   Success.
  * @retval    false  Error. `log_start()` called.
+ * @post             The multicast session memory is unlocked.
  */
 static bool
 addFile(
@@ -1062,10 +1064,11 @@ addFile(
     ProdIndexQueue* const restrict     fiq,
     const VcmtpProdIndex               iProd)
 {
+    lock(msm);
     bool success = piq_add(fiq, iProd) == 0;
-
     if (success)
         msm->modified = true;
+    unlock(msm);
 
     return success;
 }
@@ -1273,10 +1276,7 @@ msm_addMissedFile(
     McastSessionMemory* const restrict msm,
     const VcmtpProdIndex               iProd)
 {
-    lock(msm);
-    bool success = addFile(msm, msm->missedQ, iProd);
-    unlock(msm);
-    return success;
+    return addFile(msm, msm->missedQ, iProd); // locks and unlocks `msm`
 }
 
 /**
@@ -1294,10 +1294,7 @@ msm_addRequestedFile(
     McastSessionMemory* const restrict msm,
     const VcmtpProdIndex               iProd)
 {
-    lock(msm);
-    bool success = addFile(msm, msm->requestedQ, iProd);
-    unlock(msm);
-    return success;
+    return addFile(msm, msm->requestedQ, iProd); // locks and unlocks `msm`
 }
 
 /**
@@ -1315,10 +1312,7 @@ msm_peekMissedFileWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    lock(msm);
-    bool success = piq_peekWait(msm->missedQ, iProd) == 0;
-    unlock(msm);
-    return success;
+    return piq_peekWait(msm->missedQ, iProd) == 0;
 }
 
 /**
@@ -1335,10 +1329,7 @@ msm_peekMissedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    lock(msm);
-    bool exists = piq_peekNoWait(msm->missedQ, iProd) == 0;
-    unlock(msm);
-    return exists;
+    return piq_peekNoWait(msm->missedQ, iProd) == 0;
 }
 
 /**
@@ -1355,10 +1346,7 @@ msm_removeMissedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    lock(msm);
-    bool exists = piq_removeNoWait(msm->missedQ, iProd) == 0;
-    unlock(msm);
-    return exists;
+    return piq_removeNoWait(msm->missedQ, iProd) == 0;
 }
 
 /**
@@ -1376,10 +1364,7 @@ msm_peekRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    lock(msm);
-    bool success = piq_peekNoWait(msm->requestedQ, iProd) == 0;
-    unlock(msm);
-    return success;
+    return piq_peekNoWait(msm->requestedQ, iProd) == 0;
 }
 
 /**
@@ -1396,10 +1381,7 @@ msm_removeRequestedFileNoWait(
     McastSessionMemory* const restrict msm,
     VcmtpProdIndex* const restrict     iProd)
 {
-    lock(msm);
-    bool exists = piq_removeNoWait(msm->requestedQ, iProd) == 0;
-    unlock(msm);
-    return exists;
+    return piq_removeNoWait(msm->requestedQ, iProd) == 0;
 }
 
 /**

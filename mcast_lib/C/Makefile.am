@@ -69,11 +69,13 @@ mcast_stubs		= mcast_stub.c mcast_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
 globals_stubs		= globals_stub.c globals_stub.h
 mldm_sender_map_stubs	= mldm_sender_map_stub.c mldm_sender_map_stub.h
+down7_stubs		= down7_stub.c down7_stub.h
 all_stubs		= $(VCMTPReceiver_stubs) \
                           $(mcast_stubs) \
                           $(pq_stubs) \
                           $(globals_stubs) \
-                          $(mldm_sender_map_stubs)
+                          $(mldm_sender_map_stubs) \
+                          $(down7_stubs)
 BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= $(all_stubs)
 CLEANFILES		+= TEST-test.xml
@@ -91,12 +93,14 @@ $(globals_stubs):		$(top_srcdir)/registry/globals.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mldm_sender_map_stubs):	mldm_sender_map.h
 	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+$(down7_stubs):			down7.h
+	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
 opmock_tests				= mldm_receiver_memory_test \
                                           mldm_receiver_test \
                                           mldm_sender_manager_test
 opmock_check_progs			= $(opmock_tests)
-test_cppflags				= $(CPPFLAGS) @OPMOCK_CPPFLAGS@
+test_cppflags				= @OPMOCK_CPPFLAGS@
 
 mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c
 nodist_mldm_sender_manager_test_SOURCES = $(mcast_stubs)
@@ -106,7 +110,8 @@ mldm_sender_manager_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  	  @OPMOCK_LDADD@
 
 mldm_receiver_test_SOURCES 		= mldm_receiver_test.c mldm_receiver.c
-nodist_mldm_receiver_test_SOURCES 	= $(mcast_stubs) $(pq_stubs)
+nodist_mldm_receiver_test_SOURCES 	= $(mcast_stubs) $(pq_stubs) \
+					  $(down7_stubs)
 mldm_receiver_test_CPPFLAGS		= $(test_cppflags)
 mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
 mldm_receiver_test_LDADD  		= $(top_builddir)/lib/libldm.la \
@@ -118,6 +123,9 @@ mldm_receiver_memory_test_CPPFLAGS	= $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
+                                          
+check-mldm_receiver:	mldm_receiver_test
+	./mldm_receiver_test
 endif
 
 if HAVE_CUNIT

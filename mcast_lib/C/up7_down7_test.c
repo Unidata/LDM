@@ -65,7 +65,9 @@ typedef struct {
 
 static const char* const LOCAL_HOST = "127.0.0.1";
 static sigset_t          termSigSet;
-static const char* const PQ_PATHNAME = "up7_down7_test.pq";
+#define UP7_PQ_PATHNAME   "up7_test.pq"
+#define DOWN7_PQ_PATHNAME "down7_test.pq"
+static const char* const pqPathnames[] = {UP7_PQ_PATHNAME, DOWN7_PQ_PATHNAME};
 #if !USE_SIGWAIT
 static pthread_mutex_t   mutex;
 static pthread_cond_t    cond;
@@ -111,39 +113,48 @@ initCondAndMutex(void)
 static int
 setup(void)
 {
-    pqueue* pq;
-    int     status = pq_create(PQ_PATHNAME, 0666, 0, 0, 1000000, 100, &pq);
+    int         status;
 
-    if (status) {
-        LOG_ADD1("Couldn't create product-queue \"%s\"", PQ_PATHNAME);
-    }
-    else {
-        status = pq_close(pq);
+    for (int i = 0; i < sizeof(pqPathnames)/sizeof(pqPathnames[0]); i++) {
+        pqueue*     pq;
+
+        status = pq_create(pqPathnames[i], 0666, 0, 0, 1000000, 100, &pq);
+
         if (status) {
-            LOG_ADD1("Couldn't close product-queue \"%s\"", PQ_PATHNAME);
+            LOG_ADD1("Couldn't create product-queue \"%s\"", pqPathnames[i]);
+            break;
         }
         else {
-            setQueuePath(PQ_PATHNAME);
-
-            status = msm_init();
+            status = pq_close(pq);
             if (status) {
-                LOG_ADD0("msm_init() failure");
+                LOG_ADD1("Couldn't close product-queue \"%s\"",
+                        pqPathnames[i]);
+                break;
             }
-            else {
-                (void)sigemptyset(&termSigSet);
-                (void)sigaddset(&termSigSet, SIGINT);
-                (void)sigaddset(&termSigSet, SIGTERM);
-                /*
-                 * The following allows a SIGTERM to be sent to the process
-                 * group without affecting the parent process (e.g., a
-                 * make(1)).
-                 */
-                (void)setpgrp();
+        }
+    }
+
+    setQueuePath(UP7_PQ_PATHNAME); // so mldm_sender_manager uses upstream queue
+
+    if (status == 0) {
+        status = msm_init();
+        if (status) {
+            LOG_ADD0("msm_init() failure");
+        }
+        else {
+            (void)sigemptyset(&termSigSet);
+            (void)sigaddset(&termSigSet, SIGINT);
+            (void)sigaddset(&termSigSet, SIGTERM);
+            /*
+             * The following allows a SIGTERM to be sent to the process
+             * group without affecting the parent process (e.g., a
+             * make(1)).
+             */
+            (void)setpgrp();
 
 #if !USE_SIGWAIT
-                status = initCondAndMutex();
+            status = initCondAndMutex();
 #endif
-            }
         }
     }
 
@@ -156,13 +167,22 @@ setup(void)
 static int
 teardown(void)
 {
+    int status;
+
     msm_destroy();
 
-    int status = unlink(PQ_PATHNAME);
-    if (status) {
-        LOG_SERROR1("Couldn't delete product-queue \"%s\"", PQ_PATHNAME);
-        log_log(LOG_ERR);
+#if 0
+    status = 0;
+#else
+    for (int i = 0; i < sizeof(pqPathnames)/sizeof(pqPathnames[0]); i++) {
+        status = unlink(pqPathnames[i]);
+        if (status) {
+            LOG_SERROR1("Couldn't delete product-queue \"%s\"", pqPathnames[i]);
+            log_log(LOG_ERR);
+        }
     }
+#endif
+
 #if !USE_SIGWAIT
     (void)pthread_cond_destroy(&cond);
     (void)pthread_mutex_destroy(&mutex);
@@ -595,7 +615,7 @@ sender_insertProducts(
         Sender* const sender)
 {
     pqueue* pq;
-    int     status = pq_open(PQ_PATHNAME, 0, &pq);
+    int     status = pq_open(UP7_PQ_PATHNAME, 0, &pq);
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -610,7 +630,7 @@ sender_insertProducts(
     (void)memset(info->signature, 0, sizeof(info->signature));
     srand48(1234567890);
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 3; i++) {
         const unsigned size = 100000*drand48() + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 
@@ -628,7 +648,7 @@ sender_insertProducts(
         status = pq_insert(pq, &prod);
         CU_ASSERT_EQUAL_FATAL(status, 0);
         char buf[1024];
-        uinfo("Inserted: prodInfo=\"%s\"",
+        uinfo("%s: Inserted: prodInfo=\"%s\"", __FILE__,
                 s_prod_info(buf, sizeof(buf), info, 1));
 
         struct timespec duration;
@@ -712,7 +732,7 @@ receiver_spawn(
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    receiver->down7 = down7_new(servAddr, ANY, getQueuePath());
+    receiver->down7 = down7_new(servAddr, ANY, DOWN7_PQ_PATHNAME);
     CU_ASSERT_PTR_NOT_EQUAL_FATAL(receiver->down7, NULL);
 
     status = pthread_create(&receiver->thread, NULL, receiver_start,
@@ -943,7 +963,7 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_INFO, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);

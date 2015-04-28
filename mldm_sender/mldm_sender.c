@@ -727,7 +727,7 @@ mls_multicastProduct(
     else {
         if (ulogIsVerbose()) {
             char buf[1024];
-            uinfo("Multicasted: prodIndex=%lu, prodInfo=\"%s\"",
+            uinfo("Sent: prodIndex=%lu, prodInfo=\"%s\"",
                     (unsigned long)iProd,
                     s_prod_info(buf, sizeof(buf), info, 1));
         }

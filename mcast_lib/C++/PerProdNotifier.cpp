@@ -53,10 +53,9 @@ void PerProdNotifier::notify_of_bop(
         const unsigned metaSize,
         void** const   data)
 {
-    if (bop_func(obj, prodSize, metadata, metaSize, data)) {
-        throw std::runtime_error(std::string(
-                "Error notifying receiving application of beginning of product"));
-    }
+    if (bop_func(obj, prodSize, metadata, metaSize, data))
+        throw std::runtime_error(
+                "Error notifying receiving application of beginning of product");
 }
 
 void PerProdNotifier::notify_of_eop()

@@ -444,7 +444,7 @@ static int exe_init(
  * @retval    ENOMEM   Out-of-memory. `log_add()` called.
  * @post               The executor is locked.
  */
-int shutdown(
+static int shutdown(
         Executor* const restrict exe)
 {
     int status;
@@ -496,7 +496,7 @@ int shutdown(
  * @retval    EDEADLK  Logic error. `log_add()` called.
  * @post               The executor is locked.
  */
-int clear(
+static int clear(
         Executor* const restrict exe)
 {
     int status;

@@ -29,7 +29,7 @@
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed due to OpMock
 #endif
 
-static const char* const     MCAST_FEEDTYPE = ANY;
+static const feedtypet       MCAST_FEEDTYPE = ANY;
 static const char* const     HOSTNAME = "hostname";
 static const unsigned short  PORT = 38800;
 static ServiceAddr*          SERVICE_ADDR;

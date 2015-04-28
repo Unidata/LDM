@@ -56,6 +56,10 @@ typedef uint32_t	rpcprog_t;
 typedef uint32_t	rpcvers_t;
 typedef int32_t		rpc_inline_t;
 typedef unsigned        rpc_uint;
+typedef unsigned short  u_short;
+typedef unsigned int    u_int;
+typedef unsigned long   u_long;
+typedef char*           caddr_t;
 
 #define	bool_t	int
 #define	enum_t	int

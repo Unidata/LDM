@@ -173,6 +173,17 @@ pq_open(
 int
 pq_close(pqueue *pq);
 
+/**
+ * Returns the pathname of a product-queue as given to `pq_create()` or
+ * `pq_open()`.
+ *
+ * @param[in] pq  The product-queue.
+ * @return        The pathname of the product-queue as given to `pq_create()` or
+ *                `pq_open()`.
+ */
+const char* pq_getPathname(
+        const pqueue* pq);
+
 /*
  * Let the user find out the pagesize.
  */
@@ -252,21 +263,21 @@ pqe_new(pqueue *pq,
  * @param[out] ptrp       Pointer to the pointer to the region into which to
  *                        write the XDR-encoded data-product -- starting with
  *                        the data-product metadata. The client must begin
- *                        writing at \c *ptrp and not write more than \c size
+ *                        writing at `*ptrp` and not write more than `size`
  *                        bytes of data.
  * @param[out] indexp     Pointer to the handle to identify the region. The
- *                        client must call \c pqe_insert() when all the data has
- *                        been written or \c pqe_discard() to abort the writing
+ *                        client must call `pqe_insert()` when all the data has
+ *                        been written or `pqe_discard()` to abort the writing
  *                        and release the region.
- * @retval     0          Success.  \c *ptrp and \c *indexp are set.
- * @retval     EINVAL     @code{pq == NULL || ptrp == NULL || indexp == NULL}. \c
- *                        log_add() called.
-   @retval     EACCES     Product-queue is read-only. \c log_add() called.
- * @retval     PQUEUE_BIG Data-product is too large for product-queue. \c
- *                        log_add() called.
+ * @retval     0          Success.  `*ptrp` and `*indexp` are set.
+ * @retval     EINVAL     @code{pq == NULL || ptrp == NULL || indexp == NULL}.
+ *                        `log_add()` called.
+   @retval     EACCES     Product-queue is read-only. `log_add()` called.
+ * @retval     PQUEUE_BIG Data-product is too large for product-queue.
+ *                        `log_add()` called.
  * @retval     PQUEUE_DUP If a data-product with the same signature already
  *                        exists in the product-queue.
- * @return                <errno.h> error code. \c log_add() called.
+ * @return                `<errno.h>` error code. `log_add()` called.
  */
 int
 pqe_newDirect(

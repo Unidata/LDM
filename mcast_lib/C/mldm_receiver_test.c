@@ -18,6 +18,7 @@
 #include "mcast_info.h"
 #include "mldm_receiver.h"
 
+#include "down7_stub.h"
 #include "mcast_stub.h"
 #include "pq_stub.h"
 
@@ -44,7 +45,6 @@ static const unsigned short ucastPort = 38800;
 static ServiceAddr*         mcastSa;
 static ServiceAddr*         ucastSa;
 static McastInfo*           mcastInfo;
-static pqueue* const        prodQ = (pqueue*)1;
 static int                  (*const int_func)() = (int(*)())1;
 static void                 (*const void_func)() = (void(*)())2;
 static Down7* const         down7 = (Down7*)1;
@@ -65,26 +65,13 @@ init(void)
 }
 
 void
-test_invalidPq()
-{
-    int                  status;
-    Mlr*                 mlr;
-
-    /* Invalid product-queue argument */
-    mlr = mlr_new(NULL, mcastInfo, down7);
-    log_clear();
-    OP_ASSERT_TRUE(mlr == NULL);
-    OP_VERIFY();
-}
-
-void
 test_invalidMcastInfo()
 {
     int                  status;
     Mlr*                 mlr;
 
     /* Invalid multicast information argument */
-    mlr = mlr_new(prodQ, NULL, down7);
+    mlr = mlr_new(NULL, down7);
     log_clear();
     OP_ASSERT_TRUE(mlr == NULL);
     OP_VERIFY();
@@ -97,7 +84,7 @@ test_invalidDown7()
     Mlr*                 mlr;
 
     /* Invalid multicast information argument */
-    mlr = mlr_new(prodQ, mcastInfo, NULL);
+    mlr = mlr_new(mcastInfo, NULL);
     log_clear();
     OP_ASSERT_TRUE(mlr == NULL);
     OP_VERIFY();
@@ -108,12 +95,15 @@ test_trivialExecution()
 {
     int                  status;
     Mlr*                 mlr;
+    pqueue*              pq = (pqueue*)5;
 
     /* Trivial execution */
     mcastReceiver_new_ExpectAndReturn(
             NULL, ucastAddr, ucastPort, int_func, int_func, void_func, mcastAddr, mcastPort, NULL,   0,
             NULL, cmp_cstr,  cmp_short, NULL,     NULL,     NULL,      cmp_cstr,  cmp_short, NULL);
-    mlr = mlr_new(prodQ, mcastInfo, down7);
+    down7_getPq_ExpectAndReturn(down7, pq,
+                                cmp_ptr);
+    mlr = mlr_new(mcastInfo, down7);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(mlr != NULL);
     mcastReceiver_free_ExpectAndReturn(NULL, NULL);
@@ -149,7 +139,6 @@ int main(
     (void) openulog(basename(argv[0]), LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
     (void) setulogmask(LOG_UPTO(LOG_NOTICE));
     opmock_test_suite_reset();
-    opmock_register_test(test_invalidPq, "test_invalidPq");
     opmock_register_test(test_invalidMcastInfo, "test_invalidMcastInfo");
     opmock_register_test(test_trivialExecution, "test_trivialExecution");
     //opmock_register_test(test_mdl_createAndExecute, "test_mdl_createAndExecute");

@@ -885,7 +885,8 @@ stopUcastRecvTask(
 
 /**
  * Receives data-products via multicast. Doesn't return until
- * `stopMcastRecvTask()` is called. Called by `pthread_create()`.
+ * `stopMcastRecvTask()` is called or an error occurs. Called by
+ * `pthread_create()`.
  *
  * @param[in] arg            Pointer to the downstream LDM-7.
  * @retval    LDM7_SHUTDOWN  The multicast LDM receiver was stopped.
@@ -897,7 +898,7 @@ startMcastRecvTask(
 {
     Down7* const down7 = (Down7*)arg;
 
-    Mlr* const   mlr = mlr_new(pq, down7->mcastInfo, down7);
+    Mlr* const   mlr = mlr_new(down7->mcastInfo, down7);
     int          status;
 
     if (mlr == NULL) {
@@ -1560,6 +1561,18 @@ return_NULL:
 }
 
 /**
+ * Returns the product-queue associated with a downstream LDM-7.
+ *
+ * @param[in] down7  The downstream LDM-7.
+ * @return           The associated product-queue.
+ */
+pqueue* down7_getPq(
+        Down7* const down7)
+{
+    return down7->pq;
+}
+
+/**
  * Executes a downstream LDM-7. Doesn't return until `down7_stop()` is called
  * or an error occurs.
  *
@@ -1583,8 +1596,9 @@ down7_start(
     }
     else {
         char* const addrStr = sa_format(down7->servAddr);
-        unotice("Downstream LDM-7 starting up: remoteAddr=%s, feedtype=%s,"
-                "pq=%s", addrStr, s_feedtypet(down7->feedtype), getQueuePath());
+        unotice("Downstream LDM-7 starting up: remoteAddr=%s, feedtype=%s, "
+                "pq=\"%s\"", addrStr, s_feedtypet(down7->feedtype),
+                pq_getPathname(down7->pq));
         free(addrStr);
 
         do {
