@@ -1230,8 +1230,17 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
 }
 
 
-/*
+/**
  * Loop thru the pattern / action table, applying actions
+ *
+ * @param[in] infop      Pointer to data-product metadata.
+ * @param[in] datap      Pointer to data-product data.
+ * @param[in] xprod      Pointer to XDR-encoded data-product.
+ * @param[in] xlen       Size of XDR-encoded data-product in bytes.
+ * @param[in] otherargs  Pointer to optional argument.
+ * @retval    0          The data-product was successfully processed.
+ * @retval    -1         The data-product was not processed because it either
+ *                       didn't match any entries or couldn't be processed.
  */
 /*ARGSUSED*/
 int
@@ -1241,7 +1250,7 @@ processProduct(const prod_info *infop, const void *datap,
 {
         palt*           pal;
         palt*           next;
-        int             status = 0;
+        int             status = -1;
         int             did_something = 0;
         product         prod;
 
@@ -1268,18 +1277,21 @@ processProduct(const prod_info *infop, const void *datap,
                         /* A hit, do something */
                         prod.info = *infop;
                         prod.data = (void *)datap; /* cast away const */
-                        status = prodAction(&prod, pal, xprod, xlen);
+                        int actionStatus = prodAction(&prod, pal, xprod, xlen);
                         did_something++;
-                        if(status < 0
-                                && (pal->action.flags & LDM_ACT_TRANSIENT))
-                        {
+                        if (actionStatus < 0) {
+                            if (pal->action.flags & LDM_ACT_TRANSIENT) {
                                 /* connection closed, don't try again */
                                 remove_palt(pal);
+                            }
+                        }
+                        else {
+                            status = 0;
                         }
                 }
         }
         
-        return 0; /* always succeeds */
+        return status;
 }
 
 
