@@ -931,7 +931,8 @@ mls_execute(
          * the process will automatically terminate if something goes wrong.
          */
         char* miStr = mi_format(&mcastInfo);
-        unotice("Starting up: mcastInfo=%s, ttl=%u", miStr, ttl);
+        unotice("Starting up: mcastInfo=%s, ttl=%u, pq=\"%s\"", miStr, ttl,
+                pqPathname);
         free(miStr);
         status = mls_startMulticasting();
 

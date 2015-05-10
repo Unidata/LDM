@@ -286,14 +286,14 @@ finishInsertion(
         status = insertOrDiscard(mlr);
 
         if (status) {
-            LOG_ADD("Couldn't finish inserting %u-byte data-product \"%s\"",
-                    info->sz, info->ident);
+            LOG_ADD("Couldn't insert %u-byte data-product \"%s\"", info->sz,
+                    info->ident);
         }
         else {
             if (ulogIsVerbose()) {
                 char infoStr[512];
 
-                uinfo("%s: Inserted: %s",
+                uinfo("%s: Received: %s",
                         __FILE__, s_prod_info(infoStr, sizeof(infoStr), info, 1));
             }
             lastReceived(mlr, info);
@@ -504,12 +504,15 @@ mlr_start(
         LOG_ADD0("NULL multicast-LDM-receiver argument");
         status = LDM7_INVAL;
     }
-    else if ((status = mcastReceiver_execute(mlr->receiver)) != 0) {
-        LOG_ADD0("Couldn't execute multicast LDM receiver");
-        status = LDM7_MCAST;
-    }
     else {
-        status = LDM7_SHUTDOWN;
+        status = mcastReceiver_execute(mlr->receiver);
+        if (mlr->done) {
+            status = LDM7_SHUTDOWN;
+        }
+        else {
+            LOG_ADD0("Error executing multicast LDM receiver");
+            status = LDM7_MCAST;
+        }
     }
 
     return status;

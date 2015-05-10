@@ -47,13 +47,13 @@ Queue* q_new(void)
  * Enqueues an element at the tail-end of a queue.
  *
  * @param[in] q       The queue.
- * @param[in] elt     The element to be enqueued.
+ * @param[in] ptr     The pointer to be enqueued.
  * @retval    0       Success.
  * @retval    ENOMEM  Out-of-memory.
  */
 int q_enqueue(
         Queue* const restrict q,
-        void* const restrict  elt)
+        void* const restrict  ptr)
 {
     QElt* newTail = malloc(sizeof(QElt));
     int   status;
@@ -62,7 +62,7 @@ int q_enqueue(
         status = ENOMEM;
     }
     else {
-        newTail->ptr = elt;
+        newTail->ptr = ptr;
         newTail->next = NULL;
 
         if (q->tail) {
@@ -91,6 +91,8 @@ void* q_dequeue(
     else {
         QElt* oldHead = q->head;
         q->head = oldHead->next;
+        if (q->head == NULL)
+            q->tail = NULL;
         ptr = oldHead->ptr;
         free(oldHead);
         q->count--;

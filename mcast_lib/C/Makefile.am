@@ -131,9 +131,9 @@ endif
 if HAVE_CUNIT
 cunit_tests			= prod_index_map_test \
                                   mldm_sender_map_test \
-                                  prod_index_queue_test
-cunit_check_progs		= $(cunit_tests) \
-				  up7_down7_test
+                                  prod_index_queue_test \
+                                  up7_down7_test
+cunit_check_progs		= $(cunit_tests)
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
@@ -151,20 +151,21 @@ up7_down7_test_CPPFLAGS		= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
 
-prod_index_map_test_valgrind:	prod_index_map_test
+valgrind-prod_index_map_test:	prod_index_map_test
 	$(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./prod_index_map_test
-prod_index_queue_test_valgrind:	prod_index_queue_test
+valgrind-prod_index_queue_test:	prod_index_queue_test
 	$(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./prod_index_queue_test
-up7_down7_test_valgrind:	up7_down7_test
+valgrind-up7_down7_test:	up7_down7_test
 	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
             --mode=execute valgrind --leak-check=full --show-reachable=yes \
+            --suppressions=up7_down7_test.supp --gen-suppressions=all \
             ./up7_down7_test
 
 #local_checks			+= check-up7_down7_test
 check-up7_down7_test:		up7_down7_test
-	PATH=../../mldm_sender:$$PATH ./up7_down7_test
+	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
 endif
 
 check-local:			$(local_checks)

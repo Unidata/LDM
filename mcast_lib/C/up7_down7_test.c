@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <pthread.h>
 #include <rpc/rpc.h>
 #include <signal.h>
@@ -41,6 +42,7 @@
 #include <CUnit/Basic.h>
 
 #define USE_SIGWAIT 0
+#define CANCEL_SENDER 1
 
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))
@@ -72,6 +74,15 @@ static const char* const pqPathnames[] = {UP7_PQ_PATHNAME, DOWN7_PQ_PATHNAME};
 static pthread_mutex_t   mutex;
 static pthread_cond_t    cond;
 
+/**
+ * Aborts the process due to an error in logic.
+ */
+static void abortProcess(void)
+{
+    LOG_ADD0("Logic error");
+    log_log(LOG_ERR);
+    abort();
+}
 static int
 initCondAndMutex(void)
 {
@@ -193,45 +204,42 @@ teardown(void)
 
 #if !USE_SIGWAIT
 
-static int
+static void
 lockMutex(void)
 {
     udebug("Locking mutex");
     int status = pthread_mutex_lock(&mutex);
-    if (status)
+    if (status) {
         LOG_ERRNUM0(status, "Couldn't lock mutex");
-
-    return status;
+        abortProcess();
+    }
 }
 
-static int
+static void
 unlockMutex(void)
 {
     udebug("Unlocking mutex");
     int status = pthread_mutex_unlock(&mutex);
-    if (status)
+    if (status) {
         LOG_ERRNUM0(status, "Couldn't unlock mutex");
-
-    return status;
+        abortProcess();
+    }
 }
 
-static int
+static void
 setDoneCondition(void)
 {
-    int status = lockMutex();
+    lockMutex();
 
-    if (0 == status) {
-        done = 1;
-        udebug("Signaling condition variable");
-        int status = pthread_cond_broadcast(&cond);
-        if (status)
-            LOG_ERRNUM0(status, "Couldn't signal condition variable");
-        int tmpStatus = unlockMutex();
-        if (0 == status)
-            status = tmpStatus;
+    done = 1;
+    udebug("Signaling condition variable");
+    int status = pthread_cond_broadcast(&cond);
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't signal condition variable");
+        abortProcess();
     }
 
-    return status;
+    unlockMutex();
 }
 
 static void
@@ -239,10 +247,18 @@ termSigHandler(
         const int sig)
 {
     udebug("Caught signal %d", sig);
-    if (setDoneCondition())
-        log_log(LOG_ERR);
+    setDoneCondition();
 }
 
+/**
+ * @param[in]       newAction
+ * @param[out]      oldAction
+ * @retval 0        Success
+ * @retval ENOTSUP  The SA_SIGINFO bit flag is set in the `sa_flags` field of
+ *                  `newAction` and the implementation does not support either
+ *                  the Realtime Signals Extension option, or the XSI Extension
+ *                  option.
+ */
 static int
 setTermSigHandling(
         struct sigaction* newAction,
@@ -262,29 +278,24 @@ setTermSigHandling(
     return status;
 }
 
-static int
+static void
 waitForDoneCondition(void)
 {
-    int status = lockMutex();
+    lockMutex();
 
-    if (0 == status) {
-        while (!done) {
-            udebug("Waiting on condition variable");
-            status = pthread_cond_wait(&cond, &mutex);
-            if (status) {
-                LOG_ERRNUM0(status, "Couldn't wait on condition variable");
-                break;
-            }
+    while (!done) {
+        udebug("Waiting on condition variable");
+        int status = pthread_cond_wait(&cond, &mutex);
+        if (status) {
+            LOG_ERRNUM0(status, "Couldn't wait on condition variable");
+            abortProcess();
         }
-        int tmpStatus = unlockMutex();
-        if (status == 0)
-            status = tmpStatus;
     }
 
-    return status;
+    unlockMutex();
 }
 
-static int
+static void
 waitUntilDone(void)
 {
     struct sigaction newAction;
@@ -294,17 +305,17 @@ waitUntilDone(void)
     newAction.sa_handler = termSigHandler;
 
     struct sigaction oldAction;
-    int              status = setTermSigHandling(&newAction, &oldAction);
-
-    if (0 == status) {
-        status = waitForDoneCondition();
-
-        int tmpStatus = setTermSigHandling(&oldAction, NULL);
-        if (status == 0)
-            status = tmpStatus;
+    if (setTermSigHandling(&newAction, &oldAction)) {
+        LOG_SERROR0("Couldn't set termination signal handling");
+        abortProcess();
     }
 
-    return status;
+    waitForDoneCondition();
+
+    if (setTermSigHandling(&oldAction, NULL)) {
+        LOG_SERROR0("Couldn't reset termination signal handling");
+        abortProcess();
+    }
 }
 #endif
 
@@ -322,7 +333,10 @@ up7_init(
         const int  sock,
         const int  termFd)
 {
-    /* 0 => use default read/write buffer sizes */
+    /*
+     * 0 => use default read/write buffer sizes.
+     * `sock` will be closed by `svc_destroy()`.
+     */
     SVCXPRT* const xprt = svcfd_create(sock, 0, 0);
     CU_ASSERT_PTR_NOT_EQUAL_FATAL(xprt, NULL);
 
@@ -351,53 +365,74 @@ up7_init(
     return 0;
 }
 
+static void
+funcCancelled(
+        void* const arg)
+{
+    const char* funcName = (const char*)arg;
+    udebug("up7_run_cancelled(): %s() thread cancelled", funcName);
+}
+
 /**
  * @param[in] up7  Upstream LDM-7.
- * @retval    0    Success. `up7->termFd` was ready for reading or the RPC layer
- *                 closed the connection.
+ * @retval    0    Success.
  */
 static int
 up7_run(
         Up7* const up7)
 {
-    const int sock = up7->xprt->xp_sock;
-    const int termFd = up7->termFd;
-    const int width = MAX(sock, termFd) + 1;
-    int       status;
+    const int     sock = up7->xprt->xp_sock;
+    const int     termFd = up7->termFd;
+    int           status;
+
+    struct pollfd fds;
+    fds.fd = sock;
+    fds.events = POLLRDNORM;
+
+    pthread_cleanup_push(funcCancelled, "up7_run");
+
+    int initCancelState;
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &initCancelState);
 
     for (;;) {
-        fd_set    readfds;
+        udebug("up7_run(): Calling poll()");
+        status = poll(&fds, 1, -1); // `-1` => indefinite timeout
 
-        FD_ZERO(&readfds);
-        FD_SET(sock, &readfds);
-        FD_SET(termFd, &readfds);
-
-        /* NULL timeout argument => indefinite wait */
-        status = select(width, &readfds, NULL, NULL, NULL);
-
-        int initState;
-        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
+        int cancelState;
+        // (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
 
         if (0 > status)
             break;
-        if (FD_ISSET(termFd, &readfds)) {
-            /* Termination requested */
-            (void)read(termFd, &status, sizeof(int));
+        if ((fds.revents & POLLERR) || (fds.revents & POLLNVAL)) {
+            status = EIO;
+            break;
+        }
+        if (fds.revents & POLLHUP) {
             status = 0;
             break;
         }
-        if (FD_ISSET(sock, &readfds))
-            svc_getreqset(&readfds); // calls `ldmprog_7()`
+        if (fds.revents & POLLRDNORM) {
+            udebug("up7_run(): Calling svc_getreqsock()");
+            svc_getreqsock(sock); // calls `ldmprog_7()`
+        }
         if (!FD_ISSET(sock, &svc_fdset)) {
            /* The connection to the receiver was closed by the RPC layer */
             status = 0;
             break;
         }
 
-        int ignoredState;
-        (void)pthread_setcancelstate(initState, &ignoredState);
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
     }
 
+    /*
+     * In order to play nice with the caller, the cancelability state is
+     * reverted to its value on entry.
+     */
+    (void)pthread_setcancelstate(initCancelState, &initCancelState);
+
+    pthread_cleanup_pop(0);
+
+    udebug("up7_run(): Returning %d", status);
     return status;
 }
 
@@ -406,6 +441,7 @@ up7_destroy(
         Up7* const up7)
 {
     svc_unregister(LDMPROG, SEVEN);
+    svc_destroy(up7->xprt); // unconditionally closes `xprt->xp_sock`
     up7->xprt = NULL;
 }
 
@@ -423,7 +459,7 @@ static void
 destroyUp7(
         void* const arg)
 {
-    up7_destroy((Up7*)arg); // closes `servSock`
+    up7_destroy((Up7*)arg); // closes `sock`
 }
 
 
@@ -441,7 +477,7 @@ servlet_run(
     pthread_cleanup_push(closeSocket, &sock);
 
     Up7 up7;
-    status = up7_init(&up7, sock, termFd); // Closes `servSock` on failure
+    status = up7_init(&up7, sock, termFd); // Closes `sock` on failure
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     pthread_cleanup_push(destroyUp7, &up7); // calls `up7_destroy()`
@@ -449,9 +485,10 @@ servlet_run(
     status = up7_run(&up7);
     CU_ASSERT_EQUAL(status, 0);
 
-    pthread_cleanup_pop(true); // calls `up7_destroy()`
-    pthread_cleanup_pop(false); // `servSock` already closed
+    pthread_cleanup_pop(1); // calls `up7_destroy()`
+    pthread_cleanup_pop(0); // `sock` already closed
 
+    udebug("servlet_run(): Returning");
     return 0;
 }
 
@@ -463,7 +500,8 @@ freeLogging(
 }
 
 /**
- * Called by `pthread_create()`.
+ * Called by `pthread_create()`. The thread is cancelled by
+ * `sender_terminate()`.
  *
  * @param[in] arg  Pointer to sender.
  * @retval    &0   Success. Input end of sender's termination pipe(2) is closed.
@@ -475,49 +513,47 @@ sender_run(
     Sender* const sender = (Sender*)arg;
     const int     servSock = sender->sock;
     const int     termFd = sender->fds[0];
-    const int     width = MAX(servSock, termFd) + 1;
-    int           status;
+    static int    status;
+
+    struct pollfd fds;
+    fds.fd = servSock;
+    fds.events = POLLIN;
 
     pthread_cleanup_push(freeLogging, NULL);
 
     for (;;) {
-        fd_set readfds;
+        status = poll(&fds, 1, -1); // `-1` => indefinite timeout
 
-        FD_ZERO(&readfds);
-        FD_SET(servSock, &readfds);
-        FD_SET(termFd, &readfds);
-
-        /* NULL timeout argument => indefinite wait */
-        status = select(width, &readfds, 0, NULL, NULL);
+        int cancelState;
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
 
         if (0 > status)
             break;
-        if (FD_ISSET(termFd, &readfds)) {
-            /* Termination requested */
-            (void)read(termFd, &status, sizeof(int));
+        if (fds.revents & POLLHUP) {
             status = 0;
             break;
         }
-        if (FD_ISSET(servSock, &readfds)) {
+        if (fds.revents & POLLIN) {
             status = servlet_run(servSock, termFd);
 
             if (status) {
                 LOG_ADD0("servlet_run() failure");
                 break;
             }
-        } // sender's socket ready for reading
-    } // `select()` loop
+        }
+
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
+    } // `poll()` loop
 
     /* Because the current thread is ending: */
     (status && !done)
         ? log_log(LOG_ERR)
         : log_clear(); // don't care about errors if termination requested
 
-    pthread_cleanup_pop(true); // calls `log_free()`
+    pthread_cleanup_pop(1); // calls `log_free()`
 
-    static int staticStatus;
-    staticStatus = status;
-    return &staticStatus;
+    udebug("sender_run(): Returning &%d", status);
+    return &status;
 }
 
 static int
@@ -630,7 +666,7 @@ sender_insertProducts(
     (void)memset(info->signature, 0, sizeof(info->signature));
     srand48(1234567890);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 1; i++) {
         const unsigned size = 100000*drand48() + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 
@@ -658,6 +694,7 @@ sender_insertProducts(
         CU_ASSERT_EQUAL_FATAL(status, 0);
     }
 
+    free(data);
     status = pq_close(pq);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
@@ -668,9 +705,15 @@ sender_terminate(
 {
     int status = 0;
 
+#if CANCEL_SENDER
+    udebug("Canceling sender thread");
+    status = pthread_cancel(sender->thread);
+    UASSERT(status == 0);
+#else
     udebug("Writing to termination pipe");
     status = write(sender->fds[1], &status, sizeof(int));
     CU_ASSERT_NOT_EQUAL_FATAL(status, -1);
+#endif
 
     void* statusPtr;
 
@@ -678,8 +721,13 @@ sender_terminate(
     status = pthread_join(sender->thread, &statusPtr);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = *(int*)statusPtr;
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    if (statusPtr == PTHREAD_CANCELED) {
+        status = 0;
+    }
+    else {
+        status = *(int*)statusPtr;
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+    }
 
     (void)close(sender->fds[0]);
     (void)close(sender->fds[1]);
@@ -702,9 +750,9 @@ receiver_start(
     static int      status;
 
     status = down7_start(receiver->down7);
-    CU_ASSERT_EQUAL(status, 0);
+    CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
 
-    setDoneCondition();
+    // setDoneCondition();
 
     /* Because at end of thread: */
     done ? log_clear() : log_log(LOG_ERR);
@@ -765,7 +813,7 @@ receiver_terminate(
     CU_ASSERT_PTR_NOT_NULL_FATAL(statusPtr);
     CU_ASSERT_NOT_EQUAL_FATAL(statusPtr, PTHREAD_CANCELED);
     status = *(int*)statusPtr;
-    CU_ASSERT_EQUAL(status, 0);
+    CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
 
     udebug("Calling down7_free()");
     status = down7_free(receiver->down7);
@@ -874,8 +922,12 @@ test_down7(
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
+#if 1
     sleep(1);
     done = 1;
+#else
+    waitUntilDone();
+#endif
 
     status = receiver_terminate(&receiver);
     log_log(LOG_ERR);
@@ -932,10 +984,12 @@ test_up7_down7(
 #if USE_SIGWAIT
     (void)sigwait(&termSigSet, &status);
     done = 1;
-#else
-    status = waitUntilDone();
+#elif 0
+    waitUntilDone();
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+#else
+    (void)sleep(1);
 #endif
 
     udebug("Terminating receiver");
@@ -963,15 +1017,16 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_INFO, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_DEBUG, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            if (CU_ADD_TEST(testSuite, test_up7) &&
-                    CU_ADD_TEST(testSuite, test_down7) &&
-                    CU_ADD_TEST(testSuite, test_up7_down7)) {
+            if (CU_ADD_TEST(testSuite, test_up7)
+                    && CU_ADD_TEST(testSuite, test_down7)
+                    && CU_ADD_TEST(testSuite, test_up7_down7)
+                    ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();
             }

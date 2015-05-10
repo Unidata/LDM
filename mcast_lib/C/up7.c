@@ -44,6 +44,7 @@
 #include <rpc.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -60,6 +61,14 @@ static bool      hasSubscribed;
  * The feedtype of the subscription.
  */
 static feedtypet feedtype;
+
+static void up7_cleanup(void)
+{
+    if (clnt) {
+        clnt_destroy(clnt);
+        clnt = NULL;
+    }
+}
 
 /**
  * Ensures the existence of a client-side transport on the TCP connection.
@@ -93,7 +102,14 @@ up7_ensureClientTransport(
             success = false;
         }
         else {
-            success = true;
+            if (atexit(up7_cleanup)) {
+                LOG_SERROR0("Couldn't register upstream LDM-7 cleanup function");
+                log_log(LOG_ERR);
+                success = false;
+            }
+            else {
+                success = true;
+            }
         }
     }
 
@@ -198,35 +214,6 @@ up7_ensureFree(
 {
     if (reply)
         xdr_free(xdrProc, (char*)reply);
-}
-
-/**
- * Handles the case of a system error in the *synchronous* subscription service
- * routine. Logs an error message, calls `svcerr_systemerr()`, destroys the
- * server-side RPC transport, and sets the reply to NULL.
- *
- * @param[in]  xprt      RPC server-side transport
- * @param[in]  hostId    Identifier of the subscribing host.
- * @param[in]  feedtype  Subscription feedtype.
- * @param[out] reply     Service routine reply. Will be set to NULL.
- */
-static void
-up7_subscriptionError(
-        struct SVCXPRT* const restrict     xprt,
-        const feedtypet                    feedtype,
-        SubscriptionReply** const restrict reply)
-{
-    LOG_ADD2("Couldn't subscribe %s to feedtype %s",
-            hostbyaddr(svc_getcaller(xprt)), s_feedtypet(feedtype));
-    log_log(LOG_ERR);
-    svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
-    svc_destroy(xprt);
-    /*
-     * The reply is set to NULL in order to cause the RPC dispatch routine to
-     * not reply because `svcerr_systemerr()` has been called and the
-     * server-side transport destroyed.
-     */
-    *reply = NULL;
 }
 
 /**
@@ -542,13 +529,13 @@ static Ldm7Status
 up7_sendUpToSignature(
         const signaturet* const before)
 {
+    // `dup_prod_class()` compiles the patterns
     prod_class_t* const prodClass = dup_prod_class(PQ_CLASS_ALL);
 
     if (NULL == prodClass)
         return LDM7_SYSTEM;
 
     prodClass->psa.psa_val->feedtype = feedtype;        // was `ANY`
-    clss_regcomp(prodClass);
 
     int status;
     for (;;) {
@@ -613,6 +600,7 @@ subscribe_7_svc(
     feedtypet* const restrict       feedtype,
     struct svc_req* const restrict  rqstp)
 {
+    udebug("subscribe_7_svc(): Entered");
     static SubscriptionReply* reply;
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
@@ -624,11 +612,19 @@ subscribe_7_svc(
             hostname, ntohs(xprt->xp_raddr.sin_port), s_feedtypet(*feedtype));
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
 
-    if (up7_subscribe(*feedtype, xprt, &result)) {
-        up7_subscriptionError(xprt, *feedtype, &reply);
-    }
-    else if (!up7_ensureProductQueueOpen()) {
-        up7_subscriptionError(xprt, *feedtype, &reply);
+    if (up7_subscribe(*feedtype, xprt, &result) ||
+            !up7_ensureProductQueueOpen()) {
+        LOG_ADD2("Couldn't subscribe %s to feedtype %s",
+                hostbyaddr(svc_getcaller(xprt)), s_feedtypet(*feedtype));
+        log_log(LOG_ERR);
+        svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
+        svc_destroy(xprt);
+        /*
+         * The reply is set to NULL in order to cause the RPC dispatch routine
+         * to not reply because `svcerr_systemerr()` has been called and the
+         * server-side transport destroyed.
+         */
+        reply = NULL;
     }
     else {
         hasSubscribed = true;
@@ -651,6 +647,7 @@ request_product_7_svc(
     VcmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
+    udebug("request_product_7_svc(): Entered");
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (!hasSubscribed) {
@@ -665,6 +662,7 @@ request_product_7_svc(
     else if (!up7_findAndSendProduct(*iProd)) {
         log_log(LOG_ERR);
         clnt_destroy(clnt);
+        clnt = NULL;
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
 
@@ -685,6 +683,7 @@ request_backlog_7_svc(
     BacklogSpec* const    backlog,
     struct svc_req* const rqstp)
 {
+    udebug("request_backlog_7_svc(): Entered");
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (!hasSubscribed) {
@@ -699,6 +698,7 @@ request_backlog_7_svc(
     else if (!up7_sendBacklog(backlog)) {
         log_log(LOG_ERR);
         clnt_destroy(clnt);
+        clnt = NULL;
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
 
@@ -716,5 +716,6 @@ test_connection_7_svc(
     void* const           no_op,
     struct svc_req* const rqstp)
 {
+    udebug("test_connection_7_svc(): Entered");
     return NULL;                // don't reply
 }

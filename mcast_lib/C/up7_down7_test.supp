@@ -1,0 +1,77 @@
+{
+   <my_xdrrec_endofrecord>
+   Memcheck:Param
+   write(buf)
+   obj:/usr/lib64/libpthread-2.17.so
+   fun:writetcp
+   fun:flush_out
+   fun:my_xdrrec_endofrecord
+   fun:clnttcp_call
+   fun:request_backlog_7
+   fun:requestSessionBacklog
+   fun:start_thread
+   fun:clone
+}
+{
+   <xmlNewCharEncodingHandler>
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:xmlNewCharEncodingHandler
+   ...
+}
+{
+   <xmlInitCharEncodingHandlers>
+   Memcheck:Leak
+   fun:malloc
+   fun:xmlInitCharEncodingHandlers
+   ...
+}
+{
+   <xmlNewRMutex>
+   Memcheck:Leak
+   fun:malloc
+   fun:xmlNewRMutex
+   ...
+}
+{
+   <up7_setMcastInfo>
+   Memcheck:Leak
+   fun:malloc
+   fun:strdup
+   fun:sa_copy
+   fun:mi_init
+   fun:mi_copy
+   fun:up7_setMcastInfo
+   ...
+}
+{
+   <xmlNewMutex>
+   Memcheck:Leak
+   fun:malloc
+   fun:xmlNewMutex
+   fun:xmlInitMemory
+   ...
+}
+{
+   <xmlInitGlobals>
+   Memcheck:Leak
+   fun:malloc
+   fun:xmlNewMutex
+   fun:xmlInitGlobals
+   ...
+}
+{
+   <xprt_register>
+   Memcheck:Leak
+   fun:malloc
+   fun:my_xprt_register
+   ...
+}
+{
+   <authnone_create>
+   Memcheck:Leak
+   fun:calloc
+   fun:my_authnone_create
+   ...
+}

@@ -212,14 +212,20 @@ dll_remove(
     DllElt* prev = elt->prev;
     DllElt* next = elt->next;
 
-    if (prev)
+    if (prev) {
         prev->next = next;
-    if (next)
+    }
+    else {
+        dll->head = next;
+    }
+
+    if (next) {
         next->prev = prev;
-    if (dll->head == elt)
-        dll->head = NULL;
-    if (dll->tail == elt)
-        dll->tail = NULL;
+    }
+    else {
+        dll->tail = prev;
+    }
+
     dll->size--;
 
     void* ptr = elt->ptr;

@@ -104,6 +104,8 @@ mlsm_getServerPort(
         LOG_ADD0("Couldn't read from pipe to multicast LDM sender process");
     }
     else {
+        buf[nbytes-1] = 0;
+
         if (1 != sscanf(buf, "%5hu\n", serverPort)) {
             LOG_ADD0("Couldn't decode port number of TCP server of multicast "
                     "LDM sender process");
@@ -452,6 +454,7 @@ me_destroy(
         McastEntry* const entry)
 {
     mi_destroy(&entry->info);
+    free(entry->mcastIf);
 }
 
 /**

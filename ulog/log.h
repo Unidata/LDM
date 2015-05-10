@@ -44,6 +44,8 @@ extern "C" {
 #define LOG_ERRNUM(err,fmt,...)         log_errnum(err,LOG_FMT(fmt),__FILE__,__LINE__,__VA_ARGS__)
 #define LOG_MALLOC(nbytes,msg)      log_malloc(nbytes, msg, __FILE__, __LINE__)
 
+#define UASSERT(EX) (((int)(EX)) ? (void)0 : _uassert(#EX, __FILE__, __LINE__))
+
 void log_clear();
 void log_start(
     const char* const	fmt,

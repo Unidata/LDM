@@ -38,11 +38,13 @@ lib_la_SOURCES	= \
         doubly_linked_list.c doubly_linked_list.h \
         doubly_linked_stack.c doubly_linked_stack.h \
 	error.c \
+	executor.c executor.h \
 	fdnb.c \
 	fsStats.c \
 	inetutil.c \
 	mkdirs_open.c \
 	pattern.c \
+	queue.c queue.h \
 	RegularExpressions.c \
 	rpcutil.c \
 	setenv.c \
@@ -119,19 +121,19 @@ testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
 
-queue_test_SOURCES	= queue.c queue_test.c queue.h
-queue_test_LDADD	= @LIBS_CUNIT@
+queue_test_SOURCES	= queue_test.c
+queue_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 check-queue:		queue_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./queue_test
 
 doubly_linked_list_test_SOURCES	= doubly_linked_list_test.c 
 doubly_linked_list_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
-check-doubly_linked_list:		doubly_linked_list_test
+check-doubly_linked_list:	doubly_linked_list_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./doubly_linked_list_test
 
-executor_test_SOURCES	= executor.c executor_test.c executor.h queue.c
+executor_test_SOURCES	= executor_test.c
 executor_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
 check-executor:		executor_test

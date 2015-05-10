@@ -1,9 +1,16 @@
-6.12.10	2015-04-24T15:21:57-0600
+6.12.10	2015-04-28T14:22:17-0600
     Removed considerable lint identified by Coverity Scan. Some of it was
     significant. See <https://scan.coverity.com/projects/4645>.
 
     Added signal blocking to the <log.h> implementation because that module
     calls async-unsafe functions and could be called by a signal handler.
+    
+    Modified pqact(1) to correct the setting of the last successfully-processed
+    data-product when the LDM exits. Before, the last data-product that matched
+    the `-f feed` and `-p pattern` options would be used regardless of whether
+    or not it matched any entries in the configuration-file. Now, it will be 
+    used if and only if it is successfully processed by an entry in the
+    configuration-file.
 
 6.12.9	2015-03-16T11:11:30-0600
     Added to the configure(1) script, support for Solaris' non-standard grep(1),

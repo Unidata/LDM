@@ -15,16 +15,26 @@
 #include "executor.h"
 
 #include <errno.h>
+#include <pthread.h>
+#include <signal.h>
 #include <unistd.h>
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+
+static pthread_cond_t           cond;
+static pthread_mutex_t          mutex;
+static volatile sig_atomic_t    done;
 
 /**
  * Only called once.
  */
 static int setup(void)
 {
+    int status = pthread_cond_init(&cond, NULL);
+    UASSERT(status == 0);
+    status = pthread_mutex_init(&mutex, NULL);
+    UASSERT(status == 0);
     return 0;
 }
 
@@ -33,6 +43,8 @@ static int setup(void)
  */
 static int teardown(void)
 {
+    (void)pthread_mutex_destroy(&mutex);
+    (void)pthread_cond_destroy(&cond);
     return 0;
 }
 
@@ -43,11 +55,20 @@ static void* sleep1(
     return arg;
 }
 
-static void* waitForCancel(
+static void* waitForStop(
         void* const arg)
 {
-    pause();
+    while (!done)
+        pthread_cond_wait(&cond, &mutex);
     return arg;
+}
+
+static void stop(
+        void* const arg)
+{
+    done = 1;
+    int status = pthread_cond_signal(&cond);
+    UASSERT(status == 0);
 }
 
 static void test_exe_new(
@@ -65,15 +86,27 @@ static void test_exe_submit(void)
     Job*      job;
     int       status = exe_submit(exe, sleep1, &sleep1Result, NULL, &job);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    Job*      completedJob;
-    status = exe_getCompleted(exe, &completedJob);
+    CU_ASSERT_EQUAL(exe_count(exe), 1);
+    Job*      completedJob = exe_getCompleted(exe);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(exe_count(exe), 0);
     CU_ASSERT_PTR_EQUAL(completedJob, job);
-    CU_ASSERT_FALSE(job_wasCanceled(job));
+    CU_ASSERT_FALSE(job_wasStopped(job));
     CU_ASSERT_EQUAL(job_status(job), 0);
     CU_ASSERT_PTR_EQUAL(job_result(job), &sleep1Result);
-    status = job_free(job);
+    job_free(job);
     CU_ASSERT_EQUAL(status, 0);
+    status = exe_free(exe);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void test_exe_shutdown_empty(void)
+{
+    Executor* exe = exe_new();
+    CU_ASSERT_EQUAL(exe_count(exe), 0);
+    int status = exe_shutdown(exe);
+    CU_ASSERT_EQUAL(status, 0);
+    CU_ASSERT_EQUAL(exe_count(exe), 0);
     status = exe_free(exe);
     CU_ASSERT_EQUAL(status, 0);
 }
@@ -82,16 +115,18 @@ static void test_exe_shutdown(void)
 {
     Executor* exe = exe_new();
     Job*      job;
-    int       status = exe_submit(exe, waitForCancel, NULL, NULL, &job);
+    int       status = exe_submit(exe, waitForStop, NULL, stop, &job);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     sleep(1);
-    exe_shutdown(exe);
-    Job*      completedJob;
-    status = exe_getCompleted(exe, &completedJob);
+    status = exe_shutdown(exe);
+    CU_ASSERT_EQUAL(status, 0);
+    CU_ASSERT_EQUAL(exe_count(exe), 1);
+    Job*      completedJob = exe_getCompleted(exe);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(exe_count(exe), 0);
     CU_ASSERT_PTR_EQUAL(completedJob, job);
-    CU_ASSERT_TRUE(job_wasCanceled(job));
-    status = job_free(job);
+    CU_ASSERT_TRUE(job_wasStopped(job));
+    job_free(job);
     CU_ASSERT_EQUAL(status, 0);
     status = exe_free(exe);
     CU_ASSERT_EQUAL(status, 0);
@@ -102,9 +137,11 @@ static void test_submit_while_shutdown(void)
     Executor* exe = exe_new();
     int       status = exe_shutdown(exe);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(exe_count(exe), 0);
     Job*      job;
-    status = exe_submit(exe, waitForCancel, NULL, NULL, &job);
+    status = exe_submit(exe, waitForStop, NULL, NULL, &job);
     CU_ASSERT_EQUAL_FATAL(status, EINVAL);
+    CU_ASSERT_EQUAL(exe_count(exe), 0);
     exe_free(exe);
 }
 
@@ -113,7 +150,7 @@ static void test_exe_clear(void)
     Executor* exe = exe_new();
     int       status = exe_clear(exe);
     CU_ASSERT_EQUAL_FATAL(status, EINVAL);
-    status = exe_shutdown(exe);
+    (void)exe_shutdown(exe);
     status = exe_clear(exe);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     exe_free(exe);
@@ -137,6 +174,7 @@ int main(
             if (NULL != testSuite) {
                 if (CU_ADD_TEST(testSuite, test_exe_new) &&
                         CU_ADD_TEST(testSuite, test_exe_submit) &&
+                        CU_ADD_TEST(testSuite, test_exe_shutdown_empty) &&
                         CU_ADD_TEST(testSuite, test_exe_shutdown) &&
                         CU_ADD_TEST(testSuite, test_submit_while_shutdown) &&
                         CU_ADD_TEST(testSuite, test_exe_clear)) {
