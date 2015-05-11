@@ -12,7 +12,8 @@ config.h
 config.status
 config.sub
 configure
-core
+core.*
+cov-int
 .cproject
 data
 depcomp
@@ -33,6 +34,7 @@ ldm-6.*
 ldmping/ldmping
 ldmsend/ldmsend
 ldm.spec
+ldm.tgz
 ldm_version.*
 .libs
 libtool
@@ -48,6 +50,7 @@ Makefile
 Makefile.in
 Makefile.in
 man
+*.map
 missing
 notifyme/notifyme
 *.o
@@ -82,5 +85,3 @@ TEST-test.xml
 t.t
 ulog/hupsyslog
 ulog/ulogger
-cov-int
-ldm.tgz
