@@ -17,7 +17,8 @@ SU				= @SU@
 PQ_SUBDIR			= @PQ_SUBDIR@
 
 # Keep the value of LDMHOME consonant with that in `CI-commit.sh`
-AM_DISTCHECK_CONFIGURE_FLAGS	= --disable-root-actions \
+AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
+                                  --disable-root-actions \
 				  --with-noaaport \
 				  --with-retrans \
 				  --with-gribinsert \
