@@ -676,7 +676,7 @@ sender_insertProducts(
     (void)memset(info->signature, 0, sizeof(info->signature));
     srand48(1234567890);
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 3; i++) {
         const unsigned size = 100000*drand48() + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 
@@ -1027,7 +1027,7 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_DEBUG, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_INFO, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
