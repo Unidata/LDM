@@ -479,8 +479,8 @@ servlet_run(
         const int termFd)
 {
     /* NULL-s => not interested in receiver's address */
-    const int sock = accept(servSock, NULL, NULL);
-    int       status;
+    int sock = accept(servSock, NULL, NULL);
+    int status;
 
     CU_ASSERT_NOT_EQUAL_FATAL(sock, -1);
 
