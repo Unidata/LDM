@@ -57,52 +57,6 @@ struct executor {
     bool            locked;
 };
 
-static volatile sig_atomic_t sigCount;
-
-static void sigintHandler(const int sig)
-{
-    sigCount++;
-    udebug("sigintHandler(): sigCount=%d", sigCount);
-}
-
-/**
- * Sets SIGINT handling.
- *
- * @param[out] oldAction  Previous SIGINT handling.
- */
-static void setSigintHandling(
-        struct sigaction* const oldAction)
-{
-    struct sigaction newAction;
-
-    (void)sigemptyset(&newAction.sa_mask);
-    newAction.sa_flags = 0;
-    newAction.sa_handler = sigintHandler;
-    (void)sigaction(SIGINT, &newAction, oldAction);
-
-    sigCount = 0;
-}
-
-/**
- * Restores SIGINT handling.
- *
- * @param[in] oldAction  Previous SIGINT handling.
- * @param[in] numIgnore  The number of received signals to ignore.
- */
-void resetSigintHandling(
-        struct sigaction* const oldAction,
-        const int               numIgnore)
-{
-    int status = sigaction(SIGTERM, oldAction, NULL); // restores previous
-    UASSERT(status == 0);
-
-    if (numIgnore < sigCount) {
-        sigCount -= numIgnore;
-        while (sigCount-- > 0)
-            raise(SIGINT);
-    }
-}
-
 /**
  * Initializes a mutex. The mutex will have protocol `PTHREAD_PRIO_INHERIT` and
  * type `PTHREAD_MUTEX_ERRORCHECK`.
@@ -498,7 +452,6 @@ static void job_stop(
         Job* const job)
 {
     UASSERT(job->exe->locked);
-    // int status = 0;
 
     udebug("job_stop(): Entered");
     job_lock(job);
@@ -528,9 +481,7 @@ static void job_stop(
             job->state = JOB_COMPLETED;
             job->wasStopped = true;
             int status = pthread_cancel(job->thread);
-            // int status = pthread_kill(job->thread, SIGINT);
             UASSERT(status == 0);
-            // status = 1;
         }
         job_unlock(job);
     }
@@ -539,8 +490,6 @@ static void job_stop(
     }
 
     udebug("job_stop(): Returning");
-
-    // return status;
 }
 
 /**
@@ -658,33 +607,16 @@ static int shutdown(
         status = ENOMEM;
     }
     else {
-        // struct sigaction oldAction;
-        // int              sigCount = 0;
-        const int        numActiveJobs = dll_size(exe->active);
-        int              numIter = 0;
-        const int        numCompletedJobs = q_size(exe->completed);
-
-        // setSigintHandling(&oldAction);
-
         while (dll_hasNext(iter)) {
             Job* const job = (Job*)dll_next(iter);
-            // sigCount += job_stop(job);
             job_stop(job);
-            numIter++;
         }
         dll_freeIter(iter);
-
-        // resetSigintHandling(&oldAction, sigCount);
 
         while (dll_size(exe->active) > 0) {
             status = pthread_cond_wait(&exe->cond, &exe->mutex);
             UASSERT(status == 0);
         }
-
-        udebug("shutdown(): numActiveJobs=%d, numIter=%d, "
-                "numCompletedJobs=%d, q_size(exe->completed)=%d",
-                numActiveJobs, numIter, numCompletedJobs,
-                q_size(exe->completed));
 
         status = exe->errCode;
         if (status)

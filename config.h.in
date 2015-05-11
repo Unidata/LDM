@@ -155,6 +155,9 @@
    */
 #undef LT_OBJDIR
 
+/* whether or not to disable assertions */
+#undef NDEBUG
+
 /* Disables the DBFILE capability */
 #undef NO_DB
 
