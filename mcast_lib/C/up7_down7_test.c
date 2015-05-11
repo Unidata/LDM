@@ -51,6 +51,7 @@
 typedef struct {
     SVCXPRT*              xprt;
     int                   termFd;
+    bool                  xprtAllocated;
 } Up7;
 
 typedef struct {
@@ -370,10 +371,12 @@ funcCancelled(
         void* const arg)
 {
     const char* funcName = (const char*)arg;
-    udebug("up7_run_cancelled(): %s() thread cancelled", funcName);
+    udebug("funCancelled(): %s() thread cancelled", funcName);
 }
 
 /**
+ * Calls `svc_destroy(up7->xprt)`.
+ *
  * @param[in] up7  Upstream LDM-7.
  * @retval    0    Success.
  */
@@ -401,8 +404,10 @@ up7_run(
         int cancelState;
         // (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
 
-        if (0 > status)
+        if (0 > status) {
+            svc_destroy(up7->xprt);
             break;
+        }
         if ((fds.revents & POLLERR) || (fds.revents & POLLNVAL)) {
             status = EIO;
             break;
@@ -416,7 +421,11 @@ up7_run(
             svc_getreqsock(sock); // calls `ldmprog_7()`
         }
         if (!FD_ISSET(sock, &svc_fdset)) {
-           /* The connection to the receiver was closed by the RPC layer */
+           /*
+            * The connection to the receiver was closed by the RPC layer =>
+            * `svc_destroy(up7->xprt)` was called.
+            */
+            up7->xprt = NULL;
             status = 0;
             break;
         }
@@ -441,7 +450,8 @@ up7_destroy(
         Up7* const up7)
 {
     svc_unregister(LDMPROG, SEVEN);
-    svc_destroy(up7->xprt); // unconditionally closes `xprt->xp_sock`
+    if (up7->xprt)
+        svc_destroy(up7->xprt);
     up7->xprt = NULL;
 }
 
@@ -477,15 +487,15 @@ servlet_run(
     pthread_cleanup_push(closeSocket, &sock);
 
     Up7 up7;
-    status = up7_init(&up7, sock, termFd); // Closes `sock` on failure
+    status = up7_init(&up7, sock, termFd);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     pthread_cleanup_push(destroyUp7, &up7); // calls `up7_destroy()`
 
-    status = up7_run(&up7);
+    status = up7_run(&up7); // might call `svc_destroy(up7->xprt)`
     CU_ASSERT_EQUAL(status, 0);
 
-    pthread_cleanup_pop(1); // calls `up7_destroy()`
+    pthread_cleanup_pop(1); // might call `svc_destroy(up7->xprt)`
     pthread_cleanup_pop(0); // `sock` already closed
 
     udebug("servlet_run(): Returning");

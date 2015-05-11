@@ -12,6 +12,7 @@
 #include <config.h>
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -669,31 +670,35 @@ main(int ac, char *av[])
                 hupped = 0;
             }
 
-            status = pq_sequence(pq, TV_GT, &clss, processProduct, 0);
+            bool wasProcessed = false;
+            status = pq_sequence(pq, TV_GT, &clss, processProduct,
+                    &wasProcessed);
 
             if (status == 0) {
                 /*
-                 * A data-product was processed.
+                 * No processing error.
                  */
-                timestampt       oldestCursor;
+                if (wasProcessed) {
+                    timestampt       oldestCursor;
 
-                pq_ctimestamp(pq, &currentCursor);
-                currentCursorSet = 1;
+                    pq_ctimestamp(pq, &currentCursor);
+                    currentCursorSet = 1;
 
-                if (pq_getOldestCursor(pq, &oldestCursor) == 0 &&
-                        tvEqual(oldestCursor, currentCursor)) {
-                    timestampt  now;
+                    if (pq_getOldestCursor(pq, &oldestCursor) == 0 &&
+                            tvEqual(oldestCursor, currentCursor)) {
+                        timestampt  now;
 
-                    (void)set_timestamp(&now);
-                    uwarn("Processed oldest product in queue: %g s",
-                        d_diff_timestamp(&now, &currentCursor));
+                        (void)set_timestamp(&now);
+                        uwarn("Processed oldest product in queue: %g s",
+                            d_diff_timestamp(&now, &currentCursor));
+                    }
                 }
 
                 (void)exitIfDone(0);
             }
             else {
                 /*
-                 * No data-product was processed.
+                 * Processing error. Data-product wasn't processed.
                  */
                 if (status == PQUEUE_END) {
                     udebug("End of Queue");

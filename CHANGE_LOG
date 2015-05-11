@@ -4,7 +4,7 @@
 
     Added signal blocking to the <log.h> implementation because that module
     calls async-unsafe functions and could be called by a signal handler.
-    
+
     Modified pqact(1) to correct the setting of the last successfully-processed
     data-product when the LDM exits. Before, the last data-product that matched
     the `-f feed` and `-p pattern` options would be used regardless of whether

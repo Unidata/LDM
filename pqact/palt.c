@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 #include <sys/timeb.h>
@@ -1244,15 +1245,19 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
  */
 /*ARGSUSED*/
 int
-processProduct(const prod_info *infop, const void *datap,
-        void *xprod, size_t xlen,
-        void *otherargs)
+processProduct(
+        const prod_info* const restrict infop,
+        const void* const restrict      datap,
+        void* const                     xprod,
+        const size_t                    xlen,
+        void* const restrict            otherargs)
 {
         palt*           pal;
         palt*           next;
         int             status = -1;
-        int             did_something = 0;
+        bool            did_something = false;
         product         prod;
+        bool* const     wasProcessed = (bool*)otherargs;
 
         if(ulogIsVerbose())
                 uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
@@ -1278,7 +1283,7 @@ processProduct(const prod_info *infop, const void *datap,
                         prod.info = *infop;
                         prod.data = (void *)datap; /* cast away const */
                         int actionStatus = prodAction(&prod, pal, xprod, xlen);
-                        did_something++;
+                        did_something = true;
                         if (actionStatus < 0) {
                             if (pal->action.flags & LDM_ACT_TRANSIENT) {
                                 /* connection closed, don't try again */
@@ -1291,6 +1296,8 @@ processProduct(const prod_info *infop, const void *datap,
                 }
         }
         
+        *wasProcessed = did_something;
+
         return status;
 }
 

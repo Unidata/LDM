@@ -131,9 +131,10 @@ endif
 if HAVE_CUNIT
 cunit_tests			= prod_index_map_test \
                                   mldm_sender_map_test \
-                                  prod_index_queue_test \
-                                  up7_down7_test
-cunit_check_progs		= $(cunit_tests)
+                                  prod_index_queue_test
+# `up7_down7_test is separate in order to have it built by `make check` but
+# executed by `make check-local`.
+cunit_check_progs		= $(cunit_tests) up7_down7_test
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
@@ -163,7 +164,7 @@ valgrind-up7_down7_test:	up7_down7_test
             --suppressions=up7_down7_test.supp --gen-suppressions=all \
             ./up7_down7_test
 
-#local_checks			+= check-up7_down7_test
+local_checks			+= check-up7_down7_test
 check-up7_down7_test:		up7_down7_test
 	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
 endif
