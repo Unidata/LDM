@@ -1,4 +1,8 @@
-6.12.10.5
+6.12.10.6
+    Removed "--with-multicast" from AM_DISTCHECK_CONFIGURE_FLAGS because VCMTP
+    causes "make check" to fail sometimes.
+
+6.12.10.5	2015-05-12T10:51:59-0600
     Added NULL-detection protection of "otherargs" to pqact(1)'s
     "processProduct()".
     
