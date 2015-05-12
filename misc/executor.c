@@ -429,6 +429,7 @@ static void* job_start(
     }
     else {
         job_unlock(job);
+        status = 0;
     }
 
     log_log(status ? LOG_ERR : LOG_INFO);
@@ -550,6 +551,7 @@ static int exe_init(
 /**
  * Submits a job for asynchronous execution.
  *
+ * @pre                The executor is locked.
  * @param[in] exe      The executor.
  * @param[in] job      The job.
  * @retval    0        Success.
@@ -559,11 +561,13 @@ static int exe_init(
  *                     would be exceeded.
  * @retval    EINVAL   Job executor is shut down. `log_add()` called.
  * @retval    ENOMEM   Out of memory. `log_add()` called.
+ * @post               The executor is locked.
  */
 static int exe_submitJob(
         Executor* const restrict exe,
         Job* const restrict      job)
 {
+    UASSERT(exe->locked);
     int status = job_addToList(job, exe);
 
     if (status) {
@@ -949,6 +953,7 @@ int exe_free(
 
         switch (exe->state) {
             case EXE_SHUTTING_DOWN:
+                exe_unlock(exe);
                 LOG_ADD0("The executor isn't shut down");
                 status = EINVAL;
                 break;
@@ -956,6 +961,7 @@ int exe_free(
                 if (q_size(exe->completed) || dll_size(exe->active)) {
                     LOG_ADD0("The executor isn't empty");
                     status = EINVAL;
+                    exe_unlock(exe);
                     break;
                 }
             case EXE_SHUTDOWN:
