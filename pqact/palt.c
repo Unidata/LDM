@@ -1238,8 +1238,10 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
  * @param[in] datap      Pointer to data-product data.
  * @param[in] xprod      Pointer to XDR-encoded data-product.
  * @param[in] xlen       Size of XDR-encoded data-product in bytes.
- * @param[in] otherargs  Pointer to optional argument.
- * @retval    0          The data-product was successfully processed.
+ * @param[in] otherargs  Pointer to optional boolean argument.
+ * @retval    0          Success. No error occurred. `*(bool*)otherargs` is
+ *                       set to `true` if and only if the data-product was
+ *                       successfully processed.
  * @retval    -1         The data-product was not processed because it either
  *                       didn't match any entries or couldn't be processed.
  */
@@ -1296,7 +1298,8 @@ processProduct(
                 }
         }
         
-        *wasProcessed = did_something;
+        if (wasProcessed)
+            *wasProcessed = did_something;
 
         return status;
 }
