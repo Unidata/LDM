@@ -6,7 +6,7 @@
  *   @file: executor.c
  * @author: Steven R. Emmerson
  *
- * This file implements an executor of asynchronous jobs.
+ * This file implements a thread-safe executor of asynchronous jobs.
  */
 
 #include "config.h"

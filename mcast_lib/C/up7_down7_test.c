@@ -50,14 +50,12 @@
 
 typedef struct {
     SVCXPRT*              xprt;
-    int                   termFd;
     bool                  xprtAllocated;
 } Up7;
 
 typedef struct {
     pthread_t             thread;
     int                   sock;
-    int                   fds[2]; // for termination pipe(2)
 } Sender;
 
 typedef struct {
@@ -331,8 +329,7 @@ waitUntilDone(void)
 static int
 up7_init(
         Up7* const up7,
-        const int  sock,
-        const int  termFd)
+        const int  sock)
 {
     /*
      * 0 => use default read/write buffer sizes.
@@ -361,7 +358,6 @@ up7_init(
     CU_ASSERT_TRUE_FATAL(success);
 
     up7->xprt = xprt;
-    up7->termFd = termFd;
 
     return 0;
 }
@@ -375,7 +371,7 @@ funcCancelled(
 }
 
 /**
- * Calls `svc_destroy(up7->xprt)`.
+ * Might call `svc_destroy(up7->xprt)`.
  *
  * @param[in] up7  Upstream LDM-7.
  * @retval    0    Success.
@@ -385,7 +381,6 @@ up7_run(
         Up7* const up7)
 {
     const int     sock = up7->xprt->xp_sock;
-    const int     termFd = up7->termFd;
     int           status;
 
     struct pollfd fds;
@@ -425,7 +420,7 @@ up7_run(
             * The connection to the receiver was closed by the RPC layer =>
             * `svc_destroy(up7->xprt)` was called.
             */
-            up7->xprt = NULL;
+            up7->xprt = NULL; // so others don't try to destroy it
             status = 0;
             break;
         }
@@ -475,8 +470,7 @@ destroyUp7(
 
 static int
 servlet_run(
-        const int servSock,
-        const int termFd)
+        const int servSock)
 {
     /* NULL-s => not interested in receiver's address */
     int sock = accept(servSock, NULL, NULL);
@@ -487,7 +481,7 @@ servlet_run(
     pthread_cleanup_push(closeSocket, &sock);
 
     Up7 up7;
-    status = up7_init(&up7, sock, termFd);
+    status = up7_init(&up7, sock);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     pthread_cleanup_push(destroyUp7, &up7); // calls `up7_destroy()`
@@ -522,7 +516,6 @@ sender_run(
 {
     Sender* const sender = (Sender*)arg;
     const int     servSock = sender->sock;
-    const int     termFd = sender->fds[0];
     static int    status;
 
     struct pollfd fds;
@@ -544,7 +537,7 @@ sender_run(
             break;
         }
         if (fds.revents & POLLIN) {
-            status = servlet_run(servSock, termFd);
+            status = servlet_run(servSock);
 
             if (status) {
                 LOG_ADD0("servlet_run() failure");
@@ -609,9 +602,6 @@ sender_spawn(
         Sender* const sender)
 {
     int status = senderSock_init(&sender->sock);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    status = pipe(sender->fds);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     status = pthread_create(&sender->thread, NULL, sender_run, sender);
@@ -739,8 +729,6 @@ sender_terminate(
         CU_ASSERT_EQUAL_FATAL(status, 0);
     }
 
-    (void)close(sender->fds[0]);
-    (void)close(sender->fds[1]);
    (void)close(sender->sock);
 
     return 0;

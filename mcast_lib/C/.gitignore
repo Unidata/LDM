@@ -5,3 +5,4 @@ server_test
 *.pq
 send_test
 recv_test
+cond_wait_test

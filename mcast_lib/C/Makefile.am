@@ -131,7 +131,8 @@ endif
 if HAVE_CUNIT
 cunit_tests			= prod_index_map_test \
                                   mldm_sender_map_test \
-                                  prod_index_queue_test
+                                  prod_index_queue_test \
+                                  cond_wait_test
 # `up7_down7_test is separate in order to have it built by `make check` but
 # executed by `make check-local`.
 cunit_check_progs		= $(cunit_tests) up7_down7_test
@@ -151,6 +152,9 @@ up7_down7_test_SOURCES		= up7_down7_test.c
 up7_down7_test_CPPFLAGS		= $(CPPFLAGS) @CPPFLAGS_CUNIT@
 up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
+
+cond_wait_test_SOURCES		= cond_wait_test.c
+cond_wait_test_LDADD		= -lpthread @LIBS_CUNIT@
 
 valgrind-prod_index_map_test:	prod_index_map_test
 	$(LIBTOOL) --mode=execute valgrind \

@@ -1,4 +1,4 @@
-6.12.10.6
+6.12.10.6	2015-05-12T11:16:03-0600
     Removed "--with-multicast" from AM_DISTCHECK_CONFIGURE_FLAGS because VCMTP
     causes "make check" to fail sometimes.
 

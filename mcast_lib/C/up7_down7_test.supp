@@ -75,3 +75,14 @@
    fun:my_authnone_create
    ...
 }
+{
+   <subscribe_7_svc_reply>
+   Memcheck:Leak
+   fun:malloc
+   fun:strdup
+   fun:sa_copy
+   fun:mi_init
+   fun:mi_copy
+   fun:subscribe_7_svc
+   ...
+}
