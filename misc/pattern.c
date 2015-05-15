@@ -68,8 +68,8 @@ pat_new(
 
                 (void)re_vetSpec(ptr->string);
 
-                if (err = regcomp(&ptr->reg, ptr->string,
-                    REG_EXTENDED | REG_NOSUB | (ignoreCase ? REG_ICASE : 0))) {
+                if ((err = regcomp(&ptr->reg, ptr->string,
+                    REG_EXTENDED | REG_NOSUB | (ignoreCase ? REG_ICASE : 0)))) {
 
                     char        buf[512];
 

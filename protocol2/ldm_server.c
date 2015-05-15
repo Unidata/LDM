@@ -265,9 +265,9 @@ feed_or_notify(
 
     /*
      * Reduce the subscription according to existing subscriptions from the
-     * same downstream host and terminate every previously-existing upstream
-     * LDM process that's feeding (not notifying) a subset of the subscription
-     * to the same IP address.
+     * same downstream host and, if `isAntiDosEnabled()` returns `true`,
+     * terminate every previously-existing upstream LDM process that's feeding
+     * (not notifying) a subset of the subscription to the same IP address.
      *
      * The following relies on atexit()-registered cleanup for removal of the
      * entry from the upstream LDM database.

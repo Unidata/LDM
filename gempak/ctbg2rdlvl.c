@@ -73,7 +73,7 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
 
 	    cst_lstr (  buffer, &blen, &ier );
 
-            sscanf( buffer, "%d %d %33c %20c %s %d", 
+            sscanf( buffer, "%11d %11d %33c %20c %s %11d",
                             &id1, &id2, name, unit, abbrev, &scale);
 
 	    name[33] = '\0';

@@ -2371,9 +2371,12 @@ proc_exec(Process *proc)
 /**
  * Returns a new process-information object.
  *
- * @param wrdexpp       [in] List of command-line words.
- * @retval NULL         Failure. Error-message logged.
- * @return              Pointer to the new process-information.
+ * @param[in] wrdexpp   List of command-line words.
+ * @retval    NULL      Failure. Error-message logged. Caller should call
+ *                      `wordfree(wrdexpp)` when `*wrdexpp` is no longer
+ *                      needed.
+ * @return              Pointer to the new process-information. Caller must
+ *                      *not* call `wordfree(wrdexpp)`.
  */
 static Process *
 proc_new(
@@ -2387,7 +2390,7 @@ proc_new(
         proc->next = NULL;
 
         if (proc_exec(proc) < 0) {
-            proc_free(proc);
+            free(proc);
             proc = NULL;
         }
     }
@@ -2409,9 +2412,10 @@ static bool serverNeeded = false;
 /**
  * Adds an EXEC entry and executes the command as a child process.
  *
- * @param words     [in] Command-line words. Client may free upon return.
- * @retval 0        Success.
- * @return          System error code.
+ * @param[in] words  Command-line words.
+ * @retval    0      Success. Caller must *not* call `wordfree(wrdexpp)`.
+ * @return           System error code. Caller should call `wordfree(wrdexpp)`
+ *                   when `*wrdexpp` is no longer needed.
  */
 int
 lcf_addExec(wordexp_t *wrdexpp)

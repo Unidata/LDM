@@ -1,4 +1,10 @@
-6.12.10.6	2015-05-12T11:16:03-0600
+6.12.10.7
+    Corrected a bug in the product-queue code that delt with finding the 
+    last data-product that a downstream LDM successfully received given the
+    product's signature. The symptoms of this bug were either a segmentation
+    violation (i.e., SIGSEGV) or sending the CPU usage to 100%.
+
+6.12.10.6	2015-05-13T08:57:36-0600
     Removed "--with-multicast" from AM_DISTCHECK_CONFIGURE_FLAGS because VCMTP
     causes "make check" to fail sometimes.
 

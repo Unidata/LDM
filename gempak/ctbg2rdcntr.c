@@ -76,7 +76,7 @@ void ctb_g2rdcntr ( char *tbname, G2wmocntrs *cntrtbl, int *iret )
 
 	    cst_lstr (  buffer, &blen, &ier );
 
-            sscanf( buffer, "%d %64c %s", 
+            sscanf( buffer, "%10d %64c %s",
                             &id, name, abbrev);
 
 	    name[64] = '\0';

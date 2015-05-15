@@ -131,8 +131,8 @@ static void* server_serve(
 #if SELECT_TYPE
         if (FD_ISSET(pipeIn, &readfds)) {
 #else
-        if (PIPE_PFD.revents & POLLIN || PIPE_PFD.revents & POLLHUP ||
-                SOCK_PFD.revents & POLLHUP) {
+        if ((PIPE_PFD.revents & POLLIN) || (PIPE_PFD.revents & POLLHUP) ||
+                (SOCK_PFD.revents & POLLHUP)) {
 #endif
             (void)close(pipeIn);
             status = 0;

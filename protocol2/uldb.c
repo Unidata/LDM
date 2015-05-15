@@ -1553,9 +1553,10 @@ static uldb_Status sm_vetUpstreamLdm(
 /**
  * Adds an upstream LDM entry to shared-memory. Increases the amount of
  * shared-memory if necessary. Reduces the subscription according to existing
- * subscriptions from the same downstream host and terminates every
- * previously-existing upstream LDM process that's feeding (not notifying) a
- * subset of the subscription to the same IP address.
+ * subscriptions from the same downstream host and, if `isAntiDosEnabled()`
+ * returns `true`, terminates every previously-existing upstream LDM process
+ * that's feeding (not notifying) a subset of the subscription to the same IP
+ * address.
  *
  * @param sm            [in/out] Pointer to shared-memory structure
  * @param pid           [in] PID of the upstream LDM process
@@ -2098,9 +2099,9 @@ uldb_Status uldb_getSize(
  * Adds an upstream LDM process to the database, if appropriate. This is a
  * potentially lengthy process. Most signals are blocked while this function
  * operates. Reduces the subscription according to existing subscriptions from
- * the same downstream host and terminates every previously-existing upstream
- * LDM process that's feeding (not notifying) a subset of the subscription to
- * the same IP address.
+ * the same downstream host and, if `isAntiDosEnabled()` returns `true`,
+ * terminates every previously-existing upstream LDM process that's feeding (not
+ * notifying) a subset of the subscription to the same IP address.
  *
  * @param pid           [in] PID of upstream LDM process
  * @param protoVers     [in] Protocol version number (e.g., 5 or 6)

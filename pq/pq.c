@@ -6684,74 +6684,84 @@ pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class_t *clssp)
 }
 
 
-/*
- * The control-region is assumed to be locked.
+/**
+ * Returns the product-information associated with a data-product.
  *
- * Arguments:
- *      pq      Pointer to the product-queue structure.
- *      offset  The offset to the region in the product-queue that contains
- *              the data-product.
- *      infoBuf Pointer to a info-buffer for data-product metadata.  ib_init()
- *              will be called on the argument.
- * Returns:
- *      0       Success.  "info" is set.
- *      EACCES  "pq->fd" is not open for read or "pq->fd" is not open for write
- *              and PROT_WRITE was specified for a MAP_SHARED type mapping.
- *      EAGAIN  The mapping could not be locked in memory, if required by
- *              mlockall(), due to a lack of resources.
- *      EBADF   "pq->fd" is not a valid file descriptor open for reading.
- *      EDEADLK The necessary lock is blocked by some lock from another process
- *              and putting the calling process to sleep, waiting for that lock
- *              to become free would cause a deadlock.
- *      EFBIG or EINVAL
- *              The extent of the region is greater than the maximum file size.
- *      EFBIG   The file is a regular file and the extent of the region is
- *              greater than the offset maximum established in the open file
- *              description associated with "pq->fd".
- *      EINTR   A signal was caught during execution.
- *      EINVAL  The region's offset or extent is not valid, or "pq->fd" refers
- *              to a file that does not support locking.
- *      EINVAL  The region's offset is not a multiple of the page size as 
- *              returned by sysconf(), or is considered invalid by the 
- *              implementation.
- *      EIO     An I/O error occurred while reading from the file system.
- *      EIO     The metadata of the data-product in the product-queue at offset
- *              "offset" could not be decoded.
- *      EMFILE  The number of mapped regions would exceed an
- *              implementation-dependent limit (per process or per system).
- *      ENODEV  "pq->fd" refers to a file whose type is not supported by mmap().
- *      ENOLCK  Satisfying the request would result in the number of locked
- *              regions in the system exceeding a system-imposed limit.
- *      ENOMEM  There is insufficient room in the address space to effect the
- *              necessary mapping.
- *      ENOMEM  The region's mapping could not be locked in memory, if required
- *              by mlockall(), because it would require more space than the 
- *              system is able to supply.
- *      ENOMEM  Insufficient memory is available.
- *      ENOTSUP The implementation does not support the access requested in
- *              "pq->pflags".
- *      ENXIO   The region's location is invalid for the object specified by
- *              "pq->fd".
- *      EOVERFLOW
- *              The smallest or, if the region's extent is non-zero, the
- *              largest offset of any byte in the requested segment cannot be
- *              represented correctly in an object of type off_t.
- *      EOVERFLOW
- *              The file size in bytes or the number of blocks allocated to the
- *              file or the file serial number cannot be represented correctly.
- *      EOVERFLOW
- *              The file is a regular file and the region's offset plus 
- *              extent exceeds the offset maximum established in the open file
- *              description associated with "fd". 
- *      EROFS   The file resides on a read-only file system.
- *      PQ_NOTFOUND
- *              There is no data-product at the given offset.
+ * @pre               The control-region is locked.
+ * @param[in] pq      Pointer to the product-queue structure.
+ * @param[in] offset  The offset to the region in the product-queue that contains
+ *                    the data-product.
+ * @param[out] info   Pointer to the product-information structure to be filled.
+ *                    If the `origin` or `ident` member is non-NULL, then the
+ *                    pointed-to byte-array will be used; otherwise,
+ *                    `xdr_prod_info()` will allocate memory and the caller
+ *                    should call `xdr_free(xdr_prod_info, info)` when `*info`
+ *                    is no longer needed. It is the caller's responsibility to
+ *                    *either* pass-in a fully-allocated structure *or* clear
+ *                    the structure before passing it in and call `xdr_free()`
+ *                    on it later.
+ * @retval 0          Success.  "*info" is set.
+ * @retval EACCES     "pq->fd" is not open for read or "pq->fd" is not open for
+ *                    write and PROT_WRITE was specified for a MAP_SHARED type
+ *                    mapping.
+ * @retval EAGAIN     The mapping could not be locked in memory, if required by
+ *                    mlockall(), due to a lack of resources.
+ * @retval EBADF      "pq->fd" is not a valid file descriptor open for reading.
+ * @retval EDEADLK    The necessary lock is blocked by some lock from another
+ *                    process and putting the calling process to sleep, waiting
+ *                    for that lock to become free would cause a deadlock.
+ * @retval EFBIG or EINVAL
+ *                    The extent of the region is greater than the maximum file
+ *                    size.
+ * @retval EFBIG      The file is a regular file and the extent of the region is
+ *                    greater than the offset maximum established in the open
+ *                    file description associated with "pq->fd".
+ * @retval EINTR      A signal was caught during execution.
+ * @retval EINVAL     The region's offset or extent is not valid, or "pq->fd"
+ *                    refers to a file that does not support locking.
+ * @retval EINVAL     The region's offset is not a multiple of the page size as
+ *                    returned by sysconf(), or is considered invalid by the
+ *                    implementation.
+ * @retval EIO        An I/O error occurred while reading from the file system.
+ * @retval EIO        The metadata of the data-product in the product-queue at
+ *                    offset "offset" could not be decoded.
+ * @retval EMFILE     The number of mapped regions would exceed an
+ *                    implementation-dependent limit (per process or per system).
+ * @retval ENODEV     "pq->fd" refers to a file whose type is not supported by
+ *                    mmap().
+ * @retval ENOLCK     Satisfying the request would result in the number of
+ *                    locked regions in the system exceeding a system-imposed
+ *                    limit.
+ * @retval ENOMEM     There is insufficient room in the address space to effect
+ *                    the necessary mapping.
+ * @retval ENOMEM     The region's mapping could not be locked in memory, if
+ *                    required by mlockall(), because it would require more
+ *                    space than the system is able to supply.
+ * @retval ENOMEM     Insufficient memory is available.
+ * @retval ENOTSUP    The implementation does not support the access requested
+ *                    in "pq->pflags".
+ * @retval ENXIO      The region's location is invalid for the object specified
+ *                    by "pq->fd".
+ * @retval EOVERFLOW  The smallest or, if the region's extent is non-zero, the
+ *                    largest offset of any byte in the requested segment cannot
+ *                    be represented correctly in an object of type off_t.
+ * @retval EOVERFLOW
+ *                    The file size in bytes or the number of blocks allocated
+ *                    to the file or the file serial number cannot be
+ *                    represented correctly.
+ * @retval EOVERFLOW
+ *                    The file is a regular file and the region's offset plus
+ *                    extent exceeds the offset maximum established in the open
+ *                    file description associated with "fd".
+ * @retval EROFS      The file resides on a read-only file system.
+ * @retval PQ_NOTFOUND
+ *                    There is no data-product at the given offset.
  */
 static int
 getMetadataFromOffset(
-    pqueue* const       pq,
-    const off_t         offset,
-    InfoBuf* const      infoBuf)
+    pqueue* const restrict    pq,
+    const off_t               offset,
+    prod_info* const restrict info)
 {
     int                         status;
     const regionl* const        rlp = pq->rlp;
@@ -6775,22 +6785,19 @@ getMetadataFromOffset(
                     "data-region in product-queue");
         }
         else {
-            prod_info info;
             XDR       xdrs;
 
             xdrmem_create(&xdrs, vp, extent, XDR_DECODE);
-            (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
 
             /*
              * Decode the data-product's metadata.
              */
-            if (!xdr_prod_info(&xdrs, &info)) {
+            if (!xdr_prod_info(&xdrs, info)) {
                 uerror("getMetadataFromOffset(): xdr_prod_info() failed");
 
                 status = EIO;
             }
             else {
-                xdr_free(xdr_prod_info, (char*)&info);
                 status = 0;             /* success */
             }
 
@@ -6888,24 +6895,25 @@ pq_setCursorFromSignature(
             "of product-queue");
     }
     else {
-        const sxelem*   signatureEntry;
+        sxelem*   signatureEntry;
 
         /*
          * Get the relevant entry in the signature-map.
          */
-        if (!sx_find(pq->sxp, signature, (sxelem**)&signatureEntry)) {
+        if (!sx_find(pq->sxp, signature, &signatureEntry)) {
             status = PQ_NOTFOUND;
         }
         else {
             InfoBuf     infoBuf;
             prod_info*  info = &infoBuf.info;
 
+            (void)ib_init(&infoBuf); // necessary for `getMetadataFromOffset()`
+
             /*
              * Get the metadata of the data-product referenced by the 
              * signature-entry.
              */
-            status = 
-                getMetadataFromOffset(pq, signatureEntry->offset, &infoBuf);
+            status =  getMetadataFromOffset(pq, signatureEntry->offset, info);
 
             if (PQ_NOTFOUND == status) {
                 uerror("pq_setCursorFromSignature(): data-product region "
@@ -6914,9 +6922,8 @@ pq_setCursorFromSignature(
                 status = PQ_CORRUPT;
             }
             else if (0 == status) {
-                timestampt          creationTime = info->arrival;
-                timestampt          start = creationTime;
-                const tqelem*       timeEntry;
+                timestampt    searchTime = info->arrival;
+                const tqelem* timeEntry;
 
                 /*
                  * Start the time-map search beginning a little before
@@ -6928,14 +6935,14 @@ pq_setCursorFromSignature(
                  * Keep the following consonant with the temporal backoff in
                  * vetCreationTime().
                  */
-                start.tv_sec -= SEARCH_BACKOFF;
-                timeEntry = tqe_find(pq->tqp, &start, TV_LT);
+                searchTime.tv_sec -= SEARCH_BACKOFF;
+                timeEntry = tqe_find(pq->tqp, &searchTime, TV_LT);
 
                 if (NULL == timeEntry) {
-                    timeEntry = tqe_find(pq->tqp, &start, TV_EQ);
+                    timeEntry = tqe_find(pq->tqp, &searchTime, TV_EQ);
 
                     if (NULL == timeEntry)
-                        timeEntry = tqe_find(pq->tqp, &start, TV_GT);
+                        timeEntry = tqe_find(pq->tqp, &searchTime, TV_GT);
                 }
 
                 if (NULL == timeEntry) {
@@ -7114,7 +7121,8 @@ pq_processProduct(
                         XDR       xdrs;
 
                         xdrmem_create(&xdrs, vp, extent, XDR_DECODE);
-                        (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
+                        // necessary for `xdr_prod_info()`
+                        (void)memset(&info, 0, sizeof(info));
 
                         if (!xdr_prod_info(&xdrs, &info)) {
                             LOG_START0("xdr_prod_info() failed");

@@ -81,9 +81,10 @@ one_svc_run(
 
         if (selectStatus > 0) {
             /*
-             * The socket is ready for reading.
+             * The socket is ready for reading. The following statement calls
+             * `ldmprog_5()`, `ldmprog_6()`, or `ldmprog_7()`.
              */
-            svc_getreqsock(sock); /* process socket input */
+            svc_getreqsock(sock);
             (void)exitIfDone(0);
 
             if (!FD_ISSET(sock, &svc_fdset)) {
