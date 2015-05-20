@@ -27,21 +27,13 @@ typedef u_int32_t                VcmtpProdIndex;
 typedef struct mcast_receiver    McastReceiver;
 typedef struct mcast_sender      McastSender;
 
-typedef int     (*BopFunc)(void* obj, size_t prodSize, const void* metadata,
-        unsigned metaSize, void** data);
-typedef int     (*EopFunc)(void* obj);
-typedef void    (*MissedProdFunc)(void* obj, const VcmtpProdIndex iProd);
-
 int mcastReceiver_new(
-    McastReceiver**             receiver,
-    const char* const           tcpAddr,
-    unsigned short              tcpPort,
-    BopFunc                     bop_func,
-    EopFunc                     eop_func,
-    MissedProdFunc              missed_file_func,
-    const char* const           mcastAddr,
-    const unsigned short        mcastPort,
-    void*                       obj);
+    McastReceiver**       receiver,
+    const char* const     tcpAddr,
+    unsigned short        tcpPort,
+    void*                 notifier,
+    const char* const     mcastAddr,
+    const unsigned short  mcastPort);
 
 void mcastReceiver_free(
     McastReceiver*              receiver);

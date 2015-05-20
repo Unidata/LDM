@@ -354,6 +354,7 @@ up7_init(
         xprt->xp_addrlen = addrLen;
     }
 
+    // Last argument == 0 => don't register with portmapper
     bool success = svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0);
     CU_ASSERT_TRUE_FATAL(success);
 
@@ -666,7 +667,7 @@ sender_insertProducts(
     (void)memset(info->signature, 0, sizeof(info->signature));
     srand48(1234567890);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 75; i++) {
         const unsigned size = 100000*drand48() + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 

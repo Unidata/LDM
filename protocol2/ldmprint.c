@@ -599,7 +599,7 @@ s_prod_class(char *buf,
  * @param[in]  infop        Product information.
  * @param[in]  doSignature  Whether or not to format the signature.
  * @retval     NULL         Buffer is too small.
- * @return                  Number of bytes written excluding terminating NUL.
+ * @return                  `buf`. Success.
  */
 char *
 s_prod_info(

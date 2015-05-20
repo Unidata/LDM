@@ -17,6 +17,7 @@
 #include "ldm.h"
 #include "ldmprint.h"
 #include "log.h"
+#include "PerProdNotifier.h"
 #include "pq.h"
 #include "mcast.h"
 #include "xdr.h"
@@ -33,12 +34,12 @@
  * The multicast LDM receiver data-structure:
  */
 struct mlr {
-    pqueue*               pq;       // product-queue to use */
-    Down7*                down7;    // pointer to associated downstream LDM-7
-    McastReceiver*        receiver; // VCMTP C Receiver
-    char*                 prod;     // Start of product in product-queue
-    size_t                prodSize; // Size of VCMTP product in bytes
-    pqe_index             index;    // Product-queue index of reserved region
+    pqueue*               pq;         // product-queue to use */
+    Down7*                down7;      // pointer to associated downstream LDM-7
+    McastReceiver*        receiver;   // VCMTP C Receiver
+    char*                 prod;       // Start of product in product-queue
+    size_t                prodSize;   // Size of VCMTP product in bytes
+    pqe_index             index;      // Product-queue index of reserved region
     volatile sig_atomic_t done;
 };
 
@@ -90,6 +91,7 @@ unlockPq(
  * @param[in]  mlr        Pointer to the multicast LDM receiver.
  * @param[in]  signature  The MD5 checksum of the LDM data-product.
  * @param[in]  prodSize   Size of the XDR-encoded LDM data-product in bytes.
+ * @param[in]  pqeIndex   Reference to reserved space in product-queue.
  * @retval     0          Success. `mlr->prod` and `mlr->prodSize` are set. If
  *                        `mlr->prod == NULL`, then the data-product is already
  *                        in the LDM product-queue.
@@ -98,16 +100,17 @@ unlockPq(
  */
 static int
 allocateSpace(
-        Mlr* const restrict        mlr,
-        const signaturet           signature,
-        const size_t               prodSize)
+        Mlr* const restrict       mlr,
+        const signaturet          signature,
+        const size_t              prodSize,
+        pqe_index* const restrict pqeIndex)
 {
     udebug("%s:allocateSpace(): Entered: prodSize=%lu", __FILE__,
             (unsigned long)prodSize);
 
     char sigStr[sizeof(signaturet)*2 + 1];
     int  status = pqe_newDirect(mlr->pq, prodSize, signature, &mlr->prod,
-            &mlr->index);
+            pqeIndex);
 
     if (status) {
         if (status == PQUEUE_DUP) {
@@ -128,7 +131,7 @@ allocateSpace(
     else {
         if (ulogIsDebug()) {
             (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-            udebug("Allocated queue-space for product: sig=%s, size=%lu",
+            uinfo("Allocated queue-space for product: sig=%s, size=%lu",
                     sigStr, (unsigned long)prodSize);
         }
         mlr->prodSize = prodSize;
@@ -146,26 +149,26 @@ allocateSpace(
  * in the LDM product-queue to receive the VCMTP product, which is an
  * XDR-encoded LDM data-product. Called by VCMTP layer.
  *
- * @param[in,out]  obj          Pointer to the associated multicast LDM receiver
- *                              object.
+ * @param[in,out]  mlr          The associated multicast LDM receiver.
  * @param[in]      prodSize     Size of the product in bytes.
  * @param[in]      metadata     Information about the product.
  * @param[in]      metaSize     Size of the information.
  * @param[out]     prod         Starting location for product or `NULL` if
  *                              duplicate product.
+ * @param[out]     pqeIndex     Reference to reserved space in product-queue.
  * @retval         0            Success. `*prod` is set. If NULL, then
  *                              data-product is already in LDM product-queue.
  * @retval         -1           Failure. `log_add()` called.
  */
 static int
 bop_func(
-        void* const       obj,
-        const size_t      prodSize,
-        const void* const metadata,
-        const unsigned    metaSize,
-        void** const      prod)
+        Mlr* const restrict        mlr,
+        const size_t               prodSize,
+        const void* const restrict metadata,
+        const unsigned             metaSize,
+        void** const restrict      prod,
+        pqe_index* const restrict  pqeIndex)
 {
-    Mlr* mlr = obj;
     int  status;
 
     udebug("%s:bop_func(): Entered: prodSize=%lu, metaSize=%lu, prod=%p",
@@ -186,13 +189,7 @@ bop_func(
             status = -1;
         }
         else {
-            if (mlr->prod ) {
-                uerror("Premature product arrival. Discarding previous product.");
-                (void)pqe_discard(mlr->pq, mlr->index);
-                mlr->prod  = NULL;
-            }
-
-            status = allocateSpace(mlr, metadata, prodSize);
+            status = allocateSpace(mlr, metadata, prodSize, pqeIndex);
 
             if (status == 0)
                 *prod = mlr->prod; // will be `NULL` if duplicate product
@@ -203,6 +200,7 @@ bop_func(
 
     if (status)
         log_log(LOG_ERR); // because called by VCMTP layer
+
     udebug("%s:bop_func(): Returning: mlr->prod=%p, mlr->prodSize=%lu",
             __FILE__, mlr->prod, (unsigned long)mlr->prodSize);
 
@@ -213,20 +211,23 @@ bop_func(
  * Finishes inserting a data-product into the allocated product-queue region
  * associated with a multicast LDM receiver or discards the region.
  *
- * @pre              The product-queue is locked.
- * @param[in] mlr    Pointer to the multicast LDM receiver.
- * @retval    0      Success.
- * @retval    -1     Error. `log_add()` called.
- * @post             The product-queue is locked.
+ * @pre                 The product-queue is locked.
+ * @param[in] mlr       Pointer to the multicast LDM receiver.
+ * @param[in] pqeIndex  Pointer to the reference to allocated space in the
+ *                      product-queue.
+ * @retval    0         Success.
+ * @retval    -1        Error. `log_add()` called.
+ * @post                The product-queue is locked.
  */
 static int
 insertOrDiscard(
-        Mlr* const restrict mlr)
+        Mlr* const restrict       mlr,
+        pqe_index* const restrict pqeIndex)
 {
     int status;
 
-    if ((status = pqe_insert(mlr->pq, mlr->index)) != 0)
-        (void)pqe_discard(mlr->pq, mlr->index);
+    if ((status = pqe_insert(mlr->pq, *pqeIndex)) != 0)
+        (void)pqe_discard(mlr->pq, *pqeIndex);
 
     if (status) {
         LOG_ADD("Couldn't insert data-product into product-queue: status=%d",
@@ -259,9 +260,12 @@ lastReceived(
  *
  * @pre                    The product-queue is locked.
  * @param[in] mlr          Pointer to the multicast LDM receiver.
- * @param[in] info         LDM data-product metadata. Caller may free when it
- *                         is no longer needed.
- * @param[in] dataSize     Actual number of bytes received.
+ * @param[in] info         LDM data-product metadata. Caller may free when it's
+ *                         no longer needed.
+ * @param[in] dataSize     Maximum possible size of the data component of the
+ *                         data-product in bytes.
+ * @param[in] pqeIndex     Pointer to the reference to the allocated space in
+ *                         the product-queue.
  * @retval    0            Success.
  * @retval    -1           Error. `log_add()` called. The allocated region in
  *                         the product-queue was released.
@@ -271,19 +275,20 @@ static int
 finishInsertion(
         Mlr* const restrict             mlr,
         const prod_info* const restrict info,
-        const size_t                    dataSize)
+        const size_t                    dataSize,
+        pqe_index* const restrict       pqeIndex)
 {
     int status;
 
     if (info->sz > dataSize) {
-        LOG_ADD3("LDM product size > VCMTP product size: "
+        LOG_ADD3("LDM data size > VCMTP data size: "
                 "LDM=%u, VCMTP=%lu, ident=\"%s\"",
                 info->sz, (unsigned long)dataSize, info->ident);
         status = -1;
-        (void)pqe_discard(mlr->pq, mlr->index);
+        (void)pqe_discard(mlr->pq, *pqeIndex);
     }
     else {
-        status = insertOrDiscard(mlr);
+        status = insertOrDiscard(mlr, pqeIndex);
 
         if (status) {
             LOG_ADD("Couldn't insert %u-byte data-product \"%s\"", info->sz,
@@ -307,18 +312,25 @@ finishInsertion(
  * product. Finishes inserting the VCMTP product (which is an XDR-encoded
  * data-product) into the associated LDM product-queue.
  *
- * @param[in,out]  obj          Pointer to the associated multicast LDM receiver
- *                              object.
- * @retval         0            Success.
- * @retval         -1           Error. `log_add()` called. The allocated space
- *                              in the LDM product-queue was released.
+ * @param[in,out]  mlr       Pointer to the associated multicast LDM receiver.
+ * @param[in]      prodStart Pointer to the start of the XDR-encoded
+ *                           data-product in the product-queue or NULL,
+ *                           indicating a duplicate product.
+ * @param[in]      prodSize  The size of the data-product in bytes.
+ * @param[in]      pqeIndex  Reference to the reserved space in the product-
+ *                           queue.
+ * @retval         0         Success.
+ * @retval         -1        Error. `log_add()` called. The allocated space
+ *                           in the LDM product-queue was released.
  */
 static int
 eop_func(
-        void* const obj)
+        Mlr* const restrict  mlr,
+        void* const restrict prodStart,
+        const size_t         prodSize,
+        pqe_index* const     pqeIndex)
 {
-    Mlr* const mlr = (Mlr*)obj;
-    int        status;
+    int status;
 
     /*
      * Because this function is called by the VCMTP multicast and unicast
@@ -328,31 +340,30 @@ eop_func(
         status = -1;
     }
     else {
-        if (mlr->prod == NULL) {
+        if (prodStart == NULL) {
             // Duplicate product
             status = 0;
         }
         else {
-            prod_info     info;
-            XDR           xdrs;
+            prod_info info;
+            XDR       xdrs;
 
-            xdrmem_create(&xdrs, mlr->prod, mlr->prodSize, XDR_DECODE);
+            xdrmem_create(&xdrs, prodStart, prodSize, XDR_DECODE);
             (void)memset(&info, 0, sizeof(info));   // for `xdr_prod_info()`
 
             if (!xdr_prod_info(&xdrs, &info)) {
                 LOG_START1("Couldn't decode LDM product metadata from %lu-byte "
-                        "VCMTP product", (unsigned long)mlr->prodSize);
+                        "VCMTP product", (unsigned long)prodSize);
                 status = -1;
-                pqe_discard(mlr->pq, mlr->index);
+                pqe_discard(mlr->pq, *pqeIndex);
             }
             else {
                 status = finishInsertion(mlr, &info,
-                        mlr->prodSize-(xdrs.x_private-xdrs.x_base));
+                        prodSize-(xdrs.x_private-xdrs.x_base), pqeIndex);
                 xdr_free(xdr_prod_info, (char*)&info);
             }                                       // "info" allocated
 
             xdr_destroy(&xdrs);
-            mlr->prod  = NULL;
         }
 
         (void)unlockPq(mlr);
@@ -423,12 +434,20 @@ init(
         return LDM7_INVAL;
     }
 
-    status = mcastReceiver_new(&receiver, mcastInfo->server.inetId,
-            mcastInfo->server.port, bop_func, eop_func, missed_prod_func,
-            mcastInfo->group.inetId, mcastInfo->group.port, mlr);
+    void* notifier;
+    status = ppn_new(&notifier, bop_func, eop_func, missed_prod_func, mlr);
     if (status) {
-        LOG_ADD0("Couldn't create VCMTP receiver");
+        LOG_ADD0("Couldn't create per-product notifier");
         return LDM7_MCAST;
+    }
+    else {
+        status = mcastReceiver_new(&receiver, mcastInfo->server.inetId,
+                mcastInfo->server.port, notifier, mcastInfo->group.inetId,
+                mcastInfo->group.port);
+        if (status) {
+            LOG_ADD0("Couldn't create VCMTP receiver");
+            return LDM7_MCAST;
+        }
     }
 
     mlr->receiver = receiver;

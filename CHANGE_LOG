@@ -1,4 +1,4 @@
-6.12.10
+6.12.10	2015-05-16T08:42:51-0600
     Product-Queue (pq.c):
         Corrected a bug that delt with finding the last data-product that a
         downstream LDM successfully received given the product's signature. This

@@ -15,9 +15,21 @@
 #define PER_PROD_NOTIFIER_H_
 
 #include "mcast.h"
-#include "RecvAppNotifier.h"
+#include "mldm_receiver.h"
+#include "pq.h"
 
 #include <sys/types.h>
+
+typedef int     (*BopFunc)(Mlr* mlr, size_t prodSize, const void* metadata,
+                        unsigned metaSize, void** data, pqe_index* pqeIndex);
+typedef int     (*EopFunc)(Mlr* mlr, void* prod, size_t prodSize,
+                        pqe_index* pqeIndex);
+typedef void    (*MissedProdFunc)(void* obj, const VcmtpProdIndex iProd);
+
+#ifdef __cplusplus
+
+#include "RecvAppNotifier.h"
+#include <unordered_map>
 
 class PerProdNotifier: public RecvAppNotifier {
 public:
@@ -31,8 +43,7 @@ public:
      *                                  completely received by the VCMTP layer.
      * @param[in] missed_prod_func      Function to call when a product is
      *                                  missed by the VCMTP layer.
-     * @param[in] obj                   Relevant object in the receiving
-     *                                  application. May be NULL.
+     * @param[in] mlr                   Associated multicast LDM receiver.
      * @throws    std::invalid_argument if @code{!bof_func || !eof_func ||
      *                                  !missed_prod_func}
      */
@@ -40,33 +51,62 @@ public:
             BopFunc         bof_func,
             EopFunc         eof_func,
             MissedProdFunc  missed_prod_func,
-            void*           obj);
+            Mlr*            mlr);
 
     ~PerProdNotifier() {}
-    void notify_of_bop(size_t prodSize, void* metadata, unsigned metaSize,
-            void** data);
-    void notify_of_eop();
-    void notify_of_missed_prod(uint32_t prodIndex);
+    void notify_of_bop(const VcmtpProdIndex iProd, size_t prodSize, void*
+            metadata, unsigned metaSize, void** data);
+    void notify_of_eop(VcmtpProdIndex prodIndex);
+    void notify_of_missed_prod(VcmtpProdIndex prodIndex);
 
 private:
     /**
-     * Function to call when a beginning-of-product has been seen by the VCMTP
+     * C function to call when a beginning-of-product has been seen by the VCMTP
      * layer.
      */
     BopFunc             bop_func;
     /**
-     * Function to call when a product has been completely received by the VCMTP
-     * layer.
+     * C function to call when a product has been completely received by the
+     * VCMTP layer.
      */
     EopFunc             eop_func;
     /**
-     * Function to call when a product is missed by the VCMTP layer.
+     * C function to call when a product is missed by the VCMTP layer.
      */
     MissedProdFunc      missed_prod_func;
     /**
-     * Extra argument passed to the above functions.
+     * Associated multicast LDM receiver.
      */
-    void*               obj;
+    Mlr*               mlr;
+
+    // Map from product-index to useful information.
+    typedef struct {
+        void*     start; /**< Pointer to start of XDR-encoded product in
+                              product-queue */
+        size_t    size;  /**< Size of XDR-encoded product in bytes */
+        pqe_index index; /**< Reference to allocated space in product-queue */
+    } ProdInfo;
+    std::unordered_map<VcmtpProdIndex, ProdInfo> prodInfos;
 };
+
+#endif
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
+int ppn_new(
+        void**            ppn,
+        BopFunc           bop_func,
+        EopFunc           eop_func,
+        MissedProdFunc    missed_prod_func,
+        Mlr*              obj);
+
+void ppn_free(
+        void* ppn);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* PER_PROD_NOTIFIER_H_ */

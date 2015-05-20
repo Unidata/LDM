@@ -16,6 +16,7 @@ CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/ulog -I$(top_srcdir)/ulog \
+                          -I../C \
                           -I$(srcdir)/../vcmtp/VCMTPv3 \
                           -I$(srcdir)/../vcmtp/VCMTPv3/receiver \
                           -I$(srcdir)/../vcmtp/VCMTPv3/sender \

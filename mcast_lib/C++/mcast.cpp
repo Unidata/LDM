@@ -11,7 +11,6 @@
 
 #include "log.h"
 #include "mcast.h"
-#include "PerProdNotifier.h"
 #include "PerProdSendingNotifier.h"
 
 #include <vcmtpRecvv3.h>
@@ -34,10 +33,9 @@ struct mcast_receiver {
      */
     vcmtpRecvv3*      vcmtpReceiver;
     /**
-     * The per-product notifier passed to the VCMTP receiver. Pointer kept so
-     * that the object can be deleted when it's no longer needed.
+     * The receiving application notifier.
      */
-    PerProdNotifier*  notifier;
+    RecvAppNotifier*  notifier;
 };
 
 /**
@@ -49,18 +47,11 @@ struct mcast_receiver {
  *                                    hostname or IPv4 address.
  * @param[in]  tcpPort                Port number of the TCP server to which to
  *                                    connect.
- * @param[in]  bop_func               Function to call when the multicast layer
- *                                    has seen a beginning-of-product.
- * @param[in]  eop_func               Function to call when the multicast layer
- *                                    has completely received a product.
- * @param[in]  missed_prod_func       Function to call when a product is missed
- *                                    by the multicast layer.
+ * @param[in]  notifier               Receiving application notifier. Freed by
+ *                                    `mcastReceiver_free()`.
  * @param[in]  mcastAddr              Address of the multicast group to receive.
  *                                    May be groupname or IPv4 address.
  * @param[in]  mcastPort              Port number of the multicast group.
- * @param[in]  obj                    Relevant object in the receiving
- *                                    application to pass to the above
- *                                    functions. May be NULL.
  * @throws     std::invalid_argument  if @code{0==buf_func || 0==eof_func ||
  *                                    0==missed_prod_func || 0==addr}.
  * @throws     std::invalid_argument  if the multicast group address couldn't be
@@ -83,20 +74,15 @@ mcastReceiver_init(
     McastReceiver* const        receiver,
     const char* const           tcpAddr,
     const unsigned short        tcpPort,
-    const BopFunc               bop_func,
-    const EopFunc               eop_func,
-    const MissedProdFunc        missed_prod_func,
+    RecvAppNotifier* const      notifier,
     const char* const           mcastAddr,
-    const unsigned short        mcastPort,
-    void* const                 obj)
+    const unsigned short        mcastPort)
 {
     std::string             hostId(tcpAddr);
     std::string             groupId(mcastAddr);
-    // Following object will be deleted by `vcmtpRecvv3` destructor
-    receiver->notifier =
-            new PerProdNotifier(bop_func, eop_func, missed_prod_func, obj);
+    receiver->notifier = notifier;
     receiver->vcmtpReceiver = new vcmtpRecvv3(hostId, tcpPort, groupId,
-            mcastPort, receiver->notifier);
+            mcastPort, notifier);
 }
 
 /**
@@ -108,17 +94,11 @@ mcastReceiver_init(
  *                               IP address.
  * @param[in]  tcpPort           Port number of the TCP server to which to
  *                               connect.
- * @param[in]  bop_func          Function to call when the multicast layer has
- *                               seen a beginning-of-product.
- * @param[in]  eop_func          Function to call when the multicast layer has
- *                               completely received a product.
- * @param[in]  missed_prod_func  Function to call when a product is missed by the
- *                               multicast layer.
+ * @param[in]  notifier          Receiving application notifier. Freed by
+ *                               `mcastReceiver_free()`.
  * @param[in]  mcastAddr         Address of the multicast group to receive. May
  *                               be groupname or formatted IP address.
  * @param[in]  mcastPort         Port number of the multicast group.
- * @param[in]  obj               Relevant object in the receiving application to
- *                               pass to the above functions. May be NULL.
  * @retval     0                 Success. The client should call \c
  *                               mcastReceiver_free(*receiver) when the
  *                               receiver is no longer needed.
@@ -131,15 +111,12 @@ mcastReceiver_init(
  */
 int
 mcastReceiver_new(
-    McastReceiver** const       receiver,
-    const char* const           tcpAddr,
-    const unsigned short        tcpPort,
-    const BopFunc               bop_func,
-    const EopFunc               eop_func,
-    const MissedProdFunc        missed_prod_func,
-    const char* const           mcastAddr,
-    const unsigned short        mcastPort,
-    void* const                 obj)
+    McastReceiver** const receiver,
+    const char* const     tcpAddr,
+    const unsigned short  tcpPort,
+    void* const           notifier,
+    const char* const     mcastAddr,
+    const unsigned short  mcastPort)
 {
     McastReceiver* rcvr = (McastReceiver*)LOG_MALLOC(sizeof(McastReceiver),
             "multicast receiver");
@@ -148,8 +125,8 @@ mcastReceiver_new(
         return ENOMEM;
 
     try {
-        mcastReceiver_init(rcvr, tcpAddr, tcpPort, bop_func, eop_func,
-                missed_prod_func, mcastAddr, mcastPort, obj);
+        mcastReceiver_init(rcvr, tcpAddr, tcpPort, (RecvAppNotifier*)notifier,
+                mcastAddr, mcastPort);
         *receiver = rcvr;
         return 0;
     }
