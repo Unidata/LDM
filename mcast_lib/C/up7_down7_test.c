@@ -73,15 +73,6 @@ static const char* const pqPathnames[] = {UP7_PQ_PATHNAME, DOWN7_PQ_PATHNAME};
 static pthread_mutex_t   mutex;
 static pthread_cond_t    cond;
 
-/**
- * Aborts the process due to an error in logic.
- */
-static void abortProcess(void)
-{
-    LOG_ADD0("Logic error");
-    log_log(LOG_ERR);
-    abort();
-}
 static int
 initCondAndMutex(void)
 {
@@ -203,6 +194,17 @@ teardown(void)
 
 #if !USE_SIGWAIT
 
+#if 0
+/**
+ * Aborts the process due to an error in logic.
+ */
+static void abortProcess(void)
+{
+    LOG_ADD0("Logic error");
+    log_log(LOG_ERR);
+    abort();
+}
+
 static void
 lockMutex(void)
 {
@@ -317,6 +319,7 @@ waitUntilDone(void)
     }
 }
 #endif
+#endif
 
 /**
  * Closes the socket on failure.
@@ -368,7 +371,7 @@ funcCancelled(
         void* const arg)
 {
     const char* funcName = (const char*)arg;
-    udebug("funCancelled(): %s() thread cancelled", funcName);
+    udebug("funcCancelled(): %s() thread cancelled", funcName);
 }
 
 /**

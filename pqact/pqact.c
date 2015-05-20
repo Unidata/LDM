@@ -676,7 +676,7 @@ main(int ac, char *av[])
 
             if (status == 0) {
                 /*
-                 * No processing error.
+                 * No product-queue error.
                  */
                 if (wasProcessed) {
                     timestampt       oldestCursor;
@@ -698,7 +698,7 @@ main(int ac, char *av[])
             }
             else {
                 /*
-                 * Processing error. Data-product wasn't processed.
+                 * Product-queue error. Data-product wasn't processed.
                  */
                 if (status == PQUEUE_END) {
                     udebug("End of Queue");

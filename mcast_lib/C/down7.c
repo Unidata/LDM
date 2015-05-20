@@ -898,6 +898,7 @@ startUcastRecvTask(
     int          status = createUcastRecvXprt(down7->sock, &xprt);
 
     if (0 == status) {
+        // Last argument == 0 => don't register with portmapper
         if (!svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
             char buf[256];
 
@@ -1413,6 +1414,7 @@ nap(
  * Inserts a data-product into the product-queue and then unlocks the
  * product-queue. Logs directly.
  *
+ * @pre  The product-queue is locked.
  * @param[in] pq          Pointer to the product-queue. Must be locked.
  * @param[in] prod        Pointer to the data-product to be inserted into the product-
  *                        queue.
@@ -1421,6 +1423,7 @@ nap(
  * @retval    PQUEUE_DUP  Product already exists in the queue. `uinfo()` called.
  * @retval    PQUEUE_BIG  Product is too large to insert in the queue. `uwarn()`
  *                        called.
+ * @post The product-queue is unlocked.
  */
 static int
 insertAndUnlock(
@@ -1441,7 +1444,7 @@ insertAndUnlock(
             (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
 
             if (0 == status) {
-                uinfo("%s", buf);
+                uinfo("Inserted: %s", buf);
             }
             else if (status == PQUEUE_DUP) {
                 uinfo("Duplicate data-product: %s", buf);

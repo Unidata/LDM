@@ -1239,11 +1239,9 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
  * @param[in] xprod      Pointer to XDR-encoded data-product.
  * @param[in] xlen       Size of XDR-encoded data-product in bytes.
  * @param[in] otherargs  Pointer to optional boolean argument.
- * @retval    0          Success. No error occurred. `*(bool*)otherargs` is
- *                       set to `true` if and only if the data-product was
- *                       successfully processed.
- * @retval    -1         The data-product was not processed because it either
- *                       didn't match any entries or couldn't be processed.
+ * @retval    0          Always. *(bool*)otherargs` is set to `true` if and only
+ *                       if the data-product matched an entry and was
+ *                       successfully processed by all matching entries.
  */
 /*ARGSUSED*/
 int
@@ -1256,10 +1254,9 @@ processProduct(
 {
         palt*           pal;
         palt*           next;
-        int             status = -1;
-        bool            did_something = false;
+        bool            didMatch = false;
+        bool            errorOccurred = false;
         product         prod;
-        bool* const     wasProcessed = (bool*)otherargs;
 
         if(ulogIsVerbose())
                 uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
@@ -1278,30 +1275,27 @@ processProduct(
                                 pal->prog.re_nsub +1,  pal->pmatchp,
                                         0) == 0)
                        || (strcmp(pal->pattern, "^_ELSE_$") == 0
-                           && did_something == 0
-                           && infop->ident[0] != '_')))
+                           && !didMatch && infop->ident[0] != '_')))
                 {
                         /* A hit, do something */
+                        didMatch = true;
                         prod.info = *infop;
                         prod.data = (void *)datap; /* cast away const */
-                        int actionStatus = prodAction(&prod, pal, xprod, xlen);
-                        did_something = true;
-                        if (actionStatus < 0) {
+                        if (prodAction(&prod, pal, xprod, xlen)) {
                             if (pal->action.flags & LDM_ACT_TRANSIENT) {
                                 /* connection closed, don't try again */
                                 remove_palt(pal);
                             }
-                        }
-                        else {
-                            status = 0;
+                            errorOccurred = true;
                         }
                 }
         }
         
+        bool* const wasProcessed = (bool*)otherargs;
         if (wasProcessed)
-            *wasProcessed = did_something;
+            *wasProcessed = didMatch && !errorOccurred;
 
-        return status;
+        return 0; // Any non-product-queue error causes program termination
 }
 
 
