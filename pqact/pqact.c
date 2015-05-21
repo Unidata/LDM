@@ -678,20 +678,29 @@ main(int ac, char *av[])
                 /*
                  * No product-queue error.
                  */
+                timestampt insertionTime, oldestInsertionTime;
+
+                pq_ctimestamp(pq, &insertionTime);
+                status = pq_getOldestCursor(pq, &oldestInsertionTime);
+
+                if (status == 0 &&
+                        tvEqual(oldestInsertionTime, insertionTime)) {
+                    timestampt  now;
+                    (void)set_timestamp(&now);
+                    uwarn("Processed oldest product in queue: %g s",
+                        d_diff_timestamp(&now, &currentCursor));
+                }
+
                 if (wasProcessed) {
-                    timestampt       oldestCursor;
-
-                    pq_ctimestamp(pq, &currentCursor);
+                    /*
+                     * The insertion-time of the last successfully-processed
+                     * data-product is only set if it was successfully processed
+                     * by all matching entries in order to allow re-processing
+                     * of a partially processed data-product in the next session
+                     * by a corrected action.
+                     */
+                    currentCursor = insertionTime;
                     currentCursorSet = 1;
-
-                    if (pq_getOldestCursor(pq, &oldestCursor) == 0 &&
-                            tvEqual(oldestCursor, currentCursor)) {
-                        timestampt  now;
-
-                        (void)set_timestamp(&now);
-                        uwarn("Processed oldest product in queue: %g s",
-                            d_diff_timestamp(&now, &currentCursor));
-                    }
                 }
 
                 (void)exitIfDone(0);

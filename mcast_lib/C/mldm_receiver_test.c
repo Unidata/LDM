@@ -99,8 +99,8 @@ test_trivialExecution()
 
     /* Trivial execution */
     mcastReceiver_new_ExpectAndReturn(
-            NULL, ucastAddr, ucastPort, int_func, int_func, void_func, mcastAddr, mcastPort, NULL,   0,
-            NULL, cmp_cstr,  cmp_short, NULL,     NULL,     NULL,      cmp_cstr,  cmp_short, NULL);
+            NULL, ucastAddr, ucastPort, NULL, mcastAddr, mcastPort, 0,
+            NULL, cmp_cstr,  cmp_short, NULL, cmp_cstr,  cmp_short);
     down7_getPq_ExpectAndReturn(down7, pq,
                                 cmp_ptr);
     mlr = mlr_new(mcastInfo, down7);

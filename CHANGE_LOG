@@ -1,5 +1,15 @@
-6.12.11.2
-    Corrected logic and return value of processProduc().
+6.12.11.3
+    pqact(1):
+        The insertion-time of the last successfully-processed data-product is
+        only set if it was successfully processed by all matching entries in
+        order to allow the re-processing of a partially processed data-product
+        in the next session by a corrected action.
+
+        Made check for processing of oldest product independent of successful
+        processing.
+
+6.12.11.2	2015-05-20T17:30:50-0600
+    Corrected logic and return value of processProduct().
 
 6.12.11.1	2015-05-20T12:51:22-0600
     Enhanced VCMTP notifier API and modified code to use.
