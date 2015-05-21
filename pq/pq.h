@@ -725,10 +725,43 @@ pq_processProduct(
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval    0           Success.
- * @retval    PQUEUE_END  No matching data-product.
- * @return                <errno.h> error-code.
- * @return                The return-value of `ifMatch()`.
+ * @retval 0          Success.
+ * @retval PQUEUE_END No matching data-product.
+ * @retval EACCESS or EAGAIN
+ *                    A necessary region of the product-queue is locked by
+ *                    another process.
+ * @retval EINVAL     The product-queue file doesn't support locking.
+ * @retval ENOLCK     The number of locked regions would exceed a system-imposed
+ *                    limit.
+ * @retval EDEADLK    A deadlock in region locking has been detected.
+ * @retval EBADF      The file descriptor of the product-queue is invalid.
+ * @retval EIO        An I/O error occurred while reading from the product-
+ *                    queue file.
+ * @retval EOVERFLOW  The size of the product-queue cannot be represented
+ *                    correctly.
+ * @retval EINTR      A signal was caught during execution.
+ * @retval EFBIG or EINVAL
+ *                    The size of the product-queue is greater than the maximum
+ *                    file size.
+ * @retval EROFS      The product-queue resides on a read-only file system.
+ * @retval EAGAIN     The product-queue could not be locked in memory, if
+ *                    required by mlockall(), due to a lack of resources.
+ * @retval EINVAL     Logic error in the in-memory location of the product-
+ *                    queue.
+ * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
+ *                    limit (per process or per system).
+ * @retval ENODEV     The product-queue's file descriptor refers to a file whose
+ *                    type is not supported by mmap().
+ * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
+ *                    address space of a process.
+ * @retval ENOMEM     The product-queue could not be locked in memory, if
+ *                    required by mlockall(), because it would require more
+ *                    space than the system is able to supply.
+ * @retval ENOTSUP    The O/S does not support the combination of accesses
+ *                    requested.
+ * @retval ENXIO      The size of the product-queue is inconsistent with its
+ *                    file descriptor.
+ * @return            The return-value of `ifMatch()`.
  */
 int
 pq_sequence(pqueue *pq, pq_match mt,

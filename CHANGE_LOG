@@ -1,18 +1,10 @@
-6.12.11.3
+6.12.11
     pqact(1):
-        The insertion-time of the last successfully-processed data-product is
-        only set if it was successfully processed by all matching entries in
-        order to allow the re-processing of a partially processed data-product
-        in the next session by a corrected action.
-
-        Made check for processing of oldest product independent of successful
-        processing.
-
-6.12.11.2	2015-05-20T17:30:50-0600
-    Corrected logic and return value of processProduct().
-
-6.12.11.1	2015-05-20T12:51:22-0600
-    Enhanced VCMTP notifier API and modified code to use.
+        Corrected a bug introduced in version 6.12.10 in the logic regarding the
+        setting of the last successfully-processed data-product and the return
+        value of processProduct(). The bug manifested itself in version 6.12.10
+        by not writing products to disk under certain circumstances. Thanks
+        Gilbert.
 
 6.12.10	2015-05-16T08:42:51-0600
     Product-Queue (pq.c):

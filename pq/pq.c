@@ -3419,9 +3419,13 @@ rgn_lock(pqueue *const pq,
 }
 
 
-/*
- * Release lock on (offset, extent) according to the
- * RGN_* flags rflags.
+/**
+ * Release lock on (offset, extent) according to the RGN_* flags rflags.
+ *
+ * @retval 0          Success.
+ * @retval EBADF      The product-queue's file descriptor is invalid.
+ * @retval EINVAL     The region is not valid.
+ * @retval EOVERFLOW  The region is too large.
  */
 static int
 rgn_unlock(pqueue *const pq,
@@ -3890,39 +3894,15 @@ mm0_map(pqueue *const pq)
 }
 
 /**
- * File-to-memory "transfer" using `mmap()` to map the whole file.
+ * File-to-memory "transfer" using `mmap()` to map the whole file. Locks the
+ * region in question.
  *
  * @retval EACCESS or EAGAIN
- *                    The "cmd" argument is F_SETLK: the type of lock (l_type)
- *                    is a shared (F_RDLCK) or exclusive (F_WRLCK) lock and the
- *                    segment of a file to be locked is already exclusive-locked
- *                    by another process, or the type is an exclusive lock and
- *                    some portion of the segment of a file to be locked is
- *                    already shared-locked or exclusive-locked by another
- *                    process.
- * @retval EBADF      The "fd" argument is not a valid open file descriptor, or
- *                    the argument "cmd" is F_SETLK or F_SETLKW, the type of
- *                    lock, l_type, is a shared lock (F_RDLCK), and "fd" is not
- *                    a valid file descriptor open for reading, or the type of
- *                    lock l_type, is an exclusive lock (F_WRLCK), and "fd" is
- *                    not a valid file descriptor open for writing.
- * @retval EINVAL     The "cmd" argument is invalid, or the "cmd" argument is
- *                    F_GETLK, F_SETLK or F_SETLKW and "l_type", "offset",
- *                    "l_whence", or "extent" is not valid, or "fd" refers to a
- *                    file that does not support locking.
- * @retval ENOLCK     The argument "cmd" is F_SETLK or F_SETLKW and satisfying
- *                    the lock or unlock request would result in the number of
- *                    locked regions in the system exceeding a system-imposed
+ *                    The region is already locked by another process.
+ * @retval EINVAL     The product-queue file doesn't support locking.
+ * @retval ENOLCK     The number of locked regions would exceed a system-imposed
  *                    limit.
- * @retval EOVERFLOW  The "cmd" argument is F_GETLK, F_SETLK or F_SETLKW and the
- *                    smallest or, if "extent" is non-zero, the largest offset
- *                    of any byte in the requested segment cannot be represented
- *                    correctly in an object of type off_t.
- * @retval EDEADLK    The "cmd" argument is F_SETLKW, the lock is blocked by
- *                    some lock from another process and putting the calling
- *                    process to sleep, waiting for that lock to become free
- *                    would cause a deadlock.
- *
+ * @retval EDEADLK    A deadlock in region locking has been detected.
  * @retval EBADF      The file descriptor of the product-queue is invalid.
  * @retval EIO        An I/O error occurred while reading from the file system.
  * @retval EOVERFLOW  The file size in bytes or the number of blocks allocated
@@ -4007,8 +3987,15 @@ unwind_lock:
         return status;
 }
 
-/*
- * memory release, mmap whole file version
+/**
+ * Transfers a product-queue region from memory to file given that the entire
+ * product-queue is memory-mapped.
+ *
+ * @retval EINVAL     The region could not be found in the list of in-use
+ *                    regions.
+ * @retval EBADF      The product-queue's file descriptor is invalid.
+ * @retval EOVERFLOW  The (offset + extent) specification of the region is
+ *                    invalid.
  */
 /*ARGSUSED*/
 static int
@@ -4310,8 +4297,14 @@ pq_new(
  * on (0, pgsz), ctlp.
  */
 
-/*
+/**
  * Release the ctl lock and write back any changes.
+ *
+ * @retval EINVAL     The region could not be found in the list of in-use
+ *                    regions.
+ * @retval EBADF      The product-queue's file descriptor is invalid.
+ * @retval EOVERFLOW  The (offset + extent) specification of the region is
+ *                    invalid.
  */
 static int
 ctl_rel(pqueue *const pq, const int rflags)
@@ -4609,12 +4602,45 @@ unwind_map:
 }
 
 
-/*
+/**
  * Get/lock the ctl for access by this process
  *
- * Returns:
- *      ENOERR      Success.
- *      else        <errno.h> error-code.
+ * @retval ENOERR     Success.
+ * @retval EACCESS or EAGAIN
+ *                    The region is already locked by another process.
+ * @retval EINVAL     The product-queue file doesn't support locking.
+ * @retval ENOLCK     The number of locked regions would exceed a system-imposed
+ *                    limit.
+ * @retval EDEADLK    A deadlock in region locking has been detected.
+ * @retval EBADF      The file descriptor of the product-queue is invalid.
+ * @retval EIO        An I/O error occurred while reading from the file system.
+ * @retval EOVERFLOW  The file size in bytes or the number of blocks allocated
+ *                    to the file or the file serial number cannot be
+ *                    represented correctly.
+ * @retval EINTR      A signal was caught during execution.
+ * @retval EFBIG or EINVAL
+ *                    The size of the product-queue is greater than the maximum
+ *                    file size.
+ * @retval EROFS      The named file resides on a read-only file system.
+ * @retval EAGAIN     The mapping could not be locked in memory, if required by
+ *                    mlockall(), due to a lack of resources.
+ * @retval EINVAL     The product-queue object wants to map the product-queue to
+ *                    a fixed memory location that is not a multiple of the page
+ *                    size as returned by sysconf(), or is considered invalid
+ *                    by the O/S.
+ * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
+ *                    limit (per process or per system).
+ * @retval ENODEV     The file descriptor of the product-queue object refers to
+ *                    a file whose type is not supported by mmap().
+ * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
+ *                    address space of a process.
+ * @retval ENOMEM     The mapping could not be locked in memory, if required by
+ *                    mlockall(), because it would require more space than the
+ *                    system is able to supply.
+ * @retval ENOTSUP    The O/S does not support the combination of accesses
+ *                    requested.
+ * @retval ENXIO      The size of the product-queue is invalid for the object
+ *                    specified by its file descriptor.
  */
 static int
 ctl_get(pqueue *const pq, int const rflags)
@@ -7281,10 +7307,43 @@ pq_processProduct(
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval    0           Success.
- * @retval    PQUEUE_END  No matching data-product.
- * @return                <errno.h> error-code.
- * @return                The return-value of `ifMatch()`.
+ * @retval 0          Success.
+ * @retval PQUEUE_END No matching data-product.
+ * @retval EACCESS or EAGAIN
+ *                    A necessary region of the product-queue is locked by
+ *                    another process.
+ * @retval EINVAL     The product-queue file doesn't support locking.
+ * @retval ENOLCK     The number of locked regions would exceed a system-imposed
+ *                    limit.
+ * @retval EDEADLK    A deadlock in region locking has been detected.
+ * @retval EBADF      The file descriptor of the product-queue is invalid.
+ * @retval EIO        An I/O error occurred while reading from the product-
+ *                    queue file.
+ * @retval EOVERFLOW  The size of the product-queue cannot be represented
+ *                    correctly.
+ * @retval EINTR      A signal was caught during execution.
+ * @retval EFBIG or EINVAL
+ *                    The size of the product-queue is greater than the maximum
+ *                    file size.
+ * @retval EROFS      The product-queue resides on a read-only file system.
+ * @retval EAGAIN     The product-queue could not be locked in memory, if
+ *                    required by mlockall(), due to a lack of resources.
+ * @retval EINVAL     Logic error in the in-memory location of the product-
+ *                    queue.
+ * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
+ *                    limit (per process or per system).
+ * @retval ENODEV     The product-queue's file descriptor refers to a file whose
+ *                    type is not supported by mmap().
+ * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
+ *                    address space of a process.
+ * @retval ENOMEM     The product-queue could not be locked in memory, if
+ *                    required by mlockall(), because it would require more
+ *                    space than the system is able to supply.
+ * @retval ENOTSUP    The O/S does not support the combination of accesses
+ *                    requested.
+ * @retval ENXIO      The size of the product-queue is inconsistent with its
+ *                    file descriptor.
+ * @return            The return-value of `ifMatch()`.
  */
 int
 pq_sequence(pqueue *pq, pq_match mt,
@@ -7398,8 +7457,7 @@ pq_sequence(pqueue *pq, pq_match mt,
 
         /* We've got the data, so we can let go of the ctl */
         status = ctl_rel(pq, 0);
-        if(status != ENOERR)
-                goto unwind_rgn;
+        assert(status == 0);
 
         /*
          * Decode it
