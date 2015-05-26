@@ -112,6 +112,13 @@ void PerProdNotifier::notify_of_bop(
     {
         std::unique_lock<std::mutex> lock(mutex);
         ProdInfo& prodInfo = prodInfos[iProd];
+        if (prodInfo.start)
+            throw std::runtime_error(
+                    std::string("PerProdNotifier::notify_of_bop(): "
+                    "Entry already exists for product: prodIndex=") +
+                    std::to_string(iProd) + ", prodSize=" +
+                    std::to_string(prodSize) + ", metaSize=" +
+                    std::to_string(metaSize));
         prodInfo.start = *prodStart; // will be NULL if duplicate
         prodInfo.size = prodSize;
         prodInfo.index = pqeIndex;
@@ -125,16 +132,14 @@ void PerProdNotifier::notify_of_bop(
 void PerProdNotifier::notify_of_eop(
         const VcmtpProdIndex prodIndex)
 {
-    ProdInfo& prodInfo = prodInfos.at(prodIndex);
+    std::unique_lock<std::mutex> lock(mutex);
+    ProdInfo&                    prodInfo = prodInfos.at(prodIndex);
 
     if (eop_func(mlr, prodInfo.start, prodInfo.size, &prodInfo.index))
         throw std::runtime_error(std::string(
                 "Error notifying receiving application of end of product"));
 
-    {
-        std::unique_lock<std::mutex> lock(mutex);
-        (void)prodInfos.erase(prodIndex);
-    }
+    (void)prodInfos.erase(prodIndex);
 }
 
 /**
@@ -144,8 +149,10 @@ void PerProdNotifier::notify_of_eop(
 void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex prodIndex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    void* const prodStart = prodInfos[prodIndex].start;
+    void* const                  prodStart = prodInfos[prodIndex].start;
+
     missed_prod_func(mlr, prodIndex,
             prodStart ? &prodInfos[prodIndex].index : nullptr);
+
     (void)prodInfos.erase(prodIndex);
 }
