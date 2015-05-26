@@ -5814,7 +5814,7 @@ unwind_ctl:
  *                        been written or `pqe_discard()` to abort the writing
  *                        and release the region.
  * @retval     0          Success.  `*ptrp` and `*indexp` are set.
- * @retval     EINVAL     @code{pq == NULL || ptrp == NULL || indexp == NULL}.
+ * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
  *                        `log_add()` called.
    @retval     EACCES     Product-queue is read-only. `log_add()` called.
  * @retval     PQUEUE_BIG Data-product is too large for product-queue.
