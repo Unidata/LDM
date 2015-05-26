@@ -298,8 +298,9 @@ finishInsertion(
             if (ulogIsVerbose()) {
                 char infoStr[512];
 
-                uinfo("%s: Received: %s",
-                        __FILE__, s_prod_info(infoStr, sizeof(infoStr), info, 1));
+                LOG_ADD1("Received: %s",
+                        s_prod_info(infoStr, sizeof(infoStr), info, 1));
+                log_log(LOG_INFO);
             }
             lastReceived(mlr, info);
         }

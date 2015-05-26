@@ -119,8 +119,9 @@ setup(void)
     for (int i = 0; i < sizeof(pqPathnames)/sizeof(pqPathnames[0]); i++) {
         pqueue*     pq;
 
-        status = pq_create(pqPathnames[i], 0666, 0, 0, 1000000, 100, &pq);
-
+        // PQ_DEFAULT => clobber any existing
+        status = pq_create(pqPathnames[i], 0666, PQ_DEFAULT, 0, 1000000, 100,
+                &pq);
         if (status) {
             LOG_ADD1("Couldn't create product-queue \"%s\"", pqPathnames[i]);
             break;
@@ -128,8 +129,7 @@ setup(void)
         else {
             status = pq_close(pq);
             if (status) {
-                LOG_ADD1("Couldn't close product-queue \"%s\"",
-                        pqPathnames[i]);
+                LOG_ADD1("Couldn't close product-queue \"%s\"", pqPathnames[i]);
                 break;
             }
         }
@@ -688,8 +688,9 @@ sender_insertProducts(
         status = pq_insert(pq, &prod);
         CU_ASSERT_EQUAL_FATAL(status, 0);
         char buf[1024];
-        uinfo("%s: Inserted: prodInfo=\"%s\"", __FILE__,
+        LOG_ADD1("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
+        log_log(LOG_INFO);
 
         struct timespec duration;
         duration.tv_sec = 0;

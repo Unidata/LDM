@@ -727,9 +727,10 @@ mls_multicastProduct(
     else {
         if (ulogIsVerbose()) {
             char buf[1024];
-            uinfo("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+            LOG_ADD2("Sent: prodIndex=%lu, prodInfo=\"%s\"",
                     (unsigned long)iProd,
                     s_prod_info(buf, sizeof(buf), info, 1));
+            log_log(LOG_INFO);
         }
 
         status = pim_put(iProd, (const signaturet*)&info->signature);
