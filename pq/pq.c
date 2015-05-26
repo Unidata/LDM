@@ -5885,15 +5885,13 @@ pqe_newDirect(
 
 
 /**
- * Discards a region obtained from \c pqe_new() or \c pqe_newWithNoInfo().
+ * Discards a region obtained from `pqe_new()` or `pqe_newDirect()`.
  *
- * Arguments:
- *      pq              Pointer to the product-queue.  Shall not be NULL.
- *      pqe_index       Pointer to the region-index set by "pqe_new()".  Shall
- *                      not be NULL.
- * Returns:
- *      0               Success.
- *      else            <errno.h> error code.
+ * @param[in] pq         Pointer to the product-queue.  Shall not be NULL.
+ * @param[in] pqe_index  Pointer to the region-index set by `pqe_new()` or
+ *                       `pqe_newDirect()`.  Shall not be NULL.
+ * @retval 0             Success.
+ * @return               <errno.h> error code.
  */
 int
 pqe_discard(pqueue *pq, pqe_index index)
