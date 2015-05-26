@@ -22,6 +22,19 @@
 #include <stdexcept>
 #include <strings.h>
 
+PerProdNotifier::ProdInfo::ProdInfo()
+:
+    start(nullptr),
+    size(0),
+    index()
+{
+}
+
+PerProdNotifier::ProdInfo::~ProdInfo()
+{
+    start = nullptr;
+}
+
 int ppn_new(
         void** const            ppn,
         BopFunc const           bop_func,
@@ -42,9 +55,9 @@ int ppn_new(
 }
 
 void ppn_free(
-        void* const ppn)
+        void* ppn)
 {
-    delete (PerProdNotifier*)ppn;
+    delete static_cast<PerProdNotifier*>(ppn);
 }
 
 PerProdNotifier::PerProdNotifier(
@@ -53,6 +66,7 @@ PerProdNotifier::PerProdNotifier(
     MissedProdFunc      missed_prod_func,
     Mlr*                mlr)
 :
+    mutex(),
     bop_func(bop_func),
     eop_func(eop_func),
     missed_prod_func(missed_prod_func),
@@ -77,7 +91,7 @@ PerProdNotifier::PerProdNotifier(
  *                                    `metaSize == 0`.
  * @param[in]   metaSize              The size of the product's metadata in
  *                                    bytes.
- * @param[out]  data                  The start location for writing the
+ * @param[out]  prodStart             The start location for writing the
  *                                    product.
  * @retval      0                     Success.
  * @throws      std::runtime_error    if the receiving application indicates
@@ -88,23 +102,25 @@ void PerProdNotifier::notify_of_bop(
         const size_t         prodSize,
         void* const          metadata,
         const unsigned       metaSize,
-        void** const         data)
+        void** const         prodStart)
 {
     pqe_index pqeIndex;
 
-    if (bop_func(mlr, prodSize, metadata, metaSize, data, &pqeIndex))
+    if (bop_func(mlr, prodSize, metadata, metaSize, prodStart, &pqeIndex))
         throw std::runtime_error(
                 "Error notifying receiving application of beginning of product");
-
-    ProdInfo& prodInfo = prodInfos[iProd];
-    prodInfo.start = *data;
-    prodInfo.size = prodSize;
-    prodInfo.index = pqeIndex;
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        ProdInfo& prodInfo = prodInfos[iProd];
+        prodInfo.start = *prodStart; // will be NULL if duplicate
+        prodInfo.size = prodSize;
+        prodInfo.index = pqeIndex;
+    }
 }
 
 /**
- * @param[in] prodIndex  The VCMTP index of the product.
- * @throws std::out_of_range  if there's no entry for `prodIndex`
+ * @param[in] prodIndex       The VCMTP index of the product.
+ * @throws std::out_of_range  There's no entry for `prodIndex`
  */
 void PerProdNotifier::notify_of_eop(
         const VcmtpProdIndex prodIndex)
@@ -115,10 +131,21 @@ void PerProdNotifier::notify_of_eop(
         throw std::runtime_error(std::string(
                 "Error notifying receiving application of end of product"));
 
-    (void)prodInfos.erase(prodIndex);
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        (void)prodInfos.erase(prodIndex);
+    }
 }
 
-void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex iProd)
+/**
+ * @param[in] prodIndex       The VCMTP product index.
+ * @throws std::out_of_range  `prodIndex` is unknown.
+ */
+void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex prodIndex)
 {
-    missed_prod_func(mlr, iProd);
+    std::unique_lock<std::mutex> lock(mutex);
+    void* const prodStart = prodInfos[prodIndex].start;
+    missed_prod_func(mlr, prodIndex,
+            prodStart ? &prodInfos[prodIndex].index : nullptr);
+    (void)prodInfos.erase(prodIndex);
 }

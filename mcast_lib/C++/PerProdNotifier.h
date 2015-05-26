@@ -24,11 +24,13 @@ typedef int     (*BopFunc)(Mlr* mlr, size_t prodSize, const void* metadata,
                         unsigned metaSize, void** data, pqe_index* pqeIndex);
 typedef int     (*EopFunc)(Mlr* mlr, void* prod, size_t prodSize,
                         pqe_index* pqeIndex);
-typedef void    (*MissedProdFunc)(void* obj, const VcmtpProdIndex iProd);
+typedef void    (*MissedProdFunc)(void* obj, const VcmtpProdIndex iProd,
+                        pqe_index* pqeIndex);
 
 #ifdef __cplusplus
 
 #include "RecvAppNotifier.h"
+#include <mutex>
 #include <unordered_map>
 
 class PerProdNotifier: public RecvAppNotifier {
@@ -61,6 +63,11 @@ public:
 
 private:
     /**
+     * Mutex to ensure thread-safety because an instance is called by both the
+     * unicast- and multicast-receiving threads.
+     */
+    std::mutex          mutex;
+    /**
      * C function to call when a beginning-of-product has been seen by the VCMTP
      * layer.
      */
@@ -80,12 +87,16 @@ private:
     Mlr*               mlr;
 
     // Map from product-index to useful information.
-    typedef struct {
+    class ProdInfo {
+    public:
+        ProdInfo();
+        ~ProdInfo();
+
         void*     start; /**< Pointer to start of XDR-encoded product in
                               product-queue */
         size_t    size;  /**< Size of XDR-encoded product in bytes */
         pqe_index index; /**< Reference to allocated space in product-queue */
-    } ProdInfo;
+    };
     std::unordered_map<VcmtpProdIndex, ProdInfo> prodInfos;
 };
 

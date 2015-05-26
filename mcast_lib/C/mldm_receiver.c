@@ -37,9 +37,6 @@ struct mlr {
     pqueue*               pq;         // product-queue to use */
     Down7*                down7;      // pointer to associated downstream LDM-7
     McastReceiver*        receiver;   // VCMTP C Receiver
-    char*                 prod;       // Start of product in product-queue
-    size_t                prodSize;   // Size of VCMTP product in bytes
-    pqe_index             index;      // Product-queue index of reserved region
     volatile sig_atomic_t done;
 };
 
@@ -91,10 +88,11 @@ unlockPq(
  * @param[in]  mlr        Pointer to the multicast LDM receiver.
  * @param[in]  signature  The MD5 checksum of the LDM data-product.
  * @param[in]  prodSize   Size of the XDR-encoded LDM data-product in bytes.
- * @param[in]  pqeIndex   Reference to reserved space in product-queue.
- * @retval     0          Success. `mlr->prod` and `mlr->prodSize` are set. If
- *                        `mlr->prod == NULL`, then the data-product is already
- *                        in the LDM product-queue.
+ * @param[out] prodStart  Start of the region in the product-queue to which to
+ *                        write the product.
+ * @param[out] pqeIndex   Reference to reserved space in product-queue.
+ * @retval     0          Success. `prodStart` is set. If `NULL`, then the
+ *                        data-product is already in the LDM product-queue.
  * @retval    -1          Failure. `log_add()` called.
  * @post                  The product-queue is locked.
  */
@@ -103,13 +101,14 @@ allocateSpace(
         Mlr* const restrict       mlr,
         const signaturet          signature,
         const size_t              prodSize,
+        char** const restrict     prodStart,
         pqe_index* const restrict pqeIndex)
 {
     udebug("%s:allocateSpace(): Entered: prodSize=%lu", __FILE__,
             (unsigned long)prodSize);
 
     char sigStr[sizeof(signaturet)*2 + 1];
-    int  status = pqe_newDirect(mlr->pq, prodSize, signature, &mlr->prod,
+    int  status = pqe_newDirect(mlr->pq, prodSize, signature, prodStart,
             pqeIndex);
 
     if (status) {
@@ -119,7 +118,7 @@ allocateSpace(
                 uinfo("Duplicate product: sig=%s, size=%lu", sigStr,
                         (unsigned long)prodSize);
             }
-            mlr->prod = NULL;
+            *prodStart = NULL;
             status = 0;
         }
         else {
@@ -134,12 +133,10 @@ allocateSpace(
             uinfo("Allocated queue-space for product: sig=%s, size=%lu",
                     sigStr, (unsigned long)prodSize);
         }
-        mlr->prodSize = prodSize;
-        status = 0;
     } /* region allocated in product-queue */
 
-    udebug("%s:allocateSpace(): Returning: mlr->prod=%p, mlr->prodSize=%lu",
-            __FILE__, mlr->prod, (unsigned long)mlr->prodSize);
+    udebug("%s:allocateSpace(): Returning: prodStart=%p, prodSize=%lu",
+            __FILE__, *prodStart, (unsigned long)prodSize);
 
     return status;
 }
@@ -189,10 +186,12 @@ bop_func(
             status = -1;
         }
         else {
-            status = allocateSpace(mlr, metadata, prodSize, pqeIndex);
+            char* prodStart;
+            status = allocateSpace(mlr, metadata, prodSize, &prodStart,
+                    pqeIndex);
 
             if (status == 0)
-                *prod = mlr->prod; // will be `NULL` if duplicate product
+                *prod = prodStart; // will be `NULL` if duplicate product
 
             (void)unlockPq(mlr);
         }
@@ -201,8 +200,8 @@ bop_func(
     if (status)
         log_log(LOG_ERR); // because called by VCMTP layer
 
-    udebug("%s:bop_func(): Returning: mlr->prod=%p, mlr->prodSize=%lu",
-            __FILE__, mlr->prod, (unsigned long)mlr->prodSize);
+    udebug("%s:bop_func(): Returning: prod=%p, prodSize=%lu",
+            __FILE__, *prod, (unsigned long)prodSize);
 
     return status;
 }
@@ -224,13 +223,11 @@ insertOrDiscard(
         Mlr* const restrict       mlr,
         pqe_index* const restrict pqeIndex)
 {
-    int status;
+    int status = pqe_insert(mlr->pq, *pqeIndex);
 
-    if ((status = pqe_insert(mlr->pq, *pqeIndex)) != 0)
+    if (status != 0) {
         (void)pqe_discard(mlr->pq, *pqeIndex);
-
-    if (status) {
-        LOG_ADD("Couldn't insert data-product into product-queue: status=%d",
+        LOG_ADD1("Couldn't insert data-product into product-queue: status=%d",
                 status);
         status = -1;
     }
@@ -291,7 +288,7 @@ finishInsertion(
         status = insertOrDiscard(mlr, pqeIndex);
 
         if (status) {
-            LOG_ADD("Couldn't insert %u-byte data-product \"%s\"", info->sz,
+            LOG_ADD2("Couldn't insert %u-byte data-product \"%s\"", info->sz,
                     info->ident);
         }
         else {
@@ -384,17 +381,27 @@ eop_func(
  * @param[in,out]  obj          Pointer to the associated multicast LDM receiver
  *                              object.
  * @param[in]      iProd        Index of the product that was missed.
+ * @param[in]      pqeIndex     Reference to reserved space in product-queue or
+ *                              `NULL`.
  */
 static void
 missed_prod_func(
-        void*                obj,
-        const VcmtpProdIndex iProd)
+        void* const restrict      obj,
+        const VcmtpProdIndex      iProd,
+        pqe_index* const restrict pqeIndex)
 {
     Mlr* mlr = obj;
 
-    if (mlr->prod ) {
-        (void)pqe_discard(mlr->pq, mlr->index);
-        mlr->prod  = NULL;
+    if (pqeIndex) {
+        /*
+         * Because this function is called by the VCMTP multicast and unicast
+         * threads, visibility of changes is ensured by locking the
+         * product-queue.
+         */
+        if (lockPq(mlr) == 0) {
+            (void)pqe_discard(mlr->pq, *pqeIndex);
+            (void)unlockPq(mlr);
+        }
     }
 
     down7_missedProduct(((Mlr*)obj)->down7, iProd);
@@ -454,7 +461,6 @@ init(
     mlr->receiver = receiver;
     mlr->pq = down7_getPq(down7); // for convenience
     mlr->down7 = down7;
-    mlr->prod  = NULL;
     mlr->done  = 0;
 
     return 0;
