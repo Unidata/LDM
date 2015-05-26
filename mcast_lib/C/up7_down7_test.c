@@ -670,7 +670,7 @@ sender_insertProducts(
     (void)memset(info->signature, 0, sizeof(info->signature));
     srand48(1234567890);
 
-    for (int i = 0; i < 75; i++) {
+    for (int i = 0; i < 150; i++) {
         const unsigned size = 100000*drand48() + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 
