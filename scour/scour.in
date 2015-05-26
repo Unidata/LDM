@@ -13,7 +13,7 @@
 # WARNING: scour follows symbolic links, so don't put symbolic links to
 # directories you don't want scoured under data directories.
 
-PATH=@bindir@:/bin:/usr/bin
+PATH=@prefix@/bin:/bin:/usr/bin
 CONFFILE=`regutil /scour/config-path`  # default, if no args
 VERBOSEFLAG=
 DEBUGFLAG=

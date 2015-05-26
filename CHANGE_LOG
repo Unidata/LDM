@@ -1,4 +1,8 @@
-6.12.11
+6.12.12
+    scour(1):
+        Corrected setting of PATH.
+
+6.12.11	2015-05-21T15:32:07-0600
     pqact(1):
         Corrected a bug introduced in version 6.12.10 in the logic regarding the
         setting of the last successfully-processed data-product and the return
