@@ -5201,9 +5201,43 @@ rpqe_mkslot(pqueue *const pq)
 }
 
 
-/*
- * Allocate a new region from the data section,
- * (which may eventually get handed to the user).
+/**
+ * Allocate a new region for a data-product from the data section (which may
+ * eventually get handed to the user). Delete products in the queue, as
+ * necessary, in order to make room.
+ *
+ * @param[in]  pq      The product-queue.
+ * @param[in]  extent  The size of the product in bytes.
+ * @param[in]  sxi     The signature of the product.
+ * @param[out] vpp     Pointer to the start of the data region.
+ * @param[out] sxepp   Pointer to the existing signature entry if the product
+ *                     already exists in the product-queue.
+ * @retval PQUEUE_DUP  A product with the same signature already exists in the
+ *                     product-queue.
+ * @retval ENOMEM      Insufficient memory is available.
+ * @retval ENOMEM      There is insufficient room in the address space to effect
+ *                     the necessary mapping.
+ * @retval EACESS      No unlocked products left to delete.
+ * @retval EAGAIN      A mapping could not be locked in memory, if required by
+ *                     mlockall(), due to a lack of resources.
+ * @retval EDEADLK     The region's lock is blocked by some lock from another
+ *                     process and putting the calling process to sleep, waiting
+ *                     for that lock to become free would cause a deadlock.
+ * @retval EFBIG or EINVAL
+ *                     The `extent` argument was greater than the maximum file
+ *                     size.
+ * @retval EINTR       A signal was caught during execution.
+ * @retval EINVAL      `extent` is not valid, or "pq->fd" refers to a file
+ *                     that does not support locking.
+ * @retval EIO         An I/O error occurred while reading from the file system.
+ * @retval EMFILE      The number of mapped regions would exceed an
+ *                     implementation-dependent limit (per process or per
+ *                     system).
+ * @retval ENODEV      `pq->fd` refers to a file whose type is not supported by
+ *                     `mmap()`.
+ * @retval ENOLCK      Satisfying the request would result in the number of
+ *                     locked regions in the system exceeding a system-imposed
+ *                     limit.
  */
 static int
 rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
@@ -5828,9 +5862,10 @@ pqe_newDirect(
             /*
              * Obtain a new region.
              */
-            if ((status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep))
-                    != 0) {
-                LOG_ADD0("rpqe_new() failure");
+            status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep);
+            if (status) {
+                if (status != PQUEUE_DUP)
+                    LOG_ADD0("rpqe_new() failure");
             }
             else {
                 /*
