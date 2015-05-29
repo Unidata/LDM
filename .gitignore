@@ -13,6 +13,7 @@ config.status
 config.sub
 configure
 core.*
+vgcore.*
 cov-int
 .cproject
 data
