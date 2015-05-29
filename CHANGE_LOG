@@ -1,4 +1,10 @@
-6.12.12
+6.12.13
+    Logging:
+        Rewrote many of the formatting functions in "ldmprint.c" in an attempt
+        to eliminate the cause of a crash experienced by Art Person when a 
+        downstream's LDM request was reduced due to applicable ALLOW entries.
+
+6.12.12	2015-05-27T08:45:53-0600
     scour(1):
         Corrected setting of PATH.
 

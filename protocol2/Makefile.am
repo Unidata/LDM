@@ -127,30 +127,36 @@ uldb.h:			uldb.hin uldb.c
 .c.i:
 	$(CPP) $(lib_la_CPPFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $< >$@
 
+local_checks		=
+
 if HAVE_CUNIT
 
-check_PROGRAMS		= test_data_prod testuldb
-test_data_prod_CPPFLAGS	= \
-    -I$(top_srcdir) \
-    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
-    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/ulog \
-    @CPPFLAGS_CUNIT@
+check_PROGRAMS		= ldmprint_test test_data_prod testuldb
 
+ldmprint_test_CPPFLAGS  = -I$(top_srcdir) -I$(top_srcdir)/ulog \
+                          -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+                           @CPPFLAGS_CUNIT@
+ldmprint_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+check-ldmprint_test:	ldmprint_test
+	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./ldmprint_test valgrind
+local_checks		+= check-ldmprint_test
+
+test_data_prod_CPPFLAGS	= -I$(top_srcdir) \
+                          -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+                          -I$(top_builddir)/registry -I$(top_srcdir)/registry \
+                          -I$(top_srcdir)/ulog \
+                          @CPPFLAGS_CUNIT@
 test_data_prod_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
-testuldb_CPPFLAGS	= \
-    -I$(top_srcdir) \
-    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
-    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/ulog \
-    @CPPFLAGS_CUNIT@
+testuldb_CPPFLAGS	= -I$(top_srcdir) \
+                          -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+                          -I$(top_builddir)/registry -I$(top_srcdir)/registry \
+                          -I$(top_srcdir)/ulog \
+                          @CPPFLAGS_CUNIT@
+testuldb_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
-testuldb_LDADD		= \
-    $(top_builddir)/lib/libldm.la \
-    @LIBS_CUNIT@
-
-TESTS			= test_data_prod testuldb
+TESTS			= ldmprint_test test_data_prod testuldb
 
 valgrind:	testuldb
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \

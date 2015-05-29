@@ -48,9 +48,57 @@ ldm_format(
 extern int
 sprint_time_t(char *buf, size_t bufsize, time_t ts); /* obsolete ? */
 
+/**
+ * Returns the string representation of a timestamp.
+ *
+ * @param[in]  pc    The timestamp to be formatted.
+ * @param[out] buf   The buffer into which to format the timestamp.
+ *                   May be NULL only if `size == 0`.
+ * @param[in]  size  The size of the buffer in bytes.
+ * @retval     -1    The timestamp couldn't be formatted.
+ * @return           The number of characters that it takes to format the
+ *                   timestamp (excluding the terminating NUL). If equal to or
+ *                   greater than `size`, then the returned string is not
+ *                   NUL-terminated.
+ */
+int ts_format(
+        const timestampt* const ts,
+        char*                   buf,
+        size_t                  size);
+
+/**
+ * Formats a timestamp. Deprecated in favor of `ts_format()`
+ *
+ * @param[out] buf      Buffer.
+ * @param[in]  bufsize  Size of buffer in bytes.
+ * @param[in]  tvp      Timestamp.
+ * @retval     -1       `buf == NULL`, buffer is too small, or `bufsize >
+ *                      {INT_MAX}`.
+ * @return              Number of bytes written excluding terminating NUL.
+ */
 extern int
 sprint_timestampt(char *buf, size_t bufsize, const timestampt *tvp);
 
+/**
+ * Returns the string representation of a feedtype.
+ *
+ * @param[in]  feedtype  The feedtype to be formatted.
+ * @param[out] buf       The buffer into which to format the feedtype. May be
+ *                       NULL only if `size == 0`.
+ * @param[in]  size      The size of the buffer in bytes.
+ * @retval     -1        The feedtype can't be formatted.
+ * @return               The number of characters that it takes to format the
+ *                       feedtype (excluding the terminating NUL). If equal to
+ *                       or greater than `size`, then the returned string is not
+ *                       NUL-terminated.
+ */
+int
+ft_format(
+        feedtypet    feedtype,
+        char* const  buf,
+        const size_t size);
+
+// Deprecated in favor of `ft_format()`
 extern int
 sprint_feedtypet(char *buf, size_t bufsize, feedtypet feedtype);
 
@@ -67,9 +115,47 @@ sprint_signaturet(char *buf,
 extern char *
 s_signaturet(char *buf, size_t bufsize, const signaturet signaturep);
 
+/**
+ * Returns the string representation of a product-specification.
+ *
+ * @param[in]  ps    The product-specification to be formatted.
+ * @param[out] buf   The buffer into which to format the product-specification.
+ *                   May be NULL only if `size == 0`.
+ * @param[in]  size  The size of the buffer in bytes.
+ * @retval     -1    The product-specification couldn't be formatted.
+ * @return           The number of characters that it takes to format the
+ *                   product-specification (excluding the terminating NUL). If
+ *                   equal to or greater than `size`, then the returned string
+ *                   is not NUL-terminated.
+ */
+int
+ps_format(
+        const prod_spec* const restrict ps,
+        char* const restrict            buf,
+        const size_t                    size);
+
+// Deprecated in favor of `ps_format()`
 extern int
 sprint_prod_spec(char *buf,
 	size_t bufsize, const prod_spec *specp);
+
+/**
+ * Returns the string representation of a product-class.
+ *
+ * @param[in]  pc    The product-class to be formatted.
+ * @param[out] buf   The buffer into which to format the product-class.
+ *                   May be NULL only if `size == 0`.
+ * @param[in]  size  The size of the buffer in bytes.
+ * @retval     -1    The product-class couldn't be formatted.
+ * @return           The number of characters that it takes to format the
+ *                   product-class (excluding the terminating NUL). If equal to
+ *                   or greater than `size`, then the returned string is not
+ *                   NUL-terminated.
+ */
+int pc_format(
+        const prod_class_t* const pc,
+        char*                     buf,
+        size_t                    size);
 
 extern char *
 s_prod_class(char *buf,

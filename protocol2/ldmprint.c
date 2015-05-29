@@ -1,8 +1,8 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2015, University Corporation for Atmospheric Research
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: ldmprint.c,v 1.49.12.3 2008/04/15 16:34:11 steve Exp $ */
 
 /* 
  * Utility functions for printing contents of some protocol data structures
@@ -13,12 +13,14 @@
 #include "ldmprint.h"
 #include "atofeedt.h"           /* for fassoc[] */
 #include "log.h"
+#include <timestamp.h>
 
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <time.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
 #include <rpc/rpc.h>
@@ -26,6 +28,28 @@
 
 static char tprintbuf[1984];
 static const char nada[] = "(null)";
+
+static bool post_snprintf(
+        const int              n,
+        int* const restrict    nbytes,
+        char** const restrict  cp,
+        size_t* const restrict left)
+{
+    if (n < 0) {
+        *nbytes = -1;
+        return false;
+    }
+
+    *nbytes += n;
+    if (n > *left) {
+        *left = 0;
+    }
+    else {
+        *cp += n;
+        *left -= n;
+    }
+    return true;
+}
 
 /**
  * Returns an attempt at formatting arguments. This function is thread-safe.
@@ -141,14 +165,68 @@ sprint_time_t(char *buf, size_t bufsize, time_t ts)
         if(!buf || bufsize < P_TIMET_LEN)
                 return -1;
 
-        tm_ts = *(gmtime(&ts));
+        (void)gmtime_r(&ts, &tm_ts);
         len = strftime(buf, bufsize, "%Y%m%d%H%M%S", &tm_ts);
         return (int)len;
 }
 
 
 /**
- * Formats a timestamp.
+ * Returns the string representation of a timestamp.
+ *
+ * @param[in]  pc    The timestamp to be formatted.
+ * @param[out] buf   The buffer into which to format the timestamp.
+ *                   May be NULL only if `size == 0`.
+ * @param[in]  size  The size of the buffer in bytes.
+ * @retval     -1    The timestamp couldn't be formatted.
+ * @return           The number of characters that it takes to format the
+ *                   timestamp (excluding the terminating NUL). If equal to or
+ *                   greater than `size`, then the returned string is not
+ *                   NUL-terminated.
+ */
+int ts_format(
+        const timestampt* const ts,
+        char*                   buf,
+        size_t                  size)
+{
+    int nbytes;
+
+    if (buf == NULL && size) {
+        nbytes = -1;
+    }
+    else {
+        int n;
+
+        nbytes = 0;
+
+        if (tvEqual(*ts, TS_NONE)) {
+            n = snprintf(buf, size, "TS_NONE");
+            (void)post_snprintf(n, &nbytes, &buf, &size);
+        }
+        else if (tvEqual(*ts, TS_ZERO)) {
+            n = snprintf(buf, size, "TS_ZERO");
+            (void)post_snprintf(n, &nbytes, &buf, &size);
+        }
+        else if (tvEqual(*ts, TS_ENDT)) {
+            n = snprintf(buf, size, "TS_ENDT");
+            (void)post_snprintf(n, &nbytes, &buf, &size);
+        }
+        else {
+            n = sprint_time_t(buf, size, ts->tv_sec);
+            if (post_snprintf(n, &nbytes, &buf, &size)) {
+                // We only print to millisecond resolution
+                n = snprintf(buf, size, ".%03d", (int)(ts->tv_usec/1000));
+                (void)post_snprintf(n, &nbytes, &buf, &size);
+            }
+        }
+    }
+
+    return nbytes;
+}
+
+
+/**
+ * Formats a timestamp. Deprecated in favor of `ts_format()`
  *
  * @param[out] buf      Buffer.
  * @param[in]  bufsize  Size of buffer in bytes.
@@ -160,46 +238,92 @@ sprint_time_t(char *buf, size_t bufsize, time_t ts)
 int
 sprint_timestampt(char *buf, size_t bufsize, const timestampt *tvp)
 {
-        int len;
-
-#define P_TIMESTAMP_LEN (P_TIMET_LEN + 4)
-        if(!buf || bufsize < P_TIMESTAMP_LEN)
-                return -1;
-
-        if(tvp->tv_sec == TS_NONE.tv_sec && tvp->tv_usec == TS_NONE.tv_usec)
-        {
-                len = snprintf(buf, bufsize, "TS_NONE");
-                return len;
-        }
-        /* else */
-        if(tvp->tv_sec == TS_ZERO.tv_sec && tvp->tv_usec == TS_ZERO.tv_usec)
-        {
-                len = snprintf(buf, bufsize, "TS_ZERO");
-                return len;
-        }
-        /* else */
-        if(tvp->tv_sec == TS_ENDT.tv_sec && tvp->tv_usec == TS_ENDT.tv_usec)
-        {
-                len = snprintf(buf, bufsize, "TS_ENDT");
-                return len;
-        }
-        /* else */
-        
-        len = sprint_time_t(buf, bufsize, (time_t)tvp->tv_sec);
-        if (len == -1)
+    #define P_TIMESTAMP_LEN (P_TIMET_LEN + 4)
+    if(!buf || bufsize < P_TIMESTAMP_LEN)
             return -1;
-        /* assert(len == 14) */
-        bufsize -= len;
-        if (bufsize) {
-            /* we are only printing the microsecs to millisec accuracy */
-            int nbytes = snprintf(buf+len, bufsize, ".%03d",
-                    (int)(tvp->tv_usec/1000));
-            if (nbytes < 0 || nbytes >= bufsize)
-                return -1;
-            len += nbytes;
+
+    return ts_format(tvp, buf, bufsize);
+}
+
+
+/**
+ * Returns the string representation of a feedtype.
+ *
+ * @param[in]  feedtype  The feedtype to be formatted.
+ * @param[out] buf       The buffer into which to format the feedtype. May be
+ *                       NULL only if `size == 0`.
+ * @param[in]  size      The size of the buffer in bytes.
+ * @retval     -1        The feedtype can't be formatted.
+ * @return               The number of characters that it takes to format the
+ *                       feedtype (excluding the terminating NUL). If equal to
+ *                       or greater than `size`, then the returned string is not
+ *                       NUL-terminated.
+ */
+int ft_format(
+        feedtypet    feedtype,
+        char* const  buf,
+        const size_t size)
+{
+    int nbytes;
+
+    if (buf == NULL && size) {
+        nbytes = -1;
+    }
+    else if (feedtype == NONE) {
+        nbytes = snprintf(buf, size, "%s", "NONE");
+    }
+    else {
+        static struct fal* anyEntry = NULL;
+
+        if (anyEntry == NULL) { // Compute and save for subsequent calls
+            // Find the most inclusive feedtype, to work backwards from
+            for (anyEntry = fassoc;
+                    anyEntry->type != ANY && anyEntry->name != NULL;
+                    anyEntry++)
+                ;
+            if (anyEntry->name == NULL) {
+                // Who took ANY out of the feedtype name table?
+                anyEntry = NULL;
+            }
         }
-                        
-        return len;
+
+        if (anyEntry == NULL) {
+            nbytes = -1;
+        }
+        else {
+            char*       cp = buf;
+            size_t      left = size;
+            struct fal* ftEntry = anyEntry; // Start at ANY and work backwards
+
+            nbytes = 0;
+
+            while (feedtype && ftEntry->type != NONE) {
+                if ((ftEntry->type & feedtype) == ftEntry->type) { // Match
+                    int n = snprintf(cp, left, nbytes ? "|%s" : "%s", ftEntry->name);
+                    if (!post_snprintf(n, &nbytes, &cp, &left))
+                        break;
+                    feedtype &= ~ftEntry->type;
+                }
+                ftEntry--;
+            }
+
+            if (buf && nbytes >= 0) {
+                // Capitalize it
+                for (cp = buf; cp < buf + size && *cp; cp++)
+                    if (islower(*cp))
+                        *cp = toupper(*cp);
+
+                if (feedtype) {
+                    // Handle error, some unnamed bits in there
+                    int n = snprintf(cp, left, nbytes ? "|0x%08x" : "0x%08x",
+                            (unsigned)feedtype);
+                    (void)post_snprintf(n, &nbytes, &cp, &left);
+                }
+            }
+        }
+    }
+
+    return nbytes;
 }
 
 
@@ -215,56 +339,12 @@ sprint_timestampt(char *buf, size_t bufsize, const timestampt *tvp)
 int
 sprint_feedtypet(char *buf, size_t bufsize, feedtypet feedtype)
 {
-        static struct fal *fap = 0;
-        struct fal *ap;
-        char *sp = buf;
-        int len;
+    // Maximum number of bytes of any feedtype expression we will construct
+    #define FDTT_SBUF_SIZE (128)
+    if(buf == NULL || bufsize < FDTT_SBUF_SIZE +1)
+        return -1;
 
-/* max len of any feedtype expression we will construct */
-#define FDTT_SBUF_SIZE (128)
-        if(buf == NULL || bufsize < FDTT_SBUF_SIZE +1)
-                return -1;
-        (void) memset(buf, 0, bufsize);
-
-        if (feedtype == NONE)
-          return sprintf(buf, "%s", "NONE");
-
-
-        if (fap == 0) {         /* compute and save for subsequent calls */
-            /* find the most inclusive feedtype, to work backwards from */
-            for(fap = fassoc; fap->type != ANY && fap->name != NULL; )
-                fap++;
-            if(fap->name == NULL) {
-                /* who took ANY out of the feedtype name table? */
-                return -1;
-            }
-        }
-
-        ap = fap;               /* start at ANY and work backwards */
-        *sp = '\0';
-        while (feedtype && ap->type != NONE) {
-            if ((ap->type & feedtype) == ap->type) { /* includes this one */
-                (void)strncat(sp, ap->name, bufsize - 1 - strlen(buf) );
-                (void)strncat(sp, "|", bufsize - 1 - strlen(buf) );
-                sp += strlen(ap->name)+1;
-                feedtype &= ~ap->type;
-            }
-            ap--;
-        }
-
-        /* Capitalize it */
-        for( sp=buf; *sp && sp < &buf[bufsize - 1]; sp++)
-            *sp = (char)(islower(*sp) ? toupper(*sp) : *sp);
-
-        if (feedtype) {
-            /* handle error, some unnamed bits in there */
-            ptrdiff_t   left = buf + bufsize - sp;
-            (void)snprintf(sp, left, "0x%08x|", (unsigned)feedtype);
-        }
-
-        len = (int)strlen(buf)-1;
-        buf[len] = '\0';        /* chop trailing "|" */
-        return len;
+    return ft_format(feedtype, buf, bufsize);
 }
 
 /**
@@ -474,119 +554,155 @@ sigParse(
 }
 
 
+/**
+ * Returns the string representation of a product-specification.
+ *
+ * @param[in]  ps    The product-specification to be formatted.
+ * @param[out] buf   The buffer into which to format the product-specification.
+ *                   May be NULL only if `size == 0`.
+ * @param[in]  size  The size of the buffer in bytes.
+ * @retval     -1    The product-specification couldn't be formatted.
+ * @return           The number of characters that it takes to format the
+ *                   product-specification (excluding the terminating NUL). If
+ *                   equal to or greater than `size`, then the returned string
+ *                   is not NUL-terminated.
+ */
+int ps_format(
+        const prod_spec* const ps,
+        char*                  buf,
+        size_t                 size)
+{
+    int nbytes = 0;
+
+    if(buf == NULL && size) {
+        nbytes = -1;
+    }
+    else if (ps == NULL) {
+        nbytes = snprintf(buf, size, "%s", nada);
+    }
+    else {
+        int n = snprintf(buf, size, "{");
+
+        if (post_snprintf(n, &nbytes, &buf, &size)) {
+            n = ft_format(ps->feedtype, buf, size);
+
+            if (post_snprintf(n, &nbytes, &buf, &size)) {
+                n = snprintf(buf, size, ", \"%s\"}",
+                        ps->pattern ? ps->pattern : nada);
+
+                (void)post_snprintf(n, &nbytes, &buf, &size);
+            }
+        }
+    }
+
+    return nbytes;
+}
+
+
+/**
+ * Deprecated in favor of `ps_format()`.
+ */
 int
 sprint_prod_spec(char *buf,
         size_t bufsize, const prod_spec *specp)
 {
-        size_t len = 0;
-        int conv;
-#define MIN_PSPECLEN (1 + 7 + 1 + 1 + 1 + 1 +1)
-#define MAX_PSPECLEN (MIN_PSPECLEN + MAXPATTERN)
-        if(buf == NULL || (bufsize < MAX_PSPECLEN
-                        && bufsize < MIN_PSPECLEN
-                         + strlen(specp->pattern)))
-                return -1;
+    #define MIN_PSPECLEN (1 + 7 + 1 + 1 + 1 + 1 +1)
+    #define MAX_PSPECLEN (MIN_PSPECLEN + MAXPATTERN)
+    if(buf == NULL || (bufsize < MAX_PSPECLEN
+                    && bufsize < MIN_PSPECLEN
+                     + strlen(specp ? specp->pattern : nada)))
+        return -1;
 
-        if(specp == NULL)
-                return sprintf(buf, "%s", nada);
-
-        buf[0] = '{';
-        len++;
-        bufsize--;
-
-        conv = sprint_feedtypet(&buf[len], bufsize, specp->feedtype);
-        if(conv < 1)
-                return (int)len;
-        len += (size_t) conv;
-        bufsize -= len;
-
-        if(specp->pattern == NULL)
-                conv = sprintf(&buf[len], ",  \"%s\"}", nada);
-        else
-                conv = sprintf(&buf[len], ",  \"%s\"}", specp->pattern);
-        if(conv < 1)
-                return (int)len;
-        len += (size_t) conv;
-        /* bufsize -= len; */
-        return (int)len;
+    return ps_format(specp, buf, bufsize);
 }
 
 
+/**
+ * Returns the string representation of a product-class.
+ *
+ * @param[in]  pc    The product-class to be formatted.
+ * @param[out] buf   The buffer into which to format the product-class.
+ *                   May be NULL only if `size == 0`.
+ * @param[in]  size  The size of the buffer in bytes.
+ * @retval     -1    The product-class couldn't be formatted.
+ * @return           The number of characters that it takes to format the
+ *                   product-class (excluding the terminating NUL). If equal to
+ *                   or greater than `size`, then the returned string is not
+ *                   NUL-terminated.
+ */
+int pc_format(
+        const prod_class_t* const pc,
+        char*                     buf,
+        size_t                    size)
+{
+    int nbytes;
+
+    if(buf == NULL && size) {
+        nbytes = -1;
+    }
+    else if (pc == NULL) {
+        nbytes = snprintf(buf, size, "%s", nada);
+    }
+    else {
+        nbytes = 0;
+
+        int n = ts_format(&pc->from, buf, size);
+
+        if (post_snprintf(n, &nbytes, &buf, &size)) {
+            n = snprintf(buf, size, " ");
+
+            if (post_snprintf(n, &nbytes, &buf, &size)) {
+                n = ts_format(&pc->to, buf, size);
+
+                if (post_snprintf(n, &nbytes, &buf, &size)) {
+                    n = snprintf(buf, size, " {");
+
+                    if (post_snprintf(n, &nbytes, &buf, &size)) {
+                        const unsigned psa_len = pc->psa.psa_len;
+
+                        for(int i = 0; size > 0 && i < psa_len; i++) {
+                            if (i) {
+                                n = snprintf(buf, size, ",");
+                                if (!post_snprintf(n, &nbytes, &buf, &size))
+                                    break;
+                            }
+
+                            n = ps_format(&pc->psa.psa_val[i], buf, size);
+
+                            if (!post_snprintf(n, &nbytes, &buf, &size))
+                                break;
+                        }
+
+                        if (nbytes >= 0) {
+                            n = snprintf(buf, size, "}");
+                            (void)post_snprintf(n, &nbytes, &buf, &size);
+                        }
+                    } // " {" printed
+                } // `pc->to` printed
+            } // space printed
+        } // `pc->from` printed
+    } // typical case
+
+    return nbytes;
+}
+
+
+/**
+ * Deprecated in favor of `pc_format()`.
+ */
 char *
 s_prod_class(char *buf,
         size_t bufsize, const prod_class_t *clssp)
 {
-        size_t len = 0;
-        int conv;
-        int ii;
+    if (buf == NULL) {
+        buf = tprintbuf;
+        bufsize = sizeof(tprintbuf);
+    }
 
-        if(buf == NULL)
-        {
-                buf = tprintbuf;
-                bufsize = sizeof(tprintbuf);
-        }
+    if (bufsize < 2 * P_TIMESTAMP_LEN + MAX_PSPECLEN)
+        return NULL;
 
-        if(bufsize < 2 * P_TIMESTAMP_LEN + MAX_PSPECLEN) return NULL;
-
-        if(clssp == NULL)
-        {
-                (void)sprintf(buf, "%s", nada);
-                return buf;
-        }
-        
-        conv = sprint_timestampt(&buf[len], bufsize, &clssp->from);
-        if(conv < 1)
-                return buf;
-        len += (size_t)conv;
-        bufsize -= len;
-
-        conv = sprintf(&buf[len]," ");
-        len += (size_t)conv;
-        bufsize -= (size_t)conv;
-
-        conv = sprint_timestampt(&buf[len], bufsize, &clssp->to);
-        if(conv < 1)
-                return buf;
-        len += (size_t)conv;
-        bufsize -= (size_t)conv;
-        
-        conv = sprintf(&buf[len]," {");
-        len += (size_t)conv;
-        bufsize -= (size_t)conv;
-
-        {
-        const unsigned int last = clssp->psa.psa_len;
-        for(ii = 0; bufsize > 0 && ii < last; /* incr below */)
-        {
-                conv = sprint_prod_spec(&buf[len], bufsize,
-                        &clssp->psa.psa_val[ii]);
-                if(conv < 1)
-                        return buf;
-                len += (size_t)conv;
-                bufsize -= (size_t)conv;
-                if(++ii == last) /* incr */
-                        break;
-                /* else */
-                if(bufsize > 1)
-                {
-                        conv = sprintf(&buf[len],",");
-                        len += (size_t)conv;
-                        bufsize -= (size_t)conv;
-                }
-                
-        }
-        }
-
-        if(bufsize > 1)
-        {
-                conv = sprintf(&buf[len],"}");
-#if 0
-                len += (size_t)conv;
-                bufsize -= (size_t)conv;
-#endif
-        }
-
-        return buf;
+    return pc_format(clssp, buf, bufsize) < 0 ? NULL : buf;
 }
 
 
@@ -685,7 +801,7 @@ s_ldmproc(unsigned long proc)
         /* default */
         {
                 static char buf[24];
-                (void)sprintf(buf, "%ld", proc);
+                (void)sprintf(buf, "%lu", proc);
                 return buf;
         }
 }
@@ -698,7 +814,7 @@ main()
 {
     feedtypet in;
 
-    while ( scanf("%d", &in) != EOF ) {
+    while ( scanf("%12d", &in) != EOF ) {
         printf("%d\t0x%08x\t\t%s\n", in, in, s_feedtypet(in));
     }
     return 0;
