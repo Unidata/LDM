@@ -1,4 +1,9 @@
-6.12.13
+6.12.14
+    Logging:
+        Corrected bug dealing with variadic arguments that could cause a crash
+        under certain circumstances.
+
+6.12.13	2015-05-29T15:42:39-0600
     Logging:
         Rewrote many of the formatting functions in "ldmprint.c" in an attempt
         to eliminate the cause of a crash experienced by Art Person when a 
@@ -18,7 +23,7 @@
 
 6.12.10	2015-05-16T08:42:51-0600
     Product-Queue (pq.c):
-        Corrected a bug that delt with finding the last data-product that a
+        Corrected a bug that dealt with finding the last data-product that a
         downstream LDM successfully received given the product's signature. This
         bug manifested itself as either a segmentation violation (i.e., SIGSEGV)
         or 100% CPU usage -- both in the function `tqe_find()`. Thanks Gilbert.

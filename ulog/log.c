@@ -312,8 +312,7 @@ int log_vadd(
 
                         msg->string = string;
                         msg->size = size;
-                        (void)vsnprintf(msg->string, msg->size, fmt, args);
-                        status = 0;
+                        status = EAGAIN;
                     }
                 }
 
