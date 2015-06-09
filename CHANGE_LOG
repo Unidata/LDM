@@ -3,6 +3,10 @@
         Corrected bug dealing with variadic arguments that could cause a crash
         under certain circumstances.
 
+    pq_test_insert(1):
+        Created test utility for inserting synthetic data-products into the
+        product-queue.
+
 6.12.13	2015-05-29T15:42:39-0600
     Logging:
         Rewrote many of the formatting functions in "ldmprint.c" in an attempt

@@ -6,7 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST 	= pqinsert.1.in
+EXTRA_DIST 	= pqinsert.1.in pq_test_insert.txt
 CLEANFILES      = pqinsert.1 *.pq *.log
 PQ_SUBDIR	= @PQ_SUBDIR@
 
@@ -42,4 +42,4 @@ check-local:		pq_test_insert
 	$(top_builddir)/pqcreate/pqcreate -c -s 500k -q pq_test_insert.pq
 	rm -f pq_test_insert.log 
 	./pq_test_insert -vl pq_test_insert.log \
-                -q pq_test_insert.pq pq_test_insert.txt
+                -q pq_test_insert.pq $(srcdir)/pq_test_insert.txt
