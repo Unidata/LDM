@@ -7,10 +7,10 @@
 ## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST 	= pqinsert.1.in
-CLEANFILES      = pqinsert.1
+CLEANFILES      = pqinsert.1 *.pq *.log
 PQ_SUBDIR	= @PQ_SUBDIR@
 
-bin_PROGRAMS	= pqinsert
+bin_PROGRAMS	= pqinsert pq_test_insert
 CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -20,7 +20,8 @@ CPPFLAGS	= \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir) \
     -I$(top_srcdir)/mcast_lib/C++
-pqinsert_LDADD	= $(top_builddir)/lib/libldm.la
+pqinsert_LDADD		= $(top_builddir)/lib/libldm.la
+pq_test_insert_LDADD	= $(pqinsert_LDADD)
 TAGS_FILES	= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
@@ -34,3 +35,11 @@ nodist_man1_MANS	= pqinsert.1
 pqinsert.1:	$(srcdir)/pqinsert.1.in
 	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
+
+check-local:		pq_test_insert
+# The "-c" (clobber) option is used to prevent `pq_test_insert` from exiting due
+# to a duplicate data-product from a previous invocation.
+	$(top_builddir)/pqcreate/pqcreate -c -s 500k -q pq_test_insert.pq
+	rm -f pq_test_insert.log 
+	./pq_test_insert -vl pq_test_insert.log \
+                -q pq_test_insert.pq pq_test_insert.txt
