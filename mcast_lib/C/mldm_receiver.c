@@ -178,9 +178,8 @@ bop_func(
     }
     else {
         /*
-         * Because this function is called by the VCMTP multicast and unicast
-         * threads, visibility of changes is ensured by locking the
-         * product-queue.
+         * This function is called on both the VCMTP multicast and unicast
+         * threads.
          */
         if (lockPq(mlr)) {
             status = -1;
