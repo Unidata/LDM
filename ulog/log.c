@@ -204,11 +204,150 @@ void log_clear()
 }
 
 /**
+ * Returns a new message structure.
+ *
+ * @param[in] entry   The message structure.
+ * @retval    0       Success. `*entry` is set.
+ * @retval    ENOMEM  Out-of-memory. Error message logged.
+ */
+static int msg_new(
+        Message** const entry)
+{
+    Message* msg = (Message*)malloc(sizeof(Message));
+    int      status;
+
+    if (msg == NULL) {
+        status = errno;
+
+        lock();
+        serror("log_vadd(): malloc(%lu) failure",
+            (unsigned long)sizeof(Message));
+        unlock();
+    }
+    else {
+        char*   string = (char*)malloc(DEFAULT_STRING_SIZE);
+
+        if (NULL == string) {
+            status = errno;
+
+            lock();
+            serror("log_vadd(): malloc(%lu) failure",
+                (unsigned long)DEFAULT_STRING_SIZE);
+            unlock();
+            free(msg);
+        }
+        else {
+            *string = 0;
+            msg->string = string;
+            msg->size = DEFAULT_STRING_SIZE;
+            msg->next = NULL;
+            *entry = msg;
+            status = 0;
+        }
+    } // `msg` allocated
+
+    return status;
+}
+
+/**
+ * Returns the next unused entry in a message-list. Creates it if necessary.
+ *
+ * @param[in] list    The message-list.
+ * @param[in] entry   The next unused entry.
+ * @retval    0       Success. `*entry` is set.
+ * @retval    ENOMEM  Out-of-memory. Error message logged.
+ */
+static int log_getNextEntry(
+        List* const restrict     list,
+        Message** const restrict entry)
+{
+    Message* msg = (NULL == list->last) ? list->first : list->last->next;
+    int      status;
+
+    if (msg != NULL) {
+        *entry = msg;
+        status = 0;
+    }
+    else {
+        status = msg_new(&msg);
+        if (status == 0) {
+            if (NULL == list->first)
+                list->first = msg;  /* very first message */
+            if (NULL != list->last)
+                list->last->next = msg;
+            *entry = msg;
+        } // `msg` allocated
+    } // need new message structure
+
+    return status;
+}
+
+/**
+ * Prints a message into a message-list entry.
+ *
+ * @param[in] msg        The message entry.
+ * @param[in] fmt        The message format.
+ * @param[in] args       The arguments to be formatted.
+ * @retval    0          Success. The message has been written into `*msg`.
+ * @retval    EAGAIN     The character buffer was too small. Try again.
+ * @retval    EINVAL     `fmt` or `args` is `NULL`. Error message logged.
+ * @retval    EINVAL     There are insufficient arguments. Error message logged.
+ * @retval    EILSEQ     A wide-character code that doesn't correspond to a
+ *                       valid character has been detected. Error message logged.
+ * @retval    ENOMEM     Out-of-memory. Error message logged.
+ * @retval    EOVERFLOW  The length of the message is greater than {INT_MAX}.
+ *                       Error message logged.
+ */
+static int msg_format(
+        Message* const restrict    msg,
+        const char* const restrict fmt,
+        va_list                    args)
+{
+    int nbytes = vsnprintf(msg->string, msg->size, fmt, args);
+    int status;
+
+    if (msg->size > nbytes) {
+        status = 0;
+    }
+    else if (0 > nbytes) {
+        /*
+         * `vsnprintf()` isn't guaranteed to set `errno` according to The Open
+         * Group Base Specifications Issue 6
+         */
+        status = errno ? errno : EILSEQ;
+        lock();
+        serror("log_vadd(): vsnprintf() failure");
+        unlock();
+    }
+    else {
+        // The buffer is too small for the message. Expand it.
+        size_t  size = nbytes + 1;
+        char*   string = (char*)malloc(size);
+
+        if (NULL == string) {
+            status = errno;
+            lock();
+            serror("log_vadd(): malloc(%lu) failure", (unsigned long)size);
+            unlock();
+        }
+        else {
+            free(msg->string);
+            msg->string = string;
+            msg->size = size;
+            status = EAGAIN;
+        }
+    }                           /* buffer is too small */
+
+    return status;
+}
+
+/**
  * Adds a variadic log-message to the message-list for the current thread.
  *
  * @param[in] fmt       Formatting string.
  * @param[in] args      Formatting arguments.
  * @retval 0            Success
+ * @retval EAGAIN       The character buffer was too small. Try again.
  * @retval EINVAL       `fmt` or `args` is `NULL`. Error message logged.
  * @retval EINVAL       There are insufficient arguments. Error message logged.
  * @retval EILSEQ       A wide-character code that doesn't correspond to a
@@ -230,101 +369,23 @@ int log_vadd(
         lock();
         uerror("log_vadd(): NULL argument");
         unlock();
-
         status = EINVAL;
     }
     else {
-        List*   list = getList();
-
+        List* list = getList();
         if (NULL == list) {
             status = ENOMEM;
         }
         else {
-            Message*    msg = (NULL == list->last) ? list->first :
-                list->last->next;
-
-            if (msg == NULL) {
-                msg = (Message*)malloc(sizeof(Message));
-
-                if (msg == NULL) {
-                    status = errno;
-
-                    lock();
-                    serror("log_vadd(): malloc(%lu) failure",
-                        (unsigned long)sizeof(Message));
-                    unlock();
-                }
-                else {
-                    char*   string = (char*)malloc(DEFAULT_STRING_SIZE);
-
-                    if (NULL == string) {
-                        status = errno;
-
-                        lock();
-                        serror("log_vadd(): malloc(%lu) failure",
-                            (unsigned long)DEFAULT_STRING_SIZE);
-                        unlock();
-                        free(msg);
-                        msg = NULL;
-                    }
-                    else {
-                        *string = 0;
-                        msg->string = string;
-                        msg->size = DEFAULT_STRING_SIZE;
-                        msg->next = NULL;
-
-                        if (NULL == list->first)
-                            list->first = msg;  /* very first message */
-                        if (NULL != list->last)
-                            list->last->next = msg;
-                    }
-                } // `msg` allocated
-            } // need new message structure
-
-            if (msg) {
-                int nbytes = vsnprintf(msg->string, msg->size, fmt, args);
-
-                if (0 > nbytes) {
-                    status = errno;
-
-                    lock();
-                    serror("log_vadd(): vsnprintf() failure");
-                    unlock();
-                }
-                else if (msg->size > nbytes) {
-                    status = 0;
-                }
-                else {
-                    /* The buffer is too small for the message */
-                    size_t  size = nbytes + 1;
-                    char*   string = (char*)malloc(size);
-
-                    if (NULL == string) {
-                        status = errno;
-
-                        lock();
-                        serror("log_vadd(): malloc(%lu) failure",
-                            (unsigned long)size);
-                        unlock();
-                    }
-                    else {
-                        free(msg->string);
-
-                        msg->string = string;
-                        msg->size = size;
-                        status = EAGAIN;
-                    }
-                }
-
-                if (0 == status) {
-                    if (NULL != list->last)
-                        list->last->next = msg;
-
+            Message* msg;
+            status = log_getNextEntry(list, &msg);
+            if (status == 0) {
+                status = msg_format(msg, fmt, args);
+                if (status == 0)
                     list->last = msg;
-                }
-            }                               /* have a message structure */
-        }                                   /* message-list isn't NULL */
-    }                                       /* arguments aren't NULL */
+            } // have a message structure
+        } // message-list isn't NULL
+    } // arguments aren't NULL
 
     restoreSigs(&sigset);
     return status;
