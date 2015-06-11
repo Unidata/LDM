@@ -18,7 +18,9 @@ while( <STDIN> ) {
     }
 
     if (/notification_6/ || /hereis_6/ || /blkdata_6/) {
-	$nullResultsProc = 1;
+        # Uncomment-out the following line to get "batched" RPC instead of
+        # asynchronous "message-passing" RPC.
+#	$nullResultsProc = 1;
 	$zeroTimeout = 1;
     }
 

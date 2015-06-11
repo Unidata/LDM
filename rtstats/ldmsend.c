@@ -328,10 +328,13 @@ send_product_6(
         product.info = *infop;
         product.data = (void*)statsdata;
 
-        if (NULL == hereis_6(&product, clnt)) {
-            uerror("%s: HEREIS_6 failure: %s",
-                remote, clnt_errmsg(clnt));
-        }
+        (void)hereis_6(&product, clnt);
+        /*
+         * The status will be RPC_TIMEDOUT unless an error occurs because the
+         * RPC call uses asynchronous message-passing.
+         */
+        if (clnt_stat(clnt) != RPC_TIMEDOUT)
+            uerror("%s: HEREIS_6 failure: %s", remote, clnt_errmsg(clnt));
     }
     else {
         /*
@@ -370,7 +373,12 @@ send_product_6(
                 packet.data.dbuf_len = size;
                 packet.data.dbuf_val = (void*)statsdata;
 
-                if (NULL == blkdata_6(&packet, clnt)) {
+                (void)blkdata_6(&packet, clnt);
+                /*
+                 * The status will be RPC_TIMEDOUT unless an error occurs
+                 * because the RPC call uses asynchronous message-passing.
+                 */
+                if (clnt_stat(clnt) != RPC_TIMEDOUT) {
                     uerror("%s: BLKDATA_6 failure: %s",
                         remote, clnt_errmsg(clnt));
                 }

@@ -172,7 +172,12 @@ static int notify(
                     s_prod_info(NULL, 0, info, isDebug)),
                     isDebug ? ERR_DEBUG : ERR_INFO);
 
-        if (NULL == notification_6((prod_info*) info, _clnt)) {
+        (void)notification_6((prod_info*) info, _clnt);
+        /*
+         * The status will be RPC_TIMEDOUT unless an error occurs because the
+         * RPC call uses asynchronous message-passing.
+         */
+        if (clnt_stat(_clnt) != RPC_TIMEDOUT) {
             *errObj = ERR_NEW1(up6_error(clnt_stat(_clnt)), NULL,
                     "NOTIFICATION failure: %s", clnt_errmsg(_clnt));
         }
@@ -216,7 +221,12 @@ hereis(
     prod.info = *infop;
     prod.data = (void*) datap;
 
-    if (NULL == hereis_6(&prod, _clnt)) {
+    (void)hereis_6(&prod, _clnt);
+    /*
+     * The status will be RPC_TIMEDOUT unless an error occurs because the RPC
+     * call uses asynchronous message-passing.
+     */
+    if (clnt_stat(_clnt) != RPC_TIMEDOUT) {
         errObj = ERR_NEW1(up6_error(clnt_stat(_clnt)), NULL,
                 "HEREIS: %s", clnt_errmsg(_clnt));
     }
@@ -285,7 +295,12 @@ csbd(
             pkt.data.dbuf_len = infop->sz;
             pkt.data.dbuf_val = (void*) datap;
 
-            if (NULL == blkdata_6(&pkt, _clnt)) {
+            (void)blkdata_6(&pkt, _clnt);
+            /*
+             * The status will be RPC_TIMEDOUT unless an error occurs because
+             * the RPC call uses asynchronous message-passing.
+             */
+            if (clnt_stat(_clnt) != RPC_TIMEDOUT) {
                 errObj = ERR_NEW1(up6_error(clnt_stat(_clnt)), NULL,
                         "Error sending BLKDATA: %s", clnt_errmsg(_clnt));
             }

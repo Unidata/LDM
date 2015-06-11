@@ -514,8 +514,14 @@ my_csbd_6(
             packet.data.dbuf_len = size;
             packet.data.dbuf_val = product->data;
 
-            if (NULL == blkdata_6(&packet, clnt))
-                status = getStatus(proxy, "BLKDATA_6", &product->info);
+            (void)blkdata_6(&packet, clnt);
+            /*
+             * The status will be RPC_TIMEDOUT unless an error occurs because
+             * the RPC call uses asynchronous message-passing.
+             */
+            status = (clnt_stat(clnt) == RPC_TIMEDOUT)
+                ? 0
+                : getStatus(proxy, "BLKDATA_6", &product->info);
         }
     }
 
@@ -543,9 +549,14 @@ my_hereis_6(
 
     udebug("Sending file via HEREIS_6");
 
-    if (NULL == hereis_6(product, proxy->clnt)) {
-        status = getStatus(proxy, "HEREIS_6", &product->info);
-    }
+    (void)hereis_6(product, proxy->clnt);
+    /*
+     * The status will be RPC_TIMEDOUT unless an error occurs because the RPC
+     * call uses asynchronous message-passing.
+     */
+    status = (clnt_stat(proxy->clnt) == RPC_TIMEDOUT)
+        ? 0
+        : getStatus(proxy, "HEREIS_6", &product->info);
 
     return status;
 }

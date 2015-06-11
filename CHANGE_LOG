@@ -1,4 +1,15 @@
-6.12.14
+6.12.15
+    Upstream LDM:
+        Reduced the delivery latency of products with relatively large
+        inter-product temporal gaps. Modified the RPC calls that LDM-6 makes
+        to send data products in primary mode by switching from "batched" RPC
+        calls to asynchronous "message-passing" RPC calls. Specifically, the XDR
+        function to decode the (non-existent) response was changed from `NULL`
+        to `xdr_void` in the functions `notification_6`, `hereis_6`, and
+        `blkdata_6`. The results are highly dependent on the characteristics of
+        the data flow; consequently, you might not notice any difference.
+
+6.12.14	2015-06-09T09:45:43-0600
     Logging:
         Corrected bug dealing with variadic arguments that could cause a crash
         under certain circumstances.
