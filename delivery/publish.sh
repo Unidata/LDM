@@ -75,22 +75,22 @@ ssh -T $WEB_HOST bash --login <<EOF
     #
     umask 02
 
-    # Set the hyperlink references in the top-level HTML file. For a given major
+    # Set the hyperlink references to the documentation. For a given major
     # and minor version, keep only the latest bug-fix.
     #
     ls -d $PKG_ID_GLOB |
         sed "s/$PKG_NAME-//" |
         sort -t. -k 1nr,1 -k 2nr,2 -k 3nr,3 |
         awk -F. '\$1!=ma||\$2!=mi{print}{ma=\$1;mi=\$2}' >versions
-    sed -n '1,/$BEGIN_VERSION_LINKS/p' index.html >index.html.new
+    sed -n '1,/$BEGIN_VERSION_LINKS/p' documentation.inc >documentation.inc.new
     for vers in \`cat versions\`; do
         href=$PKG_NAME-\$vers
-        echo "            <li><a href=\"\$href\">\$vers</a>" >>index.html.new
+        echo "            <li><a href=\"\$href\">\$vers</a>" >>documentation.inc.new
     done
-    sed -n '/$END_VERSION_LINKS/,\$p' index.html >>index.html.new
-    rm -f index.html.old
-    cp index.html index.html.old
-    mv index.html.new index.html
+    sed -n '/$END_VERSION_LINKS/,\$p' documentation.inc >>documentation.inc.new
+    rm -f documentation.inc.old
+    cp documentation.inc documentation.inc.old
+    mv documentation.inc.new documentation.inc
 
     # Delete all versions not referenced in the top-level HTML file.
     #
