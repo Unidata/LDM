@@ -64,6 +64,7 @@ struct pqe_index {
 #define PQ_NOMAP	0x20	/* Use malloc/read/write/free instead of mmap() */
 #define PQ_MAPRGNS	0x40	/* Map region by region, default whole file */
 #define PQ_SPARSE       0x80    /* Created as sparse file, zero blocks unallocated */
+#define PQ_THREADSAFE   0x100   /* Make the queue access functions thread-safe */
 /* N.B.: bits 0x1000 (and above) in use internally */
 
 #define pqeOffset(pqe) ((pqe).offset)
@@ -82,12 +83,6 @@ extern "C" {
 #endif
 
 extern const pqe_index _pqenone;
-
-/**
- * Resets the random number generator.
- */
-void
-pq_reset_random(void);
 
 /**
  * Creates a product-queue. On success, the writer-counter of the created
@@ -182,13 +177,13 @@ pq_close(pqueue *pq);
  *                `pq_open()`.
  */
 const char* pq_getPathname(
-        const pqueue* pq);
+        pqueue* pq);
 
 /*
  * Let the user find out the pagesize.
  */
 int
-pq_pagesize(const pqueue *pq);
+pq_pagesize(pqueue *pq);
 
 /**
  * Returns the size of the data portion of a product-queue.
@@ -591,7 +586,7 @@ pq_coffset(pqueue *pq, off_t c_offset);
  * Get current cursor value used by pq_sequence() or pq_seqdel().
  */
 void
-pq_ctimestamp(const pqueue *pq, timestampt *tvp);
+pq_ctimestamp(pqueue *pq, timestampt *tvp);
 
 /*
  * Figure out the direction of scan of clssp, and set *mtp to it.
@@ -766,13 +761,11 @@ pq_sequence(pqueue *pq, pq_match mt,
         const prod_class_t *clss, pq_seqfunc *ifMatch, void *otherargs);
 
 /*
- * Boolean function to
- * check that the cursor timestime is
- * in the time range specified by clssp.
- * Returns non-zero if this is the case, zero if not.
+ * Boolean function to check that the cursor time is in the time range specified
+ * by clssp. Returns non-zero if this is the case, zero if not.
  */
 int
-pq_ctimeck(const pqueue *pq, pq_match mt, const prod_class_t *clssp,
+pq_ctimeck(pqueue *pq, pq_match mt, const prod_class_t *clssp,
         const timestampt *maxlatencyp);
 
 /*ARGSUSED*/
