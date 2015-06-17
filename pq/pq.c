@@ -150,13 +150,13 @@ pq_reset_random(void)
 }
 
 
-/* 
+/**
  * Return random level of
- *  0 with probability 3/4*(1/4)^0 = .75
- *  1 with probability 3/4*(1/4)^1 = .1875
- *  2 with probability 3/4*(1/4)^2 = .046875
- *  ...
- *  capped at "fbp->maxsize - 1".
+ *  - 0 with probability 3/4*(1/4)^0 = .75
+ *  - 1 with probability 3/4*(1/4)^1 = .1875
+ *  - 2 with probability 3/4*(1/4)^2 = .046875
+ *  - ...
+ *  capped at "fbp->maxsize - 1". Not thread-safe.
  */
 static int 
 fb_ranlev(fb *fbp) 
@@ -167,11 +167,10 @@ fb_ranlev(fb *fbp)
     int         maxlevel = fbp->maxsize - 1;
     static int  randomsLeft;
     static long randomBits;
+    static unsigned short xsubi[3] = {1234567890, 9876543210, 1029384756};
 
     if (initialized == 0) {
-        srandom(1);
-
-        randomBits = random();
+        randomBits = nrand48(xsubi);
         randomsLeft = BITSINRANDOM / 2;    
         initialized = 1;
     }
@@ -181,7 +180,7 @@ fb_ranlev(fb *fbp)
         if (!b) level++;
         randomBits>>=2;
         if (--randomsLeft == 0) {
-            randomBits = random();
+            randomBits = nrand48(xsubi);
             randomsLeft = BITSINRANDOM / 2;
         };
     } while (!b);
@@ -5017,7 +5016,7 @@ pq_del_oldest(
     /* Delete the oldest unlocked data-product. */
     size_t  rlix;
     for (tqelem* tqep = tqe_first(pq->tqp);
-            (rlix = rl_find(pq->rlp, tqep->offset)) != RL_NONE;
+            tqep && (rlix = rl_find(pq->rlp, tqep->offset)) != RL_NONE;
             tqep = tq_next(pq->tqp, tqep)) {
 
         if (pq_try_del_prod(pq, tqep, rlix)) {
@@ -5312,6 +5311,36 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
         return status;
 }
 
+/**
+ * Locks a product-queue against multi-thread access if and only if the queue
+ * was created or opened with the option `PQ_THREADSAFE`. Calls `abort()` on
+ * failure. May be called multiple times by the same thread but each call must
+ * be undone by a later call to `unlock()`.
+ *
+ * @param[in] pq  The product-queue to be locked.
+ */
+static void lockIf(
+        pqueue* const pq)
+{
+    if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_lock(pq))
+        _uassert("pq_lock(pq) == 0", __FILE__, __LINE__);
+}
+
+/**
+ * Unlocks a product-queue for multi-thread access if and only if the queue
+ * was created or opened with the option `PQ_THREADSAFE`. Calls `abort()` on
+ * failure. May be called multiple times by the same thread but each call must
+ * be matched by an earlier call to `lock()`.
+ *
+ * @param[in] pq  The product-queue to be unlocked.
+ */
+static void unlockIf(
+        pqueue* const pq)
+{
+    if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_unlock(pq))
+        _uassert("pq_unlock(pq) == 0", __FILE__, __LINE__);
+}
+
 
 /*****  Begin public interface */
 
@@ -5392,6 +5421,9 @@ pq_create(const char *path, mode_t mode,
                 status = errno;
                 goto unwind_new;
         }
+
+        lockIf(pq);
+
         pq->fd = fd;
         
         status = ctl_init(pq, align);
@@ -5404,10 +5436,12 @@ pq_create(const char *path, mode_t mode,
         *pqp = pq;
 
         (void) ctl_rel(pq, RGN_MODIFIED);
+        unlockIf(pq);
 
         return ENOERR;
 
 unwind_open:
+        unlockIf(pq);
         (void)close(fd);
         (void)unlink(path);
         /*FALLTHROUGH*/
@@ -5452,6 +5486,8 @@ pq_open(
         status = errno;
     }
     else {
+        lockIf(pq);
+
         pq->fd = open(path, fIsSet(pflags, PQ_READONLY) ? O_RDONLY : O_RDWR, 0);
 
         if (0 > pq->fd) {
@@ -5535,6 +5571,8 @@ pq_open(
             }
         }                                       /* pq->fd >= 0 */
 
+        unlockIf(pq);
+
         if (status) {
             pq_delete(pq);
         }
@@ -5564,6 +5602,8 @@ pq_close(pqueue *pq)
 
         if (pq == NULL)
                 return 0;
+
+        lockIf(pq);
 
         fd = pq->fd;
 
@@ -5620,6 +5660,8 @@ pq_close(pqueue *pq)
         }
 #endif
 
+        unlockIf(pq);
+
         pq_delete(pq);
         
         if(fd > -1 && close(fd) < 0 && !status)
@@ -5638,9 +5680,12 @@ pq_close(pqueue *pq)
  *                `pq_open()`.
  */
 const char* pq_getPathname(
-        const pqueue* pq)
+        pqueue* pq)
 {
-    return pq->pathname;
+    lockIf(pq);
+    const char* pathname = pq->pathname;
+    unlockIf(pq);
+    return pathname;
 }
 
 
@@ -5648,7 +5693,7 @@ const char* pq_getPathname(
  * Let the user find out the pagesize.
  */
 int
-pq_pagesize(const pqueue *pq)
+pq_pagesize(pqueue *pq)
 {
         /*
          * Allow 'em to figure out what the default
@@ -5656,8 +5701,12 @@ pq_pagesize(const pqueue *pq)
          */
         if(pq == NULL)
                 return (int)pagesize();
-        /* else, tell'em what it is */
-        return (int) pq->pagesz;
+
+        lockIf(pq);
+       /* else, tell'em what it is */
+        int pagesz = (int) pq->pagesz;
+        unlockIf(pq);
+        return pagesz;
 }
 
 
@@ -5671,7 +5720,10 @@ size_t
 pq_getDataSize(
     pqueue* const       pq)
 {
-    return pq->ixo - pq->datao;
+    lockIf(pq);
+    size_t size = pq->ixo - pq->datao;
+    unlockIf(pq);
+    return size;
 }
 
 
@@ -5755,8 +5807,12 @@ pqe_new(pqueue *pq,
                 return PQUEUE_BIG;  
         }
 
-        if(fIsSet(pq->pflags, PQ_READONLY))
-                return EACCES;
+        lockIf(pq);
+
+        if(fIsSet(pq->pflags, PQ_READONLY)) {
+            status = EACCES;
+            goto unwind_lock;
+        }
 
         /*
          * Write lock pq->xctl.
@@ -5764,7 +5820,7 @@ pqe_new(pqueue *pq,
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR) {
                 udebug("pqe_new(): ctl_get() failure");
-                return status;
+                goto unwind_lock;
         }
 
         extent = xlen_prod_i(infop);
@@ -5791,6 +5847,8 @@ pqe_new(pqueue *pq,
         /*FALLTHROUGH*/
 unwind_ctl:
         (void) ctl_rel(pq, RGN_MODIFIED);
+unwind_lock:
+        unlockIf(pq);
         return status;
 }
 
@@ -5845,39 +5903,46 @@ pqe_newDirect(
                 (unsigned long)size, (unsigned long)pq_getDataSize(pq));
         status = PQUEUE_BIG;
     }
-    else if (fIsSet(pq->pflags, PQ_READONLY)) {
-        LOG_ADD0("Product-queue is read-only");
-        status = EACCES;
-    }
     else {
-        /*
-         * Write-lock the product-queue control-section.
-         */
-        if ((status = ctl_get(pq, RGN_WRITE)) != 0) {
-            LOG_ADD0("ctl_get() failure");
+        lockIf(pq);
+
+        if (fIsSet(pq->pflags, PQ_READONLY)) {
+            LOG_ADD0("Product-queue is read-only");
+            status = EACCES;
         }
         else {
-            sxelem* sxep;
-
             /*
-             * Obtain a new region.
+             * Write-lock the product-queue control-section.
              */
-            status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep);
-            if (status) {
-                if (status != PQUEUE_DUP)
-                    LOG_ADD0("rpqe_new() failure");
+            if ((status = ctl_get(pq, RGN_WRITE)) != 0) {
+                LOG_ADD0("ctl_get() failure");
             }
             else {
-                /*
-                 * Save the region information in the client-supplied index
-                 * structure.
-                 */
-                indexp->offset = sxep->offset;
-                (void)memcpy(indexp->signature, sxep->sxi, sizeof(signaturet));
-            }
+                sxelem* sxep;
 
-            (void)ctl_rel(pq, RGN_MODIFIED);
-        } /* product-queue control-section locked */
+                /*
+                 * Obtain a new region.
+                 */
+                status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep);
+                if (status) {
+                    if (status != PQUEUE_DUP)
+                        LOG_ADD0("rpqe_new() failure");
+                }
+                else {
+                    /*
+                     * Save the region information in the client-supplied index
+                     * structure.
+                     */
+                    indexp->offset = sxep->offset;
+                    (void)memcpy(indexp->signature, sxep->sxi,
+                            sizeof(signaturet));
+                }
+
+                (void)ctl_rel(pq, RGN_MODIFIED);
+            } /* product-queue control-section locked */
+        } // product-queue is writable
+
+        unlockIf(pq);
     } /* arguments vetted */
 
     return status;
@@ -5896,23 +5961,25 @@ pqe_newDirect(
 int
 pqe_discard(pqueue *pq, pqe_index index)
 {
-        int status = ENOERR;
+        int   status;
         off_t offset = pqeOffset(index);
 
+        lockIf(pq);
+
         status = (pq->mtof)(pq, offset, 0);
-        if(status != ENOERR)
-                return status;
+        if(status == ENOERR) {
+            /*
+             * Write lock pq->xctl.
+             */
+            status = ctl_get(pq, RGN_WRITE);
+            if(status == ENOERR) {
+                status = rpqe_free(pq, offset, index.signature);
+                (void)ctl_rel(pq, RGN_MODIFIED);
+            }
+        }
 
-        /*
-         * Write lock pq->xctl.
-         */
-        status = ctl_get(pq, RGN_WRITE);
-        if(status != ENOERR)
-                return status;
+        unlockIf(pq);
 
-        status = rpqe_free(pq, offset, index.signature);
-        
-        (void) ctl_rel(pq, RGN_MODIFIED);
         return status;
 }
 
@@ -5927,6 +5994,8 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
         int status = ENOERR;
         off_t offset = pqeOffset(index);
 
+        lockIf(pq);
+
         /* correct the signature in the product */
         {
                 riu *rp = NULL;
@@ -5935,7 +6004,8 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
                 {
                         uerror("pqe_xinsert: Couldn't riul_r_find %ld",
                                 (long)offset);
-                        return EINVAL;
+                        status = EINVAL;
+                        goto unwind_lock;
                 }
                 xp = rp->vp;
                 assert(xp != NULL);
@@ -5945,14 +6015,14 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
 
         status =  (pq->mtof)(pq, offset, RGN_MODIFIED);
         if(status != ENOERR)
-                return status;
+                goto unwind_lock;
 
         /*
          * Write lock pq->xctl.
          */
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR)
-                return status;
+                goto unwind_lock;
 
         {
           sxelem *sxep;
@@ -5994,6 +6064,8 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
         /*FALLTHROUGH*/
 unwind_ctl:
         (void) ctl_rel(pq, RGN_MODIFIED);
+unwind_lock:
+        unlockIf(pq);
         return status;
 }
 
@@ -6006,16 +6078,18 @@ pqe_insert(pqueue *pq, pqe_index index)
         int status = ENOERR;
         off_t offset = pqeOffset(index);
 
+        lockIf(pq);
+
         status =  (pq->mtof)(pq, offset, RGN_MODIFIED);
         if(status != ENOERR)
-                return status;
+                goto unwind_lock;
 
         /*
          * Write lock pq->xctl.
          */
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR)
-                return status;
+                goto unwind_lock;
 
         assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
 
@@ -6036,6 +6110,8 @@ pqe_insert(pqueue *pq, pqe_index index)
         /*FALLTHROUGH*/
 unwind_ctl:
         (void) ctl_rel(pq, RGN_MODIFIED);
+unwind_lock:
+        unlockIf(pq);
         return status;
 }
 
@@ -6159,14 +6235,18 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         assert(pq != NULL);
         assert(prod != NULL);
 
+        lockIf(pq);
+
         if(fIsSet(pq->pflags, PQ_READONLY)) {
                 udebug("pq_insertNoSig(): queue is read-only");
-                return EACCES;
+                status = EACCES;
+                goto unwind_lock;
         }
 
         if (prod->info.sz > pq_getDataSize(pq)) {
                 udebug("pq_insertNoSig(): product is too big");
-                return PQUEUE_BIG;
+                status = PQUEUE_BIG;
+                goto unwind_lock;
         }
 
         /*
@@ -6175,7 +6255,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR) {
                 udebug("pq_insertNoSig(): ctl_get() failure");
-                return status;
+                goto unwind_lock;
         }
 
         extent = xlen_product(prod);
@@ -6210,6 +6290,8 @@ unwind_rgn:
         /*FALLTHROUGH*/
 unwind_ctl:
         (void) ctl_rel(pq, RGN_MODIFIED);
+unwind_lock:
+        unlockIf(pq);
         return status;
 }
 
@@ -6260,15 +6342,17 @@ pq_insert(pqueue *pq, const product *prod)
 int
 pq_highwater(pqueue *pq, off_t *highwaterp, size_t *maxproductsp)
 {
+        lockIf(pq);
         /* Read lock pq->xctl. */
         int status = ctl_get(pq, 0);
-        if(status != ENOERR)
-                return status;
-        if(highwaterp)
-                *highwaterp = pq->ctlp->highwater;
-        if(maxproductsp)
-                *maxproductsp = pq->ctlp->maxproducts;
-        (void) ctl_rel(pq, 0);
+        if(status == ENOERR) {
+            if(highwaterp)
+                    *highwaterp = pq->ctlp->highwater;
+            if(maxproductsp)
+                    *maxproductsp = pq->ctlp->maxproducts;
+            (void) ctl_rel(pq, 0);
+        }
+        unlockIf(pq);
 
         return status;
 }
@@ -6293,13 +6377,13 @@ int pq_isFull(
     pqueue* const       pq,
     int* const          isFull)
 {
+    lockIf(pq);
     int status = ctl_get(pq, 0);
-
     if (status == ENOERR) {
         *isFull = pq->ctlp->isFull;
-
         (void)ctl_rel(pq, 0);
     }                                   /* "pq->ctlp" allocated */
+    unlockIf(pq);
 
     return status;
 }
@@ -6323,13 +6407,13 @@ int pq_getMostRecent(
     pqueue* const       pq,
     timestampt* const   mostRecent)
 {
+    lockIf(pq);
     int status = ctl_get(pq, 0);
-
     if (status == ENOERR) {
         *mostRecent = pq->ctlp->mostRecent;
-
         (void)ctl_rel(pq, 0);
     }                                   /* "pq->ctlp" allocated */
+    unlockIf(pq);
 
     return status;
 }
@@ -6371,8 +6455,9 @@ int pq_getMinVirtResTimeMetrics(
     off_t* const        size,
     size_t* const       slots)
 {
-    int status = ctl_get(pq, 0);
+    lockIf(pq);
 
+    int status = ctl_get(pq, 0);
     if (status == ENOERR) {
         pqctl*   ctlp = pq->ctlp;
 
@@ -6395,6 +6480,8 @@ int pq_getMinVirtResTimeMetrics(
         (void)ctl_rel(pq, 0);
     }                                   /* "pq->ctlp" allocated */
 
+    unlockIf(pq);
+
     return status;
 }
 
@@ -6415,8 +6502,9 @@ int pq_getMinVirtResTimeMetrics(
 int pq_clearMinVirtResTimeMetrics(
     pqueue* const       pq)
 {
-    int status = ctl_get(pq, RGN_WRITE);
+    lockIf(pq);
 
+    int status = ctl_get(pq, RGN_WRITE);
     if (status == ENOERR) {
         pq->ctlp->minVirtResTime = TS_NONE;
         pq->ctlp->mvrtSize = -1;
@@ -6424,6 +6512,8 @@ int pq_clearMinVirtResTimeMetrics(
 
         (void)ctl_rel(pq, RGN_MODIFIED);
     }                                   /* "pq->ctlp" allocated */
+
+    unlockIf(pq);
 
     return status;
 }
@@ -6483,43 +6573,46 @@ pq_stats(pqueue *pq,
      double* const      age_oldestp,
      size_t* const      maxextentp)
 {
+    lockIf(pq);
+
     /* Read lock pq->ctl. */
     int status = ctl_get(pq, 0);
-    if(status != ENOERR)
-        return status;
-    if(nprodsp)
-        *nprodsp = pq->rlp->nelems;
-    if(nfreep)
-        *nfreep = pq->rlp->nfree;
-    if(maxextentp)
-        *maxextentp = pq->rlp->maxfextent;
-    if(nemptyp)
-        *nemptyp = pq->rlp->nempty;
-    if(nbytesp)
-        *nbytesp = pq->rlp->nbytes;
-    if(maxprodsp)
-        *maxprodsp = pq->rlp->maxelems;
-    if(maxfreep)
-        *maxfreep = pq->rlp->maxfree;
-    if(minemptyp)
-        *minemptyp = pq->rlp->minempty;
-    if(maxbytesp)
-        *maxbytesp = pq->rlp->maxbytes;
-    if(age_oldestp) {
-        timestampt ts0;
-        tqelem *tqep;
+    if(status == ENOERR) {
+        if(nprodsp)
+            *nprodsp = pq->rlp->nelems;
+        if(nfreep)
+            *nfreep = pq->rlp->nfree;
+        if(maxextentp)
+            *maxextentp = pq->rlp->maxfextent;
+        if(nemptyp)
+            *nemptyp = pq->rlp->nempty;
+        if(nbytesp)
+            *nbytesp = pq->rlp->nbytes;
+        if(maxprodsp)
+            *maxprodsp = pq->rlp->maxelems;
+        if(maxfreep)
+            *maxfreep = pq->rlp->maxfree;
+        if(minemptyp)
+            *minemptyp = pq->rlp->minempty;
+        if(maxbytesp)
+            *maxbytesp = pq->rlp->maxbytes;
+        if(age_oldestp) {
+            timestampt ts0;
+            tqelem *tqep;
 
-        tqep = tqe_first(pq->tqp); /* get oldest */
-        if(tqep != NULL) {
-          set_timestamp(&ts0);
-          *age_oldestp = d_diff_timestamp(&ts0, &tqep->tv);
-        } else {
-          *age_oldestp = 0;
+            tqep = tqe_first(pq->tqp); /* get oldest */
+            if(tqep != NULL) {
+              set_timestamp(&ts0);
+              *age_oldestp = d_diff_timestamp(&ts0, &tqep->tv);
+            } else {
+              *age_oldestp = 0;
+            }
         }
+
+        (void) ctl_rel(pq, 0);
     }
 
-
-    (void) ctl_rel(pq, 0);
+    unlockIf(pq);
 
     return status;
 }
@@ -6536,7 +6629,10 @@ size_t
 pq_getSlotCount(
     pqueue* const       pq)
 {
-    return pq->nalloc;
+    lockIf(pq);
+    size_t nalloc = pq->nalloc;
+    unlockIf(pq);
+    return nalloc;
 }
 
 
@@ -6556,8 +6652,9 @@ pq_getOldestCursor(
     pqueue*             pq,
     timestampt* const   oldestCursor)
 {
-    int                 status = ctl_get(pq, 0);
+    lockIf(pq);
 
+    int status = ctl_get(pq, 0);
     if (status == ENOERR) {
         tqelem*         tqep = tqe_first(pq->tqp);
 
@@ -6570,6 +6667,8 @@ pq_getOldestCursor(
 
         (void)ctl_rel(pq, 0);
     }                                   /* control region locked */
+
+    unlockIf(pq);
 
     return status;
 }
@@ -6701,34 +6800,38 @@ pq_fext_dump(pqueue *const pq)
     size_t prev_extent = 0;
 #endif
 
+    lockIf(pq);
 
     /* Read lock pq->ctl. */
     int status = ctl_get(pq, 0);
-    if(status != ENOERR)
-        return status;
-    rl = pq->rlp;
-    rlrp = rl->rp;
-    fbp = pq->fbp;
+    if(status == ENOERR) {
+        rl = pq->rlp;
+        rlrp = rl->rp;
+        fbp = pq->fbp;
 
-    /* p = l->header; */
-    spix = rl->fext;    /* head of skip list by extent */
-    spp = rlrp + spix;
-    /* q = p->forward[0]; */
-    sqix = fbp->fblks[spp->prev];
-    udebug("** Free list extents:\t");                  /* debugging */
-    while(sqix != RL_FEXT_TL) {
-        /* p = q */
-        spix = sqix;
+        /* p = l->header; */
+        spix = rl->fext;    /* head of skip list by extent */
         spp = rlrp + spix;
-        udebug("%u ", spp->extent);             /* debugging */
-#if !defined(NDEBUG)
-        assert(spp->extent >= prev_extent);
-        prev_extent = spp->extent;
-#endif
         /* q = p->forward[0]; */
         sqix = fbp->fblks[spp->prev];
+        udebug("** Free list extents:\t");                  /* debugging */
+        while(sqix != RL_FEXT_TL) {
+            /* p = q */
+            spix = sqix;
+            spp = rlrp + spix;
+            udebug("%u ", spp->extent);             /* debugging */
+#if !defined(NDEBUG)
+            assert(spp->extent >= prev_extent);
+            prev_extent = spp->extent;
+#endif
+            /* q = p->forward[0]; */
+            sqix = fbp->fblks[spp->prev];
+        }
+        (void) ctl_rel(pq, 0);
     }
-    (void) ctl_rel(pq, 0);
+
+    unlockIf(pq);
+
     return status;
 }
 
@@ -6744,12 +6847,14 @@ pq_cset(pqueue *pq, const timestampt *tvp)
                 && tvp->tv_usec >= TS_ZERO.tv_usec
                 && tvp->tv_sec  <= TS_ENDT.tv_sec
                 && tvp->tv_usec <= TS_ENDT.tv_usec);
+        lockIf(pq);
         pq->cursor = *tvp;
         if(tvEqual(*tvp, TS_ENDT)) {
             pq->cursor_offset = OFF_NONE;
         } else if (tvEqual(*tvp, TS_ZERO)) {
             pq->cursor_offset = 0;
         }
+        unlockIf(pq);
 }
 
 
@@ -6761,7 +6866,9 @@ pq_cset(pqueue *pq, const timestampt *tvp)
 void
 pq_coffset(pqueue *pq, off_t c_offset)
 {
+        lockIf(pq);
         pq->cursor_offset = c_offset;
+        unlockIf(pq);
 }
 
 
@@ -6769,9 +6876,11 @@ pq_coffset(pqueue *pq, off_t c_offset)
  * Get current cursor value used by pq_sequence() or pq_seqdel().
  */
 void
-pq_ctimestamp(const pqueue *pq, timestampt *tvp)
+pq_ctimestamp(pqueue *pq, timestampt *tvp)
 {
+        lockIf(pq);
         *tvp = pq->cursor;
+        unlockIf(pq);
 }
 
 
@@ -6791,6 +6900,7 @@ pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class_t *clssp)
         if(clssp == NULL || tvIsNone(clssp->from) || tvIsNone(clssp->to))
                 return EINVAL;
 
+        lockIf(pq);
         pq_cset(pq, &clssp->from);
 
         if(tvCmp(clssp->from, clssp->to, >))
@@ -6801,6 +6911,7 @@ pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class_t *clssp)
                         /* Edge case */
                         if(mtp != NULL)
                                 *mtp = TV_LT;
+                        unlockIf(pq);
                         return ENOERR;
                 }
                 /* else */
@@ -6813,26 +6924,27 @@ pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class_t *clssp)
                         /* Edge case */
                         if(mtp != NULL)
                                 *mtp = TV_GT;
+                        unlockIf(pq);
                         return ENOERR;
                 }
         }
 
         /* Read lock pq->xctl.  */
         status = ctl_get(pq, 0);
-        if(status != ENOERR)
-                return status;
-
-        /* find specified que element just outside the clssp time range */
-        tqep = tqe_find(pq->tqp, &clssp->from, otherway);
-        if(tqep != NULL)
-        {
-                /* update cursor */
-                pq_cset(pq, &tqep->tv);
-                pq_coffset(pq, tqep->offset);
+        if(status == ENOERR) {
+            /* find specified que element just outside the clssp time range */
+            tqep = tqe_find(pq->tqp, &clssp->from, otherway);
+            if(tqep != NULL)
+            {
+                    /* update cursor */
+                    pq_cset(pq, &tqep->tv);
+                    pq_coffset(pq, tqep->offset);
+            }
+            if(mtp != NULL)
+                    *mtp = otherway == TV_LT ? TV_GT : TV_LT;
+            (void) ctl_rel(pq, 0);
         }
-        if(mtp != NULL)
-                *mtp = otherway == TV_LT ? TV_GT : TV_LT;
-        (void) ctl_rel(pq, 0);
+        unlockIf(pq);
         return status;
 }
 
@@ -7038,6 +7150,8 @@ pq_setCursorFromSignature(
 {
     int                 status = 0;     /* success */
 
+    lockIf(pq);
+
     /*
      * Read-lock the control-region of the product-queue.
      */
@@ -7185,6 +7299,8 @@ pq_setCursorFromSignature(
         (void)ctl_rel(pq, 0);
     }                                   /* control region locked */
 
+    unlockIf(pq);
+
     return status;
 }
 
@@ -7209,6 +7325,8 @@ pq_processProduct(
         void* const       optArg)
 {
     int status;
+
+    lockIf(pq);
 
     /*
      * Read-lock the control-region of the product-queue to prevent concurrent
@@ -7306,6 +7424,8 @@ pq_processProduct(
         if (controlRegionLocked)
             (void)ctl_rel(pq, 0);
     }                                   // control region locked
+
+    unlockIf(pq);
 
     return status;
 }
@@ -7408,6 +7528,8 @@ pq_sequence(pqueue *pq, pq_match mt,
         info->origin = &buf.b_origin[0];
         info->ident = &buf.b_ident[0];
         
+        lockIf(pq);
+
         /* if necessary, initialize cursor */
         if(tvIsNone(pq->cursor))
         {
@@ -7423,7 +7545,7 @@ pq_sequence(pqueue *pq, pq_match mt,
         /* Read lock pq->xctl.  */
         status = ctl_get(pq, 0);
         if(status != ENOERR)
-                return status;
+            goto unwind_lock;
 
         /* find the specified queue element */
         tqep = tqe_find(pq->tqp, &pq->cursor, mt);
@@ -7555,25 +7677,29 @@ pq_sequence(pqueue *pq, pq_match mt,
 unwind_rgn:
         /* release the data segment */
         (void) rgn_rel(pq, offset, 0);
-
+        unlockIf(pq);
         return status;
 unwind_ctl:
         (void) ctl_rel(pq, 0);
+unwind_lock:
+        unlockIf(pq);
         return status;
 }
 
 
 /*
- * Boolean function to
- * check that the cursor timestime is
- * in the time range specified by clssp.
- * Returns non-zero if this is the case, zero if not.
+ * Boolean function to check that the cursor time is in the time range specified
+ * by clssp. Returns non-zero if this is the case, zero if not.
  */
 int
-pq_ctimeck(const pqueue *pq, pq_match mt, const prod_class_t *clssp,
+pq_ctimeck(pqueue *pq, pq_match mt, const prod_class_t *clssp,
         const timestampt *maxlatencyp)
 {
-        if(clssp == NULL || tvIsNone(pq->cursor))
+        lockIf(pq);
+        timestampt cursor = pq->cursor;
+        unlockIf(pq);
+
+        if(clssp == NULL || tvIsNone(cursor))
                 return 0;
 
         if(clss_eq(clssp, PQ_CLASS_ALL))
@@ -7582,13 +7708,13 @@ pq_ctimeck(const pqueue *pq, pq_match mt, const prod_class_t *clssp,
         if(mt == TV_LT)
         {
                 /* reversed scan */
-                if(tvCmp(pq->cursor, clssp->to, <))
+                if(tvCmp(cursor, clssp->to, <))
                         return 0;
         }
         else
         {
                 timestampt to = timestamp_add(&clssp->to, maxlatencyp);
-                if(tvCmp(pq->cursor, to, >))
+                if(tvCmp(cursor, to, >))
                         return 0;
         }
         /* else, it's in the time range */
@@ -7633,6 +7759,8 @@ pq_seqdel(pqueue *pq, pq_match mt,
         info->origin = &buf.b_origin[0];
         info->ident = &buf.b_ident[0];
         
+        lockIf(pq);
+
         /* if necessary, initialize cursor */
         /* We don't need to worry about disambiguating products with
            identical timestamps using offsets here (as in
@@ -7653,7 +7781,7 @@ pq_seqdel(pqueue *pq, pq_match mt,
         /* write lock pq->ctl.  */
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR)
-                return status;
+                goto unwind_lock;
 
         /* find the specified que element */
         tqep = tqe_find(pq->tqp, &pq->cursor, mt);
@@ -7746,6 +7874,8 @@ unwind_rgn:
         /*FALLTHROUGH*/
 unwind_ctl:
         (void) ctl_rel(pq, 0);
+unwind_lock:
+        unlockIf(pq);
         return status;
 }
 
@@ -7794,6 +7924,8 @@ pq_last(pqueue *pq,
 {
         int status = ENOERR;
 
+        lockIf(pq);
+
         pq_cset(pq, &clssp->to); /* Start at the end and work backwards */
         while((status = pq_sequence(pq, TV_LT, clssp, didmatch, tsp))
                         == ENOERR) 
@@ -7801,6 +7933,7 @@ pq_last(pqueue *pq,
            if((tsp != NULL)&&(pq->cursor.tv_sec < tsp->tv_sec))
            {
                 udebug("cursor reset: stop searching\0");
+                unlockIf(pq);
                 return status;
            }
         }
@@ -7822,6 +7955,7 @@ pq_last(pqueue *pq,
                 pq->cursor_offset = OFF_NONE;
         }
 
+        unlockIf(pq);
         return status;
 }
 
@@ -7846,6 +7980,7 @@ pq_clss_setfrom(pqueue *pq,
          prod_class_t *clssp)     /* modified upon return */
 {
         timestampt ts = clssp->from;
+        lockIf(pq);
         int status = pq_last(pq, clssp, &ts);
         if(status == ENOERR)
         {
@@ -7856,6 +7991,7 @@ pq_clss_setfrom(pqueue *pq,
         }
         pq->cursor = TS_NONE; /* clear cursor */
         pq->cursor_offset = OFF_NONE;
+        unlockIf(pq);
         return status;
 }
 

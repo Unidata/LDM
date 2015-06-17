@@ -659,19 +659,19 @@ sender_insertProducts(
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    product    prod;
-    prod_info* info = &prod.info;
-    char       ident[80];
-    void*      data = NULL;
+    product        prod;
+    prod_info*     info = &prod.info;
+    char           ident[80];
+    void*          data = NULL;
+    unsigned short xsubi[3] = {1234567890, 9876543210, 1029384756};
 
     info->feedtype = EXP;
     info->ident = ident;
     info->origin = "localhost";
     (void)memset(info->signature, 0, sizeof(info->signature));
-    srand48(1234567890);
 
-    for (int i = 0; i < 35; i++) {
-        const unsigned size = 100000*drand48() + 0.5;
+    for (int i = 0; i < 5000; i++) {
+        const unsigned size = 100000*erand48(xsubi) + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 
         CU_ASSERT_TRUE_FATAL(nbytes >= 0 && nbytes < sizeof(ident));
@@ -694,7 +694,7 @@ sender_insertProducts(
 
         struct timespec duration;
         duration.tv_sec = 0;
-        duration.tv_nsec = 1000000; // 1 ms
+        duration.tv_nsec = 2000000; // 1 ms
         status = nanosleep(&duration, NULL);
         CU_ASSERT_EQUAL_FATAL(status, 0);
     }
