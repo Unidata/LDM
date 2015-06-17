@@ -7,7 +7,7 @@ export PKG_VERSION=6.12.15
 export SOURCE_DISTRO_EXT=tar.gz
 export ACCEPTANCE_CONFIGURE_OPTS="--disable-root-actions --with-noaaport"
 export ABSPATH_FTP_PUB_DIR=/web/ftp/pub
-export SOURCE_REPO_HOST=www
+export SOURCE_REPO_HOST=ftp
 export WEB_HOST=www
 export ABSPATH_WEB_ROOT=/web/content
 
