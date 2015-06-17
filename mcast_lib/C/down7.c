@@ -1411,32 +1411,27 @@ nap(
 }
 
 /**
- * Inserts a data-product into the product-queue and then unlocks the
- * product-queue. Logs directly.
+ * Processes a data-product from a remote LDM-7 by attempting to add the
+ * data-product to the product-queue. The data-product should have been
+ * previously requested from the remote LDM-7.
  *
- * @pre  The product-queue is locked.
- * @param[in] pq          Pointer to the product-queue. Must be locked.
- * @param[in] prod        Pointer to the data-product to be inserted into the product-
- *                        queue.
- * @retval    0           Success. `uinfo()` called.
- * @retval    EINVAL      Invalid argument. `uerror()` called.
- * @retval    PQUEUE_DUP  Product already exists in the queue. `uinfo()` called.
- * @retval    PQUEUE_BIG  Product is too large to insert in the queue. `uwarn()`
- *                        called.
- * @post The product-queue is unlocked.
+ * @param[in] pq           Pointer to the product-queue.
+ * @param[in] prod         Pointer to the data-product.
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  System error. `log_start()` called.
  */
 static int
-insertAndUnlock(
+deliver_product(
     pqueue* const restrict  pq,
     product* const restrict prod)
 {
+    // Products are also inserted on the multicast-receiver threads
     int status = pq_insert(pq, prod);
-
-    (void)pq_unlock(pq);
 
     if (status) {
         if (status == EINVAL) {
             uerror("Invalid argument");
+            status = LDM7_SYSTEM;
         }
         else {
             char buf[256];
@@ -1452,42 +1447,10 @@ insertAndUnlock(
             else {
                 uwarn("Product too big for queue: %s", buf);
             }
+
+            status = 0; // either too big or duplicate data-product
         }
     }
-
-    return status;
-}
-
-/**
- * Processes a data-product from a remote LDM-7 by attempting to add the
- * data-product to the product-queue. The data-product should have been
- * previously requested from the remote LDM-7.
- *
- * @param[in] pq           Pointer to the product-queue.
- * @param[in] prod         Pointer to the data-product.
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_start()` called.
- */
-static int
-deliver_product(
-    pqueue* const restrict  pq,
-    product* const restrict prod)
-{
-    int status = pq_lock(pq);
-
-    if (status) {
-        LOG_ERRNUM0(status, "Couldn't lock product-queue");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        status = insertAndUnlock(pq, prod);
-
-        if (status) {
-            status = (status == EINVAL)
-                    ? LDM7_SYSTEM
-                    : 0; // either too big or duplicate data-product
-        }
-    } // product-queue is locked
 
     return status;
 }
@@ -1610,7 +1573,12 @@ down7_new(
         } // `mutexAttr` initialized
     }
 
-    if ((status = pq_open(pqPathname, 0, &down7->pq))) {
+    /*
+     * `PQ_THREADSAFE` because the queue is accessed on 3 threads: VCMTP
+     * multicast receiver, VCMTP unicast receiver, and LDM-7 data-product
+     * receiver.
+     */
+    if ((status = pq_open(pqPathname, PQ_THREADSAFE, &down7->pq))) {
         LOG_ADD1("Couldn't open product-queue \"%s\"", pqPathname);
         goto free_stateMutex;
     }
@@ -1783,7 +1751,11 @@ down7_free(
 
         Down7State state = down7->state;
 
-        if (DOWN7_INITIALIZED == state || DOWN7_STOPPED == state) {
+        if (DOWN7_INITIALIZED != state && DOWN7_STOPPED != state) {
+            LOG_ADD1("Downstream LDM-7 is in an invalid state: %d", state);
+            status = LDM7_INVAL;
+        }
+        else {
             unlockState(down7);
             if (exe_free(down7->executor)) { // frees jobs
                 LOG_ADD0("Couldn't free task executor");
