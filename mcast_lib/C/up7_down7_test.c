@@ -663,8 +663,9 @@ sender_insertProducts(
     prod_info*     info = &prod.info;
     char           ident[80];
     void*          data = NULL;
-    unsigned short xsubi[3] = {1234567890, 9876543210, 1029384756};
-
+    unsigned short xsubi[3] = {(unsigned short)1234567890,
+                               (unsigned short)9876543210,
+                               (unsigned short)1029384756};
     info->feedtype = EXP;
     info->ident = ident;
     info->origin = "localhost";
