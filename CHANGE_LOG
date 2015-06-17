@@ -1,13 +1,24 @@
-6.12.15	2015-06-11T16:31:14-0600
+6.12.15	2015-06-15T13:12:23-0600
     Upstream LDM:
         Reduced the delivery latency of products with relatively large
-        inter-product temporal gaps. Modified the RPC calls that LDM-6 makes
-        to send data products in primary mode by switching from "batched" RPC
-        calls to asynchronous "message-passing" RPC calls. Specifically, the XDR
-        function to decode the (non-existent) response was changed from `NULL`
-        to `xdr_void` in the functions `notification_6`, `hereis_6`, and
-        `blkdata_6`. The results are highly dependent on the characteristics of
-        the data flow; consequently, you might not notice any difference.
+        inter-product temporal gaps. Modified the RPC calls that LDM-6 makes to
+        send data products in primary mode by switching from "batched" RPC
+        calls to asynchronous "message-passing" RPC calls. Specifically, the
+        XDR function to decode the (non-existent) response was changed from
+        `NULL` to `xdr_void()` in the functions `notification_6()`,
+        `hereis_6()`, and `blkdata_6()`. The results are highly dependent on
+        the characteristics of the data flow; consequently, you might not
+        notice any difference.
+
+    Product-Queue (pq.c):
+        Hardened the product-queue module against access by multiple threads by:
+        1) adding a new (undocumented) option (`PQ_THREADSAFE`) to the
+        `pq_create()` and `pq_open()` functions; 2) replacing the use of the
+        thread-unsafe function `random()` with the thread-safe function
+        `nrand48()` (this change is only relevant for the multicast feature,
+        which isn't yet available); and 3) removing the (undocumented) ability
+        to reset the pseudo-random-number generator used in the skip-list
+        implementation.
 
 6.12.14	2015-06-09T09:45:43-0600
     Logging:

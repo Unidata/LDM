@@ -159,7 +159,7 @@ fb_ranlev(fb *fbp)
             (unsigned short)1029384756};
 
     for (level = 0; level < maxlevel; level++) {
-        if (--randomsLeft > 0) {
+        if (--randomsLeft <= 0) {
             randomBits = nrand48(xsubi);
             randomsLeft = BITSINRANDOM / 2;
         }
