@@ -337,13 +337,6 @@ static void signal_handler(
         req6_close();
         done = 1;
         return;
-    case SIGUSR1:
-        /*
-         * Reset the random number generator in the product-queue
-         * module.
-         */
-        pq_reset_random();
-        return;
     case SIGUSR2:
         rollulogpri();
         return;
@@ -379,7 +372,6 @@ static void set_sigactions(
 #endif
     sigact.sa_handler = signal_handler;
     (void) sigaction(SIGHUP, &sigact, NULL );
-    (void) sigaction(SIGUSR1, &sigact, NULL );
     (void) sigaction(SIGUSR2, &sigact, NULL );
     (void) sigaction(SIGCHLD, &sigact, NULL );
 
