@@ -41,50 +41,9 @@ struct mlr {
 };
 
 /**
- * Locks the product-queue of a multicast LDM receiver.
- *
- * @param[in] mlr       Pointer to the multicast LDM receiver.
- * @retval    0         Success.
- * @retval    EAGAIN    The lock could not be acquired because the maximum
- *                      number of recursive calls has been exceeded.
- * @retval    EDEADLK   A deadlock condition was detected.
- */
-static int
-lockPq(
-        Mlr* const mlr)
-{
-    int status = pq_lock(mlr->pq);
-
-    if (status)
-        LOG_ADD1("Couldn't lock product-queue: %s", strerror(status));
-
-    return status;
-}
-
-/**
- * Unlocks the product-queue of a multicast LDM receiver.
- *
- * @param[in] mlr       Pointer to the multicast LDM receiver.
- * @retval    0         Success.
- * @retval    EPERM     The current thread does not own the lock.
- */
-static int
-unlockPq(
-        Mlr* const mlr)
-{
-    int status = pq_unlock(mlr->pq);
-
-    if (status)
-        LOG_ADD1("Couldn't unlock product-queue: %s", strerror(status));
-
-    return status;
-}
-
-/**
  * Allocates space in a product-queue for a VCMTP product if it's not a
  * duplicate and returns the starting memory-location for the data.
  *
- * @pre                   The product-queue is locked.
  * @param[in]  mlr        Pointer to the multicast LDM receiver.
  * @param[in]  signature  The MD5 checksum of the LDM data-product.
  * @param[in]  prodSize   Size of the XDR-encoded LDM data-product in bytes.
@@ -94,7 +53,6 @@ unlockPq(
  * @retval     0          Success. `prodStart` is set. If `NULL`, then the
  *                        data-product is already in the LDM product-queue.
  * @retval    -1          Failure. `log_add()` called.
- * @post                  The product-queue is locked.
  */
 static int
 allocateSpace(
@@ -166,6 +124,10 @@ bop_func(
         void** const restrict      prod,
         pqe_index* const restrict  pqeIndex)
 {
+    /*
+     * This function is called on both the VCMTP multicast and unicast
+     * threads.
+     */
     int  status;
 
     udebug("%s:bop_func(): Entered: prodSize=%lu, metaSize=%lu, prod=%p",
@@ -177,23 +139,12 @@ bop_func(
         status = -1;
     }
     else {
-        /*
-         * This function is called on both the VCMTP multicast and unicast
-         * threads.
-         */
-        if (lockPq(mlr)) {
-            status = -1;
-        }
-        else {
-            char* prodStart;
-            status = allocateSpace(mlr, metadata, prodSize, &prodStart,
-                    pqeIndex);
+        char* prodStart;
+        status = allocateSpace(mlr, metadata, prodSize, &prodStart,
+                pqeIndex);
 
-            if (status == 0)
-                *prod = prodStart; // will be `NULL` if duplicate product
-
-            (void)unlockPq(mlr);
-        }
+        if (status == 0)
+            *prod = prodStart; // will be `NULL` if duplicate product
     }
 
     if (status)
@@ -209,13 +160,11 @@ bop_func(
  * Finishes inserting a data-product into the allocated product-queue region
  * associated with a multicast LDM receiver or discards the region.
  *
- * @pre                 The product-queue is locked.
  * @param[in] mlr       Pointer to the multicast LDM receiver.
  * @param[in] pqeIndex  Pointer to the reference to allocated space in the
  *                      product-queue.
  * @retval    0         Success.
  * @retval    -1        Error. `log_add()` called.
- * @post                The product-queue is locked.
  */
 static int
 insertOrDiscard(
@@ -254,7 +203,6 @@ lastReceived(
  * Finishes inserting a received VCMTP product into an LDM product-queue as an
  * LDM data-product.
  *
- * @pre                    The product-queue is locked.
  * @param[in] mlr          Pointer to the multicast LDM receiver.
  * @param[in] info         LDM data-product metadata. Caller may free when it's
  *                         no longer needed.
@@ -265,7 +213,6 @@ lastReceived(
  * @retval    0            Success.
  * @retval    -1           Error. `log_add()` called. The allocated region in
  *                         the product-queue was released.
- * @pre                    The product-queue is locked.
  */
 static int
 finishInsertion(
@@ -327,43 +274,36 @@ eop_func(
         const size_t         prodSize,
         pqe_index* const     pqeIndex)
 {
+    /*
+     * This function is called by the VCMTP multicast and unicast threads.
+     */
+
     int status;
 
-    /*
-     * Because this function is called by the VCMTP multicast and unicast
-     * threads, visibility of changes is ensured by locking the product-queue.
-     */
-    if (lockPq(mlr)) {
-        status = -1;
+    if (prodStart == NULL) {
+        // Duplicate product
+        status = 0;
     }
     else {
-        if (prodStart == NULL) {
-            // Duplicate product
-            status = 0;
+        prod_info info;
+        XDR       xdrs;
+
+        xdrmem_create(&xdrs, prodStart, prodSize, XDR_DECODE);
+        (void)memset(&info, 0, sizeof(info));   // for `xdr_prod_info()`
+
+        if (!xdr_prod_info(&xdrs, &info)) {
+            LOG_START1("Couldn't decode LDM product metadata from %lu-byte "
+                    "VCMTP product", (unsigned long)prodSize);
+            status = -1;
+            pqe_discard(mlr->pq, *pqeIndex);
         }
         else {
-            prod_info info;
-            XDR       xdrs;
+            status = finishInsertion(mlr, &info,
+                    prodSize-(xdrs.x_private-xdrs.x_base), pqeIndex);
+            xdr_free(xdr_prod_info, (char*)&info);
+        }                                       // "info" allocated
 
-            xdrmem_create(&xdrs, prodStart, prodSize, XDR_DECODE);
-            (void)memset(&info, 0, sizeof(info));   // for `xdr_prod_info()`
-
-            if (!xdr_prod_info(&xdrs, &info)) {
-                LOG_START1("Couldn't decode LDM product metadata from %lu-byte "
-                        "VCMTP product", (unsigned long)prodSize);
-                status = -1;
-                pqe_discard(mlr->pq, *pqeIndex);
-            }
-            else {
-                status = finishInsertion(mlr, &info,
-                        prodSize-(xdrs.x_private-xdrs.x_base), pqeIndex);
-                xdr_free(xdr_prod_info, (char*)&info);
-            }                                       // "info" allocated
-
-            xdr_destroy(&xdrs);
-        }
-
-        (void)unlockPq(mlr);
+        xdr_destroy(&xdrs);
     }
 
     if (status)
@@ -389,19 +329,14 @@ missed_prod_func(
         const VcmtpProdIndex      iProd,
         pqe_index* const restrict pqeIndex)
 {
+    /*
+     * This function is called by the VCMTP multicast and unicast threads.
+     */
+
     Mlr* mlr = obj;
 
-    if (pqeIndex) {
-        /*
-         * Because this function is called by the VCMTP multicast and unicast
-         * threads, visibility of changes is ensured by locking the
-         * product-queue.
-         */
-        if (lockPq(mlr) == 0) {
-            (void)pqe_discard(mlr->pq, *pqeIndex);
-            (void)unlockPq(mlr);
-        }
-    }
+    if (pqeIndex)
+        (void)pqe_discard(mlr->pq, *pqeIndex);
 
     down7_missedProduct(((Mlr*)obj)->down7, iProd);
 }
