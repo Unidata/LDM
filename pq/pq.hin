@@ -63,6 +63,7 @@ struct pqe_index {
 #define PQ_NOMAP	0x20	/* Use malloc/read/write/free instead of mmap() */
 #define PQ_MAPRGNS	0x40	/* Map region by region, default whole file */
 #define PQ_SPARSE       0x80    /* Created as sparse file, zero blocks unallocated */
+#define PQ_THREADSAFE   0x100   /* Make the queue access functions thread-safe */
 /* N.B.: bits 0x1000 (and above) in use internally */
 
 #define pqeOffset(pqe) ((pqe).offset)

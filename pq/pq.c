@@ -137,19 +137,6 @@ log4(size_t n)
 }
 
 
-static volatile sig_atomic_t initialized = 0;
-
-
-/**
- * Resets the random number generator.
- */
-void
-pq_reset_random(void)
-{
-    initialized = 0;
-}
-
-
 /**
  * Return random level of
  *  - 0 with probability 3/4*(1/4)^0 = .75
@@ -161,31 +148,27 @@ pq_reset_random(void)
 static int 
 fb_ranlev(fb *fbp) 
 {
-#   define      BITSINRANDOM 31
-    int         level = 0;
-    int         b;
-    int         maxlevel = fbp->maxsize - 1;
-    static int  randomsLeft;
-    static long randomBits;
-    static unsigned short xsubi[3] = {1234567890, 9876543210, 1029384756};
+#   define                BITSINRANDOM 31
+    int                   level;
+    int                   maxlevel = fbp->maxsize - 1;
+    static int            randomsLeft = 1;
+    static long           randomBits;
+    static unsigned short xsubi[3] = {
+            (unsigned short)1234567890,
+            (unsigned short)9876543210,
+            (unsigned short)1029384756};
 
-    if (initialized == 0) {
-        randomBits = nrand48(xsubi);
-        randomsLeft = BITSINRANDOM / 2;    
-        initialized = 1;
-    }
-
-    do {
-        b = randomBits&3;
-        if (!b) level++;
-        randomBits>>=2;
-        if (--randomsLeft == 0) {
+    for (level = 0; level < maxlevel; level++) {
+        if (--randomsLeft > 0) {
             randomBits = nrand48(xsubi);
             randomsLeft = BITSINRANDOM / 2;
-        };
-    } while (!b);
+        }
+        if (randomBits & 3)
+            break;
+        randomBits >>= 2;
+    }
 
-    return level <= maxlevel ? level : maxlevel;
+    return level;
 }
 
 
