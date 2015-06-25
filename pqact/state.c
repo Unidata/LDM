@@ -91,17 +91,15 @@ stateInit(
 }
 
 
-/*
+/**
  * Reads information from the state file.
  *
- * ARGUMENTS:
- *      pqCursor        The product-queue cursor to have its time values set
+ * @param[in] pqCursor  The product-queue cursor to have its time values set
  *                      from the state file.
- * RETURNS:
- *      0       Success
- *      -1      Module not initialized.
- *      -2      Couldn't open state file for reading.
- *      -3      Couldn't read information from state file.
+ * @retval    0         Success
+ * @retval    -1        Module not initialized.
+ * @retval    -2        Couldn't open state file for reading.
+ * @retval    -3        Couldn't read information from state file.
  */
 int
 stateRead(
@@ -141,9 +139,7 @@ stateRead(
                 ungetc(c, file);
 
                 if (fscanf(file, "%lu.%ld", &seconds, &microseconds) != 2) {
-                    log_errno();
-                    log_add("stateRead(): Couldn't read time from \"%s\"",
-                        statePathname);
+                    LOG_ADD1("Couldn't read time from \"%s\"", statePathname);
                 }
                 else {
                     pqCursor->tv_sec = seconds;
