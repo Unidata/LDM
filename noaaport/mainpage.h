@@ -39,6 +39,8 @@
  sysctl -w net.ipv4.conf.default.rp_filter=2
  sysctl -p
 \endverbatim
+ * If, after making these changes and (re)starting the LDM, the LDM doesn't see
+ * any incoming data, then you should try rebooting your system.
  *
  * <hr>
  *
