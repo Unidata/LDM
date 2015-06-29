@@ -27,7 +27,9 @@
 #include "stdbool.h"
 #include "wordexp.h"
 
+#include <arpa/inet.h>
 #include <limits.h>
+#include <netinet/in.h>
 #include <regex.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -39,11 +41,12 @@
 extern int yydebug;
 #endif
 
-static int      line = 0;
-static unsigned ldmPort = LDM_PORT;
-static int      execute = 1;
-static int      scannerPush(const char* const path);
-static int      scannerPop(void);
+static int       line = 0;
+static unsigned  ldmPort = LDM_PORT;
+static int       execute = 1;
+static in_addr_t ldmIpAddr;
+static int       scannerPush(const char* const path);
+static int       scannerPop(void);
 
 static void
 yyerror(const char *msg)
@@ -358,9 +361,12 @@ decodeRequestEntry(
  *
  * @param[in] feedtypeSpec    Specification of the feedtype.
  * @param[in] mcastGroupSpec  Specification of the multicast group.
- * @param[in] tcpServerSpec   Specfication of the VCMTP TCP server.
  * @param[in] ttlSpec         Specification of the time-to-live for multicast
  *                            packets.
+ * @param[in] mcastIface      IPv4 specification of the interface to use for
+ *                            outgoing multicast packets. If NULL, then the
+ *                            system's default multicast interface is used.
+ *                            Specify "127.0.0.1" to use the loopback interface.
  * @retval    0               Success.
  * @retval    EINVAL          Invalid specification. `log_start()` called.
  * @retval    ENOMEM          Out-of-memory. `log_start()` called.
@@ -369,8 +375,8 @@ static int
 decodeSendEntry(
     const char* const   feedtypeSpec,
     const char* const   mcastGroupSpec,
-    const char* const   tcpServerSpec,
-    const char* const   ttlSpec)
+    const char* const   ttlSpec,
+    const char* const   mcastIface)
 {
     int         status;
     feedtypet   feedtype;
@@ -387,11 +393,18 @@ decodeSendEntry(
         }
         else {
             ServiceAddr* tcpServerSa = NULL;
+            /*
+             * Currently, the VCMTP TCP server listens on the same interfaces as
+             * the LDM server and the operating-system chooses the port.
+             */
+            {
+                struct in_addr inAddr;
+                inAddr.s_addr = ldmIpAddr;
+                status = sa_new(&tcpServerSa, inet_ntoa(inAddr), 0);
+            }
 
-            if ((status = sa_parseWithDefaults(&tcpServerSa, tcpServerSpec,
-                    "0.0.0.0", -1))) {
-                LOG_START1("Couldn't parse TCP server specification: \"%s\"", 
-                        tcpServerSpec);
+            if (status) {
+                LOG_ADD0("Couldn't create VCMTP TCP server specification");
             }
             else {
                 McastInfo* mcastInfo;
@@ -404,31 +417,25 @@ decodeSendEntry(
                     int            nbytes;
 
                     if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
-                            ttlSpec[nbytes-1] != 0) {
-                        LOG_START1("Couldn't parse TTL specification: \"%s\"", 
-                                ttlSpec);
+                            ttlSpec[nbytes] != 0) {
+                        LOG_START1("Couldn't parse time-to-live specification: "
+                                "\"%s\"",  ttlSpec);
                     }
                     else {
-                        status = mlsm_addPotentialSender(mcastInfo, ttl, NULL);
-                        if (status)
-                            status = (LDM7_DUP == status)
-                                    ? EINVAL
-                                    : (LDM7_INVAL == status)
-                                        ? EINVAL
-                                        : ENOMEM;
-                        mi_free(mcastInfo);
-                    }
+                        status = lcf_addMulticast(mcastInfo, ttl, mcastIface,
+                                getQueuePath());
+                    } // `ttl` parsed
+
+                    mi_free(mcastInfo);
                 } // `mcastInfo` allocated
-            } // `tcpServerSa` is good
 
-            sa_free(tcpServerSa);       // NULL ok
-        } // `mcastGroupSa` is good
+                sa_free(tcpServerSa);
+            } // `tcpServerSa` allocated
 
-        sa_free(mcastGroupSa);          // NULL ok
+            sa_free(mcastGroupSa);
+        } // `mcastGroupSa` allocated
+
     } // `feedtype` set
-    
-    if (status)
-        LOG_ADD0("Couldn't process MULTICAST entry");
     
     return status;
 }
@@ -457,10 +464,7 @@ decodeReceiveEntry(
                 ldmPort);       // Internet ID must exist; port is optional
 
         if (0 == status) {
-            status = d7mgr_add(feedtype, ldmSvcAddr);
-            
-            if (status)
-                LOG_ADD0("Couldn't add downstream LDM-7 entry");
+            status = lcf_addReceive(feedtype, ldmSvcAddr);
 
             sa_free(ldmSvcAddr);
         }       // `ldmSvcAddr` allocated
@@ -627,7 +631,8 @@ receive_entry:        RECEIVE_K STRING STRING
                     int errCode = decodeReceiveEntry($2, $3);
 
                     if (errCode) {
-                        LOG_ADD0("Couldn't decode receive entry");
+                        LOG_ADD2("Couldn't decode receive entry "
+                                "\"RECEIVE %s %s\"", $2, $3);
                         return errCode;
                     }
                 #endif
@@ -650,13 +655,26 @@ request_entry:  REQUEST_K STRING STRING STRING
                 }
                 ;
 
-send_entry:        SEND_K STRING STRING STRING STRING
+send_entry:        SEND_K STRING STRING STRING
+                {
+                #if WANT_MULTICAST
+                    int errCode = decodeSendEntry($2, $3, $4, NULL);
+
+                    if (errCode) {
+                        LOG_ADD3("Couldn't decode multicast entry "
+                                "\"MULTICAST %s %s %s\"", $2, $3, $4);
+                        return errCode;
+                    }
+                #endif
+                }
+                | SEND_K STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
                     int errCode = decodeSendEntry($2, $3, $4, $5);
 
                     if (errCode) {
-                        LOG_ADD0("Couldn't decode multicast entry");
+                        LOG_ADD4("Couldn't decode multicast entry "
+                                "\"MULTICAST %s %s %s %s\"", $2, $3, $4, $5);
                         return errCode;
                     }
                 #endif
@@ -710,16 +728,18 @@ actUponEntries(
 /**
  * Parses an LDM configuration-file and optionally executes the entries.
  * 
- * @param[in] pathname        Pathname of configuration-file.
- * @param[in] execEntries     Whether or not to execute the entries.
- * @param[in] defaultPort     The default LDM port.
- * @retval    0               Success.
- * @retval    -1              Failure.  `log_start()` called.
+ * @param[in] pathname          Pathname of configuration-file.
+ * @param[in] execEntries       Whether or not to execute the entries.
+ * @param[in] ldmAddr           LDM server IP address in network byte order.
+ * @param[in] defaultPort       The default LDM port.
+ * @retval    0                 Success.
+ * @retval    -1                Failure.  `log_start()` called.
  */
 int
 read_conf(
     const char* const   pathname,
     int                 execEntries,
+    in_addr_t           ldmAddr,
     unsigned            defaultPort)
 {
     int status;
@@ -731,6 +751,7 @@ read_conf(
     else {
         ldmPort = defaultPort;
         execute = execEntries;
+        ldmIpAddr = ldmAddr;
         // yydebug = 1;
         status = yyparse();
 

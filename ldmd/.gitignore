@@ -1,6 +1,8 @@
-ldm6_svc.c
-parser.c
+down7.pq
 *.info
-ldmd.1
+ldm6_svc.c
 ldmd
+ldmd.1
+parser.c
 scanner.c
+up7.pq

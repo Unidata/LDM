@@ -46,9 +46,11 @@ get_context(
         }
         case 't': {
             int      nbytes;
-            if (1 != sscanf(optarg, "%3u %n", &tmpTtl, &nbytes)) {
+            if (1 != sscanf(optarg, "%3u %n", &tmpTtl, &nbytes) ||
+                    0 != optarg[nbytes]) {
                 (void)fprintf(stderr,
-                        "Couldn't decode time-to-live option argument\n");
+                        "Couldn't decode time-to-live option argument \"%s\"\n",
+                        optarg);
                 status = -1;
             }
             else if (0 != optarg[nbytes] || 255 <= tmpTtl) {

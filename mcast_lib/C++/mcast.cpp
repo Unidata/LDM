@@ -52,6 +52,8 @@ struct mcast_receiver {
  * @param[in]  mcastAddr              Address of the multicast group to receive.
  *                                    May be groupname or IPv4 address.
  * @param[in]  mcastPort              Port number of the multicast group.
+ * @param[in]  mcastIface             IP address of interface for outgoing
+ *                                    multicast packets.
  * @throws     std::invalid_argument  if @code{0==buf_func || 0==eof_func ||
  *                                    0==missed_prod_func || 0==addr}.
  * @throws     std::invalid_argument  if the multicast group address couldn't be
@@ -76,13 +78,14 @@ mcastReceiver_init(
     const unsigned short        tcpPort,
     RecvAppNotifier* const      notifier,
     const char* const           mcastAddr,
-    const unsigned short        mcastPort)
+    const unsigned short        mcastPort,
+    const char* const           mcastIface)
 {
     std::string             hostId(tcpAddr);
     std::string             groupId(mcastAddr);
     receiver->notifier = notifier;
     receiver->vcmtpReceiver = new vcmtpRecvv3(hostId, tcpPort, groupId,
-            mcastPort, notifier);
+            mcastPort, notifier, mcastIface);
 }
 
 /**
@@ -99,6 +102,8 @@ mcastReceiver_init(
  * @param[in]  mcastAddr         Address of the multicast group to receive. May
  *                               be groupname or formatted IP address.
  * @param[in]  mcastPort         Port number of the multicast group.
+ * @param[in]  mcastIface        IP address of interface for outgoing multicast
+ *                               packets.
  * @retval     0                 Success. The client should call \c
  *                               mcastReceiver_free(*receiver) when the
  *                               receiver is no longer needed.
@@ -116,7 +121,8 @@ mcastReceiver_new(
     const unsigned short  tcpPort,
     void* const           notifier,
     const char* const     mcastAddr,
-    const unsigned short  mcastPort)
+    const unsigned short  mcastPort,
+    const char* const     mcastIface)
 {
     McastReceiver* rcvr = (McastReceiver*)LOG_MALLOC(sizeof(McastReceiver),
             "multicast receiver");
@@ -126,7 +132,7 @@ mcastReceiver_new(
 
     try {
         mcastReceiver_init(rcvr, tcpAddr, tcpPort, (RecvAppNotifier*)notifier,
-                mcastAddr, mcastPort);
+                mcastAddr, mcastPort, mcastIface);
         *receiver = rcvr;
         return 0;
     }
@@ -158,7 +164,8 @@ mcastReceiver_free(
 }
 
 /**
- * Executes a multicast receiver. Doesn't return until an error occurs.
+ * Executes a multicast receiver. Doesn't return until an error occurs or
+ * `mcastReceiver_stop()` is called.
  *
  * @param[in,out] receiver      The receiver.
  * @retval        EINVAL        @code{receiver == NULL}. \c log_add() called.

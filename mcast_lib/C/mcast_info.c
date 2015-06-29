@@ -302,21 +302,41 @@ mi_asFilename(
  *
  * @param[in] info  The multicast information object.
  * @retval    NULL  Failure. `log_add()` called.
- * @return          A string representation of `info`. Caller should free when
- *                  it's no longer needed.
+ * @return          A string representation of `info`. Caller should `free()`
+ *                  it when it's no longer needed.
  */
 char*
 mi_format(
     const McastInfo* const info)
 {
-    const char* feedStr = s_feedtypet(info->feed);
-    char*       grpStr = sa_format(&info->group);
-    char*       svrStr = sa_format(&info->server);
-    char*       string = ldm_format(256, "{feed=%s, group=%s, server=%s}",
-            feedStr, grpStr, svrStr);
+    char* string;
+    char  feedStr[130];
+    int   nbytes = ft_format(info->feed, feedStr, sizeof(feedStr));
 
-    free(grpStr);
-    free(svrStr);
+    if (nbytes < 0 || nbytes >= sizeof(feedStr)) {
+        LOG_ADD1("Couldn't format feedtype %0x", info->feed);
+        string = NULL;
+    }
+    else {
+        char* grpStr = sa_format(&info->group);
+        if (grpStr == NULL) {
+            LOG_ADD0("Couldn't format multicast-group service-address");
+            string = NULL;
+        }
+        else {
+            char* svrStr = sa_format(&info->server);
+            if (svrStr == NULL) {
+                LOG_ADD0("Couldn't format TCP-server service-address");
+                string = NULL;
+            }
+            else {
+                string = ldm_format(256, "{feed=%s, group=%s, server=%s}",
+                        feedStr, grpStr, svrStr);
+                free(svrStr);
+            }
+            free(grpStr);
+        }
+    }
 
     return string;
 }

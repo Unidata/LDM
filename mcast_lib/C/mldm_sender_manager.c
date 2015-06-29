@@ -37,6 +37,7 @@ typedef struct {
     McastInfo      info;
     char*          mcastIf;
     unsigned short ttl;
+    char*          pqPathname;
 } McastEntry;
 
 static void* mcastEntries;
@@ -144,8 +145,8 @@ catenateArgs(
  *     - The logging level; and
  *     - The LDM product-queue;
  *
- * @param[in] info     Information on the multicast group.
- * @param[in] ttl      Time-to-live for the multicast packets:
+ * @param[in] info        Information on the multicast group.
+ * @param[in] ttl         Time-to-live for the multicast packets:
  *                             0  Restricted to same host. Won't be output by
  *                                any interface.
  *                             1  Restricted to same subnet. Won't be
@@ -155,16 +156,18 @@ catenateArgs(
  *                           <64  Restricted to same region.
  *                          <128  Restricted to same continent.
  *                          <255  Unrestricted in scope. Global.
- * @param[in] mcastIf  IP address of the interface from which multicast packets
- *                     should be sent or NULL to have them sent from the
- *                     system's default multicast interface.
- * @param[in] pipe     Pipe for writing to parent process.
+ * @param[in] mcastIf     IP address of the interface from which multicast
+ *                        packets should be sent or NULL to have them sent from
+ *                        the system's default multicast interface.
+ * @param[in] pqPathname  Pathname of product-queue. Caller may free.
+ * @param[in] pipe        Pipe for writing to parent process.
  */
 static void
 execMldmSender(
     const McastInfo* const restrict info,
     const unsigned short            ttl,
     const char* const restrict      mcastIf,
+    const char* const restrict      pqPathname,
     const int const                 pipe)
 {
     char* args[20]; // Keep sufficiently capacious (search for `i\+\+`)
@@ -173,7 +176,7 @@ execMldmSender(
     args[i++] = "mldm_sender";
 
     char feedtypeBuf[256];
-    if (info->feed != ANY) {
+    if (info->feed != EXP) {
         (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
         args[i++] = "-f";
         args[i++] = feedtypeBuf; // multicast group identifier
@@ -206,7 +209,7 @@ execMldmSender(
     }
 
     args[i++] = "-q";
-    args[i++] = (char*)getQueuePath(); // safe cast
+    args[i++] = (char*)pqPathname; // safe cast
 
     if (info->server.inetId && strcmp(info->server.inetId, "0.0.0.0")) {
         args[i++] = "-s";
@@ -278,6 +281,7 @@ allowTermSigs(void)
  *                          packets should be sent or NULL to have them sent
  *                          from the system's default multicast interface.
  *                          Caller may free.
+ * @param[in] pqPathname    Pathname of product-queue. Caller may free.
  * @param[out] pid          Process ID of the multicast LDM sender.
  * @param[out] serverPort   Port number of TCP server.
  * @retval     0            Success. `*pid` and `*serverPod` are set.
@@ -288,6 +292,7 @@ mlsm_spawn(
     const McastInfo* const restrict info,
     const unsigned short            ttl,
     const char* const restrict      mcastIf,
+    const char* const restrict      pqPathname,
     pid_t* const restrict           pid,
     unsigned short* const restrict  serverPort)
 {
@@ -312,7 +317,8 @@ mlsm_spawn(
             /* Child process */
             (void)close(fds[0]);                // read end of pipe unneeded
             allowTermSigs();                    // so process will terminate
-            execMldmSender(info, ttl, mcastIf, fds[1]);  // shouldn't return
+            // The following statement shouldn't return
+            execMldmSender(info, ttl, mcastIf, pqPathname, fds[1]);
             log_log(LOG_ERR);
             exit(1);
         }
@@ -349,6 +355,7 @@ mlsm_spawn(
  *                          packets should be sent or NULL to have them sent
  *                          from the system's default multicast interface.
  *                          Caller may free.
+ * @param[in]  pqPathname   Pathname of product-queue. Caller may free.
  * @param[out] serverPort   Port number of VCMTP TCP server.
  * @param[out] pid          Process ID of multicast LDM sender.
  * @retval     0            Success. Multicast LDM sender spawned. `*serverPort`
@@ -360,13 +367,15 @@ mlsm_execute(
     const McastInfo* const restrict info,
     const unsigned short            ttl,
     const char* const restrict      mcastIf,
+    const char* const restrict      pqPathname,
     unsigned short* const restrict  serverPort,
     pid_t* const restrict           pid)
 {
     const feedtypet feedtype = mi_getFeedtype(info);
     pid_t           procId;
     unsigned short  port;
-    int             status = mlsm_spawn(info, ttl, mcastIf, &procId, &port);
+    int             status = mlsm_spawn(info, ttl, mcastIf, pqPathname, &procId,
+            &port);
 
     if (0 == status) {
         status = msm_put(feedtype, procId);
@@ -398,6 +407,7 @@ mlsm_execute(
  *                         packets should be sent or NULL to have them sent from
  *                         the system's default multicast interface. Caller may
  *                         free.
+ * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is initialized. Caller should call
  *                         `me_destroy(entry)` when it's no longer needed.
  * @retval     LDM7_INVAL  `ttl` is too large. `log_start()` called.
@@ -409,7 +419,8 @@ me_init(
         McastEntry* const restrict entry,
         const McastInfo* const     info,
         unsigned short             ttl,
-        const char* const restrict mcastIf)
+        const char* const restrict mcastIf,
+        const char* const restrict pqPathname)
 {
     int status;
 
@@ -422,24 +433,36 @@ me_init(
     }
     else {
         entry->ttl = ttl;
+        entry->pqPathname = strdup(pqPathname);
 
-        if (mcastIf) {
-            entry->mcastIf = strdup(mcastIf);
-
-            if (NULL == entry->mcastIf ) {
-                LOG_SERROR0("Couldn't copy IP address of multicast interface");
-                mi_destroy(&entry->info);
-                status = LDM7_SYSTEM;
-            }
-            else {
-                status = 0;
-            }
+        if (NULL == entry->pqPathname) {
+            LOG_SERROR0("Couldn't copy pathname of product-queue");
+            status = LDM7_SYSTEM;
         }
         else {
-            entry->mcastIf = NULL;
-            status = 0;
-        }
-    }
+            if (mcastIf) {
+                entry->mcastIf = strdup(mcastIf);
+
+                if (NULL == entry->mcastIf) {
+                    LOG_SERROR0("Couldn't copy IP address of multicast interface");
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    status = 0;
+                }
+            } // `mcastIf != NULL
+            else {
+                entry->mcastIf = NULL;
+                status = 0;
+            }
+
+            if (status)
+                free(entry->pqPathname);
+        } // `entry->pqPathname` allocated
+
+        if (status)
+            mi_destroy(&entry->info);
+    } // `entry->info` allocated
 
     return status;
 }
@@ -455,6 +478,7 @@ me_destroy(
 {
     mi_destroy(&entry->info);
     free(entry->mcastIf);
+    free(entry->pqPathname);
 }
 
 /**
@@ -467,6 +491,7 @@ me_destroy(
  *                         packets should be sent or NULL to have them sent from
  *                         the system's default multicast interface. Caller may
  *                         free.
+ * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is set. Caller should call
  *                         `me_free(*entry)` when it's no longer needed.
  * @retval     LDM7_INVAL  `ttl` is too large. `log_start()` called.
@@ -476,7 +501,8 @@ me_new(
         McastEntry** const restrict entry,
         const McastInfo* const      info,
         unsigned short              ttl,
-        const char* const restrict  mcastIf)
+        const char* const restrict  mcastIf,
+        const char* const restrict  pqPathname)
 {
     int         status;
     McastEntry* ent = LOG_MALLOC(sizeof(McastEntry), "multicast entry");
@@ -485,7 +511,7 @@ me_new(
         status = LDM7_SYSTEM;
     }
     else {
-        status = me_init(ent, info, ttl, mcastIf);
+        status = me_init(ent, info, ttl, mcastIf, pqPathname);
 
         if (status) {
             free(ent);
@@ -597,6 +623,7 @@ me_compareOrConflict(
  *                              packets should be sent or NULL to have them sent
  *                              from the system's default multicast interface.
  *                              Caller may free.
+ * @param[in]      pqPathname   Pathname of product-queue. Caller may free.
  * @param[in,out]  info         Information on the multicast group.
  * @param[out]     pid          Process ID of the multicast LDM sender.
  * @retval         0            Success. The multicast LDM sender associated
@@ -611,6 +638,7 @@ mlsm_startIfNecessary(
         const feedtypet            feedtype,
         const unsigned short       ttl,
         const char* const restrict mcastIf,
+        const char* const restrict pqPathname,
         McastInfo* const restrict  info,
         pid_t* const restrict      pid)
 {
@@ -619,7 +647,7 @@ mlsm_startIfNecessary(
     if (status == LDM7_NOENT) {
         unsigned short serverPort;
 
-        status = mlsm_execute(info, ttl, mcastIf, &serverPort, pid);
+        status = mlsm_execute(info, ttl, mcastIf, pqPathname, &serverPort, pid);
 
         if (0 == status && info->server.port != serverPort) {
             // Server port number was chosen by the operating-system
@@ -655,6 +683,7 @@ mlsm_startIfNecessary(
  *                         packets should be sent or NULL to have them sent from
  *                         the system's default multicast interface. Caller may
  *                         free.
+ * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
@@ -665,10 +694,11 @@ Ldm7Status
 mlsm_addPotentialSender(
     const McastInfo* const restrict   info,
     const unsigned short              ttl,
-    const char* const restrict        mcastIf)
+    const char* const restrict        mcastIf,
+    const char* const restrict        pqPathname)
 {
     McastEntry* entry;
-    int         status = me_new(&entry, info, ttl, mcastIf);
+    int         status = me_new(&entry, info, ttl, mcastIf, pqPathname);
 
     if (0 == status) {
         const void* const node = tsearch(entry, &mcastEntries,
@@ -730,7 +760,7 @@ mlsm_ensureRunning(
             McastInfo* const info = &entry->info;
 
             status = mlsm_startIfNecessary(feedtype, entry->ttl, entry->mcastIf,
-                    info, pid);
+                    entry->pqPathname, info, pid);
 
             if (0 == status)
                 *mcastInfo = info;

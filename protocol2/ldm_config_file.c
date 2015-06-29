@@ -31,6 +31,7 @@
 #include "ldm_config_file.h"
 #include "autoshift.h"
 #include "down6.h"
+#include "down7_manager.h"
 #include "error.h"
 #include "feedTime.h"
 #include "remote.h"
@@ -40,6 +41,7 @@
 #include "ldmfork.h"
 #include "ldmprint.h"
 #include "log.h"
+#include "mldm_sender_manager.h"
 #include "pattern.h"
 #include "peer_info.h"
 #include "pq.h"
@@ -3003,6 +3005,67 @@ lcf_addAccept(
     return status;
 }
 
+/**
+ * Adds a potential multicast LDM sender. The sender is not started. This
+ * function should be called for all potential senders before any child
+ * process is forked so that all child processes will have this information.
+ *
+ * @param[in] info         Information on the multicast group. Caller may free.
+ * @param[in] ttl          Time-to-live for multicast packets:
+ *                                0  Restricted to same host. Won't be output by
+ *                                   any interface.
+ *                                1  Restricted to same subnet. Won't be
+ *                                   forwarded by a router.
+ *                              <32  Restricted to same site, organization or
+ *                                   department.
+ *                              <64  Restricted to same region.
+ *                             <128  Restricted to same continent.
+ *                             <255  Unrestricted in scope. Global.
+ * @param[in] mcastIface   IP address of the interface from which multicast
+ *                         packets should be sent or NULL to have them sent from
+ *                         the system's default multicast interface. Caller may
+ *                         free.
+ * @param[in] pqPathname   Pathname of product-queue. Caller may free.
+ * @retval    0            Success.
+ * @retval    EINVAL       Invalid specification. `log_start()` called.
+ * @retval    ENOMEM       Out-of-memory. `log_start()` called.
+ */
+int
+lcf_addMulticast(
+        const McastInfo* const restrict mcastInfo,
+        const unsigned short            ttl,
+        const char* const restrict      mcastIface,
+        const char* const restrict      pqPathname)
+{
+    int status = mlsm_addPotentialSender(mcastInfo, ttl, mcastIface,
+            getQueuePath());
+    return (0 == status)
+            ? 0
+            : (LDM7_DUP == status)
+                ? EINVAL
+                : (LDM7_INVAL == status)
+                    ? EINVAL
+                    : ENOMEM;
+}
+
+/**
+ * Adds a potential downstream LDM-7.
+ *
+ * @param[in] feedtype     Feedtype to subscribe to.
+ * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
+ * @retval    0            Success.
+ * @retval    ENOMEM       System failure. `log_start()` called.
+ */
+int
+lcf_addReceive(
+        const feedtypet    feedtype,
+        ServiceAddr* const ldmSvcAddr)
+{
+    return d7mgr_add(feedtype, ldmSvcAddr)
+            ? ENOMEM
+            : 0;
+}
+
 
 /**
  * Checks the LDM configuration-file for ACCEPT entries that are relevant to a
@@ -3258,6 +3321,8 @@ lcf_free(void)
     subs_free();
     allowEntries_free();
     acceptEntries_free();
+    (void)mlsm_clear(); // Clears multicast LDM sender manager
+    d7mgr_free();  // Clears multicast receiver manager
     serverNeeded = false;
 }
 

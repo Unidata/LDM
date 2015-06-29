@@ -85,34 +85,35 @@ mls_usage(void)
     log_add("\
 Usage: %s [options] groupId:groupPort\
 Options:\
-    -f feedExpr       Feedtype expression specifying data to send. Default\
-                      is ANY.\
-    -l logfile        Log file pathname or '-' for standard error stream.\
-                      Default depends on standard error stream:\
-                          is tty     => use standard error stream\
-                          is not tty => use system logging daemon.\
-    -m mcastIf        IP address of interface to use to send multicast\
-                      packets. Default is the default multicast interface\
-    -p serverPort     Port number for VCMTP TCP server. Default is chosen by\
-                      operating system.\
-    -q prodQueue      Pathname of product-queue. Default is \"%s\".\
-    -s serverIface    IP Address of interface on which VCMTP TCP server will\
-                      listen. Default is all interfaces.\
-    -t ttl            Time-to-live of outgoing packets (default is 1):\
-                           0  Restricted to same host. Won't be output by\
-                              any interface.\
-                           1  Restricted to same subnet. Won't be\
-                              forwarded by a router (default).\
-                         <32  Restricted to same site, organization or\
-                              department.\
-                         <64  Restricted to same region.\
-                        <128  Restricted to same continent.\
-                        <255  Unrestricted in scope. Global.\
-    -v                Verbose logging: log INFO level messages.\
-    -x                Debug logging: log DEBUG level messages.\
-Operands:\
-    groupId:groupPort Internet service address of multicast group, where\
-                      <groupId> is either group-name or dotted-decimal IPv4\
+    -f feedExpr       Feedtype expression specifying data to send. Default\n\
+                      is EXP.\n\
+    -l logfile        Log file pathname or '-' for standard error stream.\n\
+                      Default depends on standard error stream:\n\
+                          is tty     => use standard error stream\n\
+                          is not tty => use system logging daemon.\n\
+    -m mcastIf        IP address of interface to use to send multicast\n\
+                      packets. Default is the system's default multicast\n\
+                      interface.\n\
+    -p serverPort     Port number for VCMTP TCP server. Default is chosen by\n\
+                      operating system.\n\
+    -q prodQueue      Pathname of product-queue. Default is \"%s\".\n\
+    -s serverIface    IP Address of interface on which VCMTP TCP server will\n\
+                      listen. Default is all interfaces.\n\
+    -t ttl            Time-to-live of outgoing packets (default is 1):\n\
+                           0  Restricted to same host. Won't be output by\n\
+                              any interface.\n\
+                           1  Restricted to same subnet. Won't be\n\
+                              forwarded by a router (default).\n\
+                         <32  Restricted to same site, organization or\n\
+                              department.\n\
+                         <64  Restricted to same region.\n\
+                        <128  Restricted to same continent.\n\
+                        <255  Unrestricted in scope. Global.\n\
+    -v                Verbose logging: log INFO level messages.\n\
+    -x                Debug logging: log DEBUG level messages.\n\
+Operands:\n\
+    groupId:groupPort Internet service address of multicast group, where\n\
+                      <groupId> is either group-name or dotted-decimal IPv4\n\
                       address and <groupPort> is port number.",
             getulogident(), getQueuePath());
 }
@@ -386,7 +387,7 @@ mls_decodeCommandLine(
         unsigned* const restrict    ttl,
         const char** const restrict ifaceAddr)
 {
-    feedtypet      feed = ANY;
+    feedtypet      feed = EXP;
     const char*    serverIface = "0.0.0.0";     // default: all interfaces
     unsigned short serverPort = 0;              // default: chosen by O/S
     const char*    mcastIf = "0.0.0.0";         // default mcast interface
@@ -932,8 +933,8 @@ mls_execute(
          * the process will automatically terminate if something goes wrong.
          */
         char* miStr = mi_format(&mcastInfo);
-        unotice("Starting up: mcastInfo=%s, ttl=%u, pq=\"%s\"", miStr, ttl,
-                pqPathname);
+        unotice("Starting up: iface=%s, mcastInfo=%s, ttl=%u, pq=\"%s\"",
+                ifaceAddr, miStr, ttl, pqPathname);
         free(miStr);
         status = mls_startMulticasting();
 

@@ -292,7 +292,9 @@ initMissedFilesFromSequence(
             return false;
         }
         unsigned long fileId;
-        if (sscanf(itemNode->data.scalar.value, "%80lu", &fileId) != 1) {
+        int           nbytes;
+        if (sscanf(itemNode->data.scalar.value, "%80lu %n", &fileId, &nbytes)
+                != 1 || itemNode->data.scalar.value[nbytes] != 0) {
             LOG_SERROR1("Couldn't decode missed-file identifier \"%s\"",
                     itemNode->data.scalar.value);
             return false;

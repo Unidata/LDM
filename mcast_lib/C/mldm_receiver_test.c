@@ -38,6 +38,7 @@ static void missed_product_func(
 }
 #endif
 
+static const char* const    LOOPBACK_IP = "127.0.0.1";
 static const char* const    mcastAddr = "224.0.0.1";
 static const unsigned short mcastPort = 1;
 static const char* const    ucastAddr = "127.0.0.1";
@@ -71,7 +72,7 @@ test_invalidMcastInfo()
     Mlr*                 mlr;
 
     /* Invalid multicast information argument */
-    mlr = mlr_new(NULL, down7);
+    mlr = mlr_new(NULL, LOOPBACK_IP, down7);
     log_clear();
     OP_ASSERT_TRUE(mlr == NULL);
     OP_VERIFY();
@@ -84,7 +85,7 @@ test_invalidDown7()
     Mlr*                 mlr;
 
     /* Invalid multicast information argument */
-    mlr = mlr_new(mcastInfo, NULL);
+    mlr = mlr_new(mcastInfo, LOOPBACK_IP, NULL);
     log_clear();
     OP_ASSERT_TRUE(mlr == NULL);
     OP_VERIFY();
@@ -99,11 +100,11 @@ test_trivialExecution()
 
     /* Trivial execution */
     mcastReceiver_new_ExpectAndReturn(
-            NULL, ucastAddr, ucastPort, NULL, mcastAddr, mcastPort, 0,
-            NULL, cmp_cstr,  cmp_short, NULL, cmp_cstr,  cmp_short);
+            NULL, ucastAddr, ucastPort, NULL, mcastAddr, mcastPort, LOOPBACK_IP, 0,
+            NULL, cmp_cstr,  cmp_short, NULL, cmp_cstr,  cmp_short, cmp_cstr);
     down7_getPq_ExpectAndReturn(down7, pq,
                                 cmp_ptr);
-    mlr = mlr_new(mcastInfo, down7);
+    mlr = mlr_new(mcastInfo, LOOPBACK_IP, down7);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(mlr != NULL);
     mcastReceiver_free_ExpectAndReturn(NULL, NULL);

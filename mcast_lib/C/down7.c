@@ -94,6 +94,8 @@ struct Down7 {
     pqueue*               pq;            ///< pointer to the product-queue
     ServiceAddr*          servAddr;      ///< socket address of remote LDM-7
     McastInfo*            mcastInfo;     ///< information on multicast group
+    /** IP address of interface to use for incoming multicast packets */
+    char*                 mcastIface;
     Mlr*                  mlr;           ///< multicast LDM receiver
     /** Persistent multicast session memory */
     McastSessionMemory*   msm;
@@ -156,6 +158,16 @@ static int up7proxy_init(
     return status;
 }
 
+/**
+ * Returns a new proxy for an upstream LDM-7.
+ *
+ * @param[out] up7proxy     Pointer to the new proxy.
+ * @param[in]  socket       The socket to use.
+ * @param[in]  sockAddr     The address of the upstream LDM-7 server.
+ * @retval     0            Success.
+ * @retval     LDM7_INVAL   Invalid argument.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ */
 static int up7proxy_new(
         Up7Proxy** const restrict up7proxy,
         const int                 socket,
@@ -285,7 +297,12 @@ up7proxy_subscribe(
     else {
         status = reply->status;
         if (status == 0) {
-            *mcastInfo = mi_clone(&reply->SubscriptionReply_u.mgi);
+            McastInfo* const mi = &reply->SubscriptionReply_u.mgi;
+            char* miStr = mi_format(mi);
+            udebug("%s:up7proxy_subscribe(): Subscription reply is %s",
+                    __FILE__, miStr);
+            free(miStr);
+            *mcastInfo = mi_clone(mi);
             xdr_free(xdr_SubscriptionReply, (char*)reply);
         }
     }
@@ -378,6 +395,38 @@ up7proxy_requestProduct(
         status = LDM7_RPC;
     }
 
+    up7proxy_unlock(proxy);
+
+    return status;
+}
+
+/**
+ * Tests the connection to an upstream LDM-7 by sending a no-op/no-reply message
+ * to it.
+ *
+ * @param[in] proxy     Pointer to the proxy for the upstream LDM-7.
+ * @retval    0         Success. The connection is still good.
+ * @retval    LDM7_RPC  RPC error. `log_start()` called.
+ */
+static int
+up7proxy_testConnection(
+    Up7Proxy* const proxy)
+{
+    int status;
+
+    up7proxy_lock(proxy);
+    test_connection_7(NULL, proxy->clnt);
+    if (clnt_stat(proxy->clnt) == RPC_TIMEDOUT) {
+        /*
+         * "test_connection_7()" uses asynchronous message-passing, so the
+         * status will always be RPC_TIMEDOUT unless an error occurs.
+         */
+        status = 0;
+    }
+    else {
+	LOG_START1("test_connection_7() failure: %s", clnt_errmsg(proxy->clnt));
+        status = LDM7_RPC;
+    }
     up7proxy_unlock(proxy);
 
     return status;
@@ -497,15 +546,11 @@ getSocket(
 }
 
 /**
- * Returns a proxy to a remote LDM-7.
+ * Creates a new client-side handle in a downstream LDM-7 for its remote LDM-7.
  *
- * @param[out] proxy          Address of pointer to proxy. The caller should
- *                            call `up7proxy_free(*proxy)` when it is no longer
- *                            needed.
- * @param[in]  servAddr       Pointer to the address of the server.
- * @param[out] socket         Pointer to the socket to be set. The client should
- *                            call `close(*socket)` when it's no longer needed.
- * @retval     0              Success. `*proxy` and `*socket` are set.
+ * @param[in]  down7          Pointer to the downstream LDM-7.
+ * @retval     0              Success. `down7->up7proxy` and `down7->sock` are
+ *                            set.
  * @retval     LDM7_INVAL     Invalid port number or host identifier.
  *                            `log_start()` called.
  * @retval     LDM7_REFUSED   Remote host refused connection. `log_start()`
@@ -520,62 +565,42 @@ getSocket(
  */
 static int
 newClient(
-    Up7Proxy** const restrict         proxy,
-    const ServiceAddr* const restrict servAddr,
-    int* const restrict               socket)
+    Down7* const    down7)
 {
     int                     sock;
     struct sockaddr_storage sockAddr;
-    int                     status = getSocket(servAddr, &sock, &sockAddr);
+    int                     status = getSocket(down7->servAddr, &sock,
+            &sockAddr);
 
     if (status == 0) {
-        status = up7proxy_new(proxy, sock, (struct sockaddr_in*)&sockAddr);
+        status = up7proxy_new(&down7->up7proxy, sock,
+                (struct sockaddr_in*)&sockAddr);
         if (status) {
             (void)close(sock);
         }
         else {
-            *socket = sock;
+            down7->sock = sock;
         }
-    } /* "sock" allocated */
+    } // `sock` is open
 
     udebug("newClient(): Returning %d", status);
     return status;
 }
 
-#if 0
 /**
- * Tests the connection to an upstream LDM-7 by sending a no-op message to it.
+ * Tests the connection to the upstream LDM-7 of a downstream LDM-7 by sending
+ * a no-op/no-reply message to it.
  *
  * @param[in] down7     Pointer to the downstream LDM-7.
  * @retval    0         Success. The connection is still good.
  * @retval    LDM7_RPC  RPC error. `log_start()` called.
  */
-static int
+static inline int // inline because small and only called in one spot
 testConnection(
     Down7* const down7)
 {
-    int status;
-
-    (void)lockClient(down7);
-    test_connection_7(NULL, down7->clnt);
-
-    if (clnt_stat(down7->clnt) == RPC_TIMEDOUT) {
-        /*
-         * "test_connection_7()" uses asynchronous message-passing, so the
-         * status will always be RPC_TIMEDOUT unless an error occurs.
-         */
-        unlockClient(down7);
-        status = 0;
-    }
-    else {
-	LOG_START1("test_connection_7() failure: %s", clnt_errmsg(down7->clnt));
-        unlockClient(down7);
-        status = LDM7_RPC;
-    }
-
-    return status;
+    return up7proxy_testConnection(down7->up7proxy);
 }
-#endif
 
 static void
 destroyTransport(
@@ -585,10 +610,12 @@ destroyTransport(
 }
 
 /**
- * Runs an RPC-based server. Destroys and unregisters the service transport.
- * Doesn't return until an error occurs or termination is externally requested.
+ * Runs the RPC-based server of a downstream LDM-7. Destroys and unregisters the
+ * service transport. Doesn't return until an error occurs or termination is
+ * externally requested.
  *
  * @pre                          Current thread's cancelability is disabled.
+ * @param[in]     down7          Pointer to the downstream LDM-7.
  * @param[in]     xprt           Pointer to the RPC service transport. Will be
  *                               destroyed upon return.
  * @retval        0              Success. The RPC transport was closed.
@@ -597,11 +624,13 @@ destroyTransport(
  */
 static int
 run_svc(
-    SVCXPRT*  xprt)
+    Down7* const restrict   down7,
+    SVCXPRT* restrict       xprt)
 {
     const int     sock = xprt->xp_sock;
     int           status;
     struct pollfd pfd;
+    int           timeout = interval * 1000; // probably 30 seconds
 
     pfd.fd = sock;
     pfd.events = POLLIN;
@@ -611,9 +640,16 @@ run_svc(
     for (;;) {
         udebug("down7.c:run_svc(): Calling poll(): socket=%d", sock);
         setCancelState(true); // enable cancellation of `poll()`
-        status = poll(&pfd, 1, -1); // -1 timeout argument => indefinite wait
+        status = poll(&pfd, 1, timeout);
         setCancelState(false); // subsequent code should be quick
 
+        if (0 == status) {
+            // Timeout
+            status = testConnection(down7);
+            if (status)
+                break;
+            continue;
+        }
         if (0 > status) {
             LOG_SERROR1("down7.c:run_svc(): poll() error on socket %d", sock);
             status = LDM7_SYSTEM;
@@ -658,9 +694,9 @@ run_down7_svc(
     SVCXPRT* const restrict xprt)
 {
     /*
-     * The RPC-based server doesn't know its associated downstream LDM-7;
-     * therefore, a thread-specific pointer to the downstream LDM-7 is set to
-     * provide context to the server.
+     * The downstream LDM-7 RPC functions don't know their associated downstream
+     * LDM-7; therefore, a thread-specific pointer to the downstream LDM-7 is
+     * set to provide context to those that need it.
      */
     int status = pthread_setspecific(down7Key, down7);
 
@@ -676,7 +712,7 @@ run_down7_svc(
          * externally requested. It destroys and unregisters the service
          * transport, which will close the downstream LDM-7's client socket.
          */
-        status = run_svc(xprt); // indefinite timeout
+        status = run_svc(down7, xprt);
         unotice("Downstream LDM-7 server terminated");
     } // thread-specific pointer to downstream LDM-7 is set
 
@@ -724,9 +760,9 @@ requestSessionBacklog(
 }
 
 /**
- * Requests from the associated upstream LDM-7, the next product in a downstream
- * LDM-7's missed-but-not-requested queue. Doesn't return until the queue has a
- * product, or the queue is shut down, or an error occurs.
+ * Requests the next product in a downstream LDM-7's missed-but-not-requested
+ * queue from the associated upstream LDM-7. Doesn't return until the queue has
+ * a product, or the queue is shut down, or an error occurs.
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    0              Success.
@@ -938,10 +974,10 @@ static void*
 startMcastRecvTask2(
     void* const arg)
 {
-    udebug("startMcastRecvTask2(): Entered");
+    udebug("%s:startMcastRecvTask2(): Entered", __FILE__);
 
     Down7* const down7 = (Down7*)arg;
-    int          status = mlr_start(down7->mlr);
+    int          status = mlr_start(down7->mlr); // doesn't return immediately
 
     mlr_free(down7->mlr); // because done with `down7->mlr`
     down7->mlr = NULL; // to reveal logic error
@@ -994,7 +1030,7 @@ startMcastRecvTask(
 {
     udebug("startMcastRecvTask(): Entered");
 
-    Mlr* const   mlr = mlr_new(down7->mcastInfo, down7);
+    Mlr* const   mlr = mlr_new(down7->mcastInfo, down7->mcastIface, down7);
     int          status;
 
     if (mlr == NULL) {
@@ -1076,7 +1112,7 @@ static int
 startRecvTasks(
     Down7* const             down7)
 {
-    int status = startRecvTask( down7->executor, startUcastRecvTask, down7,
+    int status = startRecvTask(down7->executor, startUcastRecvTask, down7,
             NULL, "receives data-products that were missed by the multicast "
             "LDM receiving task", NULL);
     if (status == 0) {
@@ -1175,8 +1211,7 @@ freeClient(
     Down7* const   down7 = (Down7*)arg;
     up7proxy_free(down7->up7proxy); // won't close externally-created socket
     down7->up7proxy = NULL;
-    if (close(down7->sock))
-        LOG_SERROR0("Couldn't close socket");
+    (void)close(down7->sock);
     down7->sock = -1;
 }
 
@@ -1198,9 +1233,8 @@ static void*
 subscribe(
         void* const arg)
 {
-    Down7* const    down7 = (Down7*)arg;
-    int             status = newClient(&down7->up7proxy, down7->servAddr,
-            &down7->sock);
+    Down7* const down7 = (Down7*)arg;
+    int          status = newClient(down7); // sets `down7->{up7proxy,sock}`
 
     if (status == 0) {
         pthread_cleanup_push(freeClient, down7);
@@ -1318,10 +1352,7 @@ subscribeAndReceive(
         down7->mcastInfo = NULL;
         udebug("subscribeAndReceive(): Destroying client handle");
         // won't close externally-created socket
-        up7proxy_free(down7->up7proxy);
-        down7->up7proxy = NULL;
-        (void)close(down7->sock); // likely closed by server-side receiver
-        down7->sock = -1;
+        freeClient(down7);
     } // `down7->up7proxy`, `down7->sock`, and `down7->mcastInfo` allocated
 
     udebug("subscribeAndReceive(): Returning %d", status);
@@ -1519,6 +1550,8 @@ wakeUpNappingDown7(
  *                        products missed by the VCMTP layer. Caller may free
  *                        upon return.
  * @param[in] feedtype    Feedtype of multicast group to receive.
+ * @param[in] mcastIface  IP address of interface to use for incoming multicast
+ *                        packets. Caller may free upon return.
  * @param[in] pqPathname  Pathname of the product-queue.
  * @retval    NULL        Failure. `log_start()` called.
  * @return                Pointer to the new downstream LDM-7.
@@ -1527,6 +1560,7 @@ Down7*
 down7_new(
     const ServiceAddr* const restrict servAddr,
     const feedtypet                   feedtype,
+    const char* const restrict        mcastIface,
     const char* const restrict        pqPathname)
 {
     Down7* const down7 = LOG_MALLOC(sizeof(Down7), "downstream LDM-7");
@@ -1586,8 +1620,14 @@ down7_new(
     if ((down7->executor = exe_new()) == NULL)
         goto close_pq;
 
-    if ((status = pthread_once(&down7KeyControl, createDown7Key)) != 0)
+    down7->mcastIface = strdup(mcastIface);
+    if (down7->mcastIface == NULL) {
+        LOG_ADD1("Couldn't open product-queue \"%s\"", pqPathname);
         goto free_executor;
+    }
+
+    if ((status = pthread_once(&down7KeyControl, createDown7Key)) != 0)
+        goto free_mcastIface;
 
     (void)memset(down7->firstMcast, 0, sizeof(signaturet));
     (void)memset(down7->prevLastMcast, 0, sizeof(signaturet));
@@ -1602,6 +1642,8 @@ down7_new(
 
     return down7;
 
+free_mcastIface:
+    free(down7->mcastIface);
 free_executor:
     (void)exe_free(down7->executor);
 close_pq:
@@ -1773,42 +1815,11 @@ down7_free(
                 LOG_ADD0("Couldn't close product-queue");
                 status = -1;
             }
+            free(down7->mcastIface);
             sa_free(down7->servAddr);
             free(down7);
         }
     }
-
-    return status;
-}
-
-/**
- * Runs a downstream LDM-7. Doesn't return until an error occurs.
- *
- * @param[in] servAddr       Pointer to the address of the server from which to
- *                           obtain multicast information, backlog products, and
- *                           products missed by the VCMTP layer. Caller may free
- *                           upon return.
- * @param[in] feedtype       Feedtype of multicast group to receive.
- * @param[in] pqPathname     Pathname of the product-queue.
- * @retval    LDM7_SHUTDOWN  Process termination requested.
- * @retval    LDM7_SYSTEM    System error occurred. `log_start()` called.
- */
-Ldm7Status
-down7_exec(
-    const ServiceAddr* const restrict servAddr,
-    const feedtypet                   feedtype,
-    const char* const restrict        pqPathname)
-{
-    int    status;
-    Down7* down7 = down7_new(servAddr, feedtype, pqPathname);
-
-    if (NULL == down7) {
-        status = LDM7_SYSTEM;
-    }
-    else {
-        status = down7_start(down7);
-        down7_free(down7);
-    } // `down7` allocated
 
     return status;
 }

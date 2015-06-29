@@ -135,7 +135,11 @@ setup(void)
         }
     }
 
-    setQueuePath(UP7_PQ_PATHNAME); // so mldm_sender_manager uses upstream queue
+    /*
+     * Ensure that the upstream component `up7` obtains the upstream queue from
+     * `getQueuePath()`.
+     */
+    setQueuePath(UP7_PQ_PATHNAME);
 
     if (status == 0) {
         status = msm_init();
@@ -671,7 +675,7 @@ sender_insertProducts(
     info->origin = "localhost";
     (void)memset(info->signature, 0, sizeof(info->signature));
 
-    for (int i = 0; i < 5000; i++) {
+    for (int i = 0; i < 1; i++) {
         const unsigned size = 100000*erand48(xsubi) + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 
@@ -784,7 +788,7 @@ receiver_spawn(
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    receiver->down7 = down7_new(servAddr, ANY, DOWN7_PQ_PATHNAME);
+    receiver->down7 = down7_new(servAddr, ANY, LOCAL_HOST, DOWN7_PQ_PATHNAME);
     CU_ASSERT_PTR_NOT_EQUAL_FATAL(receiver->down7, NULL);
 
     status = pthread_create(&receiver->thread, NULL, receiver_start,
@@ -891,7 +895,7 @@ test_up7(
     sa_free(ucastServAddr);
     sa_free(mcastServAddr);
 
-    status = mlsm_addPotentialSender(mcastInfo, 2, "127.0.0.1");
+    status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST, UP7_PQ_PATHNAME);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     mi_free(mcastInfo);
 
@@ -965,7 +969,8 @@ test_up7_down7(
     sa_free(ucastServAddr);
     sa_free(mcastServAddr);
 
-    status = mlsm_addPotentialSender(mcastInfo, 2, "127.0.0.1");
+    status = mlsm_addPotentialSender(mcastInfo, 2, "127.0.0.1",
+            UP7_PQ_PATHNAME);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     mi_free(mcastInfo);

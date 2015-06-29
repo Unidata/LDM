@@ -7,7 +7,7 @@
 ## Process this file with automake to produce Makefile.in
 
 BUILT_SOURCES           = parser.c scanner.c
-CLEANFILES		= ldmd.1 *.i .*.info
+CLEANFILES		= ldmd.1 *.i .*.info up7.conf down7.conf *.pq
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
 EXTRA_DIST		= ldmd.1.in \
@@ -112,3 +112,22 @@ valgrind_uldb:	testUpstreamLdmDb
 	    --leak-check=full --show-reachable=yes ./testUpstreamLdmDb
         
 endif
+
+#if WANT_MULTICAST
+check-local:
+	$(top_builddir)/pqcreate/pqcreate -vl- -c -s 100M -q up7.pq
+	$(top_builddir)/pqcreate/pqcreate -vl- -c -s 100M -q down7.pq
+	echo 'REQUEST IDS|DDPLUS .* emo.unidata.ucar.edu:388' > up7.conf
+	echo 'ALLOW ANY .*' >> up7.conf
+	echo 'MULTICAST ANY 234.128.117.0:38800 1 127.0.0.1' >> up7.conf
+	echo 'RECEIVE ANY localhost:38800' > down7.conf
+	PATH=$(top_builddir)/mldm_sender:$$PATH ./ldmd -l- -I 127.0.0.1 \
+		-P 38800 -q up7.pq up7.conf & up7_pid=$$! \
+	&& sleep 1 \
+	&& ./ldmd -vl- -q down7.pq down7.conf & down7_pid=$$! \
+	&& echo up7=$$up7_pid down7=$$down7_pid
+
+#
+#	&& sleep 1 \
+#	&& kill $$up7_pid $$down7_pid
+#endif

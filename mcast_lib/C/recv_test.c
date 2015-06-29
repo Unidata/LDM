@@ -131,7 +131,11 @@ configure_socket(
     (void)memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(groupPort);
-    // Using `htonl(INADDR_ANY)` in the following also works
+    /*
+     * Using `htonl(INADDR_ANY)` in the following will also work but the socket
+     * will accept every packets destined to the port number regardless of IP
+     * address.
+     */
     addr.sin_addr.s_addr = inet_addr(groupAddr);
 
     success = bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0;

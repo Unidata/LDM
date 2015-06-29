@@ -13,6 +13,7 @@
 #include "config.h"
 
 #include "down7.h"
+#include "mcast_info.h"
 #include "mldm_receiver.h"
 #include "ldm.h"
 #include "ldmprint.h"
@@ -346,6 +347,8 @@ missed_prod_func(
  *
  * @param[out] mlr            The multicast LDM receiver to initialize.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
+ * @param[in]  mcastIface     IP address of interface to use for incoming
+ *                            multicast packets.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. `log_add()` called.
@@ -358,6 +361,7 @@ static int
 init(
         Mlr* const restrict             mlr,
         const McastInfo* const restrict mcastInfo,
+        const char* const restrict      mcastIface,
         Down7* const restrict           down7)
 {
     int            status;
@@ -383,14 +387,27 @@ init(
         return LDM7_MCAST;
     }
     else {
+        if (ulogIsVerbose()) {
+            char* const miStr = mi_format(mcastInfo);
+            if (miStr == NULL) {
+                LOG_ADD0("Couldn't format multicast information");
+                ppn_free(notifier);
+                return LDM7_SYSTEM;
+            }
+            uinfo("%s:init(): Initializing VCMTP receiver with %s", __FILE__,
+                    miStr);
+            free(miStr);
+        }
+
         status = mcastReceiver_new(&receiver, mcastInfo->server.inetId,
                 mcastInfo->server.port, notifier, mcastInfo->group.inetId,
-                mcastInfo->group.port);
+                mcastInfo->group.port, mcastIface);
         if (status) {
             LOG_ADD0("Couldn't create VCMTP receiver");
+            ppn_free(notifier);
             return LDM7_MCAST;
         }
-    }
+    } // `notifier` allocated
 
     mlr->receiver = receiver;
     mlr->pq = down7_getPq(down7); // for convenience
@@ -408,6 +425,8 @@ init(
  * Returns a new multicast LDM receiver object.
  *
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
+ * @param[in]  mcastIface     IP address of interface to use for incoming
+ *                            multicast packets.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     NULL           Failure. `log_add()` called.
  * @return                    Pointer to a new multicast LDM receiver object.
@@ -417,12 +436,13 @@ init(
 Mlr*
 mlr_new(
         const McastInfo* const restrict mcastInfo,
+        const char* const restrict      mcastIface,
         Down7* const restrict           down7)
 {
     Mlr* mlr = LOG_MALLOC(sizeof(Mlr), "multicast LDM receiver object");
 
     if (mlr) {
-        if (init(mlr, mcastInfo, down7)) {
+        if (init(mlr, mcastInfo, mcastIface, down7)) {
             LOG_ADD0("Couldn't initialize multicast LDM receiver");
             free(mlr);
             mlr = NULL;

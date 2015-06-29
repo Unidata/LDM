@@ -33,7 +33,8 @@ int mcastReceiver_new(
     unsigned short        tcpPort,
     void*                 notifier,
     const char* const     mcastAddr,
-    const unsigned short  mcastPort);
+    const unsigned short  mcastPort,
+    const char* const     mcastIface);
 
 void mcastReceiver_free(
     McastReceiver*              receiver);

@@ -9,7 +9,6 @@
  * This file implements the manager of downstream LDM-7s.
  */
 
-
 #include "config.h"
 
 #include "down7.h"
@@ -19,13 +18,119 @@
 #include "ldmfork.h"
 #include "log.h"
 
+#include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+
+/**
+ * The set of termination signals.
+ */
+static sigset_t termSigSet;
+
+/**
+ * Initializes the set of termination signals.
+ */
+static void
+setTermSigSet(void)
+{
+    (void)sigemptyset(&termSigSet);
+    (void)sigaddset(&termSigSet, SIGINT);
+    (void)sigaddset(&termSigSet, SIGTERM);
+}
+
+/**
+ * Returns the set of termination signals.
+ *
+ * @return Pointer to the set of termination signals.
+ */
+static sigset_t*
+getTermSigSet()
+{
+    static pthread_once_t initialized = PTHREAD_ONCE_INIT;
+    (void)pthread_once(&initialized, setTermSigSet);
+    return &termSigSet;
+}
+
+/**
+ * Adds termination signals to the set of blocked signals.
+ */
+static inline void
+blockTermSigs(void)
+{
+    (void)pthread_sigmask(SIG_BLOCK, getTermSigSet(), NULL);
+}
+
+/**
+ * Waits for a termination signal and then stops a downstream LDM-7.
+ *
+ * @param[in] arg  Pointer to the downstream LDM-7 to be stopped upon receiving
+ *                 a termination signal.
+ */
+static void*
+waitForTermSig(
+        void* const arg)
+{
+    int sig;
+    (void)sigwait(getTermSigSet(), &sig);
+    if (down7_stop((Down7*)arg))
+        log_log(LOG_ERR);
+    log_free();
+    return NULL;
+}
+
+/**
+ * Executes a downstream LDM-7. Doesn't return until an error occurs or a
+ * termination signal is received.
+ *
+ * @param[in] servAddr       Pointer to the address of the server from which to
+ *                           obtain multicast information, backlog products, and
+ *                           products missed by the VCMTP layer. Caller may free
+ *                           upon return.
+ * @param[in] feedtype       Feedtype of multicast group to receive.
+ * @param[in] mcastIface     IP address of interface to use for incoming
+ *                           packets.
+ * @param[in] pqPathname     Pathname of the product-queue.
+ * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
+ * @retval    LDM7_SHUTDOWN  Process termination requested.
+ * @retval    LDM7_SYSTEM    System error occurred. `log_start()` called.
+ */
+static int
+executeDown7(
+    const ServiceAddr* const restrict servAddr,
+    const feedtypet                   feedtype,
+    const char* const restrict        mcastIface,
+    const char* const restrict        pqPathname)
+{
+    Down7* down7 = down7_new(servAddr, feedtype, mcastIface, pqPathname);
+    int    status;
+
+    if (NULL == down7) {
+        status = LDM7_SYSTEM;
+    }
+    else {
+        pthread_t termWaitThread;
+        status = pthread_create(&termWaitThread, NULL, waitForTermSig, down7);
+        if (status) {
+            LOG_ERRNUM0(status, "Couldn't create termination-waiting thread");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            (void)pthread_detach(termWaitThread);
+            blockTermSigs();
+            status = down7_start(down7);
+        }
+        down7_free(down7);
+    } // `down7` allocated
+
+    return status;
+}
 
 typedef struct elt {
     struct elt*  next;
     ServiceAddr* ul7;
+    char*        mcastIface;
     feedtypet    ft;
     pid_t        pid;
 } Elt;
@@ -38,15 +143,18 @@ static Elt* top;
 /**
  * Returns a new element.
  *
- * @param[in] ft    Feedtype to subscribe to.
- * @param[in] ul7   Upstream LDM-7 to which to subscribe.
- * @retval    NULL  Failure. `log_start()` called.
- * @return          Point to new element.
+ * @param[in] ft          Feedtype to subscribe to.
+ * @param[in] ul7         Upstream LDM-7 to which to subscribe.
+ * @param[in] mcastIface  IP address of interface to use for incoming packets.
+ *                        Caller may free upon return.
+ * @retval    NULL        Failure. `log_start()` called.
+ * @return                Pointer to new element.
  */
 static Elt*
 elt_new(
-        const feedtypet    ft,
-        ServiceAddr* const ul7)
+        const feedtypet             ft,
+        ServiceAddr* const restrict ul7,
+        const char* const restrict  mcastIface)
 {
     Elt* elt = LOG_MALLOC(sizeof(Elt), "downstream LDM-7 element");
 
@@ -58,8 +166,17 @@ elt_new(
             elt = NULL;
         }
         else {
-            elt->ft = ft;
-            elt->pid = -1;
+            elt->mcastIface = strdup(mcastIface);
+            if (elt->mcastIface == NULL) {
+                LOG_SERROR0("Couldn't duplicate interface specification");
+                sa_free(elt->ul7);
+                free(elt);
+                elt = NULL;
+            }
+            else {
+                elt->ft = ft;
+                elt->pid = -1;
+            }
         }
     }
 
@@ -77,6 +194,7 @@ elt_free(
 {
     if (elt) {
         sa_free(elt->ul7);
+        free(elt->mcastIface);
         free(elt);
     }
 }
@@ -103,15 +221,17 @@ elt_start(
     }
     else if (0 == pid) {
         /* Child process */
-        status = down7_exec(elt->ul7, elt->ft, getQueuePath());
+        status = executeDown7(elt->ul7, elt->ft, elt->mcastIface, getQueuePath());
 
         if (status == LDM7_SHUTDOWN) {
             log_log(LOG_NOTICE);
+            log_free();
             exit(0);
         }
 
         log_log(LOG_ERR);
-        exit(status);
+        log_free();
+        abort(); // Should never happen
     }
     else {
         /* Parent process */
@@ -151,11 +271,11 @@ elt_stop(
  */
 Ldm7Status
 d7mgr_add(
-        const feedtypet    ft,
-        ServiceAddr* const ul7)
+        const feedtypet             ft,
+        ServiceAddr* const restrict ul7)
 {
     int  status;
-    Elt* elt = elt_new(ft, ul7);
+    Elt* elt = elt_new(ft, ul7, "0.0.0.0"); // all interfaces for now
 
     if (NULL == elt) {
         status = LDM7_SYSTEM;
@@ -197,7 +317,7 @@ d7mgr_free(void)
 int
 d7mgr_startAll(void)
 {
-    int  status;
+    int  status = 0; // Support no entries
 
     for (Elt* elt = top; elt != NULL; elt = elt->next) {
         status = elt_start(elt);

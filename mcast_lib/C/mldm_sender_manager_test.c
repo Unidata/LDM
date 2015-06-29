@@ -40,6 +40,8 @@
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed by OpMock
 #endif
 
+#define PQ_PATHNAME "mldm_sender_manager_test.pq"
+
 static const char* const    GROUP_ADDR = "224.0.0.1";
 static const unsigned short GROUP_PORT = 1;
 static const char* const    SERVER_ADDR = "0.0.0.0";
@@ -63,7 +65,7 @@ init()
     OP_ASSERT_TRUE(mcastInfo != NULL);
     status = msm_init();
     OP_ASSERT_EQUAL_INT(0, status);
-    status = pq_create(getQueuePath(), S_IRUSR|S_IWUSR, 0, 0, 1000000, 1000, &pq);
+    status = pq_create(PQ_PATHNAME, S_IRUSR|S_IWUSR, 0, 0, 1000000, 1000, &pq);
     OP_ASSERT_EQUAL_INT(0, status);
     char* path = ldm_format(256, "%s:%s", "../../mldm_sender", getenv("PATH"));
     OP_ASSERT_TRUE(path != NULL);
@@ -75,7 +77,7 @@ init()
 static void
 destroy(void)
 {
-    int status = unlink(getQueuePath());
+    int status = unlink(PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
 }
 
@@ -95,9 +97,9 @@ static void
 test_conflict()
 {
     // Depends on `init()`
-    int status = mlsm_addPotentialSender(mcastInfo, 0, NULL);
+    int status = mlsm_addPotentialSender(mcastInfo, 0, NULL, PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = mlsm_addPotentialSender(mcastInfo, 0, NULL);
+    status = mlsm_addPotentialSender(mcastInfo, 0, NULL, PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(LDM7_DUP, status);
     log_clear();
     OP_VERIFY();
@@ -128,7 +130,7 @@ test_not_running()
     OP_ASSERT_EQUAL_INT(pid, status);
     if (WIFEXITED(childStatus)) {
         OP_ASSERT_EQUAL_INT(0, WEXITSTATUS(childStatus));
-    }
+   }
     else {
         OP_ASSERT_TRUE(WIFSIGNALED(childStatus));
         OP_ASSERT_EQUAL_INT(SIGTERM, WTERMSIG(childStatus));
@@ -190,8 +192,6 @@ main(
 {
     (void)openulog(basename(argv[0]), LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
     (void)setulogmask(LOG_UPTO(LOG_NOTICE));
-
-    setQueuePath("mldm_sender_manager_test.pq");
 
     opmock_test_suite_reset();
     opmock_register_test(test_noPotentialSender, "test_noPotentialSender");

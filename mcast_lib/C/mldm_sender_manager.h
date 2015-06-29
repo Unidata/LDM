@@ -44,6 +44,7 @@ extern "C" {
  *                         packets should be sent or NULL to have them sent from
  *                         the system's default multicast interface. Caller may
  *                         free.
+ * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
@@ -54,7 +55,8 @@ Ldm7Status
 mlsm_addPotentialSender(
     const McastInfo* const restrict   info,
     const unsigned short              ttl,
-    const char* const restrict        mcastIf);
+    const char* const restrict        mcastIf,
+    const char* const restrict        pqPathname);
 
 /**
  * Ensures that the multicast LDM sender process that's responsible for a
