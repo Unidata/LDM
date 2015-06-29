@@ -713,7 +713,7 @@ static void handle_connection(
     }
 
 #if WANT_MULTICAST
-    if (!svc_register(xprt, LDMPROG, SIX, ldmprog_7, 0)) {
+    if (!svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
         uerror("unable to register LDM-7 service.");
         svc_destroy(xprt);
         goto unwind_sock;
@@ -803,7 +803,7 @@ int main(
     const char* pqfname = getQueuePath();
     int status;
     int doSomething = 1;
-    in_addr_t locIpAddr = (in_addr_t) htonl(INADDR_ANY );
+    in_addr_t ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
     unsigned ldmPort = LDM_PORT;
 
     ensureDumpable();
@@ -832,7 +832,7 @@ int main(
                     exit(1);
                 }
 
-                locIpAddr = ipAddr;
+                ldmIpAddr = ipAddr;
 
                 break;
             }
@@ -858,21 +858,15 @@ int main(
                 }
                 break;
             case 'P': {
-                char* suffix = "";
-                long port;
-
-                errno = 0;
-                port = strtol(optarg, &suffix, 0);
-
-                if (0 != errno || 0 != *suffix || 0 >= port || 0xffff < port) {
-
-                    (void) fprintf(stderr, "%s: invalid port %s\n", av[0],
-                            optarg);
+                unsigned port;
+                int      nbytes;
+                if (sscanf(optarg, "%5hu %n", &port, &nbytes) != 1 ||
+                        0 != optarg[nbytes] || port > 0xffff) {
+                    (void)fprintf(stderr, "%s: invalid port number: %s\n",
+                            av[0], optarg);
                     usage(av[0]);
                 }
-
-                ldmPort = (unsigned) port;
-
+                ldmPort = port;
                 break;
             }
             case 'M': {
@@ -989,7 +983,7 @@ int main(
      * Vet the configuration file.
      */
     udebug("main(): Vetting configuration-file");
-    if (read_conf(getLdmdConfigPath(), 0, ldmPort) != 0) {
+    if (read_conf(getLdmdConfigPath(), 0, ldmIpAddr, ldmPort) != 0) {
         log_log(LOG_ERR);
         exit(1);
     }
@@ -1004,7 +998,7 @@ int main(
              * privileges.
              */
             udebug("main(): Creating service portal");
-            if (create_ldm_tcp_svc(&sock, locIpAddr, ldmPort) != ENOERR) {
+            if (create_ldm_tcp_svc(&sock, ldmIpAddr, ldmPort) != ENOERR) {
                 /* error reports are emitted from create_ldm_tcp_svc() */
                 exit(1);
             }
@@ -1060,11 +1054,12 @@ int main(
 #endif
 
         /*
-         * Read the configuration file (downstream LDM-s are started).
+         * Re-read (and execute) the configuration file (downstream LDM-s are
+         * started).
          */
-        lcf_free();
+        lcf_free(); // Start with a clean slate to prevent duplicates
         udebug("main(): Reading configuration-file");
-        if (read_conf(getLdmdConfigPath(), 1, ldmPort) != 0) {
+        if (read_conf(getLdmdConfigPath(), 1, ldmIpAddr, ldmPort) != 0) {
             log_log(LOG_ERR);
             exit(1);
         }
