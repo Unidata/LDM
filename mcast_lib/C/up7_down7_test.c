@@ -675,7 +675,7 @@ sender_insertProducts(
     info->origin = "localhost";
     (void)memset(info->signature, 0, sizeof(info->signature));
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 5000; i++) {
         const unsigned size = 100000*erand48(xsubi) + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 
