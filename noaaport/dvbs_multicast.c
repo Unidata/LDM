@@ -409,7 +409,12 @@ int main(
     }
 
     /* Get IP socket port for multicast address as s_port[pid_channel-1] */
-    sscanf(argv[optind], "%*d.%*d.%*d.%d", &pid_channel);
+    int nbytes;
+    if (sscanf(argv[optind], "%*d.%*d.%*d.%d %n", &pid_channel, &nbytes) != 1
+            || argv[optind][nbytes] != 0) {
+        uerror("Unable to decode multicast address \"%s\"", argv[optind]);
+        exit(1);
+    }
 
     if ((pid_channel < 1) || (pid_channel > MAX_DVBS_PID)) {
         uerror("multicast address %s outside range of expected server ports\n",
