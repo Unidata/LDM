@@ -67,9 +67,10 @@ int main(const int argc, char* const argv[])
     while ((ch = getopt(argc, argv, "n:s:")) != -1) {
         switch (ch) {
             case 'n': {
-                int i = sscanf(optarg, "%d", &count);
+                int nbytes;
+                int i = sscanf(optarg, "%d %n", &count, &nbytes);
 
-                if ((1 != i) || (1 > count)) {
+                if ((1 != i) || (1 > count) || (optarg[nbytes] != 0)) {
                     fprintf(stderr, "Invalid \"-n\" argument: \"%s\"\n",
                         optarg);
 
