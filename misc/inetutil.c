@@ -1542,7 +1542,7 @@ sa_getInetSockAddr(
         const char* const inetId = sa_getInetId(servAddr);
 
         (void)memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_UNSPEC;
+        hints.ai_family = AF_INET;
         hints.ai_protocol = IPPROTO_TCP;
         hints.ai_socktype = SOCK_STREAM;
         /*
