@@ -10,5 +10,4 @@ testuldb
 timer.h
 .Tpo
 uldb.h
-ldm_config_file.h
 ldmprint_test
