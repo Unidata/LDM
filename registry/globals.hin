@@ -48,11 +48,12 @@ extern const int inactive_timeo;
 extern int max_latency;
 extern int toffset;
 
-extern void clr_pip_5(void);	        /* defined in svc5.c */
-extern int read_conf(
-    const char* const	conf_path,
-    int			doSomething,    /* defined in parser.y */
-    unsigned		defaultPort);
+extern void clr_pip_5(void);	        // defined in svc5.c
+extern int read_conf(                   // defined in "parser.y"
+    const char* const   pathname,
+    int                 execEntries,
+    in_addr_t           ldmAddr,
+    unsigned            defaultPort);
 
 @FUNCTION_DECLARATIONS@
 

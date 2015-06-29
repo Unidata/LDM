@@ -9,19 +9,6 @@
 
 #include "config.h"
 
-#include <arpa/inet.h>
-#include <assert.h>
-#include <errno.h>       /* ENOMEM */
-#include <netinet/in.h>
-#include <rpc/rpc.h>     /* SVCXPRT, xdrproc_t */
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>      /* getenv, exit */
-#include <string.h>      /* strncpy(), strerror() */
-#include <strings.h>     /* strncasecmp() */
-#include <sys/types.h>
-#include <unistd.h>      /* getpid() */
-
 #include "abbr.h"
 #include "ldm_config_file.h"         /* acl_product_intersection(), acl_check_hiya() */
 #include "autoshift.h"
@@ -41,6 +28,19 @@
 #include "log.h"
 #include "UpFilter.h"
 #include "uldb.h"
+
+#include <arpa/inet.h>
+#include <assert.h>
+#include <errno.h>       /* ENOMEM */
+#include <netinet/in.h>
+#include <rpc/rpc.h>     /* SVCXPRT, xdrproc_t */
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>      /* getenv, exit */
+#include <string.h>      /* strncpy(), strerror() */
+#include <strings.h>     /* strncasecmp() */
+#include <sys/types.h>
+#include <unistd.h>      /* getpid() */
 
 #include "up6.h"         /* the pure "upstream" LDM module */
 

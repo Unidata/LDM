@@ -9,7 +9,6 @@
 hinHeaders	        = \
     data_prod.h \
     forn.h \
-    ldm_config_file.h \
     ldmfork.h \
     LdmProxy.h \
     timer.h \
@@ -70,7 +69,7 @@ lib_la_SOURCES		= \
     ldmfork.c \
     ldmprint.c \
     ldm_clnt_misc.c \
-    ldm_config_file.c \
+    ldm_config_file.c ldm_config_file.h \
     md5c.c \
     one_svc_run.c \
     priv.c \
@@ -113,7 +112,6 @@ dist_man3_MANS		= uldb.3
 	mv -f $@.tmp $@
 data_prod.h:		data_prod.hin data_prod.c
 forn.h:			forn.hin forn.c
-ldm_config_file.h:	ldm_config_file.hin ldm_config_file.c
 ldmfork.h:		ldmfork.hin ldmfork.c
 LdmProxy.h:		LdmProxy.hin LdmProxy.c
 timer.h:		timer.hin timer.c

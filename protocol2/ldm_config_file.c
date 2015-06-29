@@ -31,7 +31,9 @@
 #include "ldm_config_file.h"
 #include "autoshift.h"
 #include "down6.h"
-#include "down7_manager.h"
+#if WANT_MULTICAST
+    #include "down7_manager.h"
+#endif
 #include "error.h"
 #include "feedTime.h"
 #include "remote.h"
@@ -42,7 +44,9 @@
 #include "ldmfork.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mldm_sender_manager.h"
+#if WANT_MULTICAST
+    #include "mldm_sender_manager.h"
+#endif
 #include "pattern.h"
 #include "peer_info.h"
 #include "pq.h"
@@ -3006,6 +3010,8 @@ lcf_addAccept(
     return status;
 }
 
+#if WANT_MULTICAST
+
 /**
  * Adds a potential multicast LDM sender. The sender is not started. This
  * function should be called for all potential senders before any child
@@ -3067,6 +3073,7 @@ lcf_addReceive(
             : 0;
 }
 
+#endif
 
 /**
  * Checks the LDM configuration-file for ACCEPT entries that are relevant to a
@@ -3322,11 +3329,12 @@ lcf_free(void)
     subs_free();
     allowEntries_free();
     acceptEntries_free();
-    (void)mlsm_clear(); // Clears multicast LDM sender manager
-    d7mgr_free();  // Clears multicast receiver manager
+    #if WANT_MULTICAST
+       (void)mlsm_clear(); // Clears multicast LDM sender manager
+        d7mgr_free();  // Clears multicast receiver manager
+    #endif
     serverNeeded = false;
 }
-
 
 /**
  * Saves information on the last, successfully-received product under a key
