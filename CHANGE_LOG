@@ -1,4 +1,4 @@
-6.12.15	2015-06-17T15:27:04-0600
+6.12.15	2015-06-29T10:02:43-0600
     Upstream LDM:
         Reduced the delivery latency of products with relatively large
         inter-product temporal gaps. Modified the RPC calls that LDM-6 makes to
