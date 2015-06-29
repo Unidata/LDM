@@ -506,9 +506,11 @@ int main(
 
             break;
         }
-        case 'm':
-            sscanf(optarg, "%*d.%*d.%*d.%d", &pid_channel);	
-            if ((pid_channel < 1) || (pid_channel > MAX_DVBS_PID)) {
+        case 'm': {
+            int nbytes;
+            if (sscanf(optarg, "%*d.%*d.%*d.%d %n", &pid_channel, &nbytes) != 1
+                    || optarg[nbytes] != 0 || (pid_channel < 1) ||
+                    (pid_channel > MAX_DVBS_PID)) {
                 pid_channel = -1;
             }
             else {  
@@ -533,6 +535,7 @@ int main(
                 }
             }
             break;
+        }
         case '?':
             usage(argv[0]);
             break;
