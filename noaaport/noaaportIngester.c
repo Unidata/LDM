@@ -99,8 +99,10 @@ decodeCommandLine(
 
             case 'b': {
                 unsigned long   n;
+                int             nbytes;
 
-                if (sscanf(optarg, "%12lu", &n) != 1) {
+                if (sscanf(optarg, "%12lu %n", &n, &nbytes) != 1 ||
+                        optarg[nbytes] != 0) {
                     LOG_SERROR1("Couldn't decode FIFO size in pages: \"%s\"",
                             optarg);
                     status = 1;
