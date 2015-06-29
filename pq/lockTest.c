@@ -277,7 +277,9 @@ main(
         }
         case 'i': {
             unsigned long       max;
-            if (sscanf(optarg, "%lu", &max) != 1 || max < 0) {
+            int                 nbytes;
+            if (sscanf(optarg, "%lu %n", &max, &nbytes) != 1 ||
+                    optarg[nbytes] != 0 || max < 0) {
                 (void)fprintf(stderr,
                     "Invalid maximum sleep interval \"%s\"\n", optarg);
                 status = EXIT_FAILURE;
