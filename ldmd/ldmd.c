@@ -860,7 +860,7 @@ int main(
             case 'P': {
                 unsigned port;
                 int      nbytes;
-                if (sscanf(optarg, "%5hu %n", &port, &nbytes) != 1 ||
+                if (sscanf(optarg, "%5u %n", &port, &nbytes) != 1 ||
                         0 != optarg[nbytes] || port > 0xffff) {
                     (void)fprintf(stderr, "%s: invalid port number: %s\n",
                             av[0], optarg);
