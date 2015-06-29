@@ -533,8 +533,10 @@ main(int ac, char *av[])
     #endif /* NET */
                     case 's': {
                             unsigned long size;
+                            int           nbytes;
 
-                            if (sscanf(optarg, "%lu", &size) != 1 || 1 > size) {
+                            if (sscanf(optarg, "%lu %n", &size, &nbytes) != 1 ||
+                                    optarg[nbytes] != 0 || 1 > size) {
                                 LOG_ADD1("Invalid maximum data-product size: \"%s\"",
                                         optarg);
                                 log_log(LOG_ERR);
