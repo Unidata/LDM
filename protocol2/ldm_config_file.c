@@ -37,6 +37,7 @@
 #include "remote.h"
 #include "globals.h"            /* global "pq"; defined in ldmd.c */
 #include "inetutil.h"
+#include "ldm.h"
 #include "ldm5_clnt.h"
 #include "ldmfork.h"
 #include "ldmprint.h"
