@@ -110,7 +110,7 @@ ldm_vformat(
     if (buf) {
         if (nbytes >= initSize) {
             free(buf);
-            buf = tryFormat(nbytes, fmt, ap, &nbytes);
+            buf = tryFormat(nbytes+1, fmt, ap, &nbytes);
         }
     }
 
