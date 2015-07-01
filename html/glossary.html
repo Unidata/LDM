@@ -22,9 +22,9 @@ href="http://wombat.doc.ic.ac.uk/"> http://wombat.doc.ic.ac.uk/</a>,
   <dt>&nbsp;
   <dd> In the context of the Unidata <a href="#LDM">LDM</a>, one of the possible 
 	fates of a <a href="#data product">data product</a> when it is read out of 
-	the <a href="#product queue">product queue</a> by the <a href="/cgi-bin/man-cgi?pqact+1"><b>pqact</b></a> 
+	the <a href="#product queue">product queue</a> by the <a href="/software/ldm/man/pqact"><b>pqact</b></a> 
 	program. If the <a href="#feed type">feed type</a> and <a href="#product ID">product 
-	ID</a> of a data product match a list maintained by <a href="/cgi-bin/man-cgi?pqact+1"><b>pqact</b></a>, 
+	ID</a> of a data product match a list maintained by <a href="/software/ldm/man/pqact"><b>pqact</b></a>, 
 	the associated action is invoked on the product. An action may have arguments 
 	that include substitution of matched subparts of the product ID. The currently 
 	supported actions include FILE, STDIOFILE, PIPE, EXEC, DBFILE, and NOOP. 
@@ -282,7 +282,7 @@ href="http://wombat.doc.ic.ac.uk/"> http://wombat.doc.ic.ac.uk/</a>,
 
   <dt> <a name="gdbm"><i>gdbm</i></a>
   <dd> GNU database manager, a freely-available library that supports a simple 
-	key-contents database. The <a href="/cgi-bin/man-cgi?pqact+1"><b>pqact</b></a> 
+	key-contents database. The <a href="/software/ldm/man/pqact"><b>pqact</b></a> 
 	program of the Unidata <a href="#LDM">LDM</a> can store <a href="#data products">data 
 	products</a> in gdbm databases using the DBPUT action. 
   <dt> <a name="GDS"><i>GDS</i></a>
@@ -357,7 +357,7 @@ href="http://wombat.doc.ic.ac.uk/"> http://wombat.doc.ic.ac.uk/</a>,
        international data products analogous to the domestic products on
        <a href="#DDS">DDS</a>.
   <dt> <a name="ingester"><i>ingester</i></a>
-  <dd> In the context of the Unidata LDM, a program such as <a href="/cgi-bin/man-cgi?pqing+1"><b>pqing</b></a> 
+  <dd> In the context of the Unidata LDM, a program such as <a href="/software/ldm/man/pqing"><b>pqing</b></a> 
 	that reads bytes from a <a href="#data stream">data stream</a> and creates 
 	<a href="#data products">data products</a>. 
   <dt> <a name="injection time"><i>injection time</i></a>
@@ -410,7 +410,7 @@ href="http://wombat.doc.ic.ac.uk/"> http://wombat.doc.ic.ac.uk/</a>,
       flow ceases for any of the data streams it monitors.
   <dt> <a name="LDM servers"><i>LDM servers</i></a>
   <dt> <a name="LDM server"><i>LDM server</i></a>
-  <dd> The LDM program <a href="/cgi-bin/man-cgi?ldmd+1"><b>ldmd</b></a> 
+  <dd> The LDM program <a href="/software/ldm/man/ldmd"><b>ldmd</b></a> 
 	responsible for servicing RPC requests, managing the reception, disposition, 
 	and injection of data to and from the <a href="#IDD">IDD</a>. 
   <dt> <a name="LDM-McIDAS"><i>LDM-McIDAS</i></a>
@@ -553,7 +553,7 @@ href="http://wombat.doc.ic.ac.uk/"> http://wombat.doc.ic.ac.uk/</a>,
        product IDs beginning with the character `A'.
   <dt> <a name="pattern-action file"><i>pattern-action file</i></a>
   <dd> In the context of the Unidata <a href="#LDM">LDM</a>, the configuration 
-	file for the <a href="/cgi-bin/man-cgi?pqact+1"><b>pqact</b></a> 
+	file for the <a href="/software/ldm/man/pqact"><b>pqact</b></a> 
 	program that contains a list of entries of the form <a href="#feed type">feed 
 	type</a>, <a href="#product ID">product ID</a> pattern, associated <a href="#action">action</a>, 
 	and action arguments. 
@@ -582,7 +582,7 @@ href="http://wombat.doc.ic.ac.uk/"> http://wombat.doc.ic.ac.uk/</a>,
   <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a program such as 
 	<a href="#surf_split">surf_split</a> that receives a data product from a <a href="#sender process">sender 
 	process</a>, fragments it into multiple smaller products with manufactured 
-	<a href="#product IDs">product IDs</a>, and feeds them back to the <a href="/cgi-bin/man-cgi?ldmd+1"><b>LDM 
+	<a href="#product IDs">product IDs</a>, and feeds them back to the <a href="/software/ldm/man/ldmd"><b>LDM 
 	server</b></a>. 
   <dt> <a name="product IDs"><i>product IDs</i></a>
   <dt> <a name="product ID"><i>product ID</i></a>
@@ -637,7 +637,7 @@ href="http://wombat.doc.ic.ac.uk/"> http://wombat.doc.ic.ac.uk/</a>,
   <dd> a notation for patterns used in many UNIX programs, e.g. ed, grep, sed, 
 	awk, lex, vi, emacs. The Unidata <a href="#LDM">LDM</a> uses regular expressions 
 	as a notation for sets of <a href="#product IDs">product IDs</a> in the <a href="#pattern-action file">pattern-action 
-	file</a> that serves as the configuration file for the <a href="/cgi-bin/man-cgi?pqact+1"><b>pqact</b></a> 
+	file</a> that serves as the configuration file for the <a href="/software/ldm/man/pqact"><b>pqact</b></a> 
 	program. 
   <dt> <a name="relay node"><i>relay node</i></a>
   <dd> see <a href="#data relay">data relay</a>
