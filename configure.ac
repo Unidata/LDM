@@ -156,7 +156,7 @@ AM_CONDITIONAL([MAINTAINER], [test -d .git])
 AC_ARG_WITH([multicast],
     AS_HELP_STRING([--with-multicast],
 	[enable support for multicast. DO NOT USE!]
-        [[default=without]]]),
+        [[default=without]]),
     [],
     [with_multicast=no])
 AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
