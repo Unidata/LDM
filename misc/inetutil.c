@@ -1391,7 +1391,7 @@ sa_format(
 #define IPV4_WIDTH      STRING2(INET_ADDRSTRLEN)
 #define IPV6_FORMAT     "%" IPV6_WIDTH "[0-9A-Fa-f:]"
 #define IPV4_FORMAT     "%" IPV4_WIDTH "[0-9.]"
-#define HOSTNAME_FORMAT "%" HOSTNAME_WIDTH "[A-Za-z0-9._]"
+#define HOSTNAME_FORMAT "%" HOSTNAME_WIDTH "[A-Za-z0-9._-]"
 
 /**
  * Parses a formatted Internet service address. An Internet service address has
