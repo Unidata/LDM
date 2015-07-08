@@ -788,7 +788,7 @@ makeRequest(
         status = LDM7_SHUTDOWN;
     }
     else {
-        if (msm_addRequestedFile(down7->msm, iProd)) {
+        if (!msm_addRequestedFile(down7->msm, iProd)) {
             LOG_ADD0("Couldn't add VCMTP product-index to requested-queue");
             status = LDM7_SYSTEM;
         }
@@ -1550,7 +1550,7 @@ wakeUpNappingDown7(
  *                        products missed by the VCMTP layer. Caller may free
  *                        upon return.
  * @param[in] feedtype    Feedtype of multicast group to receive.
- * @param[in] mcastIface  IP address of interface to use for incoming multicast
+ * @param[in] mcastIface  IP address of interface to use for receiving multicast
  *                        packets. Caller may free upon return.
  * @param[in] pqPathname  Pathname of the product-queue.
  * @retval    NULL        Failure. `log_start()` called.
