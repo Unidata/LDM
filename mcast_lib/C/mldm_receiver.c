@@ -347,7 +347,7 @@ missed_prod_func(
  *
  * @param[out] mlr            The multicast LDM receiver to initialize.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
- * @param[in]  mcastIface     IP address of interface to use for incoming
+ * @param[in]  mcastIface     IP address of interface to use for receiving
  *                            multicast packets.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     0              Success.
@@ -425,7 +425,7 @@ init(
  * Returns a new multicast LDM receiver object.
  *
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
- * @param[in]  mcastIface     IP address of interface to use for incoming
+ * @param[in]  mcastIface     IP address of interface to use for receiving
  *                            multicast packets.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     NULL           Failure. `log_add()` called.

@@ -102,7 +102,7 @@ using the <code>gunzip(1)</code> and <code>pax(1)</code>
 utilities.
 For example:
 <blockquote><pre>
-cd                                                    # go to the LDM user's home-directory
+cd                                                  # go to the LDM user's home-directory
 mkdir @PACKAGE@-@VERSION@                                   # make a version-specific subdirectory
 cd @PACKAGE@-@VERSION@                                      # go to the version-specific subdirectory
 gunzip -c $HOME/@PACKAGE@-@VERSION@.tar.gz | pax -r         # unpack the distribution

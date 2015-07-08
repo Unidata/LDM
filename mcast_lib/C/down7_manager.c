@@ -89,7 +89,7 @@ waitForTermSig(
  *                           products missed by the VCMTP layer. Caller may free
  *                           upon return.
  * @param[in] feedtype       Feedtype of multicast group to receive.
- * @param[in] mcastIface     IP address of interface to use for incoming
+ * @param[in] mcastIface     IP address of interface to use for receiving
  *                           packets.
  * @param[in] pqPathname     Pathname of the product-queue.
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.

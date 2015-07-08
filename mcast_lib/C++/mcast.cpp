@@ -52,7 +52,7 @@ struct mcast_receiver {
  * @param[in]  mcastAddr              Address of the multicast group to receive.
  *                                    May be groupname or IPv4 address.
  * @param[in]  mcastPort              Port number of the multicast group.
- * @param[in]  mcastIface             IP address of interface for outgoing
+ * @param[in]  mcastIface             IP address of interface for receiving
  *                                    multicast packets.
  * @throws     std::invalid_argument  if @code{0==buf_func || 0==eof_func ||
  *                                    0==missed_prod_func || 0==addr}.
@@ -102,7 +102,7 @@ mcastReceiver_init(
  * @param[in]  mcastAddr         Address of the multicast group to receive. May
  *                               be groupname or formatted IP address.
  * @param[in]  mcastPort         Port number of the multicast group.
- * @param[in]  mcastIface        IP address of interface for outgoing multicast
+ * @param[in]  mcastIface        IP address of interface for receiving multicast
  *                               packets.
  * @retval     0                 Success. The client should call \c
  *                               mcastReceiver_free(*receiver) when the
