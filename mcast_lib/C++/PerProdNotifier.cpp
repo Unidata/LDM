@@ -109,19 +109,24 @@ void PerProdNotifier::notify_of_bop(
     if (bop_func(mlr, prodSize, metadata, metaSize, prodStart, &pqeIndex))
         throw std::runtime_error(
                 "Error notifying receiving application of beginning of product");
-    {
+    if (*prodStart == NULL) {
+        uinfo("PerProdNotifier::notify_of_bop(): Duplicate product: "
+                "prodIndex=%lu, prodSize=%lu",
+                (unsigned long)iProd, (unsigned long)prodSize);
+    }
+    else {
         std::unique_lock<std::mutex> lock(mutex);
         ProdInfo& prodInfo = prodInfos[iProd];
-        if (prodInfo.start)
-            throw std::runtime_error(
-                    std::string("PerProdNotifier::notify_of_bop(): "
-                    "Entry already exists for product: prodIndex=") +
-                    std::to_string(iProd) + ", prodSize=" +
-                    std::to_string(prodSize) + ", metaSize=" +
-                    std::to_string(metaSize));
-        prodInfo.start = *prodStart; // will be NULL if duplicate
-        prodInfo.size = prodSize;
-        prodInfo.index = pqeIndex;
+        if (prodInfo.start) {
+            uinfo("PerProdNotifier::notify_of_bop(): Duplicate BOP: "
+                    "prodIndex=%lu, prodSize=%lu",
+                    (unsigned long)iProd, (unsigned long)prodSize);
+        }
+        else {
+            prodInfo.start = *prodStart; // can't be NULL
+            prodInfo.size = prodSize;
+            prodInfo.index = pqeIndex;
+        }
     }
 }
 

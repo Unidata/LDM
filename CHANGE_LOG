@@ -1,4 +1,8 @@
-6.12.15.1
+6.12.15.2
+    Replace throwing an exception in PerProdNotifier with simply setting product
+    pointer to NULL. Also improve duplicate product detection logic.
+
+6.12.15.1	2015-07-09T13:47:16-0600
     Corrected multicast conflict detection in mldm_sender_manager.
 
 6.12.15	2015-07-08T16:27:08-0600
