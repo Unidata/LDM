@@ -124,6 +124,8 @@ mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
                                           
+check-mldm_sender_manager:	mldm_sender_manager_test
+	./mldm_sender_manager_test
 check-mldm_receiver:	mldm_receiver_test
 	./mldm_receiver_test
 endif

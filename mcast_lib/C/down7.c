@@ -797,8 +797,6 @@ makeRequest(
             (void)msm_removeMissedFileNoWait(down7->msm, &iProd);
 
             status = up7proxy_requestProduct(down7->up7proxy, iProd);
-            if (status)
-                LOG_ADD0("Couldn't request missed data-product");
         } // product-index added to requested-but-not-received queue
     } // have a peeked-at product-index from the missed-but-not-requested queue
 

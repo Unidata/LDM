@@ -32,6 +32,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -42,27 +43,41 @@
 
 #define PQ_PATHNAME "mldm_sender_manager_test.pq"
 
-static const char* const    GROUP_ADDR = "224.0.0.1";
-static const unsigned short GROUP_PORT = 1;
+static const char* const    GROUP_ADDR_1 = "224.0.0.1";
+static const char* const    GROUP_ADDR_2 = "224.0.0.2";
+static const unsigned short GROUP_PORT_1 = 1;
+static const unsigned short GROUP_PORT_2 = 2;
 static const char* const    SERVER_ADDR = "0.0.0.0";
-static const unsigned short SERVER_PORT = 38800;
-static McastInfo*           mcastInfo;
-static feedtypet            feedtype = 1;
-static ServiceAddr*         groupAddr;
-static ServiceAddr*         serverAddr;
+static McastInfo*           mcastInfo_1;
+static McastInfo*           mcastInfo_2;
+static feedtypet            feedtype_1 = 1;
+static feedtypet            feedtype_2 = 2;
+static ServiceAddr*         groupAddr_1;
+static ServiceAddr*         groupAddr_2;
+static ServiceAddr*         serverAddr_1;
+static ServiceAddr*         serverAddr_2;
 
 static void
 init()
 {
-    int          status = sa_new(&groupAddr, GROUP_ADDR, GROUP_PORT);
+    int          status = sa_new(&groupAddr_1, GROUP_ADDR_1, GROUP_PORT_1);
     OP_ASSERT_EQUAL_INT(0, status);
-    OP_ASSERT_TRUE(groupAddr != NULL);
-    status = sa_new(&serverAddr, SERVER_ADDR, SERVER_PORT);
+    OP_ASSERT_TRUE(groupAddr_1 != NULL);
+    status = sa_new(&groupAddr_2, GROUP_ADDR_2, GROUP_PORT_2);
     OP_ASSERT_EQUAL_INT(0, status);
-    OP_ASSERT_TRUE(serverAddr != NULL);
-    status = mi_new(&mcastInfo, feedtype, groupAddr, serverAddr);
+    OP_ASSERT_TRUE(groupAddr_2 != NULL);
+    status = sa_new(&serverAddr_1, SERVER_ADDR, 0); // O/S chooses port number
     OP_ASSERT_EQUAL_INT(0, status);
-    OP_ASSERT_TRUE(mcastInfo != NULL);
+    OP_ASSERT_TRUE(serverAddr_1 != NULL);
+    status = sa_new(&serverAddr_2, SERVER_ADDR, 0); // O/S chooses port number
+    OP_ASSERT_EQUAL_INT(0, status);
+    OP_ASSERT_TRUE(serverAddr_2 != NULL);
+    status = mi_new(&mcastInfo_1, feedtype_1, groupAddr_1, serverAddr_1);
+    OP_ASSERT_EQUAL_INT(0, status);
+    OP_ASSERT_TRUE(mcastInfo_1 != NULL);
+    status = mi_new(&mcastInfo_2, feedtype_2, groupAddr_2, serverAddr_2);
+    OP_ASSERT_EQUAL_INT(0, status);
+    OP_ASSERT_TRUE(mcastInfo_2 != NULL);
     status = msm_init();
     OP_ASSERT_EQUAL_INT(0, status);
     status = pq_create(PQ_PATHNAME, S_IRUSR|S_IWUSR, 0, 0, 1000000, 1000, &pq);
@@ -86,7 +101,7 @@ test_noPotentialSender()
 {
     const McastInfo* mcastInfo;
     pid_t            pid;
-    int              status = mlsm_ensureRunning(feedtype, &mcastInfo,
+    int              status = mlsm_ensureRunning(feedtype_1, &mcastInfo,
             &pid);
     OP_ASSERT_EQUAL_INT(LDM7_NOENT, status);
     log_clear();
@@ -97,10 +112,12 @@ static void
 test_conflict()
 {
     // Depends on `init()`
-    int status = mlsm_addPotentialSender(mcastInfo, 0, NULL, PQ_PATHNAME);
+    int status = mlsm_addPotentialSender(mcastInfo_1, 0, NULL, PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = mlsm_addPotentialSender(mcastInfo, 0, NULL, PQ_PATHNAME);
+    status = mlsm_addPotentialSender(mcastInfo_1, 0, NULL, PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(LDM7_DUP, status);
+    status = mlsm_addPotentialSender(mcastInfo_2, 0, NULL, PQ_PATHNAME);
+    OP_ASSERT_EQUAL_INT(0, status);
     log_clear();
     OP_VERIFY();
 }
@@ -114,12 +131,14 @@ test_not_running()
     int              status;
 
     /* Start a multicast sender process */
-    status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid);
+    status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid);
     log_log(LOG_ERR);
     OP_ASSERT_EQUAL_INT(0, status);
-    OP_ASSERT_EQUAL_INT(feedtype, mcastInfo->feed);
-    OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr, &mcastInfo->group));
-    OP_ASSERT_EQUAL_INT(0, sa_compare(serverAddr, &mcastInfo->server));
+    OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);
+    OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr_1, &mcastInfo->group));
+    OP_ASSERT_EQUAL_INT(0, strcmp(sa_getInetId(serverAddr_1),
+            sa_getInetId(&mcastInfo->server)));
+    OP_ASSERT_NOT_EQUAL_USHORT(0, sa_getPort(&mcastInfo->server));
     OP_ASSERT_TRUE(pid > 0);
 
     /* Terminate the multicast sender process */
@@ -148,24 +167,27 @@ test_running()
     int              status;
 
     /* Start a multicast sender */
-    status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid);
+    status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid);
     log_log(LOG_ERR);
     OP_ASSERT_EQUAL_INT(0, status);
-    OP_ASSERT_EQUAL_INT(feedtype, mcastInfo->feed);
-    OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr, &mcastInfo->group));
-    OP_ASSERT_EQUAL_INT(0, sa_compare(serverAddr, &mcastInfo->server));
+    OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);
+    OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr_1, &mcastInfo->group));
+    OP_ASSERT_EQUAL_INT(0, strcmp(sa_getInetId(serverAddr_1),
+            sa_getInetId(&mcastInfo->server)));
+    OP_ASSERT_NOT_EQUAL_USHORT(0, sa_getPort(&mcastInfo->server));
     OP_ASSERT_TRUE(pid > 0);
 
     /* Try starting a duplicate multicast sender */
     pid_t      pid2;
-    status = mlsm_ensureRunning(feedtype, &mcastInfo, &pid2);
+    status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid2);
     log_log(LOG_ERR);
     OP_ASSERT_EQUAL_INT(0, status);
-    OP_ASSERT_EQUAL_INT(feedtype, mcastInfo->feed);
-    status = sa_compare(groupAddr, &mcastInfo->group);
+    OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);
+    status = sa_compare(groupAddr_1, &mcastInfo->group);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = sa_compare(serverAddr, &mcastInfo->server);
-    OP_ASSERT_EQUAL_INT(0, status);
+    OP_ASSERT_EQUAL_INT(0, strcmp(sa_getInetId(serverAddr_1),
+            sa_getInetId(&mcastInfo->server)));
+    OP_ASSERT_NOT_EQUAL_USHORT(0, sa_getPort(&mcastInfo->server));
     OP_ASSERT_EQUAL_INT(pid, pid2);
 
     /* Terminate the multicast sender */

@@ -494,6 +494,8 @@ me_destroy(
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is set. Caller should call
  *                         `me_free(*entry)` when it's no longer needed.
+ * @retval     LDM7_INVAL  `info->server->port` is not zero. `log_start()`
+ *                         called.
  * @retval     LDM7_INVAL  `ttl` is too large. `log_start()` called.
  */
 static Ldm7Status
@@ -504,20 +506,28 @@ me_new(
         const char* const restrict  mcastIf,
         const char* const restrict  pqPathname)
 {
-    int         status;
-    McastEntry* ent = LOG_MALLOC(sizeof(McastEntry), "multicast entry");
+    int            status;
+    unsigned short port = sa_getPort(&info->server);
 
-    if (ent == NULL) {
-        status = LDM7_SYSTEM;
+    if (port != 0) {
+        LOG_START1("Port number of VCMTP TCP server isn't zero: %hu", port);
+        status = LDM7_INVAL;
     }
     else {
-        status = me_init(ent, info, ttl, mcastIf, pqPathname);
+        McastEntry* ent = LOG_MALLOC(sizeof(McastEntry), "multicast entry");
 
-        if (status) {
-            free(ent);
+        if (ent == NULL) {
+            status = LDM7_SYSTEM;
         }
         else {
-            *entry = ent;
+            status = me_init(ent, info, ttl, mcastIf, pqPathname);
+
+            if (status) {
+                free(ent);
+            }
+            else {
+                *entry = ent;
+            }
         }
     }
 
@@ -541,7 +551,8 @@ me_free(
 
 /**
  * Indicates if two multicast entries conflict (e.g., have feed-types that
- * overlap, specify the same TCP server IP address and port number, etc.).
+ * overlap, specify the same TCP server IP address and positive port number,
+ * etc.).
  *
  * @param[in] info1  First multicast entry.
  * @param[in] info2  Second multicast entry.
@@ -553,9 +564,13 @@ me_doConflict(
         const McastInfo* const info1,
         const McastInfo* const info2)
 {
-    return (mi_getFeedtype(info1) & mi_getFeedtype(info2)) // feeds overlap
-            || (0 == mi_compareServers(info1, info2)) // same TCP server
-            || (0 == mi_compareGroups(info1, info2)); // same multicast group
+    if (mi_getFeedtype(info1) & mi_getFeedtype(info2))
+        return true;
+    if (0 == mi_compareServers(info1, info2) && sa_getPort(&info1->server) != 0)
+        return true;
+    if (0 == mi_compareGroups(info1, info2))
+        return true;
+    return false;
 }
 
 /**
@@ -710,10 +725,12 @@ mlsm_addPotentialSender(
             me_free(entry);
         }
         else if (*(McastEntry**)node != entry) {
-            char* const id = mi_asFilename(info);
-            LOG_START1("Multicast information conflicts with earlier addition: "
-                    "%s", id);
-            free(id);
+            char* const mi1 = mi_format(&entry->info);
+            char* const mi2 = mi_format(&(*(McastEntry**)node)->info);
+            LOG_START2("Multicast information \"%s\" "
+                    "conflicts with earlier addition \"%s\"", mi1, mi2);
+            free(mi1);
+            free(mi2);
             status = LDM7_DUP;
             me_free(entry);
         }
