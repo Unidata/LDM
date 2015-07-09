@@ -190,10 +190,10 @@ mcastReceiver_execute(
     catch (const std::logic_error& e) {
         LOG_START1("%s", e.what());
     }
-    catch (const std::runtime_error& e) {
+    catch (const std::system_error& e) {
         LOG_START1("%s", e.what());
     }
-    catch (const std::system_error& e) {
+    catch (const std::runtime_error& e) {
         LOG_START1("%s", e.what());
     }
     catch (const std::exception& e) {
@@ -574,11 +574,11 @@ mcastSender_send(
         LOG_START1("%s", e.what());
         return EIO;
     }
-    catch (const std::runtime_error& e) {
+    catch (const std::system_error& e) {
         LOG_START1("%s", e.what());
         return EIO;
     }
-    catch (const std::system_error& e) {
+    catch (const std::runtime_error& e) {
         LOG_START1("%s", e.what());
         return EIO;
     }

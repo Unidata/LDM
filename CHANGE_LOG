@@ -1,4 +1,4 @@
-6.12.15.3
+6.12.15.3	2015-07-09T17:17:56-0600
     Add catching of more types of exceptions for VCMTP receiver and sender.
 
 6.12.15.2	2015-07-09T16:16:08-0600
