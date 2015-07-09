@@ -184,6 +184,18 @@ mcastReceiver_execute(
         // VCMTP call
         receiver->vcmtpReceiver->Start();
     }
+    catch (const std::invalid_argument& e) {
+        LOG_START1("%s", e.what());
+    }
+    catch (const std::logic_error& e) {
+        LOG_START1("%s", e.what());
+    }
+    catch (const std::runtime_error& e) {
+        LOG_START1("%s", e.what());
+    }
+    catch (const std::system_error& e) {
+        LOG_START1("%s", e.what());
+    }
     catch (const std::exception& e) {
         LOG_START1("%s", e.what());
     }
@@ -553,6 +565,22 @@ mcastSender_send(
         *iProd = sender->vcmtpSender->sendProduct((void*)data, nbytes,
                 (void*)metadata, metaSize);     //  safe to cast away `const`s
         return 0;
+    }
+    catch (const std::invalid_argument& e) {
+        LOG_START1("%s", e.what());
+        return EIO;
+    }
+    catch (const std::logic_error& e) {
+        LOG_START1("%s", e.what());
+        return EIO;
+    }
+    catch (const std::runtime_error& e) {
+        LOG_START1("%s", e.what());
+        return EIO;
+    }
+    catch (const std::system_error& e) {
+        LOG_START1("%s", e.what());
+        return EIO;
     }
     catch (const std::exception& e) {
         LOG_START1("%s", e.what());

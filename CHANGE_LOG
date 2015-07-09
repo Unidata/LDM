@@ -1,4 +1,7 @@
-6.12.15.2
+6.12.15.3
+    Add catching of more types of exceptions for VCMTP receiver and sender.
+
+6.12.15.2	2015-07-09T16:16:08-0600
     Replace throwing an exception in PerProdNotifier with simply setting product
     pointer to NULL. Also improve duplicate product detection logic.
 
