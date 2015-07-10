@@ -1,4 +1,8 @@
-6.12.15.3	2015-07-09T17:17:56-0600
+6.12.15.4
+    Improved the code surrounding the creation of a client-side handle on the
+    TCP connection by an upstream LDM-7.
+
+6.12.15.3	2015-07-09T17:32:38-0600
     Add catching of more types of exceptions for VCMTP receiver and sender.
 
 6.12.15.2	2015-07-09T16:16:08-0600

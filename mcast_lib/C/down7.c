@@ -379,7 +379,7 @@ up7proxy_requestProduct(
     int     status;
 
     // Asynchronous send => no reply
-    (void)request_product_7((VcmtpProdIndex*)&iProd, clnt);
+    (void)request_product_7(&iProd, clnt);
 
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         /*
@@ -389,8 +389,8 @@ up7proxy_requestProduct(
         status = 0;
     }
     else {
-        LOG_START1("Couldn't request missed data-product: %s",
-                clnt_errmsg(clnt));
+        LOG_START2("Couldn't request missed data-product: iProd=%lu: %s",
+                (unsigned long)iProd, clnt_errmsg(clnt));
         up7proxy_destroyClient(proxy);
         status = LDM7_RPC;
     }

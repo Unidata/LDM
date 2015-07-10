@@ -54,15 +54,11 @@
  */
 static CLIENT*   clnt;
 /**
- * Whether or not the associated downstream LDM-7 has subscribed.
- */
-static bool      hasSubscribed;
-/**
  * The feedtype of the subscription.
  */
 static feedtypet feedtype;
 
-static void up7_cleanup(void)
+static void up7_destroyClient(void)
 {
     if (clnt) {
         clnt_destroy(clnt);
@@ -71,45 +67,43 @@ static void up7_cleanup(void)
 }
 
 /**
- * Ensures the existence of a client-side transport on the TCP connection.
+ * Creates a client-side transport on the TCP connection.
  *
  * @param[in] xprt      Server-side RPC transport.
  * @retval    true      Success.
  * @retval    false     System error. `log_start()` called.
  */
 static bool
-up7_ensureClientTransport(
+up7_createClientTransport(
         struct SVCXPRT* const xprt)
 {
     bool success;
 
-    if (clnt) {
-        success = true;
+    /*
+     * Create a client-side RPC transport on the TCP connection.
+     */
+    UASSERT(clnt == NULL);
+    UASSERT(xprt->xp_raddr.sin_port != 0);
+    UASSERT(xprt->xp_sock >= 0);
+    // `xprt->xp_sock >= 0` => socket won't be closed by client-side error
+    // TODO: adjust sending buffer size
+    clnt = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN, &xprt->xp_sock,
+            MAX_RPC_BUF_NEEDED, 0);
+    if (clnt == NULL) {
+        UASSERT(rpc_createerr.cf_stat != RPC_TIMEDOUT);
+        LOG_START2("Couldn't create client-side transport to downstream LDM-7 on "
+                "%s%s", hostbyaddr(&xprt->xp_raddr), clnt_spcreateerror(""));
+        success = false;
     }
     else {
-        /*
-         * Create a client-side RPC transport on the TCP connection.
-         */
-        do {
-            clnt = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN,
-                    &xprt->xp_sock, MAX_RPC_BUF_NEEDED, 0);
-            /* TODO: adjust sending buffer size in above */
-        } while (clnt == NULL && rpc_createerr.cf_stat == RPC_TIMEDOUT);
-
-        if (clnt == NULL ) {
-            LOG_START2("Couldn't create client-side transport to downstream LDM-7 on "
-                    "%s%s", hostbyaddr(&xprt->xp_raddr), clnt_spcreateerror(""));
+        if (atexit(up7_destroyClient)) {
+            LOG_SERROR0("Couldn't register upstream LDM-7 cleanup function");
+            log_log(LOG_ERR);
+            up7_destroyClient();
             success = false;
         }
         else {
-            if (atexit(up7_cleanup)) {
-                LOG_SERROR0("Couldn't register upstream LDM-7 cleanup function");
-                log_log(LOG_ERR);
-                success = false;
-            }
-            else {
-                success = true;
-            }
+            success = true;
         }
     }
 
@@ -583,8 +577,8 @@ up7_sendBacklog(
  ******************************************************************************/
 
 /**
- * Sets or resets the subscription of the associated downstream LDM-7. Called by
- * the RPC dispatch function `ldmprog_7()`.
+ * Sets the subscription of the associated downstream LDM-7. Called by the RPC
+ * dispatch function `ldmprog_7()`.
  *
  * This function is thread-compatible but not thread-safe.
  *
@@ -627,8 +621,21 @@ subscribe_7_svc(
         reply = NULL;
     }
     else {
-        hasSubscribed = true;
-        reply = &result;                                // reply synchronously
+        if (!up7_createClientTransport(xprt)) {
+            log_log(LOG_ERR);
+            svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
+            svc_destroy(xprt);
+            /*
+             * The reply is set to NULL in order to cause the RPC dispatch
+             * routine to not reply because `svcerr_systemerr()` has been called
+             * and the server-side transport destroyed.
+             */
+            reply = NULL;
+        }
+        else {
+            // `clnt` set
+            reply = &result; // reply synchronously
+        }
     }
 
     return reply;
@@ -650,19 +657,14 @@ request_product_7_svc(
     udebug("request_product_7_svc(): Entered");
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
-    if (!hasSubscribed) {
+    if (clnt == NULL) {
         LOG_START1("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
-        log_log(LOG_ERR);
-        svc_destroy(xprt);      // asynchrony => no sense replying
-    }
-    else if (!up7_ensureClientTransport(xprt)) {
         log_log(LOG_ERR);
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
     else if (!up7_findAndSendProduct(*iProd)) {
         log_log(LOG_ERR);
-        clnt_destroy(clnt);
-        clnt = NULL;
+        up7_destroyClient();
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
 
@@ -686,19 +688,14 @@ request_backlog_7_svc(
     udebug("request_backlog_7_svc(): Entered");
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
-    if (!hasSubscribed) {
+    if (clnt == NULL) {
         LOG_START1("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
-        log_log(LOG_ERR);
-        svc_destroy(xprt);      // asynchrony => no sense replying
-    }
-    else if (!up7_ensureClientTransport(xprt)) {
         log_log(LOG_ERR);
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
     else if (!up7_sendBacklog(backlog)) {
         log_log(LOG_ERR);
-        clnt_destroy(clnt);
-        clnt = NULL;
+        up7_destroyClient();
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
 

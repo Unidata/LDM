@@ -263,8 +263,8 @@ initLastMcastProd(
 }
 
 /**
- * Initializes a multicast session memory's list of files that were missed by
- * the multicast receiver during the previous session from a YAML sequence.
+ * Initializes from a YAML sequence a multicast session memory's list of files
+ * that were missed by the multicast receiver during the previous session.
  *
  * @param[in] msm       The multicast session memory to initialize.
  * @param[in] document  The YAML document to use.
