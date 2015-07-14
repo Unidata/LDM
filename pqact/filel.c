@@ -2037,7 +2037,7 @@ int spipe_prodput(
     buffer[len - 2] = SPIPE_ETX;
     buffer[len - 1] = SPIPE_RS;
 
-    uerror("spipe_prodput: size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
+    udebug("spipe_prodput: size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
             buffer[len - 2], buffer[len - 1]);
 
     /*---------------------------------------------------------
