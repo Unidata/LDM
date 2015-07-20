@@ -550,14 +550,20 @@ mls_openProdIndexMap(
         status = LDM7_SYSTEM;
     }
     else {
-        char* const mapPathname = ldm_format(256, "%s/%s.map",
-                dirname(queuePathname), s_feedtypet(feed));
+        char* const mapPathname = ldm_format(256, "%s/",
+                dirname(queuePathname));
 
         if (NULL == mapPathname) {
             LOG_ADD0("Couldn't construct pathname of product-index map");
             status = LDM7_SYSTEM;
         }
         else {
+            int nbytes = pim_getFilename(mapPathname, 256-strlen(mapPathname),
+                    feed);
+            if (nbytes < 0 || nbytes >= 256) {
+                LOG_ADD0("Couldn't construct pathname of product-index map");
+                status = LDM7_SYSTEM;
+            }
             status = pim_openForWriting(mapPathname, maxSigs);
             free(mapPathname);
         } // `mapPathname` allocated
@@ -727,7 +733,7 @@ mls_multicastProduct(
     }
     else {
         if (ulogIsVerbose()) {
-            char buf[1024];
+            char buf[LDM_INFO_MAX];
             LOG_ADD2("Sent: prodIndex=%lu, prodInfo=\"%s\"",
                     (unsigned long)iProd,
                     s_prod_info(buf, sizeof(buf), info, 1));

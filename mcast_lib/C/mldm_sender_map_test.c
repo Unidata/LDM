@@ -38,9 +38,12 @@ static int teardown(void)
 static void test_msm_init(void)
 {
     int status = msm_init();
-
-    log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+    log_log(LOG_ERR);
+
+    status = msm_init();
+    CU_ASSERT_EQUAL(status, LDM7_INVAL);
+    log_clear();
 }
 
 static void test_locking(void)
@@ -55,10 +58,10 @@ static void test_msm_put(void)
 {
     CU_ASSERT_EQUAL(msm_put(IDS|DDPLUS, 1), 0);
     CU_ASSERT_EQUAL(msm_put(PPS, 1), LDM7_DUP);
-    log_clear();
     CU_ASSERT_EQUAL(msm_put(NEXRAD3, 1), LDM7_DUP);
     log_clear();
     CU_ASSERT_EQUAL(msm_put(NEXRAD3, 2), 0);
+    log_clear();
 }
 
 static void test_msm_getPid(void)
@@ -66,11 +69,11 @@ static void test_msm_getPid(void)
     pid_t pid;
 
     CU_ASSERT_EQUAL(msm_getPid(NIMAGE, &pid), LDM7_NOENT);
-    log_clear();
     CU_ASSERT_EQUAL(msm_getPid(IDS, &pid), 0);
     CU_ASSERT_EQUAL(pid, 1);
     CU_ASSERT_EQUAL(msm_getPid(NEXRAD3, &pid), 0);
     CU_ASSERT_EQUAL(pid, 2);
+    log_clear();
 }
 
 static void test_msm_removePid(void)
@@ -78,7 +81,6 @@ static void test_msm_removePid(void)
     pid_t pid;
 
     CU_ASSERT_EQUAL(msm_removePid(5), LDM7_NOENT);
-    log_clear();
     CU_ASSERT_EQUAL(msm_removePid(1), 0);
     CU_ASSERT_EQUAL(msm_getPid(IDS, &pid), LDM7_NOENT);
     log_clear();
@@ -86,10 +88,7 @@ static void test_msm_removePid(void)
 
 static void test_msm_destroy(void)
 {
-    int status = msm_destroy();
-
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
+    msm_destroy();
 }
 
 int main(

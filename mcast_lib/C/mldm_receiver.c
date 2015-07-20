@@ -240,7 +240,7 @@ finishInsertion(
         }
         else {
             if (ulogIsVerbose()) {
-                char infoStr[512];
+                char infoStr[LDM_INFO_MAX];
 
                 LOG_ADD1("Received: %s",
                         s_prod_info(infoStr, sizeof(infoStr), info, 1));

@@ -33,6 +33,7 @@
 #include "mcast_info.h"
 #include "pq.h"
 #include "prod_class.h"
+#include "prod_info.h"
 #include "rpcutil.h"
 #include "timestamp.h"
 #include "up7.h"
@@ -58,6 +59,58 @@ static CLIENT*   clnt;
  */
 static feedtypet feedtype;
 
+
+/**
+ * Opens the product-index map associated with a feedtype.
+ *
+ * @param[in] feed         The feedtype.
+ * @retval    0            Success.
+ * @retval    LDM7_INVAL   The filename of the map couldn't be created.
+ * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ *                         called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ *                         associated file is unspecified.
+ */
+static int
+up7_openProdIndexMap(
+        const feedtypet feed)
+{
+    int  status;
+    char filename[256];
+    int  nbytes = pim_getFilename(filename, sizeof(filename), feed);
+
+    if (nbytes < 0 || nbytes >= sizeof(filename)) {
+        LOG_ADD0("Couldn't get filename of product-index map");
+        status = EINVAL;
+    }
+    else {
+        status = pim_openForReading(filename);
+        if (status)
+            LOG_ADD0("Couldn't open product-index map for reading");
+    }
+    return status;
+}
+
+/**
+ * Closes the open product-index map. Registered by `atexit()`.
+ */
+static void
+up7_closeProdIndexMap()
+{
+    if (pim_close()) {
+        char feedStr[256];
+        int  nbytes = ft_format(feedtype, feedStr, sizeof(feedStr));
+        if (nbytes == -1 || nbytes >= sizeof(feedStr)) {
+            LOG_ADD1("Couldn't close product-index map for feed %#lx",
+                    (unsigned long)feedStr);
+        }
+        else {
+            LOG_ADD1("Couldn't close product-index map for feed %s", feedStr);
+        }
+        log_log(LOG_ERR);
+    }
+}
+
 static void up7_destroyClient(void)
 {
     if (clnt) {
@@ -67,7 +120,8 @@ static void up7_destroyClient(void)
 }
 
 /**
- * Creates a client-side transport on the TCP connection.
+ * Creates a client-side RPC transport on the TCP connection of a server-side
+ * RPC transport.
  *
  * @param[in] xprt      Server-side RPC transport.
  * @retval    true      Success.
@@ -151,9 +205,9 @@ up7_setMcastInfo(
 }
 
 /**
- * Sets or resets the subscription of the associated downstream LDM-7. Ensures
- * that the multicast LDM sender process that's associated with the given
- * feedtype is running.
+ * Sets the subscription of the associated downstream LDM-7. Ensures that the
+ * multicast LDM sender process that's associated with the given feedtype is
+ * running.
  *
  * @param[in]  feed         Feedtype of multicast group.
  * @param[in]  xprt         RPC transport.
@@ -161,7 +215,8 @@ up7_setMcastInfo(
  *                          then caller should call
  *                          `xdr_free(xdr_SubscriptionReply, reply)` when it's
  *                          no longer needed.
- * @retval     0            Success. `*reply` is set.
+ * @retval     0            Success. `*reply` is set. `feedtype` is set iff
+ *                          a corresponding multicast sender exists.
  * @retval     LDM7_SYSTEM  System error. `log_start()` called.
  */
 static Ldm7Status
@@ -174,25 +229,35 @@ up7_subscribe(
     pid_t            pid;
     int              status = mlsm_ensureRunning(feed, &mcastInfo, &pid);
 
-    if (LDM7_SYSTEM == status)
-        return status;
-
-    if (LDM7_NOENT == status) {
-        log_log(LOG_INFO);
-        reply->status = LDM7_INVAL; // invalid request
-        return 0;
+    if (status) {
+        if (LDM7_NOENT == status) {
+            log_log(LOG_INFO);
+            reply->status = LDM7_INVAL; // non-existent feed
+            status = 0;
+        }
     }
+    else {
+        /* TODO: Add authorization */
+        /* TODO: Reduce subscription */
 
-    /* TODO: Add authorization */
-    /* TODO: Reduce subscription */
+        status = up7_openProdIndexMap(feed);
+        if (status == 0) {
+            if (atexit(up7_closeProdIndexMap)) {
+                LOG_SERROR0("Couldn't register function to close product-index map");
+                status = LDM7_SYSTEM;
+            }
+            else {
+                status = up7_setMcastInfo(&reply->SubscriptionReply_u.mgi,
+                        mcastInfo);
+                if (status == 0) {
+                    feedtype = feed;
+                    reply->status = LDM7_OK;
+                } // have reply
+            } // product-index map closing function registered
+        } // product-index map open
+    } // multicast sender is running
 
-    if ((status = up7_setMcastInfo(&reply->SubscriptionReply_u.mgi, mcastInfo)))
-        return status;
-
-    feedtype = feed;
-    reply->status = LDM7_OK;
-
-    return 0;
+    return status;
 }
 
 /**
@@ -218,7 +283,7 @@ up7_ensureFree(
  * @param[in] data         Data-product data.
  * @param[in] xprod        XDR-encoded data-product.
  * @param[in] len          Size of XDR-encoded data-product in bytes.
- * @param[in] optArg       Optional argument passed to `pq_processProduct()`.
+ * @param[in] optArg       Pointer to associated VCMTP product-index.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  Failure. `log_start()` called.
  */
@@ -236,6 +301,8 @@ up7_deliverProduct(
     missedProd.prod.info = *info;
     missedProd.prod.data = (void*)data; // cast away `const`
 
+    udebug("%s:up7_deliverProduct(): Delivering: iProd=%lu, ident=\"%s\"",
+            __FILE__, missedProd.iProd, info->ident);
     (void)deliver_missed_product_7(&missedProd, clnt);
 
     /*
@@ -245,7 +312,7 @@ up7_deliverProduct(
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         if (ulogIsVerbose())
             unotice("Missed product sent: %s",
-                    s_prod_info(NULL, 0, info, ulogIsDebug()));
+                    s_prod_info(NULL, 0, &missedProd.prod.info, ulogIsDebug()));
         return 0;
     }
 
@@ -255,7 +322,7 @@ up7_deliverProduct(
 }
 
 /**
- * Sends the data-product corresponding to a multicast Product-index to the
+ * Sends the data-product corresponding to a multicast product-index to the
  * associated downstream LDM-7.
  *
  * @param[in]  iProd        Product-index.
@@ -654,7 +721,8 @@ request_product_7_svc(
     VcmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
-    udebug("request_product_7_svc(): Entered");
+    udebug("%s:request_product_7_svc(): Entered: iProd=%lu", __FILE__,
+            (unsigned long)*iProd);
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {

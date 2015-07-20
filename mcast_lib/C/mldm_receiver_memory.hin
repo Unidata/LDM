@@ -21,7 +21,7 @@
 /**
  * Multicast session memory:
  */
-typedef struct McastSessionMemory McastSessionMemory;
+typedef struct McastReceiverMemory McastReceiverMemory;
 
 /**
  * Iterator over files that were missed by the multicast receiver for a

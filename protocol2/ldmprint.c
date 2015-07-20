@@ -174,7 +174,7 @@ sprint_time_t(char *buf, size_t bufsize, time_t ts)
 /**
  * Returns the string representation of a timestamp.
  *
- * @param[in]  pc    The timestamp to be formatted.
+ * @param[in]  ts    The timestamp to be formatted.
  * @param[out] buf   The buffer into which to format the timestamp.
  *                   May be NULL only if `size == 0`.
  * @param[in]  size  The size of the buffer in bytes.
@@ -707,15 +707,17 @@ s_prod_class(char *buf,
 
 
 /**
- * Formats product information.
+ * Formats product information. Thread safe if and only if `buf != NULL`.
  *
  * @param[out] buf          Output buffer or NULL, in which case a static buffer
  *                          is used.
- * @param[in]  bufsize      Size of buffer in bytes.
+ * @param[in]  bufsize      Size of buffer in bytes. Ignored if `buf == NULL`.
+ *                          Should be at least `LDM_INFO_MAX`.
  * @param[in]  infop        Product information.
  * @param[in]  doSignature  Whether or not to format the signature.
- * @retval     NULL         Buffer is too small.
- * @return                  `buf`. Success.
+ * @retval     NULL         Buffer is too small or product information couldn't
+ *                          be formatted.
+ * @return                  `buf`. Success. String is NUL-terminated.
  */
 char *
 s_prod_info(
@@ -724,49 +726,49 @@ s_prod_info(
         const prod_info* const restrict infop,
         const int                       doSignature)
 {
-        int conv;
-        size_t len = 0;
+    int    nbytes; // number of bytes encoded excluding terminating NUL
+    size_t len = 0; // current number of formatted bytes in `buf` excluding NUL
 
-        if(buf == NULL)
-        {
-                buf = tprintbuf;
-                bufsize = sizeof(tprintbuf);
-        }
+    if (buf == NULL) {
+        buf = tprintbuf;
+        bufsize = sizeof(tprintbuf);
+    }
 
-        if((doSignature && bufsize < 33 + 50 + KEYSIZE)
-                         || bufsize < 50 + KEYSIZE)
-                 return NULL;
+    if (bufsize < (doSignature ? 33 : 0) + 50 + KEYSIZE)
+         return NULL;
 
-        (void) memset(buf, 0, bufsize);
-
-        if(doSignature)
-        {
-                conv = sprint_signaturet(&buf[len], bufsize, infop->signature);
-                if (conv == 0)
-                    return NULL;
-                len += (size_t)conv;
-                bufsize -= (size_t)conv;
-                buf[len++] = ' ';
-                buf[len] = 0;
-                bufsize--;
-        }
-
-        conv = snprintf(&buf[len], bufsize, "%10u ", infop->sz);
-        if (conv >= bufsize)
+    if (doSignature) {
+        nbytes = sprint_signaturet(buf+len, bufsize, infop->signature);
+        if (nbytes == 0)
             return NULL;
-        len += (size_t)conv;
-        bufsize -= (size_t)conv;
+        len += nbytes;
+        bufsize -= nbytes;
+    }
 
-        conv = sprint_timestampt(&buf[len], bufsize, &infop->arrival);
-        if (conv == -1)
-            return NULL;
-        len += (size_t)conv;
-        bufsize -= (size_t)conv;
-                        
-        conv = snprintf(&buf[len], bufsize, " %7s %03u  %s",
-                        s_feedtypet(infop->feedtype), infop->seqno,
-                        infop->ident);
-        return (conv >= bufsize) ? NULL : buf;
+    nbytes = snprintf(buf+len, bufsize, len ? " %10u " : "%10u ", infop->sz);
+    if (nbytes < 0 || nbytes >= bufsize)
+        return NULL;
+    len += nbytes;
+    bufsize -= nbytes;
+
+    nbytes = sprint_timestampt(buf+len, bufsize, &infop->arrival);
+    if (nbytes < 0 || nbytes >= bufsize)
+        return NULL;
+    len += nbytes;
+    bufsize -= nbytes;
+
+    nbytes = ft_format(infop->feedtype, buf+len, bufsize);
+    if (nbytes < 0 || nbytes >= bufsize)
+        return NULL;
+    len += nbytes;
+    bufsize -= nbytes;
+
+    nbytes = snprintf(buf+len, bufsize, " %03u  %s", infop->seqno,
+            infop->ident);
+    if (nbytes < 0 || nbytes >= bufsize)
+        return NULL;
+
+    return buf;
 }
 
 

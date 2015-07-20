@@ -9,6 +9,10 @@
 #include "ldm.h"
 #include <stddef.h>	/* size_t */
 #include <stdarg.h>	/* size_t */
+
+// Maximum number of bytes in formatted data-product metadata including terminating NUL.
+#define LDM_INFO_MAX (33 + 50 + KEYSIZE)
+
 #if defined(__cplusplus) || defined(__STDC__)
 
 /**

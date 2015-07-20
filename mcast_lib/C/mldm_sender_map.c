@@ -22,14 +22,16 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 /**
- * filename of the shared memory object:
+ * Pathname of the shared memory object:
  */
-static const char* SMO_FILENAME = "/mldmSenderMap";
+static char*        smo_pathname;
 /**
  * Number of feed-types:
  */
@@ -58,7 +60,7 @@ static struct flock lock;
  * @retval 0            Success.
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
-Ldm7Status
+static Ldm7Status
 smo_open(
         const char* const restrict pathname,
         int* const restrict        fileDes)
@@ -128,7 +130,7 @@ spa_clear(
  * @retval     0            Success. `*pids` is set.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
-Ldm7Status
+static Ldm7Status
 spa_init(
         const int     fd,
         const size_t  numPids,
@@ -160,31 +162,83 @@ spa_init(
 }
 
 /**
+ * Sets the pathname of the shared-memory object. The name is unique to the
+ * user.
+ *
+ * @retval 0            Success
+ * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ */
+static Ldm7Status
+msm_setSmoPathname(void)
+{
+    static const char format[] = "/mldmSenderMap-%s";
+    int               status;
+    const char*       userName = getenv("USER");
+    if (userName == NULL) {
+        LOG_START0("Couldn't get value of environment variable \"USER\"");
+    }
+    else {
+        int nbytes = snprintf(NULL, 0, format, userName);
+        if (nbytes < 0) {
+            LOG_SERROR0("Couldn't get size of pathname of shared-memory object");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            nbytes += 1; // for NUL-terminator
+            smo_pathname = LOG_MALLOC(nbytes,
+                    "pathname of shared-memory object");
+            if (smo_pathname == NULL) {
+                status = LDM7_SYSTEM;
+            }
+            else {
+                (void)snprintf(smo_pathname, nbytes, format, userName);
+                status = 0;
+            }
+        }
+    }
+    return status;
+}
+
+/**
  * Initializes this module. Shall be called only once per LDM session.
  *
  * @retval 0            Success.
+ * @retval LDM7_INVAL   This module is already initialized. `log_add()` called.
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 msm_init(void)
 {
-    int fd;
-    int status = smo_open(SMO_FILENAME, &fd);
-
-    if (0 == status) {
-        status = spa_init(fd, NUM_PIDS, &pids);
-
+    int status;
+    if (smo_pathname) {
+        LOG_START0("Multicast sender map is already initialized");
+        status = LDM7_INVAL;
+    }
+    else {
+        status = msm_setSmoPathname();
         if (status) {
-            smo_close(fd, SMO_FILENAME);
+            LOG_ADD0("Couldn't initialize pathname of shared-memory object");
         }
         else {
-            fileDes = fd;
-            lock.l_whence = SEEK_SET;
-            lock.l_start = 0;
-            lock.l_len = sizeof(pid_t); // locking first entry is sufficient
-            status = 0;
-        } // shared PID array initialized
-    } // `fd` is open
+            int fd;
+            status = smo_open(smo_pathname, &fd);
+
+            if (0 == status) {
+                status = spa_init(fd, NUM_PIDS, &pids);
+
+                if (status) {
+                    smo_close(fd, smo_pathname);
+                }
+                else {
+                    fileDes = fd;
+                    lock.l_whence = SEEK_SET;
+                    lock.l_start = 0;
+                    lock.l_len = sizeof(pid_t); // locking first entry is sufficient
+                    status = 0;
+                } // shared PID array initialized
+            } // `fd` is open
+        } // `smo_pathname` set
+    } // module not intialized
 
     return status;
 }
@@ -327,18 +381,21 @@ msm_removePid(
 void
 msm_clear(void)
 {
-    spa_clear(pids, NUM_PIDS);
+    if (smo_pathname)
+        spa_clear(pids, NUM_PIDS);
 }
 
 /**
  * Destroys this module. Should be called only once per LDM session.
  *
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
-Ldm7Status
+void
 msm_destroy(void)
 {
-    smo_close(fileDes, SMO_FILENAME);
-    return 0;
+    if (smo_pathname) {
+        smo_close(fileDes, smo_pathname);
+        free(smo_pathname);
+        smo_pathname = NULL;
+    }
 }

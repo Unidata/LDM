@@ -97,8 +97,8 @@ struct Down7 {
     /** IP address of interface to use for incoming multicast packets */
     char*                 mcastIface;
     Mlr*                  mlr;           ///< multicast LDM receiver
-    /** Persistent multicast session memory */
-    McastSessionMemory*   msm;
+    /** Persistent multicast receiver memory */
+    McastReceiverMemory*   mrm;
     Up7Proxy*             up7proxy;      ///< proxy for upstream LDM-7
     Executor*             executor;      ///< asynchronous executor of jobs
     pthread_mutex_t       stateMutex;    ///< recursive mutex for changing state
@@ -378,8 +378,10 @@ up7proxy_requestProduct(
     CLIENT* clnt = proxy->clnt;
     int     status;
 
+    udebug("%s:up7proxy_requestProduct(): iProd=%lu", __FILE__,
+            (unsigned long)iProd);
     // Asynchronous send => no reply
-    (void)request_product_7(&iProd, clnt);
+    (void)request_product_7((VcmtpProdIndex*)&iProd, clnt); // safe cast
 
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         /*
@@ -783,18 +785,18 @@ makeRequest(
      * preserve the meaning of the two queues and to ensure that all missed
      * data-products are received following a restart.
      */
-    if (!msm_peekMissedFileWait(down7->msm, &iProd)) {
+    if (!mrm_peekMissedFileWait(down7->mrm, &iProd)) {
         udebug("makeRequest(): The queue of missed data-products has been shutdown");
         status = LDM7_SHUTDOWN;
     }
     else {
-        if (!msm_addRequestedFile(down7->msm, iProd)) {
+        if (!mrm_addRequestedFile(down7->mrm, iProd)) {
             LOG_ADD0("Couldn't add VCMTP product-index to requested-queue");
             status = LDM7_SYSTEM;
         }
         else {
             /* The queue can't be empty */
-            (void)msm_removeMissedFileNoWait(down7->msm, &iProd);
+            (void)mrm_removeMissedFileNoWait(down7->mrm, &iProd);
 
             status = up7proxy_requestProduct(down7->up7proxy, iProd);
         } // product-index added to requested-but-not-received queue
@@ -849,9 +851,9 @@ stopRequestTask(
         void* const arg)
 {
     Down7* const down7 = (Down7*)arg;
-    if (down7->msm) {
+    if (down7->mrm) {
         udebug("stopRequestTask(): Stopping data-product requesting task");
-        msm_shutDownMissedFiles(down7->msm);
+        mrm_shutDownMissedFiles(down7->mrm);
     }
     if (0 <= down7->sock)
         (void)shutdown(down7->sock, SHUT_WR);
@@ -1382,32 +1384,11 @@ static int
 runDown7Once(
     Down7* const down7)
 {
-    int status;
-
-    udebug("runDown7Once(): Opening multicast session memory");
-    down7->msm = msm_open(down7->servAddr, down7->feedtype);
-
-    if (down7->msm == NULL) {
-        LOG_ADD0("Couldn't open multicast session memory");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        down7->prevLastMcastSet = msm_getLastMcastProd(down7->msm,
-                down7->prevLastMcast);
-        status = subscribeAndReceive(down7);
-        exe_shutdown(down7->executor);
-        exe_clear(down7->executor);
-
-        udebug("runDown7Once(): Closing multicast session memory");
-        if (!msm_close(down7->msm)) {
-            LOG_ADD0("Couldn't close multicast session memory");
-            status = LDM7_SYSTEM;
-        }
-        else {
-            down7->msm = NULL;
-        }
-    } // `down7->msm` open
-
+    down7->prevLastMcastSet = mrm_getLastMcastProd(down7->mrm,
+            down7->prevLastMcast);
+    int status = subscribeAndReceive(down7);
+    exe_shutdown(down7->executor);
+    exe_clear(down7->executor);
     udebug("runDown7Once(): Returning %d", status);
     return status;
 }
@@ -1463,7 +1444,7 @@ deliver_product(
             status = LDM7_SYSTEM;
         }
         else {
-            char buf[256];
+            char buf[LDM_INFO_MAX];
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
 
@@ -1513,7 +1494,7 @@ deliveryFailure(
     const prod_info* const restrict info,
     struct svc_req* const restrict  rqstp)
 {
-    char buf[256];
+    char buf[LDM_INFO_MAX];
 
     LOG_ADD2("%s: %s", msg, s_prod_info(buf, sizeof(buf), info, ulogIsDebug()));
     log_log(LOG_ERR);
@@ -1624,8 +1605,15 @@ down7_new(
         goto free_executor;
     }
 
-    if ((status = pthread_once(&down7KeyControl, createDown7Key)) != 0)
+    udebug("runDown7Once(): Opening multicast session memory");
+    down7->mrm = mrm_open(down7->servAddr, down7->feedtype);
+    if (down7->mrm == NULL) {
+        LOG_ADD0("Couldn't open multicast session memory");
         goto free_mcastIface;
+    }
+
+    if ((status = pthread_once(&down7KeyControl, createDown7Key)) != 0)
+        goto close_mcastReceiverMemory;
 
     (void)memset(down7->firstMcast, 0, sizeof(signaturet));
     (void)memset(down7->prevLastMcast, 0, sizeof(signaturet));
@@ -1635,11 +1623,13 @@ down7_new(
     down7->mcastInfo = NULL;
     down7->mlr = NULL;
     down7->mcastWorking = false;
-    down7->msm = NULL;
     down7->state = DOWN7_INITIALIZED;
 
     return down7;
 
+close_mcastReceiverMemory:
+    if (!mrm_close(down7->mrm))
+        LOG_ADD0("Couldn't close multicast receiver memory");
 free_mcastIface:
     free(down7->mcastIface);
 free_executor:
@@ -1797,6 +1787,12 @@ down7_free(
         }
         else {
             unlockState(down7);
+            udebug("%s:down7_free(): Closing multicast receiver memory",
+                    __FILE__);
+            if (!mrm_close(down7->mrm)) {
+                LOG_ADD0("Couldn't close multicast receiver memory");
+                status = -1;
+            }
             if (exe_free(down7->executor)) { // frees jobs
                 LOG_ADD0("Couldn't free task executor");
                 status = -1;
@@ -1840,8 +1836,9 @@ down7_missedProduct(
      * ignored because nothing can be done about it at this point and no harm
      * should result.
      */
-    udebug("down7_missedProduct(): %lu", (unsigned long)iProd);
-    (void)msm_addMissedFile(down7->msm, iProd);
+    udebug("%s:down7_missedProduct(): Entered: iProd=%lu", __FILE__,
+            (unsigned long)iProd);
+    (void)mrm_addMissedFile(down7->mrm, iProd);
 }
 
 /**
@@ -1865,7 +1862,7 @@ down7_lastReceived(
     Down7* const restrict           down7,
     const prod_info* const restrict last)
 {
-    msm_setLastMcastProd(down7->msm, last->signature);
+    mrm_setLastMcastProd(down7->mrm, last->signature);
 
     if (!down7->mcastWorking) {
         down7->mcastWorking = true;
@@ -1904,13 +1901,13 @@ deliver_missed_product_7_svc(
     Down7*           down7 = pthread_getspecific(down7Key);
     VcmtpProdIndex   iProd;
 
-    if (!msm_peekRequestedFileNoWait(down7->msm, &iProd) ||
+    if (!mrm_peekRequestedFileNoWait(down7->mrm, &iProd) ||
             iProd != missedProd->iProd) {
         deliveryFailure("Unexpected product received", info, rqstp);
     }
     else {
         // The queue can't be empty
-        (void)msm_removeRequestedFileNoWait(down7->msm, &iProd);
+        (void)mrm_removeRequestedFileNoWait(down7->mrm, &iProd);
 
         if (deliver_product(down7->pq, &missedProd->prod) != 0)
             deliveryFailure("Couldn't insert missed product", info, rqstp);

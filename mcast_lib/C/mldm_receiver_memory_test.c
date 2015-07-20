@@ -52,107 +52,107 @@ static void init()
 }
 
 static void openMsm(
-    McastSessionMemory** msm)
+    McastReceiverMemory** msm)
 {
     getLdmLogDir_ExpectAndReturn(CWD);
-    *msm = msm_open(SERVICE_ADDR, MCAST_FEEDTYPE);
+    *msm = mrm_open(SERVICE_ADDR, MCAST_FEEDTYPE);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(*msm != NULL);
 }
 
 static void test_missed_mcast_files()
 {
-    McastSessionMemory* msm;
+    McastReceiverMemory* msm;
     int                 status;
     VcmtpProdIndex      iProd;
 
     openMsm(&msm);
-    msm_clearAllMissedFiles(msm);
+    mrm_clearAllMissedFiles(msm);
 
-    status = msm_getAnyMissedFileNoWait(msm, &iProd);
+    status = mrm_getAnyMissedFileNoWait(msm, &iProd);
     log_log(LOG_ERR);
     OP_ASSERT_FALSE(status);
 
-    status = msm_addMissedFile(msm, 1);
+    status = mrm_addMissedFile(msm, 1);
     OP_ASSERT_TRUE(status);
-    status = msm_addMissedFile(msm, 2);
+    status = mrm_addMissedFile(msm, 2);
     OP_ASSERT_TRUE(status);
-    status = msm_addMissedFile(msm, 3);
+    status = mrm_addMissedFile(msm, 3);
     OP_ASSERT_TRUE(status);
 
-    status = msm_peekMissedFileNoWait(msm, &iProd);
+    status = mrm_peekMissedFileNoWait(msm, &iProd);
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(iProd == 1);
 
-    status = msm_addRequestedFile(msm, iProd);
+    status = mrm_addRequestedFile(msm, iProd);
     OP_ASSERT_TRUE(status);
 
-    status = msm_removeMissedFileNoWait(msm, &iProd);
+    status = mrm_removeMissedFileNoWait(msm, &iProd);
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(iProd == 1);
 
-    status = msm_removeMissedFileNoWait(msm, &iProd);
+    status = mrm_removeMissedFileNoWait(msm, &iProd);
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(iProd == 2);
 
-    status = msm_addRequestedFile(msm, iProd);
+    status = mrm_addRequestedFile(msm, iProd);
     OP_ASSERT_TRUE(status);
 
-    status = msm_removeRequestedFileNoWait(msm, &iProd);
+    status = mrm_removeRequestedFileNoWait(msm, &iProd);
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(iProd == 1);
 
-    msm_close(msm);
+    mrm_close(msm);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
 
     openMsm(&msm);
 
-    status = msm_getAnyMissedFileNoWait(msm, &iProd);
+    status = mrm_getAnyMissedFileNoWait(msm, &iProd);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(iProd = 2);
 
-    status = msm_getAnyMissedFileNoWait(msm, &iProd);
+    status = mrm_getAnyMissedFileNoWait(msm, &iProd);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(iProd = 3);
 
-    status = msm_getAnyMissedFileNoWait(msm, &iProd);
+    status = mrm_getAnyMissedFileNoWait(msm, &iProd);
     log_log(LOG_ERR);
     OP_ASSERT_FALSE(status);
 
-    msm_close(msm);
+    mrm_close(msm);
 
     OP_VERIFY();
 }
 
 static void test_last_mcast_prod()
 {
-    McastSessionMemory* msm;
+    McastReceiverMemory* msm;
     int                 status;
 
     getLdmLogDir_ExpectAndReturn(CWD);
-    OP_ASSERT_TRUE(msm_delete(SERVICE_ADDR, MCAST_FEEDTYPE));
+    OP_ASSERT_TRUE(mrm_delete(SERVICE_ADDR, MCAST_FEEDTYPE));
 
     openMsm(&msm);
 
     signaturet sig1;
-    status = msm_getLastMcastProd(msm, sig1);
+    status = mrm_getLastMcastProd(msm, sig1);
     log_log(LOG_ERR);
     OP_ASSERT_FALSE(status);
 
     signaturet sig2;
     (void)memset(&sig2, 1, sizeof(sig2));
-    status = msm_setLastMcastProd(msm, sig2);
+    status = mrm_setLastMcastProd(msm, sig2);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
-    status = msm_getLastMcastProd(msm, sig1);
+    status = mrm_getLastMcastProd(msm, sig1);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(memcmp(&sig1, &sig2, sizeof(sig1)) == 0);
 
-    status = msm_close(msm);
+    status = mrm_close(msm);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
 
@@ -160,12 +160,12 @@ static void test_last_mcast_prod()
 
     openMsm(&msm);
 
-    status = msm_getLastMcastProd(msm, sig1);
+    status = mrm_getLastMcastProd(msm, sig1);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(memcmp(&sig1, &sig2, sizeof(signaturet)) == 0);
 
-    status = msm_close(msm);
+    status = mrm_close(msm);
     log_log(LOG_ERR);
     OP_ASSERT_TRUE(status);
 
@@ -174,12 +174,12 @@ static void test_last_mcast_prod()
 
 static void test_msm_open()
 {
-    McastSessionMemory* msm;
+    McastReceiverMemory* msm;
 
     openMsm(&msm);
     OP_ASSERT_TRUE(msm != NULL);
 
-    OP_ASSERT_TRUE(msm_close(msm));
+    OP_ASSERT_TRUE(mrm_close(msm));
     log_log(LOG_ERR);
 
     OP_VERIFY();

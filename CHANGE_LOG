@@ -1,6 +1,10 @@
-6.12.15.4
+6.12.15.4	2015-07-10T13:59:14-0600
     Improved the code surrounding the creation of a client-side handle on the
     TCP connection by an upstream LDM-7.
+
+    Made ZERO_TIMEOUT constant.
+
+    Demoted uerror() message in spipe_prodput() to udebug().
 
 6.12.15.3	2015-07-09T17:32:38-0600
     Add catching of more types of exceptions for VCMTP receiver and sender.

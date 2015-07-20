@@ -2435,10 +2435,14 @@ sxelem_free(sx *const sx, size_t sxix)
     sx->nfree++;
 }
 
-/*
- * Search the index 'sx' for signature.
- * Returns 1 and sets *sxepp to match if found.
- * Otherwise, returns 0.
+/**
+ * Searches the signature-index for an entry.
+ *
+ * @param[in]  sx     The signature-index to search.
+ * @param[in]  sig    The signature to find.
+ * @param[out] sxepp  The entry corresponding to `sig`.
+ * @retval 1          Success. `*sxepp` is set.
+ * @retval 0          Failure. No corresponding entry found.
  */
 static int
 sx_find(sx *const sx, const signaturet sig, sxelem **sxepp)

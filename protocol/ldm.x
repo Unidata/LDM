@@ -936,7 +936,7 @@ enum Ldm7Status {
 %}
 #endif // RPC_CLNT
 
-typedef uint32_t McastProdIndex;
+typedef u_int McastProdIndex;
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %

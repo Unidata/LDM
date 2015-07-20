@@ -198,7 +198,7 @@ static prod_class clss;
 static signaturet signature;
 static unsigned remaining;
 static timestampt arrival;
-static char infostr[50 + KEYSIZE]; /* only used for log messages */
+static char infostr[LDM_INFO_MAX]; /* only used for log messages */
 
 /*ARGSUSED*/
 ldm_replyt * 

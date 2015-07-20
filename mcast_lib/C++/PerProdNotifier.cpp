@@ -128,6 +128,8 @@ void PerProdNotifier::notify_of_bop(
             prodInfo.index = pqeIndex;
         }
     }
+
+    log_free(); // to prevent memory leak by VCMTP thread
 }
 
 /**
@@ -145,6 +147,8 @@ void PerProdNotifier::notify_of_eop(
                 "Error notifying receiving application of end of product"));
 
     (void)prodInfos.erase(prodIndex);
+
+    log_free(); // to prevent memory leak by VCMTP thread
 }
 
 /**
@@ -160,4 +164,6 @@ void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex prodIndex)
             prodStart ? &prodInfos[prodIndex].index : nullptr);
 
     (void)prodInfos.erase(prodIndex);
+
+    log_free(); // to prevent memory leak by VCMTP thread
 }

@@ -1290,7 +1290,8 @@ sa_copy(
  *
  * @param[in] sa    Pointer to the service address to be cloned.
  * @retval    NULL  Failure. \c log_add() called.
- * @return          Pointer to a clone of the service address.
+ * @return          Pointer to a clone of the service address. Caller should
+ *                  pass it to `sa_free()` when it's no longer needed.
  */
 ServiceAddr*
 sa_clone(

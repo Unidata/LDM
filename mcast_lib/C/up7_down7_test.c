@@ -20,6 +20,7 @@
 #include "mldm_sender_manager.h"
 #include "mldm_sender_map.h"
 #include "pq.h"
+#include "prod_index_map.h"
 #include "timestamp.h"
 
 #include <arpa/inet.h>
@@ -64,11 +65,28 @@ typedef struct {
     pthread_t             thread;
 } Receiver;
 
-static const char* const LOCAL_HOST = "127.0.0.1";
+// Number of data-products to insert
+static const int         NUM_PRODS = 1000;
+// Maximum size of a data-product in bytes
+static const int         MAX_PROD_SIZE = 100000;
+// Size of the data portion of the product-queue in bytes
+static const int         PQ_SIZE = 2000000;
+#define                  NUM_PQ_SLOTS (PQ_SIZE/(MAX_PROD_SIZE/2))
+// Feedtype of the stream
+static const feedtypet   FEEDTYPE = ANY;
+static const char        LOCAL_HOST[] = "127.0.0.1";
 static sigset_t          termSigSet;
-#define UP7_PQ_PATHNAME   "up7_test.pq"
-#define DOWN7_PQ_PATHNAME "down7_test.pq"
-static const char* const pqPathnames[] = {UP7_PQ_PATHNAME, DOWN7_PQ_PATHNAME};
+static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
+static const char        DOWN7_PQ_PATHNAME[] = "down7_test.pq";
+static McastProdIndex    initialProdIndex;
+static McastInfo*        mcastInfo;
+static Sender            sender;
+static Receiver          receiver;
+
+/*
+ * The following functions (until otherwise noted) are only called once.
+ */
+
 #if !USE_SIGWAIT
 static pthread_mutex_t   mutex;
 static pthread_cond_t    cond;
@@ -108,61 +126,115 @@ initCondAndMutex(void)
 }
 #endif
 
+static int
+setMcastInfo(void)
+{
+    ServiceAddr* mcastServAddr;
+    int          status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
+
+    if (status) {
+        LOG_ADD0("Couldn't create multicast service address object");
+    }
+    else {
+        ServiceAddr* ucastServAddr;
+
+        status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
+        if (status) {
+            LOG_ADD0("Couldn't create unicast service address object");
+        }
+        else {
+            status = mi_new(&mcastInfo, FEEDTYPE, mcastServAddr, ucastServAddr);
+            if (status) {
+                LOG_ADD0("Couldn't create multicast information object");
+            }
+            else {
+                sa_free(ucastServAddr);
+                sa_free(mcastServAddr);
+            }
+        }
+    }
+
+    return status;
+}
+
+static void signal_handler(
+        int sig)
+{
+    switch (sig) {
+    case SIGHUP:
+        udebug("SIGHUP");
+        return;
+    case SIGINT:
+        udebug("SIGINT");
+        return;
+    case SIGTERM:
+        udebug("SIGTERM");
+        return;
+    default:
+        udebug("Signal %d", sig);
+        return;
+    }
+}
+
+static int
+setTermSigHandler(void)
+{
+    struct sigaction sigact;
+
+    (void)sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+
+    sigact.sa_handler = signal_handler;
+    (void)sigaction(SIGHUP, &sigact, NULL );
+    (void)sigaction(SIGINT, &sigact, NULL );
+    (void)sigaction(SIGTERM, &sigact, NULL );
+
+    return 0;
+}
+
 /**
  * Only called once.
  */
 static int
 setup(void)
 {
-    int         status;
-
-    for (int i = 0; i < sizeof(pqPathnames)/sizeof(pqPathnames[0]); i++) {
-        pqueue*     pq;
-
-        // PQ_DEFAULT => clobber any existing
-        status = pq_create(pqPathnames[i], 0666, PQ_DEFAULT, 0, 1000000, 100,
-                &pq);
-        if (status) {
-            LOG_ADD1("Couldn't create product-queue \"%s\"", pqPathnames[i]);
-            break;
-        }
-        else {
-            status = pq_close(pq);
-            if (status) {
-                LOG_ADD1("Couldn't close product-queue \"%s\"", pqPathnames[i]);
-                break;
-            }
-        }
-    }
-
     /*
      * Ensure that the upstream component `up7` obtains the upstream queue from
      * `getQueuePath()`.
      */
     setQueuePath(UP7_PQ_PATHNAME);
 
-    if (status == 0) {
-        status = msm_init();
-        if (status) {
-            LOG_ADD0("msm_init() failure");
-        }
-        else {
+    int status = msm_init();
+    if (status) {
+        LOG_ADD0("Couldn't initialize multicast sender map");
+    }
+    else {
+        msm_clear();
+
+        status = setMcastInfo();
+        if (status == 0) {
             (void)sigemptyset(&termSigSet);
             (void)sigaddset(&termSigSet, SIGINT);
             (void)sigaddset(&termSigSet, SIGTERM);
             /*
-             * The following allows a SIGTERM to be sent to the process
-             * group without affecting the parent process (e.g., a
-             * make(1)).
+             * The following allows a SIGTERM to be sent to the process group
+             * without affecting the parent process (e.g., a make(1)).
              */
             (void)setpgrp();
 
-#if !USE_SIGWAIT
-            status = initCondAndMutex();
-#endif
-        }
+            #if !USE_SIGWAIT
+                status = initCondAndMutex();
+            #endif
+
+            status = setTermSigHandler();
+            if (status) {
+                LOG_ADD0("Couldn't set termination signal handler");
+            }
+        } // multicast information set
     }
 
+    if (status)
+        log_log(LOG_ERR);
     return status;
 }
 
@@ -172,28 +244,45 @@ setup(void)
 static int
 teardown(void)
 {
-    int status;
-
+    msm_clear();
     msm_destroy();
 
-#if 0
-    status = 0;
-#else
-    for (int i = 0; i < sizeof(pqPathnames)/sizeof(pqPathnames[0]); i++) {
-        status = unlink(pqPathnames[i]);
+    #if !USE_SIGWAIT
+        (void)pthread_cond_destroy(&cond);
+        (void)pthread_mutex_destroy(&mutex);
+    #endif
+
+    mi_free(mcastInfo);
+
+    return 0;
+}
+
+/*
+ * The following might be called multiple times.
+ */
+
+static int
+createEmptyProductQueue(
+        const char* const pathname)
+{
+    pqueue* pq;
+    int     status = pq_create(pathname, 0666, PQ_DEFAULT, 0, PQ_SIZE,
+            NUM_PQ_SLOTS, &pq); // PQ_DEFAULT => clobber existing
+
+    if (status == 0) {
+        status = pq_close(pq);
         if (status) {
-            LOG_SERROR1("Couldn't delete product-queue \"%s\"", pqPathnames[i]);
-            log_log(LOG_ERR);
+            LOG_ADD1("Couldn't close product-queue \"%s\"", pathname);
         }
     }
-#endif
-
-#if !USE_SIGWAIT
-    (void)pthread_cond_destroy(&cond);
-    (void)pthread_mutex_destroy(&mutex);
-#endif
-
     return status;
+}
+
+static int
+deleteProductQueue(
+        const char* const pathname)
+{
+    return unlink(pathname);
 }
 
 #if !USE_SIGWAIT
@@ -523,14 +612,14 @@ sender_run(
         void* const arg)
 {
     Sender* const sender = (Sender*)arg;
-    const int     servSock = sender->sock;
     static int    status;
 
+    pthread_cleanup_push(freeLogging, NULL);
+
+    const int     servSock = sender->sock;
     struct pollfd fds;
     fds.fd = servSock;
     fds.events = POLLIN;
-
-    pthread_cleanup_push(freeLogging, NULL);
 
     for (;;) {
         status = poll(&fds, 1, -1); // `-1` => indefinite timeout
@@ -601,18 +690,15 @@ senderSock_init(
 /**
  * Starts executing the sender on a new thread.
  *
- * @param[in] sender  The sender to be initialized.
- * @retval    0       Success. `*sender` is initialized and the sender is
- *                    executing.
+ * @retval    0       Success. `sender` is initialized and executing.
  */
 static int
-sender_spawn(
-        Sender* const sender)
+sender_spawn(void)
 {
-    int status = senderSock_init(&sender->sock);
+    int status = senderSock_init(&sender.sock);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = pthread_create(&sender->thread, NULL, sender_run, sender);
+    status = pthread_create(&sender.thread, NULL, sender_run, &sender);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     return 0;
@@ -675,8 +761,8 @@ sender_insertProducts(
     info->origin = "localhost";
     (void)memset(info->signature, 0, sizeof(info->signature));
 
-    for (int i = 0; i < 5000; i++) {
-        const unsigned size = 100000*erand48(xsubi) + 0.5;
+    for (int i = 0; i < NUM_PRODS; i++) {
+        const unsigned size = MAX_PROD_SIZE*erand48(xsubi) + 0.5;
         const ssize_t  nbytes = snprintf(ident, sizeof(ident), "%d", i);
 
         CU_ASSERT_TRUE_FATAL(nbytes >= 0 && nbytes < sizeof(ident));
@@ -692,14 +778,14 @@ sender_insertProducts(
 
         status = pq_insert(pq, &prod);
         CU_ASSERT_EQUAL_FATAL(status, 0);
-        char buf[1024];
+        char buf[LDM_INFO_MAX];
         LOG_ADD1("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
         log_log(LOG_INFO);
 
         struct timespec duration;
         duration.tv_sec = 0;
-        duration.tv_nsec = 2000000; // 1 ms
+        duration.tv_nsec = 5000000; // 5 ms
         status = nanosleep(&duration, NULL);
         CU_ASSERT_EQUAL_FATAL(status, 0);
     }
@@ -710,133 +796,58 @@ sender_insertProducts(
 }
 
 static int
-sender_terminate(
-        Sender* const sender)
+sender_start(void)
 {
-    int status = 0;
-
-#if CANCEL_SENDER
-    udebug("Canceling sender thread");
-    status = pthread_cancel(sender->thread);
-    UASSERT(status == 0);
-#else
-    udebug("Writing to termination pipe");
-    status = write(sender->fds[1], &status, sizeof(int));
-    CU_ASSERT_NOT_EQUAL_FATAL(status, -1);
-#endif
-
-    void* statusPtr;
-
-    udebug("Joining sender thread");
-    status = pthread_join(sender->thread, &statusPtr);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    if (statusPtr == PTHREAD_CANCELED) {
-        status = 0;
+    // The following ensures that the first product-index will be 0
+    int status = pim_delete(NULL, FEEDTYPE);
+    if (status) {
+        LOG_ADD1("Couldn't delete product-index map for feedtype %#lx",
+                FEEDTYPE);
     }
     else {
-        status = *(int*)statusPtr;
-        CU_ASSERT_EQUAL_FATAL(status, 0);
-    }
+        status = createEmptyProductQueue(UP7_PQ_PATHNAME);
+        if (status) {
+            LOG_ADD1("Couldn't create empty product queue \"%s\"",
+                    UP7_PQ_PATHNAME);
+        }
+        else {
+            status = mlsm_clear();
+            status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
+                    UP7_PQ_PATHNAME);
+            if (status) {
+                LOG_ADD0("mlsm_addPotentialSender() failure");
+            }
+            else {
+                // Starts the sender on a new thread
+                status = sender_spawn();
+                if (status) {
+                    LOG_ADD0("Couldn't spawn sender");
+                }
+                else {
+                    done = 0;
+                }
+            }
 
-   (void)close(sender->sock);
-
-    return 0;
-}
-
-/**
- * Starts a receiver on the current thread. Called by `pthread_create()`.
- *
- * @param[in] arg  Argument
- * @retval    &0   Success.
- */
-static void*
-receiver_start(
-        void* const arg)
-{
-    Receiver* const receiver = (Receiver*)arg;
-    static int      status;
-
-    status = down7_start(receiver->down7);
-    CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
-
-    // setDoneCondition();
-
-    /* Because at end of thread: */
-    done ? log_clear() : log_log(LOG_ERR);
-    log_free();
-
-    return &status;
-}
-
-/**
- * Starts a receiver on a new thread.
- *
- * @param[out] receiver  Receiver.
- * @param[in]  addr      Address of sender: either hostname or IPv4 address.
- * @param[in]  port      Port number of sender in host byte-order.
- * @retval 0   Success.
- */
-static int
-receiver_spawn(
-        Receiver* const restrict   receiver,
-        const char* const restrict addr,
-        const unsigned short       port)
-{
-    ServiceAddr* servAddr;
-    int          status = sa_new(&servAddr, addr, port);
-
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    receiver->down7 = down7_new(servAddr, ANY, LOCAL_HOST, DOWN7_PQ_PATHNAME);
-    CU_ASSERT_PTR_NOT_EQUAL_FATAL(receiver->down7, NULL);
-
-    status = pthread_create(&receiver->thread, NULL, receiver_start,
-            receiver);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    sa_free(servAddr);
+            if (status)
+                (void)deleteProductQueue(UP7_PQ_PATHNAME);
+        } // empty product-queue created
+    } // product-index map deleted
 
     return status;
 }
 
 /**
- * Terminates a receiver by stopping it and destroying its resources.
- *
- * @param[in] receiver  The receiver to be terminated.
- * @retval    0       Success.
+ * @retval 0           Success.
+ * @retval LDM7_INVAL  No multicast sender child process exists.
  */
 static int
-receiver_terminate(
-        Receiver* const receiver)
-{
-    udebug("Calling down7_stop()");
-    int status = down7_stop(receiver->down7);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    void* statusPtr;
-    udebug("Joining receiver thread");
-    status = pthread_join(receiver->thread, &statusPtr);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(statusPtr);
-    CU_ASSERT_NOT_EQUAL_FATAL(statusPtr, PTHREAD_CANCELED);
-    status = *(int*)statusPtr;
-    CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
-
-    udebug("Calling down7_free()");
-    status = down7_free(receiver->down7);
-    CU_ASSERT_EQUAL(status, 0);
-
-    return status;
-}
-
-static void
 terminateMcastSender(void)
 {
     int status;
 
     /*
-     * Terminate the multicast sender by sending a SIGTERM to the process group.
+     * Terminate the multicast sender process by sending a SIGTERM to the
+     * process group.
      */
     {
         struct sigaction oldSigact;
@@ -863,70 +874,231 @@ terminateMcastSender(void)
     {
         udebug("Reaping multicast sender child process");
         const pid_t wpid = wait(&status);
-        CU_ASSERT_TRUE_FATAL(wpid > 0);
-        CU_ASSERT_TRUE(WIFEXITED(status));
-        CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
-
-        status = mlsm_terminated(wpid);
-        CU_ASSERT_EQUAL(status, 0);
+        if (wpid == (pid_t)-1) {
+            CU_ASSERT_EQUAL(errno, ECHILD);
+            status = LDM7_INVAL;
+        }
+        else {
+            CU_ASSERT_TRUE_FATAL(wpid > 0);
+            CU_ASSERT_TRUE(WIFEXITED(status));
+            CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
+            status = mlsm_terminated(wpid);
+            CU_ASSERT_EQUAL(status, 0);
+        }
     }
+
+    return status;
+}
+
+/**
+ * @retval LDM7_INVAL  No multicast sender child process exists.
+ */
+static int
+sender_terminate(void)
+{
+    int retval = 0;
+    int status;
+
+    #if CANCEL_SENDER
+        udebug("Canceling sender thread");
+        status = pthread_cancel(sender.thread);
+        if (status) {
+            LOG_ERRNUM0(status, "Couldn't cancel sender thread");
+            retval = status;
+        }
+    #else
+        udebug("Writing to termination pipe");
+        status = write(sender.fds[1], &status, sizeof(int));
+        if (status == -1) {
+            LOG_SERROR0("Couldn't write to termination pipe");
+            retval = status;
+        }
+    #endif
+
+    void* statusPtr;
+
+    udebug("Joining sender thread");
+    status = pthread_join(sender.thread, &statusPtr);
+    if (status) {
+        LOG_ERRNUM0(status, "Couldn't join sender thread");
+        retval = status;
+    }
+
+    if (statusPtr != PTHREAD_CANCELED) {
+        status = *(int*)statusPtr;
+        if (status) {
+            LOG_START1("Sender task exit-status was %d", status);
+            retval = status;
+        }
+    }
+
+   (void)close(sender.sock);
+
+    udebug("Terminating multicast sender");
+    status = terminateMcastSender();
+    if (status) {
+        LOG_ADD0("Couldn't terminate multicast sender process");
+        retval = status;
+    }
+
+    udebug("Clearing multicast LDM sender manager");
+    status = mlsm_clear();
+    if (status) {
+        LOG_ADD0("mlsm_clear() failure");
+        retval = status;
+    }
+
+    status = deleteProductQueue(UP7_PQ_PATHNAME);
+    if (status) {
+        LOG_ADD0("deleteProductQueue() failure");
+        retval = status;
+    }
+
+    return retval;
+}
+
+/**
+ * Starts a receiver on the current thread. Called by `pthread_create()`.
+ *
+ * @param[in] arg  Pointer to receiver object.
+ * @retval    &0   Success.
+ */
+static void*
+receiver_start(
+        void* const arg)
+{
+    Receiver* const receiver = (Receiver*)arg;
+    static int      status;
+
+    status = down7_start(receiver->down7);
+    CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
+
+    // setDoneCondition();
+
+    // Because at end of thread:
+    done ? log_clear() : log_log(LOG_ERR);
+    log_free();
+
+    return &status;
+}
+
+/**
+ * Starts the receiver on a new thread.
+ *
+ * @param[in]  addr      Address of sender: either hostname or IPv4 address.
+ * @param[in]  port      Port number of sender in host byte-order.
+ * @retval 0   Success.
+ */
+static int
+receiver_spawn(
+        const char* const restrict addr,
+        const unsigned short       port)
+{
+    int status = createEmptyProductQueue(DOWN7_PQ_PATHNAME);
+    if (status) {
+        LOG_ADD1("Couldn't create empty product queue \"%s\"",
+                DOWN7_PQ_PATHNAME);
+    }
+    else {
+        ServiceAddr* servAddr;
+        status = sa_new(&servAddr, addr, port);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+
+        receiver.down7 = down7_new(servAddr, FEEDTYPE, LOCAL_HOST,
+                DOWN7_PQ_PATHNAME);
+        CU_ASSERT_PTR_NOT_EQUAL_FATAL(receiver.down7, NULL);
+
+        status = pthread_create(&receiver.thread, NULL, receiver_start,
+                &receiver);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+
+        sa_free(servAddr);
+    }
+
+    return status;
+}
+
+static void
+receiver_requestLastProduct(
+        Receiver* const receiver)
+{
+    down7_missedProduct(receiver->down7, initialProdIndex + NUM_PRODS - 1);
+}
+
+static int
+receiver_deleteAllProducts(
+        Receiver* const receiver)
+{
+    int status;
+
+    do
+        status = pq_seqdel(down7_getPq(receiver->down7), TV_GT, PQ_CLASS_ALL, 0,
+                NULL, NULL);
+    while (status == 0);
+
+    return status; // should be `PQ_END`
+}
+
+/**
+ * Terminates the receiver by stopping it and destroying its resources.
+ *
+ * @retval    0       Success.
+ */
+static int
+receiver_terminate(void)
+{
+    udebug("Calling down7_stop()");
+    int status = down7_stop(receiver.down7);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    void* statusPtr;
+    udebug("Joining receiver thread");
+    status = pthread_join(receiver.thread, &statusPtr);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(statusPtr);
+    CU_ASSERT_NOT_EQUAL_FATAL(statusPtr, PTHREAD_CANCELED);
+    status = *(int*)statusPtr;
+    CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
+    log_log(LOG_ERR);
+
+    udebug("Calling down7_free()");
+    status = down7_free(receiver.down7);
+    CU_ASSERT_EQUAL(status, 0);
+    log_log(LOG_ERR);
+
+    status = deleteProductQueue(DOWN7_PQ_PATHNAME);
+    CU_ASSERT_EQUAL(status, 0);
+    log_log(LOG_ERR);
+
+    return status;
 }
 
 static void
 test_up7(
         void)
 {
-    Sender   sender;
-    int      status;
-
-    done = 0;
-
-    ServiceAddr* mcastServAddr;
-    status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    ServiceAddr* ucastServAddr;
-    status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    McastInfo* mcastInfo;
-    status = mi_new(&mcastInfo, ANY, mcastServAddr, ucastServAddr);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    sa_free(ucastServAddr);
-    sa_free(mcastServAddr);
-
-    status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST, UP7_PQ_PATHNAME);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    mi_free(mcastInfo);
-
-    /* Starts a sender on a new thread */
-    status = sender_spawn(&sender);
+    int status = sender_start();
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     sleep(1);
     done = 1;
 
-    status = sender_terminate(&sender);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-
-    status = mlsm_clear();
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
+    status = sender_terminate();
+    CU_ASSERT_EQUAL(status, LDM7_INVAL);
+    log_clear();
 }
 
 static void
 test_down7(
         void)
 {
-    Receiver receiver;
     int      status;
 
     done = 0;
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(&receiver, LOCAL_HOST, 38800);
+    status = receiver_spawn(LOCAL_HOST, 38800);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -937,58 +1109,36 @@ test_down7(
     waitUntilDone();
 #endif
 
-    status = receiver_terminate(&receiver);
+    status = receiver_terminate();
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 }
 
 static void
-test_up7_down7(
+test_missed_product(
         void)
 {
-    Sender   sender;
-    Receiver receiver;
-    int      status;
-
-    done = 0;
-
-    ServiceAddr* mcastServAddr;
-    status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    ServiceAddr* ucastServAddr;
-    status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    McastInfo* mcastInfo;
-    status = mi_new(&mcastInfo, ANY, mcastServAddr, ucastServAddr);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    sa_free(ucastServAddr);
-    sa_free(mcastServAddr);
-
-    status = mlsm_addPotentialSender(mcastInfo, 2, "127.0.0.1",
-            UP7_PQ_PATHNAME);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    mi_free(mcastInfo);
-
-    /* Starts a sender on a new thread */
-    status = sender_spawn(&sender);
+    int      status = sender_start();
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(&receiver, sender_getAddr(&sender),
-            sender_getPort(&sender));
+    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender));
+    CU_ASSERT_EQUAL(status, 0);
     log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
 
     (void)sleep(1);
 
+    udebug("Terminating multicast sender");
+    status = terminateMcastSender();
+    CU_ASSERT_EQUAL(status, 0);
+    log_log(LOG_ERR);
+
     sender_insertProducts(&sender);
+
+    receiver_requestLastProduct(&receiver);
+    receiver_deleteAllProducts(&receiver);
+    receiver_requestLastProduct(&receiver);
 
 #if USE_SIGWAIT
     (void)sigwait(&termSigSet, &status);
@@ -1002,20 +1152,58 @@ test_up7_down7(
 #endif
 
     udebug("Terminating receiver");
-    status = receiver_terminate(&receiver);
+    status = receiver_terminate();
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
     udebug("Terminating sender");
-    status = sender_terminate(&sender);
+    status = sender_terminate();
+    CU_ASSERT_EQUAL(status, LDM7_INVAL);
+    log_clear();
+}
+
+static void
+test_up7_down7(
+        void)
+{
+    int      status = sender_start();
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    /* Starts a receiver on a new thread */
+    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender));
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    udebug("Terminating multicast sender");
-    terminateMcastSender();
+    (void)sleep(1);
 
-    udebug("Clearing multicast LDM sender map");
-    status = mlsm_clear();
+    sender_insertProducts(&sender);
+
+    receiver_requestLastProduct(&receiver);
+    (void)sleep(1);
+    status = receiver_deleteAllProducts(&receiver);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, PQ_END);
+    receiver_requestLastProduct(&receiver);
+
+    #if USE_SIGWAIT
+        (void)sigwait(&termSigSet, &status);
+        done = 1;
+    #elif 0
+        waitUntilDone();
+        log_log(LOG_ERR);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+    #else
+        (void)sleep(1);
+    #endif
+
+    udebug("Terminating receiver");
+    status = receiver_terminate();
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL(status, 0);
+
+    udebug("Terminating sender");
+    status = sender_terminate();
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 }
@@ -1026,15 +1214,16 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_INFO, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            if (CU_ADD_TEST(testSuite, test_up7)
-                    && CU_ADD_TEST(testSuite, test_down7)
-                    && CU_ADD_TEST(testSuite, test_up7_down7)
+            if (// CU_ADD_TEST(testSuite, test_up7) &&
+                    // CU_ADD_TEST(testSuite, test_down7) &&
+                    // CU_ADD_TEST(testSuite, test_missed_product) &&
+                    CU_ADD_TEST(testSuite, test_up7_down7)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();

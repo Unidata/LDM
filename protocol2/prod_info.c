@@ -149,10 +149,10 @@ pi_getSize(
  */
 int
 pi_copy(
-    prod_info* const            dest,
-    const prod_info* const      src)
+    prod_info* const restrict       dest,
+    const prod_info* const restrict src)
 {
-    int                         error;
+    int error;
 
     if (NULL == dest || NULL == src) {
         error = errno = EINVAL;

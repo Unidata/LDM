@@ -26,6 +26,7 @@
  * Initializes this module. Shall be called only once per LDM session.
  *
  * @retval 0            Success.
+ * @retval LDM7_INVAL   This module is already initialized. `log_add()` called.
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
@@ -107,7 +108,7 @@ msm_clear(void);
  * @retval 0            Success.
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
-Ldm7Status
+void
 msm_destroy(void);
 
 #ifdef __cplusplus

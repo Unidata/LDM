@@ -16,13 +16,16 @@
 #include "config.h"
 
 #include "ldm.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "prod_index_map.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -33,6 +36,8 @@
 /* For some reason, the following isn't defined by gcc(1) 4.8.3 on Fedora 19 */
 #   define _XOPEN_PATH_MAX 1024 // value mandated by XPG6; includes NUL
 #endif
+
+#define MIN(a,b) ((a) <= (b) ? (a) : (b))
 
 /**
  * Description of the memory-mapped object:
@@ -87,9 +92,38 @@ static size_t       fileSize;
  */
 static sigset_t     saveSet;
 /**
+ * Whether or not the product-index map is open.
+ */
+static volatile bool isOpen;
+/**
  * Whether or not the product-index map is open for writing:
  */
-static bool         forWriting;
+static volatile bool forWriting;
+
+/**
+ * Ensures that the product-index map is in the correct open state.
+ *
+ * @param[in] shouldBeOpen  Whether or not the product-index map should be open.
+ * @retval    0             The product-index map is in the correct state.
+ * @retval    LDM7_INVAL    The product-index map is in the incorrect state.
+ *                          `log_add()` called.
+ */
+static int
+ensureProperState(
+        const bool shouldBeOpen)
+{
+    int status;
+
+    if (shouldBeOpen == isOpen) {
+        status = 0;
+    }
+    else {
+        LOG_ADD1("Product-index map is %s open", isOpen ? "already" : "not");
+        status = LDM7_INVAL;
+    }
+
+    return status;
+}
 
 /**
  * Initializes some static members of this module.
@@ -565,7 +599,7 @@ initMapAndMap(
 }
 
 /**
- * Opens a file containing a product-index map.
+ * Opens the file associated with a product-index map.
  *
  * @param[in] path         Pathname of file.
  * @return    0            Success. `fd` and `pathname` are set.
@@ -584,8 +618,17 @@ openMap(
         status = LDM7_SYSTEM;
     }
     else {
-        strncpy(pathname, path, sizeof(pathname))[sizeof(pathname)-1] = 0;
-        status = 0;
+        status = fcntl(fd, F_SETFD, FD_CLOEXEC);
+        if (status == -1) {
+            LOG_SERROR1("Couldn't set FD_CLOEXEC flag on file \"%s\"",
+                    path);
+            (void)close(fd);
+            status = LDM7_SYSTEM;
+        }
+        else {
+            strncpy(pathname, path, sizeof(pathname))[sizeof(pathname)-1] = 0;
+            status = 0;
+        }
     }
 
     return status;
@@ -660,14 +703,60 @@ clearMapIfUnexpected(
  ******************************************************************************/
 
 /**
+ * Returns the filename of the product-index map for a given feedtype.
+ *
+ * @param[out] buf       The buffer into which to format the filename.
+ * @paramin]   size      The size of the buffer in bytes.
+ * @param[in]  feedtype  The feedtype.
+ * @retval    -1         Error. `log_add()` called.
+ * @return               The number of bytes that would be written to the buffer
+ *                       had it been sufficiently large excluding the terminating
+ *                       null byte. If greater than or equal to `size`, then the
+ *                       buffer is not NUL-terminated.
+ */
+int
+pim_getFilename(
+        char*           buf,
+        size_t          size,
+        const feedtypet feedtype)
+{
+    int   status;
+    int   nbytes = sprint_feedtypet(buf, size, feedtype);
+
+    if (nbytes < 0) {
+        LOG_ADD1("Couldn't format feedtype %#lx", (unsigned long)feedtype);
+        status = -1;
+    }
+    else {
+        status = nbytes;
+        buf += MIN(nbytes, size);
+        size -= MIN(nbytes, size);
+        nbytes = snprintf(buf, size, ".map");
+        if (nbytes < 0) {
+            LOG_ADD1("Couldn't construct filename of product-index map for "
+                    "feedtype %#lx", (unsigned long)feedtype);
+            status = -1;
+        }
+        else {
+            status += nbytes;
+        }
+    }
+
+    return status;
+}
+
+/**
  * Opens the product-index map for writing. Creates the associated file (with
  * an empty map) if it doesn't exist. A process should call this function at
- * most once.
+ * most once. The associated file-descriptor will have the `FD_CLOEXEC` flag
+ * set.
  *
  * @param[in] pathname     Pathname of the file. Caller may free.
  * @param[in] maxNumSigs   Maximum number of data-product signatures. Must be
  *                         positive.
  * @retval    0            Success.
+ * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ *                         called.
  * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
  *                         `log_add()` called. The file wasn't opened or
  *                         created.
@@ -679,40 +768,45 @@ pim_openForWriting(
         const char* const pathname,
         const size_t      maxNumSigs)
 {
-    int status;
+    int status = ensureProperState(false);
 
-    if (0 == maxNumSigs) {
-        LOG_START0("Maximum number of signatures must be positive");
-        status = LDM7_INVAL;
+    if (status == 0) {
+        if (0 == maxNumSigs) {
+            LOG_START0("Maximum number of signatures must be positive");
+            status = LDM7_INVAL;
+        }
+        else {
+            bool isNew;
+
+            initModule();
+            status = openMapForWriting(pathname, &isNew);
+
+            if (0 == status) {
+                if ((status = initMapAndMap(maxNumSigs, isNew))) {
+                    (void)close(fd);
+
+                    if (isNew)
+                        (void)unlink(pathname);
+                }
+                else {
+                    isOpen = true;
+                }
+            } // `fd` open
+        } // `maxSigs > 0`
     }
-    else {
-        bool isNew;
-
-        initModule();
-        status = openMapForWriting(pathname, &isNew);
-
-        if (0 == status) {
-            if ((status = initMapAndMap(maxNumSigs, isNew))) {
-                (void)close(fd);
-
-                if (isNew)
-                    (void)unlink(pathname);
-            }
-        } // `fd` open
-    } // `maxSigs > 0`
 
     return status;
 }
 
 /**
  * Opens the product-index map for reading. A process should call this
- * function at most once.
+ * function at most once. The associated file-descriptor will have the
+ * `FD_CLOEXEC` flag set.
  *
  * @param[in] pathname     Pathname of the file. Caller may free.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
- *                         `log_add()` called. The file wasn't opened or
- *                         created.
+ * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ *                         called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
  *                         file is unspecified.
  */
@@ -720,15 +814,21 @@ Ldm7Status
 pim_openForReading(
         const char* const pathname)
 {
-    int status;
+    int status = ensureProperState(false);
 
-    initModule();
-    status = openMapForReading(pathname);
+    if (status == 0) {
+        initModule();
+        status = openMapForReading(pathname);
 
-    if (0 == status) {
-        if ((status = mapMap()))
-            (void)close(fd);
-    } // `fd` open
+        if (0 == status) {
+            if ((status = mapMap())) {
+                (void)close(fd);
+            }
+            else {
+                isOpen = true;
+            }
+        } // `fd` open
+    }
 
     return status;
 }
@@ -737,21 +837,86 @@ pim_openForReading(
  * Closes the product-index map.
  *
  * @retval 0            Success.
+ * @retval LDM7_INVAL   The product-index map is not open. `log_add()` called.
  * @retval LDM7_SYSTEM  SYSTEM error. `log_add()` called. The state of the map
  *                      is unspecified.
  */
 Ldm7Status
 pim_close(void)
 {
-    int status = unmapMap();
+    int status = ensureProperState(true);
 
-    if (0 == status) {
-        if (close(fd)) {
-            LOG_SERROR1("Couldn't close file-descriptor of %s", MMO_DESC);
-            status = LDM7_SYSTEM;
+    if (status == 0) {
+        status = unmapMap();
+
+        if (0 == status) {
+            if (close(fd)) {
+                LOG_SERROR1("Couldn't close file-descriptor of %s", MMO_DESC);
+                status = LDM7_SYSTEM;
+            }
+            else {
+                isOpen = false;
+            }
         }
     }
 
+    return status;
+}
+
+/**
+ * Deletes the product-index map by deleting the associated file. The map must
+ * be closed.
+ *
+ * @param[in] directory  Pathname of the parent directory of the associated
+ *                       file or `NULL` for the current working directory.
+ * @param[in] feed       Specification of the associated feed.
+ * @retval 0             Success. The associated file doesn't exist or has been
+ *                       removed.
+ * @retval LDM7_INVAL    The product-index map is in the incorrect state.
+ *                       `log_add()` called.
+ * @retval LDM7_SYSTEM   System error. `log_add()` called.
+ */
+Ldm7Status
+pim_delete(
+        const const char* directory,
+        const feedtypet   feed)
+{
+    int status = ensureProperState(false);
+
+    if (status == 0) {
+        char   pathname[PATH_MAX];
+        char*  buf = pathname;
+        size_t len = sizeof(pathname);
+
+        if (directory) {
+            status = snprintf(buf, len, "%s/", directory);
+            if (status < 0 || status >= len) {
+                LOG_SERROR1("Couldn't copy directory pathname \"%s\"", directory);
+                status = LDM7_SYSTEM;
+            }
+            else {
+                buf += status;
+                len -= status;
+                status = 0;
+            }
+        }
+        if (status == 0) {
+            status = pim_getFilename(buf, len, feed);
+            if (status < 0 || status >= len) {
+                LOG_ADD0("Couldn't get filename of product-index map");
+            }
+            else {
+                status = unlink(pathname);
+                if (status && errno != ENOENT) {
+                    LOG_SERROR1("Couldn't unlink file \"%s\"", pathname);
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    status = 0;
+                }
+            } // `pathname` fully set
+        } // `pathname` contains pathname prefix
+    } // map is closed
     return status;
 }
 
@@ -763,6 +928,8 @@ pim_close(void)
  * @param[in] iProd        Product-index.
  * @param[in] sig          Data-product signature.
  * @retval    0            Success.
+ * @retval    LDM7_INVAL   The product-index map is not open. `log_add()`
+ *                         called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
@@ -770,24 +937,28 @@ pim_put(
         const VcmtpProdIndex    iProd,
         const signaturet* const sig)
 {
-    int status = lockMapAndBlockSignals();
+    int status = ensureProperState(true);
 
-    if (0 == status) {
-        clearMapIfUnexpected(iProd);
+    if (status == 0) {
+        status = lockMapAndBlockSignals();
 
-        (void)memcpy(mmo->sigs + (mmo->oldSig + mmo->numSigs) % maxSigs, sig,
-                SIG_SIZE);
+        if (0 == status) {
+            clearMapIfUnexpected(iProd);
 
-        if (mmo->numSigs < maxSigs) {
-            if (0 == mmo->numSigs++)
-                mmo->oldIProd = iProd;
+            (void)memcpy(mmo->sigs + (mmo->oldSig + mmo->numSigs) % maxSigs, sig,
+                    SIG_SIZE);
+
+            if (mmo->numSigs < maxSigs) {
+                if (0 == mmo->numSigs++)
+                    mmo->oldIProd = iProd;
+            }
+            else {
+                mmo->oldSig = (mmo->oldSig + 1) % maxSigs;
+                mmo->oldIProd++;
+            }
+
+            status = restoreSignalsAndUnlockMap();
         }
-        else {
-            mmo->oldSig = (mmo->oldSig + 1) % maxSigs;
-            mmo->oldIProd++;
-        }
-
-        status = restoreSignalsAndUnlockMap();
     }
 
     return status;
@@ -799,6 +970,8 @@ pim_put(
  * @param[in]  iProd        Product index.
  * @param[out] sig          Data-product signature mapped-to by `iProd`.
  * @return     0            Success.
+ * @retval     LDM7_INVAL   The product-index map is not open. `log_add()`
+ *                          called.
  * @retval     LDM7_NOENT   Product-index is unknown.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
@@ -807,24 +980,28 @@ pim_get(
         const VcmtpProdIndex iProd,
         signaturet* const    sig)
 {
-    int status = lockMap(0); // shared lock
+    int status = ensureProperState(true);
 
-    if (0 == status) {
-        const VcmtpProdIndex delta = iProd - mmo->oldIProd;
+    if (status == 0) {
+        status = lockMap(0); // shared lock
 
-        if (delta >= mmo->numSigs) {
-            status = LDM7_NOENT;
-        }
-        else {
-            (void)memcpy(sig, mmo->sigs + (mmo->oldSig + delta) % maxSigs,
-                    SIG_SIZE);
-            status = 0;
-        }
+        if (0 == status) {
+            const VcmtpProdIndex delta = iProd - mmo->oldIProd;
 
-        int stat = unlockMap();
-        if (stat)
-            status = stat;
-    } // map is locked
+            if (delta >= mmo->numSigs) {
+                status = LDM7_NOENT;
+            }
+            else {
+                (void)memcpy(sig, mmo->sigs + (mmo->oldSig + delta) % maxSigs,
+                        SIG_SIZE);
+                status = 0;
+            }
+
+            int stat = unlockMap();
+            if (stat)
+                status = stat;
+        } // map is locked
+    }
 
     return status;
 }
@@ -835,21 +1012,27 @@ pim_get(
  *
  * @param[out] iProd        Next product-index.
  * @retval     0            Success. `*iProd` is set.
+ * @retval     LDM7_INVAL   The product-index map is not open. `log_add()`
+ *                          called.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 pim_getNextProdIndex(
         VcmtpProdIndex* const iProd)
 {
-    int status = lockMap(0); // shared lock
+    int status = ensureProperState(true);
 
-    if (0 == status) {
-        *iProd = mmo->oldIProd + mmo->numSigs;
+    if (status == 0) {
+        status = lockMap(0); // shared lock
 
-        int stat = unlockMap();
-        if (stat)
-            status = stat;
-    } // map is locked
+        if (0 == status) {
+            *iProd = mmo->oldIProd + mmo->numSigs;
+
+            int stat = unlockMap();
+            if (stat)
+                status = stat;
+        } // map is locked
+    }
 
     return status;
 }

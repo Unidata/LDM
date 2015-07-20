@@ -40,7 +40,35 @@ typedef struct {
     char*          pqPathname;
 } McastEntry;
 
-static void* mcastEntries;
+static void*         mcastEntries;
+static volatile bool cleanupRegistered;
+static pid_t         childPid;
+
+static void
+mlsm_killChild(void)
+{
+    if (childPid) {
+        (void)kill(childPid, SIGTERM);
+        childPid = 0;
+    }
+}
+
+static int
+mlsm_ensureCleanup(void)
+{
+    if (cleanupRegistered)
+        return 0;
+
+    int status = atexit(mlsm_killChild);
+    if (status) {
+        LOG_SERROR0("Couldn't register cleanup routine");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        cleanupRegistered = true;
+    }
+    return status;
+}
 
 /**
  * Indicates if a particular multicast LDM sender is running.
@@ -371,26 +399,39 @@ mlsm_execute(
     unsigned short* const restrict  serverPort,
     pid_t* const restrict           pid)
 {
-    const feedtypet feedtype = mi_getFeedtype(info);
-    pid_t           procId;
-    unsigned short  port;
-    int             status = mlsm_spawn(info, ttl, mcastIf, pqPathname, &procId,
-            &port);
+    int status;
 
-    if (0 == status) {
-        status = msm_put(feedtype, procId);
-        if (status) {
-            // preconditions => LDM7_DUP can't be returned
-            char* const id = mi_format(info);
+    if (childPid) {
+        LOG_START0("Can execute only one multicast sender child process");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        const feedtypet feedtype = mi_getFeedtype(info);
+        pid_t           procId;
+        unsigned short  port;
 
-            LOG_ADD1("Terminating just-started multicast LDM sender for "
-                    "\"%s\"", id);
-            free(id);
-            (void)kill(procId, SIGTERM);
-        }
-        else {
-            *serverPort = port;
-            *pid = procId;
+        status = mlsm_spawn(info, ttl, mcastIf, pqPathname, &procId, &port);
+        if (0 == status) {
+            status = mlsm_ensureCleanup();
+            if (status) {
+                (void)kill(procId, SIGTERM);
+            }
+            else {
+                status = msm_put(feedtype, procId);
+                if (status) {
+                    // preconditions => LDM7_DUP can't be returned
+                    char* const id = mi_format(info);
+
+                    LOG_ADD1("Terminating just-started multicast LDM sender for "
+                            "\"%s\"", id);
+                    free(id);
+                    (void)kill(procId, SIGTERM);
+                }
+                else {
+                    *serverPort = port;
+                    *pid = childPid = procId;
+                }
+            }
         }
     }
 
@@ -662,11 +703,13 @@ mlsm_startIfNecessary(
     if (status == LDM7_NOENT) {
         unsigned short serverPort;
 
+        childPid = 0; // because multicast process isn't running
         status = mlsm_execute(info, ttl, mcastIf, pqPathname, &serverPort, pid);
-
-        if (0 == status && info->server.port != serverPort) {
-            // Server port number was chosen by the operating-system
-            info->server.port = serverPort;
+        if (0 == status) {
+            if (info->server.port != serverPort) {
+                // Server port number was chosen by the operating-system
+                info->server.port = serverPort;
+            }
         }
     }   // relevant multicast LDM sender isn't running
 
@@ -742,7 +785,7 @@ mlsm_addPotentialSender(
 /**
  * Ensures that the multicast LDM sender process that's responsible for a
  * particular multicast group is running and returns information on the
- * multicast LDM sender. Doesn't block.
+ * running multicast LDM sender. Doesn't block.
  *
  * @param[in]  feedtype     Multicast group feed-type.
  * @param[out] mcastInfo    Information on corresponding multicast group.
@@ -772,7 +815,8 @@ mlsm_ensureRunning(
         status = LDM7_NOENT;
     }
     else {
-        if (0 == (status = msm_lock(true))) {
+        status = msm_lock(true);
+        if (0 == status) {
             McastEntry*      entry = *(McastEntry**)node;
             McastInfo* const info = &entry->info;
 
@@ -808,6 +852,8 @@ mlsm_terminated(
 
     if (0 == status) {
         status = msm_removePid(pid);
+        if (pid == childPid)
+            childPid = 0; // no need to kill child
         (void)msm_unlock();
     }
 
