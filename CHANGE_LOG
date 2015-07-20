@@ -1,4 +1,9 @@
-6.12.15.4	2015-07-10T13:59:14-0600
+6.12.15.5
+    Ensured mldm_sender termination.
+    
+    Added test of "ultimate backstop" to up7_down7_test.
+
+6.12.15.4	2015-07-20T10:36:36-0600
     Improved the code surrounding the creation of a client-side handle on the
     TCP connection by an upstream LDM-7.
 
