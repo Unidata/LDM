@@ -265,11 +265,28 @@ return s_byte(model);
 static int
 ids_len(const char *cp)
 {
-	const unsigned char *up = (const unsigned char *)cp + IDS_LEN -1 ;
-	int len = *up++ * 256 *256;
-	len += *up++ * 256;
-	len += *up;
-	return len;
+    int                  len;
+    const unsigned char* up;
+    const int            vers = *(cp+7);
+    if (vers == 1) {
+        up = (const unsigned char *)cp + IDS_LEN -1 ;
+        len = (up[0] << 16) |
+              (up[1] <<  8) |
+               up[2];
+    }
+    else {
+        // Assume GRIB version 2
+        up = (const unsigned char *)cp + 8;
+        len =   (up[0] << 56) |
+                (up[1] << 48) |
+                (up[2] << 40) |
+                (up[3] << 32) |
+                (up[4] << 24) |
+                (up[5] << 16) |
+                (up[6] <<  8) |
+                 up[7];
+    }
+    return len;
 }
 
 static const char *
