@@ -238,36 +238,66 @@ static bool pti_setCreationTime(
         struct tm* const    tm,
         const unsigned long ns)
 {
-    bool                   success = true;
-    static struct timespec prevTime;
+    struct timeval        creationTime;
+    struct timeval        interCreationInterval;
+    struct timeval        returnTime;
+    struct timeval        now;
+    struct timespec       sleepInterval;
+    bool                  success = true;
+    static struct timeval prevReturnTime;
+    static struct timeval prevCreationTime;
+
+    // Set the current creation-time
+    creationTime.tv_sec = mktime(tm);
+    creationTime.tv_usec = ns/1000;
 
     if (lineNo == 1) {
-        prevTime.tv_sec = mktime(tm);
-        prevTime.tv_nsec = ns;
+        prevReturnTime.tv_sec = prevReturnTime.tv_usec = 0;
+        prevCreationTime = creationTime;
     }
 
-    struct timespec createTime;
-    createTime.tv_sec = mktime(tm);
-    createTime.tv_nsec = ns;
-
-    struct timespec sleepAmount;
-    sleepAmount.tv_sec = createTime.tv_sec - prevTime.tv_sec;
-    sleepAmount.tv_nsec = createTime.tv_nsec - prevTime.tv_nsec;
-    if (sleepAmount.tv_nsec < 0) {
-        sleepAmount.tv_sec -= 1;
-        sleepAmount.tv_nsec += 1000000000;
+    // Compute the inter-product creation interval
+    interCreationInterval.tv_sec = creationTime.tv_sec - prevCreationTime.tv_sec;
+    interCreationInterval.tv_usec = creationTime.tv_usec - prevCreationTime.tv_usec;
+    if (interCreationInterval.tv_usec < 0) {
+        interCreationInterval.tv_sec -= 1;
+        interCreationInterval.tv_usec += 1000000;
     }
 
-    if (sleepAmount.tv_sec >= 0) {
-        if (nanosleep(&sleepAmount, NULL)) {
+    /*
+     * Compute when this function should return based on the previous return
+     * time and the inter-product creation interval.
+     */
+    returnTime.tv_sec = prevReturnTime.tv_sec + interCreationInterval.tv_sec;
+    returnTime.tv_usec = prevReturnTime.tv_usec + interCreationInterval.tv_usec;
+    if (returnTime.tv_usec > 1000000) {
+        returnTime.tv_sec += 1;
+        returnTime.tv_usec -= 1000000;
+    }
+
+    (void)set_timestamp(&now);
+
+    // Compute how long to sleep based on the return time and the current time.
+    sleepInterval.tv_sec = returnTime.tv_sec - now.tv_sec;
+    sleepInterval.tv_nsec = (returnTime.tv_usec - now.tv_usec) * 1000;
+    if (sleepInterval.tv_nsec < 0) {
+        sleepInterval.tv_sec -= 1;
+        sleepInterval.tv_nsec += 1000000000;
+    }
+
+    // Sleep if necessary
+    if (sleepInterval.tv_sec >= 0) {
+        if (nanosleep(&sleepInterval, NULL)) {
             LOG_SERROR0("Couldn't sleep");
             success = false;
         }
     }
 
+    // Set the product's creation-time and save values for next time
     if (success) {
+        prevCreationTime = creationTime;
         (void)set_timestamp(&prod.info.arrival);
-        prevTime = createTime;
+        prevReturnTime = prod.info.arrival;
     }
 
     return success;
@@ -310,19 +340,19 @@ static bool pti_execute()
             break;
         }
 
-        success = pti_setCreationTime(lineNo, &tm, ns);
-        if (!success)
-            break;
-
         size_t nbytes = sizeof(prod.info.seqno);
         (void)memcpy(prod.info.signature+sizeof(prod.info.signature)-nbytes,
             &prod.info.seqno, nbytes);
+
+        success = pti_setCreationTime(lineNo, &tm, ns);
+        if (!success)
+            break;
 
         status = pq_insert(pq, &prod);
 
         switch (status) {
         case ENOERR:
-            if(ulogIsVerbose())
+            if (ulogIsVerbose())
                 uinfo("%s", s_prod_info(NULL, 0, &prod.info, 1)) ;
             break;
         case PQUEUE_DUP:
