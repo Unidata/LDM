@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <math.h>
 #include <rpc/rpc.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -198,13 +199,12 @@ static int pti_decodeInputLine(
         struct tm* const restrict     tm,
         unsigned long* const restrict nanoSec)
 {
-    unsigned long ns;
     int           status;
+    double        seconds;
 
     (void)memset(tm, 0, sizeof(*tm));
-    status = scanf("%u %4u%2u%2u%2u%2u%2u.%9lu \n", &prod.info.sz, &tm->tm_year,
-            &tm->tm_mon, &tm->tm_mday, &tm->tm_hour, &tm->tm_min, &tm->tm_sec,
-            &ns);
+    status = scanf("%u %4u%2u%2u%2u%2u%lf \n", &prod.info.sz, &tm->tm_year,
+            &tm->tm_mon, &tm->tm_mday, &tm->tm_hour, &tm->tm_min, &seconds);
     if (status == EOF) {
         if (ferror(stdin)) {
             LOG_ADD1("Couldn't read line %lu (origin 1) from input-file",
@@ -215,18 +215,17 @@ static int pti_decodeInputLine(
             status = 1;
         }
     }
-    else if (status != 8) {
+    else if (status != 7) {
         LOG_ADD1("Couldn't decode line %lu (origin 1) in input-file", lineNo);
         status = -1;
     }
+    else if (seconds < 0 || seconds > 60) {
+        LOG_ADD1("Invalid number of seconds in line %lu", lineNo);
+        status = -1;
+    }
     else {
-        if (ns < 1000) {
-            ns *= 1000000;
-        }
-        else if (ns < 1000000) {
-            ns *= 1000000000;
-        }
-        *nanoSec = ns;
+        *nanoSec = modf(seconds, &seconds) * 1000000000;
+        tm->tm_sec = seconds;
         status = 0;
     }
 
@@ -275,9 +274,8 @@ static bool pti_setCreationTime(
         returnTime.tv_usec -= 1000000;
     }
 
-    (void)set_timestamp(&now);
-
     // Compute how long to sleep based on the return time and the current time.
+    (void)set_timestamp(&now);
     sleepInterval.tv_sec = returnTime.tv_sec - now.tv_sec;
     sleepInterval.tv_nsec = (returnTime.tv_usec - now.tv_usec) * 1000;
     if (sleepInterval.tv_nsec < 0) {
