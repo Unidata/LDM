@@ -1,4 +1,4 @@
-6.12.15.7
+6.12.15.7	2015-07-22T10:10:58-0600
     pq_test_insert(1):
         Improved decoding of creation-time.
 
