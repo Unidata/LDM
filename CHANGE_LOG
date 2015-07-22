@@ -1,4 +1,4 @@
-6.12.15.9
+6.12.15.9	2015-07-22T16:54:54-0600
     Improved the setting of header file and library references by the configure
     script -- in particular, /opt/csw is favored over /usr because the Solaris
     XML2 library appears to have a bug.
