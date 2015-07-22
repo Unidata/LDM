@@ -1,3 +1,7 @@
+6.12.15.8
+    ldmprint.c:
+        Added missing space between timestamp and feedtype.
+
 6.12.15.7	2015-07-22T10:11:06-0600
     pq_test_insert(1):
         Improved decoding of creation-time.

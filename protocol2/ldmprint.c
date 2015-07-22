@@ -757,6 +757,12 @@ s_prod_info(
     len += nbytes;
     bufsize -= nbytes;
 
+    nbytes = snprintf(buf+len, bufsize, " ");
+    if (nbytes < 0 || nbytes >= bufsize)
+        return NULL;
+    len += nbytes;
+    bufsize -= nbytes;
+
     nbytes = ft_format(infop->feedtype, buf+len, bufsize);
     if (nbytes < 0 || nbytes >= bufsize)
         return NULL;

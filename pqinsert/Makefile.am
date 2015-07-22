@@ -41,5 +41,5 @@ check-local:		pq_test_insert
 # to a duplicate data-product from a previous invocation.
 	$(top_builddir)/pqcreate/pqcreate -c -s 500k -q pq_test_insert.pq
 	rm -f pq_test_insert.log 
-	./pq_test_insert -vl pq_test_insert.log \
-                -q pq_test_insert.pq $(srcdir)/pq_test_insert.txt
+	cat $(srcdir)/pq_test_insert.txt
+	./pq_test_insert -vl - -q pq_test_insert.pq $(srcdir)/pq_test_insert.txt
