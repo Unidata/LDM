@@ -1,4 +1,4 @@
-6.12.15.8
+6.12.15.8	2015-07-22T11:15:33-0600
     ldmprint.c:
         Added missing space between timestamp and feedtype.
 
