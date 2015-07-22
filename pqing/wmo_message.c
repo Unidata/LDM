@@ -270,21 +270,21 @@ ids_len(const char *cp)
     const int            vers = *(cp+7);
     if (vers == 1) {
         up = (const unsigned char *)cp + IDS_LEN -1 ;
-        len = (up[0] << 16) |
-              (up[1] <<  8) |
-               up[2];
+        len = ((unsigned long)up[0] << 16) |
+              ((unsigned long)up[1] <<  8) |
+               (unsigned long)up[2];
     }
     else {
         // Assume GRIB version 2
         up = (const unsigned char *)cp + 8;
-        len =   (up[0] << 56) |
-                (up[1] << 48) |
-                (up[2] << 40) |
-                (up[3] << 32) |
-                (up[4] << 24) |
-                (up[5] << 16) |
-                (up[6] <<  8) |
-                 up[7];
+        len =   ((unsigned long)up[0] << 56) |
+                ((unsigned long)up[1] << 48) |
+                ((unsigned long)up[2] << 40) |
+                ((unsigned long)up[3] << 32) |
+                ((unsigned long)up[4] << 24) |
+                ((unsigned long)up[5] << 16) |
+                ((unsigned long)up[6] <<  8) |
+                 (unsigned long)up[7];
     }
     return len;
 }

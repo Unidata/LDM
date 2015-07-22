@@ -30,7 +30,7 @@ pqing_SOURCES		= \
     tty.c \
     wmo_message.c \
     wmo_start.c
-CPPFLAGS		= \
+AM_CPPFLAGS		= \
     -I$(top_srcdir)/pqinglib \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \

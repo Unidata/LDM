@@ -7,7 +7,7 @@
 ## Process this file with automake to produce Makefile.in
 
 bin_PROGRAMS	= ldmping
-CPPFLAGS	= \
+AM_CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \

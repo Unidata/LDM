@@ -29,7 +29,7 @@ lib_la_SOURCES		= down7.c \
 			  mldm_sender_manager.c mldm_sender_manager.h \
 			  mldm_sender_map.c mldm_sender_map.h \
 			  prod_index_queue.c
-CPPFLAGS		= -I$(builddir) -I$(srcdir) \
+AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 			  -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -84,17 +84,17 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
                           -I/usr/local/include \
                           -I/usr/include
 $(VCMTPReceiver_stubs):		../vcmtp/VCMTPv3/receiver/vcmtpRecvv3.h
-	opmock2 -cpp -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+	opmock2 -cpp -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mcast_stubs):			../C++/mcast.h
-	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(pq_stubs):			$(top_srcdir)/pq/pq.h
-	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(globals_stubs):		$(top_srcdir)/registry/globals.h
-	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mldm_sender_map_stubs):	mldm_sender_map.h
-	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(down7_stubs):			down7.h
-	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
 opmock_tests				= mldm_receiver_memory_test \
                                           mldm_receiver_test \
@@ -139,19 +139,19 @@ cunit_tests			= prod_index_map_test \
 # executed by `make check-local`.
 cunit_check_progs		= $(cunit_tests) up7_down7_test
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
-mldm_sender_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+mldm_sender_map_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
 prod_index_map_test_SOURCES	= prod_index_map_test.c prod_index_map.c
-prod_index_map_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+prod_index_map_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 prod_index_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
 prod_index_queue_test_SOURCES	= prod_index_queue_test.c prod_index_queue.c
-prod_index_queue_test_CPPFLAGS	= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+prod_index_queue_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 prod_index_queue_test_LDADD	= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
 up7_down7_test_SOURCES		= up7_down7_test.c
-up7_down7_test_CPPFLAGS		= $(CPPFLAGS) @CPPFLAGS_CUNIT@
+up7_down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
 

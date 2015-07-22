@@ -10,7 +10,7 @@ noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mcast.cpp mcast.h \
 			  PerProdNotifier.cpp PerProdNotifier.h \
 			  PerProdSendingNotifier.cpp PerProdSendingNotifier.h
-CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
+AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
                           -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \

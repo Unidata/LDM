@@ -27,7 +27,7 @@ pqact_SOURCES		= \
     pqact.c \
     state.c
 date_sub_SOURCES	= palt.c
-CPPFLAGS		= \
+AM_CPPFLAGS		= \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
@@ -36,7 +36,7 @@ CPPFLAGS		= \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir) \
     -I$(top_srcdir)/mcast_lib/C++
-date_sub_CPPFLAGS	= $(CPPFLAGS) -UNDEBUG -DTEST_DATE_SUB
+date_sub_CPPFLAGS	= $(AM_CPPFLAGS) -UNDEBUG -DTEST_DATE_SUB
 pqact_LDADD		= \
     $(top_builddir)/lib/libldm.la \
     $(GDBMLIB)

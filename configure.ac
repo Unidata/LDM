@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.15.8], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.15.9], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -330,9 +330,9 @@ AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
 AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
 AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
-# Ensure that LIBS references the math library if such functions aren't
+# Ensure a reference to the math library if such functions aren't
 # available by default.
-UD_SEARCH_LIB([m], [log10], [/opt/csw/lib /opt/lib])
+UD_SEARCH_LIB([m], [log10], [/opt/csw/lib /opt/lib], [MATH_LIB])
 
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUnit unit-testing package.])
@@ -548,42 +548,47 @@ AC_CHECK_HEADERS([stropts.h], ,
 	AC_MSG_ERROR("Missing necessary header-file"))
 ])
 
-# Ensure that CPPFLAGS and LIBS reference the ZLIB library, which is used by
-# the PNG library and by the XML2 library.
+# Ensure references to the ZLIB library, which is used by the PNG library and
+# by the XML2 library.
 UD_SEARCH_HEADER([ZLIB], [zlib.h], [/usr/include /opt/csw/include \
     /usr/local/csw/include /opt/include /opt/X11/include /opt/local/include \
-        /usr/local/include])
+        /usr/local/include],
+    [ZLIB_INCLUDE])
 UD_SEARCH_LIB([z], [deflate], [/opt/csw/lib /opt/lib /opt/X11/lib \
-    /opt/local/lib /usr/local/lib])
+    /opt/local/lib /usr/local/lib], [ZLIB_LIB])
 
 AM_COND_IF([WANT_NOAAPORT], [
-    # Ensure that CPPFLAGS and LIBS reference the PNG library, which is used by the
-    # LDM NOAAPORT module.
+    # Ensure references to the PNG library, which is used by the LDM NOAAPORT
+    # module.
     UD_SEARCH_HEADER([PNG], [png.h],
         [/opt/csw/include /usr/local/csw/include /opt/include /opt/X11/include \
-            /opt/local/include /usr/local/include /user/sfw/include])
+            /opt/local/include /usr/local/include /user/sfw/include],
+        [PNG_INCLUDE])
     UD_SEARCH_LIB([png], [png_create_read_struct], [/opt/csw/lib /opt/lib \
-        /opt/X11/lib /opt/local/lib /usr/local/lib])
+        /opt/X11/lib /opt/local/lib /usr/local/lib], [PNG_LIB])
 ])
 
 AM_COND_IF([WANT_MULTICAST], [
-    # Ensure that CPPFLAGS and LIBS reference the YAML library, which is used by
-    # the LDM-7 multicast module.
+    # Ensure references to the YAML library, which is used by the LDM-7
+    # multicast module.
     UD_SEARCH_HEADER([YAML], [yaml.h],
         [/opt/csw/include /usr/local/csw/include /opt/include /opt/X11/include \
-            /opt/local/include /usr/local/include /user/sfw/include])
+            /opt/local/include /usr/local/include /user/sfw/include],
+        [YAML_INCLUDE])
     UD_SEARCH_LIB([yaml], [yaml_emitter_dump], [/opt/csw/lib /opt/lib \
-        /opt/X11/lib /opt/local/lib /usr/local/lib])
+        /opt/X11/lib /opt/local/lib /usr/local/lib], [YAML_LIB])
 ])
 
-# Ensure that CPPFLAGS and LIBS reference the XML2 library, which is used
-# by the LDM registry module.
+# Ensure references to the XML2 library, which is used by the LDM registry
+# module.
 UD_SEARCH_HEADER([XML2], [libxml/parser.h],
-    [/usr/include/libxml2 /opt/include/libxml2 /opt/X11/include/libxml2 \
-        /opt/local/include/libxml2 /usr/local/include/libxml2 \
-        /opt/csw/include/libxml2 /usr/local/csw/include/libxml2])
+    [/opt/csw/include/libxml2 /usr/local/csw/include/libxml2] \
+        /opt/include/libxml2 /usr/local/include/libxml2 \
+        /opt/X11/include/libxml2 /usr/local/X11/include/libxml2 \
+        /opt/local/include/libxml2 /usr/include/libxml2,
+    [XML2_INCLUDE])
 UD_SEARCH_LIB([xml2], [xmlInitParser], [/opt/csw/lib /opt/lib /opt/X11/lib \
-    /opt/local/lib /usr/local/lib])
+    /opt/local/lib /usr/local/lib], [XML2_LIB])
 
 #AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
 #AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])

@@ -10,7 +10,7 @@ gribinsert_SOURCES	= \
     get_gribname.c \
     wgrib.c
 
-CPPFLAGS		= \
+AM_CPPFLAGS		= \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
 	-I$(top_srcdir)/ulog \
@@ -19,8 +19,7 @@ CPPFLAGS		= \
 	-I$(top_builddir)/registry -I$(top_srcdir)/registry \
 	-I$(top_srcdir)/pq \
 	-I$(top_srcdir)/misc \
-	-I$(top_srcdir) \
-	@CPPFLAGS@
+	-I$(top_srcdir)
 
 gribinsert_LDADD 	= $(top_builddir)/lib/libldm.la
 

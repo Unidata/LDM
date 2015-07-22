@@ -52,7 +52,7 @@ lib_la_SOURCES	= \
 	statsMath.c \
 	StrBuf.c \
 	StringBuf.c StringBuf.h
-CPPFLAGS	= \
+AM_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \

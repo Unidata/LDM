@@ -10,7 +10,7 @@ EXTRA_DIST 	= pqcreate.1.in
 PQ_SUBDIR	= @PQ_SUBDIR@
 
 bin_PROGRAMS	= pqcreate
-CPPFLAGS	= \
+AM_CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \

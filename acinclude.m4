@@ -921,10 +921,11 @@ AC_DEFUN([UD_CHECK_HEADER],
     fi
 ])
 
-dnl Ensure that CPPFLAGS references a header-file directory
+dnl Ensure a preprocessor reference to a header-file directory
 dnl     $1  Name component (e.g., "XML2")
 dnl     $2  Name of the header-file (may contain "/")
 dnl     $3  Space-separated list of directories
+dnl     $4  Name of the automake output variable (e.g., "XML2_INCLUDE")
 AC_DEFUN([UD_SEARCH_HEADER],
 [
     AC_MSG_NOTICE([Searching for the "$1" header-file(s)])
@@ -938,16 +939,23 @@ AC_DEFUN([UD_SEARCH_HEADER],
         unset $cacheName
         CPPFLAGS="$origCppFlags"
     done
-    test "$CPPFLAGS" || unset CPPFLAGS
     if test $found != yes; then
         AC_MSG_ERROR(["$1" header-file(s) not found])
     else
         AC_MSG_NOTICE(["$1" header-file(s) found in "$dir"])
+        CPPFLAGS="$origCppFlags"
+        test "$CPPFLAGS" || unset CPPFLAGS
+        if test "$dir"; then
+            eval $4="-I$dir"
+        else
+            eval $4=
+        fi
+        AC_SUBST([$4])
     fi
     unset found
 ])
 
-dnl Ensure that LIBS references a library
+dnl Ensure that LIBS contains a reference to a library
 dnl     $1  Name component (e.g., "XML2")
 dnl     $2  Name of a function
 dnl     $3  Space-separated list of directories
@@ -964,11 +972,11 @@ AC_DEFUN([UD_SEARCH_LIB],
             LIBS="$origLibs"
             unset ac_cv_func_$2
         done
-        test "$LIBS" || unset LIBS
         if test $found != yes; then
             AC_MSG_ERROR(["$1" library not found])
         else
             AC_MSG_NOTICE(["$1" library found in "$dir"])
+            test "$LIBS" || unset LIBS
         fi
         unset found]
     )

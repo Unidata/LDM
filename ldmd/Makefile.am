@@ -22,7 +22,7 @@ ldmd_SOURCES	= \
     parser.c \
     ldmd.c \
     wordexp.c
-CPPFLAGS		= \
+ldmd_CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib \
     -I$(top_srcdir)/registry \
     -I$(top_builddir)/registry \

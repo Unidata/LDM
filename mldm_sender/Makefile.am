@@ -7,7 +7,7 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 bin_PROGRAMS	= mldm_sender
-CPPFLAGS	= \
+AM_CPPFLAGS	= \
     -I$(top_builddir)/ulog        -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol    -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2   -I$(top_srcdir)/protocol2 \

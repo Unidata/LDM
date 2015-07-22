@@ -1,3 +1,8 @@
+6.12.15.9
+    Improved the setting of header file and library references by the configure
+    script -- in particular, /opt/csw is favored over /usr because the Solaris
+    XML2 library appears to have a bug.
+
 6.12.15.8	2015-07-22T11:15:37-0600
     ldmprint.c:
         Added missing space between timestamp and feedtype.

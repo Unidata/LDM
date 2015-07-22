@@ -9,7 +9,7 @@
 PQ_SUBDIR	= @PQ_SUBDIR@
 EXTRA_DIST	= pqcopy.1
 bin_PROGRAMS	= pqcopy
-CPPFLAGS	= \
+AM_CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \

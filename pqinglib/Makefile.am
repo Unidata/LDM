@@ -14,7 +14,7 @@ EXTRA_DIST		= \
     xbuf.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= dtime.c wmo_header.c tokens.c xbuf.c
-CPPFLAGS		= \
+AM_CPPFLAGS		= \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \

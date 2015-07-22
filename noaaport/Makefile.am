@@ -46,7 +46,7 @@ BUILT_SOURCES		= \
 DISTCLEANFILES		= $(BUILT_SOURCES)
 CLEANFILES		= $(BUILT_SOURCES) *.out *.log
 
-CPPFLAGS		= \
+AM_CPPFLAGS		= \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
@@ -58,8 +58,7 @@ CPPFLAGS		= \
 	-I$(top_srcdir)/protocol \
 	-I$(top_srcdir)/pq \
 	-I$(top_srcdir)/misc \
-	-I$(srcdir)/retrans \
-	@CPPFLAGS@ 
+	-I$(srcdir)/retrans
 
 if WANT_RETRANS
     DEFS		+= -DRETRANS_SUPPORT

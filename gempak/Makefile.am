@@ -81,14 +81,14 @@ lib_la_SOURCES		= cflclos.c \
                           tiitoj.c \
                           timdif.c
 
-CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
-			  -I$(top_srcdir) \
-			  -I$(top_srcdir)/grib2 \
-			  -I$(top_srcdir)/ulog \
-			  -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
-			  -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
-			  -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-			  -I$(top_builddir)/mcast_lib/C++ -I$(top_srcdir)/mcast_lib/C++
+AM_CPPFLAGS	= -DLDMHOME='"$(LDMHOME)"' \
+		  -I$(top_srcdir) \
+		  -I$(top_srcdir)/grib2 \
+		  -I$(top_srcdir)/ulog \
+		  -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+		  -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
+		  -I$(top_builddir)/registry -I$(top_srcdir)/registry \
+		  -I$(top_builddir)/mcast_lib/C++ -I$(top_srcdir)/mcast_lib/C++
 
 TAGS_FILES		= *.c *.h \
                           ../ulog/*.c ../ulog/*.h \
@@ -107,14 +107,14 @@ BUILT_SOURCES		+= $(CTBG2RDVAR_STUBS)
 DISTCLEANFILES		+= $(CTBG2RDVAR_STUBS)
 
 $(CTBG2RDVAR_STUBS):	ctbg2rdvar.h
-	opmock2 -i $? -o . $(CPPFLAGS) $(OPMOCK_INCLUDES)
+	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 
 # Put "*_stub.*" files in "nodist_*_SOURCES" macros because "make distcheck"
 # expects "*_SOURCES" files without a "nodist_" prefix to exist.
 
 gb2gtvartbl_test_SOURCES 	= gb2gtvartbl_test.c
 nodist_gb2gtvartbl_test_SOURCES = $(CTBG2RDVAR_STUBS)
-gb2gtvartbl_test_CPPFLAGS	= $(lib_la_CPPFLAGS) $(CPPFLAGS) @OPMOCK_CPPFLAGS@
+gb2gtvartbl_test_CPPFLAGS	= $(AM_CPPFLAGS) @OPMOCK_CPPFLAGS@
 gb2gtvartbl_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 gb2gtvartbl_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                   @OPMOCK_LDADD@

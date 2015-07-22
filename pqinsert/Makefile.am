@@ -11,7 +11,7 @@ CLEANFILES      = pqinsert.1 *.pq *.log
 PQ_SUBDIR	= @PQ_SUBDIR@
 
 bin_PROGRAMS	= pqinsert pq_test_insert
-CPPFLAGS	= \
+AM_CPPFLAGS	= \
     -I$(top_srcdir)/ulog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
