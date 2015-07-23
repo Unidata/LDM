@@ -1,7 +1,13 @@
+6.12.15.10
+    pqing(1):
+        Tightened algorithm for decoding the length of GRIB-1 and GRIB-2
+        messages.
+
 6.12.15.9	2015-07-22T16:54:54-0600
-    Improved the setting of header file and library references by the configure
-    script -- in particular, /opt/csw is favored over /usr because the Solaris
-    XML2 library appears to have a bug.
+    Build Procedure:
+        Improved the setting of header file and library references by the
+        configure script -- in particular, /opt/csw is favored over /usr because
+        the Solaris XML2 library appears to have a bug.
 
 6.12.15.8	2015-07-22T11:15:37-0600
     ldmprint.c:
@@ -20,27 +26,33 @@
         timings.
 
 6.12.15.5	2015-07-20T10:54:05-0600
-    Ensured mldm_sender termination.
+    LDM-7:
+        Ensured mldm_sender termination.
     
-    Added test of "ultimate backstop" to up7_down7_test.
+        Added test of "ultimate backstop" to up7_down7_test.
 
 6.12.15.4	2015-07-20T10:36:36-0600
-    Improved the code surrounding the creation of a client-side handle on the
-    TCP connection by an upstream LDM-7.
+    LDM-7:
+        Improved the code surrounding the creation of a client-side handle on the TCP
+        connection by an upstream LDM-7.
 
-    Made ZERO_TIMEOUT constant.
+        Made ZERO_TIMEOUT constant.
 
-    Demoted uerror() message in spipe_prodput() to udebug().
+    pqact(1):
+        Demoted uerror() message in spipe_prodput() to udebug().
 
 6.12.15.3	2015-07-09T17:32:38-0600
-    Add catching of more types of exceptions for VCMTP receiver and sender.
+    LDM-7:
+        Add catching of more types of exceptions for VCMTP receiver and sender.
 
 6.12.15.2	2015-07-09T16:16:08-0600
-    Replace throwing an exception in PerProdNotifier with simply setting product
-    pointer to NULL. Also improve duplicate product detection logic.
+    LDM-7:
+        Replace throwing an exception in PerProdNotifier with simply setting
+        product pointer to NULL. Also improve duplicate product detection logic.
 
 6.12.15.1	2015-07-09T13:47:16-0600
-    Corrected multicast conflict detection in mldm_sender_manager.
+    LDM-7:
+        Corrected multicast conflict detection in mldm_sender_manager.
 
 6.12.15	2015-07-08T16:27:08-0600
     Upstream LDM:
