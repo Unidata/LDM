@@ -1,3 +1,8 @@
+6.12.15.11
+    Build Procedure:
+        Reverted to default directory first for header-file and library
+        searching.
+
 6.12.15.10	2015-07-23T13:54:51-0600
     Build Procedure:
         Eliminated default "" from UD_SEARCH_{HEADER,LIB} and made explicit in

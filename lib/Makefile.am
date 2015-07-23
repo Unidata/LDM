@@ -21,7 +21,8 @@ libldm_la_LIBADD	= \
 if WANT_NOAAPORT
     libldm_la_LIBADD	+= \
 	$(top_builddir)/grib2/lib.la \
-	$(top_builddir)/gempak/lib.la
+	$(top_builddir)/gempak/lib.la \
+	@PNG_LIB@
 if WANT_RETRANS
     libldm_la_LIBADD	+= $(top_builddir)/noaaport/retrans/lib.la
 endif
@@ -33,5 +34,6 @@ if WANT_GRIBINSERT
 endif
 endif
 if WANT_MULTICAST
-    libldm_la_LIBADD	+= $(top_builddir)/mcast_lib/lib.la
+    libldm_la_LIBADD	+= $(top_builddir)/mcast_lib/lib.la @YAML_LIB@
 endif
+    libldm_la_LIBADD	+= @XML2_LIB@ @Z_LIB@ @MATH_LIB@

@@ -933,7 +933,7 @@ AC_DEFUN([UD_SEARCH_HEADER],
     origCppFlags="$CPPFLAGS"
     found=no
     cacheName=ac_cv_header_`echo $2 | tr '/.' '__'`
-    for dir in $3; do
+    for dir in "" $3; do
         CPPFLAGS="${dir:+-I$dir}${CPPFLAGS:+ $CPPFLAGS}"
         #AC_MSG_NOTICE([CPPFLAGS = "$CPPFLAGS"])
         AC_CHECK_HEADER([$2], [found=yes; break])
@@ -947,26 +947,27 @@ AC_DEFUN([UD_SEARCH_HEADER],
         CPPFLAGS="$origCppFlags"
         test "$CPPFLAGS" || unset CPPFLAGS
         if test "$dir"; then
-            eval $4="-I$dir"
+            $4="-I$dir"
         else
-            eval $4=
+            $4=
         fi
-        AC_SUBST([$4])
+        AC_SUBST($4)
     fi
     unset found
 ])
 
-dnl Prepends to LIBS a linker reference to a library if necessary.
+dnl Sets a linker reference to a library if necessary.
 dnl     $1  Name component (e.g., "XML2")
 dnl     $2  Name of a function
 dnl     $3  Space-separated list of directories
+dnl     $4  Name of output variable
 AC_DEFUN([UD_SEARCH_LIB],
 [
     AC_MSG_NOTICE([Searching for the "$1" library])
     AC_SEARCH_LIBS([$2], [$1], ,
         [origLibs="$LIBS"
         found=no
-        for dir in $3; do
+        for dir in "" $3; do
             LIBS="${dir:+-L$dir }-l$1${LIBS:+ $LIBS}"
             #AC_MSG_NOTICE([LIBS = "$LIBS"])
             AC_CHECK_FUNC([$2], [found=yes; break])
@@ -977,7 +978,10 @@ AC_DEFUN([UD_SEARCH_LIB],
             AC_MSG_ERROR(["$1" library not found])
         else
             AC_MSG_NOTICE(["$1" library found in "$dir"])
+            LIBS="$origLibs"
             test "$LIBS" || unset LIBS
+            $4="${dir:+-L$dir }-l$1"
+            AC_SUBST($4)
         fi
         unset found]
     )
