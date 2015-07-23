@@ -332,7 +332,8 @@ AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
 # Ensure a reference to the math library if such functions aren't
 # available by default.
-UD_SEARCH_LIB([m], [log10], [/opt/csw/lib /opt/lib], [MATH_LIB])
+UD_SEARCH_LIB([m], [log10], ["" /opt/csw/lib /usr/local/csw/lib /opt/lib \
+    /usr/local/lib], [MATH_LIB])
 
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUnit unit-testing package.])
@@ -550,22 +551,22 @@ AC_CHECK_HEADERS([stropts.h], ,
 
 # Ensure references to the ZLIB library, which is used by the PNG library and
 # by the XML2 library.
-UD_SEARCH_HEADER([ZLIB], [zlib.h], [/usr/include /opt/csw/include \
-    /usr/local/csw/include /opt/include /opt/X11/include /opt/local/include \
-        /usr/local/include],
+UD_SEARCH_HEADER([ZLIB], [zlib.h], [/opt/csw/include /usr/local/csw/include \
+    /opt/include /opt/X11/include /opt/local/include /usr/local/include ""],
     [ZLIB_INCLUDE])
-UD_SEARCH_LIB([z], [deflate], [/opt/csw/lib /opt/lib /opt/X11/lib \
-    /opt/local/lib /usr/local/lib], [ZLIB_LIB])
+UD_SEARCH_LIB([z], [deflate], [/opt/csw/lib /usr/local/csw/lib \
+    /opt/lib /opt/X11/lib /opt/local/lib /usr/local/lib ""], [ZLIB_LIB])
 
 AM_COND_IF([WANT_NOAAPORT], [
     # Ensure references to the PNG library, which is used by the LDM NOAAPORT
     # module.
     UD_SEARCH_HEADER([PNG], [png.h],
         [/opt/csw/include /usr/local/csw/include /opt/include /opt/X11/include \
-            /opt/local/include /usr/local/include /user/sfw/include],
+            /opt/local/include /usr/local/include /user/sfw/include ""],
         [PNG_INCLUDE])
-    UD_SEARCH_LIB([png], [png_create_read_struct], [/opt/csw/lib /opt/lib \
-        /opt/X11/lib /opt/local/lib /usr/local/lib], [PNG_LIB])
+    UD_SEARCH_LIB([png], [png_create_read_struct],
+        [/opt/csw/lib /usr/local/csw/lib /opt/lib /opt/X11/lib \
+        /opt/local/lib /usr/local/lib /usr/sfw/lib ""], [PNG_LIB])
 ])
 
 AM_COND_IF([WANT_MULTICAST], [
@@ -573,22 +574,26 @@ AM_COND_IF([WANT_MULTICAST], [
     # multicast module.
     UD_SEARCH_HEADER([YAML], [yaml.h],
         [/opt/csw/include /usr/local/csw/include /opt/include /opt/X11/include \
-            /opt/local/include /usr/local/include /user/sfw/include],
+            /opt/local/include /usr/local/include /user/sfw/include ""],
         [YAML_INCLUDE])
-    UD_SEARCH_LIB([yaml], [yaml_emitter_dump], [/opt/csw/lib /opt/lib \
-        /opt/X11/lib /opt/local/lib /usr/local/lib], [YAML_LIB])
+    UD_SEARCH_LIB([yaml], [yaml_emitter_dump],
+        [/opt/csw/lib /usr/local/csw/lib /opt/lib /opt/X11/lib \
+        /opt/local/lib /usr/local/lib /usr/sfw/lib ""], [YAML_LIB])
 ])
 
 # Ensure references to the XML2 library, which is used by the LDM registry
 # module.
 UD_SEARCH_HEADER([XML2], [libxml/parser.h],
-    [/opt/csw/include/libxml2 /usr/local/csw/include/libxml2] \
+    [/opt/csw/include/libxml2 /usr/local/csw/include/libxml2 \
         /opt/include/libxml2 /usr/local/include/libxml2 \
         /opt/X11/include/libxml2 /usr/local/X11/include/libxml2 \
-        /opt/local/include/libxml2 /usr/include/libxml2,
+        /opt/local/include/libxml2 /usr/include/libxml2 ""],
     [XML2_INCLUDE])
-UD_SEARCH_LIB([xml2], [xmlInitParser], [/opt/csw/lib /opt/lib /opt/X11/lib \
-    /opt/local/lib /usr/local/lib], [XML2_LIB])
+UD_SEARCH_LIB([xml2], [xmlInitParser],
+    [/opt/csw/lib /usr/local/csw/lib \
+    /opt/lib /usr/local/lib \
+    /opt/X11/lib /usr/local/X11/lib \
+    /opt/local/lib ""], [XML2_LIB])
 
 #AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
 #AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])

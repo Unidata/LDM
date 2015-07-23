@@ -401,8 +401,8 @@ const char* getRegistryDirPath(void)
 int
 isAntiDosEnabled(void)
 {
-    static int isEnabled;
-    static int isSet = 0;
+    static unsigned isEnabled;
+    static int      isSet = 0;
 
     if (!isSet) {
         int status = reg_getBool(REG_ANTI_DOS, &isEnabled);

@@ -1,4 +1,8 @@
 6.12.15.10
+    Build Procedure:
+        Eliminated default "" from UD_SEARCH_{HEADER,LIB} and made explicit in
+        `configure.ac` to try to get CSW XML2 library on Solaris.
+
     pqing(1):
         Tightened algorithm for decoding the length of GRIB-1 and GRIB-2
         messages.
