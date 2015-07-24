@@ -23,7 +23,7 @@ EOF
 # Modifies a syslog.conf(5) or rsyslog.conf(5) file.
 #
 modifySyslog() {
-    if grep -Fq $LOG_LDM.none "$SYSLOG_CONF"; then
+    if fgrep $LOG_LDM.none "$SYSLOG_CONF" >/dev/null; then
         cp "$SYSLOG_CONF" "$SYSLOG_CONF".new
     else
         awk '
@@ -33,7 +33,7 @@ modifySyslog() {
                 print "'$LOG_LDM'.none	" $2;
             }' "$SYSLOG_CONF" >"$SYSLOG_CONF".new
     fi
-    if grep -q "^$LOG_LDM\." "$SYSLOG_CONF"; then
+    if grep "^$LOG_LDM\." "$SYSLOG_CONF" >/dev/null; then
         : true
     else
         echo >>"$SYSLOG_CONF".new
@@ -48,7 +48,7 @@ modifySyslog() {
     fi
 }
 
-if grep -Fq "$LDM_LOGFILE" "$SYSLOG_CONF"; then
+if fgrep "$LDM_LOGFILE" "$SYSLOG_CONF" >/dev/null; then
     : true
 else
     case "$SYSLOG_CONF" in
