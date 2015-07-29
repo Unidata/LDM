@@ -42,4 +42,6 @@ check-local:		pq_test_insert
 	$(top_builddir)/pqcreate/pqcreate -c -s 500k -q pq_test_insert.pq
 	rm -f pq_test_insert.log 
 	cat $(srcdir)/pq_test_insert.txt
-	./pq_test_insert -vl - -q pq_test_insert.pq $(srcdir)/pq_test_insert.txt
+	$(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=full --show-reachable=yes ./pq_test_insert -vl - \
+	    -q pq_test_insert.pq $(srcdir)/pq_test_insert.txt
