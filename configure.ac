@@ -160,7 +160,6 @@ AC_ARG_WITH([multicast],
     [],
     [with_multicast=no])
 AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
-AM_COND_IF([WANT_MULTICAST], [LIBS="-lstdc++ -lrt${LIBS:+ $LIBS}"])
 AM_COND_IF([WANT_MULTICAST], [AC_DEFINE([WANT_MULTICAST], [1],
     [Package will have multicast capability])])
 
@@ -329,11 +328,6 @@ AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
     [test "$include_root_actions" = true])
 AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
 AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
-
-# Ensure a reference to the math library if such functions aren't
-# available by default.
-UD_SEARCH_LIB([m], [log10], ["" /opt/csw/lib /usr/local/csw/lib /opt/lib \
-    /usr/local/lib], [MATH_LIB])
 
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUnit unit-testing package.])
@@ -518,7 +512,6 @@ AC_C_CONST
 AC_STRUCT_ST_BLKSIZE
 UD_SYSLOG_PIDFILE
 AC_SUBST(CFLAGS)
-UD_NETWORKING
 UD_ULOG
 UD_NEILLEY_COMPAT
 UD_DB
@@ -549,50 +542,53 @@ AC_CHECK_HEADERS([stropts.h], ,
 	AC_MSG_ERROR("Missing necessary header-file"))
 ])
 
-header_dirs='/opt/csw/include
-             /usr/local/csw/include
-             /opt/include
-             /usr/local/include
-             /opt/X11/include
-             /usr/local/X11/include'
-lib_dirs='/opt/csw/lib/amd64 /opt/csw/lib 
-          /usr/local/csw/lib/amd64 /usr/local/csw/lib
-          /opt/lib64 /opt/lib 
-          /usr/local/lib64 /usr/local/lib 
-          /opt/X11/lib64 /opt/X11/lib
-          /usr/local/X11/lib64 /usr/local/X11/lib'
+################################################################################
+# Libraries, in order, from most general to least:
 
-# Ensure references to the ZLIB library, which is used by the PNG library and
+# Ensure a reference to the math library if necessary.
+AC_SEARCH_LIBS([log10], [m], , [AC_MSG_ERROR([Library not found])])
+
+# Ensure references to networking libraries, if necessary.
+AC_SEARCH_LIBS([setsockopt], [socket nsl nsl_s], ,
+    [AC_MSG_ERROR([Library not found])])
+AC_SEARCH_LIBS([inet_addr], [socket nsl nsl_s], ,
+    [AC_MSG_ERROR([Library not found])])
+
+# Ensure references to the ZLIB package, which is used by the PNG library and
 # by the XML2 library.
-UD_SEARCH_HEADER([ZLIB], [zlib.h], [$header_dirs], [ZLIB_INCLUDE])
-UD_SEARCH_LIB([z], [deflate], [$lib_dirs], [Z_LIB])
-
-AM_COND_IF([WANT_NOAAPORT], [
-    # Ensure references to the PNG library, which is used by the LDM NOAAPORT
-    # module.
-    UD_SEARCH_HEADER([PNG], [png.h], [$header_dirs], [PNG_INCLUDE])
-    UD_SEARCH_LIB([png], [png_create_read_struct], [$lib_dirs], [PNG_LIB])
-])
+AC_CHECK_HEADER([zlib.h], , [AC_MSG_ERROR([Header-file not found])])
+AC_SEARCH_LIBS([deflate], [z], , [AC_MSG_ERROR([Library not found])])
 
 AM_COND_IF([WANT_MULTICAST], [
-    # Ensure references to the YAML library, which is used by the LDM-7
+    # Ensure references to the C++ and real-time libraries, if necessary
+    LIBS="-lstdc++ ${LIBS:+ $LIBS}"
+    AC_SEARCH_LIBS([timer_settime], [rt], , [AC_MSG_ERROR([Library not found])])
+
+    # Ensure references to the YAML package, which is used by the LDM-7
     # multicast module.
-    UD_SEARCH_HEADER([YAML], [yaml.h], [$header_dirs], [YAML_INCLUDE])
-    UD_SEARCH_LIB([yaml], [yaml_emitter_dump], [$lib_dirs], [YAML_LIB])
+    AC_CHECK_HEADER([yaml.h], , [AC_MSG_ERROR([Header-file not found])])
+    AC_SEARCH_LIBS([yaml_emitter_dump], [yaml], ,
+        [AC_MSG_ERROR([Library not found])])
 ])
 
-# Ensure references to the XML2 library, which is used by the LDM registry
+AM_COND_IF([WANT_NOAAPORT], [
+    # Ensure references to the PNG package, which is used by the LDM NOAAPORT
+    # module.
+    AC_CHECK_HEADER([png.h], , [AC_MSG_ERROR([Header-file not found])])
+    AC_SEARCH_LIBS([png_create_read_struct], [png], ,
+        [AC_MSG_ERROR([Library not found])])
+])
+
+# Ensure references to the XML2 package, which is used by the LDM registry
 # module.
-UD_SEARCH_HEADER([XML2], [libxml/parser.h],
-    [/opt/csw/include/libxml2 \
-    /usr/local/csw/include/libxml2 \
-    /opt/include/libxml2 \
-    /usr/local/include/libxml2 \
-    /opt/X11/include/libxml2 \
-    /usr/local/X11/include/libxml2 \
-    /usr/include/libxml2],
-    [XML2_INCLUDE])
-UD_SEARCH_LIB([xml2], [xmlInitParser], [$lib_dirs], [XML2_LIB])
+AC_CHECK_HEADER([libxml/parser.h], ,
+    [CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-I/usr/include/libxml2"
+    unset ac_cv_header_libxml_parser_h
+    AC_CHECK_HEADER([libxml/parser.h], ,
+        [AC_MSG_ERROR([Header-file not found])])])
+AC_SEARCH_LIBS([xmlInitParser], [xml2], , [AC_MSG_ERROR([Library not found])])
+
+################################################################################
 
 #AC_CHECK_TYPE([u_short],,[AC_DEFINE([u_short], [unsigned short], [rpcgen(1) typedef])])
 #AC_CHECK_TYPE([u_int],,[AC_DEFINE([u_int], [unsigned int], [rpcgen(1) typedef])])
