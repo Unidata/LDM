@@ -1,4 +1,4 @@
-6.12.15.11	2015-07-29T09:14:46-0600
+6.12.15.11	2015-07-29T09:14:54-0600
     Build Procedure:
         Replaced UD_SEARCH_HEADER and UD_SEARCH_LIB with AC_ macros, improved
         library searching, and modified makefiles accordingly.
