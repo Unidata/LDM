@@ -146,8 +146,21 @@ static void cleanup(void)
     (void)closeulog();
 }
 
+static void
+pti_setSig(
+        signaturet* const sig)
+{
+    for (int i = 0; i < sizeof(signaturet)/4; i++)
+        ((int32_t*)sig)[i] = random();
+}
+
 /**
- * Redirects the standard input stream to the given input file.
+ * Initializes this module:
+ *     - Registers the function `cleanup()` to be run at process termination;
+ *     - Opens the product-queue named by `getQueuePath()`;
+ *     - Redirects the standard input stream to the given input file;
+ *     - Initializes the structure `prod`; and
+ *     - Initializes the PRNG module associated with the function `random()`.
  *
  * @param[in] inputPathname  The pathname of the input file containing the size
  *                           and timestamp fields.
@@ -177,8 +190,8 @@ static bool pti_init(
             (void)strncpy(myname, ghostname(), sizeof(myname));
             myname[sizeof(myname)-1] = 0;
             prod.info.origin = myname;
-            (void)memset(prod.info.signature, 0, sizeof(prod.info.signature));
             prod.data = malloc(20000000);
+            srandom(1);
             success = true;
         }
     }
@@ -338,9 +351,7 @@ static bool pti_execute()
             break;
         }
 
-        size_t nbytes = sizeof(prod.info.seqno);
-        (void)memcpy(prod.info.signature+sizeof(prod.info.signature)-nbytes,
-            &prod.info.seqno, nbytes);
+        pti_setSig(&prod.info.signature);
 
         success = pti_setCreationTime(lineNo, &tm, ns);
         if (!success)
@@ -352,6 +363,7 @@ static bool pti_execute()
         case ENOERR:
             if (ulogIsVerbose())
                 uinfo("%s", s_prod_info(NULL, 0, &prod.info, 1)) ;
+            log_clear(); // just in case
             break;
         case PQUEUE_DUP:
             LOG_ADD1("Product already in queue: %s",
