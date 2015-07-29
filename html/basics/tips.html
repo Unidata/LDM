@@ -35,6 +35,17 @@ configuration-file,
 into multiple, smaller, disjoint entries.
 <a href="tradeoffs.html">More information</a>.
 
+<li>
+If you process a lot of data-products locally on the computer via
+<tt>pqact</tt>, then you should consider having multiple <tt>EXEC pqact...</tt>
+entries in your
+<a href="glindex.html#ldmd.conf"><tt>LDM configuration-file</tt></a> -- each
+using a different, feedtype-specific
+<a href="#pqact.conf"><tt>pqact configuration-file</tt></a> and having a
+different <tt>-f <em>feedtype</em></tt> option. This will reduce the size of
+each <tt>pqact</tt>'s configuration-file and, consequently, the time spent
+attempting to find a matching entry.
+
 </ul>
 
 </BODY>
