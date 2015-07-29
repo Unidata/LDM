@@ -151,7 +151,7 @@ pti_setSig(
         signaturet* const sig)
 {
     for (int i = 0; i < sizeof(signaturet)/4; i++)
-        ((int32_t*)sig)[i] = random();
+        ((int32_t*)sig)[i] = mrand48();
 }
 
 /**
@@ -187,12 +187,20 @@ static bool pti_init(
             LOG_SERROR1("Couldn't open input-file \"%s\"", inputPathname);
         }
         else {
-            (void)strncpy(myname, ghostname(), sizeof(myname));
-            myname[sizeof(myname)-1] = 0;
-            prod.info.origin = myname;
             prod.data = malloc(20000000);
-            srandom(1);
-            success = true;
+            if (prod.data == NULL) {
+                LOG_SERROR0("Couldn't allocate buffer for data-product");
+            }
+            else {
+                (void)strncpy(myname, ghostname(), sizeof(myname));
+                myname[sizeof(myname)-1] = 0;
+                prod.info.origin = myname;
+                srandom(1); // for `random()`
+                unsigned short seed[3];
+                seed[2] = random(); seed[1] = random(); seed[0] = random();
+                (void)seed48(seed); // for `mrand48()`
+                success = true;
+            }
         }
     }
 
