@@ -253,73 +253,108 @@ static int pti_decodeInputLine(
     return status;
 }
 
+#define ONE_BILLION 1000000000
+
+static inline void timespec_diff(
+        struct timespec* const restrict       result,
+        const struct timespec* const restrict left,
+        const struct timespec* const restrict right)
+{
+    result->tv_sec = left->tv_sec - right->tv_sec;
+    result->tv_nsec = left->tv_nsec - right->tv_nsec;
+    if (result->tv_nsec < 0) {
+        result->tv_nsec += ONE_BILLION;
+        result->tv_sec -= 1;
+    }
+}
+
+static inline bool timespec_isPositive(
+        struct timespec* const time)
+{
+    return time->tv_sec > 0 || (time->tv_sec == 0 && time->tv_nsec > 0);
+}
+
+static inline void timespec_sum(
+        struct timespec* const restrict       result,
+        const struct timespec* const restrict left,
+        const struct timespec* const restrict right)
+{
+    result->tv_sec = left->tv_sec + right->tv_sec;
+    result->tv_nsec = left->tv_nsec + right->tv_nsec;
+    if (result->tv_nsec > ONE_BILLION) {
+        result->tv_nsec -= ONE_BILLION;
+        result->tv_sec += 1;
+    }
+}
+
+/**
+ * Sets the creation-time of the next data-product and returns at that time.
+ *
+ * @param[in] init    Whether or not to initialize this function.
+ * @param[in] tm      Input creation-time.
+ * @param[in] ns      Nanosecond component of input creation-time.
+ * @return    true    Success. `prod.info.arrival` is set.
+ * @return    false   Failure. `log_add()` called.
+ */
 static bool pti_setCreationTime(
-        const unsigned long lineNo,
+        const bool          init,
         struct tm* const    tm,
         const unsigned long ns)
 {
-    struct timeval        creationTime;
-    struct timeval        interCreationInterval;
-    struct timeval        returnTime;
-    struct timeval        now;
-    struct timespec       sleepInterval;
-    bool                  success = true;
-    static struct timeval prevReturnTime;
-    static struct timeval prevCreationTime;
+    struct timespec        creationTime;
+    struct timespec        creationInterval;
+    struct timespec        returnTime;
+    static struct timespec prevReturnTime;
+    static struct timespec prevCreationTime;
 
-    // Set the current creation-time
+    // Set the input creation-time
     creationTime.tv_sec = mktime(tm);
-    creationTime.tv_usec = ns/1000;
+    creationTime.tv_nsec = ns;
 
-    if (lineNo == 1) {
-        prevReturnTime.tv_sec = prevReturnTime.tv_usec = 0;
+    if (init) {
+        prevReturnTime.tv_sec = prevReturnTime.tv_nsec = 0;
         prevCreationTime = creationTime;
     }
 
-    // Compute the inter-product creation interval
-    interCreationInterval.tv_sec = creationTime.tv_sec - prevCreationTime.tv_sec;
-    interCreationInterval.tv_usec = creationTime.tv_usec - prevCreationTime.tv_usec;
-    if (interCreationInterval.tv_usec < 0) {
-        interCreationInterval.tv_sec -= 1;
-        interCreationInterval.tv_usec += 1000000;
-    }
+    // Compute the time-interval since the previous input creation-time.
+    timespec_diff(&creationInterval, &creationTime, &prevCreationTime);
 
-    /*
-     * Compute when this function should return based on the previous return
-     * time and the inter-product creation interval.
-     */
-    returnTime.tv_sec = prevReturnTime.tv_sec + interCreationInterval.tv_sec;
-    returnTime.tv_usec = prevReturnTime.tv_usec + interCreationInterval.tv_usec;
-    if (returnTime.tv_usec > 1000000) {
-        returnTime.tv_sec += 1;
-        returnTime.tv_usec -= 1000000;
+    if (!timespec_isPositive(&creationInterval)) {
+        (void)clock_gettime(CLOCK_REALTIME, &returnTime);
     }
+    else {
+        struct timespec now;
+        struct timespec sleepInterval;
 
-    // Compute how long to sleep based on the return time and the current time.
-    (void)set_timestamp(&now);
-    sleepInterval.tv_sec = returnTime.tv_sec - now.tv_sec;
-    sleepInterval.tv_nsec = (returnTime.tv_usec - now.tv_usec) * 1000;
-    if (sleepInterval.tv_nsec < 0) {
-        sleepInterval.tv_sec -= 1;
-        sleepInterval.tv_nsec += 1000000000;
-    }
+        /*
+         * Compute when this function should return based on the previous return
+         * time and the interval since the previous input creation-time.
+         */
+        timespec_sum(&returnTime, &prevReturnTime, &creationInterval);
 
-    // Sleep if necessary
-    if (sleepInterval.tv_sec >= 0) {
-        if (nanosleep(&sleepInterval, NULL)) {
-            LOG_SERROR0("Couldn't sleep");
-            success = false;
+        /*
+         * Compute how long to sleep based on the return time and the current
+         * time.
+         */
+        (void)clock_gettime(CLOCK_REALTIME, &now);
+        timespec_diff(&sleepInterval, &returnTime, &now);
+
+        // Sleep if necessary
+        if (timespec_isPositive(&sleepInterval)) {
+            if (nanosleep(&sleepInterval, NULL)) {
+                LOG_SERROR0("Couldn't sleep");
+                return false;
+            }
         }
     }
 
     // Set the product's creation-time and save values for next time
-    if (success) {
-        prevCreationTime = creationTime;
-        (void)set_timestamp(&prod.info.arrival);
-        prevReturnTime = prod.info.arrival;
-    }
+    prod.info.arrival.tv_sec = returnTime.tv_sec;
+    prod.info.arrival.tv_usec = returnTime.tv_nsec / 1000;
+    prevCreationTime = creationTime;
+    prevReturnTime = returnTime;
 
-    return success;
+    return true;
 }
 
 /**
@@ -361,7 +396,7 @@ static bool pti_execute()
 
         pti_setSig(&prod.info.signature);
 
-        success = pti_setCreationTime(lineNo, &tm, ns);
+        success = pti_setCreationTime(lineNo == 1, &tm, ns);
         if (!success)
             break;
 
