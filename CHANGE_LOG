@@ -8,6 +8,10 @@
 
         Improved sequence-number handling.
 
+    Build Procedure:
+        Promoted check for realtime library out of WANT_MULTICAST section to
+        absolute requirement due to clock_gettime().
+
 6.12.15.11	2015-07-29T09:14:54-0600
     Build Procedure:
         Replaced UD_SEARCH_HEADER and UD_SEARCH_LIB with AC_ macros, improved

@@ -548,6 +548,9 @@ AC_CHECK_HEADERS([stropts.h], ,
 # Ensure a reference to the math library if necessary.
 AC_SEARCH_LIBS([log10], [m], , [AC_MSG_ERROR([Library not found])])
 
+# Ensure a reference to the real-time library, if necessary
+AC_SEARCH_LIBS([clock_gettime], [rt], , [AC_MSG_ERROR([Library not found])])
+
 # Ensure references to networking libraries, if necessary.
 AC_SEARCH_LIBS([setsockopt], [socket nsl nsl_s], ,
     [AC_MSG_ERROR([Library not found])])
@@ -560,9 +563,8 @@ AC_CHECK_HEADER([zlib.h], , [AC_MSG_ERROR([Header-file not found])])
 AC_SEARCH_LIBS([deflate], [z], , [AC_MSG_ERROR([Library not found])])
 
 AM_COND_IF([WANT_MULTICAST], [
-    # Ensure references to the C++ and real-time libraries, if necessary
+    # Ensure a reference to the C++ library, if necessary
     LIBS="-lstdc++ ${LIBS:+ $LIBS}"
-    AC_SEARCH_LIBS([timer_settime], [rt], , [AC_MSG_ERROR([Library not found])])
 
     # Ensure references to the YAML package, which is used by the LDM-7
     # multicast module.
