@@ -4,6 +4,10 @@
 
         Slightly improved code for computing creation-times and sleeping.
 
+        Added internal documentation.
+
+        Improved sequence-number handling.
+
 6.12.15.11	2015-07-29T09:14:54-0600
     Build Procedure:
         Replaced UD_SEARCH_HEADER and UD_SEARCH_LIB with AC_ macros, improved
