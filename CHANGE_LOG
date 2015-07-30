@@ -1,4 +1,4 @@
-6.12.15.12	2015-07-30T15:17:32-0600
+6.12.15.12	2015-07-30T15:17:37-0600
     pq_test_insert(1):
         Slightly improved the pseudo-randomness of the generated signatures.
 
