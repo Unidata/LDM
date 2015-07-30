@@ -38,7 +38,7 @@ static char        myname[HOSTNAMESIZE];
 static const char* progname;
 static feedtypet   feedtype = EXP;
 static product     prod;
-static int         seq_start = 0;
+static unsigned    seq_start = 0;
 
 static bool pti_decodeCommandLine(
         int                ac,
@@ -74,6 +74,10 @@ static bool pti_decodeCommandLine(
             break;
         case 's':
             seq = atoi(optarg);
+            if (seq < 0) {
+                LOG_ADD1("Invalid beginning sequence-number \"%s\"", optarg);
+                success = false;
+            }
             break;
         case 'v':
             (void)setulogmask(getulogmask() | LOG_MASK(LOG_INFO));
@@ -102,7 +106,7 @@ static bool pti_decodeCommandLine(
         }
         else {
             prod.info.feedtype = feedtype = ft;
-            prod.info.seqno = seq_start = seq;
+            seq_start = seq;
             setQueuePath(pqPathname);
             *inputPathname = *av;
         }
@@ -253,8 +257,15 @@ static int pti_decodeInputLine(
     return status;
 }
 
-#define ONE_BILLION 1000000000
+static const long ONE_BILLION = 1000000000;
 
+/**
+ * Returns the difference between two `struct timespec`s.
+ *
+ * @param[out] result  The difference `left - right`.
+ * @param[in]  left    The left operand.
+ * @param[in]  right   The right operand.
+ */
 static inline void timespec_diff(
         struct timespec* const restrict       result,
         const struct timespec* const restrict left,
@@ -268,12 +279,13 @@ static inline void timespec_diff(
     }
 }
 
-static inline bool timespec_isPositive(
-        struct timespec* const time)
-{
-    return time->tv_sec > 0 || (time->tv_sec == 0 && time->tv_nsec > 0);
-}
-
+/**
+ * Returns the sum of two `struct timespec`s.
+ *
+ * @param[out] result  The sum `left + right`.
+ * @param[in]  left    The left operand.
+ * @param[in]  right   The right operand.
+ */
 static inline void timespec_sum(
         struct timespec* const restrict       result,
         const struct timespec* const restrict left,
@@ -285,6 +297,19 @@ static inline void timespec_sum(
         result->tv_nsec -= ONE_BILLION;
         result->tv_sec += 1;
     }
+}
+
+/**
+ * Indicates if a `struct timespec` contains a positive value or not.
+ *
+ * @param[in] time   The time to examine.
+ * @retval    true   `time` is positive.
+ * @retval    false  `time` is zero or negative.
+ */
+static inline bool timespec_isPositive(
+        struct timespec* const time)
+{
+    return time->tv_sec > 0 || (time->tv_sec == 0 && time->tv_nsec > 0);
 }
 
 /**
@@ -376,6 +401,7 @@ static bool pti_execute()
     (void)ft_format(feedtype, feedStr, sizeof(feedStr));
     unotice("Starting up: feedtype=%s, seq_start=%d", feedStr, seq_start);
 
+    prod.info.seqno = seq_start;
     for (lineNo = 1, success = true; success; prod.info.seqno++, lineNo++) {
         unsigned long ns;
         int           status = pti_decodeInputLine(lineNo, &prod.info.sz, &tm,
