@@ -1719,43 +1719,65 @@ sub getCpu
     my($contextSwitches) = -1;
     my($haveMem) = 0;
     my($haveSwap) = 0;
-    open(FH, $top."|") or die "Can't fork() top(1): $!";
-    while (<FH>) {
-	if (/^mem/i) {
-	    s/k/e3/gi;
-	    s/m/e6/gi;
-	    s/g/e9/gi;
-	    $memUsed = $1 if /([[:digit:]]+(e\d)?) used/i;
-	    $memUsed = $1 if /([[:digit:]]+(e\d)?) phys/i;
-	    $memFree = $1 if /([[:digit:]]+(e\d)?) free/i;
-	    if ($memUsed < 0 && $memFree >= 0 && /([[:digit:]]+(e\d)?) real/i) {
-		$memUsed = $1 - $memFree;
-	    }
-	    $haveMem = 1;
-	    if (/swap/) {
-		if (/([[:digit:]]+(e\d)?) (free swap|swap free)/i) {
-		    $swapFree = $1;
-		}
-		if (/([[:digit:]]+(e\d)?) (total )?swap/i) {
-		    $swapUsed = $1 - $swapFree;
-		}
-		if (/([[:digit:]]+(e\d)?) swap in use/i) {
-		    $swapUsed = $1;
-		}
-		$haveSwap = 1;
-	    }
-	}
-	elsif (/^swap/i) {
-	    s/k/e3/gi;
-	    s/m/e6/gi;
-	    s/g/e9/gi;
-	    /([[:digit:]]+(e\d)?) used/i;	$swapUsed = $1;
-	    /([[:digit:]]+(e\d)?) free/i;	$swapFree = $1;
-	    $haveSwap = 1;
-	}
-	last if ($haveMem && $haveSwap);
+
+    if (open(FH, $top."|")) {
+        while (<FH>) {
+            if (/^mem/i) {
+                s/k/e3/gi;
+                s/m/e6/gi;
+                s/g/e9/gi;
+                $memUsed = $1 if /([[:digit:]]+(e\d)?) used/i;
+                $memUsed = $1 if /([[:digit:]]+(e\d)?) phys/i;
+                $memFree = $1 if /([[:digit:]]+(e\d)?) free/i;
+                if ($memUsed < 0 && $memFree >= 0 && /([[:digit:]]+(e\d)?) real/i) {
+                    $memUsed = $1 - $memFree;
+                }
+                $haveMem = 1;
+                if (/swap/) {
+                    if (/([[:digit:]]+(e\d)?) (free swap|swap free)/i) {
+                        $swapFree = $1;
+                    }
+                    if (/([[:digit:]]+(e\d)?) (total )?swap/i) {
+                        $swapUsed = $1 - $swapFree;
+                    }
+                    if (/([[:digit:]]+(e\d)?) swap in use/i) {
+                        $swapUsed = $1;
+                    }
+                    $haveSwap = 1;
+                }
+            }
+            elsif (/^swap/i) {
+                s/k/e3/gi;
+                s/m/e6/gi;
+                s/g/e9/gi;
+                /([[:digit:]]+(e\d)?) used/i;	$swapUsed = $1;
+                /([[:digit:]]+(e\d)?) free/i;	$swapFree = $1;
+                $haveSwap = 1;
+            }
+            last if ($haveMem && $haveSwap);
+        }
+        (close FH || !$!) or die "Can't close(): status=$?";
     }
-    (close FH || !$!) or die "Can't close(): status=$?";
+    
+    # If unsuccessful getting memory and swap usage from top(1), try using
+    # free(1)
+    if (!$haveMem || !$haveSwap) {
+        if (open(FH, "free |")) {
+            while (<FH>) {
+                if (/^Mem:/i) {
+                    my(@fields) = split(/\s+/);
+                    $memUsed = $fields[2];
+                    $memFree = $fields[3];
+                }
+                if (/^Swap:/i) {
+                    my(@fields) = split(/\s+/);
+                    $swapUsed = $fields[2];
+                    $swapFree = $fields[3];
+                }
+            }
+            (close FH || !$!) or die "Can't close(): status=$?";
+        }
+    }
 
     my($csIndex) = -1;
     my($usIndex) = -1;
