@@ -322,9 +322,13 @@ fb_rel(fb *fbp, int size, fblk_t fblk)
 }
 
 
-/* 
+/**
  * Gets a free fblk of specified level (0 <= level < MAX_LEVEL).
- * If no fblks are available, returns OFF_NONE.
+ *
+ * @param[in] fbp       Pointer to fblk structure
+ * @param[in] level     Level of fblk to return.
+ * @retval    OFF_NONE  if no fblk is available. `uerror()` called.
+ * @return              An fblk of the given level.
  */
 static fblk_t 
 fb_get(fb *fbp, int level)
@@ -548,15 +552,14 @@ tq_rel_tqelem(tqueue *const tq, int level, tqep_t p)
 #define TV_CMP_EQ(tv, uv) \
         ((tv).tv_sec == (uv).tv_sec && (tv).tv_usec == (uv).tv_usec)
 
-/*
- * Add element to time-queue.
+/**
+ * Adds an element to the time-queue.
  *
- * Arguments:
- *      tq      Pointer to time-queue.
- *      offset  Offset to data-portion of element to be added to time-queue.
- * Returns:
- *      0       Success
- *      !0      <errno.h> failure code.
+ * @param[in] tq      Pointer to time-queue.
+ * @param[in] offset  Offset to data-portion of element to be added to
+ *                    time-queue.
+ * @retval    0       Success
+ * @retval    ENOSPC  No more fblk-s: too many products in queue.
  */
 static int
 tq_add(
@@ -579,8 +582,8 @@ tq_add(
     // Pointer to the i-th element in the time-queue
     #define TQE_PTR(i)              (tq->tqep + i)
     /*
-     * Lvalue index of the time-queue element that's the next element after
-     * `elt` in the k-level linked-list.
+     * Index of the time-queue element that's the next element after `elt` in
+     * the k-level linked-list.
      */
     #define TQE_INDEX_NEXT(elt, k)  fbp->fblks[(elt)->fblk + k]
     /*
@@ -637,126 +640,47 @@ tq_add(
         /*
          * Found where to put the new element (just after `tpp`). Obtain a
          * skip-list node to contain it.
-         *
-         * The following hack limits increments in level to 1.  This messes up
-         * the theoretical distribution of random levels slightly and could be
-         * left out for a "purist" implementation.
          */
         k = fb_ranlev(fbp);
-        if (k > tq->level) {
-            tq->level++;
-            k = tq->level;
-            update[k] = TQE_PTR(TQ_HEAD);
-        }
-
-        tp->offset = offset;
-        tp->fblk = fb_get(fbp, k);      // Get new fblk of level k
-
         /*
-         * Insert the new element by having it reference the following element
-         * and having the immediately previous level-k element reference the new
-         * element for all level k.
+         * The following hack limits increments in level to 1.  This messes
+         * up the theoretical distribution of random levels slightly and
+         * could be left out for a "purist" implementation.
          */
-        do {
-            tpp = update[k];
-            TQE_INDEX_NEXT(tp, k) = TQE_INDEX_NEXT(tpp, k);
-            TQE_INDEX_NEXT(tpp, k) = tpix;
-        } while(--k >= 0);
-#if 0
-        do {
-            tpp = &tq->tqep[p];
+        if (k > tq->level)
+            k = tq->level + 1;
 
-            for (;;) {
-                tqep_t  q;
-                tqelem* tqp;
-
-                /*
-                 * q = p->forward[k]; same as *(fbp->fblks + tpp->fblk + k).
-                 */
-                q = fbp->fblks[tpp->fblk + k];
-                tqp = &tq->tqep[q];
-
-                /*
-                 * while(q->key < key) {...}
-                 */
-                while (TV_CMP_LT(tqp->tv, tp->tv)) {
-                    p = q;
-                    tpp = tqp;
-                    /*
-                     * q = p->forward[k]
-                     */
-                    q = fbp->fblks[tpp->fblk + k];
-                    tqp = &tq->tqep[q];
-                }
-
-                if (!TV_CMP_EQ(tqp->tv, tp->tv)) {
-                    /*
-                     * The insertion-time of the new data-product is unique.
-                     */
-                    update[k] = p;
-
-                    if (--k < 0)
-                        break;          /* done */
-                }
-                else {
-                    /*
-                     * A data-product with the same insertion-time as the
-                     * target-time already exists in the time-queue.  Because
-                     * keys in the time-queue must be unique, the target-time
-                     * is incremented by one microsecond and the search is
-                     * restarted from the last highest-level position.  This
-                     * should be safe as long as the mean interval between
-                     * data-product insertions is much greater than one
-                     * microsecond (ASSUMPTION).
-                     */
-                    timestamp_incr(&tp->tv);
-
-                    if (k < tq->level) {
-                        k = tq->level;
-                        p = update[k];
-                    }
-
-                    break;              /* re-search necessary */
-                }                       /* found entry with same time */
-            }                           /* loop until done or re-search */
-        } while (k >= 0);               /* loop until done */
-
-        /*
-         * Found where to put the new element.  Obtain a skip-list node to
-         * contain it.
-         *
-         * The following hack limits increments in level to 1.  This messes up
-         * the theoretical distribution of random levels slightly and could be
-         * left out for a "purist" implementation.
-         */
-        k = fb_ranlev(fbp);
-        if (k > tq->level) {
-            tq->level++;
-            k = tq->level;
-            update[k] = TQ_HEAD;
-        }
-
-        tp->offset = offset;
-        tp->fblk = fb_get(fbp, k);      /* Get new fblk of level k */
-
-        /*
-         * Insert the new element by having it reference the following element
-         * and having the immediately previous level-k element reference the new
-         * element for all level k.
-         */
-        do {
-            p = update[k];
-            tpp = &tq->tqep[p];
+        fblk_t fblk = fb_get(fbp, k);      // Get new fblk of level k
+        if (fblk == OFF_NONE) {
             /*
-             * q->forward[k] = p->forward[k]
+             * TODO: Return `tp` to the list of free elements, i.e., reverse the
+             * effects of `tq_get_tqelem(tq)`. Unfortunately, `tq_rel_tqelem()`
+             * does too much. Fortunately, this error will cause the downstream
+             * LDM to terminate, so the need isn't immediate.
              */
-            fbp->fblks[tp->fblk + k] = fbp->fblks[tpp->fblk + k];
+            status = errno = ENOSPC;       // out of fblk-s
+        }
+        else {
+            tp->fblk = fblk;
+            tp->offset = offset;
+
+            if (k > tq->level) {
+                for (int i = tq->level + 1; i <= k; i++)
+                    update[i] = TQE_PTR(TQ_HEAD);
+                tq->level = k;
+            }
+
             /*
-             * p->forward[k] = q;  forward pointer to new tqelem.
+             * Insert the new element by having it reference the following
+             * element and having the immediately previous level-k element
+             * reference the new element for all level k.
              */
-            fbp->fblks[tpp->fblk + k] = tpix;
-        } while(--k >= 0);
-#endif
+            do {
+                tpp = update[k];
+                TQE_INDEX_NEXT(tp, k) = TQE_INDEX_NEXT(tpp, k);
+                TQE_INDEX_NEXT(tpp, k) = tpix;
+            } while(--k >= 0);
+        }
     }                                   /* insertion-time set */
 
     return status;
