@@ -489,6 +489,8 @@ setCancelState(
  * Returns a socket that's connected to an Internet server via TCP.
  *
  * @param[in]  servAddr       Pointer to the address of the server.
+ * @param[in]  family         IP address family to try. One of AF_INET,
+ *                            AF_INET6, or AF_UNSPEC.
  * @param[out] sock           Pointer to the socket to be set. The client should
  *                            call `close(*sock)` when it's no longer needed.
  * @param[out] sockAddr       Pointer to the socket address object to be set.
@@ -503,15 +505,16 @@ setCancelState(
  * @retval     LDM7_SYSTEM    System error. `log_start()` called.
  */
 static int
-getSocket(
+getSock(
     const ServiceAddr* const restrict       servAddr,
+    const int                               family,
     int* const restrict                     sock,
     struct sockaddr_storage* const restrict sockAddr)
 {
     struct sockaddr_storage addr;
     socklen_t               sockLen;
-    int                     status = sa_getInetSockAddr(servAddr, false, &addr,
-            &sockLen);
+    int                     status = sa_getInetSockAddr(servAddr, family, false,
+            &addr, &sockLen);
 
     if (status == 0) {
         const int         useIPv6 = addr.ss_family == AF_INET6;
@@ -543,7 +546,48 @@ getSocket(
         } /* "fd" is open */
     } /* "addr" is set */
 
-    udebug("getSocket(): Returning %d", status);
+    udebug("getSock(): Returning %d", status);
+    return status;
+}
+
+/**
+ * Returns a socket that's connected to an Internet server via TCP.
+ *
+ * @param[in]  servAddr       Pointer to the address of the server.
+ * @param[out] sock           Pointer to the socket to be set. The client should
+ *                            call `close(*sock)` when it's no longer needed.
+ * @param[out] sockAddr       Pointer to the socket address object to be set.
+ * @retval     0              Success. `*sock` and `*sockAddr` are set.
+ * @retval     LDM7_INVAL     Invalid port number or host identifier.
+ *                            `log_start()` called.
+ * @retval     LDM7_IPV6      IPv6 not supported. `log_start()` called.
+ * @retval     LDM7_REFUSED   Remote host refused connection (server likely
+ *                            isn't running). `log_start()` called.
+ * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()`
+ *                            called.
+ * @retval     LDM7_SYSTEM    System error. `log_start()` called.
+ */
+static int
+getSocket(
+    const ServiceAddr* const restrict       servAddr,
+    int* const restrict                     sock,
+    struct sockaddr_storage* const restrict sockAddr)
+{
+    struct sockaddr_storage addr;
+    socklen_t               sockLen;
+    int                     fd;
+    int                     status = getSock(servAddr, AF_UNSPEC, &fd, &addr);
+
+    if (status) {
+        log_clear();
+        status = getSock(servAddr, AF_INET, &fd, &addr);
+    }
+
+    if (status == 0) {
+        *sock = fd;
+        *sockAddr = addr;
+    }
+
     return status;
 }
 

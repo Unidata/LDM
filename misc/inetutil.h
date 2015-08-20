@@ -19,6 +19,7 @@
 
 #include <stdbool.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
 #ifdef IPPROTO_IP /* we included netinet/in.h, so struct sockaddr_in is */
 extern const char*    hostbyaddr(
@@ -257,7 +258,10 @@ sa_parseWithDefaults(
 /**
  * Returns the Internet socket address that corresponds to a service address.
  *
- * @param[in]  serviceAddr   The service address.
+ * @param[in]  servAddr      The service address.
+ * @param[in]  family        Address family. One of AF_INET, AF_INET6, or
+ *                           AF_UNSPEC, in which case the name in `servAddr`
+ *                           should be unambiguous (i.e., not a hostname).
  * @param[in]  serverSide    Whether or not the returned socket address should be
  *                           suitable for a server's `bind()` operation.
  * @param[out] inetSockAddr  The corresponding Internet socket address. The
@@ -278,6 +282,7 @@ sa_parseWithDefaults(
 int
 sa_getInetSockAddr(
     const ServiceAddr* const       servAddr,
+    const int                      family,
     const bool                     serverSide,
     struct sockaddr_storage* const inetSockAddr,
     socklen_t* const               sockLen);

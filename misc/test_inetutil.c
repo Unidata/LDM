@@ -75,7 +75,8 @@ test_sa_getInetSockAddr(void)
     struct sockaddr_storage inetSockAddr;
     socklen_t               sockLen;
 
-    status = sa_getInetSockAddr(serviceAddr, true, &inetSockAddr, &sockLen);
+    status = sa_getInetSockAddr(serviceAddr, AF_INET, true, &inetSockAddr,
+            &sockLen);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL(((struct sockaddr_in*)&inetSockAddr)->sin_family, AF_INET);
     CU_ASSERT_EQUAL(((struct sockaddr_in*)&inetSockAddr)->sin_addr.s_addr,
@@ -99,7 +100,8 @@ test_sa_getInet6SockAddr(void)
     struct sockaddr_storage inetSockAddr;
     socklen_t               sockLen;
 
-    status = sa_getInetSockAddr(serviceAddr, true, &inetSockAddr, &sockLen);
+    status = sa_getInetSockAddr(serviceAddr, AF_INET6, true, &inetSockAddr,
+            &sockLen);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL(((struct sockaddr_in6*)&inetSockAddr)->sin6_family,
             AF_INET6);

@@ -35,7 +35,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1501,7 +1500,10 @@ sa_parseWithDefaults(
  * Returns the Internet socket address corresponding to a TCP service address.
  * Supports both IPv4 and IPv6.
  *
- * @param[in]  serviceAddr   The service address.
+ * @param[in]  servAddr      The service address.
+ * @param[in]  family        Address family. One of AF_INET, AF_INET6, or
+ *                           AF_UNSPEC, in which case the name in `servAddr`
+ *                           should be unambiguous (i.e., not a hostname).
  * @param[in]  serverSide    Whether or not the returned socket address should be
  *                           suitable for a server's `bind()` operation.
  * @param[out] inetSockAddr  The corresponding Internet socket address. The
@@ -1524,6 +1526,7 @@ sa_parseWithDefaults(
 int
 sa_getInetSockAddr(
     const ServiceAddr* const       servAddr,
+    const int                      family,
     const bool                     serverSide,
     struct sockaddr_storage* const inetSockAddr,
     socklen_t* const               sockLen)
@@ -1543,7 +1546,7 @@ sa_getInetSockAddr(
         const char* const inetId = sa_getInetId(servAddr);
 
         (void)memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_INET;
+        hints.ai_family = family;
         hints.ai_protocol = IPPROTO_TCP;
         hints.ai_socktype = SOCK_STREAM;
         /*
