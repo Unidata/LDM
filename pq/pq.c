@@ -653,10 +653,11 @@ tq_add(
         fblk_t fblk = fb_get(fbp, k);      // Get new fblk of level k
         if (fblk == OFF_NONE) {
             /*
-             * TODO: Return `tp` to the list of free elements, i.e., reverse the
-             * effects of `tq_get_tqelem(tq)`. Unfortunately, `tq_rel_tqelem()`
-             * does too much. Fortunately, this error will cause the downstream
-             * LDM to terminate, so the need isn't immediate.
+             * TODO: Return `tp` to the list of free elements; i.e., reverse the
+             * effects of the earlier `tq_get_tqelem(tq)` call. Unfortunately,
+             * `tq_rel_tqelem()` does too much. Fortunately, this error will
+             * cause the downstream LDM to terminate, so the need isn't
+             * immediate.
              */
             status = errno = ENOSPC;       // out of fblk-s
         }
