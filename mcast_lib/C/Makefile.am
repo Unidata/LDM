@@ -104,7 +104,7 @@ test_cppflags				= @OPMOCK_CPPFLAGS@
 
 mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c
 nodist_mldm_sender_manager_test_SOURCES = $(mcast_stubs)
-mldm_sender_manager_test_CPPFLAGS	= $(test_cppflags)
+mldm_sender_manager_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
 mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_sender_manager_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  	  @OPMOCK_LDADD@
@@ -112,14 +112,14 @@ mldm_sender_manager_test_LDADD		= $(top_builddir)/lib/libldm.la \
 mldm_receiver_test_SOURCES 		= mldm_receiver_test.c mldm_receiver.c
 nodist_mldm_receiver_test_SOURCES 	= $(mcast_stubs) $(pq_stubs) \
 					  $(down7_stubs)
-mldm_receiver_test_CPPFLAGS		= $(test_cppflags)
+mldm_receiver_test_CPPFLAGS		= $(AM_CPPFLAGS) $(test_cppflags)
 mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
 mldm_receiver_test_LDADD  		= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
 
 mldm_receiver_memory_test_SOURCES 	= mldm_receiver_memory_test.c
 nodist_mldm_receiver_memory_test_SOURCES = $(globals_stubs)
-mldm_receiver_memory_test_CPPFLAGS	= $(test_cppflags)
+mldm_receiver_memory_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
