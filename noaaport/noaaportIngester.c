@@ -287,7 +287,7 @@ static void usage(
 "   -b npages   Allocate \"npages\" pages of memory for the internal buffer.\n"
 "               Default is %lu pages. \"getconf PAGESIZE\" reveals page-size.\n"
 "   -I ip_addr  Listen for multicast packets on interface \"ip_addr\".\n"
-"               Default is to listen on all available interfaces.\n"
+"               Default is system's default multicast interface.\n"
 "   -l log      Log to file \"log\".  Default is to use the system logging\n"
 "               daemon if the current process is a daemon (i.e., doesn't\n"
 "               have a controlling terminal); otherwise, the standard error\n"
@@ -1171,7 +1171,8 @@ execute(
  *      <dd>Allocate \e npages pages of memory for the internal buffer.</dd>
  *
  *      <dt>-I <em>ip_addr</em></dt>
- *      <dd>Listen for multicast packets on interface \e ip_addr.</dd>
+ *      <dd>Listen for multicast packets on interface \e ip_addr. Default is
+ *      the system's default multicast interface.</dd>
  *
  *      <dt>-l <em>log</em></dt>
  *      <dd>Log to file \e log. The default is to use the system logging daemon
