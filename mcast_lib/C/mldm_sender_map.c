@@ -176,6 +176,7 @@ msm_setSmoPathname(void)
     const char*       userName = getenv("USER");
     if (userName == NULL) {
         LOG_START0("Couldn't get value of environment variable \"USER\"");
+        status = LDM7_SYSTEM;
     }
     else {
         int nbytes = snprintf(NULL, 0, format, userName);
