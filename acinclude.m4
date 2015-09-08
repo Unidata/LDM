@@ -216,7 +216,10 @@ AC_DEFUN([UD_PROG_NETSTAT], [dnl
 		for options in '-f inet -P tcp -n' '-f inet -p tcp -n' \
 			'-A inet -t -n'; do
 		    cmd="$ac_path_NETSTAT $options"
-		    if $cmd >/dev/null 2>&1; then
+                    dnl The test is for no standard error output because
+                    dnl some netstat(1)s have an exit code of 0 even if
+                    dnl invoked incorrectly (Fedora's, for example)
+		    if test -z "`$cmd 2>&1 >/dev/null`"; then
 			ac_cv_path_NETSTAT=$cmd
 			ac_path_NETSTAT_found=:
 			break

@@ -1,4 +1,7 @@
 6.12.15.13
+    Build Procedure:
+        Improved test of netstat(1) options by the configure-script.
+
     ldmadmin(1):
         Modified the "printmetrics" command to use free(1) to obtain
         memory-usage metrics if they aren't obtained from top(1).
@@ -6,6 +9,9 @@
     pq(3):
         Modified tq_add() to error-return if it can't get an fblk because
         there are too many products in the queue.
+        
+        Modified rpqe_new() to return the product-queue to a consistent state
+        if an error occurs.
 
     inetutil(3):
         Modified sa_getInetSockAddr() to try AF_UNSPEC first, then AF_INET.

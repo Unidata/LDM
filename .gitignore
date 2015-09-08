@@ -86,3 +86,5 @@ TEST-test.xml
 t.t
 ulog/hupsyslog
 ulog/ulogger
+down7_test.pq
+up7_test.pq
