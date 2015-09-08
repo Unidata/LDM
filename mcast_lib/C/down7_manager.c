@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Copyright 2015 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -266,16 +266,20 @@ elt_stop(
  *
  * @param[in] ft           Feedtype to subscribe to.
  * @param[in] ul7          Upstream LDM-7 to which to subscribe. Caller may free.
+ * @param[in] mcastIface   IP address of interface to use for incoming packets.
+ *                         Caller may free upon return. "0.0.0.0" obtains the
+ *                         system's default multicast interface.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System failure. `log_start()` called.
  */
 Ldm7Status
 d7mgr_add(
         const feedtypet             ft,
-        ServiceAddr* const restrict ul7)
+        ServiceAddr* const restrict ul7,
+        const char* const restrict  mcastIface)
 {
     int  status;
-    Elt* elt = elt_new(ft, ul7, "0.0.0.0"); // all interfaces for now
+    Elt* elt = elt_new(ft, ul7, mcastIface);
 
     if (NULL == elt) {
         status = LDM7_SYSTEM;
