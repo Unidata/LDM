@@ -60,26 +60,22 @@ typedef struct {
 } Sender;
 
 typedef struct {
-    ServiceAddr*          servAddr;
     Down7*                down7;
     pthread_t             thread;
 } Receiver;
 
 // Number of data-products to insert
-static const int         NUM_PRODS = 1000;
+static const int         NUM_PRODS = 1;
 // Maximum size of a data-product in bytes
 static const int         MAX_PROD_SIZE = 100000;
 // Size of the data portion of the product-queue in bytes
 static const int         PQ_SIZE = 2000000;
 #define                  NUM_PQ_SLOTS (PQ_SIZE/(MAX_PROD_SIZE/2))
-// Feedtype of the stream
-static const feedtypet   FEEDTYPE = ANY;
 static const char        LOCAL_HOST[] = "127.0.0.1";
 static sigset_t          termSigSet;
 static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
 static const char        DOWN7_PQ_PATHNAME[] = "down7_test.pq";
 static McastProdIndex    initialProdIndex;
-static McastInfo*        mcastInfo;
 static Sender            sender;
 static Receiver          receiver;
 
@@ -125,37 +121,6 @@ initCondAndMutex(void)
     return status;
 }
 #endif
-
-static int
-setMcastInfo(void)
-{
-    ServiceAddr* mcastServAddr;
-    int          status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
-
-    if (status) {
-        LOG_ADD0("Couldn't create multicast service address object");
-    }
-    else {
-        ServiceAddr* ucastServAddr;
-
-        status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
-        if (status) {
-            LOG_ADD0("Couldn't create unicast service address object");
-        }
-        else {
-            status = mi_new(&mcastInfo, FEEDTYPE, mcastServAddr, ucastServAddr);
-            if (status) {
-                LOG_ADD0("Couldn't create multicast information object");
-            }
-            else {
-                sa_free(ucastServAddr);
-                sa_free(mcastServAddr);
-            }
-        }
-    }
-
-    return status;
-}
 
 static void signal_handler(
         int sig)
@@ -211,26 +176,23 @@ setup(void)
     else {
         msm_clear();
 
-        status = setMcastInfo();
-        if (status == 0) {
-            (void)sigemptyset(&termSigSet);
-            (void)sigaddset(&termSigSet, SIGINT);
-            (void)sigaddset(&termSigSet, SIGTERM);
-            /*
-             * The following allows a SIGTERM to be sent to the process group
-             * without affecting the parent process (e.g., a make(1)).
-             */
-            (void)setpgrp();
+        (void)sigemptyset(&termSigSet);
+        (void)sigaddset(&termSigSet, SIGINT);
+        (void)sigaddset(&termSigSet, SIGTERM);
+        /*
+         * The following allows a SIGTERM to be sent to the process group
+         * without affecting the parent process (e.g., a make(1)).
+         */
+        (void)setpgrp();
 
-            #if !USE_SIGWAIT
-                status = initCondAndMutex();
-            #endif
+        #if !USE_SIGWAIT
+            status = initCondAndMutex();
+        #endif
 
-            status = setTermSigHandler();
-            if (status) {
-                LOG_ADD0("Couldn't set termination signal handler");
-            }
-        } // multicast information set
+        status = setTermSigHandler();
+        if (status) {
+            LOG_ADD0("Couldn't set termination signal handler");
+        }
     }
 
     if (status)
@@ -251,8 +213,6 @@ teardown(void)
         (void)pthread_cond_destroy(&cond);
         (void)pthread_mutex_destroy(&mutex);
     #endif
-
-    mi_free(mcastInfo);
 
     return 0;
 }
@@ -796,13 +756,47 @@ sender_insertProducts(
 }
 
 static int
-sender_start(void)
+setMcastInfo(
+        McastInfo** const mcastInfo,
+        const feedtypet   feedtype)
+{
+    ServiceAddr* mcastServAddr;
+    int          status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
+
+    if (status) {
+        LOG_ADD0("Couldn't create multicast service address object");
+    }
+    else {
+        ServiceAddr* ucastServAddr;
+
+        status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
+        if (status) {
+            LOG_ADD0("Couldn't create unicast service address object");
+        }
+        else {
+            status = mi_new(mcastInfo, feedtype, mcastServAddr, ucastServAddr);
+            if (status) {
+                LOG_ADD0("Couldn't create multicast information object");
+            }
+            else {
+                sa_free(ucastServAddr);
+                sa_free(mcastServAddr);
+            }
+        }
+    }
+
+    return status;
+}
+
+static int
+sender_start(
+        const feedtypet feedtype)
 {
     // The following ensures that the first product-index will be 0
-    int status = pim_delete(NULL, FEEDTYPE);
+    int status = pim_delete(NULL, feedtype);
     if (status) {
         LOG_ADD1("Couldn't delete product-index map for feedtype %#lx",
-                FEEDTYPE);
+                feedtype);
     }
     else {
         status = createEmptyProductQueue(UP7_PQ_PATHNAME);
@@ -811,22 +805,31 @@ sender_start(void)
                     UP7_PQ_PATHNAME);
         }
         else {
-            status = mlsm_clear();
-            status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
-                    UP7_PQ_PATHNAME);
+            McastInfo* mcastInfo;
+
+            status = setMcastInfo(&mcastInfo, feedtype);
             if (status) {
-                LOG_ADD0("mlsm_addPotentialSender() failure");
+                LOG_ADD0("Couldn't set multicast information");
             }
             else {
-                // Starts the sender on a new thread
-                status = sender_spawn();
+                status = mlsm_clear();
+                status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
+                        UP7_PQ_PATHNAME);
                 if (status) {
-                    LOG_ADD0("Couldn't spawn sender");
+                    LOG_ADD0("mlsm_addPotentialSender() failure");
                 }
                 else {
-                    done = 0;
+                    // Starts the sender on a new thread
+                    status = sender_spawn();
+                    if (status) {
+                        LOG_ADD0("Couldn't spawn sender");
+                    }
+                    else {
+                        done = 0;
+                    }
                 }
-            }
+                mi_free(mcastInfo);
+            } // `mcastInfo` allocated
 
             if (status)
                 (void)deleteProductQueue(UP7_PQ_PATHNAME);
@@ -983,16 +986,18 @@ receiver_start(
 }
 
 /**
- * Starts the receiver on a new thread.
+ * Initializes the receiver.
  *
- * @param[in]  addr      Address of sender: either hostname or IPv4 address.
- * @param[in]  port      Port number of sender in host byte-order.
- * @retval 0   Success.
+ * @param[in]     addr      Address of sender: either hostname or IPv4 address.
+ * @param[in]     port      Port number of sender in host byte-order.
+ * @param[in]     feedtype  The feedtype to which to subscribe.
+ * @retval        0         Success. `*receiver` is initialized.
  */
 static int
-receiver_spawn(
+receiver_init(
         const char* const restrict addr,
-        const unsigned short       port)
+        const unsigned short       port,
+        const feedtypet            feedtype)
 {
     int status = createEmptyProductQueue(DOWN7_PQ_PATHNAME);
     if (status) {
@@ -1004,15 +1009,46 @@ receiver_spawn(
         status = sa_new(&servAddr, addr, port);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
-        receiver.down7 = down7_new(servAddr, FEEDTYPE, LOCAL_HOST,
+        receiver.down7 = down7_new(servAddr, feedtype, LOCAL_HOST,
                 DOWN7_PQ_PATHNAME);
-        CU_ASSERT_PTR_NOT_EQUAL_FATAL(receiver.down7, NULL);
+        CU_ASSERT_PTR_NOT_NULL_FATAL(receiver.down7);
+        sa_free(servAddr);
+    }
 
+    return status;
+}
+
+/**
+ * Destroys the receiver.
+ */
+static void
+receiver_destroy(void)
+{
+    down7_free(receiver.down7);
+}
+
+/**
+ * Starts the receiver on a new thread.
+ *
+ * @param[in]  addr      Address of sender: either hostname or IPv4 address.
+ * @param[in]  port      Port number of sender in host byte-order.
+ * @param[in]  feedtype  The feedtype to which to subscribe.
+ * @retval 0   Success.
+ */
+static int
+receiver_spawn(
+        const char* const restrict addr,
+        const unsigned short       port,
+        const feedtypet            feedtype)
+{
+    int status = receiver_init(addr, port, feedtype);
+    if (status) {
+        LOG_ADD0("Couldn't initialize receiver");
+    }
+    else {
         status = pthread_create(&receiver.thread, NULL, receiver_start,
                 &receiver);
         CU_ASSERT_EQUAL_FATAL(status, 0);
-
-        sa_free(servAddr);
     }
 
     return status;
@@ -1077,7 +1113,7 @@ static void
 test_up7(
         void)
 {
-    int status = sender_start();
+    int status = sender_start(ANY);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -1098,7 +1134,7 @@ test_down7(
     done = 0;
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(LOCAL_HOST, 38800);
+    status = receiver_spawn(LOCAL_HOST, 38800, ANY);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -1118,12 +1154,13 @@ static void
 test_missed_product(
         void)
 {
-    int      status = sender_start();
+    int      status = sender_start(ANY);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender));
+    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender),
+            ANY);
     CU_ASSERT_EQUAL(status, 0);
     log_log(LOG_ERR);
 
@@ -1163,15 +1200,39 @@ test_missed_product(
 }
 
 static void
+test_bad_subscription(
+        void)
+{
+    int      status = sender_start(ANY);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = receiver_init(sender_getAddr(&sender), sender_getPort(&sender),
+            NGRID);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = down7_start(receiver.down7);
+    CU_ASSERT_EQUAL(status, LDM7_INVAL);
+
+    receiver_destroy();
+
+    udebug("Terminating sender");
+    status = sender_terminate();
+    CU_ASSERT_EQUAL(status, LDM7_INVAL);
+    log_clear();
+}
+
+static void
 test_up7_down7(
         void)
 {
-    int      status = sender_start();
+    int      status = sender_start(ANY);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender));
+    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender),
+            ANY);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
@@ -1214,16 +1275,17 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_DEBUG, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            if (// CU_ADD_TEST(testSuite, test_up7) &&
-                    // CU_ADD_TEST(testSuite, test_down7) &&
-                    // CU_ADD_TEST(testSuite, test_missed_product) &&
-                    CU_ADD_TEST(testSuite, test_up7_down7)
+            if (/*CU_ADD_TEST(testSuite, test_up7) &&
+                    CU_ADD_TEST(testSuite, test_down7) && */
+                    CU_ADD_TEST(testSuite, test_missed_product) /*&&
+                    CU_ADD_TEST(testSuite, test_bad_subscription) &&
+                    CU_ADD_TEST(testSuite, test_up7_down7) */
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();
