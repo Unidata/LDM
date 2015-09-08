@@ -1,5 +1,5 @@
 /**
- *   Copyright 2013, University Corporation for Atmospheric Research.
+ *   Copyright 2015, University Corporation for Atmospheric Research.
  *   All Rights reserved.
  *   <p>
  *   See file COPYRIGHT in the top-level source-directory for copying and
@@ -272,13 +272,17 @@ lcf_addMulticast(
  *
  * @param[in] feedtype     Feedtype to subscribe to.
  * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
+ * @param[in] mcastIface   IP address of interface to use for incoming packets.
+ *                         Caller may free upon return. "0.0.0.0" obtains the
+ *                         system's default multicast interface.
  * @retval    0            Success.
  * @retval    ENOMEM       System failure. `log_start()` called.
  */
 int
 lcf_addReceive(
-        const feedtypet    feedtype,
-        ServiceAddr* const ldmSvcAddr);
+        const feedtypet             feedtype,
+        ServiceAddr* const restrict ldmSvcAddr,
+        const char* const restrict  mcastIface);
 
 #endif
 
