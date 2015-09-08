@@ -134,7 +134,9 @@ check-doubly_linked_list:	doubly_linked_list_test
 	    --leak-check=full --show-reachable=yes ./doubly_linked_list_test
 
 executor_test_SOURCES	= executor_test.c
-executor_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+# `executor.c` is in the list to maintain the dependency graph.
+executor_test_LDADD	=  executor.lo $(top_builddir)/lib/libldm.la \
+			   @LIBS_CUNIT@
 
 check-executor:		executor_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \

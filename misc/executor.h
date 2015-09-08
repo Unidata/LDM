@@ -120,6 +120,7 @@ Job* exe_getCompleted(
  * @param[in] exe      The executor.
  * @retval    0        Success.
  * @retval    ENOMEM   Out-of-memory. `log_add()` called.
+ * @retval    EINVAL   Executor is in the wrong state. `log_start()` called.
  */
 int exe_shutdown(
         Executor* const restrict exe);

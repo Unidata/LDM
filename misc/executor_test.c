@@ -163,29 +163,25 @@ int main(
     int exitCode = 1;
     const char* progname = basename((char*) argv[0]);
 
-    if (-1 == openulog(progname, 0, LOG_LOCAL0, "-")) {
-        (void) fprintf(stderr, "Couldn't open logging system\n");
-        exitCode = 1;
-    }
-    else {
-        if (CUE_SUCCESS == CU_initialize_registry()) {
-            CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
+    log_initLogging(progname, LOG_NOTICE, LOG_LDM);
 
-            if (NULL != testSuite) {
-                if (CU_ADD_TEST(testSuite, test_exe_new) &&
-                        CU_ADD_TEST(testSuite, test_exe_submit) &&
-                        CU_ADD_TEST(testSuite, test_exe_shutdown_empty) &&
-                        CU_ADD_TEST(testSuite, test_exe_shutdown) &&
-                        CU_ADD_TEST(testSuite, test_submit_while_shutdown) &&
-                        CU_ADD_TEST(testSuite, test_exe_clear)) {
-                    CU_basic_set_mode(CU_BRM_VERBOSE);
-                    (void) CU_basic_run_tests();
-                }
+    if (CUE_SUCCESS == CU_initialize_registry()) {
+        CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
+
+        if (NULL != testSuite) {
+            if (CU_ADD_TEST(testSuite, test_exe_new) &&
+                    CU_ADD_TEST(testSuite, test_exe_submit) &&
+                    CU_ADD_TEST(testSuite, test_exe_shutdown_empty) &&
+                    CU_ADD_TEST(testSuite, test_exe_shutdown) &&
+                    CU_ADD_TEST(testSuite, test_submit_while_shutdown) &&
+                    CU_ADD_TEST(testSuite, test_exe_clear)) {
+                CU_basic_set_mode(CU_BRM_VERBOSE);
+                (void) CU_basic_run_tests();
             }
-
-            exitCode = CU_get_number_of_tests_failed();
-            CU_cleanup_registry();
         }
+
+        exitCode = CU_get_number_of_tests_failed();
+        CU_cleanup_registry();
     }
 
     log_free();
