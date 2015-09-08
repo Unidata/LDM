@@ -1352,7 +1352,7 @@ rl_init(regionl *const rl, size_t const nalloc, fb *fbp)
 /*
  * Affirm that that another element can be added to rl.
  */
-static int
+static inline int
 rl_HasSpace(const regionl *const rl)
 {
         return (rl->nempty > 0);
@@ -1608,7 +1608,8 @@ rl_fext_find(regionl *rl, size_t extent)
 /*
  * Get index of an available region for a specified extent off the
  * list of free regions, using a best fit algorithm.  Returns
- * RL_NONE if none available.  
+ * RL_NONE if none available. Increments the number of regions in use if
+ * successful. This function is the complement of `rl_put()`.
  */
 static size_t
 rl_get(regionl *const rl, size_t extent) 
@@ -1644,7 +1645,8 @@ rl_get(regionl *const rl, size_t extent)
 #define RLHASHP(rl) ((rlhash *)(&(rl)->rp[(rl)->nalloc + RL_FREE_OVERHEAD]))
 
 /*
- * Delete elem from region hashtable by offset.
+ * Delete elem from region hashtable by offset. This function is the complement
+ * of `rlhash_add()`.
  */
 static void
 rlhash_del(regionl *const rl, size_t rlix)
@@ -2024,7 +2026,8 @@ rl_r_find(regionl *const rl, off_t const offset, region **rpp)
 
 
 /*
- * Add in-use region to region hashtable by offset.
+ * Add in-use region to region hashtable by offset. This function is the
+ * complement of `rlhash_del()`.
  */
 static void
 rlhash_add(regionl *const rl, size_t rpix)
@@ -2119,6 +2122,33 @@ rl_split(regionl *const rl, size_t rlix, size_t const extent)
             status = ENOMEM;
         }
         return status;
+}
+
+
+/**
+ * Returns a region to the list of free regions. This function is the complement
+ * of `rl_get()`.
+ *
+ * @param[in,out] rl    Pointer to the regions object.
+ * @param[in]     rlix  Index of the region to be returned. Shall be less than
+ *                      `rl->nalloc`.
+ */
+static void
+rl_put(regionl *const rl, const size_t rlix)
+{
+    assert(rlix < rl->nalloc);
+
+    rl->nelems--;
+
+    /* Return region with index `rlix` to the free list. */
+    rl_rel(rl, rlix); // increments number of free regions, `rl->nfree`
+    rl_consolidate(rl, rlix); // updates maximum free extent
+
+    /* Update statistics */
+    if(rl->nfree > rl->maxfree)
+        rl->maxfree = rl->nfree;
+
+    assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
 }
 
 
@@ -4628,7 +4658,7 @@ unwind_mask:
 /* Begin rp */
 
 /*
- * Release/unlock a data region.
+ * Release/unlock a data region. This function is the complement of `rgn_get()`.
  */
 static int
 rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
@@ -4638,7 +4668,7 @@ rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
 }
 
 /*
- * Get/lock a data region.
+ * Get/lock a data region. This function is the complement of `rgn_rel()`.
  *
  * Returns:
  *      0       Success
@@ -4800,8 +4830,7 @@ rpqe_free(pqueue *pq, off_t offset, signaturet signature)
  *
  * @param[in] pq    The product-queue.
  * @param[in] tqep  The associated time-queue entry.
- * @param[in] info  The information-buffer containing the data-product
- *                  metadata.
+ * @param[in] info  The data-product metadata.
  */
 static void
 pq_set_mvrt(
@@ -5061,7 +5090,8 @@ pq_del_oldest(
 
 /*
  * Delete oldest elements until you have space for 'extent'
- * Returns in *rixp the region list index for a suitable region.
+ * Returns in *rixp the region list index for a suitable region. Increments the
+ * number of regions in use if successful.
  */
 static int
 rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
@@ -5115,7 +5145,13 @@ rpqe_mkslot(pqueue *const pq)
 /**
  * Allocate a new region for a data-product from the data section (which may
  * eventually get handed to the user). Delete products in the queue, as
- * necessary, in order to make room.
+ * necessary, in order to make room. If successful, then
+ * - A new region is added to the regions-in-use list;
+ * - The number of regions in use is incremented;
+ * - The number of bytes in use is incremented;
+ * - The maximum number of regions in use is updated;
+ * - The maximum number of bytes in use is updated;
+ * - The data portion of the region is locked.
  *
  * @param[in]  pq      The product-queue.
  * @param[in]  extent  The size of the product in bytes.
@@ -5154,72 +5190,88 @@ static int
 rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
         void **vpp, sxelem **sxepp)
 {
-        int status = ENOERR;
-        size_t rlix;            /* region list index */
-        region *hit = NULL;
-        off_t highwater = 0;
-        static size_t smallest_extent_seen = UINT_MAX;
+    int           status = ENOERR;
+    size_t        rlix;            /* region list index */
+    region*       hit = NULL;
+    static size_t smallest_extent_seen = UINT_MAX;
 
-        /*
-         * Check for duplicate
-         */
-        if(sx_find(pq->sxp, sxi, sxepp) != 0) {
-                udebug("PQUEUE_DUP");
-                return PQUEUE_DUP;
-        }
+    /*
+     * Check for duplicate
+     */
+    if (sx_find(pq->sxp, sxi, sxepp) != 0) {
+        udebug("PQUEUE_DUP");
+        return PQUEUE_DUP;
+    }
 
-        /* We may need to split what we find */
-        if(!rl_HasSpace(pq->rlp)) {
-          /* get one slot */
-          status = rpqe_mkslot(pq);
-          if(status != ENOERR)
+    /* We may need to split what we find */
+    if (!rl_HasSpace(pq->rlp)) {
+        /* get one slot */
+        status = rpqe_mkslot(pq);
+        if (status != ENOERR)
             return status;
-        }
+    }
 
-        extent = _RNDUP(extent, pq->ctlp->align);
-        if (extent < smallest_extent_seen) {
-            smallest_extent_seen = extent;
-        }
+    extent = _RNDUP(extent, pq->ctlp->align);
+    if (extent < smallest_extent_seen)
+        smallest_extent_seen = extent;
 
-        rlix = rl_get(pq->rlp, extent);
-        if (rlix == RL_NONE) {
-            status = rpqe_mkspace(pq, extent, &rlix);
-            if(status != ENOERR)
-                return status;
-        }
-        hit = pq->rlp->rp + rlix;
-        assert(IsFree(hit));
-#define PQ_FRAGMENT_HEURISTIC 64
-        /* Don't bother to split off tiny fragments too small for any
-           product we've seen */
-        if(extent + smallest_extent_seen + PQ_FRAGMENT_HEURISTIC < hit->extent) {
-            status = rl_split(pq->rlp, rlix, extent);
-            if(status != ENOERR)
-                return status;
-            hit = pq->rlp->rp + rlix;
-        }
-                
-        assert((hit->offset % pq->ctlp->align) == 0);
-        set_IsAlloc(hit);
-        rlhash_add(pq->rlp, rlix);
+    rlix = rl_get(pq->rlp, extent);
+    if (rlix == RL_NONE) {
+        status = rpqe_mkspace(pq, extent, &rlix);
+        if (status != ENOERR)
+            return status;
+    }
+    hit = pq->rlp->rp + rlix;
+    assert(IsFree(hit));
+    #define PQ_FRAGMENT_HEURISTIC 64
+    /* Don't bother to split off tiny fragments too small for any
+       product we've seen */
+    if (extent + smallest_extent_seen + PQ_FRAGMENT_HEURISTIC < hit->extent) {
+        status = rl_split(pq->rlp, rlix, extent);
+        if (status != ENOERR)
+            goto rl_split_failure;
+    }
 
-        /* update stats */
-        highwater = hit->offset + (off_t)Extent(hit) - pq->ctlp->datao;
-        if(highwater > pq->ctlp->highwater)
+    assert((hit->offset % pq->ctlp->align) == 0);
+    set_IsAlloc(hit);
+    rlhash_add(pq->rlp, rlix);
+
+    status = rgn_get(pq, hit->offset, Extent(hit), RGN_WRITE, vpp);
+    if (status != ENOERR)
+        goto rgn_get_failure;
+
+    {
+        sxelem* const sxelem = sx_add(pq->sxp, sxi, hit->offset);
+        if (sxelem == NULL) {
+            uerror("%s:rpqe_new(): sx_add() failure", __FILE__);
+            status = ENOMEM;
+            goto sx_add_failure;
+        }
+        else {
+            *sxepp = sxelem;
+
+            /* Update stats */
+            off_t         highwater = hit->offset + (off_t)Extent(hit) -
+                    pq->ctlp->datao;
+            if (highwater > pq->ctlp->highwater)
                 pq->ctlp->highwater = highwater;
-        
-        if(pq->rlp->nelems >  pq->ctlp->maxproducts)
+            if (pq->rlp->nelems >  pq->ctlp->maxproducts)
                 pq->ctlp->maxproducts = pq->rlp->nelems;
-        pq->rlp->nbytes += (off_t)Extent(hit);
-        if(pq->rlp->nbytes > pq->rlp->maxbytes)
-            pq->rlp->maxbytes = pq->rlp->nbytes;
+            pq->rlp->nbytes += (off_t)Extent(hit);
+            if (pq->rlp->nbytes > pq->rlp->maxbytes)
+                pq->rlp->maxbytes = pq->rlp->nbytes;
+        }
+    }
 
-        status = rgn_get(pq, hit->offset, Extent(hit), RGN_WRITE, vpp);
-        if(status != ENOERR)
-                return status;
+    return status;
 
-        *sxepp = sx_add(pq->sxp, sxi, hit->offset); 
-
+    sx_add_failure:
+        (void)rgn_rel(pq, hit->offset, 0); // region's data portion unmodified
+    rgn_get_failure:
+        rlhash_del(pq->rlp, rlix);
+        clear_IsAlloc(hit);
+    rl_split_failure:
+        rl_put(pq->rlp, rlix); // undoes `rl_get()` and `rpqe_mkspace()`
         return status;
 }
 
@@ -5227,7 +5279,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
  * Locks a product-queue against multi-thread access if and only if the queue
  * was created or opened with the option `PQ_THREADSAFE`. Calls `abort()` on
  * failure. May be called multiple times by the same thread but each call must
- * be undone by a later call to `unlock()`.
+ * be undone by a later call to `unlockIf()`.
  *
  * @param[in] pq  The product-queue to be locked.
  */
@@ -5242,7 +5294,7 @@ static void lockIf(
  * Unlocks a product-queue for multi-thread access if and only if the queue
  * was created or opened with the option `PQ_THREADSAFE`. Calls `abort()` on
  * failure. May be called multiple times by the same thread but each call must
- * be matched by an earlier call to `lock()`.
+ * be matched by an earlier call to `lockIf()`.
  *
  * @param[in] pq  The product-queue to be unlocked.
  */
@@ -5684,11 +5736,10 @@ pq_unlock(
  *      infop           Pointer to the data-product metadata object.
  *      ptrp            Pointer to the pointer to the region into which to 
  *                      write the data-product.  Set upon successful return.
- *      indexp          Pointer to the handle to identify the region.  Set
- *                      upon successful return. The client must call \c
- *                      pqe_insert() when all the data has been written or \c
- *                      pqe_discard() to abort the writing and release the
- *                      region.
+ *      indexp          Pointer to the handle for the region.  Set upon
+ *                      successful return. The client must call `pqe_insert()`
+ *                      when all the data has been written or `pqe_discard()`
+ *                      to abort the writing and release the region.
  * Returns:
  *      0               Success.  "*ptrp" and "*indexp" are set.
  *      else            <errno.h> error code.
@@ -5776,13 +5827,13 @@ unwind_lock:
  * @param[in]  signature  The data-product's MD5 checksum.
  * @param[out] ptrp       Pointer to the pointer to the region into which to
  *                        write the XDR-encoded data-product -- starting with
- *                        the data-product metadata. The client must begin
+ *                        the data-product metadata. The caller must begin
  *                        writing at `*ptrp` and not write more than `size`
  *                        bytes of data.
- * @param[out] indexp     Pointer to the handle to identify the region. The
- *                        client must call `pqe_insert()` when all the data has
- *                        been written or `pqe_discard()` to abort the writing
- *                        and release the region.
+ * @param[out] indexp     Pointer to the handle for the region. The caller must
+ *                        call `pqe_insert()` when all the data has been written
+ *                        or `pqe_discard()` to abort the writing and release
+ *                        the region.
  * @retval     0          Success.  `*ptrp` and `*indexp` are set.
  * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
  *                        `log_add()` called.
@@ -5842,7 +5893,7 @@ pqe_newDirect(
                 }
                 else {
                     /*
-                     * Save the region information in the client-supplied index
+                     * Save the region information in the caller-supplied index
                      * structure.
                      */
                     indexp->offset = sxep->offset;
