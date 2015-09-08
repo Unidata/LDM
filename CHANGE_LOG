@@ -6,6 +6,9 @@
         Modified the "printmetrics" command to use free(1) to obtain
         memory-usage metrics if they aren't obtained from top(1).
 
+    ldmd(1):
+        Added optional specification of multicast-interface to RECEIVE entry.
+
     pq(3):
         Modified tq_add() to error-return if it can't get an fblk because
         there are too many products in the queue.
