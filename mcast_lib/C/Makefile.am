@@ -167,8 +167,9 @@ valgrind-prod_index_queue_test:	prod_index_queue_test
 valgrind-up7_down7_test:	up7_down7_test
 	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
             --mode=execute valgrind --leak-check=full --show-reachable=yes \
-            --suppressions=up7_down7_test.supp --gen-suppressions=all \
+            --suppressions=up7_down7_test.supp \
             ./up7_down7_test
+#            --suppressions=up7_down7_test.supp --gen-suppressions=all 
 
 local_checks			+= check-up7_down7_test
 check-up7_down7_test:		up7_down7_test
