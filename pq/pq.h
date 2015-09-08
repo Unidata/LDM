@@ -232,11 +232,10 @@ pq_unlock(
  *      infop           Pointer to the data-product metadata object.
  *      ptrp            Pointer to the pointer to the region into which to 
  *                      write the data-product.  Set upon successful return.
- *      indexp          Pointer to the handle to identify the region.  Set
- *                      upon successful return. The client must call \c
- *                      pqe_insert() when all the data has been written or \c
- *                      pqe_discard() to abort the writing and release the
- *                      region.
+ *      indexp          Pointer to the handle for the region.  Set upon
+ *                      successful return. The client must call `pqe_insert()`
+ *                      when all the data has been written or `pqe_discard()`
+ *                      to abort the writing and release the region.
  * Returns:
  *      0               Success.  "*ptrp" and "*indexp" are set.
  *      else            <errno.h> error code.
@@ -257,13 +256,13 @@ pqe_new(pqueue *pq,
  * @param[in]  signature  The data-product's MD5 checksum.
  * @param[out] ptrp       Pointer to the pointer to the region into which to
  *                        write the XDR-encoded data-product -- starting with
- *                        the data-product metadata. The client must begin
+ *                        the data-product metadata. The caller must begin
  *                        writing at `*ptrp` and not write more than `size`
  *                        bytes of data.
- * @param[out] indexp     Pointer to the handle to identify the region. The
- *                        client must call `pqe_insert()` when all the data has
- *                        been written or `pqe_discard()` to abort the writing
- *                        and release the region.
+ * @param[out] indexp     Pointer to the handle for the region. The caller must
+ *                        call `pqe_insert()` when all the data has been written
+ *                        or `pqe_discard()` to abort the writing and release
+ *                        the region.
  * @retval     0          Success.  `*ptrp` and `*indexp` are set.
  * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
  *                        `log_add()` called.
