@@ -231,7 +231,7 @@ up7_subscribe(
 
     if (status) {
         if (LDM7_NOENT == status) {
-            log_log(LOG_INFO);
+            log_log(LOG_NOTICE);
             reply->status = LDM7_INVAL; // non-existent feed
             status = 0;
         }
@@ -366,7 +366,8 @@ up7_sendProduct(
  * the downstream LDM-7 is notified that no corresponding data-product exists.
  *
  * @param[in] iProd   Product-index.
- * @retval    true    Success.
+ * @retval    true    Success. Either the product or a notice of unavailability
+ *                    was sent to the client.
  * @retval    false   Failure. `log_start()` called.
  */
 static bool
@@ -379,13 +380,15 @@ up7_findAndSendProduct(
         log_log(LOG_INFO);
         (void)no_such_product_7(&iProd, clnt);
 
-        if (clnt_stat(clnt) != RPC_TIMEDOUT) {
+        if (clnt_stat(clnt) == RPC_TIMEDOUT) {
+            status = 0;
+        }
+        else {
             /*
              * The status will be RPC_TIMEDOUT unless an error occurs because
              * the RPC call uses asynchronous message-passing.
              */
             LOG_START1("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
-            return false;
         }
     }
 
@@ -728,12 +731,14 @@ request_product_7_svc(
     if (clnt == NULL) {
         LOG_START1("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
         log_log(LOG_ERR);
-        svc_destroy(xprt);      // asynchrony => no sense replying
+        svcerr_systemerr(xprt); // so the remote client will learn
+        svc_destroy(xprt);      // so the caller will learn
     }
     else if (!up7_findAndSendProduct(*iProd)) {
         log_log(LOG_ERR);
+        svcerr_systemerr(xprt); // so the remote client will learn
         up7_destroyClient();
-        svc_destroy(xprt);      // asynchrony => no sense replying
+        svc_destroy(xprt);      // so the caller will learn
     }
 
     return NULL;                // don't reply
