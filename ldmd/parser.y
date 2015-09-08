@@ -445,6 +445,9 @@ decodeSendEntry(
  *
  * @param[in] feedtypeSpec   Specification of the feedtype.
  * @param[in] LdmServerSpec  Specification of the remote LDM server.
+ * @param[in] mcastIface     IP address of the interface to use for receiving
+ *                           multicast packets. "0.0.0.0" obtains the system's
+ *                           default multicast interface.
  * @retval    0              Success.
  * @retval    EINVAL         Invalid specification. `log_start()` called.
  * @retval    ENOMEM         Out-of-memory. `log_start()` called.
@@ -452,7 +455,8 @@ decodeSendEntry(
 static int
 decodeReceiveEntry(
         const char* const restrict feedtypeSpec,
-        const char* const restrict ldmServerSpec)
+        const char* const restrict ldmServerSpec,
+        const char* const restrict mcastIface)
 {
     feedtypet   feedtype;
     int         status = decodeFeedtype(&feedtype, feedtypeSpec);
@@ -464,7 +468,7 @@ decodeReceiveEntry(
                 ldmPort);       // Internet ID must exist; port is optional
 
         if (0 == status) {
-            status = lcf_addReceive(feedtype, ldmSvcAddr);
+            status = lcf_addReceive(feedtype, ldmSvcAddr, mcastIface);
 
             sa_free(ldmSvcAddr);
         }       // `ldmSvcAddr` allocated
@@ -625,14 +629,26 @@ include_stmt:   INCLUDE_K STRING
                         return -1;
                 }
 
-receive_entry:        RECEIVE_K STRING STRING
+receive_entry:  RECEIVE_K STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeReceiveEntry($2, $3);
+                    int errCode = decodeReceiveEntry($2, $3, "0.0.0.0");
 
                     if (errCode) {
                         LOG_ADD2("Couldn't decode receive entry "
                                 "\"RECEIVE %s %s\"", $2, $3);
+                        return errCode;
+                    }
+                #endif
+                }
+                | RECEIVE_K STRING STRING STRING
+                {
+                #if WANT_MULTICAST
+                    int errCode = decodeReceiveEntry($2, $3, $4);
+
+                    if (errCode) {
+                        LOG_ADD3("Couldn't decode receive entry "
+                                "\"RECEIVE %s %s %s\"", $2, $3, $4);
                         return errCode;
                     }
                 #endif
