@@ -5830,11 +5830,11 @@ unwind_lock:
  *                        the data-product metadata. The caller must begin
  *                        writing at `*ptrp` and not write more than `size`
  *                        bytes of data.
- * @param[out] indexp     Pointer to the handle for the region. The caller must
- *                        call `pqe_insert()` when all the data has been written
- *                        or `pqe_discard()` to abort the writing and release
- *                        the region.
- * @retval     0          Success.  `*ptrp` and `*indexp` are set.
+ * @param[out] indexp     Pointer to the handle for the region.
+ * @retval     0          Success.  `*ptrp` and `*indexp` are set. The caller
+ *                        must eventually call either `pqe_insert()` when all
+ *                        the data has been written or `pqe_discard()` to abort
+ *                        the writing and release the region.
  * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
  *                        `log_add()` called.
    @retval     EACCES     Product-queue is read-only. `log_add()` called.
