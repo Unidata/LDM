@@ -263,13 +263,15 @@ up7proxy_unlock(
 /**
  * Subscribes to an upstream LDM-7 server.
  *
- * @param[in]  proxy      Proxy for the upstream LDM-7.
- * @param[in]  feedtype   Feedtype specification.
- * @param[out] mcastInfo  Information on the multicast group corresponding to
- *                        `feedtype`.
- * @retval     0          If and only if success. `*mcastInfo` is set. The
- *                        caller should call `mi_free(*mcastInfo)` when it's no
- *                        longer needed.
+ * @param[in]  proxy       Proxy for the upstream LDM-7.
+ * @param[in]  feedtype    Feedtype specification.
+ * @param[out] mcastInfo   Information on the multicast group corresponding to
+ *                         `feedtype`.
+ * @retval     0           If and only if success. `*mcastInfo` is set. The
+ *                         caller should call `mi_free(*mcastInfo)` when it's no
+ *                         longer needed.
+ * @retval     LDM7_INVAL  The upstream LDM-7 doesn't multicast `feedtype`.
+ *                         `log_start()` called.
  */
 static int
 up7proxy_subscribe(
@@ -296,15 +298,28 @@ up7proxy_subscribe(
     }
     else {
         status = reply->status;
-        if (status == 0) {
+        if (status == LDM7_INVAL) {
+            char buf[256];
+
+            (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
+            LOG_START1("Upstream LDM-7 doesn't multicast feedtype %s", buf);
+        }
+        else if (status != 0) {
+            char buf[256];
+
+            (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
+            LOG_START2("Couldn't subscribe to feedtype %s: status=%d",  buf,
+                    status);
+        }
+        else {
             McastInfo* const mi = &reply->SubscriptionReply_u.mgi;
             char* miStr = mi_format(mi);
             udebug("%s:up7proxy_subscribe(): Subscription reply is %s",
                     __FILE__, miStr);
             free(miStr);
             *mcastInfo = mi_clone(mi);
-            xdr_free(xdr_SubscriptionReply, (char*)reply);
         }
+        xdr_free(xdr_SubscriptionReply, (char*)reply);
     }
 
     up7proxy_unlock(proxy);
@@ -371,7 +386,7 @@ up7proxy_requestSessionBacklog(
 static int
 up7proxy_requestProduct(
     Up7Proxy* const      proxy,
-    VcmtpProdIndex const iProd)
+    const VcmtpProdIndex iProd)
 {
     up7proxy_lock(proxy);
 
@@ -1728,6 +1743,7 @@ down7_start(
         status = 0;
     }
     else if (DOWN7_INITIALIZED != down7->state) {
+        LOG_START1("Downstream LDM-7 is in wrong state: %d", down7->state);
         status = LDM7_INVAL;
     }
     else {
@@ -1806,12 +1822,12 @@ down7_stop(
  * either wasn't started or has been stopped.
  *
  * @pre                   The downstream LDM-7 was returned by `down7_new()` and
- *                        either `down7_run()` has not been called on it or
+ *                        either `down7_start()` has not been called on it or
  *                        `down7_stop()` has been called on it.
  * @param[in] down7       Pointer to the downstream LDM-7 to be freed or NULL.
  * @retval    0           Success.
  * @retval    LDM7_INVAL  The downstream LDM-7 was not returned by `down7_new()`
- *                        or `down7_run()` has been called on it but not
+ *                        or `down7_start()` has been called on it but not
  *                        `down7_stop()`. `log_start()` called.
  */
 int
@@ -1973,7 +1989,7 @@ no_such_product_7_svc(
     struct svc_req* const rqstp)
 {
     uwarn("Upstream LDM-7 says requested product doesn't exist: %lu",
-            (unsigned long)iProd);
+            (unsigned long)*iProd);
 
     return NULL ; /* don't reply */
 }
