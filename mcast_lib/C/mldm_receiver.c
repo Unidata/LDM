@@ -276,7 +276,7 @@ eop_func(
         pqe_index* const     pqeIndex)
 {
     /*
-     * This function is called by the VCMTP multicast and unicast threads.
+     * This function is called on both the VCMTP multicast and unicast threads.
      */
 
     int status;
@@ -331,7 +331,7 @@ missed_prod_func(
         pqe_index* const restrict pqeIndex)
 {
     /*
-     * This function is called by the VCMTP multicast and unicast threads.
+     * This function is called on both the VCMTP multicast and unicast threads.
      */
 
     Mlr* mlr = obj;

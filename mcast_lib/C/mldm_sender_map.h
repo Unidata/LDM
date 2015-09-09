@@ -45,10 +45,11 @@ msm_lock(
         const bool exclusive);
 
 /**
- * Adds a mapping between a feed-type and a multicast LDM sender process-ID.
+ * Adds a mapping between a feed-type and a multicast LDM sender process.
  *
  * @param[in] feedtype     Feed-type.
  * @param[in] pid          Multicast LDM sender process-ID.
+ * @param[in] port         Port number of the VCMTP TCP server.
  * @retval    0            Success.
  * @retval    LDM7_DUP     Process identifier duplicates existing entry.
  *                         `log_add()` called.
@@ -57,22 +58,24 @@ msm_lock(
  */
 Ldm7Status
 msm_put(
-        const feedtypet feedtype,
-        const pid_t     pid);
-
+        const feedtypet      feedtype,
+        const pid_t          pid,
+        const unsigned short port);
 
 /**
- * Returns the process-ID associated with a feed-type.
+ * Returns process-information associated with a feed-type.
  *
  * @param[in]  feedtype     Feed-type.
- * @param[out] pid          Associated feed-type.
- * @retval     0            Success. `*pid` is set.
- * @retval     LDM7_NOENT   No PID associated with feed-type.
+ * @param[out] pid          Associated process-ID.
+ * @param[out] port         Port number of the associated VCMTP TCP server.
+ * @retval     0            Success. `*pid` and `*port` are set.
+ * @retval     LDM7_NOENT   No process associated with feed-type.
  */
 Ldm7Status
-msm_getPid(
-        const feedtypet feedtype,
-        pid_t* const    pid);
+msm_get(
+        const feedtypet                feedtype,
+        pid_t* const restrict          pid,
+        unsigned short* const restrict port);
 
 /**
  * Unlocks the map.
@@ -93,7 +96,7 @@ msm_unlock(void);
  *                         Database is unchanged.
  */
 Ldm7Status
-msm_removePid(
+msm_remove(
         const pid_t pid);
 
 /**

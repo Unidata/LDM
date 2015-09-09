@@ -1,14 +1,14 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Copyright 2015 University Corporation for Atmospheric Research. All rights
  * reserved. See the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
  *   @file: mldm_sender_map.c
  * @author: Steven R. Emmerson
  *
- * This file implements a singleton mapping between feed-types and process-IDs
- * of multicast LDM senders. The same mapping is accessible from multiple
- * processes and exists for the duration of the LDM session.
+ * This file implements a singleton mapping between feed-types and information
+ * on multicast LDM sender processes. The same mapping is accessible from
+ * multiple processes and exists for the duration of the LDM session.
  *
  * The functions in this module are thread-compatible but not thread-safe.
  */
@@ -37,19 +37,23 @@ static char*        smo_pathname;
  */
 static const size_t NUM_FEEDTYPES = sizeof(feedtypet)*CHAR_BIT;
 /**
- * Number of PID-s:
- */
-static const size_t NUM_PIDS = sizeof(feedtypet)*CHAR_BIT;
-/**
  * File descriptor for shared memory object for multicast LDM sender map:
  */
 static int          fileDes;
 /**
- * Array of process identifiers indexed by feed-type bit-index.
+ * Multicast LDM process information structure.
  */
-static pid_t*       pids;
+typedef struct {
+    pid_t          pid;  ///< Process identifier
+    unsigned short port; ///< Port number of VCMTP TCP server
+} ProcInfo;
 /**
- * Locking structure for concurrent access to the shared PID array:
+ * Array of process information structures indexed by feed-type bit-index.
+ */
+static ProcInfo*  procInfos;
+/**
+ * Locking structure for concurrent access to the shared process-information
+ * array:
  */
 static struct flock lock;
 
@@ -57,27 +61,29 @@ static struct flock lock;
  * Opens a shared memory object. Creates it if it doesn't exist. The resulting
  * shared memory object will have zero size.
  *
- * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ * @param[in]  pathname     Pathname of the shared memory object.
+ * @param[out] fd           File descriptor of the shared memory object.
+ * @retval     0            Success. `*fd` is set.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 smo_open(
         const char* const restrict pathname,
-        int* const restrict        fileDes)
+        int* const restrict        fd)
 {
     int status;
-    int fd = shm_open(pathname, O_RDWR|O_CREAT|O_EXCL, 0666);
+    int myFd = shm_open(pathname, O_RDWR|O_CREAT|O_EXCL, 0666);
 
-    if (-1 < fd) {
-        *fileDes = fd;
+    if (-1 < myFd) {
+        *fd = myFd;
         status = 0;
     }
     else {
         /* Shared memory object already exists. */
-        fd = shm_open(pathname, O_RDWR|O_CREAT|O_TRUNC, 0666);
+        myFd = shm_open(pathname, O_RDWR|O_CREAT|O_TRUNC, 0666);
 
-        if (-1 < fd) {
-            *fileDes = fd;
+        if (-1 < myFd) {
+            *fd = myFd;
             status = 0;
         }
         else {
@@ -99,7 +105,7 @@ smo_open(
  */
 static void
 smo_close(
-        const int fd,
+        const int         fd,
         const char* const pathname)
 {
     (void)close(fd);
@@ -107,53 +113,37 @@ smo_close(
 }
 
 /**
- * Clears a shared PID array by setting all its elements to zero.
- *
- * @param[in] pids     The shared PID array.
- * @param[in] numPids  The number of elements in the array.
- */
-static void
-spa_clear(
-        pid_t* const pids,
-        const size_t numPids)
-{
-    (void)memset(pids, 0, sizeof(pid_t)*numPids);
-}
-
-/**
- * Initializes a shared PID array from a shared memory object. All elements of
- * the array will be zero.
+ * Initializes a shared memory object. All elements of the array will be zero.
  *
  * @param[in]  fd           File descriptor of the shared memory object.
- * @param[in]  numPids      Number of PID-s in the array.
- * @param[out] pids         The array of pids.
- * @retval     0            Success. `*pids` is set.
+ * @param[in]  size         Size of the shared memory object in bytes.
+ * @param[out] smo          The shared memory object.
+ * @retval     0            Success. `*smo` is set.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-spa_init(
-        const int     fd,
-        const size_t  numPids,
-        pid_t** const pids)
+smo_init(
+        const int    fd,
+        const size_t size,
+        void** const smo)
 {
-    const size_t SIZE = sizeof(pid_t)*numPids;
-    int status = ftruncate(fd, SIZE);
+    int          status = ftruncate(fd, size);
 
     if (status) {
-        LOG_SERROR0("Couldn't set size of shared PID array");
+        LOG_SERROR0("Couldn't set size of shared memory object");
         status = LDM7_SYSTEM;
     }
     else {
-        void* const addr = mmap(NULL, SIZE, PROT_READ|PROT_WRITE, MAP_SHARED,
+        void* const addr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
                 fd, 0);
 
         if (MAP_FAILED == addr) {
-            LOG_SERROR0("Couldn't memory-map shared PID array");
+            LOG_SERROR0("Couldn't memory-map shared memory object");
             status = LDM7_SYSTEM;
         }
         else {
-            spa_clear(addr, numPids);
-            *pids = addr;
+            (void)memset(addr, 0, size);
+            *smo = addr;
             status = 0;
         }
     }
@@ -225,16 +215,18 @@ msm_init(void)
             status = smo_open(smo_pathname, &fd);
 
             if (0 == status) {
-                status = spa_init(fd, NUM_PIDS, &pids);
+                void* addr;
+                status = smo_init(fd, NUM_FEEDTYPES, &addr);
 
                 if (status) {
                     smo_close(fd, smo_pathname);
                 }
                 else {
+                    procInfos = addr;
                     fileDes = fd;
                     lock.l_whence = SEEK_SET;
                     lock.l_start = 0;
-                    lock.l_len = sizeof(pid_t); // locking first entry is sufficient
+                    lock.l_len = 0; // entire object
                     status = 0;
                 } // shared PID array initialized
             } // `fd` is open
@@ -259,7 +251,7 @@ msm_lock(
     lock.l_type = exclusive ? F_RDLCK : F_WRLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        LOG_SERROR0("Couldn't lock shared PID array");
+        LOG_SERROR0("Couldn't lock shared process-information array");
         return LDM7_SYSTEM;
     }
 
@@ -267,10 +259,11 @@ msm_lock(
 }
 
 /**
- * Adds a mapping between a feed-type and a multicast LDM sender process-ID.
+ * Adds a mapping between a feed-type and a multicast LDM sender process.
  *
  * @param[in] feedtype     Feed-type.
  * @param[in] pid          Multicast LDM sender process-ID.
+ * @param[in] port         Port number of the VCMTP TCP server.
  * @retval    0            Success.
  * @retval    LDM7_DUP     Process identifier duplicates existing entry.
  *                         `log_add()` called.
@@ -279,51 +272,58 @@ msm_lock(
  */
 Ldm7Status
 msm_put(
-        const feedtypet feedtype,
-        const pid_t     pid)
+        const feedtypet      feedtype,
+        const pid_t          pid,
+        const unsigned short port)
 {
     unsigned  ibit;
     feedtypet mask;
 
     for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
-        if ((feedtype & mask) && pids[ibit]) {
+        const pid_t infoPid = procInfos[ibit].pid;
+        if ((feedtype & mask) && infoPid) {
             LOG_START2("Feed-type %s is already being sent by process %ld",
-                    s_feedtypet(mask), (long)pids[ibit]);
+                    s_feedtypet(mask), (long)pid);
             return LDM7_DUP;
         }
-        if (pid == pids[ibit]) {
-            LOG_START2("Process %ld is already sending feed-type %s",
-                    (long)pid, s_feedtypet(mask));
+        if (pid == infoPid) {
+            LOG_START1("Process-information array already contains entry for PID "
+                    "%ld", (long)pid);
             return LDM7_DUP;
         }
     }
 
     for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++)
         if (feedtype & mask)
-            pids[ibit] = pid;
+            procInfos[ibit].pid = pid;
 
     return 0;
 }
 
 /**
- * Returns the process-ID associated with a feed-type.
+ * Returns process-information associated with a feed-type.
  *
  * @param[in]  feedtype     Feed-type.
  * @param[out] pid          Associated process-ID.
- * @retval     0            Success. `*pid` is set.
- * @retval     LDM7_NOENT   No PID associated with feed-type.
+ * @param[out] port         Port number of the associated VCMTP TCP server.
+ * @retval     0            Success. `*pid` and `*port` are set.
+ * @retval     LDM7_NOENT   No process associated with feed-type.
  */
 Ldm7Status
-msm_getPid(
-        const feedtypet feedtype,
-        pid_t* const    pid)
+msm_get(
+        const feedtypet                feedtype,
+        pid_t* const restrict          pid,
+        unsigned short* const restrict port)
 {
     unsigned  ibit;
     feedtypet mask;
 
     for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
-        if ((mask & feedtype) && pids[ibit]) {
-            *pid = pids[ibit];
+        const ProcInfo* procInfo = procInfos + ibit;
+        const pid_t infoPid = procInfo->pid;
+        if ((mask & feedtype) && infoPid) {
+            *pid = infoPid;
+            *port = procInfo->port;
             return 0;
         }
     }
@@ -343,7 +343,7 @@ msm_unlock(void)
     lock.l_type = F_UNLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        LOG_SERROR0("Couldn't unlock shared PID array");
+        LOG_SERROR0("Couldn't unlock shared process-information array");
         return LDM7_SYSTEM;
     }
 
@@ -360,15 +360,16 @@ msm_unlock(void)
  *                         Database is unchanged.
  */
 Ldm7Status
-msm_removePid(
+msm_remove(
         const pid_t pid)
 {
     int       status = LDM7_NOENT;
     unsigned  ibit;
 
     for (ibit = 0; ibit < NUM_FEEDTYPES; ibit++) {
-        if (pid == pids[ibit]) {
-            pids[ibit] = 0;
+        ProcInfo* const procInfo = procInfos + ibit;
+        if (pid == procInfo->pid) {
+            (void)memset(procInfo, 0, sizeof(*procInfo));
             status = 0;
         }
     }
@@ -383,7 +384,7 @@ void
 msm_clear(void)
 {
     if (smo_pathname)
-        spa_clear(pids, NUM_PIDS);
+        (void)memset(procInfos, 0, sizeof(ProcInfo)*NUM_FEEDTYPES);
 }
 
 /**

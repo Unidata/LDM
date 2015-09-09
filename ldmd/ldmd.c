@@ -128,7 +128,7 @@ static pid_t reap(
             lcf_freeExec(wpid); /* EXEC processes */
 
 #if WANT_MULTICAST
-            (void)msm_removePid(wpid); // multicast LDM senders
+            (void)msm_remove(wpid); // multicast LDM senders
 #endif
 
             unotice(

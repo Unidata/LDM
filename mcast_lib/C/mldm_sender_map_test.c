@@ -80,8 +80,8 @@ static void test_msm_removePid(void)
 {
     pid_t pid;
 
-    CU_ASSERT_EQUAL(msm_removePid(5), LDM7_NOENT);
-    CU_ASSERT_EQUAL(msm_removePid(1), 0);
+    CU_ASSERT_EQUAL(msm_remove(5), LDM7_NOENT);
+    CU_ASSERT_EQUAL(msm_remove(1), 0);
     CU_ASSERT_EQUAL(msm_getPid(IDS, &pid), LDM7_NOENT);
     log_clear();
 }
