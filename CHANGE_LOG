@@ -1,4 +1,4 @@
-6.12.15.13
+6.12.15.13	2015-09-09T14:59:33-0600
     Build Procedure:
         Improved test of netstat(1) options by the configure-script.
 
