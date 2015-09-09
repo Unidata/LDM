@@ -171,9 +171,9 @@ up7_createClientTransport(
  * set to the canonical name of the local host; otherwise, the Internet
  * identifier is used unmodified.
  *
- * @param[out] clientView   Client-side multicast information. Call should call
- *                          `xdr_free(xdr_SubscriptionReply, clientView)` when
- *                          it's no longer needed.
+ * @param[out] clientView   Client-side multicast information. Caller should
+ *                          call `xdr_free(xdr_SubscriptionReply, clientView)`
+ *                          when it's no longer needed.
  * @param[in]  serverView   Server-side multicast information. Caller may
  *                          modify or free.
  * @retval     0            Success. `*clientView` is set.
