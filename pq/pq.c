@@ -7995,8 +7995,8 @@ hndlr_noop(int sig)
  * @param[in] maxsleep     Number of seconds to suspend or 0 for an indefinite
  *                         suspension.
  * @param[in] unblockSigs  Additional signals to unblock during suspension.
- * @param[in] numSigs      Number of additional signals to unblock. May be `0`,
- *                         in which case `unblockSigs` is ignored.
+ *                         Ignored if `numSigs == 0`.
+ * @param[in] numSigs      Number of additional signals to unblock. May be `0`.
  * @return                 Requested amount of suspension-time minus the amount
  *                         of time actually suspended.
  */
