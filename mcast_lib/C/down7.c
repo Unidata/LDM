@@ -1988,7 +1988,7 @@ no_such_product_7_svc(
     VcmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
-    uwarn("Upstream LDM-7 says requested product doesn't exist: %lu",
+    uwarn("Upstream LDM-7 says requested product doesn't exist: prodIndex=%lu",
             (unsigned long)*iProd);
 
     return NULL ; /* don't reply */

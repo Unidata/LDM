@@ -349,7 +349,7 @@ up7_sendProduct(
 
             (void)sprint_signaturet(buf, sizeof(buf), sig);
             LOG_START2("No data-product corresponding to signature: "
-                    "fileId=%lu, sig=%s", (unsigned long)iProd, buf);
+                    "prodIndex=%lu, sig=%s", (unsigned long)iProd, buf);
             status = LDM7_NOENT;
         }
         else if (status) {
