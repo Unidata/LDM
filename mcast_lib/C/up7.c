@@ -136,7 +136,7 @@ up7_createClientTransport(
     /*
      * Create a client-side RPC transport on the TCP connection.
      */
-    UASSERT(clnt == NULL);
+    up7_destroyClient(); // `up7_down7_test` calls this function more than once
     UASSERT(xprt->xp_raddr.sin_port != 0);
     UASSERT(xprt->xp_sock >= 0);
     // `xprt->xp_sock >= 0` => socket won't be closed by client-side error
