@@ -717,14 +717,15 @@ run_svc(
             break;
         }
         if ((pfd.revents & POLLHUP) || (pfd.revents & POLLERR)) {
-            // RPC transport socket closed or in error
+            udebug("down7.c:run_svc(): RPC transport socket closed or in error");
             status = 0;
             break;
         }
         if (pfd.revents & POLLIN)
             svc_getreqsock(sock); // Process RPC message. Calls ldmprog_7()
         if (!FD_ISSET(sock, &svc_fdset)) {
-           // The RPC layer destroyed the service transport
+            // Here if the upstream LDM-7 closed the connection
+            udebug("down7.c:run_svc(): The RPC layer destroyed the service transport");
             xprt = NULL;
             status = 0;
             break;
@@ -1015,6 +1016,7 @@ startUcastRecvTask(
 
     log_log(status ? LOG_ERR : LOG_INFO);
 
+    udebug("%s:startUcastRecvTask(): Returning %d", __FILE__, status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1049,7 +1051,7 @@ startMcastRecvTask2(
         log_clear();
     }
 
-    udebug("startMcastRecvTask2(): Returning &%d", status);
+    udebug("%s:startMcastRecvTask2(): Returning &%d", __FILE__, status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1185,7 +1187,7 @@ startRecvTasks(
     if (status == LDM7_SYSTEM && exe_shutdown(down7->executor))
         LOG_ADD0("Couldn't shut down task executor");
 
-    udebug("startRecvTasks(): Returning %d", status);
+    udebug("%s:startRecvTasks(): Returning %d", __FILE__, status);
     return status;
 }
 
@@ -1207,6 +1209,8 @@ reapRecvTasks(
         PtrInt ptrInt;
         ptrInt.ptr = job_result(job);
         int    result = ptrInt.val;
+
+        udebug("%s:reapRecvTasks(): Result=%d", __FILE__, result);
 
         if (job_wasStopped(job) || job_status(job) || result) { // in that order
             if (exe_shutdown(down7->executor)) {
