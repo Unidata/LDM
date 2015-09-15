@@ -47,7 +47,7 @@ static const char* const    GROUP_ADDR_1 = "224.0.0.1";
 static const char* const    GROUP_ADDR_2 = "224.0.0.2";
 static const unsigned short GROUP_PORT_1 = 1;
 static const unsigned short GROUP_PORT_2 = 2;
-static const char* const    SERVER_ADDR = "0.0.0.0";
+static const char* const    SERVER_ADDR = "127.0.0.1";
 static McastInfo*           mcastInfo_1;
 static McastInfo*           mcastInfo_2;
 static feedtypet            feedtype_1 = 1;
