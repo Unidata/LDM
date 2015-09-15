@@ -917,15 +917,21 @@ int main(
         }
     } /* command-line argument decoding */
 
+    if (logfname != NULL && *logfname == '-') {
+        /*
+         * Logging to standard error stream. Assume interactive.
+         *
+         * Make this process a process group leader so that all child processes
+         * (e.g., upstream LDM, downstream LDM, pqact(1)s) will be signaled by
+         * `cleanup()`.
+         */
+        (void)setpgid(0, 0); // can't fail
+    }
 #ifndef DONTFORK
-    /* 
-     * daemon behavior
-     *
-     * Background the process unless we are logging to stderr, in which
-     * case we assume interactive.
-     */
-    if (logfname == NULL || *logfname != '-') {
-        /* detach */
+    else {
+        /*
+         * Logging to system logging daemon or file. Make this process a daemon.
+         */
         pid_t pid;
         pid = ldmfork();
         if (pid == -1) {
@@ -941,7 +947,7 @@ int main(
         }
 
         /* detach the child from parents process group ?? */
-        (void) setsid();
+        (void) setsid(); // also makes this process a process group leader
     }
 #endif
 
