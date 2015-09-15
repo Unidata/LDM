@@ -684,8 +684,8 @@ me_compareOrConflict(
  * @retval         0            Success. The multicast LDM sender associated
  *                              with the given multicast group is running or was
  *                              successfully started. `info->server.port` is
- *                              set to the port number of the TCP server. `*pid`
- *                              is set.
+ *                              set to the port number of the VCMTP TCP server.
+ *                              `*pid` is set.
  * @retval         LDM7_SYSTEM  System error. `log_start()` called.
  */
 static int
