@@ -22,6 +22,7 @@ AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
 				  --with-noaaport \
 				  --with-retrans \
 				  --with-gribinsert \
+				  --with-multicast \
 				  LDMHOME=`cd ../_inst && pwd`
 # This works and doesn't result in `redefined` warnings but does rely
 # inappropriately on `../_inst` being the `make distcheck` installation
