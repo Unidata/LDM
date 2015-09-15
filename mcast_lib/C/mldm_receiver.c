@@ -470,6 +470,7 @@ mlr_free(
  * called or an error occurs.
  *
  * @param[in] mlr            The multicast LDM receiver to execute.
+ * @retval    0              Success.
  * @retval    LDM7_SHUTDOWN  `mlr_stop()` was called.
  * @retval    LDM7_INVAL     `mlr == NULL`. `log_add()` called.
  * @retval    LDM7_MCAST     Multicast error. `log_add()` called.
@@ -489,7 +490,7 @@ mlr_start(
         if (mlr->done) {
             status = LDM7_SHUTDOWN;
         }
-        else {
+        else if (status) {
             LOG_ADD0("Error executing multicast LDM receiver");
             status = LDM7_MCAST;
         }
