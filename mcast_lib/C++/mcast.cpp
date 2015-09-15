@@ -168,6 +168,7 @@ mcastReceiver_free(
  * `mcastReceiver_stop()` is called.
  *
  * @param[in,out] receiver      The receiver.
+ * @retval        0             Success.
  * @retval        EINVAL        @code{receiver == NULL}. \c log_add() called.
  * @retval        -1            Other failure. \c log_add() called.
  */
@@ -175,31 +176,36 @@ int
 mcastReceiver_execute(
     const McastReceiver* const receiver)
 {
+    int status;
+
     if (0 == receiver) {
         LOG_START0("NULL receiver argument");
-        return EINVAL;
+        status = EINVAL;
     }
-
-    try {
-        // VCMTP call
-        receiver->vcmtpReceiver->Start();
+    else {
+        status = -1;
+        try {
+            // VCMTP call
+            receiver->vcmtpReceiver->Start();
+            status = 0;
+        }
+        catch (const std::invalid_argument& e) {
+            LOG_START1("%s", e.what());
+        }
+        catch (const std::logic_error& e) {
+            LOG_START1("%s", e.what());
+        }
+        catch (const std::system_error& e) {
+            LOG_START1("%s", e.what());
+        }
+        catch (const std::runtime_error& e) {
+            LOG_START1("%s", e.what());
+        }
+        catch (const std::exception& e) {
+            LOG_START1("%s", e.what());
+        }
     }
-    catch (const std::invalid_argument& e) {
-        LOG_START1("%s", e.what());
-    }
-    catch (const std::logic_error& e) {
-        LOG_START1("%s", e.what());
-    }
-    catch (const std::system_error& e) {
-        LOG_START1("%s", e.what());
-    }
-    catch (const std::runtime_error& e) {
-        LOG_START1("%s", e.what());
-    }
-    catch (const std::exception& e) {
-        LOG_START1("%s", e.what());
-    }
-    return -1;
+    return status;
 }
 
 /**
