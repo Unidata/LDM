@@ -293,9 +293,13 @@ msm_put(
         }
     }
 
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++)
-        if (feedtype & mask)
-            procInfos[ibit].pid = pid;
+    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
+        if (feedtype & mask) {
+            ProcInfo* const procInfo = procInfos + ibit;
+            procInfo->pid = pid;
+            procInfo->port = port;
+        }
+    }
 
     return 0;
 }
