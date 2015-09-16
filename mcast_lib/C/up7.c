@@ -348,8 +348,8 @@ up7_sendProduct(
             char buf[sizeof(signaturet)*2+1];
 
             (void)sprint_signaturet(buf, sizeof(buf), sig);
-            LOG_START2("No data-product corresponding to signature: "
-                    "prodIndex=%lu, sig=%s", (unsigned long)iProd, buf);
+            LOG_START2("No data-product corresponding to signature %s: "
+                    "prodIndex=%lu", buf, (unsigned long)iProd);
             status = LDM7_NOENT;
         }
         else if (status) {
@@ -414,11 +414,11 @@ closePq(void)
 /**
  * Ensures that the product-queue is open for reading.
  *
- * @retval false  Failure. `log_start()` called.
+ * @retval false  Failure.   `log_start()` called.
  * @retval true   Success.
  */
 static bool
-up7_ensureProductQueueOpen()
+up7_ensureProductQueueOpen(void)
 {
     bool success;
 
@@ -652,17 +652,17 @@ up7_sendBacklog(
  *
  * This function is thread-compatible but not thread-safe.
  *
- * @param[in] feedtype   Feedtype of multicast group.
- * @param[in] rqstp      RPC service-request.
- * @retval    NULL       System error. `log_log()` and `svcerr_systemerr()`
- *                       called. No reply should be sent to the downstream
- *                       LDM-7.
- * @return               Result of the subscription request.
+ * @param[in] feedtype    Feedtype of multicast group.
+ * @param[in] rqstp       RPC service-request.
+ * @retval    NULL        System error. `log_log()` and `svcerr_systemerr()`
+ *                        called. No reply should be sent to the downstream
+ *                        LDM-7.
+ * @return                Result of the subscription request.
  */
 SubscriptionReply*
 subscribe_7_svc(
-    feedtypet* const restrict       feedtype,
-    struct svc_req* const restrict  rqstp)
+        feedtypet* const restrict       feedtype,
+        struct svc_req* const restrict  rqstp)
 {
     udebug("subscribe_7_svc(): Entered");
     static SubscriptionReply* reply;
