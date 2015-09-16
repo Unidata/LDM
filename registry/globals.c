@@ -33,6 +33,7 @@ static char             ldmdConfigPath[PATH_MAX];
 static char             pqactDataDirPath[PATH_MAX];
 static char             pqsurfDataDirPath[PATH_MAX];
 static char             surfQueuePath[PATH_MAX];
+static char             ldmLogDir[PATH_MAX];
 
 /*
  * Timeout for rpc calls:
@@ -461,15 +462,28 @@ getTimeOffset(void)
 }
 
 /**
- * Returns the absolute path of the directory for LDM log files. This function
+ * Sets the pathname of the directory for LDM log files for the duration of the
+ * process.
+ *
+ * @param[in] pathname  Pathame of the directory.  Shall not be NULL.  Can be
+ *                      absolute or relative to the current working directory.
+ */
+void setLdmLogDir(
+    const char* const   path)
+{
+    setPath(path, ldmLogDir);
+}
+
+/**
+ * Returns the pathname of the directory for LDM log files. This function
  * is thread-safe.
  *
- * @return The absolute path of the LDM log file directory.
+ * @return The pathname of the LDM log file directory.
  */
 const char*
 getLdmLogDir(void)
 {
-    return LDM_LOG_DIR;
+    return ldmLogDir[0] ? ldmLogDir : LDM_LOG_DIR;
 }
 
 /**
