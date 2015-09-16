@@ -65,7 +65,9 @@ typedef struct {
 } Receiver;
 
 // Number of data-products to insert
-static const int         NUM_PRODS = 1;
+static const int         NUM_PRODS = 1000;
+// Proportion of data-products that will not be multicasted
+static const double      FAILURE_RATE = 0.0;
 // Maximum size of a data-product in bytes
 static const int         MAX_PROD_SIZE = 100000;
 // Size of the data portion of the product-queue in bytes
@@ -165,9 +167,12 @@ setup(void)
 {
     /*
      * Ensure that the upstream component `up7` obtains the upstream queue from
-     * `getQueuePath()`.
+     * `getQueuePath()`. This is not done for the downstream component because
+     * `down7.c` implements an object-specific product-queue.
      */
     setQueuePath(UP7_PQ_PATHNAME);
+
+    setLdmLogDir("."); // For LDM-7 receiver session-memory files (*.yaml)
 
     int status = msm_init();
     if (status) {
@@ -377,10 +382,10 @@ waitUntilDone(void)
 /**
  * Closes the socket on failure.
  *
- * @param[in] up7     The upstream LDM-7 to be initialized.
- * @param[in] sock    The socket for the upstream LDM-7.
- * @param[in] termFd  Termination file-descriptor.
- * @retval    0       Success.
+ * @param[in] up7        The upstream LDM-7 to be initialized.
+ * @param[in] sock       The socket for the upstream LDM-7.
+ * @param[in] termFd     Termination file-descriptor.
+ * @retval    0          Success.
  */
 static int
 up7_init(
@@ -527,7 +532,7 @@ destroyUp7(
 
 static int
 servlet_run(
-        const int servSock)
+        const int  servSock)
 {
     /* NULL-s => not interested in receiver's address */
     int sock = accept(servSock, NULL, NULL);
@@ -701,8 +706,7 @@ sender_getPort(
 }
 
 static void
-sender_insertProducts(
-        Sender* const sender)
+sender_insertProducts(void)
 {
     pqueue* pq;
     int     status = pq_open(UP7_PQ_PATHNAME, 0, &pq);
@@ -805,31 +809,41 @@ sender_start(
                     UP7_PQ_PATHNAME);
         }
         else {
-            McastInfo* mcastInfo;
-
-            status = setMcastInfo(&mcastInfo, feedtype);
+            // Thread-safe because 2 threads: upstream LDM-7 & product insertion.
+            status = pq_open(getQueuePath(), PQ_READONLY | PQ_THREADSAFE, &pq);
             if (status) {
-                LOG_ADD0("Couldn't set multicast information");
+                LOG_ADD1("Couldn't open product-queue \"%s\"", getQueuePath());
             }
             else {
-                status = mlsm_clear();
-                status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
-                        UP7_PQ_PATHNAME);
+                McastInfo* mcastInfo;
+
+                status = setMcastInfo(&mcastInfo, feedtype);
                 if (status) {
-                    LOG_ADD0("mlsm_addPotentialSender() failure");
+                    LOG_ADD0("Couldn't set multicast information");
                 }
                 else {
-                    // Starts the sender on a new thread
-                    status = sender_spawn();
+                    status = mlsm_clear();
+                    status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
+                            UP7_PQ_PATHNAME);
                     if (status) {
-                        LOG_ADD0("Couldn't spawn sender");
+                        LOG_ADD0("mlsm_addPotentialSender() failure");
                     }
                     else {
-                        done = 0;
+                        // Starts the sender on a new thread
+                        status = sender_spawn();
+                        if (status) {
+                            LOG_ADD0("Couldn't spawn sender");
+                        }
+                        else {
+                            done = 0;
+                        }
                     }
-                }
-                mi_free(mcastInfo);
-            } // `mcastInfo` allocated
+                    mi_free(mcastInfo);
+                } // `mcastInfo` allocated
+
+                if (status)
+                    (void)pq_close(pq);
+            } // Product-queue open
 
             if (status)
                 (void)deleteProductQueue(UP7_PQ_PATHNAME);
@@ -951,6 +965,12 @@ sender_terminate(void)
         retval = status;
     }
 
+    status = pq_close(pq);
+    if (status) {
+        LOG_ADD0("pq_close() failure");
+        retval = status;
+    }
+
     status = deleteProductQueue(UP7_PQ_PATHNAME);
     if (status) {
         LOG_ADD0("deleteProductQueue() failure");
@@ -1024,7 +1044,16 @@ receiver_init(
 static void
 receiver_destroy(void)
 {
-    down7_free(receiver.down7);
+    int status;
+
+    udebug("Calling down7_free()");
+    status = down7_free(receiver.down7);
+    CU_ASSERT_EQUAL(status, 0);
+    log_log(LOG_ERR);
+
+    status = deleteProductQueue(DOWN7_PQ_PATHNAME);
+    CU_ASSERT_EQUAL(status, 0);
+    log_log(LOG_ERR);
 }
 
 /**
@@ -1076,6 +1105,21 @@ receiver_deleteAllProducts(
 }
 
 /**
+ * @retval 0  Success
+ */
+static int
+receiver_getNumProds(
+        Receiver* const restrict receiver,
+        size_t* const restrict   nprods)
+{
+    pqueue* const pq = down7_getPq(receiver->down7);
+    signaturet    sig;
+
+    return pq_stats(pq, nprods, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+            NULL);
+}
+
+/**
  * Terminates the receiver by stopping it and destroying its resources.
  *
  * @retval    0       Success.
@@ -1097,16 +1141,10 @@ receiver_terminate(void)
     CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
     log_log(LOG_ERR);
 
-    udebug("Calling down7_free()");
-    status = down7_free(receiver.down7);
-    CU_ASSERT_EQUAL(status, 0);
+    receiver_destroy();
     log_log(LOG_ERR);
 
-    status = deleteProductQueue(DOWN7_PQ_PATHNAME);
-    CU_ASSERT_EQUAL(status, 0);
-    log_log(LOG_ERR);
-
-    return status;
+    return 0;
 }
 
 static void
@@ -1151,55 +1189,6 @@ test_down7(
 }
 
 static void
-test_missed_product(
-        void)
-{
-    int      status = sender_start(ANY);
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    /* Starts a receiver on a new thread */
-    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender),
-            ANY);
-    CU_ASSERT_EQUAL(status, 0);
-    log_log(LOG_ERR);
-
-    (void)sleep(1);
-
-    udebug("Terminating multicast sender");
-    status = terminateMcastSender();
-    CU_ASSERT_EQUAL(status, 0);
-    log_log(LOG_ERR);
-
-    sender_insertProducts(&sender);
-
-    receiver_requestLastProduct(&receiver);
-    receiver_deleteAllProducts(&receiver);
-    receiver_requestLastProduct(&receiver);
-
-#if USE_SIGWAIT
-    (void)sigwait(&termSigSet, &status);
-    done = 1;
-#elif 0
-    waitUntilDone();
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-#else
-    (void)sleep(1);
-#endif
-
-    udebug("Terminating receiver");
-    status = receiver_terminate();
-    log_log(LOG_ERR);
-    CU_ASSERT_EQUAL(status, 0);
-
-    udebug("Terminating sender");
-    status = sender_terminate();
-    CU_ASSERT_EQUAL(status, LDM7_INVAL);
-    log_clear();
-}
-
-static void
 test_bad_subscription(
         void)
 {
@@ -1238,14 +1227,19 @@ test_up7_down7(
 
     (void)sleep(1);
 
-    sender_insertProducts(&sender);
+    sender_insertProducts();
 
+    (void)sleep(1);
     receiver_requestLastProduct(&receiver);
     (void)sleep(1);
     status = receiver_deleteAllProducts(&receiver);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, PQ_END);
     receiver_requestLastProduct(&receiver);
+    (void)sleep(1);
+    size_t nprods;
+    CU_ASSERT_EQUAL(receiver_getNumProds(&receiver, &nprods), 0);
+    CU_ASSERT_EQUAL(nprods, 1);
 
     #if USE_SIGWAIT
         (void)sigwait(&termSigSet, &status);
@@ -1275,17 +1269,16 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_DEBUG, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_INFO, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            if (/*CU_ADD_TEST(testSuite, test_up7) &&
-                    CU_ADD_TEST(testSuite, test_down7) && */
-                    CU_ADD_TEST(testSuite, test_missed_product) /*&&
+            if (CU_ADD_TEST(testSuite, test_up7) &&
+                    CU_ADD_TEST(testSuite, test_down7) &&
                     CU_ADD_TEST(testSuite, test_bad_subscription) &&
-                    CU_ADD_TEST(testSuite, test_up7_down7) */
+                    CU_ADD_TEST(testSuite, test_up7_down7)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();
