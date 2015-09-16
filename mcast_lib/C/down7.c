@@ -146,7 +146,7 @@ static int up7proxy_init(
                         "%s", inet_ntoa(sockAddr->sin_addr),
                         ntohs(sockAddr->sin_port), clnt_spcreateerror(""));
                 (void)pthread_mutex_destroy(&proxy->mutex);
-                status = clntStatusToLdm7Status(rpc_createerr.cf_stat);
+                status = LDM7_RPC;
             }
             else {
                 proxy->clnt = clnt;
@@ -293,7 +293,7 @@ up7proxy_subscribe(
         (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
         LOG_START2("Couldn't subscribe to feedtype %s: %s",  buf,
                 clnt_errmsg(clnt));
-        status = clntStatusToLdm7Status(clnt_stat(clnt));
+        status = clntStatusToLdm7Status(clnt);
         up7proxy_destroyClient(proxy);
     }
     else {
@@ -1743,10 +1743,7 @@ down7_start(
 
     lockState(down7);
 
-    if (DOWN7_STOPPING == down7->state) {
-        status = 0;
-    }
-    else if (DOWN7_INITIALIZED != down7->state) {
+    if (DOWN7_INITIALIZED != down7->state) {
         LOG_START1("Downstream LDM-7 is in wrong state: %d", down7->state);
         status = LDM7_INVAL;
     }
