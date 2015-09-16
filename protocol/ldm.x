@@ -740,7 +740,7 @@ program LDMPROG {
 %void* nullproc_6(void *argp, CLIENT *clnt);
 %enum  clnt_stat clnt_stat(CLIENT *clnt);
 #if WANT_MULTICAST
-%int   clntStatusToLdm7Status(const enum clnt_stat status);
+%int   clntStatusToLdm7Status(const CLIENT* clnt);
 #endif
 #endif
 
@@ -881,6 +881,7 @@ enum Ldm7Status {
 };
 
 #if RPC_CLNT
+%#include <errno.h>
 %
 %/**
 % * Returns the message associated with an LDM-7 status.
@@ -922,17 +923,31 @@ enum Ldm7Status {
 %
 %int
 %clntStatusToLdm7Status(
-%    const enum clnt_stat status)
+%    const CLIENT* clnt)
 %{
-%    return (status == 0)
-%        ? 0
-%        : (status == RPC_TIMEDOUT)
-%            ? LDM7_TIMEDOUT
-%            : (status == RPC_SYSTEMERROR)
-%                ? LDM7_SYSTEM
-%                : (status == RPC_AUTHERROR)
-%                    ? LDM7_UNAUTH
-%                    : LDM7_RPC;
+%    int    status = clnt_stat(clnt);
+%    if (status != 0) {
+%        if (status == RPC_TIMEDOUT) {
+%            status = LDM7_TIMEDOUT;
+%        }
+%        else if (status == RPC_SYSTEMERROR) {
+%            struct rpc_err rpcErr;
+%            clnt_geterr(clnt, &rpcErr);
+%            if (rpcErr.re_errno == ECONNREFUSED) {
+%                status = LDM7_REFUSED;
+%            }
+%            else {
+%                status = LDM7_SYSTEM;
+%            }
+%        }
+%        else if (status == RPC_AUTHERROR) {
+%            status = LDM7_UNAUTH;
+%        }
+%        else {
+%            status = LDM7_RPC;
+%        }
+%     }
+%     return status;
 %}
 #endif // RPC_CLNT
 
