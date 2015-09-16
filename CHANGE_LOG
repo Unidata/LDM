@@ -1,4 +1,4 @@
-6.12.15.14
+6.12.15.14	2015-09-16T10:26:16-0600
     Got "make Distclean" and "make check-local" in "ldmld/" working.
 
 6.12.15.13	2015-09-09T14:59:33-0600
