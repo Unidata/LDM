@@ -6,3 +6,7 @@ ldmd.1
 parser.c
 scanner.c
 up7.pq
+*.log
+up7.conf
+down7.conf
+*.pid
