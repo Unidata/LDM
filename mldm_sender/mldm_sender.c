@@ -57,6 +57,15 @@ static const int             termSigs[] = {SIGINT, SIGTERM};
  * Signal-set for termination signals.
  */
 static sigset_t              termSigSet;
+/**
+ * Default failure-rate.
+ */
+#define                      DEFAULT_FAILURE_RATE 0.0  // no failures
+/**
+ * Proportion of data-products that should not be multicast. Shall be in the
+ * interval [0.0,1.0].
+ */
+static double                failureRate = DEFAULT_FAILURE_RATE;
 
 /**
  * Blocks termination signals for the current thread.
@@ -83,8 +92,11 @@ static void
 mls_usage(void)
 {
     log_add("\
-Usage: %s [options] groupId:groupPort\
-Options:\
+Usage: %s [options] groupId:groupPort\n\
+Options:\n\
+    -F failureRate    Proportion of data-products that should not be\n\
+                      multicasted. Must be in the interval [0.0,1.0]. Default\n\
+                      is %g.\n\
     -f feedExpr       Feedtype expression specifying data to send. Default\n\
                       is EXP.\n\
     -l logfile        Log file pathname or '-' for standard error stream.\n\
@@ -115,7 +127,7 @@ Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
                       address and <groupPort> is port number.",
-            getulogident(), getQueuePath());
+            getulogident(), DEFAULT_FAILURE_RATE, getQueuePath());
 }
 
 /**
@@ -140,6 +152,8 @@ Operands:\n\
  *                            <255  Unrestricted in scope. Global.
  * @param[out] ifaceAddr    IP address of the interface to use to send multicast
  *                          packets.
+ * @param[out] failureRate  Proportion of data-products that should not be
+ *                          multicasted. Will be in the interval [0.0,1.0].
  * @retval     0            Success. `*serverIface` or `*ttl` might not have
  *                          been set.
  * @retval     1            Invalid options. `log_start()` called.
@@ -152,7 +166,8 @@ mls_decodeOptions(
         const char** const restrict    serverIface,
         unsigned short* const restrict serverPort,
         unsigned* const restrict       ttl,
-        const char** const restrict    ifaceAddr)
+        const char** const restrict    ifaceAddr,
+        double* const restrict         failureRate)
 {
     int          ch;
     extern int   opterr;
@@ -161,8 +176,25 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":f:l:m:p:q:s:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:s:t:vx")) != EOF)
         switch (ch) {
+        case 'F': {
+            double myFailureRate;
+            int    nbytes;
+            if (sscanf(optarg, "%12lf %n", &myFailureRate, &nbytes) != 1 ||
+                    0 != optarg[nbytes]) {
+                log_start("Couldn't decode failure-rate option-argument \"%s\"",
+                        optarg);
+                return 1;
+            }
+            if (myFailureRate < 0.0 || myFailureRate > 1.0) {
+                log_start("Invalid failure-rate option-argument \"%s\"",
+                        optarg);
+                return 1;
+            }
+            *failureRate = myFailureRate;
+            break;
+        }
         case 'f': {
             if (strfeedtypet(optarg, feed)) {
                 log_start("Invalid feed expression: \"%s\"", optarg);
@@ -359,25 +391,27 @@ mls_setMcastGroupInfo(
 /**
  * Decodes the command line.
  *
- * @param[in]  argc       Number of arguments.
- * @param[in]  argv       Arguments.
- * @param[out] mcastInfo  Multicast group information.
- * @param[out] ttl        Time-to-live of outgoing packets.
- *                              0  Restricted to same host. Won't be output by
- *                                 any interface.
- *                              1  Restricted to the same subnet. Won't be
- *                                 forwarded by a router (default).
- *                            <32  Restricted to the same site, organization or
- *                                 department.
- *                            <64  Restricted to the same region.
- *                           <128  Restricted to the same continent.
- *                           <255  Unrestricted in scope. Global.
- * @param[out] ifaceAddr  IP address of the interface from which multicast
- *                        packets should be sent or NULL to have them sent from
- *                        the system's default multicast interface.
- * @retval     0          Success. `*mcastInfo` is set. `*ttl` might be set.
- * @retval     1          Invalid command line. `log_start()` called.
- * @retval     2          System failure. `log_start()` called.
+ * @param[in]  argc         Number of arguments.
+ * @param[in]  argv         Arguments.
+ * @param[out] mcastInfo    Multicast group information.
+ * @param[out] ttl          Time-to-live of outgoing packets.
+ *                                0  Restricted to same host. Won't be output by
+ *                                   any interface.
+ *                                1  Restricted to the same subnet. Won't be
+ *                                   forwarded by a router (default).
+ *                              <32  Restricted to the same site, organization
+ *                                   or department.
+ *                              <64  Restricted to the same region.
+ *                             <128  Restricted to the same continent.
+ *                             <255  Unrestricted in scope. Global.
+ * @param[out] ifaceAddr    IP address of the interface from which multicast
+ *                          packets should be sent or NULL to have them sent
+ *                          from the system's default multicast interface.
+ * @param[out] failureRate  Proportion of data-products that should not be
+ *                          multicasted. Will be in the interval [0.0,1.0].
+ * @retval     0            Success. `*mcastInfo` is set. `*ttl` might be set.
+ * @retval     1            Invalid command line. `log_start()` called.
+ * @retval     2            System failure. `log_start()` called.
  */
 static int
 mls_decodeCommandLine(
@@ -385,14 +419,15 @@ mls_decodeCommandLine(
         char* const* restrict       argv,
         McastInfo** const restrict  mcastInfo,
         unsigned* const restrict    ttl,
-        const char** const restrict ifaceAddr)
+        const char** const restrict ifaceAddr,
+        double* const restrict      failureRate)
 {
     feedtypet      feed = EXP;
     const char*    serverIface = "0.0.0.0";     // default: all interfaces
     unsigned short serverPort = 0;              // default: chosen by O/S
     const char*    mcastIf = "0.0.0.0";         // default mcast interface
     int            status = mls_decodeOptions(argc, argv, &feed, &serverIface,
-            &serverPort, ttl, &mcastIf);
+            &serverPort, ttl, &mcastIf, failureRate);
     extern int     optind;
 
     if (0 == status) {
@@ -611,6 +646,8 @@ mls_doneWithProduct(
  *                          interface. Caller may free.
  * @param[in]  pqPathname   Pathname of product queue from which to obtain
  *                          data-products.
+ * @param[in]  failureRate  Proportion of data-products that should not be
+ *                          multicast. Must be in the interval [0.0,1.0].
  * @retval     0            Success. `*sender` is set.
  * @retval     LDM7_INVAL   An Internet identifier couldn't be converted to an
  *                          IPv4 address because it's invalid or unknown.
@@ -623,7 +660,8 @@ mls_init(
     const McastInfo* const restrict info,
     const unsigned                  ttl,
     const char*                     ifaceAddr,
-    const char* const restrict      pqPathname)
+    const char* const restrict      pqPathname,
+    const double                    failureRate)
 {
     char serverInetAddr[INET_ADDRSTRLEN];
     int  status = mls_getIpv4Addr(info->server.inetId, "server",
@@ -893,6 +931,8 @@ mls_startMulticasting(void)
  *                          packets. "0.0.0.0" obtains the default multicast
  *                          interface. Caller may free.
  * @param[in]  pqPathname   Pathname of the product-queue.
+ * @param[in]  failureRate  Proportion of data-products that should not be
+ *                          multicast. Must be in the interval [0.0,1.0].
  * @retval     0            Success. Termination was requested.
  * @retval     LDM7_INVAL.  Invalid argument. `log_start()` called.
  * @retval     LDM7_MCAST   Multicast sender failure. `log_start()` called.
@@ -904,7 +944,8 @@ mls_execute(
         const McastInfo* const restrict info,
         const unsigned                  ttl,
         const char* const restrict      ifaceAddr,
-        const char* const restrict      pqPathname)
+        const char* const restrict      pqPathname,
+        const double                    failureRate)
 {
 
     /*
@@ -919,7 +960,8 @@ mls_execute(
      * this thread manages the multicast sender.
      */
     blockTermSigs();
-    int status = mls_init(info, ttl, ifaceAddr, pqPathname); // sets `mcastInfo`
+    // Sets `mcastInfo`
+    int status = mls_init(info, ttl, ifaceAddr, pqPathname, failureRate);
     unblockTermSigs();
 
     if (status) {
@@ -977,11 +1019,11 @@ main(
     /*
      * Decode the command-line.
      */
-    McastInfo*  groupInfo;  // multicast group information
-    unsigned    ttl = 1;    // Won't be forwarded by any router.
-    const char* ifaceAddr;  // IP address of multicast interface
+    McastInfo*  groupInfo;         // multicast group information
+    unsigned    ttl = 1;           // Won't be forwarded by any router.
+    const char* ifaceAddr;         // IP address of multicast interface
     int         status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
-            &ifaceAddr);
+            &ifaceAddr, &failureRate);
 
     if (status) {
         log_add("Couldn't decode command-line");
@@ -992,7 +1034,8 @@ main(
     else {
         mls_setSignalHandling();
 
-        status = mls_execute(groupInfo, ttl, ifaceAddr, getQueuePath());
+        status = mls_execute(groupInfo, ttl, ifaceAddr, getQueuePath(),
+                failureRate);
         if (status) {
             log_log(LOG_ERR);
             switch (status) {
