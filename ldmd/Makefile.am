@@ -8,11 +8,12 @@
 
 BUILT_SOURCES           = parser.c scanner.c
 CLEANFILES		= ldmd.1 *.i .*.info up7.conf down7.conf *.pq \
-			  *.log *.pid
+			  *.log *.pid *.yaml *.map
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
 EXTRA_DIST		= ldmd.1.in \
                           ldmd.conf \
+			  nexrad3.txt \
                           parser.y \
                           scanner.c \
                           scanner.l \
@@ -116,13 +117,13 @@ endif
 
 #if WANT_MULTICAST
 check-local:
-	$(top_builddir)/pqcreate/pqcreate -vl- -c -s 100M -q up7.pq
-	$(top_builddir)/pqcreate/pqcreate -vl- -c -s 100M -q down7.pq
+	../pqcreate/pqcreate -vl- -c -s 100M -q up7.pq
+	../pqcreate/pqcreate -vl- -c -s 100M -q down7.pq
 	echo 'ALLOW ANY .*' > up7.conf
 	echo 'MULTICAST ANY 234.128.117.0:38800 1 127.0.0.1' >> up7.conf
 	echo 'RECEIVE ANY localhost:38800' > down7.conf
 	rm -f up7.log
-	PATH=$(top_builddir)/mldm_sender:$$PATH ./ldmd -l up7.log -I 127.0.0.1 \
+	PATH=../mldm_sender:$$PATH ./ldmd -l up7.log -I 127.0.0.1 \
 		-P 38800 -q up7.pq up7.conf >up7.pid
 	sleep 1
 	rm -f down7.log
@@ -130,7 +131,7 @@ check-local:
 	sleep 1
 	rm -f pq_test_insert.log
 	../pqinsert/pq_test_insert -vl pq_test_insert.log -q up7.pq -f NEXRAD3 \
-		nexrad3.txt
+		$(srcdir)/nexrad3.txt
 	ps -e -o pid,ppid,pgid,args | grep ldm | grep -v grep
 	sleep 1
 	kill `cat down7.pid` `cat up7.pid`
