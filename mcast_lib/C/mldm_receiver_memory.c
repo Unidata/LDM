@@ -100,8 +100,8 @@ vetMrm(
 }
 
 /**
- * Returns the path of the memory-file corresponding to a server and a multicast
- * group. This function is reentrant.
+ * Returns the pathname of the memory-file corresponding to a server and a
+ * multicast group. This function is reentrant.
  *
  * @param[in] servAddr  The address of the server associated with the multicast
  *                      group.
@@ -115,24 +115,16 @@ getSessionPath(
     const ServiceAddr* const servAddr,
     const feedtypet          feedtype)
 {
-    char*       path;
-    char* const servAddrStr = sa_format(servAddr);
+    char* path;
+    char  ftBuf[256];
 
-    if (NULL == servAddrStr) {
+    if (sprint_feedtypet(ftBuf, sizeof(ftBuf), feedtype) < 0) {
+        LOG_START0("sprint_feedtypet() failure");
         path = NULL;
     }
     else {
-        char ftBuf[256];
-
-        if (sprint_feedtypet(ftBuf, sizeof(ftBuf), feedtype) < 0) {
-            LOG_START0("sprint_feedtypet() failure");
-            path = NULL;
-        }
-        else {
-            path = ldm_format(256, "%s/%s_%s.yaml", getLdmLogDir(), servAddrStr,
-                    ftBuf);
-            free(servAddrStr);
-        }
+        path = ldm_format(256, "%s/%s_%s.yaml", getLdmLogDir(),
+                servAddr->inetId, ftBuf);
     }
 
     return path;
