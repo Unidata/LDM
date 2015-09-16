@@ -440,46 +440,77 @@ int pq_getMinVirtResTimeMetrics(
 int pq_clearMinVirtResTimeMetrics(
     pqueue* const       pq);
 
-/*
+/**
  * Get some detailed product queue statistics.  These may be useful for
  * monitoring the internal state of the product queue:
- *   nprodsp
- *         holds the current number of products in the queue.  May be NULL.
- *   nfreep
- *         holds the current number of free regions.  This should be small
- *         and it's OK if it's zero, since new free regions are created
- *         as needed by deleting oldest products.  If this gets large,
- *         insertion and deletion take longer.  May be NULL.
- *   nemptyp
- *         holds the number of product slots left.  This may decrease, but
- *         should eventually stay above some positive value unless too
- *         few product slots were allocated when the queue was
- *         created.  New product slots get created when adjacent free
- *         regions are consolidated, and product slots get consumed
- *         when larger free regions are split into smaller free
- *         regions.  May be NULL.
- *   nbytesp
- *         holds the current number of bytes in the queue used for data
- *         products.  May be NULL.
- *   maxprodsp
- *         holds the maximum number of products in the queue, so far.  May be
- *         NULL.
- *   maxfreep
- *         holds the maximum number of free regions, so far.  May be NULL.
- *   minemptyp
- *         holds the minimum number of empty product slots, so far.  May be
- *         NULL.
- *   maxbytesp
- *         holds the maximum number of bytes used for data, so far.  May be
- *         NULL.
- *   age_oldestp
- *         holds the age in seconds of the oldest product in the queue.  May be
- *         NULL.
- *   maxextentp
- *         holds extent of largest free region  May be NULL.
  *
- *   Note: the fixed number of slots allocated for products when the
- *         queue was created is nalloc = (nprods + nfree + nempty).
+ * @param[out] nprodsp      The current number of products in the queue.  May be
+ *                          NULL.
+ * @param[out] nfreep       The current number of free regions.  This should be
+ *                          small and it's OK if it's zero, since new free
+ *                          regions are created as needed by deleting oldest
+ *                          products.  If this gets large, insertion and
+ *                          deletion take longer.  May be NULL.
+ * @param[out] nemptyp      The number of product slots left.  This may
+ *                          decrease, but should eventually stay above some
+ *                          positive value unless too few product slots were
+ *                          allocated when the queue was created.  New product
+ *                          slots get created when adjacent free regions are
+ *                          consolidated, and product slots get consumed when
+ *                          larger free regions are split into smaller free
+ *                          regions.  May be NULL.
+ * @param[out] nbytesp      The current number of bytes in the queue used for
+ *                          data products.  May be NULL.
+ * @param[out] maxprodsp    The maximum number of products in the queue, so far.
+ *                          May be NULL.
+ * @param[out] maxfreep     The maximum number of free regions, so far.  May be
+ *                          NULL.
+ * @param[out] minemptyp    The minimum number of empty product slots, so far.
+ *                          May be NULL.
+ * @param[out] maxbytesp    The maximum number of bytes used for data, so far.
+ *                          May be NULL.
+ * @param[out] age_oldestp  The age in seconds of the oldest product in the
+ *                          queue.  May be NULL.
+ * @param[out] maxextentp   Extent of largest free region  May be NULL.
+ * @retval 0          Success.
+ * @retval EACCESS or EAGAIN
+ *                    The region is already locked by another process.
+ * @retval EINVAL     The product-queue file doesn't support locking.
+ * @retval ENOLCK     The number of locked regions would exceed a system-imposed
+ *                    limit.
+ * @retval EDEADLK    A deadlock in region locking has been detected.
+ * @retval EBADF      The file descriptor of the product-queue is invalid.
+ * @retval EIO        An I/O error occurred while reading from the file system.
+ * @retval EOVERFLOW  The file size in bytes or the number of blocks allocated
+ *                    to the file or the file serial number cannot be
+ *                    represented correctly.
+ * @retval EINTR      A signal was caught during execution.
+ * @retval EFBIG or EINVAL
+ *                    The size of the product-queue is greater than the maximum
+ *                    file size.
+ * @retval EROFS      The named file resides on a read-only file system.
+ * @retval EAGAIN     The mapping could not be locked in memory, if required by
+ *                    mlockall(), due to a lack of resources.
+ * @retval EINVAL     The product-queue object wants to map the product-queue to
+ *                    a fixed memory location that is not a multiple of the page
+ *                    size as returned by sysconf(), or is considered invalid
+ *                    by the O/S.
+ * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
+ *                    limit (per process or per system).
+ * @retval ENODEV     The file descriptor of the product-queue object refers to
+ *                    a file whose type is not supported by mmap().
+ * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
+ *                    address space of a process.
+ * @retval ENOMEM     The mapping could not be locked in memory, if required by
+ *                    mlockall(), because it would require more space than the
+ *                    system is able to supply.
+ * @retval ENOTSUP    The O/S does not support the combination of accesses
+ *                    requested.
+ * @retval ENXIO      The size of the product-queue is invalid for the object
+ *                    specified by its file descriptor.
+ *
+ * Note: the fixed number of slots allocated for products when the
+ * queue was created is nalloc = (nprods + nfree + nempty).
  */
 int
 pq_stats(pqueue *pq,
@@ -679,7 +710,8 @@ pq_setCursorFromSignature(
  * @retval    PQ_CORRUPT   The product-queue is corrupt. `log_add()` called.
  * @retval    PQ_NOTFOUND  A data-product with the given signature was not found
  *                         in the product-queue.
- * @return                 Return-code of `func`.
+ * @return                 Return-code of `func`. All the above error-codes are
+ *                         negative.
  */
 int
 pq_processProduct(
