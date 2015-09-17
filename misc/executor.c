@@ -28,11 +28,12 @@ struct job {
     void*           arg;           ///< `pthread_create()` argument or `NULL`
     void*           result;        ///< job result
     Executor*       exe;           ///< associated executor
-    DllElt*         elt;           ///< associated element in job list
+    DllElt*         elt;           ///< associated element in executor's job-list
     pthread_t       thread;        ///< executing thread
     enum {
         JOB_PENDING,
         JOB_EXECUTING,
+        JOB_CANCELLED,
         JOB_STOPPING,
         JOB_COMPLETED
     }               state;         ///< state of the job
@@ -58,7 +59,7 @@ struct executor {
 
 /**
  * Initializes a mutex. The mutex will have protocol `PTHREAD_PRIO_INHERIT` and
- * type `PTHREAD_MUTEX_ERRORCHECK`.
+ * type `PTHREAD_MUTEX_ERRORCHECK`. This module depends on these attributes.
  *
  * @param[in] mutex      The mutex.
  * @retval    0          Success.
@@ -90,6 +91,35 @@ static int mutex_init(
     }
 
     return status;
+}
+
+/**
+ * Verifies that a mutex is locked. Aborts if it isn't. The mutex must not be
+ * recursive.
+ *
+ * @param[in] mutex  The non-recursive mutex.
+ */
+static void verifyLocked(
+        pthread_mutex_t* const mutex)
+{
+    if (pthread_mutex_trylock(mutex) == 0)
+        UASSERT(false);
+}
+
+/**
+ * Verifies that a mutex is unlocked. Aborts if it isn't. The mutex must not be
+ * recursive.
+ *
+ * @param[in] mutex  The non-recursive mutex.
+ */
+static void verifyUnlocked(
+        pthread_mutex_t* const mutex)
+{
+    if (pthread_mutex_trylock(mutex) == 0) {
+        pthread_mutex_unlock(mutex);
+        return;
+    }
+    UASSERT(false);
 }
 
 /**
@@ -126,17 +156,19 @@ static void exe_unlock(
  * Enqueues a job on the completed-job queue of its executor. Signals the
  * executor's condition variable if successful.
  *
- * @pre               The associated executor is locked on this thread.
+ * @pre               The job's executor is locked.
  * @param[in] job     The job.
  * @retval    0       Success
  * @retval    ENOMEM  Out of memory. 'log_start()` called.
- * @post              The associated executor's condition variable was signaled
- *                    and the executor is locked on this thread.
+ * @post              The job's executor's condition variable was signaled.
+ * @post              The job's executor is locked.
  */
 static int exe_enqueueCompleted(
         Job* const job)
 {
     Executor* const exe = job->exe;
+
+    verifyLocked(&exe->mutex);
 
     int status = q_enqueue(exe->completed, job);
     if (status) {
@@ -154,10 +186,12 @@ static int exe_enqueueCompleted(
  * Adds a job to the completed-job queue of its executor. Signals the
  * executor's condition variable.
  *
+ * @pre               The job's executor is unlocked.
  * @param[in] job     The job.
  * @retval    0       Success.
  * @retval    ENOMEM  Out of memory. 'log_start()` called.
  * @post              The associated executor's condition variable was signaled.
+ * @pre               The job's executor is unlocked.
  */
 static int exe_addToCompleted(
         Job* const job)
@@ -196,12 +230,63 @@ static void job_unlock(
 }
 
 /**
+ * Tests the state of a job.
+ *
+ * @pre             The job is unlocked.
+ * @param[in job    The job.
+ * @param[in state  The state against which to test.
+ * @retval   true   The job was in the given state.
+ * @retval   false  The job wasn't in the given state.
+ * @post            The job is unlocked.
+ */
+static bool job_testState(
+        Job* const job,
+        const int  state)
+{
+    job_lock(job);
+    bool wasEqual = job->state == state;
+    job_unlock(job);
+    return wasEqual;
+}
+
+/**
+ * Tests the state of a job and sets it if appropriate.
+ *
+ * @pre                    The job is unlocked.
+ * @param[in] job          The job.
+ * @param[in] currState    The state to test the current state of the job
+ *                         against.
+ * @param[in] nextState    The state to set the job to if the current state of
+ *                         the job is `currState`.
+ * @retval    true         The state of the job was `currState` and has been set
+ *                         to `nextState`.
+ * @retval    false        The state of the job wasn't `currState` and is
+ *                         unchanged.
+ * @post                   The job is unlocked.
+ */
+static bool job_compareAndSetState(
+        Job* const job,
+        const int  currState,
+        const int  nextState)
+{
+    bool wasEqual = false;
+    job_lock(job);
+    if (job->state == currState) {
+        job->state = nextState;
+        wasEqual = true;
+    }
+    job_unlock(job);
+    return wasEqual;
+}
+
+/**
  * Initializes a job. The job does not start executing.
  *
  * @param[out] job     The job.
  * @param[in]  start   Starting function for `pthread_create()`.
  * @param[in]  arg     Argument for `pthread_create()` and `stop()`.
  * @param[in]  stop    Stopping function or NULL.
+ * @param[in]  exe     The executor for the job.
  * @retval     0       Success.
  * @retval     EAGAIN  Insufficient system resources other than memory.
  *                     `log_add()` called.
@@ -210,7 +295,8 @@ static int job_init(
         Job* const restrict       job,
         void*             (*const start)(void*),
         void* restrict            arg,
-        void              (*const stop)(void*))
+        void              (*const stop)(void*),
+        Executor* const restrict  exe)
 {
     UASSERT(job != NULL && start != NULL);
 
@@ -229,6 +315,7 @@ static int job_init(
         job->status = 0;
         job->stop = stop;
         job->wasStopped = false;
+        job->exe = exe;
     }
 
     return status;
@@ -241,6 +328,7 @@ static int job_init(
  * @param[in]  start   Starting function for `pthread_create()`.
  * @param[in]  arg     Argument for `pthread_create()` and `stop()`.
  * @param[in]  stop    Stopping function or NULL.
+ * @param[in]  exe     The executor for the job.
  * @retval     0       Success. `*job` is set. The caller should call
  *                     `job_free(*job)` when it's no longer needed.
  * @retval     EAGAIN  Insufficient system resources other than memory.
@@ -251,7 +339,8 @@ static int job_new(
         Job** const restrict       job,
         void*              (*const start)(void*),
         void* restrict             arg,
-        void               (*const stop)(void*))
+        void               (*const stop)(void*),
+        Executor* const restrict   exe)
 {
     Job* const jb = LOG_MALLOC(sizeof(Job), "job");
     int        status;
@@ -260,7 +349,7 @@ static int job_new(
         status = ENOMEM;
     }
     else {
-        status = job_init(jb, start, arg, stop);
+        status = job_init(jb, start, arg, stop, exe);
 
         if (status) {
             free(jb);
@@ -274,74 +363,18 @@ static int job_new(
 }
 
 /**
- * Adds a job to an executor's job list.
- *
- * @pre                The executor is locked.
- * @pre                The job is unlocked.
- * @pre                `job->state == PENDING`
- * @param[in] job      The job.
- * @param[in] exe      The executor.
- * @retval    0        Success.
- * @retval    ENOMEM   Out-of-memory. `log_add()` called.
- * @post               The job is in the executor's job list.
- * @post               The job is unlocked.
- * @post               The executor is locked.
- */
-static int job_addToList(
-        Job* const restrict      job,
-        Executor* const restrict exe)
-{
-    int status;
-
-    job_lock(job);
-
-    UASSERT(job->state == JOB_PENDING);
-
-    DllElt* const elt = dll_add(exe->jobs, job);
-
-    if (elt == NULL) {
-        status = ENOMEM;
-    }
-    else {
-        job->exe = exe;
-        job->elt = elt;
-        status = 0;
-    }
-
-    job_unlock(job);
-
-    return status;
-}
-
-/**
- * Removes a job from its executor's job list.
- *
- * @pre                The executor is locked.
- * @param[in] job      The job.
- * @post               The executor is locked.
- */
-static void job_removeFromList(
-        Job* const restrict     job)
-{
-    job_lock(job);
-    Executor* const exe = job->exe;
-    (void)dll_remove(exe->jobs, job->elt);
-    job->elt = NULL;
-    job_unlock(job);
-}
-
-/**
  * Finalizes a job that has completed. A job completes when either its
  * start-function returns or its executing thread is cancelled. In either case,
  * this function is executed on the job's executing thread.
  *
- * @pre                Job is locked on this thread.
+ * @pre                The job's executor is unlocked.
+ * @pre                The job is locked.
  * @param[in] job      The completed job.
  * @retval    ENOMEM   Out-of-memory. `log_start()` called.
  * @post               The job is in its executor's completed-job queue and the
  * @post               executor's condition variable was signaled.
  * @post               `job->state == COMPLETED`.
- * @post               Job is unlocked on this thread.
+ * @post               The job is unlocked.
  */
 static int job_completed(
         Job* const job)
@@ -349,8 +382,8 @@ static int job_completed(
     int status;
 
     job->state = JOB_COMPLETED;
-    status = exe_addToCompleted(job);
     job_unlock(job);
+    status = exe_addToCompleted(job);
 
     return status;
 }
@@ -360,24 +393,26 @@ static int job_completed(
  * canceled.
  *
  * @pre            Job is unlocked.
- * @pre            `job->state == JOB_STOPPING`.
- * @pre            Executor is unlocked.
  * @param[in] arg  Pointer to the job.
- * @post           Executor is unlocked.
- * @post           Job is in `completed` queue.
- * @post           `job->state == COMPLETED`.
+ * @post           Job is in associated executor's `completed` queue if
+ *                 `job->state == JOB_STOPPING`.
+ * @post           `job->state == JOB_COMPLETED` if it was `JOB_STOPPING`.
  * @post           Job is unlocked.
  */
 static void job_canceled(
         void* const arg)
 {
     Job* job = (Job*)arg;
+    int  status;
 
     job_lock(job);
-    UASSERT(job->state == JOB_STOPPING);
-    job->wasStopped = true;
-
-    int status = job_completed(job); // unlocks job
+    if (job->state == JOB_CANCELLED) {
+        job->wasStopped = true;
+        int status = job_completed(job); // unlocks job
+    }
+    else {
+        job_unlock(job);
+    }
 
     log_log(status ? LOG_ERR : LOG_INFO);
     log_free(); // end of thread
@@ -432,11 +467,13 @@ static void* job_start(
  * calling the `stop` function given to `job_new()` if that argument was
  * non-NULL; otherwise, the thread on which the job is executing is canceled.
  *
+ * @pre                The job is unlocked.
  * @pre                The job's executor is locked.
  * @param[in] job      The job to be stopped.
  * @retval    0        Success.
  * @retval    ENOMEM   Out of memory. 'log_start()` called.
  * @post               The job's executor is locked.
+ * @post               The job is unlocked.
  */
 static int job_stop(
         Job* const job)
@@ -455,31 +492,25 @@ static int job_stop(
         job->state = JOB_COMPLETED;
         job->wasStopped = true;
         job->status = 0;
-        status = exe_addToCompleted(job);
         job_unlock(job);
+        status = exe_enqueueCompleted(job);
         if (status)
             job_free(job); // prevents memory leak
     }
     else if (job->state == JOB_EXECUTING) {
-        job->state = JOB_STOPPING;
         job->wasStopped = true;
         if (job->stop) {
-            /*
-             * The job and the job's executor are unlocked to obviate the
-             * possibility of thread deadlock due to a foreign function being
-             * called with a lock held.
-             */
-            job_unlock(job);
+            job->state = JOB_STOPPING;
             udebug("job_stop(): Calling job's stop() function");
-            exe_unlock(job->exe);
+            job_unlock(job); // precondition for `job->stop()`
             job->stop(job->arg);
-            exe_lock(job->exe);
         }
         else {
+            job->state = JOB_CANCELLED;
+            job_unlock(job); // precondition for `job_cancelled()`
             udebug("job_stop(): Canceling job's thread");
             int status = pthread_cancel(job->thread);
             UASSERT(status == 0);
-            job_unlock(job);
         }
         status = 0;
     }
@@ -547,6 +578,64 @@ static int exe_init(
 }
 
 /**
+ * Adds a job to an executor's executing job-list.
+ *
+ * @pre                The executor is locked.
+ * @pre                The job is unlocked.
+ * @pre                `job->state == PENDING`
+ * @param[in] exe      The executor.
+ * @param[in] job      The job.
+ * @retval    0        Success.
+ * @retval    ENOMEM   Out-of-memory. `log_add()` called.
+ * @post               The job is in the executor's job list.
+ * @post               The job is unlocked.
+ * @post               The executor is locked.
+ */
+static int exe_addToList(
+        Executor* const restrict exe,
+        Job* const restrict      job)
+{
+    int status;
+
+    verifyLocked(&exe->mutex);
+
+    job_lock(job);
+    UASSERT(job->state == JOB_PENDING);
+
+    DllElt* const elt = dll_add(exe->jobs, job);
+
+    if (elt == NULL) {
+        status = ENOMEM;
+    }
+    else {
+        job->elt = elt;
+        status = 0;
+    }
+
+    job_unlock(job);
+
+    return status;
+}
+
+/**
+ * Removes a job from an executor's executing job-list.
+ *
+ * @pre                The executor is locked.
+ * @param[in] job      The job.
+ * @post               The executor is locked.
+ */
+static void exe_removeFromList(
+        Executor* const restrict exe,
+        Job* const restrict      job)
+{
+    verifyLocked(&exe->mutex);
+    (void)dll_remove(exe->jobs, job->elt);
+    job_lock(job);
+    job->elt = NULL;
+    job_unlock(job);
+}
+
+/**
  * Submits a job for asynchronous execution.
  *
  * @pre                The executor is locked.
@@ -565,8 +654,9 @@ static int exe_submitJob(
         Executor* const restrict exe,
         Job* const restrict      job)
 {
-    int status = job_addToList(job, exe);
+    verifyLocked(&exe->mutex);
 
+    int status = exe_addToList(exe, job);
     if (status) {
         LOG_ADD0("Couldn't add job to list");
     }
@@ -574,7 +664,7 @@ static int exe_submitJob(
         status = pthread_create(&job->thread, NULL, job_start, job);
         if (status) {
             LOG_ERRNUM0(status, "Couldn't create new thread");
-            job_removeFromList(job);
+            exe_removeFromList(exe, job);
         }
         else {
             (void)pthread_detach(job->thread);
@@ -598,6 +688,7 @@ static int exe_submitJob(
 static int shutdown(
         Executor* const restrict exe)
 {
+    verifyLocked(&exe->mutex);
     UASSERT(exe->state == EXE_SHUTTING_DOWN);
     int      status = 0;
     DllIter* iter = dll_iter(exe->jobs);
@@ -637,12 +728,13 @@ static int shutdown(
 static int clear(
         Executor* const restrict exe)
 {
+    verifyLocked(&exe->mutex);
     UASSERT(exe->state == EXE_SHUTDOWN);
     int status;
 
     for (Job* job = (Job*)q_dequeue(exe->completed); job;
             job = (Job*)q_dequeue(exe->completed)) {
-        job_removeFromList(job);
+        exe_removeFromList(job->exe, job);
         job_free(job);
     }
     exe->errCode = 0;
@@ -716,6 +808,8 @@ void job_free(
         Job* const job)
 {
     if (job != NULL) {
+        // Because pthread_mutex_destroy() may return 0 for a locked mutex
+        verifyUnlocked(&job->mutex);
         int status = pthread_mutex_destroy(&job->mutex);
         UASSERT(status == 0);
         free(job);
@@ -776,7 +870,7 @@ int exe_submit(
     else {
         Job* jb;
 
-        status = job_new(&jb, start, arg, stop);
+        status = job_new(&jb, start, arg, stop, exe);
         if (status == 0) {
             status = exe_submitJob(exe, jb);
             if (status) {
@@ -842,7 +936,7 @@ Job* exe_getCompleted(
     }
     else {
         job = q_dequeue(exe->completed);
-        job_removeFromList(job);
+        exe_removeFromList(job->exe, job);
     }
 
     exe_unlock(exe);

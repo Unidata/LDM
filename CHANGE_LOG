@@ -1,3 +1,7 @@
+6.12.15.15
+    Improved thread-safety of executor.c by ensuring lock-order of job
+    and executor locks.
+
 6.12.15.14	2015-09-16T10:26:16-0600
     Got "make Distclean" and "make check-local" in "ldmld/" working.
 
