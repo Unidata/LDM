@@ -1,4 +1,4 @@
-6.12.15.15
+6.12.15.15	2015-09-17T13:02:21-0600
     Improved thread-safety of executor.c by ensuring lock-order of job
     and executor locks.
 
