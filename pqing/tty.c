@@ -1,8 +1,8 @@
 /*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+ *   Copyright 2015, University Corporation for Atmospheric Research
+ *   See the file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: tty.c,v 1.41 1998/10/16 19:28:55 steve Exp $ */
 
 /* #define _POSIX_SOURCE */
 
@@ -24,8 +24,7 @@
 
 /* Begin rtty */
 /*
- * We want berkeley style exclusive mode badly enough to 
- * to do this.
+ * We want Berkeley style exclusive mode badly enough to do this.
  */
 #ifndef TIOCEXCL
 #	ifdef sun /* as of SunOS 4.1 */
