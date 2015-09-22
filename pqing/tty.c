@@ -278,6 +278,10 @@ tty_speed(const char *baud)
 	speed = B19200;
     else if (strcmp(baud, "38400") == 0)
 	speed = B38400;
+    else if (strcmp(baud, "57600") == 0)
+        speed = B57600;
+    else if (strcmp(baud, "115200") == 0)
+        speed = B115200;
     else {
 	speed = '?';		/* assumes '?' will never be a valid speed code */
     }
