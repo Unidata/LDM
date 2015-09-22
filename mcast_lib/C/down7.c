@@ -1501,7 +1501,15 @@ deliver_product(
     // Products are also inserted on the multicast-receiver threads
     int status = pq_insert(pq, prod);
 
-    if (status) {
+    if (status == 0) {
+        if (ulogIsVerbose()) {
+            char buf[LDM_INFO_MAX];
+
+            (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
+            uinfo("Inserted: %s", buf);
+        }
+    }
+    else {
         if (status == EINVAL) {
             uerror("Invalid argument");
             status = LDM7_SYSTEM;
@@ -1511,10 +1519,7 @@ deliver_product(
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
 
-            if (0 == status) {
-                uinfo("Inserted: %s", buf);
-            }
-            else if (status == PQUEUE_DUP) {
+            if (status == PQUEUE_DUP) {
                 uinfo("Duplicate data-product: %s", buf);
             }
             else {
