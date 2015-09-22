@@ -1986,11 +1986,24 @@ deliver_missed_product_7_svc(
  */
 void*
 no_such_product_7_svc(
-    VcmtpProdIndex* const iProd,
+    VcmtpProdIndex* const missingIprod,
     struct svc_req* const rqstp)
 {
-    uwarn("Upstream LDM-7 says requested product doesn't exist: prodIndex=%lu",
-            (unsigned long)*iProd);
+    Down7*         down7 = pthread_getspecific(down7Key);
+    VcmtpProdIndex iProd;
+
+    if (!mrm_peekRequestedFileNoWait(down7->mrm, &iProd) ||
+        iProd != *missingIprod) {
+        LOG_START1("Downstream LDM-7 wasn't waiting for product %lu",
+                (unsigned long)*missingIprod);
+    }
+    else {
+        // The queue can't be empty
+        (void)mrm_removeRequestedFileNoWait(down7->mrm, &iProd);
+
+        uwarn("Upstream LDM-7 says requested product doesn't exist: "
+                "prodIndex=%lu", (unsigned long)*missingIprod);
+    }
 
     return NULL ; /* don't reply */
 }
