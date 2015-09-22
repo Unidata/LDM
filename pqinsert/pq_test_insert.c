@@ -419,6 +419,7 @@ static bool pti_execute()
             success = false;
             break;
         }
+        (void)memset(prod.data, 0xbd, prod.info.sz);
 
         pti_setSig(&prod.info.signature);
 
