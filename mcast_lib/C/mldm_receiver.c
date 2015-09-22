@@ -223,9 +223,10 @@ finishInsertion(
         pqe_index* const restrict       pqeIndex)
 {
     int status;
+    int diff = dataSize - info->sz;
 
-    if (info->sz > dataSize) {
-        LOG_ADD3("LDM data size > VCMTP data size: "
+    if (diff < 0 || diff >= 4) {
+        LOG_ADD3("Mismatch between LDM data size and VCMTP data size: "
                 "LDM=%u, VCMTP=%lu, ident=\"%s\"",
                 info->sz, (unsigned long)dataSize, info->ident);
         status = -1;
@@ -261,7 +262,7 @@ finishInsertion(
  * @param[in]      prodStart Pointer to the start of the XDR-encoded
  *                           data-product in the product-queue or NULL,
  *                           indicating a duplicate product.
- * @param[in]      prodSize  The size of the data-product in bytes.
+ * @param[in]      prodSize  The size of the XDR-encoded data-product in bytes.
  * @param[in]      pqeIndex  Reference to the reserved space in the product-
  *                           queue.
  * @retval         0         Success.
