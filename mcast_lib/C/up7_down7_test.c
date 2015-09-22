@@ -64,15 +64,22 @@ typedef struct {
     pthread_t             thread;
 } Receiver;
 
-// Number of data-products to insert
-static const int         NUM_PRODS = 1000;
-// Proportion of data-products that will not be multicasted
-static const double      FAILURE_RATE = 0.0;
+// Proportion of data-products that will not be multicasted (unimplemented)
+#define                  FAILURE_RATE 0.0
 // Maximum size of a data-product in bytes
-static const int         MAX_PROD_SIZE = 100000;
+#define                  MAX_PROD_SIZE 100000
+/*
+ * Factor by which the total amount of data is greater than the amount of data
+ * the product-queue can hold (approximates the number of times the
+ * product-queue will be filled).
+ */
+#define                  NUM_TIMES 10
 // Size of the data portion of the product-queue in bytes
-static const int         PQ_SIZE = 2000000;
+#define                  PQ_SIZE 2000000
 #define                  NUM_PQ_SLOTS (PQ_SIZE/(MAX_PROD_SIZE/2))
+
+// Number of data-products to insert
+static const unsigned    NUM_PRODS = (NUM_PQ_SLOTS*NUM_TIMES);
 static const char        LOCAL_HOST[] = "127.0.0.1";
 static sigset_t          termSigSet;
 static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
@@ -733,7 +740,9 @@ sender_insertProducts(void)
         status = set_timestamp(&info->arrival);
         CU_ASSERT_EQUAL_FATAL(status, 0);
         info->seqno = i;
-        (void)memcpy(info->signature, &i, sizeof(i));
+        uint32_t signet = htonl(i);
+        (void)memcpy(info->signature+sizeof(signaturet)-sizeof(signet), &signet,
+                sizeof(signet));
         info->sz = size;
 
         data = realloc(data, size);
