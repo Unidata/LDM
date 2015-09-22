@@ -4883,15 +4883,17 @@ pq_set_mvrt(
 }
 
 /**
- * Attempts to delete a data-product.
+ * Deletes a data-product.
  *
- * @param[in] pq     The product-queue.
- * @param[in] tqep   Pointer to the entry in the time-list.
- * @param[in] rlix   Index of the data-region.
- * @retval    true   Success.
- * @retval    false  The data-region is locked by something.
+ * @param[in] pq          The product-queue.
+ * @param[in] tqep        Pointer to the entry in the time-map.
+ * @param[in] rlix        Index of the data-region.
+ * @retval    0           Success.
+ * @retval    EACCES      Product is locked.
+ * @retval    PQ_CORRUPT  The product-queue is corrupt. Error-messaged logged.
+ * @retval    PQ_SYSTEM   System error. Error-message logged.
  */
-static inline bool // inlined because only called by one function
+static inline int // inlined because only called by one function
 pq_try_del_prod(
     pqueue* const restrict pq,
     tqelem* const restrict tqep,
@@ -4899,52 +4901,74 @@ pq_try_del_prod(
 {
     region* const rep = pq->rlp->rp + rlix;
     const off_t   offset = rep->offset;
-    void*         vp;
-    int           status = rgn_get(pq, offset, Extent(rep),
-            RGN_WRITE|RGN_NOWAIT, &vp);
+    int           status;
 
-    if (status)
-        return false;
-
-    /* Get the metadata of the data-product. */
-    prod_info info;
-    XDR       xdrs;
-
-    xdrmem_create(&xdrs, vp, Extent(rep), XDR_DECODE);
-    (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
-
-    if (!xdr_prod_info(&xdrs, &info)) {
-        LOG_START0("Couldn't XDR_DECODE data-product metadata");
+    if (offset != tqep->offset) {
+        LOG_START2("Offset-to-region mismatch: time-entry=%ld, "
+                "region-entry=%ld", (long)tqep->offset, (long)offset);
         log_log(LOG_ERR);
+        status = PQ_CORRUPT;
     }
     else {
-        /* Adjust the minimum virtual residence time. */
-        pq_set_mvrt(pq, tqep, &info);
+        void* vp;
 
-        /*
-         * Remove the corresponding entry from the signature-list.
-         */
-        if (sx_find_delete(pq->sxp, info.signature) == 0)
-            uerror("pq_try_del_prod(): signature %s: Not Found",
-                    s_signaturet(NULL, 0, info.signature));
+        status = rgn_get(pq, offset, Extent(rep), RGN_WRITE|RGN_NOWAIT, &vp);
+        if (status) {
+            if (status != EACCES) {
+                LOG_SERROR0("Couldn't get region (offset=%ld,extent=%lu)");
+                log_log(LOG_ERR);
+                status = PQ_SYSTEM;
+            }
+        }
+        else {
+            /* Get the metadata of the data-product. */
+            prod_info info;
+            XDR       xdrs;
 
-        xdr_free(xdr_prod_info, (char*)&info);
-    }
+            xdrmem_create(&xdrs, vp, Extent(rep), XDR_DECODE);
+            (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
 
-    /*
-     * Remove the corresponding entry from the time-list.
-     */
-    tq_delete(pq->tqp, tqep);
+            if (!xdr_prod_info(&xdrs, &info)) {
+                LOG_START0("Couldn't XDR_DECODE data-product metadata");
+                log_log(LOG_ERR);
+                status = PQ_CORRUPT;
+            }
+            else {
+                /*
+                 * Remove the corresponding entry from the signature-map.
+                 */
+                if (sx_find_delete(pq->sxp, info.signature) == 0) {
+                    LOG_START1("pq_try_del_prod(): signature %s: Not Found",
+                            s_signaturet(NULL, 0, info.signature));
+                    log_log(LOG_ERR);
+                    status = PQ_CORRUPT;
+                }
+                else {
+                    /* Adjust the minimum virtual residence time. */
+                    pq_set_mvrt(pq, tqep, &info);
 
-    /*
-     * Remove the corresponding entry from the region-list.
-     */
-    rl_free(pq->rlp, rlix);
+                    /*
+                     * Remove the corresponding entry from the time-map.
+                     */
+                    tq_delete(pq->tqp, tqep);
 
-    /* Release the data-region. */
-    (void)rgn_rel(pq, offset, 0);
+                    /*
+                     * Remove the corresponding entry from the region-map.
+                     */
+                    rl_free(pq->rlp, rlix);
+                }
 
-    return true;
+                xdr_free(xdr_prod_info, (char*)&info);
+            } // `info` acquired
+
+            xdr_destroy(&xdrs);
+
+            /* Release the data-region. */
+            (void)rgn_rel(pq, offset, 0);
+        } // `rgn_get()` successful
+    } // region-offsets match
+
+    return status;
 }
 
 
@@ -4955,14 +4979,20 @@ pq_try_del_prod(
  * "minVirtResTime", "mvrtSize", and "mvrtSlots" members of the product-queue
  * control block on success.
  *
- * @param[in] pq      Pointer to the product-queue object.  Shall not be NULL.
- * @retval    0       Success.  "pq->ctlp->isFull" set to true.
- * @return    EACESS  No unlocked products left to delete. Error-message logged.
+ * @param[in] pq          Pointer to the product-queue object.  Shall not be
+ *                        NULL.
+ * @retval    0           Success.  "pq->ctlp->isFull" set to true.
+ * @retval    EACESS      No unlocked products left to delete. Error-message
+ *                        logged.
+ * @retval    PQ_CORRUPT  The product-queue is corrupt. Error message logged.
+ * @retval    PQ_SYSTEM   System error. Error-message logged.
  */
 static int
 pq_del_oldest(
     pqueue* const pq)
 {
+    int status = EACCES;
+
     assert(pq != NULL);
     assert(pq->ctlp != NULL && pq->tqp != NULL);
 
@@ -4972,15 +5002,18 @@ pq_del_oldest(
             tqep && (rlix = rl_find(pq->rlp, tqep->offset)) != RL_NONE;
             tqep = tq_next(pq->tqp, tqep)) {
 
-        if (pq_try_del_prod(pq, tqep, rlix)) {
+        status = pq_try_del_prod(pq, tqep, rlix);
+        if (status == 0) {
             pq->ctlp->isFull = 1; // Mark the queue as full.
             return 0;
         }
+        if (status != EACCES)
+            return status;
     }
 
     uerror("pq_del_oldest(): no unlocked products left to delete!");
 
-    return EACCES;
+    return status;
 
 #if 0
     tqelem*             tqep = tqe_first(pq->tqp);
@@ -5100,10 +5133,17 @@ pq_del_oldest(
 }
 
 
-/*
- * Delete oldest elements until you have space for 'extent'
- * Returns in *rixp the region list index for a suitable region. Increments the
- * number of regions in use if successful.
+/**
+ * Delete oldest elements until you have space for 'extent' Returns in *rixp the
+ * region list index for a suitable region. Increments the number of regions in
+ * use if successful.
+ *
+ * @retval    0           Success.
+ * @retval    ENOMEM      No data-products to delete.
+ * @retval    EACESS      No unlocked products left to delete. Error-message
+ *                        logged.
+ * @retval    PQ_CORRUPT  The product-queue is corrupt. Error message logged.
+ * @retval    PQ_SYSTEM   System error. Error-message logged.
  */
 static int
 rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
@@ -5129,10 +5169,17 @@ rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
         return ENOERR;
 }
 
-/*
+/**
  * Delete oldest elements until a consolidation has occurred, making
  * an rl element available.  If this gets called much, you didn't
  * allocate enough product slots or a big enough queue.
+ *
+ * @retval    0           Success.
+ * @retval    ENOMEM      No data-products to delete.
+ * @retval    EACESS      No unlocked products left to delete. Error-message
+ *                        logged.
+ * @retval    PQ_CORRUPT  The product-queue is corrupt. Error message logged.
+ * @retval    PQ_SYSTEM   System error. Error-message logged.
  */
 static int
 rpqe_mkslot(pqueue *const pq)
@@ -5173,6 +5220,8 @@ rpqe_mkslot(pqueue *const pq)
  *                     already exists in the product-queue.
  * @retval PQUEUE_DUP  A product with the same signature already exists in the
  *                     product-queue.
+ * @retval PQ_CORRUPT  The product-queue is corrupt. Error message logged.
+ * @retval PQ_SYSTEM   System error. Error-message logged.
  * @retval ENOMEM      Insufficient memory is available.
  * @retval ENOMEM      There is insufficient room in the address space to effect
  *                     the necessary mapping.
@@ -7073,7 +7122,6 @@ getMetadataFromOffset(
             }
 
             xdr_destroy(&xdrs);
-
             (void)rgn_rel(pq, offset, 0);
         }                               /* data-product region locked */
     }                                   /* associated data-product exists */
@@ -7682,6 +7730,7 @@ pq_sequence(pqueue *pq, pq_match mt,
 
         /*FALLTHROUGH*/
 unwind_rgn:
+        xdr_destroy(&xdrs);
         /* release the data segment */
         (void) rgn_rel(pq, offset, 0);
         unlockIf(pq);
@@ -7875,6 +7924,7 @@ pq_seqdel(pqueue *pq, pq_match mt,
 
         /*FALLTHROUGH*/
 unwind_rgn:
+        xdr_destroy(&xdrs);
         /* release the data segment */
         (void) rgn_rel(pq, offset, 0);
 
