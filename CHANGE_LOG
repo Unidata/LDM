@@ -1,3 +1,7 @@
+6.12.15.18
+    Got up7_down7_test` to work with arbitrary deletion and unicast request of
+    multicast-received products.
+
 6.12.15.17	2015-09-22T14:53:00-0600
     pq_test_insert(1):
         Set data to 0xbd.
@@ -109,8 +113,8 @@
 
 6.12.15.4	2015-07-20T10:36:36-0600
     LDM-7:
-        Improved the code surrounding the creation of a client-side handle on the TCP
-        connection by an upstream LDM-7.
+        Improved the code surrounding the creation of a client-side handle on
+        the TCP connection by an upstream LDM-7.
 
         Made ZERO_TIMEOUT constant.
 

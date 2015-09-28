@@ -27,6 +27,7 @@
 #define PQ_CORRUPT	-2	/* the product-queue is corrupt */
 #define PQ_NOTFOUND	-3	/* no such data-product */
 #define PQ_SYSTEM  	-4	/* system error */
+#define PQ_LOCKED       -5      /* data-product is locked by another process */
 
 typedef struct pqueue pqueue; /* private, implemented in pq.c */
 extern struct pqueue *pq;
@@ -103,16 +104,18 @@ extern const pqe_index _pqenone;
  *                        process' file mode creation mask.
  * @param[in]  pflags     Product-queue flags. Bitwise AND of
  *                          PQ_DEFAULT	  Default attributes (0).
- *                          PQ_NOCLOBBER  Don't replace an existing
- *                                        product-queue.
- *                          PQ_READONLY   Read-only. Default is read/write
- *                          PQ_NOLOCK     Disable locking
- *                          PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
- *                                        Default is `MAP_SHARED`.
- *                          PQ_NOMAP      Use `malloc/read/write/free` instead
- *                                        of `mmap()`
  *                          PQ_MAPRGNS    Map region by region. Default is whole
  *                                        file.
+ *                          PQ_NOCLOBBER  Don't replace an existing
+ *                                        product-queue.
+ *                          PQ_NOLOCK     Disable locking
+ *                          PQ_NOMAP      Use `malloc/read/write/free` instead
+ *                                        of `mmap()`
+ *                          PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
+ *                                        Default is `MAP_SHARED`.
+ *                          PQ_READONLY   Read-only. Default is read/write
+ *                          PQ_THREADSAFE Make the queue access functions
+ *                                        thread-safe.
  * @param[in]  align      Alignment parameter for file components or 0.
  * @param[in]  initialsz  Size, in bytes, of the data portion of the product-
  *                        queue.
@@ -133,14 +136,16 @@ pq_create(const char *path, mode_t mode,
  *
  * @param[in] path         Pathname of product-queue.
  * @param[in] pflags       File-open bit-flags:
- *                           PQ_READONLY   Default is read/write
- *                           PQ_NOLOCK     Disable locking
- *                           PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`,
- *                                         default is `MAP_SHARED`
+ *                           PQ_MAPRGNS    Map region by region, default whole
+ *                                         file.
+ *                           PQ_NOLOCK     Disable locking.
  *                           PQ_NOMAP      Use `malloc/read/write/free` instead
  *                                         of `mmap()`
- *                           PQ_MAPRGNS    Map region by region, default whole
- *                                         file
+ *                           PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
+ *                                         Default is `MAP_SHARED`
+ *                           PQ_READONLY   Default is read/write.
+ *                           PQ_THREADSAFE Make the queue access functions
+ *                                         thread-safe.
  * @param[out] pqp         Memory location to receive pointer to product-queue
  *                         structure.
  * @retval     0           Success. *pqp set.
@@ -155,6 +160,25 @@ pq_open(
     const char* const path,
     int               pflags,
     pqueue** const    pqp);
+
+/**
+ * Returns the flags used to open or create a product-queue.
+ *
+ * @param[in] pq  The product-queue.
+ * @return        The flags: a bitwise OR of
+ *                    PQ_MAPRGNS    Map region by region, default whole file.
+ *                    PQ_NOCLOBBER  Don't replace an existing product-queue.
+ *                    PQ_NOLOCK     Disable locking.
+ *                    PQ_NOMAP      Use `malloc/read/write/free` instead of
+ *                                  `mmap()`
+ *                    PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`. Default is
+ *                                  `MAP_SHARED`
+ *                    PQ_READONLY   Default is read/write.
+ *                    PQ_THREADSAFE Make the queue access functions threadsafe.
+ */
+int
+pq_getFlags(
+        pqueue* const pq);
 
 /*
  * On success, if the product-queue was open for writing, then its 
@@ -804,6 +828,23 @@ int
 pq_seqdel(pqueue *pq, pq_match mt,
         const prod_class_t *clss, int wait,
         size_t *extentp, timestampt *timestampp) ;
+
+/*
+ * Deletes the data-product with the given signature from a product-queue.
+ *
+ * @param[in] pq           The product-queue
+ * @param[in] sig          The signature of the data-product to be deleted.
+ * @retval    0            Success. The data-product was found and deleted.
+ * @retval    PQ_CORRUPT   The product-queue is corrupt.
+ * @retval    PQ_LOCKED    The data-product was found but is locked by another
+ *                         process.
+ * @retval    PQ_NOTFOUND  The data-product wasn't found.
+ * @retval    PQ_SYSTEM    System error. Error message logged.
+ */
+int
+pq_deleteBySignature(
+        pqueue* const restrict pq,
+        const signaturet       sig);
 
 /*
  * Returns the creation-time of the data-product in the product-queue whose
