@@ -160,6 +160,9 @@ void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex prodIndex)
     std::unique_lock<std::mutex> lock(mutex);
     void* const                  prodStart = prodInfos[prodIndex].start;
 
+    uinfo("PerProdNotifier::notify_of_missed_prod(): Missed product: prodIndex="
+            "%lu, prodStart=%p", (unsigned long)prodIndex, prodStart);
+
     missed_prod_func(mlr, prodIndex,
             prodStart ? &prodInfos[prodIndex].index : nullptr);
 
