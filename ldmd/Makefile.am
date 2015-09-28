@@ -136,8 +136,5 @@ check-local:
 	sleep 1
 	kill `cat down7.pid` `cat up7.pid`
 	rm down7.pid up7.pid
-
-#
-#	&& sleep 1 \
-#	&& kill $$up7_pid $$down7_pid
+	rm up7.pq down7.pq
 #endif
