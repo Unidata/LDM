@@ -103,26 +103,36 @@ executeDown7(
     const char* const restrict        mcastIface,
     const char* const restrict        pqPathname)
 {
-    Down7* down7 = down7_new(servAddr, feedtype, mcastIface, pqPathname);
-    int    status;
-
-    if (NULL == down7) {
+    pqueue* pq;
+    int     status = pq_open(pqPathname, PQ_THREADSAFE, &pq);
+    if (status) {
+        LOG_ADD1("Couldn't open product-queue \"%s\"", pqPathname);
         status = LDM7_SYSTEM;
     }
     else {
-        pthread_t termWaitThread;
-        status = pthread_create(&termWaitThread, NULL, waitForTermSig, down7);
-        if (status) {
-            LOG_ERRNUM0(status, "Couldn't create termination-waiting thread");
+        Down7* down7 = down7_new(servAddr, feedtype, mcastIface, pq);
+
+        if (NULL == down7) {
             status = LDM7_SYSTEM;
         }
         else {
-            (void)pthread_detach(termWaitThread);
-            blockTermSigs();
-            status = down7_start(down7);
-        }
-        down7_free(down7);
-    } // `down7` allocated
+            pthread_t termWaitThread;
+            status = pthread_create(&termWaitThread, NULL, waitForTermSig,
+                    down7);
+            if (status) {
+                LOG_ERRNUM0(status,
+                        "Couldn't create termination-waiting thread");
+                status = LDM7_SYSTEM;
+            }
+            else {
+                (void)pthread_detach(termWaitThread);
+                blockTermSigs();
+                status = down7_start(down7);
+            }
+            down7_free(down7);
+        } // `down7` allocated
+        (void)pq_close(pq);
+    } // product-queue open
 
     return status;
 }

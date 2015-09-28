@@ -41,6 +41,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -101,8 +102,10 @@ struct Down7 {
     McastReceiverMemory*   mrm;
     Up7Proxy*             up7proxy;      ///< proxy for upstream LDM-7
     Executor*             executor;      ///< asynchronous executor of jobs
-    pthread_mutex_t       stateMutex;    ///< recursive mutex for changing state
+    pthread_mutex_t       stateMutex;    ///< mutex for changing state
     pthread_cond_t        napCond;       ///< condition-variable for napping
+    pthread_mutex_t       numProdMutex;  /// Mutex for number of products
+    uint64_t              numProds;      ///< number of inserted products
     /** Synchronizes multiple-thread access to client-side RPC handle */
     feedtypet             feedtype;      ///< feed-expression of multicast group
     Down7State            state;         ///< Downstream LDM-7 state
@@ -667,7 +670,10 @@ static void
 destroyTransport(
         void* const arg)
 {
+    udebug("%s:destroyTansport(): Entered", __FILE__);
     svc_destroy((SVCXPRT*)arg);
+    log_log(LOG_ERR);
+    log_free(); // because end of thread
 }
 
 /**
@@ -702,7 +708,6 @@ run_svc(
         udebug("down7.c:run_svc(): Calling poll(): socket=%d", sock);
         setCancelState(true); // enable cancellation of `poll()`
         status = poll(&pfd, 1, timeout);
-        setCancelState(false); // subsequent code should be quick
 
         if (0 == status) {
             // Timeout
@@ -721,8 +726,10 @@ run_svc(
             status = 0;
             break;
         }
-        if (pfd.revents & POLLIN)
+        if (pfd.revents & POLLIN) {
+            setCancelState(false); // subsequent code should be quick
             svc_getreqsock(sock); // Process RPC message. Calls ldmprog_7()
+        }
         if (!FD_ISSET(sock, &svc_fdset)) {
             // Here if the upstream LDM-7 closed the connection
             udebug("down7.c:run_svc(): The RPC layer destroyed the service transport");
@@ -890,6 +897,7 @@ startRequestTask(
 
     log_log(status ? LOG_ERR : LOG_INFO);
 
+    udebug("%s:startRequestTask(): Returning &%d", __FILE__, status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -910,6 +918,7 @@ static void
 stopRequestTask(
         void* const arg)
 {
+    udebug("%s:stopRequestTask(): Entered", __FILE__);
     Down7* const down7 = (Down7*)arg;
     if (down7->mrm) {
         udebug("stopRequestTask(): Stopping data-product requesting task");
@@ -1016,7 +1025,7 @@ startUcastRecvTask(
 
     log_log(status ? LOG_ERR : LOG_INFO);
 
-    udebug("%s:startUcastRecvTask(): Returning %d", __FILE__, status);
+    udebug("%s:startUcastRecvTask(): Returning &%d", __FILE__, status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1069,10 +1078,13 @@ static void
 stopMcastRecvTask(
         void* const arg)
 {
+    udebug("%s:stopMcastRecvTask(): Entered", __FILE__);
     Down7* const down7 = (Down7*)arg;
+    udebug("%s:stopMcastRecvTask(): Locking state", __FILE__);
     lockState(down7);
     if (down7->mlr) {
-        udebug("stopMcastRecvTask(): Stopping multicast data-product receiving task");
+        udebug("%s:stopMcastRecvTask(): "
+                "Stopping multicast data-product receiving task", __FILE__);
         mlr_stop(down7->mlr);
     }
     unlockState(down7);
@@ -1089,7 +1101,7 @@ static int
 startMcastRecvTask(
         Down7* const down7)
 {
-    udebug("startMcastRecvTask(): Entered");
+    udebug("%s:startMcastRecvTask(): Entered", __FILE__);
 
     Mlr* const   mlr = mlr_new(down7->mcastInfo, down7->mcastIface, down7);
     int          status;
@@ -1115,7 +1127,7 @@ startMcastRecvTask(
         }
     }
 
-    udebug("startMcastRecvTask(): Returning %d", status);
+    udebug("%s:startMcastRecvTask(): Returning %d", __FILE__, status);
     return status;
 }
 
@@ -1276,6 +1288,8 @@ freeClient(
     down7->up7proxy = NULL;
     (void)close(down7->sock);
     down7->sock = -1;
+    log_log(LOG_ERR);
+    log_free(); // because end of thread
 }
 
 /**
@@ -1488,25 +1502,27 @@ nap(
  * data-product to the product-queue. The data-product should have been
  * previously requested from the remote LDM-7.
  *
- * @param[in] pq           Pointer to the product-queue.
- * @param[in] prod         Pointer to the data-product.
+ * @param[in] down7        The downstream LDM-7.
+ * @param[in] prod         The data-product.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System error. `log_start()` called.
  */
 static int
 deliver_product(
-    pqueue* const restrict  pq,
-    product* const restrict prod)
+        Down7* const restrict   down7,
+        product* const restrict prod)
 {
     // Products are also inserted on the multicast-receiver threads
-    int status = pq_insert(pq, prod);
+    pqueue* const restrict  pq = down7->pq;
+    int                     status = pq_insert(pq, prod);
 
     if (status == 0) {
         if (ulogIsVerbose()) {
             char buf[LDM_INFO_MAX];
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
-            uinfo("Inserted: %s", buf);
+            uinfo("%s:deliver_product(): Inserted: %s", __FILE__, buf);
+            down7_incNumProds(down7);
         }
     }
     else {
@@ -1520,7 +1536,8 @@ deliver_product(
             (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
 
             if (status == PQUEUE_DUP) {
-                uinfo("Duplicate data-product: %s", buf);
+                uinfo("%s:deliver_product(): Duplicate data-product: %s",
+                        __FILE__, buf);
             }
             else {
                 uwarn("Product too big for queue: %s", buf);
@@ -1599,7 +1616,8 @@ wakeUpNappingDown7(
  * @param[in] feedtype    Feedtype of multicast group to receive.
  * @param[in] mcastIface  IP address of interface to use for receiving multicast
  *                        packets. Caller may free upon return.
- * @param[in] pqPathname  Pathname of the product-queue.
+ * @param[in] pq          The product-queue. Must be thread-safe (i.e.,
+ *                        `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
  * @retval    NULL        Failure. `log_start()` called.
  * @return                Pointer to the new downstream LDM-7.
  */
@@ -1608,13 +1626,23 @@ down7_new(
     const ServiceAddr* const restrict servAddr,
     const feedtypet                   feedtype,
     const char* const restrict        mcastIface,
-    const char* const restrict        pqPathname)
+    pqueue* const restrict            down7Pq)
 {
     Down7* const down7 = LOG_MALLOC(sizeof(Down7), "downstream LDM-7");
     int          status;
 
     if (down7 == NULL)
         goto return_NULL;
+
+    /*
+     * `PQ_THREADSAFE` because the queue is accessed by this module on 3
+     * threads: VCMTP multicast receiver, VCMTP unicast receiver, and LDM-7
+     * data-product receiver.
+     */
+    if (!(pq_getFlags(down7Pq) | PQ_THREADSAFE)) {
+        LOG_START1("Product-queue not thread-safe: %0x", pq_getFlags(down7Pq));
+        goto free_down7;
+    }
 
     if ((down7->servAddr = sa_clone(servAddr)) == NULL) {
         char buf[256];
@@ -1654,22 +1682,12 @@ down7_new(
         } // `mutexAttr` initialized
     }
 
-    /*
-     * `PQ_THREADSAFE` because the queue is accessed on 3 threads: VCMTP
-     * multicast receiver, VCMTP unicast receiver, and LDM-7 data-product
-     * receiver.
-     */
-    if ((status = pq_open(pqPathname, PQ_THREADSAFE, &down7->pq))) {
-        LOG_ADD1("Couldn't open product-queue \"%s\"", pqPathname);
-        goto free_stateMutex;
-    }
-
     if ((down7->executor = exe_new()) == NULL)
-        goto close_pq;
+        goto free_stateMutex;
 
     down7->mcastIface = strdup(mcastIface);
     if (down7->mcastIface == NULL) {
-        LOG_ADD1("Couldn't open product-queue \"%s\"", pqPathname);
+        LOG_ADD0("Couldn't clone multicast interface specification");
         goto free_executor;
     }
 
@@ -1683,6 +1701,7 @@ down7_new(
     if ((status = pthread_once(&down7KeyControl, createDown7Key)) != 0)
         goto close_mcastReceiverMemory;
 
+    down7->pq = down7Pq;
     (void)memset(down7->firstMcast, 0, sizeof(signaturet));
     (void)memset(down7->prevLastMcast, 0, sizeof(signaturet));
     down7->feedtype = feedtype;
@@ -1692,6 +1711,8 @@ down7_new(
     down7->mlr = NULL;
     down7->mcastWorking = false;
     down7->state = DOWN7_INITIALIZED;
+    (void)pthread_mutex_init(&down7->numProdMutex, NULL);
+    down7->numProds = 0;
 
     return down7;
 
@@ -1788,6 +1809,42 @@ down7_start(
 }
 
 /**
+ * Increments the number of data-products successfully inserted into the
+ * product-queue of a downstream LDM-7.
+ *
+ * @param[in] down7  The downstream LDM-7.
+ */
+void
+down7_incNumProds(
+        Down7* const down7)
+{
+    int status = pthread_mutex_lock(&down7->numProdMutex);
+    UASSERT(status == 0);
+    down7->numProds++;
+    pthread_mutex_unlock(&down7->numProdMutex);
+    UASSERT(status == 0);
+}
+
+/**
+ * Returns the number of data-products successfully inserted into the product-
+ * queue of a downstream LDM-7.
+ *
+ * @param[in] down7  The downstream LDM-7.
+ * @return           The number of successfully inserted data-products.
+ */
+uint64_t
+down7_getNumProds(
+        Down7* const down7)
+{
+    int status = pthread_mutex_lock(&down7->numProdMutex);
+    UASSERT(status == 0);
+    uint64_t num = down7->numProds;
+    pthread_mutex_unlock(&down7->numProdMutex);
+    UASSERT(status == 0);
+    return num;
+}
+
+/**
  * Stops a downstream LDM-7. Causes `down7_start()` to return if it hasn't
  * already. Returns immediately.
  *
@@ -1808,12 +1865,14 @@ down7_stop(
      */
     unlockState(down7);
 
+    udebug("%s: Calling exe_shutdown()", __FILE__);
     int status = exe_shutdown(down7->executor);
     if (status) {
         LOG_ERRNUM0(status, "Couldn't shut down executor");
         status = LDM7_SYSTEM;
     }
     else {
+        udebug("%s: Calling lockState()", __FILE__);
         lockState(down7);
         wakeUpNappingDown7(down7);
         unlockState(down7);
@@ -1869,10 +1928,6 @@ down7_free(
             }
             if (pthread_cond_destroy(&down7->napCond)) {
                 LOG_ADD0("Couldn't destroy termination condition-variable");
-                status = -1;
-            }
-            if (pq_close(down7->pq)) {
-                LOG_ADD0("Couldn't close product-queue");
                 status = -1;
             }
             free(down7->mcastIface);
@@ -1975,7 +2030,7 @@ deliver_missed_product_7_svc(
         // The queue can't be empty
         (void)mrm_removeRequestedFileNoWait(down7->mrm, &iProd);
 
-        if (deliver_product(down7->pq, &missedProd->prod) != 0)
+        if (deliver_product(down7, &missedProd->prod) != 0)
             deliveryFailure("Couldn't insert missed product", info, rqstp);
     }
 
@@ -2032,7 +2087,7 @@ deliver_backlog_product_7_svc(
 {
     Down7* down7 = pthread_getspecific(down7Key);
 
-    if (deliver_product(down7->pq, prod))
+    if (deliver_product(down7, prod))
         deliveryFailure("Couldn't insert backlog product", &prod->info, rqstp);
 
     return NULL; // causes RPC dispatcher to not reply

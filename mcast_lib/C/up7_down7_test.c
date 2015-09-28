@@ -64,8 +64,8 @@ typedef struct {
     pthread_t             thread;
 } Receiver;
 
-// Proportion of data-products that will not be multicasted (unimplemented)
-#define                  FAILURE_RATE 0.0
+// Proportion of data-products that will be deleted and requested.
+#define                  REQUEST_RATE 0.5
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 100000
 /*
@@ -75,8 +75,8 @@ typedef struct {
  */
 #define                  NUM_TIMES 10
 // Size of the data portion of the product-queue in bytes
-#define                  PQ_SIZE 2000000
-#define                  NUM_PQ_SLOTS (PQ_SIZE/(MAX_PROD_SIZE/2))
+#define                  PQ_SIZE 500000
+#define                  NUM_PQ_SLOTS (PQ_SIZE/(MAX_PROD_SIZE/10))
 
 // Number of data-products to insert
 static const unsigned    NUM_PRODS = (NUM_PQ_SLOTS*NUM_TIMES);
@@ -87,6 +87,8 @@ static const char        DOWN7_PQ_PATHNAME[] = "down7_test.pq";
 static McastProdIndex    initialProdIndex;
 static Sender            sender;
 static Receiver          receiver;
+static pthread_t         requesterThread;
+static pqueue*           receiverPq;
 
 /*
  * The following functions (until otherwise noted) are only called once.
@@ -232,6 +234,28 @@ teardown(void)
 /*
  * The following might be called multiple times.
  */
+
+static void
+blockSigCont(
+        sigset_t* const oldSigSet)
+{
+    sigset_t newSigSet;
+    (void)sigemptyset(&newSigSet);
+    (void)sigaddset(&newSigSet, SIGCONT);
+    int status = pthread_sigmask(SIG_BLOCK, &newSigSet, oldSigSet);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+}
+
+static void
+unblockSigCont(
+        sigset_t* const oldSigSet)
+{
+    sigset_t newSigSet;
+    (void)sigemptyset(&newSigSet);
+    (void)sigaddset(&newSigSet, SIGCONT);
+    int status = pthread_sigmask(SIG_UNBLOCK, &newSigSet, oldSigSet);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+}
 
 static int
 createEmptyProductQueue(
@@ -440,10 +464,14 @@ funcCancelled(
 }
 
 /**
- * Might call `svc_destroy(up7->xprt)`.
- *
- * @param[in] up7  Upstream LDM-7.
- * @retval    0    Success.
+ * @param[in] up7    Upstream LDM-7.
+ * @retval    0      Success. Connection was closed by downstream LDM-7.
+ * @retval    EINTR  A signal was caught.
+ * @retval    EIO    I/O error. `log_start()` called.
+ * @retval    EAGAIN The allocation of internal data structures failed but a
+ *                   subsequent request may succeed.
+ * @post             `svc_destroy(up7->xprt)` will have been called.
+ * @post             `up7->xprt == NULL`
  */
 static int
 up7_run(
@@ -458,18 +486,17 @@ up7_run(
 
     pthread_cleanup_push(funcCancelled, "up7_run");
 
-    int initCancelState;
-    (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &initCancelState);
+    int cancelState;
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
 
     for (;;) {
         udebug("up7_run(): Calling poll()");
         status = poll(&fds, 1, -1); // `-1` => indefinite timeout
 
-        int cancelState;
-        // (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
-
         if (0 > status) {
-            svc_destroy(up7->xprt);
+            if (errno != EINTR)
+                serror("up7_run(): poll() failure");
+            status = errno;
             break;
         }
         if ((fds.revents & POLLERR) || (fds.revents & POLLNVAL)) {
@@ -493,15 +520,18 @@ up7_run(
             status = 0;
             break;
         }
+    }
 
-        (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
+    if (up7->xprt) {
+        svc_destroy(up7->xprt);
+        up7->xprt = NULL; // so others don't try to destroy it
     }
 
     /*
      * In order to play nice with the caller, the cancelability state is
      * reverted to its value on entry.
      */
-    (void)pthread_setcancelstate(initCancelState, &initCancelState);
+    (void)pthread_setcancelstate(cancelState, &cancelState);
 
     pthread_cleanup_pop(0);
 
@@ -555,8 +585,8 @@ servlet_run(
 
     pthread_cleanup_push(destroyUp7, &up7); // calls `up7_destroy()`
 
-    status = up7_run(&up7); // might call `svc_destroy(up7->xprt)`
-    CU_ASSERT_EQUAL(status, 0);
+    status = up7_run(&up7); // will call `svc_destroy(up7->xprt)`
+    CU_ASSERT(status == 0 || status == EINTR);
 
     pthread_cleanup_pop(1); // might call `svc_destroy(up7->xprt)`
     pthread_cleanup_pop(0); // `sock` already closed
@@ -715,11 +745,7 @@ sender_getPort(
 static void
 sender_insertProducts(void)
 {
-    pqueue* pq;
-    int     status = pq_open(UP7_PQ_PATHNAME, 0, &pq);
-
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
+    int            status;
     product        prod;
     prod_info*     info = &prod.info;
     char           ident[80];
@@ -740,7 +766,7 @@ sender_insertProducts(void)
         status = set_timestamp(&info->arrival);
         CU_ASSERT_EQUAL_FATAL(status, 0);
         info->seqno = i;
-        uint32_t signet = htonl(i);
+        uint32_t signet = htonl(i); // decoded in `requester_decide()`
         (void)memcpy(info->signature+sizeof(signaturet)-sizeof(signet), &signet,
                 sizeof(signet));
         info->sz = size;
@@ -760,12 +786,10 @@ sender_insertProducts(void)
         duration.tv_sec = 0;
         duration.tv_nsec = 5000000; // 5 ms
         status = nanosleep(&duration, NULL);
-        CU_ASSERT_EQUAL_FATAL(status, 0);
+        CU_ASSERT_FATAL(status == 0 || errno == EINTR);
     }
 
     free(data);
-    status = pq_close(pq);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
 static int
@@ -819,7 +843,7 @@ sender_start(
         }
         else {
             // Thread-safe because 2 threads: upstream LDM-7 & product insertion.
-            status = pq_open(getQueuePath(), PQ_READONLY | PQ_THREADSAFE, &pq);
+            status = pq_open(getQueuePath(), PQ_THREADSAFE, &pq);
             if (status) {
                 LOG_ADD1("Couldn't open product-queue \"%s\"", getQueuePath());
             }
@@ -980,13 +1004,196 @@ sender_terminate(void)
         retval = status;
     }
 
+#if 0
     status = deleteProductQueue(UP7_PQ_PATHNAME);
     if (status) {
         LOG_ADD0("deleteProductQueue() failure");
         retval = status;
     }
+#endif
 
     return retval;
+}
+
+static void
+requester_close(
+        void* const arg)
+{
+    log_log(LOG_ERR); // To log any pending messages
+    log_free();
+}
+
+typedef struct {
+    signaturet sig;
+    bool       delete;
+} RequestArg;
+
+static void
+decide(
+        RequestArg* const reqArg,
+        const signaturet  sig)
+{
+    static unsigned short    xsubi[3] = {(unsigned short)1234567890,
+                                         (unsigned short)9876543210,
+                                         (unsigned short)1029384756};
+    if (erand48(xsubi) >= REQUEST_RATE) {
+        reqArg->delete = false;
+    }
+    else {
+        reqArg->delete = true;
+        (void)memcpy(reqArg->sig, sig, sizeof(signaturet));
+    }
+}
+
+static inline int // inline because only called in one place
+requester_decide(
+        const prod_info* const restrict info,
+        const void* const restrict      data,
+        void* const restrict            xprod,
+        const size_t                    size,
+        void* const restrict            arg)
+{
+    char infoStr[LDM_INFO_MAX];
+    udebug("requester_decide(): Entered: info=\"%s\"",
+            s_prod_info(infoStr, sizeof(infoStr), info, 1));
+    static VcmtpProdIndex maxProdIndex;
+    static bool           maxProdIndexSet = false;
+    VcmtpProdIndex        prodIndex;
+    RequestArg* const     reqArg = (RequestArg*)arg;
+
+    /*
+     * The monotonicity of the product-index is checked to avoid deleting a
+     * previously-deleted and just-re-inserted data-product.
+     */
+
+    (void)memcpy(&prodIndex,
+            info->signature + sizeof(signaturet) - sizeof(VcmtpProdIndex),
+            sizeof(prodIndex));
+    prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
+
+    if (!maxProdIndexSet) {
+        decide(reqArg, info->signature);
+        maxProdIndex = prodIndex;
+        maxProdIndexSet = true;
+    }
+    else if (prodIndex > maxProdIndex) {
+        decide(reqArg, info->signature);
+        maxProdIndex = prodIndex;
+    }
+    else {
+        reqArg->delete = false;
+    }
+
+    char buf[2*sizeof(signaturet)+1];
+    sprint_signaturet(buf, sizeof(buf), info->signature);
+    udebug("requester_decide(): Returning %s: prodIndex=%lu",
+            reqArg->delete ? "delete" : "don't delete",
+            (unsigned long)prodIndex);
+    return 0; // necessary for `pq_suspenc()`
+}
+
+/**
+ * @retval    0            Success.
+ * @retval    PQ_CORRUPT   The product-queue is corrupt.
+ * @retval    PQ_LOCKED    The data-product was found but is locked by another
+ *                         process.
+ * @retval    PQ_NOTFOUND  The data-product wasn't found.
+ * @retval    PQ_SYSTEM    System error. Error message logged.
+ */
+static inline int // inline because only called in one place
+requester_deleteAndRequest(
+        const signaturet sig)
+{
+    VcmtpProdIndex  prodIndex;
+    (void)memcpy(&prodIndex, sig + sizeof(signaturet) - sizeof(VcmtpProdIndex),
+        sizeof(prodIndex));
+    prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
+    int status = pq_deleteBySignature(receiverPq, sig);
+    char buf[2*sizeof(signaturet)+1];
+    if (status) {
+        (void)sprint_signaturet(buf, sizeof(buf), sig);
+        uerror("%s: Couldn't delete data-product: pq=%s, prodIndex=%lu, sig=%s",
+                __FILE__, pq_getPathname(receiverPq), (unsigned long)prodIndex,
+                buf);
+    }
+    else {
+        if (ulogIsVerbose()) {
+            (void)sprint_signaturet(buf, sizeof(buf), sig);
+            uinfo("%s: Deleted data-product: prodIndex=%lu, sig=%s", __FILE__,
+                    (unsigned long)prodIndex, buf);
+        }
+        down7_missedProduct(receiver.down7, prodIndex);
+    }
+    return status;
+}
+
+static void*
+requester_start(
+        void* const arg)
+{
+    udebug("requester_start(): Entered");
+
+    unblockSigCont(NULL);
+
+    int           status;
+    pthread_cleanup_push(requester_close, NULL);
+
+    for (;;) {
+        RequestArg reqArg;
+        status = pq_sequence(receiverPq, TV_GT, PQ_CLASS_ALL, requester_decide,
+                &reqArg);
+        if (status == PQUEUE_END) {
+            (void)pq_suspend(30);
+        }
+        else if (status) {
+            LOG_ADD1("pq_sequence() failure: status=%d", status);
+            break;
+        }
+        else if (reqArg.delete) {
+            /*
+             * The data-product is deleted here rather than in
+             * `requester_decide()` because in that function, the
+             * product's region is locked, deleting it attempts to lock it
+             * again, and deadlock results.
+             */
+            int cancelState;
+            pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+            status = requester_deleteAndRequest(reqArg.sig);
+            pthread_setcancelstate(cancelState, &cancelState);
+            if (status) {
+                LOG_ADD1("requester_deleteAndRequest() failure: status=%d",
+                        status);
+                break;
+            }
+        }
+    }
+    pthread_cleanup_pop(1);
+    if (status)
+        log_log(LOG_ERR); // Because end-of-thread
+    udebug("requester_start(): Returning");
+    return NULL;
+}
+
+static int
+requester_init(void)
+{
+    int status = pthread_create(&requesterThread, NULL, requester_start, NULL);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+#if 0
+    status = pthread_detach(requesterThread);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+#endif
+    return status;
+}
+
+static int
+requester_destroy(void)
+{
+    int status = pthread_cancel(requesterThread);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = pthread_join(requesterThread, NULL);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    return status;
 }
 
 /**
@@ -1034,14 +1241,21 @@ receiver_init(
                 DOWN7_PQ_PATHNAME);
     }
     else {
+        status = pq_open(DOWN7_PQ_PATHNAME, PQ_THREADSAFE, &receiverPq);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+
         ServiceAddr* servAddr;
         status = sa_new(&servAddr, addr, port);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
-        receiver.down7 = down7_new(servAddr, feedtype, LOCAL_HOST,
-                DOWN7_PQ_PATHNAME);
+        receiver.down7 = down7_new(servAddr, feedtype, LOCAL_HOST, receiverPq);
         CU_ASSERT_PTR_NOT_NULL_FATAL(receiver.down7);
         sa_free(servAddr);
+
+        status = requester_init();
+        if (status) {
+            LOG_ADD0("Couldn't initialize requester");
+        }
     }
 
     return status;
@@ -1060,9 +1274,17 @@ receiver_destroy(void)
     CU_ASSERT_EQUAL(status, 0);
     log_log(LOG_ERR);
 
+    status = requester_destroy();
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = pq_close(receiverPq);
+    CU_ASSERT_EQUAL(status, 0);
+
+#if 0
     status = deleteProductQueue(DOWN7_PQ_PATHNAME);
     CU_ASSERT_EQUAL(status, 0);
     log_log(LOG_ERR);
+#endif
 }
 
 /**
@@ -1116,16 +1338,11 @@ receiver_deleteAllProducts(
 /**
  * @retval 0  Success
  */
-static int
+static uint64_t
 receiver_getNumProds(
-        Receiver* const restrict receiver,
-        size_t* const restrict   nprods)
+        Receiver* const restrict receiver)
 {
-    pqueue* const pq = down7_getPq(receiver->down7);
-    signaturet    sig;
-
-    return pq_stats(pq, nprods, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL);
+    return down7_getNumProds(receiver->down7);
 }
 
 /**
@@ -1224,7 +1441,10 @@ static void
 test_up7_down7(
         void)
 {
-    int      status = sender_start(ANY);
+    sigset_t oldSigSet;
+    blockSigCont(&oldSigSet);
+
+    int status = sender_start(ANY);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -1234,10 +1454,11 @@ test_up7_down7(
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
 
-    (void)sleep(1);
+    (void)sleep(2);
 
     sender_insertProducts();
 
+#if 0
     (void)sleep(1);
     receiver_requestLastProduct(&receiver);
     (void)sleep(1);
@@ -1245,10 +1466,13 @@ test_up7_down7(
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, PQ_END);
     receiver_requestLastProduct(&receiver);
+#endif
     (void)sleep(1);
-    size_t nprods;
-    CU_ASSERT_EQUAL(receiver_getNumProds(&receiver, &nprods), 0);
-    CU_ASSERT_EQUAL(nprods, 1);
+    uint64_t nprods = receiver_getNumProds(&receiver);
+    unotice("%s:up7_down7_test(): %lu sender product-queue insertions",
+            __FILE__, (unsigned long)NUM_PRODS);
+    unotice("%s:up7_down7_test(): %lu receiver product-queue insertions",
+            __FILE__, (unsigned long)nprods);
 
     #if USE_SIGWAIT
         (void)sigwait(&termSigSet, &status);
@@ -1270,6 +1494,9 @@ test_up7_down7(
     status = sender_terminate();
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL(status, 0);
+
+    status = pthread_sigmask(SIG_SETMASK, &oldSigSet, NULL);
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 int main(
@@ -1278,7 +1505,7 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_INFO, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);

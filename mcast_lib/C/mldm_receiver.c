@@ -74,8 +74,8 @@ allocateSpace(
         if (status == PQUEUE_DUP) {
             if (ulogIsVerbose()) {
                 (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-                uinfo("Duplicate product: sig=%s, size=%lu", sigStr,
-                        (unsigned long)prodSize);
+                uinfo("%s: Duplicate product: sig=%s, size=%lu", __FILE__,
+                        sigStr, (unsigned long)prodSize);
             }
             *prodStart = NULL;
             status = 0;
@@ -179,6 +179,9 @@ insertOrDiscard(
         LOG_ADD1("Couldn't insert data-product into product-queue: status=%d",
                 status);
         status = -1;
+    }
+    else {
+        down7_incNumProds(mlr->down7);
     }
 
     return status;
