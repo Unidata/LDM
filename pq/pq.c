@@ -93,7 +93,7 @@ extern unsigned int     interval;
 /* Begin fb */
 /*
  * This layer provides dynamic allocation of a set of "fblks" of small
- * integral sizes, intended to hold offsets.  These are used in leau
+ * integral sizes, intended to hold offsets.  These are used in lieu
  * of pointers in the subsequent skip list algorithm, because these may
  * all be in the shared mmap'd file where pointers would be useless.
  * So where the skip list algorithm specifies a block of pointers of
@@ -176,11 +176,13 @@ fb_ranlev(fb *fbp)
 static size_t 
 fb_arena_sz(size_t nelems) 
 {
+    // Keep consonant with `fb_init()` and `fb_get()`.
+
     int maxsize = log4(nelems) + 1;
     int numblks;                /* blks to preallocate for each level */
     int level;
     size_t total=0;
-    numblks = 0.75*nelems;      /* level 1 blks to preallocate */
+    numblks = 0.75*nelems;      /* level 0 blks to preallocate */
     for (level = 0; level < maxsize; level++) {
         int blksize = level + 1;        /* size of fblk (number of levels) */
 
@@ -190,8 +192,8 @@ fb_arena_sz(size_t nelems)
         else
             numblks = 1;
     }
-    /* extra blocks to allow for statistical fluctuations */
-    total += 3*sqrt((double)nelems)*log4(nelems)*maxsize;
+    // Extra blocks to allow for statistical fluctuations. See `fb_init()`.
+    total += 3*ceil(sqrt((double)nelems))*log4(nelems)*maxsize;
     return total;
     /*
      * I believe this function underestimates the necessary number of skip-list
@@ -207,13 +209,8 @@ fb_arena_sz(size_t nelems)
 static size_t
 fb_sz(size_t nelems) 
 {
-    static size_t sz;
-    static size_t last_nelems = 0;
-    if(nelems != last_nelems) {
-        last_nelems = nelems;
-        sz = sizeof(fb) - sizeof(fblk_t) * FBLKS_NALLOC_INITIAL;
-        sz += fb_arena_sz(nelems) * sizeof(fblk_t);
-    }
+    size_t sz = sizeof(fb) - sizeof(fblk_t) * FBLKS_NALLOC_INITIAL;
+    sz += fb_arena_sz(nelems) * sizeof(fblk_t);
     return sz;
 }
 
@@ -236,10 +233,73 @@ fb_stats_dump(fb *fbp)
 */
 
 
+static void
+fb_initLevel(
+        fb* const restrict     fbp,
+        fblk_t* const restrict offset,
+        const int              level,
+        const int              blksize,
+        const int              numblks)
+{
+    assert(fbp != NULL);
+    assert(level >= 0 && level <= fbp->maxsize);
+    assert(blksize > 0 && blksize >= level);
+    assert(numblks > 0);
+
+    fblk_t off = *offset;
+    fbp->free[level] = off;
+    for (int i = 0; i < numblks - 1; i++) { // Link each block but last to next
+        fbp->fblks[off] = off + blksize;
+        off += blksize;
+    }
+    fbp->fblks[off] = (fblk_t)OFF_NONE; // Last block
+    fbp->nfree[level] = numblks;
+    fbp->avail += numblks;
+    *offset = (off + blksize);
+}
+
 /* initialize fblks of needed sizes in needed proportions */
 static void
 fb_init(fb *fbp, size_t nalloc) 
 {
+    // Keep consonant with `fb_arena_sz()` and `fb_get()`.
+#if 1
+    fbp->magic = FB_MAGIC;      /* to later check we mapped it correctly */
+    assert(nalloc > 0);
+    const int maxsize = log4(nalloc) + 1; // maxsize >= 1
+    assert(maxsize < MAXLEVELS);
+    fbp->maxsize = maxsize;
+    /* free[i] is the free list for blocks of size i+1; free[maxsize] holds
+       3*ceil(sqrt(nalloc))*log4(nalloc) extra blocks of max length to allow for
+       random variations. */
+
+    /* initialize arena to invalid offsets */
+    size_t fblk_sz = fb_arena_sz(nalloc);
+    for(int i = 0; i < fblk_sz; i++)
+        fbp->fblks[i] = (fblk_t)OFF_NONE;
+
+    fbp->allocated = 0;
+    fbp->avail = 0;
+    fblk_t offset = 0;
+
+    int numblks = 0.75*nalloc;      // Level 1 blks to preallocate
+    for (int level = 0; level < maxsize; level++) {
+        fb_initLevel(fbp, &offset, level, level+1, numblks);
+        if (numblks >= 4)
+            numblks /= 4;
+        else
+            numblks = 1;
+    }
+
+    /*
+     * Create free list of extra blocks of maximum size to allow for statistical
+     * fluctuations.
+     */
+    numblks = 3*ceil(sqrt((double)nalloc))*log4(nalloc); // see `fb_arena_sz()`
+    fb_initLevel(fbp, &offset, maxsize, maxsize, numblks);
+    assert(offset == fblk_sz);
+    fbp->arena_sz = offset;
+#else
     size_t fblk_sz;
     int i, j;
     int maxsize = log4(nalloc) + 1;
@@ -248,18 +308,16 @@ fb_init(fb *fbp, size_t nalloc)
     int blksize;                /* size of fblk (number of levels) */
     int numblks;                /* blks to preallocate for each level */
 
-    assert(maxsize < MAXLEVELS);
-
     fbp->magic = FB_MAGIC;      /* to later check we mapped it correctly */
     fbp->maxsize = maxsize;
     /* free[i] is the free list for blocks of size i+1; free[maxsize] holds
-       3*sqrt(nalloc)*log4(nalloc) extra blocks of max length to allow for
+       3*ceil(sqrt(nalloc))*log4(nalloc) extra blocks of max length to allow for
        random variations. */
 
     /* initialize arena to invalid offsets */
     fblk_sz = fb_arena_sz(nalloc);
     for(i = 0; i < fblk_sz; i++)
-        fbp->fblks[i] = (fblk_t)OFF_NONE;
+        fbp->fblks[i] = OFF_NONE;
 
     fbp->allocated = 0;
     fbp->avail = 0;
@@ -274,7 +332,7 @@ fb_init(fb *fbp, size_t nalloc)
             offset += blksize;
             fbp->avail++;
         }
-        fbp->fblks[offset] = (fblk_t)OFF_NONE;
+        fbp->fblks[offset] = OFF_NONE;
         offset +=  blksize;
         fbp->avail++;
         fbp->nfree[level] = numblks;
@@ -284,9 +342,8 @@ fb_init(fb *fbp, size_t nalloc)
             numblks = 1;
     }
 
-
     /* create free list of extra blocks of max size */
-    numblks = 3*sqrt((double)nalloc)*log4(nalloc);
+    numblks = 3*ceil(sqrt((double)nalloc))*log4(nalloc);
     blksize = maxsize;
     fbp->free[maxsize] = offset;
     for(j = 0; j < numblks - 1; j++) {
@@ -294,11 +351,12 @@ fb_init(fb *fbp, size_t nalloc)
         offset += blksize;
         fbp->avail++;
     }
-    fbp->fblks[offset] = (fblk_t)OFF_NONE; /* end of list */
+    fbp->fblks[offset] = OFF_NONE; /* end of list */
     offset +=  blksize;
     fbp->avail++;
     fbp->nfree[maxsize] = numblks;
     fbp->arena_sz = offset;
+#endif
 }
 
 
@@ -323,19 +381,50 @@ fb_rel(fb *fbp, int size, fblk_t fblk)
 
 
 /**
- * Gets a free fblk of specified level (0 <= level < MAX_LEVEL).
+ * Gets a free fblk of specified level (0 <= level < fbp->maxsize).
  *
  * @param[in] fbp       Pointer to fblk structure
- * @param[in] level     Level of fblk to return.
+ * @param[in] level     Level of fblk to return (origin 0).
  * @retval    OFF_NONE  if no fblk is available. `uerror()` called.
  * @return              An fblk of the given level.
  */
 static fblk_t 
 fb_get(fb *fbp, int level)
 {
+    // Keep consonant with `fb_arena_sz()` and `fb_init()`.
+
+#if 1
+    assert(fbp != NULL);
+    assert(0 <= level && level < fbp->maxsize);
+
+    for (const int wantSize = level + 1; level <= fbp->maxsize; level++) {
+        if (fbp->nfree[level] > 0) {
+            fblk_t fblk = fbp->free[level]; // Take it off front of list
+            assert(fblk != (fblk_t)OFF_NONE);
+            assert(fblk < fbp->arena_sz);
+            fbp->free[level] = fbp->fblks[fblk];
+            assert(fbp->nfree[level] > 0);
+            fbp->nfree[level]--;
+            assert(fbp->avail > 0);
+            fbp->avail--;
+            fbp->allocated++;
+
+            const int gotSize = level + 1;
+            // Don't split highest level intended for statistical fluctuations.
+            if (level < fbp->maxsize && wantSize < gotSize) {
+                // Split off remainder and release it
+                fblk_t fblk2 = fblk + wantSize;
+                fb_rel(fbp, gotSize - wantSize, fblk2);
+                fbp->allocated++; // Restore count because fb_rel() decremented
+            }
+
+            return fblk;
+        }
+    }
+#else
     fblk_t fblk, fblk2;
     int size = level + 1;
-  
+
     assert(fbp != NULL);
     assert(0 < size && size <= fbp->maxsize);
 
@@ -369,6 +458,7 @@ fb_get(fb *fbp, int level)
         }
         level++;
     }
+#endif
     /* else: all out of extra blocks too.  This means we tried to keep
        in product queue significantly more than the specified maximum
        number of products. */
@@ -421,14 +511,9 @@ typedef struct tqueue tqueue;
 static size_t
 tq_sz(size_t nelems) 
 {
-    static size_t sz;
-    static size_t last_nelems = 0;
-    if(nelems != last_nelems) {
-        last_nelems = nelems;
-        sz = sizeof(tqueue) - sizeof(tqelem) * TQ_NALLOC_INITIAL;
-        /* TQ_OVERHEAD_ELEMS extra slots for TQ_NIL, TQ_HEADER  */
-        sz += (nelems + TQ_OVERHEAD_ELEMS) * sizeof(tqelem);
-    }
+    size_t sz = sizeof(tqueue) - sizeof(tqelem) * TQ_NALLOC_INITIAL;
+    /* TQ_OVERHEAD_ELEMS extra slots for TQ_NIL, TQ_HEADER  */
+    sz += (nelems + TQ_OVERHEAD_ELEMS) * sizeof(tqelem);
     return sz;
 }
 
@@ -1172,14 +1257,7 @@ rlwo_sz(size_t nelems)
 static size_t
 rl_sz(size_t nelems)
 {
-    static size_t sz;
-    static size_t last_nelems = 0;
-    /* cache value, since number of products is fixed by pqcreate */
-    if(nelems != last_nelems) {
-        sz = rlwo_sz(nelems) + rlhash_sz(rlhash_nchains(nelems));
-        last_nelems = nelems;
-    }
-    return sz;
+    return rlwo_sz(nelems) + rlhash_sz(rlhash_nchains(nelems));
 }
 
 /* 
@@ -2270,13 +2348,7 @@ sxwo_sz(size_t nelems)
 static size_t
 sx_sz(size_t nelems) 
 {
-    static size_t sz;
-    static size_t last_nelems = 0;
-    if(nelems != last_nelems) {
-        last_nelems = nelems;
-        sz = sxwo_sz(nelems) + sxhash_sz(nchains(nelems));
-    }
-    return sz;
+    return sxwo_sz(nelems) + sxhash_sz(nchains(nelems));
 }
 
 /* 
@@ -2539,15 +2611,8 @@ sx_find_delete(sx *const sx, const signaturet sig)
 static size_t
 ix_sz(size_t nelems, size_t align)
 {
-    /* cache value, since it only depends on nelems */
-    static size_t sz;
-    static size_t last_nelems = 0;
-    if(nelems != last_nelems) {
-        last_nelems = nelems;
-        sz = _RNDUP(rl_sz(nelems), align) + _RNDUP(tq_sz(nelems), align) 
+    return _RNDUP(rl_sz(nelems), align) + _RNDUP(tq_sz(nelems), align)
            + _RNDUP(fb_sz(nelems), align) + _RNDUP(sx_sz(nelems), align);
-    }
-    return sz;
 }
 
 
@@ -3908,8 +3973,9 @@ mm0_ftom(pqueue *const pq,
         assert(0 <= offset && offset <= pq->ixo);
         assert(0 != extent && extent < TOTAL_SIZE(pq));
 
-        assert(pIf(fIsSet(rflags, RGN_WRITE),
-                        !fIsSet(pq->pflags, PQ_READONLY)));
+        if (!pIf(fIsSet(rflags, RGN_WRITE),
+                        !fIsSet(pq->pflags, PQ_READONLY)))
+            abort();
 
         status = rgn_lock(pq, offset, extent, rflags);
         if(status != ENOERR)
@@ -4840,18 +4906,18 @@ rpqe_free(pqueue *pq, off_t offset, signaturet signature)
 /**
  * Set the minimum virtual residence time metrics if appropriate.
  *
- * @param[in] pq    The product-queue.
- * @param[in] tqep  The associated time-queue entry.
- * @param[in] info  The data-product metadata.
+ * @param[in] pq             The product-queue.
+ * @param[in] receptionTime  The time the data-product was inserted into the
+ *                           product-queue.
+ * @param[in] info           The data-product metadata.
  */
 static void
 pq_set_mvrt(
-    pqueue* const restrict    pq,
-    tqelem* const restrict    tqep,
-    prod_info* const restrict info)
+    pqueue* const restrict     pq,
+    timestampt* const restrict receptionTime,
+    prod_info* const restrict  info)
 {
     const timestampt*           creationTime = &info->arrival;
-    const timestampt* const     receptionTime = &tqep->tv;
     timestampt                  now;
 
     /*
@@ -4885,19 +4951,25 @@ pq_set_mvrt(
 /**
  * Deletes a data-product.
  *
- * @param[in] pq          The product-queue.
- * @param[in] tqep        Pointer to the entry in the time-map.
- * @param[in] rlix        Index of the data-region.
- * @retval    0           Success.
- * @retval    EACCES      Product is locked.
- * @retval    PQ_CORRUPT  The product-queue is corrupt. Error-messaged logged.
- * @retval    PQ_SYSTEM   System error. Error-message logged.
+ * @param[in]  pq          The product-queue.
+ * @param[in]  tqep        The entry in the time-map.
+ * @param[in]  rlix        The index of the entry in the region-map.
+ * @param[out] info        The data-product metadata. On success, caller should
+ *                         call `xdr_free(xdr_prod_info, (char*)info)` when it's no
+ *                         longer needed.
+ * @retval     0           Success. `*info` is set. Caller should call
+ *                         `xdr_free(xdr_prod_info, (char*)info)` when it's no
+ *                         longer needed.
+ * @retval     EACCES      Product is locked.
+ * @retval     PQ_CORRUPT  The product-queue is corrupt. Error-messaged logged.
+ * @retval     PQ_SYSTEM   System error. Error-message logged.
  */
-static inline int // inlined because only called by one function
+static int
 pq_try_del_prod(
-    pqueue* const restrict pq,
-    tqelem* const restrict tqep,
-    size_t                 rlix)
+    pqueue* const restrict    pq,
+    tqelem* const restrict    tqep,
+    size_t                    rlix,
+    prod_info* const restrict info)
 {
     region* const rep = pq->rlp->rp + rlix;
     const off_t   offset = rep->offset;
@@ -4914,7 +4986,10 @@ pq_try_del_prod(
 
         status = rgn_get(pq, offset, Extent(rep), RGN_WRITE|RGN_NOWAIT, &vp);
         if (status) {
-            if (status != EACCES) {
+            if (status == EACCES || status == EAGAIN) {
+                status = EACCES;
+            }
+            else {
                 LOG_SERROR0("Couldn't get region (offset=%ld,extent=%lu)");
                 log_log(LOG_ERR);
                 status = PQ_SYSTEM;
@@ -4922,13 +4997,13 @@ pq_try_del_prod(
         }
         else {
             /* Get the metadata of the data-product. */
-            prod_info info;
-            XDR       xdrs;
+            XDR xdrs;
 
             xdrmem_create(&xdrs, vp, Extent(rep), XDR_DECODE);
-            (void)memset(&info, 0, sizeof(info)); // necessary for `xdr_prod_info()`
+            // Necessary for `xdr_prod_info()`
+            (void)memset(info, 0, sizeof(prod_info));
 
-            if (!xdr_prod_info(&xdrs, &info)) {
+            if (!xdr_prod_info(&xdrs, info)) {
                 LOG_START0("Couldn't XDR_DECODE data-product metadata");
                 log_log(LOG_ERR);
                 status = PQ_CORRUPT;
@@ -4937,16 +5012,13 @@ pq_try_del_prod(
                 /*
                  * Remove the corresponding entry from the signature-map.
                  */
-                if (sx_find_delete(pq->sxp, info.signature) == 0) {
+                if (sx_find_delete(pq->sxp, info->signature) == 0) {
                     LOG_START1("pq_try_del_prod(): signature %s: Not Found",
-                            s_signaturet(NULL, 0, info.signature));
+                            s_signaturet(NULL, 0, info->signature));
                     log_log(LOG_ERR);
                     status = PQ_CORRUPT;
                 }
                 else {
-                    /* Adjust the minimum virtual residence time. */
-                    pq_set_mvrt(pq, tqep, &info);
-
                     /*
                      * Remove the corresponding entry from the time-map.
                      */
@@ -4957,9 +5029,7 @@ pq_try_del_prod(
                      */
                     rl_free(pq->rlp, rlix);
                 }
-
-                xdr_free(xdr_prod_info, (char*)&info);
-            } // `info` acquired
+            } // `xdr_prod_info()` successful
 
             xdr_destroy(&xdrs);
 
@@ -5001,10 +5071,14 @@ pq_del_oldest(
     for (tqelem* tqep = tqe_first(pq->tqp);
             tqep && (rlix = rl_find(pq->rlp, tqep->offset)) != RL_NONE;
             tqep = tq_next(pq->tqp, tqep)) {
-
-        status = pq_try_del_prod(pq, tqep, rlix);
+        prod_info  info;
+        timestampt insertionTime = tqep->tv;
+        status = pq_try_del_prod(pq, tqep, rlix, &info);
         if (status == 0) {
             pq->ctlp->isFull = 1; // Mark the queue as full.
+            /* Adjust the minimum virtual residence time. */
+            pq_set_mvrt(pq, &insertionTime, &info);
+            xdr_free(xdr_prod_info, (char*)&info);
             return 0;
         }
         if (status != EACCES)
@@ -5348,7 +5422,7 @@ static void lockIf(
         pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_lock(pq))
-        _uassert("pq_lock(pq) == 0", __FILE__, __LINE__);
+        _uassert("pq_lock(pq) != 0", __FILE__, __LINE__);
 }
 
 /**
@@ -5363,7 +5437,7 @@ static void unlockIf(
         pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_unlock(pq))
-        _uassert("pq_unlock(pq) == 0", __FILE__, __LINE__);
+        _uassert("pq_unlock(pq) != 0", __FILE__, __LINE__);
 }
 
 
@@ -5395,16 +5469,18 @@ const pqe_index _pqenone = {
  *                        process' file mode creation mask.
  * @param[in]  pflags     Product-queue flags. Bitwise AND of
  *                          PQ_DEFAULT	  Default attributes (0).
- *                          PQ_NOCLOBBER  Don't replace an existing
- *                                        product-queue.
- *                          PQ_READONLY   Read-only. Default is read/write
- *                          PQ_NOLOCK     Disable locking
- *                          PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
- *                                        Default is `MAP_SHARED`.
- *                          PQ_NOMAP      Use `malloc/read/write/free` instead
- *                                        of `mmap()`
  *                          PQ_MAPRGNS    Map region by region. Default is whole
  *                                        file.
+ *                          PQ_NOCLOBBER  Don't replace an existing
+ *                                        product-queue.
+ *                          PQ_NOLOCK     Disable locking
+ *                          PQ_NOMAP      Use `malloc/read/write/free` instead
+ *                                        of `mmap()`
+ *                          PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
+ *                                        Default is `MAP_SHARED`.
+ *                          PQ_READONLY   Read-only. Default is read/write
+ *                          PQ_THREADSAFE Make the queue access functions
+ *                                        thread-safe.
  * @param[in]  align      Alignment parameter for file components or 0.
  * @param[in]  initialsz  Size, in bytes, of the data portion of the product-
  *                        queue.
@@ -5481,14 +5557,16 @@ unwind_new:
  *
  * @param[in] path         Pathname of product-queue.
  * @param[in] pflags       File-open bit-flags:
- *                           PQ_READONLY   Default is read/write
- *                           PQ_NOLOCK     Disable locking
- *                           PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`,
- *                                         default is `MAP_SHARED`
+ *                           PQ_MAPRGNS    Map region by region, default whole
+ *                                         file.
+ *                           PQ_NOLOCK     Disable locking.
  *                           PQ_NOMAP      Use `malloc/read/write/free` instead
  *                                         of `mmap()`
- *                           PQ_MAPRGNS    Map region by region, default whole
- *                                         file
+ *                           PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
+ *                                         Default is `MAP_SHARED`
+ *                           PQ_READONLY   Default is read/write.
+ *                           PQ_THREADSAFE Make the queue access functions
+ *                                         thread-safe.
  * @param[out] pqp         Memory location to receive pointer to product-queue
  *                         structure.
  * @retval     0           Success. *pqp set.
@@ -5609,6 +5687,31 @@ pq_open(
     return status;
 }
 
+
+/**
+ * Returns the flags used to open or create a product-queue.
+ *
+ * @param[in] pq  The product-queue.
+ * @return        The flags: a bitwise OR of
+ *                    PQ_MAPRGNS    Map region by region, default whole file.
+ *                    PQ_NOCLOBBER  Don't replace an existing product-queue.
+ *                    PQ_NOLOCK     Disable locking.
+ *                    PQ_NOMAP      Use `malloc/read/write/free` instead of
+ *                                  `mmap()`
+ *                    PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`. Default is
+ *                                  `MAP_SHARED`
+ *                    PQ_READONLY   Default is read/write.
+ *                    PQ_THREADSAFE Make the queue access functions threadsafe.
+ */
+int
+pq_getFlags(
+        pqueue* const pq)
+{
+    lockIf(pq);
+    int pflags = pq->pflags;
+    unlockIf(pq);
+    return pflags;
+}
 
 /*
  * On success, if the product-queue was open for writing, then its 
@@ -7130,6 +7233,155 @@ getMetadataFromOffset(
 }
 
 
+/**
+ * Finds the entry in the time map of a product-queue corresponding to a
+ * data-product with a given signature.
+ *
+ * @param[in]  pq     The product-queue.
+ * @param[in]  sig    The signature of the data-product.
+ * @param[out] tqepp  The time entry.
+ * @retval     0      Success. `*tqepp` is set.
+ * @retval     PQ_CORRUPT   The product-queue is corrupt.
+ * @retval     PQ_NOTFOUND  No entry in signature map corresponding to `sig`.
+ */
+static int
+pq_findTimeEntryBySignature(
+        pqueue* const restrict  pq,
+        const signaturet        sig,
+        tqelem** const restrict tqepp)
+{
+    int     status;
+    sxelem* signatureEntry;
+
+    /*
+     * Get the relevant entry in the signature-map.
+     */
+    if (!sx_find(pq->sxp, sig, &signatureEntry)) {
+        status = PQ_NOTFOUND;
+    }
+    else {
+        InfoBuf     infoBuf;
+        prod_info*  info = &infoBuf.info;
+
+        (void)ib_init(&infoBuf); // necessary for `getMetadataFromOffset()`
+
+        /*
+         * Get the metadata of the data-product referenced by the
+         * signature-entry.
+         */
+        status =  getMetadataFromOffset(pq, signatureEntry->offset, info);
+
+        if (PQ_NOTFOUND == status) {
+            uerror("pq_setCursorFromSignature(): data-product region "
+                "of signature-map entry doesn't exist");
+            status = PQ_CORRUPT;
+        }
+        else if (0 == status) {
+            timestampt searchTime = info->arrival;
+            tqelem*    timeEntry;
+
+            /*
+             * Start the time-map search beginning a little before
+             * the creation-time of the target data-product.  This will
+             * work if 1) the data-product is in the queue; and 2) the
+             * clock on the origination host agrees with the clock on
+             * this host.
+             *
+             * Keep the following consonant with the temporal backoff in
+             * vetCreationTime().
+             */
+            searchTime.tv_sec -= SEARCH_BACKOFF;
+            timeEntry = tqe_find(pq->tqp, &searchTime, TV_LT);
+
+            if (NULL == timeEntry) {
+                timeEntry = tqe_find(pq->tqp, &searchTime, TV_EQ);
+
+                if (NULL == timeEntry)
+                    timeEntry = tqe_find(pq->tqp, &searchTime, TV_GT);
+            }
+
+            if (NULL == timeEntry) {
+                uerror("pq_findTimeEntryBySignature(): "
+                    "The product-queue appears to be empty");
+                status = PQ_CORRUPT;
+            }
+            else {
+                /*
+                 * Search forward in the time-map from the initial entry to
+                 * find the matching entry.
+                 */
+                const tqelem*       initialTimeEntry = timeEntry;
+                const fb* const     fbp =
+                    (fb*)((char*)pq->tqp + pq->tqp->fbp_off);
+
+                for (;;) {
+                    if (OFF_NONE == timeEntry->offset) {
+                        /*
+                         * The current entry is the end of the
+                         * product-queue.
+                         */
+                        status = PQ_NOTFOUND;
+                        break;
+                    }               /* entry is end-of-queue */
+
+                    if (timeEntry->offset == signatureEntry->offset) {
+                        /*
+                         * Found it.
+                         */
+                        *tqepp = timeEntry;
+                        status = 0;
+                        break;
+                    }
+
+                   /*
+                    * Advance to the very next entry in the time-map.
+                    */
+                    timeEntry = &pq->tqp->tqep[fbp->fblks[timeEntry->fblk]];
+                }                   /* time-map entry loop */
+
+                if (status == PQ_NOTFOUND) {
+                    /*
+                     * The data-product wasn't found.  This could be
+                     * because of an egregious discrepancy between the
+                     * clock on the origination system and this system's
+                     * clock (the origination clock might be fast, our
+                     * clock might be slow, or both).  Therefore, search
+                     * from the beginning of the product-queue to the
+                     * initial data-product (sigh).
+                     */
+                    timeEntry = tqe_find(pq->tqp, &TS_ZERO, TV_GT);
+
+                    for (;;) {
+                        if (initialTimeEntry == timeEntry) {
+                            /*
+                             * The current entry is the initial entry.
+                             */
+                            break;
+                        }
+
+                        if (timeEntry->offset == signatureEntry->offset) {
+                            /*
+                             * Found it.
+                             */
+                            *tqepp = timeEntry;
+                            status = 0;
+                            break;
+                        }
+
+                       /*
+                        * Advance to the very next entry in the time-map.
+                        */
+                        timeEntry = &pq->tqp->tqep[fbp->fblks[timeEntry->fblk]];
+                    }               /* time-map entry loop */
+                }                   /* product not where it should be */
+            }                       /* non-empty product-queue */
+        }                           /* have product metadata */
+    }                               /* have signature-map entry */
+
+    return status;
+}
+
+
 /*
  * Set the cursor based on the insertion-time of the product with the given
  * signature if and only if the associated data-product is found in the 
@@ -7210,142 +7462,17 @@ pq_setCursorFromSignature(
      * Read-lock the control-region of the product-queue.
      */
     status = ctl_get(pq, 0);
-
     if (ENOERR != status) {
         serror("pq_setCursorFromSignature(): Couldn't lock control-region "
             "of product-queue");
     }
     else {
-        sxelem*   signatureEntry;
-
-        /*
-         * Get the relevant entry in the signature-map.
-         */
-        if (!sx_find(pq->sxp, signature, &signatureEntry)) {
-            status = PQ_NOTFOUND;
+        tqelem* timeEntry;
+        status = pq_findTimeEntryBySignature(pq, signature, &timeEntry);
+        if (status == 0) {
+            pq_cset(pq, &timeEntry->tv);
+            pq_coffset(pq, timeEntry->offset);
         }
-        else {
-            InfoBuf     infoBuf;
-            prod_info*  info = &infoBuf.info;
-
-            (void)ib_init(&infoBuf); // necessary for `getMetadataFromOffset()`
-
-            /*
-             * Get the metadata of the data-product referenced by the 
-             * signature-entry.
-             */
-            status =  getMetadataFromOffset(pq, signatureEntry->offset, info);
-
-            if (PQ_NOTFOUND == status) {
-                uerror("pq_setCursorFromSignature(): data-product region "
-                    "of signature-map entry doesn't exist");
-
-                status = PQ_CORRUPT;
-            }
-            else if (0 == status) {
-                timestampt    searchTime = info->arrival;
-                const tqelem* timeEntry;
-
-                /*
-                 * Start the time-map search beginning a little before
-                 * the creation-time of the target data-product.  This will
-                 * work if 1) the data-product is in the queue; and 2) the
-                 * clock on the origination host agrees with the clock on
-                 * this host.
-                 *
-                 * Keep the following consonant with the temporal backoff in
-                 * vetCreationTime().
-                 */
-                searchTime.tv_sec -= SEARCH_BACKOFF;
-                timeEntry = tqe_find(pq->tqp, &searchTime, TV_LT);
-
-                if (NULL == timeEntry) {
-                    timeEntry = tqe_find(pq->tqp, &searchTime, TV_EQ);
-
-                    if (NULL == timeEntry)
-                        timeEntry = tqe_find(pq->tqp, &searchTime, TV_GT);
-                }
-
-                if (NULL == timeEntry) {
-                    uerror("pq_setCursorFromSignature(): "
-                        "The product-queue appears to be empty");
-
-                    status = PQ_CORRUPT;
-                }
-                else {
-                    /*
-                     * Search forward in the time-map from the initial entry to
-                     * find the matching entry.
-                     */
-                    const tqelem*       initialTimeEntry = timeEntry;
-                    const fb* const     fbp =
-                        (fb*)((char*)pq->tqp + pq->tqp->fbp_off);
-
-                    for (;;) {
-                        if (OFF_NONE == timeEntry->offset) {
-                            /*
-                             * The current entry is the end of the 
-                             * product-queue.
-                             */
-                            status = PQ_NOTFOUND;
-                            break;
-                        }               /* entry is end-of-queue */
-
-                        if (timeEntry->offset == signatureEntry->offset) {
-                            /*
-                             * Found it.  Set the cursor and stop searching.
-                             */
-                            pq_cset(pq, &timeEntry->tv);
-                            pq_coffset(pq, timeEntry->offset);
-                            break;
-                        }
-
-                        /*
-                         * Advance to the very next entry in the time-map.
-                         */
-                        timeEntry = &pq->tqp->tqep[fbp->fblks[timeEntry->fblk]];
-                    }                   /* time-map entry loop */
-
-                    if (status == PQ_NOTFOUND) {
-                        /*
-                         * The data-product wasn't found.  This could be
-                         * because of an egregious discrepancy between the
-                         * clock on the origination system and this system's
-                         * clock (the origination clock might be fast, our
-                         * clock might be slow, or both).  Therefore, search
-                         * from the beginning of the product-queue to the
-                         * initial data-product (sigh).
-                         */
-                        timeEntry = tqe_find(pq->tqp, &TS_ZERO, TV_GT);
-
-                        for (;;) {
-                            if (initialTimeEntry == timeEntry) {
-                                /*
-                                 * The current entry is the initial entry.
-                                 */
-                                break;
-                            }
-
-                            if (timeEntry->offset == signatureEntry->offset) {
-                                /*
-                                 * Found it.  Set the cursor and stop searching.
-                                 */
-                                pq_cset(pq, &timeEntry->tv);
-                                pq_coffset(pq, timeEntry->offset);
-                                status = 0;
-                                break;
-                            }
-
-                            /*
-                             * Advance to the very next entry in the time-map.
-                             */
-                            timeEntry =
-                                &pq->tqp->tqep[fbp->fblks[timeEntry->fblk]];
-                        }               /* time-map entry loop */
-                    }                   /* product not where it should be */
-                }                       /* non-empty product-queue */
-            }                           /* have product metadata */
-        }                               /* have signature-map entry */
 
         /*
          * Release control-region of product-queue.
@@ -7934,6 +8061,83 @@ unwind_ctl:
 unwind_lock:
         unlockIf(pq);
         return status;
+}
+
+
+/*
+ * Deletes the data-product with the given signature from a product-queue.
+ *
+ * @param[in] pq           The product-queue
+ * @param[in] sig          The signature of the data-product to be deleted.
+ * @retval    0            Success. The data-product was found and deleted.
+ * @retval    PQ_CORRUPT   The product-queue is corrupt.
+ * @retval    PQ_LOCKED    The data-product was found but is locked by another
+ *                         process.
+ * @retval    PQ_NOTFOUND  The data-product wasn't found.
+ * @retval    PQ_SYSTEM    System error. Error message logged.
+ */
+int
+pq_deleteBySignature(
+        pqueue* const restrict pq,
+        const signaturet       sig)
+{
+    lockIf(pq);
+    int status = ctl_get(pq, RGN_WRITE);
+    if (status) {
+        LOG_ADD1("Couldn't lock the control-header of product-queue %s",
+                pq->pathname);
+        log_log(LOG_ERR);
+        status = PQ_SYSTEM;
+    }
+    else {
+        sxelem* sxep;
+        if (!sx_find(pq->sxp, sig, &sxep)) {
+            status = PQ_NOTFOUND;
+        }
+        else {
+            char buf[2*sizeof(signaturet)+1];
+            size_t rlix = rl_find(pq->rlp, sxep->offset);
+            if (rlix == RL_NONE) {
+                (void)sprint_signaturet(buf, sizeof(buf), sig),
+                LOG_ADD2("Data-product with signature %s doesn't have a "
+                        "corresponding region-map entry in product-queue %s",
+                        buf, pq->pathname);
+                log_log(LOG_ERR);
+                status = PQ_CORRUPT;
+            }
+            else {
+                tqelem* timeEntry;
+                status = pq_findTimeEntryBySignature(pq, sig, &timeEntry);
+                if (status) {
+                    (void)sprint_signaturet(buf, sizeof(buf), sig),
+                    LOG_ADD2("Data-product with signature %s doesn't have a "
+                            "corresponding time-map entry in product-queue %s",
+                            buf, pq->pathname);
+                    log_log(LOG_ERR);
+                    status = PQ_CORRUPT;
+                }
+                else {
+                    prod_info prodInfo;
+                    status = pq_try_del_prod(pq, timeEntry, rlix, &prodInfo);
+                    if (status == EACCES) {
+                        status = PQ_LOCKED;
+                    }
+                    else if (status) {
+                        (void)sprint_signaturet(buf, sizeof(buf), sig),
+                        LOG_ADD2("Couldn't remove map entries for "
+                                "data-product with signature %s from "
+                                "product-queue %s",
+                                buf, pq->pathname);
+                        log_log(LOG_ERR);
+                    }
+                    xdr_free(xdr_prod_info, (char*)&prodInfo);
+                } // Entry found in time-map
+            } // Entry found in region-map
+        } // Entry found in signature-map
+        (void) ctl_rel(pq, 0);
+    } // Control-header locked
+    unlockIf(pq);
+    return status;
 }
 
 
