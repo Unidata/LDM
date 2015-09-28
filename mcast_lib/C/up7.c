@@ -311,7 +311,7 @@ up7_deliverProduct(
      */
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         if (ulogIsVerbose())
-            unotice("Missed product sent: %s",
+            unotice("up7_deliverProduct(): Missed product sent: %s",
                     s_prod_info(NULL, 0, &missedProd.prod.info, ulogIsDebug()));
         return 0;
     }
@@ -568,7 +568,7 @@ up7_sendIfNotSignature(
      */
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         if (ulogIsVerbose())
-            unotice("Backlog product sent: %s",
+            unotice("%s: Backlog product sent: %s", __FILE__,
                     s_prod_info(NULL, 0, info, ulogIsDebug()));
         return 0;
     }
