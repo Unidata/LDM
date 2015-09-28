@@ -290,16 +290,17 @@ failure:
 }
 
 /**
- * Allows termination signals to be received by the current thread. Idempotent.
+ * Allows certain signals to be received by the current thread. Idempotent.
  */
 static void
-allowTermSigs(void)
+allowSigs(void)
 {
     sigset_t sigset;
 
     (void)sigemptyset(&sigset);
-    (void)sigaddset(&sigset, SIGINT);
-    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGCONT); // for event-driven product-processing
+    (void)sigaddset(&sigset, SIGINT);  // for termination
+    (void)sigaddset(&sigset, SIGTERM); // for termination
     (void)pthread_sigmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
@@ -345,8 +346,8 @@ mlsm_spawn(
         }
         else if (child == 0) {
             /* Child process */
-            (void)close(fds[0]);                // read end of pipe unneeded
-            allowTermSigs();                    // so process will terminate
+            (void)close(fds[0]); // read end of pipe unneeded
+            allowSigs(); // so process will terminate and process products
             // The following statement shouldn't return
             execMldmSender(info, ttl, mcastIf, pqPathname, fds[1]);
             log_log(LOG_ERR);
