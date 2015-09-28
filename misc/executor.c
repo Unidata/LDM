@@ -372,7 +372,8 @@ static int job_new(
  * @param[in] job      The completed job.
  * @retval    ENOMEM   Out-of-memory. `log_start()` called.
  * @post               The job is in its executor's completed-job queue and the
- * @post               executor's condition variable was signaled.
+ * @post               The condition variable of the job's executor was
+ *                     signaled.
  * @post               `job->state == COMPLETED`.
  * @post               The job is unlocked.
  */
@@ -408,10 +409,11 @@ static void job_canceled(
     job_lock(job);
     if (job->state == JOB_CANCELLED) {
         job->wasStopped = true;
-        int status = job_completed(job); // unlocks job
+        status = job_completed(job); // unlocks job
     }
     else {
         job_unlock(job);
+        status = 0;
     }
 
     log_log(status ? LOG_ERR : LOG_INFO);
@@ -960,17 +962,20 @@ int exe_shutdown(
     udebug("exe_shutdown(): Entered");
     int status;
 
+    udebug("exe_shutdown(): Calling exe_lock()");
     exe_lock(exe);
 
     for (;;) {
         switch (exe->state) {
             case EXE_ACTIVE:
                 exe->state = EXE_SHUTTING_DOWN;
+                udebug("exe_shutdown(): Calling shutdown()");
                 status = shutdown(exe);
                 exe->state = EXE_SHUTDOWN;
                 pthread_cond_broadcast(&exe->cond);
                 continue;
             case EXE_SHUTTING_DOWN:
+                udebug("exe_shutdown(): Waiting on condition variable");
                 while (exe->state == EXE_SHUTTING_DOWN)
                     pthread_cond_wait(&exe->cond, &exe->mutex);
                 continue;
