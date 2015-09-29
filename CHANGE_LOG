@@ -1,5 +1,9 @@
+6.12.15.21
+    Corrected setting of configure(1) options in delivery/deploy.sh.
+
 6.12.15.20	2015-09-29T15:03:45-0600
-    Improved assertion of relationship between fblk arena size and used space.
+    Improved assertion of relationship between fblk arena size and actual used
+    space.
 
     Removed Coverity lint.
 

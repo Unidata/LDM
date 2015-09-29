@@ -12,7 +12,8 @@
 set -e # terminate on error
 
 host=${1:?Host name not specified}
-configOpts=$2
+shift
+configOpts="$@"
 
 # Go to the directory that contains this script.
 #
