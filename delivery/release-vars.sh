@@ -3,7 +3,7 @@
 # Base definitions:
 export USER_NAME=ldm
 export PKG_NAME=ldm
-export PKG_VERSION=6.12.15.20
+export PKG_VERSION=6.12.15.21
 export SOURCE_DISTRO_EXT=tar.gz
 export ACCEPTANCE_CONFIGURE_OPTS="--disable-root-actions --with-noaaport"
 export ABSPATH_FTP_PUB_DIR=/web/ftp/pub
