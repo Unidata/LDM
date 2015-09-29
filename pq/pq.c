@@ -193,7 +193,7 @@ fb_arena_sz(size_t nelems)
             numblks = 1;
     }
     // Extra blocks to allow for statistical fluctuations. See `fb_init()`.
-    total += 3*ceil(sqrt((double)nelems))*log4(nelems)*maxsize;
+    total += 3*sqrt((double)nelems)*log4(nelems)*maxsize;
     return total;
     /*
      * I believe this function underestimates the necessary number of skip-list
@@ -270,7 +270,7 @@ fb_init(fb *fbp, size_t nalloc)
     assert(maxsize < MAXLEVELS);
     fbp->maxsize = maxsize;
     /* free[i] is the free list for blocks of size i+1; free[maxsize] holds
-       3*ceil(sqrt(nalloc))*log4(nalloc) extra blocks of max length to allow for
+       3*sqrt(nalloc)*log4(nalloc) extra blocks of max length to allow for
        random variations. */
 
     /* initialize arena to invalid offsets */
@@ -295,9 +295,10 @@ fb_init(fb *fbp, size_t nalloc)
      * Create free list of extra blocks of maximum size to allow for statistical
      * fluctuations.
      */
-    numblks = 3*ceil(sqrt((double)nalloc))*log4(nalloc); // see `fb_arena_sz()`
+    numblks = 3*sqrt((double)nalloc)*log4(nalloc); // see `fb_arena_sz()`
     fb_initLevel(fbp, &offset, maxsize, maxsize, numblks);
-    assert(offset == fblk_sz);
+    // resolution of `fb_arena_sz()` is `sizeof(fblk_t)` and not `maxsize` above
+    assert(fblk_sz >= offset && fblk_sz < offset + maxsize);
     fbp->arena_sz = offset;
 #else
     size_t fblk_sz;
@@ -311,7 +312,7 @@ fb_init(fb *fbp, size_t nalloc)
     fbp->magic = FB_MAGIC;      /* to later check we mapped it correctly */
     fbp->maxsize = maxsize;
     /* free[i] is the free list for blocks of size i+1; free[maxsize] holds
-       3*ceil(sqrt(nalloc))*log4(nalloc) extra blocks of max length to allow for
+       3*sqrt(nalloc)*log4(nalloc) extra blocks of max length to allow for
        random variations. */
 
     /* initialize arena to invalid offsets */
@@ -343,7 +344,7 @@ fb_init(fb *fbp, size_t nalloc)
     }
 
     /* create free list of extra blocks of max size */
-    numblks = 3*ceil(sqrt((double)nalloc))*log4(nalloc);
+    numblks = 3*sqrt((double)nalloc)*log4(nalloc);
     blksize = maxsize;
     fbp->free[maxsize] = offset;
     for(j = 0; j < numblks - 1; j++) {
