@@ -1,4 +1,4 @@
-6.12.15.20
+6.12.15.20	2015-09-29T15:03:45-0600
     Improved assertion of relationship between fblk arena size and used space.
 
     Removed Coverity lint.
