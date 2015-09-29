@@ -1,3 +1,8 @@
+6.12.15.20
+    Improved assertion of relationship between fblk arena size and used space.
+
+    Removed Coverity lint.
+
 6.12.15.19	2015-09-29T11:14:48-0600
     Removed RateShaper from configure.ac, Makefile.am, and distribution.
 
