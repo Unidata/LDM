@@ -1,4 +1,4 @@
-6.12.15.19
+6.12.15.19	2015-09-29T11:14:48-0600
     Removed RateShaper from configure.ac, Makefile.am, and distribution.
 
 6.12.15.18	2015-09-28T17:44:44-0600
