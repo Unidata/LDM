@@ -1,4 +1,4 @@
-6.12.15.21
+6.12.15.21	2015-09-29T16:57:17-0600
     Corrected setting of configure(1) options in delivery/deploy.sh.
 
 6.12.15.20	2015-09-29T15:03:45-0600
