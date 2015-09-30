@@ -1,4 +1,4 @@
-6.12.15.24
+6.12.15.24	2015-09-30T15:40:21-0600
     Reduce number of "make distceck" to just one in CI-commit.sh.
 
 6.12.15.23	2015-09-30T14:33:58-0600
