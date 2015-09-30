@@ -1,3 +1,7 @@
+6.12.15.22
+    Replace ${configOpts} with "$@" in deploy.sh to accommodate argument with
+    space.
+
 6.12.15.21	2015-09-29T16:57:17-0600
     Corrected setting of configure(1) options in delivery/deploy.sh.
 
