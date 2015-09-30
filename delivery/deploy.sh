@@ -13,7 +13,6 @@ set -e # terminate on error
 
 host=${1:?Host name not specified}
 shift
-configOpts="$@"
 
 # Go to the directory that contains this script.
 #
@@ -38,7 +37,7 @@ ssh -T $USER_NAME@$host bash --login <<EOF
     gunzip -c $SOURCE_DISTRO_NAME | (mkdir -p $PKG_ID &&
         cd $PKG_ID && tar -xf - && rm -rf src && mv -f $PKG_ID src)
     cd $RELPATH_DISTRO_SOURCE_DIR
-    ./configure --disable-root-actions --enable-debug ${configOpts} CFLAGS=-g
+    ./configure --disable-root-actions --enable-debug "$@" CFLAGS=-g
     make install
 EOF
 
