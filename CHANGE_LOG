@@ -1,3 +1,6 @@
+6.12.15.24
+    Reduce number of "make distceck" to just one in CI-commit.sh.
+
 6.12.15.23	2015-09-30T14:33:58-0600
     Replace "$@" with just $@ in deploy.sh.
 
