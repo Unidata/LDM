@@ -1,4 +1,4 @@
-6.12.15.22
+6.12.15.22	2015-09-30T13:32:25-0600
     Replace ${configOpts} with "$@" in deploy.sh to accommodate argument with
     space.
 
