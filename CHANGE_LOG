@@ -1,3 +1,8 @@
+6.12.15.25
+    Remove ignoring of SIGCONT from mldm_sender_manager because it's not needed.
+
+    Generalize TCP keep-alive in TcpSend.cpp.
+
 6.12.15.24	2015-09-30T15:40:21-0600
     Reduce number of "make distceck" to just one in CI-commit.sh.
 
