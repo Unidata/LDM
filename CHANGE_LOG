@@ -1,4 +1,4 @@
-6.12.15.25
+6.12.15.25	2015-10-01T15:28:56-0600
     Remove ignoring of SIGCONT from mldm_sender_manager because it's not needed.
 
     Generalize TCP keep-alive in TcpSend.cpp.
