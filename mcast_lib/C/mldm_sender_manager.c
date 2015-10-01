@@ -298,7 +298,6 @@ allowSigs(void)
     sigset_t sigset;
 
     (void)sigemptyset(&sigset);
-    (void)sigaddset(&sigset, SIGCONT); // for event-driven product-processing
     (void)sigaddset(&sigset, SIGINT);  // for termination
     (void)sigaddset(&sigset, SIGTERM); // for termination
     (void)pthread_sigmask(SIG_UNBLOCK, &sigset, NULL);
