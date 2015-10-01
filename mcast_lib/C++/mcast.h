@@ -22,7 +22,7 @@
     extern "C" {
 #endif
 
-typedef u_int32_t                VcmtpProdIndex;
+typedef uint32_t                 VcmtpProdIndex;
 #define xdr_McastFileId          xdr_u_long
 typedef struct mcast_receiver    McastReceiver;
 typedef struct mcast_sender      McastSender;
