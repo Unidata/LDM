@@ -566,68 +566,52 @@ main(int ac, char *av[])
                 /*NOTREACHED*/
         }
 
-        if(toffset != TOFFSET_NONE)
-        {
+        if(toffset != TOFFSET_NONE) {
             /*
              * Filter and queue position set by "toffset".
              */
             clss.from.tv_sec -= toffset;
             pq_cset(pq, &clss.from);
-        }                               /* no time-offset specified */
-        else
-        {
-            int needFromTime = 1;
+        }
+        else {
+            bool       startAtTailEnd = true;
+            timestampt insertTime;
+
+            clss.from = TS_ZERO;
 
             /*
-             * Try getting the time of the last, successfully-processed
-             * data-product from the previous invocation.
+             * Try getting the insertion-time of the last,
+             * successfully-processed data-product from the previous session.
              */
-            status = stateRead(&clss.from);
+            status = stateRead(&insertTime);
 
-            if (status == 0) {
-                timestampt      now;
-
+            if (status) {
+                log_add("Couldn't get insertion-time of last-processed "
+                        "data-product from previous session");
+                log_log(LOG_WARNING);
+            }
+            else {
+                timestampt now;
                 (void)set_timestamp(&now);
 
-                if (tvCmp(now, clss.from, <)) {
-                    log_start("Time of last processed data-product from "
-                        "previous execution is in future.  Adjusting...");
-                    log_log(LOG_WARNING);
+                if (tvCmp(now, insertTime, <)) {
+                    uwarn("Time of last-processed data-product from previous "
+                            "session is in the future");
                 }
                 else {
-                    char        buf[80];
-
+                    char buf[80];
                     (void)strftime(buf, sizeof(buf), "%Y-%m-%d %T",
-                        gmtime(&clss.from.tv_sec));
+                        gmtime(&insertTime.tv_sec));
                     unotice("Starting from insertion-time %s.%06lu UTC", buf,
-                        (unsigned long)clss.from.tv_usec);
-                    pq_cset(pq, &clss.from);
+                        (unsigned long)insertTime.tv_usec);
 
-                    needFromTime = 0;
+                    pq_cset(pq, &insertTime);
+                    startAtTailEnd = false;
                 }
             }
-            else if (status == -2) {
-                /*
-                 * Previous-state information doesn't exist.
-                 */
-                log_add(
-                    "Previous-state information doesn't exist.  Continuing...");
-                log_log(LOG_WARNING);
-            }
-            else if (status == -3) {
-                /*
-                 * Previous-state I/O error.
-                 */
-                log_add("Previous-state I/O error.  Continuing...");
-                log_log(LOG_WARNING);
-            }
 
-            if (needFromTime) {
-                /*
-                 * Be permissive with the time filter,
-                 * jump now to the end of the queue.
-                 */
-                clss.from = TS_ZERO;
+            if (startAtTailEnd) {
+                unotice("Starting at tail-end of product-queue");
                 (void)pq_last(pq, &clss, NULL);
             }
         }
