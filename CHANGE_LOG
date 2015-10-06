@@ -1,3 +1,13 @@
+6.12.15.27
+    pqutil(1):
+        Removed minor lint revealed by Coverity Scan.
+
+    pq(3):
+        Use correct product size in pqe_insert() and pq_insertNoSig().
+
+    mcast_lib(3):
+        Adapt to new checks by pqe_insert().
+
 6.12.15.26	2015-10-06T09:48:58-0600
     pqact(1):
         Correct the setting of the product-queue cursor based on the last

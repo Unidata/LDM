@@ -291,9 +291,9 @@ pqe_new(pqueue *pq,
  * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
  *                        `log_add()` called.
    @retval     EACCES     Product-queue is read-only. `log_add()` called.
- * @retval     PQUEUE_BIG Data-product is too large for product-queue.
+ * @retval     PQ_BIG     Data-product is too large for product-queue.
  *                        `log_add()` called.
- * @retval     PQUEUE_DUP If a data-product with the same signature already
+ * @retval     PQ_DUP     If a data-product with the same signature already
  *                        exists in the product-queue.
  * @return                `<errno.h>` error code. `log_add()` called.
  */
@@ -357,8 +357,8 @@ pqe_insert(pqueue *pq, pqe_index index);
  * @param[in] prod         The data-product.
  * @retval ENOERR          Success.
  * @retval EINVAL          Invalid argument.
- * @retval PQUEUE_DUP      Product already exists in the queue.
- * @retval PQUEUE_BIG      Product is too large to insert in the queue.
+ * @retval PQ_DUP          Product already exists in the queue.
+ * @retval PQ_BIG          Product is too large to insert in the queue.
  */
 int
 pq_insertNoSig(pqueue *pq, const product *prod);
@@ -369,8 +369,8 @@ pq_insertNoSig(pqueue *pq, const product *prod);
  * Returns:
  *      ENOERR          Success.
  *      EINVAL          Invalid argument.
- *      PQUEUE_DUP      Product already exists in the queue.
- *      PQUEUE_BIG      Product is too large to insert in the queue.
+ *      PQ_DUP          Product already exists in the queue.
+ *      PQ_BIG          Product is too large to insert in the queue.
  */
 int
 pq_insert(pqueue *pq, const product *prod);
