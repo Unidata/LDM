@@ -215,7 +215,9 @@ fb_sz(size_t nelems)
 }
 
 
-/* Dump info about free fblks arena, for debugging.
+/**
+ *  Dump info about free fblks arena, for debugging.
+ */
 static void
 fb_stats_dump(fb *fbp) 
 {
@@ -230,7 +232,6 @@ fb_stats_dump(fb *fbp)
                fbp->free[level]);
     }
 }
-*/
 
 
 static void
@@ -422,6 +423,14 @@ fb_get(fb *fbp, int level)
             return fblk;
         }
     }
+    /*
+     * All out of blocks. This means we tried to keep in the product-queue
+     * significantly more products than the specified maximum number.
+     */
+    uerror("%s:fb_get(): fb layer ran out of product slots. "
+            "Too many products in queue.");
+    fb_stats_dump(fbp);
+    return (fblk_t)OFF_NONE;
 #else
     fblk_t fblk, fblk2;
     int size = level + 1;
@@ -459,13 +468,13 @@ fb_get(fb *fbp, int level)
         }
         level++;
     }
-#endif
     /* else: all out of extra blocks too.  This means we tried to keep
        in product queue significantly more than the specified maximum
        number of products. */
     uerror("fb layer ran out of product slots, too many products in queue\n");
     /* fb_stats_dump(fbp);   */
     return (fblk_t)OFF_NONE;
+#endif
 }
 /* End fb */
 /* Begin tqueue */
