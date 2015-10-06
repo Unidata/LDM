@@ -22,11 +22,13 @@
 #define ENOERR 0
 #endif /*!ENOERR */
 
-#define PQ_END		-1	/* at end of product-queue */
-#define PQ_CORRUPT	-2	/* the product-queue is corrupt */
-#define PQ_NOTFOUND	-3	/* no such data-product */
-#define PQ_SYSTEM  	-4	/* system error */
-#define PQ_LOCKED       -5      /* data-product is locked by another process */
+#define PQ_END		-1	// at end of product-queue
+#define PQ_DUP          -2 	// attempt to insert duplicate product
+#define PQ_BIG          -3 	// attempt to insert product that's too large
+#define PQ_SYSTEM  	-4	// system error
+#define PQ_LOCKED       -5      // data-product is locked by another process
+#define PQ_CORRUPT	-6	// the product-queue is corrupt
+#define PQ_NOTFOUND	-7	// no such data-product
 
 typedef struct pqueue pqueue; /* private, implemented in pq.c */
 extern struct pqueue *pq;
@@ -72,11 +74,9 @@ struct pqe_index {
 
 #define PQE_NONE (_pqenone)
 #define pqeIsNone(pqe) (pqeEqual(pqe, PQE_NONE))
-#define PQUEUE_DUP (-2)	/* return value indicating attempt to insert
-				duplicate product */
-#define PQUEUE_BIG (-3)	/* return value indicating attempt to insert
-				product that's too large */
-#define PQUEUE_END PQ_END	/* return value indicating end of queue */
+#define PQUEUE_DUP PQ_DUP	// attempt to insert duplicate product
+#define PQUEUE_BIG PQ_BIG	// attempt to insert product that's too large
+#define PQUEUE_END PQ_END	// return value indicating end of queue
 
 #ifdef __cplusplus
 extern "C" {
