@@ -23,11 +23,13 @@
 #define ENOERR 0
 #endif /*!ENOERR */
 
-#define PQ_END		-1	/* at end of product-queue */
-#define PQ_CORRUPT	-2	/* the product-queue is corrupt */
-#define PQ_NOTFOUND	-3	/* no such data-product */
-#define PQ_SYSTEM  	-4	/* system error */
-#define PQ_LOCKED       -5      /* data-product is locked by another process */
+#define PQ_END		-1	// at end of product-queue
+#define PQ_DUP          -2 	// attempt to insert duplicate product
+#define PQ_BIG          -3 	// attempt to insert product that's too large
+#define PQ_SYSTEM  	-4	// system error
+#define PQ_LOCKED       -5      // data-product is locked by another process
+#define PQ_CORRUPT	-6	// the product-queue is corrupt
+#define PQ_NOTFOUND	-7	// no such data-product
 
 typedef struct pqueue pqueue; /* private, implemented in pq.c */
 extern struct pqueue *pq;
@@ -73,11 +75,9 @@ struct pqe_index {
 
 #define PQE_NONE (_pqenone)
 #define pqeIsNone(pqe) (pqeEqual(pqe, PQE_NONE))
-#define PQUEUE_DUP (-2)	/* return value indicating attempt to insert
-				duplicate product */
-#define PQUEUE_BIG (-3)	/* return value indicating attempt to insert
-				product that's too large */
-#define PQUEUE_END PQ_END	/* return value indicating end of queue */
+#define PQUEUE_DUP PQ_DUP	// attempt to insert duplicate product
+#define PQUEUE_BIG PQ_BIG	// attempt to insert product that's too large
+#define PQUEUE_END PQ_END	// return value indicating end of queue
 
 #ifdef __cplusplus
 extern "C" {
@@ -324,21 +324,41 @@ pqe_discard(pqueue *pq, pqe_index index);
 int
 pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature);
 
-/*
- * Insert at rear of queue, send SIGCONT to process group
+/**
+ * Inserts the data-product reserved by a prior call to `pqe_new()` or
+ * `pqe_newDirect()` and sends a SIGCONT to the process group.
+ *
+ * @param[in] pq     The product-queue.
+ * @param[in] index  The data-product reference returned by `pqe_new()` or
+ *                   `pqe_newDirect()`.
+ * @retval 0            Success.
+ * @retval PQ_BIG       According to its metadata, the data-product is larger
+ *                      than the space allocated for it by `pqe_new()` or
+ *                      `pqe_newDirect()`. An attempt was made to revert the
+ *                      product-queue to a consistent state. `uerror()` called.
+ * @retval PQ_NOTFOUND  The data-product referenced by `index` wasn't found.
+ *                      `uerror()` called.
+ * @retval PQ_CORRUPT   The metadata of the data-product referenced by `index`
+ *                      couldn't be deserialized. The data-product isn't
+ *                      inserted. An attempt was made to revert the
+ *                      product-queue to a consistent state. `uerror()` called.
+ * @retval PQ_SYSTEM    System failure. The data-product isn't inserted.
+ *                      The state of the product-queue is unspecified.
+ *                      `uerror()` called.
  */
 int
 pqe_insert(pqueue *pq, pqe_index index);
 
-/*
- * Insert at rear of queue
- * (Don't signal process group.)
+/**
+ * Inserts a data-product at the tail-end of the product-queue without signaling
+ * the process group.
  *
- * Returns:
- *      ENOERR  Success.
- *      EINVAL  Invalid argument.
- *      PQUEUE_DUP      Product already exists in the queue.
- *      PQUEUE_BIG      Product is too large to insert in the queue.
+ * @param[in] pq           The product-queue.
+ * @param[in] prod         The data-product.
+ * @retval ENOERR          Success.
+ * @retval EINVAL          Invalid argument.
+ * @retval PQUEUE_DUP      Product already exists in the queue.
+ * @retval PQUEUE_BIG      Product is too large to insert in the queue.
  */
 int
 pq_insertNoSig(pqueue *pq, const product *prod);

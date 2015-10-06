@@ -1,10 +1,24 @@
+6.12.15.26
+    pqact(1):
+        Correct the setting of the product-queue cursor based on the last
+        successfully-processed data-product from the previous session.
+        Before this, pqact(1) might miss a product due to a restart of the LDM.
+        This was most apparent in processing NEXRAD-2 data-products. Thanks
+        Ryan.
+
+    Product-Queue (pq(3)):
+        Refactored pqe_insert() for better error-handling and return status.
+
+        Harmonized return codes by adding PQ_DUP and PQ_BIG and making
+        PQUEUE_DUP and PQUEUE_BIG aliases.
+
 6.12.15.25	2015-10-01T15:28:56-0600
     Remove ignoring of SIGCONT from mldm_sender_manager because it's not needed.
 
     Generalize TCP keep-alive in TcpSend.cpp.
 
 6.12.15.24	2015-09-30T15:40:21-0600
-    Reduce number of "make distceck" to just one in CI-commit.sh.
+    Reduce number of "make distcheck" to just one in CI-commit.sh.
 
 6.12.15.23	2015-09-30T14:33:58-0600
     Replace "$@" with just $@ in deploy.sh.
