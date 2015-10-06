@@ -6243,7 +6243,7 @@ pqe_insert(pqueue *pq, pqe_index index)
                     "product-queue might now be corrupt", __FILE__);
             status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_CORRUPT;
         }
-        else if (info->sz > rp->extent) {
+        else if (xlen_prod_i(info) > rp->extent) {
             uerror("%s:pqe_insert(): Product larger than allocated space; "
                     "product-queue now likely corrupted: "
                     "info->sz=%lu, rp->extent=%lu", __FILE__,
@@ -6455,7 +6455,8 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 goto unwind_lock;
         }
 
-        if (prod->info.sz > pq_getDataSize(pq)) {
+        extent = xlen_product(prod);
+        if (extent > pq_getDataSize(pq)) {
                 udebug("pq_insertNoSig(): product is too big");
                 status = PQ_BIG;
                 goto unwind_lock;
@@ -6470,7 +6471,6 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 goto unwind_lock;
         }
 
-        extent = xlen_product(prod);
         status = rpqe_new(pq, extent, prod->info.signature, &vp, &sxep);
         if(status != ENOERR) {
                 udebug("pq_insertNoSig(): rpqe_new() failure");
