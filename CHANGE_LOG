@@ -1,4 +1,4 @@
-6.12.15.27
+6.12.15.27	2015-10-06T12:01:45-0600
     pqutil(1):
         Removed minor lint revealed by Coverity Scan.
 
