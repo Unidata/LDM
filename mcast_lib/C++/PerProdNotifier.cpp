@@ -133,8 +133,9 @@ void PerProdNotifier::notify_of_bop(
 }
 
 /**
- * @param[in] prodIndex       The VCMTP index of the product.
- * @throws std::out_of_range  There's no entry for `prodIndex`
+ * @param[in] prodIndex        The VCMTP index of the product.
+ * @throws std::out_of_range   There's no entry for `prodIndex`
+ * @throws std::runtime_error  Receiving application error.
  */
 void PerProdNotifier::notify_of_eop(
         const VcmtpProdIndex prodIndex)
