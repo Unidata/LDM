@@ -1043,7 +1043,7 @@ big_product(pqueue      *pq,
 
         status = pqe_insert(pq, idx);
         if (status) {
-            uerror("pqe_insert: %s", strerror(status));
+            uerror("%s:big_product(): pqe_insert() failure");
             return;
         }
 
