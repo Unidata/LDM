@@ -1,4 +1,4 @@
-6.12.15.26
+6.12.15.26	2015-10-06T09:48:58-0600
     pqact(1):
         Correct the setting of the product-queue cursor based on the last
         successfully-processed data-product from the previous session.
