@@ -4956,11 +4956,11 @@ pq_set_mvrt(
  * @param[in]  tqep        The entry in the time-map.
  * @param[in]  rlix        The index of the entry in the region-map.
  * @param[out] info        The data-product metadata. On success, caller should
- *                         call `xdr_free(xdr_prod_info, (char*)info)` when it's no
- *                         longer needed.
- * @retval     0           Success. `*info` is set. Caller should call
- *                         `xdr_free(xdr_prod_info, (char*)info)` when it's no
- *                         longer needed.
+ *                         unconditionally call `xdr_free(xdr_prod_info,
+ *                         (char*)info)` when it's no longer needed.
+ * @retval     0           Success. `*info` is set. Caller should
+ *                         unconditionally call `xdr_free(xdr_prod_info,
+ *                         (char*)info)` when it's no longer needed.
  * @retval     EACCES      Product is locked.
  * @retval     PQ_CORRUPT  The product-queue is corrupt. Error-messaged logged.
  * @retval     PQ_SYSTEM   System error. Error-message logged.
@@ -5030,6 +5030,9 @@ pq_try_del_prod(
                      */
                     rl_free(pq->rlp, rlix);
                 }
+
+                if (status)
+                    xdr_free(xdr_prod_info, (char*)info);
             } // `xdr_prod_info()` successful
 
             xdr_destroy(&xdrs);
@@ -6197,13 +6200,90 @@ unwind_lock:
         return status;
 }
 
-/*
- * Insert at rear of queue, send SIGCONT to process group
+/**
+ * Inserts the data-product reserved by a prior call to `pqe_new()` or
+ * `pqe_newDirect()` and sends a SIGCONT to the process group.
+ *
+ * @param[in] pq     The product-queue.
+ * @param[in] index  The data-product reference returned by `pqe_new()` or
+ *                   `pqe_newDirect()`.
+ * @retval 0            Success.
+ * @retval PQ_BIG       According to its metadata, the data-product is larger
+ *                      than the space allocated for it by `pqe_new()` or
+ *                      `pqe_newDirect()`. An attempt was made to revert the
+ *                      product-queue to a consistent state. `uerror()` called.
+ * @retval PQ_NOTFOUND  The data-product referenced by `index` wasn't found.
+ *                      `uerror()` called.
+ * @retval PQ_CORRUPT   The metadata of the data-product referenced by `index`
+ *                      couldn't be deserialized. The data-product isn't
+ *                      inserted. An attempt was made to revert the
+ *                      product-queue to a consistent state. `uerror()` called.
+ * @retval PQ_SYSTEM    System failure. The data-product isn't inserted.
+ *                      The state of the product-queue is unspecified.
+ *                      `uerror()` called.
  */
 int
 pqe_insert(pqueue *pq, pqe_index index)
 {
-        int status = ENOERR;
+    lockIf(pq);
+
+    int  status;
+    riu* rp;
+    if (riul_r_find(pq->riulp, index.offset, &rp) == 0) {
+        uerror("%s:pqe_insert(): riul_r_find() failed", __FILE__);
+        status = PQ_NOTFOUND;
+    }
+    else {
+        InfoBuf    infoBuf;
+        prod_info* info = ib_init(&infoBuf);
+        XDR        xdrs;
+        xdrmem_create(&xdrs, rp->vp, rp->extent, XDR_DECODE);
+        if (!xdr_prod_info(&xdrs, info)) {
+            uerror("%s:pqe_insert(): xdr_prod_info() failed; "
+                    "product-queue might now be corrupt", __FILE__);
+            status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_CORRUPT;
+        }
+        else if (info->sz > rp->extent) {
+            uerror("%s:pqe_insert(): Product larger than allocated space; "
+                    "product-queue now likely corrupted: "
+                    "info->sz=%lu, rp->extent=%lu", __FILE__,
+                    (unsigned long)info->sz, (unsigned long)rp->extent);
+            // `lockIf()` is reentrant
+            status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_BIG;
+        }
+        else if (pq->mtof(pq, index.offset, RGN_MODIFIED)) {
+            uerror("%s:pqe_insert(): pq->mtof() failed", __FILE__);
+            status = PQ_SYSTEM;
+        }
+        else if (ctl_get(pq, RGN_WRITE)) {
+            uerror("%s:pqe_insert(): ctl_get() failed", __FILE__);
+            status = PQ_SYSTEM;
+        }
+        else {
+            assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
+            if (tq_add(pq->tqp, index.offset)) {
+                uerror("%s:pqe_insert(): tq_add() failed", __FILE__);
+                status = PQ_SYSTEM;
+            }
+            else {
+                (void)set_timestamp(&pq->ctlp->mostRecent);
+                /*
+                 * Inform our process group that there is new data available
+                 * (see pq_suspend() below). SIGCONT is ignored by default.
+                 */
+                (void)kill(0, SIGCONT);
+                status = 0;
+            } // entry made in time-queue
+            (void)ctl_rel(pq, RGN_MODIFIED);
+        } // `ctl_get()` succeeded
+        xdr_destroy(&xdrs);
+    } // data-product was found in region-in-use list
+
+    unlockIf(pq);
+
+    return status;
+#if 0
+        int   status = ENOERR;
         off_t offset = pqeOffset(index);
 
         lockIf(pq);
@@ -6238,9 +6318,12 @@ pqe_insert(pqueue *pq, pqe_index index)
         /*FALLTHROUGH*/
 unwind_ctl:
         (void) ctl_rel(pq, RGN_MODIFIED);
+destroy_xdrs:
+        xdr_destroy(&xdrs);
 unwind_lock:
         unlockIf(pq);
         return status;
+#endif
 }
 
 
@@ -6342,15 +6425,16 @@ vetCreationTime(
 }
 
 
-/*
- * Insert at rear of queue
- * (Don't signal process group.)
+/**
+ * Inserts a data-product at the tail-end of the product-queue without signaling
+ * the process group.
  *
- * Returns:
- *      ENOERR  Success.
- *      EINVAL  Invalid argument.
- *      PQUEUE_DUP      Product already exists in the queue.
- *      PQUEUE_BIG      Product is too large to insert in the queue.
+ * @param[in] pq           The product-queue.
+ * @param[in] prod         The data-product.
+ * @retval ENOERR          Success.
+ * @retval EINVAL          Invalid argument.
+ * @retval PQUEUE_DUP      Product already exists in the queue.
+ * @retval PQUEUE_BIG      Product is too large to insert in the queue.
  */
 int
 pq_insertNoSig(pqueue *pq, const product *prod)
@@ -7262,9 +7346,8 @@ pq_findTimeEntryBySignature(
     }
     else {
         InfoBuf     infoBuf;
-        prod_info*  info = &infoBuf.info;
-
-        (void)ib_init(&infoBuf); // necessary for `getMetadataFromOffset()`
+        // Necessary for `getMetadataFromOffset()`
+        prod_info*  info = ib_init(&infoBuf);
 
         /*
          * Get the metadata of the data-product referenced by the
@@ -8131,7 +8214,9 @@ pq_deleteBySignature(
                                 buf, pq->pathname);
                         log_log(LOG_ERR);
                     }
-                    xdr_free(xdr_prod_info, (char*)&prodInfo);
+                    else {
+                        xdr_free(xdr_prod_info, (char*)&prodInfo);
+                    }
                 } // Entry found in time-map
             } // Entry found in region-map
         } // Entry found in signature-map
