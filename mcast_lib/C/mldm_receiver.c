@@ -20,6 +20,7 @@
 #include "log.h"
 #include "PerProdNotifier.h"
 #include "pq.h"
+#include "prod_info.h"
 #include "mcast.h"
 #include "xdr.h"
 
@@ -158,8 +159,8 @@ bop_func(
 }
 
 /**
- * Finishes inserting a data-product into the allocated product-queue region
- * associated with a multicast LDM receiver or discards the region.
+ * Tries to insert a data-product in its allocated product-queue region
+ * that was received via multicast.
  *
  * @param[in] mlr       Pointer to the multicast LDM receiver.
  * @param[in] pqeIndex  Pointer to the reference to allocated space in the
@@ -168,16 +169,14 @@ bop_func(
  * @retval    -1        Error. `log_add()` called.
  */
 static int
-insertOrDiscard(
+tryToInsert(
         Mlr* const restrict       mlr,
         pqe_index* const restrict pqeIndex)
 {
     int status = pqe_insert(mlr->pq, *pqeIndex);
 
     if (status != 0) {
-        (void)pqe_discard(mlr->pq, *pqeIndex);
-        LOG_ADD1("Couldn't insert data-product into product-queue: status=%d",
-                status);
+        LOG_ADD0("Couldn't insert data-product into product-queue");
         status = -1;
     }
     else {
@@ -222,36 +221,22 @@ static int
 finishInsertion(
         Mlr* const restrict             mlr,
         const prod_info* const restrict info,
-        const size_t                    dataSize,
         pqe_index* const restrict       pqeIndex)
 {
-    int status;
-    int diff = dataSize - info->sz;
-
-    if (diff < 0 || diff >= 4) {
-        LOG_ADD3("Mismatch between LDM data size and VCMTP data size: "
-                "LDM=%u, VCMTP=%lu, ident=\"%s\"",
-                info->sz, (unsigned long)dataSize, info->ident);
-        status = -1;
-        (void)pqe_discard(mlr->pq, *pqeIndex);
+    int status = tryToInsert(mlr, pqeIndex);
+    if (status) {
+        LOG_ADD2("Couldn't insert %u-byte data-product \"%s\"", info->sz,
+                info->ident);
     }
     else {
-        status = insertOrDiscard(mlr, pqeIndex);
+        if (ulogIsVerbose()) {
+            char infoStr[LDM_INFO_MAX];
 
-        if (status) {
-            LOG_ADD2("Couldn't insert %u-byte data-product \"%s\"", info->sz,
-                    info->ident);
+            LOG_ADD1("Received: %s",
+                    s_prod_info(infoStr, sizeof(infoStr), info, 1));
+            log_log(LOG_INFO);
         }
-        else {
-            if (ulogIsVerbose()) {
-                char infoStr[LDM_INFO_MAX];
-
-                LOG_ADD1("Received: %s",
-                        s_prod_info(infoStr, sizeof(infoStr), info, 1));
-                log_log(LOG_INFO);
-            }
-            lastReceived(mlr, info);
-        }
+        lastReceived(mlr, info);
     }
     return status;
 }
@@ -290,22 +275,20 @@ eop_func(
         status = 0;
     }
     else {
-        prod_info info;
-        XDR       xdrs;
+        InfoBuf    infoBuf;
+        prod_info* info = ib_init(&infoBuf);
+        XDR        xdrs;
 
         xdrmem_create(&xdrs, prodStart, prodSize, XDR_DECODE);
-        (void)memset(&info, 0, sizeof(info));   // for `xdr_prod_info()`
 
-        if (!xdr_prod_info(&xdrs, &info)) {
+        if (!xdr_prod_info(&xdrs, info)) {
             LOG_START1("Couldn't decode LDM product metadata from %lu-byte "
                     "VCMTP product", (unsigned long)prodSize);
             status = -1;
             pqe_discard(mlr->pq, *pqeIndex);
         }
         else {
-            status = finishInsertion(mlr, &info,
-                    prodSize-(xdrs.x_private-xdrs.x_base), pqeIndex);
-            xdr_free(xdr_prod_info, (char*)&info);
+            status = finishInsertion(mlr, info, pqeIndex);
         }                                       // "info" allocated
 
         xdr_destroy(&xdrs);
