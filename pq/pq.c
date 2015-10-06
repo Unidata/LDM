@@ -5296,7 +5296,7 @@ rpqe_mkslot(pqueue *const pq)
  * @param[out] vpp     Pointer to the start of the data region.
  * @param[out] sxepp   Pointer to the existing signature entry if the product
  *                     already exists in the product-queue.
- * @retval PQUEUE_DUP  A product with the same signature already exists in the
+ * @retval PQ_DUP      A product with the same signature already exists in the
  *                     product-queue.
  * @retval PQ_CORRUPT  The product-queue is corrupt. Error message logged.
  * @retval PQ_SYSTEM   System error. Error-message logged.
@@ -5338,8 +5338,8 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
      * Check for duplicate
      */
     if (sx_find(pq->sxp, sxi, sxepp) != 0) {
-        udebug("PQUEUE_DUP");
-        return PQUEUE_DUP;
+        udebug("PQ_DUP");
+        return PQ_DUP;
     }
 
     /* We may need to split what we find */
@@ -5935,7 +5935,7 @@ pqe_new(pqueue *pq,
         if (infop->sz > pq_getDataSize(pq)) {
                 uerror("Product too big: product=%u bytes; queue=%lu bytes",
                     infop->sz, (unsigned long)pq_getDataSize(pq));
-                return PQUEUE_BIG;  
+                return PQ_BIG;
         }
 
         lockIf(pq);
@@ -6006,9 +6006,9 @@ unwind_lock:
  * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
  *                        `log_add()` called.
    @retval     EACCES     Product-queue is read-only. `log_add()` called.
- * @retval     PQUEUE_BIG Data-product is too large for product-queue.
+ * @retval     PQ_BIG     Data-product is too large for product-queue.
  *                        `log_add()` called.
- * @retval     PQUEUE_DUP If a data-product with the same signature already
+ * @retval     PQ_DUP     If a data-product with the same signature already
  *                        exists in the product-queue.
  * @return                `<errno.h>` error code. `log_add()` called.
  */
@@ -6032,7 +6032,7 @@ pqe_newDirect(
     else if (size > pq_getDataSize(pq)) {
         LOG_ADD2("Product too big: product=%lu bytes; queue=%lu bytes",
                 (unsigned long)size, (unsigned long)pq_getDataSize(pq));
-        status = PQUEUE_BIG;
+        status = PQ_BIG;
     }
     else {
         lockIf(pq);
@@ -6056,7 +6056,7 @@ pqe_newDirect(
                  */
                 status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep);
                 if (status) {
-                    if (status != PQUEUE_DUP)
+                    if (status != PQ_DUP)
                         LOG_ADD0("rpqe_new() failure");
                 }
                 else {
@@ -6162,8 +6162,8 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
            */
           if(sx_find(pq->sxp, realsignature, &sxep) != 0)
             {
-              udebug("PQUEUE_DUP");
-              status = PQUEUE_DUP;
+              udebug("PQ_DUP");
+              status = PQ_DUP;
               (void) rpqe_free(pq, offset, index.signature);
               goto unwind_ctl;
             }
@@ -6433,8 +6433,8 @@ vetCreationTime(
  * @param[in] prod         The data-product.
  * @retval ENOERR          Success.
  * @retval EINVAL          Invalid argument.
- * @retval PQUEUE_DUP      Product already exists in the queue.
- * @retval PQUEUE_BIG      Product is too large to insert in the queue.
+ * @retval PQ_DUP          Product already exists in the queue.
+ * @retval PQ_BIG          Product is too large to insert in the queue.
  */
 int
 pq_insertNoSig(pqueue *pq, const product *prod)
@@ -6457,7 +6457,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
 
         if (prod->info.sz > pq_getDataSize(pq)) {
                 udebug("pq_insertNoSig(): product is too big");
-                status = PQUEUE_BIG;
+                status = PQ_BIG;
                 goto unwind_lock;
         }
 
@@ -6514,8 +6514,8 @@ unwind_lock:
  * Returns:
  *      ENOERR          Success.
  *      EINVAL          Invalid argument.
- *      PQUEUE_DUP      Product already exists in the queue.
- *      PQUEUE_BIG      Product is too large to insert in the queue.
+ *      PQ_DUP          Product already exists in the queue.
+ *      PQ_BIG          Product is too large to insert in the queue.
  */
 int
 pq_insert(pqueue *pq, const product *prod)

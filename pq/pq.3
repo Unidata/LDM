@@ -175,7 +175,7 @@ int pq_insert(pqueue\ *\fIpq\fP, const\ product\ *\fIprod\fP);
 Inserts the LDM data product \fIprod\fP into the queue and sends SIGCONT
 to the process group.
 Calls to this function for products whose signature is already in the queue
-fail with an error indication of \fBPQUEUE_DUP\fB.
+fail with an error indication of \fBPQ_DUP\fB.
 .na
 .HP
 int pqe_new(pqueue\ *\fIpq\fP, const\ prod_info\ *\fIinfop\fP, size_t\ \fIproduct_size\fP, void\ **\fIptrp\fP, pqe_index\ *\fIindexp\fP);
@@ -189,7 +189,7 @@ described by \fIinfop\fP and \fIproduct_size\fP.
 The value of \fI*indexp\fP should be retained for use in committing the product
 using \fIpqe_insert\fP() or abandoning it using \fIpqe_discard\fP().
 Calls to this function for products whose signature is already in the queue
-fail with an error indication of \fBPQUEUE_DUP\fB.
+fail with an error indication of \fBPQ_DUP\fB.
 .na
 .HP
 int pqe_discard(pqueue\ *\fIpq\fP, pqe_index\ \fIindex\fP);
@@ -255,7 +255,7 @@ the current cursor value. If the cursor is not set,
 you will fail an assertion and dump core.
 
 If no product is in the inventory which which meets the
-above spec, \fIpq_sequence\fP() returns \fBPQUEUE_END\fP.
+above spec, \fIpq_sequence\fP() returns \fBPQ_END\fP.
 
 This function waits for locks it needs.
 
