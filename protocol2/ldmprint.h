@@ -15,6 +15,10 @@
 
 #if defined(__cplusplus) || defined(__STDC__)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Returns formatted arguments.
  *
@@ -188,6 +192,10 @@ int
 sigParse(
     const char* const	string,
     signaturet* const	signature);
+
+#ifdef __cplusplus
+}
+#endif
 
 #else /* Old Style C */
 /* TODO Will not be done, we now specify an ansi compiler */

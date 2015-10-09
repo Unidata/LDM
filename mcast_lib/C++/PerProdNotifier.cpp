@@ -14,6 +14,7 @@
 #define restrict
 
 #include "PerProdNotifier.h"
+#include "ldmprint.h"
 #include "mcast.h"
 #include "mldm_receiver.h"
 #include "log.h"
@@ -108,22 +109,25 @@ void PerProdNotifier::notify_of_bop(
 
     if (bop_func(mlr, prodSize, metadata, metaSize, prodStart, &pqeIndex))
         throw std::runtime_error(
-                "Error notifying receiving application of beginning of product");
-    if (*prodStart == NULL) {
+                "Error notifying receiving application about beginning-of-product");
+    if (*prodStart == nullptr) {
+        char sigStr[2*sizeof(signaturet)+1];
+        (void)sprint_signaturet(sigStr, sizeof(sigStr),
+                (const unsigned char*)metadata);
         uinfo("PerProdNotifier::notify_of_bop(): Duplicate product: "
-                "prodIndex=%lu, prodSize=%lu",
-                (unsigned long)iProd, (unsigned long)prodSize);
+                "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
+                (unsigned long)iProd, prodSize, metaSize, sigStr);
     }
     else {
         std::unique_lock<std::mutex> lock(mutex);
         ProdInfo& prodInfo = prodInfos[iProd];
         if (prodInfo.start) {
             uinfo("PerProdNotifier::notify_of_bop(): Duplicate BOP: "
-                    "prodIndex=%lu, prodSize=%lu",
-                    (unsigned long)iProd, (unsigned long)prodSize);
+                    "prodIndex=%lu, prodSize=%u",
+                    (unsigned long)iProd, prodSize);
         }
         else {
-            prodInfo.start = *prodStart; // can't be NULL
+            prodInfo.start = *prodStart; // can't be nullptr
             prodInfo.size = prodSize;
             prodInfo.index = pqeIndex;
         }
@@ -141,13 +145,17 @@ void PerProdNotifier::notify_of_eop(
         const VcmtpProdIndex prodIndex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    ProdInfo&                    prodInfo = prodInfos.at(prodIndex);
-
-    if (eop_func(mlr, prodInfo.start, prodInfo.size, &prodInfo.index))
-        throw std::runtime_error(std::string(
-                "Error notifying receiving application of end of product"));
-
-    (void)prodInfos.erase(prodIndex);
+    try {
+        ProdInfo& prodInfo = prodInfos.at(prodIndex);
+        if (eop_func(mlr, prodInfo.start, prodInfo.size, &prodInfo.index))
+            throw std::runtime_error(
+                    "Error notifying receiving application about end-of-product");
+        (void)prodInfos.erase(prodIndex);
+    }
+    catch (const std::out_of_range& e) {
+        throw std::out_of_range(std::string("PerProdNotifier::notify_of_eop(): "
+                "Unknown product-index: ") + std::to_string(prodIndex));
+    }
 
     log_free(); // to prevent memory leak by VCMTP thread
 }

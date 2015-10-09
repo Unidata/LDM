@@ -64,22 +64,31 @@ typedef struct {
     pthread_t             thread;
 } Receiver;
 
-// Proportion of data-products that will be deleted and requested.
+// Proportion of data-products that will be deleted and requested by the LDM-7.
 #define                  REQUEST_RATE 0.5
 // Maximum size of a data-product in bytes
-#define                  MAX_PROD_SIZE 100000
+#define                  MAX_PROD_SIZE 1000000
+#define                  MEAN_PROD_SIZE (MAX_PROD_SIZE/2)
 /*
- * Factor by which the total amount of data is greater than the amount of data
- * the product-queue can hold (approximates the number of times the
- * product-queue will be filled).
+ * Approximate number of times the product-queue will be "filled".
  */
 #define                  NUM_TIMES 10
-// Size of the data portion of the product-queue in bytes
-#define                  PQ_SIZE 500000
-#define                  NUM_PQ_SLOTS (PQ_SIZE/(MAX_PROD_SIZE/10))
-
+/*
+ * Factor by which the capacity of the product-queue is greater than a single
+ * product.
+ */
+#define                  PQ_FACTOR 100
+/*
+ * The product-queue is limited by its data-capacity (rather than its product-
+ * capacity) to attempt to reproduce the queue corruption seen by Shawn Chen at
+ * the University of Virginia.
+ */
+// Capacity of the product-queue in number of products
+static const unsigned    PQ_DATA_CAPACITY = PQ_FACTOR*MEAN_PROD_SIZE;
+// Capacity of the product-queue in bytes
+static const unsigned    PQ_PROD_CAPACITY = 10*PQ_FACTOR;
 // Number of data-products to insert
-static const unsigned    NUM_PRODS = (NUM_PQ_SLOTS*NUM_TIMES);
+static const unsigned    NUM_PRODS = NUM_TIMES*PQ_FACTOR;
 static const char        LOCAL_HOST[] = "127.0.0.1";
 static sigset_t          termSigSet;
 static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
@@ -262,8 +271,8 @@ createEmptyProductQueue(
         const char* const pathname)
 {
     pqueue* pq;
-    int     status = pq_create(pathname, 0666, PQ_DEFAULT, 0, PQ_SIZE,
-            NUM_PQ_SLOTS, &pq); // PQ_DEFAULT => clobber existing
+    int     status = pq_create(pathname, 0666, PQ_DEFAULT, 0, PQ_DATA_CAPACITY,
+            PQ_PROD_CAPACITY, &pq); // PQ_DEFAULT => clobber existing
 
     if (status == 0) {
         status = pq_close(pq);
@@ -1505,7 +1514,7 @@ int main(
 {
     int status = 1;
 
-    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
+    log_initLogging(basename(argv[0]), LOG_DEBUG, LOG_LDM);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);

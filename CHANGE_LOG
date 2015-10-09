@@ -1,3 +1,7 @@
+6.12.15.29
+    Add diagnostic print statements and modify up7-down7_test to try
+    diagnosing product-queue corruption seen by Shawn chen.
+
 6.12.15.28	2015-10-06T16:03:42-0600
     pq(3):
         Modified fb_get() to log fblk metrics when it fails to help diagnose

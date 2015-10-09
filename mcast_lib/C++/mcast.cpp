@@ -25,6 +25,20 @@
 #include <xdr.h>
 
 /**
+ * Recursively log exception "whats".
+ */
+void log_what(const std::exception& e)
+{
+    try {
+        std::rethrow_if_nested(e);
+    } catch (const std::exception& nested) {
+        log_what(nested);
+    }
+    uerror(e.what());
+}
+
+
+/**
  * The multicast receiver:
  */
 struct mcast_receiver {
@@ -189,20 +203,8 @@ mcastReceiver_execute(
             receiver->vcmtpReceiver->Start();
             status = 0;
         }
-        catch (const std::invalid_argument& e) {
-            LOG_START1("%s", e.what());
-        }
-        catch (const std::logic_error& e) {
-            LOG_START1("%s", e.what());
-        }
-        catch (const std::system_error& e) {
-            LOG_START1("%s", e.what());
-        }
-        catch (const std::runtime_error& e) {
-            LOG_START1("%s", e.what());
-        }
         catch (const std::exception& e) {
-            LOG_START1("%s", e.what());
+            log_what(e);
         }
     }
     return status;
@@ -300,7 +302,7 @@ mcastSender_init(
             status = 0;
         }
         catch (const std::invalid_argument& e) {
-            LOG_START1("%s", e.what());
+            log_what(e);
             delete notifier;
             status = 1;
         }
@@ -310,7 +312,7 @@ mcastSender_init(
         }
     }
     catch (const std::exception& e) {
-        LOG_START1("%s", e.what());
+        log_what(e);
         status = 3;
     }
 
@@ -413,17 +415,17 @@ mcastSender_start(
             status = 0;
         }
         catch(std::system_error& e) {
-            LOG_START1("%s", e.what());
+            log_what(e);
             sender->vcmtpSender->Stop();
             status = 3;
         }
     }
     catch (std::runtime_error& e) {
-        LOG_START1("%s", e.what());
+        log_what(e);
         status = 2;
     }
     catch (std::exception& e) {
-        LOG_START1("%s", e.what());
+        log_what(e);
         status = 3;
     }
 
@@ -449,11 +451,11 @@ mcastSender_stop(
         status = 0;
     }
     catch (std::runtime_error& e) {
-        LOG_START1("%s", e.what());
+        log_what(e);
         status = 2;
     }
     catch (std::exception& e) {
-        LOG_START1("%s", e.what());
+        log_what(e);
         status = 3;
     }
 
@@ -572,24 +574,8 @@ mcastSender_send(
                 (void*)metadata, metaSize);     //  safe to cast away `const`s
         return 0;
     }
-    catch (const std::invalid_argument& e) {
-        LOG_START1("%s", e.what());
-        return EIO;
-    }
-    catch (const std::logic_error& e) {
-        LOG_START1("%s", e.what());
-        return EIO;
-    }
-    catch (const std::system_error& e) {
-        LOG_START1("%s", e.what());
-        return EIO;
-    }
-    catch (const std::runtime_error& e) {
-        LOG_START1("%s", e.what());
-        return EIO;
-    }
     catch (const std::exception& e) {
-        LOG_START1("%s", e.what());
+        log_what(e);
         return EIO;
     }
 }

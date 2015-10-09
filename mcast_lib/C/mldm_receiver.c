@@ -64,8 +64,7 @@ allocateSpace(
         char** const restrict     prodStart,
         pqe_index* const restrict pqeIndex)
 {
-    udebug("%s:allocateSpace(): Entered: prodSize=%lu", __FILE__,
-            (unsigned long)prodSize);
+    udebug("%s:allocateSpace(): Entered: prodSize=%zu", __FILE__, prodSize);
 
     char sigStr[sizeof(signaturet)*2 + 1];
     int  status = pqe_newDirect(mlr->pq, prodSize, signature, prodStart,
@@ -75,14 +74,14 @@ allocateSpace(
         if (status == PQUEUE_DUP) {
             if (ulogIsVerbose()) {
                 (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-                uinfo("%s: Duplicate product: sig=%s, size=%lu", __FILE__,
-                        sigStr, (unsigned long)prodSize);
+                uinfo("%s: Duplicate product: sig=%s, size=%zu", __FILE__,
+                        sigStr, prodSize);
             }
             *prodStart = NULL;
             status = 0;
         }
         else {
-            LOG_ADD1("Couldn't allocate region for %lu-byte data-product",
+            LOG_ADD1("Couldn't allocate region for %zu-byte data-product",
                     prodSize);
             status = -1;
         }
@@ -90,13 +89,13 @@ allocateSpace(
     else {
         if (ulogIsDebug()) {
             (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-            uinfo("Allocated queue-space for product: sig=%s, size=%lu",
-                    sigStr, (unsigned long)prodSize);
+            uinfo("Allocated queue-space for product: sig=%s, size=%zu",
+                    sigStr, prodSize);
         }
     } /* region allocated in product-queue */
 
-    udebug("%s:allocateSpace(): Returning: prodStart=%p, prodSize=%lu",
-            __FILE__, *prodStart, (unsigned long)prodSize);
+    udebug("%s:allocateSpace(): Returning: prodStart=%p, prodSize=%zu",
+            __FILE__, *prodStart, prodSize);
 
     return status;
 }
@@ -132,8 +131,8 @@ bop_func(
      */
     int  status;
 
-    udebug("%s:bop_func(): Entered: prodSize=%lu, metaSize=%lu, prod=%p",
-            __FILE__, (unsigned long)prodSize, metaSize, prod);
+    udebug("%s:bop_func(): Entered: prodSize=%zu, metaSize=%u, prod=%p",
+            __FILE__, prodSize, metaSize, prod);
 
     if (sizeof(signaturet) > metaSize) {
         LOG_START1("Product metadata too small for signature: %u bytes",
@@ -152,8 +151,8 @@ bop_func(
     if (status)
         log_log(LOG_ERR); // because called by VCMTP layer
 
-    udebug("%s:bop_func(): Returning: prod=%p, prodSize=%lu",
-            __FILE__, *prod, (unsigned long)prodSize);
+    udebug("%s:bop_func(): Returning: prod=%p, prodSize=%zu",
+            __FILE__, *prod, prodSize);
 
     return status;
 }
@@ -282,8 +281,8 @@ eop_func(
         xdrmem_create(&xdrs, prodStart, prodSize, XDR_DECODE);
 
         if (!xdr_prod_info(&xdrs, info)) {
-            LOG_START1("Couldn't decode LDM product metadata from %lu-byte "
-                    "VCMTP product", (unsigned long)prodSize);
+            LOG_START1("Couldn't decode LDM product metadata from %zu-byte "
+                    "VCMTP product", prodSize);
             status = -1;
             pqe_discard(mlr->pq, *pqeIndex);
         }

@@ -58,6 +58,11 @@ public:
     ~PerProdNotifier() {}
     void notify_of_bop(const VcmtpProdIndex iProd, size_t prodSize, void*
             metadata, unsigned metaSize, void** data);
+    /**
+     * @param[in] prodIndex        The VCMTP index of the product.
+     * @throws std::out_of_range   There's no entry for `prodIndex`
+     * @throws std::runtime_error  Receiving application error.
+     */
     void notify_of_eop(VcmtpProdIndex prodIndex);
     void notify_of_missed_prod(VcmtpProdIndex prodIndex);
 
