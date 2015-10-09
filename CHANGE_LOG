@@ -1,4 +1,4 @@
-6.12.15.29
+6.12.15.29	2015-10-08T18:03:25-0600
     Add diagnostic print statements and modify up7-down7_test to try
     diagnosing product-queue corruption seen by Shawn chen.
 
