@@ -83,6 +83,7 @@
 000 001 007 008 Precipitation rate               kg m**-2 s**-1       PRATE            0  -9999.00
 000 001 007 011 Precipitation rate               kg m**-2 s**-1       PRATE            0  -9999.00
 000 001 008 008 Total precipitation              kg m**-2             APCP             0     -0.01
+000 001 008 010 Total precipitation              kg m**-2             APCP             0     -0.01
 000 001 008 011 Total precipitation              kg m**-2             APCP             0     -0.01
 000 001 008 012 Total precipitation              kg m**-2             APCP             0     -0.01
 000 001 008 009 Precipitation Probability        %                    PP--             0  -9999.00
