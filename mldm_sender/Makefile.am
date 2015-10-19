@@ -17,6 +17,8 @@ AM_CPPFLAGS	= \
     -I$(top_srcdir) \
     -I$(top_builddir)/mcast_lib/C -I$(top_srcdir)/mcast_lib/C \
     -I$(top_srcdir)/mcast_lib/C++
+noinst_HEADERS		= OffsetMap.h
+mldm_sender_SOURCES	= mldm_sender.c OffsetMap.cpp
 mldm_sender_LDADD	= $(top_builddir)/lib/libldm.la \
 		          -lstdc++
 TAGS_FILES	= \

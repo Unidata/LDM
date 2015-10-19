@@ -5237,7 +5237,8 @@ rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
 {
         size_t rlix;
 
-        udebug("Deleting oldest to make space %ld bytes", (long)extent);
+        udebug("%s:rpqe_mkspace(): Deleting oldest to make space for %ld bytes",
+                __FILE__, (long)extent);
 
         do {
                 if(pq->rlp->nelems == 0)
@@ -7729,12 +7730,21 @@ pq_processProduct(
  * execute ifMatch(xprod, len, otherargs) and return the
  * return value from ifMatch().
  *
- * @param[in] pq          Product-queue.
- * @param[in] mt          Direction from current position in queue to start
+ * @param[in]  pq         Product-queue.
+ * @param[in]  mt         Direction from current position in queue to start
  *                        matching.
- * @param[in] clss        Class of data-products to match.
- * @param[in] ifMatch     Function to call for matching products.
- * @param[in] otherargs   Optional argument to `ifMatch`.
+ * @param[in]  clss       Class of data-products to match.
+ * @param[in]  ifMatch    Function to call for matching products.
+ * @param[in]  otherargs  Optional argument to `ifMatch`.
+ * @param[out] off        Offset to the region in the product-queue or NULL. If
+ *                        NULL, then upon return the product is unlocked and may
+ *                        be deleted by another process to make room for another
+ *                        product return. If non-NULL, then this variable is set
+ *                        before `ifMatch()` is called and, upon return, the
+ *                        product is locked against deletion by another process
+ *                        and the caller should call `pq_release(*off)` when the
+ *                        product may be deleted to make room for another
+ *                        product.
  * @retval 0          Success.
  * @retval PQUEUE_END No matching data-product.
  * @retval EACCESS or EAGAIN
@@ -7773,9 +7783,12 @@ pq_processProduct(
  *                    file descriptor.
  * @return            The return-value of `ifMatch()`.
  */
-int
-pq_sequence(pqueue *pq, pq_match mt,
-        const prod_class_t *clss, pq_seqfunc *ifMatch, void *otherargs)
+static int
+pq_sequenceHelper(pqueue *pq, pq_match mt,
+        const prod_class_t* restrict clss,
+        pq_seqfunc*                  ifMatch,
+        void* restrict               otherargs,
+        off_t* const restrict        off)
 {
         int status = ENOERR;
         tqelem *tqep;
@@ -7934,6 +7947,8 @@ pq_sequence(pqueue *pq, pq_match mt,
                                 extent -= (xdrs.x_handy - xsz);
                         }
                 }
+                if (off)
+                    *off = offset;
                 status =  (*ifMatch)(info, datap, vp, extent, otherargs);
                 if(status)
                   {             /* back up, presumes clock tick > usec
@@ -7951,8 +7966,8 @@ pq_sequence(pqueue *pq, pq_match mt,
         /*FALLTHROUGH*/
 unwind_rgn:
         xdr_destroy(&xdrs);
-        /* release the data segment */
-        (void) rgn_rel(pq, offset, 0);
+        if (off == NULL)
+            (void) rgn_rel(pq, offset, 0); // release the data segment
         unlockIf(pq);
         return status;
 unwind_ctl:
@@ -7960,6 +7975,185 @@ unwind_ctl:
 unwind_lock:
         unlockIf(pq);
         return status;
+}
+
+/**
+ * Step thru the time sorted inventory according to 'mt',
+ * and the current cursor value.
+ *
+ * If(mt == TV_LT), pq_sequence() will get a product
+ * whose queue insertion timestamp is strictly less than
+ * the current cursor value.
+ *
+ * If(mt == TV_GT), pq_sequence() will get a product
+ * whose queue insertion timestamp is strictly greater than
+ * the current cursor value.
+ *
+ * If(mt == TV_EQ), pq_sequence() will get a product
+ * whose queue insertion timestamp is equal to
+ * the current cursor value.
+ *
+ * If no product is in the inventory which which meets the
+ * above spec, return PQUEUE_END.
+ *
+ * Otherwise, if the product info matches class,
+ * execute ifMatch(xprod, len, otherargs) and return the
+ * return value from ifMatch().
+ *
+ * @param[in] pq          Product-queue.
+ * @param[in] mt          Direction from current position in queue to start
+ *                        matching.
+ * @param[in] clss        Class of data-products to match.
+ * @param[in] ifMatch     Function to call for matching products.
+ * @param[in] otherargs   Optional argument to `ifMatch`.
+ * @retval 0          Success.
+ * @retval PQUEUE_END No matching data-product.
+ * @retval EACCESS or EAGAIN
+ *                    A necessary region of the product-queue is locked by
+ *                    another process.
+ * @retval EINVAL     The product-queue file doesn't support locking.
+ * @retval ENOLCK     The number of locked regions would exceed a system-imposed
+ *                    limit.
+ * @retval EDEADLK    A deadlock in region locking has been detected.
+ * @retval EBADF      The file descriptor of the product-queue is invalid.
+ * @retval EIO        An I/O error occurred while reading from the product-
+ *                    queue file.
+ * @retval EOVERFLOW  The size of the product-queue cannot be represented
+ *                    correctly.
+ * @retval EINTR      A signal was caught during execution.
+ * @retval EFBIG or EINVAL
+ *                    The size of the product-queue is greater than the maximum
+ *                    file size.
+ * @retval EROFS      The product-queue resides on a read-only file system.
+ * @retval EAGAIN     The product-queue could not be locked in memory, if
+ *                    required by mlockall(), due to a lack of resources.
+ * @retval EINVAL     Logic error in the in-memory location of the product-
+ *                    queue.
+ * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
+ *                    limit (per process or per system).
+ * @retval ENODEV     The product-queue's file descriptor refers to a file whose
+ *                    type is not supported by mmap().
+ * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
+ *                    address space of a process.
+ * @retval ENOMEM     The product-queue could not be locked in memory, if
+ *                    required by mlockall(), because it would require more
+ *                    space than the system is able to supply.
+ * @retval ENOTSUP    The O/S does not support the combination of accesses
+ *                    requested.
+ * @retval ENXIO      The size of the product-queue is inconsistent with its
+ *                    file descriptor.
+ * @return            The return-value of `ifMatch()`.
+ */
+int
+pq_sequence(pqueue *pq, pq_match mt,
+        const prod_class_t *clss, pq_seqfunc *ifMatch, void *otherargs)
+{
+    return pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, NULL);
+}
+
+/**
+ * Step thru the time sorted inventory according to 'mt',
+ * and the current cursor value.
+ *
+ * If(mt == TV_LT), pq_sequence() will get a product
+ * whose queue insertion timestamp is strictly less than
+ * the current cursor value.
+ *
+ * If(mt == TV_GT), pq_sequence() will get a product
+ * whose queue insertion timestamp is strictly greater than
+ * the current cursor value.
+ *
+ * If(mt == TV_EQ), pq_sequence() will get a product
+ * whose queue insertion timestamp is equal to
+ * the current cursor value.
+ *
+ * If no product is in the inventory which which meets the
+ * above spec, return PQUEUE_END.
+ *
+ * Otherwise, if the product info matches class,
+ * execute ifMatch(xprod, len, otherargs) and return the
+ * return value from ifMatch().
+ *
+ * @param[in] pq          Product-queue.
+ * @param[in] mt          Direction from current position in queue to start
+ *                        matching.
+ * @param[in] clss        Class of data-products to match.
+ * @param[in] ifMatch     Function to call for matching products.
+ * @param[in] otherargs   Optional argument to `ifMatch`.
+ * @retval 0          Success.
+ * @retval PQUEUE_END No matching data-product.
+ * @retval EACCESS or EAGAIN
+ *                    A necessary region of the product-queue is locked by
+ *                    another process.
+ * @retval EINVAL     The product-queue file doesn't support locking.
+ * @retval ENOLCK     The number of locked regions would exceed a system-imposed
+ *                    limit.
+ * @retval EDEADLK    A deadlock in region locking has been detected.
+ * @retval EBADF      The file descriptor of the product-queue is invalid.
+ * @retval EIO        An I/O error occurred while reading from the product-
+ *                    queue file.
+ * @retval EOVERFLOW  The size of the product-queue cannot be represented
+ *                    correctly.
+ * @retval EINTR      A signal was caught during execution.
+ * @retval EFBIG or EINVAL
+ *                    The size of the product-queue is greater than the maximum
+ *                    file size.
+ * @retval EROFS      The product-queue resides on a read-only file system.
+ * @retval EAGAIN     The product-queue could not be locked in memory, if
+ *                    required by mlockall(), due to a lack of resources.
+ * @retval EINVAL     Logic error in the in-memory location of the product-
+ *                    queue.
+ * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
+ *                    limit (per process or per system).
+ * @retval ENODEV     The product-queue's file descriptor refers to a file whose
+ *                    type is not supported by mmap().
+ * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
+ *                    address space of a process.
+ * @retval ENOMEM     The product-queue could not be locked in memory, if
+ *                    required by mlockall(), because it would require more
+ *                    space than the system is able to supply.
+ * @retval ENOTSUP    The O/S does not support the combination of accesses
+ *                    requested.
+ * @retval ENXIO      The size of the product-queue is inconsistent with its
+ *                    file descriptor.
+ * @return            The return-value of `ifMatch()`.
+ */
+int
+pq_sequenceLock(
+        pqueue* const restrict             pq,
+        pq_match                           mt,
+        const prod_class_t* const restrict clss,
+        pq_seqfunc* const                  ifMatch,
+        void* const                        otherargs,
+        off_t* const restrict              offset)
+{
+    return pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, offset);
+}
+
+/**
+ * Releases a data-product that was locked by `pq_sequenceLock()` so that it can
+ * be deleted to make room for another product.
+ *
+ * @retval 0            Success.
+ * @retval PQ_CORRUPT   If the product-queue is corrupt.
+ * @retval PQ_INVAL     If the product-queue is closed.
+ * @retval PQ_NOTFOUND  If `offset` doesn't refer to a locked product.
+ */
+int
+pq_release(
+        pqueue const* pq,
+        const off_t   offset)
+{
+    switch (rgn_rel(pq, offset, 0)) {
+    case 0:
+        return 0;
+    case EBADF:
+        return PQ_INVAL;
+    case EINVAL:
+        return PQ_NOTFOUND;
+    default:
+        return PQ_CORRUPT;
+    }
 }
 
 

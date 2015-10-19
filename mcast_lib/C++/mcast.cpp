@@ -547,6 +547,18 @@ mcastSender_spawn(
 }
 
 /**
+ * Returns the product-index of the next product to be sent.
+ * @param[in]  sender  VCMTP sender.
+ * @return the product-index of the next product to be sent.
+ */
+VcmtpProdIndex
+mcastSender_getNextProdIndex(
+    McastSender* const    sender)
+{
+  return sender->vcmtpSender->getNextProdIndex();
+}
+
+/**
  * Sends a product.
  *
  * @param[in]  sender  VCMTP sender.

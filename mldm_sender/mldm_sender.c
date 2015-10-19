@@ -22,6 +22,7 @@
 #include "log.h"
 #include "mcast.h"
 #include "mcast_info.h"
+#include "OffsetMap.h"
 #include "pq.h"
 #include "prod_class.h"
 #include "StrBuf.h"
@@ -57,6 +58,10 @@ static const int             termSigs[] = {SIGHUP, SIGINT, SIGTERM};
  * Signal-set for termination signals.
  */
 static sigset_t              termSigSet;
+/**
+ * VCMTP product-index to product-queue offset map.
+ */
+static OffMap*               offMap;
 /**
  * Default failure-rate.
  */
@@ -619,10 +624,22 @@ static void
 mls_doneWithProduct(
     const VcmtpProdIndex prodIndex)
 {
-    // TODO: Nothing is done yet because a product should reside in the queue
-    // much longer than it takes VCMTP to send it and the queue API will have to
-    // be modified to support holding a lock on a product until it's explicitly
-    // unlocked.
+    off_t offset;
+    int   status = om_get(offMap, prodIndex, &offset);
+    if (status) {
+        LOG_ADD1("Couldn't get file-offset corresponding to product-index %lu",
+                (unsigned long)prodIndex);
+        log_log(LOG_ERR);
+    }
+    else {
+        status = pq_release(pq, offset);
+        if (status) {
+            LOG_ADD2("Couldn't release data-product in product-queue "
+                    "corresponding to file-offset %ld, product-index %lu",
+                    (long)offset, (unsigned long)prodIndex);
+            log_log(LOG_ERR);
+        }
+    }
 }
 
 /**
@@ -675,10 +692,17 @@ mls_init(
             groupInetAddr)))
         goto return_status;
 
+    offMap = om_new();
+    if (offMap == NULL) {
+        LOG_ADD0("Couldn't create prodIndex-to-offset map");
+        status = LDM7_SYSTEM;
+        goto return_status;
+    }
+
     if (pq_open(pqPathname, PQ_READONLY, &pq)) {
         LOG_START1("Couldn't open product-queue \"%s\"", pqPathname);
         status = LDM7_SYSTEM;
-        goto return_status;
+        goto free_offMap;
     }
 
     if ((status = mls_openProdIndexMap(info->feed, pq_getSlotCount(pq))))
@@ -714,6 +738,8 @@ close_prod_index_map:
     (void)pim_close();
 close_pq:
     (void)pq_close(pq);
+free_offMap:
+    om_free(offMap);
 return_status:
     return status;
 }
@@ -749,7 +775,8 @@ mls_destroy(void)
  * @param[in] xprod        Pointer to an XDR-encoded version of the data-product
  *                         (data and metadata).
  * @param[in] size         Size, in bytes, of the XDR-encoded version.
- * @param[in] arg          Optional last `pq_sequence()` argument. Ignored.
+ * @param[in] arg          Optional `pq_sequence()` argument. Pointer to
+ *                         product-queue offset for the data-product.
  * @retval    0            Success.
  * @retval    LDM7_MCAST   Multicast layer error. `log_start()` called.
  * @retval    LDM7_SYSTEM  System error. `log_start()` called.
@@ -762,23 +789,33 @@ mls_multicastProduct(
         const size_t                    size,
         void* const restrict            arg)
 {
-    VcmtpProdIndex iProd;
-    int            status = mcastSender_send(mcastSender, xprod, size,
-            (void*)info->signature, sizeof(signaturet), &iProd);
-
+    off_t          offset = *(off_t*)arg;
+    VcmtpProdIndex iProd = mcastSender_getNextProdIndex(mcastSender);
+    int            status = om_put(offMap, iProd, offset);
     if (status) {
-        status = LDM7_MCAST;
+        LOG_ADD2("Couldn't add product %lu, offset %lu to map",
+                (unsigned long)iProd, (unsigned long)offset);
     }
     else {
-        if (ulogIsVerbose()) {
-            char buf[LDM_INFO_MAX];
-            LOG_ADD2("Sent: prodIndex=%lu, prodInfo=\"%s\"",
-                    (unsigned long)iProd,
-                    s_prod_info(buf, sizeof(buf), info, 1));
-            log_log(LOG_INFO);
-        }
+        status = mcastSender_send(mcastSender, xprod, size,
+                (void*)info->signature, sizeof(signaturet), &iProd);
 
-        status = pim_put(iProd, (const signaturet*)&info->signature);
+        if (status) {
+            off_t off;
+            (void)om_get(offMap, iProd, &off);
+            status = LDM7_MCAST;
+        }
+        else {
+            if (ulogIsVerbose()) {
+                char buf[LDM_INFO_MAX];
+                LOG_ADD2("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                        (unsigned long)iProd,
+                        s_prod_info(buf, sizeof(buf), info, 1));
+                log_log(LOG_INFO);
+            }
+
+            status = pim_put(iProd, (const signaturet*)&info->signature);
+        }
     }
 
     return status;
@@ -833,7 +870,9 @@ mls_tryMulticast(
 {
     // TODO: Keep product locked until VCMTP notification, then release
 
-    int status = pq_sequence(pq, TV_GT, prodClass, mls_multicastProduct, NULL);
+    off_t offset;
+    int   status = pq_sequenceLock(pq, TV_GT, prodClass, mls_multicastProduct,
+            &offset, &offset);
 
     if (PQUEUE_END == status) {
         /* No matching data-product. */

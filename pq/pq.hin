@@ -29,6 +29,7 @@
 #define PQ_LOCKED       -5      // data-product is locked by another process
 #define PQ_CORRUPT	-6	// the product-queue is corrupt
 #define PQ_NOTFOUND	-7	// no such data-product
+#define PQ_INVAL        -8      // Invalid argument
 
 typedef struct pqueue pqueue; /* private, implemented in pq.c */
 extern struct pqueue *pq;
