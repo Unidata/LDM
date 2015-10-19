@@ -72,12 +72,12 @@ typedef struct {
 /*
  * Approximate number of times the product-queue will be "filled".
  */
-#define                  NUM_TIMES 2
+#define                  NUM_TIMES 10
 /*
  * Factor by which the capacity of the product-queue is greater than a single
  * product.
  */
-#define                  CAPACITY_TO_PROD_RATIO 1000
+#define                  CAPACITY_TO_PROD_RATIO 100
 /*
  * The product-queue is limited by its data-capacity (rather than its product-
  * capacity) to attempt to reproduce the queue corruption seen by Shawn Chen at
@@ -1498,7 +1498,7 @@ test_up7_down7(
         log_log(LOG_ERR);
         CU_ASSERT_EQUAL_FATAL(status, 0);
     #else
-        (void)sleep(1);
+        (void)sleep(5);
     #endif
 
     udebug("Terminating receiver");

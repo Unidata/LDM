@@ -7739,12 +7739,11 @@ pq_processProduct(
  * @param[out] off        Offset to the region in the product-queue or NULL. If
  *                        NULL, then upon return the product is unlocked and may
  *                        be deleted by another process to make room for another
- *                        product return. If non-NULL, then this variable is set
- *                        before `ifMatch()` is called and, upon return, the
- *                        product is locked against deletion by another process
- *                        and the caller should call `pq_release(*off)` when the
- *                        product may be deleted to make room for another
- *                        product.
+ *                        product. If non-NULL, then this variable is set before
+ *                        `ifMatch()` is called and, upon return, the product is
+ *                        locked against deletion by another process and the
+ *                        caller should call `pq_release(*off)` when the product
+ *                        may be deleted to make room for another product.
  * @retval 0          Success.
  * @retval PQUEUE_END No matching data-product.
  * @retval EACCESS or EAGAIN
@@ -8141,19 +8140,19 @@ pq_sequenceLock(
  */
 int
 pq_release(
-        pqueue const* pq,
+        pqueue* const pq,
         const off_t   offset)
 {
-    switch (rgn_rel(pq, offset, 0)) {
-    case 0:
-        return 0;
-    case EBADF:
-        return PQ_INVAL;
-    case EINVAL:
-        return PQ_NOTFOUND;
-    default:
-        return PQ_CORRUPT;
-    }
+    lockIf(pq);
+    int status = rgn_rel(pq, offset, 0);
+    if (status == EBADF)
+        status = PQ_INVAL;
+    else if (status == EINVAL)
+        status = PQ_NOTFOUND;
+    else if (status)
+        status = PQ_CORRUPT;
+    unlockIf(pq);
+    return status;
 }
 
 

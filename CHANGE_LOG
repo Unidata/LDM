@@ -1,3 +1,17 @@
+6.12.15.30
+    noaaportIngester(1):
+        Added "+000 001 008 010 Total precipitation" to GEMPAK tables.
+
+    Multicast:
+        Add feature to lock products until VCMTP sender releases them.
+
+        Modify VCMTP port numbers to match WireShark plugin.
+
+        Improve log messages.
+
+    pq(3):
+        Make pq_release() thread-safe.
+
 6.12.15.29	2015-10-08T18:03:25-0600
     Add diagnostic print statements and modify up7-down7_test to try
     diagnosing product-queue corruption seen by Shawn chen.
