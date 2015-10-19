@@ -311,8 +311,9 @@ up7_deliverProduct(
      */
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         if (ulogIsVerbose())
-            unotice("up7_deliverProduct(): Missed product sent: %s",
-                    s_prod_info(NULL, 0, &missedProd.prod.info, ulogIsDebug()));
+            uinfo("%s:up7_deliverProduct(): Missed product sent: %s",
+                    __FILE__, s_prod_info(NULL, 0, &missedProd.prod.info,
+                    ulogIsDebug()));
         return 0;
     }
 
