@@ -89,8 +89,8 @@ allocateSpace(
     else {
         if (ulogIsDebug()) {
             (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-            uinfo("Allocated queue-space for product: sig=%s, size=%zu",
-                    sigStr, prodSize);
+            udebug("%s:allocateSpace(): Allocated queue-space for product: "
+                    "sig=%s, size=%zu", __FILE__, sigStr, prodSize);
         }
     } /* region allocated in product-queue */
 
