@@ -1,4 +1,4 @@
-6.12.15.30
+6.12.15.30	2015-10-19T16:23:06-0600
     noaaportIngester(1):
         Added "+000 001 008 010 Total precipitation" to GEMPAK tables.
 
