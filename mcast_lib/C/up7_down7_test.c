@@ -65,30 +65,30 @@ typedef struct {
 } Receiver;
 
 // Proportion of data-products that will be deleted and requested by the LDM-7.
-#define                  REQUEST_RATE 0.5
+#define                  REQUEST_RATE 0.0
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 1000000
 #define                  MEAN_PROD_SIZE (MAX_PROD_SIZE/2)
 /*
  * Approximate number of times the product-queue will be "filled".
  */
-#define                  NUM_TIMES 10
+#define                  NUM_TIMES 2
 /*
  * Factor by which the capacity of the product-queue is greater than a single
  * product.
  */
-#define                  PQ_FACTOR 100
+#define                  CAPACITY_TO_PROD_RATIO 1000
 /*
  * The product-queue is limited by its data-capacity (rather than its product-
  * capacity) to attempt to reproduce the queue corruption seen by Shawn Chen at
  * the University of Virginia.
  */
-// Capacity of the product-queue in number of products
-static const unsigned    PQ_DATA_CAPACITY = PQ_FACTOR*MEAN_PROD_SIZE;
 // Capacity of the product-queue in bytes
-static const unsigned    PQ_PROD_CAPACITY = 10*PQ_FACTOR;
+static const unsigned    PQ_DATA_CAPACITY = CAPACITY_TO_PROD_RATIO*MEAN_PROD_SIZE;
+// Capacity of the product-queue in number of products
+static const unsigned    PQ_PROD_CAPACITY = 10*CAPACITY_TO_PROD_RATIO;
 // Number of data-products to insert
-static const unsigned    NUM_PRODS = NUM_TIMES*PQ_FACTOR;
+static const unsigned    NUM_PRODS = NUM_TIMES*CAPACITY_TO_PROD_RATIO;
 static const char        LOCAL_HOST[] = "127.0.0.1";
 static sigset_t          termSigSet;
 static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
@@ -98,6 +98,9 @@ static Sender            sender;
 static Receiver          receiver;
 static pthread_t         requesterThread;
 static pqueue*           receiverPq;
+static uint64_t          numDeletedProds;
+static const unsigned short VCMTP_MCAST_PORT = 5173;
+static const unsigned short VCMTP_UCAST_PORT = 1234;
 
 /*
  * The following functions (until otherwise noted) are only called once.
@@ -807,7 +810,7 @@ setMcastInfo(
         const feedtypet   feedtype)
 {
     ServiceAddr* mcastServAddr;
-    int          status = sa_new(&mcastServAddr, "224.0.0.1", 38800);
+    int          status = sa_new(&mcastServAddr, "224.0.0.1", VCMTP_MCAST_PORT);
 
     if (status) {
         LOG_ADD0("Couldn't create multicast service address object");
@@ -815,7 +818,7 @@ setMcastInfo(
     else {
         ServiceAddr* ucastServAddr;
 
-        status = sa_new(&ucastServAddr, LOCAL_HOST, 0);
+        status = sa_new(&ucastServAddr, LOCAL_HOST, VCMTP_UCAST_PORT);
         if (status) {
             LOG_ADD0("Couldn't create unicast service address object");
         }
@@ -1174,6 +1177,9 @@ requester_start(
                         status);
                 break;
             }
+            else {
+                numDeletedProds++;
+            }
         }
     }
     pthread_cleanup_pop(1);
@@ -1407,7 +1413,7 @@ test_down7(
     done = 0;
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(LOCAL_HOST, 38800, ANY);
+    status = receiver_spawn(LOCAL_HOST, VCMTP_MCAST_PORT, ANY);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -1477,11 +1483,12 @@ test_up7_down7(
     receiver_requestLastProduct(&receiver);
 #endif
     (void)sleep(1);
-    uint64_t nprods = receiver_getNumProds(&receiver);
     unotice("%s:up7_down7_test(): %lu sender product-queue insertions",
             __FILE__, (unsigned long)NUM_PRODS);
+    uint64_t numDownInserts = receiver_getNumProds(&receiver);
     unotice("%s:up7_down7_test(): %lu receiver product-queue insertions",
-            __FILE__, (unsigned long)nprods);
+            __FILE__, (unsigned long)numDownInserts);
+    CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
     #if USE_SIGWAIT
         (void)sigwait(&termSigSet, &status);
@@ -1520,9 +1527,9 @@ int main(
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            if (CU_ADD_TEST(testSuite, test_up7) &&
+            if (/*CU_ADD_TEST(testSuite, test_up7) &&
                     CU_ADD_TEST(testSuite, test_down7) &&
-                    CU_ADD_TEST(testSuite, test_bad_subscription) &&
+                    CU_ADD_TEST(testSuite, test_bad_subscription) &&*/
                     CU_ADD_TEST(testSuite, test_up7_down7)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
