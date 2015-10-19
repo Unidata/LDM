@@ -549,11 +549,13 @@ me_new(
     int            status;
     unsigned short port = sa_getPort(&info->server);
 
+#if 0
     if (port != 0) {
         LOG_START1("Port number of VCMTP TCP server isn't zero: %hu", port);
         status = LDM7_INVAL;
     }
     else {
+#endif
         McastEntry* ent = LOG_MALLOC(sizeof(McastEntry), "multicast entry");
 
         if (ent == NULL) {
@@ -569,7 +571,9 @@ me_new(
                 *entry = ent;
             }
         }
+#if 0
     }
+#endif
 
     return status;
 }
