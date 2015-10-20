@@ -1522,8 +1522,8 @@ deliver_product(
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
             uinfo("%s:deliver_product(): Inserted: %s", __FILE__, buf);
-            down7_incNumProds(down7);
         }
+        down7_incNumProds(down7);
     }
     else {
         if (status == EINVAL) {
@@ -1912,6 +1912,7 @@ down7_free(
         }
         else {
             unlockState(down7);
+            (void)pthread_mutex_destroy(&down7->numProdMutex);
             udebug("%s:down7_free(): Closing multicast receiver memory",
                     __FILE__);
             if (!mrm_close(down7->mrm)) {
