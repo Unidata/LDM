@@ -4084,6 +4084,13 @@ pq_delete(pqueue *const pq)
                 free(pq->riulp);
                 pq->riulp = NULL;
         }
+        if (fIsSet(pq->pflags, PQ_THREADSAFE)) {
+            int status = pthread_mutex_destroy(&pq->mutex);
+            if (status) {
+                LOG_ERRNUM0(status, "Couldn't destroy mutex");
+                log_log(LOG_ERR);
+            }
+        }
         free(pq);
 }
 
@@ -7800,7 +7807,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
                 prod_info b_i;
                 char b_origin[HOSTNAMESIZE + 1];
                 char b_ident[KEYSIZE + 1];
-        } buf; /* static ??? */
+        } buf;
         prod_info *info ;
         void *datap;
         XDR xdrs;
@@ -7948,7 +7955,13 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
                 }
                 if (off)
                     *off = offset;
+                /*
+                 * Because calling a foreign function with an acquired lock
+                 * might result in deadlock:
+                 */
+                unlockIf(pq);
                 status =  (*ifMatch)(info, datap, vp, extent, otherargs);
+                lockIf(pq);
                 if(status)
                   {             /* back up, presumes clock tick > usec
                                    (not always true) */
@@ -8144,15 +8157,15 @@ pq_release(
         const off_t   offset)
 {
     lockIf(pq);
-    int status = rgn_rel(pq, offset, 0);
-    if (status == EBADF)
-        status = PQ_INVAL;
-    else if (status == EINVAL)
-        status = PQ_NOTFOUND;
-    else if (status)
-        status = PQ_CORRUPT;
+    const int status = rgn_rel(pq, offset, 0);
     unlockIf(pq);
-    return status;
+    return status == EBADF
+            ? PQ_INVAL
+            : status == EINVAL
+              ? PQ_NOTFOUND
+              : status
+                ? PQ_CORRUPT
+                : 0;
 }
 
 
