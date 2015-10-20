@@ -17,6 +17,7 @@
 #include "ldm.h"
 #include "ldmfork.h"
 #include "log.h"
+#include "pq.h"
 
 #include <pthread.h>
 #include <signal.h>

@@ -1616,7 +1616,7 @@ wakeUpNappingDown7(
  * @param[in] feedtype    Feedtype of multicast group to receive.
  * @param[in] mcastIface  IP address of interface to use for receiving multicast
  *                        packets. Caller may free upon return.
- * @param[in] pq          The product-queue. Must be thread-safe (i.e.,
+ * @param[in] down7Pq     The product-queue. Must be thread-safe (i.e.,
  *                        `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
  * @retval    NULL        Failure. `log_start()` called.
  * @return                Pointer to the new downstream LDM-7.
