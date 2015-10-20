@@ -1,3 +1,19 @@
+6.12.15.31
+    down7.c:
+        Correct location of down7_incNumProds().
+
+        Add mutex destruction to down7_free().
+
+    mldm_sender:
+        Add opening of product-queue in thread-safe mode to prevent corruption
+        of the regions-in-use list by multiple thread access.
+
+    pq.c:
+        Add unlocking of mutex in pq_sequence() before calling `ifMatch()`
+        to avoid deadlock in calling a foreign function.
+
+        Add mutex destruction to freeing.
+
 6.12.15.30	2015-10-19T16:23:06-0600
     noaaportIngester(1):
         Added "+000 001 008 010 Total precipitation" to GEMPAK tables.
