@@ -1074,26 +1074,20 @@ requester_decide(
     RequestArg* const     reqArg = (RequestArg*)arg;
 
     /*
-     * The monotonicity of the product-index is checked to avoid deleting a
-     * previously-deleted and just-re-inserted data-product.
+     * The monotonicity of the product-index is checked so that only the most
+     * recently-created data-product is eligible for deletion.
      */
-
     (void)memcpy(&prodIndex,
             info->signature + sizeof(signaturet) - sizeof(VcmtpProdIndex),
-            sizeof(prodIndex));
+            sizeof(VcmtpProdIndex));
     prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
-
-    if (!maxProdIndexSet) {
+    if (maxProdIndexSet && prodIndex <= maxProdIndex) {
+        reqArg->delete = false;
+    }
+    else {
         decide(reqArg, info->signature);
         maxProdIndex = prodIndex;
         maxProdIndexSet = true;
-    }
-    else if (prodIndex > maxProdIndex) {
-        decide(reqArg, info->signature);
-        maxProdIndex = prodIndex;
-    }
-    else {
-        reqArg->delete = false;
     }
 
     char buf[2*sizeof(signaturet)+1];
@@ -1101,7 +1095,7 @@ requester_decide(
     udebug("requester_decide(): Returning %s: prodIndex=%lu",
             reqArg->delete ? "delete" : "don't delete",
             (unsigned long)prodIndex);
-    return 0; // necessary for `pq_suspenc()`
+    return 0; // necessary for `pq_sequence()`
 }
 
 /**
@@ -1118,7 +1112,7 @@ requester_deleteAndRequest(
 {
     VcmtpProdIndex  prodIndex;
     (void)memcpy(&prodIndex, sig + sizeof(signaturet) - sizeof(VcmtpProdIndex),
-        sizeof(prodIndex));
+        sizeof(VcmtpProdIndex));
     prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
     int status = pq_deleteBySignature(receiverPq, sig);
     char buf[2*sizeof(signaturet)+1];
@@ -1134,6 +1128,7 @@ requester_deleteAndRequest(
             uinfo("%s: Deleted data-product: prodIndex=%lu, sig=%s", __FILE__,
                     (unsigned long)prodIndex, buf);
         }
+        numDeletedProds++;
         down7_missedProduct(receiver.down7, prodIndex);
     }
     return status;
@@ -1176,9 +1171,6 @@ requester_start(
                 LOG_ADD1("requester_deleteAndRequest() failure: status=%d",
                         status);
                 break;
-            }
-            else {
-                numDeletedProds++;
             }
         }
     }
