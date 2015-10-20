@@ -1,4 +1,4 @@
-6.12.15.31
+6.12.15.31	2015-10-20T17:11:53-0600
     down7.c:
         Correct location of down7_incNumProds().
 
