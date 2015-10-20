@@ -699,7 +699,11 @@ mls_init(
         goto return_status;
     }
 
-    if (pq_open(pqPathname, PQ_READONLY, &pq)) {
+    /*
+     * Thread-safe because `mls_tryMulticast()` and `mls_doneWithProduct()`
+     * might be executed on different threads.
+     */
+    if (pq_open(pqPathname, PQ_READONLY | PQ_THREADSAFE, &pq)) {
         LOG_START1("Couldn't open product-queue \"%s\"", pqPathname);
         status = LDM7_SYSTEM;
         goto free_offMap;
