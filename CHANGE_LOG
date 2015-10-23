@@ -1,4 +1,4 @@
-6.12.15.33
+6.12.15.33	2015-10-23T10:11:48-0600
     mldm_sender():
         Moved addition of product-index-to-product-signature entry to before the
         sending of the product because the receiving LDM-7 would sometimes
