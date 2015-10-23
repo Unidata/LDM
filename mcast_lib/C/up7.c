@@ -40,6 +40,8 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <libgen.h>
+#include <limits.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <rpc.h>
@@ -49,6 +51,11 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#ifndef _XOPEN_PATH_MAX
+/* For some reason, the following isn't defined by gcc(1) 4.8.3 on Fedora 19 */
+#   define _XOPEN_PATH_MAX 1024 // value mandated by XPG6; includes NUL
+#endif
 
 /**
  * The RPC client-side transport to the downstream LDM-7
@@ -65,7 +72,6 @@ static feedtypet feedtype;
  *
  * @param[in] feed         The feedtype.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The filename of the map couldn't be created.
  * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
  *                         called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
@@ -73,22 +79,11 @@ static feedtypet feedtype;
  */
 static int
 up7_openProdIndexMap(
-        const feedtypet feed)
+        const feedtypet   feed)
 {
-    int  status;
-    char filename[256];
-    int  nbytes = pim_getFilename(filename, sizeof(filename), feed);
-
-    if (nbytes < 0 || nbytes >= sizeof(filename)) {
-        LOG_ADD0("Couldn't get filename of product-index map");
-        status = EINVAL;
-    }
-    else {
-        status = pim_openForReading(filename);
-        if (status)
-            LOG_ADD0("Couldn't open product-index map for reading");
-    }
-    return status;
+    char pathname[_XOPEN_PATH_MAX];
+    (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
+    return pim_openForReading(dirname(pathname), feed);
 }
 
 /**

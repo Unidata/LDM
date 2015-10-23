@@ -20,28 +20,13 @@
 #endif
 
 /**
- * Returns the filename of the product-index map for a given feedtype.
- *
- * @param[out] buf       The buffer into which to format the filename.
- * @paramin]   size      The size of the buffer in bytes.
- * @param[in]  feedtype  The feedtype.
- * @retval    -1         Error. `log_add()` called.
- * @return               The number of bytes that would be written to the buffer
- *                       had it been sufficiently large excluding the terminating
- *                       null byte. If greater than or equal to `size`, then the
- *                       buffer is not NUL-terminated.
- */
-int
-pim_getFilename(
-        char*           buf,
-        size_t          size,
-        const feedtypet feedtype);
-
-/**
  * Initializes this module for read and write access to a feedtype-specific
  * product-index map contained in a file. Creates the file if necessary.
  *
- * @param[in] pathname     Pathname of the file. Caller may free.
+ * @param[in] dirname      Pathname of the parent directory or NULL, in which
+ *                         case the current working directory is used. Caller
+ *                         may free.
+ * @param[in] feedtype     Feedtype of the map.
  * @param[in] maxSigs      Maximum number of data-product signatures.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
@@ -49,14 +34,18 @@ pim_getFilename(
  */
 Ldm7Status
 pim_openForWriting(
-        const char* const pathname,
+        const char* const dirname,
+        const feedtypet   feedtype,
         const size_t      maxSigs);
 
 /**
  * Opens the product-index map for reading. A process should call this
  * function at most once.
  *
- * @param[in] pathname     Pathname of the file. Caller may free.
+ * @param[in] dirname      Pathname of the parent directory or NULL, in which
+ *                         case the current working directory is used. Caller
+ *                         may free.
+ * @param[in] feedtype     Feedtype of the map.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
  *                         `log_add()` called. The file wasn't opened or
@@ -66,7 +55,8 @@ pim_openForWriting(
  */
 Ldm7Status
 pim_openForReading(
-        const char* const pathname);
+        const char* const dirname,
+        const feedtypet   feedtype);
 
 /**
  * Closes the product-index map.
@@ -79,22 +69,21 @@ Ldm7Status
 pim_close(void);
 
 /**
- * Deletes the product-index map by deleting the associated file. The map must
- * be closed.
+ * Deletes the file associated with a product-index map. Any instance of this
+ * module that has the file open will continue to work until its `pim_close()`
+ * is called.
  *
- * @param[in] directory  Pathname of the parent directory of the associated
- *                       file or `NULL` for the current working directory.
- * @param[in] feed       Specification of the associated feed.
+ * @param[in] dirname    Pathname of the parent directory or NULL, in which case
+ *                       the current workingi directory is used.
+ * @param[in] feedtype   The feedtype.
  * @retval 0             Success. The associated file doesn't exist or has been
  *                       removed.
- * @retval LDM7_INVAL    The product-index map is in the incorrect state.
- *                       `log_add()` called.
  * @retval LDM7_SYSTEM   System error. `log_add()` called.
  */
 Ldm7Status
 pim_delete(
-        const const char* directory,
-        const feedtypet   feed);
+        const char* const dirname,
+        const feedtypet   feedtype);
 
 /**
  * Adds a mapping from a product-index to a data-product signature to the

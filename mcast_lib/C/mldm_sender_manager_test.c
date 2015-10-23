@@ -131,6 +131,8 @@ test_not_running()
     int              status;
 
     /* Start a multicast sender process */
+    status = pim_delete(NULL, feedtype_1);
+    OP_ASSERT_EQUAL_INT(0, status);
     status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid);
     log_log(LOG_ERR);
     OP_ASSERT_EQUAL_INT(0, status);
@@ -167,6 +169,8 @@ test_running()
     int              status;
 
     /* Start a multicast sender */
+    status = pim_delete(NULL, feedtype_1);
+    OP_ASSERT_EQUAL_INT(0, status);
     status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid);
     log_log(LOG_ERR);
     OP_ASSERT_EQUAL_INT(0, status);

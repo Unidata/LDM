@@ -168,6 +168,44 @@ restoreSigs(void)
 }
 
 /**
+ * Returns the pathname of the product-index map for a given feedtype.
+ *
+ * @param[out] buf       The buffer into which to format the pathname.
+ * @paramin]   size      The size of the buffer in bytes.
+ * @param[in]  dirname   Pathname of the parent directory or NULL, in which case
+ *                       the current working directory is used.
+ * @param[in]  feedtype  The feedtype.
+ * @retval    -1         Error. `log_add()` called.
+ * @return               The number of bytes that would be written to the buffer
+ *                       had it been sufficiently large excluding the
+ *                       terminating null byte. If greater than or equal to
+ *                       `size`, then the buffer is not NUL-terminated.
+ */
+static int
+pim_getPathname(
+        char*             buf,
+        size_t            size,
+        const char* const dirname,
+        const feedtypet   feedtype)
+{
+    char  feedStr[256];
+    int   status = sprint_feedtypet(feedStr, sizeof(feedStr), feedtype);
+    if (status < 0) {
+        LOG_ADD1("Couldn't format feedtype %#lx", (unsigned long)feedtype);
+    }
+    else {
+        status = snprintf(buf, size, "%s/%s.pim", dirname ? dirname : ".",
+                feedStr);
+        if (status < 0)
+            LOG_ADD3("Couldn't construct pathname of product-index map: "
+                    "bufsize=%zu, dirname=\"%s\", feedtype=%#lx", size,
+                    dirname, (unsigned long)feedtype);
+    }
+
+    return status;
+}
+
+/**
  * Locks the product-index map. Blocks until the lock is acquired.
  *
  * @pre                 {`fd` is open and `pathname` is set}
@@ -601,33 +639,36 @@ initMapAndMap(
 /**
  * Opens the file associated with a product-index map.
  *
- * @param[in] path         Pathname of file.
+ * @param[in] dirname      Pathname of parent directory or NULL, in which case
+ *                         the current working directory is used.
+ * @param[in] feedtype     Feedtype of map.
  * @return    0            Success. `fd` and `pathname` are set.
  * @return    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 openMap(
-        const char* const restrict path)
+        const char* const restrict dirname,
+        const feedtypet            feedtype)
 {
-    int status;
-
-    fd = open(path, forWriting ? O_RDWR|O_CREAT : O_RDONLY, 0666);
-
-    if (-1 == fd) {
-        LOG_SERROR2("Couldn't open %s (\"%s\")", MMO_DESC, path);
+    int  status = pim_getPathname(pathname, sizeof(pathname), dirname,
+            feedtype);
+    if (status < 0 || status >= sizeof(pathname)) {
         status = LDM7_SYSTEM;
     }
     else {
-        status = fcntl(fd, F_SETFD, FD_CLOEXEC);
-        if (status == -1) {
-            LOG_SERROR1("Couldn't set FD_CLOEXEC flag on file \"%s\"",
-                    path);
-            (void)close(fd);
+        fd = open(pathname, forWriting ? O_RDWR|O_CREAT : O_RDONLY, 0666);
+        if (-1 == fd) {
+            LOG_SERROR2("Couldn't open file %s (\"%s\")", MMO_DESC, pathname);
             status = LDM7_SYSTEM;
         }
         else {
-            strncpy(pathname, path, sizeof(pathname))[sizeof(pathname)-1] = 0;
-            status = 0;
+            status = fcntl(fd, F_SETFD, FD_CLOEXEC);
+            if (status == -1) {
+                LOG_SERROR1("Couldn't set FD_CLOEXEC flag on file \"%s\"",
+                        pathname);
+                (void)close(fd);
+                status = LDM7_SYSTEM;
+            }
         }
     }
 
@@ -637,7 +678,10 @@ openMap(
 /**
  * Opens the file containing the product-index map for reading and writing.
  *
- * @param[in]  path         Pathname of the file. Caller may free.
+ * @param[in]  dirname      Pathname of the parent directory or NULL, in which
+ *                          case the current working directory is used. Caller
+ *                          may free.
+ * @param[in]  feedtype     Feedtype of the map.
  * @param[out] isNew        Whether or not the file was created.
  * @retval     0            Success. `forWriting`, `pathname`, `fd`, and
  *                          `*isNew` are set.
@@ -645,12 +689,13 @@ openMap(
  */
 static Ldm7Status
 openMapForWriting(
-        const char* const restrict path,
+        const char* const restrict dirname,
+        const feedtypet            feedtype,
         bool* const restrict       isNew)
 {
     forWriting = true;
 
-    int status = openMap(path);
+    int status = openMap(dirname, feedtype);
 
     if (0 == status) {
         if (0 == (status = fileSizeFromFile()))
@@ -663,18 +708,22 @@ openMapForWriting(
 /**
  * Opens the file containing the product-index map for reading.
  *
- * @param[in]  path         Pathname of the file. Caller may free.
- * @retval     0            Success. `forWriting`, `pathname`, `fd`, `fileSize`,
- *                          and `maxSigs` are set.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @param[in] dirname      Pathname of the parent directory or NULL, in which
+ *                         case the current working directory is used. Caller
+ *                         may free.
+ * @param[in] feedtype     Feedtype of the map.
+ * @retval    0            Success. `forWriting`, `pathname`, `fd`, `fileSize`,
+ *                         and `maxSigs` are set.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 openMapForReading(
-        const char* const restrict path)
+        const char* const dirname,
+        const feedtypet   feedtype)
 {
     forWriting = false;
 
-    int status = openMap(path);
+    int status = openMap(dirname, feedtype);
 
     if (0 == status)
         if (0 == (status = fileSizeFromFile()))
@@ -703,55 +752,15 @@ clearMapIfUnexpected(
  ******************************************************************************/
 
 /**
- * Returns the filename of the product-index map for a given feedtype.
- *
- * @param[out] buf       The buffer into which to format the filename.
- * @paramin]   size      The size of the buffer in bytes.
- * @param[in]  feedtype  The feedtype.
- * @retval    -1         Error. `log_add()` called.
- * @return               The number of bytes that would be written to the buffer
- *                       had it been sufficiently large excluding the terminating
- *                       null byte. If greater than or equal to `size`, then the
- *                       buffer is not NUL-terminated.
- */
-int
-pim_getFilename(
-        char*           buf,
-        size_t          size,
-        const feedtypet feedtype)
-{
-    int   status;
-    int   nbytes = sprint_feedtypet(buf, size, feedtype);
-
-    if (nbytes < 0) {
-        LOG_ADD1("Couldn't format feedtype %#lx", (unsigned long)feedtype);
-        status = -1;
-    }
-    else {
-        status = nbytes;
-        buf += MIN(nbytes, size);
-        size -= MIN(nbytes, size);
-        nbytes = snprintf(buf, size, ".map");
-        if (nbytes < 0) {
-            LOG_ADD1("Couldn't construct filename of product-index map for "
-                    "feedtype %#lx", (unsigned long)feedtype);
-            status = -1;
-        }
-        else {
-            status += nbytes;
-        }
-    }
-
-    return status;
-}
-
-/**
  * Opens the product-index map for writing. Creates the associated file (with
  * an empty map) if it doesn't exist. A process should call this function at
  * most once. The associated file-descriptor will have the `FD_CLOEXEC` flag
  * set.
  *
- * @param[in] pathname     Pathname of the file. Caller may free.
+ * @param[in] dirname      Pathname of the parent directory or NULL, in which
+ *                         case the current working directory is used. Caller
+ *                         may free.
+ * @param[in] feedtype     Feedtype of the map.
  * @param[in] maxNumSigs   Maximum number of data-product signatures. Must be
  *                         positive.
  * @retval    0            Success.
@@ -765,7 +774,8 @@ pim_getFilename(
  */
 Ldm7Status
 pim_openForWriting(
-        const char* const pathname,
+        const char* const dirname,
+        const feedtypet   feedtype,
         const size_t      maxNumSigs)
 {
     int status = ensureProperState(false);
@@ -779,7 +789,7 @@ pim_openForWriting(
             bool isNew;
 
             initModule();
-            status = openMapForWriting(pathname, &isNew);
+            status = openMapForWriting(dirname, feedtype, &isNew);
 
             if (0 == status) {
                 if ((status = initMapAndMap(maxNumSigs, isNew))) {
@@ -803,7 +813,10 @@ pim_openForWriting(
  * function at most once. The associated file-descriptor will have the
  * `FD_CLOEXEC` flag set.
  *
- * @param[in] pathname     Pathname of the file. Caller may free.
+ * @param[in] dirname      Pathname of the parent directory or NULL, in which
+ *                         case the current working directory is used. Caller
+ *                         may free.
+ * @param[in] feedtype     Feedtype of the map.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
  *                         called.
@@ -812,13 +825,14 @@ pim_openForWriting(
  */
 Ldm7Status
 pim_openForReading(
-        const char* const pathname)
+        const char* const dirname,
+        const feedtypet   feedtype)
 {
     int status = ensureProperState(false);
 
     if (status == 0) {
         initModule();
-        status = openMapForReading(pathname);
+        status = openMapForReading(dirname, feedtype);
 
         if (0 == status) {
             if ((status = mapMap())) {
@@ -864,59 +878,37 @@ pim_close(void)
 }
 
 /**
- * Deletes the product-index map by deleting the associated file. The map must
- * be closed.
+ * Deletes the file associated with a product-index map. Any instance of this
+ * module that has the file open will continue to work until its `pim_close()`
+ * is called.
  *
- * @param[in] directory  Pathname of the parent directory of the associated
- *                       file or `NULL` for the current working directory.
- * @param[in] feed       Specification of the associated feed.
+ * @param[in] dirname    Pathname of the parent directory or NULL, in which case
+ *                       the current workingi directory is used.
+ * @param[in] feedtype   The feedtype.
  * @retval 0             Success. The associated file doesn't exist or has been
  *                       removed.
- * @retval LDM7_INVAL    The product-index map is in the incorrect state.
- *                       `log_add()` called.
  * @retval LDM7_SYSTEM   System error. `log_add()` called.
  */
 Ldm7Status
 pim_delete(
-        const const char* directory,
-        const feedtypet   feed)
+        const char* const dirname,
+        const feedtypet   feedtype)
 {
-    int status = ensureProperState(false);
-
-    if (status == 0) {
-        char   pathname[PATH_MAX];
-        char*  buf = pathname;
-        size_t len = sizeof(pathname);
-
-        if (directory) {
-            status = snprintf(buf, len, "%s/", directory);
-            if (status < 0 || status >= len) {
-                LOG_SERROR1("Couldn't copy directory pathname \"%s\"", directory);
-                status = LDM7_SYSTEM;
-            }
-            else {
-                buf += status;
-                len -= status;
-                status = 0;
-            }
+    char pathname[_XOPEN_PATH_MAX];
+    int status = pim_getPathname(pathname, sizeof(pathname), dirname, feedtype);
+    if (status < 0 || status >= sizeof(pathname)) {
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = unlink(pathname);
+        if (status && errno != ENOENT) {
+            LOG_SERROR1("Couldn't unlink file \"%s\"", pathname);
+            status = LDM7_SYSTEM;
         }
-        if (status == 0) {
-            status = pim_getFilename(buf, len, feed);
-            if (status < 0 || status >= len) {
-                LOG_ADD0("Couldn't get filename of product-index map");
-            }
-            else {
-                status = unlink(pathname);
-                if (status && errno != ENOENT) {
-                    LOG_SERROR1("Couldn't unlink file \"%s\"", pathname);
-                    status = LDM7_SYSTEM;
-                }
-                else {
-                    status = 0;
-                }
-            } // `pathname` fully set
-        } // `pathname` contains pathname prefix
-    } // map is closed
+        else {
+            status = 0;
+        }
+    }
     return status;
 }
 

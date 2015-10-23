@@ -22,6 +22,7 @@
 
 static const char* const pathname = "prod_index.map";
 static const signaturet  signatures[] = {{1}, {2}, {3}, {4}};
+static const feedtypet   FEEDTYPE = SPARE;
 
 /**
  * Only called once.
@@ -44,16 +45,16 @@ static void closeMap(void)
     CU_ASSERT_EQUAL_FATAL(pim_close(), 0);
 }
 
-static void unlinkMap(void)
+static void deleteMap(void)
 {
-    CU_ASSERT_EQUAL_FATAL(unlink(pathname), 0);
+    CU_ASSERT_EQUAL_FATAL(pim_delete(NULL, FEEDTYPE), 0);
 }
 
 static void test_openForWriting_0(
         void)
 {
-    (void)unlink(pathname);
-    int status = pim_openForWriting(pathname, 0);
+    deleteMap();
+    int status = pim_openForWriting(NULL, FEEDTYPE, 0);
     log_clear();
     CU_ASSERT_EQUAL_FATAL(status, LDM7_INVAL);
 }
@@ -63,26 +64,26 @@ static void test_openForWriting_3(
 {
     int status;
 
-    (void)unlink(pathname);
-    status = pim_openForWriting(pathname, 3);
+    deleteMap();
+    status = pim_openForWriting(NULL, FEEDTYPE, 3);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     closeMap();
-    unlinkMap();
+    deleteMap();
 }
 
 static void openForWriting(
         unsigned maxSigs)
 {
-    int status = pim_openForWriting(pathname, maxSigs);
+    int status = pim_openForWriting(NULL, FEEDTYPE, maxSigs);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
 static void openForReading(void)
 {
-    int status = pim_openForReading(pathname);
+    int status = pim_openForReading(NULL, FEEDTYPE);
     log_log(LOG_ERR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
@@ -90,14 +91,14 @@ static void openForReading(void)
 static void openNew(
         unsigned maxSigs)
 {
-    (void)unlink(pathname);
+    deleteMap();
     openForWriting(maxSigs);
 }
 
 static void closeAndUnlink(void)
 {
     closeMap();
-    unlinkMap();
+    deleteMap();
 }
 
 static void exists(
