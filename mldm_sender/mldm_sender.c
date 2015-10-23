@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <libgen.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -39,6 +40,11 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#ifndef _XOPEN_PATH_MAX
+/* For some reason, the following isn't defined by gcc(1) 4.8.3 on Fedora 19 */
+#   define _XOPEN_PATH_MAX 1024 // value mandated by XPG6; includes NUL
+#endif
 
 #define NELT(a) (sizeof(a)/sizeof((a)[0]))
 
@@ -62,15 +68,6 @@ static sigset_t              termSigSet;
  * VCMTP product-index to product-queue offset map.
  */
 static OffMap*               offMap;
-/**
- * Default failure-rate.
- */
-#define                      DEFAULT_FAILURE_RATE 0.0  // no failures
-/**
- * Proportion of data-products that should not be multicast. Shall be in the
- * interval [0.0,1.0].
- */
-static double                failureRate = DEFAULT_FAILURE_RATE;
 
 /**
  * Blocks termination signals for the current thread.
@@ -99,9 +96,6 @@ mls_usage(void)
     log_add("\
 Usage: %s [options] groupId:groupPort\n\
 Options:\n\
-    -F failureRate    Proportion of data-products that should not be\n\
-                      multicasted. Must be in the interval [0.0,1.0]. Default\n\
-                      is %g.\n\
     -f feedExpr       Feedtype expression specifying data to send. Default\n\
                       is EXP.\n\
     -l logfile        Log file pathname or '-' for standard error stream.\n\
@@ -132,36 +126,39 @@ Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
                       address and <groupPort> is port number.",
-            getulogident(), DEFAULT_FAILURE_RATE, getQueuePath());
+            getulogident(), getQueuePath());
 }
 
 /**
  * Decodes the options of the command-line.
  *
- * @pre                     {`openulog()` has already been called.}
- * @param[in]  argc         Number of arguments.
- * @param[in]  argv         Arguments.
- * @param[out] feed         Feedtypes of data to be sent.
- * @param[out] serverIface  Interface on which VCMTP TCP server should listen.
- *                          Caller must not free.
- * @param[out] serverPort   Port number for VCMTP TCP server.
- * @param[out] ttl          Time-to-live of outgoing packets.
- *                               0  Restricted to same host. Won't be output by
- *                                  any interface.
- *                               1  Restricted to the same subnet. Won't be
- *                                  forwarded by a router (default).
- *                             <32  Restricted to the same site, organization or
- *                                  department.
- *                             <64  Restricted to the same region.
- *                            <128  Restricted to the same continent.
- *                            <255  Unrestricted in scope. Global.
- * @param[out] ifaceAddr    IP address of the interface to use to send multicast
- *                          packets.
- * @param[out] failureRate  Proportion of data-products that should not be
- *                          multicasted. Will be in the interval [0.0,1.0].
- * @retval     0            Success. `*serverIface` or `*ttl` might not have
- *                          been set.
- * @retval     1            Invalid options. `log_start()` called.
+ * @pre                      {`openulog()` has already been called.}
+ * @param[in]  argc          Number of arguments.
+ * @param[in]  argv          Arguments.
+ * @param[out] feed          Feedtypes of data to be sent.
+ * @param[out] serverIface   Interface on which VCMTP TCP server should listen.
+ *                           Caller must not free.
+ * @param[out] serverPort    Port number for VCMTP TCP server.
+ * @param[out] ttl           Time-to-live of outgoing packets.
+ *                                0  Restricted to same host. Won't be output by
+ *                                   any interface.
+ *                                1  Restricted to the same subnet. Won't be
+ *                                   forwarded by a router (default).
+ *                              <32  Restricted to the same site, organization
+ *                                   or department.
+ *                              <64  Restricted to the same region.
+ *                             <128  Restricted to the same continent.
+ *                             <255  Unrestricted in scope. Global.
+ * @param[out] ifaceAddr     IP address of the interface to use to send
+ *                           multicast packets.
+ * @param[out] timeoutFactor Ratio of the duration that a data-product will
+ *                           be held by the VCMTP layer before being released
+ *                           after being multicast to the duration to
+ *                           multicast the product. If negative, then the
+ *                           default timeout factor is used.
+ * @retval     0             Success. `*serverIface` or `*ttl` might not have
+ *                           been set.
+ * @retval     1             Invalid options. `log_start()` called.
  */
 static int
 mls_decodeOptions(
@@ -172,7 +169,7 @@ mls_decodeOptions(
         unsigned short* const restrict serverPort,
         unsigned* const restrict       ttl,
         const char** const restrict    ifaceAddr,
-        double* const restrict         failureRate)
+        float* const                   timeoutFactor)
 {
     int          ch;
     extern int   opterr;
@@ -183,23 +180,6 @@ mls_decodeOptions(
 
     while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:s:t:vx")) != EOF)
         switch (ch) {
-        case 'F': {
-            double myFailureRate;
-            int    nbytes;
-            if (sscanf(optarg, "%12lf %n", &myFailureRate, &nbytes) != 1 ||
-                    0 != optarg[nbytes]) {
-                log_start("Couldn't decode failure-rate option-argument \"%s\"",
-                        optarg);
-                return 1;
-            }
-            if (myFailureRate < 0.0 || myFailureRate > 1.0) {
-                log_start("Invalid failure-rate option-argument \"%s\"",
-                        optarg);
-                return 1;
-            }
-            *failureRate = myFailureRate;
-            break;
-        }
         case 'f': {
             if (strfeedtypet(optarg, feed)) {
                 log_start("Invalid feed expression: \"%s\"", optarg);
@@ -396,27 +376,30 @@ mls_setMcastGroupInfo(
 /**
  * Decodes the command line.
  *
- * @param[in]  argc         Number of arguments.
- * @param[in]  argv         Arguments.
- * @param[out] mcastInfo    Multicast group information.
- * @param[out] ttl          Time-to-live of outgoing packets.
- *                                0  Restricted to same host. Won't be output by
- *                                   any interface.
- *                                1  Restricted to the same subnet. Won't be
- *                                   forwarded by a router (default).
- *                              <32  Restricted to the same site, organization
- *                                   or department.
- *                              <64  Restricted to the same region.
- *                             <128  Restricted to the same continent.
- *                             <255  Unrestricted in scope. Global.
- * @param[out] ifaceAddr    IP address of the interface from which multicast
- *                          packets should be sent or NULL to have them sent
- *                          from the system's default multicast interface.
- * @param[out] failureRate  Proportion of data-products that should not be
- *                          multicasted. Will be in the interval [0.0,1.0].
- * @retval     0            Success. `*mcastInfo` is set. `*ttl` might be set.
- * @retval     1            Invalid command line. `log_start()` called.
- * @retval     2            System failure. `log_start()` called.
+ * @param[in]  argc          Number of arguments.
+ * @param[in]  argv          Arguments.
+ * @param[out] mcastInfo     Multicast group information.
+ * @param[out] ttl           Time-to-live of outgoing packets.
+ *                                 0  Restricted to same host. Won't be output
+ *                                    by any interface.
+ *                                 1  Restricted to the same subnet. Won't be
+ *                                    forwarded by a router (default).
+ *                               <32  Restricted to the same site, organization
+ *                                    or department.
+ *                               <64  Restricted to the same region.
+ *                              <128  Restricted to the same continent.
+ *                              <255  Unrestricted in scope. Global.
+ * @param[out] ifaceAddr     IP address of the interface from which multicast
+ *                           packets should be sent or NULL to have them sent
+ *                           from the system's default multicast interface.
+ * @param[out] timeoutFactor Ratio of the duration that a data-product will
+ *                           be held by the VCMTP layer before being released
+ *                           after being multicast to the duration to
+ *                           multicast the product. If negative, then the
+ *                           default timeout factor is used.
+ * @retval     0             Success. `*mcastInfo` is set. `*ttl` might be set.
+ * @retval     1             Invalid command line. `log_start()` called.
+ * @retval     2             System failure. `log_start()` called.
  */
 static int
 mls_decodeCommandLine(
@@ -425,14 +408,14 @@ mls_decodeCommandLine(
         McastInfo** const restrict  mcastInfo,
         unsigned* const restrict    ttl,
         const char** const restrict ifaceAddr,
-        double* const restrict      failureRate)
+        float* const                timeoutFactor)
 {
     feedtypet      feed = EXP;
     const char*    serverIface = "0.0.0.0";     // default: all interfaces
     unsigned short serverPort = 0;              // default: chosen by O/S
     const char*    mcastIf = "0.0.0.0";         // default mcast interface
     int            status = mls_decodeOptions(argc, argv, &feed, &serverIface,
-            &serverPort, ttl, &mcastIf, failureRate);
+            &serverPort, ttl, &mcastIf, timeoutFactor);
     extern int     optind;
 
     if (0 == status) {
@@ -581,42 +564,14 @@ mls_openProdIndexMap(
         const feedtypet feed,
         const size_t    maxSigs)
 {
-    /* Queue pathname is cloned because `dirname()` may alter its argument */
-    char* const queuePathname = strdup(getQueuePath());
-    int         status;
-
-    if (NULL == queuePathname) {
-        LOG_SERROR0("Couldn't duplicate product-queue pathname");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        char* const mapPathname = ldm_format(256, "%s/",
-                dirname(queuePathname));
-
-        if (NULL == mapPathname) {
-            LOG_ADD0("Couldn't construct pathname of product-index map");
-            status = LDM7_SYSTEM;
-        }
-        else {
-            int nbytes = pim_getFilename(mapPathname, 256-strlen(mapPathname),
-                    feed);
-            if (nbytes < 0 || nbytes >= 256) {
-                LOG_ADD0("Couldn't construct pathname of product-index map");
-                status = LDM7_SYSTEM;
-            }
-            status = pim_openForWriting(mapPathname, maxSigs);
-            free(mapPathname);
-        } // `mapPathname` allocated
-
-        free(queuePathname);
-    } // `queuePathname` allocated
-
-    return status;
+    char pathname[_XOPEN_PATH_MAX];
+    (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
+    return pim_openForWriting(dirname(pathname), feed, maxSigs);
 }
 
 /**
- * Accepts notification that the multicast layer is finished with a
- * data-product and releases associated resources.
+ * Accepts notification that the multicast layer is finished with a data-product
+ * and releases associated resources.
  *
  * @param[in] prodIndex  Index of the product.
  */
@@ -647,38 +602,41 @@ mls_doneWithProduct(
  * sets `mcastInfo.server.port` to the actual port number used by the VCMTP
  * TCP server (in case the number was chosen by the operating-system).
  *
- * @param[in]  info         Information on the multicast group.
- * @param[in]  ttl          Time-to-live of outgoing packets.
- *                               0  Restricted to same host. Won't be output by
- *                                  any interface.
- *                               1  Restricted to the same subnet. Won't be
- *                                  forwarded by a router (default).
- *                             <32  Restricted to the same site, organization or
- *                                  department.
- *                             <64  Restricted to the same region.
- *                            <128  Restricted to the same continent.
- *                            <255  Unrestricted in scope. Global.
- * @param[in]  ifaceAddr    IP address of the interface to use to send multicast
- *                          packets. "0.0.0.0" obtains the default multicast
- *                          interface. Caller may free.
- * @param[in]  pqPathname   Pathname of product queue from which to obtain
- *                          data-products.
- * @param[in]  failureRate  Proportion of data-products that should not be
- *                          multicast. Must be in the interval [0.0,1.0].
- * @retval     0            Success. `*sender` is set.
- * @retval     LDM7_INVAL   An Internet identifier couldn't be converted to an
- *                          IPv4 address because it's invalid or unknown.
- *                          `log_start()` called.
- * @retval     LDM7_MCAST   Failure in multicast system. `log_start()` called.
- * @retval     LDM7_SYSTEM  System error. `log_start()` called.
+ * @param[in] info           Information on the multicast group.
+ * @param[in] ttl            Time-to-live of outgoing packets.
+ *                                0  Restricted to same host. Won't be output
+ *                                   by any interface.
+ *                                1  Restricted to the same subnet. Won't be
+ *                                   forwarded by a router (default).
+ *                              <32  Restricted to the same site, organization
+ *                                   or department.
+ *                              <64  Restricted to the same region.
+ *                             <128  Restricted to the same continent.
+ *                             <255  Unrestricted in scope. Global.
+ * @param[in] ifaceAddr      IP address of the interface to use to send
+ *                           multicast packets. "0.0.0.0" obtains the default
+ *                           multicast interface. Caller may free.
+ * @param[in] timeoutFactor  Ratio of the duration that a data-product will
+ *                           be held by the VCMTP layer before being released
+ *                           after being multicast to the duration to
+ *                           multicast the product. If negative, then the
+ *                           default timeout factor is used.
+ * @param[in] pqPathname     Pathname of product queue from which to obtain
+ *                           data-products.
+ * @retval    0              Success. `*sender` is set.
+ * @retval    LDM7_INVAL     An Internet identifier couldn't be converted to an
+ *                           IPv4 address because it's invalid or unknown.
+ *                           `log_start()` called.
+ * @retval    LDM7_MCAST     Failure in multicast system. `log_start()` called.
+ * @retval    LDM7_SYSTEM    System error. `log_start()` called.
  */
 static Ldm7Status
 mls_init(
     const McastInfo* const restrict info,
     const unsigned                  ttl,
     const char*                     ifaceAddr,
-    const char* const restrict      pqPathname,
-    const double                    failureRate)
+    const float                     timeoutFactor,
+    const char* const restrict      pqPathname)
 {
     char serverInetAddr[INET_ADDRSTRLEN];
     int  status = mls_getIpv4Addr(info->server.inetId, "server",
@@ -723,7 +681,7 @@ mls_init(
 
     if ((status = mcastSender_spawn(&mcastSender, serverInetAddr,
             &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port,
-            ifaceAddr, ttl, iProd, mls_doneWithProduct))) {
+            ifaceAddr, ttl, iProd, timeoutFactor, mls_doneWithProduct))) {
         status = (status == 1)
                 ? LDM7_INVAL
                 : (status == 2)
@@ -772,15 +730,15 @@ mls_destroy(void)
 }
 
 /**
- * Multicasts a single data-product. Called by `pq_sequence()`.
+ * Multicasts a single data-product. Called by `pq_sequenceLock()`.
  *
  * @param[in] info         Pointer to the data-product's metadata.
  * @param[in] data         Pointer to the data-product's data.
  * @param[in] xprod        Pointer to an XDR-encoded version of the data-product
  *                         (data and metadata).
  * @param[in] size         Size, in bytes, of the XDR-encoded version.
- * @param[in] arg          Optional `pq_sequence()` argument. Pointer to
- *                         product-queue offset for the data-product.
+ * @param[in] arg          Pointer to the `off_t` product-queue offset for the
+ *                         data-product.
  * @retval    0            Success.
  * @retval    LDM7_MCAST   Multicast layer error. `log_start()` called.
  * @retval    LDM7_SYSTEM  System error. `log_start()` called.
@@ -959,36 +917,39 @@ mls_startMulticasting(void)
  * Executes a multicast upstream LDM. Blocks until termination is requested or
  * an error occurs.
  *
- * @param[in]  info         Information on the multicast group.
- * @param[out] ttl          Time-to-live of outgoing packets.
- *                               0  Restricted to same host. Won't be output by
- *                                  any interface.
- *                               1  Restricted to the same subnet. Won't be
- *                                  forwarded by a router (default).
- *                             <32  Restricted to the same site, organization or
- *                                  department.
- *                             <64  Restricted to the same region.
- *                            <128  Restricted to the same continent.
- *                            <255  Unrestricted in scope. Global.
- * @param[in]  ifaceAddr    IP address of the interface to use to send multicast
- *                          packets. "0.0.0.0" obtains the default multicast
- *                          interface. Caller may free.
- * @param[in]  pqPathname   Pathname of the product-queue.
- * @param[in]  failureRate  Proportion of data-products that should not be
- *                          multicast. Must be in the interval [0.0,1.0].
- * @retval     0            Success. Termination was requested.
- * @retval     LDM7_INVAL.  Invalid argument. `log_start()` called.
- * @retval     LDM7_MCAST   Multicast sender failure. `log_start()` called.
- * @retval     LDM7_PQ      Product-queue error. `log_start()` called.
- * @retval     LDM7_SYSTEM  System failure. `log_start()` called.
+ * @param[in]  info          Information on the multicast group.
+ * @param[out] ttl           Time-to-live of outgoing packets.
+ *                                0  Restricted to same host. Won't be output
+ *                                   by any interface.
+ *                                1  Restricted to the same subnet. Won't be
+ *                                   forwarded by a router (default).
+ *                              <32  Restricted to the same site, organization
+ *                                   or department.
+ *                              <64  Restricted to the same region.
+ *                             <128  Restricted to the same continent.
+ *                             <255  Unrestricted in scope. Global.
+ * @param[in]  ifaceAddr     IP address of the interface to use to send
+ *                           multicast packets. "0.0.0.0" obtains the default
+ *                           multicast interface. Caller may free.
+ * @param[in]  timeoutFactor Ratio of the duration that a data-product will
+ *                           be held by the VCMTP layer before being released
+ *                           after being multicast to the duration to
+ *                           multicast the product. If negative, then the
+ *                           default timeout factor is used.
+ * @param[in]  pqPathname    Pathname of the product-queue.
+ * @retval     0             Success. Termination was requested.
+ * @retval     LDM7_INVAL.   Invalid argument. `log_start()` called.
+ * @retval     LDM7_MCAST    Multicast sender failure. `log_start()` called.
+ * @retval     LDM7_PQ       Product-queue error. `log_start()` called.
+ * @retval     LDM7_SYSTEM   System failure. `log_start()` called.
  */
 static Ldm7Status
 mls_execute(
         const McastInfo* const restrict info,
         const unsigned                  ttl,
         const char* const restrict      ifaceAddr,
-        const char* const restrict      pqPathname,
-        const double                    failureRate)
+        const float                     timeoutFactor,
+        const char* const restrict      pqPathname)
 {
 
     /*
@@ -1004,7 +965,7 @@ mls_execute(
      */
     blockTermSigs();
     // Sets `mcastInfo`
-    int status = mls_init(info, ttl, ifaceAddr, pqPathname, failureRate);
+    int status = mls_init(info, ttl, ifaceAddr, timeoutFactor, pqPathname);
     unblockTermSigs();
 
     if (status) {
@@ -1065,8 +1026,10 @@ main(
     McastInfo*  groupInfo;         // multicast group information
     unsigned    ttl = 1;           // Won't be forwarded by any router.
     const char* ifaceAddr;         // IP address of multicast interface
+    // Ratio of product-hold duration to multicast duration
+    float       timeoutFactor = -1; // Use default
     int         status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
-            &ifaceAddr, &failureRate);
+            &ifaceAddr, &timeoutFactor);
 
     if (status) {
         log_add("Couldn't decode command-line");
@@ -1077,8 +1040,8 @@ main(
     else {
         mls_setSignalHandling();
 
-        status = mls_execute(groupInfo, ttl, ifaceAddr, getQueuePath(),
-                failureRate);
+        status = mls_execute(groupInfo, ttl, ifaceAddr, timeoutFactor,
+                getQueuePath());
         if (status) {
             log_log(LOG_ERR);
             switch (status) {

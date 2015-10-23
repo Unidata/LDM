@@ -268,6 +268,11 @@ struct mcast_sender {
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
+ * @param[in]     timeoutFactor Ratio of the duration that a data-product will
+ *                              be held by the VCMTP layer before being released
+ *                              after being multicast to the duration to
+ *                              multicast the product. If negative, then the
+ *                              default timeout factor is used.
  * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
@@ -286,6 +291,7 @@ mcastSender_init(
     const char* const      ifaceAddr,
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
+    const float            timeoutFactor,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
 {
     int status;
@@ -295,8 +301,12 @@ mcastSender_init(
                 new PerProdSendingNotifier(doneWithProd);
 
         try {
-            vcmtpSendv3* vcmtpSender = new vcmtpSendv3(serverAddr, serverPort,
-                    groupAddr, groupPort, notifier, ttl, ifaceAddr, iProd);
+            vcmtpSendv3* vcmtpSender = timeoutFactor < 0
+                    ? new vcmtpSendv3(serverAddr, serverPort, groupAddr,
+                            groupPort, notifier, ttl, ifaceAddr, iProd)
+                    : new vcmtpSendv3(serverAddr, serverPort, groupAddr,
+                            groupPort, notifier, ttl, ifaceAddr, iProd,
+                            timeoutFactor);
             sender->vcmtpSender = vcmtpSender;
             sender->notifier = notifier;
             status = 0;
@@ -350,6 +360,11 @@ mcastSender_init(
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
+ * @param[in]     timeoutFactor Ratio of the duration that a data-product will
+ *                              be held by the VCMTP layer before being released
+ *                              after being multicast to the duration to
+ *                              multicast the product. If negative, then the
+ *                              default timeout factor is used.
  * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
@@ -368,6 +383,7 @@ mcastSender_new(
     const char* const      ifaceAddr,
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
+    const float            timeoutFactor,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
 {
     McastSender* const send = (McastSender*)LOG_MALLOC(sizeof(McastSender),
@@ -379,7 +395,7 @@ mcastSender_new(
     }
     else {
         status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
-                groupPort, ifaceAddr, ttl, iProd, doneWithProd);
+                groupPort, ifaceAddr, ttl, iProd, timeoutFactor, doneWithProd);
 
         if (0 == status)
             *sender = send;
@@ -507,6 +523,11 @@ mcastSender_free(
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
+ * @param[in]     timeoutFactor Ratio of the duration that a data-product will
+ *                              be held by the VCMTP layer before being released
+ *                              after being multicast to the duration to
+ *                              multicast the product. If negative, then the
+ *                              default timeout factor is used.
  * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
@@ -526,11 +547,13 @@ mcastSender_spawn(
     const char* const      ifaceAddr,
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
+    const float            timeoutFactor,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
 {
     McastSender* send;
     int          status = mcastSender_new(&send, serverAddr, *serverPort,
-            groupAddr, groupPort, ifaceAddr, ttl, iProd, doneWithProd);
+            groupAddr, groupPort, ifaceAddr, ttl, iProd, timeoutFactor,
+            doneWithProd);
 
     if (0 == status) {
         status = mcastSender_start(send, serverPort);

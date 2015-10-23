@@ -75,6 +75,11 @@ void mcastReceiver_stop(
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
+ * @param[in]     timeoutFactor Ratio of the duration that a data-product will
+ *                              be held by the VCMTP layer before being released
+ *                              after being multicast to the duration to
+ *                              multicast the product. If negative, then the
+ *                              default timeout factor is used.
  * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
@@ -94,6 +99,7 @@ mcastSender_spawn(
     const char* const      ifaceAddr,
     const unsigned         ttl,
     const VcmtpProdIndex   iProd,
+    const float            timeoutFactor,
     void                  (*doneWithProd)(VcmtpProdIndex iProd));
 
 /**
