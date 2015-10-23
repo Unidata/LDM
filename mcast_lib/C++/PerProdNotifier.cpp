@@ -107,13 +107,17 @@ void PerProdNotifier::notify_of_bop(
 {
     pqe_index pqeIndex;
 
+    char sigStr[2*sizeof(signaturet)+1];
+    (void)sprint_signaturet(sigStr, sizeof(sigStr),
+            (const unsigned char*)metadata);
+    udebug("PerProdNotifier::notify_of_bop(): Entered: "
+            "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
+                (unsigned long)iProd, prodSize, metaSize, sigStr);
+
     if (bop_func(mlr, prodSize, metadata, metaSize, prodStart, &pqeIndex))
         throw std::runtime_error(
                 "Error notifying receiving application about beginning-of-product");
     if (*prodStart == nullptr) {
-        char sigStr[2*sizeof(signaturet)+1];
-        (void)sprint_signaturet(sigStr, sizeof(sigStr),
-                (const unsigned char*)metadata);
         uinfo("PerProdNotifier::notify_of_bop(): Duplicate product: "
                 "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
                 (unsigned long)iProd, prodSize, metaSize, sigStr);
@@ -144,6 +148,9 @@ void PerProdNotifier::notify_of_bop(
 void PerProdNotifier::notify_of_eop(
         const VcmtpProdIndex prodIndex)
 {
+    udebug("PerProdNotifier::notify_of_eop(): Entered: prodIndex=%lu",
+            (unsigned long)prodIndex);
+
     std::unique_lock<std::mutex> lock(mutex);
     try {
         ProdInfo& prodInfo = prodInfos.at(prodIndex);
