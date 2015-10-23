@@ -64,7 +64,10 @@ typedef struct {
     pthread_t             thread;
 } Receiver;
 
-// Proportion of data-products that will be deleted and requested by the LDM-7.
+/*
+ * Proportion of data-products that the receiving LDM-7 will delete from the
+ * product-queue and request from the sending LDM-7.
+ */
 #define                  REQUEST_RATE 0.0
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 1000000
@@ -72,12 +75,14 @@ typedef struct {
 /*
  * Approximate number of times the product-queue will be "filled".
  */
-#define                  NUM_TIMES 10
+#define                  NUM_TIMES 1
+// Time, in nanoseconds, between sending data-products.
+#define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
 /*
  * Factor by which the capacity of the product-queue is greater than a single
  * product.
  */
-#define                  CAPACITY_TO_PROD_RATIO 100
+#define                  CAPACITY_TO_PROD_RATIO 1000
 /*
  * The product-queue is limited by its data-capacity (rather than its product-
  * capacity) to attempt to reproduce the queue corruption seen by Shawn Chen at
@@ -99,8 +104,8 @@ static Receiver          receiver;
 static pthread_t         requesterThread;
 static pqueue*           receiverPq;
 static uint64_t          numDeletedProds;
-static const unsigned short VCMTP_MCAST_PORT = 5173;
-static const unsigned short VCMTP_UCAST_PORT = 1234;
+static const unsigned short VCMTP_MCAST_PORT = 5173; // From Wireshark plug-in
+static const unsigned short VCMTP_UCAST_PORT = 1234; // From Wireshark plug-in
 
 /*
  * The following functions (until otherwise noted) are only called once.
@@ -189,7 +194,9 @@ setup(void)
     /*
      * Ensure that the upstream component `up7` obtains the upstream queue from
      * `getQueuePath()`. This is not done for the downstream component because
-     * `down7.c` implements an object-specific product-queue.
+     * `down7.c` implements an object-specific product-queue. The path-prefix of
+     * the product-queue is also used to construct the pathname of the product-
+     * index map (*.pim).
      */
     setQueuePath(UP7_PQ_PATHNAME);
 
@@ -796,7 +803,7 @@ sender_insertProducts(void)
 
         struct timespec duration;
         duration.tv_sec = 0;
-        duration.tv_nsec = 5000000; // 5 ms
+        duration.tv_nsec = INTER_PRODUCT_INTERVAL;
         status = nanosleep(&duration, NULL);
         CU_ASSERT_FATAL(status == 0 || errno == EINTR);
     }
@@ -841,59 +848,55 @@ static int
 sender_start(
         const feedtypet feedtype)
 {
-    // The following ensures that the first product-index will be 0
+    // Ensure that the first product-index will be 0
     int status = pim_delete(NULL, feedtype);
+    log_log(LOG_ERR);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = createEmptyProductQueue(UP7_PQ_PATHNAME);
     if (status) {
-        LOG_ADD1("Couldn't delete product-index map for feedtype %#lx",
-                feedtype);
+        LOG_ADD1("Couldn't create empty product queue \"%s\"",
+                UP7_PQ_PATHNAME);
     }
     else {
-        status = createEmptyProductQueue(UP7_PQ_PATHNAME);
+        // Thread-safe because 2 threads: upstream LDM-7 & product insertion.
+        status = pq_open(getQueuePath(), PQ_THREADSAFE, &pq);
         if (status) {
-            LOG_ADD1("Couldn't create empty product queue \"%s\"",
-                    UP7_PQ_PATHNAME);
+            LOG_ADD1("Couldn't open product-queue \"%s\"", getQueuePath());
         }
         else {
-            // Thread-safe because 2 threads: upstream LDM-7 & product insertion.
-            status = pq_open(getQueuePath(), PQ_THREADSAFE, &pq);
+            McastInfo* mcastInfo;
+
+            status = setMcastInfo(&mcastInfo, feedtype);
             if (status) {
-                LOG_ADD1("Couldn't open product-queue \"%s\"", getQueuePath());
+                LOG_ADD0("Couldn't set multicast information");
             }
             else {
-                McastInfo* mcastInfo;
-
-                status = setMcastInfo(&mcastInfo, feedtype);
+                status = mlsm_clear();
+                status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
+                        UP7_PQ_PATHNAME);
                 if (status) {
-                    LOG_ADD0("Couldn't set multicast information");
+                    LOG_ADD0("mlsm_addPotentialSender() failure");
                 }
                 else {
-                    status = mlsm_clear();
-                    status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
-                            UP7_PQ_PATHNAME);
+                    // Starts the sender on a new thread
+                    status = sender_spawn();
                     if (status) {
-                        LOG_ADD0("mlsm_addPotentialSender() failure");
+                        LOG_ADD0("Couldn't spawn sender");
                     }
                     else {
-                        // Starts the sender on a new thread
-                        status = sender_spawn();
-                        if (status) {
-                            LOG_ADD0("Couldn't spawn sender");
-                        }
-                        else {
-                            done = 0;
-                        }
+                        done = 0;
                     }
-                    mi_free(mcastInfo);
-                } // `mcastInfo` allocated
-
-                if (status)
-                    (void)pq_close(pq);
-            } // Product-queue open
+                }
+                mi_free(mcastInfo);
+            } // `mcastInfo` allocated
 
             if (status)
-                (void)deleteProductQueue(UP7_PQ_PATHNAME);
-        } // empty product-queue created
-    } // product-index map deleted
+                (void)pq_close(pq);
+        } // Product-queue open
+
+        if (status)
+            (void)deleteProductQueue(UP7_PQ_PATHNAME);
+    } // empty product-queue created
 
     return status;
 }
@@ -1255,6 +1258,12 @@ receiver_init(
         status = sa_new(&servAddr, addr, port);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
+        // Delete the multicast LDM receiver's session memory.
+        bool success = mrm_delete(servAddr, feedtype);
+        CU_ASSERT_EQUAL_FATAL(success, true);
+
+        numDeletedProds = 0;
+
         receiver.down7 = down7_new(servAddr, feedtype, LOCAL_HOST, receiverPq);
         CU_ASSERT_PTR_NOT_NULL_FATAL(receiver.down7);
         sa_free(servAddr);
@@ -1480,7 +1489,9 @@ test_up7_down7(
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
     unotice("%s:up7_down7_test(): %lu receiver product-queue insertions",
             __FILE__, (unsigned long)numDownInserts);
-    //CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
+    unotice("%s:up7_down7_test(): %lu product deletions",
+            __FILE__, (unsigned long)numDeletedProds);
+    CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
     #if USE_SIGWAIT
         (void)sigwait(&termSigSet, &status);
