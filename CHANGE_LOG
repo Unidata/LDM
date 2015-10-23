@@ -1,3 +1,10 @@
+6.12.15.33
+    mldm_sender():
+        Moved addition of product-index-to-product-signature entry to before the
+        sending of the product because the receiving LDM-7 would sometimes
+        request a data-product before the mapping was entered resulting in the
+        product not being found.
+
 6.12.15.32	2015-10-22T19:32:42-0600
     Improve receiver session-memory API.
 
