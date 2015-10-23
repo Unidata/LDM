@@ -334,7 +334,7 @@ up7_sendProduct(
     int        status = pim_get(iProd, &sig);
 
     if (LDM7_NOENT == status) {
-        LOG_START1("No signature corresponding to product-index %lu",
+        LOG_START1("No signature in product-index map corresponding to index %lu",
                 (unsigned long)iProd);
     }
     else if (0 == status) {
