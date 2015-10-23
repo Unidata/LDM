@@ -68,21 +68,21 @@ typedef struct {
  * Proportion of data-products that the receiving LDM-7 will delete from the
  * product-queue and request from the sending LDM-7.
  */
-#define                  REQUEST_RATE 0.0
+#define                  REQUEST_RATE 0.2
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 1000000
 #define                  MEAN_PROD_SIZE (MAX_PROD_SIZE/2)
 /*
  * Approximate number of times the product-queue will be "filled".
  */
-#define                  NUM_TIMES 1
+#define                  NUM_TIMES 10
 // Time, in nanoseconds, between sending data-products.
-#define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
+#define                  INTER_PRODUCT_INTERVAL 5000000 // 5 ms
 /*
  * Factor by which the capacity of the product-queue is greater than a single
  * product.
  */
-#define                  CAPACITY_TO_PROD_RATIO 1000
+#define                  CAPACITY_TO_PROD_RATIO 100
 /*
  * The product-queue is limited by its data-capacity (rather than its product-
  * capacity) to attempt to reproduce the queue corruption seen by Shawn Chen at
