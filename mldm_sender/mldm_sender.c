@@ -759,24 +759,36 @@ mls_multicastProduct(
                 (unsigned long)iProd, (unsigned long)offset);
     }
     else {
-        status = mcastSender_send(mcastSender, xprod, size,
-                (void*)info->signature, sizeof(signaturet), &iProd);
-
+        /*
+         * The signature is added to the product-index map before the product is
+         * sent so that it can be found if the receiving LDM-7 immediately
+         * requests it.
+         */
+        status = pim_put(iProd, (const signaturet*)&info->signature);
         if (status) {
-            off_t off;
-            (void)om_get(offMap, iProd, &off);
-            status = LDM7_MCAST;
+            char buf[LDM_INFO_MAX];
+            LOG_ADD2("Couldn't add to product-index map: prodIndex=%lu, "
+                    "prodInfo=%s", (unsigned long)iProd,
+                    s_prod_info(buf, sizeof(buf), info, 1));
         }
         else {
-            if (ulogIsVerbose()) {
-                char buf[LDM_INFO_MAX];
-                LOG_ADD2("Sent: prodIndex=%lu, prodInfo=\"%s\"",
-                        (unsigned long)iProd,
-                        s_prod_info(buf, sizeof(buf), info, 1));
-                log_log(LOG_INFO);
-            }
+            status = mcastSender_send(mcastSender, xprod, size,
+                    (void*)info->signature, sizeof(signaturet), &iProd);
 
-            status = pim_put(iProd, (const signaturet*)&info->signature);
+            if (status) {
+                off_t off;
+                (void)om_get(offMap, iProd, &off);
+                status = LDM7_MCAST;
+            }
+            else {
+                if (ulogIsVerbose()) {
+                    char buf[LDM_INFO_MAX];
+                    LOG_ADD2("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                            (unsigned long)iProd,
+                            s_prod_info(buf, sizeof(buf), info, 1));
+                    log_log(LOG_INFO);
+                }
+            }
         }
     }
 
