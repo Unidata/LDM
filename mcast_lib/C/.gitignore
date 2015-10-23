@@ -6,5 +6,4 @@ server_test
 send_test
 recv_test
 cond_wait_test
-/ANY.pim
-/PPS.pim
+*.pim
