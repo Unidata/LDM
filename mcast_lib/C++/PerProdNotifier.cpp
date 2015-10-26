@@ -124,13 +124,15 @@ void PerProdNotifier::notify_of_bop(
     }
     else {
         std::unique_lock<std::mutex> lock(mutex);
-        ProdInfo& prodInfo = prodInfos[iProd];
-        if (prodInfo.start) {
+        if (prodInfos.count(iProd)) {
+            // Exists
             uinfo("PerProdNotifier::notify_of_bop(): Duplicate BOP: "
                     "prodIndex=%lu, prodSize=%u",
                     (unsigned long)iProd, prodSize);
         }
         else {
+            // Doesn't exist
+            ProdInfo& prodInfo = prodInfos[iProd];
             prodInfo.start = *prodStart; // can't be nullptr
             prodInfo.size = prodSize;
             prodInfo.index = pqeIndex;
