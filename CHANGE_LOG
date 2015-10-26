@@ -1,4 +1,4 @@
-6.12.15.34
+6.12.15.34	2015-10-26T16:41:04-0600
     PerProdNotifier:
         Fix setting of product-information by notify_of_bop().
 
