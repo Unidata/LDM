@@ -21,7 +21,7 @@ ldmadmin delqueue
 ldmadmin mkqueue -f
 
 # Start the LDM-7. An explicit file is used for logging because rsyslogd(8) on
-# the GENI system can't keep up and the log file is subsequently processed to
-# obtain performance metrics.
+# the GENI system can't keep up and the log file is processed to obtain
+# performance metrics.
 #
 ldmd -v -l var/logs/${runId}.log
