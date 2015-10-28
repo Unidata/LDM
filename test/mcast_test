@@ -24,4 +24,4 @@ ldmadmin mkqueue -f
 # the GENI system can't keep up and the log file is processed to obtain
 # performance metrics.
 #
-ldmd -v -l var/logs/${runId}.log
+ldmd -v -l var/logs/"${runId}".log >ldmd.pid
