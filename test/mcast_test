@@ -1,0 +1,27 @@
+# This script starts a test-run of LDM-7.
+#
+# Usage: $0 runId
+#
+# where:
+#       runId          Unique run identifier
+
+set -e # Terminate on error
+
+runId=${1:?Unique run-identifier not specified}
+
+# Make the current working directory the user's home directory.
+#
+cd
+
+# Clean-up from a possible previous run
+#
+ldmadmin clean
+rm -f var/queues/*.pim var/logs/*.yaml
+ldmadmin delqueue
+ldmadmin mkqueue -f
+
+# Start the LDM-7. An explicit file is used for logging because rsyslogd(8) on
+# the GENI system can't keep up and the log file is subsequently processed to
+# obtain performance metrics.
+#
+ldmd -v -l var/logs/${runId}.log
