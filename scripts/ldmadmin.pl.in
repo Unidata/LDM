@@ -1096,7 +1096,7 @@ sub computeNewQueueSize
         # Ensure that the divisor isn't zero
         $minVirtResTime = 1;
     }
-    my $ratio = $max_latency/$minVirtResTime + 0.1;
+    my $ratio = $max_latency/$minVirtResTime;
     my $newByteCount = int($ratio*$mvrtSize);
     my $newSlotCount = int($ratio*$mvrtSlots);
 
