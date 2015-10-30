@@ -1092,13 +1092,18 @@ sub computeNewQueueSize
         # Use age of oldest product, instead
         $minVirtResTime = $oldestProductAge;
     }
-    if (0 >= $minVirtResTime) {
-        # Ensure that the divisor isn't zero
-        $minVirtResTime = 1;
+    my $newByteCount;
+    my $newSlotCount;
+    if (0 < $minVirtResTime) {
+        my $ratio = $max_latency/$minVirtResTime;
+        $newByteCount = int($ratio*$mvrtSize);
+        $newSlotCount = int($ratio*$mvrtSlots);
     }
-    my $ratio = $max_latency/$minVirtResTime;
-    my $newByteCount = int($ratio*$mvrtSize);
-    my $newSlotCount = int($ratio*$mvrtSlots);
+    else {
+        # Insufficient data
+        $newByteCount = $mvrtSize;   # Don't change
+        $newSlotCount = $mvrtSlots;  # Don't change
+    }
 
     return ($newByteCount, $newSlotCount);
 }
