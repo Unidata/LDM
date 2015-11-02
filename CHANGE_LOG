@@ -1,4 +1,4 @@
-6.12.15.36
+6.12.15.36	2015-11-02T15:59:18-0700
     ldmadmin(1):
         Reduce overestimation of new queue capacities (i.e., data capacity,
         product capacity) and don't compute new capacities if the data is
