@@ -143,6 +143,10 @@ usage(
         (void)fprintf(stderr,
                 "\t-x             Debug mode\n");
         (void)fprintf(stderr,
+                "\t-y             Log using microsecond resolution\n");
+        (void)fprintf(stderr,
+                "\t-z             Log using ISO 8601 timestamps\n");
+        (void)fprintf(stderr,
                 "\t-l logfile     Send log info to file (default uses syslogd)\n");
         (void)fprintf(stderr,
                 "\t-h remote      Have \"remote\" send us data (default \"%s\")\n",
@@ -240,6 +244,7 @@ int main(int ac, char *av[])
         int status;
         prod_class_t *clssp;
         unsigned        port = 0;
+        unsigned        logOpts = LOG_CONS | LOG_PID;
 
         if(set_timestamp(&clss.from) != 0)
         {
@@ -263,13 +268,19 @@ int main(int ac, char *av[])
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "vxl:f:o:t:h:P:p:T:")) != EOF)
+        while ((ch = getopt(ac, av, "vxyzl:f:o:t:h:P:p:T:")) != EOF)
                 switch (ch) {
                 case 'v':
                         logmask |= LOG_MASK(LOG_INFO);
                         break;
                 case 'x':
                         logmask |= LOG_MASK(LOG_DEBUG);
+                        break;
+                case 'y':
+                        logOpts |= LOG_MICROSEC;
+                        break;
+                case 'z':
+                        logOpts |= LOG_ISO_8601;
                         break;
                 case 'l':
                         logfname = optarg;
@@ -367,8 +378,7 @@ int main(int ac, char *av[])
         /*
          * initialize logger
          */
-        (void) openulog(ubasename(av[0]),
-                (LOG_CONS|LOG_PID), LOG_LDM, logfname);
+        (void) openulog(ubasename(av[0]), logOpts, LOG_LDM, logfname);
         unotice("Starting Up: %s: %s",
                         remote,
                         s_prod_class(NULL, 0, &clss));

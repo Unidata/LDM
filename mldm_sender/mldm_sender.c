@@ -122,6 +122,8 @@ Options:\n\
                         <255  Unrestricted in scope. Global.\n\
     -v                Verbose logging: log INFO level messages.\n\
     -x                Debug logging: log DEBUG level messages.\n\
+    -y                Log using microsecond resolution.\n\
+    -z                Log using ISO 8601 timestamps.\n\
 Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
@@ -178,7 +180,7 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:s:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:s:t:vxyz")) != EOF)
         switch (ch) {
         case 'f': {
             if (strfeedtypet(optarg, feed)) {
@@ -240,6 +242,14 @@ mls_decodeOptions(
         }
         case 'x': {
             (void)setulogmask(getulogmask() | LOG_MASK(LOG_DEBUG));
+            break;
+        }
+        case 'y': {
+            ulog_set_options(LOG_MICROSEC, LOG_MICROSEC);
+            break;
+        }
+        case 'z': {
+            ulog_set_options(LOG_ISO_8601, LOG_ISO_8601);
             break;
         }
         case ':': {

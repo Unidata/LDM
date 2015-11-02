@@ -15,10 +15,11 @@
  * Make sure these dont collide with ones in <syslog.h>
  * or the 4.2 compatibility section below
  */
-#define LOG_NOTIME 0x200u		/* don't put on the timestamp */
 #define LOG_LOCALTIME 0x100u  /* use localtime. default is gmt */
-
-#define LOG_IDENT 0x400u		/* add the facility identifier */
+#define LOG_NOTIME    0x200u  /* don't put on the timestamp */
+#define LOG_IDENT     0x400u  /* add the facility identifier */
+#define LOG_ISO_8601  0x800u  /* Use ISO 8601 standard timestamp */
+#define LOG_MICROSEC  0x1000u /* Use microsecond-resolution timestamp */
 
 /*
  * This set of #defines allows this to work even with a

@@ -182,9 +182,9 @@ int main(int argc, char *argv[])
 
         tag = NULL;
 #ifdef LOG_PERROR
-        while ((ch = getopt(argc, argv, "f:ip:st:l:")) != EOF)
+        while ((ch = getopt(argc, argv, "f:iyzp:st:l:")) != EOF)
 #else
-        while ((ch = getopt(argc, argv, "f:ip:t:l:")) != EOF)
+        while ((ch = getopt(argc, argv, "f:iyzp:t:l:")) != EOF)
 #endif
                 switch((char)ch) {
                 case 'f':               /* file to log */
@@ -197,6 +197,9 @@ int main(int argc, char *argv[])
                 case 'i':               /* log process id also */
                         logflags |= LOG_PID;
                         break;
+                case 'y':
+                        logflags |= LOG_MICROSEC;
+                        break;
                 case 'p':               /* priority */
                         pri = pencode(optarg);
                         break;
@@ -205,6 +208,9 @@ int main(int argc, char *argv[])
                         logflags |= LOG_PERROR;
                         break;
 #endif
+                case 'z':
+                        logflags |= LOG_ISO_8601;
+                        break;
                 case 't':               /* tag */
                         tag = optarg;
                         break;

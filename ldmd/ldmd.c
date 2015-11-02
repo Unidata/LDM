@@ -396,10 +396,13 @@ static void usage(
                     "\t                address (default is all interfaces)\n"
                     "\t-P port         The port number for LDM connections (default is \n"
                     "\t                %d)\n"
-                    "\t-x              Debug logging mode (SIGUSR2 cycles)\n"
                     "\t-v              Verbose logging mode: log each match (SIGUSR2\n"
                     "\t                cycles)\n"
+                    "\t-x              Debug logging mode (SIGUSR2 cycles)\n"
+                    "\t-y              Log with microsecond resolution\n"
+                    "\t-z              Log using ISO 8601 timestamps\n"
                     "\t-l logfile      Log to given file (default uses syslogd)\n"
+                    "\t-M maxnum       Maximum number of clients (default is %u)\n"
                     "\t-q pqfname      Product-queue pathname (default is\n"
                     "\t                \"%s\")\n"
                     "\t-o offset       The \"from\" time of data-product requests will be\n"
@@ -410,8 +413,8 @@ static void usage(
                     "\t-n              Do nothing other than check the configuration-file\n"
                     "\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
                     "\t                (default is %d)\n", av0,
-            getLdmdConfigPath(), LDM_PORT, getQueuePath(), DEFAULT_OLDEST,
-            DEFAULT_RPCTIMEO);
+            getLdmdConfigPath(), LDM_PORT, getQueuePath(), maxClients,
+            DEFAULT_OLDEST, DEFAULT_RPCTIMEO);
 
     exit(1);
 }
@@ -805,6 +808,7 @@ int main(
     int doSomething = 1;
     in_addr_t ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
     unsigned ldmPort = LDM_PORT;
+    unsigned logOpts = 0;
 
     ensureDumpable();
 
@@ -821,7 +825,7 @@ int main(
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "I:vxl:nq:o:P:M:m:t:")) != EOF) {
+        while ((ch = getopt(ac, av, "I:vxl:nq:o:P:M:m:t:yz")) != EOF) {
             switch (ch) {
             case 'I': {
                 in_addr_t ipAddr = inet_addr(optarg);
@@ -841,6 +845,11 @@ int main(
                 break;
             case 'x':
                 logmask |= LOG_MASK(LOG_DEBUG);
+            case 'y':
+                logOpts |= LOG_MICROSEC;
+                break;
+            case 'z':
+                logOpts |= LOG_ISO_8601;
                 break;
             case 'l':
                 logfname = optarg;
@@ -960,7 +969,8 @@ int main(
         (void) fclose(stderr);
     else if (!(logfname[0] == '-' && logfname[1] == 0))
         (void) close(2);
-    (void) openulog(ubasename(av[0]), (LOG_CONS | LOG_PID), LOG_LDM, logfname);
+    (void) openulog(ubasename(av[0]), LOG_CONS | LOG_PID | logOpts, LOG_LDM,
+            logfname);
     unotice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
 

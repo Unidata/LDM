@@ -19,6 +19,7 @@
 
 #include <config.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <syslog.h>
@@ -381,7 +382,9 @@ unsigned ulog_get_options()
 
 /*
  * Sets an option of the logging facility.  This function can only be used
- * to adjust LOG_NOTIME, LOG_PID, and LOG_IDENT: all other options are ignored.
+ * to adjust the options that are not understood by openlog(3): LOG_NOTIME,
+ * LOG_PID, LOG_IDENT, LOG_MICROSEC, and LOG_ISO_8601; all other options are
+ * ignored.
  *
  * @param mask            Bitwise-OR mask of the options to set.
  * @param values          The option values.
@@ -390,7 +393,7 @@ void ulog_set_options(
     unsigned mask,
     unsigned values)
 {
-    mask &= (LOG_NOTIME | LOG_PID | LOG_IDENT);
+    mask &= (LOG_NOTIME | LOG_PID | LOG_IDENT | LOG_MICROSEC | LOG_ISO_8601);
 
     logOptions = (logOptions & ~mask) | (values & mask);
 }
@@ -536,6 +539,45 @@ vulog(pri, fmt, args)
             
             if (!(logOptions & LOG_NOTIME))
             {
+#if 1
+                struct timespec now;
+                struct tm       tm_now;
+                const bool      isUtc = logOptions & LOG_LOCALTIME;
+                (void)clock_gettime(CLOCK_REALTIME, &now);
+                /* N.B.: default for this package is to use gmt */
+                if (isUtc) {
+                    (void)gmtime_r(&now.tv_sec, &tm_now);
+                }
+                else {
+                    (void)localtime_r(&now.tv_sec, &tm_now);
+                }
+                if (logOptions & LOG_ISO_8601) {
+                    cp += strftime(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
+                        "%Y%m%dT%H%M%S", &tm_now);
+                }
+                else {
+                    cp += strftime(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
+                        "%b %d %H:%M:%S", &tm_now);
+                }
+                if (logOptions & LOG_MICROSEC) {
+                    cp += snprintf(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
+                        ".%06ld", now.tv_nsec/1000);
+                }
+                if (logOptions & LOG_ISO_8601) {
+                    if (isUtc) {
+                        (void)strcpy(cp, "Z ");
+                        cp += 2;
+                    }
+                    else {
+                        cp += strftime(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
+                            "%z ", &tm_now);
+                    }
+                }
+                else {
+                    *cp++ = ' ';
+                    *cp = 0;
+                }
+#else
                 /*
                  * Encode the timestamp.
                  */
@@ -559,6 +601,7 @@ vulog(pri, fmt, args)
 
                 errno = 0;              /* ultrix 4.0 mips trashes errno in
                                          * ctime */
+#endif
             }                           /* include timestamp */
 
             /*

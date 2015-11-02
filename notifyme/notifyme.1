@@ -2,7 +2,7 @@
 .SH NAME
 notifyme - ldm NOTIFYME example client
 .SH "UNIX SYNOPSIS"
-\fBnotifyme \fR[\fB\-x -v\fR] [\fB\-l \fIlogfile\fR] 
+\fBnotifyme \fR[\fB\-vxyz\fR] [\fB\-l \fIlogfile\fR] 
 .BI [\-h " remote" ]
 .BI [\-p " pattern" ]
 .BI [\-f " feedtype" ]
@@ -61,6 +61,17 @@ to arrive at the host.)
 .TP
 .BI \-x
 Requests that debugging information also be printed.
+.TP
+.B -y
+Use logging timestamps with microsecond resolution. The default is
+second resolution.
+.TP
+.B -z
+Use logging timestamps formatted according to the ISO 8601 standard
+(e.g.
+.IR YYYYMMDD T hhmmss ).
+The default is
+.IR Mon\ day\ hh : mm : ss
 .SH EXAMPLE
 The command
 .RS +4

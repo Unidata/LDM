@@ -15,7 +15,7 @@ ldmd
 \fP[\fB-P\ \fIport\fR]
 \fP[\fB-q\ \fIpqfname\fR]
 \fP[\fB-t\ \fIrpctimeo\fR]
-\fP[\fB\-vx\fP]
+\fP[\fB\-vxyz\fP]
 \fP[\fIconf_filename\fR]
 .hy
 .ft
@@ -121,6 +121,17 @@ At least three times the output of verbose logging. A message
 is printed for each RPC transaction (except NULLPROC). In
 particular, the progress of incoming products is may be monitored.
 The MD5 checksum of each product is printed.
+.TP
+.B -y
+Use logging timestamps with microsecond resolution. The default is
+second resolution.
+.TP
+.B -z
+Use logging timestamps formatted according to the ISO 8601 standard
+(e.g.
+.IR YYYYMMDD T hhmmss ).
+The default is
+.IR Mon\ day\ hh : mm : ss
 .SH SIGNALS
 .TP
 .BR SIGTERM

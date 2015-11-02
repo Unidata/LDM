@@ -69,6 +69,17 @@ is different than the syslog(3) package which uses localtime, and
 that the ctime(3) style formating (dictated by the protocol) includes
 no timezone field. So, mixing ulog(3) messages and syslog(3) messages in
 the same file can be confusing as you first look at the time stamps.
+.TP
+.SB LOG_ISO_8601
+Use timestamps formatted according to the ISO 8601 standard (e.g.
+"20151102T133955Z").
+the default is for the time stamps to be formatted according to the
+.BR strtime (3)
+format "%b %d %H:%M:%S" (e.g., "Nov 2 13:39:55").
+.TP
+.SB LOG_MICROSEC
+Use timestamps with microsecond resolution. The default is second
+resolution.
 .RE
 .br
 .ne 9
