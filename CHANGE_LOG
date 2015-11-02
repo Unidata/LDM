@@ -1,3 +1,14 @@
+6.12.15.36
+    ldmadmin(1):
+        Reduce overestimation of new queue capacities (i.e., data capacity,
+        product capacity) and don't compute new capacities if the data is
+        insufficient.
+        
+    logging:
+        Added logging options for using microsecond resolution in timestamps and
+        formatting them according to the ISO 8601 standard. Added respective
+        options "-y" and "-z" to ldmd(1) and notifyme(1).
+
 6.12.15.35	2015-10-28T15:29:59-0600
     Create mcast_test(1) for testing LDM-7 on GENI.
 
