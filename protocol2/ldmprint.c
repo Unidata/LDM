@@ -26,9 +26,24 @@
 #include <rpc/rpc.h>
 #include <netinet/in.h>
 
-static char tprintbuf[1984];
+static char tprintbuf[1987];
 static const char nada[] = "(null)";
 
+/**
+ *
+ * @param[in]     n       The number of bytes just attempted to be written to
+ *                        `*cp` or `-1`.
+ * @param[in,out] nbytes  The number of bytes to be incremented if `n >= 0`;
+ *                        otherwise, set to `-1`.
+ * @param[in,out] cp      The pointer into the character buffer to be
+ *                        incremented iff `n >= 0 && n <= *left`;
+ * @param[in,out] left    The number of unwritten bytes remaining in the
+ *                        character buffer, including the terminating NUL.
+ *                        Decremented by `n` iff `n >= 0 && n <= *left`. Set to
+ *                        `0` iff `n >= 0 && n > *left`.
+ * @retval true iff the write attempt was successful and was NUL-terminated:
+ *              `n >= 0 && n <= *left`.
+ */
 static bool post_snprintf(
         const int              n,
         int* const restrict    nbytes,
@@ -214,8 +229,7 @@ int ts_format(
         else {
             n = sprint_time_t(buf, size, ts->tv_sec);
             if (post_snprintf(n, &nbytes, &buf, &size)) {
-                // We only print to millisecond resolution
-                n = snprintf(buf, size, ".%03d", (int)(ts->tv_usec/1000));
+                n = snprintf(buf, size, ".%06d", (int)(ts->tv_usec));
                 (void)post_snprintf(n, &nbytes, &buf, &size);
             }
         }
@@ -238,7 +252,7 @@ int ts_format(
 int
 sprint_timestampt(char *buf, size_t bufsize, const timestampt *tvp)
 {
-    #define P_TIMESTAMP_LEN (P_TIMET_LEN + 4)
+    #define P_TIMESTAMP_LEN (P_TIMET_LEN + 7) // "YYYYMMDDhhmmss.uuuuuu\0"
     if(!buf || bufsize < P_TIMESTAMP_LEN)
             return -1;
 
@@ -734,7 +748,7 @@ s_prod_info(
         bufsize = sizeof(tprintbuf);
     }
 
-    if (bufsize < (doSignature ? 33 : 0) + 50 + KEYSIZE)
+    if (bufsize < LDM_INFO_MAX - (doSignature ? 0 : 33))
          return NULL;
 
     if (doSignature) {

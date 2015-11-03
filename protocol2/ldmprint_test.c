@@ -136,7 +136,7 @@ static void test_ts_format(void)
 
     ts.tv_sec = 123456789;
     ts.tv_usec = 123456;
-    expect = "19731129213309.123";
+    expect = "19731129213309.123456";
     status = ts_format(&ts, buf, sizeof(buf));
     CU_ASSERT_EQUAL(status, strlen(expect));
     CU_ASSERT_STRING_EQUAL(buf, expect);
