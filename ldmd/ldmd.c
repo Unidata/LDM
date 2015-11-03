@@ -413,7 +413,7 @@ static void usage(
                     "\t-n              Do nothing other than check the configuration-file\n"
                     "\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
                     "\t                (default is %d)\n", av0,
-            getLdmdConfigPath(), LDM_PORT, getQueuePath(), maxClients,
+            getLdmdConfigPath(), LDM_PORT, maxClients, getQueuePath(),
             DEFAULT_OLDEST, DEFAULT_RPCTIMEO);
 
     exit(1);
@@ -845,6 +845,7 @@ int main(
                 break;
             case 'x':
                 logmask |= LOG_MASK(LOG_DEBUG);
+                break;
             case 'y':
                 logOpts |= LOG_MICROSEC;
                 break;
