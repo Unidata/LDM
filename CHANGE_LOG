@@ -1,4 +1,4 @@
-6.12.15.37
+6.12.15.37	2015-11-03T09:41:04-0700
     Increase resolution of printed product-creation timestamp from millisecond
     to microsecond.
 
