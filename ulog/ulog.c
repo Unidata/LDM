@@ -196,7 +196,7 @@ getulogpath(void) {
  * 
  * NB: Multiple calls without an intervening 'closeulog()' simply reinitialize
  * ident, options, and facility. The data referred to by 'ident' and
- * 'logfilename' should have process lifetime.
+ * 'logfilename' must have process lifetime.
  *
  * @param[in] ident        Pointer to the name of the process or NULL. The
  *                         caller shall not modify or free. If NULL, then the
@@ -206,6 +206,14 @@ getulogpath(void) {
  *                             LOG_LOCALTIME   Use localtime rather than UTC.
  *                             LOG_CONS        Log to console as last resort.
  *                             LOG_PID         Add process-identifier.
+ *                             LOG_MICROSEC    Use microsecond resolution.
+ *                             LOG_ISO_8601    Use timestamp format
+ *                                 <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
+ *                             LOG_ERROR       Errors. Default.
+ *                             LOG_WARNING     Warnings. Default.
+ *                             LOG_NOTICE      Notices. Default.
+ *                             LOG_INFO        Informational messages.
+ *                             LOG_DEBUG       Debug messages.
  * @param[in] facility     Logging facility to use.  One of LOG_LOCAL1 to
  *                         LOG_LOCAL7.
  * @param[in] logfilename  Pathname of the log file:
