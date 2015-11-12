@@ -75,8 +75,9 @@
 
 
 /*
- * The 'ident' arg to openulog() and setulogident will be
- * copied into static space, truncatated to this length.
+ * The 'ident' arg to openulog() and setulogident will be copied into static
+ * space, truncatated to this length. Does _not_ include terminating NUL
+ * character.
  */
 #define LOG_IDENT_LEN 32
 
