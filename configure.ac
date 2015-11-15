@@ -151,6 +151,16 @@ esac
 
 AM_CONDITIONAL([MAINTAINER], [test -d .git])
 
+# Whether or not to use the log4c(3) logging library rather than the original
+# ulog(3) library.
+AC_ARG_WITH([log4c],
+    AS_HELP_STRING([--with-log4c],
+	[Use the log4c(3) logging library]
+        [[default=no]]),
+    [],
+    [with_log4c=no])
+AM_CONDITIONAL([WANT_LOG4C], [test "x$with_log4c" != xno])
+
 # The following is for multicast data distribution using the Virtual Circuit
 # Multicast Transport Protocol. DO NOT USE!
 AC_ARG_WITH([multicast],
@@ -543,7 +553,7 @@ AC_CHECK_HEADERS([stropts.h], ,
 ])
 
 ################################################################################
-# Libraries, in order, from most general to least:
+# Libraries, in order, from least dependent to most:
 
 # Ensure a reference to the math library if necessary.
 AC_SEARCH_LIBS([log10], [m], , [AC_MSG_ERROR([Library not found])])
@@ -557,6 +567,14 @@ AC_SEARCH_LIBS([setsockopt], [socket nsl nsl_s], ,
     [AC_MSG_ERROR([Library not found])])
 AC_SEARCH_LIBS([inet_addr], [socket nsl nsl_s], ,
     [AC_MSG_ERROR([Library not found])])
+    
+# Ensure references to the Log4C package, if necessary.
+AM_COND_IF([WANT_LOG4C], [
+        AC_CHECK_HEADER([log4c.h], , [AC_MSG_ERROR([Header-file not found])])
+        AC_SEARCH_LIBS([log4c_init], [log4c], ,
+            [AC_MSG_ERROR([Library not found])])
+    ]
+)
 
 # Ensure references to the ZLIB package, which is used by the PNG library and
 # by the XML2 library.
