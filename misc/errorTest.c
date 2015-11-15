@@ -5,6 +5,7 @@
 
 #include "error.h"
 #include "ulog.h"
+#include "mylog.h"
 
 int
 main(int argc, char* args[])

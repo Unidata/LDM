@@ -19,6 +19,7 @@
 #include "error.h"
 #include "ldm.h"        /* needed by following */
 #include "ulog.h"
+#include "mylog.h"
 #include "log.h"
 #include "peer_info.h"
 #include "prod_class.h"

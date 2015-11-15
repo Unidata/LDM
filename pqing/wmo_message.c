@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "ulog.h"
+#include "mylog.h"
 #include "ldmalloc.h"
 #include "tokens.h"
 #include "xbuf.h"

@@ -19,6 +19,7 @@
 #include "tokens.h"
 #include "afos_message.h"
 #include "ulog.h"
+#include "mylog.h"
 
 
 static int seqno = 0;

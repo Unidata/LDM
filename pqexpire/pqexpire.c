@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <regex.h>
 #include "ulog.h"
+#include "mylog.h"
 #include "ldm.h"
 #include "ldmprint.h"
 #include "atofeedt.h"

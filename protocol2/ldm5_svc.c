@@ -10,6 +10,7 @@
 
 #include "ldm5.h"
 #include "ulog.h"
+#include "mylog.h"
 
 
 /* $Id: ldm5_svc.c,v 5.54.18.1 2008/04/15 16:34:11 steve Exp $ */

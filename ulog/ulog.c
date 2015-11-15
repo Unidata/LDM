@@ -133,7 +133,7 @@ closeulog(void)
  * by openulog() to change the identifier in a child proc.
  *
  * @param[in] ident  The new identifier or NULL. If NULL, then the identifier
- *                   isn't changed.
+ *                   isn't changed. Caller may free.
  */
 void
 setulogident(const char *ident)

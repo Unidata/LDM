@@ -13,6 +13,7 @@
 
 #include "rawfile.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "feed.h"
 
 static unsigned long file_bytes = 0; /* total bytes read */

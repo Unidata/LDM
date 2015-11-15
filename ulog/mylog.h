@@ -13,6 +13,7 @@
 #define ULOG_MYLOG_H_
 
 #include <stdarg.h>
+#include <stdbool.h>
 
 #ifndef MYLOG_LOGGER_ID
     #define MYLOG_LOGGER_ID "root"
@@ -53,8 +54,10 @@ typedef enum {
  *                   levels are ordered: MYLOG_LEVEL_ERROR > MYLOG_LEVEL_WARNING
  *                   > MYLOG_LEVEL_NOTICE > MYLOG_LEVEL_INFO >
  *                   MYLOG_LEVEL_DEBUG.
+ * @retval    0      Success.
+ * @retval    -1     Failure.
  */
-void mylog_set_level(
+int mylog_set_level(
         const mylog_level_t level);
 
 /**
@@ -73,14 +76,16 @@ mylog_level_t mylog_get_level(void);
 void mylog_roll_level(void);
 
 /**
- * Sets the logging identifier. May be called at any time -- including before
- * `mylog_init()`.
+ * Modifies the logging identifier. Should be called after `mylog_init()`.
  *
- * @param[in] id     The logging identifier. Caller may free.
- * @retval    0      Success.
+ * @param[in] hostId    The identifier of the remote host. Caller may free.
+ * @param[in] isFeeder  Whether or not the process is sending data-products or
+ *                      just notifications.
+ * @retval    0         Success.
  */
-int mylog_set_id(
-        const char* const id);
+int mylog_modify_id(
+        const char* const hostId,
+        const bool        isFeeder);
 
 /**
  * Returns the logging identifier. May be called at any time -- including before
@@ -94,13 +99,7 @@ const char* mylog_get_id(void);
  * Sets the logging options. May be called at any time -- including before
  * `mylog_init()`.
  *
- * @param[in] options  The logging options. Bitwise or of
- *                         LOG_NOTIME      Don't add timestamp
- *                         LOG_PID         Add process-identifier.
- *                         LOG_IDENT       Add logging identifier.
- *                         LOG_MICROSEC    Use microsecond resolution.
- *                         LOG_ISO_8601    Use timestamp format
- *                             <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
+ * @param[in] options  The implementation-defined logging options.
  */
 void mylog_set_options(
         const unsigned options);
@@ -109,16 +108,11 @@ void mylog_set_options(
  * Returns the logging options. May be called at any time -- including before
  * `mylog_init()`.
  *
- * @return The logging options. Bitwise or of
- *                         LOG_NOTIME      Don't add timestamp
- *                         LOG_PID         Add process-identifier.
- *                         LOG_IDENT       Add logging identifier.
- *                         LOG_MICROSEC    Use microsecond resolution.
- *                         LOG_ISO_8601    Use timestamp format
- *                             <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
+ * @return The implementation-defined logging options.
  */
 unsigned mylog_get_options(void);
 
+#if 0
 /**
  * Sets the logging output. May be called at any time -- including before
  * `mylog_init()`.
@@ -135,6 +129,7 @@ unsigned mylog_get_options(void);
  */
 int mylog_set_output(
         const char* const output);
+#endif
 
 /**
  * Returns the logging output. May be called at any time -- including before
@@ -151,10 +146,19 @@ const char* mylog_get_output(void);
  * Initializes the logging module. Should be called before any of the functions
  * that perform logging (e.g., `mylog_error()`).
  *
- * @retval    0        Success
+ * @param[in] id       The logging identifier. Caller may free.
+ * @param[in] output   The logging output specification. One of
+ *                         ""      Use the implementation-defined default
+ *                                 logging mechanism. Caller may free.
+ *                         "-"     Log to the standard error stream. Caller may
+ *                                 free.
+ *                         else    Log to the file `output`. Caller may free.
+ * @retval    0        Success.
  * @retval    -1       Error.
  */
-int mylog_init(void);
+int mylog_init(
+        const char* const id,
+        const char* const output);
 
 /**
  * Finalizes the logging module.

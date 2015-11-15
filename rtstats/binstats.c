@@ -24,6 +24,7 @@
 #include <time.h>
 
 #include "ulog.h"
+#include "mylog.h"
 #include "ldm.h"
 #include "ldmalloc.h"
 #include "ldmprint.h"

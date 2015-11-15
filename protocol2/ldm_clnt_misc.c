@@ -20,6 +20,7 @@
 #include "ldm_clnt_misc.h"
 #include "rpcutil.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "globals.h"
 #include "remote.h"
 

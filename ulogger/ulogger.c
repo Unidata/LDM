@@ -41,6 +41,7 @@
 #include <strings.h>
 #define SYSLOG_NAMES
 #include "ulog.h"
+#include "mylog.h"
 
 #ifdef SYSLOG_NAMES
 #if !defined(INTERNAL_NOPRI)

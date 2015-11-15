@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "ulog.h"
+#include "mylog.h"
 
 
 static int rawfd = -1;

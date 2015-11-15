@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include "ulog.h"
+#include "mylog.h"
 #include "ldmalloc.h"
 #include "alrm.h"
 #include "error.h"

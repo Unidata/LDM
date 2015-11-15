@@ -22,6 +22,7 @@
 #include "pq.h"
 #include "savedInfo.h"
 #include "ulog.h"
+#include "mylog.h"
 
 #include "ldm5_clnt.h"
 

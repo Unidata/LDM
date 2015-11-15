@@ -1,4 +1,5 @@
 #include <ulog.h>
+#include <mylog.h>
 
 void er_wmsg(
     const char* const   errgrp,

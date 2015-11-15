@@ -21,6 +21,7 @@
 #include "ldmalloc.h"
 #include "ldmprint.h"
 #include "ulog.h"
+#include "mylog.h"
 
 struct fl_entry {
 	struct fl_entry *next;

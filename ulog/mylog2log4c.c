@@ -6,40 +6,65 @@
  *   @file: mylog2ulog.c
  * @author: Steven R. Emmerson
  *
- * This file implements the `mylog.h` API using `ulog.c`.
+ * This file implements the `mylog.h` API using the Log4C library.
  */
 
 
 #include "config.h"
 
 #include "mylog.h"
-#include "ulog.h"
 
 #include <limits.h>
-#include <stdio.h>
+#include <log4c.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifndef _XOPEN_NAME_MAX
+    #define _XOPEN_NAME_MAX 255 // not always defined
+#endif
 
 /**
  *  Logging level. The initial value must be consonant with the initial value of
  *  `logMask` in `ulog.c`.
  */
 static mylog_level_t loggingLevel = MYLOG_LEVEL_DEBUG;
+/**
+ * The Log4C category of the current logger:
+ * <progname> [. (feeder|notifier) . <hostname>]
+ */
+static char catId[_XOPEN_NAME_MAX + 1 + 8 + 1 + _POSIX_HOST_NAME_MAX + 1] =
+        "root";
 
 /**
  * Enables logging down to a given level.
  *
  * @param[in] level  The lowest level through which logging should occur.
  * @retval    0      Success.
+ * @retval    -1     Failure.
  */
 int mylog_set_level(
         const mylog_level_t level)
 {
-    static int ulogUpTos[MYLOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
-            LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
-            LOG_UPTO(LOG_ERR)};
-    (void)setulogmask(ulogUpTos[level]);
-    loggingLevel = level;
+    int               status;
+    #define           MAX_CATEGORIES 512
+    log4c_category_t* categories[MAX_CATEGORIES];
+    const int         ncats = log4c_category_list(categories, MAX_CATEGORIES);
+    if (ncats < 0 || ncats > MAX_CATEGORIES) {
+        mylog_warning(catId, "Couldn't get all logging categories: ncats=%d",
+                ncats);
+        status = -1;
+    }
+    else {
+        static int priorities[] = {LOG4C_PRIORITY_DEBUG, LOG4C_PRIORITY_INFO,
+                LOG4C_PRIORITY_NOTICE, LOG4C_PRIORITY_WARN,
+                LOG4C_PRIORITY_ERROR};
+        int priority = priorities[level];
+        for (int i = 0; i < ncats; i++)
+            (void)log4c_set_priority(categories[i], priority);
+        loggingLevel = level;
+        status = 0;
+    }
+    return status;
 }
 
 /**
@@ -64,23 +89,21 @@ void mylog_roll_level(void)
 }
 
 /**
- * Modifies the logging identifier.
+ * Modifies the logging identifier. Should be called after `mylog_init()`.
  *
  * @param[in] hostId    The identifier of the remote host. Caller may free.
  * @param[in] isFeeder  Whether or not the process is sending data-products or
- *                      notifications.
- * @param[in] id        The logging identifier. Caller may free.
+ *                      just notifications.
  * @retval    0         Success.
  */
 int mylog_modify_id(
         const char* const hostId,
         const bool        isFeeder)
 {
-    char id[_POSIX_HOST_NAME_MAX + 6 + 1]; // hostname + "(type)" + 0
-    (void)snprintf(id, sizeof(id), "%s(%s)", hostId,
-            isFeeder ? "feed" : "noti");
-    id[sizeof(id)-1] = 0;
-    setulogident(id);
+    // progname + "." + type + "." + hostname
+    (void)snprintf(catId, sizeof(catId), "%s.%s.%s", getulogident(),
+            isFeeder ? "feeder" : "notifier", hostId);
+    catId[sizeof(catId)-1] = 0;
     return 0;
 }
 
@@ -91,75 +114,35 @@ int mylog_modify_id(
  */
 const char* mylog_get_id(void)
 {
-    return getulogident();
+    return catId;
 }
 
 /**
  * Sets the logging options.
  *
- * @param[in] options  The logging options. Bitwise or of
- *                         LOG_NOTIME      Don't add timestamp
- *                         LOG_PID         Add process-identifier.
- *                         LOG_IDENT       Add logging identifier.
- *                         LOG_MICROSEC    Use microsecond resolution.
- *                         LOG_ISO_8601    Use timestamp format
- *                             <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
+ * @param[in] options  The logging options. Ignored.
  */
 void mylog_set_options(
         const unsigned options)
 {
-    ulog_set_options(~0u, options);
 }
 
 /**
  * Returns the logging options.
  *
- * @return The logging options. Bitwise or of
- *             LOG_NOTIME      Don't add timestamp
- *             LOG_PID         Add process-identifier.
- *             LOG_IDENT       Add logging identifier.
- *             LOG_MICROSEC    Use microsecond resolution.
- *             LOG_ISO_8601    Use timestamp format
- *                             <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
- *         The initial value is `0`.
+ * @retval 0   Always.
  */
 unsigned mylog_get_options(void)
 {
-    return ulog_get_options();
+    return 0;
 }
-
-#if 0
-/**
- * Sets the logging output. May be called at any time -- including before
- * `mylog_init()`.
- *
- * @param[in] output   The logging output. One of
- *                         ""      Log to the system logging daemon. Caller may
- *                                 free.
- *                         "-"     Log to the standard error stream. Caller may
- *                                 free.
- *                         else    Log to the file whose pathname is `output`.
- *                                 Caller may free.
- * @retval    0        Success.
- * @retval    -1       Failure.
- */
-int mylog_set_output(
-        const char* const output)
-{
-    const char* const id = mylog_get_id();
-    const unsigned    options = mylog_get_options();
-    int               status = openulog(id, options, LOG_LDM, output);
-    return status == -1 ? -1 : 0;
-}
-#endif
 
 /**
  * Returns the logging output. May be called at any time -- including before
  * `mylog_init()`.
  *
  * @return       The logging output. One of
- *                   ""      Output is to the system logging daemon. Initial
- *                           value.
+ *                   ""      Output is to the system logging daemon. Default.
  *                   "-"     Output is to the standard error stream.
  *                   else    The pathname of the log file.
  */
@@ -170,15 +153,14 @@ const char* mylog_get_output(void)
 }
 
 /**
- * Initializes the logging module. The logging identifier will be the return
- * value of `mylog_get_id()`, the logging options will be the return value
- * of `mylog_get_options()`, and the logging facility will be the value of the
+ * Initializes the logging module.  The logging options will be the return value
+ * of `mylog_get_options()` and the logging facility will be the value of the
  * macro `LOG_LDM` if output is to the system logging daemon.
  *
  * @param[in] id       The logging identifier. Caller may free.
  * @param[in] output   The logging output specification. One of
- *                         ""      Log to the system logging daemon. Caller may
- *                                 free.
+ *                         ""      Log according to the relevant `log4crc`
+ *                                 configuration-file. Caller may free.
  *                         "-"     Log to the standard error stream. Caller may
  *                                 free.
  *                         else    Log to the file `output`. Caller may free.
@@ -189,9 +171,16 @@ int mylog_init(
         const char* const id,
         const char* const output)
 {
-    const unsigned    options = mylog_get_options();
-    int               status = openulog(id, options, LOG_LDM, output);
-    return status == -1 ? -1 : 0;
+    int status = log4c_init();
+    if (status == 0 && strcmp("", output)) {
+        if (strcmp("", output) == 0) {
+
+        }
+        else if (strcmp("-", output) == 0) {
+
+        }
+    }
+    return status == 0 ? 0 : -1;
 }
 
 /**
@@ -309,7 +298,7 @@ void mylog_vlog(
         const char* const   format,
         va_list             args)
 {
-    static int ulogPriorities[] = {LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING,
+    static ulogPriorities[] = {LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING,
             LOG_ERR};
     vulog(ulogPriorities[level], format, args);
 }

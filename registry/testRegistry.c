@@ -20,6 +20,7 @@
 #include "registry.h"
 #include "timestamp.h"
 #include <ulog.h>
+#include "mylog.h"
 
 static int
 setup(void)

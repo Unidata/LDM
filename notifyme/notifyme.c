@@ -17,6 +17,7 @@
 #include "ldmprint.h"
 #include "atofeedt.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "inetutil.h"
 #include "ldm5_clnt.h"
 #include "RegularExpressions.h"

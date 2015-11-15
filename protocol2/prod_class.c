@@ -20,6 +20,7 @@
 #include "RegularExpressions.h"
 
 #include "ulog.h"
+#include "mylog.h"
 #include "log.h"
 
 #ifndef ENOERR

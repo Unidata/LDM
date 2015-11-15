@@ -29,6 +29,7 @@
 #include "ldmalloc.h"
 #include "RegularExpressions.h"
 #include "ulog.h"
+#include "mylog.h"
 #include <stdio.h>
 
 #ifndef TEST_DATE_SUB

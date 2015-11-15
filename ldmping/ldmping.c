@@ -21,6 +21,7 @@
 #include "ldm5.h"
 #include "ldm5_clnt.h"
 #include "ulog.h"
+#include "mylog.h"
 
 
 #define DEFAULT_INTERVAL 25

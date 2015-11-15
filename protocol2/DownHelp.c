@@ -17,6 +17,7 @@
 #include "prod_info.h"
 #include "savedInfo.h"
 #include "ulog.h"
+#include "mylog.h"
 
 #ifndef MIN
 #  define MIN(a,b) ((a) < (b) ? (a) : (b))

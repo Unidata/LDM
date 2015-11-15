@@ -34,6 +34,7 @@
 #include "ldmfork.h"
 #include "log.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "pq.h"
 #ifndef HAVE_SETENV
     #include "setenv.h"

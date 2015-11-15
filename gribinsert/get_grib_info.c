@@ -13,6 +13,7 @@
 
 #include "gribinsert.h"
 #include "ulog.h"
+#include "mylog.h"
 
 void search_for_grib(data,filelen,offset)
 unsigned char *data;

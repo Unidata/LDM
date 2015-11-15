@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include "retrans.h"
 #include <ulog.h>
+#include "mylog.h"
 
 #define logMsg	printf
 

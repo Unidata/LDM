@@ -15,6 +15,7 @@
 
 #include <ldm.h>
 #include <ulog.h>
+#include "mylog.h"
 #include <pq.h>
 #include <md5.h>
 

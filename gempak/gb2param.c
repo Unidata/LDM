@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include "ulog.h"
+#include "mylog.h"
 
 #include <stdio.h>
 #include "gb2def.h"

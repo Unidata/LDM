@@ -30,6 +30,7 @@
 #include "remote.h"
 #include "savedInfo.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "xdr_data.h"
 
 static ldm_replyt  reply;

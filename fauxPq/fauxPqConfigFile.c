@@ -31,6 +31,7 @@
 #include "ldmprint.h"   /* s_signaturet() */
 #include "md5.h"
 #include "ulog.h"
+#include "mylog.h"
 
 #include "fauxPqConfigFile.h"
 

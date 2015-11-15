@@ -25,6 +25,7 @@
 #include "ldm_xlen.h"
 #include "pq.h"
 #include "ulog.h"
+#include "mylog.h"
 
 #include "fauxPqConfigFile.h"
 

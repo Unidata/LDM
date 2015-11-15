@@ -6,7 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-include_HEADERS		= ulog.h
+include_HEADERS		= ulog.h mylog.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= ulog.c log.c
 EXTRA_DIST		= log.h

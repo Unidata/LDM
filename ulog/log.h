@@ -2,6 +2,7 @@
 #define LDM_LOG_H
 
 #include "ulog.h"
+#include "mylog.h"
 
 #include <errno.h>
 #include <stdarg.h>

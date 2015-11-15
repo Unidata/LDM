@@ -44,6 +44,7 @@
 #endif /* !INSTR_WARN_TIME */
 #include "ldmprint.h"
 #include "ulog.h"
+#include "mylog.h"
 #endif /* INSTRUMENT */
 
 

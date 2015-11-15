@@ -18,6 +18,7 @@
 #include "globals.h"
 #include "registry.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "log.h"
 #include "ldmprint.h"
 

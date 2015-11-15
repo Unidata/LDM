@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include "ulog.h"
+#include "mylog.h"
 
 #include "log.h"
 

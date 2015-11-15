@@ -35,6 +35,7 @@
 #include "prod_class.h"
 #include "rpcutil.h"
 #include "ulog.h"
+#include "mylog.h"
 
 #ifdef NO_ATEXIT
 #include "atexit.h"

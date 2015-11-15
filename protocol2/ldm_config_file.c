@@ -60,6 +60,7 @@
 #include "savedInfo.h"
 #include "timestamp.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "log.h"
 #include "UpFilter.h"
 #include "md5.h"

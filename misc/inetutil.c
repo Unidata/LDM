@@ -11,6 +11,7 @@
 
 #include "error.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "ldm.h"
 #include "ldmprint.h"
 #include "log.h"

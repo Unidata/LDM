@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include "ulog.h"
+#include "mylog.h"
 #include "fdnb.h"
 
 /* some systems have FNDELAY (== O_NDELAY) different from O_NONBLOCK */

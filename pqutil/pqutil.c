@@ -30,6 +30,7 @@
 #include "md5.h"
 #include "pq.h"
 #include "ulog.h"
+#include "mylog.h"
 #include "RegularExpressions.h"
 
 #define MAX_COMMAND     256

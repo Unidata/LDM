@@ -17,6 +17,7 @@
 #include "error.h"
 #include "ldm.h"
 #include "ulog.h"
+#include "mylog.h"
 
 #include "dict.h"
 #include "feedtypeDB.h"         /* to ensure consistency */
