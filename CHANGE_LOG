@@ -1,4 +1,4 @@
-6.12.15.38	2015-11-03T13:07:13-0700
+6.12.15.38	2015-11-15T10:03:54-0700
     ldmd.c:
         Corrected some Coverity-discovered lint.
 
