@@ -1,3 +1,7 @@
+6.12.15.39
+    mldm_sender_manager(3):
+        Add "-y" and "-z" options to execvp(2) of mldm_sender(1).
+
 6.12.15.38	2015-11-03T13:07:13-0700
     ldmd.c:
         Corrected some Coverity-discovered lint.
