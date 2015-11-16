@@ -85,12 +85,10 @@ static void vlogMessages(void)
 static void test_mylog_open_file(void)
 {
     (void)unlink(tmpPathname);
-    int status = mylog_set_id(progname);
+    int status = mylog_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    mylog_set_options(logOpts);
+
     status = mylog_set_output(tmpPathname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_init();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     logMessages();
@@ -98,36 +96,42 @@ static void test_mylog_open_file(void)
     CU_ASSERT_EQUAL(n, 5);
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+
     status = mylog_fini();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
 static void test_mylog_open_stderr(void)
 {
-    int status = mylog_set_id(progname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    mylog_set_options(logOpts);
-    status = mylog_set_output("-");
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_init();
+    int status = mylog_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
+    status = mylog_set_output("-");
+    const char* actual = mylog_get_output();
+    CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
+    CU_ASSERT_STRING_EQUAL(actual, "-");
     MYLOG_ERROR("test_mylog_open_stderr()");
+
     status = mylog_fini();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
 static void test_mylog_open_syslog(void)
 {
-    int status = mylog_set_id(progname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    mylog_set_options(logOpts);
-    status = mylog_set_output("");
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_init();
+    int status = mylog_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
+    const char* actual = mylog_get_output();
+    CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
+    CU_ASSERT_STRING_EQUAL(actual, "");
+    MYLOG_ERROR("test_mylog_open_syslog() default");
+
+    status = mylog_set_output("");
+    actual = mylog_get_output();
+    CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
+    CU_ASSERT_STRING_EQUAL(actual, "");
     MYLOG_ERROR("test_mylog_open_syslog()");
+
     status = mylog_fini();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
@@ -138,73 +142,81 @@ static void test_mylog_levels(void)
     mylog_level_t mylogLevels[] = {MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING,
             MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_INFO, MYLOG_LEVEL_DEBUG};
     for (int nlines = 1; nlines <= MYLOG_LEVEL_COUNT; nlines++) {
+        status = mylog_init(progname);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
         (void)unlink(tmpPathname);
-        int status = mylog_set_id(progname);
-        CU_ASSERT_EQUAL_FATAL(status, 0);
-        mylog_set_options(logOpts);
         status = mylog_set_output(tmpPathname);
-        CU_ASSERT_EQUAL_FATAL(status, 0);
-        status = mylog_init();
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
         mylog_set_level(mylogLevels[nlines-1]);
         logMessages();
         int n = numLines(tmpPathname);
         CU_ASSERT_EQUAL(n, nlines);
+
+        status = mylog_fini();
+        CU_ASSERT_EQUAL(status, 0);
     }
     status = unlink(tmpPathname);
-    CU_ASSERT_EQUAL(status, 0);
-    status = mylog_fini();
     CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_mylog_get_level(void)
 {
-    int status;
     mylog_level_t mylogLevels[] = {MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING,
             MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_INFO, MYLOG_LEVEL_DEBUG};
+    int status = mylog_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    mylog_level_t level = mylog_get_level();
+    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_DEBUG);
+
     for (int i = 0; i < MYLOG_LEVEL_COUNT; i++) {
         mylog_level_t expected = mylogLevels[i];
-        mylog_set_level(expected);
+        (void)mylog_set_level(expected);
         mylog_level_t actual = mylog_get_level();
         CU_ASSERT_EQUAL(actual, expected);
     }
+
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_set_id(void)
+static void test_mylog_modify_id(void)
 {
-    const char* const expected = "foo";
-    (void)mylog_set_id(expected);
-    const char* const actual = mylog_get_id();
+    int status = mylog_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    char expected[256];
+    status = snprintf(expected, sizeof(expected), "%s.%s.%s", progname,
+            "feeder", "foo");
+    CU_ASSERT_TRUE(status > 0 && status < sizeof(expected));
+    (void)mylog_modify_id("foo", true);
+    const char* actual = mylog_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
-}
 
-static void test_mylog_set_options(void)
-{
-    unsigned expected = 0;
-    (void)mylog_set_options(expected);
-    unsigned actual = mylog_get_options();
-    CU_ASSERT_EQUAL(actual, expected);
-    expected = LOG_NOTIME | LOG_PID | LOG_IDENT | LOG_MICROSEC | LOG_ISO_8601;
-    (void)mylog_set_options(expected);
-    actual = mylog_get_options();
-    CU_ASSERT_EQUAL(actual, expected);
-}
+    status = snprintf(expected, sizeof(expected), "%s.%s.%s", progname,
+            "notifier", "bar");
+    CU_ASSERT_TRUE(status > 0 && status < sizeof(expected));
+    (void)mylog_modify_id("bar", false);
+    actual = mylog_get_id();
+    CU_ASSERT_STRING_EQUAL(actual, expected);
 
-static void test_mylog_set_output(void)
-{
-    static const char* outputs[] = {"", "-", tmpPathname};
-    for (int i = 0; i < sizeof(outputs)/sizeof(outputs[0]); i++) {
-        const char* expected = outputs[i];
-        (void)mylog_set_output(expected);
-        const char* actual = mylog_get_output();
-        CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
-        CU_ASSERT_STRING_EQUAL(actual, expected);
-    }
+    status = snprintf(expected, sizeof(expected), "%s.%s.%s", progname,
+            "notifier", "128_117_140_56");
+    CU_ASSERT_TRUE(status > 0 && status < sizeof(expected));
+    (void)mylog_modify_id("128.117.140.56", false);
+    actual = mylog_get_id();
+    CU_ASSERT_STRING_EQUAL(actual, expected);
+
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_mylog_roll_level(void)
 {
+    int status = mylog_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
     mylog_set_level(MYLOG_LEVEL_ERROR);
     mylog_level_t level;
 
@@ -227,27 +239,42 @@ static void test_mylog_roll_level(void)
     mylog_roll_level();
     level = mylog_get_level();
     CU_ASSERT_EQUAL(level, MYLOG_LEVEL_ERROR);
+
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_mylog_vlog(void)
 {
     (void)unlink(tmpPathname);
-    int status = mylog_set_id(progname);
+    int status = mylog_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    mylog_set_options(logOpts);
     status = mylog_set_output(tmpPathname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_init();
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
     mylog_set_level(MYLOG_LEVEL_DEBUG);
+
     vlogMessages();
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
-    //status = unlink(tmpPathname);
+    status = unlink(tmpPathname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     status = mylog_fini();
     CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void test_mylog_set_output(void)
+{
+    static const char* outputs[] = {"", "-", tmpPathname};
+    for (int i = 0; i < sizeof(outputs)/sizeof(outputs[0]); i++) {
+        const char* expected = outputs[i];
+        (void)mylog_set_output(expected);
+        const char* actual = mylog_get_output();
+        CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
+        CU_ASSERT_STRING_EQUAL(actual, expected);
+    }
 }
 
 int main(
@@ -266,10 +293,9 @@ int main(
                     && CU_ADD_TEST(testSuite, test_mylog_open_syslog)
                     && CU_ADD_TEST(testSuite, test_mylog_levels)
                     && CU_ADD_TEST(testSuite, test_mylog_get_level)
-                    && CU_ADD_TEST(testSuite, test_mylog_set_id)
-                    && CU_ADD_TEST(testSuite, test_mylog_set_options)
-                    && CU_ADD_TEST(testSuite, test_mylog_set_output)
+                    && CU_ADD_TEST(testSuite, test_mylog_modify_id)
                     && CU_ADD_TEST(testSuite, test_mylog_roll_level)
+                    && CU_ADD_TEST(testSuite, test_mylog_set_output)
                     && CU_ADD_TEST(testSuite, test_mylog_vlog)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);

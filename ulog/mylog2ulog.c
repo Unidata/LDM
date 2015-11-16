@@ -27,6 +27,35 @@
 static mylog_level_t loggingLevel = MYLOG_LEVEL_DEBUG;
 
 /**
+ * Initializes the logging module. Should be called before any other function.
+ * - `mylog_get_output()` will return "".
+ * - `mylog_get_facility()` will return `LOG_LDM`.
+ * - `mylog_get_level()` will return `MYLOG_LEVEL_DEBUG`.
+ *
+ * @param[in] id       The logging identifier. Caller may free.
+ * @retval    0        Success.
+ * @retval    -1       Error.
+ */
+int mylog_init(
+        const char* const id)
+{
+    const unsigned    options = mylog_get_options();
+    int               status = openulog(id, options, LOG_LDM, "");
+    return status == -1 ? -1 : 0;
+}
+
+/**
+ * Finalizes the logging module.
+ *
+ * @retval 0   Success.
+ * @retval -1  Failure. Logging module is in an unspecified state.
+ */
+int mylog_fini(void)
+{
+    return closeulog();
+}
+
+/**
  * Enables logging down to a given level.
  *
  * @param[in] level  The lowest level through which logging should occur.
@@ -40,6 +69,7 @@ int mylog_set_level(
             LOG_UPTO(LOG_ERR)};
     (void)setulogmask(ulogUpTos[level]);
     loggingLevel = level;
+    return 0;
 }
 
 /**
@@ -61,6 +91,35 @@ void mylog_roll_level(void)
     mylog_level_t level = mylog_get_level();
     level = (level == MYLOG_LEVEL_DEBUG) ? MYLOG_LEVEL_ERROR : level - 1;
     mylog_set_level(level);
+}
+
+/**
+ * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
+ * system logging daemon. Should be called after `mylog_init()`.
+ *
+ * @param[in] facility  The facility that will be used when logging to the
+ *                      system logging daemon.
+ */
+int mylog_set_facility(
+        const int facility)
+{
+    const char* const id = mylog_get_id();
+    const unsigned    options = mylog_get_options();
+    const char* const output = mylog_get_output();
+    int               status = openulog(id, options, facility, output);
+    return status == -1 ? -1 : 0;
+}
+
+/**
+ * Returns the facility that will be used when logging to the system logging
+ * daemon (e.g., `LOG_LOCAL0`).
+ *
+ * @return The facility that will be used when logging to the system logging
+ *         daemon (e.g., `LOG_LOCAL0`).
+ */
+int mylog_get_facility(void)
+{
+    return getulogfacility();
 }
 
 /**
@@ -128,7 +187,6 @@ unsigned mylog_get_options(void)
     return ulog_get_options();
 }
 
-#if 0
 /**
  * Sets the logging output. May be called at any time -- including before
  * `mylog_init()`.
@@ -151,7 +209,6 @@ int mylog_set_output(
     int               status = openulog(id, options, LOG_LDM, output);
     return status == -1 ? -1 : 0;
 }
-#endif
 
 /**
  * Returns the logging output. May be called at any time -- including before
@@ -170,50 +227,12 @@ const char* mylog_get_output(void)
 }
 
 /**
- * Initializes the logging module. The logging identifier will be the return
- * value of `mylog_get_id()`, the logging options will be the return value
- * of `mylog_get_options()`, and the logging facility will be the value of the
- * macro `LOG_LDM` if output is to the system logging daemon.
- *
- * @param[in] id       The logging identifier. Caller may free.
- * @param[in] output   The logging output specification. One of
- *                         ""      Log to the system logging daemon. Caller may
- *                                 free.
- *                         "-"     Log to the standard error stream. Caller may
- *                                 free.
- *                         else    Log to the file `output`. Caller may free.
- * @retval    0        Success.
- * @retval    -1       Failure.
- */
-int mylog_init(
-        const char* const id,
-        const char* const output)
-{
-    const unsigned    options = mylog_get_options();
-    int               status = openulog(id, options, LOG_LDM, output);
-    return status == -1 ? -1 : 0;
-}
-
-/**
- * Finalizes the logging module.
- *
- * @retval 0   Success.
- * @retval -1  Failure. Logging module is in an unspecified state.
- */
-int mylog_fini(void)
-{
-    return closeulog();
-}
-
-/**
  * Logs an error message.
  *
- * @param[in] id        Identifier. Ignored.
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
  */
 void mylog_error(
-        const char* const restrict id,
         const char* const restrict format,
         ...)
 {
@@ -226,12 +245,10 @@ void mylog_error(
 /**
  * Logs a warning message.
  *
- * @param[in] id        Identifier. Ignored.
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
  */
 void mylog_warning(
-        const char* const restrict id,
         const char* const restrict format,
         ...)
 {
@@ -244,12 +261,10 @@ void mylog_warning(
 /**
  * Logs a notice.
  *
- * @param[in] id        Identifier. Ignored.
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
  */
 void mylog_notice(
-        const char* const restrict id,
         const char* const restrict format,
         ...)
 {
@@ -262,12 +277,10 @@ void mylog_notice(
 /**
  * Logs an informational message.
  *
- * @param[in] id        Identifier. Ignored.
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
  */
 void mylog_info(
-        const char* const restrict id,
         const char* const restrict format,
         ...)
 {
@@ -280,12 +293,10 @@ void mylog_info(
 /**
  * Logs a debug message.
  *
- * @param[in] id        Identifier. Ignored.
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
  */
 void mylog_debug(
-        const char* const restrict id,
         const char* const restrict format,
         ...)
 {

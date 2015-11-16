@@ -16,12 +16,23 @@
 
 #include <limits.h>
 #include <log4c.h>
+#include <log4c/appender_type_stream.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #ifndef _XOPEN_NAME_MAX
     #define _XOPEN_NAME_MAX 255 // not always defined
 #endif
+#ifndef _XOPEN_PATH_MAX
+    #define _XOPEN_PATH_MAX 1024 // not always defined
+#endif
+
+/**
+ * Maximum number of bytes in a category specification (includes the
+ * terminating NUL).
+ */
+#define CATEGORY_ID_MAX (_XOPEN_NAME_MAX + 1 + 8 + 1 + _POSIX_HOST_NAME_MAX + 1)
 
 /**
  *  Logging level. The initial value must be consonant with the initial value of
@@ -29,11 +40,75 @@
  */
 static mylog_level_t loggingLevel = MYLOG_LEVEL_DEBUG;
 /**
- * The Log4C category of the current logger:
- * <progname> [. (feeder|notifier) . <hostname>]
+ * The Log4C category of the current logger.
  */
-static char catId[_XOPEN_NAME_MAX + 1 + 8 + 1 + _POSIX_HOST_NAME_MAX + 1] =
-        "root";
+static log4c_category_t* category;
+/**
+ * The name of the program.
+ */
+static char progname[_XOPEN_NAME_MAX + 1];
+/**
+ * The specification of logging output.
+ */
+static char output[_XOPEN_PATH_MAX] = ""; // Includes terminating NUL
+/**
+ * The facility to be used when logging to the system logging daemon.
+ */
+static int facility = LOG_LDM;
+/**
+ * The mapping from this module's logging-levels to Log4C priorities.
+ */
+static int log4cPriorities[] = {LOG4C_PRIORITY_DEBUG, LOG4C_PRIORITY_NOTICE,
+        LOG4C_PRIORITY_INFO, LOG4C_PRIORITY_WARN, LOG4C_PRIORITY_ERROR};
+
+/**
+ * Initializes the logging module. Should be called before any other function.
+ * - `mylog_get_output()`   will return "".
+ * - `mylog_get_facility()` will return `LOG_LDM`.
+ * - `mylog_get_level()`    will return `MYLOG_LEVEL_DEBUG`.
+ *
+ * @param[in] id       The logging identifier. Caller may free.
+ * @retval    0        Success.
+ * @retval    -1       Error.
+ */
+int mylog_init(
+        const char* const id)
+{
+    int status = log4c_init();
+    if (status == 0) {
+        char catId[CATEGORY_ID_MAX];
+        (void)strncpy(catId, id, sizeof(catId));
+        catId[sizeof(catId)-1] = 0;
+        log4c_category_t* cat = log4c_category_get(catId);
+        if (cat == NULL) {
+            status = -1;
+        }
+        else {
+            if (category)
+                log4c_category_delete(category);
+            category = cat;
+            (void)strncpy(progname, id, sizeof(progname));
+            progname[sizeof(progname)-1] = 0;
+            (void)strcpy(output, "");
+            facility = LOG_LDM;
+            loggingLevel = MYLOG_LEVEL_DEBUG;
+        }
+    }
+    return status == 0 ? 0 : -1;
+}
+
+/**
+ * Finalizes the logging module.
+ *
+ * @retval 0   Success.
+ * @retval -1  Failure. Logging module is in an unspecified state.
+ */
+int mylog_fini(void)
+{
+    if (category)
+        log4c_category_delete(category);
+    return 0;
+}
 
 /**
  * Enables logging down to a given level.
@@ -50,17 +125,14 @@ int mylog_set_level(
     log4c_category_t* categories[MAX_CATEGORIES];
     const int         ncats = log4c_category_list(categories, MAX_CATEGORIES);
     if (ncats < 0 || ncats > MAX_CATEGORIES) {
-        mylog_warning(catId, "Couldn't get all logging categories: ncats=%d",
+        mylog_warning("Couldn't get all logging categories: ncats=%d",
                 ncats);
         status = -1;
     }
     else {
-        static int priorities[] = {LOG4C_PRIORITY_DEBUG, LOG4C_PRIORITY_INFO,
-                LOG4C_PRIORITY_NOTICE, LOG4C_PRIORITY_WARN,
-                LOG4C_PRIORITY_ERROR};
-        int priority = priorities[level];
+        int priority = log4cPriorities[level];
         for (int i = 0; i < ncats; i++)
-            (void)log4c_set_priority(categories[i], priority);
+            (void)log4c_category_set_priority(categories[i], priority);
         loggingLevel = level;
         status = 0;
     }
@@ -90,6 +162,10 @@ void mylog_roll_level(void)
 
 /**
  * Modifies the logging identifier. Should be called after `mylog_init()`.
+ * The identifier will become "<id>.<type>.<host>", where <id> is the identifier
+ * given to `mylog_init()`, <type> is the type of upstream LDM ("feeder" or
+ * "notifier"), and <host> is the identifier given to this function with all
+ * periods replaced with underscores.
  *
  * @param[in] hostId    The identifier of the remote host. Caller may free.
  * @param[in] isFeeder  Whether or not the process is sending data-products or
@@ -100,11 +176,28 @@ int mylog_modify_id(
         const char* const hostId,
         const bool        isFeeder)
 {
-    // progname + "." + type + "." + hostname
-    (void)snprintf(catId, sizeof(catId), "%s.%s.%s", getulogident(),
-            isFeeder ? "feeder" : "notifier", hostId);
-    catId[sizeof(catId)-1] = 0;
-    return 0;
+    int  status;
+    char id[CATEGORY_ID_MAX];
+    int  nbytes = snprintf(id, sizeof(id), "%s.%s.", progname,
+            isFeeder ? "feeder" : "notifier");
+    id[sizeof(id)-1] = 0;
+    if (nbytes < sizeof(id)) {
+        char* cp = id + nbytes;
+        (void)strncpy(cp, hostId, sizeof(id)-nbytes);
+        id[sizeof(id)-1] = 0;
+        for (cp = strchr(cp, '.'); cp != NULL; cp = strchr(cp, '.'))
+            *cp = '_';
+    }
+    log4c_category_t* cat = log4c_category_get(id);
+    if (cat == NULL) {
+        status = -1;
+    }
+    else {
+        log4c_category_delete(category);
+        category = cat;
+        status = 0;
+    }
+    return status;
 }
 
 /**
@@ -114,7 +207,7 @@ int mylog_modify_id(
  */
 const char* mylog_get_id(void)
 {
-    return catId;
+    return log4c_category_get_name(category);
 }
 
 /**
@@ -138,6 +231,59 @@ unsigned mylog_get_options(void)
 }
 
 /**
+ * Sets the logging output. Should be called between `mylog_init()` and
+ * `mylog_fini()`.
+ *
+ * @param[in] out      The logging output. One of
+ *                         ""      Log according to the Log4C
+ *                                 configuration-file. Caller may free.
+ *                         "-"     Log to the standard error stream. Caller may
+ *                                 free.
+ *                         else    Log to the file whose pathname is `out`.
+ *                                 Caller may free.
+ * @retval    0        Success.
+ * @retval    -1       Failure.
+ */
+int mylog_set_output(
+        const char* const out)
+{
+    int status;
+    if (strcmp("", out) == 0) {
+        // Log using the Log4C configuration-file
+        (void)mylog_fini();
+        status = mylog_init(progname);
+    }
+    else if (strcmp("-", out) == 0) {
+        // Log to the standard error stream.
+        log4c_appender_t* appender = log4c_appender_get("stderr");
+        if (appender == NULL) {
+            status = -1;
+        }
+        else {
+            (void)log4c_category_set_appender(category, appender);
+        }
+    }
+    else {
+        // Log to the file `out`
+        log4c_appender_t* appender = log4c_appender_get("myappender");
+        if (appender == NULL) {
+            status = -1;
+        }
+        else {
+            (void)log4c_appender_set_type(appender, &log4c_appender_type_stream);
+            (void)log4c_appender_set_udata(appender, freopen(out, "w", stderr));
+            (void)log4c_category_set_appender(category, appender);
+        }
+    }
+    if (status == 0) {
+        log4c_category_set_priority(category, log4cPriorities[loggingLevel]);
+        (void)strncpy(output, out, sizeof(output));
+        output[sizeof(output)-1] = 0;
+    }
+    return status == 0 ? 0 : -1;
+}
+
+/**
  * Returns the logging output. May be called at any time -- including before
  * `mylog_init()`.
  *
@@ -148,140 +294,7 @@ unsigned mylog_get_options(void)
  */
 const char* mylog_get_output(void)
 {
-    const char* path = getulogpath();
-    return path == NULL ? "" : path;
-}
-
-/**
- * Initializes the logging module.  The logging options will be the return value
- * of `mylog_get_options()` and the logging facility will be the value of the
- * macro `LOG_LDM` if output is to the system logging daemon.
- *
- * @param[in] id       The logging identifier. Caller may free.
- * @param[in] output   The logging output specification. One of
- *                         ""      Log according to the relevant `log4crc`
- *                                 configuration-file. Caller may free.
- *                         "-"     Log to the standard error stream. Caller may
- *                                 free.
- *                         else    Log to the file `output`. Caller may free.
- * @retval    0        Success.
- * @retval    -1       Failure.
- */
-int mylog_init(
-        const char* const id,
-        const char* const output)
-{
-    int status = log4c_init();
-    if (status == 0 && strcmp("", output)) {
-        if (strcmp("", output) == 0) {
-
-        }
-        else if (strcmp("-", output) == 0) {
-
-        }
-    }
-    return status == 0 ? 0 : -1;
-}
-
-/**
- * Finalizes the logging module.
- *
- * @retval 0   Success.
- * @retval -1  Failure. Logging module is in an unspecified state.
- */
-int mylog_fini(void)
-{
-    return closeulog();
-}
-
-/**
- * Logs an error message.
- *
- * @param[in] id        Identifier. Ignored.
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- */
-void mylog_error(
-        const char* const restrict id,
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    (void)vulog(LOG_ERR, format, args);
-    va_end(args);
-}
-
-/**
- * Logs a warning message.
- *
- * @param[in] id        Identifier. Ignored.
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- */
-void mylog_warning(
-        const char* const restrict id,
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    (void)vulog(LOG_WARNING, format, args);
-    va_end(args);
-}
-
-/**
- * Logs a notice.
- *
- * @param[in] id        Identifier. Ignored.
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- */
-void mylog_notice(
-        const char* const restrict id,
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    (void)vulog(LOG_NOTICE, format, args);
-    va_end(args);
-}
-
-/**
- * Logs an informational message.
- *
- * @param[in] id        Identifier. Ignored.
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- */
-void mylog_info(
-        const char* const restrict id,
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    (void)vulog(LOG_INFO, format, args);
-    va_end(args);
-}
-
-/**
- * Logs a debug message.
- *
- * @param[in] id        Identifier. Ignored.
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- */
-void mylog_debug(
-        const char* const restrict id,
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    (void)vulog(LOG_DEBUG, format, args);
-    va_end(args);
+    return output;
 }
 
 /**
@@ -298,7 +311,98 @@ void mylog_vlog(
         const char* const   format,
         va_list             args)
 {
-    static ulogPriorities[] = {LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING,
-            LOG_ERR};
-    vulog(ulogPriorities[level], format, args);
+    int priority = log4cPriorities[level];
+    if (log4c_category_is_priority_enabled(category, priority)) {
+        char msg[_POSIX2_LINE_MAX];
+        int status = vsnprintf(msg, sizeof(msg), format, args);
+        if (status < 0) {
+            log4c_category_error(category, "[%s:%d] vsnprint() failure",
+                    __FILE__, __LINE__);
+        }
+        else {
+            if (status >= sizeof(msg))
+                msg[sizeof(msg)-1] = 0;
+            log4c_category_log(category, priority, "%s", msg);
+        }
+    }
+}
+
+/**
+ * Logs an error message.
+ *
+ * @param[in] format    Format of log message in the style of `sprintf()`.
+ * @param[in] ...       Optional arguments of log message.
+ */
+void mylog_error(
+        const char* const restrict format,
+        ...)
+{
+    va_list args;
+    va_start(args, format);
+    mylog_vlog(MYLOG_LEVEL_ERROR, format, args);
+    va_end(args);
+}
+
+/**
+ * Logs a warning message.
+ *
+ * @param[in] format    Format of log message in the style of `sprintf()`.
+ * @param[in] ...       Optional arguments of log message.
+ */
+void mylog_warning(
+        const char* const restrict format,
+        ...)
+{
+    va_list args;
+    va_start(args, format);
+    mylog_vlog(MYLOG_LEVEL_WARNING, format, args);
+    va_end(args);
+}
+
+/**
+ * Logs a notice.
+ *
+ * @param[in] format    Format of log message in the style of `sprintf()`.
+ * @param[in] ...       Optional arguments of log message.
+ */
+void mylog_notice(
+        const char* const restrict format,
+        ...)
+{
+    va_list args;
+    va_start(args, format);
+    mylog_vlog(MYLOG_LEVEL_NOTICE, format, args);
+    va_end(args);
+}
+
+/**
+ * Logs an informational message.
+ *
+ * @param[in] format    Format of log message in the style of `sprintf()`.
+ * @param[in] ...       Optional arguments of log message.
+ */
+void mylog_info(
+        const char* const restrict format,
+        ...)
+{
+    va_list args;
+    va_start(args, format);
+    mylog_vlog(MYLOG_LEVEL_INFO, format, args);
+    va_end(args);
+}
+
+/**
+ * Logs a debug message.
+ *
+ * @param[in] format    Format of log message in the style of `sprintf()`.
+ * @param[in] ...       Optional arguments of log message.
+ */
+void mylog_debug(
+        const char* const restrict format,
+        ...)
+{
+    va_list args;
+    va_start(args, format);
+    mylog_vlog(MYLOG_LEVEL_DEBUG, format, args);
+    va_end(args);
 }
