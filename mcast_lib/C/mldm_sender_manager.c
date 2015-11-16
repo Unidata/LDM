@@ -202,7 +202,7 @@ execMldmSender(
     const char* const restrict      pqPathname,
     const int const                 pipe)
 {
-    char* args[20]; // Keep sufficiently capacious (search for `i\+\+`)
+    char* args[22]; // Keep sufficiently capacious (search for `i\+\+`)
     int   i = 0;
 
     args[i++] = "mldm_sender";
@@ -219,6 +219,12 @@ execMldmSender(
         args[i++] = "-l";
         args[i++] = arg;
     }
+
+    int logOptions = ulog_get_options();
+    if (logOptions && LOG_MICROSEC)
+        args[i++] = "-y";
+    if (logOptions && LOG_ISO_8601)
+        args[i++] = "-z";
 
     if (mcastIf && strcmp(mcastIf, "0.0.0.0")) {
         args[i++] = "-m";
