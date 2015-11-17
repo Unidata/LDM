@@ -20,14 +20,3 @@ test_gmtime_SOURCES	= test_gmtime.c
 check-local:	$(test0_LDADD)
 	./test0 -l - 2>/dev/null
 	./test_gmtime
-
-if HAVE_CUNIT
-check_PROGRAMS			= mylog2ulog_test
-
-mylog2ulog_test_SOURCES		= mylog2ulog_test.c mylog2ulog_test.h \
-				  mylog2ulog.c mylog2ulog.h ulog.c ulog.h
-mylog2ulog_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-mylog2ulog_test_LDADD		= @LIBS_CUNIT@
-
-TESTS				= mylog2ulog_test
-endif

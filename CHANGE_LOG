@@ -1,3 +1,6 @@
+6.12.15.40
+    Removed mylog2ulog stuff from ulog makefile.
+
 6.12.15.39	2015-11-16T16:04:41-0700
     mldm_sender_manager(3):
         Add "-y" and "-z" options to execvp(2) of mldm_sender(1).
