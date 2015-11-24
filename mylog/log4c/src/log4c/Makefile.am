@@ -1,4 +1,4 @@
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src \
 	-DLOG4C_RCPATH="\"$(sysconfdir)\""
 

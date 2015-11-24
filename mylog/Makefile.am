@@ -15,12 +15,13 @@ lib_la_SOURCES			= mylog2log4c.c mylog2log4c.h
 lib_la_LIBADD			= log4c/lib.a
 
 if HAVE_CUNIT
+check_PROGRAMS			= mylog2log4c_test
+TESTS				= mylog2log4c_test
+
 mylog2log4c_test_SOURCES	= mylog2log4c_test.c mylog2log4c_test.h \
 				  mylog2log4c.c mylog2log4c.h
 mylog2log4c_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 mylog2log4c_test_LDADD		= log4c/lib.la @LIBS_CUNIT@
-
-TESTS				= mylog2ulog_test mylog2log4c_test
 endif
 
 else
@@ -29,7 +30,8 @@ lib_la_SOURCES			= mylog2ulog.c mylog2ulog.h
 lib_la_LIBADD			= ulog/lib.a
 
 if HAVE_CUNIT
-check_PROGRAMS			= mylog2ulog_test mylog2log4c_test
+check_PROGRAMS			= mylog2ulog_test
+TESTS				= mylog2ulog_test
 
 mylog2ulog_test_SOURCES		= mylog2ulog_test.c mylog2ulog_test.h \
 				  mylog2ulog.c mylog2ulog.h

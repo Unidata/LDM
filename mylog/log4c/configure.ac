@@ -2,16 +2,16 @@
 
 AC_PREREQ(2.57)
 
-AC_INIT
-AC_CONFIG_SRCDIR([configure.in])
-AC_CONFIG_AUX_DIR(config)
-AC_CONFIG_MACRO_DIR([config])
-AM_CONFIG_HEADER(src/config.h)
-
 LOG4C_MAJOR_VERSION=1
 LOG4C_MINOR_VERSION=2
 LOG4C_MICRO_VERSION=4
 VERSION=$LOG4C_MAJOR_VERSION.$LOG4C_MINOR_VERSION.$LOG4C_MICRO_VERSION${SNAPSHOT:+.$SNAPSHOT}
+
+AC_INIT([log4c], [1.2.4])
+AC_CONFIG_SRCDIR([configure.in])
+AC_CONFIG_AUX_DIR(config)
+AC_CONFIG_MACRO_DIR([config])
+AM_CONFIG_HEADER(src/config.h)
 
 # +1 : ? : +1  == new interface that does not break old one
 # +1 : ? : 0   == new interface that breaks old one
@@ -26,7 +26,7 @@ AC_SUBST(LOG4C_MINOR_VERSION)
 AC_SUBST(LOG4C_MICRO_VERSION)
 AC_SUBST(LT_VERSION)
 
-AM_INIT_AUTOMAKE("log4c", $VERSION)
+AM_INIT_AUTOMAKE
 
 AC_CANONICAL_HOST
 
@@ -111,7 +111,7 @@ AM_CONDITIONAL(WITH_ROLLINGFILE, test "x$with_rollingfile" = "xtrue")
 #
 AC_ARG_ENABLE(test,
        AC_HELP_STRING([--enable-test], [LOG4C: compile test programs (default=no)]))
-AM_CONDITIONAL(TEST, test x$enable_test = xyes)
+AM_CONDITIONAL([TEST], [test x$enable_test = xyes])
 
 #####################################
 # Checks for libraries.
@@ -164,7 +164,7 @@ AC_PATH_PROG(DOXYGEN, doxygen, )
 if test x$DOXYGEN = x; then
 	enable_doc=no
 fi
-AM_CONDITIONAL(DOC, test x$enable_doc = xyes)
+AM_CONDITIONAL([DOC], [test x$enable_doc = xyes])
 
 #
 # Checks for the graphviz tool 'dot' used to generate graphs
