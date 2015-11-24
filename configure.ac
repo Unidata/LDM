@@ -669,7 +669,6 @@ AC_CONFIG_FILES([
     misc/Makefile
     mldm_sender/Makefile
     mylog/Makefile
-    mylog/log4c/Makefile
     mylog/ulog/Makefile
     noaaport/Makefile
     noaaport/retrans/Makefile
