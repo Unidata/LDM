@@ -151,22 +151,22 @@ esac
 
 AM_CONDITIONAL([MAINTAINER], [test -d .git])
 
-# Whether or not to use the log4c(3) logging library rather than the original
-# ulog(3) library.
-AC_ARG_WITH([log4c],
-    AS_HELP_STRING([--with-log4c],
-	[Use the log4c(3) logging library]
+# Whether to use the original ulog(3) library for logging or the new log4c(3)
+# logging library.
+AC_ARG_WITH([ulog],
+    AS_HELP_STRING([--with-ulog],
+	[use the original ulog(3) logging library]
         [[default=no]]),
-    [],
-    [with_log4c=no])
-AM_CONDITIONAL([WANT_LOG4C], [test "x$with_log4c" != xno])
+    [$with_log4c=$withval],
+    [with_log4c=yes])
+AM_CONDITIONAL([WANT_LOG4C], [test "x$with_log4c" = xyes])
 
 # The following is for multicast data distribution using the Virtual Circuit
 # Multicast Transport Protocol. DO NOT USE!
 AC_ARG_WITH([multicast],
     AS_HELP_STRING([--with-multicast],
-	[enable support for multicast. DO NOT USE!]
-        [[default=without]]),
+	[enable support for multicast. DO NOT USE!
+        [default=without]]),
     [],
     [with_multicast=no])
 AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
@@ -176,7 +176,7 @@ AM_COND_IF([WANT_MULTICAST], [AC_DEFINE([WANT_MULTICAST], [1],
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
 	[enable support for reading data from a NOAAPORT receiver
-        [[default=without]]]),
+        [default=without]]),
     [],
     [with_noaaport=no])
 AM_CONDITIONAL([WANT_NOAAPORT], [test "x$with_noaaport" != xno])
@@ -184,7 +184,7 @@ AM_CONDITIONAL([WANT_NOAAPORT], [test "x$with_noaaport" != xno])
 AC_ARG_WITH([retrans],
     AS_HELP_STRING([--with-retrans],
         [enable support for retransmission from a NOAAPORT receiver
-        [[default=without]]]),
+        [default=without]]),
     [],
     [with_retrans=no])
 AM_CONDITIONAL([WANT_RETRANS], [test "x$with_retrans" != xno])
@@ -192,7 +192,7 @@ AM_CONDITIONAL([WANT_RETRANS], [test "x$with_retrans" != xno])
 AC_ARG_WITH([gribinsert],
     AS_HELP_STRING([--with-gribinsert],
 	[enable support for converting GRIB2 files into data-products
-        [[default=without]]]),
+        [default=without]]),
     [],
     [with_gribinsert=no])
 AM_CONDITIONAL([WANT_GRIBINSERT], [test "x$with_gribinsert" != xno])
@@ -668,6 +668,9 @@ AC_CONFIG_FILES([
     mcast_lib/C++/Makefile
     misc/Makefile
     mldm_sender/Makefile
+    mylog/Makefile
+    mylog/log4c/Makefile
+    mylog/ulog/Makefile
     noaaport/Makefile
     noaaport/retrans/Makefile
     notifyme/Makefile
@@ -703,12 +706,11 @@ AC_CONFIG_FILES([
     test/Makefile
     uldbutil/Makefile
     ulogger/Makefile
-    ulog/Makefile
 ])
 
-dnl The VCMTP subsystem is unconditionally configured to enable, for example,
+dnl The subsystems are unconditionally configured to enable, for example,
 dnl "make dist" to work.
-AC_CONFIG_SUBDIRS([mcast_lib/vcmtp])
+AC_CONFIG_SUBDIRS([mcast_lib/vcmtp mylog/log4c])
 
 export CC
 

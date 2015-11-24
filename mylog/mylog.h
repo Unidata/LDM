@@ -14,6 +14,7 @@
 
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <syslog.h>
 
 typedef enum {
@@ -28,11 +29,14 @@ typedef enum {
 #define MYLOG_STRINGIFY(x)  #x
 #define MYLOG_QUOTE(x)      MYLOG_STRINGIFY(x)
 #define MYLOG_FORMAT_PREFIX "[" __FILE__  ":" MYLOG_QUOTE(__LINE__) "] "
-#define MYLOG_ERROR(...)    mylog_error(MYLOG_FORMAT_PREFIX __VA_ARGS__)
+
+#define MYLOG_ERROR(...)    mylog_error  (MYLOG_FORMAT_PREFIX __VA_ARGS__)
 #define MYLOG_WARNING(...)  mylog_warning(MYLOG_FORMAT_PREFIX __VA_ARGS__)
-#define MYLOG_NOTICE(...)   mylog_notice(MYLOG_FORMAT_PREFIX __VA_ARGS__)
-#define MYLOG_INFO(...)     mylog_info(MYLOG_FORMAT_PREFIX __VA_ARGS__)
-#define MYLOG_DEBUG(...)    mylog_debug(MYLOG_FORMAT_PREFIX __VA_ARGS__)
+#define MYLOG_NOTICE(...)   mylog_notice (MYLOG_FORMAT_PREFIX __VA_ARGS__)
+#define MYLOG_INFO(...)     mylog_info   (MYLOG_FORMAT_PREFIX __VA_ARGS__)
+#define MYLOG_DEBUG(...)    mylog_debug  (MYLOG_FORMAT_PREFIX __VA_ARGS__)
+
+#define MYLOG_ASSERT(x)     mylog_assert((x), #x)
 
 #ifdef __cplusplus
     extern "C" {
@@ -185,8 +189,10 @@ const char* mylog_get_output(void);
  *
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_error(
+int mylog_error(
         const char* const format,
         ...);
 
@@ -196,8 +202,10 @@ void mylog_error(
  *
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_warning(
+int mylog_warning(
         const char* const format,
         ...);
 
@@ -206,8 +214,10 @@ void mylog_warning(
  *
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_notice(
+int mylog_notice(
         const char* const format,
         ...);
 
@@ -217,8 +227,10 @@ void mylog_notice(
  *
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_info(
+int mylog_info(
         const char* const format,
         ...);
 
@@ -228,8 +240,10 @@ void mylog_info(
  *
  * @param[in] format    Format of log message in the style of `sprintf()`.
  * @param[in] ...       Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_debug(
+int mylog_debug(
         const char* const format,
         ...);
 
@@ -242,11 +256,30 @@ void mylog_debug(
  *                    MYLOG_LEVEL_ERROR.
  * @param[in] format  Format of the message in the style of `sprintf()`.
  * @param[in] args    List of optional arguments.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_vlog(
+int mylog_vlog(
         const mylog_level_t level,
         const char* const   format,
         va_list             args);
+
+/**
+ * Aborts the process if an expression isn't true. The macro `MYLOG_ASSERT()`
+ * should be used instead of this function.
+ *
+ * @param[in] expr  The expression.
+ * @param[in] str   Formatted representation of the expression.
+ */
+static inline void mylog_assert(
+        const bool        expr,
+        const char* const str)
+{
+    if (!expr) {
+        MYLOG_ERROR("Assertion failure: %s", str);
+        abort();
+    }
+}
 
 #ifdef __cplusplus
     }

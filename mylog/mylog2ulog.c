@@ -229,81 +229,96 @@ const char* mylog_get_output(void)
 /**
  * Logs an error message.
  *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
+ * @param[in] format  Format of log message in the style of `sprintf()`.
+ * @param[in] ...     Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_error(
+int mylog_error(
         const char* const restrict format,
         ...)
 {
     va_list args;
     va_start(args, format);
-    (void)vulog(LOG_ERR, format, args);
+    int status = vulog(LOG_ERR, format, args);
     va_end(args);
+    return status == -1 ? -1 : 0;
 }
 
 /**
  * Logs a warning message.
  *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
+ * @param[in] format  Format of log message in the style of `sprintf()`.
+ * @param[in] ...     Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_warning(
+int mylog_warning(
         const char* const restrict format,
         ...)
 {
     va_list args;
     va_start(args, format);
-    (void)vulog(LOG_WARNING, format, args);
+    int status = vulog(LOG_WARNING, format, args);
     va_end(args);
+    return status == -1 ? -1 : 0;
 }
 
 /**
  * Logs a notice.
  *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
+ * @param[in] format  Format of log message in the style of `sprintf()`.
+ * @param[in] ...     Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_notice(
+int mylog_notice(
         const char* const restrict format,
         ...)
 {
     va_list args;
     va_start(args, format);
-    (void)vulog(LOG_NOTICE, format, args);
+    int status = vulog(LOG_NOTICE, format, args);
     va_end(args);
+    return status == -1 ? -1 : 0;
 }
 
 /**
  * Logs an informational message.
  *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
+ * @param[in] format  Format of log message in the style of `sprintf()`.
+ * @param[in] ...     Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_info(
+int mylog_info(
         const char* const restrict format,
         ...)
 {
     va_list args;
     va_start(args, format);
-    (void)vulog(LOG_INFO, format, args);
+    int status = vulog(LOG_INFO, format, args);
     va_end(args);
+    return status == -1 ? -1 : 0;
 }
 
 /**
  * Logs a debug message.
  *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
+ * @param[in] format  Format of log message in the style of `sprintf()`.
+ * @param[in] ...     Optional arguments of log message.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_debug(
+int mylog_debug(
         const char* const restrict format,
         ...)
 {
     va_list args;
     va_start(args, format);
-    (void)vulog(LOG_DEBUG, format, args);
+    int status = vulog(LOG_DEBUG, format, args);
     va_end(args);
+    return status == -1 ? -1 : 0;
 }
 
 /**
@@ -314,13 +329,16 @@ void mylog_debug(
  *                    MYLOG_LEVEL_ERROR.
  * @param[in] format  Format of the message in the style of `sprintf()`.
  * @param[in] args    List of optional arguments.
+ * @retval    0       Success.
+ * @retval    -1      Failure.
  */
-void mylog_vlog(
+int mylog_vlog(
         const mylog_level_t level,
         const char* const   format,
         va_list             args)
 {
     static int ulogPriorities[] = {LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING,
             LOG_ERR};
-    vulog(ulogPriorities[level], format, args);
+    int status = vulog(ulogPriorities[level], format, args);
+    return status == -1 ? -1 : 0;
 }
