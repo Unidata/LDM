@@ -65,7 +65,7 @@ static int               log4c_priorities[] = {LOG4C_PRIORITY_DEBUG,
 /**
  * The Log4C appender for logging to the standard error stream.
  */
-static log4c_appender_t* appender_stderr;
+static log4c_appender_t* mylog_appender_stderr;
 /**
  * The Log4C appenders that use the `LOG_LOCAL`i system logging facility:
  */
@@ -78,7 +78,7 @@ static log4c_appender_t* appender_syslog_user;
 /**
  * The default Log4C layout for logging.
  */
-static log4c_layout_t*   layout_default;
+static log4c_layout_t*   mylog_layout;
 /**
  * Whether or not `mylog_init()` has been called without a subsequent
  * `mylog_fini()`.
@@ -90,7 +90,7 @@ static inline void string_copy(
         const char* const restrict src,
         const size_t               size)
 {
-    strncpy(dst, src, size)[size-1] = 0;
+    ((char*)memmove(dst, src, size))[size-1] = 0;
 }
 
 static inline bool vetLevel(
@@ -99,20 +99,30 @@ static inline bool vetLevel(
     return level >= MYLOG_LEVEL_DEBUG && level <= MYLOG_LEVEL_ERROR;
 }
 
+/**
+ * Formats a logging event.
+ *
+ * @param[in] layout  The layout object.
+ * @param[in] event   The logging event to be formatted. `event-evt_msg` shall
+ *                    be non-NULL and point to the user's message.
+ * @retval    NULL    No formatting done.
+ * @return            Pointer to the formatted message.
+ */
 static const char* mylog_layout_format(
     const log4c_layout_t*  	 layout,
     const log4c_logging_event_t* event)
 {
     struct tm tm;
     (void)gmtime_r(&event->evt_timestamp.tv_sec, &tm);
-    char*  buf = event->evt_buffer.buf_data;
-    size_t bufsize = event->evt_buffer.buf_size;
-    int    n = snprintf(buf, bufsize,
-            "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%ld] %-8s %s\n",
+    char* const                        buf = event->evt_buffer.buf_data;
+    const size_t                       bufsize = event->evt_buffer.buf_size;
+    const log4c_location_info_t* const loc = event->evt_loc;
+    const int                          n = snprintf(buf, bufsize,
+            "%04d%02d%02dT%02d%02d%02d.%06ldZ %s:%ld %s:%d %s - %s\n",
             tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-            tm.tm_sec, event->evt_timestamp.tv_usec, event->evt_category,
-            (long)getpid(), log4c_priority_to_string(event->evt_priority),
-            event->evt_msg);
+            tm.tm_sec, (long)event->evt_timestamp.tv_usec, event->evt_category,
+            (long)getpid(), loc->loc_file, loc->loc_line,
+            log4c_priority_to_string(event->evt_priority), event->evt_msg);
     if (n >= bufsize) {
 	// Append '...' at the end of the message to show it was trimmed
         (void)strcpy(buf+bufsize-4, "...");
@@ -120,20 +130,21 @@ static const char* mylog_layout_format(
     return buf;
 }
 
-static log4c_layout_type_t default_layout_type = {
+static log4c_layout_type_t mylog_layout_type = {
     "mylog_layout",
     mylog_layout_format
 };
 
 static bool init_layouts(void)
 {
-    (void)log4c_layout_type_set(&default_layout_type);
-    layout_default = log4c_layout_get(default_layout_type.name);
-    assert(layout_default);
-    return layout_default;
+    (void)log4c_layout_type_set(&mylog_layout_type);
+    mylog_layout = log4c_layout_get(mylog_layout_type.name);
+    assert(mylog_layout);
+    log4c_layout_set_type(mylog_layout, &mylog_layout_type);
+    return mylog_layout;
 }
 
-static int syslog_open(
+static int mylog_syslog_open(
         log4c_appender_t* const this)
 {
     intptr_t facility = (intptr_t)log4c_appender_get_udata(this);
@@ -158,7 +169,7 @@ static int syslog_priority(
 }
 
 
-static int syslog_append(
+static int mylog_syslog_append(
         log4c_appender_t* const restrict            this,
         const log4c_logging_event_t* const restrict a_event)
 {
@@ -168,40 +179,29 @@ static int syslog_append(
     return 0;
 }
 
-static int syslog_close(
+static int mylog_syslog_close(
         log4c_appender_t* const this)
 {
     closelog();
     return 0;
 }
 
-static int stderr_open(
+static int mylog_stderr_open(
         log4c_appender_t* const this)
 {
     (void)setvbuf(stderr, NULL, _IOLBF, BUFSIZ); // Line buffered mode
     return 0;
 }
 
-static int stderr_append(
+static int mylog_stderr_append(
         log4c_appender_t* const restrict            this,
         const log4c_logging_event_t* const restrict a_event)
 {
+    // `a_event->evt_rendered_msg` is the message after layout formatting
     return fprintf(stderr, "%s", a_event->evt_rendered_msg);
-    /*
-      return fprintf(fp, "[%s] [%s] [%d] [%d] [%s] [%s] [%d] [%s]\n%s",
-      log4c_appender_get_name(this),
-      a_event->evt_category,
-      a_event->evt_priority,
-      a_event->evt_timestamp.tv_sec*1000000 + a_event->evt_timestamp.tv_usec,
-      a_event->evt_msg,
-      a_event->evt_loc->loc_file,
-      a_event->evt_loc->loc_line,
-      a_event->evt_loc->loc_function,
-      a_event->evt_rendered_msg);
-    */
 }
 
-static int stderr_close(
+static int mylog_stderr_close(
         log4c_appender_t* const this)
 {
     return 0;
@@ -210,14 +210,14 @@ static int stderr_close(
 /**
  * The type of a Log4C appender that appends to the standard error stream.
  */
-static const log4c_appender_type_t appender_type_stderr = {
+static const log4c_appender_type_t mylog_appender_type_stderr = {
         "mylog_stderr", // Must persist
-        stderr_open,
-        stderr_append,
-        stderr_close
+        mylog_stderr_open,
+        mylog_stderr_append,
+        mylog_stderr_close
 };
 
-static int file_open(
+static int mylog_file_open(
         log4c_appender_t* const this)
 {
     int   status;
@@ -248,27 +248,15 @@ static int file_open(
     return status;
 }
 
-static int file_append(
+static int mylog_file_append(
         log4c_appender_t* const restrict            this,
         const log4c_logging_event_t* const restrict a_event)
 {
     FILE* const fp = log4c_appender_get_udata(this);
     return fprintf(fp, "%s", a_event->evt_rendered_msg);
-    /*
-      return fprintf(fp, "[%s] [%s] [%d] [%d] [%s] [%s] [%d] [%s]\n%s",
-      log4c_appender_get_name(this),
-      a_event->evt_category,
-      a_event->evt_priority,
-      a_event->evt_timestamp.tv_sec*1000000 + a_event->evt_timestamp.tv_usec,
-      a_event->evt_msg,
-      a_event->evt_loc->loc_file,
-      a_event->evt_loc->loc_line,
-      a_event->evt_loc->loc_function,
-      a_event->evt_rendered_msg);
-    */
 }
 
-static int file_close(
+static int mylog_file_close(
         log4c_appender_t* const this)
 {
     int   status;
@@ -287,11 +275,11 @@ static int file_close(
 /**
  * The type of a Log4C appender that appends to a regular file.
  */
-static const log4c_appender_type_t appender_type_file = {
-        "file", // Must persist
-        file_open,
-        file_append,
-        file_close
+static const log4c_appender_type_t mylog_appender_type_file = {
+        "mylog_file", // Must persist
+        mylog_file_open,
+        mylog_file_append,
+        mylog_file_close
 };
 
 static log4c_appender_t* init_appender_layout(
@@ -300,8 +288,8 @@ static log4c_appender_t* init_appender_layout(
     log4c_appender_t* app = log4c_appender_get(name);
     assert(app);
     if (app != NULL) {
-        assert(layout_default);
-        (void)log4c_appender_set_layout(app, layout_default);
+        assert(mylog_layout);
+        (void)log4c_appender_set_layout(app, mylog_layout);
     }
     return app;
 }
@@ -313,9 +301,9 @@ static bool init_appender_syslog(
 {
     static log4c_appender_type_t type = {
         NULL,
-        syslog_open,
-        syslog_append,
-        syslog_close
+        mylog_syslog_open,
+        mylog_syslog_append,
+        mylog_syslog_close
     };
     type.name = name; // Name of an appender-type must persist
     (void)log4c_appender_type_set(&type);
@@ -358,14 +346,15 @@ static bool init_appenders_syslog(void)
 
 static bool init_appenders(void)
 {
-    (void)log4c_appender_type_set(&appender_type_file);
-    (void)log4c_appender_type_set(&appender_type_stderr);
-    assert(appender_type_stderr.name);
-    appender_stderr = log4c_appender_get(appender_type_stderr.name);
-    assert(appender_stderr);
-    assert(layout_default);
-    (void)log4c_appender_set_layout(appender_stderr, layout_default);
-    return appender_stderr && init_appender_layout("stderr") &&
+    (void)log4c_appender_type_set(&mylog_appender_type_file);
+    (void)log4c_appender_type_set(&mylog_appender_type_stderr);
+    assert(mylog_appender_type_stderr.name);
+    mylog_appender_stderr = log4c_appender_get(mylog_appender_type_stderr.name);
+    assert(mylog_appender_stderr);
+    (void)log4c_appender_set_type(mylog_appender_stderr,
+            &mylog_appender_type_stderr);
+    (void)log4c_appender_set_layout(mylog_appender_stderr, mylog_layout);
+    return mylog_appender_stderr && init_appender_layout("stderr") &&
             init_appender_layout("stdout") && init_appenders_syslog();
 }
 
@@ -404,8 +393,8 @@ static bool init_categories(void)
         else {
             // Controlling terminal exists => interactive => log to `stderr`
             (void)close(ttyFd);
-            assert(appender_stderr);
-            (void)log4c_category_set_appender(category, appender_stderr);
+            assert(mylog_appender_stderr);
+            (void)log4c_category_set_appender(category, mylog_appender_stderr);
         }
         (void)log4c_category_set_priority(category, LOG4C_PRIORITY_DEBUG);
         success = true;
@@ -505,8 +494,9 @@ int mylog_set_output(
             if (strcmp(out, "-") == 0) {
                 // Log to the standard error stream
                 assert(category);
-                assert(appender_stderr);
-                (void)log4c_category_set_appender(category, appender_stderr);
+                assert(mylog_appender_stderr);
+                (void)log4c_category_set_appender(category,
+                        mylog_appender_stderr);
                 status = 0;
             }
             else {
@@ -516,9 +506,10 @@ int mylog_set_output(
                     status = -1;
                 }
                 else {
-                    (void)log4c_appender_set_type(app, &appender_type_file);
-                    assert(layout_default);
-                    (void)log4c_appender_set_layout(app, layout_default);
+                    (void)log4c_appender_set_type(app,
+                            &mylog_appender_type_file);
+                    assert(mylog_layout);
+                    (void)log4c_appender_set_layout(app, mylog_layout);
                     assert(category);
                     (void)log4c_category_set_appender(category, app);
                     status = 0;

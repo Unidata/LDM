@@ -30,21 +30,20 @@ struct __log4c_rollingpolicy
 };
 
 sd_factory_t* log4c_rollingpolicy_factory = NULL;
+static sd_hash_t* rollingpolicy_types = NULL;
 
 /*******************************************************************************/
 static sd_hash_t* log4c_rollingpolicy_types(void){
-  static sd_hash_t* types = NULL;
+  if (!rollingpolicy_types)
+    rollingpolicy_types = sd_hash_new(20, NULL);
   
-  if (!types)
-    types = sd_hash_new(20, NULL);
-  
-  return types;
+  return rollingpolicy_types;
 }
 
 extern void log4c_rollingpolicy_types_free( void ) {
-	sd_hash_t * types = log4c_rollingpolicy_types();
-	if ( types != NULL ) {
-		sd_hash_delete( types );
+	if ( rollingpolicy_types != NULL ) {
+		sd_hash_delete( rollingpolicy_types );
+                rollingpolicy_types = NULL;
 	}
 }
 

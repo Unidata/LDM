@@ -11,13 +11,13 @@ libldm_la_SOURCES	=
 libldm_la_LIBADD	= \
     $(NOAAPORT_LIBS) \
     $(top_builddir)/misc/lib.la \
+    $(top_builddir)/mylog/lib.la \
     $(top_builddir)/pqinglib/lib.la \
     $(top_builddir)/@PQ_SUBDIR@/lib.la \
     $(top_builddir)/protocol/lib.la \
     $(top_builddir)/protocol2/lib.la \
     $(top_builddir)/registry/lib.la \
-    $(top_builddir)/rpc/lib.la \
-    $(top_builddir)/ulog/lib.la
+    $(top_builddir)/rpc/lib.la
 if WANT_NOAAPORT
     libldm_la_LIBADD	+= \
 	$(top_builddir)/grib2/lib.la \

@@ -568,13 +568,13 @@ AC_SEARCH_LIBS([setsockopt], [socket nsl nsl_s], ,
 AC_SEARCH_LIBS([inet_addr], [socket nsl nsl_s], ,
     [AC_MSG_ERROR([Library not found])])
     
-# Ensure references to the Log4C package, if necessary.
-AM_COND_IF([WANT_LOG4C], [
-        AC_CHECK_HEADER([log4c.h], , [AC_MSG_ERROR([Header-file not found])])
-        AC_SEARCH_LIBS([log4c_init], [log4c], ,
-            [AC_MSG_ERROR([Library not found])])
-    ]
-)
+## Ensure references to the Log4C package, if necessary.
+#AM_COND_IF([WANT_LOG4C], [
+#        AC_CHECK_HEADER([log4c.h], , [AC_MSG_ERROR([Header-file not found])])
+#        AC_SEARCH_LIBS([log4c_init], [log4c], ,
+#            [AC_MSG_ERROR([Library not found])])
+#    ]
+#)
 
 # Ensure references to the ZLIB package, which is used by the PNG library and
 # by the XML2 library.

@@ -17,6 +17,9 @@
 #include <stdlib.h>
 #include <syslog.h>
 
+#define LOG_ISO_8601  0x800u  /* Use ISO 8601 standard timestamp */
+#define LOG_MICROSEC  0x1000u /* Use microsecond-resolution timestamp */
+
 typedef enum {
     MYLOG_LEVEL_DEBUG = 0,
     MYLOG_LEVEL_INFO,

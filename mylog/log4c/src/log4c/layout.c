@@ -27,23 +27,22 @@ struct __log4c_layout
 };
 
 sd_factory_t* log4c_layout_factory = NULL;
+static sd_hash_t* layout_types = NULL;
 
 /*******************************************************************************/
 static sd_hash_t* log4c_layout_types(void)
 {
-    static sd_hash_t* types = NULL;
-
-    if (!types)
-	types = sd_hash_new(20, NULL);
+    if (!layout_types)
+        layout_types = sd_hash_new(20, NULL);
     
-    return types;
+    return layout_types;
 }
 
 extern void log4c_layout_types_free( void ) {
-	sd_hash_t * types = log4c_layout_types();
-	if ( types != NULL ) {
-		sd_hash_delete( types );
-	}
+    if (layout_types) {
+        sd_hash_delete( layout_types );
+        layout_types = NULL;
+    }
 }
 
 extern void log4c_layout_types_print(FILE *fp)

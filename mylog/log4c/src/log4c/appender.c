@@ -26,27 +26,26 @@ struct __log4c_appender
   char*				app_name;
   const log4c_layout_t*		app_layout;
   const log4c_appender_type_t*	app_type;
-  int					app_isopen;
+  int				app_isopen;
   void*				app_udata;
 };
 
 sd_factory_t* log4c_appender_factory = NULL;
+static sd_hash_t* appender_types = NULL;
 
 /*******************************************************************************/
 static sd_hash_t* log4c_appender_types(void)
 {
-  static sd_hash_t* types = NULL;
+  if (!appender_types)
+    appender_types = sd_hash_new(20, NULL);
   
-  if (!types)
-    types = sd_hash_new(20, NULL);
-  
-  return types;
+  return appender_types;
 }
 
 extern void log4c_appender_types_free( void ) {
-	sd_hash_t * types = log4c_appender_types();
-	if ( types != NULL ) {
-		sd_hash_delete( types );
+	if ( appender_types != NULL ) {
+		sd_hash_delete( appender_types );
+                appender_types = NULL;
 	}
 }
 

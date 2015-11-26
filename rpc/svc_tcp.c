@@ -54,7 +54,7 @@ static char sccsid[] = "@(#)svc_tcp.c 1.21 87/08/11 Copyr 1984 Sun Micro";
 #include <unistd.h>
 #include "rpc.h"
 
-#include "../ulog/log.h"
+#include "log.h"
 
 extern int errno;
 

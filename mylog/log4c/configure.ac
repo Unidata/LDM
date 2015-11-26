@@ -2,16 +2,16 @@
 
 AC_PREREQ(2.57)
 
+AC_INIT([log4c], [1.2.4])
+AC_CONFIG_SRCDIR([configure.ac])
+AC_CONFIG_AUX_DIR(config)
+AC_CONFIG_MACRO_DIR([config])
+AM_CONFIG_HEADER(src/config.h)
+
 LOG4C_MAJOR_VERSION=1
 LOG4C_MINOR_VERSION=2
 LOG4C_MICRO_VERSION=4
 VERSION=$LOG4C_MAJOR_VERSION.$LOG4C_MINOR_VERSION.$LOG4C_MICRO_VERSION${SNAPSHOT:+.$SNAPSHOT}
-
-AC_INIT([log4c], [1.2.4])
-AC_CONFIG_SRCDIR([configure.in])
-AC_CONFIG_AUX_DIR(config)
-AC_CONFIG_MACRO_DIR([config])
-AM_CONFIG_HEADER(src/config.h)
 
 # +1 : ? : +1  == new interface that does not break old one
 # +1 : ? : 0   == new interface that breaks old one

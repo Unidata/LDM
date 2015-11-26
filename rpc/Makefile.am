@@ -45,6 +45,7 @@ lib_la_SOURCES		= \
     xdr_rec.c \
     xdr_reference.c \
     xdr_stdio.c
+lib_la_CPPFLAGS		= -I$(top_srcdir)/mylog/ulog -I$(top_srcdir)/mylog
 EXTRA_DIST		= \
     auth.h \
     auth_unix.h \
@@ -58,5 +59,3 @@ EXTRA_DIST		= \
     svc_auth.h \
     types.h \
     xdr.h
-TAGS_FILES		= \
-    ../ulog/*.c ../ulog/*.h

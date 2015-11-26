@@ -6,7 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-include_HEADERS		= ulog.h mylog.h
+include_HEADERS		= ulog.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= ulog.c log.c
 EXTRA_DIST		= log.h
@@ -17,7 +17,7 @@ TESTS			= test_gmtime
 
 test0_SOURCES		= ulog.c
 test0_CPPFLAGS		= -DTEST0
-test0_LDADD		= ../lib/libldm.la
+test0_LDADD		= $(top_builddir)/lib/libldm.la
 test_gmtime_SOURCES	= test_gmtime.c
 
 check-local:

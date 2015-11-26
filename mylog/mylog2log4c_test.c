@@ -12,7 +12,6 @@
 #include "config.h"
 
 #include "mylog.h"
-#include "ulog.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -85,6 +84,14 @@ static void vlogMessages(void)
     vlogMessage(MYLOG_LEVEL_NOTICE, "vlogMessages(): %s", "Notice");
     vlogMessage(MYLOG_LEVEL_INFO, "vlogMessages(): %s", "Informational message");
     vlogMessage(MYLOG_LEVEL_DEBUG, "vlogMessages(): %s", "Debug message");
+}
+
+static void test_init_fini(void)
+{
+    int status = mylog_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_mylog_open_file(void)
@@ -307,16 +314,18 @@ int main(
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            if (       CU_ADD_TEST(testSuite, test_mylog_get_level)
+            if (       CU_ADD_TEST(testSuite, test_init_fini)
+                    && CU_ADD_TEST(testSuite, test_init_fini)
+                    && CU_ADD_TEST(testSuite, test_mylog_get_level)
                     && CU_ADD_TEST(testSuite, test_mylog_roll_level)
                     && CU_ADD_TEST(testSuite, test_mylog_modify_id)
                     && CU_ADD_TEST(testSuite, test_mylog_set_output)
-                    && CU_ADD_TEST(testSuite, test_mylog_open_stderr)
+                    && CU_ADD_TEST(testSuite, test_mylog_open_stderr)/*
                     && CU_ADD_TEST(testSuite, test_mylog_open_file)
                     && CU_ADD_TEST(testSuite, test_mylog_open_default)
                     && CU_ADD_TEST(testSuite, test_mylog_levels)
                     && CU_ADD_TEST(testSuite, test_mylog_vlog)
-                    ) {
+                    */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();
             }

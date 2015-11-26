@@ -50,9 +50,9 @@ typedef struct
 {
     const char* evt_category;
     int	evt_priority;
-    const char* evt_msg;
-    const char* evt_rendered_msg;
-    log4c_buffer_t evt_buffer;
+    const char* evt_msg; // The user's message (before layout formatting)
+    const char* evt_rendered_msg; // The message after layout formatting
+    log4c_buffer_t evt_buffer; // Utility buffer
 /* ok, this is probably not a good way to do it--should define a common type here
 and have the base acessor function do the mapping
 */
