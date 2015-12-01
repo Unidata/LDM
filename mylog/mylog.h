@@ -12,10 +12,16 @@
 #ifndef ULOG_MYLOG_H_
 #define ULOG_MYLOG_H_
 
+#include "config.h"
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <syslog.h>
+
+#if WANT_LOG4C
+    #include "log4c.h"
+#endif
 
 #define LOG_ISO_8601  0x800u  /* Use ISO 8601 standard timestamp */
 #define LOG_MICROSEC  0x1000u /* Use microsecond-resolution timestamp */
@@ -186,86 +192,127 @@ int mylog_set_output(
  */
 const char* mylog_get_output(void);
 
-/**
- * Logs an error message. Should be called between `mylog_init()` and
- * `mylog_fini()`.
- *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
+/*
+ * Do not use any of the following until further notice:
  */
-int mylog_error(
-        const char* const format,
-        ...);
 
-/**
- * Logs a warning message. Should be called between `mylog_init()` and
- * `mylog_fini()`.
- *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_warning(
-        const char* const format,
-        ...);
+#if WANT_LOG4C
 
-/**
- * Logs a notice. Should be called between `mylog_init()` and `mylog_fini()`.
- *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_notice(
-        const char* const format,
-        ...);
+#include <log4c.h>
 
-/**
- * Logs an informational message. Should be called between `mylog_init()` and
- * `mylog_fini()`.
- *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_info(
-        const char* const format,
-        ...);
+extern int               mylog_log4c_priorities[];
+extern log4c_category_t* mylog_category;
 
-/**
- * Logs a debug message. Should be called between `mylog_init()` and
- * `mylog_fini()`.
- *
- * @param[in] format    Format of log message in the style of `sprintf()`.
- * @param[in] ...       Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_debug(
-        const char* const format,
-        ...);
+#define mylog_get_category()          mylog_category
 
-/**
- * Logs a message with an argument list. Should be called between `mylog_init()`
- * and `mylog_fini()`.
- *
- * @param[in] level   Logging level: MYLOG_LEVEL_DEBUG, MYLOG_LEVEL_INFO,
- *                    MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_WARNING, or
- *                    MYLOG_LEVEL_ERROR.
- * @param[in] format  Format of the message in the style of `sprintf()`.
- * @param[in] args    List of optional arguments.
- * @retval    0       Success.
- * @retval    -1      Failure.
+#define mylog_get_priority(level)     mylog_log4c_priorities[level]
+
+#define mylog_is_level_enabled(level) \
+    log4c_category_is_priority_enabled(mylog_get_category(), \
+            mylog_get_priority(level))
+
+static inline void mylog_vlog_internal(
+        const log4c_location_info_t* restrict locinfo,
+        const mylog_level_t                   level,
+        const char* const restrict            format,
+        va_list                               args)
+{
+    __log4c_category_vlog(mylog_get_category(), locinfo,
+            mylog_get_priority(level), format, args);
+}
+
+static inline void mylog_log_internal(
+        const log4c_location_info_t* restrict locinfo,
+        const mylog_level_t                   level,
+        const char* const restrict            format,
+                                              ...)
+{
+    va_list args;
+    va_start(args, format);
+    mylog_vlog_internal(locinfo, level, format, args);
+    va_end(args);
+}
+
+#define MYLOG_LOG(level, ...) \
+    if (mylog_is_level_enabled(level)) { \
+        const log4c_location_info_t locinfo = \
+                LOG4C_LOCATION_INFO_INITIALIZER(NULL); \
+	mylog_log_internal(&locinfo, level, __VA_ARGS__); \
+    } \
+    else
+
+#define MYLOG_VLOG(level, format, args) \
+    if (mylog_is_level_enabled(level)) { \
+        const log4c_location_info_t locinfo = \
+                LOG4C_LOCATION_INFO_INITIALIZER(NULL); \
+	mylog_vlog_internal(&locinfo, level, format, args); \
+    } \
+    else
+
+#else
+
+#include "ulog.h"
+
+#include <limits.h>
+#include <stdio.h>
+
+#ifndef _POSIX2_LINE_MAX
+    #define _POSIX2_LINE_MAX 2048
+#endif
+
+extern int mylog_syslog_priorities[];
+
+#define mylog_get_priority(level)     mylog_syslog_priorities[level]
+
+#define mylog_is_level_enabled(level) \
+    ulog_is_priority_enabled(mylog_get_priority(level))
+
+#define mylog_vlog_internal(file, line, level, format, args) \
+{ \
+    char fmt[_POSIX2_LINE_MAX]; \
+    (void)snprintf(fmt, sizeof(fmt), "%s:%d %s", file, line, format); \
+    fmt[sizeof(fmt)-1] = 0; \
+    (void)vulog(mylog_get_priority(level), fmt, args); \
+}
+
+static inline void mylog_log_internal(
+        const char* const restrict            file,
+        const int                             line,
+        const mylog_level_t                   level,
+        const char* const restrict            format,
+                                              ...)
+{
+    va_list args;
+    va_start(args, format);
+    mylog_vlog_internal(file, line, level, format, args);
+    va_end(args);
+}
+
+#define MYLOG_LOG(level, ...) \
+    if (mylog_is_level_enabled(level)) { \
+	mylog_log_internal(__FILE__, __LINE__, level, __VA_ARGS__); \
+    } \
+    else
+
+#define MYLOG_VLOG(level, format, args) \
+    if (mylog_is_level_enabled(level)) { \
+	mylog_vlog_internal(__FILE__, __LINE__, level, format, args); \
+    } \
+    else
+
+#endif
+
+/*
+ * FURTHER NOTICE: The following may be used:
  */
-int mylog_vlog(
-        const mylog_level_t level,
-        const char* const   format,
-        va_list             args);
+
+#define mylog_error(...)      MYLOG_LOG(MYLOG_LEVEL_ERROR,   __VA_ARGS__)
+#define mylog_warning(...)    MYLOG_LOG(MYLOG_LEVEL_WARNING, __VA_ARGS__)
+#define mylog_notice(...)     MYLOG_LOG(MYLOG_LEVEL_NOTICE,  __VA_ARGS__)
+#define mylog_info(...)       MYLOG_LOG(MYLOG_LEVEL_INFO,    __VA_ARGS__)
+#define mylog_debug(...)      MYLOG_LOG(MYLOG_LEVEL_DEBUG,   __VA_ARGS__)
+#define mylog_log(level, ...) MYLOG_LOG(level, __VA_ARGS__)
+#define mylog_vlog(level, format, args) MYLOG_VLOG(level, format, args)
 
 /**
  * Aborts the process if an expression isn't true. The macro `MYLOG_ASSERT()`
@@ -279,7 +326,7 @@ static inline void mylog_assert(
         const char* const str)
 {
     if (!expr) {
-        MYLOG_ERROR("Assertion failure: %s", str);
+        mylog_error("Assertion failure: %s", str);
         abort();
     }
 }

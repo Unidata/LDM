@@ -258,6 +258,9 @@
 /* Version number of package */
 #undef VERSION
 
+/* Package will use Log4C for logging */
+#undef WANT_LOG4C
+
 /* Package will have multicast capability */
 #undef WANT_MULTICAST
 

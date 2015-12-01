@@ -160,6 +160,8 @@ AC_ARG_WITH([ulog],
     [$with_log4c=$withval],
     [with_log4c=yes])
 AM_CONDITIONAL([WANT_LOG4C], [test "x$with_log4c" = xyes])
+AM_COND_IF([WANT_LOG4C], [AC_DEFINE([WANT_LOG4C], [1],
+    [Package will use Log4C for logging])])
 
 # The following is for multicast data distribution using the Virtual Circuit
 # Multicast Transport Protocol. DO NOT USE!

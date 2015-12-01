@@ -21,6 +21,13 @@
 #include <string.h>
 
 /**
+ * The mapping from `mylog` logging levels to `ulog` priorities:
+ */
+int                  mylog_syslog_priorities[] = {
+        LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR
+};
+
+/**
  *  Logging level. The initial value must be consonant with the initial value of
  *  `logMask` in `ulog.c`.
  */
@@ -41,6 +48,8 @@ int mylog_init(
 {
     const unsigned    options = mylog_get_options();
     int               status = openulog(id, options, LOG_LDM, "");
+    if (status != -1)
+        mylog_set_level(MYLOG_LEVEL_DEBUG);
     return status == -1 ? -1 : 0;
 }
 
@@ -224,121 +233,4 @@ const char* mylog_get_output(void)
 {
     const char* path = getulogpath();
     return path == NULL ? "" : path;
-}
-
-/**
- * Logs an error message.
- *
- * @param[in] format  Format of log message in the style of `sprintf()`.
- * @param[in] ...     Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_error(
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    int status = vulog(LOG_ERR, format, args);
-    va_end(args);
-    return status == -1 ? -1 : 0;
-}
-
-/**
- * Logs a warning message.
- *
- * @param[in] format  Format of log message in the style of `sprintf()`.
- * @param[in] ...     Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_warning(
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    int status = vulog(LOG_WARNING, format, args);
-    va_end(args);
-    return status == -1 ? -1 : 0;
-}
-
-/**
- * Logs a notice.
- *
- * @param[in] format  Format of log message in the style of `sprintf()`.
- * @param[in] ...     Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_notice(
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    int status = vulog(LOG_NOTICE, format, args);
-    va_end(args);
-    return status == -1 ? -1 : 0;
-}
-
-/**
- * Logs an informational message.
- *
- * @param[in] format  Format of log message in the style of `sprintf()`.
- * @param[in] ...     Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_info(
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    int status = vulog(LOG_INFO, format, args);
-    va_end(args);
-    return status == -1 ? -1 : 0;
-}
-
-/**
- * Logs a debug message.
- *
- * @param[in] format  Format of log message in the style of `sprintf()`.
- * @param[in] ...     Optional arguments of log message.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_debug(
-        const char* const restrict format,
-        ...)
-{
-    va_list args;
-    va_start(args, format);
-    int status = vulog(LOG_DEBUG, format, args);
-    va_end(args);
-    return status == -1 ? -1 : 0;
-}
-
-/**
- * Logs a message with an argument list.
- *
- * @param[in] level   Logging level: MYLOG_LEVEL_DEBUG, MYLOG_LEVEL_INFO,
- *                    MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_WARNING, or
- *                    MYLOG_LEVEL_ERROR.
- * @param[in] format  Format of the message in the style of `sprintf()`.
- * @param[in] args    List of optional arguments.
- * @retval    0       Success.
- * @retval    -1      Failure.
- */
-int mylog_vlog(
-        const mylog_level_t level,
-        const char* const   format,
-        va_list             args)
-{
-    static int ulogPriorities[] = {LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING,
-            LOG_ERR};
-    int status = vulog(ulogPriorities[level], format, args);
-    return status == -1 ? -1 : 0;
 }

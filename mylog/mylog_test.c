@@ -3,16 +3,15 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mylog2ulog_test.c
+ *   @file: mylog_test.c
  * @author: Steven R. Emmerson
  *
- * This file tests the `mylog2log4c` module.
+ * This file tests the `mylog` module.
  */
 
 #include "config.h"
 
 #include "mylog.h"
-#include "log4c.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -22,7 +21,7 @@
 #include <CUnit/Basic.h>
 
 static char* progname;
-static const char tmpPathname[] = "/tmp/mylog2log4c_test.log";
+static const char tmpPathname[] = "/tmp/mylog_test.log";
 
 /**
  * Only called once.
@@ -54,11 +53,11 @@ static int numLines(
 
 static void logMessages(void)
 {
-    MYLOG_ERROR("logMessages(): Error message");
-    MYLOG_WARNING("logMessages(): Warning");
-    MYLOG_NOTICE("logMessages(): Notice");
-    MYLOG_INFO("logMessages(): Informational message");
-    MYLOG_DEBUG("logMessages(): Debug message");
+    mylog_error("logMessages(): Error message");
+    mylog_warning("logMessages(): Warning");
+    mylog_notice("logMessages(): Notice");
+    mylog_info("logMessages(): Informational message");
+    mylog_debug("logMessages(): Debug message");
 }
 
 static void vlogMessage(
@@ -81,6 +80,35 @@ static void vlogMessages(void)
     vlogMessage(MYLOG_LEVEL_DEBUG, "vlogMessages(): %s", "Debug message");
 }
 
+static void make_expected_id(
+        char* const restrict       id,
+        const size_t               size,
+        const char* const restrict name,
+        const bool                 is_feeder)
+{
+    int status;
+#if WANT_LOG4C
+    status = snprintf(id, size, "%s.%s.%s", progname,
+                    is_feeder ? "feeder" : "notifier", name);
+#else
+    char tmp_name[_POSIX_HOST_NAME_MAX+1];
+    (void)strncpy(tmp_name, name, sizeof(tmp_name));
+    for (char* cp = strchr(tmp_name, '.'); cp != NULL; cp = strchr(cp, '.'))
+        *cp = '_';
+    status = snprintf(id, size, "%s(%s)", name, is_feeder ? "feed" : "noti");
+#endif
+    CU_ASSERT_TRUE(status > 0);
+    CU_ASSERT_TRUE(status < size);
+}
+
+static void test_init_fini(void)
+{
+    int status = mylog_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
+}
+
 static void test_mylog_open_file(void)
 {
     (void)unlink(tmpPathname);
@@ -88,19 +116,18 @@ static void test_mylog_open_file(void)
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     status = mylog_set_output(tmpPathname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    const char* actual = mylog_get_output();
-    CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
-    CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
-    int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
-    status = unlink(tmpPathname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
 
     status = mylog_fini();
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(status, 0);
+
+    int n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
+
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_mylog_open_stderr(void)
@@ -109,32 +136,34 @@ static void test_mylog_open_stderr(void)
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     status = mylog_set_output("-");
+    CU_ASSERT_EQUAL(status, 0);
     const char* actual = mylog_get_output();
-    CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
+    CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-");
-    MYLOG_ERROR("test_mylog_open_stderr()");
+    mylog_error("test_mylog_open_stderr()");
 
     status = mylog_fini();
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_open_syslog(void)
+static void test_mylog_open_default(void)
 {
     int status = mylog_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+
     const char* actual = mylog_get_output();
-    CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
+    CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "");
-    MYLOG_ERROR("test_mylog_open_syslog() default");
+    mylog_error("test_mylog_open_default() implicit");
 
     status = mylog_set_output("");
     actual = mylog_get_output();
-    CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
+    CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "");
-    MYLOG_ERROR("test_mylog_open_syslog()");
+    mylog_error("test_mylog_open_default() explicit");
 
     status = mylog_fini();
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_mylog_levels(void)
@@ -145,17 +174,22 @@ static void test_mylog_levels(void)
     for (int nlines = 1; nlines <= MYLOG_LEVEL_COUNT; nlines++) {
         status = mylog_init(progname);
         CU_ASSERT_EQUAL_FATAL(status, 0);
+
         (void)unlink(tmpPathname);
         status = mylog_set_output(tmpPathname);
-        CU_ASSERT_EQUAL_FATAL(status, 0);
+        CU_ASSERT_EQUAL(status, 0);
 
         mylog_set_level(mylogLevels[nlines-1]);
         logMessages();
-        int n = numLines(tmpPathname);
-        CU_ASSERT_EQUAL(n, nlines);
 
         status = mylog_fini();
         CU_ASSERT_EQUAL(status, 0);
+
+        int n = numLines(tmpPathname);
+        CU_ASSERT_EQUAL(n, nlines);
+
+        //if (n != nlines)
+            //exit(1);
     }
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -182,57 +216,29 @@ static void test_mylog_get_level(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_get_facility(void)
-{
-    int facilities[] = {LOG_LOCAL0, LOG_LOCAL1, LOG_LOCAL2, LOG_LOCAL3,
-            LOG_LOCAL4, LOG_LOCAL5, LOG_LOCAL6, LOG_LOCAL7};
-    int status = mylog_init(progname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    status = mylog_get_facility();
-    CU_ASSERT_EQUAL(status, LOG_LDM);
-
-    for (int i = 0; i < sizeof(facilities)/sizeof(*facilities); i++) {
-        int expected = facilities[i];
-        status = mylog_set_facility(expected);
-        CU_ASSERT_EQUAL(status, 0);
-        int actual = mylog_get_facility();
-        CU_ASSERT_EQUAL(actual, expected);
-    }
-
-    status = mylog_fini();
-    CU_ASSERT_EQUAL(status, 0);
-}
-
 static void test_mylog_modify_id(void)
 {
-    const char* expected = "foo(noti)";
     int status = mylog_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    (void)mylog_modify_id("foo", false);
+    char expected[256];
+    make_expected_id(expected, sizeof(expected), "foo", true);
+    (void)mylog_modify_id("foo", true);
     const char* actual = mylog_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
-    expected = "bar(feed)";
-    (void)mylog_modify_id("bar", true);
+    make_expected_id(expected, sizeof(expected), "bar", false);
+    (void)mylog_modify_id("bar", false);
+    actual = mylog_get_id();
+    CU_ASSERT_STRING_EQUAL(actual, expected);
+
+    make_expected_id(expected, sizeof(expected), "128.117.140.56", false);
+    (void)mylog_modify_id("128.117.140.56", false);
     actual = mylog_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
     status = mylog_fini();
     CU_ASSERT_EQUAL(status, 0);
-}
-
-static void test_mylog_set_output(void)
-{
-    static const char* outputs[] = {"", "-", tmpPathname};
-    for (int i = 0; i < sizeof(outputs)/sizeof(outputs[0]); i++) {
-        const char* expected = outputs[i];
-        (void)mylog_set_output(expected);
-        const char* actual = mylog_get_output();
-        CU_ASSERT_PTR_NOT_NULL_FATAL(actual);
-        CU_ASSERT_STRING_EQUAL(actual, expected);
-    }
 }
 
 static void test_mylog_roll_level(void)
@@ -273,16 +279,33 @@ static void test_mylog_vlog(void)
     int status = mylog_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     status = mylog_set_output(tmpPathname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    mylog_set_level(MYLOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
 
     vlogMessages();
+
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
+
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
-    //status = unlink(tmpPathname);
+
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void test_mylog_set_output(void)
+{
+    int status = mylog_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_fini();
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    static const char* outputs[] = {"", "-", tmpPathname};
+    for (int i = 0; i < sizeof(outputs)/sizeof(outputs[0]); i++) {
+        const char* expected = outputs[i];
+        (void)mylog_set_output(expected);
+        const char* actual = mylog_get_output();
+        CU_ASSERT_PTR_NOT_NULL(actual);
+        CU_ASSERT_STRING_EQUAL(actual, expected);
+    }
 
     status = mylog_fini();
     CU_ASSERT_EQUAL(status, 0);
@@ -299,17 +322,18 @@ int main(
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            if (       CU_ADD_TEST(testSuite, test_mylog_open_file)
-                    && CU_ADD_TEST(testSuite, test_mylog_open_stderr)
-                    && CU_ADD_TEST(testSuite, test_mylog_open_syslog)
+            if (       CU_ADD_TEST(testSuite, test_init_fini)
+                    && CU_ADD_TEST(testSuite, test_init_fini)
                     && CU_ADD_TEST(testSuite, test_mylog_get_level)
-                    && CU_ADD_TEST(testSuite, test_mylog_get_facility)
-                    && CU_ADD_TEST(testSuite, test_mylog_modify_id)
-                    && CU_ADD_TEST(testSuite, test_mylog_levels)
                     && CU_ADD_TEST(testSuite, test_mylog_roll_level)
+                    && CU_ADD_TEST(testSuite, test_mylog_modify_id)
                     && CU_ADD_TEST(testSuite, test_mylog_set_output)
-                    && CU_ADD_TEST(testSuite, test_mylog_vlog)
-                    ) {
+                    && CU_ADD_TEST(testSuite, test_mylog_open_stderr)
+                    && CU_ADD_TEST(testSuite, test_mylog_open_file)
+                    && CU_ADD_TEST(testSuite, test_mylog_open_default)
+                    && CU_ADD_TEST(testSuite, test_mylog_levels)
+                    && CU_ADD_TEST(testSuite, test_mylog_vlog)/*
+                    */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();
             }

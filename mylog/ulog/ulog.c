@@ -139,7 +139,7 @@ void
 setulogident(const char *ident)
 {
     if (ident != NULL)
-        strncpy(logIdent, ident, LOG_IDENT_LEN)[LOG_IDENT_LEN] = 0;
+        ((char*)memmove(logIdent, ident, LOG_IDENT_LEN))[LOG_IDENT_LEN] = 0;
 }
 
 
@@ -414,29 +414,29 @@ void ulog_set_options(
 #endif 
 
 
-/*
+/**
  * Logs a message given in argument-list form (analogous to vsyslog()).
  *
  * This function is unsafe: calling it from a signal handler as a result of
  * an interruption of an unsafe function results in undefined behavior.
  *
- * Arguments:
- *      pri     The message priority: LOG_ERROR, LOG_WARNING, LOG_NOTICE,
- *              LOG_INFO, or LOG_DEBUG.
- *      fmt     The format for the message.  The arguments for the format are
- *              taken from "args".
- *      args    The argument-list structure.  The caller must have invoked the
- *              "va_start" macro on "args".  This function doesn't invoke the
- *              "va_end" macro on "args".  On return, the value of "args" is
- *              indeterminate.
- *
- * Returns:
- *      -1      Failure.  errno is set.
- *      else    The number of bytes written.
+ * @param[in] pri     The message priority: LOG_ERROR, LOG_WARNING, LOG_NOTICE,
+ *                    LOG_INFO, or LOG_DEBUG.
+ * @param[in] fmt     The format for the message.  The arguments for the format
+ *                    are taken from `args`.
+ * @param[in] args    The argument-list structure.  The caller must have invoked
+ *                    the `va_start` macro on `args`.  This function doesn't
+ *                    invoke the `va_end` macro on `args`.  On return, the value
+ *                    of `args` is indeterminate.
+ * @retval    -1      Failure.  `errno` is set.
+ * @return            The number of bytes written.
  */
 #ifdef STDC_ARGS
 int
-vulog(unsigned int pri, const char *fmt, va_list args)
+vulog(
+        unsigned int               pri,
+        const char* restrict       fmt,
+        va_list                    args)
 {
 #else
 int
@@ -968,18 +968,30 @@ getulogmask(void)
         return (logMask);
 }
 
+/**
+ * Indicates if a particular logging priority is enabled.
+ *
+ * @param[in] priority  The logging priority.
+ * @retval    true      iff the priority is enabled.
+ */
+bool ulog_is_priority_enabled(
+        const int priority)
+{
+    return logMask & LOG_MASK(priority);
+}
+
 
 int
 ulogIsVerbose(void)
 {
-        return (logMask & LOG_MASK(LOG_INFO)) != 0;
+    return ulog_is_priority_enabled(LOG_INFO);
 }
 
 
 int
 ulogIsDebug(void)
 {
-        return (logMask & LOG_MASK(LOG_DEBUG)) != 0;
+    return ulog_is_priority_enabled(LOG_DEBUG);
 }
 
 

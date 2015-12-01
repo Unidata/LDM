@@ -85,6 +85,8 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 int closeulog(void);
 int openulog(
 	const char *ident ,
@@ -93,6 +95,7 @@ int openulog(
 	const char *logfilename);
 unsigned ulog_get_options();
 void ulog_set_options(unsigned mask, unsigned values);
+bool ulog_is_priority_enabled(int priority);
 
 /**
  * Returns the identity string being used.
@@ -114,7 +117,10 @@ unsigned getulogfacility(void);
  */
 const char* getulogpath(void);
 void ulog(unsigned int pri, const char *fmt, ...);
-int vulog(unsigned int pri, const char *fmt, va_list args);
+int vulog(
+        unsigned int      pri,
+        const char*       fmt,
+        va_list           args);
 unsigned int setulogmask(unsigned int pmask);
 int toggleulogpri(unsigned int pri);
 void rollulogpri(void);
