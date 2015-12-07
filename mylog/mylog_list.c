@@ -1,11 +1,11 @@
 /**
- *   Copyright © 2014, University Corporation for Atmospheric Research
+ *   Copyright © 2015, University Corporation for Atmospheric Research
  *   See file ../COPYRIGHT for copying and redistribution conditions.
  *
- * Provides for the accumulation of log-messages and the printing of all,
- * accumlated log-messages at a single priority.
+ * Provides for accumulating log-messages into a thread-specific list and the
+ * emission of that list at a single logging level.
  *
- * This module uses the ulog(3) module.
+ * This module is part of the `mylog` module.
  *
  * This module is thread-safe.
  *
@@ -13,9 +13,13 @@
  */
 #include <config.h>
 
+#undef NDEBUG
+#include "mylog.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -25,20 +29,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "ulog.h"
-
-#include "log.h"
-
-
-/**
- * A log-message.  Such structures accumulate in a thread-specific message-list.
- */
-typedef struct message {
-    struct message*     next;   /**< pointer to next message */
-    char*               string; /**< message buffer */
-#define LOG_DEFAULT_STRING_SIZE     256
-    size_t              size;   /**< size of message buffer */
-} Message;
+#ifndef _XOPEN_NAME_MAX
+    #define _XOPEN_NAME_MAX 255 // not always defined
+#endif
 
 /**
  * A list of log messages.
@@ -56,13 +49,34 @@ static pthread_key_t    listKey;
 /**
  * Whether or not the thread-specific key has been created.
  */
-static int              keyCreated = 0;
+static pthread_once_t   key_creation_control = PTHREAD_ONCE_INIT;
 
 /**
- * The mutex that makes this module thread-safe and is also used to make use
- * of the ulog(3) module thread-safe.
+ * The mutex that makes this module thread-safe.
  */
 static pthread_mutex_t  mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * Copies at most `n` bytes from one string to another. Stops if and when a NUL
+ * byte is copied. The destination string will be NUL-terminated -- even if it
+ * doesn't contain all the bytes from the source string.
+ *
+ * @param[out] dst  The destination buffer.
+ * @param[in]  src  The source string.
+ * @param[in]  n    The size of the destination buffer in bytes. If `strlen(src)
+ *                  >= n`, then `dst[n-1]` will be the NUL byte.
+ */
+static void string_copy(
+        char* restrict       dst,
+        const char* restrict src,
+        size_t               n)
+{
+    if (n) {
+        while (--n && (*dst++ = *src++))
+            ;
+        *dst = 0;
+    }
+}
 
 /**
  * Blocks all signals for the current thread. This is done so that the
@@ -100,8 +114,8 @@ static void restoreSigs(
  */
 static void lock(void)
 {
-    if (pthread_mutex_lock(&mutex) != 0)
-        serror("Couldn't lock logging mutex");
+    int status = pthread_mutex_lock(&mutex);
+    MYLOG_ASSERT(status == 0);
 }
 
 /**
@@ -112,8 +126,18 @@ static void lock(void)
  */
 static void unlock(void)
 {
-    if (pthread_mutex_unlock(&mutex) != 0)
-        serror("Couldn't unlock logging mutex");
+    int status = pthread_mutex_unlock(&mutex);
+    MYLOG_ASSERT(status == 0);
+}
+
+static void create_key(void)
+{
+    int status = pthread_key_create(&listKey, NULL);
+
+    if (status != 0) {
+        mylog_error("pthread_key_create() failure");
+        abort();
+    }
 }
 
 /**
@@ -125,77 +149,41 @@ static void unlock(void)
  * @return  The message-list of the current thread or NULL if the message-list
  *          doesn't exist and couldn't be created.
  */
-static List* getList(void)
+static List* list_get(void)
 {
-    List*   list;
-    int     status;
-
-    lock();
-
-    if (!keyCreated) {
-        status = pthread_key_create(&listKey, NULL);
-
-        if (status != 0) {
-            serror("getList(): pthread_key_create() failure: %s",
-                    strerror(status));
+    (void)pthread_once(&key_creation_control, create_key);
+    List*   list = pthread_getspecific(listKey);
+    if (NULL == list) {
+        list = (List*)malloc(sizeof(List));
+        if (NULL == list) {
+            mylog_error("malloc() failure");
         }
         else {
-            keyCreated = 1;
-        }
-    }
-
-    unlock();
-
-    if (!keyCreated) {
-        list = NULL;
-    }
-    else {
-        list = pthread_getspecific(listKey);
-
-        if (NULL == list) {
-            list = (List*)malloc(sizeof(List));
-
-            if (NULL == list) {
-                lock();
-                serror("getList(): malloc() failure");
-                unlock();
+            int status = pthread_setspecific(listKey, list);
+            if (status != 0) {
+                mylog_error("pthread_setspecific() failure");
+                free(list);
+                list = NULL;
             }
             else {
-                if ((status = pthread_setspecific(listKey, list)) != 0) {
-                    lock();
-                    serror("getList(): pthread_setspecific() failure: %s",
-                        strerror(status));
-                    unlock();
-                    free(list);
-
-                    list = NULL;
-                }
-                else {
-                    list->first = NULL;
-                    list->last = NULL;
-                }
+                list->first = NULL;
+                list->last = NULL;
             }
         }
     }
-
     return list;
 }
-
-
-/******************************************************************************
- * Public API:
- ******************************************************************************/
 
 
 /**
  * Clears the accumulated log-messages of the current thread.
  */
-void log_clear()
+static void list_clear()
 {
     sigset_t sigset;
     blockSigs(&sigset);
 
-    List*   list = getList();
+    List*   list = list_get();
 
     if (NULL != list)
         list->last = NULL;
@@ -213,27 +201,18 @@ void log_clear()
 static int msg_new(
         Message** const entry)
 {
-    Message* msg = (Message*)malloc(sizeof(Message));
     int      status;
-
+    Message* msg = (Message*)malloc(sizeof(Message));
     if (msg == NULL) {
         status = errno;
-
-        lock();
-        serror("log_vadd(): malloc(%lu) failure",
-            (unsigned long)sizeof(Message));
-        unlock();
+        mylog_error("malloc() failure");
     }
     else {
+        #define LOG_DEFAULT_STRING_SIZE     256
         char*   string = (char*)malloc(LOG_DEFAULT_STRING_SIZE);
-
         if (NULL == string) {
             status = errno;
-
-            lock();
-            serror("log_vadd(): malloc(%lu) failure",
-                (unsigned long)LOG_DEFAULT_STRING_SIZE);
-            unlock();
+            mylog_error("malloc() failure");
             free(msg);
         }
         else {
@@ -245,7 +224,6 @@ static int msg_new(
             status = 0;
         }
     } // `msg` allocated
-
     return status;
 }
 
@@ -257,7 +235,7 @@ static int msg_new(
  * @retval    0       Success. `*entry` is set.
  * @retval    ENOMEM  Out-of-memory. Error message logged.
  */
-static int log_getNextEntry(
+static int list_getNextEntry(
         List* const restrict     list,
         Message** const restrict entry)
 {
@@ -289,7 +267,6 @@ static int log_getNextEntry(
  * @param[in] fmt        The message format.
  * @param[in] args       The arguments to be formatted.
  * @retval    0          Success. The message has been written into `*msg`.
- * @retval    EAGAIN     The character buffer was too small. Try again.
  * @retval    EINVAL     `fmt` or `args` is `NULL`. Error message logged.
  * @retval    EINVAL     There are insufficient arguments. Error message logged.
  * @retval    EILSEQ     A wide-character code that doesn't correspond to a
@@ -315,9 +292,7 @@ static int msg_format(
          * Group Base Specifications Issue 6
          */
         status = errno ? errno : EILSEQ;
-        lock();
-        serror("log_vadd(): vsnprintf() failure");
-        unlock();
+        mylog_error("vsnprintf() failure");
     }
     else {
         // The buffer is too small for the message. Expand it.
@@ -326,15 +301,14 @@ static int msg_format(
 
         if (NULL == string) {
             status = errno;
-            lock();
-            serror("log_vadd(): malloc(%lu) failure", (unsigned long)size);
-            unlock();
+            mylog_error("malloc() failure");
         }
         else {
             free(msg->string);
             msg->string = string;
             msg->size = size;
-            status = EAGAIN;
+            (void)vsnprintf(msg->string, msg->size, fmt, args);
+            status = 0;
         }
     }                           /* buffer is too small */
 
@@ -344,10 +318,11 @@ static int msg_format(
 /**
  * Adds a variadic log-message to the message-list for the current thread.
  *
+ * @param[in] loc       Location where the message was created. `loc->file` must
+ *                      persist.
  * @param[in] fmt       Formatting string.
  * @param[in] args      Formatting arguments.
  * @retval 0            Success
- * @retval EAGAIN       The character buffer was too small. Try again.
  * @retval EINVAL       `fmt` or `args` is `NULL`. Error message logged.
  * @retval EINVAL       There are insufficient arguments. Error message logged.
  * @retval EILSEQ       A wide-character code that doesn't correspond to a
@@ -356,9 +331,10 @@ static int msg_format(
  * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
  *                      Error message logged.
  */
-int log_vadd(
-    const char* const   fmt,  /**< The message format */
-    va_list             args) /**< The arguments referenced by the format. */
+int mylog_list_vadd(
+        const mylog_loc_t* const restrict loc,
+        const char* const restrict        fmt,
+        va_list                           args)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -366,20 +342,19 @@ int log_vadd(
     int status;
 
     if (NULL == fmt) {
-        lock();
-        uerror("log_vadd(): NULL argument");
-        unlock();
+        mylog_error("NULL argument");
         status = EINVAL;
     }
     else {
-        List* list = getList();
+        List* list = list_get();
         if (NULL == list) {
             status = ENOMEM;
         }
         else {
             Message* msg;
-            status = log_getNextEntry(list, &msg);
+            status = list_getNextEntry(list, &msg);
             if (status == 0) {
+                msg->loc = *loc;
                 status = msg_format(msg, fmt, args);
                 if (status == 0)
                     list->last = msg;
@@ -392,53 +367,166 @@ int log_vadd(
 }
 
 /**
- * Sets the first log-message for the current thread.
- */
-void log_start(
-    const char* const fmt,  /**< The message format */
-    ...)                    /**< Arguments referenced by the format */
-{
-    sigset_t sigset;
-    blockSigs(&sigset);
-
-    va_list     args;
-
-    log_clear();
-    va_start(args, fmt);
-
-    if (EAGAIN == log_vadd(fmt, args)) {
-        va_end(args);
-        va_start(args, fmt);
-        (void)log_vadd(fmt, args);
-    }
-
-    va_end(args);
-    restoreSigs(&sigset);
-}
-
-/**
  * Adds a log-message for the current thread.
  *
  * @param[in] fmt  Formatting string for the message.
  * @param[in] ...  Arguments for the formatting string.
+ * @retval    0    Success.
  */
-void log_add(
-    const char* const fmt,  /**< The message format */
-    ...)                    /**< Arguments referenced by the format */
+int mylog_list_add(
+        const mylog_loc_t* const restrict loc,
+        const char* const restrict        fmt,
+                                          ...)
+{
+    sigset_t sigset;
+    blockSigs(&sigset);
+    va_list     args;
+    va_start(args, fmt);
+    int status = mylog_list_vadd(loc, fmt, args);
+    va_end(args);
+    restoreSigs(&sigset);
+    return status;
+}
+
+/**
+ * Logs the currently-accumulated log-messages of the current thread and resets
+ * the message-list for the current thread.
+ *
+ * @param[in] level  The level at which to log the messages. One of MYLOG_ERR,
+ *                   MYLOG_WARNING, MYLOG_NOTICE, MYLOG_INFO, or MYLOG_DEBUG;
+ *                   otherwise, the behavior is undefined.
+ */
+void mylog_list_emit(
+    const mylog_level_t level)
 {
     sigset_t sigset;
     blockSigs(&sigset);
 
-    va_list     args;
+    List*   list = list_get();
 
-    va_start(args, fmt);
+    if (NULL != list && NULL != list->last) {
+        lock();
 
-    if (EAGAIN == log_vadd(fmt, args)) {
-        va_end(args);
-        va_start(args, fmt);
-        (void)log_vadd(fmt, args);
+        if (mylog_is_level_enabled(level)) {
+            for (const Message* msg = list->first; NULL != msg;
+                    msg = msg->next) {
+                mylog_emit(level, msg);
+
+                if (msg == list->last)
+                    break;
+            }                       /* message loop */
+        }                           /* messages should be printed */
+
+        unlock();
+        list_clear();
+    }                               /* have messages */
+
+    restoreSigs(&sigset);
+}
+
+/**
+ * Destroys a list of log-messages.
+ *
+ * @param[in] list  The list of messages.
+ */
+static void
+list_fini(
+        List* const list)
+{
+    Message* msg;
+    Message* next;
+
+    for (msg = list->first; msg; msg = next) {
+        next = msg->next;
+        free(msg->string);
+        free(msg);
+    }
+}
+
+/**
+ * Frees the log-message resources of the current thread. Should only be called
+ * when no more logging by the current thread will occur.
+ */
+void
+mylog_list_free(void)
+{
+    sigset_t sigset;
+    blockSigs(&sigset);
+
+    List*   list = list_get();
+
+    if (list) {
+        if (list->last)
+            MYLOG_ERROR("%s() called with pending messages", __func__);
+        list_fini(list);
+        free(list);
+        (void)pthread_setspecific(listKey, NULL);
     }
 
+    restoreSigs(&sigset);
+}
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
+/**
+ * Adds a variadic message to the current thread's list of messages. Emits and
+ * then clears the list.
+ *
+ * @param[in] loc     Location where the message was generated.
+ * @param[in] level   Logging level.
+ * @param[in] format  Format of the message.
+ * @param[in] args    Format arguments.
+ */
+void mylog_vlog(
+        const mylog_loc_t* const restrict loc,
+        const mylog_level_t               level,
+        const char* const restrict        format,
+        va_list                           args)
+{
+    mylog_list_vadd(loc, format, args);
+    mylog_list_emit(level);
+}
+
+/**
+ * Adds a message to the current thread's list of messages. Emits and then
+ * clears the list.
+ *
+ * @param[in] loc     Location where the message was generated.
+ * @param[in] level   Logging level.
+ * @param[in] format  Format of the message.
+ * @param[in] ...     Format arguments.
+ */
+void mylog_log(
+        const mylog_loc_t* const restrict loc,
+        const mylog_level_t               level,
+        const char* const restrict        format,
+                                          ...)
+{
+    va_list args;
+    va_start(args, format);
+    mylog_vlog(loc, level, format, args);
+    va_end(args);
+}
+
+#if 0
+/**
+ * Sets the first log-message for the current thread.
+ *
+ * @param[in] fmt  The message format
+ * @param[in] ...  Arguments referenced by the format
+ */
+void log_start(
+        const char* const fmt,
+                          ...)
+{
+    sigset_t sigset;
+    blockSigs(&sigset);
+    va_list     args;
+    list_clear();
+    va_start(args, fmt);
+    log_vadd(fmt, args);
     va_end(args);
     restoreSigs(&sigset);
 }
@@ -462,18 +550,10 @@ void log_serror(
 {
     sigset_t sigset;
     blockSigs(&sigset);
-
     va_list     args;
-
     log_errno();
     va_start(args, fmt);
-
-    if (EAGAIN == log_vadd(fmt, args)) {
-        va_end(args);
-        va_start(args, fmt);
-        (void)log_vadd(fmt, args);
-    }
-
+    log_vadd(fmt, args);
     va_end(args);
     restoreSigs(&sigset);
 }
@@ -495,69 +575,10 @@ void log_errnum(
 
     if (NULL != fmt) {
         va_list     args;
-
         va_start(args, fmt);
-
-        if (EAGAIN == log_vadd(fmt, args)) {
-            va_end(args);
-            va_start(args, fmt);
-            (void)log_vadd(fmt, args);
-        }
-
+        log_vadd(fmt, args);
         va_end(args);
     }
-
-    restoreSigs(&sigset);
-}
-
-/**
- * Logs the currently-accumulated log-messages of the current thread and resets
- * the message-list for the current thread.
- */
-void log_log(
-    const int   level)  /**< The level at which to log the messages.  One of
-                          *  LOG_ERR, LOG_WARNING, LOG_NOTICE, LOG_INFO, or
-                          *  LOG_DEBUG; otherwise, the behavior is undefined. */
-{
-    sigset_t sigset;
-    blockSigs(&sigset);
-
-    List*   list = getList();
-
-    if (NULL != list && NULL != list->last) {
-        static const unsigned       allPrioritiesMask = 
-            LOG_MASK(LOG_ERR) |
-            LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE) | 
-            LOG_MASK(LOG_INFO) |
-            LOG_MASK(LOG_DEBUG);
-        const int                   priorityMask = LOG_MASK(level);
-
-        lock();
-
-        if ((priorityMask & allPrioritiesMask) == 0) {
-            uerror("log_log(): Invalid logging-level (%d)", level);
-        }
-        else if (getulogmask() & priorityMask) {
-            const Message*     msg;
-
-            for (msg = list->first; NULL != msg; msg = msg->next) {
-                /*
-                 * NB: The message is not printed using "ulog(level,
-                 * msg->string)" because "msg->string" might have formatting
-                 * characters in it (e.g., "%") from, for example, a call to
-                 * "s_prod_info()" with a dangerous product-identifier.
-                 */
-                ulog(level, "%s", msg->string);
-
-                if (msg == list->last)
-                    break;
-            }                       /* message loop */
-        }                           /* messages should be printed */
-
-        unlock();
-        log_clear();
-    }                               /* have messages */
 
     restoreSigs(&sigset);
 }
@@ -582,98 +603,8 @@ void* log_malloc(
     void* obj = malloc(nbytes);
 
     if (obj == NULL)
-        log_serror(LOG_FMT("Couldn't allocate %lu bytes for %s"), file, line,
-                nbytes, msg);
+        mylog_error(MYLOG_LEVEL_ERROR, "malloc() failure");
 
     return obj;
 }
-
-/**
- * Frees the log-message resources of the current thread. Should only be called
- * when no more logging by the current thread will occur.
- */
-void
-log_free(void)
-{
-    sigset_t sigset;
-    blockSigs(&sigset);
-
-    List*   list = getList();
-
-    if (list) {
-        Message* msg;
-        Message* next;
-
-        for (msg = list->first; msg; msg = next) {
-            next = msg->next;
-            free(msg->string);
-            free(msg);
-        }
-        free(list);
-        (void)pthread_setspecific(listKey, NULL);
-    }
-
-    restoreSigs(&sigset);
-}
-
-/**
- * Returns the logging options appropriate to a log-file specification.
- *
- * @param[in] logFileSpec  Log-file specification:
- *                             NULL  Use syslog(3)
- *                             ""    Use syslog(3)
- *                             "-"   Log to `stderr`
- *                             else  Pathname of log-file
- * @return                 Logging options appropriate to the log-file
- *                         specification.
- */
-unsigned
-log_getLogOpts(
-        const char* const logFileSpec)
-{
-    return (logFileSpec && 0 == strcmp(logFileSpec, "-"))
-        /*
-         * Interactive invocation. Use ID, timestamp, UTC, no PID, and no
-         * console.
-         */
-        ? LOG_IDENT
-        /*
-         * Non-interactive invocation. Use ID, timestamp, UTC, PID, and the
-         * console as a last resort.
-         */
-        : LOG_IDENT | LOG_PID | LOG_CONS;
-}
-
-/**
- * Initializes logging. This should be called before the command-line is
- * decoded.
- *
- * @param[in] progName    Name of the program. Caller may modify on return.
- * @param[in] maxLogLevel Initial maximum logging-level. One of LOG_ERR,
- *                        LOG_WARNING, LOG_NOTICE, LOG_INFO, or LOG_DEBUG.
- *                        Log messages up to this level will be logged.
- * @param[in] facility    Logging facility. Typically LOG_LDM.
- */
-void
-log_initLogging(
-        const char* const progName,
-        const int         maxLogLevel,
-        const int         facility)
-{
-    char* logFileSpec;
-    int   ttyFd = open("/dev/tty", O_RDONLY);
-
-    if (-1 == ttyFd) {
-        // No controlling terminal => daemon => use syslog(3)
-        logFileSpec = NULL;
-    }
-    else {
-        // Controlling terminal exists => interactive => log to `stderr`
-        (void)close(ttyFd);
-        logFileSpec = "-";
-    }
-
-    (void)setulogmask(LOG_UPTO(maxLogLevel));
-    (void)openulog(progName, log_getLogOpts(logFileSpec), facility,
-            logFileSpec);
-}
+#endif

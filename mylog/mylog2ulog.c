@@ -16,6 +16,7 @@
 #include "ulog.h"
 
 #include <limits.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,63 @@ int                  mylog_syslog_priorities[] = {
 static mylog_level_t loggingLevel = MYLOG_LEVEL_DEBUG;
 
 /**
+ * The thread identifier of the thread on which `mylog_init()` was called.
+ */
+static pthread_t initThread;
+
+/**
+ * The mutex that makes this module thread-safe.
+ */
+static pthread_mutex_t  mutex;
+
+static inline void lock(void)
+{
+    if (pthread_mutex_lock(&mutex))
+        abort();
+}
+
+static inline void unlock(void)
+{
+    if (pthread_mutex_unlock(&mutex))
+        abort();
+}
+
+/**
+ * Emits a single log message.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] msg    The message.
+ */
+void mylog_emit(
+        const mylog_level_t    level,
+        const Message* const   msg)
+{
+    (void)ulog(mylog_get_priority(level), "%s:%d %s", msg->loc.file,
+            msg->loc.line, msg->string);
+}
+
+/**
+ * Emits an error message. Used internally when an error occurs in this logging
+ * module.
+ *
+ * @param[in] fmt  Format of the message.
+ * @param[in] ...  Format arguments.
+ */
+void mylog_error(
+        const char* const fmt,
+                          ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    (void)vulog(mylog_get_priority(MYLOG_LEVEL_ERROR), fmt, args);
+    va_end(args);
+}
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
+/**
  * Initializes the logging module. Should be called before any other function.
  * - `mylog_get_output()` will return "".
  * - `mylog_get_facility()` will return `LOG_LDM`.
@@ -46,22 +104,46 @@ static mylog_level_t loggingLevel = MYLOG_LEVEL_DEBUG;
 int mylog_init(
         const char* const id)
 {
-    const unsigned    options = mylog_get_options();
-    int               status = openulog(id, options, LOG_LDM, "");
-    if (status != -1)
-        mylog_set_level(MYLOG_LEVEL_DEBUG);
-    return status == -1 ? -1 : 0;
+    pthread_mutexattr_t mutexAttr;
+    int status = pthread_mutexattr_init(&mutexAttr);
+    if (status == 0) {
+        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
+        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
+        status = pthread_mutex_init(&mutex, &mutexAttr);
+        if (status == 0) {
+            const unsigned  options = mylog_get_options();
+            status = openulog(id, options, LOG_LDM, "");
+            if (status != -1) {
+                mylog_set_level(MYLOG_LEVEL_DEBUG);
+                initThread = pthread_self();
+                status = 0;
+            }
+        }
+    }
+    return status ? -1 : 0;
 }
 
 /**
- * Finalizes the logging module.
+ * Finalizes the logging module. Frees resources specific to the current thread.
+ * Frees all resources if the current thread is the one on which `mylog_init()`
+ * was called.
  *
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
 int mylog_fini(void)
 {
-    return closeulog();
+    int status;
+    mylog_list_free();
+    if (!pthread_equal(initThread, pthread_self())) {
+        status = 0;
+    }
+    else {
+        status = pthread_mutex_destroy(&mutex);
+        if (status == 0)
+            status = closeulog();
+    }
+    return status ? -1 : 0;
 }
 
 /**
@@ -73,11 +155,13 @@ int mylog_fini(void)
 int mylog_set_level(
         const mylog_level_t level)
 {
+    lock();
     static int ulogUpTos[MYLOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
             LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
             LOG_UPTO(LOG_ERR)};
     (void)setulogmask(ulogUpTos[level]);
     loggingLevel = level;
+    unlock();
     return 0;
 }
 
@@ -89,7 +173,10 @@ int mylog_set_level(
  */
 mylog_level_t mylog_get_level(void)
 {
-    return loggingLevel;
+    lock();
+    mylog_level_t level = loggingLevel;
+    unlock();
+    return level;
 }
 
 /**
@@ -97,9 +184,11 @@ mylog_level_t mylog_get_level(void)
  */
 void mylog_roll_level(void)
 {
+    lock();
     mylog_level_t level = mylog_get_level();
     level = (level == MYLOG_LEVEL_DEBUG) ? MYLOG_LEVEL_ERROR : level - 1;
     mylog_set_level(level);
+    unlock();
 }
 
 /**
@@ -112,10 +201,12 @@ void mylog_roll_level(void)
 int mylog_set_facility(
         const int facility)
 {
+    lock();
     const char* const id = mylog_get_id();
     const unsigned    options = mylog_get_options();
     const char* const output = mylog_get_output();
     int               status = openulog(id, options, facility, output);
+    unlock();
     return status == -1 ? -1 : 0;
 }
 
@@ -128,7 +219,10 @@ int mylog_set_facility(
  */
 int mylog_get_facility(void)
 {
-    return getulogfacility();
+    lock();
+    int facility = getulogfacility();
+    unlock();
+    return facility;
 }
 
 /**
@@ -140,15 +234,17 @@ int mylog_get_facility(void)
  * @param[in] id        The logging identifier. Caller may free.
  * @retval    0         Success.
  */
-int mylog_modify_id(
+int mylog_modify_level(
         const char* const hostId,
         const bool        isFeeder)
 {
+    lock();
     char id[_POSIX_HOST_NAME_MAX + 6 + 1]; // hostname + "(type)" + 0
     (void)snprintf(id, sizeof(id), "%s(%s)", hostId,
             isFeeder ? "feed" : "noti");
     id[sizeof(id)-1] = 0;
     setulogident(id);
+    unlock();
     return 0;
 }
 
@@ -159,7 +255,10 @@ int mylog_modify_id(
  */
 const char* mylog_get_id(void)
 {
-    return getulogident();
+    lock();
+    const char* const id = getulogident();
+    unlock();
+    return id;
 }
 
 /**
@@ -176,7 +275,9 @@ const char* mylog_get_id(void)
 void mylog_set_options(
         const unsigned options)
 {
+    lock();
     ulog_set_options(~0u, options);
+    unlock();
 }
 
 /**
@@ -193,7 +294,10 @@ void mylog_set_options(
  */
 unsigned mylog_get_options(void)
 {
-    return ulog_get_options();
+    lock();
+    const unsigned opts = ulog_get_options();
+    unlock();
+    return opts;
 }
 
 /**
@@ -213,9 +317,11 @@ unsigned mylog_get_options(void)
 int mylog_set_output(
         const char* const output)
 {
+    lock();
     const char* const id = mylog_get_id();
     const unsigned    options = mylog_get_options();
     int               status = openulog(id, options, LOG_LDM, output);
+    unlock();
     return status == -1 ? -1 : 0;
 }
 
@@ -231,6 +337,8 @@ int mylog_set_output(
  */
 const char* mylog_get_output(void)
 {
+    lock();
     const char* path = getulogpath();
+    unlock();
     return path == NULL ? "" : path;
 }

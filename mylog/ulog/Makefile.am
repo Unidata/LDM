@@ -8,17 +8,16 @@
 
 include_HEADERS		= ulog.h
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= ulog.c log.c
+lib_la_SOURCES		= ulog.c
 EXTRA_DIST		= log.h
 dist_man3_MANS		= ulog.3
 
-check_PROGRAMS		= test_gmtime test0
+check_PROGRAMS		= test_gmtime test_gmtime
 TESTS			= test_gmtime
 
-test0_SOURCES		= ulog.c
-test0_CPPFLAGS		= -DTEST0
-test0_LDADD		= $(top_builddir)/lib/libldm.la
+test_gmtime_SOURCES	= ulog.c
+test_gmtime_CPPFLAGS	= -DTEST0
 test_gmtime_SOURCES	= test_gmtime.c
 
 check-local:
-	./test0 -l - 2>/dev/null
+	./test_gmtime -l - 2>/dev/null

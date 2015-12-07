@@ -167,7 +167,7 @@ static RegStatus addChild(
         }
         else {
             if (NULL == tsearch(child, &parent->children, compareNodes)) {
-                LOG_ERRNO();
+                MYLOG_ERRNO();
                 status = ENOMEM;
             }
             else {
@@ -879,7 +879,7 @@ static RegStatus putValue(
                     if (0 == (status = reg_cloneString(&vt->name, name))) {
                         if (NULL == (ptr = tsearch(vt, &node->values,
                                 compareValueThings))) {
-                            LOG_ERRNO();
+                            MYLOG_ERRNO();
                             status = ENOMEM;
                         }
                         else {

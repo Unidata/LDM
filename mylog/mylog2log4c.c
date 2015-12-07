@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <log4c.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -114,28 +115,31 @@ static inline bool vetLevel(
 }
 
 /**
- * Formats a logging event.
+ * Formats a logging event in the standard form. The format is
+ * > _cat_:_pid_ _pri_ _msg_
+ * where:
+ * <dl>
+ * <dt>_cat_</dt> <dd>Is the logging category (e.g., program name)</dd>
+ * <dt>_pid_</dt> <dd>Is the numeric identifier of the process</dd>
+ * <dt>_pri_</dt> <dd>Is the priority of the message: one of  `ERROR`, `WARN`,
+ *                    `NOTICE`, `INFO`, or `DEBUG`.</dd>
+ * <dt>_msg_</dt> <dd>Is the message from the application</dd>
+ * </dl>
  *
  * @param[in] layout  The layout object.
  * @param[in] event   The logging event to be formatted. `event-evt_msg` shall
- *                    be non-NULL and point to the user's message.
- * @retval    NULL    No formatting done.
+ *                    be non-NULL and point to the application's message.
  * @return            Pointer to the formatted message.
  */
 static const char* mylog_layout_format(
     const log4c_layout_t*  	 layout,
     const log4c_logging_event_t* event)
 {
-    struct tm tm;
-    (void)gmtime_r(&event->evt_timestamp.tv_sec, &tm);
     char* const                        buf = event->evt_buffer.buf_data;
     const size_t                       bufsize = event->evt_buffer.buf_size;
     const log4c_location_info_t* const loc = event->evt_loc;
     const int                          n = snprintf(buf, bufsize,
-            "%04d%02d%02dT%02d%02d%02d.%06ldZ %s/%ld %s/%d %s %s\n",
-            tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-            tm.tm_sec, (long)event->evt_timestamp.tv_usec, event->evt_category,
-            (long)getpid(), loc->loc_file, loc->loc_line,
+            "%s:%ld %s %s\n", event->evt_category, (long)getpid(),
             log4c_priority_to_string(event->evt_priority), event->evt_msg);
     if (n >= bufsize) {
 	// Append '...' at the end of the message to show it was trimmed
@@ -145,7 +149,7 @@ static const char* mylog_layout_format(
 }
 
 /**
- * The standard layout type for this module.
+ * The standard layout type.
  */
 static log4c_layout_type_t mylog_layout_type = {
     "mylog_layout",
@@ -203,7 +207,8 @@ static int syslog_priority(
 }
 
 /**
- * Logs a message to the system logging daemon.
+ * Logs a message to the system logging daemon. A timestamp is not added because
+ * the system logging daemon will add one and its format is configurable.
  *
  * @param[in] this     An appender to the system logging daemon.
  * @param[in] a_event  The event to be logged.
@@ -211,11 +216,11 @@ static int syslog_priority(
  */
 static int mylog_syslog_append(
         log4c_appender_t* const restrict            this,
-        const log4c_logging_event_t* const restrict a_event)
+        const log4c_logging_event_t* const restrict event)
 {
-    intptr_t facility = (intptr_t)log4c_appender_get_udata(this);
-    syslog(syslog_priority(a_event->evt_priority) | facility, "%s",
-            a_event->evt_rendered_msg);
+    intptr_t  facility = (intptr_t)log4c_appender_get_udata(this);
+    syslog(syslog_priority(event->evt_priority) | facility, "%s",
+            event->evt_rendered_msg);
     return 0;
 }
 
@@ -233,6 +238,33 @@ static int mylog_syslog_close(
 }
 
 /**
+ * Appends a log message to a stream. The format is
+ * > _time_  _msg_
+ * where:
+ * <dl>
+ * <dt>_time_</dt> <dd>Is the creation-time of the message as
+ *                     <em>YYYYMMDD</em>T<em>hhmmss</em>.<em>uuuuuu</em></dd>
+ * <dt>_msg_</dt>  <dd>Is the layout-formatted message</dd>
+ * </dl>
+ *
+ * @param[in] this   An appender to a stream.
+ * @param[in] event  The event to be logged.
+ * @return           The number of bytes logged.
+ */
+static int mylog_stream_append(
+        log4c_appender_t* const restrict            this,
+        const log4c_logging_event_t* const restrict event)
+{
+    FILE* const fp = log4c_appender_get_udata(this);
+    struct tm tm;
+    (void)gmtime_r(&event->evt_timestamp.tv_sec, &tm);
+    return fprintf(fp, "%04d%02d%02dT%02d%02d%02d.%06ldZ %s",
+            tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
+            tm.tm_sec, (long)event->evt_timestamp.tv_usec,
+            event->evt_rendered_msg);
+}
+
+/**
  * Opens the standard error stream.
  *
  * @param[in] this  An appender to the standard error stream.
@@ -241,23 +273,11 @@ static int mylog_syslog_close(
 static int mylog_stderr_open(
         log4c_appender_t* const this)
 {
-    (void)setvbuf(stderr, NULL, _IOLBF, BUFSIZ); // Line buffered mode
+    if (log4c_appender_get_udata(this) == NULL) {
+        (void)setvbuf(stderr, NULL, _IOLBF, BUFSIZ); // Line buffered mode
+        (void)log4c_appender_set_udata(this, stderr);
+    }
     return 0;
-}
-
-/**
- * Appends a log message to the standard error stream.
- *
- * @param[in] this     An appender to the standard error stream.
- * @param[in] a_event  The event to be logged.
- * @return             The number of bytes logged.
- */
-static int mylog_stderr_append(
-        log4c_appender_t* const restrict            this,
-        const log4c_logging_event_t* const restrict a_event)
-{
-    // `a_event->evt_rendered_msg` is the message after layout formatting
-    return fprintf(stderr, "%s", a_event->evt_rendered_msg);
 }
 
 /**
@@ -278,7 +298,7 @@ static int mylog_stderr_close(
 static const log4c_appender_type_t mylog_appender_type_stderr = {
         "mylog_stderr", // Must persist
         mylog_stderr_open,
-        mylog_stderr_append,
+        mylog_stream_append,
         mylog_stderr_close
 };
 
@@ -321,21 +341,6 @@ static int mylog_file_open(
 }
 
 /**
- * Appends a log message to a regular file.
- *
- * @param[in] this     An appender to a regular file.
- * @param[in] a_event  The event to be logged.
- * @return             The number of bytes logged.
- */
-static int mylog_file_append(
-        log4c_appender_t* const restrict            this,
-        const log4c_logging_event_t* const restrict a_event)
-{
-    FILE* const fp = log4c_appender_get_udata(this);
-    return fprintf(fp, "%s", a_event->evt_rendered_msg);
-}
-
-/**
  * Closes a stream to a regular file.
  *
  * @param[in] this  An appender to a regular file.
@@ -364,7 +369,7 @@ static int mylog_file_close(
 static const log4c_appender_type_t mylog_appender_type_file = {
         "mylog_file", // Must persist
         mylog_file_open,
-        mylog_file_append,
+        mylog_stream_append,
         mylog_file_close
 };
 
@@ -520,7 +525,8 @@ static bool init_categories(void)
             // Controlling terminal exists => interactive => log to `stderr`
             (void)close(ttyFd);
             assert(mylog_appender_stderr);
-            (void)log4c_category_set_appender(mylog_category, mylog_appender_stderr);
+            (void)log4c_category_set_appender(mylog_category,
+                    mylog_appender_stderr);
         }
         (void)log4c_category_set_priority(mylog_category, LOG4C_PRIORITY_DEBUG);
         success = true;
@@ -646,7 +652,8 @@ int mylog_set_output(
         } // `out` specifies a stream
         if (status == 0) {
             //(void)log4c_category_set_additivity(category, 0);
-            log4c_category_set_priority(mylog_category, mylog_log4c_priorities[log_level]);
+            log4c_category_set_priority(mylog_category,
+                    mylog_log4c_priorities[log_level]);
             string_copy(output, out, sizeof(output));
         }
     } // `initialized && out != NULL`
@@ -688,8 +695,7 @@ int mylog_set_level(
         const int         ncats = log4c_category_list(categories,
                 MAX_CATEGORIES);
         if (ncats < 0 || ncats > MAX_CATEGORIES) {
-            mylog_warning("Couldn't get all logging categories: ncats=%d",
-                    ncats);
+            mylog_error("Couldn't get all logging categories: ncats=%d", ncats);
             status = -1;
         }
         else {
@@ -738,7 +744,7 @@ void mylog_roll_level(void)
  * @retval    0         Success.
  * @retval    -1        Failure.
  */
-int mylog_modify_id(
+int mylog_modify_level(
         const char* const hostId,
         const bool        isFeeder)
 {
@@ -813,4 +819,53 @@ int mylog_set_facility(
         const int facility)
 {
     return -1;
+}
+
+/**
+ * Emits an error message. Used internally when an error occurs in this logging
+ * module.
+ *
+ * @param[in] fmt  Format of the message.
+ * @param[in] ...  Format arguments.
+ */
+void mylog_error(
+        const char* const      fmt,
+                               ...)
+{
+    const log4c_appender_t* const app =
+            log4c_category_get_appender(mylog_category);
+    if (app) {
+        const log4c_appender_type_t* type = log4c_appender_get_type(app);
+        if (type) {
+            va_list args;
+            va_start(args, fmt);
+            if (type->append == mylog_stream_append) {
+                FILE* fp = log4c_appender_get_udata(app);
+                if (fp)
+                    (void)vfprintf(fp, fmt, args);
+            }
+            else if (type->append == mylog_syslog_append) {
+                intptr_t facility = (intptr_t)log4c_appender_get_udata(app);
+                char     buf[_POSIX2_LINE_MAX];
+                (void)snprintf(buf, sizeof(buf), fmt, args);
+                buf[sizeof(buf)-1] = 0;
+                syslog(LOG_ERR | facility, "%s", buf);
+            }
+            va_end(args);
+        }
+    }
+}
+
+/**
+ * Emits a single log message.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] msg    The message.
+ */
+void mylog_emit(
+        const mylog_level_t    level,
+        const Message* const   msg)
+{
+    log4c_category_log(mylog_category, mylog_get_priority(level), "%s:%d %s",
+            msg->loc.file, msg->loc.line, msg->string);
 }

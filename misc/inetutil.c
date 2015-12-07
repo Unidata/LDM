@@ -1132,7 +1132,7 @@ mcastRecvSock_joinGroup(
     int status = setsockopt(socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq,
             sizeof(mreq));
     if (status) {
-        LOG_ERRNO();
+        MYLOG_ERRNO();
         status = 2;
     }
 

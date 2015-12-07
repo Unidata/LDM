@@ -7,16 +7,17 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 noinst_LTLIBRARIES		= lib.la
+lib_la_SOURCES			= mylog.h mylog_list.c
 
 if WANT_LOG4C
 SUBDIRS				= log4c
-lib_la_SOURCES			= mylog2log4c.c mylog2log4c.h
+lib_la_SOURCES			+= mylog2log4c.c mylog2log4c.h
 lib_la_CPPFLAGS			= -I$(srcdir)/log4c/src
 lib_la_LIBADD			= $(builddir)/log4c/src/log4c/liblog4c.la \
                                   $(builddir)/log4c/src/sd/liblog4c_sd.la
 else
 SUBDIRS				= ulog
-lib_la_SOURCES			= mylog2ulog.c mylog2ulog.h
+lib_la_SOURCES			+= mylog2ulog.c mylog2ulog.h
 lib_la_CPPFLAGS			= -I$(srcdir)/ulog
 lib_la_LIBADD			= $(builddir)/ulog/lib.la
 endif

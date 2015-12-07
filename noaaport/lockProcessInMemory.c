@@ -56,7 +56,7 @@ int lockProcessInMemory(void)
                 status = mlockall(MCL_CURRENT|MCL_FUTURE);
 
                 if (status) {
-                    LOG_ERRNO();
+                    MYLOG_ERRNO();
                     status = errno;
                 }
         #if UNKNOWN

@@ -2,7 +2,6 @@
 #define LDM_LOG_H
 
 #include "ulog.h"
-#include "mylog.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -13,7 +12,7 @@ extern "C" {
 #endif
 
 #define LOG_FMT(fmt)                 "[%s:%d] " fmt
-#define LOG_ERRNO()                 log_start(LOG_FMT("%s"),__FILE__,__LINE__,strerror(errno))
+#define MYLOG_ERRNO()                 log_start(LOG_FMT("%s"),__FILE__,__LINE__,strerror(errno))
 #define LOG_START0(fmt)             log_start(LOG_FMT(fmt),__FILE__,__LINE__)
 #define LOG_START1(fmt,a)           log_start(LOG_FMT(fmt),__FILE__,__LINE__,a)
 #define LOG_START2(fmt,a,b)         log_start(LOG_FMT(fmt),__FILE__,__LINE__,a,b)

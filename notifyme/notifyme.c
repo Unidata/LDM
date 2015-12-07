@@ -281,7 +281,7 @@ int main(int ac, char *av[])
                         logOpts |= LOG_MICROSEC;
                         break;
                 case 'z':
-                        logOpts |= LOG_ISO_8601;
+                        logOpts |= MYLOG_ISO_8601;
                         break;
                 case 'l':
                         logfname = optarg;

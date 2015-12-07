@@ -249,7 +249,7 @@ mls_decodeOptions(
             break;
         }
         case 'z': {
-            ulog_set_options(LOG_ISO_8601, LOG_ISO_8601);
+            ulog_set_options(MYLOG_ISO_8601, MYLOG_ISO_8601);
             break;
         }
         case ':': {
