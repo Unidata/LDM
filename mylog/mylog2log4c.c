@@ -78,6 +78,10 @@ static log4c_appender_t* appenders_syslog_local[MYLOG_NLOCALS];
  */
 static log4c_appender_t* appender_syslog_user;
 /**
+ * The Log4C appender that uses the system logging daemon:
+ */
+static log4c_appender_t* mylog_appender_syslog;
+/**
  * The default Log4C layout for logging.
  */
 static log4c_layout_t*   mylog_layout;
@@ -244,7 +248,7 @@ static int mylog_syslog_close(
  * where:
  * <dl>
  * <dt>_time_</dt> <dd>Is the creation-time of the message as
- *                     <em>YYYYMMDD</em>T<em>hhmmss</em>.<em>uuuuuu</em></dd>
+ *                     <em>YYYYMMDD</em>T<em>hhmmss</em>.<em>uuuuuu</em>Z</dd>
  * <dt>_msg_</dt>  <dd>Is the layout-formatted message</dd>
  * </dl>
  *
@@ -426,6 +430,29 @@ static bool init_appender_syslog(
 }
 
 /**
+ * Returns the appender corresponding to a system logging daemon facility.
+ *
+ * @param[in] facility  The facility.
+ * @return              The appender corresponding to `facility`.
+ */
+static log4c_appender_t* mylog_get_syslog_appender(
+        const int facility)
+{
+    switch (facility) {
+        case LOG_LOCAL0: return appenders_syslog_local[0];
+        case LOG_LOCAL1: return appenders_syslog_local[1];
+        case LOG_LOCAL2: return appenders_syslog_local[2];
+        case LOG_LOCAL3: return appenders_syslog_local[3];
+        case LOG_LOCAL4: return appenders_syslog_local[4];
+        case LOG_LOCAL5: return appenders_syslog_local[5];
+        case LOG_LOCAL6: return appenders_syslog_local[6];
+        case LOG_LOCAL7: return appenders_syslog_local[7];
+        case LOG_USER:   return appender_syslog_user;
+        default:         return NULL;
+    }
+}
+
+/**
  * Initializes the appenders to the system logging daemon -- all `LOG_LOCAL`n
  * facilities and `LOG_USER`.
  *
@@ -457,6 +484,7 @@ static bool init_appenders_syslog(void)
     }
     if (!init_appender_syslog(LOG_USER, "syslog_user", &appender_syslog_user))
         return false;
+    mylog_appender_syslog = mylog_get_syslog_appender(LOG_LDM);
     return true;
 }
 
@@ -477,28 +505,6 @@ static bool init_appenders(void)
     (void)log4c_appender_set_layout(mylog_appender_stderr, mylog_layout);
     return mylog_appender_stderr && init_appender_layout("stderr") &&
             init_appender_layout("stdout") && init_appenders_syslog();
-}
-
-/**
- * Returns the appender corresponding to a system logging daemon facility.
- *
- * @param[in] facility  The facility.
- * @return              The appender corresponding to `facility`.
- */
-static log4c_appender_t* mylog_get_syslog_appender(
-        const int facility)
-{
-    switch (facility) {
-        case LOG_LOCAL0: return appenders_syslog_local[0];
-        case LOG_LOCAL1: return appenders_syslog_local[1];
-        case LOG_LOCAL2: return appenders_syslog_local[2];
-        case LOG_LOCAL3: return appenders_syslog_local[3];
-        case LOG_LOCAL4: return appenders_syslog_local[4];
-        case LOG_LOCAL5: return appenders_syslog_local[5];
-        case LOG_LOCAL6: return appenders_syslog_local[6];
-        case LOG_LOCAL7: return appenders_syslog_local[7];
-        default:         return appender_syslog_user;
-    }
 }
 
 /**
@@ -809,19 +815,22 @@ unsigned mylog_get_options(void)
 }
 
 /**
- * Sets the facility that might be used (e.g., `LOG_LOCAL0`) when logging to the
- * system logging daemon. Should be called between `mylog_init()` and
- * `mylog_fini()`. May do nothing.
+ * Sets the facility to use (e.g., `LOG_LOCAL0`) when logging via the system
+ * logging daemon. Should be called between `mylog_init()` and `mylog_fini()`.
  *
- * @param[in] facility  The facility that might be used when logging to the
- *                      system logging daemon.
+ * @param[in] facility  The facility to use when logging via the system logging
+ *                      daemon.
  * @retval    0         Success.
  * @retval    -1        Error.
  */
 int mylog_set_facility(
         const int facility)
 {
-    return -1;
+    if (facility != LOG_USER &&
+            ((LOG_LOCAL0 - facility) * (LOG_LOCAL7 - facility) > 0))
+        return -1;
+    mylog_appender_syslog = mylog_get_syslog_appender(facility);
+    return 0;
 }
 
 /**

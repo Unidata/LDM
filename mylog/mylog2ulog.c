@@ -99,7 +99,7 @@ void mylog_error(
  * Initializes the logging module. Should be called before any other function.
  * - `mylog_get_output()` will return "".
  * - `mylog_get_facility()` will return `LOG_LDM`.
- * - `mylog_get_level()` will return `MYLOG_LEVEL_DEBUG`.
+ * - `mylog_get_level()` will return `MYLOG_LEVEL_NOTICE`.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
@@ -116,13 +116,12 @@ int mylog_init(
         (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
         status = pthread_mutex_init(&mutex, &mutexAttr);
         if (status == 0) {
-            const unsigned  options = mylog_get_options();
-            char            progname[_XOPEN_PATH_MAX];
+            char progname[_XOPEN_PATH_MAX];
             strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
             id = basename(progname);
-            status = openulog(id, options, LOG_LDM, "");
+            status = openulog(id, LOG_PID, LOG_LDM, "");
             if (status != -1) {
-                mylog_set_level(MYLOG_LEVEL_DEBUG);
+                mylog_set_level(MYLOG_LEVEL_NOTICE);
                 initThread = pthread_self();
                 status = 0;
             }

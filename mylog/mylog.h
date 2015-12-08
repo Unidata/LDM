@@ -40,7 +40,7 @@ typedef enum {
  * Initializes the logging module. Should be called before any other function.
  * - `mylog_get_output()` will return "".
  * - `mylog_get_facility()` will return `LOG_LDM`.
- * - `mylog_get_level()` will return `MYLOG_LEVEL_DEBUG`.
+ * - `mylog_get_level()` will return `MYLOG_LEVEL_NOTICE`.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
