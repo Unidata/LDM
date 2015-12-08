@@ -16,6 +16,7 @@
 #undef NDEBUG
 #include <assert.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <limits.h>
 #include <log4c.h>
 #include <stdarg.h>
@@ -52,7 +53,7 @@ log4c_category_t*        mylog_category;
 /**
  * The name of the program.
  */
-static char              progname[_XOPEN_NAME_MAX + 1];
+static char              progname[_XOPEN_NAME_MAX];
 /**
  * The specification of logging output.
  */
@@ -540,13 +541,13 @@ static bool init_categories(void)
  * - `mylog_get_facility()` will return `LOG_LDM`.
  * - `mylog_get_level()`    will return `MYLOG_LEVEL_DEBUG`.
  *
- * @param[in] id       The logging identifier. Typically the name of the
- *                     program. Caller may free.
+ * @param[in] id       The pathname of the program (e.g., `argv[0]`. Caller may
+ *                     free.
  * @retval    0        Success.
  * @retval    -1       Error.
  */
 int mylog_init(
-        const char* const id)
+        const char* id)
 {
     bool success;
     if (initialized || (id == NULL) || !init_layouts() || !init_appenders() ||
@@ -562,6 +563,8 @@ int mylog_init(
             }
             else {
                 string_copy(progname, id, sizeof(progname));
+                id = basename(progname);
+                (void)memmove(progname, id, strlen(id)+1);
                 (void)strcpy(output, "");
                 log_level = MYLOG_LEVEL_DEBUG;
                 log4c_rc->config.reread = 0;

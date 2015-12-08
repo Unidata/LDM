@@ -42,7 +42,8 @@ typedef enum {
  * - `mylog_get_facility()` will return `LOG_LDM`.
  * - `mylog_get_level()` will return `MYLOG_LEVEL_DEBUG`.
  *
- * @param[in] id       The logging identifier. Caller may free.
+ * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
+ *                     free.
  * @retval    0        Success.
  * @retval    -1       Error.
  */

@@ -21,6 +21,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef _XOPEN_PATH_MAX
+    #define _XOPEN_PATH_MAX 1024
+#endif
+
 /**
  * The mapping from `mylog` logging levels to `ulog` priorities:
  */
@@ -97,12 +101,13 @@ void mylog_error(
  * - `mylog_get_facility()` will return `LOG_LDM`.
  * - `mylog_get_level()` will return `MYLOG_LEVEL_DEBUG`.
  *
- * @param[in] id       The logging identifier. Caller may free.
+ * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
+ *                     free.
  * @retval    0        Success.
  * @retval    -1       Error.
  */
 int mylog_init(
-        const char* const id)
+        const char* id)
 {
     pthread_mutexattr_t mutexAttr;
     int status = pthread_mutexattr_init(&mutexAttr);
@@ -112,6 +117,9 @@ int mylog_init(
         status = pthread_mutex_init(&mutex, &mutexAttr);
         if (status == 0) {
             const unsigned  options = mylog_get_options();
+            char            progname[_XOPEN_PATH_MAX];
+            strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
+            id = basename(progname);
             status = openulog(id, options, LOG_LDM, "");
             if (status != -1) {
                 mylog_set_level(MYLOG_LEVEL_DEBUG);
