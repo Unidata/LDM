@@ -31,7 +31,6 @@
 #include "fbits.h"
 #include "remote.h"
 #include "lcm.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "log.h"
 #include "ldmprint.h"

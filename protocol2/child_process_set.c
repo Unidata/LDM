@@ -16,7 +16,6 @@
 #include <stdlib.h>     /* malloc(), free() */
 #include <sys/types.h>
 
-#include "ulog.h"
 #include "mylog.h"
 #include "child_process_set.h"
 

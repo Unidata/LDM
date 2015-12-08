@@ -2,7 +2,6 @@
  *   Copyright 1993, University Corporation for Atmospheric Research
  *   See ../COPYRIGHT file for copying and redistribution conditions.
  */
-/* $Id: ulog.h,v 1.84 2002/12/02 22:38:49 steve Exp $ */
 
 #ifndef _ULOG_H_
 #define _ULOG_H_

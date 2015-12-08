@@ -12,7 +12,6 @@
 #include <errno.h>
 
 #include "rawfile.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "feed.h"
 

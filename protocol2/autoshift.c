@@ -23,7 +23,6 @@
 #include "ldm.h"
 #include "error.h"
 #include "timestamp.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "globals.h"
 #include "remote.h"

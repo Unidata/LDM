@@ -16,7 +16,6 @@
 
 #include "error.h"
 #include "ldm.h"
-#include "ulog.h"
 #include "mylog.h"
 
 #include "dict.h"

@@ -17,7 +17,6 @@
 #include <errno.h>
 #include "ldm.h"
 #include "globals.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "pq.h"
 

@@ -43,7 +43,6 @@
 #define INSTR_WARN_TIME 20      /* # of seconds which is too long */
 #endif /* !INSTR_WARN_TIME */
 #include "ldmprint.h"
-#include "ulog.h"
 #include "mylog.h"
 #endif /* INSTRUMENT */
 

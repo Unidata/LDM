@@ -23,7 +23,6 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "ulog.h"
 #include "mylog.h"
 #include "ldm.h"
 #include "ldmalloc.h"

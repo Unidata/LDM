@@ -30,7 +30,6 @@
 #include "atofeedt.h"
 #include "ldmprint.h"
 #include "inetutil.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "md5.h"
 #include "gribinsert.h"

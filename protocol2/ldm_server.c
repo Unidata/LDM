@@ -24,7 +24,6 @@
 #include "ldmprint.h"    /* s_prod_class() */
 #include "pq.h"
 #include "prod_class.h"  /* free_prod_class() */
-#include "ulog.h"
 #include "mylog.h"
 #include "log.h"
 #include "UpFilter.h"

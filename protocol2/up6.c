@@ -34,7 +34,6 @@
 #include "prod_class.h"  /* clss_eq() */
 #include "rpcutil.h"     /* clnt_errmsg() */
 #include "UpFilter.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "globals.h"
 #include "remote.h"

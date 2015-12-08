@@ -11,7 +11,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "ulog.h"
 #include "mylog.h"
 #include "timestamp.h"
 #ifndef NDEBUG

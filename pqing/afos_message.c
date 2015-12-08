@@ -18,7 +18,6 @@
 #include "xbuf.h"
 #include "tokens.h"
 #include "afos_message.h"
-#include "ulog.h"
 #include "mylog.h"
 
 

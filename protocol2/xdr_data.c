@@ -11,7 +11,6 @@
 
 #include <stdlib.h>
 
-#include "ulog.h"
 #include "mylog.h"
 
 #include "xdr_data.h"

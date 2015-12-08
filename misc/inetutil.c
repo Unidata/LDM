@@ -10,7 +10,6 @@
 #include <config.h>
 
 #include "error.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "ldm.h"
 #include "ldmprint.h"

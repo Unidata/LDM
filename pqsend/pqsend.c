@@ -22,7 +22,6 @@
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "LdmProxy.h"
 #include "log.h"

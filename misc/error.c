@@ -13,7 +13,6 @@
 #include <string.h>
 #include <strings.h>  /* strdup() */
 
-#include "ulog.h"
 #include "mylog.h"
 
 #include "error.h"

@@ -12,7 +12,6 @@
 #include <sys/types.h>
 
 #include "gribinsert.h"
-#include "ulog.h"
 #include "mylog.h"
 
 void search_for_grib(data,filelen,offset)

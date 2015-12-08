@@ -18,7 +18,6 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
-#include "ulog.h"
 #include "mylog.h"
 #include "feed.h"
 #include "rawfile.h"

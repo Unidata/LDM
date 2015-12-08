@@ -30,7 +30,6 @@
 #include "ldm_xlen.h"   /* xlen_prod_i() */
 #include "ldmprint.h"   /* s_signaturet() */
 #include "md5.h"
-#include "ulog.h"
 #include "mylog.h"
 
 #include "fauxPqConfigFile.h"

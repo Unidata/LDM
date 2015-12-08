@@ -19,7 +19,6 @@
 #include "timestamp.h" 
 #include "RegularExpressions.h"
 
-#include "ulog.h"
 #include "mylog.h"
 #include "log.h"
 

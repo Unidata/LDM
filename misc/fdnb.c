@@ -7,7 +7,6 @@
 #include <config.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include "ulog.h"
 #include "mylog.h"
 #include "fdnb.h"
 

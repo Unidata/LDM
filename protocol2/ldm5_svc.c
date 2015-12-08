@@ -9,7 +9,6 @@
 #include <string.h> /* memset() */
 
 #include "ldm5.h"
-#include "ulog.h"
 #include "mylog.h"
 
 

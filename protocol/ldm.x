@@ -60,7 +60,7 @@
 %
 %#ifndef NDEBUG
 %#include <assert.h>
-%#include <ulog.h>
+%#include <mylog.h>
 %#define pIf(a,b) (!(a) || (b))	/* a implies b */
 %
 %static bool_t
@@ -764,7 +764,7 @@ program LDMPROG {
 %
 %#include <stddef.h>
 %
-%#include "ulog.h"
+%#include "mylog.h"
 %#include "xdr_data.h"
 %
 %

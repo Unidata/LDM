@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ldm.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "wmo_header.h"
 #include "tokens.h"

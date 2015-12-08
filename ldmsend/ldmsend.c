@@ -35,9 +35,7 @@
 #include "md5.h"
 #include "prod_class.h"
 #include "rpcutil.h"
-#include "ulog.h"
 #include "mylog.h"
-#include "log.h"
 
 #ifdef NO_ATEXIT
 #include "atexit.h"

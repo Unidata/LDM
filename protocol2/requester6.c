@@ -34,7 +34,6 @@
 #include "rpcutil.h"     /* clnt_errmsg() */
 #include "savedInfo.h"
 #include "timestamp.h"
-#include "ulog.h"
 #include "mylog.h"
 
 #include "requester6.h"

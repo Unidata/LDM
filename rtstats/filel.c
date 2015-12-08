@@ -20,7 +20,6 @@
 #include "ldm.h"
 #include "ldmalloc.h"
 #include "ldmprint.h"
-#include "ulog.h"
 #include "mylog.h"
 
 struct fl_entry {

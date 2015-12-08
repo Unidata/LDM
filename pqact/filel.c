@@ -55,7 +55,6 @@ union semun {
 #include "log.h"
 #include "mkdirs_open.h"
 #include "registry.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "pbuf.h"
 #include "pq.h"

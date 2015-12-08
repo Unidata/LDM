@@ -1,4 +1,3 @@
-#include <ulog.h>
 #include <mylog.h>
 
 void er_wmsg(

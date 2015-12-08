@@ -13,7 +13,6 @@
 #include "ldm.h"
 #include "ldmprint.h"
 #include "timestamp.h"
-#include "ulog.h"
 #include "mylog.h"
 
 #include "feedTime.h"

@@ -11,7 +11,6 @@
 #include "ldmalloc.h"
 #include "xbuf.h"
 #ifndef NDEBUG
-#include "ulog.h" /* use _uassert() => ulog printing of assert messages */
 #include "mylog.h"
 #endif
 

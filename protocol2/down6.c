@@ -28,7 +28,6 @@
 #include "prod_info.h"
 #include "savedInfo.h"
 #include "timestamp.h"   /* clss_eq(), prodInClass() */
-#include "ulog.h"
 #include "mylog.h"
 #include "xdr_data.h"
 

@@ -12,7 +12,6 @@
 #include "xbuf.h"
 #include "tokens.h"
 #include "wmo_message.h"
-#include "ulog.h"
 #include "mylog.h"
 
 #if !defined (SCAN_CHECK)

@@ -4,7 +4,6 @@
 #include <errno.h>
 
 #include "error.h"
-#include "ulog.h"
 #include "mylog.h"
 
 int

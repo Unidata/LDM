@@ -59,7 +59,6 @@
 #include "rpcutil.h"
 #include "savedInfo.h"
 #include "timestamp.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "log.h"
 #include "UpFilter.h"

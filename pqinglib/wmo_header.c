@@ -12,7 +12,6 @@
 
 #include "ldmalloc.h"
 #include "tokens.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "wmo_header.h"
 #include "xbuf.h"

@@ -40,7 +40,6 @@
 #include <string.h>
 #include <strings.h>
 #define SYSLOG_NAMES
-#include "ulog.h"
 #include "mylog.h"
 
 #ifdef SYSLOG_NAMES

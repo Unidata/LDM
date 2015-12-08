@@ -3,7 +3,6 @@
 #include <rpc/rpc.h>
 
 #include "inetutil.h"
-#include "ulog.h"
 #include "mylog.h"
 
 #include "ldm4.h"

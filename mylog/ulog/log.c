@@ -25,8 +25,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "ulog.h"
-
 #include "log.h"
 
 

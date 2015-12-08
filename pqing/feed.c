@@ -15,7 +15,6 @@
 
 #include "inetutil.h"
 #include "feed.h"
-#include "ulog.h"
 #include "mylog.h"
 #include "rawfile.h"
 #ifndef MCIDAS_ONLY
