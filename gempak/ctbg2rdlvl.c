@@ -63,6 +63,12 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
         }
 
         lvltbl->info = (G2level *)malloc((size_t)nr*sizeof(G2level));
+        if (lvltbl->info == NULL) {
+            *iret = -1;
+            cfl_clos(fp, &ier);
+            return;
+        }
+
         lvltbl->nlines = nr;
 
         n  = 0;
@@ -71,14 +77,14 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
             cfl_trln( fp, 256, buffer, &ier );
             if ( ier != 0 ) break;
 
-	    cst_lstr (  buffer, &blen, &ier );
+            cst_lstr (  buffer, &blen, &ier );
 
-            sscanf( buffer, "%11d %11d %33c %20c %s %11d",
+            sscanf( buffer, "%11d %11d %33c %20c %4s %11d",
                             &id1, &id2, name, unit, abbrev, &scale);
 
-	    name[33] = '\0';
-	    unit[20] = '\0';
-	    abbrev[4] = '\0';
+            name[33] = '\0';
+            unit[20] = '\0';
+            abbrev[4] = '\0';
 
             lvltbl->info[n].id1=id1;
             lvltbl->info[n].id2=id2;
