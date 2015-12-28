@@ -20,17 +20,15 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
  * ctb_g2rdlvl ( tbname, lvltbl, iret )				        *
  *									*
  * Input parameters:							*
- *	*tbname		char		Filename of the table to read   *
+ *	*tbname char    Filename of the table to read                   *
  *									*
  * Output parameters:							*
- *	*lvltbl	G2lvls	Pointer to list of table entries        *
- *	*iret		int		Return code			*
- *                                        0 = Successful                *
- *                                       -1 = Could not open            *
- *                                       -2 = Could not get count of    *
- *                                            of table entries.         *
- *                                       G_NMEMRY = Memory allocation   *
- *                                                  failure
+ *	*lvltbl G2lvls  Pointer to list of table entries                *
+ *	*iret   int     Return code			                *
+ *                          0 = Successful                              *
+ *                         -1 = Could not open                          *
+ *                         -2 = Could not get count of of table entries *
+ *                        -52 = Memory allocation failure (G_NMEMRY)    *
  **									*
  * Log:									*
  * S. Gilbert/NCEP	 11/04	Modified from ctb_g2rdcntr to read a    *
