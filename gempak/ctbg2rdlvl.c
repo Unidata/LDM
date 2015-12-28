@@ -29,10 +29,13 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
  *                                       -1 = Could not open            *
  *                                       -2 = Could not get count of    *
  *                                            of table entries.         *
+ *                                       G_NMEMRY = Memory allocation   *
+ *                                                  failure
  **									*
  * Log:									*
  * S. Gilbert/NCEP	 11/04	Modified from ctb_g2rdcntr to read a    *
  *                              GRIB2 level/layer Table.                *
+ * S. Emmerson/Unidata   12/15  Added check for malloc() returning NULL *
  ***********************************************************************/
 {
         FILE     *fp = NULL;
@@ -64,7 +67,7 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
 
         lvltbl->info = (G2level *)malloc((size_t)nr*sizeof(G2level));
         if (lvltbl->info == NULL) {
-            *iret = -1;
+            *iret = G_NMEMRY;
             cfl_clos(fp, &ier);
             return;
         }
