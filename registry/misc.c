@@ -12,7 +12,7 @@
 #include <string.h>
 
 #include "registry.h"
-#include "log.h"
+#include "mylog.h"
 
 /*
  * Allocates memory.
@@ -23,7 +23,7 @@
  *                      NULL.  Upon successful return, "*status" will be 0;
  *                      otherwise it will be ENOMEM.
  * Returns:
- *      NULL            System error.  "log_start()" called.  "*status" is
+ *      NULL            System error.  "mylog_add()" called.  "*status" is
  *                      ENOMEM.
  *      else            A pointer to the allocated memory.  "*status" is 0.
  */
@@ -34,7 +34,7 @@ void* reg_malloc(
     void*       ptr = malloc(nbytes);
 
     if (NULL == ptr) {
-        LOG_SERROR1("Couldn't allocate %lu bytes", nbytes);
+        mylog_syserr("Couldn't allocate %lu bytes", nbytes);
         *status = ENOMEM;
     }
     else {
@@ -55,7 +55,7 @@ void* reg_malloc(
  *      nbytes          The number of bytes of prefix to clone
  * RETURNS:
  *      0               Success.  "*clone" is not NULL.
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus reg_clonePrefix(
     char** const        clone,
@@ -71,7 +71,7 @@ RegStatus reg_clonePrefix(
         status = 0;
     }
     else {
-        LOG_SERROR2("Couldn't clone first %lu bytes of string \"%s\"",
+        mylog_syserr("Couldn't clone first %lu bytes of string \"%s\"",
             nbytes, string);
         status = ENOMEM;
     }
@@ -89,7 +89,7 @@ RegStatus reg_clonePrefix(
  *      src             The string to clone.  Shall not be NULL.
  * RETURNS:
  *      0               Success.  "*clone" is not NULL.
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus reg_cloneString(
     char** const        clone,
@@ -133,7 +133,7 @@ int reg_isAbsRootPath(const char* const path)
  *      path            The path name to be vetted.  Shall not be NULL.
  * Returns:
  *      0               The path name is absolute
- *      EINVAL     The path name isn't absolute.  "log_start()" called.
+ *      EINVAL     The path name isn't absolute.  "mylog_add()" called.
  */
 RegStatus reg_vetAbsPath(
     const char* const   path)
@@ -144,7 +144,7 @@ RegStatus reg_vetAbsPath(
         status = 0;
     }
     else {
-        LOG_START1("Not an absolute path name: \"%s\"", path);
+        mylog_add("Not an absolute path name: \"%s\"", path);
         status = EINVAL;
     }
 
@@ -167,7 +167,7 @@ RegStatus reg_vetAbsPath(
  * Returns:
  *      0               Success.  "*parent" is not NULL.
  *      ENOENT          The child pathname has no parent pathname
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus reg_getParentPath(
     const char* const   child,
@@ -215,8 +215,8 @@ RegStatus reg_getParentPath(
  *                      is no longer needed.
  * Returns:
  *      0               Success.  "*relPath" and "*valueName" are set.
- *      EINVAL          "path" isn't valid.  "log_start()" called.
- *      ENOMEM          System error.  "log_start()" called.
+ *      EINVAL          "path" isn't valid.  "mylog_add()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus reg_splitAbsPath(
     const char* const   path,
@@ -229,7 +229,7 @@ RegStatus reg_splitAbsPath(
     if (0 == status) {
         if (0 == (status = reg_vetAbsPath(absPath))) {
             if (strstr(path, absPath) != path) {
-                LOG_START2("Path \"%s\" doesn't have prefix \"%s\"", path,
+                mylog_add("Path \"%s\" doesn't have prefix \"%s\"", path,
                     absPath);
                 status = EINVAL;
             }
@@ -237,7 +237,7 @@ RegStatus reg_splitAbsPath(
                 const char*     lastSep = strrchr(path, REG_SEP[0]);
 
                 if (NULL == lastSep) {
-                    LOG_START1("Not a valid path to a value: \"%s\"", path);
+                    mylog_add("Not a valid path to a value: \"%s\"", path);
                     status = EINVAL;
                 }
                 else {

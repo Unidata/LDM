@@ -7,7 +7,7 @@
 
 #include <stddef.h>
 
-#include <log.h>
+#include <mylog.h>
 #include <timestamp.h>
 
 #include <timer.h>
@@ -23,7 +23,7 @@ struct timer {
  * Arguments:
  *      seconds         The coundown time-interval in seconds.
  * Returns:
- *      NULL            Error. "log_start()" called.
+ *      NULL            Error. "mylog_add()" called.
  *      else            Pointer to the timer data-structure.
  */
 Timer*
@@ -34,11 +34,11 @@ timer_new(
     Timer*              timer = (Timer*)malloc(nbytes);
 
     if (NULL == timer) {
-        LOG_SERROR1("Couldn't allocate %lu bytes", nbytes);
+        mylog_syserr("Couldn't allocate %lu bytes", nbytes);
     }
     else {
         if (0 != set_timestamp(&timer->started)) {
-            LOG_SERROR0("Couldn't get time");
+            mylog_syserr("Couldn't get time");
             free(timer);
             timer = NULL;
         }

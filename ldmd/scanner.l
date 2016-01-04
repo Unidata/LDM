@@ -26,7 +26,7 @@
 #include "atofeedt.h"
 #include "ldm_config_file.h"
 #include "error.h"
-#include "log.h"
+#include "mylog.h"
 #include "RegularExpressions.h"
 
 #if YYDEBUG
@@ -116,7 +116,7 @@ qstring		([^"]|{escquote})*
     int	status;
 
     if (yyleng > sizeof(yylval.string)-1) {
-        log_start("String too long: \"%s\"", yytext);
+        mylog_add("String too long: \"%s\"", yytext);
 
 	status = -1;
     }
@@ -135,7 +135,7 @@ qstring		([^"]|{escquote})*
     int         status;
 
     if (yyleng-2 > sizeof(yylval.string)-1) {
-        LOG_START1("String too long: \"%s\"", yytext);
+        mylog_add("String too long: \"%s\"", yytext);
 
 	status = -1;
     }
@@ -160,7 +160,7 @@ qstring		([^"]|{escquote})*
             }
             else {
                 if ('"' == *from) {
-                    LOG_START1("Unescaped quote: \"%s\"", yytext);
+                    mylog_add("Unescaped quote: \"%s\"", yytext);
 
                     status = -1;
 
@@ -212,7 +212,7 @@ scannerPush(
     FileEntry*	entry = malloc(sizeof(FileEntry));
 
     if (entry == NULL) {
-	log_serror("Couldn't allocate new input-file entry");
+	mylog_syserr("Couldn't allocate new input-file entry");
     }
     else {
 	if (path[0] == '/' || currentFileEntry == NULL) {
@@ -235,13 +235,13 @@ scannerPush(
 	entry->file = fopen(entry->path, "r");
 
 	if (entry->file == NULL) {
-	    log_serror("Couldn't open input-file \"%s\"", entry->path);
+	    mylog_syserr("Couldn't open input-file \"%s\"", entry->path);
 	}
 	else {
 	    entry->buf = yy_create_buffer(entry->file, YY_BUF_SIZE);
 
 	    if (entry->buf == NULL) {
-		log_serror("Couldn't create new input-file buffer");
+		mylog_syserr("Couldn't create new input-file buffer");
 	    }
 	    else {
 		entry->prev = currentFileEntry;

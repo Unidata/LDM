@@ -3,7 +3,7 @@
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
 #include "config.h"
-#include "log.h"
+#include "mylog.h"
 #include "fifo.h"
 #include "reader.h"     /* Eat own dog food */
 
@@ -34,7 +34,7 @@ struct reader {
  * @param[in] fifo     Pointer to FIFO into which to put data.
  * @param[in] maxSize  Maximum amount to read in a single call in bytes.
  * @retval    0        Success. `*reader` is set.
- * @retval    2        O/S failure. `log_start()` called.
+ * @retval    2        O/S failure. `mylog_add()` called.
  */
 static int reader_init(
         Reader* const restrict reader,
@@ -46,7 +46,7 @@ static int reader_init(
     int                 status = pthread_mutexattr_init(&attr);
 
     if (status) {
-        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
+        mylog_errno(status, "Couldn't initialize mutex attributes");
         status = 2;
     }
     else {
@@ -58,7 +58,7 @@ static int reader_init(
         status = pthread_mutex_init(&reader->mutex, &attr);
 
         if (status) {
-            LOG_ERRNUM0(status, "Couldn't initialize mutex");
+            mylog_errno(status, "Couldn't initialize mutex");
             status = 2;
         }
         else {
@@ -90,8 +90,8 @@ static int reader_init(
  * @param[in]  maxSize  Maximum amount to read in a single call in bytes.
  * @param[out] reader   Returned reader.
  * @retval     0        Success. `*reader` is set.
- * @retval     1        Precondition failure. `log_start()` called.
- * @retval     2        O/S failure. `log_start()` called.
+ * @retval     1        Precondition failure. `mylog_add()` called.
+ * @retval     2        O/S failure. `mylog_add()` called.
  */
 int readerNew(
     const int           fd,
@@ -103,14 +103,14 @@ int readerNew(
     Reader*   r = (Reader*)malloc(sizeof(Reader));
 
     if (NULL == r) {
-        LOG_SERROR0("Couldn't allocate new reader");
+        mylog_syserr("Couldn't allocate new reader");
         status = 2;
     }
     else {
         status = reader_init(r, fd, fifo, maxSize);
 
         if (status) {
-            LOG_ADD0("Couldn't initialize reader");
+            mylog_add("Couldn't initialize reader");
             free(r);
         }
         else {
@@ -147,7 +147,7 @@ void readerFree(
  * @param[in]  arg   Pointer to reader.
  * @retval     &0    Success. End of input encountered.
  * @retval     &1    FIFO was closed.
- * @retval     &2    O/S failure. `log_log()` called.
+ * @retval     &2    O/S failure. `mylog_flush()` called.
  */
 void*
 readerStart(
@@ -165,18 +165,18 @@ readerStart(
         if (status) {
             if (3 == status) {
                 // FIFO was closed
-                udebug("FIFO was closed");
-                log_clear();
+                mylog_debug("FIFO was closed");
+                mylog_clear();
                 status = 1;
             }
             else {
-                udebug("fifo_readFd() failure");
+                mylog_debug("fifo_readFd() failure");
                 status = 2;
             }
             break;
         }
         if (0 == nbytes) {
-            udebug("FIFO EOF");
+            mylog_debug("FIFO EOF");
             break; // EOF
         }
 
@@ -185,7 +185,7 @@ readerStart(
         (void)pthread_mutex_unlock(&reader->mutex);
     }                       /* I/O loop */
 
-    log_log(LOG_ERR);  // could be end of thread
+    mylog_flush_error();  // could be end of thread
 
     static int returnPointer[] = {0, 1, 2};
     return returnPointer + status;

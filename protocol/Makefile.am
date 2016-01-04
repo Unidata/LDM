@@ -19,7 +19,7 @@ nodist_include_HEADERS	= ldm.h
 nodist_lib_la_SOURCES	= $(BUILT_SOURCES)
 lib_la_CPPFLAGS		= -I$(top_srcdir) \
 			  -I$(top_srcdir)/rpc \
-			  -I$(top_srcdir)/ulog \
+			  -I$(top_srcdir)/mylog \
 			  -I$(top_srcdir)/protocol2 \
 			  -I$(top_srcdir)/misc \
 			  -I$(top_builddir)/mcast_lib/C -I$(top_srcdir)/mcast_lib/C \

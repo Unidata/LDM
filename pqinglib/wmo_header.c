@@ -355,7 +355,7 @@ decode_type(char *tt, char *aa, char *pil)
         {
                 if( pil[4] == 'R' || pil[4] == 'T')
                 {
-                        uerror("HDR + PIL: %s%s %s", tt, aa, pil ) ;
+                        mylog_error("HDR + PIL: %s%s %s", tt, aa, pil ) ;
                         return METAR; 
                 }
         }

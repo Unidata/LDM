@@ -62,7 +62,7 @@ setNewInfo(
         newInfo = pi_new();
 
     if (NULL == newInfo) {
-        serror("Couldn't allocate new prod_info structure");
+        mylog_syserr("Couldn't allocate new prod_info structure");
         error = ENOMEM;
     }
     else {
@@ -99,7 +99,7 @@ hereis_5_svc(product *prod, struct svc_req *rqstp)
     int         status;
     ldm_replyt* replyPtr = &reply;
 
-    udebug("%s:%d: hereis_5_svc()", __FILE__, __LINE__);
+    mylog_debug("hereis_5_svc()");
 
     (void)memset((char*)&reply, 0, sizeof(reply));
 
@@ -128,13 +128,13 @@ hereis_5_svc(product *prod, struct svc_req *rqstp)
                 remote->clssp->from.tv_sec += rpctimeo;
             }
 
-            unotice("RECLASS: %s", s_prod_class(NULL, 0, remote->clssp));
+            mylog_notice("RECLASS: %s", s_prod_class(NULL, 0, remote->clssp));
 
             if (tvCmp(remote->clssp->from, prod->info.arrival, >)) {
                 char buf[32];
 
                 (void) sprint_timestampt(buf, sizeof(buf), &prod->info.arrival);
-                unotice("skipped: %s (%.3f seconds)", buf,
+                mylog_notice("skipped: %s (%.3f seconds)", buf,
                         d_diff_timestamp(&remote->clssp->from,
                                 &prod->info.arrival));
             }
@@ -166,12 +166,12 @@ hereis_5_svc(product *prod, struct svc_req *rqstp)
 ldm_replyt * 
 feedme_5_svc(prod_class_t *want, struct svc_req *rqstp)
 {
-    udebug("%s:%d: feedme_5_svc()", __FILE__, __LINE__);
+    mylog_debug("feedme_5_svc()");
 
-    if(ulogIsVerbose()) {
+    if(mylog_is_enabled_info) {
         if(remote_name() == NULL)
             svc_setremote(rqstp);
-        uinfo("feedme5: %s: %s", remote_name(), s_prod_class(NULL, 0, want));
+        mylog_info("feedme5: %s: %s", remote_name(), s_prod_class(NULL, 0, want));
     }
 
     return forn_5_svc(want, rqstp, "(feed)", feed5_sqf);
@@ -185,7 +185,7 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
         const char* const       pqfname = getQueuePath();
         peer_info*              remote = get_remote();
 
-        udebug("%s:%d: hiya_5_svc()", __FILE__, __LINE__);
+        mylog_debug("hiya_5_svc()");
 
         (void)memset((char*)&reply, 0, sizeof(reply));
 
@@ -198,9 +198,9 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
                 remote->addr.s_addr = paddr->sin_addr.s_addr;
         }
 
-        if(ulogIsVerbose())
+        if(mylog_is_enabled_info)
         {
-                uinfo("hiya5: %s: %s",
+                mylog_info("hiya5: %s: %s",
                         remote_name(),
                         s_prod_class(NULL, 0, offerd));
         }
@@ -221,11 +221,11 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
                 case ENOERR:
                         break;
                 case EINVAL:
-                        uerror("hiya_acl_ck: BADPATTERN");
+                        mylog_errno(EINVAL, "hiya_acl_ck: BADPATTERN");
                         reply.code = BADPATTERN;
                         return(&reply);
                 default:
-                        uerror("hiya_acl_ck");
+                        mylog_error("hiya_acl_ck");
                         svcerr_systemerr(rqstp->rq_xprt);
                         return NULL;
                 }
@@ -240,11 +240,11 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
 
         if(remote->clssp == NULL || remote->clssp->psa.psa_len == 0)
         {
-                if(!ulogIsVerbose())
-                        unotice("hiya5: Accept: No Match: %s",
+                if(!mylog_is_enabled_info)
+                        mylog_notice("hiya5: Accept: No Match: %s",
                                 s_prod_class(NULL, 0, offerd));
                 else
-                        unotice("hiya5: Accept: No Match");
+                        mylog_notice("hiya5: Accept: No Match");
                 /* ??? */
                 svcerr_weakauth(rqstp->rq_xprt);
                 return NULL;
@@ -253,15 +253,15 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
         if(!clss_eq(remote->clssp, offerd))
         {
                 reply.code = RECLASS;
-                if(ulogIsVerbose())
-                        uinfo("hiya5: reclss: %s: %s",
+                if(mylog_is_enabled_info)
+                        mylog_info("hiya5: reclss: %s: %s",
                                 remote_name(),
                                 s_prod_class(NULL, 0, remote->clssp));
                 reply.ldm_replyt_u.newclssp = remote->clssp;
         }
         /* else, reply.code == OK */
-        if(!ulogIsVerbose())
-                unotice("hiya5: %s",
+        if(!mylog_is_enabled_info)
+                mylog_notice("hiya5: %s",
                         s_prod_class(NULL, 0, remote->clssp));
 
         /*
@@ -298,7 +298,7 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
 ldm_replyt * 
 notification_5_svc(prod_info *infop, struct svc_req *rqstp)
 {
-        udebug("%s:%d: notification_5_svc()", __FILE__, __LINE__);
+        mylog_debug("notification_5_svc()");
 
         /* This should never be called here */
 #if 0
@@ -307,10 +307,11 @@ notification_5_svc(prod_info *infop, struct svc_req *rqstp)
 #else
         (void)memset((char*)&reply, 0, sizeof(reply));
 
-        if(ulogIsVerbose())
+        if(mylog_is_enabled_info)
         {
-                uinfo("notification5: %s",
-                        s_prod_info(NULL, 0, infop, ulogIsDebug()));
+                mylog_info("notification5: %s",
+                        s_prod_info(NULL, 0, infop,
+                                mylog_is_enabled_debug));
         }
 
         if(done)
@@ -324,12 +325,12 @@ notification_5_svc(prod_info *infop, struct svc_req *rqstp)
 ldm_replyt * 
 notifyme_5_svc(prod_class_t *want, struct svc_req *rqstp)
 {
-    udebug("%s:%d: notifyme_5_svc()", __FILE__, __LINE__);
+    mylog_debug("notifyme_5_svc()");
 
-    if(ulogIsVerbose()) {
+    if(mylog_is_enabled_info) {
         if(remote_name() == NULL)
             svc_setremote(rqstp);
-        uinfo("notifyme5: %s: %s", remote_name(), s_prod_class(NULL, 0, want));
+        mylog_info("notifyme5: %s: %s", remote_name(), s_prod_class(NULL, 0, want));
     }
 
     return forn_5_svc(want, rqstp, "(noti)", noti5_sqf);
@@ -356,7 +357,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         prod_info*      infop = argsp->infop;
         peer_info*      remote = get_remote();
 
-        udebug("%s:%d: comingsoon_5_svc()", __FILE__, __LINE__);
+        mylog_debug("comingsoon_5_svc()");
 
         (void)memset((char*)&reply, 0, sizeof(reply));
 
@@ -370,7 +371,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         /* inline clr_pip_5(); */
         if(!pqeIsNone(idx))
         {
-                uerror("%s: never completed",
+                mylog_error("%s: never completed",
                         s_signaturet(NULL, 0, idx.signature));
                 (void) pqe_discard(pq, idx);
                 idx = PQE_NONE;
@@ -392,13 +393,13 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
                         /* undo the fuzz */
                         remote->clssp->from.tv_sec += rpctimeo;
                 }
-                unotice("RECLASS: %s", s_prod_class(NULL, 0, remote->clssp));
+                mylog_notice("RECLASS: %s", s_prod_class(NULL, 0, remote->clssp));
                 if(tvCmp(remote->clssp->from, infop->arrival, >))
                 {
                         char buf[32];
                         (void) sprint_timestampt(buf, sizeof(buf),
                                  &infop->arrival);
-                        unotice("skipped: %s (%.3f seconds)", buf,
+                        mylog_notice("skipped: %s (%.3f seconds)", buf,
                                 d_diff_timestamp(&remote->clssp->from,
                                         &infop->arrival));
                 }
@@ -416,8 +417,9 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
 
         if(status == EINVAL)
         {
-                uerror("Invalid product: %s",
-                        s_prod_info(NULL, 0, infop, ulogIsDebug()));
+                mylog_error("Invalid product: %s",
+                        s_prod_info(NULL, 0, infop,
+                                mylog_is_enabled_debug));
 
                 error = savedInfo_set(infop);
 
@@ -440,12 +442,13 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
                 /*
                  * The data-product is too big to fit into the product-queue.
                  */
-                uerror("Product too big: %s",
-                        s_prod_info(NULL, 0, infop, ulogIsDebug()));
+                mylog_error("Product too big: %s",
+                        s_prod_info(NULL, 0, infop,
+                                mylog_is_enabled_debug));
 
                 error = savedInfo_set(infop);
                 if (error) {
-                    uerror("Couldn't save product-information: %s",
+                    mylog_error("Couldn't save product-information: %s",
                             savedInfo_strerror(error));
                     svcerr_systemerr(rqstp->rq_xprt);
                     return NULL;
@@ -469,19 +472,20 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
                 }
 
                 reply.code = DONT_SEND;
-                if(ulogIsVerbose())
+                if(mylog_is_enabled_info)
                 {
-                        uinfo("dup    : %s",
-                                s_prod_info(NULL, 0, infop, ulogIsDebug()));
+                        mylog_info("dup    : %s",
+                                s_prod_info(NULL, 0, infop,
+                                        mylog_is_enabled_debug));
                 }
                 return(&reply);
         }
         /* else */
         if(status != ENOERR)
         {
-                uerror("origin: %s\0",infop->origin);
-                uerror("comings: pqe_new: %s", strerror(status));
-                uerror("       : %s",
+                mylog_error("origin: %s\0",infop->origin);
+                mylog_error("comings: pqe_new: %s", strerror(status));
+                mylog_error("       : %s",
                         s_prod_info(NULL, 0, infop, 1));
                 svcerr_systemerr(rqstp->rq_xprt);
                 return NULL;
@@ -501,9 +505,11 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         remaining = infop->sz;
         datap = xd_getBuffer(remaining);        /* completely allocate buffer */
 
-        if (ulogIsDebug())
-            udebug("comings: %s (pktsz %u)",
-                s_prod_info(NULL, 0, infop, ulogIsDebug()), argsp->pktsz);
+        if (mylog_is_enabled_debug)
+            mylog_debug("comings: %s (pktsz %u)",
+                s_prod_info(NULL, 0, infop,
+                        mylog_is_enabled_debug),
+                        argsp->pktsz);
 
         return(&reply);
 }
@@ -518,12 +524,12 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
     char        expectedSig[2*sizeof(signaturet)+1];
     ldm_replyt* result = &reply;
 
-    udebug("%s:%d: blkdata_5_svc()", __FILE__, __LINE__);
+    mylog_debug("blkdata_5_svc()");
 
     (void)memset((char*)&reply, 0, sizeof(reply));
 
-    if(ulogIsDebug()) {
-        udebug("blkdata5: %s %8u %5u",
+    if(mylog_is_enabled_debug) {
+        mylog_debug("blkdata5: %s %8u %5u",
                 s_signaturet(gotSig, sizeof(gotSig), *dpkp->signaturep),
                 dpkp->data.dbuf_len,
                 dpkp->pktnum);
@@ -534,8 +540,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
     }
     else {
         if(memcmp(*dpkp->signaturep, idx.signature, sizeof(signaturet)) != 0) {
-            unotice("%s:%d: invalid signature: got=%s; expected=%s", 
-                __FILE__, __LINE__,
+            mylog_notice("invalid signature: got=%s; expected=%s",
                 s_signaturet(gotSig, sizeof(gotSig), *dpkp->signaturep),
                 s_signaturet(expectedSig, sizeof(expectedSig), idx.signature));
             svcerr_systemerr(rqstp->rq_xprt);
@@ -547,8 +552,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
 
             if (got > remaining)
             {
-                uerror("%s:%d: too much data: max=%u; got=%u",
-                    __FILE__, __LINE__, remaining, got);
+                mylog_error("too much data: max=%u; got=%u", remaining, got);
                 svcerr_systemerr(rqstp->rq_xprt);
                 xd_reset();
 

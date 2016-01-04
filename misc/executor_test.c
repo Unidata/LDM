@@ -11,7 +11,7 @@
 
 #include "config.h"
 
-#include "log.h"
+#include "mylog.h"
 #include "executor.h"
 
 #include <errno.h>
@@ -32,9 +32,9 @@ static volatile sig_atomic_t    done;
 static int setup(void)
 {
     int status = pthread_cond_init(&cond, NULL);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
     status = pthread_mutex_init(&mutex, NULL);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
     return 0;
 }
 
@@ -68,7 +68,7 @@ static void stop(
 {
     done = 1;
     int status = pthread_cond_signal(&cond);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
 }
 
 static void test_exe_new(
@@ -163,7 +163,7 @@ int main(
     int exitCode = 1;
     const char* progname = basename((char*) argv[0]);
 
-    log_initLogging(progname, LOG_NOTICE, LOG_LDM);
+    (void)mylog_init(progname);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
@@ -184,7 +184,7 @@ int main(
         CU_cleanup_registry();
     }
 
-    log_free();
+    mylog_free();
 
     return exitCode;
 }

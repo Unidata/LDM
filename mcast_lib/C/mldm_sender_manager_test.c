@@ -17,7 +17,7 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "mcast_info.h"
 #include "mldm_sender_manager.h"
 #include "mldm_sender_map.h"
@@ -104,7 +104,7 @@ test_noPotentialSender()
     int              status = mlsm_ensureRunning(feedtype_1, &mcastInfo,
             &pid);
     OP_ASSERT_EQUAL_INT(LDM7_NOENT, status);
-    log_clear();
+    mylog_clear();
     OP_VERIFY();
 }
 
@@ -118,7 +118,7 @@ test_conflict()
     OP_ASSERT_EQUAL_INT(LDM7_DUP, status);
     status = mlsm_addPotentialSender(mcastInfo_2, 0, NULL, PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
-    log_clear();
+    mylog_clear();
     OP_VERIFY();
 }
 
@@ -134,7 +134,7 @@ test_not_running()
     status = pim_delete(NULL, feedtype_1);
     OP_ASSERT_EQUAL_INT(0, status);
     status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid);
-    log_log(LOG_ERR);
+    mylog_flush_error();
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);
     OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr_1, &mcastInfo->group));
@@ -172,7 +172,7 @@ test_running()
     status = pim_delete(NULL, feedtype_1);
     OP_ASSERT_EQUAL_INT(0, status);
     status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid);
-    log_log(LOG_ERR);
+    mylog_flush_error();
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);
     OP_ASSERT_EQUAL_INT(0, sa_compare(groupAddr_1, &mcastInfo->group));
@@ -184,7 +184,7 @@ test_running()
     /* Try starting a duplicate multicast sender */
     pid_t      pid2;
     status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid2);
-    log_log(LOG_ERR);
+    mylog_flush_error();
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);
     status = sa_compare(groupAddr_1, &mcastInfo->group);
@@ -216,8 +216,8 @@ main(
     int		argc,
     char**	argv)
 {
-    (void)openulog(basename(argv[0]), LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
-    (void)setulogmask(LOG_UPTO(LOG_NOTICE));
+    (void)mylog_init(argv[0]);
+    (void)mylog_set_level(MYLOG_LEVEL_NOTICE);
 
     opmock_test_suite_reset();
     opmock_register_test(test_noPotentialSender, "test_noPotentialSender");

@@ -9,6 +9,7 @@
  */
 
 #include <config.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -65,8 +66,8 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-        unotice("Exiting"); 
-        (void) closeulog();
+        mylog_notice("Exiting");
+        (void)mylog_fini();
 }
 
 
@@ -102,28 +103,20 @@ set_sigactions(void)
  */
 int main(int ac, char *av[])
 {
-        const char *progname = ubasename(av[0]);
-        char *logfname;
+        const char *progname = basename(av[0]);
         int status = 0;
-        int logoptions = (LOG_CONS|LOG_PID) ;
         unsigned write_count;
         int force = 0;
 
-        logfname = "";
-
-        if(isatty(fileno(stderr)))
-        {
-                /* set interactive defaults */
-                logfname = "-" ;
-                logoptions = 0 ;
-        }
+        /*
+         * Set up error logging.
+         */
+        (void)mylog_init(progname);
 
         {
             extern int opterr;
             extern char *optarg;
             int ch;
-            int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-                LOG_MASK(LOG_NOTICE));
 
             opterr = 1;
             pqfname = getQueuePath();
@@ -134,13 +127,13 @@ int main(int ac, char *av[])
                             force = 1;
                             break;
                     case 'v':
-                            logmask |= LOG_MASK(LOG_INFO);
+                            (void)mylog_set_level(MYLOG_LEVEL_INFO);
                             break;
                     case 'x':
-                            logmask |= LOG_MASK(LOG_DEBUG);
+                            (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                             break;
                     case 'l':
-                            logfname = optarg;
+                            (void)mylog_set_output(optarg);
                             break;
                     case 'q':
                             pqfname = optarg;
@@ -149,23 +142,16 @@ int main(int ac, char *av[])
                             usage(progname);
                             break;
                     }
-
-            (void) setulogmask(logmask);
         }
 
-        /*
-         * Set up error logging.
-         */
-        (void) openulog(progname,
-                logoptions, LOG_LDM, logfname);
-        unotice("Starting Up (%d)", getpgrp());
+        mylog_notice("Starting Up (%d)", getpgrp());
 
         /*
          * register exit handler
          */
         if(atexit(cleanup) != 0)
         {
-                serror("atexit");
+                mylog_syserr("atexit");
                 return 1;
         }
 
@@ -182,11 +168,11 @@ int main(int ac, char *av[])
             status = pq_clear_write_count(pqfname);
             if (status) {
                 if (PQ_CORRUPT == status) {
-                    uerror("The product-queue \"%s\" is inconsistent", pqfname);
+                    mylog_error("The product-queue \"%s\" is inconsistent", pqfname);
                     return 4;
                 }
                 else {
-                    uerror("pq_clear_write_count() failure: %s: %s",
+                    mylog_error("pq_clear_write_count() failure: %s: %s",
                             pqfname, strerror(status));
                     return 1;
                 }
@@ -200,23 +186,23 @@ int main(int ac, char *av[])
             status = pq_get_write_count(pqfname, &write_count);
             if (status) {
                 if (ENOSYS == status) {
-                    uerror("Product-queue \"%s\" doesn't have a writer-counter",
+                    mylog_error("Product-queue \"%s\" doesn't have a writer-counter",
                         pqfname);
                     return 2;
                 }
                 else if (PQ_CORRUPT == status) {
-                    uerror("Product-queue \"%s\" is inconsistent", pqfname);
+                    mylog_error("Product-queue \"%s\" is inconsistent", pqfname);
                     return 4;
                 }
                 else {
-                    uerror("pq_get_write_count() failure: %s: %s",
+                    mylog_error("pq_get_write_count() failure: %s: %s",
                         pqfname, strerror(status));
                     return 1;
                 }
             }
         }
 
-        uinfo("The writer-counter of the product-queue is %u", write_count);
+        mylog_info("The writer-counter of the product-queue is %u", write_count);
 
         return write_count == 0 ? 0 : 3;
 }

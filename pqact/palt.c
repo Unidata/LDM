@@ -8,7 +8,7 @@
 
 #include <config.h>
 #include <stdio.h>
-#include <assert.h>
+#include <mylog.h>
 #include <errno.h>
 #include <ctype.h>
 #include <limits.h>
@@ -165,7 +165,7 @@ again1:
 
         cp = &buf[len-1];
         if(*cp != '\n' && !feof(fp)) {
-                uerror("Entry too long at line %d", linenumber);
+                mylog_error("Entry too long at line %d", linenumber);
                 return -2;
         }
         /* get rid of trailing white space */
@@ -203,7 +203,7 @@ again2:
                         ungetc(ch, fp);
                         if(len >= bufsize)
                         {
-                                uerror("Entry too long to continue at line %d", linenumber);
+                                mylog_error("Entry too long to continue at line %d", linenumber);
                                 return -2;
                         }
                         /* else */
@@ -323,28 +323,28 @@ new_palt_fromStr(char *buf)
 
         if(ntabtoks < 3 )
         {
-                uerror("Syntax error at line %d, not enough fields", linenumber);
+                mylog_error("Syntax error at line %d, not enough fields", linenumber);
                 goto err;
         }
 
         status = strfeedtypet(tabtoks[0], &pal->feedtype);
         if(status != FEEDTYPE_OK)
         {
-                uerror("feedtype error at line %d: %s: \"%s\"",
+                mylog_error("feedtype error at line %d: %s: \"%s\"",
                         linenumber, strfeederr(status), tabtoks[0]);
                 goto err;
         }
 
-        assert(tabtoks[1] != NULL && *tabtoks[1] != 0);
+        mylog_assert(tabtoks[1] != NULL && *tabtoks[1] != 0);
         if(strlen(tabtoks[1]) >= (size_t)PATSZ)
         {
-                uerror("Pattern string too long at line %d: \"%s\"",
+                mylog_error("Pattern string too long at line %d: \"%s\"",
                         linenumber, tabtoks[1]);
                 goto err;
         }
         if (re_isPathological(tabtoks[1]))
         {
-                uwarn("Adjusting pathological regular-expression at line "
+                mylog_warning("Adjusting pathological regular-expression at line "
                     "%d: \"%s\"", linenumber, tabtoks[1]);
                 re_vetSpec(tabtoks[1]);
         }
@@ -354,33 +354,33 @@ new_palt_fromStr(char *buf)
 
         if( regcomp(&pal->prog, pal->pattern, REG_EXTENDED) != 0)
         {
-                uerror("regcomp error at line %d: \"%s\"", linenumber, tabtoks[1]);
+                mylog_error("regcomp error at line %d: \"%s\"", linenumber, tabtoks[1]);
                 goto err;
         }
         pal->pmatchp = Alloc(pal->prog.re_nsub + 1, regmatch_t);
         if(pal->pmatchp == NULL)
         {
                 regfree(&pal->prog);
-                serror("new_palt: malloc failed");
+                mylog_syserr("malloc failed");
                 goto err;
         }
 
         if(atoaction(tabtoks[2], &pal->action) < 0)
         {
                 /* duplicate reporting */
-                uerror("Unknown action \"%s\" at line %d", tabtoks[2], linenumber);
+                mylog_error("Unknown action \"%s\" at line %d", tabtoks[2], linenumber);
                 goto err;
         }
 
         if(ntabtoks >= 4)
         {
                 size_t len = strlen(tabtoks[3]);
-                assert(len != 0);
+                mylog_assert(len != 0);
 
                 pal->private = malloc(len+1);
                 if(pal->private == NULL)
                 {
-                        serror("new_palt: malloc failed");
+                        mylog_syserr("malloc failed");
                         goto err;
                 }
                 (void) strcpy(pal->private, tabtoks[3]);
@@ -414,7 +414,7 @@ readPatFile(const char *path)
     FILE        *fp = fopen(path, "r");
 
     if (fp == NULL) {
-        serror("Couldn't open configuration-file \"%s\"", path);
+        mylog_syserr("Couldn't open configuration-file \"%s\"", path);
         status = -1;
     }
     else {
@@ -455,7 +455,7 @@ readPatFile(const char *path)
         }
 
         if (status < 0) {
-            uerror("Error in configuration-file \"%s\"", path);
+            mylog_error("Error in configuration-file \"%s\"", path);
 
             /*
              * Free new list.
@@ -478,7 +478,7 @@ readPatFile(const char *path)
 
             pal = paList = begin;
 
-            uinfo("Successfully read configuration-file \"%s\"", path);
+            mylog_info("Successfully read configuration-file \"%s\"", path);
         }
 
         (void)fclose(fp);
@@ -504,7 +504,7 @@ gm_strftime(char *str, size_t maxsize, char *format, time_t arrival)
     struct tm atm;
 
     if (gmtime_r(&arrival, &atm) == NULL) {
-        udebug("gmtime_r() returns NULL");
+        mylog_debug("gmtime_r() returns NULL");
         /* you should never really execute this */
         strncpy(str, format, maxsize-1);
         return strlen(str);
@@ -540,7 +540,7 @@ utcToEpochTime(
     epochTime = timegm(&localTime);
 
     if (epochTime == (time_t)-1)
-        serror("utcToEpochTime(): timegm() failure");
+        mylog_syserr("timegm() failure");
 
 #else
     /*
@@ -560,7 +560,7 @@ utcToEpochTime(
     epochTime = mktime(&localTime);
 
     if (epochTime == (time_t)-1)
-        serror("utcToEpochTime(): mktime() failure");
+        mylog_syserr("mktime() failure");
 
 #endif
 
@@ -598,7 +598,7 @@ seq_sub(
            static char     seq_exp[] = "\\(seq\\)";
 
            if (regcomp(&seqprog, seq_exp, REG_EXTENDED) != 0)
-              serror("Bad regular expression or out of memory: %s", seq_exp);
+              mylog_syserr("Bad regular expression or out of memory: %s", seq_exp);
            seqfirst = 0;
         }
 
@@ -678,7 +678,7 @@ date_sub(
         static char     date_exp[] = "\\(([0-9]{2}):([^)]*)\\)";
 
         if (regcomp(&prog, date_exp, REG_EXTENDED) != 0)
-            serror("Bad regular expression or out of memory: %s", date_exp);
+            mylog_syserr("Bad regular expression or out of memory: %s", date_exp);
 
         first = 0;
     }
@@ -687,7 +687,7 @@ date_sub(
      * Convert time argument to broken-down times.
      */
     if (gmtime_r(&prodClock, &utcProdTime) == NULL)
-        uerror("date_sub(): gmtime_r() returns NULL");
+        mylog_error("gmtime_r() returns NULL");
 
     tdom = utcProdTime.tm_mday;         /* UTC-based day-of-month */
 
@@ -730,7 +730,7 @@ date_sub(
          * Validate day-of-month from substring.
          */
         if (dom < 0 || dom > 31) {
-            uerror("bad day of month in ident: %s",istring);
+            mylog_error("bad day of month in ident: %s",istring);
             dom = -1;
         }
 
@@ -803,7 +803,7 @@ date_sub(
                                         ? prodMonthClock
                                         : prevMonthClock;
                             if (gmtime_r(&adjClock, &adjProdTime) == NULL)
-                                uerror("date_sub(): gmtime_r() failure");
+                                mylog_error("gmtime_r() failure");
                         }               /* valid "nextMonthClock" */
                     }                   /* valid "prevMonthClock" */
                 }                       /* valid "prodMonthClock" */
@@ -846,7 +846,7 @@ date_sub(
                 ostring += 2;
             }
             else {
-                uerror("unknown date indicator: %s",select);
+                mylog_error("unknown date indicator: %s",select);
             }
         }                               /* good date indicator */
     }                                   /* date substitution loop */
@@ -857,7 +857,9 @@ date_sub(
 
 #ifdef TEST_DATE_SUB
 int
-main()
+main(
+        int   ac,
+        char* av[])
 {
     char        buf[128];
     struct tm   tm;
@@ -870,7 +872,7 @@ main()
     time_t      jan01;
     time_t      may31;
 
-    (void)openulog("date_sub", (LOG_CONS|LOG_PID), LOG_LDM, "-");
+    (void)mylog_init(av[0]);
 
     /*
      * The start of the epoch is not tested because it can cause
@@ -882,12 +884,12 @@ main()
         struct tm       utc;
 
         (void)gmtime_r(&unixTime, &utc);
-        assert(utcToEpochTime(&utc) == unixTime);
+        mylog_assert(utcToEpochTime(&utc) == unixTime);
 
         unixTime = 86400;
         (void)gmtime_r(&unixTime, &utc);
 
-        assert(utcToEpochTime(&utc) == unixTime);
+        mylog_assert(utcToEpochTime(&utc) == unixTime);
     }
 
     tm.tm_year = 71;
@@ -900,19 +902,19 @@ main()
     feb28 = utcToEpochTime(&tm);
 
     date_sub("(27:yyyy)-(27:mm)-(27:dd)", buf, feb28);
-    assert(strcmp(buf, "1971-02-27") == 0);
+    mylog_assert(strcmp(buf, "1971-02-27") == 0);
 
     date_sub("(28:yyyy)-(28:mm)-(28:dd)", buf, feb28);
-    assert(strcmp(buf, "1971-02-28") == 0);
+    mylog_assert(strcmp(buf, "1971-02-28") == 0);
 
     date_sub("(29:yyyy)-(29:mm)-(29:dd)", buf, feb28);
-    assert(strcmp(buf, "1971-03-01") == 0);
+    mylog_assert(strcmp(buf, "1971-03-01") == 0);
 
     date_sub("(01:yyyy)-(01:mm)-(01:dd)", buf, feb28);
-    assert(strcmp(buf, "1971-03-01") == 0);
+    mylog_assert(strcmp(buf, "1971-03-01") == 0);
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, feb28);
-    assert(strcmp(buf, "1971-02-02") == 0);
+    mylog_assert(strcmp(buf, "1971-02-02") == 0);
 
     tm.tm_year = 80;
     tm.tm_mon = 1;
@@ -924,19 +926,19 @@ main()
     feb29leap = utcToEpochTime(&tm);
 
     date_sub("(28:yyyy)-(28:mm)-(28:dd)", buf, feb29leap);
-    assert(strcmp(buf, "1980-02-28") == 0);
+    mylog_assert(strcmp(buf, "1980-02-28") == 0);
 
     date_sub("(29:yyyy)-(29:mm)-(29:dd)", buf, feb29leap);
-    assert(strcmp(buf, "1980-02-29") == 0);
+    mylog_assert(strcmp(buf, "1980-02-29") == 0);
 
     date_sub("(30:yyyy)-(30:mm)-(30:dd)", buf, feb29leap);
-    assert(strcmp(buf, "1980-03-01") == 0);
+    mylog_assert(strcmp(buf, "1980-03-01") == 0);
 
     date_sub("(01:yyyy)-(01:mm)-(01:dd)", buf, feb29leap);
-    assert(strcmp(buf, "1980-03-01") == 0);
+    mylog_assert(strcmp(buf, "1980-03-01") == 0);
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, feb29leap);
-    assert(strcmp(buf, "1980-02-02") == 0);
+    mylog_assert(strcmp(buf, "1980-02-02") == 0);
 
     tm.tm_year = 80;
     tm.tm_mon = 1;
@@ -948,19 +950,19 @@ main()
     feb28leap = utcToEpochTime(&tm);
 
     date_sub("(27:yyyy)-(27:mm)-(27:dd)", buf, feb28leap);
-    assert(strcmp(buf, "1980-02-27") == 0);
+    mylog_assert(strcmp(buf, "1980-02-27") == 0);
 
     date_sub("(28:yyyy)-(28:mm)-(28:dd)", buf, feb28leap);
-    assert(strcmp(buf, "1980-02-28") == 0);
+    mylog_assert(strcmp(buf, "1980-02-28") == 0);
 
     date_sub("(29:yyyy)-(29:mm)-(29:dd)", buf, feb28leap);
-    assert(strcmp(buf, "1980-02-29") == 0);
+    mylog_assert(strcmp(buf, "1980-02-29") == 0);
 
     date_sub("(30:yyyy)-(30:mm)-(30:dd)", buf, feb28leap);
-    assert(strcmp(buf, "1980-01-30") == 0);
+    mylog_assert(strcmp(buf, "1980-01-30") == 0);
 
     date_sub("(01:yyyy)-(01:mm)-(01:dd)", buf, feb28leap);
-    assert(strcmp(buf, "1980-02-01") == 0);
+    mylog_assert(strcmp(buf, "1980-02-01") == 0);
 
     tm.tm_year = 70;
     tm.tm_mon = 2;
@@ -972,19 +974,19 @@ main()
     mar01 = utcToEpochTime(&tm);
 
     date_sub("(28:yyyy)-(28:mm)-(28:dd)", buf, mar01);
-    assert(strcmp(buf, "1970-02-28") == 0);
+    mylog_assert(strcmp(buf, "1970-02-28") == 0);
 
     date_sub("(29:yyyy)-(29:mm)-(29:dd)", buf, mar01);
-    assert(strcmp(buf, "1970-03-01") == 0);
+    mylog_assert(strcmp(buf, "1970-03-01") == 0);
 
     date_sub("(01:yyyy)-(01:mm)-(01:dd)", buf, mar01);
-    assert(strcmp(buf, "1970-03-01") == 0);
+    mylog_assert(strcmp(buf, "1970-03-01") == 0);
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, mar01);
-    assert(strcmp(buf, "1970-03-02") == 0);
+    mylog_assert(strcmp(buf, "1970-03-02") == 0);
 
     date_sub("(03:yyyy)-(03:mm)-(03:dd)", buf, mar01);
-    assert(strcmp(buf, "1970-02-03") == 0);
+    mylog_assert(strcmp(buf, "1970-02-03") == 0);
 
     tm.tm_year = 80;
     tm.tm_mon = 2;
@@ -996,22 +998,22 @@ main()
     mar01leap = utcToEpochTime(&tm);
 
     date_sub("(28:yyyy)-(28:mm)-(28:dd)", buf, mar01leap);
-    assert(strcmp(buf, "1980-02-28") == 0);
+    mylog_assert(strcmp(buf, "1980-02-28") == 0);
 
     date_sub("(29:yyyy)-(29:mm)-(29:dd)", buf, mar01leap);
-    assert(strcmp(buf, "1980-02-29") == 0);
+    mylog_assert(strcmp(buf, "1980-02-29") == 0);
 
     date_sub("(30:yyyy)-(30:mm)-(30:dd)", buf, mar01leap);
-    assert(strcmp(buf, "1980-03-01") == 0);
+    mylog_assert(strcmp(buf, "1980-03-01") == 0);
 
     date_sub("(01:yyyy)-(01:mm)-(01:dd)", buf, mar01leap);
-    assert(strcmp(buf, "1980-03-01") == 0);
+    mylog_assert(strcmp(buf, "1980-03-01") == 0);
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, mar01leap);
-    assert(strcmp(buf, "1980-03-02") == 0);
+    mylog_assert(strcmp(buf, "1980-03-02") == 0);
 
     date_sub("(03:yyyy)-(03:mm)-(03:dd)", buf, mar01leap);
-    assert(strcmp(buf, "1980-02-03") == 0);
+    mylog_assert(strcmp(buf, "1980-02-03") == 0);
 
     tm.tm_year = 70;
     tm.tm_mon = 11;
@@ -1023,16 +1025,16 @@ main()
     dec31 = utcToEpochTime(&tm);
 
     date_sub("(30:yyyy)-(30:mm)-(30:dd)", buf, dec31);
-    assert(strcmp(buf, "1970-12-30") == 0);
+    mylog_assert(strcmp(buf, "1970-12-30") == 0);
 
     date_sub("(31:yyyy)-(31:mm)-(31:dd)", buf, dec31);
-    assert(strcmp(buf, "1970-12-31") == 0);
+    mylog_assert(strcmp(buf, "1970-12-31") == 0);
 
     date_sub("(01:yyyy)-(01:mm)-(01:dd)", buf, dec31);
-    assert(strcmp(buf, "1971-01-01") == 0);
+    mylog_assert(strcmp(buf, "1971-01-01") == 0);
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, dec31);
-    assert(strcmp(buf, "1970-12-02") == 0);
+    mylog_assert(strcmp(buf, "1970-12-02") == 0);
 
     tm.tm_year = 71;
     tm.tm_mon = 0;
@@ -1044,16 +1046,16 @@ main()
     jan01 = utcToEpochTime(&tm);
 
     date_sub("(31:yyyy)-(31:mm)-(31:dd)", buf, jan01);
-    assert(strcmp(buf, "1970-12-31") == 0);
+    mylog_assert(strcmp(buf, "1970-12-31") == 0);
 
     date_sub("(01:yyyy)-(01:mm)-(01:dd)", buf, jan01);
-    assert(strcmp(buf, "1971-01-01") == 0);
+    mylog_assert(strcmp(buf, "1971-01-01") == 0);
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, jan01);
-    assert(strcmp(buf, "1971-01-02") == 0);
+    mylog_assert(strcmp(buf, "1971-01-02") == 0);
 
     date_sub("(03:yyyy)-(03:mm)-(03:dd)", buf, jan01);
-    assert(strcmp(buf, "1970-12-03") == 0);
+    mylog_assert(strcmp(buf, "1970-12-03") == 0);
 
     tm.tm_year = 107;
     tm.tm_mon = 4;
@@ -1065,13 +1067,13 @@ main()
     may31 = mktime(&tm);
 
     date_sub("(31:yyyy)-(31:mm)-(31:dd)", buf, may31);
-    assert(strcmp(buf, "2007-05-31") == 0);
+    mylog_assert(strcmp(buf, "2007-05-31") == 0);
 
     date_sub("(01:yyyy)-(01:mm)-(01:dd)", buf, may31);
-    assert(strcmp(buf, "2007-06-01") == 0);
+    mylog_assert(strcmp(buf, "2007-06-01") == 0);
 
     date_sub("(02:yyyy)-(02:mm)-(02:dd)", buf, may31);
-    assert(strcmp(buf, "2007-05-02") == 0);
+    mylog_assert(strcmp(buf, "2007-05-02") == 0);
     seq_sub("/tmp/(seq).txt", buf, 1234, 999);
 
     exit(0);
@@ -1092,7 +1094,7 @@ static void
 regsub(const palt* const pal, const char *ident, char *dest, size_t size)
 {
     if (size == 0) {
-        uerror("Zero-length output buffer");
+        mylog_error("Zero-length output buffer");
     }
     else {
         register const char *src = pal->private;
@@ -1116,7 +1118,7 @@ regsub(const palt* const pal, const char *ident, char *dest, size_t size)
 
                                 if (sscanf(src+1, "%d%n)", &i, &nbytes) != 1 ||
                                         i < 0 || src[1+nbytes] != ')') {
-                                    uerror("Invalid parenthetical backreference: \"%s\"",
+                                    mylog_error("Invalid parenthetical backreference: \"%s\"",
                                             src);
                                     break;
                                 }
@@ -1147,7 +1149,7 @@ regsub(const palt* const pal, const char *ident, char *dest, size_t size)
                         dst += len;
                         if (len != 0 && *(dst-1) == '\0') {
                                 /* strncpy hit NUL. */
-                                uerror("Invalid match string: \"%s\"",
+                                mylog_error("Invalid match string: \"%s\"",
                                         &ident[pal->pmatchp[no].rm_so]);
                                 return;
                         }
@@ -1157,7 +1159,7 @@ regsub(const palt* const pal, const char *ident, char *dest, size_t size)
             *dst++ = '\0';
         }
         else {
-            uerror("Output buffer too small: \"%.*s\"", (int)size, dest);
+            mylog_error("Output buffer too small: \"%.*s\"", (int)size, dest);
             dest[size-1] = 0;
         }
     }
@@ -1209,8 +1211,8 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         OUTBUF[sizeof(OUTBUF)-1] = 0;
         SWITCH_BUFS;
 
-        if (ulogIsVerbose())
-            uinfo("               %s: %s and the ident is %s",
+        if (mylog_is_enabled_info)
+            mylog_info("               %s: %s and the ident is %s",
                     s_actiont(&pal->action), INBUF, prod->info.ident);
 
         argc = tokenize(INBUF, argv, ARRAYLEN(argv));
@@ -1222,7 +1224,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         }
         else
         {
-            uerror("Too many arguments: \"%s\"", INBUF);
+            mylog_error("Too many arguments: \"%s\"", INBUF);
             status = -1;
         }
     }
@@ -1258,8 +1260,9 @@ processProduct(
         bool            errorOccurred = false;
         product         prod;
 
-        if(ulogIsVerbose())
-                uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
+        if(mylog_is_enabled_info)
+                mylog_info("%s", s_prod_info(NULL, 0, infop,
+                        mylog_is_enabled_debug));
 
         for(pal = paList; pal != NULL; pal = next)
         {

@@ -4,7 +4,7 @@
  */
 #include "config.h"
 #include "gempak/gb2def.h"
-#include "log.h"
+#include "mylog.h"
 #include "StringBuf.h"
 
 #define USE_GRIB2_DECODER 0
@@ -97,7 +97,7 @@ static int sec1_new(
     };
     static unsigned     numParams = sizeof(paramInfo)/sizeof(paramInfo[0]);
     Grib2Section*       sec1;
-    g2int*              params = (g2int*)LOG_MALLOC(numParams*sizeof(g2int),
+    g2int*              params = (g2int*)MYLOG_MALLOC(numParams*sizeof(g2int),
             "section 1 parameter array");
     int                 status;
 
@@ -336,7 +336,7 @@ static int gfld_new(
     static char*     tbllist[5] = {g2tables[0], g2tables[1], g2tables[2],
             g2tables[3], g2tables[4]};
     int              status;
-    const gribfield* gfld = (gribfield*)LOG_MALLOC(sizeof(gribfield),
+    const gribfield* gfld = (gribfield*)MYLOG_MALLOC(sizeof(gribfield),
             "GRIB field");
 
     if (NULL == gfld) {
@@ -450,13 +450,13 @@ static int appendParameterName(
 
     if (strBuf_getLength(buf)) {
         if (strBuf_appendString(buf, ";")) {
-            LOG_ADD0("Couldn't append parameter-name separator");
+            mylog_add("Couldn't append parameter-name separator");
             return 3;
         }
     }
 
     if (strBuf_appendString(buf, g2name)) {
-        LOG_ADD1("Couldn't append parameter-name \"%s\"", g2name);
+        mylog_add("Couldn't append parameter-name \"%s\"", g2name);
         return 3;
     }
 
@@ -506,7 +506,7 @@ static int appendParameterNames(
         (void)g2d_getField(decoded, i, &field);
 
         if (status = gfld_init(&gfld, field, i)) {
-            LOG_ADD0("Couldn't initialize gribfield structure");
+            mylog_add("Couldn't initialize gribfield structure");
         }
         else {
             gribMsg->gfld = gfld;
@@ -560,7 +560,7 @@ static int getModelId(
     (void)g2f_getSection(field, 4, &section); /* section must exist */
 
     if (g2s_getG2Int(section, 13, 1, &id)) {
-        LOG_ADD0("Couldn't get model ID");
+        mylog_add("Couldn't get model ID");
         return 1;
     }
 
@@ -616,14 +616,14 @@ static int setIdent(
     int            status;
 
     if (0 == numFields) {
-        LOG_ADD0("GRIB message has no fields");
+        mylog_add("GRIB message has no fields");
         status = 1;
     }
     else {
         StringBuf* const prods = strBuf_new(127); /* initially empty */
 
         if (NULL == prods) {
-            LOG_SERROR0("Couldn't allocate string-buffer for products");
+            mylog_syserr("Couldn't allocate string-buffer for products");
             status = 3;
         }
         else {
@@ -680,7 +680,7 @@ int grib2name (
     DecodedGrib2Msg*    decoded;
 
     if (status = g2d_new(&decoded, (unsigned char*)data, sz)) {
-        LOG_ADD0("Couldn't decode GRIB message");
+        mylog_add("Couldn't decode GRIB message");
         status = G2D_INVALID == status
                 ? 1
                 : G2D_NOT_2
@@ -689,7 +689,7 @@ int grib2name (
     }
     else {
         if (status = setIdent(ident, identSize, decoded, wmohead)) {
-            LOG_ADD0("Couldn't set LDM product-identifier");
+            mylog_add("Couldn't set LDM product-identifier");
             status = 1;
         }
 
@@ -716,7 +716,7 @@ int grib2name (
     else {
         prodBuf = strBuf_new(127);
         if (NULL == prodBuf) {
-            LOG_ADD0("Couldn't allocate buffer for parameter ID-s");
+            mylog_add("Couldn't allocate buffer for parameter ID-s");
             return 3;
         }
     }
@@ -731,7 +731,7 @@ int grib2name (
         return (2 == status) ? 2 : 1;
 
     if (g2Msg.field_tot <= 0) {
-        LOG_ADD0("GRIB-2 message has no data fields");
+        mylog_add("GRIB-2 message has no data fields");
         return 1;
     }
 
@@ -746,7 +746,7 @@ int grib2name (
                 &g2Msg.gfld);
 
         if (status) {
-            LOG_ADD1("Invalid GRIB-2 message: g2_getfld() status=%d", status);
+            mylog_add("Invalid GRIB-2 message: g2_getfld() status=%d", status);
             return (2 == status) ? 2 : 1;
         }
 
@@ -776,9 +776,8 @@ int grib2name (
         gb2_2gem(&g2Msg, &gemInfo, tbllist, &status);
 
         if (status) {
-            LOG_ADD1("Couldn't decode GRIB2 message. WMO header=\"%s\"",
+            mylog_error("Couldn't decode GRIB2 message. WMO header=\"%s\"",
                     wmohead);
-            log_log(LOG_ERR);
 
             if (lastField) {
                 (void)strcpy(fdats, "FHRS"); /* safe */

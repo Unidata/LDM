@@ -110,7 +110,7 @@ dump_statsbin(statsbin *sb)
         char buf[P_TIMET_LEN];
         char buf_a[P_TIMET_LEN];
 
-        unotice("%s %s %s %12.0lf %12.0lf %10.2f %4.0f@%s %s",
+        mylog_notice("%s %s %s %12.0lf %12.0lf %10.2f %4.0f@%s %s",
                 s_time(buf, sizeof(buf), sb->recent.tv_sec),
                 s_feedtypet(sb->feedtype),
                 sb->origin,

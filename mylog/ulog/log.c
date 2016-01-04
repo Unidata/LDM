@@ -512,7 +512,7 @@ void log_errnum(
  * Logs the currently-accumulated log-messages of the current thread and resets
  * the message-list for the current thread.
  */
-void log_log(
+void mylog_flush(
     const int   level)  /**< The level at which to log the messages.  One of
                           *  LOG_ERR, LOG_WARNING, LOG_NOTICE, LOG_INFO, or
                           *  LOG_DEBUG; otherwise, the behavior is undefined. */
@@ -534,7 +534,7 @@ void log_log(
         lock();
 
         if ((priorityMask & allPrioritiesMask) == 0) {
-            uerror("log_log(): Invalid logging-level (%d)", level);
+            uerror("mylog_flush(): Invalid logging-level (%d)", level);
         }
         else if (getulogmask() & priorityMask) {
             const Message*     msg;

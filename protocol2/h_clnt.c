@@ -20,7 +20,7 @@
 #include <netdb.h>
 #include <rpc/rpc.h>
 #include <rpc/pmap_prot.h>
-#include <assert.h>
+#include <mylog.h>
 #include <ctype.h>
 #include "error.h"
 #include "ldm_clnt_misc.h"
@@ -486,12 +486,12 @@ close_h_clnt(h_clnt *hcp)
         if(hcp->state >= H_CLNTED)
         {
 
-                assert(hcp->clnt != NULL); /* if state >= H_CLNTED, this must be */
+                mylog_assert(hcp->clnt != NULL); /* if state >= H_CLNTED, this must be */
                 clnt_destroy(hcp->clnt);
                 hcp->clnt = NULL;
         }
 
-        assert(hcp->clnt == NULL);
+        mylog_assert(hcp->clnt == NULL);
 
         free_h_pmap(hcp);
 
@@ -570,7 +570,7 @@ get_addr(h_clnt *hcp, struct timeval timeo)
 {
         ErrorObj*        error;
 
-        assert(hcp->prog != PROG_NONE);
+        mylog_assert(hcp->prog != PROG_NONE);
 
         hcp->errmsg[0] = 0;
 
@@ -653,7 +653,7 @@ get_pmap_clnt(h_clnt *hcp, struct timeval timeo)
         pmap_addr.sin_port = (short)htons(PMAPPORT);
         /* UDP pmap query */
         
-        /* assert alrm not needed here since it is udp ? */
+        /* mylog_assert alrm not needed here since it is udp ? */
 
         /* Determine retry interval. It is 5 secs in pmap_getport() */
         wait.tv_usec = 0;
@@ -726,7 +726,7 @@ get_port(h_clnt *hcp, struct timeval timeo)
         struct pmap parms;
         unsigned short port = 0;
 
-        assert(hcp->prog != PROG_NONE);
+        mylog_assert(hcp->prog != PROG_NONE);
 
         if(hcp->pmap_clnt == NULL)
         {
@@ -810,7 +810,7 @@ get_clnt(h_clnt *hcp, struct timeval timeo)
         int sock = RPC_ANYSOCK;
         CLIENT *clnt = NULL;
 
-        assert(hcp->prog != PROG_NONE);
+        mylog_assert(hcp->prog != PROG_NONE);
 
         if(hcp->state < MAPPED)
         {
@@ -914,7 +914,7 @@ hC_clnt_call(
                 return hcp->state;
         }
 
-        assert(hcp->clnt != NULL); /* if state >= H_CLNTED, this must be */
+        mylog_assert(hcp->clnt != NULL); /* if state >= H_CLNTED, this must be */
 
 #if FD_DEBUG
         {
@@ -1098,7 +1098,7 @@ h_clnt_call(
 #if INSTRUMENT
         if(hcp->rpcerr.re_status == RPC_SUCCESS
                         && hcp->elapsed.tv_sec > INSTR_WARN_TIME)
-                uerror("h_clnt_call: %s: %s: time elapsed %3ld.%06ld",
+                mylog_error("h_clnt_call: %s: %s: time elapsed %3ld.%06ld",
                         hcp->remote,
                         s_ldmproc(proc),
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec);
@@ -1238,7 +1238,7 @@ open_h_clnt(
         if( h_clnt_open(hcp, timeout) < H_CLNTED)
         {
 #if 0 /* debug */
-                uerror("open_h_clnt(%s, %d, %d, %s)%s"
+                mylog_error("open_h_clnt(%s, %d, %d, %s)%s"
                         host, prognum, versnum, protocol, clnt_spcreateerror(""));
 #endif
                 free_h_clnt(hcp);
@@ -1288,7 +1288,7 @@ h_clnt_flush(
 #endif
         }
 
-        assert(hcp->clnt != NULL); /* if state >= H_CLNTED, this must be */
+        mylog_assert(hcp->clnt != NULL); /* if state >= H_CLNTED, this must be */
 
         (void)set_begin(hcp);
 
@@ -1365,7 +1365,7 @@ done:
 #if INSTRUMENT
         if(hcp->rpcerr.re_status == RPC_SUCCESS
                         && hcp->elapsed.tv_sec > INSTR_WARN_TIME)
-                uerror("h_clnt_flush: %s: time elapsed %3ld.%06ld",
+                mylog_error("h_clnt_flush: %s: time elapsed %3ld.%06ld",
                         hcp->remote,
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec);
 #endif /* INSTRUMENT */

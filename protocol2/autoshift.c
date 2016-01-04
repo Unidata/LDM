@@ -11,7 +11,7 @@
 
 #include <config.h>
 
-#include <assert.h>
+#include <mylog.h>
 #include <errno.h>
 #include <math.h>
 #include <stddef.h>
@@ -39,7 +39,7 @@ getTime(void)
     static timestampt   now;
     int                 error = set_timestamp(&now);
 
-    assert(error == 0);
+    mylog_assert(error == 0);
 
     return &now;
 }
@@ -300,7 +300,7 @@ s_process(
                 if (period < 2*interval) {  /* SWAG threshold */
                     /* No */
                     s_switch = 0;
-                    udebug("s_process(): period=%g s", period);
+                    mylog_debug("s_process(): period=%g s", period);
                 }
                 else {
                     /* Yes */
@@ -322,7 +322,7 @@ s_process(
                         /* No */
                         s_switch = 0;
 
-                        udebug("s_process(): period=%g s, #accept=%u, "
+                        mylog_debug("s_process(): period=%g s, #accept=%u, "
                                 "#reject=%u",
                             period, acceptedCount, rejectedCount);
                     }
@@ -335,7 +335,7 @@ s_process(
                                     ? (acceptedCount <= rejectedMean)
                                     : (acceptedCount >= rejectedMean);
 
-                        udebug("s_process(): period=%g s, #accept=%u, "
+                        mylog_debug("s_process(): period=%g s, #accept=%u, "
                                 "#reject=%u, #LDM-s=%u, primary=%d, switch=%d",
                             period, acceptedCount, rejectedCount, s_ldmCount,
                             s_primary, s_switch);

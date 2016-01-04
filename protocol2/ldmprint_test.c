@@ -12,7 +12,7 @@
 #include "config.h"
 
 #include "ldm.h"
-#include "log.h"
+#include "mylog.h"
 #include "ldmprint.h"
 
 #include <stddef.h>
@@ -181,7 +181,7 @@ int main(
     int exitCode = 1;
     const char* progname = basename((char*) argv[0]);
 
-    if (-1 == openulog(progname, 0, LOG_LOCAL0, "-")) {
+    if (mylog_init(progname)) {
         (void) fprintf(stderr, "Couldn't open logging system\n");
         exitCode = 1;
     }

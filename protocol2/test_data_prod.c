@@ -14,7 +14,7 @@
 #include <CUnit/Basic.h>
 
 #include "data_prod.h"
-#include "log.h"
+#include "mylog.h"
 
 /**
  * Only called once.
@@ -51,7 +51,7 @@ int main(
     int exitCode;
     const char* progname = basename((char*) argv[0]);
 
-    if (-1 == openulog(progname, 0, LOG_LOCAL0, "-")) {
+    if (mylog_init(progname)) {
         (void) fprintf(stderr, "Couldn't open logging system\n");
         exitCode = 1;
     }

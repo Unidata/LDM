@@ -7,6 +7,7 @@
  */
 
 #include <config.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -48,7 +49,7 @@ static int              nprods;
 static void
 dump_stats(void)
 {
-    unotice("Number of products copied: %d", nprods);
+    mylog_notice("Number of products copied: %d", nprods);
 }
 
 
@@ -68,16 +69,18 @@ copyProduct(
 
     switch (pq_insert(outPq, &product)) {
     case 0:
-        if (ulogIsVerbose())
-            uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
+        if (mylog_is_enabled_info)
+            mylog_info("%s", s_prod_info(NULL, 0, infop,
+                    mylog_is_enabled_debug));
         nprods++;
         return 0;
     case PQUEUE_DUP:
-        uinfo("duplicate product: %s",
-            s_prod_info(NULL, 0, infop, ulogIsDebug()));
+        mylog_info("duplicate product: %s",
+            s_prod_info(NULL, 0, infop,
+                    mylog_is_enabled_debug));
         return 0;
     default:
-        serror("Product copy failed");
+        mylog_syserr("Product copy failed");
         return 1;
     }
 }
@@ -106,7 +109,7 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-    unotice("Exiting"); 
+    mylog_notice("Exiting");
 
     if (!intr) {
         if (inPq != NULL)  
@@ -117,7 +120,7 @@ cleanup(void)
 
     dump_stats();
 
-    (void)closeulog();
+    (void)mylog_fini();
 }
 
 
@@ -142,7 +145,7 @@ signal_handler(int sig)
             stats_req = !0;
             return;
     case SIGUSR2 :
-            rollulogpri();
+            mylog_roll_level();
             return;
     }
 }
@@ -189,25 +192,19 @@ int main(
     const int   ac,
     char        *av[])
 {
-    const char          *progname = ubasename(av[0]);
-    char                *logfname;
+    const char          *progname = basename(av[0]);
     prod_class_t        clss;
     prod_spec           spec;
     int                 status = 0;
     int                 interval = DEFAULT_INTERVAL;
-    int                 logoptions = (LOG_CONS|LOG_PID) ;
     int                 queueSanityCheck = FALSE;
     char                *inPath;
     char                *outPath;
 
-    logfname = "";
-
-    if(isatty(fileno(stderr)))
-    {
-        /* set interactive defaults */
-        logfname = "-" ;
-        logoptions = 0 ;
-    }
+    /*
+     * Set up error logging.
+     */
+    (void)mylog_init(progname);
 
     clss.from = TS_ZERO; /* default dump the whole file */
     clss.to = TS_ENDT;
@@ -221,8 +218,6 @@ int main(
         extern int      opterr;
         extern char     *optarg;
         int             ch;
-        int             logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
         int             fterr;
 
         opterr = 1;
@@ -239,7 +234,7 @@ int main(
                 }
                 break;
             case 'l':
-                logfname = optarg;
+                (void)mylog_set_output(optarg);
                 break;
             case 'o':
                 (void) set_timestamp(&clss.from);
@@ -250,18 +245,16 @@ int main(
                 /* compiled below */
                 break;
             case 'v':
-                logmask |= LOG_MASK(LOG_INFO);
+                (void)mylog_set_level(MYLOG_LEVEL_INFO);
                 break;
             case 'x':
-                logmask |= LOG_MASK(LOG_DEBUG);
+                (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                 break;
             case '?':
                 usage(progname);
                 break;
             }
         }
-
-        (void) setulogmask(logmask);
 
         if (re_isPathological(spec.pattern)) {
             fprintf(stderr, "Adjusting pathological regular-expression: "
@@ -281,17 +274,13 @@ int main(
         outPath = av[optind++];
     }                                   /* command-line decoding block */
 
-    /*
-     * Set up error logging.
-     */
-    (void) openulog(progname, logoptions, LOG_LDM, logfname);
-    unotice("Starting Up (%d)", getpgrp());
+    mylog_notice("Starting Up (%d)", getpgrp());
 
     /*
      * Register exit handler
      */
     if(atexit(cleanup) != 0) {
-        serror("atexit");
+        mylog_syserr("atexit");
         return 1;
     }
 
@@ -305,11 +294,11 @@ int main(
      */
     if (0 != (status = pq_open(inPath, PQ_READONLY, &inPq))) {
         if (PQ_CORRUPT == status) {
-            uerror("The input product-queue \"%s\" is inconsistent\n",
+            mylog_error("The input product-queue \"%s\" is inconsistent\n",
                 inPath);
         }
         else {
-            uerror("pq_open failed: %s: %s\n", inPath, strerror(status));
+            mylog_error("pq_open failed: %s: %s\n", inPath, strerror(status));
         }
         return 1;
     }
@@ -319,11 +308,11 @@ int main(
      */
     if (0 != (status = pq_open(outPath, 0, &outPq))) {
         if (PQ_CORRUPT == status) {
-            uerror("The output product-queue \"%s\" is inconsistent\n",
+            mylog_error("The output product-queue \"%s\" is inconsistent\n",
                 outPath);
         }
         else {
-            uerror("pq_open failed: %s: %s\n", outPath, strerror(status));
+            mylog_error("pq_open failed: %s: %s\n", outPath, strerror(status));
         }
         return 1;
     }
@@ -345,17 +334,17 @@ int main(
         case 0: /* no error */
             continue;                   /* N.B., other cases sleep */
         case PQUEUE_END:
-            udebug("End of Queue");
+            mylog_debug("End of Queue");
             done = 1;
             status = 0;
             break;
         case EAGAIN:
         case EACCES:
-            udebug("Hit a lock");
+            mylog_debug("Hit a lock");
             return 1;
             break;
         default:
-            uerror("pq_sequence failed: %s (errno = %d)", strerror(status),
+            mylog_error("pq_sequence failed: %s (errno = %d)", strerror(status),
                 status);
             return 1;
             break;

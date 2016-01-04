@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include "ldmfork.h"
-#include <log.h>
+#include <mylog.h>
 #include <registry.h>
 
 /*
@@ -20,7 +20,7 @@
  *
  * Returns:
  *      0               Success.  The calling process is the child.
- *      -1              Failure.  "log_start()" called.
+ *      -1              Failure.  "mylog_add()" called.
  *      else            PID of child process.  The calling process is the       
  *                      parent.
  */
@@ -39,7 +39,7 @@ pid_t ldmfork(void)
         }
         else if (-1 == pid) {
             /* System error */
-            LOG_SERROR0("Couldn't fork a child process");
+            mylog_syserr("Couldn't fork a child process");
         }
     }
 

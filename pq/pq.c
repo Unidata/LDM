@@ -15,7 +15,7 @@
 #endif
 #include <unistd.h> /* sysconf */
 #include <limits.h>
-#include <assert.h>
+#include <mylog.h>
 #include <stdbool.h>
 #include <stdio.h>  /* DEBUG */
 #include <errno.h>
@@ -32,7 +32,6 @@
 #include "remote.h"
 #include "lcm.h"
 #include "mylog.h"
-#include "log.h"
 #include "ldmprint.h"
 #include "fsStats.h"
 #include "ldm_xlen.h"
@@ -132,7 +131,7 @@ typedef struct fb fb;
 static int 
 log4(size_t n) 
 {
-    assert(n > 0);
+    mylog_assert(n > 0);
     return (int)(log(n + 0.5)/log(4.0));
 }
 
@@ -222,13 +221,13 @@ static void
 fb_stats_dump(fb *fbp) 
 {
     int level;
-    assert(fbp != NULL);
-    uerror("maxsize = %d\n", fbp->maxsize);
-    uerror("arena_sz = %d\n", fbp->arena_sz);
-    uerror("avail = %d\n", fbp->avail);
-    uerror("allocated = %d\n", fbp->allocated);
+    mylog_assert(fbp != NULL);
+    mylog_error("maxsize = %d\n", fbp->maxsize);
+    mylog_error("arena_sz = %d\n", fbp->arena_sz);
+    mylog_error("avail = %d\n", fbp->avail);
+    mylog_error("allocated = %d\n", fbp->allocated);
     for(level = 0; level <= fbp->maxsize; level++) {
-        uerror("nfree[%d]:\t%d\t%d\n", level, fbp->nfree[level], 
+        mylog_error("nfree[%d]:\t%d\t%d\n", level, fbp->nfree[level],
                fbp->free[level]);
     }
 }
@@ -242,10 +241,10 @@ fb_initLevel(
         const int              blksize,
         const int              numblks)
 {
-    assert(fbp != NULL);
-    assert(level >= 0 && level <= fbp->maxsize);
-    assert(blksize > 0 && blksize >= level);
-    assert(numblks > 0);
+    mylog_assert(fbp != NULL);
+    mylog_assert(level >= 0 && level <= fbp->maxsize);
+    mylog_assert(blksize > 0 && blksize >= level);
+    mylog_assert(numblks > 0);
 
     fblk_t off = *offset;
     fbp->free[level] = off;
@@ -266,9 +265,9 @@ fb_init(fb *fbp, size_t nalloc)
     // Keep consonant with `fb_arena_sz()` and `fb_get()`.
 #if 1
     fbp->magic = FB_MAGIC;      /* to later check we mapped it correctly */
-    assert(nalloc > 0);
+    mylog_assert(nalloc > 0);
     const int maxsize = log4(nalloc) + 1; // maxsize >= 1
-    assert(maxsize < MAXLEVELS);
+    mylog_assert(maxsize < MAXLEVELS);
     fbp->maxsize = maxsize;
     /* free[i] is the free list for blocks of size i+1; free[maxsize] holds
        3*sqrt(nalloc)*log4(nalloc) extra blocks of max length to allow for
@@ -299,7 +298,7 @@ fb_init(fb *fbp, size_t nalloc)
     numblks = 3*sqrt((double)nalloc)*log4(nalloc); // see `fb_arena_sz()`
     fb_initLevel(fbp, &offset, maxsize, maxsize, numblks);
     // resolution of `fb_arena_sz()` is `sizeof(fblk_t)` and not `maxsize` above
-    assert(fblk_sz >= offset && fblk_sz < offset + maxsize);
+    mylog_assert(fblk_sz >= offset && fblk_sz < offset + maxsize);
     fbp->arena_sz = offset;
 #else
     size_t fblk_sz;
@@ -370,9 +369,9 @@ fb_rel(fb *fbp, int size, fblk_t fblk)
 {
     int level = size - 1;
 
-    assert(fbp != NULL);
-    assert(0 < size && size <= fbp->maxsize);
-    assert(fblk < fbp->arena_sz);
+    mylog_assert(fbp != NULL);
+    mylog_assert(0 < size && size <= fbp->maxsize);
+    mylog_assert(fblk < fbp->arena_sz);
 
     fbp->fblks[fblk] = fbp->free[level]; /* stick on front of list */
     fbp->free[level] = fblk;
@@ -387,7 +386,7 @@ fb_rel(fb *fbp, int size, fblk_t fblk)
  *
  * @param[in] fbp       Pointer to fblk structure
  * @param[in] level     Level of fblk to return (origin 0).
- * @retval    OFF_NONE  if no fblk is available. `uerror()` called.
+ * @retval    OFF_NONE  if no fblk is available. `mylog_error()` called.
  * @return              An fblk of the given level.
  */
 static fblk_t 
@@ -396,18 +395,18 @@ fb_get(fb *fbp, int level)
     // Keep consonant with `fb_arena_sz()` and `fb_init()`.
 
 #if 1
-    assert(fbp != NULL);
-    assert(0 <= level && level < fbp->maxsize);
+    mylog_assert(fbp != NULL);
+    mylog_assert(0 <= level && level < fbp->maxsize);
 
     for (const int wantSize = level + 1; level <= fbp->maxsize; level++) {
         if (fbp->nfree[level] > 0) {
             fblk_t fblk = fbp->free[level]; // Take it off front of list
-            assert(fblk != (fblk_t)OFF_NONE);
-            assert(fblk < fbp->arena_sz);
+            mylog_assert(fblk != (fblk_t)OFF_NONE);
+            mylog_assert(fblk < fbp->arena_sz);
             fbp->free[level] = fbp->fblks[fblk];
-            assert(fbp->nfree[level] > 0);
+            mylog_assert(fbp->nfree[level] > 0);
             fbp->nfree[level]--;
-            assert(fbp->avail > 0);
+            mylog_assert(fbp->avail > 0);
             fbp->avail--;
             fbp->allocated++;
 
@@ -427,7 +426,7 @@ fb_get(fb *fbp, int level)
      * All out of blocks. This means we tried to keep in the product-queue
      * significantly more products than the specified maximum number.
      */
-    uerror("%s:fb_get(): fb layer ran out of product slots. "
+    mylog_error("fb layer ran out of product slots. "
             "Too many products in queue.");
     fb_stats_dump(fbp);
     return (fblk_t)OFF_NONE;
@@ -435,12 +434,12 @@ fb_get(fb *fbp, int level)
     fblk_t fblk, fblk2;
     int size = level + 1;
 
-    assert(fbp != NULL);
-    assert(0 < size && size <= fbp->maxsize);
+    mylog_assert(fbp != NULL);
+    mylog_assert(0 < size && size <= fbp->maxsize);
 
     if(fbp->nfree[level] > 0) { /* ok, available */
         fblk = fbp->free[level];        /* take it off the front of the list */
-        assert(fblk != (fblk_t)OFF_NONE);
+        mylog_assert(fblk != (fblk_t)OFF_NONE);
         fbp->free[level] = fbp->fblks[fblk];
         fbp->nfree[level]--;
         fbp->avail--;
@@ -452,7 +451,7 @@ fb_get(fb *fbp, int level)
     while (level <= fbp->maxsize) {
         if(fbp->nfree[level] > 0) {
             fblk = fbp->free[level];    /* take it off the front of the list */
-            assert(fblk != (fblk_t)OFF_NONE);
+            mylog_assert(fblk != (fblk_t)OFF_NONE);
             fbp->free[level] = fbp->fblks[fblk];
             fbp->nfree[level]--;
             fbp->avail--;
@@ -471,7 +470,7 @@ fb_get(fb *fbp, int level)
     /* else: all out of extra blocks too.  This means we tried to keep
        in product queue significantly more than the specified maximum
        number of products. */
-    uerror("fb layer ran out of product slots, too many products in queue\n");
+    mylog_error("fb layer ran out of product slots, too many products in queue");
     /* fb_stats_dump(fbp);   */
     return (fblk_t)OFF_NONE;
 #endif
@@ -541,7 +540,7 @@ tq_init(tqueue *const tq, size_t const nalloc0, fb *fbp)
     size_t nelems;
     size_t nalloc = nalloc0 + TQ_OVERHEAD_ELEMS; /* for TQ_NIL, TQ_HEADER */
 
-    assert(fbp->magic == FB_MAGIC); /* sanity check */
+    mylog_assert(fbp->magic == FB_MAGIC); /* sanity check */
 
     tq->nalloc = nalloc0;
     /* cache offset to skip list blocks, so we can find them from only tq */
@@ -586,7 +585,7 @@ tq_init(tqueue *const tq, size_t const nalloc0, fb *fbp)
 static int
 tq_HasSpace(const tqueue *const tq)
 {
-        assert(tq->nelems - TQ_OVERHEAD_ELEMS <= tq->nalloc);
+        mylog_assert(tq->nelems - TQ_OVERHEAD_ELEMS <= tq->nalloc);
         return (tq->nelems - TQ_OVERHEAD_ELEMS < tq->nalloc);
 }
 
@@ -605,7 +604,7 @@ tq_get_tqelem(tqueue *const tq)
         tq->free = tpp->offset;
         tq->nfree--;
         tq->nelems++;
-        assert(result > TQ_HEAD && result != TQ_NONE);
+        mylog_assert(result > TQ_HEAD && result != TQ_NONE);
         return result;
     }
     /* else */
@@ -623,8 +622,8 @@ tq_rel_tqelem(tqueue *const tq, int level, tqep_t p)
     tqelem *tpp = &tq->tqep[p];
     fb *fbp = (fb *)((char *)tq + tq->fbp_off);
 
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
-    assert(TQ_HEAD < p && p < tq->nalloc + TQ_OVERHEAD_ELEMS);
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(TQ_HEAD < p && p < tq->nalloc + TQ_OVERHEAD_ELEMS);
     tpp->tv = TS_NONE;
     tpp->offset = tq->free;
     /* free associated fblk */
@@ -663,16 +662,16 @@ tq_add(
 {
     fb*         fbp = (fb*)((char*)tq + tq->fbp_off);
 
-    assert(fbp->magic == FB_MAGIC); // check for sanity
-    assert(tq->nalloc != 0);
-    assert(tq_HasSpace(tq));
+    mylog_assert(fbp->magic == FB_MAGIC); // check for sanity
+    mylog_assert(tq->nalloc != 0);
+    mylog_assert(tq_HasSpace(tq));
 
     /*
      * Index of the time-queue element that's to be inserted. Taken from the
      * free list.
      */
     tqep_t      tpix = tq_get_tqelem(tq);
-    assert(tpix != TQ_NONE);
+    mylog_assert(tpix != TQ_NONE);
 
     // Pointer to the i-th element in the time-queue
     #define TQE_PTR(i)              (tq->tqep + i)
@@ -804,7 +803,7 @@ tqe_find(const tqueue *const tq, const timestampt *const key, const pq_match mt)
     if(tq->nelems - TQ_OVERHEAD_ELEMS == 0) {
         return NULL;
     }
-    assert(fbp->magic == FB_MAGIC);
+    mylog_assert(fbp->magic == FB_MAGIC);
     p = TQ_HEAD;                /* header of skip list */
     tpp = &tq->tqep[p];
     k = tq->level;              /* level of skip list and header */
@@ -849,7 +848,7 @@ tqe_find(const tqueue *const tq, const timestampt *const key, const pq_match mt)
         } /* else */
         return (tqelem *) tqp;
     }
-    uerror("tqe_find: bad value for mt: %d", mt);
+    mylog_error("bad value for mt: %d", mt);
     return NULL;
 }
 
@@ -868,7 +867,7 @@ tqe_first(const tqueue *const tq)
     const tqelem *tqp;
     fb *fbp = (fb *)((char *)tq + tq->fbp_off);
 
-    assert(fbp->magic == FB_MAGIC);
+    mylog_assert(fbp->magic == FB_MAGIC);
     p = TQ_HEAD;                /* header of skip list */
     tpp = &tq->tqep[p];
     /* q = p->forward[0]; */
@@ -896,7 +895,7 @@ tq_delete(tqueue *const tq, tqelem *tqep)
     tqep_t update[MAXLEVELS];
     fb *fbp = (fb *)((char *)tq + tq->fbp_off);
 
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
     /* p = l->header; */
     p = TQ_HEAD;
     tpp = &tq->tqep[p];
@@ -908,7 +907,7 @@ tq_delete(tqueue *const tq, tqelem *tqep)
         /* same as *(fbp->fblks + tpp->fblk + k) */
         q = fbp->fblks[tpp->fblk + k];
         tqp = &tq->tqep[q];
-        assert((q == TQ_NIL) || (TQ_HEAD < q && q < tq->nalloc + TQ_OVERHEAD_ELEMS));
+        mylog_assert((q == TQ_NIL) || (TQ_HEAD < q && q < tq->nalloc + TQ_OVERHEAD_ELEMS));
         /* while(q->key < key) { */
         /* on fast machines distinct products may have equal timestamps */
         while(TV_CMP_LT(tqp->tv, tqep->tv) ||
@@ -918,12 +917,12 @@ tq_delete(tqueue *const tq, tqelem *tqep)
             /* q = p->forward[k]; */
             q = fbp->fblks[tpp->fblk + k];
             tqp = &tq->tqep[q];
-            assert((q == TQ_NIL) || (TQ_HEAD < q && q < tq->nalloc + TQ_OVERHEAD_ELEMS));
+            mylog_assert((q == TQ_NIL) || (TQ_HEAD < q && q < tq->nalloc + TQ_OVERHEAD_ELEMS));
         }
         update[k] = p;
     } while(--k >= 0);
     /* q may have key equal or greater than the specified key.  */
-    assert((q == TQ_NIL) || (TQ_HEAD < q && q < tq->nalloc + TQ_OVERHEAD_ELEMS));
+    mylog_assert((q == TQ_NIL) || (TQ_HEAD < q && q < tq->nalloc + TQ_OVERHEAD_ELEMS));
     /* if (q->key == key) { */
     /*
      * Given the way this function is used, the equality-test of the offsets in
@@ -966,7 +965,7 @@ tq_next(const tqueue *const tq, const tqelem *const tqep)
 {
     /* get the skip list array of offsets */
     fb *fbp = (fb *)((char *)tq + tq->fbp_off);
-    assert(fbp->magic == FB_MAGIC);
+    mylog_assert(fbp->magic == FB_MAGIC);
 
     /* use the 0-level offset block to get the next element by time */
     return (tqelem *) &tq->tqep[fbp->fblks[tqep->fblk]];
@@ -1135,7 +1134,7 @@ rp_get(regionl *rl)
 
     /* Just get first empty slot on list */
     if(rl->empty == RL_NONE) {
-        assert(rl->nempty == 0);
+        mylog_assert(rl->nempty == 0);
         return RL_NONE;
     }
     ix = rl->empty;
@@ -1160,7 +1159,7 @@ rp_rel(regionl *rl, size_t rlix)
     region *rep = rlrp + rlix;
     size_t rnix = rl->empty;
 
-    assert(0 < rlix && rlix < rl->nalloc + RL_FREE_OVERHEAD);
+    mylog_assert(0 < rlix && rlix < rl->nalloc + RL_FREE_OVERHEAD);
 
     /* Just put on front of list of empties. */
     rep->next = rnix;
@@ -1188,7 +1187,7 @@ static int
 isprime(unsigned long n) {
   unsigned long d;
 
-  assert(n <= 4294967290UL);   /* if larger: infinite loop with 32 bit longs */
+  mylog_assert(n <= 4294967290UL);   /* if larger: infinite loop with 32 bit longs */
   if (n <= 1)
     return 0;
   if (n <= 19)
@@ -1205,7 +1204,7 @@ isprime(unsigned long n) {
 
 static unsigned long
 prevprime(unsigned long n) {/* find largest prime <= n */
-  assert (n > 1);
+  mylog_assert (n > 1);
   if(n == 2)
     return n;
   if(n%2 == 0)
@@ -1362,7 +1361,7 @@ rl_fext_init(regionl *const rl)
          */
         huge_size_t = ~huge_size_t;
 
-        assert(huge_size_t > 0);
+        mylog_assert(huge_size_t > 0);
     }
     
     /* create psuedo-regions to use for head and tail of freelist
@@ -1403,7 +1402,7 @@ rl_init(regionl *const rl, size_t const nalloc, fb *fbp)
     region *const end = rlrp + (nalloc + RL_FREE_OVERHEAD);
     rlhash *rlhp;
 
-    assert(fbp->magic == FB_MAGIC); /* sanity check */
+    mylog_assert(fbp->magic == FB_MAGIC); /* sanity check */
 
     rlhp = (rlhash *)end;       /* associated chains */
     
@@ -1411,7 +1410,7 @@ rl_init(regionl *const rl, size_t const nalloc, fb *fbp)
     rl->nchains = rlhash_nchains(nalloc);
     rlhash_init(rlhp, rl->nchains);
     
-    assert(rlhp->magic == RL_MAGIC); /* sanity check */
+    mylog_assert(rlhp->magic == RL_MAGIC); /* sanity check */
     
     rp_init(rl);                /* create list of empty region slots */
     rl->empty = RL_EMPTY_HD;    /* rp array starts out as all empty list */
@@ -1433,7 +1432,7 @@ rl_init(regionl *const rl, size_t const nalloc, fb *fbp)
 
     /* This assertion should always be preserved by conversions among
        used, free and empty regions */
-    assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
+    mylog_assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
     return;
 }
 
@@ -1466,8 +1465,8 @@ rl_fext_prev(regionl *const rl, size_t rlix)
     int k;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
 
-    assert(IsFree(rep));
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(IsFree(rep));
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
 
     spix = rl->fext;            /* head of skip list by extent, p */
     spp = rlrp + spix;
@@ -1492,8 +1491,8 @@ rl_fext_prev(regionl *const rl, size_t rlix)
     {
         region *left = rlrp + spix;
 
-        assert(IsFree(left));
-        assert(left->extent <= rep->extent);
+        mylog_assert(IsFree(left));
+        mylog_assert(left->extent <= rep->extent);
     }
 #endif
 
@@ -1535,7 +1534,7 @@ rl_foff_del(regionl *rl, size_t rlix)
     region *rep = rlrp + rlix;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
 
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
     /* p = l->header; */
     spix = rl->foff;    /* head of skip list by offset */
     spp = rlrp + spix;
@@ -1546,7 +1545,7 @@ rl_foff_del(regionl *rl, size_t rlix)
         /* q = p->forward[k]; */
         sqix = fbp->fblks[spp->next + k];
         sqp = rlrp + sqix;
-        assert((sqix == RL_FOFF_TL) || (rl->foff < sqix && sqix < rl->nalloc + RL_FREE_OVERHEAD));
+        mylog_assert((sqix == RL_FOFF_TL) || (rl->foff < sqix && sqix < rl->nalloc + RL_FREE_OVERHEAD));
         /* while(q->key < key) { */
         while(sqp->offset < rep->offset) {
             spix = sqix;
@@ -1558,7 +1557,7 @@ rl_foff_del(regionl *rl, size_t rlix)
         update[k] = spix;
     } while(--k >= 0);
     /* q may have key equal or greater than the specified key.  */
-    assert((sqix == RL_FOFF_TL) || (rl->foff < sqix && sqix < rl->nalloc + RL_FREE_OVERHEAD));
+    mylog_assert((sqix == RL_FOFF_TL) || (rl->foff < sqix && sqix < rl->nalloc + RL_FREE_OVERHEAD));
     /* if (q->key == key) { */
     if (sqp->offset == rep->offset) {
         for(k = 0; k <= m; k++) {
@@ -1601,7 +1600,7 @@ rl_fext_del(regionl *rl, size_t rlix)
     region *rep = rlrp + rlix;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
 
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
     /* p = l->header; */
     spix = rl->fext;    /* head of skip list by extent */
     spp = rlrp + spix;
@@ -1612,9 +1611,9 @@ rl_fext_del(regionl *rl, size_t rlix)
         /* q = p->forward[k]; */
         sqix = fbp->fblks[spp->prev + k];
         sqp = rlrp + sqix;
-        assert((sqix == RL_FEXT_TL) || (rl->fext < sqix && sqix < rl->nalloc + RL_FREE_OVERHEAD));
+        mylog_assert((sqix == RL_FEXT_TL) || (rl->fext < sqix && sqix < rl->nalloc + RL_FREE_OVERHEAD));
         /* while(q->key < key) { */
-        assert(sqp->extent > 0);
+        mylog_assert(sqp->extent > 0);
         /* regions with equal extents may be on freelist, so need to find right one to delete */
         while(sqp->extent < rep->extent
               || (sqp->extent == rep->extent && sqp->offset < rep->offset)) {
@@ -1669,7 +1668,7 @@ rl_fext_find(regionl *rl, size_t extent)
     region *rlrp = rl->rp;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
 
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
     /* p = l->header; */
     spix = rl->fext;    /* head of skip list by extent */
     spp = rlrp + spix;
@@ -1757,7 +1756,7 @@ rlhash_del(regionl *const rl, size_t rlix)
     }
     if(rnix != RL_NONE) {
         region *rnp = rlrp + rnix;
-        assert(IsAlloc(rnp));
+        mylog_assert(IsAlloc(rnp));
         rnp->prev = rpix;
     }
     return;
@@ -1779,7 +1778,7 @@ rl_foff_add(regionl *const rl, size_t rlix)
     region *sqp;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
     
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
     spix = rl->foff;            /* head of skip list by offset, p */
     spp = rlrp + spix;
     k = rl->level_foff;
@@ -1835,7 +1834,7 @@ rl_fext_add(regionl *const rl, size_t rlix)
     region *sqp;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
     
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
     spix = rl->fext;            /* head of skip list by extent, p */
     spp = rlrp + spix;
     k = rl->level_fext;
@@ -1897,13 +1896,13 @@ rl_foff_dump(regionl *const rl)
     /* q = p->forward[0]; */
     sqix = fbp->fblks[spp->next];
     sqp = rlrp + sqix;
-    udebug("** Offsets:\t");                    /* debugging */
+    mylog_debug("** Offsets:\t");                    /* debugging */
     while(sqix != RL_FOFF_TL) {
         /* p = q */
         spix = sqix;
         spp = rlrp + spix;
-        udebug("%u ", spp->offset);             /* debugging */
-        assert(spp->offset > prev_offset);
+        mylog_debug("%u ", spp->offset);             /* debugging */
+        mylog_assert(spp->offset > prev_offset);
         prev_offset = spp->offset;
         /* q = p->forward[0]; */
         sqix = fbp->fblks[spp->next];
@@ -1941,16 +1940,16 @@ rl_foff_next(regionl *const rl, size_t rlix)
     size_t rnix;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
 
-    assert(IsFree(rep));
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(IsFree(rep));
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
     rnix = fbp->fblks[rep->next];
 
 #if !defined(NDEBUG)
     {
         region *rght = rlrp + rnix;
 
-        assert(IsFree(rght));
-        assert(rght->offset > rep->offset);
+        mylog_assert(IsFree(rght));
+        mylog_assert(rght->offset > rep->offset);
     }
 #endif
 
@@ -1976,8 +1975,8 @@ rl_foff_prev(regionl *const rl, size_t rlix)
     int k;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
 
-    assert(IsFree(rep));
-    assert(fbp->magic == FB_MAGIC); /* check for sanity */
+    mylog_assert(IsFree(rep));
+    mylog_assert(fbp->magic == FB_MAGIC); /* check for sanity */
 
     spix = rl->foff;            /* head of skip list by offset, p */
     spp = rlrp + spix;
@@ -2001,8 +2000,8 @@ rl_foff_prev(regionl *const rl, size_t rlix)
     {
         region *left = rlrp + spix;
 
-        assert(IsFree(left));
-        assert(left->offset < rep->offset);
+        mylog_assert(IsFree(left));
+        mylog_assert(left->offset < rep->offset);
     }
 #endif
 
@@ -2074,7 +2073,7 @@ rl_find(const regionl *const rl, off_t const offset)
     size_t ret;
 
     rlhp = RLHASHP(rl);
-    assert(rlhp->magic == RL_MAGIC);
+    mylog_assert(rlhp->magic == RL_MAGIC);
     
     ret = RL_NONE;
     try = rl_hash(rl->nchains, offset);
@@ -2083,7 +2082,7 @@ rl_find(const regionl *const rl, off_t const offset)
         rep = rlrp + next;
         if(offset == rep->offset) { /* found */
             ret = next;
-            assert(IsAlloc(rep)); /* verify region is in use */
+            mylog_assert(IsAlloc(rep)); /* verify region is in use */
             break;
         }
         next = rep->next;
@@ -2126,16 +2125,16 @@ rlhash_add(regionl *const rl, size_t rpix)
     size_t next;
     rlhash *rlhp;
     rlhp = RLHASHP(rl);
-    assert(rlhp->magic == RL_MAGIC);
+    mylog_assert(rlhp->magic == RL_MAGIC);
 
     rep = rlrp + rpix;
-    assert(IsAlloc(rep));
+    mylog_assert(IsAlloc(rep));
     try = rl_hash(rl->nchains, rep->offset);
     /* link new element on front of chain */
     next = rlhp->chains[try];
     if (next != RL_NONE) {
         region *rnp = rlrp + next;
-        assert(IsAlloc(rnp));
+        mylog_assert(IsAlloc(rnp));
         rnp->prev = rpix;
     }
     rep->next = next;
@@ -2161,11 +2160,11 @@ rl_add(regionl *const rl, off_t const offset, size_t const extent)
     if (rpix == RL_NONE) {
         /* This shouldn't happen if enough product slots are allocated
            by pqcreate ... */
-        uerror("Need more product slots, allocate more when creating queue");
+        mylog_error("Need more product slots, allocate more when creating queue");
         /* Can't call pq_del_oldest(), because that's who might have called us */
         return NULL;
     }
-    assert(rl->nelems < rl->nalloc);
+    mylog_assert(rl->nelems < rl->nalloc);
     
     rep = rlrp + rpix;
     rep->offset = offset;
@@ -2174,7 +2173,7 @@ rl_add(regionl *const rl, off_t const offset, size_t const extent)
     rl_rel(rl, rpix);   /* Insert into free list.  No need to consolidate. */
     if(rl->nfree > rl->maxfree)
         rl->maxfree = rl->nfree;
-    assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
+    mylog_assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
     return rep;
 }
 
@@ -2194,15 +2193,15 @@ rl_split(regionl *const rl, size_t rlix, size_t const extent)
         int status = ENOERR;
 
         region *low = rlrp + rlix;
-        assert(low != NULL);
-        assert(IsFree(low));
-        assert(extent <= low->extent);
+        mylog_assert(low != NULL);
+        mylog_assert(IsFree(low));
+        mylog_assert(extent <= low->extent);
 
         rem = low->extent - extent;
         newoff = low->offset + (off_t)extent;
         new = rl_add(rl, newoff, rem);
         if(new) {
-            assert(IsFree(new));
+            mylog_assert(IsFree(new));
             low->extent = extent; /* can change extent, because this is not on freelist */
             if(rem > rl->maxfextent)
                 rl->maxfextent = rem;
@@ -2224,7 +2223,7 @@ rl_split(regionl *const rl, size_t rlix, size_t const extent)
 static void
 rl_put(regionl *const rl, const size_t rlix)
 {
-    assert(rlix < rl->nalloc);
+    mylog_assert(rlix < rl->nalloc);
 
     rl->nelems--;
 
@@ -2236,7 +2235,7 @@ rl_put(regionl *const rl, const size_t rlix)
     if(rl->nfree > rl->maxfree)
         rl->maxfree = rl->nfree;
 
-    assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
+    mylog_assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
 }
 
 
@@ -2260,7 +2259,7 @@ rl_free(regionl *const rl, size_t rpix)
     /* update statistics */
     if(rl->nfree > rl->maxfree)
         rl->maxfree = rl->nfree;
-    assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
+    mylog_assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
 }
 /* End regionl */
 /* Begin sx */
@@ -2414,7 +2413,7 @@ sx_init(sx *const sx, size_t const nalloc)
         sx->nchains = nchains(nalloc);
         sxhash_init(sxhp, sx->nchains);
 
-        assert(sxhp->magic == SX_MAGIC); /* sanity check */
+        mylog_assert(sxhp->magic == SX_MAGIC); /* sanity check */
 
         for(sxep = &sx->sxep[0]; sxep < end; sxep++, isx++)
         {
@@ -2491,11 +2490,11 @@ sx_find(sx *const sx, const signaturet sig, sxelem **sxepp)
     int status = 0;
         /* sxhp = (sxhash *)((char *)(sx) + sxwo_sz(sx->nalloc)); */
     sxhp = (sxhash *)(&sx->sxep[sx->nalloc]);
-    assert(sxhp->magic == SX_MAGIC);
+    mylog_assert(sxhp->magic == SX_MAGIC);
 
     /*
-    assert(sx->nalloc != 0);
-    assert(sx->nfree + sx->nelems == sx->nalloc);
+    mylog_assert(sx->nalloc != 0);
+    mylog_assert(sx->nfree + sx->nelems == sx->nalloc);
     */
 
     *sxepp = (sxelem *) 0;
@@ -2528,15 +2527,15 @@ sx_add(sx *const sx, const signaturet sig, off_t const offset)
     sxhash *sxhp;
     /* sxhp = (sxhash *)((char *)(sx) + sxwo_sz(sx->nalloc)); */
     sxhp = (sxhash *)(&sx->sxep[sx->nalloc]);
-    assert(sxhp->magic == SX_MAGIC);
+    mylog_assert(sxhp->magic == SX_MAGIC);
 
-    assert(sx->nalloc != 0);
-    assert(sx->nfree + sx->nelems == sx->nalloc);
+    mylog_assert(sx->nalloc != 0);
+    mylog_assert(sx->nfree + sx->nelems == sx->nalloc);
 
     /* get a new sxelem from the front of free list */
     sxix = sxelem_new(sx);
     if (sxix == SX_NONE) {
-        uerror("sx_add: no slots for signatures, too many products?\n");
+        mylog_error("sx_add: no slots for signatures, too many products?\n");
         return 0;
     }
     sxep = &sx->sxep[sxix];
@@ -2552,7 +2551,7 @@ sx_add(sx *const sx, const signaturet sig, off_t const offset)
     sx->nelems++;
 
     /*
-    udebug("%s:sx_add(): Added signature 0x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+    MYLOG_DEBUG("%s:sx_add(): Added signature 0x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
             "%02x%02x%02x%02x%02x%02x%02x", __FILE__, sig[0], sig[1], sig[2],
             sig[3], sig[4], sig[5], sig[6], sig[7], sig[8], sig[9], sig[10],
             sig[11], sig[12], sig[13], sig[14], sig[15]);
@@ -2575,8 +2574,8 @@ sx_find_delete(sx *const sx, const signaturet sig)
     int status = 0;
     /* sxhp = (sxhash *)((char *)(sx) + sxwo_sz(sx->nalloc)); */
     sxhp = (sxhash *)(&sx->sxep[sx->nalloc]);
-    assert(sxhp->magic == SX_MAGIC);
-    assert(sx->nfree + sx->nelems == sx->nalloc);
+    mylog_assert(sxhp->magic == SX_MAGIC);
+    mylog_assert(sx->nfree + sx->nelems == sx->nalloc);
 
     /* find chain */
     try = sx_hash(sx->nchains, sig);
@@ -2645,10 +2644,10 @@ ix_ptrs(void *ix, size_t ixsz, size_t nelems,
         ((struct tqueue *)*tqpp)->fbp = *fbpp;
         */
 #ifndef NDEBUG
-        assert(((char *)(*sxpp) + sx_sz(nelems)) <= ((char *)ix + ixsz));
+        mylog_assert(((char *)(*sxpp) + sx_sz(nelems)) <= ((char *)ix + ixsz));
 #else
         if (!(((char *)(*sxpp) + sx_sz(nelems)) <= ((char *)ix + ixsz))) {
-            uerror("ix_ptrs: *sxpp=%p, sx_sz(%lu)=%lu, ix=%p, ixsz=%lu",
+            mylog_error("ix_ptrs: *sxpp=%p, sx_sz(%lu)=%lu, ix=%p, ixsz=%lu",
                 (void*)*sxpp, (unsigned long)nelems,
                 (unsigned long)sx_sz(nelems), (void*)ix,
                 (unsigned long)ixsz);
@@ -2766,7 +2765,7 @@ typedef struct riul riul;
 static size_t
 riul_nalloc(size_t sz)
 {
-        assert(sz >  MIN_RIUL_SZ);
+        mylog_assert(sz >  MIN_RIUL_SZ);
         sz -= sizeof(size_t); /* sz */
         sz -= sizeof(size_t); /* nalloc */
         sz -= sizeof(size_t); /* nelems */
@@ -2786,10 +2785,10 @@ riul_init(riul *const rl, size_t const nelems, size_t sz)
         size_t nalloc = riul_nalloc(sz);
         riu *const end = &rl->rp[nalloc];
 
-        assert(rl != NULL);
-        assert(sz != 0);
-        assert(nelems == 0 || rl->nelems == nelems);
-        assert(nelems == 0 || rl->nalloc < nalloc);
+        mylog_assert(rl != NULL);
+        mylog_assert(sz != 0);
+        mylog_assert(nelems == 0 || rl->nelems == nelems);
+        mylog_assert(nelems == 0 || rl->nalloc < nalloc);
 
         rl->sz = sz;
         rl->nalloc = nalloc;
@@ -2813,7 +2812,7 @@ riul_init(riul *const rl, size_t const nelems, size_t sz)
 static int
 riul_HasSpace(const riul *const rl)
 {
-        assert(rl->nelems <= rl->nalloc);
+        mylog_assert(rl->nelems <= rl->nalloc);
         return (rl->nelems < rl->nalloc);
 }
 
@@ -2852,7 +2851,7 @@ riul_r_find(const riul *const rl, off_t const offset, riu *const *rpp)
         status = bsrch(&rgn,
                 rl->rp, rl->nelems, sizeof(riu), riul_r_compare,
                         (const void **)rpp);
-        assert(status == 0 || (*rpp)->vp != NULL);
+        mylog_assert(status == 0 || (*rpp)->vp != NULL);
         return status;
 }
 
@@ -2898,14 +2897,14 @@ riul_add(riul **riulpp, size_t growby,
             riul_r_find(rl, offset, &rp);
 
 #if !defined(NDEBUG)
-            assert(found == 0);
+            mylog_assert(found == 0);
         }
 #endif
 
         if(rp < end)
         {
                 /* shuffle right */
-                /* udebug("riul_add memmove: %ld\n", (char* )end - (char *)rp); */
+                /* MYLOG_DEBUG("riul_add memmove: %ld\n", (char* )end - (char *)rp); */
                 memmove(rp +1, rp, (char *)end - (char *)rp);
         }
         
@@ -2918,7 +2917,7 @@ riul_add(riul **riulpp, size_t growby,
         if(rl->nelems > rl->maxelems) {
             rl->maxelems = rl->nelems;
         }
-        /* DEBUG */ /* assert(riul_r_find(rl, offset, &rp) != 0); */
+        /* DEBUG */ /* mylog_assert(riul_r_find(rl, offset, &rp) != 0); */
 
         return ENOERR;
 }
@@ -2932,12 +2931,12 @@ riul_delete(riul *rl, riu *const rp)
         riu *end = &rl->rp[rl->nelems];
         riu *rght = rp +1;
 
-        assert(&rl->rp[0] <= rp && rp < end);
+        mylog_assert(&rl->rp[0] <= rp && rp < end);
 
         if(rght < end)
         {
                 /* shuffle left */
-                /* udebug("riul_delete memmove: %ld\n", (char* )end - (char *)rght); */
+                /* MYLOG_DEBUG("riul_delete memmove: %ld\n", (char* )end - (char *)rght); */
                 memmove(rp, rght, (char *)end - (char *)rght);
         }
         end--;
@@ -3237,16 +3236,17 @@ fd_lock(const int fd, const int cmd, const short l_type,
                         {
                         pid_t conflict = fd_isLocked(fd, l_type, offset,
                                         l_whence, extent);
-                        uerror("fcntl %s failed for rgn (%ld %s, %lu): %s",
+                        mylog_errno(errnum,
+                                "fcntl %s failed for rgn (%ld %s, %lu): %s",
                                 s_ltype(l_type), 
                                 (long)offset, s_whence(l_whence), (long)extent, 
                                 strerror(errnum));
-                        uerror("conflicting pid %d", (int)conflict);
+                        mylog_error("conflicting pid %d", (int)conflict);
                         }
                 }
                 else
                 {
-                        serror("fcntl %s failed for rgn (%ld %s, %lu) %d",
+                        mylog_syserr("fcntl %s failed for rgn (%ld %s, %lu) %d",
                                 s_ltype(l_type), 
                                 (long)offset, s_whence(l_whence), (long)extent, 
                                 errnum);
@@ -3321,14 +3321,13 @@ mapwrap(const int fd,
         if(mm == (void *)((ptrdiff_t)-1))
         {
                 status = errno;
-                LOG_SERROR3("mmap() failure: *ptrp=%p, offset=%ld, extent=%lu",
+                mylog_add_syserr("mmap() failure: *ptrp=%p, offset=%ld, extent=%lu",
                     *ptrp, (long)offset, (unsigned long)extent);
-                LOG_ADD0("Product-queue size too big?");
-                log_log(LOG_ERR);
+                mylog_error("Product-queue size too big?");
                 return status;
         }
 #if TRACE_MMAP
-        udebug("%p = mmap: %p %ld %lu", mm, *ptrp,
+        mylog_debug("%p = mmap: %p %ld %lu", mm, *ptrp,
                 (long)offset, (unsigned long)extent );
 #endif
 
@@ -3355,23 +3354,23 @@ unmapwrap(void *const ptr,
         {
 #ifdef MS_ASYNC
                 if(msync(ptr, extent, MS_ASYNC) == -1)
-                        serror("msync: %ld %lu MS_ASYNC",
+                        mylog_syserr("msync: %ld %lu MS_ASYNC",
                                 (long)offset, (unsigned long)extent);
 #else
                 if(msync(ptr, extent) == -1)
-                        serror("msync: %ld %lu",
+                        mylog_syserr("msync: %ld %lu",
                                 (long)offset, (unsigned long)extent);
 #endif
         }
 #endif /* USE_MSYNC */
 
 #if TRACE_MMAP
-        udebug("unmap: %p %ld %lu", ptr, (long)offset, (unsigned long)extent);
+        mylog_debug("unmap: %p %ld %lu", ptr, (long)offset, (unsigned long)extent);
 #endif
         if(munmap(ptr, extent) == -1)
         {
                 status = errno;
-                serror("munmap: %ld %lu", (long)offset, (unsigned long)extent);
+                mylog_syserr("munmap: %ld %lu", (long)offset, (unsigned long)extent);
                 return status;
         }
 
@@ -3422,9 +3421,9 @@ rgn_lock(pqueue *const pq,
 {
 #ifndef NDEBUG
         if(offset == pq->ixo && extent == pq->ixsz)
-                assert(fIsSet(rflags, RGN_NOLOCK));
+                mylog_assert(fIsSet(rflags, RGN_NOLOCK));
         else
-                assert(!fIsSet(rflags, RGN_NOLOCK));
+                mylog_assert(!fIsSet(rflags, RGN_NOLOCK));
 #endif
 
         if(fIsSet(rflags, RGN_NOLOCK) || fIsSet(pq->pflags, PQ_NOLOCK))
@@ -3438,7 +3437,7 @@ rgn_lock(pqueue *const pq,
                 int status =  fd_lock(pq->fd, cmd, l_type,
                                 offset, SEEK_SET, extent);
 #if TRACE_LOCK
-        udebug("%s (%ld, %lu)",
+        mylog_debug("%s (%ld, %lu)",
                 s_ltype(l_type),
                 (long)offset, (unsigned long)extent);
 #endif
@@ -3463,14 +3462,14 @@ rgn_unlock(pqueue *const pq,
 {
 #ifndef NDEBUG
         if(offset == pq->ixo && extent == pq->ixsz)
-                assert(fIsSet(rflags, RGN_NOLOCK));
+                mylog_assert(fIsSet(rflags, RGN_NOLOCK));
 #endif
 
         if(fIsSet(rflags, RGN_NOLOCK) || fIsSet(pq->pflags, PQ_NOLOCK))
                 return ENOERR;
         /* else */
 #if TRACE_LOCK
-        udebug("F_UNLCK (%ld, %lu)",
+        mylog_debug("F_UNLCK (%ld, %lu)",
                 (long)offset, (unsigned long)extent);
 #endif
         return fd_lock(pq->fd, F_SETLK, F_UNLCK,
@@ -3493,25 +3492,25 @@ f_ftom(pqueue *const pq,
         void *vp = NULL;
         ssize_t nread = 0;
 
-        assert(pq != NULL);
-        assert(pq->datao > 0);
-        assert(pq->datao % pq->pagesz == 0);
-        assert(pq->ixo >= pq->datao);
-        assert(pq->ixo % pq->pagesz == 0);
-        assert(pq->ixsz >= pq->pagesz);
-        assert(pq->ixsz % pq->pagesz == 0);
+        mylog_assert(pq != NULL);
+        mylog_assert(pq->datao > 0);
+        mylog_assert(pq->datao % pq->pagesz == 0);
+        mylog_assert(pq->ixo >= pq->datao);
+        mylog_assert(pq->ixo % pq->pagesz == 0);
+        mylog_assert(pq->ixsz >= pq->pagesz);
+        mylog_assert(pq->ixsz % pq->pagesz == 0);
 
-        assert(0 <= offset && offset <= pq->ixo);
-        assert(0 != extent && extent < TOTAL_SIZE(pq));
+        mylog_assert(0 <= offset && offset <= pq->ixo);
+        mylog_assert(0 != extent && extent < TOTAL_SIZE(pq));
 
-        assert(pIf(fIsSet(rflags, RGN_WRITE),
+        mylog_assert(pIf(fIsSet(rflags, RGN_WRITE),
                         !fIsSet(pq->pflags, PQ_READONLY)));
         
         vp = malloc(extent);
         if(vp == NULL)
         {
                 status = errno;
-                serror("f_ftom malloc %lu", (unsigned long)extent);
+                mylog_syserr("f_ftom malloc %lu", (unsigned long)extent);
                 return status;
         }
         /* DEBUG */
@@ -3524,7 +3523,7 @@ f_ftom(pqueue *const pq,
         if(lseek(pq->fd, offset, SEEK_SET) != offset)
         {
                 status = errno;
-                serror("f_ftom lseek %ld", (long)offset);
+                mylog_syserr("f_ftom lseek %ld", (long)offset);
                 goto unwind_lock;
         }
 
@@ -3536,13 +3535,13 @@ f_ftom(pqueue *const pq,
                 status = errno;
                 if(nread == -1)
                 {
-                        serror("f_ftom read %lu", (unsigned long)extent);
+                        mylog_syserr("f_ftom read %lu", (unsigned long)extent);
                         goto unwind_lock;
                 }
                 /* else */
                 if(status != ENOERR)
                 {
-                        serror("f_ftom at %ld incomplete read %d != %lu",
+                        mylog_syserr("f_ftom at %ld incomplete read %d != %lu",
                                 (long)offset, nread, (unsigned long)extent);
                         goto unwind_lock;
                 }
@@ -3580,42 +3579,42 @@ f_mtof(pqueue *const pq,
         void *vp;
         ssize_t nwrote;
 
-        assert(pq != NULL); /* would have core dumped already initializing */
-        assert(pq->datao > 0);
-        assert(pq->datao % pq->pagesz == 0);
-        assert(pq->ixo >= pq->datao);
-        assert(pq->ixo % pq->pagesz == 0);
-        assert(pq->ixsz >= pq->pagesz);
-        assert(pq->ixsz % pq->pagesz == 0);
+        mylog_assert(pq != NULL); /* would have core dumped already initializing */
+        mylog_assert(pq->datao > 0);
+        mylog_assert(pq->datao % pq->pagesz == 0);
+        mylog_assert(pq->ixo >= pq->datao);
+        mylog_assert(pq->ixo % pq->pagesz == 0);
+        mylog_assert(pq->ixsz >= pq->pagesz);
+        mylog_assert(pq->ixsz % pq->pagesz == 0);
 
-        assert(pIf(fIsSet(rflags, RGN_MODIFIED),
+        mylog_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
                         !fIsSet(pq->pflags, PQ_READONLY)));
 
         if(riul_r_find(pq->riulp, offset, &rp) == 0)
         {
-                uerror("f_mtof: Couldn't riul_r_find %ld", (long)offset);
+                mylog_error("Couldn't riul_r_find %ld", (long)offset);
                 return EINVAL;
         }
 
-        assert(rp->offset == offset);
-        assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
+        mylog_assert(rp->offset == offset);
+        mylog_assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
         extent = rp->extent;
-        assert(rp->vp != NULL);
+        mylog_assert(rp->vp != NULL);
         vp = rp->vp;
-        assert(pIf(fIsSet(rflags, RGN_MODIFIED),
+        mylog_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
                         fIsSet(rp->rflags, RGN_WRITE)));
-        assert(fIsSet(rflags, RGN_NOLOCK) ==
+        mylog_assert(fIsSet(rflags, RGN_NOLOCK) ==
                         fIsSet(rp->rflags, RGN_NOLOCK));
 
         riul_delete(pq->riulp, rp);
         
         if(fIsSet(rflags, RGN_MODIFIED))
         {
-                assert(!fIsSet(pq->pflags, PQ_READONLY));
+                mylog_assert(!fIsSet(pq->pflags, PQ_READONLY));
                 if(lseek(pq->fd, offset, SEEK_SET) != offset)
                 {
                         status = errno;
-                        serror("f_mtof lseek %ld", (long)offset);
+                        mylog_syserr("f_mtof lseek %ld", (long)offset);
                         goto unwind_vp;
                 }
                 nwrote = write(pq->fd, vp, extent);
@@ -3625,12 +3624,12 @@ f_mtof(pqueue *const pq,
                         status = errno;
                         if(nwrote == -1)
                         {
-                                serror("f_mtof write %lu",
+                                mylog_syserr("f_mtof write %lu",
                                         (unsigned long)extent);
                         }
                         else
                         {
-                        serror("f_mtof at %ld incomplete write %d != %lu",
+                        mylog_syserr("f_mtof at %ld incomplete write %d != %lu",
                                         (long)offset, nwrote,
                                         (unsigned long)extent);
                         }
@@ -3726,18 +3725,18 @@ mm_ftom(pqueue *const pq,
         size_t pagext = _RNDUP(rem + extent, pq->pagesz);
         void *vp = NULL;
 
-        assert(pq != NULL); /* would have core dumped already initializing */
-        assert(pq->datao > 0);
-        assert(pq->datao % pq->pagesz == 0);
-        assert(pq->ixo >= pq->datao);
-        assert(pq->ixo % pq->pagesz == 0);
-        assert(pq->ixsz >= pq->pagesz);
-        assert(pq->ixsz % pq->pagesz == 0);
+        mylog_assert(pq != NULL); /* would have core dumped already initializing */
+        mylog_assert(pq->datao > 0);
+        mylog_assert(pq->datao % pq->pagesz == 0);
+        mylog_assert(pq->ixo >= pq->datao);
+        mylog_assert(pq->ixo % pq->pagesz == 0);
+        mylog_assert(pq->ixsz >= pq->pagesz);
+        mylog_assert(pq->ixsz % pq->pagesz == 0);
 
-        assert(0 <= offset && offset <= pq->ixo);
-        assert(0 != extent && extent < TOTAL_SIZE(pq));
+        mylog_assert(0 <= offset && offset <= pq->ixo);
+        mylog_assert(0 != extent && extent < TOTAL_SIZE(pq));
 
-        assert(pIf(fIsSet(rflags, RGN_WRITE),
+        mylog_assert(pIf(fIsSet(rflags, RGN_WRITE),
                         !fIsSet(pq->pflags, PQ_READONLY)));
 
         if(rem != 0)
@@ -3755,8 +3754,8 @@ mm_ftom(pqueue *const pq,
                         goto unwind_lock;
         }
 
-        assert(pageo % pq->pagesz == 0);
-        assert(pagext % pq->pagesz == 0);
+        mylog_assert(pageo % pq->pagesz == 0);
+        mylog_assert(pagext % pq->pagesz == 0);
         status = mapwrap(pq->fd, pageo, pagext, prot, mflags, &vp);
         if(status != ENOERR)
                 goto unwind_lock;
@@ -3794,31 +3793,31 @@ mm_mtof(pqueue *const pq,
         size_t extent;
         void *vp;
 
-        assert(pq != NULL); /* would have core dumped already initializing */
-        assert(pq->datao > 0);
-        assert(pq->datao % pq->pagesz == 0);
-        assert(pq->ixo >= pq->datao);
-        assert(pq->ixo % pq->pagesz == 0);
-        assert(pq->ixsz >= pq->pagesz);
-        assert(pq->ixsz % pq->pagesz == 0);
+        mylog_assert(pq != NULL); /* would have core dumped already initializing */
+        mylog_assert(pq->datao > 0);
+        mylog_assert(pq->datao % pq->pagesz == 0);
+        mylog_assert(pq->ixo >= pq->datao);
+        mylog_assert(pq->ixo % pq->pagesz == 0);
+        mylog_assert(pq->ixsz >= pq->pagesz);
+        mylog_assert(pq->ixsz % pq->pagesz == 0);
 
-        assert(pIf(fIsSet(rflags, RGN_MODIFIED),
+        mylog_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
                         !fIsSet(pq->pflags, PQ_READONLY)));
 
         if(riul_r_find(pq->riulp, offset, &rp) == 0)
         {
-                uerror("mm_mtof: Couldn't riul_r_find %ld", (long)offset);
+                mylog_error("Couldn't riul_r_find %ld", (long)offset);
                 return EINVAL;
         }
 
-        assert(rp->offset == offset);
-        assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
+        mylog_assert(rp->offset == offset);
+        mylog_assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
         extent = rp->extent;
-        assert(rp->vp != NULL);
+        mylog_assert(rp->vp != NULL);
         vp = rp->vp;
-        assert(pIf(fIsSet(rflags, RGN_MODIFIED),
+        mylog_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
                         fIsSet(rp->rflags, RGN_WRITE)));
-        assert(fIsSet(rflags, RGN_NOLOCK) ==
+        mylog_assert(fIsSet(rflags, RGN_NOLOCK) ==
                         fIsSet(rp->rflags, RGN_NOLOCK));
 
         riul_delete(pq->riulp, rp);
@@ -3880,7 +3879,7 @@ mm0_map(pqueue *const pq)
         void *vp = pq->base;
         struct stat sb;
         off_t st_size = TOTAL_SIZE(pq);
-        assert(st_size >= 0);
+        mylog_assert(st_size >= 0);
         int mflags = fIsSet(pq->pflags, PQ_PRIVATE) ?
                         MAP_PRIVATE : MAP_SHARED;
         int prot = fIsSet(pq->pflags, PQ_READONLY) ?
@@ -3901,22 +3900,22 @@ mm0_map(pqueue *const pq)
         }
         if(vp != NULL)
                 fSet(mflags, MAP_FIXED);
-        udebug("Mapping %ld", (long)st_size);
+        mylog_debug("Mapping %ld", (long)st_size);
         if (~(size_t)0 < st_size) {
-            uerror("mm0_map(): File is too big to memory-map");
+            mylog_error("File is too big to memory-map");
             pq->base = NULL;
             status = EFBIG;
             return status;
         }
         status = mapwrap(pq->fd, 0, st_size, prot, mflags, &vp);
-        assert(status != EACCES);
+        mylog_assert(status != EACCES);
         if(status != ENOERR)
         {
                 pq->base = NULL;
                 return status;
         }
-        assert(vp != NULL);
-        assert(pIf(pq->base != NULL, pq->base == vp));
+        mylog_assert(vp != NULL);
+        mylog_assert(pIf(pq->base != NULL, pq->base == vp));
         pq->base = vp;
         return status;
 }
@@ -3972,16 +3971,16 @@ mm0_ftom(pqueue *const pq,
         int status = ENOERR;
         void *vp = NULL;
 
-        assert(pq != NULL);
-        assert(pq->datao > 0);
-        assert(pq->datao % pq->pagesz == 0);
-        assert(pq->ixo >= pq->datao);
-        assert(pq->ixo % pq->pagesz == 0);
-        assert(pq->ixsz >= pq->pagesz);
-        assert(pq->ixsz % pq->pagesz == 0);
+        mylog_assert(pq != NULL);
+        mylog_assert(pq->datao > 0);
+        mylog_assert(pq->datao % pq->pagesz == 0);
+        mylog_assert(pq->ixo >= pq->datao);
+        mylog_assert(pq->ixo % pq->pagesz == 0);
+        mylog_assert(pq->ixsz >= pq->pagesz);
+        mylog_assert(pq->ixsz % pq->pagesz == 0);
 
-        assert(0 <= offset && offset <= pq->ixo);
-        assert(0 != extent && extent < TOTAL_SIZE(pq));
+        mylog_assert(0 <= offset && offset <= pq->ixo);
+        mylog_assert(0 != extent && extent < TOTAL_SIZE(pq));
 
         if (!pIf(fIsSet(rflags, RGN_WRITE),
                         !fIsSet(pq->pflags, PQ_READONLY)))
@@ -4035,32 +4034,32 @@ mm0_mtof(pqueue *const pq,
         size_t extent;
         riu *rp = NULL;
         
-        assert(pq != NULL); /* would have core dumped already initializing */
-        assert(pq->datao > 0);
-        assert(pq->datao % pq->pagesz == 0);
-        assert(pq->ixo >= pq->datao);
-        assert(pq->ixo % pq->pagesz == 0);
-        assert(pq->ixsz >= pq->pagesz);
-        assert(pq->ixsz % pq->pagesz == 0);
+        mylog_assert(pq != NULL); /* would have core dumped already initializing */
+        mylog_assert(pq->datao > 0);
+        mylog_assert(pq->datao % pq->pagesz == 0);
+        mylog_assert(pq->ixo >= pq->datao);
+        mylog_assert(pq->ixo % pq->pagesz == 0);
+        mylog_assert(pq->ixsz >= pq->pagesz);
+        mylog_assert(pq->ixsz % pq->pagesz == 0);
 
-        assert(pIf(fIsSet(rflags, RGN_MODIFIED),
+        mylog_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
                         !fIsSet(pq->pflags, PQ_READONLY)));
 
         if(riul_r_find(pq->riulp, offset, &rp) == 0)
         {
-                uerror("mm0_mtof: Couldn't riul_r_find %ld", (long)offset);
+                mylog_error("Couldn't riul_r_find %ld", (long)offset);
                 return EINVAL;
         }
 
-        assert(rp->offset == offset);
-        assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
+        mylog_assert(rp->offset == offset);
+        mylog_assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
         extent = rp->extent;
-        assert(pq->base == NULL || (rp->vp != NULL
+        mylog_assert(pq->base == NULL || (rp->vp != NULL
                  && pq->base <= rp->vp
                 && (char *)rp->vp <= (char *)pq->base + pq->ixo));
-        assert(pIf(fIsSet(rflags, RGN_MODIFIED),
+        mylog_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
                         fIsSet(rp->rflags, RGN_WRITE)));
-        assert(fIsSet(rflags, RGN_NOLOCK) ==
+        mylog_assert(fIsSet(rflags, RGN_NOLOCK) ==
                         fIsSet(rp->rflags, RGN_NOLOCK));
 
         riul_delete(pq->riulp, rp);
@@ -4087,8 +4086,7 @@ pq_delete(pqueue *const pq)
         if (fIsSet(pq->pflags, PQ_THREADSAFE)) {
             int status = pthread_mutex_destroy(&pq->mutex);
             if (status) {
-                LOG_ERRNUM0(status, "Couldn't destroy mutex");
-                log_log(LOG_ERR);
+                mylog_errno(status, "Couldn't destroy mutex");
             }
         }
         free(pq);
@@ -4117,7 +4115,7 @@ setOffsetsAndSizes(
     pq->pagesz = (size_t)pagesize();
     /* Offset to the data segment in bytes: */
     pq->datao = lcm(pq->pagesz, align);
-    assert(pq->datao >= sizeof(pqctl));
+    mylog_assert(pq->datao >= sizeof(pqctl));
     /* Offset to the index segment in bytes: */
     pq->ixo = pq->datao + _RNDUP(initsz, pq->pagesz);
     /* The capacity of the product-queue in products: */
@@ -4176,7 +4174,7 @@ pq_setAccessFunctions(
 {
     const int           pflags = pq->pflags;
 
-    assert(NULL != pq);
+    mylog_assert(NULL != pq);
 
 #ifdef HAVE_MMAP
     if (fIsSet(pflags, PQ_NOMAP)) {
@@ -4250,7 +4248,7 @@ pq_new(
     setOffsetsAndSizes(pq, align, initialsz, maxProds);
 
     if (pq->ixo < pq->datao) {
-        uerror("Queue-size not supported by environment: initialsz=%ld, "
+        mylog_error("Queue-size not supported by environment: initialsz=%ld, "
                 "sizeof(off_t)=%lu, sizeof(size_t)=%lu", (long)initialsz,
                 (unsigned long)sizeof(off_t), (unsigned long)sizeof(size_t));
         errno = EINVAL;
@@ -4274,7 +4272,7 @@ pq_new(
          * boundaries.
          */
         if (align < pq->pagesz) {
-            /* unotice("forcing alignment %u", pq->pagesz); */
+            /* MYLOG_NOTICE("forcing alignment %u", pq->pagesz); */
             setOffsetsAndSizes(pq, pq->pagesz, initialsz, maxProds);
         }
     }
@@ -4284,7 +4282,7 @@ pq_new(
         pthread_mutexattr_t mutexAttr;
 
         if (pthread_mutexattr_init(&mutexAttr)) {
-            unotice("Couldn't initialize product-queue mutex attributes");
+            mylog_notice("Couldn't initialize product-queue mutex attributes");
             free(pq);
             return NULL;
         }
@@ -4293,7 +4291,7 @@ pq_new(
                     PTHREAD_MUTEX_RECURSIVE);
 
             if (pthread_mutex_init(&pq->mutex, &mutexAttr)) {
-                unotice("Couldn't initialize product-queue mutex");
+                mylog_notice("Couldn't initialize product-queue mutex");
                 free(pq);
                 return NULL;
             }
@@ -4347,14 +4345,14 @@ ctl_rel(pqueue *const pq, const int rflags)
 {
         int status = ENOERR;
 
-        assert(pq->ctlp != NULL);
-        assert(pq->ixp != NULL);
+        mylog_assert(pq->ctlp != NULL);
+        mylog_assert(pq->ixp != NULL);
 
         if(pq->ixp != NULL)
         {
                 status = (pq->mtof)(pq, pq->ixo, rflags|RGN_NOLOCK);
                 if(status != ENOERR)
-                        uerror("mtof ix: %s", strerror(status));
+                        mylog_error("mtof ix: %s", strerror(status));
                 pq->ixp = NULL;
                 pq->rlp = NULL;
                 pq->tqp = NULL;
@@ -4366,7 +4364,7 @@ ctl_rel(pqueue *const pq, const int rflags)
         {
                 status = (pq->mtof)(pq, 0, rflags);
                 if(status != ENOERR)
-                        uerror("mtof ctl: %s", strerror(status));
+                        mylog_error("mtof ctl: %s", strerror(status));
                 pq->ctlp = NULL;
         }
 
@@ -4396,15 +4394,15 @@ ctl_init(pqueue *const pq, size_t const align)
         void *vp = NULL;
         size_t nalloc;
 
-        assert(pq != NULL);
-        assert(pq->pagesz != 0);
-        assert(pq->datao > 0);
-        assert(pq->datao % pq->pagesz == 0);
-        assert(pq->ixo > pq->datao);
-        assert(pq->ixo % pq->pagesz == 0);
-        assert(pq->ixsz >= pq->pagesz);
-        assert(pq->ixsz % pq->pagesz == 0);
-        assert(align != 0);
+        mylog_assert(pq != NULL);
+        mylog_assert(pq->pagesz != 0);
+        mylog_assert(pq->datao > 0);
+        mylog_assert(pq->datao % pq->pagesz == 0);
+        mylog_assert(pq->ixo > pq->datao);
+        mylog_assert(pq->ixo % pq->pagesz == 0);
+        mylog_assert(pq->ixsz >= pq->pagesz);
+        mylog_assert(pq->ixsz % pq->pagesz == 0);
+        mylog_assert(align != 0);
 
         /*
          * You might well ask why this is not a
@@ -4422,7 +4420,7 @@ ctl_init(pqueue *const pq, size_t const align)
 #ifdef HAVE_MMAP
         if(status == EIO && (pq->ftom == mm_ftom || pq->ftom == mm0_ftom))
         {
-                unotice("EIO => remote file system\n");
+                mylog_notice("EIO => remote file system\n");
                 /* try again */
                 pq->ftom = f_ftom;
                 pq->mtof = f_mtof;
@@ -4477,8 +4475,7 @@ ctl_init(pqueue *const pq, size_t const align)
                 off_t  datasz = pq->ixo - pq->datao;
 
                 if (~(size_t)0 < datasz) {
-                    uerror("ctl_init(): Data portion of file is too big for "
-                        "one region");
+                    mylog_error("Data portion of file is too big for one region");
                     return EFBIG;
                 }
                 {
@@ -4486,7 +4483,7 @@ ctl_init(pqueue *const pq, size_t const align)
                     region *rp = rl_add(pq->rlp, pq->datao, extent0);
 
                     pq->rlp->maxfextent = extent0;
-                    assert(rp != NULL
+                    mylog_assert(rp != NULL
                             && rp->offset == pq->datao
                             && rp->extent == extent0);
                 }
@@ -4520,9 +4517,9 @@ ctl_gopen(pqueue *const pq, const char *path)
         size_t ctlsz; 
         void *vp = NULL;
 
-        assert(pq != NULL);
-        assert(pq->pagesz > 0);
-        assert(pq->ixp == NULL && pq->rlp == NULL && pq->tqp == NULL);
+        mylog_assert(pq != NULL);
+        mylog_assert(pq->pagesz > 0);
+        mylog_assert(pq->ixp == NULL && pq->rlp == NULL && pq->tqp == NULL);
 
         ctlsz = pq->pagesz;
 
@@ -4532,7 +4529,7 @@ remap:
 #ifdef HAVE_MMAP
         if(status == EIO && (pq->ftom == mm_ftom || pq->ftom == mm0_ftom))
         {
-                uwarn("Product-queue can't be memory-mapped!  "
+                mylog_warning("Product-queue can't be memory-mapped!  "
                     "Continuing with slower read/write I/O.");
                 /* try again */
                 pq->ftom = f_ftom;
@@ -4547,13 +4544,13 @@ remap:
         if(ctlp->magic != PQ_MAGIC)
         {
                 /* Not a product queue */
-                uerror("%s: Not a product queue\n", path);
+                mylog_error("%s: Not a product queue\n", path);
                 status = EINVAL;
                 goto unwind_map;
         }
         if (PQ_VERSION != ctlp->version && 7 != ctlp->version)
         {
-                uerror("%s: Product queue is version %d instead of expected version %d\n",
+                mylog_error("%s: Product queue is version %d instead of expected version %d\n",
                        path, ctlp->version, PQ_VERSION);
                 status = EINVAL;
                 goto unwind_map;
@@ -4562,7 +4559,7 @@ remap:
         {
                 /* Can't align */
                 /* TODO: If we use read()/write() not fatal ??? */
-                uerror("%s: Can't align\n", path);
+                mylog_error("%s: Can't align\n", path);
                 status = EINVAL;
                 goto unwind_map;
         }
@@ -4593,7 +4590,7 @@ remap:
             !(pq->ixsz >= pq->pagesz) ||
             !(pq->ixsz % pq->pagesz == 0)) {
 
-            uerror("ctl_gopen: pq->datao=%lu, pq->pagesz=%lu, pq->ixo=%lu, "
+            mylog_error("pq->datao=%lu, pq->pagesz=%lu, pq->ixo=%lu, "
                 "pq->ixsz=%lu",
                 (unsigned long)pq->datao, (unsigned long)pq->pagesz, 
                 (unsigned long)pq->ixo, (unsigned long)pq->ixsz);
@@ -4620,7 +4617,7 @@ remap:
 
         if (!(pq->rlp->nalloc == pq->nalloc && pq->tqp->nalloc == pq->nalloc
                         && pq->sxp->nalloc == pq->nalloc)) { 
-                uerror("ctl_gopen: pq->rlp->nalloc=%lu, pq->nalloc=%lu, "
+                mylog_error("pq->rlp->nalloc=%lu, pq->nalloc=%lu, "
                     "pq->tqp->nalloc=%lu, pq->sxp->nalloc=%lu",
                     (unsigned long)pq->rlp->nalloc,
                     (unsigned long)pq->nalloc, 
@@ -4684,9 +4681,9 @@ ctl_get(pqueue *const pq, int const rflags)
         int status = ENOERR;
 
 #if _NOMAP || !defined(HAVE_MMAP)
-        assert(pq->mtof == f_mtof);
-        assert(pq->ctlp == NULL);
-        assert(pq->ixp == NULL);
+        mylog_assert(pq->mtof == f_mtof);
+        mylog_assert(pq->ctlp == NULL);
+        mylog_assert(pq->ixp == NULL);
 #endif
 
         if(fIsSet(rflags, RGN_WRITE) && !fIsSet(pq->pflags, PQ_SIGSBLOCKED))
@@ -4701,7 +4698,7 @@ ctl_get(pqueue *const pq, int const rflags)
                 (void) sigdelset(&set, SIGSEGV);
                 (void) sigdelset(&set, SIGBUS);
                 status = pthread_sigmask(SIG_BLOCK, &set, &pq->sav_set);
-                assert(0 == status);
+                mylog_assert(0 == status);
                 fSet(pq->pflags, PQ_SIGSBLOCKED);
         }
         if(pq->ctlp == NULL)
@@ -4713,11 +4710,11 @@ ctl_get(pqueue *const pq, int const rflags)
                 if(status != ENOERR)
                         goto unwind_mask;
         }
-        assert(pq->ctlp->magic == PQ_MAGIC);
-        assert(PQ_VERSION == pq->ctlp->version || 7 == pq->ctlp->version);
-        assert(pq->ctlp->datao == pq->datao);
-        assert(pq->ctlp->ixo == pq->ixo);
-        assert(pq->ctlp->ixsz == pq->ixsz);
+        mylog_assert(pq->ctlp->magic == PQ_MAGIC);
+        mylog_assert(PQ_VERSION == pq->ctlp->version || 7 == pq->ctlp->version);
+        mylog_assert(pq->ctlp->datao == pq->datao);
+        mylog_assert(pq->ctlp->ixo == pq->ixo);
+        mylog_assert(pq->ctlp->ixsz == pq->ixsz);
 
         if(pq->ixp == NULL)
         {
@@ -4731,7 +4728,7 @@ ctl_get(pqueue *const pq, int const rflags)
 
         ix_ptrs(pq->ixp, pq->ixsz, pq->nalloc, pq->ctlp->align, &pq->rlp,
             &pq->tqp, &pq->fbp, &pq->sxp);
-        assert(pq->rlp->nalloc == pq->nalloc && pq->tqp->nalloc == pq->nalloc
+        mylog_assert(pq->rlp->nalloc == pq->nalloc && pq->tqp->nalloc == pq->nalloc
                         && pq->sxp->nalloc == pq->nalloc);
 
         return ENOERR;
@@ -4758,7 +4755,7 @@ unwind_mask:
 static int
 rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
 {
-        assert(offset >= pq->datao && offset < pq->ixo);
+        mylog_assert(offset >= pq->datao && offset < pq->ixo);
         return (pq->mtof)(pq, offset, rflags);
 }
 
@@ -4829,10 +4826,10 @@ static int
 rgn_get(pqueue *const pq, off_t const offset, size_t const extent,
          int const rflags, void **const vpp)
 {
-        assert(offset >= pq->datao && offset < pq->ixo);
-        assert(extent >= MIN_RGN_SIZE  && extent <= pq->ixo - pq->datao);
+        mylog_assert(offset >= pq->datao && offset < pq->ixo);
+        mylog_assert(extent >= MIN_RGN_SIZE  && extent <= pq->ixo - pq->datao);
 
-        assert(pq->riulp->nelems <= pq->rlp->nelems +1);
+        mylog_assert(pq->riulp->nelems <= pq->rlp->nelems +1);
 
         return (pq->ftom)(pq, offset, extent, rflags, vpp);
 }
@@ -4851,7 +4848,7 @@ xinfo_i(void *buf, size_t size, enum xdr_op op,
         
         if(!xdr_prod_info(xdrs, infop))
         {
-                uerror("xinfo:%s xdr_prod_info() failed\n",
+                mylog_error("xinfo:%s xdr_prod_info() failed\n",
                         infop->ident) ;
                 return NULL;
         }
@@ -4871,7 +4868,7 @@ xproduct(void *buf, size_t size, enum xdr_op op, product *prod)
 
         if (!xdr_product(xdrs, prod))
         {
-                uerror("xproduct: %s xdr_product() failed\n",
+                mylog_error("%s xdr_product() failed\n",
                         prod->info.ident);
                 return 0;
         }
@@ -4896,21 +4893,19 @@ rpqe_free(pqueue *pq, off_t offset, signaturet signature)
         rlix = rl_find(pq->rlp, offset);
         if(rlix == RL_NONE)
         {
-                uerror("rpqe_free: offset 0x%08lx: Not Found\n",
-                        (long)offset);
+                mylog_error("offset 0x%08lx: Not Found", (long)offset);
                 return EINVAL;
         }
         rp = pq->rlp->rp + rlix;
         if(IsFree(rp))
         {
-                uerror("rpqe_free: 0x%08lx: Already free\n",
-                        (long)offset);
+                mylog_error("0x%08lx: Already free", (long)offset);
                 return EINVAL;
         }
 
         if(sx_find_delete(pq->sxp, signature) == 0)
         {
-                uerror("rpqe_free: signature %s: Not Found\n",
+                mylog_error("signature %s: Not Found",
                         s_signaturet(NULL, 0, signature));
                 return EINVAL;
         }
@@ -4956,8 +4951,9 @@ pq_set_mvrt(
 
         if (tvIsNone(pq->ctlp->minVirtResTime) ||
                 TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime)) {
-            uinfo("pq_set_mvrt(): MVRT product: %s",
-                    s_prod_info(NULL, 0, info, ulogIsDebug()));
+            mylog_info("pq_set_mvrt(): MVRT product: %s",
+                    s_prod_info(NULL, 0, info,
+                            mylog_is_enabled_debug));
             pq->ctlp->minVirtResTime = virtResTime;
             pq->ctlp->mvrtSize = pq->rlp->nbytes;
             pq->ctlp->mvrtSlots = pq->rlp->nelems;
@@ -4993,9 +4989,8 @@ pq_try_del_prod(
     int           status;
 
     if (offset != tqep->offset) {
-        LOG_START2("Offset-to-region mismatch: time-entry=%ld, "
+        mylog_error("Offset-to-region mismatch: time-entry=%ld, "
                 "region-entry=%ld", (long)tqep->offset, (long)offset);
-        log_log(LOG_ERR);
         status = PQ_CORRUPT;
     }
     else {
@@ -5007,8 +5002,7 @@ pq_try_del_prod(
                 status = EACCES;
             }
             else {
-                LOG_SERROR0("Couldn't get region (offset=%ld,extent=%lu)");
-                log_log(LOG_ERR);
+                mylog_syserr("Couldn't get region (offset=%ld,extent=%lu)");
                 status = PQ_SYSTEM;
             }
         }
@@ -5021,8 +5015,7 @@ pq_try_del_prod(
             (void)memset(info, 0, sizeof(prod_info));
 
             if (!xdr_prod_info(&xdrs, info)) {
-                LOG_START0("Couldn't XDR_DECODE data-product metadata");
-                log_log(LOG_ERR);
+                mylog_error("Couldn't XDR_DECODE data-product metadata");
                 status = PQ_CORRUPT;
             }
             else {
@@ -5030,9 +5023,8 @@ pq_try_del_prod(
                  * Remove the corresponding entry from the signature-map.
                  */
                 if (sx_find_delete(pq->sxp, info->signature) == 0) {
-                    LOG_START1("pq_try_del_prod(): signature %s: Not Found",
+                    mylog_error("pq_try_del_prod(): signature %s: Not Found",
                             s_signaturet(NULL, 0, info->signature));
-                    log_log(LOG_ERR);
                     status = PQ_CORRUPT;
                 }
                 else {
@@ -5083,8 +5075,8 @@ pq_del_oldest(
 {
     int status = EACCES;
 
-    assert(pq != NULL);
-    assert(pq->ctlp != NULL && pq->tqp != NULL);
+    mylog_assert(pq != NULL);
+    mylog_assert(pq->ctlp != NULL && pq->tqp != NULL);
 
     /* Delete the oldest unlocked data-product. */
     size_t  rlix;
@@ -5105,7 +5097,7 @@ pq_del_oldest(
             return status;
     }
 
-    uerror("pq_del_oldest(): no unlocked products left to delete!");
+    mylog_error("no unlocked products left to delete!");
 
     return status;
 
@@ -5117,7 +5109,7 @@ pq_del_oldest(
     size_t              rlix;
 
     rlix = rl_find(pq->rlp, tqep->offset);
-    assert(rlix != RL_NONE);
+    mylog_assert(rlix != RL_NONE);
     rep = pq->rlp->rp + rlix;
     status = rgn_get(pq, rep->offset, Extent(rep), RGN_WRITE|RGN_NOWAIT, &vp);
 
@@ -5129,7 +5121,7 @@ pq_del_oldest(
         rlix = rl_find(pq->rlp, tqep->offset);
 
         if (rlix == RL_NONE) {
-            uerror("pq_del_oldest: no unlocked products left to delete!");
+            mylog_error("no unlocked products left to delete!");
             break;
         }
 
@@ -5180,9 +5172,8 @@ pq_del_oldest(
 
                 if (tvIsNone(pq->ctlp->minVirtResTime) || 
                         (TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime)))  {
-                    LOG_START1("pq_del_oldest(): MVRT product: %s",
+                    mylog_info("pq_del_oldest(): MVRT product: %s",
                             s_prod_info(NULL, 0, &infoBuf.info, ulogIsDebug()));
-                    log_log(LOG_INFO);
                     pq->ctlp->minVirtResTime = virtResTime;
                     pq->ctlp->mvrtSize = pq->rlp->nbytes;
                     pq->ctlp->mvrtSlots = pq->rlp->nelems;
@@ -5201,7 +5192,7 @@ pq_del_oldest(
         signature = infoBuf.info.signature;
 
         if (sx_find_delete(pq->sxp, signature) == 0) {
-            uerror("pq_del_oldest: signature %s: Not Found\n",
+            mylog_error("signature %s: Not Found\n",
                     s_signaturet(NULL, 0, signature));
             status = EINVAL;
         }
@@ -5244,7 +5235,7 @@ rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
 {
         size_t rlix;
 
-        udebug("%s:rpqe_mkspace(): Deleting oldest to make space for %ld bytes",
+        mylog_debug("%s:rpqe_mkspace(): Deleting oldest to make space for %ld bytes",
                 __FILE__, (long)extent);
 
         do {
@@ -5279,7 +5270,7 @@ rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
 static int
 rpqe_mkslot(pqueue *const pq)
 {
-        /* unotice("Deleting oldest to get a queue slot"); */
+        /* MYLOG_NOTICE("Deleting oldest to get a queue slot"); */
 
         do {
                 if(pq->rlp->nelems == 0)
@@ -5355,7 +5346,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
      * Check for duplicate
      */
     if (sx_find(pq->sxp, sxi, sxepp) != 0) {
-        udebug("PQ_DUP");
+        mylog_debug("PQ_DUP");
         return PQ_DUP;
     }
 
@@ -5378,7 +5369,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
             return status;
     }
     hit = pq->rlp->rp + rlix;
-    assert(IsFree(hit));
+    mylog_assert(IsFree(hit));
     #define PQ_FRAGMENT_HEURISTIC 64
     /* Don't bother to split off tiny fragments too small for any
        product we've seen */
@@ -5388,7 +5379,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
             goto rl_split_failure;
     }
 
-    assert((hit->offset % pq->ctlp->align) == 0);
+    mylog_assert((hit->offset % pq->ctlp->align) == 0);
     set_IsAlloc(hit);
     rlhash_add(pq->rlp, rlix);
 
@@ -5399,7 +5390,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     {
         sxelem* const sxelem = sx_add(pq->sxp, sxi, hit->offset);
         if (sxelem == NULL) {
-            uerror("%s:rpqe_new(): sx_add() failure", __FILE__);
+            mylog_error("sx_add() failure");
             status = ENOMEM;
             goto sx_add_failure;
         }
@@ -5443,7 +5434,7 @@ static void lockIf(
         pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_lock(pq))
-        _uassert("pq_lock(pq) != 0", __FILE__, __LINE__);
+        mylog_abort("pq_lock(pq) != 0");
 }
 
 /**
@@ -5458,7 +5449,7 @@ static void unlockIf(
         pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_unlock(pq))
-        _uassert("pq_unlock(pq) != 0", __FILE__, __LINE__);
+        mylog_abort("pq_unlock(pq) != 0");
 }
 
 
@@ -5646,7 +5637,7 @@ pq_open(
                             rflags = RGN_MODIFIED;
                         }
                         else {
-                            uerror("Too many writers (%u) to product-queue "
+                            mylog_error("Too many writers (%u) to product-queue "
                                 "(%s)", ctlp->write_count, path);
 
                             status = EACCES;    /* too many writers */
@@ -5789,7 +5780,7 @@ pq_close(pqueue *pq)
                     rflags = RGN_MODIFIED;
                 }
                 else {
-                    uerror("Write-count of product-queue prematurely 0");
+                    mylog_error("Write-count of product-queue prematurely 0");
 
                     rflags = 0;                 /* unmodified */
                     status = EOVERFLOW;
@@ -5939,18 +5930,18 @@ pqe_new(pqueue *pq,
         void *vp = NULL;
         sxelem *sxep;
 
-        assert(pq != NULL);
-        assert(infop != NULL);
-        assert(ptrp != NULL);
-        assert(indexp != NULL);
+        mylog_assert(pq != NULL);
+        mylog_assert(infop != NULL);
+        mylog_assert(ptrp != NULL);
+        mylog_assert(indexp != NULL);
         
         if(infop->sz == 0) {
-                uerror("pqe_new(): zero product size");
+                mylog_error("zero product size");
                 return EINVAL;  
         }
 
         if (infop->sz > pq_getDataSize(pq)) {
-                uerror("Product too big: product=%u bytes; queue=%lu bytes",
+                mylog_error("Product too big: product=%u bytes; queue=%lu bytes",
                     infop->sz, (unsigned long)pq_getDataSize(pq));
                 return PQ_BIG;
         }
@@ -5967,14 +5958,14 @@ pqe_new(pqueue *pq,
          */
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR) {
-                udebug("pqe_new(): ctl_get() failure");
+                mylog_debug("pqe_new(): ctl_get() failure");
                 goto unwind_lock;
         }
 
         extent = xlen_prod_i(infop);
         status = rpqe_new(pq, extent, infop->signature, &vp, &sxep);
         if(status != ENOERR) {
-                udebug("pqe_new(): rpqe_new() failure");
+                mylog_debug("pqe_new(): rpqe_new() failure");
                 goto unwind_ctl;
         }
 
@@ -5982,12 +5973,12 @@ pqe_new(pqueue *pq,
         *ptrp = xinfo_i(vp, extent, XDR_ENCODE, (prod_info *)infop);
         if(*ptrp == NULL)
         {
-                udebug("pqe_new(): xinfo_i() failure");
+                mylog_debug("pqe_new(): xinfo_i() failure");
                 status = EIO;
                 goto unwind_ctl;
         }
 
-        assert(((char *)(*ptrp) + infop->sz) <= ((char *)vp + extent));
+        mylog_assert(((char *)(*ptrp) + infop->sz) <= ((char *)vp + extent));
 
         indexp->offset = sxep->offset;
         memcpy(indexp->signature, sxep->sxi, sizeof(signaturet));
@@ -6021,13 +6012,13 @@ unwind_lock:
  *                        the data has been written or `pqe_discard()` to abort
  *                        the writing and release the region.
  * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
- *                        `log_add()` called.
-   @retval     EACCES     Product-queue is read-only. `log_add()` called.
+ *                        `mylog_add()` called.
+   @retval     EACCES     Product-queue is read-only. `mylog_add()` called.
  * @retval     PQ_BIG     Data-product is too large for product-queue.
- *                        `log_add()` called.
+ *                        `mylog_add()` called.
  * @retval     PQ_DUP     If a data-product with the same signature already
  *                        exists in the product-queue.
- * @return                `<errno.h>` error code. `log_add()` called.
+ * @return                `<errno.h>` error code. `mylog_add()` called.
  */
 int
 pqe_newDirect(
@@ -6043,11 +6034,11 @@ pqe_newDirect(
      * Vet arguments.
      */
     if (pq == NULL || ptrp == NULL || indexp == NULL) {
-        LOG_ADD0("NULL pointer argument");
+        mylog_add("NULL pointer argument");
         status = EINVAL;
     }
     else if (size > pq_getDataSize(pq)) {
-        LOG_ADD2("Product too big: product=%lu bytes; queue=%lu bytes",
+        mylog_add("Product too big: product=%lu bytes; queue=%lu bytes",
                 (unsigned long)size, (unsigned long)pq_getDataSize(pq));
         status = PQ_BIG;
     }
@@ -6055,7 +6046,7 @@ pqe_newDirect(
         lockIf(pq);
 
         if (fIsSet(pq->pflags, PQ_READONLY)) {
-            LOG_ADD0("Product-queue is read-only");
+            mylog_add("Product-queue is read-only");
             status = EACCES;
         }
         else {
@@ -6063,7 +6054,7 @@ pqe_newDirect(
              * Write-lock the product-queue control-section.
              */
             if ((status = ctl_get(pq, RGN_WRITE)) != 0) {
-                LOG_ADD0("ctl_get() failure");
+                mylog_add("ctl_get() failure");
             }
             else {
                 sxelem* sxep;
@@ -6074,7 +6065,7 @@ pqe_newDirect(
                 status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep);
                 if (status) {
                     if (status != PQ_DUP)
-                        LOG_ADD0("rpqe_new() failure");
+                        mylog_add("rpqe_new() failure");
                 }
                 else {
                     /*
@@ -6150,13 +6141,12 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
                 char *xp;
                 if(riul_r_find(pq->riulp, offset, &rp) == 0)
                 {
-                        uerror("pqe_xinsert: Couldn't riul_r_find %ld",
-                                (long)offset);
+                        mylog_error("Couldn't riul_r_find %ld", (long)offset);
                         status = EINVAL;
                         goto unwind_lock;
                 }
                 xp = rp->vp;
-                assert(xp != NULL);
+                mylog_assert(xp != NULL);
                 xp += 8; /* xlen_timestampt */
                 memcpy(xp, realsignature, sizeof(signaturet));
         }
@@ -6179,7 +6169,7 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
            */
           if(sx_find(pq->sxp, realsignature, &sxep) != 0)
             {
-              udebug("PQ_DUP");
+              mylog_debug("PQ_DUP");
               status = PQ_DUP;
               (void) rpqe_free(pq, offset, index.signature);
               goto unwind_ctl;
@@ -6189,13 +6179,13 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
           
           if(sx_find_delete(pq->sxp, index.signature) == 0)
             {
-              uerror("pqe_xinsert: old signature %s: Not Found\n",
+              mylog_error("old signature %s: Not Found",
                      s_signaturet(NULL, 0, index.signature));
             }
           sxep = sx_add(pq->sxp, realsignature, offset); 
         }
 
-        assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
+        mylog_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
 
         status = tq_add(pq->tqp, offset);
         if(status != ENOERR)
@@ -6228,16 +6218,16 @@ unwind_lock:
  * @retval PQ_BIG       According to its metadata, the data-product is larger
  *                      than the space allocated for it by `pqe_new()` or
  *                      `pqe_newDirect()`. An attempt was made to revert the
- *                      product-queue to a consistent state. `uerror()` called.
+ *                      product-queue to a consistent state. `mylog_error()` called.
  * @retval PQ_NOTFOUND  The data-product referenced by `index` wasn't found.
- *                      `uerror()` called.
+ *                      `mylog_error()` called.
  * @retval PQ_CORRUPT   The metadata of the data-product referenced by `index`
  *                      couldn't be deserialized. The data-product isn't
  *                      inserted. An attempt was made to revert the
- *                      product-queue to a consistent state. `uerror()` called.
+ *                      product-queue to a consistent state. `mylog_error()` called.
  * @retval PQ_SYSTEM    System failure. The data-product isn't inserted.
  *                      The state of the product-queue is unspecified.
- *                      `uerror()` called.
+ *                      `mylog_error()` called.
  */
 int
 pqe_insert(pqueue *pq, pqe_index index)
@@ -6247,7 +6237,7 @@ pqe_insert(pqueue *pq, pqe_index index)
     int  status;
     riu* rp;
     if (riul_r_find(pq->riulp, index.offset, &rp) == 0) {
-        uerror("%s:pqe_insert(): riul_r_find() failed", __FILE__);
+        mylog_error("riul_r_find() failed");
         status = PQ_NOTFOUND;
     }
     else {
@@ -6256,30 +6246,30 @@ pqe_insert(pqueue *pq, pqe_index index)
         XDR        xdrs;
         xdrmem_create(&xdrs, rp->vp, rp->extent, XDR_DECODE);
         if (!xdr_prod_info(&xdrs, info)) {
-            uerror("%s:pqe_insert(): xdr_prod_info() failed; "
-                    "product-queue might now be corrupt", __FILE__);
+            mylog_error("xdr_prod_info() failed; "
+                    "product-queue might now be corrupt");
             status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_CORRUPT;
         }
         else if (xlen_prod_i(info) > rp->extent) {
-            uerror("%s:pqe_insert(): Product larger than allocated space; "
+            mylog_error("Product larger than allocated space; "
                     "product-queue now likely corrupted: "
-                    "info->sz=%lu, rp->extent=%lu", __FILE__,
+                    "info->sz=%lu, rp->extent=%lu",
                     (unsigned long)info->sz, (unsigned long)rp->extent);
             // `lockIf()` is reentrant
             status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_BIG;
         }
         else if (pq->mtof(pq, index.offset, RGN_MODIFIED)) {
-            uerror("%s:pqe_insert(): pq->mtof() failed", __FILE__);
+            mylog_error("pq->mtof() failed");
             status = PQ_SYSTEM;
         }
         else if (ctl_get(pq, RGN_WRITE)) {
-            uerror("%s:pqe_insert(): ctl_get() failed", __FILE__);
+            mylog_error("ctl_get() failed");
             status = PQ_SYSTEM;
         }
         else {
-            assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
+            mylog_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
             if (tq_add(pq->tqp, index.offset)) {
-                uerror("%s:pqe_insert(): tq_add() failed", __FILE__);
+                mylog_error("tq_add() failed");
                 status = PQ_SYSTEM;
             }
             else {
@@ -6316,7 +6306,7 @@ pqe_insert(pqueue *pq, pqe_index index)
         if(status != ENOERR)
                 goto unwind_lock;
 
-        assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
+        mylog_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
 
         status = tq_add(pq->tqp, offset);
         if(status != ENOERR)
@@ -6390,11 +6380,11 @@ vetCreationTime(
         size_t                  len =
             cp == NULL ?  strlen(origin) : (size_t)(cp - origin);
 
-        if (ulogIsVerbose()) {
-            LOG_START3("Future product from \"%*s\". "
+        if (mylog_is_enabled_info) {
+            mylog_add("Future product from \"%*s\". "
                     "Fix local or ingest clock. %s",
                     (int)len, origin, s_prod_info(NULL, 0, info, 0));
-            log_log(LOG_WARNING);
+            mylog_flush_warning();
         }
         else {
             FutureEntry         targetEntry;
@@ -6414,10 +6404,9 @@ vetCreationTime(
                 time_t          now = time(NULL);
 
                 if (entry->start <= now) {
-                    LOG_START2("Future product from \"%s\". "
+                    mylog_warning("Future product from \"%s\". "
                             "Fix local or ingest clock. %s", entry->hostname,
                             s_prod_info(NULL, 0, info, 0));
-                    log_log(LOG_WARNING);
 
                     entry->start = now + FUTURE_INTERVAL;
                 }
@@ -6425,10 +6414,9 @@ vetCreationTime(
             else {
                 FutureEntry*    newEntry = malloc(sizeof(FutureEntry));
 
-                LOG_START2("Future product from \"%s\". "
+                mylog_warning("Future product from \"%s\". "
                         "Fix local or ingest clock. %s", targetEntry.hostname,
                     s_prod_info(NULL, 0, info, 0));
-                log_log(LOG_WARNING);
 
                 if (newEntry != NULL) {
                     newEntry->start = time(NULL) + FUTURE_INTERVAL;
@@ -6461,20 +6449,20 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         void *vp = NULL;
         sxelem *sxep;
         
-        assert(pq != NULL);
-        assert(prod != NULL);
+        mylog_assert(pq != NULL);
+        mylog_assert(prod != NULL);
 
         lockIf(pq);
 
         if(fIsSet(pq->pflags, PQ_READONLY)) {
-                udebug("pq_insertNoSig(): queue is read-only");
+                mylog_debug("pq_insertNoSig(): queue is read-only");
                 status = EACCES;
                 goto unwind_lock;
         }
 
         extent = xlen_product(prod);
         if (extent > pq_getDataSize(pq)) {
-                udebug("pq_insertNoSig(): product is too big");
+                mylog_debug("pq_insertNoSig(): product is too big");
                 status = PQ_BIG;
                 goto unwind_lock;
         }
@@ -6484,28 +6472,28 @@ pq_insertNoSig(pqueue *pq, const product *prod)
          */
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR) {
-                udebug("pq_insertNoSig(): ctl_get() failure");
+                mylog_debug("pq_insertNoSig(): ctl_get() failure");
                 goto unwind_lock;
         }
 
         status = rpqe_new(pq, extent, prod->info.signature, &vp, &sxep);
         if(status != ENOERR) {
-                udebug("pq_insertNoSig(): rpqe_new() failure");
+                mylog_debug("pq_insertNoSig(): rpqe_new() failure");
                 goto unwind_ctl;
         }
 
                                                 /* cast away const'ness */
         if(xproduct(vp, extent, XDR_ENCODE, (product *)prod) == 0)
         {
-                udebug("pq_insertNoSig(): xproduct() failure");
+                mylog_debug("pq_insertNoSig(): xproduct() failure");
                 status = EIO;
                 goto unwind_rgn;
         }
 
-        assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
+        mylog_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
         status = tq_add(pq->tqp, sxep->offset);
         if(status != ENOERR) {
-                udebug("pq_insertNoSig(): tq_add() failure");
+                mylog_debug("pq_insertNoSig(): tq_add() failure");
                 goto unwind_rgn;
         }
 
@@ -7074,14 +7062,14 @@ pq_fext_dump(pqueue *const pq)
         spp = rlrp + spix;
         /* q = p->forward[0]; */
         sqix = fbp->fblks[spp->prev];
-        udebug("** Free list extents:\t");                  /* debugging */
+        mylog_debug("** Free list extents:\t");                  /* debugging */
         while(sqix != RL_FEXT_TL) {
             /* p = q */
             spix = sqix;
             spp = rlrp + spix;
-            udebug("%u ", spp->extent);             /* debugging */
+            mylog_debug("%u ", spp->extent);             /* debugging */
 #if !defined(NDEBUG)
-            assert(spp->extent >= prev_extent);
+            mylog_assert(spp->extent >= prev_extent);
             prev_extent = spp->extent;
 #endif
             /* q = p->forward[0]; */
@@ -7103,7 +7091,7 @@ pq_fext_dump(pqueue *const pq)
 void
 pq_cset(pqueue *pq, const timestampt *tvp)
 {
-        assert(    tvp->tv_sec  >= TS_ZERO.tv_sec
+        mylog_assert(    tvp->tv_sec  >= TS_ZERO.tv_sec
                 && tvp->tv_usec >= TS_ZERO.tv_usec
                 && tvp->tv_sec  <= TS_ENDT.tv_sec
                 && tvp->tv_usec <= TS_ENDT.tv_usec);
@@ -7306,7 +7294,7 @@ getMetadataFromOffset(
         status = rgn_get(pq, offset, extent, 0, &vp);
 
         if (0 != status) {
-            serror("getMetadataFromOffset(): Couldn't lock data-product's "
+            mylog_syserr("Couldn't lock data-product's "
                     "data-region in product-queue");
         }
         else {
@@ -7318,7 +7306,7 @@ getMetadataFromOffset(
              * Decode the data-product's metadata.
              */
             if (!xdr_prod_info(&xdrs, info)) {
-                uerror("getMetadataFromOffset(): xdr_prod_info() failed");
+                mylog_error("xdr_prod_info() failed");
 
                 status = EIO;
             }
@@ -7373,7 +7361,7 @@ pq_findTimeEntryBySignature(
         status =  getMetadataFromOffset(pq, signatureEntry->offset, info);
 
         if (PQ_NOTFOUND == status) {
-            uerror("pq_setCursorFromSignature(): data-product region "
+            mylog_error("data-product region "
                 "of signature-map entry doesn't exist");
             status = PQ_CORRUPT;
         }
@@ -7402,8 +7390,7 @@ pq_findTimeEntryBySignature(
             }
 
             if (NULL == timeEntry) {
-                uerror("pq_findTimeEntryBySignature(): "
-                    "The product-queue appears to be empty");
+                mylog_error("The product-queue appears to be empty");
                 status = PQ_CORRUPT;
             }
             else {
@@ -7564,7 +7551,7 @@ pq_setCursorFromSignature(
      */
     status = ctl_get(pq, 0);
     if (ENOERR != status) {
-        serror("pq_setCursorFromSignature(): Couldn't lock control-region "
+        mylog_syserr("Couldn't lock control-region "
             "of product-queue");
     }
     else {
@@ -7593,8 +7580,8 @@ pq_setCursorFromSignature(
  * @param[in] sig          Signature of data-product to process.
  * @param[in] func         Function to process data-product.
  * @param[in] optArg       Optional `func` argument.
- * @retval    PQ_SYSTEM    System error. `log_add()` called.
- * @retval    PQ_CORRUPT   The product-queue is corrupt. `log_add()` called.
+ * @retval    PQ_SYSTEM    System error. `mylog_add()` called.
+ * @retval    PQ_CORRUPT   The product-queue is corrupt. `mylog_add()` called.
  * @retval    PQ_NOTFOUND  A data-product with the given signature was not found
  *                         in the product-queue.
  * @return                 Return-code of `func`. All the above error-codes are
@@ -7616,7 +7603,7 @@ pq_processProduct(
      * write-access by another process.
      */
     if (ctl_get(pq, 0)) {
-        LOG_SERROR0("Couldn't lock control-region of product-queue");
+        mylog_syserr("Couldn't lock control-region of product-queue");
         status = PQ_SYSTEM;
     }
     else {
@@ -7638,7 +7625,7 @@ pq_processProduct(
             const size_t         rlix = rl_find(rlp, offset);
 
             if (RL_NONE == rlix) {
-                LOG_START0("Signature-entry has no corresponding region-entry");
+                mylog_add("Signature-entry has no corresponding region-entry");
                 status = PQ_CORRUPT;
             }
             else {
@@ -7651,7 +7638,7 @@ pq_processProduct(
                 const size_t        extent = Extent(rp);
 
                 if (rgn_get(pq, offset, extent, 0, &vp)) {
-                    LOG_START0("Couldn't lock data-product's data-region");
+                    mylog_add("Couldn't lock data-product's data-region");
                     status = PQ_SYSTEM;
                 }
                 else {
@@ -7661,7 +7648,7 @@ pq_processProduct(
                      * because the data-product's data-region is locked,
                      */
                     if (ctl_rel(pq, 0)) {
-                        LOG_START0("Couldn't unlock control-region");
+                        mylog_add("Couldn't unlock control-region");
                         status = PQ_SYSTEM;
                     }
                     else {
@@ -7679,7 +7666,7 @@ pq_processProduct(
                         (void)memset(&info, 0, sizeof(info));
 
                         if (!xdr_prod_info(&xdrs, &info)) {
-                            LOG_START0("xdr_prod_info() failed");
+                            mylog_add("xdr_prod_info() failed");
                             status = PQ_SYSTEM;
                         }
                         else {
@@ -7827,7 +7814,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         /* if necessary, initialize cursor */
         if(tvIsNone(pq->cursor))
         {
-                assert(mt != TV_EQ);
+                mylog_assert(mt != TV_EQ);
                 if(mt == TV_LT) {
                         pq->cursor = TS_ENDT;
                 }
@@ -7860,7 +7847,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
          */
         if(clss == NULL || ifMatch == NULL)
         {
-                udebug("pq_sequence NOOP");
+                mylog_debug("pq_sequence NOOP");
                 goto unwind_ctl;
         }
         /* else */
@@ -7874,7 +7861,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         {
                 char ts[20];
                 (void) sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                uerror("Queue corrupt: tq: %s %s at %ld",
+                mylog_error("Queue corrupt: tq: %s %s at %ld",
                         ts,
                         status ? "invalid region" : "no data",
                         tqep->offset);
@@ -7890,23 +7877,23 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         {
                 goto unwind_ctl;
         }
-        assert(vp != NULL);
+        mylog_assert(vp != NULL);
         offset = rp->offset;
         extent = Extent(rp);
 
-        if(ulogIsDebug()) {     /* delay to process product, useful to see
-                                   if it's falling behind */
+        // Delay to process product, useful to see if it's falling behind
+        if(mylog_is_enabled_debug) {
           timestampt now;
           pq_time = tqep->tv;
           if(gettimeofday(&now, 0) == 0) {
             double delay = d_diff_timestamp(&now, &tqep->tv);
-            udebug("Delay: %.4f sec", delay);
+            mylog_debug("Delay: %.4f sec", delay);
           }
         }
 
         /* We've got the data, so we can let go of the ctl */
         status = ctl_rel(pq, 0);
-        assert(status == 0);
+        mylog_assert(status == 0);
 
         /*
          * Decode it
@@ -7915,36 +7902,36 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
 
         if(!xdr_prod_info(&xdrs, info))
         {
-                uerror("pq_sequence: xdr_prod_info() failed\n") ;
+                mylog_error("xdr_prod_info() failed") ;
                 status = EIO;
                 goto unwind_rgn;
         }
 
-        assert(info->sz <= xdrs.x_handy);
+        mylog_assert(info->sz <= xdrs.x_handy);
         /* rather than copy the data, just use the existing buffer */
         datap = xdrs.x_private;
 
 #if PQ_SEQ_TRACE
-        udebug("%s %u",
+        mylog_debug("%s %u",
                 s_prod_info(NULL, 0, info, 1), xdrs.x_handy) ;
 #endif
 
         /*
          * Log time-interval from product-creation to queue-insertion.
          */
-        if(ulogIsDebug()) {
+        if(mylog_is_enabled_debug) {
             double latency = d_diff_timestamp(&pq_time, &info->arrival);
-            udebug("pq_sequence(): time(insert)-time(create): %.4f s", latency);
+            mylog_debug("pq_sequence(): time(insert)-time(create): %.4f s", latency);
         }
 
         /*
          * Do the work.
          */
-        assert(clss != NULL);
+        mylog_assert(clss != NULL);
         if(clss == PQ_CLASS_ALL || prodInClass(clss, info))
         {
                 /* do the ifMatch function */
-                assert(ifMatch != NULL);
+                mylog_assert(ifMatch != NULL);
                 {
                         /* change extent into xlen_product */
                         const size_t xsz = _RNDUP(info->sz, 4);
@@ -8277,16 +8264,16 @@ pq_seqdel(pqueue *pq, pq_match mt,
 
         /* get the actual data region */
         rlix = rl_find(pq->rlp, tqep->offset);
-        assert(rlix != RL_NONE);
+        mylog_assert(rlix != RL_NONE);
         rp = pq->rlp->rp + rlix;
-        assert(rp->offset == tqep->offset);
-        assert(Extent(rp) <= pq_getDataSize(pq));
+        mylog_assert(rp->offset == tqep->offset);
+        mylog_assert(Extent(rp) <= pq_getDataSize(pq));
         status = rgn_get(pq, rp->offset, Extent(rp), rflags, &vp);
         if(status != ENOERR)
         {
                 goto unwind_ctl;
         }
-        assert(vp != NULL);
+        mylog_assert(vp != NULL);
 
         /* update cursor */
         /* pq->cursor = tqep->tv; */
@@ -8304,11 +8291,11 @@ pq_seqdel(pqueue *pq, pq_match mt,
 
         if(!xdr_prod_info(&xdrs, info))
         {
-                uerror("pq_seqdel: xdr_prod_info() failed\n") ;
+                mylog_error("xdr_prod_info() failed") ;
                 status = EIO;
                 goto unwind_rgn;
         }
-        assert(info->sz <= xdrs.x_handy);
+        mylog_assert(info->sz <= xdrs.x_handy);
                 
         /* return timestamp value even if we don't delete it */
         if(timestampp)
@@ -8316,20 +8303,20 @@ pq_seqdel(pqueue *pq, pq_match mt,
 /*** */
 
 
-        assert(clss != NULL);
+        mylog_assert(clss != NULL);
         if(clss != PQ_CLASS_ALL && !prodInClass(clss, info))
         {
                 /* skip this one */
-                if(ulogIsDebug())
-                        udebug("skip %s", s_prod_info(NULL, 0, info, 1));
+                if(mylog_is_enabled_debug)
+                        mylog_debug("skip %s", s_prod_info(NULL, 0, info, 1));
                 goto unwind_rgn;
         }
 
         /*
          * else, Doit
          */
-        if(ulogIsVerbose())
-                uinfo(" del %s", s_prod_info(NULL, 0, info, 1));
+        if(mylog_is_enabled_info)
+                mylog_info(" del %s", s_prod_info(NULL, 0, info, 1));
 
         /* return extent value */
         if(extentp)
@@ -8342,7 +8329,7 @@ pq_seqdel(pqueue *pq, pq_match mt,
                 {
                         char ts[20];
                         (void) sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                        uerror("Queue corrupt: pq_seqdel: %s no signature at %ld",
+                        mylog_error("Queue corrupt: pq_seqdel: %s no signature at %ld",
                                 ts, tqep->offset);
                 }
         }
@@ -8383,9 +8370,8 @@ pq_deleteBySignature(
     lockIf(pq);
     int status = ctl_get(pq, RGN_WRITE);
     if (status) {
-        LOG_ADD1("Couldn't lock the control-header of product-queue %s",
+        mylog_error("Couldn't lock the control-header of product-queue %s",
                 pq->pathname);
-        log_log(LOG_ERR);
         status = PQ_SYSTEM;
     }
     else {
@@ -8397,22 +8383,20 @@ pq_deleteBySignature(
             char buf[2*sizeof(signaturet)+1];
             size_t rlix = rl_find(pq->rlp, sxep->offset);
             if (rlix == RL_NONE) {
-                (void)sprint_signaturet(buf, sizeof(buf), sig),
-                LOG_ADD2("Data-product with signature %s doesn't have a "
+                (void)sprint_signaturet(buf, sizeof(buf), sig);
+                mylog_error("Data-product with signature %s doesn't have a "
                         "corresponding region-map entry in product-queue %s",
                         buf, pq->pathname);
-                log_log(LOG_ERR);
                 status = PQ_CORRUPT;
             }
             else {
                 tqelem* timeEntry;
                 status = pq_findTimeEntryBySignature(pq, sig, &timeEntry);
                 if (status) {
-                    (void)sprint_signaturet(buf, sizeof(buf), sig),
-                    LOG_ADD2("Data-product with signature %s doesn't have a "
+                    (void)sprint_signaturet(buf, sizeof(buf), sig);
+                    mylog_error("Data-product with signature %s doesn't have a "
                             "corresponding time-map entry in product-queue %s",
                             buf, pq->pathname);
-                    log_log(LOG_ERR);
                     status = PQ_CORRUPT;
                 }
                 else {
@@ -8422,12 +8406,11 @@ pq_deleteBySignature(
                         status = PQ_LOCKED;
                     }
                     else if (status) {
-                        (void)sprint_signaturet(buf, sizeof(buf), sig),
-                        LOG_ADD2("Couldn't remove map entries for "
+                        (void)sprint_signaturet(buf, sizeof(buf), sig);
+                        mylog_error("Couldn't remove map entries for "
                                 "data-product with signature %s from "
                                 "product-queue %s",
                                 buf, pq->pathname);
-                        log_log(LOG_ERR);
                     }
                     else {
                         xdr_free(xdr_prod_info, (char*)&prodInfo);
@@ -8454,9 +8437,9 @@ didmatch(const prod_info *infop, const void *datap,
         if(tsp != NULL)
                 *tsp = infop->arrival;
 
-        if(ulogIsDebug())
+        if(mylog_is_enabled_debug)
         {
-                udebug("lastmatch: %s", s_prod_info(NULL, 0, infop, 1));
+                mylog_debug("lastmatch: %s", s_prod_info(NULL, 0, infop, 1));
         }
 
         return PQUEUE_END; /* done with scan on the first hit */
@@ -8494,7 +8477,7 @@ pq_last(pqueue *pq,
         {
            if((tsp != NULL)&&(pq->cursor.tv_sec < tsp->tv_sec))
            {
-                udebug("cursor reset: stop searching\0");
+                mylog_debug("cursor reset: stop searching\0");
                 unlockIf(pq);
                 return status;
            }
@@ -8502,8 +8485,7 @@ pq_last(pqueue *pq,
 
         if(status != PQUEUE_END)
         {
-                uerror("pq_last: seq:%s (errno = %d)",
-                        strerror(status), status);
+                mylog_error("seq:%s (errno = %d)", strerror(status), status);
         }
         else
         {
@@ -8569,14 +8551,14 @@ hndlr_noop(int sig)
 #ifndef NDEBUG
         switch(sig) {
         case SIGALRM :
-                udebug("SIGALRM") ;
+                mylog_debug("SIGALRM") ;
                 sigalrm_received = 1;
                 return ;
         case SIGCONT :
-                udebug("SIGCONT") ;
+                mylog_debug("SIGCONT") ;
                 return;
         }
-        udebug("hndlr_noop: unhandled signal: %d", sig) ;
+        mylog_debug("hndlr_noop: unhandled signal: %d", sig) ;
 #endif
         /* nothing to do, just wake up */
         return;

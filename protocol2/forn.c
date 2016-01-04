@@ -8,7 +8,7 @@
 #include "forn.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "prod_class.h"
 
 /**
@@ -37,9 +37,8 @@ int logIfReduced(
         char origStr[1984];
 
         (void) s_prod_class(origStr, sizeof(origStr), origSub);
-        LOG_ADD3("Subscription reduced by one or more %s: %s -> %s", entity,
+        mylog_warning("Subscription reduced by one or more %s: %s -> %s", entity,
                 origStr, s_prod_class(NULL, 0, currSub));
-        log_log(LOG_WARNING);
     }
 
     return wasReduced;

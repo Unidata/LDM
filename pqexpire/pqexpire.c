@@ -57,14 +57,14 @@ minstats(const expirestats *stp)
         
         static unsigned lastnprods = 0;
 
-        if(pq != NULL && ulogIsVerbose())
+        if(pq != NULL && mylog_is_enabled_info)
         {
                 off_t highwater = -1;
                 size_t maxregions = 0;
                 (void) pq_highwater(pq, &highwater, &maxregions);
-                uinfo("> Queue usage (bytes):%8ld",
+                mylog_info("> Queue usage (bytes):%8ld",
                                         (long)highwater);
-                uinfo(">          (nregions):%8ld",
+                mylog_info(">          (nregions):%8ld",
                                         (long)maxregions);
         }
 
@@ -73,7 +73,7 @@ minstats(const expirestats *stp)
                 double elapsed = d_diff_timestamp(&stp->lasthit,
                          &stp->firsthit);
                 elapsed /= 3600;
-                unotice("> Recycled %10.3f kb/hr (%10.3f prods per hour)",
+                mylog_notice("> Recycled %10.3f kb/hr (%10.3f prods per hour)",
                         ((double)stp->nbytes)/(1024 * elapsed),
                         ((double)stp->nprods)/elapsed
                 );
@@ -87,16 +87,16 @@ dump_stats(const expirestats *stp)
         char cp[32];
 
         sprint_timestampt(cp, sizeof(cp), &stp->starttime);
-        unotice("> Up since:      %s", cp);
+        mylog_notice("> Up since:      %s", cp);
 
         if(pq != NULL)
         {
                 off_t highwater = -1;
                 size_t maxregions = 0;
                 (void) pq_highwater(pq, &highwater, &maxregions);
-                unotice("> Queue usage (bytes):%8ld",
+                mylog_notice("> Queue usage (bytes):%8ld",
                                         (long)highwater);
-                unotice(">          (nregions):%8ld",
+                mylog_notice(">          (nregions):%8ld",
                                         (long)maxregions);
         }
 
@@ -106,20 +106,20 @@ dump_stats(const expirestats *stp)
                          &stp->firsthit);
                 
                 elapsed /= 3600;
-                unotice("> nbytes recycle:   %10u (%10.3f kb/hr)",
+                mylog_notice("> nbytes recycle:   %10u (%10.3f kb/hr)",
                         stp->nbytes, ((double)stp->nbytes)/(1024 * elapsed));
-                unotice("> nprods deleted:   %10u (%10.3f per hour)",
+                mylog_notice("> nprods deleted:   %10u (%10.3f per hour)",
                         stp->nprods, ((double)stp->nprods)/elapsed);
 
                 sprint_timestampt(cp, sizeof(cp), &stp->firsthit);
-                unotice("> First deleted: %s", cp);
+                mylog_notice("> First deleted: %s", cp);
         
                 sprint_timestampt(cp, sizeof(cp), &stp->lasthit);
-                unotice("> Last  deleted: %s", cp);
+                mylog_notice("> Last  deleted: %s", cp);
         }
         else
         {
-                unotice("> nprods deleted 0");
+                mylog_notice("> nprods deleted 0");
         }
 }
 
@@ -159,7 +159,7 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-        unotice("Exiting"); 
+        mylog_notice("Exiting");
 
         dump_stats(&stats);
 
@@ -169,7 +169,7 @@ cleanup(void)
                 pq = NULL;
         }
 
-        (void) closeulog();
+        (void)mylog_fini();
 }
 
 static int stats_req = 0;
@@ -195,7 +195,7 @@ signal_handler(int sig)
                 stats_req = !0;
                 return;
         case SIGUSR2 :
-                rollulogpri();
+                mylog_roll_level();
                 return;
         }
 }
@@ -238,7 +238,6 @@ int ac;
 char *av[];
 {
         const char* const       pqfname = getQueuePath();
-        char *logfname = 0;
         int status;
         double age = DEFAULT_AGE;
         prod_class_t clss;
@@ -249,6 +248,11 @@ char *av[];
         timestampt cursor;
         double diff; 
         double max_latency = 0; /* reset on each pass */
+
+        /*
+         * initialize logger
+         */
+        (void)mylog_init(av[0]);
         
         (void) set_timestamp(&stats.starttime);
         stats.firsthit = TS_ENDT;
@@ -267,7 +271,6 @@ char *av[];
         extern char *optarg;
         int ch;
         int fterr;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_NOTICE));
 
         opterr = 1;
 
@@ -277,13 +280,13 @@ char *av[];
                         wait = 1;
                         break;
                 case 'v':
-                        logmask |= LOG_MASK(LOG_INFO);
+                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
                         break;
                 case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG);
+                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        logfname = optarg;
+                        (void)mylog_set_output(optarg);
                         break;
                 case 'a':
                         age = atof(optarg);
@@ -341,16 +344,9 @@ char *av[];
 
         age *= 3600;
         clss.to.tv_sec -= age;
-
-        (void) setulogmask(logmask);
         }
 
-        /*
-         * initialize logger
-         */
-        (void)openulog(ubasename(av[0]),
-                (LOG_CONS|LOG_PID), LOG_LDM, logfname);
-        unotice("Starting Up");
+        mylog_notice("Starting Up");
 
         /*
          * Open the product queue
@@ -359,11 +355,11 @@ char *av[];
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    uerror("The product-queue \"%s\" is inconsistent\n",
+                    mylog_error("The product-queue \"%s\" is inconsistent\n",
                             pqfname);
                 }
                 else {
-                    uerror("pq_open failed: %s: %s",
+                    mylog_error("pq_open failed: %s: %s",
                             pqfname, strerror(status));
                 }
                 exit(1);
@@ -374,7 +370,7 @@ char *av[];
          */
         if(atexit(cleanup) != 0)
         {
-                serror("atexit");
+                mylog_syserr("atexit");
                 exit(1);
         }
 
@@ -414,7 +410,7 @@ char *av[];
                         if(diff > max_latency)
                         {
                                 max_latency = diff;
-                                udebug("max_latency %.3f", max_latency);
+                                mylog_debug("max_latency %.3f", max_latency);
                         }
 
                         if(nr != 0)
@@ -442,16 +438,16 @@ char *av[];
                                  * product-queue is periodically scanned.
                                  */
                                 diff = d_diff_timestamp(&cursor, &clss.to);
-                                udebug("diff %.3f", diff);
+                                mylog_debug("diff %.3f", diff);
                                 if(diff > interval + max_latency)
                                 {
-                                        udebug("heuristic depth break");
+                                        mylog_debug("heuristic depth break");
                                         break;
                                 }
                         }
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        udebug("End of Queue");
+                        mylog_debug("End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
@@ -459,7 +455,7 @@ char *av[];
                          * The next data-product was locked.  The product-queue
                          * cursor was not advanced to it.
                          */
-                        udebug("Hit a lock");
+                        mylog_debug("Hit a lock");
                         /* N.B.: peculiar logic ahead */
                         if(interval != 0)
                         {
@@ -496,7 +492,7 @@ char *av[];
                                 }
                                 /* else */
                                 if(status != PQUEUE_END)
-                                        uerror("pq_sequence failed: %s",
+                                        mylog_error("pq_sequence failed: %s",
                                                         strerror(status));
                                 break;
                         }
@@ -506,11 +502,10 @@ char *av[];
                 case EDEADLOCK:
 #endif
                 case EDEADLK:
-                        uerror("%s", strerror(status));
+                        mylog_errno(status, NULL);
                         break;
                 default:
-                        uerror("pq_seqdel failed: %s (errno = %d)",
-                                strerror(status), status);
+                        mylog_errno(status, "pq_seqdel failed");
                         exit(1);
                         break;
                 }

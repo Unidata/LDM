@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 #include "timestamp.h"
-#include "log.h"
+#include "mylog.h"
 
 #include "state.h"
 
@@ -42,7 +42,7 @@ stateInit(
     int         status;
 
     if (configPathname == NULL) {
-        log_start("stateInit(): Pathname is NULL");
+        mylog_add("stateInit(): Pathname is NULL");
         status = -1;
     }
     else {
@@ -52,8 +52,7 @@ stateInit(
         char*                           newPath = malloc(pathlen);
 
         if (newPath == NULL) {
-            log_errno();
-            log_add("stateInit(): Couldn't allocate %lu-byte pathname",
+            mylog_add_syserr("Couldn't allocate %lu-byte pathname",
                 (unsigned long)pathlen);
             status = -2;
         }
@@ -65,8 +64,7 @@ stateInit(
             newTmpPath = malloc(pathlen);
 
             if (newTmpPath == NULL) {
-                log_errno();
-                log_add("stateInit(): Couldn't allocate %lu-byte pathname",
+                mylog_add_syserr("Couldn't allocate %lu-byte pathname",
                     (unsigned long)pathlen);
                 free(newPath);
                 status = -2;
@@ -108,15 +106,14 @@ stateRead(
     int         status;
 
     if (statePathname == NULL) {
-        log_start("stateRead(): stateInit() not successfully called");
+        mylog_add("stateRead(): stateInit() not successfully called");
         status = -1;                    /* module not initialized */
     }
     else {
         FILE*   file = fopen(statePathname, "r");
 
         if (file == NULL) {
-            log_errno();
-            log_add("stateRead(): Couldn't open \"%s\"", statePathname);
+            mylog_add_syserr("stateRead(): Couldn't open \"%s\"", statePathname);
             status = -2;                /* couldn't open state-file */
         }
         else {
@@ -128,9 +125,8 @@ stateRead(
                 (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
-                log_errno();
-                log_add("stateRead(): Couldn't read comments from \"%s\"",
-                    statePathname);
+                mylog_errno("Couldn't read comments from \"%s\"",
+                        statePathname);
             }
             else {
                 unsigned long   seconds;
@@ -139,7 +135,7 @@ stateRead(
                 ungetc(c, file);
 
                 if (fscanf(file, "%lu.%ld", &seconds, &microseconds) != 2) {
-                    LOG_ADD1("Couldn't read time from \"%s\"", statePathname);
+                    mylog_add("Couldn't read time from \"%s\"", statePathname);
                 }
                 else {
                     pqCursor->tv_sec = seconds;
@@ -175,15 +171,14 @@ stateWrite(
     int         status;
 
     if (statePathname == NULL) {
-        log_start("stateWrite(): stateInit() not successfully called");
+        mylog_add("stateWrite(): stateInit() not successfully called");
         status = -1;
     }
     else {
         FILE*   file = fopen(tmpStatePathname, "w");
 
         if (file == NULL) {
-            log_errno();
-            log_add("stateWrite(): Couldn't open \"%s\"", tmpStatePathname);
+            mylog_errno("Couldn't open \"%s\"", tmpStatePathname);
             status = -2;
         }
         else {
@@ -193,23 +188,19 @@ stateWrite(
 "# The following line contains the insertion-time of the last, successfully-\n"
 "# processed data-product.  Do not modify it unless you know exactly what\n"
 "# you're doing!\n", file) < 0) {
-                log_errno();
-                log_add("stateWrite(): Couldn't write comment to \"%s\"",
+                mylog_errno("Couldn't write comment to \"%s\"",
                     tmpStatePathname);
             }
             else {
                 if (fprintf(file, "%lu.%06lu\n",
                         (unsigned long)pqCursor->tv_sec, 
                         (unsigned long)pqCursor->tv_usec) < 0) {
-                    log_errno();
-                    log_add("stateWrite(): Couldn't write time to \"%s\"",
+                    mylog_errno("Couldn't write time to \"%s\"",
                         tmpStatePathname);
                 }
                 else {
                     if (rename(tmpStatePathname, statePathname) == -1) {
-                        log_errno();
-                        log_add("stateWrite(): "
-                            "Couldn't rename \"%s\" to \"%s\"",
+                        mylog_errno("Couldn't rename \"%s\" to \"%s\"",
                             tmpStatePathname, statePathname);
                     }
                     else {

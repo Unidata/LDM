@@ -46,16 +46,17 @@ Options:\n\
 
 int main(int ac, char *av[])
 {
-        int verbose = 0;
         const char *pqfname = getQueuePath();
         int pflags = PQ_NOCLOBBER;
         off_t initialsz = 0;
         size_t nproducts = 0;
         pqueue *pq = NULL;
         int errnum = 0;
-        char *logfname = "-" ;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE)) ;
+
+        /*
+         * initialize logger
+         */
+        (void)mylog_init(av[0]);
 
         int ch;
         char *qopt = NULL;
@@ -67,8 +68,7 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "xvcfq:s:S:l:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        verbose = !0;
-                        logmask |= LOG_MASK(LOG_INFO) ;
+                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
                         break;
                 case 'c':
                         pflags &= ~PQ_NOCLOBBER;
@@ -86,10 +86,10 @@ int main(int ac, char *av[])
                         qopt = optarg;
                         break;
                 case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG) ;
+                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        logfname = optarg ;
+                        (void)mylog_set_output(optarg);
                         break;
                 case '?':
                         usage(av[0]);
@@ -182,16 +182,8 @@ int main(int ac, char *av[])
         }
 
 
-        /*
-         * initialize logger
-         */
-        (void) setulogmask(logmask) ;
-        (void)openulog(ubasename(av[0]),
-                LOG_PID, LOG_LDM, logfname) ;
-
-        if(verbose)
-                fprintf(stderr, "Creating %s, %ld bytes, %ld products.\n",
-                        pqfname, (long)initialsz, (long)nproducts);
+        mylog_info("Creating %s, %ld bytes, %ld products.\n",
+                pqfname, (long)initialsz, (long)nproducts);
 
         errnum = pq_create(pqfname, 0666, pflags,
                 0, initialsz, nproducts, &pq);

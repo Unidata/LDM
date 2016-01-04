@@ -7,7 +7,7 @@
  */
 #include "config.h"
 
-#include <assert.h>      /* assert() */
+#include <mylog.h>      /* mylog_assert() */
 #include <errno.h>       /* error numbers */
 #include <arpa/inet.h>   /* for <netinet/in.h> under FreeBSD 4.5-RELEASE */
 #include <netinet/in.h>  /* sockaddr_in */
@@ -28,7 +28,7 @@
 #include "error.h"
 #include "ldm.h"         /* LDM version 6 client-side functions */
 #include "ldmprint.h"    /* s_prod_class(), s_prod_info() */
-#include "log.h"
+#include "mylog.h"
 #include "peer_info.h"   /* peer_info */
 #include "pq.h"          /* pq_close(), pq_open() */
 #include "prod_class.h"  /* clss_eq() */
@@ -165,9 +165,9 @@ static int notify(
     ErrorObj** const errObj = (ErrorObj**) arg;
 
     if (upFilter_isMatch(_upFilter, info)) {
-        int isDebug = ulogIsDebug();
+        int isDebug = mylog_is_enabled_debug;
 
-        if (ulogIsVerbose() || isDebug)
+        if (mylog_is_enabled_info || isDebug)
             err_log_and_free(ERR_NEW1(0, NULL, "notifying: %s",
                     s_prod_info(NULL, 0, info, isDebug)),
                     isDebug ? ERR_DEBUG : ERR_INFO);
@@ -237,8 +237,8 @@ hereis(
         _lastSendTime = time(NULL);
         _flushNeeded = 1;
 
-        if (ulogIsDebug())
-            udebug("%s", s_prod_info(NULL, 0, infop, 1));
+        if (mylog_is_enabled_debug)
+            mylog_debug("%s", s_prod_info(NULL, 0, infop, 1));
     }
 
     return errObj;
@@ -308,8 +308,8 @@ csbd(
                 _lastSendTime = time(NULL );
                 _flushNeeded = 1; /* because asynchronous RPC call */
 
-                if (ulogIsDebug())
-                    udebug("%s", s_prod_info(NULL, 0, infop, 1));
+                if (mylog_is_enabled_debug)
+                    mylog_debug("%s", s_prod_info(NULL, 0, infop, 1));
             }
         }
 
@@ -358,9 +358,9 @@ static int feed(
     ErrorObj** const errObj = (ErrorObj**) arg;
 
     if (upFilter_isMatch(_upFilter, info)) {
-        int isDebug = ulogIsDebug();
+        int isDebug = mylog_is_enabled_debug;
 
-        if (ulogIsVerbose() || isDebug)
+        if (mylog_is_enabled_info || isDebug)
             err_log_and_free(ERR_NEW1(0, NULL, "sending: %s",
                     s_prod_info(NULL, 0, info, isDebug)),
                     isDebug ? ERR_DEBUG : ERR_INFO);
@@ -398,7 +398,7 @@ flushConnection(
 #endif
         _lastSendTime = time(NULL );
         _flushNeeded = 0;
-        udebug("flushConnection() success");
+        mylog_debug("flushConnection() success");
         return NULL;
     }
 
@@ -429,22 +429,22 @@ static up6_error_t up6_run(
             ? "NONE"
             : s_signaturet(buf, sizeof(buf), *_signature);
 
-    assert(_mode == FEED || _mode == NOTIFY);
-    assert(_class != NULL);
+    mylog_assert(_mode == FEED || _mode == NOTIFY);
+    mylog_assert(_class != NULL);
 
     if (NOTIFY == _mode) {
         set_abbr_ident(_downName, "(noti)");
-        unotice("Starting Up(%s/6): %s, SIG=%s", PACKAGE_VERSION,
+        mylog_notice("Starting Up(%s/6): %s, SIG=%s", PACKAGE_VERSION,
                 s_prod_class(NULL, 0, _class), sig);
     }
     else {
         set_abbr_ident(_downName, "(feed)");
-        unotice("Starting Up(%s/6): %s, SIG=%s, %s", PACKAGE_VERSION,
+        mylog_notice("Starting Up(%s/6): %s, SIG=%s, %s", PACKAGE_VERSION,
                 s_prod_class(NULL, 0, _class), sig,
                 _isPrimary ? "Primary" : "Alternate");
     }
 
-    unotice("topo:  %s %s", _downName, upFilter_toString(_upFilter));
+    mylog_notice("topo:  %s %s", _downName, upFilter_toString(_upFilter));
     /* s_feedtypet(clss_feedtypeU(_class))); */
 
     /*
@@ -458,13 +458,13 @@ static up6_error_t up6_run(
     flags = fcntl(_socket, F_GETFL);
 
     if (-1 == flags) {
-        serror("fcntl(F_GETFL) failure");
+        mylog_syserr("fcntl(F_GETFL) failure");
         errCode = UP6_SYSTEM_ERROR;
     }
     else if ((flags & O_NONBLOCK)
             && -1 == fcntl(_socket, F_SETFL, flags & ~O_NONBLOCK)) {
 
-        serror("fcntl(F_SETFL) failure");
+        mylog_syserr("fcntl(F_SETFL) failure");
         errCode = UP6_SYSTEM_ERROR;
     }
     else {
@@ -479,7 +479,7 @@ static up6_error_t up6_run(
         } while (_clnt == NULL && rpc_createerr.cf_stat == RPC_TIMEDOUT);
 
         if (_clnt == NULL ) {
-            uerror("Couldn't connect to downstream LDM on %s%s", _downName,
+            mylog_error("Couldn't connect to downstream LDM on %s%s", _downName,
                     clnt_spcreateerror(""));
 
             errCode = UP6_CLIENT_FAILURE;
@@ -513,7 +513,7 @@ static up6_error_t up6_run(
                             time_t timeSinceLastSend = time(NULL)
                                     - _lastSendTime;
 
-                            udebug(err == PQUEUE_END
+                            mylog_debug(err == PQUEUE_END
                                     ? "End of product-queue"
                                     : "Hit a lock");
 
@@ -528,7 +528,7 @@ static up6_error_t up6_run(
                         }
                     } /* end-of-queue reached or lock hit */
                     else {
-                        uerror("Product send failure: %s", strerror(err));
+                        mylog_error("Product send failure: %s", strerror(err));
 
                         errCode = UP6_PQ;
                     }
@@ -604,21 +604,21 @@ static up6_error_t up6_init(
 {
     int errCode;
 
-    assert(socket >= 0);
-    assert(downName != NULL);
-    assert(prodClass != NULL);
-    assert(pqPath != NULL);
-    assert(upFilter != NULL);
+    mylog_assert(socket >= 0);
+    mylog_assert(downName != NULL);
+    mylog_assert(prodClass != NULL);
+    mylog_assert(pqPath != NULL);
+    mylog_assert(upFilter != NULL);
 
     /*
      * Open the product-queue read-only.
      */
     if ((errCode = pq_open(pqPath, PQ_READONLY, &_pq))) {
         if (PQ_CORRUPT == errCode) {
-            uerror("The product-queue \"%s\" is inconsistent", pqPath);
+            mylog_error("The product-queue \"%s\" is inconsistent", pqPath);
         }
         else {
-            uerror("Couldn't open product-queue \"%s\": %s", pqPath,
+            mylog_error("Couldn't open product-queue \"%s\": %s", pqPath,
                     strerror(errCode));
         }
 

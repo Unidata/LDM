@@ -15,6 +15,7 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include <CUnit/CUnit.h>
@@ -53,11 +54,11 @@ static int numLines(
 
 static void logMessages(void)
 {
-    MYLOG_ERROR("%s(): Error message", __func__);
-    MYLOG_WARNING("%s(): Warning", __func__);
-    MYLOG_NOTICE("%s(): Notice", __func__);
-    MYLOG_INFO("%s(): Informational message", __func__);
-    MYLOG_DEBUG("%s(): Debug message", __func__);
+    mylog_error("%s(): Error message", __func__);
+    mylog_warning("%s(): Warning", __func__);
+    mylog_notice("%s(): Notice", __func__);
+    mylog_info("%s(): Informational message", __func__);
+    mylog_debug("%s(): Debug message", __func__);
 }
 
 static void vlogMessage(
@@ -67,7 +68,7 @@ static void vlogMessage(
 {
     va_list args;
     va_start(args, format);
-    MYLOG_VLOG(level, format, args);
+    mylog_vlog(level, format, args);
     va_end(args);
 }
 
@@ -118,6 +119,9 @@ static void test_mylog_open_file(void)
     status = mylog_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
+    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+
     logMessages();
 
     status = mylog_fini();
@@ -141,6 +145,9 @@ static void test_mylog_open_stderr(void)
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-");
 
+    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+
     logMessages();
 
     status = mylog_fini();
@@ -155,13 +162,13 @@ static void test_mylog_open_default(void)
     const char* actual = mylog_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "");
-    MYLOG_ERROR("test_mylog_open_default() implicit");
+    mylog_error("test_mylog_open_default() implicit");
 
     status = mylog_set_output("");
     actual = mylog_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "");
-    MYLOG_ERROR("test_mylog_open_default() explicit");
+    mylog_error("test_mylog_open_default() explicit");
 
     status = mylog_fini();
     CU_ASSERT_EQUAL(status, 0);
@@ -172,7 +179,8 @@ static void test_mylog_levels(void)
     int status;
     mylog_level_t mylogLevels[] = {MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING,
             MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_INFO, MYLOG_LEVEL_DEBUG};
-    for (int nlines = 1; nlines <= MYLOG_LEVEL_COUNT; nlines++) {
+    for (int nlines = 1; nlines <= sizeof(mylogLevels)/sizeof(*mylogLevels);
+            nlines++) {
         status = mylog_init(progname);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -204,9 +212,9 @@ static void test_mylog_get_level(void)
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     mylog_level_t level = mylog_get_level();
-    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_NOTICE);
 
-    for (int i = 0; i < MYLOG_LEVEL_COUNT; i++) {
+    for (int i = 0; i < sizeof(mylogLevels)/sizeof(*mylogLevels); i++) {
         mylog_level_t expected = mylogLevels[i];
         (void)mylog_set_level(expected);
         mylog_level_t actual = mylog_get_level();
@@ -224,12 +232,12 @@ static void test_mylog_modify_id(void)
 
     char expected[256];
     make_expected_id(expected, sizeof(expected), "foo", true);
-    (void)mylog_modify_level("foo", true);
+    (void)mylog_set_upstream_id("foo", true);
     const char* actual = mylog_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
     make_expected_id(expected, sizeof(expected), "bar", false);
-    (void)mylog_modify_level("bar", false);
+    (void)mylog_set_upstream_id("bar", false);
     actual = mylog_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
@@ -238,7 +246,7 @@ static void test_mylog_modify_id(void)
 #else
     make_expected_id(expected, sizeof(expected), "128.117.140.56", false);
 #endif
-    (void)mylog_modify_level("128.117.140.56", false);
+    (void)mylog_set_upstream_id("128.117.140.56", false);
     actual = mylog_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
@@ -286,6 +294,9 @@ static void test_mylog_vlog(void)
     status = mylog_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
+    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+
     vlogMessages();
 
     status = mylog_fini();
@@ -324,15 +335,42 @@ static void test_mylog_add(void)
     status = mylog_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
-    MYLOG_ADD("%s(): LOG_ADD message 1", __func__);
-    MYLOG_ADD("%s(): LOG_ADD message 2", __func__);
-    MYLOG_ERROR("%s(): LOG_ERROR message", __func__);
+    mylog_add("%s(): LOG_ADD message 1", __func__);
+    mylog_add("%s(): LOG_ADD message 2", __func__);
+    mylog_error("%s(): LOG_ERROR message", __func__);
 
     status = mylog_fini();
     CU_ASSERT_EQUAL(status, 0);
 
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 3);
+
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void test_mylog_syserr(void)
+{
+    (void)unlink(tmpPathname);
+    int status = mylog_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = mylog_set_output(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+
+    mylog_errno(ENOMEM, NULL);
+    mylog_errno(ENOMEM, "MYLOG_ERRNO() above message part of this one");
+    mylog_errno(ENOMEM, "MYLOG_ERRNO() above message is part of this one #%d", 2);
+    void* const ptr = malloc(~(size_t)0);
+    CU_ASSERT_PTR_NULL(ptr);
+    mylog_syserr(NULL);
+    mylog_syserr("mylog_syserr() above message is part of this one");
+    mylog_syserr("mylog_syserr() above message is part of this one #%d", 2);
+
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
+
+    int n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 10);
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -361,6 +399,7 @@ int main(
                     && CU_ADD_TEST(testSuite, test_mylog_levels)
                     && CU_ADD_TEST(testSuite, test_mylog_vlog)
                     && CU_ADD_TEST(testSuite, test_mylog_add)
+                    && CU_ADD_TEST(testSuite, test_mylog_syserr)
                     /*
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);

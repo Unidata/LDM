@@ -9,7 +9,7 @@
  * This file implements a mapping from VCMTP product-indexes to file-offsets.
  */
 
-#include "log.h"
+#include "mylog.h"
 #include "OffsetMap.h"
 
 #include <exception>
@@ -35,7 +35,7 @@ OffMap* om_new()
         return new OffsetMap();
     }
     catch (const std::exception& e) {
-        LOG_START1("%s", e.what());
+        mylog_add("%s", e.what());
         return NULL;
     }
 }
@@ -56,7 +56,7 @@ int om_put(
         return 0;
     }
     catch (const std::exception& e) {
-        LOG_START1("%s", e.what());
+        mylog_add("%s", e.what());
         return LDM7_SYSTEM;
     }
 }
@@ -71,7 +71,7 @@ int om_get(
         return 0;
     }
     catch (const std::exception& e) {
-        LOG_START1("%s", e.what());
+        mylog_add("%s", e.what());
         return LDM7_INVAL;
     }
 }

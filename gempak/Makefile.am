@@ -84,14 +84,14 @@ lib_la_SOURCES		= cflclos.c \
 AM_CPPFLAGS	= -DLDMHOME='"$(LDMHOME)"' \
 		  -I$(top_srcdir) \
 		  -I$(top_srcdir)/grib2 \
-		  -I$(top_srcdir)/ulog \
+		  -I$(top_srcdir)/mylog \
 		  -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
 		  -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
 		  -I$(top_builddir)/registry -I$(top_srcdir)/registry \
 		  -I$(top_builddir)/mcast_lib/C++ -I$(top_srcdir)/mcast_lib/C++
 
 TAGS_FILES		= *.c *.h \
-                          ../ulog/*.c ../ulog/*.h \
+                          ../mylog/*.c ../mylog/*.h \
                           ../grib2/*.c ../grib2/*.h
 
 if HAVE_OPMOCK

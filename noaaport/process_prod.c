@@ -23,7 +23,7 @@
 #include "ldmProductQueue.h"
 #include "md5.h"
 #include "inetutil.h"
-#include "log.h"
+#include "mylog.h"
 
 /*
  * The following is declared here because it isn't declared elsewhere.
@@ -41,7 +41,7 @@ if ( dataheap == NULL ) dataheap = (datastore *)malloc(MAXFRAGS * sizeof(datasto
 if ( nfrags >= MAXFRAGS )
    {
    MAXFRAGS = nfrags + 1;
-   unotice("increasing fragheap to %d\0",MAXFRAGS);
+   mylog_notice("increasing fragheap to %d\0",MAXFRAGS);
    dataheap = (datastore *)realloc ( dataheap, MAXFRAGS * sizeof(datastore));
    }
 
@@ -59,7 +59,7 @@ if ( dataheap == NULL )
 if ( nextfrag >= MAXFRAGS )
    {
    MAXFRAGS += 1000;
-   uerror("Error in number of frags, increasing fragheap to %d\0",MAXFRAGS);
+   mylog_error("Error in number of frags, increasing fragheap to %d\0",MAXFRAGS);
    dataheap = (datastore *)realloc ( dataheap, MAXFRAGS * sizeof(datastore));
    }
 
@@ -134,7 +134,7 @@ process_prod(
              lengrib = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
              (void)grib2name(cpos, lengrib, PROD_NAME, &psh->metadata[2],
                      sizeof(psh->metadata)-2);
-             udebug("%d PRODname %s meta %s",psh->metaoff,PROD_NAME,psh->metadata);
+             mylog_debug("%d PRODname %s meta %s",psh->metaoff,PROD_NAME,psh->metadata);
         }
     }
 
@@ -192,35 +192,35 @@ process_prod(
     prod.info.ident = prodId;
 
     if (prod.info.sz == 0) {
-        uerror("heapsize is invalid %ld for prod %s", prod.info.sz,
+        mylog_error("heapsize is invalid %ld for prod %s", prod.info.sz,
                 prod.info.ident);
         return;
     }
 
     MD5Final (prod.info.signature, md5try);
-    uinfo("md5 checksum final");
+    mylog_info("md5 checksum final");
 
     if (strlen (prod.info.ident) == 0) {
         prod.info.ident = "_NOHEAD";
-        unotice("strange header %s (%d) size %d %d", prod.info.ident,
+        mylog_notice("strange header %s (%d) size %d %d", prod.info.ident,
                  psh->ptype, prod.info.sz, prod.info.seqno);
     }
 
     status = set_timestamp (&prod.info.arrival);
-    uinfo("timestamp %ld", prod.info.arrival);
+    mylog_info("timestamp %ld", prod.info.arrival);
 
     status = lpqInsert(lpq, &prod);
     if (status == 0) {
-        unotice("%s inserted [cat %d type %d ccb %d/%d seq %d size %d]",
+        mylog_notice("%s inserted [cat %d type %d ccb %d/%d seq %d size %d]",
                  prod.info.ident, psh->pcat, psh->ptype, psh->ccbmode,
                  psh->ccbsubmode, prod.info.seqno, prod.info.sz);
         return;
     }
     else if (3 == status) {
-        unotice("%s already in queue [%d]", prod.info.ident, prod.info.seqno);
+        mylog_notice("%s already in queue [%d]", prod.info.ident, prod.info.seqno);
     }
     else {
-        uerror("pqinsert failed [%d] %s", status, prod.info.ident);
+        mylog_error("pqinsert failed [%d] %s", status, prod.info.ident);
     }
 
     return;
@@ -238,12 +238,12 @@ prodalloc (long int nfrags, long int dbsize, char **heap)
     nfrags = 1;
   bsize = (nfrags * dbsize) + 32;
 
-  udebug ("heap allocate %ld  [%ld %ld] bytes\0", bsize, nfrags, dbsize);
+  mylog_debug("heap allocate %ld  [%ld %ld] bytes\0", bsize, nfrags, dbsize);
   if (*heap == NULL)
     {
       newheap = (char *) malloc (bsize);
       largestsiz = bsize;
-      udebug ("malloc new\0");
+      mylog_debug("malloc new\0");
     }
   else
     {
@@ -251,7 +251,7 @@ prodalloc (long int nfrags, long int dbsize, char **heap)
 	{
 	  newheap = (char *) realloc (*heap, bsize);
 	  largestsiz = bsize;
-	  udebug ("remalloc\0");
+	  mylog_debug("remalloc\0");
 	}
       else
 	newheap = *heap;

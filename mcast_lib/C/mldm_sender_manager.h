@@ -46,10 +46,10 @@ extern "C" {
  *                         free.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
+ * @retval    LDM7_INVAL   Invalid argument. `mylog_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
- *                         addition. Manager not modified. `log_add()` called.
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ *                         addition. Manager not modified. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
  */
 Ldm7Status
 mlsm_addPotentialSender(
@@ -68,8 +68,8 @@ mlsm_addPotentialSender(
  * @retval     0            Success. The group is being multicast and
  *                          `*mcastInfo` is set.
  * @retval     LDM7_NOENT   No corresponding potential sender was added via
- *                          `mlsm_addPotentialSender()`. `log_start() called`.
- * @retval     LDM7_SYSTEM  System error. `log_start()` called.
+ *                          `mlsm_addPotentialSender()`. `mylog_add() called`.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 mlsm_ensureRunning(
@@ -86,7 +86,7 @@ mlsm_ensureRunning(
  *                         process.
  * @retval    0            Success.
  * @retval    LDM7_NOENT   PID doesn't correspond to known process.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 mlsm_terminated(
@@ -96,7 +96,7 @@ mlsm_terminated(
  * Clears all entries.
  *
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 mlsm_clear(void);

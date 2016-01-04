@@ -8,6 +8,7 @@
  */
 
 #include <config.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -53,7 +54,7 @@ static MD5_CTX *md5ctxp = NULL;
 static void
 dump_stats(void)
 {
-        unotice("Number of products %d", nprods);
+        mylog_notice("Number of products %d", nprods);
 }
 
 /*
@@ -63,14 +64,17 @@ static int
 writeprod(const prod_info *infop, const void *datap,
                 void *xprod, size_t size,  void *notused)
 {
-        if(ulogIsVerbose())
+        if(mylog_is_enabled_info)
         {
                 if (showProdOrigin)
                 {
-                        uinfo("%s %s", s_prod_info(NULL, 0, infop, ulogIsDebug()), infop->origin);
+                        mylog_info("%s %s", s_prod_info(NULL, 0, infop,
+                                mylog_is_enabled_debug),
+                                infop->origin);
                 } else
                 {
-                        uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
+                        mylog_info("%s", s_prod_info(NULL, 0, infop,
+                                mylog_is_enabled_debug));
                 }
         }
 
@@ -83,7 +87,7 @@ writeprod(const prod_info *infop, const void *datap,
                 if(memcmp(infop->signature, check, sizeof(signaturet)) != 0)
                 {
                         char sb[33]; char cb[33];
-                        uerror("signature mismatch: %s != %s",
+                        mylog_error("signature mismatch: %s != %s",
                                  s_signaturet(sb, sizeof(sb), infop->signature),
                                  s_signaturet(cb, sizeof(cb), check));
                 }
@@ -93,7 +97,7 @@ writeprod(const prod_info *infop, const void *datap,
                         infop->sz)
         {
                 int errnum = errno;
-                serror( "data write failed") ;
+                mylog_syserr( "data write failed") ;
                 return errnum;
         }
 
@@ -152,7 +156,7 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-        unotice("Exiting"); 
+        mylog_notice("Exiting");
 
         if(!intr)
         {
@@ -165,7 +169,7 @@ cleanup(void)
 
         dump_stats();
 
-        (void) closeulog();
+        (void)mylog_fini();
 }
 
 
@@ -190,7 +194,7 @@ signal_handler(int sig)
                 stats_req = !0;
                 return;
         case SIGUSR2 :
-                rollulogpri();
+                mylog_roll_level();
                 return;
         }
 }
@@ -235,8 +239,7 @@ set_sigactions(void)
 
 int main(int ac, char *av[])
 {
-        const char *progname = ubasename(av[0]);
-        char *logfname;
+        const char *progname = basename(av[0]);
         prod_class_t clss;
         prod_spec spec;
         int status = 0;
@@ -244,14 +247,10 @@ int main(int ac, char *av[])
         int logoptions = (LOG_CONS|LOG_PID) ;
         int queueSanityCheck = FALSE;
 
-        logfname = "";
-
-        if(isatty(fileno(stderr)))
-        {
-                /* set interactive defaults */
-                logfname = "-" ;
-                logoptions = 0 ;
-        }
+        /*
+         * Set up error logging.
+         */
+        (void)mylog_init(progname);
 
         clss.from = TS_ZERO; /* default dump the whole file */
         clss.to = TS_ENDT;
@@ -265,8 +264,6 @@ int main(int ac, char *av[])
         extern int opterr;
         extern char *optarg;
         int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
         int fterr;
 
         opterr = 1;
@@ -277,16 +274,16 @@ int main(int ac, char *av[])
                 case 'c':
                         md5ctxp = new_MD5_CTX();
                         if(md5ctxp == NULL)
-                                serror("new_md5_CTX failed");
+                                mylog_syserr("new_md5_CTX failed");
                         break;
                 case 'v':
-                        logmask |= LOG_MASK(LOG_INFO);
+                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
                         break;
                 case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG);
+                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        logfname = optarg;
+                        (void)mylog_set_output(optarg);
                         break;
                 case 'p':
                         spec.pattern = optarg;
@@ -328,8 +325,6 @@ int main(int ac, char *av[])
                         break;
                 }
 
-        (void) setulogmask(logmask);
-
         if (re_isPathological(spec.pattern))
         {
                 fprintf(stderr, "Adjusting pathological regular-expression: "
@@ -361,19 +356,14 @@ int main(int ac, char *av[])
 
         }
 
-        /*
-         * Set up error logging.
-         */
-        (void) openulog(progname,
-                logoptions, LOG_LDM, logfname);
-        unotice("Starting Up (%d)", getpgrp());
+        mylog_notice("Starting Up (%d)", getpgrp());
 
         /*
          * register exit handler
          */
         if(atexit(cleanup) != 0)
         {
-                serror("atexit");
+                mylog_syserr("atexit");
                 exit(1);
         }
 
@@ -390,11 +380,11 @@ int main(int ac, char *av[])
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    uerror("The product-queue \"%s\" is inconsistent\n",
+                    mylog_error("The product-queue \"%s\" is inconsistent\n",
                             pqfname);
                 }
                 else {
-                    uerror("pq_open failed: %s: %s\n",
+                    mylog_error("pq_open failed: %s: %s\n",
                             pqfname, strerror(status));
                 }
                 exit(1);
@@ -422,14 +412,14 @@ int main(int ac, char *av[])
                 case 0: /* no error */
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        udebug("End of Queue");
+                        mylog_debug("End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        udebug("Hit a lock");
+                        mylog_debug("Hit a lock");
                         break;
                 default:
-                        uerror("pq_sequence failed: %s (errno = %d)",
+                        mylog_error("pq_sequence failed: %s (errno = %d)",
                                 strerror(status), status);
                         exit(1);
                         break;
@@ -449,20 +439,20 @@ int main(int ac, char *av[])
           status = pq_stats(pq, &queueProdCnt, &dummy1, &dummy2, &dummy3, &dummy4, 
                    &dummy5, &dummy6, &dummy7, &dummy8, &dummy9);
           if (status) {
-                uerror("pq_stats failed: %s (errno = %d)",
+                mylog_error("pq_stats failed: %s (errno = %d)",
                        strerror(status), status);
                 exit(1);
           }
 
           if (nprods == queueProdCnt)
           {
-            unotice("pqcat queueSanityCheck: Number of products tallied consistent with value in queue");
+            mylog_notice("pqcat queueSanityCheck: Number of products tallied consistent with value in queue");
             exit(0);
           }
           else
           {
-              uerror("pqcat queueSanityCheck: Product count doesn't match");
-              uerror("products tallied: %d   Value in queue: %d", nprods, queueProdCnt);              exit(1);
+              mylog_error("pqcat queueSanityCheck: Product count doesn't match");
+              mylog_error("products tallied: %d   Value in queue: %d", nprods, queueProdCnt);              exit(1);
           }
         }
         exit(0);

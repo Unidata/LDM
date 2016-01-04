@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "log.h"
+#include "mylog.h"
 
 #include "gb2def.h"
 #include "ctbg2rdvar.h"
@@ -48,8 +48,8 @@ compare(
  * @param[in] entry     Cache entry to be initialized.
  * @param[in] filename  Filename associated with the entry.
  * @retval    0         Success. INFO-level message logged.
- * @retval    ENOMEM    Out-of-memory. `log_start()` called.
- * @retval    -31       Error reading file. `log_start()` called.
+ * @retval    ENOMEM    Out-of-memory. `mylog_add()` called.
+ * @retval    -31       Error reading file. `mylog_add()` called.
  */
 static int
 initEntry(
@@ -67,17 +67,17 @@ initEntry(
     ctb_g2rdvar(entry->filename, &entry->table, &status);
 
     if (status) {
-        LOG_START1("Couldn't read GRIB2 parameter file \"%s\"",
+        mylog_add("Couldn't read GRIB2 parameter file \"%s\"",
                 entry->filename);
         status = -31;
     }
     else {
-        uinfo("Read GRIB2 parameter file \"%s\"", entry->filename);
+        mylog_info("Read GRIB2 parameter file \"%s\"", entry->filename);
 
         void* node = tsearch(entry, &cache, compare);
 
         if (NULL == node) {
-            LOG_SERROR0("Couldn't allocate new tsearch(3) node");
+            mylog_syserr("Couldn't allocate new tsearch(3) node");
             status = ENOMEM;
         }
         else {
@@ -94,8 +94,8 @@ initEntry(
  * @param[in]  filename  Filename associated with the entry.
  * @param[out] entry     Returned entry.
  * @retval     0         Success. `*entry` is set.
- * @retval     ENOMEM    Out-of-memory. `log_start()` called.
- * @retval     -31       Error reading file. `log_start()` called.
+ * @retval     ENOMEM    Out-of-memory. `mylog_add()` called.
+ * @retval     -31       Error reading file. `mylog_add()` called.
  */
 static int
 addEntry(
@@ -106,7 +106,7 @@ addEntry(
     Entry* ent = malloc(sizeof(Entry));
 
     if (NULL == ent) {
-        LOG_SERROR0("Couldn't allocate new cache entry");
+        mylog_syserr("Couldn't allocate new cache entry");
         status = ENOMEM;
     }
     else {
@@ -149,8 +149,8 @@ findEntry(
  * @param[in]  filename  Filename associated with the entry.
  * @param[out] table     GRIB2 parameter table associated with the filename.
  * @retval     0         Success. `*table` is set.
- * @retval     ENOMEM    Out-of-memory. `log_start()` called.
- * @retval     -31       Couldn't read file. `log_start()` called.
+ * @retval     ENOMEM    Out-of-memory. `mylog_add()` called.
+ * @retval     -31       Couldn't read file. `mylog_add()` called.
  */
 static int
 getVarTable(
@@ -193,7 +193,7 @@ getVarTable(
  * @param[out] iret       Return code:
  *                              0 = Success. `*g2vartbl` and `*filename` are
  *                                  set.
- *                            -31 = Error getting table. `log_log()` called.
+ *                            -31 = Error getting table. `mylog_flush()` called.
  */
 void
 gb2_gtvartbl(
@@ -218,7 +218,7 @@ gb2_gtvartbl(
     }
 
     if (getVarTable(nameBuf, g2vartbl)) {
-        log_log(LOG_ERR);
+        mylog_flush_error();
         *iret = 31;
     }
     else {

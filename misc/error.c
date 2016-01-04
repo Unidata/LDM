@@ -5,7 +5,7 @@
 
 #include <config.h>
 
-#include <assert.h>
+#include <mylog.h>
 #include <stdarg.h>
 #include <stddef.h>   /* NULL */
 #include <stdio.h>    /* vsnprintf(), snprintf() */
@@ -44,12 +44,12 @@ err_new(
 {
     ErrorObj *err;
 
-    assert(file != NULL);
+    mylog_assert(file != NULL);
 
     err = (ErrorObj*)malloc(sizeof(ErrorObj));
 
     if (NULL == err) {
-        serror("err_new(): malloc(%lu) failure",
+        mylog_syserr("malloc(%lu) failure",
             (unsigned long)sizeof(ErrorObj));
     }
     else {
@@ -83,7 +83,7 @@ err_new(
             err->msg[nbytes] = 0;
             err->msglen = (size_t)nbytes;
 
-            assert(err->msglen < size);
+            mylog_assert(err->msglen < size);
 
             err->code = code;
             err->cause = cause;
@@ -98,7 +98,7 @@ int
 err_code(
     const ErrorObj*     err)
 {
-    assert(err != NULL);
+    mylog_assert(err != NULL);
 
     return err->code;
 }
@@ -108,7 +108,7 @@ ErrorObj*
 err_cause(
     const ErrorObj*     err)
 {
-    assert(err != NULL);
+    mylog_assert(err != NULL);
 
     return err->cause;
 }
@@ -131,15 +131,15 @@ err_log(
     const ErrorObj* const       err,
     const enum err_level        level)
 {
-    static const unsigned logMasks[] = {
-        LOG_MASK(LOG_ERR),
-        LOG_MASK(LOG_WARNING),
-        LOG_MASK(LOG_NOTICE), 
-        LOG_MASK(LOG_INFO),
-        LOG_MASK(LOG_DEBUG)
+    static const unsigned mylog_levels[] = {
+        MYLOG_LEVEL_ERROR,
+        MYLOG_LEVEL_WARNING,
+        MYLOG_LEVEL_NOTICE,
+        MYLOG_LEVEL_INFO,
+        MYLOG_LEVEL_DEBUG
     };
 
-    if (getulogmask() & logMasks[level]) {
+    if (mylog_is_level_enabled(mylog_levels[level])) {
         const ErrorObj*          e;
         const char* const       stdErrSep = "; ";
         const char* const       stdLocSep = ": ";
@@ -149,10 +149,8 @@ err_log(
         static char             initialBuf[1024];
         static char*            buf = initialBuf;
         static size_t           buflen = sizeof(initialBuf);
-        static const int        pris[] =
-            {LOG_ERR, LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG};
 
-        assert(err != NULL);
+        mylog_assert(err != NULL);
 
         {
             size_t          totlen = 0;
@@ -193,7 +191,7 @@ err_log(
                 buflen = totlen;
             }
 
-            assert(NULL != buf);
+            mylog_assert(NULL != buf);
         }
 
         {
@@ -231,12 +229,11 @@ err_log(
         }
 
         /*
-         * NB: The message is not printed using "ulog(pris[level], buf)"
-         * because "buf" might have formatting characters in it (e.g., "%")
-         * from, for example, a call to "s_prod_info()" with a dangerous
-         * product-identifier.
+         * NB: The message is not used as the format parameter because "buf"
+         * might have formatting characters in it (e.g., "%") from, for example,
+         * a call to "s_prod_info()" with a dangerous product-identifier.
          */
-        ulog(pris[level], "%s", buf);
+        mylog_log_located(NULL, mylog_levels[level], "%s", buf);
     }
 }
 

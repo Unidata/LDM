@@ -68,11 +68,11 @@ static ldm_replyt reply = { OK };
 static void
 cleanup(void)
 {
-        unotice("exiting");
+        mylog_notice("exiting");
 
         /* TODO: sign off */
 
-        (void) closeulog();
+        (void)mylog_fini();
 }
 
 
@@ -101,7 +101,7 @@ signal_handler(int sig)
         case SIGUSR1 :
                 return;
         case SIGUSR2 :
-                toggleulogpri(LOG_INFO);
+                mylog_roll_level();
                 return;
         case SIGPIPE :
                 return;
@@ -175,9 +175,9 @@ hiya_5_svc(prod_class *clssp, struct svc_req *rqstp)
 
         (void) memset((char*)&reply, 0, sizeof(reply));
 
-        if(ulogIsVerbose())
+        if(mylog_is_enabled_info)
         {
-                uinfo("hiya5: %s: %s",
+                mylog_info("hiya5: %s: %s",
                         remote,
                          s_prod_class(NULL, 0, clssp));
         }
@@ -208,9 +208,9 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         (void) memset((char*)&reply, 0, sizeof(reply));
 
         (void) s_prod_info(infostr, sizeof(infostr), infop, 0);
-        if(ulogIsDebug())
+        if(mylog_is_enabled_debug)
         {
-                udebug("comingsoon5: %s %s (pktsz %u)",
+                mylog_debug("comingsoon5: %s %s (pktsz %u)",
                         s_signaturet(NULL, 0, infop->signature),
                         infostr, argsp->pktsz);
         }
@@ -230,9 +230,9 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
 {
         (void) memset((char*)&reply, 0, sizeof(reply));
 
-        if(ulogIsDebug())
+        if(mylog_is_enabled_debug)
         {
-                udebug("   blkdata5: %s %8u %5u",
+                mylog_debug("   blkdata5: %s %8u %5u",
                         s_signaturet(NULL, 0, *dpkp->signaturep),
                         dpkp->data.dbuf_len,
                         dpkp->pktnum);
@@ -240,7 +240,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
 
         if(memcmp(*dpkp->signaturep, signature, sizeof(signaturet)) != 0)
         {
-                uerror("signature mismatch\n");
+                mylog_error("signature mismatch");
                 goto err;
         }
         /* else */
@@ -258,7 +258,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
         {
                 clss.from = arrival;
                 timestamp_incr(&clss.from);
-                uinfo("%s", infostr);
+                mylog_info("%s", infostr);
         }
 
 
@@ -268,7 +268,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
         if( write(STDOUT_FILENO, dpkp->data.dbuf_val, dpkp->data.dbuf_len) !=
                         dpkp->data.dbuf_len)
         {
-                serror( "data write failed") ;
+                mylog_syserr( "data write failed") ;
                 exit(1) ;
         }
 
@@ -340,7 +340,7 @@ feedmeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 svcerr_systemerr(transp);
         }
         if (!svc_freeargs(transp, xdr_argument, (caddr_t) &argument)) {
-                uerror("unable to free arguments");
+                mylog_error("unable to free arguments");
                 exit(1);
         }
         return;
@@ -349,13 +349,17 @@ feedmeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
 
 int main(int ac, char *av[])
 {
-        char *logfname = 0;
         int      TotalTimeo = DEFAULT_TOTALTIMEO;
         unsigned timeo = DEFAULT_TIMEO; 
         unsigned interval = DEFAULT_TIMEO; 
         prod_spec spec;
         int status;
         prod_class *clssp;
+
+        /*
+         * initialize logger
+         */
+        (void)mylog_init(av[0]);
 
         if(set_timestamp(&clss.from) != 0)
         {
@@ -373,8 +377,6 @@ int main(int ac, char *av[])
         extern int opterr;
         extern char *optarg;
         int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
         int fterr;
 
         opterr = 1;
@@ -382,13 +384,13 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "vxl:f:o:t:h:p:T:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        logmask |= LOG_MASK(LOG_INFO);
+                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
                         break;
                 case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG);
+                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        logfname = optarg;
+                        mylog_set_output(optarg);
                         break;
                 case 'h':
                         remote = optarg;
@@ -452,8 +454,6 @@ int main(int ac, char *av[])
                 usage(av[0]);
         }
 
-        (void) setulogmask(logmask);
-
         if(TotalTimeo < timeo)
         {
                 (void)fprintf(stderr, "TotalTimeo %d < timeo %u\n",
@@ -463,12 +463,7 @@ int main(int ac, char *av[])
 
         } /* End getopt block */
 
-        /*
-         * initialize logger
-         */
-        (void) openulog(ubasename(av[0]),
-                (LOG_CONS|LOG_PID), LOG_LDM, logfname);
-        unotice("Starting Up: %s: %s",
+        mylog_notice("Starting Up: %s: %s",
                         remote,
                         s_prod_class(NULL, 0, &clss));
 
@@ -477,7 +472,7 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                serror("atexit");
+                mylog_syserr("atexit");
                 exit(1);
         }
 

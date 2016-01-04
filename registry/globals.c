@@ -18,12 +18,12 @@
 #include "globals.h"
 #include "remote.h"
 #include "ldm.h"
-#include "log.h"
+#include "mylog.h"
 #include "pq.h"
 #include "registry.h"
 
 volatile sig_atomic_t   done = 0;
-const char*             logfname = 0;
+const char*             logfname = "";
 pqueue*                 pq = NULL;
 
 static char             queuePath[PATH_MAX];
@@ -83,7 +83,7 @@ static void setPath(
  *      buf             Buffer of length PATH_MAX into which to put the path.
  *      desc            Pointer to a description of the file.
  * Returns:
- *      NULL            Error.  "log_log()" called.
+ *      NULL            Error.  "mylog_flush()" called.
  *      else            Pointer to the pathname of the file.  Might be absolute
  *                      or relative to the current working directory.
  */
@@ -96,7 +96,7 @@ static const char* getPath(
         char*           var;
 
         if (reg_getString(name, &var)) {
-            LOG_ADD1("Couldn't get pathname of %s", desc);
+            mylog_add("Couldn't get pathname of %s", desc);
             return NULL;
         }
         else {
@@ -147,7 +147,7 @@ void setQueuePath(
 /**
  * Returns the path name of the product-queue.
  *
- * @retval NULL  Error.  "log_start()" called.
+ * @retval NULL  Error.  "mylog_add()" called.
  * @return       Pointer to the pathname of the product-queue. Might be absolute
  *               or relative to the current working directory.
  */
@@ -174,7 +174,7 @@ void setPqactConfigPath(
  * Returns the path name of the default pqact(1) configuration-file.
  *
  * Returns:
- *      NULL            Error.  "log_start()" called.
+ *      NULL            Error.  "mylog_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -202,7 +202,7 @@ void setLdmdConfigPath(
  * Returns the path name of the ldmd(1) configuration-file.
  *
  * Returns:
- *      NULL            Error.  "log_start()" called.
+ *      NULL            Error.  "mylog_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -230,7 +230,7 @@ void setPqactDataDirPath(
  * Returns the path name of the default pqact(1) data-directory.
  *
  * Returns:
- *      NULL            Error.  "log_start()" called.
+ *      NULL            Error.  "mylog_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -258,7 +258,7 @@ void setPqsurfDataDirPath(
  * Returns the path name of the default pqsurf(1) data-directory.
  *
  * Returns:
- *      NULL            Error.  "log_start()" called.
+ *      NULL            Error.  "mylog_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -286,7 +286,7 @@ void setSurfQueuePath(
  * Returns the path name of the default pqsurf(1) output product-queue
  *
  * Returns:
- *      NULL            Error.  "log_start()" called.
+ *      NULL            Error.  "mylog_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -314,7 +314,7 @@ void setPqsurfConfigPath(
  * Returns the path name of the default pqsurf(1) configuration-file.
  *
  * Returns:
- *      NULL            Error.  "log_start()" called.
+ *      NULL            Error.  "mylog_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -368,9 +368,8 @@ const char* getSysConfDirPath(void)
         static const char      subdir[] = "/etc";
 
         if (strlen(ldmHome) + strlen(subdir) >= sizeof(sysConfDirPath)) {
-            LOG_START2("System configuration directory pathname too long: "
+            mylog_error("System configuration directory pathname too long: "
                     "\"%s%s\"", ldmHome, subdir);
-            log_log(LOG_ERR);
             abort();
         }
 
@@ -410,13 +409,13 @@ isAntiDosEnabled(void)
 
         if (status) {
             isEnabled = 1;
-            LOG_ADD1("Using default value: %s", isEnabled ? "TRUE" : "FALSE");
+            mylog_add("Using default value: %s", isEnabled ? "TRUE" : "FALSE");
             if (status == ENOENT) {
-                log_log(LOG_INFO);
+                mylog_flush_info();
                 isSet = 1;
             }
             else {
-                log_log(LOG_ERR);
+                mylog_flush_error();
             }
         }
         else {
@@ -444,13 +443,13 @@ getTimeOffset(void)
 
         if (status) {
             timeOffset = 3600;
-            LOG_ADD1("Using default value: %u seconds", timeOffset);
+            mylog_add("Using default value: %u seconds", timeOffset);
             if (status == ENOENT) {
-                log_log(LOG_INFO);
+                mylog_flush_info();
                 isSet = 1;
             }
             else {
-                log_log(LOG_ERR);
+                mylog_flush_error();
             }
         }
         else {

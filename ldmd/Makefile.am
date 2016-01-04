@@ -28,7 +28,7 @@ ldmd_CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib \
     -I$(top_srcdir)/registry \
     -I$(top_builddir)/registry \
-    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/mylog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
@@ -46,7 +46,7 @@ TAGS_FILES		= \
     ../protocol/*.c ../protocol/*.h \
     ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
-    ../ulog/*.c ../ulog/*.h \
+    ../mylog/*.c ../mylog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 
@@ -115,7 +115,7 @@ valgrind_uldb:	testUpstreamLdmDb
         
 endif
 
-#if WANT_MULTICAST
+if WANT_MULTICAST
 check-local:
 	../pqcreate/pqcreate -vl- -c -s 100M -q up7.pq
 	../pqcreate/pqcreate -vl- -c -s 100M -q down7.pq
@@ -126,15 +126,30 @@ check-local:
 	PATH=../mldm_sender:$$PATH ./ldmd -l up7.log -I 127.0.0.1 \
 		-P 38800 -q up7.pq up7.conf >up7.pid
 	sleep 1
+	ps -o pid,ppid,pgid,args -p `cat up7.pid`
 	rm -f down7.log
 	./ldmd -vl down7.log -q down7.pq down7.conf >down7.pid
 	sleep 1
+	if ! ps -o pid,ppid,pgid,args -p `cat down7.pid`; then \
+	    echo "Downstream LDM-7 isn't running. See \"down7.log\"" 1>&2; \
+            kill `cat up7.pid`; \
+            exit 1; \
+	fi
 	rm -f pq_test_insert.log
 	../pqinsert/pq_test_insert -vl pq_test_insert.log -q up7.pq -f NEXRAD3 \
 		$(srcdir)/nexrad3.txt
-	ps -e -o pid,ppid,pgid,args | grep ldm | grep -v grep
+	if ! ps -o pid,ppid,pgid,args -p `cat up7.pid`; then \
+	    echo "Upstream LDM-7 isn't running. See \"up7.log\"" 1>&2; \
+            kill `cat down7.pid`; \
+            exit 1; \
+	fi
+	if ! ps -o pid,ppid,pgid,args -p `cat down7.pid`; then \
+	    echo "Downstream LDM-7 isn't running. See \"down7.log\"" 1>&2; \
+            kill `cat up7.pid`; \
+            exit 1; \
+	fi
 	sleep 1
 	kill `cat down7.pid` `cat up7.pid`
 	rm down7.pid up7.pid
 	rm up7.pq down7.pq
-#endif
+endif

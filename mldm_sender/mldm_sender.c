@@ -19,7 +19,7 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "mcast.h"
 #include "mcast_info.h"
 #include "OffsetMap.h"
@@ -93,7 +93,7 @@ unblockTermSigs(void)
 static void
 mls_usage(void)
 {
-    log_add("\
+    mylog_add("\
 Usage: %s [options] groupId:groupPort\n\
 Options:\n\
     -f feedExpr       Feedtype expression specifying data to send. Default\n\
@@ -128,7 +128,7 @@ Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
                       address and <groupPort> is port number.",
-            getulogident(), getQueuePath());
+            mylog_get_id(), getQueuePath());
 }
 
 /**
@@ -160,7 +160,7 @@ Operands:\n\
  *                           default timeout factor is used.
  * @retval     0             Success. `*serverIface` or `*ttl` might not have
  *                           been set.
- * @retval     1             Invalid options. `log_start()` called.
+ * @retval     1             Invalid options. `mylog_add()` called.
  */
 static int
 mls_decodeOptions(
@@ -184,14 +184,13 @@ mls_decodeOptions(
         switch (ch) {
         case 'f': {
             if (strfeedtypet(optarg, feed)) {
-                log_start("Invalid feed expression: \"%s\"", optarg);
+                mylog_add("Invalid feed expression: \"%s\"", optarg);
                 return 1;
             }
             break;
         }
         case 'l': {
-            (void)openulog(getulogident(), log_getLogOpts(optarg),
-                    getulogfacility(), optarg);
+            (void)mylog_set_output(optarg);
             break;
         }
         case 'm': {
@@ -204,7 +203,7 @@ mls_decodeOptions(
 
             if (1 != sscanf(optarg, "%5hu %n", &port, &nbytes) ||
                     0 != optarg[nbytes]) {
-                log_start("Couldn't decode TCP-server port-number option-argument "
+                mylog_add("Couldn't decode TCP-server port-number option-argument "
                         "\"%s\"", optarg);
                 return 1;
             }
@@ -224,12 +223,12 @@ mls_decodeOptions(
             int      nbytes;
             if (1 != sscanf(optarg, "%3u %n", &t, &nbytes) ||
                     0 != optarg[nbytes]) {
-                log_start("Couldn't decode time-to-live option-argument \"%s\"",
+                mylog_add("Couldn't decode time-to-live option-argument \"%s\"",
                         optarg);
                 return 1;
             }
             if (t >= 255) {
-                log_start("Invalid time-to-live option-argument \"%s\"",
+                mylog_add("Invalid time-to-live option-argument \"%s\"",
                         optarg);
                 return 1;
             }
@@ -237,27 +236,27 @@ mls_decodeOptions(
             break;
         }
         case 'v': {
-            (void)setulogmask(getulogmask() | LOG_MASK(LOG_INFO));
+            (void)mylog_set_level(MYLOG_LEVEL_INFO);
             break;
         }
         case 'x': {
-            (void)setulogmask(getulogmask() | LOG_MASK(LOG_DEBUG));
+            (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
             break;
         }
         case 'y': {
-            ulog_set_options(LOG_MICROSEC, LOG_MICROSEC);
+            mylog_set_options(LOG_MICROSEC, LOG_MICROSEC);
             break;
         }
         case 'z': {
-            ulog_set_options(MYLOG_ISO_8601, MYLOG_ISO_8601);
+            mylog_set_options(MYLOG_ISO_8601, MYLOG_ISO_8601);
             break;
         }
         case ':': {
-            LOG_START1("Option \"%c\" requires an argument", optopt);
+            mylog_add("Option \"%c\" requires an argument", optopt);
             return 1;
         }
         default: {
-            LOG_ADD1("Unknown option: \"%c\"", optopt);
+            mylog_add("Unknown option: \"%c\"", optopt);
             return 1;
         }
         }
@@ -273,8 +272,8 @@ mls_decodeOptions(
  * @param[in]  port         The port number.
  * @param[out] serviceAddr  The Internet service address to be set.
  * @retval     0            Success. `*serviceAddr` is set.
- * @retval     1            Invalid argument. `log_start()` called.
- * @retval     2            System failure. `log_start()` called.
+ * @retval     1            Invalid argument. `mylog_add()` called.
+ * @retval     2            System failure. `mylog_add()` called.
  */
 static int
 mls_setServiceAddr(
@@ -298,8 +297,8 @@ mls_setServiceAddr(
  * @param[out] groupAddr  Internet service address of the multicast group.
  *                        Caller should free when it's no longer needed.
  * @retval     0          Success. `*groupAddr` is set.
- * @retval     1          Invalid operand. `log_start()` called.
- * @retval     2          System failure. `log_start()` called.
+ * @retval     1          Invalid operand. `mylog_add()` called.
+ * @retval     2          System failure. `mylog_add()` called.
  */
 static int
 mls_decodeGroupAddr(
@@ -312,7 +311,7 @@ mls_decodeGroupAddr(
         status = 2;
     }
     else if (status) {
-        log_add("Invalid multicast group specification");
+        mylog_add("Invalid multicast group specification");
     }
 
     return status;
@@ -327,8 +326,8 @@ mls_decodeGroupAddr(
  *                          Caller should free when it's no longer needed.
  * @retval     0            Success. `*groupAddr`, `*serverAddr`, and `*feed`
  *                          are set.
- * @retval     1            Invalid operands. `log_start()` called.
- * @retval     2            System failure. `log_start()` called.
+ * @retval     1            Invalid operands. `mylog_add()` called.
+ * @retval     2            System failure. `mylog_add()` called.
  */
 static int
 mls_decodeOperands(
@@ -339,7 +338,7 @@ mls_decodeOperands(
     int status;
 
     if (argc < 1) {
-        log_start("Multicast group not specified");
+        mylog_add("Multicast group not specified");
         status = 1;
     }
     else {
@@ -360,8 +359,8 @@ mls_decodeOperands(
  *                          Caller should free when it's no longer needed.
  * @param[out] mcastInfo    Information on multicast group.
  * @retval     0            Success. `*mcastInfo` is set.
- * @retval     1            Invalid argument. `log_start()` called.
- * @retval     2            System failure. `log_start()` called.
+ * @retval     1            Invalid argument. `mylog_add()` called.
+ * @retval     2            System failure. `mylog_add()` called.
  */
 static int
 mls_setMcastGroupInfo(
@@ -408,8 +407,8 @@ mls_setMcastGroupInfo(
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
  * @retval     0             Success. `*mcastInfo` is set. `*ttl` might be set.
- * @retval     1             Invalid command line. `log_start()` called.
- * @retval     2             System failure. `log_start()` called.
+ * @retval     1             Invalid command line. `mylog_add()` called.
+ * @retval     2             System failure. `mylog_add()` called.
  */
 static int
 mls_decodeCommandLine(
@@ -457,7 +456,7 @@ static void
 mls_rotateLoggingLevel(
         const int sig)
 {
-    rollulogpri();
+    mylog_roll_level();
 }
 
 /**
@@ -470,13 +469,13 @@ mls_setDoneFlag(
         const int sig)
 {
     if (sig == SIGTERM) {
-        udebug("SIGTERM");
+        mylog_debug("SIGTERM");
     }
     else if (sig == SIGINT) {
-        udebug("SIGINT");
+        mylog_debug("SIGINT");
     }
     else {
-        udebug("Signal %d", sig);
+        mylog_debug("Signal %d", sig);
     }
     done = 1;
 }
@@ -533,9 +532,9 @@ mls_setSignalHandling(void)
  * @retval     0            Success. `buf` is set.
  * @retval     LDM7_INVAL   The identifier cannot be converted to an IPv4
  *                          address because it's invalid or unknown.
- *                          `log_start()` called.
+ *                          `mylog_add()` called.
  * @retval     LDM7_SYSTEM  The identifier cannot be converted to an IPv4
- *                          address due to a system error. `log_start()` called.
+ *                          address due to a system error. `mylog_add()` called.
  */
 static Ldm7Status
 mls_getIpv4Addr(
@@ -548,7 +547,7 @@ mls_getIpv4Addr(
     if (status == 0)
         return 0;
 
-    LOG_ADD1("Couldn't get address of %s", desc);
+    mylog_add("Couldn't get address of %s", desc);
 
     return (status == EINVAL || status == ENOENT)
             ? LDM7_INVAL
@@ -565,9 +564,9 @@ mls_getIpv4Addr(
  *                         must contain.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
- *                         `log_add()` called. The file wasn't opened or
+ *                         `mylog_add()` called. The file wasn't opened or
  *                         created.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 mls_openProdIndexMap(
@@ -592,17 +591,15 @@ mls_doneWithProduct(
     off_t offset;
     int   status = om_get(offMap, prodIndex, &offset);
     if (status) {
-        LOG_ADD1("Couldn't get file-offset corresponding to product-index %lu",
+        mylog_error("Couldn't get file-offset corresponding to product-index %lu",
                 (unsigned long)prodIndex);
-        log_log(LOG_ERR);
     }
     else {
         status = pq_release(pq, offset);
         if (status) {
-            LOG_ADD2("Couldn't release data-product in product-queue "
+            mylog_error("Couldn't release data-product in product-queue "
                     "corresponding to file-offset %ld, product-index %lu",
                     (long)offset, (unsigned long)prodIndex);
-            log_log(LOG_ERR);
         }
     }
 }
@@ -636,9 +633,9 @@ mls_doneWithProduct(
  * @retval    0              Success. `*sender` is set.
  * @retval    LDM7_INVAL     An Internet identifier couldn't be converted to an
  *                           IPv4 address because it's invalid or unknown.
- *                           `log_start()` called.
- * @retval    LDM7_MCAST     Failure in multicast system. `log_start()` called.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
+ *                           `mylog_add()` called.
+ * @retval    LDM7_MCAST     Failure in multicast system. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
  */
 static Ldm7Status
 mls_init(
@@ -662,7 +659,7 @@ mls_init(
 
     offMap = om_new();
     if (offMap == NULL) {
-        LOG_ADD0("Couldn't create prodIndex-to-offset map");
+        mylog_add("Couldn't create prodIndex-to-offset map");
         status = LDM7_SYSTEM;
         goto return_status;
     }
@@ -672,7 +669,7 @@ mls_init(
      * might be executed on different threads.
      */
     if (pq_open(pqPathname, PQ_READONLY | PQ_THREADSAFE, &pq)) {
-        LOG_START1("Couldn't open product-queue \"%s\"", pqPathname);
+        mylog_add("Couldn't open product-queue \"%s\"", pqPathname);
         status = LDM7_SYSTEM;
         goto free_offMap;
     }
@@ -720,8 +717,8 @@ return_status:
  * Destroys the multicast LDM sender by stopping it and releasing its resources.
  *
  * @retval 0            Success.
- * @retval LDM7_MCAST   Multicast system failure. `log_add()` called.
- * @retval LDM7_SYSTEM  System failure. `log_add()` called.
+ * @retval LDM7_MCAST   Multicast system failure. `mylog_add()` called.
+ * @retval LDM7_SYSTEM  System failure. `mylog_add()` called.
  */
 static inline int       // inlined because small and only called in one place
 mls_destroy(void)
@@ -750,8 +747,8 @@ mls_destroy(void)
  * @param[in] arg          Pointer to the `off_t` product-queue offset for the
  *                         data-product.
  * @retval    0            Success.
- * @retval    LDM7_MCAST   Multicast layer error. `log_start()` called.
- * @retval    LDM7_SYSTEM  System error. `log_start()` called.
+ * @retval    LDM7_MCAST   Multicast layer error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static int
 mls_multicastProduct(
@@ -765,7 +762,7 @@ mls_multicastProduct(
     VcmtpProdIndex iProd = mcastSender_getNextProdIndex(mcastSender);
     int            status = om_put(offMap, iProd, offset);
     if (status) {
-        LOG_ADD2("Couldn't add product %lu, offset %lu to map",
+        mylog_add("Couldn't add product %lu, offset %lu to map",
                 (unsigned long)iProd, (unsigned long)offset);
     }
     else {
@@ -777,7 +774,7 @@ mls_multicastProduct(
         status = pim_put(iProd, (const signaturet*)&info->signature);
         if (status) {
             char buf[LDM_INFO_MAX];
-            LOG_ADD2("Couldn't add to product-index map: prodIndex=%lu, "
+            mylog_add("Couldn't add to product-index map: prodIndex=%lu, "
                     "prodInfo=%s", (unsigned long)iProd,
                     s_prod_info(buf, sizeof(buf), info, 1));
         }
@@ -791,12 +788,11 @@ mls_multicastProduct(
                 status = LDM7_MCAST;
             }
             else {
-                if (ulogIsVerbose()) {
+                if (mylog_is_enabled_info) {
                     char buf[LDM_INFO_MAX];
-                    LOG_ADD2("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                    mylog_info("Sent: prodIndex=%lu, prodInfo=\"%s\"",
                             (unsigned long)iProd,
                             s_prod_info(buf, sizeof(buf), info, 1));
-                    log_log(LOG_INFO);
                 }
             }
         }
@@ -813,8 +809,8 @@ mls_multicastProduct(
  *                          should call `free_prod_class(*prodClass)` when it's
  *                          no longer needed.
  * @retval     0            Success. `*prodClass` is set.
- * @retval     LDM7_INVAL   Invalid parameter. `log_start()` called.
- * @retval     LDM7_SYSTEM  System error. `log_start()` called.
+ * @retval     LDM7_INVAL   Invalid parameter. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static int
 mls_setProdClass(
@@ -844,9 +840,9 @@ mls_setProdClass(
  *
  * @param[in] prodClass    Class of data-products to multicast.
  * @retval    0            Success.
- * @retval    LDM7_MCAST   Multicast layer error. `log_start()` called.
- * @retval    LDM7_PQ      Product-queue error. `log_start()` called.
- * @retval    LDM7_SYSTEM  System error. `log_start()` called.
+ * @retval    LDM7_MCAST   Multicast layer error. `mylog_add()` called.
+ * @retval    LDM7_PQ      Product-queue error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static int
 mls_tryMulticast(
@@ -881,7 +877,7 @@ mls_tryMulticast(
         unblockTermSigs();
     }
     else if (status < 0) {
-        LOG_ERRNUM0(status, "Error in product-queue");
+        mylog_errno(status, "Error in product-queue");
         status = LDM7_PQ;
     }
 
@@ -908,9 +904,9 @@ mls_blockPqSignals(void)
  *
  * @pre                    `mls_init()` was called.
  * @retval    0            Success.
- * @retval    LDM7_PQ      Product-queue error. `log_start()` called.
- * @retval    LDM7_MCAST   Multicast layer error. `log_start()` called.
- * @retval    LDM7_SYSTEM  System error. `log_start()` called.
+ * @retval    LDM7_PQ      Product-queue error. `mylog_add()` called.
+ * @retval    LDM7_MCAST   Multicast layer error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 mls_startMulticasting(void)
@@ -960,10 +956,10 @@ mls_startMulticasting(void)
  *                           default timeout factor is used.
  * @param[in]  pqPathname    Pathname of the product-queue.
  * @retval     0             Success. Termination was requested.
- * @retval     LDM7_INVAL.   Invalid argument. `log_start()` called.
- * @retval     LDM7_MCAST    Multicast sender failure. `log_start()` called.
- * @retval     LDM7_PQ       Product-queue error. `log_start()` called.
- * @retval     LDM7_SYSTEM   System failure. `log_start()` called.
+ * @retval     LDM7_INVAL.   Invalid argument. `mylog_add()` called.
+ * @retval     LDM7_MCAST    Multicast sender failure. `mylog_add()` called.
+ * @retval     LDM7_PQ       Product-queue error. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM   System failure. `mylog_add()` called.
  */
 static Ldm7Status
 mls_execute(
@@ -991,7 +987,7 @@ mls_execute(
     unblockTermSigs();
 
     if (status) {
-        LOG_ADD0("Couldn't initialize multicast LDM sender");
+        mylog_add("Couldn't initialize multicast LDM sender");
     }
     else {
         /*
@@ -1007,7 +1003,7 @@ mls_execute(
          * the process will automatically terminate if something goes wrong.
          */
         char* miStr = mi_format(&mcastInfo);
-        unotice("Starting up: iface=%s, mcastInfo=%s, ttl=%u, pq=\"%s\"",
+        mylog_notice("Starting up: iface=%s, mcastInfo=%s, ttl=%u, pq=\"%s\"",
                 ifaceAddr, miStr, ttl, pqPathname);
         free(miStr);
         status = mls_startMulticasting();
@@ -1040,7 +1036,7 @@ main(
      * Initialize logging. Done first in case something happens that needs to
      * be reported.
      */
-    log_initLogging(basename(argv[0]), LOG_NOTICE, LOG_LDM);
+    mylog_init(argv[0]);
 
     /*
      * Decode the command-line.
@@ -1054,10 +1050,10 @@ main(
             &ifaceAddr, &timeoutFactor);
 
     if (status) {
-        log_add("Couldn't decode command-line");
+        mylog_add("Couldn't decode command-line");
         if (1 == status)
             mls_usage();
-        log_log(LOG_ERR);
+        mylog_flush_error();
     }
     else {
         mls_setSignalHandling();
@@ -1065,7 +1061,7 @@ main(
         status = mls_execute(groupInfo, ttl, ifaceAddr, timeoutFactor,
                 getQueuePath());
         if (status) {
-            log_log(LOG_ERR);
+            mylog_flush_error();
             switch (status) {
                 case LDM7_INVAL: status = 1; break;
                 case LDM7_PQ:    status = 3; break;
@@ -1074,7 +1070,7 @@ main(
             }
         }
 
-        unotice("Terminating");
+        mylog_notice("Terminating");
         mi_free(groupInfo);
     } // `groupInfo` allocated
 

@@ -123,9 +123,9 @@ ft_get_time(prod_class_t* const class)
             }
 
             if (!success) {
-                uwarn("%s:%d: Couldn't encode pathname: \"%s\" \"%s\"",
-                    __FILE__, __LINE__, ldmhome, s_prod_class(NULL, 0, class));
-                uwarn("%s:%d: Feed-time cannot be saved");
+                mylog_warning("Couldn't encode pathname: \"%s\" \"%s\"",
+                    ldmhome, s_prod_class(NULL, 0, class));
+                mylog_warning("%s:%d: Feed-time cannot be saved");
             }
             else {
                 /*
@@ -139,8 +139,7 @@ ft_get_time(prod_class_t* const class)
                 file = fopen(_pathname, "rb");
 
                 if (file == NULL) {
-                    uinfo("%s:%d: Feed-time file \"%s\" doesn't exist",
-                        __FILE__, __LINE__, _pathname);
+                    uinfo("Feed-time file \"%s\" doesn't exist", _pathname);
                 }
                 else {
                     timestampt time;
@@ -150,8 +149,8 @@ ft_get_time(prod_class_t* const class)
                         success = 1;                    /* success */
                     }
                     else {
-                        uwarn("%s:%d: Feed-time file \"%s\" is corrupt; "
-                            "using TS_NONE", __FILE__, __LINE__, _pathname);
+                        mylog_warning("Feed-time file \"%s\" is corrupt; using "
+                                "TS_NONE", _pathname);
                     }
 
                     (void)fclose(file);
@@ -181,13 +180,11 @@ ft_set_time(const timestampt* const time)
         FILE* file = fopen(_pathname, "wb");
 
         if (file == NULL) {
-            serror("%s:%d: Couldn't open feed-time file \"%s\"",
-                __FILE__, __LINE__, _pathname);
+            serror("Couldn't open feed-time file \"%s\"", _pathname);
         }
         else {
             if (fwrite(time, sizeof(time), 1, file) != 1) {
-                serror("%s:%d: Couldn't write feed-time file \"%s\"",
-                    __FILE__, __LINE__, _pathname);
+                serror("Couldn't write feed-time file \"%s\"", _pathname);
             }
 
             (void)fclose(file);

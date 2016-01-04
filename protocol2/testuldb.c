@@ -21,7 +21,7 @@
 #include <CUnit/Basic.h>
 
 #include "uldb.h"
-#include "log.h"
+#include "mylog.h"
 #include "prod_class.h"
 
 static time_t   stop_time;
@@ -35,8 +35,7 @@ static unsigned get_size(void)
     const int   status = uldb_getSize(&count);
 
     if (status) {
-        LOG_ADD0("Couldn't get size of database");
-        log_log(LOG_ERR);
+        mylog_error("Couldn't get size of database");
         CU_ASSERT_EQUAL(status, 0);
     }
 
@@ -50,8 +49,7 @@ static void clear(void)
         uldb_Iter*  iter;
 
         if (status = uldb_getIterator(&iter)) {
-            LOG_ADD0("Couldn't get iterator");
-            log_log(LOG_ERR);
+            mylog_error("Couldn't get iterator");
             CU_ASSERT_TRUE(0);
         }
         else {
@@ -62,7 +60,7 @@ static void clear(void)
                     uldb_iter_nextEntry(iter)) {
                 const pid_t pid = uldb_entry_getPid(entry);
                 if (status = kill(pid, SIGTERM)) {
-                    LOG_ADD1("Couldn't terminate process %d", pid);
+                    mylog_add("Couldn't terminate process %d", pid);
                     CU_ASSERT_TRUE(0);
                 }
                 else {
@@ -91,18 +89,16 @@ static int setup(
 
     if (status) {
         if (status == ULDB_EXIST) {
-            log_clear();
+            mylog_clear();
         }
         else {
-            log_add("Couldn't delete existing database");
-            log_log(LOG_ERR);
+            mylog_error("Couldn't delete existing database");
             return 1;
         }
     }
 
     if (uldb_create(__FILE__, 0)) {
-        log_add("Couldn't create database");
-        log_log(LOG_ERR);
+        mylog_error("Couldn't create database");
         return 1;
     }
 
@@ -123,14 +119,12 @@ static int teardown(
     sleep(1); /** allow child processes to remove themselves from the ULDB */
 
     if (uldb_close()) {
-        log_add("Couldn't close database");
-        log_log(LOG_ERR);
+        mylog_error("Couldn't close database");
         return 1;
     }
 
     if (uldb_delete(__FILE__)) {
-        log_add("Couldn't delete database");
-        log_log(LOG_ERR);
+        mylog_error("Couldn't delete database");
         return 1;
     }
 
@@ -151,7 +145,7 @@ static void test_nil(
 
     status = uldb_addProcess(-1, 6, &sockAddr, &_clss_all, &allowed, 0, 1);
     CU_ASSERT_EQUAL(status, ULDB_ARG);
-    log_clear();
+    mylog_clear();
 }
 
 static struct sockaddr_in new_sock_addr(void)
@@ -180,7 +174,7 @@ static pid_t spawn_upstream(
     pid_t   pid = fork();
 
     if (pid < 0) {
-        LOG_SERROR0("Couldn't fork child process");
+        mylog_syserr("Couldn't fork child process");
         return pid;
     }
 
@@ -205,14 +199,12 @@ static pid_t spawn_upstream(
         status = uldb_addProcess(pid, proto, sockAddr, desired, &allowed,
                 isNotifier, isPrimary);
         if (status) {
-            LOG_ADD1("Couldn't add upstream LDM process %d", pid);
-            log_log(LOG_ERR);
+            mylog_error("Couldn't add upstream LDM process %d", pid);
             status = 1;
         }
         else {
             if (!clss_eq(&_clss_all, allowed)) {
-                LOG_ADD0("Allowed != desired");
-                log_log(LOG_ERR);
+                mylog_error("Allowed != desired");
                 status = 2;
             }
             else {
@@ -223,14 +215,12 @@ static pid_t spawn_upstream(
             free_prod_class(allowed);
 
             if (uldb_remove(pid)) {
-                LOG_ADD1("Couldn't remove upstream LDM process %d", pid);
-                log_log(LOG_ERR);
+                mylog_error("Couldn't remove upstream LDM process %d", pid);
                 status = 3;
             }
 
             if (uldb_close()) {
-                LOG_ADD0("Couldn't close ULDB database");
-                log_log(LOG_ERR);
+                mylog_error("Couldn't close ULDB database");
                 status = 4;
             }
         }
@@ -364,7 +354,7 @@ static void test_add_same_feeder(void)
 
     status = uldb_addProcess(pid, 6, &sockAddr, &_clss_all, &allowed, 0, 1);
     CU_ASSERT_EQUAL(status, ULDB_EXIST);
-    log_clear();
+    mylog_clear();
 
     CU_ASSERT_EQUAL(get_size(), 1);
 }
@@ -403,7 +393,7 @@ static void test_add_same_notifier(void)
 
     status = uldb_addProcess(pid, 6, &sockAddr, &_clss_all, &allowed, 1, 0);
     CU_ASSERT_EQUAL(status, ULDB_EXIST);
-    log_clear();
+    mylog_clear();
 
     CU_ASSERT_EQUAL(get_size(), 1);
 }
@@ -417,12 +407,12 @@ static int set_independent(
     pid_t               pid1 = set_uldb(6, &sockAddr, &_clss_all, isNotifier1, 1);
 
     if (pid1 <= 0) {
-        LOG_ADD1("Couldn't set state to upstream LDM %s",
+        mylog_add("Couldn't set state to upstream LDM %s",
                 isNotifier1 ? "notifier" : "feeder");
     }
     else {
         if (spawn_reg_upstream(6, &sockAddr, &_clss_all, isNotifier2, 1) <= 0) {
-            LOG_ADD1("Couldn't spawn upstream LDM %s",
+            mylog_add("Couldn't spawn upstream LDM %s",
                     isNotifier2 ? "notifier" : "feeder");
         }
         else {
@@ -432,7 +422,7 @@ static int set_independent(
 
             size = get_size();
             if (size != 2) {
-                LOG_ADD1("Size is %u; not 2", size);
+                mylog_add("Size is %u; not 2", size);
             }
             else {
                 success = 1;
@@ -445,16 +435,16 @@ static int set_independent(
 
 static void test_add_dup_notifier(void)
 {
-    log_clear();
+    mylog_clear();
     CU_ASSERT_TRUE(set_independent(1, 1));
-    log_log(LOG_ERR);
+    mylog_flush_error();
 }
 
 static void test_add_feeder_and_notifier(void)
 {
-    log_clear();
+    mylog_clear();
     CU_ASSERT_TRUE(set_independent(0, 1));
-    log_log(LOG_ERR);
+    mylog_flush_error();
 }
 
 /**
@@ -484,8 +474,7 @@ static void test_random(
             pid = spawn_perf_upstream();
 
             if (pid <= 0) {
-                LOG_ADD0("Couldn't spawn performance child");
-                log_log(LOG_ERR);
+                mylog_error("Couldn't spawn performance child");
                 CU_ASSERT_TRUE(0);
             }
             else {
@@ -499,14 +488,12 @@ static void test_random(
             if (errno == ECHILD) {
                 /* No child processes left */
                 if (done) {
-                    LOG_ADD1("Number of spawned processes = %u", numChild);
-                    log_log(LOG_NOTICE);
+                    mylog_notice("Number of spawned processes = %u", numChild);
                     return;
                 }
             }
             else {
-                LOG_SERROR0("waitpid() failure");
-                log_log(LOG_ERR);
+                mylog_syserr("waitpid() failure");
                 CU_ASSERT_TRUE(0);
             }
         }
@@ -539,7 +526,7 @@ int main(
     int exitCode = 1; /* failure */
     const char* progname = basename((char*) argv[0]);
 
-    if (-1 == openulog(progname, LOG_PID, LOG_LOCAL0, "-")) {
+    if (mylog_init(progname)) {
         (void) fprintf(stderr, "Couldn't open logging system\n");
     }
     else {

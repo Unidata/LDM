@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <log.h>
+#include <mylog.h>
 
 
 
@@ -103,7 +103,7 @@ int i;
 
 if(len*2 < 21) 
    {
-   uerror("mode 2 submode 2 short %d\0",len);
+   mylog_error("mode 2 submode 2 short %d\0",len);
    return;
    }
 memcpy(cpilid,buf+11,9);
@@ -161,8 +161,7 @@ while ( ( DONE == 0 ) && ( start < ( nbytes - 4 ) ) ) /* ensure that get_block w
    {
    get_block(buf+start,&FF,&blen,&mode,&submode); 
 
-   if ( ulogIsDebug() )
-      udebug("redbook: get_block start %d FF %d blen %d mode %d submode %d\0",start,FF,blen,mode,submode);
+   mylog_debug("redbook: get_block start %d FF %d blen %d mode %d submode %d\0",start,FF,blen,mode,submode);
 
    if ( ( FF != 1 ) || ( blen <= 0 ) || ( nbytes < (start + blen*2) ) )
       {
@@ -189,7 +188,7 @@ while ( ( DONE == 0 ) && ( start < ( nbytes - 4 ) ) ) /* ensure that get_block w
    if((blen <= 0)||(blen > 128)||(start > 512))
       {
       DONE = 1;
-      uerror("error in redbook header %d %d\0",blen,start);
+      mylog_error("error in redbook header %d %d\0",blen,start);
       }*/
    
   

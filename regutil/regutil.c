@@ -18,7 +18,6 @@
 #include "globals.h"
 #include "registry.h"
 #include "mylog.h"
-#include "log.h"
 #include "ldmprint.h"
 
 typedef enum {
@@ -33,7 +32,7 @@ static StringBuf*       _valuePath;
 
 static void printUsage(const char* progname)
 {
-    log_add(
+    mylog_add(
 "Usages:\n"
 "  Create Registry:     %s [-v|-x] [-d dir] -c\n"
 "  Reset Registry:      %s [-v|-x] [-d dir] -R\n"
@@ -54,7 +53,7 @@ static void printUsage(const char* progname)
 "  path         Absolute path name of registry node or value\n"
 "  valpath      Absolute path name of value\n",
         progname, progname, progname, progname, progname, getRegistryDirPath());
-    log_log(LOG_ERR);
+    mylog_flush_error();
 }
 
 /*
@@ -95,7 +94,7 @@ static int printValueThing(
         NULL);
 
     if (0 != status) {
-        LOG_ADD1("Couldn't form pathname for value \"%s\"", vt_getName(vt));
+        mylog_add("Couldn't form pathname for value \"%s\"", vt_getName(vt));
     }
     else {
         (void)printf("%s : %s\n", sb_string(_valuePath), vt_getValue(vt));
@@ -149,9 +148,9 @@ static int printNodeValues(
  *                      existing.
  * Returns:
  *      0               Success
- *      NO_SUCH_ENTRY   No such value or node.  "log_log()" called iff "quiet
+ *      NO_SUCH_ENTRY   No such value or node.  "mylog_flush()" called iff "quiet
  *                      == 0".
- *      SYSTEM_ERROR    Failure.  "log_log()" called.
+ *      SYSTEM_ERROR    Failure.  "mylog_flush()" called.
  */
 static Status printPath(
     const char*         path,
@@ -161,7 +160,7 @@ static Status printPath(
     RegStatus   regStatus;
     char*       value;
 
-    udebug("%s printing path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
+    mylog_debug("%s printing path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
 
     /*
      * The path name is first assumed to reference an existing value;
@@ -175,7 +174,7 @@ static Status printPath(
     }                                   /* got value-string */
     else {
         if (ENOENT != regStatus) {
-            log_log(LOG_ERR);
+            mylog_flush_error();
             status = SYSTEM_ERROR;
         }
         else {
@@ -184,18 +183,17 @@ static Status printPath(
              */
             RegNode*    node;
 
-            log_clear();
+            mylog_clear();
 
             if (0 != (regStatus = reg_getNode(path, &node, 0))) {
                 if (ENOENT == regStatus) {
                     if (!quiet) {
-                        LOG_START1("No such value or node: \"%s\"", path);
-                        log_log(LOG_ERR);
+                        mylog_error("No such value or node: \"%s\"", path);
                     }
                     status = NO_SUCH_ENTRY;
                 }
                 else {
-                    log_log(LOG_ERR);
+                    mylog_flush_error();
                     status = SYSTEM_ERROR;
                 }
             }                           /* didn't get node */
@@ -203,7 +201,7 @@ static Status printPath(
                 _pathPrefix = path;
 
                 if (0 != reg_visitNodes(node, printNodeValues)) {
-                    log_log(LOG_ERR);
+                    mylog_flush_error();
                     status = SYSTEM_ERROR;
                 }                       /* error visiting nodes */
             }                           /* got node */
@@ -218,17 +216,16 @@ static Status printPath(
  *
  * Returns:
  *      0               Success.
- *      SYSTEM_ERROR    System error.  "log_log()" called.
+ *      SYSTEM_ERROR    System error.  "mylog_flush()" called.
  */
 static Status createRegistry(void)
 {
     RegNode*    rootNode;
 
-    udebug("Creating registry");
+    mylog_debug("Creating registry");
 
     if (0 != reg_getNode("/", &rootNode, 1)) {
-        LOG_ADD0("Couldn't create registry");
-        log_log(LOG_ERR);
+        mylog_error("Couldn't create registry");
         return SYSTEM_ERROR;
     }
 
@@ -240,15 +237,14 @@ static Status createRegistry(void)
  *
  * Returns:
  *      0               Success.
- *      SYSTEM_ERROR    System error.  "log_log()" called.
+ *      SYSTEM_ERROR    System error.  "mylog_flush()" called.
  */
 static Status resetRegistry(void)
 {
-    udebug("Resetting registry");
+    mylog_debug("Resetting registry");
 
     if (0 != reg_reset()) {
-        LOG_ADD0("Couldn't reset registry");
-        log_log(LOG_ERR);
+        mylog_error("Couldn't reset registry");
         return SYSTEM_ERROR;
     }
 
@@ -266,15 +262,15 @@ static Status resetRegistry(void)
  *                      existing.
  * Returns:
  *      0               Success.
- *      NO_SUCH_ENTRY   No such entry in the registry.  "log_log()" called iff
+ *      NO_SUCH_ENTRY   No such entry in the registry.  "mylog_flush()" called iff
  *                      "quiet == 0".
- *      SYSTEM_ERROR    System error.  "log_log()" called.
+ *      SYSTEM_ERROR    System error.  "mylog_flush()" called.
  */
 static Status deletePath(
     const char* const   path,
     const int           quiet)
 {
-    udebug("%s deleting path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
+    mylog_debug("%s deleting path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
 
     switch (reg_deleteValue(path)) {
         case 0:
@@ -288,19 +284,18 @@ static Status deletePath(
                     reg_deleteNode(node);
 
                     if (reg_flushNode(node)) {
-                        log_log(LOG_ERR);
+                        mylog_flush_error();
                         return SYSTEM_ERROR;
                     }
 
                     return 0;
                 case ENOENT:
                     if (!quiet) {
-                        LOG_START1("No such value or node: \"%s\"", path);
-                        log_log(LOG_ERR);
+                        mylog_error("No such value or node: \"%s\"", path);
                     }
                     return NO_SUCH_ENTRY;
                 default:
-                    log_log(LOG_ERR);
+                    mylog_flush_error();
                     return SYSTEM_ERROR;
             }
         }
@@ -308,7 +303,7 @@ static Status deletePath(
         /* no break */
 
         default:
-            log_log(LOG_ERR);
+            mylog_flush_error();
             return SYSTEM_ERROR;
     }
 }
@@ -322,17 +317,17 @@ static Status deletePath(
  *      func            Pointer to the function to be applied to each pathname.
  *                      The function shall return one of
  *                          0   Success.
- *                          NO_SUCH_ENTRY       No such entry.  "log_start()"
+ *                          NO_SUCH_ENTRY       No such entry.  "mylog_add()"
  *                                              called iff "quiet == 0".
- *                          SYSTEM_ERROR        System error.  "log_start()"
+ *                          SYSTEM_ERROR        System error.  "mylog_add()"
  *                                              called.
  *      quiet           Whether or not to be quiet about a pathname not
  *                      existing.
  * Returns:
  *      0               Success.
- *      NO_SUCH_ENTRY   An entry didn't exist.  "log_log()" called.  All
+ *      NO_SUCH_ENTRY   An entry didn't exist.  "mylog_flush()" called.  All
  *                      pathnames were acted upon.
- *      SYSTEM_ERROR    System error.  "log_log()" called.  Processing
+ *      SYSTEM_ERROR    System error.  "mylog_flush()" called.  Processing
  *                      terminated with the pathname that caused the error.
  */
 static Status actUponPathList(
@@ -372,12 +367,10 @@ int main(
     int                 status;
     const char* const   progname = basename(argv[0]);
 
-    (void) openulog(progname, LOG_NOTIME | LOG_IDENT, LOG_LDM, "-");
-    (void) setulogmask(LOG_UPTO(LOG_NOTICE));
+    (void)mylog_init(progname);
 
     if ((status = sb_new(&_valuePath, 80))) {
-        LOG_ADD0("Couldn't initialize utility");
-        log_log(LOG_ERR);
+        mylog_error("Couldn't initialize utility");
         status = SYSTEM_ERROR;
     }
     else {
@@ -414,14 +407,13 @@ int main(
                     boolean = 0;
                 }
                 else {
-                    LOG_START1("Not a boolean value: \"%s\"", optarg);
+                    mylog_add("Not a boolean value: \"%s\"", optarg);
                     status = COMMAND_SYNTAX;
                 }
 
                 if (status == 0) {
                     if (CREATE == usage) {
-                        LOG_START0("Create option ignored");
-                        log_log(LOG_INFO);
+                        mylog_error("Create option ignored");
                     }
                     usage = PUT_BOOL;
                 }
@@ -429,7 +421,7 @@ int main(
             }
             case 'c': {
                 if (UNKNOWN != usage) {
-                    LOG_START0("Can't mix create action with other actions");
+                    mylog_add("Can't mix create action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
@@ -446,13 +438,12 @@ int main(
                 status = sigParse(optarg, &signature);
 
                 if (0 > status || 0 != optarg[status]) {
-                    LOG_START1("Not a signature: \"%s\"", optarg);
+                    mylog_add("Not a signature: \"%s\"", optarg);
                     status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
-                        LOG_START0("Create action ignored");
-                        log_log(LOG_INFO);
+                        mylog_info("Create action ignored");
                     }
                     usage = PUT_SIGNATURE;
                     status = 0;
@@ -465,7 +456,7 @@ int main(
             }
             case 'R': {
                 if (UNKNOWN != usage) {
-                    LOG_START0("Can't mix reset action with other actions");
+                    mylog_add("Can't mix reset action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
@@ -475,7 +466,7 @@ int main(
             }
             case 'r': {
                 if (UNKNOWN != usage) {
-                    LOG_START0("Can't mix remove action with other actions");
+                    mylog_add("Can't mix remove action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
@@ -485,8 +476,7 @@ int main(
             }
             case 's': {
                 if (CREATE == usage) {
-                    LOG_START0("Create action  ignored");
-                    log_log(LOG_INFO);
+                    mylog_info("Create action  ignored");
                 }
                 string = optarg;
                 usage = PUT_STRING;
@@ -496,13 +486,12 @@ int main(
                 status = tsParse(optarg, &timestamp);
 
                 if (0 > status || 0 != optarg[status]) {
-                    LOG_START1("Not a timestamp: \"%s\"", optarg);
+                    mylog_add("Not a timestamp: \"%s\"", optarg);
                     status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
-                        LOG_START0("Create action ignored");
-                        log_log(LOG_INFO);
+                        mylog_info("Create action ignored");
                     }
                     usage = PUT_TIME;
                     status = 0;
@@ -516,40 +505,39 @@ int main(
                 uint = strtoul(optarg, &end, 0);
 
                 if (0 != *end || (0 == uint && 0 != errno)) {
-                    LOG_START1("Not an unsigned integer: \"%s\"", optarg);
+                    mylog_add("Not an unsigned integer: \"%s\"", optarg);
                     status = COMMAND_SYNTAX;
                 }
                 else {
                     if (CREATE == usage) {
-                        LOG_START0("Create option ignored");
-                        log_log(LOG_INFO);
+                        mylog_info("Create option ignored");
                     }
                     usage = PUT_UINT;
                 }
                 break;
             }
             case 'v': {
-                (void) setulogmask(getulogmask() | LOG_MASK(LOG_INFO));
+                (void)mylog_set_level(MYLOG_LEVEL_INFO);
                 break;
             }
             case 'x': {
-                (void) setulogmask(getulogmask() | LOG_MASK(LOG_DEBUG));
+                (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                 break;
             }
             case ':': {
-                LOG_START1("Option \"-%c\" requires an operand", optopt);
+                mylog_add("Option \"-%c\" requires an operand", optopt);
                 status = COMMAND_SYNTAX;
                 break;
             }
             default:
-                LOG_START1("Unknown option: \"%c\"", optopt);
+                mylog_add("Unknown option: \"%c\"", optopt);
                 status = COMMAND_SYNTAX;
                 /* no break */
             }
         }                               /* options loop */
 
         if (status) {
-            log_log(LOG_ERR);
+            mylog_flush_error();
 
             if (COMMAND_SYNTAX == status)
                 printUsage(progname);
@@ -563,8 +551,7 @@ int main(
             switch (usage) {
                 case CREATE: {
                     if (0 < argCount) {
-                        LOG_START0("Too many arguments");
-                        log_log(LOG_ERR);
+                        mylog_error("Too many arguments");
                         printUsage(progname);
                         status = COMMAND_SYNTAX;
                     }
@@ -575,8 +562,7 @@ int main(
                 }
                 case RESET: {
                     if (0 < argCount) {
-                        LOG_START0("Too many arguments");
-                        log_log(LOG_ERR);
+                        mylog_error("Too many arguments");
                         printUsage(progname);
                         status = COMMAND_SYNTAX;
                     }
@@ -587,21 +573,20 @@ int main(
                 }
                 case REMOVE: {
                     if (0 == argCount) {
-                        LOG_START0(
+                        mylog_error(
                             "Removal action requires absolute pathname(s)");
-                        log_log(LOG_ERR);
                         printUsage(progname);
                         status = COMMAND_SYNTAX;
                     }
                     else {
-                        udebug("Removing registry");
+                        mylog_debug("Removing registry");
                         status = actUponPathList(argv + optind, deletePath,
                             quiet);
                     }
                     break;
                 }
                 case PRINT: {
-                    udebug("Printing registry");
+                    mylog_debug("Printing registry");
                     status = (0 == argCount)
                         ? printPath("/", quiet)
                         : actUponPathList(argv + optind, printPath, quiet);
@@ -612,8 +597,7 @@ int main(
                      * Must be some kind of "put".
                      */
                     if (0 == argCount) {
-                        LOG_START0("Put action requires value pathname");
-                        log_log(LOG_ERR);
+                        mylog_error("Put action requires value pathname");
                         printUsage(progname);
                         status = COMMAND_SYNTAX;
                     }
@@ -638,7 +622,7 @@ int main(
                             abort();
                         }
                         if (status) {
-                            log_log(LOG_ERR);
+                            mylog_flush_error();
                             status = SYSTEM_ERROR;
                         }
                     }

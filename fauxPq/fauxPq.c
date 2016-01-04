@@ -15,7 +15,7 @@
 
 #include <config.h>
 
-#include <assert.h>
+#include <mylog.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -323,7 +323,7 @@ int pq_insert(
     pqueue*        pq,
     const product* prod)
 {
-    assert(pq != NULL);
+    mylog_assert(pq != NULL);
 
     return checkOpen(pq);
 }
@@ -657,8 +657,7 @@ int pq_last(
     int status = set_timestamp(tsp);
 
     if (status  != 0) {
-        uerror("%s:%d: Couldn't set time: %s", __FILE__,
-            __LINE__, strerror(errno));
+        mylog_errno(status, "Couldn't set time");
     }
 
     return status;

@@ -9,6 +9,7 @@
  *
  * This module is thread-safe.
  *
+ * @file   mylog_internal.c
  * @author Steven R. Emmerson
  */
 #include <config.h>
@@ -57,28 +58,6 @@ static pthread_once_t   key_creation_control = PTHREAD_ONCE_INIT;
 static pthread_mutex_t  mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * Copies at most `n` bytes from one string to another. Stops if and when a NUL
- * byte is copied. The destination string will be NUL-terminated -- even if it
- * doesn't contain all the bytes from the source string.
- *
- * @param[out] dst  The destination buffer.
- * @param[in]  src  The source string.
- * @param[in]  n    The size of the destination buffer in bytes. If `strlen(src)
- *                  >= n`, then `dst[n-1]` will be the NUL byte.
- */
-static void string_copy(
-        char* restrict       dst,
-        const char* restrict src,
-        size_t               n)
-{
-    if (n) {
-        while (--n && (*dst++ = *src++))
-            ;
-        *dst = 0;
-    }
-}
-
-/**
  * Blocks all signals for the current thread. This is done so that the
  * functions of this module may be called by a signal handler.
  *
@@ -115,7 +94,7 @@ static void restoreSigs(
 static void lock(void)
 {
     int status = pthread_mutex_lock(&mutex);
-    MYLOG_ASSERT(status == 0);
+    mylog_assert(status == 0);
 }
 
 /**
@@ -127,7 +106,7 @@ static void lock(void)
 static void unlock(void)
 {
     int status = pthread_mutex_unlock(&mutex);
-    MYLOG_ASSERT(status == 0);
+    mylog_assert(status == 0);
 }
 
 static void create_key(void)
@@ -135,7 +114,7 @@ static void create_key(void)
     int status = pthread_key_create(&listKey, NULL);
 
     if (status != 0) {
-        mylog_error("pthread_key_create() failure");
+        mylog_internal("pthread_key_create() failure");
         abort();
     }
 }
@@ -156,12 +135,12 @@ static List* list_get(void)
     if (NULL == list) {
         list = (List*)malloc(sizeof(List));
         if (NULL == list) {
-            mylog_error("malloc() failure");
+            mylog_internal("malloc() failure");
         }
         else {
             int status = pthread_setspecific(listKey, list);
             if (status != 0) {
-                mylog_error("pthread_setspecific() failure");
+                mylog_internal("pthread_setspecific() failure");
                 free(list);
                 list = NULL;
             }
@@ -205,14 +184,14 @@ static int msg_new(
     Message* msg = (Message*)malloc(sizeof(Message));
     if (msg == NULL) {
         status = errno;
-        mylog_error("malloc() failure");
+        mylog_internal("malloc() failure");
     }
     else {
         #define LOG_DEFAULT_STRING_SIZE     256
         char*   string = (char*)malloc(LOG_DEFAULT_STRING_SIZE);
         if (NULL == string) {
             status = errno;
-            mylog_error("malloc() failure");
+            mylog_internal("malloc() failure");
             free(msg);
         }
         else {
@@ -292,7 +271,7 @@ static int msg_format(
          * Group Base Specifications Issue 6
          */
         status = errno ? errno : EILSEQ;
-        mylog_error("vsnprintf() failure");
+        mylog_internal("vsnprintf() failure");
     }
     else {
         // The buffer is too small for the message. Expand it.
@@ -301,7 +280,7 @@ static int msg_format(
 
         if (NULL == string) {
             status = errno;
-            mylog_error("malloc() failure");
+            mylog_internal("malloc() failure");
         }
         else {
             free(msg->string);
@@ -313,6 +292,19 @@ static int msg_format(
     }                           /* buffer is too small */
 
     return status;
+}
+
+/**
+ * Returns a pointer to the last component of a pathname.
+ *
+ * @param[in] pathname  The pathname.
+ * @return              Pointer to the last component of the pathname.
+ */
+const char* mylog_basename(
+        const char* const pathname)
+{
+    const char* const cp = strrchr(pathname, '/');
+    return cp ? cp + 1 : pathname;
 }
 
 /**
@@ -331,7 +323,7 @@ static int msg_format(
  * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
  *                      Error message logged.
  */
-int mylog_list_vadd(
+int mylog_vadd_located(
         const mylog_loc_t* const restrict loc,
         const char* const restrict        fmt,
         va_list                           args)
@@ -342,7 +334,7 @@ int mylog_list_vadd(
     int status;
 
     if (NULL == fmt) {
-        mylog_error("NULL argument");
+        mylog_internal("NULL argument");
         status = EINVAL;
     }
     else {
@@ -373,7 +365,7 @@ int mylog_list_vadd(
  * @param[in] ...  Arguments for the formatting string.
  * @retval    0    Success.
  */
-int mylog_list_add(
+int mylog_add_located(
         const mylog_loc_t* const restrict loc,
         const char* const restrict        fmt,
                                           ...)
@@ -382,8 +374,36 @@ int mylog_list_add(
     blockSigs(&sigset);
     va_list     args;
     va_start(args, fmt);
-    int status = mylog_list_vadd(loc, fmt, args);
+    int status = mylog_vadd_located(loc, fmt, args);
     va_end(args);
+    restoreSigs(&sigset);
+    return status;
+}
+
+/**
+ * Adds a system error message and an optional user message.
+ *
+ * @param[in] loc     Location.
+ * @param[in] errnum  System error number (i.e., `errno`).
+ * @param[in] fmt     Formatting string for the message or NULL.
+ * @param[in] ...     Arguments for the formatting string.
+ * @return
+ */
+int mylog_add_errno_located(
+        const mylog_loc_t* const loc,
+        const int                errnum,
+        const char* const        fmt,
+                                 ...)
+{
+    sigset_t sigset;
+    blockSigs(&sigset);
+    int status = mylog_add_located(loc, "%s", strerror(errnum));
+    if (status == 0 && fmt && *fmt) {
+        va_list     args;
+        va_start(args, fmt);
+        status = mylog_vadd_located(loc, fmt, args);
+        va_end(args);
+    }
     restoreSigs(&sigset);
     return status;
 }
@@ -392,11 +412,12 @@ int mylog_list_add(
  * Logs the currently-accumulated log-messages of the current thread and resets
  * the message-list for the current thread.
  *
- * @param[in] level  The level at which to log the messages. One of MYLOG_ERR,
- *                   MYLOG_WARNING, MYLOG_NOTICE, MYLOG_INFO, or MYLOG_DEBUG;
- *                   otherwise, the behavior is undefined.
+ * @param[in] level  The level at which to log the messages. One of MYLOG_LEVEL_ERROR,
+ *                   MYLOG_LEVEL_WARNING, MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_INFO,
+ *                   or MYLOG_LEVEL_DEBUG; otherwise, the behavior is
+ *                   undefined.
  */
-void mylog_list_emit(
+void mylog_flush(
     const mylog_level_t level)
 {
     sigset_t sigset;
@@ -410,7 +431,7 @@ void mylog_list_emit(
         if (mylog_is_level_enabled(level)) {
             for (const Message* msg = list->first; NULL != msg;
                     msg = msg->next) {
-                mylog_emit(level, msg);
+                mylog_write_one(level, msg);
 
                 if (msg == list->last)
                     break;
@@ -422,6 +443,15 @@ void mylog_list_emit(
     }                               /* have messages */
 
     restoreSigs(&sigset);
+}
+
+/**
+ * Clears the message-list of the current thread.
+ */
+void
+mylog_clear(void)
+{
+    list_clear();
 }
 
 /**
@@ -448,7 +478,7 @@ list_fini(
  * when no more logging by the current thread will occur.
  */
 void
-mylog_list_free(void)
+mylog_free(void)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -457,13 +487,42 @@ mylog_list_free(void)
 
     if (list) {
         if (list->last)
-            MYLOG_ERROR("%s() called with pending messages", __func__);
+            mylog_error("%s() called with pending messages", __func__);
         list_fini(list);
         free(list);
         (void)pthread_setspecific(listKey, NULL);
     }
 
     restoreSigs(&sigset);
+}
+
+/**
+ * Allocates memory. Thread safe.
+ *
+ * @param[in] file      Pathname of the file.
+ * @param[in] func      Name of the function.
+ * @param[in] line      Line number in the file.
+ * @param[in  nbytes    Number of bytes to allocate.
+ * @param[in] msg       Message to print on error. Should complete the sentence
+ *                      "Couldn't allocate <n> bytes for ...".
+ * @retval    NULL      Out of memory. Log message added.
+ * @return              Pointer to the allocated memory.
+ */
+void* mylog_malloc_located(
+        const char* const restrict file,
+        const char* const restrict func,
+        const int                  line,
+        const size_t               nbytes,
+        const char* const          msg)
+{
+    void* obj = malloc(nbytes);
+
+    if (obj == NULL) {
+        mylog_loc_t loc = {file, line};
+        mylog_add_located(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
+    }
+
+    return obj;
 }
 
 /******************************************************************************
@@ -476,17 +535,18 @@ mylog_list_free(void)
  *
  * @param[in] loc     Location where the message was generated.
  * @param[in] level   Logging level.
- * @param[in] format  Format of the message.
- * @param[in] args    Format arguments.
+ * @param[in] format  Format of the message or NULL.
+ * @param[in] args    Optional format arguments.
  */
-void mylog_vlog(
+void mylog_vlog_located(
         const mylog_loc_t* const restrict loc,
         const mylog_level_t               level,
         const char* const restrict        format,
         va_list                           args)
 {
-    mylog_list_vadd(loc, format, args);
-    mylog_list_emit(level);
+    if (format && *format)
+        mylog_vadd_located(loc, format, args);
+    mylog_flush(level);
 }
 
 /**
@@ -495,10 +555,10 @@ void mylog_vlog(
  *
  * @param[in] loc     Location where the message was generated.
  * @param[in] level   Logging level.
- * @param[in] format  Format of the message.
- * @param[in] ...     Format arguments.
+ * @param[in] format  Format of the message or NULL.
+ * @param[in] ...     Optional format arguments.
  */
-void mylog_log(
+void mylog_log_located(
         const mylog_loc_t* const restrict loc,
         const mylog_level_t               level,
         const char* const restrict        format,
@@ -506,9 +566,33 @@ void mylog_log(
 {
     va_list args;
     va_start(args, format);
-    mylog_vlog(loc, level, format, args);
+    mylog_vlog_located(loc, level, format, args);
     va_end(args);
 }
+
+/**
+ * Adds a system error message and an optional user's message to the current
+ * thread's message-list, emits the list, and then clears the list.
+ *
+ * @param[in] loc     The location where the error occurred. `loc->file` must
+ *                    persist.
+ * @param[in] errnum  The system error number (i.e., `errno`).
+ * @param[in] fmt     Format of the user's message or NULL.
+ * @param[in] ...     Optional format arguments.
+ */
+void mylog_errno_located(
+        const mylog_loc_t* const   loc,
+        const int                  errnum,
+        const char* const restrict fmt,
+                                   ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    mylog_add_located(loc, "%s", strerror(errnum));
+    mylog_vlog_located(loc, MYLOG_LEVEL_ERROR, fmt, args);
+    va_end(args);
+}
+
 
 #if 0
 /**
@@ -603,7 +687,7 @@ void* log_malloc(
     void* obj = malloc(nbytes);
 
     if (obj == NULL)
-        mylog_error(MYLOG_LEVEL_ERROR, "malloc() failure");
+        mylog_internal(MYLOG_LEVEL_ERROR, "malloc() failure");
 
     return obj;
 }

@@ -166,7 +166,7 @@ surf_split(const prod_info *infop, const void *datap,
                 dbuf = malloc(size);
 
                 if (dbuf == NULL) {
-                    serror("surf_split(): Couldn't allocate %lu-byte buffer",
+                    mylog_syserr("Couldn't allocate %lu-byte buffer",
                         (unsigned long)size);
                     dbufSize = 0;
                     return -1;
@@ -201,7 +201,7 @@ surf_split(const prod_info *infop, const void *datap,
         }
         if( get_wmo_header(buf, &hdr) == NULL)
         {
-                uerror("get_wmo_header: hdr: %s\n", hdr);
+                mylog_error("get_wmo_header: hdr: %s", hdr);
                 return -1;
         } 
         usePil = 1;
@@ -234,8 +234,7 @@ surf_split(const prod_info *infop, const void *datap,
                         if( cbuf[3] != 'X' )
                         {
                                 /* punt */
-                                uerror("surface_split: Unknown SYNOP type: %s\n",
-                                    cbuf);
+                                mylog_error("Unknown SYNOP type: %s", cbuf);
                                 return 0;
                         }
                         if(get_yygg(buf, &time) < 0 ) return -1; /* YYGG */
@@ -268,7 +267,8 @@ surf_split(const prod_info *infop, const void *datap,
                         if( cbuf[3] != 'X' )
                         {
                                 /* punt */
-                                uerror("surface_split: Unknown SHIP type: %s\n", cbuf);
+                                mylog_error("surface_split: Unknown SHIP type: %s",
+                                        cbuf);
                                 return 0;
                         }
                         subtype = BBXX;
@@ -307,9 +307,8 @@ surf_split(const prod_info *infop, const void *datap,
                 }
                 break;  
         default :
-                uerror("surface_split: Can't handle %s", 
-                        sMessage_type(mtype) );
-                uerror("HDR + PIL: %s%s %s", hdr.TT, hdr.AA, hdr.PIL ) ;
+                mylog_error("Can't handle %s", sMessage_type(mtype) );
+                mylog_error("HDR + PIL: %s%s %s", hdr.TT, hdr.AA, hdr.PIL ) ;
                 return -1;
         }
 

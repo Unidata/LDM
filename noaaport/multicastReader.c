@@ -11,7 +11,7 @@
  */
 #include <config.h>
 
-#include "log.h"
+#include "mylog.h"
 #include "fifo.h"
 #include "noaaport_socket.h" /* Eat own dog food */
 #include "reader.h"
@@ -30,8 +30,8 @@
  *                        interfaces.
  * @param[in]  fifo       Pointer to the FIFO into which to write data.
  * @retval     0          Success. `*reader` is set.
- * @retval     1          Usage failure. `log_start()` called.
- * @retval     2          System failure. `log_start()` called.
+ * @retval     1          Usage failure. `mylog_add()` called.
+ * @retval     2          System failure. `mylog_add()` called.
  */
 int mcastReader_new(
     Reader** const      reader,
@@ -62,7 +62,7 @@ int mcastReader_new(
          */
         status = readerNew(socket, fifo, 65507, reader);
         if (status) {
-            LOG_ADD0("Couldn't create new reader object");
+            mylog_add("Couldn't create new reader object");
             (void)close(socket);
         }
     } // `socket` set

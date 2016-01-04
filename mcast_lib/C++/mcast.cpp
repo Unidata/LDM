@@ -9,7 +9,7 @@
  * @author: Steven R. Emmerson
  */
 
-#include "log.h"
+#include "mylog.h"
 #include "mcast.h"
 #include "PerProdSendingNotifier.h"
 
@@ -34,7 +34,7 @@ void log_what(const std::exception& e)
     } catch (const std::exception& nested) {
         log_what(nested);
     }
-    uerror(e.what());
+    mylog_error(e.what());
 }
 
 
@@ -125,8 +125,8 @@ mcastReceiver_init(
  *                               0==missed_prod_func || 0==addr} or the
  *                               multicast group address couldn't be converted
  *                               into a binary IP address.
- * @retval     ENOMEM            Out of memory. \c log_add() called.
- * @retval     -1                Other failure. \c log_add() called.
+ * @retval     ENOMEM            Out of memory. \c mylog_add() called.
+ * @retval     -1                Other failure. \c mylog_add() called.
  */
 int
 mcastReceiver_new(
@@ -138,7 +138,7 @@ mcastReceiver_new(
     const unsigned short  mcastPort,
     const char* const     mcastIface)
 {
-    McastReceiver* rcvr = (McastReceiver*)LOG_MALLOC(sizeof(McastReceiver),
+    McastReceiver* rcvr = (McastReceiver*)mylog_malloc(sizeof(McastReceiver),
             "multicast receiver");
 
     if (0 == rcvr)
@@ -151,12 +151,12 @@ mcastReceiver_new(
         return 0;
     }
     catch (const std::invalid_argument& e) {
-        log_add("%s", e.what());
+        mylog_add("%s", e.what());
         free(rcvr);
         return EINVAL;
     }
     catch (const std::exception& e) {
-        log_add("%s", e.what());
+        mylog_add("%s", e.what());
         free(rcvr);
         return -1;
     }
@@ -183,8 +183,8 @@ mcastReceiver_free(
  *
  * @param[in,out] receiver      The receiver.
  * @retval        0             Success.
- * @retval        EINVAL        @code{receiver == NULL}. \c log_add() called.
- * @retval        -1            Other failure. \c log_add() called.
+ * @retval        EINVAL        @code{receiver == NULL}. \c mylog_add() called.
+ * @retval        -1            Other failure. \c mylog_add() called.
  */
 int
 mcastReceiver_execute(
@@ -193,7 +193,7 @@ mcastReceiver_execute(
     int status;
 
     if (0 == receiver) {
-        LOG_START0("NULL receiver argument");
+        mylog_add("NULL receiver argument");
         status = EINVAL;
     }
     else {
@@ -277,9 +277,9 @@ struct mcast_sender {
  *                              with a data-product so that its resources may be
  *                              released.
  * @retval        0             Success. `*sender` is set.
- * @retval        1             Invalid argument. `log_start()` called.
- * @retval        2             Non-system runtime error. `log_start()` called.
- * @retval        3             System error. `log_start()` called.
+ * @retval        1             Invalid argument. `mylog_add()` called.
+ * @retval        2             Non-system runtime error. `mylog_add()` called.
+ * @retval        3             System error. `mylog_add()` called.
  */
 static int
 mcastSender_init(
@@ -369,9 +369,9 @@ mcastSender_init(
  *                              with a data-product so that its resources may be
  *                              released.
  * @retval        0             Success. `*sender` is set.
- * @retval        1             Invalid argument. `log_start()` called.
- * @retval        2             Non-system runtime error. `log_start()` called.
- * @retval        3             System error. `log_start()` called.
+ * @retval        1             Invalid argument. `mylog_add()` called.
+ * @retval        2             Non-system runtime error. `mylog_add()` called.
+ * @retval        3             System error. `mylog_add()` called.
  */
 static int
 mcastSender_new(
@@ -386,7 +386,7 @@ mcastSender_new(
     const float            timeoutFactor,
     void                  (*doneWithProd)(VcmtpProdIndex iProd))
 {
-    McastSender* const send = (McastSender*)LOG_MALLOC(sizeof(McastSender),
+    McastSender* const send = (McastSender*)mylog_malloc(sizeof(McastSender),
             "multicast sender");
     int                status;
 
@@ -412,8 +412,8 @@ mcastSender_new(
  *                         byte-order.
  * @retval     0           Success. `mcastSender_stop()` was called.
  *                         `*serverPort` is set.
- * @retval     2           Non-system runtime error. `log_start()` called.
- * @retval     3           System error. `log_start()` called.
+ * @retval     2           Non-system runtime error. `mylog_add()` called.
+ * @retval     3           System error. `mylog_add()` called.
  */
 static int
 mcastSender_start(
@@ -422,7 +422,7 @@ mcastSender_start(
 {
     int status;
 
-    udebug("Starting VCMTP sender");
+    mylog_debug("Starting VCMTP sender");
     try {
         sender->vcmtpSender->Start();
 
@@ -453,8 +453,8 @@ mcastSender_start(
  *
  * @param[in] sender  The sender to be stopped.
  * @retval    0       Success.
- * @retval    2       Runtime error. `log_start()` called.
- * @retval    3       System error. `log_start()` called.
+ * @retval    2       Runtime error. `mylog_add()` called.
+ * @retval    3       System error. `mylog_add()` called.
  */
 static int
 mcastSender_stop(
@@ -533,9 +533,9 @@ mcastSender_free(
  *                              released.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
  *                              if the initial port number was 0.
- * @retval        1             Invalid argument. `log_start()` called.
- * @retval        2             Non-system runtime error. `log_start()` called.
- * @retval        3             System error. `log_start()` called.
+ * @retval        1             Invalid argument. `mylog_add()` called.
+ * @retval        2             Non-system runtime error. `mylog_add()` called.
+ * @retval        3             System error. `mylog_add()` called.
  */
 int
 mcastSender_spawn(
@@ -589,7 +589,7 @@ mcastSender_getNextProdIndex(
  * @param[in]  nbytes  Amount of data in bytes.
  * @param[out] iProd   Index of the sent product.
  * @retval     0       Success.
- * @retval     EIO     Failure. `log_start()` called.
+ * @retval     EIO     Failure. `mylog_add()` called.
  */
 int
 mcastSender_send(
@@ -620,8 +620,8 @@ mcastSender_send(
  *
  * @param[in] sender  The multicast sender to be terminated.
  * @retval    0       Success.
- * @retval    2       Non-system runtime error. `log_start()` called.
- * @retval    3       System error. `log_start()` called.
+ * @retval    2       Non-system runtime error. `mylog_add()` called.
+ * @retval    3       System error. `mylog_add()` called.
  */
 int
 mcastSender_terminate(

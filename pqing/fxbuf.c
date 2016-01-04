@@ -9,7 +9,7 @@
 #ifndef MCIDAS_ONLY
 #include "feed.h"
 #endif
-#include "log.h"
+#include "mylog.h"
 #ifndef NULL
 #define NULL 0
 #endif
@@ -66,7 +66,7 @@ initTheXbuf(
 		if(theBuf == NULL)
 		{
 			const int status = errno == 0 ? ENOMEM : errno;
-			serror("new_xbuf");
+			mylog_syserr("new_xbuf");
 			return status;
 		}
 	}
@@ -93,20 +93,20 @@ feedTheXbuf(const int ifd)
 
 	if (remaining <= CHUNKSIZE) {
 		if (theBuf->bufsiz >= maxProductSize) {
-			LOG_ADD1("Data-product would exceed %lu bytes. Resetting input buffer.",
+			mylog_warning(
+			        "Data-product would exceed %lu bytes. Resetting input buffer.",
 				maxProductSize);
-			log_log(LOG_WARNING);
 			justify_xbuf(theBuf, 0);
 		}
 
-		uinfo("Expanding input buffer size to %lu\n",
+		mylog_info("Expanding input buffer size to %lu\n",
 			(unsigned long)(2 * theBuf->bufsiz));
 
 		theBuf = expand_xbuf(theBuf, theBuf->bufsiz);
 
 		if (theBuf == NULL) {
 			status = errno == 0 ? ENOMEM : errno;
-			serror("expand_xbuf");
+			mylog_syserr("expand_xbuf");
 			return status;
 		}
 	}
@@ -114,8 +114,7 @@ feedTheXbuf(const int ifd)
 	status = (*read_feed)(ifd, (char *)theBuf->put, CHUNKSIZE, &nn);
 	if(status != ENOERR)
 	{
-		uerror("feedTheXbuf:read_feed: %d %s",
-			status, strerror(status));
+		mylog_errno(status, "read_feed");
 		return status;
 	}
 	/* else */

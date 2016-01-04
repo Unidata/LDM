@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <assert.h>
+#include <mylog.h>
 #include <netdb.h>
 #include <signal.h>
 #include <stddef.h>
@@ -33,8 +33,8 @@ ldm_clnt_addr(const char* const name, struct sockaddr_in* addr)
     struct sockaddr_in  ad;
     ErrorObj*            error;
 
-    assert(NULL != name);
-    assert(NULL != addr);
+    mylog_assert(NULL != name);
+    mylog_assert(NULL != addr);
 
     if (addrbyhost(name, &ad)) {
         const char* msg;
@@ -92,9 +92,9 @@ ldm_clnt_tcp_create(
     int                       sck;
     ErrorObj*                 error;
 
-    assert(NULL != addr);
-    assert(NULL != client);
-    assert(NULL != sock);
+    mylog_assert(NULL != addr);
+    mylog_assert(NULL != client);
+    mylog_assert(NULL != sock);
 
     ad = *addr;
     sck = RPC_ANYSOCK;
@@ -136,7 +136,7 @@ ldm_clnt_nullproc(CLIENT* const clnt)
     struct timeval timeout;
     ErrorObj*       error;
 
-    assert(NULL != clnt);
+    mylog_assert(NULL != clnt);
 
     timeout.tv_sec = 25;        /* RPC default */
     timeout.tv_usec = 0;
@@ -198,8 +198,8 @@ ldm_clnttcp_create_vers(
     ErrorObj*           error;
     struct sockaddr_in  addr;
 
-    assert(upName != NULL);
-    assert(client != NULL);
+    mylog_assert(upName != NULL);
+    mylog_assert(client != NULL);
 
     /*
      * Get the IP address of the upstream LDM.  This is a potentially

@@ -75,7 +75,7 @@ cleanup(void)
         lp_free(ldmProxy);
         ldmProxy = NULL;
     }
-    (void) closeulog();
+    (void)mylog_fini();
 }
 
 static void
@@ -137,7 +137,7 @@ fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
     for (; exitIfDone(1) && st_size > 0; st_size -= (off_t)nread) {
         nread = read(fd, buf, sizeof(buf));
         if(nread <= 0) {
-            serror("fd_md5: read");
+            mylog_syserr("fd_md5: read");
             return -1;
         } /* else */
         MD5Update(md5ctxp, (unsigned char *)buf, (unsigned int)nread);
@@ -159,8 +159,8 @@ fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
  *
  * Returns:
  *      0                       Success.
- *      SYSTEM_ERROR            O/S failure. "log_start()" called.
- *      CONNECTION_ABORTED      The connection was aborted. "log_start()"
+ *      SYSTEM_ERROR            O/S failure. "mylog_add()" called.
+ *      CONNECTION_ABORTED      The connection was aborted. "mylog_add()"
  *                              called.
  */
 static int
@@ -176,14 +176,14 @@ send_product(
     product.data = mmap(NULL, info->sz, PROT_READ, MAP_PRIVATE, fd, 0);
 
     if (MAP_FAILED == product.data) {
-        LOG_SERROR0("Couldn't memory-map file");
+        mylog_syserr("Couldn't memory-map file");
         status = SYSTEM_ERROR;
     }
     else {
         status = lp_send(proxy, &product);
         if (LP_UNWANTED == status) {
-            unotice("Unwanted product: %s", s_prod_info(NULL, 0, info,
-                        ulogIsDebug()));
+            mylog_notice("Unwanted product: %s", s_prod_info(NULL, 0, info,
+                        mylog_is_enabled_debug));
             status = 0;
         }
         (void)munmap(product.data, info->sz);
@@ -207,8 +207,8 @@ send_product(
  *
  * Returns:
  *      0                       Success.
- *      SYSTEM_ERROR            O/S failure. "log_start()" called.
- *      CONNECTION_ABORTED      The connection was aborted. "log_start()"        *                              called.
+ *      SYSTEM_ERROR            O/S failure. "mylog_add()" called.
+ *      CONNECTION_ABORTED      The connection was aborted. "mylog_add()"        *                              called.
  */
 static int
 ldmsend(
@@ -233,7 +233,7 @@ ldmsend(
     md5ctxp = new_MD5_CTX();
     if (md5ctxp == NULL)
     {
-        LOG_SERROR0("new_md5_CTX failed");
+        mylog_syserr("new_md5_CTX failed");
         return SYSTEM_ERROR;
     }
 
@@ -261,27 +261,27 @@ ldmsend(
              * against what the other guy has said he wants.
              */
             if (!prodInClass(offer, &info)) {
-                uinfo("Not going to send %s", filename);
+                mylog_info("Not going to send %s", filename);
                 continue;       
             }
             if (!prodInClass(want, &info)) {
-                uinfo("%s doesn't want %s", lp_host(ldmProxy), filename);
+                mylog_info("%s doesn't want %s", lp_host(ldmProxy), filename);
                 continue;       
             }
 
             fd = open(filename, O_RDONLY, 0);
             if (fd == -1) {
-                serror("open: %s", filename);
+                mylog_syserr("open: %s", filename);
                 continue;
             }
 
             if (fstat(fd, &statb) == -1) {
-                serror("fstat: %s", filename);
+                mylog_syserr("fstat: %s", filename);
                 (void) close(fd);
                 continue;
             }
 
-            uinfo("Sending %s, %d bytes", filename, statb.st_size);
+            mylog_info("Sending %s, %d bytes", filename, statb.st_size);
             
             /* These members, and seqno, vary over the loop. */
             if (fd_md5(md5ctxp, fd, statb.st_size, info.signature) != 0) {
@@ -289,7 +289,7 @@ ldmsend(
                 continue;
             }
             if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
-                serror("rewind: %s", filename);
+                mylog_syserr("rewind: %s", filename);
                 (void) close(fd);
                 continue;
             }
@@ -303,13 +303,13 @@ ldmsend(
             (void) close(fd);
 
             if (0 != status) {
-                LOG_ADD1("Couldn't send file \"%s\" to LDM", filename);
+                mylog_add("Couldn't send file \"%s\" to LDM", filename);
                 break;
             }
         }                                       /* file loop */
 
         if (lp_flush(ldmProxy))
-            log_add("Couldn't flush connection");
+            mylog_add("Couldn't flush connection");
 
         free_prod_class(want);
     }                                           /* HIYA succeeded */
@@ -322,10 +322,10 @@ ldmsend(
 /*
  * Returns:
  *      0               Success
- *      SYSTEM_ERROR    O/S failure. "log_start()" called.
- *      LP_TIMEDOUT     The RPC call timed-out. "log_start()" called.
- *      LP_RPC_ERROR    RPC error. "log_start()" called.
- *      LP_LDM_ERROR    LDM error. "log_start()" called.
+ *      SYSTEM_ERROR    O/S failure. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
+ *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
+ *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
  */
 int
 main(
@@ -334,15 +334,18 @@ main(
 {
     char            myname[_POSIX_HOST_NAME_MAX];
     char*           progname = av[0];
-    char*           logfname;
     prod_class_t    clss;
     prod_spec       spec;
     int             seq_start = 0;
     int             status;
     ErrorObj*       error;
     unsigned        remotePort = LDM_PORT;
-    
-    logfname = "-";
+
+    /*
+     * Set up error logging
+     */
+    (void)mylog_init(progname);
+
     remote = "localhost";
 
     (void)set_timestamp(&clss.from);
@@ -356,19 +359,17 @@ main(
         extern int optind;
         extern char *optarg;
         int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
 
         while ((ch = getopt(ac, av, "vxl:h:f:P:s:")) != EOF)
             switch (ch) {
             case 'v':
-                logmask |= LOG_MASK(LOG_INFO);
+                (void)mylog_set_level(MYLOG_LEVEL_INFO);
                 break;
             case 'x':
-                logmask |= LOG_MASK(LOG_DEBUG);
+                (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                 break;
             case 'l':
-                logfname = optarg;
+                (void)mylog_set_output(optarg);
                 break;
             case 'h':
                 remote = optarg;
@@ -412,20 +413,14 @@ main(
         ac -= optind; av += optind;
 
         if(ac < 1) usage(progname);
-        (void) setulogmask(logmask);
     }
-
-    /*
-     * Set up error logging
-     */
-    (void) openulog(ubasename(progname), LOG_NOTIME, LOG_LDM, logfname);
 
     /*
      * Register the exit handler
      */
     if(atexit(cleanup) != 0)
     {
-        serror("atexit");
+        mylog_syserr("atexit");
         exit(SYSTEM_ERROR);
     }
 
@@ -445,18 +440,18 @@ main(
     status = lp_new(remote, &ldmProxy);
 
     if (0 != status) {
-        log_log(LOG_ERR);
+        mylog_flush_error();
         status = (LP_SYSTEM == status)
             ? SYSTEM_ERROR
             : CONNECTION_ABORTED;
     }
     else {
-        udebug("version %u", lp_version(ldmProxy));
+        mylog_debug("version %u", lp_version(ldmProxy));
 
         status = ldmsend(ldmProxy, &clss, myname, seq_start, ac, av);
 
         if (0 != status)
-            log_log(LOG_ERR);
+            mylog_flush_error();
 
         lp_free(ldmProxy);
         ldmProxy = NULL;

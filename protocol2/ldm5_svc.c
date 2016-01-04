@@ -40,7 +40,7 @@ ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp)
 
         switch (rqstp->rq_proc) {
         case NULLPROC:
-                udebug("%s:%d: NULLPROC", __FILE__, __LINE__);
+                mylog_debug("NULLPROC");
                 (void)svc_sendreply(transp, (xdrproc_t) xdr_void, (char *)NULL);
                 return;
 
@@ -98,22 +98,21 @@ ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp)
                 return;
          }
 
-        udebug("%s:%d: %s", __FILE__, __LINE__, procName);
+        mylog_debug("%s", procName);
         (void) memset((void *)&argument, 0, sizeof (argument));
         if (!svc_getargs(transp, xdr_argument, (void*) &argument)) {
-                unotice("%s:%d: %s: Couldn't decode RPC-request arguments", 
-                        __FILE__, __LINE__, procName);
+                mylog_notice("%s: Couldn't decode RPC-request arguments",
+                        procName);
                 svcerr_decode(transp);
                 return;
         }
         result = (*local)((char *)&argument, rqstp);
         if (result != NULL && !svc_sendreply(transp, xdr_result, result)) {
-                unotice("%s:%d: %s: Couldn't reply to RPC-request", 
-                        __FILE__, __LINE__, procName);
+                mylog_notice("%s: Couldn't reply to RPC-request", procName);
                 svcerr_systemerr(transp);
         }
         if (!svc_freeargs(transp, xdr_argument, (void*) &argument)) {
-                uerror("unable to free arguments");
+                mylog_error("unable to free arguments");
                 exit(1);
         }
         return;

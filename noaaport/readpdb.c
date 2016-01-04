@@ -7,7 +7,7 @@
 #include <string.h>
 #include <zlib.h>
 #include "nport.h"
-#include "log.h"
+#include "mylog.h"
 
 int npunz (char *zstr, int *lenout, int *ioff);
 
@@ -44,11 +44,11 @@ while((wmocnt<512)&&(buf[wmocnt] != '\n'))
       }
    wmocnt++;
    }
-if(wmocnt > 0) uinfo("%s %d\0",psh->pname, bufsz);
+if(wmocnt > 0) mylog_info("%s %d\0",psh->pname, bufsz);
 
 if ( zflag )
    {
-   udebug ("compressed file %d\0",wmocnt+1);
+   mylog_debug("compressed file %d\0",wmocnt+1);
    if( npunz ( buf + wmocnt + 1, &i, &ioff ) != 0)
       {
       pdb->platform = 0;
@@ -120,7 +120,7 @@ pdb->second = b1;
 b1 = (unsigned char)wbuf[14];
 pdb->sechunds = b1;
 
-udebug("look time %04d%02d%02d %02d%02d %02d.%02d\0",
+mylog_debug("look time %04d%02d%02d %02d%02d %02d.%02d\0",
    pdb->year,pdb->month,pdb->day,pdb->hour,pdb->minute,pdb->second,pdb->sechunds);
 
 b1 = (unsigned char)wbuf[16];
@@ -170,7 +170,7 @@ return(iret);
 
 #define CHECK_ERR(err, msg) { \
     if (err != Z_OK) { \
-        uerror("%s error: %d\0", msg, err); \
+        mylog_error("%s error: %d\0", msg, err); \
     } \
 }
 

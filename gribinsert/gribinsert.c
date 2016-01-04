@@ -81,7 +81,7 @@ cleanup (void)
       (void) pq_close (pq);
       pq = NULL;
     }
-  (void) closeulog ();
+  (void)mylog_fini();
 }
 
 static void
@@ -101,10 +101,10 @@ signal_handler (int sig)
     case SIGTERM:
       exit (1);
     case SIGPIPE:
-      udebug ("SIGPIPE");
+      mylog_debug("SIGPIPE");
       exit (1);
     }
-  udebug ("signal_handler: unhandled signal: %d", sig);
+  mylog_debug("signal_handler: unhandled signal: %d", sig);
 }
 
 
@@ -167,13 +167,16 @@ main (int ac, char *av[])
 {
   const char* pqfname;
   char *progname = av[0];
-  char *logfname;
   int status;
   int seq_start = 0;
   stat_info *sinfo, *shead = NULL, *slast = NULL;
   int statusoff=0;
 
-  logfname = "-";
+  /*
+   * Set up error logging
+   */
+  (void)mylog_init(progname);
+
 
   /*
    * Check the environment for some options.
@@ -190,7 +193,6 @@ main (int ac, char *av[])
     extern int opterr;
     extern char *optarg;
     int ch;
-    int logmask = (LOG_MASK (LOG_ERR) | LOG_MASK (LOG_NOTICE));
 
     opterr = 1;
 
@@ -198,13 +200,13 @@ main (int ac, char *av[])
       switch (ch)
 	{
 	case 'v':
-	  logmask |= LOG_MASK (LOG_INFO);
+          (void)mylog_set_level(MYLOG_LEVEL_INFO);
 	  break;
 	case 'x':
-	  logmask |= LOG_MASK (LOG_DEBUG);
+          (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
 	  break;
 	case 'l':
-	  logfname = optarg;
+	  mylog_set_output(optarg);
 	  break;
 	case 'q':
 	  setQueuePath(optarg);
@@ -235,20 +237,14 @@ main (int ac, char *av[])
 
     if (ac < 1)
       usage (progname);
-    (void) setulogmask (logmask);
   }
-
-  /*
-   * Set up error logging
-   */
-  (void) openulog (ubasename (progname), LOG_NOTIME, LOG_LDM, logfname);
 
   /*
    * register exit handler
    */
   if (atexit (cleanup) != 0)
     {
-      serror ("atexit");
+      mylog_syserr ("atexit");
       exit (1);
     }
 
@@ -267,8 +263,12 @@ main (int ac, char *av[])
    */
   if (status = pq_open (pqfname, PQ_DEFAULT, &pq))
     {
-      uerror ("pq_open: \"%s\" failed: %s",
-	      pqfname, status > 0 ? strerror (status) : "Internal error");
+      if (status > 0) {
+          mylog_syserr("\"%s\" failed", pqfname);
+      }
+      else {
+          mylog_error("\"%s\" failed: %s", pqfname, "Internal error");
+      }
       exit (2);
     }
 
@@ -288,7 +288,7 @@ main (int ac, char *av[])
     md5ctxp = new_MD5_CTX ();
     if (md5ctxp == NULL)
       {
-	serror ("new_md5_CTX failed");
+	mylog_syserr ("new_md5_CTX failed");
 	exit (6);
       }
 
@@ -311,18 +311,18 @@ main (int ac, char *av[])
 	av++;
 	ac--;
 
-	unotice ("open and memorymap %s\0", filename);
+	mylog_notice ("open and memorymap %s\0", filename);
 
 	fd = open (filename, O_RDONLY, 0);
 	if (fd == -1)
 	  {
-	    serror ("open: %s", filename);
+	    mylog_syserr ("open: %s", filename);
 	    continue;
 	  }
 
 	if (fstat (fd, &statb) == -1)
 	  {
-	    serror ("fstat: %s", filename);
+	    mylog_syserr ("fstat: %s", filename);
 	    (void) close (fd);
 	    continue;
 	  }
@@ -331,18 +331,18 @@ main (int ac, char *av[])
 				       PROT_READ, MAP_PRIVATE, fd,
 				       0)) == MAP_FAILED)
 	  {
-	    serror ("prodmmap: allocation failed");
+	    mylog_syserr ("allocation failed");
 	  }
 	else
 	  {
 	    int GRIBDONE = 0;
 	    off_t griboff = 0;
 	    size_t griblen = 0;
-	    unotice ("%ld bytes memory mapped\0", (long) statb.st_size);
+	    mylog_notice ("%ld bytes memory mapped\0", (long) statb.st_size);
 
 	    while (!GRIBDONE)
 	      {
-		udebug ("griboff %d\0", (int) griboff);
+		mylog_debug("griboff %d\0", (int) griboff);
 		/* get offset of next grib product */
 		status =
 		  get_grib_info (prodmmap, statb.st_size, &griboff, &griblen,
@@ -370,7 +370,7 @@ main (int ac, char *av[])
 		    /*if (mm_md5 (md5ctxp, prod.data, prod.info.sz,
 				prod.info.signature) != 0)
 		      {
-			uerror ("could not compute MD5\0");
+			mylog_error ("could not compute MD5\0");
 		      }
 		    else
 		      { */
@@ -384,13 +384,13 @@ main (int ac, char *av[])
 			status = set_timestamp (&prod.info.arrival);
 			if (status != ENOERR)
 			  {
-			    serror ("could not set timestamp");
+			    mylog_syserr ("could not set timestamp");
 			  }
 			/*
 			 * Insert the product
 			 */
 			status = pq_insert (pq, &prod);
-			uinfo ("%d %s\0", status, prod.info.ident);
+			mylog_info ("%d %s\0", status, prod.info.ident);
                 
 			if ( status == ENOERR )
 			   insert_sum += prod.info.sz;
@@ -428,17 +428,17 @@ main (int ac, char *av[])
 		    GRIBDONE = 1;
 		    break;
 		  case -2:
-		    uerror ("truncated grib file at: %d", prod.info.seqno);
+		    mylog_error ("truncated grib file at: %d", prod.info.seqno);
 		    GRIBDONE = 1;
 		    break;
 		  case -7:
-		    uerror ("End sequence 7777 not found where expected: %d",
+		    mylog_error ("End sequence 7777 not found where expected: %d",
 			    prod.info.seqno);
 		    griboff += griblen;
-		    uerror("resume looking at %d\0",griboff);
+		    mylog_error("resume looking at %d\0",griboff);
 		    break;
 		  default:
-		    uerror ("unknown error %d\0", status);
+		    mylog_error ("unknown error %d\0", status);
 		    griboff += griblen;
 		    if (griboff >= statb.st_size)
 		      GRIBDONE = 1;
@@ -450,7 +450,7 @@ main (int ac, char *av[])
 	      }
 
 
-	    unotice ("munmap\0");
+	    mylog_notice ("munmap\0");
 	    (void) munmap ((void *)prodmmap, statb.st_size);
 
 	    if ( stat_size != 0 )
@@ -459,13 +459,14 @@ main (int ac, char *av[])
 	     */
 	      {
 		char *statusmess;
-		unotice("stats_size %ld %ld\0",stat_size,sinfo_cnt);
+		mylog_notice("stats_size %ld %ld\0",stat_size,sinfo_cnt);
 
 		statusmess = (char *)malloc((30 * sinfo_cnt) + stat_size +
                         strlen(filename) + 128);
                 if(statusmess == NULL) 
 		  {
-              	    uerror("could not malloc status message %ld\0",stat_size);
+              	    mylog_syserr("could not malloc status message %ld\0",
+              	            stat_size);
            	  }
            	else
 		  {
@@ -503,8 +504,9 @@ main (int ac, char *av[])
                     status = mm_md5(md5ctxp, prod.data, prod.info.sz, prod.info.signature);
                     status = set_timestamp(&prod.info.arrival);
                     status = pq_insert(pq, &prod);
-                    if(ulogIsVerbose())
-                        uinfo("%s", s_prod_info(NULL, 0, &prod.info, ulogIsDebug())) ;
+                    if(mylog_is_enabled_info)
+                        mylog_info("%s", s_prod_info(NULL, 0, &prod.info,
+                                mylog_is_enabled_debug)) ;
                     free(statusmess);
 		    prod.info.seqno++;
 		  }

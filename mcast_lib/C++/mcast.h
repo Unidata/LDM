@@ -85,9 +85,9 @@ void mcastReceiver_stop(
  *                              released.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
  *                              if the initial port number was 0.
- * @retval        1             Invalid argument. `log_start()` called.
- * @retval        2             Non-system runtime error. `log_start()` called.
- * @retval        3             System error. `log_start()` called.
+ * @retval        1             Invalid argument. `mylog_add()` called.
+ * @retval        2             Non-system runtime error. `mylog_add()` called.
+ * @retval        3             System error. `mylog_add()` called.
  */
 int
 mcastSender_spawn(
@@ -119,7 +119,7 @@ mcastSender_getNextProdIndex(
  * @param[in]  nbytes  Amount of data in bytes.
  * @param[out] iProd   Index of the sent product.
  * @retval     0       Success.
- * @retval     EIO     Failure. `log_start()` called.
+ * @retval     EIO     Failure. `mylog_add()` called.
  */
 int
 mcastSender_send(
@@ -135,8 +135,8 @@ mcastSender_send(
  *
  * @param[in] sender  The multicast sender to be terminated.
  * @retval    0       Success.
- * @retval    2       Runtime error. `log_start()` called.
- * @retval    3       System error. `log_start()` called.
+ * @retval    2       Runtime error. `mylog_add()` called.
+ * @retval    3       System error. `mylog_add()` called.
  */
 int
 mcastSender_terminate(

@@ -17,7 +17,7 @@
 #include "ldmprint.h"
 #include "mcast.h"
 #include "mldm_receiver.h"
-#include "log.h"
+#include "mylog.h"
 
 #include <stdlib.h>
 #include <stdexcept>
@@ -49,7 +49,7 @@ int ppn_new(
         status = 0;
     }
     catch (...) {
-        LOG_SERROR0("Couldn't allocate per-product-notifier");
+        mylog_syserr("Couldn't allocate per-product-notifier");
         status = ENOMEM;
     }
     return status;
@@ -110,7 +110,7 @@ void PerProdNotifier::notify_of_bop(
     char sigStr[2*sizeof(signaturet)+1];
     (void)sprint_signaturet(sigStr, sizeof(sigStr),
             (const unsigned char*)metadata);
-    udebug("PerProdNotifier::notify_of_bop(): Entered: "
+    mylog_debug("PerProdNotifier::notify_of_bop(): Entered: "
             "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
                 (unsigned long)iProd, prodSize, metaSize, sigStr);
 
@@ -118,7 +118,7 @@ void PerProdNotifier::notify_of_bop(
         throw std::runtime_error(
                 "Error notifying receiving application about beginning-of-product");
     if (*prodStart == nullptr) {
-        uinfo("PerProdNotifier::notify_of_bop(): Duplicate product: "
+        mylog_info("PerProdNotifier::notify_of_bop(): Duplicate product: "
                 "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
                 (unsigned long)iProd, prodSize, metaSize, sigStr);
     }
@@ -126,7 +126,7 @@ void PerProdNotifier::notify_of_bop(
         std::unique_lock<std::mutex> lock(mutex);
         if (prodInfos.count(iProd)) {
             // Exists
-            uinfo("PerProdNotifier::notify_of_bop(): Duplicate BOP: "
+            mylog_info("PerProdNotifier::notify_of_bop(): Duplicate BOP: "
                     "prodIndex=%lu, prodSize=%u",
                     (unsigned long)iProd, prodSize);
         }
@@ -139,7 +139,7 @@ void PerProdNotifier::notify_of_bop(
         }
     }
 
-    log_free(); // to prevent memory leak by VCMTP thread
+    mylog_free(); // to prevent memory leak by VCMTP thread
 }
 
 /**
@@ -150,7 +150,7 @@ void PerProdNotifier::notify_of_bop(
 void PerProdNotifier::notify_of_eop(
         const VcmtpProdIndex prodIndex)
 {
-    udebug("PerProdNotifier::notify_of_eop(): Entered: prodIndex=%lu",
+    mylog_debug("PerProdNotifier::notify_of_eop(): Entered: prodIndex=%lu",
             (unsigned long)prodIndex);
 
     std::unique_lock<std::mutex> lock(mutex);
@@ -166,7 +166,7 @@ void PerProdNotifier::notify_of_eop(
                 "Unknown product-index: ") + std::to_string(prodIndex));
     }
 
-    log_free(); // to prevent memory leak by VCMTP thread
+    mylog_free(); // to prevent memory leak by VCMTP thread
 }
 
 /**
@@ -178,7 +178,7 @@ void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex prodIndex)
     std::unique_lock<std::mutex> lock(mutex);
     void* const                  prodStart = prodInfos[prodIndex].start;
 
-    uinfo("PerProdNotifier::notify_of_missed_prod(): Missed product: prodIndex="
+    mylog_info("PerProdNotifier::notify_of_missed_prod(): Missed product: prodIndex="
             "%lu, prodStart=%p", (unsigned long)prodIndex, prodStart);
 
     missed_prod_func(mlr, prodIndex,
@@ -186,5 +186,5 @@ void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex prodIndex)
 
     (void)prodInfos.erase(prodIndex);
 
-    log_free(); // to prevent memory leak by VCMTP thread
+    mylog_free(); // to prevent memory leak by VCMTP thread
 }

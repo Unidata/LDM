@@ -10,7 +10,7 @@ PQ_SUBDIR	= @PQ_SUBDIR@
 EXTRA_DIST	= pqcopy.1
 bin_PROGRAMS	= pqcopy
 AM_CPPFLAGS	= \
-    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/mylog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
@@ -25,6 +25,6 @@ TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \
     ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
-    ../ulog/*.c ../ulog/*.h \
+    ../mylog/*.c ../mylog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h

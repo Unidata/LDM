@@ -68,7 +68,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
      * things right.
      */
     if (iver != 255 && strcmp(cmsg->origcntr, "wmo")) {
-        unotice("Setting Master Table Version to 255 for non-WMO originating center: "
+        mylog_notice("Setting Master Table Version to 255 for non-WMO originating center: "
                     "iver=%d, disc=%d, cat=%d, id=%d, pdtn=%d, "
                     "center=%.*s, lclver=%d",
                 iver, disc, cat, id, pdtn,
@@ -95,7 +95,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
                 &ier);
     }
     if (ier != 0) {
-        unotice("Couldn't get parameter table: iver=%d, disc=%d, cat=%d, "
+        mylog_notice("Couldn't get parameter table: iver=%d, disc=%d, cat=%d, "
                 "id=%d, pdtn=%d, center=%.*s, lclver=%d", iver, disc, cat, id,
                 pdtn, (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver);
         *iret = 1;
@@ -107,7 +107,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     gb2_skvar(disc, cat, id, pdtn, g2vartbl, &g2var, &ier);
 
     if (ier != 0) {
-        unotice("Couldn't get parameter info: iver=%d, disc=%d, cat=%d, id=%d, "
+        mylog_notice("Couldn't get parameter info: iver=%d, disc=%d, cat=%d, id=%d, "
                 "pdtn=%d, center=%.*s, lclver=%d, file=%s", iver, disc, cat, id,
                 pdtn, (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver,
                 filename);

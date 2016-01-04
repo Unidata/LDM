@@ -12,7 +12,7 @@
 
 #include "config.h"
 
-#include "log.h"
+#include "mylog.h"
 
 #include <errno.h>
 #include <sys/mman.h>
@@ -28,15 +28,15 @@
  * Locks a process in physical memory.
  *
  * @retval 0        Success.
- * @retval ENOTSUP  The operation isn't supported. `log_start()` called.
+ * @retval ENOTSUP  The operation isn't supported. `mylog_add()` called.
  * @retval EAGAIN   Some or all of the memory identified by the operation could
- *                  not be locked when the call was made. `log_start()` called.
+ *                  not be locked when the call was made. `mylog_add()` called.
  * @retval ENOMEM   Locking all of the pages currently mapped into the address
  *                  space of the process would exceed an implementation-defined
  *                  limit on the amount of memory that the process may lock.
- *                  `log_start()` called.
+ *                  `mylog_add()` called.
  * @retval EPERM    The calling process does not have the appropriate privilege
- *                  to perform the requested operation. `log_start()` called.
+ *                  to perform the requested operation. `mylog_add()` called.
  */
 int lockProcessInMemory(void)
 {
@@ -56,7 +56,7 @@ int lockProcessInMemory(void)
                 status = mlockall(MCL_CURRENT|MCL_FUTURE);
 
                 if (status) {
-                    MYLOG_ERRNO();
+                    mylog_add_syserr();
                     status = errno;
                 }
         #if UNKNOWN

@@ -101,8 +101,8 @@ static void myStartElement(
             currState = IN_ROOT_ELT;
         }
         else {
-            uerror("%s:%d: Root element \"%s\" is not \"%s\"", __FILE__,
-                __LINE__, name, rootEltName);
+            mylog_error("Root element \"%s\" is not \"%s\"",  name,
+                    rootEltName);
             currState = ERROR;
         }
         break;
@@ -122,8 +122,8 @@ static void myStartElement(
                     if (strfeedtypet((const char*)nameValuePair[1], &feedType)
                         != FEEDTYPE_OK) {
 
-                        uerror("%s:%d: Invalid feed type: \"%s\"",
-                            __FILE__, __LINE__, nameValuePair[1]);
+                        mylog_error("Invalid feed type: \"%s\"",
+                                nameValuePair[1]);
                         currState = ERROR;
                     }
                 }
@@ -131,9 +131,8 @@ static void myStartElement(
                     prodId = strdup((char*)nameValuePair[1]);
 
                     if (prodId == NULL) {
-                        uerror(
-                            "%s:%d: Couldn't duplicate product ID: \"%s\"",
-                            __FILE__, __LINE__, nameValuePair[1]);
+                        mylog_syserr( "Couldn't duplicate product ID: \"%s\"",
+                                nameValuePair[1]);
                         currState = ERROR;
                     }
                 }
@@ -141,8 +140,8 @@ static void myStartElement(
                     if (sscanf((const char*)nameValuePair[1], "%u", &prodSize)
                         != 1) {
 
-                        uerror("%s:%d: Invalid product size: \"%s\"",
-                            __FILE__, __LINE__, nameValuePair[1]);
+                        mylog_syserr("Invalid product size: \"%s\"",
+                                nameValuePair[1]);
                         currState = ERROR;
                     }
                 }
@@ -150,14 +149,13 @@ static void myStartElement(
                     if (sscanf((const char*)nameValuePair[1], "%u", &delay)
                         != 1) {
 
-                        uerror("%s:%d: Invalid delay time: \"%s\"",
-                            __FILE__, __LINE__, nameValuePair[1]);
+                        mylog_syserr("Invalid delay time: \"%s\"",
+                                nameValuePair[1]);
                         currState = ERROR;
                     }
                 }
                 else {
-                    uerror("%s:%d: Invalid attribute: \"%s\"",
-                        __FILE__, __LINE__, attName);
+                    mylog_error("Invalid attribute: \"%s\"", attName);
                     currState = ERROR;
                 }
             }
@@ -248,7 +246,7 @@ static void xmlWarning(
     va_list     args;
 
     va_start(args, msg);
-    vulog(LOG_WARNING, msg, args);
+    mylog_vlog(MYLOG_LEVEL_WARNING, msg, args);
     va_end(args);
 }
 
@@ -269,7 +267,7 @@ static void xmlError(
     va_list     args;
 
     va_start(args, msg);
-    vulog(LOG_ERR, msg, args);
+    mylog_vlog(MYLOG_LEVEL_ERROR, msg, args);
     va_end(args);
 
     currState = ERROR;
@@ -332,7 +330,7 @@ int cfOpen(const char* pathname)
     int              status;
 
     if (pathname == NULL) {
-        uerror("%s:%d: NULL pathname", __FILE__, __LINE__);
+        mylog_error("NULL pathname");
         status = EINVAL;
     }
     else {
@@ -363,8 +361,8 @@ int cfOpen(const char* pathname)
             prodData = realloc(prodData, prodSize);
 
             if (prodData == NULL) {
-                uerror("%s:%d: Couldn't allocate %u bytes for product data",
-                    __FILE__, __LINE__, prodSize);
+                mylog_syserr("Couldn't allocate %u bytes for product data",
+                        prodSize);
                 status = ENOMEM;
             }
             else {
@@ -378,8 +376,8 @@ int cfOpen(const char* pathname)
                 prodXdrBuf = realloc(prodXdrBuf, prodXdrLen);
 
                 if (prodXdrBuf == NULL) {
-                    uerror("%s:%d: Couldn't allocate %lu bytes for product "
-                        "XDR buffer", __FILE__, __LINE__, prodXdrLen);
+                    mylog_syserr("Couldn't allocate %lu bytes for product XDR "
+                            "buffer", prodXdrLen);
                     status = errno;
                 }
                 else {
@@ -430,7 +428,7 @@ int cfGetProduct(
     int               status;
 
     if (currState != READY) {
-        uerror("%s:%d: Configuration file not ready", __FILE__, __LINE__);
+        mylog_error("Configuration file not ready");
 
         status = ENOENT;
     }
@@ -442,8 +440,7 @@ int cfGetProduct(
         status = set_timestamp(&info->arrival);
 
         if (status  != 0) {
-            uerror("%s:%d: Couldn't set product arrival time: %s", __FILE__,
-                __LINE__, strerror(errno));
+            mylog_errno(status, "Couldn't set product arrival time");
         }
         else {
             XDR      xdr;
@@ -463,8 +460,7 @@ int cfGetProduct(
                 status = ENOERR;
             }
             else {
-                uerror("%s:%d: Couldn't XDR_ENCODE product",
-                    __FILE__, __LINE__);
+                mylog_error("Couldn't XDR_ENCODE product");
                 status = EIO;
             }
 

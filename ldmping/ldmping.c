@@ -42,7 +42,7 @@ int timeout ;
 static void
 print_label()
 {
-        uinfo("%10s %10s %4s   %-21s %s\n",
+        mylog_info("%10s %10s %4s   %-21s %s\n",
                         "State",
                         "Elapsed",
                         "Port",
@@ -58,7 +58,7 @@ print_hstat(hcp)
 h_clnt *hcp ;
 {
         if(hcp->state == RESPONDING)
-                uinfo("%10s %3ld.%06ld %4d   %-11s  %s\n",
+                mylog_info("%10s %3ld.%06ld %4d   %-11s  %s\n",
                         s_remote_state(hcp->state),
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec,
                         hcp->port,
@@ -66,7 +66,7 @@ h_clnt *hcp ;
                         s_hclnt_sperrno(hcp)
                         ) ;
         else
-                uerror("%10s %3ld.%06ld %4d   %-11s  %s\n",
+                mylog_error("%10s %3ld.%06ld %4d   %-11s  %s\n",
                         s_remote_state(hcp->state),
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec,
                         hcp->port,
@@ -112,26 +112,26 @@ int ac ;
 char *av[] ;
 {
         int verbose = 0 ;
-        char *logfname = 0 ;
         int interval = 0 ;
         int timeo = DEFAULT_TIMEO ; 
-        const char *logident = ubasename(av[0]) ;
         int logoptions = (LOG_CONS|LOG_PID) ;
         int nremotes = 0 ;
 #define MAX_REMOTES 14 /* 2 * MAX_REMOTES + 3 < max_open_file_descriptors */
         h_clnt stats[MAX_REMOTES + 1] ;
         h_clnt *sp ;
         unsigned        port = 0;
-        unsigned        logmask = LOG_UPTO(LOG_NOTICE);
+        unsigned        logmask = LOG_UPTO(MYLOG_LEVEL_NOTICE);
+
+        /*
+         * initialize logger
+         */
+        (void)mylog_init(av[0]);
 
         if(isatty(fileno(stderr)))
         {
                 /* set interactive defaults */
                 verbose = !0 ;
-                logfname = "-" ;
                 interval = DEFAULT_INTERVAL ;
-                logident = "" ;
-                logoptions = 0 ;
         }
 
         {
@@ -145,16 +145,17 @@ char *av[] ;
         while ((ch = getopt(ac, av, "vxl:t:h:P:qi:")) != EOF)
                 switch (ch) {
                 case 'v':
+                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
                         verbose = !0 ;
                         break;
                 case 'q':
                         verbose = 0 ;
                         break ;
                 case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG) ;
+                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        logfname = optarg ;
+                        (void)mylog_set_output(optarg);
                         break;
                 case 'h':
                         if(nremotes > MAX_REMOTES)
@@ -223,17 +224,7 @@ char *av[] ;
                         LDMPROG, FIVE, IPPROTO_TCP) ;
         }
         stats[nremotes].state = H_NONE ; /* terminator */
-
-        if(verbose)
-                logmask |= LOG_MASK(LOG_INFO) ;
-        (void) setulogmask(logmask) ;
-
         }
-
-        /*
-         * initialize logger
-         */
-        (void)openulog(logident, logoptions, LOG_LDM, logfname) ;
 
         /*
          * set up signal handlers

@@ -63,11 +63,11 @@ static ldm_replyt reply = { OK };
 static void
 cleanup(void)
 {
-        unotice("exiting");
+        mylog_notice("exiting");
 
         /* TODO: sign off */
 
-        (void) closeulog();
+        (void)mylog_fini();
 }
 
 
@@ -96,7 +96,7 @@ signal_handler(int sig)
         case SIGUSR1 :
                 return;
         case SIGUSR2 :
-                toggleulogpri(LOG_INFO);
+                mylog_roll_level();
                 return;
         case SIGPIPE :
                 return;
@@ -210,7 +210,8 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 /* 
                  * your code here, example just logs it 
                  */
-                uinfo("%s", s_prod_info(NULL, 0, &notice, ulogIsDebug()));
+                mylog_info("%s", s_prod_info(NULL, 0, &notice,
+                        mylog_is_enabled_debug));
 
 
                 if(!svc_sendreply(transp, (xdrproc_t)xdr_ldm_replyt,
@@ -222,7 +223,7 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 (void)exitIfDone(0);
 
                 if(!svc_freeargs(transp, xdr_prod_info, (caddr_t) &notice)) {
-                        uerror("unable to free arguments");
+                        mylog_error("unable to free arguments");
                         exit(1);
                 }
                 /* no break */
@@ -262,8 +263,6 @@ int main(int ac, char *av[])
         extern int opterr;
         extern char *optarg;
         int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
         int fterr;
 
         opterr = 1;
@@ -271,13 +270,13 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "vxyzl:f:o:t:h:P:p:T:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        logmask |= LOG_MASK(LOG_INFO);
+                        mylog_set_level(MYLOG_LEVEL_INFO);
                         break;
                 case 'x':
-                        logmask |= LOG_MASK(LOG_DEBUG);
+                        mylog_set_level(MYLOG_LEVEL_DEBUG);
                         break;
                 case 'y':
-                        logOpts |= LOG_MICROSEC;
+                        logOpts |= MYLOG_MICROSEC;
                         break;
                 case 'z':
                         logOpts |= MYLOG_ISO_8601;
@@ -364,8 +363,6 @@ int main(int ac, char *av[])
                 usage(av[0]);
         }
 
-        (void) setulogmask(logmask);
-
         if(TotalTimeo < timeo)
         {
                 fprintf(stderr, "TotalTimeo %u < timeo %u\n",
@@ -378,8 +375,8 @@ int main(int ac, char *av[])
         /*
          * initialize logger
          */
-        (void) openulog(ubasename(av[0]), logOpts, LOG_LDM, logfname);
-        unotice("Starting Up: %s: %s",
+        (void)mylog_init(av[0]);
+        mylog_notice("Starting Up: %s: %s",
                         remote,
                         s_prod_class(NULL, 0, &clss));
 
@@ -388,7 +385,7 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                serror("atexit");
+                mylog_syserr("atexit");
                 exit(1);
         }
 

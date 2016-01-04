@@ -24,7 +24,7 @@ EXTRA_DIST              = \
     regutil.txt
 TAGS_FILES              = \
     *.c ../*.h \
-    ../ulog/*.c ../ulog/*.h \
+    ../mylog/*.c ../mylog/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
@@ -34,7 +34,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/registry \
     -I$(top_builddir)/registry \
-    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/mylog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \

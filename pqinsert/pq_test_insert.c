@@ -14,7 +14,7 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "pq.h"
 #include "remote.h"
 
@@ -62,12 +62,12 @@ static bool pti_decodeCommandLine(
         case 'f':
             ft = atofeedtypet(optarg);
             if (ft == NONE) {
-                LOG_ADD1("Unknown feedtype \"%s\"", optarg);
+                mylog_add("Unknown feedtype \"%s\"", optarg);
                 success = false;
             }
             break;
         case 'l':
-            openulog(progname, ulog_get_options(), LOG_LDM, optarg);
+            (void)mylog_set_output(optarg);
             break;
         case 'q':
             pqPathname = optarg;
@@ -75,23 +75,23 @@ static bool pti_decodeCommandLine(
         case 's':
             seq = atoi(optarg);
             if (seq < 0) {
-                LOG_ADD1("Invalid beginning sequence-number \"%s\"", optarg);
+                mylog_add("Invalid beginning sequence-number \"%s\"", optarg);
                 success = false;
             }
             break;
         case 'v':
-            (void)setulogmask(getulogmask() | LOG_MASK(LOG_INFO));
+            (void)mylog_set_level(MYLOG_LEVEL_INFO);
             break;
         case 'x':
-            (void)setulogmask(getulogmask() | LOG_MASK(LOG_DEBUG));
+            (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
             break;
         case ':': {
-            LOG_ADD1("Option \"-%c\" requires an operand", optopt);
+            mylog_add("Option \"-%c\" requires an operand", optopt);
             success = false;
             break;
         }
         default:
-            LOG_ADD1("Unknown option: \"%c\"", optopt);
+            mylog_add("Unknown option: \"%c\"", optopt);
             success = false;
         }
     }
@@ -101,7 +101,7 @@ static bool pti_decodeCommandLine(
         av += optind ;
 
         if(ac != 1) {
-            LOG_ADD0("Invalid number of operands");
+            mylog_add("Invalid number of operands");
             success = false;
         }
         else {
@@ -121,7 +121,7 @@ static void pti_usage(void)
     const char* pqPath = getQueuePath();
 
     (void)ft_format(feedtype, feedbuf, sizeof(feedbuf));
-    log_add(
+    mylog_add(
 "Usage: %s [options] file\n"
 "Options:\n"
 "    -f feedtype   Use <feedtype> as data-product feed-type. Default is %s.\n"
@@ -137,7 +137,7 @@ static void pti_usage(void)
 "Operands:\n"
 "    file          Pathname of file containing size and timestamp entries.",
             progname, feedbuf, pqPath, seq_start);
-    log_log(LOG_ERR);
+    mylog_flush_error();
 }
 
 static void cleanup(void)
@@ -147,7 +147,7 @@ static void cleanup(void)
         pq = NULL;
     }
 
-    (void)closeulog();
+    (void)mylog_fini();
 }
 
 static void
@@ -176,24 +176,24 @@ static bool pti_init(
     int success = false;
 
     if (atexit(cleanup) != 0) {
-        LOG_SERROR0("Couldn't register exit handler");
+        mylog_syserr("Couldn't register exit handler");
     }
     else {
         const char* const pqfname = getQueuePath();
         int status = pq_open(pqfname, PQ_DEFAULT, &pq);
         if (PQ_CORRUPT == status) {
-            LOG_ADD1("The product-queue \"%s\" is corrupt\n", pqfname);
+            mylog_add("The product-queue \"%s\" is corrupt\n", pqfname);
         }
         else if (status) {
-            LOG_ERRNUM1(status, "Couldn't open product-queue \"%s\"", pqfname);
+            mylog_errno(status, "Couldn't open product-queue \"%s\"", pqfname);
         }
         else if (freopen(inputPathname, "r", stdin) == NULL) {
-            LOG_SERROR1("Couldn't open input-file \"%s\"", inputPathname);
+            mylog_syserr("Couldn't open input-file \"%s\"", inputPathname);
         }
         else {
             prod.data = malloc(20000000);
             if (prod.data == NULL) {
-                LOG_SERROR0("Couldn't allocate buffer for data-product");
+                mylog_syserr("Couldn't allocate buffer for data-product");
             }
             else {
                 (void)strncpy(myname, ghostname(), sizeof(myname));
@@ -216,7 +216,7 @@ static bool pti_init(
  *
  * @retval 1   EOF.
  * @retval 0   Success.
- * @retval -1  Error. `log_add()` called.
+ * @retval -1  Error. `mylog_add()` called.
  */
 static int pti_decodeInputLine(
         const unsigned long           lineNo,
@@ -232,7 +232,7 @@ static int pti_decodeInputLine(
             &tm->tm_mon, &tm->tm_mday, &tm->tm_hour, &tm->tm_min, &seconds);
     if (status == EOF) {
         if (ferror(stdin)) {
-            LOG_ADD1("Couldn't read line %lu (origin 1) from input-file",
+            mylog_add("Couldn't read line %lu (origin 1) from input-file",
                     lineNo);
             status = -1;
         }
@@ -241,11 +241,11 @@ static int pti_decodeInputLine(
         }
     }
     else if (status != 7) {
-        LOG_ADD1("Couldn't decode line %lu (origin 1) in input-file", lineNo);
+        mylog_add("Couldn't decode line %lu (origin 1) in input-file", lineNo);
         status = -1;
     }
     else if (seconds < 0 || seconds > 60) {
-        LOG_ADD1("Invalid number of seconds in line %lu", lineNo);
+        mylog_add("Invalid number of seconds in line %lu", lineNo);
         status = -1;
     }
     else {
@@ -319,7 +319,7 @@ static inline bool timespec_isPositive(
  * @param[in] tm      Input creation-time.
  * @param[in] ns      Nanosecond component of input creation-time.
  * @return    true    Success. `prod.info.arrival` is set.
- * @return    false   Failure. `log_add()` called.
+ * @return    false   Failure. `mylog_add()` called.
  */
 static bool pti_setCreationTime(
         const bool          init,
@@ -367,7 +367,7 @@ static bool pti_setCreationTime(
         // Sleep if necessary
         if (timespec_isPositive(&sleepInterval)) {
             if (nanosleep(&sleepInterval, NULL)) {
-                LOG_SERROR0("Couldn't sleep");
+                mylog_syserr("Couldn't sleep");
                 return false;
             }
         }
@@ -399,7 +399,7 @@ static bool pti_execute()
     tm.tm_isdst = 0;
 
     (void)ft_format(feedtype, feedStr, sizeof(feedStr));
-    unotice("Starting up: feedtype=%s, seq_start=%d", feedStr, seq_start);
+    mylog_notice("Starting up: feedtype=%s, seq_start=%d", feedStr, seq_start);
 
     prod.info.seqno = seq_start;
     for (lineNo = 1, success = true; success; prod.info.seqno++, lineNo++) {
@@ -415,7 +415,7 @@ static bool pti_execute()
         (void)snprintf(id, sizeof(id), "%u", prod.info.seqno);
         prod.data = realloc(prod.data, prod.info.sz);
         if (prod.data == NULL) {
-            LOG_SERROR0("Couldn't allocate memory for data-product");
+            mylog_syserr("Couldn't allocate memory for data-product");
             success = false;
             break;
         }
@@ -431,22 +431,22 @@ static bool pti_execute()
 
         switch (status) {
         case ENOERR:
-            if (ulogIsVerbose())
-                uinfo("%s", s_prod_info(NULL, 0, &prod.info, 1)) ;
-            log_clear(); // just in case
+            if (mylog_is_enabled_info)
+                mylog_info("%s", s_prod_info(NULL, 0, &prod.info, 1)) ;
+            mylog_clear(); // just in case
             break;
         case PQUEUE_DUP:
-            LOG_ADD1("Product already in queue: %s",
+            mylog_add("Product already in queue: %s",
                 s_prod_info(NULL, 0, &prod.info, 1));
             success = false;
             break;
         case PQUEUE_BIG:
-            LOG_ADD1("Product too big for queue: %s",
+            mylog_add("Product too big for queue: %s",
                 s_prod_info(NULL, 0, &prod.info, 1));
             success = false;
             break;
         case ENOMEM:
-            LOG_ERRNUM0(status, "Queue full?");
+            mylog_errno(status, "Queue full?");
             success = false;
             break;
         case EINTR:
@@ -454,7 +454,7 @@ static bool pti_execute()
             /* TODO: retry ? */
             /*FALLTHROUGH*/
         default:
-            LOG_ADD1("pq_insert: %s", status > 0
+            mylog_add("pq_insert: %s", status > 0
                 ? strerror(status) : "Internal error");
             success = false;
         }
@@ -471,13 +471,13 @@ static bool pti_initAndExecute(
     bool success = pti_init(inputPathname);
 
     if (!success) {
-        LOG_ADD0("Couldn't initialize program");
+        mylog_add("Couldn't initialize program");
     }
     else {
         success = pti_execute();
 
         if (!success)
-            LOG_ADD0("Failure executing program");
+            mylog_add("Failure executing program");
     }
 
     return success;
@@ -489,18 +489,17 @@ int main(
 {
     // Done first in case something happens that needs to be reported.
    progname = basename(av[0]);
-   log_initLogging(progname, LOG_NOTICE, LOG_LDM);
+   (void)mylog_init(progname);
 
     const char* inputPathname;
     int         status = EXIT_FAILURE;
     if (!pti_decodeCommandLine(ac, av, &inputPathname)) {
-        log_add("Couldn't decode command-line");
-        log_log(LOG_ERR);
+        mylog_error("Couldn't decode command-line");
         pti_usage();
     }
     else {
         if (!pti_initAndExecute(inputPathname)) {
-            log_log(LOG_ERR);
+            mylog_flush_error();
         }
         else {
             status = EXIT_SUCCESS;

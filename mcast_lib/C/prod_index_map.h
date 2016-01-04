@@ -29,7 +29,7 @@
  * @param[in] feedtype     Feedtype of the map.
  * @param[in] maxSigs      Maximum number of data-product signatures.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                         file is unspecified.
  */
 Ldm7Status
@@ -48,9 +48,9 @@ pim_openForWriting(
  * @param[in] feedtype     Feedtype of the map.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
- *                         `log_add()` called. The file wasn't opened or
+ *                         `mylog_add()` called. The file wasn't opened or
  *                         created.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                         file is unspecified.
  */
 Ldm7Status
@@ -62,7 +62,7 @@ pim_openForReading(
  * Closes the product-index map.
  *
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  SYSTEM error. `log_add()` called. The state of the map
+ * @retval LDM7_SYSTEM  SYSTEM error. `mylog_add()` called. The state of the map
  *                      is unspecified.
  */
 Ldm7Status
@@ -78,7 +78,7 @@ pim_close(void);
  * @param[in] feedtype   The feedtype.
  * @retval 0             Success. The associated file doesn't exist or has been
  *                       removed.
- * @retval LDM7_SYSTEM   System error. `log_add()` called.
+ * @retval LDM7_SYSTEM   System error. `mylog_add()` called.
  */
 Ldm7Status
 pim_delete(
@@ -93,7 +93,7 @@ pim_delete(
  * @param[in] iProd        Product index.
  * @param[in] sig          Data-product signature.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 pim_put(
@@ -107,7 +107,7 @@ pim_put(
  * @param[out] sig          Data-product signature mapped-to by `fileId`.
  * @return     0            Success.
  * @retval     LDM7_NOENT   Product-index is unknown.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 pim_get(
@@ -120,7 +120,7 @@ pim_get(
  *
  * @param[out] iProd        Next product-index.
  * @retval     0            Success. `*fileId` is set.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 pim_getNextProdIndex(

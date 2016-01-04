@@ -23,7 +23,7 @@
 #include "ldm.h"
 #include "ldmprint.h"
 #include "RegularExpressions.h"
-#include "log.h"
+#include "mylog.h"
 #include "stdbool.h"
 #include "wordexp.h"
 
@@ -51,7 +51,7 @@ static int       scannerPop(void);
 static void
 yyerror(const char *msg)
 {
-    log_add("Error in LDM configuration-file: %s", msg);
+    mylog_add("Error in LDM configuration-file: %s", msg);
 }
 
 #if __STDC__
@@ -77,7 +77,7 @@ decodeFeedtype(
         error = 0;
     }
     else {
-        log_start("Invalid feedtype expression \"%s\": %s", string,
+        mylog_add("Invalid feedtype expression \"%s\": %s", string,
             strfeederr(status));
 
         error = 1;
@@ -95,21 +95,20 @@ decodeRegEx(
     int         error = 1;              /* failure */
 
     if (strlen(string) == 0) {
-        LOG_START0("Empty regular-expression");
-        log_log(LOG_ERR);
+        mylog_error("Empty regular-expression");
     }
     else {
         char* const     clone = strdup(string);
 
         if (NULL == clone) {
-            log_start("Couldn't clone regular-expression \"%s\": %s", string,
+            mylog_add("Couldn't clone regular-expression \"%s\": %s", string,
                     strerror(errno));
         }
         else {
             regex_t*    regexp = (regex_t*)malloc(sizeof(regex_t));
 
             if (NULL == regexp) {
-                log_start("Couldn't allocate %lu bytes for \"regex_t\"",
+                mylog_add("Couldn't allocate %lu bytes for \"regex_t\"",
                     (unsigned long)sizeof(regex_t));
             }
             else {
@@ -117,9 +116,8 @@ decodeRegEx(
                     /*
                      * Pathological regular expression.
                      */
-                    log_start("Adjusted pathological regular expression \"%s\"",
+                    mylog_warning("Adjusted pathological regular expression \"%s\"",
                         string);
-                    log_log(LOG_WARNING);
                 }
 
                 error = regcomp(regexp, clone,
@@ -132,7 +130,7 @@ decodeRegEx(
                     char        buf[132];
 
                     (void)regerror(error, regexp, buf, sizeof(buf));
-                    log_start("Couldn't compile regular-expression \"%s\": %s",
+                    mylog_add("Couldn't compile regular-expression \"%s\": %s",
                             clone, buf);
                 }
 
@@ -160,14 +158,14 @@ decodeHostSet(
         char* dup = strdup(string);
 
         if (NULL == dup) {
-            log_start("Couldn't clone string \"%s\": %s", string,
+            mylog_add("Couldn't clone string \"%s\": %s", string,
                 strerror(errno));
         }
         else {
             host_set*   hsp = lcf_newHostSet(HS_REGEXP, dup, regexp);
 
             if (NULL == hsp) {
-                log_start("Couldn't create host-set for \"%s\": %s", dup,
+                mylog_add("Couldn't create host-set for \"%s\": %s", dup,
                         strerror(errno));
 
                 error = 1;
@@ -231,8 +229,7 @@ warnIfPathological(
         /*
          * Pathological regular expression.
          */
-        log_start("Pathological regular expression \"%s\"", re);
-        log_log(LOG_WARNING);
+        mylog_warning("Pathological regular expression \"%s\"", re);
     }
 }
 
@@ -252,7 +249,7 @@ warnIfPathological(
  *                      disabled.  Caller may free upon return.
  * Returns:
  *      0               Success.
- *      else            Failure.  "log_start()" called.
+ *      else            Failure.  "mylog_add()" called.
  */
 static int
 decodeAllowEntry(
@@ -280,7 +277,7 @@ decodeAllowEntry(
             errObj = lcf_addAllow(ft, hsp, okPattern, notPattern);
 
             if (errObj) {
-                log_start("Couldn't add ALLOW entry: feedSet=%s, hostPat=%s, "
+                mylog_add("Couldn't add ALLOW entry: feedSet=%s, hostPat=%s, "
                         "okPat=\"%s\", notPat=\"%s\"",
                         feedtypeSpec, hostPattern, okPattern, notPattern);
                 lcf_freeHostSet(hsp);
@@ -308,7 +305,7 @@ decodeRequestEntry(
         const char*    hostId = strtok(hostSpec, ":");
     
         if (NULL == hostId) {
-            log_start("Invalid hostname specification \"%s\"", hostSpec);
+            mylog_add("Invalid hostname specification \"%s\"", hostSpec);
     
             errCode = EINVAL;
         }
@@ -330,7 +327,7 @@ decodeRequestEntry(
                     localPort = (unsigned)port;
                 }
                 else {
-                    log_start("Invalid port specification \"%s\"", portSpec);
+                    mylog_add("Invalid port specification \"%s\"", portSpec);
         
                     errCode = EINVAL;
                 }
@@ -348,7 +345,7 @@ decodeRequestEntry(
     } /* "regexp" allocated */
     
     if (errCode)
-        LOG_ADD3("Couldn't process REQUEST: host=%s, feedSet=%s, "
+        mylog_add("Couldn't process REQUEST: host=%s, feedSet=%s, "
                 "prodPat=\"%s\"", hostSpec, feedtypeSpec, prodPattern);
 
     return errCode;
@@ -368,8 +365,8 @@ decodeRequestEntry(
  *                            system's default multicast interface is used.
  *                            Specify "127.0.0.1" to use the loopback interface.
  * @retval    0               Success.
- * @retval    EINVAL          Invalid specification. `log_start()` called.
- * @retval    ENOMEM          Out-of-memory. `log_start()` called.
+ * @retval    EINVAL          Invalid specification. `mylog_add()` called.
+ * @retval    ENOMEM          Out-of-memory. `mylog_add()` called.
  */
 static int
 decodeSendEntry(
@@ -388,7 +385,7 @@ decodeSendEntry(
         
         if ((status = sa_parseWithDefaults(&mcastGroupSa, mcastGroupSpec, NULL,
                 ldmPort))) {
-            LOG_START1("Couldn't parse multicast group specification: \"%s\"", 
+            mylog_add("Couldn't parse multicast group specification: \"%s\"", 
                     mcastGroupSpec);
         }
         else {
@@ -404,7 +401,7 @@ decodeSendEntry(
             }
 
             if (status) {
-                LOG_ADD0("Couldn't create VCMTP TCP server specification");
+                mylog_add("Couldn't create VCMTP TCP server specification");
             }
             else {
                 McastInfo* mcastInfo;
@@ -418,7 +415,7 @@ decodeSendEntry(
 
                     if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
                             ttlSpec[nbytes] != 0) {
-                        LOG_START1("Couldn't parse time-to-live specification: "
+                        mylog_add("Couldn't parse time-to-live specification: "
                                 "\"%s\"",  ttlSpec);
                     }
                     else {
@@ -449,8 +446,8 @@ decodeSendEntry(
  *                           multicast packets. "0.0.0.0" obtains the system's
  *                           default multicast interface.
  * @retval    0              Success.
- * @retval    EINVAL         Invalid specification. `log_start()` called.
- * @retval    ENOMEM         Out-of-memory. `log_start()` called.
+ * @retval    EINVAL         Invalid specification. `mylog_add()` called.
+ * @retval    ENOMEM         Out-of-memory. `mylog_add()` called.
  */
 static int
 decodeReceiveEntry(
@@ -531,7 +528,7 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                             char*       patp = strdup($3);
 
                             if (NULL == patp) {
-                                log_start("Couldn't clone string \"%s\": %s",
+                                mylog_add("Couldn't clone string \"%s\": %s",
                                     $3, strerror(errno));
 
                                 error = 1;
@@ -561,7 +558,7 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                     }                   /* "regexp" allocated */
 
                     if (error) {
-                        LOG_ADD3("Couldn't process ACCEPT: feedSet=\"%s\""
+                        mylog_add("Couldn't process ACCEPT: feedSet=\"%s\""
                                 "prodPat=\"%s\", hostPat=\"%s\"", $2, $3, $4);
                         return error;
                     }
@@ -601,7 +598,7 @@ exec_entry:     EXEC_K STRING
                     error = wordexp($2, &words, 0);
 
                     if (error) {
-                        log_start("Couldn't decode command \"%s\": %s",
+                        mylog_add("Couldn't decode command \"%s\": %s",
                             strerror(errno));
                     }
                     else {
@@ -617,7 +614,7 @@ exec_entry:     EXEC_K STRING
                     }                   /* "words" set */
 
                     if (error) {
-                        LOG_ADD1("Couldn't process EXEC: cmd=\"%s\"", $2);
+                        mylog_add("Couldn't process EXEC: cmd=\"%s\"", $2);
                         return error;
                     }
                 }
@@ -647,7 +644,7 @@ receive_entry:  RECEIVE_K STRING STRING
                     int errCode = decodeReceiveEntry($2, $3, $4);
 
                     if (errCode) {
-                        LOG_ADD3("Couldn't decode receive entry "
+                        mylog_add("Couldn't decode receive entry "
                                 "\"RECEIVE %s %s %s\"", $2, $3, $4);
                         return errCode;
                     }
@@ -677,7 +674,7 @@ send_entry:        SEND_K STRING STRING STRING
                     int errCode = decodeSendEntry($2, $3, $4, NULL);
 
                     if (errCode) {
-                        LOG_ADD3("Couldn't decode multicast entry "
+                        mylog_add("Couldn't decode multicast entry "
                                 "\"MULTICAST %s %s %s\"", $2, $3, $4);
                         return errCode;
                     }
@@ -725,14 +722,14 @@ actUponEntries(
     int status = lcf_startRequesters(defaultPort);
 
     if (status) {
-        LOG_ADD0("Problem starting downstream LDM-s");
+        mylog_add("Problem starting downstream LDM-s");
     }
 #if WANT_MULTICAST
     else {
         status = d7mgr_startAll();
 
         if (status) {
-            LOG_ADD0("Couldn't start all multicast LDM receivers");
+            mylog_add("Couldn't start all multicast LDM receivers");
             d7mgr_free();
         }
     }
@@ -749,7 +746,7 @@ actUponEntries(
  * @param[in] ldmAddr           LDM server IP address in network byte order.
  * @param[in] defaultPort       The default LDM port.
  * @retval    0                 Success.
- * @retval    -1                Failure.  `log_start()` called.
+ * @retval    -1                Failure.  `mylog_add()` called.
  */
 int
 read_conf(
@@ -761,7 +758,7 @@ read_conf(
     int status;
 
     if (scannerPush(pathname)) {
-        LOG_ADD1("Couldn't open LDM configuration-file \"%s\"", pathname);
+        mylog_add("Couldn't open LDM configuration-file \"%s\"", pathname);
         status = -1;
     }
     else {
@@ -772,7 +769,7 @@ read_conf(
         status = yyparse();
 
         if (status) {
-            LOG_ADD1("Couldn't parse LDM configuration-file \"%s\"", pathname);
+            mylog_add("Couldn't parse LDM configuration-file \"%s\"", pathname);
             status = -1;
         }
         else if (execute) {

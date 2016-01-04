@@ -54,7 +54,7 @@ extern "C" {
 
 /**
  * Returns a new offset-map.
- * @retval NULL  Failure. `log_add()` called.
+ * @retval NULL  Failure. `mylog_add()` called.
  * @return       A new offset-map. The caller should call `om_free()` when
  *               it's no longer needed.
  */
@@ -70,7 +70,7 @@ void om_free(OffMap* offMap);
  * @param[in] prodIndex  The product-index.
  * @param[in] offset     The offset.
  * @retval 0             If successful.
- * @retval LDM7_SYSTEM   If a system error occurred. `log_add()` called.
+ * @retval LDM7_SYSTEM   If a system error occurred. `mylog_add()` called.
  */
 int om_put(OffMap* offMap, McastProdIndex prodIndex, off_t offset);
 /**

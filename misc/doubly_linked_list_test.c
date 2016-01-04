@@ -12,7 +12,7 @@
 #include "config.h"
 
 #include "doubly_linked_list.h"
-#include "log.h"
+#include "mylog.h"
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
@@ -46,7 +46,7 @@ static void test_dll_add_null(void)
 {
     Dll* list = dll_new();
     DllElt* elt = dll_add(list, NULL);
-    log_clear();
+    mylog_clear();
     CU_ASSERT_PTR_NULL(elt);
     CU_ASSERT_EQUAL(dll_size(list), 0);
     dll_free(list);
@@ -105,7 +105,7 @@ int main(
     int         exitCode = 1;
     const char* progname = basename((char*) argv[0]);
 
-    if (-1 == openulog(progname, 0, LOG_LOCAL0, "-")) {
+    if (mylog_init(progname)) {
         (void) fprintf(stderr, "Couldn't open logging system\n");
         exitCode = 1;
     }
@@ -129,7 +129,7 @@ int main(
             CU_cleanup_registry();
         }
 
-        log_free();
+        mylog_free();
     }
 
     return exitCode;

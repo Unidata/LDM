@@ -18,7 +18,7 @@
 #include "mcast.h"
 #include "mldm_receiver_memory.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -96,7 +96,7 @@ static void
 vetMrm(
         const McastReceiverMemory* const mrm)
 {
-    UASSERT(mrm != NULL && mrm->magic == &MAGIC);
+    mylog_assert(mrm != NULL && mrm->magic == &MAGIC);
 }
 
 /**
@@ -106,7 +106,7 @@ vetMrm(
  * @param[in] servAddr  The address of the server associated with the multicast
  *                      group.
  * @param[in] feedtype  Feedtype of multicast group.
- * @retval    NULL      Failure. `log_start()` called.
+ * @retval    NULL      Failure. `mylog_add()` called.
  * @return              The path of the corresponding memory-file. The caller
  *                      should free when it's no longer needed.
  */
@@ -119,7 +119,7 @@ getSessionPath(
     char  ftBuf[256];
 
     if (sprint_feedtypet(ftBuf, sizeof(ftBuf), feedtype) < 0) {
-        LOG_START0("sprint_feedtypet() failure");
+        mylog_add("sprint_feedtypet() failure");
         path = NULL;
     }
     else {
@@ -136,7 +136,7 @@ getSessionPath(
  *
  * @param[in] path  The path of a canonical memory-file. The caller may free
  *                  when it's no longer needed.
- * @retval    NULL  Failure. `log_start()` called.
+ * @retval    NULL  Failure. `mylog_add()` called.
  * @return          The path of the corresponding temporary memory-file. The
  *                  caller should free when it's no longer needed.
  */
@@ -147,7 +147,7 @@ makeTempPath(
     char* const tmpPath = ldm_format(256, "%s%s", path, ".new");
 
     if (tmpPath == NULL)
-        LOG_ADD0("Couldn't create path of temporary memory-file");
+        mylog_add("Couldn't create path of temporary memory-file");
 
     return tmpPath;
 }
@@ -215,8 +215,7 @@ lock(
     int status = pthread_mutex_lock(&mrm->mutex);
 
     if (status) {
-        LOG_ERRNUM0(status, "Couldn't lock mutex");
-        log_log(LOG_ERR);
+        mylog_errno(status, "Couldn't lock mutex");
     }
 }
 
@@ -227,8 +226,7 @@ unlock(
     int status = pthread_mutex_unlock(&mrm->mutex);
 
     if (status) {
-        LOG_ERRNUM0(status, "Couldn't unlock mutex");
-        log_log(LOG_ERR);
+        mylog_errno(status, "Couldn't unlock mutex");
     }
 }
 
@@ -241,7 +239,7 @@ unlock(
  * @param[in] start     The first node-pair of the mapping.
  * @param[in] end       The last node-pair of the mapping.
  * @retval    true      Success or the parameter doesn't exist.
- * @retval    false     Error. `log_start()` called.
+ * @retval    false     Error. `mylog_add()` called.
  */
 static bool
 initLastMcastProd(
@@ -257,7 +255,7 @@ initLastMcastProd(
         return true;
 
     if (valueNode->type != YAML_SCALAR_NODE) {
-        LOG_START1("Unexpected node-type for value associated with key \"%s\"",
+        mylog_add("Unexpected node-type for value associated with key \"%s\"",
                 LAST_MCAST_PROD_KEY);
         return false;
     }
@@ -265,7 +263,7 @@ initLastMcastProd(
     const char* sigStr = valueNode->data.scalar.value;
 
     if (sigParse(sigStr, &mrm->lastMcastProd) == -1) {
-        LOG_ADD1("Unable to parse last multicast data-product signature \"%s\"",
+        mylog_add("Unable to parse last multicast data-product signature \"%s\"",
                 sigStr);
         return false;
     }
@@ -284,7 +282,7 @@ initLastMcastProd(
  * @param[in] start     The first item of the sequence.
  * @param[in] end       The last item of the sequence.
  * @retval    true      Success.
- * @retval    false     Error. `log_start()` called.
+ * @retval    false     Error. `mylog_add()` called.
  */
 static bool
 initMissedFilesFromSequence(
@@ -297,18 +295,18 @@ initMissedFilesFromSequence(
         yaml_node_t* itemNode = yaml_document_get_node(document, *item);
 
         if (itemNode == NULL) {
-            LOG_START0("yaml_document_get_node() failure");
+            mylog_add("yaml_document_get_node() failure");
             return false;
         }
         if (itemNode->type != YAML_SCALAR_NODE) {
-            LOG_START0("Unexpected node-type for missed-file item");
+            mylog_add("Unexpected node-type for missed-file item");
             return false;
         }
         unsigned long fileId;
         int           nbytes;
         if (sscanf(itemNode->data.scalar.value, "%80lu %n", &fileId, &nbytes)
                 != 1 || itemNode->data.scalar.value[nbytes] != 0) {
-            LOG_SERROR1("Couldn't decode missed-file identifier \"%s\"",
+            mylog_syserr("Couldn't decode missed-file identifier \"%s\"",
                     itemNode->data.scalar.value);
             return false;
         }
@@ -328,7 +326,7 @@ initMissedFilesFromSequence(
  * @param[in] start     The first node-pair of the mapping.
  * @param[in] end       The last node-pair of the mapping.
  * @retval    true      Success or the information doesn't exist.
- * @retval    false     Error. `log_start()` called.
+ * @retval    false     Error. `mylog_add()` called.
  */
 static bool
 initMissedFiles(
@@ -344,7 +342,7 @@ initMissedFiles(
         return true;
 
     if (valueNode->type != YAML_SEQUENCE_NODE) {
-        LOG_START1("Unexpected node-type for value associated with key \"%s\"",
+        mylog_add("Unexpected node-type for value associated with key \"%s\"",
                 MISSED_MCAST_FILES_KEY);
         return false;
     }
@@ -362,7 +360,7 @@ initMissedFiles(
  * @param[in] document  The YAML document to use.
  * @param[in] node      The YAML node to use.
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 initFromNode(
@@ -371,7 +369,7 @@ initFromNode(
     yaml_node_t* const restrict         node)
 {
     if (node->type != YAML_MAPPING_NODE) {
-        LOG_START1("Unexpected YAML node: %d", node->type);
+        mylog_add("Unexpected YAML node: %d", node->type);
         return false;
     }
 
@@ -389,7 +387,7 @@ initFromNode(
  * @param[in] mrm       The multicast receiver memory to initialize.
  * @param[in] document  The YAML document to use.
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 initFromDocument(
@@ -399,7 +397,7 @@ initFromDocument(
     yaml_node_t* rootNode = yaml_document_get_root_node(document);
 
     if (rootNode == NULL) {
-        LOG_START0("YAML document is empty");
+        mylog_add("YAML document is empty");
         return false;
     }
 
@@ -413,7 +411,7 @@ initFromDocument(
  * @param[in] mrm     The multicast receiver memory to be initialized.
  * @param[in] parser  The YAML parser.
  * @retval    true    Success.
- * @retval    false   Error. `log_start()` called.
+ * @retval    false   Error. `mylog_add()` called.
  */
 static bool
 initFromStream(
@@ -425,7 +423,7 @@ initFromStream(
     (void)memset(&document, 0, sizeof(document));
 
     if (!yaml_parser_load(parser, &document)) {
-        LOG_START3("YAML parser failure at line=%lu, column=%lu: %s:",
+        mylog_add("YAML parser failure at line=%lu, column=%lu: %s:",
                 yamlParserLine(parser), yamlParserColumn(parser),
                 yamlParserErrMsg(parser));
         return false;
@@ -445,8 +443,8 @@ initFromStream(
  * @param[in] mrm   The multicast receiver memory to initialize.
  * @param[in] file  The YAML file to parse.
  * @retval    0     Success.
- * @retval    1     System error. `log_start()` called.
- * @retval    2     Parse error. `log_start()` called.
+ * @retval    1     System error. `mylog_add()` called.
+ * @retval    2     Parse error. `mylog_add()` called.
  */
 static int
 initFromYamlFile(
@@ -457,14 +455,14 @@ initFromYamlFile(
     yaml_parser_t parser;
 
     if (!yaml_parser_initialize(&parser)) {
-        LOG_SERROR0("Couldn't initialize YAML parser");
+        mylog_syserr("Couldn't initialize YAML parser");
         status = 1;
     }
     else {
         yaml_parser_set_input_file(&parser, file);
 
         if (!initFromStream(mrm, &parser)) {
-            LOG_ADD0("Error parsing memory-file. Delete or correct it.");
+            mylog_add("Error parsing memory-file. Delete or correct it.");
             status = 2;
         }
         else {
@@ -485,7 +483,7 @@ initFromYamlFile(
  * @param[in] path          The path of the memory-file. Caller must not modify
  *                          or free.
  * @retval    0             Success.
- * @retval    1             System error. `log_start()` called.
+ * @retval    1             System error. `mylog_add()` called.
  * @retval    2             Memory-file doesn't exist.
  */
 static int
@@ -502,7 +500,7 @@ initFromFile(
             status = 2;
         }
         else {
-            LOG_SERROR1("Couldn't open memory-file \"%s\"", path);
+            mylog_syserr("Couldn't open memory-file \"%s\"", path);
             status = 1;
         }
     }
@@ -510,7 +508,7 @@ initFromFile(
         status = initFromYamlFile(mrm, file);
 
         if (status)
-            LOG_ADD1("Couldn't initialize multicast-memory from file \"%s\"",
+            mylog_add("Couldn't initialize multicast-memory from file \"%s\"",
                     path);
 
         (void)fclose(file); // don't care because open for reading only
@@ -524,7 +522,7 @@ initFromFile(
  *
  * @param[in] mrm    The multicast receiver memory.
  * @retval    true   Success.
- * @retval    false  Failure. `log_start()` called.
+ * @retval    false  Failure. `mylog_add()` called.
  */
 static bool
 initMutex(
@@ -534,7 +532,7 @@ initMutex(
     int                 status = pthread_mutexattr_init(&mutexAttr);
 
     if (status) {
-        LOG_ERRNUM0(status, "Couldn't initialize mutex attributes");
+        mylog_errno(status, "Couldn't initialize mutex attributes");
     }
     else {
         // At most one lock per thread.
@@ -545,7 +543,7 @@ initMutex(
         status = pthread_mutex_init(&mrm->mutex, &mutexAttr);
 
         if (status)
-            LOG_ERRNUM0(status, "Couldn't initialize mutex");
+            mylog_errno(status, "Couldn't initialize mutex");
 
         (void)pthread_mutexattr_destroy(&mutexAttr);
     } // `mutexAttr` initialized
@@ -562,7 +560,7 @@ initMutex(
  * @param[in] path   The path of the temporary memory-file. Caller must not
  *                   modify or free.
  * @retval    true   Success.
- * @retval    false  Failure. `log_start()` called.
+ * @retval    false  Failure. `mylog_add()` called.
  */
 static bool
 initFromScratch(
@@ -574,11 +572,11 @@ initFromScratch(
 
     if (tmpPath != NULL) {
         if ((mrm->missedQ = piq_new()) == NULL) {
-            LOG_ADD0("Couldn't create queue of missed data-products");
+            mylog_add("Couldn't create queue of missed data-products");
         }
         else {
             if ((mrm->requestedQ = piq_new()) == NULL) {
-                LOG_ADD0("Couldn't create queue of requested data-products");
+                mylog_add("Couldn't create queue of requested data-products");
             }
             else {
                 if (initMutex(mrm)) {
@@ -612,7 +610,7 @@ initFromScratch(
  * @param[in] path      The path of the canonical memory-file. Caller must not
  *                      modify or free.
  * @retval    true      Success.
- * @retval    false     Failure. `log_add()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 initFromScratchOrFile(
@@ -634,7 +632,7 @@ initFromScratchOrFile(
  * @param[in] servAddr  Address of the server.
  * @param[in] feedtype  Feedtype of the multicast group.
  * @retval    true      Success.
- * @retval    false     Failure. `log_add()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 init(
@@ -665,7 +663,7 @@ init(
  * Opens a memory-file of a multicast receiver memory.
  *
  * @param[in] mrm    The multicast receiver memory.
- * @retval    NULL   Failure. `log_start()` called.
+ * @retval    NULL   Failure. `mylog_add()` called.
  * @return           A memory-file open for writing.
  */
 static FILE*
@@ -675,7 +673,7 @@ openTempMemoryFile(
     FILE* file = fopen(mrm->tmpPath, "w");
 
     if (file == NULL)
-        LOG_SERROR1("Couldn't open temporary memory-file \"%s\"", mrm->tmpPath);
+        mylog_syserr("Couldn't open temporary memory-file \"%s\"", mrm->tmpPath);
 
     return file;
 }
@@ -688,7 +686,7 @@ openTempMemoryFile(
  * @param[in] seq       The identifier of the YAML sequence-node.
  * @param[in] fiq       The product-index queue.
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 appendFileIds(
@@ -707,12 +705,12 @@ appendFileIds(
                 YAML_PLAIN_SCALAR_STYLE);
 
         if (!scalarNode) {
-            LOG_START0("yaml_document_add_scalar() failure");
+            mylog_add("yaml_document_add_scalar() failure");
             return false;
         }
         else {
             if (!yaml_document_append_sequence_item(document, seq, scalarNode)) {
-                LOG_START0("yaml_document_append_sequence_item() failure");
+                mylog_add("yaml_document_append_sequence_item() failure");
                 return false;
             }
         }
@@ -730,7 +728,7 @@ appendFileIds(
  * @param[in] document  The YAML document.
  * @param[in] seq       The identifier of the YAML sequence-node.
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 addMissedFiles(
@@ -748,7 +746,7 @@ addMissedFiles(
  *
  * @param[in] mrm       The multicast receiver memory.
  * @param[in] document  The YAML document.
- * @retval    0         Failure. `log_start()` called.
+ * @retval    0         Failure. `mylog_add()` called.
  * @return              The identifier of the YAML sequence-node.
  */
 static int
@@ -760,7 +758,7 @@ getMissedFileSequence(
             YAML_FLOW_SEQUENCE_STYLE);
 
     if (!seq) {
-        LOG_START0("yaml_document_add_sequence() failure");
+        mylog_add("yaml_document_add_sequence() failure");
     }
     else {
         if (!addMissedFiles(mrm, document, seq))
@@ -778,7 +776,7 @@ getMissedFileSequence(
  * @param[in] document  The YAML document.
  * @param[in] map       The identifier of the YAML map-node.
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 addMissedMcastFiles(
@@ -795,11 +793,11 @@ addMissedMcastFiles(
                 (char*)MISSED_MCAST_FILES_KEY, -1, YAML_PLAIN_SCALAR_STYLE);
 
         if (key == 0) {
-            LOG_START0("yaml_document_add_scalar() failure");
+            mylog_add("yaml_document_add_scalar() failure");
         }
         else {
             if (!yaml_document_append_mapping_pair(document, map, key, seq)) {
-                LOG_START0("yaml_document_append_mapping_pair() failure");
+                mylog_add("yaml_document_append_mapping_pair() failure");
             }
             else {
                 success = true;
@@ -818,7 +816,7 @@ addMissedMcastFiles(
  * @param[in] keyStr    The key string.
  * @param[in] valueStr  The value string.
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 appendStringMapping(
@@ -833,7 +831,7 @@ appendStringMapping(
             YAML_PLAIN_SCALAR_STYLE);
 
     if (key == 0) {
-        LOG_START0("yaml_document_add_scalar() failure");
+        mylog_add("yaml_document_add_scalar() failure");
     }
     else {
         // ASSUMPTION: The 3rd argument isn't modified
@@ -841,11 +839,11 @@ appendStringMapping(
                 YAML_PLAIN_SCALAR_STYLE);
 
         if (value == 0) {
-            LOG_START0("yaml_document_add_scalar() failure");
+            mylog_add("yaml_document_add_scalar() failure");
         }
         else {
             if (!yaml_document_append_mapping_pair(document, map, key, value)) {
-                LOG_START0("yaml_document_append_mapping_pair() failure");
+                mylog_add("yaml_document_append_mapping_pair() failure");
             }
             else {
                 success = true;
@@ -864,7 +862,7 @@ appendStringMapping(
  * @param[in] document  The YAML document.
  * @param[in] map       The identifier of the YAML map-node.
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 addLastMcastProd(
@@ -885,7 +883,7 @@ addLastMcastProd(
  * @param[in] mrm       The multicast receiver memory.
  * @param[in] document  The YAML document.
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 addData(
@@ -897,7 +895,7 @@ addData(
             YAML_BLOCK_MAPPING_STYLE);
 
     if (root == 0) {
-        LOG_START0("yaml_document_add_mapping() failure");
+        mylog_add("yaml_document_add_mapping() failure");
         success = false;
     }
     else {
@@ -917,7 +915,7 @@ addData(
  * @param[in] mrm      The multicast receiver memory to be written.
  * @param[in] emitter  The YAML emitter.
  * @retval    true     Success.
- * @retval    false    Failure. `log_start()` called.
+ * @retval    false    Failure. `mylog_add()` called.
  */
 static bool
 emitDocument(
@@ -930,7 +928,7 @@ emitDocument(
     (void)memset(&document, 0, sizeof(document));
 
     if (!yaml_document_initialize(&document, NULL, NULL, NULL, 0, 0)) {
-        LOG_START0("yaml_document_initialize() failure");
+        mylog_add("yaml_document_initialize() failure");
     }
     else {
         if (!addData(mrm, &document)) {
@@ -952,7 +950,7 @@ emitDocument(
  * @param[in] mrm      The multicast receiver memory.
  * @param[in] emitter  The YAML emitter.
  * @retval    true     Success.
- * @retval    false    Failure. `log_start()` called.
+ * @retval    false    Failure. `mylog_add()` called.
  */
 static bool
 emitStream(
@@ -962,13 +960,13 @@ emitStream(
     bool success = false;
 
     if (!yaml_emitter_open(emitter)) { // emit STREAM-START event
-        LOG_START0("yaml_emitter_open() failure");
+        mylog_add("yaml_emitter_open() failure");
     }
     else {
         success = emitDocument(mrm, emitter);
 
         if (!yaml_emitter_close(emitter)) { // emit STREAM-STOP event?
-            LOG_START0("yaml_emitter_close() failure");
+            mylog_add("yaml_emitter_close() failure");
             success = false;
         }
     } // `emitter` opened
@@ -983,7 +981,7 @@ emitStream(
  * @param[in] mrm    The multicast receiver memory.
  * @param[in] file   The file into which to dump the memory.
  * @retval    true   Success.
- * @retval    false  Failure. `log_start()` called.
+ * @retval    false  Failure. `mylog_add()` called.
  */
 static bool
 dumpMemory(
@@ -996,7 +994,7 @@ dumpMemory(
     (void)memset(&emitter, 0, sizeof(emitter));
 
     if (!yaml_emitter_initialize(&emitter)) {
-        LOG_START0("yaml_emitter_initialize() failure");
+        mylog_add("yaml_emitter_initialize() failure");
     }
     else {
         yaml_emitter_set_output_file(&emitter, file);
@@ -1018,7 +1016,7 @@ dumpMemory(
  * @param[in] mrm       The multicast receiver memory.
  * @param[in] goodDump  Was the dump of memory successful?
  * @retval    true      Success.
- * @retval    false     Failure. `log_start()` called.
+ * @retval    false     Failure. `mylog_add()` called.
  */
 static bool
 closeAndRenameTempMemoryFile(
@@ -1027,11 +1025,11 @@ closeAndRenameTempMemoryFile(
     const bool                 goodDump)
 {
     if (fclose(file)) {
-        LOG_SERROR1("Couldn't close temporary memory-file \"%s\"", mrm->tmpPath);
+        mylog_syserr("Couldn't close temporary memory-file \"%s\"", mrm->tmpPath);
         return false;
     }
     if (rename(mrm->tmpPath, mrm->path)) {
-        LOG_SERROR2("Couldn't rename file \"%s\" to \"%s\"", mrm->tmpPath,
+        mylog_syserr("Couldn't rename file \"%s\" to \"%s\"", mrm->tmpPath,
                 mrm->path);
         return false;
     }
@@ -1045,7 +1043,7 @@ closeAndRenameTempMemoryFile(
  *
  * @param[in] mrm    The multicast memory receiver to be dumped.
  * @retval    true   Success.
- * @retval    false  Failure. `log_start()` called. The associated memory-file,
+ * @retval    false  Failure. `mylog_add()` called. The associated memory-file,
  *                   if it exists, is unmodified.
  */
 static bool
@@ -1075,7 +1073,7 @@ dump(
  * @param[in] fiq    The queue to use.
  * @param[in] id     The product index to add.
  * @retval    true   Success.
- * @retval    false  Error. `log_start()` called.
+ * @retval    false  Error. `mylog_add()` called.
  * @post             The multicast receiver memory is unlocked.
  */
 static bool
@@ -1103,7 +1101,7 @@ addFile(
  * @param[in] servAddr  Address of the server.
  * @param[in] feedtype  Feedtype of the multicast group.
  * @retval    true      Success or the file doesn't exist.
- * @retval    false     Error. `log_start()` called.
+ * @retval    false     Error. `mylog_add()` called.
  */
 bool
 mrm_delete(
@@ -1122,7 +1120,7 @@ mrm_delete(
                 success = true;
             }
             else {
-                LOG_SERROR1("Couldn't remove multicast-receiver memory-file \"%s\"",
+                mylog_syserr("Couldn't remove multicast-receiver memory-file \"%s\"",
                         path);
                 success = false;
             }
@@ -1142,7 +1140,7 @@ mrm_delete(
  *
  * @param[in] servAddr  Address of the server.
  * @param[in] feedtype  Feedtype of the multicast group.
- * @retval    NULL      Error. `log_add()` called.
+ * @retval    NULL      Error. `mylog_add()` called.
  * @return              Pointer to a multicast receiver memory object.
  */
 McastReceiverMemory*
@@ -1150,7 +1148,7 @@ mrm_open(
     const ServiceAddr* const servAddr,
     const feedtypet          feedtype)
 {
-    McastReceiverMemory* mrm = LOG_MALLOC(sizeof(McastReceiverMemory),
+    McastReceiverMemory* mrm = mylog_malloc(sizeof(McastReceiverMemory),
             "multicast receiver memory");
 
     if (mrm) {
@@ -1174,7 +1172,7 @@ mrm_open(
  *                   be closed. Use of this object upon successful return from
  *                   this function results in undefined behavior.
  * @retval    true   Success.
- * @retval    false  Failure. `log_start()` called. `mrm` is unmodified.
+ * @retval    false  Failure. `mylog_add()` called. `mrm` is unmodified.
  */
 bool
 mrm_close(
@@ -1203,7 +1201,7 @@ mrm_close(
  * @param[in] mrm    The multicast receiver memory.
  * @param[in] sig    Signature of the last data-product received via multicast.
  * @retval    true   Success.
- * @retval    false  Failure. `log_start()` called. The multicast receiver
+ * @retval    false  Failure. `mylog_add()` called. The multicast receiver
  *                   memory is unmodified. Thread-safe.
  */
 bool
@@ -1295,7 +1293,7 @@ mrm_getAnyMissedFileNoWait(
  * @param[in] mrm    The multicast receiver memory.
  * @param[in] id     The product-index to add.
  * @retval    true   Success.
- * @retval    false  Error. `log_start()` called.
+ * @retval    false  Error. `mylog_add()` called.
  */
 bool
 mrm_addMissedFile(
@@ -1314,7 +1312,7 @@ mrm_addMissedFile(
  * @param[in] mrm    The multicast receiver memory.
  * @param[in] id     The product-index to add.
  * @retval    true   Success.
- * @retval    false  Error. `log_start()` called.
+ * @retval    false  Error. `mylog_add()` called.
  */
 bool
 mrm_addRequestedFile(

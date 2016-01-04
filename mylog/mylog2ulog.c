@@ -66,7 +66,7 @@ static inline void unlock(void)
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void mylog_emit(
+void mylog_write_one(
         const mylog_level_t    level,
         const Message* const   msg)
 {
@@ -81,7 +81,7 @@ void mylog_emit(
  * @param[in] fmt  Format of the message.
  * @param[in] ...  Format arguments.
  */
-void mylog_error(
+void mylog_internal(
         const char* const fmt,
                           ...)
 {
@@ -141,7 +141,7 @@ int mylog_init(
 int mylog_fini(void)
 {
     int status;
-    mylog_list_free();
+    mylog_free();
     if (!pthread_equal(initThread, pthread_self())) {
         status = 0;
     }
@@ -233,6 +233,23 @@ int mylog_get_facility(void)
 }
 
 /**
+ * Sets the logging identifier. Should be called between `mylog_init()` and
+ * `mylog_fini()`.
+ *
+ * @param[in] id        The new identifier. Caller may free.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+int mylog_set_id(
+        const char* const id)
+{
+    lock();
+    setulogident(id);
+    unlock();
+    return 0;
+}
+
+/**
  * Modifies the logging identifier.
  *
  * @param[in] hostId    The identifier of the remote host. Caller may free.
@@ -241,7 +258,7 @@ int mylog_get_facility(void)
  * @param[in] id        The logging identifier. Caller may free.
  * @retval    0         Success.
  */
-int mylog_modify_level(
+int mylog_set_upstream_id(
         const char* const hostId,
         const bool        isFeeder)
 {

@@ -26,7 +26,7 @@
 #include "globals.h"
 #include "remote.h"
 #include "pq.h"
-#include "log.h"
+#include "mylog.h"
 
 ChildMap*        execMap = NULL;
 
@@ -72,8 +72,7 @@ exec_prodput(
         execMap = cm_new();
 
         if (NULL == execMap) {
-            LOG_ADD0("Couldn't create child-process map for EXEC entries");
-            log_log(LOG_ERR);
+            mylog_error("Couldn't create child-process map for EXEC entries");
             pid = -1;
         }
     }                                   /* child-process map not allocated */
@@ -88,8 +87,7 @@ exec_prodput(
 
         pid = ldmfork();
         if (-1 == pid) {
-            LOG_SERROR0("Couldn't fork EXEC process");
-            log_log(LOG_ERR);
+            mylog_syserr("Couldn't fork EXEC process");
         }
         else {
             if (0 == pid) {
@@ -100,10 +98,8 @@ exec_prodput(
                  *
                  * (void) setpgid(0,0);
                  */
-                const unsigned  ulogOptions = ulog_get_options();
-                const char*     ulogIdent = getulogident();
-                const unsigned  ulogFacility = getulogfacility();
-                const char*     ulogPath = getulogpath();
+                const char*     id = mylog_get_id();
+                const unsigned  facility = mylog_get_facility();
 
                 (void)signal(SIGTERM, SIG_DFL);
                 (void)pq_close(pq);
@@ -119,10 +115,11 @@ exec_prodput(
                  */
                 endpriv();
 
+                (void)mylog_fini();
                 (void) execvp(argv[0], argv);
-                openulog(ulogIdent, ulogOptions, ulogFacility, ulogPath);
-                LOG_SERROR1("Couldn't execute command \"%s\"", argv[0]);
-                log_log(LOG_ERR);
+                (void)mylog_init(id);
+                (void)mylog_set_facility(facility);
+                mylog_syserr("Couldn't execute command \"%s\"", argv[0]);
                 exit(EXIT_FAILURE);
             }                           /* child process */
             else {
@@ -132,10 +129,10 @@ exec_prodput(
                 (void)cm_add_argv(execMap, pid, argv);
 
                 if (!waitOnChild) {
-                    udebug("    exec %s[%d]", argv[0], pid);
+                    mylog_debug("    exec %s[%d]", argv[0], pid);
                 }
                 else {
-                    udebug("    exec -wait %s[%d]", argv[0], pid);
+                    mylog_debug("    exec -wait %s[%d]", argv[0], pid);
                     (void)reap(pid, 0);
                 }
             }
@@ -191,7 +188,7 @@ atoaction(
 
         if(str == NULL || *str == 0)
         {
-                udebug("atoaction: Invalid string argument");
+                mylog_debug("atoaction: Invalid string argument");
                 return -1;
         }
 

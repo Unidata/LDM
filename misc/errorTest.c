@@ -10,15 +10,15 @@ int
 main(int argc, char* args[])
 {
     int status;
-    if (openulog("errorTest", LOG_PID, 0, "-") == -1) {
-        perror("openulog()");
+    if (mylog_init(args[0])) {
+        perror("mylog_init()");
 
         status = 1;
     }
     else {
         ErrorObj* err;
 
-        (void)setulogmask(LOG_UPTO(LOG_DEBUG));
+        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
 
         err = ERR_NEW(0, NULL, "Simple message");
         err_log(err, ERR_ERROR); 

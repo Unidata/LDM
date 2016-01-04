@@ -426,6 +426,7 @@ static bool init_appender_syslog(
         return false;
     intptr_t ptr = facility;
     (void)log4c_appender_set_udata(app, (void*)ptr);
+    *appender = app;
     return true;
 }
 
@@ -479,7 +480,7 @@ static bool init_appenders_syslog(void)
     for (int i = 0; i < n; i++) {
         const fac_t* const fac = facs + i;
         if (!init_appender_syslog(fac->facility, fac->name,
-                &appenders_syslog_local[i]))
+                appenders_syslog_local+i))
             return false;
     }
     if (!init_appender_syslog(LOG_USER, "syslog_user", &appender_syslog_user))
@@ -542,6 +543,52 @@ static bool init_categories(void)
 }
 
 /**
+ * Sets the logging identifier. Should be called between `mylog_init()` and
+ * `mylog_fini()`. The logging identifier will have the result of `fmt` and its
+ * arguments as the prefix and `comp` as the suffix.
+ *
+ * @param[in] suffix    The suffix of the logging identifier. Caller may free.
+ *                      Every period will be replaced by an underscore.
+ * @param[in] fmt       Format for the prefix.
+ * @param[in] ...       Arguments for the prefix.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+static int set_id(
+        const char* const restrict suffix,
+        const char* const restrict fmt,
+                                   ...)
+{
+    int  status;
+    if (!initialized) {
+        status = -1;
+    }
+    else {
+        char    id[CATEGORY_ID_MAX];
+        va_list args;
+        va_start(args, fmt);
+        int  nbytes = vsnprintf(id, sizeof(id), fmt, args);
+        va_end(args);
+        id[sizeof(id)-1] = 0;
+        if (nbytes < sizeof(id)) {
+            char* cp = id + nbytes;
+            string_copy(cp, suffix, sizeof(id) - nbytes);
+            for (cp = strchr(cp, '.'); cp != NULL; cp = strchr(cp, '.'))
+                *cp = '_';
+        }
+        log4c_category_t* cat = log4c_category_get(id);
+        if (cat == NULL) {
+            status = -1;
+        }
+        else {
+            mylog_category = cat;
+            status = 0;
+        }
+    }
+    return status;
+}
+
+/**
  * Initializes the logging module. Should be called before most other functions.
  * - `mylog_get_output()`   will return "".
  * - `mylog_get_facility()` will return `LOG_LDM`.
@@ -563,16 +610,16 @@ int mylog_init(
     else {
         success = log4c_init() == 0;
         if (success) {
-            mylog_category = log4c_category_get(id);
+            char filename[_XOPEN_PATH_MAX];
+            string_copy(filename, id, sizeof(filename));
+            string_copy(progname, basename(filename), sizeof(progname));
+            mylog_category = log4c_category_get(progname);
             if (mylog_category == NULL) {
                 success = false;
             }
             else {
-                string_copy(progname, id, sizeof(progname));
-                id = basename(progname);
-                (void)memmove(progname, id, strlen(id)+1);
                 (void)strcpy(output, "");
-                log_level = MYLOG_LEVEL_DEBUG;
+                log_level = MYLOG_LEVEL_NOTICE;
                 log4c_rc->config.reread = 0;
                 initialized = true;
                 success = true;
@@ -608,11 +655,11 @@ int mylog_fini(void)
  * `mylog_fini()`.
  *
  * @param[in] out      The logging output. One of
- *                         ""      Log according to the Log4C
+ *                         - ""      Log according to the Log4C
  *                                 configuration-file. Caller may free.
- *                         "-"     Log to the standard error stream. Caller may
+ *                         - "-"     Log to the standard error stream. Caller may
  *                                 free.
- *                         else    Log to the file whose pathname is `out`.
+ *                         - else    Log to the file whose pathname is `out`.
  *                                 Caller may free.
  * @retval    0        Success.
  * @retval    -1       Failure.
@@ -704,7 +751,7 @@ int mylog_set_level(
         const int         ncats = log4c_category_list(categories,
                 MAX_CATEGORIES);
         if (ncats < 0 || ncats > MAX_CATEGORIES) {
-            mylog_error("Couldn't get all logging categories: ncats=%d", ncats);
+            mylog_internal("Couldn't get all logging categories: ncats=%d", ncats);
             status = -1;
         }
         else {
@@ -741,7 +788,21 @@ void mylog_roll_level(void)
 }
 
 /**
- * Modifies the logging identifier.  Should be called between `mylog_init()` and
+ * Sets the logging identifier. Should be called between `mylog_init()` and
+ * `mylog_fini()`.
+ *
+ * @param[in] id        The new identifier. Caller may free.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+int mylog_set_id(
+        const char* const id)
+{
+    return set_id(id, "%s.", progname);
+}
+
+/**
+ * Modifies the logging identifier. Should be called between `mylog_init()` and
  * `mylog_fini()`. The identifier will become "<id>.<type>.<host>", where <id>
  * is the identifier given to `mylog_init()`, <type> is the type of upstream LDM
  * ("feeder" or "notifier"), and <host> is the identifier given to this function
@@ -753,41 +814,17 @@ void mylog_roll_level(void)
  * @retval    0         Success.
  * @retval    -1        Failure.
  */
-int mylog_modify_level(
+int mylog_set_upstream_id(
         const char* const hostId,
         const bool        isFeeder)
 {
-    int  status;
-    if (!initialized) {
-        status = -1;
-    }
-    else {
-        char id[CATEGORY_ID_MAX];
-        int  nbytes = snprintf(id, sizeof(id), "%s.%s.", progname,
-                isFeeder ? "feeder" : "notifier");
-        id[sizeof(id)-1] = 0;
-        if (nbytes < sizeof(id)) {
-            char* cp = id + nbytes;
-            string_copy(cp, hostId, sizeof(id)-nbytes);
-            for (cp = strchr(cp, '.'); cp != NULL; cp = strchr(cp, '.'))
-                *cp = '_';
-        }
-        log4c_category_t* cat = log4c_category_get(id);
-        if (cat == NULL) {
-            status = -1;
-        }
-        else {
-            mylog_category = cat;
-            status = 0;
-        }
-    }
-    return status;
+    return set_id(hostId, "%s.%s.", progname, isFeeder ? "feeder" : "notifier");
 }
 
 /**
  * Returns the logging identifier.
  *
- * @return The logging identifier. The initial value is "ulog".
+ * @return The logging identifier.
  */
 const char* mylog_get_id(void)
 {
@@ -834,13 +871,27 @@ int mylog_set_facility(
 }
 
 /**
+ * Returns the facility that will be used (e.g., `LOG_LOCAL0`) when logging to
+ * the system logging daemon. Should be called between `mylog_init()` and
+ * `mylog_fini()`.
+ *
+ * @param[in] facility  The facility that might be used when logging to the
+ *                      system logging daemon.
+ */
+int mylog_get_facility(void)
+{
+    return (intptr_t)log4c_appender_get_udata(mylog_appender_syslog);
+}
+
+
+/**
  * Emits an error message. Used internally when an error occurs in this logging
  * module.
  *
  * @param[in] fmt  Format of the message.
  * @param[in] ...  Format arguments.
  */
-void mylog_error(
+void mylog_internal(
         const char* const      fmt,
                                ...)
 {
@@ -874,10 +925,17 @@ void mylog_error(
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void mylog_emit(
+void mylog_write_one(
         const mylog_level_t    level,
         const Message* const   msg)
 {
-    log4c_category_log(mylog_category, mylog_get_priority(level), "%s:%d %s",
-            msg->loc.file, msg->loc.line, msg->string);
+    if (msg->loc.file) {
+        log4c_category_log(mylog_category, mylog_get_priority(level),
+                "%s:%d %s", mylog_basename(msg->loc.file), msg->loc.line,
+                msg->string);
+    }
+    else {
+        log4c_category_log(mylog_category, mylog_get_priority(level), "%s",
+                msg->string);
+    }
 }

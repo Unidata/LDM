@@ -290,13 +290,13 @@ pqe_new(pqueue *pq,
  *                        the data has been written or `pqe_discard()` to abort
  *                        the writing and release the region.
  * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
- *                        `log_add()` called.
-   @retval     EACCES     Product-queue is read-only. `log_add()` called.
+ *                        `mylog_add()` called.
+   @retval     EACCES     Product-queue is read-only. `mylog_add()` called.
  * @retval     PQ_BIG     Data-product is too large for product-queue.
- *                        `log_add()` called.
+ *                        `mylog_add()` called.
  * @retval     PQ_DUP     If a data-product with the same signature already
  *                        exists in the product-queue.
- * @return                `<errno.h>` error code. `log_add()` called.
+ * @return                `<errno.h>` error code. `mylog_add()` called.
  */
 int
 pqe_newDirect(
@@ -336,16 +336,16 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature);
  * @retval PQ_BIG       According to its metadata, the data-product is larger
  *                      than the space allocated for it by `pqe_new()` or
  *                      `pqe_newDirect()`. An attempt was made to revert the
- *                      product-queue to a consistent state. `uerror()` called.
+ *                      product-queue to a consistent state. `mylog_error()` called.
  * @retval PQ_NOTFOUND  The data-product referenced by `index` wasn't found.
- *                      `uerror()` called.
+ *                      `mylog_error()` called.
  * @retval PQ_CORRUPT   The metadata of the data-product referenced by `index`
  *                      couldn't be deserialized. The data-product isn't
  *                      inserted. An attempt was made to revert the
- *                      product-queue to a consistent state. `uerror()` called.
+ *                      product-queue to a consistent state. `mylog_error()` called.
  * @retval PQ_SYSTEM    System failure. The data-product isn't inserted.
  *                      The state of the product-queue is unspecified.
- *                      `uerror()` called.
+ *                      `mylog_error()` called.
  */
 int
 pqe_insert(pqueue *pq, pqe_index index);
@@ -751,8 +751,8 @@ pq_setCursorFromSignature(
  * @param[in] sig          Signature of data-product to process.
  * @param[in] func         Function to process data-product.
  * @param[in] optArg       Optional `func` argument.
- * @retval    PQ_SYSTEM    System error. `log_add()` called.
- * @retval    PQ_CORRUPT   The product-queue is corrupt. `log_add()` called.
+ * @retval    PQ_SYSTEM    System error. `mylog_add()` called.
+ * @retval    PQ_CORRUPT   The product-queue is corrupt. `mylog_add()` called.
  * @retval    PQ_NOTFOUND  A data-product with the given signature was not found
  *                         in the product-queue.
  * @return                 Return-code of `func`. All the above error-codes are

@@ -11,7 +11,7 @@
 #include <config.h>
 
 #include <arpa/inet.h>
-#include <assert.h>
+#include <mylog.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>             /* UINT_MAX */
@@ -43,7 +43,7 @@
 #include "ldm5_clnt.h"
 #include "ldmfork.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #if WANT_MULTICAST
     #include "mldm_sender_manager.h"
 #endif
@@ -59,8 +59,6 @@
 #include "rpcutil.h"
 #include "savedInfo.h"
 #include "timestamp.h"
-#include "mylog.h"
-#include "log.h"
 #include "UpFilter.h"
 #include "md5.h"
 
@@ -83,7 +81,7 @@ typedef struct {
  *
  * @param string        [in] The string. Client may free upon return.
  * @param integer       [in] Integer value.
- * @retval NULL         Failure. log_add() called.
+ * @retval NULL         Failure. mylog_add() called.
  * @return              Pointer to the new String/Unsigned object.
  */
 static const SUS*
@@ -94,13 +92,13 @@ sus_new(
     char*   str = strdup(string);
 
     if (str == NULL) {
-        LOG_SERROR1("Couldn't duplicate string \"%s\"", string);
+        mylog_syserr("Couldn't duplicate string \"%s\"", string);
     }
     else {
         SUS*    sus = malloc(sizeof(SUS));
 
         if (sus == NULL) {
-            LOG_SERROR0("Couldn't allocate new string/unsigned object");
+            mylog_syserr("Couldn't allocate new string/unsigned object");
         }
         else {
             sus->string = str;
@@ -120,7 +118,7 @@ sus_new(
  * Clones a string/unsigned object.
  *
  * @param sus           [in] The object to be cloned.
- * @retval NULL         Failure. log_add() called.
+ * @retval NULL         Failure. mylog_add() called.
  * @return              Pointer to the clone.
  */
 static const SUS*
@@ -130,7 +128,7 @@ sus_clone(
     const SUS*   clone = sus_new(sus->string, sus->integer);
 
     if (clone == NULL)
-        LOG_ADD0("Couldn't clone string/unsigned object");
+        mylog_add("Couldn't clone string/unsigned object");
 
     return clone;
 }
@@ -208,7 +206,7 @@ typedef SUS ServerInfo;
  *
  * @param hostId        [in] Host identifier. Client may free upon return.
  * @param port          [in] Port number.
- * @retval NULL         Failure. log_add() called.
+ * @retval NULL         Failure. mylog_add() called.
  * @return              Pointer to the new server-information object.
  */
 static const ServerInfo*
@@ -225,7 +223,7 @@ serverInfo_new(
  *
  * @param server    [in] The server information to be cloned. Client
  *                  may free upon return.
- * @retval NULL     Failure. log_add() called.
+ * @retval NULL     Failure. mylog_add() called.
  * @return          Pointer to the clone.
  */
 static const ServerInfo*
@@ -372,9 +370,9 @@ getQueueProdInfo(
 {
     int     status = -1;                /* error */
 
-    assert(pq != NULL);
-    assert(prodClass != NULL);
-    assert(info != NULL);
+    mylog_assert(pq != NULL);
+    mylog_assert(prodClass != NULL);
+    mylog_assert(info != NULL);
 
     for (pq_cset(pq, &TS_ENDT);
         !(status = pq_sequence(pq, TV_LT, prodClass, getInfo, info));)
@@ -390,7 +388,7 @@ getQueueProdInfo(
     }
 
     if (status && PQ_END != status) {
-        log_start("getQueueProdInfo(): %s", pq_strerror(pq, status));
+        mylog_add("getQueueProdInfo(): %s", pq_strerror(pq, status));
     }
     else {
         status =
@@ -512,8 +510,7 @@ getPreviousProdInfo(
     MD5_CTX*    context = new_MD5_CTX();
 
     if (context == NULL) {
-        log_errno();
-        log_add("getPreviousProdInfo(): Couldn't allocate MD5 structure");
+        mylog_error("Couldn't allocate MD5 structure");
     }
     else {
         /*
@@ -551,14 +548,12 @@ getPreviousProdInfo(
 
         if (file == NULL) {
             if (errno == ENOENT) {
-                unotice("Previous product-information file \"%s\" "
+                mylog_notice("Previous product-information file \"%s\" "
                     "doesn't exist", statePath);
                 status = 1;
             }
             else {
-                log_errno();
-                log_add("getPreviousProdInfo(): Couldn't open \"%s\"",
-                    statePath);
+                mylog_syserr("Couldn't open \"%s\"", statePath);
             }
         }
         else {
@@ -575,15 +570,13 @@ getPreviousProdInfo(
                 (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
-                log_errno();
-                log_add("getPreviousProdInfo(): Couldn't skip comments in "
-                    "\"%s\"", statePath);
+                mylog_syserr("Couldn't skip comments in " "\"%s\"", statePath);
             }
             else {
                 (void)ungetc(c, file);
 
                 if (pi_scan(info, file) < 0) {
-                    log_add("getPreviousProdInfo(): "
+                    mylog_add("getPreviousProdInfo(): "
                         "Couldn't scan product-information in \"%s\"",
                         statePath);
                 }
@@ -625,9 +618,7 @@ initSavedInfo(
     prod_info*  info = pi_new();
 
     if (info == NULL) {
-        log_errno();
-        log_add("initSavedInfo(): "
-            "Couldn't allocate product-information structure");
+        mylog_syserr("Couldn't allocate product-information structure");
         status = -1;
     }
     else {
@@ -647,7 +638,7 @@ initSavedInfo(
             status = pq_open(pqPath, PQ_READONLY, &pq);
 
             if (status) {
-                log_start("initSavedInfo(): Couldn't open product-queue "
+                mylog_add("initSavedInfo(): Couldn't open product-queue "
                     "\"%s\" for reading: %s", pqPath, pq_strerror(pq, status));
 
                 status = -1;
@@ -667,8 +658,7 @@ initSavedInfo(
 
         if (status == 0) {
             if (savedInfo_set(info)) {
-                log_errno();
-                log_add("initSavedInfo(): Couldn't set product-information");
+                mylog_syserr("Couldn't set product-information");
 
                 status = -1;
             }
@@ -739,7 +729,7 @@ requester_exec(
      */
     vetFromTime(&clssp->from, backoffTime);
 
-    unotice("Starting Up(%s): %s:%u %s", PACKAGE_VERSION, source, port,
+    mylog_notice("Starting Up(%s): %s:%u %s", PACKAGE_VERSION, source, port,
         s_prod_class(NULL, 0, clssp));
 
     (void)as_setLdmCount(serverCount);
@@ -751,9 +741,8 @@ requester_exec(
      * NB: Potentially lengthy and CPU-intensive.
      */
     if (initSavedInfo(source, port, getQueuePath(), clssp) != 0) {
-        log_add("prog_requester(): "
+        mylog_error("prog_requester(): "
             "Couldn't initialize saved product-information module");
-        log_log(LOG_ERR);
 
         errCode = EXIT_FAILURE;
     }
@@ -806,21 +795,20 @@ requester_exec(
                     isPrimary = !isPrimary;
                     doSleep = 0; /* reconnect immediately */
 
-                    LOG_ADD1("Switching data-product transfer-mode to %s",
+                    mylog_notice("Switching data-product transfer-mode to %s",
                                 isPrimary ? "primary" : "alternate");
-                    log_log(LOG_NOTICE);
                 }
             } /* req6_new() success */
             else {
                 int feedCode = err_code(errObj);
 
                 if (feedCode != REQ6_BAD_VERSION) {
-                    int             logLevel = LOG_ERR; /* default */
+                    int             logLevel = MYLOG_LEVEL_ERROR; /* default */
                     enum err_level  errLevel = ERR_ERROR; /* default */
 
                     if (feedCode == REQ6_UNKNOWN_HOST ||
                             feedCode == REQ6_NO_CONNECT) {
-                        logLevel = LOG_WARNING;
+                        logLevel = MYLOG_LEVEL_WARNING;
                         errLevel = ERR_WARNING;
                     }
                     else if (feedCode == REQ6_NOT_ALLOWED) {
@@ -831,11 +819,11 @@ requester_exec(
                             feedCode == REQ6_BAD_RECLASS) {
                     }
                     else if (feedCode == REQ6_DISCONNECT) {
-                        logLevel = LOG_NOTICE;
+                        logLevel = MYLOG_LEVEL_NOTICE;
                         errLevel = ERR_NOTICE;
                     }
                     else if (feedCode == REQ6_TIMED_OUT) {
-                        logLevel = LOG_NOTICE;
+                        logLevel = MYLOG_LEVEL_NOTICE;
                         errLevel = ERR_NOTICE;
                         doSleep = 0; /* reconnect immediately */
                     }
@@ -850,19 +838,19 @@ requester_exec(
                         errCode = EXIT_FAILURE; /* terminate */
                     }
 
-                    log_log(logLevel);
+                    mylog_flush(logLevel);
                     err_log(errObj, errLevel);
                 } /* don't need to try version 5 of the LDM */
                 else {
                     /*
                      * Try LDM version 5.
                      */
-                    log_log(LOG_NOTICE);
+                    mylog_flush_notice();
                     err_log(errObj, ERR_NOTICE);
                     free_remote_clss();
 
                     if (set_remote_class(clssp)) {
-                        log_log(LOG_ERR);
+                        mylog_flush_error();
                         errCode = EXIT_FAILURE;
                     }
                     else {
@@ -873,30 +861,30 @@ requester_exec(
                             rpctimeo, inactive_timeo, ldmprog_5);
                         (void)exitIfDone(0);
 
-                        udebug("forn5(...) = %d", feedCode);
+                        mylog_debug("forn5(...) = %d", feedCode);
 
                         if (feedCode == ECONNABORTED) {
-                            unotice("Connection aborted");
+                            mylog_notice("Connection aborted");
                         }
                         else if (feedCode == ECONNRESET) {
-                            unotice("Connection closed by upstream LDM");
+                            mylog_notice("Connection closed by upstream LDM");
                         }
                         else if (feedCode == ETIMEDOUT) {
-                            unotice("Connection timed-out");
+                            mylog_notice("Connection timed-out");
                             doSleep = 0; /* reconnect immediately */
                         }
                         else if (feedCode == ECONNREFUSED) {
-                            unotice("Connection refused");
+                            mylog_notice("Connection refused");
                         }
                         else if (feedCode != 0){
-                            uerror("Unexpected forn5() return: %d", feedCode);
+                            mylog_error("Unexpected forn5() return: %d", feedCode);
 
                             errCode = EXIT_FAILURE; /* terminate */
                         }
                     } /* remote product-class set */
                 } /* LDM-6 protocol not supported */
 
-                log_clear();
+                mylog_clear();
                 err_free(errObj);
             } /* req6_new() error; "errObj" allocated */
 
@@ -914,7 +902,7 @@ requester_exec(
                      */
                     const unsigned  sleepAmount = 2*interval;
 
-                    uinfo("Sleeping %u seconds before retrying...", sleepAmount);
+                    mylog_info("Sleeping %u seconds before retrying...", sleepAmount);
                     (void)sleep(sleepAmount);
                     (void)exitIfDone(0);
 
@@ -946,7 +934,7 @@ requester_exec(
  * @param serverCount   [in] The number of servers to which the same request will be
  *                      made.
  * @retval 0            Success.
- * @retval -1           Failure.  errno is set.  "log_log()" called.
+ * @retval -1           Failure.  errno is set.  "mylog_flush()" called.
  */
 static pid_t
 requester_spawn(
@@ -959,8 +947,7 @@ requester_spawn(
         pid_t pid = ldmfork();
         if(pid == -1)
         {
-                log_add("Couldn't fork downstream LDM");
-                log_log(LOG_ERR);
+                mylog_error("Couldn't fork downstream LDM");
                 return -1;
         }
 
@@ -1001,8 +988,8 @@ requester_new(
 {
     Requester*  reqstrp = (Requester*)malloc(sizeof(Requester));
 
-    assert(server != NULL);
-    assert(clssp != NULL);
+    mylog_assert(server != NULL);
+    mylog_assert(clssp != NULL);
 
     if (reqstrp != NULL) {
         int     error = 0;              /* success */
@@ -1101,7 +1088,7 @@ typedef struct {
  *
  * @param feedtype  [in] Feedtype.
  * @param pattern   [in] Pattern. The client may free upon return.
- * @retval NULL     Failure. log_add() called.
+ * @retval NULL     Failure. mylog_add() called.
  * @return          Pointer to the new subscription.
  */
 static Subscription*
@@ -1112,13 +1099,13 @@ sub_new(
     char* const pat = strdup(pattern);
 
     if (pat == NULL) {
-        LOG_SERROR1("Couldn't duplicate string \"%s\"", pattern);
+        mylog_syserr("Couldn't duplicate string \"%s\"", pattern);
     }
     else {
         Subscription*   sub = malloc(sizeof(Subscription));
 
         if (sub == NULL) {
-            LOG_SERROR0("Couldn't allocate new subscription object");
+            mylog_syserr("Couldn't allocate new subscription object");
         }
         else {
             sub->feedtype = feedtype;
@@ -1190,7 +1177,7 @@ sub_toString(
  *
  * @param sub       [in] The subscription to be cloned. Client may free upon
  *                  return.
- * @retval NULL     Failure. log_add() called.
+ * @retval NULL     Failure. mylog_add() called.
  * @return          Pointer to the clone.
  */
 static Subscription*
@@ -1200,7 +1187,7 @@ sub_clone(
     Subscription* const   clone = sub_new(sub->feedtype, sub->pattern);
 
     if (clone == NULL)
-        LOG_ADD1("Couldn't clone subscription %s", sub_toString(sub));
+        mylog_add("Couldn't clone subscription %s", sub_toString(sub));
 
     return clone;
 }
@@ -1307,7 +1294,7 @@ typedef struct request {
  * Returns a new, uninitialized request object. The request is not a member of
  * any list.
  *
- * @retval NULL     Failure. log_add() called.
+ * @retval NULL     Failure. mylog_add() called.
  * @return          A new, uninitialized request.
  */
 static Request* req_alloc()
@@ -1316,7 +1303,7 @@ static Request* req_alloc()
     Request*        req = malloc(nbytes);
 
     if (req == NULL) {
-        LOG_ADD1("Couldn't allocate %lu bytes for a new request object", nbytes);
+        mylog_add("Couldn't allocate %lu bytes for a new request object", nbytes);
     }
     else {
         req->subscription = NULL;
@@ -1334,7 +1321,7 @@ static Request* req_alloc()
  * @param next          [in] Pointer to the next request in the linked-list or
  *                      NULL.
  * @retval 0            Success.
- * @retval -1           Failure. log_add() called.
+ * @retval -1           Failure. mylog_add() called.
  */
 static int req_init(
     Request* const              req,
@@ -1380,7 +1367,7 @@ static void req_free(
  * @param next          [in] Pointer to the next request in the linked-list or
  *                      NULL.
  * @retval 0            Success.
- * @retval -1           Failure. log_add() called.
+ * @retval -1           Failure. mylog_add() called.
  */
 static Request* req_new(
     const Subscription* const   sub,
@@ -1440,7 +1427,7 @@ typedef struct serverEntry    ServerEntry;
  *
  * @param server    [in] Information on the server. Client may free upon
  *                  return.
- * @retval NULL     Failure. log_add() called.
+ * @retval NULL     Failure. mylog_add() called.
  * @return          Pointer to the new server-entry.
  */
 static ServerEntry*
@@ -1453,7 +1440,7 @@ serverEntry_new(
         ServerEntry*  entry = malloc(sizeof(ServerEntry));
 
         if (entry == NULL) {
-            LOG_SERROR0("Couldn't allocate new server-entry object");
+            mylog_syserr("Couldn't allocate new server-entry object");
         }
         else {
             entry->serverInfo = clone;
@@ -1509,13 +1496,13 @@ serverEntry_getServerInfo(
 
 
 /**
- * Reduces a subscription by the subscriptions in a server-entry. log_add() is
+ * Reduces a subscription by the subscriptions in a server-entry. mylog_add() is
  * called for every overlap in subscriptions.
  *
  * @param entry         [in] The server-entry.
  * @param sub           [in/out] The subscription to be reduced.
  * @retval 0            Success.
- * @retval -1           Failure. log_add() called.
+ * @retval -1           Failure. mylog_add() called.
  */
 static int
 serverEntry_reduceSub(
@@ -1534,7 +1521,7 @@ serverEntry_reduceSub(
                 char    buf[1024];
 
                 (void)sub_toString_r(buf, sizeof(buf), origSub);
-                LOG_ADD2("Subscription %s overlaps subscription %s",
+                mylog_add("Subscription %s overlaps subscription %s",
                         buf, sub_toString(entrySub));
             }
         }
@@ -1558,9 +1545,9 @@ serverEntry_reduceSub(
  *                      an empty specification, in which case the subscription
  *                      is ignored (i.e., not added). The client may free upon
  *                      return.
- * @retval 0            Success. log_add() is called if the subscription was
+ * @retval 0            Success. mylog_add() is called if the subscription was
  *                      reduced.
- * @retval -1           Failure. log_add() called.
+ * @retval -1           Failure. mylog_add() called.
  */
 static int
 serverEntry_add(
@@ -1570,7 +1557,7 @@ serverEntry_add(
     int     status = -1; /* failure */
 
     if (serverEntry_reduceSub(entry, sub)) {
-        LOG_ADD0("Couldn't reduce subscription by previous subscriptions");
+        mylog_add("Couldn't reduce subscription by previous subscriptions");
     }
     else {
         if (sub_isEmpty(sub)) {
@@ -1602,7 +1589,7 @@ static ServerEntry*         serverEntries = NULL;
  *
  * @param server        [in] Pointer to the server-information. Client may free
  *                      upon return.
- * @retval NULL         Failure. log_add() called.
+ * @retval NULL         Failure. mylog_add() called.
  * @return              Pointer to the corresponding entry.
  */
 static ServerEntry*
@@ -1618,7 +1605,7 @@ servers_addIfAbsent(
     entry = serverEntry_new(server);
 
     if (entry == NULL) {
-        LOG_ADD0("Couldn't create new server-entry");
+        mylog_add("Couldn't create new server-entry");
         return NULL;
     }
 
@@ -1721,7 +1708,7 @@ typedef struct subEntry SubEntry;
  *
  * @param sub       [in] The subscription to be in the entry. Client may free
  *                  upon return.
- * @retval NULL     Failure. log_add() called.
+ * @retval NULL     Failure. mylog_add() called.
  * @return          Pointer to the new entry.
  */
 static SubEntry*
@@ -1734,7 +1721,7 @@ subEntry_new(
         SubEntry*   entry = malloc(sizeof(SubEntry));
 
         if (entry == NULL) {
-            LOG_SERROR0("Couldn't allocate new subscription-entry");
+            mylog_syserr("Couldn't allocate new subscription-entry");
         }
         else {
             entry->next = NULL;
@@ -1759,7 +1746,7 @@ subEntry_new(
  * @param server        [in] The server information. Client may free upon
  *                      return.
  * @retval 0            Success.
- * @retval -1           Failure. log_add() called.
+ * @retval -1           Failure. mylog_add() called.
  */
 static int
 subEntry_add(
@@ -1771,7 +1758,7 @@ subEntry_add(
             (size_t)((entry->serverCount+1)*sizeof(ServerInfo*)));
 
     if (NULL == servers) {
-        LOG_SERROR0("Couldn't allocate new server-information array");
+        mylog_syserr("Couldn't allocate new server-information array");
     }
     else {
         const ServerInfo* const clone = serverInfo_clone(server);
@@ -1796,7 +1783,7 @@ subEntry_add(
  *
  * @param entry     [in] The subscription entry.
  * @retval 0        Success.
- * @return          System error code. log_add() called.
+ * @return          System error code. mylog_add() called.
  */
 static int
 subEntry_startRequester(
@@ -1825,7 +1812,7 @@ subEntry_startRequester(
             sp->pattern = strdup(sub_getPattern(entry->subscription));
 
             if (sp->pattern == NULL) {
-                LOG_SERROR1("Couldn't duplicate pattern \"%s\"",
+                mylog_syserr("Couldn't duplicate pattern \"%s\"",
                         sub_getPattern(entry->subscription));
                 status = errno;
             }
@@ -1834,7 +1821,7 @@ subEntry_startRequester(
 
                 if (regcomp(&sp->rgx, sp->pattern,
                         REG_EXTENDED|REG_NOSUB) != 0) {
-                    LOG_ADD1("Couldn't compile pattern \"%s\"", sp->pattern);
+                    mylog_add("Couldn't compile pattern \"%s\"", sp->pattern);
                     status = EINVAL;
                 }
                 else {
@@ -1891,7 +1878,7 @@ static SubEntry*   subsTail = NULL;
  *
  * @param sub           [in] Pointer to the subscription. Client may free upon
  *                      return.
- * @retval NULL         Failure. log_add() called.
+ * @retval NULL         Failure. mylog_add() called.
  * @return              Pointer to the corresponding entry.
  */
 static SubEntry*
@@ -1907,7 +1894,7 @@ subs_addIfAbsent(
     entry = subEntry_new(sub);
 
     if (NULL == entry) {
-        LOG_ADD0("Couldn't create new subscription-entry");
+        mylog_add("Couldn't create new subscription-entry");
         return NULL;
     }
 
@@ -1949,7 +1936,7 @@ subs_free(void)
  * Starts all downstream LDM-s necessary to satisfy the set of subscriptions.
  *
  * @retval 0        Success.
- * @return          System error code. log_add() called.
+ * @return          System error code. mylog_add() called.
  */
 static int
 subs_startRequesters(void)
@@ -1969,7 +1956,7 @@ subs_startRequesters(void)
 
         for (reqstrp = requesters; reqstrp != NULL; reqstrp = reqstrp->next)
         {
-            unotice("%s: %s",
+            mylog_notice("%s: %s",
                  reqstrp->source,
                  s_prod_class(buf, sizeof(buf), reqstrp->clssp));
         }
@@ -1986,7 +1973,7 @@ subs_startRequesters(void)
  *                      return.
  * @param serverEntry   [in/out] Server entry to which to add the subscription.
  * @return 0            Success.
- * @return -1           Failure. log_add() called.
+ * @return -1           Failure. mylog_add() called.
  */
 static int
 addRequest(
@@ -1998,13 +1985,12 @@ addRequest(
 
     if (origSub != NULL) {
         if (serverEntry_add(serverEntry, sub)) {
-            LOG_ADD0("Couldn't add subscription to server entry");
+            mylog_add("Couldn't add subscription to server entry");
         }
         else if (sub_isEmpty(sub)) {
-            LOG_ADD1("Ignoring subscription %s because it "
+            mylog_warning("Ignoring subscription %s because it "
                     "duplicates previous subscriptions or specifies nothing",
                     sub_toString(origSub));
-            log_log(LOG_WARNING);
             status = 0;
         }
         else {
@@ -2015,20 +2001,19 @@ addRequest(
 
                 (void)sub_toString_r(buf, sizeof(buf), origSub);
 
-                LOG_ADD2("Subscription %s reduced to %s by previous "
+                mylog_warning("Subscription %s reduced to %s by previous "
                         "subscriptions", buf, sub_toString(sub));
-                log_log(LOG_WARNING);
             }
 
             subEntry = subs_addIfAbsent(sub);
 
             if (subEntry == NULL) {
-                LOG_ADD0("Couldn't get subscription entry");
+                mylog_add("Couldn't get subscription entry");
             }
             else {
                 if (subEntry_add(subEntry,
                         serverEntry_getServerInfo(serverEntry))) {
-                    LOG_ADD0("Couldn't add server information to subscription "
+                    mylog_add("Couldn't add server information to subscription "
                             "entry");
                 }
                 else {
@@ -2291,23 +2276,22 @@ close_rest(int bottom)
 static int
 proc_exec(Process *proc)
 {
-        assert(proc->pid == -1);
-        assert(proc->wrdexp.we_wordv[proc->wrdexp.we_wordc] == NULL);
+        mylog_assert(proc->pid == -1);
+        mylog_assert(proc->wrdexp.we_wordv[proc->wrdexp.we_wordc] == NULL);
 
         proc->pid = ldmfork() ;
         if(proc->pid == -1)
         {       /* failure */
-                log_log(LOG_ERR);
+                mylog_flush_error();
                 return -1;
         }
         /* else */
 
         if(proc->pid == 0)
         {       /* child */
-                const unsigned  ulogOptions = ulog_get_options();
-                const char*     ulogIdent = getulogident();
-                const unsigned  ulogFacility = getulogfacility();
-                const char*     ulogPath = getulogpath();
+                const char*     id = mylog_get_id();
+                const unsigned  facility = mylog_get_facility();
+                const char*     output = mylog_get_output();
 
                 /* restore signals */
                 {
@@ -2364,9 +2348,12 @@ proc_exec(Process *proc)
                 } /* else, the logFd is stderr, and that's ok */
                 close_rest(3);
                 endpriv();
+                (void)mylog_fini();
                 (void) execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
-                openulog(ulogIdent, ulogOptions, ulogFacility, ulogPath);
-                serror("execvp: %s", proc->wrdexp.we_wordv[0]) ;
+                (void)mylog_init(id);
+                (void)mylog_set_facility(facility);
+                (void)mylog_set_output(output);
+                mylog_syserr("execvp: %s", proc->wrdexp.we_wordv[0]) ;
                 _exit(127) ;
         }
         /* else, parent */
@@ -2515,8 +2502,8 @@ lcf_getCommandLine(
                 size -= n;
             }
             else {
-                log_start("%s", strerror(errno));
-                log_add("Couldn't write command-line word %lu", (unsigned)i);
+                mylog_add("%s", strerror(errno));
+                mylog_add("Couldn't write command-line word %lu", (unsigned)i);
 
                 status = -1;
                 break;
@@ -2539,7 +2526,7 @@ lcf_getCommandLine(
  * @param hostId        [in] Host identifier. Client may free upon return.
  * @param port          [in] Port number.
  * @retval 0            Success.
- * @retval -1           System error. log_add() called.
+ * @retval -1           System error. mylog_add() called.
  */
 int
 lcf_addRequest(
@@ -2552,19 +2539,19 @@ lcf_addRequest(
     const ServerInfo*   server = serverInfo_new(hostId, port);
 
     if (server == NULL) {
-        LOG_ADD0("Couldn't create new server-information object");
+        mylog_add("Couldn't create new server-information object");
     }
     else {
         ServerEntry*  serverEntry = servers_addIfAbsent(server);
 
         if (serverEntry == NULL) {
-            LOG_ADD0("Couldn't get server entry");
+            mylog_add("Couldn't get server entry");
         }
         else {
             Subscription*   sub = sub_new(feedtype, pattern);
 
             if (sub == NULL) {
-                LOG_ADD0("Couldn't create new subscription object");
+                mylog_add("Couldn't create new subscription object");
             }
             else {
                 status = addRequest(sub, serverEntry);
@@ -2766,7 +2753,7 @@ lcf_reduceToAllowed(
          * If there's no access-control-list (ACL) or the host wants nothing,
          * then the intersection is the empty set.
          */
-        uwarn("%s:%d: no ACL or empty request", __FILE__, __LINE__);
+        mylog_warning("no ACL or empty request");
         nhits = 0;
     }
     else {
@@ -2781,8 +2768,7 @@ lcf_reduceToAllowed(
                 feedType[nhits++] = entry->ft;
 
                 if (nhits >= MAXHITS) {
-                    uerror("%s:%d: nhits (%u) >= MAXHITS (%d)",
-                        __FILE__, __LINE__, nhits, MAXHITS);
+                    mylog_error("nhits (%u) >= MAXHITS (%d)", nhits, MAXHITS);
                     break;
                 }
             }
@@ -2823,7 +2809,7 @@ lcf_reduceToAllowed(
                     sprint_feedtypet(s3, sizeof(s3), ft);
 
                     if (ft) {
-                        udebug("hit %s = %s & %s", s3, s1, s2);
+                        mylog_debug("hit %s = %s & %s", s3, s1, s2);
 
                         inter->psa.psa_val[ii].feedtype = ft;
 
@@ -2832,7 +2818,7 @@ lcf_reduceToAllowed(
                 }
 
                 if (ft == NONE) {
-                    udebug("miss %s", s1);
+                    mylog_debug("miss %s", s1);
 
                     inter->psa.psa_val[ii].feedtype = NONE;
                 }
@@ -3034,8 +3020,8 @@ lcf_addAccept(
  *                         free.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
- * @retval    EINVAL       Invalid specification. `log_start()` called.
- * @retval    ENOMEM       Out-of-memory. `log_start()` called.
+ * @retval    EINVAL       Invalid specification. `mylog_add()` called.
+ * @retval    ENOMEM       Out-of-memory. `mylog_add()` called.
  */
 int
 lcf_addMulticast(
@@ -3064,7 +3050,7 @@ lcf_addMulticast(
  *                         Caller may free upon return. "0.0.0.0" obtains the
  *                         system's default multicast interface.
  * @retval    0            Success.
- * @retval    ENOMEM       System failure. `log_start()` called.
+ * @retval    ENOMEM       System failure. `mylog_add()` called.
  */
 int
 lcf_addReceive(
@@ -3175,7 +3161,7 @@ lcf_reduceToAcceptable(
                 hits[nhits++] = ap;
 
                 if (nhits >= MAXHITS) {
-                        uerror("nhits (%u) >= MAXHITS (%d)",
+                        mylog_error("nhits (%u) >= MAXHITS (%d)",
                                 nhits, MAXHITS);
                         break;
                 }
@@ -3214,21 +3200,21 @@ lcf_reduceToAcceptable(
 
             prodClass->psa.psa_val[ii].feedtype = fi;
 
-            if (ulogIsDebug())
+            if (mylog_is_enabled_debug)
                 (void)sprint_feedtypet(s1, sizeof(s1), hits[ii]->ft);
 
             if (NONE == fi) {
-                udebug("miss %s", s1);
+                mylog_debug("miss %s", s1);
             }
             else {
-                if (ulogIsDebug()) {
+                if (mylog_is_enabled_debug) {
                     char s2[255], s3[255];
 
                     (void)sprint_feedtypet(s2, sizeof(s2),
                         offerd->psa.psa_val[jj].feedtype);
                     (void)sprint_feedtypet(s3, sizeof(s3), fi);
-                    udebug("hit %s = %s & %s", s3, s1, s2);
-                    udebug("    %s was %s", hits[ii]->pattern,
+                    mylog_debug("hit %s = %s & %s", s3, s1, s2);
+                    mylog_debug("    %s was %s", hits[ii]->pattern,
                          offerd->psa.psa_val[jj].pattern);
                 }
 
@@ -3268,7 +3254,7 @@ lcf_reduceToAcceptable(
  *
  * @param ldmPort       [in] Ignored.
  * @retval 0            Success.
- * @return              System error code. log_add() called.
+ * @return              System error code. mylog_add() called.
  */
 int
 lcf_startRequesters(
@@ -3359,7 +3345,7 @@ lcf_savePreviousProdInfo(void)
         file = fopen(tmpStatePath, "w");
 
         if (file == NULL) {
-            serror("savePreviousProdInfo(): Couldn't open \"%s\" for writing",
+            mylog_syserr("Couldn't open \"%s\" for writing",
                 tmpStatePath);
         }
         else {
@@ -3367,22 +3353,20 @@ lcf_savePreviousProdInfo(void)
 "# The following is the product-information of the last,\n"
 "# successfully-received data-product.  Do not modify it unless\n"
 "# you know exactly what you're doing!\n", file) < 0) {
-                log_errno();
-                log_add("savePreviousProdInfo(): "
-                    "Couldn't write comment to \"%s\"", tmpStatePath);
+                mylog_syserr("Couldn't write comment to \"%s\"", tmpStatePath);
             }
             else {
                 if (pi_print(info, file) < 0 || fputc('\n', file) == EOF) {
-                    log_add("Couldn't write product-information to \"%s\"",
+                    mylog_add("Couldn't write product-information to \"%s\"",
                         tmpStatePath);
                 }
                 else {
                     if (fclose(file) != 0) {
-                        serror("savePreviousProdInfo(): Error closing \"%s\"",
+                        mylog_syserr("Error closing \"%s\"",
                             tmpStatePath);
                     }
                     else if (rename(tmpStatePath, statePath) == -1) {
-                        serror("savePreviousProdInfo(): Couldn't rename "
+                        mylog_syserr("Couldn't rename "
                             "\"%s\" to \"%s\"",
                             tmpStatePath, statePath);
                     }

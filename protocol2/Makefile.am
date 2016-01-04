@@ -91,7 +91,7 @@ lib_la_CPPFLAGS		= \
     -I$(top_srcdir)/misc \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/mylog \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/mcast_lib/C \
     -I$(top_srcdir)/mcast_lib/C++
@@ -99,7 +99,7 @@ if WANT_MULTICAST
 lib_la_CPPFLAGS		+= -I$(top_builddir)/mcast_lib -I$(top_srcdir)/mcast_lib
 endif
 TAGS_FILES		= \
-    ../ulog/*.c ../ulog/*.h \
+    ../mylog/*.c ../mylog/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../misc/*.c ../misc/*.h \
     ../pq/*.c ../pq/*.h \
@@ -133,7 +133,7 @@ if HAVE_CUNIT
 
 check_PROGRAMS		= ldmprint_test test_data_prod testuldb
 
-ldmprint_test_CPPFLAGS  = -I$(top_srcdir) -I$(top_srcdir)/ulog \
+ldmprint_test_CPPFLAGS  = -I$(top_srcdir) -I$(top_srcdir)/mylog \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
                            @CPPFLAGS_CUNIT@
 ldmprint_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
@@ -145,14 +145,14 @@ local_checks		+= check-ldmprint_test
 test_data_prod_CPPFLAGS	= -I$(top_srcdir) \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-                          -I$(top_srcdir)/ulog \
+                          -I$(top_srcdir)/mylog \
                           @CPPFLAGS_CUNIT@
 test_data_prod_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
 testuldb_CPPFLAGS	= -I$(top_srcdir) \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-                          -I$(top_srcdir)/ulog \
+                          -I$(top_srcdir)/mylog \
                           @CPPFLAGS_CUNIT@
 testuldb_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 

@@ -28,7 +28,7 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "mldm_sender_manager.h"
 #include "mcast_info.h"
 #include "pq.h"
@@ -72,9 +72,9 @@ static feedtypet feedtype;
  *
  * @param[in] feed         The feedtype.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ * @retval    LDM7_INVAL   The product-index map is already open. `mylog_add()`
  *                         called.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                         associated file is unspecified.
  */
 static int
@@ -96,13 +96,12 @@ up7_closeProdIndexMap()
         char feedStr[256];
         int  nbytes = ft_format(feedtype, feedStr, sizeof(feedStr));
         if (nbytes == -1 || nbytes >= sizeof(feedStr)) {
-            LOG_ADD1("Couldn't close product-index map for feed %#lx",
+            mylog_error("Couldn't close product-index map for feed %#lx",
                     (unsigned long)feedStr);
         }
         else {
-            LOG_ADD1("Couldn't close product-index map for feed %s", feedStr);
+            mylog_error("Couldn't close product-index map for feed %s", feedStr);
         }
-        log_log(LOG_ERR);
     }
 }
 
@@ -120,7 +119,7 @@ static void up7_destroyClient(void)
  *
  * @param[in] xprt      Server-side RPC transport.
  * @retval    true      Success.
- * @retval    false     System error. `log_start()` called.
+ * @retval    false     System error. `mylog_add()` called.
  */
 static bool
 up7_createClientTransport(
@@ -132,22 +131,21 @@ up7_createClientTransport(
      * Create a client-side RPC transport on the TCP connection.
      */
     up7_destroyClient(); // `up7_down7_test` calls this function more than once
-    UASSERT(xprt->xp_raddr.sin_port != 0);
-    UASSERT(xprt->xp_sock >= 0);
+    mylog_assert(xprt->xp_raddr.sin_port != 0);
+    mylog_assert(xprt->xp_sock >= 0);
     // `xprt->xp_sock >= 0` => socket won't be closed by client-side error
     // TODO: adjust sending buffer size
     clnt = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN, &xprt->xp_sock,
             MAX_RPC_BUF_NEEDED, 0);
     if (clnt == NULL) {
-        UASSERT(rpc_createerr.cf_stat != RPC_TIMEDOUT);
-        LOG_START2("Couldn't create client-side transport to downstream LDM-7 on "
+        mylog_assert(rpc_createerr.cf_stat != RPC_TIMEDOUT);
+        mylog_add("Couldn't create client-side transport to downstream LDM-7 on "
                 "%s%s", hostbyaddr(&xprt->xp_raddr), clnt_spcreateerror(""));
         success = false;
     }
     else {
         if (atexit(up7_destroyClient)) {
-            LOG_SERROR0("Couldn't register upstream LDM-7 cleanup function");
-            log_log(LOG_ERR);
+            mylog_syserr("Couldn't register upstream LDM-7 cleanup function");
             up7_destroyClient();
             success = false;
         }
@@ -172,7 +170,7 @@ up7_createClientTransport(
  * @param[in]  serverView   Server-side multicast information. Caller may
  *                          modify or free.
  * @retval     0            Success. `*clientView` is set.
- * @retval     LDM7_SYSTEM  System failure. `log_start()` called.
+ * @retval     LDM7_SYSTEM  System failure. `mylog_add()` called.
  */
 static Ldm7Status
 up7_setMcastInfo(
@@ -212,7 +210,7 @@ up7_setMcastInfo(
  *                          no longer needed.
  * @retval     0            Success. `*reply` is set. `feedtype` is set iff
  *                          a corresponding multicast sender exists.
- * @retval     LDM7_SYSTEM  System error. `log_start()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 up7_subscribe(
@@ -226,7 +224,7 @@ up7_subscribe(
 
     if (status) {
         if (LDM7_NOENT == status) {
-            log_log(LOG_NOTICE);
+            mylog_flush_notice();
             reply->status = LDM7_INVAL; // non-existent feed
             status = 0;
         }
@@ -238,7 +236,7 @@ up7_subscribe(
         status = up7_openProdIndexMap(feed);
         if (status == 0) {
             if (atexit(up7_closeProdIndexMap)) {
-                LOG_SERROR0("Couldn't register function to close product-index map");
+                mylog_syserr("Couldn't register function to close product-index map");
                 status = LDM7_SYSTEM;
             }
             else {
@@ -280,7 +278,7 @@ up7_ensureFree(
  * @param[in] len          Size of XDR-encoded data-product in bytes.
  * @param[in] optArg       Pointer to associated VCMTP product-index.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  Failure. `log_start()` called.
+ * @retval    LDM7_SYSTEM  Failure. `mylog_add()` called.
  */
 static int
 up7_deliverProduct(
@@ -296,8 +294,8 @@ up7_deliverProduct(
     missedProd.prod.info = *info;
     missedProd.prod.data = (void*)data; // cast away `const`
 
-    udebug("%s:up7_deliverProduct(): Delivering: iProd=%lu, ident=\"%s\"",
-            __FILE__, missedProd.iProd, info->ident);
+    mylog_debug("up7_deliverProduct(): Delivering: iProd=%lu, ident=\"%s\"",
+            missedProd.iProd, info->ident);
     (void)deliver_missed_product_7(&missedProd, clnt);
 
     /*
@@ -305,14 +303,14 @@ up7_deliverProduct(
      * call uses asynchronous message-passing.
      */
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
-        if (ulogIsVerbose())
-            uinfo("%s:up7_deliverProduct(): Missed product sent: %s",
-                    __FILE__, s_prod_info(NULL, 0, &missedProd.prod.info,
-                    ulogIsDebug()));
+        if (mylog_is_enabled_info)
+            mylog_info("up7_deliverProduct(): Missed product sent: %s",
+                    s_prod_info(NULL, 0, &missedProd.prod.info,
+                    mylog_is_enabled_debug));
         return 0;
     }
 
-    LOG_START1("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
+    mylog_add("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
 
     return LDM7_SYSTEM;
 }
@@ -323,8 +321,8 @@ up7_deliverProduct(
  *
  * @param[in]  iProd        Product-index.
  * @retval     0            Success.
- * @retval     LDM7_NOENT   No corresponding data-product. `log_start()` called.
- * @retval     LDM7_SYSTEM  System failure. `log_start()` called.
+ * @retval     LDM7_NOENT   No corresponding data-product. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM  System failure. `mylog_add()` called.
  */
 static Ldm7Status
 up7_sendProduct(
@@ -334,7 +332,7 @@ up7_sendProduct(
     int        status = pim_get(iProd, &sig);
 
     if (LDM7_NOENT == status) {
-        LOG_START1("No signature in product-index map corresponding to index %lu",
+        mylog_add("No signature in product-index map corresponding to index %lu",
                 (unsigned long)iProd);
     }
     else if (0 == status) {
@@ -344,7 +342,7 @@ up7_sendProduct(
             char buf[sizeof(signaturet)*2+1];
 
             (void)sprint_signaturet(buf, sizeof(buf), sig);
-            LOG_START2("No data-product corresponding to signature %s: "
+            mylog_add("No data-product corresponding to signature %s: "
                     "prodIndex=%lu", buf, (unsigned long)iProd);
             status = LDM7_NOENT;
         }
@@ -364,7 +362,7 @@ up7_sendProduct(
  * @param[in] iProd   Product-index.
  * @retval    true    Success. Either the product or a notice of unavailability
  *                    was sent to the client.
- * @retval    false   Failure. `log_start()` called.
+ * @retval    false   Failure. `mylog_add()` called.
  */
 static bool
 up7_findAndSendProduct(
@@ -373,7 +371,7 @@ up7_findAndSendProduct(
     int status = up7_sendProduct(iProd);
 
     if (LDM7_NOENT == status) {
-        log_log(LOG_INFO);
+        mylog_flush_info();
         (void)no_such_product_7(&iProd, clnt);
 
         if (clnt_stat(clnt) == RPC_TIMEDOUT) {
@@ -384,7 +382,7 @@ up7_findAndSendProduct(
              * The status will be RPC_TIMEDOUT unless an error occurs because
              * the RPC call uses asynchronous message-passing.
              */
-            LOG_START1("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
+            mylog_add("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
         }
     }
 
@@ -400,8 +398,7 @@ closePq(void)
 {
     if (pq) {
         if (pq_close(pq)) {
-            LOG_START0("Couldn't close global product-queue");
-            log_log(LOG_ERR);
+            mylog_error("Couldn't close global product-queue");
         }
         pq = NULL;
     }
@@ -410,7 +407,7 @@ closePq(void)
 /**
  * Ensures that the product-queue is open for reading.
  *
- * @retval false  Failure.   `log_start()` called.
+ * @retval false  Failure.   `mylog_add()` called.
  * @retval true   Success.
  */
 static bool
@@ -427,17 +424,16 @@ up7_ensureProductQueueOpen(void)
 
         if (status) {
             if (PQ_CORRUPT == status) {
-                LOG_START1("The product-queue \"%s\" is corrupt", pqPath);
+                mylog_add("The product-queue \"%s\" is corrupt", pqPath);
             }
             else {
-                LOG_ERRNUM1(status, "Couldn't open product-queue \"%s\": %s",
-                        pqPath);
+                mylog_error("Couldn't open product-queue \"%s\": %s", pqPath);
             }
             success = false;
         }
         else {
             if (atexit(closePq)) {
-                LOG_SERROR0("Couldn't register product-queue closing function");
+                mylog_syserr("Couldn't register product-queue closing function");
                 success = false;
             }
             else {
@@ -456,7 +452,7 @@ up7_ensureProductQueueOpen(void)
  * @param[in] after        Data-product signature.
  * @retval    0            Success.
  * @retval    LDM7_NOENT   Corresponding data-product not found.
- * @retval    LDM7_SYSTEM  Failure. `log_start()` called.
+ * @retval    LDM7_SYSTEM  Failure. `mylog_add()` called.
  */
 static Ldm7Status
 up7_setCursorFromSignature(
@@ -468,12 +464,11 @@ up7_setCursorFromSignature(
     case 0:
         return 0;
     case PQ_NOTFOUND:
-        LOG_START1("Data-product with signature %s wasn't found in product-queue",
+        mylog_info("Data-product with signature %s wasn't found in product-queue",
                 s_signaturet(NULL, 0, after));
-        log_log(LOG_INFO);
         return LDM7_NOENT;
     default:
-        LOG_START2("Couldn't set product-queue cursor from signature %s: %s",
+        mylog_add("Couldn't set product-queue cursor from signature %s: %s",
                 s_signaturet(NULL, 0, after), pq_strerror(pq, status));
         return LDM7_SYSTEM;
     }
@@ -484,7 +479,7 @@ up7_setCursorFromSignature(
  *
  * @param[in] offset  Time offset in seconds.
  * @retval    true    Success.
- * @retval    false   Failure. `log_start()` called.
+ * @retval    false   Failure. `mylog_add()` called.
  */
 static void
 up7_setCursorFromTimeOffset(
@@ -504,7 +499,7 @@ up7_setCursorFromTimeOffset(
  *
  * @param[in] backlog  Backlog specification.
  * @retval    true     Success.
- * @retval    false    Failure. `log_start()` called.
+ * @retval    false    Failure. `mylog_add()` called.
  */
 static bool
 up7_setProductQueueCursor(
@@ -537,7 +532,7 @@ up7_setProductQueueCursor(
  * @param[in] arg          Signature.
  * @retval    0            Success.
  * @retval    LDM7_EXISTS  Data-product has given signature. Not sent.
- * @retval    LDM7_SYSTEM  System error. `log_start()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static int
 up7_sendIfNotSignature(
@@ -563,13 +558,14 @@ up7_sendIfNotSignature(
      * call uses asynchronous message-passing.
      */
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
-        if (ulogIsVerbose())
-            unotice("%s: Backlog product sent: %s", __FILE__,
-                    s_prod_info(NULL, 0, info, ulogIsDebug()));
+        if (mylog_is_enabled_info)
+            mylog_notice("Backlog product sent: %s",
+                    s_prod_info(NULL, 0, info,
+                            mylog_is_enabled_debug));
         return 0;
     }
 
-    LOG_START1("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
+    mylog_add("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
 
     return LDM7_SYSTEM;
 }
@@ -583,7 +579,7 @@ up7_sendIfNotSignature(
  * @retval    0            Success.
  * @retval    LDM7_NOENT   Data-product with given signature not found before
  *                         end of queue reached.
- * @retval    LDM7_SYSTEM  System failure. `log_start()` called.
+ * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
  */
 static Ldm7Status
 up7_sendUpToSignature(
@@ -626,7 +622,7 @@ up7_sendUpToSignature(
  * @param[in] backlog  Specification of data-product backlog.
  * @param[in] rqstp    RPC service-request.
  * @retval    true     Success.
- * @retval    false    Failure. `log_start()` called.
+ * @retval    false    Failure. `mylog_add()` called.
  */
 static bool
 up7_sendBacklog(
@@ -650,7 +646,7 @@ up7_sendBacklog(
  *
  * @param[in] feedtype    Feedtype of multicast group.
  * @param[in] rqstp       RPC service-request.
- * @retval    NULL        System error. `log_log()` and `svcerr_systemerr()`
+ * @retval    NULL        System error. `mylog_flush()` and `svcerr_systemerr()`
  *                        called. No reply should be sent to the downstream
  *                        LDM-7.
  * @return                Result of the subscription request.
@@ -660,7 +656,7 @@ subscribe_7_svc(
         feedtypet* const restrict       feedtype,
         struct svc_req* const restrict  rqstp)
 {
-    udebug("subscribe_7_svc(): Entered");
+    mylog_debug("subscribe_7_svc(): Entered");
     static SubscriptionReply* reply;
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
@@ -668,15 +664,14 @@ subscribe_7_svc(
     const char*               hostname = hostbyaddr(&xprt->xp_raddr);
     const char*               feedspec = s_feedtypet(*feedtype);
 
-    unotice("Incoming subscription from %s (%s) port %u for %s", ipv4spec,
+    mylog_notice("Incoming subscription from %s (%s) port %u for %s", ipv4spec,
             hostname, ntohs(xprt->xp_raddr.sin_port), s_feedtypet(*feedtype));
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
 
     if (up7_subscribe(*feedtype, xprt, &result) ||
             !up7_ensureProductQueueOpen()) {
-        LOG_ADD2("Couldn't subscribe %s to feedtype %s",
+        mylog_error("Couldn't subscribe %s to feedtype %s",
                 hostbyaddr(svc_getcaller(xprt)), s_feedtypet(*feedtype));
-        log_log(LOG_ERR);
         svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
         svc_destroy(xprt);
         /*
@@ -688,7 +683,7 @@ subscribe_7_svc(
     }
     else {
         if (!up7_createClientTransport(xprt)) {
-            log_log(LOG_ERR);
+            mylog_flush_error();
             svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
             svc_destroy(xprt);
             /*
@@ -720,18 +715,17 @@ request_product_7_svc(
     VcmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
-    udebug("%s:request_product_7_svc(): Entered: iProd=%lu", __FILE__,
+    mylog_debug("request_product_7_svc(): Entered: iProd=%lu",
             (unsigned long)*iProd);
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
-        LOG_START1("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
-        log_log(LOG_ERR);
+        mylog_error("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
         svcerr_systemerr(xprt); // so the remote client will learn
         svc_destroy(xprt);      // so the caller will learn
     }
     else if (!up7_findAndSendProduct(*iProd)) {
-        log_log(LOG_ERR);
+        mylog_flush_error();
         svcerr_systemerr(xprt); // so the remote client will learn
         up7_destroyClient();
         svc_destroy(xprt);      // so the caller will learn
@@ -754,16 +748,15 @@ request_backlog_7_svc(
     BacklogSpec* const    backlog,
     struct svc_req* const rqstp)
 {
-    udebug("request_backlog_7_svc(): Entered");
+    mylog_debug("request_backlog_7_svc(): Entered");
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
-        LOG_START1("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
-        log_log(LOG_ERR);
+        mylog_error("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
     else if (!up7_sendBacklog(backlog)) {
-        log_log(LOG_ERR);
+        mylog_flush_error();
         up7_destroyClient();
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
@@ -782,6 +775,6 @@ test_connection_7_svc(
     void* const           no_op,
     struct svc_req* const rqstp)
 {
-    udebug("test_connection_7_svc(): Entered");
+    mylog_debug("test_connection_7_svc(): Entered");
     return NULL;                // don't reply
 }

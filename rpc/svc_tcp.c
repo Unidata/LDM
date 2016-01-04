@@ -54,7 +54,7 @@ static char sccsid[] = "@(#)svc_tcp.c 1.21 87/08/11 Copyr 1984 Sun Micro";
 #include <unistd.h>
 #include "rpc.h"
 
-#include "log.h"
+#include "mylog.h"
 
 extern int errno;
 
@@ -335,13 +335,13 @@ readtcp(
 
 		if (status <= 0) {
 			if (status == 0) {
-			    LOG_START1("select() timeout on socket %d", sock);
+			    mylog_add("select() timeout on socket %d", sock);
 			}
 			else {
 			    if (errno == EINTR)
 				    continue;
 
-			    LOG_SERROR1("select() error on socket %d", sock);
+			    mylog_syserr("select() error on socket %d", sock);
 			}
 
 			goto fatal_err;
@@ -355,10 +355,10 @@ readtcp(
 		return (len);
 	}
 	if (len == 0) {
-	    LOG_START1("EOF on socket %d", sock);
+	    mylog_add("EOF on socket %d", sock);
 	}
 	else {
-	    LOG_SERROR1("read() error on socket %d", sock);
+	    mylog_syserr("read() error on socket %d", sock);
 	}
 fatal_err:
 	((struct tcp_conn *)(xprt->xp_p1))->strm_stat = XPRT_DIED;
@@ -379,7 +379,7 @@ writetcp(
 
 	for (cnt = len; cnt > 0; cnt -= i, buf += i) {
 		if ((i = (int)write(xprt->xp_sock, buf, cnt)) < 0) {
-			LOG_SERROR1("writetcp(): write() error on socket %d",
+			mylog_syserr("writetcp(): write() error on socket %d",
 			    xprt->xp_sock);
 			((struct tcp_conn *)(xprt->xp_p1))->strm_stat =
 			    XPRT_DIED;

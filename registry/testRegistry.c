@@ -16,7 +16,7 @@
 #include <syslog.h>
 #include <sys/stat.h>
 
-#include <log.h>
+#include <mylog.h>
 #include "registry.h"
 #include "timestamp.h"
 #include "mylog.h"
@@ -43,7 +43,7 @@ test_regMissing(void)
     /* The registry shouldn't exist. */
     status = reg_getString("/foo_key", &value);
     CU_ASSERT_EQUAL(status, EIO);
-    log_clear();
+    mylog_clear();
 }
 
 static void
@@ -54,7 +54,7 @@ test_keyWithSpace(void)
 
     status = reg_putString("/foo key", "foo value 0");
     CU_ASSERT_EQUAL(status, EINVAL);
-    log_clear();
+    mylog_clear();
 }
 
 static void
@@ -65,8 +65,7 @@ test_regString(void)
 
     status = reg_putString("/foo_key", "foo value 0");
     if (status) {
-        log_add("test_regString(): Couldn't put string");
-        log_log(LOG_ERR);
+        mylog_error("test_regString(): Couldn't put string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -74,8 +73,7 @@ test_regString(void)
 
     status = reg_putString("/foo_key", "foo value");
     if (status) {
-        log_add("test_regString(): Couldn't replace string");
-        log_log(LOG_ERR);
+        mylog_error("test_regString(): Couldn't replace string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -83,8 +81,7 @@ test_regString(void)
 
     status = reg_getString("/foo_key", &value);
     if (status) {
-        log_add("test_regString(): Couldn't get string");
-        log_log(LOG_ERR);
+        mylog_error("test_regString(): Couldn't get string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -94,8 +91,7 @@ test_regString(void)
 
     status = reg_getString("/bar_key", &value);
     if (status && ENOENT != status) {
-        log_add("test_regString(): Couldn't add second string");
-        log_log(LOG_ERR);
+        mylog_error("test_regString(): Couldn't add second string");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -110,65 +106,56 @@ test_regBool(void)
 
     status = reg_putBool("/fooBool_key", 0);
     if (status) {
-        log_add("test_regBool(): Couldn't add boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regBool(): Couldn't add boolean");
     }
     CU_ASSERT_EQUAL(status, 0);
 
     status = reg_getBool("/fooBool_key", &value);
     if (status) {
-        log_add("test_regBool(): Couldn't get boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regBool(): Couldn't get boolean");
     }
     CU_ASSERT_EQUAL(value, 0);
 
     status = reg_putString("/fooBool_key", "FALSE");
     if (status) {
-        log_add("test_regBool(): Couldn't add boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regBool(): Couldn't add boolean");
     }
     CU_ASSERT_EQUAL(status, 0);
 
     status = reg_getBool("/fooBool_key", &value);
     if (status) {
-        log_add("test_regBool(): Couldn't get boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regBool(): Couldn't get boolean");
     }
     CU_ASSERT_EQUAL(value, 0);
 
     status = reg_putBool("/fooBool_key", 1);
     if (status) {
-        log_add("test_regBool(): Couldn't replace boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regBool(): Couldn't replace boolean");
     }
     CU_ASSERT_EQUAL(status, 0);
 
     status = reg_getBool("/fooBool_key", &value);
     if (status) {
-        log_add("test_regBool(): Couldn't get boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regBool(): Couldn't get boolean");
     }
     CU_ASSERT_EQUAL(value, 1);
 
     status = reg_putString("/fooBool_key", "TRUE");
     if (status) {
-        log_add("test_regBool(): Couldn't replace boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regBool(): Couldn't replace boolean");
     }
     CU_ASSERT_EQUAL(status, 0);
 
     status = reg_getBool("/fooBool_key", &value);
     if (status) {
-        log_add("test_regBool(): Couldn't get boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regBool(): Couldn't get boolean");
     }
     CU_ASSERT_EQUAL(value, 1);
 
     status = reg_getBool("/barBool_key", &value);
     if (status && ENOENT != status) {
-        log_add("test_regBool(): Bad status getting non-existent boolean: %d",
+        mylog_error("test_regBool(): Bad status getting non-existent boolean: %d",
                 status);
-        log_log(LOG_ERR);
     }
     CU_ASSERT_EQUAL(status, ENOENT);
 }
@@ -181,8 +168,7 @@ test_regInt(void)
 
     status = reg_putUint("/fooInt_key", 1);
     if (status) {
-        log_add("test_regInt(): Couldn't add int");
-        log_log(LOG_ERR);
+        mylog_error("test_regInt(): Couldn't add int");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -190,8 +176,7 @@ test_regInt(void)
 
     status = reg_putUint("/fooInt_key", 2);
     if (status) {
-        log_add("test_regInt(): Couldn't replace int");
-        log_log(LOG_ERR);
+        mylog_error("test_regInt(): Couldn't replace int");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -199,8 +184,7 @@ test_regInt(void)
 
     status = reg_getUint("/fooInt_key", &value);
     if (status) {
-        log_add("test_regInt(): Couldn't get int");
-        log_log(LOG_ERR);
+        mylog_error("test_regInt(): Couldn't get int");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -209,8 +193,7 @@ test_regInt(void)
 
     status = reg_getUint("/barInt_key", &value);
     if (status && ENOENT != status) {
-        log_add("test_regInt(): Couldn't put second int");
-        log_log(LOG_ERR);
+        mylog_error("test_regInt(): Couldn't put second int");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -225,8 +208,7 @@ test_regTime(void)
 
     status = reg_putTime("/fooTime_key", &TS_ENDT);
     if (status) {
-        log_add("test_regTime(): Couldn't put time");
-        log_log(LOG_ERR);
+        mylog_error("test_regTime(): Couldn't put time");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -234,8 +216,7 @@ test_regTime(void)
 
     status = reg_putTime("/fooTime_key", &TS_ZERO);
     if (status) {
-        log_add("test_regTime(): Couldn't replace time");
-        log_log(LOG_ERR);
+        mylog_error("test_regTime(): Couldn't replace time");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -243,8 +224,7 @@ test_regTime(void)
 
     status = reg_getTime("/fooTime_key", &value);
     if (status) {
-        log_add("test_regTime(): Couldn't get time");
-        log_log(LOG_ERR);
+        mylog_error("test_regTime(): Couldn't get time");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -253,8 +233,7 @@ test_regTime(void)
 
     status = reg_getTime("/barTime_key", &value);
     if (status && ENOENT != status) {
-        log_add("test_regTime(): Couldn't put second time");
-        log_log(LOG_ERR);
+        mylog_error("test_regTime(): Couldn't put second time");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -272,8 +251,7 @@ test_regSignature(void)
 
     status = reg_putSignature("/fooSignature_key", value1);
     if (status) {
-        log_add("test_regSignature(): Couldn't put signature");
-        log_log(LOG_ERR);
+        mylog_error("test_regSignature(): Couldn't put signature");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -281,8 +259,7 @@ test_regSignature(void)
 
     status = reg_putSignature("/fooSignature_key", value2);
     if (status) {
-        log_add("test_regSignature(): Couldn't replace signature");
-        log_log(LOG_ERR);
+        mylog_error("test_regSignature(): Couldn't replace signature");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -290,8 +267,7 @@ test_regSignature(void)
 
     status = reg_getSignature("/fooSignature_key", &value);
     if (status) {
-        log_add("test_regSignature(): Couldn't get signature");
-        log_log(LOG_ERR);
+        mylog_error("test_regSignature(): Couldn't get signature");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -300,8 +276,7 @@ test_regSignature(void)
 
     status = reg_getSignature("/barSignature_key", &value);
     if (status && ENOENT != status) {
-        log_add("test_regSignature(): Couldn't put second signature");
-        log_log(LOG_ERR);
+        mylog_error("test_regSignature(): Couldn't put second signature");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -316,8 +291,7 @@ test_regSubkeys(void)
 
     status = reg_putString("/subkey/string_key", "string_value");
     if (status) {
-        log_add("test_subkeys(): Couldn't put string");
-        log_log(LOG_ERR);
+        mylog_error("test_subkeys(): Couldn't put string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -325,8 +299,7 @@ test_regSubkeys(void)
 
     status = reg_putString("/subkey/string_key", "string value 2");
     if (status) {
-        log_add("test_subkeys(): Couldn't replace string");
-        log_log(LOG_ERR);
+        mylog_error("test_subkeys(): Couldn't replace string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -334,8 +307,7 @@ test_regSubkeys(void)
 
     status = reg_getString("/subkey/string_key", &value);
     if (status) {
-        log_add("test_regString(): Couldn't get string");
-        log_log(LOG_ERR);
+        mylog_error("test_regString(): Couldn't get string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -345,8 +317,7 @@ test_regSubkeys(void)
 
     status = reg_putString("/subkey/string_key2", "string_value2");
     if (status) {
-        log_add("test_subkeys(): Couldn't put second string");
-        log_log(LOG_ERR);
+        mylog_error("test_subkeys(): Couldn't put second string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -354,8 +325,7 @@ test_regSubkeys(void)
 
     status = reg_getString("/subkey/nonexistant_key", &value);
     if (status && ENOENT != status) {
-        log_add("test_regString(): Couldn't verify non-existant value");
-        log_log(LOG_ERR);
+        mylog_error("test_regString(): Couldn't verify non-existant value");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -371,8 +341,7 @@ test_regDelete(void)
 
     status = reg_putString("/string_key", "string value");
     if (status) {
-        log_add("test_regDelete(): Couldn't put string");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't put string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -380,8 +349,7 @@ test_regDelete(void)
 
     status = reg_getString("/string_key", &string);
     if (status) {
-        log_add("test_regDelete(): Couldn't get string");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't get string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -391,8 +359,7 @@ test_regDelete(void)
 
     status = reg_deleteValue("/string_key");
     if (status) {
-        log_add("test_regDelete(): Couldn't delete string");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't delete string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -400,8 +367,7 @@ test_regDelete(void)
 
     status = reg_getString("/string_key", &string);
     if (status && ENOENT != status) {
-        log_add("test_regDelete(): Couldn't verify string deletion");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't verify string deletion");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -409,8 +375,7 @@ test_regDelete(void)
 
     status = reg_putUint("/int_key", -1);
     if (status) {
-        log_add("test_regDelete(): Couldn't put int");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't put int");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -418,8 +383,7 @@ test_regDelete(void)
 
     status = reg_getUint("/int_key", &value);
     if (status) {
-        log_add("test_regDelete(): Couldn't get int");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't get int");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -428,8 +392,7 @@ test_regDelete(void)
 
     status = reg_deleteValue("/int_key");
     if (status) {
-        log_add("test_regDelete(): Couldn't delete int");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't delete int");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -437,8 +400,7 @@ test_regDelete(void)
 
     status = reg_getUint("/int_key", &value);
     if (status && ENOENT != status) {
-        log_add("test_regDelete(): Couldn't verify int deletion");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't verify int deletion");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -446,8 +408,7 @@ test_regDelete(void)
 
     status = reg_deleteValue("/nosuch_key");
     if (status && ENOENT != status) {
-        log_add("test_regDelete(): Couldn't verify no-such-value deletion");
-        log_log(LOG_ERR);
+        mylog_error("test_regDelete(): Couldn't verify no-such-value deletion");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -471,8 +432,7 @@ test_regNode(void)
 
     status = reg_getNode("/test_node/subnode", &subnode, 1);
     if (status) {
-        log_add("test_regNode(): Couldn't get subnode");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't get subnode");
     }
     else {
         CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -487,8 +447,7 @@ test_regNode(void)
 
     status = reg_getNodeString(subnode, "string_key", &string);
     if (status && ENOENT != status) {
-        log_add("test_regNode(): Couldn't verify non-existant subnode string");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't verify non-existant subnode string");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -496,8 +455,7 @@ test_regNode(void)
 
     status = reg_putNodeString(subnode, "string_key", "string value");
     if (0 != status) {
-        log_add("test_regNode(): Couldn't add subnode string");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't add subnode string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -505,8 +463,7 @@ test_regNode(void)
 
     status = reg_getNodeString(subnode, "string_key", &string);
     if (status) {
-        log_add("test_regNode(): Couldn't get subnode string");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't get subnode string");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -516,8 +473,7 @@ test_regNode(void)
 
     status = reg_getNodeBool(subnode, "bool_key", &boolean);
     if (status && ENOENT != status) {
-        log_add("test_regNode(): Couldn't verify non-existant subnode boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't verify non-existant subnode boolean");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -525,8 +481,7 @@ test_regNode(void)
 
     status = reg_putNodeBool(subnode, "bool_key", 1);
     if (0 != status) {
-        log_add("test_regNode(): Couldn't put subnode boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't put subnode boolean");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -534,8 +489,7 @@ test_regNode(void)
 
     status = reg_getNodeBool(subnode, "bool_key", &boolean);
     if (status) {
-        log_add("test_regNode(): Couldn't get subnode boolean");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't get subnode boolean");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -544,8 +498,7 @@ test_regNode(void)
 
     status = reg_getNodeUint(subnode, "uint_key", &uint);
     if (status && ENOENT != status) {
-        log_add("test_regNode(): Couldn't verify non-existant subnode int");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't verify non-existant subnode int");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -553,8 +506,7 @@ test_regNode(void)
 
     status = reg_putNodeUint(subnode, "uint_key", 5);
     if (0 != status) {
-        log_add("test_regNode(): Couldn't put subnode int");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't put subnode int");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -562,8 +514,7 @@ test_regNode(void)
 
     status = reg_getNodeUint(subnode, "uint_key", &uint);
     if (status) {
-        log_add("test_regNode(): Couldn't get subnode int");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't get subnode int");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -572,8 +523,7 @@ test_regNode(void)
 
     status = reg_getNodeTime(subnode, "time_key", &time);
     if (status && ENOENT != status) {
-        log_add("test_regNode(): Couldn't verify non-existant subnode time");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't verify non-existant subnode time");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -581,8 +531,7 @@ test_regNode(void)
 
     status = reg_putNodeTime(subnode, "time_key", &TS_ZERO);
     if (0 != status) {
-        log_add("test_regNode(): Couldn't put subnode time");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't put subnode time");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -590,8 +539,7 @@ test_regNode(void)
 
     status = reg_getNodeTime(subnode, "time_key", &time);
     if (status) {
-        log_add("test_regNode(): Couldn't get subnode time");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't get subnode time");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -600,8 +548,7 @@ test_regNode(void)
 
     status = reg_getNodeSignature(subnode, "sig_key", &sig);
     if (status && ENOENT != status) {
-        log_add("test_regNode(): Couldn't verify non-existant subnode sig");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't verify non-existant subnode sig");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -609,8 +556,7 @@ test_regNode(void)
 
     status = reg_putNodeSignature(subnode, "sig_key", defSig2);
     if (0 != status) {
-        log_add("test_regNode(): Couldn't put subnode sig");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't put subnode sig");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -618,8 +564,7 @@ test_regNode(void)
 
     status = reg_getNodeSignature(subnode, "sig_key", &sig);
     if (status) {
-        log_add("test_regNode(): Couldn't get subnode sig");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't get subnode sig");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -628,8 +573,7 @@ test_regNode(void)
 
     status = reg_deleteNodeValue(subnode, "non-existant_key");
     if (status && ENOENT != status) {
-        log_add("test_regNode(): Couldn't verify non-existant subnode value deletion");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't verify non-existant subnode value deletion");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -637,8 +581,7 @@ test_regNode(void)
 
     status = reg_deleteNodeValue(subnode, "string_key");
     if (status) {
-        log_add("test_regNode(): Couldn't delete subnode value");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't delete subnode value");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -646,8 +589,7 @@ test_regNode(void)
 
     status = reg_getNodeString(subnode, "string_key", &string);
     if (status && ENOENT != status) {
-        log_add("test_regNode(): Couldn't verify non-existant subnode string");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't verify non-existant subnode string");
     }
     else {
         CU_ASSERT_EQUAL(status, ENOENT);
@@ -655,8 +597,7 @@ test_regNode(void)
 
     status = reg_getNode("/test_node", &testnode, 1);
     if (status) {
-        log_add("test_regNode(): Couldn't get subnode");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't get subnode");
     }
     else {
         CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -665,8 +606,7 @@ test_regNode(void)
 
     status = reg_flushNode(testnode);
     if (status) {
-        log_add("test_regNode(): Couldn't flush node");
-        log_log(LOG_ERR);
+        mylog_error("test_regNode(): Couldn't flush node");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -677,8 +617,7 @@ test_regNode(void)
     {
         status = reg_getNode("/test_node2", &testnode, 1);
         if (status) {
-            log_add("test_regNode(): Couldn't get temporary node");
-            log_log(LOG_ERR);
+            mylog_error("test_regNode(): Couldn't get temporary node");
         }
         else {
             CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -687,8 +626,7 @@ test_regNode(void)
 
         status = reg_putNodeString(testnode, "string_key", "string value");
         if (0 != status) {
-            log_add("test_regNode(): Couldn't add temporary node string");
-            log_log(LOG_ERR);
+            mylog_error("test_regNode(): Couldn't add temporary node string");
         }
         else {
             CU_ASSERT_EQUAL(status, 0);
@@ -696,8 +634,7 @@ test_regNode(void)
 
         status = reg_flushNode(testnode);
         if (status) {
-            log_add("test_regNode(): Couldn't flush temporary node");
-            log_log(LOG_ERR);
+            mylog_error("test_regNode(): Couldn't flush temporary node");
         }
         else {
             CU_ASSERT_EQUAL(status, 0);
@@ -707,8 +644,7 @@ test_regNode(void)
 
         status = reg_flushNode(testnode);
         if (status) {
-            log_add("test_regNode(): Couldn't delete temporary node");
-            log_log(LOG_ERR);
+            mylog_error("test_regNode(): Couldn't delete temporary node");
         }
         else {
             CU_ASSERT_EQUAL(status, 0);
@@ -718,8 +654,7 @@ test_regNode(void)
 
         status = reg_getNode("/test_node2", &testnode, 0);
         if (status && ENOENT != status) {
-            log_add("test_regNode(): Couldn't verify temporary node deletion");
-            log_log(LOG_ERR);
+            mylog_error("test_regNode(): Couldn't verify temporary node deletion");
         }
         else {
             CU_ASSERT_EQUAL(status, ENOENT);
@@ -734,8 +669,7 @@ test_regReset(void)
 
     status = reg_reset();
     if (status) {
-        log_add("test_regReset(): Couldn't reset registry");
-        log_log(LOG_ERR);
+        mylog_error("test_regReset(): Couldn't reset registry");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -750,8 +684,7 @@ test_regRemove(void)
 
     status = reg_remove();
     if (status) {
-        log_add("test_regRemove(): Couldn't remove registry");
-        log_log(LOG_ERR);
+        mylog_error("test_regRemove(): Couldn't remove registry");
     }
     else {
         CU_ASSERT_EQUAL(status, 0);
@@ -768,46 +701,47 @@ main(
     char        cmd[80];
     char*       regPath = "/tmp/testRegistry";
 
-    if (0 != system(strcat(strcpy(cmd, "rm -rf "), regPath))) {
-        (void)fprintf(stderr, "Couldn't remove test-directory \"%s\": %s",
-            regPath, strerror(errno));
+    if (mylog_init(argv[0])) {
+        (void)fprintf(stderr, "Couldn't open logging system\n");
     }
     else {
-        if (-1 == mkdir(regPath, S_IRWXU)) {
-            (void)fprintf(stderr, "Couldn't create test directory \"%s\": %s\n",
+        if (0 != system(strcat(strcpy(cmd, "rm -rf "), regPath))) {
+            (void)fprintf(stderr, "Couldn't remove test-directory \"%s\": %s",
                 regPath, strerror(errno));
         }
         else {
-            if (CUE_SUCCESS == CU_initialize_registry()) {
-                CU_Suite*       testSuite = CU_add_suite(__FILE__, setup,
-                    teardown);
+            if (-1 == mkdir(regPath, S_IRWXU)) {
+                (void)fprintf(stderr,
+                        "Couldn't create test directory \"%s\": %s\n",
+                    regPath, strerror(errno));
+            }
+            else {
+                if (CUE_SUCCESS == CU_initialize_registry()) {
+                    CU_Suite*       testSuite = CU_add_suite(__FILE__, setup,
+                        teardown);
 
-                if (NULL != testSuite) {
-                    const char*       progname = strrchr(argv[0], '/');
+                    if (NULL != testSuite) {
+                        const char*       progname = strrchr(argv[0], '/');
 
-                    progname = (NULL == progname)
-                        ? argv[0]
-                        : progname + 1;
+                        progname = (NULL == progname)
+                            ? argv[0]
+                            : progname + 1;
 
-                    CU_ADD_TEST(testSuite, test_regMissing);
-                    CU_ADD_TEST(testSuite, test_keyWithSpace);
-                    CU_ADD_TEST(testSuite, test_regString);
-                    CU_ADD_TEST(testSuite, test_regBool);
-                    CU_ADD_TEST(testSuite, test_regInt);
-                    CU_ADD_TEST(testSuite, test_regTime);
-                    CU_ADD_TEST(testSuite, test_regSignature);
-                    CU_ADD_TEST(testSuite, test_regSubkeys);
-                    CU_ADD_TEST(testSuite, test_regDelete);
-                    CU_ADD_TEST(testSuite, test_regNode);
-                    CU_ADD_TEST(testSuite, test_regReset);
-                    #if 0
-                    CU_ADD_TEST(testSuite, test_regRemove);
-                    #endif
+                        CU_ADD_TEST(testSuite, test_regMissing);
+                        CU_ADD_TEST(testSuite, test_keyWithSpace);
+                        CU_ADD_TEST(testSuite, test_regString);
+                        CU_ADD_TEST(testSuite, test_regBool);
+                        CU_ADD_TEST(testSuite, test_regInt);
+                        CU_ADD_TEST(testSuite, test_regTime);
+                        CU_ADD_TEST(testSuite, test_regSignature);
+                        CU_ADD_TEST(testSuite, test_regSubkeys);
+                        CU_ADD_TEST(testSuite, test_regDelete);
+                        CU_ADD_TEST(testSuite, test_regNode);
+                        CU_ADD_TEST(testSuite, test_regReset);
+                        #if 0
+                        CU_ADD_TEST(testSuite, test_regRemove);
+                        #endif
 
-                    if (-1 == openulog(progname, 0, LOG_LOCAL0, "-")) {
-                        (void)fprintf(stderr, "Couldn't open logging system\n");
-                    }
-                    else {
                         reg_setDirectory(regPath);
 
                         if (CU_basic_run_tests() == CUE_SUCCESS) {
@@ -815,19 +749,19 @@ main(
                                 exitCode = EXIT_SUCCESS;
                         }
                     }
-                }
 
-                CU_cleanup_registry();
-            }                           /* CUnit registery allocated */
+                    CU_cleanup_registry();
+                }                           /* CUnit registery allocated */
 
-            #if 0
-            if (-1 == rmdir(regPath))
-                (void)fprintf(stderr,
-                    "Couldn't delete test directory \"%s\": %s\n",
-                    regPath, strerror(errno));
-            #endif
-        }                               /* test-directory created */
-    }                                   /* test-directory removed */
+                #if 0
+                if (-1 == rmdir(regPath))
+                    (void)fprintf(stderr,
+                        "Couldn't delete test directory \"%s\": %s\n",
+                        regPath, strerror(errno));
+                #endif
+            }                               /* test-directory created */
+        }                                   /* test-directory removed */
+    }                                       /* logging initialized */
 
     return exitCode;
 }

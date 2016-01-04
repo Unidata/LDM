@@ -17,7 +17,7 @@
 
 #include "ldm.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "prod_index_map.h"
 
 #include <errno.h>
@@ -106,7 +106,7 @@ static volatile bool forWriting;
  * @param[in] shouldBeOpen  Whether or not the product-index map should be open.
  * @retval    0             The product-index map is in the correct state.
  * @retval    LDM7_INVAL    The product-index map is in the incorrect state.
- *                          `log_add()` called.
+ *                          `mylog_add()` called.
  */
 static int
 ensureProperState(
@@ -118,7 +118,7 @@ ensureProperState(
         status = 0;
     }
     else {
-        LOG_ADD1("Product-index map is %s open", isOpen ? "already" : "not");
+        mylog_add("Product-index map is %s open", isOpen ? "already" : "not");
         status = LDM7_INVAL;
     }
 
@@ -175,7 +175,7 @@ restoreSigs(void)
  * @param[in]  dirname   Pathname of the parent directory or NULL, in which case
  *                       the current working directory is used.
  * @param[in]  feedtype  The feedtype.
- * @retval    -1         Error. `log_add()` called.
+ * @retval    -1         Error. `mylog_add()` called.
  * @return               The number of bytes that would be written to the buffer
  *                       had it been sufficiently large excluding the
  *                       terminating null byte. If greater than or equal to
@@ -191,13 +191,13 @@ pim_getPathname(
     char  feedStr[256];
     int   status = sprint_feedtypet(feedStr, sizeof(feedStr), feedtype);
     if (status < 0) {
-        LOG_ADD1("Couldn't format feedtype %#lx", (unsigned long)feedtype);
+        mylog_add("Couldn't format feedtype %#lx", (unsigned long)feedtype);
     }
     else {
         status = snprintf(buf, size, "%s/%s.pim", dirname ? dirname : ".",
                 feedStr);
         if (status < 0)
-            LOG_ADD3("Couldn't construct pathname of product-index map: "
+            mylog_add("Couldn't construct pathname of product-index map: "
                     "bufsize=%zu, dirname=\"%s\", feedtype=%#lx", size,
                     dirname, (unsigned long)feedtype);
     }
@@ -211,7 +211,7 @@ pim_getPathname(
  * @pre                 {`fd` is open and `pathname` is set}
  * @param  exclusive    Whether or not the lock should be exclusive.
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 lockMap(
@@ -220,7 +220,7 @@ lockMap(
     lock.l_type = exclusive ? F_WRLCK : F_RDLCK;
 
     if (-1 == fcntl(fd, F_SETLKW, &lock)) {
-        LOG_SERROR3("Couldn't lock %s (%s) for %s", MMO_DESC, pathname,
+        mylog_syserr("Couldn't lock %s (%s) for %s", MMO_DESC, pathname,
                 exclusive ? "writing" : "reading");
         return LDM7_SYSTEM;
     }
@@ -233,7 +233,7 @@ lockMap(
  *
  * @pre                    {`lockMap()` was previous called}
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
  */
 static Ldm7Status
 unlockMap(void)
@@ -241,7 +241,7 @@ unlockMap(void)
     lock.l_type = F_UNLCK;
 
     if (-1 == fcntl(fd, F_SETLKW, &lock)) {
-        LOG_SERROR2("Couldn't unlock %s (%s)", MMO_DESC, pathname);
+        mylog_syserr("Couldn't unlock %s (%s)", MMO_DESC, pathname);
         return LDM7_SYSTEM;
     }
 
@@ -254,7 +254,7 @@ unlockMap(void)
  *
  * @pre                 {`fd` is open and `pathname` is set}
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 lockMapAndBlockSignals(void)
@@ -273,7 +273,7 @@ lockMapAndBlockSignals(void)
  *
  * @pre                 {`lockMapAndBlockSigs` was previously called}
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static inline Ldm7Status
 restoreSignalsAndUnlockMap(void)
@@ -320,7 +320,7 @@ maxSigsFromFileSize(
  *
  * @pre                     {`fd` is open and `pathname` is set}
  * @retval     0            Success. `fileSize` is set.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 fileSizeFromFile(void)
@@ -329,7 +329,7 @@ fileSizeFromFile(void)
     int          status = fstat(fd, &statBuf);
 
     if (status) {
-        LOG_SERROR2("Couldn't get size of %s (\"%s\")", MMO_DESC, pathname);
+        mylog_syserr("Couldn't get size of %s (\"%s\")", MMO_DESC, pathname);
         return LDM7_SYSTEM;
     }
 
@@ -343,7 +343,7 @@ fileSizeFromFile(void)
  *
  * @pre                 {`forWriting`, `fd`, and `pathname` are set}
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 mapMap(void)
@@ -352,7 +352,7 @@ mapMap(void)
             forWriting ? PROT_READ|PROT_WRITE : PROT_READ, MAP_SHARED, fd, 0);
 
     if (MAP_FAILED == ptr) {
-        LOG_SERROR2("Couldn't memory-map %s (\"%s\")", MMO_DESC, pathname);
+        mylog_syserr("Couldn't memory-map %s (\"%s\")", MMO_DESC, pathname);
         return LDM7_SYSTEM;
     }
 
@@ -366,14 +366,14 @@ mapMap(void)
  *
  * @pre                 {`fd` and `pathname` are set}
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
  * @return
  */
 static Ldm7Status
 unmapMap(void)
 {
     if (munmap(mmo, fileSize)) {
-        LOG_SERROR2("Couldn't un-memory-map %s (\"%s\")", MMO_DESC, pathname);
+        mylog_syserr("Couldn't un-memory-map %s (\"%s\")", MMO_DESC, pathname);
         return LDM7_SYSTEM;
     }
 
@@ -385,14 +385,14 @@ unmapMap(void)
  *
  * @param[in] size         The new size for the file in bytes.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 truncateMap(
         const size_t size)
 {
     if (ftruncate(fd, size)) {
-        LOG_SERROR3("Couldn't set size of %s (\"%s\") to %lu bytes",
+        mylog_syserr("Couldn't set size of %s (\"%s\") to %lu bytes",
                 MMO_DESC, pathname, (unsigned long)size);
         return LDM7_SYSTEM;
     }
@@ -408,7 +408,7 @@ truncateMap(
  *
  * @param[in] max          Maximum number of signatures in the file.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 consolidateMap(
@@ -448,7 +448,7 @@ consolidateMap(
         newSmallSeg = mmo->sigs + oldCount;
     }
 
-    signaturet* tmpSigs = LOG_MALLOC(smallBytes, "temporary signatures buffer");
+    signaturet* tmpSigs = mylog_malloc(smallBytes, "temporary signatures buffer");
 
     if (NULL == tmpSigs) {
         status = LDM7_SYSTEM;
@@ -500,7 +500,7 @@ shiftMapDown(
  * @param[in] newSize      New size for the file in bytes. Must be greater than
  *                         the current size of the file.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                         file is unspecified.
  */
 static Ldm7Status
@@ -526,7 +526,7 @@ expandMapAndMap(
  * @param[in] newSize      New size for the file in bytes. Must be less than
  *                         the current size of the file.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                         file is unspecified.
  */
 static Ldm7Status
@@ -555,7 +555,7 @@ contractMapAndMap(
  *
  * @param[in]  maxNumSigs   Maximum number of data-product signatures.
  * @retval     0            Success.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                          file is unspecified.
  */
 static Ldm7Status
@@ -593,7 +593,7 @@ clearMap(void)
  * @param[in]  max          Maximum number of data-product signatures for the
  *                          map.
  * @retval     0            Success.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 initNewMapAndMap(
@@ -623,7 +623,7 @@ initNewMapAndMap(
  *                          map.
  * @param[in]  isNew        Whether or not the file was just created.
  * @retval     0            Success.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                          file is unspecified.
  */
 static Ldm7Status
@@ -643,7 +643,7 @@ initMapAndMap(
  *                         the current working directory is used.
  * @param[in] feedtype     Feedtype of map.
  * @return    0            Success. `fd` and `pathname` are set.
- * @return    LDM7_SYSTEM  System error. `log_add()` called.
+ * @return    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 openMap(
@@ -658,13 +658,13 @@ openMap(
     else {
         fd = open(pathname, forWriting ? O_RDWR|O_CREAT : O_RDONLY, 0666);
         if (-1 == fd) {
-            LOG_SERROR2("Couldn't open file %s (\"%s\")", MMO_DESC, pathname);
+            mylog_syserr("Couldn't open file %s (\"%s\")", MMO_DESC, pathname);
             status = LDM7_SYSTEM;
         }
         else {
             status = fcntl(fd, F_SETFD, FD_CLOEXEC);
             if (status == -1) {
-                LOG_SERROR1("Couldn't set FD_CLOEXEC flag on file \"%s\"",
+                mylog_syserr("Couldn't set FD_CLOEXEC flag on file \"%s\"",
                         pathname);
                 (void)close(fd);
                 status = LDM7_SYSTEM;
@@ -685,7 +685,7 @@ openMap(
  * @param[out] isNew        Whether or not the file was created.
  * @retval     0            Success. `forWriting`, `pathname`, `fd`, and
  *                          `*isNew` are set.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 openMapForWriting(
@@ -714,7 +714,7 @@ openMapForWriting(
  * @param[in] feedtype     Feedtype of the map.
  * @retval    0            Success. `forWriting`, `pathname`, `fd`, `fileSize`,
  *                         and `maxSigs` are set.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static Ldm7Status
 openMapForReading(
@@ -764,12 +764,12 @@ clearMapIfUnexpected(
  * @param[in] maxNumSigs   Maximum number of data-product signatures. Must be
  *                         positive.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ * @retval    LDM7_INVAL   The product-index map is already open. `mylog_add()`
  *                         called.
  * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
- *                         `log_add()` called. The file wasn't opened or
+ *                         `mylog_add()` called. The file wasn't opened or
  *                         created.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                         file is unspecified.
  */
 Ldm7Status
@@ -782,7 +782,7 @@ pim_openForWriting(
 
     if (status == 0) {
         if (0 == maxNumSigs) {
-            LOG_START0("Maximum number of signatures must be positive");
+            mylog_add("Maximum number of signatures must be positive");
             status = LDM7_INVAL;
         }
         else {
@@ -818,9 +818,9 @@ pim_openForWriting(
  *                         may free.
  * @param[in] feedtype     Feedtype of the map.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ * @retval    LDM7_INVAL   The product-index map is already open. `mylog_add()`
  *                         called.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called. The state of the
  *                         file is unspecified.
  */
 Ldm7Status
@@ -851,8 +851,8 @@ pim_openForReading(
  * Closes the product-index map.
  *
  * @retval 0            Success.
- * @retval LDM7_INVAL   The product-index map is not open. `log_add()` called.
- * @retval LDM7_SYSTEM  SYSTEM error. `log_add()` called. The state of the map
+ * @retval LDM7_INVAL   The product-index map is not open. `mylog_add()` called.
+ * @retval LDM7_SYSTEM  SYSTEM error. `mylog_add()` called. The state of the map
  *                      is unspecified.
  */
 Ldm7Status
@@ -865,7 +865,7 @@ pim_close(void)
 
         if (0 == status) {
             if (close(fd)) {
-                LOG_SERROR1("Couldn't close file-descriptor of %s", MMO_DESC);
+                mylog_syserr("Couldn't close file-descriptor of %s", MMO_DESC);
                 status = LDM7_SYSTEM;
             }
             else {
@@ -887,7 +887,7 @@ pim_close(void)
  * @param[in] feedtype   The feedtype.
  * @retval 0             Success. The associated file doesn't exist or has been
  *                       removed.
- * @retval LDM7_SYSTEM   System error. `log_add()` called.
+ * @retval LDM7_SYSTEM   System error. `mylog_add()` called.
  */
 Ldm7Status
 pim_delete(
@@ -902,7 +902,7 @@ pim_delete(
     else {
         status = unlink(pathname);
         if (status && errno != ENOENT) {
-            LOG_SERROR1("Couldn't unlink file \"%s\"", pathname);
+            mylog_syserr("Couldn't unlink file \"%s\"", pathname);
             status = LDM7_SYSTEM;
         }
         else {
@@ -920,9 +920,9 @@ pim_delete(
  * @param[in] iProd        Product-index.
  * @param[in] sig          Data-product signature.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The product-index map is not open. `log_add()`
+ * @retval    LDM7_INVAL   The product-index map is not open. `mylog_add()`
  *                         called.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 pim_put(
@@ -962,10 +962,10 @@ pim_put(
  * @param[in]  iProd        Product index.
  * @param[out] sig          Data-product signature mapped-to by `iProd`.
  * @return     0            Success.
- * @retval     LDM7_INVAL   The product-index map is not open. `log_add()`
+ * @retval     LDM7_INVAL   The product-index map is not open. `mylog_add()`
  *                          called.
  * @retval     LDM7_NOENT   Product-index is unknown.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 pim_get(
@@ -1004,9 +1004,9 @@ pim_get(
  *
  * @param[out] iProd        Next product-index.
  * @retval     0            Success. `*iProd` is set.
- * @retval     LDM7_INVAL   The product-index map is not open. `log_add()`
+ * @retval     LDM7_INVAL   The product-index map is not open. `mylog_add()`
  *                          called.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 Ldm7Status
 pim_getNextProdIndex(

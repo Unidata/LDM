@@ -19,7 +19,6 @@
 #include "error.h"
 #include "ldm.h"        /* needed by following */
 #include "mylog.h"
-#include "log.h"
 #include "peer_info.h"
 #include "prod_class.h"
 #include "globals.h"
@@ -52,7 +51,7 @@ so_buf(int sock, int optname)
         if(getsockopt(sock, SOL_SOCKET, optname,
                         (void*) &optval, &optlen) < 0)
         {
-                serror("getsockopt %s", s_optname(optname));
+                mylog_syserr("getsockopt %s", s_optname(optname));
                 return 0;
         }
         /* else */
@@ -67,13 +66,13 @@ so_buf(int sock, int optname)
                  * MAX_RPC_BUF_NEEDED for all systems?
                  */
 
-                udebug("%s %d, setting to %d",
+                mylog_debug("%s %d, setting to %d",
                          s_optname(optname), optval, MAX_RPC_BUF_NEEDED);
                 optval = MAX_RPC_BUF_NEEDED;
                 if(setsockopt(sock, SOL_SOCKET, optname,
                                 (char *) &optval, optlen) < 0)
                 {
-                        serror("setsockopt %s %d", s_optname(optname), optval);
+                        mylog_syserr("setsockopt %s %d", s_optname(optname), optval);
                         return 0;
                 }
 #if 0 /* DEBUG verify */
@@ -81,11 +80,11 @@ so_buf(int sock, int optname)
                 if(getsockopt(sock, SOL_SOCKET, SO_SNDBUF,
                                 (char *) &optval, &optlen) < 0)
                 {
-                        serror("getsockopt 2 %s", s_optname(optname));
+                        mylog_syserr("getsockopt 2 %s", s_optname(optname));
                 }
 #endif
         }
-        udebug("%s %d", s_optname(optname), optval);
+        mylog_debug("%s %d", s_optname(optname), optval);
         return optval;
 }
 
@@ -181,7 +180,7 @@ setremote(
         if(remote.recvsz > MAX_RPC_BUF_NEEDED || remote.recvsz == 0)
             remote.recvsz = MAX_RPC_BUF_NEEDED;
 
-        uinfo("RPC buffer sizes for %s: send=%u; recv=%u",
+        mylog_info("RPC buffer sizes for %s: send=%u; recv=%u",
             remote_name(), remote.sendsz, remote.recvsz);
     }                                   /* remote host differs from previous */
 
@@ -264,7 +263,7 @@ update_remote_clss(prod_class_t *want)
  *                      be NULL.  May be freed upon return.
  * Returns:
  *      0               Success.
- *      ENOMEM          Out of memory.  "log_start()" called.
+ *      ENOMEM          Out of memory.  "mylog_add()" called.
  */
 int
 set_remote_class(
@@ -279,7 +278,7 @@ set_remote_class(
         newProdClass = dup_prod_class(prodClass);
 
         if (NULL == newProdClass) {
-            LOG_SERROR0("Couldn't duplicate product-class");
+            mylog_syserr("Couldn't duplicate product-class");
             return ENOMEM;
         }
     }

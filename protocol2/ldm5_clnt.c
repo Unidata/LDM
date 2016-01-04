@@ -237,8 +237,8 @@ retry:
 
         case RPC_SUCCESS:
                 /* call succeeded, can use the reply */
-                if (ulogIsDebug())
-                    udebug("%s(%s) returns %s",
+                if (mylog_is_enabled_debug)
+                    mylog_debug("%s(%s) returns %s",
                              s_ldmproc(proc), remote, s_ldm_errt(reply.code));
                 break;
 
@@ -254,7 +254,7 @@ retry:
                 goto out;
 
         case RPC_AUTHERROR:
-                uerror("%s(%s): %d: %s",
+                mylog_error("%s(%s): %d: %s",
                         s_ldmproc(proc), remote, rpc_stat,
                          "Authentication error; No match for request");
                 status = ECONNABORTED;
@@ -267,7 +267,7 @@ retry:
                          * The server won't even talk to us
                          */
                         rpc_stat = RPC_AUTHERROR;
-                        uerror("%s(%s): %d: %s",
+                        mylog_error("%s(%s): %d: %s",
                                 s_ldmproc(proc), remote, rpc_stat,
                                  "Access denied by remote server");
                         status = ECONNREFUSED;
@@ -278,7 +278,7 @@ retry:
                 /* no break */
         case RPC_UNKNOWNHOST:
         default:
-                uerror("%s(%s): %d: %s",
+                mylog_error("%s(%s): %d: %s",
                         s_ldmproc(proc), remote, rpc_stat,
                                  s_hclnt_sperrno(&hc));
                 status = ECONNABORTED;
@@ -290,21 +290,21 @@ retry:
         switch (reply.code) {
 
         case OK:
-                unotice("%s(%s): OK",
+                mylog_notice("%s(%s): OK",
                         s_ldmproc(proc), remote);
                 break;
 
         case RECLASS:
-                unotice("%s(%s): reclass: %s",
+                mylog_notice("%s(%s): reclass: %s",
                         s_ldmproc(proc), remote,
                         s_prod_class(NULL, 0,
                                 reply.ldm_replyt_u.newclssp));
                 if(reply.ldm_replyt_u.newclssp->psa.psa_len == 0)
                 {
                         (void) free_prod_class(reply.ldm_replyt_u.newclssp);
-                        uerror("Request denied by upstream LDM: %s",
+                        mylog_error("Request denied by upstream LDM: %s",
                                 s_prod_class(NULL, 0, clssp));
-                        uerror("Does it overlap with another?");
+                        mylog_error("Does it overlap with another?");
                         status = ECONNREFUSED;
                         goto out;
                 }
@@ -317,14 +317,14 @@ retry:
                 goto retry;
 
         case SHUTTING_DOWN:
-                uerror("%s is shutting down", remote);
+                mylog_error("%s is shutting down", remote);
                 status = ECONNABORTED;
                 goto out;
         case DONT_SEND:
         case RESTART:
         case REDIRECT: /* TODO */
         default:
-                uerror("%s(%s): unexpected reply type %s",
+                mylog_error("%s(%s): unexpected reply type %s",
                          s_ldmproc(proc), remote,
                          s_ldm_errt(reply.code));
                 status = ECONNABORTED;
@@ -338,7 +338,7 @@ retry:
         if(sock == -1)
         {
                 status = errno;
-                serror("dup %d", cfd);
+                mylog_syserr("dup %d", cfd);
                 goto out;
         }
         *sockp = sock;
@@ -379,7 +379,7 @@ adjustByLastInfo(
 
     if (NULL != info) {
         if (tvIsNone(info->arrival)) {
-            uerror("Creation-time of last data-product is TS_NONE");
+            mylog_error("Creation-time of last data-product is TS_NONE");
 
             errCode = EINVAL;
         }
@@ -387,7 +387,7 @@ adjustByLastInfo(
             prod_class* const   newClass = dup_prod_class(*prodClass);
 
             if (newClass == NULL) {
-                uerror("Couldn't duplicate product-class: %s", strerror(errno));
+                mylog_error("Couldn't duplicate product-class: %s", strerror(errno));
 
                 errCode = errno;
             }
@@ -456,7 +456,7 @@ forn5(
     if (status == 0) {
         int             xp_sock;
 
-        unotice("LDM-5 desired product-class: %s",
+        mylog_notice("LDM-5 desired product-class: %s",
             s_prod_class(NULL, 0, *request));
 
         status = forn_signon(proc, remote, request, rpctimeo, &xp_sock);
@@ -472,11 +472,11 @@ forn5(
                 svcfd_create(xp_sock, 0, MAX_RPC_BUF_NEEDED);
 
             if(xprt == NULL) {
-                uerror("svcfd_create() failure.");
+                mylog_error("svcfd_create() failure.");
             }
             else {
                 if(!svc_register(xprt, LDMPROG, 5, dispatch, 0)) {
-                    uerror("svc_register() failure.");
+                    mylog_error("svc_register() failure.");
                     svc_destroy(xprt);
                 }
                 else {

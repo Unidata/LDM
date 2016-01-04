@@ -8,7 +8,7 @@
 
 #include "inetutil.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 
 #include <arpa/inet.h>
 #include <CUnit/CUnit.h>
@@ -126,7 +126,7 @@ sa_parse_test(
 
     CU_ASSERT_PTR_NOT_NULL_FATAL(buf);
     status = sa_parse(&sa, buf);
-    log_log(LOG_ERR);
+    MYLOG_FLUSH_ERROR();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_STRING_EQUAL(sa_getInetId(sa), inetId);
     CU_ASSERT_EQUAL(sa_getPort(sa), port);
@@ -150,7 +150,7 @@ test_sa_parseWithDefaults(void)
     const short  port = 388;
 
     status = sa_parseWithDefaults(&sa, hostId, NULL, 388);
-    log_log(LOG_ERR);
+    MYLOG_FLUSH_ERROR();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_STRING_EQUAL(sa_getInetId(sa), hostId);
     CU_ASSERT_EQUAL(sa_getPort(sa), port);
@@ -178,7 +178,7 @@ main(
                 CU_ADD_TEST(testSuite, test_sa_parseWithDefaults);
 #           endif
 
-            if (-1 == openulog(basename(argv[0]), 0, LOG_LOCAL0, "-")) {
+            if (mylog_init(argv[0])) {
                 (void)fprintf(stderr, "Couldn't open logging system\n");
             }
             else {

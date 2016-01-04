@@ -179,11 +179,11 @@ ensure-var:	$(DESTDIR)$(localstatedir)
 $(DESTDIR)$(localstatedir):
 	$(MKDIR_P) $@
 
-root-actions:	\
-    install_setuids \
-    ensure-syslog-entry \
-    ensure-rpc-entry \
-    ensure-services-entry
+ROOT_ACTIONS	= install_setuids ensure-rpc-entry ensure-services-entry
+if !WANT_LOG4C
+ROOT_ACTIONS	+= ensure-syslog-entry 
+endif
+root-actions:	$(ROOT_ACTIONS)
 
 install_setuids:
 	chown root $(DESTDIR)$(bindir)/ldmd

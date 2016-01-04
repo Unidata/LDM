@@ -6,7 +6,7 @@
 
 #include <config.h>
 #include <stdio.h>
-#include <assert.h>
+#include <mylog.h>
 #include <string.h>
 #include "ldmalloc.h"
 #include "xbuf.h"
@@ -94,7 +94,7 @@ clone_xbuf(
 {
 	if(buf == NULL || clone == NULL) return NULL;
 	clone->bufsiz = (size_t)((buf->get - backoff) - buf->base);
-	/* assert(clone->bufsiz > 0) */
+	/* mylog_assert(clone->bufsiz > 0) */
 	clone->base = buf->base;
 	clone->cnt = (ptrdiff_t)clone->bufsiz;
 	clone->get = clone->base;
@@ -138,15 +138,15 @@ justify_xbuf(
 
 	if(cp == buf->base) return; /* already justified */
 
-	assert(cp <= buf->put);
-	assert(cp >= buf->base);
-	assert( buf->cnt == buf->put - buf->get);
+	mylog_assert(cp <= buf->put);
+	mylog_assert(cp >= buf->base);
+	mylog_assert( buf->cnt == buf->put - buf->get);
 
 	if(count > 0 )
 		memmove(buf->base, cp, count); /* may be overlapping */
 	buf->get = buf->base + offset;
 	buf->put = buf->get + buf->cnt;
-	assert( buf->cnt == buf->put - buf->get);
+	mylog_assert( buf->cnt == buf->put - buf->get);
 }
 
 
@@ -154,7 +154,7 @@ size_t
 resync_xbuf(
 	xbuf *buf)
 {
-	/* assert(buf->get - buf->base >= 0); */
+	/* mylog_assert(buf->get - buf->base >= 0); */
 	size_t nbytes = buf->get - buf->base;
 	buf->cnt = 0;
 	buf->get = buf->put = buf->base;

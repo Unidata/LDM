@@ -3,10 +3,10 @@
 #include "ldmprint.h"
 #include "prod_info.h"
 #include "timestamp.h"
-#include "log.h"
+#include "mylog.h"
 #include "atofeedt.h"
 
-#include <assert.h>
+#include <mylog.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -114,7 +114,7 @@ pi_setOrigin(
     prod_info* const    info,
     const char* const   origin)
 {
-    assert(isValid(info));
+    mylog_assert(isValid(info));
     (void)strncpy(info->origin, origin, HOSTNAMESIZE);
 
     info->origin[HOSTNAMESIZE] = 0;
@@ -158,7 +158,7 @@ pi_copy(
         error = errno = EINVAL;
     }
     else {
-        assert(isValid(dest));
+        mylog_assert(isValid(dest));
 
         dest->arrival = src->arrival;
         dest->feedtype = src->feedtype;
@@ -255,7 +255,7 @@ pi_free(
     prod_info* const    info)
 {
     if (NULL != info) {
-        assert(isValid(info));
+        mylog_assert(isValid(info));
         free(info);
     }
 }
@@ -268,7 +268,7 @@ pi_free(
  *      info    Pointer to the prod_info to be written to "file".
  *      file    Pointer to the output stream.
  * Returns:
- *      -1      Failure.  log_errno() called.
+ *      -1      Failure.  MYLOG_ADD_ERRNO() called.
  *      else    Number of bytes written.
  */
 int
@@ -286,7 +286,7 @@ pi_print(
         s_signaturet(NULL, 0, info->signature));
 
     if (nbytes < 0)
-        log_errno();
+        mylog_syserr("Couldn't format product information");
 
     return nbytes;
 }
@@ -324,10 +324,10 @@ scanBytes(
     }
 
     if (feof(file)) {
-        log_start("scanBytes(): Premature EOF");
+        mylog_add("scanBytes(): Premature EOF");
     }
     else if (ferror(file)) {
-        log_errno();
+        mylog_syserr("Couldn't scan input");
     }
     else {
         nbytes = len;
@@ -359,7 +359,7 @@ scanString(
     off_t       start = ftello(file);
 
     if (start == (off_t)-1) {
-        log_errno();
+        mylog_syserr("Couldn't get position in file");
     }
     else {
         int     len;
@@ -367,21 +367,20 @@ scanString(
         errno = 0;
 
         if (fscanf(file, "{%d,", &len) != 1) {
-            log_errno();
-            log_add("scanString(): Couldn't scan string-length");
+            mylog_syserr("Couldn't scan string-length");
         }
         else if (len > max) {
-            log_start("scanString(): String is too long: %d > %lu",
+            mylog_add("scanString(): String is too long: %d > %lu",
                 len, (unsigned long)max);
         }
         else if (scanBytes(file, buf, len) < 0) {
-            log_add("scanString(): Couldn't scan %d characters", len);
+            mylog_add("scanString(): Couldn't scan %d characters", len);
         }
         else {
             buf[len] = 0;
 
             if (fgetc(file) != '}') {
-                log_start("scanString(): String isn't terminated");
+                mylog_add("scanString(): String isn't terminated");
             }
             else {
                 nbytes = (int)(ftello(file) - start);
@@ -412,7 +411,7 @@ pi_scan(
     off_t       start = ftello(file);
 
     if (start == (off_t)-1) {
-        log_errno();
+        mylog_syserr("Couldn't get position in file");
     }
     else {
         char    buf[512];
@@ -423,42 +422,38 @@ pi_scan(
 
         if (fscanf(file, "{%80[^,]", buf) != 1 ||
                 tsParse(buf, &info->arrival) < 0) {
-            log_errno();
-            log_add("pi_scan(): Couldn't scan product creation-time");
+            mylog_syserr("Couldn't scan product creation-time");
         }
         else if (fscanf(file, ",%511[^,]", buf) != 1 ||
                 strfeedtypet(buf, &info->feedtype) != FEEDTYPE_OK) {
-            log_errno();
-            log_start("pi_scan(): Couldn't scan product feedtype");
+            mylog_add_syserr("Couldn't scan product feedtype");
         }
         else if (fscanf(file, ",%u", &info->seqno) != 1) {
-            log_errno();
-            log_add("pi_scan(): Couldn't scan product sequence-number");
+            mylog_add_syserr("Couldn't scan product sequence-number");
         }
         else if (fgetc(file) != ',' ||
                 scanString(file, info->origin, HOSTNAMESIZE) < 0) {
-            log_add("pi_scan(): Couldn't scan product origin");
+            mylog_add("pi_scan(): Couldn't scan product origin");
         }
         else if (fscanf(file, ",%u", &info->sz) != 1) {
-            log_errno();
-            log_add("pi_scan(): Couldn't scan product size");
+            mylog_add_syserr("Couldn't scan product size");
         }
         else {
             if (fgetc(file) != ',' ||
                     scanString(file, info->ident, KEYSIZE) < 0) {
-                log_add("pi_scan(): Couldn't scan product identifier");
+                mylog_add("pi_scan(): Couldn't scan product identifier");
             }
             else {
-                log_clear();
+                mylog_clear();
 
                 if (fgetc(file) != ',' ||
                         scanBytes(file, buf, 2*sizeof(signaturet)) < 0 ||
                         sigParse(buf, &info->signature) < 0) {
-                    log_add("pi_scan(): Couldn't scan product signature");
+                    mylog_add("pi_scan(): Couldn't scan product signature");
                 }
                 else {
                     if (fgetc(file) != '}') {
-                        log_start("pi_scan(): Information isn't terminated");
+                        mylog_add("pi_scan(): Information isn't terminated");
                     }
                     else {
                         nbytes = (int)(ftello(file) - start);

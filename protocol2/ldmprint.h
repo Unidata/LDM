@@ -25,7 +25,7 @@ extern "C" {
  * @param[in] initSize  The initial size of the formatting buffer.
  * @param[in] fmt       The format for the arguments.
  * @param[in] args      The arguments to be formatted.
- * @retval    NULL      Error. `log_add()` called.
+ * @retval    NULL      Error. `mylog_add()` called.
  * @return              Pointer to the string buffer containing the formatted
  *                      arguments. The caller should free when it's no longer
  *                      needed.
@@ -42,7 +42,7 @@ ldm_vformat(
  * @param[in] initSize  The initial size of the formatting buffer.
  * @param[in] fmt       The format for the arguments.
  * @param[in] ...       The arguments to be formatted.
- * @retval    NULL      Error. `log_add()` called.
+ * @retval    NULL      Error. `mylog_add()` called.
  * @return              Pointer to the string buffer containing the formatted
  *                      arguments. The caller should free when it's no longer
  *                      needed.
@@ -185,7 +185,7 @@ s_ldmproc(unsigned long proc);
  * Arguments:
  *	string	Pointer to the formatted signature.
  * Returns:
- *	-1	Failure.  log_errno() called.
+ *	-1	Failure.  MYLOG_ERRNO() called.
  *	else	Number of bytes parsed.
  */
 int

@@ -23,7 +23,7 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "mcast.h"
 #include "mcast_info.h"
 #include "mldm_receiver.h"
@@ -135,7 +135,7 @@ static int up7proxy_init(
         status = pthread_mutex_init(&proxy->mutex, NULL);
 
         if (status) {
-            LOG_ERRNUM0(status,
+            mylog_errno(status,
                     "Couldn't initialize mutex for upstream LDM-7 proxy");
             status = LDM7_SYSTEM;
         }
@@ -145,7 +145,7 @@ static int up7proxy_init(
                     0, 0);
 
             if (clnt == NULL) {
-                LOG_SERROR3("Couldn't create RPC client for host %s, port %hu: "
+                mylog_syserr("Couldn't create RPC client for host %s, port %hu: "
                         "%s", inet_ntoa(sockAddr->sin_addr),
                         ntohs(sockAddr->sin_port), clnt_spcreateerror(""));
                 (void)pthread_mutex_destroy(&proxy->mutex);
@@ -169,7 +169,7 @@ static int up7proxy_init(
  * @param[in]  sockAddr     The address of the upstream LDM-7 server.
  * @retval     0            Success.
  * @retval     LDM7_INVAL   Invalid argument.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static int up7proxy_new(
         Up7Proxy** const restrict up7proxy,
@@ -182,7 +182,7 @@ static int up7proxy_new(
         status = LDM7_INVAL;
     }
     else {
-        Up7Proxy* const proxy = LOG_MALLOC(sizeof(Up7Proxy),
+        Up7Proxy* const proxy = mylog_malloc(sizeof(Up7Proxy),
                 "upstream LDM-7 proxy");
 
         if (proxy == NULL) {
@@ -228,8 +228,7 @@ static void up7proxy_free(
         up7proxy_destroyClient(proxy);
         int status = pthread_mutex_destroy(&proxy->mutex);
         if (status) {
-            LOG_ERRNUM0(status, "Couldn't destroy mutex");
-            log_log(LOG_ERR);
+            mylog_errno(status, "Couldn't destroy mutex");
         }
         free(proxy);
     }
@@ -246,8 +245,8 @@ up7proxy_lock(
     Up7Proxy* const proxy)
 {
     int status = pthread_mutex_lock(&proxy->mutex);
-    UASSERT(status == 0);
-    UASSERT(proxy->clnt != NULL);
+    mylog_assert(status == 0);
+    mylog_assert(proxy->clnt != NULL);
 }
 
 /**
@@ -260,7 +259,7 @@ up7proxy_unlock(
     Up7Proxy* const proxy)
 {
     int status = pthread_mutex_unlock(&proxy->mutex);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
 }
 
 /**
@@ -274,7 +273,7 @@ up7proxy_unlock(
  *                         caller should call `mi_free(*mcastInfo)` when it's no
  *                         longer needed.
  * @retval     LDM7_INVAL  The upstream LDM-7 doesn't multicast `feedtype`.
- *                         `log_start()` called.
+ *                         `mylog_add()` called.
  */
 static int
 up7proxy_subscribe(
@@ -294,7 +293,7 @@ up7proxy_subscribe(
         char buf[256];
 
         (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
-        LOG_START2("Couldn't subscribe to feedtype %s: %s",  buf,
+        mylog_add("Couldn't subscribe to feedtype %s: %s",  buf,
                 clnt_errmsg(clnt));
         status = clntStatusToLdm7Status(clnt);
         up7proxy_destroyClient(proxy);
@@ -305,20 +304,19 @@ up7proxy_subscribe(
             char buf[256];
 
             (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
-            LOG_START1("Upstream LDM-7 doesn't multicast feedtype %s", buf);
+            mylog_add("Upstream LDM-7 doesn't multicast feedtype %s", buf);
         }
         else if (status != 0) {
             char buf[256];
 
             (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
-            LOG_START2("Couldn't subscribe to feedtype %s: status=%d",  buf,
+            mylog_add("Couldn't subscribe to feedtype %s: status=%d",  buf,
                     status);
         }
         else {
             McastInfo* const mi = &reply->SubscriptionReply_u.mgi;
             char* miStr = mi_format(mi);
-            udebug("%s:up7proxy_subscribe(): Subscription reply is %s",
-                    __FILE__, miStr);
+            mylog_debug("Subscription reply is %s", miStr);
             free(miStr);
             *mcastInfo = mi_clone(mi);
         }
@@ -327,7 +325,7 @@ up7proxy_subscribe(
 
     up7proxy_unlock(proxy);
 
-    udebug("up7proxy_subscribe(): Returning %d", status);
+    mylog_debug("up7proxy_subscribe(): Returning %d", status);
     return status;
 }
 
@@ -347,7 +345,7 @@ up7proxy_subscribe(
  *
  * @param[in] arg       Pointer to upstream LDM-7 proxy.
  * @retval    0         Success.
- * @retval    LDM7_RPC  Error in RPC layer. `log_start()` called.
+ * @retval    LDM7_RPC  Error in RPC layer. `mylog_add()` called.
  */
 static int
 up7proxy_requestSessionBacklog(
@@ -368,7 +366,7 @@ up7proxy_requestSessionBacklog(
         status = 0;
     }
     else {
-        LOG_ADD1("Couldn't request session backlog: %s", clnt_errmsg(clnt));
+        mylog_add("Couldn't request session backlog: %s", clnt_errmsg(clnt));
         up7proxy_destroyClient(proxy);
         status = LDM7_RPC;
     }
@@ -384,7 +382,7 @@ up7proxy_requestSessionBacklog(
  * @param[in] proxy       Pointer to the upstream LDM-7 proxy.
  * @param[in] prodId      LDM product-ID of missed data-product.
  * @retval    0           Success. A data-product was requested.
- * @retval    LDM7_RPC    RPC error. `log_start()` called.
+ * @retval    LDM7_RPC    RPC error. `mylog_add()` called.
  */
 static int
 up7proxy_requestProduct(
@@ -396,8 +394,7 @@ up7proxy_requestProduct(
     CLIENT* clnt = proxy->clnt;
     int     status;
 
-    udebug("%s:up7proxy_requestProduct(): iProd=%lu", __FILE__,
-            (unsigned long)iProd);
+    mylog_debug("iProd=%lu", (unsigned long)iProd);
     // Asynchronous send => no reply
     (void)request_product_7((VcmtpProdIndex*)&iProd, clnt); // safe cast
 
@@ -409,7 +406,7 @@ up7proxy_requestProduct(
         status = 0;
     }
     else {
-        LOG_START2("Couldn't request missed data-product: iProd=%lu: %s",
+        mylog_add("Couldn't request missed data-product: iProd=%lu: %s",
                 (unsigned long)iProd, clnt_errmsg(clnt));
         up7proxy_destroyClient(proxy);
         status = LDM7_RPC;
@@ -426,7 +423,7 @@ up7proxy_requestProduct(
  *
  * @param[in] proxy     Pointer to the proxy for the upstream LDM-7.
  * @retval    0         Success. The connection is still good.
- * @retval    LDM7_RPC  RPC error. `log_start()` called.
+ * @retval    LDM7_RPC  RPC error. `mylog_add()` called.
  */
 static int
 up7proxy_testConnection(
@@ -444,7 +441,7 @@ up7proxy_testConnection(
         status = 0;
     }
     else {
-	LOG_START1("test_connection_7() failure: %s", clnt_errmsg(proxy->clnt));
+	mylog_add("test_connection_7() failure: %s", clnt_errmsg(proxy->clnt));
         status = LDM7_RPC;
     }
     up7proxy_unlock(proxy);
@@ -461,9 +458,9 @@ static void
 lockState(
     Down7* const down7)
 {
-    udebug("lockState(): Locking state");
+    mylog_debug("lockState(): Locking state");
     int status = pthread_mutex_lock(&down7->stateMutex);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
 }
 
 /**
@@ -475,9 +472,9 @@ static void
 unlockState(
     Down7* const down7)
 {
-    udebug("unlockState(): Unlocking state");
+    mylog_debug("unlockState(): Unlocking state");
     int status = pthread_mutex_unlock(&down7->stateMutex);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
 }
 
 static Down7State
@@ -514,13 +511,13 @@ setCancelState(
  * @param[out] sockAddr       Pointer to the socket address object to be set.
  * @retval     0              Success. `*sock` and `*sockAddr` are set.
  * @retval     LDM7_INVAL     Invalid port number or host identifier.
- *                            `log_start()` called.
- * @retval     LDM7_IPV6      IPv6 not supported. `log_start()` called.
+ *                            `mylog_add()` called.
+ * @retval     LDM7_IPV6      IPv6 not supported. `mylog_add()` called.
  * @retval     LDM7_REFUSED   Remote host refused connection (server likely
- *                            isn't running). `log_start()` called.
- * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()`
+ *                            isn't running). `mylog_add()` called.
+ * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `mylog_add()`
  *                            called.
- * @retval     LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval     LDM7_SYSTEM    System error. `mylog_add()` called.
  */
 static int
 getSock(
@@ -540,14 +537,14 @@ getSock(
         const int         fd = socket(addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
 
         if (fd == -1) {
-            LOG_SERROR1("Couldn't create %s TCP socket", addrFamilyId);
+            mylog_syserr("Couldn't create %s TCP socket", addrFamilyId);
             status = (useIPv6 && errno == EAFNOSUPPORT)
                     ? LDM7_IPV6
                     : LDM7_SYSTEM;
         }
         else {
             if (connect(fd, (struct sockaddr*)&addr, sockLen)) {
-                LOG_SERROR3("Couldn't connect %s TCP socket to \"%s\", port %hu",
+                mylog_syserr("Couldn't connect %s TCP socket to \"%s\", port %hu",
                         addrFamilyId, sa_getInetId(servAddr),
                         sa_getPort(servAddr));
                 (void)close(fd);
@@ -564,7 +561,7 @@ getSock(
         } /* "fd" is open */
     } /* "addr" is set */
 
-    udebug("getSock(): Returning %d", status);
+    mylog_debug("getSock(): Returning %d", status);
     return status;
 }
 
@@ -577,13 +574,13 @@ getSock(
  * @param[out] sockAddr       Pointer to the socket address object to be set.
  * @retval     0              Success. `*sock` and `*sockAddr` are set.
  * @retval     LDM7_INVAL     Invalid port number or host identifier.
- *                            `log_start()` called.
- * @retval     LDM7_IPV6      IPv6 not supported. `log_start()` called.
+ *                            `mylog_add()` called.
+ * @retval     LDM7_IPV6      IPv6 not supported. `mylog_add()` called.
  * @retval     LDM7_REFUSED   Remote host refused connection (server likely
- *                            isn't running). `log_start()` called.
- * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()`
+ *                            isn't running). `mylog_add()` called.
+ * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `mylog_add()`
  *                            called.
- * @retval     LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval     LDM7_SYSTEM    System error. `mylog_add()` called.
  */
 static int
 getSocket(
@@ -597,7 +594,7 @@ getSocket(
     int                     status = getSock(servAddr, AF_UNSPEC, &fd, &addr);
 
     if (status) {
-        log_clear();
+        mylog_clear();
         status = getSock(servAddr, AF_INET, &fd, &addr);
     }
 
@@ -616,16 +613,16 @@ getSocket(
  * @retval     0              Success. `down7->up7proxy` and `down7->sock` are
  *                            set.
  * @retval     LDM7_INVAL     Invalid port number or host identifier.
- *                            `log_start()` called.
- * @retval     LDM7_REFUSED   Remote host refused connection. `log_start()`
+ *                            `mylog_add()` called.
+ * @retval     LDM7_REFUSED   Remote host refused connection. `mylog_add()`
  *                            called.
- * @retval     LDM7_RPC       RPC error. `log_start()` called.
- * @retval     LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval     LDM7_RPC       RPC error. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM    System error. `mylog_add()` called.
  * @retval     LDM7_REFUSED   Remote host refused connection (server likely
- *                            isn't running). `log_start()` called.
- * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()`
+ *                            isn't running). `mylog_add()` called.
+ * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `mylog_add()`
  *                            called.
- * @retval     LDM7_UNAUTH    Not authorized. `log_start()` called.
+ * @retval     LDM7_UNAUTH    Not authorized. `mylog_add()` called.
  */
 static int
 newClient(
@@ -647,7 +644,7 @@ newClient(
         }
     } // `sock` is open
 
-    udebug("newClient(): Returning %d", status);
+    mylog_debug("newClient(): Returning %d", status);
     return status;
 }
 
@@ -657,7 +654,7 @@ newClient(
  *
  * @param[in] down7     Pointer to the downstream LDM-7.
  * @retval    0         Success. The connection is still good.
- * @retval    LDM7_RPC  RPC error. `log_start()` called.
+ * @retval    LDM7_RPC  RPC error. `mylog_add()` called.
  */
 static inline int // inline because small and only called in one spot
 testConnection(
@@ -670,10 +667,10 @@ static void
 destroyTransport(
         void* const arg)
 {
-    udebug("%s:destroyTansport(): Entered", __FILE__);
+    mylog_debug("destroyTansport(): Entered");
     svc_destroy((SVCXPRT*)arg);
-    log_log(LOG_ERR);
-    log_free(); // because end of thread
+    mylog_flush_error();
+    mylog_free(); // because end of thread
 }
 
 /**
@@ -686,8 +683,8 @@ destroyTransport(
  * @param[in]     xprt           Pointer to the RPC service transport. Will be
  *                               destroyed upon return.
  * @retval        0              Success. The RPC transport was closed.
- * @retval        LDM7_RPC       Error in RPC layer. `log_start()` called.
- * @retval        LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval        LDM7_RPC       Error in RPC layer. `mylog_add()` called.
+ * @retval        LDM7_SYSTEM    System error. `mylog_add()` called.
  */
 static int
 run_svc(
@@ -705,7 +702,7 @@ run_svc(
     pthread_cleanup_push(destroyTransport, xprt);
 
     for (;;) {
-        udebug("down7.c:run_svc(): Calling poll(): socket=%d", sock);
+        mylog_debug("down7.c:run_svc(): Calling poll(): socket=%d", sock);
         setCancelState(true); // enable cancellation of `poll()`
         status = poll(&pfd, 1, timeout);
 
@@ -717,12 +714,12 @@ run_svc(
             continue;
         }
         if (0 > status) {
-            LOG_SERROR1("down7.c:run_svc(): poll() error on socket %d", sock);
+            mylog_syserr("poll() error on socket %d", sock);
             status = LDM7_SYSTEM;
             break;
         }
         if ((pfd.revents & POLLHUP) || (pfd.revents & POLLERR)) {
-            udebug("down7.c:run_svc(): RPC transport socket closed or in error");
+            mylog_debug("down7.c:run_svc(): RPC transport socket closed or in error");
             status = 0;
             break;
         }
@@ -732,7 +729,7 @@ run_svc(
         }
         if (!FD_ISSET(sock, &svc_fdset)) {
             // Here if the upstream LDM-7 closed the connection
-            udebug("down7.c:run_svc(): The RPC layer destroyed the service transport");
+            mylog_debug("down7.c:run_svc(): The RPC layer destroyed the service transport");
             xprt = NULL;
             status = 0;
             break;
@@ -754,8 +751,8 @@ run_svc(
  * @param[in] xprt           Pointer to the server-side transport object. Will
  *                           be destroyed upon return.
  * @retval    0              Success. The server transport is closed.
- * @retval    LDM7_RPC       An RPC error occurred. `log_start()` called.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval    LDM7_RPC       An RPC error occurred. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
  */
 static int
 run_down7_svc(
@@ -770,7 +767,7 @@ run_down7_svc(
     int status = pthread_setspecific(down7Key, down7);
 
     if (status) {
-        LOG_ERRNUM0(status,
+        mylog_errno(status,
                 "Couldn't set thread-specific pointer to downstream LDM-7");
         svc_destroy(xprt);
         status = LDM7_SYSTEM;
@@ -782,7 +779,7 @@ run_down7_svc(
          * transport, which will close the downstream LDM-7's client socket.
          */
         status = run_svc(down7, xprt);
-        unotice("Downstream LDM-7 server terminated");
+        mylog_notice("Downstream LDM-7 server terminated");
     } // thread-specific pointer to downstream LDM-7 is set
 
     return status;
@@ -804,7 +801,7 @@ run_down7_svc(
  *
  * @param[in] arg       Pointer to downstream LDM-7.
  * @retval    0         Success.
- * @retval    LDM7_RPC  Error in RPC layer. `log_log()` called.
+ * @retval    LDM7_RPC  Error in RPC layer. `mylog_flush()` called.
  */
 static void*
 requestSessionBacklog(
@@ -837,8 +834,8 @@ requestSessionBacklog(
  * @retval    0              Success.
  * @retval    LDM7_SHUTDOWN  The missed-but-not-requested queue has been shut
  *                           down.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
- * @retval    LDM7_RPC       Error in RPC layer. `log_start()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
+ * @retval    LDM7_RPC       Error in RPC layer. `mylog_add()` called.
  */
 static inline int // inlined because only called by one small function
 makeRequest(
@@ -853,12 +850,12 @@ makeRequest(
      * data-products are received following a restart.
      */
     if (!mrm_peekMissedFileWait(down7->mrm, &iProd)) {
-        udebug("makeRequest(): The queue of missed data-products has been shutdown");
+        mylog_debug("makeRequest(): The queue of missed data-products has been shutdown");
         status = LDM7_SHUTDOWN;
     }
     else {
         if (!mrm_addRequestedFile(down7->mrm, iProd)) {
-            LOG_ADD0("Couldn't add VCMTP product-index to requested-queue");
+            mylog_add("Couldn't add VCMTP product-index to requested-queue");
             status = LDM7_SYSTEM;
         }
         else {
@@ -881,8 +878,8 @@ makeRequest(
  *
  * @param[in] arg            Pointer to the downstream LDM-7 object.
  * @retval    LDM7_SHUTDOWN  `stopRequestTask()` was called.
- * @retval    LDM7_RPC       Error in RPC layer. `log_start()` called.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval    LDM7_RPC       Error in RPC layer. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
  */
 static void*
 startRequestTask(
@@ -895,9 +892,9 @@ startRequestTask(
         status = makeRequest(down7);
     } while (status == 0 && getState(down7) == DOWN7_EXECUTING);
 
-    log_log(status ? LOG_ERR : LOG_INFO);
+    mylog_flush(status ? MYLOG_LEVEL_ERROR : MYLOG_LEVEL_INFO);
 
-    udebug("%s:startRequestTask(): Returning &%d", __FILE__, status);
+    mylog_debug("startRequestTask(): Returning &%d", status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -918,10 +915,10 @@ static void
 stopRequestTask(
         void* const arg)
 {
-    udebug("%s:stopRequestTask(): Entered", __FILE__);
+    mylog_debug("stopRequestTask(): Entered");
     Down7* const down7 = (Down7*)arg;
     if (down7->mrm) {
-        udebug("stopRequestTask(): Stopping data-product requesting task");
+        mylog_debug("stopRequestTask(): Stopping data-product requesting task");
         mrm_shutDownMissedFiles(down7->mrm);
     }
     if (0 <= down7->sock)
@@ -936,8 +933,8 @@ stopRequestTask(
  * @param[out] rpcXprt      The created RPC transport. Caller should call
  *                          `svc_destroy(xprt)` when it's no longer needed.
  * @retval     0            Success.
- * @retval     LDM7_SYSTEM  System error. `log_start()` called.
- * @retval     LDM7_RPC     RPC error. `log_start()` called.
+ * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval     LDM7_RPC     RPC error. `mylog_add()` called.
  */
 static int
 createUcastRecvXprt(
@@ -950,14 +947,14 @@ createUcastRecvXprt(
 
     status = getpeername(sock, &addr, &addrLen);
     if (status) {
-        LOG_SERROR0("Couldn't get Internet address of upstream LDM-7");
+        mylog_syserr("Couldn't get Internet address of upstream LDM-7");
         status = LDM7_SYSTEM;
     }
     else {
         SVCXPRT* const     xprt = svcfd_create(sock, 0, MAX_RPC_BUF_NEEDED);
 
         if (xprt == NULL) {
-            LOG_ADD1("Couldn't create server-side RPC transport for receiving "
+            mylog_add("Couldn't create server-side RPC transport for receiving "
                     "data-products from upstream LDM-7 at \"%s\"",
                     inet_ntoa(addr.sin_addr));
             status = LDM7_RPC;
@@ -988,8 +985,8 @@ createUcastRecvXprt(
  *
  * @param[in] arg            Pointer to the downstream LDM-7.
  * @retval    0              Success. The server transport was closed.
- * @retval    LDM7_RPC       RPC error. `log_start()` called.
- * @retval    LDM7_SYSTEM    System error. `log_log()` called.
+ * @retval    LDM7_RPC       RPC error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_flush()` called.
  */
 static void*
 startUcastRecvTask(
@@ -1008,7 +1005,7 @@ startUcastRecvTask(
             char buf[256];
 
             (void)sa_snprint(down7->servAddr, buf, sizeof(buf));
-            LOG_ADD1("Couldn't register RPC server for receiving "
+            mylog_add("Couldn't register RPC server for receiving "
                     "data-products from upstream LDM-7 at \"%s\"", buf);
             svc_destroy(xprt);
             status = LDM7_RPC;
@@ -1023,9 +1020,9 @@ startUcastRecvTask(
         }
     } // `xprt` initialized
 
-    log_log(status ? LOG_ERR : LOG_INFO);
+    mylog_flush(status ? MYLOG_LEVEL_ERROR : MYLOG_LEVEL_INFO);
 
-    udebug("%s:startUcastRecvTask(): Returning &%d", __FILE__, status);
+    mylog_debug("startUcastRecvTask(): Returning &%d", status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1038,13 +1035,13 @@ startUcastRecvTask(
  *
  * @param[in] arg            Pointer to the downstream LDM-7.
  * @retval    LDM7_SHUTDOWN  `stopMcastRecvTask()` was called.
- * @retval    LDM7_MCAST     Multicast reception error. `log_add()` called.
+ * @retval    LDM7_MCAST     Multicast reception error. `mylog_add()` called.
  */
 static void*
 startMcastRecvTask2(
     void* const arg)
 {
-    udebug("%s:startMcastRecvTask2(): Entered", __FILE__);
+    mylog_debug("startMcastRecvTask2(): Entered");
 
     Down7* const down7 = (Down7*)arg;
     int          status = mlr_start(down7->mlr); // doesn't return immediately
@@ -1054,13 +1051,13 @@ startMcastRecvTask2(
 
     // Because end of task
     if (status) {
-        log_log((status == LDM7_SHUTDOWN) ? LOG_INFO : LOG_ERR);
+        mylog_flush((status == LDM7_SHUTDOWN) ? MYLOG_LEVEL_INFO : MYLOG_LEVEL_ERROR);
     }
     else {
-        log_clear();
+        mylog_clear();
     }
 
-    udebug("%s:startMcastRecvTask2(): Returning &%d", __FILE__, status);
+    mylog_debug("startMcastRecvTask2(): Returning &%d", status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1078,13 +1075,13 @@ static void
 stopMcastRecvTask(
         void* const arg)
 {
-    udebug("%s:stopMcastRecvTask(): Entered", __FILE__);
+    mylog_debug("stopMcastRecvTask(): Entered");
     Down7* const down7 = (Down7*)arg;
-    udebug("%s:stopMcastRecvTask(): Locking state", __FILE__);
+    mylog_debug("stopMcastRecvTask(): Locking state");
     lockState(down7);
     if (down7->mlr) {
-        udebug("%s:stopMcastRecvTask(): "
-                "Stopping multicast data-product receiving task", __FILE__);
+        mylog_debug("stopMcastRecvTask(): "
+                "Stopping multicast data-product receiving task");
         mlr_stop(down7->mlr);
     }
     unlockState(down7);
@@ -1095,19 +1092,19 @@ stopMcastRecvTask(
  *
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    LDM7_SHUTDOWN  `stopMcastRecvTask()` was called.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
  */
 static int
 startMcastRecvTask(
         Down7* const down7)
 {
-    udebug("%s:startMcastRecvTask(): Entered", __FILE__);
+    mylog_debug("startMcastRecvTask(): Entered");
 
     Mlr* const   mlr = mlr_new(down7->mcastInfo, down7->mcastIface, down7);
     int          status;
 
     if (mlr == NULL) {
-        LOG_ADD0("Couldn't create a new multicast LDM receiver");
+        mylog_add("Couldn't create a new multicast LDM receiver");
         status = LDM7_SYSTEM;
     }
     else {
@@ -1122,12 +1119,12 @@ startMcastRecvTask(
             status = LDM7_SHUTDOWN;
         }
         else if (status) {
-            LOG_ADD0("Couldn't submit multicast receiving task");
+            mylog_add("Couldn't submit multicast receiving task");
             status = LDM7_SYSTEM;
         }
     }
 
-    udebug("%s:startMcastRecvTask(): Returning %d", __FILE__, status);
+    mylog_debug("startMcastRecvTask(): Returning %d", status);
     return status;
 }
 
@@ -1143,7 +1140,7 @@ startMcastRecvTask(
  * @param[out] job            The job or NULL.
  * @retval     0              Success.
  * @retval     LDM7_SHUTDOWN  `down7_stop()` was called. The task isn't running.
- * @retval     LDM7_SYSTEM    Error. `log_start()` called. The task isn't
+ * @retval     LDM7_SYSTEM    Error. `mylog_add()` called. The task isn't
  *                            running.
  */
 static int
@@ -1158,15 +1155,15 @@ startRecvTask(
     int status = exe_submit(exe, start, arg, stop, job);
 
     if (status == EINVAL) {
-        log_clear();
+        mylog_clear();
         status = LDM7_SHUTDOWN;
     }
     else if (status) {
-        LOG_ERRNUM1(status, "Couldn't start task that %s", desc);
+        mylog_errno(status, "Couldn't start task that %s", desc);
         status = LDM7_SYSTEM;
     }
 
-    udebug("startRecvTask(): Returning %d", status);
+    mylog_debug("startRecvTask(): Returning %d", status);
     return status;
 }
 
@@ -1178,7 +1175,7 @@ startRecvTask(
  * @param[in]  down7          Pointer to the downstream LDM-7.
  * @retval     0              Success.
  * @retval     LDM7_SHUTDOWN  The LDM-7 has been shut down. No task is running.
- * @retval     LDM7_SYSTEM    Error. `log_start()` called. No task is running.
+ * @retval     LDM7_SYSTEM    Error. `mylog_add()` called. No task is running.
  * @post                      The state of the downstream LDM-7 is locked.
  */
 static int
@@ -1197,9 +1194,9 @@ startRecvTasks(
     }
 
     if (status == LDM7_SYSTEM && exe_shutdown(down7->executor))
-        LOG_ADD0("Couldn't shut down task executor");
+        mylog_add("Couldn't shut down task executor");
 
-    udebug("%s:startRecvTasks(): Returning %d", __FILE__, status);
+    mylog_debug("startRecvTasks(): Returning %d", status);
     return status;
 }
 
@@ -1207,7 +1204,7 @@ startRecvTasks(
  * @param[in] down7         Downstream LDM-7
  * @retval    0             Success. All tasks terminated with exit status 0.
  * @retval    LDM_SHUTDOWN  `down7_stop()` was called.
- * @retval    LDM_SYSTEM    System error. `log_add()` called.
+ * @retval    LDM_SYSTEM    System error. `mylog_add()` called.
  */
 static int
 reapRecvTasks(
@@ -1222,11 +1219,11 @@ reapRecvTasks(
         ptrInt.ptr = job_result(job);
         int    result = ptrInt.val;
 
-        udebug("%s:reapRecvTasks(): Result=%d", __FILE__, result);
+        mylog_debug("reapRecvTasks(): Result=%d", result);
 
         if (job_wasStopped(job) || job_status(job) || result) { // in that order
             if (exe_shutdown(down7->executor)) {
-                LOG_ADD0("Couldn't shut down task executor");
+                mylog_add("Couldn't shut down task executor");
                 status = LDM7_SYSTEM;
             }
             else {
@@ -1243,7 +1240,7 @@ reapRecvTasks(
         job_free(job);
     }
 
-    udebug("reapRecvTasks(): Returning %d", status);
+    mylog_debug("reapRecvTasks(): Returning %d", status);
     return status;
 }
 
@@ -1254,10 +1251,10 @@ reapRecvTasks(
  *
  * @pre                        The downstream LDM-7 state is locked.
  * @param[in] down7            Pointer to the downstream LDM-7.
- * @retval    LDM7_RPC         RPC error. `log_start()` called.
+ * @retval    LDM7_RPC         RPC error. `mylog_add()` called.
  * @retval    LDM7_SHUTDOWN    The downstream LDM-7 was shut down.
- * @retval    LDM7_SYSTEM      System error. `log_start()` called.
- * @retval    LDM7_TIMEDOUT    A timeout occurred. `log_start()` called.
+ * @retval    LDM7_SYSTEM      System error. `mylog_add()` called.
+ * @retval    LDM7_TIMEDOUT    A timeout occurred. `mylog_add()` called.
  * @post                       The downstream LDM-7 state is locked.
  */
 static int
@@ -1267,7 +1264,7 @@ receive(
     int status = startRecvTasks(down7);
 
     if (status) {
-        LOG_ADD0("Couldn't start downstream LDM-7 receiving tasks");
+        mylog_add("Couldn't start downstream LDM-7 receiving tasks");
     }
     else {
         unlockState(down7); // allow tasks to be stopped by `down7_stop()`
@@ -1275,7 +1272,7 @@ receive(
         lockState(down7);
     }
 
-    udebug("receive(): Returning %d", status);
+    mylog_debug("receive(): Returning %d", status);
     return status;
 }
 
@@ -1288,8 +1285,8 @@ freeClient(
     down7->up7proxy = NULL;
     (void)close(down7->sock);
     down7->sock = -1;
-    log_log(LOG_ERR);
-    log_free(); // because end of thread
+    mylog_flush_error();
+    mylog_free(); // because end of thread
 }
 
 /**
@@ -1300,11 +1297,11 @@ freeClient(
  * @param[in] down7          Pointer to the downstream LDM-7.
  *            0              Success. `down7->up7proxy`, `down7->sock`, and
  *                           `down7->mcastInfo` are set.
- * @retval    LDM7_REFUSED   `log_log(LOG_WARN)` called.
- * @retval    LDM7_RPC       `log_log(LOG_ERR)` called.
- * @retval    LDM7_SYSTEM    `log_log(LOG_ERR)` called.
- * @retval    LDM7_TIMEDOUT  `log_log(LOG_WARN)` called.
- * @retval    LDM7_UNAUTH    `log_log(LOG_WARN)` called.
+ * @retval    LDM7_REFUSED   `MYLOG_FLUSH_WARNING()` called.
+ * @retval    LDM7_RPC       `MYLOG_FLUSH_ERROR()` called.
+ * @retval    LDM7_SYSTEM    `MYLOG_FLUSH_ERROR()` called.
+ * @retval    LDM7_TIMEDOUT  `MYLOG_FLUSH_WARNING()` called.
+ * @retval    LDM7_UNAUTH    `MYLOG_FLUSH_WARNING()` called.
  */
 static void*
 subscribe(
@@ -1323,16 +1320,16 @@ subscribe(
 
     // Because end-of-thread:
     if (status) {
-        log_log((status == LDM7_TIMEDOUT || status == LDM7_UNAUTH ||
+        mylog_flush((status == LDM7_TIMEDOUT || status == LDM7_UNAUTH ||
                 status == LDM7_REFUSED)
-                ? LOG_WARNING
-                : LOG_ERR);
+                ? MYLOG_LEVEL_WARNING
+                : MYLOG_LEVEL_ERROR);
     }
     else {
-        log_clear();
+        mylog_clear();
     }
 
-    udebug("subscribe(): Returning &%d", status);
+    mylog_debug("subscribe(): Returning &%d", status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1348,12 +1345,12 @@ subscribe(
  * @retval    0              Success. `down7->sock`, `down7->up7proxy`, and
  *                           `down7->mcastInfo` are set.
  * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
- * @retval    LDM7_TIMEDOUT  Timeout occurred. `log_start()` called.
- * @retval    LDM7_RPC       RPC failure (including interrupt). `log_start()`
+ * @retval    LDM7_TIMEDOUT  Timeout occurred. `mylog_add()` called.
+ * @retval    LDM7_RPC       RPC failure (including interrupt). `mylog_add()`
  *                           called.
  * @retval    LDM7_INVAL     Invalid multicast group name.
  * @retval    LDM7_UNAUTH    Not authorized to receive multicast group.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
  * @post                     The downstream LDM-7 state is locked.
  */
 static int
@@ -1362,17 +1359,17 @@ execSubscriptionTask(
 {
     int status;
 
-    UASSERT(down7 != NULL && exe_count(down7->executor) == 0);
+    mylog_assert(down7 != NULL && exe_count(down7->executor) == 0);
 
     Job* job;
     status = exe_submit(down7->executor, subscribe, down7, NULL, &job);
 
     if (status == EINVAL) {
-        log_clear();
+        mylog_clear();
         status = LDM7_SHUTDOWN;
     }
     else if (status) {
-        LOG_ADD0("Couldn't start task that subscribes to a feed");
+        mylog_add("Couldn't start task that subscribes to a feed");
         status = LDM7_SYSTEM;
     }
     else {
@@ -1393,7 +1390,7 @@ execSubscriptionTask(
         job_free(job);
     }
 
-    udebug("execSubscriptionTask(): Returning %d", status);
+    mylog_debug("execSubscriptionTask(): Returning %d", status);
     return status;
 }
 
@@ -1402,19 +1399,19 @@ execSubscriptionTask(
  *
  * @pre                      The downstream LDM-7 state is locked.
  * @param[in] down7          Pointer to the downstream LDM-7 to be executed.
- * @retval    LDM7_INVAL     Invalid multicast group name. `log_start()` called.
+ * @retval    LDM7_INVAL     Invalid multicast group name. `mylog_add()` called.
  * @retval    LDM7_INVAL     Invalid port number or host identifier.
- *                           `log_start()` called.
- * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
+ *                           `mylog_add()` called.
+ * @retval    LDM7_MCAST     Multicast layer failure. `mylog_add()` called.
  * @retval    LDM7_REFUSED   Remote host refused connection (server likely
- *                           isn't running). `log_start()` called.
- * @retval    LDM7_RPC       RPC failure (including interrupt). `log_start()`
+ *                           isn't running). `mylog_add()` called.
+ * @retval    LDM7_RPC       RPC failure (including interrupt). `mylog_add()`
  *                           called.
  * @retval    LDM7_SHUTDOWN  `down7_stop()` was called.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
- * @retval    LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
+ * @retval    LDM7_TIMEDOUT  Connection attempt timed-out. `mylog_add()` called.
  * @retval    LDM7_UNAUTH    Not authorized to receive multicast group.
- *                           `log_start()` called.
+ *                           `mylog_add()` called.
  * @post                     The downstream LDM-7 state is locked.
  */
 static int
@@ -1427,12 +1424,12 @@ subscribeAndReceive(
 
         mi_free(down7->mcastInfo); // NULL safe
         down7->mcastInfo = NULL;
-        udebug("subscribeAndReceive(): Destroying client handle");
+        mylog_debug("subscribeAndReceive(): Destroying client handle");
         // won't close externally-created socket
         freeClient(down7);
     } // `down7->up7proxy`, `down7->sock`, and `down7->mcastInfo` allocated
 
-    udebug("subscribeAndReceive(): Returning %d", status);
+    mylog_debug("subscribeAndReceive(): Returning %d", status);
     return status;
 }
 
@@ -1442,19 +1439,19 @@ subscribeAndReceive(
  *
  * @pre                      The downstream LDM-7 state is locked.
  * @param[in] down7          Pointer to the downstream LDM-7 to be executed.
- * @retval    LDM7_INVAL     Invalid multicast group name. `log_start()` called.
+ * @retval    LDM7_INVAL     Invalid multicast group name. `mylog_add()` called.
  * @retval    LDM7_INVAL     Invalid port number or host identifier.
- *                           `log_start()` called.
- * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
+ *                           `mylog_add()` called.
+ * @retval    LDM7_MCAST     Multicast layer failure. `mylog_add()` called.
  * @retval    LDM7_REFUSED   Remote host refused connection (server likely
- *                           isn't running). `log_start()` called.
- * @retval    LDM7_RPC       RPC failure (including interrupt). `log_start()`
+ *                           isn't running). `mylog_add()` called.
+ * @retval    LDM7_RPC       RPC failure (including interrupt). `mylog_add()`
  *                           called.
  * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
- * @retval    LDM7_TIMEDOUT  Connection attempt timed-out. `log_start()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
+ * @retval    LDM7_TIMEDOUT  Connection attempt timed-out. `mylog_add()` called.
  * @retval    LDM7_UNAUTH    Not authorized to receive multicast group.
- *                           `log_start()` called.
+ *                           `mylog_add()` called.
  * @post                     The downstream LDM-7 state is locked.
  */
 static int
@@ -1466,7 +1463,7 @@ runDown7Once(
     int status = subscribeAndReceive(down7);
     exe_shutdown(down7->executor);
     exe_clear(down7->executor);
-    udebug("runDown7Once(): Returning %d", status);
+    mylog_debug("runDown7Once(): Returning %d", status);
     return status;
 }
 
@@ -1489,12 +1486,12 @@ nap(
     absTime.tv_nsec = 0;
 
     while (down7->state == DOWN7_EXECUTING && status == 0) {
-        udebug("nap(): Napping");
+        mylog_debug("nap(): Napping");
         status = pthread_cond_timedwait(&down7->napCond, &down7->stateMutex,
                 &absTime);
     }
 
-    UASSERT(status == 0 || status == ETIMEDOUT);
+    mylog_assert(status == 0 || status == ETIMEDOUT);
 }
 
 /**
@@ -1505,7 +1502,7 @@ nap(
  * @param[in] down7        The downstream LDM-7.
  * @param[in] prod         The data-product.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_start()` called.
+ * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
  */
 static int
 deliver_product(
@@ -1517,30 +1514,32 @@ deliver_product(
     int                     status = pq_insert(pq, prod);
 
     if (status == 0) {
-        if (ulogIsVerbose()) {
+        if (mylog_is_enabled_info) {
             char buf[LDM_INFO_MAX];
 
-            (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
-            uinfo("%s:deliver_product(): Inserted: %s", __FILE__, buf);
+            (void)s_prod_info(buf, sizeof(buf), &prod->info,
+                    mylog_is_enabled_debug);
+            mylog_info("deliver_product(): Inserted: %s", buf);
         }
         down7_incNumProds(down7);
     }
     else {
         if (status == EINVAL) {
-            uerror("Invalid argument");
+            mylog_error("Invalid argument");
             status = LDM7_SYSTEM;
         }
         else {
             char buf[LDM_INFO_MAX];
 
-            (void)s_prod_info(buf, sizeof(buf), &prod->info, ulogIsDebug());
+            (void)s_prod_info(buf, sizeof(buf), &prod->info,
+                    mylog_is_enabled_debug);
 
             if (status == PQUEUE_DUP) {
-                uinfo("%s:deliver_product(): Duplicate data-product: %s",
-                        __FILE__, buf);
+                mylog_info("deliver_product(): Duplicate data-product: %s",
+                        buf);
             }
             else {
-                uwarn("Product too big for queue: %s", buf);
+                mylog_warning("Product too big for queue: %s", buf);
             }
 
             status = 0; // either too big or duplicate data-product
@@ -1560,7 +1559,7 @@ createDown7Key(void)
     int status = pthread_key_create(&down7Key, NULL);
 
     if (status) {
-        LOG_ERRNUM0(status,
+        mylog_errno(status,
                 "Couldn't create thread-specific data-key for downstream LDM-7");
     }
 }
@@ -1581,8 +1580,8 @@ deliveryFailure(
 {
     char buf[LDM_INFO_MAX];
 
-    LOG_ADD2("%s: %s", msg, s_prod_info(buf, sizeof(buf), info, ulogIsDebug()));
-    log_log(LOG_ERR);
+    mylog_error("%s: %s", msg, s_prod_info(buf, sizeof(buf), info,
+            mylog_is_enabled_debug));
     (void)svcerr_systemerr(rqstp->rq_xprt);
     svc_destroy(rqstp->rq_xprt);
 }
@@ -1618,7 +1617,7 @@ wakeUpNappingDown7(
  *                        packets. Caller may free upon return.
  * @param[in] down7Pq     The product-queue. Must be thread-safe (i.e.,
  *                        `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
- * @retval    NULL        Failure. `log_start()` called.
+ * @retval    NULL        Failure. `mylog_add()` called.
  * @return                Pointer to the new downstream LDM-7.
  */
 Down7*
@@ -1628,7 +1627,7 @@ down7_new(
     const char* const restrict        mcastIface,
     pqueue* const restrict            down7Pq)
 {
-    Down7* const down7 = LOG_MALLOC(sizeof(Down7), "downstream LDM-7");
+    Down7* const down7 = mylog_malloc(sizeof(Down7), "downstream LDM-7");
     int          status;
 
     if (down7 == NULL)
@@ -1640,7 +1639,7 @@ down7_new(
      * data-product receiver.
      */
     if (!(pq_getFlags(down7Pq) | PQ_THREADSAFE)) {
-        LOG_START1("Product-queue not thread-safe: %0x", pq_getFlags(down7Pq));
+        mylog_add("Product-queue not thread-safe: %0x", pq_getFlags(down7Pq));
         goto free_down7;
     }
 
@@ -1648,12 +1647,12 @@ down7_new(
         char buf[256];
 
         (void)sa_snprint(servAddr, buf, sizeof(buf));
-        LOG_ADD1("Couldn't clone server address \"%s\"", buf);
+        mylog_add("Couldn't clone server address \"%s\"", buf);
         goto free_down7;
     }
 
     if ((status = pthread_cond_init(&down7->napCond, NULL)) != 0) {
-        LOG_ERRNUM0(status,
+        mylog_errno(status,
                 "Couldn't initialize condition-variable for napping");
         goto free_servAddr;
     }
@@ -1663,7 +1662,7 @@ down7_new(
 
         status = pthread_mutexattr_init(&mutexAttr);
         if (status) {
-            LOG_ERRNUM0(status,
+            mylog_errno(status,
                     "Couldn't initialize attributes of state-mutex");
         }
         else {
@@ -1673,7 +1672,7 @@ down7_new(
                     PTHREAD_MUTEX_ERRORCHECK);
 
             if ((status = pthread_mutex_init(&down7->stateMutex, &mutexAttr))) {
-                LOG_ERRNUM0(status, "Couldn't initialize state-mutex");
+                mylog_errno(status, "Couldn't initialize state-mutex");
                 (void)pthread_mutexattr_destroy(&mutexAttr);
                 goto free_napCond;
             }
@@ -1687,14 +1686,14 @@ down7_new(
 
     down7->mcastIface = strdup(mcastIface);
     if (down7->mcastIface == NULL) {
-        LOG_ADD0("Couldn't clone multicast interface specification");
+        mylog_add("Couldn't clone multicast interface specification");
         goto free_executor;
     }
 
-    udebug("runDown7Once(): Opening multicast session memory");
+    mylog_debug("runDown7Once(): Opening multicast session memory");
     down7->mrm = mrm_open(down7->servAddr, down7->feedtype);
     if (down7->mrm == NULL) {
-        LOG_ADD0("Couldn't open multicast session memory");
+        mylog_add("Couldn't open multicast session memory");
         goto free_mcastIface;
     }
 
@@ -1718,7 +1717,7 @@ down7_new(
 
 close_mcastReceiverMemory:
     if (!mrm_close(down7->mrm))
-        LOG_ADD0("Couldn't close multicast receiver memory");
+        mylog_add("Couldn't close multicast receiver memory");
 free_mcastIface:
     free(down7->mcastIface);
 free_executor:
@@ -1756,10 +1755,10 @@ pqueue* down7_getPq(
  * @param[in] arg            Pointer to downstream LDM-7 object.
  * @retval    0              Success.
  * @retval    LDM7_INVAL     The downstream LDM-7 object is in the wrong state.
- *                           `log_start() called.
- * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
+ *                           `mylog_add() called.
+ * @retval    LDM7_MCAST     Multicast layer failure. `mylog_add()` called.
  * @retval    LDM7_SHUTDOWN  `down7_stop()` was called.
- * @retval    LDM7_SYSTEM    System error. `log_start()` called.
+ * @retval    LDM7_SYSTEM    System error. `mylog_add()` called.
  */
 Ldm7Status
 down7_start(
@@ -1770,12 +1769,12 @@ down7_start(
     lockState(down7);
 
     if (DOWN7_INITIALIZED != down7->state) {
-        LOG_START1("Downstream LDM-7 is in wrong state: %d", down7->state);
+        mylog_add("Downstream LDM-7 is in wrong state: %d", down7->state);
         status = LDM7_INVAL;
     }
     else {
         char* const addrStr = sa_format(down7->servAddr);
-        unotice("Downstream LDM-7 starting up: remoteAddr=%s, feedtype=%s, "
+        mylog_notice("Downstream LDM-7 starting up: remoteAddr=%s, feedtype=%s, "
                 "pq=\"%s\"", addrStr, s_feedtypet(down7->feedtype),
                 pq_getPathname(down7->pq));
         free(addrStr);
@@ -1788,7 +1787,7 @@ down7_start(
                     LDM7_MCAST == status || LDM7_SHUTDOWN == status)
                 break; // severe error or shut down
 
-            log_log(LOG_NOTICE); // might log nothing
+            mylog_flush_notice(); // might log nothing
 
             if (LDM7_TIMEDOUT != status) {
                 // Returns immediately if `down7_stop()` called
@@ -1804,7 +1803,7 @@ down7_start(
 
     unlockState(down7);
 
-    udebug("down7_start(): Returning %d", status);
+    mylog_debug("down7_start(): Returning %d", status);
     return status;
 }
 
@@ -1819,10 +1818,10 @@ down7_incNumProds(
         Down7* const down7)
 {
     int status = pthread_mutex_lock(&down7->numProdMutex);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
     down7->numProds++;
     pthread_mutex_unlock(&down7->numProdMutex);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
 }
 
 /**
@@ -1837,10 +1836,10 @@ down7_getNumProds(
         Down7* const down7)
 {
     int status = pthread_mutex_lock(&down7->numProdMutex);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
     uint64_t num = down7->numProds;
     pthread_mutex_unlock(&down7->numProdMutex);
-    UASSERT(status == 0);
+    mylog_assert(status == 0);
     return num;
 }
 
@@ -1851,7 +1850,7 @@ down7_getNumProds(
  * @param[in] down7          The running downstream LDM-7 to be stopped.
  * @retval    0              Success. `down7_run()` should return.
  * @retval    LDM7_SYSTEM    The downstream LDM-7 couldn't be stopped due to a
- *                           system error. `log_log()` called.
+ *                           system error. `mylog_flush()` called.
  */
 Ldm7Status
 down7_stop(
@@ -1865,14 +1864,14 @@ down7_stop(
      */
     unlockState(down7);
 
-    udebug("%s: Calling exe_shutdown()", __FILE__);
+    mylog_debug("Calling exe_shutdown()");
     int status = exe_shutdown(down7->executor);
     if (status) {
-        LOG_ERRNUM0(status, "Couldn't shut down executor");
+        mylog_errno(status, "Couldn't shut down executor");
         status = LDM7_SYSTEM;
     }
     else {
-        udebug("%s: Calling lockState()", __FILE__);
+        mylog_debug("Calling lockState()");
         lockState(down7);
         wakeUpNappingDown7(down7);
         unlockState(down7);
@@ -1893,7 +1892,7 @@ down7_stop(
  * @retval    0           Success.
  * @retval    LDM7_INVAL  The downstream LDM-7 was not returned by `down7_new()`
  *                        or `down7_start()` has been called on it but not
- *                        `down7_stop()`. `log_start()` called.
+ *                        `down7_stop()`. `mylog_add()` called.
  */
 int
 down7_free(
@@ -1907,28 +1906,27 @@ down7_free(
         Down7State state = down7->state;
 
         if (DOWN7_INITIALIZED != state && DOWN7_STOPPED != state) {
-            LOG_ADD1("Downstream LDM-7 is in an invalid state: %d", state);
+            mylog_add("Downstream LDM-7 is in an invalid state: %d", state);
             status = LDM7_INVAL;
         }
         else {
             unlockState(down7);
             (void)pthread_mutex_destroy(&down7->numProdMutex);
-            udebug("%s:down7_free(): Closing multicast receiver memory",
-                    __FILE__);
+            mylog_debug("down7_free(): Closing multicast receiver memory");
             if (!mrm_close(down7->mrm)) {
-                LOG_ADD0("Couldn't close multicast receiver memory");
+                mylog_add("Couldn't close multicast receiver memory");
                 status = -1;
             }
             if (exe_free(down7->executor)) { // frees jobs
-                LOG_ADD0("Couldn't free task executor");
+                mylog_add("Couldn't free task executor");
                 status = -1;
             }
             if (pthread_mutex_destroy(&down7->stateMutex)) {
-                LOG_ADD0("Couldn't destroy state-mutex");
+                mylog_add("Couldn't destroy state-mutex");
                 status = -1;
             }
             if (pthread_cond_destroy(&down7->napCond)) {
-                LOG_ADD0("Couldn't destroy termination condition-variable");
+                mylog_add("Couldn't destroy termination condition-variable");
                 status = -1;
             }
             free(down7->mcastIface);
@@ -1958,7 +1956,7 @@ down7_missedProduct(
      * ignored because nothing can be done about it at this point and no harm
      * should result.
      */
-    udebug("%s:down7_missedProduct(): Entered: iProd=%lu", __FILE__,
+    mylog_debug("down7_missedProduct(): Entered: iProd=%lu",
             (unsigned long)iProd);
     (void)mrm_addMissedFile(down7->mrm, iProd);
 }
@@ -1993,11 +1991,10 @@ down7_lastReceived(
         int  status = exe_submit(down7->executor, requestSessionBacklog, down7,
                 NULL, NULL);
         if (status == EINVAL) {
-            log_clear(); // executor was shut down
+            mylog_clear(); // executor was shut down
         }
         else if (status) {
-            LOG_ERRNUM0(status, "Couldn't start backlog-requesting task");
-            log_log(LOG_ERR);
+            mylog_errno(status, "Couldn't start backlog-requesting task");
         }
     }
 }
@@ -2055,14 +2052,14 @@ no_such_product_7_svc(
 
     if (!mrm_peekRequestedFileNoWait(down7->mrm, &iProd) ||
         iProd != *missingIprod) {
-        LOG_START1("Downstream LDM-7 wasn't waiting for product %lu",
+        mylog_add("Downstream LDM-7 wasn't waiting for product %lu",
                 (unsigned long)*missingIprod);
     }
     else {
         // The queue can't be empty
         (void)mrm_removeRequestedFileNoWait(down7->mrm, &iProd);
 
-        uwarn("Upstream LDM-7 says requested product doesn't exist: "
+        mylog_warning("Upstream LDM-7 says requested product doesn't exist: "
                 "prodIndex=%lu", (unsigned long)*missingIprod);
     }
 
@@ -2111,7 +2108,7 @@ end_backlog_7_svc(
     char   saStr[512];
     Down7* down7 = pthread_getspecific(down7Key);
 
-    unotice("All backlog data-products received: feedtype=%s, server=%s",
+    mylog_notice("All backlog data-products received: feedtype=%s, server=%s",
             s_feedtypet(down7->feedtype),
             sa_snprint(down7->servAddr, saStr, sizeof(saStr)));
 

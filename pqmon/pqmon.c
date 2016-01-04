@@ -8,6 +8,7 @@
  */
 
 #include <config.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -24,7 +25,7 @@
 #include "remote.h"
 #include "ldmprint.h"
 #include "timestamp.h"
-#include "log.h"
+#include "mylog.h"
 #include "pq.h"
 #include "md5.h"
 
@@ -68,14 +69,14 @@ static void
 cleanup(void)
 {
         if (!printSizePar)
-            unotice("Exiting"); 
+            mylog_notice("Exiting");
 
         if(!intr)
         {
                 if(pq != NULL)  
                         (void)pq_close(pq);
         }
-        (void) closeulog();
+        (void)mylog_fini();
 }
 
 
@@ -99,7 +100,7 @@ signal_handler(int sig)
         case SIGUSR1 :
                 return;
         case SIGUSR2 :
-                rollulogpri();
+                mylog_roll_level();
                 return;
         }
 }
@@ -219,31 +220,20 @@ int
 main(int ac, char *av[])
 {
     const char* pqfname;
-    const char* progname = ubasename(av[0]);
-    char*       logfname = NULL;        /* log to syslogd(8) */
-    int         logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-                    LOG_MASK(LOG_NOTICE));
+    const char* progname = basename(av[0]);
     int         status = 0;
     int         interval = DEFAULT_INTERVAL;
-    int         logoptions = (LOG_CONS|LOG_PID) ;
     int         list_extents = 0;
     int         extended = 0;
 
     /*
      * Set up default logging before calling anything that might log.
      */
-    if(isatty(fileno(stderr)))
-    {
-        /* set interactive defaults */
-        logfname = "-" ;                /* log to standard error stream */
-        logoptions = 0 ;
-    }
-    (void)openulog(progname, logoptions, LOG_LDM, logfname);
-    (void)setulogmask(logmask);
+    (void)mylog_init(progname);
 
     pqfname = getQueuePath();           /* this might log */
     if (NULL == pqfname) {
-        log_log(LOG_ERR);
+        mylog_flush_error();
         exit(1);
     }
 
@@ -258,14 +248,14 @@ main(int ac, char *av[])
         while ((ch = getopt(ac, av, "Sevxl:q:o:i:")) != EOF)
             switch (ch) {
             case 'v':
-                logmask |= LOG_MASK(LOG_INFO);
+                (void)mylog_set_level(MYLOG_LEVEL_INFO);
                 break;
             case 'x':
-                logmask |= LOG_MASK(LOG_DEBUG);
+                (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                 list_extents = 1;
                 break;
             case 'l':
-                logfname = optarg;
+                (void)mylog_set_output(optarg);
                 break;
             case 'q':
                 pqfname = optarg;
@@ -293,8 +283,6 @@ main(int ac, char *av[])
                 break;
             }
 
-        (void) setulogmask(logmask);
-
         /* last arg, outputfname, is optional */
         if(ac - optind > 0)
         {
@@ -311,16 +299,15 @@ main(int ac, char *av[])
     /*
      * Set up error logging.
      */
-    (void) openulog(progname, logoptions, LOG_LDM, logfname);
     if (!printSizePar)
-        unotice("Starting Up (%d)", getpgrp());
+        mylog_notice("Starting Up (%d)", getpgrp());
 
     /*
      * register exit handler
      */
     if(atexit(cleanup) != 0)
     {
-        serror("atexit");
+        mylog_syserr("atexit");
         exit(1);
     }
 
@@ -337,11 +324,11 @@ main(int ac, char *av[])
     if(status)
     {
         if (PQ_CORRUPT == status) {
-            uerror("The product-queue \"%s\" is inconsistent\n",
+            mylog_error("The product-queue \"%s\" is inconsistent\n",
                 pqfname);
         }
         else {
-            uerror("pq_open failed: %s: %s\n",
+            mylog_error("pq_open failed: %s: %s\n",
                 pqfname, strerror(status));
         }
         exit(1);
@@ -349,11 +336,11 @@ main(int ac, char *av[])
 
     if (!printSizePar) {
         if (extended) {
-            unotice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
+            mylog_notice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
                 "minempty    maxext    age    maxbytes");
         }
         else {
-            unotice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
+            mylog_notice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
                 "minempty    maxext  age");
         }
     }
@@ -382,13 +369,13 @@ main(int ac, char *av[])
                               &age_oldest, &maxextent);
 
             if (status) {
-                uerror("pq_stats() failed: %s (errno = %d)", strerror(status),
+                mylog_error("pq_stats() failed: %s (errno = %d)", strerror(status),
                     status);
                 exit(1);
             }
 
             if (status = pq_isFull(pq, &isFull)) {
-                uerror("pq_isFull() failed: %s (errno = %d)", strerror(status),
+                mylog_error("pq_isFull() failed: %s (errno = %d)", strerror(status),
                     status);
                 exit(1);
             }
@@ -405,7 +392,7 @@ main(int ac, char *av[])
                 timestampt      minResidenceTime;
 
                 if (status = pq_getMostRecent(pq, &mostRecent)) {
-                    uerror("pq_getMostRecent() failed: %s (errno = %d)",
+                    mylog_error("pq_getMostRecent() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
                 }
@@ -416,7 +403,7 @@ main(int ac, char *av[])
 
                 if (status = pq_getMinVirtResTimeMetrics(pq,
                             &minResidenceTime, &mvrtSize, &mvrtSlots)) {
-                    uerror("pq_getMinResidency() failed: %s (errno = %d)",
+                    mylog_error("pq_getMinResidency() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
                 }
@@ -448,19 +435,19 @@ main(int ac, char *av[])
                               &age_oldest, &maxextent);
 
             if (status) {
-                uerror("pq_stats() failed: %s (errno = %d)",
+                mylog_error("pq_stats() failed: %s (errno = %d)",
                    strerror(status), status);
                 exit(1);
             }
 
             if (extended) {
-                unotice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f %11lu",
+                mylog_notice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f %11lu",
                     nprods,   nfree,   nempty, nbytes,
                     maxprods, maxfree, minempty, maxextent, age_oldest,
                     maxbytes);
             }
             else {
-                unotice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f",
+                mylog_notice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f",
                     nprods,   nfree,   nempty, nbytes,
                     maxprods, maxfree, minempty, maxextent, age_oldest);
             }
@@ -468,7 +455,7 @@ main(int ac, char *av[])
                 status = pq_fext_dump(pq);
             }
             if (status) {
-                uerror("pq_fext_dump failed: %s (errno = %d)",
+                mylog_error("pq_fext_dump failed: %s (errno = %d)",
                    strerror(status), status);
                 exit(1);
             }

@@ -31,7 +31,7 @@ nodist_lib_la_SOURCES	= backend.c
 TAGS_FILES              = \
     *.c *.h \
     ../*.h \
-    ../ulog/*.c ../ulog/*.h \
+    ../mylog/*.c ../mylog/*.h \
     ../pq/*.c ../pq/*.h \
     ../protocol/*.c \
     ../protocol2/*.c \
@@ -39,7 +39,7 @@ TAGS_FILES              = \
     /usr/local/include/CUnit/Basic.h
 AM_CPPFLAGS		= \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/mylog \
     -I$(top_srcdir)/pq \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
@@ -81,7 +81,7 @@ testRegistry_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/mylog \
     @CPPFLAGS_CUNIT@
 
 testRegistry_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@

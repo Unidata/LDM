@@ -19,7 +19,7 @@
 #include <string.h>             /* strcup() */
 #include <sys/types.h>          /* pid_t */
 
-#include "log.h"
+#include "mylog.h"
 #include "child_map.h"
 #include "StringBuf.h"
 
@@ -61,7 +61,7 @@ static int compare(
 /**
  * Returns a new instance of a child-map.
  *
- * @retval NULL         Failure. \c log_start() called.
+ * @retval NULL         Failure. \c mylog_add() called.
  * @retval !NULL        Pointer to a new instance.
  */
 ChildMap* cm_new(void)
@@ -69,7 +69,7 @@ ChildMap* cm_new(void)
     ChildMap*   map = (ChildMap*)malloc(sizeof(ChildMap));
 
     if (NULL == map) {
-        LOG_SERROR0("Couldn't allocate new child-map");
+        mylog_syserr("Couldn't allocate new child-map");
     }
     else {
         map->root = NULL;
@@ -77,7 +77,7 @@ ChildMap* cm_new(void)
         map->buf = strBuf_new(132);
 
         if (NULL == map->buf) {
-            LOG_SERROR0("Couldn't allocate command-line buffer");
+            mylog_syserr("Couldn't allocate command-line buffer");
             free(map);
 
             map = NULL;
@@ -114,8 +114,8 @@ void cm_free(
  * Adds an entry to a child-map.
  *
  * @retval 0    Success
- * @retval 1    Usage error. \c log_start() called.
- * @retval 2    O/S failure. \c log_start() called.
+ * @retval 1    Usage error. \c mylog_add() called.
+ * @retval 2    O/S failure. \c mylog_add() called.
  */
 int cm_add_string(
     ChildMap* const     map,            /**< [in/out] Pointer to the child-map
@@ -128,11 +128,11 @@ int cm_add_string(
     int    status;
 
     if (NULL == map) {
-        LOG_START0("Null map argument");
+        mylog_add("Null map argument");
         status = 1;
     }
     else if (NULL == command) {
-        LOG_START0("Null command argument");
+        mylog_add("Null command argument");
         status = 1;
     }
     else {
@@ -142,21 +142,21 @@ int cm_add_string(
             Entry* const    entry = (Entry*)malloc(sizeof(Entry));
 
             if (NULL == entry) {
-                LOG_SERROR0("Couldn't allocate new entry");
+                mylog_syserr("Couldn't allocate new entry");
                 status = 2;
             }
             else {
                 entry->command = strdup(command);
 
                 if (NULL == entry->command) {
-                    LOG_SERROR0("Couldn't duplicate command-line");
+                    mylog_syserr("Couldn't duplicate command-line");
                     status = 2;
                 }
                 else {
                     entry->pid = pid;
 
                     if (NULL == tsearch(entry, &map->root, compare)) {
-                        LOG_SERROR0("Couldn't add entry to map");
+                        mylog_syserr("Couldn't add entry to map");
                         status = 2;
                     }
                     else {
@@ -182,8 +182,8 @@ int cm_add_string(
  * Adds an entry to a child-map.
  *
  * @retval 0    Success
- * @retval 1    Usage error. \c log_start() called.
- * @retval 2    O/S failure. \c log_start() called.
+ * @retval 1    Usage error. \c mylog_add() called.
+ * @retval 2    O/S failure. \c mylog_add() called.
  */
 int cm_add_argv(
     ChildMap* const map,    /**< [in/out] Pointer to the child-map */
@@ -208,7 +208,7 @@ int cm_add_argv(
             if (0 < i)
                 (void)strBuf_appendString(map->buf, " ");
             if (0 != strBuf_appendString(map->buf, argv[i])) {
-                LOG_SERROR1(
+                mylog_syserr(
                         "Couldn't append to command-line buffer: \"%s\"",
                         argv[i]);
                 status = 2;
@@ -291,7 +291,7 @@ const char* cm_get_command(
  * Removes an entry from a child-map.
  *
  * @retval 0    Success. The entry was removed.
- * @retval 1    Usage error. \c log_start() called.
+ * @retval 1    Usage error. \c mylog_add() called.
  * @retval 2    The entry wasn't in the map.
  */
 int cm_remove(
@@ -302,7 +302,7 @@ int cm_remove(
     int         status;
 
     if (NULL == map) {
-        LOG_START0("NULL map argument");
+        mylog_add("NULL map argument");
         status = 1;
     }
     else {

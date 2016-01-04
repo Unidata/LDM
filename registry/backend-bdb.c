@@ -20,7 +20,7 @@
 #include <db.h>
 #include "backend.h"
 #include "registry.h"
-#include <log.h>
+#include <mylog.h>
 
 typedef struct cursor        Cursor;
 
@@ -58,7 +58,7 @@ logDbError(
     /*
      * An error-message from the database starts a sequence of log-messages.
      */
-    log_start("Berkeley DB: %s", msg);
+    mylog_add("Berkeley DB: %s", msg);
 }
 
 /*
@@ -98,8 +98,8 @@ is_alive(
  *                      not be NULL.  "*dbEnv" is set upon successful return.
  * RETURNS:
  *      0               Success.  "*dbEnv" is set.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 static RegStatus
 createEnvHandle(
@@ -111,10 +111,10 @@ createEnvHandle(
 
     assert(NULL != path);
 
-    log_clear();
+    mylog_list_clear();
 
     if (status = db_env_create(&env, 0)) {
-        log_serror("Couldn't create environment handle for database: %s",
+        mylog_syserr("Couldn't create environment handle for database: %s",
             db_strerror(status));
         status = ENOMEM;
     }
@@ -122,7 +122,7 @@ createEnvHandle(
         env->set_errcall(env, logDbError);
 
         if (status = env->set_isalive(env, is_alive)) {
-            log_add("Couldn't register \"is_alive()\" function for "
+            mylog_add("Couldn't register \"is_alive()\" function for "
                 "database \"%s\"", path);
             status = EIO;
         }
@@ -130,7 +130,7 @@ createEnvHandle(
             static const unsigned      threadCount = 256;
 
             if (status = env->set_thread_count(env, threadCount)) {
-                log_add("Couldn't set thread count to %u for database \"%s\"",
+                mylog_add("Couldn't set thread count to %u for database \"%s\"",
                     threadCount, path);
                 status = EIO;
             }
@@ -156,8 +156,8 @@ createEnvHandle(
  *                      not be NULL.  "*dbEnv" is set upon successful return.
  * RETURNS:
  *      0               Success.  "*dbEnv" is set.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 static RegStatus
 openEnvironment(
@@ -169,7 +169,7 @@ openEnvironment(
 
     assert(NULL != path);
 
-    log_clear();
+    mylog_list_clear();
 
     if (0 == (status = createEnvHandle(path, &env))) {
         /*
@@ -181,7 +181,7 @@ openEnvironment(
             0);
 
         if (status) {
-            log_add("Couldn't open environment for database \"%s\"", path);
+            mylog_add("Couldn't open environment for database \"%s\"", path);
             status = EIO;
         }
         else {
@@ -203,10 +203,10 @@ openEnvironment(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  *      ECANCELED       The database environment must be recovered.
- *                      "log_start()" called.
+ *                      "mylog_add()" called.
  */
 static RegStatus
 verifyEnvironment(
@@ -219,7 +219,7 @@ verifyEnvironment(
 
     if (0 == (status = openEnvironment(path, &env))) {
         if (0 != (status = env->failchk(env, 0))) {
-            log_add("The environment of database \"%s\" must be recovered",
+            mylog_add("The environment of database \"%s\" must be recovered",
                 path);
             status = ECANCELED;
         }
@@ -238,8 +238,8 @@ verifyEnvironment(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 static RegStatus
 removeEnvironment(
@@ -252,7 +252,7 @@ removeEnvironment(
 
     if (0 == (status = createEnvHandle(path, &env))) {
         if (status = env->remove(env, path, DB_FORCE)) {
-            log_add("Couldn't remove environment for database \"%s\"", path);
+            mylog_add("Couldn't remove environment for database \"%s\"", path);
             status = EIO;
         }
     }                                   /* "env" allocated */
@@ -273,8 +273,8 @@ removeEnvironment(
  *                      "*dbHandle" is set upon successful return.
  * RETURNS:
  *      0               Success.  "*envHandle" and "*dbHandle" are set.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 static RegStatus
 createDbHandle(
@@ -292,7 +292,7 @@ createDbHandle(
         DB*     db;
 
         if (status = db_create(&db, env, 0)) {
-            log_add("Couldn't create database handle");
+            mylog_add("Couldn't create database handle");
             status = ENOMEM;
         }
         else {
@@ -316,8 +316,8 @@ createDbHandle(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 static RegStatus
 verifyDatabase(
@@ -331,7 +331,7 @@ verifyDatabase(
 
     if (0 == (status = createDbHandle(path, &env, &db))) {
         if (status = db->verify(db, DB_FILENAME, NULL, NULL, 0)) {
-            log_add("Couldn't verify file \"%s\" of database "
+            mylog_add("Couldn't verify file \"%s\" of database "
                 "\"%s\"", DB_FILENAME, path);
             status = EIO;
         }
@@ -350,9 +350,9 @@ verifyDatabase(
  *                      The client can free it upon return.
  * Returns:
  *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
- *      ECANCELED       The backend must be recovered.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
+ *      ECANCELED       The backend must be recovered.  "mylog_add()" called.
  */
 static RegStatus
 verifyBackend(
@@ -374,7 +374,7 @@ verifyBackend(
  *                      The client can free it upon return.
  *      ext             Extension for the database path name.
  * Returns:
- *      NULL            System error.  "log_start()" called.
+ *      NULL            System error.  "mylog_add()" called.
  *      else            Pointer to the path name of the database.  The
  *                      client should call "free()" when the path name is no
  *                      longer needed.
@@ -390,7 +390,7 @@ makeDatabasePath(
     char*               buf = (char*)malloc(len);
 
     if (NULL == buf) {
-        log_serror("Couldn't allocate %lu bytes", (unsigned long)len);
+        mylog_syserr("Couldn't allocate %lu bytes", (unsigned long)len);
     }
     else {
         (void)strcpy(strcpy(strcpy(strcpy(buf, path) + lenPath, "/") + 1, 
@@ -410,8 +410,8 @@ makeDatabasePath(
  *      toExt           Pointer to the "to" extension.  Shall not be NULL.
  * Returns:
  *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 static RegStatus
 copyDatabase(
@@ -441,7 +441,7 @@ copyDatabase(
                 + lenFromPath, " ") + 1, toPath);
 
             if (system(cmd)) {
-                log_start("Couldn't execute command \"%s\"", cmd);
+                mylog_add("Couldn't execute command \"%s\"", cmd);
                 status = ENOMEM;
             }
             else {
@@ -486,7 +486,7 @@ static const char* getPath(DB* db)
  * Returns:
  *      0               Success.  "*cursor" is set.
  *      ENOENT          No such entry.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 static RegStatus setCursor(
     Cursor* const       cursor,
@@ -514,7 +514,7 @@ static RegStatus setCursor(
  *      backend         Pointer to the backend database.  Shall not be NULL.
  * Returns:
  *      0               Success.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 static RegStatus closeCursor(
     Backend* const       backend)
@@ -524,10 +524,10 @@ static RegStatus closeCursor(
     DBC* const          dbCursor = cursor->dbCursor;
 
     if (dbCursor) {
-        log_clear();
+        mylog_list_clear();
 
         if (status = dbCursor->close(dbCursor)) {
-            log_add("Couldn't close cursor for database \"%s\"",
+            mylog_add("Couldn't close cursor for database \"%s\"",
                 getPath(backend->db));
             status = EIO;
         }
@@ -560,8 +560,8 @@ static RegStatus closeCursor(
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.  "*backend" is set.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beOpen(
@@ -575,7 +575,7 @@ beOpen(
     assert(NULL != dir);
 
     if (NULL == back) {
-        log_serror("Couldn't allocate %lu bytes", (long)sizeof(Backend));
+        mylog_syserr("Couldn't allocate %lu bytes", (long)sizeof(Backend));
         status = ENOMEM;
     }
     else {
@@ -588,7 +588,7 @@ beOpen(
                 if (0 == (status = createDbHandle(path, &env, &db))) {
                     if (status = db->open(db, NULL, DB_FILENAME, NULL,
                             DB_BTREE, forWriting ? DB_CREATE : DB_RDONLY, 0)) {
-                        log_add("Couldn't open database \"%s\" in \"%s\" "
+                        mylog_add("Couldn't open database \"%s\" in \"%s\" "
                             "for %s", DB_FILENAME, path,
                             forWriting ? "writing" : "reading");
                         status = EIO;
@@ -631,7 +631,7 @@ beOpen(
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beClose(
@@ -648,7 +648,7 @@ beClose(
             status = EIO;
 
         if (db->close(db, 0)) {
-            log_add("Couldn't close backend database \"%s\"", path);
+            mylog_add("Couldn't close backend database \"%s\"", path);
             status = EIO;
         }
         else {
@@ -656,7 +656,7 @@ beClose(
         }
 
         if (env->close(env, 0)) {
-            log_add("Couldn't close environment of backend database \"%s\"",
+            mylog_add("Couldn't close environment of backend database \"%s\"",
                 path);
             status = EIO;
         }
@@ -679,7 +679,7 @@ beClose(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beReset(
@@ -699,8 +699,7 @@ beReset(
         /*
          * The backend database needs to be restored.
          */
-        log_add("Restoring from backup");
-        log_log(LOG_NOTICE);
+        MYLOG_NOTICE("Restoring from backup");
 
         if (0 == (status = removeEnvironment(path))) {
             status = copyDatabase(path, ".bck", "");
@@ -719,8 +718,8 @@ beReset(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
- *      EIO             Backend database error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beRemove(
@@ -736,7 +735,7 @@ beRemove(
      */
     if (0 == (status = openEnvironment(path, &env))) {
         if (status = env->dbremove(env, NULL, DB_FILENAME, NULL, 0)) {
-            log_add("Couldn't remove database file \"%s\" in \"%s\"",
+            mylog_add("Couldn't remove database file \"%s\" in \"%s\"",
                 DB_FILENAME, path);
             status = EIO;
         }
@@ -763,7 +762,7 @@ beRemove(
  *      value           Pointer to the string value.  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 bePut(
@@ -788,7 +787,7 @@ bePut(
 
     if (status = backend->db->put(backend->db, NULL, &keyDbt, &valueDbt,
             0)) {
-        log_add("Couldn't map key \"%s\" to value \"%s\"", key, value);
+        mylog_add("Couldn't map key \"%s\" to value \"%s\"", key, value);
         status = EIO;
     }
     else {
@@ -812,7 +811,7 @@ bePut(
  * RETURNS:
  *      0               Success.  "*value" points to the string value.
  *      ENOENT          The given key doesn't match any entry.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beGet(
@@ -845,7 +844,7 @@ beGet(
         status = ENOENT;
     }
     else {
-        log_add("Couldn't get value for key \"%s\"", key);
+        mylog_add("Couldn't get value for key \"%s\"", key);
         status = EIO;
     }
 
@@ -861,7 +860,7 @@ beGet(
  *      key             Pointer to the 0-terminated key.
  * RETURNS:
  *      0               Success.  The entry associated with the key was deleted.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beDelete(
@@ -886,7 +885,7 @@ beDelete(
         status = 0;
     }
     else if (status) {
-        log_add("Couldn't delete entry for key \"%s\"", key);
+        mylog_add("Couldn't delete entry for key \"%s\"", key);
         status = EIO;
     }
 
@@ -901,7 +900,7 @@ beDelete(
  *                      "beOpen()".  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO    Backend database error.  "log_start()" called.
+ *      EIO    Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beSync(
@@ -913,7 +912,7 @@ beSync(
     assert(NULL != backend->db);
 
     if (status = backend->db->sync(backend->db, 0)) {
-        log_add("Couldn't sync() database");
+        mylog_add("Couldn't sync() database");
         status = EIO;
     }
     else {
@@ -932,8 +931,8 @@ beSync(
  * RETURNS
  *      0               Success.
  *      EINVAL          The backend database already has an active cursor.
- *      EIO             Backend database error.  "log_start()" called.
- *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus
 beInitCursor(
@@ -945,7 +944,7 @@ beInitCursor(
     assert(NULL != backend->db);
 
     if (backend->cursor.dbCursor) {
-        log_start("Cursor already active for backend database \"%s\"",
+        mylog_add("Cursor already active for backend database \"%s\"",
             getPath(backend->db));
         status = EINVAL;
     }
@@ -957,7 +956,7 @@ beInitCursor(
          * cursor needn't be transactionally protected.
          */
         if (status = db->cursor(db, NULL, &dbCursor, 0)) {
-            log_add("Couldn't create cursor for database \"%s\"", getPath(db));
+            mylog_add("Couldn't create cursor for database \"%s\"", getPath(db));
             status = EIO;
         }
         else {
@@ -989,8 +988,8 @@ beInitCursor(
  *      0               Success.
  *      EINVAL          The cursor is not initialized.
  *      ENOENT          The database is empty.
- *      EIO             Backend database error.  "log_start()" called.
- *      ENOMEM          System error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus
 beFirstEntry(
@@ -1006,7 +1005,7 @@ beFirstEntry(
     cursor = &backend->cursor;
 
     if (!cursor->dbCursor) {
-        log_start("Cursor for backend database \"%s\" not initialized",
+        mylog_add("Cursor for backend database \"%s\" not initialized",
             getPath(backend->db));
         status = EINVAL;
     }
@@ -1014,7 +1013,7 @@ beFirstEntry(
         char* const dupKey = strdup(key);
 
         if (NULL == dupKey) {
-            log_serror("Couldn't allocate %lu bytes", (long)strlen(key));
+            mylog_syserr("Couldn't allocate %lu bytes", (long)strlen(key));
             status = ENOMEM;
         }
         else {
@@ -1022,7 +1021,7 @@ beFirstEntry(
             backend->cursor.key.size = strlen(dupKey) + 1;
 
             if (EIO == (status = setCursor(&backend->cursor, DB_SET_RANGE))) {
-                log_add("Couldn't set cursor for database \"%s\" to first "
+                mylog_add("Couldn't set cursor for database \"%s\" to first "
                     "entry on or after key \"%s\"", getPath(backend->db), key);
             }
         }                               /* "dupKey" allocated */
@@ -1040,7 +1039,7 @@ beFirstEntry(
  * RETURNS
  *      0               Success.
  *      ENOENT          The database is empty.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beNextEntry(
@@ -1054,13 +1053,13 @@ beNextEntry(
     cursor = &backend->cursor;
 
     if (!cursor->dbCursor) {
-        log_start("Cursor for backend database \"%s\" not initialized",
+        mylog_add("Cursor for backend database \"%s\" not initialized",
             getPath(backend->db));
         status = EINVAL;
     }
     else {
         if (EIO == (status = setCursor(cursor, DB_NEXT))) {
-            log_add("Couldn't advance cursor for database \"%s\" to next entry "
+            mylog_add("Couldn't advance cursor for database \"%s\" to next entry "
                 "after key \"%s\"", getPath(backend->db),
                 cursor->key.data);
         }
@@ -1078,7 +1077,7 @@ beNextEntry(
  *                      set by beOpen().  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "log_start()" called.
+ *      EIO             Backend database error.  "mylog_add()" called.
  */
 RegStatus
 beFreeCursor(

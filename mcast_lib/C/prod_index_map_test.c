@@ -13,7 +13,7 @@
 #include "config.h"
 
 #include "ldm.h"
-#include "log.h"
+#include "mylog.h"
 #include "prod_index_map.h"
 
 #include <CUnit/CUnit.h>
@@ -55,7 +55,7 @@ static void test_openForWriting_0(
 {
     deleteMap();
     int status = pim_openForWriting(NULL, FEEDTYPE, 0);
-    log_clear();
+    mylog_clear();
     CU_ASSERT_EQUAL_FATAL(status, LDM7_INVAL);
 }
 
@@ -66,7 +66,7 @@ static void test_openForWriting_3(
 
     deleteMap();
     status = pim_openForWriting(NULL, FEEDTYPE, 3);
-    log_log(LOG_ERR);
+    mylog_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     closeMap();
@@ -77,14 +77,14 @@ static void openForWriting(
         unsigned maxSigs)
 {
     int status = pim_openForWriting(NULL, FEEDTYPE, maxSigs);
-    log_log(LOG_ERR);
+    mylog_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
 static void openForReading(void)
 {
     int status = pim_openForReading(NULL, FEEDTYPE);
-    log_log(LOG_ERR);
+    mylog_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
@@ -220,7 +220,7 @@ int main(
     int exitCode = 1;
     const char* progname = basename((char*) argv[0]);
 
-    if (-1 == openulog(progname, 0, LOG_LOCAL0, "-")) {
+    if (mylog_init(progname)) {
         (void) fprintf(stderr, "Couldn't open logging system\n");
         exitCode = 1;
     }
@@ -247,7 +247,7 @@ int main(
             CU_cleanup_registry();
         }
 
-        log_free();
+        mylog_free();
     }
 
     return exitCode;

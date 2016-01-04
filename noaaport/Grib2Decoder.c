@@ -15,7 +15,7 @@
 #include "config.h"
 #include "Grib2Decoder.h"
 #include "grib2.h"
-#include "log.h"
+#include "mylog.h"
 
 #include <limits.h>
 #include <stddef.h>
@@ -100,7 +100,7 @@ static int list_init(
     const unsigned eltSize,
     const unsigned initSize)
 {
-    void* const elts = (void*)LOG_MALLOC(eltSize*initSize, "list");
+    void* const elts = (void*)mylog_malloc(eltSize*initSize, "list");
 
     if (elts == NULL)
         return G2D_SYSERR;
@@ -152,7 +152,7 @@ static int list_append(
         void* const           newElts = (void*)realloc(list->elts, nbytes);
 
         if (0 == newElts) {
-            LOG_ADD1("Couldn't increase list to %lu bytes", nbytes);
+            mylog_add("Couldn't increase list to %lu bytes", nbytes);
             return G2D_SYSERR;
         }
 
@@ -226,13 +226,13 @@ static int sec0_init(
     g2int msgLen;
 
     if (len < 16) {
-        LOG_ADD1("GRIB-2 message length less than 16 bytes: %lu",
+        mylog_add("GRIB-2 message length less than 16 bytes: %lu",
                 (unsigned long)len);
         return G2D_INVALID;
     }
 
     if (buf[0] != 'G' || buf[1] != 'R' || buf[2] != 'I' || buf[3] != 'B') {
-        LOG_ADD0("GRIB-2 message doesn't start with \"GRIB\"");
+        mylog_add("GRIB-2 message doesn't start with \"GRIB\"");
         return G2D_INVALID;
     }
 
@@ -240,14 +240,14 @@ static int sec0_init(
     gbit(buf+7, &edition, 0, CHAR_BIT);
 
     if (2 != edition) {
-        LOG_ADD1("GRIB message isn't edition 2: %ld", (long)edition);
+        mylog_add("GRIB message isn't edition 2: %ld", (long)edition);
         return G2D_NOT_2;
     }
 
     gbit(buf+12, &msgLen, 0, 4*CHAR_BIT);
 
     if (len < msgLen) {
-        LOG_ADD2("Stated GRIB-2 message-length longer than actual message: "
+        mylog_add("Stated GRIB-2 message-length longer than actual message: "
                 "stated=%ld; actual= %lu", (long)msgLen, (unsigned long)len);
         return G2D_INVALID;
     }
@@ -289,7 +289,7 @@ static int sec1_validate(
     Grib2Section* const       sec)
 {
     if (sec->len < 21) {
-        LOG_ADD1("Section 1 less than 21 bytes: ", (unsigned long)sec->len);
+        mylog_add("Section 1 less than 21 bytes: ", (unsigned long)sec->len);
         return G2D_INVALID;
     }
 
@@ -379,7 +379,7 @@ static int g2s_isLastSection(
     const size_t                bufLen)
 {
     if (bufLen < 4) {
-        LOG_ADD1("Remaining GRIB-2 message too short to contain a last "
+        mylog_add("Remaining GRIB-2 message too short to contain a last "
                 "section: %lu bytes remaining", (unsigned long)bufLen);
         return G2D_INVALID;
     }
@@ -417,7 +417,7 @@ static int g2s_decodeLengthAndType(
     g2int                       secType;
 
     if (bufLen < 5) {
-        LOG_ADD1("Remaining GRIB-2 message too short to contain valid "
+        mylog_add("Remaining GRIB-2 message too short to contain valid "
                 "section: %lu bytes remaining", (unsigned long)bufLen);
         return G2D_INVALID;
     }
@@ -425,7 +425,7 @@ static int g2s_decodeLengthAndType(
     gbit(buf, &secLen, 0, 4*CHAR_BIT);
 
     if (5 > secLen || bufLen < secLen) {
-        LOG_ADD2("Invalid section-length parameter: value=%ld; %lu bytes "
+        mylog_add("Invalid section-length parameter: value=%ld; %lu bytes "
                 "remaining", (long)secLen, (unsigned long)bufLen);
         return G2D_INVALID;
     }
@@ -433,7 +433,7 @@ static int g2s_decodeLengthAndType(
     gbit(buf+4, &secType, 0, 1*CHAR_BIT);
 
     if (!g2s_isValid(secType)) {
-        LOG_ADD1("Invalid section-type parameter: %ld", (long)secType);
+        mylog_add("Invalid section-type parameter: %ld", (long)secType);
         return G2D_INVALID;
     }
 
@@ -563,7 +563,7 @@ int g2s_getG2Int(
     g2int* const              value)
 {
     if (iByte + nBytes > section->len) {
-        LOG_ADD3("Invalid byte-spec: iByte=%lu, nBytes=%u, bufLen=%lu", iByte,
+        mylog_add("Invalid byte-spec: iByte=%lu, nBytes=%u, bufLen=%lu", iByte,
                 nBytes, section->len);
         return G2D_INVALID;
     }
@@ -660,7 +660,7 @@ static int g2f_init(
 
     for (i = 0; i < G2F_NUM_SEC; i++) {
         if (NULL == sections[i]) {
-            LOG_ADD1("Missing section of type %d", i);
+            mylog_add("Missing section of type %d", i);
             return G2D_INVALID;
         }
     }
@@ -697,7 +697,7 @@ int g2f_getSection(
     }
     else {
         if (index < G2F_MIN_SEC || index > G2F_MAX_SEC) {
-            LOG_ADD1("Invalid section index: %u", index);
+            mylog_add("Invalid section index: %u", index);
             return G2D_INVALID;
         }
 
@@ -847,7 +847,7 @@ static int g2d_initFields(
      * At least one field.
      */
     if ((status = list_init(&decoded->fields, sizeof(Grib2Field), 1))) {
-        LOG_ADD0("Couldn't initialize list of fields");
+        mylog_add("Couldn't initialize list of fields");
         return status;
     }
 
@@ -902,7 +902,7 @@ static int g2d_init(
     size_t secLen;
 
     if ((status = sec0_init(&decoded->sec0, &secLen, buf, bufLen))) {
-        LOG_ADD0("Couldn't decode section 0 of GRIB-2 message");
+        mylog_add("Couldn't decode section 0 of GRIB-2 message");
         return status;
     }
 
@@ -913,13 +913,13 @@ static int g2d_init(
     bufLen -= secLen;
 
     if ((status = g2d_initSections(decoded, buf, bufLen))) {
-        LOG_ADD0("Couldn't decode sections of GRIB-2 message after section 0");
+        mylog_add("Couldn't decode sections of GRIB-2 message after section 0");
         sec0_clear(&decoded->sec0);
         return status;
     }
 
     if ((status = g2d_initFields(decoded))) {
-        LOG_ADD0("Couldn't create fields of GRIB-2 message");
+        mylog_add("Couldn't create fields of GRIB-2 message");
         g2d_clearSections(decoded);
         sec0_clear(&decoded->sec0);
         return status;
@@ -972,7 +972,7 @@ int g2d_new(
     size_t                  bufLen)
 {
     int                    status;
-    DecodedGrib2Msg* const msg = (DecodedGrib2Msg*)LOG_MALLOC(
+    DecodedGrib2Msg* const msg = (DecodedGrib2Msg*)mylog_malloc(
             sizeof(DecodedGrib2Msg), "decoded GRIB-2 message");
 
     if (!msg)
@@ -1119,7 +1119,7 @@ int g2d_getField(
     const size_t numFields = list_getSize(&decoded->fields);
 
     if (index >= numFields) {
-        LOG_ADD2("Invalid field index: index=%u, numFields=%lu", index,
+        mylog_add("Invalid field index: index=%u, numFields=%lu", index,
                 (unsigned long)numFields);
         return G2D_INVALID;
     }

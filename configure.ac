@@ -157,9 +157,9 @@ AC_ARG_WITH([ulog],
     AS_HELP_STRING([--with-ulog],
 	[use the original ulog(3) logging library]
         [[default=no]]),
-    [$with_log4c=$withval],
-    [with_log4c=yes])
-AM_CONDITIONAL([WANT_LOG4C], [test "x$with_log4c" = xyes])
+    [],
+    [with_ulog=no])
+AM_CONDITIONAL([WANT_LOG4C], [test "x$with_ulog" != xyes])
 AM_COND_IF([WANT_LOG4C], [AC_DEFINE([WANT_LOG4C], [1],
     [Package will use Log4C for logging])])
 

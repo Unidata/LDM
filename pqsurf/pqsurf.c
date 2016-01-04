@@ -14,6 +14,7 @@
  */
 
 #include <config.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +32,7 @@
 #include "registry.h"
 #include "remote.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "pq.h"
 #include "surface.h"
 #include "RegularExpressions.h"
@@ -93,7 +94,7 @@ run_child(int argc, char *argv[])
 {
         pid_t pid;
 
-        if(ulogIsDebug())
+        if(mylog_is_enabled_debug)
         {
                 char command[1024];
                 size_t left = sizeof(command) - 1;
@@ -114,22 +115,21 @@ run_child(int argc, char *argv[])
                         nbytes = strlen(argv[ii]);
                         left -= (nbytes <= left) ? nbytes : left;
                 }
-                udebug("exec'ing: \"%s\"", command);
+                mylog_debug("exec'ing: \"%s\"", command);
         }
 
         pid = ldmfork();
         if(pid == -1)
         {
-                log_log(LOG_ERR);
+                mylog_flush_error();
                 return pid;
         }
 
         if(pid == 0)
         {       /* child */
-                const unsigned  ulogOptions = ulog_get_options();
-                const char*     ulogIdent = getulogident();
-                const unsigned  ulogFacility = getulogfacility();
-                const char*     ulogPath = getulogpath();
+                const char*     id = mylog_get_id();
+                const unsigned  facility = mylog_get_facility();
+                const char*     output = mylog_get_output();
 
                 (void)signal(SIGCHLD, SIG_DFL);
                 (void)signal(SIGTERM, SIG_DFL);
@@ -139,9 +139,13 @@ run_child(int argc, char *argv[])
                 /* don't let child get real privilege */
                 endpriv();
 
+                (void)mylog_fini();
                 (void) execvp(argv[0], &argv[0]);
-                openulog(ulogIdent, ulogOptions, ulogFacility, ulogPath);
-                serror("run_child: execvp: %s", argv[0]);
+                (void)mylog_init(id);
+                (void)mylog_set_output(output);
+                (void)mylog_set_facility(facility);
+
+                mylog_syserr("execvp: %s", argv[0]);
                 _exit(127);
         }
         /* else, parent */
@@ -157,9 +161,9 @@ static int ndups = 0;
 static void
 dump_stats(void)
 {
-        unotice("Number of products %d", nprods);
-        unotice("Number of observations %d", nsplit);
-        unotice("Number of dups %d", ndups);
+        mylog_notice("Number of products %d", nprods);
+        mylog_notice("Number of observations %d", nsplit);
+        mylog_notice("Number of dups %d", ndups);
 }
 
 
@@ -173,8 +177,8 @@ doOne(const prod_info *infop, const void *datap)
         struct product prod;
         int status = ENOERR;
 
-        if(ulogIsDebug())
-                udebug("%s", s_prod_info(NULL, 0, infop, 1));
+        if(mylog_is_enabled_debug)
+                mylog_debug("%s", s_prod_info(NULL, 0, infop, 1));
         
         prod.info = *infop;
         prod.data = (void *)datap; /* cast away const */
@@ -191,15 +195,15 @@ doOne(const prod_info *infop, const void *datap)
         if(status == PQUEUE_DUP)
         {
                 ndups++;
-                if(ulogIsVerbose())
-                        uinfo("Product already in queue: %s",
+                if(mylog_is_enabled_info)
+                        mylog_info("Product already in queue: %s",
                                 s_prod_info(NULL, 0, &prod.info,
-                                         ulogIsDebug()));
+                                         mylog_is_enabled_debug));
                 return status;
         }
 
         /* else, error */
-        uerror("pq_insert() returned %d\n", status);
+        mylog_error("pq_insert() returned %d", status);
 
         return status;
 }
@@ -214,8 +218,9 @@ split_prod(const prod_info *infop, const void *datap,
         size_t *nsp = (size_t *)vp;
         int ns;
 
-        if(ulogIsVerbose())
-                uinfo("%s", s_prod_info(NULL, 0, infop, ulogIsDebug()));
+        if(mylog_is_enabled_info)
+                mylog_info("%s", s_prod_info(NULL, 0, infop,
+                        mylog_is_enabled_debug));
 
         ns = surf_split(infop, datap, doOne);
 
@@ -290,7 +295,7 @@ reap_act(int options)
                     if(!(errno == ECHILD && act_pid == -1))
                     {
                              /* Only complain if relevant */
-                            serror("waitpid");
+                            mylog_syserr("waitpid");
                     }
                     return -1;
             }
@@ -303,12 +308,12 @@ reap_act(int options)
 #ifdef HAVE_WAITPID
                     if(WIFSTOPPED(status))
                     {
-                            unotice("child %d stopped by signal %d",
+                            mylog_notice("child %d stopped by signal %d",
                                     wpid, WSTOPSIG(status));
                     }
                     else if(WIFSIGNALED(status))
                     {
-                            unotice("child %d terminated by signal %d",
+                            mylog_notice("child %d terminated by signal %d",
                                     wpid, WTERMSIG(status));
                             /* DEBUG */
                             switch(WTERMSIG(status)) {
@@ -343,10 +348,10 @@ reap_act(int options)
                     else if(WIFEXITED(status))
                     {
                             if(WEXITSTATUS(status) != 0)
-                                    unotice("child %d exited with status %d",
+                                    mylog_notice("child %d exited with status %d",
                                             wpid, WEXITSTATUS(status));
                             else
-                                    udebug("child %d exited with status %d",
+                                    mylog_debug("child %d exited with status %d",
                                             wpid, WEXITSTATUS(status));
                             act_pid = -1;
                             exit(WEXITSTATUS(status));
@@ -362,7 +367,7 @@ reap_act(int options)
 void
 cleanup(void)
 {
-        unotice("Exiting"); 
+        mylog_notice("Exiting");
 
         if(act_pid != -1)
         {
@@ -379,9 +384,9 @@ cleanup(void)
                 (void) pq_close(opq);
                 opq = NULL;
 
-                unotice("  Queue usage (bytes):%8ld",
+                mylog_notice("  Queue usage (bytes):%8ld",
                                         (long)highwater);
-                unotice("           (nregions):%8ld",
+                mylog_notice("           (nregions):%8ld",
                                         (long)maxregions);
         }
 
@@ -393,7 +398,7 @@ cleanup(void)
 
         dump_stats();
 
-        (void) closeulog();
+        (void)mylog_fini();
 }
 
 
@@ -418,7 +423,7 @@ signal_handler(int sig)
                 stats_req = !0;
                 return;
         case SIGUSR2 :
-                rollulogpri();
+                mylog_roll_level();
                 return;
         case SIGCHLD :
                 /* usually calls exit */
@@ -492,18 +497,18 @@ expire(pqueue *epq, const unsigned interval, const double age)
         if(d_diff_timestamp(&now, &eclss.to) < interval + age)
         {
                 /* only run this routine every interval seconds */
-                udebug("not yet");
+                mylog_debug("not yet");
                 return ENOERR;
         }
         /* else */
         eclss.to = now;
         eclss.to.tv_sec -= age;
 
-        if(ulogIsDebug())
+        if(mylog_is_enabled_debug)
         {
                 char cp[64];
                 sprint_timestampt(cp, sizeof(cp), &eclss.to);
-                udebug("to %s", cp);
+                mylog_debug("to %s", cp);
         }
 
         pq_cset(epq, &TS_ZERO);
@@ -520,37 +525,36 @@ expire(pqueue *epq, const unsigned interval, const double age)
                         if(diff > max_latency)
                         {
                                 max_latency = diff;
-                                udebug("max_latency %.3f", max_latency);
+                                mylog_debug("max_latency %.3f", max_latency);
                         }
                         
                         if(nr == 0)
                         {
                                 diff = d_diff_timestamp(&cursor, &eclss.to);
-                                udebug("diff %.3f", diff);
+                                mylog_debug("diff %.3f", diff);
                                 if(diff > interval + max_latency)
                                 {
-                                        udebug("heuristic depth break");
+                                        mylog_debug("heuristic depth break");
                                         break;
                                 }
 
                         }
                         continue; /* N.B., other cases break and return */
                 case PQUEUE_END:
-                        udebug("expire: End of Queue");
+                        mylog_debug("expire: End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        udebug("Hit a lock");
+                        mylog_debug("Hit a lock");
                         break;
 #if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
                 case EDEADLOCK:
 #endif
                 case EDEADLK:
-                        uerror("%s", strerror(status));
+                        mylog_errno(status, NULL);
                         break;
                 default:
-                        uerror("pq_seqdel failed: %s (errno = %d)",
-                                strerror(status), status);
+                        mylog_errno(status, "pq_seqdel failed");
                         break;
                 }
                 break;
@@ -563,20 +567,21 @@ int main(int ac, char *av[])
 {
         const char* pqfname = getQueuePath();
         const char *opqfname = getSurfQueuePath();
-        const char *progname = ubasename(av[0]);
-        char *logfname;
+        const char *progname = basename(av[0]);
         prod_class_t clss;
         prod_spec spec;
         int status = 0;
         unsigned interval = DEFAULT_INTERVAL;
-        int logoptions = (LOG_CONS|LOG_PID);
         double age = DEFAULT_AGE;
         /* these are containers for the pqact args */
         char *argv[16];
         int argc = 0;
         int toffset = TOFFSET_NONE;
 
-        logfname = "";
+        /*
+         * Set up error logging.
+         */
+        (void)mylog_init(progname);
 
         if(set_timestamp(&clss.from) != ENOERR) /* corrected by toffset below */
         {
@@ -601,8 +606,6 @@ int main(int ac, char *av[])
         extern int opterr;
         extern char *optarg;
         int ch;
-        int logmask = (LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) |
-            LOG_MASK(LOG_NOTICE));
         int fterr;
         const char *conffilename = getPqsurfConfigPath();
         const char *datadir = getPqsurfDataDirPath();
@@ -613,17 +616,17 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "vxl:d:f:p:q:Q:o:i:a:t:")) != EOF)
                 switch (ch) {
                 case 'v':
+                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
                         argv[argc++] = "-v";
-                        logmask |= LOG_MASK(LOG_INFO);
                         break;
                 case 'x':
+                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
                         argv[argc++] = "-x";
-                        logmask |= LOG_MASK(LOG_DEBUG);
                         break;
                 case 'l':
                         argv[argc++] = "-l";
                         argv[argc++] = optarg;
-                        logfname = optarg;
+                        (void)mylog_set_output(optarg);
                         break;
                 case 'd':
                         datadir = optarg;
@@ -690,8 +693,6 @@ int main(int ac, char *av[])
                         break;
                 }
 
-        (void) setulogmask(logmask);
-
         if (re_isPathological(spec.pattern))
         {
                 fprintf(stderr, "Adjusting pathological regular-expression: "
@@ -730,21 +731,14 @@ int main(int ac, char *av[])
                 clss.from.tv_sec -= (age - interval);
         }
 
-
-        /*
-         * Set up error logging.
-         * N.B. log ident is the remote
-         */
-        (void) openulog(progname,
-                logoptions, LOG_LDM, logfname);
-        unotice("Starting Up (%d)", getpgrp());
+        mylog_notice("Starting Up (%d)", getpgrp());
 
         /*
          * register exit handler
          */
         if(atexit(cleanup) != 0)
         {
-                serror("atexit");
+                mylog_syserr("atexit");
                 exit(1);
         }
 
@@ -761,12 +755,11 @@ int main(int ac, char *av[])
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    uerror("The output product-queue \"%s\" is inconsistent\n",
+                    mylog_error("The output product-queue \"%s\" is inconsistent\n",
                             opqfname);
                 }
                 else {
-                    uerror("pq_open failed: %s: %s\n",
-                            opqfname, strerror(status));
+                    mylog_errno(status, "pq_open failed: %s", opqfname);
                 }
                 exit(1);
         }
@@ -783,12 +776,11 @@ int main(int ac, char *av[])
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    uerror("The product-queue \"%s\" is inconsistent\n",
+                    mylog_error("The product-queue \"%s\" is inconsistent\n",
                             pqfname);
                 }
                 else {
-                    uerror("pq_open failed: %s: %s\n",
-                            pqfname, strerror(status));
+                    mylog_errno(status, "pq_open failed: %s", pqfname);
                 }
                 exit(1);
         }
@@ -806,10 +798,10 @@ int main(int ac, char *av[])
                 pq_cset(pq, &clss.from);
         }
 
-        if(ulogIsVerbose())
+        if(mylog_is_enabled_info)
         {
                 char buf[1984];
-                uinfo("%s",
+                mylog_info("%s",
                          s_prod_class(buf, sizeof(buf), &clss));
         }
 
@@ -827,15 +819,14 @@ int main(int ac, char *av[])
                 case 0: /* no error */
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        udebug("surf: End of Queue");
+                        mylog_debug("surf: End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        udebug("Hit a lock");
+                        mylog_debug("Hit a lock");
                         break;
                 default:
-                        uerror("pq_sequence failed: %s (errno = %d)",
-                                strerror(status), status);
+                        mylog_errno(status, "pq_sequence failed");
                         exit(1);
                         break;
                 }

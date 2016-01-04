@@ -5,13 +5,13 @@
 /* $Id: lcm.c,v 1.3 1998/10/16 19:28:13 steve Exp $ */
 
 #include <config.h>
-#include <assert.h>
 #include <limits.h>
 #include <errno.h>
 #ifndef NDEBUG
 #include <stdio.h>
 #endif
 #include "lcm.h"
+#include "mylog.h"
 
 /*
  * Compute the Greatest Common Divisor
@@ -22,7 +22,7 @@ gcd0(unsigned long mm, unsigned long nn)
 {
 	unsigned long tmp;
 
-	assert(nn <= mm);
+	mylog_assert(nn <= mm);
 
 	while(nn > 1)
 	{
@@ -33,7 +33,7 @@ gcd0(unsigned long mm, unsigned long nn)
 	if(nn == 0)
 		return mm;
 	/* else */
-	assert(nn == 1);
+	mylog_assert(nn == 1);
 	return 1;
 }
 
@@ -86,7 +86,7 @@ lcm(unsigned long mm, unsigned long nn)
 		return mm;
 
 	gg = gcd0(mm, nn);
-	assert(gg != 0); /* covered by (nn == 0) case above */
+	mylog_assert(gg != 0); /* covered by (nn == 0) case above */
 	mm /= gg;
 
 	/* bounds check */

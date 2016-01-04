@@ -33,7 +33,7 @@
 #include <sys/mman.h>
 /* setpriority */
 #include <sys/resource.h>
-#include <assert.h>
+#include <mylog.h>
 #include <sys/wait.h>
 
 #include "shmfifo.h"
@@ -41,7 +41,7 @@
 /* LDM headers */
 #include "ldm.h"
 #include "pq.h"
-#include "log.h"
+#include "mylog.h"
 #include "globals.h"
 
 /* Local headers */
@@ -78,7 +78,7 @@ static void usage(
 
 static void mypriv_stats(void)
 {
-    unotice("wait count %d",mypriv.counter);
+    mylog_notice("wait count %d",mypriv.counter);
 }
 
 /*
@@ -106,7 +106,7 @@ static void signal_handler(
         logmypriv = !0;
         return;
     case SIGUSR2:
-        rollulogpri();
+        mylog_roll_level();
         return;
     }
 
@@ -153,7 +153,7 @@ static void cleanup(void)
 {
     int status;
 
-    unotice("cleanup %d", child);
+    mylog_notice("cleanup %d", child);
 
     if (shm != NULL)
         shmfifo_detach(shm);
@@ -162,7 +162,7 @@ static void cleanup(void)
         return;
 
     if (!memsegflg) {
-        unotice("waiting for child");
+        mylog_notice("waiting for child");
         wait(&status);
     }
 
@@ -170,11 +170,11 @@ static void cleanup(void)
         shmfifo_dealloc(shm);
 
     if (pq != NULL) {
-        unotice("Closing product_queue\0");
+        mylog_notice("Closing product_queue\0");
         pq_close(pq);
     }
 
-    unotice("parent exiting");
+    mylog_notice("parent exiting");
 }
 
 /**
@@ -248,7 +248,6 @@ int main(
     const int           argc,
     char* const         argv[])
 {
-    const char* const   progName = ubasename(argv[0]);
     const char*         pqfname = getQueuePath();
     int                 sd, rc, n;
     socklen_t           cliLen;
@@ -268,43 +267,35 @@ int main(
     extern int          opterr;
     extern char*        optarg;
     int                 ch;
-    int                 logmask = LOG_MASK(LOG_ERR);
-    const char*         logfname = NULL;        /* use system logging daemon */
-    unsigned            logOptions = LOG_CONS | LOG_PID;
-    unsigned            logFacility = LOG_LDM;  /* use default LDM facility */
     int                 status, ipri=0, rtflag = 0;
     int                 bufpag = CBUFPAG;
     product             prod;
     static char*        prodident = "dvbs";
 
     /* Initialize the logger. */
-    (void)setulogmask(logmask);
-    (void)openulog(progName, logOptions, logFacility, logfname);
+    (void)mylog_init(argv[0]);
+    (void)mylog_set_level(MYLOG_LEVEL_ERROR);
 
     opterr = 1;
 
     while ((ch = getopt(argc, argv, "dmnrvxl:q:b:p:I:")) != EOF) {
         switch (ch) {
         case 'v':
-            logmask |= LOG_MASK(LOG_INFO);
-            (void)setulogmask(logmask);
+            (void)mylog_set_level(MYLOG_LEVEL_INFO);
             break;
         case 'x':
-            logmask |= LOG_MASK(LOG_DEBUG);
-            (void)setulogmask(logmask);
+            (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
             break;
         case 'n':
-            logmask |= LOG_MASK(LOG_NOTICE);
-            (void)setulogmask(logmask);
+            (void)mylog_set_level(MYLOG_LEVEL_NOTICE);
             break;
         case 'l':
             if (optarg[0] == '-' && optarg[1] != 0) {
-                uerror("logfile \"%s\" ??", optarg);
+                mylog_error("logfile \"%s\" ??", optarg);
                 usage(argv[0]);
             }
             /* else */
-            logfname = optarg;
-            (void)openulog(progName, logOptions, logFacility, logfname);
+            (void)mylog_set_output(optarg);
             break;
         case 'q':
             pqfname = optarg;
@@ -345,19 +336,17 @@ int main(
         }
     }
 
-    (void)setulogmask(logmask);
-
     if (argc - optind < 1)
         usage(argv[0]);
 
-    unotice("Starting Up %s", PACKAGE_VERSION);
+    mylog_notice("Starting Up %s", PACKAGE_VERSION);
 
     /*
      * Use mlockall command to prevent paging of our process, then exit root
      * privileges
      */
     if (mlockall( MCL_CURRENT|MCL_FUTURE ) != 0 )
-        serror("mlockall");
+        mylog_syserr("mlockall");
 
     if (rtflag) {
 #if _XOPEN_REALTIME != -1
@@ -368,23 +357,23 @@ int main(
               status = sched_setscheduler(0, SCHED_RR, &schedparam);
 
               if (status != -1)
-                  unotice("Realtime scheduler %d",status);
+                  mylog_notice("Realtime scheduler %d",status);
               else
-                  serror("scheduler");
+                  mylog_syserr("scheduler");
            }
        }
 #else
-       uerror("rtmode not configured");
+       mylog_error("rtmode not configured");
 #endif
     }
     else if (ipri != 0) {
        if (setpriority(PRIO_PROCESS, 0, ipri) != 0)
-           serror("setpriority");
+           mylog_syserr("setpriority");
     }
 
     if ((pq == NULL) && (dumpflag)) {
         if (pq_open(pqfname, PQ_DEFAULT, &pq)) {
-            uerror("couldn't open the product queue %s\0", pqfname);
+            mylog_error("couldn't open the product queue %s\0", pqfname);
             exit(1);
         }
 
@@ -404,7 +393,7 @@ int main(
      * Register atexit routine
      */
     if (atexit(cleanup) != 0) {
-        serror("atexit");
+        mylog_syserr("atexit");
         exit(1);
     }
 
@@ -412,12 +401,12 @@ int main(
     int nbytes;
     if (sscanf(argv[optind], "%*d.%*d.%*d.%d %n", &pid_channel, &nbytes) != 1
             || argv[optind][nbytes] != 0) {
-        uerror("Unable to decode multicast address \"%s\"", argv[optind]);
+        mylog_error("Unable to decode multicast address \"%s\"", argv[optind]);
         exit(1);
     }
 
     if ((pid_channel < 1) || (pid_channel > MAX_DVBS_PID)) {
-        uerror("multicast address %s outside range of expected server ports\n",
+        mylog_error("multicast address %s outside range of expected server ports\n",
                 argv[optind]);
         exit(1);
     }
@@ -429,7 +418,7 @@ int main(
            : shmfifo_create(bufpag, sizeof(struct shmfifo_priv), -1);
 
     if (shm == NULL) {
-        uerror("%s: Couldn't ensure existence of shared-memory FIFO", progName);
+        mylog_error("Couldn't ensure existence of shared-memory FIFO");
         exit(1);
     }
 
@@ -442,7 +431,7 @@ int main(
         char            msg[MAX_MSG];
 
         if (shmfifo_attach(shm) == -1) {
-            uerror("parent cannot attach");
+            mylog_error("parent cannot attach");
             exit(1);
         };
 
@@ -453,7 +442,7 @@ int main(
         h = gethostbyname(argv[optind]);
 
         if (h == NULL) {
-            uerror("%s : unknown group '%s'", argv[0], argv[optind]);
+            mylog_error("unknown group '%s'", argv[optind]);
             exit(1);
         }
 
@@ -461,7 +450,7 @@ int main(
 
         /* Check given address is multicast */
         if (!IN_MULTICAST(ntohl(mcastAddr.s_addr))) {
-            uerror("%s : given address '%s' is not multicast", argv[0],
+            mylog_error("given address '%s' is not multicast",
                     inet_ntoa(mcastAddr));
             exit(1);
         }
@@ -480,7 +469,7 @@ int main(
         sd = socket(AF_INET, SOCK_DGRAM, 0);
 
         if (sd < 0) {
-            uerror("%s : cannot create socket", argv[0]);
+            mylog_error("%s : cannot create socket", argv[0]);
             exit(1);
         }
 
@@ -490,8 +479,7 @@ int main(
         servAddr.sin_port = htons(s_port[pid_channel - 1]);
         
         if (bind(sd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
-            uerror("%s : cannot bind port %d", argv[0],
-                    s_port[pid_channel - 1]);
+            mylog_error("cannot bind port %d", s_port[pid_channel - 1]);
             exit(1);
         }
 
@@ -506,7 +494,7 @@ int main(
                       sizeof(mreq));
 
         if (rc < 0) {
-            uerror("%s : cannot join multicast group '%s'", argv[0],
+            mylog_error("cannot join multicast group '%s'",
                     inet_ntoa(mcastAddr));
             exit(1);
         }
@@ -530,13 +518,13 @@ int main(
 
                 if (n <= 0) {
                     if (haslogged) {
-                        unotice("recvfrom returned %d",n);
+                        mylog_notice("recvfrom returned %d",n);
                     }
                     else {
                        if (n == 0)
-                          uerror("recvfrom returns zero");
+                          mylog_error("recvfrom returns zero");
                        else
-                          serror("recvfrom failure");
+                          mylog_syserr("recvfrom failure");
                     }
 
                     haslogged = 1;
@@ -547,22 +535,22 @@ int main(
                 }
 
                 if (haslogged) {
-                    unotice("recvfrom has succeeded");
+                    mylog_notice("recvfrom has succeeded");
 
                     haslogged = 0;
                 }
 
-                assert(n <= MAX_MSG);
+                mylog_assert(n <= MAX_MSG);
 
                 sbnnum = ((((((unsigned char) msg[8] << 8) +
                       (unsigned char) msg[9]) << 8) +
                       (unsigned char) msg[10]) << 8) + (unsigned char) msg[11];
 
-                if (ulogIsDebug())
-                    udebug("received %d bytes", n);
+                if (mylog_is_enabled_debug)
+                    mylog_debug("received %d bytes", n);
 
                 if (sbnnum <= lastnum) {
-                    unotice("Retrograde packet number: previous=%lu, "
+                    mylog_notice("Retrograde packet number: previous=%lu, "
                         "latest=%lu, difference=%lu", lastnum, sbnnum,
                         lastnum - sbnnum);
                 }
@@ -570,11 +558,11 @@ int main(
                     unsigned long       gap = sbnnum - lastnum - 1;
 
                     if ((lastnum != 0) && (0 < gap)) {
-                        uerror("Gap in SBN last %lu, this %lu, gap %lu",
+                        mylog_error("Gap in SBN last %lu, this %lu, gap %lu",
                             lastnum, sbnnum, gap);
                     }
-                    else if (ulogIsVerbose()) {
-                        uinfo("SBN number %u", sbnnum);
+                    else if (mylog_is_enabled_info) {
+                        mylog_info("SBN number %u", sbnnum);
                     }
                 }
 
@@ -592,23 +580,23 @@ int main(
         char            msg[MAX_MSG];
         unsigned long   sbnnum, lastnum = 0;
 
-        udebug("I am the child");
+        mylog_debug("I am the child");
 
         if (shmfifo_attach(shm) == -1) {
-            uerror("child cannot attach");
+            mylog_error("child cannot attach");
             exit(1);
         }
 
         for (;;) {
             /* Check for data without locking */
             while (shmfifo_empty(shm)) {
-                if (ulogIsVerbose())
-                    uinfo("nothing in shmem, waiting...");
+                if (mylog_is_enabled_info)
+                    mylog_info("nothing in shmem, waiting...");
                 usleep(500);
             }
 
             if (shmfifo_get(shm, msg, MAX_MSG, &n) != 0) {
-                uerror( "circbuf read failed to return data...");
+                mylog_error( "circbuf read failed to return data...");
                 exit(1);
             }
 
@@ -616,13 +604,13 @@ int main(
                   (unsigned char) msg[9]) << 8) +
                   (unsigned char) msg[10]) << 8) + (unsigned char) msg[11];
 
-            if (ulogIsDebug())
-                udebug("child received %d bytes", n);
+            if (mylog_is_enabled_debug)
+                mylog_debug("child received %d bytes", n);
             if ((lastnum != 0) && (lastnum + 1 != sbnnum))
-                uerror("Gap in SBN last %lu, this %lu, gap %lu", lastnum,
+                mylog_error("Gap in SBN last %lu, this %lu, gap %lu", lastnum,
                     sbnnum, sbnnum - lastnum);
-            else if (ulogIsVerbose())
-                uinfo("SBN number %u", sbnnum);
+            else if (mylog_is_enabled_info)
+                mylog_info("SBN number %u", sbnnum);
 
             lastnum = sbnnum;
 
@@ -647,10 +635,10 @@ int main(
 
                 if (status != 0) {
                     if (status == PQUEUE_DUP) {
-                        unotice("SBN %u already in queue", prod.info.seqno);
+                        mylog_notice("SBN %u already in queue", prod.info.seqno);
                     }
                     else {
-                        uerror("pqinsert failed [%d] SBN %u", status,
+                        mylog_error("pqinsert failed [%d] SBN %u", status,
                               prod.info.seqno);
                     }
                 }

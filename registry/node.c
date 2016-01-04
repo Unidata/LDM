@@ -11,12 +11,12 @@
 #include <config.h>
 
 #undef NDEBUG
-#include <assert.h>
+#include <mylog.h>
 #include <errno.h>
 #include <search.h>
 #include <string.h>
 
-#include <log.h>
+#include <mylog.h>
 #include "misc.h"
 #include "node.h"
 #include "registry.h"
@@ -58,7 +58,7 @@ static NodeFunc         _nodeFunc;      /* node visitation function */
  *                      NULL.  Set upon successful return.
  * Returns:
  *      0               Success.  "*valueThing" is set.
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 static RegStatus newValueThing(
     ValueThing** const  valueThing)
@@ -67,7 +67,7 @@ static RegStatus newValueThing(
     ValueThing* vt = (ValueThing*)reg_malloc(sizeof(ValueThing), &status);
 
     if (0 != status) {
-        LOG_ADD0("Couldn't allocate a new ValueThing");
+        mylog_add("Couldn't allocate a new ValueThing");
     }
     else {
         vt->name = NULL;
@@ -143,7 +143,7 @@ static int compareNodes(
  * Returns:
  *      0               Success
  *      EEXIST          A value with the same name exists in the parent node.
- *                      "log_start()" called.
+ *                      "mylog_add()" called.
  */
 static RegStatus addChild(
     RegNode* const              parent,
@@ -161,23 +161,23 @@ static RegStatus addChild(
         vt.name = (char*)child->name;   /* safe cast */
 
         if (NULL != tfind(&vt, &parent->values, compareValueThings)) {
-            LOG_START2("Node \"%s\" has a value named \"%s\"", parent->absPath,
+            mylog_add("Node \"%s\" has a value named \"%s\"", parent->absPath,
                     vt.name);
             status = EEXIST;
         }
         else {
             if (NULL == tsearch(child, &parent->children, compareNodes)) {
-                MYLOG_ERRNO();
+                mylog_syserr("tsearch() failure");
                 status = ENOMEM;
             }
             else {
-                assert(parent == child->parent);
+                mylog_assert(parent == child->parent);
                 status = 0;
             }
         }
 
         if (status)
-            LOG_ADD2("Couldn't add child-node \"%s\" to parent-node \"%s\"",
+            mylog_add("Couldn't add child-node \"%s\" to parent-node \"%s\"",
                     child->name, parent->absPath);
     }
 
@@ -194,7 +194,7 @@ static RegStatus addChild(
  *      name            Pointer to the name of the node.  Shall not be NULL.
  * Returns:
  *      0               Success.
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 static RegStatus initNameAndPath(
     RegNode* const              node,
@@ -234,9 +234,9 @@ static RegStatus initNameAndPath(
  *                      upon successful return.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  *      EEXIST          A value with the same name exists in the parent node.
- *                      "log_start()" called.
+ *                      "mylog_add()" called.
  */
 static RegStatus newNode(
     RegNode* const      parent,
@@ -269,9 +269,9 @@ static RegStatus newNode(
 
     if (status) {
         if (NULL == parent)
-            LOG_ADD0("Couldn't create root-node");
+            mylog_add("Couldn't create root-node");
         else
-            LOG_ADD2("Couldn't create child-node \"%s\" of parent-node \"%s\"",
+            mylog_add("Couldn't create child-node \"%s\" of parent-node \"%s\"",
                 name, parent->absPath);
     }
 
@@ -555,7 +555,7 @@ static RegNode* findChild(
  *                      NULL.
  * Returns:
  *      0               Success.  "*node" is set.
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 static RegStatus getLastNode(
     RegNode* const      root,
@@ -567,7 +567,7 @@ static RegStatus getLastNode(
     RegStatus   status;
 
     if (reg_isAbsPath(initPath)) {
-        LOG_START1("Invalid relative path name: \"%s\"", initPath);
+        mylog_add("Invalid relative path name: \"%s\"", initPath);
         status = EINVAL;
     }
     else {
@@ -620,7 +620,7 @@ static RegStatus getLastNode(
  * Returns:
  *      0               Success.  "*node" is set if and only if "node" is not
  *                      NULL.
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 static RegStatus actUponLastNode(
     RegNode* const              root,
@@ -671,7 +671,7 @@ static RegStatus lastFindNode(
 {
     RegStatus   status;
 
-    assert(NULL != lastNode);
+    mylog_assert(NULL != lastNode);
 
     if (NULL != name) {
         status = ENOENT;
@@ -698,7 +698,7 @@ static RegStatus lastFindNode(
  * Returns:
  *      0               Success.  "*node" is not NULL iff "node" is not NULL.
  *      ENOENT          No such node exists
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 static RegStatus findNode(
     RegNode* const              root,
@@ -738,11 +738,11 @@ static RegStatus undelete(
  *                      Set upon successful return.
  * Returns:
  *      0               Success.  "*node" is not NULL.
- *      EINVAL          "path" is an invalid relative path name.  "log_start()"
+ *      EINVAL          "path" is an invalid relative path name.  "mylog_add()"
  *                      called.
  *      EEXIST          A node would have to be created with the same absolute
- *                      path name as an existing value.  "log_start()" called.
- *      ENOMEM          System error.  "log_start()" called.
+ *                      path name as an existing value.  "mylog_add()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 static RegStatus ensureNode(
     RegNode* const      root,
@@ -783,7 +783,7 @@ static RegStatus ensureNode(
  *      node            Pointer to the node to be vetted.  Shall not be NULL.
  * Returns:
  *      0               The node has not been deleted
- *      EPERM           The node has been deleted.  "log_start()" called.
+ *      EPERM           The node has been deleted.  "mylog_add()" called.
  */
 static RegStatus vetExtant(
     const RegNode* const        node)
@@ -791,7 +791,7 @@ static RegStatus vetExtant(
     RegStatus   status;
 
     if (node->deleted) {
-        LOG_START1("Node \"%s\" has been deleted", node->absPath);
+        mylog_add("Node \"%s\" has been deleted", node->absPath);
         status = EPERM;
     }
     else {
@@ -815,10 +815,10 @@ static RegStatus vetExtant(
  * Returns:
  *      0               Success.  "*valueThing" is set if "valueThing" isn't
  *                      NULL.
- *      ENOMEM          System error.  "log_start()" called.
- *      EPERM           The node has been deleted.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EPERM           The node has been deleted.  "mylog_add()" called.
  *      EEXIST          The value would have the same absolute path name as an
- *                      existing node.  "log_start()" called.
+ *                      existing node.  "mylog_add()" called.
  */
 static RegStatus putValue(
     RegNode* const      node,
@@ -849,7 +849,7 @@ static RegStatus putValue(
                 status = 0;
             }                               /* "string" allocated */
 
-            assert(NULL ==
+            mylog_assert(NULL ==
                 tfind(&template, &node->deletedValues, compareValueThings));
         }
         else {
@@ -864,7 +864,7 @@ static RegStatus putValue(
             child.name = name;
 
             if (NULL != tfind(&child, &node->children, compareNodes)) {
-                LOG_START1("A child-node named \"%s\" exists", name);
+                mylog_add("A child-node named \"%s\" exists", name);
                 status = EEXIST;
             }
             else {
@@ -879,7 +879,7 @@ static RegStatus putValue(
                     if (0 == (status = reg_cloneString(&vt->name, name))) {
                         if (NULL == (ptr = tsearch(vt, &node->values,
                                 compareValueThings))) {
-                            MYLOG_ERRNO();
+                            mylog_syserr("tsearch() failure");
                             status = ENOMEM;
                         }
                         else {
@@ -894,7 +894,7 @@ static RegStatus putValue(
         }
 
         if (status) {
-            LOG_ADD2("Couldn't add value \"%s\" to node \"%s\"", name,
+            mylog_add("Couldn't add value \"%s\" to node \"%s\"", name,
                 node->absPath);
         }
         else {
@@ -933,8 +933,8 @@ static void clear(
  * Returns:
  *      0               Success
  *      ENOENT          No such value
- *      ENOMEM          System error.  "log_start()" called.
- *      EPERM           The node has been deleted.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EPERM           The node has been deleted.  "mylog_add()" called.
  */
 static RegStatus deleteValue(
     RegNode* const      node,
@@ -958,7 +958,7 @@ static RegStatus deleteValue(
             (void)tdelete(vt, &node->values, compareValueThings);
 
             if (NULL == tsearch(vt, &node->deletedValues, compareValueThings)) {
-                LOG_SERROR0("Couldn't add value to set of deleted values");
+                mylog_syserr("Couldn't add value to set of deleted values");
                 status = ENOMEM;
             }
             else {
@@ -969,7 +969,7 @@ static RegStatus deleteValue(
     }
 
     if (status && ENOENT != status)
-        LOG_ADD2("Couldn't delete value \"%s\" of node \"%s\"",
+        mylog_add("Couldn't delete value \"%s\" of node \"%s\"",
             name, node->absPath);
 
     return status;
@@ -989,7 +989,7 @@ static RegStatus deleteValue(
  *                      upon successful return.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus rn_newRoot(
     RegNode** const     node)
@@ -1072,10 +1072,10 @@ int rn_isDeleted(
  *                      May be NULL.  Set upon successful return if not NULL.
  * Returns:
  *      0               Success.  "*vt" is set if "vt" isn't NULL.
- *      ENOMEM          System error.  "log_start()" called.
- *      EPERM           The node has been deleted.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EPERM           The node has been deleted.  "mylog_add()" called.
  *      EEXIST          The value would have the same absolute path name as an
- *                      existing node.  "log_start()" called.
+ *                      existing node.  "mylog_add()" called.
  */
 RegStatus rn_putValue(
     RegNode* const      node,
@@ -1101,9 +1101,9 @@ RegStatus rn_putValue(
  * Returns:
  *      0               Success.  "*string" is not NULL.
  *      EPERM           The node containing the value has been deleted.
- *                      "log_start()" called.
- *      ENOENT          No such value.  "log_start()" called.
- *      ENOMEM          System error.  "log_start()" called.
+ *                      "mylog_add()" called.
+ *      ENOENT          No such value.  "mylog_add()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus rn_getValue(
     const RegNode* const        node,
@@ -1124,7 +1124,7 @@ RegStatus rn_getValue(
             ptr = tfind(&template, &lastNode->values, compareValueThings);
 
             if (NULL == ptr) {
-                LOG_START2("No such value \"%s\" in node \"%s\"", template.name,
+                mylog_add("No such value \"%s\" in node \"%s\"", template.name,
                     rn_getAbsPath(lastNode));
                 status = ENOENT;
             }
@@ -1171,8 +1171,8 @@ RegStatus rn_find(
  * Returns:
  *      0               Success
  *      ENOENT          The node has no such value
- *      ENOMEM          System error.  "log_start()" called.
- *      EPERM           The node has been deleted.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
+ *      EPERM           The node has been deleted.  "mylog_add()" called.
  */
 RegStatus rn_deleteValue(
     RegNode* const      node,
@@ -1195,8 +1195,8 @@ RegStatus rn_deleteValue(
  * Returns:
  *      0               Success.  "*node" is not NULL.
  *      EEXIST          A node would have to be created with the same absolute
- *                      path name as an existing value.  "log_start()" called.
- *      ENOMEM          System error.  "log_start()" called.
+ *                      path name as an existing value.  "mylog_add()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus rn_ensure(
     RegNode* const      root,
@@ -1238,7 +1238,7 @@ void rn_free(
  *                      longer needed.
  * Returns:
  *      0               Success.  "*node" is set.
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  */
 RegStatus rn_getLastNode(
     RegNode* const              root,
@@ -1283,7 +1283,7 @@ RegStatus rn_visitNodes(
  *                      May be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "log_start()" called.
+ *      ENOMEM          System error.  "mylog_add()" called.
  *      else            The first non-zero value returned by "extant" or
  *                      "deleted".
  */

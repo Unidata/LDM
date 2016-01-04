@@ -159,8 +159,9 @@ dh_saveDataProduct(
     error = pq_insert(pq, &newprod);
 
     if (!error) {
-        if (ulogIsVerbose())
-            uinfo("%s", s_prod_info(NULL, 0, info, ulogIsDebug()));
+        if (mylog_is_enabled_info)
+            mylog_info("%s", s_prod_info(NULL, 0, info,
+                    mylog_is_enabled_debug));
 
         error = savedInfo_set(info);
         if (error) {
@@ -188,8 +189,9 @@ dh_saveDataProduct(
         }                               /* "savedInfo" updated */
     }                                   /* data-product inserted */
     else if (PQUEUE_BIG == error) {
-        uerror("Product too big: %s",
-            s_prod_info(NULL, 0, info, ulogIsDebug()));
+        mylog_error("Product too big: %s",
+            s_prod_info(NULL, 0, info,
+                    mylog_is_enabled_debug));
         retCode = DOWN6_PQ_BIG;
 
         error = savedInfo_set(info);
@@ -204,10 +206,11 @@ dh_saveDataProduct(
         }
     }                                   /* product too big */
     else if (PQUEUE_DUP == error) {
-        if (ulogIsVerbose())
-            uinfo("%s: duplicate: %s",
+        if (mylog_is_enabled_info)
+            mylog_info("%s: duplicate: %s",
                 wasHereis ? "hereis" : "comingsoon/blkdata",
-                s_prod_info(NULL, 0, info, ulogIsDebug()));
+                s_prod_info(NULL, 0, info,
+                        mylog_is_enabled_debug));
 
         retCode = DOWN6_UNWANTED;
 
@@ -238,8 +241,9 @@ dh_saveDataProduct(
         }                           /* "savedInfo"' updated */
     }                               /* duplicate data-product */
     else {
-        uerror("pq_insert() failed: %s: %s",
-            strerror(error), s_prod_info(NULL, 0, info, ulogIsDebug()));
+        mylog_error("pq_insert() failed: %s: %s",
+            strerror(error), s_prod_info(NULL, 0, info,
+                    mylog_is_enabled_debug));
 
         retCode = DOWN6_PQ;             /* fatal product-queue error */
     }                                   /* general insertion failure */

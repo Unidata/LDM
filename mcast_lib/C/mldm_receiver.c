@@ -17,7 +17,7 @@
 #include "mldm_receiver.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "PerProdNotifier.h"
 #include "pq.h"
 #include "prod_info.h"
@@ -54,7 +54,7 @@ struct mlr {
  * @param[out] pqeIndex   Reference to reserved space in product-queue.
  * @retval     0          Success. `prodStart` is set. If `NULL`, then the
  *                        data-product is already in the LDM product-queue.
- * @retval    -1          Failure. `log_add()` called.
+ * @retval    -1          Failure. `mylog_add()` called.
  */
 static int
 allocateSpace(
@@ -64,7 +64,7 @@ allocateSpace(
         char** const restrict     prodStart,
         pqe_index* const restrict pqeIndex)
 {
-    udebug("%s:allocateSpace(): Entered: prodSize=%zu", __FILE__, prodSize);
+    mylog_debug("allocateSpace(): Entered: prodSize=%zu", prodSize);
 
     char sigStr[sizeof(signaturet)*2 + 1];
     int  status = pqe_newDirect(mlr->pq, prodSize, signature, prodStart,
@@ -72,30 +72,30 @@ allocateSpace(
 
     if (status) {
         if (status == PQUEUE_DUP) {
-            if (ulogIsVerbose()) {
+            if (mylog_is_enabled_info) {
                 (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-                uinfo("%s: Duplicate product: sig=%s, size=%zu", __FILE__,
-                        sigStr, prodSize);
+                mylog_info("Duplicate product: sig=%s, size=%zu", sigStr,
+                        prodSize);
             }
             *prodStart = NULL;
             status = 0;
         }
         else {
-            LOG_ADD1("Couldn't allocate region for %zu-byte data-product",
+            mylog_add("Couldn't allocate region for %zu-byte data-product",
                     prodSize);
             status = -1;
         }
     }
     else {
-        if (ulogIsDebug()) {
+        if (mylog_is_enabled_debug) {
             (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-            udebug("%s:allocateSpace(): Allocated queue-space for product: "
-                    "sig=%s, size=%zu", __FILE__, sigStr, prodSize);
+            mylog_debug("allocateSpace(): Allocated queue-space for product: "
+                    "sig=%s, size=%zu", sigStr, prodSize);
         }
     } /* region allocated in product-queue */
 
-    udebug("%s:allocateSpace(): Returning: prodStart=%p, prodSize=%zu",
-            __FILE__, *prodStart, prodSize);
+    mylog_debug("allocateSpace(): Returning: prodStart=%p, prodSize=%zu",
+            *prodStart, prodSize);
 
     return status;
 }
@@ -114,7 +114,7 @@ allocateSpace(
  * @param[out]     pqeIndex     Reference to reserved space in product-queue.
  * @retval         0            Success. `*prod` is set. If NULL, then
  *                              data-product is already in LDM product-queue.
- * @retval         -1           Failure. `log_add()` called.
+ * @retval         -1           Failure. `mylog_add()` called.
  */
 static int
 bop_func(
@@ -131,11 +131,11 @@ bop_func(
      */
     int  status;
 
-    udebug("%s:bop_func(): Entered: prodSize=%zu, metaSize=%u, prod=%p",
-            __FILE__, prodSize, metaSize, prod);
+    mylog_debug("bop_func(): Entered: prodSize=%zu, metaSize=%u, prod=%p",
+            prodSize, metaSize, prod);
 
     if (sizeof(signaturet) > metaSize) {
-        LOG_START1("Product metadata too small for signature: %u bytes",
+        mylog_add("Product metadata too small for signature: %u bytes",
                 metaSize);
         status = -1;
     }
@@ -149,10 +149,10 @@ bop_func(
     }
 
     if (status)
-        log_log(LOG_ERR); // because called by VCMTP layer
+        mylog_flush_error(); // because called by VCMTP layer
 
-    udebug("%s:bop_func(): Returning: prod=%p, prodSize=%zu",
-            __FILE__, *prod, prodSize);
+    mylog_debug("bop_func(): Returning: prod=%p, prodSize=%zu",
+            *prod, prodSize);
 
     return status;
 }
@@ -165,7 +165,7 @@ bop_func(
  * @param[in] pqeIndex  Pointer to the reference to allocated space in the
  *                      product-queue.
  * @retval    0         Success.
- * @retval    -1        Error. `log_add()` called.
+ * @retval    -1        Error. `mylog_add()` called.
  */
 static int
 tryToInsert(
@@ -175,7 +175,7 @@ tryToInsert(
     int status = pqe_insert(mlr->pq, *pqeIndex);
 
     if (status != 0) {
-        LOG_ADD0("Couldn't insert data-product into product-queue");
+        mylog_add("Couldn't insert data-product into product-queue");
         status = -1;
     }
     else {
@@ -213,7 +213,7 @@ lastReceived(
  * @param[in] pqeIndex     Pointer to the reference to the allocated space in
  *                         the product-queue.
  * @retval    0            Success.
- * @retval    -1           Error. `log_add()` called. The allocated region in
+ * @retval    -1           Error. `mylog_add()` called. The allocated region in
  *                         the product-queue was released.
  */
 static int
@@ -224,16 +224,15 @@ finishInsertion(
 {
     int status = tryToInsert(mlr, pqeIndex);
     if (status) {
-        LOG_ADD2("Couldn't insert %u-byte data-product \"%s\"", info->sz,
+        mylog_add("Couldn't insert %u-byte data-product \"%s\"", info->sz,
                 info->ident);
     }
     else {
-        if (ulogIsVerbose()) {
+        if (mylog_is_enabled_info) {
             char infoStr[LDM_INFO_MAX];
 
-            LOG_ADD1("Received: %s",
+            mylog_info("Received: %s",
                     s_prod_info(infoStr, sizeof(infoStr), info, 1));
-            log_log(LOG_INFO);
         }
         lastReceived(mlr, info);
     }
@@ -253,7 +252,7 @@ finishInsertion(
  * @param[in]      pqeIndex  Reference to the reserved space in the product-
  *                           queue.
  * @retval         0         Success.
- * @retval         -1        Error. `log_add()` called. The allocated space
+ * @retval         -1        Error. `mylog_add()` called. The allocated space
  *                           in the LDM product-queue was released.
  */
 static int
@@ -281,7 +280,7 @@ eop_func(
         xdrmem_create(&xdrs, prodStart, prodSize, XDR_DECODE);
 
         if (!xdr_prod_info(&xdrs, info)) {
-            LOG_START1("Couldn't decode LDM product metadata from %zu-byte "
+            mylog_add("Couldn't decode LDM product metadata from %zu-byte "
                     "VCMTP product", prodSize);
             status = -1;
             pqe_discard(mlr->pq, *pqeIndex);
@@ -294,7 +293,7 @@ eop_func(
     }
 
     if (status)
-        log_log(LOG_ERR); // because called by VCMTP layer
+        mylog_flush_error(); // because called by VCMTP layer
 
     return status;
 }
@@ -337,11 +336,11 @@ missed_prod_func(
  *                            multicast packets.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     0              Success.
- * @retval     LDM7_SYSTEM    System error. `log_add()` called.
+ * @retval     LDM7_SYSTEM    System error. `mylog_add()` called.
  * @retval     LDM7_INVAL     `pq == NULL || missed_product == NULL ||
- *                            mcastInfo == NULL || down7 == NULL`. `log_add()`
+ *                            mcastInfo == NULL || down7 == NULL`. `mylog_add()`
  *                            called.
- * @retval     LDM7_VCMTP     VCMTP error. `log_add()` called.
+ * @retval     LDM7_VCMTP     VCMTP error. `mylog_add()` called.
  */
 static int
 init(
@@ -354,34 +353,33 @@ init(
     McastReceiver* receiver;
 
     if (mlr == NULL) {
-        LOG_ADD0("NULL multicast-LDM-receiver argument");
+        mylog_add("NULL multicast-LDM-receiver argument");
         return LDM7_INVAL;
     }
     if (mcastInfo == NULL) {
-        LOG_ADD0("NULL multicast-group-information argument");
+        mylog_add("NULL multicast-group-information argument");
         return LDM7_INVAL;
     }
     if (down7 == NULL) {
-        LOG_ADD0("NULL downstream LDM-7 argument");
+        mylog_add("NULL downstream LDM-7 argument");
         return LDM7_INVAL;
     }
 
     void* notifier;
     status = ppn_new(&notifier, bop_func, eop_func, missed_prod_func, mlr);
     if (status) {
-        LOG_ADD0("Couldn't create per-product notifier");
+        mylog_add("Couldn't create per-product notifier");
         return LDM7_MCAST;
     }
     else {
-        if (ulogIsVerbose()) {
+        if (mylog_is_enabled_info) {
             char* const miStr = mi_format(mcastInfo);
             if (miStr == NULL) {
-                LOG_ADD0("Couldn't format multicast information");
+                mylog_add("Couldn't format multicast information");
                 ppn_free(notifier);
                 return LDM7_SYSTEM;
             }
-            uinfo("%s:init(): Initializing VCMTP receiver with %s", __FILE__,
-                    miStr);
+            mylog_info("init(): Initializing VCMTP receiver with %s", miStr);
             free(miStr);
         }
 
@@ -389,7 +387,7 @@ init(
                 mcastInfo->server.port, notifier, mcastInfo->group.inetId,
                 mcastInfo->group.port, mcastIface);
         if (status) {
-            LOG_ADD0("Couldn't create VCMTP receiver");
+            mylog_add("Couldn't create VCMTP receiver");
             ppn_free(notifier);
             return LDM7_MCAST;
         }
@@ -414,7 +412,7 @@ init(
  * @param[in]  mcastIface     IP address of interface to use for receiving
  *                            multicast packets.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
- * @retval     NULL           Failure. `log_add()` called.
+ * @retval     NULL           Failure. `mylog_add()` called.
  * @return                    Pointer to a new multicast LDM receiver object.
  *                            The caller should call `mlr_free()` when it's no
  *                            longer needed.
@@ -425,11 +423,11 @@ mlr_new(
         const char* const restrict      mcastIface,
         Down7* const restrict           down7)
 {
-    Mlr* mlr = LOG_MALLOC(sizeof(Mlr), "multicast LDM receiver object");
+    Mlr* mlr = mylog_malloc(sizeof(Mlr), "multicast LDM receiver object");
 
     if (mlr) {
         if (init(mlr, mcastInfo, mcastIface, down7)) {
-            LOG_ADD0("Couldn't initialize multicast LDM receiver");
+            mylog_add("Couldn't initialize multicast LDM receiver");
             free(mlr);
             mlr = NULL;
         }
@@ -458,8 +456,8 @@ mlr_free(
  * @param[in] mlr            The multicast LDM receiver to execute.
  * @retval    0              Success.
  * @retval    LDM7_SHUTDOWN  `mlr_stop()` was called.
- * @retval    LDM7_INVAL     `mlr == NULL`. `log_add()` called.
- * @retval    LDM7_MCAST     Multicast error. `log_add()` called.
+ * @retval    LDM7_INVAL     `mlr == NULL`. `mylog_add()` called.
+ * @retval    LDM7_MCAST     Multicast error. `mylog_add()` called.
  */
 int
 mlr_start(
@@ -468,7 +466,7 @@ mlr_start(
     int status;
 
     if (NULL == mlr) {
-        LOG_ADD0("NULL multicast-LDM-receiver argument");
+        mylog_add("NULL multicast-LDM-receiver argument");
         status = LDM7_INVAL;
     }
     else {
@@ -477,7 +475,7 @@ mlr_start(
             status = LDM7_SHUTDOWN;
         }
         else if (status) {
-            LOG_ADD0("Error executing multicast LDM receiver");
+            mylog_add("Error executing multicast LDM receiver");
             status = LDM7_MCAST;
         }
     }

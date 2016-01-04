@@ -15,7 +15,7 @@ EXTRA_DIST		= \
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= dtime.c wmo_header.c tokens.c xbuf.c
 AM_CPPFLAGS		= \
-    -I$(top_srcdir)/ulog \
+    -I$(top_srcdir)/mylog \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
@@ -25,6 +25,6 @@ TAGS_FILES		= \
     ../$(PQ_SUBDIR)/*.c ../$(PQ_SUBDIR)/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../registry/*.c ../registry/*.h \
-    ../ulog/*.c ../ulog/*.h \
+    ../mylog/*.c ../mylog/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h

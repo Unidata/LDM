@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <log.h>
+#include <mylog.h>
 
 #include "semRWLock.h"
 
@@ -67,7 +67,7 @@ static mode_t read_write;
  * Vets a lock structure.
  *
  * @retval RWL_SUCCESS  The lock structure is valid
- * @retval RWL_INVALID  The lock structure is invalid. log_add() called.
+ * @retval RWL_INVALID  The lock structure is invalid. mylog_add() called.
  */
 static srwl_Status vet(
         srwl_Lock* const lock /**< [in/out] the lock structure to vet */)
@@ -75,7 +75,7 @@ static srwl_Status vet(
     int status;
 
     if (lock->isValid != VALID_STRING) {
-        LOG_ADD0("Invalid lock structure");
+        mylog_add("Invalid lock structure");
 
         status = RWL_INVALID;
     }
@@ -102,16 +102,17 @@ static srwl_Status vet(
 /**
  * Deletes a semaphore set.
  *
+ * @param[in] semId     Semaphore set identifier
  * @retval RWL_SUCCESS  Success.
- * @retval RWL_SYSTEM   System error. See "errno". log_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". mylog_add() called.
  */
 static srwl_Status deleteSemSet(
-        const int semId /**< [in] semaphore set identifier */)
+        const int semId)
 {
     if (semctl(semId, 0, IPC_RMID) == 0)
         return RWL_SUCCESS;
 
-    LOG_SERROR1("Couldn't delete semaphore set: semId=%d", semId);
+    mylog_add("Couldn't delete semaphore set: semId=%d", semId);
     return RWL_SYSTEM;
 }
 
@@ -120,7 +121,7 @@ static srwl_Status deleteSemSet(
  * semaphore set will be deleted.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_SYSTEM   System error. See "errno". log_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". mylog_add() called.
  */
 static srwl_Status createLock(
         const key_t key /**< [in] the key associated with the semaphore */,
@@ -129,13 +130,13 @@ static srwl_Status createLock(
     srwl_Status status;
     int id;
 
-    (void) deleteSemSet(semget(key, 0, read_write));
-    log_clear();
+    (void)deleteSemSet(semget(key, 0, read_write));
+    mylog_clear();
 
     id = semget(key, SI_NUM_SEMS, IPC_CREAT | IPC_EXCL | read_write);
 
     if (-1 == id) {
-        LOG_SERROR0("Couldn't create semaphore set");
+        mylog_add_syserr("Couldn't create semaphore set");
         status = RWL_SYSTEM;
     }
     else {
@@ -151,7 +152,7 @@ static srwl_Status createLock(
         arg.array = semVal;
 
         if (semctl(id, 0, SETALL, arg) == -1) {
-            LOG_SERROR1("Couldn't initialize semaphore set: semId=%d", id);
+            mylog_add_syserr("Couldn't initialize semaphore set: semId=%d", id);
             (void) deleteSemSet(id);
             status = RWL_SYSTEM;
         }
@@ -169,7 +170,7 @@ static srwl_Status createLock(
  *
  * @retval RWL_SUCCESS  Success.
  * @retval RWL_EXIST    The lock doesn't exist.
- * @retval RWL_SYSTEM   System error. See "errno". log_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". mylog_add() called.
  */
 static srwl_Status getLock(
         const key_t key /**< [in] the key associated with the semaphore */,
@@ -179,7 +180,7 @@ static srwl_Status getLock(
     int id = semget(key, SI_NUM_SEMS, read_write);
 
     if (-1 == id) {
-        LOG_SERROR0("Couldn't get existing semaphore set");
+        mylog_add_syserr("Couldn't get existing semaphore set");
         status = RWL_EXIST;
     }
     else {
@@ -195,8 +196,8 @@ static srwl_Status getLock(
  *
  * @retval RWL_SUCCESS  Success.
  * @retval RWL_EXIST    "create" is false and the semaphore set doesn't exist.
- *                      log_add() called.
- * @retval RWL_SYSTEM   System error. log_add() called.
+ *                      mylog_add() called.
+ * @retval RWL_SYSTEM   System error. mylog_add() called.
  */
 static srwl_Status initLock(
         const int create /**< [in] Whether to create the lock. If true, then
@@ -251,7 +252,7 @@ static srwl_Status initLock(
     lck = (srwl_Lock*) malloc(sizeof(srwl_Lock));
 
     if (NULL == lck) {
-        LOG_SERROR1("Couldn't allocate %lu bytes for lock",
+        mylog_add_syserr("Couldn't allocate %lu bytes for lock",
                 (unsigned long) sizeof(srwl_Lock));
         status = RWL_SYSTEM;
     }
@@ -282,7 +283,7 @@ static srwl_Status initLock(
  * @param key           [in] IPC key for the semaphore set
  * @param lock          [out] address of pointer to lock
  * @retval RWL_SUCCESS  Success
- * @retval RWL_SYSTEM   System error. See "errno". log_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". mylog_add() called.
  */
 srwl_Status srwl_create(
         int key,
@@ -297,8 +298,8 @@ srwl_Status srwl_create(
  * @param key   [in] IPC key for the lock
  * @param lock  [out] Address of the pointer to the lock
  * @retval RWL_SUCCESS  Success
- * @retval RWL_EXIST    The semaphore set doesn't exist. log_add() called.
- * @retval RWL_SYSTEM   System error. log_add() called.
+ * @retval RWL_EXIST    The semaphore set doesn't exist. mylog_add() called.
+ * @retval RWL_SYSTEM   System error. mylog_add() called.
  */
 srwl_Status srwl_get(
         const key_t key,
@@ -313,8 +314,8 @@ srwl_Status srwl_get(
  * returns.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_INVALID  The lock is invalid. log_add() called.
- * @retval RWL_SYSTEM   System error. log_add() called. The resulting state
+ * @retval RWL_INVALID  The lock is invalid. mylog_add() called.
+ * @retval RWL_SYSTEM   System error. mylog_add() called. The resulting state
  *                      of "*lock" is unspecified.
  */
 srwl_Status srwl_delete(
@@ -341,7 +342,7 @@ srwl_Status srwl_delete(
  * @param key           The IPC key
  * @retval RWL_SUCCESS  Success
  * @retval RWL_EXIST    The key has no associated read/write lock
- * @retval RWL_SYSTEM   System error. log_add() called.
+ * @retval RWL_SYSTEM   System error. mylog_add() called.
  */
 srwl_Status srwl_deleteByKey(
         const key_t key)
@@ -349,11 +350,11 @@ srwl_Status srwl_deleteByKey(
     int status = semget(key, 0, read_write);
 
     if (-1 == status) {
-        LOG_SERROR0("Couldn't get semaphore set");
+        mylog_add_syserr("Couldn't get semaphore set");
         status = (ENOENT == errno) ? RWL_EXIST : RWL_SYSTEM;
     }
     else if (semctl(status, 0, IPC_RMID)) {
-        LOG_SERROR1("Couldn't delete existing semaphore set %d", status);
+        mylog_add_syserr("Couldn't delete existing semaphore set %d", status);
         status = RWL_SYSTEM;
     }
     else {
@@ -369,8 +370,8 @@ srwl_Status srwl_deleteByKey(
  * function returns.
  *
  * @retval RWL_SUCCESS  Success or "lock" was NULL
- * @retval RWL_EXIST    The lock is locked. log_add() called.
- * @retval RWL_SYSTEM   System error. See "errno". log_add() called. The state
+ * @retval RWL_EXIST    The lock is locked. mylog_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". mylog_add() called. The state
  *                      of "*lock" is unspecified.
  */
 srwl_Status srwl_free(
@@ -386,7 +387,7 @@ srwl_Status srwl_free(
 
         if (RWL_SUCCESS == status) {
             if (0 != lock->numWriteLocks || 0 != lock->numReadLocks) {
-                LOG_ADD3("Lock is locked: semId=%d, numReadLocks=%u, "
+                mylog_add("Lock is locked: semId=%d, numReadLocks=%u, "
                 "numWriteLocks=%u", lock->semId, lock->numReadLocks,
                         lock->numWriteLocks);
                 status = RWL_EXIST;
@@ -407,10 +408,10 @@ srwl_Status srwl_free(
  * Reentrant.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_INVALID  Lock structure is invalid. log_add() called.
+ * @retval RWL_INVALID  Lock structure is invalid. mylog_add() called.
  * @retval RWL_EXIST    Lock is locked for reading and the current process is
- *                      the one that created it. log_add() called.
- * @retval RWL_SYSTEM   System error. See "errno". log_add() called. Resulting
+ *                      the one that created it. mylog_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". mylog_add() called. Resulting
  *                      state of the lock is unspecified.
  */
 srwl_Status srwl_writeLock(
@@ -420,7 +421,7 @@ srwl_Status srwl_writeLock(
 
     if (RWL_SUCCESS == status) {
         if (0 < lock->numReadLocks) {
-            LOG_ADD1("Lock is locked for reading; semId=%d", lock->semId);
+            mylog_add("Lock is locked for reading; semId=%d", lock->semId);
             status = RWL_EXIST;
         }
         else if (0 < lock->numWriteLocks) {
@@ -430,7 +431,8 @@ srwl_Status srwl_writeLock(
         else {
             if (semop(lock->semId, writeLockOps,
                     sizeof(writeLockOps) / sizeof(writeLockOps[0])) == -1) {
-                LOG_SERROR1("Couldn't lock for writing: semId=%d", lock->semId);
+                mylog_add_syserr("Couldn't lock for writing: semId=%d",
+                        lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -448,10 +450,10 @@ srwl_Status srwl_writeLock(
  * Reentrant.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_INVALID  Lock structure is invalid. log_add() called.
+ * @retval RWL_INVALID  Lock structure is invalid. mylog_add() called.
  * @retval RWL_EXIST    Lock is locked for writing and the current process is
- *                      the one that created it. log_add() called.
- * @retval RWL_SYSTEM   System error. See "errno". log_add() called. Resulting
+ *                      the one that created it. mylog_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". mylog_add() called. Resulting
  *                      state of the lock is unspecified.
  */
 srwl_Status srwl_readLock(
@@ -461,7 +463,7 @@ srwl_Status srwl_readLock(
 
     if (RWL_SUCCESS == status) {
         if (0 < lock->numWriteLocks) {
-            LOG_ADD1("Lock is locked for writing; semId=%d", lock->semId);
+            mylog_add("Lock is locked for writing; semId=%d", lock->semId);
             status = RWL_EXIST;
         }
         else if (0 < lock->numReadLocks) {
@@ -476,12 +478,14 @@ srwl_Status srwl_readLock(
              */
             if (semop(lock->semId, readLockOps,
                     sizeof(readLockOps) / sizeof(readLockOps[0])) == -1) {
-                LOG_SERROR1("Couldn't lock for reading: semId=%d", lock->semId);
+                mylog_add_syserr("Couldn't lock for reading: semId=%d",
+                        lock->semId);
                 status = RWL_SYSTEM;
             }
             else if (semop(lock->semId, shareOps,
                     sizeof(shareOps) / sizeof(shareOps[0])) == -1) {
-                LOG_SERROR1("Couldn't share read-lock: semId=%d", lock->semId);
+                mylog_add_syserr("Couldn't share read-lock: semId=%d",
+                        lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -499,8 +503,8 @@ srwl_Status srwl_readLock(
  * locked before the lock will be truly unlocked.
  *
  * @retval RWL_SUCCESS  Success
- * @retval RWL_INVALID  Lock structure is invalid. log_add() called.
- * @retval RWL_SYSTEM   System error. See "errno". log_add() called. Resulting
+ * @retval RWL_INVALID  Lock structure is invalid. mylog_add() called.
+ * @retval RWL_SYSTEM   System error. See "errno". mylog_add() called. Resulting
  *                      state of the lock is unspecified.
  */
 srwl_Status srwl_unlock(
@@ -515,7 +519,8 @@ srwl_Status srwl_unlock(
         else if (1 == lock->numWriteLocks) {
             if (semop(lock->semId, writeUnlockOps,
                     sizeof(writeUnlockOps) / sizeof(writeUnlockOps[0])) == -1) {
-                LOG_SERROR1("Couldn't unlock write-lock: semId=%d", lock->semId);
+                mylog_add_syserr("Couldn't unlock write-lock: semId=%d",
+                        lock->semId);
                 status = RWL_SYSTEM;
             }
             else {
@@ -528,7 +533,8 @@ srwl_Status srwl_unlock(
         else if (1 == lock->numReadLocks) {
             if (semop(lock->semId, readUnlockOps,
                     sizeof(readUnlockOps) / sizeof(readUnlockOps[0])) == -1) {
-                LOG_SERROR1("Couldn't unlock read-lock: semId=%d", lock->semId);
+                mylog_add_syserr("Couldn't unlock read-lock: semId=%d",
+                        lock->semId);
                 status = RWL_SYSTEM;
             }
             else {

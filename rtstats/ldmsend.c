@@ -12,7 +12,7 @@
 #include <config.h>
 
 #include "ldm.h"
-#include <assert.h>
+#include <mylog.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <rpc/rpc.h>
@@ -109,28 +109,28 @@ my_hiya_5(CLIENT *clnt, prod_class_t **clsspp)
 
         if(rpc_stat != RPC_SUCCESS)
         {
-                uerror("hiya %s:  %s", remote, clnt_sperrno(rpc_stat));
+                mylog_error("hiya %s:  %s", remote, clnt_sperrno(rpc_stat));
                 return ECONNABORTED; /* Perhaps could be more descriptive */
         }
         switch (reply.code) {
                 case OK:
                         break;
                 case SHUTTING_DOWN:
-                        uerror("%s is shutting down", remote);
+                        mylog_error("%s is shutting down", remote);
                         return ECONNABORTED;
                 case DONT_SEND:
                 case RESTART:
                 case REDIRECT: /* TODO */
                 default:
-                        uerror("%s: unexpected reply type %s",
+                        mylog_error("%s: unexpected reply type %s",
                                 remote, s_ldm_errt(reply.code));
                         return ECONNABORTED;
                 case RECLASS:
                         *clsspp = reply.ldm_replyt_u.newclssp;
                         clss_regcomp(*clsspp);
                         /* N.B. we use the downstream patterns */
-                        if (ulogIsVerbose())
-                                uinfo("%s: reclass: %s",
+                        if (mylog_is_enabled_info)
+                                mylog_info("%s: reclass: %s",
                                         remote, s_prod_class(NULL, 0, *clsspp));
                         break;
         }
@@ -154,7 +154,7 @@ my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
     reply = hiya_6(*clsspp, clnt);
 
     if (NULL == reply) {
-        uerror("%s: HIYA_6 failure: %s", remote, clnt_errmsg(clnt));
+        mylog_error("%s: HIYA_6 failure: %s", remote, clnt_errmsg(clnt));
 
         error = ECONNABORTED;
     }
@@ -166,32 +166,32 @@ my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
                 break;
 
             case SHUTTING_DOWN:
-                uerror("%s: LDM shutting down", remote);
+                mylog_error("%s: LDM shutting down", remote);
                 error = ECONNABORTED;
                 break;
 
             case BADPATTERN:
-                uerror("%s: Bad product-class pattern", remote);
+                mylog_error("%s: Bad product-class pattern", remote);
                 error = ECONNABORTED;
                 break;
 
             case DONT_SEND:
-                uerror("%s: LDM says don't send", remote);
+                mylog_error("%s: LDM says don't send", remote);
                 error = ECONNABORTED;
                 break;
 
             case RESEND:
-                uerror("%s: LDM says resend (ain't gonna happen)", remote);
+                mylog_error("%s: LDM says resend (ain't gonna happen)", remote);
                 error = ECONNABORTED;
                 break;
 
             case RESTART:
-                uerror("%s: LDM says restart (ain't gonna happen)", remote);
+                mylog_error("%s: LDM says restart (ain't gonna happen)", remote);
                 error = ECONNABORTED;
                 break;
 
             case REDIRECT:
-                uerror("%s: LDM says redirect (ain't gonna happen)", remote);
+                mylog_error("%s: LDM says redirect (ain't gonna happen)", remote);
                 error = ECONNABORTED;
                 break;
 
@@ -200,15 +200,15 @@ my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
                 max_hereis = reply->hiya_reply_t_u.feedPar.max_hereis;
                 clss_regcomp(*clsspp);
                 /* N.B. we use the downstream patterns */
-                if (ulogIsVerbose())
-                    uinfo("%s: reclass: %s",
+                if (mylog_is_enabled_info)
+                    mylog_info("%s: reclass: %s",
                         remote, s_prod_class(NULL, 0, *clsspp));
                 error = 0;
                 break;
         }
 
         if (!error)
-            udebug("max_hereis = %u", max_hereis);
+            mylog_debug("max_hereis = %u", max_hereis);
     }
 
     return error;
@@ -223,7 +223,7 @@ void ldmsend_clnt_destroy()
 {
     if (clnt != NULL) {
         if (NULL != nullproc && NULL == (*nullproc)(NULL, clnt)) {
-            uerror("%s: NULLPROC failure: %s", remote,
+            mylog_error("%s: NULLPROC failure: %s", remote,
                 clnt_errmsg(clnt));
         }
 
@@ -256,7 +256,7 @@ send_product_5(
         rpc_stat = my_comingsoon_5(clnt, infop, DBUFMAX, &reply);
         if(rpc_stat != RPC_SUCCESS)
         {
-                uerror("send_product_5: %s %s",
+                mylog_error("send_product_5: %s %s",
                         infop->ident,
                         clnt_sperrno(rpc_stat));
                 return;
@@ -266,11 +266,11 @@ send_product_5(
         if(reply.code != OK)
         {
                 if(reply.code == DONT_SEND)
-                   uinfo("send_product_5: %s: %s",
+                   mylog_info("send_product_5: %s: %s",
                         infop->ident,
                         s_ldm_errt(reply.code));
                 else
-                   uerror("send_product_5: %s: %s",
+                   mylog_error("send_product_5: %s: %s",
                         infop->ident,
                         s_ldm_errt(reply.code));
                 return;
@@ -323,7 +323,7 @@ send_product_6(
          */
         product product;
 
-        udebug("Sending file via HEREIS");
+        mylog_debug("Sending file via HEREIS");
 
         product.info = *infop;
         product.data = (void*)statsdata;
@@ -334,7 +334,7 @@ send_product_6(
          * RPC call uses asynchronous message-passing.
          */
         if (clnt_stat(clnt) != RPC_TIMEDOUT)
-            uerror("%s: HEREIS_6 failure: %s", remote, clnt_errmsg(clnt));
+            mylog_error("%s: HEREIS_6 failure: %s", remote, clnt_errmsg(clnt));
     }
     else {
         /*
@@ -344,7 +344,7 @@ send_product_6(
         comingsoon_reply_t* reply;
         comingsoon_args     soonArg;
 
-        udebug("Sending file via COMINGSOON/BLKDATA");
+        mylog_debug("Sending file via COMINGSOON/BLKDATA");
 
         soonArg.infop = (prod_info*)infop;              /* remove "const" */
         soonArg.pktsz = size;
@@ -352,17 +352,20 @@ send_product_6(
         reply = comingsoon_6(&soonArg, clnt);
 
         if (NULL == reply) {
-            uerror("%s: COMINGSOON_6 failure: %s", remote, clnt_errmsg(clnt));
+            mylog_error("%s: COMINGSOON_6 failure: %s", remote, clnt_errmsg(clnt));
         }
         else {
             if (DONT_SEND == *reply) {
-                if (ulogIsVerbose() || ulogIsDebug())
-                    uinfo("Downstream LDM says don't send: %s",
-                        s_prod_info(NULL, 0, infop, ulogIsDebug()));
+                if (mylog_is_enabled_info ||
+                        mylog_is_enabled_debug)
+                    mylog_info("Downstream LDM says don't send: %s",
+                        s_prod_info(NULL, 0, infop,
+                                mylog_is_enabled_debug));
             }
             else if (0 != *reply) {
-                uwarn("Unexpected reply (%s) from downstream LDM: %s",
-                    s_prod_info(NULL, 0, infop, ulogIsDebug()));
+                mylog_warning("Unexpected reply (%s) from downstream LDM: %s",
+                    s_prod_info(NULL, 0, infop,
+                            mylog_is_enabled_debug));
             }
             else {
                 datapkt packet;
@@ -379,7 +382,7 @@ send_product_6(
                  * because the RPC call uses asynchronous message-passing.
                  */
                 if (clnt_stat(clnt) != RPC_TIMEDOUT) {
-                    uerror("%s: BLKDATA_6 failure: %s",
+                    mylog_error("%s: BLKDATA_6 failure: %s",
                         remote, clnt_errmsg(clnt));
                 }
             }
@@ -420,11 +423,11 @@ ldmsend(
     prod_class_t* test_clssp = clssp;
 
     /* ldmproduct "filename" length = 255
-     * assert that
+     * mylog_assert that
      * sprintf(filename,"rtstats-%s/%s/%s/%s\0",PACKAGE_VERSION,
      * origin,feedid,prodo); will fit into allocated space.
      */
-    assert ( ( strlen(PACKAGE_VERSION) + 2 * HOSTNAMESIZE + 80 + 9 ) < 255 );
+    mylog_assert ( ( strlen(PACKAGE_VERSION) + 2 * HOSTNAMESIZE + 80 + 9 ) < 255 );
 
     /*
      * time_insert time_arrive myname feedid product_origin
@@ -454,11 +457,11 @@ ldmsend(
     if(md5ctxp == NULL)
     {
         status = errno;
-        serror("new_md5_CTX failed");
+        mylog_syserr("new_md5_CTX failed");
     }
     else {
         if(signed_on_hiya) {
-           udebug("already signed on");
+           mylog_debug("already signed on");
         }
         else {
             status = (*hiya)(clnt, &clssp);
@@ -488,11 +491,11 @@ ldmsend(
              */
             if(!prodInClass(clssp, &info))
             {
-                uinfo("%s doesn't want %s", remote, filename);
+                mylog_info("%s doesn't want %s", remote, filename);
                 if(test_clssp != clssp) free_prod_class(clssp);
             }
             else {
-                uinfo("Sending %s, %d bytes", filename, strlen(statsdata));
+                mylog_info("Sending %s, %d bytes", filename, strlen(statsdata));
                 
                 MD5Init(md5ctxp);
                 MD5Update(md5ctxp, (unsigned char *)statsdata,
@@ -568,7 +571,7 @@ int ldmsend_main(
         if (!error) {
             signed_on_hiya = 0;
 
-            udebug("version = %u", version);
+            mylog_debug("version = %u", version);
         }
         else {
             err_log_and_free(error, ERR_WARNING);

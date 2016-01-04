@@ -53,18 +53,18 @@ typedef struct _code {
 } CODE;
 
 CODE prioritynames[] = {
-        "alert",        LOG_ALERT,
-        "crit",         LOG_CRIT,
-        "debug",        LOG_DEBUG,
-        "emerg",        LOG_EMERG,
-        "err",          LOG_ERR,
-        "error",        LOG_ERR,                /* DEPRECATED */
-        "info",         LOG_INFO,
+        "alert",        MYLOG_LEVEL_ALERT,
+        "crit",         MYLOG_LEVEL_CRIT,
+        "debug",        MYLOG_LEVEL_DEBUG,
+        "emerg",        MYLOG_LEVEL_EMERG,
+        "err",          MYLOG_LEVEL_ERROR,
+        "error",        MYLOG_LEVEL_ERROR,                /* DEPRECATED */
+        "info",         MYLOG_LEVEL_INFO,
         "none",         INTERNAL_NOPRI,         /* INTERNAL */
-        "notice",       LOG_NOTICE,
-        "panic",        LOG_EMERG,              /* DEPRECATED */
-        "warn",         LOG_WARNING,            /* DEPRECATED */
-        "warning",      LOG_WARNING,
+        "notice",       MYLOG_LEVEL_NOTICE,
+        "panic",        MYLOG_LEVEL_EMERG,              /* DEPRECATED */
+        "warn",         MYLOG_LEVEL_WARNING,            /* DEPRECATED */
+        "warning",      MYLOG_LEVEL_WARNING,
         NULL,           -1,
 };
 
@@ -174,11 +174,14 @@ int main(int argc, char *argv[])
 {
         extern char *optarg;
         extern int errno, optind;
-        int pri = LOG_NOTICE;
+        int pri = MYLOG_LEVEL_NOTICE;
         int ch, logflags = 0;
         char *tag, buf[1024];
-        char *logfname = 0 ;
-        int logfd ;
+
+        if (mylog_init(argv[0])) {
+            fprintf(stderr, "mylog_init() failure\n");
+            return 1;
+        }
 
         tag = NULL;
 #ifdef LOG_PERROR
@@ -198,7 +201,7 @@ int main(int argc, char *argv[])
                         logflags |= LOG_PID;
                         break;
                 case 'y':
-                        logflags |= LOG_MICROSEC;
+                        logflags |= MYLOG_MICROSEC;
                         break;
                 case 'p':               /* priority */
                         pri = pencode(optarg);
@@ -209,13 +212,13 @@ int main(int argc, char *argv[])
                         break;
 #endif
                 case 'z':
-                        logflags |= LOG_ISO_8601;
+                        logflags |= MYLOG_ISO_8601;
                         break;
                 case 't':               /* tag */
                         tag = optarg;
                         break;
                 case 'l':               /* logfname */
-                        logfname = optarg;
+                        (void)mylog_set_output(optarg);
                         break;
                 case '?':
                 default:
@@ -223,18 +226,6 @@ int main(int argc, char *argv[])
                 }
         argc -= optind;
         argv += optind;
-
-        /* setup for logging */
-        logfd = openulog(tag ? tag : getlogin(), logflags, LOG_LDM, logfname);
-
-        if (logfd == -1) {
-            fprintf(stderr, "openulog() failure\n");
-
-            return 1;
-        }
-
-        if(logfd != fileno(stdout))
-                (void) fclose(stdout);
 
         /* log input line if appropriate */
         if (argc > 0) {
@@ -244,11 +235,11 @@ int main(int argc, char *argv[])
                 for (p = buf, endp = buf + sizeof(buf) - 2; *argv;) {
                         len = strlen(*argv);
                         if (p + len > endp && p > buf) {
-                                ulog(pri, "%s", buf);
+                                mylog_log(pri, "%s", buf);
                                 p = buf;
                         }
                         if (len > sizeof(buf) - 1)
-                                ulog(pri, "%s", *argv++);
+                                mylog_log(pri, "%s", *argv++);
                         else {
                                 if (p != buf)
                                         *p++ = ' ';
@@ -257,13 +248,13 @@ int main(int argc, char *argv[])
                         }
                 }
                 if (p != buf)
-                        ulog(pri, "%s", buf);
+                        mylog_log(pri, "%s", buf);
                 return(0);
         }
 
         /* main loop */
         while (fgets(buf, sizeof(buf), stdin) != NULL)
-                ulog(pri, "%s", buf);
+                mylog_log(pri, "%s", buf);
 
         return(0);
 }
