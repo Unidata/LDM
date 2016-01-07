@@ -68,6 +68,15 @@ int mylog_init(
         const char* const id);
 
 /**
+ * Refreshes the logging module. In particular, if output is to a file, then the
+ * file is closed and re-opened; thus allowing for log file rotation.
+ *
+ * @retval  0  Success.
+ * @retval -1  Failure. The logging module is in an unspecified state.
+ */
+int mylog_refresh(void);
+
+/**
  * Finalizes the logging module. Should be called eventually after
  * `mylog_init()`, after which no more logging should occur.
  *

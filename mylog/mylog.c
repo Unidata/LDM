@@ -240,6 +240,25 @@ static int list_getNextEntry(
 }
 
 /**
+ * Destroys a list of log-messages.
+ *
+ * @param[in] list  The list of messages.
+ */
+static void
+list_fini(
+        List* const list)
+{
+    Message* msg;
+    Message* next;
+
+    for (msg = list->first; msg; msg = next) {
+        next = msg->next;
+        free(msg->string);
+        free(msg);
+    }
+}
+
+/**
  * Prints a message into a message-list entry.
  *
  * @param[in] msg        The message entry.
@@ -455,25 +474,6 @@ mylog_clear(void)
 }
 
 /**
- * Destroys a list of log-messages.
- *
- * @param[in] list  The list of messages.
- */
-static void
-list_fini(
-        List* const list)
-{
-    Message* msg;
-    Message* next;
-
-    for (msg = list->first; msg; msg = next) {
-        next = msg->next;
-        free(msg->string);
-        free(msg);
-    }
-}
-
-/**
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
  */
@@ -524,10 +524,6 @@ void* mylog_malloc_located(
 
     return obj;
 }
-
-/******************************************************************************
- * Public API:
- ******************************************************************************/
 
 /**
  * Adds a variadic message to the current thread's list of messages. Emits and

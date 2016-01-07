@@ -78,6 +78,18 @@ typedef struct message {
 #endif // `ulog` implementation
 
 /**
+ * Vets a logging level.
+ *
+ * @param[in] level  The logging level to be vetted.
+ * @retval    true   iff `level` is a valid level.
+ */
+static inline bool mylog_vetLevel(
+        mylog_level_t level)
+{
+    return level >= MYLOG_LEVEL_DEBUG && level <= MYLOG_LEVEL_ERROR;
+}
+
+/**
  * Returns a pointer to the last component of a pathname.
  *
  * @param[in] pathname  The pathname.

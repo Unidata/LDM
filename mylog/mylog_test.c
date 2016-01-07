@@ -13,6 +13,7 @@
 
 #include "mylog.h"
 
+#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,7 @@
 
 static char* progname;
 static const char tmpPathname[] = "/tmp/mylog_test.log";
+static const char tmpPathname1[] = "/tmp/mylog_test.log.1";
 
 /**
  * Only called once.
@@ -358,13 +360,13 @@ static void test_mylog_syserr(void)
     CU_ASSERT_EQUAL(status, 0);
 
     mylog_errno(ENOMEM, NULL);
-    mylog_errno(ENOMEM, "MYLOG_ERRNO() above message part of this one");
-    mylog_errno(ENOMEM, "MYLOG_ERRNO() above message is part of this one #%d", 2);
-    void* const ptr = malloc(~(size_t)0);
-    CU_ASSERT_PTR_NULL(ptr);
+    mylog_errno(ENOMEM, "MYLOG_ERRNO() previous message is part of this one");
+    mylog_errno(ENOMEM, "MYLOG_ERRNO() previous message is part of this one "
+            "#%d", 2);
+    errno = EEXIST;
     mylog_syserr(NULL);
-    mylog_syserr("mylog_syserr() above message is part of this one");
-    mylog_syserr("mylog_syserr() above message is part of this one #%d", 2);
+    mylog_syserr("mylog_syserr() previous message is part of this one");
+    mylog_syserr("mylog_syserr() previous message is part of this one #%d", 2);
 
     status = mylog_fini();
     CU_ASSERT_EQUAL(status, 0);
@@ -373,6 +375,39 @@ static void test_mylog_syserr(void)
     CU_ASSERT_EQUAL(n, 10);
 
     status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void test_mylog_refresh(void)
+{
+    (void)unlink(tmpPathname);
+    int status = mylog_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = mylog_set_output(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+
+    logMessages();
+    int n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
+
+    status = rename(tmpPathname, tmpPathname1);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = mylog_refresh();
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    logMessages();
+    n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
+
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = unlink(tmpPathname1);
     CU_ASSERT_EQUAL(status, 0);
 }
 
@@ -388,6 +423,7 @@ int main(
 
         if (NULL != testSuite) {
             if (       CU_ADD_TEST(testSuite, test_init_fini)
+                    /*
                     && CU_ADD_TEST(testSuite, test_init_fini)
                     && CU_ADD_TEST(testSuite, test_mylog_get_level)
                     && CU_ADD_TEST(testSuite, test_mylog_roll_level)
@@ -400,7 +436,7 @@ int main(
                     && CU_ADD_TEST(testSuite, test_mylog_vlog)
                     && CU_ADD_TEST(testSuite, test_mylog_add)
                     && CU_ADD_TEST(testSuite, test_mylog_syserr)
-                    /*
+                    && CU_ADD_TEST(testSuite, test_mylog_refresh)
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();

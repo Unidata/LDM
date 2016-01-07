@@ -12,6 +12,7 @@
 
 #include "config.h"
 
+#include "mutex.h"
 #include "mylog.h"
 #include "ulog.h"
 
@@ -46,18 +47,78 @@ static pthread_t initThread;
 /**
  * The mutex that makes this module thread-safe.
  */
-static pthread_mutex_t  mutex;
+static mutex_t  mutex;
 
 static inline void lock(void)
 {
-    if (pthread_mutex_lock(&mutex))
+    if (mutex_lock(&mutex))
         abort();
 }
 
 static inline void unlock(void)
 {
-    if (pthread_mutex_unlock(&mutex))
+    if (mutex_unlock(&mutex))
         abort();
+}
+
+/**
+ * Enables logging down to a given level.
+ *
+ * @param[in] level  The lowest level through which logging should occur.
+ * @retval    0      Success.
+ * @retval    -1     Failure.
+ */
+int set_level(
+        const mylog_level_t level)
+{
+    int status;
+    if (!mylog_vetLevel(level)) {
+        status = -1;
+    }
+    else {
+        static int ulogUpTos[MYLOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
+                LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
+                LOG_UPTO(LOG_ERR)};
+        (void)setulogmask(ulogUpTos[level]);
+        loggingLevel = level;
+    }
+    return status;
+}
+
+/**
+ * Initializes the logging module -- overwriting any previous initialization --
+ * except for the mutual-exclusion lock. Should be called before any other
+ * function.
+ *
+ * @param[in] id        The pathname of the program (e.g., `argv[0]`). Caller
+ *                      may free.
+ * @param[in] options   `openulog()` options.
+ * @param[in] facility  Facility to use if using the system logging daemon.
+ * @param[in] output    Output:
+ *                        ""      Output is to the system logging daemon.
+ *                        "-"     Output is to the standard error stream.
+ *                        else    The pathname of the log file.
+ * @param[in] level    Logging level.
+ * @retval    0        Success.
+ *                       - `mylog_get_output()` will return `output`.
+ *                       - `mylog_get_facility()` will return `facility`.
+ *                       - `mylog_get_level()` will return `level`.
+ * @retval    -1       Error.
+ */
+int init(
+        const char* restrict       id,
+        const int                  options,
+        const int                  facility,
+        const char* const restrict output,
+        const mylog_level_t        level)
+{
+    char progname[_XOPEN_PATH_MAX];
+    strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
+    id = basename(progname);
+    int status = openulog(id, options, facility, output);
+    if (status != -1)
+        status = set_level(level);
+    return status ? -1 : 0;
 }
 
 /**
@@ -104,30 +165,34 @@ void mylog_internal(
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
  * @retval    0        Success.
- * @retval    -1       Error.
+ * @retval    -1       Error. Logging module is in an unspecified state.
  */
 int mylog_init(
         const char* id)
 {
-    pthread_mutexattr_t mutexAttr;
-    int status = pthread_mutexattr_init(&mutexAttr);
+    int status = init(id, LOG_PID, LOG_LDM, "", MYLOG_LEVEL_NOTICE);
     if (status == 0) {
-        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
-        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
-        status = pthread_mutex_init(&mutex, &mutexAttr);
-        if (status == 0) {
-            char progname[_XOPEN_PATH_MAX];
-            strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
-            id = basename(progname);
-            status = openulog(id, LOG_PID, LOG_LDM, "");
-            if (status != -1) {
-                mylog_set_level(MYLOG_LEVEL_NOTICE);
-                initThread = pthread_self();
-                status = 0;
-            }
-        }
+        status = mutex_init(&mutex, true, true);
+        if (status == 0)
+            initThread = pthread_self();
     }
     return status ? -1 : 0;
+}
+
+/**
+ * Refreshes the logging module. In particular, if logging is to a file, then
+ * the file is closed and re-opened; thus allowing for log file rotation.
+ *
+ * @retval  0  Success.
+ * @retval -1  Failure.
+ */
+int mylog_refresh(void)
+{
+    lock();
+    int status = init(getulogident(), ulog_get_options(), getulogfacility(),
+            getulogpath(), loggingLevel);
+    unlock();
+    return status;
 }
 
 /**
@@ -140,15 +205,18 @@ int mylog_init(
  */
 int mylog_fini(void)
 {
-    int status;
+    lock();
     mylog_free();
+    int status;
     if (!pthread_equal(initThread, pthread_self())) {
         status = 0;
     }
     else {
-        status = pthread_mutex_destroy(&mutex);
-        if (status == 0)
-            status = closeulog();
+        status = closeulog();
+        if (status == 0) {
+            unlock();
+            status = mutex_fini(&mutex);
+        }
     }
     return status ? -1 : 0;
 }
@@ -158,18 +226,15 @@ int mylog_fini(void)
  *
  * @param[in] level  The lowest level through which logging should occur.
  * @retval    0      Success.
+ * @retval    -1     Failure.
  */
 int mylog_set_level(
         const mylog_level_t level)
 {
     lock();
-    static int ulogUpTos[MYLOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
-            LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
-            LOG_UPTO(LOG_ERR)};
-    (void)setulogmask(ulogUpTos[level]);
-    loggingLevel = level;
+    int status = set_level(level);
     unlock();
-    return 0;
+    return status;
 }
 
 /**

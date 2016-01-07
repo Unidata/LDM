@@ -11,6 +11,7 @@
 
 #include "config.h"
 
+#include "mutex.h"
 #include "mylog.h"
 
 #undef NDEBUG
@@ -19,6 +20,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <log4c.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -45,54 +47,91 @@
  *  Logging level. The initial value must be consonant with the initial value of
  *  `logMask` in `ulog.c`.
  */
-static mylog_level_t     log_level = MYLOG_LEVEL_DEBUG;
+static mylog_level_t         log_level = MYLOG_LEVEL_DEBUG;
 /**
  * The Log4C category of the current logger.
  */
-log4c_category_t*        mylog_category;
+log4c_category_t*            mylog_category;
 /**
  * The name of the program.
  */
-static char              progname[_XOPEN_NAME_MAX];
+static char                  progname[_XOPEN_NAME_MAX];
 /**
- * The specification of logging output.
+ * The specification of logging output. Length includes terminating NUL.
  */
-static char              output[_XOPEN_PATH_MAX]; // Includes terminating NUL
+static char                  output[_XOPEN_PATH_MAX];
 /**
  * The mapping from this module's logging-levels to Log4C priorities.
  */
-int               mylog_log4c_priorities[] = {LOG4C_PRIORITY_DEBUG,
+int                          mylog_log4c_priorities[] = {LOG4C_PRIORITY_DEBUG,
         LOG4C_PRIORITY_INFO, LOG4C_PRIORITY_NOTICE, LOG4C_PRIORITY_WARN,
         LOG4C_PRIORITY_ERROR};
 /**
  * The Log4C appender for logging to the standard error stream.
  */
-static log4c_appender_t* mylog_appender_stderr;
+static log4c_appender_t*     mylog_appender_stderr;
 /**
  * The Log4C appenders that use the `LOG_LOCAL`i system logging facility:
  */
 #define MYLOG_NLOCALS 8 // `LOG_LOCAL0` through `LOG_LOCAL7`
-static log4c_appender_t* appenders_syslog_local[MYLOG_NLOCALS];
+static log4c_appender_t*     appenders_syslog_local[MYLOG_NLOCALS];
 /**
  * The Log4C appender that uses the `LOG_USER` system logging facility:
  */
-static log4c_appender_t* appender_syslog_user;
+static log4c_appender_t*     appender_syslog_user;
 /**
  * The Log4C appender that uses the system logging daemon:
  */
-static log4c_appender_t* mylog_appender_syslog;
+static log4c_appender_t*     mylog_appender_syslog;
 /**
  * The default Log4C layout for logging.
  */
-static log4c_layout_t*   mylog_layout;
+static log4c_layout_t*       mylog_layout;
 /**
  * Whether or not `mylog_init()` has been called without a subsequent
  * `mylog_fini()`.
  */
-static bool              initialized;
+static bool                  initialized;
+/**
+ * The mutual-exclusion lock that keeps this module thread-safe.
+ */
+static mutex_t               mutex;
+/**
+ * Whether a SIGHUP has been delivered.
+ */
+static volatile sig_atomic_t hupped;
+/**
+ * The SIGHUP signal set.
+ */
+static sigset_t              hup_sigset;
+/**
+ * The signal action for this module.
+ */
+static struct sigaction      hup_sigaction;
+/**
+ * The previous SIGHUP action when this module's SIGHUP action is registered.
+ */
+static struct sigaction      prev_hup_sigaction;
+
+static inline void lock()
+{
+    if (mutex_lock(&mutex))
+        abort();
+    if (hupped) {
+        mylog_refresh();
+        hupped = 0;
+    }
+}
+
+static inline void unlock()
+{
+    if (mutex_unlock(&mutex))
+        abort();
+}
 
 /**
- * Copies a string up to a limit on the number of bytes.
+ * Copies a string up to a limit on the number of bytes. Ensures that the copy
+ * is NUL-terminated.
  *
  * @param[in] dst   The destination.
  * @param[in] src   The source.
@@ -108,24 +147,12 @@ static inline void string_copy(
 }
 
 /**
- * Vets a logging level.
- *
- * @param[in] level  The logging level to be vetted.
- * @retval    true   iff `level` is a valid level.
- */
-static inline bool vetLevel(
-        mylog_level_t level)
-{
-    return level >= MYLOG_LEVEL_DEBUG && level <= MYLOG_LEVEL_ERROR;
-}
-
-/**
  * Formats a logging event in the standard form. The format is
  * > _cat_:_pid_ _pri_ _msg_
  * where:
  * <dl>
  * <dt>_cat_</dt> <dd>Is the logging category (e.g., program name)</dd>
- * <dt>_pid_</dt> <dd>Is the numeric identifier of the process</dd>
+ * <dt>_pid_</dt> <dd>Is the numeric process identifier</dd>
  * <dt>_pri_</dt> <dd>Is the priority of the message: one of  `ERROR`, `WARN`,
  *                    `NOTICE`, `INFO`, or `DEBUG`.</dd>
  * <dt>_msg_</dt> <dd>Is the message from the application</dd>
@@ -543,6 +570,162 @@ static bool init_categories(void)
 }
 
 /**
+ * Initializes the logging module except for the mutual exclusion lock. Should
+ * be called before most other functions.
+ * - `mylog_get_output()`   will return "".
+ * - `mylog_get_facility()` will return `LOG_LDM`.
+ * - `mylog_get_level()`    will return `MYLOG_LEVEL_DEBUG`.
+ *
+ * @param[in] id       The pathname of the program (e.g., `argv[0]`. Caller may
+ *                     free.
+ * @retval    0        Success.
+ * @retval    -1       Error. The logging module is in an unspecified state.
+ */
+static int init(
+        const char* id)
+{
+    bool success;
+    if ((id == NULL) || !init_layouts() || !init_appenders() ||
+            !init_categories()) {
+        success = false;
+    }
+    else {
+        success = log4c_init() == 0;
+        if (success) {
+            char filename[_XOPEN_PATH_MAX];
+            string_copy(filename, id, sizeof(filename));
+            string_copy(progname, basename(filename), sizeof(progname));
+            mylog_category = log4c_category_get(progname);
+            if (mylog_category == NULL) {
+                success = false;
+            }
+            else {
+                (void)strcpy(output, "");
+                log_level = MYLOG_LEVEL_NOTICE;
+                log4c_rc->config.reread = 0;
+                success = true;
+            } // `category` is valid
+        } // `log4c_init()` successful
+    } // layouts, appenders, and categories initialized
+    return success ? 0 : -1;
+}
+
+/**
+ * Finalizes the logging module.
+ *
+ * @retval 0   Success.
+ * @retval -1  Failure. The logging module is in an unspecified state.
+ */
+static inline int fini(void)
+{
+    // Closes every appender's output that isn't stdout or stderr
+    return log4c_fini() ? -1 : 0;
+}
+
+/**
+ * Sets the logging output. Should be called between `mylog_init()` and
+ * `mylog_fini()`.
+ *
+ * @param[in] out      The logging output. One of
+ *                         - ""      Log according to the Log4C
+ *                                 configuration-file. Caller may free.
+ *                         - "-"     Log to the standard error stream. Caller may
+ *                                 free.
+ *                         - else    Log to the file whose pathname is `out`.
+ *                                 Caller may free.
+ * @retval    0        Success.
+ * @retval    -1       Failure.
+ */
+static int set_output(
+        const char* const out)
+{
+    int status;
+    if (out == NULL) {
+        status = -1;
+    }
+    else {
+        if (strcmp(out, "") == 0) {
+            // Log using the Log4C configuration-file
+            (void)fini();
+            status = init(progname);
+        }
+        else {
+            // Log to a stream
+            if (strcmp(out, "-") == 0) {
+                // Log to the standard error stream
+                assert(mylog_category);
+                assert(mylog_appender_stderr);
+                (void)log4c_category_set_appender(mylog_category,
+                        mylog_appender_stderr);
+                status = 0;
+            }
+            else {
+                // Log to the file `out`
+                log4c_appender_t* app = log4c_appender_get(out);
+                if (app == NULL) {
+                    status = -1;
+                }
+                else {
+                    (void)log4c_appender_set_type(app,
+                            &mylog_appender_type_file);
+                    assert(mylog_layout);
+                    (void)log4c_appender_set_layout(app, mylog_layout);
+                    assert(mylog_category);
+                    (void)log4c_category_set_appender(mylog_category, app);
+                    status = 0;
+                }
+            } // `out` specifies a regular file
+            if (status == 0)
+                (void)log4c_category_set_additivity(mylog_category, 0);
+        } // `out` specifies a stream
+        if (status == 0) {
+            //(void)log4c_category_set_additivity(category, 0);
+            log4c_category_set_priority(mylog_category,
+                    mylog_log4c_priorities[log_level]);
+            string_copy(output, out, sizeof(output));
+        }
+    } // out != NULL`
+    return status ? -1 : 0;
+}
+
+/**
+ * Enables logging down to a given level. Should be called between
+ * `init()` and `fini()`.
+ *
+ * @param[in] level  The lowest level through which logging should occur.
+ * @retval    0      Success.
+ * @retval    -1     Failure.
+ */
+static int set_level(
+        const mylog_level_t level)
+{
+    int status;
+    if (!mylog_vetLevel(level)) {
+        status = -1;
+    }
+    else {
+        #define           MAX_CATEGORIES 512
+        log4c_category_t* categories[MAX_CATEGORIES];
+        const int         ncats = log4c_category_list(categories,
+                MAX_CATEGORIES);
+        if (ncats < 0 || ncats > MAX_CATEGORIES) {
+            mylog_internal("Couldn't get all logging categories: ncats=%d",
+                    ncats);
+            status = -1;
+        }
+        else {
+            int priority = mylog_log4c_priorities[level];
+            for (int i = 0; i < ncats; i++)
+                (void)log4c_category_set_priority(categories[i], priority);
+            log_level = level;
+            status = 0;
+        }
+    } // `initialized` && valid `level`
+    return status;
+}
+
+
+/**
  * Sets the logging identifier. Should be called between `mylog_init()` and
  * `mylog_fini()`. The logging identifier will have the result of `fmt` and its
  * arguments as the prefix and `comp` as the suffix.
@@ -589,6 +772,25 @@ static int set_id(
 }
 
 /**
+ * Handles SIGHUP delivery. Sets variable `hupped` and ensures that any
+ * previously-registered SIGHUP handler is called.
+ *
+ * @param[in] sig  SIGHUP.
+ */
+static void handle_sighup(
+        const int sig)
+{
+    hupped = 1;
+    if (prev_hup_sigaction.sa_handler != SIG_DFL &&
+            prev_hup_sigaction.sa_handler != SIG_IGN) {
+        (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+        raise(SIGHUP);
+        (void)sigprocmask(SIG_UNBLOCK, &hup_sigset, NULL);
+        (void)sigaction(SIGHUP, &hup_sigaction, NULL);
+    }
+}
+
+/**
  * Initializes the logging module. Should be called before most other functions.
  * - `mylog_get_output()`   will return "".
  * - `mylog_get_facility()` will return `LOG_LDM`.
@@ -597,57 +799,89 @@ static int set_id(
  * @param[in] id       The pathname of the program (e.g., `argv[0]`. Caller may
  *                     free.
  * @retval    0        Success.
- * @retval    -1       Error.
+ * @retval    -1       Error. The logging module is in an unspecified state.
  */
 int mylog_init(
         const char* id)
 {
-    bool success;
-    if (initialized || (id == NULL) || !init_layouts() || !init_appenders() ||
-            !init_categories()) {
-        success = false;
+    int status;
+    if (initialized) {
+        status = -1;
     }
     else {
-        success = log4c_init() == 0;
-        if (success) {
-            char filename[_XOPEN_PATH_MAX];
-            string_copy(filename, id, sizeof(filename));
-            string_copy(progname, basename(filename), sizeof(progname));
-            mylog_category = log4c_category_get(progname);
-            if (mylog_category == NULL) {
-                success = false;
-            }
-            else {
-                (void)strcpy(output, "");
-                log_level = MYLOG_LEVEL_NOTICE;
-                log4c_rc->config.reread = 0;
+        status = init(id);
+        if (status == 0) {
+            status = mutex_init(&mutex, true, true);
+            if (status == 0) {
+                (void)sigemptyset(&hup_sigset);
+                (void)sigaddset(&hup_sigset, SIGHUP);
+                hup_sigaction.sa_mask = hup_sigset;
+                hup_sigaction.sa_flags = SA_RESTART;
+                hup_sigaction.sa_handler = handle_sighup;
+                (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
                 initialized = true;
-                success = true;
-            } // `category` is valid
-        } // `log4c_init()` successful
-    } // layouts, appenders, and categories initialized
-    return success ? 0 : -1;
+            }
+        }
+    }
+    return status;
+}
+
+/**
+ * Refreshes the logging module. In particular, if logging is to a file, then
+ * the file is closed and re-opened; thus allowing for log file rotation.
+ *
+ * @retval  0  Success.
+ * @retval -1  Failure. The logging module is in an unspecified state.
+ */
+int mylog_refresh(void)
+{
+    lock();
+    int status;
+    if (!initialized) {
+        status = -1;
+    }
+    else {
+        mylog_level_t level = log_level;
+        char id[_XOPEN_PATH_MAX];
+        char out[_XOPEN_PATH_MAX];
+        string_copy(id, progname, sizeof(id));
+        string_copy(out, output, sizeof(out));
+        status = fini();
+        if (status == 0) {
+            status = init(id);
+            if (status == 0)
+                status = set_output(out);
+                if (status == 0)
+                    status = set_level(level);
+        }
+    }
+    unlock();
+    return status;
 }
 
 /**
  * Finalizes the logging module.
  *
  * @retval 0   Success.
- * @retval -1  Failure.
+ * @retval -1  Failure. The logging module is in an unspecified state.
  */
 int mylog_fini(void)
 {
+    lock();
     int status;
     if (!initialized) {
         status = -1;
     }
     else {
-        // Closes every appender's output that isn't stdout or stderr
-        status = log4c_fini();
-        if (status == 0)
+        status = fini();
+        if (status == 0) {
+            (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
             initialized = false;
+            unlock();
+            mutex_fini(&mutex);
+        }
     }
-    return status == 0 ? 0 : -1;
+    return status;
 }
 
 /**
@@ -667,53 +901,10 @@ int mylog_fini(void)
 int mylog_set_output(
         const char* const out)
 {
-    int status;
-    if (!initialized || out == NULL) {
-        status = -1;
-    }
-    else {
-        if (strcmp(out, "") == 0) {
-            // Log using the Log4C configuration-file
-            (void)mylog_fini();
-            status = mylog_init(progname);
-        }
-        else {
-            // Log to a stream
-            if (strcmp(out, "-") == 0) {
-                // Log to the standard error stream
-                assert(mylog_category);
-                assert(mylog_appender_stderr);
-                (void)log4c_category_set_appender(mylog_category,
-                        mylog_appender_stderr);
-                status = 0;
-            }
-            else {
-                // Log to the file `out`
-                log4c_appender_t* app = log4c_appender_get(out);
-                if (app == NULL) {
-                    status = -1;
-                }
-                else {
-                    (void)log4c_appender_set_type(app,
-                            &mylog_appender_type_file);
-                    assert(mylog_layout);
-                    (void)log4c_appender_set_layout(app, mylog_layout);
-                    assert(mylog_category);
-                    (void)log4c_category_set_appender(mylog_category, app);
-                    status = 0;
-                }
-            } // `out` specifies a regular file
-            if (status == 0)
-                (void)log4c_category_set_additivity(mylog_category, 0);
-        } // `out` specifies a stream
-        if (status == 0) {
-            //(void)log4c_category_set_additivity(category, 0);
-            log4c_category_set_priority(mylog_category,
-                    mylog_log4c_priorities[log_level]);
-            string_copy(output, out, sizeof(output));
-        }
-    } // `initialized && out != NULL`
-    return status ? -1 : 0;
+    lock();
+    int status = initialized ? set_output(out) : -1;
+    unlock();
+    return status;
 }
 
 /**
@@ -727,7 +918,10 @@ int mylog_set_output(
  */
 const char* mylog_get_output(void)
 {
-    return output;
+    lock();
+    const char* const out = output;
+    unlock();
+    return out;
 }
 
 /**
@@ -741,27 +935,9 @@ const char* mylog_get_output(void)
 int mylog_set_level(
         const mylog_level_t level)
 {
-    int status;
-    if (!initialized || !vetLevel(level)) {
-        status = -1;
-    }
-    else {
-        #define           MAX_CATEGORIES 512
-        log4c_category_t* categories[MAX_CATEGORIES];
-        const int         ncats = log4c_category_list(categories,
-                MAX_CATEGORIES);
-        if (ncats < 0 || ncats > MAX_CATEGORIES) {
-            mylog_internal("Couldn't get all logging categories: ncats=%d", ncats);
-            status = -1;
-        }
-        else {
-            int priority = mylog_log4c_priorities[level];
-            for (int i = 0; i < ncats; i++)
-                (void)log4c_category_set_priority(categories[i], priority);
-            log_level = level;
-            status = 0;
-        }
-    } // `initialized` && valid `level`
+    lock();
+    int status = initialized ? set_level(level) : -1;
+    unlock();
     return status;
 }
 
@@ -773,7 +949,10 @@ int mylog_set_level(
  */
 mylog_level_t mylog_get_level(void)
 {
-    return log_level;
+    lock();
+    mylog_level_t level = log_level;
+    unlock();
+    return level;
 }
 
 /**
@@ -782,9 +961,11 @@ mylog_level_t mylog_get_level(void)
  */
 void mylog_roll_level(void)
 {
+    lock();
     mylog_level_t level = mylog_get_level();
     level = (level == MYLOG_LEVEL_DEBUG) ? MYLOG_LEVEL_ERROR : level - 1;
-    mylog_set_level(level);
+    set_level(level);
+    unlock();
 }
 
 /**
@@ -798,7 +979,10 @@ void mylog_roll_level(void)
 int mylog_set_id(
         const char* const id)
 {
-    return set_id(id, "%s.", progname);
+    lock();
+    int status = set_id(id, "%s.", progname);
+    unlock();
+    return status;
 }
 
 /**
@@ -818,7 +1002,10 @@ int mylog_set_upstream_id(
         const char* const hostId,
         const bool        isFeeder)
 {
-    return set_id(hostId, "%s.%s.", progname, isFeeder ? "feeder" : "notifier");
+    lock();
+    int status = set_id(hostId, "%s.%s.", progname, isFeeder ? "feeder" : "notifier");
+    unlock();
+    return status;
 }
 
 /**
@@ -828,7 +1015,10 @@ int mylog_set_upstream_id(
  */
 const char* mylog_get_id(void)
 {
-    return log4c_category_get_name(mylog_category);
+    lock();
+    const char* const id = log4c_category_get_name(mylog_category);
+    unlock();
+    return id;
 }
 
 /**
@@ -863,11 +1053,18 @@ unsigned mylog_get_options(void)
 int mylog_set_facility(
         const int facility)
 {
+    int status;
+    lock();
     if (facility != LOG_USER &&
-            ((LOG_LOCAL0 - facility) * (LOG_LOCAL7 - facility) > 0))
-        return -1;
-    mylog_appender_syslog = mylog_get_syslog_appender(facility);
-    return 0;
+            ((LOG_LOCAL0 - facility) * (LOG_LOCAL7 - facility) > 0)) {
+        status = -1;
+    }
+    else {
+        mylog_appender_syslog = mylog_get_syslog_appender(facility);
+        status = 0;
+    }
+    unlock();
+    return status;
 }
 
 /**
@@ -880,7 +1077,10 @@ int mylog_set_facility(
  */
 int mylog_get_facility(void)
 {
-    return (intptr_t)log4c_appender_get_udata(mylog_appender_syslog);
+    lock();
+    int status = (intptr_t)log4c_appender_get_udata(mylog_appender_syslog);
+    unlock();
+    return status;
 }
 
 
@@ -895,6 +1095,7 @@ void mylog_internal(
         const char* const      fmt,
                                ...)
 {
+    lock();
     const log4c_appender_t* const app =
             log4c_category_get_appender(mylog_category);
     if (app) {
@@ -917,6 +1118,7 @@ void mylog_internal(
             va_end(args);
         }
     }
+    unlock();
 }
 
 /**
@@ -929,6 +1131,7 @@ void mylog_write_one(
         const mylog_level_t    level,
         const Message* const   msg)
 {
+    lock();
     if (msg->loc.file) {
         log4c_category_log(mylog_category, mylog_get_priority(level),
                 "%s:%d %s", mylog_basename(msg->loc.file), msg->loc.line,
@@ -938,4 +1141,5 @@ void mylog_write_one(
         log4c_category_log(mylog_category, mylog_get_priority(level), "%s",
                 msg->string);
     }
+    unlock();
 }
