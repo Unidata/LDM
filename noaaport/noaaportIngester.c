@@ -1108,6 +1108,7 @@ runOuter(
             status = runInner(productMaker, pmThread, isMcastInput,
                     SCHED_POLICY, maxPriority, mcastSpec, interface);
 
+        pmFree(productMaker);
         destroyRetransSupport(isMcastInput);
         (void)pthread_attr_destroy(&attr);
     }   // `attr` initialized
