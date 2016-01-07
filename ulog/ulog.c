@@ -138,8 +138,11 @@ closeulog(void)
 void
 setulogident(const char *ident)
 {
-    if (ident != NULL)
-        strncpy(logIdent, ident, LOG_IDENT_LEN)[LOG_IDENT_LEN] = 0;
+    if (ident != NULL) {
+        size_t n = strlen(ident);
+        n = n < LOG_IDENT_LEN ? n : LOG_IDENT_LEN;
+        ((char*)memmove(logIdent, ident, n))[n] = 0;
+    }
 }
 
 
