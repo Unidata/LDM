@@ -185,7 +185,8 @@ readerStart(
         (void)pthread_mutex_unlock(&reader->mutex);
     }                       /* I/O loop */
 
-    log_log(LOG_ERR);  // could be end of thread
+    log_log(LOG_ERR);
+    log_free();  // could be end of thread
 
     static int returnPointer[] = {0, 1, 2};
     return returnPointer + status;
