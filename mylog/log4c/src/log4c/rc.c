@@ -197,16 +197,14 @@ static int appender_load(log4c_rc_t* this, sd_domnode_t* anode)
            logdir, logprefix,
            rollingpolicy_name ? rollingpolicy_name : "(not set)");
 
-        rfup = rollingfile_make_udata();
-
-        rollingfile_udata_set_logdir(rfup, logdir);
-        rollingfile_udata_set_files_prefix(rfup, logprefix);
-
         if (rollingpolicy_name && *rollingpolicy_name) {
           /* recover a rollingpolicy instance with this name */
           rollingpolicyp = log4c_rollingpolicy_get(rollingpolicy_name);
           
           /* connect that policy to this rollingfile appender conf */
+          rfup = rollingfile_make_udata();
+          rollingfile_udata_set_logdir(rfup, logdir);
+          rollingfile_udata_set_files_prefix(rfup, logprefix);
           rollingfile_udata_set_policy(rfup, rollingpolicyp);
           log4c_appender_set_udata(app, rfup);
           
