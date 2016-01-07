@@ -90,15 +90,14 @@ static int stream2_append(log4c_appender_t* this,
 /*******************************************************************************/
 static int stream2_close(log4c_appender_t* this)
 {
-    log4c_stream2_udata_t *s2up = log4c_appender_get_udata(this);
     int rc = -1;
     
     if ( !this){
 	return rc;
     }
-    s2up = stream2_get_udata(this);
+    log4c_stream2_udata_t *s2up = log4c_appender_get_udata(this);
     if ( !s2up){
-	return(rc);
+	return 0;
     }  
 
     if ( s2up->s2u_fp && (s2up->s2u_state & STREAM2_MY_FP) ){

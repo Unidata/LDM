@@ -322,7 +322,14 @@ LOG4C_API int sizewin_udata_set_rfudata(rollingpolicy_sizewin_udata_t *swup,
                        private functions
 *****************************************************************************/
 
-
+/**
+ * Returns an array of log file pathnames.
+ *
+ * @param swup[in]  Pointer to size-window user-data.
+ * @return          Pointer to allocated memory containing pointers to
+ *                  allocated memory containing pathnames. Caller should free
+ *                  when it's no longer needed.
+ */
 static char **sizewin_make_filename_array(rollingpolicy_sizewin_udata_t *swup){
 
   int i = 0;
@@ -339,7 +346,15 @@ static char **sizewin_make_filename_array(rollingpolicy_sizewin_udata_t *swup){
 }
 
 /****************************************************************************/
-
+/**
+ * Returns the pathname of an old log file.
+ *
+ * @param swup[in]  Pointer to size-window user-data.
+ * @param i[in]     Index of the log file.
+ * @return          Pointer to allocated memory containing the constructed
+ *                  pathname of the file. Caller should free when it's no longer
+ *                  needed.
+ */
 static char* sizewin_get_filename_by_index(rollingpolicy_sizewin_udata_t* swup,
 					   long i){
   char tmp[100];

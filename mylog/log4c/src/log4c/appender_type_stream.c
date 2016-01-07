@@ -50,7 +50,7 @@ static int stream_close(log4c_appender_t* this)
 	return 0;
 
     retval = fclose(fp);
-    if (retval == 0) log4c_appender_set_udata(this, NULL);
+    log4c_appender_set_udata(this, NULL);
     return retval;
 }
 

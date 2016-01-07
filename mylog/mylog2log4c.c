@@ -1,5 +1,5 @@
 /**
- * Copyright 2015 University Corporation for Atmospheric Research. All rights
+ * Copyright 2016 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -425,7 +425,7 @@ static log4c_appender_t* init_appender_layout(
 }
 
 /**
- * Sets the layout of the appender to the system logging daemon to the standard
+ * Sets the layout of an appender to the system logging daemon to the standard
  * layout.
  *
  * @param[in]  facility  The system logging daemon facility to use.
@@ -448,9 +448,12 @@ static bool init_appender_syslog(
     };
     type.name = name; // Name of an appender-type must persist
     (void)log4c_appender_type_set(&type);
-    log4c_appender_t* const app = init_appender_layout(type.name);
+    log4c_appender_t* app = log4c_appender_get(name);
     if (app == NULL)
         return false;
+    assert(mylog_layout);
+    (void)log4c_appender_set_layout(app, mylog_layout);
+    (void)log4c_appender_set_type(app, &type);
     intptr_t ptr = facility;
     (void)log4c_appender_set_udata(app, (void*)ptr);
     *appender = app;

@@ -94,7 +94,7 @@ static int rollingfile_open(log4c_appender_t* this)
  */
  if ( rfup->rfu_conf.rfc_policy ) {
    sd_debug("rollingfile udata has a policy '%s'--calling rollover",
-          log4c_rollingpolicy_get_name( rfup->rfu_conf.rfc_policy)  );
+          (const char*)log4c_rollingpolicy_get_name( rfup->rfu_conf.rfc_policy)  );
    
    /*
    * If the policy is not yet initialized force it now to default values
@@ -129,8 +129,15 @@ static int rollingfile_open(log4c_appender_t* this)
 static int rollingfile_append(log4c_appender_t* this, 
 			 const log4c_logging_event_t* a_event)
 {
-  rollingfile_udata_t* rfup = log4c_appender_get_udata(this); 
+  rollingfile_udata_t* rfup = log4c_appender_get_udata(this);
   int rc = 0;
+  /*
+  if (rfup == NULL) {
+    rc = rollingfile_open(this);
+    if (rc)
+      return rc;
+  }
+  */
 
   sd_debug("rollingfile_append[");
  
@@ -193,34 +200,36 @@ static int rollingfile_close(log4c_appender_t* this)
   } else {
  
     rfup = log4c_appender_get_udata(this);
- 
-    pthread_mutex_lock(&rfup->rfu_mutex);  /***** LOCK ****/  
-    rc = (rfup->rfu_current_fp ? fclose(rfup->rfu_current_fp) : 0);
-    rfup->rfu_current_fp = NULL;
-    
-    rfup->rfu_current_file_size = 0;
-    if( rfup->rfu_base_filename) {
-      free( (char *)rfup->rfu_base_filename);
-      rfup->rfu_base_filename = NULL;
-    }
-    if( rfup->rfu_conf.rfc_logdir) {
-      free( (char *)rfup->rfu_conf.rfc_logdir);
-      rfup->rfu_conf.rfc_logdir = NULL;
-    }
-    if( rfup->rfu_conf.rfc_files_prefix) {
-      free( (char *)rfup->rfu_conf.rfc_files_prefix);
-      rfup->rfu_conf.rfc_files_prefix = NULL;
-    }
-    if ( rfup->rfu_conf.rfc_policy){
-      if (!log4c_rollingpolicy_fini(rfup->rfu_conf.rfc_policy)){
-        rfup->rfu_conf.rfc_policy = NULL;
-      }else{ 
-        sd_debug("rollingpolicy fini failed");
-        rc = -1;
+    if (rfup) {
+      pthread_mutex_lock(&rfup->rfu_mutex);  /***** LOCK ****/
+      rc = (rfup->rfu_current_fp ? fclose(rfup->rfu_current_fp) : 0);
+      rfup->rfu_current_fp = NULL;
+
+      rfup->rfu_current_file_size = 0;
+      if( rfup->rfu_base_filename) {
+        free( (char *)rfup->rfu_base_filename);
+        rfup->rfu_base_filename = NULL;
       }
+      if( rfup->rfu_conf.rfc_logdir) {
+        free( (char *)rfup->rfu_conf.rfc_logdir);
+        rfup->rfu_conf.rfc_logdir = NULL;
+      }
+      if( rfup->rfu_conf.rfc_files_prefix) {
+        free( (char *)rfup->rfu_conf.rfc_files_prefix);
+        rfup->rfu_conf.rfc_files_prefix = NULL;
+      }
+      if ( rfup->rfu_conf.rfc_policy){
+        if (!log4c_rollingpolicy_fini(rfup->rfu_conf.rfc_policy)){
+          rfup->rfu_conf.rfc_policy = NULL;
+        }else{
+          sd_debug("rollingpolicy fini failed");
+          rc = -1;
+        }
+      }
+      pthread_mutex_unlock(&rfup->rfu_mutex);  /****** UNLOCK *****/
+      free(rfup);
+      log4c_appender_set_udata(this, NULL);
     }
-    
-    pthread_mutex_unlock(&rfup->rfu_mutex);  /****** UNLOCK *****/
   }
   sd_debug("]");
   return(rc);
@@ -335,6 +344,11 @@ static char *rollingfile_make_base_name(const char *logdir, const char* prefix){
 	   FILE_SEP, prefix);
 
   return(s);
+}
+
+static int rollingfile_noop(log4c_appender_t* this)
+{
+    return 0;
 }
 
 /****************************************************************************/

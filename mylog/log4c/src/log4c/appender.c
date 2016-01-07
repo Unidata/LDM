@@ -241,9 +241,7 @@ extern int log4c_appender_open(log4c_appender_t* this)
   if (this->app_type->open(this) == -1){
     rc = -1;
   }
-  if (!rc) {
-    this->app_isopen++;
-  }
+  this->app_isopen = !rc;
 
   return rc;
 }
@@ -257,46 +255,52 @@ extern int log4c_appender_append(
   log4c_appender_t*		this, 
   log4c_logging_event_t*	a_event)
 {
-  if (!this)
-    return -1;
-  
-  if (!this->app_type)
-    return 0;
-  
-  if (!this->app_type->append)
-    return 0;
-  
-  if (!this->app_isopen)
-    if (log4c_appender_open(this) == -1)
-     return -1;
-	
-    if ( (a_event->evt_rendered_msg = 
-      log4c_layout_format(this->app_layout, a_event)) == NULL)
+  int rc;
+  if (this == NULL) {
+    rc = -1;
+  }
+  else if (this->app_type == NULL || this->app_type->append == NULL) {
+    rc = 0;
+  }
+  else {
+    rc = this->app_isopen ? 0 : log4c_appender_open(this);
+    if (rc == 0) {
+      a_event->evt_rendered_msg = log4c_layout_format(this->app_layout, a_event);
+      if (a_event->evt_rendered_msg == NULL)
         a_event->evt_rendered_msg = a_event->evt_msg;
-
-    return this->app_type->append(this, a_event);
+      rc = this->app_type->append(this, a_event);
+    }
+  }
+  return rc;
 }
 
 /*******************************************************************************/
 extern int log4c_appender_close(log4c_appender_t* this)
 {
-  if (!this)
-    return -1;
-  
-  if (!this->app_isopen)
-    return 0;
-  
-  if (!this->app_type)
-    return 0;
-  
-  if (!this->app_type->close)
-    return 0;
-  
-  if (this->app_type->close(this) == -1)
-    return -1;
-  
-  this->app_isopen--;
-  return 0;
+  int rc;
+  if (this == NULL) {
+    rc = -1;
+  }
+  else if (this->app_type == NULL || this->app_type->close == NULL) {
+    this->app_isopen = 0;
+    rc = 0;
+  }
+  /*
+   * NB: The appender's close() function is always called if it exists --
+   * regardless of whether or not the appender's open() function was called.
+   * This is done so that the appender can free any resources acquired during
+   * construction (e.g., the pathname members of the rollingfile appender). This
+   * means, however, that the close() function of every appender must be
+   * idempotent.
+   */
+  else if (this->app_type->close(this) == -1) {
+    rc = -1;
+  }
+  else {
+    this->app_isopen = 0;
+    rc = 0;
+  }
+  return rc;
 }
 
 /*******************************************************************************/
