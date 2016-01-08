@@ -248,7 +248,7 @@ static int sizewin_fini(log4c_rollingpolicy_t *this){
   if (!swup){
     goto sizewin_fini_exit;
   }
-  
+
   for ( i = 0; i<swup->sw_conf.swc_file_max_num_files; i++){
     if ( swup->sw_filenames[i]){
       free(swup->sw_filenames[i]);

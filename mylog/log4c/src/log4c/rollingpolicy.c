@@ -165,11 +165,15 @@ LOG4C_API int log4c_rollingpolicy_fini(log4c_rollingpolicy_t *this){
   if (!this){
     rc = 0;
   } else {
-    if (this->policy_flags & PFLAGS_IS_INITIALIZED){
-      if (this->policy_type){
-        rc = this->policy_type->fini(this);
-      }
-    }
+    /*
+     * NB: The rolling-policy's close() function is always called if it exists
+     * -- regardless of whether or not its open() function was called. This is
+     * done so that the any resources acquired during construction can be freed
+     * (e.g., pathnames of old log files). This means, however, that such
+     * close() functions must be idempotent.
+     */
+    if (this->policy_type)
+      rc = this->policy_type->fini(this);
     
     if (!rc){
       this->policy_flags &= ~PFLAGS_IS_INITIALIZED;

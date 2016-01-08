@@ -15,6 +15,7 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -411,6 +412,38 @@ static void test_mylog_refresh(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
+static void test_sighup(void)
+{
+    (void)unlink(tmpPathname);
+    int status = mylog_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = mylog_set_output(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+
+    logMessages();
+    int n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
+
+    status = rename(tmpPathname, tmpPathname1);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    (void)raise(SIGHUP);
+
+    logMessages();
+    n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
+
+    status = mylog_fini();
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = unlink(tmpPathname1);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
 int main(
         const int    argc,
         char* const* argv)
@@ -423,7 +456,6 @@ int main(
 
         if (NULL != testSuite) {
             if (       CU_ADD_TEST(testSuite, test_init_fini)
-                    /*
                     && CU_ADD_TEST(testSuite, test_init_fini)
                     && CU_ADD_TEST(testSuite, test_mylog_get_level)
                     && CU_ADD_TEST(testSuite, test_mylog_roll_level)
@@ -437,6 +469,8 @@ int main(
                     && CU_ADD_TEST(testSuite, test_mylog_add)
                     && CU_ADD_TEST(testSuite, test_mylog_syserr)
                     && CU_ADD_TEST(testSuite, test_mylog_refresh)
+                    && CU_ADD_TEST(testSuite, test_sighup)
+                    /*
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();

@@ -277,38 +277,30 @@ static int rollingpolicy_load(log4c_rc_t* this, sd_domnode_t* anode)
            (maxsize && maxsize->value ? maxsize->value :"(not set)"),
            (maxnum && maxnum->value ? maxnum->value :"(not set)"),
            (name && name->value ? name->value :"(not set)"));
-        /*
-         * Get a new sizewin policy type and configure it.
-         * Then attach it to the policy object.
-         * Check to see if this policy already has a
-         sw udata object.  If so, leave as is except update
-         the params
-        */
-        if ( !(sizewin_udatap = log4c_rollingpolicy_get_udata(rpolicyp))){ 
-          sd_debug("creating new sizewin udata for this policy");
-          sizewin_udatap = sizewin_make_udata();
-          log4c_rollingpolicy_set_udata(rpolicyp,sizewin_udatap);   
-	  a_maxsize = parse_byte_size(maxsize->value);
-	  if (a_maxsize)
-            sizewin_udata_set_file_maxsize(sizewin_udatap, a_maxsize);
-	  else{
-	    sd_debug("When parsing %s a size of 0 was returned. Default size %d will be used",
-	      maxsize->value, ROLLINGPOLICY_SIZE_DEFAULT_MAX_FILE_SIZE);
-	    sizewin_udata_set_file_maxsize(sizewin_udatap, ROLLINGPOLICY_SIZE_DEFAULT_MAX_FILE_SIZE); 
-	  }
 
+        /*
+         * Ensure that the policy user-data pointer, `rpolicyp->policy_udata`,
+         * is NULL and that any previously allocated resources are freed.
+         */
+        log4c_rollingpolicy_fini(rpolicyp);
+        /*
+         * Create a new sizewin policy type and configure it. Then attach it to
+         * the policy object.
+         */
+        sizewin_udatap = sizewin_make_udata();
+        log4c_rollingpolicy_set_udata(rpolicyp,sizewin_udatap);
+        a_maxsize = parse_byte_size(maxsize->value);
+        if (a_maxsize)
+          sizewin_udata_set_file_maxsize(sizewin_udatap, a_maxsize);
+        else{
+          sd_debug("When parsing %s a size of 0 was returned. Default size %d will be used",
+            maxsize->value, ROLLINGPOLICY_SIZE_DEFAULT_MAX_FILE_SIZE);
+          sizewin_udata_set_file_maxsize(sizewin_udatap, ROLLINGPOLICY_SIZE_DEFAULT_MAX_FILE_SIZE);
+        }
         sizewin_udata_set_max_num_files(sizewin_udatap, atoi(maxnum->value));
-        }else{
-          sd_debug("policy already has a sizewin udata--just updating params");
-        sizewin_udata_set_file_maxsize(sizewin_udatap, parse_byte_size(maxsize->value));
-        sizewin_udata_set_max_num_files(sizewin_udatap, atoi(maxnum->value));
-         /* allow the policy to initialize itself */
-        log4c_rollingpolicy_init(rpolicyp, 
-            log4c_rollingpolicy_get_rfudata(rpolicyp));
-        }        
-       
+        log4c_rollingpolicy_init(rpolicyp,
+          log4c_rollingpolicy_get_rfudata(rpolicyp));
       }
-    
     }
     sd_debug("]");
 

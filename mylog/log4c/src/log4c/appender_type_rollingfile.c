@@ -346,11 +346,6 @@ static char *rollingfile_make_base_name(const char *logdir, const char* prefix){
   return(s);
 }
 
-static int rollingfile_noop(log4c_appender_t* this)
-{
-    return 0;
-}
-
 /****************************************************************************/
 const log4c_appender_type_t log4c_appender_type_rollingfile = {
     "rollingfile",
