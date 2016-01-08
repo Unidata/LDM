@@ -105,29 +105,13 @@ static volatile sig_atomic_t hupped;
  */
 static sigset_t              hup_sigset;
 /**
- * The signal action for this module.
+ * The SIGHUP action for this module.
  */
 static struct sigaction      hup_sigaction;
 /**
  * The previous SIGHUP action when this module's SIGHUP action is registered.
  */
 static struct sigaction      prev_hup_sigaction;
-
-static inline void lock()
-{
-    if (mutex_lock(&mutex))
-        abort();
-    if (hupped) {
-        mylog_refresh();
-        hupped = 0;
-    }
-}
-
-static inline void unlock()
-{
-    if (mutex_unlock(&mutex))
-        abort();
-}
 
 /**
  * Copies a string up to a limit on the number of bytes. Ensures that the copy
@@ -775,6 +759,37 @@ static int set_id(
 }
 
 /**
+ * Refreshes the logging module. In particular, if logging is to a file, then
+ * the file is closed and re-opened; thus allowing for log file rotation.
+ *
+ * @retval  0  Success.
+ * @retval -1  Failure. The logging module is in an unspecified state.
+ */
+static int refresh(void)
+{
+    int status;
+    if (!initialized) {
+        status = -1;
+    }
+    else {
+        mylog_level_t level = log_level;
+        char id[_XOPEN_PATH_MAX];
+        char out[_XOPEN_PATH_MAX];
+        string_copy(id, progname, sizeof(id));
+        string_copy(out, output, sizeof(out));
+        status = fini();
+        if (status == 0) {
+            status = init(id);
+            if (status == 0)
+                status = set_output(out);
+                if (status == 0)
+                    status = set_level(level);
+        }
+    }
+    return status;
+}
+
+/**
  * Handles SIGHUP delivery. Sets variable `hupped` and ensures that any
  * previously-registered SIGHUP handler is called.
  *
@@ -791,6 +806,22 @@ static void handle_sighup(
         (void)sigprocmask(SIG_UNBLOCK, &hup_sigset, NULL);
         (void)sigaction(SIGHUP, &hup_sigaction, NULL);
     }
+}
+
+static inline void lock()
+{
+    if (mutex_lock(&mutex))
+        abort();
+    if (hupped) {
+        refresh();
+        hupped = 0;
+    }
+}
+
+static inline void unlock()
+{
+    if (mutex_unlock(&mutex))
+        abort();
 }
 
 /**

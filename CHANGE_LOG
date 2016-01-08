@@ -1,3 +1,7 @@
+6.12.15.39
+    pqact.c:
+        Added SIGHUP forwarding.
+
 6.12.15.38	2016-01-07T12:21:35-0700
     ldmd.c:
         Corrected some Coverity-discovered lint.
