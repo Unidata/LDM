@@ -63,6 +63,11 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
         }
 
         lvltbl->info = (G2level *)malloc((size_t)nr*sizeof(G2level));
+        if (lvltbl->info == NULL) {
+            iret = -1;
+            cfl_clos(fp, &ier);
+            return;
+        }
         lvltbl->nlines = nr;
 
         n  = 0;
