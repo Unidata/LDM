@@ -12,11 +12,13 @@ lib_la_SOURCES		= ulog.c log.c
 EXTRA_DIST		= log.h
 dist_man3_MANS		= ulog.3
 
+check_PROGRAMS		= test0
 test0_SOURCES		= ulog.c
 test0_CPPFLAGS		= -DTEST0
 test0_LDADD		= ../lib/libldm.la
 test_gmtime_SOURCES	= test_gmtime.c
 
-check-local:	$(test0_LDADD)
+TESTS			= test_gmtime
+
+check-local:	test0
 	./test0 -l - 2>/dev/null
-	./test_gmtime
