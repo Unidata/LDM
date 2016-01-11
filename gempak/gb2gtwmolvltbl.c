@@ -68,6 +68,7 @@ void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl,
             return;
         }
 
+        free(currlvltbl.info);
         currlvltbl = tmptbl;
         (void)strcpy(currtable, tmpname);
     }

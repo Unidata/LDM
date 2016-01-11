@@ -72,7 +72,10 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
         while ( n < nr ) {
 
             cfl_trln( fp, 256, buffer, &ier );
-            if ( ier != 0 ) break;
+            if ( ier != 0 ) {
+                free(vartbl->info);
+                break;
+            }
 
 	    cst_lstr (  buffer, &blen, &ier );
 

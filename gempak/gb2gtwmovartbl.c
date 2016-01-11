@@ -64,11 +64,7 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
      *  If different table, read new one in.
      */
     if ( strcmp( tmpname, currtable ) != 0 ) {
-        if ( currvartbl.info != 0 ) {
-            free(currvartbl.info);
-            currvartbl.info=0;
-            currvartbl.nlines=0;
-        }
+        static G2vars_t tmptbl = {0, 0};
         ctb_g2rdvar( tmpname, &currvartbl, &ier );
         if ( ier != 0 ) {
             char        ctemp[256];
@@ -81,8 +77,10 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
             *g2vartbl = &currvartbl;
             return;
         }
+        free(currvartbl.info);
+        currvartbl = tmptbl;
+        strcpy(currtable, tmpname);
     }
-    strcpy( currtable, tmpname );
     *g2vartbl = &currvartbl;
     *filename = currtable;
 

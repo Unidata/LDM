@@ -13,7 +13,7 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
  * This routine will read a GRIB2 vertical coordinate level/layer       *
  * table into an array of structures.	                                *
  * The table is allocated locally and a pointer to the new table is     *
- * passed back to the user in argument lvltbl.  The user is resposible  *
+ * passed back to the user in argument lvltbl.  The user is responsible *
  * for freeing this memory, when the table is no longer needed, by      *
  * free(lvltbl.info)                                                    *
  *									*
@@ -69,7 +69,10 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
         while ( n < nr ) {
 
             cfl_trln( fp, 256, buffer, &ier );
-            if ( ier != 0 ) break;
+            if ( ier != 0 ) {
+                free(lvltbl->info);
+                break;
+            }
 
 	    cst_lstr (  buffer, &blen, &ier );
 

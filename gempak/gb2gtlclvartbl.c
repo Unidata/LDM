@@ -67,16 +67,11 @@ void  gb2_gtlclvartbl( char *lclvartbl, char *cntr, int lclver,
      *  If different table, read new one in.
      */
     if ( strcmp( tmpname, currtable ) != 0 ) {
-        if ( currvartbl.info != 0 ) {
-            free(currvartbl.info);
-            currvartbl.info=0;
-            currvartbl.nlines=0;
-        }
-        ctb_g2rdvar( tmpname, &currvartbl, &ier );
+        G2vars_t tmpvartbl = {0, 0};
+        ctb_g2rdvar( tmpname, &tmpvartbl, &ier );
         if ( ier != 0 ) {
             char        ctemp[256];
 
-            currvartbl.nlines=0;
             *iret=-31;
             (void)sprintf(ctemp, "Couldn't open local GRIB2 parameter table: "
                     "\"%s\"", tmpname);
@@ -84,8 +79,11 @@ void  gb2_gtlclvartbl( char *lclvartbl, char *cntr, int lclver,
             *g2vartbl = &currvartbl;
             return;
         }
+
+        free(currvartbl.info);
+        currvartbl = tmpvartbl;
+        (void)strcpy(currtable, tmpname);
     }
-    strcpy( currtable, tmpname );
     *g2vartbl = &currvartbl;
     *filename = currtable;
 
