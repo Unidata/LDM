@@ -1,5 +1,7 @@
 6.12.15.40
     Removed mylog2ulog stuff from ulog makefile.
+    
+    Eliminated memory-leaks from components that read GEMPAK tables.
 
 6.12.15.39	2015-11-16T16:04:41-0700
     mldm_sender_manager(3):
