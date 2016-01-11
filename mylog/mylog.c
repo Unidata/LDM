@@ -1,16 +1,34 @@
 /**
- *   Copyright © 2015, University Corporation for Atmospheric Research
- *   See file ../COPYRIGHT for copying and redistribution conditions.
+ *   Copyright 2016, University Corporation for Atmospheric Research. All rights
+ *   reserved. See the file COPYRIGHT in the top-level source-directory for
+ *   licensing conditions.
  *
  * Provides for accumulating log-messages into a thread-specific list and the
- * emission of that list at a single logging level.
- *
- * This module is part of the `mylog` module.
+ * logging of that list at a single logging level.
  *
  * This module is thread-safe.
  *
- * @file   mylog_internal.c
+ * @file   mylog.c
  * @author Steven R. Emmerson
+ *
+ * REQUIREMENTS:
+ *   - Can log to
+ *     - System logging daemon (-l '')
+ *     - Standard error stream (-l -) if not a daemon
+ *     - File (-l _pathname_)
+ *   - Default output
+ *     - If daemon
+ *       - If backward-compatible: system logging daemon
+ *       - If not backward-compatible: standard LDM log file
+ *     - Otherwise, standard error stream
+ *   - Output format consistent with earlier logging except for timestamp
+ *   - Timestamp format
+ *     - Chosen by system logging daemon when used
+ *     - Otherwise, in ISO 8601 format with microsecond precision and UTC
+ *       timezone (<em>YYYYMMDD</em>T<em>hhmmss.uuuuuu</em>Z)
+ *   - Allow log file rotation via SIGHUP handling
+ *   - Pathname of standard LDM log file configurable with session resolution,
+ *     at least
  */
 #include <config.h>
 
