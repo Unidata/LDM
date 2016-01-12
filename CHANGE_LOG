@@ -1,3 +1,7 @@
+6.12.15.41
+    Get "make distclean" to work on both Winters (with C++11 support) and Spock
+    (without C++11 support).
+
 6.12.15.40	2016-01-11T16:07:56-0700
     Removed mylog2ulog stuff from ulog makefile.
     

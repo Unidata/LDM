@@ -45,7 +45,7 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 # mldm_sender_manager_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory
-CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf
+CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 .hin.h:

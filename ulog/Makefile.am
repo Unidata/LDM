@@ -1,4 +1,4 @@
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2016 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -9,8 +9,9 @@
 include_HEADERS		= ulog.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= ulog.c log.c
-EXTRA_DIST		= log.h
+EXTRA_DIST		= log.h test_gmtime.c
 dist_man3_MANS		= ulog.3
+CLEANFILES		= test_gmtime
 
 check_PROGRAMS		= test0
 test0_SOURCES		= ulog.c

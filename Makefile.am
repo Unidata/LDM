@@ -16,13 +16,16 @@ SUDO				= @SUDO@
 SU				= @SU@
 PQ_SUBDIR			= @PQ_SUBDIR@
 
-# Keep the value of LDMHOME consonant with that in `CI-commit.sh`
+# Keep the value of LDMHOME consonant with that in `CI-commit.sh`.
+# "--with-multicast" is conditional because Spock's g++ is 4.6.3 and doesn't
+# support the C++11 standard (in particular, `std::this_thread::sleep_for()`),
+# which is used by `mcast_lib/vcmtp/VCMTPV3/RateShaper/RateShaper.cpp`.
 AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
                                   --disable-root-actions \
 				  --with-noaaport \
 				  --with-retrans \
 				  --with-gribinsert \
-				  --with-multicast \
+				  @DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST@ \
 				  LDMHOME=`cd ../_inst && pwd`
 # This works and doesn't result in `redefined` warnings but does rely
 # inappropriately on `../_inst` being the `make distcheck` installation
