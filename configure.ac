@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.15.41], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.15.42], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -30,7 +30,10 @@ AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
 AC_PROG_CXX
 if test "$GXX" = "yes"; then
     AC_SUBST([AM_CXXFLAGS], [-std=c++0x])
-    DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast
+    case `$CXX -dumpversion` in
+        ([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
+        (4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
+    esac
 else
     DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=
 fi
