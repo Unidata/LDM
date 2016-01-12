@@ -1,4 +1,4 @@
-6.12.15.41
+6.12.15.41	2016-01-12T09:28:01-0700
     Get "make distclean" to work on both Winters (with C++11 support) and Spock
     (without C++11 support).
 
