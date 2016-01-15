@@ -16,24 +16,28 @@
  *     - System logging daemon (-l '')
  *     - Standard error stream (-l -) if not a daemon
  *     - File (-l _pathname_)
- *   - Default output
+ *   - Default destination for log messages
  *     - If daemon
  *       - If backward-compatible: system logging daemon
  *       - If not backward-compatible: standard LDM log file
  *     - Otherwise, standard error stream
- *   - Output format consistent with earlier logging except for timestamp
- *   - Timestamp format
- *     - Chosen by system logging daemon when used
- *     - Otherwise, in ISO 8601 format with microsecond precision and UTC
- *       timezone (<em>YYYYMMDD</em>T<em>hhmmss.uuuuuu</em>Z)
- *   - Allow log file rotation via SIGHUP handling
- *   - Pathname of standard LDM log file configurable with session resolution,
- *     at least
+ *   - Pathname of standard LDM log file configurable at session time
+ *   - Output format
+ *     - If using system logging daemon: chosen by daemon
+ *     - Otherwise:
+ *       - Pattern: _time_ _process_ _priority_ _location_ _message_
+ *         - _time_: <em>YYYYMMDD</em>T<em>hhmmss</em>.<em>uuuuuu</em>Z
+ *         - _process_: _program_[_pid_]
+ *         - _priority_: DEBUG | INFO | NOTE | WARN | ERROR
+ *         - _location_: _file_:_line_
+ *       - Example: 20160113T150106.734013Z noaaportIngester[26398] NOTE process_prod.c:216 SDUS58 PACR 062008 /pN0RABC inserted
+ *   - Enable log file rotation by refreshing destination upon SIGHUP reception
  */
 #include <config.h>
 
 #undef NDEBUG
 #include "mylog.h"
+#include "mutex.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -42,6 +46,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>   /* NULL */
 #include <stdio.h>    /* vsnprintf(), snprintf() */
 #include <stdlib.h>   /* malloc(), free(), abort() */
@@ -63,17 +68,35 @@ typedef struct list {
 /**
  * Key for the thread-specific list of log messages.
  */
-static pthread_key_t    listKey;
-
+static pthread_key_t         listKey;
 /**
  * Whether or not the thread-specific key has been created.
  */
-static pthread_once_t   key_creation_control = PTHREAD_ONCE_INIT;
-
+static pthread_once_t        key_creation_control = PTHREAD_ONCE_INIT;
 /**
  * The mutex that makes this module thread-safe.
  */
-static pthread_mutex_t  mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t       mutex;
+/**
+ * Whether a SIGHUP has been delivered.
+ */
+static volatile sig_atomic_t hupped;
+/**
+ * The SIGHUP signal set.
+ */
+static sigset_t              hup_sigset;
+/**
+ * The SIGHUP action for this module.
+ */
+static struct sigaction      hup_sigaction;
+/**
+ * The previous SIGHUP action when this module's SIGHUP action is registered.
+ */
+static struct sigaction      prev_hup_sigaction;
+/**
+ * The signal mask of all signals.
+ */
+static sigset_t              all_sigset;
 
 /**
  * Blocks all signals for the current thread. This is done so that the
@@ -86,10 +109,7 @@ static pthread_mutex_t  mutex = PTHREAD_MUTEX_INITIALIZER;
 static void blockSigs(
         sigset_t* const prevset)
 {
-    sigset_t sigset;
-
-    (void)sigfillset(&sigset);
-    (void)pthread_sigmask(SIG_BLOCK, &sigset, prevset);
+    (void)pthread_sigmask(SIG_BLOCK, &all_sigset, prevset);
 }
 
 /**
@@ -104,6 +124,25 @@ static void restoreSigs(
 }
 
 /**
+ * Handles SIGHUP delivery. Sets variable `hupped` and ensures that any
+ * previously-registered SIGHUP handler is called.
+ *
+ * @param[in] sig  SIGHUP.
+ */
+static void handle_sighup(
+        const int sig)
+{
+    hupped = 1;
+    if (prev_hup_sigaction.sa_handler != SIG_DFL &&
+            prev_hup_sigaction.sa_handler != SIG_IGN) {
+        (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+        raise(SIGHUP);
+        (void)sigprocmask(SIG_UNBLOCK, &hup_sigset, NULL);
+        (void)sigaction(SIGHUP, &hup_sigaction, NULL);
+    }
+}
+
+/**
  * Locks this module's lock.
  *
  * This function is thread-safe. On entry, this module's lock shall be
@@ -113,6 +152,10 @@ static void lock(void)
 {
     int status = pthread_mutex_lock(&mutex);
     mylog_assert(status == 0);
+    if (hupped) {
+        mylog_refresh();
+        hupped = 0;
+    }
 }
 
 /**
@@ -125,6 +168,39 @@ static void unlock(void)
 {
     int status = pthread_mutex_unlock(&mutex);
     mylog_assert(status == 0);
+}
+
+/**
+ * Initializes this logging module.
+ */
+int mylog_init(
+        const char* const id)
+{
+    (void)sigfillset(&all_sigset);
+    (void)sigemptyset(&hup_sigset);
+    (void)sigaddset(&hup_sigset, SIGHUP);
+    hup_sigaction.sa_mask = hup_sigset;
+    hup_sigaction.sa_flags = SA_RESTART;
+    hup_sigaction.sa_handler = handle_sighup;
+    (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
+    int status = mutex_init(&mutex, true, true);
+    if (status == 0)
+        status = mylog_impl_init(id);
+    return status;
+}
+
+/**
+ * Finalizes this logging module.
+ */
+int mylog_fini(void)
+{
+    int status = mylog_impl_fini();
+    if (status == 0) {
+        status = mutex_fini(&mutex);
+        if (status == 0)
+            (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+    }
+    return status ? -1 : 0;
 }
 
 static void create_key(void)
@@ -171,6 +247,22 @@ static List* list_get(void)
     return list;
 }
 
+/**
+ * Indicates if the message list of the current thread is empty.
+ *
+ * @retval true iff the list is empty
+ */
+static bool list_is_empty()
+{
+    sigset_t sigset;
+    blockSigs(&sigset);
+
+    List* const list = list_get();
+    const bool  is_empty = list->last == NULL;
+
+    restoreSigs(&sigset);
+    return is_empty;
+}
 
 /**
  * Clears the accumulated log-messages of the current thread.
@@ -332,6 +424,60 @@ static int msg_format(
 }
 
 /**
+ * Logs the currently-accumulated log-messages of the current thread and resets
+ * the message-list for the current thread.
+ *
+ * @param[in] level  The level at which to log the messages. One of
+ *                   MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING, MYLOG_LEVEL_NOTICE,
+ *                   MYLOG_LEVEL_INFO, or MYLOG_LEVEL_DEBUG; otherwise, the
+ *                   behavior is undefined.
+ */
+static void flush(
+    const mylog_level_t level)
+{
+    sigset_t sigset;
+    blockSigs(&sigset);
+    List*   list = list_get();
+
+    if (NULL != list && NULL != list->last) {
+        lock();
+
+        if (mylog_is_level_enabled(level)) {
+            for (const Message* msg = list->first; NULL != msg;
+                    msg = msg->next) {
+                mylog_write_one(level, msg);
+
+                if (msg == list->last)
+                    break;
+            }                       /* message loop */
+        }                           /* messages should be printed */
+
+        unlock();
+        list_clear();
+    }                               /* have messages */
+    restoreSigs(&sigset);
+}
+
+/**
+ * Returns the string associated with a logging level.
+ *
+ * @param[in] level  The logging level. One of `MYLOG_LEVEL_DEBUG`,
+ *                   `MYLOG_LEVEL_INFO`, `MYLOG_LEVEL_NOTICE`,
+ *                   `MYLOG_LEVEL_WARNING`, `MYLOG_LEVEL_ERROR`,
+ *                   `MYLOG_LEVEL_ALERT`, `MYLOG_LEVEL_CRIT`, or
+ *                   `MYLOG_LEVEL_EMERG`. The string `"UNKNOWN"` is returned if
+ *                   the level is not one of these values.
+ * @return           The associated string.
+ */
+const char* mylog_level_to_string(
+        const mylog_level_t level)
+{
+    static const char* const strings[] = {"DEBUG", "INFO", "NOTE", "WARN",
+        "ERROR", "ALERT", "CRIT", "FATAL"};
+    return mylog_vet_level(level) ? strings[level] : "UNKNOWN";
+}
+
+/**
  * Returns a pointer to the last component of a pathname.
  *
  * @param[in] pathname  The pathname.
@@ -446,43 +592,6 @@ int mylog_add_errno_located(
 }
 
 /**
- * Logs the currently-accumulated log-messages of the current thread and resets
- * the message-list for the current thread.
- *
- * @param[in] level  The level at which to log the messages. One of MYLOG_LEVEL_ERROR,
- *                   MYLOG_LEVEL_WARNING, MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_INFO,
- *                   or MYLOG_LEVEL_DEBUG; otherwise, the behavior is
- *                   undefined.
- */
-void mylog_flush(
-    const mylog_level_t level)
-{
-    sigset_t sigset;
-    blockSigs(&sigset);
-
-    List*   list = list_get();
-
-    if (NULL != list && NULL != list->last) {
-        lock();
-
-        if (mylog_is_level_enabled(level)) {
-            for (const Message* msg = list->first; NULL != msg;
-                    msg = msg->next) {
-                mylog_write_one(level, msg);
-
-                if (msg == list->last)
-                    break;
-            }                       /* message loop */
-        }                           /* messages should be printed */
-
-        unlock();
-        list_clear();
-    }                               /* have messages */
-
-    restoreSigs(&sigset);
-}
-
-/**
  * Clears the message-list of the current thread.
  */
 void
@@ -560,7 +669,7 @@ void mylog_vlog_located(
 {
     if (format && *format)
         mylog_vadd_located(loc, format, args);
-    mylog_flush(level);
+    flush(level);
 }
 
 /**
@@ -605,6 +714,30 @@ void mylog_errno_located(
     mylog_add_located(loc, "%s", strerror(errnum));
     mylog_vlog_located(loc, MYLOG_LEVEL_ERROR, fmt, args);
     va_end(args);
+}
+
+/**
+ * Logs the currently-accumulated log-messages of the current thread and resets
+ * the message-list for the current thread.
+ *
+ * @param[in] loc    Location.
+ * @param[in] level  The level at which to log the messages. One of
+ *                   MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING, MYLOG_LEVEL_NOTICE,
+ *                   MYLOG_LEVEL_INFO, or MYLOG_LEVEL_DEBUG; otherwise, the
+ *                   behavior is undefined.
+ */
+void mylog_flush_located(
+        const mylog_loc_t* const loc,
+        const mylog_level_t      level)
+{
+    if (!list_is_empty()) {
+        /*
+         * The following message is added so that the location of the call to
+         * mylog_flush() is logged in case the call needs to be adjusted.
+         */
+        mylog_add_located(loc, "Log messages flushed");
+        flush(level);
+    }
 }
 
 

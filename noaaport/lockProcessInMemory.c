@@ -43,12 +43,12 @@ int lockProcessInMemory(void)
     int status;
 
     #if UNSUPPORTED
-        LOG_START0("System doesn't support locking a process in memory");
+        mylog_add("System doesn't support locking a process in memory");
         status = ENOTSUP;
     #else
         #if UNKNOWN
             if (sysconf(_SC_MEMLOCK) <= 0) {
-                LOG_START0("System doesn't support locking a process in memory");
+                mylog_add("System doesn't support locking a process in memory");
                 status = ENOTSUP; // `_SC_MEMLOCK` can't be invalid
             }
             else {
@@ -56,7 +56,7 @@ int lockProcessInMemory(void)
                 status = mlockall(MCL_CURRENT|MCL_FUTURE);
 
                 if (status) {
-                    mylog_add_syserr();
+                    mylog_add_syserr("mlockall() failure");
                     status = errno;
                 }
         #if UNKNOWN

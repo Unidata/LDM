@@ -122,12 +122,12 @@ test_mdl_createAndExecute()
 
     vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     status = mlr_start(mdl);
-    MYLOG_FLUSH_INFO();
+    mylog_flush_info();
     OP_ASSERT_EQUAL_INT(LDM7_SHUTDOWN, status);
 
     vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
     mlr_free(mdl);
-    MYLOG_FLUSH_INFO();
+    mylog_flush_info();
 
     OP_VERIFY();
 }

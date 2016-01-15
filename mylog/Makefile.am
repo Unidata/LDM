@@ -1,4 +1,4 @@
-# Copyright 2015 University Corporation for Atmospheric Research
+# Copyright 2016 University Corporation for Atmospheric Research
 #
 # This file is part of the Unidata LDM package.  See the file COPYRIGHT in
 # the top-level source-directory of the package for copying and redistribution
@@ -13,14 +13,10 @@ lib_la_SOURCES			= mutex.c mutex.h mylog.c mylog.h \
 SUBDIRS				= ulog
 lib_la_LIBADD			= $(builddir)/ulog/lib.la
 
-if WANT_LOG4C
-SUBDIRS				+= log4c
-lib_la_SOURCES			+= mylog2log4c.c mylog2log4c.h
-lib_la_CPPFLAGS			= -I$(srcdir)/log4c/src
-lib_la_LIBADD			+= $(builddir)/log4c/src/log4c/liblog4c.la \
-                                  $(builddir)/log4c/src/sd/liblog4c_sd.la
+if WANT_SLOG
+lib_la_SOURCES			+= mylog2slog.c
 else
-lib_la_SOURCES			+= mylog2ulog.c mylog2ulog.h
+lib_la_SOURCES			+= mylog2ulog.c
 lib_la_CPPFLAGS			= -I$(srcdir)/ulog
 endif
 
@@ -28,9 +24,10 @@ if HAVE_CUNIT
 check_PROGRAMS			= mylog_test
 TESTS				= mylog_test
 
-mylog_test_SOURCES	= mylog_test.c mylog_test.h $(lib_la_SOURCES)
+mylog_test_SOURCES	= mylog_test.c $(lib_la_SOURCES)
 mylog_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@ $(lib_la_CPPFLAGS)
-mylog_test_LDADD	= $(lib_la_LIBADD) @LIBS_CUNIT@
+mylog_test_LDADD	= $(lib_la_LIBADD) $(top_builddir)/lib/libldm.la \
+			  @LIBS_CUNIT@
 
 valgrind:       mylog_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \

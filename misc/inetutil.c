@@ -106,69 +106,46 @@ host_err_str(void)
 char *
 ghostname(void)
 {
+    static char hostname[_POSIX_HOST_NAME_MAX+1];
 
-        static char hostname[_POSIX_HOST_NAME_MAX+1];
-
-        if (hostname[0])
-                return hostname;
-
+    if (hostname[0] == 0) {
         /*
          * The registry is first checked for the hostname because the ldm
-         * programs require fully qualified hostnames in an internet
+         * programs require fully-qualified hostnames in an internet
          * environment AND users often don't have control over the system admin
          * conventions,
          */
-        {
-                char*   cp;
-                int     status = reg_getString(REG_HOSTNAME, &cp);
-
-                if (status) {
-                    ENOENT == status
-                        ? mylog_clear()
-                        : mylog_flush_error();
-                }
-                else
-                {
-                        (void)strncpy(hostname, cp, sizeof(hostname));
-                        hostname[sizeof(hostname)-1] = 0;
-                        free(cp);
-                        return hostname;
-                }
+        char* cp;
+        int   status = reg_getString(REG_HOSTNAME, &cp);
+        if (status == 0) {
+            (void)snprintf(hostname, sizeof(hostname), "%s", cp);
+            hostname[sizeof(hostname)-1] = 0;
+            free(cp);
         }
-
-        if(gethostname(hostname, sizeof(hostname)) < 0)
-                return NULL;
-/* !NO_INET_FQ_KLUDGE ==> try to make sure it is "fully qualified" */
-#ifndef NO_INET_FQ_KLUDGE
-        if(strchr(hostname, '.') == NULL)
-        {
-                /* gethostname return not fully qualified */
-                struct hostent *hp;
-                hp = gethostbyname(hostname);
-                if(hp != NULL && hp->h_addrtype == AF_INET) 
-                {
-                        /* hopefully hp->h_name is fully qualified */
-                        (void)strncpy(hostname, hp->h_name, sizeof(hostname));
-                        hostname[sizeof(hostname)-1] = 0;
-                }
+        else if(gethostname(hostname, sizeof(hostname)) < 0) {
+            (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
+            hostname[sizeof(hostname)-1] = 0;
+            mylog_warning("Couldn't get name of local host from registry or "
+                    "gethostname(). Using default: \"%s\"", hostname);
         }
-        /* 
-         * On some systems, neither gethostname() nor
-         * the hp->h_name is fully qualified.
-         * If you can't shoot the Systems Administrator and fix it,
-         * hardwire the trailing path here.
-         * (Uncomment and replace ".unversity.edu" with your domain.)
-         */
-/* #define HARDWIRED_LOCAL_DOMAIN ".unversity.edu" */
-#ifdef HARDWIRED_LOCAL_DOMAIN
-        if(strchr(hostname, '.') == NULL)
-        {
-                (void)strncat(hostname, HARDWIRED_LOCAL_DOMAIN,
-                        sizeof(hostname)-strlen(hostname));
+        else if (strchr(hostname, '.') == NULL) {
+            // `hostname` isn't fully-qualified
+            struct hostent *hp = gethostbyname(hostname);
+            if (hp == NULL || hp->h_addrtype != AF_INET) {
+                (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
+                hostname[sizeof(hostname)-1] = 0;
+                mylog_warning("Couldn't get fully-qualified name of local host "
+                        "from registry, gethostname(), or gethostbyname(). "
+                        "Using default: \"%s\"", hostname);
+            }
+            else {
+                // Hopefully, `hp->h_name` is fully qualified
+                (void)snprintf(hostname, sizeof(hostname), "%s", hp->h_name);
+                hostname[sizeof(hostname)-1] = 0;
+            }
         }
-#endif /* HARDWIRED_LOCAL_DOMAIN */
-#endif
-        return hostname;
+    }
+    return hostname;
 }
 
 

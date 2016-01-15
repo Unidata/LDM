@@ -8,7 +8,7 @@
 
 BUILT_SOURCES           = parser.c scanner.c
 CLEANFILES		= ldmd.1 *.i .*.info up7.conf down7.conf *.pq \
-			  *.log *.pid *.yaml *.map
+			  *.log *.pid *.yaml *.map *.pim
 LD_GEN			= @LD_GEN@
 YACC			= @YACC@
 EXTRA_DIST		= ldmd.1.in \

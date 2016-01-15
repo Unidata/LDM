@@ -69,14 +69,16 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
             cfl_clos(fp, &ier);
             return;
         }
-
         lvltbl->nlines = nr;
 
         n  = 0;
         while ( n < nr ) {
 
             cfl_trln( fp, 256, buffer, &ier );
-            if ( ier != 0 ) break;
+            if ( ier != 0 ) {
+                free(lvltbl->info);
+                break;
+            }
 
             cst_lstr (  buffer, &blen, &ier );
 

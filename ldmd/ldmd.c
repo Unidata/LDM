@@ -184,7 +184,12 @@ static pid_t reap(
                             "child %d exited with status %d" :
                             "child %d exited with status %d: %*s", wpid,
                     exitStatus, n, command);
-            exitStatus ? mylog_flush_notice() : mylog_flush_info();
+            if (exitStatus) {
+                mylog_flush_notice();
+            }
+            else {
+                mylog_flush_info();
+            }
         }
 #endif /*WIFEXITED*/
 

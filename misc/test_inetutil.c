@@ -126,7 +126,7 @@ sa_parse_test(
 
     CU_ASSERT_PTR_NOT_NULL_FATAL(buf);
     status = sa_parse(&sa, buf);
-    MYLOG_FLUSH_ERROR();
+    mylog_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_STRING_EQUAL(sa_getInetId(sa), inetId);
     CU_ASSERT_EQUAL(sa_getPort(sa), port);
@@ -150,7 +150,7 @@ test_sa_parseWithDefaults(void)
     const short  port = 388;
 
     status = sa_parseWithDefaults(&sa, hostId, NULL, 388);
-    MYLOG_FLUSH_ERROR();
+    mylog_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_STRING_EQUAL(sa_getInetId(sa), hostId);
     CU_ASSERT_EQUAL(sa_getPort(sa), port);

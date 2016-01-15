@@ -44,9 +44,12 @@ parsePid(
     long pid;
 
     if (fscanf(file, "%ld", &pid) != 1) {
-        ferror(file)
-            ? mylog_syserr("Couldn't parse PID")
-            : LOG_START0("Couldn't parse PID");
+        if (ferror(file)) {
+            mylog_syserr("Couldn't parse PID");
+        }
+        else {
+            mylog_add("Couldn't parse PID");
+        }
         pid = -1;
     }
 

@@ -233,7 +233,7 @@ err_log(
          * might have formatting characters in it (e.g., "%") from, for example,
          * a call to "s_prod_info()" with a dangerous product-identifier.
          */
-        mylog_log_located(NULL, mylog_levels[level], "%s", buf);
+        mylog_log(mylog_levels[level], "%s", buf);
     }
 }
 

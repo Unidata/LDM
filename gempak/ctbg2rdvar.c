@@ -66,13 +66,21 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
         }
 
         vartbl->info = (G2Vinfo *)malloc((size_t)nr*sizeof(G2Vinfo));
+        if (vartbl->info == NULL) {
+            iret = -1;
+            cfl_clos(fp, &ier);
+            return;
+        }
         vartbl->nlines = nr;
 
         n  = 0;
         while ( n < nr ) {
 
             cfl_trln( fp, 256, buffer, &ier );
-            if ( ier != 0 ) break;
+            if ( ier != 0 ) {
+                free(vartbl->info);
+                break;
+            }
 
 	    cst_lstr (  buffer, &blen, &ier );
 

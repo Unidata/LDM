@@ -72,7 +72,7 @@ int set_level(
         const mylog_level_t level)
 {
     int status;
-    if (!mylog_vetLevel(level)) {
+    if (!mylog_vet_level(level)) {
         status = -1;
     }
     else {

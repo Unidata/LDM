@@ -97,14 +97,16 @@ int lpqGet(
                     int     err = pq_open(pathname, PQ_DEFAULT, &pq);
 
                     if (err) {
-                        err > 0
-                                ? mylog_errno(err,
-                                        "Couldn't open product-queue \"%s\"",
-                                        pathname)
-                                : mylog_add(
-                                        "Couldn't open product-queue \"%s\": "
-                                        "pq_open() returned %d", pathname,
-                                        err);
+                        if (err > 0) {
+                            mylog_errno(err,
+                                    "Couldn't open product-queue \"%s\"",
+                                    pathname);
+                        }
+                        else {
+                            mylog_add(
+                                    "Couldn't open product-queue \"%s\": "
+                                    "pq_open() returned %d", pathname, err);
+                        }
                         status = 3;
                     }
                     else {

@@ -1,6 +1,4 @@
-WARN lockProcessInMemory.c:59 Cannot allocate memory
-WARN lockProcessInMemory.c:59 mlockall() failure
-WARN noaaportIngester.c:325 Couldn't lock process in physical memory
+NOTE readnoaaport.c:539 Starting Up 6.12.15.42
 NOTE process_prod.c:216 YFBI00 KWBE 061800 /mNAM_84 !grib/ncep/NAM_84/#218/200407061800/F048/PWAT/atmos col/  inserted [cat 4 type 4 ccb 2/1 seq 15530983 size 295770]
 NOTE process_prod.c:216 SDUS24 KLUB 062004 /pN2RLBB inserted [cat 99 type 4 ccb 2/0 seq 15530984 size 4220]
 NOTE process_prod.c:216 SDUS24 KLUB 062004 /pN2SLBB inserted [cat 99 type 4 ccb 2/0 seq 15530985 size 8149]
@@ -179,4 +177,8 @@ NOTE process_prod.c:216 JUSA41 KWNO 062000 inserted [cat 5 type 4 ccb 2/1 seq 15
 NOTE process_prod.c:216 NTUS99 KNCF 062007 /pTSTNCF inserted [cat 1 type 4 ccb 2/0 seq 15531158 size 495]
 NOTE process_prod.c:216 JUSA41 KWNO 062000 inserted [cat 5 type 4 ccb 2/1 seq 15531159 size 9684]
 NOTE process_prod.c:216 JUSA41 KWNO 062000 inserted [cat 5 type 4 ccb 2/1 seq 15531160 size 9684]
-NOTE noaaportIngester.c:630 ----------------------------------------
+NOTE readnoaaport.c:80 Exiting...
+NOTE readnoaaport.c:72 ----------------------------------------
+NOTE readnoaaport.c:73 Ingestion Statistics:
+NOTE readnoaaport.c:74    Number of missed packets 0
+NOTE readnoaaport.c:75 ----------------------------------------

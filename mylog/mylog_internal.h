@@ -39,7 +39,20 @@ typedef struct message {
     size_t          size;       ///< Size of message buffer
 } Message;
 
-#if WANT_LOG4C
+#if WANT_SLOG
+    // `slog` implementation:
+
+    /// Map from MYLOG levels to SYSLOG priorities
+    extern int mylog_syslog_priorities[];
+
+    /// Returns the SYSLOG priority corresponding to a MYLOG level
+    #define mylog_get_priority(level)     mylog_syslog_priorities[level]
+
+    /// Indicates if a log message of the given level would be emitted
+    #define mylog_is_level_enabled(level) slog_is_priority_enabled(level)
+
+    extern int slog_is_priority_enabled(const mylog_level_t level);
+#elif WANT_LOG4C
     // `log4c` implementation:
 
     #include <log4c.h>
@@ -78,16 +91,51 @@ typedef struct message {
 #endif // `ulog` implementation
 
 /**
+ * Initializes the logging module's implementation. Should be called before any
+ * other function.
+ *
+ * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
+ *                     free.
+ * @retval    0        Success.
+ * @retval    -1       Error. Logging module is in an unspecified state.
+ */
+int mylog_impl_init(
+        const char* const id);
+
+/**
+ * Finalizes the logging module's implementation. Should be called eventually
+ * after `mylog_init_impl()`, after which no more logging should occur.
+ *
+ * @retval 0   Success.
+ * @retval -1  Failure. Logging module is in an unspecified state.
+ */
+int mylog_impl_fini(void);
+
+/**
  * Vets a logging level.
  *
  * @param[in] level  The logging level to be vetted.
  * @retval    true   iff `level` is a valid level.
  */
-static inline bool mylog_vetLevel(
+static inline bool mylog_vet_level(
         mylog_level_t level)
 {
     return level >= MYLOG_LEVEL_DEBUG && level <= MYLOG_LEVEL_ERROR;
 }
+
+/**
+ * Returns the string associated with a logging level.
+ *
+ * @param[in] level  The logging level. One of `MYLOG_LEVEL_DEBUG`,
+ *                   `MYLOG_LEVEL_INFO`, `MYLOG_LEVEL_NOTICE`,
+ *                   `MYLOG_LEVEL_WARNING`, `MYLOG_LEVEL_ERROR`,
+ *                   `MYLOG_LEVEL_ALERT`, `MYLOG_LEVEL_CRIT`, or
+ *                   `MYLOG_LEVEL_EMERG`. The string `"UNKNOWN"` is returned if
+ *                   the level is not one of these values.
+ * @return           The associated string.
+ */
+const char* mylog_level_to_string(
+        const mylog_level_t level);
 
 /**
  * Returns a pointer to the last component of a pathname.
@@ -143,6 +191,20 @@ void mylog_errno_located(
         const int                errnum,
         const char* const        fmt,
                                  ...);
+
+/**
+ * Logs the currently-accumulated log-messages of the current thread and resets
+ * the message-list for the current thread.
+ *
+ * @param[in] loc    Location.
+ * @param[in] level  The level at which to log the messages. One of
+ *                   MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING, MYLOG_LEVEL_NOTICE,
+ *                   MYLOG_LEVEL_INFO, or MYLOG_LEVEL_DEBUG; otherwise, the
+ *                   behavior is undefined.
+ */
+void mylog_flush_located(
+        const mylog_loc_t* const loc,
+        const mylog_level_t      level);
 
 /**
  * Emits a single log message.

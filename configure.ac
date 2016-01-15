@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.12.15.39], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.12.15.42], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -30,7 +30,14 @@ AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
 AC_PROG_CXX
 if test "$GXX" = "yes"; then
     AC_SUBST([AM_CXXFLAGS], [-std=c++0x])
+    case `$CXX -dumpversion` in
+        ([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
+        (4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
+    esac
+else
+    DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=
 fi
+AC_SUBST([DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST])
 case "`uname -sr`" in
     "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
     Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
@@ -151,17 +158,16 @@ esac
 
 AM_CONDITIONAL([MAINTAINER], [test -d .git])
 
-# Whether to use the original ulog(3) library for logging or the new log4c(3)
-# logging library.
+# Whether to use the original ulog(3) library for logging
 AC_ARG_WITH([ulog],
     AS_HELP_STRING([--with-ulog],
 	[use the original ulog(3) logging library]
         [[default=no]]),
     [],
     [with_ulog=no])
-AM_CONDITIONAL([WANT_LOG4C], [test "x$with_ulog" != xyes])
-AM_COND_IF([WANT_LOG4C], [AC_DEFINE([WANT_LOG4C], [1],
-    [Package will use Log4C for logging])])
+AM_CONDITIONAL([WANT_SLOG], [test "x$with_ulog" != xyes])
+AM_COND_IF([WANT_SLOG], [AC_DEFINE([WANT_SLOG], [1],
+    [Package will use slog(3) for logging])])
 
 # The following is for multicast data distribution using the Virtual Circuit
 # Multicast Transport Protocol. DO NOT USE!
@@ -415,6 +421,7 @@ AC_MSG_RESULT([$prefix])
 AC_MSG_CHECKING([the name of the host])
 HOSTNAME=`uname -n`
 AC_SUBST([HOSTNAME])
+AC_DEFINE_UNQUOTED([HOSTNAME], ["$HOSTNAME"], [Name of the local host])
 AC_MSG_RESULT([$HOSTNAME])
 
 AC_ARG_VAR([LDMHOME], [Root directory of the LDM installation])
@@ -443,6 +450,20 @@ AC_DEFINE_UNQUOTED([LDM_VAR_RUN_DIR], ["$LDMHOME/var/run"],
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
 AC_DEFINE_UNQUOTED([LDM_QUEUE_DIR], ["$LDMHOME/var/queues"],
     [Pathname of LDM product-queue directory])
+AC_DEFINE([LDM_QUEUE_PATH], [LDM_QUEUE_DIR "/ldm.pq"],
+    [Pathname of LDM product-queue])
+AC_DEFINE_UNQUOTED([PQACT_CONFIG_PATH], ["$LDMHOME/etc/pqact.conf"],
+    [Pathname of default pqact(1) configuration-file])
+AC_DEFINE_UNQUOTED([LDM_CONFIG_PATH], ["$LDMHOME/etc/ldmd.conf"],
+    [Pathname of default LDM configuration-file])
+AC_DEFINE_UNQUOTED([PQACT_DATA_DIR], ["$LDMHOME/var/data"],
+    [Pathname of default pqact(1) data-directory])
+AC_DEFINE_UNQUOTED([PQSURF_DATA_DIR], ["$LDMHOME/var/data"],
+    [Pathname of default pqsurf(1) data-directory])
+AC_DEFINE_UNQUOTED([PQSURF_QUEUE_PATH], [LDM_QUEUE_DIR "/pqsurf.pq"],
+    [Pathname of default pqsurf(1) product-queue])
+AC_DEFINE_UNQUOTED([PQSURF_CONFIG_PATH], ["$LDMHOME/etc/pqsurf.conf"],
+    [Pathname of default pqsurf(1) configuration-file])
 # The following accomodates pre-6.9 LDM installations:
 if test -d $LDMHOME/data -a ! -h $LDMHOME/data; then
     DATA_DIR=$LDMHOME

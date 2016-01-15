@@ -74,30 +74,32 @@ static void setPath(
     strncpy(buf, path, PATH_MAX)[PATH_MAX-1] = 0;
 }
 
-/*
+/**
  * Returns the path name of a file.
  *
- * Arguments:
- *      name            The name of the registry parameter that contains the
- *                      desired pathname.
- *      buf             Buffer of length PATH_MAX into which to put the path.
- *      desc            Pointer to a description of the file.
- * Returns:
- *      NULL            Error.  "mylog_flush()" called.
- *      else            Pointer to the pathname of the file.  Might be absolute
- *                      or relative to the current working directory.
+ * @param[in] name  The name of the registry parameter that contains the
+ *                  desired pathname.
+ * @param[in] buf   Buffer of length PATH_MAX into which to put the path.
+ * @param[in] desc  Pointer to a description of the file.
+ * @param[in] def   Default value
+ * @return          Pointer to the pathname of the file.  Might be absolute
+ *                  or relative to the current working directory. Will be the
+ *                  default value if a value couldn't be recovered from the
+ *                  registry.
  */
 static const char* getPath(
     const char* const   name,
     char                buf[PATH_MAX],
-    const char* const   desc)
+    const char* const   desc,
+    const char* const   def)
 {
     if (0 == buf[0]) {
         char*           var;
 
         if (reg_getString(name, &var)) {
-            mylog_add("Couldn't get pathname of %s", desc);
-            return NULL;
+            mylog_warning("Couldn't get pathname of %s from registry. "
+                    "Using default: \"%s\"", desc, def);
+            setPath(def, buf);
         }
         else {
             setPath(var, buf);
@@ -153,7 +155,7 @@ void setQueuePath(
  */
 const char* getQueuePath(void)
 {
-    return getPath(REG_QUEUE_PATH, queuePath, "product-queue");
+    return getPath(REG_QUEUE_PATH, queuePath, "product-queue", LDM_QUEUE_PATH);
 }
 
 /*
@@ -181,7 +183,7 @@ void setPqactConfigPath(
 const char* getPqactConfigPath(void)
 {
     return getPath(REG_PQACT_CONFIG_PATH, pqactConfigPath,
-        "default pqact(1) configuration-file");
+        "default pqact(1) configuration-file", PQACT_CONFIG_PATH);
 }
 
 /*
@@ -209,7 +211,7 @@ void setLdmdConfigPath(
 const char* getLdmdConfigPath(void)
 {
     return getPath(REG_LDMD_CONFIG_PATH, ldmdConfigPath,
-        "ldmd(1) configuration-file");
+        "ldmd(1) configuration-file", LDM_CONFIG_PATH);
 }
 
 /*
@@ -237,7 +239,7 @@ void setPqactDataDirPath(
 const char* getPqactDataDirPath(void)
 {
     return getPath(REG_PQACT_DATADIR_PATH, pqactDataDirPath,
-        "default pqact(1) data-directory");
+        "default pqact(1) data-directory", PQACT_DATA_DIR);
 }
 
 /*
@@ -265,7 +267,7 @@ void setPqsurfDataDirPath(
 const char* getPqsurfDataDirPath(void)
 {
     return getPath(REG_PQSURF_DATADIR_PATH, pqsurfDataDirPath,
-        "default pqsurf(1) data-directory");
+        "default pqsurf(1) data-directory", PQSURF_DATA_DIR);
 }
 
 /*
@@ -293,7 +295,7 @@ void setSurfQueuePath(
 const char* getSurfQueuePath(void)
 {
     return getPath(REG_SURFQUEUE_PATH, surfQueuePath,
-        "default pqsurf(1) output product-queue");
+        "default pqsurf(1) output product-queue", PQSURF_QUEUE_PATH);
 }
 
 /*
@@ -321,7 +323,7 @@ void setPqsurfConfigPath(
 const char* getPqsurfConfigPath(void)
 {
     return getPath(REG_PQSURF_CONFIG_PATH, pqsurfConfigPath,
-        "default pqsurf(1) configuration-file");
+        "default pqsurf(1) configuration-file", PQSURF_CONFIG_PATH);
 }
 
 /**

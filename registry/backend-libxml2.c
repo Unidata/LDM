@@ -155,7 +155,7 @@ fileLock(
                 : open(file->path, O_RDONLY | flags);
 
         if (-1 == fd) {
-            mylog_syserr("Couldn't open file \"%s\" for %s",
+            mylog_add_syserr("Couldn't open file \"%s\" for %s",
                 file->path, file->exclusive ? "writing" : "reading");
             status = EIO;
         }
@@ -168,7 +168,7 @@ fileLock(
             flock.l_len = 0;              /* to end */
 
             if (fcntl(fd, F_SETLKW, &flock) == -1) {
-                mylog_syserr("Couldn't lock file \"%s\"", file->path);
+                mylog_add_syserr("Couldn't lock file \"%s\"", file->path);
                 status = EIO;
             }
             else {

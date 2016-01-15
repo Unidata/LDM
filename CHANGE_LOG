@@ -1,8 +1,23 @@
-6.12.15.39
+6.12.15.42	2016-01-12T10:40:24-0700
+    Make test for C++11-compatible g++ more robust.
+
+6.12.15.41	2016-01-12T09:28:01-0700
+    Get "make distclean" to work on both Winters (with C++11 support) and Spock
+    (without C++11 support).
+
+6.12.15.40	2016-01-11T16:07:56-0700
+    Removed mylog2ulog stuff from ulog makefile.
+    
+    Eliminated memory-leaks from components that read GEMPAK tables.
+
+6.12.15.39	2015-11-16T16:04:41-0700
+    mldm_sender_manager(3):
+        Add "-y" and "-z" options to execvp(2) of mldm_sender(1).
+
     pqact.c:
         Added SIGHUP forwarding.
 
-6.12.15.38	2016-01-07T12:21:35-0700
+6.12.15.38	2015-11-03T13:07:13-0700
     ldmd.c:
         Corrected some Coverity-discovered lint.
 

@@ -632,7 +632,7 @@ receive_entry:  RECEIVE_K STRING STRING
                     int errCode = decodeReceiveEntry($2, $3, "0.0.0.0");
 
                     if (errCode) {
-                        LOG_ADD2("Couldn't decode receive entry "
+                        mylog_add("Couldn't decode receive entry "
                                 "\"RECEIVE %s %s\"", $2, $3);
                         return errCode;
                     }
@@ -686,7 +686,7 @@ send_entry:        SEND_K STRING STRING STRING
                     int errCode = decodeSendEntry($2, $3, $4, $5);
 
                     if (errCode) {
-                        LOG_ADD4("Couldn't decode multicast entry "
+                        mylog_add("Couldn't decode multicast entry "
                                 "\"MULTICAST %s %s %s %s\"", $2, $3, $4, $5);
                         return errCode;
                     }

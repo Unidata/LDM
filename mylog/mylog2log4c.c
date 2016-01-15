@@ -20,7 +20,6 @@
 #include <libgen.h>
 #include <limits.h>
 #include <log4c.h>
-#include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -96,22 +95,6 @@ static bool                  initialized;
  * The mutual-exclusion lock that keeps this module thread-safe.
  */
 static mutex_t               mutex;
-/**
- * Whether a SIGHUP has been delivered.
- */
-static volatile sig_atomic_t hupped;
-/**
- * The SIGHUP signal set.
- */
-static sigset_t              hup_sigset;
-/**
- * The SIGHUP action for this module.
- */
-static struct sigaction      hup_sigaction;
-/**
- * The previous SIGHUP action when this module's SIGHUP action is registered.
- */
-static struct sigaction      prev_hup_sigaction;
 
 /**
  * Copies a string up to a limit on the number of bytes. Ensures that the copy
@@ -138,7 +121,7 @@ static inline void string_copy(
  * <dt>_cat_</dt> <dd>Is the logging category (e.g., program name)</dd>
  * <dt>_pid_</dt> <dd>Is the numeric process identifier</dd>
  * <dt>_pri_</dt> <dd>Is the priority of the message: one of  `ERROR`, `WARN`,
- *                    `NOTICE`, `INFO`, or `DEBUG`.</dd>
+ *                    `NOTE`, `INFO`, or `DEBUG`.</dd>
  * <dt>_msg_</dt> <dd>Is the message from the application</dd>
  * </dl>
  *
@@ -155,7 +138,7 @@ static const char* mylog_layout_format(
     const size_t                       bufsize = event->evt_buffer.buf_size;
     const log4c_location_info_t* const loc = event->evt_loc;
     const int                          n = snprintf(buf, bufsize,
-            "%s:%ld %s %s\n", event->evt_category, (long)getpid(),
+            "%s[%ld] %s %s\n", event->evt_category, (long)getpid(),
             log4c_priority_to_string(event->evt_priority), event->evt_msg);
     if (n >= bufsize) {
 	// Append '...' at the end of the message to show it was trimmed
@@ -687,7 +670,7 @@ static int set_level(
         const mylog_level_t level)
 {
     int status;
-    if (!mylog_vetLevel(level)) {
+    if (!mylog_vet_level(level)) {
         status = -1;
     }
     else {
@@ -765,7 +748,7 @@ static int set_id(
  * @retval  0  Success.
  * @retval -1  Failure. The logging module is in an unspecified state.
  */
-static int refresh(void)
+int mylog_impl_refresh(void)
 {
     int status;
     if (!initialized) {
@@ -789,33 +772,10 @@ static int refresh(void)
     return status;
 }
 
-/**
- * Handles SIGHUP delivery. Sets variable `hupped` and ensures that any
- * previously-registered SIGHUP handler is called.
- *
- * @param[in] sig  SIGHUP.
- */
-static void handle_sighup(
-        const int sig)
-{
-    hupped = 1;
-    if (prev_hup_sigaction.sa_handler != SIG_DFL &&
-            prev_hup_sigaction.sa_handler != SIG_IGN) {
-        (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
-        raise(SIGHUP);
-        (void)sigprocmask(SIG_UNBLOCK, &hup_sigset, NULL);
-        (void)sigaction(SIGHUP, &hup_sigaction, NULL);
-    }
-}
-
 static inline void lock()
 {
     if (mutex_lock(&mutex))
         abort();
-    if (hupped) {
-        refresh();
-        hupped = 0;
-    }
 }
 
 static inline void unlock()
@@ -835,7 +795,7 @@ static inline void unlock()
  * @retval    0        Success.
  * @retval    -1       Error. The logging module is in an unspecified state.
  */
-int mylog_init(
+int mylog_impl_init(
         const char* id)
 {
     int status;
@@ -846,15 +806,8 @@ int mylog_init(
         status = init(id);
         if (status == 0) {
             status = mutex_init(&mutex, true, true);
-            if (status == 0) {
-                (void)sigemptyset(&hup_sigset);
-                (void)sigaddset(&hup_sigset, SIGHUP);
-                hup_sigaction.sa_mask = hup_sigset;
-                hup_sigaction.sa_flags = SA_RESTART;
-                hup_sigaction.sa_handler = handle_sighup;
-                (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
+            if (status == 0)
                 initialized = true;
-            }
         }
     }
     return status;
@@ -909,10 +862,10 @@ int mylog_fini(void)
     else {
         status = fini();
         if (status == 0) {
-            (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
             initialized = false;
             unlock();
             mutex_fini(&mutex);
+            mylog_fini_generic();
         }
     }
     return status;

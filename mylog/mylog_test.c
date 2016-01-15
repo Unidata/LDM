@@ -23,6 +23,10 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
+#ifndef _XOPEN_PATH_MAX
+    #define _XOPEN_PATH_MAX 1024
+#endif
+
 static char* progname;
 static const char tmpPathname[] = "/tmp/mylog_test.log";
 static const char tmpPathname1[] = "/tmp/mylog_test.log.1";
@@ -164,7 +168,7 @@ static void test_mylog_open_default(void)
 
     const char* actual = mylog_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
-    CU_ASSERT_STRING_EQUAL(actual, "");
+    CU_ASSERT_STRING_EQUAL(actual, "-");
     mylog_error("test_mylog_open_default() implicit");
 
     status = mylog_set_output("");

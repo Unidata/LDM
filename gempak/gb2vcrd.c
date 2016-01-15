@@ -1,4 +1,5 @@
 #include "config.h"
+#include "mylog.h"
 
 #include "gb2def.h"
 #include "proto_gemlib.h"
@@ -68,7 +69,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
                 &filename, &ier);
     }
     if ( ier != 0 ) {
-        LOG_ADD6("Couldn't get vertical coordinate table: iver=%d, lvl1=%d, "
+        mylog_add("Couldn't get vertical coordinate table: iver=%d, lvl1=%d, "
                     "lvl2=%d, center=%.*s, lclver=%d",
                 iver, lvl1, lvl2, (int)sizeof(cmsg->origcntr), cmsg->origcntr,
                 lclver);

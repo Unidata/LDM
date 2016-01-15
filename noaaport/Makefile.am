@@ -26,6 +26,7 @@ EXTRA_DIST 		= \
 	mainpage.h \
 	mrms1.data \
 	multicastReader.hin \
+	readnoaaport.log.good \
 	noaaportIngester.log.good \
 	noaaportIngester-nssl.log.good \
 	nwstgdump.data \
@@ -156,8 +157,10 @@ check-local:		check-readnoaaport check-noaaportIngester \
 check-readnoaaport:	readnoaaport
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	./readnoaaport -nl- -q /tmp/readnoaaport-test.pq \
-	    $(srcdir)/nwstgdump.data
+	    $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
 	rm /tmp/readnoaaport-test.pq
+	cut -d ' ' -f 3- readnoaaport.out >readnoaaport.log
+	diff readnoaaport.log $(srcdir)/readnoaaport.log.good
 
 noaaportIngester.out:		noaaportIngester
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
@@ -165,10 +168,10 @@ noaaportIngester.out:		noaaportIngester
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:		noaaportIngester.out
-	cut -d ' ' -f 5- <$? | \
-	sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
+	cut -d ' ' -f 3- <$? | sed 's/NOTICE/NOTE/' | \
+	sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
 check-noaaportIngester:		noaaportIngester.log
-	diff $(srcdir)/noaaportIngester.log.good $?
+	diff $? $(srcdir)/noaaportIngester.log.good
 noaaportIngester-nssl.out:	noaaportIngester
 	-rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
@@ -181,10 +184,10 @@ noaaportIngester-nssl.out:	noaaportIngester
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:	noaaportIngester-nssl.out
-	cut -d ' ' -f 5- <$? | \
-	sed '1,2d;/^NOTE: Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
+	cut -d ' ' -f 3- <$? | \
+	sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
 check-noaaportIngester-nssl:	noaaportIngester-nssl.log
-	diff $(srcdir)/noaaportIngester-nssl.log.good $?
+	diff $? $(srcdir)/noaaportIngester-nssl.log.good
 
 valgrind:		valgrind-readnoaaport valgrind-noaaportIngester
 

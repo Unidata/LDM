@@ -244,11 +244,11 @@ mls_decodeOptions(
             break;
         }
         case 'y': {
-            mylog_set_options(LOG_MICROSEC, LOG_MICROSEC);
+            mylog_set_options(MYLOG_MICROSEC);
             break;
         }
         case 'z': {
-            mylog_set_options(MYLOG_ISO_8601, MYLOG_ISO_8601);
+            mylog_set_options(MYLOG_ISO_8601);
             break;
         }
         case ':': {

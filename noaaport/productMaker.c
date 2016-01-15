@@ -133,6 +133,20 @@ int pmNew(
 }
 
 /**
+ * Frees a product-maker.
+ *
+ * @param[in,out] pm  The product-maker to be freed or NULL.
+ */
+void pmFree(
+        ProductMaker* const pm)
+{
+    if (pm) {
+        free_MD5_CTX(pm->md5ctxp);
+        free(pm);
+    }
+}
+
+/**
  * Executes a product-maker.
  *
  * This function is thread-compatible but not thread-safe.

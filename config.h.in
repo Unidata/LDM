@@ -121,6 +121,9 @@
 /* Define to 1 if you have the `waitpid' function. */
 #undef HAVE_WAITPID
 
+/* Name of the local host */
+#undef HOSTNAME
+
 /* use IEEE double-precision in XDR layer */
 #undef IEEE_DOUBLE
 
@@ -129,6 +132,9 @@
 
 /* Root directory of the LDM installation */
 #undef LDMHOME
+
+/* Pathname of default LDM configuration-file */
+#undef LDM_CONFIG_PATH
 
 /* Pathname of LDM logging directory */
 #undef LDM_LOG_DIR
@@ -141,6 +147,9 @@
 
 /* Pathname of LDM product-queue directory */
 #undef LDM_QUEUE_DIR
+
+/* Pathname of LDM product-queue */
+#undef LDM_QUEUE_PATH
 
 /* Pathname of LDM var/run directory */
 #undef LDM_VAR_RUN_DIR
@@ -190,6 +199,21 @@
 
 /* Maximum length of a pathname */
 #undef PATH_MAX
+
+/* Pathname of default pqact(1) configuration-file */
+#undef PQACT_CONFIG_PATH
+
+/* Pathname of default pqact(1) data-directory */
+#undef PQACT_DATA_DIR
+
+/* Pathname of default pqsurf(1) configuration-file */
+#undef PQSURF_CONFIG_PATH
+
+/* Pathname of default pqsurf(1) data-directory */
+#undef PQSURF_DATA_DIR
+
+/* Pathname of default pqsurf(1) product-queue */
+#undef PQSURF_QUEUE_PATH
 
 /* Time limit for resolving hostname */
 #undef RESOLVER_TIME_THRESHOLD
@@ -258,11 +282,11 @@
 /* Version number of package */
 #undef VERSION
 
-/* Package will use Log4C for logging */
-#undef WANT_LOG4C
-
 /* Package will have multicast capability */
 #undef WANT_MULTICAST
+
+/* Package will use slog(3) for logging */
+#undef WANT_SLOG
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

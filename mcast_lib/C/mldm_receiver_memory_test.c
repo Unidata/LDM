@@ -30,7 +30,7 @@
 #endif
 
 static const feedtypet       MCAST_FEEDTYPE = ANY;
-static const char* const     HOSTNAME = "hostname";
+static const char* const     hostname = "hostname";
 static const unsigned short  PORT = 38800;
 static ServiceAddr*          SERVICE_ADDR;
 static const char*           CWD;
@@ -41,7 +41,7 @@ static void init()
 
     if (!initialized) {
         char buf[265];
-        int status = sa_new(&SERVICE_ADDR, HOSTNAME, PORT);
+        int status = sa_new(&SERVICE_ADDR, hostname, PORT);
 
         OP_ASSERT_TRUE(0 == status);
         OP_ASSERT_TRUE(SERVICE_ADDR != NULL);

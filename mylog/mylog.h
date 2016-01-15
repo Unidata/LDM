@@ -1,5 +1,5 @@
 /**
- * Copyright 2015 University Corporation for Atmospheric Research. All rights
+ * Copyright 2016 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -7,7 +7,6 @@
  * @author Steven R. Emmerson
  *
  * This file defines the API for LDM logging.
- *
  */
 
 #ifndef ULOG_MYLOG_H_
@@ -391,8 +390,10 @@ void mylog_free(void);
  *                   MYLOG_LEVEL_INFO, or MYLOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
  */
-void mylog_flush(
-        const mylog_level_t    level);
+#define mylog_flush(level) do { \
+    MYLOG_LOC_DECL(loc); \
+    mylog_flush_located(&loc, level); \
+} while (false)
 
 /**
  * Writes the message-list of the current thread at the ERROR level and then

@@ -33,8 +33,10 @@ void  gb2_gtlcllvltbl( char *lcllvltbl, char *cntr, int lclver,
  *                                        -29 = Error reading table     *
  **									*
  * Log:									*
- * S. Gilbert/NCEP		 08/2005				*
- ***********************************************************************/
+ * S. Gilbert/NCEP	08/2005				                *
+ * S. Emmerson/Unidata  01/2016  Add `free(tmptbl.info)` before         *
+ *                               accepting new table                    *
+ ************************************************************************/
 {
 
     char tmpname[LLMXLN];
@@ -69,6 +71,7 @@ void  gb2_gtlcllvltbl( char *lcllvltbl, char *cntr, int lclver,
             return;
         }
 
+        free(currlvltbl.info);
         currlvltbl = tmptbl;
         (void)strcpy(currtable, tmpname);
     }

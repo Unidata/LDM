@@ -1297,11 +1297,11 @@ freeClient(
  * @param[in] down7          Pointer to the downstream LDM-7.
  *            0              Success. `down7->up7proxy`, `down7->sock`, and
  *                           `down7->mcastInfo` are set.
- * @retval    LDM7_REFUSED   `MYLOG_FLUSH_WARNING()` called.
- * @retval    LDM7_RPC       `MYLOG_FLUSH_ERROR()` called.
- * @retval    LDM7_SYSTEM    `MYLOG_FLUSH_ERROR()` called.
- * @retval    LDM7_TIMEDOUT  `MYLOG_FLUSH_WARNING()` called.
- * @retval    LDM7_UNAUTH    `MYLOG_FLUSH_WARNING()` called.
+ * @retval    LDM7_REFUSED   `mylog_flush_warning()` called.
+ * @retval    LDM7_RPC       `mylog_flush_error()` called.
+ * @retval    LDM7_SYSTEM    `mylog_flush_error()` called.
+ * @retval    LDM7_TIMEDOUT  `mylog_flush_warning()` called.
+ * @retval    LDM7_UNAUTH    `mylog_flush_warning()` called.
  */
 static void*
 subscribe(

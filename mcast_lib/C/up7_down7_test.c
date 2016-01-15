@@ -15,8 +15,9 @@
 #include "globals.h"
 #include "inetutil.h"
 #include "ldmprint.h"
-#include "log.h"
+#include "mylog.h"
 #include "mcast_info.h"
+#include "mldm_receiver_memory.h"
 #include "mldm_sender_manager.h"
 #include "mldm_sender_map.h"
 #include "pq.h"
@@ -465,7 +466,7 @@ up7_init(
     }
 
     // Last argument == 0 => don't register with portmapper
-    bool success = svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0);
+    bool success = svc_register(xprt, LDMPROG, 7, ldmprog_7, 0);
     CU_ASSERT_TRUE_FATAL(success);
 
     up7->xprt = xprt;
@@ -561,7 +562,7 @@ static void
 up7_destroy(
         Up7* const up7)
 {
-    svc_unregister(LDMPROG, SEVEN);
+    svc_unregister(LDMPROG, 7);
     if (up7->xprt)
         svc_destroy(up7->xprt);
     up7->xprt = NULL;
@@ -666,9 +667,12 @@ sender_run(
     } // `poll()` loop
 
     /* Because the current thread is ending: */
-    (status && !done)
-        ? mylog_flush_error()
-        : mylog_clear(); // don't care about errors if termination requested
+    if (status && !done) {
+        mylog_flush_error();
+    }
+    else {
+        mylog_clear(); // don't care about errors if termination requested
+    }
 
     pthread_cleanup_pop(1); // calls `mylog_free()`
 
@@ -1223,7 +1227,12 @@ receiver_start(
     // setDoneCondition();
 
     // Because at end of thread:
-    done ? mylog_clear() : mylog_flush_error();
+    if (done) {
+        mylog_clear();
+    }
+    else {
+        mylog_flush_error();
+    }
     mylog_free();
 
     return &status;

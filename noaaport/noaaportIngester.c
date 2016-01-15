@@ -116,7 +116,7 @@ decodeCommandLine(
                 *interface = optarg;
                 break;
             case 'l':
-                if (mylog_set_output(logfname))
+                if (mylog_set_output(optarg))
                     status = 1;
                 break;
             case 'm':
@@ -210,7 +210,7 @@ decodeCommandLine(
                 if(!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs")){
                      /** Using MHS for communication with NCF  **/
                 }else{
-                     LOG_START0("No other mechanism other than MHS is currently supported\n");
+                     mylog_add("No other mechanism other than MHS is currently supported\n");
                      status  = 1;
                 }
 #endif
@@ -1089,6 +1089,7 @@ runOuter(
             status = runInner(productMaker, pmThread, isMcastInput,
                     SCHED_POLICY, maxPriority, mcastSpec, interface);
 
+        pmFree(productMaker);
         destroyRetransSupport(isMcastInput);
         (void)pthread_attr_destroy(&attr);
     }   // `attr` initialized
