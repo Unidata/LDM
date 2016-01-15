@@ -165,7 +165,10 @@ AC_ARG_WITH([ulog],
         [[default=no]]),
     [],
     [with_ulog=no])
+AM_CONDITIONAL([WANT_ULOG], [test "x$with_ulog" = xyes])
 AM_CONDITIONAL([WANT_SLOG], [test "x$with_ulog" != xyes])
+AM_COND_IF([WANT_ULOG], [AC_DEFINE([WANT_ULOG], [1],
+    [Package will use ulog(3) for logging])])
 AM_COND_IF([WANT_SLOG], [AC_DEFINE([WANT_SLOG], [1],
     [Package will use slog(3) for logging])])
 

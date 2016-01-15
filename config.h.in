@@ -288,6 +288,9 @@
 /* Package will use slog(3) for logging */
 #undef WANT_SLOG
 
+/* Package will use ulog(3) for logging */
+#undef WANT_ULOG
+
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
 #if defined AC_APPLE_UNIVERSAL_BUILD

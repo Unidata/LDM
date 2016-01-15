@@ -183,7 +183,7 @@ $(DESTDIR)$(localstatedir):
 	$(MKDIR_P) $@
 
 ROOT_ACTIONS	= install_setuids ensure-rpc-entry ensure-services-entry
-if !WANT_SLOG
+if WANT_ULOG
 ROOT_ACTIONS	+= ensure-syslog-entry 
 endif
 root-actions:	$(ROOT_ACTIONS)

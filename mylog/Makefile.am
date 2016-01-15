@@ -16,8 +16,10 @@ lib_la_LIBADD			= $(builddir)/ulog/lib.la
 if WANT_SLOG
 lib_la_SOURCES			+= mylog2slog.c
 else
+if WANT_ULOG
 lib_la_SOURCES			+= mylog2ulog.c
 lib_la_CPPFLAGS			= -I$(srcdir)/ulog
+endif
 endif
 
 if HAVE_CUNIT

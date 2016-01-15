@@ -72,7 +72,7 @@ typedef struct message {
     #define mylog_is_level_enabled(level) \
         log4c_category_is_priority_enabled(mylog_get_category(), \
                 mylog_get_priority(level))
-#else
+#elif WANT_ULOG
     // `ulog` implementation:
 
     #include "ulog/ulog.h"
