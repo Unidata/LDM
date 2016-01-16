@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 #include "uldb.h"
 #include "inetutil.h"
 #include "ldmprint.h"
@@ -27,10 +27,10 @@
 static void printUsage(
         const char* progname)
 {
-    mylog_add("Usages:");
-    mylog_add("  Print Database:     %s", progname);
-    mylog_add("  Delete Database:    %s -d", progname);
-    mylog_flush_error();
+    log_add("Usages:");
+    log_add("  Print Database:     %s", progname);
+    log_add("  Delete Database:    %s -d", progname);
+    log_flush_error();
 }
 
 /**
@@ -47,7 +47,7 @@ int main(
     int               status = 0;
     int               delete = 0;
 
-    (void)mylog_init(progname);
+    (void)log_init(progname);
 
     {
         int ch;
@@ -60,7 +60,7 @@ int main(
                 delete = 1;
                 break;
             default:
-                mylog_add("Unknown option: %c", optopt);
+                log_add("Unknown option: %c", optopt);
                 printUsage(progname);
                 status = 1;
                 break;
@@ -68,7 +68,7 @@ int main(
         }
 
         if (0 == status && optind < argc) {
-            mylog_add("Too many arguments");
+            log_add("Too many arguments");
             printUsage(progname);
             status = 1;
         }
@@ -79,11 +79,11 @@ int main(
             status = uldb_delete(NULL);
             if (status) {
                 if (ULDB_EXIST == status) {
-                    mylog_info("The upstream LDM database doesn't exist");
+                    log_info("The upstream LDM database doesn't exist");
                     status = 2;
                 }
                 else {
-                    mylog_error("Couldn't open the upstream LDM database");
+                    log_error("Couldn't open the upstream LDM database");
                     status = 3;
                 }
             }
@@ -92,12 +92,12 @@ int main(
             status = uldb_open(NULL);
             if (status) {
                 if (ULDB_EXIST == status) {
-                    mylog_add("The upstream LDM database doesn't exist");
-                    mylog_notice("Is the LDM running?");
+                    log_add("The upstream LDM database doesn't exist");
+                    log_notice("Is the LDM running?");
                     status = 2;
                 }
                 else {
-                    mylog_error("Couldn't open the upstream LDM database");
+                    log_error("Couldn't open the upstream LDM database");
                     status = 3;
                 }
             }
@@ -106,7 +106,7 @@ int main(
 
                 status = uldb_getIterator(&iter);
                 if (status) {
-                    mylog_error("Couldn't get database iterator");
+                    log_error("Couldn't get database iterator");
                     status = 3;
                 }
                 else {
@@ -119,7 +119,7 @@ int main(
                         prod_class* prodClass;
 
                         if (uldb_entry_getProdClass(entry, &prodClass)) {
-                            mylog_error(
+                            log_error(
                                     "Couldn't get product-class of database entry");
                             status = 3;
                             break;

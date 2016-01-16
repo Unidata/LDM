@@ -7,7 +7,7 @@
 #include "config.h"
 
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 #include "prod_index_queue.h"
 #include "mcast.h"
 
@@ -44,12 +44,12 @@ test_add_get(void)
     int                status;
 
     status = piq_add(rq, fileA);
-    mylog_flush_error();
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL(piq_count(rq), 1);
 
     status = piq_removeNoWait(rq, &fileB);
-    mylog_flush_error();
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileB, fileA);
     CU_ASSERT_EQUAL(piq_count(rq), 0);
@@ -65,32 +65,32 @@ test_order(void)
     int            status;
 
     status = piq_add(rq, fileA);
-    mylog_flush_error();
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL(piq_count(rq), 1);
     status = piq_add(rq, fileB);
-    mylog_flush_error();
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL(piq_count(rq), 2);
     status = piq_add(rq, fileC);
-    mylog_flush_error();
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL(piq_count(rq), 3);
 
     status = piq_removeNoWait(rq, &fileD);
-    mylog_flush_error();
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileA);
     CU_ASSERT_EQUAL(piq_count(rq), 2);
 
     status = piq_removeNoWait(rq, &fileD);
-    mylog_flush_error();
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileB);
     CU_ASSERT_EQUAL(piq_count(rq), 1);
 
     status = piq_removeNoWait(rq, &fileD);
-    mylog_flush_error();
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_EQUAL_FATAL(fileD, fileC);
     CU_ASSERT_EQUAL(piq_count(rq), 0);
@@ -103,7 +103,7 @@ main(
 {
     int         exitCode = EXIT_FAILURE;
 
-    if (mylog_init(argv[0])) {
+    if (log_init(argv[0])) {
         (void)fprintf(stderr, "Couldn't initialize logging system\n");
     }
     else {
@@ -122,7 +122,7 @@ main(
             CU_cleanup_registry();
         } /* CUnit registery allocated */
 
-        mylog_free();
+        log_free();
     } /* logging system initialized */
 
     return exitCode;

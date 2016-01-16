@@ -16,7 +16,7 @@
 #include "remote.h"
 #include "ldmprint.h"
 #include "atofeedt.h"
-#include "mylog.h"
+#include "log.h"
 #include "inetutil.h"
 #include "ldm5_clnt.h"
 #include "RegularExpressions.h"
@@ -63,11 +63,11 @@ static ldm_replyt reply = { OK };
 static void
 cleanup(void)
 {
-        mylog_notice("exiting");
+        log_notice("exiting");
 
         /* TODO: sign off */
 
-        (void)mylog_fini();
+        (void)log_fini();
 }
 
 
@@ -96,7 +96,7 @@ signal_handler(int sig)
         case SIGUSR1 :
                 return;
         case SIGUSR2 :
-                mylog_roll_level();
+                log_roll_level();
                 return;
         case SIGPIPE :
                 return;
@@ -210,8 +210,8 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 /* 
                  * your code here, example just logs it 
                  */
-                mylog_info("%s", s_prod_info(NULL, 0, &notice,
-                        mylog_is_enabled_debug));
+                log_info("%s", s_prod_info(NULL, 0, &notice,
+                        log_is_enabled_debug));
 
 
                 if(!svc_sendreply(transp, (xdrproc_t)xdr_ldm_replyt,
@@ -223,7 +223,7 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 (void)exitIfDone(0);
 
                 if(!svc_freeargs(transp, xdr_prod_info, (caddr_t) &notice)) {
-                        mylog_error("unable to free arguments");
+                        log_error("unable to free arguments");
                         exit(1);
                 }
                 /* no break */
@@ -270,16 +270,16 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "vxyzl:f:o:t:h:P:p:T:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        mylog_set_level(MYLOG_LEVEL_INFO);
+                        log_set_level(LOG_LEVEL_INFO);
                         break;
                 case 'x':
-                        mylog_set_level(MYLOG_LEVEL_DEBUG);
+                        log_set_level(LOG_LEVEL_DEBUG);
                         break;
                 case 'y':
-                        logOpts |= MYLOG_MICROSEC;
+                        logOpts |= LOG_MICROSEC;
                         break;
                 case 'z':
-                        logOpts |= MYLOG_ISO_8601;
+                        logOpts |= LOG_ISO_8601;
                         break;
                 case 'l':
                         logfname = optarg;
@@ -375,8 +375,8 @@ int main(int ac, char *av[])
         /*
          * initialize logger
          */
-        (void)mylog_init(av[0]);
-        mylog_notice("Starting Up: %s: %s",
+        (void)log_init(av[0]);
+        log_notice("Starting Up: %s: %s",
                         remote,
                         s_prod_class(NULL, 0, &clss));
 
@@ -385,7 +385,7 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                mylog_syserr("atexit");
+                log_syserr("atexit");
                 exit(1);
         }
 

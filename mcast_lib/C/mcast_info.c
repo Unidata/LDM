@@ -14,7 +14,7 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "mylog.h"
+#include "log.h"
 #include "mcast_info.h"
 
 #include <stdlib.h>
@@ -48,7 +48,7 @@
  *                        and files that are missed by the multicast receiver.
  *                        The caller may free.
  * @retval     true       Success. `info` is set.
- * @retval     false      Failure. \c mylog_add() called. The state of `info` is
+ * @retval     false      Failure. \c log_add() called. The state of `info` is
  *                        indeterminate.
  */
 static bool
@@ -59,12 +59,12 @@ mi_init(
     const ServiceAddr* const restrict ucast)
 {
     if (!sa_copy(&info->group, mcast)) {
-        mylog_add("Couldn't copy multicast address");
+        log_add("Couldn't copy multicast address");
         return false;
     }
 
     if (!sa_copy(&info->server, ucast)) {
-        mylog_add("Couldn't copy unicast address");
+        log_add("Couldn't copy unicast address");
         xdr_free(xdr_ServiceAddr, (char*)&info->group);
         return false;
     }
@@ -91,7 +91,7 @@ mi_init(
  *                        and files that are missed by the multicast receiver.
  *                        The caller may free.
  * @retval     0          Success. `*info` is set.
- * @retval     ENOMEM     Out-of-memory error. `mylog_add()` called.
+ * @retval     ENOMEM     Out-of-memory error. `log_add()` called.
  */
 int
 mi_new(
@@ -101,7 +101,7 @@ mi_new(
     const ServiceAddr* const restrict ucast)
 {
     int              status;
-    McastInfo* const info = mylog_malloc(sizeof(McastInfo),
+    McastInfo* const info = log_malloc(sizeof(McastInfo),
             "multicast information");
 
     if (NULL == info) {
@@ -158,7 +158,7 @@ mi_free(
  * @param[out] to           Destination.
  * @param[in]  from         Source. The caller may free.
  * @retval     0            Success.
- * @retval     LDM7_SYSTEM  System error. \c mylog_add() called.
+ * @retval     LDM7_SYSTEM  System error. \c log_add() called.
  */
 Ldm7Status
 mi_copy(
@@ -173,7 +173,7 @@ mi_copy(
  * Clones a multicast information object.
  *
  * @param[in] info  Multicast information object to be cloned.
- * @retval    NULL  Failure. `mylog_add()` called.
+ * @retval    NULL  Failure. `log_add()` called.
  * @return          Clone of multicast information object. Caller should call
  *                  `mi_free()` when the clone is no longer needed.
  */
@@ -196,7 +196,7 @@ mi_clone(
  * @param[in]     id           Replacement Internet identifier.
  * @retval        0            Success. `info->server.inetId` was freed and now
  *                             points to a copy of `id`.
- * @retval        LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval        LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 mi_replaceServerId(
@@ -206,7 +206,7 @@ mi_replaceServerId(
     char* const dup = strdup(id);
 
     if (NULL == dup) {
-        mylog_syserr("Couldn't duplicate Internet identifier of TCP server");
+        log_syserr("Couldn't duplicate Internet identifier of TCP server");
         return LDM7_SYSTEM;
     }
 
@@ -278,7 +278,7 @@ mi_compareGroups(
  * suitable for use as a filename.
  *
  * @param[in] info  The multicast information object.
- * @retval    NULL  Failure. `mylog_add()` called.
+ * @retval    NULL  Failure. `log_add()` called.
  * @return          A filename representation of `info`. Caller should free when
  *                  it's no longer needed.
  */
@@ -301,7 +301,7 @@ mi_asFilename(
  * Returns a formatted representation of a multicast information object.
  *
  * @param[in] info  The multicast information object.
- * @retval    NULL  Failure. `mylog_add()` called.
+ * @retval    NULL  Failure. `log_add()` called.
  * @return          A string representation of `info`. Caller should `free()`
  *                  it when it's no longer needed.
  */
@@ -314,19 +314,19 @@ mi_format(
     int   nbytes = ft_format(info->feed, feedStr, sizeof(feedStr));
 
     if (nbytes < 0 || nbytes >= sizeof(feedStr)) {
-        mylog_add("Couldn't format feedtype %0x", info->feed);
+        log_add("Couldn't format feedtype %0x", info->feed);
         string = NULL;
     }
     else {
         char* grpStr = sa_format(&info->group);
         if (grpStr == NULL) {
-            mylog_add("Couldn't format multicast-group service-address");
+            log_add("Couldn't format multicast-group service-address");
             string = NULL;
         }
         else {
             char* svrStr = sa_format(&info->server);
             if (svrStr == NULL) {
-                mylog_add("Couldn't format TCP-server service-address");
+                log_add("Couldn't format TCP-server service-address");
                 string = NULL;
             }
             else {

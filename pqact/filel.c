@@ -7,7 +7,7 @@
 
 #include <config.h>
 #include <stdio.h>
-#include <mylog.h>
+#include <log.h>
 #include <string.h>
 #include <ctype.h>
 #include <limits.h> /* PATH_MAX */
@@ -52,10 +52,10 @@ union semun {
 #include "ldmalloc.h"
 #include "ldmfork.h"
 #include "ldmprint.h"
-#include "mylog.h"
+#include "log.h"
 #include "mkdirs_open.h"
 #include "registry.h"
-#include "mylog.h"
+#include "log.h"
 #include "pbuf.h"
 #include "pq.h"
 
@@ -344,7 +344,7 @@ dump_fl(void)
     fl_entry *entry;
     int fd;
 
-    mylog_debug("      thefl->size %d", thefl->size);
+    log_debug("      thefl->size %d", thefl->size);
     for(entry = thefl->head; entry != NULL;
             entry = entry->next )
     {
@@ -369,7 +369,7 @@ dump_fl(void)
         default :
             fd = -2;
         }
-        mylog_debug("       %d %s", fd, entry->path);
+        log_debug("       %d %s", fd, entry->path);
     }
 }
 #endif
@@ -414,17 +414,17 @@ fl_removeAndFree(
         fl_entry* const    entry,
         const DeleteReason dr)
 {
-    // mylog_assert(thefl->size >= 1);
+    // log_assert(thefl->size >= 1);
 
     if (entry != NULL) {
-        int logLevel = (DR_ERROR == dr) ? MYLOG_LEVEL_ERROR : MYLOG_LEVEL_INFO;
+        int logLevel = (DR_ERROR == dr) ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO;
 
         if (PIPE == entry->type) {
-            mylog_log(logLevel, "Deleting %s PIPE entry: pid=%lu, cmd=\"%s\"",
+            log_log(logLevel, "Deleting %s PIPE entry: pid=%lu, cmd=\"%s\"",
                     REASON_STRING[dr], entry->private, entry->path);
         }
         else {
-            mylog_log(logLevel, "Deleting %s %s entry \"%s\"", REASON_STRING[dr],
+            log_log(logLevel, "Deleting %s %s entry \"%s\"", REASON_STRING[dr],
                     TYPE_NAME[entry->type], entry->path);
         }
 
@@ -445,7 +445,7 @@ fl_sync(
         int       nentries,
         const int block)
 {
-    // MYLOG_DEBUG("  fl_sync");
+    // LOG_DEBUG("  fl_sync");
 
     if (thefl->size <= 0)
         return;
@@ -531,7 +531,7 @@ fl_getEntry(
         wasCreated = false;
     }
     else {
-        mylog_assert(maxEntries > 0);
+        log_assert(maxEntries > 0);
 
         if (thefl->size >= maxEntries)
             fl_closeLru(0);
@@ -609,7 +609,7 @@ ensureCloseOnExec(
  *
  * @param[in] entry  Entry.
  * @retval    0      Success.
- * @return           `errno` error-code. `mylog_error()` called.
+ * @return           `errno` error-code. `log_error()` called.
  */
 static inline int flushIfAppropriate(
         fl_entry* const restrict entry)
@@ -626,7 +626,7 @@ static inline int flushIfAppropriate(
  * @param[in] in       Input character array.
  * @param[in] len      Input size in bytes.
  * @param[in] outlenp  Output size in bytes.
- * @retval    NULL     System failure. `mylog_syserr()` called.
+ * @retval    NULL     System failure. `log_syserr()` called.
  * @return             Pointer to new character array. Caller should free when
  *                     it's no longer needed.
  */
@@ -646,7 +646,7 @@ dupstrip(
 
     out = malloc(len);
     if (out == NULL ) {
-        mylog_syserr("dupstrip: malloc %ld failed", (long) len);
+        log_syserr("dupstrip: malloc %ld failed", (long) len);
         return NULL ;
     }
 
@@ -719,9 +719,9 @@ static int str_cmp(
 {
     const char* path;
 
-    mylog_assert(argc > 0);
-    mylog_assert(argv[argc -1] != NULL);
-    mylog_assert(*argv[argc -1] != 0);
+    log_assert(argc > 0);
+    log_assert(argv[argc -1] != NULL);
+    log_assert(*argv[argc -1] != 0);
 
     path = argv[argc - 1];
     return (strcmp(path, entry->path));
@@ -747,9 +747,9 @@ static int unio_open(
     int flags = (O_WRONLY | O_CREAT);
     int writeFd = -1; /* failure */
 
-    mylog_assert(ac > 0);
-    mylog_assert(av[ac -1] != NULL);
-    mylog_assert(*av[ac -1] != 0);
+    log_assert(ac > 0);
+    log_assert(av[ac -1] != NULL);
+    log_assert(*av[ac -1] != 0);
 
     unsigned nopt = decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP,
             &OPT_METADATA, &OPT_LOG, &OPT_EDEX, &OPT_FLUSH, &OPT_CLOSE, NULL);
@@ -773,7 +773,7 @@ static int unio_open(
             fl_closeLru(0);
         }
 
-        mylog_syserr("unio_open: %s", path);
+        log_syserr("unio_open: %s", path);
     }
     else {
         int error = 0;
@@ -796,7 +796,7 @@ static int unio_open(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    mylog_syserr("unio_open(): Couldn't seek to EOF: %s", path);
+                    log_syserr("unio_open(): Couldn't seek to EOF: %s", path);
                 }
             }
 
@@ -804,7 +804,7 @@ static int unio_open(
             strncpy(entry->path, path, PATH_MAX);
             entry->path[PATH_MAX - 1] = 0; /* just in case */
 
-            mylog_debug("    unio_open: %d %s", entry->handle.fd, entry->path);
+            log_debug("    unio_open: %d %s", entry->handle.fd, entry->path);
         } /* output-file set to close_on_exec */
 
         if (error) {
@@ -819,10 +819,10 @@ static int unio_open(
 static void unio_close(
         fl_entry *entry)
 {
-    mylog_debug("    unio_close: %d", entry->handle.fd);
+    log_debug("    unio_close: %d", entry->handle.fd);
     if (entry->handle.fd != -1) {
         if (close(entry->handle.fd) == -1) {
-            mylog_syserr("close: %s", entry->path);
+            log_syserr("close: %s", entry->path);
         }
     }
 
@@ -833,7 +833,7 @@ static int unio_sync(
         fl_entry *entry,
         int block)
 {
-    mylog_debug("    unio_sync: %d %s", entry->handle.fd, block ? "" : "non-block");
+    log_debug("    unio_sync: %d %s", entry->handle.fd, block ? "" : "non-block");
 
     if (0 == fsync(entry->handle.fd)) {
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
@@ -843,7 +843,7 @@ static int unio_sync(
         return 0;
     }
     if (EINTR != errno) {
-        mylog_syserr("fsync: %s", entry->path);
+        log_syserr("fsync: %s", entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -860,7 +860,7 @@ static int unio_put(
 {
     if (sz) {
         TO_HEAD(entry);
-        mylog_debug("    unio_dbufput: %d", entry->handle.fd);
+        log_debug("    unio_dbufput: %d", entry->handle.fd);
 
         do {
             ssize_t nwrote = write(entry->handle.fd, data, sz);
@@ -871,7 +871,7 @@ static int unio_put(
             }
             else {
                 if (EINTR != errno) {
-                    mylog_syserr("write() error: \"%s\"", entry->path);
+                    log_syserr("write() error: \"%s\"", entry->path);
                     // disable flushing on I/O error
                     entry_unsetFlag(entry, FL_NEEDS_SYNC);
                 }
@@ -1052,7 +1052,7 @@ int unio_prodput(
     int status = -1; /* failure */
     fl_entry* entry = fl_getEntry(UNIXIO, argc, argv, NULL);
 
-    mylog_debug("    unio_prodput: %d %s", entry == NULL ? -1 : entry->handle.fd,
+    log_debug("    unio_prodput: %d %s", entry == NULL ? -1 : entry->handle.fd,
             prodp->info.ident);
 
     if (entry != NULL ) {
@@ -1061,7 +1061,7 @@ int unio_prodput(
 
         if (entry_isFlagSet(entry, FL_EDEX)) {
             if (shared_id == -1) {
-                mylog_error(
+                log_error(
                         "Notification specified but shared memory is not available.");
             }
             else {
@@ -1073,7 +1073,7 @@ int unio_prodput(
                 strncpy(msg->ident, prodp->info.ident, 256);
                 msg->ident[256-1] = 0;
                 if (shmdt((void*)queue) == -1) {
-                    mylog_error("Detaching shared memory failed.");
+                    log_error("Detaching shared memory failed.");
                 }
             }
         }
@@ -1087,7 +1087,7 @@ int unio_prodput(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    mylog_syserr("Couldn't seek to BOF: %s", entry->path);
+                    log_syserr("Couldn't seek to BOF: %s", entry->path);
                 }
             }
 
@@ -1101,9 +1101,9 @@ int unio_prodput(
 
                 if (status == 0) {
                     if (entry_isFlagSet(entry, FL_LOG))
-                        mylog_notice("Filed in \"%s\": %s", argv[argc - 1],
+                        log_notice("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info,
-                                        mylog_is_enabled_debug));
+                                        log_is_enabled_debug));
                     if (entry_isFlagSet(entry, FL_EDEX) && shared_id != -1) {
                         semarg.val = queue_counter;
                         (void)semctl(sem_id, 1, SETVAL, semarg);
@@ -1149,9 +1149,9 @@ static int stdio_open(
     int fd;
     char* mode = "a";
 
-    mylog_assert(ac > 0);
-    mylog_assert(av[ac -1] != NULL);
-    mylog_assert(*av[ac -1] != 0);
+    log_assert(ac > 0);
+    log_assert(av[ac -1] != NULL);
+    log_assert(*av[ac -1] != 0);
 
     entry->handle.stream = NULL;
 
@@ -1178,7 +1178,7 @@ static int stdio_open(
             fl_closeLru(0);
         }
 
-        mylog_syserr("mkdirs_open: %s", path);
+        log_syserr("mkdirs_open: %s", path);
     }
     else {
         int error = 1;
@@ -1197,7 +1197,7 @@ static int stdio_open(
             entry->handle.stream = fdopen(fd, mode);
 
             if (NULL == entry->handle.stream) {
-                mylog_syserr("fdopen: %s", path);
+                log_syserr("fdopen: %s", path);
             }
             else {
                 if (!entry_isFlagSet(entry, O_TRUNC)) {
@@ -1205,13 +1205,13 @@ static int stdio_open(
                         /*
                          * The "file" must be a pipe or FIFO.
                          */
-                        mylog_syserr("stdio_open(): Couldn't seek to EOF: %s", path);
+                        log_syserr("stdio_open(): Couldn't seek to EOF: %s", path);
                     }
                 }
 
                 strncpy(entry->path, path, PATH_MAX);
                 entry->path[PATH_MAX - 1] = 0; /* just in case */
-                mylog_debug("    stdio_open: %d", fileno(entry->handle.stream));
+                log_debug("    stdio_open: %d", fileno(entry->handle.stream));
                 error = 0;
             } /* entry->handle.stream allocated */
         } /* output-file set to close-on-exec */
@@ -1228,11 +1228,11 @@ static int stdio_open(
 static void stdio_close(
         fl_entry *entry)
 {
-    mylog_debug("    stdio_close: %d",
+    log_debug("    stdio_close: %d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
     if (entry->handle.stream != NULL ) {
         if (fclose(entry->handle.stream) == EOF) {
-            mylog_syserr("fclose: %s", entry->path);
+            log_syserr("fclose: %s", entry->path);
         }
     }
     entry->handle.stream = NULL;
@@ -1243,12 +1243,12 @@ static int stdio_sync(
         fl_entry *entry,
         int block)
 {
-    mylog_debug("    stdio_sync: %d",
+    log_debug("    stdio_sync: %d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
 
     if (fflush(entry->handle.stream) == EOF) {
         if (EINTR != errno) {
-            mylog_syserr("fflush: %s", entry->path);
+            log_syserr("fflush: %s", entry->path);
             // disable flushing on I/O error
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
@@ -1268,14 +1268,14 @@ static int stdio_put(
         const void *data,
         size_t sz)
 {
-    mylog_debug("    stdio_dbufput: %d", fileno(entry->handle.stream));
+    log_debug("    stdio_dbufput: %d", fileno(entry->handle.stream));
     TO_HEAD(entry);
 
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
 
     if (nwrote != sz) {
         if (errno != EINTR) {
-            mylog_syserr("fwrite() error: \"%s\"", entry->path);
+            log_syserr("fwrite() error: \"%s\"", entry->path);
             // disable flushing on I/O error
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
@@ -1301,7 +1301,7 @@ int stdio_prodput(
     int status = -1; /* failure */
     fl_entry* entry = fl_getEntry(STDIO, argc, argv, NULL);
 
-    mylog_debug("    stdio_prodput: %d %s",
+    log_debug("    stdio_prodput: %d %s",
             entry == NULL ? -1 : fileno(entry->handle.stream), prodp->info.ident);
 
     if (entry != NULL ) {
@@ -1316,7 +1316,7 @@ int stdio_prodput(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    mylog_syserr("Couldn't seek to BOF: %s",
+                    log_syserr("Couldn't seek to BOF: %s",
                             entry->path);
                 }
             }
@@ -1330,9 +1330,9 @@ int stdio_prodput(
                 status = flushIfAppropriate(entry);
 
                 if ((status == 0) && entry_isFlagSet(entry, FL_LOG))
-                    mylog_notice("StdioFiled in \"%s\": %s", argv[argc - 1],
+                    log_notice("StdioFiled in \"%s\": %s", argv[argc - 1],
                             s_prod_info(NULL, 0, &prodp->info,
-                                    mylog_is_enabled_debug));
+                                    log_is_enabled_debug));
             } /* data written */
 
             if (data != prodp->data)
@@ -1395,9 +1395,9 @@ static int argcat_cmp(
 {
     char buf[PATH_MAX];
 
-    mylog_assert(argc > 0);
-    mylog_assert(argv[0] != NULL);
-    mylog_assert(*argv[0] != 0);
+    log_assert(argc > 0);
+    log_assert(argv[0] != NULL);
+    log_assert(*argv[0] != 0);
 
     argcat(buf, sizeof(buf) - 1, argc, argv);
     return (strcmp(buf, entry->path));
@@ -1445,9 +1445,9 @@ static int pipe_open(
     int    pfd[2];
     int    writeFd = -1; /* failure */
 
-    mylog_assert(argc >= 1);
-    mylog_assert(argv[0] != NULL && *argv[0] != 0);
-    mylog_assert(argv[argc] == NULL);
+    log_assert(argc >= 1);
+    log_assert(argv[0] != NULL && *argv[0] != 0);
+    log_assert(argv[argc] == NULL);
 
     entry->handle.pbuf = NULL;
     entry_setFlag(entry, FL_NOTRANSIENT);
@@ -1473,7 +1473,7 @@ static int pipe_open(
             fl_closeLru(0);
         }
 
-        mylog_syserr("Couldn't create pipe");
+        log_syserr("Couldn't create pipe");
     }
     else {
         ErrorObj* errObj;
@@ -1492,7 +1492,7 @@ static int pipe_open(
             pid_t pid = ldmfork();
 
             if (-1 == pid) {
-                mylog_error("Couldn't fork PIPE process");
+                log_error("Couldn't fork PIPE process");
             }
             else {
                 if (0 == pid) {
@@ -1509,7 +1509,7 @@ static int pipe_open(
                      * (e.g., SIGCONTs, SIGINTs, and SIGTERMs).
                      */
                     if (setpgid(0, 0) == -1) {
-                        mylog_warning(
+                        log_warning(
                                 "Couldn't make decoder a process-group leader");
                     }
 
@@ -1524,7 +1524,7 @@ static int pipe_open(
                      */
                     if (STDIN_FILENO != pfd[0]) {
                         if (-1 == dup2(pfd[0], STDIN_FILENO)) {
-                            mylog_syserr("Couldn't dup2(%d,%d)", pfd[0],
+                            log_syserr("Couldn't dup2(%d,%d)", pfd[0],
                                     STDIN_FILENO);
                         }
                         else {
@@ -1535,18 +1535,18 @@ static int pipe_open(
                     }
 
                     if (STDIN_FILENO == pfd[0]) {
-                        const char*     id = mylog_get_id();
-                        const unsigned  facility = mylog_get_facility();
+                        const char*     id = log_get_id();
+                        const unsigned  facility = log_get_facility();
 
                         endpriv();
-                        if (mylog_is_enabled_info) {
-                            mylog_info("Executing decoder \"%s\"", av[0]);
+                        if (log_is_enabled_info) {
+                            log_info("Executing decoder \"%s\"", av[0]);
                         }
-                        (void)mylog_fini();
+                        (void)log_fini();
                         (void) execvp(av[0], &av[0]);
-                        (void)mylog_init(id);
-                        (void)mylog_set_facility(facility);
-                        mylog_syserr("Couldn't execute decoder \"%s\"", av[0]);
+                        (void)log_init(id);
+                        (void)log_set_facility(facility);
+                        log_syserr("Couldn't execute decoder \"%s\"", av[0]);
                     }
 
                     exit(EXIT_FAILURE);
@@ -1570,14 +1570,14 @@ static int pipe_open(
                     #endif
 
                     if (NULL == entry->handle.pbuf) {
-                        mylog_syserr("Couldn't create pipe-buffer");
+                        log_syserr("Couldn't create pipe-buffer");
                     }
                     else {
                         entry->private = pid;
                         writeFd = pfd[1]; /* success */
 
                         argcat(entry->path, PATH_MAX - 1, argc, argv);
-                        mylog_debug("    pipe_open: %d %d", writeFd, pid);
+                        log_debug("    pipe_open: %d %d", writeFd, pid);
                     }
                 } /* parent process */
             } /* fork() success */
@@ -1596,7 +1596,7 @@ static int pipe_sync(
         fl_entry *entry,
         int block)
 {
-    mylog_debug("    pipe_sync: %d %s", entry->handle.pbuf->pfd, block ? "" :
+    log_debug("    pipe_sync: %d %s", entry->handle.pbuf->pfd, block ? "" :
             "non-block");
 
     int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo);
@@ -1609,7 +1609,7 @@ static int pipe_sync(
         return 0;
     }
     if (EINTR != status) {
-        mylog_error("pid=%lu, cmd=\"%s\"", entry->private, entry->path);
+        log_error("pid=%lu, cmd=\"%s\"", entry->private, entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -1623,7 +1623,7 @@ static void pipe_close(
     pid_t pid = (pid_t) entry->private;
     int pfd = -1;
 
-    mylog_debug("    pipe_close: %d, %d",
+    log_debug("    pipe_close: %d, %d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1, pid);
     if (entry->handle.pbuf != NULL ) {
         if (pid >= 0 && entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
@@ -1634,7 +1634,7 @@ static void pipe_close(
     }
     if (pfd != -1) {
         if (close(pfd) == -1) {
-            mylog_syserr("pipe close: %s", entry->path);
+            log_syserr("pipe close: %s", entry->path);
         }
         /*
          * The close should cause termination of the child
@@ -1658,7 +1658,7 @@ static int pipe_put(
 {
     int status;
 
-    mylog_debug("    pipe_put: %d",
+    log_debug("    pipe_put: %d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
     TO_HEAD(entry);
 
@@ -1886,11 +1886,11 @@ int pipe_prodput(
     fl_entry* entry = fl_getEntry(PIPE, argc, argv, &isNew);
 
     if (entry == NULL ) {
-        mylog_debug("    pipe_prodput: %s", prodp->info.ident);
+        log_debug("    pipe_prodput: %s", prodp->info.ident);
         status = -1;
     }
     else {
-        mylog_debug("    pipe_prodput: %d %s",
+        log_debug("    pipe_prodput: %d %s",
                 entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                 prodp->info.ident);
 
@@ -1915,7 +1915,7 @@ int pipe_prodput(
                  * happened). Remove the entry, free its resources, and try
                  * again -- once.
                  */
-                mylog_error("Decoder terminated prematurely");
+                log_error("Decoder terminated prematurely");
                 fl_removeAndFree(entry, DR_ERROR);
                 entry = fl_getEntry(PIPE, argc, argv, &isNew);
                 status = entry
@@ -1960,7 +1960,7 @@ int spipe_prodput(
     conv sync;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    mylog_debug("    spipe_prodput: %d %s",
+    log_debug("    spipe_prodput: %d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2032,7 +2032,7 @@ int spipe_prodput(
     buffer[len - 2] = SPIPE_ETX;
     buffer[len - 1] = SPIPE_RS;
 
-    mylog_debug("spipe_prodput: size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
+    log_debug("spipe_prodput: size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
             buffer[len - 2], buffer[len - 1]);
 
     /*---------------------------------------------------------
@@ -2045,7 +2045,7 @@ int spipe_prodput(
          * try again once.
          */
         fl_removeAndFree(entry, DR_ERROR);
-        mylog_error("trying again");
+        log_error("trying again");
         entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
             return -1;
@@ -2073,7 +2073,7 @@ int xpipe_prodput(
     fl_entry *entry;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    mylog_debug("    xpipe_prodput: %d %s",
+    log_debug("    xpipe_prodput: %d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2086,7 +2086,7 @@ int xpipe_prodput(
          * try again once.
          */
         fl_removeAndFree(entry, DR_ERROR);
-        mylog_error("trying again");
+        log_error("trying again");
         entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
             return -1;
@@ -2115,7 +2115,7 @@ int xpipe_prodput(
 static void ldmdb_fatal(
         const char * str)
 {
-    mylog_syserr("ldmdb_fatal(): %s", str);
+    log_syserr("ldmdb_fatal(): %s", str);
 }
 
 /*
@@ -2145,7 +2145,7 @@ static int ldmdb_open(
             dblocksize = (int) tmp;
         }
         else {
-            mylog_error("%s: ldmdb_open: -dblocksize %s invalid", path, argv[1]);
+            log_error("%s: ldmdb_open: -dblocksize %s invalid", path, argv[1]);
         }
     }
 
@@ -2153,7 +2153,7 @@ static int ldmdb_open(
     {
         /* create directories if needed */
         if (diraccess(path, (R_OK | W_OK), !0) == -1) {
-            mylog_syserr("Couldn't access directories leading to %s", path);
+            log_syserr("Couldn't access directories leading to %s", path);
             return -1;
         }
     }
@@ -2170,21 +2170,21 @@ static int ldmdb_open(
             fl_closeLru(0);
             fl_closeLru(0);
         }
-        mylog_syserr("gdbm_open: %s", path);
+        log_syserr("gdbm_open: %s", path);
         return -1;
     }
     entry->handle.db = db;
     entry->private = read_write;
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX - 1] = 0; /* just in case */
-    mylog_debug("    ldmdb_open: %s", entry->path);
+    log_debug("    ldmdb_open: %s", entry->path);
     return 0;
 }
 
 static void ldmdb_close(
         fl_entry *entry)
 {
-    mylog_debug("    ldmdb_close: %s", entry->path);
+    log_debug("    ldmdb_close: %s", entry->path);
     if (entry->handle.db != NULL )
         gdbm_close(entry->handle.db);
     entry->private = 0;
@@ -2200,9 +2200,9 @@ static int ldmdb_cmp(
     int read_write;
     int cmp;
 
-    mylog_assert(argc > 1);
-    mylog_assert(argv[0] != NULL);
-    mylog_assert(*argv[0] != 0);
+    log_assert(argc > 1);
+    log_assert(argv[0] != NULL);
+    log_assert(*argv[0] != 0);
 
     path = argv[0];
     read_write = atoi(argv[1]);
@@ -2227,7 +2227,7 @@ static int ldmdb_sync(
         int block)
 {
     /* there is no gdbm_sync */
-    mylog_debug("    ldmdb_sync: %s", entry->handle.db ? entry->path : "");
+    log_debug("    ldmdb_sync: %s", entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return (0);
 }
@@ -2262,14 +2262,14 @@ static int ldmdb_put(
         int size;
         datum old_stuff, new_stuff;
         old_stuff = gdbm_fetch(entry->handle.db, key);
-        mylog_debug("\tConcatenating data under key %s", key.dptr);
+        log_debug("\tConcatenating data under key %s", key.dptr);
         if (NULL == old_stuff.dptr) {
-            mylog_syserr("Inconsistent Duplicate Key storage");
+            log_syserr("Inconsistent Duplicate Key storage");
             return -1;
         }
         size = content.dsize + old_stuff.dsize;
         if (NULL == (new_stuff.dptr = malloc(size))) {
-            mylog_syserr("malloc failed");
+            log_syserr("malloc failed");
             free(old_stuff.dptr);
             return -1;
         }
@@ -2301,9 +2301,9 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
     const char *path;
     int flags = (O_WRONLY|O_CREAT);
 
-    mylog_assert(ac > 0);
-    mylog_assert(av[ac -1] != NULL);
-    mylog_assert(*av[ac -1] != 0);
+    log_assert(ac > 0);
+    log_assert(av[ac -1] != NULL);
+    log_assert(*av[ac -1] != 0);
 
     entry->handle.db = NULL;
 
@@ -2320,7 +2320,7 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
     /* create directories if needed */
     if(diraccess(path, (R_OK | W_OK), 1) == -1)
     {
-        mylog_syserr("Couldn't access directories leading to %s", path);
+        log_syserr("Couldn't access directories leading to %s", path);
         return -1;
     }
 
@@ -2340,19 +2340,19 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
             fl_closeLru(0);
             fl_closeLru(0);
         }
-        mylog_syserr("ldmdb_open: %s", path);
+        log_syserr("ldmdb_open: %s", path);
         return -1;
     }
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX-1] = 0; /* just in case */
-    mylog_debug("    ldmdb_open: %s", entry->path);
+    log_debug("    ldmdb_open: %s", entry->path);
     return 0;
 }
 
 static void
 ldmdb_close(fl_entry *entry)
 {
-    mylog_debug("    ldmdb_close: %s", entry->path);
+    log_debug("    ldmdb_close: %s", entry->path);
     if(entry->handle.db != NULL)
         dbm_close(entry->handle.db);
     entry->private = 0;
@@ -2370,7 +2370,7 @@ static int
 ldmdb_sync(fl_entry *entry, int block)
 {
     /* there is no dbm_sync */
-    mylog_debug("    ldmdb_sync: %s",
+    log_debug("    ldmdb_sync: %s",
             entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return(0);
@@ -2405,16 +2405,16 @@ ldmdb_put(fl_entry *entry, const char *keystr,
         int size;
         datum old_stuff, new_stuff;
         old_stuff = dbm_fetch(entry->handle.db, key);
-        mylog_debug("\tConcatenating data under key %s", key.dptr);
+        log_debug("\tConcatenating data under key %s", key.dptr);
         if (NULL == old_stuff.dptr)
         {
-            mylog_syserr("Inconsistent Duplicate Key storage");
+            log_syserr("Inconsistent Duplicate Key storage");
             return -1;
         }
         size = (int)(content.dsize+old_stuff.dsize);
         if (NULL == (new_stuff.dptr = malloc(size)))
         {
-            mylog_syserr("malloc failed");
+            log_syserr("malloc failed");
             free (old_stuff.dptr);
             return -1;
         }
@@ -2463,7 +2463,7 @@ int ldmdb_prodput(
             dblocksizep = *av;
         }
         else
-            mylog_error("dbfile: Invalid argument %s", *av);
+            log_error("dbfile: Invalid argument %s", *av);
 
     }
 
@@ -2477,7 +2477,7 @@ int ldmdb_prodput(
             argv[argc++] = dblocksizep;
         argv[argc] = NULL;
         entry = fl_getEntry(FT_DB, argc, argv, NULL);
-        mylog_debug("    ldmdb_prodput: %s %s", entry == NULL ? "" : entry->path,
+        log_debug("    ldmdb_prodput: %s %s", entry == NULL ? "" : entry->path,
                 prod->info.ident);
         if (entry == NULL )
             return -1;
@@ -2502,7 +2502,7 @@ int ldmdb_prodput(
 #endif
 
     if (status == -1) {
-        mylog_error("%s error for %s, dbkey %s", entry->path, prod->info.ident,
+        log_error("%s error for %s, dbkey %s", entry->path, prod->info.ident,
                 keystr);
     }
     if (closeflag || status == -1) {
@@ -2537,12 +2537,12 @@ entry_new(
         #ifndef NO_DB
             ops = &ldmdb_ops;
         #else
-            mylog_error("DB type not enabled");
+            log_error("DB type not enabled");
             ops = NULL;
         #endif
         break;
     default:
-        mylog_error("unknown type %d", type);
+        log_error("unknown type %d", type);
         ops = NULL;
     }
 
@@ -2553,7 +2553,7 @@ entry_new(
         entry = Alloc(1, fl_entry);
 
         if (NULL == entry) {
-            mylog_syserr("entry_new: malloc");
+            log_syserr("entry_new: malloc");
         }
         else {
             entry->ops = ops;
@@ -2588,7 +2588,7 @@ set_avail_fd_count(
     int error;
 
     if (fdCount <= 1) {
-        mylog_error("Invalid file-descriptor count: %ld", fdCount);
+        log_error("Invalid file-descriptor count: %ld", fdCount);
         error = -1;
     }
     else {
@@ -2611,7 +2611,7 @@ int set_shared_space(
 {
     int error;
     if (shid == -1 || semid == -1) {
-        mylog_error("Shared memory is not available.  Notification system disabled.");
+        log_error("Shared memory is not available.  Notification system disabled.");
         error = -1;
     }
     else {
@@ -2687,7 +2687,7 @@ pid_t reap(
             /*
              * Unwaited-for child processes exist.
              */
-            mylog_syserr("waitpid()");
+            log_syserr("waitpid()");
         }
     }
     else if (wpid != 0) {
@@ -2724,35 +2724,35 @@ pid_t reap(
         }
 
         if (WIFSTOPPED(status)) {
-            mylog_notice(cmd
+            log_notice(cmd
                         ? "child %d stopped by signal %d (%s %s)"
                         : "child %d stopped by signal %d",
                     wpid, WSTOPSIG(status), childType, cmd);
         }
         else if (WIFSIGNALED(status)) {
-            mylog_warning("Child %d terminated by signal %d", wpid, WTERMSIG(status));
+            log_warning("Child %d terminated by signal %d", wpid, WTERMSIG(status));
 
             if (!isExec) {
                 fl_removeAndFree(entry, DR_TERMINATED); // NULL `entry` safe
             }
             else {
-                mylog_info("Deleting terminated EXEC entry \"%s\"", cmd);
+                log_info("Deleting terminated EXEC entry \"%s\"", cmd);
                 (void)cm_remove(execMap, wpid);
             }
         }
         else if (WIFEXITED(status)) {
             const int          exitStatus = WEXITSTATUS(status);
             const int          logLevel =
-                    exitStatus ? MYLOG_LEVEL_ERROR : MYLOG_LEVEL_INFO;
+                    exitStatus ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO;
             const DeleteReason dr = exitStatus ? DR_ERROR : DR_TERMINATED;
 
-            mylog_log(logLevel, "Child %d exited with status %d", wpid, exitStatus);
+            log_log(logLevel, "Child %d exited with status %d", wpid, exitStatus);
 
             if (!isExec) {
                 fl_removeAndFree(entry, dr);    // NULL `entry` safe
             }
             else {
-                mylog_log(logLevel, "Deleting %s EXEC entry \"%s\"",
+                log_log(logLevel, "Deleting %s EXEC entry \"%s\"",
                         REASON_STRING[dr], cmd);
                 (void)cm_remove(execMap, wpid);
             }

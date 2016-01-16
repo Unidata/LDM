@@ -34,7 +34,7 @@
  * @code
  * log4c_appender_t* myappender;
  *
- * myappender = log4c_appender_get("/var/logs/mylog.log");
+ * myappender = log4c_appender_get("/var/logs/log.log");
  * log4c_appender_set_type(myappender,log4c_appender_type_get("stream2"));
  *
  * @endcode
@@ -68,7 +68,7 @@
  *
  * @code log4c_appender_t* myappender;
  *
- * myappender = log4c_appender_get("/var/logs/mylog.log");
+ * myappender = log4c_appender_get("/var/logs/log.log");
  * log4c_appender_set_type(myappender,log4c_appender_type_get("stream2"));
  * log4c_stream2_set_flags(myappender, LOG4C_STREAM2_UNBUFFERED);
  *

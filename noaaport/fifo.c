@@ -8,7 +8,7 @@
  */
 #include "config.h"
 
-#include "mylog.h"
+#include "log.h"
 #include "fifo.h"
 
 #include <pthread.h>
@@ -37,8 +37,8 @@ struct fifo {
  * Initializes a FIFO
  *
  * @retval 0    Success
- * @retval 1    Usage error. `mylog_add()` called.
- * @retval 2    O/S failure. `mylog_add()` called.
+ * @retval 1    Usage error. `log_add()` called.
+ * @retval 2    O/S failure. `log_add()` called.
  */
 static int
 fifo_init(
@@ -50,7 +50,7 @@ fifo_init(
     pthread_mutexattr_t mutexAttr;
 
     if ((status = pthread_mutexattr_init(&mutexAttr)) != 0) {
-        mylog_errno(status, "Couldn't initialize mutex attributes");
+        log_errno(status, "Couldn't initialize mutex attributes");
         status = 2;
     }
     else {
@@ -60,12 +60,12 @@ fifo_init(
         (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
 
         if ((status = pthread_mutex_init(&fifo->mutex, &mutexAttr)) != 0) {
-            mylog_errno(status, "Couldn't initialize mutex");
+            log_errno(status, "Couldn't initialize mutex");
             status = 2;
         }
         else {
             if ((status = pthread_cond_init(&fifo->cond, NULL)) != 0) {
-                mylog_errno(status, "Couldn't initialize condition variable");
+                log_errno(status, "Couldn't initialize condition variable");
                 status = 2;
             }
             else {
@@ -288,7 +288,7 @@ fifo_isInvalidSize(
     if (nbytes <= fifo_capacity(fifo))
         return false;
 
-    mylog_add("Request-amount is greater than FIFO capacity: %lu > %lu",
+    log_add("Request-amount is greater than FIFO capacity: %lu > %lu",
             (unsigned long)nbytes, (unsigned long)fifo_capacity(fifo));
     return true;
 }
@@ -303,7 +303,7 @@ fifo_isInvalidSize(
  * @param[in]  maxBytes  Maximum number of bytes to transfer.
  * @param[out] nbytes    Actual number of bytes transferred.
  * @retval     0         Success.
- * @retval     2         O/S error. `mylog_add()` called.
+ * @retval     2         O/S error. `log_add()` called.
  * @post                 FIFO is locked.
  */
 static inline int // `inline` because only called in one place
@@ -336,7 +336,7 @@ fifo_transferFromFd(
     }
 
     if (-1 == nb) {
-        mylog_syserr("Couldn't read up to %lu bytes from file descriptor %d",
+        log_syserr("Couldn't read up to %lu bytes from file descriptor %d",
                 (unsigned long)maxBytes, (unsigned long)fd);
         status = 2;
         fifo_lock(fifo); // was locked => deadlock not possible
@@ -397,8 +397,8 @@ fifo_removeBytes(
  * This function is thread-safe.
  *
  * @retval 0    Success.
- * @retval 1    Usage error. \c mylog_add() called.
- * @retval 2    O/S failure. \c mylog_add() called.
+ * @retval 1    Usage error. \c log_add() called.
+ * @retval 2    O/S failure. \c log_add() called.
  */
 int
 fifo_new(
@@ -410,7 +410,7 @@ fifo_new(
     Fifo* f = (Fifo*)malloc(sizeof(Fifo));
 
     if (NULL == f) {
-        mylog_syserr("Couldn't allocate FIFO object");
+        log_syserr("Couldn't allocate FIFO object");
         status = 2;
     }
     else {
@@ -419,7 +419,7 @@ fifo_new(
         unsigned char* const    buf = (unsigned char*)malloc(size);
 
         if (NULL == buf) {
-            mylog_syserr("Couldn't allocate %lu bytes for FIFO buffer",
+            log_syserr("Couldn't allocate %lu bytes for FIFO buffer",
                     (unsigned long)size);
             status = 2;
         }
@@ -462,8 +462,8 @@ fifo_free(
  * @param[in]  maxBytes  Maximum number of bytes to transfer.
  * @param[out] nbytes    Actual number of bytes transferred.
  * @retval     0         Success. `*nbytes` is set.
- * @retval     1         Usage error. `mylog_add()` called.
- * @retval     2         System error. `mylog_add()` called.
+ * @retval     1         Usage error. `log_add()` called.
+ * @retval     2         System error. `log_add()` called.
  * @retval     3         `fifo_close()` was called.
  */
 int
@@ -508,7 +508,7 @@ fifo_readFd(
  * @param[in] buf     Buffer into which to put bytes.
  * @param[in[ nbytes  Number of bytes to remove.
  * @retval    0       Success.
- * @retval    1       Usage error. `mylog_add()` called.
+ * @retval    1       Usage error. `log_add()` called.
  * @retval    3       `fifo_close()` was called and insufficient data exists.
  */
 int

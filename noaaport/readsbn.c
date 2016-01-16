@@ -4,7 +4,7 @@
  */
 #include <stdio.h>
 #include "nport.h"
-#include "mylog.h"
+#include "log.h"
 
 int readsbn(char *buf, sbn_struct *sbn)
 {
@@ -22,7 +22,7 @@ for(i=0;i<14;i++) csum = csum + (unsigned char)buf[i];
 
 if(csum != lval) 
    {
-   mylog_error("SBN checksum invalid %u %u",csum,lval);
+   log_error("SBN checksum invalid %u %u",csum,lval);
    return(-1);
    }
 else
@@ -32,7 +32,7 @@ b1 = buf[0];
 if(b1 != 255)
    {
    for(i=0;i<32;i++)
-      mylog_info("look val %d %u",i,buf[i]);
+      log_info("look val %d %u",i,buf[i]);
    return(-1);
    }
 
@@ -51,7 +51,7 @@ switch ( sbn->command )
    case 10:/* Test message */
 	break;
    default:
-	mylog_error ( "Invalid SBN command %d", sbn->command );
+	log_error ( "Invalid SBN command %d", sbn->command );
 	return(-1);
    }
 

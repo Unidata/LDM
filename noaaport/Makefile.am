@@ -55,7 +55,7 @@ AM_CPPFLAGS		= \
 	-I$(top_srcdir)/grib2 \
 	-I$(top_srcdir)/gempak \
 	-I$(top_srcdir)/zlib \
-	-I$(top_srcdir)/mylog \
+	-I$(top_srcdir)/log \
 	-I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
 	-I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
 	-I$(top_builddir)/registry -I$(top_srcdir)/registry \
@@ -120,7 +120,7 @@ TAGS_FILES		= \
 	$(top_srcdir)/protocol/*.c $(top_srcdir)/protocol/*.h \
 	$(top_srcdir)/protocol2/*.c $(top_srcdir)/protocol2/*.h \
 	$(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
-	$(top_srcdir)/mylog/*.c $(top_srcdir)/mylog/*.h \
+	$(top_srcdir)/log/*.c $(top_srcdir)/log/*.h \
 	$(top_srcdir)/misc/*.c $(top_srcdir)/misc/*.h \
 	$(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
 	$(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h

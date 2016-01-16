@@ -23,7 +23,7 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "mylog.h"
+#include "log.h"
 #include "ldm.h"
 #include "ldmalloc.h"
 #include "ldmprint.h"
@@ -110,7 +110,7 @@ dump_statsbin(statsbin *sb)
         char buf[P_TIMET_LEN];
         char buf_a[P_TIMET_LEN];
 
-        mylog_notice("%s %s %s %12.0lf %12.0lf %10.2f %4.0f@%s %s",
+        log_notice("%s %s %s %12.0lf %12.0lf %10.2f %4.0f@%s %s",
                 s_time(buf, sizeof(buf), sb->recent.tv_sec),
                 s_feedtypet(sb->feedtype),
                 sb->origin,

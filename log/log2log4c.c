@@ -3,16 +3,16 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mylog2log4c.c
+ *   @file: log2log4c.c
  * @author: Steven R. Emmerson
  *
- * This file implements the `mylog.h` API using the Log4C library.
+ * This file implements the `log.h` API using the Log4C library.
  */
 
 #include "config.h"
 
 #include "mutex.h"
-#include "mylog.h"
+#include "log.h"
 
 #undef NDEBUG
 #include <assert.h>
@@ -46,11 +46,11 @@
  *  Logging level. The initial value must be consonant with the initial value of
  *  `logMask` in `ulog.c`.
  */
-static mylog_level_t         log_level = MYLOG_LEVEL_DEBUG;
+static log_level_t         log_level = LOG_LEVEL_DEBUG;
 /**
  * The Log4C category of the current logger.
  */
-log4c_category_t*            mylog_category;
+log4c_category_t*            log_category;
 /**
  * The name of the program.
  */
@@ -62,18 +62,18 @@ static char                  output[_XOPEN_PATH_MAX];
 /**
  * The mapping from this module's logging-levels to Log4C priorities.
  */
-int                          mylog_log4c_priorities[] = {LOG4C_PRIORITY_DEBUG,
+int                          log_log4c_priorities[] = {LOG4C_PRIORITY_DEBUG,
         LOG4C_PRIORITY_INFO, LOG4C_PRIORITY_NOTICE, LOG4C_PRIORITY_WARN,
         LOG4C_PRIORITY_ERROR};
 /**
  * The Log4C appender for logging to the standard error stream.
  */
-static log4c_appender_t*     mylog_appender_stderr;
+static log4c_appender_t*     log_appender_stderr;
 /**
  * The Log4C appenders that use the `LOG_LOCAL`i system logging facility:
  */
-#define MYLOG_NLOCALS 8 // `LOG_LOCAL0` through `LOG_LOCAL7`
-static log4c_appender_t*     appenders_syslog_local[MYLOG_NLOCALS];
+#define LOG_NLOCALS 8 // `LOG_LOCAL0` through `LOG_LOCAL7`
+static log4c_appender_t*     appenders_syslog_local[LOG_NLOCALS];
 /**
  * The Log4C appender that uses the `LOG_USER` system logging facility:
  */
@@ -81,14 +81,14 @@ static log4c_appender_t*     appender_syslog_user;
 /**
  * The Log4C appender that uses the system logging daemon:
  */
-static log4c_appender_t*     mylog_appender_syslog;
+static log4c_appender_t*     log_appender_syslog;
 /**
  * The default Log4C layout for logging.
  */
-static log4c_layout_t*       mylog_layout;
+static log4c_layout_t*       log_layout;
 /**
- * Whether or not `mylog_init()` has been called without a subsequent
- * `mylog_fini()`.
+ * Whether or not `log_init()` has been called without a subsequent
+ * `log_fini()`.
  */
 static bool                  initialized;
 /**
@@ -130,7 +130,7 @@ static inline void string_copy(
  *                    be non-NULL and point to the application's message.
  * @return            Pointer to the formatted message.
  */
-static const char* mylog_layout_format(
+static const char* log_layout_format(
     const log4c_layout_t*  	 layout,
     const log4c_logging_event_t* event)
 {
@@ -150,9 +150,9 @@ static const char* mylog_layout_format(
 /**
  * The standard layout type.
  */
-static log4c_layout_type_t mylog_layout_type = {
-    "mylog_layout",
-    mylog_layout_format
+static log4c_layout_type_t log_layout_type = {
+    "log_layout",
+    log_layout_format
 };
 
 /**
@@ -162,11 +162,11 @@ static log4c_layout_type_t mylog_layout_type = {
  */
 static bool init_layouts(void)
 {
-    (void)log4c_layout_type_set(&mylog_layout_type);
-    mylog_layout = log4c_layout_get(mylog_layout_type.name);
-    assert(mylog_layout);
-    log4c_layout_set_type(mylog_layout, &mylog_layout_type);
-    return mylog_layout;
+    (void)log4c_layout_type_set(&log_layout_type);
+    log_layout = log4c_layout_get(log_layout_type.name);
+    assert(log_layout);
+    log4c_layout_set_type(log_layout, &log_layout_type);
+    return log_layout;
 }
 
 /**
@@ -175,11 +175,11 @@ static bool init_layouts(void)
  * @param[in] this  An appender to the system logging daemon.
  * @retval    true  iff the connection was successfully opened.
  */
-static int mylog_syslog_open(
+static int log_syslog_open(
         log4c_appender_t* const this)
 {
     intptr_t facility = (intptr_t)log4c_appender_get_udata(this);
-    openlog(log4c_category_get_name(mylog_category), LOG_PID, facility);
+    openlog(log4c_category_get_name(log_category), LOG_PID, facility);
     return 0;
 }
 
@@ -213,7 +213,7 @@ static int syslog_priority(
  * @param[in] a_event  The event to be logged.
  * @retval    0        Always.
  */
-static int mylog_syslog_append(
+static int log_syslog_append(
         log4c_appender_t* const restrict            this,
         const log4c_logging_event_t* const restrict event)
 {
@@ -229,7 +229,7 @@ static int mylog_syslog_append(
  * @param[in] this  An appender to the system logging daemon.
  * @retval    0     Always.
  */
-static int mylog_syslog_close(
+static int log_syslog_close(
         log4c_appender_t* const this)
 {
     closelog();
@@ -250,7 +250,7 @@ static int mylog_syslog_close(
  * @param[in] event  The event to be logged.
  * @return           The number of bytes logged.
  */
-static int mylog_stream_append(
+static int log_stream_append(
         log4c_appender_t* const restrict            this,
         const log4c_logging_event_t* const restrict event)
 {
@@ -269,7 +269,7 @@ static int mylog_stream_append(
  * @param[in] this  An appender to the standard error stream.
  * @retval    0     Always.
  */
-static int mylog_stderr_open(
+static int log_stderr_open(
         log4c_appender_t* const this)
 {
     if (log4c_appender_get_udata(this) == NULL) {
@@ -285,7 +285,7 @@ static int mylog_stderr_open(
  * @param[in] this  An appender to the standard error stream.
  * @retval    0     Always.
  */
-static int mylog_stderr_close(
+static int log_stderr_close(
         log4c_appender_t* const this)
 {
     return 0;
@@ -294,11 +294,11 @@ static int mylog_stderr_close(
 /**
  * The type of a Log4C appender that appends to the standard error stream.
  */
-static const log4c_appender_type_t mylog_appender_type_stderr = {
-        "mylog_stderr", // Must persist
-        mylog_stderr_open,
-        mylog_stream_append,
-        mylog_stderr_close
+static const log4c_appender_type_t log_appender_type_stderr = {
+        "log_stderr", // Must persist
+        log_stderr_open,
+        log_stream_append,
+        log_stderr_close
 };
 
 /**
@@ -308,7 +308,7 @@ static const log4c_appender_type_t mylog_appender_type_stderr = {
  * @retval    0     Success.
  * @retval    -1    Failure.
  */
-static int mylog_file_open(
+static int log_file_open(
         log4c_appender_t* const this)
 {
     int   status;
@@ -346,7 +346,7 @@ static int mylog_file_open(
  * @retval    0     Success.
  * @retval    -1    Failure.
  */
-static int mylog_file_close(
+static int log_file_close(
         log4c_appender_t* const this)
 {
     int   status;
@@ -365,11 +365,11 @@ static int mylog_file_close(
 /**
  * The type of a Log4C appender that appends to a regular file.
  */
-static const log4c_appender_type_t mylog_appender_type_file = {
-        "mylog_file", // Must persist
-        mylog_file_open,
-        mylog_stream_append,
-        mylog_file_close
+static const log4c_appender_type_t log_appender_type_file = {
+        "log_file", // Must persist
+        log_file_open,
+        log_stream_append,
+        log_file_close
 };
 
 /**
@@ -385,8 +385,8 @@ static log4c_appender_t* init_appender_layout(
     log4c_appender_t* app = log4c_appender_get(name);
     assert(app);
     if (app != NULL) {
-        assert(mylog_layout);
-        (void)log4c_appender_set_layout(app, mylog_layout);
+        assert(log_layout);
+        (void)log4c_appender_set_layout(app, log_layout);
     }
     return app;
 }
@@ -409,17 +409,17 @@ static bool init_appender_syslog(
 {
     static log4c_appender_type_t type = {
         NULL,
-        mylog_syslog_open,
-        mylog_syslog_append,
-        mylog_syslog_close
+        log_syslog_open,
+        log_syslog_append,
+        log_syslog_close
     };
     type.name = name; // Name of an appender-type must persist
     (void)log4c_appender_type_set(&type);
     log4c_appender_t* app = log4c_appender_get(name);
     if (app == NULL)
         return false;
-    assert(mylog_layout);
-    (void)log4c_appender_set_layout(app, mylog_layout);
+    assert(log_layout);
+    (void)log4c_appender_set_layout(app, log_layout);
     (void)log4c_appender_set_type(app, &type);
     intptr_t ptr = facility;
     (void)log4c_appender_set_udata(app, (void*)ptr);
@@ -433,7 +433,7 @@ static bool init_appender_syslog(
  * @param[in] facility  The facility.
  * @return              The appender corresponding to `facility`.
  */
-static log4c_appender_t* mylog_get_syslog_appender(
+static log4c_appender_t* log_get_syslog_appender(
         const int facility)
 {
     switch (facility) {
@@ -473,7 +473,7 @@ static bool init_appenders_syslog(void)
             {"syslog_local6", LOG_LOCAL6},
             {"syslog_local7", LOG_LOCAL7}};
     const int n = sizeof(facs)/sizeof(*facs);
-    assert(n == MYLOG_NLOCALS);
+    assert(n == LOG_NLOCALS);
     for (int i = 0; i < n; i++) {
         const fac_t* const fac = facs + i;
         if (!init_appender_syslog(fac->facility, fac->name,
@@ -482,7 +482,7 @@ static bool init_appenders_syslog(void)
     }
     if (!init_appender_syslog(LOG_USER, "syslog_user", &appender_syslog_user))
         return false;
-    mylog_appender_syslog = mylog_get_syslog_appender(LOG_LDM);
+    log_appender_syslog = log_get_syslog_appender(LOG_LDM);
     return true;
 }
 
@@ -493,15 +493,15 @@ static bool init_appenders_syslog(void)
  */
 static bool init_appenders(void)
 {
-    (void)log4c_appender_type_set(&mylog_appender_type_file);
-    (void)log4c_appender_type_set(&mylog_appender_type_stderr);
-    assert(mylog_appender_type_stderr.name);
-    mylog_appender_stderr = log4c_appender_get(mylog_appender_type_stderr.name);
-    assert(mylog_appender_stderr);
-    (void)log4c_appender_set_type(mylog_appender_stderr,
-            &mylog_appender_type_stderr);
-    (void)log4c_appender_set_layout(mylog_appender_stderr, mylog_layout);
-    return mylog_appender_stderr && init_appender_layout("stderr") &&
+    (void)log4c_appender_type_set(&log_appender_type_file);
+    (void)log4c_appender_type_set(&log_appender_type_stderr);
+    assert(log_appender_type_stderr.name);
+    log_appender_stderr = log4c_appender_get(log_appender_type_stderr.name);
+    assert(log_appender_stderr);
+    (void)log4c_appender_set_type(log_appender_stderr,
+            &log_appender_type_stderr);
+    (void)log4c_appender_set_layout(log_appender_stderr, log_layout);
+    return log_appender_stderr && init_appender_layout("stderr") &&
             init_appender_layout("stdout") && init_appenders_syslog();
 }
 
@@ -513,8 +513,8 @@ static bool init_appenders(void)
 static bool init_categories(void)
 {
     bool success;
-    mylog_category = log4c_category_get("root");
-    if (mylog_category == NULL) {
+    log_category = log4c_category_get("root");
+    if (log_category == NULL) {
         success = false;
     }
     else {
@@ -522,18 +522,18 @@ static bool init_categories(void)
 
         if (-1 == ttyFd) {
             // No controlling terminal => daemon => use syslog(3)
-            log4c_appender_t* app = mylog_get_syslog_appender(LOG_LDM);
+            log4c_appender_t* app = log_get_syslog_appender(LOG_LDM);
             assert(app);
-            (void)log4c_category_set_appender(mylog_category, app);
+            (void)log4c_category_set_appender(log_category, app);
         }
         else {
             // Controlling terminal exists => interactive => log to `stderr`
             (void)close(ttyFd);
-            assert(mylog_appender_stderr);
-            (void)log4c_category_set_appender(mylog_category,
-                    mylog_appender_stderr);
+            assert(log_appender_stderr);
+            (void)log4c_category_set_appender(log_category,
+                    log_appender_stderr);
         }
-        (void)log4c_category_set_priority(mylog_category, LOG4C_PRIORITY_DEBUG);
+        (void)log4c_category_set_priority(log_category, LOG4C_PRIORITY_DEBUG);
         success = true;
     }
     return success;
@@ -542,9 +542,9 @@ static bool init_categories(void)
 /**
  * Initializes the logging module except for the mutual exclusion lock. Should
  * be called before most other functions.
- * - `mylog_get_output()`   will return "".
- * - `mylog_get_facility()` will return `LOG_LDM`.
- * - `mylog_get_level()`    will return `MYLOG_LEVEL_DEBUG`.
+ * - `log_get_output()`   will return "".
+ * - `log_get_facility()` will return `LOG_LDM`.
+ * - `log_get_level()`    will return `LOG_LEVEL_DEBUG`.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`. Caller may
  *                     free.
@@ -565,13 +565,13 @@ static int init(
             char filename[_XOPEN_PATH_MAX];
             string_copy(filename, id, sizeof(filename));
             string_copy(progname, basename(filename), sizeof(progname));
-            mylog_category = log4c_category_get(progname);
-            if (mylog_category == NULL) {
+            log_category = log4c_category_get(progname);
+            if (log_category == NULL) {
                 success = false;
             }
             else {
                 (void)strcpy(output, "");
-                log_level = MYLOG_LEVEL_NOTICE;
+                log_level = LOG_LEVEL_NOTICE;
                 log4c_rc->config.reread = 0;
                 success = true;
             } // `category` is valid
@@ -593,8 +593,8 @@ static inline int fini(void)
 }
 
 /**
- * Sets the logging output. Should be called between `mylog_init()` and
- * `mylog_fini()`.
+ * Sets the logging output. Should be called between `log_init()` and
+ * `log_fini()`.
  *
  * @param[in] out      The logging output. One of
  *                         - ""      Log according to the Log4C
@@ -623,10 +623,10 @@ static int set_output(
             // Log to a stream
             if (strcmp(out, "-") == 0) {
                 // Log to the standard error stream
-                assert(mylog_category);
-                assert(mylog_appender_stderr);
-                (void)log4c_category_set_appender(mylog_category,
-                        mylog_appender_stderr);
+                assert(log_category);
+                assert(log_appender_stderr);
+                (void)log4c_category_set_appender(log_category,
+                        log_appender_stderr);
                 status = 0;
             }
             else {
@@ -637,21 +637,21 @@ static int set_output(
                 }
                 else {
                     (void)log4c_appender_set_type(app,
-                            &mylog_appender_type_file);
-                    assert(mylog_layout);
-                    (void)log4c_appender_set_layout(app, mylog_layout);
-                    assert(mylog_category);
-                    (void)log4c_category_set_appender(mylog_category, app);
+                            &log_appender_type_file);
+                    assert(log_layout);
+                    (void)log4c_appender_set_layout(app, log_layout);
+                    assert(log_category);
+                    (void)log4c_category_set_appender(log_category, app);
                     status = 0;
                 }
             } // `out` specifies a regular file
             if (status == 0)
-                (void)log4c_category_set_additivity(mylog_category, 0);
+                (void)log4c_category_set_additivity(log_category, 0);
         } // `out` specifies a stream
         if (status == 0) {
             //(void)log4c_category_set_additivity(category, 0);
-            log4c_category_set_priority(mylog_category,
-                    mylog_log4c_priorities[log_level]);
+            log4c_category_set_priority(log_category,
+                    log_log4c_priorities[log_level]);
             string_copy(output, out, sizeof(output));
         }
     } // out != NULL`
@@ -667,10 +667,10 @@ static int set_output(
  * @retval    -1     Failure.
  */
 static int set_level(
-        const mylog_level_t level)
+        const log_level_t level)
 {
     int status;
-    if (!mylog_vet_level(level)) {
+    if (!log_vet_level(level)) {
         status = -1;
     }
     else {
@@ -679,12 +679,12 @@ static int set_level(
         const int         ncats = log4c_category_list(categories,
                 MAX_CATEGORIES);
         if (ncats < 0 || ncats > MAX_CATEGORIES) {
-            mylog_internal("Couldn't get all logging categories: ncats=%d",
+            log_internal("Couldn't get all logging categories: ncats=%d",
                     ncats);
             status = -1;
         }
         else {
-            int priority = mylog_log4c_priorities[level];
+            int priority = log_log4c_priorities[level];
             for (int i = 0; i < ncats; i++)
                 (void)log4c_category_set_priority(categories[i], priority);
             log_level = level;
@@ -696,8 +696,8 @@ static int set_level(
 
 
 /**
- * Sets the logging identifier. Should be called between `mylog_init()` and
- * `mylog_fini()`. The logging identifier will have the result of `fmt` and its
+ * Sets the logging identifier. Should be called between `log_init()` and
+ * `log_fini()`. The logging identifier will have the result of `fmt` and its
  * arguments as the prefix and `comp` as the suffix.
  *
  * @param[in] suffix    The suffix of the logging identifier. Caller may free.
@@ -734,7 +734,7 @@ static int set_id(
             status = -1;
         }
         else {
-            mylog_category = cat;
+            log_category = cat;
             status = 0;
         }
     }
@@ -748,14 +748,14 @@ static int set_id(
  * @retval  0  Success.
  * @retval -1  Failure. The logging module is in an unspecified state.
  */
-int mylog_impl_refresh(void)
+int log_impl_refresh(void)
 {
     int status;
     if (!initialized) {
         status = -1;
     }
     else {
-        mylog_level_t level = log_level;
+        log_level_t level = log_level;
         char id[_XOPEN_PATH_MAX];
         char out[_XOPEN_PATH_MAX];
         string_copy(id, progname, sizeof(id));
@@ -786,16 +786,16 @@ static inline void unlock()
 
 /**
  * Initializes the logging module. Should be called before most other functions.
- * - `mylog_get_output()`   will return "".
- * - `mylog_get_facility()` will return `LOG_LDM`.
- * - `mylog_get_level()`    will return `MYLOG_LEVEL_DEBUG`.
+ * - `log_get_output()`   will return "".
+ * - `log_get_facility()` will return `LOG_LDM`.
+ * - `log_get_level()`    will return `LOG_LEVEL_DEBUG`.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`. Caller may
  *                     free.
  * @retval    0        Success.
  * @retval    -1       Error. The logging module is in an unspecified state.
  */
-int mylog_impl_init(
+int log_impl_init(
         const char* id)
 {
     int status;
@@ -820,7 +820,7 @@ int mylog_impl_init(
  * @retval  0  Success.
  * @retval -1  Failure. The logging module is in an unspecified state.
  */
-int mylog_refresh(void)
+int log_refresh(void)
 {
     lock();
     int status;
@@ -828,7 +828,7 @@ int mylog_refresh(void)
         status = -1;
     }
     else {
-        mylog_level_t level = log_level;
+        log_level_t level = log_level;
         char id[_XOPEN_PATH_MAX];
         char out[_XOPEN_PATH_MAX];
         string_copy(id, progname, sizeof(id));
@@ -852,7 +852,7 @@ int mylog_refresh(void)
  * @retval 0   Success.
  * @retval -1  Failure. The logging module is in an unspecified state.
  */
-int mylog_fini(void)
+int log_fini(void)
 {
     lock();
     int status;
@@ -865,15 +865,15 @@ int mylog_fini(void)
             initialized = false;
             unlock();
             mutex_fini(&mutex);
-            mylog_fini_generic();
+            log_fini_generic();
         }
     }
     return status;
 }
 
 /**
- * Sets the logging output. Should be called between `mylog_init()` and
- * `mylog_fini()`.
+ * Sets the logging output. Should be called between `log_init()` and
+ * `log_fini()`.
  *
  * @param[in] out      The logging output. One of
  *                         - ""      Log according to the Log4C
@@ -885,7 +885,7 @@ int mylog_fini(void)
  * @retval    0        Success.
  * @retval    -1       Failure.
  */
-int mylog_set_output(
+int log_set_output(
         const char* const out)
 {
     lock();
@@ -896,14 +896,14 @@ int mylog_set_output(
 
 /**
  * Returns the logging output. May be called at any time -- including before
- * `mylog_init()`.
+ * `log_init()`.
  *
  * @return       The logging output. One of
  *                   ""      Output is to the system logging daemon. Default.
  *                   "-"     Output is to the standard error stream.
  *                   else    The pathname of the log file.
  */
-const char* mylog_get_output(void)
+const char* log_get_output(void)
 {
     lock();
     const char* const out = output;
@@ -913,14 +913,14 @@ const char* mylog_get_output(void)
 
 /**
  * Enables logging down to a given level. Should be called between
- * `mylog_init()` and `mylog_fini()`.
+ * `log_init()` and `log_fini()`.
  *
  * @param[in] level  The lowest level through which logging should occur.
  * @retval    0      Success.
  * @retval    -1     Failure.
  */
-int mylog_set_level(
-        const mylog_level_t level)
+int log_set_level(
+        const log_level_t level)
 {
     lock();
     int status = initialized ? set_level(level) : -1;
@@ -932,38 +932,38 @@ int mylog_set_level(
  * Returns the current logging level.
  *
  * @return The lowest level through which logging will occur. The initial value
- *         is `MYLOG_LEVEL_DEBUG`.
+ *         is `LOG_LEVEL_DEBUG`.
  */
-mylog_level_t mylog_get_level(void)
+log_level_t log_get_level(void)
 {
     lock();
-    mylog_level_t level = log_level;
+    log_level_t level = log_level;
     unlock();
     return level;
 }
 
 /**
  * Lowers the logging threshold by one. Wraps at the bottom. Should be called
- * between `mylog_init()` and `mylog_fini()`.
+ * between `log_init()` and `log_fini()`.
  */
-void mylog_roll_level(void)
+void log_roll_level(void)
 {
     lock();
-    mylog_level_t level = mylog_get_level();
-    level = (level == MYLOG_LEVEL_DEBUG) ? MYLOG_LEVEL_ERROR : level - 1;
+    log_level_t level = log_get_level();
+    level = (level == LOG_LEVEL_DEBUG) ? LOG_LEVEL_ERROR : level - 1;
     set_level(level);
     unlock();
 }
 
 /**
- * Sets the logging identifier. Should be called between `mylog_init()` and
- * `mylog_fini()`.
+ * Sets the logging identifier. Should be called between `log_init()` and
+ * `log_fini()`.
  *
  * @param[in] id        The new identifier. Caller may free.
  * @retval    0         Success.
  * @retval    -1        Failure.
  */
-int mylog_set_id(
+int log_set_id(
         const char* const id)
 {
     lock();
@@ -973,9 +973,9 @@ int mylog_set_id(
 }
 
 /**
- * Modifies the logging identifier. Should be called between `mylog_init()` and
- * `mylog_fini()`. The identifier will become "<id>.<type>.<host>", where <id>
- * is the identifier given to `mylog_init()`, <type> is the type of upstream LDM
+ * Modifies the logging identifier. Should be called between `log_init()` and
+ * `log_fini()`. The identifier will become "<id>.<type>.<host>", where <id>
+ * is the identifier given to `log_init()`, <type> is the type of upstream LDM
  * ("feeder" or "notifier"), and <host> is the identifier given to this function
  * with all periods replaced with underscores.
  *
@@ -985,7 +985,7 @@ int mylog_set_id(
  * @retval    0         Success.
  * @retval    -1        Failure.
  */
-int mylog_set_upstream_id(
+int log_set_upstream_id(
         const char* const hostId,
         const bool        isFeeder)
 {
@@ -1000,10 +1000,10 @@ int mylog_set_upstream_id(
  *
  * @return The logging identifier.
  */
-const char* mylog_get_id(void)
+const char* log_get_id(void)
 {
     lock();
-    const char* const id = log4c_category_get_name(mylog_category);
+    const char* const id = log4c_category_get_name(log_category);
     unlock();
     return id;
 }
@@ -1013,7 +1013,7 @@ const char* mylog_get_id(void)
  *
  * @param[in] options  The logging options. Ignored.
  */
-void mylog_set_options(
+void log_set_options(
         const unsigned options)
 {
 }
@@ -1023,21 +1023,21 @@ void mylog_set_options(
  *
  * @retval 0   Always.
  */
-unsigned mylog_get_options(void)
+unsigned log_get_options(void)
 {
     return 0;
 }
 
 /**
  * Sets the facility to use (e.g., `LOG_LOCAL0`) when logging via the system
- * logging daemon. Should be called between `mylog_init()` and `mylog_fini()`.
+ * logging daemon. Should be called between `log_init()` and `log_fini()`.
  *
  * @param[in] facility  The facility to use when logging via the system logging
  *                      daemon.
  * @retval    0         Success.
  * @retval    -1        Error.
  */
-int mylog_set_facility(
+int log_set_facility(
         const int facility)
 {
     int status;
@@ -1047,7 +1047,7 @@ int mylog_set_facility(
         status = -1;
     }
     else {
-        mylog_appender_syslog = mylog_get_syslog_appender(facility);
+        log_appender_syslog = log_get_syslog_appender(facility);
         status = 0;
     }
     unlock();
@@ -1056,16 +1056,16 @@ int mylog_set_facility(
 
 /**
  * Returns the facility that will be used (e.g., `LOG_LOCAL0`) when logging to
- * the system logging daemon. Should be called between `mylog_init()` and
- * `mylog_fini()`.
+ * the system logging daemon. Should be called between `log_init()` and
+ * `log_fini()`.
  *
  * @param[in] facility  The facility that might be used when logging to the
  *                      system logging daemon.
  */
-int mylog_get_facility(void)
+int log_get_facility(void)
 {
     lock();
-    int status = (intptr_t)log4c_appender_get_udata(mylog_appender_syslog);
+    int status = (intptr_t)log4c_appender_get_udata(log_appender_syslog);
     unlock();
     return status;
 }
@@ -1078,24 +1078,24 @@ int mylog_get_facility(void)
  * @param[in] fmt  Format of the message.
  * @param[in] ...  Format arguments.
  */
-void mylog_internal(
+void log_internal(
         const char* const      fmt,
                                ...)
 {
     lock();
     const log4c_appender_t* const app =
-            log4c_category_get_appender(mylog_category);
+            log4c_category_get_appender(log_category);
     if (app) {
         const log4c_appender_type_t* type = log4c_appender_get_type(app);
         if (type) {
             va_list args;
             va_start(args, fmt);
-            if (type->append == mylog_stream_append) {
+            if (type->append == log_stream_append) {
                 FILE* fp = log4c_appender_get_udata(app);
                 if (fp)
                     (void)vfprintf(fp, fmt, args);
             }
-            else if (type->append == mylog_syslog_append) {
+            else if (type->append == log_syslog_append) {
                 intptr_t facility = (intptr_t)log4c_appender_get_udata(app);
                 char     buf[_POSIX2_LINE_MAX];
                 (void)snprintf(buf, sizeof(buf), fmt, args);
@@ -1114,18 +1114,18 @@ void mylog_internal(
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void mylog_write_one(
-        const mylog_level_t    level,
+void log_write_one(
+        const log_level_t    level,
         const Message* const   msg)
 {
     lock();
     if (msg->loc.file) {
-        log4c_category_log(mylog_category, mylog_get_priority(level),
-                "%s:%d %s", mylog_basename(msg->loc.file), msg->loc.line,
+        log4c_category_log(log_category, log_get_priority(level),
+                "%s:%d %s", log_basename(msg->loc.file), msg->loc.line,
                 msg->string);
     }
     else {
-        log4c_category_log(mylog_category, mylog_get_priority(level), "%s",
+        log4c_category_log(log_category, log_get_priority(level), "%s",
                 msg->string);
     }
     unlock();

@@ -51,14 +51,14 @@ extern int            sockbind(const char *type, unsigned short port);
  *                     `INET_ADDRSTRLEN` (from `<netinet/in.h>`) bytes.
  * @retval     0       Success. `out` is set.
  * @retval     EAGAIN  A necessary resource is temporarily unavailable.
- *                     `mylog_add()` called.
+ *                     `log_add()` called.
  * @retval     EINVAL  The identifier cannot be converted to an IPv4
- *                     dotted-decimal format. `mylog_add()` called.
+ *                     dotted-decimal format. `log_add()` called.
  * @retval     ENOENT  No IPv4 address corresponds to the given Internet
  *                     identifier.
- * @retval     ENOMEM  Out-of-memory. `mylog_add()` called.
+ * @retval     ENOMEM  Out-of-memory. `log_add()` called.
  * @retval     ENOSYS  A non-recoverable error occurred when attempting to
- *                     resolve the identifier. `mylog_add()` called.
+ *                     resolve the identifier. `log_add()` called.
  */
 int
 getDottedDecimal(
@@ -72,7 +72,7 @@ getDottedDecimal(
  * @param[in]  spec  The IPv4 address in Internet standard dot notation or NULL
  *                   to obtain INADDR_ANY.
  * @retval     0     Success. `*addr` is set.
- * @retval     1     Usage error. `mylog_add()` called.
+ * @retval     1     Usage error. `log_add()` called.
  */
 int
 addr_init(
@@ -97,7 +97,7 @@ mcastAddr_isValid(
  * @param[in]  inetSpec   The IPv4 address specification. May be `NULL` to
  *                        obtain `INADDR_ANY`.
  * @retval     0          Success. `*inetAddr` is set.
- * @retval     1          Usage error. `mylog_add()` called.
+ * @retval     1          Usage error. `log_add()` called.
  */
 int
 inetAddr_init(
@@ -111,7 +111,7 @@ inetAddr_init(
  * @param[in]  addr      The IPv4 address in network byte order.
  * @param[in]  port      The port number in host byte order.
  * @retval     0         Success. `*sockAddr` is set.
- * @retval     1         Usage error. `mylog_add()` called.
+ * @retval     1         Usage error. `log_add()` called.
  */
 void
 sockAddr_init(
@@ -125,7 +125,7 @@ sockAddr_init(
  * @param[out] sock      The socket.
  * @param[in]  sockAddr  The IPv4 socket address.
  * @retval     0         Success.
- * @retval     2         System failure. `mylog_add()` called.
+ * @retval     2         System failure. `log_add()` called.
  */
 int
 udpSock_init(
@@ -140,7 +140,7 @@ udpSock_init(
  * @param[in]  ifaceAddr  IPv4 address of the interface on which to listen for
  *                        multicast UDP packets. May specify `INADDR_ANY`.
  * @retval     0          Success.
- * @retval     2          O/S failure. `mylog_add()` called.
+ * @retval     2          O/S failure. `log_add()` called.
  */
 int
 mcastRecvSock_joinGroup(
@@ -157,8 +157,8 @@ mcastRecvSock_joinGroup(
  * @param[in]  ifaceAddr      IPv4 address of the interface. May specify
  *                            `INADDR_ANY`.
  * @retval     0              Success.
- * @retval     1              Usage failure. `mylog_add()` called.
- * @retval     2              System failure. `mylog_add()` called.
+ * @retval     1              Usage failure. `log_add()` called.
+ * @retval     2              System failure. `log_add()` called.
  */
 int
 mcastRecvSock_init(
@@ -176,9 +176,9 @@ mcastRecvSock_init(
  *                      address. Client may free upon return.
  * @param[in]  port     Port number of the service. Must be non-negative.
  * @retval     0        Success. `*svcAddr` is set.
- * @retval     EINVAL   Invalid Internet address or port number. `mylog_add()`
+ * @retval     EINVAL   Invalid Internet address or port number. `log_add()`
  *                      called.
- * @retval     ENOMEM   Out-of-memory. `mylog_add()` called.
+ * @retval     ENOMEM   Out-of-memory. `log_add()` called.
  */
 int
 sa_new(
@@ -192,7 +192,7 @@ extern void           sa_free(ServiceAddr* const sa);
  * @param[out] dest   The destination.
  * @param[in]  src    The source. The caller may free.
  * @retval     true   Success. `*dest` is set.
- * @retval     false  Failure. `mylog_add()` called.
+ * @retval     false  Failure. `log_add()` called.
  */
 extern bool           sa_copy(
     ServiceAddr* const restrict       dest,
@@ -209,7 +209,7 @@ extern int            sa_snprint(const ServiceAddr* restrict sa,
  * This function is thread-safe.
  *
  * @param[in]  sa    Pointer to the service address.
- * @retval     NULL  Failure. `mylog_add()` called.
+ * @retval     NULL  Failure. `log_add()` called.
  * @return           Pointer to the formatted representation. The caller should
  *                   free when it's no longer needed.
  */
@@ -224,8 +224,8 @@ extern char*          sa_format(const ServiceAddr* const sa);
  *                          `sa_free(*sa)` when it's no longer needed.
  * @param[in]  spec         String containing the specification.
  * @retval     0            Success. `*sa` is set.
- * @retval     EINVAL       Invalid specification. `mylog_add()` called.
- * @retval     ENOMEM       Out of memory. `mylog_add()` called.
+ * @retval     EINVAL       Invalid specification. `log_add()` called.
+ * @retval     ENOMEM       Out of memory. `log_add()` called.
  */
 int
 sa_parse(
@@ -246,8 +246,8 @@ sa_parse(
  * @param[in]  defPort      Default port number. If negative, then port number
  *                          must exist in specification.
  * @retval     0            Success. `*sa` is set.
- * @retval     EINVAL       Invalid specification. `mylog_add()` called.
- * @retval     ENOMEM       Out of memory. `mylog_add()` called.
+ * @retval     EINVAL       Invalid specification. `log_add()` called.
+ * @retval     ENOMEM       Out of memory. `log_add()` called.
  */
 int
 sa_parseWithDefaults(
@@ -271,13 +271,13 @@ sa_parseWithDefaults(
  *                           Suitable for use in a `bind()` or `connect()` call.
  * @retval     0             Success.
  * @retval     EAGAIN        A necessary resource is temporarily unavailable.
- *                           `mylog_add()` called.
- * @retval     EINVAL        Invalid port number. `mylog_add()` called.
+ *                           `log_add()` called.
+ * @retval     EINVAL        Invalid port number. `log_add()` called.
  * @retval     ENOENT        The service address doesn't resolve into an IP
  *                           address.
- * @retval     ENOMEM        Out-of-memory. `mylog_add()` called.
+ * @retval     ENOMEM        Out-of-memory. `log_add()` called.
  * @retval     ENOSYS        A non-recoverable error occurred when attempting to
- *                           resolve the name. `mylog_add()` called.
+ *                           resolve the name. `log_add()` called.
  */
 int
 sa_getInetSockAddr(

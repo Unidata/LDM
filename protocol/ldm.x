@@ -60,7 +60,7 @@
 %
 %#ifndef NDEBUG
 %#include <assert.h>
-%#include <mylog.h>
+%#include <log.h>
 %#define pIf(a,b) (!(a) || (b))	/* a implies b */
 %
 %static bool_t
@@ -764,7 +764,7 @@ program LDMPROG {
 %
 %#include <stddef.h>
 %
-%#include "mylog.h"
+%#include "log.h"
 %#include "xdr_data.h"
 %
 %
@@ -821,7 +821,7 @@ program LDMPROG {
 %
 %	    if (NULL == (objp->dbuf_val =
 %		    (char*)xd_getNextSegment(objp->dbuf_len))) {
-%		mylog_syserr("xdr_dbuf()");
+%		log_syserr("xdr_dbuf()");
 %		return FALSE;
 %	    }
 %

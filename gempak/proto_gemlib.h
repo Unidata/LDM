@@ -71,7 +71,7 @@
  * D. Kidwell/NCEP      10/05   Added int* to gh_wwtx for adv num       *
  ***********************************************************************/
 
-#include <mylog.h>
+#include <log.h>
 #include "proto.h"
 
 /* AW library */
@@ -127,7 +127,7 @@ void er_wbuf ( int *iret );
 void er_wmsg ( char *errgrp, int *numerr, char *errstr, int *iret, size_t, size_t );
 
 #define ER_WMSG(grp,ier,msg,iret,i1,i2) { \
-    mylog_error("[%s %d] %s", grp, *(ier), msg); \
+    log_error("[%s %d] %s", grp, *(ier), msg); \
     *(iret) = 0; \
 }
 

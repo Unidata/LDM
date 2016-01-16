@@ -16,7 +16,7 @@
 #include <sys/types.h>
 
 #include "child_map.h"
-#include "mylog.h"
+#include "log.h"
 
 static ChildMap*                childMap = NULL;
 static pid_t                    pidCounter = 1;
@@ -49,7 +49,7 @@ test_add_string_null_map(void)
     int status = cm_add_string(NULL, pidCounter, COMMAND);
 
     CU_ASSERT_EQUAL(status, 1);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -58,7 +58,7 @@ test_add_string_null_command(void)
     int status = cm_add_string(childMap, pidCounter, NULL);
 
     CU_ASSERT_EQUAL(status, 1);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -71,14 +71,14 @@ test_add_string(void)
 
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(cm_count(childMap), count+1);
-    mylog_clear();
+    log_clear();
 }
 
 static void
 test_count_null_map(void)
 {
     CU_ASSERT_EQUAL(cm_count(NULL), 0);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -87,7 +87,7 @@ test_contains_null_map(void)
     int status = cm_contains(NULL, PID);
 
     CU_ASSERT_EQUAL(status, 0);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -98,7 +98,7 @@ test_contains_no_entry(void)
 
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(cm_count(childMap), count);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -109,7 +109,7 @@ test_contains(void)
 
     CU_ASSERT_EQUAL(status, 1);
     CU_ASSERT_EQUAL(cm_count(childMap), count);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -118,7 +118,7 @@ test_get_command_null_map(void)
     const char* command = cm_get_command(NULL, PID);
 
     CU_ASSERT_EQUAL(command, NULL);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -127,7 +127,7 @@ test_get_command_no_entry(void)
     const char* command = cm_get_command(childMap, pidCounter);
 
     CU_ASSERT_EQUAL(command, NULL);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -136,7 +136,7 @@ test_get_command(void)
     const char* command = cm_get_command(childMap, PID);
 
     CU_ASSERT_EQUAL(strcmp(command, COMMAND), 0);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -145,7 +145,7 @@ test_remove_null_map(void)
     int status = cm_remove(NULL, PID);
 
     CU_ASSERT_EQUAL(status, 1);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -156,7 +156,7 @@ test_remove_no_entry(void)
 
     CU_ASSERT_EQUAL(status, 2);
     CU_ASSERT_EQUAL(cm_count(childMap), count);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -167,7 +167,7 @@ test_remove(void)
 
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(cm_count(childMap), count-1);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -176,7 +176,7 @@ test_add_argv_null_map(void)
     int status = cm_add_argv(NULL, pidCounter, ARGV);
 
     CU_ASSERT_EQUAL(status, 1);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -185,7 +185,7 @@ test_add_argv_null_command(void)
     int status = cm_add_argv(childMap, pidCounter, NULL);
 
     CU_ASSERT_EQUAL(status, 1);
-    mylog_clear();
+    log_clear();
 }
 
 static void
@@ -201,7 +201,7 @@ test_add_argv(void)
     CU_ASSERT_EQUAL(cm_count(childMap), count+1);
     cmd = cm_get_command(childMap, PID);
     CU_ASSERT_EQUAL(strcmp(cmd, COMMAND), 0);
-    mylog_clear();
+    log_clear();
 }
 
 
@@ -245,7 +245,7 @@ main(
                 CU_ADD_TEST(testSuite, test_add_argv_null_command);
                 CU_ADD_TEST(testSuite, test_add_argv);
 
-                if (mylog_init(progname)) {
+                if (log_init(progname)) {
                     (void)fprintf(stderr, "Couldn't open logging system\n");
                 }
                 else {

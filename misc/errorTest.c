@@ -4,21 +4,21 @@
 #include <errno.h>
 
 #include "error.h"
-#include "mylog.h"
+#include "log.h"
 
 int
 main(int argc, char* args[])
 {
     int status;
-    if (mylog_init(args[0])) {
-        perror("mylog_init()");
+    if (log_init(args[0])) {
+        perror("log_init()");
 
         status = 1;
     }
     else {
         ErrorObj* err;
 
-        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+        (void)log_set_level(LOG_LEVEL_DEBUG);
 
         err = ERR_NEW(0, NULL, "Simple message");
         err_log(err, ERR_ERROR); 

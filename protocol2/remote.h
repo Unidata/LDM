@@ -32,7 +32,7 @@ extern int update_remote_clss(prod_class_t *want);
  *                      be NULL.  May be freed upon return.
  * Returns:
  *      0               Success.
- *      ENOMEM          Out of memory.  "mylog_add()" called.
+ *      ENOMEM          Out of memory.  "log_add()" called.
  */
 int
 set_remote_class(

@@ -26,7 +26,7 @@
 #include "globals.h"
 #include "remote.h"
 #include "pq.h"
-#include "mylog.h"
+#include "log.h"
 
 ChildMap*        execMap = NULL;
 
@@ -72,7 +72,7 @@ exec_prodput(
         execMap = cm_new();
 
         if (NULL == execMap) {
-            mylog_error("Couldn't create child-process map for EXEC entries");
+            log_error("Couldn't create child-process map for EXEC entries");
             pid = -1;
         }
     }                                   /* child-process map not allocated */
@@ -87,7 +87,7 @@ exec_prodput(
 
         pid = ldmfork();
         if (-1 == pid) {
-            mylog_syserr("Couldn't fork EXEC process");
+            log_syserr("Couldn't fork EXEC process");
         }
         else {
             if (0 == pid) {
@@ -98,8 +98,8 @@ exec_prodput(
                  *
                  * (void) setpgid(0,0);
                  */
-                const char*     id = mylog_get_id();
-                const unsigned  facility = mylog_get_facility();
+                const char*     id = log_get_id();
+                const unsigned  facility = log_get_facility();
 
                 (void)signal(SIGTERM, SIG_DFL);
                 (void)pq_close(pq);
@@ -115,11 +115,11 @@ exec_prodput(
                  */
                 endpriv();
 
-                (void)mylog_fini();
+                (void)log_fini();
                 (void) execvp(argv[0], argv);
-                (void)mylog_init(id);
-                (void)mylog_set_facility(facility);
-                mylog_syserr("Couldn't execute command \"%s\"", argv[0]);
+                (void)log_init(id);
+                (void)log_set_facility(facility);
+                log_syserr("Couldn't execute command \"%s\"", argv[0]);
                 exit(EXIT_FAILURE);
             }                           /* child process */
             else {
@@ -129,10 +129,10 @@ exec_prodput(
                 (void)cm_add_argv(execMap, pid, argv);
 
                 if (!waitOnChild) {
-                    mylog_debug("    exec %s[%d]", argv[0], pid);
+                    log_debug("    exec %s[%d]", argv[0], pid);
                 }
                 else {
-                    mylog_debug("    exec -wait %s[%d]", argv[0], pid);
+                    log_debug("    exec -wait %s[%d]", argv[0], pid);
                     (void)reap(pid, 0);
                 }
             }
@@ -188,7 +188,7 @@ atoaction(
 
         if(str == NULL || *str == 0)
         {
-                mylog_debug("atoaction: Invalid string argument");
+                log_debug("atoaction: Invalid string argument");
                 return -1;
         }
 

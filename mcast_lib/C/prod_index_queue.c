@@ -13,7 +13,7 @@
 #include "config.h"
 
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 #include "prod_index_queue.h"
 
 #include <errno.h>
@@ -35,7 +35,7 @@ typedef struct entry {
  * Returns a new entry.
  *
  * @param[in] iProd   Index of the product.
- * @retval    NULL    Error. \c mylog_add() called.
+ * @retval    NULL    Error. \c log_add() called.
  * @return            Pointer to the new entry. The client should call \c
  *                    entry_free() when it is no longer needed.
  */
@@ -43,7 +43,7 @@ static Entry*
 entry_new(
     const VcmtpProdIndex iProd)
 {
-    Entry* entry = mylog_malloc(sizeof(Entry), "product-index queue-entry");
+    Entry* entry = log_malloc(sizeof(Entry), "product-index queue-entry");
 
     if (entry) {
         entry->iProd = iProd;
@@ -97,7 +97,7 @@ lock(
     int status = pthread_mutex_lock(&fiq->mutex);
 
     if (status)
-        mylog_syserr("Couldn't lock mutex");
+        log_syserr("Couldn't lock mutex");
 }
 
 static inline void
@@ -107,7 +107,7 @@ unlock(
     int status = pthread_mutex_unlock(&fiq->mutex);
 
     if (status)
-        mylog_syserr("Couldn't unlock mutex");
+        log_syserr("Couldn't unlock mutex");
 }
 
 /**
@@ -119,7 +119,7 @@ unlock(
  * @param[in]     tail       Pointer to the entry to be added. Not checked.
  *                           Must have NULL "previous" and "next" pointers.
  * @retval        0          Success.
- * @retval        ECANCELED  The queue has been canceled. `mylog_add()` called.
+ * @retval        ECANCELED  The queue has been canceled. `log_add()` called.
  */
 static int
 addTail(
@@ -129,7 +129,7 @@ addTail(
     int status;
 
     if (fiq->isCancelled) {
-        mylog_add("The queue has been shutdown");
+        log_add("The queue has been shutdown");
         status = ECANCELED;
     }
     else {
@@ -213,7 +213,7 @@ removeHead(
  *
  * @param[in] mutex  Mutex to be initialized.
  * @retval    true   Success.
- * @retval    false  Failure. `mylog_add()` called.
+ * @retval    false  Failure. `log_add()` called.
  */
 static bool
 piq_initMutex(
@@ -223,17 +223,17 @@ piq_initMutex(
     int                 status = pthread_mutexattr_init(&mutexAttr);
 
     if (status) {
-        mylog_errno(status, "Couldn't initialize mutex attributes");
+        log_errno(status, "Couldn't initialize mutex attributes");
     }
     else {
         (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
 
         if ((status = pthread_mutexattr_settype(&mutexAttr,
                 PTHREAD_MUTEX_RECURSIVE))) {
-            mylog_errno(status, "Couldn't set recursive mutex attribute");
+            log_errno(status, "Couldn't set recursive mutex attribute");
         }
         else if ((status = pthread_mutex_init(mutex, &mutexAttr))) {
-            mylog_syserr("Couldn't initialize mutex");
+            log_syserr("Couldn't initialize mutex");
         }
 
         (void)pthread_mutexattr_destroy(&mutexAttr);
@@ -247,7 +247,7 @@ piq_initMutex(
  *
  * @param[in] fiq    The product-index queue.
  * @retval    true   Success.
- * @retval    false  Failure. `mylog_add()` called.
+ * @retval    false  Failure. `log_add()` called.
  */
 static bool
 piq_initLock(
@@ -259,7 +259,7 @@ piq_initLock(
         if (0 == status)
             return true;
 
-        mylog_errno(status, "Couldn't initialize condition-variable");
+        log_errno(status, "Couldn't initialize condition-variable");
         (void)pthread_mutex_destroy(&fiq->mutex);
     }
 
@@ -273,14 +273,14 @@ piq_initLock(
 /**
  * Returns a new product-index queue.
  *
- * @retval NULL  Failure. \c mylog_add() called.
+ * @retval NULL  Failure. \c log_add() called.
  * @return       Pointer to a new product-index queue. The client should call
  *               \c fiq_free() when it is no longer needed.
  */
 ProdIndexQueue*
 piq_new(void)
 {
-    ProdIndexQueue* fiq = mylog_malloc(sizeof(ProdIndexQueue),
+    ProdIndexQueue* fiq = log_malloc(sizeof(ProdIndexQueue),
             "missed-product product-index queue");
 
     if (fiq) {
@@ -350,7 +350,7 @@ piq_free(
  *                           add a product-index.
  * @param[in]     iProd      Index of the data-product.
  * @retval        0          Success.
- * @retval        ENOMEM     Out of memory. \c mylog_add() called.
+ * @retval        ENOMEM     Out of memory. \c log_add() called.
  * @retval        ECANCELED  The queue has been canceled.
  */
 int

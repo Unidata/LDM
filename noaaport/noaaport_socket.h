@@ -29,8 +29,8 @@
  *                        multicast UDP packets or NULL to listen on all
  *                        available interfaces.
  * @retval     0          Success. `*socket` is set.
- * @retval     1          Usage failure. \c mylog_add() called.
- * @retval     2          O/S failure. \c mylog_add() called.
+ * @retval     1          Usage failure. \c log_add() called.
+ * @retval     2          O/S failure. \c log_add() called.
  */
 int
 nportSock_init(

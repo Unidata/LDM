@@ -16,7 +16,7 @@
 
 #include "error.h"
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 
 #include "dict.h"
 #include "feedtypeDB.h"         /* to ensure consistency */

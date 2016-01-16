@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#include "mylog.h"
+#include "log.h"
 #include "ldmalloc.h"
 #include "alrm.h"
 #include "error.h"
@@ -43,7 +43,7 @@ new_pbuf(
         pipe_buf = fpathconf(pfd, _PC_PIPE_BUF);
         if(pipe_buf == -1L)
         {
-                mylog_syserr("fpathconf %d, _PC_PIPE_BUF", pfd);
+                log_syserr("fpathconf %d, _PC_PIPE_BUF", pfd);
                 goto err;
         }
 #endif
@@ -88,7 +88,7 @@ pbuf_flush(
     time_t              start;
     time_t              duration;
 
-    mylog_debug("        pbuf_flush fd %d %6d %s",
+    log_debug("        pbuf_flush fd %d %6d %s",
         buf->pfd, len, block ? "block" : "" );
 
     if(len == 0)
@@ -111,24 +111,24 @@ pbuf_flush(
 
     if(nwrote == -1) {
         if((tmpErrno == EAGAIN) && (!block)) {
-            mylog_debug("         pbuf_flush: EAGAIN on %d bytes", len);
+            log_debug("         pbuf_flush: EAGAIN on %d bytes", len);
             nwrote = 0;
         }
         else {
-            mylog_syserr("pbuf_flush(): fd=%d", buf->pfd);
+            log_syserr("pbuf_flush(): fd=%d", buf->pfd);
         }
         status = tmpErrno;
     }
     else if(nwrote == len) {
         /* wrote the whole buffer */
-        mylog_debug("         pbuf_flush: wrote  %d bytes", nwrote);
+        log_debug("         pbuf_flush: wrote  %d bytes", nwrote);
 
         buf->ptr = buf->base;
         len = 0;
     }
     else if(nwrote > 0) {
         /* partial write, just shift the buffer by the amount written */
-        mylog_debug("         pbuf_flush: partial write %d of %d bytes",
+        log_debug("         pbuf_flush: partial write %d of %d bytes",
             nwrote, len);
 
         len -= nwrote;
@@ -145,7 +145,7 @@ pbuf_flush(
     duration = time(NULL) - start;
 
     if(duration > 5)
-        mylog_warning("pbuf_flush(): write(%d,,%d) to decoder took %lu s",
+        log_warning("pbuf_flush(): write(%d,,%d) to decoder took %lu s",
             buf->pfd, nwrote, (unsigned long)duration);
 
     return status;
@@ -154,7 +154,7 @@ flush_timeo:
     if(changed)
         set_fd_nonblock(buf->pfd);
 
-    mylog_error("write(%d,,%lu) to decoder timed-out (%lu s)",
+    log_error("write(%d,,%lu) to decoder timed-out (%lu s)",
         buf->pfd, (unsigned long)len, (unsigned long)(time(NULL) - start));
 
     return ETIMEDOUT;

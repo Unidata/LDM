@@ -4,7 +4,7 @@
 
 #include "config.h"
 
-#include <mylog.h>
+#include <log.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h> /* O_RDONLY et al */
@@ -62,8 +62,8 @@ mkdirs(
             size_t      len = (size_t)(ep - path);
             char        stripped[PATH_MAX+1];
 
-            mylog_assert(ep != NULL && ep != path);
-            mylog_assert(len < PATH_MAX);
+            log_assert(ep != NULL && ep != path);
+            log_assert(len < PATH_MAX);
 
             /*
              * Copy up-to the last component in the path.

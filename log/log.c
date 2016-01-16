@@ -8,7 +8,7 @@
  *
  * This module is thread-safe.
  *
- * @file   mylog.c
+ * @file   log.c
  * @author Steven R. Emmerson
  *
  * REQUIREMENTS:
@@ -36,7 +36,7 @@
 #include <config.h>
 
 #undef NDEBUG
-#include "mylog.h"
+#include "log.h"
 #include "mutex.h"
 
 #include <assert.h>
@@ -151,9 +151,9 @@ static void handle_sighup(
 static void lock(void)
 {
     int status = pthread_mutex_lock(&mutex);
-    mylog_assert(status == 0);
+    log_assert(status == 0);
     if (hupped) {
-        mylog_refresh();
+        log_refresh();
         hupped = 0;
     }
 }
@@ -167,13 +167,13 @@ static void lock(void)
 static void unlock(void)
 {
     int status = pthread_mutex_unlock(&mutex);
-    mylog_assert(status == 0);
+    log_assert(status == 0);
 }
 
 /**
  * Initializes this logging module.
  */
-int mylog_init(
+int log_init(
         const char* const id)
 {
     (void)sigfillset(&all_sigset);
@@ -185,16 +185,16 @@ int mylog_init(
     (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
     int status = mutex_init(&mutex, true, true);
     if (status == 0)
-        status = mylog_impl_init(id);
+        status = log_impl_init(id);
     return status;
 }
 
 /**
  * Finalizes this logging module.
  */
-int mylog_fini(void)
+int log_fini(void)
 {
-    int status = mylog_impl_fini();
+    int status = log_impl_fini();
     if (status == 0) {
         status = mutex_fini(&mutex);
         if (status == 0)
@@ -208,7 +208,7 @@ static void create_key(void)
     int status = pthread_key_create(&listKey, NULL);
 
     if (status != 0) {
-        mylog_internal("pthread_key_create() failure");
+        log_internal("pthread_key_create() failure");
         abort();
     }
 }
@@ -229,12 +229,12 @@ static List* list_get(void)
     if (NULL == list) {
         list = (List*)malloc(sizeof(List));
         if (NULL == list) {
-            mylog_internal("malloc() failure");
+            log_internal("malloc() failure");
         }
         else {
             int status = pthread_setspecific(listKey, list);
             if (status != 0) {
-                mylog_internal("pthread_setspecific() failure");
+                log_internal("pthread_setspecific() failure");
                 free(list);
                 list = NULL;
             }
@@ -294,14 +294,14 @@ static int msg_new(
     Message* msg = (Message*)malloc(sizeof(Message));
     if (msg == NULL) {
         status = errno;
-        mylog_internal("malloc() failure");
+        log_internal("malloc() failure");
     }
     else {
         #define LOG_DEFAULT_STRING_SIZE     256
         char*   string = (char*)malloc(LOG_DEFAULT_STRING_SIZE);
         if (NULL == string) {
             status = errno;
-            mylog_internal("malloc() failure");
+            log_internal("malloc() failure");
             free(msg);
         }
         else {
@@ -400,7 +400,7 @@ static int msg_format(
          * Group Base Specifications Issue 6
          */
         status = errno ? errno : EILSEQ;
-        mylog_internal("vsnprintf() failure");
+        log_internal("vsnprintf() failure");
     }
     else {
         // The buffer is too small for the message. Expand it.
@@ -409,7 +409,7 @@ static int msg_format(
 
         if (NULL == string) {
             status = errno;
-            mylog_internal("malloc() failure");
+            log_internal("malloc() failure");
         }
         else {
             free(msg->string);
@@ -428,12 +428,12 @@ static int msg_format(
  * the message-list for the current thread.
  *
  * @param[in] level  The level at which to log the messages. One of
- *                   MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING, MYLOG_LEVEL_NOTICE,
- *                   MYLOG_LEVEL_INFO, or MYLOG_LEVEL_DEBUG; otherwise, the
+ *                   LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
+ *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
  */
 static void flush(
-    const mylog_level_t level)
+    const log_level_t level)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -442,10 +442,10 @@ static void flush(
     if (NULL != list && NULL != list->last) {
         lock();
 
-        if (mylog_is_level_enabled(level)) {
+        if (log_is_level_enabled(level)) {
             for (const Message* msg = list->first; NULL != msg;
                     msg = msg->next) {
-                mylog_write_one(level, msg);
+                log_write_one(level, msg);
 
                 if (msg == list->last)
                     break;
@@ -461,20 +461,20 @@ static void flush(
 /**
  * Returns the string associated with a logging level.
  *
- * @param[in] level  The logging level. One of `MYLOG_LEVEL_DEBUG`,
- *                   `MYLOG_LEVEL_INFO`, `MYLOG_LEVEL_NOTICE`,
- *                   `MYLOG_LEVEL_WARNING`, `MYLOG_LEVEL_ERROR`,
- *                   `MYLOG_LEVEL_ALERT`, `MYLOG_LEVEL_CRIT`, or
- *                   `MYLOG_LEVEL_EMERG`. The string `"UNKNOWN"` is returned if
+ * @param[in] level  The logging level. One of `LOG_LEVEL_DEBUG`,
+ *                   `LOG_LEVEL_INFO`, `LOG_LEVEL_NOTICE`,
+ *                   `LOG_LEVEL_WARNING`, `LOG_LEVEL_ERROR`,
+ *                   `LOG_LEVEL_ALERT`, `LOG_LEVEL_CRIT`, or
+ *                   `LOG_LEVEL_EMERG`. The string `"UNKNOWN"` is returned if
  *                   the level is not one of these values.
  * @return           The associated string.
  */
-const char* mylog_level_to_string(
-        const mylog_level_t level)
+const char* log_level_to_string(
+        const log_level_t level)
 {
     static const char* const strings[] = {"DEBUG", "INFO", "NOTE", "WARN",
         "ERROR", "ALERT", "CRIT", "FATAL"};
-    return mylog_vet_level(level) ? strings[level] : "UNKNOWN";
+    return log_vet_level(level) ? strings[level] : "UNKNOWN";
 }
 
 /**
@@ -483,7 +483,7 @@ const char* mylog_level_to_string(
  * @param[in] pathname  The pathname.
  * @return              Pointer to the last component of the pathname.
  */
-const char* mylog_basename(
+const char* log_basename(
         const char* const pathname)
 {
     const char* const cp = strrchr(pathname, '/');
@@ -506,8 +506,8 @@ const char* mylog_basename(
  * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
  *                      Error message logged.
  */
-int mylog_vadd_located(
-        const mylog_loc_t* const restrict loc,
+int log_vadd_located(
+        const log_loc_t* const restrict loc,
         const char* const restrict        fmt,
         va_list                           args)
 {
@@ -517,7 +517,7 @@ int mylog_vadd_located(
     int status;
 
     if (NULL == fmt) {
-        mylog_internal("NULL argument");
+        log_internal("NULL argument");
         status = EINVAL;
     }
     else {
@@ -548,8 +548,8 @@ int mylog_vadd_located(
  * @param[in] ...  Arguments for the formatting string.
  * @retval    0    Success.
  */
-int mylog_add_located(
-        const mylog_loc_t* const restrict loc,
+int log_add_located(
+        const log_loc_t* const restrict loc,
         const char* const restrict        fmt,
                                           ...)
 {
@@ -557,7 +557,7 @@ int mylog_add_located(
     blockSigs(&sigset);
     va_list     args;
     va_start(args, fmt);
-    int status = mylog_vadd_located(loc, fmt, args);
+    int status = log_vadd_located(loc, fmt, args);
     va_end(args);
     restoreSigs(&sigset);
     return status;
@@ -572,19 +572,19 @@ int mylog_add_located(
  * @param[in] ...     Arguments for the formatting string.
  * @return
  */
-int mylog_add_errno_located(
-        const mylog_loc_t* const loc,
+int log_add_errno_located(
+        const log_loc_t* const loc,
         const int                errnum,
         const char* const        fmt,
                                  ...)
 {
     sigset_t sigset;
     blockSigs(&sigset);
-    int status = mylog_add_located(loc, "%s", strerror(errnum));
+    int status = log_add_located(loc, "%s", strerror(errnum));
     if (status == 0 && fmt && *fmt) {
         va_list     args;
         va_start(args, fmt);
-        status = mylog_vadd_located(loc, fmt, args);
+        status = log_vadd_located(loc, fmt, args);
         va_end(args);
     }
     restoreSigs(&sigset);
@@ -595,7 +595,7 @@ int mylog_add_errno_located(
  * Clears the message-list of the current thread.
  */
 void
-mylog_clear(void)
+log_clear(void)
 {
     list_clear();
 }
@@ -605,7 +605,7 @@ mylog_clear(void)
  * when no more logging by the current thread will occur.
  */
 void
-mylog_free(void)
+log_free(void)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -614,7 +614,7 @@ mylog_free(void)
 
     if (list) {
         if (list->last)
-            mylog_error("%s() called with pending messages", __func__);
+            log_error("%s() called with pending messages", __func__);
         list_fini(list);
         free(list);
         (void)pthread_setspecific(listKey, NULL);
@@ -635,7 +635,7 @@ mylog_free(void)
  * @retval    NULL      Out of memory. Log message added.
  * @return              Pointer to the allocated memory.
  */
-void* mylog_malloc_located(
+void* log_malloc_located(
         const char* const restrict file,
         const char* const restrict func,
         const int                  line,
@@ -645,8 +645,8 @@ void* mylog_malloc_located(
     void* obj = malloc(nbytes);
 
     if (obj == NULL) {
-        mylog_loc_t loc = {file, line};
-        mylog_add_located(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
+        log_loc_t loc = {file, line};
+        log_add_located(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
     }
 
     return obj;
@@ -661,14 +661,14 @@ void* mylog_malloc_located(
  * @param[in] format  Format of the message or NULL.
  * @param[in] args    Optional format arguments.
  */
-void mylog_vlog_located(
-        const mylog_loc_t* const restrict loc,
-        const mylog_level_t               level,
+void log_vlog_located(
+        const log_loc_t* const restrict loc,
+        const log_level_t               level,
         const char* const restrict        format,
         va_list                           args)
 {
     if (format && *format)
-        mylog_vadd_located(loc, format, args);
+        log_vadd_located(loc, format, args);
     flush(level);
 }
 
@@ -681,15 +681,15 @@ void mylog_vlog_located(
  * @param[in] format  Format of the message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void mylog_log_located(
-        const mylog_loc_t* const restrict loc,
-        const mylog_level_t               level,
+void log_log_located(
+        const log_loc_t* const restrict loc,
+        const log_level_t               level,
         const char* const restrict        format,
                                           ...)
 {
     va_list args;
     va_start(args, format);
-    mylog_vlog_located(loc, level, format, args);
+    log_vlog_located(loc, level, format, args);
     va_end(args);
 }
 
@@ -703,16 +703,16 @@ void mylog_log_located(
  * @param[in] fmt     Format of the user's message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void mylog_errno_located(
-        const mylog_loc_t* const   loc,
+void log_errno_located(
+        const log_loc_t* const   loc,
         const int                  errnum,
         const char* const restrict fmt,
                                    ...)
 {
     va_list args;
     va_start(args, fmt);
-    mylog_add_located(loc, "%s", strerror(errnum));
-    mylog_vlog_located(loc, MYLOG_LEVEL_ERROR, fmt, args);
+    log_add_located(loc, "%s", strerror(errnum));
+    log_vlog_located(loc, LOG_LEVEL_ERROR, fmt, args);
     va_end(args);
 }
 
@@ -722,20 +722,20 @@ void mylog_errno_located(
  *
  * @param[in] loc    Location.
  * @param[in] level  The level at which to log the messages. One of
- *                   MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING, MYLOG_LEVEL_NOTICE,
- *                   MYLOG_LEVEL_INFO, or MYLOG_LEVEL_DEBUG; otherwise, the
+ *                   LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
+ *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
  */
-void mylog_flush_located(
-        const mylog_loc_t* const loc,
-        const mylog_level_t      level)
+void log_flush_located(
+        const log_loc_t* const loc,
+        const log_level_t      level)
 {
     if (!list_is_empty()) {
         /*
          * The following message is added so that the location of the call to
-         * mylog_flush() is logged in case the call needs to be adjusted.
+         * log_flush() is logged in case the call needs to be adjusted.
          */
-        mylog_add_located(loc, "Log messages flushed");
+        log_add_located(loc, "Log messages flushed");
         flush(level);
     }
 }
@@ -834,7 +834,7 @@ void* log_malloc(
     void* obj = malloc(nbytes);
 
     if (obj == NULL)
-        mylog_internal(MYLOG_LEVEL_ERROR, "malloc() failure");
+        log_internal(LOG_LEVEL_ERROR, "malloc() failure");
 
     return obj;
 }

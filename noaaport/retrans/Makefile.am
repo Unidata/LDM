@@ -16,7 +16,7 @@ lib_la_SOURCES		= retrans.c \
 
 lib_la_CPPFLAGS		= -DLDMHOME='"$(LDMHOME)"' \
 			  -I$(top_srcdir) \
-			  -I$(top_srcdir)/mylog
+			  -I$(top_srcdir)/log
 
 bin_PROGRAMS            = acq_ldm_getshm acq_ldm_ctl acq_ldm_freeshm
 ACQ_SHM_SOURCES         = shmem_lib.c \

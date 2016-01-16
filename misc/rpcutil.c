@@ -14,7 +14,7 @@
 
 #include "rpcutil.h"
 #include "inetutil.h"
-#include "mylog.h"
+#include "log.h"
 
 
 /*
@@ -122,9 +122,9 @@ local_portmapper_running()
                     PMAPVERS, &socket, 50, 500)) == NULL) {
                 status = 0;
 
-                mylog_notice("local_portmapper_running(): clnttcp_create() "
+                log_notice("local_portmapper_running(): clnttcp_create() "
                     "failure: %s", clnt_spcreateerror(""));
-                mylog_info("Portmapper daemon is not running on local host");
+                log_info("Portmapper daemon is not running on local host");
             }
             else {
                 status = 1;

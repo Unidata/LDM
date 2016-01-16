@@ -11,7 +11,7 @@
 
 #include <stdlib.h>
 
-#include "mylog.h"
+#include "log.h"
 
 #include "xdr_data.h"
 

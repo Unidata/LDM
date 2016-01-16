@@ -9,7 +9,7 @@
 #include "ldm.h"
 #include "ldm_clnt_misc.h"
 #include "ldmprint.h"
-#include "mylog.h"
+#include "log.h"
 #include "prod_class.h"
 #include "rpc/rpc.h"
 #include "rpcutil.h"
@@ -44,9 +44,9 @@ static char             buf[2048];
  *                      NULL.
  * Returns:
  *      0               Success.
- *      LP_TIMEDOUT     The failure was due to an RPC timeout. "mylog_add()"
+ *      LP_TIMEDOUT     The failure was due to an RPC timeout. "log_add()"
  *                      called iff "name" isn't NULL.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called iff "name" isn't NULL.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called iff "name" isn't NULL.
  */
 static LdmProxyStatus
 getStatus(
@@ -64,12 +64,12 @@ getStatus(
     }
     else {
         if (NULL != name) {
-            mylog_add("%s failure to host \"%s\": %s", name, proxy->host,
+            log_add("%s failure to host \"%s\": %s", name, proxy->host,
                     clnt_errmsg(proxy->clnt));
 
             if (NULL != info) {
-                mylog_add("Couldn't send product: %s", s_prod_info(NULL, 0,
-                            info, mylog_is_enabled_debug));
+                log_add("Couldn't send product: %s", s_prod_info(NULL, 0,
+                            info, log_is_enabled_debug));
             }
         }
 
@@ -111,9 +111,9 @@ my_flush_5(
  *                      longer needed.
  * Returns:
  *      0               Success. "*clsspp" might be modified.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_hiya_5(
@@ -139,13 +139,13 @@ my_hiya_5(
             *want = (prod_class_t*)PQ_CLASS_ALL;
             break;
         case SHUTTING_DOWN:
-            mylog_add("%s is shutting down", proxy->host);
+            log_add("%s is shutting down", proxy->host);
             return LP_LDM_ERROR;
         case DONT_SEND:
         case RESTART:
         case REDIRECT: /* TODO */
         default:
-            mylog_add("%s: Unexpected reply from LDM: %s", proxy->host,
+            log_add("%s: Unexpected reply from LDM: %s", proxy->host,
                     s_ldm_errt(reply.code));
             return LP_LDM_ERROR;
         case RECLASS:
@@ -154,7 +154,7 @@ my_hiya_5(
             /* N.B. we use the downstream patterns */
             /* Use of "buf" added to prevent SIGSEGV on 64-bit RHEL 6 */
             (void)s_prod_class(buf, sizeof(buf)-1, *want);
-            mylog_notice("%s: reclass: %s", proxy->host, buf);
+            log_notice("%s: reclass: %s", proxy->host, buf);
             break;
     }
 
@@ -176,8 +176,8 @@ my_hiya_5(
  *                      longer needed.
  * Returns:
  *      0               Success. "*clsspp" might be modified.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_hiya_6(
@@ -203,34 +203,34 @@ my_hiya_6(
                 break;
 
             case SHUTTING_DOWN:
-                mylog_add("%s: LDM shutting down", proxy->host);
+                log_add("%s: LDM shutting down", proxy->host);
                 status = LP_LDM_ERROR;
                 break;
 
             case BADPATTERN:
-                mylog_add("%s: Bad product-class pattern", proxy->host);
+                log_add("%s: Bad product-class pattern", proxy->host);
                 status = LP_LDM_ERROR;
                 break;
 
             case DONT_SEND:
-                mylog_add("%s: LDM says don't send", proxy->host);
+                log_add("%s: LDM says don't send", proxy->host);
                 status = LP_LDM_ERROR;
                 break;
 
             case RESEND:
-                mylog_add("%s: LDM says resend (ain't gonna happen)",
+                log_add("%s: LDM says resend (ain't gonna happen)",
                         proxy->host);
                 status = LP_LDM_ERROR;
                 break;
 
             case RESTART:
-                mylog_add("%s: LDM says restart (ain't gonna happen)",
+                log_add("%s: LDM says restart (ain't gonna happen)",
                         proxy->host);
                 status = LP_LDM_ERROR;
                 break;
 
             case REDIRECT:
-                mylog_add("%s: LDM says redirect (ain't gonna happen)",
+                log_add("%s: LDM says redirect (ain't gonna happen)",
                         proxy->host);
                 status = LP_LDM_ERROR;
                 break;
@@ -242,13 +242,13 @@ my_hiya_6(
                 /* N.B. we use the downstream patterns */
                 /* Use of "buf" added to prevent SIGSEGV on 64-bit RHEL 6 */
                 (void)s_prod_class(buf, sizeof(buf)-1, *want);
-                mylog_notice("%s: reclass: %s", proxy->host, buf);
+                log_notice("%s: reclass: %s", proxy->host, buf);
                 status = 0;
                 break;
         }
 
         if (LP_OK != status)
-            mylog_debug("max_hereis = %u", proxy->max_hereis);
+            log_debug("max_hereis = %u", proxy->max_hereis);
     }
 
     return status;
@@ -264,9 +264,9 @@ my_hiya_6(
  *      replyp          The response from the LDM.
  * Returns:
  *      0               OK
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_comingsoon_5(
@@ -300,8 +300,8 @@ my_comingsoon_5(
  * Returns:
  *      0               OK
  *      LP_TIMEDOUT     The RPC call timed-out.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_blkdata_5(
@@ -330,9 +330,9 @@ my_blkdata_5(
  * Returns:
  *      0               Success.
  *      LP_UNWANTED     Data-product was unwanted.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_csbd_5(
@@ -354,7 +354,7 @@ my_csbd_5(
                status = LP_UNWANTED;
             }
             else {
-               mylog_add("send_5: %s: %s", info->ident,
+               log_add("send_5: %s: %s", info->ident,
                        s_ldm_errt(reply.code));
                status = LP_LDM_ERROR;
             }
@@ -379,7 +379,7 @@ my_csbd_5(
                     break;
                 }
                 else if (reply.code != OK) {
-                    mylog_add("Unexpected reply from LDM: %s",
+                    log_add("Unexpected reply from LDM: %s",
                             s_ldm_errt(reply.code));
                     status = LP_LDM_ERROR;
                     break;
@@ -404,9 +404,9 @@ my_csbd_5(
  * Returns:
  *      0               Success.
  *      LP_UNWANTED     Data-product was unwanted.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_hereis_5(
@@ -431,7 +431,7 @@ my_hereis_5(
             status = LP_UNWANTED;
         }
         else {
-            mylog_add("Unexpected reply from LDM: %s", s_ldm_errt(reply.code));
+            log_add("Unexpected reply from LDM: %s", s_ldm_errt(reply.code));
             status = LP_LDM_ERROR;
         }
     }
@@ -448,9 +448,9 @@ my_hereis_5(
  * Returns:
  *      0               Success.
  *      LP_UNWANTED     Data-product was unwanted.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_send_5(
@@ -472,9 +472,9 @@ my_send_5(
  * Return:
  *      0               Success.
  *      LP_UNWANTED     Data-product was unwanted.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_csbd_6(
@@ -488,7 +488,7 @@ my_csbd_6(
     comingsoon_reply_t* reply;
     comingsoon_args     soonArg;
 
-    mylog_debug("Sending file via COMINGSOON_6/BLKDATA_6");
+    log_debug("Sending file via COMINGSOON_6/BLKDATA_6");
 
     soonArg.infop = info;
     soonArg.pktsz = size;
@@ -503,7 +503,7 @@ my_csbd_6(
             status = LP_UNWANTED;
         }
         else if (0 != *reply) {
-            mylog_add("Unexpected reply from LDM: %s", s_ldm_errt(*reply));
+            log_add("Unexpected reply from LDM: %s", s_ldm_errt(*reply));
             status = LP_LDM_ERROR;
         }
         else {
@@ -536,9 +536,9 @@ my_csbd_6(
  *      product         Pointer to the data-product to be sent.
  * Return:
  *      0               Success.
- *      LP_TIMEDOUT     RPC timeout. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     RPC timeout. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_hereis_6(
@@ -547,7 +547,7 @@ my_hereis_6(
 {
     LdmProxyStatus      status = 0;     /* success */
 
-    mylog_debug("Sending file via HEREIS_6");
+    log_debug("Sending file via HEREIS_6");
 
     (void)hereis_6(product, proxy->clnt);
     /*
@@ -570,9 +570,9 @@ my_hereis_6(
  * Return:
  *      0               Success.
  *      LP_UNWANTED     Data-product was unwanted.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 static LdmProxyStatus
 my_send_6(
@@ -614,8 +614,8 @@ my_flush_6(
  *      LP_SYSTEM       System error.
  *      LP_TIMEDOUT     Connection attempt timed-out.
  *      LP_HOSTUNREACH  Host is unreachable.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */      
 static LdmProxyStatus
 convertStatus(
@@ -665,11 +665,11 @@ lp_setRpcTimeout(
  *                      is set upon successful return.
  * Returns:
  *      0               Success. "*instance" is set.
- *      LP_SYSTEM       System error. "mylog_add()" called.
- *      LP_TIMEDOUT     Connection attempt timed-out. "mylog_add()" called.
- *      LP_HOSTUNREACH  Host is unreachable. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_SYSTEM       System error. "log_add()" called.
+ *      LP_TIMEDOUT     Connection attempt timed-out. "log_add()" called.
+ *      LP_HOSTUNREACH  Host is unreachable. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 LdmProxyStatus
 lp_new(
@@ -681,14 +681,14 @@ lp_new(
     LdmProxy*           proxy = (LdmProxy*)malloc(nbytes);
 
     if (NULL == proxy) {
-        mylog_syserr("Couldn't allocate %lu bytes for new LdmProxy", nbytes);
+        log_syserr("Couldn't allocate %lu bytes for new LdmProxy", nbytes);
         status = LP_SYSTEM;
     }
     else {
         proxy->host = strdup(host);
 
         if (NULL == proxy->host) {
-            mylog_syserr("Couldn't duplicate string \"%s\"", host);
+            log_syserr("Couldn't duplicate string \"%s\"", host);
             status = LP_SYSTEM;
         }
         else {
@@ -718,7 +718,7 @@ lp_new(
             }
 
             if (error) {
-                mylog_add("%s", err_message(error));
+                log_add("%s", err_message(error));
                 free(proxy->host);
                 status = convertStatus(error);
                 err_free(error);
@@ -801,9 +801,9 @@ lp_version(
  *                      longer needed.
  * Returns:
  *      0               Success. "*want" is set.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 LdmProxyStatus
 lp_hiya(
@@ -823,9 +823,9 @@ lp_hiya(
  * Returns:
  *      0               Success.
  *      LP_UNWANTED     The data-product wasn't wanted by the LDM.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
- *      LP_LDM_ERROR    LDM error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
+ *      LP_LDM_ERROR    LDM error. "log_add()" called.
  */
 LdmProxyStatus
 lp_send(
@@ -842,8 +842,8 @@ lp_send(
  *      proxy           Pointer to the LDM proxy data-structure.
  * Returns:
  *      0               Success.
- *      LP_TIMEDOUT     The RPC call timed-out. "mylog_add()" called.
- *      LP_RPC_ERROR    RPC error. "mylog_add()" called.
+ *      LP_TIMEDOUT     The RPC call timed-out. "log_add()" called.
+ *      LP_RPC_ERROR    RPC error. "log_add()" called.
  */
 LdmProxyStatus
 lp_flush(

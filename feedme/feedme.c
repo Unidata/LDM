@@ -16,7 +16,7 @@
 #include "remote.h"
 #include "ldmprint.h"
 #include "atofeedt.h"
-#include "mylog.h"
+#include "log.h"
 #include "inetutil.h"
 #include "ldm5_clnt.h"
 #include "RegularExpressions.h"
@@ -68,11 +68,11 @@ static ldm_replyt reply = { OK };
 static void
 cleanup(void)
 {
-        mylog_notice("exiting");
+        log_notice("exiting");
 
         /* TODO: sign off */
 
-        (void)mylog_fini();
+        (void)log_fini();
 }
 
 
@@ -101,7 +101,7 @@ signal_handler(int sig)
         case SIGUSR1 :
                 return;
         case SIGUSR2 :
-                mylog_roll_level();
+                log_roll_level();
                 return;
         case SIGPIPE :
                 return;
@@ -175,9 +175,9 @@ hiya_5_svc(prod_class *clssp, struct svc_req *rqstp)
 
         (void) memset((char*)&reply, 0, sizeof(reply));
 
-        if(mylog_is_enabled_info)
+        if(log_is_enabled_info)
         {
-                mylog_info("hiya5: %s: %s",
+                log_info("hiya5: %s: %s",
                         remote,
                          s_prod_class(NULL, 0, clssp));
         }
@@ -208,9 +208,9 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         (void) memset((char*)&reply, 0, sizeof(reply));
 
         (void) s_prod_info(infostr, sizeof(infostr), infop, 0);
-        if(mylog_is_enabled_debug)
+        if(log_is_enabled_debug)
         {
-                mylog_debug("comingsoon5: %s %s (pktsz %u)",
+                log_debug("comingsoon5: %s %s (pktsz %u)",
                         s_signaturet(NULL, 0, infop->signature),
                         infostr, argsp->pktsz);
         }
@@ -230,9 +230,9 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
 {
         (void) memset((char*)&reply, 0, sizeof(reply));
 
-        if(mylog_is_enabled_debug)
+        if(log_is_enabled_debug)
         {
-                mylog_debug("   blkdata5: %s %8u %5u",
+                log_debug("   blkdata5: %s %8u %5u",
                         s_signaturet(NULL, 0, *dpkp->signaturep),
                         dpkp->data.dbuf_len,
                         dpkp->pktnum);
@@ -240,7 +240,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
 
         if(memcmp(*dpkp->signaturep, signature, sizeof(signaturet)) != 0)
         {
-                mylog_error("signature mismatch");
+                log_error("signature mismatch");
                 goto err;
         }
         /* else */
@@ -258,7 +258,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
         {
                 clss.from = arrival;
                 timestamp_incr(&clss.from);
-                mylog_info("%s", infostr);
+                log_info("%s", infostr);
         }
 
 
@@ -268,7 +268,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
         if( write(STDOUT_FILENO, dpkp->data.dbuf_val, dpkp->data.dbuf_len) !=
                         dpkp->data.dbuf_len)
         {
-                mylog_syserr( "data write failed") ;
+                log_syserr( "data write failed") ;
                 exit(1) ;
         }
 
@@ -340,7 +340,7 @@ feedmeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 svcerr_systemerr(transp);
         }
         if (!svc_freeargs(transp, xdr_argument, (caddr_t) &argument)) {
-                mylog_error("unable to free arguments");
+                log_error("unable to free arguments");
                 exit(1);
         }
         return;
@@ -359,7 +359,7 @@ int main(int ac, char *av[])
         /*
          * initialize logger
          */
-        (void)mylog_init(av[0]);
+        (void)log_init(av[0]);
 
         if(set_timestamp(&clss.from) != 0)
         {
@@ -384,13 +384,13 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "vxl:f:o:t:h:p:T:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                        (void)log_set_level(LOG_LEVEL_INFO);
                         break;
                 case 'x':
-                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                        (void)log_set_level(LOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        mylog_set_output(optarg);
+                        log_set_output(optarg);
                         break;
                 case 'h':
                         remote = optarg;
@@ -463,7 +463,7 @@ int main(int ac, char *av[])
 
         } /* End getopt block */
 
-        mylog_notice("Starting Up: %s: %s",
+        log_notice("Starting Up: %s: %s",
                         remote,
                         s_prod_class(NULL, 0, &clss));
 
@@ -472,7 +472,7 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                mylog_syserr("atexit");
+                log_syserr("atexit");
                 exit(1);
         }
 

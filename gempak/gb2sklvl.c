@@ -3,7 +3,7 @@
 #include "gb2def.h"
 #include "proto_gemlib.h"
 
-#include <mylog.h>
+#include <log.h>
 
 void  gb2_sklvl( int lvl1, int lvl2, G2lvls *lvltbl,
                  G2level *g2lev, int *iret)

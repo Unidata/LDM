@@ -25,7 +25,7 @@
 #include "remote.h"
 #include "ldmprint.h"
 #include "timestamp.h"
-#include "mylog.h"
+#include "log.h"
 #include "pq.h"
 #include "md5.h"
 
@@ -69,14 +69,14 @@ static void
 cleanup(void)
 {
         if (!printSizePar)
-            mylog_notice("Exiting");
+            log_notice("Exiting");
 
         if(!intr)
         {
                 if(pq != NULL)  
                         (void)pq_close(pq);
         }
-        (void)mylog_fini();
+        (void)log_fini();
 }
 
 
@@ -100,7 +100,7 @@ signal_handler(int sig)
         case SIGUSR1 :
                 return;
         case SIGUSR2 :
-                mylog_roll_level();
+                log_roll_level();
                 return;
         }
 }
@@ -229,11 +229,11 @@ main(int ac, char *av[])
     /*
      * Set up default logging before calling anything that might log.
      */
-    (void)mylog_init(progname);
+    (void)log_init(progname);
 
     pqfname = getQueuePath();           /* this might log */
     if (NULL == pqfname) {
-        mylog_flush_error();
+        log_flush_error();
         exit(1);
     }
 
@@ -248,14 +248,14 @@ main(int ac, char *av[])
         while ((ch = getopt(ac, av, "Sevxl:q:o:i:")) != EOF)
             switch (ch) {
             case 'v':
-                (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                (void)log_set_level(LOG_LEVEL_INFO);
                 break;
             case 'x':
-                (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                (void)log_set_level(LOG_LEVEL_DEBUG);
                 list_extents = 1;
                 break;
             case 'l':
-                (void)mylog_set_output(optarg);
+                (void)log_set_output(optarg);
                 break;
             case 'q':
                 pqfname = optarg;
@@ -300,14 +300,14 @@ main(int ac, char *av[])
      * Set up error logging.
      */
     if (!printSizePar)
-        mylog_notice("Starting Up (%d)", getpgrp());
+        log_notice("Starting Up (%d)", getpgrp());
 
     /*
      * register exit handler
      */
     if(atexit(cleanup) != 0)
     {
-        mylog_syserr("atexit");
+        log_syserr("atexit");
         exit(1);
     }
 
@@ -324,11 +324,11 @@ main(int ac, char *av[])
     if(status)
     {
         if (PQ_CORRUPT == status) {
-            mylog_error("The product-queue \"%s\" is inconsistent\n",
+            log_error("The product-queue \"%s\" is inconsistent\n",
                 pqfname);
         }
         else {
-            mylog_error("pq_open failed: %s: %s\n",
+            log_error("pq_open failed: %s: %s\n",
                 pqfname, strerror(status));
         }
         exit(1);
@@ -336,11 +336,11 @@ main(int ac, char *av[])
 
     if (!printSizePar) {
         if (extended) {
-            mylog_notice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
+            log_notice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
                 "minempty    maxext    age    maxbytes");
         }
         else {
-            mylog_notice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
+            log_notice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
                 "minempty    maxext  age");
         }
     }
@@ -369,13 +369,13 @@ main(int ac, char *av[])
                               &age_oldest, &maxextent);
 
             if (status) {
-                mylog_error("pq_stats() failed: %s (errno = %d)", strerror(status),
+                log_error("pq_stats() failed: %s (errno = %d)", strerror(status),
                     status);
                 exit(1);
             }
 
             if (status = pq_isFull(pq, &isFull)) {
-                mylog_error("pq_isFull() failed: %s (errno = %d)", strerror(status),
+                log_error("pq_isFull() failed: %s (errno = %d)", strerror(status),
                     status);
                 exit(1);
             }
@@ -392,7 +392,7 @@ main(int ac, char *av[])
                 timestampt      minResidenceTime;
 
                 if (status = pq_getMostRecent(pq, &mostRecent)) {
-                    mylog_error("pq_getMostRecent() failed: %s (errno = %d)",
+                    log_error("pq_getMostRecent() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
                 }
@@ -403,7 +403,7 @@ main(int ac, char *av[])
 
                 if (status = pq_getMinVirtResTimeMetrics(pq,
                             &minResidenceTime, &mvrtSize, &mvrtSlots)) {
-                    mylog_error("pq_getMinResidency() failed: %s (errno = %d)",
+                    log_error("pq_getMinResidency() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
                 }
@@ -435,19 +435,19 @@ main(int ac, char *av[])
                               &age_oldest, &maxextent);
 
             if (status) {
-                mylog_error("pq_stats() failed: %s (errno = %d)",
+                log_error("pq_stats() failed: %s (errno = %d)",
                    strerror(status), status);
                 exit(1);
             }
 
             if (extended) {
-                mylog_notice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f %11lu",
+                log_notice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f %11lu",
                     nprods,   nfree,   nempty, nbytes,
                     maxprods, maxfree, minempty, maxextent, age_oldest,
                     maxbytes);
             }
             else {
-                mylog_notice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f",
+                log_notice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f",
                     nprods,   nfree,   nempty, nbytes,
                     maxprods, maxfree, minempty, maxextent, age_oldest);
             }
@@ -455,7 +455,7 @@ main(int ac, char *av[])
                 status = pq_fext_dump(pq);
             }
             if (status) {
-                mylog_error("pq_fext_dump failed: %s (errno = %d)",
+                log_error("pq_fext_dump failed: %s (errno = %d)",
                    strerror(status), status);
                 exit(1);
             }

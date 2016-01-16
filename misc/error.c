@@ -5,7 +5,7 @@
 
 #include <config.h>
 
-#include <mylog.h>
+#include <log.h>
 #include <stdarg.h>
 #include <stddef.h>   /* NULL */
 #include <stdio.h>    /* vsnprintf(), snprintf() */
@@ -13,7 +13,7 @@
 #include <string.h>
 #include <strings.h>  /* strdup() */
 
-#include "mylog.h"
+#include "log.h"
 
 #include "error.h"
 
@@ -44,12 +44,12 @@ err_new(
 {
     ErrorObj *err;
 
-    mylog_assert(file != NULL);
+    log_assert(file != NULL);
 
     err = (ErrorObj*)malloc(sizeof(ErrorObj));
 
     if (NULL == err) {
-        mylog_syserr("malloc(%lu) failure",
+        log_syserr("malloc(%lu) failure",
             (unsigned long)sizeof(ErrorObj));
     }
     else {
@@ -83,7 +83,7 @@ err_new(
             err->msg[nbytes] = 0;
             err->msglen = (size_t)nbytes;
 
-            mylog_assert(err->msglen < size);
+            log_assert(err->msglen < size);
 
             err->code = code;
             err->cause = cause;
@@ -98,7 +98,7 @@ int
 err_code(
     const ErrorObj*     err)
 {
-    mylog_assert(err != NULL);
+    log_assert(err != NULL);
 
     return err->code;
 }
@@ -108,7 +108,7 @@ ErrorObj*
 err_cause(
     const ErrorObj*     err)
 {
-    mylog_assert(err != NULL);
+    log_assert(err != NULL);
 
     return err->cause;
 }
@@ -131,15 +131,15 @@ err_log(
     const ErrorObj* const       err,
     const enum err_level        level)
 {
-    static const unsigned mylog_levels[] = {
-        MYLOG_LEVEL_ERROR,
-        MYLOG_LEVEL_WARNING,
-        MYLOG_LEVEL_NOTICE,
-        MYLOG_LEVEL_INFO,
-        MYLOG_LEVEL_DEBUG
+    static const unsigned log_levels[] = {
+        LOG_LEVEL_ERROR,
+        LOG_LEVEL_WARNING,
+        LOG_LEVEL_NOTICE,
+        LOG_LEVEL_INFO,
+        LOG_LEVEL_DEBUG
     };
 
-    if (mylog_is_level_enabled(mylog_levels[level])) {
+    if (log_is_level_enabled(log_levels[level])) {
         const ErrorObj*          e;
         const char* const       stdErrSep = "; ";
         const char* const       stdLocSep = ": ";
@@ -150,7 +150,7 @@ err_log(
         static char*            buf = initialBuf;
         static size_t           buflen = sizeof(initialBuf);
 
-        mylog_assert(err != NULL);
+        log_assert(err != NULL);
 
         {
             size_t          totlen = 0;
@@ -191,7 +191,7 @@ err_log(
                 buflen = totlen;
             }
 
-            mylog_assert(NULL != buf);
+            log_assert(NULL != buf);
         }
 
         {
@@ -233,7 +233,7 @@ err_log(
          * might have formatting characters in it (e.g., "%") from, for example,
          * a call to "s_prod_info()" with a dangerous product-identifier.
          */
-        mylog_log(mylog_levels[level], "%s", buf);
+        log_log(log_levels[level], "%s", buf);
     }
 }
 

@@ -15,7 +15,7 @@
 
 #include <config.h>
 
-#include <mylog.h>
+#include <log.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -24,7 +24,7 @@
 
 #include "ldm_xlen.h"
 #include "pq.h"
-#include "mylog.h"
+#include "log.h"
 
 #include "fauxPqConfigFile.h"
 
@@ -323,7 +323,7 @@ int pq_insert(
     pqueue*        pq,
     const product* prod)
 {
-    mylog_assert(pq != NULL);
+    log_assert(pq != NULL);
 
     return checkOpen(pq);
 }
@@ -657,7 +657,7 @@ int pq_last(
     int status = set_timestamp(tsp);
 
     if (status  != 0) {
-        mylog_errno(status, "Couldn't set time");
+        log_errno(status, "Couldn't set time");
     }
 
     return status;

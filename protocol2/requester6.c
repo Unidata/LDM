@@ -7,7 +7,7 @@
 
 #include "config.h"
 
-#include <mylog.h>      /* mylog_assert() */
+#include <log.h>      /* log_assert() */
 #include <errno.h>       /* system error codes */
 #include <limits.h>      /* *INT_MAX */
 #include <arpa/inet.h>   /* for <netinet/in.h> under FreeBSD 4.5-RELEASE */
@@ -34,7 +34,7 @@
 #include "rpcutil.h"     /* clnt_errmsg() */
 #include "savedInfo.h"
 #include "timestamp.h"
-#include "mylog.h"
+#include "log.h"
 
 #include "requester6.h"
 
@@ -162,12 +162,12 @@ run_service(
     ErrorObj*   error = NULL; /* success */
     SVCXPRT*    xprt;
 
-    mylog_assert(socket >= 0);
-    mylog_assert(inactiveTimeout != 0);
-    mylog_assert(upName != NULL);
-    mylog_assert(upAddr != NULL);
-    mylog_assert(pqPathname != NULL);
-    mylog_assert(pq != NULL);
+    log_assert(socket >= 0);
+    log_assert(inactiveTimeout != 0);
+    log_assert(upName != NULL);
+    log_assert(upAddr != NULL);
+    log_assert(pqPathname != NULL);
+    log_assert(pq != NULL);
 
     xprt = svcfd_create(socket, 0, MAX_RPC_BUF_NEEDED);
 
@@ -196,7 +196,7 @@ run_service(
                 else {
                     as_init(isPrimary);
 
-                    mylog_debug("Downstream LDM initialized");
+                    log_debug("Downstream LDM initialized");
 
                     for (;;) {
                         /*
@@ -212,12 +212,12 @@ run_service(
                         (void)exitIfDone(0);
 
                         if (err == ETIMEDOUT) {
-                            mylog_info("Connection from upstream LDM silent for "
+                            log_info("Connection from upstream LDM silent for "
                                     "%u seconds", inactiveTimeout);
 
 #if ENABLE_IS_ALIVE
                             if (is_upstream_alive(upName, upAddr, upId)) {
-                                mylog_info("Upstream LDM is alive.  Waiting...");
+                                log_info("Upstream LDM is alive.  Waiting...");
 
                                 continue;
                             }
@@ -280,9 +280,9 @@ make_request(
     int         finished = 0;
     feedpar_t   feedpar;
 
-    mylog_assert(prodClass != NULL);
-    mylog_assert(clnt != NULL);
-    mylog_assert(id != NULL);
+    log_assert(prodClass != NULL);
+    log_assert(clnt != NULL);
+    log_assert(id != NULL);
 
     feedpar.max_hereis = isPrimary ? UINT_MAX : 0;
     feedpar.prod_class = dup_prod_class(prodClass);
@@ -295,7 +295,7 @@ make_request(
         while (!errObj && !finished && exitIfDone(0)) {
             fornme_reply_t*     feedmeReply;
 
-            mylog_debug("Calling feedme_6(...)");
+            log_debug("Calling feedme_6(...)");
 
             feedmeReply = feedme_6(&feedpar, clnt);
 
@@ -307,7 +307,7 @@ make_request(
             }
             else {
                 if (feedmeReply->code == 0) {
-                    mylog_notice("Upstream LDM-6 on %s is willing to be %s feeder",
+                    log_notice("Upstream LDM-6 on %s is willing to be %s feeder",
                         upName, isPrimary ? "a primary" : "an alternate");
 
                     *id = feedmeReply->fornme_reply_t_u.id;
@@ -336,7 +336,7 @@ make_request(
 
                             (void)s_prod_class(wantStr, sizeof(wantStr), 
                                 feedpar.prod_class);
-                            mylog_notice("Product reclassification by upstream LDM: "
+                            log_notice("Product reclassification by upstream LDM: "
                                 "%s -> %s",
                                 wantStr, s_prod_class(NULL, 0, allow));
 
@@ -570,11 +570,11 @@ req6_new(
     prod_class_t*   prodClass;
     ErrorObj*       errObj = adjustByLastInfo(request, &prodClass);
 
-    mylog_assert(upName != NULL);
-    mylog_assert(request != NULL);
-    mylog_assert(inactiveTimeout > 0);
-    mylog_assert(pqPathname != NULL);
-    mylog_assert(pq != NULL);
+    log_assert(upName != NULL);
+    log_assert(request != NULL);
+    log_assert(inactiveTimeout > 0);
+    log_assert(pqPathname != NULL);
+    log_assert(pq != NULL);
 
     if (NULL != errObj) {
         errObj = ERR_NEW(REQ6_SYSTEM_ERROR, errObj,
@@ -584,7 +584,7 @@ req6_new(
         CLIENT*                 clnt;
         struct sockaddr_in      upAddr;
 
-        mylog_notice("LDM-6 desired product-class: %s",
+        log_notice("LDM-6 desired product-class: %s",
             s_prod_class(NULL, 0, prodClass));
 
         errObj = ldm_clnttcp_create_vers(upName, port, SIX, &clnt,
@@ -619,13 +619,13 @@ req6_new(
              */
             unsigned    id;
 
-            mylog_info("Connected to upstream LDM-6 on host %s using port %u",
+            log_info("Connected to upstream LDM-6 on host %s using port %u",
                 upName, (unsigned)ntohs(upAddr.sin_port));
 
             errObj = make_request(upName, prodClass, isPrimary, clnt, &id);
 
             if (!errObj) {
-                mylog_debug("Calling run_service()");
+                log_debug("Calling run_service()");
 
                 errObj = run_service(dataSocket, inactiveTimeout, upName,
                         &upAddr, id, pqPathname, prodClass, pq, isPrimary);

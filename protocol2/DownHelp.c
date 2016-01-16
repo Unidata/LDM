@@ -16,7 +16,7 @@
 #include "pq.h"
 #include "prod_info.h"
 #include "savedInfo.h"
-#include "mylog.h"
+#include "log.h"
 
 #ifndef MIN
 #  define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -159,9 +159,9 @@ dh_saveDataProduct(
     error = pq_insert(pq, &newprod);
 
     if (!error) {
-        if (mylog_is_enabled_info)
-            mylog_info("%s", s_prod_info(NULL, 0, info,
-                    mylog_is_enabled_debug));
+        if (log_is_enabled_info)
+            log_info("%s", s_prod_info(NULL, 0, info,
+                    log_is_enabled_debug));
 
         error = savedInfo_set(info);
         if (error) {
@@ -189,9 +189,9 @@ dh_saveDataProduct(
         }                               /* "savedInfo" updated */
     }                                   /* data-product inserted */
     else if (PQUEUE_BIG == error) {
-        mylog_error("Product too big: %s",
+        log_error("Product too big: %s",
             s_prod_info(NULL, 0, info,
-                    mylog_is_enabled_debug));
+                    log_is_enabled_debug));
         retCode = DOWN6_PQ_BIG;
 
         error = savedInfo_set(info);
@@ -206,11 +206,11 @@ dh_saveDataProduct(
         }
     }                                   /* product too big */
     else if (PQUEUE_DUP == error) {
-        if (mylog_is_enabled_info)
-            mylog_info("%s: duplicate: %s",
+        if (log_is_enabled_info)
+            log_info("%s: duplicate: %s",
                 wasHereis ? "hereis" : "comingsoon/blkdata",
                 s_prod_info(NULL, 0, info,
-                        mylog_is_enabled_debug));
+                        log_is_enabled_debug));
 
         retCode = DOWN6_UNWANTED;
 
@@ -241,9 +241,9 @@ dh_saveDataProduct(
         }                           /* "savedInfo"' updated */
     }                               /* duplicate data-product */
     else {
-        mylog_error("pq_insert() failed: %s: %s",
+        log_error("pq_insert() failed: %s: %s",
             strerror(error), s_prod_info(NULL, 0, info,
-                    mylog_is_enabled_debug));
+                    log_is_enabled_debug));
 
         retCode = DOWN6_PQ;             /* fatal product-queue error */
     }                                   /* general insertion failure */

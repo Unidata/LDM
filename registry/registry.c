@@ -20,7 +20,7 @@
 #include "backend.h"
 #include "globals.h"
 #include <ldmprint.h>
-#include <mylog.h>
+#include <log.h>
 #include "misc.h"
 #include "node.h"
 #include "registry.h"
@@ -39,7 +39,7 @@
  *      value           Pointer to the value.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EILSEQ          The string isn't a valid representation of the type
  */
 typedef RegStatus (*Parser)(const char* string, void* value);
@@ -53,7 +53,7 @@ typedef RegStatus (*Parser)(const char* string, void* value);
  *                      representation of the value.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*strBuf" is not NULL.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 typedef RegStatus (*Formatter)(const void* value, StringBuf* strBuf);
 
@@ -118,7 +118,7 @@ static void freeRegistryDir(void)
  * Sets the registry directory pathname.
  *
  * @retval 0            Success
- * @retval ENOMEM       System error.  "mylog_add()" called.
+ * @retval ENOMEM       System error.  "log_add()" called.
  */
 static int setRegistryDir(
     const char* const   path)   /**< [in] Pointer to pathname of registry
@@ -137,7 +137,7 @@ static int setRegistryDir(
         char*   clone;
 
         if (0 != (status = reg_cloneString(&clone, path))) {
-            mylog_add("Couldn't set new registry pathname to \"%s\"", path);
+            log_add("Couldn't set new registry pathname to \"%s\"", path);
         }
         else {
             freeRegistryDir();
@@ -180,7 +180,7 @@ static void resetRegistry(void)
  *
  * Returns:
  *      0               Success.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 static RegStatus closeRegistry(void)
 {
@@ -230,7 +230,7 @@ static RegStatus parseString(
  *                      representation of the value.  Shall not be NULL.
  * Returns:
  *      0               Success.  The string-buffer is not NULL.
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 static RegStatus formatString(
     const void* const   value,
@@ -248,7 +248,7 @@ static RegStatus formatString(
  * Returns:
  *      0               Success
  *      EILSEQ          The string doesn't represent a boolean.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 static RegStatus parseBool(
     const char* const   string,
@@ -275,7 +275,7 @@ static RegStatus parseBool(
             val = strtol(string, &end, 0);
 
             if (0 != *end || (0 == val && 0 != errno)) {
-                mylog_add("Not a boolean: \"%s\"", string);
+                log_add("Not a boolean: \"%s\"", string);
                 status = EILSEQ;
             }
             else {
@@ -297,7 +297,7 @@ static RegStatus parseBool(
  *                      representation of the value.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*value" is not NULL.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 static RegStatus formatBool(
     const void* const   value,
@@ -319,7 +319,7 @@ static RegStatus formatBool(
  * Returns:
  *      0               Success
  *      EILSEQ          The string doesn't represent an unsigned integer.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 static RegStatus parseUint(
     const char* const   string,
@@ -333,7 +333,7 @@ static RegStatus parseUint(
     val = strtoul(string, &end, 0);
 
     if (0 != *end || (0 == val && 0 != errno)) {
-        mylog_add("Not an unsigned integer: \"%s\"", string);
+        log_add("Not an unsigned integer: \"%s\"", string);
         status = EILSEQ;
     }
     else {
@@ -353,7 +353,7 @@ static RegStatus parseUint(
  *                      representation of the value.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*value" is not NULL.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 static RegStatus formatUint(
     const void* const   value,
@@ -376,7 +376,7 @@ static RegStatus formatUint(
  *      value           Pointer to the value.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      EILSEQ          The string doesn't represent a time.  "mylog_add()"
+ *      EILSEQ          The string doesn't represent a time.  "log_add()"
  *                      called.
  */
 static RegStatus parseTime(
@@ -389,7 +389,7 @@ static RegStatus parseTime(
     status = tsParse(string, &val);
 
     if (0 > status || 0 != string[status]) {
-        mylog_add("Not a timestamp: \"%s\"", string);
+        log_add("Not a timestamp: \"%s\"", string);
         status = EILSEQ;
     }
     else {
@@ -409,7 +409,7 @@ static RegStatus parseTime(
  *                      representation of the value.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*strBuf" is not NULL.
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 static RegStatus formatTime(
     const void* const   value,
@@ -438,7 +438,7 @@ static RegStatus parseSignature(
     status = sigParse(string, &val);
 
     if (0 > status || 0 != string[status]) {
-        mylog_add("Not a signature: \"%s\"", string);
+        log_add("Not a signature: \"%s\"", string);
         status = EILSEQ;
     }
     else {
@@ -458,7 +458,7 @@ static RegStatus parseSignature(
  *                      representation of the value.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*strBuf" is not NULL.
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 static RegStatus formatSignature(
     const void* const   value,
@@ -483,8 +483,8 @@ static const TypeStruct  signatureStruct = {parseSignature, formatSignature};
  *                      NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 static RegStatus sync(
     RegNode* const      node)
@@ -534,7 +534,7 @@ static RegStatus sync(
     }                                   /* cursor initialized */
 
     if (status)
-        mylog_add("Couldn't synchronize node \"%s\"", absPath);
+        log_add("Couldn't synchronize node \"%s\"", absPath);
 
     return status;
 }
@@ -549,8 +549,8 @@ static RegStatus sync(
  *                      0 <=> no.
  * Returns:
  *      0               Success
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 static RegStatus initRegistry(
     const int   forWriting)
@@ -559,17 +559,17 @@ static RegStatus initRegistry(
  
     if (!_initialized) {
         if (0 != sb_new(&_pathBuf, 80)) {
-            mylog_add("Couldn't allocate path-buffer");
+            log_add("Couldn't allocate path-buffer");
             status = ENOMEM;
         }
         else {
             if (0 != sb_new(&_formatBuf, 80)) {
-                mylog_add("Couldn't allocate formating-buffer");
+                log_add("Couldn't allocate formating-buffer");
                 status = ENOMEM;
             }
             else {
                 if (0 != sb_new(&_valuePath, 80)) {
-                    mylog_add("Couldn't allocate value-pathname buffer");
+                    log_add("Couldn't allocate value-pathname buffer");
                     status = ENOMEM;
                 }
                 else {
@@ -601,7 +601,7 @@ static RegStatus initRegistry(
             /* The backend isn't open. */
             if (0 != (status = beOpen(&_backend, getRegistryDir(),
                             forWriting))) {
-                mylog_add("Couldn't open registry");
+                log_add("Couldn't open registry");
             }
             else {
                 _forWriting = forWriting;
@@ -631,7 +631,7 @@ static RegStatus initRegistry(
             _atexitCalled = 1;
         }
         else {
-            mylog_syserr("Couldn't register registry cleanup routine");
+            log_syserr("Couldn't register registry cleanup routine");
         }
     }
  
@@ -648,7 +648,7 @@ static RegStatus initRegistry(
  *      vt              Pointer to the value-thing.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 static int formAbsValuePath(
     StringBuf* const            sb,
@@ -666,8 +666,8 @@ static int formAbsValuePath(
  *      vt              Pointer to the ValueThing.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 static RegStatus writeValue(
     ValueThing* const   vt)
@@ -696,8 +696,8 @@ static RegStatus writeValue(
  *      vt              Pointer to the ValueThing.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 static RegStatus deleteValue(
     ValueThing* const     vt)
@@ -717,7 +717,7 @@ static RegStatus deleteValue(
  *      node            Pointer to the node to be written.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 static RegStatus writeNode(
     RegNode*    node)
@@ -736,7 +736,7 @@ static RegStatus writeNode(
             rn_freeDeletedValues(node);
 
         if (0 != status)
-            mylog_add("Couldn't update values of node \"%s\"",
+            log_add("Couldn't update values of node \"%s\"",
                     rn_getAbsPath(node));
     }
 
@@ -751,7 +751,7 @@ static RegStatus writeNode(
  *                      descendents.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 static RegStatus flush(
     RegNode* const      node)
@@ -773,10 +773,10 @@ static RegStatus flush(
  *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*value" is set.
- *      ENOENT          No such value.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOENT          No such value.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EPERM           The node containing the value has been deleted.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 static RegStatus getNodeValue(
     const RegNode* const        node,
@@ -811,12 +811,12 @@ static RegStatus getNodeValue(
  *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
  * Returns:
  *      0               Success.  "*value" is not NULL.
- *      ENOENT          No value found for "path".  "mylog_add()" called.
- *      EINVAL          The path name isn't valid.  "mylog_add()" called.
- *      EILSEQ          The value found isn't the expected type.  "mylog_add()"
+ *      ENOENT          No value found for "path".  "log_add()" called.
+ *      EINVAL          The path name isn't valid.  "log_add()" called.
+ *      EILSEQ          The value found isn't the expected type.  "log_add()"
  *                      called.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 static RegStatus getValue(
     const char* const           path,
@@ -833,7 +833,7 @@ static RegStatus getValue(
 
         if (0 == status) {
             if (0 == *remPath) {
-                mylog_add("\"%s\" is a node; not a value", path);
+                log_add("\"%s\" is a node; not a value", path);
                 status = ENOENT;
             }
             else if (0 == (status = flush(lastNode))) {
@@ -847,7 +847,7 @@ static RegStatus getValue(
     }
 
     if (0 != status && ENOENT != status)
-        mylog_add("Couldn't get value of key \"%s\"", path);
+        log_add("Couldn't get value of key \"%s\"", path);
 
     return status;
 }
@@ -863,9 +863,9 @@ static RegStatus getValue(
  *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          The value would have the same absolute path name as an
- *                      existing node.  "mylog_add()" called.
+ *                      existing node.  "log_add()" called.
  */
 static RegStatus putNodeValue(
     RegNode* const              node,
@@ -887,7 +887,7 @@ static RegStatus putNodeValue(
     }
 
     if (status)
-        mylog_add("Couldn't put value \"%s\" in node \"%s\"", name,
+        log_add("Couldn't put value \"%s\" in node \"%s\"", name,
             rn_getAbsPath(node));
 
     return status;
@@ -904,13 +904,13 @@ static RegStatus putNodeValue(
  *      typeStruct      Pointer to type-specific functions.  Shall not be NULL.
  * Returns:
  *      0               Success
- *      EINVAL          The absolute path name is invalid.  "mylog_add()"
+ *      EINVAL          The absolute path name is invalid.  "log_add()"
  *                      called. The registry is unchanged.
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  *      EEXIST          A node or value would have to be created with the same
  *                      absolute path name as an existing value or node.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 static RegStatus putValue(
     const char* const           path,
@@ -959,8 +959,8 @@ static RegStatus putValue(
  *                      pathname is used.  The client may free upon return.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EPERM           Backend database already open.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EPERM           Backend database already open.  "log_add()" called.
  */
 RegStatus reg_setDirectory(
     const char* const   path)
@@ -968,7 +968,7 @@ RegStatus reg_setDirectory(
     RegStatus   status;
 
     if (NULL != _backend) {
-        mylog_add("Can't set registry directory to "
+        log_add("Can't set registry directory to "
                 "\"%s\"; registry already open in \"%s\"", path,
                 getRegistryDir());
         status = EPERM;
@@ -986,7 +986,7 @@ RegStatus reg_setDirectory(
  *
  * Returns:
  *      0               Success
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus reg_close(void)
 {
@@ -1003,8 +1003,8 @@ RegStatus reg_close(void)
  *
  * Returns:
  *      0               Success
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_reset(void)
 {
@@ -1024,8 +1024,8 @@ RegStatus reg_reset(void)
  *
  * Returns:
  *      0               Success
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_remove(void)
 {
@@ -1056,11 +1056,11 @@ RegStatus reg_remove(void)
  *                      "free(*value)" when the value is no longer needed.
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      ENOENT          No such value.  "mylog_add()" called.
+ *      ENOENT          No such value.  "log_add()" called.
  *      EINVAL          "path" contains a space.
- *      EINVAL          The path name isn't absolute.  "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EINVAL          The path name isn't absolute.  "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_getString(
     const char* const   path,
@@ -1079,12 +1079,12 @@ RegStatus reg_getString(
  *                      NULL.
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      ENOENT          No such value.  "mylog_add()" called.
- *      EINVAL          The path name isn't absolute.  "mylog_add()" called.
+ *      ENOENT          No such value.  "log_add()" called.
+ *      EINVAL          The path name isn't absolute.  "log_add()" called.
  *      EINVAL          "path" contains a space.
- *      EILSEQ          The value found isn't a boolean. "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EILSEQ          The value found isn't a boolean. "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_getBool(
     const char* const   path,
@@ -1103,13 +1103,13 @@ RegStatus reg_getBool(
  *                      NULL.
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      ENOENT          No such value.  "mylog_add()" called.
- *      EINVAL          The path name isn't absolute.  "mylog_add()" called.
+ *      ENOENT          No such value.  "log_add()" called.
+ *      EINVAL          The path name isn't absolute.  "log_add()" called.
  *      EINVAL          "path" contains a space.
  *      EILSEQ          The value found isn't an unsigned integer.
- *                      "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *                      "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_getUint(
     const char* const   path,
@@ -1128,13 +1128,13 @@ RegStatus reg_getUint(
  *                      The client may free upon return.
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      ENOENT          No such value.  "mylog_add()" called.
- *      EINVAL          The path name isn't absolute.  "mylog_add()" called.
+ *      ENOENT          No such value.  "log_add()" called.
+ *      EINVAL          The path name isn't absolute.  "log_add()" called.
  *      EINVAL          "path" contains a space.
- *      EILSEQ          The value found isn't a timestamp.  "mylog_add()"
+ *      EILSEQ          The value found isn't a timestamp.  "log_add()"
  *                      called.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_getTime(
     const char* const           path,
@@ -1153,13 +1153,13 @@ RegStatus reg_getTime(
  *                      The client may free upon return.
  * Returns:
  *      0               Success.  Value found and put in "*value".
- *      ENOENT          No such value.  "mylog_add()" called.
- *      EINVAL          The path name isn't absolute.  "mylog_add()" called.
+ *      ENOENT          No such value.  "log_add()" called.
+ *      EINVAL          The path name isn't absolute.  "log_add()" called.
  *      EINVAL          "path" contains a space.
- *      EILSEQ          The value found isn't a signature.  "mylog_add()"
+ *      EILSEQ          The value found isn't a signature.  "log_add()"
  *                      called.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_getSignature(
     const char* const           path,
@@ -1179,17 +1179,17 @@ RegStatus reg_getSignature(
  * Returns:
  *      0               Success.
  *      EINVAL          "path" contains a space.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          A node or value would have to be created with the same
  *                      absolute path name as an existing value or node.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 RegStatus reg_putBool(
     const char* const   path,
     const int           value)
 {
-    mylog_debug("Putting boolean %s into \"%s\"", value ? "TRUE" : "FALSE", path);
+    log_debug("Putting boolean %s into \"%s\"", value ? "TRUE" : "FALSE", path);
 
     return putValue(path, &value, &boolStruct);
 }
@@ -1205,17 +1205,17 @@ RegStatus reg_putBool(
  * Returns:
  *      0               Success.
  *      EINVAL          "path" contains a space.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          A node or value would have to be created with the same
  *                      absolute path name as an existing value or node.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 RegStatus reg_putUint(
     const char* const   path,
     const unsigned      value)
 {
-    mylog_debug("Putting unsigned int %lu into \"%s\"", value, path);
+    log_debug("Putting unsigned int %lu into \"%s\"", value, path);
 
     return putValue(path, &value, &uintStruct);
 }
@@ -1232,11 +1232,11 @@ RegStatus reg_putUint(
  * Returns:
  *      0               Success.
  *      EINVAL          "path" contains a space.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          A node or value would have to be created with the same
  *                      absolute path name as an existing value or node.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 RegStatus reg_putString(
     const char* const   path,
@@ -1244,12 +1244,12 @@ RegStatus reg_putString(
 {
     RegStatus   status;
 
-    mylog_debug("Putting string \"%s\" into \"%s\"", value, path);
+    log_debug("Putting string \"%s\" into \"%s\"", value, path);
 
     status = putValue(path, value, &stringStruct);
 
     if (status) {
-        mylog_add("Couldn't store value \"%s\" in parameter \"%s\"",
+        log_add("Couldn't store value \"%s\" in parameter \"%s\"",
                 value, path);
     }
 
@@ -1268,11 +1268,11 @@ RegStatus reg_putString(
  * Returns:
  *      0               Success.
  *      EINVAL          "path" contains a space.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          A node or value would have to be created with the same
  *                      absolute path name as an existing value or node.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 RegStatus reg_putTime(
     const char* const           path,
@@ -1281,7 +1281,7 @@ RegStatus reg_putTime(
     static char buf[80];
 
     (void)sprint_timestampt(buf, sizeof(buf), value);
-    mylog_debug("Putting time %s into \"%s\"", value, path);
+    log_debug("Putting time %s into \"%s\"", value, path);
 
     return putValue(path, value, &timeStruct);
 }
@@ -1298,17 +1298,17 @@ RegStatus reg_putTime(
  * Returns:
  *      0               Success.
  *      EINVAL          "path" contains a space.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          A node or value would have to be created with the same
  *                      absolute path name as an existing value or node.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 RegStatus reg_putSignature(
     const char* const   path,
     const signaturet    value)
 {
-    mylog_debug("Putting signature %s into \"%s\"", s_signaturet(NULL, 0, value),
+    log_debug("Putting signature %s into \"%s\"", s_signaturet(NULL, 0, value),
             path);
 
     return putValue(path, value, &signatureStruct);
@@ -1323,11 +1323,11 @@ RegStatus reg_putSignature(
  * Returns:
  *      0               Success
  *      ENOENT          No such value
- *      EINVAL          The absolute path name is invalid.  "mylog_add()"
+ *      EINVAL          The absolute path name is invalid.  "log_add()"
  *                      called.
  *      EINVAL          "path" contains a space.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_deleteValue(
     const char* const   path)
@@ -1357,7 +1357,7 @@ RegStatus reg_deleteValue(
     }
 
     if (status && ENOENT != status)
-        mylog_add("Couldn't delete value \"%s\"", path);
+        log_add("Couldn't delete value \"%s\"", path);
 
     return status;
 }
@@ -1382,13 +1382,13 @@ RegStatus reg_deleteValue(
  *      0               Success.  "*node" is set.  The client should call
  *                      "rn_free(*node)" when the node is no longer
  *                      needed.
- *      ENOENT          "create" was 0 and the node doesn't exist. "mylog_add()"
+ *      ENOENT          "create" was 0 and the node doesn't exist. "log_add()"
  *                      called.
- *      EINVAL          "path" isn't a valid absolute path name.  "mylog_add()
+ *      EINVAL          "path" isn't a valid absolute path name.  "log_add()
  *                      called.
  *      EINVAL          "path" contains a space.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_getNode(
     const char* const   path,
@@ -1412,7 +1412,7 @@ RegStatus reg_getNode(
                         *node = lastNode;
                     }
                     else {
-                        mylog_add("Node \"%s\" not found", path);
+                        log_add("Node \"%s\" not found", path);
                         status = ENOENT;
                     }
 
@@ -1448,8 +1448,8 @@ void reg_deleteNode(
  *                      Shall not be NULL.
  * Returns:
  *      0               Success
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus reg_flushNode(
     RegNode*    node)
@@ -1504,9 +1504,9 @@ const char* reg_getNodeAbsPath(
  * Returns:
  *      0               Success
  *      EINVAL          "path" contains a space.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          The value would have the same absolute path name as an
- *                      existing node.  "mylog_add()" called.
+ *                      existing node.  "log_add()" called.
  */
 RegStatus reg_putNodeString(
     RegNode*            node,
@@ -1528,9 +1528,9 @@ RegStatus reg_putNodeString(
  * Returns:
  *      0               Success
  *      EINVAL          "path" contains a space.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          The value would have the same absolute path name as an
- *                      existing node.  "mylog_add()" called.
+ *                      existing node.  "log_add()" called.
  */
 RegStatus reg_putNodeBool(
     RegNode*            node,
@@ -1552,9 +1552,9 @@ RegStatus reg_putNodeBool(
  * Returns:
  *      0               Success
  *      EINVAL          "path" contains a space.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          The value would have the same absolute path name as an
- *                      existing node.  "mylog_add()" called.
+ *                      existing node.  "log_add()" called.
  */
 RegStatus reg_putNodeUint(
     RegNode*            node,
@@ -1577,9 +1577,9 @@ RegStatus reg_putNodeUint(
  * Returns:
  *      0               Success
  *      EINVAL          "path" contains a space.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          The value would have the same absolute path name as an
- *                      existing node.  "mylog_add()" called.
+ *                      existing node.  "log_add()" called.
  */
 RegStatus reg_putNodeTime(
     RegNode*            node,
@@ -1602,9 +1602,9 @@ RegStatus reg_putNodeTime(
  * Returns:
  *      0               Success
  *      EINVAL          "path" contains a space.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EEXIST          The value would have the same absolute path name as an
- *                      existing node.  "mylog_add()" called.
+ *                      existing node.  "log_add()" called.
  */
 RegStatus reg_putNodeSignature(
     RegNode*            node,
@@ -1629,9 +1629,9 @@ RegStatus reg_putNodeSignature(
  *      0               Success.  "*value" is set.
  *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      EPERM           The node containing the value has been deleted.
- *                      "mylog_add()" called.
+ *                      "log_add()" called.
  */
 RegStatus reg_getNodeString(
     const RegNode* const        node,
@@ -1655,8 +1655,8 @@ RegStatus reg_getNodeString(
  *      0               Success.  "*value" is set.
  *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EILSEQ          The value isn't a boolean.  "mylog_add()"
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EILSEQ          The value isn't a boolean.  "log_add()"
  *                      called.
  */
 RegStatus reg_getNodeBool(
@@ -1681,8 +1681,8 @@ RegStatus reg_getNodeBool(
  *      0               Success.  "*value" is set.
  *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EILSEQ          The value isn't an unsigned integer.  "mylog_add()"
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EILSEQ          The value isn't an unsigned integer.  "log_add()"
  *                      called.
  */
 RegStatus reg_getNodeUint(
@@ -1707,8 +1707,8 @@ RegStatus reg_getNodeUint(
  *      0               Success.  "*value" is set.
  *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EILSEQ          The value isn't a time.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EILSEQ          The value isn't a time.  "log_add()" called.
  */
 RegStatus reg_getNodeTime(
     const RegNode* const        node,
@@ -1730,8 +1730,8 @@ RegStatus reg_getNodeTime(
  * Returns:
  *      0               Success.  "*value" is not NULL.
  *      ENOENT          No such value
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EILSEQ          The value isn't a signature.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EILSEQ          The value isn't a signature.  "log_add()" called.
  */
 RegStatus reg_getNodeSignature(
     const RegNode* const        node,
@@ -1755,8 +1755,8 @@ RegStatus reg_getNodeSignature(
  *      0               Success
  *      EINVAL          "path" contains a space.
  *      ENOENT          No such value
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EPERM           The node has been deleted.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EPERM           The node has been deleted.  "log_add()" called.
  */
 RegStatus reg_deleteNodeValue(
     RegNode* const      node,
@@ -1802,7 +1802,7 @@ RegStatus reg_visitNodes(
  *                      set of values to which the visited value belongs.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  *      else            The first non-zero value returned by "func"
  */
 RegStatus reg_visitValues(

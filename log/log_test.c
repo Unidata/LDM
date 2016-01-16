@@ -3,15 +3,15 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mylog_test.c
+ *   @file: log_test.c
  * @author: Steven R. Emmerson
  *
- * This file tests the `mylog` module.
+ * This file tests the `log` module.
  */
 
 #include "config.h"
 
-#include "mylog.h"
+#include "log.h"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -28,8 +28,8 @@
 #endif
 
 static char* progname;
-static const char tmpPathname[] = "/tmp/mylog_test.log";
-static const char tmpPathname1[] = "/tmp/mylog_test.log.1";
+static const char tmpPathname[] = "/tmp/log_test.log";
+static const char tmpPathname1[] = "/tmp/log_test.log.1";
 
 /**
  * Only called once.
@@ -61,31 +61,31 @@ static int numLines(
 
 static void logMessages(void)
 {
-    mylog_error("%s(): Error message", __func__);
-    mylog_warning("%s(): Warning", __func__);
-    mylog_notice("%s(): Notice", __func__);
-    mylog_info("%s(): Informational message", __func__);
-    mylog_debug("%s(): Debug message", __func__);
+    log_error("%s(): Error message", __func__);
+    log_warning("%s(): Warning", __func__);
+    log_notice("%s(): Notice", __func__);
+    log_info("%s(): Informational message", __func__);
+    log_debug("%s(): Debug message", __func__);
 }
 
 static void vlogMessage(
-        const mylog_level_t level,
+        const log_level_t level,
         const char* const   format,
         ...)
 {
     va_list args;
     va_start(args, format);
-    mylog_vlog(level, format, args);
+    log_vlog(level, format, args);
     va_end(args);
 }
 
 static void vlogMessages(void)
 {
-    vlogMessage(MYLOG_LEVEL_ERROR, "%s(): %s", "Error message", __func__);
-    vlogMessage(MYLOG_LEVEL_WARNING, "%s(): %s", "Warning", __func__);
-    vlogMessage(MYLOG_LEVEL_NOTICE, "%s(): %s", "Notice", __func__);
-    vlogMessage(MYLOG_LEVEL_INFO, "%s(): %s", "Informational message", __func__);
-    vlogMessage(MYLOG_LEVEL_DEBUG, "%s(): %s", "Debug message", __func__);
+    vlogMessage(LOG_LEVEL_ERROR, "%s(): %s", "Error message", __func__);
+    vlogMessage(LOG_LEVEL_WARNING, "%s(): %s", "Warning", __func__);
+    vlogMessage(LOG_LEVEL_NOTICE, "%s(): %s", "Notice", __func__);
+    vlogMessage(LOG_LEVEL_INFO, "%s(): %s", "Informational message", __func__);
+    vlogMessage(LOG_LEVEL_DEBUG, "%s(): %s", "Debug message", __func__);
 }
 
 static void make_expected_id(
@@ -111,27 +111,27 @@ static void make_expected_id(
 
 static void test_init_fini(void)
 {
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_open_file(void)
+static void test_log_open_file(void)
 {
     (void)unlink(tmpPathname);
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = mylog_set_output(tmpPathname);
+    status = log_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    status = log_set_level(LOG_LEVEL_DEBUG);
     CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 
     int n = numLines(tmpPathname);
@@ -141,64 +141,64 @@ static void test_mylog_open_file(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_open_stderr(void)
+static void test_log_open_stderr(void)
 {
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = mylog_set_output("-");
+    status = log_set_output("-");
     CU_ASSERT_EQUAL(status, 0);
-    const char* actual = mylog_get_output();
+    const char* actual = log_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-");
 
-    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    status = log_set_level(LOG_LEVEL_DEBUG);
     CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_open_default(void)
+static void test_log_open_default(void)
 {
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    const char* actual = mylog_get_output();
+    const char* actual = log_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-"); // default is standard error stream
-    mylog_error("test_mylog_open_default() implicit");
+    log_error("test_log_open_default() implicit");
 
-    status = mylog_set_output(tmpPathname);
-    actual = mylog_get_output();
+    status = log_set_output(tmpPathname);
+    actual = log_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
-    mylog_error("test_mylog_open_default() explicit");
+    log_error("test_log_open_default() explicit");
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_levels(void)
+static void test_log_levels(void)
 {
     int status;
-    mylog_level_t mylogLevels[] = {MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING,
-            MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_INFO, MYLOG_LEVEL_DEBUG};
-    for (int nlines = 1; nlines <= sizeof(mylogLevels)/sizeof(*mylogLevels);
+    log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
+            LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
+    for (int nlines = 1; nlines <= sizeof(logLevels)/sizeof(*logLevels);
             nlines++) {
-        status = mylog_init(progname);
+        status = log_init(progname);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
         (void)unlink(tmpPathname);
-        status = mylog_set_output(tmpPathname);
+        status = log_set_output(tmpPathname);
         CU_ASSERT_EQUAL(status, 0);
 
-        mylog_set_level(mylogLevels[nlines-1]);
+        log_set_level(logLevels[nlines-1]);
         logMessages();
 
-        status = mylog_fini();
+        status = log_fini();
         CU_ASSERT_EQUAL(status, 0);
 
         int n = numLines(tmpPathname);
@@ -211,41 +211,41 @@ static void test_mylog_levels(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_get_level(void)
+static void test_log_get_level(void)
 {
-    mylog_level_t mylogLevels[] = {MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING,
-            MYLOG_LEVEL_NOTICE, MYLOG_LEVEL_INFO, MYLOG_LEVEL_DEBUG};
-    int status = mylog_init(progname);
+    log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
+            LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    mylog_level_t level = mylog_get_level();
-    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_NOTICE);
+    log_level_t level = log_get_level();
+    CU_ASSERT_EQUAL(level, LOG_LEVEL_NOTICE);
 
-    for (int i = 0; i < sizeof(mylogLevels)/sizeof(*mylogLevels); i++) {
-        mylog_level_t expected = mylogLevels[i];
-        (void)mylog_set_level(expected);
-        mylog_level_t actual = mylog_get_level();
+    for (int i = 0; i < sizeof(logLevels)/sizeof(*logLevels); i++) {
+        log_level_t expected = logLevels[i];
+        (void)log_set_level(expected);
+        log_level_t actual = log_get_level();
         CU_ASSERT_EQUAL(actual, expected);
     }
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_modify_id(void)
+static void test_log_modify_id(void)
 {
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     char expected[256];
     make_expected_id(expected, sizeof(expected), "foo", true);
-    (void)mylog_set_upstream_id("foo", true);
-    const char* actual = mylog_get_id();
+    (void)log_set_upstream_id("foo", true);
+    const char* actual = log_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
     make_expected_id(expected, sizeof(expected), "bar", false);
-    (void)mylog_set_upstream_id("bar", false);
-    actual = mylog_get_id();
+    (void)log_set_upstream_id("bar", false);
+    actual = log_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
 #if WANT_LOG4C
@@ -253,60 +253,60 @@ static void test_mylog_modify_id(void)
 #else
     make_expected_id(expected, sizeof(expected), "128.117.140.56", false);
 #endif
-    (void)mylog_set_upstream_id("128.117.140.56", false);
-    actual = mylog_get_id();
+    (void)log_set_upstream_id("128.117.140.56", false);
+    actual = log_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_roll_level(void)
+static void test_log_roll_level(void)
 {
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    mylog_set_level(MYLOG_LEVEL_ERROR);
-    mylog_level_t level;
+    log_set_level(LOG_LEVEL_ERROR);
+    log_level_t level;
 
-    mylog_roll_level();
-    level = mylog_get_level();
-    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_WARNING);
+    log_roll_level();
+    level = log_get_level();
+    CU_ASSERT_EQUAL(level, LOG_LEVEL_WARNING);
 
-    mylog_roll_level();
-    level = mylog_get_level();
-    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_NOTICE);
+    log_roll_level();
+    level = log_get_level();
+    CU_ASSERT_EQUAL(level, LOG_LEVEL_NOTICE);
 
-    mylog_roll_level();
-    level = mylog_get_level();
-    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_INFO);
+    log_roll_level();
+    level = log_get_level();
+    CU_ASSERT_EQUAL(level, LOG_LEVEL_INFO);
 
-    mylog_roll_level();
-    level = mylog_get_level();
-    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_DEBUG);
+    log_roll_level();
+    level = log_get_level();
+    CU_ASSERT_EQUAL(level, LOG_LEVEL_DEBUG);
 
-    mylog_roll_level();
-    level = mylog_get_level();
-    CU_ASSERT_EQUAL(level, MYLOG_LEVEL_ERROR);
+    log_roll_level();
+    level = log_get_level();
+    CU_ASSERT_EQUAL(level, LOG_LEVEL_ERROR);
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_vlog(void)
+static void test_log_vlog(void)
 {
     (void)unlink(tmpPathname);
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_set_output(tmpPathname);
+    status = log_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    status = log_set_level(LOG_LEVEL_DEBUG);
     CU_ASSERT_EQUAL(status, 0);
 
     vlogMessages();
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 
     int n = numLines(tmpPathname);
@@ -316,37 +316,37 @@ static void test_mylog_vlog(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_set_output(void)
+static void test_log_set_output(void)
 {
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     static const char* outputs[] = {"", "-", tmpPathname};
     for (int i = 0; i < sizeof(outputs)/sizeof(outputs[0]); i++) {
         const char* expected = outputs[i];
-        (void)mylog_set_output(expected);
-        const char* actual = mylog_get_output();
+        (void)log_set_output(expected);
+        const char* actual = log_get_output();
         CU_ASSERT_PTR_NOT_NULL(actual);
         CU_ASSERT_STRING_EQUAL(actual, expected);
     }
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_add(void)
+static void test_log_add(void)
 {
     (void)unlink(tmpPathname);
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_set_output(tmpPathname);
+    status = log_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
-    mylog_add("%s(): LOG_ADD message 1", __func__);
-    mylog_add("%s(): LOG_ADD message 2", __func__);
-    mylog_error("%s(): LOG_ERROR message", __func__);
+    log_add("%s(): LOG_ADD message 1", __func__);
+    log_add("%s(): LOG_ADD message 2", __func__);
+    log_error("%s(): LOG_ERROR message", __func__);
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 
     int n = numLines(tmpPathname);
@@ -356,24 +356,24 @@ static void test_mylog_add(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_syserr(void)
+static void test_log_syserr(void)
 {
     (void)unlink(tmpPathname);
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_set_output(tmpPathname);
+    status = log_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
-    mylog_errno(ENOMEM, NULL);
-    mylog_errno(ENOMEM, "MYLOG_ERRNO() previous message is part of this one");
-    mylog_errno(ENOMEM, "MYLOG_ERRNO() previous message is part of this one "
+    log_errno(ENOMEM, NULL);
+    log_errno(ENOMEM, "LOG_ERRNO() previous message is part of this one");
+    log_errno(ENOMEM, "LOG_ERRNO() previous message is part of this one "
             "#%d", 2);
     errno = EEXIST;
-    mylog_syserr(NULL);
-    mylog_syserr("mylog_syserr() previous message is part of this one");
-    mylog_syserr("mylog_syserr() previous message is part of this one #%d", 2);
+    log_syserr(NULL);
+    log_syserr("log_syserr() previous message is part of this one");
+    log_syserr("log_syserr() previous message is part of this one #%d", 2);
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 
     int n = numLines(tmpPathname);
@@ -383,14 +383,14 @@ static void test_mylog_syserr(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_mylog_refresh(void)
+static void test_log_refresh(void)
 {
     (void)unlink(tmpPathname);
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_set_output(tmpPathname);
+    status = log_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
-    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    status = log_set_level(LOG_LEVEL_DEBUG);
     CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
@@ -400,14 +400,14 @@ static void test_mylog_refresh(void)
     status = rename(tmpPathname, tmpPathname1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = mylog_refresh();
+    status = log_refresh();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     logMessages();
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 
     status = unlink(tmpPathname);
@@ -419,11 +419,11 @@ static void test_mylog_refresh(void)
 static void test_sighup(void)
 {
     (void)unlink(tmpPathname);
-    int status = mylog_init(progname);
+    int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = mylog_set_output(tmpPathname);
+    status = log_set_output(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
-    status = mylog_set_level(MYLOG_LEVEL_DEBUG);
+    status = log_set_level(LOG_LEVEL_DEBUG);
     CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
@@ -439,7 +439,7 @@ static void test_sighup(void)
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
 
-    status = mylog_fini();
+    status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
 
     status = unlink(tmpPathname);
@@ -461,18 +461,18 @@ int main(
         if (NULL != testSuite) {
             if (       CU_ADD_TEST(testSuite, test_init_fini)
                     && CU_ADD_TEST(testSuite, test_init_fini)
-                    && CU_ADD_TEST(testSuite, test_mylog_get_level)
-                    && CU_ADD_TEST(testSuite, test_mylog_roll_level)
-                    && CU_ADD_TEST(testSuite, test_mylog_modify_id)
-                    && CU_ADD_TEST(testSuite, test_mylog_set_output)
-                    && CU_ADD_TEST(testSuite, test_mylog_open_stderr)
-                    && CU_ADD_TEST(testSuite, test_mylog_open_file)
-                    && CU_ADD_TEST(testSuite, test_mylog_open_default)
-                    && CU_ADD_TEST(testSuite, test_mylog_levels)
-                    && CU_ADD_TEST(testSuite, test_mylog_vlog)
-                    && CU_ADD_TEST(testSuite, test_mylog_add)
-                    && CU_ADD_TEST(testSuite, test_mylog_syserr)
-                    && CU_ADD_TEST(testSuite, test_mylog_refresh)
+                    && CU_ADD_TEST(testSuite, test_log_get_level)
+                    && CU_ADD_TEST(testSuite, test_log_roll_level)
+                    && CU_ADD_TEST(testSuite, test_log_modify_id)
+                    && CU_ADD_TEST(testSuite, test_log_set_output)
+                    && CU_ADD_TEST(testSuite, test_log_open_stderr)
+                    && CU_ADD_TEST(testSuite, test_log_open_file)
+                    && CU_ADD_TEST(testSuite, test_log_open_default)
+                    && CU_ADD_TEST(testSuite, test_log_levels)
+                    && CU_ADD_TEST(testSuite, test_log_vlog)
+                    && CU_ADD_TEST(testSuite, test_log_add)
+                    && CU_ADD_TEST(testSuite, test_log_syserr)
+                    && CU_ADD_TEST(testSuite, test_log_refresh)
                     && CU_ADD_TEST(testSuite, test_sighup)
                     /*
                     */) {

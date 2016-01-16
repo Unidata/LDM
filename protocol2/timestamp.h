@@ -101,7 +101,7 @@ tsFormat(
  * Arguments:
  *	timestamp	Pointer to the timestamp to be formatted.
  * Returns:
- *	-1		Error.  MYLOG_ADD_ERRNO() called.
+ *	-1		Error.  LOG_ADD_ERRNO() called.
  *	else		Number of bytes parsed.
  */
 int

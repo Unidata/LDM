@@ -9,7 +9,7 @@
 #include <string.h> /* memset() */
 
 #include "ldm5.h"
-#include "mylog.h"
+#include "log.h"
 
 
 /* $Id: ldm5_svc.c,v 5.54.18.1 2008/04/15 16:34:11 steve Exp $ */
@@ -40,7 +40,7 @@ ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp)
 
         switch (rqstp->rq_proc) {
         case NULLPROC:
-                mylog_debug("NULLPROC");
+                log_debug("NULLPROC");
                 (void)svc_sendreply(transp, (xdrproc_t) xdr_void, (char *)NULL);
                 return;
 
@@ -98,21 +98,21 @@ ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp)
                 return;
          }
 
-        mylog_debug("%s", procName);
+        log_debug("%s", procName);
         (void) memset((void *)&argument, 0, sizeof (argument));
         if (!svc_getargs(transp, xdr_argument, (void*) &argument)) {
-                mylog_notice("%s: Couldn't decode RPC-request arguments",
+                log_notice("%s: Couldn't decode RPC-request arguments",
                         procName);
                 svcerr_decode(transp);
                 return;
         }
         result = (*local)((char *)&argument, rqstp);
         if (result != NULL && !svc_sendreply(transp, xdr_result, result)) {
-                mylog_notice("%s: Couldn't reply to RPC-request", procName);
+                log_notice("%s: Couldn't reply to RPC-request", procName);
                 svcerr_systemerr(transp);
         }
         if (!svc_freeargs(transp, xdr_argument, (void*) &argument)) {
-                mylog_error("unable to free arguments");
+                log_error("unable to free arguments");
                 exit(1);
         }
         return;

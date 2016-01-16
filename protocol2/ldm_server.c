@@ -24,7 +24,7 @@
 #include "ldmprint.h"    /* s_prod_class() */
 #include "pq.h"
 #include "prod_class.h"  /* free_prod_class() */
-#include "mylog.h"
+#include "log.h"
 #include "UpFilter.h"
 #include "uldb.h"
 
@@ -200,7 +200,7 @@ feed_or_notify(
 
     downName = strdup(hostbyaddr(&downAddr));
     if (NULL == downName) {
-        mylog_error("Couldn't duplicate downstream host name: \"%s\"",
+        log_error("Couldn't duplicate downstream host name: \"%s\"",
                 hostbyaddr(&downAddr));
         svcerr_systemerr(xprt);
         goto return_or_exit;
@@ -245,12 +245,12 @@ feed_or_notify(
     status = lcf_reduceToAllowed(downName, &downAddr.sin_addr, origSub,
             &allowSub);
     if (status == ENOMEM) {
-        mylog_syserr("Couldn't compute wanted/allowed product intersection");
+        log_syserr("Couldn't compute wanted/allowed product intersection");
         svcerr_systemerr(xprt);
         goto free_up_filter;
     }
     if (status == EINVAL) {
-        mylog_warning("Invalid pattern in product-class: %s",
+        log_warning("Invalid pattern in product-class: %s",
                 s_prod_class(NULL, 0, origSub));
         theReply.code = BADPATTERN;
         reply = &theReply;
@@ -272,7 +272,7 @@ feed_or_notify(
     status = uldb_addProcess(getpid(), 6, &downAddr, allowSub, &uldbSub,
             isNotifier, isPrimary);
     if (status) {
-        mylog_error("Couldn't add this process to the upstream LDM database");
+        log_error("Couldn't add this process to the upstream LDM database");
         svcerr_systemerr(xprt);
         goto free_allow_sub;
     }
@@ -316,7 +316,7 @@ feed_or_notify(
     theReply.fornme_reply_t_u.id = (unsigned) getpid();
     if (!svc_sendreply(xprt, (xdrproc_t)xdr_fornme_reply_t,
             (caddr_t)&theReply)) {
-        mylog_error("svc_sendreply(...) failure");
+        log_error("svc_sendreply(...) failure");
         svcerr_systemerr(xprt);
         goto free_allow_sub;
     }
@@ -374,7 +374,7 @@ fornme_reply_t *feedme_6_svc(
     fornme_reply_t* reply = feed_or_notify(xprt, want, 0, feedPar->max_hereis);
 
     if (!svc_freeargs(xprt, xdr_feedpar_t, (caddr_t)feedPar)) {
-        mylog_error("Couldn't free arguments");
+        log_error("Couldn't free arguments");
         svc_destroy(xprt);
         exit(1);
     }
@@ -396,7 +396,7 @@ fornme_reply_t *notifyme_6_svc(
     fornme_reply_t* reply = feed_or_notify(xprt, want, 1, 0);
 
     if (!svc_freeargs(xprt, xdr_prod_class, (caddr_t)want)) {
-        mylog_error("Couldn't free arguments");
+        log_error("Couldn't free arguments");
         svc_destroy(xprt);
         exit(1);
     }
@@ -414,8 +414,8 @@ int *is_alive_6_svc(
 
     alive = cps_contains((pid_t) *id);
 
-    if (mylog_is_enabled_debug) {
-        mylog_debug("LDM %u is %s", *id, alive ? "alive" : "dead");
+    if (log_is_enabled_debug) {
+        log_debug("LDM %u is %s", *id, alive ? "alive" : "dead");
     }
 
     if (!svc_sendreply(xprt, (xdrproc_t) xdr_bool, (caddr_t) &alive)) {
@@ -425,7 +425,7 @@ int *is_alive_6_svc(
     }
 
     if (!svc_freeargs(xprt, xdr_u_int, (caddr_t)id)) {
-        mylog_error("Couldn't free arguments");
+        log_error("Couldn't free arguments");
 
         error = 1;
     }
@@ -478,13 +478,13 @@ hiya_6_svc(
 
     error = down6_init(upName, upAddr, pqfname, pq);
     if (error) {
-        mylog_error("Couldn't initialize downstream LDM");
+        log_error("Couldn't initialize downstream LDM");
         svcerr_systemerr(xprt);
         svc_destroy(xprt);
         exit(error);
     }
     else {
-        mylog_info("Downstream LDM initialized");
+        log_info("Downstream LDM initialized");
     }
 
     /*
@@ -503,17 +503,17 @@ hiya_6_svc(
     maxHereis = isPrimary ? UINT_MAX : 0;
 
     if (error) {
-        mylog_syserr("Couldn't validate HIYA");
+        log_syserr("Couldn't validate HIYA");
         svcerr_systemerr(xprt);
         svc_destroy(xprt);
         exit(error);
     }
     else {
-        if (mylog_is_enabled_debug)
-            mylog_debug("intersection: %s", s_prod_class(NULL, 0, accept));
+        if (log_is_enabled_debug)
+            log_debug("intersection: %s", s_prod_class(NULL, 0, accept));
 
         if (accept->psa.psa_len == 0) {
-            mylog_warning("Empty intersection of HIYA offer from %s (%s) and ACCEPT "
+            log_warning("Empty intersection of HIYA offer from %s (%s) and ACCEPT "
                     "entries", upName, s_prod_class(NULL, 0, offered));
             svcerr_weakauth(xprt);
             svc_destroy(xprt);
@@ -524,11 +524,11 @@ hiya_6_svc(
 
             if (error) {
                 if (DOWN6_SYSTEM_ERROR == error) {
-                    mylog_syserr("Couldn't set product class: %s",
+                    log_syserr("Couldn't set product class: %s",
                             s_prod_class(NULL, 0, accept));
                 }
                 else {
-                    mylog_error("Couldn't set product class: %s",
+                    log_error("Couldn't set product class: %s",
                             s_prod_class(NULL, 0, accept));
                 }
 
@@ -540,20 +540,20 @@ hiya_6_svc(
             /* else */
 
             if (clss_eq(offered, accept)) {
-                mylog_notice("hiya6: %s", s_prod_class(NULL, 0, offered));
+                log_notice("hiya6: %s", s_prod_class(NULL, 0, offered));
 
                 reply.code = OK;
                 reply.hiya_reply_t_u.max_hereis = maxHereis;
             }
             else {
-                if (mylog_is_enabled_info) {
+                if (log_is_enabled_info) {
                     char off[512];
                     char acc[512];
 
                     (void) s_prod_class(off, sizeof(off), offered), (void) s_prod_class(
                             acc, sizeof(acc), accept);
 
-                    mylog_info("hiya6: RECLASS: %s -> %s", off, acc);
+                    log_info("hiya6: RECLASS: %s -> %s", off, acc);
                 }
 
                 reply.code = RECLASS;

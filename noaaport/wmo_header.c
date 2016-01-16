@@ -8,7 +8,7 @@
 #include <ctype.h>
 #include <time.h>
 #include "wmo_header.h"
-#include "mylog.h"
+#include "log.h"
 
 char *levels(int, int, int);
 char *k5toa(unsigned char *pds);
@@ -186,7 +186,7 @@ else
                b3 = (unsigned char) cpos[14];
                b4 = (unsigned char) cpos[15];
                lensec = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
-               mylog_error("grib2 length %u\0",lensec);
+               log_error("grib2 length %u\0",lensec);
 	       grib2name(cpos, (size_t)lensec, hdr, wmometa);
                }*/
 	    break;
@@ -246,7 +246,7 @@ if(hdr.model[0] != '\0')
 
 if((strlen(wmoid) > 128)||(strlen(wmoid) < 1)) 
    {
-   mylog_error("wmoid is bizzare %d\n",strlen(wmoid));
+   log_error("wmoid is bizzare %d\n",strlen(wmoid));
    return(-1);
    }
 

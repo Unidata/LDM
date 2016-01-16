@@ -20,7 +20,7 @@
 #include "h_clnt.h"
 #include "ldm5.h"
 #include "ldm5_clnt.h"
-#include "mylog.h"
+#include "log.h"
 
 
 #define DEFAULT_INTERVAL 25
@@ -42,7 +42,7 @@ int timeout ;
 static void
 print_label()
 {
-        mylog_info("%10s %10s %4s   %-21s %s\n",
+        log_info("%10s %10s %4s   %-21s %s\n",
                         "State",
                         "Elapsed",
                         "Port",
@@ -58,7 +58,7 @@ print_hstat(hcp)
 h_clnt *hcp ;
 {
         if(hcp->state == RESPONDING)
-                mylog_info("%10s %3ld.%06ld %4d   %-11s  %s\n",
+                log_info("%10s %3ld.%06ld %4d   %-11s  %s\n",
                         s_remote_state(hcp->state),
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec,
                         hcp->port,
@@ -66,7 +66,7 @@ h_clnt *hcp ;
                         s_hclnt_sperrno(hcp)
                         ) ;
         else
-                mylog_error("%10s %3ld.%06ld %4d   %-11s  %s\n",
+                log_error("%10s %3ld.%06ld %4d   %-11s  %s\n",
                         s_remote_state(hcp->state),
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec,
                         hcp->port,
@@ -120,12 +120,12 @@ char *av[] ;
         h_clnt stats[MAX_REMOTES + 1] ;
         h_clnt *sp ;
         unsigned        port = 0;
-        unsigned        logmask = LOG_UPTO(MYLOG_LEVEL_NOTICE);
+        unsigned        logmask = LOG_UPTO(LOG_LEVEL_NOTICE);
 
         /*
          * initialize logger
          */
-        (void)mylog_init(av[0]);
+        (void)log_init(av[0]);
 
         if(isatty(fileno(stderr)))
         {
@@ -145,17 +145,17 @@ char *av[] ;
         while ((ch = getopt(ac, av, "vxl:t:h:P:qi:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                        (void)log_set_level(LOG_LEVEL_INFO);
                         verbose = !0 ;
                         break;
                 case 'q':
                         verbose = 0 ;
                         break ;
                 case 'x':
-                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                        (void)log_set_level(LOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        (void)mylog_set_output(optarg);
+                        (void)log_set_output(optarg);
                         break;
                 case 'h':
                         if(nremotes > MAX_REMOTES)

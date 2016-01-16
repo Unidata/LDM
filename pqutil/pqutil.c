@@ -29,7 +29,7 @@
 #include "ldmprint.h"
 #include "md5.h"
 #include "pq.h"
-#include "mylog.h"
+#include "log.h"
 #include "RegularExpressions.h"
 
 #define MAX_COMMAND     256
@@ -184,7 +184,7 @@ parse_time(char *in_string, timestampt *result) {
                          &time_conv.tm_mon, &time_conv.tm_mday,
                          &time_conv.tm_hour, &time_conv.tm_min);
         if (ret_val != 5) {                                     /* bad input */
-            mylog_error("Bad time string: %s", in_string);
+            log_error("Bad time string: %s", in_string);
             return(1);
         }
 
@@ -272,28 +272,28 @@ init_options(pqueue     *pq,
 /* set the product class structure */
 
     clssp->psa.psa_val->feedtype = fdtype;
-    mylog_info("Feedtype set to %s", s_feedtypet(clssp->psa.psa_val->feedtype));
+    log_info("Feedtype set to %s", s_feedtypet(clssp->psa.psa_val->feedtype));
 
     strcpy(pattern,".*");
     clssp->psa.psa_val->pattern = pattern;
     (void)regcomp(&clssp->psa.psa_val->rgx, clssp->psa.psa_val->pattern,
                 REG_EXTENDED|REG_NOSUB);
-    mylog_info("Pattern set to \".*\"");
+    log_info("Pattern set to \".*\"");
 
     clssp->from = TS_ZERO;
-    mylog_info("From time set to %s", ctime(&clssp->from.tv_sec));
+    log_info("From time set to %s", ctime(&clssp->from.tv_sec));
 
     clssp->to = TS_ENDT;
-    mylog_info("To time set to %s", ctime(&clssp->to.tv_sec));
+    log_info("To time set to %s", ctime(&clssp->to.tv_sec));
 
 /* take care of the queue cursor */
 
     parse_time("NOW", &tv);
     pq_cset(pq, &tv);
-    mylog_info("Cursor set to %s", ctime(&tv.tv_sec));
+    log_info("Cursor set to %s", ctime(&tv.tv_sec));
 
     *dir = TV_GT;
-    mylog_info("Cursor direction set to TV_GT");
+    log_info("Cursor direction set to TV_GT");
 
 /* set up the product information record */
     
@@ -307,17 +307,17 @@ init_options(pqueue     *pq,
     strncpy(prod_ident, "TEST PRODUCT", sizeof(prod_ident)-1);
     prod_ident[sizeof(prod_ident)-1] = 0;
     prod->info.ident = prod_ident;
-    mylog_info("info.origin: %s\n", prod->info.origin);
-    mylog_info("info.arrival: %s\n", ctime(&prod->info.arrival.tv_sec));
-    mylog_info("info.feedtype: EXP\n");
-    mylog_info("info.seqno: %d\n", prod->info.seqno);
-    mylog_info("info.ident: %s\n", prod->info.ident);
+    log_info("info.origin: %s\n", prod->info.origin);
+    log_info("info.arrival: %s\n", ctime(&prod->info.arrival.tv_sec));
+    log_info("info.feedtype: EXP\n");
+    log_info("info.seqno: %d\n", prod->info.seqno);
+    log_info("info.ident: %s\n", prod->info.ident);
 
 /* allocate an MD% context */
 
     md5ctxp = new_MD5_CTX();
     if (md5ctxp == NULL) {
-        mylog_syserr("new_MD5_CTX failed");
+        log_syserr("new_MD5_CTX failed");
         exit(6);
     }
 
@@ -345,7 +345,7 @@ parse_command(char *cmd) {
         if (result == NULL) {
             crec.cmd_opt = OPT_BAD;
             crec.cmd = CMD_BAD;
-            mylog_error("Set command must have option specified");
+            log_error("Set command must have option specified");
         }
         else if (!strcmp(result,"feedtype"))
             crec.cmd_opt = OPT_FEEDTYPE;
@@ -372,11 +372,11 @@ parse_command(char *cmd) {
         else {
             crec.cmd_opt = OPT_BAD;
             crec.cmd = CMD_BAD;
-            mylog_error("Invalid option: %s", result);
+            log_error("Invalid option: %s", result);
         }
 
         if ((result = strtok(NULL,"\n")) == NULL) {
-            mylog_error("Set command must have a value specified");
+            log_error("Set command must have a value specified");
             crec.cmd = CMD_BAD;
             crec.cmd_opt = OPT_BAD;
         }
@@ -393,7 +393,7 @@ parse_command(char *cmd) {
         if (result == NULL) {
             crec.cmd_opt = OPT_BAD;
             crec.cmd = CMD_BAD;
-            mylog_error("Show command must have an option specified");
+            log_error("Show command must have an option specified");
         }
         else if (!strcmp(result,"feedtype"))
             crec.cmd_opt = OPT_FEEDTYPE;
@@ -420,7 +420,7 @@ parse_command(char *cmd) {
         else {
             crec.cmd_opt = OPT_BAD;
             crec.cmd = CMD_BAD;
-            mylog_error("Invalid option: %s", result);
+            log_error("Invalid option: %s", result);
         }
     }
 
@@ -428,7 +428,7 @@ parse_command(char *cmd) {
         if (!strcmp(result,"read")) {
             crec.cmd = CMD_READ;
             if ((result = strtok(NULL,"\n")) == NULL) {
-                mylog_error("read command must have a filename");
+                log_error("read command must have a filename");
                 crec.cmd = CMD_BAD;
             }
             else {
@@ -440,7 +440,7 @@ parse_command(char *cmd) {
         else if (!strcmp(result,"new")) {
             crec.cmd = CMD_NEW;
             if ((result = strtok(NULL, "\n")) == NULL) {
-                mylog_error("new command must have a product size");
+                log_error("new command must have a product size");
                 crec.cmd = CMD_BAD;
             }
             else {
@@ -452,7 +452,7 @@ parse_command(char *cmd) {
         else if (!strcmp(result,"put")) {
             crec.cmd = CMD_PUT;
             if ((result = strtok(NULL, "\n")) == NULL) {
-                mylog_error("put command must have a filename");
+                log_error("put command must have a filename");
                 crec.cmd = CMD_BAD;
             }
             else {
@@ -469,7 +469,7 @@ parse_command(char *cmd) {
         else if (!strcmp(result, "display")) {
             crec.cmd = CMD_DISPLAY;
             if ((result = strtok(NULL, "\n")) == NULL) {
-                mylog_error("display command must have a filename");
+                log_error("display command must have a filename");
                 crec.cmd = CMD_BAD;
             }
             else {
@@ -484,7 +484,7 @@ parse_command(char *cmd) {
         else if (!strcmp(result,"delete")) {
             crec.cmd = CMD_DELETE;
             if ((result = strtok(NULL, "\n")) == NULL) {
-                mylog_error("delete command must have an ending time");
+                log_error("delete command must have an ending time");
                 crec.cmd = CMD_BAD;
             }
             else {
@@ -590,109 +590,109 @@ set_option(prod_class *clssp,
     switch (crec.cmd_opt) {
     case OPT_FEEDTYPE:                             /* set the class feedtype */
         if ((result = strfeedtypet(crec.cmd_val,&ftype)) != FEEDTYPE_OK) {
-            mylog_error("set_option: %s: %s\n", crec.cmd_val, strfeederr(result));
+            log_error("set_option: %s: %s\n", crec.cmd_val, strfeederr(result));
             break;
         }
         clssp->psa.psa_val->feedtype = ftype;
-        mylog_info("Feedtype set to %s", crec.cmd_val);
+        log_info("Feedtype set to %s", crec.cmd_val);
         break;
 
     case OPT_PATTERN:                      /* set the product header pattern */
         if (re_isPathological(crec.cmd_val)) {
-            mylog_warning("Adjusting pathological regular-expression: \"%s\"",
+            log_warning("Adjusting pathological regular-expression: \"%s\"",
                 crec.cmd_val);
             re_vetSpec(crec.cmd_val);
         }
         if ( regcomp(&clssp->psa.psa_val->rgx, crec.cmd_val,
                 REG_EXTENDED|REG_NOSUB) != 0) {
-            mylog_error("Invalid regular expresssion: %s", crec.cmd_val);
+            log_error("Invalid regular expresssion: %s", crec.cmd_val);
             break;
             /* TODO: inconsistant state on error */
         }
         strcpy(pattern, crec.cmd_val);
         clssp->psa.psa_val->pattern = pattern;
-        mylog_info("Pattern set to \"%s\"", crec.cmd_val);
+        log_info("Pattern set to \"%s\"", crec.cmd_val);
         break;
 
     case OPT_CURSOR:                                       /* set the cursor */
         if (parse_time(crec.cmd_val,&curstime)) {          /* bad time value */
-            mylog_error("Invalid cursor time specification: %s", crec.cmd_val);
+            log_error("Invalid cursor time specification: %s", crec.cmd_val);
             break;
         }
         pq_cset(pq, &curstime);
-        mylog_info("Cursor time set to %s", ctime(&curstime.tv_sec));
+        log_info("Cursor time set to %s", ctime(&curstime.tv_sec));
         break;
 
     case OPT_CURSDIR:                            /* set the cursor direction */
         if (!strcmp(crec.cmd_val,"LT")) {
             *dir = TV_LT;
-            mylog_info("Cursor direction set to TV_LT");
+            log_info("Cursor direction set to TV_LT");
         }
 
         else if (!strcmp(crec.cmd_val, "EQ")) {
             *dir = TV_EQ;
-            mylog_info("Cursor direction set to TV_EQ");
+            log_info("Cursor direction set to TV_EQ");
         }
 
         else if (!strcmp(crec.cmd_val, "GT")) {
             *dir = TV_GT;
-            mylog_info("Cursor direction set to TV_GT");
+            log_info("Cursor direction set to TV_GT");
         }
 
         else
-            mylog_error("Invalid direction specified: %s", crec.cmd_val);
+            log_error("Invalid direction specified: %s", crec.cmd_val);
         break;
 
     case OPT_TOTIME:                               /* set prod class to time */
         if (parse_time(crec.cmd_val,&curstime)) {          /* bad time value */
-            mylog_error("Invalid \"to\" time specification: %s", crec.cmd_val);
+            log_error("Invalid \"to\" time specification: %s", crec.cmd_val);
             break;
         }
         clssp->to = curstime;
-        mylog_info("To time set to %s", ctime(&clssp->to.tv_sec));
+        log_info("To time set to %s", ctime(&clssp->to.tv_sec));
         break;
 
     case OPT_FROMTIME:                           /* set prod class from time */
         if (parse_time(crec.cmd_val,&curstime)) {          /* bad time value */
-            mylog_error("Invalid \"from\" time specification: %s", crec.cmd_val);
+            log_error("Invalid \"from\" time specification: %s", crec.cmd_val);
             break;
         }
         clssp->from = curstime;
-        mylog_info("From time set to %s", ctime(&clssp->from.tv_sec));
+        log_info("From time set to %s", ctime(&clssp->from.tv_sec));
         break;
 
     case OPT_ARRIVAL:                                /* set the arrival time */
         if (parse_time(crec.cmd_val,&curstime)) {          /* bad time value */
-            mylog_error("Invalid \"arrival\" time specification: %s", crec.cmd_val);
+            log_error("Invalid \"arrival\" time specification: %s", crec.cmd_val);
             break;
         }
         prod_rec->info.arrival = curstime;
-        mylog_info("Arrival time set to %s", ctime(&prod_rec->info.arrival.tv_sec));
+        log_info("Arrival time set to %s", ctime(&prod_rec->info.arrival.tv_sec));
         break;
 
     case OPT_PRODFTYPE:
         if ((result = strfeedtypet(crec.cmd_val,&ftype)) != FEEDTYPE_OK) {
-            mylog_error("set_option: %s: %s\n", crec.cmd_val, strfeederr(result));
+            log_error("set_option: %s: %s\n", crec.cmd_val, strfeederr(result));
             break;
         }
         prod_rec->info.feedtype = ftype;
-        mylog_info("Feedtype set to %s", crec.cmd_val);
+        log_info("Feedtype set to %s", crec.cmd_val);
         break;
 
     case OPT_SEQNO:
         seqnum = atoi(crec.cmd_val);
         prod_rec->info.seqno = seqnum++;
-        mylog_info("Sequence Number set to %d", prod_rec->info.seqno);
+        log_info("Sequence Number set to %d", prod_rec->info.seqno);
         break;
 
     case OPT_ORIGIN:
         strcpy(prod_rec->info.origin, crec.cmd_val);
-        mylog_info("Origin set to %s", prod_rec->info.origin);
+        log_info("Origin set to %s", prod_rec->info.origin);
         break;
 
     case OPT_IDENT:
         strcpy(prod_rec->info.ident,crec.cmd_val);
-        mylog_info("Product ID set to %s", prod_rec->info.ident);
+        log_info("Product ID set to %s", prod_rec->info.ident);
         break;
     }
 
@@ -787,7 +787,7 @@ read_file(pqueue *pq,
     else {
 
         if((fd = open(crec.cmd_val, O_RDONLY)) < 0) {            /* bad open */
-            mylog_syserr("Error opening %s", crec.cmd_val);
+            log_syserr("Error opening %s", crec.cmd_val);
             return;
         }
     }
@@ -799,7 +799,7 @@ read_file(pqueue *pq,
 /* how we handle this depends on the size */
 
         (void)fstat(fd, &f_stat);
-        mylog_debug("read_file: File size is %d", f_stat.st_size);
+        log_debug("read_file: File size is %d", f_stat.st_size);
 
         if (f_stat.st_size <= DBUFMAX) {                    /* small product */
             prodrec->info.sz = f_stat.st_size;
@@ -807,7 +807,7 @@ read_file(pqueue *pq,
 
             status = read(fd, prodrec->data, prodrec->info.sz);
             if (status < 0) {
-                mylog_syserr("Bad file read: %s", crec.cmd_val);
+                log_syserr("Bad file read: %s", crec.cmd_val);
                 free(prodrec->data);
                 close(fd);
                 return;
@@ -822,7 +822,7 @@ read_file(pqueue *pq,
 
             status = pq_insert(pq,prodrec);
             if (status) {
-                mylog_error("pq_insert() returned %d", status);
+                log_error("pq_insert() returned %d", status);
                 free(prodrec->data);
                 close(fd);
                 return;
@@ -842,14 +842,14 @@ read_file(pqueue *pq,
             status = pqe_new(pq, &(prodrec->info),
                              (void **)&dbuf, &idx);
             if (status) {
-                mylog_error("pqe_new() returned %d", status);
+                log_error("pqe_new() returned %d", status);
                 close(fd);
                 return;
             }
 
             status = read(fd, dbuf, prodrec->info.sz);
             if (status < 0) {
-                mylog_syserr("Bad file read: %s", crec.cmd_val);
+                log_syserr("Bad file read: %s", crec.cmd_val);
                 close(fd);
                 return;
             }
@@ -862,7 +862,7 @@ read_file(pqueue *pq,
 
             status = pqe_insert(pq, idx);
             if (status) {
-                mylog_error("pqe_insert() returned %d", status);
+                log_error("pqe_insert() returned %d", status);
                 close(fd);
                 return;
             }
@@ -880,14 +880,14 @@ read_file(pqueue *pq,
         int     bufcnt = 0;                     /* number of bytes in buffer */
 
         if((prodrec->data = malloc(DBUFMAX)) == NULL) {
-            mylog_syserr("malloc failed");
+            log_syserr("malloc failed");
             return;
         }
 
         if (tty_flag) {
             printf("Enter product (^D when finished)\n");
             if (set_stdin(1)) {
-                mylog_error("set_stdin: noncanonical mode set failed");
+                log_error("set_stdin: noncanonical mode set failed");
                 return;
             }
         }
@@ -895,8 +895,8 @@ read_file(pqueue *pq,
 
         while ((ch = getc(stdin)) != '\004') {
             if (bufcnt >= DBUFMAX) {
-                mylog_error("Product must be smaller than %d bytes", DBUFMAX);
-                mylog_error("Read operation aborted");
+                log_error("Product must be smaller than %d bytes", DBUFMAX);
+                log_error("Read operation aborted");
                 free(prodrec->data);
                 return;
             }
@@ -915,7 +915,7 @@ read_file(pqueue *pq,
 
         status = pq_insert(pq,prodrec);
         if (status != 0 && status != PQUEUE_DUP) {
-            mylog_error("pq_insert returned %d", status);
+            log_error("pq_insert returned %d", status);
             free(prodrec->data);
             return;
         }
@@ -927,7 +927,7 @@ read_file(pqueue *pq,
 
         if (tty_flag) {
             if (reset_stdin())
-                mylog_error("reset_stdin: stdin reset failed");
+                log_error("reset_stdin: stdin reset failed");
             printf("\n");
         }
     }
@@ -960,7 +960,7 @@ big_product(pqueue      *pq,
     switch (crec.cmd) {
     case CMD_NEW:                                     /* start a new product */
         if (in_progress) {               /* a product is already in progress */
-            mylog_error("Must complete old product first");
+            log_error("Must complete old product first");
             return;
         }
 
@@ -969,7 +969,7 @@ big_product(pqueue      *pq,
         prec->info.sz = prod_sz;
         status = pqe_new(pq, &(prec->info), (void **)&dbuf, &idx);
         if (status) {
-            mylog_error("pq_new() returned %d", status);
+            log_error("pq_new() returned %d", status);
             return;
         }
 
@@ -980,7 +980,7 @@ big_product(pqueue      *pq,
 
     case CMD_PUT:                             /* read a piece of the product */
         if (!in_progress) {              /* must initialize with new command */
-            mylog_error("Must start product with \"new\" command");
+            log_error("Must start product with \"new\" command");
             return;
         }
 
@@ -992,7 +992,7 @@ big_product(pqueue      *pq,
 
             while ((ch = fgetc(stdin)) != EOF) {
                 if (++prod_cnt > prod_sz) {
-                    mylog_error("product exceeds buffer size: aborting input");
+                    log_error("product exceeds buffer size: aborting input");
                     fflush(stdin);
                     prod_cnt--;
                     return;
@@ -1006,22 +1006,22 @@ big_product(pqueue      *pq,
             int fd;                                 /* input file descriptor */
 
             if ((fd = open(crec.cmd_val, O_RDONLY)) < 0) {       /* bad open */
-                mylog_syserr("Error opening %s", crec.cmd_val);
+                log_syserr("Error opening %s", crec.cmd_val);
                 return;
             }
 
             (void)fstat(fd, &f_stat); /* we need the file size */
-            mylog_debug("big_product: File size is %d", f_stat.st_size);
+            log_debug("big_product: File size is %d", f_stat.st_size);
 
             if ((prod_cnt + f_stat.st_size) > prod_sz) {  /* file is too big */
-                mylog_error("Product exceeds allocated size: input aborted");
+                log_error("Product exceeds allocated size: input aborted");
                 close(fd);
                 return;
             }
 
             status = read(fd, prod_ptr, f_stat.st_size);
             if (status < 0) {
-                mylog_syserr("Bad file read: %s", strerror(errno));
+                log_syserr("Bad file read: %s", strerror(errno));
                 close(fd);
                 return;
             }
@@ -1043,7 +1043,7 @@ big_product(pqueue      *pq,
 
         status = pqe_insert(pq, idx);
         if (status) {
-            mylog_error("%s:big_product(): pqe_insert() failure");
+            log_error("%s:big_product(): pqe_insert() failure");
             return;
         }
 
@@ -1054,13 +1054,13 @@ big_product(pqueue      *pq,
 
     case CMD_DISCARD:                       /* discard a product in progress */
         if (!in_progress) {
-            mylog_error("No product in progress: nothing to discard");
+            log_error("No product in progress: nothing to discard");
             return;
         }
 
         status = pqe_discard(pq, idx);
         if (status) {
-            mylog_error("pqe_discard: %s", strerror(status));
+            log_error("pqe_discard: %s", strerror(status));
             return;
         }
 
@@ -1085,7 +1085,7 @@ disp_stdout(const prod_info     *infop,
         infop->sz) {
         int errnum = errno;
 
-        mylog_syserr("data write failed");
+        log_syserr("data write failed");
         return(errnum);
     }
 
@@ -1112,13 +1112,13 @@ disp_file(const prod_info       *infop,
     if ((fd = open(crec.cmd_val, O_CREAT|O_WRONLY|O_APPEND, 0664)) < 0) {
                                                                  /* bad open */
         errnum = errno;
-        mylog_syserr("Error opening %s", crec.cmd_val);
+        log_syserr("Error opening %s", crec.cmd_val);
         return(errnum);
     }
 
     if (write(fd, datap, infop->sz) != infop->sz) {
         errnum = errno;
-        mylog_syserr("data write failed");
+        log_syserr("data write failed");
         close(fd);
         return(errnum);
     }
@@ -1151,12 +1151,12 @@ display_product(pqueue          *pq,
             break;
 
         case PQUEUE_END:
-            mylog_debug("End of queue");
+            log_debug("End of queue");
             return;
             break;
 
         default:
-            mylog_error("pq_sequence: %s", strerror(status));
+            log_error("pq_sequence: %s", strerror(status));
             return;
             break;
         }
@@ -1174,11 +1174,11 @@ display_watch(const prod_info   *infop,
               size_t            size_notused,
               void              *notused)
 {
-    unsigned int logLevel = mylog_get_level();
-    (void)mylog_set_level(MYLOG_LEVEL_INFO);
-    mylog_info("%s", s_prod_info(NULL, 0, infop,
-            mylog_is_enabled_debug));
-    (void)mylog_set_level(logLevel);
+    unsigned int logLevel = log_get_level();
+    (void)log_set_level(LOG_LEVEL_INFO);
+    log_info("%s", s_prod_info(NULL, 0, infop,
+            log_is_enabled_debug));
+    (void)log_set_level(logLevel);
     return ENOERR;
 } /*display_watch*/
 
@@ -1206,14 +1206,14 @@ watch_queue(pqueue      *pq,
 
     clssp->from = TS_ZERO;
     clssp->to = TS_ENDT;
-    mylog_info("From time set to %s", ctime(&clssp->from.tv_sec));
-    mylog_info("To time set to %s", ctime(&clssp->to.tv_sec));
+    log_info("From time set to %s", ctime(&clssp->from.tv_sec));
+    log_info("To time set to %s", ctime(&clssp->to.tv_sec));
     pq_last(pq, clssp, &tvout);
 
     if (tty_flag) {
         printf("(Type ^D when finished)\n");
         if (set_stdin(0)) {
-            mylog_error("set_stdin: noncanonical mode set failed");
+            log_error("set_stdin: noncanonical mode set failed");
             return;
         }
     }
@@ -1230,7 +1230,7 @@ watch_queue(pqueue      *pq,
                 errno = 0;
                 continue;
             }
-            mylog_syserr("select");
+            log_syserr("select");
             exit(1);
         }
 
@@ -1245,12 +1245,12 @@ watch_queue(pqueue      *pq,
                         if (status == 0)
                             continue;
                         else if (status == PQUEUE_END){
-                            mylog_debug("End of queue");
+                            log_debug("End of queue");
                             break;
                         }
                         else {
                             printf("status: %d\n",status);
-                            mylog_error("pq_sequence: %s", strerror(status));
+                            log_error("pq_sequence: %s", strerror(status));
                             return;
                         }
                     }
@@ -1267,12 +1267,12 @@ watch_queue(pqueue      *pq,
                 if (status == 0)
                     continue;
                 else if (status == PQUEUE_END){
-                    mylog_debug("End of queue");
+                    log_debug("End of queue");
                     break;
                 }
                 else {
                     printf("status: %d\n",status);
-                    mylog_error("pq_sequence: %s", strerror(status));
+                    log_error("pq_sequence: %s", strerror(status));
                     return;
                 }
             }
@@ -1281,7 +1281,7 @@ watch_queue(pqueue      *pq,
 
     if (tty_flag) {
         if (reset_stdin())
-            mylog_error("reset_stdin: failed");
+            log_error("reset_stdin: failed");
         printf("\n");
     }
 
@@ -1307,16 +1307,16 @@ rm_prod(pqueue          *pq,
 
         switch(status) {
         case 0:                                                  /* no error */
-            mylog_info("%d bytes freed: %s", savail, ctime(&ins_time.tv_sec));
+            log_info("%d bytes freed: %s", savail, ctime(&ins_time.tv_sec));
             break;
 
         case PQUEUE_END:
-            mylog_debug("End of queue");
+            log_debug("End of queue");
             return;
             break;
 
         default:
-            mylog_error("pq_seqdel: %s", strerror(status));
+            log_error("pq_seqdel: %s", strerror(status));
             return;
             break;
         }
@@ -1353,7 +1353,7 @@ main(int argc, char *argv[])
 
 
 /* initialize logger */
-    (void)mylog_init(argv[0]);
+    (void)log_init(argv[0]);
 
     if (isatty(fileno(stdin)))
         tty_flag = 1;
@@ -1374,15 +1374,15 @@ main(int argc, char *argv[])
         while ((ch=getopt(argc, argv, "vxl:pa:cs:nrPLFMS:wf:C")) != EOF)
             switch (ch) {
             case 'v':
-                (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                (void)log_set_level(LOG_LEVEL_INFO);
                 break;
 
             case 'x':
-                (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                (void)log_set_level(LOG_LEVEL_DEBUG);
                 break;
 
             case 'l':
-                (void)mylog_set_output(optarg);
+                (void)log_set_output(optarg);
                 break;
 
             case 'a':                                               /* align */
@@ -1460,7 +1460,7 @@ main(int argc, char *argv[])
                 break;
 
             case 'w':                                  /* set the watch flag */
-                (void)mylog_set_output("-");
+                (void)log_set_output("-");
                 watch_flag = 1;
                 break;
 
@@ -1495,25 +1495,25 @@ main(int argc, char *argv[])
         status = pq_open(path, aflags, &pq);
         if (status != ENOERR) {                                    /* whoops */
             if (PQ_CORRUPT == status) {
-                mylog_error("The product-queue \"%s\" is inconsistent\n",
+                log_error("The product-queue \"%s\" is inconsistent\n",
                         path);
             }
             else {
-                mylog_error("pq_open: %s: %s\n", path, strerror(status));
+                log_error("pq_open: %s: %s\n", path, strerror(status));
             }
             exit(EXIT_FAILURE);
         }
-        mylog_debug("pq_open: %s: Success\n", path);
+        log_debug("pq_open: %s: Success\n", path);
     }
 
     else {                                               /* create new queue */
         status = pq_create(path, 0666, aflags, align, initialsz, nproducts,
                            &pq);
         if (status != ENOERR) {                                    /* whoops */
-            mylog_error("pq_create: %s: %s\n", path, strerror(status));
+            log_error("pq_create: %s: %s\n", path, strerror(status));
             exit(EXIT_FAILURE);
         }
-        mylog_debug("pq_create: %s: Success\n", path);
+        log_debug("pq_create: %s: Success\n", path);
     }
 
 /* initialize options */
@@ -1534,7 +1534,7 @@ main(int argc, char *argv[])
         int     status = pq_clearMinVirtResTimeMetrics(pq);
 
         if (status) {
-            mylog_error("Couldn't clear minimum virtual residence time metrics: %s",
+            log_error("Couldn't clear minimum virtual residence time metrics: %s",
                 strerror(status));
         }
 
@@ -1615,7 +1615,7 @@ main(int argc, char *argv[])
                 break;
 
             case CMD_BAD:                         /* invalid command entered */
-                mylog_error("Bad command(type help for command list): %s", command);
+                log_error("Bad command(type help for command list): %s", command);
                 break;
             }
         }

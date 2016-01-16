@@ -13,7 +13,7 @@
 
 #include "config.h"
 
-#include <mylog.h>
+#include <log.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -48,21 +48,21 @@ static void* signalCond(
 {
     pthread_t* const thread = (pthread_t*)arg;
     int              status = pthread_mutex_lock(&mutex);
-    mylog_assert(status == 0);
+    log_assert(status == 0);
 
     // Try a signal first. This doesn't work
     status = pthread_kill(*thread, SIGINT);
-    mylog_assert(status == 0);
+    log_assert(status == 0);
 
     sleep(1);
 
     done = 1;
 
     status = pthread_cond_signal(&cond);
-    mylog_assert(status == 0);
+    log_assert(status == 0);
 
     status = pthread_mutex_unlock(&mutex);
-    mylog_assert(status == 0);
+    log_assert(status == 0);
 
     return NULL;
 }

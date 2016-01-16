@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <mylog.h>
-#include "mylog.h"
+#include <log.h>
+#include "log.h"
 #include "ldmalloc.h"
 #include "tokens.h"
 #include "xbuf.h"
@@ -39,10 +39,10 @@ unsigned long not_wmo = 0;
 void
 wmo_stats(void)
 {
-	mylog_notice("  WMO Messages seen:  %8lu", completed);
-	mylog_notice("  SOH/ETX missing  :  %8lu", sohetx_missed);
-	mylog_notice("  parity/chksum err:  %8lu", bad_cksum);
-	mylog_notice("  WMO format errors:  %8lu", not_wmo);
+	log_notice("  WMO Messages seen:  %8lu", completed);
+	log_notice("  SOH/ETX missing  :  %8lu", sohetx_missed);
+	log_notice("  parity/chksum err:  %8lu", bad_cksum);
+	log_notice("  WMO format errors:  %8lu", not_wmo);
 }
 
 
@@ -289,7 +289,7 @@ ids_len(const char *cp)
 static const char *
 pds_ident(const char *cp)
 {
-	/* mylog_assert (pdsp + 28) is valid, accessable memory */
+	/* log_assert (pdsp + 28) is valid, accessable memory */
 	const unsigned char *pdsp = (const unsigned char *)cp -1;
 					/* -1 trick for 1 based indexing */
 	static char idb[80];
@@ -310,20 +310,20 @@ grib_ident(size_t remaining, const char *const wmo_msg, const char *const ident)
 	cp = scanFor("GRIB", remaining, wmo_msg);
 	if(!cp)
 	{
-		mylog_notice("%s: Can't find `GRIB'", ident);
+		log_notice("%s: Can't find `GRIB'", ident);
 		return nada;
 	}
 	remaining -= cp - wmo_msg;
 	if(remaining < (8 + 28 +4))
 	{
-		mylog_notice("%s: way too short", ident);
+		log_notice("%s: way too short", ident);
 		return NULL;
 	}
 
 	len = ids_len(cp);
 	if(remaining < len)
 	{
-		mylog_notice("%s: %d bytes too short", ident, len - remaining);
+		log_notice("%s: %d bytes too short", ident, len - remaining);
 		return NULL;
 	}
 
@@ -332,14 +332,14 @@ grib_ident(size_t remaining, const char *const wmo_msg, const char *const ident)
             The test for 7777 at expected len should suffice (Chiz)
 	if(remaining > len + 8)
 	{
-		MYLOG_NOTICE("%s: garbled product", ident);
-		MYLOG_NOTICE("remaining %d, ids_len %d", remaining, len);
+		LOG_NOTICE("%s: garbled product", ident);
+		LOG_NOTICE("remaining %d, ids_len %d", remaining, len);
 		return NULL;
 	} */
 
 	if(scanFor("7777", 8, cp + len - 8) == NULL)
 	{
-		mylog_notice("%s: no end of product", ident);
+		log_notice("%s: no end of product", ident);
 		return NULL;
 	}
 
@@ -389,7 +389,7 @@ wmo_err_ident(xbuf *buf)
 			return identbuf;
 		conv = sprintf(cp, "  %s", s_wmo_header(&hdr));
 		cp += conv;
-		mylog_assert(cp < &identbuf[sizeof(identbuf)]);
+		log_assert(cp < &identbuf[sizeof(identbuf)]);
 	}
 	
 	return identbuf;
@@ -424,7 +424,7 @@ wmo_send_buf(
 		)
 	{
 		not_wmo++;
-		mylog_error("Not a WMO format message.        %s",
+		log_error("Not a WMO format message.        %s",
 			wmo_err_ident(buf));
 		return;
 	}
@@ -439,7 +439,7 @@ wmo_send_buf(
 		if(ni == NULL)
 		{
 			not_wmo++;
-			mylog_error("Not a WMO GRIB format message.   %s",
+			log_error("Not a WMO GRIB format message.   %s",
 				wmo_err_ident(buf));
 			return;
 		}

@@ -24,7 +24,7 @@
 #include "atofeedt.h"
 #include "globals.h"
 #include "ldmprint.h"
-#include "mylog.h"
+#include "log.h"
 #include "pq.h"
 #include "md5.h"
 
@@ -66,8 +66,8 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-        mylog_notice("Exiting");
-        (void)mylog_fini();
+        log_notice("Exiting");
+        (void)log_fini();
 }
 
 
@@ -111,7 +111,7 @@ int main(int ac, char *av[])
         /*
          * Set up error logging.
          */
-        (void)mylog_init(progname);
+        (void)log_init(progname);
 
         {
             extern int opterr;
@@ -127,13 +127,13 @@ int main(int ac, char *av[])
                             force = 1;
                             break;
                     case 'v':
-                            (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                            (void)log_set_level(LOG_LEVEL_INFO);
                             break;
                     case 'x':
-                            (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                            (void)log_set_level(LOG_LEVEL_DEBUG);
                             break;
                     case 'l':
-                            (void)mylog_set_output(optarg);
+                            (void)log_set_output(optarg);
                             break;
                     case 'q':
                             pqfname = optarg;
@@ -144,14 +144,14 @@ int main(int ac, char *av[])
                     }
         }
 
-        mylog_notice("Starting Up (%d)", getpgrp());
+        log_notice("Starting Up (%d)", getpgrp());
 
         /*
          * register exit handler
          */
         if(atexit(cleanup) != 0)
         {
-                mylog_syserr("atexit");
+                log_syserr("atexit");
                 return 1;
         }
 
@@ -168,11 +168,11 @@ int main(int ac, char *av[])
             status = pq_clear_write_count(pqfname);
             if (status) {
                 if (PQ_CORRUPT == status) {
-                    mylog_error("The product-queue \"%s\" is inconsistent", pqfname);
+                    log_error("The product-queue \"%s\" is inconsistent", pqfname);
                     return 4;
                 }
                 else {
-                    mylog_error("pq_clear_write_count() failure: %s: %s",
+                    log_error("pq_clear_write_count() failure: %s: %s",
                             pqfname, strerror(status));
                     return 1;
                 }
@@ -186,23 +186,23 @@ int main(int ac, char *av[])
             status = pq_get_write_count(pqfname, &write_count);
             if (status) {
                 if (ENOSYS == status) {
-                    mylog_error("Product-queue \"%s\" doesn't have a writer-counter",
+                    log_error("Product-queue \"%s\" doesn't have a writer-counter",
                         pqfname);
                     return 2;
                 }
                 else if (PQ_CORRUPT == status) {
-                    mylog_error("Product-queue \"%s\" is inconsistent", pqfname);
+                    log_error("Product-queue \"%s\" is inconsistent", pqfname);
                     return 4;
                 }
                 else {
-                    mylog_error("pq_get_write_count() failure: %s: %s",
+                    log_error("pq_get_write_count() failure: %s: %s",
                         pqfname, strerror(status));
                     return 1;
                 }
             }
         }
 
-        mylog_info("The writer-counter of the product-queue is %u", write_count);
+        log_info("The writer-counter of the product-queue is %u", write_count);
 
         return write_count == 0 ? 0 : 3;
 }

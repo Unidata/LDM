@@ -6,12 +6,12 @@
 
 #include <config.h>
 #include <errno.h>
-#include <mylog.h>
+#include <log.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
-#include "mylog.h"
+#include "log.h"
 #include "timestamp.h"
 #ifndef NDEBUG
 #define pIf(a,b) (!(a) || (b))  /* a implies b */
@@ -29,7 +29,7 @@ set_timestamp(timestampt *tsp)
         {
                 /* should never happen ... */
                 status = errno;
-                mylog_error("gettimeofday: %s", strerror(status));
+                log_error("gettimeofday: %s", strerror(status));
         }
         return status;
 }
@@ -47,7 +47,7 @@ swap_timestamp(timestampt *fr, timestampt *to)
 bool_t
 xdr_timestampt(XDR *xdrs, timestampt *tvp)
 {
-        mylog_assert(pIf(xdrs->x_op == XDR_ENCODE,
+        log_assert(pIf(xdrs->x_op == XDR_ENCODE,
                         (tvp->tv_sec  >= TS_ZERO.tv_sec
                         && tvp->tv_usec >= TS_ZERO.tv_usec
                         && tvp->tv_sec  <= TS_ENDT.tv_sec
@@ -126,7 +126,7 @@ timestamp_add(const timestampt *const left, const timestampt *const rght)
 void
 timestamp_incr(timestampt *ts)
 {
-        /* mylog_assert(ts != NULL); */
+        /* log_assert(ts != NULL); */
         if(ts->tv_usec == 999999)
         {
 #if 0
@@ -149,7 +149,7 @@ timestamp_incr(timestampt *ts)
 void
 timestamp_decr(timestampt *ts)
 {
-        /* mylog_assert(ts != NULL); */
+        /* log_assert(ts != NULL); */
         if(ts->tv_usec == 0)
         {
 #if 0
@@ -256,7 +256,7 @@ tsFormat(
  * Arguments:
  *      timestamp       Pointer to the timestamp to be parsed.
  * Returns:
- *      -1              Error.  "mylog_error()" called.
+ *      -1              Error.  "log_error()" called.
  *      else            Number of bytes parsed.
  */
 int
@@ -277,7 +277,7 @@ tsParse(
                             &hour, &minute, &second, &microseconds);
 
     if (6 > nfields) {
-        mylog_error("Couldn't decode timestamp \"%s\" with format \"%s\"", string,
+        log_error("Couldn't decode timestamp \"%s\" with format \"%s\"", string,
             format);
     }
     else if (month < 1 || month > 12 ||
@@ -286,7 +286,7 @@ tsParse(
             minute < 0 || minute > 59 ||
             second < 0 || second > 61 ||
             microseconds < 0) {
-        mylog_error("Invalid timestamp \"%s\"", string);
+        log_error("Invalid timestamp \"%s\"", string);
     }
     else {
         struct tm           tm;

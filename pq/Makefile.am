@@ -15,7 +15,7 @@ dist_man3_MANS		= pq.3
 lib_la_CPPFLAGS		= \
     -I$(top_srcdir)/rpc \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir)/mylog \
+    -I$(top_srcdir)/log \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
@@ -23,7 +23,7 @@ lib_la_CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib/C++
 TAGS_FILES		= \
     ../misc/*.c ../misc/*.h \
-    ../mylog/*.c ../mylog/*.h \
+    ../log/*.c ../log/*.h \
     ../protocol/*.c ../protocol/*.h \
     ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \

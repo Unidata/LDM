@@ -14,7 +14,7 @@
 #include "globals_stub.h"
 #include "inetutil.h"
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 #include "mldm_receiver_memory.h"
 
 #include <errno.h>
@@ -56,7 +56,7 @@ static void openMsm(
 {
     getLdmLogDir_ExpectAndReturn(CWD);
     *msm = mrm_open(SERVICE_ADDR, MCAST_FEEDTYPE);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(*msm != NULL);
 }
 
@@ -70,7 +70,7 @@ static void test_missed_mcast_files()
     mrm_clearAllMissedFiles(msm);
 
     status = mrm_getAnyMissedFileNoWait(msm, &iProd);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_FALSE(status);
 
     status = mrm_addMissedFile(msm, 1);
@@ -103,23 +103,23 @@ static void test_missed_mcast_files()
     OP_ASSERT_TRUE(iProd == 1);
 
     mrm_close(msm);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(status);
 
     openMsm(&msm);
 
     status = mrm_getAnyMissedFileNoWait(msm, &iProd);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(iProd = 2);
 
     status = mrm_getAnyMissedFileNoWait(msm, &iProd);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(iProd = 3);
 
     status = mrm_getAnyMissedFileNoWait(msm, &iProd);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_FALSE(status);
 
     mrm_close(msm);
@@ -139,21 +139,21 @@ static void test_last_mcast_prod()
 
     signaturet sig1;
     status = mrm_getLastMcastProd(msm, sig1);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_FALSE(status);
 
     signaturet sig2;
     (void)memset(&sig2, 1, sizeof(sig2));
     status = mrm_setLastMcastProd(msm, sig2);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(status);
     status = mrm_getLastMcastProd(msm, sig1);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(memcmp(&sig1, &sig2, sizeof(sig1)) == 0);
 
     status = mrm_close(msm);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(status);
 
     // Verify the data in the new file
@@ -161,12 +161,12 @@ static void test_last_mcast_prod()
     openMsm(&msm);
 
     status = mrm_getLastMcastProd(msm, sig1);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(status);
     OP_ASSERT_TRUE(memcmp(&sig1, &sig2, sizeof(signaturet)) == 0);
 
     status = mrm_close(msm);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(status);
 
     OP_VERIFY();
@@ -180,7 +180,7 @@ static void test_msm_open()
     OP_ASSERT_TRUE(msm != NULL);
 
     OP_ASSERT_TRUE(mrm_close(msm));
-    mylog_flush_error();
+    log_flush_error();
 
     OP_VERIFY();
 }
@@ -189,8 +189,8 @@ int main(
     int		argc,
     char**	argv)
 {
-    (void)mylog_init(argv[0]);
-    (void)mylog_set_level(MYLOG_LEVEL_INFO);
+    (void)log_init(argv[0]);
+    (void)log_set_level(LOG_LEVEL_INFO);
     opmock_test_suite_reset();
     opmock_register_test(test_msm_open, "test_msm_open");
     opmock_register_test(test_last_mcast_prod, "test_last_mcast_prod");

@@ -3,17 +3,17 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mylog2ulog.c
+ *   @file: log2ulog.c
  * @author: Steven R. Emmerson
  *
- * This file implements the `mylog.h` API using `ulog.c`.
+ * This file implements the `log.h` API using `ulog.c`.
  */
 
 
 #include "config.h"
 
 #include "mutex.h"
-#include "mylog.h"
+#include "log.h"
 #include "ulog.h"
 
 #include <fcntl.h>
@@ -29,9 +29,9 @@
 #endif
 
 /**
- * The mapping from `mylog` logging levels to `ulog` priorities:
+ * The mapping from `log` logging levels to `ulog` priorities:
  */
-int                  mylog_syslog_priorities[] = {
+int                  log_syslog_priorities[] = {
         LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR
 };
 
@@ -39,10 +39,10 @@ int                  mylog_syslog_priorities[] = {
  *  Logging level. The initial value must be consonant with the initial value of
  *  `logMask` in `ulog.c`.
  */
-static mylog_level_t loggingLevel = MYLOG_LEVEL_DEBUG;
+static log_level_t loggingLevel = LOG_LEVEL_DEBUG;
 
 /**
- * The thread identifier of the thread on which `mylog_impl_init()` was called.
+ * The thread identifier of the thread on which `log_impl_init()` was called.
  */
 static pthread_t initThread;
 
@@ -71,14 +71,14 @@ static inline void unlock(void)
  * @retval    -1     Failure.
  */
 static int set_level(
-        const mylog_level_t level)
+        const log_level_t level)
 {
     int status;
-    if (!mylog_vet_level(level)) {
+    if (!log_vet_level(level)) {
         status = -1;
     }
     else {
-        static int ulogUpTos[MYLOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
+        static int ulogUpTos[LOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
                 LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
                 LOG_UPTO(LOG_ERR)};
         (void)setulogmask(ulogUpTos[level]);
@@ -128,11 +128,11 @@ static const char* get_default_output(void)
  *                        - else file whose pathname is `output`
  * @param[in] level     Logging level.
  * @retval    0         Success.
- *                        - `mylog_get_output()` will return
+ *                        - `log_get_output()` will return
  *                          - ""  if the process is a daemon
  *                          - "-" otherwise
- *                        - `mylog_get_facility()` will return `facility`.
- *                        - `mylog_get_level()` will return `level`.
+ *                        - `log_get_facility()` will return `facility`.
+ *                        - `log_get_level()` will return `level`.
  * @retval    -1        Error.
  */
 static int init(
@@ -140,7 +140,7 @@ static int init(
         const int                  options,
         const int                  facility,
         const char* const          output,
-        const mylog_level_t        level)
+        const log_level_t        level)
 {
     char progname[_XOPEN_PATH_MAX];
     strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
@@ -157,11 +157,11 @@ static int init(
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void mylog_write_one(
-        const mylog_level_t    level,
+void log_write_one(
+        const log_level_t    level,
         const Message* const   msg)
 {
-    (void)ulog(mylog_get_priority(level), "%s:%d %s", msg->loc.file,
+    (void)ulog(log_get_priority(level), "%s:%d %s", msg->loc.file,
             msg->loc.line, msg->string);
 }
 
@@ -172,13 +172,13 @@ void mylog_write_one(
  * @param[in] fmt  Format of the message.
  * @param[in] ...  Format arguments.
  */
-void mylog_internal(
+void log_internal(
         const char* const fmt,
                           ...)
 {
     va_list args;
     va_start(args, fmt);
-    (void)vulog(mylog_get_priority(MYLOG_LEVEL_ERROR), fmt, args);
+    (void)vulog(log_get_priority(LOG_LEVEL_ERROR), fmt, args);
     va_end(args);
 }
 
@@ -188,22 +188,22 @@ void mylog_internal(
 
 /**
  * Initializes the logging module. Should be called before any other function.
- * - `mylog_get_output()` will return ""
+ * - `log_get_output()` will return ""
  *   - ""  if the process is a daemon
  *   - "-" otherwise
- * - `mylog_get_facility()` will return `LOG_LDM`.
- * - `mylog_get_level()` will return `MYLOG_LEVEL_NOTICE`.
+ * - `log_get_facility()` will return `LOG_LDM`.
+ * - `log_get_level()` will return `LOG_LEVEL_NOTICE`.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
-int mylog_impl_init(
+int log_impl_init(
         const char* id)
 {
     const char* output = get_default_output();
-    int status = init(id, LOG_PID, LOG_LDM, output, MYLOG_LEVEL_NOTICE);
+    int status = init(id, LOG_PID, LOG_LDM, output, LOG_LEVEL_NOTICE);
     if (status == 0) {
         status = mutex_init(&mutex, true, true);
         if (status == 0)
@@ -219,7 +219,7 @@ int mylog_impl_init(
  * @retval  0  Success.
  * @retval -1  Failure.
  */
-int mylog_refresh(void)
+int log_refresh(void)
 {
     lock();
     int status = init(getulogident(), ulog_get_options(), getulogfacility(),
@@ -231,15 +231,15 @@ int mylog_refresh(void)
 /**
  * Finalizes the logging module. Frees resources specific to the current thread.
  * Frees all resources if the current thread is the one on which
- * `mylog_impl_init()` was called.
+ * `log_impl_init()` was called.
  *
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int mylog_impl_fini(void)
+int log_impl_fini(void)
 {
     lock();
-    mylog_free();
+    log_free();
     int status;
     if (!pthread_equal(initThread, pthread_self())) {
         status = 0;
@@ -261,8 +261,8 @@ int mylog_impl_fini(void)
  * @retval    0      Success.
  * @retval    -1     Failure.
  */
-int mylog_set_level(
-        const mylog_level_t level)
+int log_set_level(
+        const log_level_t level)
 {
     lock();
     int status = set_level(level);
@@ -274,12 +274,12 @@ int mylog_set_level(
  * Returns the current logging level.
  *
  * @return The lowest level through which logging will occur. The initial value
- *         is `MYLOG_LEVEL_DEBUG`.
+ *         is `LOG_LEVEL_DEBUG`.
  */
-mylog_level_t mylog_get_level(void)
+log_level_t log_get_level(void)
 {
     lock();
-    mylog_level_t level = loggingLevel;
+    log_level_t level = loggingLevel;
     unlock();
     return level;
 }
@@ -287,29 +287,29 @@ mylog_level_t mylog_get_level(void)
 /**
  * Lowers the logging threshold by one. Wraps at the bottom.
  */
-void mylog_roll_level(void)
+void log_roll_level(void)
 {
     lock();
-    mylog_level_t level = mylog_get_level();
-    level = (level == MYLOG_LEVEL_DEBUG) ? MYLOG_LEVEL_ERROR : level - 1;
-    mylog_set_level(level);
+    log_level_t level = log_get_level();
+    level = (level == LOG_LEVEL_DEBUG) ? LOG_LEVEL_ERROR : level - 1;
+    log_set_level(level);
     unlock();
 }
 
 /**
  * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
- * system logging daemon. Should be called after `mylog_impl_init()`.
+ * system logging daemon. Should be called after `log_impl_init()`.
  *
  * @param[in] facility  The facility that will be used when logging to the
  *                      system logging daemon.
  */
-int mylog_set_facility(
+int log_set_facility(
         const int facility)
 {
     lock();
-    const char* const id = mylog_get_id();
-    const unsigned    options = mylog_get_options();
-    const char* const output = mylog_get_output();
+    const char* const id = log_get_id();
+    const unsigned    options = log_get_options();
+    const char* const output = log_get_output();
     int               status = openulog(id, options, facility, output);
     unlock();
     return status == -1 ? -1 : 0;
@@ -322,7 +322,7 @@ int mylog_set_facility(
  * @return The facility that will be used when logging to the system logging
  *         daemon (e.g., `LOG_LOCAL0`).
  */
-int mylog_get_facility(void)
+int log_get_facility(void)
 {
     lock();
     int facility = getulogfacility();
@@ -331,14 +331,14 @@ int mylog_get_facility(void)
 }
 
 /**
- * Sets the logging identifier. Should be called between `mylog_impl_init()` and
- * `mylog_impl_fini()`.
+ * Sets the logging identifier. Should be called between `log_impl_init()` and
+ * `log_impl_fini()`.
  *
  * @param[in] id        The new identifier. Caller may free.
  * @retval    0         Success.
  * @retval    -1        Failure.
  */
-int mylog_set_id(
+int log_set_id(
         const char* const id)
 {
     lock();
@@ -356,7 +356,7 @@ int mylog_set_id(
  * @param[in] id        The logging identifier. Caller may free.
  * @retval    0         Success.
  */
-int mylog_set_upstream_id(
+int log_set_upstream_id(
         const char* const hostId,
         const bool        isFeeder)
 {
@@ -375,7 +375,7 @@ int mylog_set_upstream_id(
  *
  * @return The logging identifier. The initial value is "ulog".
  */
-const char* mylog_get_id(void)
+const char* log_get_id(void)
 {
     lock();
     const char* const id = getulogident();
@@ -394,7 +394,7 @@ const char* mylog_get_id(void)
  *                         LOG_ISO_8601    Use timestamp format
  *                             <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
  */
-void mylog_set_options(
+void log_set_options(
         const unsigned options)
 {
     lock();
@@ -414,7 +414,7 @@ void mylog_set_options(
  *                             <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
  *         The initial value is `0`.
  */
-unsigned mylog_get_options(void)
+unsigned log_get_options(void)
 {
     lock();
     const unsigned opts = ulog_get_options();
@@ -424,7 +424,7 @@ unsigned mylog_get_options(void)
 
 /**
  * Sets the logging output. May be called at any time -- including before
- * `mylog_impl_init()`.
+ * `log_impl_init()`.
  *
  * @param[in] output   The logging output. One of
  *                         ""      Log to the system logging daemon. Caller may
@@ -436,12 +436,12 @@ unsigned mylog_get_options(void)
  * @retval    0        Success.
  * @retval    -1       Failure.
  */
-int mylog_set_output(
+int log_set_output(
         const char* const output)
 {
     lock();
-    const char* const id = mylog_get_id();
-    const unsigned    options = mylog_get_options();
+    const char* const id = log_get_id();
+    const unsigned    options = log_get_options();
     int               status = openulog(id, options, LOG_LDM, output);
     unlock();
     return status == -1 ? -1 : 0;
@@ -449,7 +449,7 @@ int mylog_set_output(
 
 /**
  * Returns the logging output. May be called at any time -- including before
- * `mylog_impl_init()`.
+ * `log_impl_init()`.
  *
  * @return       The logging output. One of
  *                   ""      Output is to the system logging daemon. Initial
@@ -457,7 +457,7 @@ int mylog_set_output(
  *                   "-"     Output is to the standard error stream.
  *                   else    The pathname of the log file.
  */
-const char* mylog_get_output(void)
+const char* log_get_output(void)
 {
     lock();
     const char* path = getulogpath();

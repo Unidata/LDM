@@ -18,7 +18,7 @@
 #include "globals.h"
 #include "remote.h"
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 #include "pq.h"
 #include "registry.h"
 
@@ -97,7 +97,7 @@ static const char* getPath(
         char*           var;
 
         if (reg_getString(name, &var)) {
-            mylog_warning("Couldn't get pathname of %s from registry. "
+            log_warning("Couldn't get pathname of %s from registry. "
                     "Using default: \"%s\"", desc, def);
             setPath(def, buf);
         }
@@ -149,7 +149,7 @@ void setQueuePath(
 /**
  * Returns the path name of the product-queue.
  *
- * @retval NULL  Error.  "mylog_add()" called.
+ * @retval NULL  Error.  "log_add()" called.
  * @return       Pointer to the pathname of the product-queue. Might be absolute
  *               or relative to the current working directory.
  */
@@ -176,7 +176,7 @@ void setPqactConfigPath(
  * Returns the path name of the default pqact(1) configuration-file.
  *
  * Returns:
- *      NULL            Error.  "mylog_add()" called.
+ *      NULL            Error.  "log_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -204,7 +204,7 @@ void setLdmdConfigPath(
  * Returns the path name of the ldmd(1) configuration-file.
  *
  * Returns:
- *      NULL            Error.  "mylog_add()" called.
+ *      NULL            Error.  "log_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -232,7 +232,7 @@ void setPqactDataDirPath(
  * Returns the path name of the default pqact(1) data-directory.
  *
  * Returns:
- *      NULL            Error.  "mylog_add()" called.
+ *      NULL            Error.  "log_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -260,7 +260,7 @@ void setPqsurfDataDirPath(
  * Returns the path name of the default pqsurf(1) data-directory.
  *
  * Returns:
- *      NULL            Error.  "mylog_add()" called.
+ *      NULL            Error.  "log_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -288,7 +288,7 @@ void setSurfQueuePath(
  * Returns the path name of the default pqsurf(1) output product-queue
  *
  * Returns:
- *      NULL            Error.  "mylog_add()" called.
+ *      NULL            Error.  "log_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -316,7 +316,7 @@ void setPqsurfConfigPath(
  * Returns the path name of the default pqsurf(1) configuration-file.
  *
  * Returns:
- *      NULL            Error.  "mylog_add()" called.
+ *      NULL            Error.  "log_add()" called.
  *      else            Pointer to the pathname.  Might be absolute or relative
  *                      to the current working directory.
  */
@@ -370,7 +370,7 @@ const char* getSysConfDirPath(void)
         static const char      subdir[] = "/etc";
 
         if (strlen(ldmHome) + strlen(subdir) >= sizeof(sysConfDirPath)) {
-            mylog_error("System configuration directory pathname too long: "
+            log_error("System configuration directory pathname too long: "
                     "\"%s%s\"", ldmHome, subdir);
             abort();
         }
@@ -411,13 +411,13 @@ isAntiDosEnabled(void)
 
         if (status) {
             isEnabled = 1;
-            mylog_add("Using default value: %s", isEnabled ? "TRUE" : "FALSE");
+            log_add("Using default value: %s", isEnabled ? "TRUE" : "FALSE");
             if (status == ENOENT) {
-                mylog_flush_info();
+                log_flush_info();
                 isSet = 1;
             }
             else {
-                mylog_flush_error();
+                log_flush_error();
             }
         }
         else {
@@ -445,13 +445,13 @@ getTimeOffset(void)
 
         if (status) {
             timeOffset = 3600;
-            mylog_add("Using default value: %u seconds", timeOffset);
+            log_add("Using default value: %u seconds", timeOffset);
             if (status == ENOENT) {
-                mylog_flush_info();
+                log_flush_info();
                 isSet = 1;
             }
             else {
-                mylog_flush_error();
+                log_flush_error();
             }
         }
         else {

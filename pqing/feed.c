@@ -15,7 +15,7 @@
 
 #include "inetutil.h"
 #include "feed.h"
-#include "mylog.h"
+#include "log.h"
 #include "rawfile.h"
 #ifndef MCIDAS_ONLY
 #include "xbuf.h"
@@ -72,7 +72,7 @@ port_open(const char *remote, unsigned short port, int *const fdp)
         if (addrbyhost(remote, &addr) != 0)
         {
                 status = ENOENT;
-                mylog_syserr("gethostbyname(%s)", remote);
+                log_syserr("gethostbyname(%s)", remote);
                 return status;
         }
 
@@ -80,7 +80,7 @@ port_open(const char *remote, unsigned short port, int *const fdp)
         if(sock < 0)
         {
                 status = errno;
-                mylog_syserr("socket");
+                log_syserr("socket");
                 return status;
         }
 #if 0 /* doesnt seem to help. See VOODOO in pqing.c */
@@ -90,7 +90,7 @@ port_open(const char *remote, unsigned short port, int *const fdp)
                                 (char *) &optval, (int) sizeof(optval)) < 0)
                 {
                         status = errno;
-                        mylog_syserr("setsockopt SO_KEEPALIVE");
+                        log_syserr("setsockopt SO_KEEPALIVE");
                         return status;
                 }
         }
@@ -100,12 +100,12 @@ port_open(const char *remote, unsigned short port, int *const fdp)
         if(connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
         {
                 status = errno;
-                mylog_syserr("connect");
+                log_syserr("connect");
                 (void) close(sock);
                 return status;
         }
         
-        mylog_notice("NET \"%s\" %hu", remote, port);
+        log_notice("NET \"%s\" %hu", remote, port);
         *fdp = sock;
         return status;
 }
@@ -116,7 +116,7 @@ port_open(const char *remote, unsigned short port, int *const fdp)
 static void
 null_stats(void)
 {
-        mylog_notice("  No feed statistics: never opened feed");
+        log_notice("  No feed statistics: never opened feed");
 }
 
 /* pointer set to the right function by open_feed() */
@@ -240,7 +240,7 @@ open_feed(const char *feedfname, int *const fdp, const unsigned long maxProdSize
                 {
                         /* use stdin */
                         *fdp = fileno(stdin);
-                        mylog_notice("FILE stdin");
+                        log_notice("FILE stdin");
                 }
                 else
                 {

@@ -9,8 +9,8 @@
  * This file declares the API for a mutual-exclusion lock.
  */
 
-#ifndef MYLOG_LOCK_H_
-#define MYLOG_LOCK_H_
+#ifndef LOG_LOCK_H_
+#define LOG_LOCK_H_
 
 #include <stdbool.h>
 #include <pthread.h>
@@ -90,4 +90,4 @@ static inline int mutex_unlock(
     }
 #endif
 
-#endif /* MYLOG_LOCK_H_ */
+#endif /* LOG_LOCK_H_ */

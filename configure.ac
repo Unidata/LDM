@@ -694,8 +694,8 @@ AC_CONFIG_FILES([
     mcast_lib/C++/Makefile
     misc/Makefile
     mldm_sender/Makefile
-    mylog/Makefile
-    mylog/ulog/Makefile
+    log/Makefile
+    log/ulog/Makefile
     noaaport/Makefile
     noaaport/retrans/Makefile
     notifyme/Makefile
@@ -735,7 +735,7 @@ AC_CONFIG_FILES([
 
 dnl The subsystems are unconditionally configured to enable, for example,
 dnl "make dist" to work.
-AC_CONFIG_SUBDIRS([mcast_lib/vcmtp mylog/log4c])
+AC_CONFIG_SUBDIRS([mcast_lib/vcmtp])
 
 export CC
 

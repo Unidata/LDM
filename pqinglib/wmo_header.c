@@ -12,7 +12,7 @@
 
 #include "ldmalloc.h"
 #include "tokens.h"
-#include "mylog.h"
+#include "log.h"
 #include "wmo_header.h"
 #include "xbuf.h"
 
@@ -355,7 +355,7 @@ decode_type(char *tt, char *aa, char *pil)
         {
                 if( pil[4] == 'R' || pil[4] == 'T')
                 {
-                        mylog_error("HDR + PIL: %s%s %s", tt, aa, pil ) ;
+                        log_error("HDR + PIL: %s%s %s", tt, aa, pil ) ;
                         return METAR; 
                 }
         }

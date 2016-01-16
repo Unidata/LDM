@@ -32,7 +32,7 @@ pqing_SOURCES		= \
     wmo_start.c
 AM_CPPFLAGS		= \
     -I$(top_srcdir)/pqinglib \
-    -I$(top_srcdir)/mylog \
+    -I$(top_srcdir)/log \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
@@ -52,7 +52,7 @@ TAGS_FILES		= \
 	../protocol/*.c ../protocol/*.h \
 	../protocol2/*.c ../protocol2/*.h \
 	../registry/*.c ../registry/*.h \
-	../mylog/*.c ../mylog/*.h \
+	../log/*.c ../log/*.h \
 	../misc/*.c ../misc/*.h \
 	../rpc/*.c ../rpc/*.h
 

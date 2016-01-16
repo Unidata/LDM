@@ -15,7 +15,7 @@
 #include "config.h"
 
 #include "doubly_linked_stack.h"
-#include "mylog.h"
+#include "log.h"
 
 #include <stdlib.h>
 
@@ -33,14 +33,14 @@ struct Dls {
 /**
  * Returns a new doubly-linked stack.
  *
- * @retval NULL  Error. `mylog_add()` called.
+ * @retval NULL  Error. `log_add()` called.
  * @return       Pointer to a new doubly-linked stack. The client should call
  *               `dls_free()` when it is no longer needed.
  */
 Dls*
 dls_new(void)
 {
-    Dls* dls = mylog_malloc(sizeof(Dls), "doubly-linked stack");
+    Dls* dls = log_malloc(sizeof(Dls), "doubly-linked stack");
 
     if (dls)
         dls->top = NULL;
@@ -53,7 +53,7 @@ dls_new(void)
  *
  * @param[in] dls   Pointer to the stack to have a pointer pushed onto it.
  * @param[in] ptr   The pointer to be pushed. Should not be `NULL`.
- * @retval    NULL  Error. `mylog_add()` called.
+ * @retval    NULL  Error. `log_add()` called.
  * @return          Pointer to the stack element that contains the pointer.
  */
 DlsElt*
@@ -61,7 +61,7 @@ dls_push(
     Dls* const  dls,
     void* const ptr)
 {
-    DlsElt* elt = mylog_malloc(sizeof(DlsElt), "doubly-linked stack element");
+    DlsElt* elt = log_malloc(sizeof(DlsElt), "doubly-linked stack element");
 
     if (elt) {
         elt->down = dls->top;

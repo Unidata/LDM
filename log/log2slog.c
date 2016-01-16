@@ -3,16 +3,16 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mylog2ulog.c
+ *   @file: log2ulog.c
  * @author: Steven R. Emmerson
  *
- * This file implements the `mylog.h` API using `ulog.c`.
+ * This file implements the `log.h` API using `ulog.c`.
  */
 
 #include "config.h"
 
 #include "mutex.h"
-#include "mylog.h"
+#include "log.h"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -30,17 +30,17 @@
 #endif
 
 /**
- * The mapping from `mylog` logging levels to system logging daemon priorities:
+ * The mapping from `log` logging levels to system logging daemon priorities:
  */
-int                  mylog_syslog_priorities[] = {
+int                  log_syslog_priorities[] = {
         LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR
 };
 /**
  *  Logging level.
  */
-static mylog_level_t logging_level = MYLOG_LEVEL_NOTICE;
+static log_level_t logging_level = LOG_LEVEL_NOTICE;
 /**
- * The thread identifier of the thread on which `mylog_init()` was called.
+ * The thread identifier of the thread on which `log_init()` was called.
  */
 static pthread_t     init_thread;
 /**
@@ -77,7 +77,7 @@ static void get_ldm_logfile_pathname(
     if (reg_getString("/log/file", &pathname)) {
         (void)snprintf(buf, size, "%s/ldmd.log", LDM_LOG_DIR);
         buf[size-1] = 0;
-        mylog_internal("Couldn't get pathname of LDM log file from registry. "
+        log_internal("Couldn't get pathname of LDM log file from registry. "
                 "Using default \"%s\".", buf);
     }
     else {
@@ -116,7 +116,7 @@ static FILE* open_output_stream(
     else {
         stream = fopen(pathname, "a");
         if (stream == NULL) {
-            mylog_internal("Couldn't open log file \"%s\"", pathname);
+            log_internal("Couldn't open log file \"%s\"", pathname);
         }
         else {
             (void)setvbuf(stream, NULL, _IOLBF, BUFSIZ); // line buffering
@@ -271,11 +271,11 @@ static int init_output(void)
  * @return               The string associated with `level`
  */
 static const char* level_to_string(
-        const mylog_level_t level)
+        const log_level_t level)
 {
     static const char* strings[] = {"DEBUG", "INFO", "NOTE", "WARN",
             "ERROR", "CRIT", "ALERT", "FATAL"};
-    return mylog_vet_level(level) ? strings[level] : "UNKNOWN";
+    return log_vet_level(level) ? strings[level] : "UNKNOWN";
 }
 
 /**
@@ -286,9 +286,9 @@ static const char* level_to_string(
  * @return             The system logging priority associated with `level`
  */
 static int level_to_priority(
-        const mylog_level_t level)
+        const log_level_t level)
 {
-    return mylog_vet_level(level) ? mylog_syslog_priorities[level] : LOG_ERR;
+    return log_vet_level(level) ? log_syslog_priorities[level] : LOG_ERR;
 }
 
 /**
@@ -297,8 +297,8 @@ static int level_to_priority(
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void mylog_write_one(
-        const mylog_level_t    level,
+void log_write_one(
+        const log_level_t    level,
         const Message* const   msg)
 {
     if (output_stream) {
@@ -312,12 +312,12 @@ void mylog_write_one(
                 tm.tm_sec, (long)now.tv_usec,
                 ident, getpid(),
                 level_to_string(level),
-                mylog_basename(msg->loc.file), msg->loc.line,
+                log_basename(msg->loc.file), msg->loc.line,
                 msg->string);
     }
     else {
         syslog(level_to_priority(level), "%s:%d %s",
-                mylog_basename(msg->loc.file), msg->loc.line, msg->string);
+                log_basename(msg->loc.file), msg->loc.line, msg->string);
     }
 }
 
@@ -328,7 +328,7 @@ void mylog_write_one(
  * @param[in] fmt  Format of the message.
  * @param[in] ...  Format arguments.
  */
-void mylog_internal(
+void log_internal(
         const char* const fmt,
                           ...)
 {
@@ -343,7 +343,7 @@ void mylog_internal(
     va_start(args, fmt);
     (void)vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
-    mylog_write_one(MYLOG_LEVEL_ERROR, &msg);
+    log_write_one(LOG_LEVEL_ERROR, &msg);
 }
 
 /******************************************************************************
@@ -352,18 +352,18 @@ void mylog_internal(
 
 /**
  * Initializes the logging module. Should be called before any other function.
- * - `mylog_get_id()`       will return the filename component of `id`
- * - `mylog_get_facility()` will return `LOG_LDM`
- * - `mylog_get_level()`    will return `MYLOG_LEVEL_NOTICE`
- * - `mylog_get_options()`  will return `LOG_PID | LOG_NDELAY`
- * - `mylog_get_output()`   will return the pathname of the LDM logfile
+ * - `log_get_id()`       will return the filename component of `id`
+ * - `log_get_facility()` will return `LOG_LDM`
+ * - `log_get_level()`    will return `LOG_LEVEL_NOTICE`
+ * - `log_get_options()`  will return `LOG_PID | LOG_NDELAY`
+ * - `log_get_output()`   will return the pathname of the LDM logfile
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
-int mylog_impl_init(
+int log_impl_init(
         const char* id)
 {
     int status;
@@ -371,11 +371,11 @@ int mylog_impl_init(
         status = -1;
     }
     else {
-        logging_level = MYLOG_LEVEL_NOTICE;
+        logging_level = LOG_LEVEL_NOTICE;
         syslog_options = LOG_PID | LOG_NDELAY;
         syslog_facility = LOG_LDM;
 
-        strncpy(ident, mylog_basename(id), sizeof(ident))[sizeof(ident)-1] = 0;
+        strncpy(ident, log_basename(id), sizeof(ident))[sizeof(ident)-1] = 0;
 
         status = init_output();
         if (status == 0) {
@@ -390,12 +390,12 @@ int mylog_impl_init(
 /**
  * Refreshes the logging module. In particular, if logging is to a file, then
  * the file is closed and re-opened; thus enabling log file rotation. Should be
- * called after mylog_init().
+ * called after log_init().
  *
  * @retval  0  Success.
  * @retval -1  Failure.
  */
-int mylog_refresh(void)
+int log_refresh(void)
 {
     lock();
     char output[_XOPEN_PATH_MAX];
@@ -409,16 +409,16 @@ int mylog_refresh(void)
 /**
  * Finalizes the logging module. Frees resources specific to the current thread.
  * Frees all resources if the current thread is the one on which
- * `mylog_impl_init()` was called.
+ * `log_impl_init()` was called.
  *
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int mylog_impl_fini(void)
+int log_impl_fini(void)
 {
     int status;
     lock();
-    mylog_free();
+    log_free();
     if (!pthread_equal(init_thread, pthread_self())) {
         status = 0;
     }
@@ -432,17 +432,17 @@ int mylog_impl_fini(void)
 }
 
 /**
- * Enables logging down to a given level. Should be called after mylog_init().
+ * Enables logging down to a given level. Should be called after log_init().
  *
  * @param[in] level  The lowest level through which logging should occur.
  * @retval    0      Success.
  * @retval    -1     Failure.
  */
-int mylog_set_level(
-        const mylog_level_t level)
+int log_set_level(
+        const log_level_t level)
 {
     int status;
-    if (!mylog_vet_level(level)) {
+    if (!log_vet_level(level)) {
         status = -1;
     }
     else {
@@ -456,41 +456,41 @@ int mylog_set_level(
 
 /**
  * Lowers the logging threshold by one. Wraps at the bottom. Should be called
- * after mylog_init().
+ * after log_init().
  */
-void mylog_roll_level(void)
+void log_roll_level(void)
 {
     lock();
-    logging_level = (logging_level == MYLOG_LEVEL_DEBUG)
-            ? MYLOG_LEVEL_ERROR
+    logging_level = (logging_level == LOG_LEVEL_DEBUG)
+            ? LOG_LEVEL_ERROR
             : logging_level - 1;
     unlock();
 }
 
 /**
- * Returns the current logging level. Should be called after mylog_init().
+ * Returns the current logging level. Should be called after log_init().
  *
  * @return The lowest level through which logging will occur. The initial value
- *         is `MYLOG_LEVEL_DEBUG`.
+ *         is `LOG_LEVEL_DEBUG`.
  */
-mylog_level_t mylog_get_level(void)
+log_level_t log_get_level(void)
 {
     lock();
-    mylog_level_t level = logging_level;
+    log_level_t level = logging_level;
     unlock();
     return level;
 }
 
 /**
  * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
- * system logging daemon. Should be called after `mylog_init()`.
+ * system logging daemon. Should be called after `log_init()`.
  *
  * @param[in] facility  The facility that will be used when logging to the
  *                      system logging daemon.
  * @retval    0         Success (always)
  * @retval    -1        Failure
  */
-int mylog_set_facility(
+int log_set_facility(
         const int facility)
 {
     int  status;
@@ -510,12 +510,12 @@ int mylog_set_facility(
 
 /**
  * Returns the facility that will be used when logging to the system logging
- * daemon (e.g., `LOG_LOCAL0`). Should be called after mylog_init().
+ * daemon (e.g., `LOG_LOCAL0`). Should be called after log_init().
  *
  * @return The facility that will be used when logging to the system logging
  *         daemon (e.g., `LOG_LOCAL0`).
  */
-int mylog_get_facility(void)
+int log_get_facility(void)
 {
     lock();
     int facility = syslog_facility;
@@ -524,13 +524,13 @@ int mylog_get_facility(void)
 }
 
 /**
- * Sets the logging identifier. Should be called after `mylog_init()`.
+ * Sets the logging identifier. Should be called after `log_init()`.
  *
  * @param[in] id        The new identifier. Caller may free.
  * @retval    0         Success.
  * @retval    -1        Failure.
  */
-int mylog_set_id(
+int log_set_id(
         const char* const id)
 {
     int status;
@@ -547,7 +547,7 @@ int mylog_set_id(
 }
 
 /**
- * Modifies the logging identifier. Should be called after mylog_init().
+ * Modifies the logging identifier. Should be called after log_init().
  *
  * @param[in] hostId    The identifier of the remote host. Caller may free.
  * @param[in] isFeeder  Whether or not the process is sending data-products or
@@ -556,7 +556,7 @@ int mylog_set_id(
  * @retval    0         Success.
  * @retval    -1        Failure.
  */
-int mylog_set_upstream_id(
+int log_set_upstream_id(
         const char* const hostId,
         const bool        isFeeder)
 {
@@ -576,11 +576,11 @@ int mylog_set_upstream_id(
 }
 
 /**
- * Returns the logging identifier. Should be called after mylog_init().
+ * Returns the logging identifier. Should be called after log_init().
  *
  * @return The logging identifier.
  */
-const char* mylog_get_id(void)
+const char* log_get_id(void)
 {
     lock();
     const char* const id = ident;
@@ -590,7 +590,7 @@ const char* mylog_get_id(void)
 
 /**
  * Sets the logging options for the system logging daemon. Should be called
- * after mylog_init().
+ * after log_init().
  *
  * @param[in] options  The logging options. Bitwise or of
  *                         LOG_PID     Log the pid with each message (default)
@@ -600,7 +600,7 @@ const char* mylog_get_id(void)
  *                         LOG_NOWAIT  Don't wait for console forks: DEPRECATED
  *                         LOG_PERROR  Log to stderr as well
  */
-void mylog_set_options(
+void log_set_options(
         const unsigned options)
 {
     lock();
@@ -611,7 +611,7 @@ void mylog_set_options(
 
 /**
  * Returns the logging options for the system logging daemon. Should be called
- * after mylog_init().
+ * after log_init().
  *
  * @return The logging options. Bitwise or of
  *             LOG_PID     Log the pid with each message (default)
@@ -621,7 +621,7 @@ void mylog_set_options(
  *             LOG_NOWAIT  Don't wait for console forks: DEPRECATED
  *             LOG_PERROR  Log to stderr as well
  */
-unsigned mylog_get_options(void)
+unsigned log_get_options(void)
 {
     lock();
     const int opts = syslog_options;
@@ -630,7 +630,7 @@ unsigned mylog_get_options(void)
 }
 
 /**
- * Sets the logging output. Should be called after `mylog_init()`.
+ * Sets the logging output. Should be called after `log_init()`.
  *
  * @param[in] output   The logging output. One of
  *                         ""      Log to the system logging daemon. Caller may
@@ -642,7 +642,7 @@ unsigned mylog_get_options(void)
  * @retval    0        Success.
  * @retval    -1       Failure.
  */
-int mylog_set_output(
+int log_set_output(
         const char* const output)
 {
     lock();
@@ -652,14 +652,14 @@ int mylog_set_output(
 }
 
 /**
- * Returns the logging output. Should be called after `mylog_init()`.
+ * Returns the logging output. Should be called after `log_init()`.
  *
  * @return       The logging output. One of
  *                   ""      Output is to the system logging daemon.
  *                   "-"     Output is to the standard error stream.
  *                   else    The pathname of the log file.
  */
-const char* mylog_get_output(void)
+const char* log_get_output(void)
 {
     lock();
     const char* path = output_spec;
@@ -668,10 +668,10 @@ const char* mylog_get_output(void)
 }
 
 int slog_is_priority_enabled(
-        const mylog_level_t level)
+        const log_level_t level)
 {
     lock();
-    int enabled = mylog_vet_level(level) && level >= logging_level;
+    int enabled = log_vet_level(level) && level >= logging_level;
     unlock();
     return enabled;
 }

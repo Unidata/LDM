@@ -14,7 +14,7 @@
 #include "config.h"
 
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 #include "mcast_info.h"
 #include "mldm_receiver.h"
 
@@ -73,7 +73,7 @@ test_invalidMcastInfo()
 
     /* Invalid multicast information argument */
     mlr = mlr_new(NULL, LOOPBACK_IP, down7);
-    mylog_clear();
+    log_clear();
     OP_ASSERT_TRUE(mlr == NULL);
     OP_VERIFY();
 }
@@ -86,7 +86,7 @@ test_invalidDown7()
 
     /* Invalid multicast information argument */
     mlr = mlr_new(mcastInfo, LOOPBACK_IP, NULL);
-    mylog_clear();
+    log_clear();
     OP_ASSERT_TRUE(mlr == NULL);
     OP_VERIFY();
 }
@@ -105,7 +105,7 @@ test_trivialExecution()
     down7_getPq_ExpectAndReturn(down7, pq,
                                 cmp_ptr);
     mlr = mlr_new(mcastInfo, LOOPBACK_IP, down7);
-    mylog_flush_error();
+    log_flush_error();
     OP_ASSERT_TRUE(mlr != NULL);
     mcastReceiver_free_ExpectAndReturn(NULL, NULL);
     mlr_free(mlr);
@@ -122,12 +122,12 @@ test_mdl_createAndExecute()
 
     vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     status = mlr_start(mdl);
-    mylog_flush_info();
+    log_flush_info();
     OP_ASSERT_EQUAL_INT(LDM7_SHUTDOWN, status);
 
     vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
     mlr_free(mdl);
-    mylog_flush_info();
+    log_flush_info();
 
     OP_VERIFY();
 }
@@ -137,8 +137,8 @@ int main(
     int		argc,
     char**	argv)
 {
-    (void)mylog_init(argv[0]);
-    (void)mylog_set_level(MYLOG_LEVEL_NOTICE);
+    (void)log_init(argv[0]);
+    (void)log_set_level(LOG_LEVEL_NOTICE);
     opmock_test_suite_reset();
     opmock_register_test(test_invalidMcastInfo, "test_invalidMcastInfo");
     opmock_register_test(test_trivialExecution, "test_trivialExecution");

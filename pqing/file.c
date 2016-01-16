@@ -12,7 +12,7 @@
 #include <errno.h>
 
 #include "rawfile.h"
-#include "mylog.h"
+#include "log.h"
 #include "feed.h"
 
 static unsigned long file_bytes = 0; /* total bytes read */
@@ -21,7 +21,7 @@ static unsigned long file_bytes = 0; /* total bytes read */
 void
 file_stats(void)
 {
-        mylog_notice("  FILE Bytes read:    %8lu",
+        log_notice("  FILE Bytes read:    %8lu",
                 file_bytes);
 }
 
@@ -51,12 +51,12 @@ file_open(const char *feedfname, int *const fdp)
         if(fd < 0)
         {
                 const int status = errno;
-                mylog_syserr("Couldn't open file \"%s\"", feedfname);
+                log_syserr("Couldn't open file \"%s\"", feedfname);
                 return status;
         }
 
         *fdp = fd;
-        mylog_notice("FILE \"%s\"", feedfname);
+        log_notice("FILE \"%s\"", feedfname);
         return ENOERR;
 }
 

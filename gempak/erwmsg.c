@@ -1,4 +1,4 @@
-#include <mylog.h>
+#include <log.h>
 
 void er_wmsg(
     const char* const   errgrp,
@@ -11,7 +11,7 @@ void er_wmsg(
     *iret = 0;
 
     if (*numerr != 0)
-        mylog_error("[%s %d] %s", errgrp, *numerr, errstr);
+        log_error("[%s %d] %s", errgrp, *numerr, errstr);
     else
-        mylog_info("[%s %d] %s", errgrp, *numerr, errstr);
+        log_info("[%s %d] %s", errgrp, *numerr, errstr);
 }

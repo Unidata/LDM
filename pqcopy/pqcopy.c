@@ -22,7 +22,7 @@
 #include "globals.h"
 #include "atofeedt.h"
 #include "ldmprint.h"
-#include "mylog.h"
+#include "log.h"
 #include "pq.h"
 #include "RegularExpressions.h"
 
@@ -49,7 +49,7 @@ static int              nprods;
 static void
 dump_stats(void)
 {
-    mylog_notice("Number of products copied: %d", nprods);
+    log_notice("Number of products copied: %d", nprods);
 }
 
 
@@ -69,18 +69,18 @@ copyProduct(
 
     switch (pq_insert(outPq, &product)) {
     case 0:
-        if (mylog_is_enabled_info)
-            mylog_info("%s", s_prod_info(NULL, 0, infop,
-                    mylog_is_enabled_debug));
+        if (log_is_enabled_info)
+            log_info("%s", s_prod_info(NULL, 0, infop,
+                    log_is_enabled_debug));
         nprods++;
         return 0;
     case PQUEUE_DUP:
-        mylog_info("duplicate product: %s",
+        log_info("duplicate product: %s",
             s_prod_info(NULL, 0, infop,
-                    mylog_is_enabled_debug));
+                    log_is_enabled_debug));
         return 0;
     default:
-        mylog_syserr("Product copy failed");
+        log_syserr("Product copy failed");
         return 1;
     }
 }
@@ -109,7 +109,7 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-    mylog_notice("Exiting");
+    log_notice("Exiting");
 
     if (!intr) {
         if (inPq != NULL)  
@@ -120,7 +120,7 @@ cleanup(void)
 
     dump_stats();
 
-    (void)mylog_fini();
+    (void)log_fini();
 }
 
 
@@ -145,7 +145,7 @@ signal_handler(int sig)
             stats_req = !0;
             return;
     case SIGUSR2 :
-            mylog_roll_level();
+            log_roll_level();
             return;
     }
 }
@@ -204,7 +204,7 @@ int main(
     /*
      * Set up error logging.
      */
-    (void)mylog_init(progname);
+    (void)log_init(progname);
 
     clss.from = TS_ZERO; /* default dump the whole file */
     clss.to = TS_ENDT;
@@ -234,7 +234,7 @@ int main(
                 }
                 break;
             case 'l':
-                (void)mylog_set_output(optarg);
+                (void)log_set_output(optarg);
                 break;
             case 'o':
                 (void) set_timestamp(&clss.from);
@@ -245,10 +245,10 @@ int main(
                 /* compiled below */
                 break;
             case 'v':
-                (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                (void)log_set_level(LOG_LEVEL_INFO);
                 break;
             case 'x':
-                (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                (void)log_set_level(LOG_LEVEL_DEBUG);
                 break;
             case '?':
                 usage(progname);
@@ -274,13 +274,13 @@ int main(
         outPath = av[optind++];
     }                                   /* command-line decoding block */
 
-    mylog_notice("Starting Up (%d)", getpgrp());
+    log_notice("Starting Up (%d)", getpgrp());
 
     /*
      * Register exit handler
      */
     if(atexit(cleanup) != 0) {
-        mylog_syserr("atexit");
+        log_syserr("atexit");
         return 1;
     }
 
@@ -294,11 +294,11 @@ int main(
      */
     if (0 != (status = pq_open(inPath, PQ_READONLY, &inPq))) {
         if (PQ_CORRUPT == status) {
-            mylog_error("The input product-queue \"%s\" is inconsistent\n",
+            log_error("The input product-queue \"%s\" is inconsistent\n",
                 inPath);
         }
         else {
-            mylog_error("pq_open failed: %s: %s\n", inPath, strerror(status));
+            log_error("pq_open failed: %s: %s\n", inPath, strerror(status));
         }
         return 1;
     }
@@ -308,11 +308,11 @@ int main(
      */
     if (0 != (status = pq_open(outPath, 0, &outPq))) {
         if (PQ_CORRUPT == status) {
-            mylog_error("The output product-queue \"%s\" is inconsistent\n",
+            log_error("The output product-queue \"%s\" is inconsistent\n",
                 outPath);
         }
         else {
-            mylog_error("pq_open failed: %s: %s\n", outPath, strerror(status));
+            log_error("pq_open failed: %s: %s\n", outPath, strerror(status));
         }
         return 1;
     }
@@ -334,17 +334,17 @@ int main(
         case 0: /* no error */
             continue;                   /* N.B., other cases sleep */
         case PQUEUE_END:
-            mylog_debug("End of Queue");
+            log_debug("End of Queue");
             done = 1;
             status = 0;
             break;
         case EAGAIN:
         case EACCES:
-            mylog_debug("Hit a lock");
+            log_debug("Hit a lock");
             return 1;
             break;
         default:
-            mylog_error("pq_sequence failed: %s (errno = %d)", strerror(status),
+            log_error("pq_sequence failed: %s (errno = %d)", strerror(status),
                 status);
             return 1;
             break;

@@ -12,10 +12,10 @@
 #include "ldm.h"
 #include "ldmprint.h"
 #include "atofeedt.h"           /* for fassoc[] */
-#include "mylog.h"
+#include "log.h"
 #include <timestamp.h>
 
-#include <mylog.h>
+#include <log.h>
 #include <errno.h>
 #include <stdio.h>
 #include <time.h>
@@ -77,7 +77,7 @@ static bool post_snprintf(
  * @param[out] nbytes    The number of bytes that would be written to the
  *                       buffer -- excluding the terminating NUL character --
  *                       if it was sufficiently capacious.
- * @retval     NULL      Error. `mylog_add()` called.
+ * @retval     NULL      Error. `log_add()` called.
  * @return               Pointer to the NUL-terminated string buffer containing
  *                       the formatted arguments. The caller should free when
  *                       it's no longer needed.
@@ -89,7 +89,7 @@ tryFormat(
     va_list                    args,
     int* const restrict        nbytes)
 {
-    char* buf = mylog_malloc(size, "formatting buffer");
+    char* buf = log_malloc(size, "formatting buffer");
 
     if (buf)
         *nbytes = vsnprintf(buf, size, fmt, args);
@@ -105,7 +105,7 @@ tryFormat(
  * @param[in] fmt       The format for the arguments.
  * @param[in] args      The arguments to be formatted. Must have been
  *                      initialized by `va_start()` or `va_copy()`.
- * @retval    NULL      Error. `mylog_add()` called.
+ * @retval    NULL      Error. `log_add()` called.
  * @return              Pointer to the string buffer containing the formatted
  *                      arguments. The caller should free when it's no longer
  *                      needed.
@@ -141,7 +141,7 @@ ldm_vformat(
  *                      terminating NUL character.
  * @param[in] fmt       The format for the arguments.
  * @param[in] ...       The arguments to be formatted.
- * @retval    NULL      Error. `mylog_add()` called.
+ * @retval    NULL      Error. `log_add()` called.
  * @return              Pointer to the string buffer containing the formatted
  *                      arguments. The caller should free when it's no longer
  *                      needed.
@@ -488,7 +488,7 @@ sprint_signaturet(char *buf, size_t bufsize, const signaturet signature)
 
         len = (int)(bp - buf);
 
-        mylog_assert(len == 2*sigLen);
+        log_assert(len == 2*sigLen);
     }
 
     return len;
@@ -532,7 +532,7 @@ char* s_signaturet(char *buf, size_t bufsize, const signaturet signaturep)
  *
  * @param[in]  string     Pointer to the formatted signature.
  * @param[out] signature  Pointer to the data-product MD5 signature.
- * @retval     -1         Failure. \c mylog_add() called.
+ * @retval     -1         Failure. \c log_add() called.
  * @return                Number of bytes parsed.
  */
 int
@@ -556,7 +556,7 @@ sigParse(
     }
 
     if (i != sizeof(signaturet)) {
-        mylog_syserr("Couldn't parse signature \"%s\"", string);
+        log_syserr("Couldn't parse signature \"%s\"", string);
         nbytes = -1;
     }
     else {

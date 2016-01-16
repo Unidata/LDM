@@ -26,8 +26,8 @@
  * Initializes this module. Shall be called only once per LDM session.
  *
  * @retval 0            Success.
- * @retval LDM7_INVAL   This module is already initialized. `mylog_add()` called.
- * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval LDM7_INVAL   This module is already initialized. `log_add()` called.
+ * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 msm_init(void);
@@ -38,7 +38,7 @@ msm_init(void);
  *
  * @param[in] exclusive    Lock for exclusive access?
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 msm_lock(
@@ -52,9 +52,9 @@ msm_lock(
  * @param[in] port         Port number of the VCMTP TCP server.
  * @retval    0            Success.
  * @retval    LDM7_DUP     Process identifier duplicates existing entry.
- *                         `mylog_add()` called.
+ *                         `log_add()` called.
  * @retval    LDM7_DUP     Feed-type overlaps with feed-type being sent by
- *                         another process. `mylog_add()` called.
+ *                         another process. `log_add()` called.
  */
 Ldm7Status
 msm_put(
@@ -81,7 +81,7 @@ msm_get(
  * Unlocks the map.
  *
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 msm_unlock(void);
@@ -109,7 +109,7 @@ msm_clear(void);
  * Destroys this module. Should be called only once per LDM session.
  *
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 void
 msm_destroy(void);

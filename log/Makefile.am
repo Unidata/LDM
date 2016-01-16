@@ -8,30 +8,30 @@
 
 EXTRA_DIST			= mainpage.h
 noinst_LTLIBRARIES		= lib.la
-lib_la_SOURCES			= mutex.c mutex.h mylog.c mylog.h \
-                                  mylog_private.h
+lib_la_SOURCES			= mutex.c mutex.h log.c log.h \
+                                  log_private.h
 SUBDIRS				= ulog
 lib_la_LIBADD			= $(builddir)/ulog/lib.la
 
 if WANT_SLOG
-lib_la_SOURCES			+= mylog2slog.c
+lib_la_SOURCES			+= log2slog.c
 else
 if WANT_ULOG
-lib_la_SOURCES			+= mylog2ulog.c
+lib_la_SOURCES			+= log2ulog.c
 lib_la_CPPFLAGS			= -I$(srcdir)/ulog
 endif
 endif
 
 if HAVE_CUNIT
-check_PROGRAMS			= mylog_test
-TESTS				= mylog_test
+check_PROGRAMS			= log_test
+TESTS				= log_test
 
-mylog_test_SOURCES	= mylog_test.c $(lib_la_SOURCES)
-mylog_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@ $(lib_la_CPPFLAGS)
-mylog_test_LDADD	= $(lib_la_LIBADD) $(top_builddir)/lib/libldm.la \
+log_test_SOURCES	= log_test.c $(lib_la_SOURCES)
+log_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@ $(lib_la_CPPFLAGS)
+log_test_LDADD	= $(lib_la_LIBADD) $(top_builddir)/lib/libldm.la \
 			  @LIBS_CUNIT@
 
-valgrind:       mylog_test
+valgrind:       log_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
-		--leak-check=full --show-reachable=yes ./mylog_test
+		--leak-check=full --show-reachable=yes ./log_test
 endif

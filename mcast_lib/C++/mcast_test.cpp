@@ -13,7 +13,7 @@
 
 #include "config.h"
 
-#include "mylog.h"
+#include "log.h"
 #include "mldm_receiver.h"
 #include "mcast.h"
 #include "VCMTPReceiver_stub.hpp"
@@ -51,28 +51,28 @@ void test_vcmtpReceiver_new()
     status = mcastReceiver_new(NULL, tcpAddr, tcpPort, bof_func, eof_func,
             missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
-    mylog_list_clear();
+    log_list_clear();
     status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, NULL, eof_func,
             missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
-    mylog_list_clear();
+    log_list_clear();
     status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, NULL,
             missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
-    mylog_list_clear();
+    log_list_clear();
     status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
             NULL, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
-    mylog_list_clear();
+    log_list_clear();
     status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
             missed_file_func, NULL, port, NULL);
     OP_ASSERT_EQUAL_INT(EINVAL, status);
-    mylog_list_clear();
+    log_list_clear();
 
     status = mcastReceiver_new(&receiver, tcpAddr, tcpPort, bof_func, eof_func,
             missed_file_func, addr, port, NULL);
     OP_ASSERT_EQUAL_INT(0, status);
-    mylog_list_clear();
+    log_list_clear();
 
     OP_VERIFY();
 }

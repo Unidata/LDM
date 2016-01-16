@@ -1,8 +1,0 @@
-hupsyslog.o: ../config.h
-hupsyslog.o: hupsyslog.c
-ulog.o: ../config.h
-ulog.o: ulog.c
-ulog.o: ulog.h
-ulogger.o: ../config.h
-ulogger.o: ulog.h
-ulogger.o: ulogger.c

@@ -17,7 +17,7 @@
 #include <errno.h>
 #include "ldm.h"
 #include "globals.h"
-#include "mylog.h"
+#include "log.h"
 #include "pq.h"
 
 
@@ -56,7 +56,7 @@ int main(int ac, char *av[])
         /*
          * initialize logger
          */
-        (void)mylog_init(av[0]);
+        (void)log_init(av[0]);
 
         int ch;
         char *qopt = NULL;
@@ -68,7 +68,7 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "xvcfq:s:S:l:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                        (void)log_set_level(LOG_LEVEL_INFO);
                         break;
                 case 'c':
                         pflags &= ~PQ_NOCLOBBER;
@@ -86,10 +86,10 @@ int main(int ac, char *av[])
                         qopt = optarg;
                         break;
                 case 'x':
-                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                        (void)log_set_level(LOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        (void)mylog_set_output(optarg);
+                        (void)log_set_output(optarg);
                         break;
                 case '?':
                         usage(av[0]);
@@ -182,7 +182,7 @@ int main(int ac, char *av[])
         }
 
 
-        mylog_info("Creating %s, %ld bytes, %ld products.\n",
+        log_info("Creating %s, %ld bytes, %ld products.\n",
                 pqfname, (long)initialsz, (long)nproducts);
 
         errnum = pq_create(pqfname, 0666, pflags,

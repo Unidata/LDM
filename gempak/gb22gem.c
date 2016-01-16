@@ -1,7 +1,7 @@
 #include "config.h"
 
 #include "gb2def.h"
-#include <mylog.h>
+#include <log.h>
 
 #include <string.h>
 

@@ -17,7 +17,7 @@
 #include <string.h>
 #include <sys/time.h>  /* fd_set */
 
-#include "mylog.h"
+#include "log.h"
 
 #include "ldm.h"        /* one_svc_run() */
 #include "autoshift.h"  /* asTimeToShift() */
@@ -92,7 +92,7 @@ one_svc_run(
                  * The RPC layer closed the socket and destroyed the associated
                  * SVCXPRT structure.
                  */
-                 mylog_add("one_svc_run(): RPC layer closed connection");
+                 log_add("one_svc_run(): RPC layer closed connection");
                  return ECONNRESET;
             }
 
@@ -103,7 +103,7 @@ one_svc_run(
         } /* socket is read-ready */
         else {
             if (errno != EINTR) {
-                mylog_syserr("select() error on socket %d", sock);
+                log_syserr("select() error on socket %d", sock);
                 return errno;
             }
 

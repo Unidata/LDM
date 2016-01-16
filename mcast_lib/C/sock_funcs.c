@@ -37,7 +37,7 @@
 
 #include "config.h"
 
-#include "mylog.h"
+#include "log.h"
 #include "sock_funcs.h"
 
 #include <unistd.h>
@@ -58,7 +58,7 @@
  *                      be at least INET_ADDRSTRLEN bytes in size.
  * @param[in]  size     The size of the buffer in bytes.
  * @param[in]  addr     The IPv4 address in network byte order.
- * @retval     -1       Error. \c mylog_add() called. \c errno will be
+ * @retval     -1       Error. \c log_add() called. \c errno will be
  *                          ENOSPC      The size of the buffer is inadequate.
  * @return              The number of bytes written to the buffer excluding the
  *                      terminating NUL.
@@ -91,7 +91,7 @@ static char* sockaddr_format(
     const struct sockaddr_in* const     sockaddr)
 {
     const size_t        bufsize = INET_ADDRSTRLEN + 7;
-    char* const         buf = mylog_malloc(bufsize, "socket address buffer");
+    char* const         buf = log_malloc(bufsize, "socket address buffer");
 
     if (buf != NULL) {
         size_t len = ipaddr_print(buf, bufsize, sockaddr->sin_addr.s_addr);
@@ -110,7 +110,7 @@ static char* sockaddr_format(
  * @param[in] loop      Whether or not packets should be received on the
  *                      loopback interface.
  * @retval    0         Success.
- * @retval    -1        Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1        Failure. @code{log_add()} called. \c errno will be one
  *                      of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -121,7 +121,7 @@ int sf_set_loopback_reception(
     const int   loop)
 {
     if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop))) {
-        mylog_syserr("Couldn't %s loopback reception of multicast packets sent "
+        log_syserr("Couldn't %s loopback reception of multicast packets sent "
                 "on socket %d", loop ? "enable" : "disable", sock);
         return -1;
     }
@@ -143,7 +143,7 @@ int sf_set_loopback_reception(
  *                        <128       Restricted to the same continent.
  *                        <255       Unrestricted in scope. Global.
  * @retval    0         Success.
- * @retval    -1        Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1        Failure. @code{log_add()} called. \c errno will be one
  *                      of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -154,7 +154,7 @@ int sf_set_time_to_live(
     const unsigned ttl)
 {
     if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl))) {
-        mylog_syserr("Couldn't set time-to-live for multicast packets on socket "
+        log_syserr("Couldn't set time-to-live for multicast packets on socket "
                 "%d to %u", sock, ttl);
         return -1;
     }
@@ -170,7 +170,7 @@ int sf_set_time_to_live(
  * @param[in] ifaceAddr  IPv4 address of interface in network byte order. 0
  *                       means the default interface.
  * @retval    0          Success.
- * @retval    -1         Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -187,7 +187,7 @@ int sf_set_interface(
     if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr))) {
         char    buf[INET_ADDRSTRLEN];
 
-        mylog_syserr("Couldn't set outgoing IPv4 multicast interface "
+        log_syserr("Couldn't set outgoing IPv4 multicast interface "
                 "to %s for socket %d",
                 inet_ntop(AF_INET, &addr, buf, INET_ADDRSTRLEN), sock);
         return -1;
@@ -202,7 +202,7 @@ int sf_set_interface(
  * @param[in] nonblock  Whether or not the socket should be in non-blocking
  *                      mode.
  * @retval    0         Success.
- * @retval    -1        Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1        Failure. @code{log_add()} called. \c errno will be one
  *                      of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -215,12 +215,12 @@ int sf_set_nonblocking(
     int flags = fcntl(sock, F_GETFL);
 
     if (flags == -1) {
-        mylog_syserr("Couldn't get status flags of socket %d", sock);
+        log_syserr("Couldn't get status flags of socket %d", sock);
         return -1;
     }
     if (fcntl(sock, F_SETFL,
             nonblock ? (flags | O_NONBLOCK) : (flags | ~O_NONBLOCK))) {
-        mylog_syserr("Couldn't set socket %d to %s", sock,
+        log_syserr("Couldn't set socket %d to %s", sock,
                 nonblock ? "non-blocking" : "blocking");
         return -1;
     }
@@ -236,7 +236,7 @@ int sf_set_nonblocking(
  *                       whether or not multiple processes on the same host can
  *                       receive packets from the same multicast group).
  * @retval    0          Success.
- * @retval    -1         Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES      The process does not have appropriate
  *                                      privileges.
@@ -248,7 +248,7 @@ int sf_set_address_reuse(
 {
     if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseAddr,
             sizeof(reuseAddr))) {
-        mylog_syserr("Couldn't %s reuse of multicast address on socket %d",
+        log_syserr("Couldn't %s reuse of multicast address on socket %d",
                 reuseAddr ? "enable" : "disable", sock);
         return -1;
     }
@@ -269,7 +269,7 @@ int sf_set_address_reuse(
  *                                                      administrative scoping
  * @param[in] port       Port number of multicast group.
  * @retval    >=0        The multicast socket.
- * @retval    -1         Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES        The process does not have appropriate
  *                                        privileges.
@@ -312,7 +312,7 @@ static int create_or_open_multicast(
     int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
     if (sock == -1) {
-        mylog_syserr("Couldn't create UDP socket");
+        log_syserr("Couldn't create UDP socket");
     }
     else {
         struct sockaddr_in      addr;
@@ -327,7 +327,7 @@ static int create_or_open_multicast(
                 (struct sockaddr*) &addr, sizeof(addr)) == -1) {
             char* const mcastAddrString = sockaddr_format(&addr);
 
-            mylog_syserr("Couldn't %s socket %d to multicast group %s",
+            log_syserr("Couldn't %s socket %d to multicast group %s",
                     receive ? "bind" : "connect", sock, mcastAddrString);
             free(mcastAddrString);
             (void)close(sock);
@@ -353,7 +353,7 @@ static int create_or_open_multicast(
  *                                                      administrative scoping
  * @param[in] port       Port number used for the destination multicast group.
  * @retval    >=0        The created multicast socket.
- * @retval    -1         Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES        The process does not have appropriate
  *                                        privileges.
@@ -402,7 +402,7 @@ int sf_create_multicast(
  *
  * @param[in] port       Port number of multicast group.
  * @retval    >=0        The socket.
- * @retval    -1         Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EACCES        The process does not have appropriate
  *                                        privileges.
@@ -455,7 +455,7 @@ int sf_open_multicast(
  *                       means the default interface for multicast packets.
  * @param[in] add        Whether to add or drop the multicast group (0 => drop).
  * @retval    0          Success.
- * @retval    -1         Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.
@@ -488,7 +488,7 @@ static int add_or_drop_multicast_group(
 
         (void)ipaddr_print(mcastAddrString, sizeof(mcastAddrString), mIpAddr);
         (void)ipaddr_print(ifaceAddrString, sizeof(ifaceAddrString), ifaceAddr);
-        mylog_syserr("Couldn't %s IPv4 multicast group %s %s interface %s "
+        log_syserr("Couldn't %s IPv4 multicast group %s %s interface %s "
                 "for socket %d", add ? "add" : "drop", mcastAddrString,
                 add ? "to" : "from", ifaceAddrString, sock);
     }
@@ -515,7 +515,7 @@ static int add_or_drop_multicast_group(
  *                       interface for multicast packets. The same multicast
  *                       group can be joined using multiple interfaces.
  * @retval    0          Success.
- * @retval    -1         Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.
@@ -543,7 +543,7 @@ int sf_add_multicast_group(
  * @param[in] ifaceAddr  IPv4 address of interface in network byte order. 0
  *                       means the default interface for multicast packets.
  * @retval    0          Success.
- * @retval    -1         Failure. @code{mylog_add()} called. \c errno will be one
+ * @retval    -1         Failure. @code{log_add()} called. \c errno will be one
  *                       of the following:
  *                          EBADF       The socket argument is not a valid file
  *                                      descriptor.

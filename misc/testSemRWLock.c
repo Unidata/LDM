@@ -17,7 +17,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-#include <mylog.h>
+#include <log.h>
 #include <globals.h>
 
 #include "semRWLock.h"
@@ -261,7 +261,7 @@ int main(
             CU_ADD_TEST(testSuite, test_multiple_write);
             CU_ADD_TEST(testSuite, test_multiple_read);
 
-            if (mylog_init(progname)) {
+            if (log_init(progname)) {
                 (void) fprintf(stderr, "Couldn't open logging system\n");
             }
             else {

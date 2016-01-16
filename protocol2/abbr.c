@@ -10,7 +10,7 @@
 
 #include "abbr.h"
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 
 #include <ctype.h>
 #include <pthread.h>
@@ -30,7 +30,7 @@ static void regex_fini(void)
 static void regex_init(void)
 {
     int status = regcomp(&regex, "feed", REG_ICASE | REG_NOSUB);
-    mylog_assert(status == 0);
+    log_assert(status == 0);
     atexit(regex_fini);
 }
 
@@ -52,5 +52,5 @@ set_abbr_ident(
     bool isFeeder = suffix
         ? regexec(&regex, suffix, 0, NULL, 0) == 0
         : false;
-    (void)mylog_set_upstream_id(remote, isFeeder);
+    (void)log_set_upstream_id(remote, isFeeder);
 }

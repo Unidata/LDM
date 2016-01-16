@@ -11,7 +11,7 @@
 #include <config.h>
 
 #undef NDEBUG
-#include <mylog.h>
+#include <log.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -26,7 +26,7 @@
 #include "backend.h"
 #include "registry.h"
 #include "stringBuf.h"
-#include <mylog.h>
+#include <log.h>
 
 typedef struct {
     char*       path;           /* pathname of file */
@@ -46,8 +46,8 @@ typedef struct {
  *                      return.
  * Returns
  *      0               Success.
- *      EIO             I/O failure. "mylog_add()" called.
- *      ENOMEM          System failure. "mylog_add()" called.
+ *      EIO             I/O failure. "log_add()" called.
+ *      ENOMEM          System failure. "log_add()" called.
  */
 static RegStatus
 fileNew(
@@ -59,7 +59,7 @@ fileNew(
     File*       f = (File*)malloc(sizeof(File));
 
     if (NULL == f) {
-        mylog_add("Couldn't allocate %lu bytes", sizeof(File));
+        log_add("Couldn't allocate %lu bytes", sizeof(File));
         status = ENOMEM;
     }
     else {
@@ -68,7 +68,7 @@ fileNew(
         f->path = strdup(path);
 
         if (NULL == f->path) {
-            mylog_syserr("Couldn't duplicate string \"%s\"", path);
+            log_syserr("Couldn't duplicate string \"%s\"", path);
             status = ENOMEM;
             free(f);
         }
@@ -103,7 +103,7 @@ fileGetPath(
  *      size            Pointer to the size of the file. Set upon return.
  * Returns
  *      0               Success. "*size" is set.
- *      EIO             I/O error. "mylog_add()" called.
+ *      EIO             I/O error. "log_add()" called.
  */
 static RegStatus
 fileGetSize(
@@ -113,7 +113,7 @@ fileGetSize(
     struct stat     stat;
 
     if (fstat(file->fd, &stat) == -1) {
-        mylog_syserr("Couldn't fstat(2) file \"%s\"", file->path);
+        log_syserr("Couldn't fstat(2) file \"%s\"", file->path);
         return EIO;
     }
 
@@ -128,7 +128,7 @@ fileGetSize(
  *      file            The file to be locked.
  * Returns
  *      0               Success
- *      EIO             I/O error. "mylog_add()" called. State of "file" is
+ *      EIO             I/O error. "log_add()" called. State of "file" is
  *                      unchanged.
  */
 static RegStatus
@@ -155,7 +155,7 @@ fileLock(
                 : open(file->path, O_RDONLY | flags);
 
         if (-1 == fd) {
-            mylog_add_syserr("Couldn't open file \"%s\" for %s",
+            log_add_syserr("Couldn't open file \"%s\" for %s",
                 file->path, file->exclusive ? "writing" : "reading");
             status = EIO;
         }
@@ -168,7 +168,7 @@ fileLock(
             flock.l_len = 0;              /* to end */
 
             if (fcntl(fd, F_SETLKW, &flock) == -1) {
-                mylog_add_syserr("Couldn't lock file \"%s\"", file->path);
+                log_add_syserr("Couldn't lock file \"%s\"", file->path);
                 status = EIO;
             }
             else {
@@ -192,7 +192,7 @@ fileLock(
  *      file            The file to be unlocked.
  * Returns
  *      0               Success
- *      EIO             I/O error. "mylog_add()" called. State of "file" is
+ *      EIO             I/O error. "log_add()" called. State of "file" is
  *                      unspecified.
  */
 static RegStatus
@@ -210,7 +210,7 @@ fileUnlock(
         flock.l_len = 0;                /* to end */
 
         if (fcntl(file->fd, F_SETLK, &flock) == -1) {
-            mylog_syserr("Couldn't unlock file \"%s\"", file->path);
+            log_syserr("Couldn't unlock file \"%s\"", file->path);
             status = EIO;
         }
         else {
@@ -218,7 +218,7 @@ fileUnlock(
         }
 
         if (close(file->fd) == -1) {
-            mylog_syserr("Couldn't close file \"%s\"", file->path);
+            log_syserr("Couldn't close file \"%s\"", file->path);
             status = EIO;
         }
     }
@@ -233,7 +233,7 @@ fileUnlock(
  *      file            Pointer to the file.
  * Returns
  *      0               Success
- *      EIO             I/O failure. "mylog_add()" called. "file" is unchanged.
+ *      EIO             I/O failure. "log_add()" called. "file" is unchanged.
  */
 static RegStatus
 fileFree(
@@ -256,9 +256,9 @@ fileFree(
  *      file            Pointer to the file.
  * Returns
  *      0               Success
- *      EACCES          The file isn't exclusively locked. "mylog_add()" called.
+ *      EACCES          The file isn't exclusively locked. "log_add()" called.
  *                      "file" is unchanged.
- *      EIO             I/O failure. "mylog_add()" called.  "file" is unchanged.
+ *      EIO             I/O failure. "log_add()" called.  "file" is unchanged.
  */
 static RegStatus
 fileDelete(
@@ -267,13 +267,13 @@ fileDelete(
     int         status;
 
     if (!(file->isLocked && file->exclusive)) {
-        mylog_add("File \"%s\" isn't exclusively locked. Can't delete.",
+        log_add("File \"%s\" isn't exclusively locked. Can't delete.",
                 file->path);
         status = EACCES;
     }
     else {
         if (unlink(file->path) == -1) {
-            mylog_syserr("Couldn't unlink(2) file \"%s\"", file->path);
+            log_syserr("Couldn't unlink(2) file \"%s\"", file->path);
             status = EIO;
         }
         else {
@@ -312,7 +312,7 @@ static const char       REGISTRY_ELTNAME[] = "registry";
  * @param path          Pathname of the XML file. Set upon return. User should
  *                      free when no longer needed.
  * @retval 0            Success. "*path" is set.
- * @retval ENOMEM       Out-of-memory. "mylog_add()" called.
+ * @retval ENOMEM       Out-of-memory. "log_add()" called.
  */
 static RegStatus
 getXmlFilePath(
@@ -324,7 +324,7 @@ getXmlFilePath(
     char* const         p = (char*)malloc(nbytes);
 
     if (NULL == p) {
-        mylog_syserr("Couldn't allocate %lu bytes for pathname", nbytes);
+        log_syserr("Couldn't allocate %lu bytes for pathname", nbytes);
         status = ENOMEM;
     }
     else {
@@ -361,7 +361,7 @@ actOnNode(
     char* const dupKey = strdup(key);
 
     if (NULL == dupKey) {
-        mylog_syserr("Couldn't duplicate string \"%s\"", key);
+        log_syserr("Couldn't duplicate string \"%s\"", key);
         status = ENOMEM;
     }
     else {
@@ -446,7 +446,7 @@ deleteNode(
  *      backend         Pointer to the backend structure. Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO             I/O error.  "mylog_add()" called.
+ *      EIO             I/O error.  "log_add()" called.
  */
 static RegStatus
 writeXmlIfAppropriate(
@@ -460,7 +460,7 @@ writeXmlIfAppropriate(
         const char* const   path = fileGetPath(backend->file);
 
         if (xmlSaveFormatFile(path, backend->doc, 1) == -1) {
-            mylog_syserr("Couldn't write XML file \"%s\"", path);
+            log_syserr("Couldn't write XML file \"%s\"", path);
             status = EIO;
         }
 
@@ -506,7 +506,7 @@ getDescendantNodeCount(
  *                      success.
  * Returns
  *      0               Success
- *      ENOMEM          Out-of-memory error. "mylog_add()" called.
+ *      ENOMEM          Out-of-memory error. "log_add()" called.
  */
 static RegStatus
 recursiveAddDescendants(
@@ -570,7 +570,7 @@ recursiveAddDescendants(
  *      back            Pointer to the backend structure.
  * Returns
  *      0               Success
- *      ENOMEM          Out-of-memory error. "mylog_add()" called.
+ *      ENOMEM          Out-of-memory error. "log_add()" called.
  */
 static RegStatus
 addDescendants(
@@ -610,7 +610,7 @@ compareIndexElts(
  *      back            Pointer to the backend structure.
  * Returns
  *      0               Success
- *      ENOMEM          Out-of-memory. "mylog_add()" called.
+ *      ENOMEM          Out-of-memory. "log_add()" called.
  */
 static RegStatus
 buildSortedIndex(
@@ -624,7 +624,7 @@ buildSortedIndex(
         IndexElt*   index = (IndexElt*)malloc(nodeCount * sizeof(IndexElt));
 
         if (NULL == index) {
-            mylog_syserr("Couldn't allocate %d elements for sorted index",
+            log_syserr("Couldn't allocate %d elements for sorted index",
                     nodeCount);
             status = ENOMEM;
         }
@@ -677,7 +677,7 @@ freeSortedIndex(
  *      back            Pointer to the backend structure.
  * Returns
  *      0               Success. Empty document is created.
- *      ENOMEM          Out-of-memory error. "mylog_add()" called.
+ *      ENOMEM          Out-of-memory error. "log_add()" called.
  */
 static RegStatus
 createNewDocument(
@@ -687,7 +687,7 @@ createNewDocument(
     xmlDocPtr   doc = xmlNewDoc((const xmlChar*)"1.0");
 
     if (NULL == doc) {
-        mylog_syserr("Couldn't create new XML document");
+        log_syserr("Couldn't create new XML document");
         status = ENOMEM;
     }
     else {
@@ -695,7 +695,7 @@ createNewDocument(
                 (const xmlChar*)REGISTRY_ELTNAME, NULL);
 
         if (NULL == rootNode) {
-            mylog_syserr("Couldn't create root-node of XML document");
+            log_syserr("Couldn't create root-node of XML document");
             status = ENOMEM;
         }
         else {
@@ -723,7 +723,7 @@ createNewDocument(
  *      path            Pathname of the XML file.
  * Returns
  *      0               Success.
- *      EIO             I/O error. "mylog_add()" called.
+ *      EIO             I/O error. "log_add()" called.
  */
 static RegStatus
 parseXmlFile(
@@ -735,14 +735,14 @@ parseXmlFile(
     xmlDocPtr   doc = xmlParseFile(path);
 
     if (NULL == doc) {
-        mylog_add("Couldn't parse XML file \"%s\"", path);
+        log_add("Couldn't parse XML file \"%s\"", path);
         status = EIO;
     }
     else {
         xmlNodePtr  rootNode = xmlDocGetRootElement(doc);
 
         if (NULL == rootNode) {
-            mylog_add("XML file \"%s\" is empty", path);
+            log_add("XML file \"%s\" is empty", path);
             status = EIO;
         }
         else {
@@ -770,9 +770,9 @@ parseXmlFile(
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "mylog_add()" called. "*back"
+ *      EIO             Backend database error.  "log_add()" called. "*back"
  *                      is unchanged.
- *      ENOMEM          System error.  "mylog_add()" called. "*back" is
+ *      ENOMEM          System error.  "log_add()" called. "*back" is
  *                      unchanged.
  */
 static RegStatus
@@ -781,7 +781,7 @@ acquireBackend(
 {
     RegStatus   status = fileLock(back->file);
 
-    mylog_assert(!back->isAcquired);
+    log_assert(!back->isAcquired);
 
     if (0 == status) {
         off_t       size;
@@ -813,7 +813,7 @@ acquireBackend(
  *                      set by "acquireBackend()".
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 static RegStatus
 releaseBackend(
@@ -821,7 +821,7 @@ releaseBackend(
 {
     RegStatus   status = 0;             /* success */
 
-    mylog_assert(back->isAcquired);
+    log_assert(back->isAcquired);
 
     if (0 == (status = writeXmlIfAppropriate(back))) {
         int     stat = fileUnlock(back->file);
@@ -881,8 +881,8 @@ isLeafNode(
  *      forWriting      Open the database for writing? 0 <=> no
  * RETURNS:
  *      0               Success.  "*backend" is set.
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beOpen(
@@ -894,7 +894,7 @@ beOpen(
     Backend*    back = (Backend*)malloc(sizeof(Backend));
 
     if (NULL == back) {
-        mylog_syserr("Couldn't allocate %lu bytes", (long)sizeof(Backend));
+        log_syserr("Couldn't allocate %lu bytes", (long)sizeof(Backend));
         status = ENOMEM;
     }
     else {
@@ -937,7 +937,7 @@ beOpen(
  *                      shall not be used again.
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beClose(
@@ -967,7 +967,7 @@ beClose(
  *                      The client can free it upon return.
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beReset(
@@ -985,8 +985,8 @@ beReset(
  *                      Shall not be NULL.  The client may free it upon return.
  * RETURNS:
  *      0               Success.
- *      ENOMEM          System error.  "mylog_add()" called.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beRemove(
@@ -1024,8 +1024,8 @@ beRemove(
  * RETURNS:
  *      0               Success.
  *      EINVAL          "key" contains a space.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error. "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error. "log_add()" called.
  */
 RegStatus
 bePut(
@@ -1036,14 +1036,14 @@ bePut(
     RegStatus   status;
 
     if (strchr(key, ' ') != NULL) {
-        mylog_add("Key \"%s\" has a space", key);
+        log_add("Key \"%s\" has a space", key);
         status = EINVAL;
     }
     else {
         char* const dupKey = strdup(key);
 
         if (NULL == dupKey) {
-            mylog_syserr("Couldn't duplicate string \"%s\"", key);
+            log_syserr("Couldn't duplicate string \"%s\"", key);
             status = ENOMEM;
         }
         else {
@@ -1103,7 +1103,7 @@ bePut(
  * RETURNS:
  *      0               Success.  "*value" points to the string value.
  *      ENOENT          The given key doesn't match any entry.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beGet(
@@ -1135,7 +1135,7 @@ beGet(
  *      key             Pointer to the 0-terminated key.
  * RETURNS:
  *      0               Success.  The entry associated with the key was deleted.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beDelete(
@@ -1174,7 +1174,7 @@ beDelete(
  *                      "beOpen()".  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beSync(
@@ -1193,8 +1193,8 @@ beSync(
  * RETURNS
  *      0               Success.
  *      EINVAL          The backend database already has an active cursor.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus
 beInitCursor(
@@ -1217,8 +1217,8 @@ beInitCursor(
  *      0               Success.
  *      EINVAL          The cursor is not initialized.
  *      ENOENT          The database is empty.
- *      EIO             Backend database error.  "mylog_add()" called.
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus
 beFirstEntry(
@@ -1248,7 +1248,7 @@ beFirstEntry(
  * RETURNS
  *      0               Success.
  *      ENOENT          No more entries.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beNextEntry(
@@ -1277,7 +1277,7 @@ beNextEntry(
  *                      set by beOpen().  Shall not be NULL.
  * RETURNS:
  *      0               Success.
- *      EIO             Backend database error.  "mylog_add()" called.
+ *      EIO             Backend database error.  "log_add()" called.
  */
 RegStatus
 beFreeCursor(
@@ -1312,7 +1312,7 @@ beGetKey(
  *      backend         Pointer to the backend database.  Shall have been
  *                      set by beOpen().  Shall not be NULL.
  * Returns:
- *      NULL            Error occurred. "mylog_add()" called.
+ *      NULL            Error occurred. "log_add()" called.
  *      else            Pointer to the value.
  */
 const char*
@@ -1325,11 +1325,11 @@ beGetValue(
     char*       content = (char*)xmlNodeGetContent(elt->xmlNode);
 
     if (NULL == content) {
-        mylog_syserr("Couldn't get value of key \"%s\"", key);
+        log_syserr("Couldn't get value of key \"%s\"", key);
     }
     else {
         if (sb_set(backend->content, content, NULL)) {
-            mylog_add("Couldn't get value of key \"%s\"", key);
+            log_add("Couldn't get value of key \"%s\"", key);
         }
         else {
             value = sb_string(backend->content);

@@ -12,7 +12,7 @@
 #include <config.h>
 
 #include "ldm.h"
-#include "mylog.h"
+#include "log.h"
 #include "fifo.h"
 #include "fileReader.h"
 #include "getFacilityName.h"
@@ -73,7 +73,7 @@ static pthread_cond_t    cond = PTHREAD_COND_INITIALIZER;
  * @param[out] mcastSpec      Specification of multicast group.
  * @param[out] interface      Specification of interface on which to listen.
  * @retval     0              Success.
- * @retval     1              Error. `mylog_add()` called.
+ * @retval     1              Error. `log_add()` called.
  */
 static int
 decodeCommandLine(
@@ -103,7 +103,7 @@ decodeCommandLine(
 
                 if (sscanf(optarg, "%12lu %n", &n, &nbytes) != 1 ||
                         optarg[nbytes] != 0) {
-                    mylog_syserr("Couldn't decode FIFO size in pages: \"%s\"",
+                    log_syserr("Couldn't decode FIFO size in pages: \"%s\"",
                             optarg);
                     status = 1;
                 }
@@ -116,14 +116,14 @@ decodeCommandLine(
                 *interface = optarg;
                 break;
             case 'l':
-                if (mylog_set_output(optarg))
+                if (log_set_output(optarg))
                     status = 1;
                 break;
             case 'm':
                 *mcastSpec = optarg;
                 break;
             case 'n':
-                (void)mylog_set_level(MYLOG_LEVEL_NOTICE);
+                (void)log_set_level(LOG_LEVEL_NOTICE);
                 break;
             case 'q':
                 *prodQueuePath = optarg;
@@ -210,7 +210,7 @@ decodeCommandLine(
                 if(!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs")){
                      /** Using MHS for communication with NCF  **/
                 }else{
-                     mylog_add("No other mechanism other than MHS is currently supported\n");
+                     log_add("No other mechanism other than MHS is currently supported\n");
                      status  = 1;
                 }
 #endif
@@ -219,31 +219,31 @@ decodeCommandLine(
                 int         i = atoi(optarg);
 
                 if (0 > i || 7 < i) {
-                    mylog_add("Invalid logging facility number: %d", i);
+                    log_add("Invalid logging facility number: %d", i);
                     status = 1;
                 }
                 else {
                     static int  logFacilities[] = {LOG_LOCAL0, LOG_LOCAL1,
                         LOG_LOCAL2, LOG_LOCAL3, LOG_LOCAL4, LOG_LOCAL5,
                         LOG_LOCAL6, LOG_LOCAL7};
-                    if (mylog_set_facility(logFacilities[i]))
+                    if (log_set_facility(logFacilities[i]))
                         status = 1;
                 }
 
                 break;
             }
             case 'v':
-                (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                (void)log_set_level(LOG_LEVEL_INFO);
                 break;
             case 'x':
-                (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                (void)log_set_level(LOG_LEVEL_DEBUG);
                 break;
             default:
                 optopt = ch;
                 /*FALLTHROUGH*/
                 /* no break */
             case '?': {
-                mylog_add("Unknown option: \"%c\"", optopt);
+                log_add("Unknown option: \"%c\"", optopt);
                 status = 1;
                 break;
             }
@@ -252,7 +252,7 @@ decodeCommandLine(
 
     if (0 == status) {
         if (optind < argc) {
-            mylog_add("Extraneous command-line argument: \"%s\"", argv[optind]);
+            log_add("Extraneous command-line argument: \"%s\"", argv[optind]);
             status = 1;
         }
     }
@@ -272,10 +272,10 @@ static void usage(
     const size_t               npages,
     const char* const restrict copyright)
 {
-    int level = mylog_get_level();
-    (void)mylog_set_level(MYLOG_LEVEL_NOTICE);
+    int level = log_get_level();
+    (void)log_set_level(LOG_LEVEL_NOTICE);
 
-    mylog_notice(
+    log_notice(
 "%s version %s\n"
 "%s\n"
 "\n"
@@ -310,9 +310,9 @@ static void usage(
 "SIGUSR1 causes statistics to be unconditionally logged at level NOTE.\n"
 "SIGUSR2 rotates the logging level.\n",
         progName, PACKAGE_VERSION, copyright, progName, (unsigned
-        long)npages, lpqGetQueuePath(), getFacilityName(mylog_get_facility()));
+        long)npages, lpqGetQueuePath(), getFacilityName(log_get_facility()));
 
-    (void)mylog_set_level(level);
+    (void)log_set_level(level);
 }
 
 /**
@@ -322,7 +322,7 @@ static inline void
 tryLockingProcessInMemory(void)
 {
     if (lockProcessInMemory()) {
-        mylog_warning("Couldn't lock process in physical memory");
+        log_warning("Couldn't lock process in physical memory");
     }
 }
 
@@ -365,7 +365,7 @@ static void signal_handler(
                 fifo_close(fifo); // will cause input-reader to terminate
             break;
         case SIGUSR2: {
-            (void)mylog_roll_level();
+            (void)log_roll_level();
         }
     }
 
@@ -468,8 +468,8 @@ unblockTermSignals(void)
  * @param[out] productMaker    Pointer to pointer to created product-maker.
  * @param[out] thread          Pointer to created thread.
  * @retval     0               Success.
- * @retval     USAGE_ERROR     Usage error. `mylog_add()` called.
- * @retval     SYSTEM_FAILURE  System failure. `mylog_add()` called.
+ * @retval     USAGE_ERROR     Usage error. `log_add()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static int spawnProductMaker(
     const pthread_attr_t* const restrict attr,
@@ -482,13 +482,13 @@ static int spawnProductMaker(
     int             status = pmNew(fifo, productQueue, &pm);
 
     if (status) {
-        mylog_add("Couldn't create new LDM product-maker");
+        log_add("Couldn't create new LDM product-maker");
     }
     else {
         status = pthread_create(thread, attr, pmStart, pm);
 
         if (status) {
-            mylog_errno(status, "Couldn't start product-maker thread");
+            log_errno(status, "Couldn't start product-maker thread");
             status = SYSTEM_FAILURE;
         }
         else {
@@ -624,72 +624,72 @@ static void reportStats(
     totalProdCount += prodCount;
     totalFullFifoCount += fullFifoCount;
 
-    logLevel = mylog_get_level();
-    (void)setulogmask(MYLOG_LEVEL_NOTICE);
+    logLevel = log_get_level();
+    (void)setulogmask(LOG_LEVEL_NOTICE);
 
-    mylog_notice("----------------------------------------");
-    mylog_notice("Ingestion Statistics:");
-    mylog_notice("    Since Previous Report (or Start):");
+    log_notice("----------------------------------------");
+    log_notice("Ingestion Statistics:");
+    log_notice("    Since Previous Report (or Start):");
     interval = duration(&now, reportTime);
     encodeDuration(buf, sizeof(buf), interval);
-    mylog_notice("        Duration          %s", buf);
-    mylog_notice("        Raw Data:");
-    mylog_notice("            Octets        %lu", byteCount);
-    mylog_notice("            Mean Rate:");
+    log_notice("        Duration          %s", buf);
+    log_notice("        Raw Data:");
+    log_notice("            Octets        %lu", byteCount);
+    log_notice("            Mean Rate:");
     rate = (byteCount/interval);
-    mylog_notice("                Octets    %g/s", rate);
-    mylog_notice("                Bits      %g/s", 8*rate);
-    mylog_notice("        Received frames:");
-    mylog_notice("            Number        %lu", frameCount);
-    mylog_notice("            Mean Rate     %g/s", frameCount/interval);
-    mylog_notice("        Missed frames:");
-    mylog_notice("            Number        %lu", missedFrameCount);
-    mylog_notice("            %%             %g",
+    log_notice("                Octets    %g/s", rate);
+    log_notice("                Bits      %g/s", 8*rate);
+    log_notice("        Received frames:");
+    log_notice("            Number        %lu", frameCount);
+    log_notice("            Mean Rate     %g/s", frameCount/interval);
+    log_notice("        Missed frames:");
+    log_notice("            Number        %lu", missedFrameCount);
+    log_notice("            %%             %g",
             100.0 * missedFrameCount / (missedFrameCount + frameCount));
-    mylog_notice("        Full FIFO:");
-    mylog_notice("            Number        %lu", fullFifoCount);
-    mylog_notice("            %%             %g",
+    log_notice("        Full FIFO:");
+    log_notice("            Number        %lu", fullFifoCount);
+    log_notice("            %%             %g",
             100.0 * fullFifoCount / frameCount);
-    mylog_notice("        Products:");
-    mylog_notice("            Inserted      %lu", prodCount);
-    mylog_notice("            Mean Rate     %g/s", prodCount/interval);
-    mylog_notice("    Since Start:");
+    log_notice("        Products:");
+    log_notice("            Inserted      %lu", prodCount);
+    log_notice("            Mean Rate     %g/s", prodCount/interval);
+    log_notice("    Since Start:");
     interval = duration(&now, startTime);
     encodeDuration(buf, sizeof(buf), interval);
-    mylog_notice("        Duration          %s", buf);
-    mylog_notice("        Raw Data:");
-    mylog_notice("            Octets        %lu", totalByteCount);
-    mylog_notice("            Mean Rate:");
+    log_notice("        Duration          %s", buf);
+    log_notice("        Raw Data:");
+    log_notice("            Octets        %lu", totalByteCount);
+    log_notice("            Mean Rate:");
     rate = (totalByteCount/interval);
-    mylog_notice("                Octets    %g/s", rate);
-    mylog_notice("                Bits      %g/s", 8*rate);
-    mylog_notice("        Received frames:");
-    mylog_notice("            Number        %lu", totalFrameCount);
-    mylog_notice("            Mean Rate     %g/s", totalFrameCount/interval);
-    mylog_notice("        Missed frames:");
-    mylog_notice("            Number        %lu", totalMissedFrameCount);
-    mylog_notice("            %%             %g", 100.0 * totalMissedFrameCount /
+    log_notice("                Octets    %g/s", rate);
+    log_notice("                Bits      %g/s", 8*rate);
+    log_notice("        Received frames:");
+    log_notice("            Number        %lu", totalFrameCount);
+    log_notice("            Mean Rate     %g/s", totalFrameCount/interval);
+    log_notice("        Missed frames:");
+    log_notice("            Number        %lu", totalMissedFrameCount);
+    log_notice("            %%             %g", 100.0 * totalMissedFrameCount /
             (totalMissedFrameCount + totalFrameCount));
-    mylog_notice("        Full FIFO:");
-    mylog_notice("            Number        %lu", totalFullFifoCount);
-    mylog_notice("            %%             %g",
+    log_notice("        Full FIFO:");
+    log_notice("            Number        %lu", totalFullFifoCount);
+    log_notice("            %%             %g",
             100.0 * totalFullFifoCount / totalFrameCount);
-    mylog_notice("        Products:");
-    mylog_notice("            Inserted      %lu", totalProdCount);
-    mylog_notice("            Mean Rate     %g/s", totalProdCount/interval);
+    log_notice("        Products:");
+    log_notice("            Inserted      %lu", totalProdCount);
+    log_notice("            Mean Rate     %g/s", totalProdCount/interval);
 
 #ifdef RETRANS_SUPPORT
    if(retrans_xmit_enable == OPTION_ENABLE){
-    mylog_notice("       Retransmissions:");
-    mylog_notice("           Requested     %lu", total_prods_retrans_rqstd);
-    mylog_notice("           Received      %lu", total_prods_retrans_rcvd);
-    mylog_notice("           Duplicates    %lu", total_prods_retrans_rcvd_notlost);
-    mylog_notice("           No duplicates %lu", total_prods_retrans_rcvd_lost);
+    log_notice("       Retransmissions:");
+    log_notice("           Requested     %lu", total_prods_retrans_rqstd);
+    log_notice("           Received      %lu", total_prods_retrans_rcvd);
+    log_notice("           Duplicates    %lu", total_prods_retrans_rcvd_notlost);
+    log_notice("           No duplicates %lu", total_prods_retrans_rcvd_lost);
     }
 #endif 
-    mylog_notice("----------------------------------------");
+    log_notice("----------------------------------------");
 
-    (void)mylog_set_level(logLevel);
+    (void)log_set_level(logLevel);
 
     *reportTime = now;
 }
@@ -755,8 +755,8 @@ ss_init(
  * @param[in] priority        Thread priority. Ignored if input isn't from
  *                            multicast. Must be consonant with `policy`.
  * @retval    0               Success. `*attr` is initialized.
- * @retval    USAGE_ERROR     Usage error. `mylog_add()` called.
- * @retval    SYSTEM_FAILURE  System error. `mylog_add()` called.
+ * @retval    USAGE_ERROR     Usage error. `log_add()` called.
+ * @retval    SYSTEM_FAILURE  System error. `log_add()` called.
  */
 static int
 initThreadAttr(
@@ -768,12 +768,12 @@ initThreadAttr(
     int status = pthread_attr_init(attr);
 
     if (status) {
-        mylog_errno(status, "Couldn't initialize thread attributes object");
+        log_errno(status, "Couldn't initialize thread attributes object");
         status = (EBUSY == status) ? USAGE_ERROR : SYSTEM_FAILURE;
     }
     else if (isMcastInput) {
         #ifndef _POSIX_THREAD_PRIORITY_SCHEDULING
-            mylog_warning("Can't adjust thread scheduling due to lack of support from "
+            log_warning("Can't adjust thread scheduling due to lack of support from "
                     "the environment");
         #else
             struct sched_param  param;
@@ -847,8 +847,8 @@ destroyRetransSupport(
  * @param[out] reader          Reader of input. Caller should call
  *                             `readerFree(*reader)` when it's no longer needed.
  * @retval     0               Success. `*reader` is set.
- * @retval     USAGE_ERROR     Usage error. `mylog_add()` called.
- * @retval     SYSTEM_FAILURE  System failure. `mylog_add()` called.
+ * @retval     USAGE_ERROR     Usage error. `log_add()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static int
 spawnReader(
@@ -864,13 +864,13 @@ spawnReader(
             : fileReaderNew(NULL, fifo, &rdr);
 
     if (status) {
-        mylog_add("Couldn't create input-reader");
+        log_add("Couldn't create input-reader");
     }
     else {
         status = pthread_create(thread, attr, readerStart, rdr);
 
         if (status) {
-            mylog_errno(status, "Couldn't create input-reader thread");
+            log_errno(status, "Couldn't create input-reader thread");
             readerFree(rdr);
             status = SYSTEM_FAILURE;
         }
@@ -899,8 +899,8 @@ spawnReader(
  *                             `readerFree(*reader)` when it's no longer needed.
  * @param[out] thread          Thread on which the input-reader is executing.
  * @retval     0               Success. `*reader` and `*thread` are set.
- * @retval     USAGE_ERROR     Usage error. `mylog_add()` called.
- * @retval     SYSTEM_FAILURE  System failure. `mylog_add()` called.
+ * @retval     USAGE_ERROR     Usage error. `log_add()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static int
 startReader(
@@ -933,7 +933,7 @@ startReader(
  * @param[in]  thread          Thread on which the reader is executing.
  * @retval     0               Success.
  * @retval     USAGE_ERROR     Usage error.
- * @retval     SYSTEM_FAILURE  System failure. `mylog_add()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static inline int
 waitOnReader(
@@ -943,14 +943,14 @@ waitOnReader(
     int   status = pthread_join(thread, &voidPtr);
 
     if (status) {
-        mylog_errno(status, "Couldn't join input-reader thread");
+        log_errno(status, "Couldn't join input-reader thread");
         status = SYSTEM_FAILURE;
     }
     else {
         status = done ? 0 : *(int*)voidPtr;
 
         if (status)
-            mylog_add("Input-reader thread returned %d", status);
+            log_add("Input-reader thread returned %d", status);
     }
 
     return status;
@@ -974,8 +974,8 @@ waitOnReader(
  * @param[in]  interface       Specification of interface on which to listen or
  *                             NULL to listen on all interfaces.
  * @retval     0               Success.
- * @retval     USAGE_ERROR     Usage error. `mylog_add()` called.
- * @retval     SYSTEM_FAILURE  System failure. `mylog_add()` called.
+ * @retval     USAGE_ERROR     Usage error. `log_add()` called.
+ * @retval     SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static int
 runInner(
@@ -995,13 +995,13 @@ runInner(
     bool        reporterRunning = false;
 
     if (status) {
-        mylog_add("Couldn't start input-reader");
+        log_add("Couldn't start input-reader");
     }
     else {
         pthread_mutexattr_t attr;
         status = pthread_mutexattr_init(&attr);
         if (status) {
-            mylog_errno(status, "Couldn't initialize mutex attributes");
+            log_errno(status, "Couldn't initialize mutex attributes");
         }
         else {
             // At most one lock per thread
@@ -1051,8 +1051,8 @@ runInner(
  * @param[in] interface       Specification of interface on which to listen or
  *                            NULL to listen on all interfaces.
  * @retval    0               Success.
- * @retval    USAGE_ERROR     Usage error. `mylog_add()` called.
- * @retval    SYSTEM_FAILURE  System failure. `mylog_add()` called.
+ * @retval    USAGE_ERROR     Usage error. `log_add()` called.
+ * @retval    SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static int
 runOuter(
@@ -1106,8 +1106,8 @@ runOuter(
  * @param[in] interface       Specification of interface on which to listen or
  *                            NULL to listen on all interfaces.
  * @retval    0               Success.
- * @retval    USAGE_ERROR     Usage error. `mylog_add()` called.
- * @retval    SYSTEM_FAILURE  O/S failure. `mylog_add()` called.
+ * @retval    USAGE_ERROR     Usage error. `log_add()` called.
+ * @retval    SYSTEM_FAILURE  O/S failure. `log_add()` called.
  */
 static int
 execute(
@@ -1199,7 +1199,7 @@ int main(
      * be reported.
      */
     const char* const progname = basename(argv[0]);
-    (void)mylog_init(progname);
+    (void)log_init(progname);
 
     set_sigusr1Action(true);  // ignore SIGUSR1 initially
 
@@ -1213,18 +1213,18 @@ int main(
             &mcastSpec, &interface);
 
     if (status) {
-        mylog_error("Couldn't decode command-line");
+        log_error("Couldn't decode command-line");
         usage(progname, npages, COPYRIGHT_NOTICE);
     }
     else {
-        mylog_notice("Starting Up %s", PACKAGE_VERSION);
-        mylog_notice("%s", COPYRIGHT_NOTICE);
+        log_notice("Starting Up %s", PACKAGE_VERSION);
+        log_notice("%s", COPYRIGHT_NOTICE);
 
         tryLockingProcessInMemory(); // because NOAAPORT is realtime
         status = execute(npages, prodQueuePath, mcastSpec, interface);
 
         if (status)
-            mylog_flush_error();
+            log_flush_error();
     }                               /* command line decoded */
 
     return status;

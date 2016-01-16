@@ -11,7 +11,7 @@
  * @author: Steven R. Emmerson
  */
 
-#include "mylog.h"
+#include "log.h"
 #include "LdmBofResponse.h"
 #include "BofResponse.h"
 #include "pq.h"

@@ -83,7 +83,7 @@ lcf_getCommandLine(
  * @param hostId        [in] Host identifier. Client may free upon return.
  * @param port          [in] Port number.
  * @retval 0            Success.
- * @retval -1           System error. mylog_add() called.
+ * @retval -1           System error. log_add() called.
  */
 int
 lcf_addRequest(
@@ -257,8 +257,8 @@ lcf_addAccept(
  *                         free.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
- * @retval    EINVAL       Invalid specification. `mylog_add()` called.
- * @retval    ENOMEM       Out-of-memory. `mylog_add()` called.
+ * @retval    EINVAL       Invalid specification. `log_add()` called.
+ * @retval    ENOMEM       Out-of-memory. `log_add()` called.
  */
 int
 lcf_addMulticast(
@@ -276,7 +276,7 @@ lcf_addMulticast(
  *                         Caller may free upon return. "0.0.0.0" obtains the
  *                         system's default multicast interface.
  * @retval    0            Success.
- * @retval    ENOMEM       System failure. `mylog_add()` called.
+ * @retval    ENOMEM       System failure. `log_add()` called.
  */
 int
 lcf_addReceive(
@@ -336,7 +336,7 @@ lcf_reduceToAcceptable(
  *
  * @param ldmPort       [in] Ignored.
  * @retval 0            Success.
- * @return              System error code. mylog_add() called.
+ * @return              System error code. log_add() called.
  */
 int
 lcf_startRequesters(

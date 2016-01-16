@@ -12,7 +12,7 @@
 #include <sys/types.h>
 
 #include "gribinsert.h"
-#include "mylog.h"
+#include "log.h"
 
 void search_for_grib(data,filelen,offset)
 unsigned char *data;
@@ -60,7 +60,7 @@ if(memcmp((char *)(data + *off),"GRIB",4) == 0)
     * get version number
     */
    *gversion = (int) data[ (int)(*off)+7];
-   mylog_debug("GRIB version %d\0",*gversion);
+   log_debug("GRIB version %d\0",*gversion);
    switch( *gversion )
       {
       case 0:
@@ -69,7 +69,7 @@ if(memcmp((char *)(data + *off),"GRIB",4) == 0)
       		b2 = (unsigned int) data[ (int)(*off)+5];
       		b3 = (unsigned int) data[ (int)(*off)+6];
       		griblen = (((b1 << 8) + b2) << 8) + b3;
-		mylog_debug("grib1 length %u\0",griblen);
+		log_debug("grib1 length %u\0",griblen);
 		break;
       case 2:
       		b1 = (unsigned int) data[ (int)(*off)+12];
@@ -77,10 +77,10 @@ if(memcmp((char *)(data + *off),"GRIB",4) == 0)
       		b3 = (unsigned int) data[ (int)(*off)+14];
       		b4 = (unsigned int) data[ (int)(*off)+15];
       		griblen = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
-		mylog_debug("grib2 length %u\0",griblen);
+		log_debug("grib2 length %u\0",griblen);
 		break;
       default:
-		mylog_error("Unknown GRIB version %d\0",*gversion);
+		log_error("Unknown GRIB version %d\0",*gversion);
 		return(-7);
       }
 
@@ -96,13 +96,13 @@ if(*len == 0)
    {
    if ( griblen < 4 )
       {
-      mylog_info("GRIB/7777 short [Invalid GRIB]");
+      log_info("GRIB/7777 short [Invalid GRIB]");
       *len = 4;
       }
    else
       {
       *len = griblen;
-      mylog_debug( "look vals %u %u %u %u     %u %u %u %u     %u %u %u %u",
+      log_debug( "look vals %u %u %u %u     %u %u %u %u     %u %u %u %u",
 	   data [*off], data [*off+1], data [*off + 2], data [*off+3],
 	  data [ ioff - 4], 
 	  data [ ioff - 3], 
@@ -113,7 +113,7 @@ if(*len == 0)
 	  data [ ioff + 2], 
 	  data [ ioff + 3] );
       }
-   mylog_error("7777 not found %u\0",griblen);
+   log_error("7777 not found %u\0",griblen);
    return(-7);
    }
 else

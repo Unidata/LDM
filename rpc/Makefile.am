@@ -45,7 +45,7 @@ lib_la_SOURCES		= \
     xdr_rec.c \
     xdr_reference.c \
     xdr_stdio.c
-lib_la_CPPFLAGS		= -I$(top_srcdir)/mylog
+lib_la_CPPFLAGS		= -I$(top_srcdir)/log
 EXTRA_DIST		= \
     auth.h \
     auth_unix.h \

@@ -17,7 +17,7 @@
 
 #include "ldm.h"
 #include "ldmprint.h"
-#include "mylog.h"
+#include "log.h"
 #include "mldm_sender_map.h"
 
 #include <fcntl.h>
@@ -64,7 +64,7 @@ static struct flock lock;
  * @param[in]  pathname     Pathname of the shared memory object.
  * @param[out] fd           File descriptor of the shared memory object.
  * @retval     0            Success. `*fd` is set.
- * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 smo_open(
@@ -87,7 +87,7 @@ smo_open(
             status = 0;
         }
         else {
-            mylog_syserr("Couldn't open shared memory object %s", pathname);
+            log_syserr("Couldn't open shared memory object %s", pathname);
             status = LDM7_SYSTEM;
         }
     }
@@ -119,7 +119,7 @@ smo_close(
  * @param[in]  size         Size of the shared memory object in bytes.
  * @param[out] smo          The shared memory object.
  * @retval     0            Success. `*smo` is set.
- * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 smo_init(
@@ -130,7 +130,7 @@ smo_init(
     int          status = ftruncate(fd, size);
 
     if (status) {
-        mylog_syserr("Couldn't set size of shared memory object");
+        log_syserr("Couldn't set size of shared memory object");
         status = LDM7_SYSTEM;
     }
     else {
@@ -138,7 +138,7 @@ smo_init(
                 fd, 0);
 
         if (MAP_FAILED == addr) {
-            mylog_syserr("Couldn't memory-map shared memory object");
+            log_syserr("Couldn't memory-map shared memory object");
             status = LDM7_SYSTEM;
         }
         else {
@@ -156,7 +156,7 @@ smo_init(
  * user.
  *
  * @retval 0            Success
- * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 msm_setSmoPathname(void)
@@ -165,18 +165,18 @@ msm_setSmoPathname(void)
     int               status;
     const char*       userName = getenv("USER");
     if (userName == NULL) {
-        mylog_add("Couldn't get value of environment variable \"USER\"");
+        log_add("Couldn't get value of environment variable \"USER\"");
         status = LDM7_SYSTEM;
     }
     else {
         int nbytes = snprintf(NULL, 0, format, userName);
         if (nbytes < 0) {
-            mylog_syserr("Couldn't get size of pathname of shared-memory object");
+            log_syserr("Couldn't get size of pathname of shared-memory object");
             status = LDM7_SYSTEM;
         }
         else {
             nbytes += 1; // for NUL-terminator
-            smo_pathname = mylog_malloc(nbytes,
+            smo_pathname = log_malloc(nbytes,
                     "pathname of shared-memory object");
             if (smo_pathname == NULL) {
                 status = LDM7_SYSTEM;
@@ -194,21 +194,21 @@ msm_setSmoPathname(void)
  * Initializes this module. Shall be called only once per LDM session.
  *
  * @retval 0            Success.
- * @retval LDM7_INVAL   This module is already initialized. `mylog_add()` called.
- * @retval LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval LDM7_INVAL   This module is already initialized. `log_add()` called.
+ * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 msm_init(void)
 {
     int status;
     if (smo_pathname) {
-        mylog_add("Multicast sender map is already initialized");
+        log_add("Multicast sender map is already initialized");
         status = LDM7_INVAL;
     }
     else {
         status = msm_setSmoPathname();
         if (status) {
-            mylog_add("Couldn't initialize pathname of shared-memory object");
+            log_add("Couldn't initialize pathname of shared-memory object");
         }
         else {
             int fd;
@@ -242,7 +242,7 @@ msm_init(void)
  *
  * @param[in] exclusive    Lock for exclusive access?
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 msm_lock(
@@ -251,7 +251,7 @@ msm_lock(
     lock.l_type = exclusive ? F_RDLCK : F_WRLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        mylog_syserr("Couldn't lock shared process-information array");
+        log_syserr("Couldn't lock shared process-information array");
         return LDM7_SYSTEM;
     }
 
@@ -266,9 +266,9 @@ msm_lock(
  * @param[in] port         Port number of the VCMTP TCP server.
  * @retval    0            Success.
  * @retval    LDM7_DUP     Process identifier duplicates existing entry.
- *                         `mylog_add()` called.
+ *                         `log_add()` called.
  * @retval    LDM7_DUP     Feed-type overlaps with feed-type being sent by
- *                         another process. `mylog_add()` called.
+ *                         another process. `log_add()` called.
  */
 Ldm7Status
 msm_put(
@@ -282,12 +282,12 @@ msm_put(
     for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
         const pid_t infoPid = procInfos[ibit].pid;
         if ((feedtype & mask) && infoPid) {
-            mylog_add("Feed-type %s is already being sent by process %ld",
+            log_add("Feed-type %s is already being sent by process %ld",
                     s_feedtypet(mask), (long)pid);
             return LDM7_DUP;
         }
         if (pid == infoPid) {
-            mylog_add("Process-information array already contains entry for PID "
+            log_add("Process-information array already contains entry for PID "
                     "%ld", (long)pid);
             return LDM7_DUP;
         }
@@ -339,7 +339,7 @@ msm_get(
  * Unlocks the map.
  *
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 msm_unlock(void)
@@ -347,7 +347,7 @@ msm_unlock(void)
     lock.l_type = F_UNLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        mylog_syserr("Couldn't unlock shared process-information array");
+        log_syserr("Couldn't unlock shared process-information array");
         return LDM7_SYSTEM;
     }
 

@@ -28,7 +28,7 @@
  * @param[in] mcastIface   IP address of interface to use for incoming packets.
  *                         Caller may free upon return.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 d7mgr_add(
@@ -47,7 +47,7 @@ d7mgr_free(void);
  * current process and frees the downstream LDM-7 manager.
  *
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `mylog_add()` called. Downstream LDM-7
+ * @retval LDM7_SYSTEM  System error. `log_add()` called. Downstream LDM-7
  *                      manager is in an indeterminate state.
  */
 int

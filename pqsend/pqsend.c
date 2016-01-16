@@ -23,9 +23,9 @@
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"
-#include "mylog.h"
+#include "log.h"
 #include "LdmProxy.h"
-#include "mylog.h"
+#include "log.h"
 #include "pq.h"
 #include "prod_class.h"
 #include "RegularExpressions.h"
@@ -82,35 +82,35 @@ static void update_last_downtime(const timestampt *nowp) {
      * Update last_downtime
      */
     stats.last_downtime = d_diff_timestamp(nowp, &stats.last_disco);
-    mylog_debug("last_downtime %10.3f", stats.last_downtime);
+    log_debug("last_downtime %10.3f", stats.last_downtime);
 }
 
 static void dump_stats(const sendstats *stp) {
     char cp[24];
 
     sprint_timestampt(cp, sizeof(cp), &stp->starttime);
-    mylog_notice("> Up since:          %s", cp);
+    log_notice("> Up since:          %s", cp);
 
     if (stp->nconnects <= 0) {
-        mylog_notice("> Never connected");
+        log_notice("> Never connected");
     } else {
         sprint_timestampt(cp, sizeof(cp), &stp->last_disco);
         if (stp->last_downtime != 0.) {
-            mylog_notice(">  last disconnect:  %s for %10.3f seconds", cp,
+            log_notice(">  last disconnect:  %s for %10.3f seconds", cp,
                     stp->last_downtime);
         } else {
-            mylog_notice(">  last disconnect:  %s", cp);
+            log_notice(">  last disconnect:  %s", cp);
         }
         if (stp->nprods) {
-            mylog_notice(">     nprods min_latency max_latency");
-            mylog_notice("> %10d  %10.3f  %10.3f", stp->nprods,
+            log_notice(">     nprods min_latency max_latency");
+            log_notice("> %10d  %10.3f  %10.3f", stp->nprods,
                     stp->min_latency, stp->max_latency);
         } else {
-            mylog_notice(">     nprods");
-            mylog_notice("> %10d", stp->nprods);
+            log_notice(">     nprods");
+            log_notice("> %10d", stp->nprods);
         }
-        mylog_notice(">  nconnects      ndisco  secs_disco");
-        mylog_notice("> %10d  %10d  %10.3f", stp->nconnects, stp->ndisco,
+        log_notice(">  nconnects      ndisco  secs_disco");
+        log_notice("> %10d  %10d  %10.3f", stp->nconnects, stp->ndisco,
                 stp->downtime);
     }
 }
@@ -151,7 +151,7 @@ static void printUsage(const char* const av0) {
 }
 
 static void cleanup(void) {
-    mylog_notice("Exiting");
+    log_notice("Exiting");
 
     lp_free(ldmProxy);
     ldmProxy = NULL;
@@ -163,7 +163,7 @@ static void cleanup(void) {
 
     dump_stats(&stats);
 
-    (void) mylog_fini();
+    (void) log_fini();
 }
 
 static void signal_handler(int sig) {
@@ -184,7 +184,7 @@ static void signal_handler(int sig) {
         stats_req = 1;
         return;
     case SIGUSR2:
-        mylog_roll_level();
+        log_roll_level();
         return;
     }
 }
@@ -227,9 +227,9 @@ static void set_sigactions(void) {
  *
  * To avoid conflict with the return-values of pq_sequence(), this function
  * always returns zero and sets "sendStatus" to the actual status:
- *      CONNECTION_TIMEDOUT     The connection timed-out. "mylog_add()" called.
+ *      CONNECTION_TIMEDOUT     The connection timed-out. "log_add()" called.
  *      CONNECTION_ABORTED      The connection failed for a reason other than a
- *                              time-out). "mylog_add()" called.
+ *                              time-out). "log_add()" called.
  *
  * Arguments:
  *      infop           The data-product's metadata.
@@ -245,9 +245,9 @@ static void set_sigactions(void) {
 static int mySend(const prod_info* infop, const void* datap, void* xprod,
         size_t size, void* arg) {
     if (!prodInClass(want, infop)) {
-        mylog_info("%s doesn't want %s", lp_host(ldmProxy),
+        log_info("%s doesn't want %s", lp_host(ldmProxy),
                 s_prod_info(NULL, 0, infop,
-                        mylog_is_enabled_debug));
+                        log_is_enabled_debug));
     } else {
         product product;
 
@@ -258,10 +258,10 @@ static int mySend(const prod_info* infop, const void* datap, void* xprod,
 
         if (0 != sendStatus) {
             if (LP_UNWANTED == sendStatus) {
-                if (mylog_is_enabled_info)
-                    mylog_info(" dup: %s",
+                if (log_is_enabled_info)
+                    log_info(" dup: %s",
                             s_prod_info(NULL, 0, infop,
-                                    mylog_is_enabled_debug));
+                                    log_is_enabled_debug));
                 sendStatus = 0;
             } else {
                 sendStatus =
@@ -272,10 +272,10 @@ static int mySend(const prod_info* infop, const void* datap, void* xprod,
             timestampt now;
             double latency;
 
-            if (mylog_is_enabled_info)
-                mylog_info("%s",
+            if (log_is_enabled_info)
+                log_info("%s",
                         s_prod_info(NULL, 0, infop,
-                                mylog_is_enabled_debug));
+                                log_is_enabled_debug));
 
             set_timestamp(&now);
             latency = d_diff_timestamp(&now, &infop->arrival);
@@ -299,8 +299,8 @@ static int mySend(const prod_info* infop, const void* datap, void* xprod,
  *      av                      The argument strings.
  * Returns:
  *      0                       Success.
- *      SYSTEM_ERROR            O/S failure. "mylog_add()" called.
- *      INVOCATION_ERROR        User-error on command-line. "mylog_add()"
+ *      SYSTEM_ERROR            O/S failure. "log_add()" called.
+ *      INVOCATION_ERROR        User-error on command-line. "log_add()"
  *                              called.
  */
 static int getConfiguration(int ac, char* const * const av) {
@@ -318,7 +318,7 @@ static int getConfiguration(int ac, char* const * const av) {
 
     /* Initialize statistics */
     if (set_timestamp(&stats.starttime) != ENOERR) {
-        mylog_syserr("Couldn't set timestamp");
+        log_syserr("Couldn't set timestamp");
         status = SYSTEM_ERROR;
     } else {
         stats.last_disco = stats.starttime;
@@ -365,7 +365,7 @@ static int getConfiguration(int ac, char* const * const av) {
                 }
                 break;
             case 'l':
-                (void) mylog_set_output(optarg);
+                (void) log_set_output(optarg);
                 break;
             case 'o':
                 timeOffset.tv_sec = atoi(optarg);
@@ -401,10 +401,10 @@ static int getConfiguration(int ac, char* const * const av) {
                 }
                 break;
             case 'v':
-                (void) mylog_set_level(MYLOG_LEVEL_INFO);
+                (void) log_set_level(LOG_LEVEL_INFO);
                 break;
             case 'x':
-                (void) mylog_set_level(MYLOG_LEVEL_DEBUG);
+                (void) log_set_level(LOG_LEVEL_DEBUG);
                 break;
             default:
                 status = INVOCATION_ERROR;
@@ -466,13 +466,13 @@ static int getConfiguration(int ac, char* const * const av) {
  *
  * Returns:
  *      0                       Success. No more data-products to send.
- *      CONNECTION_TIMEDOUT     The connection attempt timed-out. "mylog_add()"
+ *      CONNECTION_TIMEDOUT     The connection attempt timed-out. "log_add()"
  *                              called.
  *      CONNECTION_ABORTED      The connection attempt failed for a reason
- *                              other than a time-out). "mylog_add()" called.
- *      PQ_ERROR                I/O error with the product-queue. "mylog_add()"
+ *                              other than a time-out). "log_add()" called.
+ *      PQ_ERROR                I/O error with the product-queue. "log_add()"
  *                              called.
- *      SYSTEM_ERROR            O/S error. "mylog_add()" called.
+ *      SYSTEM_ERROR            O/S error. "log_add()" called.
  */
 static int executeConnection(void) {
     int status;
@@ -541,7 +541,7 @@ static int executeConnection(void) {
                 else if (0 != status) {
                     /* pq_sequence() encountered a problem */
                     if (PQUEUE_END == status) {
-                        mylog_debug("End of Queue");
+                        log_debug("End of Queue");
 
                         /* Flush the connection. */
                         status = lp_flush(ldmProxy);
@@ -560,13 +560,13 @@ static int executeConnection(void) {
                         exitIfDone(INTERRUPTED);
                         pq_suspend(interval);
                     } else if (EAGAIN == status || EACCES == status) {
-                        mylog_debug("Hit a lock");
+                        log_debug("Hit a lock");
                     } else if (EIO == status) {
-                        mylog_syserr("Product-queue I/O error");
+                        log_syserr("Product-queue I/O error");
                         status = PQ_ERROR;
                         break;
                     } else {
-                        mylog_syserr("Unexpected pq_sequence() return: %d",
+                        log_syserr("Unexpected pq_sequence() return: %d",
                                 status);
                         status = PQ_ERROR;
                         break;
@@ -590,10 +590,10 @@ static int executeConnection(void) {
  *
  * Returns:
  *      0                       Success.
- *      SYSTEM_ERROR            O/S failure. "mylog_add()" called.
- *      PQ_ERROR                Product-queue I/O failure. "mylog_add()" called.
+ *      SYSTEM_ERROR            O/S failure. "log_add()" called.
+ *      PQ_ERROR                Product-queue I/O failure. "log_add()" called.
  *      SESSION_TIMEDOUT        The time-limit on the session was reached.
- *                              "mylog_add()" called.
+ *                              "log_add()" called.
  *      INTERRUPTED             The process received a SIGTERM.
  */
 static int execute(void) {
@@ -602,14 +602,14 @@ static int execute(void) {
     /*
      * N.B. log ident is the remote
      */
-    (void) mylog_set_id(remote);
-    mylog_notice("Starting Up (%d)", getpgrp());
+    (void) log_set_id(remote);
+    log_notice("Starting Up (%d)", getpgrp());
 
     /*
      * Register exit handler
      */
     if (atexit(cleanup) != 0) {
-        mylog_syserr("atexit");
+        log_syserr("atexit");
         status = SYSTEM_ERROR;
     } else {
         /*
@@ -623,10 +623,10 @@ static int execute(void) {
         status = pq_open(pqfname, PQ_READONLY, &pq);
         if (status) {
             if (PQ_CORRUPT == status) {
-                mylog_error("The product-queue \"%s\" is inconsistent\n",
+                log_error("The product-queue \"%s\" is inconsistent\n",
                         pqfname);
             } else {
-                mylog_error("pq_open failed: %s: %s\n", pqfname,
+                log_error("pq_open failed: %s: %s\n", pqfname,
                         strerror(status));
             }
             status = PQ_ERROR;
@@ -661,9 +661,9 @@ static int execute(void) {
                         exitIfDone(INTERRUPTED);
                         sleep(rpcTimeout);
                     } else if (CONNECTION_TIMEDOUT == status) {
-                        mylog_flush_error();
+                        log_flush_error();
                         if (timer_hasElapsed(timer)) {
-                            mylog_add(
+                            log_add(
                                     "Session time-limit reached " "(%lu seconds)",
                                     totalTimeo);
                             status = SESSION_TIMEDOUT;
@@ -689,27 +689,27 @@ static int execute(void) {
 /*
  * Returns:
  *      0                       Success.
- *      INVOCATION_ERROR        User-error on command-line. "mylog_flush()" called.
- *      PQ_ERROR                Product-queue I/O failure. "mylog_flush()" called.
+ *      INVOCATION_ERROR        User-error on command-line. "log_flush()" called.
+ *      PQ_ERROR                Product-queue I/O failure. "log_flush()" called.
  *      SESSION_TIMEDOUT        The time-limit on the session was reached.
- *                              "mylog_flush()" called.
- *      SYSTEM_ERROR            O/S failure. "mylog_flush()" called.
+ *                              "log_flush()" called.
+ *      SYSTEM_ERROR            O/S failure. "log_flush()" called.
  *      INTERRUPTED             The process received a SIGTERM.
  */
 int main(int ac, char* const * const av) {
-    (void) mylog_init(av[0]);
+    (void) log_init(av[0]);
 
     int status = getConfiguration(ac, av);
     if (0 != status) {
         if (INVOCATION_ERROR == status) {
-            mylog_flush_error();
+            log_flush_error();
             printUsage(av[0]);
         }
     } else {
         status = execute();
 
         if (0 != status) {
-            mylog_flush_error();
+            log_flush_error();
         }
     }
 

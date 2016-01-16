@@ -15,7 +15,7 @@ AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
                           -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-                          -I$(top_builddir)/mylog -I$(top_srcdir)/mylog \
+                          -I$(top_builddir)/log -I$(top_srcdir)/log \
                           -I../C \
                           -I$(srcdir)/../vcmtp/VCMTPv3 \
                           -I$(srcdir)/../vcmtp/VCMTPv3/receiver \

@@ -10,10 +10,10 @@
 #include <config.h>
 
 #include "error.h"
-#include "mylog.h"
+#include "log.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "mylog.h"
+#include "log.h"
 #include "inetutil.h"
 #include "timestamp.h"
 #include "registry.h"
@@ -125,7 +125,7 @@ ghostname(void)
         else if(gethostname(hostname, sizeof(hostname)) < 0) {
             (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
             hostname[sizeof(hostname)-1] = 0;
-            mylog_warning("Couldn't get name of local host from registry or "
+            log_warning("Couldn't get name of local host from registry or "
                     "gethostname(). Using default: \"%s\"", hostname);
         }
         else if (strchr(hostname, '.') == NULL) {
@@ -134,7 +134,7 @@ ghostname(void)
             if (hp == NULL || hp->h_addrtype != AF_INET) {
                 (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
                 hostname[sizeof(hostname)-1] = 0;
-                mylog_warning("Couldn't get fully-qualified name of local host "
+                log_warning("Couldn't get fully-qualified name of local host "
                         "from registry, gethostname(), or gethostbyname(). "
                         "Using default: \"%s\"", hostname);
             }
@@ -193,7 +193,7 @@ hostbyaddr(
             identifier = hp->h_name;
 
             if (elapsed < RESOLVER_TIME_THRESHOLD &&
-                    !mylog_is_enabled_info) {
+                    !log_is_enabled_info) {
                 error = NULL;
             }
             else {
@@ -274,7 +274,7 @@ addrbyhost(
                 (size_t)hp->h_length);
 
             if (elapsed < RESOLVER_TIME_THRESHOLD &&
-                    !mylog_is_enabled_info) {
+                    !log_is_enabled_info) {
                 error = NULL;
             }
             else {
@@ -367,7 +367,7 @@ hostHasIpAddress(
             *hasAddress = *in_addr_pp != NULL;
 
             if (elapsed >= RESOLVER_TIME_THRESHOLD ||
-                    mylog_is_enabled_info) {
+                    log_is_enabled_info) {
                 err_log_and_free(
                     ERR_NEW2(0, NULL,
                         "Resolving %s to an IP address took %g seconds",
@@ -503,7 +503,7 @@ hostent_new(
      */
     entry = gethostbyname(name);
     if (NULL == entry)
-        mylog_error("Couldn't get information on host %s: %s", name, host_err_str());
+        log_error("Couldn't get information on host %s: %s", name, host_err_str());
     else
     {
         int             num_aliases;
@@ -554,7 +554,7 @@ hostent_new(
          */
         new = (struct hostent *) malloc(nbytes);
         if (NULL == new)
-            mylog_syserr(
+            log_syserr(
             "Couldn't allocate %lu bytes for information on host \"%s\"", 
                    (unsigned long) nbytes, name);
         else
@@ -695,7 +695,7 @@ local_sockaddr_in(struct sockaddr_in* addr)
         (void)memset(&cachedAddr, 0, sizeof(cachedAddr));
 
         if (gethostname(name, sizeof(name))) {
-            mylog_syserr("gethostname()");
+            log_syserr("gethostname()");
 
             error = errno;
         }
@@ -705,7 +705,7 @@ local_sockaddr_in(struct sockaddr_in* addr)
             if (addrbyhost(name, &cachedAddr)) {
                 if (addrbyhost("localhost", &cachedAddr)) {
                     if (addrbyhost("0.0.0.0", &cachedAddr)) {
-                        mylog_syserr("addrbyhost()");
+                        log_syserr("addrbyhost()");
 
                         error = errno;
                     }
@@ -838,7 +838,7 @@ sockbind(
         }
         if(memcmp(req->addr.buf, ret->addr.buf, ret->addr.len) != 0)
         {
-                mylog_error("memcmp: t_bind changed address");
+                log_error("memcmp: t_bind changed address");
         }
 
         (void) t_free((char *)req, T_BIND);
@@ -870,14 +870,14 @@ err0 :
  *                       to the input.
  * @retval     0         Success. `*addrInfo` is set.
  * @retval     EAGAIN    A necessary resource is temporarily unavailable.
- *                       `mylog_add()` called.
+ *                       `log_add()` called.
  * @retval     EINVAL    Invalid Internet identifier or address family.
- *                       `mylog_add()` called.
+ *                       `log_add()` called.
  * @retval     ENOENT    The Internet identifier doesn't resolve to an IP
- *                       address. `mylog_add()` called.
- * @retval     ENOMEM    Out-of-memory. `mylog_add()` called.
+ *                       address. `log_add()` called.
+ * @retval     ENOMEM    Out-of-memory. `log_add()` called.
  * @retval     ENOSYS    A non-recoverable error occurred when attempting to
- *                       resolve the name. `mylog_add()` called.
+ *                       resolve the name. `log_add()` called.
  */
 static int
 getAddrInfo(
@@ -891,7 +891,7 @@ getAddrInfo(
     if (status == 0)
         return 0;
 
-    mylog_add("Couldn't get %s address of \"%s\": %s",
+    log_add("Couldn't get %s address of \"%s\": %s",
             hints->ai_family == AF_INET ? "IPv4" :
                     hints->ai_family == AF_INET6 ? "IPv6" : "IP",
             nodeName, gai_strerror(status));
@@ -923,14 +923,14 @@ getAddrInfo(
  *                     `INET_ADDRSTRLEN` (from `<netinet/in.h>`) bytes.
  * @retval     0       Success. `out` is set.
  * @retval     EAGAIN  A necessary resource is temporarily unavailable.
- *                     `mylog_add()` called.
+ *                     `log_add()` called.
  * @retval     EINVAL  The identifier cannot be converted to an IPv4
- *                     dotted-decimal format. `mylog_add()` called.
+ *                     dotted-decimal format. `log_add()` called.
  * @retval     ENOENT  No IPv4 address corresponds to the given Internet
  *                     identifier.
- * @retval     ENOMEM  Out-of-memory. `mylog_add()` called.
+ * @retval     ENOMEM  Out-of-memory. `log_add()` called.
  * @retval     ENOSYS  A non-recoverable error occurred when attempting to
- *                     resolve the identifier. `mylog_add()` called.
+ *                     resolve the identifier. `log_add()` called.
  */
 int
 getDottedDecimal(
@@ -962,7 +962,7 @@ getDottedDecimal(
  * @param[in]  spec  The IPv4 address in Internet standard dot notation or NULL
  *                   to obtain INADDR_ANY.
  * @retval     0     Success. `*addr` is set.
- * @retval     1     Usage error. `mylog_add()` called.
+ * @retval     1     Usage error. `log_add()` called.
  */
 int
 addr_init(
@@ -979,7 +979,7 @@ addr_init(
         in_addr_t a = inet_addr(spec);
 
         if ((in_addr_t)-1 == a) {
-            mylog_add("Invalid IPv4 address: \"%s\"", spec);
+            log_add("Invalid IPv4 address: \"%s\"", spec);
             status = 1;
         }
         else {
@@ -1012,7 +1012,7 @@ mcastAddr_isValid(
  * @param[in]  inetSpec   The IPv4 address specification. May be `NULL` to
  *                        obtain `INADDR_ANY`.
  * @retval     0          Success. `*inetAddr` is set.
- * @retval     1          Usage error. `mylog_add()` called.
+ * @retval     1          Usage error. `log_add()` called.
  */
 int
 inetAddr_init(
@@ -1037,7 +1037,7 @@ inetAddr_init(
  * @param[in]  addr      The IPv4 address in network byte order.
  * @param[in]  port      The port number in host byte order.
  * @retval     0         Success. `*sockAddr` is set.
- * @retval     1         Usage error. `mylog_add()` called.
+ * @retval     1         Usage error. `log_add()` called.
  */
 void
 sockAddr_init(
@@ -1058,7 +1058,7 @@ sockAddr_init(
  * @param[in]  sockAddr  The IPv4 socket address to which the socket will be
  *                       bound.
  * @retval     0         Success.
- * @retval     2         System failure. `mylog_add()` called.
+ * @retval     2         System failure. `log_add()` called.
  */
 int
 udpSock_init(
@@ -1069,13 +1069,13 @@ udpSock_init(
     int status;
 
     if (-1 == fd) {
-        mylog_syserr("Couldn't create UDP socket");
+        log_syserr("Couldn't create UDP socket");
         status = 2;
     }
     else {
         status = bind(fd, (struct sockaddr*)sockAddr, sizeof(*sockAddr));
         if (status) {
-            mylog_syserr("Couldn't bind UDP socket");
+            log_syserr("Couldn't bind UDP socket");
             (void)close(fd);
             status = 2;
         }
@@ -1095,7 +1095,7 @@ udpSock_init(
  * @param[in]  ifaceAddr  IPv4 address of the interface on which to listen for
  *                        multicast UDP packets. May specify `INADDR_ANY`.
  * @retval     0          Success.
- * @retval     2          O/S failure. `mylog_add()` called.
+ * @retval     2          O/S failure. `log_add()` called.
  */
 int
 mcastRecvSock_joinGroup(
@@ -1111,7 +1111,7 @@ mcastRecvSock_joinGroup(
     int status = setsockopt(socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq,
             sizeof(mreq));
     if (status) {
-        mylog_add_syserr("setsockopt() failure");
+        log_add_syserr("setsockopt() failure");
         status = 2;
     }
 
@@ -1127,8 +1127,8 @@ mcastRecvSock_joinGroup(
  * @param[in]  ifaceAddr      IPv4 address of the interface. May specify
  *                            `INADDR_ANY`.
  * @retval     0              Success.
- * @retval     1              Usage failure. `mylog_add()` called.
- * @retval     2              System failure. `mylog_add()` called.
+ * @retval     1              Usage failure. `log_add()` called.
+ * @retval     2              System failure. `log_add()` called.
  */
 int
 mcastRecvSock_init(
@@ -1140,14 +1140,14 @@ mcastRecvSock_init(
     int status = udpSock_init(&sock, mcastSockAddr);
 
     if (status) {
-        mylog_add("Couldn't initialize UDP socket %s:%u",
+        log_add("Couldn't initialize UDP socket %s:%u",
                 inet_ntoa(mcastSockAddr->sin_addr),
                 ntohs(mcastSockAddr->sin_port));
     }
     else {
         status = mcastRecvSock_joinGroup(sock, &mcastSockAddr->sin_addr, ifaceAddr);
         if (status) {
-            mylog_add("Couldn't join multicast group %s:%u on interface %s",
+            log_add("Couldn't join multicast group %s:%u on interface %s",
                     inet_ntoa(mcastSockAddr->sin_addr),
                     ntohs(mcastSockAddr->sin_port), inet_ntoa(*ifaceAddr));
             (void)close(sock);
@@ -1169,9 +1169,9 @@ mcastRecvSock_init(
  *                      address. Client may free upon return.
  * @param[in]  port     Port number of the service. Must be non-negative.
  * @retval     0        Success. `*svcAddr` is set.
- * @retval     EINVAL   Invalid Internet address or port number. `mylog_add()`
+ * @retval     EINVAL   Invalid Internet address or port number. `log_add()`
  *                      called.
- * @retval     ENOMEM   Out-of-memory. `mylog_add()` called.
+ * @retval     ENOMEM   Out-of-memory. `log_add()` called.
  */
 int
 sa_new(
@@ -1182,11 +1182,11 @@ sa_new(
     int status;
 
     if (NULL == addr || 0 > port) {
-        mylog_add("Invalid Internet ID or port number");
+        log_add("Invalid Internet ID or port number");
         status = EINVAL;
     }
     else {
-        ServiceAddr* sa = mylog_malloc(sizeof(ServiceAddr), "service address");
+        ServiceAddr* sa = log_malloc(sizeof(ServiceAddr), "service address");
 
         if (sa == NULL) {
             status = ENOMEM;
@@ -1195,7 +1195,7 @@ sa_new(
             char* id = strdup(addr);
 
             if (id == NULL) {
-                mylog_syserr("Couldn't duplicate service address \"%s\"", addr);
+                log_syserr("Couldn't duplicate service address \"%s\"", addr);
                 free(sa);
                 status = ENOMEM;
             }
@@ -1244,7 +1244,7 @@ sa_free(
  * @param[out] dest   The destination.
  * @param[in]  src    The source. The caller may free.
  * @retval     true   Success. `*dest` is set.
- * @retval     false  Failure. `mylog_add()` called.
+ * @retval     false  Failure. `log_add()` called.
  */
 bool
 sa_copy(
@@ -1254,7 +1254,7 @@ sa_copy(
     char* const inetId = strdup(src->inetId);
 
     if (inetId == NULL) {
-        mylog_syserr("Couldn't copy Internet identifier");
+        log_syserr("Couldn't copy Internet identifier");
         return false;
     }
 
@@ -1268,7 +1268,7 @@ sa_copy(
  * Clones a service address.
  *
  * @param[in] sa    Pointer to the service address to be cloned.
- * @retval    NULL  Failure. \c mylog_add() called.
+ * @retval    NULL  Failure. \c log_add() called.
  * @return          Pointer to a clone of the service address. Caller should
  *                  pass it to `sa_free()` when it's no longer needed.
  */
@@ -1348,7 +1348,7 @@ sa_snprint(
  * This function is thread-safe.
  *
  * @param[in]  sa    Pointer to the service address.
- * @retval     NULL  Failure. `mylog_add()` called.
+ * @retval     NULL  Failure. `log_add()` called.
  * @return           Pointer to the formatted representation. The caller should
  *                   free when it's no longer needed.
  */
@@ -1384,8 +1384,8 @@ sa_format(
  * @param[in]  spec         String containing the specification. Caller may
  *                          free.
  * @retval     0            Success. `*sa` is set.
- * @retval     EINVAL       Invalid specification. `mylog_add()` called.
- * @retval     ENOMEM       Out of memory. `mylog_add()` called.
+ * @retval     EINVAL       Invalid specification. `log_add()` called.
+ * @retval     ENOMEM       Out of memory. `log_add()` called.
  */
 int
 sa_parse(
@@ -1395,7 +1395,7 @@ sa_parse(
     int status = EINVAL;
 
     if (NULL == spec) {
-        mylog_add("NULL argument");
+        log_add("NULL argument");
     }
     else {
         char                 inetId[HOSTNAME_MAX+1];
@@ -1417,7 +1417,7 @@ sa_parse(
         }
 
         if (EINVAL == status)
-            mylog_add("Invalid Internet service address: \"%s\"", spec);
+            log_add("Invalid Internet service address: \"%s\"", spec);
     }
 
     return status;
@@ -1438,8 +1438,8 @@ sa_parse(
  * @param[in]  defPort      Default port number. If negative, then port number
  *                          must exist in specification.
  * @retval     0            Success. `*sa` is set.
- * @retval     EINVAL       Invalid specification. `mylog_add()` called.
- * @retval     ENOMEM       Out of memory. `mylog_add()` called.
+ * @retval     EINVAL       Invalid specification. `log_add()` called.
+ * @retval     ENOMEM       Out of memory. `log_add()` called.
  */
 int
 sa_parseWithDefaults(
@@ -1468,7 +1468,7 @@ sa_parseWithDefaults(
             status = sa_new(svcAddr, buf, defPort);
         }
         else {
-            mylog_add("Invalid service address specification: \"%s\"", spec);
+            log_add("Invalid service address specification: \"%s\"", spec);
             status = EINVAL;
         }
     }
@@ -1493,15 +1493,15 @@ sa_parseWithDefaults(
  *                           Suitable for use in a `bind()` or `connect()` call.
  * @retval     0             Success. `inetSockAddr` and `sockLen` are set.
  * @retval     EAGAIN        A necessary resource is temporarily unavailable.
- *                           `mylog_add()` called.
+ *                           `log_add()` called.
  * @retval     EINVAL        Invalid port number or the Internet identifier
- *                           cannot be resolved to an IP address. `mylog_add()`
+ *                           cannot be resolved to an IP address. `log_add()`
  *                           called.
  * @retval     ENOENT        The service address doesn't resolve into an IP
  *                           address.
- * @retval     ENOMEM        Out-of-memory. `mylog_add()` called.
+ * @retval     ENOMEM        Out-of-memory. `log_add()` called.
  * @retval     ENOSYS        A non-recoverable error occurred when attempting to
- *                           resolve the name. `mylog_add()` called.
+ *                           resolve the name. `log_add()` called.
  */
 int
 sa_getInetSockAddr(
@@ -1517,7 +1517,7 @@ sa_getInetSockAddr(
 
     if (port == 0 || snprintf(servName, sizeof(servName), "%u", port) >=
             sizeof(servName)) {
-        mylog_add("Invalid port number: %u", port);
+        log_add("Invalid port number: %u", port);
         status = EINVAL;
     }
     else {

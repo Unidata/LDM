@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 #include "timestamp.h"
-#include "mylog.h"
+#include "log.h"
 
 #include "state.h"
 
@@ -42,7 +42,7 @@ stateInit(
     int         status;
 
     if (configPathname == NULL) {
-        mylog_add("stateInit(): Pathname is NULL");
+        log_add("stateInit(): Pathname is NULL");
         status = -1;
     }
     else {
@@ -52,7 +52,7 @@ stateInit(
         char*                           newPath = malloc(pathlen);
 
         if (newPath == NULL) {
-            mylog_add_syserr("Couldn't allocate %lu-byte pathname",
+            log_add_syserr("Couldn't allocate %lu-byte pathname",
                 (unsigned long)pathlen);
             status = -2;
         }
@@ -64,7 +64,7 @@ stateInit(
             newTmpPath = malloc(pathlen);
 
             if (newTmpPath == NULL) {
-                mylog_add_syserr("Couldn't allocate %lu-byte pathname",
+                log_add_syserr("Couldn't allocate %lu-byte pathname",
                     (unsigned long)pathlen);
                 free(newPath);
                 status = -2;
@@ -106,14 +106,14 @@ stateRead(
     int         status;
 
     if (statePathname == NULL) {
-        mylog_add("stateRead(): stateInit() not successfully called");
+        log_add("stateRead(): stateInit() not successfully called");
         status = -1;                    /* module not initialized */
     }
     else {
         FILE*   file = fopen(statePathname, "r");
 
         if (file == NULL) {
-            mylog_add_syserr("stateRead(): Couldn't open \"%s\"", statePathname);
+            log_add_syserr("stateRead(): Couldn't open \"%s\"", statePathname);
             status = -2;                /* couldn't open state-file */
         }
         else {
@@ -125,7 +125,7 @@ stateRead(
                 (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
-                mylog_syserr("Couldn't read comments from \"%s\"",
+                log_syserr("Couldn't read comments from \"%s\"",
                         statePathname);
             }
             else {
@@ -135,7 +135,7 @@ stateRead(
                 ungetc(c, file);
 
                 if (fscanf(file, "%lu.%ld", &seconds, &microseconds) != 2) {
-                    mylog_add("Couldn't read time from \"%s\"", statePathname);
+                    log_add("Couldn't read time from \"%s\"", statePathname);
                 }
                 else {
                     pqCursor->tv_sec = seconds;
@@ -171,14 +171,14 @@ stateWrite(
     int         status;
 
     if (statePathname == NULL) {
-        mylog_add("stateWrite(): stateInit() not successfully called");
+        log_add("stateWrite(): stateInit() not successfully called");
         status = -1;
     }
     else {
         FILE*   file = fopen(tmpStatePathname, "w");
 
         if (file == NULL) {
-            mylog_syserr("Couldn't open \"%s\"", tmpStatePathname);
+            log_syserr("Couldn't open \"%s\"", tmpStatePathname);
             status = -2;
         }
         else {
@@ -188,19 +188,19 @@ stateWrite(
 "# The following line contains the insertion-time of the last, successfully-\n"
 "# processed data-product.  Do not modify it unless you know exactly what\n"
 "# you're doing!\n", file) < 0) {
-                mylog_syserr("Couldn't write comment to \"%s\"",
+                log_syserr("Couldn't write comment to \"%s\"",
                     tmpStatePathname);
             }
             else {
                 if (fprintf(file, "%lu.%06lu\n",
                         (unsigned long)pqCursor->tv_sec, 
                         (unsigned long)pqCursor->tv_usec) < 0) {
-                    mylog_syserr("Couldn't write time to \"%s\"",
+                    log_syserr("Couldn't write time to \"%s\"",
                         tmpStatePathname);
                 }
                 else {
                     if (rename(tmpStatePathname, statePathname) == -1) {
-                        mylog_syserr("Couldn't rename \"%s\" to \"%s\"",
+                        log_syserr("Couldn't rename \"%s\" to \"%s\"",
                             tmpStatePathname, statePathname);
                     }
                     else {

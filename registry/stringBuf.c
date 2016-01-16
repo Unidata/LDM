@@ -9,13 +9,13 @@
 #include <config.h>
 
 #undef NDEBUG
-#include <mylog.h>
+#include <log.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <mylog.h>
+#include <log.h>
 #include "misc.h"
 #include "registry.h"
 #include "stringBuf.h"
@@ -36,8 +36,8 @@ struct stringBuf {
 static void clear(
     StringBuf* const  strBuf)
 {
-    mylog_assert(NULL != strBuf);
-    mylog_assert(NULL != strBuf->buf);
+    log_assert(NULL != strBuf);
+    log_assert(NULL != strBuf->buf);
 
     strBuf->buf[0] = 0;
     strBuf->len = 0;
@@ -52,7 +52,7 @@ static void clear(
  *                      contain (excluding the terminating NUL)
  * Returns:
  *      0               Success
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 static RegStatus ensure(
     StringBuf* const    strBuf,
@@ -61,7 +61,7 @@ static RegStatus ensure(
     RegStatus   status;
     size_t      max = nbytes + 1;
 
-    mylog_assert(NULL != strBuf);
+    log_assert(NULL != strBuf);
 
     if (max <= strBuf->max) {
         status = 0;
@@ -70,7 +70,7 @@ static RegStatus ensure(
         char*   buf = (char*)realloc(strBuf->buf, max);
 
         if (NULL == buf) {
-            mylog_syserr("Couldn't allocate %lu-bytes", (unsigned long)max);
+            log_syserr("Couldn't allocate %lu-bytes", (unsigned long)max);
             status = ENOMEM;
         }
         else {
@@ -92,7 +92,7 @@ static RegStatus ensure(
  *                      NULL.
  * Returns:
  *      0               Success
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 static RegStatus appendString(
     StringBuf* const    strBuf,
@@ -101,8 +101,8 @@ static RegStatus appendString(
     RegStatus   status;
     size_t      newLen;
 
-    mylog_assert(NULL != strBuf);
-    mylog_assert(NULL != string);
+    log_assert(NULL != strBuf);
+    log_assert(NULL != string);
 
     newLen = strBuf->len + strlen(string);
 
@@ -126,7 +126,7 @@ static RegStatus appendString(
  *                      be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 static RegStatus appendArgs(
     StringBuf* const    strBuf,
@@ -160,7 +160,7 @@ static RegStatus appendArgs(
  *      nchar           Initial maximum number of characters.
  * Returns:
  *      0               Success.  "*buf" is set.
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 RegStatus sb_new(
     StringBuf** const   buf,
@@ -184,7 +184,7 @@ RegStatus sb_new(
     }                                   /* "instance" allocated */
 
     if (status)
-        mylog_add("Couldn't create new string-buffer");
+        log_add("Couldn't create new string-buffer");
 
     return status;
 }
@@ -215,7 +215,7 @@ void sb_free(
  *                      (excluding the terminating NUL)
  * Returns:
  *      0               Success
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 RegStatus sb_ensure(
     StringBuf* const    strBuf,
@@ -235,7 +235,7 @@ RegStatus sb_ensure(
  *                      pointer which shall be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM          System error.  "mylog_add()" called.
+ *      ENOMEM          System error.  "log_add()" called.
  */
 RegStatus sb_set(
     StringBuf* const    strBuf,
@@ -265,7 +265,7 @@ RegStatus sb_set(
  *                      terminating NUL).
  * Returns:
  *      0               Success
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 RegStatus sb_nset(
     StringBuf* const    strBuf,
@@ -299,7 +299,7 @@ RegStatus sb_nset(
  *                      pointer which shall be NULL.
  * Returns:
  *      0               Success
- *      ENOMEM   System error.  "mylog_add()" called.
+ *      ENOMEM   System error.  "log_add()" called.
  */
 RegStatus sb_cat(
     StringBuf* const    strBuf,
@@ -308,7 +308,7 @@ RegStatus sb_cat(
     RegStatus   status;
     va_list     ap;
 
-    mylog_assert(NULL != strBuf);
+    log_assert(NULL != strBuf);
 
     va_start(ap, strBuf);
 
@@ -351,7 +351,7 @@ void sb_trim(
 const char* sb_string(
     const StringBuf* const      strBuf)
 {
-    mylog_assert(NULL != strBuf);
+    log_assert(NULL != strBuf);
 
     return strBuf->buf;
 }
@@ -368,7 +368,7 @@ const char* sb_string(
 size_t sb_len(
     const StringBuf* const      strBuf)
 {
-    mylog_assert(NULL != strBuf);
+    log_assert(NULL != strBuf);
 
     return strBuf->len;
 }

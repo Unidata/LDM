@@ -1,6 +1,6 @@
 #include "config.h"
 
-#include <mylog.h>
+#include <log.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -31,9 +31,9 @@ createTestFile(
 {
     int success = 0;
 
-    mylog_assert(pathname != NULL);
-    mylog_assert(pathname[0] != 0);
-    mylog_assert(size >= 0);
+    log_assert(pathname != NULL);
+    log_assert(pathname[0] != 0);
+    log_assert(size >= 0);
 
     if (unlink(pathname) == -1 && errno != ENOENT) {
         (void)fprintf(stderr, "Couldn't delete file \"%s\": %s\n", pathname,
@@ -78,7 +78,7 @@ randomSleep(
     useconds_t          interval;
     int                 seconds;
 
-    mylog_assert(maxInterval >= 0);
+    log_assert(maxInterval >= 0);
 
     if (!initialized) {
         srand((unsigned)getpid());
@@ -95,7 +95,7 @@ randomSleep(
             success = 0;
         }
         interval %= 1000000;
-        mylog_assert(interval >= 0);
+        log_assert(interval >= 0);
     }
 
     if (!done && success) {
@@ -165,7 +165,7 @@ testLocking(
 {
     const int   fd = open(pathname, O_RDWR, 0);
 
-    mylog_assert(len >= 0);
+    log_assert(len >= 0);
 
     if (fd == -1) {
         (void)fprintf(stderr, "%ld: Couldn't open file \"%s\": %s\n",
@@ -182,7 +182,7 @@ testLocking(
                 (long)getpid(), pathname, strerror(errno));
         }
         else {
-            mylog_assert(addr != NULL);
+            log_assert(addr != NULL);
 
             while (!done) {
                 randomSleep(maxInterval);

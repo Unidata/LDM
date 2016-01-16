@@ -15,7 +15,7 @@
 #include "config.h"
 
 #include "globals.h"
-#include "mylog.h"
+#include "log.h"
 #include "ldmprint.h"
 #include "mcast.h"
 #include "mcast_info.h"
@@ -61,7 +61,7 @@ mlsm_ensureCleanup(void)
 
     int status = atexit(mlsm_killChild);
     if (status) {
-        mylog_syserr("Couldn't register cleanup routine");
+        log_syserr("Couldn't register cleanup routine");
         status = LDM7_SYSTEM;
     }
     else {
@@ -81,7 +81,7 @@ mlsm_ensureCleanup(void)
  *                          multicast group is running. `*pid` and `*port` are
  *                          set.
  * @retval     LDM7_NOENT   No such process.
- * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 mlsm_isRunning(
@@ -101,7 +101,7 @@ mlsm_isRunning(
         }
         else {
             /* Can't signal the process */
-            mylog_warning("According to my information, the PID of the multicast LDM "
+            log_warning("According to my information, the PID of the multicast LDM "
                     "sender associated with feed-type %s is %d -- but that "
                     "process can't be signaled by this process. I'll assume "
                     "the relevant multicast LDM sender is not running.",
@@ -122,7 +122,7 @@ mlsm_isRunning(
  *                          process.
  * @param[out] serverPort   Port number of VCMTP TCP server.
  * @retval     0            Success. `*serverPort` is set.
- * @retval     LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static Ldm7Status
 mlsm_getServerPort(
@@ -134,13 +134,13 @@ mlsm_getServerPort(
     int           status = LDM7_SYSTEM;
 
     if (nbytes <= 0) {
-        mylog_add("Couldn't read from pipe to multicast LDM sender process");
+        log_add("Couldn't read from pipe to multicast LDM sender process");
     }
     else {
         buf[nbytes-1] = 0;
 
         if (1 != sscanf(buf, "%5hu\n", serverPort)) {
-            mylog_add("Couldn't decode port number of TCP server of multicast "
+            log_add("Couldn't decode port number of TCP server of multicast "
                     "LDM sender process");
         }
         else {
@@ -171,7 +171,7 @@ catenateArgs(
 
 /**
  * Executes the process image of the multicast LDM sender program. If this
- * function returns, then an error occurred and `mylog_add()` was called. The
+ * function returns, then an error occurred and `log_add()` was called. The
  * multicast LDM sender process inherits the following from this process:
  *     - The LDM log;
  *     - The logging level; and
@@ -214,16 +214,16 @@ execMldmSender(
         args[i++] = feedtypeBuf; // multicast group identifier
     }
 
-    char* arg = (char*)mylog_get_output(); // safe cast
+    char* arg = (char*)log_get_output(); // safe cast
     if (arg != NULL) {
         args[i++] = "-l";
         args[i++] = arg;
     }
 
     int logOptions = ulog_get_options();
-    if (logOptions && MYLOG_MICROSEC)
+    if (logOptions && LOG_MICROSEC)
         args[i++] = "-y";
-    if (logOptions && MYLOG_ISO_8601)
+    if (logOptions && LOG_ISO_8601)
         args[i++] = "-z";
 
     if (mcastIf && strcmp(mcastIf, "0.0.0.0")) {
@@ -236,7 +236,7 @@ execMldmSender(
         ssize_t nbytes = snprintf(serverPortOptArg, sizeof(serverPortOptArg), "%hu",
                 info->server.port);
         if (nbytes < 0 || nbytes >= sizeof(serverPortOptArg)) {
-            mylog_add("Couldn't create server-port option-argument \"%hu\"",
+            log_add("Couldn't create server-port option-argument \"%hu\"",
                     info->server.port);
             goto failure;
         }
@@ -258,7 +258,7 @@ execMldmSender(
         char ttlOptArg[4];
         ssize_t nbytes = snprintf(ttlOptArg, sizeof(ttlOptArg), "%hu", ttl);
         if (nbytes < 0 || nbytes >= sizeof(ttlOptArg)) {
-            mylog_add("Couldn't create time-to-live option-argument \"%hu\"",
+            log_add("Couldn't create time-to-live option-argument \"%hu\"",
                     ttl);
             goto failure;
         }
@@ -266,15 +266,15 @@ execMldmSender(
         args[i++] = ttlOptArg;
     }
 
-    if (mylog_is_enabled_info)
+    if (log_is_enabled_info)
         args[i++] = "-v";
-    if (mylog_is_enabled_debug)
+    if (log_is_enabled_debug)
         args[i++] = "-x";
 
     char* mcastGroupOperand = ldm_format(128, "%s:%hu", info->group.inetId,
             info->group.port);
     if (mcastGroupOperand == NULL) {
-        mylog_add("Couldn't create multicast-group operand");
+        log_add("Couldn't create multicast-group operand");
         goto failure;
     }
 
@@ -282,13 +282,13 @@ execMldmSender(
     args[i++] = NULL;
 
     StrBuf* command = catenateArgs(args);
-    mylog_notice("Executing multicast sender: %s", sbString(command));
+    log_notice("Executing multicast sender: %s", sbString(command));
     sbFree(command);
 
     (void)dup2(pipe, 1);
     execvp(args[0], args);
 
-    mylog_syserr("Couldn't execvp() multicast LDM sender \"%s\"; PATH=%s",
+    log_syserr("Couldn't execvp() multicast LDM sender \"%s\"; PATH=%s",
             args[0], getenv("PATH"));
     free(mcastGroupOperand);
 failure:
@@ -322,7 +322,7 @@ allowSigs(void)
  * @param[in]     pqPathname   Pathname of product-queue. Caller may free.
  * @param[out]    pid          Process ID of the multicast LDM sender.
  * @retval        0            Success. `*pid` and `info->server.port` are set.
- * @retval        LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval        LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 mlsm_spawn(
@@ -336,7 +336,7 @@ mlsm_spawn(
     int   status = pipe(fds);
 
     if (status) {
-        mylog_syserr("Couldn't create pipe for multicast LDM sender process");
+        log_syserr("Couldn't create pipe for multicast LDM sender process");
         status = LDM7_SYSTEM;
     }
     else {
@@ -345,7 +345,7 @@ mlsm_spawn(
         if (child == -1) {
             char* const id = mi_format(info);
 
-            mylog_syserr("Couldn't fork() multicast LDM sender for \"%s\"", id);
+            log_syserr("Couldn't fork() multicast LDM sender for \"%s\"", id);
             free(id);
             status = LDM7_SYSTEM;
         }
@@ -355,7 +355,7 @@ mlsm_spawn(
             allowSigs(); // so process will terminate and process products
             // The following statement shouldn't return
             execMldmSender(info, ttl, mcastIf, pqPathname, fds[1]);
-            mylog_flush_error();
+            log_flush_error();
             exit(1);
         }
         else {
@@ -365,7 +365,7 @@ mlsm_spawn(
             (void)close(fds[0]);                // no longer needed
 
             if (status) {
-                mylog_add("Couldn't get port number of VCMTP TCP server from "
+                log_add("Couldn't get port number of VCMTP TCP server from "
                         "multicast LDM sender process. Terminating that "
                         "process.");
                 (void)kill(child, SIGTERM);
@@ -395,7 +395,7 @@ mlsm_spawn(
  * @param[out]    pid          Process ID of multicast LDM sender.
  * @retval        0            Success. Multicast LDM sender spawned. `*pid`
  *                             and `info->server.port` are set.
- * @retval        LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval        LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 mlsm_execute(
@@ -408,7 +408,7 @@ mlsm_execute(
     int status;
 
     if (childPid) {
-        mylog_add("Can execute only one multicast sender child process");
+        log_add("Can execute only one multicast sender child process");
         status = LDM7_SYSTEM;
     }
     else {
@@ -428,7 +428,7 @@ mlsm_execute(
                     // preconditions => LDM7_DUP can't be returned
                     char* const id = mi_format(info);
 
-                    mylog_add("Terminating just-started multicast LDM sender for "
+                    log_add("Terminating just-started multicast LDM sender for "
                             "\"%s\"", id);
                     free(id);
                     (void)kill(procId, SIGTERM);
@@ -456,8 +456,8 @@ mlsm_execute(
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is initialized. Caller should call
  *                         `me_destroy(entry)` when it's no longer needed.
- * @retval     LDM7_INVAL  `ttl` is too large. `mylog_add()` called.
- * @retval     LDM7_SYSTEM System error. `mylog_add()` called. The state of
+ * @retval     LDM7_INVAL  `ttl` is too large. `log_add()` called.
+ * @retval     LDM7_SYSTEM System error. `log_add()` called. The state of
  *                         `*entry` is unspecified.
  */
 static Ldm7Status
@@ -471,7 +471,7 @@ me_init(
     int status;
 
     if (ttl >= 255) {
-        mylog_add("Time-to-live is too large: %hu >= 255", ttl);
+        log_add("Time-to-live is too large: %hu >= 255", ttl);
         status = LDM7_INVAL;
     }
     else if (mi_copy(&entry->info, info)) {
@@ -482,7 +482,7 @@ me_init(
         entry->pqPathname = strdup(pqPathname);
 
         if (NULL == entry->pqPathname) {
-            mylog_syserr("Couldn't copy pathname of product-queue");
+            log_syserr("Couldn't copy pathname of product-queue");
             status = LDM7_SYSTEM;
         }
         else {
@@ -490,7 +490,7 @@ me_init(
                 entry->mcastIf = strdup(mcastIf);
 
                 if (NULL == entry->mcastIf) {
-                    mylog_syserr("Couldn't copy IP address of multicast interface");
+                    log_syserr("Couldn't copy IP address of multicast interface");
                     status = LDM7_SYSTEM;
                 }
                 else {
@@ -540,9 +540,9 @@ me_destroy(
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is set. Caller should call
  *                         `me_free(*entry)` when it's no longer needed.
- * @retval     LDM7_INVAL  `info->server->port` is not zero. `mylog_add()`
+ * @retval     LDM7_INVAL  `info->server->port` is not zero. `log_add()`
  *                         called.
- * @retval     LDM7_INVAL  `ttl` is too large. `mylog_add()` called.
+ * @retval     LDM7_INVAL  `ttl` is too large. `log_add()` called.
  */
 static Ldm7Status
 me_new(
@@ -557,12 +557,12 @@ me_new(
 
 #if 0
     if (port != 0) {
-        mylog_add("Port number of VCMTP TCP server isn't zero: %hu", port);
+        log_add("Port number of VCMTP TCP server isn't zero: %hu", port);
         status = LDM7_INVAL;
     }
     else {
 #endif
-        McastEntry* ent = mylog_malloc(sizeof(McastEntry), "multicast entry");
+        McastEntry* ent = log_malloc(sizeof(McastEntry), "multicast entry");
 
         if (ent == NULL) {
             status = LDM7_SYSTEM;
@@ -696,7 +696,7 @@ me_compareOrConflict(
  *                              successfully started. `info->server.port` is
  *                              set to the port number of the VCMTP TCP server.
  *                              `*pid` is set.
- * @retval         LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval         LDM7_SYSTEM  System error. `log_add()` called.
  */
 static int
 mlsm_startIfNecessary(
@@ -745,10 +745,10 @@ mlsm_startIfNecessary(
  *                         free.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   Invalid argument. `mylog_add()` called.
+ * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
- *                         addition. Manager not modified. `mylog_add()` called.
- * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
+ *                         addition. Manager not modified. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 mlsm_addPotentialSender(
@@ -765,14 +765,14 @@ mlsm_addPotentialSender(
                 me_compareOrConflict);
 
         if (NULL == node) {
-            mylog_syserr("Couldn't add to multicast entries");
+            log_syserr("Couldn't add to multicast entries");
             status = LDM7_SYSTEM;
             me_free(entry);
         }
         else if (*(McastEntry**)node != entry) {
             char* const mi1 = mi_format(&entry->info);
             char* const mi2 = mi_format(&(*(McastEntry**)node)->info);
-            mylog_add("Multicast information \"%s\" "
+            log_add("Multicast information \"%s\" "
                     "conflicts with earlier addition \"%s\"", mi1, mi2);
             free(mi1);
             free(mi2);
@@ -795,8 +795,8 @@ mlsm_addPotentialSender(
  * @retval     0            Success. The group is being multicast and
  *                          `*mcastInfo` is set.
  * @retval     LDM7_NOENT   No corresponding potential sender was added via
- *                          `mlsm_addPotentialSender()`. `mylog_add() called`.
- * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
+ *                          `mlsm_addPotentialSender()`. `log_add() called`.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 mlsm_ensureRunning(
@@ -812,7 +812,7 @@ mlsm_ensureRunning(
     const void* const node = tfind(&key, &mcastEntries, me_compareFeedtypes);
 
     if (NULL == node) {
-        mylog_add("No multicast LDM sender is associated with feed-type %s",
+        log_add("No multicast LDM sender is associated with feed-type %s",
                 s_feedtypet(feedtype));
         status = LDM7_NOENT;
     }
@@ -844,7 +844,7 @@ mlsm_ensureRunning(
  *                         process.
  * @retval    0            Success.
  * @retval    LDM7_NOENT   PID doesn't correspond to known process.
- * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 mlsm_terminated(
@@ -866,7 +866,7 @@ mlsm_terminated(
  * Clears all entries.
  *
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 mlsm_clear(void)

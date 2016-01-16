@@ -14,7 +14,7 @@
 #include "config.h"
 
 #include "doubly_linked_list.h"
-#include "mylog.h"
+#include "log.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -37,14 +37,14 @@ struct DllIter {
 /**
  * Returns a new doubly-linked list.
  *
- * @retval NULL  Error. `mylog_add()` called.
+ * @retval NULL  Error. `log_add()` called.
  * @return       Pointer to a new doubly-linked list. The client should call
  *               `dll_free()` when it is no longer needed.
  */
 Dll*
 dll_new(void)
 {
-    Dll* dll = mylog_malloc(sizeof(Dll), "doubly-linked list");
+    Dll* dll = log_malloc(sizeof(Dll), "doubly-linked list");
 
     if (dll) {
         dll->tail = dll->head = NULL;
@@ -59,8 +59,8 @@ dll_new(void)
  *
  * @param[in] dll   Pointer to the list to have a pointer added to it.
  * @param[in] ptr   The pointer to be added. Should not be `NULL`.
- * @retval    NULL  Out-of-memory. `mylog_add()` called.
- * @retval    NULL  `ptr == NULL`. `mylog_add()` called.
+ * @retval    NULL  Out-of-memory. `log_add()` called.
+ * @retval    NULL  `ptr == NULL`. `log_add()` called.
  * @return          Pointer to the list element that contains the pointer.
  */
 DllElt*
@@ -71,11 +71,11 @@ dll_add(
     DllElt* elt;
 
     if (ptr == NULL) {
-        mylog_add("Null pointer");
+        log_add("Null pointer");
         elt = NULL;
     }
     else {
-        elt = mylog_malloc(sizeof(DllElt), "doubly-linked list element");
+        elt = log_malloc(sizeof(DllElt), "doubly-linked list element");
 
         if (elt) {
             elt->ptr = ptr;
@@ -129,13 +129,13 @@ dll_getFirst(
  * Returns an iterator.
  *
  * @param[in] dll   The doubly-linked-list.
- * @retval    NULL  Out-of-memory. `mylog_add()` called.
+ * @retval    NULL  Out-of-memory. `log_add()` called.
  * @return          An iterator over the list.
  */
 DllIter* dll_iter(
         Dll* const dll)
 {
-    DllIter* const iter = mylog_malloc(sizeof(DllIter),
+    DllIter* const iter = log_malloc(sizeof(DllIter),
             "doubly-linked-list iterator");
 
     if (iter)

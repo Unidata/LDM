@@ -11,7 +11,7 @@ libldm_la_SOURCES	=
 libldm_la_LIBADD	= \
     $(NOAAPORT_LIBS) \
     $(top_builddir)/misc/lib.la \
-    $(top_builddir)/mylog/lib.la \
+    $(top_builddir)/log/lib.la \
     $(top_builddir)/pqinglib/lib.la \
     $(top_builddir)/@PQ_SUBDIR@/lib.la \
     $(top_builddir)/protocol/lib.la \

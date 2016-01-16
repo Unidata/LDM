@@ -3,7 +3,7 @@
 #include <rpc/rpc.h>
 
 #include "inetutil.h"
-#include "mylog.h"
+#include "log.h"
 
 #include "ldm4.h"
 
@@ -22,7 +22,7 @@ void
 ldmprog_4(struct svc_req *rqstp, register SVCXPRT *transp)
 {
     if (rqstp->rq_proc == 0) {                          /* NULLPROC */
-        mylog_notice("ldmprog_4: ldmping from %s",
+        log_notice("ldmprog_4: ldmping from %s",
             hostbyaddr((struct sockaddr_in*)svc_getcaller(transp)));
         (void)svc_sendreply(transp, (xdrproc_t) xdr_void, (char *)NULL);
     }

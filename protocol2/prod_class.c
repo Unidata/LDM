@@ -6,7 +6,7 @@
 
 #include <config.h>
 
-#include <mylog.h>
+#include <log.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/types.h>  /* must precede <regex.h> for FreeBSD 4.5-RELEASE cc */
@@ -19,7 +19,7 @@
 #include "timestamp.h" 
 #include "RegularExpressions.h"
 
-#include "mylog.h"
+#include "log.h"
 
 #ifndef ENOERR
 #define ENOERR 0
@@ -77,7 +77,7 @@ spec_eq(prod_spec *left, prod_spec *rght)
 static int
 psa_eq(const prod_class_t *lhs, const prod_class_t *rhs)
 {
-        /* mylog_assert(lhs != NULL && rhs != NULL); */
+        /* log_assert(lhs != NULL && rhs != NULL); */
 
         if(lhs->psa.psa_len != rhs->psa.psa_len)
                 return 0;
@@ -203,10 +203,10 @@ prodInClass(const prod_class_t *clssp, const prod_info *info)
 int
 cp_prod_spec(prod_spec *lhs, const prod_spec *rhs)
 {
-        mylog_assert(rhs != NULL);
-        mylog_assert(lhs != NULL);
-        mylog_assert(rhs->pattern != NULL);
-        mylog_assert(lhs->pattern == NULL);
+        log_assert(rhs != NULL);
+        log_assert(lhs != NULL);
+        log_assert(rhs->pattern != NULL);
+        log_assert(lhs->pattern == NULL);
 
         lhs->feedtype = rhs->feedtype;
         lhs->pattern = strdup(rhs->pattern);
@@ -262,7 +262,7 @@ free_prod_class(prod_class_t *clssp)
  * Arguments:
  *      psa_len         The size of the product-specification array.
  * Returns:
- *      NULL            Out-of-memory. "mylog_add()" called.
+ *      NULL            Out-of-memory. "log_add()" called.
  *      else            Pointer to the new product-class structure. The length
  *                      of the product-spcficiation array will be set but its
  *                      elements will be NULL.
@@ -278,7 +278,7 @@ new_prod_class(
     clssp = (prod_class_t*)malloc(sz);
 
     if (clssp == NULL) {
-        mylog_syserr("Couldn't allocate %lu bytes for product-class", sz);
+        log_syserr("Couldn't allocate %lu bytes for product-class", sz);
     }
     else {
         (void)memset(clssp, 0, sz);
@@ -313,8 +313,8 @@ new_prod_class(
  *      0               if successful.
  *      EINVAL          if the regular expression pattern of a
  *                      product-specification couldn't be compiled.
- *                      "mylog_add()" called.
- *      ENOMEM          if out-of-memory. "mylog_add()" called.
+ *                      "log_add()" called.
+ *      ENOMEM          if out-of-memory. "log_add()" called.
  * Throws:
  *      SIGSEGV         if "lhs" or "rhs"  is NULL.
  */
@@ -326,8 +326,8 @@ cp_prod_class(
 {
     int                 status = ENOERR;
 
-    mylog_assert(rhs != NULL);
-    mylog_assert(lhs != NULL);
+    log_assert(rhs != NULL);
+    log_assert(lhs != NULL);
     
     lhs->from = rhs->from;
     lhs->to = rhs->to;
@@ -342,7 +342,7 @@ cp_prod_class(
                 prodSpec);
 
             if (status != ENOERR) {
-                mylog_syserr("Couldn't copy product-specification \"%s\"",
+                log_syserr("Couldn't copy product-specification \"%s\"",
                         sprint_prod_spec(buf, sizeof(buf), prodSpec));
                 return status;
             }
@@ -353,7 +353,7 @@ cp_prod_class(
         }
     }
 
-    mylog_assert(lhs->psa.psa_len ==  rhs->psa.psa_len);
+    log_assert(lhs->psa.psa_len ==  rhs->psa.psa_len);
 
     return status;
 }
@@ -363,7 +363,7 @@ cp_prod_class(
  * Returns a deep copy of a product-class.
  *
  * @param[in] class           Pointer to the product-class to be duplicated.
- * @retval    NULL            Out-of-memory. "mylog_add()" called.
+ * @retval    NULL            Out-of-memory. "log_add()" called.
  * @return                    Pointer to the duplicate product-class.
  */
 prod_class_t *
@@ -373,11 +373,11 @@ dup_prod_class(
     prod_class_t *clone = new_prod_class(class->psa.psa_len);
 
     if (clone == NULL) {
-        mylog_add("Couldn't allocate product-class clone");
+        log_add("Couldn't allocate product-class clone");
     }
     else {
         if (cp_prod_class(clone, class, 0)) {
-            mylog_add("Couldn't copy product-class to clone");
+            log_add("Couldn't copy product-class to clone");
             free_prod_class(clone);
             clone = NULL;
         }
@@ -394,7 +394,7 @@ clss_scrunch(prod_class_t *clssp)
         int ii;
         prod_spec *sp, *end;
 
-        mylog_assert(clssp != NULL);
+        log_assert(clssp != NULL);
         
         sp = clssp->psa.psa_val;
         end = &clssp->psa.psa_val[len -1];

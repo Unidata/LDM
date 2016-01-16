@@ -11,7 +11,7 @@
 #include <stdio.h>
 #endif
 #include "lcm.h"
-#include "mylog.h"
+#include "log.h"
 
 /*
  * Compute the Greatest Common Divisor
@@ -22,7 +22,7 @@ gcd0(unsigned long mm, unsigned long nn)
 {
 	unsigned long tmp;
 
-	mylog_assert(nn <= mm);
+	log_assert(nn <= mm);
 
 	while(nn > 1)
 	{
@@ -33,7 +33,7 @@ gcd0(unsigned long mm, unsigned long nn)
 	if(nn == 0)
 		return mm;
 	/* else */
-	mylog_assert(nn == 1);
+	log_assert(nn == 1);
 	return 1;
 }
 
@@ -86,7 +86,7 @@ lcm(unsigned long mm, unsigned long nn)
 		return mm;
 
 	gg = gcd0(mm, nn);
-	mylog_assert(gg != 0); /* covered by (nn == 0) case above */
+	log_assert(gg != 0); /* covered by (nn == 0) case above */
 	mm /= gg;
 
 	/* bounds check */

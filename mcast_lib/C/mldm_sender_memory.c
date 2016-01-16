@@ -16,7 +16,7 @@
 #include "globals.h"
 #include "ldm.h"
 #include "ldmprint.h"
-#include "mylog.h"
+#include "log.h"
 #include "mcast_info.h"
 #include "mldm_sender_memory.h"
 #include "StrBuf.h"
@@ -34,7 +34,7 @@ struct MldmSenderMemory {
  * Returns the process-ID that's contained in a file.
  *
  * @param[in] file      The file that contains the PID.
- * @retval    -1        Error. `mylog_add()` called.
+ * @retval    -1        Error. `log_add()` called.
  * @return              The process-ID that was in the file.
  */
 static pid_t
@@ -45,10 +45,10 @@ parsePid(
 
     if (fscanf(file, "%ld", &pid) != 1) {
         if (ferror(file)) {
-            mylog_syserr("Couldn't parse PID");
+            log_syserr("Couldn't parse PID");
         }
         else {
-            mylog_add("Couldn't parse PID");
+            log_add("Couldn't parse PID");
         }
         pid = -1;
     }
@@ -61,7 +61,7 @@ parsePid(
  *
  * @param[in] pathname  The pathname of the file.
  * @retval     0        The file doesn't exist.
- * @retval    -1        Error. `mylog_add()` called.
+ * @retval    -1        Error. `log_add()` called.
  * @return              The process-ID that was in the file.
  */
 static pid_t
@@ -76,7 +76,7 @@ getPidFromFile(
             pid = 0;
         }
         else {
-            mylog_syserr("Couldn't open PID file \"%s\"", pathname);
+            log_syserr("Couldn't open PID file \"%s\"", pathname);
             pid = -1;
         }
     }
@@ -84,7 +84,7 @@ getPidFromFile(
         pid = parsePid(file);
 
         if (pid == -1)
-            mylog_add("Couldn't get PID from file \"%s\"", pathname);
+            log_add("Couldn't get PID from file \"%s\"", pathname);
 
         (void)fclose(file);
     } // `file` is open
@@ -97,7 +97,7 @@ getPidFromFile(
  * the multicast LDM sender corresponding to a multicast group identifier.
  *
  * @param[in] info  Information on the multicast group.
- * @retval    NULL  Error. `mylog_add()` called.
+ * @retval    NULL  Error. `log_add()` called.
  * @return          The absolute pathname of the PID file. The caller should
  *                  free when it's no longer needed.
  */
@@ -123,7 +123,7 @@ getPidPathname(
  * multicast group.
  *
  * @param[in] info  Information on the multicast group.
- * @retval    -1    Error. `mylog_add()` called.
+ * @retval    -1    Error. `log_add()` called.
  * @retval     0    No such process exists.
  * @return          The process-ID of the multicast LDM sender.
  */
@@ -154,7 +154,7 @@ getPidFromInfo(
  * Returns a new multicast sender memory object.
  *
  * @param[in] info  Information on the multicast group.
- * @retval    NULL  Failure. `mylog_add()` called.
+ * @retval    NULL  Failure. `log_add()` called.
  * @return          A new, initialized, multicast sender memory object.
  */
 MldmSenderMemory*
@@ -183,7 +183,7 @@ msm_free(
  *
  * @param[in] msm          The multicast sender memory object.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 msm_lock(
@@ -197,7 +197,7 @@ msm_lock(
  *
  * @param[in] msm          The multicast sender memory object.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 msm_unlock(
@@ -214,7 +214,7 @@ msm_unlock(
  * @param[out] pid          The PID of the associated multicast LDM sender.
  * @retval     0            Success. `*pid` is set.
  * @retval     LDM7_NOENT   No such PID exists.
- * @retval     LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 msm_getPid(
@@ -231,7 +231,7 @@ msm_getPid(
  * @param[in] msm          The multicast sender memory object.
  * @param[in] pid          The PID of the associated multicast LDM sender.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
 msm_setPid(

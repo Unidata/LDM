@@ -16,7 +16,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <regex.h>
-#include "mylog.h"
+#include "log.h"
 #include "ldm.h"
 #include "ldmprint.h"
 #include "atofeedt.h"
@@ -57,14 +57,14 @@ minstats(const expirestats *stp)
         
         static unsigned lastnprods = 0;
 
-        if(pq != NULL && mylog_is_enabled_info)
+        if(pq != NULL && log_is_enabled_info)
         {
                 off_t highwater = -1;
                 size_t maxregions = 0;
                 (void) pq_highwater(pq, &highwater, &maxregions);
-                mylog_info("> Queue usage (bytes):%8ld",
+                log_info("> Queue usage (bytes):%8ld",
                                         (long)highwater);
-                mylog_info(">          (nregions):%8ld",
+                log_info(">          (nregions):%8ld",
                                         (long)maxregions);
         }
 
@@ -73,7 +73,7 @@ minstats(const expirestats *stp)
                 double elapsed = d_diff_timestamp(&stp->lasthit,
                          &stp->firsthit);
                 elapsed /= 3600;
-                mylog_notice("> Recycled %10.3f kb/hr (%10.3f prods per hour)",
+                log_notice("> Recycled %10.3f kb/hr (%10.3f prods per hour)",
                         ((double)stp->nbytes)/(1024 * elapsed),
                         ((double)stp->nprods)/elapsed
                 );
@@ -87,16 +87,16 @@ dump_stats(const expirestats *stp)
         char cp[32];
 
         sprint_timestampt(cp, sizeof(cp), &stp->starttime);
-        mylog_notice("> Up since:      %s", cp);
+        log_notice("> Up since:      %s", cp);
 
         if(pq != NULL)
         {
                 off_t highwater = -1;
                 size_t maxregions = 0;
                 (void) pq_highwater(pq, &highwater, &maxregions);
-                mylog_notice("> Queue usage (bytes):%8ld",
+                log_notice("> Queue usage (bytes):%8ld",
                                         (long)highwater);
-                mylog_notice(">          (nregions):%8ld",
+                log_notice(">          (nregions):%8ld",
                                         (long)maxregions);
         }
 
@@ -106,20 +106,20 @@ dump_stats(const expirestats *stp)
                          &stp->firsthit);
                 
                 elapsed /= 3600;
-                mylog_notice("> nbytes recycle:   %10u (%10.3f kb/hr)",
+                log_notice("> nbytes recycle:   %10u (%10.3f kb/hr)",
                         stp->nbytes, ((double)stp->nbytes)/(1024 * elapsed));
-                mylog_notice("> nprods deleted:   %10u (%10.3f per hour)",
+                log_notice("> nprods deleted:   %10u (%10.3f per hour)",
                         stp->nprods, ((double)stp->nprods)/elapsed);
 
                 sprint_timestampt(cp, sizeof(cp), &stp->firsthit);
-                mylog_notice("> First deleted: %s", cp);
+                log_notice("> First deleted: %s", cp);
         
                 sprint_timestampt(cp, sizeof(cp), &stp->lasthit);
-                mylog_notice("> Last  deleted: %s", cp);
+                log_notice("> Last  deleted: %s", cp);
         }
         else
         {
-                mylog_notice("> nprods deleted 0");
+                log_notice("> nprods deleted 0");
         }
 }
 
@@ -159,7 +159,7 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-        mylog_notice("Exiting");
+        log_notice("Exiting");
 
         dump_stats(&stats);
 
@@ -169,7 +169,7 @@ cleanup(void)
                 pq = NULL;
         }
 
-        (void)mylog_fini();
+        (void)log_fini();
 }
 
 static int stats_req = 0;
@@ -195,7 +195,7 @@ signal_handler(int sig)
                 stats_req = !0;
                 return;
         case SIGUSR2 :
-                mylog_roll_level();
+                log_roll_level();
                 return;
         }
 }
@@ -252,7 +252,7 @@ char *av[];
         /*
          * initialize logger
          */
-        (void)mylog_init(av[0]);
+        (void)log_init(av[0]);
         
         (void) set_timestamp(&stats.starttime);
         stats.firsthit = TS_ENDT;
@@ -280,13 +280,13 @@ char *av[];
                         wait = 1;
                         break;
                 case 'v':
-                        (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                        (void)log_set_level(LOG_LEVEL_INFO);
                         break;
                 case 'x':
-                        (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                        (void)log_set_level(LOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        (void)mylog_set_output(optarg);
+                        (void)log_set_output(optarg);
                         break;
                 case 'a':
                         age = atof(optarg);
@@ -346,7 +346,7 @@ char *av[];
         clss.to.tv_sec -= age;
         }
 
-        mylog_notice("Starting Up");
+        log_notice("Starting Up");
 
         /*
          * Open the product queue
@@ -355,11 +355,11 @@ char *av[];
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    mylog_error("The product-queue \"%s\" is inconsistent\n",
+                    log_error("The product-queue \"%s\" is inconsistent\n",
                             pqfname);
                 }
                 else {
-                    mylog_error("pq_open failed: %s: %s",
+                    log_error("pq_open failed: %s: %s",
                             pqfname, strerror(status));
                 }
                 exit(1);
@@ -370,7 +370,7 @@ char *av[];
          */
         if(atexit(cleanup) != 0)
         {
-                mylog_syserr("atexit");
+                log_syserr("atexit");
                 exit(1);
         }
 
@@ -410,7 +410,7 @@ char *av[];
                         if(diff > max_latency)
                         {
                                 max_latency = diff;
-                                mylog_debug("max_latency %.3f", max_latency);
+                                log_debug("max_latency %.3f", max_latency);
                         }
 
                         if(nr != 0)
@@ -438,16 +438,16 @@ char *av[];
                                  * product-queue is periodically scanned.
                                  */
                                 diff = d_diff_timestamp(&cursor, &clss.to);
-                                mylog_debug("diff %.3f", diff);
+                                log_debug("diff %.3f", diff);
                                 if(diff > interval + max_latency)
                                 {
-                                        mylog_debug("heuristic depth break");
+                                        log_debug("heuristic depth break");
                                         break;
                                 }
                         }
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        mylog_debug("End of Queue");
+                        log_debug("End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
@@ -455,7 +455,7 @@ char *av[];
                          * The next data-product was locked.  The product-queue
                          * cursor was not advanced to it.
                          */
-                        mylog_debug("Hit a lock");
+                        log_debug("Hit a lock");
                         /* N.B.: peculiar logic ahead */
                         if(interval != 0)
                         {
@@ -492,7 +492,7 @@ char *av[];
                                 }
                                 /* else */
                                 if(status != PQUEUE_END)
-                                        mylog_error("pq_sequence failed: %s",
+                                        log_error("pq_sequence failed: %s",
                                                         strerror(status));
                                 break;
                         }
@@ -502,10 +502,10 @@ char *av[];
                 case EDEADLOCK:
 #endif
                 case EDEADLK:
-                        mylog_errno(status, NULL);
+                        log_errno(status, NULL);
                         break;
                 default:
-                        mylog_errno(status, "pq_seqdel failed");
+                        log_errno(status, "pq_seqdel failed");
                         exit(1);
                         break;
                 }

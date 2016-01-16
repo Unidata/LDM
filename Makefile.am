@@ -41,7 +41,7 @@ AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
 
 # Order is important in the following because of compile and link dependencies
 # amongst the subdirectories.
-SUBDIRS		= rpc mylog protocol pqinglib
+SUBDIRS		= rpc log protocol pqinglib
 if WANT_FAUX_PQ
     SUBDIRS	+= fauxPq
 else

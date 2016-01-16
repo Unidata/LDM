@@ -40,7 +40,7 @@
 #include <string.h>
 #include <strings.h>
 #define SYSLOG_NAMES
-#include "mylog.h"
+#include "log.h"
 
 #ifdef SYSLOG_NAMES
 #if !defined(INTERNAL_NOPRI)
@@ -53,18 +53,18 @@ typedef struct _code {
 } CODE;
 
 CODE prioritynames[] = {
-        "alert",        MYLOG_LEVEL_ALERT,
-        "crit",         MYLOG_LEVEL_CRIT,
-        "debug",        MYLOG_LEVEL_DEBUG,
-        "emerg",        MYLOG_LEVEL_EMERG,
-        "err",          MYLOG_LEVEL_ERROR,
-        "error",        MYLOG_LEVEL_ERROR,                /* DEPRECATED */
-        "info",         MYLOG_LEVEL_INFO,
+        "alert",        LOG_LEVEL_ALERT,
+        "crit",         LOG_LEVEL_CRIT,
+        "debug",        LOG_LEVEL_DEBUG,
+        "emerg",        LOG_LEVEL_EMERG,
+        "err",          LOG_LEVEL_ERROR,
+        "error",        LOG_LEVEL_ERROR,                /* DEPRECATED */
+        "info",         LOG_LEVEL_INFO,
         "none",         INTERNAL_NOPRI,         /* INTERNAL */
-        "notice",       MYLOG_LEVEL_NOTICE,
-        "panic",        MYLOG_LEVEL_EMERG,              /* DEPRECATED */
-        "warn",         MYLOG_LEVEL_WARNING,            /* DEPRECATED */
-        "warning",      MYLOG_LEVEL_WARNING,
+        "notice",       LOG_LEVEL_NOTICE,
+        "panic",        LOG_LEVEL_EMERG,              /* DEPRECATED */
+        "warn",         LOG_LEVEL_WARNING,            /* DEPRECATED */
+        "warning",      LOG_LEVEL_WARNING,
         NULL,           -1,
 };
 
@@ -174,12 +174,12 @@ int main(int argc, char *argv[])
 {
         extern char *optarg;
         extern int errno, optind;
-        int pri = MYLOG_LEVEL_NOTICE;
+        int pri = LOG_LEVEL_NOTICE;
         int ch, logflags = 0;
         char *tag, buf[1024];
 
-        if (mylog_init(argv[0])) {
-            fprintf(stderr, "mylog_init() failure\n");
+        if (log_init(argv[0])) {
+            fprintf(stderr, "log_init() failure\n");
             return 1;
         }
 
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
                         logflags |= LOG_PID;
                         break;
                 case 'y':
-                        logflags |= MYLOG_MICROSEC;
+                        logflags |= LOG_MICROSEC;
                         break;
                 case 'p':               /* priority */
                         pri = pencode(optarg);
@@ -212,13 +212,13 @@ int main(int argc, char *argv[])
                         break;
 #endif
                 case 'z':
-                        logflags |= MYLOG_ISO_8601;
+                        logflags |= LOG_ISO_8601;
                         break;
                 case 't':               /* tag */
                         tag = optarg;
                         break;
                 case 'l':               /* logfname */
-                        (void)mylog_set_output(optarg);
+                        (void)log_set_output(optarg);
                         break;
                 case '?':
                 default:
@@ -235,11 +235,11 @@ int main(int argc, char *argv[])
                 for (p = buf, endp = buf + sizeof(buf) - 2; *argv;) {
                         len = strlen(*argv);
                         if (p + len > endp && p > buf) {
-                                mylog_log(pri, "%s", buf);
+                                log_log(pri, "%s", buf);
                                 p = buf;
                         }
                         if (len > sizeof(buf) - 1)
-                                mylog_log(pri, "%s", *argv++);
+                                log_log(pri, "%s", *argv++);
                         else {
                                 if (p != buf)
                                         *p++ = ' ';
@@ -248,13 +248,13 @@ int main(int argc, char *argv[])
                         }
                 }
                 if (p != buf)
-                        mylog_log(pri, "%s", buf);
+                        log_log(pri, "%s", buf);
                 return(0);
         }
 
         /* main loop */
         while (fgets(buf, sizeof(buf), stdin) != NULL)
-                mylog_log(pri, "%s", buf);
+                log_log(pri, "%s", buf);
 
         return(0);
 }

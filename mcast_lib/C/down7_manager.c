@@ -16,7 +16,7 @@
 #include "globals.h"
 #include "ldm.h"
 #include "ldmfork.h"
-#include "mylog.h"
+#include "log.h"
 #include "pq.h"
 
 #include <pthread.h>
@@ -76,8 +76,8 @@ waitForTermSig(
     int sig;
     (void)sigwait(getTermSigSet(), &sig);
     if (down7_stop((Down7*)arg))
-        mylog_flush_error();
-    mylog_free();
+        log_flush_error();
+    log_free();
     return NULL;
 }
 
@@ -93,9 +93,9 @@ waitForTermSig(
  * @param[in] mcastIface     IP address of interface to use for receiving
  *                           packets.
  * @param[in] pqPathname     Pathname of the product-queue.
- * @retval    LDM7_MCAST     Multicast layer failure. `mylog_add()` called.
+ * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
  * @retval    LDM7_SHUTDOWN  Process termination requested.
- * @retval    LDM7_SYSTEM    System error occurred. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM    System error occurred. `log_add()` called.
  */
 static int
 executeDown7(
@@ -107,7 +107,7 @@ executeDown7(
     pqueue* pq;
     int     status = pq_open(pqPathname, PQ_THREADSAFE, &pq);
     if (status) {
-        mylog_add("Couldn't open product-queue \"%s\"", pqPathname);
+        log_add("Couldn't open product-queue \"%s\"", pqPathname);
         status = LDM7_SYSTEM;
     }
     else {
@@ -121,7 +121,7 @@ executeDown7(
             status = pthread_create(&termWaitThread, NULL, waitForTermSig,
                     down7);
             if (status) {
-                mylog_errno(status,
+                log_errno(status,
                         "Couldn't create termination-waiting thread");
                 status = LDM7_SYSTEM;
             }
@@ -158,7 +158,7 @@ static Elt* top;
  * @param[in] ul7         Upstream LDM-7 to which to subscribe.
  * @param[in] mcastIface  IP address of interface to use for incoming packets.
  *                        Caller may free upon return.
- * @retval    NULL        Failure. `mylog_add()` called.
+ * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to new element.
  */
 static Elt*
@@ -167,7 +167,7 @@ elt_new(
         ServiceAddr* const restrict ul7,
         const char* const restrict  mcastIface)
 {
-    Elt* elt = mylog_malloc(sizeof(Elt), "downstream LDM-7 element");
+    Elt* elt = log_malloc(sizeof(Elt), "downstream LDM-7 element");
 
     if (elt) {
         elt->ul7 = sa_clone(ul7);
@@ -179,7 +179,7 @@ elt_new(
         else {
             elt->mcastIface = strdup(mcastIface);
             if (elt->mcastIface == NULL) {
-                mylog_syserr("Couldn't duplicate interface specification");
+                log_syserr("Couldn't duplicate interface specification");
                 sa_free(elt->ul7);
                 free(elt);
                 elt = NULL;
@@ -216,7 +216,7 @@ elt_free(
  *
  * @param[in] elt          Element whose downstream LDM-7 is to be started.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 elt_start(
@@ -227,7 +227,7 @@ elt_start(
 
     if (-1 == pid) {
         /* System error */
-        mylog_add("Couldn't fork downstream LDM-7 child process");
+        log_add("Couldn't fork downstream LDM-7 child process");
         status = LDM7_SYSTEM;
     }
     else if (0 == pid) {
@@ -235,13 +235,13 @@ elt_start(
         status = executeDown7(elt->ul7, elt->ft, elt->mcastIface, getQueuePath());
 
         if (status == LDM7_SHUTDOWN) {
-            mylog_flush_notice();
-            mylog_free();
+            log_flush_notice();
+            log_free();
             exit(0);
         }
 
-        mylog_flush_error();
-        mylog_free();
+        log_flush_error();
+        log_free();
         abort(); // Should never happen
     }
     else {
@@ -281,7 +281,7 @@ elt_stop(
  *                         Caller may free upon return. "0.0.0.0" obtains the
  *                         system's default multicast interface.
  * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 d7mgr_add(
@@ -326,7 +326,7 @@ d7mgr_free(void)
  * current process.
  *
  * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `mylog_add()` called. All started
+ * @retval LDM7_SYSTEM  System error. `log_add()` called. All started
  *                      multicast LDM receivers were stopped.
  */
 int

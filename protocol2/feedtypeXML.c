@@ -35,7 +35,7 @@
 #include "ldmprint.h"
 #include "ldm_clnt_misc.h"
 #include "rpcutil.h"
-#include "mylog.h"
+#include "log.h"
 #include "xmlparse.h"
 
 #include "feedtypeXML.h"                /* to ensure consistency */

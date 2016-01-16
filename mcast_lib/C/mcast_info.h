@@ -30,7 +30,7 @@ extern "C" {
  *                        and files that are missed by the multicast receiver.
  *                        The caller may free.
  * @retval     0          Success. `*info` is set.
- * @retval     ENOMEM     Out-of-memory error. `mylog_add()` called.
+ * @retval     ENOMEM     Out-of-memory error. `log_add()` called.
  */
 int
 mi_new(
@@ -65,7 +65,7 @@ mi_free(
  * @param[out] to           Destination.
  * @param[in]  from         Source. The caller may free.
  * @retval     0            Success.
- * @retval     LDM7_SYSTEM  System error. \c mylog_add() called.
+ * @retval     LDM7_SYSTEM  System error. \c log_add() called.
  */
 Ldm7Status
 mi_copy(
@@ -76,7 +76,7 @@ mi_copy(
  * Clones a multicast information object.
  *
  * @param[in] info  Multicast information object to be cloned.
- * @retval    NULL  Failure. `mylog_add()` called.
+ * @retval    NULL  Failure. `log_add()` called.
  * @return          Clone of multicast information object. Caller should call
  *                  `mi_free()` when the clone is no longer needed.
  */
@@ -91,7 +91,7 @@ mi_clone(
  * @param[in]     id           Replacement Internet identifier.
  * @retval        0            Success. `info->server.inetId` was freed and now
  *                             points to a copy of `id`.
- * @retval        LDM7_SYSTEM  System failure. `mylog_add()` called.
+ * @retval        LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 mi_replaceServerId(
@@ -149,7 +149,7 @@ mi_compareGroups(
  * suitable for use as a filename.
  *
  * @param[in] info  The multicast information object.
- * @retval    NULL  Failure. `mylog_add()` called.
+ * @retval    NULL  Failure. `log_add()` called.
  * @return          A filename representation of `info`. Caller should free when
  *                  it's no longer needed.
  */
@@ -161,7 +161,7 @@ mi_asFilename(
  * Returns a formatted representation of a multicast information object.
  *
  * @param[in] info  The multicast information object.
- * @retval    NULL  Failure. `mylog_add()` called.
+ * @retval    NULL  Failure. `log_add()` called.
  * @return          A string representation of `info`. Caller should free when
  *                  it's no longer needed.
  */

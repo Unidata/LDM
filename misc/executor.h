@@ -37,7 +37,7 @@ bool job_wasStopped(
  *
  * @param[in] job      The job to have its status returned.
  * @retval    0        The job was executed successfully.
- * @retval    EAGAIN   System lacked resources (other than memory). `mylog_add()`
+ * @retval    EAGAIN   System lacked resources (other than memory). `log_add()`
  *                     called.
  * @retval    ENOMEM   Out-of-memory.
  */
@@ -66,7 +66,7 @@ void job_free(
 /**
  * Returns a new job executor.
  *
- * @retval NULL  Insufficient system resources or logic error. `mylog_add()`
+ * @retval NULL  Insufficient system resources or logic error. `log_add()`
  *               called.
  * @return       Pointer to new job executor.
  */
@@ -81,8 +81,8 @@ Executor* exe_new(void);
  * @param[in]  stop    Stopping function or NULL.
  * @param[out] job     The job or NULL.
  * @retval     0       Success. `*job` is set.
- * @retval     EINVAL  The executor is shut down. `mylog_add()` called.
- * @retval     ENOMEM  Out of memory. `mylog_add()` called.
+ * @retval     EINVAL  The executor is shut down. `log_add()` called.
+ * @retval     ENOMEM  Out of memory. `log_add()` called.
  */
 int exe_submit(
         Executor* const restrict exe,
@@ -119,8 +119,8 @@ Job* exe_getCompleted(
  *
  * @param[in] exe      The executor.
  * @retval    0        Success.
- * @retval    ENOMEM   Out-of-memory. `mylog_add()` called.
- * @retval    EINVAL   Executor is in the wrong state. `mylog_add()` called.
+ * @retval    ENOMEM   Out-of-memory. `log_add()` called.
+ * @retval    EINVAL   Executor is in the wrong state. `log_add()` called.
  */
 int exe_shutdown(
         Executor* const restrict exe);
@@ -132,7 +132,7 @@ int exe_shutdown(
  *
  * @param[in] exe      The executor to be cleared.
  * @retval    0        Success.
- * @retval    EINVAL   The executor isn't shut down. `mylog_add()` called.
+ * @retval    EINVAL   The executor isn't shut down. `log_add()` called.
  */
 int exe_clear(
         Executor* const restrict exe);
@@ -143,9 +143,9 @@ int exe_clear(
  *
  * @param[in] exe      The executor to be freed or NULL.
  * @retval    0        Success or `exe == NULL`.
- * @retval    EINVAL   The executor is neither shut down nor empty. `mylog_add()`
+ * @retval    EINVAL   The executor is neither shut down nor empty. `log_add()`
  *                     called.
- * @retval    ENOMEM   Out-of-memory. `mylog_add()` called.
+ * @retval    ENOMEM   Out-of-memory. `log_add()` called.
  */
 int exe_free(
         Executor* const exe);

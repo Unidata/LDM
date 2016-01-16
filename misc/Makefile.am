@@ -56,7 +56,7 @@ AM_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/mylog \
+    -I$(top_srcdir)/log \
     -I$(top_srcdir)/rpc \
     -I$(top_srcdir) \
     -I$(top_srcdir)/mcast_lib/C++
@@ -64,7 +64,7 @@ TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \
     ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
-    ../mylog/*.c ../mylog/*.h \
+    ../log/*.c ../log/*.h \
     ../rpc/*.c ../rpc/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
@@ -89,7 +89,7 @@ check_PROGRAMS		= test_inetutil test_child_map testSemRWLock \
 test_inetutil_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
-    -I$(top_srcdir)/mylog \
+    -I$(top_srcdir)/log \
     -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
 
@@ -101,7 +101,7 @@ test_child_map_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/mylog \
+    -I$(top_srcdir)/log \
     -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
 
@@ -113,7 +113,7 @@ testSemRWLock_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/mylog \
+    -I$(top_srcdir)/log \
     -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
 

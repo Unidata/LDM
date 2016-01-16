@@ -30,7 +30,7 @@
 #include "atofeedt.h"
 #include "ldmprint.h"
 #include "inetutil.h"
-#include "mylog.h"
+#include "log.h"
 #include "md5.h"
 #include "gribinsert.h"
 
@@ -81,7 +81,7 @@ cleanup (void)
       (void) pq_close (pq);
       pq = NULL;
     }
-  (void)mylog_fini();
+  (void)log_fini();
 }
 
 static void
@@ -101,10 +101,10 @@ signal_handler (int sig)
     case SIGTERM:
       exit (1);
     case SIGPIPE:
-      mylog_debug("SIGPIPE");
+      log_debug("SIGPIPE");
       exit (1);
     }
-  mylog_debug("signal_handler: unhandled signal: %d", sig);
+  log_debug("signal_handler: unhandled signal: %d", sig);
 }
 
 
@@ -175,7 +175,7 @@ main (int ac, char *av[])
   /*
    * Set up error logging
    */
-  (void)mylog_init(progname);
+  (void)log_init(progname);
 
 
   /*
@@ -200,13 +200,13 @@ main (int ac, char *av[])
       switch (ch)
 	{
 	case 'v':
-          (void)mylog_set_level(MYLOG_LEVEL_INFO);
+          (void)log_set_level(LOG_LEVEL_INFO);
 	  break;
 	case 'x':
-          (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+          (void)log_set_level(LOG_LEVEL_DEBUG);
 	  break;
 	case 'l':
-	  mylog_set_output(optarg);
+	  log_set_output(optarg);
 	  break;
 	case 'q':
 	  setQueuePath(optarg);
@@ -244,7 +244,7 @@ main (int ac, char *av[])
    */
   if (atexit (cleanup) != 0)
     {
-      mylog_syserr ("atexit");
+      log_syserr ("atexit");
       exit (1);
     }
 
@@ -264,10 +264,10 @@ main (int ac, char *av[])
   if (status = pq_open (pqfname, PQ_DEFAULT, &pq))
     {
       if (status > 0) {
-          mylog_syserr("\"%s\" failed", pqfname);
+          log_syserr("\"%s\" failed", pqfname);
       }
       else {
-          mylog_error("\"%s\" failed: %s", pqfname, "Internal error");
+          log_error("\"%s\" failed: %s", pqfname, "Internal error");
       }
       exit (2);
     }
@@ -288,7 +288,7 @@ main (int ac, char *av[])
     md5ctxp = new_MD5_CTX ();
     if (md5ctxp == NULL)
       {
-	mylog_syserr ("new_md5_CTX failed");
+	log_syserr ("new_md5_CTX failed");
 	exit (6);
       }
 
@@ -311,18 +311,18 @@ main (int ac, char *av[])
 	av++;
 	ac--;
 
-	mylog_notice ("open and memorymap %s\0", filename);
+	log_notice ("open and memorymap %s\0", filename);
 
 	fd = open (filename, O_RDONLY, 0);
 	if (fd == -1)
 	  {
-	    mylog_syserr ("open: %s", filename);
+	    log_syserr ("open: %s", filename);
 	    continue;
 	  }
 
 	if (fstat (fd, &statb) == -1)
 	  {
-	    mylog_syserr ("fstat: %s", filename);
+	    log_syserr ("fstat: %s", filename);
 	    (void) close (fd);
 	    continue;
 	  }
@@ -331,18 +331,18 @@ main (int ac, char *av[])
 				       PROT_READ, MAP_PRIVATE, fd,
 				       0)) == MAP_FAILED)
 	  {
-	    mylog_syserr ("allocation failed");
+	    log_syserr ("allocation failed");
 	  }
 	else
 	  {
 	    int GRIBDONE = 0;
 	    off_t griboff = 0;
 	    size_t griblen = 0;
-	    mylog_notice ("%ld bytes memory mapped\0", (long) statb.st_size);
+	    log_notice ("%ld bytes memory mapped\0", (long) statb.st_size);
 
 	    while (!GRIBDONE)
 	      {
-		mylog_debug("griboff %d\0", (int) griboff);
+		log_debug("griboff %d\0", (int) griboff);
 		/* get offset of next grib product */
 		status =
 		  get_grib_info (prodmmap, statb.st_size, &griboff, &griblen,
@@ -370,7 +370,7 @@ main (int ac, char *av[])
 		    /*if (mm_md5 (md5ctxp, prod.data, prod.info.sz,
 				prod.info.signature) != 0)
 		      {
-			mylog_error ("could not compute MD5\0");
+			log_error ("could not compute MD5\0");
 		      }
 		    else
 		      { */
@@ -384,13 +384,13 @@ main (int ac, char *av[])
 			status = set_timestamp (&prod.info.arrival);
 			if (status != ENOERR)
 			  {
-			    mylog_syserr ("could not set timestamp");
+			    log_syserr ("could not set timestamp");
 			  }
 			/*
 			 * Insert the product
 			 */
 			status = pq_insert (pq, &prod);
-			mylog_info ("%d %s\0", status, prod.info.ident);
+			log_info ("%d %s\0", status, prod.info.ident);
                 
 			if ( status == ENOERR )
 			   insert_sum += prod.info.sz;
@@ -428,17 +428,17 @@ main (int ac, char *av[])
 		    GRIBDONE = 1;
 		    break;
 		  case -2:
-		    mylog_error ("truncated grib file at: %d", prod.info.seqno);
+		    log_error ("truncated grib file at: %d", prod.info.seqno);
 		    GRIBDONE = 1;
 		    break;
 		  case -7:
-		    mylog_error ("End sequence 7777 not found where expected: %d",
+		    log_error ("End sequence 7777 not found where expected: %d",
 			    prod.info.seqno);
 		    griboff += griblen;
-		    mylog_error("resume looking at %d\0",griboff);
+		    log_error("resume looking at %d\0",griboff);
 		    break;
 		  default:
-		    mylog_error ("unknown error %d\0", status);
+		    log_error ("unknown error %d\0", status);
 		    griboff += griblen;
 		    if (griboff >= statb.st_size)
 		      GRIBDONE = 1;
@@ -450,7 +450,7 @@ main (int ac, char *av[])
 	      }
 
 
-	    mylog_notice ("munmap\0");
+	    log_notice ("munmap\0");
 	    (void) munmap ((void *)prodmmap, statb.st_size);
 
 	    if ( stat_size != 0 )
@@ -459,13 +459,13 @@ main (int ac, char *av[])
 	     */
 	      {
 		char *statusmess;
-		mylog_notice("stats_size %ld %ld\0",stat_size,sinfo_cnt);
+		log_notice("stats_size %ld %ld\0",stat_size,sinfo_cnt);
 
 		statusmess = (char *)malloc((30 * sinfo_cnt) + stat_size +
                         strlen(filename) + 128);
                 if(statusmess == NULL) 
 		  {
-              	    mylog_syserr("could not malloc status message %ld\0",
+              	    log_syserr("could not malloc status message %ld\0",
               	            stat_size);
            	  }
            	else
@@ -504,9 +504,9 @@ main (int ac, char *av[])
                     status = mm_md5(md5ctxp, prod.data, prod.info.sz, prod.info.signature);
                     status = set_timestamp(&prod.info.arrival);
                     status = pq_insert(pq, &prod);
-                    if(mylog_is_enabled_info)
-                        mylog_info("%s", s_prod_info(NULL, 0, &prod.info,
-                                mylog_is_enabled_debug)) ;
+                    if(log_is_enabled_info)
+                        log_info("%s", s_prod_info(NULL, 0, &prod.info,
+                                log_is_enabled_debug)) ;
                     free(statusmess);
 		    prod.info.seqno++;
 		  }

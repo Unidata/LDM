@@ -36,7 +36,7 @@
 #include "atofeedt.h"
 #include "ldmprint.h"
 #include "inetutil.h"
-#include "mylog.h"
+#include "log.h"
 #include "md5.h"
 
 #ifdef NO_ATEXIT
@@ -56,7 +56,7 @@ usage(
         const char* const   progname /*  id string */
 )
 {
-    mylog_add(
+    log_add(
 "Usage: %s [options] filename ...\n"
 "    Options:\n"
 "    -v            Verbose, tell me about each product\n"
@@ -71,7 +71,7 @@ usage(
 "                  <productID>.<seqno>\n"
 "    -i            Compute product signature (MD5 checksum) from product ID\n",
             progname, getQueuePath());
-    mylog_flush_error();
+    log_flush_error();
     exit(1);
 }
 
@@ -89,7 +89,7 @@ cleanup(void)
         pq = NULL;
     }
 
-    (void)mylog_fini();
+    (void)log_fini();
 }
 
 
@@ -168,7 +168,7 @@ fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
                 nread = read(fd, buf, sizeof(buf));
                 if(nread <= 0)
                 {
-                        mylog_syserr("fd_md5: read");
+                        log_syserr("fd_md5: read");
                         return -1;
                 } /* else */
                 MD5Update(md5ctxp, buf, nread);
@@ -214,7 +214,7 @@ int main(
             exit_md5 = 6        /* couldn't initialize MD5 processing */
         } exitCode = exit_success;
 
-        (void)mylog_init(progname);
+        (void)log_init(progname);
 
 #if !USE_MMAP
         pqeIndex = PQE_NONE;
@@ -234,13 +234,13 @@ int main(
                             signatureFromId = 1;
                             break;
                     case 'v':
-                            (void)mylog_set_level(MYLOG_LEVEL_INFO);
+                            (void)log_set_level(LOG_LEVEL_INFO);
                             break;
                     case 'x':
-                            (void)mylog_set_level(MYLOG_LEVEL_DEBUG);
+                            (void)log_set_level(LOG_LEVEL_DEBUG);
                             break;
                     case 'l':
-                            (void)mylog_set_output(optarg);
+                            (void)log_set_output(optarg);
                             break;
                     case 'q':
                             setQueuePath(optarg);
@@ -261,12 +261,12 @@ int main(
                             productID = optarg;
                             break;
                     case ':': {
-                        mylog_add("Option \"-%c\" requires an operand", optopt);
+                        log_add("Option \"-%c\" requires an operand", optopt);
                         usage(progname);
                     }
                     /* no break */
                     default:
-                        mylog_add("Unknown option: \"%c\"", optopt);
+                        log_add("Unknown option: \"%c\"", optopt);
                         usage(progname);
                         /* no break */
                     }
@@ -281,7 +281,7 @@ int main(
          */
         if(atexit(cleanup) != 0)
         {
-                mylog_syserr("atexit");
+                log_syserr("atexit");
                 exit(exit_system);
         }
 
@@ -302,11 +302,11 @@ int main(
         if(status = pq_open(pqfname, PQ_DEFAULT, &pq))
         {
                 if (PQ_CORRUPT == status) {
-                    mylog_error("The product-queue \"%s\" is inconsistent\n",
+                    log_error("The product-queue \"%s\" is inconsistent\n",
                             pqfname);
                 }
                 else {
-                    mylog_error("pq_open: \"%s\" failed: %s",
+                    log_error("pq_open: \"%s\" failed: %s",
                             pqfname, status > 0 ? strerror(status) :
                                             "Internal error");
                 }
@@ -327,7 +327,7 @@ int main(
         md5ctxp = new_MD5_CTX();
         if(md5ctxp == NULL)
         {
-                mylog_syserr("new_md5_CTX failed");
+                log_syserr("new_md5_CTX failed");
                 exit(exit_md5);
         }
 
@@ -348,14 +348,14 @@ int main(
                 fd = open(filename, O_RDONLY, 0);
                 if(fd == -1)
                 {
-                        mylog_syserr("open: %s", filename);
+                        log_syserr("open: %s", filename);
                         exitCode = exit_infile;
                         continue;
                 }
 
                 if( fstat(fd, &statb) == -1) 
                 {
-                        mylog_syserr("fstat: %s", filename);
+                        log_syserr("fstat: %s", filename);
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -381,7 +381,7 @@ int main(
                 /* These members, and seqno, vary over the loop. */
                 status = set_timestamp(&prod.info.arrival);
                 if(status != ENOERR) {
-                        mylog_syserr("set_timestamp: %s, filename");
+                        log_syserr("set_timestamp: %s, filename");
                         exitCode = exit_infile;
                         continue;
                 }
@@ -391,7 +391,7 @@ int main(
                         PROT_READ, MAP_PRIVATE, fd, 0);
                 if(prod.data == NULL)
                 {
-                        mylog_syserr("mmap: %s", filename);
+                        log_syserr("mmap: %s", filename);
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -407,7 +407,7 @@ int main(
                 (void)exitIfDone(1);
 
                 if (status != 0) {
-                    mylog_syserr("mm_md5: %s", filename);
+                    log_syserr("mm_md5: %s", filename);
                     (void) munmap(prod.data, prod.info.sz);
                     (void) close(fd);
                     exitCode = exit_infile;
@@ -417,7 +417,7 @@ int main(
                 /* These members, and seqno, vary over the loop. */
                 status = set_timestamp(&prod.info.arrival);
                 if(status != ENOERR) {
-                        mylog_syserr("set_timestamp: %s, filename");
+                        log_syserr("set_timestamp: %s, filename");
                         exitCode = exit_infile;
                         continue;
                 }
@@ -430,22 +430,22 @@ int main(
                 switch (status) {
                 case ENOERR:
                     /* no error */
-                    if(mylog_is_enabled_info)
-                        mylog_info("%s", s_prod_info(NULL, 0, &prod.info,
-                            mylog_is_enabled_debug)) ;
+                    if(log_is_enabled_info)
+                        log_info("%s", s_prod_info(NULL, 0, &prod.info,
+                            log_is_enabled_debug)) ;
                     break;
                 case PQUEUE_DUP:
-                    mylog_error("Product already in queue: %s",
+                    log_error("Product already in queue: %s",
                         s_prod_info(NULL, 0, &prod.info, 1));
                     exitCode = exit_dup;
                     break;
                 case PQUEUE_BIG:
-                    mylog_error("Product too big for queue: %s",
+                    log_error("Product too big for queue: %s",
                         s_prod_info(NULL, 0, &prod.info, 1));
                     exitCode = exit_infile;
                     break;
                 case ENOMEM:
-                    mylog_error("queue full?");
+                    log_error("queue full?");
                     exitCode = exit_system;
                     break;  
                 case EINTR:
@@ -457,7 +457,7 @@ int main(
                     /* TODO: retry ? */
                     /*FALLTHROUGH*/
                 default:
-                    mylog_error("pq_insert: %s", status > 0
+                    log_error("pq_insert: %s", status > 0
                         ? strerror(status) : "Internal error");
                     break;
                 }
@@ -474,7 +474,7 @@ int main(
                 (void)exitIfDone(1);
 
                 if (status != 0) {
-                        mylog_syserr("xx_md5: %s", filename);
+                        log_syserr("xx_md5: %s", filename);
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -482,7 +482,7 @@ int main(
 
                 if(lseek(fd, 0, SEEK_SET) == (off_t)-1)
                 {
-                        mylog_syserr("rewind: %s", filename);
+                        log_syserr("rewind: %s", filename);
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -492,7 +492,7 @@ int main(
                 status = pqe_new(pq, &prod.info, &prod.data, &pqeIndex);
 
                 if(status != ENOERR) {
-                    mylog_syserr("pqe_new: %s", filename);
+                    log_syserr("pqe_new: %s", filename);
                     exitCode = exit_infile;
                 }
                 else {
@@ -501,7 +501,7 @@ int main(
                     (void)exitIfDone(1);
 
                     if (nread != prod.info.sz) {
-                        mylog_syserr("read %s %u", filename, prod.info.sz);
+                        log_syserr("read %s %u", filename, prod.info.sz);
                         status = EIO;
                     }
                     else {
@@ -512,16 +512,16 @@ int main(
                         case ENOERR:
                             /* no error */
                             if(ulogIsVerbose())
-                                mylog_info("%s", s_prod_info(NULL, 0, &prod.info,
-                                    mylog_is_enabled_debug)) ;
+                                log_info("%s", s_prod_info(NULL, 0, &prod.info,
+                                    log_is_enabled_debug)) ;
                             break;
                         case PQUEUE_DUP:
-                            mylog_error("Product already in queue: %s",
+                            log_error("Product already in queue: %s",
                                 s_prod_info(NULL, 0, &prod.info, 1));
                             exitCode = exit_dup;
                             break;
                         case ENOMEM:
-                            mylog_error("queue full?");
+                            log_error("queue full?");
                             break;  
                         case EINTR:
 #if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
@@ -532,7 +532,7 @@ int main(
                             /* TODO: retry ? */
                             /*FALLTHROUGH*/
                         default:
-                            mylog_error("pq_insert: %s", status > 0
+                            log_error("pq_insert: %s", status > 0
                                 ? strerror(status) : "Internal error");
                         }
                     }                   /* data read into `pqeIndex` region */

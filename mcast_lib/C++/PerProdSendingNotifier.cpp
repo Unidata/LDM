@@ -13,7 +13,7 @@
 
 #include "PerProdSendingNotifier.h"
 #include "mcast.h"
-#include "mylog.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <stdexcept>

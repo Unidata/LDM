@@ -12,7 +12,7 @@
 
 #include "config.h"
 
-#include "mylog.h"
+#include "log.h"
 #include "mldm_sender_map.h"
 
 #include <CUnit/CUnit.h>
@@ -39,11 +39,11 @@ static void test_msm_init(void)
 {
     int status = msm_init();
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    mylog_flush_error();
+    log_flush_error();
 
     status = msm_init();
     CU_ASSERT_EQUAL(status, LDM7_INVAL);
-    mylog_clear();
+    log_clear();
 }
 
 static void test_locking(void)
@@ -59,9 +59,9 @@ static void test_msm_put(void)
     CU_ASSERT_EQUAL(msm_put(IDS|DDPLUS, 1, 38800), 0);
     CU_ASSERT_EQUAL(msm_put(PPS, 1, 38800), LDM7_DUP);
     CU_ASSERT_EQUAL(msm_put(NEXRAD3, 1, 38800), LDM7_DUP);
-    mylog_clear();
+    log_clear();
     CU_ASSERT_EQUAL(msm_put(NEXRAD3, 2, 38801), 0);
-    mylog_clear();
+    log_clear();
 }
 
 static void test_msm_get(void)
@@ -76,7 +76,7 @@ static void test_msm_get(void)
     CU_ASSERT_EQUAL(msm_get(NEXRAD3, &pid, &port), 0);
     CU_ASSERT_EQUAL(pid, 2);
     CU_ASSERT_EQUAL(port, 38801);
-    mylog_clear();
+    log_clear();
 }
 
 static void test_msm_removePid(void)
@@ -87,7 +87,7 @@ static void test_msm_removePid(void)
     CU_ASSERT_EQUAL(msm_remove(5), LDM7_NOENT);
     CU_ASSERT_EQUAL(msm_remove(1), 0);
     CU_ASSERT_EQUAL(msm_get(IDS, &pid, &port), LDM7_NOENT);
-    mylog_clear();
+    log_clear();
 }
 
 static void test_msm_destroy(void)
@@ -102,7 +102,7 @@ int main(
     int exitCode = 1;
     const char* progname = basename((char*) argv[0]);
 
-    if (mylog_init(progname)) {
+    if (log_init(progname)) {
         (void) fprintf(stderr, "Couldn't open logging system\n");
     }
     else {

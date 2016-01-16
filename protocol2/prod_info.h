@@ -59,7 +59,7 @@ void		pi_free(
  *	info	Pointer to the prod_info to be written to "file".
  *	file	Pointer to the output stream.
  * Returns:
- *	-1	Failure.  MYLOG_ADD_ERRNO() called.
+ *	-1	Failure.  LOG_ADD_ERRNO() called.
  *	else	Number of bytes written.
  */
 int

@@ -3,14 +3,14 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mylog.h
+ *   @file: log.h
  * @author: Steven R. Emmerson
  *
  * This file defines the internal-use-only API of the LDM logging system.
  */
 
-#ifndef ULOG_MYLOG_INTERNAL_H_
-#define ULOG_MYLOG_INTERNAL_H_
+#ifndef ULOG_LOG_INTERNAL_H_
+#define ULOG_LOG_INTERNAL_H_
 
 #include "config.h"
 
@@ -27,14 +27,14 @@
 typedef struct {
     const char* file; ///< The pathname of the file
     int         line; ///< The origin-1 line-number in the file
-} mylog_loc_t;
+} log_loc_t;
 
 /**
  * A log-message.  Such structures accumulate in a thread-specific message-list.
  */
 typedef struct message {
     struct message* next;       ///< Pointer to next message
-    mylog_loc_t     loc;        ///< Location where the message was created
+    log_loc_t     loc;        ///< Location where the message was created
     char*           string;     ///< Message buffer
     size_t          size;       ///< Size of message buffer
 } Message;
@@ -43,35 +43,35 @@ typedef struct message {
     // `slog` implementation:
 
     /// Map from MYLOG levels to SYSLOG priorities
-    extern int mylog_syslog_priorities[];
+    extern int log_syslog_priorities[];
 
     /// Returns the SYSLOG priority corresponding to a MYLOG level
-    #define mylog_get_priority(level)     mylog_syslog_priorities[level]
+    #define log_get_priority(level)     log_syslog_priorities[level]
 
     /// Indicates if a log message of the given level would be emitted
-    #define mylog_is_level_enabled(level) slog_is_priority_enabled(level)
+    #define log_is_level_enabled(level) slog_is_priority_enabled(level)
 
-    extern int slog_is_priority_enabled(const mylog_level_t level);
+    extern int slog_is_priority_enabled(const log_level_t level);
 #elif WANT_LOG4C
     // `log4c` implementation:
 
     #include <log4c.h>
 
     /// Map from MYLOG levels to LOG4C priorities
-    extern int               mylog_log4c_priorities[];
+    extern int               log_log4c_priorities[];
     /// The current working LOG4C category
-    extern log4c_category_t* mylog_category;
+    extern log4c_category_t* log_category;
 
     /// Returns the current working LOG4C category
-    #define mylog_get_category()          mylog_category
+    #define log_get_category()          log_category
 
     /// Returns the LOG4C priority corresponding to a MYLOG level
-    #define mylog_get_priority(level)     mylog_log4c_priorities[level]
+    #define log_get_priority(level)     log_log4c_priorities[level]
 
     /// Indicates if a log message of the given level would be emitted
-    #define mylog_is_level_enabled(level) \
-        log4c_category_is_priority_enabled(mylog_get_category(), \
-                mylog_get_priority(level))
+    #define log_is_level_enabled(level) \
+        log4c_category_is_priority_enabled(log_get_category(), \
+                log_get_priority(level))
 #elif WANT_ULOG
     // `ulog` implementation:
 
@@ -80,14 +80,14 @@ typedef struct message {
     #include <stdio.h>
 
     /// Map from MYLOG levels to SYSLOG priorities
-    extern int mylog_syslog_priorities[];
+    extern int log_syslog_priorities[];
 
     /// Returns the SYSLOG priority corresponding to a MYLOG level
-    #define mylog_get_priority(level)     mylog_syslog_priorities[level]
+    #define log_get_priority(level)     log_syslog_priorities[level]
 
     /// Indicates if a log message of the given level would be emitted
-    #define mylog_is_level_enabled(level) \
-        ulog_is_priority_enabled(mylog_get_priority(level))
+    #define log_is_level_enabled(level) \
+        ulog_is_priority_enabled(log_get_priority(level))
 #endif // `ulog` implementation
 
 /**
@@ -99,17 +99,17 @@ typedef struct message {
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
-int mylog_impl_init(
+int log_impl_init(
         const char* const id);
 
 /**
  * Finalizes the logging module's implementation. Should be called eventually
- * after `mylog_impl_init()`, after which no more logging should occur.
+ * after `log_impl_init()`, after which no more logging should occur.
  *
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int mylog_impl_fini(void);
+int log_impl_fini(void);
 
 /**
  * Vets a logging level.
@@ -117,25 +117,25 @@ int mylog_impl_fini(void);
  * @param[in] level  The logging level to be vetted.
  * @retval    true   iff `level` is a valid level.
  */
-static inline bool mylog_vet_level(
-        mylog_level_t level)
+static inline bool log_vet_level(
+        log_level_t level)
 {
-    return level >= MYLOG_LEVEL_DEBUG && level <= MYLOG_LEVEL_ERROR;
+    return level >= LOG_LEVEL_DEBUG && level <= LOG_LEVEL_ERROR;
 }
 
 /**
  * Returns the string associated with a logging level.
  *
- * @param[in] level  The logging level. One of `MYLOG_LEVEL_DEBUG`,
- *                   `MYLOG_LEVEL_INFO`, `MYLOG_LEVEL_NOTICE`,
- *                   `MYLOG_LEVEL_WARNING`, `MYLOG_LEVEL_ERROR`,
- *                   `MYLOG_LEVEL_ALERT`, `MYLOG_LEVEL_CRIT`, or
- *                   `MYLOG_LEVEL_EMERG`. The string `"UNKNOWN"` is returned if
+ * @param[in] level  The logging level. One of `LOG_LEVEL_DEBUG`,
+ *                   `LOG_LEVEL_INFO`, `LOG_LEVEL_NOTICE`,
+ *                   `LOG_LEVEL_WARNING`, `LOG_LEVEL_ERROR`,
+ *                   `LOG_LEVEL_ALERT`, `LOG_LEVEL_CRIT`, or
+ *                   `LOG_LEVEL_EMERG`. The string `"UNKNOWN"` is returned if
  *                   the level is not one of these values.
  * @return           The associated string.
  */
-const char* mylog_level_to_string(
-        const mylog_level_t level);
+const char* log_level_to_string(
+        const log_level_t level);
 
 /**
  * Returns a pointer to the last component of a pathname.
@@ -143,7 +143,7 @@ const char* mylog_level_to_string(
  * @param[in] pathname  The pathname.
  * @return              Pointer to the last component of the pathname.
  */
-const char* mylog_basename(
+const char* log_basename(
         const char* const pathname);
 
 /**
@@ -155,9 +155,9 @@ const char* mylog_basename(
  * @param[in] format  Format of the message.
  * @param[in] args    Format arguments.
  */
-void mylog_vlog_located(
-        const mylog_loc_t* const loc,
-        const mylog_level_t      level,
+void log_vlog_located(
+        const log_loc_t* const loc,
+        const log_level_t      level,
         const char* const        format,
         va_list                  args);
 
@@ -170,9 +170,9 @@ void mylog_vlog_located(
  * @param[in] format  Format of the message or NULL.
  * @param[in] ...     Optional Format arguments.
  */
-void mylog_log_located(
-        const mylog_loc_t* const loc,
-        const mylog_level_t      level,
+void log_log_located(
+        const log_loc_t* const loc,
+        const log_level_t      level,
         const char* const        format,
                                  ...);
 
@@ -186,8 +186,8 @@ void mylog_log_located(
  * @param[in] fmt     Format of the user's message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void mylog_errno_located(
-        const mylog_loc_t* const loc,
+void log_errno_located(
+        const log_loc_t* const loc,
         const int                errnum,
         const char* const        fmt,
                                  ...);
@@ -198,13 +198,13 @@ void mylog_errno_located(
  *
  * @param[in] loc    Location.
  * @param[in] level  The level at which to log the messages. One of
- *                   MYLOG_LEVEL_ERROR, MYLOG_LEVEL_WARNING, MYLOG_LEVEL_NOTICE,
- *                   MYLOG_LEVEL_INFO, or MYLOG_LEVEL_DEBUG; otherwise, the
+ *                   LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
+ *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
  */
-void mylog_flush_located(
-        const mylog_loc_t* const loc,
-        const mylog_level_t      level);
+void log_flush_located(
+        const log_loc_t* const loc,
+        const log_level_t      level);
 
 /**
  * Emits a single log message.
@@ -212,8 +212,8 @@ void mylog_flush_located(
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void mylog_write_one(
-        const mylog_level_t    level,
+void log_write_one(
+        const log_level_t    level,
         const Message* const   msg);
 
 /**
@@ -223,7 +223,7 @@ void mylog_write_one(
  * @param[in] fmt  Format of the message.
  * @param[in] ...  Format arguments.
  */
-void mylog_internal(
+void log_internal(
         const char* const      fmt,
                                ...);
 
@@ -243,8 +243,8 @@ void mylog_internal(
  * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
  *                      Error message logged.
  */
-int mylog_vadd_located(
-        const mylog_loc_t* const loc,
+int log_vadd_located(
+        const log_loc_t* const loc,
         const char *const        fmt,
         va_list                  args);
 
@@ -257,8 +257,8 @@ int mylog_vadd_located(
  * @param[in] ...  Arguments for the formatting string.
  * @retval    0    Success.
  */
-int mylog_add_located(
-        const mylog_loc_t* const loc,
+int log_add_located(
+        const log_loc_t* const loc,
         const char *const        fmt,
                                  ...);
 
@@ -272,15 +272,15 @@ int mylog_add_located(
  * @param[in] ...     Arguments for the formatting string.
  * @return
  */
-int mylog_add_errno_located(
-        const mylog_loc_t* const loc,
+int log_add_errno_located(
+        const log_loc_t* const loc,
         const int                errnum,
         const char* const        fmt,
                                  ...);
 
 /**
  * Allocates memory. Thread safe. Defined with explicit location parameters so
- * that `MYLOG_MALLOC` can be used in an initializer.
+ * that `LOG_MALLOC` can be used in an initializer.
  *
  * @param[in] file      Pathname of the file.
  * @param[in] func      Name of the function.
@@ -291,7 +291,7 @@ int mylog_add_errno_located(
  * @retval    NULL      Out of memory. Log message added.
  * @return              Pointer to the allocated memory.
  */
-void* mylog_malloc_located(
+void* log_malloc_located(
         const char* const file,
         const char* const func,
         const int         line,
@@ -299,15 +299,15 @@ void* mylog_malloc_located(
         const char* const msg);
 
 /// Declares an instance of a location structure
-#define MYLOG_LOC_DECL(loc) const mylog_loc_t loc = {__FILE__, __LINE__}
+#define LOG_LOC_DECL(loc) const log_loc_t loc = {__FILE__, __LINE__}
 
-#define MYLOG_LOG2(level, ...) do { \
-    if (!mylog_is_level_enabled(level)) {\
-        mylog_clear();\
+#define LOG_LOG2(level, ...) do { \
+    if (!log_is_level_enabled(level)) {\
+        log_clear();\
     }\
     else {\
-        MYLOG_LOC_DECL(loc); \
-        mylog_log_located(&loc, level, __VA_ARGS__); \
+        LOG_LOC_DECL(loc); \
+        log_log_located(&loc, level, __VA_ARGS__); \
     }\
 } while (false)
 
@@ -315,4 +315,4 @@ void* mylog_malloc_located(
     }
 #endif
 
-#endif /* ULOG_MYLOG_INTERNAL_H_ */
+#endif /* ULOG_LOG_INTERNAL_H_ */
