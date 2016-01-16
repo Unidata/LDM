@@ -104,7 +104,7 @@ int mylog_impl_init(
 
 /**
  * Finalizes the logging module's implementation. Should be called eventually
- * after `mylog_init_impl()`, after which no more logging should occur.
+ * after `mylog_impl_init()`, after which no more logging should occur.
  *
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.

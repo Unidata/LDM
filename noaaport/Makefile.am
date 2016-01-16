@@ -26,9 +26,12 @@ EXTRA_DIST 		= \
 	mainpage.h \
 	mrms1.data \
 	multicastReader.hin \
-	readnoaaport.log.good \
-	noaaportIngester.log.good \
-	noaaportIngester-nssl.log.good \
+	readnoaaport.slog \
+	readnoaaport.ulog \
+	noaaportIngester.slog \
+	noaaportIngester.ulog \
+	noaaportIngester-nssl.slog \
+	noaaportIngester-nssl.ulog \
 	nwstgdump.data \
 	productMaker.hin \
 	reader.hin \
@@ -82,7 +85,7 @@ COMMON_SOURCES		= \
 	process_prod.c \
 	readpdb.c \
 	readpdh.c \
-	readpsh.c\
+	readpsh.c \
 	readsbn.c \
 	redbook_header.c \
 	wgrib.c \
@@ -146,6 +149,19 @@ productMaker.h:		productMaker.c productMaker.hin extractDecls
 .c.i:
 	$(COMPILE) -E $< >$@
 
+if WANT_SLOG
+READNOAAPORT_LOG		= readnoaaport.slog
+NOAAPORTINGESTER_LOG		= noaaportIngester.slog
+NOAAPORTINGESTER_NSSL_LOG	= noaaportIngester-nssl.slog
+CUT_FIELD			= 3
+endif
+if WANT_ULOG
+READNOAAPORT_LOG		= readnoaaport.ulog
+NOAAPORTINGESTER_LOG		= noaaportIngester.ulog
+NOAAPORTINGESTER_NSSL_LOG	= noaaportIngester-nssl.ulog
+CUT_FIELD			= 5
+endif
+
 installcheck-local:
 	$(DESTDIR)$(bindir)/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	$(DESTDIR)$(bindir)/readnoaaport -l- -q /tmp/readnoaaport-test.pq \
@@ -154,13 +170,13 @@ installcheck-local:
 
 check-local:		check-readnoaaport check-noaaportIngester \
 			check-noaaportIngester-nssl
-check-readnoaaport:	readnoaaport
+check-readnoaaport:	readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	./readnoaaport -nl- -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
 	rm /tmp/readnoaaport-test.pq
-	cut -d ' ' -f 3- readnoaaport.out >readnoaaport.log
-	diff readnoaaport.log $(srcdir)/readnoaaport.log.good
+	cut -d ' ' -f $(CUT_FIELD)- readnoaaport.out >readnoaaport.log
+	diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
 
 noaaportIngester.out:		noaaportIngester
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
@@ -168,10 +184,11 @@ noaaportIngester.out:		noaaportIngester
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:		noaaportIngester.out
-	cut -d ' ' -f 3- <$? | sed 's/NOTICE/NOTE/' | \
+	cut -d ' ' -f $(CUT_FIELD)- <$? | sed 's/NOTICE/NOTE/' | \
 	sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
-check-noaaportIngester:		noaaportIngester.log
-	diff $? $(srcdir)/noaaportIngester.log.good
+check-noaaportIngester:		noaaportIngester.log \
+				$(srcdir)/$(NOAAPORTINGESTER_LOG)
+	diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
 noaaportIngester-nssl.out:	noaaportIngester
 	-rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
@@ -184,10 +201,11 @@ noaaportIngester-nssl.out:	noaaportIngester
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:	noaaportIngester-nssl.out
-	cut -d ' ' -f 3- <$? | \
+	cut -d ' ' -f $(CUT_FIELD)- <$? | \
 	sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
-check-noaaportIngester-nssl:	noaaportIngester-nssl.log
-	diff $? $(srcdir)/noaaportIngester-nssl.log.good
+check-noaaportIngester-nssl:	noaaportIngester-nssl.log \
+				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
+	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 
 valgrind:		valgrind-readnoaaport valgrind-noaaportIngester
 

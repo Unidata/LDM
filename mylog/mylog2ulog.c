@@ -40,7 +40,7 @@ int                  mylog_syslog_priorities[] = {
 static mylog_level_t loggingLevel = MYLOG_LEVEL_DEBUG;
 
 /**
- * The thread identifier of the thread on which `mylog_init()` was called.
+ * The thread identifier of the thread on which `mylog_impl_init()` was called.
  */
 static pthread_t initThread;
 
@@ -81,6 +81,7 @@ int set_level(
                 LOG_UPTO(LOG_ERR)};
         (void)setulogmask(ulogUpTos[level]);
         loggingLevel = level;
+        status = 0;
     }
     return status;
 }
@@ -167,9 +168,10 @@ void mylog_internal(
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
-int mylog_init(
+int mylog_impl_init(
         const char* id)
 {
+    // The default logging destination is the system logging daemon
     int status = init(id, LOG_PID, LOG_LDM, "", MYLOG_LEVEL_NOTICE);
     if (status == 0) {
         status = mutex_init(&mutex, true, true);
@@ -197,13 +199,13 @@ int mylog_refresh(void)
 
 /**
  * Finalizes the logging module. Frees resources specific to the current thread.
- * Frees all resources if the current thread is the one on which `mylog_init()`
- * was called.
+ * Frees all resources if the current thread is the one on which
+ * `mylog_impl_init()` was called.
  *
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int mylog_fini(void)
+int mylog_impl_fini(void)
 {
     lock();
     mylog_free();
@@ -265,7 +267,7 @@ void mylog_roll_level(void)
 
 /**
  * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
- * system logging daemon. Should be called after `mylog_init()`.
+ * system logging daemon. Should be called after `mylog_impl_init()`.
  *
  * @param[in] facility  The facility that will be used when logging to the
  *                      system logging daemon.
@@ -298,8 +300,8 @@ int mylog_get_facility(void)
 }
 
 /**
- * Sets the logging identifier. Should be called between `mylog_init()` and
- * `mylog_fini()`.
+ * Sets the logging identifier. Should be called between `mylog_impl_init()` and
+ * `mylog_impl_fini()`.
  *
  * @param[in] id        The new identifier. Caller may free.
  * @retval    0         Success.
@@ -391,7 +393,7 @@ unsigned mylog_get_options(void)
 
 /**
  * Sets the logging output. May be called at any time -- including before
- * `mylog_init()`.
+ * `mylog_impl_init()`.
  *
  * @param[in] output   The logging output. One of
  *                         ""      Log to the system logging daemon. Caller may
@@ -416,7 +418,7 @@ int mylog_set_output(
 
 /**
  * Returns the logging output. May be called at any time -- including before
- * `mylog_init()`.
+ * `mylog_impl_init()`.
  *
  * @return       The logging output. One of
  *                   ""      Output is to the system logging daemon. Initial

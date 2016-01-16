@@ -168,13 +168,17 @@ static void test_mylog_open_default(void)
 
     const char* actual = mylog_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
-    CU_ASSERT_STRING_EQUAL(actual, "-");
+#if WANT_SLOG
+    CU_ASSERT_STRING_EQUAL(actual, "-"); // default is standard error stream
+#elif WANT_ULOG
+    CU_ASSERT_STRING_EQUAL(actual, ""); // default is system logging daemon
+#endif
     mylog_error("test_mylog_open_default() implicit");
 
-    status = mylog_set_output("");
+    status = mylog_set_output(tmpPathname);
     actual = mylog_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
-    CU_ASSERT_STRING_EQUAL(actual, "");
+    CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
     mylog_error("test_mylog_open_default() explicit");
 
     status = mylog_fini();
