@@ -9,7 +9,6 @@
 include_HEADERS		= ulog.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= ulog.c
-EXTRA_DIST		= log.h
 dist_man3_MANS		= ulog.3
 
 check_PROGRAMS		= test_gmtime test0
