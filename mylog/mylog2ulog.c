@@ -16,6 +16,7 @@
 #include "mylog.h"
 #include "ulog.h"
 
+#include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -68,7 +69,7 @@ static inline void unlock(void)
  * @retval    0      Success.
  * @retval    -1     Failure.
  */
-int set_level(
+static int set_level(
         const mylog_level_t level)
 {
     int status;
@@ -86,6 +87,33 @@ int set_level(
     return status;
 }
 
+#if 0
+/**
+ * Returns the default destination for log messages. If the current process is a
+ * daemon, then the default destination will be the system logging daemon;
+ * otherwise, the default destination will be to the standard error stream.
+ *
+ * @retval ""   Log to the system logging daemon
+ * @retval "-"  Log to the standard error stream
+ */
+static const char* get_default_output(void)
+{
+    int         status;
+    const char* output;
+    int         ttyFd = open("/dev/tty", O_RDONLY);
+    if (-1 == ttyFd) {
+        // No controlling terminal => daemon => use system logging daemon
+        output = "";
+    }
+    else {
+        // Controlling terminal exists => interactive => log to `stderr`
+        (void)close(ttyFd);
+        output = "-";
+    }
+    return output;
+}
+#endif
+
 /**
  * Initializes the logging module -- overwriting any previous initialization --
  * except for the mutual-exclusion lock. Should be called before any other
@@ -95,28 +123,24 @@ int set_level(
  *                      may free.
  * @param[in] options   `openulog()` options.
  * @param[in] facility  Facility to use if using the system logging daemon.
- * @param[in] output    Output:
- *                        ""      Output is to the system logging daemon.
- *                        "-"     Output is to the standard error stream.
- *                        else    The pathname of the log file.
- * @param[in] level    Logging level.
- * @retval    0        Success.
- *                       - `mylog_get_output()` will return `output`.
- *                       - `mylog_get_facility()` will return `facility`.
- *                       - `mylog_get_level()` will return `level`.
- * @retval    -1       Error.
+ * @param[in] level     Logging level.
+ * @retval    0         Success.
+ *                        - `mylog_get_output()` will return ""
+ *                        - `mylog_get_facility()` will return `facility`.
+ *                        - `mylog_get_level()` will return `level`.
+ * @retval    -1        Error.
  */
-int init(
+static int init(
         const char* restrict       id,
         const int                  options,
         const int                  facility,
-        const char* const restrict output,
         const mylog_level_t        level)
 {
     char progname[_XOPEN_PATH_MAX];
     strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
     id = basename(progname);
-    int status = openulog(id, options, facility, output);
+    // const char* output = get_default_output();
+    int status = openulog(id, options, facility, "");
     if (status != -1)
         status = set_level(level);
     return status ? -1 : 0;
@@ -159,7 +183,7 @@ void mylog_internal(
 
 /**
  * Initializes the logging module. Should be called before any other function.
- * - `mylog_get_output()` will return "".
+ * - `mylog_get_output()` will return ""
  * - `mylog_get_facility()` will return `LOG_LDM`.
  * - `mylog_get_level()` will return `MYLOG_LEVEL_NOTICE`.
  *
@@ -171,8 +195,7 @@ void mylog_internal(
 int mylog_impl_init(
         const char* id)
 {
-    // The default logging destination is the system logging daemon
-    int status = init(id, LOG_PID, LOG_LDM, "", MYLOG_LEVEL_NOTICE);
+    int status = init(id, LOG_PID, LOG_LDM, MYLOG_LEVEL_NOTICE);
     if (status == 0) {
         status = mutex_init(&mutex, true, true);
         if (status == 0)
