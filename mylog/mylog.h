@@ -44,7 +44,7 @@ typedef enum {
     MYLOG_LEVEL_COUNT     ///< Number of levels
 } mylog_level_t;
 
-#include "mylog_internal.h"
+#include "mylog_private.h"
 
 #ifdef __cplusplus
     extern "C" {

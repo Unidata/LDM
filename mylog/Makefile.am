@@ -9,7 +9,7 @@
 EXTRA_DIST			= mainpage.h
 noinst_LTLIBRARIES		= lib.la
 lib_la_SOURCES			= mutex.c mutex.h mylog.c mylog.h \
-                                  mylog_internal.h
+                                  mylog_private.h
 SUBDIRS				= ulog
 lib_la_LIBADD			= $(builddir)/ulog/lib.la
 
