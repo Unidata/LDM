@@ -168,11 +168,7 @@ static void test_mylog_open_default(void)
 
     const char* actual = mylog_get_output();
     CU_ASSERT_PTR_NOT_NULL(actual);
-#if WANT_SLOG
     CU_ASSERT_STRING_EQUAL(actual, "-"); // default is standard error stream
-#elif WANT_ULOG
-    CU_ASSERT_STRING_EQUAL(actual, ""); // default is system logging daemon
-#endif
     mylog_error("test_mylog_open_default() implicit");
 
     status = mylog_set_output(tmpPathname);

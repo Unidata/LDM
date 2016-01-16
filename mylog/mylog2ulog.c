@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifndef _XOPEN_PATH_MAX
     #define _XOPEN_PATH_MAX 1024
@@ -87,7 +88,6 @@ static int set_level(
     return status;
 }
 
-#if 0
 /**
  * Returns the default destination for log messages. If the current process is a
  * daemon, then the default destination will be the system logging daemon;
@@ -112,7 +112,6 @@ static const char* get_default_output(void)
     }
     return output;
 }
-#endif
 
 /**
  * Initializes the logging module -- overwriting any previous initialization --
@@ -123,9 +122,15 @@ static const char* get_default_output(void)
  *                      may free.
  * @param[in] options   `openulog()` options.
  * @param[in] facility  Facility to use if using the system logging daemon.
+ * @param[in] output    The logging destination:
+ *                        - ""  system logging daemon
+ *                        - "-" standard error stream
+ *                        - else file whose pathname is `output`
  * @param[in] level     Logging level.
  * @retval    0         Success.
- *                        - `mylog_get_output()` will return ""
+ *                        - `mylog_get_output()` will return
+ *                          - ""  if the process is a daemon
+ *                          - "-" otherwise
  *                        - `mylog_get_facility()` will return `facility`.
  *                        - `mylog_get_level()` will return `level`.
  * @retval    -1        Error.
@@ -134,13 +139,13 @@ static int init(
         const char* restrict       id,
         const int                  options,
         const int                  facility,
+        const char* const          output,
         const mylog_level_t        level)
 {
     char progname[_XOPEN_PATH_MAX];
     strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
     id = basename(progname);
-    // const char* output = get_default_output();
-    int status = openulog(id, options, facility, "");
+    int status = openulog(id, options, facility, output);
     if (status != -1)
         status = set_level(level);
     return status ? -1 : 0;
@@ -184,6 +189,8 @@ void mylog_internal(
 /**
  * Initializes the logging module. Should be called before any other function.
  * - `mylog_get_output()` will return ""
+ *   - ""  if the process is a daemon
+ *   - "-" otherwise
  * - `mylog_get_facility()` will return `LOG_LDM`.
  * - `mylog_get_level()` will return `MYLOG_LEVEL_NOTICE`.
  *
@@ -195,7 +202,8 @@ void mylog_internal(
 int mylog_impl_init(
         const char* id)
 {
-    int status = init(id, LOG_PID, LOG_LDM, MYLOG_LEVEL_NOTICE);
+    const char* output = get_default_output();
+    int status = init(id, LOG_PID, LOG_LDM, output, MYLOG_LEVEL_NOTICE);
     if (status == 0) {
         status = mutex_init(&mutex, true, true);
         if (status == 0)
