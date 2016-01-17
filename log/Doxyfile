@@ -670,7 +670,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  = mainpage.h mylog.h
+INPUT                  = mainpage.h log.h
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is
@@ -724,12 +724,12 @@ EXCLUDE_PATTERNS       =
 # wildcard * is used, a substring. Examples: ANamespace, AClass,
 # AClass::ANamespace, ANamespace::*Test
 
-EXCLUDE_SYMBOLS        = mylog_loc_t, mylog_log4c_priorities, mylog_category
-EXCLUDE_SYMBOLS       += mylog_get_category, mylog_get_priority, mylog_is_level_enabled
-EXCLUDE_SYMBOLS       += mylog_syslog_priorities, mylog_basename, mylog_vlog
-EXCLUDE_SYMBOLS       += mylog_log, mylog_errno, mylog_write_one, mylog_internal
-EXCLUDE_SYMBOLS       += mylog_vadd, mylog_add, mylog_add_errno, mylog_malloc
-EXCLUDE_SYMBOLS       += MYLOG_LOC_DECL, MYLOG_LOG2
+EXCLUDE_SYMBOLS        = log_loc_t, log_log4c_priorities, log_category
+EXCLUDE_SYMBOLS       += log_get_category, log_get_priority, log_is_level_enabled
+EXCLUDE_SYMBOLS       += log_syslog_priorities, log_basename, log_vlog
+EXCLUDE_SYMBOLS       += log_log, log_errno, log_write_one, log_internal
+EXCLUDE_SYMBOLS       += log_vadd, log_add, log_add_errno, log_malloc
+EXCLUDE_SYMBOLS       += LOG_LOC_DECL, LOG_LOG2
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see

@@ -53,9 +53,9 @@ typedef enum {
 /**
  * Initializes the logging module. Should be called before any other function.
  * <dl>
- *     <dt>`log_get_output()` <dd>will return "".
- *     <dt>`log_get_facility()` <dd>will return `LOG_LDM`.
- *     <dt>`log_get_level()` <dd>will return `LOG_LEVEL_NOTICE`.
+ *     <dt>log_get_output() <dd>will return "".
+ *     <dt>log_get_facility() <dd>will return `LOG_LDM`.
+ *     <dt>log_get_level() <dd>will return `LOG_LEVEL_NOTICE`.
  * </dl>
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
@@ -77,7 +77,7 @@ int log_refresh(void);
 
 /**
  * Finalizes the logging module. Should be called eventually after
- * `log_init()`, after which no more logging should occur.
+ * log_init(), after which no more logging should occur.
  *
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
@@ -86,7 +86,7 @@ int log_fini(void);
 
 /**
  * Enables logging down to a given level. Should be called between
- * `log_init()` and `log_fini()`.
+ * log_init() and log_fini().
  *
  * @param[in] level  The lowest level through which logging should occur. The
  *                   levels are ordered: LOG_LEVEL_DEBUG < LOG_LEVEL_INFO <
@@ -99,8 +99,8 @@ int log_set_level(
         const log_level_t level);
 
 /**
- * Returns the current logging level. Should be called between `log_init()`
- * and `log_fini()`.
+ * Returns the current logging level. Should be called between log_init()
+ * and log_fini().
  *
  * @return The lowest level through which logging will occur. The levels are
  *         ordered: LOG_LEVEL_ERROR > LOG_LEVEL_WARNING > LOG_LEVEL_NOTICE
@@ -110,13 +110,13 @@ log_level_t log_get_level(void);
 
 /**
  * Lowers the logging threshold by one. Wraps at the bottom. Should be called
- * between `log_init()` and `log_fini()`.
+ * between log_init() and log_fini().
  */
 void log_roll_level(void);
 
 /**
- * Sets the logging identifier. Should be called between `log_init()` and
- * `log_fini()`.
+ * Sets the logging identifier. Should be called between log_init() and
+ * log_fini().
  *
  * @param[in] id        The new identifier. Caller may free.
  * @retval    0         Success.
@@ -126,8 +126,8 @@ int log_set_id(
         const char* const id);
 
 /**
- * Modifies the logging identifier. Should be called between `log_init()` and
- * `log_fini()`.
+ * Modifies the logging identifier. Should be called between log_init() and
+ * log_fini().
  *
  * @param[in] hostId    The identifier of the remote host. Caller may free.
  * @param[in] isFeeder  Whether or not the process is sending data-products or
@@ -139,8 +139,8 @@ int log_set_upstream_id(
         const bool        isFeeder);
 
 /**
- * Returns the logging identifier. Should be called between `log_init()` and
- * `log_fini()`.
+ * Returns the logging identifier. Should be called between log_init() and
+ * log_fini().
  *
  * @return The logging identifier.
  */
@@ -148,7 +148,7 @@ const char* log_get_id(void);
 
 /**
  * Sets the implementation-defined logging options. Should be called between
- * `log_init()` and `log_fini()`.
+ * log_init() and log_fini().
  *
  * @param[in] options  The implementation-defined logging options.
  */
@@ -157,7 +157,7 @@ void log_set_options(
 
 /**
  * Returns the implementation-defined logging options. Should be called between
- * `log_init()` and `log_fini()`.
+ * log_init() and log_fini().
  *
  * @return The implementation-defined logging options.
  */
@@ -165,8 +165,8 @@ unsigned log_get_options(void);
 
 /**
  * Sets the facility that might be used (e.g., `LOG_LOCAL0`) when logging to the
- * system logging daemon. Should be called between `log_init()` and
- * `log_fini()`. May do nothing.
+ * system logging daemon. Should be called between log_init() and
+ * log_fini(). May do nothing.
  *
  * @param[in] facility  The facility that will be used when logging to the
  *                      system logging daemon.
@@ -178,14 +178,14 @@ int log_set_facility(
 
 /**
  * Returns the facility that will be used (e.g., `LOG_LOCAL0`) when logging to
- * the system logging daemon. Should be called between `log_init()` and
- * `log_fini()`.
+ * the system logging daemon. Should be called between log_init() and
+ * log_fini().
  */
 int log_get_facility(void);
 
 /**
- * Sets the logging output. Should be called between `log_init()` and
- * `log_fini()`.
+ * Sets the logging output. Should be called between log_init() and
+ * log_fini().
  *
  * @param[in] output   The logging output. Caller may free. One of <dl>
  *                         <dt>""   <dd>Log according to the implementation-defined
@@ -200,8 +200,8 @@ int log_set_output(
         const char* const output);
 
 /**
- * Returns the logging output. Should be called between `log_init()` and
- * `log_fini()`.
+ * Returns the logging output. Should be called between log_init() and
+ * log_fini().
  *
  * @return       The logging output. One of <dl>
  *                   <dt>""      <dd>Output is to the system logging daemon.
