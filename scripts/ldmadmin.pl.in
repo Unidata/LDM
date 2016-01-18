@@ -775,7 +775,7 @@ sub stop_ldm
     my $status = 0;                     # default success
 
     # get pid 
-    $rpc_pid = getPid($pid_file) ;
+    my $rpc_pid = getPid($pid_file) ;
 
     if ($rpc_pid == -1) {
         errmsg("The LDM server isn't running or its process-ID is ".
@@ -823,18 +823,39 @@ sub new_log
     # Rotate the log file
     system("newlog $log_file $numlogs");
 
-    # If rotation successful, notify syslogd(8)
     if ($?) {
 	errmsg("new_log(): log rotation failed");
     }
     else {
-	system("hupsyslog");
-
-        if ($?) {
-            errmsg("new_log(): Couldn't notify system logging daemon");
+        # Refresh logging
+        if ("@WANT_ULOG_TRUE@" eq "") {
+            system("hupsyslog");
+            if ($?) {
+                errmsg("new_log(): Couldn't notify system logging daemon");
+            }
+            else {
+                $status = 0;        # success
+            }
         }
-        else {
-            $status = 0;        # success
+        elif ("@WANT_SLOG_TRUE@" eq "") {
+            if (!isRunning($pid_file, $ip_addr)) {
+                $status = 0;
+            }
+            else {
+                my $pid = getPid($pid_file);
+                if ($pid <= 0) {
+                    errmsg("new_log(): LDM PID file \"$pid_file\" doesn't exist!");
+                }
+                else {
+                    system("kill -s HUP -$pid");
+                    if ($?) {
+                        errmsg("new_log(): Couldn't notify LDM process-group");
+                    }
+                    else {
+                        $status = 0;        # success
+                    }
+                }
+            }
         }
     }
 
