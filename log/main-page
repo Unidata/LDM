@@ -12,19 +12,19 @@
  * - \ref example
  *
  * @section introduction Introduction
- * This module is the logging system for the LDM. It comprises a single API with
- * two implementations: one using a simple implementation and the other using
- * the original `ulog` module that came with the LDM (that module is still part
- * of the LDM library for backward compatibility with user-developed code). By
- * default the simple implementation is used. The `ulog` implementation will be
- * used if the option `--with-ulog` is given to the `configure` script.
+ * This module is the logging component of the LDM. It comprises a single API
+ * with two implementations: one using a simple implementation and the other
+ * using the LDM's original `ulog` module (that module is still part of the LDM
+ * library for backward compatibility with user-developed code). By default the
+ * simple implementation is used. The `ulog` implementation will be used if the
+ * option `--with-ulog` is given to the `configure` script.
  *
  * This module manages a FIFO queue of log messages for each thread in a
  * process. `log_add*` function add to the queue. At some point, one of the
  * following should occur:
  *   - A final message added and the accumulated messages emitted by
  *     `log_error()`, for example;
- *   - The accumulated messages emitted by one of the `log_flush_*` functions;
+ *   - The accumulated messages emitted by `log_flush_error()`, for example;
  *     or
  *   - The queue cleared by `log_clear()`.
  *
@@ -36,13 +36,19 @@
  * (Note that the LDM server, `ldmd`, daemonizes itself by default. It is the
  * only program that does.)
  *
- * The default destination for log messages can usually be overridden by a
- * command-line option.
+ * The default destination for log messages can usually be overridden by the
+ * command-line option `-l` _dest_:
+ * @par
+ * <em>dest</em>   | Destination
+ * --------------- | -----------------------------
+ * <tt>""</tt>     | Default (see above)
+ * <tt>"-"</tt>    | Standard error stream
+ * <em>path</em>   | File whose pathname is _path_
  *
  * Besides managing thread-specific queues of log messages, this module also
  * registers a handler for the `HUP` signal. If log messages are being written
  * to a regular file (e.g., the LDM log file), then upon receipt of the signal,
- * the module will refresh (i.e., close and re-open) its connection to the file.
+ * this module will refresh (i.e., close and re-open) its connection to the file.
  * This allows the log files to be rotated and purged by an external process so
  * that the disk partition doesn't become full.
  *
@@ -93,11 +99,11 @@
  *         if (func()) {
  *             if (log_is_enabled_info)
  *                 // Adds to queue, prints queue at INFO level, and clears queue
- *                 log_info("func() failure: reason = %s", expensive_func());
+ *                 log_info("func() failure: reason = %s", slow_func());
  *         }
  *         if (func()) {
  *             // Adds to queue, prints queue at ERROR level, and clears queue
- *             log_error("func() failure: reason = %s", cheap_func());
+ *             log_error("func() failure: reason = %s", fast_func());
  *         }
  *         ...
  *         (void)log_fini(); // Good form
