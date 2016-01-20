@@ -444,6 +444,8 @@ AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
 # installation directories.
 test "$sysconfdir" = '${prefix}/etc' && sysconfdir='$(LDMHOME)/etc'
 test "$localstatedir" = '${prefix}/var' && localstatedir='$(LDMHOME)/var'
+AC_SUBST([DOCDIR_UTILITIES], $docdir/utilities)
+AC_SUBST([DOCDIR_LIBRARIES], $docdir/libraries)
 AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$LDMHOME/var/logs"],

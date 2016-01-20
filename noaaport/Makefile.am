@@ -12,7 +12,7 @@ LDMHOME			= @LDMHOME@
 LDMSRC			= $(top_srcdir)
 SUDO			= @SUDO@
 SU			= @SU@
-docdir			= @docdir@/noaaport
+docdir			= @DOCDIR_UTILITIES@/noaaport
 DOXYGEN			= @DOXYGEN@
 
 EXTRA_DIST 		= \
