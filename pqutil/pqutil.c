@@ -1382,7 +1382,7 @@ main(int argc, char *argv[])
                 break;
 
             case 'l':
-                (void)log_set_output(optarg);
+                (void)log_set_destination(optarg);
                 break;
 
             case 'a':                                               /* align */
@@ -1460,7 +1460,7 @@ main(int argc, char *argv[])
                 break;
 
             case 'w':                                  /* set the watch flag */
-                (void)log_set_output("-");
+                (void)log_set_destination("-");
                 watch_flag = 1;
                 break;
 

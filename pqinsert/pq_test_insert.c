@@ -67,7 +67,7 @@ static bool pti_decodeCommandLine(
             }
             break;
         case 'l':
-            (void)log_set_output(optarg);
+            (void)log_set_destination(optarg);
             break;
         case 'q':
             pqPathname = optarg;

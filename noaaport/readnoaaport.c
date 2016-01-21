@@ -480,7 +480,7 @@ int main(
             }
             /* else */
             logfname = optarg;
-            (void)log_set_output(logfname);
+            (void)log_set_destination(logfname);
             break;
         case 'q':
             pqfname = optarg;

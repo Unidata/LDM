@@ -958,7 +958,7 @@ int main(
      * Initialize logger.
      */
     (void)log_init(av[0]);
-    (void)log_set_output(logfname);
+    (void)log_set_destination(logfname);
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
 

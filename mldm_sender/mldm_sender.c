@@ -190,7 +190,7 @@ mls_decodeOptions(
             break;
         }
         case 'l': {
-            (void)log_set_output(optarg);
+            (void)log_set_destination(optarg);
             break;
         }
         case 'm': {

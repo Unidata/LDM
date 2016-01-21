@@ -283,7 +283,7 @@ int main(int ac, char *av[])
                         (void)log_set_level(LOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        (void)log_set_output(optarg);
+                        (void)log_set_destination(optarg);
                         break;
                 case 'p':
                         spec.pattern = optarg;

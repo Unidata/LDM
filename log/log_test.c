@@ -123,7 +123,7 @@ static void test_log_open_file(void)
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = log_set_output(tmpPathname);
+    status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
     status = log_set_level(LOG_LEVEL_DEBUG);
@@ -146,9 +146,9 @@ static void test_log_open_stderr(void)
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = log_set_output("-");
+    status = log_set_destination("-");
     CU_ASSERT_EQUAL(status, 0);
-    const char* actual = log_get_output();
+    const char* actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-");
 
@@ -166,13 +166,13 @@ static void test_log_open_default(void)
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    const char* actual = log_get_output();
+    const char* actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-"); // default is standard error stream
     log_error("test_log_open_default() implicit");
 
-    status = log_set_output(tmpPathname);
-    actual = log_get_output();
+    status = log_set_destination(tmpPathname);
+    actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
     log_error("test_log_open_default() explicit");
@@ -192,7 +192,7 @@ static void test_log_levels(void)
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
         (void)unlink(tmpPathname);
-        status = log_set_output(tmpPathname);
+        status = log_set_destination(tmpPathname);
         CU_ASSERT_EQUAL(status, 0);
 
         log_set_level(logLevels[nlines-1]);
@@ -298,7 +298,7 @@ static void test_log_vlog(void)
     (void)unlink(tmpPathname);
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = log_set_output(tmpPathname);
+    status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
     status = log_set_level(LOG_LEVEL_DEBUG);
@@ -324,8 +324,8 @@ static void test_log_set_output(void)
     static const char* outputs[] = {"", "-", tmpPathname};
     for (int i = 0; i < sizeof(outputs)/sizeof(outputs[0]); i++) {
         const char* expected = outputs[i];
-        (void)log_set_output(expected);
-        const char* actual = log_get_output();
+        (void)log_set_destination(expected);
+        const char* actual = log_get_destination();
         CU_ASSERT_PTR_NOT_NULL(actual);
         CU_ASSERT_STRING_EQUAL(actual, expected);
     }
@@ -339,7 +339,7 @@ static void test_log_add(void)
     (void)unlink(tmpPathname);
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = log_set_output(tmpPathname);
+    status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
     log_add("%s(): LOG_ADD message 1", __func__);
@@ -361,7 +361,7 @@ static void test_log_syserr(void)
     (void)unlink(tmpPathname);
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = log_set_output(tmpPathname);
+    status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
     log_errno(ENOMEM, NULL);
@@ -388,7 +388,7 @@ static void test_log_refresh(void)
     (void)unlink(tmpPathname);
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = log_set_output(tmpPathname);
+    status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
     status = log_set_level(LOG_LEVEL_DEBUG);
     CU_ASSERT_EQUAL(status, 0);
@@ -421,7 +421,7 @@ static void test_sighup(void)
     (void)unlink(tmpPathname);
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = log_set_output(tmpPathname);
+    status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
     status = log_set_level(LOG_LEVEL_DEBUG);
     CU_ASSERT_EQUAL(status, 0);

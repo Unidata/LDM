@@ -342,7 +342,7 @@ main(int ac, char *av[])
                         break;
                 case 'l':
                         logfname = optarg;
-                        (void)log_set_output(logfname);
+                        (void)log_set_destination(logfname);
                         break;
                 case 'd':
                         setPqactDataDirPath(optarg);

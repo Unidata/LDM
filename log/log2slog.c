@@ -243,6 +243,10 @@ static int set_output(
  * daemon, then logging will be to the LDM log file; otherwise, logging will be
  * to the standard error stream.
  *
+ * log_get_destination() will return
+ *   - The pathname of the LDM log file if the process is a daemon
+ *   - "-" otherwise
+ *
  * @retval 0   Success
  * @retval -1  Failure
  */
@@ -356,7 +360,10 @@ void log_internal(
  * - `log_get_facility()` will return `LOG_LDM`
  * - `log_get_level()`    will return `LOG_LEVEL_NOTICE`
  * - `log_get_options()`  will return `LOG_PID | LOG_NDELAY`
- * - `log_get_output()`   will return the pathname of the LDM logfile
+ * - `log_get_destination()`   will return
+ *                          - The pathname of the LDM log file if the process
+ *                            is a daemon
+ *                          - "-" otherwise
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
@@ -630,36 +637,37 @@ unsigned log_get_options(void)
 }
 
 /**
- * Sets the logging output. Should be called after `log_init()`.
+ * Sets the logging destination. Should be called between log_init() and
+ * log_fini().
  *
- * @param[in] output   The logging output. One of
- *                         ""      Log to the system logging daemon. Caller may
- *                                 free.
- *                         "-"     Log to the standard error stream. Caller may
- *                                 free.
- *                         else    Log to the file whose pathname is `output`.
- *                                 Caller may free.
+ * @param[in] dest     The logging destination. Caller may free. One of <dl>
+ *                         <dt>""   <dd>The system logging daemon.
+ *                         <dt>"-"  <dd>The standard error stream.
+ *                         <dt>else <dd>The file whose pathname is `dest`.
+ *                     </dl>
  * @retval    0        Success.
  * @retval    -1       Failure.
  */
-int log_set_output(
-        const char* const output)
+int log_set_destination(
+        const char* const dest)
 {
     lock();
-    int status = set_output(output);
+    int status = set_output(dest);
     unlock();
     return status;
 }
 
 /**
- * Returns the logging output. Should be called after `log_init()`.
+ * Returns the logging destination. Should be called between log_init() and
+ * log_fini().
  *
- * @return       The logging output. One of
- *                   ""      Output is to the system logging daemon.
- *                   "-"     Output is to the standard error stream.
- *                   else    The pathname of the log file.
+ * @return       The logging destination. One of <dl>
+ *                   <dt>""      <dd>The system logging daemon.
+ *                   <dt>"-"     <dd>The standard error stream.
+ *                   <dt>else    <dd>The pathname of the log file.
+ *               </dl>
  */
-const char* log_get_output(void)
+const char* log_get_destination(void)
 {
     lock();
     const char* path = output_spec;

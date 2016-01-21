@@ -2291,7 +2291,7 @@ proc_exec(Process *proc)
         {       /* child */
                 const char*     id = log_get_id();
                 const unsigned  facility = log_get_facility();
-                const char*     output = log_get_output();
+                const char*     output = log_get_destination();
 
                 /* restore signals */
                 {
@@ -2352,7 +2352,7 @@ proc_exec(Process *proc)
                 (void) execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
                 (void)log_init(id);
                 (void)log_set_facility(facility);
-                (void)log_set_output(output);
+                (void)log_set_destination(output);
                 log_syserr("execvp: %s", proc->wrdexp.we_wordv[0]) ;
                 _exit(127) ;
         }

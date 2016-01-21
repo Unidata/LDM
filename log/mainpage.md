@@ -22,7 +22,7 @@ simple implementation is used. The `ulog` implementation will be used if the
 option `--with-ulog` is given to the `configure` script.
 
 This module manages a FIFO queue of log messages for each thread in a
-process. `log_add*` function add to the queue. At some point, one of the
+process. `log_add*` functions add to the queue. At some point, one of the
 following should occur:
   - A final message added and the accumulated messages emitted by
     `log_error()`, for example;
@@ -30,11 +30,12 @@ following should occur:
     or
   - The queue cleared by `log_clear()`.
 
-By default, emitted messages are written to
+By default, log messages are written to
   - If the process is a daemon (i.e., doesn't have a controlling terminal)
-    - The LDM log file for the simple implementation; or
-    - The system logging daemon for the `ulog` implementation.
-  - The standard error stream if the process is not a daemon.
+    - Simple Implementation: The LDM log file
+    - `ulog` implementation: The system logging daemon
+  - If the process is not a daemon: The standard error stream
+
 (Note that the LDM server, `ldmd`, daemonizes itself by default. It is the
 only program that does.)
 
@@ -43,7 +44,7 @@ command-line option `-l` _dest_:
 @par
 <em>dest</em>   | Destination
 --------------- | -----------------------------
-<tt>""</tt>     | Default (see above)
+<tt>""</tt>     | System logging daemon
 <tt>"-"</tt>    | Standard error stream
 <em>path</em>   | File whose pathname is _path_
 

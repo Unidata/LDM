@@ -128,7 +128,7 @@ static const char* get_default_output(void)
  *                        - else file whose pathname is `output`
  * @param[in] level     Logging level.
  * @retval    0         Success.
- *                        - `log_get_output()` will return
+ *                        - `log_get_destination()` will return
  *                          - ""  if the process is a daemon
  *                          - "-" otherwise
  *                        - `log_get_facility()` will return `facility`.
@@ -188,7 +188,7 @@ void log_internal(
 
 /**
  * Initializes the logging module. Should be called before any other function.
- * - `log_get_output()` will return ""
+ * - `log_get_destination()` will return ""
  *   - ""  if the process is a daemon
  *   - "-" otherwise
  * - `log_get_facility()` will return `LOG_LDM`.
@@ -309,7 +309,7 @@ int log_set_facility(
     lock();
     const char* const id = log_get_id();
     const unsigned    options = log_get_options();
-    const char* const output = log_get_output();
+    const char* const output = log_get_destination();
     int               status = openulog(id, options, facility, output);
     unlock();
     return status == -1 ? -1 : 0;
@@ -423,41 +423,39 @@ unsigned log_get_options(void)
 }
 
 /**
- * Sets the logging output. May be called at any time -- including before
- * `log_impl_init()`.
+ * Sets the logging destination. Should be called between log_init() and
+ * log_fini().
  *
- * @param[in] output   The logging output. One of
- *                         ""      Log to the system logging daemon. Caller may
- *                                 free.
- *                         "-"     Log to the standard error stream. Caller may
- *                                 free.
- *                         else    Log to the file whose pathname is `output`.
- *                                 Caller may free.
+ * @param[in] dest     The logging destination. Caller may free. One of <dl>
+ *                         <dt>""   <dd>The system logging daemon.
+ *                         <dt>"-"  <dd>The standard error stream.
+ *                         <dt>else <dd>The file whose pathname is `dest`.
+ *                     </dl>
  * @retval    0        Success.
  * @retval    -1       Failure.
  */
-int log_set_output(
-        const char* const output)
+int log_set_destination(
+        const char* const dest)
 {
     lock();
     const char* const id = log_get_id();
     const unsigned    options = log_get_options();
-    int               status = openulog(id, options, LOG_LDM, output);
+    int               status = openulog(id, options, LOG_LDM, dest);
     unlock();
     return status == -1 ? -1 : 0;
 }
 
 /**
- * Returns the logging output. May be called at any time -- including before
- * `log_impl_init()`.
+ * Returns the logging destination. Should be called between log_init() and
+ * log_fini().
  *
- * @return       The logging output. One of
- *                   ""      Output is to the system logging daemon. Initial
- *                           value.
- *                   "-"     Output is to the standard error stream.
- *                   else    The pathname of the log file.
+ * @return       The logging destination. One of <dl>
+ *                   <dt>""      <dd>The system logging daemon.
+ *                   <dt>"-"     <dd>The standard error stream.
+ *                   <dt>else    <dd>The pathname of the log file.
+ *               </dl>
  */
-const char* log_get_output(void)
+const char* log_get_destination(void)
 {
     lock();
     const char* path = getulogpath();

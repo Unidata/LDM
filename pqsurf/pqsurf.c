@@ -129,7 +129,7 @@ run_child(int argc, char *argv[])
         {       /* child */
                 const char*     id = log_get_id();
                 const unsigned  facility = log_get_facility();
-                const char*     output = log_get_output();
+                const char*     output = log_get_destination();
 
                 (void)signal(SIGCHLD, SIG_DFL);
                 (void)signal(SIGTERM, SIG_DFL);
@@ -142,7 +142,7 @@ run_child(int argc, char *argv[])
                 (void)log_fini();
                 (void) execvp(argv[0], &argv[0]);
                 (void)log_init(id);
-                (void)log_set_output(output);
+                (void)log_set_destination(output);
                 (void)log_set_facility(facility);
 
                 log_syserr("execvp: %s", argv[0]);
@@ -626,7 +626,7 @@ int main(int ac, char *av[])
                 case 'l':
                         argv[argc++] = "-l";
                         argv[argc++] = optarg;
-                        (void)log_set_output(optarg);
+                        (void)log_set_destination(optarg);
                         break;
                 case 'd':
                         datadir = optarg;

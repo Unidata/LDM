@@ -53,7 +53,6 @@ typedef enum {
 /**
  * Initializes the logging module. Should be called before any other function.
  * <dl>
- *     <dt>log_get_output() <dd>will return "".
  *     <dt>log_get_facility() <dd>will return `LOG_LDM`.
  *     <dt>log_get_level() <dd>will return `LOG_LEVEL_NOTICE`.
  * </dl>
@@ -184,32 +183,31 @@ int log_set_facility(
 int log_get_facility(void);
 
 /**
- * Sets the logging output. Should be called between log_init() and
+ * Sets the logging destination. Should be called between log_init() and
  * log_fini().
  *
- * @param[in] output   The logging output. Caller may free. One of <dl>
- *                         <dt>""   <dd>Log according to the implementation-defined
- *                                  default.
- *                         <dt>"-"  <dd>Log to the standard error stream.
- *                         <dt>else <dd>Log to the file whose pathname is `output`.
+ * @param[in] dest     The logging destination. Caller may free. One of <dl>
+ *                         <dt>""   <dd>The system logging daemon.
+ *                         <dt>"-"  <dd>The standard error stream.
+ *                         <dt>else <dd>The file whose pathname is `dest`.
  *                     </dl>
  * @retval    0        Success.
  * @retval    -1       Failure.
  */
-int log_set_output(
-        const char* const output);
+int log_set_destination(
+        const char* const dest);
 
 /**
- * Returns the logging output. Should be called between log_init() and
+ * Returns the logging destination. Should be called between log_init() and
  * log_fini().
  *
- * @return       The logging output. One of <dl>
- *                   <dt>""      <dd>Output is to the system logging daemon.
- *                   <dt>"-"     <dd>Output is to the standard error stream.
+ * @return       The logging destination. One of <dl>
+ *                   <dt>""      <dd>The system logging daemon.
+ *                   <dt>"-"     <dd>The standard error stream.
  *                   <dt>else    <dd>The pathname of the log file.
  *               </dl>
  */
-const char* log_get_output(void);
+const char* log_get_destination(void);
 
 /**
  * Clears the message-list of the current thread.

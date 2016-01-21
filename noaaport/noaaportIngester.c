@@ -116,7 +116,7 @@ decodeCommandLine(
                 *interface = optarg;
                 break;
             case 'l':
-                if (log_set_output(optarg))
+                if (log_set_destination(optarg))
                     status = 1;
                 break;
             case 'm':

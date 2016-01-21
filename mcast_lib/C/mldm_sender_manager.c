@@ -214,7 +214,7 @@ execMldmSender(
         args[i++] = feedtypeBuf; // multicast group identifier
     }
 
-    char* arg = (char*)log_get_output(); // safe cast
+    char* arg = (char*)log_get_destination(); // safe cast
     if (arg != NULL) {
         args[i++] = "-l";
         args[i++] = arg;

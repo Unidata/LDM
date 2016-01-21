@@ -234,7 +234,7 @@ int main(
                 }
                 break;
             case 'l':
-                (void)log_set_output(optarg);
+                (void)log_set_destination(optarg);
                 break;
             case 'o':
                 (void) set_timestamp(&clss.from);

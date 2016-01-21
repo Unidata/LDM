@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
                         tag = optarg;
                         break;
                 case 'l':               /* logfname */
-                        (void)log_set_output(optarg);
+                        (void)log_set_destination(optarg);
                         break;
                 case '?':
                 default:

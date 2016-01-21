@@ -542,7 +542,7 @@ static bool init_categories(void)
 /**
  * Initializes the logging module except for the mutual exclusion lock. Should
  * be called before most other functions.
- * - `log_get_output()`   will return "".
+ * - `log_get_destination()`   will return "".
  * - `log_get_facility()` will return `LOG_LDM`.
  * - `log_get_level()`    will return `LOG_LEVEL_DEBUG`.
  *
@@ -786,7 +786,7 @@ static inline void unlock()
 
 /**
  * Initializes the logging module. Should be called before most other functions.
- * - `log_get_output()`   will return "".
+ * - `log_get_destination()`   will return "".
  * - `log_get_facility()` will return `LOG_LDM`.
  * - `log_get_level()`    will return `LOG_LEVEL_DEBUG`.
  *
@@ -885,7 +885,7 @@ int log_fini(void)
  * @retval    0        Success.
  * @retval    -1       Failure.
  */
-int log_set_output(
+int log_set_destination(
         const char* const out)
 {
     lock();
@@ -903,7 +903,7 @@ int log_set_output(
  *                   "-"     Output is to the standard error stream.
  *                   else    The pathname of the log file.
  */
-const char* log_get_output(void)
+const char* log_get_destination(void)
 {
     lock();
     const char* const out = output;

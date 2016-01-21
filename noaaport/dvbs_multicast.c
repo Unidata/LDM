@@ -295,7 +295,7 @@ int main(
                 usage(argv[0]);
             }
             /* else */
-            (void)log_set_output(optarg);
+            (void)log_set_destination(optarg);
             break;
         case 'q':
             pqfname = optarg;

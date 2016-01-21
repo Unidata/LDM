@@ -495,7 +495,7 @@ main(int ac, char *av[])
                             skipLeadingCtlString = 0;
                             break;
                     case 'l': {
-                            (void)log_set_output(optarg);
+                            (void)log_set_destination(optarg);
                             break;
                     }
                     case 'b':

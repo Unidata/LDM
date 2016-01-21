@@ -365,7 +365,7 @@ static int getConfiguration(int ac, char* const * const av) {
                 }
                 break;
             case 'l':
-                (void) log_set_output(optarg);
+                (void) log_set_destination(optarg);
                 break;
             case 'o':
                 timeOffset.tv_sec = atoi(optarg);
