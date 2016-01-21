@@ -11,13 +11,20 @@ noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mutex.c mutex.h log.c log.h log_private.h
 lib_la_LIBADD		= $(builddir)/ulog/lib.la
 MAIN_PAGE		= mainpage.md
-EXTRA_DIST		= $(MAIN_PAGE) html
+EXTRA_DIST		= $(MAIN_PAGE) html Doxyfile
 DOXYGEN			= @DOXYGEN@
+docdir			= @DOCDIR_LIBRARIES@/simple-logging
 CLEANFILES		= html
 
-$(srcdir)/html \
-$(srcdir)/html/index.html:	$(srcdir)/$(MAIN_PAGE) $(srcdir)/Doxyfile
-	cd $(srcdir) && $(DOXYGEN) Doxyfile
+html \
+html/index.html:	$(MAIN_PAGE) Doxyfile
+	$(DOXYGEN) $(srcdir)/Doxyfile
+
+install-html:		html/index.html $(DESTDIR)$(docdir)
+	cp -R html/* $(DESTDIR)$(docdir)
+
+$(DESTDIR)$(docdir):
+	mkdir -p $@
 
 if WANT_SLOG
 lib_la_SOURCES		+= log2slog.c

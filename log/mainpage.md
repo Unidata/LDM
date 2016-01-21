@@ -10,6 +10,7 @@ licensing conditions.
 @section contents Table of Contents
 - \ref introduction
 - \ref example
+- \ref format
 
 <hr>
 
@@ -115,3 +116,36 @@ Here's a contrived example:
         return 0;
     }
 @endcode
+
+<hr>
+
+@section format Format of Log Messages
+
+Log messages sent to either the standard error stream or the LDM log file will
+have the following format:
+
+> _time_ _proc_ _level_ _loc_ _msg_
+
+where:
+<dl>
+<dt><em>time</em> <dd>Is the creation-time of the message in the form
+    <em>YYYYMMDD</em>T<em>hhmmss</em>.<em>uuuuuu</em>Z
+    (e.g., 20160121T163218.391847Z).
+<dt><em>proc</em> <dd>Is the identifier of the process in the form
+    <em>id</em>[<em>pid</em>], where <em>id</em> is the identifier given to
+    log_init(), log_set_id(), or log_set_upstream_id(), and <em>pid</em> is the
+    system's process-identifier.
+<dt><em>level</em> <dd>Is the logging-level (i.e., priority) of the message. One
+    of `DEBUG`, `INFO`, `NOTE`, `WARN`, or `ERROR`.
+<dt><em>loc</em> <dd>Is the location where the message was created in the form
+    <em>file</em>:<em>line</em>, where <em>file</em> is the name of the file that created the message
+    and <em>line</em> is the line number where the message was created.
+<dt><em>msg</em></dt>  <dd>Is the actual message given to one of the logging
+    functions.</dd>
+</dl>
+
+Log messages sent to the system logging daemon will, in general, have the same
+_proc_, _loc_, and _msg_ components as above, but the _time_ and _level_ 
+components will depend on the system logging daemon. Additionally, the system
+logging daemon might alter the order of the components and/or add additional
+components (e.g., the name of the local host).

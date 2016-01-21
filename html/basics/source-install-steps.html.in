@@ -187,14 +187,28 @@ options and arguments, when and if appropriate:
     incomplete until the superuser executes the command <tt>make
     root-actions</tt>.
 
+    <dt><code>--with-ulog</code>
+    <dd>Use the <code>ulog</code> logging module that was standard prior to LDM
+        version 6.12.15. When appropriate, the <code>ulog</code> module writes
+        log messages to the <a href="glindex.html#syslog">system logging
+        daemon</a>. Because enabling such use was the single greatest impediment
+        to correctly using the LDM (and for other reasons), the
+        <code>ulog</code> module has been replaced by one that writes directly
+        into the LDM log file when appropriate, yet still supports <a
+        href="newlog.html">LDM log file rotation</a>.
+
     <dt><code>--enable-logging=<a href="glindex.html#localn">local<em>n</em>
 	</a></code>
     <dd>Configures the <a href="glindex.html#LDM">LDM</a> to use the
 	<a href="glindex.html#localn">local<i>n</i></a>
-	facility for logging messages.  If you have a previous 
+	facility when logging messages to the
+	<a href="glindex.html#syslog">system logging daemon</a>.
+	If you have a previous 
 	<a href="glindex.html#LDM">LDM</a>
 	installation, then you should use the same facility.
 	The default is <code>local0</code>.
+	Note that, by default, log messages will be written directly into the
+	LDM log file, when appropriate, unless the previous option is specified.
 
     <dt><code>--localstatedir=<i>volatile_dir</i></code>
     <dd>Configures the LDM to use <i>volatile_dir</i> (<i>e.g.</i>,

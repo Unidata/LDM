@@ -67,8 +67,9 @@ nobase_html_DATA	= \
     tutorial/images/Schedule.gif \
     tutorial/images/TOCIcon.gif \
     tutorial/images/TopArrow.gif
+CLEANFILES	= $(EXTRA_DIST)
 
-all:
+all:	$(EXTRA_DIST)
 
 $(EXTRA_DIST):
 	rm -rf tutorial

@@ -2,17 +2,17 @@
 
 <head>
 <meta name="UIINDEX" content="4">
-<title>LDM Logfile Format</title>
-<meta NAME="BOOKMARK" CONTENT="LDM Logfile Format">
+<title><tt>ulog</tt> Logging Format</title>
+<meta NAME="BOOKMARK" CONTENT="ulog Logging Format">
 <meta NAME="AUTHOR" CONTENT="steve">
-<meta NAME="KEYWORDS" CONTENT="LDM, Logfile, format">
-<meta NAME="DESCRIPTION" CONTENT="Describes the format of the logfile
-of an LDM system">
+<meta NAME="KEYWORDS" CONTENT="LDM, ulog Logging, format">
+<meta NAME="DESCRIPTION" CONTENT="Describes the format of log messages from the
+ulog module">
 </head>
 
 <body>
 
-<h1 align="center">LDM Logfile Format and Interpretation</h1>
+<h1 align="center"><tt>ulog</tt> Logging Format and Interpretation</h1>
 
 <h2>Contents</h2>
 <ul>
@@ -29,7 +29,7 @@ write diagnostic and informational messages to
 <a href="glindex.html#standard output">standard output</a>, most
 utilities (in particular the LDM server, <a
 href="glindex.html#ldmd"><tt>ldmd</tt></a>)
-are designed to write such messages to a logfile.  The logfile is
+are designed to write such messages to a log file.  The log file is
 <tt>$HOME/logs/ldmd.log</tt>.
 
 <p>In general, the format of most log-messages is
@@ -46,13 +46,13 @@ are designed to write such messages to a logfile.  The logfile is
 <p>Associated with each log-message is a priority-level.  The
 levels are: error, warning, notice, informational, and debug.  The
 priority-level is used to decide whether or not to write the message
-to the logfile.  Most utilities log errors, warnings, and notices by
+to the log file.  Most utilities log errors, warnings, and notices by
 default.  This behavior can usually be changed when the utility is
 executed by using the "<tt>-v</tt>" (verbose) option.  This option will
 cause the utility to also log informational messages (and cause the
-logfile to grow more rapidly).  Another common option is "<tt>-x</tt>",
+log file to grow more rapidly).  Another common option is "<tt>-x</tt>",
 which will cause the utility to also log debug messages (and cause the
-logfile to grow extremely fast).  You should rarely, if ever, need to
+log file to grow extremely fast).  You should rarely, if ever, need to
 use the "<tt>-x</tt>" option.
 
 <p>Each LDM process (
@@ -910,7 +910,7 @@ fields are shown.
 	in which case
 	it will print a message for every such data-product).
 	You can use a command like the following to extract a unique list of
-	such ingest hosts from an LDM logfile:
+	such ingest hosts from an LDM log file:
 <blockquote><pre>
 grep -F 'WARN: Future' ldmd.log.1 | sort -u -t ' ' -k 10,10
 </pre></blockquote>
@@ -918,7 +918,7 @@ grep -F 'WARN: Future' ldmd.log.1 | sort -u -t ' ' -k 10,10
 	<a href="glindex.html#crontab utility">
 	<tt><b>crontab utility</b></tt></a>
 	just after the
-	<a href="newlog.html">logfiles are rotated</a>
+	<a href="newlog.html">log files are rotated</a>
 	to notify the LDM administrator of problems via email.
 </dl>
 </blockquote>

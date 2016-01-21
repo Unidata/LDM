@@ -13,7 +13,8 @@ EXTRA_DIST	= \
     index.html \
     ldmd.conf.html \
     LDM-user.html \
-    logfile-format.html \
+    logging-format.html \
+    logging-format-ulog.html \
     logfile.html \
     monitoring.html \
     multiple_ldms.html \
@@ -73,7 +74,8 @@ html_DATA	= \
     ldmd.conf.html \
     LDM-registry.html \
     LDM-user.html \
-    logfile-format.html \
+    logging-format.html \
+    logging-format-ulog.html \
     logfile.html \
     monitoring.html \
     multiple_ldms.html \

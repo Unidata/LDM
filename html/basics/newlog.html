@@ -2,23 +2,23 @@
 
 <head>
 <meta name="UIINDEX" content="4">
-<title>Logfile Rotation</title>
-<meta NAME="BOOKMARK" CONTENT="Logfile Rotation">
+<title>Log File Rotation</title>
+<meta NAME="BOOKMARK" CONTENT="Log File Rotation">
 <meta NAME="AUTHOR" CONTENT="steve">
-<meta NAME="KEYWORDS" CONTENT="LDM, Logfile, rotation">
-<meta NAME="DESCRIPTION" CONTENT="Describes the rotation of the LDM logfiles">
+<meta NAME="KEYWORDS" CONTENT="LDM, Log File, rotation">
+<meta NAME="DESCRIPTION" CONTENT="Describes the rotation of the LDM log files">
 </head>
 
 <body>
 
-<h1 align="center">LDM Logfile Rotation</h1>
+<h1 align="center">LDM Log File Rotation</h1>
 
 <p>
-Without intervention, the <a href="glindex.html#logfile">LDM logfile</a> ,
+Without intervention, the <a href="glindex.html#logfile">LDM log file</a> ,
 <tt>ldmd.log</tt>,
 will grow without bound.
 For this reason, it is desirable to have an automatic process manage the
-<a href="glindex.html#logfile">LDM logfile</a>.
+<a href="glindex.html#logfile">LDM log file</a>.
 A convenient mechanism for curtailing growth is provided by the 
 <tt><a href="glindex.html#ldmadmin">ldmadmin</a> newlog</tt>
 command in conjunction with the UNIX
@@ -28,17 +28,17 @@ crontab</a> utility.
 
 <p>
 The <tt><a href="glindex.html#ldmadmin">ldmadmin</a> newlog</tt>
-command rotates through the last <tt>$numlogs</tt> logfiles of the 
+command rotates through the last <tt>$numlogs</tt> log files of the 
 <a href="glindex.html#LDM">LDM</a>, where
 <tt>$numlogs</tt> is a user-customizable variable in the
 <tt><a href="glindex.html#ldmadmin">ldmadmin</a></tt>
 script.
-The command causes every logfile matching the patten 
+The command causes every log file matching the patten 
 <tt>ldmd.log.<i>n</i></tt>, where <i>n</i> is a positive integer less than
 <tt>$numlogs</tt>,
 to be renamed <tt>ldmd.log.<i>n+1</i></tt>, where <i>n+1</i> denotes
 the next higher integer.  This action will proceed from the larger
-<i>n</i>-s to the smaller so that no logfile is lost.
+<i>n</i>-s to the smaller so that no log file is lost.
 Then, the file <tt>ldmd.log</tt> is renamed <tt>ldmd.log.1</tt>.
 Finally an empty <tt>ldmd.log</tt> file is created.
 
@@ -79,12 +79,12 @@ at 1800 hours local-time every day:
 
 <p>
 Because the timestamps in an 
-<a href="glindex.html#logfile">LDM logfile</a> 
-are usually in UTC, a common convention is to rotate the logfiles at 0000 
+<a href="glindex.html#logfile">LDM log file</a> 
+are usually in UTC, a common convention is to rotate the log files at 0000 
 hours UTC.
 This is why the above example used 1800 hours MDT.  (If we remember, we
 change the execution-time to 1700 MST when appropriate.)  An alternative
-convention is to rotate the logfile at local midnight, <i>e.g.</i>,
+convention is to rotate the log file at local midnight, <i>e.g.</i>,
 <blockquote><pre>
 0 0 * * * bin/ldmadmin newlog
 </pre></blockquote>
@@ -93,14 +93,14 @@ you use.
 
 <p>
 We also like to keep a week's worth of <a
-href="glindex.html#logfile">LDM logfile</a> entries around
+href="glindex.html#logfile">LDM log file</a> entries around
 -- so we change the 
 <tt>$numlogs</tt> variable to 7.
 
 <p>
 This rotation (and purging) of the
-<a href="glindex.html#logfile">LDM logfile</a>s will ensure that the space
-occupied by the logfiles will not grow indefinitely.
+<a href="glindex.html#logfile">LDM log file</a>s will ensure that the space
+occupied by the log files will not grow indefinitely.
 
 <hr>
 
