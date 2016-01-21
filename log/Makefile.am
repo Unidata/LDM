@@ -14,7 +14,6 @@ MAIN_PAGE		= mainpage.md
 EXTRA_DIST		= $(MAIN_PAGE) html Doxyfile
 DOXYGEN			= @DOXYGEN@
 docdir			= @DOCDIR_LIBRARIES@/simple-logging
-CLEANFILES		= html
 
 html \
 html/index.html:	$(MAIN_PAGE) Doxyfile
@@ -25,6 +24,9 @@ install-html:		html/index.html $(DESTDIR)$(docdir)
 
 $(DESTDIR)$(docdir):
 	mkdir -p $@
+
+clean-local:
+	-rm -rf html latex man
 
 if WANT_SLOG
 lib_la_SOURCES		+= log2slog.c
