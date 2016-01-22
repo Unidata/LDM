@@ -10,3 +10,4 @@ up7.pq
 up7.conf
 down7.conf
 *.pid
+*.pim
