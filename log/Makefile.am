@@ -13,11 +13,13 @@ lib_la_LIBADD		= $(builddir)/ulog/lib.la
 MAIN_PAGE		= simple-logging.md
 # The Doxygen documentation is part of the distribution so that it doesn't have
 # to be created by the user.
-EXTRA_DIST		= $(MAIN_PAGE) html Doxyfile
+dist_man3_MANS		= man/man3/log.h.3
+EXTRA_DIST		= Doxyfile $(MAIN_PAGE) html $(dist_man3_MANS)
 DOXYGEN			= @DOXYGEN@
 docdir			= @DOCDIR_LIBRARIES@/simple-logging
 
 $(srcdir)/html \
+$(srcdir)/$(dist_man3_MANS) \
 $(srcdir)/html/index.html:	$(MAIN_PAGE) Doxyfile $(lib_la_sources)
 	cd $(srcdir) && $(DOXYGEN) Doxyfile
 
