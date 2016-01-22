@@ -1490,7 +1490,7 @@ test_up7_down7(
     CU_ASSERT_EQUAL(status, PQ_END);
     receiver_requestLastProduct(&receiver);
 #endif
-    (void)sleep(1);
+    (void)sleep(2);
     log_notice("up7_down7_test(): %lu sender product-queue insertions",
             (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
