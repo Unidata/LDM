@@ -10,23 +10,26 @@ SUBDIRS			= ulog
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mutex.c mutex.h log.c log.h log_private.h
 lib_la_LIBADD		= $(builddir)/ulog/lib.la
-MAIN_PAGE		= mainpage.md
+MAIN_PAGE		= simple-logging.md
+# The Doxygen documentation is part of the distribution so that it doesn't have
+# to be created by the user.
 EXTRA_DIST		= $(MAIN_PAGE) html Doxyfile
 DOXYGEN			= @DOXYGEN@
 docdir			= @DOCDIR_LIBRARIES@/simple-logging
 
-html \
-html/index.html:	$(MAIN_PAGE) Doxyfile
-	$(DOXYGEN) $(srcdir)/Doxyfile
+$(srcdir)/html \
+$(srcdir)/html/index.html:	$(MAIN_PAGE) Doxyfile $(lib_la_sources)
+	cd $(srcdir) && $(DOXYGEN) Doxyfile
 
-install-html:		html/index.html $(DESTDIR)$(docdir)
-	cp -R html/* $(DESTDIR)$(docdir)
+install-data-local:	$(srcdir)/html/index.html $(DESTDIR)$(docdir)
+	cp -R $(srcdir)/html/* $(DESTDIR)$(docdir)
+
+uninstall-local:
+	chmod -R +w $(DESTDIR)$(docdir)
+	rm -rf $(DESTDIR)$(docdir)
 
 $(DESTDIR)$(docdir):
 	mkdir -p $@
-
-clean-local:
-	-rm -rf html latex man
 
 if WANT_SLOG
 lib_la_SOURCES		+= log2slog.c
