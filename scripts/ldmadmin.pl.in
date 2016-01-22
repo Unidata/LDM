@@ -837,7 +837,7 @@ sub new_log
                 $status = 0;        # success
             }
         }
-        elif ("@WANT_SLOG_TRUE@" eq "") {
+        elsif ("@WANT_SLOG_TRUE@" eq "") {
             if (!isRunning($pid_file, $ip_addr)) {
                 $status = 0;
             }

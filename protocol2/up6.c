@@ -13,6 +13,7 @@
 #include <netinet/in.h>  /* sockaddr_in */
 #include <rpc/rpc.h>     /* CLIENT, clnt_stat */
 #include <signal.h>      /* sig_atomic_t */
+#include <stdbool.h>
 #include <stdlib.h>      /* NULL, malloc() */
 #include <string.h>      /* strerror() */
 #include <strings.h>     /* strncasecmp() */
@@ -433,12 +434,12 @@ static up6_error_t up6_run(
     log_assert(_class != NULL);
 
     if (NOTIFY == _mode) {
-        set_abbr_ident(_downName, "(noti)");
+        log_set_upstream_id(_downName, false);
         log_notice("Starting Up(%s/6): %s, SIG=%s", PACKAGE_VERSION,
                 s_prod_class(NULL, 0, _class), sig);
     }
     else {
-        set_abbr_ident(_downName, "(feed)");
+        log_set_upstream_id(_downName, true);
         log_notice("Starting Up(%s/6): %s, SIG=%s, %s", PACKAGE_VERSION,
                 s_prod_class(NULL, 0, _class), sig,
                 _isPrimary ? "Primary" : "Alternate");

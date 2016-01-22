@@ -683,7 +683,7 @@ static void handle_connection(
     (void) close(sock);
 
     /* Set the ulog identifier, optional. */
-    set_abbr_ident(remote_name(), NULL );
+    log_set_id(remote_name());
 
     log_info("Connection from %s", remote_name());
 

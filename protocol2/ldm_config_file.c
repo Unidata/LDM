@@ -721,7 +721,7 @@ requester_exec(
             ? max_latency
             : toffset;
 
-    set_abbr_ident(source, NULL);
+    log_set_id(source);
     str_setremote(source);
 
     /*

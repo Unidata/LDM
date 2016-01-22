@@ -206,7 +206,7 @@ feed_or_notify(
         goto return_or_exit;
     }
 
-    set_abbr_ident(downName, isNotifier ? "(noti)" : "(feed)");
+    log_set_upstream_id(downName, !isNotifier);
 
     /*
      * Remove any "signature" specification from the subscription.

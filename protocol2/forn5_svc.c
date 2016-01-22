@@ -463,7 +463,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
 
         /* Set the ulog identifier, optional. */
         if(ident != NULL && *ident != 0)
-                set_abbr_ident(remote_name(), ident);
+                log_set_upstream_id(remote_name(), strstr(ident, "feed"));
         log_notice("Starting Up(%s/5): %s",
             PACKAGE_VERSION, s_prod_class(NULL, 0, remote->clssp));
 
