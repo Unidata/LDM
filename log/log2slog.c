@@ -29,6 +29,10 @@
     #define _XOPEN_PATH_MAX 1024
 #endif
 
+#define IS_SYSLOG_SPEC(spec) (strcmp(spec, "") == 0)
+#define IS_STDERR_SPEC(spec) (strcmp(spec, "-") == 0)
+#define IS_FILE_SPEC(spec)   (!IS_SYSLOG_SPEC(spec) && !IS_STDERR_SPEC(spec))
+
 /**
  * The mapping from `log` logging levels to system logging daemon priorities:
  */
@@ -395,8 +399,11 @@ int log_impl_init(
 }
 
 /**
- * Refreshes the logging module. In particular, if logging is to a file, then
- * the file is closed and re-opened; thus enabling log file rotation. Should be
+ * Refreshes the logging module. If logging is to the system logging daemon,
+ * then it will continue to be. If logging is to a file, then the file is closed
+ * and re-opened; thus enabling log file rotation. If logging is to the standard
+ * error stream, then it will continue to be if the process has not become a
+ * daemon; otherwise, logging will be to the standard LDM log file. Should be
  * called after log_init().
  *
  * @retval  0  Success.
@@ -407,8 +414,14 @@ int log_refresh(void)
     lock();
     char output[_XOPEN_PATH_MAX];
     strncpy(output, output_spec, sizeof(output))[sizeof(output)-1] = 0;
-    stream_close(); // Enable log file rotation
-    int status = set_output(output);
+    int status = init_output(); // in case we've turned into a daemon
+    if (IS_SYSLOG_SPEC(output)) {
+        status = set_output(output);
+    }
+    else if (!IS_STDERR_SPEC(output)) {
+        stream_close(); // Enable log file rotation
+        status = set_output(output);
+    }
     unlock();
     return status;
 }
