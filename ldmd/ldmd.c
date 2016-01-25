@@ -288,19 +288,12 @@ static void cleanup(
          * Delete the upstream LDM database.
          */
         (void) uldb_delete(NULL);
-
-#if WANT_MULTICAST
-        /*
-         * Destroy the multicast LDM sender map.
-         */
-        msm_destroy();
-#endif
     }
 
     /*
      * Free access-control-list resources.
      */
-    lcf_free();
+    lcf_free(); // eventually calls msm_destroy()
 
     /*
      * Close registry.
@@ -807,6 +800,7 @@ int main(
     unsigned ldmPort = LDM_PORT;
     unsigned logOpts = 0;
 
+    (void)log_init(av[0]);
     ensureDumpable();
 
     /*
@@ -836,10 +830,12 @@ int main(
                 break;
             }
             case 'v':
-                (void)log_set_level(LOG_LEVEL_INFO);
+                if (!log_is_enabled_info)
+                    (void)log_set_level(LOG_LEVEL_INFO);
                 break;
             case 'x':
-                (void)log_set_level(LOG_LEVEL_DEBUG);
+                if (!log_is_enabled_debug)
+                    (void)log_set_level(LOG_LEVEL_DEBUG);
                 break;
             case 'y':
                 logOpts |= LOG_MICROSEC;
@@ -954,11 +950,7 @@ int main(
     }
 #endif
 
-    /*
-     * Initialize logger.
-     */
-    (void)log_init(av[0]);
-    (void)log_set_destination(logfname);
+    (void)log_refresh();
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
 

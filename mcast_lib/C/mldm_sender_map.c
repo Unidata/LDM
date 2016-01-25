@@ -24,6 +24,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -200,6 +201,7 @@ msm_setSmoPathname(void)
 Ldm7Status
 msm_init(void)
 {
+    log_debug("Entered");
     int status;
     if (smo_pathname) {
         log_add("Multicast sender map is already initialized");
@@ -219,6 +221,8 @@ msm_init(void)
                 status = smo_init(fd, NUM_FEEDTYPES, &addr);
 
                 if (status) {
+                    log_add("Couldn't initialize shared-memory object \"%s\"",
+                            smo_pathname);
                     smo_close(fd, smo_pathname);
                 }
                 else {
@@ -227,18 +231,19 @@ msm_init(void)
                     lock.l_whence = SEEK_SET;
                     lock.l_start = 0;
                     lock.l_len = 0; // entire object
-                    status = 0;
                 } // shared PID array initialized
             } // `fd` is open
         } // `smo_pathname` set
-    } // module not intialized
+    } // module not initialized
 
+    log_debug("Returning");
     return status;
 }
 
 /**
  * Locks the map. Idempotent. Blocks until the lock is acquired or an error
- * occurs.
+ * occurs. Locking the map is explicit because the map is shared by multiple
+ * processes and a transaction might require several function calls.
  *
  * @param[in] exclusive    Lock for exclusive access?
  * @retval    0            Success.
@@ -251,7 +256,8 @@ msm_lock(
     lock.l_type = exclusive ? F_RDLCK : F_WRLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        log_syserr("Couldn't lock shared process-information array");
+        log_syserr("Couldn't lock shared process-information array: fileDes=%d",
+                fileDes);
         return LDM7_SYSTEM;
     }
 
@@ -347,7 +353,8 @@ msm_unlock(void)
     lock.l_type = F_UNLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        log_syserr("Couldn't unlock shared process-information array");
+        log_syserr("Couldn't unlock shared process-information array: "
+                "fileDes=%d", fileDes);
         return LDM7_SYSTEM;
     }
 
@@ -399,9 +406,11 @@ msm_clear(void)
 void
 msm_destroy(void)
 {
+    log_debug("Entered");
     if (smo_pathname) {
         smo_close(fileDes, smo_pathname);
         free(smo_pathname);
         smo_pathname = NULL;
     }
+    log_debug("Returning");
 }

@@ -818,7 +818,10 @@ mlsm_ensureRunning(
     }
     else {
         status = msm_lock(true);
-        if (0 == status) {
+        if (status) {
+            log_add("Couldn't lock multicast sender map");
+        }
+        else {
             McastEntry*      entry = *(McastEntry**)node;
             McastInfo* const info = &entry->info;
 
@@ -851,14 +854,15 @@ mlsm_terminated(
         const pid_t pid)
 {
     int status = msm_lock(true);
-
-    if (0 == status) {
+    if (status) {
+        log_add("Couldn't lock multicast sender map");
+    }
+    else {
         status = msm_remove(pid);
         if (pid == childPid)
             childPid = 0; // no need to kill child
         (void)msm_unlock();
     }
-
     return status;
 }
 
@@ -872,17 +876,17 @@ Ldm7Status
 mlsm_clear(void)
 {
     int status = msm_lock(true);
-
-    if (0 == status) {
+    if (status) {
+        log_add("Couldn't lock multicast sender map");
+    }
+    else {
         while (mcastEntries) {
             McastEntry* entry = *(McastEntry**)mcastEntries;
             (void)tdelete(entry, &mcastEntries, me_compareOrConflict);
             me_free(entry);
         }
         msm_clear();
+        (void)msm_unlock();
     }
-
-    (void)msm_unlock();
-
     return status;
 }

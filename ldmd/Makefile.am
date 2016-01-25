@@ -24,7 +24,7 @@ ldmd_SOURCES	= \
     parser.c \
     ldmd.c \
     wordexp.c
-ldmd_CPPFLAGS		= \
+CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib \
     -I$(top_srcdir)/registry \
     -I$(top_builddir)/registry \
@@ -37,7 +37,7 @@ ldmd_CPPFLAGS		= \
     -I$(top_srcdir) \
     -I$(top_srcdir)/mcast_lib/C \
     -I$(top_srcdir)/mcast_lib/C++
-ldmd_LDADD		= \
+LDADD		= \
     $(top_builddir)/lib/libldm.la \
     $(LD_GEN)
 nodist_man1_MANS	= ldmd.1
@@ -102,7 +102,7 @@ debug:		ldmd
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb ./ldmd
 
 .c.i:
-	$(COMPILE) $(CPPFLAGS) -E -o $@ $<
+	$(COMPILE) -E -o $@ $<
     
 if HAVE_CUNIT
 

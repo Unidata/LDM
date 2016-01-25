@@ -3320,7 +3320,8 @@ lcf_free(void)
     allowEntries_free();
     acceptEntries_free();
     #if WANT_MULTICAST
-       (void)mlsm_clear(); // Clears multicast LDM sender manager
+        if (mlsm_clear())
+            log_error("Couldn't clear multicast LDM sender manager");
         d7mgr_free();  // Clears multicast receiver manager
     #endif
     serverNeeded = false;
