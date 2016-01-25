@@ -951,6 +951,7 @@ int main(
 #endif
 
     (void)log_refresh();
+
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
 
