@@ -171,6 +171,27 @@ static void unlock(void)
 }
 
 /**
+ * Initializes a location structure.
+ *
+ * @param[out] dest  The location to be initialized.
+ * @param[in]  src   The location whose values are to be used for
+ *                   initialization.
+ */
+static void loc_init(
+        log_loc_t* const restrict       dest,
+        const log_loc_t* const restrict src)
+{
+    dest->file = src->file; // `__FILE__` is persistent
+    char* d = dest->func_buf;
+    char* s = src->func;
+    while (*s && d < dest->func_buf + sizeof(dest->func_buf) - 1)
+        *d++ = *s++;
+    *d = 0;
+    dest->func = dest->func_buf;
+    dest->line = src->line;
+}
+
+/**
  * Initializes this logging module.
  */
 int log_init(
@@ -508,8 +529,8 @@ const char* log_basename(
  */
 int log_vadd_located(
         const log_loc_t* const restrict loc,
-        const char* const restrict        fmt,
-        va_list                           args)
+        const char* const restrict      fmt,
+        va_list                         args)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -529,7 +550,7 @@ int log_vadd_located(
             Message* msg;
             status = list_getNextEntry(list, &msg);
             if (status == 0) {
-                msg->loc = *loc;
+                loc_init(&msg->loc, loc);
                 status = msg_format(msg, fmt, args);
                 if (status == 0)
                     list->last = msg;
@@ -550,8 +571,8 @@ int log_vadd_located(
  */
 int log_add_located(
         const log_loc_t* const restrict loc,
-        const char* const restrict        fmt,
-                                          ...)
+        const char* const restrict      fmt,
+                                        ...)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -664,8 +685,8 @@ void* log_malloc_located(
 void log_vlog_located(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
-        const char* const restrict        format,
-        va_list                           args)
+        const char* const restrict      format,
+        va_list                         args)
 {
     if (format && *format)
         log_vadd_located(loc, format, args);
@@ -684,8 +705,8 @@ void log_vlog_located(
 void log_log_located(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
-        const char* const restrict        format,
-                                          ...)
+        const char* const restrict      format,
+                                        ...)
 {
     va_list args;
     va_start(args, format);

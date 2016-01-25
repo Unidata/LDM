@@ -311,12 +311,12 @@ void log_write_one(
         struct tm tm;
         (void)gmtime_r(&now.tv_sec, &tm);
         (void)fprintf(output_stream,
-                "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%d] %s %s:%d %s\n",
+                "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%d] %s %s:%s():%d %s\n",
                 tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
                 tm.tm_sec, (long)now.tv_usec,
                 ident, getpid(),
                 level_to_string(level),
-                log_basename(msg->loc.file), msg->loc.line,
+                log_basename(msg->loc.file), msg->loc.func, msg->loc.line,
                 msg->string);
     }
     else {

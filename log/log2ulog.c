@@ -161,8 +161,8 @@ void log_write_one(
         const log_level_t    level,
         const Message* const   msg)
 {
-    (void)ulog(log_get_priority(level), "%s:%d %s", msg->loc.file,
-            msg->loc.line, msg->string);
+    (void)ulog(log_get_priority(level), "%s:%s():%d %s", msg->loc.file,
+            msg->loc->func, msg->loc.line, msg->string);
 }
 
 /**

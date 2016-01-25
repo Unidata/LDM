@@ -138,8 +138,10 @@ where:
 <dt><em>level</em> <dd>Is the logging-level (i.e., priority) of the message. One
     of `DEBUG`, `INFO`, `NOTE`, `WARN`, or `ERROR`.
 <dt><em>loc</em> <dd>Is the location where the message was created in the form
-    <em>file</em>:<em>line</em>, where <em>file</em> is the name of the file that created the message
-    and <em>line</em> is the line number where the message was created.
+    <em>file</em>:<em>func</em>():<em>line</em>, where <em>file</em> is the name
+    of the file where the message was generated, <em>func</em> is the name of
+    the function that generated the message, and <em>line</em> is the line
+    number where the message was created.
 <dt><em>msg</em></dt>  <dd>Is the actual message given to one of the logging
     functions.</dd>
 </dl>

@@ -25,8 +25,16 @@
  * message was generated.
  */
 typedef struct {
-    const char* file; ///< The pathname of the file
-    int         line; ///< The origin-1 line-number in the file
+    // The pathname of the file
+    const char* file;
+    // Pointer to the name of the function. Might point to `func_buf` or
+    // somwhere else (e.g., to a function's `__function__`` value).
+    const char* func;
+    // The origin-1 line-number in the file
+    int         line;
+    // Buffer that might contain the name of the function. NB: The C standard
+    // doesn't actually limit the length of identifiers.
+    char        func_buf[64];
 } log_loc_t;
 
 /**
@@ -34,7 +42,7 @@ typedef struct {
  */
 typedef struct message {
     struct message* next;       ///< Pointer to next message
-    log_loc_t     loc;        ///< Location where the message was created
+    log_loc_t       loc;        ///< Location where the message was created
     char*           string;     ///< Message buffer
     size_t          size;       ///< Size of message buffer
 } Message;
@@ -214,7 +222,7 @@ void log_flush_located(
  */
 void log_write_one(
         const log_level_t    level,
-        const Message* const   msg);
+        const Message* const msg);
 
 /**
  * Emits an error message. Used internally when an error occurs in this logging
@@ -298,8 +306,11 @@ void* log_malloc_located(
         const size_t      nbytes,
         const char* const msg);
 
-/// Declares an instance of a location structure
-#define LOG_LOC_DECL(loc) const log_loc_t loc = {__FILE__, __LINE__}
+/**
+ * Declares an instance of a location structure. NB: `__func__` is an automatic
+ * variable with local scope.
+ */
+#define LOG_LOC_DECL(loc) const log_loc_t loc = {__FILE__, __func__, __LINE__}
 
 #define LOG_LOG2(level, ...) do { \
     if (!log_is_level_enabled(level)) {\

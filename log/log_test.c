@@ -61,11 +61,11 @@ static int numLines(
 
 static void logMessages(void)
 {
-    log_error("%s(): Error message", __func__);
-    log_warning("%s(): Warning", __func__);
-    log_notice("%s(): Notice", __func__);
-    log_info("%s(): Informational message", __func__);
-    log_debug("%s(): Debug message", __func__);
+    log_error("Error message");
+    log_warning("Warning");
+    log_notice("Notice");
+    log_info("Informational message");
+    log_debug("Debug message");
 }
 
 static void vlogMessage(
@@ -81,11 +81,11 @@ static void vlogMessage(
 
 static void vlogMessages(void)
 {
-    vlogMessage(LOG_LEVEL_ERROR, "%s(): %s", "Error message", __func__);
-    vlogMessage(LOG_LEVEL_WARNING, "%s(): %s", "Warning", __func__);
-    vlogMessage(LOG_LEVEL_NOTICE, "%s(): %s", "Notice", __func__);
-    vlogMessage(LOG_LEVEL_INFO, "%s(): %s", "Informational message", __func__);
-    vlogMessage(LOG_LEVEL_DEBUG, "%s(): %s", "Debug message", __func__);
+    vlogMessage(LOG_LEVEL_ERROR, "%s", "Error message");
+    vlogMessage(LOG_LEVEL_WARNING, "%s", "Warning");
+    vlogMessage(LOG_LEVEL_NOTICE, "%s", "Notice");
+    vlogMessage(LOG_LEVEL_INFO, "%s", "Informational message");
+    vlogMessage(LOG_LEVEL_DEBUG, "%s", "Debug message");
 }
 
 static void make_expected_id(
@@ -342,9 +342,9 @@ static void test_log_add(void)
     status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
-    log_add("%s(): LOG_ADD message 1", __func__);
-    log_add("%s(): LOG_ADD message 2", __func__);
-    log_error("%s(): LOG_ERROR message", __func__);
+    log_add("LOG_ADD message 1");
+    log_add("LOG_ADD message 2");
+    log_error("LOG_ERROR message");
 
     status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
