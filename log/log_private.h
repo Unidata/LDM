@@ -14,7 +14,15 @@
 
 #include "config.h"
 
+#include <stdbool.h>
+#include <string.h>
 #include <sys/types.h>
+
+#define SYSLOG_SPEC ""
+#define SYSERR_SPEC "-"
+#define LOG_IS_SYSLOG_SPEC(spec) (strcmp(spec, SYSLOG_SPEC) == 0)
+#define LOG_IS_STDERR_SPEC(spec) (strcmp(spec, SYSERR_SPEC) == 0)
+#define LOG_IS_FILE_SPEC(spec)   (!LOG_IS_SYSLOG_SPEC(spec) && !LOG_IS_STDERR_SPEC(spec))
 
 #ifdef __cplusplus
     extern "C" {
@@ -99,6 +107,34 @@ typedef struct message {
 #endif // `ulog` implementation
 
 /**
+ * Acquires this module's mutex.
+ */
+void log_lock(void);
+
+/**
+ * Releases this module's mutex.
+ */
+void log_unlock(void);
+
+/**
+ * Indicates if the current process is a daemon.
+ *
+ * @retval `true` iff the current process is a daemon
+ */
+bool log_am_daemon(void);
+
+/**
+ * Returns the default destination for log messages. If the current process is a
+ * daemon, then the default destination will depend on the implementation;
+ * otherwise, the default destination will be the standard error stream.
+ *
+ * @retval ""   Log to the system logging daemon
+ * @retval "-"  Log to the standard error stream
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_destination(void);
+
+/**
  * Initializes the logging module's implementation. Should be called before any
  * other function.
  *
@@ -130,20 +166,6 @@ static inline bool log_vet_level(
 {
     return level >= LOG_LEVEL_DEBUG && level <= LOG_LEVEL_ERROR;
 }
-
-/**
- * Returns the string associated with a logging level.
- *
- * @param[in] level  The logging level. One of `LOG_LEVEL_DEBUG`,
- *                   `LOG_LEVEL_INFO`, `LOG_LEVEL_NOTICE`,
- *                   `LOG_LEVEL_WARNING`, `LOG_LEVEL_ERROR`,
- *                   `LOG_LEVEL_ALERT`, `LOG_LEVEL_CRIT`, or
- *                   `LOG_LEVEL_EMERG`. The string `"UNKNOWN"` is returned if
- *                   the level is not one of these values.
- * @return           The associated string.
- */
-const char* log_level_to_string(
-        const log_level_t level);
 
 /**
  * Returns a pointer to the last component of a pathname.

@@ -6,7 +6,7 @@
  *   @file: log2ulog.c
  * @author: Steven R. Emmerson
  *
- * This file implements the `log.h` API using `ulog.c`.
+ * This file provides a simple implementation of the `log.h` API.
  */
 
 #include "config.h"
@@ -29,10 +29,6 @@
     #define _XOPEN_PATH_MAX 1024
 #endif
 
-#define IS_SYSLOG_SPEC(spec) (strcmp(spec, "") == 0)
-#define IS_STDERR_SPEC(spec) (strcmp(spec, "-") == 0)
-#define IS_FILE_SPEC(spec)   (!IS_SYSLOG_SPEC(spec) && !IS_STDERR_SPEC(spec))
-
 /**
  * The mapping from `log` logging levels to system logging daemon priorities:
  */
@@ -43,14 +39,6 @@ int                  log_syslog_priorities[] = {
  *  Logging level.
  */
 static log_level_t logging_level = LOG_LEVEL_NOTICE;
-/**
- * The thread identifier of the thread on which `log_init()` was called.
- */
-static pthread_t     init_thread;
-/**
- * The mutex that makes this module thread-safe.
- */
-static mutex_t       mutex;
 /**
  * The log file stream.
  */
@@ -72,35 +60,31 @@ static int           syslog_options = LOG_PID | LOG_NDELAY;
  */
 static int           syslog_facility = LOG_LDM;
 
-static void get_ldm_logfile_pathname(
-        char* const  buf,
-        const size_t size)
+/**
+ * Returns the pathname of the LDM log file.
+ *
+ * @return The pathname of the LDM log file
+ */
+static const char* get_ldm_logfile_pathname(void)
 {
-    char* pathname;
-    int   reg_getString(const char* path, char** pathname);
-    if (reg_getString("/log/file", &pathname)) {
-        (void)snprintf(buf, size, "%s/ldmd.log", LDM_LOG_DIR);
-        buf[size-1] = 0;
-        log_internal("Couldn't get pathname of LDM log file from registry. "
-                "Using default \"%s\".", buf);
+    static char pathname[_XOPEN_PATH_MAX];
+    if (pathname[0] == 0) {
+        int   reg_getString(const char* path, char** value);
+        char* path;
+        if (reg_getString("/log/file", &path)) {
+            (void)snprintf(pathname, sizeof(pathname), "%s/ldmd.log",
+                    LDM_LOG_DIR);
+            pathname[sizeof(pathname)-1] = 0;
+            log_internal("Couldn't get pathname of LDM log file from registry. "
+                    "Using default: \"%s\".", pathname);
+        }
+        else {
+            (void)strncpy(pathname, path, sizeof(pathname));
+            pathname[sizeof(pathname)-1] = 0;
+            free(path);
+        }
     }
-    else {
-        (void)strncpy(buf, pathname, size);
-        buf[size-1] = 0;
-        free(pathname);
-    }
-}
-
-static inline void lock(void)
-{
-    if (mutex_lock(&mutex))
-        abort();
-}
-
-static inline void unlock(void)
-{
-    if (mutex_unlock(&mutex))
-        abort();
+    return pathname;
 }
 
 /**
@@ -147,7 +131,6 @@ static void stream_close(void)
 
 /**
  * Sets the output stream. Should only be called by other `stream_` functions.
- * Idempotent.
  *
  * @param[in] spec      The new output stream specification.
  * @param[in] stream    The new output stream.
@@ -191,7 +174,7 @@ static int stream_set_file(
 }
 
 /**
- * Opens the output stream. Idempotent.
+ * Opens the output stream.
  *
  * @param[in] spec  Specification of the output:
  *                      - "-"  standard error stream
@@ -202,73 +185,9 @@ static int stream_set_file(
 static int stream_open(
         const char* const spec)
 {
-    int status;
-    if (strcmp(spec, output_spec) == 0 && output_stream) {
-        status = 0; // already open
-    }
-    else {
-        // New output stream
-        status = strcmp(spec, "-")
-                ? stream_set_file(spec)
-                : stream_set("-", stderr);
-    }
-    return status;
-}
-
-/**
- * Sets the destination for log messages. Idempotent.
- *
- * @param[in] output  Specification of the destination for log messages:
- *                        - ""   The system logging daemon
- *                        - "-"  The standard error stream
- *                        - else The file whose pathname is `output`
- * @retval    0       Success
- * @retval    -1      Failure
- */
-static int set_output(
-        const char* const output)
-{
-    int status;
-    if (strcmp(output, "")) {
-        status = stream_open(output);
-        if (status == 0)
-            closelog();
-    }
-    else {
-        stream_close();
-        openlog(ident, syslog_options, syslog_facility);
-        status = 0;
-    }
-    return status;
-}
-
-/**
- * Initializes the destination for log messages. If the current process is a
- * daemon, then logging will be to the LDM log file; otherwise, logging will be
- * to the standard error stream.
- *
- * log_get_destination() will return
- *   - The pathname of the LDM log file if the process is a daemon
- *   - "-" otherwise
- *
- * @retval 0   Success
- * @retval -1  Failure
- */
-static int init_output(void)
-{
-    int  status;
-    char output[_XOPEN_PATH_MAX];
-    int  ttyFd = open("/dev/tty", O_RDONLY);
-    if (-1 == ttyFd) {
-        // No controlling terminal => daemon => use LDM log file
-        get_ldm_logfile_pathname(output, sizeof(output));
-    }
-    else {
-        // Controlling terminal exists => interactive => log to `stderr`
-        (void)close(ttyFd);
-        (void)strcpy(output, "-");
-    }
-    return set_output(output);
+    return strcmp(spec, SYSERR_SPEC)
+            ? stream_set_file(spec)
+            : stream_set(SYSERR_SPEC, stderr);
 }
 
 /**
@@ -297,6 +216,19 @@ static int level_to_priority(
         const log_level_t level)
 {
     return log_vet_level(level) ? log_syslog_priorities[level] : LOG_ERR;
+}
+
+/**
+ * Returns the default destination for log messages. If the current process is a
+ * daemon, then the default destination will be the standard LDM log file;
+ * otherwise, the default destination will be the standard error stream.
+ *
+ * @retval "-"  Log to the standard error stream
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_destination(void)
+{
+    return log_am_daemon() ? get_ldm_logfile_pathname() : "-";
 }
 
 /**
@@ -355,7 +287,7 @@ void log_internal(
 }
 
 /******************************************************************************
- * Public API:
+ * Package API:
  ******************************************************************************/
 
 /**
@@ -388,67 +320,25 @@ int log_impl_init(
 
         strncpy(ident, log_basename(id), sizeof(ident))[sizeof(ident)-1] = 0;
 
-        status = init_output();
-        if (status == 0) {
-            status = mutex_init(&mutex, true, true);
-            if (status == 0)
-                init_thread = pthread_self();
-        }
+        const char* dest = log_get_default_destination();
+        status = log_set_destination(dest);
     }
-    return status ? -1 : 0;
-}
-
-/**
- * Refreshes the logging module. If logging is to the system logging daemon,
- * then it will continue to be. If logging is to a file, then the file is closed
- * and re-opened; thus enabling log file rotation. If logging is to the standard
- * error stream, then it will continue to be if the process has not become a
- * daemon; otherwise, logging will be to the standard LDM log file. Should be
- * called after log_init().
- *
- * @retval  0  Success.
- * @retval -1  Failure.
- */
-int log_refresh(void)
-{
-    lock();
-    char output[_XOPEN_PATH_MAX];
-    strncpy(output, output_spec, sizeof(output))[sizeof(output)-1] = 0;
-    int status = init_output(); // in case we've turned into a daemon
-    if (IS_SYSLOG_SPEC(output)) {
-        status = set_output(output);
-    }
-    else if (!IS_STDERR_SPEC(output)) {
-        stream_close(); // Enable log file rotation
-        status = set_output(output);
-    }
-    unlock();
     return status;
 }
 
 /**
- * Finalizes the logging module. Frees resources specific to the current thread.
- * Frees all resources if the current thread is the one on which
- * `log_impl_init()` was called.
+ * Finalizes the logging module.
  *
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
 int log_impl_fini(void)
 {
-    int status;
-    lock();
-    log_free();
-    if (!pthread_equal(init_thread, pthread_self())) {
-        status = 0;
-    }
-    else {
-        stream_close();
-        closelog();
-        unlock();
-        status = mutex_fini(&mutex);
-    }
-    return status ? -1 : 0;
+    log_lock();
+    stream_close();
+    closelog();
+    log_unlock();
+    return 0;
 }
 
 /**
@@ -466,25 +356,12 @@ int log_set_level(
         status = -1;
     }
     else {
-        lock();
+        log_lock();
         logging_level = level;
-        unlock();
+        log_unlock();
         status = 0;
     }
     return status;
-}
-
-/**
- * Lowers the logging threshold by one. Wraps at the bottom. Should be called
- * after log_init().
- */
-void log_roll_level(void)
-{
-    lock();
-    logging_level = (logging_level == LOG_LEVEL_DEBUG)
-            ? LOG_LEVEL_ERROR
-            : logging_level - 1;
-    unlock();
 }
 
 /**
@@ -495,9 +372,9 @@ void log_roll_level(void)
  */
 log_level_t log_get_level(void)
 {
-    lock();
+    log_lock();
     log_level_t level = logging_level;
-    unlock();
+    log_unlock();
     return level;
 }
 
@@ -520,10 +397,10 @@ int log_set_facility(
         status = -1; // `facility` is invalid
     }
     else {
-        lock();
+        log_lock();
         syslog_facility = facility;
-        status = set_output(output_spec);
-        unlock();
+        status = log_set_destination(output_spec);
+        log_unlock();
     }
     return status;
 }
@@ -537,9 +414,9 @@ int log_set_facility(
  */
 int log_get_facility(void)
 {
-    lock();
+    log_lock();
     int facility = syslog_facility;
-    unlock();
+    log_unlock();
     return facility;
 }
 
@@ -558,39 +435,10 @@ int log_set_id(
         status = -1;
     }
     else {
-        lock();
+        log_lock();
         strncpy(ident, id, sizeof(ident))[sizeof(ident)-1] = 0;
-        status = set_output(output_spec);
-        unlock();
-    }
-    return status;
-}
-
-/**
- * Modifies the logging identifier. Should be called after log_init().
- *
- * @param[in] hostId    The identifier of the remote host. Caller may free.
- * @param[in] isFeeder  Whether or not the process is sending data-products or
- *                      notifications.
- * @param[in] id        The logging identifier. Caller may free.
- * @retval    0         Success.
- * @retval    -1        Failure.
- */
-int log_set_upstream_id(
-        const char* const hostId,
-        const bool        isFeeder)
-{
-    int status;
-    if (hostId == NULL) {
-        status = -1;
-    }
-    else {
-        lock();
-        (void)snprintf(ident, sizeof(ident), "%s(%s)", hostId,
-                isFeeder ? "feed" : "noti");
-        ident[sizeof(ident)-1] = 0;
-        status = set_output(output_spec);
-        unlock();
+        status = log_set_destination(output_spec);
+        log_unlock();
     }
     return status;
 }
@@ -602,9 +450,9 @@ int log_set_upstream_id(
  */
 const char* log_get_id(void)
 {
-    lock();
+    log_lock();
     const char* const id = ident;
-    unlock();
+    log_unlock();
     return id;
 }
 
@@ -623,10 +471,10 @@ const char* log_get_id(void)
 void log_set_options(
         const unsigned options)
 {
-    lock();
+    log_lock();
     syslog_options = options;
-    (void)set_output(output_spec);
-    unlock();
+    (void)log_set_destination(output_spec);
+    log_unlock();
 }
 
 /**
@@ -643,9 +491,9 @@ void log_set_options(
  */
 unsigned log_get_options(void)
 {
-    lock();
+    log_lock();
     const int opts = syslog_options;
-    unlock();
+    log_unlock();
     return opts;
 }
 
@@ -664,9 +512,19 @@ unsigned log_get_options(void)
 int log_set_destination(
         const char* const dest)
 {
-    lock();
-    int status = set_output(dest);
-    unlock();
+    log_lock();
+    int status;
+    if (LOG_IS_SYSLOG_SPEC(dest)) {
+        stream_close();
+        openlog(ident, syslog_options, syslog_facility);
+        status = 0;
+    }
+    else {
+        status = stream_open(dest);
+        if (status == 0)
+            closelog();
+    }
+    log_unlock();
     return status;
 }
 
@@ -682,17 +540,17 @@ int log_set_destination(
  */
 const char* log_get_destination(void)
 {
-    lock();
+    log_lock();
     const char* path = output_spec;
-    unlock();
-    return path == NULL ? "" : path;
+    log_unlock();
+    return path == NULL ? SYSLOG_SPEC : path;
 }
 
 int slog_is_priority_enabled(
         const log_level_t level)
 {
-    lock();
+    log_lock();
     int enabled = log_vet_level(level) && level >= logging_level;
-    unlock();
+    log_unlock();
     return enabled;
 }

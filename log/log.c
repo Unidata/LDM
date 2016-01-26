@@ -3,8 +3,9 @@
  *   reserved. See the file COPYRIGHT in the top-level source-directory for
  *   licensing conditions.
  *
- * Provides for accumulating log-messages into a thread-specific list and the
- * logging of that list at a single logging level.
+ * This file implements the the provider-independent `log.h` API. It provides
+ * for accumulating log-messages into a thread-specific list and the logging of
+ * that list at a single logging level.
  *
  * This module is thread-safe.
  *
@@ -54,8 +55,16 @@
 #include <unistd.h>
 
 #ifndef _XOPEN_NAME_MAX
-    #define _XOPEN_NAME_MAX 255 // not always defined
+    #define _XOPEN_NAME_MAX 255 // Not always defined
 #endif
+
+#ifndef _XOPEN_PATH_MAX
+    #define _XOPEN_PATH_MAX 1024 // Not always defined
+#endif
+
+/******************************************************************************
+ * Private API:
+ ******************************************************************************/
 
 /**
  * A list of log messages.
@@ -74,9 +83,9 @@ static pthread_key_t         listKey;
  */
 static pthread_once_t        key_creation_control = PTHREAD_ONCE_INIT;
 /**
- * The mutex that makes this module thread-safe.
+ * The thread identifier of the thread on which `log_init()` was called.
  */
-static pthread_mutex_t       mutex;
+static pthread_t             init_thread;
 /**
  * Whether a SIGHUP has been delivered.
  */
@@ -97,6 +106,10 @@ static struct sigaction      prev_hup_sigaction;
  * The signal mask of all signals.
  */
 static sigset_t              all_sigset;
+/**
+ * The mutex that makes this module thread-safe.
+ */
+mutex_t                      log_mutex;
 
 /**
  * Blocks all signals for the current thread. This is done so that the
@@ -143,34 +156,6 @@ static void handle_sighup(
 }
 
 /**
- * Locks this module's lock.
- *
- * This function is thread-safe. On entry, this module's lock shall be
- * unlocked.
- */
-static void lock(void)
-{
-    int status = pthread_mutex_lock(&mutex);
-    log_assert(status == 0);
-    if (hupped) {
-        log_refresh();
-        hupped = 0;
-    }
-}
-
-/**
- * Unlocks this module's lock.
- *
- * This function is thread-safe. On entry, this module's lock shall be locked
- * by the current thread.
- */
-static void unlock(void)
-{
-    int status = pthread_mutex_unlock(&mutex);
-    log_assert(status == 0);
-}
-
-/**
  * Initializes a location structure.
  *
  * @param[out] dest  The location to be initialized.
@@ -182,46 +167,13 @@ static void loc_init(
         const log_loc_t* const restrict src)
 {
     dest->file = src->file; // `__FILE__` is persistent
-    char* d = dest->func_buf;
-    char* s = src->func;
+    char*       d = dest->func_buf;
+    const char* s = src->func;
     while (*s && d < dest->func_buf + sizeof(dest->func_buf) - 1)
         *d++ = *s++;
     *d = 0;
     dest->func = dest->func_buf;
     dest->line = src->line;
-}
-
-/**
- * Initializes this logging module.
- */
-int log_init(
-        const char* const id)
-{
-    (void)sigfillset(&all_sigset);
-    (void)sigemptyset(&hup_sigset);
-    (void)sigaddset(&hup_sigset, SIGHUP);
-    hup_sigaction.sa_mask = hup_sigset;
-    hup_sigaction.sa_flags = SA_RESTART;
-    hup_sigaction.sa_handler = handle_sighup;
-    (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
-    int status = mutex_init(&mutex, true, true);
-    if (status == 0)
-        status = log_impl_init(id);
-    return status;
-}
-
-/**
- * Finalizes this logging module.
- */
-int log_fini(void)
-{
-    int status = log_impl_fini();
-    if (status == 0) {
-        status = mutex_fini(&mutex);
-        if (status == 0)
-            (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
-    }
-    return status ? -1 : 0;
 }
 
 static void create_key(void)
@@ -461,7 +413,7 @@ static void flush(
     List*   list = list_get();
 
     if (NULL != list && NULL != list->last) {
-        lock();
+        log_lock();
 
         if (log_is_level_enabled(level)) {
             for (const Message* msg = list->first; NULL != msg;
@@ -473,29 +425,62 @@ static void flush(
             }                       /* message loop */
         }                           /* messages should be printed */
 
-        unlock();
+        log_unlock();
         list_clear();
     }                               /* have messages */
     restoreSigs(&sigset);
 }
 
+/******************************************************************************
+ * Package-private API:
+ ******************************************************************************/
+
 /**
- * Returns the string associated with a logging level.
+ * Acquires this module's lock.
  *
- * @param[in] level  The logging level. One of `LOG_LEVEL_DEBUG`,
- *                   `LOG_LEVEL_INFO`, `LOG_LEVEL_NOTICE`,
- *                   `LOG_LEVEL_WARNING`, `LOG_LEVEL_ERROR`,
- *                   `LOG_LEVEL_ALERT`, `LOG_LEVEL_CRIT`, or
- *                   `LOG_LEVEL_EMERG`. The string `"UNKNOWN"` is returned if
- *                   the level is not one of these values.
- * @return           The associated string.
+ * This function is thread-safe.
  */
-const char* log_level_to_string(
-        const log_level_t level)
+void log_lock(void)
 {
-    static const char* const strings[] = {"DEBUG", "INFO", "NOTE", "WARN",
-        "ERROR", "ALERT", "CRIT", "FATAL"};
-    return log_vet_level(level) ? strings[level] : "UNKNOWN";
+    int status = mutex_lock(&log_mutex);
+    log_assert(status == 0);
+    if (hupped) {
+        hupped = 0;
+        log_refresh();
+    }
+}
+
+/**
+ * Releases this module's lock.
+ *
+ * This function is thread-safe. On entry, this module's lock shall be locked
+ * by the current thread.
+ */
+void log_unlock(void)
+{
+    int status = mutex_unlock(&log_mutex);
+    log_assert(status == 0);
+}
+
+/**
+ * Indicates if the current process is a daemon.
+ *
+ * @retval `true` iff the current process is a daemon
+ */
+bool log_am_daemon(void)
+{
+    bool am_daemon;
+    int  ttyFd = open("/dev/tty", O_RDONLY);
+    if (-1 == ttyFd) {
+        // No controlling terminal => daemon
+        am_daemon = true;
+    }
+    else {
+        // Controlling terminal exists => interactive (i.e., not a daemon)
+        (void)close(ttyFd);
+        am_daemon = false;
+    }
+    return am_daemon;
 }
 
 /**
@@ -613,38 +598,6 @@ int log_add_errno_located(
 }
 
 /**
- * Clears the message-list of the current thread.
- */
-void
-log_clear(void)
-{
-    list_clear();
-}
-
-/**
- * Frees the log-message resources of the current thread. Should only be called
- * when no more logging by the current thread will occur.
- */
-void
-log_free(void)
-{
-    sigset_t sigset;
-    blockSigs(&sigset);
-
-    List*   list = list_get();
-
-    if (list) {
-        if (list->last)
-            log_error("%s() called with pending messages", __func__);
-        list_fini(list);
-        free(list);
-        (void)pthread_setspecific(listKey, NULL);
-    }
-
-    restoreSigs(&sigset);
-}
-
-/**
  * Allocates memory. Thread safe.
  *
  * @param[in] file      Pathname of the file.
@@ -666,7 +619,7 @@ void* log_malloc_located(
     void* obj = malloc(nbytes);
 
     if (obj == NULL) {
-        log_loc_t loc = {file, line};
+        log_loc_t loc = {file, func, line};
         log_add_located(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
     }
 
@@ -761,102 +714,151 @@ void log_flush_located(
     }
 }
 
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
 
-#if 0
 /**
- * Sets the first log-message for the current thread.
+ * Initializes this logging module.
+ */
+int log_init(
+        const char* const id)
+{
+    (void)sigfillset(&all_sigset);
+    (void)sigemptyset(&hup_sigset);
+    (void)sigaddset(&hup_sigset, SIGHUP);
+    hup_sigaction.sa_mask = hup_sigset;
+    hup_sigaction.sa_flags = SA_RESTART;
+    hup_sigaction.sa_handler = handle_sighup;
+    (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
+    int status = mutex_init(&log_mutex, true, true);
+    if (status == 0) {
+        init_thread = pthread_self();
+        status = log_impl_init(id);
+    }
+    return status;
+}
+
+/**
+ * Refreshes the logging module. If logging is to the system logging daemon,
+ * then it will continue to be. If logging is to a file, then the file is closed
+ * and re-opened; thus enabling log file rotation. If logging is to the standard
+ * error stream, then it will continue to be if the process has not become a
+ * daemon; otherwise, logging will be to the provider default. Should be called
+ * after log_init().
  *
- * @param[in] fmt  The message format
- * @param[in] ...  Arguments referenced by the format
+ * @retval  0  Success.
+ * @retval -1  Failure.
  */
-void log_start(
-        const char* const fmt,
-                          ...)
+int log_refresh(void)
 {
-    sigset_t sigset;
-    blockSigs(&sigset);
-    va_list     args;
+    log_lock();
+    char output[_XOPEN_PATH_MAX];
+    strncpy(output, log_get_destination(), sizeof(output))[sizeof(output)-1] = 0;
+    // In case we've turned into a daemon
+    int status = log_set_destination(log_get_default_destination());
+    if (status == 0 && (LOG_IS_SYSLOG_SPEC(output) ||
+            !LOG_IS_STDERR_SPEC(output)))
+        status = log_set_destination(output);
+    log_unlock();
+    return status;
+}
+
+/**
+ * Modifies the logging identifier. Should be called after log_init().
+ *
+ * @param[in] hostId    The identifier of the remote host. Caller may free.
+ * @param[in] isFeeder  Whether or not the process is sending data-products or
+ *                      notifications.
+ * @param[in] id        The logging identifier. Caller may free.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+int log_set_upstream_id(
+        const char* const hostId,
+        const bool        isFeeder)
+{
+    int status;
+    if (hostId == NULL) {
+        status = -1;
+    }
+    else {
+        char id[_POSIX_HOST_NAME_MAX + 6 + 1]; // hostname + "(type)" + 0
+        log_lock();
+        (void)snprintf(id, sizeof(id), "%s(%s)", hostId,
+                isFeeder ? "feed" : "noti");
+        id[sizeof(id)-1] = 0;
+        status = log_set_id(id);
+        log_unlock();
+    }
+    return status;
+}
+
+/**
+ * Finalizes the logging module. Frees resources specific to the current thread.
+ * Frees all resources if the current thread is the one on which
+ * `log_impl_init()` was called.
+ */
+int log_fini(void)
+{
+    int status;
+    log_lock();
+    log_free();
+    if (!pthread_equal(init_thread, pthread_self())) {
+        status = 0;
+    }
+    else {
+        status = log_impl_fini();
+        if (status == 0) {
+            log_unlock();
+            status = mutex_fini(&log_mutex);
+            if (status == 0)
+                (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+        }
+    }
+    return status ? -1 : 0;
+}
+
+/**
+ * Lowers the logging threshold by one. Wraps at the bottom.
+ */
+void log_roll_level(void)
+{
+    log_lock();
+    log_level_t level = log_get_level();
+    level = (level == LOG_LEVEL_DEBUG) ? LOG_LEVEL_ERROR : level - 1;
+    log_set_level(level);
+    log_unlock();
+}
+
+/**
+ * Clears the message-list of the current thread.
+ */
+void
+log_clear(void)
+{
     list_clear();
-    va_start(args, fmt);
-    log_vadd(fmt, args);
-    va_end(args);
-    restoreSigs(&sigset);
 }
 
 /**
- * Sets a system error-message as the first error-message for the current
- * thread.
+ * Frees the log-message resources of the current thread. Should only be called
+ * when no more logging by the current thread will occur.
  */
-void log_errno(void)
-{
-    log_start("%s", strerror(errno));
-}
-
-/**
- * Sets a system error-message as the first error-message for the current thread
- * based on the current value of "errno" and a higher-level error-message.
- */
-void log_serror(
-    const char* const fmt,  /**< The higher-level message format */
-    ...)                    /**< Arguments referenced by the format */
-{
-    sigset_t sigset;
-    blockSigs(&sigset);
-    va_list     args;
-    log_errno();
-    va_start(args, fmt);
-    log_vadd(fmt, args);
-    va_end(args);
-    restoreSigs(&sigset);
-}
-
-/**
- * Adds a system error-message for the current thread based on a error number
- * and a higher-level error-message.
- */
-void log_errnum(
-    const int           errnum, /**< The "errno" error number */
-    const char* const   fmt,    /**< The higher-level message format or NULL
-                                  *  for no higher-level message */
-    ...)                        /**< Arguments referenced by the format */
+void
+log_free(void)
 {
     sigset_t sigset;
     blockSigs(&sigset);
 
-    log_start(strerror(errnum));
+    List*   list = list_get();
 
-    if (NULL != fmt) {
-        va_list     args;
-        va_start(args, fmt);
-        log_vadd(fmt, args);
-        va_end(args);
+    if (list) {
+        if (list->last)
+            log_error("%s() called with pending messages", __func__);
+        list_fini(list);
+        free(list);
+        (void)pthread_setspecific(listKey, NULL);
     }
 
     restoreSigs(&sigset);
 }
-
-/**
- * Allocates memory. Thread safe.
- *
- * @param nbytes        Number of bytes to allocate.
- * @param msg           Message to print on error. Should complete the sentence
- *                      "Couldn't allocate <n> bytes for ...".
- * @param file          Name of the file.
- * @param line          Line number in the file.
- * @retval NULL         Out of memory. \c log_start() called.
- * @return              Pointer to the allocated memory.
- */
-void* log_malloc(
-    const size_t        nbytes,
-    const char* const   msg,
-    const char* const   file,
-    const int           line)
-{
-    void* obj = malloc(nbytes);
-
-    if (obj == NULL)
-        log_internal(LOG_LEVEL_ERROR, "malloc() failure");
-
-    return obj;
-}
-#endif
