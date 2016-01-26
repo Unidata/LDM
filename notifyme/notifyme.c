@@ -270,7 +270,8 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "vxyzl:f:o:t:h:P:p:T:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        log_set_level(LOG_LEVEL_INFO);
+                        if (!log_is_enabled_info)
+                            log_set_level(LOG_LEVEL_INFO);
                         break;
                 case 'x':
                         log_set_level(LOG_LEVEL_DEBUG);

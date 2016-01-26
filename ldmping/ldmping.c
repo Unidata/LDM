@@ -145,7 +145,8 @@ char *av[] ;
         while ((ch = getopt(ac, av, "vxl:t:h:P:qi:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        (void)log_set_level(LOG_LEVEL_INFO);
+                        if (!log_is_enabled_info)
+                            (void)log_set_level(LOG_LEVEL_INFO);
                         verbose = !0 ;
                         break;
                 case 'q':

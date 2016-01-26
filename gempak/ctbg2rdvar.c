@@ -67,7 +67,7 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
 
         vartbl->info = (G2Vinfo *)malloc((size_t)nr*sizeof(G2Vinfo));
         if (vartbl->info == NULL) {
-            iret = -1;
+            *iret = -1;
             cfl_clos(fp, &ier);
             return;
         }

@@ -616,7 +616,8 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "vxl:d:f:p:q:Q:o:i:a:t:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        (void)log_set_level(LOG_LEVEL_INFO);
+                        if (!log_is_enabled_info)
+                            (void)log_set_level(LOG_LEVEL_INFO);
                         argv[argc++] = "-v";
                         break;
                 case 'x':

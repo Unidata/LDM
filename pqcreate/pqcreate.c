@@ -68,7 +68,8 @@ int main(int ac, char *av[])
         while ((ch = getopt(ac, av, "xvcfq:s:S:l:")) != EOF)
                 switch (ch) {
                 case 'v':
-                        (void)log_set_level(LOG_LEVEL_INFO);
+                        if (!log_is_enabled_info)
+                            (void)log_set_level(LOG_LEVEL_INFO);
                         break;
                 case 'c':
                         pflags &= ~PQ_NOCLOBBER;

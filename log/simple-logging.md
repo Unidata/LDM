@@ -93,7 +93,9 @@ Here's a contrived example:
                      (void)log_set_output(optarg);
                      break;
                 case 'v':
-                     (void)log_set_level(LOG_LEVEL_INFO);
+                     // In case LOG_LEVEL_DEBUG is enabled (e.g., option "-xv")
+                     if (!log_is_enabled_info)
+                         (void)log_set_level(LOG_LEVEL_INFO);
                      break;
                 case 'x':
                      (void)log_set_level(LOG_LEVEL_DEBUG);

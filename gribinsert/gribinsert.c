@@ -200,7 +200,8 @@ main (int ac, char *av[])
       switch (ch)
 	{
 	case 'v':
-          (void)log_set_level(LOG_LEVEL_INFO);
+          if (!log_is_enabled_info)
+            (void)log_set_level(LOG_LEVEL_INFO);
 	  break;
 	case 'x':
           (void)log_set_level(LOG_LEVEL_DEBUG);

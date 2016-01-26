@@ -1374,7 +1374,8 @@ main(int argc, char *argv[])
         while ((ch=getopt(argc, argv, "vxl:pa:cs:nrPLFMS:wf:C")) != EOF)
             switch (ch) {
             case 'v':
-                (void)log_set_level(LOG_LEVEL_INFO);
+                if (!log_is_enabled_info)
+                    (void)log_set_level(LOG_LEVEL_INFO);
                 break;
 
             case 'x':

@@ -465,13 +465,15 @@ int main(
     while ((ch = getopt(argc, argv, "nvxl:q:u:m:")) != EOF) {
         switch (ch) {
         case 'v':
-            (void)log_set_level(LOG_LEVEL_INFO);
+            if (!log_is_enabled_info)
+                (void)log_set_level(LOG_LEVEL_INFO);
             break;
         case 'x':
             (void)log_set_level(LOG_LEVEL_DEBUG);
             break;
         case 'n':
-            (void)log_set_level(LOG_LEVEL_NOTICE);
+            if (!log_is_enabled_notice)
+                (void)log_set_level(LOG_LEVEL_NOTICE);
             break;
         case 'l':
             if (optarg[0] == '-' && optarg[1] != 0) {
