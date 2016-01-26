@@ -123,7 +123,8 @@ decodeCommandLine(
                 *mcastSpec = optarg;
                 break;
             case 'n':
-                (void)log_set_level(LOG_LEVEL_NOTICE);
+                if (!log_is_enabled_notice)
+                    (void)log_set_level(LOG_LEVEL_NOTICE);
                 break;
             case 'q':
                 *prodQueuePath = optarg;
@@ -1201,6 +1202,7 @@ int main(
      */
     const char* const progname = basename(argv[0]);
     (void)log_init(progname);
+    (void)log_set_level(LOG_LEVEL_ERROR);
 
     set_sigusr1Action(true);  // ignore SIGUSR1 initially
 
