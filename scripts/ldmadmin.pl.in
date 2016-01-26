@@ -1542,10 +1542,10 @@ sub ldmadmin_pqactHUP
 sub isProductQueueOk
 {
     my $isOk = 0;
+    print "Checking the product-queue...\n";
     my($status) = system("pqcheck -q $pq_path 2>/dev/null") >> 8;
 
     if( 0 == $status ) {
-	print "The product-queue is OK.\n";
 	$isOk = 1;
     }
     elsif (1 == $status) {
