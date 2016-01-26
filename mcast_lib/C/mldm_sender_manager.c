@@ -281,7 +281,7 @@ execMldmSender(
     args[i++] = mcastGroupOperand;
     args[i++] = NULL;
 
-    StrBuf* command = catenateArgs(args);
+    StrBuf* command = catenateArgs((const char**)args); // Safe cast
     log_notice("Executing multicast sender: %s", sbString(command));
     sbFree(command);
 

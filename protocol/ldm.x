@@ -925,7 +925,7 @@ enum Ldm7Status {
 %clntStatusToLdm7Status(
 %    const CLIENT* clnt)
 %{
-%    int    status = clnt_stat(clnt);
+%    int    status = clnt_stat((CLIENT*)clnt); // Safe cast
 %    if (status != 0) {
 %        if (status == RPC_TIMEDOUT) {
 %            status = LDM7_TIMEDOUT;
