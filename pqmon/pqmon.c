@@ -53,7 +53,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-l logfile   Log to a file rather than stderr\n");
         (void)fprintf(stderr,
-                "\t-q pqfname   (default \"%s\")\n", getQueuePath());
+                "\t-q pqfname   (default \"%s\")\n", getDefaultQueuePath());
         (void)fprintf(stderr,
                 "\t-i interval  Poll queue after \"interval\" secs (default %d)\n",
                 DEFAULT_INTERVAL);
@@ -231,12 +231,6 @@ main(int ac, char *av[])
      */
     (void)log_init(progname);
 
-    pqfname = getQueuePath();           /* this might log */
-    if (NULL == pqfname) {
-        log_flush_error();
-        exit(1);
-    }
-
     {
         extern int optind;
         extern int opterr;
@@ -259,7 +253,6 @@ main(int ac, char *av[])
                 (void)log_set_destination(optarg);
                 break;
             case 'q':
-                pqfname = optarg;
                 setQueuePath(optarg);
                 break;
             case 'i':
@@ -295,6 +288,12 @@ main(int ac, char *av[])
                     progname, outputfname, strerror(status));
             }
         }
+    }
+
+    pqfname = getQueuePath();           /* this might log */
+    if (NULL == pqfname) {
+        log_flush_error();
+        exit(1);
     }
 
     /*

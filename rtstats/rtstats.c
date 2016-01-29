@@ -96,7 +96,7 @@ usage(const char *av0) /*  id string */
     log_error("    -p pattern   Interested in products matching \"pattern\"");
     log_error("                 (default: \".*\").") ;
     log_error("    -q queue     Use file \"queue\" as product-queue (default: ");
-    log_error("                 \"%s\").", getQueuePath());
+    log_error("                 \"%s\").", getDefaultQueuePath());
     log_error("    -o offset    Oldest product to consider is \"offset\"");
     log_error("                 seconds before now (default: 0).");
     log_error("    -i interval  Poll queue every \"interval\" seconds (default:");
@@ -186,7 +186,6 @@ set_sigactions(void)
 
 int main(int ac, char *av[])
 {
-        const char* const  pqfname = getQueuePath();
         const char* const  progname = basename(av[0]);
         prod_class_t       clss;
         prod_spec          spec;
@@ -200,6 +199,8 @@ int main(int ac, char *av[])
          * Setup default logging before anything else.
          */
         (void)log_init(progname);
+
+        const char* const  pqfname = getQueuePath();
 
         remote = "localhost";
 

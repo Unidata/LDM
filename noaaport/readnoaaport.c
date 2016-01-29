@@ -165,7 +165,7 @@ static void usage(
     (void)fprintf(stderr,
                   "\t-f type      Claim to be feedtype \"type\", "
                   "one of \"hds\", \"ddplus\", ...\n");
-    (void)fprintf(stderr, "\t-q queue     default \"%s\"\n", getQueuePath());
+    (void)fprintf(stderr, "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
     (void)fprintf(stderr, "\t-u number    default LOCAL0\n");
     exit(1);
 }
@@ -418,7 +418,6 @@ int main(
      const int          argc,
      char* const        argv[])
 {
-    const char*         pqfname = getQueuePath();
     int                 fd;
     char*               prodmmap;
     char*               memheap = NULL;
@@ -485,7 +484,7 @@ int main(
             (void)log_set_destination(logfname);
             break;
         case 'q':
-            pqfname = optarg;
+            setQueuePath(optarg);
             break;
         case 'u': {
             int         i = atoi(optarg);
@@ -534,6 +533,8 @@ int main(
             break;
         }
     }
+
+    const char*         pqfname = getQueuePath();
 
     if (argc - optind < 0)
         usage(argv[0]);

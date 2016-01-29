@@ -69,7 +69,7 @@ static void usage(
               "packet\n");
       (void)fprintf(stderr, "\t-x           Log debug messages\n");
       (void)fprintf(stderr, "\t-l logfile   Default logs to syslogd\n");
-      (void)fprintf(stderr, "\t-q queue     default \"%s\"\n", getQueuePath());
+      (void)fprintf(stderr, "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
       (void)fprintf(stderr, "\t-d           dump packets, no output");
       (void)fprintf(stderr, "\t-b pagnum    Number of pages for shared memory "
               "buffer\n");
@@ -248,7 +248,6 @@ int main(
     const int           argc,
     char* const         argv[])
 {
-    const char*         pqfname = getQueuePath();
     int                 sd, rc, n;
     socklen_t           cliLen;
     struct ip_mreq      mreq;
@@ -299,7 +298,7 @@ int main(
             (void)log_set_destination(optarg);
             break;
         case 'q':
-            pqfname = optarg;
+            setQueuePath(optarg);
             break;
         case 'I':
             imr_interface = optarg;
@@ -336,6 +335,8 @@ int main(
             break;
         }
     }
+
+    const char*         pqfname = getQueuePath();
 
     if (argc - optind < 1)
         usage(argv[0]);

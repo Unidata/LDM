@@ -63,7 +63,7 @@ usage (char *av0		/*  id string */
 		  "\t-v           Verbose, tell me about each product\n");
   (void) fprintf (stderr,
 		  "\t-l logfile   log to a file rather than stderr\n");
-  (void) fprintf (stderr, "\t-q queue     default \"%s\"\n", getQueuePath());
+  (void) fprintf (stderr, "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
   (void) fprintf (stderr,
 		  "\t-s seqno     set initial product sequence number to \"seqno\", defaults to 0\n");
   (void) fprintf (stderr,

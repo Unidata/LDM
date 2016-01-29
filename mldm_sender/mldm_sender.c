@@ -128,7 +128,7 @@ Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
                       address and <groupPort> is port number.",
-            log_get_id(), getQueuePath());
+            log_get_id(), getDefaultQueuePath());
 }
 
 /**

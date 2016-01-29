@@ -146,7 +146,7 @@ static void printUsage(const char* const av0) {
                     "    -t timeout    Timeout in seconds for RPC messages. Default is %u.\n"
                     "    -v            Verbose-level logging. Log each product sent.\n"
                     "    -x            Debug-level logging.\n", progname,
-            s_feedtypet(DEFAULT_FEEDTYPE), DEFAULT_INTERVAL, getQueuePath(),
+            s_feedtypet(DEFAULT_FEEDTYPE), DEFAULT_INTERVAL, getDefaultQueuePath(),
             DEFAULT_TOTALTIMEOUT, DEFAULT_TIMEOUT);
 }
 

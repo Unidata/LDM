@@ -267,7 +267,6 @@ int main(int ac, char *av[])
         int fterr;
 
         opterr = 1;
-        pqfname = getQueuePath();
 
         while ((ch = getopt(ac, av, "cvxOsl:p:f:q:o:i:")) != EOF)
                 switch (ch) {
@@ -300,7 +299,7 @@ int main(int ac, char *av[])
                         }
                         break;
                 case 'q':
-                        pqfname = optarg;
+                        setQueuePath(optarg);
                         break;
                 case 'o':
                         (void) set_timestamp(&clss.from);
@@ -325,6 +324,8 @@ int main(int ac, char *av[])
                         usage(progname);
                         break;
                 }
+
+        pqfname = getQueuePath();
 
         if (re_isPathological(spec.pattern))
         {

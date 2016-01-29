@@ -56,7 +56,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-l logfile   Log to a file rather than stderr\n");
         (void)fprintf(stderr,
-                "\t-q pqfname   (default \"%s\")\n", getQueuePath());
+                "\t-q pqfname   (default \"%s\")\n", getDefaultQueuePath());
         (void)fprintf(stderr,
                 "Output defaults to standard output\n");
         exit(1);
@@ -119,7 +119,6 @@ int main(int ac, char *av[])
             int ch;
 
             opterr = 1;
-            pqfname = getQueuePath();
 
             while ((ch = getopt(ac, av, "Fvxl:q:")) != EOF)
                     switch (ch) {
@@ -137,13 +136,15 @@ int main(int ac, char *av[])
                             (void)log_set_destination(optarg);
                             break;
                     case 'q':
-                            pqfname = optarg;
+                            setQueuePath(optarg);
                             break;
                     case '?':
                             usage(progname);
                             break;
                     }
         }
+
+        pqfname = getQueuePath();
 
         log_notice("Starting Up (%d)", getpgrp());
 

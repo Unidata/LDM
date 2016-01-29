@@ -220,7 +220,7 @@ usage(
     log_add("    -p parity     Set input parity to <parity>. One of \"even\",");
     log_add("                  \"odd\", or \"none\"");
     log_add("    -q queue      Use product-queue <queue>. Default is");
-    log_add("                  \"%s\".", getQueuePath());
+    log_add("                  \"%s\".", getDefaultQueuePath());
 #if NET
     log_add("    -P port       Get input via TCP connection to port <port> on");
     log_add("                  host <feedname>");
@@ -469,7 +469,6 @@ main(int ac, char *av[])
             opterr = 0; /* stops getopt() from printing to stderr */
             usePil = 1;
             useNex = 1;
-            pqpath = getQueuePath();
 
             while ((ch = getopt(ac, av, ":vxcni5Nl:b:p:P:T:q:r:f:s:")) != EOF)
                     switch (ch) {
@@ -575,6 +574,8 @@ main(int ac, char *av[])
             }
             (void)strncat(feedfname, av[optind], sizeof(feedfname)-6);
         }
+
+        pqpath = getQueuePath();
 
         log_notice("Starting Up");
         log_debug(PACKAGE_VERSION);

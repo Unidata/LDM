@@ -141,7 +141,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
                 "\t-l logfile   Send log info to file (default uses syslogd)\n");
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", getQueuePath());
+                "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
         (void)fprintf(stderr,
                 "\t-a age       Protect products younger than \"age\" hours (default %.4f)\n", DEFAULT_AGE);
         (void)fprintf(stderr,
@@ -237,7 +237,6 @@ int main(ac,av)
 int ac;
 char *av[];
 {
-        const char* const       pqfname = getQueuePath();
         int status;
         double age = DEFAULT_AGE;
         prod_class_t clss;
@@ -253,7 +252,7 @@ char *av[];
          * initialize logger
          */
         (void)log_init(av[0]);
-        
+
         (void) set_timestamp(&stats.starttime);
         stats.firsthit = TS_ENDT;
         stats.lasthit = TS_ZERO;
@@ -352,6 +351,7 @@ char *av[];
         /*
          * Open the product queue
          */
+        const char* const       pqfname = getQueuePath();
         status = pq_open(pqfname, PQ_DEFAULT, &pq);
         if(status)
         {

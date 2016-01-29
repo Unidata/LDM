@@ -253,7 +253,7 @@ usage(const char *av0) /*  id string */
                 "\t             conffile (default %s)\n",
                 getPqsurfDataDirPath());
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", getQueuePath());
+                "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
         (void)fprintf(stderr,
                 "\t-p pattern   Interested in products matching \"pattern\" (default \"%s\")\n", DEFAULT_PATTERN);
         (void)fprintf(stderr,
@@ -565,7 +565,6 @@ expire(pqueue *epq, const unsigned interval, const double age)
 
 int main(int ac, char *av[])
 {
-        const char* pqfname = getQueuePath();
         const char *opqfname = getSurfQueuePath();
         const char *progname = basename(av[0]);
         prod_class_t clss;
@@ -582,6 +581,8 @@ int main(int ac, char *av[])
          * Set up error logging.
          */
         (void)log_init(progname);
+
+        const char* pqfname = getQueuePath();
 
         if(set_timestamp(&clss.from) != ENOERR) /* corrected by toffset below */
         {

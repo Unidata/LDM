@@ -26,6 +26,7 @@ volatile sig_atomic_t   done = 0;
 const char*             logfname = "";
 pqueue*                 pq = NULL;
 
+static char             defaultQueuePath[PATH_MAX];
 static char             queuePath[PATH_MAX];
 static char             pqactConfigPath[PATH_MAX];
 static char             pqsurfConfigPath[PATH_MAX];
@@ -130,6 +131,33 @@ int exitIfDone(
         exit(status);
 
     return 1;
+}
+
+/**
+ * Returns the default pathname of the product-queue. Obtains the pathname from
+ * the registry if available; otherwise, the configure-time pathname is used.
+ *
+ * @retval NULL  Error.  "log_add()" called.
+ * @return       Pointer to the default pathname of the product-queue. Might be
+ *               absolute or relative to the current working directory.
+ */
+const char* getDefaultQueuePath(void)
+{
+    if (0 == defaultQueuePath[0]) {
+        char*           var;
+        if (reg_getString(REG_QUEUE_PATH, &var)) {
+            log_warning("Couldn't get pathname of product-queue from registry. "
+                    "Using default: \"%s\"", LDM_QUEUE_PATH);
+            strncpy(defaultQueuePath, LDM_QUEUE_PATH,
+                    sizeof(defaultQueuePath))[sizeof(defaultQueuePath)-1] = 0;
+        }
+        else {
+            strncpy(defaultQueuePath, var,
+                    sizeof(defaultQueuePath))[sizeof(defaultQueuePath)-1] = 0;
+            free(var);
+        }
+    }
+    return defaultQueuePath;
 }
 
 /*

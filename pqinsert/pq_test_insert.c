@@ -51,7 +51,6 @@ static bool pti_decodeCommandLine(
     int          ch;
     feedtypet    ft = feedtype;
     int          seq = seq_start;
-    const char*  pqPathname = getQueuePath();
     bool         success = true;
 
     // Error messages are being explicitly handled
@@ -70,7 +69,7 @@ static bool pti_decodeCommandLine(
             (void)log_set_destination(optarg);
             break;
         case 'q':
-            pqPathname = optarg;
+            setQueuePath(optarg);
             break;
         case 's':
             seq = atoi(optarg);
@@ -97,6 +96,8 @@ static bool pti_decodeCommandLine(
         }
     }
 
+    const char*  pqPathname = getQueuePath();
+
     if (success) {
         ac -= optind;
         av += optind ;
@@ -108,7 +109,6 @@ static bool pti_decodeCommandLine(
         else {
             prod.info.feedtype = feedtype = ft;
             seq_start = seq;
-            setQueuePath(pqPathname);
             *inputPathname = *av;
         }
     }
@@ -119,7 +119,7 @@ static bool pti_decodeCommandLine(
 static void pti_usage(void)
 {
     char        feedbuf[256];
-    const char* pqPath = getQueuePath();
+    const char* pqPath = getDefaultQueuePath();
 
     (void)ft_format(feedtype, feedbuf, sizeof(feedbuf));
     log_add(

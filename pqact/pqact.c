@@ -254,7 +254,7 @@ usage(
                 getPqactDataDirPath());
         log_error(
                 "\t-q queue     Use product-queue \"queue\" (default: \"%s\")",
-                getQueuePath());
+                getDefaultQueuePath());
         log_error(
                 "\t-p pattern   Only process products matching \"pattern\" (default: \"%s\")", DEFAULT_PATTERN);
         log_error(
@@ -294,9 +294,6 @@ main(int ac, char *av[])
          * Setup default logging before anything else.
          */
         (void)log_init(progname);
-
-        pqfname = getQueuePath();
-        conffilename = getPqactConfigPath();
 
         spec.feedtype = DEFAULT_FEEDTYPE;
         spec.pattern = DEFAULT_PATTERN;
@@ -393,6 +390,10 @@ main(int ac, char *av[])
                 }
             }
 
+            pqfname = getQueuePath();
+            conffilename = getPqactConfigPath();
+            datadir = getPqactDataDirPath();
+
             {
                 int numOperands = ac - optind;
 
@@ -405,8 +406,6 @@ main(int ac, char *av[])
                 }
             }
         }
-
-        datadir = getPqactDataDirPath();
 
         log_notice("Starting Up");
 

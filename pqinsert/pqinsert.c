@@ -70,7 +70,7 @@ usage(
 "                  filename. With multiple files, product-ID becomes\n"
 "                  <productID>.<seqno>\n"
 "    -i            Compute product signature (MD5 checksum) from product ID\n",
-            progname, getQueuePath());
+            progname, getDefaultQueuePath());
     log_flush_error();
     exit(1);
 }
@@ -196,7 +196,6 @@ int main(
         char *av[]
 )
 {
-        const char* const       pqfname = getQueuePath();
         const char* const progname = basename(av[0]);
         int useProductID = FALSE;
         int signatureFromId = FALSE;
@@ -276,6 +275,8 @@ int main(
 
             if(ac < 1) usage(progname);
             }
+
+        const char* const       pqfname = getQueuePath();
 
         /*
          * register exit handler

@@ -39,14 +39,13 @@ Options:\n\
         (void)fprintf(stderr, USAGE_FMT,
                         av0,
                         av0,
-                        getQueuePath());
+                        getDefaultQueuePath());
         exit(1);
 }
 
 
 int main(int ac, char *av[])
 {
-        const char *pqfname = getQueuePath();
         int pflags = PQ_NOCLOBBER;
         off_t initialsz = 0;
         size_t nproducts = 0;
@@ -84,6 +83,7 @@ int main(int ac, char *av[])
                         Sopt = optarg;
                         break;
                 case 'q':
+                        setQueuePath(optarg);
                         qopt = optarg;
                         break;
                 case 'x':
@@ -96,6 +96,8 @@ int main(int ac, char *av[])
                         usage(av[0]);
                         break;
                 }
+
+        const char* pqfname = getQueuePath();
         
         if(ac - optind > 1)
         {

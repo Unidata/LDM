@@ -407,7 +407,7 @@ static void usage(
                     "\t-n              Do nothing other than check the configuration-file\n"
                     "\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
                     "\t                (default is %d)\n", av0,
-            getLdmdConfigPath(), LDM_PORT, maxClients, getQueuePath(),
+            getLdmdConfigPath(), LDM_PORT, maxClients, getDefaultQueuePath(),
             DEFAULT_OLDEST, DEFAULT_RPCTIMEO);
 
     exit(1);
@@ -793,7 +793,6 @@ int main(
         int ac,
         char* av[])
 {
-    const char* pqfname = getQueuePath();
     int status;
     int doSomething = 1;
     in_addr_t ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
@@ -844,10 +843,9 @@ int main(
                 logOpts |= LOG_ISO_8601;
                 break;
             case 'l':
-                logfname = optarg;
+                (void)log_set_destination(optarg);
                 break;
             case 'q':
-                pqfname = optarg;
                 setQueuePath(optarg);
                 break;
             case 'o':
@@ -917,7 +915,10 @@ int main(
         }
     } /* command-line argument decoding */
 
-    if (logfname != NULL && *logfname == '-') {
+    const char* pqfname = getQueuePath();
+
+    logfname = log_get_destination();
+    if (strcmp(logfname, "-") == 0) {
         /*
          * Logging to standard error stream. Assume interactive.
          *
@@ -949,8 +950,6 @@ int main(
         (void) setsid(); // also makes this process a process group leader
     }
 #endif
-
-    (void)log_refresh();
 
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
