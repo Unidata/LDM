@@ -25,6 +25,7 @@ autoreconf -if
 # Assumes AM_DISTCHECK_CONFIGURE_FLAGS contains all appropriate "--with-..."
 # options
 make distcheck
+make distcheck DISTCHECK_CONFIGURE_FLAGS=--with-ulog 
 
 # DISTCHECK_CONFIGURE_FLAGS appends to AM_DISTCHECK_CONFIGURE_FLAGS, which
 # exists in automake(1) 1.13 but not in 1.11.
