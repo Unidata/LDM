@@ -15,14 +15,18 @@ licensing conditions.
 <hr>
 
 @section introduction Introduction
-This module is the logging component of the LDM. It comprises a single API
+The logging component of the LDM comprises a single API
 with two implementations: one using a simple implementation and the other
 using the LDM's original `ulog` module (that module is still part of the LDM
 library for backward compatibility with user-developed code). By default the
 simple implementation is used. The `ulog` implementation will be used if the
 option `--with-ulog` is given to the `configure` script.
 
-This module manages a FIFO queue of log messages for each thread in a
+Unless otherwise stated, this documentation is primarily on the simple
+implementation rather than the `ulog` implementation, which is documented
+elsewhere.
+
+Both implementations manage a FIFO queue of log messages for each thread in a
 process. `log_add*` functions add to the queue. At some point, one of the
 following should occur:
   - A final message added and the accumulated messages emitted by
@@ -49,12 +53,12 @@ command-line option `-l` _dest_:
 <tt>"-"</tt>    | Standard error stream
 <em>path</em>   | File whose pathname is _path_
 
-Besides managing thread-specific queues of log messages, this module also
-registers a handler for the `HUP` signal. If log messages are being written
-to a regular file (e.g., the LDM log file), then upon receipt of the signal,
-this module will refresh (i.e., close and re-open) its connection to the file.
-This allows the log files to be rotated and purged by an external process so
-that the disk partition doesn't become full.
+Besides managing thread-specific queues of log messages, the LDM logging
+component also registers a handler for the `HUP` signal. If log messages are
+being written to a regular file (e.g., the LDM log file), then upon receipt of
+the signal, the LDM logging component will refresh (i.e., close and re-open) its
+connection to the file. This allows the log files to be rotated and purged by an
+external process so that the disk partition doesn't become full.
 
 ---------------
 
@@ -93,7 +97,7 @@ Here's a contrived example:
                      (void)log_set_output(optarg);
                      break;
                 case 'v':
-                     // In case LOG_LEVEL_DEBUG is enabled (e.g., option "-xv")
+                     // In case "-x" option specified first (e.g., "-xv")
                      if (!log_is_enabled_info)
                          (void)log_set_level(LOG_LEVEL_INFO);
                      break;
@@ -123,8 +127,8 @@ Here's a contrived example:
 
 @section format Format of Log Messages
 
-Log messages sent to either the standard error stream or the LDM log file will
-have the following format:
+Log messages sent to either the standard error stream or the LDM log file by
+the simple implementation will have the following format:
 
 > _time_ _proc_ _level_ _loc_ _msg_
 
