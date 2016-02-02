@@ -8,6 +8,7 @@
 
 #include <config.h>
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -793,11 +794,12 @@ int main(
         int ac,
         char* av[])
 {
-    int status;
-    int doSomething = 1;
+    int       status;
+    int       doSomething = 1;
     in_addr_t ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
-    unsigned ldmPort = LDM_PORT;
-    unsigned logOpts = 0;
+    unsigned  ldmPort = LDM_PORT;
+    unsigned  logOpts = 0;
+    bool      makeDaemon = true; // default
 
     (void)log_init(av[0]);
     ensureDumpable();
@@ -844,6 +846,7 @@ int main(
                 break;
             case 'l':
                 (void)log_set_destination(optarg);
+                makeDaemon = strcmp(optarg, "-");
                 break;
             case 'q':
                 setQueuePath(optarg);
@@ -918,10 +921,8 @@ int main(
     const char* pqfname = getQueuePath();
 
     logfname = log_get_destination();
-    if (strcmp(logfname, "-") == 0) {
+    if (!makeDaemon) {
         /*
-         * Logging to standard error stream. Assume interactive.
-         *
          * Make this process a process group leader so that all child processes
          * (e.g., upstream LDM, downstream LDM, pqact(1)s) will be signaled by
          * `cleanup()`.
@@ -931,7 +932,7 @@ int main(
 #ifndef DONTFORK
     else {
         /*
-         * Logging to system logging daemon or file. Make this process a daemon.
+         * Make this process a daemon.
          */
         pid_t pid;
         pid = ldmfork();
@@ -950,6 +951,7 @@ int main(
         (void) setsid(); // also makes this process a process group leader
     }
 #endif
+    log_refresh();
 
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
