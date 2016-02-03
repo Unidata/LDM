@@ -160,29 +160,20 @@ dh_saveDataProduct(
 
     if (!error) {
         if (log_is_enabled_info)
-            log_info("%s", s_prod_info(NULL, 0, info,
-                    log_is_enabled_debug));
+            log_info("%s", s_prod_info(NULL, 0, info, log_is_enabled_debug));
 
         error = savedInfo_set(info);
         if (error) {
-            err_log_and_free(
-                ERR_NEW1(0, NULL, "Couldn't save product-information: %s",
-                    savedInfo_strerror(error)),
-                ERR_FAILURE);
-
+            log_error("Couldn't save product-information: %s",
+                    savedInfo_strerror(error));
             retCode = DOWN6_SYSTEM_ERROR;
         }
         else {
             if (notifyAutoShift) {
                 error = as_process(1, info->sz);
-
                 if (error) {
-                    err_log_and_free(
-                        ERR_NEW1(0, NULL,
-                            "Couldn't process acceptance of data-product: %s",
-                            strerror(error)),
-                        ERR_FAILURE);
-
+                    log_error("Couldn't process acceptance of data-product: %s",
+                            strerror(error));
                     retCode = DOWN6_SYSTEM_ERROR;
                 }
             }                           /* "notifyAutoShift" set */
@@ -190,18 +181,13 @@ dh_saveDataProduct(
     }                                   /* data-product inserted */
     else if (PQUEUE_BIG == error) {
         log_error("Product too big: %s",
-            s_prod_info(NULL, 0, info,
-                    log_is_enabled_debug));
+            s_prod_info(NULL, 0, info, log_is_enabled_debug));
         retCode = DOWN6_PQ_BIG;
 
         error = savedInfo_set(info);
         if (error) {
-            err_log_and_free(
-                ERR_NEW1(0, NULL,
-                    "Couldn't save product-information: %s",
-                    savedInfo_strerror(error)),
-                ERR_FAILURE);
-
+            log_error("Couldn't save product-information: %s",
+                    savedInfo_strerror(error));
             retCode = DOWN6_SYSTEM_ERROR;
         }
     }                                   /* product too big */
@@ -209,32 +195,21 @@ dh_saveDataProduct(
         if (log_is_enabled_info)
             log_info("%s: duplicate: %s",
                 wasHereis ? "hereis" : "comingsoon/blkdata",
-                s_prod_info(NULL, 0, info,
-                        log_is_enabled_debug));
-
+                s_prod_info(NULL, 0, info, log_is_enabled_debug));
         retCode = DOWN6_UNWANTED;
 
         error = savedInfo_set(info);
         if (error) {
-            err_log_and_free(
-                ERR_NEW1(0, NULL,
-                    "Couldn't save product-information: %s",
-                    savedInfo_strerror(error)),
-                ERR_FAILURE);
-
+            log_error("Couldn't save product-information: %s",
+                    savedInfo_strerror(error));
             retCode = DOWN6_SYSTEM_ERROR;
         }
         else {
             if (notifyAutoShift) {
                 error = as_process(0, info->sz);
-
                 if (error) {
-                    err_log_and_free(
-                        ERR_NEW1(0, NULL,
-                            "Couldn't process rejection of data-product: %s",
-                            strerror(error)),
-                        ERR_FAILURE);
-
+                    log_error("Couldn't process rejection of data-product: %s",
+                            strerror(error));
                     retCode = DOWN6_SYSTEM_ERROR;
                 }
             }                       /* "notifyAutoShift" set */
@@ -242,9 +217,7 @@ dh_saveDataProduct(
     }                               /* duplicate data-product */
     else {
         log_error("pq_insert() failed: %s: %s",
-            strerror(error), s_prod_info(NULL, 0, info,
-                    log_is_enabled_debug));
-
+            strerror(error), s_prod_info(NULL, 0, info, log_is_enabled_debug));
         retCode = DOWN6_PQ;             /* fatal product-queue error */
     }                                   /* general insertion failure */
 
