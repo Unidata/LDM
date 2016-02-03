@@ -1793,7 +1793,7 @@ subEntry_startRequester(
     unsigned    serverIndex;
 
     for (serverIndex = 0; serverIndex < entry->serverCount; serverIndex++) {
-        prod_class_t*       clssp;
+        prod_class_t*      clssp;
         const ServerInfo*  requestServer = entry->servers[serverIndex];
 
         clssp = new_prod_class(1);
