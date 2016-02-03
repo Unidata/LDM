@@ -400,8 +400,7 @@ static void test_log_refresh(void)
     status = rename(tmpPathname, tmpPathname1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = log_refresh();
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    log_refresh();
 
     logMessages();
     n = numLines(tmpPathname);
@@ -416,7 +415,7 @@ static void test_log_refresh(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_sighup(void)
+static void test_sighup_log(void)
 {
     (void)unlink(tmpPathname);
     int status = log_init(progname);
@@ -438,6 +437,55 @@ static void test_sighup(void)
     logMessages();
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
+
+    status = log_fini();
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = unlink(tmpPathname1);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void signal_handler(
+        const int sig)
+{
+    if (sig == SIGHUP)
+        log_refresh();
+}
+
+static void test_sighup_prog(void)
+{
+    (void)unlink(tmpPathname);
+    int status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = log_set_destination(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = log_set_level(LOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+
+    struct sigaction sigact, oldsigact;
+    (void) sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags |= SA_RESTART;
+    sigact.sa_handler = signal_handler;
+    status = sigaction(SIGHUP, &sigact, &oldsigact);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    logMessages();
+    int n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
+
+    status = rename(tmpPathname, tmpPathname1);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    (void)raise(SIGHUP);
+
+    logMessages();
+    n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
+
+    status = sigaction(SIGHUP, &oldsigact, NULL);
+    CU_ASSERT_EQUAL(status, 0);
 
     status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
@@ -473,7 +521,8 @@ int main(
                     && CU_ADD_TEST(testSuite, test_log_add)
                     && CU_ADD_TEST(testSuite, test_log_syserr)
                     && CU_ADD_TEST(testSuite, test_log_refresh)
-                    && CU_ADD_TEST(testSuite, test_sighup)
+                    && CU_ADD_TEST(testSuite, test_sighup_log)
+                    && CU_ADD_TEST(testSuite, test_sighup_prog)
                     /*
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);

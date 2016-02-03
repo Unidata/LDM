@@ -87,9 +87,9 @@ static pthread_once_t        key_creation_control = PTHREAD_ONCE_INIT;
  */
 static pthread_t             init_thread;
 /**
- * Whether a SIGHUP has been delivered.
+ * Whether this module needs to be refreshed.
  */
-static volatile sig_atomic_t hupped;
+static volatile sig_atomic_t refresh_needed;
 /**
  * The SIGHUP signal set.
  */
@@ -137,7 +137,7 @@ static void restoreSigs(
 }
 
 /**
- * Handles SIGHUP delivery. Sets variable `hupped` and ensures that any
+ * Handles SIGHUP delivery. Sets variable `refresh_needed` and ensures that any
  * previously-registered SIGHUP handler is called.
  *
  * @param[in] sig  SIGHUP.
@@ -145,7 +145,7 @@ static void restoreSigs(
 static void handle_sighup(
         const int sig)
 {
-    hupped = 1;
+    refresh_needed = 1;
     if (prev_hup_sigaction.sa_handler != SIG_DFL &&
             prev_hup_sigaction.sa_handler != SIG_IGN) {
         (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
@@ -431,6 +431,29 @@ static void flush(
     restoreSigs(&sigset);
 }
 
+/**
+ * Refreshes the logging module. If logging is to the system logging daemon,
+ * then it will continue to be. If logging is to a file, then the file is closed
+ * and re-opened; thus enabling log file rotation. If logging is to the standard
+ * error stream, then it will continue to be if the process has not become a
+ * daemon; otherwise, logging will be to the provider default. Should be called
+ * after log_init().
+ *
+ * @retval  0  Success.
+ * @retval -1  Failure.
+ */
+static int refresh(void)
+{
+    char dest[_XOPEN_PATH_MAX];
+    strncpy(dest, log_get_destination(), sizeof(dest))[sizeof(dest)-1] = 0;
+    // In case we've turned into a daemon
+    const char* def_dest = log_get_default_destination();
+    int status = log_set_destination(def_dest);
+    if (status == 0 && !LOG_IS_STDERR_SPEC(dest))
+        status = log_set_destination(dest);
+    return status;
+}
+
 /******************************************************************************
  * Package-private API:
  ******************************************************************************/
@@ -444,9 +467,13 @@ void log_lock(void)
 {
     int status = mutex_lock(&log_mutex);
     log_assert(status == 0);
-    if (hupped) {
-        hupped = 0;
-        log_refresh();
+    if (refresh_needed) {
+        /*
+         * The following must be executed in the given order in order to prevent
+         * blowing the stack because refresh() causes log_lock() to be called.
+         */
+        refresh_needed = 0;
+        (void)refresh();
     }
 }
 
@@ -747,21 +774,11 @@ int log_init(
  * daemon; otherwise, logging will be to the provider default. Should be called
  * after log_init().
  *
- * @retval  0  Success.
- * @retval -1  Failure.
+ * This function is async-signal-safe.
  */
-int log_refresh(void)
+void log_refresh(void)
 {
-    log_lock();
-    char output[_XOPEN_PATH_MAX];
-    strncpy(output, log_get_destination(), sizeof(output))[sizeof(output)-1] = 0;
-    // In case we've turned into a daemon
-    int status = log_set_destination(log_get_default_destination());
-    if (status == 0 && (LOG_IS_SYSLOG_SPEC(output) ||
-            !LOG_IS_STDERR_SPEC(output)))
-        status = log_set_destination(output);
-    log_unlock();
-    return status;
+    refresh_needed = 1;
 }
 
 /**

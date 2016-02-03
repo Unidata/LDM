@@ -66,13 +66,16 @@ int log_init(
         const char* const id);
 
 /**
- * Refreshes the logging module. In particular, if output is to a file, then the
- * file is closed and re-opened; thus allowing for log file rotation.
+ * Refreshes the logging module. If logging is to the system logging daemon,
+ * then it will continue to be. If logging is to a file, then the file is closed
+ * and re-opened; thus enabling log file rotation. If logging is to the standard
+ * error stream, then it will continue to be if the process has not become a
+ * daemon; otherwise, logging will be to the provider default. Should be called
+ * after log_init().
  *
- * @retval  0  Success.
- * @retval -1  Failure. The logging module is in an unspecified state.
+ * This function is async-signal safe.
  */
-int log_refresh(void);
+void log_refresh(void);
 
 /**
  * Finalizes the logging module. Should be called eventually after

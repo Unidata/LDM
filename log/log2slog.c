@@ -42,7 +42,7 @@ static log_level_t logging_level = LOG_LEVEL_NOTICE;
 /**
  * The log file stream.
  */
-static FILE*         output_stream;
+static FILE*         stream_file;
 /**
  * The identifier for log messages
  */
@@ -50,7 +50,7 @@ static char          ident[_XOPEN_PATH_MAX];
 /**
  * Specification of the destination for log messages.
  */
-static char          output_spec[_XOPEN_PATH_MAX];
+static char          dest_spec[_XOPEN_PATH_MAX];
 /**
  * System logging daemon options
  */
@@ -123,10 +123,9 @@ static FILE* open_output_stream(
  */
 static void stream_close(void)
 {
-    if (output_stream && output_stream != stderr)
-        (void)fclose(output_stream);
-    output_stream = NULL;
-    output_spec[0] = 0;
+    if (stream_file && stream_file != stderr)
+        (void)fclose(stream_file);
+    stream_file = NULL;
 }
 
 /**
@@ -146,13 +145,7 @@ static int stream_set(
         status = -1;
     }
     else {
-        stream_close();
-        output_stream = stream;
-        size_t nbytes = strlen(spec);
-        if (nbytes > sizeof(output_spec) - 1)
-            nbytes = sizeof(output_spec) - 1;
-        (void)memmove(output_spec, spec, nbytes); // `spec == output_spec`?
-        output_spec[nbytes] = 0;
+        stream_file = stream;
         status = 0;
     }
     return status;
@@ -185,9 +178,9 @@ static int stream_set_file(
 static int stream_open(
         const char* const spec)
 {
-    return strcmp(spec, SYSERR_SPEC)
-            ? stream_set_file(spec)
-            : stream_set(SYSERR_SPEC, stderr);
+    return LOG_IS_STDERR_SPEC(spec)
+            ? stream_set(STDERR_SPEC, stderr)
+            : stream_set_file(spec);
 }
 
 /**
@@ -239,14 +232,14 @@ const char* log_get_default_destination(void)
  */
 void log_write_one(
         const log_level_t    level,
-        const Message* const   msg)
+        const Message* const msg)
 {
-    if (output_stream) {
+    if (stream_file) {
         struct timeval now;
         (void)gettimeofday(&now, NULL);
         struct tm tm;
         (void)gmtime_r(&now.tv_sec, &tm);
-        (void)fprintf(output_stream,
+        (void)fprintf(stream_file,
                 "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%d] %s %s:%s():%d %s\n",
                 tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
                 tm.tm_sec, (long)now.tv_usec,
@@ -277,6 +270,7 @@ void log_internal(
     msg.next = NULL;
     msg.loc.file = __FILE__;
     msg.loc.line = __LINE__;
+    msg.loc.func = __func__;
     msg.string = buf;
     msg.size = sizeof(buf);
     va_list args;
@@ -399,7 +393,7 @@ int log_set_facility(
     else {
         log_lock();
         syslog_facility = facility;
-        status = log_set_destination(output_spec);
+        status = log_set_destination(dest_spec);
         log_unlock();
     }
     return status;
@@ -437,7 +431,7 @@ int log_set_id(
     else {
         log_lock();
         strncpy(ident, id, sizeof(ident))[sizeof(ident)-1] = 0;
-        status = log_set_destination(output_spec);
+        status = log_set_destination(dest_spec);
         log_unlock();
     }
     return status;
@@ -473,7 +467,7 @@ void log_set_options(
 {
     log_lock();
     syslog_options = options;
-    (void)log_set_destination(output_spec);
+    (void)log_set_destination(dest_spec);
     log_unlock();
 }
 
@@ -514,8 +508,8 @@ int log_set_destination(
 {
     log_lock();
     int status;
+    stream_close();
     if (LOG_IS_SYSLOG_SPEC(dest)) {
-        stream_close();
         openlog(ident, syslog_options, syslog_facility);
         status = 0;
     }
@@ -523,6 +517,16 @@ int log_set_destination(
         status = stream_open(dest);
         if (status == 0)
             closelog();
+    }
+    if (status == 0) {
+        /*
+         * Handle potential overlap because `log_get_destination()` returns
+         * `dest_spec`
+         */
+        size_t nbytes = strlen(dest);
+        if (nbytes > sizeof(dest_spec) - 1)
+            nbytes = sizeof(dest_spec) - 1;
+        ((char*)memmove(dest_spec, dest, nbytes))[nbytes] = 0;
     }
     log_unlock();
     return status;
@@ -541,9 +545,9 @@ int log_set_destination(
 const char* log_get_destination(void)
 {
     log_lock();
-    const char* path = output_spec;
+    const char* path = dest_spec;
     log_unlock();
-    return path == NULL ? SYSLOG_SPEC : path;
+    return path;
 }
 
 int slog_is_priority_enabled(

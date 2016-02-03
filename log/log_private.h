@@ -19,9 +19,9 @@
 #include <sys/types.h>
 
 #define SYSLOG_SPEC ""
-#define SYSERR_SPEC "-"
+#define STDERR_SPEC "-"
 #define LOG_IS_SYSLOG_SPEC(spec) (strcmp(spec, SYSLOG_SPEC) == 0)
-#define LOG_IS_STDERR_SPEC(spec) (strcmp(spec, SYSERR_SPEC) == 0)
+#define LOG_IS_STDERR_SPEC(spec) (strcmp(spec, STDERR_SPEC) == 0)
 #define LOG_IS_FILE_SPEC(spec)   (!LOG_IS_SYSLOG_SPEC(spec) && !LOG_IS_STDERR_SPEC(spec))
 
 #ifdef __cplusplus
