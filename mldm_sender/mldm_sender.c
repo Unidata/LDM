@@ -59,7 +59,7 @@ static McastInfo             mcastInfo;
 /**
  * Termination signals.
  */
-static const int             termSigs[] = {SIGHUP, SIGINT, SIGTERM};
+static const int             termSigs[] = {SIGINT, SIGTERM};
 /**
  * Signal-set for termination signals.
  */

@@ -361,6 +361,9 @@ static void signal_handler(
 #endif
 
     switch (sig) {
+        case SIGHUP:
+            log_refresh();
+            break;
         case SIGTERM:
             done = 1;
             if (fifo)
@@ -409,7 +412,6 @@ static void set_sigactions(void)
 
     /* Ignore these */
     sigact.sa_handler = SIG_IGN;
-    (void)sigaction(SIGHUP, &sigact, NULL);
     (void)sigaction(SIGALRM, &sigact, NULL);
     (void)sigaction(SIGCHLD, &sigact, NULL);
     (void)sigaction(SIGCONT, &sigact, NULL);
@@ -425,6 +427,7 @@ static void set_sigactions(void)
     /* Restart system calls for these */
     sigact.sa_flags |= SA_RESTART;
 #endif
+    (void)sigaction(SIGHUP,  &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
 }
 

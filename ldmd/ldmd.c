@@ -323,6 +323,7 @@ static void signal_handler(
 #endif
     switch (sig) {
     case SIGHUP:
+        log_refresh();
         return;
     case SIGINT:
         exit(0);
@@ -366,7 +367,7 @@ static void set_sigactions(
     sigact.sa_flags |= SA_RESTART;
 #endif
     sigact.sa_handler = signal_handler;
-    (void) sigaction(SIGHUP, &sigact, NULL );
+    (void) sigaction(SIGHUP,  &sigact, NULL );
     (void) sigaction(SIGUSR2, &sigact, NULL );
     (void) sigaction(SIGCHLD, &sigact, NULL );
 
@@ -799,7 +800,7 @@ int main(
     in_addr_t ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
     unsigned  ldmPort = LDM_PORT;
     unsigned  logOpts = 0;
-    bool      makeDaemon = true; // default
+    bool      becomeDaemon = true; // default
 
     (void)log_init(av[0]);
     ensureDumpable();
@@ -846,7 +847,7 @@ int main(
                 break;
             case 'l':
                 (void)log_set_destination(optarg);
-                makeDaemon = strcmp(optarg, "-");
+                becomeDaemon = strcmp(optarg, "-");
                 break;
             case 'q':
                 setQueuePath(optarg);
@@ -921,7 +922,7 @@ int main(
     const char* pqfname = getQueuePath();
 
     logfname = log_get_destination();
-    if (!makeDaemon) {
+    if (!becomeDaemon) {
         /*
          * Make this process a process group leader so that all child processes
          * (e.g., upstream LDM, downstream LDM, pqact(1)s) will be signaled by
@@ -949,9 +950,10 @@ int main(
 
         /* detach the child from parents process group ?? */
         (void) setsid(); // also makes this process a process group leader
+
+        log_refresh(); // Because this process is now a daemon
     }
 #endif
-    log_refresh();
 
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);

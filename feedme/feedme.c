@@ -92,6 +92,7 @@ signal_handler(int sig)
 #endif
         switch(sig) {
         case SIGHUP :
+                log_refresh();
                 return;
         case SIGINT :
                 /*FALLTHROUGH*/
@@ -117,9 +118,11 @@ set_sigactions(void)
 
         sigact.sa_handler = signal_handler;
         (void)sigemptyset(&sigact.sa_mask);
-        sigact.sa_flags = 0;
 
+        sigact.sa_flags = SA_RESTART;
         (void) sigaction(SIGHUP, &sigact, NULL);
+
+        sigact.sa_flags = 0;
         (void) sigaction(SIGINT, &sigact, NULL);
         (void) sigaction(SIGTERM, &sigact, NULL);
         (void) sigaction(SIGUSR1, &sigact, NULL);

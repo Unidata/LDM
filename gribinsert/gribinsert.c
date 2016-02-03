@@ -119,7 +119,6 @@ set_sigactions (void)
 
   /* Ignore these */
   sigact.sa_handler = SIG_IGN;
-  (void) sigaction (SIGHUP, &sigact, NULL);
   (void) sigaction (SIGPIPE, &sigact, NULL);
   (void) sigaction (SIGALRM, &sigact, NULL);
   (void) sigaction (SIGCHLD, &sigact, NULL);

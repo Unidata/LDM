@@ -62,18 +62,6 @@ static key_t                 semkey;
 timestampt                   oldestCursor;
 timestampt                   currentCursor;
 int                          currentCursorSet = 0;
-/**
- * The SIGHUP signal set.
- */
-static sigset_t              hup_sigset;
-/**
- * The previous SIGHUP action when this module's SIGHUP action is registered.
- */
-static struct sigaction      prev_hup_sigaction;
-/**
- * The SIGHUP action for this module.
- */
-static struct sigaction      hup_sigaction;
 
 #ifndef DEFAULT_INTERVAL
 #define DEFAULT_INTERVAL 15
@@ -157,13 +145,7 @@ signal_handler(int sig)
         switch(sig) {
         case SIGHUP :
                 hupped = 1;
-                if (prev_hup_sigaction.sa_handler != SIG_DFL &&
-                        prev_hup_sigaction.sa_handler != SIG_IGN) {
-                    (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
-                    raise(SIGHUP);
-                    (void)sigprocmask(SIG_UNBLOCK, &hup_sigset, NULL);
-                    (void)sigaction(SIGHUP, &hup_sigaction, NULL);
-                }
+                log_refresh();
                 return;
         case SIGINT :
                 exit(0);
@@ -211,15 +193,8 @@ set_sigactions(void)
          * at http://www.opengroup.org/onlinepubs/007908799/xsh/sigaction.html
          */
 #endif
-        // SIGHUP is special because it's also used by `log2log4c.c`
-        (void)sigemptyset(&hup_sigset);
-        (void)sigaddset(&hup_sigset, SIGHUP);
-        hup_sigaction.sa_mask = hup_sigset;
-        hup_sigaction.sa_flags = SA_RESTART;
-        hup_sigaction.sa_handler = signal_handler;
-        (void) sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
-
         sigact.sa_handler = signal_handler;
+        (void) sigaction(SIGHUP,  &sigact, NULL);
         (void) sigaction(SIGTERM, &sigact, NULL);
         (void) sigaction(SIGUSR1, &sigact, NULL);
         (void) sigaction(SIGUSR2, &sigact, NULL);

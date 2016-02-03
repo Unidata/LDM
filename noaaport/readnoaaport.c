@@ -103,6 +103,9 @@ static void signal_handler(
     (void)signal(sig, signal_handler);
 #endif
     switch (sig) {
+      case SIGHUP:
+        log_refresh();
+        return;
       case SIGINT:
         exit(0);
       case SIGTERM:
@@ -130,7 +133,6 @@ static void set_sigactions(void)
 
     /* Ignore these */
     sigact.sa_handler = SIG_IGN;
-    (void)sigaction(SIGHUP, &sigact, NULL);
     (void)sigaction(SIGALRM, &sigact, NULL);
     (void)sigaction(SIGCHLD, &sigact, NULL);
 
@@ -140,6 +142,7 @@ static void set_sigactions(void)
     sigact.sa_flags |= SA_RESTART;
 #endif
     sigact.sa_handler = signal_handler;
+    (void)sigaction(SIGHUP,  &sigact, NULL);
     (void)sigaction(SIGTERM, &sigact, NULL);
     (void)sigaction(SIGUSR1, &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
