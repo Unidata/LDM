@@ -384,6 +384,9 @@ static void set_sigactions(
 static void usage(
         char *av0) /*  id string */
 {
+    const char* log_dest = log_get_default_daemon_destination();
+    const char* config_path = getLdmdConfigPath();
+    const char* pq_path = getDefaultQueuePath();
     (void) fprintf(stderr,
             "Usage: %s [options] [conf_filename]\n"
 "\t(default conf_filename is \"%s\")\n"
@@ -396,7 +399,9 @@ static void usage(
 "\t                cycles)\n"
 "\t-x              Debug logging mode (SIGUSR2 cycles)\n"
 "\t-l dest         Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
-"\t                (standard error), or file `dest`. Default is \"%s\"\n",
+"\t                (standard error), or file `dest`. If standard error is\n"
+"\t                specified, then process will stay interactive. Default is\n"
+"\t                \"%s\".\n"
 "\t-M maxnum       Maximum number of clients (default is %u)\n"
 "\t-q pqfname      Product-queue pathname (default is\n"
 "\t                \"%s\")\n"
@@ -407,11 +412,9 @@ static void usage(
 "\t                seconds (default is %d)\n"
 "\t-n              Do nothing other than check the configuration-file\n"
 "\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
-"\t                (default is %d)\n", av0,
-            getLdmdConfigPath(), LDM_PORT, log_get_default_destination(),
-            maxClients, getDefaultQueuePath(), DEFAULT_OLDEST,
-            DEFAULT_RPCTIMEO);
-
+"\t                (default is %d)\n",
+            av0, config_path, LDM_PORT, log_dest, maxClients, pq_path,
+            DEFAULT_OLDEST, DEFAULT_RPCTIMEO);
     exit(1);
 }
 
