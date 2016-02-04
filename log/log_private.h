@@ -135,6 +135,14 @@ bool log_am_daemon(void);
 const char* log_get_default_destination(void);
 
 /**
+ * Returns the default destination for log messages if the process is a daemon.
+ *
+ * @retval ""   The system logging daemon
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_daemon_destination(void);
+
+/**
  * Initializes the logging module's implementation. Should be called before any
  * other function.
  *

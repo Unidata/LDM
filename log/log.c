@@ -511,6 +511,24 @@ bool log_am_daemon(void)
 }
 
 /**
+ * Returns the default destination for log messages. If the current process is
+ * not a daemon, then the default destination will be the standard error stream.
+ *
+ * @retval ""   Log to the system logging daemon
+ * @retval "-"  Log to the standard error stream
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_destination(void)
+{
+    log_lock();
+    const char* dest = log_am_daemon()
+            ? log_get_default_daemon_destination()
+            : "-";
+    log_lock();
+    return dest;
+}
+
+/**
  * Returns a pointer to the last component of a pathname.
  *
  * @param[in] pathname  The pathname.

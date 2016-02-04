@@ -212,16 +212,14 @@ static int level_to_priority(
 }
 
 /**
- * Returns the default destination for log messages. If the current process is a
- * daemon, then the default destination will be the standard LDM log file;
- * otherwise, the default destination will be the standard error stream.
+ * Returns the default destination for log messages if the process is a daemon.
  *
- * @retval "-"  Log to the standard error stream
+ * @retval ""   The system logging daemon
  * @return      The pathname of the standard LDM log file
  */
-const char* log_get_default_destination(void)
+const char* log_get_default_daemon_destination(void)
 {
-    return log_am_daemon() ? get_ldm_logfile_pathname() : "-";
+    return get_ldm_logfile_pathname();
 }
 
 /**

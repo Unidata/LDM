@@ -49,16 +49,14 @@ static log_level_t loggingLevel = LOG_LEVEL_DEBUG;
  ******************************************************************************/
 
 /**
- * Returns the default destination for log messages. If the current process is a
- * daemon, then the default destination will be the system logging daemon;
- * otherwise, the default destination will be to the standard error stream.
+ * Returns the default destination for log messages if the process is a daemon.
  *
- * @retval ""   Log to the system logging daemon
- * @retval "-"  Log to the standard error stream
+ * @retval ""   The system logging daemon
+ * @return      The pathname of the standard LDM log file
  */
-const char* log_get_default_destination(void)
+const char* log_get_default_daemon_destination(void)
 {
-    return log_am_daemon() ? "" : "-";
+    return "";
 }
 
 /**
