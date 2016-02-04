@@ -58,16 +58,18 @@ usage (char *av0		/*  id string */
   )
 {
   (void) fprintf (stderr,
-		  "Usage: %s [options] filename ...\n\tOptions:\n", av0);
+"Usage: %s [options] filename ...\n\tOptions:\n", av0);
   (void) fprintf (stderr,
-		  "\t-v           Verbose, tell me about each product\n");
+"\t-v           Verbose, tell me about each product\n");
   (void) fprintf (stderr,
-		  "\t-l logfile   log to a file rather than stderr\n");
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
   (void) fprintf (stderr, "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
   (void) fprintf (stderr,
-		  "\t-s seqno     set initial product sequence number to \"seqno\", defaults to 0\n");
+"\t-s seqno     set initial product sequence number to \"seqno\", defaults to 0\n");
   (void) fprintf (stderr,
-		  "\t-f feedtype  assert your feed type as \"feedtype\", defaults to \"EXP\"\n");
+"\t-f feedtype  assert your feed type as \"feedtype\", defaults to \"EXP\"\n");
   (void) fprintf (stderr, "\t-S           Do not create .status product\n");
   exit (1);
 }

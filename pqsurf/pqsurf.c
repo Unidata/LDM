@@ -239,38 +239,39 @@ static void
 usage(const char *av0) /*  id string */
 {
         (void)fprintf(stderr,
-                "Usage: %s [options] [confilename]\t\nOptions:\n",
+"Usage: %s [options] [confilename]\t\nOptions:\n",
                 av0);
         (void)fprintf(stderr,
-                "\t-v           Verbose, log each match (SIGUSR2 toggles)\n");
+"\t-v           Verbose, log each match (SIGUSR2 toggles)\n");
         (void)fprintf(stderr,
-                "\t-x           Debug mode\n");
+"\t-x           Debug mode\n");
         (void)fprintf(stderr,
-                "\t-l logfile   Send log info to file (default uses syslogd)\n");
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
         (void)fprintf(stderr,
-                "\t-d datadir   cd to \"datadir\" before interpreting filenames in\n");
+"\t-d datadir   cd to \"datadir\" before interpreting filenames in\n");
         (void)fprintf(stderr,
-                "\t             conffile (default %s)\n",
+"\t             conffile (default %s)\n",
                 getPqsurfDataDirPath());
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
+"\t-q queue     default \"%s\"\n", getDefaultQueuePath());
         (void)fprintf(stderr,
-                "\t-p pattern   Interested in products matching \"pattern\" (default \"%s\")\n", DEFAULT_PATTERN);
+"\t-p pattern   Interested in products matching \"pattern\" (default \"%s\")\n", DEFAULT_PATTERN);
         (void)fprintf(stderr,
-                "\t-f feedtype  Interested in products from feed \"feedtype\" (default %s)\n", s_feedtypet(DEFAULT_FEEDTYPE));
+"\t-f feedtype  Interested in products from feed \"feedtype\" (default %s)\n", s_feedtypet(DEFAULT_FEEDTYPE));
         (void)fprintf(stderr,
-                "\t-i interval  loop, polling each \"interval\" seconds (default %d)\n", DEFAULT_INTERVAL);
+"\t-i interval  loop, polling each \"interval\" seconds (default %d)\n", DEFAULT_INTERVAL);
         (void)fprintf(stderr,
-                "\t-a age       Expire products older than \"age\" hours (default %.4f)\n", DEFAULT_AGE);
+"\t-a age       Expire products older than \"age\" hours (default %.4f)\n", DEFAULT_AGE);
         (void)fprintf(stderr,
-                "\t-t timeo     set write timeo for PIPE subprocs to \"timeo\" secs (default %d)\n", DEFAULT_PIPE_TIMEO);
+"\t-t timeo     set write timeo for PIPE subprocs to \"timeo\" secs (default %d)\n", DEFAULT_PIPE_TIMEO);
         (void)fprintf(stderr,
-                "\t-o offset    the oldest product we will consider is \"offset\" secs before now (default: most recent in output queue)\n");
+"\t-o offset    the oldest product we will consider is \"offset\" secs before now (default: most recent in output queue)\n");
         (void)fprintf(stderr,
-                "\t-Q outQueue    default \"%s\"\n", getSurfQueuePath());
+"\t-Q outQueue    default \"%s\"\n", getSurfQueuePath());
         (void)fprintf(stderr,
-                "\t(default conffilename is %s)\n",
-                getPqsurfConfigPath());
+"\t(default conffilename is %s)\n", getPqsurfConfigPath());
         exit(1);
 }
 

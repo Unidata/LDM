@@ -49,18 +49,20 @@ static void
 usage(const char *av0) /*  id string */
 {
         (void)fprintf(stderr,
-                "Usage: %s [options] [outputfile]\n\tOptions:\n", av0);
+"Usage: %s [options] [outputfile]\n\tOptions:\n", av0);
         (void)fprintf(stderr,
-                "\t-l logfile   Log to a file rather than stderr\n");
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
         (void)fprintf(stderr,
-                "\t-q pqfname   (default \"%s\")\n", getDefaultQueuePath());
+"\t-q pqfname   (default \"%s\")\n", getDefaultQueuePath());
         (void)fprintf(stderr,
-                "\t-i interval  Poll queue after \"interval\" secs (default %d)\n",
+"\t-i interval  Poll queue after \"interval\" secs (default %d)\n",
                 DEFAULT_INTERVAL);
         (void)fprintf(stderr,
-                "\t             (\"interval\" of 0 means exit at end of queue)\n");
+"\t             (\"interval\" of 0 means exit at end of queue)\n");
         (void)fprintf(stderr,
-                "Output defaults to standard output\n");
+"Output defaults to standard output\n");
         exit(1);
 }
 

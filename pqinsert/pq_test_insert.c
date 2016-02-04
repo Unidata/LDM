@@ -126,10 +126,8 @@ static void pti_usage(void)
 "Usage: %s [options] file\n"
 "Options:\n"
 "    -f feedtype   Use <feedtype> as data-product feed-type. Default is %s.\n"
-"    -l logfile    Log to <logfile> (\"-\" means standard error stream).\n"
-"                  Default depends on standard error stream:\n"
-"                      is tty     => use standard error stream\n"
-"                      is not tty => use system logging daemon.\n"
+"    -l dest       Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"                  (standard error), or file `dest`. Default is \"%s\"\n"
 "    -q queue      Use <queue> as product-queue. Default is \"%s\".\n"
 "    -s seqno      Set initial product sequence number to <seqno>. Default is\n"
 "                  %d.\n"
@@ -137,7 +135,8 @@ static void pti_usage(void)
 "    -x            Debug logging level.\n"
 "Operands:\n"
 "    file          Pathname of file containing size and timestamp entries.",
-            progname, feedbuf, pqPath, seq_start);
+            progname, feedbuf, log_get_default_destination(), pqPath,
+            seq_start);
     log_flush_error();
 }
 

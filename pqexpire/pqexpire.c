@@ -131,27 +131,33 @@ static void
 usage(const char *av0) /*  id string */
 {
         (void)fprintf(stderr,
-                "Usage: %s [options]\nOptions:\n", av0);
+"Usage: %s [options]\nOptions:\n", av0);
         (void)fprintf(stderr,
-                "\t-v           Verbose, report each notification\n");
+"\t-v           Verbose, report each notification\n");
         (void)fprintf(stderr,
-                "\t-x           Debug mode\n");
+"\t-x           Debug mode\n");
         (void)fprintf(stderr,
-                "\t-w           Wait on region locks\n");
+"\t-w           Wait on region locks\n");
         (void)fprintf(stderr,
-                "\t-l logfile   Send log info to file (default uses syslogd)\n");
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
         (void)fprintf(stderr,
-                "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
+"\t-q queue     default \"%s\"\n", getDefaultQueuePath());
         (void)fprintf(stderr,
-                "\t-a age       Protect products younger than \"age\" hours (default %.4f)\n", DEFAULT_AGE);
+"\t-a age       Protect products younger than \"age\" hours (default %.4f)\n",
+                DEFAULT_AGE);
         (void)fprintf(stderr,
-                "\t-i interval  loop, restart each \"interval\" seconds (default %d)\n", DEFAULT_INTERVAL);
+"\t-i interval  loop, restart each \"interval\" seconds (default %d)\n",
+                DEFAULT_INTERVAL);
         (void)fprintf(stderr,
-                "\t             interval of 0 means exit after one pass\n");
+"\t             interval of 0 means exit after one pass\n");
         (void)fprintf(stderr,
-                "\t-f feedtype  Delete products from feed \"feedtype\" (default %s)\n", s_feedtypet(DEFAULT_FEEDTYPE));
+"\t-f feedtype  Delete products from feed \"feedtype\" (default %s)\n",
+                s_feedtypet(DEFAULT_FEEDTYPE));
         (void)fprintf(stderr,
-                "\t-p pattern   Delete products matching \"pattern\" (default \"%s\")\n", DEFAULT_PATTERN);
+"\t-p pattern   Delete products matching \"pattern\" (default \"%s\")\n",
+                DEFAULT_PATTERN);
         exit(1);
 }
 

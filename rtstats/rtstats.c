@@ -81,29 +81,49 @@ addtostats(const prod_info *infop, const void *datap,
 static void
 usage(const char *av0) /*  id string */
 {
-    log_error("Usage: %s [options]", av0);
-    log_error("where:");
-    log_error("    -v           Log INFO-level messages (log each product).");
-    log_error("    -x           Log DEBUG-level messages.");
-    log_error("    -l logfile   Log to file \"logfile\" rather than syslogd(8).");
-    log_error("                 \"-\" means standard error.");
+    log_error(
+"Usage: %s [options]", av0);
+    log_error(
+"where:");
+    log_error(
+"    -v           Log INFO-level messages (log each product).");
+    log_error(
+"    -x           Log DEBUG-level messages.");
+    log_error(
+"    -l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"");
+    log_error(
+"                 (standard error), or file `dest`. Default is \"%s\"",
+            log_get_default_destination());
     /*
      * NB: Don't use "s_feedtypet(DEFAULT_FEEDTYPE)" in the following because
      * it looks ugly for "ANY - EXP".
      */
-    log_error("    -f feedtype  Scan for data of type \"feedtype\" (default: ");
-    log_error("                 \"ANY - EXP\").");
-    log_error("    -p pattern   Interested in products matching \"pattern\"");
-    log_error("                 (default: \".*\").") ;
-    log_error("    -q queue     Use file \"queue\" as product-queue (default: ");
-    log_error("                 \"%s\").", getDefaultQueuePath());
-    log_error("    -o offset    Oldest product to consider is \"offset\"");
-    log_error("                 seconds before now (default: 0).");
-    log_error("    -i interval  Poll queue every \"interval\" seconds (default:");
-    log_error("                 %d).", DEFAULT_INTERVAL);
-    log_error("    -h hostname  Send to LDM server on host \"hostname\"");
-    log_error("                 (default: LOCALHOST).");
-    log_error("    -P port      Send to port \"port\" (default: %d).", LDM_PORT);
+    log_error(
+"    -f feedtype  Scan for data of type \"feedtype\" (default: ");
+    log_error(
+"                 \"ANY - EXP\").");
+    log_error(
+"    -p pattern   Interested in products matching \"pattern\"");
+    log_error(
+"                 (default: \".*\").") ;
+    log_error(
+"    -q queue     Use file \"queue\" as product-queue (default: ");
+    log_error(
+"                 \"%s\").", getDefaultQueuePath());
+    log_error(
+"    -o offset    Oldest product to consider is \"offset\"");
+    log_error(
+"                 seconds before now (default: 0).");
+    log_error(
+"    -i interval  Poll queue every \"interval\" seconds (default:");
+    log_error(
+"                 %d).", DEFAULT_INTERVAL);
+    log_error(
+"    -h hostname  Send to LDM server on host \"hostname\"");
+    log_error(
+"                 (default: LOCALHOST).");
+    log_error(
+"    -P port      Send to port \"port\" (default: %d).", LDM_PORT);
     exit(1);
 }
 

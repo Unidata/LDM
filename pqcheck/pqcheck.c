@@ -47,18 +47,20 @@ static void
 usage(const char *av0) /*  id string */
 {
         (void)fprintf(stderr,
-                "Usage: %s [options]\n\tOptions:\n", av0);
+"Usage: %s [options]\n\tOptions:\n", av0);
         (void)fprintf(stderr,
-                "\t-F           Force. Set the writer-counter to zero "
-                "(creating it if necessary).\n");
+"\t-F           Force. Set the writer-counter to zero "
+"(creating it if necessary).\n");
         (void)fprintf(stderr,
-                "\t-v           Verbose\n");
+"\t-v           Verbose\n");
         (void)fprintf(stderr,
-                "\t-l logfile   Log to a file rather than stderr\n");
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
         (void)fprintf(stderr,
-                "\t-q pqfname   (default \"%s\")\n", getDefaultQueuePath());
+"\t-q pqfname   (default \"%s\")\n", getDefaultQueuePath());
         (void)fprintf(stderr,
-                "Output defaults to standard output\n");
+"Output defaults to standard output\n");
         exit(1);
 }
 

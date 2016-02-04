@@ -101,41 +101,43 @@ static void
 usage(const char *av0) {
 
     fprintf(stderr,
-            "Usage: %s [options] [pqueuefname]\t\nOptions:\n", av0);
+"Usage: %s [options] [pqueuefname]\t\nOptions:\n", av0);
     fprintf(stderr,
-            "\t-l logfile     Send log info to file (default STDERR)\n");
+"\t-l dest        Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t               (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
     fprintf(stderr,
-            "\t-v             Verbose output\n");
+"\t-v             Verbose output\n");
     fprintf(stderr,
-            "\t-x             Debug output\n");
+"\t-x             Debug output\n");
     fprintf(stderr,
-            "\t-c             Create the pqueue, clobber existing\n");
+"\t-c             Create the pqueue, clobber existing\n");
     fprintf(stderr,
-            "\t-n             Create the pqueue, error if it exists\n");
+"\t-n             Create the pqueue, error if it exists\n");
     fprintf(stderr,
-            "\t-a align       Align (round up) allocations to \"align\" boundaries\n");
+"\t-a align       Align (round up) allocations to \"align\" boundaries\n");
     fprintf(stderr,
-            "\t-p             Align (round up) allocations to the pagesize\n");
+"\t-p             Align (round up) allocations to the pagesize\n");
     fprintf(stderr,
-            "\t-s initialsz   Initial data section size\n");
+"\t-s initialsz   Initial data section size\n");
     fprintf(stderr,
-            "\t-S nproducts   Initially allocate index space for \"nproducts\" products\n");
+"\t-S nproducts   Initially allocate index space for \"nproducts\" products\n");
     fprintf(stderr,
-            "\t-r             Open read only\n");
+"\t-r             Open read only\n");
     fprintf(stderr,
-            "\t-P             Open private (PQ_PRIVATE)\n");
+"\t-P             Open private (PQ_PRIVATE)\n");
     fprintf(stderr,
-            "\t-L             Open no locking (PQ_NOLOCK)\n");
+"\t-L             Open no locking (PQ_NOLOCK)\n");
     fprintf(stderr,
-            "\t-F             Open \"fixed size\" (PQ_NOGROW)\n");
+"\t-F             Open \"fixed size\" (PQ_NOGROW)\n");
     fprintf(stderr,
-            "\t-M             Open PQ_NOMAP\n");
+"\t-M             Open PQ_NOMAP\n");
     fprintf(stderr,
-            "\t-w             Run the watch command and exit when through\n");
+"\t-w             Run the watch command and exit when through\n");
     fprintf(stderr,
-            "\t-C             Clear the minimum virtual residence time metrics and exit\n");
+"\t-C             Clear the minimum virtual residence time metrics and exit\n");
     fprintf(stderr,
-            "\t-f feedtype    Product feedtype (default ANY)\n");
+"\t-f feedtype    Product feedtype (default ANY)\n");
 
     exit(EXIT_FAILURE);
 

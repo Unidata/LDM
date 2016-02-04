@@ -288,10 +288,8 @@ static void usage(
 "               Default is %lu pages. \"getconf PAGESIZE\" reveals page-size.\n"
 "   -I ip_addr  Listen for multicast packets on interface \"ip_addr\".\n"
 "               Default is system's default multicast interface.\n"
-"   -l log      Log to file \"log\".  Default is to use the system logging\n"
-"               daemon if the current process is a daemon (i.e., doesn't\n"
-"               have a controlling terminal); otherwise, the standard error\n"
-"               stream is used.\n"
+"   -l dest     Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"               (standard error), or file `dest`. Default is \"%s\"\n"
 "   -m addr     Read data from IPv4 dotted-quad multicast address \"addr\".\n"
 "               Default is to read from the standard input stream.\n"
 "   -n          Log through level NOTE. Report each data-product.\n"
@@ -311,8 +309,9 @@ static void usage(
 "\n"
 "SIGUSR1 causes statistics to be unconditionally logged at level NOTE.\n"
 "SIGUSR2 rotates the logging level.\n",
-        progName, PACKAGE_VERSION, copyright, progName, (unsigned
-        long)npages, lpqGetQueuePath(), getFacilityName(log_get_facility()));
+        progName, PACKAGE_VERSION, copyright, progName, (unsigned long)npages,
+        log_get_default_destination(), lpqGetQueuePath(),
+        getFacilityName(log_get_facility()));
 
     (void)log_set_level(level);
 }

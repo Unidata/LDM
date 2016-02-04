@@ -98,10 +98,8 @@ Usage: %s [options] groupId:groupPort\n\
 Options:\n\
     -f feedExpr       Feedtype expression specifying data to send. Default\n\
                       is EXP.\n\
-    -l logfile        Log file pathname or '-' for standard error stream.\n\
-                      Default depends on standard error stream:\n\
-                          is tty     => use standard error stream\n\
-                          is not tty => use system logging daemon.\n\
+    -l dest           Log to `dest`. One of: \"\" (system logging daemon, \"-\"\n\
+                      (standard error), or file `dest`. Default is \"%s\"\n\
     -m mcastIf        IP address of interface to use to send multicast\n\
                       packets. Default is the system's default multicast\n\
                       interface.\n\
@@ -122,13 +120,11 @@ Options:\n\
                         <255  Unrestricted in scope. Global.\n\
     -v                Verbose logging: log INFO level messages.\n\
     -x                Debug logging: log DEBUG level messages.\n\
-    -y                Log using microsecond resolution.\n\
-    -z                Log using ISO 8601 timestamps.\n\
 Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
                       address and <groupPort> is port number.",
-            log_get_id(), getDefaultQueuePath());
+            log_get_id(), log_get_default_destination(), getDefaultQueuePath());
 }
 
 /**

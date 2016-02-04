@@ -62,17 +62,24 @@ static volatile sig_atomic_t    logmypriv = 0;
 static void usage(
     const char* const av0)      /*  id string */
 {
-      (void)fprintf(stderr, "Usage: %s [options] mcast_address\t\nOptions:\n",
-              av0);
-      (void)fprintf(stderr, "\t-n           Log notice messages\n");
-      (void)fprintf(stderr, "\t-v           Verbose, tell me about each "
-              "packet\n");
-      (void)fprintf(stderr, "\t-x           Log debug messages\n");
-      (void)fprintf(stderr, "\t-l logfile   Default logs to syslogd\n");
-      (void)fprintf(stderr, "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
-      (void)fprintf(stderr, "\t-d           dump packets, no output");
-      (void)fprintf(stderr, "\t-b pagnum    Number of pages for shared memory "
-              "buffer\n");
+      (void)fprintf(stderr,
+"Usage: %s [options] mcast_address\t\nOptions:\n", av0);
+      (void)fprintf(stderr,
+"\t-n           Log notice messages\n");
+      (void)fprintf(stderr,
+"\t-v           Verbose, tell me about each packet\n");
+      (void)fprintf(stderr,
+"\t-x           Log debug messages\n");
+      (void)fprintf(stderr,
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
+      (void)fprintf(stderr,
+"\t-q queue     default \"%s\"\n", getDefaultQueuePath());
+      (void)fprintf(stderr,
+"\t-d           dump packets, no output");
+      (void)fprintf(stderr,
+"\t-b pagnum    Number of pages for shared memory buffer\n");
       exit(1);
 }
 

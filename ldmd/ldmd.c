@@ -386,31 +386,31 @@ static void usage(
 {
     (void) fprintf(stderr,
             "Usage: %s [options] [conf_filename]\n"
-                    "\t(default conf_filename is \"%s\")\n"
-                    "Options:\n"
-                    "\t-I IP_addr      Use network interface associated with given IP \n"
-                    "\t                address (default is all interfaces)\n"
-                    "\t-P port         The port number for LDM connections (default is \n"
-                    "\t                %d)\n"
-                    "\t-v              Verbose logging mode: log each match (SIGUSR2\n"
-                    "\t                cycles)\n"
-                    "\t-x              Debug logging mode (SIGUSR2 cycles)\n"
-                    "\t-y              Log with microsecond resolution\n"
-                    "\t-z              Log using ISO 8601 timestamps\n"
-                    "\t-l logfile      Log to given file (default uses syslogd)\n"
-                    "\t-M maxnum       Maximum number of clients (default is %u)\n"
-                    "\t-q pqfname      Product-queue pathname (default is\n"
-                    "\t                \"%s\")\n"
-                    "\t-o offset       The \"from\" time of data-product requests will be\n"
-                    "\t                no earlier than \"offset\" seconds ago (default is\n"
-                    "\t                \"max_latency\", below)\n"
-                    "\t-m max_latency  The maximum acceptable data-product latency in\n"
-                    "\t                seconds (default is %d)\n"
-                    "\t-n              Do nothing other than check the configuration-file\n"
-                    "\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
-                    "\t                (default is %d)\n", av0,
-            getLdmdConfigPath(), LDM_PORT, maxClients, getDefaultQueuePath(),
-            DEFAULT_OLDEST, DEFAULT_RPCTIMEO);
+"\t(default conf_filename is \"%s\")\n"
+"Options:\n"
+"\t-I IP_addr      Use network interface associated with given IP \n"
+"\t                address (default is all interfaces)\n"
+"\t-P port         The port number for LDM connections (default is \n"
+"\t                %d)\n"
+"\t-v              Verbose logging mode: log each match (SIGUSR2\n"
+"\t                cycles)\n"
+"\t-x              Debug logging mode (SIGUSR2 cycles)\n"
+"\t-l dest         Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t                (standard error), or file `dest`. Default is \"%s\"\n",
+"\t-M maxnum       Maximum number of clients (default is %u)\n"
+"\t-q pqfname      Product-queue pathname (default is\n"
+"\t                \"%s\")\n"
+"\t-o offset       The \"from\" time of data-product requests will be\n"
+"\t                no earlier than \"offset\" seconds ago (default is\n"
+"\t                \"max_latency\", below)\n"
+"\t-m max_latency  The maximum acceptable data-product latency in\n"
+"\t                seconds (default is %d)\n"
+"\t-n              Do nothing other than check the configuration-file\n"
+"\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
+"\t                (default is %d)\n", av0,
+            getLdmdConfigPath(), LDM_PORT, log_get_default_destination(),
+            maxClients, getDefaultQueuePath(), DEFAULT_OLDEST,
+            DEFAULT_RPCTIMEO);
 
     exit(1);
 }

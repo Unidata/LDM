@@ -119,36 +119,39 @@ static void
 usage(const char *av0) /*  id string */
 {
         (void)fprintf(stderr,
-                "Usage: %s [options] [outputfile]\n\tOptions:\n", av0);
+"Usage: %s [options] [outputfile]\n\tOptions:\n", av0);
         (void)fprintf(stderr,
-                "\t-v           Verbose, tell me about each product\n");
+"\t-v           Verbose, tell me about each product\n");
         (void)fprintf(stderr,
-                "\t-l logfile   Log to a file rather than stderr\n");
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
         (void)fprintf(stderr,
-                "\t-f feedtype  Scan for data of type \"feedtype\" (default \"%s\")\n", s_feedtypet(DEFAULT_FEEDTYPE));
+"\t-f feedtype  Scan for data of type \"feedtype\" (default \"%s\")\n",
+                s_feedtypet(DEFAULT_FEEDTYPE));
         (void)fprintf(stderr,
-                "\t-p pattern   Interested in products matching \"pattern\" (default \".*\")\n") ;
+"\t-p pattern   Interested in products matching \"pattern\" (default \".*\")\n") ;
         (void)fprintf(stderr,
-                "\t-q pqfname   (default \"%s\")\n", getQueuePath());
+"\t-q pqfname   (default \"%s\")\n", getQueuePath());
         (void)fprintf(stderr,
-                "\t-o offset    Set the \"from\" time \"offset\" secs before now\n");
+"\t-o offset    Set the \"from\" time \"offset\" secs before now\n");
         (void)fprintf(stderr,
-                "\t             (default \"from\" the beginning of the epoch)\n");
+"\t             (default \"from\" the beginning of the epoch)\n");
         (void)fprintf(stderr,
-                "\t-i interval  Poll queue after \"interval\" secs (default %d)\n",
+"\t-i interval  Poll queue after \"interval\" secs (default %d)\n",
                 DEFAULT_INTERVAL);
         (void)fprintf(stderr,
-                "\t             (\"interval\" of 0 means exit at end of queue)\n");
+"\t             (\"interval\" of 0 means exit at end of queue)\n");
         (void)fprintf(stderr,
-                "\t-c           Check, verify MD5 signature\n");
+"\t-c           Check, verify MD5 signature\n");
         (void)fprintf(stderr,
-                "\t-O           Include product origin in verbose output\n");
+"\t-O           Include product origin in verbose output\n");
         (void)fprintf(stderr,
-                "\t             (valid only with -v option)\n");
+"\t             (valid only with -v option)\n");
         (void)fprintf(stderr,
-                "\t-s           Check queue for sanity/non-corruption\n");
+"\t-s           Check queue for sanity/non-corruption\n");
         (void)fprintf(stderr,
-                "Output defaults to standard output\n");
+"Output defaults to standard output\n");
         exit(1);
 }
 

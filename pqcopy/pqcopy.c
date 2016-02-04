@@ -93,7 +93,8 @@ usage(const char *av0) /*  id string */
 "Usage: %s [options] inPath outPath\n"
 "where:\n"
 "   -f feedtype  Scan for data of type \"feedtype\" (default \"%s\")\n"
-"   -l logfile   Log to a file rather than stderr\n"
+"   -l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"                (standard error), or file `dest`. Default is \"%s\"\n"
 "   -o offset    Set the \"from\" time \"offset\" secs before now\n"
 "                (default \"from\" the beginning of the epoch\n"
 "   -p pattern   Interested in products matching \"pattern\" (default \".*\")\n"
@@ -101,7 +102,7 @@ usage(const char *av0) /*  id string */
 "   -x           Add debuging to diagnostic outout\n"
 "   inPath       Path name of source product-queue\n"
 "   outPath      Path name of destination product-queue\n",
-        av0, s_feedtypet(DEFAULT_FEEDTYPE));
+        av0, s_feedtypet(DEFAULT_FEEDTYPE), log_get_default_destination());
     exit(1);
 }
 

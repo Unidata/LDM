@@ -140,32 +140,32 @@ usage(
 )
 {
         (void)fprintf(stderr,
-                "Usage: %s [options] \t\nOptions:\n", av0);
+"Usage: %s [options] \t\nOptions:\n", av0);
         (void)fprintf(stderr,
-                "\t-v             Verbose, report each notification\n");
+"\t-v             Verbose, report each notification\n");
         (void)fprintf(stderr,
-                "\t-x             Debug mode\n");
+"\t-x             Debug mode\n");
         (void)fprintf(stderr,
-                "\t-y             Log using microsecond resolution\n");
+"\t-l dest        Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t               (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
         (void)fprintf(stderr,
-                "\t-z             Log using ISO 8601 timestamps\n");
-        (void)fprintf(stderr,
-                "\t-l logfile     Send log info to file (default uses syslogd)\n");
-        (void)fprintf(stderr,
-                "\t-h remote      Have \"remote\" send us data (default \"%s\")\n",
+"\t-h remote      Have \"remote\" send us data (default \"%s\")\n",
                 DEFAULT_REMOTE);
         (void)fprintf(stderr,
-                "\t-f feedtype    Interested in products from feed \"feedtype\" (default %s)\n", s_feedtypet(DEFAULT_FEEDTYPE));
+"\t-f feedtype    Interested in products from feed \"feedtype\" (default %s)\n",
+        s_feedtypet(DEFAULT_FEEDTYPE));
         (void)fprintf(stderr,
-                "\t-p pattern     Interested in products matching \"pattern\" (default \"%s\")\n", DEFAULT_PATTERN);
+"\t-p pattern     Interested in products matching \"pattern\" (default \"%s\")\n",
+                DEFAULT_PATTERN);
         (void)fprintf(stderr,
-                "\t-o offset      Set the \"from\" time offset secs before now\n");
+"\t-o offset      Set the \"from\" time offset secs before now\n");
         (void)fprintf(stderr,
-                "\t-t timeout     Set RPC timeout to \"timeout\" seconds (default %d)\n",
-                        DEFAULT_TIMEO);
+"\t-t timeout     Set RPC timeout to \"timeout\" seconds (default %d)\n",
+                DEFAULT_TIMEO);
         (void)fprintf(stderr,
-                "\t-T TotalTimeo  Give up after this many secs (default %d)\n",
-                        DEFAULT_TOTALTIMEO);
+"\t-T TotalTimeo  Give up after this many secs (default %d)\n",
+                DEFAULT_TOTALTIMEO);
         exit(1);
 }
 

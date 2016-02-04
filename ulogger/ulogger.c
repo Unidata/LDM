@@ -115,7 +115,8 @@ static void
 usage(const char *av0)
 {
         (void)fprintf(stderr,
-            "%s: [-i] [-f file] [-p pri] [-t tag] [-l logfname] [ message ... ]\n", av0);
+            "%s: [-i] [-f file] [-p pri] [-t tag] [-l dest] [ message ... ]\n",
+            av0);
         exit(1);
 }
 

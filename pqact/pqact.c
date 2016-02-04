@@ -216,33 +216,36 @@ usage(
         log_error("Usage: %s [options] [config_file]\t\nOptions:\n", av0);
         log_error("Options:");
         log_error(
-                "\t-v           Log INFO-level messages, log each match "
-                "(SIGUSR2 cycles)");
+"\t-v           Log INFO-level messages, log each match (SIGUSR2 cycles)");
         log_error(
-                "\t-x           Log DEBUG-level messages (SIGUSR2 cycles)");
+"\t-x           Log DEBUG-level messages (SIGUSR2 cycles)");
         log_error(
-                "\t-l logfile   Log to \"logfile\" (default: use system "
-                "logging daemon)");
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
         log_error(
-                "\t-d datadir   cd(1) to \"datadir\" before interpreting "
-                "pathnames in configuration-file (default: \"%s\")",
-                getPqactDataDirPath());
+"\t-d datadir   cd(1) to \"datadir\" before interpreting pathnames in\n"
+"\t             configuration-file (default: \"%s\")", getPqactDataDirPath());
         log_error(
-                "\t-q queue     Use product-queue \"queue\" (default: \"%s\")",
+"\t-q queue     Use product-queue \"queue\" (default: \"%s\")",
                 getDefaultQueuePath());
         log_error(
-                "\t-p pattern   Only process products matching \"pattern\" (default: \"%s\")", DEFAULT_PATTERN);
+"\t-p pattern   Only process products matching \"pattern\" (default: \"%s\")",
+                DEFAULT_PATTERN);
         log_error(
-                "\t-f feedtype  Only process products from feed \"feedtype\" (default: %s)", s_feedtypet(DEFAULT_FEEDTYPE));
+"\t-f feedtype  Only process products from feed \"feedtype\" (default: %s)",
+                s_feedtypet(DEFAULT_FEEDTYPE));
         log_error(
-                "\t-i interval  Loop, polling every \"interval\" seconds (default: %d)", DEFAULT_INTERVAL);
+"\t-i interval  Loop, polling every \"interval\" seconds (default: %d)",
+                DEFAULT_INTERVAL);
         log_error(
-                "\t-t timeo     Set write timeout for PIPE subprocs to \"timeo\" secs (default: %d)", DEFAULT_PIPE_TIMEO);
+"\t-t timeo     Set write timeout for PIPE subprocs to \"timeo\" secs (default: %d)",
+                DEFAULT_PIPE_TIMEO);
         log_error(
-                "\t-o offset    Start with products arriving \"offset\" seconds before now (default: 0)");
+"\t-o offset    Start with products arriving \"offset\" seconds before now (default: 0)");
         log_error(
-                "\tconfig_file  Pathname of configuration-file (default: "
-                "\"%s\")", getPqactConfigPath());
+"\tconfig_file  Pathname of configuration-file (default: " "\"%s\")",
+                getPqactConfigPath());
         exit(1);
         /*NOTREACHED*/
 }

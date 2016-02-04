@@ -60,7 +60,8 @@ usage(
 "Usage: %s [options] filename ...\n"
 "    Options:\n"
 "    -v            Verbose, tell me about each product\n"
-"    -l logfile    Log to file <logfile> rather than stderr\n"
+"    -l dest       Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"                  (standard error), or file `dest`. Default is \"%s\"\n"
 "    -q queue      Use <queue> as product-queue. Default:\n"
 "                  \"%s\"\n"
 "    -s seqno      Set initial product sequence number to <seqno>.\n"
@@ -70,7 +71,7 @@ usage(
 "                  filename. With multiple files, product-ID becomes\n"
 "                  <productID>.<seqno>\n"
 "    -i            Compute product signature (MD5 checksum) from product ID\n",
-            progname, getDefaultQueuePath());
+            progname, log_get_default_destination(), getDefaultQueuePath());
     log_flush_error();
     exit(1);
 }

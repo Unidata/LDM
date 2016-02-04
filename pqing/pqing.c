@@ -215,8 +215,9 @@ usage(
     log_add("                  \"HDS\", \"DDPLUS\", etc.");
     log_add("    -i            Do not include a PIL-like \"/p\" identifier in");
     log_add("                  the product-identifier of suitable products");
-    log_add("    -l logfile    Log to <logfile>. \"-\" means standard error.");
-    log_add("                  Default uses system logging daemon.");
+    log_add("    -l dest       Log to `dest`. One of: \"\" (system logging daemon),");
+    log_add("                  \"-\" (standard error), or file `dest`. Default");
+    log_add("                  is \"%s\"", log_get_default_destination());
     log_add("    -N            Do not assign NEXRAD feedtype to NEXRAD products");
     log_add("                  (for WMO products only)");
     log_add("    -n            Disable checksum or parity check on tty input");

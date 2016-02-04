@@ -82,27 +82,29 @@ usage(av0)
 char *av0 ; /*  id string */
 {
         (void)fprintf(stderr,
-                "Usage: %s [options] [remote ...] \t\nOptions:\n", av0);
+"Usage: %s [options] [remote ...] \t\nOptions:\n", av0);
         (void)fprintf(stderr,
-                "\t-v           Verbose (default if interactive)\n") ;
+"\t-v           Verbose (default if interactive)\n") ;
         (void)fprintf(stderr,
-                "\t-q           Quiet (to shut up when interactive)\n") ;
+"\t-q           Quiet (to shut up when interactive)\n") ;
         (void)fprintf(stderr,
-                "\t-x           Debug mode\n") ;
+"\t-x           Debug mode\n") ;
         (void)fprintf(stderr,
-                "\t-l logfile   Send log info to file (default stderr if interactive,\n") ;
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
         (void)fprintf(stderr,
-                "\t                 else uses syslogd)\n") ;
+"\t                 else uses syslogd)\n") ;
         (void)fprintf(stderr,
-                "\t-t timeout   set RPC timeout to \"timeout\" seconds (default %d)\n",
+"\t-t timeout   set RPC timeout to \"timeout\" seconds (default %d)\n",
                         DEFAULT_TIMEO) ;
         fprintf(stderr,
-                "\t-i interval  Poll after \"interval\" secs (default %d when interactive,\n",
+"\t-i interval  Poll after \"interval\" secs (default %d when interactive,\n",
                 DEFAULT_INTERVAL) ;
         (void)fprintf(stderr,
-                "\t                 0 => one trip otherwise)\n") ;
+"\t                 0 => one trip otherwise)\n") ;
         (void)fprintf(stderr,
-                "\t-h remote    \"remote\" host to ping (default is localhost)\n") ;
+"\t-h remote    \"remote\" host to ping (default is localhost)\n") ;
         exit(1);
 }
 

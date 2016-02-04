@@ -31,7 +31,9 @@ Options:\n\
         -v\n\
         -c\n\
         -f\n\
-        -l logfname\n\
+        -l dest      Log to `dest`. One of: \"\" (system logging daemon),\n\
+                     \"-\" (standard error), or file `dest`. Default is\n\
+                     \"%s\"\n\
         -S nproducts\n\
        (default pqfname is \"%s\")\n\
 "
@@ -39,6 +41,7 @@ Options:\n\
         (void)fprintf(stderr, USAGE_FMT,
                         av0,
                         av0,
+                        log_get_default_destination(),
                         getDefaultQueuePath());
         exit(1);
 }

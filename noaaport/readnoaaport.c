@@ -159,17 +159,25 @@ static void set_sigactions(void)
 static void usage(
     const char* const   av0)		/*  id string */
 {
-    (void)fprintf(stderr, "Usage: %s [options] feedname\t\nOptions:\n", av0);
     (void)fprintf(stderr,
-                  "\t-v           Verbose, tell me about each product\n");
-    (void)fprintf(stderr, "\t-n           Log notice messages\n");
-    (void)fprintf(stderr, "\t-x           Log debug messages\n");
-    (void)fprintf(stderr, "\t-l logfile   Default logs to syslogd\n");
+"Usage: %s [options] feedname\t\nOptions:\n", av0);
     (void)fprintf(stderr,
-                  "\t-f type      Claim to be feedtype \"type\", "
-                  "one of \"hds\", \"ddplus\", ...\n");
-    (void)fprintf(stderr, "\t-q queue     default \"%s\"\n", getDefaultQueuePath());
-    (void)fprintf(stderr, "\t-u number    default LOCAL0\n");
+"\t-v           Verbose, tell me about each product\n");
+    (void)fprintf(stderr,
+"\t-n           Log notice messages\n");
+    (void)fprintf(stderr,
+"\t-x           Log debug messages\n");
+    (void)fprintf(stderr,
+"\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"\t             (standard error), or file `dest`. Default is \"%s\"\n",
+                log_get_default_destination());
+    (void)fprintf(stderr,
+"\t-f type      Claim to be feedtype \"type\", "
+"one of \"hds\", \"ddplus\", ...\n");
+    (void)fprintf(stderr,
+"\t-q queue     default \"%s\"\n", getDefaultQueuePath());
+    (void)fprintf(stderr,
+"\t-u number    default LOCAL0\n");
     exit(1);
 }
 
