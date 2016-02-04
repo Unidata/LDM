@@ -2,7 +2,7 @@
 .SH NAME
 feedme - event driven data sink client for the Unidata LDM
 .SH "UNIX SYNOPSIS"
-\fBfeedme \fR[\fB\-vx\fR] [\fB\-l \fIlogfile\fR] 
+\fBfeedme \fR[\fB\-vx\fR] [\fB\-l \fIlogdest\fR] 
 .BI [\-h " remote" ]
 .BI [\-p " pattern" ]
 .BI [\-f " feedtype" ]
@@ -27,9 +27,12 @@ each product that was received.
 Requests that debugging information also be printed. Details about
 each FEEDME RPC.
 .TP
-.BI \-l " logfile"
-The path name of a file to be used as the log file for the process.  The
-default is to use syslogd(8).
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-h " remote"
 Requests that  that the LDM server on \fIremote\fR send along data.

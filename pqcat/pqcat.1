@@ -9,7 +9,7 @@ pqcat
 \%[-v]
 \%[-O]
 \%[-x]
-\%[-l\ \fIlogfile\fP]
+\%[-l\ \fIlogdest\fP]
 \%[-f\ \fIfeedtype\fP]
 \%[-p\ \fIpattern\fP]
 \%[-q\ \fIpqfname\fP]
@@ -52,11 +52,12 @@ verbose output.  Valid only with -v option.
 .B -x
 Debugging information is also emitted.
 .TP
-.BI "-l " logfile
-The path name of a file to be used as the log file for the process.  The
-default is to use standard error when interactive and syslogd(8) otherwise.
-To use syslogd from the command line, enter ``pqcat ... >& /dev/null''.
-
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-f " feedtype"
 Reads from the product queue only products that have a feedtype that is a

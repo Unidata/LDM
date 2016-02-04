@@ -7,7 +7,7 @@ pqmon - program to monitor the state of an LDM product queue
 pqmon
 .nh
 \%[-S]
-\%[-l\ \fIlogfile\fP]
+\%[-l\ \fIlogdest\fP]
 \%[-q\ \fIpqfname\fP]
 \%[-i\ \fIinterval\fP]
 \%[\fIoutputfile\fP]
@@ -88,10 +88,12 @@ residence time was determined.
 This parameter can be reset via the \fBpqutil\fP(1) utility.
 .RE
 .TP
-.BI "-l " logfile
-The path name of a file to be used as the log file for the process.  The
-default is to use standard error when interactive and syslogd(8) otherwise.
-To use syslogd from the command line, enter ``pqmon ... >& /dev/null''.
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI "-q " pqfname
 The filename of the product queue.

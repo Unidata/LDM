@@ -2,7 +2,7 @@
 .SH NAME
 notifyme - ldm NOTIFYME example client
 .SH "UNIX SYNOPSIS"
-\fBnotifyme \fR[\fB\-vxyz\fR] [\fB\-l \fIlogfile\fR] 
+\fBnotifyme \fR[\fB\-vxyz\fR] [\fB\-l \fIlogdest\fR] 
 .BI [\-h " remote" ]
 .BI [\-p " pattern" ]
 .BI [\-f " feedtype" ]
@@ -29,10 +29,12 @@ The default is `ANY'.
 Requests notification from the ldm server on \fIremote\fR. Default
 is "localhost".
 .TP
-.BI \-l " logfile"
-the path name of a file to be used as the log file for the process.  By
-default messages are sent to syslogd(8).  If a HUP signal is received, the
-log file is closed and then reopened.
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-o " offset"
 Requests notification for data that arrived \fIoffset\fP seconds before NOW.
@@ -76,10 +78,10 @@ The default is
 The command
 .RS +4
 .nf
-notifyme -v -l - -h localhost
+notifyme -v
 .fi
 .RE
-will let you watch the data come in on `localhost'.
+will let you watch the data come in to the local host.
 .SH "SEE ALSO"
 ldmd(1), ldmd.conf(5), feedme(1) 
 .SH DIAGNOSTICS

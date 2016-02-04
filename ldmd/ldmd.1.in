@@ -7,7 +7,7 @@ ldmd \- Unidata LDM Server (version 6)
 ldmd
 .nh
 \fP[\fB-I\ \fIIP_addr\fR]
-\fP[\fB-l\ \fIlogpath\fR]
+\fP[\fB-l\ \fIlogdest\fR]
 \fP[\fB-M\ \fImax_clients\fR]
 \fP[\fB-m\ \fImax_latency\fR]
 \fP[\fB-n\fP]
@@ -61,14 +61,14 @@ is printed by the command "regutil regpath{LDMD_CONFIG_PATH}".
 IP address of network interface to use.  The default is printed by the
 command "regutil regpath{IP_ADDR}".
 .TP
-.BI "-l " logpath
-Log file pathname.
-The program uses Unidata's ulog(3) package to write error and diagnostic
-messages.
-The default is to write to the \fBsyslogd\fP(8) daemon.  If this option is
-specified, however, then messages will be written to the file
-\fIlogpath\fP unless that pathname is "\fB-\fP", in which case all 
-messages will be written to standard error.
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. If the standard error stream is
+specified, then the process will not daemonize itself. Default is the standard
+error stream if the process has a controlling terminal (i.e., the process isn't
+a daemon); otherwise, log messages will be sent to either the LDM log file or
+the system logging daemon (execute this program with just the option \fB'-?'\fP
+to determine which).
 .TP
 .BI "-M " max_clients
 The maximum number of clients allowed to connect to the LDM server before

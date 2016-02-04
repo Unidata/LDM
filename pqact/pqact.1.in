@@ -8,7 +8,7 @@ pqact
 .nh
 \%[-v]
 \%[-x]
-\%[-l\ \fIlogpath\fP]
+\%[-l\ \fIlogdest\fP]
 \%[-d\ \fIdatadir\fP]
 \%[-q\ \fIpqfname\fP]
 \%[-f\ \fIfeedtype\fP]
@@ -78,15 +78,12 @@ logged.
 Debug logging.
 Debugging messages (level \fBLOG_DEBUG\fP) are logged.
 .TP
-.BI "-l " logpath
-Log file pathname.
-The program uses Unidata's \fBulog\fP(3) package to write error and log
-messages.
-The default is to write to the \fBsyslogd\fP(8) daemon.  If this option is
-specified, however, then messages will be written to the file
-\fIlogpath\fP unless that pathname is "-", in which case all messages will be
-written to standard error and the program will not put itself into the
-background.
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-d " datadir"
 The directory relative to
@@ -108,7 +105,7 @@ You can specify a null product queue
 \fB/dev/null\fP to just check the syntax of a configuration file for
 \fBpqact\fP, as in
 .RS +12
-pqact -v -l- -q /dev/null pqact.conf
+pqact -v -q /dev/null pqact.conf
 .RE
 .TP
 .BI \-f " feedtype"

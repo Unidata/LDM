@@ -8,7 +8,7 @@ pqsend
 .nh
 \%-h\ \fIremote\fP
 \%[-dvx]
-\%[-l\ \fIlogpath\fP]
+\%[-l\ \fIlogdest\fP]
 \%[-f\ \fIfeedtype\fP]
 \%[-p\ \fIpattern\fP]
 \%[-q\ \fIqueue\fP]
@@ -47,10 +47,12 @@ product identifier.
 .B \-x
 Debugging information is also emitted.
 .TP
-.BI \-l " logpath"
-The path name of a file to be used as the log file for the process.  The
-default is to use syslogd(8) if no logfile is provided.  Specifying "-" logs
-messages to stderr.
+.BI \-l " logdest"
+Log to \fIdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-f " feedtype"
 Offers only products that have a feedtype that is a

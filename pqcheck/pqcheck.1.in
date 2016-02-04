@@ -8,7 +8,7 @@ pqcheck
 .nh
 \%[-F]
 \%[-v]
-\%[-l\ \fIlogfile\fP]
+\%[-l\ \fIlogdest\fP]
 \%[-q\ \fIpqfname\fP]
 .hy
 .ft
@@ -34,11 +34,12 @@ writing and the product-queue is guaranteed to be in a consistent state
 Force.  Support for a write-count will be added to the product-queue,
 if necessary, and the write-count will be set to zero.
 .TP
-.BI "-l " logfile
-The path name of a file to be used as the log file for the process.  The
-default is to use standard error when that stream goes to the terminal
-and syslogd(8) otherwise.
-To use syslogd(8) from the command line, execute "pqcheck ... 2> /dev/null".
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI "-q " pqfname
 The filename of the product queue.

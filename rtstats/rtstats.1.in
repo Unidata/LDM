@@ -12,7 +12,7 @@ rtstats
 \%[-H\ \fIhostname\fP]
 \%[-h\ \fIremote host\fP]
 \%[-P\ \fIport\fP]
-\%[-l\ \fIlogfile\fP]
+\%[-l\ \fIlogdest\fP]
 \%[-f\ \fIfeedtype\fP]
 \%[-p\ \fIpattern\fP]
 \%[-q\ \fIqueue\fP]
@@ -98,10 +98,12 @@ Requests that the statistic products be delivered to the LDM  server on
 \fIremote\fP.
 Defaults to localhost if not specified.
 .TP
-.BI "-l " logfile
-The path name of a file to be used as the log file for the process.
-If \fIlogfile\fP is "\fB-\fP", then the standard error stream will be used. The
-default is to use the system logging daemon (e.g., \fBsyslogd\fP(8)).
+.BI \-l " logdest"
+Log to \fIdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-f " feedtype"
 Reads from the product queue only products that have a feedtype that is a

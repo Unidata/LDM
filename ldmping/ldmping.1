@@ -2,7 +2,7 @@
 .SH NAME
 ldmping - check if ldm server is running
 .SH "UNIX SYNOPSIS"
-\fBldmping \fR[\fB\-x\fR] [\fB\-v\fR|\fB\-q\fR] [\fB\-l \fIlogfile\fR] 
+\fBldmping \fR[\fB\-x\fR] [\fB\-v\fR|\fB\-q\fR] [\fB\-l \fIlogdest\fR] 
 .BI [\-t timeout]
 .BI [\-i interval]
 .BI [\-h remote]
@@ -29,10 +29,12 @@ as failure. If the program is invoked interactively, this is the default.
 .B \-q
 Quiet, turn off verbose flag. Useful to override the default.
 .TP
-.BI \-l " logfile"
-The path name of a file to be used as the log file for the process.  The
-default is to use standard error when interactive and syslogd(8) otherwise.
-To use syslogd from the command line, enter "ldmping remote >& /dev/null".
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-t " timeout"
 Set the RPC timeout to this many seconds. The default is 10 seconds.

@@ -10,7 +10,7 @@ pqing
 \%[-c]
 \%[-b\ \fIbaud\fR]
 \%[-f\ \fIfeedtype\fR]
-\%[-l\ \fIlogfile\fR] 
+\%[-l\ \fIlogdest\fR] 
 \%[-n]
 \%[-q\ \fIq_path\fP]
 \%[-p\ \fIparity\fR]
@@ -68,12 +68,12 @@ file as the \fIfeedname\fP argument.  \fBWARNING:\fP If this program is
 invoked with this option and is left running, then the file system will 
 eventually fill up.
 .TP
-.BI \-l " logfile"
-The path name of a file to be used as the log file for the process.  The
-default is send messages to syslogd(8).  You may specify a minus
-``\fB\-\fP'' for the filename.  This results in the standard error output
-being used and prevents the program from putting itself in the background.
-This allows you to watch the log messages as products are read, for example.
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-f " feedtype"
 Assert that the feedtype is \fIfeedtype\fR, one of \fBhds, ddplus, 

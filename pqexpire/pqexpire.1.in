@@ -9,7 +9,7 @@ pqexpire
 \%[-v]
 \%[-x]
 \%[-w]
-\%[-l\ \fIlogfile\fP]
+\%[-l\ \fIlogdest\fP]
 \%[-q\ \fIqueue\fP]
 \%[-i\ \fIinterval\fP]
 \%[-a\ \fIage\fP]
@@ -68,10 +68,12 @@ Debugging information is also emitted.
 Wait on region locks. The default is to treat hitting a locked region
 the same as end of queue.
 .TP
-.BI "-l " logfile
-The path name of a file to be used as the log file for the process.  The
-default is to use \fBsyslogd\fP(8) if no logfile is provided.  Specifying
-`-' logs messages to stderr.
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI "-q " queue
 The pathname of the data product queue.

@@ -2,7 +2,7 @@
 .SH NAME
 ldmsend - ldm data source example client
 .SH "SYNOPSIS"
-\fBldmsend \fR[\fB\-vx\fR] [\fB\-l \fIlogfile\fR] 
+\fBldmsend \fR[\fB\-vx\fR] [\fB\-l \fIlogdest\fR] 
 [\fB-h \fIremote\fR]
 [\fB-P \fIport\fR]
 [\fB-s \fIseqno\fR]
@@ -30,9 +30,12 @@ The default is `EXP', indicating an experimental feedtype.
 .BI \-h " remote"
 Sends data to the ldm server on \fIremote\fR. The default is `localhost'.
 .TP
-.BI \-l " logfile"
-the path name of a file to be used as the log file for the process.  The
-default is log to stderr.
+.BI \-l " logdest"
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI \-P " port"
 The port on the remote sytem to which to connect.  Only useful for LDM 6

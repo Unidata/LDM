@@ -6,7 +6,7 @@ pqutil - utility program for the LDM product queue
 .ft B
 pqutil
 .nh
-\%[-l\ \fIlogfile\fP]
+\%[-l\ \fIlogdest\fP]
 \%[-v]
 \%[-x]
 \%[-c]
@@ -43,9 +43,12 @@ then the default is the output of the command
 
 .SH OPTIONS
 .TP
-.BI \-l " logfile"
-The path name of a file to be used as the log file for the process.  The
-default is to log to STDERR.
+.BI \-l " logdest"
+Log to \fIdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .B -v
 Verbose logging.
