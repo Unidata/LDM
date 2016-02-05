@@ -418,7 +418,7 @@ static void flush(
         if (log_is_level_enabled(level)) {
             for (const Message* msg = list->first; NULL != msg;
                     msg = msg->next) {
-                log_write_one(level, msg);
+                log_msg_write(level, msg);
 
                 if (msg == list->last)
                     break;
@@ -524,7 +524,7 @@ const char* log_get_default_destination(void)
     const char* dest = log_am_daemon()
             ? log_get_default_daemon_destination()
             : "-";
-    log_lock();
+    log_unlock();
     return dest;
 }
 
@@ -833,6 +833,9 @@ int log_set_upstream_id(
  * Finalizes the logging module. Frees resources specific to the current thread.
  * Frees all resources if the current thread is the one on which
  * `log_impl_init()` was called.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
  */
 int log_fini(void)
 {

@@ -250,7 +250,7 @@ void log_flush_located(
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void log_write_one(
+void log_msg_write(
         const log_level_t    level,
         const Message* const msg);
 

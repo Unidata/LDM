@@ -30,7 +30,19 @@
 #endif
 
 /**
+ * Functions for accessing the destination for log messages.
+ */
+typedef struct {
+    int  (*open)(void);
+    void (*write)(
+        const log_level_t    level,
+        const Message* const msg);
+    int  (*close)(void);
+} dest_funcs_t;
+
+/**
  * The mapping from `log` logging levels to system logging daemon priorities:
+ * Accessed by macros in `log_private.h`.
  */
 int                  log_syslog_priorities[] = {
         LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR
@@ -38,19 +50,31 @@ int                  log_syslog_priorities[] = {
 /**
  *  Logging level.
  */
-static log_level_t logging_level = LOG_LEVEL_NOTICE;
-/**
- * The log file stream.
- */
-static FILE*         stream_file;
-/**
- * The identifier for log messages
- */
-static char          ident[_XOPEN_PATH_MAX];
+static log_level_t   logging_level = LOG_LEVEL_NOTICE;
 /**
  * Specification of the destination for log messages.
  */
 static char          dest_spec[_XOPEN_PATH_MAX];
+/**
+ * The logging stream.
+ */
+static FILE*         stream_file;
+/**
+ * The file descriptor of the log file.
+ */
+static int           file_fd;
+/**
+ * Locking structure for concurrent access to the log file.
+ */
+static struct flock  lock;
+/**
+ * Unlocking structure for concurrent access to the log file.
+ */
+static struct flock  unlock;
+/**
+ * The identifier for log messages
+ */
+static char          ident[_XOPEN_PATH_MAX];
 /**
  * System logging daemon options
  */
@@ -59,6 +83,10 @@ static int           syslog_options = LOG_PID | LOG_NDELAY;
  * System logging facility
  */
 static int           syslog_facility = LOG_LDM;
+/**
+ * Functions for accessing the destination of log messages:
+ */
+static dest_funcs_t  dest_funcs;
 
 /**
  * Returns the pathname of the LDM log file.
@@ -88,99 +116,16 @@ static const char* get_ldm_logfile_pathname(void)
 }
 
 /**
- * Opens an output stream on a file for logging.
+ * Returns the system logging priority associated with a logging level.
  *
- * @param[in] pathname  Pathname of the file
- * @retval    NULL      Failure
- * @return              An output stream
+ * @param[in] level    The logging level
+ * @retval    LOG_ERR  `level` is invalid
+ * @return             The system logging priority associated with `level`
  */
-static FILE* open_output_stream(
-        const char* const pathname)
+static int level_to_priority(
+        const log_level_t level)
 {
-    FILE* stream;
-    if (pathname == NULL) {
-        stream = NULL;
-    }
-    else {
-        stream = fopen(pathname, "a");
-        if (stream == NULL) {
-            log_internal("Couldn't open log file \"%s\"", pathname);
-        }
-        else {
-            (void)setvbuf(stream, NULL, _IOLBF, BUFSIZ); // line buffering
-        }
-    }
-    return stream;
-}
-
-/*
- * The `stream_` functions keep `output_spec` and `output_stream` consistent
- * with each other.
- */
-
-/**
- * Closes the output stream. Idempotent.
- */
-static void stream_close(void)
-{
-    if (stream_file && stream_file != stderr)
-        (void)fclose(stream_file);
-    stream_file = NULL;
-}
-
-/**
- * Sets the output stream. Should only be called by other `stream_` functions.
- *
- * @param[in] spec      The new output stream specification.
- * @param[in] stream    The new output stream.
- * @retval    0         Success
- * @retval    -1        Failure
- */
-static int stream_set(
-        const char* const spec,
-        FILE* const       stream)
-{
-    int status;
-    if (spec == NULL || stream == NULL) {
-        status = -1;
-    }
-    else {
-        stream_file = stream;
-        status = 0;
-    }
-    return status;
-}
-
-/**
- * Sets the output stream to a file. Should only be called by other `stream_`
- * functions. Idempotent.
- *
- * @param[in] pathname  Pathname of the file.
- * @retval    0         Success
- * @retval    -1        Failure
- */
-static int stream_set_file(
-        const char* const pathname)
-{
-    FILE* stream = open_output_stream(pathname);
-    return stream_set(pathname, stream);
-}
-
-/**
- * Opens the output stream.
- *
- * @param[in] spec  Specification of the output:
- *                      - "-"  standard error stream
- *                      - else file whose pathname is `spec`
- * @retval    0     Success
- * @retval    -1    Failure
- */
-static int stream_open(
-        const char* const spec)
-{
-    return LOG_IS_STDERR_SPEC(spec)
-            ? stream_set(STDERR_SPEC, stderr)
-            : stream_set_file(spec);
+    return log_vet_level(level) ? log_syslog_priorities[level] : LOG_ERR;
 }
 
 /**
@@ -199,17 +144,180 @@ static const char* level_to_string(
 }
 
 /**
- * Returns the system logging priority associated with a logging level.
+ * Opens access to the system logging daemon.
  *
- * @param[in] level    The logging level
- * @retval    LOG_ERR  `level` is invalid
- * @return             The system logging priority associated with `level`
+ * @retval -1  Failure
+ * @retval  0  Success
  */
-static int level_to_priority(
-        const log_level_t level)
+static int syslog_open(void)
 {
-    return log_vet_level(level) ? log_syslog_priorities[level] : LOG_ERR;
+    openlog(ident, syslog_options, syslog_facility);
+    return 0;
 }
+
+/**
+ * Writes a single log message to the system logging daemon.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] msg    The message.
+ */
+static void syslog_write(
+        const log_level_t    level,
+        const Message* const msg)
+{
+    syslog(level_to_priority(level), "%s:%d %s",
+            log_basename(msg->loc.file), msg->loc.line, msg->string);
+}
+
+/**
+ * Closes access to the system logging daemon.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
+ */
+static int syslog_close(void)
+{
+    closelog();
+    return 0;
+}
+
+static dest_funcs_t syslog_funcs = {syslog_open, syslog_write, syslog_close};
+
+/**
+ * Writes a single log message to the stream.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] msg    The message.
+ */
+static void stream_write(
+        const log_level_t    level,
+        const Message* const msg)
+{
+    struct timeval now;
+    (void)gettimeofday(&now, NULL);
+    struct tm tm;
+    (void)gmtime_r(&now.tv_sec, &tm);
+    (void)fprintf(stream_file,
+            "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%d] %s %s:%s():%d %s\n",
+            tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
+            tm.tm_sec, (long)now.tv_usec,
+            ident, getpid(),
+            level_to_string(level),
+            log_basename(msg->loc.file), msg->loc.func, msg->loc.line,
+            msg->string);
+}
+
+/**
+ * Opens access to the standard error stream.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
+ */
+static int stderr_open(void)
+{
+    stream_file = stderr;
+    return 0;
+}
+
+/**
+ * Writes a single log message to the standard error stream.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] msg    The message.
+ */
+static void stderr_write(
+        const log_level_t    level,
+        const Message* const msg)
+{
+    stream_write(level, msg);
+}
+
+/**
+ * Closes access to the system logging daemon.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
+ */
+static int stderr_close(void)
+{
+    stream_file = NULL;
+    return 0;
+}
+
+static dest_funcs_t stderr_funcs = {stderr_open, stderr_write, stderr_close};
+
+/**
+ * Locks the log file.
+ */
+static void file_lock(void)
+{
+    int status = fcntl(file_fd, F_SETLKW, &lock);
+    log_assert(status == 0);
+}
+
+/**
+ * Unlocks the log file.
+ */
+static void file_unlock(void)
+{
+    int status = fcntl(file_fd, F_SETLKW, &unlock);
+    log_assert(status == 0);
+}
+
+/**
+ * Opens access to the log file.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
+ */
+static int file_open(void)
+{
+    int status;
+    stream_file = fopen(dest_spec, "a");
+    if (stream_file == NULL) {
+        log_internal("Couldn't open log file \"%s\"", dest_spec);
+        status = -1;
+    }
+    else {
+        (void)setvbuf(stream_file, NULL, _IOLBF, BUFSIZ); // line buffering
+        file_fd = fileno(stream_file);
+        status = 0;
+    }
+    return status;
+}
+
+/**
+ * Writes a single log message to the log file.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] msg    The message.
+ */
+static void file_write(
+        const log_level_t    level,
+        const Message* const msg)
+{
+    file_lock(); // To prevent concurrent access
+    stream_write(level, msg);
+    file_unlock();
+}
+
+/**
+ * Closes access to the log file.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
+ */
+static int file_close(void)
+{
+    int status = fclose(stream_file);
+    if (status == 0) {
+        stream_file = NULL;
+        file_fd = -1;
+    }
+    return status ? -1 : 0;
+}
+
+static dest_funcs_t file_funcs = {file_open, file_write, file_close};
 
 /**
  * Returns the default destination for log messages if the process is a daemon.
@@ -220,36 +328,6 @@ static int level_to_priority(
 const char* log_get_default_daemon_destination(void)
 {
     return get_ldm_logfile_pathname();
-}
-
-/**
- * Emits a single log message.
- *
- * @param[in] level  Logging level.
- * @param[in] msg    The message.
- */
-void log_write_one(
-        const log_level_t    level,
-        const Message* const msg)
-{
-    if (stream_file) {
-        struct timeval now;
-        (void)gettimeofday(&now, NULL);
-        struct tm tm;
-        (void)gmtime_r(&now.tv_sec, &tm);
-        (void)fprintf(stream_file,
-                "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%d] %s %s:%s():%d %s\n",
-                tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-                tm.tm_sec, (long)now.tv_usec,
-                ident, getpid(),
-                level_to_string(level),
-                log_basename(msg->loc.file), msg->loc.func, msg->loc.line,
-                msg->string);
-    }
-    else {
-        syslog(level_to_priority(level), "%s:%d %s",
-                log_basename(msg->loc.file), msg->loc.line, msg->string);
-    }
 }
 
 /**
@@ -275,7 +353,7 @@ void log_internal(
     va_start(args, fmt);
     (void)vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
-    log_write_one(LOG_LEVEL_ERROR, &msg);
+    dest_funcs.write(LOG_LEVEL_ERROR, &msg);
 }
 
 /******************************************************************************
@@ -306,6 +384,13 @@ int log_impl_init(
         status = -1;
     }
     else {
+        lock.l_type = F_WRLCK;
+        lock.l_whence = SEEK_SET;
+        lock.l_start = 0;
+        lock.l_len = 0; // entire object
+        unlock = lock;
+        unlock.l_type = F_UNLCK;
+        dest_funcs = stderr_funcs;
         logging_level = LOG_LEVEL_NOTICE;
         syslog_options = LOG_PID | LOG_NDELAY;
         syslog_facility = LOG_LDM;
@@ -327,10 +412,22 @@ int log_impl_init(
 int log_impl_fini(void)
 {
     log_lock();
-    stream_close();
-    closelog();
+    dest_funcs.close();
     log_unlock();
     return 0;
+}
+
+/**
+ * Emits a single log message.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] msg    The message.
+ */
+void log_msg_write(
+        const log_level_t    level,
+        const Message* const msg)
+{
+    dest_funcs.write(level, msg);
 }
 
 /**
@@ -505,17 +602,7 @@ int log_set_destination(
         const char* const dest)
 {
     log_lock();
-    int status;
-    stream_close();
-    if (LOG_IS_SYSLOG_SPEC(dest)) {
-        openlog(ident, syslog_options, syslog_facility);
-        status = 0;
-    }
-    else {
-        status = stream_open(dest);
-        if (status == 0)
-            closelog();
-    }
+    int status = dest_funcs.close();
     if (status == 0) {
         /*
          * Handle potential overlap because `log_get_destination()` returns
@@ -525,6 +612,14 @@ int log_set_destination(
         if (nbytes > sizeof(dest_spec) - 1)
             nbytes = sizeof(dest_spec) - 1;
         ((char*)memmove(dest_spec, dest, nbytes))[nbytes] = 0;
+
+        dest_funcs = LOG_IS_SYSLOG_SPEC(dest)
+            ? syslog_funcs
+            : LOG_IS_STDERR_SPEC(dest)
+                ? stderr_funcs
+                : file_funcs;
+
+        status = dest_funcs.open();
     }
     log_unlock();
     return status;
