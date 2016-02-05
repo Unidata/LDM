@@ -1,4 +1,4 @@
-NOTE readnoaaport.c:main():542 Starting Up 6.12.15.42
+NOTE readnoaaport.c:main():553 Starting Up 6.12.15.42
 NOTE process_prod.c:process_prod():216 YFBI00 KWBE 061800 /mNAM_84 !grib/ncep/NAM_84/#218/200407061800/F048/PWAT/atmos col/  inserted [cat 4 type 4 ccb 2/1 seq 15530983 size 295770]
 NOTE process_prod.c:process_prod():216 SDUS24 KLUB 062004 /pN2RLBB inserted [cat 99 type 4 ccb 2/0 seq 15530984 size 4220]
 NOTE process_prod.c:process_prod():216 SDUS24 KLUB 062004 /pN2SLBB inserted [cat 99 type 4 ccb 2/0 seq 15530985 size 8149]
