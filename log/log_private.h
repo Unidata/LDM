@@ -124,23 +124,32 @@ void log_unlock(void);
 bool log_am_daemon(void);
 
 /**
- * Returns the default destination for log messages. If the current process is a
- * daemon, then the default destination will depend on the implementation;
- * otherwise, the default destination will be the standard error stream.
+ * Returns the logging destination. Should be called between log_init() and
+ * log_fini().
  *
- * @retval ""   Log to the system logging daemon
- * @retval "-"  Log to the standard error stream
- * @return      The pathname of the standard LDM log file
+ * @pre          Module is locked
+ * @return       The logging destination. One of <dl>
+ *                   <dt>""      <dd>The system logging daemon.
+ *                   <dt>"-"     <dd>The standard error stream.
+ *                   <dt>else    <dd>The pathname of the log file.
+ *               </dl>
  */
-const char* log_get_default_destination(void);
+const char* log_get_destination_impl(void);
 
 /**
- * Returns the default destination for log messages if the process is a daemon.
+ * Sets the logging destination.
  *
- * @retval ""   The system logging daemon
- * @return      The pathname of the standard LDM log file
+ * @pre                Module is locked
+ * @param[in] dest     The logging destination. Caller may free. One of <dl>
+ *                         <dt>""   <dd>The system logging daemon.
+ *                         <dt>"-"  <dd>The standard error stream.
+ *                         <dt>else <dd>The file whose pathname is `dest`.
+ *                     </dl>
+ * @retval    0        Success.
+ * @retval    -1       Failure.
  */
-const char* log_get_default_daemon_destination(void);
+int log_set_destination_impl(
+        const char* const dest);
 
 /**
  * Initializes the logging module's implementation. Should be called before any
@@ -151,8 +160,18 @@ const char* log_get_default_daemon_destination(void);
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
-int log_impl_init(
+int log_init_impl(
         const char* const id);
+
+/**
+ * Re-initializes the logging module based on its state just prior to calling
+ * log_fini_impl(). If log_fini_impl(), wasn't called, then the result is
+ * unspecified.
+ *
+ * @retval   -1        Failure
+ * @retval    0        Success
+ */
+int log_reinit_impl(void);
 
 /**
  * Finalizes the logging module's implementation. Should be called eventually
@@ -161,7 +180,7 @@ int log_impl_init(
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int log_impl_fini(void);
+int log_fini_impl(void);
 
 /**
  * Vets a logging level.
@@ -226,9 +245,9 @@ void log_log_located(
  */
 void log_errno_located(
         const log_loc_t* const loc,
-        const int                errnum,
-        const char* const        fmt,
-                                 ...);
+        const int              errnum,
+        const char* const      fmt,
+                               ...);
 
 /**
  * Logs the currently-accumulated log-messages of the current thread and resets
@@ -248,22 +267,13 @@ void log_flush_located(
  * Emits a single log message.
  *
  * @param[in] level  Logging level.
- * @param[in] msg    The message.
+ * @param[in] loc    The location where the message was generated.
+ * @param[in] string The message.
  */
-void log_msg_write(
-        const log_level_t    level,
-        const Message* const msg);
-
-/**
- * Emits an error message. Used internally when an error occurs in this logging
- * module.
- *
- * @param[in] fmt  Format of the message.
- * @param[in] ...  Format arguments.
- */
-void log_internal(
-        const char* const      fmt,
-                               ...);
+void log_write(
+        const log_level_t level,
+        const log_loc_t*  loc,
+        const char*       string);
 
 /**
  * Adds a variadic log-message to the message-list for the current thread.
@@ -283,8 +293,8 @@ void log_internal(
  */
 int log_vadd_located(
         const log_loc_t* const loc,
-        const char *const        fmt,
-        va_list                  args);
+        const char *const      fmt,
+        va_list                args);
 
 /**
  * Adds a log-message for the current thread.
@@ -337,19 +347,51 @@ void* log_malloc_located(
         const char* const msg);
 
 /**
+ * Emits an error message. Used internally when an error occurs in this logging
+ * module.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] loc    Location where the message was generated.
+ * @param[in] ...    Message arguments -- starting with the format.
+ */
+void log_internal_located(
+        const log_level_t      level,
+        const log_loc_t* const loc,
+                               ...);
+
+/**
  * Declares an instance of a location structure. NB: `__func__` is an automatic
  * variable with local scope.
  */
 #define LOG_LOC_DECL(loc) const log_loc_t loc = {__FILE__, __func__, __LINE__}
 
-#define LOG_LOG2(level, ...) do { \
+#define LOG_LOG(level, ...) do {\
+    if (log_is_level_enabled(level)) {\
+        LOG_LOC_DECL(loc);\
+        log_log_located(&loc, level, __VA_ARGS__);\
+    }\
+} while (false)
+
+#define LOG_LOG_FLUSH(level, ...) do {\
     if (!log_is_level_enabled(level)) {\
         log_clear();\
     }\
     else {\
-        LOG_LOC_DECL(loc); \
-        log_log_located(&loc, level, __VA_ARGS__); \
+        LOG_LOC_DECL(loc);\
+        log_add_located(&loc, __VA_ARGS__);\
+        log_flush(level);\
     }\
+} while (false)
+
+/**
+ * Emits an error message. Used internally when an error occurs in this logging
+ * module.
+ *
+ * @param[in] ...  Message arguments -- starting with the format.
+ */
+#define log_internal(level, ...) do { \
+    LOG_LOC_DECL(loc); \
+    log_internal_located(level, &loc, __VA_ARGS__); \
 } while (false)
 
 #ifdef __cplusplus

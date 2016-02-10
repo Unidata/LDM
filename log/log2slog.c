@@ -14,6 +14,7 @@
 #include "mutex.h"
 #include "log.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
@@ -21,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <syslog.h>
 #include <unistd.h>
@@ -33,11 +35,12 @@
  * Functions for accessing the destination for log messages.
  */
 typedef struct {
-    int  (*open)(void);
-    void (*write)(
-        const log_level_t    level,
-        const Message* const msg);
-    int  (*close)(void);
+    int  (*init)(void);
+    void (*print)(
+        const log_level_t         level,
+        const log_loc_t* restrict loc,
+        const char* restrict      msg);
+    int  (*fini)(void);
 } dest_funcs_t;
 
 /**
@@ -62,7 +65,7 @@ static FILE*         stream_file;
 /**
  * The file descriptor of the log file.
  */
-static int           file_fd;
+static int           file_fd = -1;
 /**
  * Locking structure for concurrent access to the log file.
  */
@@ -103,7 +106,7 @@ static const char* get_ldm_logfile_pathname(void)
             (void)snprintf(pathname, sizeof(pathname), "%s/ldmd.log",
                     LDM_LOG_DIR);
             pathname[sizeof(pathname)-1] = 0;
-            log_internal("Couldn't get pathname of LDM log file from registry. "
+            log_warning("Couldn't get pathname of LDM log file from registry. "
                     "Using default: \"%s\".", pathname);
         }
         else {
@@ -149,7 +152,7 @@ static const char* level_to_string(
  * @retval -1  Failure
  * @retval  0  Success
  */
-static int syslog_open(void)
+static int syslog_init(void)
 {
     openlog(ident, syslog_options, syslog_facility);
     return 0;
@@ -161,12 +164,13 @@ static int syslog_open(void)
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-static void syslog_write(
-        const log_level_t    level,
-        const Message* const msg)
+static void syslog_print(
+        const log_level_t         level,
+        const log_loc_t* restrict loc,
+        const char* restrict      msg)
 {
-    syslog(level_to_priority(level), "%s:%d %s",
-            log_basename(msg->loc.file), msg->loc.line, msg->string);
+    syslog(level_to_priority(level), "%s:%s():%d %s",
+            log_basename(loc->file), loc->func, loc->line, msg);
 }
 
 /**
@@ -175,13 +179,13 @@ static void syslog_write(
  * @retval -1  Failure
  * @retval  0  Success
  */
-static int syslog_close(void)
+static int syslog_fini(void)
 {
     closelog();
     return 0;
 }
 
-static dest_funcs_t syslog_funcs = {syslog_open, syslog_write, syslog_close};
+static dest_funcs_t syslog_funcs = {syslog_init, syslog_print, syslog_fini};
 
 /**
  * Writes a single log message to the stream.
@@ -189,9 +193,10 @@ static dest_funcs_t syslog_funcs = {syslog_open, syslog_write, syslog_close};
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-static void stream_write(
-        const log_level_t    level,
-        const Message* const msg)
+static void stream_print(
+        const log_level_t         level,
+        const log_loc_t* restrict loc,
+        const char* restrict      msg)
 {
     struct timeval now;
     (void)gettimeofday(&now, NULL);
@@ -203,8 +208,8 @@ static void stream_write(
             tm.tm_sec, (long)now.tv_usec,
             ident, getpid(),
             level_to_string(level),
-            log_basename(msg->loc.file), msg->loc.func, msg->loc.line,
-            msg->string);
+            log_basename(loc->file), loc->func, loc->line,
+            msg);
 }
 
 /**
@@ -213,7 +218,7 @@ static void stream_write(
  * @retval -1  Failure
  * @retval  0  Success
  */
-static int stderr_open(void)
+static int stderr_init(void)
 {
     stream_file = stderr;
     return 0;
@@ -225,80 +230,79 @@ static int stderr_open(void)
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-static void stderr_write(
-        const log_level_t    level,
-        const Message* const msg)
+static void stderr_print(
+        const log_level_t         level,
+        const log_loc_t* restrict loc,
+        const char* restrict      msg)
 {
-    stream_write(level, msg);
+    stream_print(level, loc, msg);
 }
 
 /**
- * Closes access to the system logging daemon.
+ * Closes access to the standard error stream.
  *
  * @retval -1  Failure
  * @retval  0  Success
  */
-static int stderr_close(void)
+static int stderr_fini(void)
 {
     stream_file = NULL;
     return 0;
 }
 
-static dest_funcs_t stderr_funcs = {stderr_open, stderr_write, stderr_close};
+static dest_funcs_t stderr_funcs = {stderr_init, stderr_print, stderr_fini};
 
 /**
- * Locks the log file.
+ * "Opens" access to the log file. Does nothing in case the destination log
+ * file doesn't yet exist and another log file will be specified.
+ *
+ * @retval  0  Success
  */
-static void file_lock(void)
+static int file_init(void)
 {
-    int status = fcntl(file_fd, F_SETLKW, &lock);
-    log_assert(status == 0);
-}
-
-/**
- * Unlocks the log file.
- */
-static void file_unlock(void)
-{
-    int status = fcntl(file_fd, F_SETLKW, &unlock);
-    log_assert(status == 0);
+    return 0;
 }
 
 /**
  * Opens access to the log file.
  *
- * @retval -1  Failure
  * @retval  0  Success
+ * @retval -1  Failure
  */
 static int file_open(void)
 {
     int status;
-    stream_file = fopen(dest_spec, "a");
-    if (stream_file == NULL) {
-        log_internal("Couldn't open log file \"%s\"", dest_spec);
+    file_fd = open(dest_spec, O_WRONLY|O_APPEND|O_CREAT,
+            S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+    if (file_fd < 0) {
+        log_internal(LOG_LEVEL_ERROR, "Couldn't open log file \"%s\": %s",
+                dest_spec, strerror(errno));
         status = -1;
     }
     else {
-        (void)setvbuf(stream_file, NULL, _IOLBF, BUFSIZ); // line buffering
-        file_fd = fileno(stream_file);
+        int flags = fcntl(file_fd, F_GETFD);
+        (void)fcntl(file_fd, F_SETFD, flags | FD_CLOEXEC);
+        stream_file = fdopen(file_fd, "a");
+        (void)setvbuf(stream_file, NULL, _IOLBF, BUFSIZ); // Line buffering
         status = 0;
     }
     return status;
 }
 
 /**
- * Writes a single log message to the log file.
+ * Writes a single log message to the log file. Opens the log file if necessary.
  *
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-static void file_write(
-        const log_level_t    level,
-        const Message* const msg)
+static void file_print(
+        const log_level_t         level,
+        const log_loc_t* restrict loc,
+        const char* restrict      msg)
 {
-    file_lock(); // To prevent concurrent access
-    stream_write(level, msg);
-    file_unlock();
+    if (stream_file == NULL && file_open())
+        abort();
+    stream_print(level, loc, msg);
 }
 
 /**
@@ -307,58 +311,99 @@ static void file_write(
  * @retval -1  Failure
  * @retval  0  Success
  */
-static int file_close(void)
+static int file_fini(void)
 {
-    int status = fclose(stream_file);
-    if (status == 0) {
-        stream_file = NULL;
-        file_fd = -1;
+    int status;
+    if (stream_file) {
+        status = fclose(stream_file);
+        if (status == 0) {
+            stream_file = NULL;
+            file_fd = -1;
+        }
     }
     return status ? -1 : 0;
 }
 
-static dest_funcs_t file_funcs = {file_open, file_write, file_close};
+static dest_funcs_t file_funcs = {file_init, file_print, file_fini};
+
+/******************************************************************************
+ * Package API:
+ ******************************************************************************/
 
 /**
- * Returns the default destination for log messages if the process is a daemon.
+ * Returns the logging destination. Should be called between log_init() and
+ * log_fini().
  *
- * @retval ""   The system logging daemon
- * @return      The pathname of the standard LDM log file
+ * @pre          Module is locked
+ * @return       The logging destination. One of <dl>
+ *                   <dt>""      <dd>The system logging daemon.
+ *                   <dt>"-"     <dd>The standard error stream.
+ *                   <dt>else    <dd>The pathname of the log file.
+ *               </dl>
  */
-const char* log_get_default_daemon_destination(void)
+const char* log_get_destination_impl(void)
 {
-    return get_ldm_logfile_pathname();
+    return dest_spec;
+}
+
+/**
+ * Sets the logging destination.
+ *
+ * @pre                Module is locked
+ * @param[in] dest     The logging destination. Caller may free. One of <dl>
+ *                         <dt>""   <dd>The system logging daemon.
+ *                         <dt>"-"  <dd>The standard error stream.
+ *                         <dt>else <dd>The file whose pathname is `dest`.
+ *                     </dl>
+ * @retval    0        Success.
+ * @retval    -1       Failure.
+ */
+int log_set_destination_impl(
+        const char* const dest)
+{
+    int status = dest_funcs.fini();
+    if (status == 0) {
+        /*
+         * Handle potential overlap because `log_get_destination()` returns
+         * `dest_spec`
+         */
+        size_t nbytes = strlen(dest);
+        if (nbytes > sizeof(dest_spec) - 1)
+            nbytes = sizeof(dest_spec) - 1;
+        ((char*)memmove(dest_spec, dest, nbytes))[nbytes] = 0;
+
+        dest_funcs = LOG_IS_SYSLOG_SPEC(dest)
+            ? syslog_funcs
+            : LOG_IS_STDERR_SPEC(dest)
+                ? stderr_funcs
+                : file_funcs;
+
+        status = dest_funcs.init();
+    }
+    return status;
 }
 
 /**
  * Emits an error message. Used internally when an error occurs in this logging
  * module.
  *
- * @param[in] fmt  Format of the message.
- * @param[in] ...  Format arguments.
+ * @param[in] level  Logging level.
+ * @param[in] loc    Location where the message was generated.
+ * @param[in] ...    Message arguments -- starting with the format.
  */
-void log_internal(
-        const char* const fmt,
-                          ...)
+void log_internal_located(
+        const log_level_t      level,
+        const log_loc_t* const loc,
+                               ...)
 {
-    char    buf[_POSIX2_LINE_MAX];
-    Message msg;
-    msg.next = NULL;
-    msg.loc.file = __FILE__;
-    msg.loc.line = __LINE__;
-    msg.loc.func = __func__;
-    msg.string = buf;
-    msg.size = sizeof(buf);
     va_list args;
-    va_start(args, fmt);
+    va_start(args, loc);
+    const char* fmt = va_arg(args, const char*);
+    char        buf[_POSIX2_LINE_MAX];
     (void)vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
-    dest_funcs.write(LOG_LEVEL_ERROR, &msg);
+    dest_funcs.print(level, loc, buf);
 }
-
-/******************************************************************************
- * Package API:
- ******************************************************************************/
 
 /**
  * Initializes the logging module. Should be called before any other function.
@@ -376,7 +421,7 @@ void log_internal(
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
-int log_impl_init(
+int log_init_impl(
         const char* id)
 {
     int status;
@@ -398,9 +443,21 @@ int log_impl_init(
         strncpy(ident, log_basename(id), sizeof(ident))[sizeof(ident)-1] = 0;
 
         const char* dest = log_get_default_destination();
-        status = log_set_destination(dest);
+        status = log_set_destination_impl(dest);
     }
     return status;
+}
+
+/**
+ * Re-initializes the logging module based on its state just prior to calling
+ * log_fini_impl(). If log_fini_impl(), wasn't called, then the result is
+ * unspecified.
+ *
+ * @retval    0        Success.
+ */
+int log_reinit_impl(void)
+{
+    return 0;
 }
 
 /**
@@ -409,10 +466,10 @@ int log_impl_init(
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int log_impl_fini(void)
+int log_fini_impl(void)
 {
     log_lock();
-    dest_funcs.close();
+    dest_funcs.fini();
     log_unlock();
     return 0;
 }
@@ -421,13 +478,39 @@ int log_impl_fini(void)
  * Emits a single log message.
  *
  * @param[in] level  Logging level.
- * @param[in] msg    The message.
+ * @param[in] loc    The location where the message was generated.
+ * @param[in] string The message.
  */
-void log_msg_write(
-        const log_level_t    level,
-        const Message* const msg)
+void log_write(
+        const log_level_t               level,
+        const log_loc_t* const restrict loc,
+        const char* const restrict      string)
 {
-    dest_funcs.write(level, msg);
+    dest_funcs.print(level, loc, string);
+}
+
+int slog_is_priority_enabled(
+        const log_level_t level)
+{
+    log_lock();
+    int enabled = log_vet_level(level) && level >= logging_level;
+    log_unlock();
+    return enabled;
+}
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
+/**
+ * Returns the default destination for log messages if the process is a daemon.
+ *
+ * @retval ""   The system logging daemon
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_daemon_destination(void)
+{
+    return get_ldm_logfile_pathname();
 }
 
 /**
@@ -488,7 +571,7 @@ int log_set_facility(
     else {
         log_lock();
         syslog_facility = facility;
-        status = log_set_destination(dest_spec);
+        status = log_set_destination_impl(dest_spec);
         log_unlock();
     }
     return status;
@@ -526,7 +609,7 @@ int log_set_id(
     else {
         log_lock();
         strncpy(ident, id, sizeof(ident))[sizeof(ident)-1] = 0;
-        status = log_set_destination(dest_spec);
+        status = log_set_destination_impl(dest_spec);
         log_unlock();
     }
     return status;
@@ -562,7 +645,7 @@ void log_set_options(
 {
     log_lock();
     syslog_options = options;
-    (void)log_set_destination(dest_spec);
+    (void)log_set_destination_impl(dest_spec);
     log_unlock();
 }
 
@@ -602,25 +685,7 @@ int log_set_destination(
         const char* const dest)
 {
     log_lock();
-    int status = dest_funcs.close();
-    if (status == 0) {
-        /*
-         * Handle potential overlap because `log_get_destination()` returns
-         * `dest_spec`
-         */
-        size_t nbytes = strlen(dest);
-        if (nbytes > sizeof(dest_spec) - 1)
-            nbytes = sizeof(dest_spec) - 1;
-        ((char*)memmove(dest_spec, dest, nbytes))[nbytes] = 0;
-
-        dest_funcs = LOG_IS_SYSLOG_SPEC(dest)
-            ? syslog_funcs
-            : LOG_IS_STDERR_SPEC(dest)
-                ? stderr_funcs
-                : file_funcs;
-
-        status = dest_funcs.open();
-    }
+    int status = log_set_destination_impl(dest);
     log_unlock();
     return status;
 }
@@ -638,16 +703,7 @@ int log_set_destination(
 const char* log_get_destination(void)
 {
     log_lock();
-    const char* path = dest_spec;
+    const char* path = log_get_destination_impl();
     log_unlock();
     return path;
-}
-
-int slog_is_priority_enabled(
-        const log_level_t level)
-{
-    log_lock();
-    int enabled = log_vet_level(level) && level >= logging_level;
-    log_unlock();
-    return enabled;
 }

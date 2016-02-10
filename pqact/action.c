@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 University Corporation for Atmospheric Research
+ *   Copyright 2016 University Corporation for Atmospheric Research
  *
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -98,9 +99,6 @@ exec_prodput(
                  *
                  * (void) setpgid(0,0);
                  */
-                const char*     id = log_get_id();
-                const unsigned  facility = log_get_facility();
-
                 (void)signal(SIGTERM, SIG_DFL);
                 (void)pq_close(pq);
 
@@ -117,9 +115,9 @@ exec_prodput(
 
                 (void)log_fini();
                 (void) execvp(argv[0], argv);
-                (void)log_init(id);
-                (void)log_set_facility(facility);
-                log_syserr("Couldn't execute command \"%s\"", argv[0]);
+                (void)log_reinit();
+                log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
+                        getenv("PATH"));
                 exit(EXIT_FAILURE);
             }                           /* child process */
             else {

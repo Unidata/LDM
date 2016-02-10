@@ -61,11 +61,11 @@ static int numLines(
 
 static void logMessages(void)
 {
-    log_error("Error message");
+    log_error("Error");
     log_warning("Warning");
     log_notice("Notice");
-    log_info("Informational message");
-    log_debug("Debug message");
+    log_info("Information");
+    log_debug("Debug");
 }
 
 static void vlogMessage(
@@ -169,13 +169,13 @@ static void test_log_open_default(void)
     const char* actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-"); // default is standard error stream
-    log_error("test_log_open_default() implicit");
+    log_error("Standard error stream");
 
     status = log_set_destination(tmpPathname);
     actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
-    log_error("test_log_open_default() explicit");
+    log_error("File \"%s\"", tmpPathname);
 
     status = log_fini();
     CU_ASSERT_EQUAL(status, 0);
@@ -203,6 +203,41 @@ static void test_log_levels(void)
 
         int n = numLines(tmpPathname);
         CU_ASSERT_EQUAL(n, nlines);
+
+        //if (n != nlines)
+            //exit(1);
+    }
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void test_lower_level_not_clear(void)
+{
+    int status;
+    log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
+            LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
+    for (int index = 0; index < sizeof(logLevels)/sizeof(*logLevels); index++) {
+        status = log_init(progname);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+
+        (void)unlink(tmpPathname);
+        status = log_set_destination(tmpPathname);
+        CU_ASSERT_EQUAL(status, 0);
+
+        int level = logLevels[index];
+        log_set_level(level);
+        log_add("Logging level %d", level);
+
+        level--;
+        log_log(level, "Logging level %d", level);
+
+        log_flush(++level);
+
+        status = log_fini();
+        CU_ASSERT_EQUAL(status, 0);
+
+        int n = numLines(tmpPathname);
+        CU_ASSERT_EQUAL(n, 1);
 
         //if (n != nlines)
             //exit(1);
@@ -496,6 +531,33 @@ static void test_sighup_prog(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
+static void test_log_reinit(void)
+{
+    (void)unlink(tmpPathname);
+    int status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    status = log_set_destination(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = log_set_level(LOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+
+    logMessages();
+
+    status = log_fini();
+    CU_ASSERT_EQUAL(status, 0);
+
+    status = log_reinit();
+    CU_ASSERT_EQUAL(status, 0);
+
+    logMessages();
+
+    int n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 10);
+
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
 int main(
         const int    argc,
         char* const* argv)
@@ -517,12 +579,14 @@ int main(
                     && CU_ADD_TEST(testSuite, test_log_open_file)
                     && CU_ADD_TEST(testSuite, test_log_open_default)
                     && CU_ADD_TEST(testSuite, test_log_levels)
+                    //&& CU_ADD_TEST(testSuite, test_lower_level_not_clear)
                     && CU_ADD_TEST(testSuite, test_log_vlog)
                     && CU_ADD_TEST(testSuite, test_log_add)
                     && CU_ADD_TEST(testSuite, test_log_syserr)
                     && CU_ADD_TEST(testSuite, test_log_refresh)
                     && CU_ADD_TEST(testSuite, test_sighup_log)
                     && CU_ADD_TEST(testSuite, test_sighup_prog)
+                    && CU_ADD_TEST(testSuite, test_log_reinit)
                     /*
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);

@@ -795,7 +795,7 @@ static inline void unlock()
  * @retval    0        Success.
  * @retval    -1       Error. The logging module is in an unspecified state.
  */
-int log_impl_init(
+int log_init_impl(
         const char* id)
 {
     int status;
@@ -1114,7 +1114,7 @@ void log_internal(
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void log_msg_write(
+void log_write(
         const log_level_t    level,
         const Message* const   msg)
 {

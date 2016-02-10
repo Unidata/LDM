@@ -65,7 +65,7 @@ const char* log_get_default_daemon_destination(void)
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void log_msg_write(
+void log_write(
         const log_level_t    level,
         const Message* const   msg)
 {
@@ -103,7 +103,7 @@ void log_internal(
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
-int log_impl_init(
+int log_init_impl(
         const char* id)
 {
     const char* dest = log_get_default_destination();
@@ -122,7 +122,7 @@ int log_impl_init(
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int log_impl_fini(void)
+int log_fini_impl(void)
 {
     log_lock();
     int status = closeulog();

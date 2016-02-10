@@ -14,6 +14,7 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #ifndef PATH_MAX
 #define PATH_MAX 255                    /* _POSIX_PATH_MAX */
 #endif /* !PATH_MAX */
@@ -1535,18 +1536,14 @@ static int pipe_open(
                     }
 
                     if (STDIN_FILENO == pfd[0]) {
-                        const char*     id = log_get_id();
-                        const unsigned  facility = log_get_facility();
-
                         endpriv();
-                        if (log_is_enabled_info) {
+                        if (log_is_enabled_info)
                             log_info("Executing decoder \"%s\"", av[0]);
-                        }
                         (void)log_fini();
                         (void) execvp(av[0], &av[0]);
-                        (void)log_init(id);
-                        (void)log_set_facility(facility);
-                        log_syserr("Couldn't execute decoder \"%s\"", av[0]);
+                        (void)log_reinit();
+                        log_syserr("Couldn't execute decoder \"%s\"; PATH=%s",
+                                av[0], getenv("PATH"));
                     }
 
                     exit(EXIT_FAILURE);

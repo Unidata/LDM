@@ -2289,10 +2289,6 @@ proc_exec(Process *proc)
 
         if(proc->pid == 0)
         {       /* child */
-                const char*     id = log_get_id();
-                const unsigned  facility = log_get_facility();
-                const char*     output = log_get_destination();
-
                 /* restore signals */
                 {
                         struct sigaction sigact;
@@ -2332,8 +2328,9 @@ proc_exec(Process *proc)
                                 (void) close(fd);
                         }
                 }
-                if(logfname == NULL)
+                if(strcmp(log_get_destination(), "") == 0)
                 {
+                        // Logging to system logging daemon
                         (void)close(2);
                         {
                                 int fd = open("/dev/console", O_WRONLY);
@@ -2350,10 +2347,9 @@ proc_exec(Process *proc)
                 endpriv();
                 (void)log_fini();
                 (void) execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
-                (void)log_init(id);
-                (void)log_set_facility(facility);
-                (void)log_set_destination(output);
-                log_syserr("execvp: %s", proc->wrdexp.we_wordv[0]) ;
+                (void)log_reinit();
+                log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
+                        proc->wrdexp.we_wordv[0], getenv("PATH"));
                 _exit(127) ;
         }
         /* else, parent */
