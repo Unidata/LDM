@@ -331,22 +331,6 @@ static dest_funcs_t file_funcs = {file_init, file_print, file_fini};
  ******************************************************************************/
 
 /**
- * Returns the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @pre          Module is locked
- * @return       The logging destination. One of <dl>
- *                   <dt>""      <dd>The system logging daemon.
- *                   <dt>"-"     <dd>The standard error stream.
- *                   <dt>else    <dd>The pathname of the log file.
- *               </dl>
- */
-const char* log_get_destination_impl(void)
-{
-    return dest_spec;
-}
-
-/**
  * Sets the logging destination.
  *
  * @pre                Module is locked
@@ -381,6 +365,22 @@ int log_set_destination_impl(
         status = dest_funcs.init();
     }
     return status;
+}
+
+/**
+ * Returns the logging destination. Should be called between log_init() and
+ * log_fini().
+ *
+ * @pre          Module is locked
+ * @return       The logging destination. One of <dl>
+ *                   <dt>""      <dd>The system logging daemon.
+ *                   <dt>"-"     <dd>The standard error stream.
+ *                   <dt>else    <dd>The pathname of the log file.
+ *               </dl>
+ */
+const char* log_get_destination_impl(void)
+{
+    return dest_spec;
 }
 
 /**
@@ -667,43 +667,4 @@ unsigned log_get_options(void)
     const int opts = syslog_options;
     log_unlock();
     return opts;
-}
-
-/**
- * Sets the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @param[in] dest     The logging destination. Caller may free. One of <dl>
- *                         <dt>""   <dd>The system logging daemon.
- *                         <dt>"-"  <dd>The standard error stream.
- *                         <dt>else <dd>The file whose pathname is `dest`.
- *                     </dl>
- * @retval    0        Success.
- * @retval    -1       Failure.
- */
-int log_set_destination(
-        const char* const dest)
-{
-    log_lock();
-    int status = log_set_destination_impl(dest);
-    log_unlock();
-    return status;
-}
-
-/**
- * Returns the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @return       The logging destination. One of <dl>
- *                   <dt>""      <dd>The system logging daemon.
- *                   <dt>"-"     <dd>The standard error stream.
- *                   <dt>else    <dd>The pathname of the log file.
- *               </dl>
- */
-const char* log_get_destination(void)
-{
-    log_lock();
-    const char* path = log_get_destination_impl();
-    log_unlock();
-    return path;
 }

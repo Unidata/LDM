@@ -49,48 +49,6 @@ static log_level_t loggingLevel = LOG_LEVEL_DEBUG;
  ******************************************************************************/
 
 /**
- * Returns the default destination for log messages if the process is a daemon.
- *
- * @retval ""   The system logging daemon
- * @return      The pathname of the standard LDM log file
- */
-const char* log_get_default_daemon_destination(void)
-{
-    return "";
-}
-
-/**
- * Emits a single log message.
- *
- * @param[in] level  Logging level.
- * @param[in] msg    The message.
- */
-void log_write(
-        const log_level_t    level,
-        const Message* const   msg)
-{
-    (void)ulog(log_get_priority(level), "%s:%s():%d %s", msg->loc.file,
-            msg->loc.func, msg->loc.line, msg->string);
-}
-
-/**
- * Emits an error message. Used internally when an error occurs in this logging
- * module.
- *
- * @param[in] fmt  Format of the message.
- * @param[in] ...  Format arguments.
- */
-void log_internal(
-        const char* const fmt,
-                          ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    (void)vulog(log_get_priority(LOG_LEVEL_ERROR), fmt, args);
-    va_end(args);
-}
-
-/**
  * Initializes the logging module. Should be called before any other function.
  * - `log_get_destination()` will return ""
  *   - ""  if the process is a daemon
@@ -124,10 +82,110 @@ int log_init_impl(
  */
 int log_fini_impl(void)
 {
-    log_lock();
     int status = closeulog();
-    log_unlock();
     return status ? -1 : 0;
+}
+
+/**
+ * Re-initializes the logging module based on its state just prior to calling
+ * log_fini_impl(). If log_fini_impl(), wasn't called, then the result is
+ * unspecified.
+ *
+ * @retval    0        Success.
+ */
+int log_reinit_impl(void)
+{
+    const char* const id = getulogident();
+    const unsigned    options = ulog_get_options();
+    const int         facility = getulogfacility();
+    const char* const dest = getulogpath();
+    int               status = openulog(id, options, facility, dest);
+    return status < 0 ? -1 : 0;
+}
+
+/**
+ * Sets the logging destination. Should be called between log_init() and
+ * log_fini().
+ *
+ * @param[in] dest     The logging destination. Caller may free. One of <dl>
+ *                         <dt>""   <dd>The system logging daemon.
+ *                         <dt>"-"  <dd>The standard error stream.
+ *                         <dt>else <dd>The file whose pathname is `dest`.
+ *                     </dl>
+ * @retval    0        Success.
+ * @retval    -1       Failure.
+ */
+int log_set_destination_impl(
+        const char* const dest)
+{
+    const char* const id = getulogident();
+    const unsigned    options = ulog_get_options();
+    int               status = openulog(id, options, LOG_LDM, dest);
+    return status == -1 ? -1 : 0;
+}
+
+/**
+ * Returns the logging destination. Should be called between log_init() and
+ * log_fini().
+ *
+ * @pre          Module is locked
+ * @return       The logging destination. One of <dl>
+ *                   <dt>""      <dd>The system logging daemon.
+ *                   <dt>"-"     <dd>The standard error stream.
+ *                   <dt>else    <dd>The pathname of the log file.
+ *               </dl>
+ */
+const char* log_get_destination_impl(void)
+{
+    const char* dest = getulogpath();
+    return dest == NULL ? "" : dest;
+}
+
+/**
+ * Returns the default destination for log messages if the process is a daemon.
+ *
+ * @retval ""   The system logging daemon
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_daemon_destination(void)
+{
+    return "";
+}
+
+/**
+ * Emits a single log message.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] loc    The location where the message was generated.
+ * @param[in] string The message.
+ */
+void log_write(
+        const log_level_t level,
+        const log_loc_t*  loc,
+        const char*       string)
+{
+    (void)ulog(log_get_priority(level), "%s:%s():%d %s", loc->file,
+            loc->func, loc->line, string);
+}
+
+/**
+ * Emits an error message. Used internally when an error occurs in this logging
+ * module.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] loc    The location where the message was generated. Unused.
+ * @param[in] ...    Format and format arguments.
+ */
+void log_internal_located(
+        const log_level_t level,
+        const log_loc_t*  loc,
+                          ...)
+{
+    va_list args;
+    va_start(args, loc);
+    const char* const fmt = va_arg(args, const char*);
+    (void)vulog(log_get_priority(level), fmt, args);
+    va_end(args);
 }
 
 /******************************************************************************
@@ -283,45 +341,4 @@ unsigned log_get_options(void)
     const unsigned opts = ulog_get_options();
     log_unlock();
     return opts;
-}
-
-/**
- * Sets the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @param[in] dest     The logging destination. Caller may free. One of <dl>
- *                         <dt>""   <dd>The system logging daemon.
- *                         <dt>"-"  <dd>The standard error stream.
- *                         <dt>else <dd>The file whose pathname is `dest`.
- *                     </dl>
- * @retval    0        Success.
- * @retval    -1       Failure.
- */
-int log_set_destination(
-        const char* const dest)
-{
-    log_lock();
-    const char* const id = getulogident();
-    const unsigned    options = ulog_get_options();
-    int               status = openulog(id, options, LOG_LDM, dest);
-    log_unlock();
-    return status == -1 ? -1 : 0;
-}
-
-/**
- * Returns the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @return       The logging destination. One of <dl>
- *                   <dt>""      <dd>The system logging daemon.
- *                   <dt>"-"     <dd>The standard error stream.
- *                   <dt>else    <dd>The pathname of the log file.
- *               </dl>
- */
-const char* log_get_destination(void)
-{
-    log_lock();
-    const char* path = getulogpath();
-    log_unlock();
-    return path == NULL ? "" : path;
 }
