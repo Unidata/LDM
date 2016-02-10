@@ -1,11 +1,6 @@
 /*
- *   Copyright 1993, University Corporation for Atmospheric Research
+ *   Copyright 2016, University Corporation for Atmospheric Research
  *   See ../COPYRIGHT file for copying and redistribution conditions.
- */
-/* $Id: pqsurf.c,v 1.55.10.1.2.4 2008/04/15 16:34:10 steve Exp $ */
-
-/* 
- * 
  */
 
 /*
@@ -127,10 +122,6 @@ run_child(int argc, char *argv[])
 
         if(pid == 0)
         {       /* child */
-                const char*     id = log_get_id();
-                const unsigned  facility = log_get_facility();
-                const char*     output = log_get_destination();
-
                 (void)signal(SIGCHLD, SIG_DFL);
                 (void)signal(SIGTERM, SIG_DFL);
 
@@ -141,11 +132,10 @@ run_child(int argc, char *argv[])
 
                 (void)log_fini();
                 (void) execvp(argv[0], &argv[0]);
-                (void)log_init(id);
-                (void)log_set_destination(output);
-                (void)log_set_facility(facility);
+                (void)log_reinit();
 
-                log_syserr("execvp: %s", argv[0]);
+                log_syserr("Couldn't execute decoder \"%s\"; PATH=%s", argv[0],
+                        getenv("PATH"));
                 _exit(127);
         }
         /* else, parent */
