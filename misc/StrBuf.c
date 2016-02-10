@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <log.h>
 #include "StrBuf.h"
 
 struct strBuf {
@@ -27,8 +26,7 @@ struct strBuf {
  *      n               The number of characters the string-buffer must hold
  *                      (excluding the terminating NUL).
  * Returns
- *      NULL            Out-of-memory ("log_add()" called) or "buf" is
- *                      NULL.
+ *      NULL            Out-of-memory or "buf" is NULL.
  *      else            Pointer to the string-buffer.
  */
 StrBuf*
@@ -43,7 +41,6 @@ sbEnsure(
             char*   newBuf = realloc(buf->buf, newMax);
 
             if (NULL == newBuf) {
-                log_syserr("sbEnsure(): Couldn't reallocate %lu bytes", newMax);
                 buf = NULL;
             }
             else {
@@ -60,7 +57,7 @@ sbEnsure(
  * Returns a new string-buffer. The buffer's string will be the empty string.
  *
  * Returns
- *      NULL            Out-of-memory. "log_add()" called.
+ *      NULL            Out-of-memory.
  *      else            Pointer to the string-buffer.
  */      
 StrBuf*
@@ -69,11 +66,7 @@ sbNew(void)
     size_t      nbytes = sizeof(StrBuf);
     StrBuf*     sb = (StrBuf*)malloc(nbytes);
 
-    if (NULL == sb) {
-        log_syserr("sbNew(): Couldn't allocate %lu bytes for a new instance",
-            nbytes);
-    }
-    else {
+    if (NULL != sb) {
         sb->buf = NULL;
         sb->len = 0;
         sb->max = 1;
@@ -139,8 +132,7 @@ sbTruncate(
  *      strings         Pointers to the strings to be appended. The last
  *                      pointer must be NULL.
  * Returns
- *      NULL            Out-of-memory ("log_add()" called) or "buf" is
- *                      NULL.
+ *      NULL            Out-of-memory or "buf" is NULL.
  *      else            Pointer to the string-buffer.
  */
 StrBuf*
@@ -175,8 +167,7 @@ sbCatV(
  *      ...             Pointers to the strings to be appended. The last
  *                      pointer must be NULL.
  * Returns
- *      NULL            Out-of-memory ("log_add()" called) or "buf" is
- *                      NULL.
+ *      NULL            Out-of-memory or "buf" is NULL.
  *      else            Pointer to the string-buffer.
  */
 StrBuf*
@@ -203,8 +194,7 @@ sbCatL(
  *      buf             Pointer to the string-buffer to append to or NULL.
  *      string          The string to append.
  * Returns
- *      NULL            Out-of-memory ("log_add()" called) or "buf" is
- *                      NULL.
+ *      NULL            Out-of-memory or "buf" is NULL.
  *      else            Pointer to the string-buffer.
  */
 StrBuf*
@@ -224,8 +214,7 @@ sbCat(
  *      string          The string to append.
  *      n               The number of characters to append.
  * Returns
- *      NULL            Out-of-memory ("log_add()" called) or "buf" is
- *                      NULL.
+ *      NULL            Out-of-memory or "buf" is NULL.
  *      else            Pointer to the string-buffer.
  */
 StrBuf*
@@ -244,7 +233,7 @@ sbCatN(
  *                  according to the given format.
  * @param[in] fmt   The format to use.
  * @param[in] args  The stdarg argument list.
- * @retval    NULL  Out-of-memory ("log_add()" called) or "buf" is NULL.
+ * @retval    NULL  Out-of-memory or "buf" is NULL.
  * @return          `buf`.
  */
 StrBuf*
@@ -279,7 +268,7 @@ sbPrintV(
  *                  according to the given format.
  * @param[in] fmt   The format to use.
  * @param[in] ...   The arguments to format.
- * @retval    NULL  Out-of-memory ("log_add()" called) or "buf" is NULL.
+ * @retval    NULL  Out-of-memory or "buf" is NULL.
  * @return          `buf`.
  */
 StrBuf*

@@ -10,14 +10,12 @@ BUILT_SOURCES		= \
         child_map.h \
         doubly_linked_list.h \
         doubly_linked_stack.h \
-        semRWLock.h \
-        StrBuf.h
+        semRWLock.h
 EXTRA_DIST	        = \
         child_map.hin \
         doubly_linked_list.hin \
         doubly_linked_stack.hin \
-        semRWLock.hin \
-        StrBuf.hin
+        semRWLock.hin
 CLEANFILES		= $(BUILT_SOURCES) *.i
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
@@ -50,7 +48,7 @@ lib_la_SOURCES	= \
 	setenv.c \
 	semRWLock.c semRWLock.h \
 	statsMath.c \
-	StrBuf.c \
+	StrBuf.c StrBuf.h \
 	StringBuf.c StringBuf.h
 AM_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -80,7 +78,6 @@ child_map.h:		child_map.hin child_map.c
 doubly_linked_list.h:	doubly_linked_list.hin doubly_linked_list.c
 doubly_linked_stack.h:	doubly_linked_stack.hin doubly_linked_stack.c
 semRWLock.h:		semRWLock.hin semRWLock.c
-StrBuf.h:		StrBuf.hin StrBuf.c
 
 if HAVE_CUNIT
 check_PROGRAMS		= test_inetutil test_child_map testSemRWLock \

@@ -51,7 +51,29 @@ typedef enum {
 #endif
 
 /**
- * Initializes the logging module. Should be called before any other function.
+ * Returns the default destination for log messages if the process is a daemon
+ * (i.e., doesn't have a controlling terminal).
+ *
+ * @retval ""   The system logging daemon
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_daemon_destination(void);
+
+/**
+ * Returns the default destination for log messages, which depends on whether
+ * the current process is a daemon (i.e., doesn't have a controlling terminal)
+ * or not. If the current process is not a daemon, then the default destination
+ * will be the standard error stream; otherwise, the default destination will be
+ * that given by log_get_default_daemon_destination().
+ *
+ * @retval ""   The system logging daemon
+ * @retval "-"  The standard error stream
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_destination(void);
+
+/**
+ * Initializes the logging module. Should be called before most other functions.
  * <dl>
  *     <dt>log_get_facility() <dd>will return `LOG_LDM`.
  *     <dt>log_get_level() <dd>will return `LOG_LEVEL_NOTICE`.
@@ -64,6 +86,15 @@ typedef enum {
  */
 int log_init(
         const char* const id);
+
+/**
+ * Re-initializes this logging module based on its state just prior to calling
+ * log_fini().
+ *
+ * @retval    -1  Failure
+ * @retval     0  Success
+ */
+int log_reinit(void);
 
 /**
  * Refreshes the logging module. If logging is to the system logging daemon,
@@ -339,7 +370,7 @@ void log_free(void);
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_error(...)       LOG_LOG2(LOG_LEVEL_ERROR,   __VA_ARGS__)
+#define log_error(...)       LOG_LOG(LOG_LEVEL_ERROR,   __VA_ARGS__)
 /**
  * Adds a message to the current thread's list of messages, writes the list at
  * the WARNING level, and then clears the list.
@@ -347,7 +378,7 @@ void log_free(void);
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_warning(...)     LOG_LOG2(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define log_warning(...)     LOG_LOG(LOG_LEVEL_WARNING, __VA_ARGS__)
 /**
  * Adds a message to the current thread's list of messages, writes the list at
  * the NOTICE level, and then clears the list.
@@ -355,7 +386,7 @@ void log_free(void);
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_notice(...)      LOG_LOG2(LOG_LEVEL_NOTICE,  __VA_ARGS__)
+#define log_notice(...)      LOG_LOG(LOG_LEVEL_NOTICE,  __VA_ARGS__)
 /**
  * Adds a message to the current thread's list of messages, writes the list at
  * the INFO level, and then clears the list.
@@ -363,7 +394,7 @@ void log_free(void);
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_info(...)        LOG_LOG2(LOG_LEVEL_INFO,    __VA_ARGS__)
+#define log_info(...)        LOG_LOG(LOG_LEVEL_INFO,    __VA_ARGS__)
 /**
  * Adds a message to the current thread's list of messages, writes the list at
  * the DEBUG level, and then clears the list.
@@ -371,7 +402,7 @@ void log_free(void);
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_debug(...)       LOG_LOG2(LOG_LEVEL_DEBUG,   __VA_ARGS__)
+#define log_debug(...)       LOG_LOG(LOG_LEVEL_DEBUG,   __VA_ARGS__)
 /**
  * Adds a message to the current thread's list of messages, writes the list at
  * the given level, and then clears the list.
@@ -380,7 +411,7 @@ void log_free(void);
  * @param[in] ...    Optional arguments of the message -- starting with the
  *                   format of the message.
  */
-#define log_log(level, ...)  LOG_LOG2(level,               __VA_ARGS__)
+#define log_log(level, ...)  LOG_LOG(level,               __VA_ARGS__)
 
 /**
  * Logs the currently-accumulated log-messages of the current thread and resets

@@ -39,6 +39,7 @@
 #undef NDEBUG
 #include "log.h"
 #include "mutex.h"
+#include "StrBuf.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -62,6 +63,9 @@
     #define _XOPEN_PATH_MAX 1024 // Not always defined
 #endif
 
+/// Whether or not this module is initialized.
+static bool isInitialized = false;
+
 /******************************************************************************
  * Private API:
  ******************************************************************************/
@@ -75,13 +79,13 @@ typedef struct list {
 } List;
 
 /**
+ * Key for the thread-specific string-buffer.
+ */
+static pthread_key_t         sbKey;
+/**
  * Key for the thread-specific list of log messages.
  */
 static pthread_key_t         listKey;
-/**
- * Whether or not the thread-specific key has been created.
- */
-static pthread_once_t        key_creation_control = PTHREAD_ONCE_INIT;
 /**
  * The thread identifier of the thread on which `log_init()` was called.
  */
@@ -176,12 +180,54 @@ static void loc_init(
     dest->line = src->line;
 }
 
-static void create_key(void)
+static void sb_create_key(void)
+{
+    int status = pthread_key_create(&sbKey, NULL);
+    if (status != 0) {
+        log_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure");
+        abort();
+    }
+}
+
+/**
+ * Returns the current thread's string-buffer.
+ *
+ * This function is thread-safe. On entry, this module's lock shall be
+ * unlocked.
+ *
+ * @return  The string-buffer of the current thread or NULL if the string-buffer
+ *          doesn't exist and couldn't be created.
+ */
+static StrBuf* sb_get(void)
+{
+    /**
+     * Whether or not the thread-specific string-buffer key has been created.
+     */
+    static pthread_once_t key_creation_control = PTHREAD_ONCE_INIT;
+    (void)pthread_once(&key_creation_control, sb_create_key);
+    StrBuf* sb = pthread_getspecific(sbKey);
+    if (NULL == sb) {
+        sb = sbNew();
+        if (NULL == sb) {
+            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
+        }
+        else {
+            int status = pthread_setspecific(sbKey, sb);
+            if (status != 0) {
+                log_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure");
+                sbFree(sb);
+                sb = NULL;
+            }
+        }
+    }
+    return sb;
+}
+
+static void list_create_key(void)
 {
     int status = pthread_key_create(&listKey, NULL);
-
     if (status != 0) {
-        log_internal("pthread_key_create() failure");
+        log_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure");
         abort();
     }
 }
@@ -197,17 +243,21 @@ static void create_key(void)
  */
 static List* list_get(void)
 {
-    (void)pthread_once(&key_creation_control, create_key);
-    List*   list = pthread_getspecific(listKey);
+    /**
+     * Whether or not the thread-specific list key has been created.
+     */
+    static pthread_once_t key_creation_control = PTHREAD_ONCE_INIT;
+    (void)pthread_once(&key_creation_control, list_create_key);
+    List* list = pthread_getspecific(listKey);
     if (NULL == list) {
         list = (List*)malloc(sizeof(List));
         if (NULL == list) {
-            log_internal("malloc() failure");
+            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
         }
         else {
             int status = pthread_setspecific(listKey, list);
             if (status != 0) {
-                log_internal("pthread_setspecific() failure");
+                log_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure");
                 free(list);
                 list = NULL;
             }
@@ -267,14 +317,14 @@ static int msg_new(
     Message* msg = (Message*)malloc(sizeof(Message));
     if (msg == NULL) {
         status = errno;
-        log_internal("malloc() failure");
+        log_internal(LOG_LEVEL_ERROR, "malloc() failure");
     }
     else {
         #define LOG_DEFAULT_STRING_SIZE     256
         char*   string = (char*)malloc(LOG_DEFAULT_STRING_SIZE);
         if (NULL == string) {
             status = errno;
-            log_internal("malloc() failure");
+            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
             free(msg);
         }
         else {
@@ -342,6 +392,22 @@ list_fini(
 }
 
 /**
+ * Returns the default destination for log messages. If the current process is
+ * not a daemon, then the default destination will be the standard error stream.
+ *
+ * @pre         Module is locked
+ * @retval ""   Log to the system logging daemon
+ * @retval "-"  Log to the standard error stream
+ * @return      The pathname of the standard LDM log file
+ */
+static const char* get_default_destination(void)
+{
+    return log_am_daemon()
+            ? log_get_default_daemon_destination()
+            : "-";
+}
+
+/**
  * Prints a message into a message-list entry.
  *
  * @param[in] msg        The message entry.
@@ -373,7 +439,7 @@ static int msg_format(
          * Group Base Specifications Issue 6
          */
         status = errno ? errno : EILSEQ;
-        log_internal("vsnprintf() failure");
+        log_internal(LOG_LEVEL_ERROR, "vsnprintf() failure");
     }
     else {
         // The buffer is too small for the message. Expand it.
@@ -382,7 +448,7 @@ static int msg_format(
 
         if (NULL == string) {
             status = errno;
-            log_internal("malloc() failure");
+            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
         }
         else {
             free(msg->string);
@@ -418,7 +484,7 @@ static void flush(
         if (log_is_level_enabled(level)) {
             for (const Message* msg = list->first; NULL != msg;
                     msg = msg->next) {
-                log_msg_write(level, msg);
+                log_write(level, &msg->loc, msg->string);
 
                 if (msg == list->last)
                     break;
@@ -439,18 +505,19 @@ static void flush(
  * daemon; otherwise, logging will be to the provider default. Should be called
  * after log_init().
  *
+ * @pre        Module is locked
  * @retval  0  Success.
  * @retval -1  Failure.
  */
 static int refresh(void)
 {
     char dest[_XOPEN_PATH_MAX];
-    strncpy(dest, log_get_destination(), sizeof(dest))[sizeof(dest)-1] = 0;
+    strncpy(dest, log_get_destination_impl(), sizeof(dest))[sizeof(dest)-1] = 0;
     // In case we've turned into a daemon
-    const char* def_dest = log_get_default_destination();
-    int status = log_set_destination(def_dest);
+    const char* def_dest = get_default_destination();
+    int status = log_set_destination_impl(def_dest);
     if (status == 0 && !LOG_IS_STDERR_SPEC(dest))
-        status = log_set_destination(dest);
+        status = log_set_destination_impl(dest);
     return status;
 }
 
@@ -468,10 +535,6 @@ void log_lock(void)
     int status = mutex_lock(&log_mutex);
     log_assert(status == 0);
     if (refresh_needed) {
-        /*
-         * The following must be executed in the given order in order to prevent
-         * blowing the stack because refresh() causes log_lock() to be called.
-         */
         refresh_needed = 0;
         (void)refresh();
     }
@@ -568,7 +631,7 @@ int log_vadd_located(
     int status;
 
     if (NULL == fmt) {
-        log_internal("NULL argument");
+        log_internal(LOG_LEVEL_ERROR, "NULL argument");
         status = EINVAL;
     }
     else {
@@ -675,6 +738,7 @@ void* log_malloc_located(
  * Adds a variadic message to the current thread's list of messages. Emits and
  * then clears the list.
  *
+ *
  * @param[in] loc     Location where the message was generated.
  * @param[in] level   Logging level.
  * @param[in] format  Format of the message or NULL.
@@ -686,9 +750,25 @@ void log_vlog_located(
         const char* const restrict      format,
         va_list                         args)
 {
-    if (format && *format)
+    if (format && *format) {
+#if 1
         log_vadd_located(loc, format, args);
+    }
     flush(level);
+#else
+        StrBuf* sb = sb_get();
+        if (sb == NULL) {
+            log_internal(LOG_LEVEL_ERROR,
+                    "Couldn't get thread-specific string-buffer");
+        }
+        else if (sbPrintV(sb, format, args) == NULL) {
+            log_internal(LOG_LEVEL_ERROR, "Couldn't format message into string-buffer");
+        }
+        else {
+            log_write(level, loc, sbString(sb));
+        }
+    }
+#endif
 }
 
 /**
@@ -723,7 +803,7 @@ void log_log_located(
  * @param[in] ...     Optional format arguments.
  */
 void log_errno_located(
-        const log_loc_t* const   loc,
+        const log_loc_t* const     loc,
         const int                  errnum,
         const char* const restrict fmt,
                                    ...)
@@ -759,27 +839,68 @@ void log_flush_located(
     }
 }
 
+/**
+ * Initializes this logging module.
+ *
+ * @retval    -1  Failure
+ * @retval     0  Success
+ */
+static int init(void)
+{
+    int status;
+    if (isInitialized) {
+        log_internal(LOG_LEVEL_ERROR, "Logging module already initialized");
+        status = -1;
+    }
+    else {
+        (void)sigfillset(&all_sigset);
+        (void)sigemptyset(&hup_sigset);
+        (void)sigaddset(&hup_sigset, SIGHUP);
+        hup_sigaction.sa_mask = hup_sigset;
+        hup_sigaction.sa_flags = SA_RESTART;
+        hup_sigaction.sa_handler = handle_sighup;
+        (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
+        status = mutex_init(&log_mutex, true, true);
+    }
+    return status;
+}
+
 /******************************************************************************
  * Public API:
  ******************************************************************************/
 
 /**
  * Initializes this logging module.
+ *
+ * @param[in] id The pathname of the program (e.g., `argv[0]`). Caller may free.
+ * @retval    -1  Failure
+ * @retval     0  Success
  */
 int log_init(
         const char* const id)
 {
-    (void)sigfillset(&all_sigset);
-    (void)sigemptyset(&hup_sigset);
-    (void)sigaddset(&hup_sigset, SIGHUP);
-    hup_sigaction.sa_mask = hup_sigset;
-    hup_sigaction.sa_flags = SA_RESTART;
-    hup_sigaction.sa_handler = handle_sighup;
-    (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
-    int status = mutex_init(&log_mutex, true, true);
+    int status = init();
     if (status == 0) {
         init_thread = pthread_self();
-        status = log_impl_init(id);
+        status = log_init_impl(id);
+        isInitialized = (status == 0);
+    }
+    return status;
+}
+
+/**
+ * Re-initializes this logging module based on its state just prior to calling
+ * log_fini().
+ *
+ * @retval    -1  Failure
+ * @retval     0  Success
+ */
+int log_reinit(void)
+{
+    int status = init();
+    if (status == 0) {
+        status = log_reinit_impl();
+        isInitialized = (status == 0);
     }
     return status;
 }
@@ -789,8 +910,7 @@ int log_init(
  * then it will continue to be. If logging is to a file, then the file is closed
  * and re-opened; thus enabling log file rotation. If logging is to the standard
  * error stream, then it will continue to be if the process has not become a
- * daemon; otherwise, logging will be to the provider default. Should be called
- * after log_init().
+ * daemon; otherwise, logging will be to the provider default.
  *
  * This function is async-signal-safe.
  */
@@ -830,9 +950,9 @@ int log_set_upstream_id(
 }
 
 /**
- * Finalizes the logging module. Frees resources specific to the current thread.
- * Frees all resources if the current thread is the one on which
- * `log_impl_init()` was called.
+ * Finalizes the logging module. Frees all thread-specific resources. Frees all
+ * thread-independent resources if the current thread is the one on which
+ * log_init() was called.
  *
  * @retval -1  Failure
  * @retval  0  Success
@@ -840,18 +960,26 @@ int log_set_upstream_id(
 int log_fini(void)
 {
     int status;
-    log_lock();
-    log_free();
-    if (!pthread_equal(init_thread, pthread_self())) {
-        status = 0;
+    if (!isInitialized) {
+        // Can't log an error message because not initialized
+        status = -1;
     }
     else {
-        status = log_impl_fini();
-        if (status == 0) {
-            log_unlock();
-            status = mutex_fini(&log_mutex);
-            if (status == 0)
-                (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+        log_lock();
+        log_free();
+        if (!pthread_equal(init_thread, pthread_self())) {
+            status = 0;
+        }
+        else {
+            status = log_fini_impl();
+            if (status == 0) {
+                log_unlock();
+                status = mutex_fini(&log_mutex);
+                if (status == 0) {
+                    (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+                    isInitialized = false;
+                }
+            }
         }
     }
     return status ? -1 : 0;
