@@ -68,7 +68,33 @@ Here's a contrived example:
 @code{.c}
     #include <log.h>
     #include <errno.h>
+    #include <pthread.h>
     #include <unistd.h>
+
+    // Called by pthread_create()
+    static void* start(void* arg)
+    {
+        ...
+        log_free(); // Frees thread-specific resources
+        return NULL;
+    }
+
+    static pid_t exec(const char* const path)
+    {
+        int pid = fork();
+        if (pid < 0) {
+            log_add_syserr("Couldn't fork() process");
+        }
+        else if (pid > 0) {
+            // Child process
+            log_fini(); // Frees resources; closes file descriptors
+            (void)execl(path, path, NULL);
+            log_reinit(); // Re-establish pre-log_fini() state
+            log_syserr("execl(\"%s\") failure", path); // prints queue
+            exit(1);
+        }
+        return pid;
+    }
 
     static int system_failure()
     {
@@ -85,12 +111,12 @@ Here's a contrived example:
         return status;
     }
 
-    int main(int ac, char* av)
+    int main(int argc, char* argv)
     {
         ...
-        log_init(av[0]); // Necessary
+        log_init(argv[0]); // Necessary
         ...
-        while ((int c = getopt(ac, av, "l:vx") != EOF) {
+        while ((int c = getopt(argc, argv, "l:vx") != EOF) {
             extern char *optarg;
             switch (c) {
                 case 'l':
@@ -116,6 +142,14 @@ Here's a contrived example:
         if (func()) {
             // Adds to queue, prints queue at ERROR level, and clears queue
             log_error("func() failure: reason = %s", fast_func());
+        }
+        if (exec("program") < 0) {
+            log_error("Couldn't execute program"); // prints queue at ERROR level
+        }
+        pthread_t thread_id;
+        int       status = pthread_create(&thread_id, NULL, start, NULL);
+        if (status) {
+            log_syserr("Couldn't create thread"); // prints queue at ERROR level
         }
         ...
         (void)log_fini(); // Good form
