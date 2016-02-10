@@ -122,26 +122,30 @@ ghostname(void)
             hostname[sizeof(hostname)-1] = 0;
             free(cp);
         }
-        else if(gethostname(hostname, sizeof(hostname)) < 0) {
-            (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
-            hostname[sizeof(hostname)-1] = 0;
-            log_warning("Couldn't get name of local host from registry or "
-                    "gethostname(). Using default: \"%s\"", hostname);
-        }
-        else if (strchr(hostname, '.') == NULL) {
-            // `hostname` isn't fully-qualified
-            struct hostent *hp = gethostbyname(hostname);
-            if (hp == NULL || hp->h_addrtype != AF_INET) {
+        else {
+            log_warning("Couldn't get name of local host from registry");
+            if (gethostname(hostname, sizeof(hostname)) < 0) {
                 (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
                 hostname[sizeof(hostname)-1] = 0;
-                log_warning("Couldn't get fully-qualified name of local host "
-                        "from registry, gethostname(), or gethostbyname(). "
-                        "Using default: \"%s\"", hostname);
+                log_warning("Couldn't get name of local host from "
+                        "gethostname(). Using default: \"%s\"", hostname);
             }
-            else {
-                // Hopefully, `hp->h_name` is fully qualified
-                (void)snprintf(hostname, sizeof(hostname), "%s", hp->h_name);
-                hostname[sizeof(hostname)-1] = 0;
+            else if (strchr(hostname, '.') == NULL) {
+                // `hostname` isn't fully-qualified
+                struct hostent *hp = gethostbyname(hostname);
+                if (hp == NULL || hp->h_addrtype != AF_INET) {
+                    (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
+                    hostname[sizeof(hostname)-1] = 0;
+                    log_warning("Couldn't get fully-qualified name of local "
+                            "host from registry, gethostname(), or "
+                            "gethostbyname(). Using default: \"%s\"", hostname);
+                }
+                else {
+                    // Hopefully, `hp->h_name` is fully qualified
+                    (void)snprintf(hostname, sizeof(hostname), "%s",
+                            hp->h_name);
+                    hostname[sizeof(hostname)-1] = 0;
+                }
             }
         }
     }
