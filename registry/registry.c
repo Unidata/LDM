@@ -12,6 +12,7 @@
 #undef NDEBUG
 #include <assert.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -73,17 +74,18 @@ typedef struct {
     Formatter   format;
 }       TypeStruct;
 
-static char*                    _registryDir;   /* registry directory path */
-static int                      _initialized;   /* Module is initialized? */
-static int                      _atexitCalled;  /* atexit() called? */
-static Backend*                 _backend;       /* backend database */
-static int                      _forWriting;    /* registry open for writing? */
-static StringBuf*               _pathBuf;       /* buffer for creating paths */
-static StringBuf*               _formatBuf;     /* values-formatting buffer */
-static RegNode*                 _rootNode;
-static ValueFunc                _extantValueFunc;
-static const char*              _nodePath;      /* pathname of visited node */
-static StringBuf*               _valuePath;     /* pathname of visited value */
+static bool        _freeRegDir;      ///< free registry directory path?
+static char*       _registryDir;     ///< registry directory path
+static int         _initialized;     ///< Module is initialized?
+static int         _atexitCalled;    ///< atexit() called?
+static Backend*    _backend;         ///< backend database
+static int         _forWriting;      ///< registry open for writing?
+static StringBuf*  _pathBuf;         ///< buffer for creating paths
+static StringBuf*  _formatBuf;       ///< values-formatting buffer
+static RegNode*    _rootNode;        ///< root node of the registry tree
+static ValueFunc   _extantValueFunc; ///< function when visiting nodes
+static const char* _nodePath;        ///< pathname of visited node
+static StringBuf*  _valuePath;       ///< pathname of visited value
 
 /******************************************************************************
  * Private Functions:
@@ -97,9 +99,13 @@ static StringBuf*               _valuePath;     /* pathname of visited value */
  */
 static const char* getRegistryDir(void)
 {
-    if (NULL == _registryDir)
-        _registryDir = (char*)getRegistryDirPath();
-
+    if (NULL == _registryDir) {
+        char* const envPath = getenv("LDM_REGISTRY_DIR");
+        _registryDir = envPath
+                ? envPath
+                : (char*)getRegistryDirPath();
+        _freeRegDir = false;
+    }
     return _registryDir;
 }
 
@@ -108,9 +114,10 @@ static const char* getRegistryDir(void)
  */
 static void freeRegistryDir(void)
 {
-    if (getRegistryDirPath() != _registryDir)
+    if (_freeRegDir) {
         free(_registryDir);
-
+        _freeRegDir = false;
+    }
     _registryDir = NULL;
 }
 
@@ -143,6 +150,7 @@ static int setRegistryDir(
             freeRegistryDir();
 
             _registryDir = clone;
+            _freeRegDir = true;
         }
     }
 

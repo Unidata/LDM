@@ -82,6 +82,8 @@ $(DESTDIR)$(sysconfdir)/ldmd.conf:
 
 $(DESTDIR)$(sysconfdir):
 	mkdir $@
+	
+TESTS_ENVIRONMENTS	= LDM_REGISTRY_DIR=../regutil PATH=../mldm_sender:$$PATH 
 
 valgrind:	ldmd
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
@@ -123,12 +125,13 @@ check-local:
 	echo 'MULTICAST ANY 234.128.117.0:38800 1 127.0.0.1' >> up7.conf
 	echo 'RECEIVE ANY localhost:38800' > down7.conf
 	rm -f up7.log
-	PATH=../mldm_sender:$$PATH ./ldmd -l up7.log -I 127.0.0.1 \
+	$(TESTS_ENVIRONMENT) ./ldmd -l up7.log -I 127.0.0.1 \
 		-P 38800 -q up7.pq up7.conf >up7.pid
 	sleep 1
 	ps -o pid,ppid,pgid,args -p `cat up7.pid`
 	rm -f down7.log
-	./ldmd -vl down7.log -q down7.pq down7.conf >down7.pid
+	$(TESTS_ENVIRONMENT) ./ldmd -vl down7.log -q down7.pq down7.conf \
+                >down7.pid
 	sleep 1
 	if ! ps -o pid,ppid,pgid,args -p `cat down7.pid`; then \
 	    echo "Downstream LDM-7 isn't running. See \"down7.log\"" 1>&2; \
