@@ -133,8 +133,11 @@ mlsm_getServerPort(
     const ssize_t nbytes = read(pipe, buf, sizeof(buf));
     int           status = LDM7_SYSTEM;
 
-    if (nbytes <= 0) {
-        log_add("Couldn't read from pipe to multicast LDM sender process");
+    if (nbytes < 0) {
+        log_add_syserr("Couldn't read from pipe to multicast LDM sender process");
+    }
+    else if (nbytes == 0) {
+        log_add("Read EOF from pipe to multicast LDM sender process");
     }
     else {
         buf[nbytes-1] = 0;
@@ -220,7 +223,7 @@ execMldmSender(
         args[i++] = arg;
     }
 
-    int logOptions = ulog_get_options();
+    int logOptions = log_get_options();
     if (logOptions && LOG_MICROSEC)
         args[i++] = "-y";
     if (logOptions && LOG_ISO_8601)
@@ -286,9 +289,11 @@ execMldmSender(
     sbFree(command);
 
     (void)dup2(pipe, 1);
+    log_fini();
     execvp(args[0], args);
+    log_reinit();
 
-    log_syserr("Couldn't execvp() multicast LDM sender \"%s\"; PATH=%s",
+    log_syserr("Couldn't execute multicast LDM sender \"%s\"; PATH=%s",
             args[0], getenv("PATH"));
     free(mcastGroupOperand);
 failure:
