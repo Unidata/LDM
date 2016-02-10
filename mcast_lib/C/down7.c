@@ -325,7 +325,6 @@ up7proxy_subscribe(
 
     up7proxy_unlock(proxy);
 
-    log_debug("up7proxy_subscribe(): Returning %d", status);
     return status;
 }
 
@@ -458,7 +457,7 @@ static void
 lockState(
     Down7* const down7)
 {
-    log_debug("lockState(): Locking state");
+    log_debug("Locking state");
     int status = pthread_mutex_lock(&down7->stateMutex);
     log_assert(status == 0);
 }
@@ -472,7 +471,7 @@ static void
 unlockState(
     Down7* const down7)
 {
-    log_debug("unlockState(): Unlocking state");
+    log_debug("Unlocking state");
     int status = pthread_mutex_unlock(&down7->stateMutex);
     log_assert(status == 0);
 }
@@ -547,12 +546,12 @@ getSock(
                 log_syserr("Couldn't connect %s TCP socket to \"%s\", port %hu",
                         addrFamilyId, sa_getInetId(servAddr),
                         sa_getPort(servAddr));
-                (void)close(fd);
                 status = (errno == ETIMEDOUT)
                         ? LDM7_TIMEDOUT
                         : (errno == ECONNREFUSED)
                           ? LDM7_REFUSED
                           : LDM7_SYSTEM;
+                (void)close(fd);
             }
             else {
                 *sock = fd;
@@ -561,7 +560,6 @@ getSock(
         } /* "fd" is open */
     } /* "addr" is set */
 
-    log_debug("getSock(): Returning %d", status);
     return status;
 }
 
@@ -633,7 +631,12 @@ newClient(
     int                     status = getSocket(down7->servAddr, &sock,
             &sockAddr);
 
-    if (status == 0) {
+    if (status) {
+        const char* servAddrStr = sa_format(down7->servAddr);
+        log_add("Couldn't create socket to %s", servAddrStr);
+        free(servAddrStr);
+    }
+    else {
         status = up7proxy_new(&down7->up7proxy, sock,
                 (struct sockaddr_in*)&sockAddr);
         if (status) {
@@ -644,7 +647,6 @@ newClient(
         }
     } // `sock` is open
 
-    log_debug("newClient(): Returning %d", status);
     return status;
 }
 
@@ -667,7 +669,7 @@ static void
 destroyTransport(
         void* const arg)
 {
-    log_debug("destroyTansport(): Entered");
+    log_debug("Entered");
     svc_destroy((SVCXPRT*)arg);
     log_flush_error();
     log_free(); // because end of thread
@@ -702,7 +704,7 @@ run_svc(
     pthread_cleanup_push(destroyTransport, xprt);
 
     for (;;) {
-        log_debug("down7.c:run_svc(): Calling poll(): socket=%d", sock);
+        log_debug("Calling poll(): socket=%d", sock);
         setCancelState(true); // enable cancellation of `poll()`
         status = poll(&pfd, 1, timeout);
 
@@ -719,7 +721,7 @@ run_svc(
             break;
         }
         if ((pfd.revents & POLLHUP) || (pfd.revents & POLLERR)) {
-            log_debug("down7.c:run_svc(): RPC transport socket closed or in error");
+            log_debug("RPC transport socket closed or in error");
             status = 0;
             break;
         }
@@ -729,7 +731,7 @@ run_svc(
         }
         if (!FD_ISSET(sock, &svc_fdset)) {
             // Here if the upstream LDM-7 closed the connection
-            log_debug("down7.c:run_svc(): The RPC layer destroyed the service transport");
+            log_debug("The RPC layer destroyed the service transport");
             xprt = NULL;
             status = 0;
             break;
@@ -850,7 +852,7 @@ makeRequest(
      * data-products are received following a restart.
      */
     if (!mrm_peekMissedFileWait(down7->mrm, &iProd)) {
-        log_debug("makeRequest(): The queue of missed data-products has been shutdown");
+        log_debug("The queue of missed data-products has been shutdown");
         status = LDM7_SHUTDOWN;
     }
     else {
@@ -894,7 +896,6 @@ startRequestTask(
 
     log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO);
 
-    log_debug("startRequestTask(): Returning &%d", status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -915,10 +916,10 @@ static void
 stopRequestTask(
         void* const arg)
 {
-    log_debug("stopRequestTask(): Entered");
+    log_debug("Entered");
     Down7* const down7 = (Down7*)arg;
     if (down7->mrm) {
-        log_debug("stopRequestTask(): Stopping data-product requesting task");
+        log_debug("Stopping data-product requesting task");
         mrm_shutDownMissedFiles(down7->mrm);
     }
     if (0 <= down7->sock)
@@ -1022,7 +1023,6 @@ startUcastRecvTask(
 
     log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO);
 
-    log_debug("startUcastRecvTask(): Returning &%d", status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1041,7 +1041,7 @@ static void*
 startMcastRecvTask2(
     void* const arg)
 {
-    log_debug("startMcastRecvTask2(): Entered");
+    log_debug("Entered");
 
     Down7* const down7 = (Down7*)arg;
     int          status = mlr_start(down7->mlr); // doesn't return immediately
@@ -1057,7 +1057,6 @@ startMcastRecvTask2(
         log_clear();
     }
 
-    log_debug("startMcastRecvTask2(): Returning &%d", status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1075,13 +1074,12 @@ static void
 stopMcastRecvTask(
         void* const arg)
 {
-    log_debug("stopMcastRecvTask(): Entered");
+    log_debug("Entered");
     Down7* const down7 = (Down7*)arg;
-    log_debug("stopMcastRecvTask(): Locking state");
+    log_debug("Locking state");
     lockState(down7);
     if (down7->mlr) {
-        log_debug("stopMcastRecvTask(): "
-                "Stopping multicast data-product receiving task");
+        log_debug("Stopping multicast data-product receiving task");
         mlr_stop(down7->mlr);
     }
     unlockState(down7);
@@ -1098,7 +1096,7 @@ static int
 startMcastRecvTask(
         Down7* const down7)
 {
-    log_debug("startMcastRecvTask(): Entered");
+    log_debug("Entered");
 
     Mlr* const   mlr = mlr_new(down7->mcastInfo, down7->mcastIface, down7);
     int          status;
@@ -1124,7 +1122,6 @@ startMcastRecvTask(
         }
     }
 
-    log_debug("startMcastRecvTask(): Returning %d", status);
     return status;
 }
 
@@ -1163,7 +1160,6 @@ startRecvTask(
         status = LDM7_SYSTEM;
     }
 
-    log_debug("startRecvTask(): Returning %d", status);
     return status;
 }
 
@@ -1196,7 +1192,6 @@ startRecvTasks(
     if (status == LDM7_SYSTEM && exe_shutdown(down7->executor))
         log_add("Couldn't shut down task executor");
 
-    log_debug("startRecvTasks(): Returning %d", status);
     return status;
 }
 
@@ -1219,7 +1214,7 @@ reapRecvTasks(
         ptrInt.ptr = job_result(job);
         int    result = ptrInt.val;
 
-        log_debug("reapRecvTasks(): Result=%d", result);
+        log_debug("Result=%d", result);
 
         if (job_wasStopped(job) || job_status(job) || result) { // in that order
             if (exe_shutdown(down7->executor)) {
@@ -1240,7 +1235,6 @@ reapRecvTasks(
         job_free(job);
     }
 
-    log_debug("reapRecvTasks(): Returning %d", status);
     return status;
 }
 
@@ -1272,7 +1266,6 @@ receive(
         lockState(down7);
     }
 
-    log_debug("receive(): Returning %d", status);
     return status;
 }
 
@@ -1329,7 +1322,6 @@ subscribe(
         log_clear();
     }
 
-    log_debug("subscribe(): Returning &%d", status);
     PtrInt ptrInt;
     ptrInt.val = status;
     return ptrInt.ptr;
@@ -1390,7 +1382,6 @@ execSubscriptionTask(
         job_free(job);
     }
 
-    log_debug("execSubscriptionTask(): Returning %d", status);
     return status;
 }
 
@@ -1424,12 +1415,11 @@ subscribeAndReceive(
 
         mi_free(down7->mcastInfo); // NULL safe
         down7->mcastInfo = NULL;
-        log_debug("subscribeAndReceive(): Destroying client handle");
+        log_debug("Destroying client handle");
         // won't close externally-created socket
         freeClient(down7);
     } // `down7->up7proxy`, `down7->sock`, and `down7->mcastInfo` allocated
 
-    log_debug("subscribeAndReceive(): Returning %d", status);
     return status;
 }
 
@@ -1463,7 +1453,6 @@ runDown7Once(
     int status = subscribeAndReceive(down7);
     exe_shutdown(down7->executor);
     exe_clear(down7->executor);
-    log_debug("runDown7Once(): Returning %d", status);
     return status;
 }
 
@@ -1486,7 +1475,7 @@ nap(
     absTime.tv_nsec = 0;
 
     while (down7->state == DOWN7_EXECUTING && status == 0) {
-        log_debug("nap(): Napping");
+        log_debug("Napping");
         status = pthread_cond_timedwait(&down7->napCond, &down7->stateMutex,
                 &absTime);
     }
@@ -1690,7 +1679,7 @@ down7_new(
         goto free_executor;
     }
 
-    log_debug("runDown7Once(): Opening multicast session memory");
+    log_debug("Opening multicast session memory");
     down7->mrm = mrm_open(down7->servAddr, down7->feedtype);
     if (down7->mrm == NULL) {
         log_add("Couldn't open multicast session memory");
@@ -1803,7 +1792,6 @@ down7_start(
 
     unlockState(down7);
 
-    log_debug("down7_start(): Returning %d", status);
     return status;
 }
 
@@ -1912,7 +1900,7 @@ down7_free(
         else {
             unlockState(down7);
             (void)pthread_mutex_destroy(&down7->numProdMutex);
-            log_debug("down7_free(): Closing multicast receiver memory");
+            log_debug("Closing multicast receiver memory");
             if (!mrm_close(down7->mrm)) {
                 log_add("Couldn't close multicast receiver memory");
                 status = -1;
@@ -1956,8 +1944,7 @@ down7_missedProduct(
      * ignored because nothing can be done about it at this point and no harm
      * should result.
      */
-    log_debug("down7_missedProduct(): Entered: iProd=%lu",
-            (unsigned long)iProd);
+    log_debug("Entered: iProd=%lu", (unsigned long)iProd);
     (void)mrm_addMissedFile(down7->mrm, iProd);
 }
 
