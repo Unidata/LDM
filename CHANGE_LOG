@@ -1,3 +1,27 @@
+6.13.0.0
+    Logging:
+        Re-wrote LDM logging because:
+            1) It was the major impediment to correctly using the LDM;
+            2) It was the major impediment to putting the LDM in a Docker
+               container; and
+            3) Some system logging daemons sometimes dropped LDM log messages.
+        For backward-compatibility, the original logging component, "ulog",
+        still exists and is unconditionally included in the LDM library,
+        "libldm". Indeed, the original behavior of the LDM can be obtained by
+        specifying the option "--with-ulog" to the configure(1) script. By
+        default, however, the new logging component, named "slog" (for "simple
+        logging"), will be built and used. While "slog" can be told to write to
+        the system logging daemon, by default it will write directly to the LDM
+        log file if the process doesn't have a controlling terminal (i.e., is a
+        daemon) or to the standard error stream if the process does have a
+        controlling terminal (i.e., is not a daemon). Like the original "ulog"
+        component, "slog" also supports log file rotation via a
+        crontab(1)-executed "ldmadmin newlog" command. See the installed HTML
+        documentation "$HOME/share/doc/ldm/basics/logging-format.html" or the
+        web page
+        <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/logfile-format.html>
+        for more information.
+
 6.12.15.42	2016-01-12T10:40:24-0700
     Make test for C++11-compatible g++ more robust.
 
