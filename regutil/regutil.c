@@ -30,7 +30,7 @@ static const char*      _pathPrefix;
 static const char*      _nodePath;
 static StringBuf*       _valuePath;
 
-static void printUsage(const char* progname)
+static void usage(const char* progname)
 {
     log_add(
 "Usages:\n"
@@ -50,8 +50,8 @@ static void printUsage(const char* progname)
 "  -u uint      Unsigned integer registry value\n"
 "  -v           Log INFO messages\n"
 "  -x           Log DEBUG messages\n"
-"  path         Absolute path name of registry node or value\n"
-"  valpath      Absolute path name of value\n",
+"  path         Absolute pathname of registry node or value\n"
+"  valpath      Absolute pathname of value\n",
         progname, progname, progname, progname, progname, getRegistryDirPath());
     log_flush_error();
 }
@@ -385,7 +385,7 @@ int main(
             PUT_TIME,
             RESET,
             REMOVE
-        }               usage = UNKNOWN;
+        }               action = UNKNOWN;
         const char*     string;
         signaturet      signature;
         timestampt      timestamp;
@@ -412,20 +412,20 @@ int main(
                 }
 
                 if (status == 0) {
-                    if (CREATE == usage) {
+                    if (CREATE == action) {
                         log_error("Create option ignored");
                     }
-                    usage = PUT_BOOL;
+                    action = PUT_BOOL;
                 }
                 break;
             }
             case 'c': {
-                if (UNKNOWN != usage) {
+                if (UNKNOWN != action) {
                     log_add("Can't mix create action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
-                    usage = CREATE;
+                    action = CREATE;
                 }
                 break;
             }
@@ -442,10 +442,10 @@ int main(
                     status = COMMAND_SYNTAX;
                 }
                 else {
-                    if (CREATE == usage) {
+                    if (CREATE == action) {
                         log_info("Create action ignored");
                     }
-                    usage = PUT_SIGNATURE;
+                    action = PUT_SIGNATURE;
                     status = 0;
                 }
                 break;
@@ -455,31 +455,31 @@ int main(
                 break;
             }
             case 'R': {
-                if (UNKNOWN != usage) {
+                if (UNKNOWN != action) {
                     log_add("Can't mix reset action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
-                    usage = RESET;
+                    action = RESET;
                 }
                 break;
             }
             case 'r': {
-                if (UNKNOWN != usage) {
+                if (UNKNOWN != action) {
                     log_add("Can't mix remove action with other actions");
                     status = COMMAND_SYNTAX;
                 }
                 else {
-                    usage = REMOVE;
+                    action = REMOVE;
                 }
                 break;
             }
             case 's': {
-                if (CREATE == usage) {
+                if (CREATE == action) {
                     log_info("Create action  ignored");
                 }
                 string = optarg;
-                usage = PUT_STRING;
+                action = PUT_STRING;
                 break;
             }
             case 't': {
@@ -490,10 +490,10 @@ int main(
                     status = COMMAND_SYNTAX;
                 }
                 else {
-                    if (CREATE == usage) {
+                    if (CREATE == action) {
                         log_info("Create action ignored");
                     }
-                    usage = PUT_TIME;
+                    action = PUT_TIME;
                     status = 0;
                 }
                 break;
@@ -509,10 +509,10 @@ int main(
                     status = COMMAND_SYNTAX;
                 }
                 else {
-                    if (CREATE == usage) {
+                    if (CREATE == action) {
                         log_info("Create option ignored");
                     }
-                    usage = PUT_UINT;
+                    action = PUT_UINT;
                 }
                 break;
             }
@@ -541,19 +541,19 @@ int main(
             log_flush_error();
 
             if (COMMAND_SYNTAX == status)
-                printUsage(progname);
+                usage(progname);
         }
         else {
             const int     argCount = argc - optind;
 
-            if (UNKNOWN == usage)
-                usage = PRINT;
+            if (UNKNOWN == action)
+                action = PRINT;
 
-            switch (usage) {
+            switch (action) {
                 case CREATE: {
                     if (0 < argCount) {
                         log_error("Too many arguments");
-                        printUsage(progname);
+                        usage(progname);
                         status = COMMAND_SYNTAX;
                     }
                     else {
@@ -564,7 +564,7 @@ int main(
                 case RESET: {
                     if (0 < argCount) {
                         log_error("Too many arguments");
-                        printUsage(progname);
+                        usage(progname);
                         status = COMMAND_SYNTAX;
                     }
                     else {
@@ -576,7 +576,7 @@ int main(
                     if (0 == argCount) {
                         log_error(
                             "Removal action requires absolute pathname(s)");
-                        printUsage(progname);
+                        usage(progname);
                         status = COMMAND_SYNTAX;
                     }
                     else {
@@ -599,11 +599,11 @@ int main(
                      */
                     if (0 == argCount) {
                         log_error("Put action requires value pathname");
-                        printUsage(progname);
+                        usage(progname);
                         status = COMMAND_SYNTAX;
                     }
                     else {
-                        switch (usage) {
+                        switch (action) {
                         case PUT_BOOL:
                             status = reg_putBool(argv[optind], boolean);
                             break;
@@ -629,7 +629,7 @@ int main(
                     }
                 }                       /* put switch */
                 /* no break */
-            }                           /* "usage" switch */
+            }                           /* "action" switch */
         }                               /* decoded options */
 
         sb_free(_valuePath);
