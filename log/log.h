@@ -20,16 +20,12 @@
 #include <stdlib.h>
 #include <syslog.h>
 
-/// Use localtime. default is GMT
-#define LOG_LOCALTIME 0x100u
-/// Don't put on the timestamp
-#define LOG_NOTIME    0x200u
-/// Add the facility identifier
-#define LOG_IDENT     0x400u
-/// Use ISO 8601 standard timestamp
-#define LOG_ISO_8601  0x800u
-/// Use microsecond-resolution timestamp
-#define LOG_MICROSEC  0x1000u
+/**
+ * Macros for the `ulog` backend reproduced here with the "LOG_" prefix:
+ */
+#define LOG_LOCALTIME 0x100u ///< Use local time. Default is UTC.
+#define LOG_NOTIME    0x200u ///< Don't add a timestamp
+#define LOG_IDENT     0x400u ///< Add the facility identifier
 
 /// Logging levels
 typedef enum {

@@ -819,7 +819,7 @@ int main(
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "I:vxl:nq:o:P:M:m:t:yz")) != EOF) {
+        while ((ch = getopt(ac, av, "I:vxl:nq:o:P:M:m:t:")) != EOF) {
             switch (ch) {
             case 'I': {
                 in_addr_t ipAddr = inet_addr(optarg);
@@ -841,12 +841,6 @@ int main(
             case 'x':
                 if (!log_is_enabled_debug)
                     (void)log_set_level(LOG_LEVEL_DEBUG);
-                break;
-            case 'y':
-                logOpts |= LOG_MICROSEC;
-                break;
-            case 'z':
-                logOpts |= LOG_ISO_8601;
                 break;
             case 'l':
                 (void)log_set_destination(optarg);

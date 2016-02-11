@@ -176,7 +176,7 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:s:t:vxyz")) != EOF)
+    while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:s:t:vx")) != EOF)
         switch (ch) {
         case 'f': {
             if (strfeedtypet(optarg, feed)) {
@@ -238,14 +238,6 @@ mls_decodeOptions(
         }
         case 'x': {
             (void)log_set_level(LOG_LEVEL_DEBUG);
-            break;
-        }
-        case 'y': {
-            log_set_options(LOG_MICROSEC);
-            break;
-        }
-        case 'z': {
-            log_set_options(LOG_ISO_8601);
             break;
         }
         case ':': {

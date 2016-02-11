@@ -224,10 +224,6 @@ execMldmSender(
     }
 
     int logOptions = log_get_options();
-    if (logOptions && LOG_MICROSEC)
-        args[i++] = "-y";
-    if (logOptions && LOG_ISO_8601)
-        args[i++] = "-z";
 
     if (mcastIf && strcmp(mcastIf, "0.0.0.0")) {
         args[i++] = "-m";

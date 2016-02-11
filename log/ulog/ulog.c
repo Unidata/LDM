@@ -394,7 +394,7 @@ void ulog_set_options(
     unsigned mask,
     unsigned values)
 {
-    mask &= (LOG_NOTIME | LOG_PID | LOG_IDENT | LOG_MICROSEC | LOG_ISO_8601);
+    mask &= (LOG_NOTIME | LOG_PID | LOG_IDENT);
 
     logOptions = (logOptions & ~mask) | (values & mask);
 }
@@ -552,32 +552,10 @@ vulog(pri, fmt, args)
                 else {
                     (void)localtime_r(&now.tv_sec, &tm_now);
                 }
-                if (logOptions & LOG_ISO_8601) {
-                    cp += strftime(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
-                        "%Y%m%dT%H%M%S", &tm_now);
-                }
-                else {
-                    cp += strftime(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
-                        "%b %d %H:%M:%S", &tm_now);
-                }
-                if (logOptions & LOG_MICROSEC) {
-                    cp += snprintf(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
-                        ".%06ld", now.tv_nsec/1000);
-                }
-                if (logOptions & LOG_ISO_8601) {
-                    if (isUtc) {
-                        (void)strcpy(cp, "Z ");
-                        cp += 2;
-                    }
-                    else {
-                        cp += strftime(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
-                            "%z ", &tm_now);
-                    }
-                }
-                else {
-                    *cp++ = ' ';
-                    *cp = 0;
-                }
+                cp += strftime(cp, (size_t)(sizeof(tbuf)-(cp-tbuf)),
+                    "%b %d %H:%M:%S", &tm_now);
+                *cp++ = ' ';
+                *cp = 0;
 #else
                 /*
                  * Encode the timestamp.

@@ -270,7 +270,7 @@ int main(int ac, char *av[])
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "vxyzl:f:o:t:h:P:p:T:")) != EOF)
+        while ((ch = getopt(ac, av, "vxl:f:o:t:h:P:p:T:")) != EOF)
                 switch (ch) {
                 case 'v':
                         if (!log_is_enabled_info)
@@ -278,12 +278,6 @@ int main(int ac, char *av[])
                         break;
                 case 'x':
                         log_set_level(LOG_LEVEL_DEBUG);
-                        break;
-                case 'y':
-                        logOpts |= LOG_MICROSEC;
-                        break;
-                case 'z':
-                        logOpts |= LOG_ISO_8601;
                         break;
                 case 'l':
                         logfname = optarg;
