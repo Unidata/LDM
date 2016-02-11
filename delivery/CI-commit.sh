@@ -20,10 +20,9 @@ set -e  # exit if error
 PATH=/usr/bin:$PATH
 mkdir -p m4 mcast_lib/vcmtp/m4
 autoreconf -if
-./configure --disable-root-actions >configure.log 2>&1
+./configure --enable-debug --disable-root-actions >configure.log 2>&1
 
-# Assumes AM_DISTCHECK_CONFIGURE_FLAGS contains all appropriate "--with-..."
-# options
+# Assumes AM_DISTCHECK_CONFIGURE_FLAGS contains all appropriate options
 make distcheck
 make distcheck DISTCHECK_CONFIGURE_FLAGS=--with-ulog 
 

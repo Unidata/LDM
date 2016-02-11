@@ -176,7 +176,8 @@ check-readnoaaport:	readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
             -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
 	rm /tmp/readnoaaport-test.pq
-	cut -d ' ' -f $(CUT_FIELD)- readnoaaport.out >readnoaaport.log
+	cut -d ' ' -f $(CUT_FIELD)- readnoaaport.out | \
+        grep -v Starting >readnoaaport.log
 	diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
 
 noaaportIngester.out:		noaaportIngester
@@ -187,6 +188,7 @@ noaaportIngester.out:		noaaportIngester
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:		noaaportIngester.out
 	cut -d ' ' -f $(CUT_FIELD)- <$? | sed 's/NOTICE/NOTE/' | \
+        grep -v Starting | \
 	sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
 check-noaaportIngester:		noaaportIngester.log \
 				$(srcdir)/$(NOAAPORTINGESTER_LOG)
@@ -205,7 +207,8 @@ noaaportIngester-nssl.out:	noaaportIngester
             g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:	noaaportIngester-nssl.out
 	cut -d ' ' -f $(CUT_FIELD)- <$? | \
-	sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
+        grep -v Starting | \
+        sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
 check-noaaportIngester-nssl:	noaaportIngester-nssl.log \
 				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)

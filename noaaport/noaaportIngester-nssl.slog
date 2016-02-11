@@ -1,4 +1,3 @@
-WARN lockProcessInMemory.c:lockProcessInMemory():59 Cannot allocate memory
 WARN lockProcessInMemory.c:lockProcessInMemory():59 mlockall() failure
 WARN noaaportIngester.c:tryLockingProcessInMemory():326 Couldn't lock process in physical memory
 ERROR readsbn.c:readsbn():25 SBN checksum invalid 1398 768

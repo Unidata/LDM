@@ -2,7 +2,7 @@
 #
 # This perl script installs the LDM registry.
 #
-# Usage: perl thisScript regpar regutil confPath regdir
+# Usage: perl thisScript parPath utilPath confPath dirPath
 #
 # where:
 #       thisScript      This script

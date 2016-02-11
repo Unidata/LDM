@@ -11,6 +11,35 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects no-installinfo])
 AC_CONFIG_HEADERS([config.h])
 
+AC_ARG_ENABLE([debug],
+    AS_HELP_STRING([--enable-debug],
+	[enable support for debugging [[default=disabled]]]),
+    [
+	case "$enableval" in
+	yes) enable_debug=true
+            case "$CFLAGS" in
+                *-g*);;
+                '') CFLAGS=-g;;
+                *) CFLAGS="${CFLAGS} -g";;
+            esac
+            case "$CXXFLAGS" in
+                *-g*);;
+                '') CXXFLAGS=-g;;
+                *) CXXFLAGS="${CXXFLAGS} -g";;
+            esac
+            ;;
+	no) enable_debug=false
+            AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
+            ;;
+	*) AC_MSG_ERROR(
+	    [bad value {$enableval} for --enable-debug]);;
+	esac
+    ],
+    [
+	enable_debug=false
+        AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
+    ])
+
 ccList='c99 gcc'
 test `uname` = Darwin && ccList=gcc
 AC_PROG_CC([$ccList])
@@ -207,35 +236,6 @@ AC_ARG_WITH([gribinsert],
     [],
     [with_gribinsert=no])
 AM_CONDITIONAL([WANT_GRIBINSERT], [test "x$with_gribinsert" != xno])
-
-AC_ARG_ENABLE([debug],
-    AS_HELP_STRING([--enable-debug],
-	[enable support for debugging [[default=disabled]]]),
-    [
-	case "$enableval" in
-	yes) enable_debug=true
-            case "$CFLAGS" in
-                *-g*);;
-                '') CFLAGS=-g;;
-                *) CFLAGS="${CFLAGS} -g";;
-            esac
-            case "$CXXFLAGS" in
-                *-g*);;
-                '') CXXFLAGS=-g;;
-                *) CXXFLAGS="${CXXFLAGS} -g";;
-            esac
-            ;;
-	no) enable_debug=false
-            AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
-            ;;
-	*) AC_MSG_ERROR(
-	    [bad value {$enableval} for --enable-debug]);;
-	esac
-    ],
-    [
-	enable_debug=false
-        AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
-    ])
 
 AC_ARG_ENABLE(faux-pq,
     AS_HELP_STRING([--enable-faux-pq],
