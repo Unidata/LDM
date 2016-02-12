@@ -164,8 +164,8 @@ void log_write(
         const log_loc_t*  loc,
         const char*       string)
 {
-    (void)ulog(log_get_priority(level), "%s:%s():%d %s", loc->file,
-            loc->func, loc->line, string);
+    (void)ulog(log_get_priority(level), "%s:%s():%d %s",
+            log_basename(loc->file), loc->func, loc->line, string);
 }
 
 /**
