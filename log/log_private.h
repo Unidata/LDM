@@ -117,13 +117,6 @@ void log_lock(void);
 void log_unlock(void);
 
 /**
- * Indicates if the current process is a daemon.
- *
- * @retval `true` iff the current process is a daemon
- */
-bool log_am_daemon(void);
-
-/**
  * Returns the logging destination. Should be called between log_init() and
  * log_fini().
  *

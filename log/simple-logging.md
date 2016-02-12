@@ -66,95 +66,126 @@ external process so that the disk partition doesn't become full.
 Here's a contrived example:
 
 @code{.c}
-    #include <log.h>
-    #include <errno.h>
-    #include <pthread.h>
-    #include <unistd.h>
+#include <log.h>
+#include <errno.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
 
-    // Called by pthread_create()
-    static void* start(void* arg)
-    {
-        ...
-        log_free(); // Frees thread-specific resources
-        return NULL;
+static int system_failure()
+{
+    (void)close(-1); // Guaranteed failure
+    log_add_syserr("close() failure"); // Uses `errno`; adds to queue
+    return -1;
+}
+
+static int func()
+{
+    int status = system_failure();
+    if (status)
+        log_add("system_failure() returned %d", status); // adds to queue
+    return status;
+}
+
+static pid_t exec(const char* const path)
+{
+    int pid = fork();
+    if (pid < 0) {
+        log_add_syserr("Couldn't fork() process");
     }
+    else if (pid > 0) {
+        // Child process
+        log_fini(); // Frees resources; closes file descriptors
+        (void)execl(path, path, NULL);
+        log_reinit(); // Re-establish pre-log_fini() state
+        log_syserr("execl(\"%s\") failure", path); // prints queue
+        exit(1);
+    }
+    return pid;
+}
 
-    static pid_t exec(const char* const path)
-    {
-        int pid = fork();
-        if (pid < 0) {
-            log_add_syserr("Couldn't fork() process");
+// Called by pthread_create()
+static void* start(void* arg)
+{
+    ...
+    log_free(); // Frees thread-specific resources
+    return NULL;
+}
+
+static int daemonize(void)
+{
+    int   status;
+    pid_t pid = fork();
+    if (pid == -1) {
+        log_error("fork() failure");
+        status = -1;
+    }
+    else {
+        if (pid > 0) {
+            // Parent process
+            (void)printf("%ld\n", (long)pid);
+            status = 0;
         }
-        else if (pid > 0) {
+        else {
             // Child process
-            log_fini(); // Frees resources; closes file descriptors
-            (void)execl(path, path, NULL);
-            log_reinit(); // Re-establish pre-log_fini() state
-            log_syserr("execl(\"%s\") failure", path); // prints queue
-            exit(1);
+            (void)setsid();
+            (void)fclose(stdin);
+            (void)fclose(stdout);
+            (void)fclose(stderr);
+            log_avoid_stderr(); // Because this process is now a daemon
+            ...
+            status = 0;
         }
-        return pid;
     }
+    return status;
+}
 
-    static int system_failure()
-    {
-        (void)close(-1); // Guaranteed failure
-        log_add_syserr("close() failure"); // Uses `errno`; adds to queue
-        return -1;
+int main(int argc, char* argv)
+{
+    ...
+    log_init(argv[0]); // Necessary
+    ...
+    while ((int c = getopt(argc, argv, "l:vx") != EOF) {
+        extern char *optarg;
+        switch (c) {
+            case 'l':
+                 (void)log_set_output(optarg);
+                 break;
+            case 'v':
+                 // In case "-x" option specified first (e.g., "-xv")
+                 if (!log_is_enabled_info)
+                     (void)log_set_level(LOG_LEVEL_INFO);
+                 break;
+            case 'x':
+                 (void)log_set_level(LOG_LEVEL_DEBUG);
+                 break;
+            ...
+        }
     }
-
-    static int func()
-    {
-        int status = system_failure();
-        if (status)
-            log_add("system_failure() returned %d", status); // adds to queue
-        return status;
+    ...
+    if (func()) {
+        if (log_is_enabled_info)
+            // Adds to queue, prints queue at INFO level, and clears queue
+            log_info("func() failure: reason = %s", slow_func());
     }
-
-    int main(int argc, char* argv)
-    {
-        ...
-        log_init(argv[0]); // Necessary
-        ...
-        while ((int c = getopt(argc, argv, "l:vx") != EOF) {
-            extern char *optarg;
-            switch (c) {
-                case 'l':
-                     (void)log_set_output(optarg);
-                     break;
-                case 'v':
-                     // In case "-x" option specified first (e.g., "-xv")
-                     if (!log_is_enabled_info)
-                         (void)log_set_level(LOG_LEVEL_INFO);
-                     break;
-                case 'x':
-                     (void)log_set_level(LOG_LEVEL_DEBUG);
-                     break;
-                ...
-            }
-        }
-        ...
-        if (func()) {
-            if (log_is_enabled_info)
-                // Adds to queue, prints queue at INFO level, and clears queue
-                log_info("func() failure: reason = %s", slow_func());
-        }
-        if (func()) {
-            // Adds to queue, prints queue at ERROR level, and clears queue
-            log_error("func() failure: reason = %s", fast_func());
-        }
-        if (exec("program") < 0) {
-            log_error("Couldn't execute program"); // prints queue at ERROR level
-        }
-        pthread_t thread_id;
-        int       status = pthread_create(&thread_id, NULL, start, NULL);
-        if (status) {
-            log_syserr("Couldn't create thread"); // prints queue at ERROR level
-        }
-        ...
-        (void)log_fini(); // Good form
-        return 0;
+    if (func()) {
+        // Adds to queue, prints queue at ERROR level, and clears queue
+        log_error("func() failure: reason = %s", fast_func());
     }
+    if (exec("program") < 0) {
+        log_error("Couldn't execute program"); // prints queue at ERROR level
+    }
+    pthread_t thread_id;
+    int       status = pthread_create(&thread_id, NULL, start, NULL);
+    if (status)
+        log_syserr("Couldn't create thread"); // prints queue at ERROR level
+    status = daemonize();
+    if (status)
+        log_syserr("Couldn't daemonize"); // prints queue at ERROR level
+    ...
+    (void)log_fini(); // Good form
+    return status ? 1 : 0;
+}
 @endcode
 
 <hr>

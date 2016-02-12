@@ -918,7 +918,6 @@ int main(
 
     const char* pqfname = getQueuePath();
 
-    logfname = log_get_destination();
     if (!becomeDaemon) {
         /*
          * Make this process a process group leader so that all child processes
@@ -945,12 +944,25 @@ int main(
             exit(0);
         }
 
-        /* detach the child from parents process group ?? */
-        (void) setsid(); // also makes this process a process group leader
+        /*
+         * Make the child a session leader so that it is no longer affected by
+         * the parent's process group.
+         */
+        (void)setsid(); // also makes this process a process group leader
 
-        log_refresh(); // Because this process is now a daemon
+        (void)fclose(stderr);
+        log_avoid_stderr(); // Because this process is now a daemon
     }
 #endif
+
+    /*
+     * Close the standard input and standard output streams because they won't
+     * be used (more anality :-)
+     */
+    (void) fclose(stdout);
+    (void) fclose(stdin);
+
+    logfname = log_get_destination();
 
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
@@ -968,13 +980,6 @@ int main(
      * set up signal handlers
      */
     set_sigactions();
-
-    /*
-     * Close the standard input and standard output streams because they won't
-     * be used (more anality :-)
-     */
-    (void) fclose(stdout);
-    (void) fclose(stdin);
 
     /*
      * Vet the configuration file.

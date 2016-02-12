@@ -56,15 +56,14 @@ typedef enum {
 const char* log_get_default_daemon_destination(void);
 
 /**
- * Returns the default destination for log messages, which depends on whether
- * the current process is a daemon (i.e., doesn't have a controlling terminal)
- * or not. If the current process is not a daemon, then the default destination
- * will be the standard error stream; otherwise, the default destination will be
- * that given by log_get_default_daemon_destination().
+ * Returns the default destination for log messages, which depends on whether or
+ * not log_avoid_stderr() has been called. If it hasn't been called, then the
+ * default destination will be the standard error stream; otherwise, the default
+ * destination will be that given by log_get_default_daemon_destination().
  *
  * @retval ""   The system logging daemon
  * @retval "-"  The standard error stream
- * @return      The pathname of the standard LDM log file
+ * @return      The pathname of the log file
  */
 const char* log_get_default_destination(void);
 
@@ -84,6 +83,12 @@ int log_init(
         const char* const id);
 
 /**
+ * Tells this module to avoid using the standard error stream (because the
+ * process has become a daemon, for example).
+ */
+void log_avoid_stderr(void);
+
+/**
  * Re-initializes this logging module based on its state just prior to calling
  * log_fini().
  *
@@ -96,11 +101,10 @@ int log_reinit(void);
  * Refreshes the logging module. If logging is to the system logging daemon,
  * then it will continue to be. If logging is to a file, then the file is closed
  * and re-opened; thus enabling log file rotation. If logging is to the standard
- * error stream, then it will continue to be if the process has not become a
- * daemon; otherwise, logging will be to the provider default. Should be called
- * after log_init().
+ * error stream, then it will continue to be if log_avoid_stderr() hasn't been
+ * called; otherwise, logging will be to the provider default.
  *
- * This function is async-signal safe.
+ * This function is async-signal-safe.
  */
 void log_refresh(void);
 

@@ -15,13 +15,13 @@
  * REQUIREMENTS:
  *   - Can log to
  *     - System logging daemon (-l '')
- *     - Standard error stream (-l -) if not a daemon
+ *     - Standard error stream (-l -) if it exists
  *     - File (-l _pathname_)
  *   - Default destination for log messages
- *     - If daemon
+ *     - To the standard error stream if it exists
+ *     - Otherwise:
  *       - If backward-compatible: system logging daemon
  *       - If not backward-compatible: standard LDM log file
- *     - Otherwise, standard error stream
  *   - Pathname of standard LDM log file configurable at session time
  *   - Output format
  *     - If using system logging daemon: chosen by daemon
@@ -90,6 +90,10 @@ static pthread_key_t         listKey;
  * The thread identifier of the thread on which `log_init()` was called.
  */
 static pthread_t             init_thread;
+/**
+ * Whether or not to avoid using the standard error stream.
+ */
+static bool                  avoid_stderr;
 /**
  * Whether this module needs to be refreshed.
  */
@@ -392,17 +396,19 @@ list_fini(
 }
 
 /**
- * Returns the default destination for log messages. If the current process is
- * not a daemon, then the default destination will be the standard error stream.
+ * Returns the default destination for log messages, which depends on whether or
+ * not log_avoid_stderr() has been called. If it hasn't been called, then the
+ * default destination will be the standard error stream; otherwise, the default
+ * destination will be that given by log_get_default_daemon_destination().
  *
  * @pre         Module is locked
  * @retval ""   Log to the system logging daemon
  * @retval "-"  Log to the standard error stream
- * @return      The pathname of the standard LDM log file
+ * @return      The pathname of the log file
  */
 static const char* get_default_destination(void)
 {
-    return log_am_daemon()
+    return avoid_stderr
             ? log_get_default_daemon_destination()
             : "-";
 }
@@ -501,8 +507,8 @@ static void flush(
  * Refreshes the logging module. If logging is to the system logging daemon,
  * then it will continue to be. If logging is to a file, then the file is closed
  * and re-opened; thus enabling log file rotation. If logging is to the standard
- * error stream, then it will continue to be if the process has not become a
- * daemon; otherwise, logging will be to the provider default. Should be called
+ * error stream, then it will continue to be if log_avoid_stderr() hasn't been
+ * called; otherwise, logging will be to the provider default. Should be called
  * after log_init().
  *
  * @pre        Module is locked
@@ -513,7 +519,7 @@ static int refresh(void)
 {
     char dest[_XOPEN_PATH_MAX];
     strncpy(dest, log_get_destination_impl(), sizeof(dest))[sizeof(dest)-1] = 0;
-    // In case we've turned into a daemon
+    // In case log_avoid_stderr() has been called
     const char* def_dest = get_default_destination();
     int status = log_set_destination_impl(def_dest);
     if (status == 0 && !LOG_IS_STDERR_SPEC(dest))
@@ -553,40 +559,19 @@ void log_unlock(void)
 }
 
 /**
- * Indicates if the current process is a daemon.
+ * Returns the default destination for log messages, which depends on whether or
+ * not log_avoid_stderr() has been called. If it hasn't been called, then the
+ * default destination will be the standard error stream; otherwise, the default
+ * destination will be that given by log_get_default_daemon_destination().
  *
- * @retval `true` iff the current process is a daemon
- */
-bool log_am_daemon(void)
-{
-    bool am_daemon;
-    int  ttyFd = open("/dev/tty", O_RDONLY);
-    if (-1 == ttyFd) {
-        // No controlling terminal => daemon
-        am_daemon = true;
-    }
-    else {
-        // Controlling terminal exists => interactive (i.e., not a daemon)
-        (void)close(ttyFd);
-        am_daemon = false;
-    }
-    return am_daemon;
-}
-
-/**
- * Returns the default destination for log messages. If the current process is
- * not a daemon, then the default destination will be the standard error stream.
- *
- * @retval ""   Log to the system logging daemon
- * @retval "-"  Log to the standard error stream
- * @return      The pathname of the standard LDM log file
+ * @retval ""   The system logging daemon
+ * @retval "-"  The standard error stream
+ * @return      The pathname of the log file
  */
 const char* log_get_default_destination(void)
 {
     log_lock();
-    const char* dest = log_am_daemon()
-            ? log_get_default_daemon_destination()
-            : "-";
+    const char* dest = get_default_destination();
     log_unlock();
     return dest;
 }
@@ -840,7 +825,7 @@ void log_flush_located(
 }
 
 /**
- * Initializes this logging module.
+ * Initializes this logging module. Called by log_init() and log_reinit().
  *
  * @retval    -1  Failure
  * @retval     0  Success
@@ -881,11 +866,25 @@ int log_init(
 {
     int status = init();
     if (status == 0) {
+        // The following functions aren't called by log_reinit():
         init_thread = pthread_self();
+        avoid_stderr = fcntl(STDERR_FILENO, F_GETFD) == -1;
         status = log_init_impl(id);
         isInitialized = (status == 0);
     }
     return status;
+}
+
+/**
+ * Tells this module to avoid using the standard error stream (because the
+ * process has become a daemon, for example).
+ */
+void log_avoid_stderr(void)
+{
+    log_lock();
+    avoid_stderr = true;
+    refresh_needed = true;
+    log_unlock();
 }
 
 /**
@@ -909,8 +908,8 @@ int log_reinit(void)
  * Refreshes the logging module. If logging is to the system logging daemon,
  * then it will continue to be. If logging is to a file, then the file is closed
  * and re-opened; thus enabling log file rotation. If logging is to the standard
- * error stream, then it will continue to be if the process has not become a
- * daemon; otherwise, logging will be to the provider default.
+ * error stream, then it will continue to be if log_avoid_stderr() hasn't been
+ * called; otherwise, logging will be to the provider default.
  *
  * This function is async-signal-safe.
  */
