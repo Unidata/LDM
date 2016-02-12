@@ -201,7 +201,7 @@ where:
 <dl>
 <dt><em>time</em> <dd>Is the creation-time of the message in the form
     <em>YYYYMMDD</em>T<em>hhmmss</em>.<em>uuuuuu</em>Z
-    (e.g., 20160121T163218.391847Z).
+    (e.g., `20160121T163218.391847Z`).
 <dt><em>proc</em> <dd>Is the identifier of the process in the form
     <em>id</em>[<em>pid</em>], where <em>id</em> is the identifier given to
     log_init(), log_set_id(), or log_set_upstream_id(), and <em>pid</em> is the
