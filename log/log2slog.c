@@ -314,7 +314,10 @@ static void file_print(
 static int file_fini(void)
 {
     int status;
-    if (stream_file) {
+    if (stream_file == NULL) {
+        status = 0;
+    }
+    else {
         status = fclose(stream_file);
         if (status == 0) {
             stream_file = NULL;
