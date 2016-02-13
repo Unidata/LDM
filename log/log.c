@@ -285,7 +285,7 @@ static bool list_is_empty()
     blockSigs(&sigset);
 
     List* const list = list_get();
-    const bool  is_empty = list->last == NULL;
+    const bool  is_empty = list == NULL || list->last == NULL;
 
     restoreSigs(&sigset);
     return is_empty;
