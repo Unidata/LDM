@@ -31,7 +31,8 @@ static void regex_init(void)
 {
     int status = regcomp(&regex, "feed", REG_ICASE | REG_NOSUB);
     log_assert(status == 0);
-    atexit(regex_fini);
+    status = atexit(regex_fini);
+    log_assert(status == 0);
 }
 
 /**
