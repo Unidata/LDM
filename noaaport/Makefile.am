@@ -153,7 +153,7 @@ if WANT_SLOG
 READNOAAPORT_LOG		= readnoaaport.slog
 NOAAPORTINGESTER_LOG		= noaaportIngester.slog
 NOAAPORTINGESTER_NSSL_LOG	= noaaportIngester-nssl.slog
-CUT_FIELD			= 3
+CUT_FIELD			= 5
 endif
 if WANT_ULOG
 READNOAAPORT_LOG		= readnoaaport.ulog
@@ -176,8 +176,8 @@ check-readnoaaport:	readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
             -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
 	rm /tmp/readnoaaport-test.pq
-	cut -d ' ' -f $(CUT_FIELD)- readnoaaport.out | \
-        grep -v Starting >readnoaaport.log
+	fgrep 'process_prod()' readnoaaport.out | cut -d ' ' -f $(CUT_FIELD)- \
+                >readnoaaport.log
 	diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
 
 noaaportIngester.out:		noaaportIngester
@@ -187,12 +187,11 @@ noaaportIngester.out:		noaaportIngester
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:		noaaportIngester.out
-	cut -d ' ' -f $(CUT_FIELD)- <$? | sed 's/NOTICE/NOTE/' | \
-        grep -v Starting | \
-	sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
+	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
 check-noaaportIngester:		noaaportIngester.log \
 				$(srcdir)/$(NOAAPORTINGESTER_LOG)
 	diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
+
 noaaportIngester-nssl.out:	noaaportIngester
 	-rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
@@ -206,9 +205,7 @@ noaaportIngester-nssl.out:	noaaportIngester
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
             g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:	noaaportIngester-nssl.out
-	cut -d ' ' -f $(CUT_FIELD)- <$? | \
-        grep -v Starting | \
-        sed '1,2d;/^NOTE.*Ingestion Statistics:/,$$d;/^WARN: /d;/^ERROR: /d' >$@
+	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
 check-noaaportIngester-nssl:	noaaportIngester-nssl.log \
 				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)

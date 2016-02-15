@@ -1,6 +1,1 @@
-WARN lockProcessInMemory.c:lockProcessInMemory():59 mlockall() failure
-WARN noaaportIngester.c:tryLockingProcessInMemory():326 Couldn't lock process in physical memory
-ERROR readsbn.c:readsbn():25 SBN checksum invalid 1398 768
-ERROR readsbn.c:readsbn():25 SBN checksum invalid 1146 78
-NOTE process_prod.c:process_prod():216 YAUS16 KWNR 262024 !grib2/161/161/#255/201502262024F000/EchoTop60/500 m HGHT inserted [cat 4 type 4 ccb 2/1 seq 14562689 size 215]
-NOTE noaaportIngester.c:reportStats():634 ----------------------------------------
+YAUS16 KWNR 262024 !grib2/161/161/#255/201502262024F000/EchoTop60/500 m HGHT inserted [cat 4 type 4 ccb 2/1 seq 14562689 size 215]

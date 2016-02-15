@@ -604,20 +604,16 @@ static void reportStats(
         struct timeval* const restrict reportTime,
         Reader* const restrict         reader)
 {
-    struct timeval          now;
-    double                  interval;
-    double                  rate;
-    char                    buf[80];
-    int                     logLevel;
-    unsigned long           byteCount;
-    unsigned long           frameCount, missedFrameCount, prodCount;
-    unsigned long           fullFifoCount;
     static unsigned long    totalFrameCount;
     static unsigned long    totalMissedFrameCount;
     static unsigned long    totalProdCount;
     static unsigned long    totalByteCount;
     static unsigned long    totalFullFifoCount;
 
+    struct timeval          now;
+    unsigned long           byteCount;
+    unsigned long           frameCount, missedFrameCount, prodCount;
+    unsigned long           fullFifoCount;
     (void)gettimeofday(&now, NULL);
     readerGetStatistics(reader, &byteCount, &fullFifoCount);
     pmGetStatistics(productMaker, &frameCount, &missedFrameCount, &prodCount);
@@ -628,70 +624,112 @@ static void reportStats(
     totalProdCount += prodCount;
     totalFullFifoCount += fullFifoCount;
 
-    logLevel = log_get_level();
+    int     logLevel = log_get_level();
     (void)log_set_level(LOG_LEVEL_NOTICE);
 
-    log_notice("----------------------------------------");
-    log_notice("Ingestion Statistics:");
-    log_notice("    Since Previous Report (or Start):");
-    interval = duration(&now, reportTime);
-    encodeDuration(buf, sizeof(buf), interval);
-    log_notice("        Duration          %s", buf);
-    log_notice("        Raw Data:");
-    log_notice("            Octets        %lu", byteCount);
-    log_notice("            Mean Rate:");
-    rate = (byteCount/interval);
-    log_notice("                Octets    %g/s", rate);
-    log_notice("                Bits      %g/s", 8*rate);
-    log_notice("        Received frames:");
-    log_notice("            Number        %lu", frameCount);
-    log_notice("            Mean Rate     %g/s", frameCount/interval);
-    log_notice("        Missed frames:");
-    log_notice("            Number        %lu", missedFrameCount);
-    log_notice("            %%             %g",
-            100.0 * missedFrameCount / (missedFrameCount + frameCount));
-    log_notice("        Full FIFO:");
-    log_notice("            Number        %lu", fullFifoCount);
-    log_notice("            %%             %g",
-            100.0 * fullFifoCount / frameCount);
-    log_notice("        Products:");
-    log_notice("            Inserted      %lu", prodCount);
-    log_notice("            Mean Rate     %g/s", prodCount/interval);
-    log_notice("    Since Start:");
-    interval = duration(&now, startTime);
-    encodeDuration(buf, sizeof(buf), interval);
-    log_notice("        Duration          %s", buf);
-    log_notice("        Raw Data:");
-    log_notice("            Octets        %lu", totalByteCount);
-    log_notice("            Mean Rate:");
-    rate = (totalByteCount/interval);
-    log_notice("                Octets    %g/s", rate);
-    log_notice("                Bits      %g/s", 8*rate);
-    log_notice("        Received frames:");
-    log_notice("            Number        %lu", totalFrameCount);
-    log_notice("            Mean Rate     %g/s", totalFrameCount/interval);
-    log_notice("        Missed frames:");
-    log_notice("            Number        %lu", totalMissedFrameCount);
-    log_notice("            %%             %g", 100.0 * totalMissedFrameCount /
-            (totalMissedFrameCount + totalFrameCount));
-    log_notice("        Full FIFO:");
-    log_notice("            Number        %lu", totalFullFifoCount);
-    log_notice("            %%             %g",
-            100.0 * totalFullFifoCount / totalFrameCount);
-    log_notice("        Products:");
-    log_notice("            Inserted      %lu", totalProdCount);
-    log_notice("            Mean Rate     %g/s", totalProdCount/interval);
-
+    double  reportDuration = duration(&now, reportTime);
+    double  startDuration = duration(&now, startTime);
+    char    reportDurationBuf[80];
+    char    startDurationBuf[80];
+    encodeDuration(reportDurationBuf, sizeof(reportDurationBuf), reportDuration);
+    encodeDuration(startDurationBuf, sizeof(startDurationBuf), startDuration);
+    double  reportRate = (byteCount/reportDuration);
+    double  startRate = (totalByteCount/startDuration);
+    char    msg[4096];
+    char*   buf = msg;
+    size_t  size = sizeof(msg);
+    int     nbytes = snprintf(buf, size,
+"----------------------------------------\n"
+"Ingestion Statistics:\n"
+"    Since Previous Report (or Start):\n"
+"        Duration          %s\n"
+"        Raw Data:\n"
+"            Octets        %lu\n"
+"            Mean Rate:\n"
+"                Octets    %g/s\n"
+"                Bits      %g/s\n"
+"        Received frames:\n"
+"            Number        %lu\n"
+"            Mean Rate     %g/s\n"
+"        Missed frames:\n"
+"            Number        %lu\n"
+"            %%             %g\n"
+"        Full FIFO:\n"
+"            Number        %lu\n"
+"            %%             %g\n"
+"        Products:\n"
+"            Inserted      %lu\n"
+"            Mean Rate     %g/s\n"
+"    Since Start:\n"
+"        Duration          %s\n"
+"        Raw Data:\n"
+"            Octets        %lu\n"
+"            Mean Rate:\n"
+"                Octets    %g/s\n"
+"                Bits      %g/s\n"
+"        Received frames:\n"
+"            Number        %lu\n"
+"            Mean Rate     %g/s\n"
+"        Missed frames:\n"
+"            Number        %lu\n"
+"            %%             %g\n"
+"        Full FIFO:\n"
+"            Number        %lu\n"
+"            %%             %g\n"
+"        Products:\n"
+"            Inserted      %lu\n"
+"            Mean Rate     %g/s\n",
+            reportDurationBuf,
+            byteCount,
+            reportRate,
+            8*reportRate,
+            frameCount,
+            frameCount/reportDuration,
+            missedFrameCount,
+            100.0 * missedFrameCount / (missedFrameCount + frameCount),
+            fullFifoCount,
+            100.0 * fullFifoCount / frameCount,
+            prodCount,
+            prodCount/reportDuration,
+            startDurationBuf,
+            totalByteCount,
+            startRate,
+            8*startRate,
+            totalFrameCount,
+            totalFrameCount/startDuration,
+            totalMissedFrameCount,
+            100.0 * totalMissedFrameCount /
+                (totalMissedFrameCount + totalFrameCount),
+            totalFullFifoCount,
+            100.0 * totalFullFifoCount / totalFrameCount,
+            totalProdCount,
+            totalProdCount/startDuration);
+    if (nbytes >= size)
+        nbytes = size;
+    buf += nbytes;
+    size -= nbytes;
 #ifdef RETRANS_SUPPORT
-   if(retrans_xmit_enable == OPTION_ENABLE){
-    log_notice("       Retransmissions:");
-    log_notice("           Requested     %lu", total_prods_retrans_rqstd);
-    log_notice("           Received      %lu", total_prods_retrans_rcvd);
-    log_notice("           Duplicates    %lu", total_prods_retrans_rcvd_notlost);
-    log_notice("           No duplicates %lu", total_prods_retrans_rcvd_lost);
+    if (retrans_xmit_enable == OPTION_ENABLE) {
+        nbytes = snprintf(buf, size,
+"        Retransmissions:\n"
+"            Requested     %lu\n"
+"            Received      %lu\n"
+"            Duplicates    %lu\n"
+"            No duplicates %lu\n",
+                total_prods_retrans_rqstd,
+                total_prods_retrans_rcvd,
+                total_prods_retrans_rcvd_notlost,
+                total_prods_retrans_rcvd_lost);
+        if (nbytes >= size)
+            nbytes = size;
+        buf += nbytes;
+        size -= nbytes;
     }
 #endif 
-    log_notice("----------------------------------------");
+    (void)snprintf(buf, size,
+"----------------------------------------");
+    msg[sizeof(msg)-1] = 0;
+    log_notice(msg);
 
     (void)log_set_level(logLevel);
 
