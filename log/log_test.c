@@ -501,7 +501,7 @@ static void test_sighup_prog(void)
 
     struct sigaction sigact, oldsigact;
     (void) sigemptyset(&sigact.sa_mask);
-    sigact.sa_flags |= SA_RESTART;
+    sigact.sa_flags = SA_RESTART;
     sigact.sa_handler = signal_handler;
     status = sigaction(SIGHUP, &sigact, &oldsigact);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -550,6 +550,9 @@ static void test_log_reinit(void)
     CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
+
+    status = log_fini();
+    CU_ASSERT_EQUAL(status, 0);
 
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 10);
