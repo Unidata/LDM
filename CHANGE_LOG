@@ -3,8 +3,10 @@
         Re-wrote LDM logging because:
             1) It was the major impediment to correctly using the LDM;
             2) It was the major impediment to putting the LDM in a Docker
-               container; and
-            3) Some system logging daemons sometimes dropped LDM log messages.
+               container;
+            3) Only 7 "local" syslog(8) facilities are guaranteed and NOAAPort
+               ingestion could use more; and
+            4) Some system logging daemons sometimes dropped LDM log messages.
         For backward-compatibility, the original logging component, "ulog",
         still exists and is unconditionally included in the LDM library,
         "libldm". Indeed, the original behavior of the LDM can be obtained by
