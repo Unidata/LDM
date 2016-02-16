@@ -227,7 +227,9 @@ decodeCommandLine(
                     static int  logFacilities[] = {LOG_LOCAL0, LOG_LOCAL1,
                         LOG_LOCAL2, LOG_LOCAL3, LOG_LOCAL4, LOG_LOCAL5,
                         LOG_LOCAL6, LOG_LOCAL7};
-                    if (log_set_facility(logFacilities[i]))
+                    // NB: Specifying syslog facility implies logging to syslog
+                    if (log_set_facility(logFacilities[i]) ||
+                            log_set_destination(""))
                         status = 1;
                 }
 
@@ -295,7 +297,7 @@ static void usage(
 "   -n          Log through level NOTE. Report each data-product.\n"
 "   -q queue    Use \"queue\" as LDM product-queue. Default is \"%s\".\n"
 "   -u n        Use logging facility local\"n\". Default is to use the\n"
-"               default LDM logging facility, %s.\n"
+"               default LDM logging facility, %s. Implies \"-l ''\".\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
 #ifdef RETRANS_SUPPORT
