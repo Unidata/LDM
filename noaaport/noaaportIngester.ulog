@@ -176,4 +176,3 @@ NOTE: process_prod.c:process_prod():216 JUSA41 KWNO 062000 inserted [cat 5 type 
 NOTE: process_prod.c:process_prod():216 NTUS99 KNCF 062007 /pTSTNCF inserted [cat 1 type 4 ccb 2/0 seq 15531158 size 495]
 NOTE: process_prod.c:process_prod():216 JUSA41 KWNO 062000 inserted [cat 5 type 4 ccb 2/1 seq 15531159 size 9684]
 NOTE: process_prod.c:process_prod():216 JUSA41 KWNO 062000 inserted [cat 5 type 4 ccb 2/1 seq 15531160 size 9684]
-NOTE: noaaportIngester.c:reportStats():634 ----------------------------------------
