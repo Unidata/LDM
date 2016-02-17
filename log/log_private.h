@@ -206,10 +206,10 @@ const char* log_basename(
  * @param[in] args    Format arguments.
  */
 void log_vlog_located(
-        const log_loc_t* const loc,
-        const log_level_t      level,
-        const char* const        format,
-        va_list                  args);
+        const log_loc_t* const  loc,
+        const log_level_t       level,
+        const char* const       format,
+        va_list* const          args);
 
 /**
  * Adds a message to the current thread's list of messages. Emits and then
@@ -223,8 +223,8 @@ void log_vlog_located(
 void log_log_located(
         const log_loc_t* const loc,
         const log_level_t      level,
-        const char* const        format,
-                                 ...);
+        const char* const      format,
+                               ...);
 
 /**
  * Adds a system error message and an optional user's message to the current
@@ -285,9 +285,9 @@ void log_write(
  *                      Error message logged.
  */
 int log_vadd_located(
-        const log_loc_t* const loc,
-        const char *const      fmt,
-        va_list                args);
+        const log_loc_t* const  loc,
+        const char *const       fmt,
+        va_list* const          args);
 
 /**
  * Adds a log-message for the current thread.

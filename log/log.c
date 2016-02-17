@@ -254,7 +254,7 @@ static List* list_get(void)
     (void)pthread_once(&key_creation_control, list_create_key);
     List* list = pthread_getspecific(listKey);
     if (NULL == list) {
-        list = (List*)malloc(sizeof(List));
+        list = malloc(sizeof(List));
         if (NULL == list) {
             log_internal(LOG_LEVEL_ERROR, "malloc() failure");
         }
@@ -318,14 +318,14 @@ static int msg_new(
         Message** const entry)
 {
     int      status;
-    Message* msg = (Message*)malloc(sizeof(Message));
+    Message* msg = malloc(sizeof(Message));
     if (msg == NULL) {
         status = errno;
         log_internal(LOG_LEVEL_ERROR, "malloc() failure");
     }
     else {
         #define LOG_DEFAULT_STRING_SIZE     256
-        char*   string = (char*)malloc(LOG_DEFAULT_STRING_SIZE);
+        char*   string = malloc(LOG_DEFAULT_STRING_SIZE);
         if (NULL == string) {
             status = errno;
             log_internal(LOG_LEVEL_ERROR, "malloc() failure");
@@ -431,9 +431,12 @@ static const char* get_default_destination(void)
 static int msg_format(
         Message* const restrict    msg,
         const char* const restrict fmt,
-        va_list                    args)
+        va_list* const restrict    args)
 {
-    int nbytes = vsnprintf(msg->string, msg->size, fmt, args);
+    va_list argsCopy;
+    va_copy(argsCopy, *args);
+
+    int nbytes = vsnprintf(msg->string, msg->size, fmt, *args);
     int status;
 
     if (msg->size > nbytes) {
@@ -450,7 +453,7 @@ static int msg_format(
     else {
         // The buffer is too small for the message. Expand it.
         size_t  size = nbytes + 1;
-        char*   string = (char*)malloc(size);
+        char*   string = malloc(size);
 
         if (NULL == string) {
             status = errno;
@@ -460,10 +463,12 @@ static int msg_format(
             free(msg->string);
             msg->string = string;
             msg->size = size;
-            (void)vsnprintf(msg->string, msg->size, fmt, args);
+            (void)vsnprintf(msg->string, msg->size, fmt, argsCopy);
             status = 0;
         }
     }                           /* buffer is too small */
+
+    va_end(argsCopy);
 
     return status;
 }
@@ -608,7 +613,7 @@ const char* log_basename(
 int log_vadd_located(
         const log_loc_t* const restrict loc,
         const char* const restrict      fmt,
-        va_list                         args)
+        va_list* const restrict         args)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -656,7 +661,7 @@ int log_add_located(
     blockSigs(&sigset);
     va_list     args;
     va_start(args, fmt);
-    int status = log_vadd_located(loc, fmt, args);
+    int status = log_vadd_located(loc, fmt, &args);
     va_end(args);
     restoreSigs(&sigset);
     return status;
@@ -683,7 +688,7 @@ int log_add_errno_located(
     if (status == 0 && fmt && *fmt) {
         va_list     args;
         va_start(args, fmt);
-        status = log_vadd_located(loc, fmt, args);
+        status = log_vadd_located(loc, fmt, &args);
         va_end(args);
     }
     restoreSigs(&sigset);
@@ -733,7 +738,7 @@ void log_vlog_located(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
-        va_list                         args)
+        va_list* const restrict         args)
 {
     if (format && *format) {
 #if 1
@@ -773,7 +778,7 @@ void log_log_located(
 {
     va_list args;
     va_start(args, format);
-    log_vlog_located(loc, level, format, args);
+    log_vlog_located(loc, level, format, &args);
     va_end(args);
 }
 
@@ -796,7 +801,7 @@ void log_errno_located(
     va_list args;
     va_start(args, fmt);
     log_add_located(loc, "%s", strerror(errnum));
-    log_vlog_located(loc, LOG_LEVEL_ERROR, fmt, args);
+    log_vlog_located(loc, LOG_LEVEL_ERROR, fmt, &args);
     va_end(args);
 }
 
@@ -1058,7 +1063,7 @@ log_free(void)
 
     if (list) {
         if (list->last)
-            log_error("%s() called with pending messages", __func__);
+            log_error("Log message queue isn't empty");
         list_fini(list);
         free(list);
         (void)pthread_setspecific(listKey, NULL);
