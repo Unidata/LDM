@@ -12,7 +12,7 @@ noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= pq.h fbits.h lcm.h
 lib_la_SOURCES		= pq.c lcm.c
 dist_man3_MANS		= pq.3
-lib_la_CPPFLAGS		= \
+AM_CPPFLAGS		= \
     -I$(top_srcdir)/rpc \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir)/log \
@@ -28,8 +28,28 @@ TAGS_FILES		= \
     ../protocol2/*.c ../protocol2/*.h \
     ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
+CLEANFILES		= *.pq *.out *.log callgrind.out.* vgcore.* core.*
 
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 pq.h:		pq.hin pq.c
+
+if HAVE_CUNIT
+check_PROGRAMS		= pq_test
+
+pq_test_SOURCES		= pq_test.c pq.c
+pq_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+pq_test_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+
+check-local:	pq_test
+	rm -f pq_test.out
+	./pq_test
+#	rm pq_test.out
+
+valgrind:	pq_test
+	rm -f pq_test.out
+	$(LIBTOOL) --mode=execute valgrind --leak-check=full \
+                --show-reachable=yes --gen-suppressions=all ./pq_test
+#	rm pq_test.out
+endif

@@ -5490,7 +5490,6 @@ const pqe_index _pqenone = {
  *                                        of `mmap()`
  *                          PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
  *                                        Default is `MAP_SHARED`.
- *                          PQ_READONLY   Read-only. Default is read/write
  *                          PQ_THREADSAFE Make the queue access functions
  *                                        thread-safe.
  * @param[in]  align      Alignment parameter for file components or 0.
