@@ -58,6 +58,9 @@ extern void     process_prod(
     LdmProductQueue* const      lpq,
     psh_struct*                 psh,
     sbn_struct*                 sbn);
+static z_stream i_zstrm;
+
+int inflateData(char *const inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
 
 #ifdef RETRANS_SUPPORT
 extern CPIO_TABLE cpio_tbl;
