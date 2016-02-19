@@ -1789,7 +1789,7 @@ static int deflateData(
 
          compressedBytes = CHUNK_SZ - d_zstrm.avail_out;
          if(compressedBytes == 0) {
-              printf("\n Unable to compress data - truncated");
+              log_debug("\n Unable to compress data - truncated");
               break;
          }
 
