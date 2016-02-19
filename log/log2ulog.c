@@ -45,7 +45,7 @@ int                  log_syslog_priorities[] = {
 static log_level_t loggingLevel = LOG_LEVEL_DEBUG;
 
 /******************************************************************************
- * Package-private API:
+ * Package-Private Implementation API:
  ******************************************************************************/
 
 /**
@@ -58,13 +58,18 @@ static log_level_t loggingLevel = LOG_LEVEL_DEBUG;
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
+ * @param[in] dest     Destination for log messages: <dl>
+ *                         <dt>""   <dd>System logging daemon
+ *                         <dt>"-"  <dd>Standard error stream
+ *                         <dt>else <dd>Pathname of log file
+ *                     </dl>
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
-int log_init_impl(
-        const char* id)
+int logi_init(
+        const char* const id,
+        const char* const dest)
 {
-    const char* dest = log_get_default_destination();
     char progname[_XOPEN_PATH_MAX];
     strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
     id = basename(progname);
@@ -80,7 +85,7 @@ int log_init_impl(
  * @retval 0   Success.
  * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int log_fini_impl(void)
+int logi_fini(void)
 {
     int status = closeulog();
     return status ? -1 : 0;
@@ -88,12 +93,12 @@ int log_fini_impl(void)
 
 /**
  * Re-initializes the logging module based on its state just prior to calling
- * log_fini_impl(). If log_fini_impl(), wasn't called, then the result is
+ * logi_fini(). If logi_fini(), wasn't called, then the result is
  * unspecified.
  *
  * @retval    0        Success.
  */
-int log_reinit_impl(void)
+int logi_reinit(void)
 {
     const char* const id = getulogident();
     const unsigned    options = ulog_get_options();
@@ -112,16 +117,15 @@ int log_reinit_impl(void)
  *                         <dt>"-"  <dd>The standard error stream.
  *                         <dt>else <dd>The file whose pathname is `dest`.
  *                     </dl>
- * @retval    0        Success.
- * @retval    -1       Failure.
  */
-int log_set_destination_impl(
+void logi_set_destination(
         const char* const dest)
 {
     const char* const id = getulogident();
     const unsigned    options = ulog_get_options();
     int               status = openulog(id, options, LOG_LDM, dest);
-    return status == -1 ? -1 : 0;
+    if (status == -1)
+        abort();
 }
 
 /**
@@ -135,7 +139,7 @@ int log_set_destination_impl(
  *                   <dt>else    <dd>The pathname of the log file.
  *               </dl>
  */
-const char* log_get_destination_impl(void)
+const char* logi_get_destination(void)
 {
     const char* dest = getulogpath();
     return dest == NULL ? "" : dest;
@@ -159,13 +163,13 @@ const char* log_get_default_daemon_destination(void)
  * @param[in] loc    The location where the message was generated.
  * @param[in] string The message.
  */
-void log_write(
+void logi_log(
         const log_level_t level,
         const log_loc_t*  loc,
         const char*       string)
 {
     (void)ulog(log_get_priority(level), "%s:%s():%d %s",
-            log_basename(loc->file), loc->func, loc->line, string);
+            logl_basename(loc->file), loc->func, loc->line, string);
 }
 
 /**
@@ -176,7 +180,7 @@ void log_write(
  * @param[in] loc    The location where the message was generated. Unused.
  * @param[in] ...    Format and format arguments.
  */
-void log_internal_located(
+void logi_internal(
         const log_level_t level,
         const log_loc_t*  loc,
                           ...)
@@ -192,6 +196,16 @@ void log_internal_located(
  * Public API:
  ******************************************************************************/
 
+bool log_is_level_enabled(
+        const log_level_t level)
+{
+    int priority = log_get_priority(level);
+    logl_lock();
+    bool enabled = ulog_is_priority_enabled(priority);
+    logl_unlock();
+    return enabled;
+}
+
 /**
  * Enables logging down to a given level.
  *
@@ -203,17 +217,17 @@ int log_set_level(
         const log_level_t level)
 {
     int status;
-    if (!log_vet_level(level)) {
+    if (!logl_vet_level(level)) {
         status = -1;
     }
     else {
         static int ulogUpTos[LOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
                 LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
                 LOG_UPTO(LOG_ERR)};
-        log_lock();
+        logl_lock();
         (void)setulogmask(ulogUpTos[level]);
         loggingLevel = level;
-        log_unlock();
+        logl_unlock();
         status = 0;
     }
     return status;
@@ -227,15 +241,15 @@ int log_set_level(
  */
 log_level_t log_get_level(void)
 {
-    log_lock();
+    logl_lock(); // For visibility of changes
     log_level_t level = loggingLevel;
-    log_unlock();
+    logl_unlock();
     return level;
 }
 
 /**
  * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
- * system logging daemon. Should be called after `log_impl_init()`.
+ * system logging daemon. Should be called after `logi_init()`.
  *
  * @param[in] facility  The facility that will be used when logging to the
  *                      system logging daemon.
@@ -243,12 +257,12 @@ log_level_t log_get_level(void)
 int log_set_facility(
         const int facility)
 {
-    log_lock();
+    logl_lock();
     const char* const id = log_get_id();
     const unsigned    options = log_get_options();
     const char* const output = log_get_destination();
     int               status = openulog(id, options, facility, output);
-    log_unlock();
+    logl_unlock();
     return status == -1 ? -1 : 0;
 }
 
@@ -261,15 +275,15 @@ int log_set_facility(
  */
 int log_get_facility(void)
 {
-    log_lock();
+    logl_lock();
     int facility = getulogfacility();
-    log_unlock();
+    logl_unlock();
     return facility;
 }
 
 /**
- * Sets the logging identifier. Should be called between `log_impl_init()` and
- * `log_impl_fini()`.
+ * Sets the logging identifier. Should be called between `logi_init()` and
+ * `logi_fini()`.
  *
  * @param[in] id        The new identifier. Caller may free.
  * @retval    0         Success.
@@ -283,9 +297,9 @@ int log_set_id(
         status = -1;
     }
     else {
-        log_lock();
+        logl_lock();
         setulogident(id);
-        log_unlock();
+        logl_unlock();
         status = 0;
     }
     return status;
@@ -298,9 +312,9 @@ int log_set_id(
  */
 const char* log_get_id(void)
 {
-    log_lock();
+    logl_lock();
     const char* const id = getulogident();
-    log_unlock();
+    logl_unlock();
     return id;
 }
 
@@ -318,9 +332,9 @@ const char* log_get_id(void)
 void log_set_options(
         const unsigned options)
 {
-    log_lock();
+    logl_lock();
     ulog_set_options(~0u, options);
-    log_unlock();
+    logl_unlock();
 }
 
 /**
@@ -337,8 +351,8 @@ void log_set_options(
  */
 unsigned log_get_options(void)
 {
-    log_lock();
+    logl_lock();
     const unsigned opts = ulog_get_options();
-    log_unlock();
+    logl_unlock();
     return opts;
 }

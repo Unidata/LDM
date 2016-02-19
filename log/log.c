@@ -188,7 +188,7 @@ static void sb_create_key(void)
 {
     int status = pthread_key_create(&sbKey, NULL);
     if (status != 0) {
-        log_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure");
+        logl_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure");
         abort();
     }
 }
@@ -213,12 +213,12 @@ static StrBuf* sb_get(void)
     if (NULL == sb) {
         sb = sbNew();
         if (NULL == sb) {
-            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
+            logl_internal(LOG_LEVEL_ERROR, "malloc() failure");
         }
         else {
             int status = pthread_setspecific(sbKey, sb);
             if (status != 0) {
-                log_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure");
+                logl_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure");
                 sbFree(sb);
                 sb = NULL;
             }
@@ -231,7 +231,7 @@ static void list_create_key(void)
 {
     int status = pthread_key_create(&listKey, NULL);
     if (status != 0) {
-        log_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure");
+        logl_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure");
         abort();
     }
 }
@@ -256,12 +256,12 @@ static List* list_get(void)
     if (NULL == list) {
         list = malloc(sizeof(List));
         if (NULL == list) {
-            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
+            logl_internal(LOG_LEVEL_ERROR, "malloc() failure");
         }
         else {
             int status = pthread_setspecific(listKey, list);
             if (status != 0) {
-                log_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure");
+                logl_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure");
                 free(list);
                 list = NULL;
             }
@@ -321,14 +321,14 @@ static int msg_new(
     Message* msg = malloc(sizeof(Message));
     if (msg == NULL) {
         status = errno;
-        log_internal(LOG_LEVEL_ERROR, "malloc() failure");
+        logl_internal(LOG_LEVEL_ERROR, "malloc() failure");
     }
     else {
         #define LOG_DEFAULT_STRING_SIZE     256
         char*   string = malloc(LOG_DEFAULT_STRING_SIZE);
         if (NULL == string) {
             status = errno;
-            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
+            logl_internal(LOG_LEVEL_ERROR, "malloc() failure");
             free(msg);
         }
         else {
@@ -431,12 +431,12 @@ static const char* get_default_destination(void)
 static int msg_format(
         Message* const restrict    msg,
         const char* const restrict fmt,
-        va_list* const restrict    args)
+        va_list                    args)
 {
     va_list argsCopy;
-    va_copy(argsCopy, *args);
+    va_copy(argsCopy, args);
 
-    int nbytes = vsnprintf(msg->string, msg->size, fmt, *args);
+    int nbytes = vsnprintf(msg->string, msg->size, fmt, args);
     int status;
 
     if (msg->size > nbytes) {
@@ -448,7 +448,7 @@ static int msg_format(
          * Group Base Specifications Issue 6
          */
         status = errno ? errno : EILSEQ;
-        log_internal(LOG_LEVEL_ERROR, "vsnprintf() failure");
+        logl_internal(LOG_LEVEL_ERROR, "vsnprintf() failure");
     }
     else {
         // The buffer is too small for the message. Expand it.
@@ -457,7 +457,7 @@ static int msg_format(
 
         if (NULL == string) {
             status = errno;
-            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
+            logl_internal(LOG_LEVEL_ERROR, "malloc() failure");
         }
         else {
             free(msg->string);
@@ -490,19 +490,19 @@ static void flush(
     List*   list = list_get();
 
     if (NULL != list && NULL != list->last) {
-        log_lock();
+        logl_lock();
 
         if (log_is_level_enabled(level)) {
             for (const Message* msg = list->first; NULL != msg;
                     msg = msg->next) {
-                log_write(level, &msg->loc, msg->string);
+                logi_log(level, &msg->loc, msg->string);
 
                 if (msg == list->last)
                     break;
             }                       /* message loop */
         }                           /* messages should be printed */
 
-        log_unlock();
+        logl_unlock();
         list_clear();
     }                               /* have messages */
     restoreSigs(&sigset);
@@ -517,18 +517,18 @@ static void flush(
  * after log_init().
  *
  * @pre        Module is locked
- * @retval  0  Success.
- * @retval -1  Failure.
+ * @retval  0  Success
+ * @retval -1  Failure
  */
 static int refresh(void)
 {
     char dest[_XOPEN_PATH_MAX];
-    strncpy(dest, log_get_destination_impl(), sizeof(dest))[sizeof(dest)-1] = 0;
+    strncpy(dest, logi_get_destination(), sizeof(dest))[sizeof(dest)-1] = 0;
     // In case log_avoid_stderr() has been called
     const char* def_dest = get_default_destination();
-    int status = log_set_destination_impl(def_dest);
+    int status = logi_set_destination(def_dest);
     if (status == 0 && !LOG_IS_STDERR_SPEC(dest))
-        status = log_set_destination_impl(dest);
+        status = logi_set_destination(dest);
     return status;
 }
 
@@ -541,7 +541,7 @@ static int refresh(void)
  *
  * This function is thread-safe.
  */
-void log_lock(void)
+void logl_lock(void)
 {
     int status = mutex_lock(&log_mutex);
     log_assert(status == 0);
@@ -557,7 +557,7 @@ void log_lock(void)
  * This function is thread-safe. On entry, this module's lock shall be locked
  * by the current thread.
  */
-void log_unlock(void)
+void logl_unlock(void)
 {
     int status = mutex_unlock(&log_mutex);
     log_assert(status == 0);
@@ -575,9 +575,9 @@ void log_unlock(void)
  */
 const char* log_get_default_destination(void)
 {
-    log_lock();
+    logl_lock();
     const char* dest = get_default_destination();
-    log_unlock();
+    logl_unlock();
     return dest;
 }
 
@@ -587,7 +587,7 @@ const char* log_get_default_destination(void)
  * @param[in] pathname  The pathname.
  * @return              Pointer to the last component of the pathname.
  */
-const char* log_basename(
+const char* logl_basename(
         const char* const pathname)
 {
     const char* const cp = strrchr(pathname, '/');
@@ -610,10 +610,10 @@ const char* log_basename(
  * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
  *                      Error message logged.
  */
-int log_vadd_located(
+int logl_vadd(
         const log_loc_t* const restrict loc,
         const char* const restrict      fmt,
-        va_list* const restrict         args)
+        va_list                         args)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -621,7 +621,7 @@ int log_vadd_located(
     int status;
 
     if (NULL == fmt) {
-        log_internal(LOG_LEVEL_ERROR, "NULL argument");
+        logl_internal(LOG_LEVEL_ERROR, "NULL argument");
         status = EINVAL;
     }
     else {
@@ -652,7 +652,7 @@ int log_vadd_located(
  * @param[in] ...  Arguments for the formatting string.
  * @retval    0    Success.
  */
-int log_add_located(
+int logl_add(
         const log_loc_t* const restrict loc,
         const char* const restrict      fmt,
                                         ...)
@@ -661,7 +661,7 @@ int log_add_located(
     blockSigs(&sigset);
     va_list     args;
     va_start(args, fmt);
-    int status = log_vadd_located(loc, fmt, &args);
+    int status = logl_vadd(loc, fmt, args);
     va_end(args);
     restoreSigs(&sigset);
     return status;
@@ -676,7 +676,7 @@ int log_add_located(
  * @param[in] ...     Arguments for the formatting string.
  * @return
  */
-int log_add_errno_located(
+int logl_add_errno(
         const log_loc_t* const loc,
         const int                errnum,
         const char* const        fmt,
@@ -684,11 +684,11 @@ int log_add_errno_located(
 {
     sigset_t sigset;
     blockSigs(&sigset);
-    int status = log_add_located(loc, "%s", strerror(errnum));
+    int status = logl_add(loc, "%s", strerror(errnum));
     if (status == 0 && fmt && *fmt) {
         va_list     args;
         va_start(args, fmt);
-        status = log_vadd_located(loc, fmt, &args);
+        status = logl_vadd(loc, fmt, args);
         va_end(args);
     }
     restoreSigs(&sigset);
@@ -707,7 +707,7 @@ int log_add_errno_located(
  * @retval    NULL      Out of memory. Log message added.
  * @return              Pointer to the allocated memory.
  */
-void* log_malloc_located(
+void* logl_malloc(
         const char* const restrict file,
         const char* const restrict func,
         const int                  line,
@@ -718,7 +718,7 @@ void* log_malloc_located(
 
     if (obj == NULL) {
         log_loc_t loc = {file, func, line};
-        log_add_located(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
+        logl_add(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
     }
 
     return obj;
@@ -734,28 +734,28 @@ void* log_malloc_located(
  * @param[in] format  Format of the message or NULL.
  * @param[in] args    Optional format arguments.
  */
-void log_vlog_located(
+void logl_vlog(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
-        va_list* const restrict         args)
+        va_list                         args)
 {
     if (format && *format) {
 #if 1
-        log_vadd_located(loc, format, args);
+        logl_vadd(loc, format, args);
     }
     flush(level);
 #else
         StrBuf* sb = sb_get();
         if (sb == NULL) {
-            log_internal(LOG_LEVEL_ERROR,
+            logl_internal(LOG_LEVEL_ERROR,
                     "Couldn't get thread-specific string-buffer");
         }
         else if (sbPrintV(sb, format, args) == NULL) {
-            log_internal(LOG_LEVEL_ERROR, "Couldn't format message into string-buffer");
+            logl_internal(LOG_LEVEL_ERROR, "Couldn't format message into string-buffer");
         }
         else {
-            log_write(level, loc, sbString(sb));
+            logi_log(level, loc, sbString(sb));
         }
     }
 #endif
@@ -770,7 +770,7 @@ void log_vlog_located(
  * @param[in] format  Format of the message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void log_log_located(
+void logl_log(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
@@ -778,7 +778,7 @@ void log_log_located(
 {
     va_list args;
     va_start(args, format);
-    log_vlog_located(loc, level, format, &args);
+    logl_vlog(loc, level, format, args);
     va_end(args);
 }
 
@@ -792,7 +792,7 @@ void log_log_located(
  * @param[in] fmt     Format of the user's message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void log_errno_located(
+void logl_errno(
         const log_loc_t* const     loc,
         const int                  errnum,
         const char* const restrict fmt,
@@ -800,8 +800,8 @@ void log_errno_located(
 {
     va_list args;
     va_start(args, fmt);
-    log_add_located(loc, "%s", strerror(errnum));
-    log_vlog_located(loc, LOG_LEVEL_ERROR, fmt, &args);
+    logl_add(loc, "%s", strerror(errnum));
+    logl_vlog(loc, LOG_LEVEL_ERROR, fmt, args);
     va_end(args);
 }
 
@@ -815,7 +815,7 @@ void log_errno_located(
  *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
  */
-void log_flush_located(
+void logl_flush(
         const log_loc_t* const loc,
         const log_level_t      level)
 {
@@ -824,7 +824,7 @@ void log_flush_located(
          * The following message is added so that the location of the call to
          * log_flush() is logged in case the call needs to be adjusted.
          */
-        log_add_located(loc, "Log messages flushed");
+        logl_add(loc, "Log messages flushed");
         flush(level);
     }
 }
@@ -839,7 +839,7 @@ static int init(void)
 {
     int status;
     if (isInitialized) {
-        log_internal(LOG_LEVEL_ERROR, "Logging module already initialized");
+        logl_internal(LOG_LEVEL_ERROR, "Logging module already initialized");
         status = -1;
     }
     else {
@@ -874,7 +874,8 @@ int log_init(
         // The following functions aren't called by log_reinit():
         init_thread = pthread_self();
         avoid_stderr = fcntl(STDERR_FILENO, F_GETFD) == -1;
-        status = log_init_impl(id);
+        const char* const dest = get_default_destination();
+        status = logi_init(id, dest);
         isInitialized = (status == 0);
     }
     return status;
@@ -886,10 +887,10 @@ int log_init(
  */
 void log_avoid_stderr(void)
 {
-    log_lock();
+    logl_lock();
     avoid_stderr = true;
     refresh_needed = true;
-    log_unlock();
+    logl_unlock();
 }
 
 /**
@@ -903,7 +904,7 @@ int log_reinit(void)
 {
     int status = init();
     if (status == 0) {
-        status = log_reinit_impl();
+        status = logi_reinit();
         isInitialized = (status == 0);
     }
     return status;
@@ -943,12 +944,12 @@ int log_set_upstream_id(
     }
     else {
         char id[_POSIX_HOST_NAME_MAX + 6 + 1]; // hostname + "(type)" + 0
-        log_lock();
+        logl_lock();
         (void)snprintf(id, sizeof(id), "%s(%s)", hostId,
                 isFeeder ? "feed" : "noti");
         id[sizeof(id)-1] = 0;
         status = log_set_id(id);
-        log_unlock();
+        logl_unlock();
     }
     return status;
 }
@@ -968,9 +969,15 @@ int log_set_upstream_id(
 int log_set_destination(
         const char* const dest)
 {
-    log_lock();
-    int status = log_set_destination_impl(dest);
-    log_unlock();
+    int status;
+    if (dest == NULL) {
+        status = -1;
+    }
+    else {
+        logl_lock();
+        status = logi_set_destination(dest);
+        logl_unlock();
+    }
     return status;
 }
 
@@ -986,9 +993,9 @@ int log_set_destination(
  */
 const char* log_get_destination(void)
 {
-    log_lock();
-    const char* path = log_get_destination_impl();
-    log_unlock();
+    logl_lock();
+    const char* path = logi_get_destination();
+    logl_unlock();
     return path;
 }
 
@@ -1008,15 +1015,15 @@ int log_fini(void)
         status = -1;
     }
     else {
-        log_lock();
+        logl_lock();
         log_free();
         if (!pthread_equal(init_thread, pthread_self())) {
             status = 0;
         }
         else {
-            status = log_fini_impl();
+            status = logi_fini();
             if (status == 0) {
-                log_unlock();
+                logl_unlock();
                 status = mutex_fini(&log_mutex);
                 if (status == 0) {
                     (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
@@ -1033,11 +1040,11 @@ int log_fini(void)
  */
 void log_roll_level(void)
 {
-    log_lock();
+    logl_lock();
     log_level_t level = log_get_level();
     level = (level == LOG_LEVEL_DEBUG) ? LOG_LEVEL_ERROR : level - 1;
     log_set_level(level);
-    log_unlock();
+    logl_unlock();
 }
 
 /**
