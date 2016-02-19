@@ -701,13 +701,10 @@ int nnnxxx_offset;
                                 GOES_BLNK_FRM_LEN = saved_pdb_struct.recsize;
                                 n_scanlines = saved_pdh_struct.records_per_block;
 
-                                unotice("Fragments filled %d scanlines [%d] size (%d each) prod seq %ld ", 
+                                log_notice("Fragments filled %d scanlines [%d] size (%d each) prod seq %ld ",
                                                                 frags_left, n_scanlines, GOES_BLNK_FRM_LEN, prod.seqno);
-                                if (ulogIsDebug()){
-                                        udebug("prev prod seqno %ld [%ld %ld]", prod.seqno,
-                                                        prod.nfrag, pfrag->fragnum);
-                                        udebug("Balance frames left %d ", frags_left);
-                                }
+                                log_debug("prev prod seqno %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
+                                log_debug("Balance frames left %d ", frags_left);
                                 if(unCompress){
                                     /** Use uncompressed blank frames for scanlines **/
                                   for(int cnt = 0; cnt < frags_left; cnt++){
@@ -718,7 +715,7 @@ int nnnxxx_offset;
                                 } else {
                                     /** Use compressed blank frames for scanlines **/
                                    /** Compress the frame and add to the memheap **/
-                                   unotice("Genearating compressed blank scan lines of size [%d x %d x %d]" 
+                                   log_notice("Genearating compressed blank scan lines of size [%d x %d x %d]"
                                                  "[%ld] for prod seq %ld ", frags_left, n_scanlines, GOES_BLNK_FRM_LEN,
                                                  (frags_left * n_scanlines * GOES_BLNK_FRM_LEN), prod.seqno);
 /**** FOR NOW   *****/
@@ -792,7 +789,7 @@ int nnnxxx_offset;
                                 }
 #endif
                 if(unCompress) {
-                      uinfo("resetting inflate due to prod error....");
+                      log_info("resetting inflate due to prod error....");
                       inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, END_BLK );
                 }
 
@@ -987,7 +984,7 @@ int nnnxxx_offset;
              if(fillScan) {
                 if(pfrag->seqno != prod.seqno) { /** Ex. last 307/5690 this 5/5691 **/
                         frags_left = saved_nfrags - prod.tail->fragnum - 1;
-                        unotice("Total frames expected: %d balance left %d ", saved_nfrags, frags_left);
+                        log_notice("Total frames expected: %d balance left %d ", saved_nfrags, frags_left);
 
                         GOES_BLNK_FRM_LEN = saved_pdb_struct.recsize;
                         n_scanlines = saved_pdh_struct.records_per_block;
@@ -998,10 +995,8 @@ int nnnxxx_offset;
                                 MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount),
                                         (GOES_BLNK_FRM_LEN * n_scanlines));
                                 heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
-                                if (ulogIsDebug()){
-                                        udebug("GOES uncompressed blank frames added [tot/this] [%d/%d] heapcount = %ld blank_frame_len = %d scanlines %d",
-                                                                         frags_left, cnt, heapcount, GOES_BLNK_FRM_LEN, n_scanlines);
-                                }
+                                log_debug("GOES uncompressed blank frames added [tot/this] [%d/%d] heapcount = %ld blank_frame_len = %d scanlines %d",
+                                        frags_left, cnt, heapcount, GOES_BLNK_FRM_LEN, n_scanlines);
                              }
                         }else{
                                /** Use compressed blank frames for scanlines **/
@@ -1047,7 +1042,7 @@ int nnnxxx_offset;
 
                      } /** end if-else unCompress **/
 
-                        unotice("%d scanlines filled into block %d prod seq %ld ", n_scanlines, frags_left, prod.seqno);
+                        log_notice("%d scanlines filled into block %d prod seq %ld ", n_scanlines, frags_left, prod.seqno);
                         /** Insert the prod with missing frames into the ldm pq    **/
                         /** Also terminate current prod as there is no header info **/
                         process_prod(prod, PROD_NAME, memheap, heapcount,
@@ -1069,7 +1064,7 @@ int nnnxxx_offset;
                 n_scanlines = pdh->records_per_block;
                 GOES_BLNK_FRM_LEN = pdb->recsize;
 
-                unotice("Balance frames left %d scanlines per frame %d", frags_left, n_scanlines);
+                log_notice("Balance frames left %d scanlines per frame %d", frags_left, n_scanlines);
 
                 if(unCompress) {
                     for(int cnt = 0; cnt < frags_left; cnt++){
@@ -1077,10 +1072,8 @@ int nnnxxx_offset;
                          MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount),
                                 (GOES_BLNK_FRM_LEN * n_scanlines));
                          heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
-                         if (ulogIsDebug()){
-                                udebug("GOES blank frames added [tot/this] [%d/%d] heapcount [%ld] blank_frame_len [%d] scanlines [%d]",
-                                                                         frags_left, cnt, heapcount, GOES_BLNK_FRM_LEN, n_scanlines);
-                         }
+                         log_debug("GOES blank frames added [tot/this] [%d/%d] heapcount [%ld] blank_frame_len [%d] scanlines [%d]",
+                                frags_left, cnt, heapcount, GOES_BLNK_FRM_LEN, n_scanlines);
                    }
                 }else{
                       /** Use compressed blank frames for scanlines **/
@@ -1100,13 +1093,10 @@ int nnnxxx_offset;
                         memcpy(memheap + heapcount, comprBuf, comprLen);
                         MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
                         heapcount += comprLen;
-                        if (ulogIsDebug()){
-                         udebug("GOES compressed blank frames added heapcount = %ld blank frame size = %ld ",
-                                                                                           heapcount, comprLen );
-                         }
+                        log_debug("GOES compressed blank frames added heapcount = %ld blank frame size = %ld ", heapcount, comprLen );
                       }
                   }
-                unotice("Total %d scanlines filled for block %d into prod seq %ld ", (n_scanlines * frags_left), frags_left, prod.seqno);
+                log_notice("Total %d scanlines filled for block %d into prod seq %ld ", (n_scanlines * frags_left), frags_left, prod.seqno);
 /**********************    NEW CODE    ********************************/
              }/** end if fillScan */
              else {
@@ -1219,7 +1209,7 @@ int nnnxxx_offset;
                                       }
 #endif
               if(unCompress) {
-                     uinfo("resetting inflate due to prod error....");
+                     log_info("resetting inflate due to prod error....");
                      inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, END_BLK );
               }
 
@@ -1281,8 +1271,8 @@ int nnnxxx_offset;
               **  and frame is compressed then uncompress
               **  the frame and add to the heap
               **/
-              if (ulogIsDebug() && unCompress)
-                     udebug(" unCompress = %d   PROD_COMPRESSED = %d seqno=%ld\n",
+              if (unCompress)
+                     log_debug(" unCompress = %d   PROD_COMPRESSED = %d seqno=%ld\n",
                                                         unCompress, PROD_COMPRESSED, prod.seqno);
 
               /***  
@@ -1295,8 +1285,7 @@ int nnnxxx_offset;
                  (curr_prod_seqno == prod.seqno) &&
                  (prod.nfrag == (pfrag->fragnum + 1)) &&
                  (saved_prod_compr_flag == 1 && PROD_COMPRESSED == 0)) {
-                   if(ulogIsDebug())
-                      udebug("Prev. frame %s Current frame %s", ((saved_prod_compr_flag > 0) ? "compressed":"uncompressed"),
+                      log_debug("Prev. frame %s Current frame %s", ((saved_prod_compr_flag > 0) ? "compressed":"uncompressed"),
                             ((PROD_COMPRESSED > 0) ? "compressed" : "uncompressed"));
                      firstBlk = 2;
                      lastBlk = 2;
@@ -1306,8 +1295,7 @@ int nnnxxx_offset;
 
               if(unCompress) {
                  if(pdh->dbno == 0){
-                    if(ulogIsDebug())
-                       udebug("First Blk, initializing inflate prod %ld", prod.seqno);
+                    log_debug("First Blk, initializing inflate prod %ld", prod.seqno);
                     inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
                  }
               }
@@ -1322,14 +1310,9 @@ int nnnxxx_offset;
                      wmo_offset = prod_get_WMO_offset(buf + dataoff, datalen, (size_t *)&wmolen);
                      nnnxxx_offset =  prod_get_WMO_nnnxxx_offset(buf + dataoff, datalen, &nxlen);
 
-                     if (ulogIsDebug()){
-                              udebug(" Block# %d  wmo_offset [%d] wmolen [%d] ",
-                                                        pdh->dbno, wmo_offset, wmolen);
-                              udebug(" Block# %d  nnnxxx_offset [%d] nnxxlen [%d] ",
-                                                        pdh->dbno, nnnxxx_offset, nxlen);
-                     }
-                     if (ulogIsDebug())
-                              udebug("Seq#:%ld Block# %d ",prod.seqno, pdh->dbno );
+                     log_debug(" Block# %d  wmo_offset [%d] wmolen [%d] ", pdh->dbno, wmo_offset, wmolen);
+                     log_debug(" Block# %d  nnnxxx_offset [%d] nnxxlen [%d] ", pdh->dbno, nnnxxx_offset, nxlen);
+                     log_debug("Seq#:%ld Block# %d ",prod.seqno, pdh->dbno );
                      if((nnnxxx_offset == -1 && nxlen == 0) && (wmolen > 0)) {
                         /** Product does not contain NNNXXX **/
                         inflateData(buf + dataoff + wmolen, datalen - wmolen, uncomprBuf, &uncomprLen, ANY_BLK );
@@ -1341,16 +1324,13 @@ int nnnxxx_offset;
                         }
                      }
                  } else{ /** Continuation block **/
-                     if (ulogIsDebug())
-                              udebug(" Block# %d  contd block", pdh->dbno);
+                     log_ebug(" Block# %d  contd block", pdh->dbno);
                      inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, ANY_BLK );
-                     if (ulogIsDebug())
-                              udebug("Seq#:%ld Block# %d  contd block ",prod.seqno, pdh->dbno);
+                     log_debug("Seq#:%ld Block# %d  contd block ",prod.seqno, pdh->dbno);
                  }
                 memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
                 deflen = uncomprLen;
-                if (ulogIsDebug())
-                       udebug(" Block# %d inflated uncomprLen [%ld]", pdh->dbno, uncomprLen);
+                log_debug(" Block# %d inflated uncomprLen [%ld]", pdh->dbno, uncomprLen);
              } else{
                /** executed by default (when unCompress is not enabled 
                    or product is not compressed) **/
@@ -1386,7 +1366,7 @@ int nnnxxx_offset;
  
 #ifdef RETRANS_SUPPORT
                  if(((prod.nfrag == 0) || (prod.nfrag >= (pfrag->fragnum +1))) && (save_prod == 0)){
-                   if(ulogIsVerbose())
+                   if(log_is_enabled_info)
                           log_info("Do not save prod [seqno=%ld] as its retrans dup fragnum/total fragments =[%d of %d] save_prod=[%d] \n",
                            prod.seqno,pfrag->fragnum,prod.nfrag,save_prod);
                    ds_free ();
@@ -1397,8 +1377,7 @@ int nnnxxx_offset;
 #endif
           if ((prod.nfrag == 0) || (prod.nfrag == (pfrag->fragnum + 1))) {
                if(unCompress){
-                  if(ulogIsDebug())
-                     udebug("uncompress ==> %d Last Blk, call inflateEnd prod %ld", unCompress,  prod.seqno);
+                  log_debug("uncompress ==> %d Last Blk, call inflateEnd prod %ld", unCompress,  prod.seqno);
                   inflateData(NULL, 0, NULL, &uncomprLen, END_BLK );
                }
             if (GOES == 1) {
@@ -1412,8 +1391,7 @@ int nnnxxx_offset;
             }
             if (log_is_enabled_info)
               log_info("we should have a complete product %ld %ld/%ld %ld /heap "
-                  "%ld", prod.seqno, pfrag->seqno, prod.nfrag, pfrag->fragnum,
-                 (long) heapcount);
+                  "%ld", prod.seqno, pfrag->seqno, prod.nfrag, pfrag->fragnum, (long) heapcount);
             if ((NWSTG == 1) && (heapcount > 4)) {
                 cnt = 4;                /* number of bytes to add for TRAILER */
 
@@ -1445,7 +1423,7 @@ int nnnxxx_offset;
 						num_prod_discards++;
                                                 /* Set discard_prod to 1; Otherwise already stored prod may be requested for retransmit */
                                                 discard_prod=1;
-                                                if(ulogIsVerbose())
+                                                if(log_is_enabled_info)
                                                   log_info("No of products discarded = %ld prod.seqno=%ld \n ",num_prod_discards,prod.seqno);
                                                 prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
                                                 acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno -1 ;
@@ -1635,38 +1613,34 @@ static int inflateData(
   if(blk == END_BLK && isStreamSet) {
     ret = inflateEnd(&i_zstrm);
     if(ret < 0) {
-      uerror("Fail inflateEnd %d [%s] ", ret, decode_zlib_err(ret));
+      log_error("Fail inflateEnd %d [%s] ", ret, decode_zlib_err(ret));
       return (ret);
     }
    isStreamSet = NO;
-   if(ulogIsDebug())
-      udebug("inflateEnd called ......ret=%d", ret);
+   log_debug("inflateEnd called ......ret=%d", ret);
    return 0;
   }
 
 
 
   if(blk == BEGIN_BLK && !isStreamSet){
-      if (ulogIsDebug())
-        udebug("Received first Blk");
-        memset(&i_zstrm, '\0', sizeof(z_stream));
-        i_zstrm.zalloc = Z_NULL;
-        i_zstrm.zfree = Z_NULL;
-        i_zstrm.opaque = Z_NULL;
+     log_debug("Received first Blk");
+     memset(&i_zstrm, '\0', sizeof(z_stream));
+     i_zstrm.zalloc = Z_NULL;
+     i_zstrm.zfree = Z_NULL;
+     i_zstrm.opaque = Z_NULL;
 
-        if ((zerr = inflateInit(&i_zstrm)) != Z_OK) {
-                uerror("ERROR %d inflateInit (%s)",
-                        zerr, decode_zlib_err(zerr));
-                return -1;
-        }
-        isStreamSet = YES;
-        return 0;
+     if ((zerr = inflateInit(&i_zstrm)) != Z_OK) {
+       log_error("ERROR %d inflateInit (%s)", zerr, decode_zlib_err(zerr));
+       return -1;
+     }
+     isStreamSet = YES;
+     return 0;
   }
 
   dstBuf = (unsigned char *) outBuf;
 
-  if (ulogIsDebug())
-       udebug("inflating now.. inlen[%ld] ", inLen);
+    log_debug("inflating now.. inlen[%ld] ", inLen);
 /**************** NEW CODE FROM JAVA *******************/
 
     while(totalBytesIn < inLen ) {
@@ -1684,7 +1658,7 @@ static int inflateData(
       while(ret != Z_STREAM_END) {
          ret  = inflate(&i_zstrm, Z_NO_FLUSH);
          if(ret < 0) {
-          uerror(" Error %d inflate (%s)", ret, decode_zlib_err(ret));
+          log_error(" Error %d inflate (%s)", ret, decode_zlib_err(ret));
           (void)inflateEnd(&i_zstrm);
           isStreamSet = NO;
            return ret;
@@ -1692,7 +1666,7 @@ static int inflateData(
          inflatedBytes = CHUNK_SZ - i_zstrm.avail_out;
 
          if(inflatedBytes == 0) {
-              unotice("\n Unable to decompress data - truncated");
+              log_notice("\n Unable to decompress data - truncated");
               break;
          }
 
@@ -1701,25 +1675,25 @@ static int inflateData(
 
          if(totalBytesIn == inLen) {
               idx = getIndex(out, 0, inflatedBytes);
-          }
+         }
          if(idx == -1) {
             /** search failed, so write all data **/
             memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
          } else {
             /*memcpy(dstBuf + savedByteCntr, out, idx);*/
             memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
-          }
+         }
             savedByteCntr = decompByteCounter;
-       }
-       // Reset inflater for additional input
-       ret = inflateReset(&i_zstrm);
-       if(ret == Z_STREAM_ERROR){
-          uerror(" Error %d inflateReset (%s)", ret, decode_zlib_err(ret));
-          (void)inflateEnd(&i_zstrm);
-          isStreamSet = NO;
-           return ret;
-       }
       }
+      // Reset inflater for additional input
+      ret = inflateReset(&i_zstrm);
+      if(ret == Z_STREAM_ERROR){
+        log_error(" Error %d inflateReset (%s)", ret, decode_zlib_err(ret));
+        (void)inflateEnd(&i_zstrm);
+        isStreamSet = NO;
+        return ret;
+      }
+    }
 
 /**************** NEW CODE FROM JAVA *******************/
 
@@ -1759,9 +1733,7 @@ static int deflateData(
     static int isStreamSet = NO;
     static z_stream d_zstrm;
 
-  if (ulogIsDebug())
-          udebug(" Block [%d] deflating now.. inlen[%ld] isStreamSet %d ",
-                                             blk, inLen, isStreamSet );
+  log_debug(" Block [%d] deflating now.. inlen[%ld] isStreamSet %d ", blk, inLen, isStreamSet );
   if(blk == BEGIN_BLK && !isStreamSet){
 
         memset(&d_zstrm, '\0', sizeof(z_stream));
@@ -1770,8 +1742,7 @@ static int deflateData(
         d_zstrm.opaque = Z_NULL;
 
         if ((zerr = deflateInit(&d_zstrm, Z_BEST_COMPRESSION)) != Z_OK) {
-                uerror("ERROR %d deflateInit (%s)",
-                        zerr, decode_zlib_err(zerr));
+                log_error("ERROR %d deflateInit (%s)", zerr, decode_zlib_err(zerr));
                 return -1;
         }
       isStreamSet = YES;
@@ -1780,13 +1751,11 @@ static int deflateData(
 
    if(blk == END_BLK && isStreamSet){
         if ((zerr = deflateEnd(&d_zstrm)) != Z_OK) {
-                uerror("ERROR %d deflateEnd (%s)",
-                        zerr, decode_zlib_err(zerr));
+                log_error("ERROR %d deflateEnd (%s)", zerr, decode_zlib_err(zerr));
                 return -1;
         }
      isStreamSet = NO;
-     if(ulogIsDebug())
-       udebug(" Calling deflateEnd to close deflate stream zerr = %d", zerr);
+     log_debug(" Calling deflateEnd to close deflate stream zerr = %d", zerr);
    }
 
     dstBuf = (unsigned char *) outBuf;
@@ -1795,8 +1764,7 @@ static int deflateData(
  /************** NEW CODE   - FROM JAVA ********************/
 
    while(totalBytesComp != inLen ) {
-      int compChunkSize = ((inLen - totalBytesComp) > 5120) ? 5120 :
-                                                  (inLen - totalBytesComp);
+      int compChunkSize = ((inLen - totalBytesComp) > 5120) ? 5120 : (inLen - totalBytesComp);
       memcpy(in, inBuf + totalBytesComp, compChunkSize);
 
       d_zstrm.avail_in = compChunkSize; /*srcLen - totalBytesComp;*/
@@ -1813,7 +1781,7 @@ static int deflateData(
        do  {
          ret  = deflate(&d_zstrm, flush);
           if (ret < 0) {
-              uerror("FAIL %d delate (%s}", ret, decode_zlib_err(ret));
+              log_error("FAIL %d delate (%s}", ret, decode_zlib_err(ret));
               (void)deflateEnd(&d_zstrm);
                isStreamSet = NO;
                return (ret);
@@ -1829,18 +1797,16 @@ static int deflateData(
 
           memcpy(dstBuf + savedByteCntr, out, compressedBytes);
           savedByteCntr = compressedByteCounter;
-          if (ulogIsDebug())
-                  udebug(" aval_in [%ld] after deflate.. inlen[%ld] compBytes [%ld]", 
-                                                  d_zstrm.avail_in, inLen, compressedBytes);
-         if(d_zstrm.avail_in > 0){
-          int ret1;
+          log_debug(" aval_in [%ld] after deflate.. inlen[%ld] compBytes [%ld]", d_zstrm.avail_in, inLen, compressedBytes);
+          if(d_zstrm.avail_in > 0){
+            int ret1;
             memmove(in, d_zstrm.next_in, d_zstrm.avail_in);
             totalBytesComp += d_zstrm.avail_in;
             d_zstrm.avail_out = CHUNK_SZ;
             d_zstrm.next_out = out;
             ret1  = deflate(&d_zstrm, flush);
             if (ret1 < 0){  /* state not clobbered */
-              uerror("FAIL %d delate (%s) ", ret, decode_zlib_err(ret1));
+              log_error("FAIL %d delate (%s) ", ret, decode_zlib_err(ret1));
               deflateEnd(&d_zstrm);
               isStreamSet = NO;
               return (ret);
