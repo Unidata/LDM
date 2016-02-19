@@ -359,7 +359,8 @@ static void test_log_set_output(void)
     static const char* outputs[] = {"", "-", tmpPathname};
     for (int i = 0; i < sizeof(outputs)/sizeof(outputs[0]); i++) {
         const char* expected = outputs[i];
-        (void)log_set_destination(expected);
+        status = log_set_destination(expected);
+        CU_ASSERT_EQUAL(status, 0);
         const char* actual = log_get_destination();
         CU_ASSERT_PTR_NOT_NULL(actual);
         CU_ASSERT_STRING_EQUAL(actual, expected);

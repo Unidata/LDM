@@ -31,6 +31,10 @@
     #define _XOPEN_PATH_MAX 1024
 #endif
 
+/******************************************************************************
+ * Private API:
+ ******************************************************************************/
+
 /**
  * Functions for accessing the destination for log messages.
  */
@@ -43,21 +47,6 @@ typedef struct {
     void (*fini)(void);
 } dest_funcs_t;
 
-/**
- * The mapping from `log` logging levels to system logging daemon priorities:
- * Accessed by macros in `log_private.h`.
- */
-int                  log_syslog_priorities[] = {
-        LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR
-};
-/**
- *  Logging level.
- */
-static log_level_t   logging_level = LOG_LEVEL_NOTICE;
-/**
- * Specification of the destination for log messages.
- */
-static char          dest_spec[_XOPEN_PATH_MAX];
 /**
  * The logging stream.
  */
@@ -116,19 +105,6 @@ static const char* get_ldm_logfile_pathname(void)
 }
 
 /**
- * Returns the system logging priority associated with a logging level.
- *
- * @param[in] level    The logging level
- * @retval    LOG_ERR  `level` is invalid
- * @return             The system logging priority associated with `level`
- */
-static int level_to_priority(
-        const log_level_t level)
-{
-    return logl_vet_level(level) ? log_syslog_priorities[level] : LOG_ERR;
-}
-
-/**
  * Returns the string associated with a logging level.
  *
  * @param[in] level      The logging level
@@ -144,7 +120,7 @@ static const char* level_to_string(
 }
 
 /**
- * Opens access to the system logging daemon.
+ * Initializes access to the system logging daemon.
  */
 static void syslog_init(void)
 {
@@ -162,12 +138,12 @@ static void syslog_log(
         const log_loc_t* restrict loc,
         const char* restrict      msg)
 {
-    syslog(level_to_priority(level), "%s:%s():%d %s",
+    syslog(logl_level_to_priority(level), "%s:%s():%d %s",
             logl_basename(loc->file), loc->func, loc->line, msg);
 }
 
 /**
- * Closes access to the system logging daemon.
+ * Finalizes access to the system logging daemon.
  */
 static void syslog_fini(void)
 {
@@ -179,7 +155,8 @@ static dest_funcs_t syslog_funcs = {syslog_init, syslog_log, syslog_fini};
 /**
  * Writes a single log message to the stream.
  *
- * @param[in] level  Logging level.
+ * @param[in] level  The Logging level.
+ * @param[in] loc    The location where the message was created.
  * @param[in] msg    The message.
  */
 static void stream_log(
@@ -202,7 +179,7 @@ static void stream_log(
 }
 
 /**
- * Opens access to the standard error stream.
+ * Initializes access to the standard error stream.
  */
 static void stderr_init(void)
 {
@@ -224,7 +201,7 @@ static void stderr_log(
 }
 
 /**
- * Closes access to the standard error stream.
+ * Finalizes access to the standard error stream.
  */
 static void stderr_fini(void)
 {
@@ -234,7 +211,7 @@ static void stderr_fini(void)
 static dest_funcs_t stderr_funcs = {stderr_init, stderr_log, stderr_fini};
 
 /**
- * "Opens" access to the log file. Does nothing in case the destination log
+ * Initializes access to the log file. Does nothing in case the destination log
  * file doesn't yet exist and another log file will be specified.
  */
 static inline void file_init(void)
@@ -242,7 +219,7 @@ static inline void file_init(void)
 }
 
 /**
- * Opens access to the log file.
+ * Opens the log file.
  *
  * @retval  0  Success
  * @retval -1  Failure
@@ -250,11 +227,13 @@ static inline void file_init(void)
 static int file_open(void)
 {
     int status;
-    int file_fd = open(dest_spec, O_WRONLY|O_APPEND|O_CREAT,
+    int file_fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
             S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
     if (file_fd < 0) {
-        logl_internal(LOG_LEVEL_ERROR, "Couldn't open log file \"%s\": %s",
-                dest_spec, strerror(errno));
+        /*
+         * Can't log message because logl_internal() -> logi_log() ->
+         * file_log() -> file_open()
+         */
         status = -1;
     }
     else {
@@ -284,7 +263,7 @@ static void file_log(
 }
 
 /**
- * Closes access to the log file.
+ * Finalizes access to the log file.
  */
 static void file_fini(void)
 {
@@ -304,51 +283,19 @@ static dest_funcs_t file_funcs = {file_init, file_log, file_fini};
  * Sets the logging destination.
  *
  * @pre                Module is locked
- * @param[in] dest     The logging destination. Caller may free. One of <dl>
- *                         <dt>""   <dd>The system logging daemon.
- *                         <dt>"-"  <dd>The standard error stream.
- *                         <dt>else <dd>The file whose pathname is `dest`.
- *                     </dl>
  * @retval  0          Success
  * @retval -1          Failure
  */
-int logi_set_destination(
-        const char* const dest)
+int logi_set_destination(void)
 {
     dest_funcs.fini();
-    /*
-     * Handle potential overlap because `log_get_destination()` returns
-     * `dest_spec`
-     */
-    size_t nbytes = strlen(dest);
-    if (nbytes > sizeof(dest_spec) - 1)
-        nbytes = sizeof(dest_spec) - 1;
-    ((char*)memmove(dest_spec, dest, nbytes))[nbytes] = 0;
-
-    dest_funcs = LOG_IS_SYSLOG_SPEC(dest)
+    dest_funcs = LOG_IS_SYSLOG_SPEC(log_dest)
         ? syslog_funcs
-        : LOG_IS_STDERR_SPEC(dest)
+        : LOG_IS_STDERR_SPEC(log_dest)
             ? stderr_funcs
             : file_funcs;
-
     dest_funcs.init();
     return 0;
-}
-
-/**
- * Returns the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @pre          Module is locked
- * @return       The logging destination. One of <dl>
- *                   <dt>""      <dd>The system logging daemon.
- *                   <dt>"-"     <dd>The standard error stream.
- *                   <dt>else    <dd>The pathname of the log file.
- *               </dl>
- */
-const char* logi_get_destination(void)
-{
-    return dest_spec;
 }
 
 /**
@@ -393,17 +340,11 @@ void logi_internal(
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
- * @param[in] dest     Destination for log messages: <dl>
- *                         <dt>""   <dd>System logging daemon
- *                         <dt>"-"  <dd>Standard error stream
- *                         <dt>else <dd>Pathname of log file
- *                     </dl>
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
 int logi_init(
-        const char* const id,
-        const char* const dest)
+        const char* const id)
 {
     int status;
     if (id == NULL) {
@@ -417,12 +358,11 @@ int logi_init(
         unlock = lock;
         unlock.l_type = F_UNLCK;
         dest_funcs = stderr_funcs;
-        logging_level = LOG_LEVEL_NOTICE;
         syslog_options = LOG_PID | LOG_NDELAY;
         syslog_facility = LOG_LDM;
 
         strncpy(ident, logl_basename(id), sizeof(ident))[sizeof(ident)-1] = 0;
-        status = logi_set_destination(dest);
+        status = logi_set_destination();
     }
     return status;
 }
@@ -469,15 +409,6 @@ void logi_log(
  * Public API:
  ******************************************************************************/
 
-bool log_is_level_enabled(
-        const log_level_t level)
-{
-    logl_lock();
-    int enabled = logl_vet_level(level) && level >= logging_level;
-    logl_unlock();
-    return enabled;
-}
-
 /**
  * Returns the default destination for log messages if the process is a daemon.
  *
@@ -505,7 +436,7 @@ int log_set_level(
     }
     else {
         logl_lock();
-        logging_level = level;
+        log_level = level;
         logl_unlock();
         status = 0;
     }
@@ -521,7 +452,7 @@ int log_set_level(
 log_level_t log_get_level(void)
 {
     logl_lock();
-    log_level_t level = logging_level;
+    log_level_t level = log_level;
     logl_unlock();
     return level;
 }
@@ -532,7 +463,7 @@ log_level_t log_get_level(void)
  *
  * @param[in] facility  The facility that will be used when logging to the
  *                      system logging daemon.
- * @retval    0         Success (always)
+ * @retval    0         Success
  * @retval    -1        Failure
  */
 int log_set_facility(
@@ -542,6 +473,8 @@ int log_set_facility(
     bool sign_local0 = facility > LOG_LOCAL0;
     bool sign_local7 = facility > LOG_LOCAL7;
     if (sign_local0 == sign_local7 && facility != LOG_USER) {
+        logl_internal(LOG_LEVEL_ERROR, "Invalid system logging facility: %d",
+                facility);
         status = -1; // `facility` is invalid
     }
     else {

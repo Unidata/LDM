@@ -6,7 +6,7 @@
  *   @file: log2ulog.c
  * @author: Steven R. Emmerson
  *
- * This file provides the `log.h` API using `ulog.c`.
+ * This file interfaces the `log.h` API to the `ulog.c` module.
  */
 
 #include "config.h"
@@ -31,26 +31,13 @@
  * Private API:
  ******************************************************************************/
 
-/**
- * The mapping from `log` logging levels to `ulog` priorities:
- */
-int                  log_syslog_priorities[] = {
-        LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR
-};
-
-/**
- *  Logging level. The initial value must be consonant with the initial value of
- *  `logMask` in `ulog.c`.
- */
-static log_level_t loggingLevel = LOG_LEVEL_DEBUG;
-
 /******************************************************************************
  * Package-Private Implementation API:
  ******************************************************************************/
 
 /**
  * Initializes the logging module. Should be called before any other function.
- * - `log_get_destination()` will return ""
+ * - `log_get_destination()` will return
  *   - ""  if the process is a daemon
  *   - "-" otherwise
  * - `log_get_facility()` will return `LOG_LDM`.
@@ -58,22 +45,14 @@ static log_level_t loggingLevel = LOG_LEVEL_DEBUG;
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
- * @param[in] dest     Destination for log messages: <dl>
- *                         <dt>""   <dd>System logging daemon
- *                         <dt>"-"  <dd>Standard error stream
- *                         <dt>else <dd>Pathname of log file
- *                     </dl>
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
 int logi_init(
-        const char* const id,
-        const char* const dest)
+        const char* const id)
 {
-    char progname[_XOPEN_PATH_MAX];
-    strncpy(progname, id, sizeof(progname))[sizeof(progname)-1] = 0;
-    id = basename(progname);
-    int status = openulog(id, LOG_PID, LOG_LDM, dest);
+    const char* const progname = logl_basename(id);
+    int status = openulog(progname, LOG_PID, LOG_LDM, log_dest);
     if (status != -1)
         status = log_set_level(LOG_LEVEL_NOTICE);
     return status ? -1 : 0;
@@ -103,57 +82,20 @@ int logi_reinit(void)
     const char* const id = getulogident();
     const unsigned    options = ulog_get_options();
     const int         facility = getulogfacility();
-    const char* const dest = getulogpath();
-    int               status = openulog(id, options, facility, dest);
+    int               status = openulog(id, options, facility, log_dest);
     return status < 0 ? -1 : 0;
 }
 
 /**
  * Sets the logging destination. Should be called between log_init() and
  * log_fini().
- *
- * @param[in] dest     The logging destination. Caller may free. One of <dl>
- *                         <dt>""   <dd>The system logging daemon.
- *                         <dt>"-"  <dd>The standard error stream.
- *                         <dt>else <dd>The file whose pathname is `dest`.
- *                     </dl>
  */
-void logi_set_destination(
-        const char* const dest)
+int logi_set_destination(void)
 {
     const char* const id = getulogident();
     const unsigned    options = ulog_get_options();
-    int               status = openulog(id, options, LOG_LDM, dest);
-    if (status == -1)
-        abort();
-}
-
-/**
- * Returns the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @pre          Module is locked
- * @return       The logging destination. One of <dl>
- *                   <dt>""      <dd>The system logging daemon.
- *                   <dt>"-"     <dd>The standard error stream.
- *                   <dt>else    <dd>The pathname of the log file.
- *               </dl>
- */
-const char* logi_get_destination(void)
-{
-    const char* dest = getulogpath();
-    return dest == NULL ? "" : dest;
-}
-
-/**
- * Returns the default destination for log messages if the process is a daemon.
- *
- * @retval ""   The system logging daemon
- * @return      The pathname of the standard LDM log file
- */
-const char* log_get_default_daemon_destination(void)
-{
-    return "";
+    int               status = openulog(id, options, LOG_LDM, log_dest);
+    return status == -1 ? -1 : 0;
 }
 
 /**
@@ -168,7 +110,7 @@ void logi_log(
         const log_loc_t*  loc,
         const char*       string)
 {
-    (void)ulog(log_get_priority(level), "%s:%s():%d %s",
+    (void)ulog(logl_level_to_priority(level), "%s:%s():%d %s",
             logl_basename(loc->file), loc->func, loc->line, string);
 }
 
@@ -188,7 +130,7 @@ void logi_internal(
     va_list args;
     va_start(args, loc);
     const char* const fmt = va_arg(args, const char*);
-    (void)vulog(log_get_priority(level), fmt, args);
+    (void)vulog(logl_level_to_priority(level), fmt, args);
     va_end(args);
 }
 
@@ -196,14 +138,15 @@ void logi_internal(
  * Public API:
  ******************************************************************************/
 
-bool log_is_level_enabled(
-        const log_level_t level)
+/**
+ * Returns the default destination for log messages if the process is a daemon.
+ *
+ * @retval ""   The system logging daemon
+ * @return      The pathname of the standard LDM log file
+ */
+const char* log_get_default_daemon_destination(void)
 {
-    int priority = log_get_priority(level);
-    logl_lock();
-    bool enabled = ulog_is_priority_enabled(priority);
-    logl_unlock();
-    return enabled;
+    return "";
 }
 
 /**
@@ -226,7 +169,7 @@ int log_set_level(
                 LOG_UPTO(LOG_ERR)};
         logl_lock();
         (void)setulogmask(ulogUpTos[level]);
-        loggingLevel = level;
+        log_level = level;
         logl_unlock();
         status = 0;
     }
@@ -242,7 +185,7 @@ int log_set_level(
 log_level_t log_get_level(void)
 {
     logl_lock(); // For visibility of changes
-    log_level_t level = loggingLevel;
+    log_level_t level = log_level;
     logl_unlock();
     return level;
 }
@@ -258,10 +201,9 @@ int log_set_facility(
         const int facility)
 {
     logl_lock();
-    const char* const id = log_get_id();
-    const unsigned    options = log_get_options();
-    const char* const output = log_get_destination();
-    int               status = openulog(id, options, facility, output);
+    const char* const id = getulogident();
+    const unsigned    options = ulog_get_options();
+    int               status = openulog(id, options, facility, log_dest);
     logl_unlock();
     return status == -1 ? -1 : 0;
 }

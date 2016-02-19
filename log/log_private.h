@@ -55,55 +55,36 @@ typedef struct message {
     size_t          size;       ///< Size of message buffer
 } Message;
 
-#if WANT_SLOG
-    // `slog` implementation:
-
-    /// Map from MYLOG levels to SYSLOG priorities
-    extern int log_syslog_priorities[];
-
-    /// Returns the SYSLOG priority corresponding to a MYLOG level
-    #define log_get_priority(level)     log_syslog_priorities[level]
-#elif WANT_LOG4C
-    // `log4c` implementation:
-
-    #include <log4c.h>
-
-    /// Map from MYLOG levels to LOG4C priorities
-    extern int               log_log4c_priorities[];
-    /// The current working LOG4C category
-    extern log4c_category_t* log_category;
-
-    /// Returns the current working LOG4C category
-    #define log_get_category()          log_category
-
-    /// Returns the LOG4C priority corresponding to a MYLOG level
-    #define log_get_priority(level)     log_log4c_priorities[level]
-
-    /// Indicates if a log message of the given level would be emitted
-    #define log_is_level_enabled(level) \
-        log4c_category_is_priority_enabled(log_get_category(), \
-                log_get_priority(level))
-#elif WANT_ULOG
+#if WANT_ULOG
     // `ulog` implementation:
-
     #include "ulog/ulog.h"
     #include <limits.h>
     #include <stdio.h>
+#endif
 
-    /// Map from MYLOG levels to SYSLOG priorities
-    extern int log_syslog_priorities[];
+/**
+ *  Logging level.
+ */
+extern log_level_t log_level;
 
-    /// Returns the SYSLOG priority corresponding to a MYLOG level
-    #define log_get_priority(level)     log_syslog_priorities[level]
-
-    /// Indicates if a log message of the given level would be emitted
-    #define log_is_level_enabled(level) \
-        ulog_is_priority_enabled(log_get_priority(level))
-#endif // `ulog` implementation
+/**
+ * The persistent destination specification.
+ */
+extern char        log_dest[];
 
 /******************************************************************************
  * Internal logging library functions:
  ******************************************************************************/
+
+/**
+ * Returns the system logging priority associated with a logging level.
+ *
+ * @param[in] level    The logging level
+ * @retval    LOG_ERR  `level` is invalid
+ * @return             The system logging priority associated with `level`
+ */
+int logl_level_to_priority(
+        const log_level_t level);
 
 /**
  * Acquires this module's mutex.
@@ -307,32 +288,13 @@ void* logl_malloc(
  ******************************************************************************/
 
 /**
- * Returns the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @pre          Module is locked
- * @return       The logging destination. One of <dl>
- *                   <dt>""      <dd>The system logging daemon.
- *                   <dt>"-"     <dd>The standard error stream.
- *                   <dt>else    <dd>The pathname of the log file.
- *               </dl>
- */
-const char* logi_get_destination(void);
-
-/**
  * Sets the logging destination.
  *
  * @pre                Module is locked
- * @param[in] dest     The logging destination. Caller may free. One of <dl>
- *                         <dt>""   <dd>The system logging daemon.
- *                         <dt>"-"  <dd>The standard error stream.
- *                         <dt>else <dd>The file whose pathname is `dest`.
- *                     </dl>
  * @retval  0          Success
  * @retval -1          Failure
  */
-int logi_set_destination(
-        const char* const dest);
+int logi_set_destination(void);
 
 /**
  * Initializes the logging module's implementation. Should be called before any
@@ -340,17 +302,11 @@ int logi_set_destination(
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
- * @param[in] dest     Destination for log messages: <dl>
- *                         <dt>""   <dd>System logging daemon
- *                         <dt>"-"  <dd>Standard error stream
- *                         <dt>else <dd>Pathname of log file
- *                     </dl>
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
  */
 int logi_init(
-        const char* const id,
-        const char* const dest);
+        const char* const id);
 
 /**
  * Re-initializes the logging module based on its state just prior to calling
