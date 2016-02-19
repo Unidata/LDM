@@ -58,9 +58,13 @@ extern void     process_prod(
     LdmProductQueue* const      lpq,
     psh_struct*                 psh,
     sbn_struct*                 sbn);
-static z_stream i_zstrm;
 
-int inflateData(char *const inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
+static int	inflateData (char const *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
+static int	deflateData (char const *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
+static int	prod_get_WMO_nnnxxx_offset (char *wmo_buff, int max_search, int *p_len);
+static int	prod_get_WMO_offset (char *buf, size_t buflen, size_t *p_wmolen);
+static int	getIndex (char *arr, int pos, int sz);
+static char	*decode_zlib_err (int err);
 
 #ifdef RETRANS_SUPPORT
 extern CPIO_TABLE cpio_tbl;
@@ -87,6 +91,8 @@ struct productMaker {
 };
 
 datastore*  ds_alloc(void);
+static z_stream d_zstrm;
+static z_stream i_zstrm;
 
 /**
  * Returns a new product-maker.
@@ -1092,7 +1098,6 @@ int nnnxxx_offset;
                                                                      comprBuf, &comprLen, ANY_BLK );
 /**** FOR NOW   *****/
 
-                      //  genBlankScanlines((GOES_BLNK_FRM_LEN * n_scanlines * frags_left) , &comprBuf, &comprLen );
                       for(int cnt = 0; cnt < frags_left; cnt++){
                         memcpy(memheap + heapcount, comprBuf, comprLen);
                         MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
@@ -1597,8 +1602,7 @@ int pmStatus(
  * @retval -1   Failed to uncompress.
  */
 
-static z_stream i_zstrm;
-int inflateData(
+static int inflateData(
     char*    const    inBuf,                  /**< [in] Pointer to the frame buffer   */
     unsigned long     inLen,                  /**< [in] Length of the compressed data */
     const    char*    outBuf,                 /**< [out] Pointer to uncompressed frame 
@@ -1734,8 +1738,7 @@ int inflateData(
  * @retval -1   Failed to compress.
  */
 
-static z_stream d_zstrm;
-int deflateData(
+static int deflateData(
     char*    const    inBuf,                  /**< [in] Pointer to the frame buffer   */
     unsigned long     inLen,                  /**< [in] Length of the uncompressed data */
     const    char*    outBuf,                 /**< [out] Pointer to compressed frame 
@@ -1861,78 +1864,6 @@ int deflateData(
    return 0; 
 }
 
-
-
-int genBlankScanlines(
-    unsigned long   inLen,                  /**< [in] Length of the uncompressed data */
-    unsigned  char** outBuf,          /**< [out] Pointer to pointer of compressed frame 
-                                              *  data buffer  */
-    unsigned long*     outLen)                 /**< [out] Length of compressed frame */  
-{
-  
-  char *compr, *uncompr;
-  unsigned long clen, ulen;
-  int i,rval;
-  char *inbuf = NULL;
-
-  
-  if(inLen <= 0){
-    uerror("Uncompressed length should be greater than 0 ");
-    return -1;
-  }
-
-  /** Release already compressed scanline buffer, if exists **/
-   if(*outBuf){
-         free(*outBuf);
-         *outBuf = NULL;
-   }
-
-  if(ulogIsDebug()){
-     udebug("Genearating blank scan lines of size [%ld]", inLen);
-  }
-
-  inbuf = (char *) malloc(inLen);
-
-  if(inbuf == NULL){
-    uerror("Buffer allocation (malloc) failed.");
-    return -1;
-  }
-
-  *outBuf = (char *) malloc(inLen);
-
-  if(*outBuf == NULL){
-    uerror("Buffer allocation (malloc) failed.");
-    return -1;
-  }
-
-  memset(inbuf, 0, inLen);
-
-  uncompr = (char *) inbuf;
-  compr = (char *) *outBuf;
-
-
-  ulen = inLen;
-  clen = ulen;
-
-  if((rval = compress2((Bytef *) compr, &clen, (Bytef *) uncompr, ulen, DEFAULT_COMPRESSION_LEVEL)) < 0)
-  {
-     uerror("Compress failed compress_len [%ld] uncompress_len [%ld] rval=[%d] ",
-                          clen, ulen, rval);
-     return -1;
-  } else {
-       if (ulogIsDebug())
-            udebug("Compressed frame compress_len [%ld] uncompress_len [%ld] ",
-                                clen, ulen);
-  }
-
-  *outLen = clen;
-
-
-   return 0; 
-
-}
-
-
 /*******************************************************************************
 FUNCTION NAME
         int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
@@ -2003,7 +1934,7 @@ RETURNS
 #define MAX_SECLINE_LEN         40
 
 
-int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
+static int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
 {
         char *p_wmo;
         int i_bbb;
@@ -2208,7 +2139,7 @@ RETURNS
 
 *******************************************************************************/
 
-int prod_get_WMO_nnnxxx_offset (
+static int prod_get_WMO_nnnxxx_offset (
         char *wmo_buff,     /* pointer to start of wmo header in the data buffer */
         int max_search,         /* max len for WMO search in buff */
         int *p_len)                     /* len for the nnnxxx */
@@ -2283,7 +2214,7 @@ int prod_get_WMO_nnnxxx_offset (
         return -1;
 }
 
-char *decode_zlib_err(int err)
+static char *decode_zlib_err(int err)
 {
         static struct {
                 int             code;
@@ -2316,7 +2247,7 @@ char *decode_zlib_err(int err)
         }
 }
 
-int getIndex(char *arr, int pos, int sz)
+static int getIndex(char *arr, int pos, int sz)
 {
   int index = -1;
   int ii;
