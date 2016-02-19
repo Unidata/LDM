@@ -91,8 +91,6 @@ struct productMaker {
 };
 
 datastore*  ds_alloc(void);
-static z_stream d_zstrm;
-static z_stream i_zstrm;
 
 /**
  * Returns a new product-maker.
@@ -1627,7 +1625,7 @@ static int inflateData(
   int decompByteCounter = 0;
   int num=0;
   static int isStreamSet = NO;
-
+  static z_stream i_zstrm;
 
   ret = Z_OK;
   readsz = 0;
@@ -1759,7 +1757,7 @@ static int deflateData(
     int zerr;
     unsigned char *dstBuf;
     static int isStreamSet = NO;
-
+    static z_stream d_zstrm;
 
   if (ulogIsDebug())
           udebug(" Block [%d] deflating now.. inlen[%ld] isStreamSet %d ",
