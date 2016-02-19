@@ -21,6 +21,7 @@
 #include "multicastReader.h"
 #include "productMaker.h"
 #include "reader.h"
+#include "goes.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -92,7 +93,7 @@ decodeCommandLine(
     opterr = 0;                         /* no error messages from getopt(3) */
 
     while (0 == status &&
-            (ch = getopt(argc, argv, "b:I:l:m:nq:r:s:t:u:vx")) != -1) {
+            (ch = getopt(argc, argv, "b:cfI:l:m:nq:r:s:t:u:vx")) != -1) {
         switch (ch) {
             extern char*    optarg;
             extern int      optopt;
@@ -112,6 +113,12 @@ decodeCommandLine(
                 }
                 break;
             }
+            case 'c':
+                inflateFrame = TRUE;
+                break;  
+            case 'f':
+                fillScanlines = TRUE;
+                break;  
             case 'I':
                 *interface = optarg;
                 break;
@@ -305,6 +312,8 @@ static void usage(
 "   -t          Transfer mechanism [Default = MHS]. \n"
 "   -s          Channel Name [Default = NMC]. \n"
 #endif
+"   -c          Enable Frame Decompression [Default => Disabled ]. \n"
+"   -f          Fill blank scanlines for missing Satellite Imagery  [Default => Disabled ]. \n"
 "\n"
 "If neither \"-n\", \"-v\", nor \"-x\" is specified, then only levels ERROR\n"
 "and WARN are logged.\n"
@@ -606,6 +615,14 @@ static void reportStats(
         struct timeval* const restrict reportTime,
         Reader* const restrict         reader)
 {
+    struct timeval          now;
+    double                  interval;
+    double                  rate;
+    char                    buf[80];
+    int                     logmask;
+    unsigned long           byteCount;
+    unsigned long           frameCount, missedFrameCount, prodCount;
+    unsigned long           fullFifoCount;
     static unsigned long    totalFrameCount;
     static unsigned long    totalMissedFrameCount;
     static unsigned long    totalProdCount;
