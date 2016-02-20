@@ -929,20 +929,6 @@ int log_set_level(
 }
 
 /**
- * Returns the current logging level.
- *
- * @return The lowest level through which logging will occur. The initial value
- *         is `LOG_LEVEL_DEBUG`.
- */
-log_level_t log_get_level(void)
-{
-    lock();
-    log_level_t level = log_level;
-    unlock();
-    return level;
-}
-
-/**
  * Lowers the logging threshold by one. Wraps at the bottom. Should be called
  * between `log_init()` and `log_fini()`.
  */

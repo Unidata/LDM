@@ -259,6 +259,23 @@ void* logl_malloc(
     logi_internal(level, &loc, __VA_ARGS__); \
 } while (false)
 
+#ifdef NDEBUG
+    #define logl_assert(expr)
+#else
+    /**
+     * Tests an assertion. Writes an error-message and then aborts the process
+     * if the assertion is false.
+     *
+     * @param[in] expr  The assertion to be tested.
+     */
+    #define logl_assert(expr) do { \
+        if (!(expr)) { \
+            logl_internal(LOG_LEVEL_ERROR, "Assertion failure: %s", #expr); \
+            abort(); \
+        } \
+    } while (false)
+#endif
+
 /**
  * Declares an instance of a location structure. NB: `__func__` is an automatic
  * variable with local scope.
@@ -317,6 +334,25 @@ int logi_init(
  * @retval    0        Success
  */
 int logi_reinit(void);
+
+/**
+ * Enables logging down to a given level.
+ *
+ * @pre              `log_level` is valid
+ * @param[in] level  The lowest level through which logging should occur.
+ */
+void logi_set_level(void);
+
+/**
+ * Sets the logging identifier. Should be called between `logi_init()` and
+ * `logi_fini()`.
+ *
+ * @param[in] id        The new identifier. Caller may free.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+int logi_set_id(
+        const char* const id);
 
 /**
  * Finalizes the logging module's implementation. Should be called eventually

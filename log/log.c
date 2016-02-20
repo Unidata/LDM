@@ -498,7 +498,10 @@ static int init(void)
         hup_sigaction.sa_flags = SA_RESTART;
         hup_sigaction.sa_handler = handle_sighup;
         (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
-        status = mutex_init(&log_mutex, true, true);
+        status = mutex_init(&log_mutex, false, true);
+        if (status)
+            logl_internal(LOG_LEVEL_ERROR, "Couldn't initialize mutex: %s",
+                    strerror(status));
     }
     return status;
 }
@@ -610,7 +613,7 @@ int logl_level_to_priority(
 void logl_lock(void)
 {
     int status = mutex_lock(&log_mutex);
-    log_assert(status == 0);
+    logl_assert(status == 0);
     if (refresh_needed) {
         refresh_needed = 0;
         (void)refresh();
@@ -626,7 +629,7 @@ void logl_lock(void)
 void logl_unlock(void)
 {
     int status = mutex_unlock(&log_mutex);
-    log_assert(status == 0);
+    logl_assert(status == 0);
 }
 
 /**
@@ -878,6 +881,30 @@ void logl_flush(
     }
 }
 
+/**
+ * Frees the log-message resources of the current thread. Should only be called
+ * when no more logging by the current thread will occur.
+ */
+void
+logl_free(void)
+{
+    sigset_t sigset;
+    blockSigs(&sigset);
+
+    List*   list = list_get();
+
+    if (list) {
+        if (list->last)
+            logl_internal(LOG_LEVEL_WARNING,
+                    "Loging message-queue isn't empty");
+        list_fini(list);
+        free(list);
+        (void)pthread_setspecific(listKey, NULL);
+    }
+
+    restoreSigs(&sigset);
+}
+
 /******************************************************************************
  * Public API:
  ******************************************************************************/
@@ -896,12 +923,15 @@ int log_init(
     if (status == 0) {
         // The following isn't done by log_reinit():
         init_thread = pthread_self();
-        avoid_stderr = fcntl(STDERR_FILENO, F_GETFD) == -1;
+        avoid_stderr = (fcntl(STDERR_FILENO, F_GETFD) == -1);
         log_level = LOG_LEVEL_NOTICE;
         const char* const dest = get_default_destination();
         // `dest` doesn't overlap `log_dest`
         strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
         status = logi_init(id);
+        if (status)
+            logl_internal(LOG_LEVEL_ERROR,
+                    "Couldn't initialize implementation");
         isInitialized = (status == 0);
     }
     return status;
@@ -959,6 +989,28 @@ void log_refresh(void)
 }
 
 /**
+ * Sets the logging identifier. Should be called after `log_init()`.
+ *
+ * @param[in] id        The new identifier. Caller may free.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+int log_set_id(
+        const char* const id)
+{
+    int status;
+    if (id == NULL) {
+        status = -1;
+    }
+    else {
+        logl_lock();
+        status = logi_set_id(id);
+        logl_unlock();
+    }
+    return status;
+}
+
+/**
  * Modifies the logging identifier. Should be called after log_init().
  *
  * @param[in] hostId    The identifier of the remote host. Caller may free.
@@ -978,11 +1030,11 @@ int log_set_upstream_id(
     }
     else {
         char id[_POSIX_HOST_NAME_MAX + 6 + 1]; // hostname + "(type)" + 0
-        logl_lock();
         (void)snprintf(id, sizeof(id), "%s(%s)", hostId,
                 isFeeder ? "feed" : "noti");
         id[sizeof(id)-1] = 0;
-        status = log_set_id(id);
+        logl_lock();
+        status = logi_set_id(id);
         logl_unlock();
     }
     return status;
@@ -1061,15 +1113,52 @@ const char* log_get_destination(void)
 }
 
 /**
+ * Enables logging down to a given level. Should be called after log_init().
+ *
+ * @param[in] level  The lowest level through which logging should occur.
+ * @retval    0      Success.
+ * @retval    -1     Failure.
+ */
+int log_set_level(
+        const log_level_t level)
+{
+    int status;
+    if (!logl_vet_level(level)) {
+        status = -1;
+    }
+    else {
+        logl_lock();
+        log_level = level;
+        logi_set_level();
+        logl_unlock();
+        status = 0;
+    }
+    return status;
+}
+
+/**
  * Lowers the logging threshold by one. Wraps at the bottom.
  */
 void log_roll_level(void)
 {
     logl_lock();
-    log_level_t level = log_get_level();
-    level = (level == LOG_LEVEL_DEBUG) ? LOG_LEVEL_ERROR : level - 1;
-    log_set_level(level);
+    log_level = (log_level == LOG_LEVEL_DEBUG)
+            ? LOG_LEVEL_ERROR
+            : log_level - 1;
     logl_unlock();
+}
+
+/**
+ * Returns the current logging level.
+ *
+ * @return The lowest level through which logging will occur.
+ */
+log_level_t log_get_level(void)
+{
+    logl_lock(); // For visibility of changes
+    log_level_t level = log_level;
+    logl_unlock();
+    return level;
 }
 
 /**
@@ -1103,20 +1192,9 @@ log_clear(void)
 void
 log_free(void)
 {
-    sigset_t sigset;
-    blockSigs(&sigset);
-
-    List*   list = list_get();
-
-    if (list) {
-        if (list->last)
-            log_error("Log message queue isn't empty");
-        list_fini(list);
-        free(list);
-        (void)pthread_setspecific(listKey, NULL);
-    }
-
-    restoreSigs(&sigset);
+    logl_lock();
+    logl_free();
+    logl_unlock();
 }
 
 /**
@@ -1136,7 +1214,7 @@ int log_fini(void)
     }
     else {
         logl_lock();
-        log_free();
+        logl_free();
         if (!pthread_equal(init_thread, pthread_self())) {
             status = 0;
         }

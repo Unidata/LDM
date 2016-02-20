@@ -39,7 +39,7 @@
  * Functions for accessing the destination for log messages.
  */
 typedef struct {
-    void (*init)(void);
+    int  (*init)(void);
     void (*log)(
         const log_level_t         level,
         const log_loc_t* restrict loc,
@@ -121,10 +121,13 @@ static const char* level_to_string(
 
 /**
  * Initializes access to the system logging daemon.
+ *
+ * @retval 0  Success (always)
  */
-static void syslog_init(void)
+static int syslog_init(void)
 {
     openlog(ident, syslog_options, syslog_facility);
+    return 0;
 }
 
 /**
@@ -180,24 +183,13 @@ static void stream_log(
 
 /**
  * Initializes access to the standard error stream.
+ *
+ * @retval 0  Success (always)
  */
-static void stderr_init(void)
+static int stderr_init(void)
 {
     stream_file = stderr;
-}
-
-/**
- * Writes a single log message to the standard error stream.
- *
- * @param[in] level  Logging level.
- * @param[in] msg    The message.
- */
-static void stderr_log(
-        const log_level_t         level,
-        const log_loc_t* restrict loc,
-        const char* restrict      msg)
-{
-    stream_log(level, loc, msg);
+    return 0;
 }
 
 /**
@@ -208,32 +200,23 @@ static void stderr_fini(void)
     stream_file = NULL;
 }
 
-static dest_funcs_t stderr_funcs = {stderr_init, stderr_log, stderr_fini};
+static dest_funcs_t stderr_funcs = {stderr_init, stream_log, stderr_fini};
 
 /**
- * Initializes access to the log file. Does nothing in case the destination log
- * file doesn't yet exist and another log file will be specified.
- */
-static inline void file_init(void)
-{
-}
-
-/**
- * Opens the log file.
+ * Initializes access to the log file.
  *
  * @retval  0  Success
  * @retval -1  Failure
  */
-static int file_open(void)
+static int file_init(void)
 {
     int status;
     int file_fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
             S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
     if (file_fd < 0) {
-        /*
-         * Can't log message because logl_internal() -> logi_log() ->
-         * file_log() -> file_open()
-         */
+        LOG_LOC_DECL(loc);
+        logi_internal(LOG_LEVEL_ERROR, &loc, "Can't open log file \"%s\": %s",
+                log_dest, strerror(errno));
         status = -1;
     }
     else {
@@ -247,22 +230,6 @@ static int file_open(void)
 }
 
 /**
- * Writes a single message to the log file. Opens the log file if necessary.
- *
- * @param[in] level  Logging level.
- * @param[in] msg    The message.
- */
-static void file_log(
-        const log_level_t         level,
-        const log_loc_t* restrict loc,
-        const char* restrict      msg)
-{
-    if (stream_file == NULL && file_open())
-        abort();
-    stream_log(level, loc, msg);
-}
-
-/**
  * Finalizes access to the log file.
  */
 static void file_fini(void)
@@ -273,7 +240,7 @@ static void file_fini(void)
     }
 }
 
-static dest_funcs_t file_funcs = {file_init, file_log, file_fini};
+static dest_funcs_t file_funcs = {file_init, stream_log, file_fini};
 
 /******************************************************************************
  * Package-Private Implementation API:
@@ -294,8 +261,7 @@ int logi_set_destination(void)
         : LOG_IS_STDERR_SPEC(log_dest)
             ? stderr_funcs
             : file_funcs;
-    dest_funcs.init();
-    return 0;
+    return dest_funcs.init();
 }
 
 /**
@@ -363,6 +329,8 @@ int logi_init(
 
         strncpy(ident, logl_basename(id), sizeof(ident))[sizeof(ident)-1] = 0;
         status = logi_set_destination();
+        if (status)
+            logl_internal(LOG_LEVEL_ERROR, "Couldn't set logging destination");
     }
     return status;
 }
@@ -375,7 +343,35 @@ int logi_init(
  */
 int logi_reinit(void)
 {
-    return 0;
+    return dest_funcs.init();
+}
+
+/**
+ * Enables logging down to a given level. Should be called after logi_init().
+ *
+ * @param[in] level  The lowest level through which logging should occur.
+ */
+void logi_set_level(void)
+{
+}
+
+/**
+ * Sets the logging identifier. Should be called after `logi_init()`.
+ *
+ * @pre                 `id` isn't NULL
+ * @param[in] id        The new identifier. Caller may free.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+int logi_set_id(
+        const char* const id)
+{
+    strncpy(ident, id, sizeof(ident))[sizeof(ident)-1] = 0;
+    /*
+     * The destination is re-initialized in case it's the system logging
+     * daemon.
+     */
+    return dest_funcs.init();
 }
 
 /**
@@ -421,43 +417,6 @@ const char* log_get_default_daemon_destination(void)
 }
 
 /**
- * Enables logging down to a given level. Should be called after log_init().
- *
- * @param[in] level  The lowest level through which logging should occur.
- * @retval    0      Success.
- * @retval    -1     Failure.
- */
-int log_set_level(
-        const log_level_t level)
-{
-    int status;
-    if (!logl_vet_level(level)) {
-        status = -1;
-    }
-    else {
-        logl_lock();
-        log_level = level;
-        logl_unlock();
-        status = 0;
-    }
-    return status;
-}
-
-/**
- * Returns the current logging level. Should be called after log_init().
- *
- * @return The lowest level through which logging will occur. The initial value
- *         is `LOG_LEVEL_DEBUG`.
- */
-log_level_t log_get_level(void)
-{
-    logl_lock();
-    log_level_t level = log_level;
-    logl_unlock();
-    return level;
-}
-
-/**
  * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
  * system logging daemon. Should be called after `log_init()`.
  *
@@ -484,7 +443,7 @@ int log_set_facility(
          * The destination is re-initialized in case it's the system logging
          * daemon.
          */
-        dest_funcs.init();
+        status = dest_funcs.init();
         logl_unlock();
     }
     return status;
@@ -503,33 +462,6 @@ int log_get_facility(void)
     int facility = syslog_facility;
     logl_unlock();
     return facility;
-}
-
-/**
- * Sets the logging identifier. Should be called after `log_init()`.
- *
- * @param[in] id        The new identifier. Caller may free.
- * @retval    0         Success.
- * @retval    -1        Failure.
- */
-int log_set_id(
-        const char* const id)
-{
-    int status;
-    if (id == NULL) {
-        status = -1;
-    }
-    else {
-        logl_lock();
-        strncpy(ident, id, sizeof(ident))[sizeof(ident)-1] = 0;
-        /*
-         * The destination is re-initialized in case it's the system logging
-         * daemon.
-         */
-        dest_funcs.init();
-        logl_unlock();
-    }
-    return status;
 }
 
 /**
@@ -563,7 +495,8 @@ void log_set_options(
     logl_lock();
     syslog_options = options;
     // The destination is re-initialized in case it's the system logging daemon.
-    dest_funcs.init();
+    int status = dest_funcs.init();
+    logl_assert(status == 0);
     logl_unlock();
 }
 

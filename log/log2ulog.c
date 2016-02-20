@@ -99,6 +99,37 @@ int logi_set_destination(void)
 }
 
 /**
+ * Enables logging down to a given level.
+ *
+ * @pre              `log_level` is valid
+ * @param[in] level  The lowest level through which logging should occur.
+ * @retval    0      Success.
+ * @retval    -1     Failure.
+ */
+void logi_set_level(void)
+{
+    static int ulogUpTos[LOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
+            LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
+            LOG_UPTO(LOG_ERR)};
+    (void)setulogmask(ulogUpTos[log_level]);
+}
+
+/**
+ * Sets the logging identifier. Should be called between `logi_init()` and
+ * `logi_fini()`.
+ *
+ * @pre                 `id` isn't NULL
+ * @param[in] id        The new identifier. Caller may free.
+ * @retval    0         Success (always).
+ */
+int logi_set_id(
+        const char* const id)
+{
+    setulogident(id);
+    return 0;
+}
+
+/**
  * Emits a single log message.
  *
  * @param[in] level  Logging level.
@@ -150,47 +181,6 @@ const char* log_get_default_daemon_destination(void)
 }
 
 /**
- * Enables logging down to a given level.
- *
- * @param[in] level  The lowest level through which logging should occur.
- * @retval    0      Success.
- * @retval    -1     Failure.
- */
-int log_set_level(
-        const log_level_t level)
-{
-    int status;
-    if (!logl_vet_level(level)) {
-        status = -1;
-    }
-    else {
-        static int ulogUpTos[LOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
-                LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
-                LOG_UPTO(LOG_ERR)};
-        logl_lock();
-        (void)setulogmask(ulogUpTos[level]);
-        log_level = level;
-        logl_unlock();
-        status = 0;
-    }
-    return status;
-}
-
-/**
- * Returns the current logging level.
- *
- * @return The lowest level through which logging will occur. The initial value
- *         is `LOG_LEVEL_DEBUG`.
- */
-log_level_t log_get_level(void)
-{
-    logl_lock(); // For visibility of changes
-    log_level_t level = log_level;
-    logl_unlock();
-    return level;
-}
-
-/**
  * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
  * system logging daemon. Should be called after `logi_init()`.
  *
@@ -221,30 +211,6 @@ int log_get_facility(void)
     int facility = getulogfacility();
     logl_unlock();
     return facility;
-}
-
-/**
- * Sets the logging identifier. Should be called between `logi_init()` and
- * `logi_fini()`.
- *
- * @param[in] id        The new identifier. Caller may free.
- * @retval    0         Success.
- * @retval    -1        Failure.
- */
-int log_set_id(
-        const char* const id)
-{
-    int status;
-    if (id == NULL) {
-        status = -1;
-    }
-    else {
-        logl_lock();
-        setulogident(id);
-        logl_unlock();
-        status = 0;
-    }
-    return status;
 }
 
 /**
