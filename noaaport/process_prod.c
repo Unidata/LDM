@@ -142,44 +142,44 @@ process_prod(
 
     prod.info.origin = ghostname();
 
-    if (sbn->datastream == 6) { /* dvbs broadcast */
+    if (sbn->datastream == SBN_CHAN_NMC2) { /* dvbs broadcast */
         switch (psh->ptype) {
-            case 1:
-            case 2:
-            case 3:
+            case PROD_TYPE_GOES_EAST:
+            case PROD_TYPE_GOES_WEST:
+            case PROD_TYPE_NOAAPORT_OPT:
                 prod.info.feedtype = NIMAGE;
                 break;
-            case 4:
+            case PROD_TYPE_NWSTG:
                 prod.info.feedtype = NGRID;
                 break;
             default:
                 prod.info.feedtype = NOTHER;
         }
     }
-    else if (psh->ptype < 4) {
+    else if (psh->ptype < PROD_TYPE_NWSTG) {
         prod.info.feedtype = NIMAGE;
     }
     else {
         /* Generally left with NWSTG data */
         switch (psh->pcat) {
-            case 1:
-            case 7:
+            case PROD_CAT_TEXT:
+            case PROD_CAT_OTHER:
                 prod.info.feedtype = IDS | DDPLUS;
                 break;
-            case 101:
-            case 107:
+            case PROD_CAT_HDS_TEXT:
+            case PROD_CAT_HDS_OTHER:
                 prod.info.feedtype = HDS;
                 break;
-            case 2:
+            case PROD_CAT_GRAPHIC:
                 prod.info.feedtype = HDS;
                 break;
-            case 4:
+            case PROD_CAT_GRID:
                 prod.info.feedtype = HDS;
                 break;
-            case 5:
+            case PROD_CAT_POINT:
                 prod.info.feedtype = HDS;
                 break;
-            case 99:
+            case PROD_CAT_NIDS:
                 prod.info.feedtype = NEXRAD;
                 break;
             default:

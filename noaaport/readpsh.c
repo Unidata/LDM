@@ -197,17 +197,17 @@ if((psh->ccbmode == 2)&&(psh->ccbsubmode == 0))
       {
       /* uncompressed nids check */
       if(ccb->user1 != 'F') sprintf(psh->ccbdtype,"nids/\0");
-      psh->pcat = 99;
+      psh->pcat = PROD_CAT_NIDS;
       }
    }
 /*
 unfortunately, NWS isn't using CCB mode for all product types
-else if((psh->pcat == 4)&&(psh->ccbmode == 2)&&(psh->ccbsubmode == 1))
+else if((psh->pcat == PROD_CAT_GRID)&&(psh->ccbmode == 2)&&(psh->ccbsubmode == 1))
    sprintf(psh->ccbdtype,"grib/\0");
-else if(psh->pcat == 5)
+else if(psh->pcat == PROD_CAT_POINT)
    sprintf(psh->ccbdtype,"bufr/\0");
 */
-else if (psh->pcat == 2)
+else if (psh->pcat == PROD_CAT_GRAPHIC)
    {
    /* see if this is recognizeable as a redbook graphic */
    redbook_header(buf+ccb->len,blen - ccb->len, redbook_title);
