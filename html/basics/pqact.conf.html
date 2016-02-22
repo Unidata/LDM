@@ -346,7 +346,7 @@ to a file using the (unbuffered)
 <p>
 The syntax of a <tt>FILE</tt> action is
 <blockquote><pre>
-FILE <a href="#TAB"><i>TAB</i></a> [-overwrite] [-flush|-close] [-strip] [-log] <i>pathname</i>
+FILE <a href="#TAB"><i>TAB</i></a> [-overwrite] [-flush|-close] [-strip] [-log] [-metadata] <i>pathname</i>
 </blockquote></pre>
 where:
 <blockquote>
@@ -381,6 +381,36 @@ where:
 	<a href="glindex.html#pqact"><tt>pqact</tt></a>
 	process to log the fact that it filed the
 	<a href="glindex.html#data-product">data-product</a>.
+
+    <dt><tt>-metadata</tt>
+    <dd>Causes the metadata of the data-product to be written to the file before
+        any data. The metadata is written in the following order using the
+        indicated binary data-types of the C language:
+        <ul>
+            <li>Metadata-length in bytes (<tt>uint32_t</tt>)
+            <li>Data-product signature (MD5 checksum) (<tt>uchar[16]</tt>)
+            <li>Data-product size in bytes (<tt>uint32_t</tt>)
+            <li>Product creation-time in seconds since the epoch:
+                <ul>
+                    <li>Integer portion (<tt>uint64_t</tt>)
+                    <li>Microseconds portion (<tt>int32_t</tt>)
+                </ul>
+            <li>Data-product feedtype (<tt>uint32_t</tt>)
+            <li>Data-product sequence number (<tt>uint32_t</tt>)
+            <li>Product-identifier:
+                <ul>
+                    <li>Length in bytes (excluding NUL) (<tt>uint32_t</tt>)
+                    <li>Non-NUL-terminated string (<tt>char[]</tt>)
+                </ul>
+            <li>product-origin:
+                <ul>
+                    <li>Length in bytes (excluding NUL) (<tt>uint32_t</tt>)
+                    <li>Non-NUL-terminated string (<tt>char[]</tt>)
+                </ul>
+        </ul>
+        The endianness of the multi-byte primitive types is that of the local
+        host.
+    </dd>
 
     <dt><i>pathname</i>
     <dd>Is the pathname of the file to which the
@@ -495,7 +525,7 @@ input of the child process.
 <p>
 The syntax of a <tt>PIPE</tt> action is
 <blockquote><pre>
-PIPE <a href="#TAB"><i>TAB</i></a> [-strip] [-flush|-close] <i>pathname</i> [<i>arg</i> ...]
+PIPE <a href="#TAB"><i>TAB</i></a> [-strip] [-flush|-close] [-metadata] <i>pathname</i> [<i>arg</i> ...]
 </blockquote></pre>
 where:
 <blockquote>
@@ -520,6 +550,36 @@ where:
 	close the pipe to the child process after writing the
 	<a href="glindex.html#data-product">data-product</a>.
 	The default is to keep the pipe open.
+
+    <dt><tt>-metadata</tt>
+    <dd>Causes the metadata of the data-product to be written to the file before
+        any data. The metadata is written in the following order using the
+        indicated binary data-types of the C language:
+        <ul>
+            <li>Metadata-length in bytes (<tt>uint32_t</tt>)
+            <li>Data-product signature (MD5 checksum) (<tt>uchar[16]</tt>)
+            <li>Data-product size in bytes (<tt>uint32_t</tt>)
+            <li>Product creation-time in seconds since the epoch:
+                <ul>
+                    <li>Integer portion (<tt>uint64_t</tt>)
+                    <li>Microseconds portion (<tt>int32_t</tt>)
+                </ul>
+            <li>Data-product feedtype (<tt>uint32_t</tt>)
+            <li>Data-product sequence number (<tt>uint32_t</tt>)
+            <li>Product-identifier:
+                <ul>
+                    <li>Length in bytes (excluding NUL) (<tt>uint32_t</tt>)
+                    <li>Non-NUL-terminated string (<tt>char[]</tt>)
+                </ul>
+            <li>product-origin:
+                <ul>
+                    <li>Length in bytes (excluding NUL) (<tt>uint32_t</tt>)
+                    <li>Non-NUL-terminated string (<tt>char[]</tt>)
+                </ul>
+        </ul>
+        The endianness of the multi-byte primitive types is that of the local
+        host.
+    </dd>
 
     <dt><i>pathname</i>
     <dd>Is the pathname of the program to be executed.
