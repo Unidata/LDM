@@ -63,12 +63,12 @@
     #define _XOPEN_PATH_MAX 1024 // Not always defined
 #endif
 
-/// Whether or not this module is initialized.
-static bool isInitialized = false;
-
 /******************************************************************************
  * Private API:
  ******************************************************************************/
+
+/// Whether or not this module is initialized.
+static bool isInitialized = false;
 
 /**
  * A list of log messages.
@@ -164,7 +164,7 @@ static void handle_sighup(
 }
 
 /**
- * Initializes a location structure.
+ * Initializes a location structure from another location structure.
  *
  * @param[out] dest  The location to be initialized.
  * @param[in]  src   The location whose values are to be used for
@@ -188,7 +188,8 @@ static void sb_create_key(void)
 {
     int status = pthread_key_create(&sbKey, NULL);
     if (status != 0) {
-        log_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure");
+        logl_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure: "
+                "errno=\"%s\"", strerror(status));
         abort();
     }
 }
@@ -213,12 +214,13 @@ static StrBuf* sb_get(void)
     if (NULL == sb) {
         sb = sbNew();
         if (NULL == sb) {
-            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
+            logl_internal(LOG_LEVEL_ERROR, "sbNew() failure");
         }
         else {
             int status = pthread_setspecific(sbKey, sb);
             if (status != 0) {
-                log_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure");
+                logl_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure: "
+                        "errno=\"%s\"", strerror(status));
                 sbFree(sb);
                 sb = NULL;
             }
@@ -227,11 +229,107 @@ static StrBuf* sb_get(void)
     return sb;
 }
 
+/**
+ * Returns a new message structure.
+ *
+ * @param[in] entry   The message structure.
+ * @retval    0       Success. `*entry` is set.
+ * @retval    ENOMEM  Out-of-memory. Error message logged.
+ */
+static int msg_new(
+        Message** const entry)
+{
+    int      status;
+    Message* msg = malloc(sizeof(Message));
+    if (msg == NULL) {
+        status = errno;
+        logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%zu",
+                sizeof(Message));
+    }
+    else {
+        #define LOG_DEFAULT_STRING_SIZE     256
+        char*   string = malloc(LOG_DEFAULT_STRING_SIZE);
+        if (NULL == string) {
+            status = errno;
+            logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%u",
+                    LOG_DEFAULT_STRING_SIZE);
+            free(msg);
+        }
+        else {
+            *string = 0;
+            msg->string = string;
+            msg->size = LOG_DEFAULT_STRING_SIZE;
+            msg->next = NULL;
+            *entry = msg;
+            status = 0;
+        }
+    } // `msg` allocated
+    return status;
+}
+
+/**
+ * Prints a message into a message-list entry.
+ *
+ * @param[in] msg        The message entry.
+ * @param[in] fmt        The message format.
+ * @param[in] args       The arguments to be formatted.
+ * @retval    0          Success. The message has been written into `*msg`.
+ * @retval    EINVAL     `fmt` or `args` is `NULL`. Error message logged.
+ * @retval    EINVAL     There are insufficient arguments. Error message logged.
+ * @retval    EILSEQ     A wide-character code that doesn't correspond to a
+ *                       valid character has been detected. Error message logged.
+ * @retval    ENOMEM     Out-of-memory. Error message logged.
+ * @retval    EOVERFLOW  The length of the message is greater than {INT_MAX}.
+ *                       Error message logged.
+ */
+static int msg_format(
+        Message* const restrict    msg,
+        const char* const restrict fmt,
+        va_list                    args)
+{
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+
+    int nbytes = vsnprintf(msg->string, msg->size, fmt, args);
+    int status;
+
+    if (msg->size > nbytes) {
+        status = 0;
+    }
+    else if (0 > nbytes) {
+        // EINTR, EILSEQ, ENOMEM, or EOVERFLOW
+        logl_internal(LOG_LEVEL_ERROR, "vsnprintf() failure: "
+                "fmt=\"%s\", errno=\"%s\"", fmt, strerror(errno));
+    }
+    else {
+        // The buffer is too small for the message. Expand it.
+        size_t  size = nbytes + 1;
+        char*   string = malloc(size);
+
+        if (NULL == string) {
+            status = errno;
+            logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%zu", size);
+        }
+        else {
+            free(msg->string);
+            msg->string = string;
+            msg->size = size;
+            (void)vsnprintf(msg->string, msg->size, fmt, argsCopy);
+            status = 0;
+        }
+    }                           /* buffer is too small */
+
+    va_end(argsCopy);
+
+    return status;
+}
+
 static void list_create_key(void)
 {
     int status = pthread_key_create(&listKey, NULL);
     if (status != 0) {
-        log_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure");
+        logl_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure: "
+                "errno=\"%s\"", strerror(status));
         abort();
     }
 }
@@ -256,12 +354,14 @@ static List* list_get(void)
     if (NULL == list) {
         list = malloc(sizeof(List));
         if (NULL == list) {
-            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
+            logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%zu",
+                    sizeof(List));
         }
         else {
             int status = pthread_setspecific(listKey, list);
             if (status != 0) {
-                log_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure");
+                logl_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure: "
+                        "errno=\"%s\"", strerror(status));
                 free(list);
                 list = NULL;
             }
@@ -289,58 +389,6 @@ static bool list_is_empty()
 
     restoreSigs(&sigset);
     return is_empty;
-}
-
-/**
- * Clears the accumulated log-messages of the current thread.
- */
-static void list_clear()
-{
-    sigset_t sigset;
-    blockSigs(&sigset);
-
-    List*   list = list_get();
-
-    if (NULL != list)
-        list->last = NULL;
-
-    restoreSigs(&sigset);
-}
-
-/**
- * Returns a new message structure.
- *
- * @param[in] entry   The message structure.
- * @retval    0       Success. `*entry` is set.
- * @retval    ENOMEM  Out-of-memory. Error message logged.
- */
-static int msg_new(
-        Message** const entry)
-{
-    int      status;
-    Message* msg = malloc(sizeof(Message));
-    if (msg == NULL) {
-        status = errno;
-        log_internal(LOG_LEVEL_ERROR, "malloc() failure");
-    }
-    else {
-        #define LOG_DEFAULT_STRING_SIZE     256
-        char*   string = malloc(LOG_DEFAULT_STRING_SIZE);
-        if (NULL == string) {
-            status = errno;
-            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
-            free(msg);
-        }
-        else {
-            *string = 0;
-            msg->string = string;
-            msg->size = LOG_DEFAULT_STRING_SIZE;
-            msg->next = NULL;
-            *entry = msg;
-            status = 0;
-        }
-    } // `msg` allocated
-    return status;
 }
 
 /**
@@ -374,6 +422,22 @@ static int list_getNextEntry(
     } // need new message structure
 
     return status;
+}
+
+/**
+ * Clears the accumulated log-messages of the current thread.
+ */
+static void list_clear()
+{
+    sigset_t sigset;
+    blockSigs(&sigset);
+
+    List*   list = list_get();
+
+    if (NULL != list)
+        list->last = NULL;
+
+    restoreSigs(&sigset);
 }
 
 /**
@@ -414,63 +478,44 @@ static const char* get_default_destination(void)
 }
 
 /**
- * Prints a message into a message-list entry.
+ * Initializes this logging module. Called by log_init() and log_reinit().
  *
- * @param[in] msg        The message entry.
- * @param[in] fmt        The message format.
- * @param[in] args       The arguments to be formatted.
- * @retval    0          Success. The message has been written into `*msg`.
- * @retval    EINVAL     `fmt` or `args` is `NULL`. Error message logged.
- * @retval    EINVAL     There are insufficient arguments. Error message logged.
- * @retval    EILSEQ     A wide-character code that doesn't correspond to a
- *                       valid character has been detected. Error message logged.
- * @retval    ENOMEM     Out-of-memory. Error message logged.
- * @retval    EOVERFLOW  The length of the message is greater than {INT_MAX}.
- *                       Error message logged.
+ * @retval    -1  Failure
+ * @retval     0  Success
  */
-static int msg_format(
-        Message* const restrict    msg,
-        const char* const restrict fmt,
-        va_list* const restrict    args)
+static int init(void)
 {
-    va_list argsCopy;
-    va_copy(argsCopy, *args);
-
-    int nbytes = vsnprintf(msg->string, msg->size, fmt, *args);
     int status;
-
-    if (msg->size > nbytes) {
-        status = 0;
-    }
-    else if (0 > nbytes) {
-        /*
-         * `vsnprintf()` isn't guaranteed to set `errno` according to The Open
-         * Group Base Specifications Issue 6
-         */
-        status = errno ? errno : EILSEQ;
-        log_internal(LOG_LEVEL_ERROR, "vsnprintf() failure");
+    if (isInitialized) {
+        logl_internal(LOG_LEVEL_ERROR, "Logging module already initialized");
+        status = -1;
     }
     else {
-        // The buffer is too small for the message. Expand it.
-        size_t  size = nbytes + 1;
-        char*   string = malloc(size);
-
-        if (NULL == string) {
-            status = errno;
-            log_internal(LOG_LEVEL_ERROR, "malloc() failure");
-        }
-        else {
-            free(msg->string);
-            msg->string = string;
-            msg->size = size;
-            (void)vsnprintf(msg->string, msg->size, fmt, argsCopy);
-            status = 0;
-        }
-    }                           /* buffer is too small */
-
-    va_end(argsCopy);
-
+        (void)sigfillset(&all_sigset);
+        (void)sigemptyset(&hup_sigset);
+        (void)sigaddset(&hup_sigset, SIGHUP);
+        hup_sigaction.sa_mask = hup_sigset;
+        hup_sigaction.sa_flags = SA_RESTART;
+        hup_sigaction.sa_handler = handle_sighup;
+        (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
+        status = mutex_init(&log_mutex, false, true);
+        if (status)
+            logl_internal(LOG_LEVEL_ERROR, "Couldn't initialize mutex: %s",
+                    strerror(status));
+    }
     return status;
+}
+
+/**
+ * Indicates if a message at a given logging level would be logged.
+ *
+ * @param[in] level  The logging level
+ * @retval    true   iff a message at level `level` would be logged
+ */
+static bool is_level_enabled(
+        const log_level_t level)
+{
+    return logl_vet_level(level) && level >= log_level;
 }
 
 /**
@@ -490,19 +535,19 @@ static void flush(
     List*   list = list_get();
 
     if (NULL != list && NULL != list->last) {
-        log_lock();
+        logl_lock();
 
-        if (log_is_level_enabled(level)) {
+        if (is_level_enabled(level)) {
             for (const Message* msg = list->first; NULL != msg;
                     msg = msg->next) {
-                log_write(level, &msg->loc, msg->string);
+                logi_log(level, &msg->loc, msg->string);
 
                 if (msg == list->last)
                     break;
             }                       /* message loop */
         }                           /* messages should be printed */
 
-        log_unlock();
+        logl_unlock();
         list_clear();
     }                               /* have messages */
     restoreSigs(&sigset);
@@ -517,19 +562,12 @@ static void flush(
  * after log_init().
  *
  * @pre        Module is locked
- * @retval  0  Success.
- * @retval -1  Failure.
+ * @retval  0  Success
+ * @retval -1  Failure
  */
 static int refresh(void)
 {
-    char dest[_XOPEN_PATH_MAX];
-    strncpy(dest, log_get_destination_impl(), sizeof(dest))[sizeof(dest)-1] = 0;
-    // In case log_avoid_stderr() has been called
-    const char* def_dest = get_default_destination();
-    int status = log_set_destination_impl(def_dest);
-    if (status == 0 && !LOG_IS_STDERR_SPEC(dest))
-        status = log_set_destination_impl(dest);
-    return status;
+    return logi_set_destination();
 }
 
 /******************************************************************************
@@ -537,14 +575,45 @@ static int refresh(void)
  ******************************************************************************/
 
 /**
+ * The persistent destination specification.
+ */
+char log_dest[_XOPEN_PATH_MAX];
+
+/**
+ *  Logging level.
+ */
+log_level_t log_level = LOG_LEVEL_NOTICE;
+
+/**
+ * The mapping from `log` logging levels to system logging daemon priorities:
+ * Accessed by macros in `log_private.h`.
+ */
+int log_syslog_priorities[] = {
+        LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR
+};
+
+/**
+ * Returns the system logging priority associated with a logging level.
+ *
+ * @param[in] level    The logging level
+ * @retval    LOG_ERR  `level` is invalid
+ * @return             The system logging priority associated with `level`
+ */
+int logl_level_to_priority(
+        const log_level_t level)
+{
+    return logl_vet_level(level) ? log_syslog_priorities[level] : LOG_ERR;
+}
+
+/**
  * Acquires this module's lock.
  *
  * This function is thread-safe.
  */
-void log_lock(void)
+void logl_lock(void)
 {
     int status = mutex_lock(&log_mutex);
-    log_assert(status == 0);
+    logl_assert(status == 0);
     if (refresh_needed) {
         refresh_needed = 0;
         (void)refresh();
@@ -557,28 +626,10 @@ void log_lock(void)
  * This function is thread-safe. On entry, this module's lock shall be locked
  * by the current thread.
  */
-void log_unlock(void)
+void logl_unlock(void)
 {
     int status = mutex_unlock(&log_mutex);
-    log_assert(status == 0);
-}
-
-/**
- * Returns the default destination for log messages, which depends on whether or
- * not log_avoid_stderr() has been called. If it hasn't been called, then the
- * default destination will be the standard error stream; otherwise, the default
- * destination will be that given by log_get_default_daemon_destination().
- *
- * @retval ""   The system logging daemon
- * @retval "-"  The standard error stream
- * @return      The pathname of the log file
- */
-const char* log_get_default_destination(void)
-{
-    log_lock();
-    const char* dest = get_default_destination();
-    log_unlock();
-    return dest;
+    logl_assert(status == 0);
 }
 
 /**
@@ -587,7 +638,7 @@ const char* log_get_default_destination(void)
  * @param[in] pathname  The pathname.
  * @return              Pointer to the last component of the pathname.
  */
-const char* log_basename(
+const char* logl_basename(
         const char* const pathname)
 {
     const char* const cp = strrchr(pathname, '/');
@@ -610,10 +661,10 @@ const char* log_basename(
  * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
  *                      Error message logged.
  */
-int log_vadd_located(
+int logl_vadd(
         const log_loc_t* const restrict loc,
         const char* const restrict      fmt,
-        va_list* const restrict         args)
+        va_list                         args)
 {
     sigset_t sigset;
     blockSigs(&sigset);
@@ -621,7 +672,7 @@ int log_vadd_located(
     int status;
 
     if (NULL == fmt) {
-        log_internal(LOG_LEVEL_ERROR, "NULL argument");
+        logl_internal(LOG_LEVEL_ERROR, "NULL argument");
         status = EINVAL;
     }
     else {
@@ -652,7 +703,7 @@ int log_vadd_located(
  * @param[in] ...  Arguments for the formatting string.
  * @retval    0    Success.
  */
-int log_add_located(
+int logl_add(
         const log_loc_t* const restrict loc,
         const char* const restrict      fmt,
                                         ...)
@@ -661,7 +712,7 @@ int log_add_located(
     blockSigs(&sigset);
     va_list     args;
     va_start(args, fmt);
-    int status = log_vadd_located(loc, fmt, &args);
+    int status = logl_vadd(loc, fmt, args);
     va_end(args);
     restoreSigs(&sigset);
     return status;
@@ -676,7 +727,7 @@ int log_add_located(
  * @param[in] ...     Arguments for the formatting string.
  * @return
  */
-int log_add_errno_located(
+int logl_add_errno(
         const log_loc_t* const loc,
         const int                errnum,
         const char* const        fmt,
@@ -684,11 +735,11 @@ int log_add_errno_located(
 {
     sigset_t sigset;
     blockSigs(&sigset);
-    int status = log_add_located(loc, "%s", strerror(errnum));
+    int status = logl_add(loc, "%s", strerror(errnum));
     if (status == 0 && fmt && *fmt) {
         va_list     args;
         va_start(args, fmt);
-        status = log_vadd_located(loc, fmt, &args);
+        status = logl_vadd(loc, fmt, args);
         va_end(args);
     }
     restoreSigs(&sigset);
@@ -707,7 +758,7 @@ int log_add_errno_located(
  * @retval    NULL      Out of memory. Log message added.
  * @return              Pointer to the allocated memory.
  */
-void* log_malloc_located(
+void* logl_malloc(
         const char* const restrict file,
         const char* const restrict func,
         const int                  line,
@@ -718,7 +769,7 @@ void* log_malloc_located(
 
     if (obj == NULL) {
         log_loc_t loc = {file, func, line};
-        log_add_located(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
+        logl_add(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
     }
 
     return obj;
@@ -734,28 +785,29 @@ void* log_malloc_located(
  * @param[in] format  Format of the message or NULL.
  * @param[in] args    Optional format arguments.
  */
-void log_vlog_located(
+void logl_vlog(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
-        va_list* const restrict         args)
+        va_list                         args)
 {
     if (format && *format) {
 #if 1
-        log_vadd_located(loc, format, args);
+        logl_vadd(loc, format, args);
     }
     flush(level);
 #else
         StrBuf* sb = sb_get();
         if (sb == NULL) {
-            log_internal(LOG_LEVEL_ERROR,
+            logl_internal(LOG_LEVEL_ERROR,
                     "Couldn't get thread-specific string-buffer");
         }
         else if (sbPrintV(sb, format, args) == NULL) {
-            log_internal(LOG_LEVEL_ERROR, "Couldn't format message into string-buffer");
+            logl_internal(LOG_LEVEL_ERROR,
+                    "Couldn't format message into string-buffer");
         }
         else {
-            log_write(level, loc, sbString(sb));
+            logi_log(level, loc, sbString(sb));
         }
     }
 #endif
@@ -770,7 +822,7 @@ void log_vlog_located(
  * @param[in] format  Format of the message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void log_log_located(
+void logl_log(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
@@ -778,7 +830,7 @@ void log_log_located(
 {
     va_list args;
     va_start(args, format);
-    log_vlog_located(loc, level, format, &args);
+    logl_vlog(loc, level, format, args);
     va_end(args);
 }
 
@@ -792,7 +844,7 @@ void log_log_located(
  * @param[in] fmt     Format of the user's message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void log_errno_located(
+void logl_errno(
         const log_loc_t* const     loc,
         const int                  errnum,
         const char* const restrict fmt,
@@ -800,8 +852,8 @@ void log_errno_located(
 {
     va_list args;
     va_start(args, fmt);
-    log_add_located(loc, "%s", strerror(errnum));
-    log_vlog_located(loc, LOG_LEVEL_ERROR, fmt, &args);
+    logl_add(loc, "%s", strerror(errnum));
+    logl_vlog(loc, LOG_LEVEL_ERROR, fmt, args);
     va_end(args);
 }
 
@@ -815,7 +867,7 @@ void log_errno_located(
  *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
  */
-void log_flush_located(
+void logl_flush(
         const log_loc_t* const loc,
         const log_level_t      level)
 {
@@ -824,35 +876,33 @@ void log_flush_located(
          * The following message is added so that the location of the call to
          * log_flush() is logged in case the call needs to be adjusted.
          */
-        log_add_located(loc, "Log messages flushed");
+        logl_add(loc, "Log messages flushed");
         flush(level);
     }
 }
 
 /**
- * Initializes this logging module. Called by log_init() and log_reinit().
- *
- * @retval    -1  Failure
- * @retval     0  Success
+ * Frees the log-message resources of the current thread. Should only be called
+ * when no more logging by the current thread will occur.
  */
-static int init(void)
+void
+logl_free(void)
 {
-    int status;
-    if (isInitialized) {
-        log_internal(LOG_LEVEL_ERROR, "Logging module already initialized");
-        status = -1;
+    sigset_t sigset;
+    blockSigs(&sigset);
+
+    List*   list = list_get();
+
+    if (list) {
+        if (list->last)
+            logl_internal(LOG_LEVEL_WARNING,
+                    "Loging message-queue isn't empty");
+        list_fini(list);
+        free(list);
+        (void)pthread_setspecific(listKey, NULL);
     }
-    else {
-        (void)sigfillset(&all_sigset);
-        (void)sigemptyset(&hup_sigset);
-        (void)sigaddset(&hup_sigset, SIGHUP);
-        hup_sigaction.sa_mask = hup_sigset;
-        hup_sigaction.sa_flags = SA_RESTART;
-        hup_sigaction.sa_handler = handle_sighup;
-        (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
-        status = mutex_init(&log_mutex, true, true);
-    }
-    return status;
+
+    restoreSigs(&sigset);
 }
 
 /******************************************************************************
@@ -871,10 +921,17 @@ int log_init(
 {
     int status = init();
     if (status == 0) {
-        // The following functions aren't called by log_reinit():
+        // The following isn't done by log_reinit():
         init_thread = pthread_self();
-        avoid_stderr = fcntl(STDERR_FILENO, F_GETFD) == -1;
-        status = log_init_impl(id);
+        avoid_stderr = (fcntl(STDERR_FILENO, F_GETFD) == -1);
+        log_level = LOG_LEVEL_NOTICE;
+        const char* const dest = get_default_destination();
+        // `dest` doesn't overlap `log_dest`
+        strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
+        status = logi_init(id);
+        if (status)
+            logl_internal(LOG_LEVEL_ERROR,
+                    "Couldn't initialize implementation");
         isInitialized = (status == 0);
     }
     return status;
@@ -886,10 +943,18 @@ int log_init(
  */
 void log_avoid_stderr(void)
 {
-    log_lock();
+    logl_lock();
     avoid_stderr = true;
-    refresh_needed = true;
-    log_unlock();
+    if (LOG_IS_STDERR_SPEC(log_dest)) { // Don't change if unnecessary
+        /*
+         * log_get_default_daemon_destination() doesn't lock and the string it
+         * returns doesn't overlap `log_dest`.
+         */
+        const char* const dest = log_get_default_daemon_destination();
+        strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
+        (void)logi_set_destination();
+    }
+    logl_unlock();
 }
 
 /**
@@ -903,7 +968,7 @@ int log_reinit(void)
 {
     int status = init();
     if (status == 0) {
-        status = log_reinit_impl();
+        status = logi_reinit();
         isInitialized = (status == 0);
     }
     return status;
@@ -921,6 +986,28 @@ int log_reinit(void)
 void log_refresh(void)
 {
     refresh_needed = 1;
+}
+
+/**
+ * Sets the logging identifier. Should be called after `log_init()`.
+ *
+ * @param[in] id        The new identifier. Caller may free.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+int log_set_id(
+        const char* const id)
+{
+    int status;
+    if (id == NULL) {
+        status = -1;
+    }
+    else {
+        logl_lock();
+        status = logi_set_id(id);
+        logl_unlock();
+    }
+    return status;
 }
 
 /**
@@ -943,14 +1030,32 @@ int log_set_upstream_id(
     }
     else {
         char id[_POSIX_HOST_NAME_MAX + 6 + 1]; // hostname + "(type)" + 0
-        log_lock();
         (void)snprintf(id, sizeof(id), "%s(%s)", hostId,
                 isFeeder ? "feed" : "noti");
         id[sizeof(id)-1] = 0;
-        status = log_set_id(id);
-        log_unlock();
+        logl_lock();
+        status = logi_set_id(id);
+        logl_unlock();
     }
     return status;
+}
+
+/**
+ * Returns the default destination for log messages, which depends on whether or
+ * not log_avoid_stderr() has been called. If it hasn't been called, then the
+ * default destination will be the standard error stream; otherwise, the default
+ * destination will be that given by log_get_default_daemon_destination().
+ *
+ * @retval ""   The system logging daemon
+ * @retval "-"  The standard error stream
+ * @return      The pathname of the log file
+ */
+const char* log_get_default_destination(void)
+{
+    logl_lock();
+    const char* dest = get_default_destination();
+    logl_unlock();
+    return dest;
 }
 
 /**
@@ -968,9 +1073,24 @@ int log_set_upstream_id(
 int log_set_destination(
         const char* const dest)
 {
-    log_lock();
-    int status = log_set_destination_impl(dest);
-    log_unlock();
+    int status;
+    if (dest == NULL) {
+        status = -1;
+    }
+    else {
+        logl_lock();
+        /*
+         * Handle potential overlap because log_get_destination() returns
+         * `log_dest`.
+         */
+        size_t nbytes = strlen(dest);
+        if (nbytes > sizeof(log_dest)-1)
+            nbytes = sizeof(log_dest)-1;
+        (void)memmove(log_dest, dest, nbytes);
+        log_dest[nbytes] = 0;
+        status = logi_set_destination();
+        logl_unlock();
+    }
     return status;
 }
 
@@ -986,46 +1106,34 @@ int log_set_destination(
  */
 const char* log_get_destination(void)
 {
-    log_lock();
-    const char* path = log_get_destination_impl();
-    log_unlock();
+    logl_lock();
+    const char* path = log_dest;
+    logl_unlock();
     return path;
 }
 
 /**
- * Finalizes the logging module. Frees all thread-specific resources. Frees all
- * thread-independent resources if the current thread is the one on which
- * log_init() was called.
+ * Enables logging down to a given level. Should be called after log_init().
  *
- * @retval -1  Failure
- * @retval  0  Success
+ * @param[in] level  The lowest level through which logging should occur.
+ * @retval    0      Success.
+ * @retval    -1     Failure.
  */
-int log_fini(void)
+int log_set_level(
+        const log_level_t level)
 {
     int status;
-    if (!isInitialized) {
-        // Can't log an error message because not initialized
+    if (!logl_vet_level(level)) {
         status = -1;
     }
     else {
-        log_lock();
-        log_free();
-        if (!pthread_equal(init_thread, pthread_self())) {
-            status = 0;
-        }
-        else {
-            status = log_fini_impl();
-            if (status == 0) {
-                log_unlock();
-                status = mutex_fini(&log_mutex);
-                if (status == 0) {
-                    (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
-                    isInitialized = false;
-                }
-            }
-        }
+        logl_lock();
+        log_level = level;
+        logi_set_level();
+        logl_unlock();
+        status = 0;
     }
-    return status ? -1 : 0;
+    return status;
 }
 
 /**
@@ -1033,11 +1141,39 @@ int log_fini(void)
  */
 void log_roll_level(void)
 {
-    log_lock();
-    log_level_t level = log_get_level();
-    level = (level == LOG_LEVEL_DEBUG) ? LOG_LEVEL_ERROR : level - 1;
-    log_set_level(level);
-    log_unlock();
+    logl_lock();
+    log_level = (log_level == LOG_LEVEL_DEBUG)
+            ? LOG_LEVEL_ERROR
+            : log_level - 1;
+    logl_unlock();
+}
+
+/**
+ * Returns the current logging level.
+ *
+ * @return The lowest level through which logging will occur.
+ */
+log_level_t log_get_level(void)
+{
+    logl_lock(); // For visibility of changes
+    log_level_t level = log_level;
+    logl_unlock();
+    return level;
+}
+
+/**
+ * Indicates if a message at a given logging level would be logged.
+ *
+ * @param[in] level  The logging level
+ * @retval    true   iff a message at level `level` would be logged
+ */
+bool log_is_level_enabled(
+        const log_level_t level)
+{
+    logl_lock();
+    int enabled = is_level_enabled(level);
+    logl_unlock();
+    return enabled;
 }
 
 /**
@@ -1056,18 +1192,43 @@ log_clear(void)
 void
 log_free(void)
 {
-    sigset_t sigset;
-    blockSigs(&sigset);
+    logl_lock();
+    logl_free();
+    logl_unlock();
+}
 
-    List*   list = list_get();
-
-    if (list) {
-        if (list->last)
-            log_error("Log message queue isn't empty");
-        list_fini(list);
-        free(list);
-        (void)pthread_setspecific(listKey, NULL);
+/**
+ * Finalizes the logging module. Frees all thread-specific resources. Frees all
+ * thread-independent resources if the current thread is the one on which
+ * log_init() was called.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
+ */
+int log_fini(void)
+{
+    int status;
+    if (!isInitialized) {
+        // Can't log an error message because not initialized
+        status = -1;
     }
-
-    restoreSigs(&sigset);
+    else {
+        logl_lock();
+        logl_free();
+        if (!pthread_equal(init_thread, pthread_self())) {
+            status = 0;
+        }
+        else {
+            status = logi_fini();
+            if (status == 0) {
+                logl_unlock();
+                status = mutex_fini(&log_mutex);
+                if (status == 0) {
+                    (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+                    isInitialized = false;
+                }
+            }
+        }
+    }
+    return status ? -1 : 0;
 }

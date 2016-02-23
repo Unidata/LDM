@@ -844,7 +844,7 @@ int main(
                 break;
             case 'l':
                 (void)log_set_destination(optarg);
-                becomeDaemon = strcmp(optarg, "-");
+                becomeDaemon = strcmp(optarg, "-") != 0;
                 break;
             case 'q':
                 setQueuePath(optarg);

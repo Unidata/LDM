@@ -227,7 +227,7 @@ decodeCommandLine(
                 int         i = atoi(optarg);
 
                 if (0 > i || 7 < i) {
-                    log_add("Invalid logging facility number: %d", i);
+                    log_add("Invalid system logging facility number: %d", i);
                     status = 1;
                 }
                 else {

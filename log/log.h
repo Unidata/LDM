@@ -255,6 +255,15 @@ void log_clear(void);
 void log_free(void);
 
 /**
+ * Indicates if a message of the given level would be logged.
+ *
+ * @param[in] level  Logging level
+ * @retval    true   iff a message of level `level` would be logged
+ */
+bool log_is_level_enabled(
+        const log_level_t level);
+
+/**
  * Indicates if a log message of WARNING level will be written. Useful if a
  * format argument of a message is expensive to evaluate.
  */
@@ -283,7 +292,7 @@ void log_free(void);
  */
 #define log_add(...) do { \
     LOG_LOC_DECL(loc); \
-    log_add_located(&loc, __VA_ARGS__);\
+    logl_add(&loc, __VA_ARGS__);\
 } while (false)
 
 /**
@@ -294,7 +303,7 @@ void log_free(void);
  */
 #define log_vadd(fmt, args) do { \
     LOG_LOC_DECL(loc); \
-    log_vadd_located(&loc, fmt, args); \
+    logl_vadd(&loc, fmt, args); \
 } while (false)
 
 /**
@@ -307,7 +316,7 @@ void log_free(void);
  */
 #define log_add_errno(n, ...) do {\
     LOG_LOC_DECL(loc); \
-    log_add_errno_located(&loc, n, __VA_ARGS__); \
+    logl_add_errno(&loc, n, __VA_ARGS__); \
 } while (false)
 
 /**
@@ -336,7 +345,7 @@ void log_free(void);
  */
 #define log_vlog(level, fmt, args) do { \
     LOG_LOC_DECL(loc); \
-    log_vlog_located(&loc, level, fmt, args); \
+    logl_vlog(&loc, level, fmt, args); \
 } while (false)
 
 /**
@@ -350,7 +359,7 @@ void log_free(void);
  */
 #define log_errno(n, ...) do {\
     LOG_LOC_DECL(loc); \
-    log_errno_located(&loc, n, __VA_ARGS__); \
+    logl_errno(&loc, n, __VA_ARGS__); \
 } while (false)
 
 /**
@@ -424,7 +433,7 @@ void log_free(void);
  */
 #define log_flush(level) do { \
     LOG_LOC_DECL(loc); \
-    log_flush_located(&loc, level); \
+    logl_flush(&loc, level); \
 } while (false)
 
 /**
@@ -463,7 +472,7 @@ void log_free(void);
  * @retval    NULL      Out of memory. Log message added.
  * @return              Pointer to the allocated memory.
  */
-#define log_malloc(nbytes, msg) log_malloc_located(__FILE__, __func__, __LINE__, \
+#define log_malloc(nbytes, msg) logl_malloc(__FILE__, __func__, __LINE__, \
         nbytes, msg)
 
 /**

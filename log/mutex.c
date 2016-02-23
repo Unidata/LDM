@@ -23,6 +23,7 @@
  *                             thread that is attempting to acquire the mutex.
  * @retval        0            Success.
  * @retval        ENOMEM       Out-of-memory.
+ * @retval        EINVAL       `*mutex` is invalid.
  */
 int mutex_init(
         mutex_t* const mutex,
@@ -32,13 +33,15 @@ int mutex_init(
     pthread_mutexattr_t mutexAttr;
     int status = pthread_mutexattr_init(&mutexAttr);
     if (status == 0) {
-        if (recursive)
-            (void)pthread_mutexattr_settype(&mutexAttr,
-                    PTHREAD_MUTEX_RECURSIVE);
-        if (inheritable)
-            (void)pthread_mutexattr_setprotocol(&mutexAttr,
+        status = pthread_mutexattr_settype(&mutexAttr,
+                recursive
+                    ? PTHREAD_MUTEX_RECURSIVE
+                    : PTHREAD_MUTEX_ERRORCHECK);
+        if (status == 0 && inheritable)
+            status = pthread_mutexattr_setprotocol(&mutexAttr,
                     PTHREAD_PRIO_INHERIT);
-        status = pthread_mutex_init(mutex, &mutexAttr);
+        if (status == 0)
+            status = pthread_mutex_init(mutex, &mutexAttr);
         (void)pthread_mutexattr_destroy(&mutexAttr);
     }
     return status;

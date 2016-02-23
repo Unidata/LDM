@@ -55,145 +55,66 @@ typedef struct message {
     size_t          size;       ///< Size of message buffer
 } Message;
 
-#if WANT_SLOG
-    // `slog` implementation:
-
-    /// Map from MYLOG levels to SYSLOG priorities
-    extern int log_syslog_priorities[];
-
-    /// Returns the SYSLOG priority corresponding to a MYLOG level
-    #define log_get_priority(level)     log_syslog_priorities[level]
-
-    /// Indicates if a log message of the given level would be emitted
-    #define log_is_level_enabled(level) slog_is_priority_enabled(level)
-
-    extern int slog_is_priority_enabled(const log_level_t level);
-#elif WANT_LOG4C
-    // `log4c` implementation:
-
-    #include <log4c.h>
-
-    /// Map from MYLOG levels to LOG4C priorities
-    extern int               log_log4c_priorities[];
-    /// The current working LOG4C category
-    extern log4c_category_t* log_category;
-
-    /// Returns the current working LOG4C category
-    #define log_get_category()          log_category
-
-    /// Returns the LOG4C priority corresponding to a MYLOG level
-    #define log_get_priority(level)     log_log4c_priorities[level]
-
-    /// Indicates if a log message of the given level would be emitted
-    #define log_is_level_enabled(level) \
-        log4c_category_is_priority_enabled(log_get_category(), \
-                log_get_priority(level))
-#elif WANT_ULOG
+#if WANT_ULOG
     // `ulog` implementation:
-
     #include "ulog/ulog.h"
     #include <limits.h>
     #include <stdio.h>
+    #include "ulog/ulog.h"
+    #include <limits.h>
+    #include <stdio.h>
+#endif
 
-    /// Map from MYLOG levels to SYSLOG priorities
-    extern int log_syslog_priorities[];
+/**
+ *  Logging level.
+ */
+extern log_level_t log_level;
 
-    /// Returns the SYSLOG priority corresponding to a MYLOG level
-    #define log_get_priority(level)     log_syslog_priorities[level]
+/**
+ * The persistent destination specification.
+ */
+extern char        log_dest[];
 
-    /// Indicates if a log message of the given level would be emitted
-    #define log_is_level_enabled(level) \
-        ulog_is_priority_enabled(log_get_priority(level))
-#endif // `ulog` implementation
+/******************************************************************************
+ * Internal logging library functions:
+ ******************************************************************************/
+
+/**
+ * Returns the system logging priority associated with a logging level.
+ *
+ * @param[in] level    The logging level
+ * @retval    LOG_ERR  `level` is invalid
+ * @return             The system logging priority associated with `level`
+ */
+int logl_level_to_priority(
+        const log_level_t level);
 
 /**
  * Acquires this module's mutex.
  */
-void log_lock(void);
+void logl_lock(void);
 
 /**
  * Releases this module's mutex.
  */
-void log_unlock(void);
-
-/**
- * Returns the logging destination. Should be called between log_init() and
- * log_fini().
- *
- * @pre          Module is locked
- * @return       The logging destination. One of <dl>
- *                   <dt>""      <dd>The system logging daemon.
- *                   <dt>"-"     <dd>The standard error stream.
- *                   <dt>else    <dd>The pathname of the log file.
- *               </dl>
- */
-const char* log_get_destination_impl(void);
-
-/**
- * Sets the logging destination.
- *
- * @pre                Module is locked
- * @param[in] dest     The logging destination. Caller may free. One of <dl>
- *                         <dt>""   <dd>The system logging daemon.
- *                         <dt>"-"  <dd>The standard error stream.
- *                         <dt>else <dd>The file whose pathname is `dest`.
- *                     </dl>
- * @retval    0        Success.
- * @retval    -1       Failure.
- */
-int log_set_destination_impl(
-        const char* const dest);
-
-/**
- * Initializes the logging module's implementation. Should be called before any
- * other function.
- *
- * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
- *                     free.
- * @retval    0        Success.
- * @retval    -1       Error. Logging module is in an unspecified state.
- */
-int log_init_impl(
-        const char* const id);
-
-/**
- * Re-initializes the logging module based on its state just prior to calling
- * log_fini_impl(). If log_fini_impl(), wasn't called, then the result is
- * unspecified.
- *
- * @retval   -1        Failure
- * @retval    0        Success
- */
-int log_reinit_impl(void);
-
-/**
- * Finalizes the logging module's implementation. Should be called eventually
- * after `log_impl_init()`, after which no more logging should occur.
- *
- * @retval 0   Success.
- * @retval -1  Failure. Logging module is in an unspecified state.
- */
-int log_fini_impl(void);
+void logl_unlock(void);
 
 /**
  * Vets a logging level.
- *
  * @param[in] level  The logging level to be vetted.
  * @retval    true   iff `level` is a valid level.
  */
-static inline bool log_vet_level(
+static inline bool logl_vet_level(
         log_level_t level)
 {
     return level >= LOG_LEVEL_DEBUG && level <= LOG_LEVEL_ERROR;
-}
-
 /**
  * Returns a pointer to the last component of a pathname.
  *
  * @param[in] pathname  The pathname.
  * @return              Pointer to the last component of the pathname.
  */
-const char* log_basename(
+const char* logl_basename(
         const char* const pathname);
 
 /**
@@ -205,11 +126,11 @@ const char* log_basename(
  * @param[in] format  Format of the message.
  * @param[in] args    Format arguments.
  */
-void log_vlog_located(
+void logl_vlog(
         const log_loc_t* const  loc,
         const log_level_t       level,
         const char* const       format,
-        va_list* const          args);
+        va_list                 args);
 
 /**
  * Adds a message to the current thread's list of messages. Emits and then
@@ -220,7 +141,7 @@ void log_vlog_located(
  * @param[in] format  Format of the message or NULL.
  * @param[in] ...     Optional Format arguments.
  */
-void log_log_located(
+void logl_log(
         const log_loc_t* const loc,
         const log_level_t      level,
         const char* const      format,
@@ -236,7 +157,7 @@ void log_log_located(
  * @param[in] fmt     Format of the user's message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void log_errno_located(
+void logl_errno(
         const log_loc_t* const loc,
         const int              errnum,
         const char* const      fmt,
@@ -252,21 +173,9 @@ void log_errno_located(
  *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
  */
-void log_flush_located(
+void logl_flush(
         const log_loc_t* const loc,
         const log_level_t      level);
-
-/**
- * Emits a single log message.
- *
- * @param[in] level  Logging level.
- * @param[in] loc    The location where the message was generated.
- * @param[in] string The message.
- */
-void log_write(
-        const log_level_t level,
-        const log_loc_t*  loc,
-        const char*       string);
 
 /**
  * Adds a variadic log-message to the message-list for the current thread.
@@ -284,10 +193,10 @@ void log_write(
  * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
  *                      Error message logged.
  */
-int log_vadd_located(
+int logl_vadd(
         const log_loc_t* const  loc,
         const char *const       fmt,
-        va_list* const          args);
+        va_list                 args);
 
 /**
  * Adds a log-message for the current thread.
@@ -298,10 +207,10 @@ int log_vadd_located(
  * @param[in] ...  Arguments for the formatting string.
  * @retval    0    Success.
  */
-int log_add_located(
+int logl_add(
         const log_loc_t* const loc,
-        const char *const        fmt,
-                                 ...);
+        const char *const      fmt,
+                               ...);
 
 /**
  * Adds a system error message and an optional user message.
@@ -313,11 +222,11 @@ int log_add_located(
  * @param[in] ...     Arguments for the formatting string.
  * @return
  */
-int log_add_errno_located(
+int logl_add_errno(
         const log_loc_t* const loc,
-        const int                errnum,
-        const char* const        fmt,
-                                 ...);
+        const int              errnum,
+        const char* const      fmt,
+                               ...);
 
 /**
  * Allocates memory. Thread safe. Defined with explicit location parameters so
@@ -332,7 +241,7 @@ int log_add_errno_located(
  * @retval    NULL      Out of memory. Log message added.
  * @return              Pointer to the allocated memory.
  */
-void* log_malloc_located(
+void* logl_malloc(
         const char* const file,
         const char* const func,
         const int         line,
@@ -343,14 +252,29 @@ void* log_malloc_located(
  * Emits an error message. Used internally when an error occurs in this logging
  * module.
  *
- * @param[in] level  Logging level.
- * @param[in] loc    Location where the message was generated.
- * @param[in] ...    Message arguments -- starting with the format.
+ * @param[in] ...  Message arguments -- starting with the format.
  */
-void log_internal_located(
-        const log_level_t      level,
-        const log_loc_t* const loc,
-                               ...);
+#define logl_internal(level, ...) do { \
+    LOG_LOC_DECL(loc); \
+    logi_internal(level, &loc, __VA_ARGS__); \
+} while (false)
+
+#ifdef NDEBUG
+    #define logl_assert(expr)
+#else
+    /**
+     * Tests an assertion. Writes an error-message and then aborts the process
+     * if the assertion is false.
+     *
+     * @param[in] expr  The assertion to be tested.
+     */
+    #define logl_assert(expr) do { \
+        if (!(expr)) { \
+            logl_internal(LOG_LEVEL_ERROR, "Assertion failure: %s", #expr); \
+            abort(); \
+        } \
+    } while (false)
+#endif
 
 /**
  * Declares an instance of a location structure. NB: `__func__` is an automatic
@@ -361,7 +285,7 @@ void log_internal_located(
 #define LOG_LOG(level, ...) do {\
     if (log_is_level_enabled(level)) {\
         LOG_LOC_DECL(loc);\
-        log_log_located(&loc, level, __VA_ARGS__);\
+        logl_log(&loc, level, __VA_ARGS__);\
     }\
 } while (false)
 
@@ -371,21 +295,98 @@ void log_internal_located(
     }\
     else {\
         LOG_LOC_DECL(loc);\
-        log_add_located(&loc, __VA_ARGS__);\
+        logl_add(&loc, __VA_ARGS__);\
         log_flush(level);\
     }\
 } while (false)
+
+/******************************************************************************
+ * Logging implementation functions:
+ ******************************************************************************/
+
+/**
+ * Sets the logging destination.
+ *
+ * @pre                Module is locked
+ * @retval  0          Success
+ * @retval -1          Failure
+ */
+int logi_set_destination(void);
+
+/**
+ * Initializes the logging module's implementation. Should be called before any
+ * other function.
+ *
+ * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
+ *                     free.
+ * @retval    0        Success.
+ * @retval    -1       Error. Logging module is in an unspecified state.
+ */
+int logi_init(
+        const char* const id);
+
+/**
+ * Re-initializes the logging module based on its state just prior to calling
+ * log_fini_impl(). If log_fini_impl(), wasn't called, then the result is
+ * unspecified.
+ *
+ * @retval   -1        Failure
+ * @retval    0        Success
+ */
+int logi_reinit(void);
+
+/**
+ * Enables logging down to a given level.
+ *
+ * @pre              `log_level` is valid
+ * @param[in] level  The lowest level through which logging should occur.
+ */
+void logi_set_level(void);
+
+/**
+ * Sets the logging identifier. Should be called between `logi_init()` and
+ * `logi_fini()`.
+ *
+ * @param[in] id        The new identifier. Caller may free.
+ * @retval    0         Success.
+ * @retval    -1        Failure.
+ */
+int logi_set_id(
+        const char* const id);
+
+/**
+ * Finalizes the logging module's implementation. Should be called eventually
+ * after `log_impl_init()`, after which no more logging should occur.
+ *
+ * @retval 0   Success.
+ * @retval -1  Failure. Logging module is in an unspecified state.
+ */
+int logi_fini(void);
+
+/**
+ * Emits a single log message.
+ *
+ * @param[in] level  Logging level.
+ * @param[in] loc    The location where the message was generated.
+ * @param[in] string The message.
+ */
+void logi_log(
+        const log_level_t level,
+        const log_loc_t*  loc,
+        const char*       string);
 
 /**
  * Emits an error message. Used internally when an error occurs in this logging
  * module.
  *
- * @param[in] ...  Message arguments -- starting with the format.
+ * @param[in] level  Logging level.
+ * @param[in] loc    Location where the message was generated.
+ * @param[in] ...    Message arguments -- starting with the format.
  */
-#define log_internal(level, ...) do { \
-    LOG_LOC_DECL(loc); \
-    log_internal_located(level, &loc, __VA_ARGS__); \
-} while (false)
+void logi_internal(
+        const log_level_t      level,
+        const log_loc_t* const loc,
+                               ...);
 
 #ifdef __cplusplus
     }

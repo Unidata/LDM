@@ -192,8 +192,8 @@ getulogpath(void) {
  * 'logfilename' must have process lifetime.
  *
  * @param[in] ident        Pointer to the name of the process or NULL. The
- *                         caller shall not modify or free. If NULL, then the
- *                         identifier isn't changed.
+ *                         caller may free. If NULL, then the identifier isn't
+ *                         changed.
  * @param[in] options      Logging options.  Bitwise or of
  *                             LOG_NOTIME      Don't add timestamp
  *                             LOG_LOCALTIME   Use localtime rather than UTC.

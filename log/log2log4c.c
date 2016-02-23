@@ -670,7 +670,7 @@ static int set_level(
         const log_level_t level)
 {
     int status;
-    if (!log_vet_level(level)) {
+    if (!logl_vet_level(level)) {
         status = -1;
     }
     else {
@@ -679,7 +679,7 @@ static int set_level(
         const int         ncats = log4c_category_list(categories,
                 MAX_CATEGORIES);
         if (ncats < 0 || ncats > MAX_CATEGORIES) {
-            log_internal("Couldn't get all logging categories: ncats=%d",
+            logl_internal("Couldn't get all logging categories: ncats=%d",
                     ncats);
             status = -1;
         }
@@ -795,7 +795,7 @@ static inline void unlock()
  * @retval    0        Success.
  * @retval    -1       Error. The logging module is in an unspecified state.
  */
-int log_init_impl(
+int logi_init(
         const char* id)
 {
     int status;
@@ -926,20 +926,6 @@ int log_set_level(
     int status = initialized ? set_level(level) : -1;
     unlock();
     return status;
-}
-
-/**
- * Returns the current logging level.
- *
- * @return The lowest level through which logging will occur. The initial value
- *         is `LOG_LEVEL_DEBUG`.
- */
-log_level_t log_get_level(void)
-{
-    lock();
-    log_level_t level = log_level;
-    unlock();
-    return level;
 }
 
 /**
@@ -1078,7 +1064,7 @@ int log_get_facility(void)
  * @param[in] fmt  Format of the message.
  * @param[in] ...  Format arguments.
  */
-void log_internal(
+void logl_internal(
         const char* const      fmt,
                                ...)
 {
@@ -1114,14 +1100,14 @@ void log_internal(
  * @param[in] level  Logging level.
  * @param[in] msg    The message.
  */
-void log_write(
+void logi_log(
         const log_level_t    level,
         const Message* const   msg)
 {
     lock();
     if (msg->loc.file) {
         log4c_category_log(log_category, log_get_priority(level),
-                "%s:%d %s", log_basename(msg->loc.file), msg->loc.line,
+                "%s:%d %s", logl_basename(msg->loc.file), msg->loc.line,
                 msg->string);
     }
     else {
