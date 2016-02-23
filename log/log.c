@@ -1171,7 +1171,7 @@ bool log_is_level_enabled(
         const log_level_t level)
 {
     logl_lock();
-    int enabled = is_level_enabled(level);
+    bool enabled = is_level_enabled(level);
     logl_unlock();
     return enabled;
 }
