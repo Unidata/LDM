@@ -1,5 +1,6 @@
 htmldir	= $(docdir)
 EXTRA_DIST		= \
+    generate \
     tutorial/activate.html \
     tutorial/configure.html \
     tutorial/default.css \
