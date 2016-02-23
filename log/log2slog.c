@@ -218,9 +218,8 @@ static int file_init(void)
         int fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
                 S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
         if (fd < 0) {
-            LOG_LOC_DECL(loc);
-            logi_internal(LOG_LEVEL_ERROR, &loc, "Can't open log file \"%s\": "
-                    "%s", log_dest, strerror(errno));
+            logl_internal(LOG_LEVEL_ERROR, "Can't open log file \"%s\": %s",
+                    log_dest, strerror(errno));
             status = -1;
         }
         else {
