@@ -1178,7 +1178,7 @@ display_watch(const prod_info   *infop,
 {
     unsigned int logLevel = log_get_level();
     (void)log_set_level(LOG_LEVEL_INFO);
-    log_info("%s", s_prod_info(NULL, 0, infop, log_is_enabled_debug));
+    log_info("%s", s_prod_info(NULL, 0, infop, 0));
     (void)log_set_level(logLevel);
     return ENOERR;
 } /*display_watch*/
