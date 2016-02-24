@@ -34,7 +34,7 @@ void log_what(const std::exception& e)
     } catch (const std::exception& nested) {
         log_what(nested);
     }
-    log_error(e.what());
+    log_add("%s", e.what());
 }
 
 
@@ -313,20 +313,24 @@ mcastSender_init(
         }
         catch (const std::invalid_argument& e) {
             log_what(e);
-            delete notifier;
             status = 1;
         }
         catch (const std::exception& e) {
+            log_what(e);
+            status = 3;
+        }
+        if (status) {
+            log_add("Couldn't create new FMTP sender");
             delete notifier;
-            throw;
         }
     }
     catch (const std::exception& e) {
         log_what(e);
+        log_add("Couldn't create new per-product sending-notifier");
         status = 3;
     }
 
-    return status;      // Eclipse wants to see a return
+    return status;
 }
 
 /**
@@ -397,8 +401,12 @@ mcastSender_new(
         status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
                 groupPort, ifaceAddr, ttl, iProd, timeoutFactor, doneWithProd);
 
-        if (0 == status)
+        if (status) {
+            log_add("Couldn't initialize multicast sender");
+        }
+        else {
             *sender = send;
+        }
     }
 
     return status;      // Eclipse wants to see a return
@@ -432,6 +440,7 @@ mcastSender_start(
         }
         catch(std::system_error& e) {
             log_what(e);
+            log_add("Couldn't get TCP port number of FMTP sender");
             sender->vcmtpSender->Stop();
             status = 3;
         }
@@ -443,6 +452,9 @@ mcastSender_start(
     catch (std::exception& e) {
         log_what(e);
         status = 3;
+    }
+    if (status) {
+        log_add("Couldn't start FMTP sender");
     }
 
     return status;
@@ -555,10 +567,14 @@ mcastSender_spawn(
             groupAddr, groupPort, ifaceAddr, ttl, iProd, timeoutFactor,
             doneWithProd);
 
-    if (0 == status) {
+    if (status) {
+        log_add("Couldn't create new multicast sender");
+    }
+    else {
         status = mcastSender_start(send, serverPort);
 
         if (status) {
+            log_add("Couldn't start multicast sender");
             mcastSender_free(send);
         }
         else {
