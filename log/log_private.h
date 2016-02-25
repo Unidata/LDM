@@ -60,9 +60,6 @@ typedef struct message {
     #include "ulog/ulog.h"
     #include <limits.h>
     #include <stdio.h>
-    #include "ulog/ulog.h"
-    #include <limits.h>
-    #include <stdio.h>
 #endif
 
 /**

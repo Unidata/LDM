@@ -678,6 +678,7 @@ mls_init(
     if ((status = mcastSender_spawn(&mcastSender, serverInetAddr,
             &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port,
             ifaceAddr, ttl, iProd, timeoutFactor, mls_doneWithProduct))) {
+        log_add("Couldn't spawn multicast sender");
         status = (status == 1)
                 ? LDM7_INVAL
                 : (status == 2)
@@ -1050,7 +1051,7 @@ main(
         status = mls_execute(groupInfo, ttl, ifaceAddr, timeoutFactor,
                 getQueuePath());
         if (status) {
-            log_flush_error();
+            log_error("Couldn't execute multicast LDM sender");
             switch (status) {
                 case LDM7_INVAL: status = 1; break;
                 case LDM7_PQ:    status = 3; break;
@@ -1062,6 +1063,8 @@ main(
         log_notice("Terminating");
         mi_free(groupInfo);
     } // `groupInfo` allocated
+
+    log_fini();
 
     return status;
 }

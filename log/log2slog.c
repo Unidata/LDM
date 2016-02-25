@@ -211,20 +211,24 @@ static dest_funcs_t stderr_funcs = {stderr_init, stream_log, stderr_fini};
 static int file_init(void)
 {
     int status;
-    int file_fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
-            S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
-    if (file_fd < 0) {
-        LOG_LOC_DECL(loc);
-        logi_internal(LOG_LEVEL_ERROR, &loc, "Can't open log file \"%s\": %s",
-                log_dest, strerror(errno));
-        status = -1;
+    if (stream_file) {
+        status = 0;
     }
     else {
-        int flags = fcntl(file_fd, F_GETFD);
-        (void)fcntl(file_fd, F_SETFD, flags | FD_CLOEXEC);
-        stream_file = fdopen(file_fd, "a");
-        (void)setvbuf(stream_file, NULL, _IOLBF, BUFSIZ); // Line buffering
-        status = 0;
+        int fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
+                S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+        if (fd < 0) {
+            logl_internal(LOG_LEVEL_ERROR, "Can't open log file \"%s\": %s",
+                    log_dest, strerror(errno));
+            status = -1;
+        }
+        else {
+            int flags = fcntl(fd, F_GETFD);
+            (void)fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+            stream_file = fdopen(fd, "a");
+            (void)setvbuf(stream_file, NULL, _IOLBF, BUFSIZ); // Line buffering
+            status = 0;
+        }
     }
     return status;
 }
@@ -320,14 +324,20 @@ int logi_init(
         lock.l_type = F_WRLCK;
         lock.l_whence = SEEK_SET;
         lock.l_start = 0;
-        lock.l_len = 0; // entire object
+        lock.l_len = 0; // Entire file
         unlock = lock;
         unlock.l_type = F_UNLCK;
         dest_funcs = stderr_funcs;
         syslog_options = LOG_PID | LOG_NDELAY;
         syslog_facility = LOG_LDM;
 
-        strncpy(ident, logl_basename(id), sizeof(ident))[sizeof(ident)-1] = 0;
+        // Handle potential overlap because log_get_id() returns `ident`
+        size_t nbytes = strlen(id);
+        if (nbytes > sizeof(ident) - 1)
+            nbytes = sizeof(ident) - 1;
+        (void)memmove(ident, logl_basename(id), nbytes);
+        ident[nbytes] = 0;
+
         status = logi_set_destination();
         if (status)
             logl_internal(LOG_LEVEL_ERROR, "Couldn't set logging destination");
@@ -366,7 +376,12 @@ void logi_set_level(void)
 int logi_set_id(
         const char* const id)
 {
-    strncpy(ident, id, sizeof(ident))[sizeof(ident)-1] = 0;
+    // Handle potential overlap because log_get_id() returns `ident`
+    size_t nbytes = strlen(id);
+    if (nbytes > sizeof(ident) - 1)
+        nbytes = sizeof(ident) - 1;
+    (void)memmove(ident, id, nbytes);
+    ident[nbytes] = 0;
     /*
      * The destination is re-initialized in case it's the system logging
      * daemon.
@@ -413,6 +428,10 @@ void logi_log(
  */
 const char* log_get_default_daemon_destination(void)
 {
+    /*
+     * Locking is unnecessary because the pathname of the LDM log file is
+     * immutable
+     */
     return get_ldm_logfile_pathname();
 }
 

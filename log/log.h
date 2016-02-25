@@ -505,4 +505,4 @@ bool log_is_level_enabled(
     }
 #endif
 
-#endif /* ULOG_LOG_H_ */
+#endif /* LOG_LOG_H_ */
