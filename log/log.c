@@ -238,124 +238,6 @@ static int msg_format(
         const char* const restrict fmt,
         va_list                    args)
 {
-<<<<<<< HEAD
-    /**
-     * Whether or not the thread-specific string-buffer key has been created.
-     */
-    static pthread_once_t key_creation_control = PTHREAD_ONCE_INIT;
-    (void)pthread_once(&key_creation_control, sb_create_key);
-    StrBuf* sb = pthread_getspecific(sbKey);
-    if (NULL == sb) {
-        sb = sbNew();
-        if (NULL == sb) {
-            logl_internal(LOG_LEVEL_ERROR, "sbNew() failure");
-        }
-        else {
-            int status = pthread_setspecific(sbKey, sb);
-            if (status != 0) {
-                logl_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure: "
-                        "errno=\"%s\"", strerror(status));
-                sbFree(sb);
-                sb = NULL;
-            }
-=======
-    va_list argsCopy;
-    va_copy(argsCopy, args);
-
-    int nbytes = vsnprintf(msg->string, msg->size, fmt, args);
-    int status;
-
-    if (msg->size > nbytes) {
-        status = 0;
-    }
-    else if (0 > nbytes) {
-        // EINTR, EILSEQ, ENOMEM, or EOVERFLOW
-        logl_internal(LOG_LEVEL_ERROR, "vsnprintf() failure: "
-                "fmt=\"%s\", errno=\"%s\"", fmt, strerror(errno));
-    }
-    else {
-        // The buffer is too small for the message. Expand it.
-        size_t  size = nbytes + 1;
-        char*   string = malloc(size);
-
-        if (NULL == string) {
-            status = errno;
-            logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%zu", size);
-        }
-        else {
-            free(msg->string);
-            msg->string = string;
-            msg->size = size;
-            (void)vsnprintf(msg->string, msg->size, fmt, argsCopy);
-            status = 0;
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
-        }
-    }                           /* buffer is too small */
-
-    va_end(argsCopy);
-
-    return status;
-}
-
-<<<<<<< HEAD
-/**
- * Returns a new message structure.
- *
- * @param[in] entry   The message structure.
- * @retval    0       Success. `*entry` is set.
- * @retval    ENOMEM  Out-of-memory. Error message logged.
- */
-static int msg_new(
-        Message** const entry)
-{
-    int      status;
-    Message* msg = malloc(sizeof(Message));
-    if (msg == NULL) {
-        status = errno;
-        logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%zu",
-                sizeof(Message));
-    }
-    else {
-        #define LOG_DEFAULT_STRING_SIZE     256
-        char*   string = malloc(LOG_DEFAULT_STRING_SIZE);
-        if (NULL == string) {
-            status = errno;
-            logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%u",
-                    LOG_DEFAULT_STRING_SIZE);
-            free(msg);
-        }
-        else {
-            *string = 0;
-            msg->string = string;
-            msg->size = LOG_DEFAULT_STRING_SIZE;
-            msg->next = NULL;
-            *entry = msg;
-            status = 0;
-        }
-    } // `msg` allocated
-    return status;
-}
-
-/**
- * Prints a message into a message-list entry.
- *
- * @param[in] msg        The message entry.
- * @param[in] fmt        The message format.
- * @param[in] args       The arguments to be formatted.
- * @retval    0          Success. The message has been written into `*msg`.
- * @retval    EINVAL     `fmt` or `args` is `NULL`. Error message logged.
- * @retval    EINVAL     There are insufficient arguments. Error message logged.
- * @retval    EILSEQ     A wide-character code that doesn't correspond to a
- *                       valid character has been detected. Error message logged.
- * @retval    ENOMEM     Out-of-memory. Error message logged.
- * @retval    EOVERFLOW  The length of the message is greater than {INT_MAX}.
- *                       Error message logged.
- */
-static int msg_format(
-        Message* const restrict    msg,
-        const char* const restrict fmt,
-        va_list                    args)
-{
     va_list argsCopy;
     va_copy(argsCopy, args);
 
@@ -393,10 +275,7 @@ static int msg_format(
     return status;
 }
 
-static void list_create_key(void)
-=======
 static void queue_create_key(void)
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
 {
     int status = pthread_key_create(&queueKey, NULL);
     if (status != 0) {
@@ -421,15 +300,6 @@ static msg_queue_t* queue_get(void)
      * Whether or not the thread-specific queue key has been created.
      */
     static pthread_once_t key_creation_control = PTHREAD_ONCE_INIT;
-<<<<<<< HEAD
-    (void)pthread_once(&key_creation_control, list_create_key);
-    List* list = pthread_getspecific(listKey);
-    if (NULL == list) {
-        list = malloc(sizeof(List));
-        if (NULL == list) {
-            logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%zu",
-                    sizeof(List));
-=======
     (void)pthread_once(&key_creation_control, queue_create_key);
     msg_queue_t* queue = pthread_getspecific(queueKey);
     if (NULL == queue) {
@@ -437,20 +307,14 @@ static msg_queue_t* queue_get(void)
         if (NULL == queue) {
             logl_internal(LOG_LEVEL_ERROR, "malloc() failure: size=%zu",
                     sizeof(msg_queue_t));
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
         }
         else {
             int status = pthread_setspecific(queueKey, queue);
             if (status != 0) {
                 logl_internal(LOG_LEVEL_ERROR, "pthread_setspecific() failure: "
                         "errno=\"%s\"", strerror(status));
-<<<<<<< HEAD
-                free(list);
-                list = NULL;
-=======
                 free(queue);
                 queue = NULL;
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
             }
             else {
                 queue->first = NULL;
@@ -474,9 +338,6 @@ static bool queue_is_empty(
 }
 
 /**
-<<<<<<< HEAD
- * Returns the next unused entry in a message-list. Creates it if necessary.
-=======
  * Indicates if the message queue of the current thread is empty.
  *
  * @retval true iff the queue is empty
@@ -495,7 +356,6 @@ static bool logl_is_queue_empty()
 
 /**
  * Returns the next unused entry in a message-queue. Creates it if necessary.
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
  *
  * @param[in] queue   The message-queue.
  * @param[in] entry   The next unused entry.
@@ -530,36 +390,21 @@ static int queue_getNextEntry(
 /**
  * Clears the accumulated log-messages of the current thread.
  */
-<<<<<<< HEAD
-static void list_clear()
-=======
 static void queue_clear()
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
 {
     sigset_t sigset;
     blockSigs(&sigset);
 
-<<<<<<< HEAD
-    List*   list = list_get();
-
-    if (NULL != list)
-        list->last = NULL;
-=======
     msg_queue_t*   queue = queue_get();
 
     if (NULL != queue)
         queue->last = NULL;
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
 
     restoreSigs(&sigset);
 }
 
 /**
-<<<<<<< HEAD
- * Destroys a list of log-messages.
-=======
  * Destroys a queue of log-messages.
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
  *
  * @param[in] queue  The queue of messages.
  */
@@ -650,21 +495,11 @@ static void flush(
 {
     sigset_t sigset;
     blockSigs(&sigset);
-<<<<<<< HEAD
-    List*   list = list_get();
-
-    if (NULL != list && NULL != list->last) {
-        logl_lock();
-
-        if (is_level_enabled(level)) {
-            for (const Message* msg = list->first; NULL != msg;
-=======
     msg_queue_t*   queue = queue_get();
 
     if (NULL != queue && NULL != queue->last) {
         if (is_level_enabled(level)) {
             for (const Message* msg = queue->first; NULL != msg;
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
                     msg = msg->next) {
                 logi_log(level, &msg->loc, msg->string);
 
@@ -673,12 +508,7 @@ static void flush(
             }                       /* message loop */
         }                           /* messages should be printed */
 
-<<<<<<< HEAD
-        logl_unlock();
-        list_clear();
-=======
         queue_clear();
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
     }                               /* have messages */
     restoreSigs(&sigset);
 }
@@ -1021,17 +851,6 @@ logl_free(void)
     sigset_t sigset;
     blockSigs(&sigset);
 
-<<<<<<< HEAD
-    List*   list = list_get();
-
-    if (list) {
-        if (list->last)
-            logl_internal(LOG_LEVEL_WARNING,
-                    "Loging message-queue isn't empty");
-        list_fini(list);
-        free(list);
-        (void)pthread_setspecific(listKey, NULL);
-=======
     msg_queue_t* queue = queue_get();
     if (!queue_is_empty(queue)) {
         LOG_LOC_DECL(loc);
@@ -1044,7 +863,6 @@ logl_free(void)
         queue_fini(queue);
         free(queue);
         (void)pthread_setspecific(queueKey, NULL);
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
     }
 
     restoreSigs(&sigset);
@@ -1291,37 +1109,6 @@ void log_roll_level(void)
             ? LOG_LEVEL_ERROR
             : log_level - 1;
     logl_unlock();
-<<<<<<< HEAD
-}
-
-/**
- * Returns the current logging level.
- *
- * @return The lowest level through which logging will occur.
- */
-log_level_t log_get_level(void)
-{
-    logl_lock(); // For visibility of changes
-    log_level_t level = log_level;
-    logl_unlock();
-    return level;
-}
-
-/**
- * Indicates if a message at a given logging level would be logged.
- *
- * @param[in] level  The logging level
- * @retval    true   iff a message at level `level` would be logged
- */
-bool log_is_level_enabled(
-        const log_level_t level)
-{
-    logl_lock();
-    int enabled = is_level_enabled(level);
-    logl_unlock();
-    return enabled;
-=======
->>>>>>> 199815bb22dd17266861260a09e6873a35e36118
 }
 
 /**

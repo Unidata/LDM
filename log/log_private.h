@@ -98,6 +98,7 @@ void logl_unlock(void);
 
 /**
  * Vets a logging level.
+ *
  * @param[in] level  The logging level to be vetted.
  * @retval    true   iff `level` is a valid level.
  */
@@ -105,6 +106,8 @@ static inline bool logl_vet_level(
         log_level_t level)
 {
     return level >= LOG_LEVEL_DEBUG && level <= LOG_LEVEL_ERROR;
+}
+
 /**
  * Returns a pointer to the last component of a pathname.
  *
