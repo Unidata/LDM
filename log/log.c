@@ -30,8 +30,8 @@
  *         - _time_: <em>YYYYMMDD</em>T<em>hhmmss</em>.<em>uuuuuu</em>Z
  *         - _process_: _program_[_pid_]
  *         - _priority_: DEBUG | INFO | NOTE | WARN | ERROR
- *         - _location_: _file_:_line_
- *       - Example: 20160113T150106.734013Z noaaportIngester[26398] NOTE process_prod.c:216 SDUS58 PACR 062008 /pN0RABC inserted
+ *         - _location_: _file_:_func()_:_line_
+ *       - Example: 20160113T150106.734013Z noaaportIngester[26398] NOTE process_prod.c:process_prod():216 SDUS58 PACR 062008 /pN0RABC inserted
  *   - Enable log file rotation by refreshing destination upon SIGHUP reception
  */
 #include <config.h>
@@ -1041,7 +1041,6 @@ int log_set_destination(
         status = -1;
     }
     else {
-        logl_lock();
         /*
          * Handle potential overlap because log_get_destination() returns
          * `log_dest`.
@@ -1049,6 +1048,7 @@ int log_set_destination(
         size_t nbytes = strlen(dest);
         if (nbytes > sizeof(log_dest)-1)
             nbytes = sizeof(log_dest)-1;
+        logl_lock();
         (void)memmove(log_dest, dest, nbytes);
         log_dest[nbytes] = 0;
         status = logi_set_destination();
