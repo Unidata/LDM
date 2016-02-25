@@ -241,14 +241,19 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
 int main(int ac, char *av[])
 {
         char *logfname = 0;
-        unsigned timeo = DEFAULT_TIMEO; 
-        unsigned interval = DEFAULT_TIMEO; 
-        unsigned TotalTimeo = DEFAULT_TOTALTIMEO;
-        prod_spec spec;
-        int status;
+        unsigned      timeo = DEFAULT_TIMEO;
+        unsigned      interval = DEFAULT_TIMEO;
+        unsigned      TotalTimeo = DEFAULT_TOTALTIMEO;
+        prod_spec     spec;
+        int           status;
         prod_class_t *clssp;
-        unsigned        port = 0;
-        unsigned        logOpts = LOG_CONS | LOG_PID;
+        unsigned      port = 0;
+        unsigned      logOpts = LOG_CONS | LOG_PID;
+
+        /*
+         * initialize logger
+         */
+        (void)log_init(av[0]);
 
         if(set_timestamp(&clss.from) != 0)
         {
@@ -370,10 +375,6 @@ int main(int ac, char *av[])
 
         } /* End getopt block */
 
-        /*
-         * initialize logger
-         */
-        (void)log_init(av[0]);
         log_notice("Starting Up: %s: %s",
                         remote,
                         s_prod_class(NULL, 0, &clss));
