@@ -78,7 +78,6 @@ dist_bin_SCRIPTS	= \
 
 COMMON_SOURCES          = \
         dvbs.h \
-        goes.h \
         grib2name.c \
         ldmProductQueue.c ldmProductQueue.h \
         nport.h \
@@ -148,7 +147,7 @@ multicastReader.h:	multicastReader.c multicastReader.hin extractDecls
 productMaker.h:		productMaker.c productMaker.hin extractDecls
 
 .c.i:
-        $(COMPILE) -E $< >$@
+	$(COMPILE) -E $< >$@
 
 if WANT_SLOG
 READNOAAPORT_LOG                = readnoaaport.slog
@@ -164,52 +163,52 @@ CUT_FIELD                       = 5
 endif
 
 installcheck-local:
-        $(DESTDIR)$(bindir)/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
-        $(DESTDIR)$(bindir)/readnoaaport -l- -q /tmp/readnoaaport-test.pq \
+	$(DESTDIR)$(bindir)/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	$(DESTDIR)$(bindir)/readnoaaport -l- -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
 
 check-local:            check-readnoaaport check-noaaportIngester \
                         check-noaaportIngester-nssl
 check-readnoaaport:     readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
-        $(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
-        LDM_REGISTRY_DIR=../regutil ./readnoaaport -nl- \
-            -q /tmp/readnoaaport-test.pq \
-            $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
-        rm /tmp/readnoaaport-test.pq
-        fgrep 'process_prod()' readnoaaport.out | cut -d ' ' -f $(CUT_FIELD)- \
-                >readnoaaport.log
-        diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	LDM_REGISTRY_DIR=../regutil ./readnoaaport -nl- \
+	    -q /tmp/readnoaaport-test.pq \
+	    $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
+	rm /tmp/readnoaaport-test.pq
+	fgrep 'process_prod()' readnoaaport.out | cut -d ' ' -f $(CUT_FIELD)- \
+		>readnoaaport.log
+	diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
 
 noaaportIngester.out:           noaaportIngester
-        $(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-        LDM_REGISTRY_DIR=../regutil ./noaaportIngester -l- -b 2 -n \
-            -q /tmp/noaaportIngester-test.pq \
-            <$(srcdir)/nwstgdump.data >$@ 2>&1
-        rm /tmp/noaaportIngester-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	LDM_REGISTRY_DIR=../regutil ./noaaportIngester -l- -b 2 -n \
+	    -q /tmp/noaaportIngester-test.pq \
+	    <$(srcdir)/nwstgdump.data >$@ 2>&1
+	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:           noaaportIngester.out
-        fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
+	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
 check-noaaportIngester:         noaaportIngester.log \
-                                $(srcdir)/$(NOAAPORTINGESTER_LOG)
-        diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
+	                        $(srcdir)/$(NOAAPORTINGESTER_LOG)
+	diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
 
 noaaportIngester-nssl.out:      noaaportIngester
-        -rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
-            g2vcrdwmo255.tbl
+	-rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
+	    g2vcrdwmo255.tbl
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-        ln -s $(top_srcdir)/gempak/tables/wmocenter.tbl .
-        ln -s $(top_srcdir)/gempak/tables/g2varsnssl.tbl g2varsnssl1.tbl
-        ln -s $(top_srcdir)/gempak/tables/g2vcrdwmo.tbl g2vcrdwmo255.tbl
-        LDM_REGISTRY_DIR=../regutil ./noaaportIngester -nl- \
-            -q /tmp/noaaportIngester-test.pq \
-            <$(srcdir)/mrms1.data >$@ 2>&1
-        rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
-            g2vcrdwmo255.tbl
+	ln -s $(top_srcdir)/gempak/tables/wmocenter.tbl .
+	ln -s $(top_srcdir)/gempak/tables/g2varsnssl.tbl g2varsnssl1.tbl
+	ln -s $(top_srcdir)/gempak/tables/g2vcrdwmo.tbl g2vcrdwmo255.tbl
+	LDM_REGISTRY_DIR=../regutil ./noaaportIngester -nl- \
+	    -q /tmp/noaaportIngester-test.pq \
+	    <$(srcdir)/mrms1.data >$@ 2>&1
+	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
+	    g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:      noaaportIngester-nssl.out
-        fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
+	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
 check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
-                                $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
-        diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
+				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
+	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 
 valgrind:               valgrind-readnoaaport valgrind-noaaportIngester
 
@@ -230,11 +229,11 @@ else
 endif
 
 valgrind-noaaportIngester:      noaaportIngester
-        $(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-        LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute valgrind \
-            --leak-check=yes .libs/noaaportIngester -b 1 -q \
-            /tmp/noaaportIngester-test.pq <$(srcdir)/nwstgdump.data
-        rm /tmp/noaaportIngester-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=yes .libs/noaaportIngester -b 1 -q \
+	    /tmp/noaaportIngester-test.pq <$(srcdir)/nwstgdump.data
+	rm /tmp/noaaportIngester-test.pq
 
 root-ni-vg:
         LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute valgrind \
@@ -242,7 +241,7 @@ root-ni-vg:
             -q /tmp/noaaportIngester-test.pq <$(srcdir)/nwstgdump.data
 
 debug-readnoaaport:     readnoaaport
-        $(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	echo 'handle SIGCONT pass noprint nostop' >/tmp/readnoaaport.gdb
 	echo 'b 617' >>/tmp/readnoaaport.gdb
 	echo 'run -l- -q /tmp/readnoaaport-test.pq nwstgdump.data' \
@@ -251,20 +250,20 @@ debug-readnoaaport:     readnoaaport
 	rm /tmp/readnoaaport-test.pq /tmp/readnoaaport.gdb
 
 debug-noaaportIngester:	noaaportIngester
-        $(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-        echo 'handle SIGCONT pass noprint nostop' >/tmp/noaaportIngester.gdb
-        echo 'handle SIGTERM pass nostop' >>/tmp/noaaportIngester.gdb
-        echo 'run -q /tmp/noaaportIngester-test.pq -n \
-            <$(srcdir)/nwstgdump.data' >>/tmp/noaaportIngester.gdb
-        $(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-db
-        rm /tmp/noaaportIngester-test.pq /tmp/noaaportIngester.gdb
+	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+	echo 'handle SIGCONT pass noprint nostop' >/tmp/noaaportIngester.gdb
+	echo 'handle SIGTERM pass nostop' >>/tmp/noaaportIngester.gdb
+	echo 'run -q /tmp/noaaportIngester-test.pq -n \
+	    <$(srcdir)/nwstgdump.data' >>/tmp/noaaportIngester.gdb
+	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-db
+	rm /tmp/noaaportIngester-test.pq /tmp/noaaportIngester.gdb
 
 root-ni-db:
         LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute gdb -x \
             /tmp/noaaportIngester.gdb noaaportIngester
 
 install-html:           $(srcdir)/html/index.html $(DESTDIR)$(docdir)
-        cp -R $(srcdir)/html/* $(DESTDIR)$(docdir)
+	cp -R $(srcdir)/html/* $(DESTDIR)$(docdir)
 
 $(DESTDIR)$(docdir):
 	mkdir -p $@

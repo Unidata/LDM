@@ -21,8 +21,8 @@
 #include "multicastReader.h"
 #include "productMaker.h"
 #include "reader.h"
-#include "goes.h"
 
+#include <zlib.h> /* Required for compress/uncompress */
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -63,6 +63,8 @@ static Fifo*             fifo;
 static bool              reportStatistics;
 static pthread_mutex_t   mutex;
 static pthread_cond_t    cond = PTHREAD_COND_INITIALIZER;
+int inflateFrame;
+int fillScanlines;
 
 /**
  * Decodes the command-line.

@@ -20,8 +20,8 @@
 #include <pq.h>
 #include <md5.h>
 
-#include "goes.h"
-
+#include <sys/types.h>
+#include <zlib.h> /* Required for compress/uncompress */
 
 #include "log.h"
 #include "fifo.h"
@@ -81,6 +81,9 @@ struct productMaker {
     int                     status;     /**< Termination status */
     unsigned char           buf[10000]; /**< Read buffer */
 };
+
+extern int inflateFrame;
+extern int fillScanlines;
 
 datastore*  ds_alloc(void);
 
@@ -178,10 +181,7 @@ void* pmStart(
     int                 firstBlk = 0;
     int                 lastBlk = 0;
     unsigned long       curr_prod_seqno;        
-    
-    int			unCompress = NO;		/* By default uncompress is disabled */
-    int			fillScan = NO;			/* By default scanlines are not filled *
-                             	     	     	     	 * for missing satellite GOES imagery  */
+
 #define CHUNK_SZ 5700
 #define MAXBYTES_DATA   5700    
 #define PDB_LEN 512
@@ -227,8 +227,6 @@ void* pmStart(
     prod.head = NULL;
     prod.tail = NULL;
 
-    unCompress = inflateFrame;
-    fillScan = fillScanlines;
     memset(GOES_BLANK_FRAME, 0, MAXBYTES_DATA);
 
         /*** For Retranmission Purpose  ***/
@@ -639,7 +637,7 @@ void* pmStart(
                 log_error("OOPS, start of new product [%ld ] with unfinished "
                     "product %ld", pdh->seqno, prod.seqno);
 
-                if (GOES == 1 && fillScan) {
+                if (GOES == 1 && fillScanlines) {
                         /** Assume next product started before the prev. product is compelete **/
                         /** then the remaining number of frags should be filled with  blank   **/
                         /** scanlines in the GOES imagery **/
@@ -658,7 +656,7 @@ void* pmStart(
                                     frags_left, n_scanlines, GOES_BLNK_FRM_LEN, prod.seqno);
                         log_debug("prev prod seqno %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
                         log_debug("Balance frames left %d ", frags_left);
-                        if (unCompress) {
+                        if (inflateFrame) {
                             /** Use uncompressed blank frames for scanlines **/
                             for (int cnt = 0; cnt < frags_left; cnt++) {
                                 memcpy(memheap + heapcount, GOES_BLANK_FRAME, (GOES_BLNK_FRM_LEN * n_scanlines));
@@ -702,7 +700,7 @@ void* pmStart(
                         	MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
                         	heapcount += comprLen;
                             }
-                        } /** end if-else unCompress **/
+                        } /** end if-else inflateFrame **/
 
                         process_prod (prod, PROD_NAME, memheap, heapcount,
                                       md5ctxp, productMaker->ldmProdQueue,
@@ -714,7 +712,7 @@ void* pmStart(
                         (void)pthread_mutex_unlock(&productMaker->mutex);
 
                     }
-                } /* end if GOES == 1 && fillScan */
+                } /* end if GOES == 1 && fillScanlines */
 
 
 
@@ -741,7 +739,7 @@ void* pmStart(
                     acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
                 }
 #endif
-                if (unCompress) {
+                if (inflateFrame) {
                     log_info("resetting inflate due to prod error....");
                     inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, END_BLK );
                 }
@@ -928,7 +926,7 @@ void* pmStart(
 		    }
 #endif
 /**********************    NEW CODE    ********************************/
-		    if (fillScan) {
+		    if (fillScanlines) {
 			if (pfrag->seqno != prod.seqno) { /** Ex. last 307/5690 this 5/5691 **/
 			    frags_left = saved_nfrags - prod.tail->fragnum - 1;
 			    log_notice("Total frames expected: %d balance left %d ", saved_nfrags, frags_left);
@@ -936,7 +934,7 @@ void* pmStart(
 			    GOES_BLNK_FRM_LEN = saved_pdb_struct.recsize;
 			    n_scanlines = saved_pdh_struct.records_per_block;
 
-			    if (unCompress) {
+			    if (inflateFrame) {
 				for (int cnt = 0; cnt < frags_left; cnt++) {
 				    memcpy(memheap + heapcount, GOES_BLANK_FRAME, (GOES_BLNK_FRM_LEN * n_scanlines));
 				    MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount), (GOES_BLNK_FRM_LEN * n_scanlines));
@@ -984,7 +982,7 @@ void* pmStart(
 				    heapcount += comprLen;
 				}
 
-			    } /** end if-else unCompress **/
+			    } /** end if-else inflateFrame **/
 
 			    log_notice("%d scanlines filled into block %d prod seq %ld ", n_scanlines, frags_left, prod.seqno);
 			    /** Insert the prod with missing frames into the ldm pq    **/
@@ -1010,7 +1008,7 @@ void* pmStart(
 
 			log_notice("Balance frames left %d scanlines per frame %d", frags_left, n_scanlines);
 
-			if (unCompress) {
+			if (inflateFrame) {
 			    for (int cnt = 0; cnt < frags_left; cnt++){
 				memcpy(memheap + heapcount, GOES_BLANK_FRAME, (GOES_BLNK_FRM_LEN * n_scanlines));
 				MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount), (GOES_BLNK_FRM_LEN * n_scanlines));
@@ -1038,7 +1036,7 @@ void* pmStart(
 
 			log_notice("Total %d scanlines filled for block %d into prod seq %ld ", (n_scanlines * frags_left), frags_left, prod.seqno);
 /**********************    NEW CODE    ********************************/
-		    }/** end if fillScan */
+		    }/** end if fillScanlines */
 		    else {
 
 			ds_free();
@@ -1142,7 +1140,7 @@ void* pmStart(
                 	acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
                     }
 #endif
-                    if (unCompress) {
+                    if (inflateFrame) {
                 	log_info("resetting inflate due to prod error....");
                 	inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, END_BLK );
                     }
@@ -1208,22 +1206,22 @@ void* pmStart(
              **  and frame is compressed then uncompress
              **  the frame and add to the heap
              **/
-            if (unCompress)
-        	log_debug(" unCompress = %d   PROD_COMPRESSED = %d seqno=%ld\n", unCompress, PROD_COMPRESSED, prod.seqno);
+            if (inflateFrame)
+        	log_debug(" inflateFrame = %d   PROD_COMPRESSED = %d seqno=%ld\n", inflateFrame, PROD_COMPRESSED, prod.seqno);
 
             	    /* Special case: For a given product, when first and intermediate frames are compressed
                        but not the last frame by uplink then last frame does not need
                        to be decompressed. But inflateData routine should be notified
                        to close the stream. Otherwise it would cause memory leak */
 
-            if (unCompress) {
+            if (inflateFrame) {
                 if (pdh->dbno == 0){
                     log_debug("First Blk, initializing inflate prod %ld", prod.seqno);
                     inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
                 }
             }
  
-            if (unCompress && PROD_COMPRESSED) {
+            if (inflateFrame && PROD_COMPRESSED) {
                 if (pdh->dbno == 0) {
                     /** Only need to parse the first block for WMO and NNNXXX 
                      ** and get the offset required to pass on to inflate.
@@ -1254,7 +1252,7 @@ void* pmStart(
             	deflen = uncomprLen;
             	log_debug(" Block# %d inflated uncomprLen [%ld]", pdh->dbno, uncomprLen);
             } else {
-                /** executed by default (when unCompress is not enabled or product is not compressed) **/
+                /** executed by default (when inflateFrame is not enabled or product is not compressed) **/
                 memcpy(memheap + heapcount, buf + dataoff, datalen);
 
             	deflen = datalen;
@@ -1295,8 +1293,8 @@ void* pmStart(
 	} else {
 #endif
 	    if ((prod.nfrag == 0) || (prod.nfrag == (pfrag->fragnum + 1))) {
-		if (unCompress) {
-		    log_debug("uncompress ==> %d Last Blk, call inflateEnd prod %ld", unCompress,  prod.seqno);
+		if (inflateFrame) {
+		    log_debug("uncompress ==> %d Last Blk, call inflateEnd prod %ld", inflateFrame,  prod.seqno);
 		    inflateData(NULL, 0, NULL, &uncomprLen, END_BLK );
 		}
 
@@ -1397,7 +1395,7 @@ void* pmStart(
 	    }
 #endif
 	    /** Required to save only if decompression is requested via cmdline **/
-	    if (unCompress || fillScan) {
+	    if (inflateFrame || fillScanlines) {
 		saved_sbn_struct = *sbn;
 		saved_psh_struct = *psh;
 		saved_pdb_struct = *pdb;
@@ -1514,7 +1512,7 @@ static int inflateData(
   int inflatedBytes=0;
   int decompByteCounter = 0;
   int num=0;
-  static int isStreamSet = NO;
+  static int isStreamSet = FALSE;
   static z_stream i_zstrm;
 
   ret = Z_OK;
@@ -1528,7 +1526,7 @@ static int inflateData(
       log_error("Fail inflateEnd %d [%s] ", ret, decode_zlib_err(ret));
       return (ret);
     }
-   isStreamSet = NO;
+   isStreamSet = FALSE;
    log_debug("inflateEnd called ......ret=%d", ret);
    return 0;
   }
@@ -1546,7 +1544,7 @@ static int inflateData(
        log_error("ERROR %d inflateInit (%s)", zerr, decode_zlib_err(zerr));
        return -1;
      }
-     isStreamSet = YES;
+     isStreamSet = TRUE;
      return 0;
   }
 
@@ -1572,7 +1570,7 @@ static int inflateData(
          if(ret < 0) {
           log_error(" Error %d inflate (%s)", ret, decode_zlib_err(ret));
           (void)inflateEnd(&i_zstrm);
-          isStreamSet = NO;
+          isStreamSet = FALSE;
            return ret;
          }
          inflatedBytes = CHUNK_SZ - i_zstrm.avail_out;
@@ -1602,7 +1600,7 @@ static int inflateData(
       if(ret == Z_STREAM_ERROR){
         log_error(" Error %d inflateReset (%s)", ret, decode_zlib_err(ret));
         (void)inflateEnd(&i_zstrm);
-        isStreamSet = NO;
+        isStreamSet = FALSE;
         return ret;
       }
     }
@@ -1642,7 +1640,7 @@ static int deflateData(
     int compressedByteCounter = 0;
     int zerr;
     unsigned char *dstBuf;
-    static int isStreamSet = NO;
+    static int isStreamSet = FALSE;
     static z_stream d_zstrm;
 
   log_debug(" Block [%d] deflating now.. inlen[%ld] isStreamSet %d ", blk, inLen, isStreamSet );
@@ -1657,7 +1655,7 @@ static int deflateData(
                 log_error("ERROR %d deflateInit (%s)", zerr, decode_zlib_err(zerr));
                 return -1;
         }
-      isStreamSet = YES;
+      isStreamSet = TRUE;
       return 0;
   }
 
@@ -1666,7 +1664,7 @@ static int deflateData(
                 log_error("ERROR %d deflateEnd (%s)", zerr, decode_zlib_err(zerr));
                 return -1;
         }
-     isStreamSet = NO;
+     isStreamSet = FALSE;
      log_debug(" Calling deflateEnd to close deflate stream zerr = %d", zerr);
    }
 
@@ -1695,7 +1693,7 @@ static int deflateData(
           if (ret < 0) {
               log_error("FAIL %d delate (%s}", ret, decode_zlib_err(ret));
               (void)deflateEnd(&d_zstrm);
-               isStreamSet = NO;
+               isStreamSet = FALSE;
                return (ret);
           }
 
@@ -1720,7 +1718,7 @@ static int deflateData(
             if (ret1 < 0){  /* state not clobbered */
               log_error("FAIL %d delate (%s) ", ret, decode_zlib_err(ret1));
               deflateEnd(&d_zstrm);
-              isStreamSet = NO;
+              isStreamSet = FALSE;
               return (ret);
             }
 

@@ -31,6 +31,21 @@
  * Private API:
  ******************************************************************************/
 
+/**
+ * Re-initializes the logging module based on its current state.
+ *
+ * @retval    0        Success.
+ * @retval   -1        Failure.
+ */
+static int reinit(void)
+{
+    const char* const id = getulogident();
+    const unsigned    options = ulog_get_options();
+    const int         facility = getulogfacility();
+    int               status = openulog(id, options, facility, log_dest);
+    return status < 0 ? -1 : 0;
+}
+
 /******************************************************************************
  * Package-Private Implementation API:
  ******************************************************************************/
@@ -79,11 +94,7 @@ int logi_fini(void)
  */
 int logi_reinit(void)
 {
-    const char* const id = getulogident();
-    const unsigned    options = ulog_get_options();
-    const int         facility = getulogfacility();
-    int               status = openulog(id, options, facility, log_dest);
-    return status < 0 ? -1 : 0;
+    return reinit();
 }
 
 /**
@@ -92,10 +103,7 @@ int logi_reinit(void)
  */
 int logi_set_destination(void)
 {
-    const char* const id = getulogident();
-    const unsigned    options = ulog_get_options();
-    int               status = openulog(id, options, LOG_LDM, log_dest);
-    return status == -1 ? -1 : 0;
+    return reinit();
 }
 
 /**

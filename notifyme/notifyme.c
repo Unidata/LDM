@@ -240,13 +240,13 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
 
 int main(int ac, char *av[])
 {
-        char *logfname = 0;
+        char*         logfname = 0;
         unsigned      timeo = DEFAULT_TIMEO;
         unsigned      interval = DEFAULT_TIMEO;
         unsigned      TotalTimeo = DEFAULT_TOTALTIMEO;
         prod_spec     spec;
         int           status;
-        prod_class_t *clssp;
+        prod_class_t* clssp;
         unsigned      port = 0;
         unsigned      logOpts = LOG_CONS | LOG_PID;
 
