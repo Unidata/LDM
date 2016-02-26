@@ -56,15 +56,15 @@ typedef struct {
     struct timeval    reportTime;
 } StatsStruct;
 
-static const int         USAGE_ERROR = 1;
-static const int         SYSTEM_FAILURE = 2;
-static const int         SCHED_POLICY = SCHED_FIFO;
-static Fifo*             fifo;
-static bool              reportStatistics;
-static pthread_mutex_t   mutex;
-static pthread_cond_t    cond = PTHREAD_COND_INITIALIZER;
-int inflateFrame;
-int fillScanlines;
+static const int	USAGE_ERROR = 1;
+static const int	SYSTEM_FAILURE = 2;
+static const int	SCHED_POLICY = SCHED_FIFO;
+static Fifo*		fifo;
+static bool		reportStatistics;
+static pthread_mutex_t	mutex;
+static pthread_cond_t	cond = PTHREAD_COND_INITIALIZER;
+int			inflateFrame;
+int			fillScanlines;
 
 /**
  * Decodes the command-line.

@@ -12,14 +12,11 @@
 #include <sys/time.h>
 #include <limits.h>
 #include <unistd.h>
-
 #include <ctype.h> /* Required for character classification routines - isalpha */
-
 #include <ldm.h>
 #include "log.h"
 #include <pq.h>
 #include <md5.h>
-
 #include <sys/types.h>
 #include <zlib.h> /* Required for compress/uncompress */
 
@@ -28,7 +25,6 @@
 #include "ldmProductQueue.h"
 #include "nport.h"
 #include "productMaker.h"     /* Eat own dog food */
-
 
 #ifdef RETRANS_SUPPORT
 #include "retrans.h"
@@ -49,8 +45,16 @@ extern void     png_header(char *memheap, int length);
 extern void     pngout_init(int width, int height);
 extern int      png_get_prodlen();
 extern int      prod_isascii(char *pname, char *prod, size_t psize);
-extern void     process_prod(prodstore nprod, char *PROD_NAME, char *memheap, size_t heapsize,
-			MD5_CTX *md5try, LdmProductQueue const *lpq, psh_struct *psh, sbn_struct *sbn);
+extern void     process_prod(
+			prodstore		nprod,
+			char*			PROD_NAME,
+			char*			memheap,
+			size_t			heapsize,
+			MD5_CTX*		md5try,
+			LdmProductQueue* const	lpq,
+			psh_struct*		psh,
+			sbn_struct*		sbn);
+
 static int	inflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
 static int	deflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
 static int	prod_get_WMO_nnnxxx_offset (char *wmo_buff, int max_search, int *p_len);
@@ -82,10 +86,10 @@ struct productMaker {
     unsigned char           buf[10000]; /**< Read buffer */
 };
 
-extern int inflateFrame;
-extern int fillScanlines;
+extern int	inflateFrame;
+extern int	fillScanlines;
 
-datastore*  ds_alloc(void);
+datastore*	ds_alloc(void);
 
 /**
  * Returns a new product-maker.
@@ -109,27 +113,31 @@ int pmNew(
 
     if (NULL == w) {
         log_syserr("Couldn't allocate new product-maker");
-    } else {
-        MD5_CTX*    md5ctxp = new_MD5_CTX();
+    }
+    else {
+	MD5_CTX*    md5ctxp = new_MD5_CTX();
 
-        if (NULL == md5ctxp) {
-            log_syserr("Couldn't allocate MD5 object");
-            free(w);
-        } else if ((status = pthread_mutex_init(&w->mutex, NULL)) != 0) {
-            log_errno(status, "Couldn't initialize product-maker mutex");
-            free(w);
-            free_MD5_CTX(md5ctxp);
-            status = 2;
-        } else {
-            w->fifo = fifo;
-            w->ldmProdQueue = lpq;
-            w->nframes = 0;
-            w->nmissed = 0;
-            w->nprods = 0;
-            w->md5ctxp = md5ctxp;
-            w->status = 0;
-            *productMaker = w;
-        }
+	if (NULL == md5ctxp) {
+	    log_syserr("Couldn't allocate MD5 object");
+	    free(w);
+	}
+	else {
+	    if ((status = pthread_mutex_init(&w->mutex, NULL)) != 0) {
+		log_errno(status, "Couldn't initialize product-maker mutex");
+		free(w);
+		free_MD5_CTX(md5ctxp);
+		status = 2;
+	    } else {
+		w->fifo = fifo;
+		w->ldmProdQueue = lpq;
+		w->nframes = 0;
+		w->nmissed = 0;
+		w->nprods = 0;
+		w->md5ctxp = md5ctxp;
+		w->status = 0;
+		*productMaker = w;
+	    }
+        } // `md5cctxp` allocated
     } // `w` allocated
 
     return status;
