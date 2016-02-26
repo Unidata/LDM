@@ -617,14 +617,6 @@ static void reportStats(
         struct timeval* const restrict reportTime,
         Reader* const restrict         reader)
 {
-    struct timeval          now;
-    double                  interval;
-    double                  rate;
-    char                    buf[80];
-    int                     logmask;
-    unsigned long           byteCount;
-    unsigned long           frameCount, missedFrameCount, prodCount;
-    unsigned long           fullFifoCount;
     static unsigned long    totalFrameCount;
     static unsigned long    totalMissedFrameCount;
     static unsigned long    totalProdCount;

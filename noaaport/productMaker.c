@@ -51,8 +51,8 @@ extern int      png_get_prodlen();
 extern int      prod_isascii(char *pname, char *prod, size_t psize);
 extern void     process_prod(prodstore nprod, char *PROD_NAME, char *memheap, size_t heapsize,
 			MD5_CTX *md5try, LdmProductQueue const *lpq, psh_struct *psh, sbn_struct *sbn);
-static int	inflateData (char const *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
-static int	deflateData (char const *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
+static int	inflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
+static int	deflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
 static int	prod_get_WMO_nnnxxx_offset (char *wmo_buff, int max_search, int *p_len);
 static int	prod_get_WMO_offset (char *buf, size_t buflen, size_t *p_wmolen);
 static int	getIndex (char *arr, int pos, int sz);
@@ -1243,7 +1243,7 @@ void* pmStart(
             		}
             	    }
                 } else { /** Continuation block **/
-                    log_ebug(" Block# %d  contd block", pdh->dbno);
+                    log_debug(" Block# %d  contd block", pdh->dbno);
                     inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, ANY_BLK );
                     log_debug("Seq#:%ld Block# %d  contd block ",prod.seqno, pdh->dbno);
                 }
@@ -1489,12 +1489,12 @@ int pmStatus(
  */
 
 static int inflateData(
-    char*    const    inBuf,                  /**< [in] Pointer to the frame buffer   */
-    unsigned long     inLen,                  /**< [in] Length of the compressed data */
-    const    char*    outBuf,                 /**< [out] Pointer to uncompressed frame 
-                                                *  data buffer  */
-    unsigned long*     outLen,                 /**< [out] Length of uncompressed frame */  
-    unsigned int       blk)                   /** Block position   **/
+    const char		*inBuf,			/**< [in] Pointer to the frame buffer   */
+    unsigned long	inLen,			/**< [in] Length of the compressed data */
+    const char		*outBuf,		/**< [out] Pointer to uncompressed frame
+     	     	     	     	     	     	  *  data buffer  */
+    unsigned long	*outLen,		/**< [out] Length of uncompressed frame */
+    unsigned int	blk)			/** Block position   **/
 {
   
   int have;
@@ -1621,12 +1621,12 @@ static int inflateData(
  */
 
 static int deflateData(
-    char*    const    inBuf,                  /**< [in] Pointer to the frame buffer   */
-    unsigned long     inLen,                  /**< [in] Length of the uncompressed data */
-    const    char*    outBuf,                 /**< [out] Pointer to compressed frame 
-                                                *  data buffer  */
-    unsigned long*     outLen,                 /**< [out] Length of compressed frame */  
-    unsigned int       blk)
+    const char		*inBuf,			/**< [in] Pointer to the frame buffer   */
+    unsigned long	inLen,			/**< [in] Length of the uncompressed data */
+    const char		*outBuf,		/**< [out] Pointer to compressed frame
+						  *  data buffer  */
+    unsigned long	*outLen,		/**< [out] Length of compressed frame */
+    unsigned int	blk)
 {
   
     int ret,idx = -1;
