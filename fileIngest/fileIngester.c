@@ -45,12 +45,12 @@
  * Build Instructions:
  *	By default, LDM support is not compiled in.  To use LDM, the source must
  *	be compiled as part of LDM using the Makefile.am automake template.  This
- *	is part of a branch of v6.11.6 of LDM that includes changes to the LDM
+ *	is part of a branch of v6.13.0 of LDM that includes changes to the LDM
  *	build system.  To build it for LDM, follow the normal procedure.  When
  *	ready to build, do the following from the base LDM source directory as
  *	user ldm:
  *
- *		autoreconf
+ *		autoreconf -fi
  *		automake	(if version errors occur, follow instructions provided)
  *		./configure --with-ingester --prefix=$HOME
  *		rm -f libtool
@@ -226,7 +226,7 @@
 #ifdef LDM_SUPPORT
 #       include <syslog.h>
 #       include <md5.h>
-#       include "../fileIngest/ldmProductQueue.h"
+#       include "ldmProductQueue.h"
 #endif
 
 #include "../fileIngest/stdclib.h"
@@ -998,14 +998,9 @@ static int initLogs () {
 	}
 
 #ifdef LDM_SUPPORT
-
-	if (openulog (ProgName, LOG_CONS | LOG_PID, LOG_LOCAL0, NULL) == -1) {
-		logMsg (eLog, V_ERROR, S_ERROR,
-			"(%s) - Couldn't initialize logging",
-			__FUNCTION__);
-		return 1;
-	}
-
+	sprintf (logName, "%s/ldm.log", MessagePath);
+	log_set_destination(logName);
+	log_set_level(LOG_LEVEL_NOTICE);
 #endif
 
 	return 0;
