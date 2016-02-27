@@ -12,11 +12,13 @@
 #include <sys/time.h>
 #include <limits.h>
 #include <unistd.h>
-
+#include <ctype.h> /* Required for character classification routines - isalpha */
 #include <ldm.h>
 #include "log.h"
 #include <pq.h>
 #include <md5.h>
+#include <sys/types.h>
+#include <zlib.h> /* Required for compress/uncompress */
 
 #include "log.h"
 #include "fifo.h"
@@ -44,14 +46,21 @@ extern void     pngout_init(int width, int height);
 extern int      png_get_prodlen();
 extern int      prod_isascii(char *pname, char *prod, size_t psize);
 extern void     process_prod(
-    prodstore                   nprod,
-    char*                       PROD_NAME,
-    char*                       memheap,
-    size_t                      heapsize,
-    MD5_CTX*                    md5try,
-    LdmProductQueue* const      lpq,
-    psh_struct*                 psh,
-    sbn_struct*                 sbn);
+			prodstore		nprod,
+			char*			PROD_NAME,
+			char*			memheap,
+			size_t			heapsize,
+			MD5_CTX*		md5try,
+			LdmProductQueue* const	lpq,
+			psh_struct*		psh,
+			sbn_struct*		sbn);
+
+static int	inflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
+static int	deflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
+static int	prod_get_WMO_nnnxxx_offset (char *wmo_buff, int max_search, int *p_len);
+static int	prod_get_WMO_offset (char *buf, size_t buflen, size_t *p_wmolen);
+static int	getIndex (char *arr, int pos, int sz);
+static char	*decode_zlib_err (int err);
 
 #ifdef RETRANS_SUPPORT
 extern CPIO_TABLE cpio_tbl;
@@ -77,7 +86,10 @@ struct productMaker {
     unsigned char           buf[10000]; /**< Read buffer */
 };
 
-datastore*  ds_alloc(void);
+extern int	inflateFrame;
+extern int	fillScanlines;
+
+datastore*	ds_alloc(void);
 
 /**
  * Returns a new product-maker.
@@ -103,29 +115,28 @@ int pmNew(
         log_syserr("Couldn't allocate new product-maker");
     }
     else {
-        MD5_CTX*    md5ctxp = new_MD5_CTX();
+	MD5_CTX*    md5ctxp = new_MD5_CTX();
 
-        if (NULL == md5ctxp) {
-            log_syserr("Couldn't allocate MD5 object");
-            free(w);
-        }
-        else {
-            if ((status = pthread_mutex_init(&w->mutex, NULL)) != 0) {
-                log_errno(status, "Couldn't initialize product-maker mutex");
-                free(w);
-                free_MD5_CTX(md5ctxp);
-                status = 2;
-            }
-            else {
-                w->fifo = fifo;
-                w->ldmProdQueue = lpq;
-                w->nframes = 0;
-                w->nmissed = 0;
-                w->nprods = 0;
-                w->md5ctxp = md5ctxp;
-                w->status = 0;
-                *productMaker = w;
-            }
+	if (NULL == md5ctxp) {
+	    log_syserr("Couldn't allocate MD5 object");
+	    free(w);
+	}
+	else {
+	    if ((status = pthread_mutex_init(&w->mutex, NULL)) != 0) {
+		log_errno(status, "Couldn't initialize product-maker mutex");
+		free(w);
+		free_MD5_CTX(md5ctxp);
+		status = 2;
+	    } else {
+		w->fifo = fifo;
+		w->ldmProdQueue = lpq;
+		w->nframes = 0;
+		w->nmissed = 0;
+		w->nprods = 0;
+		w->md5ctxp = md5ctxp;
+		w->status = 0;
+		*productMaker = w;
+	    }
         } // `md5cctxp` allocated
     } // `w` allocated
 
@@ -175,115 +186,131 @@ void* pmStart(
     MD5_CTX*            md5ctxp = productMaker->md5ctxp;
     int                 logResync = 1;
     prodstore           prod;
+    int                 firstBlk = 0;
+    int                 lastBlk = 0;
+    unsigned long       curr_prod_seqno;        
+
+#define CHUNK_SZ 5700
+#define MAXBYTES_DATA   5700    
+#define PDB_LEN 512
+#define DEFAULT_COMPRESSION_LEVEL Z_DEFAULT_COMPRESSION
+
+#define BEGIN_BLK   0
+#define ANY_BLK     1
+#define END_BLK     2
+
+    unsigned long	uncomprLen;
+    unsigned char	uncomprBuf[MAXBYTES_DATA];
+
+    unsigned long	comprLen;
+    unsigned char	comprBuf[MAXBYTES_DATA];
+
+    unsigned long	comprDataLen;
+    unsigned char	comprDataBuf[CHUNK_SZ];
+
+    char		GOES_BLANK_FRAME[MAXBYTES_DATA];
+    unsigned int	GOES_BLNK_FRM_LEN;
+
+    int			wmolen;
+    int			nxlen;
+    int			wmo_offset;
+    int			nnnxxx_offset;
+
 
 #ifdef RETRANS_SUPPORT
-    long cpio_addr_tmp;
-    int cpio_fd_tmp;
- /*   char transfer_type[10]={0};*/
-    int retrans_val,idx;
-    long retrans_tbl_size;
-    time_t orig_arrive_time;
-    int new_key; /* shm key */
-    ACQ_TABLE *acq_tbl = NULL;
-    long num_prod_discards=0;
-    int save_prod = 1;
-    int discard_prod = 0;
-    long proc_orig_prod_seqno_last_save=0;
+    long		cpio_addr_tmp;
+    int			cpio_fd_tmp;
+    int			retrans_val,idx;
+    long		retrans_tbl_size;
+    time_t		orig_arrive_time;
+    int			new_key;		/* shm key */
+    ACQ_TABLE		*acq_tbl			= NULL;
+    long		num_prod_discards		= 0;
+    int			save_prod			= 1;
+    int			discard_prod			= 0;
+    long		proc_orig_prod_seqno_last_save	= 0;
 #endif
 
 
     prod.head = NULL;
     prod.tail = NULL;
 
-	/*** For Retranmission Purpose  ***/
+    memset(GOES_BLANK_FRAME, 0, MAXBYTES_DATA);
+
+        /*** For Retranmission Purpose  ***/
 #ifdef RETRANS_SUPPORT
-	if (ulogIsDebug())
-         log_debug(" retrans_xmit_enable = %d   transfer_type = %s sbn_channel_name=%s \n",retrans_xmit_enable,transfer_type,sbn_channel_name);
+    log_debug(" retrans_xmit_enable = %d   transfer_type = %s sbn_channel_name=%s \n",
+		retrans_xmit_enable, transfer_type, sbn_channel_name);
 
-       if((retrans_xmit_enable == OPTION_ENABLE) && (!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs"))){
-                idx = get_cpio_addr(mcastAddr);
-                if( idx >= 0 && idx < NUM_CPIO_ENTRIES){
-                    global_cpio_fd = cpio_tbl[idx].cpio_fd;
-                    global_cpio_addr = cpio_tbl[idx].cpio_addr;
-	            if (ulogIsDebug())
- 	              log_debug("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",global_cpio_addr,global_cpio_fd);
-                }else{
-                    log_error("Invalid multicast address provided");
-                    status = -1;
-	  	    return NULL;	
-                 }
+    if ((retrans_xmit_enable == OPTION_ENABLE) && (!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs"))) {
+	idx = get_cpio_addr(mcastAddr);
+	if (idx >= 0 && idx < NUM_CPIO_ENTRIES) {
+	    global_cpio_fd = cpio_tbl[idx].cpio_fd;
+	    global_cpio_addr = cpio_tbl[idx].cpio_addr;
+	    log_debug("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",global_cpio_addr,global_cpio_fd);
+	} else {
+	    log_error("Invalid multicast address provided");
+	    status = -1;
+	    return NULL;
+	}
 
-		 retrans_tbl_size = sizeof(PROD_RETRANS_TABLE);
+	retrans_tbl_size = sizeof(PROD_RETRANS_TABLE);
 
-		/** Modified to setup retrans table on per channel basis - Sathya - 14-Mar'2013 **/
+/** Modified to setup retrans table on per channel basis - Sathya - 14-Mar'2013 **/
 
-		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * GET_RETRANS_CHANNEL_ENTRIES(sbn_type));
+	retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * GET_RETRANS_CHANNEL_ENTRIES(sbn_type));
 
-                /****   
-		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NMC);
-		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NMC1);
-		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NMC2);
-		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NMC3);
-		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_GOES_EAST);
-		 retrans_tbl_size += (sizeof(PROD_RETRANS_ENTRY) * DEFAULT_RETRANS_ENTRIES_NOAAPORT_OPT);
-		****/
+	p_prod_retrans_table = (PROD_RETRANS_TABLE *) malloc (retrans_tbl_size);
+	if (p_prod_retrans_table == NULL) {
+	    log_error("Unable to allocate memory for retrans table..Quitting.\n");
+	    status = -1;
+	    return NULL;
+	}
 
+	if (init_retrans(&p_prod_retrans_table) < 0 ) {
+	    log_error("Error in initializing retrans table \n");
+	    if (p_prod_retrans_table) {
+		free(p_prod_retrans_table);
+	    }
 
-		p_prod_retrans_table = (PROD_RETRANS_TABLE *) malloc (retrans_tbl_size);
-		if(p_prod_retrans_table == NULL){
-		   log_error("Unable to allocate memory for retrans table..Quitting.\n");
-                   status = -1;
-	  	   return NULL;	
-		}
+	    status = -1;
+	    return NULL;
+	}
 
-		if( init_retrans(&p_prod_retrans_table) < 0 ){
-		  log_error("Error in initializing retrans table \n");
-		  if(p_prod_retrans_table)
-			free(p_prod_retrans_table);
-                  status = -1;
-	  	  return NULL;	
-		}	
+	GET_SHMPTR(global_acq_tbl,ACQ_TABLE,ACQ_TABLE_SHMKEY,DEBUGGETSHM);
 
-       GET_SHMPTR(global_acq_tbl,ACQ_TABLE,ACQ_TABLE_SHMKEY,DEBUGGETSHM);
-
-	if (ulogIsDebug())
-	  log_debug("Global acquisition table = 0x%x cpio_fd = %d \n",global_acq_tbl,global_cpio_fd);
+	log_debug("Global acquisition table = 0x%x cpio_fd = %d \n",global_acq_tbl,global_cpio_fd);
 	acq_tbl = &global_acq_tbl[global_cpio_fd];
 
-	if (ulogIsDebug())
-	    log_debug("Obtained acquisition table = 0x%x \n",acq_tbl);
+	log_debug("Obtained acquisition table = 0x%x \n",acq_tbl);
 
-	/* ACQ_TABLE already initialized in acq_ldm_getshm */
-	/*
-	if(init_acq_table(acq_tbl) < 0){
-		log_error("Unable to initialize acq table\n");
-		exit(-1);
+	buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
+	if (init_buff_hdr(buff_hdr) < 0) {
+	    log_error("Unable to initialize buffer header \n");
+	    if (acq_tbl) {
+		free(acq_tbl);
+	    }
+
+	    if (p_prod_retrans_table) {
+		free(p_prod_retrans_table);
+	    }
+
+	    status = -1;
+	    return NULL;
 	}
-	*/
-	
-	 buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
-	 if(init_buff_hdr(buff_hdr) < 0){
-		log_error("Unable to initialize buffer header \n");
-		if(acq_tbl)
-			free(acq_tbl);
-		if(p_prod_retrans_table)
-		  free(p_prod_retrans_table);
-                status = -1;
-	  	return NULL;	
-	 }
 
-	 acq_tbl->pid = getpid();
-	 acq_tbl->link_id = global_cpio_fd;
-	 acq_tbl->link_addr = global_cpio_addr;
-	 if(ulogIsVerbose()){
- 	  log_info("Initialized acq_tbl  = 0x%x & buff_hdr = 0x%x pid = %d \n",acq_tbl,buff_hdr,acq_tbl->pid);
-	  log_info("Global link id = %d  Global link addr = %ld \n",acq_tbl->link_id,acq_tbl->link_addr);
-	  log_info("acq_tbl->read_distrib_enable = 0x%x \n",acq_tbl->read_distrib_enable);
-	 }
+	acq_tbl->pid = getpid();
+	acq_tbl->link_id = global_cpio_fd;
+	acq_tbl->link_addr = global_cpio_addr;
+	if (log_is_enabled_info) {
+	    log_info("Initialized acq_tbl  = 0x%x & buff_hdr = 0x%x pid = %d \n",acq_tbl,buff_hdr,acq_tbl->pid);
+	    log_info("Global link id = %d  Global link addr = %ld \n",acq_tbl->link_id,acq_tbl->link_addr);
+	    log_info("acq_tbl->read_distrib_enable = 0x%x \n",acq_tbl->read_distrib_enable);
+	}
     }
-	   /*** For Retranmission Purpose  ***/
+/*** For Retranmission Purpose  ***/
 #endif
-
+	
     for (;;) {
         unsigned char       b1;
         long                IOFF;
@@ -300,6 +327,15 @@ void* pmStart(
         int                 deflen;
         static const char*  FOS_TRAILER = "\015\015\012\003";
         int                 cnt;
+        sbn_struct          saved_sbn_struct;
+        pdh_struct          saved_pdh_struct;
+        psh_struct          saved_psh_struct;
+        pdb_struct          saved_pdb_struct;
+        int                 saved_nfrags;
+        int                 saved_prod_compr_flag;
+        int                 frags_left;
+        int                 n_scanlines;
+
 
         /* Look for first byte == 255  and a valid SBN checksum */
         if ((status = fifo_getBytes(fifo, buf, 1)) != 0) {
@@ -326,8 +362,7 @@ void* pmStart(
 
             IOFF = 1;
 
-            while ((IOFF < 16) && 
-                    ((b1 = (unsigned char) buf[IOFF]) != 255))
+            while ((IOFF < 16) && ((b1 = (unsigned char) buf[IOFF]) != 255))
                 IOFF++;
 
             if (IOFF > 15) {
@@ -359,11 +394,11 @@ void* pmStart(
         }
 
 #ifdef RETRANS_SUPPORT
-		/* Update acq table stats - Begin */
-		if(retrans_xmit_enable == OPTION_ENABLE){
-			buff_hdr->read_channel_type = sbn->datastream;
-		}
-		/* Update acq table stats - End */
+	/* Update acq table stats - Begin */
+	if (retrans_xmit_enable == OPTION_ENABLE) {
+	    buff_hdr->read_channel_type = sbn->datastream;
+	}
+                /* Update acq table stats - End */
 #endif
 
         log_debug("***********************************************");
@@ -376,8 +411,7 @@ void* pmStart(
              * The sequence number is 4 bytes and `& MAX_SEQNO` is necessary if
              * `sizeof(unsigned long) > 4`
              */
-            const unsigned long   delta =
-                    (unsigned long)(sbn->seqno - last_sbn_seqno) & MAX_SEQNO;
+            const unsigned long   delta = (unsigned long) (sbn->seqno - last_sbn_seqno) & MAX_SEQNO;
 
             if (0 == delta || MAX_SEQNO/2 < delta) {
                 log_warning("Retrograde packet number: previous=%lu, latest=%lu, "
@@ -406,37 +440,40 @@ void* pmStart(
         if (log_is_enabled_info)
             log_info("SBN seqnumber %ld", sbn->seqno);
         if (log_is_enabled_info)
-            log_info("SBN datastream %d command %d", sbn->datastream,
-                sbn->command);
+            log_info("SBN datastream %d command %d", sbn->datastream, sbn->command);
         log_debug("SBN version %d length offset %d", sbn->version, sbn->len);
-        if (((sbn->command != 3) && (sbn->command != 5)) || 
-                (sbn->version != 1)) {
+
+        if (((sbn->command != SBN_CMD_DATA) && (sbn->command != SBN_CMD_TIME)) || (sbn->version != 1)) {
             log_error("Unknown sbn command/version %d PUNT", sbn->command);
             continue;
         }
 
+        GOES	= 0;
+        NWSTG	= 0;
+
         switch (sbn->datastream) {
-        case 5:       /* nwstg */
-        case 6:       /* nwtg2 */
-        case 7:       /* polarsat */
-        case 8:       /* NOAA Weather Wire Service (NWWS) */
-        case 9:
-        case 10:
-        case 11:
-        case 12:      /* GOES-R */
-        case 13:      /* GOES-R */
-            NWSTG = 1;
-            GOES = 0;
-            break;
-        case 1:       /* GINI GOES */
-        case 2:       /* GINI GOES */
-        case 4:       /* OCONUS */
-            NWSTG = 0;
-            GOES = 1;
-            break;
-        default:
-            log_error("Unknown NOAAport channel %d PUNT", sbn->datastream);
-            continue;
+            case SBN_CHAN_GOES:		/* GINI GOES */
+            case SBN_CHAN_NMC4:		/* GINI GOES (deprecated) */
+            case SBN_CHAN_NOAAPORT_OPT:	/* OCONUS */
+                GOES = 1;
+                break;
+
+            case SBN_CHAN_NMC1:		/* NWSTG1 - not used */
+            case SBN_CHAN_NMC:		/* NWSTG */
+            case SBN_CHAN_NMC2:		/* NWSTG2 */
+            case SBN_CHAN_NMC3:		/* POLARSAT */
+            case SBN_CHAN_NWWS:		/* NOAA Weather Wire Service (NWWS) */
+            case SBN_CHAN_ADD:		/* Reserved for NWS internal use - Data Delivery */
+            case SBN_CHAN_ENC:		/* Reserved for NWS internal use - Encrypted */
+            case SBN_CHAN_EXP:		/* Reserved for NWS internal use - Experimental */
+            case SBN_CHAN_GRW:		/* GOES-R West */
+            case SBN_CHAN_GRE:		/* GOES-R East */
+        	NWSTG = 1;
+        	break;
+
+            default:
+        	log_error("Unknown NOAAport channel %d PUNT", sbn->datastream);
+        	continue;
         }
 
         /* End of SBN version low 4 bits */
@@ -450,13 +487,13 @@ void* pmStart(
                 continue;
         }
 
-        log_debug("Product definition header version %d pdhlen %d",
-                pdh->version, pdh->len);
+        log_debug("Product definition header version %d pdhlen %d", pdh->version, pdh->len);
 
         if (pdh->version != 1) {
             log_error("Error: PDH transfer type %u, PUNT", pdh->transtype);
             continue;
         }
+
         log_debug("PDH transfer type %u", pdh->transtype);
 
         if ((pdh->transtype & 8) > 0)
@@ -473,12 +510,9 @@ void* pmStart(
             PROD_COMPRESSED = 0;
         }
 
-        log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen,
-                pdh->pshlen);
-        log_debug("blocks per record %ld records per block %ld\n",
-                pdh->blocks_per_record, pdh->records_per_block);
-        log_debug("product seqnumber %ld block number %ld data block size "
-                "%ld", pdh->seqno, pdh->dbno, pdh->dbsize);
+        log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen, pdh->pshlen);
+        log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record, pdh->records_per_block);
+        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno, pdh->dbno, pdh->dbsize);
 
         /* Stop here if no psh */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
@@ -487,23 +521,21 @@ void* pmStart(
         }
 
 #ifdef RETRANS_SUPPORT
-		/** Update acquisition table statistics  **/
-		if(retrans_xmit_enable == OPTION_ENABLE){
-				acq_tbl->read_tot_buff_read++;
-		}
+	/** Update acquisition table statistics  **/
+	if (retrans_xmit_enable == OPTION_ENABLE) {
+	    acq_tbl->read_tot_buff_read++;
+	}
 #endif
         if (pdh->pshlen != 0) {
-            if (fifo_getBytes(fifo, buf + sbn->len + pdh->len,
-                        pdh->pshlen) != 0) {
+            if (fifo_getBytes(fifo, buf + sbn->len + pdh->len, pdh->pshlen) != 0) {
                 log_error("problem reading psh");
                 continue;
-            }
-            else {
+            } else {
                 log_debug("read psh %d", pdh->pshlen);
             }
 
             /* Timing block */
-            if (sbn->command == 5) {
+            if (sbn->command == SBN_CMD_TIME) {
                 log_debug("Timing block recieved %ld %ld\0", psh->olen,
                         pdh->len);
                 /*
@@ -523,12 +555,10 @@ void* pmStart(
                 continue;
             }
             log_debug("len %ld", psh->olen);
-            log_debug("product header flag %d, version %d", psh->hflag,
-                    psh->version);
+            log_debug("product header flag %d, version %d", psh->hflag, psh->version);
             log_debug("prodspecific data length %ld", psh->psdl);
             log_debug("bytes per record %ld", psh->bytes_per_record);
-            log_debug("Fragments = %ld category %d ptype %d code %d",
-                    psh->frags, psh->pcat, psh->ptype, psh->pcode);
+            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat, psh->ptype, psh->pcode);
             if (psh->frags < 0)
                 log_error("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)
@@ -541,106 +571,187 @@ void* pmStart(
             log_debug("original run id %ld", psh->origrunid);
 
 #ifdef RETRANS_SUPPORT
-				/* Update acq table stats - Begin */
-			if(retrans_xmit_enable == OPTION_ENABLE){
-			
-				buff_hdr->buff_data_length = pdh->dbsize;
-				if(pdh->dbno == 0) {
-						/* Assume first block */
-					acq_tbl->proc_base_prod_type_last = psh->ptype;
-					acq_tbl->proc_base_prod_cat_last = psh->pcat;
-					acq_tbl->proc_base_prod_code_last = psh->pcode;
-					acq_tbl->proc_prod_NCF_rcv_time = (time_t)psh->rectime;
-					acq_tbl->proc_prod_NCF_xmit_time = (time_t)psh->transtime;
-					if(psh->hflag & XFR_PROD_RETRANSMIT){
-					   acq_tbl->proc_orig_prod_seqno_last = psh->seqno;
-					   acq_tbl->proc_orig_prod_run_id = psh->origrunid;
-					   if(ulogIsDebug())
-					     log_debug("ORIG SEQ# = %ld	CURR SEQ#: %ld \n",acq_tbl->proc_orig_prod_seqno_last,pdh->seqno);
-						}else{
-						   acq_tbl->proc_orig_prod_seqno_last = 0;
-						   acq_tbl->proc_orig_prod_run_id = 0;
-						}
-					acq_tbl->proc_prod_run_id = psh->runid;
-					buff_hdr->buff_datahdr_length = psh->psdl;
-					time(&acq_tbl->proc_prod_start_time);
-					acq_tbl->proc_tot_prods_handled++;
-				}else{
-						buff_hdr->buff_datahdr_length = 0;
-				 }
-				buff_hdr->proc_prod_seqno= pdh->seqno;
-				buff_hdr->proc_blkno = pdh->dbno;
-				buff_hdr->proc_sub_code = 0;
-				buff_hdr->proc_prod_flag = pdh->transtype;
-					
-				acq_tbl->proc_base_channel_type_last = buff_hdr->read_channel_type;
-				buff_hdr->proc_prod_type = acq_tbl->proc_base_prod_type_last;
-				buff_hdr->proc_prod_code = acq_tbl->proc_base_prod_code_last;
-				buff_hdr->proc_prod_cat = acq_tbl->proc_base_prod_cat_last;
-					
-				acq_tbl->proc_prod_bytes_read = buff_hdr->buff_data_length;
-						
-				/* Check prod_seqno for lost products */
-				if((buff_hdr->proc_prod_seqno - acq_tbl->proc_base_prod_seqno_last) != 1){
-					do_prod_lost(buff_hdr,acq_tbl);
-				}
-				retrans_val = prod_retrans_ck(acq_tbl, buff_hdr, &orig_arrive_time);
-				log_buff[0] = '\0'; 		
-				if((retrans_val == PROD_DUPLICATE_DISCARD) ||
-					((retrans_val == PROD_DUPLICATE_MATCH) &&
-					(acq_tbl->proc_retransmit_ctl_flag & ENABLE_RETRANS_DUP_MATCH_DISCARD)) ||
-					((retrans_val == PROD_DUPLICATE_NOMATCH) &&
-					(acq_tbl->proc_retransmit_ctl_flag & ENABLE_RETRANS_DUP_NOMATCH_DISCARD))){
-						/* Log product details and discard the product */
-						strcpy(log_buff,"DISCARD");
-						if(acq_tbl->proc_orig_prod_seqno_last != 0){
-							strcat(log_buff, "/RETRANS");
-						}
-								
-						log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last,
-									buff_hdr->proc_prod_seqno,buff_hdr->proc_blkno,
-									buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,orig_arrive_time);
-						save_prod = 0;
-						acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
-						/* Current prod discarded and continue with next */
-						/*continue; */
-					}else{
-						if(retrans_val == PROD_DUPLICATE_NOMATCH){
-							strcpy(log_buff,"SAVE RETRANS");
-							log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last,
-							buff_hdr->proc_prod_seqno,buff_hdr->proc_blkno,
-							buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,acq_tbl->proc_prod_start_time);
-					  }
-				   }
-			  }
+            /* Update acq table stats - Begin */
+            if (retrans_xmit_enable == OPTION_ENABLE) {
+		buff_hdr->buff_data_length = pdh->dbsize;
+		if (pdh->dbno == 0) {
+		    /* Assume first block */
+		    acq_tbl->proc_base_prod_type_last	= psh->ptype;
+		    acq_tbl->proc_base_prod_cat_last	= psh->pcat;
+		    acq_tbl->proc_base_prod_code_last	= psh->pcode;
+		    acq_tbl->proc_prod_NCF_rcv_time	= (time_t)psh->rectime;
+		    acq_tbl->proc_prod_NCF_xmit_time	= (time_t)psh->transtime;
+		    if (psh->hflag & XFR_PROD_RETRANSMIT) {
+			acq_tbl->proc_orig_prod_seqno_last	= psh->seqno;
+			acq_tbl->proc_orig_prod_run_id		= psh->origrunid;
+			log_debug("ORIG SEQ# = %ld CURR SEQ#: %ld \n",acq_tbl->proc_orig_prod_seqno_last,pdh->seqno);
+		    } else {
+			acq_tbl->proc_orig_prod_seqno_last	= 0;
+			acq_tbl->proc_orig_prod_run_id		= 0;
+		    }
+
+		    acq_tbl->proc_prod_run_id = psh->runid;
+		    buff_hdr->buff_datahdr_length = psh->psdl;
+		    time(&acq_tbl->proc_prod_start_time);
+		    acq_tbl->proc_tot_prods_handled++;
+		} else {
+		    buff_hdr->buff_datahdr_length = 0;
+		}
+
+		buff_hdr->proc_prod_seqno= pdh->seqno;
+		buff_hdr->proc_blkno = pdh->dbno;
+		buff_hdr->proc_sub_code = 0;
+		buff_hdr->proc_prod_flag = pdh->transtype;
+
+		acq_tbl->proc_base_channel_type_last = buff_hdr->read_channel_type;
+		buff_hdr->proc_prod_type = acq_tbl->proc_base_prod_type_last;
+		buff_hdr->proc_prod_code = acq_tbl->proc_base_prod_code_last;
+		buff_hdr->proc_prod_cat = acq_tbl->proc_base_prod_cat_last;
+
+		acq_tbl->proc_prod_bytes_read = buff_hdr->buff_data_length;
+
+		/* Check prod_seqno for lost products */
+		if((buff_hdr->proc_prod_seqno - acq_tbl->proc_base_prod_seqno_last) != 1) {
+		    do_prod_lost(buff_hdr,acq_tbl);
+		}
+
+		retrans_val = prod_retrans_ck(acq_tbl, buff_hdr, &orig_arrive_time);
+		log_buff[0] = '\0';
+		if ((retrans_val == PROD_DUPLICATE_DISCARD) ||
+		    ((retrans_val == PROD_DUPLICATE_MATCH) && (acq_tbl->proc_retransmit_ctl_flag & ENABLE_RETRANS_DUP_MATCH_DISCARD)) ||
+		    ((retrans_val == PROD_DUPLICATE_NOMATCH) && (acq_tbl->proc_retransmit_ctl_flag & ENABLE_RETRANS_DUP_NOMATCH_DISCARD))) {
+		    /* Log product details and discard the product */
+		    strcpy(log_buff,"DISCARD");
+		    if (acq_tbl->proc_orig_prod_seqno_last != 0) {
+			strcat(log_buff, "/RETRANS");
+		    }
+
+		    log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last,
+				buff_hdr->proc_prod_seqno,buff_hdr->proc_blkno,
+				buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,orig_arrive_time);
+		    save_prod = 0;
+		    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+		    /* Current prod discarded and continue with next */
+		} else if (retrans_val == PROD_DUPLICATE_NOMATCH) {
+			strcpy(log_buff,"SAVE RETRANS");
+			log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last, buff_hdr->proc_prod_seqno,
+				buff_hdr->proc_blkno, buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,
+				acq_tbl->proc_prod_start_time);
+		}
+	    }
 #endif
 
             if (prod.head != NULL) {
                 log_error("OOPS, start of new product [%ld ] with unfinished "
                     "product %ld", pdh->seqno, prod.seqno);
 
+                if (GOES == 1 && fillScanlines) {
+                        /** Assume next product started before the prev. product is compelete **/
+                        /** then the remaining number of frags should be filled with  blank   **/
+                        /** scanlines in the GOES imagery **/
+
+                    int last4byte_offset;
+
+                    if ((pdh->seqno != prod.seqno) && ((prod.nfrag != pfrag->fragnum + 1))) {
+                	frags_left = prod.nfrag - pfrag->fragnum - 1;
+                        /** frags_left is the number of scanlines to be filled    **/
+                        /** in the imagery rather than discarding the entire prod **/
+                                
+                        GOES_BLNK_FRM_LEN = saved_pdb_struct.recsize;
+                        n_scanlines = saved_pdh_struct.records_per_block;
+
+                        log_notice("Fragments filled %d scanlines [%d] size (%d each) prod seq %ld ",
+                                    frags_left, n_scanlines, GOES_BLNK_FRM_LEN, prod.seqno);
+                        log_debug("prev prod seqno %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
+                        log_debug("Balance frames left %d ", frags_left);
+                        if (inflateFrame) {
+                            /** Use uncompressed blank frames for scanlines **/
+                            for (int cnt = 0; cnt < frags_left; cnt++) {
+                                memcpy(memheap + heapcount, GOES_BLANK_FRAME, (GOES_BLNK_FRM_LEN * n_scanlines));
+                                MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), (GOES_BLNK_FRM_LEN * n_scanlines));
+                                heapcount += (GOES_BLNK_FRM_LEN * n_scanlines);
+                            }
+                        } else {
+                            /** Use compressed blank frames for scanlines **/
+                            /** Compress the frame and add to the memheap **/
+                            log_notice("Genearating compressed blank scan lines of size [%d x %d x %d]"
+                                       "[%ld] for prod seq %ld ", frags_left, n_scanlines, GOES_BLNK_FRM_LEN,
+                                       (frags_left * n_scanlines * GOES_BLNK_FRM_LEN), prod.seqno);
+/**** FOR NOW   *****/
+                            memset(uncomprBuf, 0, (GOES_BLNK_FRM_LEN * n_scanlines));
+                            memset(comprBuf, 0, MAXBYTES_DATA);
+                            uncomprLen = 0;
+                            comprLen = 0;
+
+                            deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf, &comprLen, ANY_BLK);
+                            inflateData(comprBuf, comprLen, uncomprBuf, &uncomprLen, ANY_BLK );
+                            deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
+
+                            for (int cnt = 0; cnt < (frags_left - 1); cnt++){
+                        	memcpy(memheap + heapcount, comprBuf, comprLen);
+                        	MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
+                        	heapcount += comprLen;
+                            }
+
+                            /*** Last frame should be a filler with -1,0,-1,0 to make edex happy - Sathya - 10/06/2015 ***/
+                            for (int ii = 0; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii += 2)
+                                uncomprBuf[ii] =  -1;
+                            for (int ii = 1; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii += 2)
+                                uncomprBuf[ii] =  0;
+
+                            deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf, &comprLen, ANY_BLK);
+                            inflateData(comprBuf, comprLen, uncomprBuf, &uncomprLen, ANY_BLK );
+                            deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
+/**** FOR NOW   *****/
+                            for (int cnt = 0; cnt < 1; cnt++){
+                        	memcpy(memheap + heapcount, comprBuf, comprLen);
+                        	MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
+                        	heapcount += comprLen;
+                            }
+                        } /** end if-else inflateFrame **/
+
+                        process_prod (prod, PROD_NAME, memheap, heapcount,
+                                      md5ctxp, productMaker->ldmProdQueue,
+				      &saved_psh_struct, &saved_sbn_struct);
+
+                        /** Increase the prod cnt as the product is inserted into ldm pq **/
+                        (void) pthread_mutex_lock(&productMaker->mutex);
+                        productMaker->nprods++;
+                        (void)pthread_mutex_unlock(&productMaker->mutex);
+
+                    }
+                } /* end if GOES == 1 && fillScanlines */
+
+
+
 #ifdef RETRANS_SUPPORT
-				/* Request retrans when prod is partially received but before completion */
-				/* if there is frame error and continue with different prod then, we need */
-				/* to abort the old prod and clear retrans table. */
-				if((retrans_xmit_enable == OPTION_ENABLE) /*&& (pdh->dbno != 0)*/){
-				 acq_tbl->proc_acqtab_prodseq_errs++;
-				 if(proc_orig_prod_seqno_last_save != acq_tbl->proc_orig_prod_seqno_last){
-				 /* Clear retrans table for the orig prod if the previous prod is retrans */
-				 /* of original prod  */
-				   prod_retrans_abort_entry(acq_tbl, proc_orig_prod_seqno_last_save, RETRANS_RQST_CAUSE_RCV_ERR);
-				 }
-				 prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
-				 /* Update Statistics */
-				 acq_tbl->proc_tot_prods_lost_errs++;
-				  /* For now, generate retrans request only for non-imagery products */
-				 if(!((buff_hdr->proc_prod_cat == PROD_CAT_IMAGE) && 
-					   (PROD_TYPE_NESDIS_HDR_TRUE(buff_hdr->proc_prod_type)))){
-				       generate_retrans_rqst(acq_tbl,prod.seqno , prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
-				 }
-				   acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
-				}
+                /* Request retrans when prod is partially received but before completion */
+                /* if there is frame error and continue with different prod then, we need */
+		/* to abort the old prod and clear retrans table. */
+		if (retrans_xmit_enable == OPTION_ENABLE) {
+		    acq_tbl->proc_acqtab_prodseq_errs++;
+		    if (proc_orig_prod_seqno_last_save != acq_tbl->proc_orig_prod_seqno_last) {
+			/* Clear retrans table for the orig prod if the previous prod is retrans */
+			/* of original prod  */
+			prod_retrans_abort_entry(acq_tbl, proc_orig_prod_seqno_last_save, RETRANS_RQST_CAUSE_RCV_ERR);
+		    }
+
+		    prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+		    /* Update Statistics */
+		    acq_tbl->proc_tot_prods_lost_errs++;
+		    /* For now, generate retrans request only for non-imagery products */
+		    if (!((buff_hdr->proc_prod_cat == PROD_CAT_IMAGE) && (PROD_TYPE_NESDIS_HDR_TRUE(buff_hdr->proc_prod_type)))) {
+			generate_retrans_rqst(acq_tbl,prod.seqno , prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+		    }
+
+                    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+                }
 #endif
+                if (inflateFrame) {
+                    log_info("resetting inflate due to prod error....");
+                    inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, END_BLK );
+                }
+
                 ds_free();
 
                 prod.head = NULL;
@@ -651,8 +762,7 @@ void* pmStart(
                     PNGINIT = 0;
                 }
 
-                log_error("Product definition header version %d pdhlen %d",
-                        pdh->version, pdh->len);
+                log_error("Product definition header version %d pdhlen %d", pdh->version, pdh->len);
                 log_error("PDH transfer type %u", pdh->transtype);
 
                 if ((pdh->transtype & 8) > 0)
@@ -696,8 +806,8 @@ void* pmStart(
                 log_error("problem reading datablock");
                 continue;
             }
-            if (sbn->datastream == 4) {
-                if (psh->pcat != 3) {
+            if (sbn->datastream == SBN_CHAN_NOAAPORT_OPT) {
+                if (psh->pcat != PROD_CAT_IMAGE) {
                     GOES = 0;
                     NWSTG = 1;
                 }
@@ -708,10 +818,8 @@ void* pmStart(
             MD5Init(md5ctxp);
 
             if (GOES == 1) {
-                if (readpdb(buf + IOFF + sbn->len + pdh->len + 
-                            pdh->pshlen,
-                        psh, pdb, PROD_COMPRESSED, pdh->dbsize) == -1) {
-                    log_error("Error reading pdb, punt");
+                if (readpdb (buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb, PROD_COMPRESSED, pdh->dbsize) == -1) {
+                    log_error ("Error reading pdb, punt");
                     continue;
                 }
 
@@ -740,6 +848,7 @@ void* pmStart(
                 memcpy(PROD_NAME, psh->pname, sizeof(PROD_NAME));
 
                 heapsize = prodalloc(psh->frags, 4000 + 15, &memheap);
+
                 /*
                  * We will only compute md5 checksum on the data, 11 FOS
                  * characters at start
@@ -755,7 +864,7 @@ void* pmStart(
         }
         else {
             /* If a continuation record...don't let psh->pcat get missed */
-            if ((sbn->datastream == 4) && (psh->pcat != 3)) {
+            if ((sbn->datastream == SBN_CHAN_NOAAPORT_OPT) && (psh->pcat != PROD_CAT_IMAGE)) {
                 GOES = 0;
                 NWSTG = 1;
             }
@@ -765,22 +874,20 @@ void* pmStart(
             log_debug("continuation record");
 
 #ifdef RETRANS_SUPPORT
-			if(retrans_xmit_enable == OPTION_ENABLE){
-					 buff_hdr->buff_data_length = pdh->dbsize;
-					 buff_hdr->buff_datahdr_length = 0;
-					 buff_hdr->proc_prod_seqno= pdh->seqno;
-					 buff_hdr->proc_blkno = pdh->dbno;
-					 buff_hdr->proc_sub_code = 0;
-					 buff_hdr->proc_prod_flag = pdh->transtype;
+            if (retrans_xmit_enable == OPTION_ENABLE) {
+		buff_hdr->buff_data_length		= pdh->dbsize;
+		buff_hdr->buff_datahdr_length		= 0;
+		buff_hdr->proc_prod_seqno		= pdh->seqno;
+		buff_hdr->proc_blkno			= pdh->dbno;
+		buff_hdr->proc_sub_code			= 0;
+		buff_hdr->proc_prod_flag		= pdh->transtype;
+		acq_tbl->proc_base_channel_type_last	= buff_hdr->read_channel_type;
+		buff_hdr->proc_prod_type		= acq_tbl->proc_base_prod_type_last;
+		buff_hdr->proc_prod_code		= acq_tbl->proc_base_prod_code_last;
+		buff_hdr->proc_prod_cat			= acq_tbl->proc_base_prod_cat_last;
+		acq_tbl->proc_prod_bytes_read += buff_hdr->buff_data_length;
 					 
-					 acq_tbl->proc_base_channel_type_last = buff_hdr->read_channel_type;
-					 buff_hdr->proc_prod_type = acq_tbl->proc_base_prod_type_last;
-					 buff_hdr->proc_prod_code = acq_tbl->proc_base_prod_code_last;
-					 buff_hdr->proc_prod_cat = acq_tbl->proc_base_prod_cat_last;
-				 
-					 acq_tbl->proc_prod_bytes_read += buff_hdr->buff_data_length;
-					 
-			  }
+            }
 #endif
 
             if ((pdh->transtype & 4) > 0) {
@@ -814,26 +921,139 @@ void* pmStart(
 
         if (GOES == 1) {
             if (pfrag->fragnum > 0) {
-                if ((pfrag->fragnum != prod.tail->fragnum + 1) || 
-                        (pfrag->seqno != prod.seqno)) {
+                if ((pfrag->fragnum != prod.tail->fragnum + 1) || (pfrag->seqno != prod.seqno)) {
                     log_error("Missing GOES fragment in sequence, "
                         "last %d/%d this %d/%d\0", prod.tail->fragnum,
                         prod.seqno, pfrag->fragnum, pfrag->seqno);
 
 #ifdef RETRANS_SUPPORT
-					if(retrans_xmit_enable == OPTION_ENABLE){
-					  acq_tbl->proc_acqtab_prodseq_errs++;
-					  do_prod_mismatch(acq_tbl,buff_hdr);
-					  acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
-					}
+		    if (retrans_xmit_enable == OPTION_ENABLE) {
+			acq_tbl->proc_acqtab_prodseq_errs++;
+			do_prod_mismatch(acq_tbl,buff_hdr);
+                        acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+		    }
 #endif
+/**********************    NEW CODE    ********************************/
+		    if (fillScanlines) {
+			if (pfrag->seqno != prod.seqno) { /** Ex. last 307/5690 this 5/5691 **/
+			    frags_left = saved_nfrags - prod.tail->fragnum - 1;
+			    log_notice("Total frames expected: %d balance left %d ", saved_nfrags, frags_left);
 
-					ds_free();
+			    GOES_BLNK_FRM_LEN = saved_pdb_struct.recsize;
+			    n_scanlines = saved_pdh_struct.records_per_block;
 
-                    prod.head = NULL;
-                    prod.tail = NULL;
+			    if (inflateFrame) {
+				for (int cnt = 0; cnt < frags_left; cnt++) {
+				    memcpy(memheap + heapcount, GOES_BLANK_FRAME, (GOES_BLNK_FRM_LEN * n_scanlines));
+				    MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount), (GOES_BLNK_FRM_LEN * n_scanlines));
+				    heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
+				    log_debug("GOES uncompressed blank frames added [tot/this] [%d/%d] heapcount = %ld blank_frame_len = %d scanlines %d",
+                                        frags_left, cnt, heapcount, GOES_BLNK_FRM_LEN, n_scanlines);
+				}
+			    } else {
+                               /** Use compressed blank frames for scanlines **/
+                               /** Compress the frame and add to the memheap **/
+/**** FOR NOW   *****/
+				memset(uncomprBuf, 0, (GOES_BLNK_FRM_LEN * n_scanlines));
+				memset(comprBuf, 0, MAXBYTES_DATA);
+				uncomprLen = 0;
+				comprLen = 0;
 
-                    continue;
+				deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines),
+                                                                   comprBuf, &comprLen, ANY_BLK );
+				inflateData(comprBuf, comprLen, uncomprBuf, &uncomprLen, ANY_BLK );
+				deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
+
+				for (int cnt = 0; cnt < (frags_left - 1); cnt++) {
+				    memcpy(memheap + heapcount, comprBuf, comprLen);
+				    MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
+				    heapcount += comprLen;
+				}
+
+
+
+				/*** Last frame should be a filler with -1,0,-1,0 to make edex happy - Sathya - 10/06/2015 ***/
+				for (int ii = 0; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii += 2)
+				    uncomprBuf[ii] =  -1;
+				for (int ii=1; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii +=2)
+				    uncomprBuf[ii] =  0;
+
+				deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf, &comprLen, ANY_BLK);
+
+				inflateData(comprBuf, comprLen, uncomprBuf, &uncomprLen, ANY_BLK );
+				deflateData(uncomprBuf, uncomprLen, comprBuf, &comprLen, ANY_BLK );
+
+/**** FOR NOW   *****/
+				for (int cnt = 0; cnt < 1; cnt++) {
+				    memcpy(memheap + heapcount, comprBuf, comprLen);
+				    MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
+				    heapcount += comprLen;
+				}
+
+			    } /** end if-else inflateFrame **/
+
+			    log_notice("%d scanlines filled into block %d prod seq %ld ", n_scanlines, frags_left, prod.seqno);
+			    /** Insert the prod with missing frames into the ldm pq    **/
+			    /** Also terminate current prod as there is no header info **/
+			    process_prod(prod, PROD_NAME, memheap, heapcount,
+                                           md5ctxp, productMaker->ldmProdQueue, &saved_psh_struct, &saved_sbn_struct);
+
+			    /** Increase the prod cnt as the product is inserted into ldm pq **/
+			    pthread_mutex_lock(&productMaker->mutex);
+                            productMaker->nprods++;
+                            pthread_mutex_unlock(&productMaker->mutex);
+
+                            ds_free();
+                            prod.head = NULL;
+                            prod.tail = NULL;
+                            continue;
+
+			} /** pfrag->seqno != prod.seqno **/
+
+			frags_left = pfrag->fragnum - prod.tail->fragnum - 1;
+			n_scanlines = pdh->records_per_block;
+			GOES_BLNK_FRM_LEN = pdb->recsize;
+
+			log_notice("Balance frames left %d scanlines per frame %d", frags_left, n_scanlines);
+
+			if (inflateFrame) {
+			    for (int cnt = 0; cnt < frags_left; cnt++){
+				memcpy(memheap + heapcount, GOES_BLANK_FRAME, (GOES_BLNK_FRM_LEN * n_scanlines));
+				MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount), (GOES_BLNK_FRM_LEN * n_scanlines));
+				heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
+				log_debug("GOES blank frames added [tot/this] [%d/%d] heapcount [%ld] blank_frame_len [%d] scanlines [%d]",
+						frags_left, cnt, heapcount, GOES_BLNK_FRM_LEN, n_scanlines);
+			    }
+			} else {
+			    /** Use compressed blank frames for scanlines **/
+			    /** Compress the frame and add to the memheap **/
+			    memset(uncomprBuf, 0, (GOES_BLNK_FRM_LEN * n_scanlines));
+			    memset(comprBuf, 0, MAXBYTES_DATA);
+			    uncomprLen = 0;
+			    comprLen = 0;
+
+			    deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf, &comprLen, ANY_BLK);
+
+			    for (int cnt = 0; cnt < frags_left; cnt++) {
+				memcpy(memheap + heapcount, comprBuf, comprLen);
+				MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
+				heapcount += comprLen;
+				log_debug("GOES compressed blank frames added heapcount = %ld blank frame size = %ld ", heapcount, comprLen );
+			    }
+			}
+
+			log_notice("Total %d scanlines filled for block %d into prod seq %ld ", (n_scanlines * frags_left), frags_left, prod.seqno);
+/**********************    NEW CODE    ********************************/
+		    }/** end if fillScanlines */
+		    else {
+
+			ds_free();
+
+			prod.head = NULL;
+			prod.tail = NULL;
+
+			continue;
+		    }
                 }
 
                 if ((PNGINIT != 1) && (!PROD_COMPRESSED)) {
@@ -868,11 +1088,10 @@ void* pmStart(
                 }
                 else {
                     memcpy(memheap + heapcount, buf + dataoff, datalen);
-                    MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount),
-                        datalen);
+                    MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount), datalen);
                     heapcount += datalen;
                 }
-            }
+            } /* end if fragnum > 0 */
             else {
                 if (!PROD_COMPRESSED) {
                     png_set_memheap(memheap, md5ctxp);
@@ -904,35 +1123,35 @@ void* pmStart(
             }
             deflen = 0;
 #ifdef RETRANS_SUPPORT
-			if(retrans_xmit_enable == OPTION_ENABLE){
-			   if(buff_hdr->proc_blkno != 0){
-		          /*acq_tbl->proc_prod_bytes_read += buff_hdr->buff_data_length;*/
-				  acq_tbl->proc_prod_bytes_read += datalen;
-	           }
+	    if (retrans_xmit_enable == OPTION_ENABLE) {
+		if (buff_hdr->proc_blkno != 0){
+		    /*acq_tbl->proc_prod_bytes_read += buff_hdr->buff_data_length;*/
+		    acq_tbl->proc_prod_bytes_read += datalen;
+		}
             }
 #endif
-       	}
-        else {
+	}
+	else {
             /* If the product already has a FOS trailer, don't add
              * another....this will match what pqing(SDI) sees
              */
             if ((prod.nfrag != 0) && (prod.tail != NULL)) {
-                if ((pfrag->fragnum != prod.tail->fragnum + 1) ||
-                        (pfrag->seqno != prod.seqno)) {
+                if ((pfrag->fragnum != prod.tail->fragnum + 1) || (pfrag->seqno != prod.seqno)) {
                     log_error("Missing fragment in sequence, last %d/%d this "
-                        "%d/%d\0", prod.tail->fragnum, prod.seqno,
-                        pfrag->fragnum, pfrag->seqno);
+                        "%d/%d\0", prod.tail->fragnum, prod.seqno, pfrag->fragnum, pfrag->seqno);
 
 #ifdef RETRANS_SUPPORT
-                                      if(retrans_xmit_enable == OPTION_ENABLE){
-                                         acq_tbl->proc_acqtab_prodseq_errs++;
-                                         if(ulogIsDebug())
-                                            log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
-					                                    acq_tbl->proc_base_prod_seqno_last);
-                                            do_prod_mismatch(acq_tbl,buff_hdr);
-                                            acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
-                                      }
+                    if (retrans_xmit_enable == OPTION_ENABLE) {
+                	acq_tbl->proc_acqtab_prodseq_errs++;
+                	log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n", acq_tbl->proc_base_prod_seqno_last);
+                	do_prod_mismatch(acq_tbl,buff_hdr);
+                	acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+                    }
 #endif
+                    if (inflateFrame) {
+                	log_info("resetting inflate due to prod error....");
+                	inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, END_BLK );
+                    }
 
                     ds_free();
 
@@ -942,6 +1161,7 @@ void* pmStart(
                     continue;
                 }
             }
+
             if ((prod.nfrag == 0) || (prod.nfrag == (pfrag->fragnum + 1))) {
                 char testme[4];
 
@@ -958,6 +1178,7 @@ void* pmStart(
                     }
                 }
             }
+
             if (heapcount + datalen > heapsize) {
                 /*
                  * this above wasn't big enough heapsize =
@@ -965,45 +1186,96 @@ void* pmStart(
                  */
                 log_error("Error in heapsize %d product size %d [%d %d], Punt!\0",
                     heapsize, (heapcount + datalen), heapcount, datalen);
-				
+                                
 #ifdef RETRANS_SUPPORT
-				if(retrans_xmit_enable == OPTION_ENABLE){ 	
-			      /* Update Statistics */
-					acq_tbl->proc_tot_prods_lost_errs++;
-					/*  Abort entry and request retransmission */
-					prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
-					generate_retrans_rqst(acq_tbl, prod.seqno, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
-					if(acq_tbl->proc_orig_prod_seqno_last != 0){
-						strcpy(log_buff, "RETRANS");
-					}
-					log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last,
-								 buff_hdr->proc_prod_seqno,buff_hdr->proc_blkno,
-								 buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,
-								 acq_tbl->proc_prod_start_time);
+		if (retrans_xmit_enable == OPTION_ENABLE) {
+		    /* Update Statistics */
+		    acq_tbl->proc_tot_prods_lost_errs++;
+		    /*  Abort entry and request retransmission */
+		    prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+		    generate_retrans_rqst(acq_tbl, prod.seqno, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+		    if (acq_tbl->proc_orig_prod_seqno_last != 0) {
+			strcpy(log_buff, "RETRANS");
+		    }
 
-		      		acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
-	      		}
+		    log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last,
+				buff_hdr->proc_prod_seqno,buff_hdr->proc_blkno,
+				buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,
+				acq_tbl->proc_prod_start_time);
+
+		    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+		}
 #endif
 
                 continue;
             }
+/**********     NEW CODE - BEGIN        ***************/
+            /**  If uncompress is requested via cmdline
+             **  and frame is compressed then uncompress
+             **  the frame and add to the heap
+             **/
+            if (inflateFrame)
+        	log_debug(" inflateFrame = %d   PROD_COMPRESSED = %d seqno=%ld\n", inflateFrame, PROD_COMPRESSED, prod.seqno);
 
-            memcpy(memheap + heapcount, buf + dataoff, datalen);
+            	    /* Special case: For a given product, when first and intermediate frames are compressed
+                       but not the last frame by uplink then last frame does not need
+                       to be decompressed. But inflateData routine should be notified
+                       to close the stream. Otherwise it would cause memory leak */
 
-            deflen = datalen;
+            if (inflateFrame) {
+                if (pdh->dbno == 0){
+                    log_debug("First Blk, initializing inflate prod %ld", prod.seqno);
+                    inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
+                }
+            }
+ 
+            if (inflateFrame && PROD_COMPRESSED) {
+                if (pdh->dbno == 0) {
+                    /** Only need to parse the first block for WMO and NNNXXX 
+                     ** and get the offset required to pass on to inflate.
+                     ** For other blocks, simply pass the buffer to inflate. **/
 
-            MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount),
-                deflen);
+            	    wmo_offset = prod_get_WMO_offset(buf + dataoff, datalen, (size_t *)&wmolen);
+            	    nnnxxx_offset =  prod_get_WMO_nnnxxx_offset(buf + dataoff, datalen, &nxlen);
+
+            	    log_debug(" Block# %d  wmo_offset [%d] wmolen [%d] ", pdh->dbno, wmo_offset, wmolen);
+            	    log_debug(" Block# %d  nnnxxx_offset [%d] nnxxlen [%d] ", pdh->dbno, nnnxxx_offset, nxlen);
+            	    log_debug("Seq#:%ld Block# %d ",prod.seqno, pdh->dbno );
+            	    if ((nnnxxx_offset == -1 && nxlen == 0) && (wmolen > 0)) {
+                        /** Product does not contain NNNXXX **/
+            		inflateData(buf + dataoff + wmolen, datalen - wmolen, uncomprBuf, &uncomprLen, ANY_BLK );
+            	    } else {
+            		/** Product has NNNXXX (AWIPS Prod ID) **/
+            		if ((nnnxxx_offset > 0 && nxlen > 0) && (wmolen > 0)){
+            		    inflateData(buf + dataoff + wmolen + nxlen, datalen - wmolen - nxlen, uncomprBuf, &uncomprLen, ANY_BLK );
+            		}
+            	    }
+                } else { /** Continuation block **/
+                    log_debug(" Block# %d  contd block", pdh->dbno);
+                    inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, ANY_BLK );
+                    log_debug("Seq#:%ld Block# %d  contd block ",prod.seqno, pdh->dbno);
+                }
+
+            	memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
+            	deflen = uncomprLen;
+            	log_debug(" Block# %d inflated uncomprLen [%ld]", pdh->dbno, uncomprLen);
+            } else {
+                /** executed by default (when inflateFrame is not enabled or product is not compressed) **/
+                memcpy(memheap + heapcount, buf + dataoff, datalen);
+
+            	deflen = datalen;
+            } /** end if-else pdh->blkno  == 0 **/
+
+            MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount), deflen);
 
 #ifdef RETRANS_SUPPORT
-			if(retrans_xmit_enable == OPTION_ENABLE){
-	  		  if(buff_hdr->proc_blkno != 0){
-				/*acq_tbl->proc_prod_bytes_read += buff_hdr->buff_data_length;*/
-				acq_tbl->proc_prod_bytes_read += datalen;
-			  }
-	  		}
+            if (retrans_xmit_enable == OPTION_ENABLE) {
+            	if (buff_hdr->proc_blkno != 0) {
+            	    acq_tbl->proc_prod_bytes_read += datalen;
+            	}
+            }
 #endif
-        }
+	}
 
         pfrag->recsiz = deflen;
         heapcount += deflen;
@@ -1018,116 +1290,129 @@ void* pmStart(
         }
  
 #ifdef RETRANS_SUPPORT
-		 if(((prod.nfrag == 0) || (prod.nfrag >= (pfrag->fragnum +1))) && (save_prod == 0)){
-		   if(ulogIsVerbose())
-			  log_info("Do not save prod [seqno=%ld] as its retrans dup fragnum/total fragments =[%d of %d] save_prod=[%d] \n",
-			   prod.seqno,pfrag->fragnum,prod.nfrag,save_prod);
-		   ds_free ();
-		   prod.head = NULL;
-		   prod.tail = NULL;
-		   PNGINIT = 0;
-		}else{
+	if (((prod.nfrag == 0) || (prod.nfrag >= (pfrag->fragnum +1))) && (save_prod == 0)) {
+	    if (log_is_enabled_info)
+		log_info("Do not save prod [seqno=%ld] as its retrans dup fragnum/total fragments =[%d of %d] save_prod=[%d] \n",
+			prod.seqno,pfrag->fragnum,prod.nfrag,save_prod);
+	    ds_free ();
+	    prod.head = NULL;
+	    prod.tail = NULL;
+	    PNGINIT = 0;
+	} else {
 #endif
-          if ((prod.nfrag == 0) || (prod.nfrag == (pfrag->fragnum + 1))) {
-            if (GOES == 1) {
-                if (PNGINIT == 1) {
-                    pngout_end();
-                    heapcount = png_get_prodlen();
-                }
-                else {
-                    log_debug("GOES product already compressed %d", heapcount);
-                }
-            }
-            if (log_is_enabled_info)
-              log_info("we should have a complete product %ld %ld/%ld %ld /heap "
-                  "%ld", prod.seqno, pfrag->seqno, prod.nfrag, pfrag->fragnum,
-                 (long) heapcount);
-            if ((NWSTG == 1) && (heapcount > 4)) {
-                cnt = 4;                /* number of bytes to add for TRAILER */
+	    if ((prod.nfrag == 0) || (prod.nfrag == (pfrag->fragnum + 1))) {
+		if (inflateFrame) {
+		    log_debug("uncompress ==> %d Last Blk, call inflateEnd prod %ld", inflateFrame,  prod.seqno);
+		    inflateData(NULL, 0, NULL, &uncomprLen, END_BLK );
+		}
 
-                /*
-                 * Do a DDPLUS vs HDS check for NWSTG channel only
-                 */
-                if (sbn->datastream == 5) {
+		if (GOES == 1) {
+		    if (PNGINIT == 1) {
+			pngout_end();
+			heapcount = png_get_prodlen();
+		    }
+		    else {
+			log_debug("GOES product already compressed %d", heapcount);
+		    }
+		}
+
+		if (log_is_enabled_info)
+		    log_info("we should have a complete product %ld %ld/%ld %ld /heap "
+				"%ld", prod.seqno, pfrag->seqno, prod.nfrag, pfrag->fragnum, (long) heapcount);
+		if ((NWSTG == 1) && (heapcount > 4)) {
+		    cnt = 4;                /* number of bytes to add for TRAILER */
+
+                    /*
+                     * Do a DDPLUS vs HDS check for NWSTG channel only
+                     */
+		    if (sbn->datastream == SBN_CHAN_NMC) {
                     /* nwstg channel */
-                    switch (psh->pcat) {
-                    case 1:
-                    case 7:
-                      /* Do a quick check for non-ascii text products */
-                      if (!prod_isascii(PROD_NAME, memheap, heapcount))
-                        psh->pcat += 100;       /* call these HDS */
-                      break;
-                    }
-                }
+			switch (psh->pcat) {
+			    case PROD_CAT_TEXT:
+			    case PROD_CAT_OTHER:
+                            /* Do a quick check for non-ascii text products */
+				if (!prod_isascii(PROD_NAME, memheap, heapcount))
+				    psh->pcat += 100;       /* call these HDS */
+				break;
+			}
+		    }
 
-                if (cnt > 0) {
-                    memcpy(memheap + heapcount, FOS_TRAILER + 4 - cnt, cnt);
-                    MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount),
-                        cnt);
-                    heapcount += cnt;
-                }
-            }
-
-#ifdef RETRANS_SUPPORT
-			if((retrans_xmit_enable == OPTION_ENABLE) && (acq_tbl->read_distrib_enable & READ_CTL_DISCARD)){
-						num_prod_discards++;
-						/* Set discard_prod to 1; Otherwise already stored prod may be requested for retransmit */
-						discard_prod=1;
-						if(ulogIsVerbose())
-						  log_info("No of products discarded = %ld prod.seqno=%ld \n ",num_prod_discards,prod.seqno);
-						prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
-						acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno -1 ;
-						ds_free ();
-						prod.head = NULL;
-						prod.tail = NULL;
-						PNGINIT = 0;
-			}else{
-				/* Do not insert prod into queue if its a duplicate product */
-				if(save_prod != 0)
-#endif
-                                   process_prod(prod, PROD_NAME, memheap, heapcount,
-                                                md5ctxp, productMaker->ldmProdQueue, psh, sbn);
-#ifdef RETRANS_SUPPORT
-				/* Update acq table with last processed seqno -Begin */
-				if(retrans_xmit_enable == OPTION_ENABLE){
-					acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
-					log_info(" prod with seqno processed = %ld\n",acq_tbl->proc_base_prod_seqno_last);
-				}
-				/* Update acq table with last processed seqno -End */
-#endif
-
-            ds_free();
-
-            prod.head = NULL;
-            prod.tail = NULL;
-            PNGINIT = 0;
-
-            (void)pthread_mutex_lock(&productMaker->mutex);
-            productMaker->nprods++;
-            (void)pthread_mutex_unlock(&productMaker->mutex);
-#ifdef RETRANS_SUPPORT
-        }
-#endif
-       }
-        else {
-            log_debug("processing record %ld [%ld %ld]", prod.seqno,
-                    prod.nfrag, pfrag->fragnum);
-            if ((pdh->transtype & 4) > 0) {
-                log_error("Hmmm....should call completed product %ld [%ld %ld]",
-                    prod.seqno, prod.nfrag, pfrag->fragnum);
-            }
-        }
+		    if (cnt > 0) {
+			memcpy(memheap + heapcount, FOS_TRAILER + 4 - cnt, cnt);
+			MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), cnt);
+			heapcount += cnt;
+		    }
+		}
 
 #ifdef RETRANS_SUPPORT
-	   if(retrans_xmit_enable == OPTION_ENABLE){
-	     if(!(acq_tbl->read_distrib_enable & READ_CTL_DISCARD))
-	   	  if(!discard_prod){
-		    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
-		    discard_prod = 0;
-	      }
-	   }  
+		if ((retrans_xmit_enable == OPTION_ENABLE) && (acq_tbl->read_distrib_enable & READ_CTL_DISCARD)) {
+		    num_prod_discards++;
+		    /* Set discard_prod to 1; Otherwise already stored prod may be requested for retransmit */
+		    discard_prod=1;
+		    if (log_is_enabled_info)
+			log_info("No of products discarded = %ld prod.seqno=%ld \n ",num_prod_discards,prod.seqno);
+		    prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
+		    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno -1 ;
+		    ds_free ();
+		    prod.head = NULL;
+		    prod.tail = NULL;
+		    PNGINIT = 0;
+		} else {
+		    /* Do not insert prod into queue if its a duplicate product */
+		    if (save_prod != 0)
 #endif
-		
+			process_prod(prod, PROD_NAME, memheap, heapcount, md5ctxp, productMaker->ldmProdQueue, psh, sbn);
+#ifdef RETRANS_SUPPORT
+		    	/* Update acq table with last processed seqno -Begin */
+		    if (retrans_xmit_enable == OPTION_ENABLE) {
+			acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+			log_info(" prod with seqno processed = %ld\n",acq_tbl->proc_base_prod_seqno_last);
+		    }
+                /* Update acq table with last processed seqno -End */
+#endif
+
+		    ds_free();
+
+		    prod.head = NULL;
+		    prod.tail = NULL;
+		    PNGINIT = 0;
+
+		    pthread_mutex_lock(&productMaker->mutex);
+		    productMaker->nprods++;
+		    pthread_mutex_unlock(&productMaker->mutex);
+#ifdef RETRANS_SUPPORT
+		}
+#endif
+	    }
+	    else {
+		log_debug("processing record %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
+		if ((pdh->transtype & 4) > 0) {
+			log_error("Hmmm....should call completed product %ld [%ld %ld]",
+					prod.seqno, prod.nfrag, pfrag->fragnum);
+		}
+	    }
+
+#ifdef RETRANS_SUPPORT
+	    if (retrans_xmit_enable == OPTION_ENABLE) {
+		if (!(acq_tbl->read_distrib_enable & READ_CTL_DISCARD)) {
+		    if (!discard_prod) {
+			acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+			discard_prod = 0;
+		    }
+		}
+	    }
+#endif
+	    /** Required to save only if decompression is requested via cmdline **/
+	    if (inflateFrame || fillScanlines) {
+		saved_sbn_struct = *sbn;
+		saved_psh_struct = *psh;
+		saved_pdb_struct = *pdb;
+		saved_pdh_struct = *pdh;
+		saved_nfrags = prod.nfrag;
+		saved_prod_compr_flag = PROD_COMPRESSED;
+		curr_prod_seqno = prod.seqno;
+	    }
+                
 #ifdef RETRANS_SUPPORT
 	}
 
@@ -1135,20 +1420,19 @@ void* pmStart(
 #endif
         IOFF += (sbn->len + pdh->len + pdh->pshlen + pdh->dbsize);
 
-        log_debug("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen,
-                deflen);
+        log_debug("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen, deflen);
 #ifdef RETRANS_SUPPORT
-		if(retrans_xmit_enable == OPTION_ENABLE){
-		  total_prods_retrans_rcvd = acq_tbl->proc_tot_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
-		  total_prods_retrans_rcvd_lost = acq_tbl->proc_tot_prods_retrans_rcvd_lost; /* prods retrans rcvd lost */
-		  total_prods_retrans_rcvd_notlost = acq_tbl->proc_tot_prods_retrans_rcvd_notlost; /* prods rcvd not lost */
-		  total_prods_retrans_rqstd = acq_tbl->proc_tot_prods_retrans_rqstd;    /* prods retrans requested */
-		  total_prods_handled = acq_tbl->proc_tot_prods_handled;    /* prods retrans requested */
-		  total_prods_lost_err = acq_tbl->proc_tot_prods_lost_errs;    /* prods retrans requested */
-		  total_frame_cnt = acq_tbl->read_tot_buff_read;
-		  total_frame_err = acq_tbl->read_frame_tot_lost_errs;
-		  proc_orig_prod_seqno_last_save = acq_tbl->proc_orig_prod_seqno_last;
-        }
+	if (retrans_xmit_enable == OPTION_ENABLE){
+	    total_prods_retrans_rcvd = acq_tbl->proc_tot_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
+	    total_prods_retrans_rcvd_lost = acq_tbl->proc_tot_prods_retrans_rcvd_lost; /* prods retrans rcvd lost */
+	    total_prods_retrans_rcvd_notlost = acq_tbl->proc_tot_prods_retrans_rcvd_notlost; /* prods rcvd not lost */
+	    total_prods_retrans_rqstd = acq_tbl->proc_tot_prods_retrans_rqstd;    /* prods retrans requested */
+	    total_prods_handled = acq_tbl->proc_tot_prods_handled;    /* prods retrans requested */
+	    total_prods_lost_err = acq_tbl->proc_tot_prods_lost_errs;    /* prods retrans requested */
+	    total_frame_cnt = acq_tbl->read_tot_buff_read;
+	    total_frame_err = acq_tbl->read_frame_tot_lost_errs;
+	    proc_orig_prod_seqno_last_save = acq_tbl->proc_orig_prod_seqno_last;
+	}
 #endif
     }
 
@@ -1202,3 +1486,671 @@ int pmStatus(
 {
     return productMaker->status;
 }
+
+/**
+ * Returns the status of a frame decommpression
+ *
+ * This function is thread-compatible but not thread-safe.
+ *
+ * @retval 0    The frame was successfully uncompressed.
+ * @retval -1   Failed to uncompress.
+ */
+
+static int inflateData(
+    const char		*inBuf,			/**< [in] Pointer to the frame buffer   */
+    unsigned long	inLen,			/**< [in] Length of the compressed data */
+    const char		*outBuf,		/**< [out] Pointer to uncompressed frame
+     	     	     	     	     	     	  *  data buffer  */
+    unsigned long	*outLen,		/**< [out] Length of uncompressed frame */
+    unsigned int	blk)			/** Block position   **/
+{
+  
+  int have;
+  int readsz;
+  int bsize;
+  int zerr;
+  int flush;
+  char out[CHUNK_SZ];
+  char in[CHUNK_SZ];
+  int ret,nwrite,idx = -1;
+  int savedByteCntr=0;
+  unsigned char *dstBuf;
+  int  firstCall = 1;
+  int totalBytesIn=0;
+  int inflatedBytes=0;
+  int decompByteCounter = 0;
+  int num=0;
+  static int isStreamSet = FALSE;
+  static z_stream i_zstrm;
+
+  ret = Z_OK;
+  readsz = 0;
+  bsize = CHUNK_SZ;
+
+ /** special case - close the stream when there is product error **/
+  if(blk == END_BLK && isStreamSet) {
+    ret = inflateEnd(&i_zstrm);
+    if(ret < 0) {
+      log_error("Fail inflateEnd %d [%s] ", ret, decode_zlib_err(ret));
+      return (ret);
+    }
+   isStreamSet = FALSE;
+   log_debug("inflateEnd called ......ret=%d", ret);
+   return 0;
+  }
+
+
+
+  if(blk == BEGIN_BLK && !isStreamSet){
+     log_debug("Received first Blk");
+     memset(&i_zstrm, '\0', sizeof(z_stream));
+     i_zstrm.zalloc = Z_NULL;
+     i_zstrm.zfree = Z_NULL;
+     i_zstrm.opaque = Z_NULL;
+
+     if ((zerr = inflateInit(&i_zstrm)) != Z_OK) {
+       log_error("ERROR %d inflateInit (%s)", zerr, decode_zlib_err(zerr));
+       return -1;
+     }
+     isStreamSet = TRUE;
+     return 0;
+  }
+
+  dstBuf = (unsigned char *) outBuf;
+
+    log_debug("inflating now.. inlen[%ld] ", inLen);
+/**************** NEW CODE FROM JAVA *******************/
+
+    while(totalBytesIn < inLen ) {
+      int compChunkSize = ((inLen - totalBytesIn) > 5120) ? 5120 :
+                                                  (inLen - totalBytesIn);
+      memcpy(in, inBuf + totalBytesIn, compChunkSize);
+
+      i_zstrm.avail_in = inLen - totalBytesIn;
+      i_zstrm.next_in = in ;
+
+      i_zstrm.avail_out = CHUNK_SZ;
+      i_zstrm.next_out = out;
+      inflatedBytes = 0;
+
+      while(ret != Z_STREAM_END) {
+         ret  = inflate(&i_zstrm, Z_NO_FLUSH);
+         if(ret < 0) {
+          log_error(" Error %d inflate (%s)", ret, decode_zlib_err(ret));
+          (void)inflateEnd(&i_zstrm);
+          isStreamSet = FALSE;
+           return ret;
+         }
+         inflatedBytes = CHUNK_SZ - i_zstrm.avail_out;
+
+         if(inflatedBytes == 0) {
+              log_notice("\n Unable to decompress data - truncated");
+              break;
+         }
+
+         totalBytesIn += i_zstrm.total_in;
+         decompByteCounter += inflatedBytes;
+
+         if(totalBytesIn == inLen) {
+              idx = getIndex(out, 0, inflatedBytes);
+         }
+         if(idx == -1) {
+            /** search failed, so write all data **/
+            memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
+         } else {
+            /*memcpy(dstBuf + savedByteCntr, out, idx);*/
+            memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
+         }
+            savedByteCntr = decompByteCounter;
+      }
+      // Reset inflater for additional input
+      ret = inflateReset(&i_zstrm);
+      if(ret == Z_STREAM_ERROR){
+        log_error(" Error %d inflateReset (%s)", ret, decode_zlib_err(ret));
+        (void)inflateEnd(&i_zstrm);
+        isStreamSet = FALSE;
+        return ret;
+      }
+    }
+
+/**************** NEW CODE FROM JAVA *******************/
+
+  *outLen = decompByteCounter;
+   return 0; 
+}
+
+/**
+ * Returns the status of a frame commpression
+ *
+ * This function is thread-compatible but not thread-safe.
+ *
+ * @retval 0    The frame was successfully compressed.
+ * @retval -1   Failed to compress.
+ */
+
+static int deflateData(
+    const char		*inBuf,			/**< [in] Pointer to the frame buffer   */
+    unsigned long	inLen,			/**< [in] Length of the uncompressed data */
+    const char		*outBuf,		/**< [out] Pointer to compressed frame
+						  *  data buffer  */
+    unsigned long	*outLen,		/**< [out] Length of compressed frame */
+    unsigned int	blk)
+{
+  
+    int ret,idx = -1;
+    int savedByteCntr=0;
+    unsigned char in[CHUNK_SZ];
+    unsigned char out[CHUNK_SZ];
+    int flush;
+    int  firstCall = 0;
+    int totalBytesComp=0;
+    int compressedBytes=0;
+    int compressedByteCounter = 0;
+    int zerr;
+    unsigned char *dstBuf;
+    static int isStreamSet = FALSE;
+    static z_stream d_zstrm;
+
+  log_debug(" Block [%d] deflating now.. inlen[%ld] isStreamSet %d ", blk, inLen, isStreamSet );
+  if(blk == BEGIN_BLK && !isStreamSet){
+
+        memset(&d_zstrm, '\0', sizeof(z_stream));
+        d_zstrm.zalloc = Z_NULL;
+        d_zstrm.zfree = Z_NULL;
+        d_zstrm.opaque = Z_NULL;
+
+        if ((zerr = deflateInit(&d_zstrm, Z_BEST_COMPRESSION)) != Z_OK) {
+                log_error("ERROR %d deflateInit (%s)", zerr, decode_zlib_err(zerr));
+                return -1;
+        }
+      isStreamSet = TRUE;
+      return 0;
+  }
+
+   if(blk == END_BLK && isStreamSet){
+        if ((zerr = deflateEnd(&d_zstrm)) != Z_OK) {
+                log_error("ERROR %d deflateEnd (%s)", zerr, decode_zlib_err(zerr));
+                return -1;
+        }
+     isStreamSet = FALSE;
+     log_debug(" Calling deflateEnd to close deflate stream zerr = %d", zerr);
+   }
+
+    dstBuf = (unsigned char *) outBuf;
+
+  totalBytesComp = 0;
+ /************** NEW CODE   - FROM JAVA ********************/
+
+   while(totalBytesComp != inLen ) {
+      int compChunkSize = ((inLen - totalBytesComp) > 5120) ? 5120 : (inLen - totalBytesComp);
+      memcpy(in, inBuf + totalBytesComp, compChunkSize);
+
+      d_zstrm.avail_in = compChunkSize; /*srcLen - totalBytesComp;*/
+      d_zstrm.next_in = in ;
+
+      d_zstrm.avail_out = CHUNK_SZ;
+      d_zstrm.next_out = out;
+
+      totalBytesComp += compChunkSize;
+      flush = (totalBytesComp >= inLen) ? Z_FINISH : Z_NO_FLUSH;
+
+      compressedBytes = 0;
+
+       do  {
+         ret  = deflate(&d_zstrm, flush);
+          if (ret < 0) {
+              log_error("FAIL %d delate (%s}", ret, decode_zlib_err(ret));
+              (void)deflateEnd(&d_zstrm);
+               isStreamSet = FALSE;
+               return (ret);
+          }
+
+         compressedBytes = CHUNK_SZ - d_zstrm.avail_out;
+         if(compressedBytes == 0) {
+              log_debug("\n Unable to compress data - truncated");
+              break;
+         }
+
+          compressedByteCounter += compressedBytes;
+
+          memcpy(dstBuf + savedByteCntr, out, compressedBytes);
+          savedByteCntr = compressedByteCounter;
+          log_debug(" aval_in [%ld] after deflate.. inlen[%ld] compBytes [%ld]", d_zstrm.avail_in, inLen, compressedBytes);
+          if(d_zstrm.avail_in > 0){
+            int ret1;
+            memmove(in, d_zstrm.next_in, d_zstrm.avail_in);
+            totalBytesComp += d_zstrm.avail_in;
+            d_zstrm.avail_out = CHUNK_SZ;
+            d_zstrm.next_out = out;
+            ret1  = deflate(&d_zstrm, flush);
+            if (ret1 < 0){  /* state not clobbered */
+              log_error("FAIL %d delate (%s) ", ret, decode_zlib_err(ret1));
+              deflateEnd(&d_zstrm);
+              isStreamSet = FALSE;
+              return (ret);
+            }
+
+            compressedBytes =  d_zstrm.avail_out;
+            compressedByteCounter += compressedBytes;
+            memcpy(dstBuf + savedByteCntr, out, compressedBytes);
+            savedByteCntr = compressedByteCounter;
+         }
+
+       }while(ret == Z_FINISH);
+
+       deflateReset(&d_zstrm);
+      }
+ 
+     
+  *outLen = compressedByteCounter;
+   return 0; 
+}
+
+/*******************************************************************************
+FUNCTION NAME
+        int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
+
+FUNCTION DESCRIPTION
+        Parse the wmo heading from buffer and load the appropriate prod
+        info fields.  The following regular expressions will satisfy this
+        parser.  Note this parser is not case sensative.
+/*******************************************************************************
+FUNCTION NAME
+        int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
+
+FUNCTION DESCRIPTION
+        Parse the wmo heading from buffer and load the appropriate prod
+        info fields.  The following regular expressions will satisfy this
+        parser.  Note this parser is not case sensative.
+
+        The WMO format is supposed to be...
+
+        TTAAii CCCC DDHHMM[ BBB]\r\r\n
+        [NNNXXX\r\r\n]
+
+        This parser is generous with the ii portion of the WMO and all spaces
+        are optional.  The TTAAII, CCCC, and DDHHMM portions of the WMO are
+        required followed by at least 1 <cr> or <lf> with no other unparsed
+        intervening characters. The following quasi-grammar describe what
+        is matched.
+
+        WMO = "TTAAII CCCC DDHHMM [BBB] CRCRLF [NNNXXX CRCRLF]"
+
+        TTAAII = "[A-Z]{4}[0-9]{0,1,2}" | "[A-Z]{4} [0-9]" | "[A-Z]{3}[0-9]{3} "
+        CCCC = "[A-Z]{4}"
+        DDHHMM = "[ 0-9][0-9]{3,5}"
+        BBB = "[A-Z0-9]{0-3}"
+        CRCRLF = "[\r\n]+"
+        NNNXXX = "[A-Z0-9]{0,4-6}"
+
+        Most of the WMO's that fail to be parsed seem to be missing the ii
+        altogether or missing part or all of the timestamp (DDHHMM)
+
+PARAMETERS
+        Type                    Name            I/O             Description
+        char *                  buf                     I               buffer to parse for WMO
+        size_t                  buflen          I               length of data in buffer
+RETURNS
+         offset to WMO from buf[0]
+        -1: otherwise
+*******************************************************************************/
+
+
+
+#define WMO_TTAAII_LEN          6
+#define WMO_CCCC_LEN            4
+#define WMO_DDHHMM_LEN          6
+#define WMO_DDHH_LEN            4
+#define WMO_BBB_LEN                     3
+
+#define WMO_T1  0
+#define WMO_T2  1
+#define WMO_A1  2
+#define WMO_A2  3
+#define WMO_I1  4
+#define WMO_I2  5
+
+#define NNN_LEN                 3
+#define XXX_LEN                 3
+#define AWIPSID_LEN             WMO_CCCC_LEN + NNN_LEN + XXX_LEN
+#define MAX_SECLINE_LEN         40
+
+
+static int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
+{
+        char *p_wmo;
+        int i_bbb;
+        int spaces;
+        int     ttaaii_found = 0;
+        int     ddhhmm_found = 0;
+        int     crcrlf_found = 0;
+        int     bbb_found = 0;
+        int wmo_offset = -1;
+
+        *p_wmolen = 0;
+
+        for (p_wmo = buf; p_wmo + WMO_I2 + 1 < buf + buflen; p_wmo++) {
+                if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
+                                && isalpha(p_wmo[WMO_A1]) && isalpha(p_wmo[WMO_A2])) {
+                        /* 'TTAAII ' */
+                        if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
+                                        && (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+                                ttaaii_found = 1;
+                                wmo_offset = p_wmo - buf;
+                                p_wmo += WMO_I2 + 1;
+                                break;
+                        /* 'TTAAI C' */
+                        } else if (isdigit(p_wmo[WMO_I1]) && isspace(p_wmo[WMO_I2])
+                                        && (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+                                ttaaii_found = 1;
+                                wmo_offset = p_wmo - buf;
+                                p_wmo += WMO_I1 + 1;
+                                break;
+                        /* 'TTAA I ' */
+                        } else if (isspace(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
+                                        && (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+                                ttaaii_found = 1;
+                                wmo_offset = p_wmo - buf;
+                                p_wmo += WMO_I2 + 1;
+                                break;
+                        /* 'TTAAIC' */
+                        } else if (isdigit(p_wmo[WMO_I1]) && isalpha(p_wmo[WMO_I2])) {
+                                ttaaii_found = 1;
+                                wmo_offset = p_wmo - buf;
+                                p_wmo += WMO_I1 + 1;
+                                break;
+                        }
+                } else if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
+                                && isalpha(p_wmo[WMO_A1]) && isdigit(p_wmo[WMO_A2])) {
+                        /* 'TTA#II ' */
+                        if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
+                                        && (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+                                ttaaii_found = 1;
+                                wmo_offset = p_wmo - buf;
+                                p_wmo += WMO_I2 + 1;
+                                break;
+                        }
+                } else if (!strncmp(p_wmo, "\r\r\n", 3)) {
+                        /* got to EOH with no TTAAII found, check TTAA case below */
+                        break;
+                }
+        }
+
+        if (!ttaaii_found) {
+                /* look for TTAA CCCC DDHHMM */
+                for (p_wmo = buf; p_wmo + 9 < buf + buflen; p_wmo++) {
+                        if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
+                                        && isalpha(p_wmo[WMO_A1]) && isalpha(p_wmo[WMO_A2])
+                                        && isspace(p_wmo[WMO_A2+1]) && isalpha(p_wmo[WMO_A2+2])
+                                        && isalpha(p_wmo[WMO_A2+3]) && isalpha(p_wmo[WMO_A2+4])
+                                        && isalpha(p_wmo[WMO_A2+5]) && isspace(p_wmo[WMO_A2+6])) {
+                                ttaaii_found = 1;
+                                wmo_offset = p_wmo - buf;
+                                p_wmo += WMO_A2 + 1;
+                                break;
+                        } else if (!strncmp(p_wmo, "\r\r\n", 3)) {
+                                /* got to EOH with no TTAA found, give up */
+                                return -1;
+                        }
+                }
+        }
+
+        /* skip spaces if present */
+        while (isspace(*p_wmo) && p_wmo < buf + buflen) {
+                p_wmo++;
+        }
+
+        if (p_wmo + WMO_CCCC_LEN > buf + buflen) {
+                return -1;
+        } else if (isalpha(*p_wmo) && isalnum(*(p_wmo+1))
+                        && isalpha(*(p_wmo+2)) && isalnum(*(p_wmo+3))) {
+                p_wmo += WMO_CCCC_LEN;
+        } else {
+                return -1;
+        }
+
+        /* skip spaces if present */
+        spaces = 0;
+        while (isspace(*p_wmo) && p_wmo < buf + buflen) {
+                p_wmo++;
+                spaces++;
+        }
+
+        /* case1: check for 6 digit date-time group */
+        if (p_wmo + 6 <= buf + buflen) {
+                if (isdigit(*p_wmo) && isdigit(*(p_wmo+1))
+                                && isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
+                                && isdigit(*(p_wmo+4)) && isdigit(*(p_wmo+5))) {
+                        ddhhmm_found = 1;
+                        p_wmo += 6;
+                }
+        }
+
+        /* case2: check for 4 digit date-time group */
+        if (!ddhhmm_found && p_wmo + 5 <= buf + buflen) {
+                if (isdigit(*p_wmo) && isdigit(*(p_wmo+1))
+                                && isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
+                                && isspace(*(p_wmo+4))) {
+                        ddhhmm_found = 1;
+                        p_wmo += 4;
+                }
+        }
+
+        /* case3: check for leading 0 in date-time group being a space */
+        if (!ddhhmm_found && p_wmo + 5 <= buf + buflen) {
+                if (spaces > 1 && isdigit(*p_wmo) && isdigit(*(p_wmo+1))
+                                && isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
+                                && isdigit(*(p_wmo+4))) {
+                        ddhhmm_found = 1;
+                        p_wmo += 5;
+                } else {
+                        return -1;
+                }
+        }
+
+        /* skip potential trailing 'Z' on dddhhmm */
+        if (*p_wmo == 'Z') {
+                p_wmo++;
+        }
+        /* Everything past this point is gravy, we'll return the current
+           length if we don't get the expected [bbb] crcrlf
+         */
+
+        /* check if we have a <cr> and/or <lf>, parse bbb if present */
+        while (p_wmo < buf + buflen) {
+                if ((*p_wmo == '\r') || (*p_wmo == '\n')) {
+                        crcrlf_found++;
+                        p_wmo++;
+                        if (crcrlf_found == 3) {
+                                /* assume this is our complete cr-cr-lf */
+                                break;
+                        }
+                } else if (crcrlf_found) {
+                        /* pre-mature end of crcrlf */
+                        p_wmo--;
+                        break;
+                } else if (isalpha(*p_wmo)) {
+                        if (bbb_found) {
+                                /* already have a bbb, give up here */
+                                return wmo_offset;
+                        }
+                        for (i_bbb = 1; p_wmo + i_bbb < buf + buflen && i_bbb < WMO_BBB_LEN; i_bbb++) {
+                                if (!isalpha(p_wmo[i_bbb])) {
+                                        break; /* out of bbb parse loop */
+                                }
+                        }
+                        if (p_wmo + i_bbb < buf + buflen && isspace(p_wmo[i_bbb])) {
+                                bbb_found = 1;
+                                p_wmo += i_bbb;
+                        } else {
+                                /* bbb is too long or maybe not a bbb at all, give up */
+                                return wmo_offset;
+                        }
+                } else if (isspace(*p_wmo)) {
+                        p_wmo++;
+                } else {
+                        /* give up */
+                        return wmo_offset;
+                }
+        }
+
+        /* update length to include bbb and crcrlf */
+        *p_wmolen = p_wmo - buf - wmo_offset;
+
+        return wmo_offset;
+} /* end prod_get_WMO_offset() */
+
+/*************************************************************************
+
+FUNCTION NAME
+        prod_get_WMO_nnnxxx_offset - ACQ product library routine
+
+FUNCTION DESCRIPTION
+        Get the offset and lenght of the NNNXXX following the WMO header The
+        NNNXXX may follow the cr-cr-lf WMO termination.  Some checks are
+        made to ensure that what follows the WMO header is indeed an NNNXXX.
+
+PARAMETERS
+        Type    Name                    I/O     Description
+        char *  wmo_buff                I   pointer to start of wmo header in the data
+        int     max_search              I       max len for WMO search in buff
+        int *   p_len                   O       len for the nnnxxx including crcrlf
+
+RETURNS
+        0 for success -1 for failure
+
+*******************************************************************************/
+
+static int prod_get_WMO_nnnxxx_offset (
+        char *wmo_buff,     /* pointer to start of wmo header in the data buffer */
+        int max_search,         /* max len for WMO search in buff */
+        int *p_len)                     /* len for the nnnxxx */
+{
+        char *  p_nnnxxx;
+        int             offset;
+        int             eow_flag;
+        int             eoh_flag;
+        int             fill_flag;
+
+        *p_len = 0;
+        eow_flag = 0;
+        for (p_nnnxxx = wmo_buff; p_nnnxxx <= wmo_buff+max_search; p_nnnxxx++) {
+                if (*p_nnnxxx == '\n' || *p_nnnxxx == '\r') {
+                        eow_flag = 1;
+                        if (!strncmp(p_nnnxxx, "\r\r\n", 3)) {
+                                p_nnnxxx += 3;
+                                break;
+                        }
+                }
+                else if (eow_flag) {
+                        break;
+                }
+        }
+
+        if (!eow_flag) {
+                return -1;
+        }
+
+        offset = p_nnnxxx - wmo_buff;
+
+        fill_flag = 0;
+        eoh_flag = 0;
+        for (*p_len = 0; p_nnnxxx <= wmo_buff+max_search; p_nnnxxx++, (*p_len)++) {
+                /* maximum length check */
+                if (*p_len > NNN_LEN + XXX_LEN && !eoh_flag) {
+                        return -1;
+                }
+                /* NNNXXX may contain fill characters */
+                if (*p_nnnxxx == ' ') {
+                        fill_flag = 1;
+                }
+                /* loose check for crcrlf terminator */
+                else if (*p_nnnxxx == '\n' || *p_nnnxxx == '\r') {
+                        eoh_flag = 1;
+                }
+                /* we at least got a cr or a lf so assume the header is OK */
+                else if (eoh_flag) {
+                        return offset;
+                }
+                /* Found an embedded space -- assume this is not an NNNXXX */
+                else if (fill_flag) {
+                        return -1;
+                }
+                /* NNNXXX must be all upper-case alpha-numeric */
+                else if (!(isalpha(*p_nnnxxx) && isupper(*p_nnnxxx))
+                                && !isdigit(*p_nnnxxx)) {
+                        return -1;
+                }
+
+                /* minimum length check, NNNXXX may contain a fill character or 2 (LEK) */
+                if ((fill_flag || eoh_flag) && *p_len < NNN_LEN + XXX_LEN - 2) {
+                        return -1;
+                }
+
+                /* check for official terminator, if we found it we are done */
+                if (eoh_flag && !strncmp(p_nnnxxx, "\r\r\n", 3)) {
+                        (*p_len)+=3;
+                        return offset;
+                }
+        }
+        return -1;
+}
+
+static char *decode_zlib_err(int err)
+{
+        static struct {
+                int             code;
+                char *  desc;
+        } errtab[] = {
+                {       Z_OK,                           "OK"                    },
+                {       Z_STREAM_END,           "STREAM_END"    },
+                {       Z_NEED_DICT,            "NEED_DICT"             },
+                {       Z_ERRNO,                        "ERRNO"                 },
+                {       Z_STREAM_ERROR,         "STREAM_ERROR"  },
+                {       Z_DATA_ERROR,           "DATA_ERROR"    },
+                {       Z_MEM_ERROR,            "MEM_ERROR"             },
+                {       Z_BUF_ERROR,            "BUF_ERROR"             },
+                {       Z_VERSION_ERROR,        "VERSION_ERROR" },
+                {       0,                                      ""                              }
+        };
+
+        int i;
+
+        for (i = 0; *errtab[i].desc ; i++) {
+                if (err == errtab[i].code) {
+                        break;
+                }
+        }
+
+        if (errtab[i].code == Z_ERRNO) {
+                return strerror(errno);
+        } else {
+                return errtab[i].desc;
+        }
+}
+
+static int getIndex(char *arr, int pos, int sz)
+{
+  int index = -1;
+  int ii;
+
+  for(ii = pos; ii < sz; ii++) {
+    if(arr[ii] == -1) {
+      index = ii;
+      break;
+    }
+  }
+
+  if(index != -1 && (index + 3 <= sz -1)) {
+    if(!(arr[index] == -1 && arr[index + 1] == 0 &&
+          arr[index + 2] == -1 && arr[index + 3] == 0)) {
+            index = getIndex(arr, index+1, sz);
+    }
+  }else {
+         index = -1;
+  }
+
+  return index;
+
+}
+

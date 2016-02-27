@@ -22,6 +22,7 @@
 #include "productMaker.h"
 #include "reader.h"
 
+#include <zlib.h> /* Required for compress/uncompress */
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -55,13 +56,15 @@ typedef struct {
     struct timeval    reportTime;
 } StatsStruct;
 
-static const int         USAGE_ERROR = 1;
-static const int         SYSTEM_FAILURE = 2;
-static const int         SCHED_POLICY = SCHED_FIFO;
-static Fifo*             fifo;
-static bool              reportStatistics;
-static pthread_mutex_t   mutex;
-static pthread_cond_t    cond = PTHREAD_COND_INITIALIZER;
+static const int	USAGE_ERROR = 1;
+static const int	SYSTEM_FAILURE = 2;
+static const int	SCHED_POLICY = SCHED_FIFO;
+static Fifo*		fifo;
+static bool		reportStatistics;
+static pthread_mutex_t	mutex;
+static pthread_cond_t	cond = PTHREAD_COND_INITIALIZER;
+int			inflateFrame;
+int			fillScanlines;
 
 /**
  * Decodes the command-line.
@@ -92,7 +95,7 @@ decodeCommandLine(
     opterr = 0;                         /* no error messages from getopt(3) */
 
     while (0 == status &&
-            (ch = getopt(argc, argv, "b:I:l:m:nq:r:s:t:u:vx")) != -1) {
+            (ch = getopt(argc, argv, "b:cfI:l:m:nq:r:s:t:u:vx")) != -1) {
         switch (ch) {
             extern char*    optarg;
             extern int      optopt;
@@ -112,6 +115,12 @@ decodeCommandLine(
                 }
                 break;
             }
+            case 'c':
+                inflateFrame = TRUE;
+                break;  
+            case 'f':
+                fillScanlines = TRUE;
+                break;  
             case 'I':
                 *interface = optarg;
                 break;
@@ -305,6 +314,8 @@ static void usage(
 "   -t          Transfer mechanism [Default = MHS]. \n"
 "   -s          Channel Name [Default = NMC]. \n"
 #endif
+"   -c          Enable Frame Decompression [Default => Disabled ]. \n"
+"   -f          Fill blank scanlines for missing Satellite Imagery  [Default => Disabled ]. \n"
 "\n"
 "If neither \"-n\", \"-v\", nor \"-x\" is specified, then only levels ERROR\n"
 "and WARN are logged.\n"
