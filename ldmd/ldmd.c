@@ -175,25 +175,19 @@ static pid_t reap(
             cps_remove(wpid); /* upstream LDM processes */
             lcf_freeExec(wpid); /* EXEC processes */
 
+            const char* fmt;
             if (n == -1) {
                 log_error("Couldn't get command-line of EXEC process %ld",
                         wpid);
-            }
-
-            log_add(
-                    n <= 0 ?
-                            "child %d exited with status %d" :
-                            "child %d exited with status %d: %*s", wpid,
-                    exitStatus, n, command);
-            if (exitStatus) {
-                log_flush_notice();
+                fmt = "child %d exited with status %d";
             }
             else {
-                log_flush_info();
+                fmt = "child %d exited with status %d: %*s";
             }
+            log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
+            log_log(level, fmt, wpid, exitStatus, n, command);
         }
 #endif /*WIFEXITED*/
-
     }
 
     return wpid;
