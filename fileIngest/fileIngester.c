@@ -224,7 +224,7 @@
 #include <locale.h>
 
 #ifdef LDM_SUPPORT
-#       include <syslog.h>
+#       include <log.h>
 #       include <md5.h>
 #       include "ldmProductQueue.h"
 #endif
