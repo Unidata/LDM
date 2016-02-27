@@ -16,4 +16,4 @@ foreach LOG ($LOGS)
    ~ldm/bin/newlog ./$LOG $KEEP_LOG
 end
 
-~ldm/bin/hupsyslog
+~ldm/bin/refresh_logging
