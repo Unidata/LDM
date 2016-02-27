@@ -197,16 +197,14 @@ void* pmStart(
 
 	/*** For Retranmission Purpose  ***/
 #ifdef RETRANS_SUPPORT
-	if (ulogIsDebug())
-         log_debug(" retrans_xmit_enable = %d   transfer_type = %s sbn_channel_name=%s \n",retrans_xmit_enable,transfer_type,sbn_channel_name);
+       log_debug(" retrans_xmit_enable = %d   transfer_type = %s sbn_channel_name=%s \n",retrans_xmit_enable,transfer_type,sbn_channel_name);
 
        if((retrans_xmit_enable == OPTION_ENABLE) && (!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs"))){
                 idx = get_cpio_addr(mcastAddr);
                 if( idx >= 0 && idx < NUM_CPIO_ENTRIES){
                     global_cpio_fd = cpio_tbl[idx].cpio_fd;
                     global_cpio_addr = cpio_tbl[idx].cpio_addr;
-	            if (ulogIsDebug())
- 	              log_debug("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",global_cpio_addr,global_cpio_fd);
+ 	            log_debug("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",global_cpio_addr,global_cpio_fd);
                 }else{
                     log_error("Invalid multicast address provided");
                     status = -1;
@@ -246,12 +244,10 @@ void* pmStart(
 
        GET_SHMPTR(global_acq_tbl,ACQ_TABLE,ACQ_TABLE_SHMKEY,DEBUGGETSHM);
 
-	if (ulogIsDebug())
-	  log_debug("Global acquisition table = 0x%x cpio_fd = %d \n",global_acq_tbl,global_cpio_fd);
+	log_debug("Global acquisition table = 0x%x cpio_fd = %d \n",global_acq_tbl,global_cpio_fd);
 	acq_tbl = &global_acq_tbl[global_cpio_fd];
 
-	if (ulogIsDebug())
-	    log_debug("Obtained acquisition table = 0x%x \n",acq_tbl);
+	log_debug("Obtained acquisition table = 0x%x \n",acq_tbl);
 
 	/* ACQ_TABLE already initialized in acq_ldm_getshm */
 	/*
@@ -275,11 +271,9 @@ void* pmStart(
 	 acq_tbl->pid = getpid();
 	 acq_tbl->link_id = global_cpio_fd;
 	 acq_tbl->link_addr = global_cpio_addr;
-	 if(ulogIsVerbose()){
- 	  log_info("Initialized acq_tbl  = 0x%x & buff_hdr = 0x%x pid = %d \n",acq_tbl,buff_hdr,acq_tbl->pid);
-	  log_info("Global link id = %d  Global link addr = %ld \n",acq_tbl->link_id,acq_tbl->link_addr);
-	  log_info("acq_tbl->read_distrib_enable = 0x%x \n",acq_tbl->read_distrib_enable);
-	 }
+ 	 log_info("Initialized acq_tbl  = 0x%x & buff_hdr = 0x%x pid = %d \n",acq_tbl,buff_hdr,acq_tbl->pid);
+	 log_info("Global link id = %d  Global link addr = %ld \n",acq_tbl->link_id,acq_tbl->link_addr);
+	 log_info("acq_tbl->read_distrib_enable = 0x%x \n",acq_tbl->read_distrib_enable);
     }
 	   /*** For Retranmission Purpose  ***/
 #endif
@@ -555,12 +549,11 @@ void* pmStart(
 					if(psh->hflag & XFR_PROD_RETRANSMIT){
 					   acq_tbl->proc_orig_prod_seqno_last = psh->seqno;
 					   acq_tbl->proc_orig_prod_run_id = psh->origrunid;
-					   if(ulogIsDebug())
-					     log_debug("ORIG SEQ# = %ld	CURR SEQ#: %ld \n",acq_tbl->proc_orig_prod_seqno_last,pdh->seqno);
-						}else{
-						   acq_tbl->proc_orig_prod_seqno_last = 0;
-						   acq_tbl->proc_orig_prod_run_id = 0;
-						}
+					   log_debug("ORIG SEQ# = %ld	CURR SEQ#: %ld \n",acq_tbl->proc_orig_prod_seqno_last,pdh->seqno);
+					}else{
+                                           acq_tbl->proc_orig_prod_seqno_last = 0;
+                                           acq_tbl->proc_orig_prod_run_id = 0;
+					}
 					acq_tbl->proc_prod_run_id = psh->runid;
 					buff_hdr->buff_datahdr_length = psh->psdl;
 					time(&acq_tbl->proc_prod_start_time);
@@ -926,11 +919,10 @@ void* pmStart(
 #ifdef RETRANS_SUPPORT
                                       if(retrans_xmit_enable == OPTION_ENABLE){
                                          acq_tbl->proc_acqtab_prodseq_errs++;
-                                         if(ulogIsDebug())
-                                            log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
-					                                    acq_tbl->proc_base_prod_seqno_last);
-                                            do_prod_mismatch(acq_tbl,buff_hdr);
-                                            acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+                                          log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
+                                                acq_tbl->proc_base_prod_seqno_last);
+                                          do_prod_mismatch(acq_tbl,buff_hdr);
+                                          acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
                                       }
 #endif
 
@@ -1019,8 +1011,7 @@ void* pmStart(
  
 #ifdef RETRANS_SUPPORT
 		 if(((prod.nfrag == 0) || (prod.nfrag >= (pfrag->fragnum +1))) && (save_prod == 0)){
-		   if(ulogIsVerbose())
-			  log_info("Do not save prod [seqno=%ld] as its retrans dup fragnum/total fragments =[%d of %d] save_prod=[%d] \n",
+                   log_info("Do not save prod [seqno=%ld] as its retrans dup fragnum/total fragments =[%d of %d] save_prod=[%d] \n",
 			   prod.seqno,pfrag->fragnum,prod.nfrag,save_prod);
 		   ds_free ();
 		   prod.head = NULL;
@@ -1073,8 +1064,7 @@ void* pmStart(
 						num_prod_discards++;
 						/* Set discard_prod to 1; Otherwise already stored prod may be requested for retransmit */
 						discard_prod=1;
-						if(ulogIsVerbose())
-						  log_info("No of products discarded = %ld prod.seqno=%ld \n ",num_prod_discards,prod.seqno);
+						log_info("No of products discarded = %ld prod.seqno=%ld \n ",num_prod_discards,prod.seqno);
 						prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
 						acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno -1 ;
 						ds_free ();
