@@ -1,0 +1,16 @@
+#       File: refresh_logging.in
+# Created on: Feb 27, 2016
+#     Author: Steven R. Emmerson
+#
+# This script refreshes LDM logging. If the configure(1) script was run with the
+# "--with-ulog" option, then a SIGHUP will be sent to the system logging daemon;
+# otherwise, a SIGHUP will be sent to the LDM process-group if the LDM is
+# running.
+
+set -e
+
+if test -z "@WANT_ULOG_TRUE@"; then
+    hupsyslog
+else
+    kill -s HUP -`cat @prefix@/ldm.pid`
+fi

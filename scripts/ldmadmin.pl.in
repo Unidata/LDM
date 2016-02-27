@@ -828,34 +828,12 @@ sub new_log
     }
     else {
         # Refresh logging
-        if ("@WANT_ULOG_TRUE@" eq "") {
-            system("hupsyslog");
-            if ($?) {
-                errmsg("new_log(): Couldn't notify system logging daemon");
-            }
-            else {
-                $status = 0;        # success
-            }
+        system("refresh_logging");
+        if ($?) {
+            errmsg("new_log(): Couldn't refresh LDM logging");
         }
-        elsif ("@WANT_SLOG_TRUE@" eq "") {
-            if (!isRunning($pid_file, $ip_addr)) {
-                $status = 0;
-            }
-            else {
-                my $pid = getPid($pid_file);
-                if ($pid <= 0) {
-                    errmsg("new_log(): LDM PID file \"$pid_file\" doesn't exist!");
-                }
-                else {
-                    system("kill -s HUP -$pid");
-                    if ($?) {
-                        errmsg("new_log(): Couldn't notify LDM process-group");
-                    }
-                    else {
-                        $status = 0;        # success
-                    }
-                }
-            }
+        else {
+            $status = 0;        # success
         }
     }
 
