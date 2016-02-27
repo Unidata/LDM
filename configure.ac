@@ -221,6 +221,14 @@ AC_ARG_WITH([noaaport],
     [with_noaaport=no])
 AM_CONDITIONAL([WANT_NOAAPORT], [test "x$with_noaaport" != xno])
 
+AC_ARG_WITH([ingester],
+    AS_HELP_STRING([--with-ingester],
+	[enable support for ingesting files into product queue
+        [default=without]]),
+    [],
+    [with_ingester=no])
+AM_CONDITIONAL([WANT_INGESTER], [test "x$with_ingester" != xno])
+
 AC_ARG_WITH([retrans],
     AS_HELP_STRING([--with-retrans],
         [enable support for retransmission from a NOAAPORT receiver
@@ -628,6 +636,15 @@ AM_COND_IF([WANT_NOAAPORT], [
         [AC_MSG_ERROR([Library not found])])
 ])
 
+AM_COND_IF([WANT_INGESTER],[
+    AC_SEARCH_LIBS([clock_gettime], [rt],,[AC_MSG_ERROR([Could not find required function clock_gettime],[1])])
+    AC_SEARCH_LIBS([timer_create], [rt],,[AC_MSG_ERROR([Could not find required function timer_create],[1])])
+    AC_SEARCH_LIBS([timer_settime], [rt],,[AC_MSG_ERROR([Could not find required function timer_settime],[1])])
+libs=$LIBS
+])
+
+
+
 # Ensure references to the XML2 package, which is used by the LDM registry
 # module.
 AC_CHECK_HEADER([libxml/parser.h], ,
@@ -668,6 +685,7 @@ AC_PROG_LIBTOOL
 AC_CONFIG_FILES([
     fauxPq/Makefile
     feedme/Makefile
+    fileIngest/Makefile
     gempak/Makefile
     gempak/tables/Makefile
     grib2/Makefile
