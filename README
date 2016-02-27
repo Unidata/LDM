@@ -2,40 +2,37 @@
 
 INTRODUCTION:
 
-    This package contains the source-code for the Unidata Program
-    Center's Local Data Manager (LDM).
+    This package contains the source-code for the Unidata Program Center's Local
+    Data Manager (LDM).
 
 RELEASE IDENTIFICATION:
 
-    The release identifier for this package is in the file VERSION and
-    has the following form:
+    The release identifier for this package is in the file VERSION and has the
+    following form:
 
         <major>.<minor>.<rev>
 
     where:
 
-        <major>     Is the major release-number (e.g., 6).  Changes
-                    to this component indicate a major departure from
-                    previous releases (such as a change to the LDM
-                    protocol).  Such changes are often not compatible
-                    with previous releases.
+        <major>     Is the major release-number (e.g., 6).  Changes to this
+                    component indicate a major departure from previous releases
+                    (such as a change to the LDM protocol).  Such changes are
+                    often not compatible with previous releases.
 
-        <minor>     Is the minor release-number (e.g., 1).  Changes
-                    to this component indicate the addition of
-                    new features.  The package remains compatible
-                    with previous releases having the same major
-                    release-number.
+        <minor>     Is the minor release-number (e.g., 1).  Changes to this
+                    component indicate the addition of new features.  The
+                    package remains compatible with previous releases having the
+                    same major release-number.
 
-        <rev>       Is the revision-level (e.g., 0).  Changes to this
-                    component indicate bug-fixes and/or performance
-                    improvments that are functionally compatible with
-                    previous releases having the same major and minor
-                    release-numbers.
+        <rev>       Is the revision-level (e.g., 0).  Changes to this component
+                    indicate bug-fixes and/or performance improvments that are
+                    functionally compatible with previous releases having the
+                    same major and minor release-numbers.
 
 LEGAL:
 
-    Licensing and copyright information are contained in the file
-    COPYRIGHT, which is in the top-level source directory.
+    Licensing and copyright information are contained in the file COPYRIGHT,
+    which is in the top-level source directory.
 
 INFORMATION:
 
@@ -45,22 +42,20 @@ INFORMATION:
 
                 http://www.unidata.ucar.edu/software/ldm/
 
-        Click on the appropriate release identifier to go the
-        release-specific homepage, where you will find detailed LDM
-        installation and configuration instructions as well as other useful
-        information.
+        Click on the appropriate release identifier to go the release-specific
+        homepage, where you will find detailed LDM installation and
+        configuration instructions as well as other useful information.
 
     CHANGE LOG:
 
-        Changes to the package are documented in the file CHANGE_LOG,
-        which is in the top-level source-directory.
+        Changes to the package are documented in the file CHANGE_LOG, which is
+        in the top-level source-directory.
 
 LDM DECODERS:
 
-    LDM-compatible decoders for local processing of received data
-    products are available seperately from the Unidata Program
-    Center.  These include Unidata decoders, GEMPAK decoders and MCIDAS
-    decoders. See
+    LDM-compatible decoders for local processing of received data products are
+    available seperately from the Unidata Program Center.  These include Unidata
+    decoders, GEMPAK decoders and MCIDAS decoders. See
 
         Unidata Decoders:
             http://www.unidata.ucar.edu/software/decoders/
@@ -77,6 +72,30 @@ SUPPORT:
     
         support-ldm@unidata.ucar.edu
         
-    Please include a description of the type of platform (hardware and
-    operating system) and any relevant information that can help us
-    answer your question (error messages, symptoms, etc.).
+    Please include a description of the type of platform (hardware and operating
+    system) and any relevant information that can help us answer your question
+    (error messages, symptoms, etc.).
+
+RULES FOR CONTRIBUTING:
+
+    1. Clone the repository:
+           git clone https://github.com/Unidata/LDM.git src
+    2. Change to the source-directory:
+           cd src
+    4. Create the autotools(1) infrastructure:
+           autoreconf -f -i
+    5. Create the build infrastructure:
+           ./configure --enable-debug --disable-root-actions ... >&configure.log
+    6. Merge any changes in the upstream branch:
+           git pull
+    7. Edit the package to add your feature. Start by adding a test of the
+       feature to "make check".
+    8. Build the package:
+           make >&all.log
+    9. Test the package:
+           make check >&check.log && echo Checked &&
+           make distcheck >&distcheck.log && echo Distchecked
+   10. Repeat steps 6 through 9 until 9 succeeds
+   11. Commit your changes:
+           git commit -a
+   12. Make a pull request
