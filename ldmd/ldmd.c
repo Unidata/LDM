@@ -169,23 +169,24 @@ static pid_t reap(
 #endif /*WIFSIGNALED*/
 #if defined(WIFEXITED)
         if (WIFEXITED(status)) {
-            int exitStatus = WEXITSTATUS(status);
-            int n = lcf_getCommandLine(wpid, command, sizeof(command));
+            int nbytes = lcf_getCommandLine(wpid, command, sizeof(command));
+            command[sizeof(command)-1] = 0;
 
-            cps_remove(wpid); /* upstream LDM processes */
-            lcf_freeExec(wpid); /* EXEC processes */
+            cps_remove(wpid);   // Upstream LDM processes
+            lcf_freeExec(wpid); // EXEC processes
 
-            const char* fmt;
-            if (n == -1) {
+            int         exitStatus = WEXITSTATUS(status);
+            log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
+            if (nbytes < 0) {
                 log_error("Couldn't get command-line of EXEC process %ld",
-                        wpid);
-                fmt = "child %d exited with status %d";
+                        (long)wpid);
+                log_log(level, "child %ld exited with status %d", (long)wpid,
+                        exitStatus);
             }
             else {
-                fmt = "child %d exited with status %d: %*s";
+                log_log(level, "child %ld exited with status %d: %*s",
+                        (long)wpid, exitStatus, nbytes, command);
             }
-            log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
-            log_log(level, fmt, wpid, exitStatus, n, command);
         }
 #endif /*WIFEXITED*/
     }
