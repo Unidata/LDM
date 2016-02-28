@@ -5,12 +5,14 @@
 # This script refreshes LDM logging. If the configure(1) script was run with the
 # "--with-ulog" option, then a SIGHUP will be sent to the system logging daemon;
 # otherwise, a SIGHUP will be sent to the LDM process-group if the LDM is
-# running.
+# running; otherwise, nothing will happen.
 
 set -e
 
 if test -z "@WANT_ULOG_TRUE@"; then
     hupsyslog
 else
-    kill -s HUP -`cat @prefix@/ldm.pid`
+    if pid=`cat @prefix@/ldmd.pid` && kill -s 0 $pid; then
+        kill -s HUP -$pid
+    fi
 fi
