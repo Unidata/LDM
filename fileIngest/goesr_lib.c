@@ -93,11 +93,13 @@ Description:
 	Region		A2
 	======		==
 	AKREGI		A
+	TCONUS		C
 	ECONUS		E
 	HIREGI		H
 	PRREGI		P
 	EFD		S
 	WFD		T
+	TFD		U
 	WCONUS		W
 
 Return Values:
@@ -116,11 +118,13 @@ static char findGoesrCmiNonMesoRegionID (char *regionName) {
 	};
 	static struct a2_non_meso_table_struct	a2_table[] = {
 			{ "AKREGI",	'A' },
+			{ "TCONUS",	'C' },
 			{ "ECONUS",	'E' },
 			{ "HIREGI",	'H' },
 			{ "PRREGI",	'P' },
 			{ "EFD",	'S' },
 			{ "WFD",	'T' },
+			{ "TFD",	'U' },
 			{ "WCONUS",	'W' },
 			{ "\0",		'\0' }
 		};
@@ -235,8 +239,8 @@ static char findGoesrCmiMesoRegionID (int latitude, int longitude) {
 	 int		i;
 
 	 for (i = 0; a2_table[i].regionID != '\0'; i++) {
-		 if ((latitude < a2_table[i].top_lat) && (latitude >= a2_table[i].bottom_lat) &&
-			(longitude >= a2_table[i].left_long) && (longitude < a2_table[i].right_long)) {
+		 if ((latitude >= a2_table[i].bottom_lat) && (latitude < a2_table[i].top_lat) &&
+		     (longitude >= a2_table[i].left_long) && (longitude < a2_table[i].right_long)) {
 			 return a2_table[i].regionID;
 		 }
 	 }
@@ -415,11 +419,13 @@ Description:
 		xxxx = Product Region
 			ECONUS - East CONUS
 			WCONUS - West CONUS
+			TCONUS - Center position CONUS
 			HIREGI - Hawaii Regional
 			PRREGI - Puerto Rico Regional
 			AKREGI - Alaska Regional
 			EFD    - East Full Disk
 			WFD    - West Full Disk
+			TFD    - Center position Full Disk
 
 		rrr = Resolution
 			005 - 0.5 km
@@ -490,6 +496,7 @@ Description:
 		xxxx = Product Region
 			EMeso  - East Satellite Mesoscale
 			WMeso  - West Satellite Mesoscale
+			TMeso  - Center Position Mesoscale
 
 		rrr = Resolution
 			005 - 0.5 km
