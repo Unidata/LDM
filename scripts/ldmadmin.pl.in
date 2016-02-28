@@ -10,7 +10,7 @@ use POSIX;
 #
 # Files:
 #
-#  $LDMHOME/ldm.pid          file containing process group ID
+#  $LDMHOME/ldmd.pid         file containing process group ID
 #  $LDMHOME/.ldmadmin.lck    lock file for operations that modify the state of
 #                            the LDM system
 #  $LDMHOME/.[0-9a-f]*.info  product-information of the last, successfuly-
