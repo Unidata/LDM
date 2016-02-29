@@ -12,7 +12,10 @@ set -e
 if test -z "@WANT_ULOG_TRUE@"; then
     hupsyslog
 else
-    if pid=`cat @prefix@/ldmd.pid 2>/dev/null` && kill -s 0 $pid; then
-        kill -s HUP -$pid
+    pid_pathname=@prefix@/ldmd.pid 
+    if test -e $pid_pathname; then
+        if pid=`cat $pid_pathname`; then
+            kill -s HUP -$pid
+        fi
     fi
 fi
