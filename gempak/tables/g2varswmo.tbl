@@ -123,6 +123,8 @@
 000 001 027 008 Maximum Relative Humidity        %                    RHMX             0  -9999.00
 000 001 028 000 Maximum Absolute Humidity        kg m**-3             MAXAH            0  -9999.00
 000 001 029 008 Total Snowfall                   m                    SNOW             0  -9999.00
+000 001 029 009 Total Snowfall                   m                    SNOW             0  -9999.00
+000 001 029 010 Total Snowfall                   m                    SNOW             0  -9999.00
 000 001 030 000 Precipitable Water Category      code table           PWCAT            0  -9999.00
 000 001 031 000 Hail                             m                    HAIL             0  -9999.00
 000 001 032 000 Graupel (snow pellets)           kg kg**-1            GRMR             0  -9999.00
@@ -559,6 +561,7 @@
 000 019 025 000 Weather                          code table           WIWW             0  -9999.00
 000 019 026 000 Convective Outlook               code table           CONVO            0  -9999.00
 000 019 027 000 Icing Scenario                   code table           ICESC            0  -9999.00
+000 019 028 000 Mtn Wave Turb (eddy disp rate)   m**2/3 s**-1         MWTURB           0  -9999.00
 !000 019 028-191 000 Reserved                                                           0  -9999.00
 !000 019 192-254 000 Reserved for local use                                             0  -9999.00
 000 019 255 000 Missing                                                                0  -9999.00
