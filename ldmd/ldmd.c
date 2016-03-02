@@ -913,6 +913,21 @@ int main(
 
     const char* pqfname = getQueuePath();
 
+    /*
+     * Vet the configuration file.
+     */
+    log_debug("main(): Vetting configuration-file");
+    if (read_conf(getLdmdConfigPath(), 0, ldmIpAddr, ldmPort) != 0) {
+        log_flush_error();
+        exit(1);
+    }
+    if (!lcf_haveSomethingToDo()) {
+        log_error("The LDM configuration-file \"%s\" is effectively empty",
+                getLdmdConfigPath());
+        exit(1);
+    }
+    lcf_free(); // Prevent duplicates
+
     if (!becomeDaemon) {
         /*
          * Make this process a process group leader so that all child processes
@@ -975,15 +990,6 @@ int main(
      * set up signal handlers
      */
     set_sigactions();
-
-    /*
-     * Vet the configuration file.
-     */
-    log_debug("main(): Vetting configuration-file");
-    if (read_conf(getLdmdConfigPath(), 0, ldmIpAddr, ldmPort) != 0) {
-        log_flush_error();
-        exit(1);
-    }
 
     if (doSomething) {
         int sock = -1;
@@ -1051,7 +1057,6 @@ int main(
          * Re-read (and execute) the configuration file (downstream LDM-s are
          * started).
          */
-        lcf_free(); // Start with a clean slate to prevent duplicates
         log_debug("main(): Reading configuration-file");
         if (read_conf(getLdmdConfigPath(), 1, ldmIpAddr, ldmPort) != 0) {
             log_flush_error();
