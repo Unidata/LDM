@@ -43,28 +43,34 @@
           010 000 193 000 Wave Length                     -            WLENG  0 -9999.00
 
     ldmadmin(1):
-        Reduce overestimation of new queue capacities (i.e., data capacity,
-        product capacity) and don't compute new capacities if the data is
+        Reduced overestimation of new queue capacities (i.e., data capacity and
+        product capacity) and eliminated computing new capacities if the data is
         insufficient.
 
         Modified the "printmetrics" command to use free(1) to obtain
         memory-usage metrics if they aren't obtained from top(1).
         
-    LDM Server (ldmd(1)):
-        Added immediate, unsuccessful termination of the top-level LDM server --
-        before it forks a daemon version of itself -- if its LDM
-        configuration-file doesn't specify anything to do (i.e., is effectively
-        empty).
+    LDM (ldmd(1)):
+        Top-level Server:
+            Added immediate, unsuccessful termination of the top-level LDM
+            server -- before it forks a daemon version of itself -- if its LDM
+            configuration-file doesn't specify anything to do (i.e., is
+            effectively empty).
 
-    Upstream LDM:
-        Reduced the delivery latency of products with relatively large
-        inter-product arrival gaps by modifying the RPC calls that LDM-6 makes
-        to send data products in primary mode by switching from "batched" RPC
-        calls to asynchronous "message-passing" RPC calls. Specifically, the XDR
-        function to decode the (non-existent) response was changed from `NULL`
-        to `xdr_void()` in the functions `notification_6()`, `hereis_6()`, and
-        `blkdata_6()`. Because the results are highly dependent on the
-        characteristics of the data flow, you might not notice any difference.
+        Upstream LDM Child Process:
+            Reduced the delivery latency of products with relatively large
+            inter-product arrival gaps by modifying the RPC calls that LDM-6
+            makes to send data products in primary mode by switching from
+            "batched" RPC calls to asynchronous "message-passing" RPC calls.
+            Specifically, the XDR function to decode the (non-existent) response
+            was changed from `NULL` to `xdr_void()` in the functions
+            `notification_6()`, `hereis_6()`, and `blkdata_6()`. Because the
+            results are highly dependent on the characteristics of the data
+            flow, you might not notice any difference.
+
+    pqinsert(1):
+        Corrected test of mmap() return-value to eliminate crashing if a
+        directory was specified on the command-line.
 
     pqact(1):
         Corrected the setting of the product-queue cursor based on the last
