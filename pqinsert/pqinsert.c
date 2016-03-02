@@ -395,7 +395,7 @@ int main(
 #if USE_MMAP
                 prod.data = mmap(0, prod.info.sz,
                         PROT_READ, MAP_PRIVATE, fd, 0);
-                if(prod.data == NULL)
+                if(prod.data == MAP_FAILED)
                 {
                         log_syserr("mmap: %s", filename);
                         (void) close(fd);
