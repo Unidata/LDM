@@ -649,6 +649,7 @@ static void reportStats(
     char*   buf = msg;
     size_t  size = sizeof(msg);
     int     nbytes = snprintf(buf, size,
+"\n"
 "----------------------------------------\n"
 "Ingestion Statistics:\n"
 "    Since Previous Report (or Start):\n"
@@ -739,7 +740,7 @@ static void reportStats(
     (void)snprintf(buf, size,
 "----------------------------------------");
     msg[sizeof(msg)-1] = 0;
-    log_notice(msg);
+    log_notice("%s", msg); // Danger! `msg` contains '%' characters
 
     (void)log_set_level(logLevel);
 
