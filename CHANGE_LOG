@@ -56,6 +56,10 @@
             server -- before it forks a daemon version of itself -- if its LDM
             configuration-file doesn't specify anything to do (i.e., is
             effectively empty).
+            
+            Removed misleading "Couldn't get command of EXEC process ..." error
+            message because it was mistakenly applied to upstream LDM processes
+            and not just EXEC processes.
 
         Upstream LDM Child Process:
             Reduced the delivery latency of products with relatively large
