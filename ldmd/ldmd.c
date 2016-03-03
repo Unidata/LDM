@@ -90,6 +90,8 @@ static pid_t reap(
 
     if (wpid != 0) {
         char command[512];
+        int  nbytes = lcf_getCommandLine(wpid, command, sizeof(command));
+        command[sizeof(command)-1] = 0;
 
 #if !defined(WIFSIGNALED) && !defined(WIFEXITED)
 #error "Can't decode wait status"
@@ -97,49 +99,32 @@ static pid_t reap(
 
 #if defined(WIFSTOPPED)
         if (WIFSTOPPED(status)) {
-            int n = lcf_getCommandLine(wpid, command, sizeof(command));
-
-            if (n == -1) {
-                log_error("Couldn't get command-line of EXEC process "
-                        "%ld", wpid);
-            }
-
             log_notice(
-                    n <= 0 ?
-                            "child %d stopped by signal %d" :
-                            "child %d stopped by signal %d: %*s", wpid,
-                    WSTOPSIG(status), n, command);
+                    nbytes <= 0
+                        ? "child %ld stopped by signal %d"
+                        : "child %ld stopped by signal %d: %*s",
+                    (long)wpid, WSTOPSIG(status), nbytes, command);
         }
         else
 #endif /*WIFSTOPPED*/
 #if defined(WIFSIGNALED)
         if (WIFSIGNALED(status)) {
-            int n = lcf_getCommandLine(wpid, command, sizeof(command));
-
-            if (n == -1) {
-                log_error("Couldn't get command-line of EXEC process "
-                        "%ld", wpid);
-            }
-
-            cps_remove(wpid); /* upstream LDM processes */
-
-            lcf_freeExec(wpid); /* EXEC processes */
-
+            cps_remove(wpid);       // Upstream LDM processes
+            lcf_freeExec(wpid);     // EXEC processes
 #if WANT_MULTICAST
-            (void)msm_remove(wpid); // multicast LDM senders
+            (void)msm_remove(wpid); // Multicast LDM senders
 #endif
 
             log_notice(
-                    n <= 0 ?
-                            "child %d terminated by signal %d" :
-                            "child %d terminated by signal %d: %*s", wpid,
-                    WTERMSIG(status), n, command);
+                    nbytes <= 0
+                        ? "child %ld terminated by signal %d"
+                        : "child %ld terminated by signal %d: %*s",
+                    (long)wpid, WTERMSIG(status), nbytes, command);
 
             /* DEBUG */
             switch (WTERMSIG(status)) {
             /*
-             * If a child dumped core,
-             * shut everything down.
+             * If a child dumped core, shut everything down.
              */
             case SIGQUIT:
             case SIGILL:
@@ -169,24 +154,18 @@ static pid_t reap(
 #endif /*WIFSIGNALED*/
 #if defined(WIFEXITED)
         if (WIFEXITED(status)) {
-            int nbytes = lcf_getCommandLine(wpid, command, sizeof(command));
-            command[sizeof(command)-1] = 0;
-
-            cps_remove(wpid);   // Upstream LDM processes
-            lcf_freeExec(wpid); // EXEC processes
-
+            cps_remove(wpid);       // Upstream LDM processes
+            lcf_freeExec(wpid);     // EXEC processes
+#if WANT_MULTICAST
+            (void)msm_remove(wpid); // Multicast LDM senders
+#endif
             int         exitStatus = WEXITSTATUS(status);
             log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
-            if (nbytes < 0) {
-                log_error("Couldn't get command-line of EXEC process %ld",
-                        (long)wpid);
-                log_log(level, "child %ld exited with status %d", (long)wpid,
-                        exitStatus);
-            }
-            else {
-                log_log(level, "child %ld exited with status %d: %*s",
-                        (long)wpid, exitStatus, nbytes, command);
-            }
+            log_log(level,
+                    nbytes <= 0
+                        ? "child %ld exited with status %d"
+                        : "child %ld exited with status %d: %*s",
+                    (long)wpid, exitStatus, nbytes, command);
         }
 #endif /*WIFEXITED*/
     }
