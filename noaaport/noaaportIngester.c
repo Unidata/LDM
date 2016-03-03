@@ -347,11 +347,14 @@ sigusr1_handler(
     }
 }
 
-/*
+/**
  * Handles a signal.
+ *
+ * @param[in] sig  The signal to be handled. Should be SIGHUP, SIGTERM, or
+ *                 SIGUSR2.
  */
 static void signal_handler(
-        const int       sig)    /**< [in] Signal to be handled */
+        const int       sig)
 {
 #ifdef SVR3SIGNALS
     /*
@@ -363,16 +366,21 @@ static void signal_handler(
 
     switch (sig) {
         case SIGHUP:
+            log_notice("SIGHUP received");
             log_refresh();
             break;
         case SIGTERM:
+            log_notice("SIGTERM received");
             done = 1;
             if (fifo)
                 fifo_close(fifo); // will cause input-reader to terminate
             break;
-        case SIGUSR2: {
+        case SIGUSR2:
+            log_notice("SIGUSR2 received");
             (void)log_roll_level();
-        }
+            break;
+        default:
+            log_notice("Unexpected signal received: %d", sig);
     }
 
     return;
