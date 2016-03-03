@@ -506,6 +506,7 @@ static void flush(
                 if (msg == queue->last)
                     break;
             }                       /* message loop */
+            logi_flush();
         }                           /* messages should be printed */
 
         queue_clear();

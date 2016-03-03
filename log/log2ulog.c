@@ -154,6 +154,14 @@ void logi_log(
 }
 
 /**
+ * Flushes logging.
+ */
+void logi_flush(void)
+{
+    // Does nothing because the `ulog` module flushes every message
+}
+
+/**
  * Emits an error message. Used internally when an error occurs in this logging
  * module.
  *

@@ -376,6 +376,11 @@ void logi_log(
         const char*       string);
 
 /**
+ * Flushes logging.
+ */
+void logi_flush(void);
+
+/**
  * Emits an error message. Used internally when an error occurs in this logging
  * module.
  *
