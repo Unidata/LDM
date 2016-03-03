@@ -212,7 +212,7 @@ static int file_init(void)
 {
     int status;
     if (stream_file) {
-        status = 0;
+        status = 0; // Already initialized
     }
     else {
         int fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
