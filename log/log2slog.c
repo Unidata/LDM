@@ -86,9 +86,10 @@ static const char* get_ldm_logfile_pathname(void)
 {
     static char pathname[_XOPEN_PATH_MAX];
     if (pathname[0] == 0) {
-        int   reg_getString(const char* path, char** value);
-        char* path;
-        if (reg_getString("/log/file", &path)) {
+        int   reg_getString(const char* key, char** value);
+        char* value;
+        if (reg_getString("/log/file", &value)) {
+            // No entry in registry
             (void)snprintf(pathname, sizeof(pathname), "%s/ldmd.log",
                     LDM_LOG_DIR);
             pathname[sizeof(pathname)-1] = 0;
@@ -97,9 +98,9 @@ static const char* get_ldm_logfile_pathname(void)
                     "Using default: \"%s\".", pathname);
         }
         else {
-            (void)strncpy(pathname, path, sizeof(pathname));
+            (void)strncpy(pathname, value, sizeof(pathname));
             pathname[sizeof(pathname)-1] = 0;
-            free(path);
+            free(value);
         }
     }
     return pathname;
