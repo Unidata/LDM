@@ -728,7 +728,7 @@ sub start_ldm
             }
             else {
                 # Ensure that the upstream LDM database doesn't exist
-                #print "Deleting upstream LDM database...\n";
+                #print "Attempting to delete upstream LDM database...\n";
                 system("uldbutil -d");
                     
                 # Check the pqact(1) configuration-file(s)
