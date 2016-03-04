@@ -905,7 +905,7 @@ int main(
                 getLdmdConfigPath());
         exit(1);
     }
-    lcf_free(); // Prevent duplicates
+    // lcf_free() not called because lcf_isServerNeeded() will be
 
     if (!becomeDaemon) {
         /*
@@ -1036,6 +1036,7 @@ int main(
          * Re-read (and execute) the configuration file (downstream LDM-s are
          * started).
          */
+        lcf_free(); // Prevent duplicates
         log_debug("main(): Reading configuration-file");
         if (read_conf(getLdmdConfigPath(), 1, ldmIpAddr, ldmPort) != 0) {
             log_flush_error();
