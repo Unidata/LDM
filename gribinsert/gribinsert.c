@@ -83,7 +83,7 @@ cleanup (void)
       (void) pq_close (pq);
       pq = NULL;
     }
-  (void)log_fini();
+  log_fini();
 }
 
 static void

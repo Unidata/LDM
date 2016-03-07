@@ -183,7 +183,7 @@ int main(int argc, char* argv)
     if (status)
         log_syserr("Couldn't daemonize"); // prints queue at ERROR level
     ...
-    (void)log_fini(); // Good form
+    log_fini(); // Good form
     return status ? 1 : 0;
 }
 @endcode
