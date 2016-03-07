@@ -104,8 +104,7 @@ exec_prodput(
 
                 /*
                  * It is assumed that the standard input, output, and error
-                 * streams are correctly established and should not be
-                 * modified.
+                 * streams are correct and should not be modified.
                  */
 
                 /*
@@ -113,11 +112,12 @@ exec_prodput(
                  */
                 endpriv();
 
-                (void)log_fini();
+                (void)log_fini(); // ldmfork() called log_free()
                 (void) execvp(argv[0], argv);
                 (void)log_reinit();
                 log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
                         getenv("PATH"));
+                (void)log_fini(); // ldmfork() called log_free()
                 exit(EXIT_FAILURE);
             }                           /* child process */
             else {
