@@ -92,7 +92,7 @@ typedef struct {
 // Capacity of the product-queue in bytes
 static const unsigned    PQ_DATA_CAPACITY = CAPACITY_TO_PROD_RATIO*MEAN_PROD_SIZE;
 // Capacity of the product-queue in number of products
-static const unsigned    PQ_PROD_CAPACITY = 10*CAPACITY_TO_PROD_RATIO;
+static const unsigned    PQ_PROD_CAPACITY = 50*CAPACITY_TO_PROD_RATIO;
 // Number of data-products to insert
 static const unsigned    NUM_PRODS = NUM_TIMES*CAPACITY_TO_PROD_RATIO;
 static const char        LOCAL_HOST[] = "127.0.0.1";
