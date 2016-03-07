@@ -1882,7 +1882,7 @@ static int pipe_out(
             log_add("Couldn't write product metadata to pipe");
     }
     if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
-        log_add("Couldn't write product metadata to pipe");
+        log_add("Couldn't write product data to pipe");
         status = pipe_put(entry, info->ident, data, sz);
         if (status)
             log_add("Couldn't write product data to pipe");
