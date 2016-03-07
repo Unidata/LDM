@@ -345,7 +345,7 @@ dump_fl(void)
     fl_entry *entry;
     int fd;
 
-    log_debug("      thefl->size %d", thefl->size);
+    log_debug("thefl->size %d", thefl->size);
     for(entry = thefl->head; entry != NULL;
             entry = entry->next )
     {
@@ -370,7 +370,7 @@ dump_fl(void)
         default :
             fd = -2;
         }
-        log_debug("       %d %s", fd, entry->path);
+        log_debug("%d %s", fd, entry->path);
     }
 }
 #endif
@@ -807,7 +807,7 @@ static int unio_open(
             strncpy(entry->path, path, PATH_MAX);
             entry->path[PATH_MAX - 1] = 0; /* just in case */
 
-            log_debug("    unio_open: %d %s", entry->handle.fd, entry->path);
+            log_debug("%d %s", entry->handle.fd, entry->path);
         } /* output-file set to close_on_exec */
 
         if (error) {
@@ -822,7 +822,7 @@ static int unio_open(
 static void unio_close(
         fl_entry *entry)
 {
-    log_debug("    unio_close: %d", entry->handle.fd);
+    log_debug("%d", entry->handle.fd);
     if (entry->handle.fd != -1) {
         if (close(entry->handle.fd) == -1) {
             log_syserr("close: %s", entry->path);
@@ -846,7 +846,7 @@ static int unio_sync(
         return 0;
     }
     if (EINTR != errno) {
-        log_add_syserr("Couldn't fsync() file \"%s\"", entry->path);
+        log_add_syserr("Couldn't flush I/O to file \"%s\"", entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -1240,7 +1240,7 @@ static int stdio_open(
 
                 strncpy(entry->path, path, PATH_MAX);
                 entry->path[PATH_MAX - 1] = 0; /* just in case */
-                log_debug("    stdio_open: %d", fileno(entry->handle.stream));
+                log_debug("%d", fileno(entry->handle.stream));
                 error = 0;
             } /* entry->handle.stream allocated */
         } /* output-file set to close-on-exec */
@@ -1257,7 +1257,7 @@ static int stdio_open(
 static void stdio_close(
         fl_entry *entry)
 {
-    log_debug("    stdio_close: %d",
+    log_debug("%d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
     if (entry->handle.stream != NULL ) {
         if (fclose(entry->handle.stream) == EOF) {
@@ -1272,12 +1272,12 @@ static int stdio_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("    stdio_sync: %d",
+    log_debug("%d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
 
     if (fflush(entry->handle.stream) == EOF) {
         if (EINTR != errno) {
-            log_syserr("fflush: %s", entry->path);
+            log_syserr("Couldn't flush I/O to file \"%s\"", entry->path);
             // disable flushing on I/O error
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
@@ -1297,7 +1297,7 @@ static int stdio_put(
         const void *data,
         size_t sz)
 {
-    log_debug("    stdio_dbufput: %d", fileno(entry->handle.stream));
+    log_debug("%d", fileno(entry->handle.stream));
     TO_HEAD(entry);
 
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
@@ -1330,7 +1330,7 @@ int stdio_prodput(
     int status = -1; /* failure */
     fl_entry* entry = fl_getEntry(STDIO, argc, argv, NULL);
 
-    log_debug("    stdio_prodput: %d %s",
+    log_debug("%d %s",
             entry == NULL ? -1 : fileno(entry->handle.stream), prodp->info.ident);
 
     if (entry != NULL ) {
@@ -1603,7 +1603,7 @@ static int pipe_open(
                         writeFd = pfd[1]; /* success */
 
                         argcat(entry->path, PATH_MAX - 1, argc, argv);
-                        log_debug("    pipe_open: %d %d", writeFd, pid);
+                        log_debug("%d %d", writeFd, pid);
                     }
                 } /* parent process */
             } /* fork() success */
@@ -1634,8 +1634,8 @@ static int pipe_sync(
         return 0;
     }
     if (EINTR != status) {
-        log_add("Couldn't sync to decoder: pid=%lu, cmd=\"%s\"", entry->private,
-                entry->path);
+        log_add("Couldn't flush I/O to decoder: pid=%lu, cmd=\"%s\"",
+                entry->private, entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -1649,7 +1649,7 @@ static void pipe_close(
     pid_t pid = (pid_t) entry->private;
     int pfd = -1;
 
-    log_debug("    pipe_close: %d, %d",
+    log_debug("%d, %d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1, pid);
     if (entry->handle.pbuf != NULL ) {
         if (pid >= 0 && entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
@@ -1684,7 +1684,7 @@ static int pipe_put(
 {
     int status;
 
-    log_debug("    pipe_put: %d",
+    log_debug("%d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
     TO_HEAD(entry);
 
@@ -1922,7 +1922,7 @@ int pipe_prodput(
         status = -1;
     }
     else {
-        log_debug("    pipe_prodput: %d %s",
+        log_debug("%d %s",
                 entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                 prodp->info.ident);
 
@@ -2013,7 +2013,7 @@ int spipe_prodput(
     conv sync;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    log_debug("    spipe_prodput: %d %s",
+    log_debug("%d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2085,7 +2085,7 @@ int spipe_prodput(
     buffer[len - 2] = SPIPE_ETX;
     buffer[len - 1] = SPIPE_RS;
 
-    log_debug("spipe_prodput: size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
+    log_debug("size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
             buffer[len - 2], buffer[len - 1]);
 
     /*---------------------------------------------------------
@@ -2126,7 +2126,7 @@ int xpipe_prodput(
     fl_entry *entry;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    log_debug("    xpipe_prodput: %d %s",
+    log_debug("%d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2198,7 +2198,7 @@ static int ldmdb_open(
             dblocksize = (int) tmp;
         }
         else {
-            log_error("%s: ldmdb_open: -dblocksize %s invalid", path, argv[1]);
+            log_error("%s: -dblocksize %s invalid", path, argv[1]);
         }
     }
 
@@ -2230,14 +2230,14 @@ static int ldmdb_open(
     entry->private = read_write;
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX - 1] = 0; /* just in case */
-    log_debug("    ldmdb_open: %s", entry->path);
+    log_debug("%s", entry->path);
     return 0;
 }
 
 static void ldmdb_close(
         fl_entry *entry)
 {
-    log_debug("    ldmdb_close: %s", entry->path);
+    log_debug("%s", entry->path);
     if (entry->handle.db != NULL )
         gdbm_close(entry->handle.db);
     entry->private = 0;
@@ -2280,7 +2280,7 @@ static int ldmdb_sync(
         int block)
 {
     /* there is no gdbm_sync */
-    log_debug("    ldmdb_sync: %s", entry->handle.db ? entry->path : "");
+    log_debug("%s", entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return (0);
 }
@@ -2398,14 +2398,14 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
     }
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX-1] = 0; /* just in case */
-    log_debug("    ldmdb_open: %s", entry->path);
+    log_debug("%s", entry->path);
     return 0;
 }
 
 static void
 ldmdb_close(fl_entry *entry)
 {
-    log_debug("    ldmdb_close: %s", entry->path);
+    log_debug("%s", entry->path);
     if(entry->handle.db != NULL)
         dbm_close(entry->handle.db);
     entry->private = 0;
@@ -2423,7 +2423,7 @@ static int
 ldmdb_sync(fl_entry *entry, int block)
 {
     /* there is no dbm_sync */
-    log_debug("    ldmdb_sync: %s",
+    log_debug("%s",
             entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return(0);
@@ -2516,7 +2516,7 @@ int ldmdb_prodput(
             dblocksizep = *av;
         }
         else
-            log_error("dbfile: Invalid argument %s", *av);
+            log_error("Invalid argument %s", *av);
 
     }
 
@@ -2530,7 +2530,7 @@ int ldmdb_prodput(
             argv[argc++] = dblocksizep;
         argv[argc] = NULL;
         entry = fl_getEntry(FT_DB, argc, argv, NULL);
-        log_debug("    ldmdb_prodput: %s %s", entry == NULL ? "" : entry->path,
+        log_debug("%s %s", entry == NULL ? "" : entry->path,
                 prod->info.ident);
         if (entry == NULL )
             return -1;
