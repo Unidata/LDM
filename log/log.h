@@ -252,7 +252,10 @@ void log_clear(void);
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
  */
-void log_free(void);
+#define log_free()  do {\
+    LOG_LOC_DECL(loc);\
+    logl_free(&loc);\
+} while (false)
 
 /**
  * Indicates if a message of the given level would be logged.

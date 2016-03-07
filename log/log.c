@@ -860,17 +860,20 @@ void logl_flush(
 /**
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
+ *
+ * @pre This module is not locked
  */
 void
-logl_free(void)
+logl_free(
+        const log_loc_t* const loc)
 {
+    logl_lock();
     sigset_t sigset;
     blockSigs(&sigset);
 
     msg_queue_t* queue = queue_get();
     if (!queue_is_empty(queue)) {
-        LOG_LOC_DECL(loc);
-        logl_log(&loc, LOG_LEVEL_WARNING,
+        logl_log(loc, LOG_LEVEL_WARNING,
                 "logl_free() called with the above messages still in the "
                 "message-queue");
     }
@@ -882,6 +885,7 @@ logl_free(void)
     }
 
     restoreSigs(&sigset);
+    logl_unlock();
 }
 
 /******************************************************************************
@@ -1162,18 +1166,6 @@ void
 log_clear(void)
 {
     queue_clear();
-}
-
-/**
- * Frees the log-message resources of the current thread. Should only be called
- * when no more logging by the current thread will occur.
- */
-void
-log_free(void)
-{
-    logl_lock();
-    logl_free();
-    logl_unlock();
 }
 
 /**
