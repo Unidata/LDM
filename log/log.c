@@ -111,9 +111,15 @@ static struct sigaction      prev_hup_sigaction;
  */
 static sigset_t              all_sigset;
 /**
+ * The signal-mask prior to calling logl_lock() so that this module is
+ * async-signal-safe (i.e., can be called safely from a signal-catching
+ * function).
+ */
+static sigset_t              prevSigs;
+/**
  * The mutex that makes this module thread-safe.
  */
-mutex_t                      log_mutex;
+static mutex_t               log_mutex;
 
 /**
  * Blocks all signals for the current thread. This is done so that the
@@ -569,10 +575,17 @@ int logl_level_to_priority(
 /**
  * Acquires this module's lock.
  *
- * This function is thread-safe.
+ * This function is thread-safe and async-signal-safe.
  */
 void logl_lock(void)
 {
+    /*
+     * Because this module calls async-signal-unsafe functions (e.g.,
+     * pthread_mutex_lock()), the current thread's signal-mask is set to block
+     * most signals so that this module's functions can be called from a
+     * signal-catching function.
+     */
+    blockSigs(&prevSigs);
     int status = mutex_lock(&log_mutex);
     logl_assert(status == 0);
     if (refresh_needed) {
@@ -584,13 +597,15 @@ void logl_lock(void)
 /**
  * Releases this module's lock.
  *
- * This function is thread-safe. On entry, this module's lock shall be locked
- * by the current thread.
+ * This function is thread-safe and async-signal-safe.
+ *
+ * @pre This module's lock shall be locked on the current thread.
  */
 void logl_unlock(void)
 {
     int status = mutex_unlock(&log_mutex);
     logl_assert(status == 0);
+    restoreSigs(&prevSigs);
 }
 
 /**
