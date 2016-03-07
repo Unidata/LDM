@@ -1142,13 +1142,17 @@ requester_deleteAndRequest(
     return status;
 }
 
+/**
+ * Executes a requester, which deletes selected data-products from the downstream
+ * product-queue and requests them from the upstream LDM.
+ *
+ * @retval NULL  Always
+ */
 static void*
 requester_start(
         void* const arg)
 {
     log_debug("requester_start(): Entered");
-
-    unblockSigCont(NULL);
 
     int           status;
     pthread_cleanup_push(requester_close, NULL);
@@ -1158,7 +1162,7 @@ requester_start(
         status = pq_sequence(receiverPq, TV_GT, PQ_CLASS_ALL, requester_decide,
                 &reqArg);
         if (status == PQUEUE_END) {
-            (void)pq_suspend(30);
+            (void)pq_suspend(30); // Unblocks SIGCONT
         }
         else if (status) {
             log_add("pq_sequence() failure: status=%d", status);
@@ -1189,6 +1193,12 @@ requester_start(
     return NULL;
 }
 
+/**
+ * Starts a requester, which deletes selected data-products from the downstream
+ * product-queue and requests them from the upstream LDM.
+ *
+ * @return pthread_create() return value
+ */
 static int
 requester_init(void)
 {
@@ -1494,13 +1504,11 @@ test_up7_down7(
     receiver_requestLastProduct(&receiver);
 #endif
     (void)sleep(2);
-    log_notice("up7_down7_test(): %lu sender product-queue insertions",
-            (unsigned long)NUM_PRODS);
+    log_notice("%lu sender product-queue insertions", (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
-    log_notice("up7_down7_test(): %lu receiver product-queue insertions",
+    log_notice("%lu receiver product-queue insertions",
             (unsigned long)numDownInserts);
-    log_notice("up7_down7_test(): %lu product deletions",
-            (unsigned long)numDeletedProds);
+    log_notice("%lu product deletions", (unsigned long)numDeletedProds);
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
     #if USE_SIGWAIT
@@ -1540,9 +1548,9 @@ int main(
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
         if (NULL != testSuite) {
-            if (/*CU_ADD_TEST(testSuite, test_up7) &&
+            if (CU_ADD_TEST(testSuite, test_up7) &&
                     CU_ADD_TEST(testSuite, test_down7) &&
-                    CU_ADD_TEST(testSuite, test_bad_subscription) &&*/
+                    CU_ADD_TEST(testSuite, test_bad_subscription) &&
                     CU_ADD_TEST(testSuite, test_up7_down7)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
