@@ -1567,13 +1567,14 @@ static int pipe_open(
                         endpriv();
                         if (log_is_enabled_info)
                             log_info("Executing decoder \"%s\"", av[0]);
-                        (void)log_fini();
+                        log_fini();
                         (void) execvp(av[0], &av[0]);
                         (void)log_reinit();
                         log_syserr("Couldn't execute decoder \"%s\"; PATH=%s",
                                 av[0], getenv("PATH"));
                     }
 
+                    log_fini();
                     exit(EXIT_FAILURE);
                 } /* child process */
                 else {

@@ -72,6 +72,24 @@ extern log_level_t log_level;
  */
 extern char        log_dest[];
 
+/**
+ * Finalizes the logging module. Should be called eventually after
+ * log_init(), after which no more logging should occur.
+ *
+ * @retval 0   Success.
+ * @retval -1  Failure. Logging module is in an unspecified state.
+ */
+int log_fini_located(
+        const log_loc_t* loc);
+
+/**
+ * Frees the log-message resources of the current thread. Should only be called
+ * when no more logging by the current thread will occur.
+ */
+void log_free_located(
+        const log_loc_t* loc);
+
+
 /******************************************************************************
  * Internal logging library functions:
  ******************************************************************************/

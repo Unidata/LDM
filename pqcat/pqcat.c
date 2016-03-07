@@ -172,7 +172,7 @@ cleanup(void)
 
         dump_stats();
 
-        (void)log_fini();
+        log_fini();
 }
 
 

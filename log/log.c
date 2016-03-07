@@ -861,31 +861,50 @@ void logl_flush(
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
  *
- * @pre This module is not locked
+ * @pre This module is locked
  */
-void
-logl_free(
+void logl_free(
         const log_loc_t* const loc)
 {
-    logl_lock();
-    sigset_t sigset;
-    blockSigs(&sigset);
-
     msg_queue_t* queue = queue_get();
     if (!queue_is_empty(queue)) {
         logl_log(loc, LOG_LEVEL_WARNING,
                 "logl_free() called with the above messages still in the "
                 "message-queue");
     }
-
     if (queue) {
         queue_fini(queue);
         free(queue);
         (void)pthread_setspecific(queueKey, NULL);
     }
+}
 
-    restoreSigs(&sigset);
-    logl_unlock();
+/**
+ * Finalizes the logging module. Frees all thread-specific resources. Frees all
+ * thread-independent resources if the current thread is the one on which
+ * log_init() was called.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
+ */
+int logl_fini(
+        const log_loc_t* const loc)
+{
+    int status;
+    if (!isInitialized) {
+        // Can't log an error message because not initialized
+        status = -1;
+    }
+    else {
+        logl_free(loc);
+        if (!pthread_equal(init_thread, pthread_self())) {
+            status = 0;
+        }
+        else {
+            status = logi_fini();
+        }
+    }
+    return status ? -1 : 0;
 }
 
 /******************************************************************************
@@ -1169,6 +1188,19 @@ log_clear(void)
 }
 
 /**
+ * Frees the log-message resources of the current thread. Should only be called
+ * when no more logging by the current thread will occur.
+ */
+void
+log_free_located(
+        const log_loc_t* const loc)
+{
+    logl_lock();
+    logl_free(loc);
+    logl_unlock();
+}
+
+/**
  * Finalizes the logging module. Frees all thread-specific resources. Frees all
  * thread-independent resources if the current thread is the one on which
  * log_init() was called.
@@ -1176,29 +1208,17 @@ log_clear(void)
  * @retval -1  Failure
  * @retval  0  Success
  */
-int log_fini(void)
+int log_fini_located(
+        const log_loc_t* const loc)
 {
-    int status;
-    if (!isInitialized) {
-        // Can't log an error message because not initialized
-        status = -1;
-    }
-    else {
-        logl_lock();
-        logl_free();
-        if (!pthread_equal(init_thread, pthread_self())) {
-            status = 0;
-        }
-        else {
-            status = logi_fini();
-            if (status == 0) {
-                logl_unlock();
-                status = mutex_fini(&log_mutex);
-                if (status == 0) {
-                    (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
-                    isInitialized = false;
-                }
-            }
+    logl_lock();
+    int status = logl_fini(loc);
+    logl_unlock();
+    if (status == 0) {
+        status = mutex_fini(&log_mutex);
+        if (status == 0) {
+            (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+            isInitialized = false;
         }
     }
     return status ? -1 : 0;

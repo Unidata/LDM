@@ -130,7 +130,7 @@ run_child(int argc, char *argv[])
                 /* don't let child get real privilege */
                 endpriv();
 
-                (void)log_fini();
+                log_fini();
                 (void) execvp(argv[0], &argv[0]);
                 (void)log_reinit();
 
@@ -389,7 +389,7 @@ cleanup(void)
 
         dump_stats();
 
-        (void)log_fini();
+        log_fini();
 }
 
 

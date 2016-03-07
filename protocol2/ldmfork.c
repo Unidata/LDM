@@ -32,11 +32,11 @@ pid_t ldmfork(void)
         pid = -1;
     }
     else {
-        log_free(); // Because, effectively, a new thread
         pid = fork();
 
         if (0 == pid) {
             /* Child process */
+            log_free(); // Because, effectively, a new thread
         }
         else if (-1 == pid) {
             /* System error */

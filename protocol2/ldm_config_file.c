@@ -2345,7 +2345,7 @@ proc_exec(Process *proc)
                 } /* else, the logFd is stderr, and that's ok */
                 close_rest(3);
                 endpriv();
-                (void)log_fini();
+                log_fini();
                 (void) execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
                 (void)log_reinit();
                 log_syserr("Couldn't execute utility \"%s\"; PATH=%s",

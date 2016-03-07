@@ -279,7 +279,7 @@ static void cleanup(
     /*
      * Terminate logging.
      */
-    (void)log_fini();
+    log_fini();
 }
 
 /*

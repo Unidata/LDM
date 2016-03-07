@@ -175,7 +175,7 @@ cleanup(void)
                 pq = NULL;
         }
 
-        (void)log_fini();
+        log_fini();
 }
 
 static int stats_req = 0;
