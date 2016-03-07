@@ -460,8 +460,10 @@ fl_sync(
         prev = entry->prev;
 
         if (entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
-            if (entry->ops->sync(entry, block))
+            if (entry->ops->sync(entry, block)) {
+                log_error("Couldn't sync entry");
                 fl_removeAndFree(entry, DR_ERROR); // public function so remove
+            }
         }
     }
 }
@@ -834,7 +836,7 @@ static int unio_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("    unio_sync: %d %s", entry->handle.fd, block ? "" : "non-block");
+    log_debug("%d %s", entry->handle.fd, block ? "" : "non-block");
 
     if (0 == fsync(entry->handle.fd)) {
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
@@ -844,7 +846,7 @@ static int unio_sync(
         return 0;
     }
     if (EINTR != errno) {
-        log_syserr("fsync: %s", entry->path);
+        log_add_syserr("Couldn't fsync() file \"%s\"", entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -861,7 +863,7 @@ static int unio_put(
 {
     if (sz) {
         TO_HEAD(entry);
-        log_debug("    unio_dbufput: %d", entry->handle.fd);
+        log_debug("%d", entry->handle.fd);
 
         do {
             ssize_t nwrote = write(entry->handle.fd, data, sz);
@@ -872,7 +874,8 @@ static int unio_put(
             }
             else {
                 if (EINTR != errno) {
-                    log_syserr("write() error: \"%s\"", entry->path);
+                    log_add_syserr("Couldn't write() %zu bytes to file \"%s\"",
+                            entry->path);
                     // disable flushing on I/O error
                     entry_unsetFlag(entry, FL_NEEDS_SYNC);
                 }
@@ -1034,9 +1037,13 @@ static int unio_out(
 
     if (entry_isFlagSet(entry, FL_METADATA)) {
         status = unio_putmeta(entry, &prodp->info, sz);
+        if (status)
+            log_add("Couldn't write product metadata to file");
     }
     if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
         status = unio_put(entry, prodp->info.ident, data, sz);
+        if (status)
+            log_add("Couldn't write product data to file");
     }
 
     return status;
@@ -1053,13 +1060,14 @@ int unio_prodput(
     int status = -1; /* failure */
     fl_entry* entry = fl_getEntry(UNIXIO, argc, argv, NULL);
 
-    log_debug("    unio_prodput: %d %s", entry == NULL ? -1 : entry->handle.fd,
-            prodp->info.ident);
+    log_debug("%d %s", entry == NULL ? -1 : entry->handle.fd,
+    prodp->info.ident);
 
-    if (entry != NULL ) {
-        size_t sz;
-        void* data;
-
+    if (entry == NULL ) {
+        log_add("Couldn't get entry for product \"%s\"", prodp->info.ident);
+        status = -1;
+    }
+    else {
         if (entry_isFlagSet(entry, FL_EDEX)) {
             if (shared_id == -1) {
                 log_error(
@@ -1078,11 +1086,27 @@ int unio_prodput(
                 }
             }
         }
-        sz = prodp->info.sz;
-        data = (entry_isFlagSet(entry, FL_STRIP)) ?
-                        dupstrip(prodp->data, prodp->info.sz, &sz) : prodp->data;
 
-        if (data != NULL ) {
+        size_t sz = prodp->info.sz;
+        void*  data;
+
+        if (entry_isFlagSet(entry, FL_STRIP)) {
+            data = dupstrip(prodp->data, sz, &sz);
+            if (data == NULL) {
+                log_add("Couldn't strip control-characters out of product "
+                        "\"%s\"", prodp->info.ident);
+                status = -1;
+            }
+            else {
+                status = 0;
+            }
+        }
+        else {
+            data = prodp->data;
+            status = 0;
+        }
+
+        if (status == 0) {
             if (entry_isFlagSet(entry, FL_OVERWRITE)) {
                 if (lseek(entry->handle.fd, 0, SEEK_SET) < 0) {
                     /*
@@ -1093,14 +1117,18 @@ int unio_prodput(
             }
 
             status = unio_out(entry, prodp, data, sz);
-
-            if (status == 0) {
+            if (status) {
+                log_add("Couldn't write product to file \"%s\"", entry->path);
+            }
+            else {
                 if (entry_isFlagSet(entry, FL_OVERWRITE))
                     (void) ftruncate(entry->handle.fd, sz);
 
                 status = flushIfAppropriate(entry);
-
-                if (status == 0) {
+                if (status) {
+                    log_add("Couldn't flush I/O to file \"%s\"", entry->path);
+                }
+                else {
                     if (entry_isFlagSet(entry, FL_LOG))
                         log_notice("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info,
@@ -1593,8 +1621,7 @@ static int pipe_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("    pipe_sync: %d %s", entry->handle.pbuf->pfd, block ? "" :
-            "non-block");
+    log_debug("%d %s", entry->handle.pbuf->pfd, block ? "" : "non-block");
 
     int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo);
 
@@ -1606,7 +1633,8 @@ static int pipe_sync(
         return 0;
     }
     if (EINTR != status) {
-        log_error("pid=%lu, cmd=\"%s\"", entry->private, entry->path);
+        log_add("Couldn't sync to decoder: pid=%lu, cmd=\"%s\"", entry->private,
+                entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -1660,6 +1688,7 @@ static int pipe_put(
     TO_HEAD(entry);
 
     if (entry->handle.pbuf == NULL ) {
+        log_add("NULL pipe-buffer");
         status = EINVAL;
     }
     else {
@@ -1670,6 +1699,7 @@ static int pipe_put(
             status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo);
 
             if (status && status != EINTR) {
+                log_add("Couldn't write %zu-byte product to pipe", sz);
                 /* don't waste time syncing an errored entry */
                 entry_unsetFlag(entry, FL_NEEDS_SYNC);
             }
@@ -1848,9 +1878,14 @@ static int pipe_out(
 
     if (entry_isFlagSet(entry, FL_METADATA)) {
         status = pipe_putmeta(entry, info, sz);
+        if (status)
+            log_add("Couldn't write product metadata to pipe");
     }
     if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
+        log_add("Couldn't write product metadata to pipe");
         status = pipe_put(entry, info->ident, data, sz);
+        if (status)
+            log_add("Couldn't write product data to pipe");
     }
 
     return status;
@@ -1883,7 +1918,7 @@ int pipe_prodput(
     fl_entry* entry = fl_getEntry(PIPE, argc, argv, &isNew);
 
     if (entry == NULL ) {
-        log_debug("    pipe_prodput: %s", prodp->info.ident);
+        log_add("Couldn't get entry for product \"%s\"", prodp->info.ident);
         status = -1;
     }
     else {
@@ -1895,7 +1930,14 @@ int pipe_prodput(
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
             data = dupstrip(prodp->data, prodp->info.sz, &sz);
-            status = (NULL == data) ? -1 : 0;
+            if (data == NULL) {
+                log_add("Couldn't strip control-characters out of product "
+                        "\"%s\"", prodp->info.ident);
+                status = -1;
+            }
+            else {
+                status = 0;
+            }
         }
         else {
             data = prodp->data;
@@ -1904,6 +1946,8 @@ int pipe_prodput(
 
         if (0 == status) {
             status = pipe_out(entry, &prodp->info, data, sz);
+            if (status)
+                log_add("Couldn't pipe product to decoder \"%s\"", entry->path);
 
             if (EPIPE == status && !isNew) {
                 /*
@@ -1915,13 +1959,25 @@ int pipe_prodput(
                 log_error("Decoder terminated prematurely");
                 fl_removeAndFree(entry, DR_ERROR);
                 entry = fl_getEntry(PIPE, argc, argv, &isNew);
-                status = entry
-                        ? pipe_out(entry, &prodp->info, data, sz)
-                        : -1;
+                if (entry == NULL ) {
+                    log_add("Couldn't get entry for product \"%s\"",
+                            prodp->info.ident);
+                    status = -1;
+                }
+                else {
+                    status = pipe_out(entry, &prodp->info, data, sz);
+                    if (status)
+                        log_add("Couldn't re-pipe product to decoder \"%s\"",
+                                entry->path);
+                }
             }
 
-            if (0 == status)
+            if (status == 0) {
                 status = flushIfAppropriate(entry);
+                if (status)
+                    log_add("Couldn't flush pipe to decoder \"%s\"",
+                            entry->path);
+            }
 
             if (data != prodp->data)
                 free(data);
@@ -1929,7 +1985,7 @@ int pipe_prodput(
 
         if (entry && (status || entry_isFlagSet(entry, FL_CLOSE)))
             fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
-    }   // `entry != NULL`
+    }   // Got initial entry
 
     return status ? -1 : 0;
 }
