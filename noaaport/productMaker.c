@@ -397,11 +397,8 @@ void* pmStart(
         }                               /* "last_sbn_seqno" initialized */
         last_sbn_seqno = sbn->seqno;
 
-        if (log_is_enabled_info)
-            log_info("SBN seqnumber %ld", sbn->seqno);
-        if (log_is_enabled_info)
-            log_info("SBN datastream %d command %d", sbn->datastream,
-                sbn->command);
+        log_info("SBN seqnumber %ld", sbn->seqno);
+        log_info("SBN datastream %d command %d", sbn->datastream, sbn->command);
         log_debug("SBN version %d length offset %d", sbn->version, sbn->len);
         if (((sbn->command != 3) && (sbn->command != 5)) || 
                 (sbn->version != 1)) {
