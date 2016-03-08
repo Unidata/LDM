@@ -40,6 +40,10 @@ typedef enum {
     LOG_LEVEL_COUNT     ///< Number of levels
 } log_level_t;
 
+/*
+ * The declarations in the following header-file are package-private -- so don't
+ * use them.
+ */
 #include "log_private.h"
 
 #ifdef __cplusplus
