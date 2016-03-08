@@ -1278,8 +1278,9 @@ int main(
         status = execute(npages, prodQueuePath, mcastSpec, interface);
 
         if (status)
-            log_flush_error();
+            log_error("Couldn't ingest NOAAPort data");
     }                               /* command line decoded */
 
+    log_fini();
     return status;
 }
