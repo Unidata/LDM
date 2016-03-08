@@ -861,7 +861,7 @@ void* pmStart(
                 if (psh->metaoff > 0)
                     psh->metaoff = psh->metaoff + 11;
             }
-        }
+        } // Have product-specific header (pdh->pshlen != 0)
         else {
             /* If a continuation record...don't let psh->pcat get missed */
             if ((sbn->datastream == SBN_CHAN_NOAAPORT_OPT) && (psh->pcat != PROD_CAT_IMAGE)) {
@@ -904,7 +904,7 @@ void* pmStart(
                         "skipping sequence %d frag #%d", pdh->seqno, pdh->dbno);
                 continue;
             }
-        }
+        } // Don't have product-specific header (pdh->pshlen == 0)
 
         /* Get the data */
         dataoff = IOFF + sbn->len + pdh->len + pdh->pshlen + ccb->len;
@@ -1130,7 +1130,7 @@ void* pmStart(
 		}
             }
 #endif
-	}
+	} // Product is GOES image (GOES == 1)
 	else {
             /* If the product already has a FOS trailer, don't add
              * another....this will match what pqing(SDI) sees
@@ -1275,7 +1275,7 @@ void* pmStart(
             	}
             }
 #endif
-	}
+	} // Product isn't GOES image (GOES == 0)
 
         pfrag->recsiz = deflen;
         heapcount += deflen;
@@ -1383,7 +1383,7 @@ void* pmStart(
 #ifdef RETRANS_SUPPORT
 		}
 #endif
-	    }
+	    } // Multiple products in frame or last fragment
 	    else {
 		log_debug("processing record %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
 		if ((pdh->transtype & 4) > 0) {
