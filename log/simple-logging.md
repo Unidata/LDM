@@ -74,8 +74,8 @@ Here's a contrived example:
 
 static int system_failure()
 {
-    (void)close(-1); // Guaranteed failure
-    log_add_syserr("close() failure"); // Uses `errno`; adds to queue
+    (void)close(-1); // Guaranteed failure for the purpose of this example
+    log_add_syserr("close() failure"); // Uses `errno`; adds to message queue
     return -1;
 }
 
@@ -83,11 +83,11 @@ static int func()
 {
     int status = system_failure();
     if (status)
-        log_add("system_failure() returned %d", status); // adds to queue
+        log_add("system_failure() returned %d", status); // Adds to message queue
     return status;
 }
 
-static pid_t exec(const char* const path)
+static pid_t exec_child(const char* const path)
 {
     int pid = fork();
     if (pid < 0) {
@@ -95,10 +95,15 @@ static pid_t exec(const char* const path)
     }
     else if (pid > 0) {
         // Child process
-        log_fini(); // Frees resources; closes file descriptors
+        log_fini(); // Frees resources; closes appropriate file descriptors
         (void)execl(path, path, NULL);
-        log_reinit(); // Re-establish pre-log_fini() state
-        log_syserr("execl(\"%s\") failure", path); // prints queue
+        log_reinit(); // Re-establishes logging state before log_fini()
+        /*
+         * Adds to empty message queue using `errno`, prints queue at ERROR
+         * level, then clears queue:
+         */
+        log_syserr("execl(\"%s\") failure", path);
+        log_fini(); // Good form
         exit(1);
     }
     return pid;
@@ -165,23 +170,23 @@ int main(int argc, char* argv)
     ...
     if (func()) {
         if (log_is_enabled_info)
-            // Adds to queue, prints queue at INFO level, and clears queue
+            // Adds to message queue, prints queue at INFO level, then clears queue
             log_info("func() failure: reason = %s", slow_func());
     }
     if (func()) {
-        // Adds to queue, prints queue at ERROR level, and clears queue
+        // Adds to message queue, prints queue at ERROR level, then clears queue
         log_error("func() failure: reason = %s", fast_func());
     }
-    if (exec("program") < 0) {
-        log_error("Couldn't execute program"); // prints queue at ERROR level
+    if (exec_child("program") < 0) {
+        log_error("Couldn't execute program"); // Prints message queue at ERROR level
     }
     pthread_t thread_id;
     int       status = pthread_create(&thread_id, NULL, start, NULL);
     if (status)
-        log_syserr("Couldn't create thread"); // prints queue at ERROR level
+        log_syserr("Couldn't create thread"); // Prints message queue at ERROR level
     status = daemonize();
     if (status)
-        log_syserr("Couldn't daemonize"); // prints queue at ERROR level
+        log_syserr("Couldn't daemonize"); // Prints message queue at ERROR level
     ...
     log_fini(); // Good form
     return status ? 1 : 0;
@@ -205,7 +210,7 @@ where:
 <dt><em>proc</em> <dd>Is the identifier of the process in the form
     <em>id</em>[<em>pid</em>], where <em>id</em> is the identifier given to
     log_init(), log_set_id(), or log_set_upstream_id(), and <em>pid</em> is the
-    system's process-identifier.
+    system's numeric process-identifier.
 <dt><em>level</em> <dd>Is the logging-level (i.e., priority) of the message. One
     of `DEBUG`, `INFO`, `NOTE`, `WARN`, or `ERROR`.
 <dt><em>loc</em> <dd>Is the location where the message was created in the form
