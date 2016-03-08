@@ -54,7 +54,7 @@ int readsbn(char *buf, sbn_struct *sbn)
     }
 
     val = (unsigned char)buf[5];
-    sbn->datastream = val;
+    sbn->datastream = val; // Alias "channel"
 
     b1 = (unsigned char)buf[8];
     b2 = (unsigned char)buf[9];
