@@ -176,54 +176,54 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
 
 int npunz (char *zstr, int *lenout, int *ioff)
 {
-/*
- * ZLIB decompression variables.
- */
-z_stream        d_stream;
-uLong           lentot=0;
+    /*
+     * ZLIB decompression variables.
+     */
+    z_stream        d_stream;
+    uLong           lentot=0;
 
-int nbytes=540, err;
-int i;
+    int nbytes=540, err;
+    int i;
 
-*lenout = 0;
+    *lenout = 0;
 
-d_stream.zalloc = (alloc_func) 0;
-d_stream.zfree  = (free_func) 0;
-d_stream.opaque = (voidpf) 0;
+    d_stream.zalloc = (alloc_func) 0;
+    d_stream.zfree  = (free_func) 0;
+    d_stream.opaque = (voidpf) 0;
 
-err = inflateInit ( &d_stream );
-CHECK_ERR ( err, "inflateInit" );
+    err = inflateInit ( &d_stream );
+    CHECK_ERR ( err, "inflateInit" );
 
-d_stream.next_in   = (Byte *)(zstr + lentot);
-d_stream.avail_in  = nbytes - lentot;
-d_stream.next_out  = uncompr + *lenout;
-d_stream.avail_out = (uInt)uncomprLen - *lenout;
+    d_stream.next_in   = (Byte *)(zstr + lentot);
+    d_stream.avail_in  = nbytes - lentot;
+    d_stream.next_out  = uncompr + *lenout;
+    d_stream.avail_out = (uInt)uncomprLen - *lenout;
 
-err = inflate ( &d_stream, Z_NO_FLUSH );
+    err = inflate ( &d_stream, Z_NO_FLUSH );
 
-if  ( err != Z_STREAM_END ) {
-  CHECK_ERR ( err, "large inflate" );
-  err = inflateEnd ( &d_stream );
-  return ( -1 );
-}
+    if (err != Z_STREAM_END) {
+        CHECK_ERR(err, "large inflate");
+        err = inflateEnd(&d_stream);
+        return(-1);
+    }
 
-lentot += d_stream.total_in;
-*lenout = *lenout + d_stream.total_out;
+    lentot += d_stream.total_in;
+    *lenout = *lenout + d_stream.total_out;
 
-err = inflateEnd ( &d_stream );
-CHECK_ERR ( err, "inflateEnd" );
+    err = inflateEnd ( &d_stream );
+    CHECK_ERR ( err, "inflateEnd" );
 
-/*
- * jump past the internal WMO header
- */ 
-i = 0;
-while  ( ( uncompr[i] != '\n') && ( i < *lenout ) ) i++;
+    /*
+     * jump past the internal WMO header
+     */
+    i = 0;
+    while  ((uncompr[i] != '\n') && (i < *lenout))
+        i++;
 
-if ( i == *lenout )
-   return ( -1 );
-else
-   *ioff = i + 1;
+    if ( i == *lenout )
+        return( -1 );
+    else
+        *ioff = i + 1;
 
-return ( 0 );
-
+    return(0);
 } /*end */
