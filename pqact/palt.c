@@ -1181,6 +1181,11 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
 
         argc = 0;
         status = (*pal->action.prod_action)(prod, argc, argv, xprod, xlen);
+        if (status)
+            log_error("Couldn't process product: "
+                    "feedtype=%s, pattern=\"%s\", action=%s",
+                    s_feedtypet(prod->info.feedtype), pal->pattern,
+                    pal->action.name);
     }
     else
     {
@@ -1221,6 +1226,11 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         {
             argv[argc] = NULL;
             status = (*pal->action.prod_action)(prod, argc, argv, xprod, xlen);
+            if (status)
+                log_error("Couldn't process product: "
+                        "feedtype=%s, pattern=\"%s\", action=%s, "
+                        "args=\"%s\"", s_feedtypet(prod->info.feedtype),
+                        pal->pattern, pal->action.name, pal->private);
         }
         else
         {

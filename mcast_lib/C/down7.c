@@ -1050,12 +1050,10 @@ startMcastRecvTask2(
     down7->mlr = NULL; // to reveal logic error
 
     // Because end of task
-    if (status) {
-        log_flush((status == LDM7_SHUTDOWN) ? LOG_LEVEL_INFO : LOG_LEVEL_ERROR);
-    }
-    else {
-        log_clear();
-    }
+    const log_level_t level = (status && status != LDM7_SHUTDOWN)
+            ? LOG_LEVEL_ERROR
+            : LOG_LEVEL_INFO;
+    log_log(level, "Terminating");
 
     PtrInt ptrInt;
     ptrInt.val = status;

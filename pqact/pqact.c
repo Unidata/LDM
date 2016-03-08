@@ -125,7 +125,7 @@ cleanup(void)
         semctl(semid, 0, IPC_RMID);
     }
 
-    (void)log_fini();
+    log_fini();
 }
 
 

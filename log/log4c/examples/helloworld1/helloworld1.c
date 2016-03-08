@@ -17,10 +17,8 @@ int main(int argc, char** argv){
 
     MYLOGMSG(LOG4C_PRIORITY_ERROR, "Hello World!");
     
-    /* Explicitly call the log4c cleanup routine */
-    if ( log_fini()){
-      printf("log_fini() failed");
-    }
+    /* Explicitly call the logging cleanup routine */
+    log_fini();
   }
   return rc;
 }

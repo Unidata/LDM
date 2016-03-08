@@ -117,8 +117,19 @@ valgrind_uldb:	testUpstreamLdmDb
         
 endif
 
+check-empty-conf:
+	../pqcreate/pqcreate -c -s 10M -q ldmd.pq
+	trap "rm ldmd.pq" EXIT; \
+	if $(TESTS_ENVIRONMENT) ./ldmd -l- -I 127.0.0.1 -P 38800 -q ldmd.pq \
+		/dev/null 2>/dev/null; then \
+            exit 1; \
+        else \
+            exit 0; \
+        fi
+
 if WANT_MULTICAST
-check-local:
+CHECK_MULTICAST	= check-multicast
+check-multicast:
 	../pqcreate/pqcreate -vl- -c -s 100M -q up7.pq
 	../pqcreate/pqcreate -vl- -c -s 100M -q down7.pq
 	echo 'ALLOW ANY .*' > up7.conf
@@ -156,3 +167,5 @@ check-local:
 	rm down7.pid up7.pid
 	rm up7.pq down7.pq
 endif
+
+check-local: check-empty-conf $(CHECK_MULTICAST)

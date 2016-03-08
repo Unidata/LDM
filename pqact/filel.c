@@ -345,7 +345,7 @@ dump_fl(void)
     fl_entry *entry;
     int fd;
 
-    log_debug("      thefl->size %d", thefl->size);
+    log_debug("thefl->size %d", thefl->size);
     for(entry = thefl->head; entry != NULL;
             entry = entry->next )
     {
@@ -370,7 +370,7 @@ dump_fl(void)
         default :
             fd = -2;
         }
-        log_debug("       %d %s", fd, entry->path);
+        log_debug("%d %s", fd, entry->path);
     }
 }
 #endif
@@ -460,8 +460,10 @@ fl_sync(
         prev = entry->prev;
 
         if (entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
-            if (entry->ops->sync(entry, block))
+            if (entry->ops->sync(entry, block)) {
+                log_error("Couldn't sync entry");
                 fl_removeAndFree(entry, DR_ERROR); // public function so remove
+            }
         }
     }
 }
@@ -805,7 +807,7 @@ static int unio_open(
             strncpy(entry->path, path, PATH_MAX);
             entry->path[PATH_MAX - 1] = 0; /* just in case */
 
-            log_debug("    unio_open: %d %s", entry->handle.fd, entry->path);
+            log_debug("%d %s", entry->handle.fd, entry->path);
         } /* output-file set to close_on_exec */
 
         if (error) {
@@ -820,7 +822,7 @@ static int unio_open(
 static void unio_close(
         fl_entry *entry)
 {
-    log_debug("    unio_close: %d", entry->handle.fd);
+    log_debug("%d", entry->handle.fd);
     if (entry->handle.fd != -1) {
         if (close(entry->handle.fd) == -1) {
             log_syserr("close: %s", entry->path);
@@ -834,7 +836,7 @@ static int unio_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("    unio_sync: %d %s", entry->handle.fd, block ? "" : "non-block");
+    log_debug("%d %s", entry->handle.fd, block ? "" : "non-block");
 
     if (0 == fsync(entry->handle.fd)) {
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
@@ -844,7 +846,7 @@ static int unio_sync(
         return 0;
     }
     if (EINTR != errno) {
-        log_syserr("fsync: %s", entry->path);
+        log_add_syserr("Couldn't flush I/O to file \"%s\"", entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -861,7 +863,7 @@ static int unio_put(
 {
     if (sz) {
         TO_HEAD(entry);
-        log_debug("    unio_dbufput: %d", entry->handle.fd);
+        log_debug("%d", entry->handle.fd);
 
         do {
             ssize_t nwrote = write(entry->handle.fd, data, sz);
@@ -872,7 +874,8 @@ static int unio_put(
             }
             else {
                 if (EINTR != errno) {
-                    log_syserr("write() error: \"%s\"", entry->path);
+                    log_add_syserr("Couldn't write() %zu bytes to file \"%s\"",
+                            entry->path);
                     // disable flushing on I/O error
                     entry_unsetFlag(entry, FL_NEEDS_SYNC);
                 }
@@ -1034,9 +1037,13 @@ static int unio_out(
 
     if (entry_isFlagSet(entry, FL_METADATA)) {
         status = unio_putmeta(entry, &prodp->info, sz);
+        if (status)
+            log_add("Couldn't write product metadata to file");
     }
     if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
         status = unio_put(entry, prodp->info.ident, data, sz);
+        if (status)
+            log_add("Couldn't write product data to file");
     }
 
     return status;
@@ -1053,13 +1060,14 @@ int unio_prodput(
     int status = -1; /* failure */
     fl_entry* entry = fl_getEntry(UNIXIO, argc, argv, NULL);
 
-    log_debug("    unio_prodput: %d %s", entry == NULL ? -1 : entry->handle.fd,
-            prodp->info.ident);
+    log_debug("%d %s", entry == NULL ? -1 : entry->handle.fd,
+    prodp->info.ident);
 
-    if (entry != NULL ) {
-        size_t sz;
-        void* data;
-
+    if (entry == NULL ) {
+        log_add("Couldn't get entry for product \"%s\"", prodp->info.ident);
+        status = -1;
+    }
+    else {
         if (entry_isFlagSet(entry, FL_EDEX)) {
             if (shared_id == -1) {
                 log_error(
@@ -1078,11 +1086,27 @@ int unio_prodput(
                 }
             }
         }
-        sz = prodp->info.sz;
-        data = (entry_isFlagSet(entry, FL_STRIP)) ?
-                        dupstrip(prodp->data, prodp->info.sz, &sz) : prodp->data;
 
-        if (data != NULL ) {
+        size_t sz = prodp->info.sz;
+        void*  data;
+
+        if (entry_isFlagSet(entry, FL_STRIP)) {
+            data = dupstrip(prodp->data, sz, &sz);
+            if (data == NULL) {
+                log_add("Couldn't strip control-characters out of product "
+                        "\"%s\"", prodp->info.ident);
+                status = -1;
+            }
+            else {
+                status = 0;
+            }
+        }
+        else {
+            data = prodp->data;
+            status = 0;
+        }
+
+        if (status == 0) {
             if (entry_isFlagSet(entry, FL_OVERWRITE)) {
                 if (lseek(entry->handle.fd, 0, SEEK_SET) < 0) {
                     /*
@@ -1093,14 +1117,18 @@ int unio_prodput(
             }
 
             status = unio_out(entry, prodp, data, sz);
-
-            if (status == 0) {
+            if (status) {
+                log_add("Couldn't write product to file \"%s\"", entry->path);
+            }
+            else {
                 if (entry_isFlagSet(entry, FL_OVERWRITE))
                     (void) ftruncate(entry->handle.fd, sz);
 
                 status = flushIfAppropriate(entry);
-
-                if (status == 0) {
+                if (status) {
+                    log_add("Couldn't flush I/O to file \"%s\"", entry->path);
+                }
+                else {
                     if (entry_isFlagSet(entry, FL_LOG))
                         log_notice("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info,
@@ -1212,7 +1240,7 @@ static int stdio_open(
 
                 strncpy(entry->path, path, PATH_MAX);
                 entry->path[PATH_MAX - 1] = 0; /* just in case */
-                log_debug("    stdio_open: %d", fileno(entry->handle.stream));
+                log_debug("%d", fileno(entry->handle.stream));
                 error = 0;
             } /* entry->handle.stream allocated */
         } /* output-file set to close-on-exec */
@@ -1229,7 +1257,7 @@ static int stdio_open(
 static void stdio_close(
         fl_entry *entry)
 {
-    log_debug("    stdio_close: %d",
+    log_debug("%d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
     if (entry->handle.stream != NULL ) {
         if (fclose(entry->handle.stream) == EOF) {
@@ -1244,12 +1272,12 @@ static int stdio_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("    stdio_sync: %d",
+    log_debug("%d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
 
     if (fflush(entry->handle.stream) == EOF) {
         if (EINTR != errno) {
-            log_syserr("fflush: %s", entry->path);
+            log_syserr("Couldn't flush I/O to file \"%s\"", entry->path);
             // disable flushing on I/O error
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
@@ -1269,7 +1297,7 @@ static int stdio_put(
         const void *data,
         size_t sz)
 {
-    log_debug("    stdio_dbufput: %d", fileno(entry->handle.stream));
+    log_debug("%d", fileno(entry->handle.stream));
     TO_HEAD(entry);
 
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
@@ -1302,7 +1330,7 @@ int stdio_prodput(
     int status = -1; /* failure */
     fl_entry* entry = fl_getEntry(STDIO, argc, argv, NULL);
 
-    log_debug("    stdio_prodput: %d %s",
+    log_debug("%d %s",
             entry == NULL ? -1 : fileno(entry->handle.stream), prodp->info.ident);
 
     if (entry != NULL ) {
@@ -1539,13 +1567,14 @@ static int pipe_open(
                         endpriv();
                         if (log_is_enabled_info)
                             log_info("Executing decoder \"%s\"", av[0]);
-                        (void)log_fini();
+                        log_fini();
                         (void) execvp(av[0], &av[0]);
                         (void)log_reinit();
                         log_syserr("Couldn't execute decoder \"%s\"; PATH=%s",
                                 av[0], getenv("PATH"));
                     }
 
+                    log_fini();
                     exit(EXIT_FAILURE);
                 } /* child process */
                 else {
@@ -1574,7 +1603,7 @@ static int pipe_open(
                         writeFd = pfd[1]; /* success */
 
                         argcat(entry->path, PATH_MAX - 1, argc, argv);
-                        log_debug("    pipe_open: %d %d", writeFd, pid);
+                        log_debug("%d %d", writeFd, pid);
                     }
                 } /* parent process */
             } /* fork() success */
@@ -1593,8 +1622,7 @@ static int pipe_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("    pipe_sync: %d %s", entry->handle.pbuf->pfd, block ? "" :
-            "non-block");
+    log_debug("%d %s", entry->handle.pbuf->pfd, block ? "" : "non-block");
 
     int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo);
 
@@ -1606,7 +1634,8 @@ static int pipe_sync(
         return 0;
     }
     if (EINTR != status) {
-        log_error("pid=%lu, cmd=\"%s\"", entry->private, entry->path);
+        log_add("Couldn't flush I/O to decoder: pid=%lu, cmd=\"%s\"",
+                entry->private, entry->path);
         // disable flushing on I/O error
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
     }
@@ -1620,7 +1649,7 @@ static void pipe_close(
     pid_t pid = (pid_t) entry->private;
     int pfd = -1;
 
-    log_debug("    pipe_close: %d, %d",
+    log_debug("%d, %d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1, pid);
     if (entry->handle.pbuf != NULL ) {
         if (pid >= 0 && entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
@@ -1655,11 +1684,12 @@ static int pipe_put(
 {
     int status;
 
-    log_debug("    pipe_put: %d",
+    log_debug("%d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
     TO_HEAD(entry);
 
     if (entry->handle.pbuf == NULL ) {
+        log_add("NULL pipe-buffer");
         status = EINVAL;
     }
     else {
@@ -1670,6 +1700,7 @@ static int pipe_put(
             status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo);
 
             if (status && status != EINTR) {
+                log_add("Couldn't write %zu-byte product to pipe", sz);
                 /* don't waste time syncing an errored entry */
                 entry_unsetFlag(entry, FL_NEEDS_SYNC);
             }
@@ -1848,9 +1879,13 @@ static int pipe_out(
 
     if (entry_isFlagSet(entry, FL_METADATA)) {
         status = pipe_putmeta(entry, info, sz);
+        if (status)
+            log_add("Couldn't write product metadata to pipe");
     }
     if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
         status = pipe_put(entry, info->ident, data, sz);
+        if (status)
+            log_add("Couldn't write product data to pipe");
     }
 
     return status;
@@ -1883,11 +1918,11 @@ int pipe_prodput(
     fl_entry* entry = fl_getEntry(PIPE, argc, argv, &isNew);
 
     if (entry == NULL ) {
-        log_debug("    pipe_prodput: %s", prodp->info.ident);
+        log_add("Couldn't get entry for product \"%s\"", prodp->info.ident);
         status = -1;
     }
     else {
-        log_debug("    pipe_prodput: %d %s",
+        log_debug("%d %s",
                 entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                 prodp->info.ident);
 
@@ -1895,7 +1930,14 @@ int pipe_prodput(
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
             data = dupstrip(prodp->data, prodp->info.sz, &sz);
-            status = (NULL == data) ? -1 : 0;
+            if (data == NULL) {
+                log_add("Couldn't strip control-characters out of product "
+                        "\"%s\"", prodp->info.ident);
+                status = -1;
+            }
+            else {
+                status = 0;
+            }
         }
         else {
             data = prodp->data;
@@ -1904,6 +1946,8 @@ int pipe_prodput(
 
         if (0 == status) {
             status = pipe_out(entry, &prodp->info, data, sz);
+            if (status)
+                log_add("Couldn't pipe product to decoder \"%s\"", entry->path);
 
             if (EPIPE == status && !isNew) {
                 /*
@@ -1915,13 +1959,25 @@ int pipe_prodput(
                 log_error("Decoder terminated prematurely");
                 fl_removeAndFree(entry, DR_ERROR);
                 entry = fl_getEntry(PIPE, argc, argv, &isNew);
-                status = entry
-                        ? pipe_out(entry, &prodp->info, data, sz)
-                        : -1;
+                if (entry == NULL ) {
+                    log_add("Couldn't get entry for product \"%s\"",
+                            prodp->info.ident);
+                    status = -1;
+                }
+                else {
+                    status = pipe_out(entry, &prodp->info, data, sz);
+                    if (status)
+                        log_add("Couldn't re-pipe product to decoder \"%s\"",
+                                entry->path);
+                }
             }
 
-            if (0 == status)
+            if (status == 0) {
                 status = flushIfAppropriate(entry);
+                if (status)
+                    log_add("Couldn't flush pipe to decoder \"%s\"",
+                            entry->path);
+            }
 
             if (data != prodp->data)
                 free(data);
@@ -1929,7 +1985,7 @@ int pipe_prodput(
 
         if (entry && (status || entry_isFlagSet(entry, FL_CLOSE)))
             fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
-    }   // `entry != NULL`
+    }   // Got initial entry
 
     return status ? -1 : 0;
 }
@@ -1957,7 +2013,7 @@ int spipe_prodput(
     conv sync;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    log_debug("    spipe_prodput: %d %s",
+    log_debug("%d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2029,7 +2085,7 @@ int spipe_prodput(
     buffer[len - 2] = SPIPE_ETX;
     buffer[len - 1] = SPIPE_RS;
 
-    log_debug("spipe_prodput: size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
+    log_debug("size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
             buffer[len - 2], buffer[len - 1]);
 
     /*---------------------------------------------------------
@@ -2070,7 +2126,7 @@ int xpipe_prodput(
     fl_entry *entry;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    log_debug("    xpipe_prodput: %d %s",
+    log_debug("%d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2142,7 +2198,7 @@ static int ldmdb_open(
             dblocksize = (int) tmp;
         }
         else {
-            log_error("%s: ldmdb_open: -dblocksize %s invalid", path, argv[1]);
+            log_error("%s: -dblocksize %s invalid", path, argv[1]);
         }
     }
 
@@ -2174,14 +2230,14 @@ static int ldmdb_open(
     entry->private = read_write;
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX - 1] = 0; /* just in case */
-    log_debug("    ldmdb_open: %s", entry->path);
+    log_debug("%s", entry->path);
     return 0;
 }
 
 static void ldmdb_close(
         fl_entry *entry)
 {
-    log_debug("    ldmdb_close: %s", entry->path);
+    log_debug("%s", entry->path);
     if (entry->handle.db != NULL )
         gdbm_close(entry->handle.db);
     entry->private = 0;
@@ -2224,7 +2280,7 @@ static int ldmdb_sync(
         int block)
 {
     /* there is no gdbm_sync */
-    log_debug("    ldmdb_sync: %s", entry->handle.db ? entry->path : "");
+    log_debug("%s", entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return (0);
 }
@@ -2342,14 +2398,14 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
     }
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX-1] = 0; /* just in case */
-    log_debug("    ldmdb_open: %s", entry->path);
+    log_debug("%s", entry->path);
     return 0;
 }
 
 static void
 ldmdb_close(fl_entry *entry)
 {
-    log_debug("    ldmdb_close: %s", entry->path);
+    log_debug("%s", entry->path);
     if(entry->handle.db != NULL)
         dbm_close(entry->handle.db);
     entry->private = 0;
@@ -2367,7 +2423,7 @@ static int
 ldmdb_sync(fl_entry *entry, int block)
 {
     /* there is no dbm_sync */
-    log_debug("    ldmdb_sync: %s",
+    log_debug("%s",
             entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return(0);
@@ -2460,7 +2516,7 @@ int ldmdb_prodput(
             dblocksizep = *av;
         }
         else
-            log_error("dbfile: Invalid argument %s", *av);
+            log_error("Invalid argument %s", *av);
 
     }
 
@@ -2474,7 +2530,7 @@ int ldmdb_prodput(
             argv[argc++] = dblocksizep;
         argv[argc] = NULL;
         entry = fl_getEntry(FT_DB, argc, argv, NULL);
-        log_debug("    ldmdb_prodput: %s %s", entry == NULL ? "" : entry->path,
+        log_debug("%s %s", entry == NULL ? "" : entry->path,
                 prod->info.ident);
         if (entry == NULL )
             return -1;

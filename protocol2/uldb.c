@@ -1101,7 +1101,8 @@ static uldb_Status sm_attach(
         Segment* segment = (Segment*) shmat(sm->shmId, NULL, 0);
 
         if ((Segment*) -1 == segment) {
-            log_add("Couldn't attach shared-memory segment %d", sm->shmId);
+            log_add_syserr("Couldn't attach shared-memory segment %d",
+                    sm->shmId);
 
             sm->shmId = -1;
             status = ULDB_SYSTEM;

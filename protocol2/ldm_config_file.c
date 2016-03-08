@@ -2345,7 +2345,7 @@ proc_exec(Process *proc)
                 } /* else, the logFd is stderr, and that's ok */
                 close_rest(3);
                 endpriv();
-                (void)log_fini();
+                log_fini();
                 (void) execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
                 (void)log_reinit();
                 log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
@@ -2398,6 +2398,10 @@ proc_new(
  * the configuration-file contains ALLOW or ACCEPT entries.
  */
 static bool serverNeeded = false;
+/**
+ * Whether or not the configuration-file specifies something to do.
+ */
+static bool somethingToDo = false;
 
 /**
  * Adds an EXEC entry and executes the command as a child process.
@@ -2425,6 +2429,7 @@ lcf_addExec(wordexp_t *wrdexpp)
                     ep = ep->next;
                 ep->next = process;
         }
+        somethingToDo = true;
         return ENOERR;
 }
 
@@ -2449,6 +2454,21 @@ lcf_freeExec(
             break;
         }
     }
+}
+
+
+/**
+ * Frees the EXEC entries.
+ */
+static void
+execEntries_free(void)
+{
+    Process* next;
+    for (Process* entry = processes; entry != NULL; entry = next) {
+        next = entry->next;
+        proc_free(entry);
+    }
+    processes = NULL;
 }
 
 
@@ -2551,6 +2571,8 @@ lcf_addRequest(
             }
             else {
                 status = addRequest(sub, serverEntry);
+                if (0 == status)
+                    somethingToDo = true;
 
                 sub_free(sub);
             } /* "sub" allocated */
@@ -2696,6 +2718,7 @@ lcf_addAllow(
                 }
 
                 serverNeeded = true;
+                somethingToDo = true;
             }                           // `notPattern` set
         }                               // "okPattern" allocated
     }                                   // "entry" allocated
@@ -2986,8 +3009,10 @@ lcf_addAccept(
     int status = acceptEntries_add(&acceptEntries, ft, pattern, rgxp, hsp,
             isPrimary);
 
-    if (0 == status)
+    if (0 == status) {
         serverNeeded = true;
+        somethingToDo = true;
+    }
 
     return status;
 }
@@ -3028,13 +3053,18 @@ lcf_addMulticast(
 {
     int status = mlsm_addPotentialSender(mcastInfo, ttl, mcastIface,
             getQueuePath());
-    return (0 == status)
-            ? 0
-            : (LDM7_DUP == status)
-                ? EINVAL
-                : (LDM7_INVAL == status)
+    if (0 == status) {
+        serverNeeded = true;
+        somethingToDo = true;
+    }
+    else {
+        status = (LDM7_DUP == status)
                     ? EINVAL
-                    : ENOMEM;
+                    : (LDM7_INVAL == status)
+                        ? EINVAL
+                        : ENOMEM;
+    }
+    return status;
 }
 
 /**
@@ -3054,9 +3084,11 @@ lcf_addReceive(
         ServiceAddr* const restrict ldmSvcAddr,
         const char* const restrict  mcastIface)
 {
-    return d7mgr_add(feedtype, ldmSvcAddr, mcastIface)
+    int status = d7mgr_add(feedtype, ldmSvcAddr, mcastIface)
             ? ENOMEM
             : 0;
+    if (0 == status)
+        somethingToDo = true;
 }
 
 #endif
@@ -3306,6 +3338,17 @@ lcf_isServerNeeded(void)
 }
 
 /**
+ * Indicates of the configuration-file contains something to do.
+ *
+ * @retval `true` iff the configuration-file contains something to do.
+ */
+bool
+lcf_haveSomethingToDo(void)
+{
+    return somethingToDo;
+}
+
+/**
  * Frees this module's resources. Idempotent.
  */
 void
@@ -3315,12 +3358,14 @@ lcf_free(void)
     subs_free();
     allowEntries_free();
     acceptEntries_free();
+    execEntries_free();
     #if WANT_MULTICAST
         if (mlsm_clear())
             log_error("Couldn't clear multicast LDM sender manager");
         d7mgr_free();  // Clears multicast receiver manager
     #endif
     serverNeeded = false;
+    somethingToDo = false;
 }
 
 /**

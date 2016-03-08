@@ -302,11 +302,9 @@ void* pmStart(
 	acq_tbl->pid = getpid();
 	acq_tbl->link_id = global_cpio_fd;
 	acq_tbl->link_addr = global_cpio_addr;
-	if (log_is_enabled_info) {
-	    log_info("Initialized acq_tbl  = 0x%x & buff_hdr = 0x%x pid = %d \n",acq_tbl,buff_hdr,acq_tbl->pid);
-	    log_info("Global link id = %d  Global link addr = %ld \n",acq_tbl->link_id,acq_tbl->link_addr);
-	    log_info("acq_tbl->read_distrib_enable = 0x%x \n",acq_tbl->read_distrib_enable);
-	}
+        log_info("Initialized acq_tbl  = 0x%x & buff_hdr = 0x%x pid = %d \n",acq_tbl,buff_hdr,acq_tbl->pid);
+        log_info("Global link id = %d  Global link addr = %ld \n",acq_tbl->link_id,acq_tbl->link_addr);
+        log_info("acq_tbl->read_distrib_enable = 0x%x \n",acq_tbl->read_distrib_enable);
     }
 /*** For Retranmission Purpose  ***/
 #endif
@@ -437,13 +435,12 @@ void* pmStart(
         }                               /* "last_sbn_seqno" initialized */
         last_sbn_seqno = sbn->seqno;
 
-        if (log_is_enabled_info)
-            log_info("SBN seqnumber %ld", sbn->seqno);
-        if (log_is_enabled_info)
-            log_info("SBN datastream %d command %d", sbn->datastream, sbn->command);
+        log_info("SBN seqnumber %ld", sbn->seqno);
+        log_info("SBN datastream %d command %d", sbn->datastream, sbn->command);
         log_debug("SBN version %d length offset %d", sbn->version, sbn->len);
 
-        if (((sbn->command != SBN_CMD_DATA) && (sbn->command != SBN_CMD_TIME)) || (sbn->version != 1)) {
+        if (((sbn->command != SBN_CMD_DATA) && (sbn->command != SBN_CMD_TIME)) ||
+                (sbn->version != 1)) {
             log_error("Unknown sbn command/version %d PUNT", sbn->command);
             continue;
         }
@@ -511,8 +508,10 @@ void* pmStart(
         }
 
         log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen, pdh->pshlen);
-        log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record, pdh->records_per_block);
-        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno, pdh->dbno, pdh->dbsize);
+        log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record,
+                pdh->records_per_block);
+        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno,
+                pdh->dbno, pdh->dbsize);
 
         /* Stop here if no psh */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
@@ -528,9 +527,10 @@ void* pmStart(
 #endif
         if (pdh->pshlen != 0) {
             if (fifo_getBytes(fifo, buf + sbn->len + pdh->len, pdh->pshlen) != 0) {
-                log_error("problem reading psh");
+                        log_error("problem reading psh");
                 continue;
-            } else {
+            }
+            else {
                 log_debug("read psh %d", pdh->pshlen);
             }
 
@@ -558,7 +558,8 @@ void* pmStart(
             log_debug("product header flag %d, version %d", psh->hflag, psh->version);
             log_debug("prodspecific data length %ld", psh->psdl);
             log_debug("bytes per record %ld", psh->bytes_per_record);
-            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat, psh->ptype, psh->pcode);
+            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat,
+                    psh->ptype, psh->pcode);
             if (psh->frags < 0)
                 log_error("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)
@@ -632,7 +633,8 @@ void* pmStart(
 		    save_prod = 0;
 		    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
 		    /* Current prod discarded and continue with next */
-		} else if (retrans_val == PROD_DUPLICATE_NOMATCH) {
+		}
+		else if (retrans_val == PROD_DUPLICATE_NOMATCH) {
 			strcpy(log_buff,"SAVE RETRANS");
 			log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last, buff_hdr->proc_prod_seqno,
 				buff_hdr->proc_blkno, buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,
@@ -762,7 +764,8 @@ void* pmStart(
                     PNGINIT = 0;
                 }
 
-                log_error("Product definition header version %d pdhlen %d", pdh->version, pdh->len);
+                log_error("Product definition header version %d pdhlen %d", pdh->version,
+                        pdh->len);
                 log_error("PDH transfer type %u", pdh->transtype);
 
                 if ((pdh->transtype & 8) > 0)
@@ -818,7 +821,8 @@ void* pmStart(
             MD5Init(md5ctxp);
 
             if (GOES == 1) {
-                if (readpdb (buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb, PROD_COMPRESSED, pdh->dbsize) == -1) {
+                if (readpdb (buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb,
+                        PROD_COMPRESSED, pdh->dbsize) == -1) {
                     log_error ("Error reading pdb, punt");
                     continue;
                 }
@@ -1143,7 +1147,8 @@ void* pmStart(
 #ifdef RETRANS_SUPPORT
                     if (retrans_xmit_enable == OPTION_ENABLE) {
                 	acq_tbl->proc_acqtab_prodseq_errs++;
-                	log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n", acq_tbl->proc_base_prod_seqno_last);
+                	log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
+                	        acq_tbl->proc_base_prod_seqno_last);
                 	do_prod_mismatch(acq_tbl,buff_hdr);
                 	acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
                     }
@@ -1291,9 +1296,8 @@ void* pmStart(
  
 #ifdef RETRANS_SUPPORT
 	if (((prod.nfrag == 0) || (prod.nfrag >= (pfrag->fragnum +1))) && (save_prod == 0)) {
-	    if (log_is_enabled_info)
-		log_info("Do not save prod [seqno=%ld] as its retrans dup fragnum/total fragments =[%d of %d] save_prod=[%d] \n",
-			prod.seqno,pfrag->fragnum,prod.nfrag,save_prod);
+            log_info("Do not save prod [seqno=%ld] as its retrans dup fragnum/total fragments =[%d of %d] save_prod=[%d] \n",
+                    prod.seqno,pfrag->fragnum,prod.nfrag,save_prod);
 	    ds_free ();
 	    prod.head = NULL;
 	    prod.tail = NULL;
@@ -1349,8 +1353,7 @@ void* pmStart(
 		    num_prod_discards++;
 		    /* Set discard_prod to 1; Otherwise already stored prod may be requested for retransmit */
 		    discard_prod=1;
-		    if (log_is_enabled_info)
-			log_info("No of products discarded = %ld prod.seqno=%ld \n ",num_prod_discards,prod.seqno);
+                    log_info("No of products discarded = %ld prod.seqno=%ld \n ",num_prod_discards,prod.seqno);
 		    prod_retrans_abort_entry(acq_tbl, prod.seqno, RETRANS_RQST_CAUSE_RCV_ERR);
 		    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno -1 ;
 		    ds_free ();

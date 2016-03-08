@@ -90,6 +90,8 @@ static pid_t reap(
 
     if (wpid != 0) {
         char command[512];
+        int  nbytes = lcf_getCommandLine(wpid, command, sizeof(command));
+        command[sizeof(command)-1] = 0;
 
 #if !defined(WIFSIGNALED) && !defined(WIFEXITED)
 #error "Can't decode wait status"
@@ -97,49 +99,32 @@ static pid_t reap(
 
 #if defined(WIFSTOPPED)
         if (WIFSTOPPED(status)) {
-            int n = lcf_getCommandLine(wpid, command, sizeof(command));
-
-            if (n == -1) {
-                log_error("Couldn't get command-line of EXEC process "
-                        "%ld", wpid);
-            }
-
             log_notice(
-                    n <= 0 ?
-                            "child %d stopped by signal %d" :
-                            "child %d stopped by signal %d: %*s", wpid,
-                    WSTOPSIG(status), n, command);
+                    nbytes <= 0
+                        ? "child %ld stopped by signal %d"
+                        : "child %ld stopped by signal %d: %*s",
+                    (long)wpid, WSTOPSIG(status), nbytes, command);
         }
         else
 #endif /*WIFSTOPPED*/
 #if defined(WIFSIGNALED)
         if (WIFSIGNALED(status)) {
-            int n = lcf_getCommandLine(wpid, command, sizeof(command));
-
-            if (n == -1) {
-                log_error("Couldn't get command-line of EXEC process "
-                        "%ld", wpid);
-            }
-
-            cps_remove(wpid); /* upstream LDM processes */
-
-            lcf_freeExec(wpid); /* EXEC processes */
-
+            cps_remove(wpid);       // Upstream LDM processes
+            lcf_freeExec(wpid);     // EXEC processes
 #if WANT_MULTICAST
-            (void)msm_remove(wpid); // multicast LDM senders
+            (void)msm_remove(wpid); // Multicast LDM senders
 #endif
 
             log_notice(
-                    n <= 0 ?
-                            "child %d terminated by signal %d" :
-                            "child %d terminated by signal %d: %*s", wpid,
-                    WTERMSIG(status), n, command);
+                    nbytes <= 0
+                        ? "child %ld terminated by signal %d"
+                        : "child %ld terminated by signal %d: %*s",
+                    (long)wpid, WTERMSIG(status), nbytes, command);
 
             /* DEBUG */
             switch (WTERMSIG(status)) {
             /*
-             * If a child dumped core,
-             * shut everything down.
+             * If a child dumped core, shut everything down.
              */
             case SIGQUIT:
             case SIGILL:
@@ -169,23 +154,18 @@ static pid_t reap(
 #endif /*WIFSIGNALED*/
 #if defined(WIFEXITED)
         if (WIFEXITED(status)) {
-            int exitStatus = WEXITSTATUS(status);
-            int n = lcf_getCommandLine(wpid, command, sizeof(command));
-
-            cps_remove(wpid); /* upstream LDM processes */
-            lcf_freeExec(wpid); /* EXEC processes */
-
-            const char* fmt;
-            if (n == -1) {
-                log_error("Couldn't get command-line of EXEC process %ld",
-                        wpid);
-                fmt = "child %d exited with status %d";
-            }
-            else {
-                fmt = "child %d exited with status %d: %*s";
-            }
+            cps_remove(wpid);       // Upstream LDM processes
+            lcf_freeExec(wpid);     // EXEC processes
+#if WANT_MULTICAST
+            (void)msm_remove(wpid); // Multicast LDM senders
+#endif
+            int         exitStatus = WEXITSTATUS(status);
             log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
-            log_log(level, fmt, wpid, exitStatus, n, command);
+            log_log(level,
+                    nbytes <= 0
+                        ? "child %ld exited with status %d"
+                        : "child %ld exited with status %d: %*s",
+                    (long)wpid, exitStatus, nbytes, command);
         }
 #endif /*WIFEXITED*/
     }
@@ -299,7 +279,7 @@ static void cleanup(
     /*
      * Terminate logging.
      */
-    (void)log_fini();
+    log_fini();
 }
 
 /*
@@ -912,6 +892,21 @@ int main(
 
     const char* pqfname = getQueuePath();
 
+    /*
+     * Vet the configuration file.
+     */
+    log_debug("main(): Vetting configuration-file");
+    if (read_conf(getLdmdConfigPath(), 0, ldmIpAddr, ldmPort) != 0) {
+        log_flush_error();
+        exit(1);
+    }
+    if (!lcf_haveSomethingToDo()) {
+        log_error("The LDM configuration-file \"%s\" is effectively empty",
+                getLdmdConfigPath());
+        exit(1);
+    }
+    // lcf_free() not called because lcf_isServerNeeded() will be
+
     if (!becomeDaemon) {
         /*
          * Make this process a process group leader so that all child processes
@@ -974,15 +969,6 @@ int main(
      * set up signal handlers
      */
     set_sigactions();
-
-    /*
-     * Vet the configuration file.
-     */
-    log_debug("main(): Vetting configuration-file");
-    if (read_conf(getLdmdConfigPath(), 0, ldmIpAddr, ldmPort) != 0) {
-        log_flush_error();
-        exit(1);
-    }
 
     if (doSomething) {
         int sock = -1;
@@ -1050,7 +1036,7 @@ int main(
          * Re-read (and execute) the configuration file (downstream LDM-s are
          * started).
          */
-        lcf_free(); // Start with a clean slate to prevent duplicates
+        lcf_free(); // Prevent duplicates
         log_debug("main(): Reading configuration-file");
         if (read_conf(getLdmdConfigPath(), 1, ldmIpAddr, ldmPort) != 0) {
             log_flush_error();

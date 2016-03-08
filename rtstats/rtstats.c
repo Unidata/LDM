@@ -136,7 +136,7 @@ cleanup(void)
         if(pq && !intr) 
                 (void)pq_close(pq);
 
-        (void)log_fini();
+        log_fini();
 }
 
 

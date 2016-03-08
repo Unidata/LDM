@@ -10,7 +10,7 @@ use POSIX;
 #
 # Files:
 #
-#  $LDMHOME/ldm.pid          file containing process group ID
+#  $LDMHOME/ldmd.pid         file containing process group ID
 #  $LDMHOME/.ldmadmin.lck    lock file for operations that modify the state of
 #                            the LDM system
 #  $LDMHOME/.[0-9a-f]*.info  product-information of the last, successfuly-
@@ -728,7 +728,7 @@ sub start_ldm
             }
             else {
                 # Ensure that the upstream LDM database doesn't exist
-                #print "Deleting upstream LDM database...\n";
+                #print "Attempting to delete upstream LDM database...\n";
                 system("uldbutil -d");
                     
                 # Check the pqact(1) configuration-file(s)
@@ -1689,20 +1689,18 @@ sub getPortCount
     return ($localCount, $remoteCount);
 }
 #
-# Command for getting product-queue metrics (age, #prods):
+# Command for getting product-queue metrics (age, #prods, #bytes):
 sub getPq
 {
     my($age) = -1;
     my($prodCount) = -1;
     my($byteCount) = -1;
-    open(FH, "pqmon -l- -q $pq_path 2>&1 |") or die "Can't fork() pqmon(1): $!";
+    open(FH, "pqmon -S -q $pq_path |") or die "Can't fork() pqmon(1): $!";
     while (<FH>) {
 	my(@fields) = split(/\s+/);
-	if ($#fields == 13) {
-	    $age = $fields[13];
-	    $prodCount = $fields[5];
-	    $byteCount = $fields[8];
-	}
+        $age = $fields[7];
+        $prodCount = $fields[6];
+        $byteCount = $fields[3];
     }
     (close FH || !$!) or die "Can't close(): status=$?";
     return ($age, $prodCount, $byteCount);

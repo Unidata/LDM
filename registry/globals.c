@@ -470,21 +470,15 @@ getTimeOffset(void)
 
     if (!isSet) {
         int status = reg_getUint(REG_TIME_OFFSET, &timeOffset);
-
         if (status) {
             timeOffset = 3600;
-            log_add("Using default value: %u seconds", timeOffset);
-            if (status == ENOENT) {
-                log_flush_info();
-                isSet = 1;
-            }
-            else {
-                log_flush_error();
-            }
+            log_level_t level = (status == ENOENT)
+                    ? LOG_LEVEL_WARNING
+                    : LOG_LEVEL_ERROR;
+            log_add_errno(status, "Couldn't get time-offset value");
+            log_log(level, "Using default value: %u seconds", timeOffset);
         }
-        else {
-            isSet = 1;
-        }
+        isSet = 1;
     }
 
     return timeOffset;

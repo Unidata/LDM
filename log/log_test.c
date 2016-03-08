@@ -113,8 +113,7 @@ static void test_init_fini(void)
 {
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 }
 
 static void test_log_open_file(void)
@@ -131,8 +130,7 @@ static void test_log_open_file(void)
 
     logMessages();
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
@@ -157,8 +155,7 @@ static void test_log_open_stderr(void)
 
     logMessages();
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 }
 
 static void test_log_open_default(void)
@@ -177,8 +174,7 @@ static void test_log_open_default(void)
     CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
     log_error("File \"%s\"", tmpPathname);
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 }
 
 static void test_log_levels(void)
@@ -198,8 +194,7 @@ static void test_log_levels(void)
         log_set_level(logLevels[nlines-1]);
         logMessages();
 
-        status = log_fini();
-        CU_ASSERT_EQUAL(status, 0);
+        log_fini();
 
         int n = numLines(tmpPathname);
         CU_ASSERT_EQUAL(n, nlines);
@@ -233,8 +228,7 @@ static void test_lower_level_not_clear(void)
 
         log_flush(++level);
 
-        status = log_fini();
-        CU_ASSERT_EQUAL(status, 0);
+        log_fini();
 
         int n = numLines(tmpPathname);
         CU_ASSERT_EQUAL(n, 1);
@@ -263,8 +257,7 @@ static void test_log_get_level(void)
         CU_ASSERT_EQUAL(actual, expected);
     }
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 }
 
 static void test_log_modify_id(void)
@@ -292,8 +285,7 @@ static void test_log_modify_id(void)
     actual = log_get_id();
     CU_ASSERT_STRING_EQUAL(actual, expected);
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 }
 
 static void test_log_roll_level(void)
@@ -324,8 +316,7 @@ static void test_log_roll_level(void)
     level = log_get_level();
     CU_ASSERT_EQUAL(level, LOG_LEVEL_ERROR);
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 }
 
 static void test_log_vlog(void)
@@ -341,8 +332,7 @@ static void test_log_vlog(void)
 
     vlogMessages();
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
@@ -366,8 +356,7 @@ static void test_log_set_output(void)
         CU_ASSERT_STRING_EQUAL(actual, expected);
     }
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 }
 
 static void test_log_add(void)
@@ -382,8 +371,7 @@ static void test_log_add(void)
     log_add("LOG_ADD message 2");
     log_error("LOG_ERROR message");
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 3);
@@ -409,8 +397,7 @@ static void test_log_syserr(void)
     log_syserr("log_syserr() previous message is part of this one");
     log_syserr("log_syserr() previous message is part of this one #%d", 2);
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 10);
@@ -442,8 +429,7 @@ static void test_log_refresh(void)
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -474,8 +460,7 @@ static void test_sighup_log(void)
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -523,8 +508,7 @@ static void test_sighup_prog(void)
     status = sigaction(SIGHUP, &oldsigact, NULL);
     CU_ASSERT_EQUAL(status, 0);
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -544,16 +528,14 @@ static void test_log_reinit(void)
 
     logMessages();
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     status = log_reinit();
     CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
 
-    status = log_fini();
-    CU_ASSERT_EQUAL(status, 0);
+    log_fini();
 
     int n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 10);

@@ -45,18 +45,16 @@ prod_noop(
 }
 
 
-/*
+/**
  * Execute a program.
  *
- * Arguments:
- *      prod    Pointer to the data-product that caused this action.
- *      argc    Number of arguments in the command-line.
- *      argv    Pointer to pointers to command-line arguments.
- *      xprod   Pointer to XDR-ed data-product.
- *      xlen    Size of "xprod" in bytes.
- * Returns:
- *      -1      Failure.  An error--message is logged.
- *      else    PID of the child process.
+ * @param[in] prod    Pointer to the data-product that caused this action.
+ * @param[in] argc    Number of arguments in the command-line.
+ * @param[in] argv    Pointer to pointers to command-line arguments.
+ * @param[in] xprod   Pointer to XDR-ed data-product.
+ * @param[in] xlen    Size of "xprod" in bytes.
+ * @retval    -1      Failure.  An error--message is logged.
+ * @retval     0      Success.
  */
 /*ARGSUSED*/
 static int
@@ -70,19 +68,20 @@ exec_prodput(
     pid_t       pid = 0;
 
     if (NULL == execMap) {
+        // Child-process map not allocated
         execMap = cm_new();
 
         if (NULL == execMap) {
             log_error("Couldn't create child-process map for EXEC entries");
             pid = -1;
         }
-    }                                   /* child-process map not allocated */
+    }
 
     if (0 == pid) {
-        int     waitOnChild = 0;        /* default is not to wait */
+        int waitOnChild = 0; // Default is not to wait
 
         if (strcmp(argv[0], "-wait") == 0) {
-            waitOnChild = 1;            /* => wait for child */
+            waitOnChild = 1;
             argc--; argv++;
         }
 
@@ -90,54 +89,47 @@ exec_prodput(
         if (-1 == pid) {
             log_syserr("Couldn't fork EXEC process");
         }
+        else if (0 == pid) {
+            /*
+             * Child process.
+             *
+             * Detach the child process from the parents process group??
+             * (void) setpgid(0,0);
+             */
+            (void)signal(SIGTERM, SIG_DFL);
+            (void)pq_close(pq);
+
+            /*
+             * It is assumed that the standard input, output, and error
+             * streams are correct and should not be modified.
+             */
+
+            // Don't let the child process get any inappropriate privileges.
+            endpriv();
+
+            log_fini(); // ldmfork() called log_free()
+            (void) execvp(argv[0], argv);
+            (void)log_reinit();
+            log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
+                    getenv("PATH"));
+            log_fini();
+            exit(EXIT_FAILURE);
+        }
         else {
-            if (0 == pid) {
-                /*
-                 * Child process.
-                 *
-                 * Detach the child process from the parents process group??
-                 *
-                 * (void) setpgid(0,0);
-                 */
-                (void)signal(SIGTERM, SIG_DFL);
-                (void)pq_close(pq);
+            // Parent process.
+            (void)cm_add_argv(execMap, pid, argv);
 
-                /*
-                 * It is assumed that the standard input, output, and error
-                 * streams are correctly established and should not be
-                 * modified.
-                 */
-
-                /*
-                 * Don't let the child process get any inappropriate privileges.
-                 */
-                endpriv();
-
-                (void)log_fini();
-                (void) execvp(argv[0], argv);
-                (void)log_reinit();
-                log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
-                        getenv("PATH"));
-                exit(EXIT_FAILURE);
-            }                           /* child process */
-            else {
-                /*
-                 * Parent process.
-                 */
-                (void)cm_add_argv(execMap, pid, argv);
-
-                if (!waitOnChild) {
-                    log_debug("    exec %s[%d]", argv[0], pid);
-                }
-                else {
-                    log_debug("    exec -wait %s[%d]", argv[0], pid);
-                    (void)reap(pid, 0);
-                }
+            if (!waitOnChild) {
+                log_debug("exec %s[%d]", argv[0], pid);
             }
-        }                               /* child-process forked */
-    }                                   /* child-process map allocated */
+            else {
+                log_debug("exec -wait %s[%d]", argv[0], pid);
+                (void)reap(pid, 0);
+            }
+        }
+    } // Child-process map allocated
 
-    return -1 == pid ? -1 : 1;
+    return -1 == pid ? -1 : 0;
 }
 
 

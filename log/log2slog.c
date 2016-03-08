@@ -44,6 +44,7 @@ typedef struct {
         const log_level_t         level,
         const log_loc_t* restrict loc,
         const char* restrict      msg);
+    void (*flush)(void);
     void (*fini)(void);
 } dest_funcs_t;
 
@@ -85,9 +86,10 @@ static const char* get_ldm_logfile_pathname(void)
 {
     static char pathname[_XOPEN_PATH_MAX];
     if (pathname[0] == 0) {
-        int   reg_getString(const char* path, char** value);
-        char* path;
-        if (reg_getString("/log/file", &path)) {
+        int   reg_getString(const char* key, char** value);
+        char* value;
+        if (reg_getString("/log/file", &value)) {
+            // No entry in registry
             (void)snprintf(pathname, sizeof(pathname), "%s/ldmd.log",
                     LDM_LOG_DIR);
             pathname[sizeof(pathname)-1] = 0;
@@ -96,9 +98,9 @@ static const char* get_ldm_logfile_pathname(void)
                     "Using default: \"%s\".", pathname);
         }
         else {
-            (void)strncpy(pathname, path, sizeof(pathname));
+            (void)strncpy(pathname, value, sizeof(pathname));
             pathname[sizeof(pathname)-1] = 0;
-            free(path);
+            free(value);
         }
     }
     return pathname;
@@ -146,6 +148,14 @@ static void syslog_log(
 }
 
 /**
+ * Flushes logging to the system logging daemon.
+ */
+static void syslog_flush(void)
+{
+    // Does nothing
+}
+
+/**
  * Finalizes access to the system logging daemon.
  */
 static void syslog_fini(void)
@@ -153,7 +163,8 @@ static void syslog_fini(void)
     closelog();
 }
 
-static dest_funcs_t syslog_funcs = {syslog_init, syslog_log, syslog_fini};
+static dest_funcs_t syslog_funcs =
+        {syslog_init, syslog_log, syslog_flush, syslog_fini};
 
 /**
  * Writes a single log message to the stream.
@@ -182,6 +193,14 @@ static void stream_log(
 }
 
 /**
+ * Flushes logging to the stream.
+ */
+static void stream_flush(void)
+{
+    (void)fflush(stream_file);
+}
+
+/**
  * Initializes access to the standard error stream.
  *
  * @retval 0  Success (always)
@@ -197,10 +216,12 @@ static int stderr_init(void)
  */
 static void stderr_fini(void)
 {
+    stream_flush();
     stream_file = NULL;
 }
 
-static dest_funcs_t stderr_funcs = {stderr_init, stream_log, stderr_fini};
+static dest_funcs_t stderr_funcs =
+        {stderr_init, stream_log, stream_flush, stderr_fini};
 
 /**
  * Initializes access to the log file.
@@ -212,7 +233,7 @@ static int file_init(void)
 {
     int status;
     if (stream_file) {
-        status = 0;
+        status = 0; // Already initialized
     }
     else {
         int fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
@@ -226,8 +247,15 @@ static int file_init(void)
             int flags = fcntl(fd, F_GETFD);
             (void)fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
             stream_file = fdopen(fd, "a");
-            (void)setvbuf(stream_file, NULL, _IOLBF, BUFSIZ); // Line buffering
-            status = 0;
+            if (stream_file == NULL) {
+                logl_internal(LOG_LEVEL_ERROR,
+                        "Can't associate stream with log file \"%s\": %s",
+                        log_dest, strerror(errno));
+                status = -1;
+            }
+            else {
+                status = 0;
+            }
         }
     }
     return status;
@@ -239,12 +267,13 @@ static int file_init(void)
 static void file_fini(void)
 {
     if (stream_file != NULL) {
-        (void)fclose(stream_file);
+        (void)fclose(stream_file); // Will flush
         stream_file = NULL;
     }
 }
 
-static dest_funcs_t file_funcs = {file_init, stream_log, file_fini};
+static dest_funcs_t file_funcs =
+        {file_init, stream_log, stream_flush, file_fini};
 
 /******************************************************************************
  * Package-Private Implementation API:
@@ -414,6 +443,14 @@ void logi_log(
         const char* const restrict      string)
 {
     dest_funcs.log(level, loc, string);
+}
+
+/**
+ * Flushes logging.
+ */
+void logi_flush(void)
+{
+    dest_funcs.flush();
 }
 
 /******************************************************************************

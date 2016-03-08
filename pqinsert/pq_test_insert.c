@@ -147,7 +147,7 @@ static void cleanup(void)
         pq = NULL;
     }
 
-    (void)log_fini();
+    log_fini();
 }
 
 static void

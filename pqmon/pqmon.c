@@ -78,7 +78,7 @@ cleanup(void)
                 if(pq != NULL)  
                         (void)pq_close(pq);
         }
-        (void)log_fini();
+        log_fini();
 }
 
 

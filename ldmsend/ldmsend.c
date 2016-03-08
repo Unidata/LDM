@@ -77,7 +77,7 @@ cleanup(void)
         lp_free(ldmProxy);
         ldmProxy = NULL;
     }
-    (void)log_fini();
+    log_fini();
 }
 
 static void
