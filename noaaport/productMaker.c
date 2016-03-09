@@ -212,7 +212,7 @@ void* pmStart(
     char		GOES_BLANK_FRAME[MAXBYTES_DATA];
     unsigned int	GOES_BLNK_FRM_LEN;
 
-    int			wmolen;
+    size_t		wmolen;
     int			nxlen;
     int			wmo_offset;
     int			nnnxxx_offset;
@@ -1244,7 +1244,8 @@ void* pmStart(
             	    wmo_offset = prod_get_WMO_offset(buf + dataoff, datalen, (size_t *)&wmolen);
             	    nnnxxx_offset =  prod_get_WMO_nnnxxx_offset(buf + dataoff, datalen, &nxlen);
 
-            	    log_debug(" Block# %d  wmo_offset [%d] wmolen [%d] ", pdh->dbno, wmo_offset, wmolen);
+            	    log_debug(" Block# %d  wmo_offset [%d] wmolen [%zd] ",
+            	            pdh->dbno, wmo_offset, wmolen);
             	    log_debug(" Block# %d  nnnxxx_offset [%d] nnxxlen [%d] ", pdh->dbno, nnnxxx_offset, nxlen);
             	    log_debug("Seq#:%ld Block# %d ",prod.seqno, pdh->dbno );
             	    if ((nnnxxx_offset == -1 && nxlen == 0) && (wmolen > 0)) {
