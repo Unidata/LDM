@@ -27,6 +27,11 @@
         for more information.
 
     NOAAPort Ingestion (noaaportIngester(1), readnoaaport(1)):
+        Incorporated Raytheon's modifications to noaaportIngester(1) to:
+          1) Optionally create blank scan lines for missing GINI data; and
+          2) Optionally always de-compress a compressed data block in a NOAAPort  
+             frame.
+             
         Eliminated memory-leaks from components that read GEMPAK tables.
 
         Added entries to GEMPAK tables (indicated column positions aren't correct):
