@@ -108,6 +108,8 @@
 000 001 208 000 Snow temperature                 K                    SNOT             0  -9999.00
 000 001 209 000 Total column-int supercooled H2O kg m**-2             TCLSW            0  -9999.00
 000 001 210 000 Total column-int melting ice     kg m**-2             TCOLM            0  -9999.00
+000 001 225 009 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
+000 001 225 010 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
 !
 ! momentum
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
@@ -379,6 +381,7 @@
 000 019 216 000 Total Prob of Extrm Sev Tstorms  %                    PRSIGSVR         0  -9999.00
 000 019 216 009 Total Prob of Extrm Sev Tstorms  %                    PRSIGSVR         0  -9999.00
 000 019 217 000 Supercooled Large Droplet Icing  non-dim              SIPD             0  -9999.00
+000 019 219 000 Turbulence Potential Fcst Index  NA                   TPFI             0  -9999.00
 000 019 219 005 Turbulence Potential Fcst Index  NA                   TPFI             0  -9999.00
 !
 000 019 221 008 Probability of Convection        %                    PROCON           0  -9999.00
@@ -494,6 +497,7 @@
 010 000 015 000 Pd Combined Wind Waves & Swell   s                    MWSPER           0  -9999.00
 !
 010 000 192 000 Wave Steepness                   -                    WSTP             0  -9999.00
+010 000 193 000 Wave Length                      -                    WLENG            0  -9999.00
 !
 ! Product Discipline 10 - Oceanographic Products
 ! CATEGORY 1 - Currents

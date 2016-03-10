@@ -364,6 +364,14 @@ bool
 lcf_isServerNeeded(void);
 
 /**
+ * Indicates of the configuration-file contains something to do.
+ *
+ * @retval `true` iff the configuration-file contains something to do.
+ */
+bool
+lcf_haveSomethingToDo(void);
+
+/**
  * Frees this module's resources. Idempotent.
  */
 void

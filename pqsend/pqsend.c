@@ -164,7 +164,7 @@ static void cleanup(void) {
 
     dump_stats(&stats);
 
-    (void) log_fini();
+    log_fini();
 }
 
 static void signal_handler(int sig) {

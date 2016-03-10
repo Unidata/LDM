@@ -65,7 +65,7 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
             return;
         }
 
-        vartbl->info = (G2Vinfo *)malloc((size_t)nr*sizeof(G2Vinfo));
+        vartbl->info = malloc((size_t)nr*sizeof(G2Vinfo));
         if (vartbl->info == NULL) {
             *iret = -1;
             cfl_clos(fp, &ier);
@@ -85,13 +85,13 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
 	    cst_lstr (  buffer, &blen, &ier );
 
             if ( blen > ncoln ) {
-                sscanf( buffer, "%12d %12d %12d %12d %32c %20c %s %12d %f %12d %12d",
+                sscanf( buffer, "%12d %12d %12d %12d %32c %20c %12s %12d %f %12d %12d",
                             &disc, &cat, &parm, &pdtn,
                             name, unts, gname,
                             &scl, &msng, &ihzrmp, &idrct );
             }
             else {
-                sscanf( buffer, "%12d %12d %12d %12d %32c %20c %s %12d %20f",
+                sscanf( buffer, "%12d %12d %12d %12d %32c %20c %12s %12d %20f",
                             &disc, &cat, &parm, &pdtn,
                             name, unts, gname,
                             &scl, &msng);

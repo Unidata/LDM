@@ -111,9 +111,15 @@ static struct sigaction      prev_hup_sigaction;
  */
 static sigset_t              all_sigset;
 /**
+ * The signal-mask prior to calling logl_lock() so that this module is
+ * async-signal-safe (i.e., can be called safely from a signal-catching
+ * function).
+ */
+static sigset_t              prevSigs;
+/**
  * The mutex that makes this module thread-safe.
  */
-mutex_t                      log_mutex;
+static mutex_t               log_mutex;
 
 /**
  * Blocks all signals for the current thread. This is done so that the
@@ -506,6 +512,7 @@ static void flush(
                 if (msg == queue->last)
                     break;
             }                       /* message loop */
+            logi_flush();
         }                           /* messages should be printed */
 
         queue_clear();
@@ -568,10 +575,17 @@ int logl_level_to_priority(
 /**
  * Acquires this module's lock.
  *
- * This function is thread-safe.
+ * This function is thread-safe and async-signal-safe.
  */
 void logl_lock(void)
 {
+    /*
+     * Because this module calls async-signal-unsafe functions (e.g.,
+     * pthread_mutex_lock()), the current thread's signal-mask is set to block
+     * most signals so that this module's functions can be called from a
+     * signal-catching function.
+     */
+    blockSigs(&prevSigs);
     int status = mutex_lock(&log_mutex);
     logl_assert(status == 0);
     if (refresh_needed) {
@@ -583,13 +597,15 @@ void logl_lock(void)
 /**
  * Releases this module's lock.
  *
- * This function is thread-safe. On entry, this module's lock shall be locked
- * by the current thread.
+ * This function is thread-safe and async-signal-safe.
+ *
+ * @pre This module's lock shall be locked on the current thread.
  */
 void logl_unlock(void)
 {
     int status = mutex_unlock(&log_mutex);
     logl_assert(status == 0);
+    restoreSigs(&prevSigs);
 }
 
 /**
@@ -844,28 +860,51 @@ void logl_flush(
 /**
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
+ *
+ * @pre This module is locked
  */
-void
-logl_free(void)
+void logl_free(
+        const log_loc_t* const loc)
 {
-    sigset_t sigset;
-    blockSigs(&sigset);
-
     msg_queue_t* queue = queue_get();
     if (!queue_is_empty(queue)) {
-        LOG_LOC_DECL(loc);
-        logl_log(&loc, LOG_LEVEL_WARNING,
+        logl_log(loc, LOG_LEVEL_WARNING,
                 "logl_free() called with the above messages still in the "
                 "message-queue");
     }
-
     if (queue) {
         queue_fini(queue);
         free(queue);
         (void)pthread_setspecific(queueKey, NULL);
     }
+}
 
-    restoreSigs(&sigset);
+/**
+ * Finalizes the logging module. Frees all thread-specific resources. Frees all
+ * thread-independent resources if the current thread is the one on which
+ * log_init() was called.
+ *
+ * @retval -1  Failure
+ * @retval  0  Success
+ */
+int logl_fini(
+        const log_loc_t* const loc)
+{
+    int status;
+    if (!isInitialized) {
+        // Can't log an error message because not initialized
+        status = -1;
+    }
+    else {
+        logl_free(loc);
+        if (!pthread_equal(init_thread, pthread_self())) {
+            status = 0;
+        }
+        else {
+            status = logi_fini();
+        }
+    }
+    return status ? -1 : 0;
 }
 
 /******************************************************************************
@@ -1153,10 +1192,11 @@ log_clear(void)
  * when no more logging by the current thread will occur.
  */
 void
-log_free(void)
+log_free_located(
+        const log_loc_t* const loc)
 {
     logl_lock();
-    logl_free();
+    logl_free(loc);
     logl_unlock();
 }
 
@@ -1168,29 +1208,17 @@ log_free(void)
  * @retval -1  Failure
  * @retval  0  Success
  */
-int log_fini(void)
+int log_fini_located(
+        const log_loc_t* const loc)
 {
-    int status;
-    if (!isInitialized) {
-        // Can't log an error message because not initialized
-        status = -1;
-    }
-    else {
-        logl_lock();
-        logl_free();
-        if (!pthread_equal(init_thread, pthread_self())) {
-            status = 0;
-        }
-        else {
-            status = logi_fini();
-            if (status == 0) {
-                logl_unlock();
-                status = mutex_fini(&log_mutex);
-                if (status == 0) {
-                    (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
-                    isInitialized = false;
-                }
-            }
+    logl_lock();
+    int status = logl_fini(loc);
+    logl_unlock();
+    if (status == 0) {
+        status = mutex_fini(&log_mutex);
+        if (status == 0) {
+            (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+            isInitialized = false;
         }
     }
     return status ? -1 : 0;

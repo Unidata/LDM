@@ -40,6 +40,10 @@ typedef enum {
     LOG_LEVEL_COUNT     ///< Number of levels
 } log_level_t;
 
+/*
+ * The declarations in the following header-file are package-private -- so don't
+ * use them.
+ */
 #include "log_private.h"
 
 #ifdef __cplusplus
@@ -111,11 +115,11 @@ void log_refresh(void);
 /**
  * Finalizes the logging module. Should be called eventually after
  * log_init(), after which no more logging should occur.
- *
- * @retval 0   Success.
- * @retval -1  Failure. Logging module is in an unspecified state.
  */
-int log_fini(void);
+#define log_fini() do {\
+    LOG_LOC_DECL(loc);\
+    (void)log_fini_located(&loc);\
+} while (false)
 
 /**
  * Enables logging down to a given level. Should be called between
@@ -252,7 +256,10 @@ void log_clear(void);
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
  */
-void log_free(void);
+#define log_free() do {\
+    LOG_LOC_DECL(loc);\
+    log_free_located(&loc);\
+} while (false)
 
 /**
  * Indicates if a message of the given level would be logged.

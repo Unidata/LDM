@@ -358,11 +358,14 @@ sigusr1_handler(
     }
 }
 
-/*
+/**
  * Handles a signal.
+ *
+ * @param[in] sig  The signal to be handled. Should be SIGHUP, SIGTERM, or
+ *                 SIGUSR2.
  */
 static void signal_handler(
-        const int       sig)    /**< [in] Signal to be handled */
+        const int       sig)
 {
 #ifdef SVR3SIGNALS
     /*
@@ -374,16 +377,21 @@ static void signal_handler(
 
     switch (sig) {
         case SIGHUP:
+            log_notice("SIGHUP received");
             log_refresh();
             break;
         case SIGTERM:
+            log_notice("SIGTERM received");
             done = 1;
             if (fifo)
                 fifo_close(fifo); // will cause input-reader to terminate
             break;
-        case SIGUSR2: {
+        case SIGUSR2:
+            log_notice("SIGUSR2 received");
             (void)log_roll_level();
-        }
+            break;
+        default:
+            log_notice("Unexpected signal received: %d", sig);
     }
 
     return;
@@ -652,6 +660,7 @@ static void reportStats(
     char*   buf = msg;
     size_t  size = sizeof(msg);
     int     nbytes = snprintf(buf, size,
+"\n"
 "----------------------------------------\n"
 "Ingestion Statistics:\n"
 "    Since Previous Report (or Start):\n"
@@ -742,7 +751,7 @@ static void reportStats(
     (void)snprintf(buf, size,
 "----------------------------------------");
     msg[sizeof(msg)-1] = 0;
-    log_notice(msg);
+    log_notice("%s", msg); // Danger! `msg` contains '%' characters
 
     (void)log_set_level(logLevel);
 
@@ -1280,8 +1289,9 @@ int main(
         status = execute(npages, prodQueuePath, mcastSpec, interface);
 
         if (status)
-            log_flush_error();
+            log_error("Couldn't ingest NOAAPort data");
     }                               /* command line decoded */
 
+    log_fini();
     return status;
 }

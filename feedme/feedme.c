@@ -72,7 +72,7 @@ cleanup(void)
 
         /* TODO: sign off */
 
-        (void)log_fini();
+        log_fini();
 }
 
 

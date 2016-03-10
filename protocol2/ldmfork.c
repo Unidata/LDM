@@ -36,6 +36,7 @@ pid_t ldmfork(void)
 
         if (0 == pid) {
             /* Child process */
+            log_free(); // Because, effectively, a new thread
         }
         else if (-1 == pid) {
             /* System error */

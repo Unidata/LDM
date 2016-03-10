@@ -1,12 +1,14 @@
-6.13.0.0	2016-02-22T09:44:30-0700
+6.13.0.0	2016-03-10T14:17:20-0700
     Logging:
-        Re-wrote LDM logging because:
+        Re-wrote LDM logging to eliminate the dependency on the system logging
+        daemon because:
             1) It was the major impediment to correctly using the LDM;
             2) It was the major impediment to putting the LDM in a Docker
                container;
             3) Only 7 "local" syslog(8) facilities are guaranteed and NOAAPort
                ingestion could use more; and
-            4) Some system logging daemons sometimes dropped LDM log messages.
+            4) Some system logging daemons would drop LDM log messages depending
+               on how heavily they were loaded.
         For backward-compatibility, the original logging component, "ulog",
         still exists and is unconditionally included in the LDM library,
         "libldm". Indeed, the original behavior of the LDM can be obtained by
@@ -24,308 +26,137 @@
         <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/logfile-format.html>
         for more information.
 
-6.12.15.42	2016-01-12T10:40:24-0700
-    Make test for C++11-compatible g++ more robust.
+    NOAAPort Ingestion (noaaportIngester(1), readnoaaport(1)):
+        Incorporated Raytheon's modifications to noaaportIngester(1) to:
+          1) Optionally create blank scan lines for missing GINI data; and
+          2) Optionally always de-compress a compressed data block in a NOAAPort  
+             frame.
+             
+        Eliminated memory-leaks from components that read GEMPAK tables.
 
-6.12.15.41	2016-01-12T09:28:01-0700
-    Get "make distclean" to work on both Winters (with C++11 support) and Spock
-    (without C++11 support).
+        Added entries to GEMPAK tables (indicated column positions aren't correct):
+          File "g2varswmo.tbl":
+          000 001 008 010 Total precipitation             kg m**-2     APCP   0    -0.01
+          000 001 029 009 Total Snowfall                  m            SNOW   0 -9999.00
+          000 001 029 010 Total Snowfall                  m            SNOW   0 -9999.00
+          000 019 028 000 Mtn Wave Turb (eddy disp rate)  m**2/3 s**-1 MWTURB 0 -9999.00
 
-6.12.15.40	2016-01-11T16:07:56-0700
-    Removed mylog2ulog stuff from ulog makefile.
-    
-    Eliminated memory-leaks from components that read GEMPAK tables.
+          File "g2varsncep.tbl":
+          000 001 225 009 Freezing Rain                   kg m**-2     FRZL   0 -9999.00
+          000 001 225 010 Freezing Rain                   kg m**-2     FRZL   0 -9999.00
+          000 019 219 000 Turbulence Potential Fcst Index NA           TPFI   0 -9999.00
+          010 000 193 000 Wave Length                     -            WLENG  0 -9999.00
 
-6.12.15.39	2015-11-16T16:04:41-0700
-    mldm_sender_manager(3):
-        Add "-y" and "-z" options to execvp(2) of mldm_sender(1).
-
-    pqact.c:
-        Added SIGHUP forwarding.
-
-6.12.15.38	2015-11-03T13:07:13-0700
-    ldmd.c:
-        Corrected some Coverity-discovered lint.
-
-6.12.15.37	2015-11-03T09:41:04-0700
-    Increase resolution of printed product-creation timestamp from millisecond
-    to microsecond.
-
-6.12.15.36	2015-11-02T15:59:18-0700
     ldmadmin(1):
-        Reduce overestimation of new queue capacities (i.e., data capacity,
-        product capacity) and don't compute new capacities if the data is
+        Reduced overestimation of new queue capacities (i.e., data capacity and
+        product capacity) and eliminated computing new capacities if the data is
         insufficient.
+
+        Modified the "printmetrics" command to use free(1) to obtain
+        memory-usage metrics if they aren't obtained from top(1).
         
-    logging:
-        Added logging options for using microsecond resolution in timestamps and
-        formatting them according to the ISO 8601 standard. Added respective
-        options "-y" and "-z" to ldmd(1) and notifyme(1).
+    LDM (ldmd(1)):
+        Top-level Server:
+            Added immediate, unsuccessful termination of the top-level LDM
+            server -- before it forks a daemon version of itself -- if its LDM
+            configuration-file doesn't specify anything to do (i.e., is
+            effectively empty).
+            
+            Removed misleading "Couldn't get command of EXEC process ..." error
+            message because it was mistakenly applied to upstream LDM processes
+            and not just EXEC processes.
 
-6.12.15.35	2015-10-28T15:29:59-0600
-    Create mcast_test(1) for testing LDM-7 on GENI.
+        Upstream LDM Child Process:
+            Reduced the delivery latency of products with relatively large
+            inter-product arrival gaps by modifying the RPC calls that LDM-6
+            makes to send data products in primary mode by switching from
+            "batched" RPC calls to asynchronous "message-passing" RPC calls.
+            Specifically, the XDR function to decode the (non-existent) response
+            was changed from `NULL` to `xdr_void()` in the functions
+            `notification_6()`, `hereis_6()`, and `blkdata_6()`. Because the
+            results are highly dependent on the characteristics of the data
+            flow, you might not notice any difference.
 
-6.12.15.34	2015-10-26T16:41:04-0600
-    PerProdNotifier:
-        Fix setting of product-information by notify_of_bop().
+    pqinsert(1):
+        Corrected test of mmap() return-value to eliminate crashing if a
+        directory was specified on the command-line.
 
-6.12.15.33	2015-10-23T15:57:05-0600
-    mldm_sender():
-        Moved addition of product-index-to-product-signature entry to before the
-        sending of the product because the receiving LDM-7 would sometimes
-        request a data-product before the mapping was entered resulting in the
-        product not being found.
-
-6.12.15.32	2015-10-22T19:32:42-0600
-    Improve receiver session-memory API.
-
-6.12.15.31	2015-10-20T17:11:53-0600
-    down7.c:
-        Correct location of down7_incNumProds().
-
-        Add mutex destruction to down7_free().
-
-    mldm_sender:
-        Add opening of product-queue in thread-safe mode to prevent corruption
-        of the regions-in-use list by multiple thread access.
-
-    pq.c:
-        Add unlocking of mutex in pq_sequence() before calling `ifMatch()`
-        to avoid deadlock in calling a foreign function.
-
-        Add mutex destruction to freeing.
-
-6.12.15.30	2015-10-19T16:23:06-0600
-    noaaportIngester(1):
-        Added "+000 001 008 010 Total precipitation" to GEMPAK tables.
-
-    Multicast:
-        Add feature to lock products until VCMTP sender releases them.
-
-        Modify VCMTP port numbers to match WireShark plugin.
-
-        Improve log messages.
-
-    pq(3):
-        Make pq_release() thread-safe.
-
-6.12.15.29	2015-10-08T18:03:25-0600
-    Add diagnostic print statements and modify up7-down7_test to try
-    diagnosing product-queue corruption seen by Shawn chen.
-
-6.12.15.28	2015-10-06T16:03:42-0600
-    pq(3):
-        Modified fb_get() to log fblk metrics when it fails to help diagnose
-        multicast problem.
-
-6.12.15.27	2015-10-06T12:01:45-0600
-    pqutil(1):
-        Removed minor lint revealed by Coverity Scan.
-
-    pq(3):
-        Use correct product size in pqe_insert() and pq_insertNoSig().
-
-    mcast_lib(3):
-        Adapt to new checks by pqe_insert().
-
-6.12.15.26	2015-10-06T09:48:58-0600
     pqact(1):
-        Correct the setting of the product-queue cursor based on the last
-        successfully-processed data-product from the previous session.
-        Before this, pqact(1) might miss a product due to a restart of the LDM.
-        This was most apparent in processing NEXRAD-2 data-products. Thanks
-        Ryan.
+        Corrected the setting of the product-queue cursor based on the last
+        successfully-processed data-product from the previous session. Before
+        this, pqact(1) might miss a product due to a restart of the LDM. This
+        was most apparent in processing NEXRAD-2 data-products. Thanks Ryan.
+
+        Demoted uerror() message in spipe_prodput() to udebug().
+
+    pqing(1):
+        Accepted Bill Gerry's additions of higher baud rates.
+
+        Added support for decoding the length of GRIB-2 data-products and
+        improved algorithm for decoding the length of GRIB-1 messages.
 
     Product-Queue (pq(3)):
+        Added unlocking of mutex in pq_sequence() before calling ifMatch() to
+        avoid deadlock in calling a foreign function.
+
+        Added mutex destruction to freeing.
+
+        Made pq_release() thread-safe.
+
+        Modified fb_get() to log `fblk` diagnostics when it fails.
+
+        Improved assertion of relationship between `fblk` arena size and actual
+        used space.
+
+        Modified tq_add() to error-return if it can't get an `fblk` because
+        there are too many products in the queue.
+
+        Modified rpqe_new() to return the product-queue to a consistent state
+        if an error occurs.
+
+        Used correct product size in pqe_insert() and pq_insertNoSig().
+
         Refactored pqe_insert() for better error-handling and return status.
 
         Harmonized return code names by adding PQ_DUP and PQ_BIG and making
         PQUEUE_DUP and PQUEUE_BIG aliases.
 
-6.12.15.25	2015-10-01T15:28:56-0600
-    Remove ignoring of SIGCONT from mldm_sender_manager because it's not needed.
-
-    Generalize TCP keep-alive in TcpSend.cpp.
-
-6.12.15.24	2015-09-30T15:40:21-0600
-    Reduce number of "make distcheck" to just one in CI-commit.sh.
-
-6.12.15.23	2015-09-30T14:33:58-0600
-    Replace "$@" with just $@ in deploy.sh.
-
-6.12.15.22	2015-09-30T13:32:25-0600
-    Replace ${configOpts} with "$@" in deploy.sh to accommodate argument with
-    space.
-
-6.12.15.21	2015-09-29T16:57:17-0600
-    Corrected setting of configure(1) options in delivery/deploy.sh.
-
-6.12.15.20	2015-09-29T15:03:45-0600
-    Improved assertion of relationship between fblk arena size and actual used
-    space.
-
-    Removed Coverity lint.
-
-6.12.15.19	2015-09-29T11:14:48-0600
-    Removed RateShaper from configure.ac, Makefile.am, and distribution.
-
-6.12.15.18	2015-09-28T17:44:44-0600
-    Got up7_down7_test` to work with arbitrary deletion and unicast request of
-    multicast-received products.
-
-6.12.15.17	2015-09-22T14:53:00-0600
-    pq_test_insert(1):
-        Set data to 0xbd.
-
-6.12.15.16	2015-09-22T14:25:36-0600
-    pqing(1):
-        Accepted Bill Gery's additions of higher baud rates.
-        
-    Product-queue (pq.c):
-        Improved error handling.
-
-6.12.15.15	2015-09-17T14:42:54-0600
-    Improved thread-safety of executor.c by ensuring lock-order of job
-    and executor locks.
-
-6.12.15.14	2015-09-16T10:26:16-0600
-    Got "make Distclean" and "make check-local" in "ldmld/" working.
-
-6.12.15.13	2015-09-09T14:59:33-0600
-    Build Procedure:
-        Improved test of netstat(1) options by the configure-script.
-
-    ldmadmin(1):
-        Modified the "printmetrics" command to use free(1) to obtain
-        memory-usage metrics if they aren't obtained from top(1).
-
-    ldmd(1):
-        Added optional specification of multicast-interface to RECEIVE entry.
-
-    pq(3):
-        Modified tq_add() to error-return if it can't get an fblk because
-        there are too many products in the queue.
-        
-        Modified rpqe_new() to return the product-queue to a consistent state
-        if an error occurs.
+        Hardened the product-queue module against concurrent access by multiple
+        threads by:
+            1)  Adding a new (undocumented) option (`PQ_THREADSAFE`) to the
+                `pq_create()` and `pq_open()` functions;
+            2)  Replacing the use of the thread-unsafe function `random()` with
+                the thread-safe function `nrand48()`; and
+            3)  Removing the (undocumented) ability to reset the
+                pseudo-random-number generator used in the skip-list
+                implementation.
 
     inetutil(3):
         Modified sa_getInetSockAddr() to try AF_UNSPEC first, then AF_INET.
 
-    Multicast:
-        Added the port number of the VCMTP TCP server to the multicast LDM
-        shared memory map so that it could be given to subscribers of a feed
-        after the first subscriber.
-
-6.12.15.12	2015-07-30T15:17:37-0600
-    pq_test_insert(1):
-        Slightly improved the pseudo-randomness of the generated signatures.
-
-        Slightly improved code for computing creation-times and sleeping.
-
-        Added internal documentation.
-
-        Improved sequence-number handling.
+    ldmprint(3):
+        Added missing space between the timestamp and feedtype.
 
     Build Procedure:
-        Promoted check for realtime library out of WANT_MULTICAST section to
-        absolute requirement due to clock_gettime().
+        Improved test of netstat(1) options by the configure-script.
 
-6.12.15.11	2015-07-29T09:14:54-0600
-    Build Procedure:
         Replaced UD_SEARCH_HEADER and UD_SEARCH_LIB with AC_ macros, improved
         library searching, and modified makefiles accordingly.
 
-        Modified script ensureSyslogEntry to accommodate Solaris's grep(1) (no
-        "-F" or "-q" options).
+        Improved the setting of header file and library references by the
+        configure script -- in particular, `/opt/csw` is favored over `/usr`
+        because the Solaris XML2 library appears to have a bug.
 
-        Made signatures generated by pq_test_insert(1) pseudo-random instead of
-        sequential to eliminate the possibility that the decrease in
-        product-queue performance is due to sequential signatures.
+        Modified script ensureSyslogEntry(1) to accommodate Solaris's grep(1),
+        which doesn't support the standard "-F" or "-q" options.
 
         Improved documentation based on latest workshop.
 
-6.12.15.10	2015-07-23T13:54:51-0600
-    Build Procedure:
-        Eliminated default "" from UD_SEARCH_{HEADER,LIB} and made explicit in
-        `configure.ac` to try to get CSW XML2 library on Solaris.
+    Testing:
+        Added "check-local" make(1)-target for ldmd(1).
 
-    pqing(1):
-        Tightened algorithm for decoding the length of GRIB-1 and GRIB-2
-        messages.
-
-6.12.15.9	2015-07-22T16:54:54-0600
-    Build Procedure:
-        Improved the setting of header file and library references by the
-        configure script -- in particular, /opt/csw is favored over /usr because
-        the Solaris XML2 library appears to have a bug.
-
-6.12.15.8	2015-07-22T11:15:37-0600
-    ldmprint.c:
-        Added missing space between timestamp and feedtype.
-
-6.12.15.7	2015-07-22T10:11:06-0600
-    pq_test_insert(1):
-        Improved decoding of creation-time.
-
-6.12.15.6	2015-07-21T16:47:25-0600
-    pqing(1):
-        Added support for decoding the length of GRIB-2 data-products.
-
-    pq_test_insert(1):
-        Improved timing of inter-product sleeps. Should be truer to input
-        timings.
-
-6.12.15.5	2015-07-20T10:54:05-0600
-    LDM-7:
-        Ensured mldm_sender termination.
-    
-        Added test of "ultimate backstop" to up7_down7_test.
-
-6.12.15.4	2015-07-20T10:36:36-0600
-    LDM-7:
-        Improved the code surrounding the creation of a client-side handle on
-        the TCP connection by an upstream LDM-7.
-
-        Made ZERO_TIMEOUT constant.
-
-    pqact(1):
-        Demoted uerror() message in spipe_prodput() to udebug().
-
-6.12.15.3	2015-07-09T17:32:38-0600
-    LDM-7:
-        Add catching of more types of exceptions for VCMTP receiver and sender.
-
-6.12.15.2	2015-07-09T16:16:08-0600
-    LDM-7:
-        Replace throwing an exception in PerProdNotifier with simply setting
-        product pointer to NULL. Also improve duplicate product detection logic.
-
-6.12.15.1	2015-07-09T13:47:16-0600
-    LDM-7:
-        Corrected multicast conflict detection in mldm_sender_manager.
-
-6.12.15	2015-07-08T16:27:08-0600
-    Upstream LDM:
-        Reduced the delivery latency of products with relatively large
-        inter-product temporal gaps. Modified the RPC calls that LDM-6 makes to
-        send data products in primary mode by switching from "batched" RPC
-        calls to asynchronous "message-passing" RPC calls. Specifically, the
-        XDR function to decode the (non-existent) response was changed from
-        `NULL` to `xdr_void()` in the functions `notification_6()`,
-        `hereis_6()`, and `blkdata_6()`. The results are highly dependent on
-        the characteristics of the data flow; consequently, you might not
-        notice any difference.
-
-    Product-Queue (pq.c):
-        Hardened the product-queue module against access by multiple threads by:
-        1) adding a new (undocumented) option (`PQ_THREADSAFE`) to the
-        `pq_create()` and `pq_open()` functions; 2) replacing the use of the
-        thread-unsafe function `random()` with the thread-safe function
-        `nrand48()` (this change is only relevant for the multicast feature,
-        which isn't yet available); and 3) removing the (undocumented) ability
-        to reset the pseudo-random-number generator used in the skip-list
-        implementation.
+    Continuous-Delivery:
+        Corrected setting of configure(1) options in "delivery/deploy.sh".
 
 6.12.14	2015-06-09T09:45:43-0600
     Logging:

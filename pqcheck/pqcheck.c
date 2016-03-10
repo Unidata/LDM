@@ -69,7 +69,7 @@ static void
 cleanup(void)
 {
         log_notice("Exiting");
-        (void)log_fini();
+        log_fini();
 }
 
 

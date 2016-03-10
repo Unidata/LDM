@@ -118,7 +118,7 @@ cleanup(void)
                 (*prod_stats)();
                 (*feed_stats)();
         }
-        (void)log_fini();
+        log_fini();
 }
 
 

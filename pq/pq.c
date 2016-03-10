@@ -3318,7 +3318,7 @@ mapwrap(const int fd,
 #endif
         
         mm = (void *) mmap(*ptrp, extent, prot, mflags, fd, offset);
-        if(mm == (void *)((ptrdiff_t)-1))
+        if(mm == MAP_FAILED)
         {
                 status = errno;
                 log_add_syserr("mmap() failure: *ptrp=%p, offset=%ld, extent=%lu",

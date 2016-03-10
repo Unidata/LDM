@@ -81,77 +81,69 @@ pbuf_flush(
     unsigned int        timeo)          /* N.B. Not a struct timeval */
 {
     size_t              len = (size_t)(buf->ptr - buf->base);
-    int                 changed = 0;
-    int                 nwrote = 0;
     int                 status = ENOERR;        /* success */
-    int                 tmpErrno;
-    time_t              start;
-    time_t              duration;
 
-    log_debug("        pbuf_flush fd %d %6d %s",
-        buf->pfd, len, block ? "block" : "" );
+    log_debug("fd %d %6d %s", buf->pfd, len, block ? "block" : "" );
 
-    if(len == 0)
+    if (len == 0)
         return 0; /* nothing to do */
     /* else */
 
+    time_t start;
     (void)time(&start);
 
-    if(block)
-        changed = clr_fd_nonblock(buf->pfd);
+    int changed = block ? clr_fd_nonblock(buf->pfd) : 0;
 
-    if(block && timeo != 0)             /* (timeo == 0) => don't set alarm */
+    if (block && timeo != 0)             /* (timeo == 0) => don't set alarm */
         SET_ALARM(timeo, flush_timeo);
 
-    nwrote = (int) write(buf->pfd, buf->base, len);
-    tmpErrno = errno;                   /* CLR_ALRM() can change "errno" */
+    int nwrote = (int)write(buf->pfd, buf->base, len);
+    int tmpErrno = errno;                /* CLR_ALRM() can change "errno" */
 
-    if(block && timeo != 0)
+    if (block && timeo != 0)
         CLR_ALRM();
 
-    if(nwrote == -1) {
-        if((tmpErrno == EAGAIN) && (!block)) {
-            log_debug("         pbuf_flush: EAGAIN on %d bytes", len);
+    if (nwrote == -1) {
+        if ((tmpErrno == EAGAIN) && (!block)) {
+            // Couldn't execute non-blocking write just now
             nwrote = 0;
         }
         else {
-            log_syserr("pbuf_flush(): fd=%d", buf->pfd);
+            log_add_errno(tmpErrno, "Couldn't write to pipe: fd=%d, len=%zd",
+                    buf->pfd, len);
         }
         status = tmpErrno;
     }
-    else if(nwrote == len) {
-        /* wrote the whole buffer */
-        log_debug("         pbuf_flush: wrote  %d bytes", nwrote);
+    else {
+        if (nwrote == len) {
+            /* wrote the whole buffer */
+            log_debug("Wrote %d bytes", nwrote);
+            buf->ptr = buf->base;
+            len = 0;
+        }
+        else if (nwrote > 0) {
+            /* partial write, just shift the buffer by the amount written */
+            log_debug("Partial write %d of %d bytes",
+                nwrote, len);
+            len -= nwrote;
+            /* could be an overlapping copy */
+            memmove(buf->base, buf->base + nwrote, len);
+            buf->ptr = buf->base +len;
+        }
 
-        buf->ptr = buf->base;
-        len = 0;
+        unsigned long duration = time(NULL) - start;
+        if (duration > 5)
+            log_warning("Write of %d bytes to decoder took %lu seconds", nwrote,
+                    duration);
     }
-    else if(nwrote > 0) {
-        /* partial write, just shift the buffer by the amount written */
-        log_debug("         pbuf_flush: partial write %d of %d bytes",
-            nwrote, len);
 
-        len -= nwrote;
-
-        /* could be an overlapping copy */
-        memmove(buf->base, buf->base + nwrote, len);
-
-        buf->ptr = buf->base +len;
-    }
-
-    if(changed)
+    if (changed)
         set_fd_nonblock(buf->pfd);
-
-    duration = time(NULL) - start;
-
-    if(duration > 5)
-        log_warning("pbuf_flush(): write(%d,,%d) to decoder took %lu s",
-            buf->pfd, nwrote, (unsigned long)duration);
 
     return status;
 
 flush_timeo:
-    if(changed)
+    if (changed)
         set_fd_nonblock(buf->pfd);
 
     log_error("write(%d,,%lu) to decoder timed-out (%lu s)",
