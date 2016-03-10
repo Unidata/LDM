@@ -926,7 +926,8 @@ void* pmStart(
 
         if (GOES == 1) {
             if (pfrag->fragnum > 0) {
-                if ((pfrag->fragnum != prod.tail->fragnum + 1) || (pfrag->seqno != prod.seqno)) {
+                if (prod.tail && ((pfrag->fragnum != prod.tail->fragnum + 1) ||
+                        (pfrag->seqno != prod.seqno))) {
                     log_error("Missing GOES fragment in sequence, "
                         "last %d/%d this %d/%d\0", prod.tail->fragnum,
                         prod.seqno, pfrag->fragnum, pfrag->seqno);
@@ -1599,14 +1600,8 @@ static int inflateData(
          if(totalBytesIn == inLen) {
               idx = getIndex(out, 0, inflatedBytes);
          }
-         if(idx == -1) {
-            /** search failed, so write all data **/
-            memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
-         } else {
-            /*memcpy(dstBuf + savedByteCntr, out, idx);*/
-            memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
-         }
-            savedByteCntr = decompByteCounter;
+         memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
+         savedByteCntr = decompByteCounter;
       }
       // Reset inflater for additional input
       ret = inflateReset(&i_zstrm);
