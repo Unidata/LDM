@@ -1241,7 +1241,7 @@ void* pmStart(
                      ** and get the offset required to pass on to inflate.
                      ** For other blocks, simply pass the buffer to inflate. **/
 
-            	    wmo_offset = prod_get_WMO_offset(buf + dataoff, datalen, (size_t *)&wmolen);
+            	    wmo_offset = prod_get_WMO_offset(buf + dataoff, datalen, &wmolen);
             	    nnnxxx_offset =  prod_get_WMO_nnnxxx_offset(buf + dataoff, datalen, &nxlen);
 
             	    log_debug(" Block# %d  wmo_offset [%d] wmolen [%zd] ",
