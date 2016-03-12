@@ -1950,7 +1950,7 @@ int getWmoFromFile (char *fname, char *wmo) {
 
 	if ((bufsize = fread (buf, 1, DEF_STR_LEN, fp)) > 0) {
 		if ((wmo_offset = getWmoOffset (buf, bufsize, &wmo_len)) >= 0) {
-			memset (wmo, '\0', MAX_PRODID_LEN+1);
+			memset (wmo, '\0', SIZE_WMO+1);
 			strncpy (wmo, buf+wmo_offset, MIN (wmo_len, SIZE_WMO));
 			wmo[MIN (wmo_len, SIZE_WMO)] = '\0';
 			fclose (fp);

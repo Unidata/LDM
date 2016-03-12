@@ -498,7 +498,7 @@ typedef struct cpio_table_entry{
 
 typedef	CPIO_TABLE_ENTRY CPIO_TABLE[];
 
-#define NUM_CPIO_ENTRIES	11
+#define NUM_CPIO_ENTRIES	10
 
 ulong   total_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
 ulong   total_prods_retrans_rcvd_lost; /* prods retrans rcvd lost */
