@@ -60,8 +60,7 @@ int init_retrans(PROD_RETRANS_TABLE **pp_prod_retrans_table)
 
 	pl_prod_retrans_table = *pp_prod_retrans_table;
 
-	if(log_is_enabled_debug)
-		log_debug("%s Begin init retrans_table   base=0x%x\n", FNAME, pl_prod_retrans_table);
+	log_debug("%s Begin init retrans_table   base=0x%x\n", FNAME, pl_prod_retrans_table);
 
 	global_time_zone = (char *) utc_time;
 
@@ -79,10 +78,8 @@ int init_retrans(PROD_RETRANS_TABLE **pp_prod_retrans_table)
 		ii = 0; /* For now set to 0; Later can setup retrans table depending on the channel type */
 		pl_prod_retrans_table->entry_info[GET_RETRANS_TABLE_TYP(sbn_type)].
 			numb_entries = GET_RETRANS_CHANNEL_ENTRIES(sbn_type);
-	if(log_is_enabled_debug){
 		log_debug("%s Total retrans numb_entries for channel %s of sbn_type (%d) = %d \n",
                                FNAME, sbn_channel_name,sbn_type,pl_prod_retrans_table->entry_info[ii].numb_entries);
-	}
 
 		pl_prod_retrans_table->entry_info[GET_RETRANS_TABLE_TYP(sbn_type)].
 			retrans_entry_base_offset = (long)entry_base -
@@ -138,10 +135,8 @@ int init_retrans(PROD_RETRANS_TABLE **pp_prod_retrans_table)
 				p_retrans_entry[iii].entry_flag = 0;
 				p_retrans_entry[iii].WMO_hdr_abbrev[0] = '\0';
 			} /* end for each numb entries */
-		if(log_is_enabled_debug){
-			log_debug("%s  OK init retrans_table for channel [%s] numb_entries = %d\n",FNAME,
-						sbn_channel_name,pl_prod_retrans_table->entry_info[ii].numb_entries);
-		}
+		log_debug("%s  OK init retrans_table for channel [%s] numb_entries = %d\n",FNAME,
+				sbn_channel_name,pl_prod_retrans_table->entry_info[ii].numb_entries);
 
 	} /* end if pl_prod_retrans_table != NULL */
 
@@ -166,8 +161,7 @@ int init_retrans(PROD_RETRANS_TABLE **pp_prod_retrans_table)
 		log_notice(" OK open pipe[%d] for %s\n", global_retransmitpipe_fd,DEFAULT_RETRANSMIT_PIPENAME);
 	}
 
-	if(log_is_enabled_debug)
-		log_debug("%s Exiting  init retrans_table   base=0x%lx\n", FNAME,(unsigned long) pl_prod_retrans_table);
+	log_debug("%s Exiting  init retrans_table   base=0x%lx\n", FNAME,(unsigned long) pl_prod_retrans_table);
 	return(0);
 
 } /* end init_retrans */
@@ -317,15 +311,13 @@ int generate_retrans_rqst(ACQ_TABLE *p_acqtable,
 	p_pipe_requesthdr->pipe_request_cause = RETRANS_RQST_CAUSE_RCV_ERR;
 
 
-        if(log_is_enabled_debug){
-            log_debug("pipe_request_numb = %ld | ctl_flag = %d | link_id = %d | channel_type = %d | rqst cause = %d \n",
-            p_pipe_requesthdr->pipe_request_numb,p_pipe_requesthdr->pipe_ctl_flag,p_pipe_requesthdr->pipe_link_id,
-            p_pipe_requesthdr->pipe_channel_type,p_pipe_requesthdr->pipe_request_cause);
+	log_debug("pipe_request_numb = %ld | ctl_flag = %d | link_id = %d | channel_type = %d | rqst cause = %d \n",
+			p_pipe_requesthdr->pipe_request_numb,p_pipe_requesthdr->pipe_ctl_flag,p_pipe_requesthdr->pipe_link_id,
+			p_pipe_requesthdr->pipe_channel_type,p_pipe_requesthdr->pipe_request_cause);
 
-            log_debug("cpio addr = %ld | rqst time = %ld | first prod seqno = [%d-%ld] | last prod seqno = %ld | run number = %d | delay_send = %d \n",
-            p_pipe_requesthdr->pipe_cpio_addr, p_pipe_requesthdr->pipe_request_time,p_pipe_requesthdr->pipe_first_prod_seqno,first_prod_seqno,
-            p_pipe_requesthdr->pipe_last_prod_seqno,p_pipe_requesthdr->pipe_run_numb,p_pipe_requesthdr->pipe_delay_send);
-        }
+	log_debug("cpio addr = %ld | rqst time = %ld | first prod seqno = [%d-%ld] | last prod seqno = %ld | run number = %d | delay_send = %d \n",
+			p_pipe_requesthdr->pipe_cpio_addr, p_pipe_requesthdr->pipe_request_time,p_pipe_requesthdr->pipe_first_prod_seqno,first_prod_seqno,
+			p_pipe_requesthdr->pipe_last_prod_seqno,p_pipe_requesthdr->pipe_run_numb,p_pipe_requesthdr->pipe_delay_send);
 
 	/* Now write to pipe */
 	if((bytes_written = write(global_retransmitpipe_fd,
@@ -390,13 +382,8 @@ int prod_retrans_ck(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr, time_t *orig_arr
 
 	if(p_acqtable->proc_orig_prod_seqno_last != 0) {
 
-		if (log_is_enabled_debug)/* Debug only */
-		{
-			log_debug("%s ok retrans channel_typ=%d tbl[%d] so ck more\n",
-				FNAME,
-				p_acqtable->proc_base_channel_type_last,
-				retrans_table_type);
-		}
+		log_debug("%s ok retrans channel_typ=%d tbl[%d] so ck more\n",
+			FNAME, p_acqtable->proc_base_channel_type_last, retrans_table_type);
 
 		/* Assume have retransmitted product do following */
 		p_acqtable->proc_tot_prods_retrans_rcvd++,
@@ -432,8 +419,7 @@ int prod_retrans_ck(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr, time_t *orig_arr
 			
 		}
 
-		if (log_is_enabled_debug){
-			log_debug("%s %s duplicate run(%d) prod|orig(%ld|%ld) tbl[%d]=%ld\n",
+		log_debug("%s %s duplicate run(%d) prod|orig(%ld|%ld) tbl[%d]=%ld\n",
 			FNAME,
 			(match_value==PROD_DUPLICATE_MATCH)?"OK MATCH":"NO MATCH",
 			p_acqtable->proc_orig_prod_run_id,
@@ -442,7 +428,6 @@ int prod_retrans_ck(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr, time_t *orig_arr
 			index_value,
 			p_retrans_entry[index_value].prod_seqno);
 	
-			}
 		/* Check if retransmit prod is within range of table entries */
 		orig_prod_seqno = (long)p_acqtable->proc_orig_prod_seqno_last;
 		now_prod_seqno = (long)p_buffhdr->proc_prod_seqno;
@@ -541,38 +526,35 @@ int prod_retrans_ck(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr, time_t *orig_arr
 			RETRANS_ENTRY_FLAG_NEW_W_DUP:0), 0);
 
 	p_retrans_entry_info->index_last = index_value;
-	p_retrans_entry_info->run_id_last = 
-		p_acqtable->proc_prod_run_id; 
+	p_retrans_entry_info->run_id_last = p_acqtable->proc_prod_run_id;
 
 /* Debug only */
 
-	if(log_is_enabled_debug) {
-		if(match_value & PROD_NODUPLICATE) {
-	    	log_debug(" %s %s entry(%d) prod(%ld) code=%d %s[%d]\n",
-				FNAME,
-				GET_PROD_TYPE_NAME(p_buffhdr->proc_prod_type),
-				index_value,
-				p_buffhdr->proc_prod_seqno, 
-				p_buffhdr->proc_prod_code,
-				(match_value & PROD_NODUPLICATE)?"NO_DUPL":
-				(match_value & PROD_DUPLICATE_MATCH)?"DUPL_MATCH":
-				(match_value & PROD_DUPLICATE_NOMATCH)?"DUPL_NOMATCH":
-					"UNKNOWN",
-				match_value);
-		} else {
-	    	log_debug("%s %s entry(%d) prod|orig(%ld|%ld) code=%d %s[%d]\n",
-				FNAME,
-				GET_PROD_TYPE_NAME(p_buffhdr->proc_prod_type),
-				index_value,
-				p_buffhdr->proc_prod_seqno, 
-				p_acqtable->proc_orig_prod_seqno_last, 
-				p_buffhdr->proc_prod_code,
-				(match_value & PROD_NODUPLICATE)?"NO_DUPL":
-				(match_value & PROD_DUPLICATE_MATCH)?"DUPL_MATCH":
-				(match_value & PROD_DUPLICATE_NOMATCH)?"DUPL_NOMATCH":
-					"UNKNOWN",
-				match_value);
-		}
+	if(match_value & PROD_NODUPLICATE) {
+		log_debug(" %s %s entry(%d) prod(%ld) code=%d %s[%d]\n",
+			FNAME,
+			GET_PROD_TYPE_NAME(p_buffhdr->proc_prod_type),
+			index_value,
+			p_buffhdr->proc_prod_seqno,
+			p_buffhdr->proc_prod_code,
+			(match_value & PROD_NODUPLICATE)?"NO_DUPL":
+			(match_value & PROD_DUPLICATE_MATCH)?"DUPL_MATCH":
+			(match_value & PROD_DUPLICATE_NOMATCH)?"DUPL_NOMATCH":
+				"UNKNOWN",
+			match_value);
+	} else {
+		log_debug("%s %s entry(%d) prod|orig(%ld|%ld) code=%d %s[%d]\n",
+			FNAME,
+			GET_PROD_TYPE_NAME(p_buffhdr->proc_prod_type),
+			index_value,
+			p_buffhdr->proc_prod_seqno,
+			p_acqtable->proc_orig_prod_seqno_last,
+			p_buffhdr->proc_prod_code,
+			(match_value & PROD_NODUPLICATE)?"NO_DUPL":
+			(match_value & PROD_DUPLICATE_MATCH)?"DUPL_MATCH":
+			(match_value & PROD_DUPLICATE_NOMATCH)?"DUPL_NOMATCH":
+				"UNKNOWN",
+			match_value);
 	}
 /* Debug only */
 
@@ -596,9 +578,8 @@ int prod_retrans_update_entry(
 	
 
 /* Debug only */
-	if(log_is_enabled_debug) {
 		if(p_buffhdr != (BUFF_HDR *)NULL) {
-	    	log_debug("%s %s prod(%ld) code=%d %s[0x%x] update\n",
+			log_debug("%s %s prod(%ld) code=%d %s[0x%x] update\n",
 				FNAME,
 				GET_PROD_TYPE_NAME(p_buffhdr->proc_prod_type),
 				prod_seqno,
@@ -611,7 +592,7 @@ int prod_retrans_update_entry(
 				"UNKNOWN",
 				entry_flag);
 		} else {
-	    	log_debug("%s prod(%ld)  %s[0x%x] update\n",
+			log_debug("%s prod(%ld)  %s[0x%x] update\n",
 				FNAME,
 				prod_seqno,
 				(entry_flag & RETRANS_ENTRY_FLAG_AVAIL)?"AVAIL":
@@ -622,7 +603,6 @@ int prod_retrans_update_entry(
 				"UNKNOWN",
 				entry_flag);
 		}
-	}
 /* Debug only */
 
 	/* Check if entry is to be made available again */
@@ -637,8 +617,7 @@ int prod_retrans_update_entry(
 	if(entry_flag & RETRANS_ENTRY_FLAG_RETRANS_DUP){
 		p_retrans_entry->entry_flag |= RETRANS_ENTRY_FLAG_RETRANS_DUP; 
 		/* Also, update the arrival time */
-		p_retrans_entry->prod_arrive_time = 
-			p_acqtable->proc_prod_start_time;	
+		p_retrans_entry->prod_arrive_time = p_acqtable->proc_prod_start_time;
 		/* Note this does not change any other contents of the entry */
 		return(0);
 	}
@@ -648,8 +627,7 @@ int prod_retrans_update_entry(
 
 	/* Use last acqtable values for these */
 	p_retrans_entry->prod_run_id = in_run_id;
-	p_retrans_entry->prod_arrive_time = 
-		p_acqtable->proc_prod_start_time;	
+	p_retrans_entry->prod_arrive_time = p_acqtable->proc_prod_start_time;
 
 	/* Use current buffhdr values for these */
 	if(p_buffhdr != (BUFF_HDR *)NULL) {
@@ -911,10 +889,10 @@ int do_prod_mismatch(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr)
 					/* its a duplicate retrans and hence may get discarded */
 					/*  Note: This needs to be done only when retrans prod is in error again and again*/
 					if(p_acqtable->proc_orig_prod_seqno_last != 0){
-                                           if(log_is_enabled_debug)
 						log_debug(" Aborting orig seqno [%ld] in retrans table. Cuurent prod seqno [%ld] \n",
-                                                                                p_acqtable->proc_orig_prod_seqno_last,proc_prod_seqno);
-						prod_retrans_abort_entry(p_acqtable, p_acqtable->proc_orig_prod_seqno_last, RETRANS_RQST_CAUSE_RCV_ERR);
+							p_acqtable->proc_orig_prod_seqno_last,proc_prod_seqno);
+							prod_retrans_abort_entry(p_acqtable, p_acqtable->proc_orig_prod_seqno_last,
+							RETRANS_RQST_CAUSE_RCV_ERR);
 					}
 					
 				}
@@ -997,12 +975,10 @@ int prod_retrans_abort_entry (ACQ_TABLE *p_acqtable, long prod_seqno, int err_ca
 		index_value = 0;
 	}
 
-	if(log_is_enabled_info){
-		log_info("%s ok abort %s tbl[%d]=%ld\n",FNAME,
+	log_info("%s ok abort %s tbl[%d]=%ld\n",FNAME,
 		GET_SBN_TYP_NAME(p_acqtable->proc_base_channel_type_last),
 		index_value,
 		p_retrans_entry[index_value].prod_seqno);
-	}
 
 	prod_retrans_update_entry(p_acqtable, (BUFF_HDR *)NULL,
 		p_retrans_entry_info,

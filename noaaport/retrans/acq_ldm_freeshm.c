@@ -35,6 +35,7 @@ typedef struct	input 	{		/* user input options */
 /**** prototypes ****/
 void usage(void);
 int cmd_line(int argc, char *argv[], INPUT *p_input);
+int com_shmFree(int SHMnumber);
 
 char	PNAME[40];
 

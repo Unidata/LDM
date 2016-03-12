@@ -59,7 +59,7 @@ extern void     process_prod(
 static int	inflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
 static int	deflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
 static int	prod_get_WMO_nnnxxx_offset (char *wmo_buff, int max_search, int *p_len);
-static int	prod_get_WMO_offset (char *buf, size_t buflen, size_t *p_wmolen);
+static int	prod_get_WMO_offset (char *buf, int buflen, int *p_wmolen);
 static int	getIndex (char *arr, int pos, int sz);
 static char	*decode_zlib_err (int err);
 
@@ -171,34 +171,34 @@ void* pmStart(
     void* const         arg)          /**< [in/out] Pointer to the
                                         *  product-maker to be executed */
 {
-    ProductMaker* const productMaker = (ProductMaker*)arg;
-    int                 status;
-    Fifo* const         fifo = productMaker->fifo;
-    unsigned char*      buf = productMaker->buf;
-    sbn_struct*         sbn = &productMaker->sbn;
-    pdh_struct*         pdh = &productMaker->pdh;
-    psh_struct*         psh = &productMaker->psh;
-    pdb_struct*         pdb = &productMaker->pdb;
-    ccb_struct*         ccb = &productMaker->ccb;
-    unsigned long       last_sbn_seqno;
-    unsigned long       last_sbn_runno = ULONG_MAX;
-    int                 PNGINIT = 0;
-    char*               memheap = NULL;
-    MD5_CTX*            md5ctxp = productMaker->md5ctxp;
-    int                 logResync = 1;
-    prodstore           prod;
-    int                 firstBlk = 0;
-    int                 lastBlk = 0;
-    unsigned long       curr_prod_seqno;        
+    ProductMaker* const		productMaker = (ProductMaker*)arg;
+    int				status;
+    Fifo* const			fifo = productMaker->fifo;
+    unsigned char*		buf = productMaker->buf;
+    sbn_struct*			sbn = &productMaker->sbn;
+    pdh_struct*			pdh = &productMaker->pdh;
+    psh_struct*			psh = &productMaker->psh;
+    pdb_struct*			pdb = &productMaker->pdb;
+    ccb_struct*			ccb = &productMaker->ccb;
+    unsigned long		last_sbn_seqno;
+    unsigned long		last_sbn_runno = ULONG_MAX;
+    int				PNGINIT = 0;
+    char*			memheap = NULL;
+    MD5_CTX*			md5ctxp = productMaker->md5ctxp;
+    int				logResync = 1;
+    prodstore			prod;
+    int				firstBlk = 0;
+    int				lastBlk = 0;
+    unsigned long		curr_prod_seqno;
 
-#define CHUNK_SZ 5700
-#define MAXBYTES_DATA   5700    
-#define PDB_LEN 512
-#define DEFAULT_COMPRESSION_LEVEL Z_DEFAULT_COMPRESSION
+#define CHUNK_SZ			5700
+#define MAXBYTES_DATA			5700
+#define PDB_LEN				512
+#define DEFAULT_COMPRESSION_LEVEL	Z_DEFAULT_COMPRESSION
 
-#define BEGIN_BLK   0
-#define ANY_BLK     1
-#define END_BLK     2
+#define BEGIN_BLK			0
+#define ANY_BLK				1
+#define END_BLK				2
 
     unsigned long	uncomprLen;
     unsigned char	uncomprBuf[MAXBYTES_DATA];
@@ -212,7 +212,7 @@ void* pmStart(
     char		GOES_BLANK_FRAME[MAXBYTES_DATA];
     unsigned int	GOES_BLNK_FRM_LEN;
 
-    size_t		wmolen;
+    int			wmolen;
     int			nxlen;
     int			wmo_offset;
     int			nnnxxx_offset;
@@ -440,8 +440,7 @@ void* pmStart(
         log_info("SBN datastream %d command %d", sbn->datastream, sbn->command);
         log_debug("SBN version %d length offset %d", sbn->version, sbn->len);
 
-        if (((sbn->command != SBN_CMD_DATA) && (sbn->command != SBN_CMD_TIME)) ||
-                (sbn->version != 1)) {
+        if (((sbn->command != SBN_CMD_DATA) && (sbn->command != SBN_CMD_TIME)) || (sbn->version != 1)) {
             log_error("Unknown sbn command/version %d PUNT", sbn->command);
             continue;
         }
@@ -509,10 +508,8 @@ void* pmStart(
         }
 
         log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen, pdh->pshlen);
-        log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record,
-                pdh->records_per_block);
-        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno,
-                pdh->dbno, pdh->dbsize);
+        log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record, pdh->records_per_block);
+        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno, pdh->dbno, pdh->dbsize);
 
         /* Stop here if no psh */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
@@ -528,17 +525,15 @@ void* pmStart(
 #endif
         if (pdh->pshlen != 0) {
             if (fifo_getBytes(fifo, buf + sbn->len + pdh->len, pdh->pshlen) != 0) {
-                        log_error("problem reading psh");
+                log_error("problem reading psh");
                 continue;
-            }
-            else {
+            } else {
                 log_debug("read psh %d", pdh->pshlen);
             }
 
             /* Timing block */
             if (sbn->command == SBN_CMD_TIME) {
-                log_debug("Timing block recieved %ld %ld\0", psh->olen,
-                        pdh->len);
+                log_debug("Timing block recieved %ld %ld\0", psh->olen, pdh->len);
                 /*
                  * Don't step on our psh of a product struct of prod in
                  * progress.
@@ -559,8 +554,7 @@ void* pmStart(
             log_debug("product header flag %d, version %d", psh->hflag, psh->version);
             log_debug("prodspecific data length %ld", psh->psdl);
             log_debug("bytes per record %ld", psh->bytes_per_record);
-            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat,
-                    psh->ptype, psh->pcode);
+            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat, psh->ptype, psh->pcode);
             if (psh->frags < 0)
                 log_error("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)
@@ -634,8 +628,7 @@ void* pmStart(
 		    save_prod = 0;
 		    acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
 		    /* Current prod discarded and continue with next */
-		}
-		else if (retrans_val == PROD_DUPLICATE_NOMATCH) {
+		} else if (retrans_val == PROD_DUPLICATE_NOMATCH) {
 			strcpy(log_buff,"SAVE RETRANS");
 			log_prod_end(log_buff, acq_tbl->proc_orig_prod_seqno_last, buff_hdr->proc_prod_seqno,
 				buff_hdr->proc_blkno, buff_hdr->proc_prod_code, acq_tbl->proc_prod_bytes_read,
@@ -690,7 +683,7 @@ void* pmStart(
                             inflateData(comprBuf, comprLen, uncomprBuf, &uncomprLen, ANY_BLK );
                             deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
 
-                            for (int cnt = 0; cnt < (frags_left - 1); cnt++){
+                            for (int cnt = 0; cnt < (frags_left - 1); cnt++) {
                         	memcpy(memheap + heapcount, comprBuf, comprLen);
                         	MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
                         	heapcount += comprLen;
@@ -765,8 +758,7 @@ void* pmStart(
                     PNGINIT = 0;
                 }
 
-                log_error("Product definition header version %d pdhlen %d", pdh->version,
-                        pdh->len);
+                log_error("Product definition header version %d pdhlen %d", pdh->version, pdh->len);
                 log_error("PDH transfer type %u", pdh->transtype);
 
                 if ((pdh->transtype & 8) > 0)
@@ -822,8 +814,7 @@ void* pmStart(
             MD5Init(md5ctxp);
 
             if (GOES == 1) {
-                if (readpdb (buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb,
-                        PROD_COMPRESSED, pdh->dbsize) == -1) {
+                if (readpdb (buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb, PROD_COMPRESSED, pdh->dbsize) == -1) {
                     log_error ("Error reading pdb, punt");
                     continue;
                 }
@@ -847,8 +838,7 @@ void* pmStart(
                     log_error("Error reading ccb, using default name");
                 log_debug("look at ccb start %d %d", ccb->b1, ccb->len);
 
-                if (log_is_enabled_info)
-                    log_info("%s", psh->pname);
+                log_info("%s", psh->pname);
 
                 memcpy(PROD_NAME, psh->pname, sizeof(PROD_NAME));
 
@@ -904,9 +894,8 @@ void* pmStart(
                 continue;
             }
             if (prod.head == NULL) {
-                if (log_is_enabled_info)
-                    log_info("found data block before header, "
-                        "skipping sequence %d frag #%d", pdh->seqno, pdh->dbno);
+                log_info("found data block before header, skipping sequence %d frag #%d",
+                		pdh->seqno, pdh->dbno);
                 continue;
             }
         } // Don't have product-specific header (pdh->pshlen == 0)
@@ -926,8 +915,7 @@ void* pmStart(
 
         if (GOES == 1) {
             if (pfrag->fragnum > 0) {
-                if (prod.tail && ((pfrag->fragnum != prod.tail->fragnum + 1) ||
-                        (pfrag->seqno != prod.seqno))) {
+                if (((prod.tail != NULL) && (pfrag->fragnum != prod.tail->fragnum + 1)) || (pfrag->seqno != prod.seqno)) {
                     log_error("Missing GOES fragment in sequence, "
                         "last %d/%d this %d/%d\0", prod.tail->fragnum,
                         prod.seqno, pfrag->fragnum, pfrag->seqno);
@@ -1149,8 +1137,7 @@ void* pmStart(
 #ifdef RETRANS_SUPPORT
                     if (retrans_xmit_enable == OPTION_ENABLE) {
                 	acq_tbl->proc_acqtab_prodseq_errs++;
-                	log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
-                	        acq_tbl->proc_base_prod_seqno_last);
+                	log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n", acq_tbl->proc_base_prod_seqno_last);
                 	do_prod_mismatch(acq_tbl,buff_hdr);
                 	acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
                     }
@@ -1245,8 +1232,7 @@ void* pmStart(
             	    wmo_offset = prod_get_WMO_offset(buf + dataoff, datalen, &wmolen);
             	    nnnxxx_offset =  prod_get_WMO_nnnxxx_offset(buf + dataoff, datalen, &nxlen);
 
-            	    log_debug(" Block# %d  wmo_offset [%d] wmolen [%zd] ",
-            	            pdh->dbno, wmo_offset, wmolen);
+            	    log_debug(" Block# %d  wmo_offset [%d] wmolen [%d] ", pdh->dbno, wmo_offset, wmolen);
             	    log_debug(" Block# %d  nnnxxx_offset [%d] nnxxlen [%d] ", pdh->dbno, nnnxxx_offset, nxlen);
             	    log_debug("Seq#:%ld Block# %d ",prod.seqno, pdh->dbno );
             	    if ((nnnxxx_offset == -1 && nxlen == 0) && (wmolen > 0)) {
@@ -1323,9 +1309,8 @@ void* pmStart(
 		    }
 		}
 
-		if (log_is_enabled_info)
-		    log_info("we should have a complete product %ld %ld/%ld %ld /heap "
-				"%ld", prod.seqno, pfrag->seqno, prod.nfrag, pfrag->fragnum, (long) heapcount);
+		log_info("we should have a complete product %ld %ld/%ld %ld /heap %ld",
+				prod.seqno, pfrag->seqno, prod.nfrag, pfrag->fragnum, (long) heapcount);
 		if ((NWSTG == 1) && (heapcount > 4)) {
 		    cnt = 4;                /* number of bytes to add for TRAILER */
 
@@ -1597,9 +1582,6 @@ static int inflateData(
          totalBytesIn += i_zstrm.total_in;
          decompByteCounter += inflatedBytes;
 
-         if(totalBytesIn == inLen) {
-              idx = getIndex(out, 0, inflatedBytes);
-         }
          memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
          savedByteCntr = decompByteCounter;
       }
@@ -1748,15 +1730,7 @@ static int deflateData(
 
 /*******************************************************************************
 FUNCTION NAME
-        int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
-
-FUNCTION DESCRIPTION
-        Parse the wmo heading from buffer and load the appropriate prod
-        info fields.  The following regular expressions will satisfy this
-        parser.  Note this parser is not case sensative.
-/*******************************************************************************
-FUNCTION NAME
-        int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
+        int prod_get_WMO_offset(char *buf, int buflen, int *p_wmolen)
 
 FUNCTION DESCRIPTION
         Parse the wmo heading from buffer and load the appropriate prod
@@ -1795,28 +1769,26 @@ RETURNS
         -1: otherwise
 *******************************************************************************/
 
+#define WMO_TTAAII_LEN		6
+#define WMO_CCCC_LEN		4
+#define WMO_DDHHMM_LEN		6
+#define WMO_DDHH_LEN		4
+#define WMO_BBB_LEN		3
+
+#define WMO_T1			0
+#define WMO_T2			1
+#define WMO_A1			2
+#define WMO_A2			3
+#define WMO_I1			4
+#define WMO_I2			5
+
+#define NNN_LEN			3
+#define XXX_LEN			3
+#define AWIPSID_LEN		WMO_CCCC_LEN + NNN_LEN + XXX_LEN
+#define MAX_SECLINE_LEN		40
 
 
-#define WMO_TTAAII_LEN          6
-#define WMO_CCCC_LEN            4
-#define WMO_DDHHMM_LEN          6
-#define WMO_DDHH_LEN            4
-#define WMO_BBB_LEN                     3
-
-#define WMO_T1  0
-#define WMO_T2  1
-#define WMO_A1  2
-#define WMO_A2  3
-#define WMO_I1  4
-#define WMO_I2  5
-
-#define NNN_LEN                 3
-#define XXX_LEN                 3
-#define AWIPSID_LEN             WMO_CCCC_LEN + NNN_LEN + XXX_LEN
-#define MAX_SECLINE_LEN         40
-
-
-static int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
+static int prod_get_WMO_offset(char *buf, int buflen, int *p_wmolen)
 {
         char *p_wmo;
         int i_bbb;

@@ -2109,7 +2109,7 @@ int processProducts (FILE_LIST *fileList) {
         int             i;
 	int		rstat;
 	FILE_NODE	*flist = fileList->fileNodes;
-	char		wmo_id[SIZE_WMO_HDR+1];
+	char		wmo_id[MAX_PRODID_LEN+1];
 	int		processed;
 	char		tmpbuf[40];
 	int		prodSize;

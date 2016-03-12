@@ -597,6 +597,7 @@ int moveFile (char *inpath, char *outpath, int overwrite) {
 		if (overwrite) {
 			unlink (outpath);
 		} else {
+			free (fullname);
 			return EEXIST;
 		}
 	}

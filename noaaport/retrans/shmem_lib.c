@@ -25,7 +25,6 @@ RETURNS
 char *com_shmAttach(int SHMnumber);
 int com_shmIsAlloc(int SHMnumber);
 
-
 char *
 get_shm_ptr(SHMnumber,name,flag) 
 	int SHMnumber;		/* shared memory number to validate */
