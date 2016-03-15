@@ -55,6 +55,8 @@
         Modified the "printmetrics" command to use free(1) to obtain
         memory-usage metrics if they aren't obtained from top(1).
         
+        Corrected "break" in loop to "last".
+        
     LDM (ldmd(1)):
         Top-level Server:
             Added immediate, unsuccessful termination of the top-level LDM
