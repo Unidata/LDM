@@ -689,7 +689,7 @@ sub start
                     errmsg("start(): ".
                         "Server not started.");
                     $status = 1;        # failure
-                    break;
+                    last;
                 }
                 sleep($loopcount);
                 $loopcount++;
