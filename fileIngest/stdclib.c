@@ -626,9 +626,10 @@ int moveFile (char *inpath, char *outpath, int overwrite) {
  *	exist. *
  *
  * Description
- *	This function is used to change the current working directory.  If the
- *	specified directory does not exist and 'create' is non-zero, then the
- *	specified directory will be created.
+ *	This function is used to create a copy of an existing file. While the
+ *	file is being copied, the copy is set to write-only by the owner to
+ *	prevent incomplete reading by a process that may be polling the directory
+ *	for input.
  *
  * Return Values
  *	0		success
@@ -638,16 +639,23 @@ int moveFile (char *inpath, char *outpath, int overwrite) {
 
 int copyFile (const char* source, const char* destination) {
 
-	int	input;
-	int	output;
-	int	result;
+	int		input;
+	int		output;
+	int		result;
+	struct stat	fileinfo		= { 0 };
 
 	if ((input = open (source, O_RDONLY)) == -1) {
 		return -1;
 	}
-	if ((output = open (destination, O_RDWR | O_CREAT)) == -1) {
+	if ((output = open (destination, O_RDWR | O_CREAT, S_IWUSR)) == -1) {
 		close (input);
 		return -1;
+	}
+
+	if ((result = fstat (input, &fileinfo)) != 0) {
+		close (input);
+		close (output);
+		return result;
 	}
 
 	/* Here we use kernel-space copying for performance reasons */
@@ -657,14 +665,18 @@ int copyFile (const char* source, const char* destination) {
 #else
 	/* sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+ */
 	off_t		bytesCopied		= 0;
-	struct stat	fileinfo		= { 0 };
 
-	fstat (input, &fileinfo);
 	result = sendfile (output, input, &bytesCopied, fileinfo.st_size);
 #endif
 
 	close (input);
 	close (output);
+
+	if (result == 0) {
+		chmod (destination, fileinfo.st_mode);
+	} else {
+		unlink (destination);
+	}
 
 	return result;
 }

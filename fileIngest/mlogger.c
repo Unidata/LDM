@@ -1323,7 +1323,7 @@ int logMsg (LOGGER *pl, int visibility, int severity, const char *format, ...) {
 	sigset_t	mask;
 	sigset_t	orig_mask;
 	int		retval 		= SUCCESS;
-	char		*p		= pl->formatBuf;
+	char		*p;
 
 	if (pl == NULL) {
 		fprintf (stderr, "ERROR: %s - NULL logger provided\n", __FUNCTION__);
@@ -1335,6 +1335,7 @@ int logMsg (LOGGER *pl, int visibility, int severity, const char *format, ...) {
 		return ERROR;
 	}
 
+	p = pl->formatBuf;
 	visibility = (visibility < V_MIN) ? V_MIN : visibility;
 	visibility = (visibility > V_MAX) ? V_MAX : visibility;
 	severity = (severity < S_MIN) ? S_MIN : severity;
