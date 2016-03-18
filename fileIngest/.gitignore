@@ -5,4 +5,6 @@
 /Makefile.in
 /stdclib.h
 /mlogger.h
+/datelib.h
+/goesr_lib.h
 
