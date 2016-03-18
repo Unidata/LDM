@@ -30,10 +30,23 @@ CPPFLAGS		= \
 
 bin_PROGRAMS		= fileIngester
 
+EXTRA_DIST              = \
+	datelib.hin \
+	stdclib.hin \
+	goesr_lib.hin \
+	mlogger.hin
+
+BUILT_SOURCES		= \
+	datelib.h \
+	stdclib.h \
+	goesr_lib.h \
+	mlogger.h
+
 COMMON_SOURCES		= \
 	stdclib.c stdclib.h \
 	goesr_lib.c goesr_lib.h \
 	mlogger.c mlogger.h \
+	datelib.c datelib.h \
 	ldmProductQueue.c ldmProductQueue.h
 
 fileIngester_SOURCES		= fileIngester.c $(COMMON_SOURCES)
@@ -46,30 +59,34 @@ TAGS_FILES		= \
 .c.i:
 	$(COMPILE) -E $< >$@
 
-installcheck-local:
-	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
-	$(DESTDIR)$(bindir)/readnoaaport -l- -q /tmp/readnoaaport-test.pq \
-	    $(srcdir)/nwstgdump.data
-	rm /tmp/readnoaaport-test.pq
+.hin.h:
+	./extractDecls $*.hin $*.c >$@.tmp
+	mv -f $@.tmp $@
 
-check-local:		check-readnoaaport
-check-readnoaaport:	readnoaaport
-	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
-	./readnoaaport -nl- -q /tmp/readnoaaport-test.pq \
-	    $(srcdir)/nwstgdump.data
-	rm /tmp/readnoaaport-test.pq
+#installcheck-local:
+#	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+#	$(DESTDIR)$(bindir)/readnoaaport -l- -q /tmp/readnoaaport-test.pq \
+#	    $(srcdir)/nwstgdump.data
+#	rm /tmp/readnoaaport-test.pq
 
-root-ni-ck:
-	./noaaportIngester -b 3 -q /tmp/noaaportIngester-test.pq \
-	    <$(srcdir)/nwstgdump.data
+#check-local:		check-readnoaaport
+#check-readnoaaport:	readnoaaport
+#	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+#	./readnoaaport -nl- -q /tmp/readnoaaport-test.pq \
+#	    $(srcdir)/nwstgdump.data
+#	rm /tmp/readnoaaport-test.pq
 
-valgrind:		valgrind-readnoaaport
+#root-ni-ck:
+#	./noaaportIngester -b 3 -q /tmp/noaaportIngester-test.pq \
+#	    <$(srcdir)/nwstgdump.data
 
-valgrind-readnoaaport:		readnoaaport
-	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
-	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
-	    readnoaaport -l- -q /tmp/readnoaaport-test.pq nwstgdump.data
-	rm /tmp/readnoaaport-test.pq
+#valgrind:		valgrind-readnoaaport
+
+#valgrind-readnoaaport:		readnoaaport
+#	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+#	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
+#	    readnoaaport -l- -q /tmp/readnoaaport-test.pq nwstgdump.data
+#	rm /tmp/readnoaaport-test.pq
 
 sudo:
 if HAVE_SUDO
@@ -83,41 +100,41 @@ if HAVE_SU
 endif
 endif
 	
-valgrind-noaaportIngester:	noaaportIngester
-	pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-vg
-	rm /tmp/noaaportIngester-test.pq
+#valgrind-noaaportIngester:	noaaportIngester
+#	pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+#	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-vg
+#	rm /tmp/noaaportIngester-test.pq
 
-root-ni-vg:
-	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
-	    noaaportIngester -n -q /tmp/noaaportIngester-test.pq \
-		<$(srcdir)/nwstgdump.data
+#root-ni-vg:
+#	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
+#	    noaaportIngester -n -q /tmp/noaaportIngester-test.pq \
+#		<$(srcdir)/nwstgdump.data
 
-debug-readnoaaport:	readnoaaport
-	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
-	echo 'handle SIGCONT pass noprint nostop' >/tmp/readnoaaport.gdb
-	echo 'b 617' >>/tmp/readnoaaport.gdb
-	echo 'run -l- -q /tmp/readnoaaport-test.pq nwstgdump.data' \
-	    >>/tmp/readnoaaport.gdb
-	$(LIBTOOL) --mode=execute gdb -x /tmp/readnoaaport.gdb readnoaaport
-	rm /tmp/readnoaaport-test.pq /tmp/readnoaaport.gdb
+#debug-readnoaaport:	readnoaaport
+#	pqcreate -c -s 2m /tmp/readnoaaport-test.pq
+#	echo 'handle SIGCONT pass noprint nostop' >/tmp/readnoaaport.gdb
+#	echo 'b 617' >>/tmp/readnoaaport.gdb
+#	echo 'run -l- -q /tmp/readnoaaport-test.pq nwstgdump.data' \
+#	    >>/tmp/readnoaaport.gdb
+#	$(LIBTOOL) --mode=execute gdb -x /tmp/readnoaaport.gdb readnoaaport
+#	rm /tmp/readnoaaport-test.pq /tmp/readnoaaport.gdb
 
-debug-noaaportIngester:	noaaportIngester
-	pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-	echo 'handle SIGCONT pass noprint nostop' >/tmp/noaaportIngester.gdb
-	echo 'handle SIGTERM pass nostop' >>/tmp/noaaportIngester.gdb
-	echo 'run -q /tmp/noaaportIngester-test.pq -n -m 224.0.1.1' \
-	    >>/tmp/noaaportIngester.gdb
-	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-db
-	rm /tmp/noaaportIngester-test.pq /tmp/noaaportIngester.gdb
+#debug-noaaportIngester:	noaaportIngester
+#	pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
+#	echo 'handle SIGCONT pass noprint nostop' >/tmp/noaaportIngester.gdb
+#	echo 'handle SIGTERM pass nostop' >>/tmp/noaaportIngester.gdb
+#	echo 'run -q /tmp/noaaportIngester-test.pq -n -m 224.0.1.1' \
+#	    >>/tmp/noaaportIngester.gdb
+#	$(MAKE) $(AM_MAKEFLAGS) sudo TARGET=root-ni-db
+#	rm /tmp/noaaportIngester-test.pq /tmp/noaaportIngester.gdb
 
-root-ni-db:
-	$(LIBTOOL) --mode=execute gdb -x /tmp/noaaportIngester.gdb \
-	      noaaportIngester
+#root-ni-db:
+#	$(LIBTOOL) --mode=execute gdb -x /tmp/noaaportIngester.gdb \
+#	      noaaportIngester
 
 .PHONY:	\
-	install-html \
-	root-ni-ck \
-	root-ni-db \
-	root-ni-vg \
+#	install-html \
+#	root-ni-ck \
+#	root-ni-db \
+#	root-ni-vg \
 	sudo

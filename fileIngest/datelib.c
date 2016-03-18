@@ -18,10 +18,12 @@
  *
  ------------------------------------------------------------------------------ */
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE
+#endif
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
-// #define __USE_XOPEN /* glibc2 needs this */
-#include <time.h>
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
