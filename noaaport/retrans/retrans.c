@@ -683,23 +683,11 @@ int prod_retrans_get_addr(
 		return(ERROR);
 	}
 
-	if ((retrans_table_typ = GET_RETRANS_TABLE_TYP(channel_type)) >= 0) {
-		p_retrans_entry_info = &prod_retrans_table->entry_info[retrans_table_typ];
-		p_retrans_entry = (PROD_RETRANS_ENTRY *)
-			(((long)&p_retrans_entry_info->retrans_entry_base_offset) +
-			 	p_retrans_entry_info->retrans_entry_base_offset);
-	} else {
-		/* have invalid table type */
-		*in_p_retrans_entry_info = (PROD_RETRANS_ENTRY_INFO *)NULL;
-		*in_p_retrans_entry = (PROD_RETRANS_ENTRY *)NULL;
-		*in_retrans_table_typ = 0;
-		/* so ignore lookup */
-		log_error("%s invalid channel_typ=%d tbl[%d] ignore\n",
-			FNAME,
-			channel_type,
-			retrans_table_typ);
-		return(ERROR);
-	}
+	retrans_table_typ = 0;
+	p_retrans_entry_info = &prod_retrans_table->entry_info[retrans_table_typ];
+	p_retrans_entry = (PROD_RETRANS_ENTRY *)
+			(((long) &p_retrans_entry_info->retrans_entry_base_offset) +
+				  p_retrans_entry_info->retrans_entry_base_offset);
 
 	*in_p_retrans_entry_info = p_retrans_entry_info;
 	*in_p_retrans_entry = p_retrans_entry;
@@ -819,7 +807,7 @@ char *get_date_time(const  struct tm *p_tm, char *tz)
 			strftime (buf, sizeof (buf), "%c", p_tm);
 			*/
 			strftime (buf, sizeof (buf), "%m/%d/%Y %T", p_tm);
-			if(strcmp(tz, "GMT") || strcmp(tz, "UTC")) {
+			if (!strcmp(tz, "GMT") || !strcmp(tz, "UTC")) {
 				/* Skip the GMT or UTC label for time */
 			} else {
 				ptr = (char *)(buf + strlen(buf));
@@ -827,7 +815,7 @@ char *get_date_time(const  struct tm *p_tm, char *tz)
 			}
 		} else {
 			strftime (buf, sizeof (buf), "%m/%d/%Y %T %Z", p_tm);
-			if(strstr(buf, "GMT") || strstr(buf, "UTC")) {
+			if (!strstr(buf, "GMT") && !strstr(buf, "UTC")) {
 				/* Skip the GMT or UTC label for time */
 				strftime (buf, sizeof (buf), "%m/%d/%Y %T", p_tm);
 			}

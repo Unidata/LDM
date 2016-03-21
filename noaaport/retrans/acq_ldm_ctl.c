@@ -253,7 +253,7 @@ typedef struct		input {		/* user input options */
 	int		shutdown_flag;	/* operator shutdown acq flag */
 	int		NCF_only_flag;	/* sbn downlink flag */
 	int		kill_flag;	/* operator kill acq flag */
-	char	input_option[LEN_INPUT_OPTION];	/* operator input option string */
+	char	input_option[LEN_INPUT_OPTION+1];	/* operator input option string */
 }    INPUT;
 
 /**** prototypes ****/
@@ -1051,7 +1051,7 @@ cmd_line(
   	    printf("getopt returned %c\n", (char)c);
 	    switch(c) {
 		case 'i': {
-			strcpy(p_input->input_option,optarg);
+			strncpy(p_input->input_option,optarg, LEN_INPUT_OPTION);
 			break;
 		}
 		case 'k': {
@@ -1165,6 +1165,7 @@ cmd_line(
 		}
 		case '?': {
 			usage();
+			break;
 		}
 		default:
 		        break; 
