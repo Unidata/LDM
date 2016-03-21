@@ -218,6 +218,16 @@ valgrind-readnoaaport:		readnoaaport
 	    readnoaaport -l- -q /tmp/readnoaaport-test.pq nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
 
+if HAVE_CUNIT
+check_PROGRAMS			= frame_queue_test
+frame_queue_test_SOURCES	= frame_queue_test.c \
+				  frame_queue.c frame_queue.h
+frame_queue_test_LDADD		= $(LDADD) @LIBS_CUNIT@
+TESTS				= frame_queue_test
+valgrind-frame_queue:	frame_queue_test
+	$(LIBTOOL) --mode=execute valgrind --leak-check=yes frame_queue_test
+endif
+
 sudo:
 if HAVE_SUDO
 	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) $(TARGET) 2>/dev/tty
