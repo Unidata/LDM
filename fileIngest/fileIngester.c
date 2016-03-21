@@ -761,7 +761,7 @@ static void cmd_line (int argc, char **argv) {
 			break;
 
 		case 'd':
-			strcpy(SaveDir, optarg);
+			strncpy(SaveDir, optarg, MAX_PATH_LEN);
 			stripTrailingChar(SaveDir, '/');
 			break;
 
@@ -779,13 +779,13 @@ static void cmd_line (int argc, char **argv) {
 #endif
 
 		case 'f':
-			strcpy(FailDir, optarg);
+			strncpy(FailDir, optarg, MAX_PATH_LEN);
 			stripTrailingChar(FailDir, '/');
 			SaveFails = TRUE;
 			break;
 
 		case 'h':
-			strcpy(ParDir, optarg);
+			strncpy(ParDir, optarg, MAX_PATH_LEN);
 			break;
 
 		case 'i':
@@ -803,7 +803,7 @@ static void cmd_line (int argc, char **argv) {
 			break;
 
 		case 'L':
-			strcpy(LogPathBase, optarg);
+			strncpy(LogPathBase, optarg, MAX_PATH_LEN);
 			break;
 
 		case 'l':
@@ -811,7 +811,7 @@ static void cmd_line (int argc, char **argv) {
 			break;
 
 		case 'M':
-			strcpy(MessagePath, optarg);
+			strncpy(MessagePath, optarg, MAX_PATH_LEN);
 			break;
 
 		case 'n':
@@ -851,13 +851,13 @@ static void cmd_line (int argc, char **argv) {
 			break;
 
 		case 'p':
-			strcpy(InputSource, optarg);
+			strncpy(InputSource, optarg, MAX_PATH_LEN);
 			stripTrailingChar(InputSource, '/');
 			break;
 
 #ifdef LDM_SUPPORT
 			case 'q':
-			strcpy (pqfName, optarg);
+			strncpy (pqfName, optarg, MAX_PATH_LEN);
 			break;
 
 #endif
@@ -873,13 +873,13 @@ static void cmd_line (int argc, char **argv) {
 			break;
 
 		case 's':
-			strcpy(SentDir, optarg);
+			strncpy(SentDir, optarg, MAX_PATH_LEN);
 			stripTrailingChar(SentDir, '/');
 			SaveFiles = TRUE;
 			break;
 
 		case 't':
-			strcpy(PollFileSpec, optarg);
+			strncpy(PollFileSpec, optarg, MAX_FILENAME_LEN);
 			break;
 
 		case 'v':
@@ -2162,7 +2162,7 @@ int processProducts (FILE_LIST *fileList) {
 					}
 				}
 
-				strcpy (prodFullName, hashFileName);	/* Copy hash file name */
+				strncpy (prodFullName, hashFileName, MAX_FILENAME_LEN);	/* Copy hash file name */
 				removeExtension (prodFullName);		/* Now remove the extension to get the product file name */
 				removeExtension (pFileName);		/* Remove hash extension from globbed file name */
 				if (stat (prodFullName, &stat_buf) < 0) {
@@ -2258,7 +2258,7 @@ int processProducts (FILE_LIST *fileList) {
 				break;
 
 			case IN_ACQ_PIPE:
-				strcpy (prodFullName, flist[i].fptr);
+				strncpy (prodFullName, flist[i].fptr, MAX_FILENAME_LEN);
 				break;
 
 			case IN_GOESR:	/* Files will be product files */
@@ -2687,7 +2687,12 @@ int main (int argc, char **argv) {
 		return 1;
 	}
 
-	atexit (&atExitHandler);
+	if (atexit (&atExitHandler)) {
+		logMsg (eLog, V_ERROR, S_FATAL,
+			"atExitHandler could not be registered with atexit()");
+
+		return 1;
+	}
 
 	logMsg (eLog, V_INFO, S_STATUS,
 		"Start up parameters:");

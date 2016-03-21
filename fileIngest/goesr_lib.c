@@ -598,7 +598,7 @@ int goesrCmiFile2Wmo (char *goesrFileName, char *wmo_header) {
 
 	strncpy (fname, goesrFileName, MAX_STR_LEN);
 
-	if ((fname == NULL) || (strlen (fname) == 0)) {
+	if (strlen (fname) == 0) {
 		logMsg (eLog, V_ERROR, S_ERROR, "(%s) - File name is null or zero length", __FUNCTION__);
 		return 1;
 	}

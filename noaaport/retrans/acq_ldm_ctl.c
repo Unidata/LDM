@@ -1006,7 +1006,7 @@ acqctl_get_pid(
 	}
 
 	pclose(fp);
-	return last_pid;
+	return (int) last_pid;
 
 } /* end routine acqctl_get_pid */
 
@@ -1098,7 +1098,7 @@ cmd_line(
 			break;
 		}
 		case 'c': {
-			strcpy(input_string, optarg);
+			strncpy(input_string, optarg, 79);
 			printf(" input is %s\n", input_string);
 			/* strcpy(input_string, p_input->input_command); */
 			p_in_args = &input_string[0];

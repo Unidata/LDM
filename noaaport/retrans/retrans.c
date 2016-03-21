@@ -683,10 +683,8 @@ int prod_retrans_get_addr(
 		return(ERROR);
 	}
 
-	if((retrans_table_typ = 
-		GET_RETRANS_TABLE_TYP(channel_type)) >= 0) {
-		p_retrans_entry_info = 
-			&prod_retrans_table->entry_info[retrans_table_typ];
+	if ((retrans_table_typ = GET_RETRANS_TABLE_TYP(channel_type)) >= 0) {
+		p_retrans_entry_info = &prod_retrans_table->entry_info[retrans_table_typ];
 		p_retrans_entry = (PROD_RETRANS_ENTRY *)
 			(((long)&p_retrans_entry_info->retrans_entry_base_offset) +
 			 	p_retrans_entry_info->retrans_entry_base_offset);

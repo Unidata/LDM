@@ -401,7 +401,7 @@ time_t getFileLastStatus (const char *fname) {
  * -------------------------------------------------------------------------- */
 
 int splitFilenameExt (const char *fname, char **ext) {
-	if (!fname || !ext) {
+	if (!fname || !*ext) {
 		*ext = NULL;
 		return 1;
 	}
@@ -673,9 +673,9 @@ int copyFile (const char* source, const char* destination) {
 	close (output);
 
 	if (result == 0) {
-		chmod (destination, fileinfo.st_mode);
+		result = chmod (destination, fileinfo.st_mode);
 	} else {
-		unlink (destination);
+		result = unlink (destination);
 	}
 
 	return result;

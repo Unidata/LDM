@@ -288,10 +288,6 @@ void* pmStart(
 	buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
 	if (init_buff_hdr(buff_hdr) < 0) {
 	    log_error("Unable to initialize buffer header \n");
-	    if (acq_tbl) {
-		free(acq_tbl);
-	    }
-
 	    if (p_prod_retrans_table) {
 		free(p_prod_retrans_table);
 	    }
