@@ -133,8 +133,9 @@ endif
 #	      noaaportIngester
 
 .PHONY:	\
+	sudo
 #	install-html \
 #	root-ni-ck \
 #	root-ni-db \
 #	root-ni-vg \
-	sudo
+#	sudo
