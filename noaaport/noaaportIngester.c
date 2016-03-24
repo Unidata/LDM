@@ -1164,6 +1164,7 @@ runOuter(
 /**
  * Executes this program.
  *
+ * @param[in] npages          Size of the queue in pages.
  * @param[in] prodQueuePath   Pathname of product-queue.
  * @param[in] mcastSpec       Specification of multicast group or NULL if input
  *                            is from the standard input stream.

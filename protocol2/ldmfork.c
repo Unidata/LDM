@@ -35,8 +35,8 @@ pid_t ldmfork(void)
         pid = fork();
 
         if (0 == pid) {
+            log_clear(); // So child process starts with no queued messages
             /* Child process */
-            log_free(); // Because, effectively, a new thread
         }
         else if (-1 == pid) {
             /* System error */

@@ -1,4 +1,4 @@
-6.13.0.0	2016-03-10T14:17:20-0700
+6.13.0.0	2016-03-21T14:44:51-0600
     Logging:
         Re-wrote LDM logging to eliminate the dependency on the system logging
         daemon because:
@@ -54,6 +54,8 @@
 
         Modified the "printmetrics" command to use free(1) to obtain
         memory-usage metrics if they aren't obtained from top(1).
+        
+        Corrected "break" in loop to "last".
         
     LDM (ldmd(1)):
         Top-level Server:

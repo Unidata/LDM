@@ -1598,7 +1598,7 @@ static int inflateData(
 }
 
 /**
- * Returns the status of a frame commpression
+ * Returns the status of a frame compression
  *
  * This function is thread-compatible but not thread-safe.
  *

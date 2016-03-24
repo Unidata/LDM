@@ -558,8 +558,7 @@ int main(
                       (unsigned char) msg[9]) << 8) +
                       (unsigned char) msg[10]) << 8) + (unsigned char) msg[11];
 
-                if (log_is_enabled_debug)
-                    log_debug("received %d bytes", n);
+                log_debug("received %d bytes", n);
 
                 if (sbnnum <= lastnum) {
                     log_notice("Retrograde packet number: previous=%lu, "
