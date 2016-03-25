@@ -1147,6 +1147,7 @@ void log_roll_level(void)
     log_level = (log_level == LOG_LEVEL_DEBUG)
             ? LOG_LEVEL_ERROR
             : log_level - 1;
+    logi_set_level();
     logl_unlock();
 }
 
