@@ -13,18 +13,12 @@
 #ifndef NOAAPORT_NBS_TRANSPORT_H_
 #define NOAAPORT_NBS_TRANSPORT_H_
 
+#include "nbs_presentation.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
 typedef struct nbst nbst_t;
-
-typedef enum {
-    NBST_TYPE_GOES_EAST = 1,
-    NBST_TYPE_GOES_WEST = 2,
-    NBST_TYPE_NON_GOES_IMAGERY_DCP = 3,
-    NBST_TYPE_NCEP_NWSTG = 4,
-    NBST_TYPE_NEXRAD = 5
-} nbst_type_t;
 
 typedef enum {
     NBST_STATUS_SUCCESS = 0,
@@ -32,8 +26,9 @@ typedef enum {
     NBST_STATUS_NOMEM,
     NBST_STATUS_IO,
     NBST_STATUS_INIT,
-    NBST_STATUS_INVAL,
-    NBST_STATUS_UNSUPP
+    NBST_STATUS_UNSUPP,
+    NBST_STATUS_END,
+    NBST_STATUS_SYSTEM
 } nbst_status_t;
 
 #ifdef __cplusplus
@@ -41,8 +36,8 @@ typedef enum {
 #endif
 
 nbst_status_t nbst_start(
-        fq_t* const restrict    fq,
-        pp_t* const restrict    pp);
+        fq_t* const restrict   fq,
+        nbsp_t* const restrict nbsp);
 
 #ifdef __cplusplus
     }

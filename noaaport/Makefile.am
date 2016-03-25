@@ -77,9 +77,13 @@ dist_bin_SCRIPTS	= \
 	nplog_rotate
 
 COMMON_SOURCES          = \
+        decode.h \
         dvbs.h \
+        frame_queue.c frame_queue.h \
         grib2name.c \
         ldmProductQueue.c ldmProductQueue.h \
+        nbs_transport.c nbs_transport.h \
+        nbs_presentation.c nbs_presentation.h \
         nport.h \
 	png_io.c \
         process_prod.c \
