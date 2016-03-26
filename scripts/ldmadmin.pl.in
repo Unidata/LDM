@@ -743,6 +743,7 @@ sub start_ldm
                     $line_prefix = $prev_line_prefix;
 
                     # Rotate the ldm log files if appropriate
+                    system("mkdir -p `dirname $log_file`");
                     if ($log_rotate) {
                         #print "start_ldm(): Rotating log files\n";
                         if (new_log()) {
