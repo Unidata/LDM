@@ -107,6 +107,7 @@ exec_prodput(
             // Don't let the child process get any inappropriate privileges.
             endpriv();
 
+            log_info("Executing program \"%s\"", argv[0]);
             log_fini(); // ldmfork() called log_free()
             (void) execvp(argv[0], argv);
             (void)log_reinit();
