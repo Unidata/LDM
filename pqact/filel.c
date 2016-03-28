@@ -1565,8 +1565,7 @@ static int pipe_open(
 
                     if (STDIN_FILENO == pfd[0]) {
                         endpriv();
-                        if (log_is_enabled_info)
-                            log_info("Executing decoder \"%s\"", av[0]);
+                        log_info("Executing decoder \"%s\"", av[0]);
                         log_fini();
                         (void) execvp(av[0], &av[0]);
                         (void)log_reinit();
