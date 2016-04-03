@@ -6,8 +6,8 @@
  *   @file: nbs_transport.c
  * @author: Steven R. Emmerson
  *
- * This file implements the API for the Noaaport Broadcast System (NBS)
- * transport-layer.
+ * This file implements the transport-layer of the NOAAPort Broadcast System
+ * (NBS).
  */
 #include "config.h"
 
@@ -23,72 +23,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/// NBS frame header
-typedef struct fh {
-    uint_fast32_t hdlc_address;
-    uint_fast32_t hdlc_control;
-    uint_fast32_t sbn_version;
-    uint_fast32_t sbn_length;       ///< Length of frame header in bytes
-    uint_fast32_t sbn_control;
-    uint_fast32_t sbn_command;
-    uint_fast32_t sbn_data_stream;
-    uint_fast32_t sbn_source;
-    uint_fast32_t sbn_destination;
-    uint_fast32_t sbn_sequence_num;
-    uint_fast32_t sbn_run;
-    uint_fast32_t sbn_checksum;
-} fh_t;
-
-/// Product-definition header
-typedef struct pdh {
-    uint_fast32_t version;
-    uint_fast32_t pdh_length;
-    uint_fast32_t trans_type;
-    uint_fast32_t psh_length;
-    uint_fast32_t block_num;
-    uint_fast32_t data_offset;
-    uint_fast32_t data_size;
-    uint_fast32_t recs_per_block;
-    uint_fast32_t blocks_per_rec;
-    uint_fast32_t prod_sequence_num;
-} pdh_t;
-
-/// Product-specific header
-typedef struct psh {
-    uint_fast32_t opt_field_num;
-    uint_fast32_t opt_field_type;
-    uint_fast32_t opt_field_length;
-    uint_fast32_t version;
-    uint_fast32_t flag;
-    uint_fast32_t data_length;
-    uint_fast32_t bytes_per_rec;
-    uint_fast32_t prod_type;
-    uint_fast32_t prod_category;
-    int_fast32_t  prod_code;
-    uint_fast32_t num_fragments;
-    uint_fast32_t next_head_offset;
-    uint_fast32_t prod_seq_num;
-    uint_fast32_t prod_source;
-    uint_fast32_t prod_start_time;
-    uint_fast32_t ncf_recv_time;
-    uint_fast32_t ncf_send_time;
-    uint_fast32_t proc_cntl_flag;
-    uint_fast32_t put_buf_last;
-    uint_fast32_t put_buf_first;
-    uint_fast32_t expect_buf_num;
-    uint_fast32_t prod_run_id;
-} psh_t;
-
-typedef struct {
-    fh_t  fh;  ///< Frame header
-    pdh_t pdh; ///< Product-definition header
-    psh_t psh; ///< Product-specific header
-} headers_t;
-
-struct nbst {
-    fq_t*    fq;        ///< Queue from which to read NBS frames
-    nbsp_t*  nbsp;      ///< NBS presentation-layer object
-};
+#define NBST_MAX(a, b) ((a) >= (b) ? (a) : (b))
 
 /******************************************************************************
  * Utilities:
@@ -107,8 +42,24 @@ static void decode_version_and_length(
 }
 
 /******************************************************************************
- * Frame header:
+ * NBS Transport-Layer Frame Header:
  ******************************************************************************/
+
+/// NBS frame header
+typedef struct fh {
+    uint_fast32_t hdlc_address;
+    uint_fast32_t hdlc_control;
+    uint_fast32_t sbn_version;
+    uint_fast32_t sbn_length;       ///< Length of frame header in bytes
+    uint_fast32_t sbn_control;
+    uint_fast32_t sbn_command;
+    uint_fast32_t sbn_data_stream;
+    uint_fast32_t sbn_source;
+    uint_fast32_t sbn_destination;
+    uint_fast32_t sbn_sequence_num;
+    uint_fast32_t sbn_run;
+    uint_fast32_t sbn_checksum;
+} fh_t;
 
 /**
  * Decodes the frame-header in a buffer.
@@ -119,9 +70,9 @@ static void decode_version_and_length(
  * @param[out] nscanned           Number of bytes in `buf` scanned in order to
  *                                perform the decoding
  * @retval     0                  Success. `*fh` and `*nscanned` are set.
- * @retval     NBST_STATUS_INVAL  Invalid frame-header. `log_add()` called.
+ * @retval     NBS_STATUS_INVAL   Invalid frame-header. `log_add()` called.
  */
-static nbst_status_t fh_decode(
+static nbs_status_t fh_decode(
         fh_t* const restrict          fh,
         const uint8_t* const restrict buf,
         const unsigned                nbytes,
@@ -129,19 +80,19 @@ static nbst_status_t fh_decode(
 {
     if (nbytes < 16) {
         log_add("Available bytes for frame header less than 16: %u", nbytes);
-        return NBST_STATUS_INVAL;
+        return NBS_STATUS_INVAL;
     }
 
     fh->hdlc_address = buf[0];
     if (fh->hdlc_address != 255) {
         log_add("First byte of frame header not 255: %u", fh->hdlc_address);
-        return NBST_STATUS_INVAL;
+        return NBS_STATUS_INVAL;
     }
     fh->hdlc_control = buf[1];
     decode_version_and_length(&fh->sbn_version, &fh->sbn_length, buf[2]);
     if (fh->sbn_length != 16) {
         log_add("Length of frame header not 16 bytes: %u", fh->sbn_length);
-        return NBST_STATUS_INVAL;
+        return NBS_STATUS_INVAL;
     }
 
     fh->sbn_control = buf[3];
@@ -149,7 +100,7 @@ static nbst_status_t fh_decode(
     if (fh->sbn_command != SBN_CMD_DATA && fh->sbn_command != SBN_CMD_TIME &&
             fh->sbn_command != SBN_CMD_TEST) {
         log_add("Invalid frame header command: %u", fh->sbn_command);
-        return NBST_STATUS_INVAL;
+        return NBS_STATUS_INVAL;
     }
 
     fh->sbn_checksum = decode_uint16(buf+14);
@@ -158,7 +109,7 @@ static nbst_status_t fh_decode(
         cksum += buf[i];
     if (cksum != fh->sbn_checksum) {
         log_add("Invalid frame header checksum");
-        return NBST_STATUS_INVAL;
+        return NBS_STATUS_INVAL;
     }
 
     fh->sbn_data_stream = buf[5];
@@ -200,7 +151,7 @@ static bool fh_is_next(
                 curr->sbn_sequence_num == 0);
 }
 
-static void fh_verify_next_frame(
+static void fh_log_if_unexpected(
         const fh_t* const restrict prev,
         const fh_t* const restrict curr)
 {
@@ -212,8 +163,32 @@ static void fh_verify_next_frame(
 }
 
 /******************************************************************************
- * Product-definition header:
+ * NBS Transport-Layer Product-Definition Header:
  ******************************************************************************/
+
+/// Product-definition header
+typedef struct pdh {
+    uint_fast32_t version;
+    uint_fast32_t pdh_length;
+    /**
+     * Transfer-type bit-mask:
+     *   0x01  Start-of-product frame
+     *   0x02  Product transfer. Set in Start-of-product frame
+     *   0x04  End-of-product frame
+     *   0x08  Product error
+     *   0x10  Data-block is zlib(3) compressed
+     *   0x20  Product abort
+     *   0x40  ???
+     */
+    uint_fast32_t trans_type;
+    uint_fast32_t psh_length;
+    uint_fast32_t block_num;         ///< Data-block index. Start-frame is 0
+    uint_fast32_t data_offset;       ///< Not used in pmStart()
+    uint_fast32_t data_size;         ///< Size of data-block in bytes
+    uint_fast32_t recs_per_block;    ///< Canonical: last block may have fewer
+    uint_fast32_t blocks_per_rec;
+    uint_fast32_t prod_sequence_num;
+} pdh_t;
 
 /**
  * Decodes a product-definition header.
@@ -224,9 +199,9 @@ static void fh_verify_next_frame(
  * @param[out] nscanned           Number of bytes in `buf` scanned in order to
  *                                perform the decoding
  * @retval     0                  Success. `*pdh` and `nscanned` are set.
- * @retval     NBST_STATUS_INVAL  Invalid header. log_add() called.
+ * @retval     NBS_STATUS_INVAL  Invalid header. log_add() called.
  */
-static nbst_status_t pdh_decode(
+static nbs_status_t pdh_decode(
         pdh_t* const restrict         pdh,
         const uint8_t* const restrict buf,
         const unsigned                nbytes,
@@ -236,19 +211,19 @@ static nbst_status_t pdh_decode(
     if (nbytes < 16) {
         log_add("Available bytes for product-definition header less than 16: "
                 "%u", nbytes);
-        status = NBST_STATUS_INVAL;
+        status = NBS_STATUS_INVAL;
     }
     else {
         decode_version_and_length(&pdh->version, &pdh->pdh_length, buf[0]);
         if (pdh->version != 1) {
             log_add("Product-definition header version not 1: %u",
                     pdh->version);
-            status = NBST_STATUS_INVAL;
+            status = NBS_STATUS_INVAL;
         }
         else if (pdh->pdh_length < 16) {
             log_add("Product-definition header shorter than 16 bytes: %u",
                     (unsigned)pdh->pdh_length);
-            status = NBST_STATUS_INVAL;
+            status = NBS_STATUS_INVAL;
         }
         else {
             pdh->trans_type = buf[1];
@@ -269,7 +244,7 @@ static nbst_status_t pdh_decode(
                     log_add("Product-definition header longer than "
                             "available bytes: length=%u, avail=%u",
                             (unsigned)pdh->pdh_length, nbytes);
-                    status = NBST_STATUS_INVAL;
+                    status = NBS_STATUS_INVAL;
                 }
             }
             if (status == 0)
@@ -435,8 +410,34 @@ static inline unsigned pdh_get_block_num(
 }
 
 /******************************************************************************
- * Product-specific header:
+ * NBS Transport-Layer Product-Specific Header:
  ******************************************************************************/
+
+/// Product-specific header
+typedef struct psh {
+    uint_fast32_t opt_field_num;
+    uint_fast32_t opt_field_type;
+    uint_fast32_t opt_field_length;
+    uint_fast32_t version;
+    uint_fast32_t flag;
+    uint_fast32_t data_length;      ///< Length of AWIPS data-header in bytes
+    uint_fast32_t bytes_per_rec;    ///< In the data-blocks of NBS frames
+    uint_fast32_t prod_type;
+    uint_fast32_t prod_category;
+    int_fast32_t  prod_code;
+    uint_fast32_t num_fragments;    ///< Includes start-frame
+    uint_fast32_t next_head_offset;
+    uint_fast32_t prod_seq_num;
+    uint_fast32_t prod_source;
+    uint_fast32_t prod_start_time;
+    uint_fast32_t ncf_recv_time;
+    uint_fast32_t ncf_send_time;
+    uint_fast32_t proc_cntl_flag;
+    uint_fast32_t put_buf_last;
+    uint_fast32_t put_buf_first;
+    uint_fast32_t expect_buf_num;
+    uint_fast32_t prod_run_id;
+} psh_t;
 
 /**
  * Decodes a product-specific header.
@@ -447,9 +448,9 @@ static inline unsigned pdh_get_block_num(
  * @param[out] nscanned           Number of bytes in `buf` scanned in order to
  *                                perform the decoding
  * @retval     0                  Success. `*psh` and `*nscanned` are set.
- * @retval     NBST_STATUS_INVAL  Invalid header. log_add() called.
+ * @retval     NBS_STATUS_INVAL  Invalid header. log_add() called.
  */
-static nbst_status_t psh_decode(
+static nbs_status_t psh_decode(
         psh_t* const restrict         psh,
         const uint8_t* const restrict buf,
         const unsigned                nbytes,
@@ -458,7 +459,7 @@ static nbst_status_t psh_decode(
     int status;
     if (nbytes < 32) {
         log_add("Product-specific header shorter than 32: %u", nbytes);
-        status = NBST_STATUS_INVAL;
+        status = NBS_STATUS_INVAL;
     }
     else {
         psh->opt_field_num = buf[0];
@@ -467,7 +468,7 @@ static nbst_status_t psh_decode(
         if (psh->opt_field_length > nbytes) {
             log_add("Product-specific header longer than available data: "
                     "length=%u, avail=%u", psh->opt_field_length, nbytes);
-            status = NBST_STATUS_INVAL;
+            status = NBS_STATUS_INVAL;
         }
         else {
             psh->version = buf[4];
@@ -533,6 +534,18 @@ static inline unsigned psh_get_type(
 }
 
 /**
+ * Returns the number of bytes in a record.
+ *
+ * @param[in] pdh  Decoded product-definition header
+ * @return         Number of bytes in a record
+ */
+static inline unsigned psh_get_rec_len(
+        const psh_t* const psh)
+{
+    return psh->bytes_per_rec;
+}
+
+/**
  * Returns the number of fragments.
  *
  * @param[in] pdh  Decoded product-definition header
@@ -545,7 +558,7 @@ static inline unsigned psh_get_num_fragments(
 }
 
 /******************************************************************************
- * Combined product-definition and product-specific headers:
+ * Combined NBS Transport-Layer Product-Definition and Product-Specific Headers:
  ******************************************************************************/
 
 /**
@@ -564,10 +577,10 @@ static inline unsigned psh_get_num_fragments(
  *                                and `buf` doesn't contain an encoded
  *                                product-specific header (in which case
  *                                `*nscanned` is set to `0`).
- * @retval     NBST_STATUS_INVAL  Invalid product-specific header. log_add()
+ * @retval     NBS_STATUS_INVAL  Invalid product-specific header. log_add()
  *                                called.
  */
-static nbst_status_t pdhpsh_decode_psh(
+static nbs_status_t pdhpsh_decode_psh(
         psh_t* const restrict         psh,
         const pdh_t* const restrict   pdh,
         const uint8_t* const restrict buf,
@@ -583,7 +596,7 @@ static nbst_status_t pdhpsh_decode_psh(
         else {
             log_add("Start-of-product frame doesn't have product-specific "
                     "header");
-            status = NBST_STATUS_INVAL;
+            status = NBS_STATUS_INVAL;
         }
     }
     else {
@@ -600,7 +613,7 @@ static nbst_status_t pdhpsh_decode_psh(
                 log_add("Actual length of product-specific header doesn't "
                         "match expected length: actual=%u, expected=%u",
                         *nscanned, expected);
-                status = NBST_STATUS_INVAL;
+                status = NBS_STATUS_INVAL;
             }
         }
     }
@@ -619,9 +632,9 @@ static nbst_status_t pdhpsh_decode_psh(
  *                                perform the decoding
  * @return     0                  Success. `*pdh` and `*nscanned` are set.
  *                                `*psh` is set if appropriate.
- * @retval     NBST_STATUS_INVAL  Invalid header. `log_add()` called.
+ * @retval     NBS_STATUS_INVAL  Invalid header. `log_add()` called.
  */
-static nbst_status_t pdhpsh_decode(
+static nbs_status_t pdhpsh_decode(
         pdh_t* const restrict    pdh,
         psh_t* const restrict    psh,
         const uint8_t* restrict  buf,
@@ -642,11 +655,17 @@ static nbst_status_t pdhpsh_decode(
 }
 
 /******************************************************************************
- * Frame headers:
+ * Headers in an NBS Transport-Layer Frame (all of them):
  ******************************************************************************/
 
+typedef struct {
+    fh_t  fh;  ///< Frame header
+    pdh_t pdh; ///< Product-definition header
+    psh_t psh; ///< Product-specific header
+} headers_t;
+
 /**
- * Clears a products headers.
+ * Clears a product's headers.
  *
  * @param[in] headers  Product's headers to be cleared
  */
@@ -665,9 +684,9 @@ static inline void headers_clear(
  * @param[out] nscanned           Number of bytes in `buf` scanned in order to
  *                                perform the decoding
  * @retval     0                  Success. `*headers` and `*nscanned` are set.
- * @retval     NBST_STATUS_INVAL  Invalid header. `log_add()` called.
+ * @retval     NBS_STATUS_INVAL  Invalid header. `log_add()` called.
  */
-static nbst_status_t headers_decode(
+static nbs_status_t headers_decode(
         headers_t* const restrict headers,
         const uint8_t* restrict   buf,
         unsigned                  nbytes,
@@ -692,7 +711,7 @@ static nbst_status_t headers_decode(
                 log_add("Frame too small to contain data specified: "
                         "data_offset (%u) + data_size (%u) > frame_size (%u)",
                         data_offset, data_size, frame_size);
-                status = NBST_STATUS_INVAL;
+                status = NBS_STATUS_INVAL;
             }
             else {
                 *nscanned = data_offset;
@@ -714,11 +733,11 @@ static inline bool headers_is_sync_frame(
     return fh_is_sync_frame(&headers->fh);
 }
 
-static inline void headers_verify_next_frame(
+static inline void headers_log_if_unexpected(
         const headers_t* const restrict prev,
         const headers_t* const restrict curr)
 {
-    fh_verify_next_frame(&prev->fh, &curr->fh);
+    fh_log_if_unexpected(&prev->fh, &curr->fh);
 }
 
 static inline bool headers_is_same_product(
@@ -726,6 +745,12 @@ static inline bool headers_is_same_product(
         const headers_t* const restrict curr)
 {
     return pdh_is_same_product(&prev->pdh, &curr->pdh);
+}
+
+static inline bool headers_is_start(
+        const headers_t* const restrict headers)
+{
+    return pdh_is_product_start(&headers->pdh);
 }
 
 static inline bool headers_is_next(
@@ -751,103 +776,20 @@ static inline unsigned headers_get_product_type(
 }
 
 /******************************************************************************
- * Product data:
+ * NBS Transport Layer:
  ******************************************************************************/
 
-/**
- * Processes the product data in an NBS frame.
- *
- * @param[in] nbsp                NBS presentation-layer object
- * @param[in] headers             Decoded product headers
- * @param[in] buf                 Product data
- * @retval    0                   Success
- * @retval    NBST_STATUS_UNSUPP  Unsupported product. log_add() called.
- * @retval    NBST_STATUS_SYSTEM  System failure. log_add() called.
- */
-static nbst_status_t data_process(
-        nbsp_t* const restrict          nbsp,
-        const headers_t* const restrict headers,
-        const uint8_t* const restrict   buf)
-{
-    const unsigned     type = headers_get_product_type(headers);
-    const pdh_t* const pdh = &headers->pdh;
-    const psh_t* const psh = &headers->psh;
-    const unsigned     nbytes = pdh_get_data_size(pdh);
-    const bool         is_start = pdh_is_product_start(pdh);
-    const bool         is_end = pdh_is_product_end(pdh);
-    const bool         is_compressed = pdh_is_compressed(pdh);
-    switch (type) {
-        case PROD_TYPE_GOES_EAST:
-        case PROD_TYPE_GOES_WEST: {
-            int status = is_start
-                    ? nbsp_nesdis_start(nbsp, buf, nbytes,
-                            pdh_get_recs_per_block(pdh), is_compressed,
-                            psh_get_num_fragments(psh) * 5120)
-                    : nbsp_nesdis_block(nbsp, buf, nbytes,
-                            pdh_get_block_num(pdh), is_compressed);
-            return status ? NBST_STATUS_SYSTEM : 0;
-        }
-
-        case PROD_TYPE_NESDIS_NONGOES: // also PROD_TYPE_NOAAPORT_OPT
-            return nbsp_nongoes(nbsp, buf, nbytes, is_start, is_end,
-                    is_compressed) ? NBST_STATUS_SYSTEM : 0;
-
-        case PROD_TYPE_NWSTG:
-            return nbsp_nwstg(nbsp, buf, nbytes, is_start, is_end)
-                    ? NBST_STATUS_SYSTEM : 0;
-
-        case PROD_TYPE_NEXRAD:
-            return nbsp_nexrad(nbsp, buf, nbytes, is_start, is_end)
-                    ? NBST_STATUS_SYSTEM : 0;
-
-        default:
-            log_add("Unsupported product type: %u", type);
-            return NBST_STATUS_UNSUPP;
-    }
-}
-
-/******************************************************************************
- * NBS transport-layer frame
- ******************************************************************************/
-
-/**
- * Processes an NBS frame.
- *
- * @param[in]  prev_headers       Decoded product headers of previous frame
- * @param[in]  nbsp               NBS presentation-layer object
- * @param[in]  buf                Encoded NBS frame
- * @param[in]  nbytes             Number of bytes in `buf`
- * @param[out] curr_headers       Decoded product headers of `buf`
- * @retval     0                  Product data successfully passed to
- *                                presentation layer
- * @retval     NBST_STATUS_INVAL  Invalid header. log_add() called.
- * @retval     NBST_STATUS_UNSUPP Unsupported product type. log_add() called.
- * @retval     NBST_STATUS_SYSTEM System failure. log_add() called.
- */
-static nbst_status_t frame_process(
-        const headers_t* const restrict prev_headers,
-        nbsp_t* const restrict          nbsp,
-        const uint8_t* restrict         buf,
-        unsigned                        nbytes,
-        headers_t* const restrict       curr_headers)
-{
-    unsigned n;
-    int      status = headers_decode(curr_headers, buf, nbytes, &n);
-    if (status == 0) {
-        headers_verify_next_frame(prev_headers, curr_headers);
-        if (!headers_is_sync_frame(curr_headers)) {
-            if (!headers_is_same_product(prev_headers, curr_headers))
-                nbsp_end_product(nbsp);
-            buf += n;
-            status = data_process(nbsp, curr_headers, buf);
-        }
-    }
-    return status;
-}
-
-/******************************************************************************
- * NBS transport-layer object
- ******************************************************************************/
+struct nbst {
+    fq_t*     fq;              ///< Queue from which to read NBS frames
+    nbsp_t*   nbsp;            ///< NBS presentation-layer object
+    headers_t headers[2];      ///< Previous and current NBS transport-layer
+                               ///< headers
+    unsigned  curr_header;     ///< Current header index
+#define CURR_HEADER(nbst)    nbst->headers[nbst->curr_header]
+#define PREV_HEADER(nbst)    nbst->headers[!nbst->curr_header]
+#define SWITCH_HEADERS(nbst) (nbst->curr_header = !nbst->curr_header)
+    bool      start_processed; ///< Has the start of a product been processed?
+};
 
 /**
  * Returns a new NBS transport-layer object.
@@ -857,11 +799,11 @@ static nbst_status_t frame_process(
  *                                Will _not_ be freed by nbst_free().
  * @param[in]  nbsp               NBS Presentation-layer object
  * @retval     0                  Success. `*nbst` is set.
- * @retval     NBST_STATUS_INVAL  `fq == NULL || nbst == NULL`. log_add()
+ * @retval     NBS_STATUS_INVAL  `fq == NULL || nbst == NULL`. log_add()
  *                                called.
- * @retval     NBST_STATUS_NOMEM  Out of memory. log_add() called.
+ * @retval     NBS_STATUS_NOMEM  Out of memory. log_add() called.
  */
-static nbst_status_t nbst_new(
+static nbs_status_t nbst_new(
         nbst_t** const restrict nbst,
         fq_t* const restrict    fq,
         nbsp_t* const restrict  nbsp)
@@ -869,17 +811,21 @@ static nbst_status_t nbst_new(
     int status;
     if (nbst == NULL || fq == NULL || nbsp == NULL) {
         log_add("Invalid argument: nbst=%p, fq=%p, nbsp=%p", nbst, fq, nbsp);
-        status = NBST_STATUS_INVAL;
+        status = NBS_STATUS_INVAL;
     }
     else {
         nbst_t* const ptr = log_malloc(sizeof(nbst_t),
                 "NBS transport-layer object");
         if (ptr == NULL) {
-            status = NBST_STATUS_NOMEM;
+            status = NBS_STATUS_NOMEM;
         }
         else {
             ptr->fq = fq;
             ptr->nbsp = nbsp;
+            headers_clear(ptr->headers);
+            headers_clear(ptr->headers+1);
+            ptr->curr_header = 0;
+            ptr->start_processed = false;
             *nbst = ptr;
             status = 0;
         }
@@ -888,45 +834,167 @@ static nbst_status_t nbst_new(
 }
 
 /**
- * Runs the transport-layer. Reads frames from the frame queue and calls the
- * NBS presentation-layer object. Doesn't return until the frame queue is shut
- * down or an unrecoverable error occurs.
+ * Processes the data-block of an NBS frame.
+ *
+ * @param[in] nbst                NBS transport-layer object
+ * @param[in] headers             Decoded product headers
+ * @param[in] buf                 Product data
+ * @retval    0                   Success
+ * @retval    NBS_STATUS_INVAL   `headers` or `buf` is invalid. log_add()
+ *                                called.
+ * @retval    NBS_STATUS_LOGIC   Logic error. log_add() called.
+ * @retval    NBS_STATUS_UNSUPP  Unsupported product. log_add() called.
+ * @retval    NBS_STATUS_SYSTEM  System failure. log_add() called.
+ */
+static nbs_status_t nbst_process_data(
+        nbst_t* const restrict          nbst,
+        const uint8_t* const restrict   buf)
+{
+    nbsp_t* const          nbsp = nbst->nbsp;
+    const headers_t* const headers = &CURR_HEADER(nbst);
+    const unsigned         type = headers_get_product_type(headers);
+    const pdh_t* const     pdh = &headers->pdh;
+    const psh_t* const     psh = &headers->psh;
+    const unsigned         nbytes = pdh_get_data_size(pdh);
+    const bool             is_start = pdh_is_product_start(pdh);
+    const bool             is_end = pdh_is_product_end(pdh);
+    const bool             is_compressed = pdh_is_compressed(pdh);
+    switch (type) {
+        case PROD_TYPE_GOES_EAST:
+        case PROD_TYPE_GOES_WEST: {
+            int num_frag = psh_get_num_fragments(psh);
+            num_frag = NBST_MAX(num_frag, 1); // `num_frag` could be `-1`
+            int status = is_start
+                    ? nbsp_gini_start(nbsp, buf, nbytes, psh_get_rec_len(psh),
+                            pdh_get_recs_per_block(pdh), is_compressed,
+                            psh_get_type(psh),
+                            num_frag * 5120) // Canonical data-block max size
+                    : nbsp_gini_block(nbsp, buf, nbytes,
+                            pdh_get_block_num(pdh), is_compressed);
+            return (status == NBS_STATUS_INVAL || status == NBS_STATUS_LOGIC ||
+                    status == 0)
+                      ? status
+                      : NBS_STATUS_SYSTEM;
+        }
+
+        case PROD_TYPE_NESDIS_NONGOES: // also PROD_TYPE_NOAAPORT_OPT
+            return nbsp_nongoes(nbsp, buf, nbytes, is_start, is_end,
+                    is_compressed) ? NBS_STATUS_SYSTEM : 0;
+
+        case PROD_TYPE_NWSTG:
+            return nbsp_nwstg(nbsp, buf, nbytes, is_start, is_end)
+                    ? NBS_STATUS_SYSTEM : 0;
+
+        case PROD_TYPE_NEXRAD:
+            return nbsp_nexrad(nbsp, buf, nbytes, is_start, is_end)
+                    ? NBS_STATUS_SYSTEM : 0;
+
+        default:
+            log_add("Unsupported product type: %u", type);
+            return NBS_STATUS_UNSUPP;
+    }
+}
+
+/**
+ * Process a non-synchronization frame.
+ *
+ * @param[in,out] nbst         NBS transport-layer object
+ * @param[in]     buf          Rest of frame after NBS transport-layer headers
+ * @retval 0                   Success
+ * @retval NBS_STATUS_INVAL   `nbst->headers` or `buf` is invalid. log_add()
+ *                             called.
+ * @retval NBS_STATUS_LOGIC   Logic error. log_add() called.
+ * @retval NBS_STATUS_UNSUPP  Unsupported product. log_add() called.
+ * @retval NBS_STATUS_SYSTEM  System failure. log_add() called.
+ */
+static nbs_status_t nbst_process_non_sync_frame(
+        nbst_t* const restrict        nbst,
+        const uint8_t* const restrict buf)
+{
+    int status;
+    if (headers_is_same_product(&PREV_HEADER(nbst), &CURR_HEADER(nbst))) {
+        if (nbst->start_processed)
+            status = nbst_process_data(nbst, buf);
+    }
+    else {
+        nbsp_end_product(nbst->nbsp);
+        nbst->start_processed = false;
+        if (headers_is_start(&CURR_HEADER(nbst))) {
+            status = nbst_process_data(nbst, buf);
+            nbst->start_processed = status == 0;
+        }
+    }
+    SWITCH_HEADERS(nbst);
+    return status;
+}
+
+/**
+ * Processes an NBS frame.
+ *
+ * @param[in,out] nbsp                NBS transport-layer object
+ * @param[in]     buf                 Encoded NBS frame
+ * @param[in]     nbytes              Number of bytes in `buf`
+ * @retval        0                   Continue
+ * @retval        NBS_STATUS_INVAL   `buf` is invalid. log_add() called.
+ * @retval        NBS_STATUS_UNSUPP  Unsupported product type. log_add()
+ *                                    called.
+ * @retval        NBS_STATUS_LOGIC   Logic error. log_add() called.
+ * @retval        NBS_STATUS_SYSTEM  System failure. log_add() called.
+ */
+static nbs_status_t nbst_process_frame(
+        nbst_t* const restrict  nbst,
+        const uint8_t* restrict buf,
+        unsigned                nbytes)
+{
+    unsigned n;
+    int      status = headers_decode(&CURR_HEADER(nbst), buf, nbytes, &n);
+    if (status == 0) {
+        headers_log_if_unexpected(&PREV_HEADER(nbst), &CURR_HEADER(nbst));
+        if (!headers_is_sync_frame(&CURR_HEADER(nbst))) {
+            buf += n;
+            status = nbst_process_non_sync_frame(nbst, buf);
+        }
+    }
+    return status;
+}
+
+/**
+ * Runs the NBS transport-layer. Reads frames from the frame-queue and calls the
+ * NBS presentation-layer object with data-blocks. Doesn't return until the
+ * frame-queue is shut down or an unrecoverable error occurs.
  *
  * @param[in]  nbst                NBS transport-layer object
  * @retval     0                   Success. Frame-queue was shut down.
- * @retval     NBST_STATUS_SYSTEM  System failure. log_add() called.
+ * @retval     NBS_STATUS_LOGIC   Logic error. log_add() called.
+ * @retval     NBS_STATUS_SYSTEM  System failure. log_add() called.
  */
-static nbst_status_t nbst_run(
+static nbs_status_t nbst_run(
         nbst_t* const nbst)
 {
-    int       status = 0;
-    headers_t headers[2];
-    headers_clear(headers);
-    headers_clear(headers+1);
-    for (int i = 0; status == 0; i = !i) {
+    int status = 0;
+    while (status == 0) {
         uint8_t* buf;
         unsigned nbytes;
         status = fq_peek(nbst->fq, &buf, &nbytes);
-        if (status == 0) {
-            status = frame_process(headers+i, nbst->nbsp, buf, nbytes,
-                    headers+!i);
-            if (status == NBST_STATUS_INVAL || status == NBST_STATUS_UNSUPP) {
-                log_warning("Discarding frame");
+        if (status) {
+            status = NBS_STATUS_END;
+        }
+        else {
+            status = nbst_process_frame(nbst, buf, nbytes);
+            if (status == NBS_STATUS_INVAL || status == NBS_STATUS_UNSUPP) {
+                log_debug("Discarding frame");
                 status = 0;
-            }
-            else if (status) {
-                status = NBST_STATUS_SYSTEM;
             }
             (void)fq_remove(nbst->fq);
         }
     }
     nbsp_end_product(nbst->nbsp);
-    return status == NBST_STATUS_END ? 0 : status;
+    return status == NBS_STATUS_END ? 0 : status;
 }
 
 /**
  * Frees the resources associated with an NBS transport-layer object. Does _not_
- * free the associated frame-queue or product-processor.
+ * free the associated frame-queue or NBS presentation-layer object.
  *
  * @param[in]  nbst  NBS transport-layer object or `NULL`.
  */
@@ -937,25 +1005,21 @@ static void nbst_free(
         free(nbst);
 }
 
-/******************************************************************************
- * Public API
- ******************************************************************************/
-
 /**
- * Starts the transport-layer. Reads frames from the frame queue and calls the
- * product processor. Doesn't return until the frame-queue is shut down or an
- * unrecoverable error occurs.
+ * Executes the transport-layer. Reads frames from the frame-queue and calls the
+ * NBS presentation-layer with blocks of data. Doesn't return until the
+ * frame-queue is shut down or an unrecoverable error occurs.
  *
  * @param[in]  fq                 Frame-queue from which to read NBS frames.
  *                                Caller should free when it's no longer needed.
  * @param[in]  nbsp               NBS presentation-layer object. Caller should
  *                                free when it's no longer needed.
  * @retval     0                  Success. Frame-queue was shut down.
- * @retval     NBST_STATUS_INVAL  ` nbst == NULL || fq == NULL || nbsp == NULL`.
+ * @retval     NBS_STATUS_INVAL  ` nbst == NULL || fq == NULL || nbsp == NULL`.
  *                                log_add() called.
- * @retval     NBST_STATUS_NOMEM  Out of memory. log_add() called.
+ * @retval     NBS_STATUS_NOMEM  Out of memory. log_add() called.
  */
-nbst_status_t nbst_start(
+nbs_status_t nbst_execute(
         fq_t* const restrict   fq,
         nbsp_t* const restrict nbsp)
 {

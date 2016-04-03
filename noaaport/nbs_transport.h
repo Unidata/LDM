@@ -14,28 +14,18 @@
 #define NOAAPORT_NBS_TRANSPORT_H_
 
 #include "nbs_presentation.h"
+#include "nbs_status.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 
 typedef struct nbst nbst_t;
 
-typedef enum {
-    NBST_STATUS_SUCCESS = 0,
-    NBST_STATUS_INVAL,
-    NBST_STATUS_NOMEM,
-    NBST_STATUS_IO,
-    NBST_STATUS_INIT,
-    NBST_STATUS_UNSUPP,
-    NBST_STATUS_END,
-    NBST_STATUS_SYSTEM
-} nbst_status_t;
-
 #ifdef __cplusplus
     extern "C" {
 #endif
 
-nbst_status_t nbst_start(
+nbs_status_t nbst_execute(
         fq_t* const restrict   fq,
         nbsp_t* const restrict nbsp);
 

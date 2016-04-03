@@ -13,6 +13,8 @@
 #ifndef NOAAPORT_NBS_PRESENTATION_H_
 #define NOAAPORT_NBS_PRESENTATION_H_
 
+#include "nbs_application.h"
+#include "nbs_status.h"
 #include "pq.h"
 
 #include <stdbool.h>
@@ -20,44 +22,39 @@
 
 typedef struct nbsp nbsp_t;
 
-typedef enum {
-    NBSP_STATUS_SUCCESS = 0,
-    NBSP_STATUS_INVAL,
-    NBSP_STATUS_NOMEM,
-    NBSP_STATUS_SYSTEM,
-    NBSP_STATUS_STATE
-} nbsp_status_t;
-
 #ifdef __cplusplus
     extern "C" {
 #endif
 
-nbsp_status_t nbsp_new(
-        nbsp_t* restrict* const restrict nbsp);
+nbs_status_t nbsp_new(
+        nbsp_t* restrict* const restrict nbsp,
+        nbsa_t* const restrict           nbsa);
 
 /**
  * Ends the current product. Does nothing if there's no current product.
  * Idempotent.
  */
-void nbsp_end_product(
+nbs_status_t nbsp_end_product(
         nbsp_t* const nbsp);
 
-nbsp_status_t nbsp_nesdis_start(
+nbs_status_t nbsp_gini_start(
         nbsp_t* const restrict        nbsp,
         const uint8_t* const restrict buf,
         const unsigned                nbytes,
+        const unsigned                rec_len,
         const unsigned                recs_per_block,
         const bool                    is_compressed,
+        const int                     prod_transfer_type,
         size_t                        size_estimate);
 
-nbsp_status_t nbsp_nesdis_block(
+nbs_status_t nbsp_gini_block(
         nbsp_t* const restrict  nbsp,
         const uint8_t* restrict buf,
         const unsigned          nbytes,
         const unsigned          block_num,
         const bool              is_compressed);
 
-nbsp_status_t nbsp_nongoes(
+nbs_status_t nbsp_nongoes(
         nbsp_t* const restrict        nbsp,
         const uint8_t* const restrict buf,
         const unsigned                nbytes,
@@ -65,14 +62,14 @@ nbsp_status_t nbsp_nongoes(
         const bool                    is_end,
         const bool                    is_compressed);
 
-nbsp_status_t nbsp_nwstg(
+nbs_status_t nbsp_nwstg(
         nbsp_t* const restrict        nbsp,
         const uint8_t* const restrict buf,
         const unsigned                nbytes,
         const bool                    is_start,
         const bool                    is_end);
 
-nbsp_status_t nbsp_nexrad(
+nbs_status_t nbsp_nexrad(
         nbsp_t* const restrict        nbsp,
         const uint8_t* const restrict buf,
         const unsigned                nbytes,

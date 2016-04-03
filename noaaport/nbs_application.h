@@ -17,11 +17,9 @@
 #ifndef NOAAPORT_NBS_APPLICATION_H_
 #define NOAAPORT_NBS_APPLICATION_H_
 
-typedef enum {
-    NBSA_STATUS_SUCCESS = 0,
-    NBSA_STATUS_INVAL,
-    NBSA_STATUS_NOMEM
-} nbsa_status_t;
+#include "gini.h"
+#include "nbs_status.h"
+#include "pq.h"
 
 typedef struct nbsa nbsa_t;
 
@@ -29,9 +27,13 @@ typedef struct nbsa nbsa_t;
     extern "C" {
 #endif
 
-nbsa_status_t nbsa_new(
+nbs_status_t nbsa_new(
         nbsa_t** const restrict nbsa,
         pqueue* const restrict  pq);
+
+nbs_status_t nbsa_process_gini(
+        nbsa_t* const restrict       nbsa,
+        const gini_t* const restrict gini);
 
 void nbsa_free(
         nbsa_t* const nbsa);

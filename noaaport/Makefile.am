@@ -79,9 +79,12 @@ dist_bin_SCRIPTS	= \
 COMMON_SOURCES          = \
         decode.h \
         dvbs.h \
+        dynabuf.c dynabuf.h \
         frame_queue.c frame_queue.h \
+        gini.c gini.h \
         grib2name.c \
         ldmProductQueue.c ldmProductQueue.h \
+        nbs_application.c nbs_application.h \
         nbs_transport.c nbs_transport.h \
         nbs_presentation.c nbs_presentation.h \
         nport.h \
