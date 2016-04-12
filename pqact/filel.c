@@ -1573,8 +1573,7 @@ static int pipe_open(
                                 av[0], getenv("PATH"));
                     }
 
-                    log_fini();
-                    exit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE); // cleanup() calls log_fini()
                 } /* child process */
                 else {
                     /*

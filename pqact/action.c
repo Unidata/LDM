@@ -113,8 +113,7 @@ exec_prodput(
             (void)log_reinit();
             log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
                     getenv("PATH"));
-            log_fini();
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE); // cleanup() calls log_fini()
         }
         else {
             // Parent process.
