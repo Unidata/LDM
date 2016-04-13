@@ -122,12 +122,12 @@ char *av[] ;
         h_clnt stats[MAX_REMOTES + 1] ;
         h_clnt *sp ;
         unsigned        port = 0;
-        unsigned        logmask = LOG_UPTO(LOG_LEVEL_NOTICE);
 
         /*
          * initialize logger
          */
         (void)log_init(av[0]);
+        log_set_level(LOG_LEVEL_INFO);
 
         if(isatty(fileno(stderr)))
         {
