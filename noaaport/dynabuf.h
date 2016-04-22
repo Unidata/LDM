@@ -54,6 +54,10 @@ uint8_t* dynabuf_get_buf(
 size_t dynabuf_get_used(
         const dynabuf_t* const dynabuf);
 
+void dynabuf_set_used(
+        dynabuf_t* const dynabuf,
+        const size_t     nbytes);
+
 void dynabuf_clear(
         dynabuf_t* const dynabuf);
 

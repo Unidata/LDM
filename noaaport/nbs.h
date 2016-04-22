@@ -3,14 +3,16 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: nbs_status.h
+ *   @file: nbs.h
  * @author: Steven R. Emmerson
  *
- * This file declares the NOAAPort Broadcast System (NBS) status value.
+ * This file implements ...
  */
 
-#ifndef NOAAPORT_NBS_STATUS_H_
-#define NOAAPORT_NBS_STATUS_H_
+#ifndef NOAAPORT_NBS_H_
+#define NOAAPORT_NBS_H_
+
+#define NBS_MAX_FRAME_SIZE 10000
 
 typedef enum {
     NBS_STATUS_SUCCESS = 0,
@@ -19,6 +21,7 @@ typedef enum {
     NBS_STATUS_IO,
     NBS_STATUS_INIT,
     NBS_STATUS_UNSUPP,
+    NBS_STATUS_NOSTART,
     NBS_STATUS_END,
     NBS_STATUS_SYSTEM,
     NBS_STATUS_LOGIC
@@ -28,9 +31,8 @@ typedef enum {
     extern "C" {
 #endif
 
-
 #ifdef __cplusplus
     }
 #endif
 
-#endif /* NOAAPORT_NBS_STATUS_H_ */
+#endif /* NOAAPORT_NBS_H_ */

@@ -37,13 +37,13 @@ struct nbsa {
     pqueue*  pq;   ///< LDM product-queue
     product  prod; ///< LDM data-product
     MD5_CTX* md5;  ///< MD5 object
+    nbsp_t*  nbsp; ///< NBS presentation-layer object
 };
 
 static char hostname[HOSTNAMESIZE]; ///< Local host name
 
 static nbs_status_t nbsa_init(
-        nbsa_t* const restrict nbsa,
-        pqueue* const restrict pq)
+        nbsa_t* const restrict nbsa)
 {
     int status;
     if (hostname[0] == 0) {
@@ -51,7 +51,6 @@ static nbs_status_t nbsa_init(
         hostname[sizeof(hostname)-1] = 0;
     }
     log_assert(nbsa);
-    log_assert(pq);
     MD5_CTX* md5 = new_MD5_CTX();
     if (md5 == NULL) {
         log_add_syserr("Couldn't create new MD5 object");
@@ -59,7 +58,7 @@ static nbs_status_t nbsa_init(
     }
     else {
         nbsa->md5 = md5;
-        nbsa->pq = pq;
+        nbsa->pq = NULL;
         nbsa->prod.data = NULL;
         nbsa->prod.info.origin = hostname;
         nbsa->prod.info.seqno = 0;
@@ -72,19 +71,17 @@ static nbs_status_t nbsa_init(
  * Returns a new NBS application-layer object.
  *
  * @param[out] nbsa              NBS application-layer object
- * @param[in]  pq                LDM product-queue
  * @retval     0                 Success. `*nbsa` is set.
  * @retval     NBS_STATUS_INVAL  `nbsa == NULL || pq == NULL`. log_add()
  *                               called.
  * @retval     NBS_STATUS_NOMEM  Out of memory. log_add() called.
  */
 nbs_status_t nbsa_new(
-        nbsa_t** const restrict nbsa,
-        pqueue* const restrict  pq)
+        nbsa_t** const restrict nbsa)
 {
     int status;
-    if (pq == NULL) {
-        log_add("NULL argument: nbsa=%p, pq=%p", nbsa, pq);
+    if (nbsa == NULL) {
+        log_add("NULL argument: nbsa=%p", nbsa);
         status = NBS_STATUS_INVAL;
     }
     else {
@@ -94,7 +91,7 @@ nbs_status_t nbsa_new(
             status = NBS_STATUS_NOMEM;
         }
         else {
-            status = nbsa_init(obj, pq);
+            status = nbsa_init(obj);
             if (status) {
                 log_add("Couldn't initialize NBS application-layer object");
             }
@@ -102,6 +99,57 @@ nbs_status_t nbsa_new(
                 *nbsa = obj;
             }
         }
+    }
+    return status;
+}
+
+/**
+ * Sets the product-queue for receiving data-products.
+ *
+ * @param[out] nbsa              NBS application-layer object
+ * @param[in]  pq                LDM product-queue
+ * @retval     0                 Success
+ * @retval     NBS_STATUS_INVAL  `nbsa == NULL || pq == NULL`. log_add()
+ *                               called.
+ */
+nbs_status_t nbsa_set_pq(
+        nbsa_t* const restrict nbsa,
+        pqueue* const restrict pq)
+{
+    int status;
+    if (nbsa == NULL || pq == NULL) {
+        log_add("NULL argument: nbsa=%p, pq=%p", nbsa, pq);
+        status = NBS_STATUS_INVAL;
+    }
+    else {
+        nbsa->pq = pq;
+        status = 0;
+    }
+    return status;
+}
+
+/**
+ * Sets the NBS presentation-layer object of an NBS application-layer object for
+ * sending data-products.
+ *
+ * @param[out] nbsa              NBS application-layer object
+ * @param[in]  nbsp              NBS presentation-layer object
+ * @retval     0                 Success
+ * @retval     NBS_STATUS_INVAL  `nbsa == NULL || nbsp == NULL`. log_add()
+ *                               called.
+ */
+nbs_status_t nbsa_set_presentation_layer(
+        nbsa_t* const restrict nbsa,
+        nbsp_t* const restrict nbsp)
+{
+    int status;
+    if (nbsa == NULL || nbsp == NULL) {
+        log_add("NULL argument: nbsa=%p, nbsp=%p", nbsa, nbsp);
+        status = NBS_STATUS_INVAL;
+    }
+    else {
+        nbsa->nbsp = nbsp;
+        status = 0;
     }
     return status;
 }
@@ -116,7 +164,7 @@ nbs_status_t nbsa_new(
  * @retval NBS_STATUS_INVAL  `gini` is invalid. log_add() called.
  * @retval NBS_STATUS_SYSTEM System failure. log_add() called.
  */
-nbs_status_t nbsa_process_gini(
+nbs_status_t nbsa_recv_gini(
         nbsa_t* const restrict       nbsa,
         const gini_t* const restrict gini)
 {
@@ -157,7 +205,7 @@ nbs_status_t nbsa_process_gini(
             MD5Init(nbsa->md5);
             MD5Update(nbsa->md5, prod->data, info->sz);
             MD5Final (info->signature, nbsa->md5);
-            status = pq_insert(pq, prod);
+            status = pq_insert(nbsa->pq, prod);
             switch (status) {
             case 0:
                 log_info("Product inserted: %s", s_prod_info(NULL, 0, info,

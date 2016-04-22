@@ -18,6 +18,24 @@
     extern "C" {
 #endif
 
+static inline void encode_uint16(
+        uint8_t* const buf,
+        const uint16_t value)
+{
+    buf[0] = (value >> 8) & 0xff;
+    buf[1] = value & 0xff;
+}
+
+static inline void encode_uint32(
+        uint8_t* const buf,
+        uint32_t       value)
+{
+    buf[0] = (value >> 24) & 0xff;
+    buf[1] = (value >> 16) & 0xff;
+    buf[2] = (value >> 8) & 0xff;
+    buf[3] = value & 0xff;
+}
+
 static inline uint16_t decode_uint16(
         const uint8_t* const buf)
 {

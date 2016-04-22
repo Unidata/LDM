@@ -15,6 +15,7 @@
 #include "log.h"
 
 #include <stddef.h>
+#include <string.h>
 
 struct dynabuf {
     size_t   max;   ///< Current size of `buf`
@@ -40,6 +41,7 @@ static dynabuf_status_t dynabuf_init(
         status = DYNABUF_STATUS_NOMEM;
     }
     else {
+        (void)memset(dynabuf->buf, 0, nbytes); // To shut-up valgrind(1)
         dynabuf->max = nbytes;
         dynabuf->used = 0;
         status = 0;
@@ -184,7 +186,7 @@ dynabuf_status_t dynabuf_set(
  * @param[in] dynabuf  Dynamic buffer
  * @return             Bytes of `dynabuf`
  */
-inline uint8_t* dynabuf_get_buf(
+uint8_t* dynabuf_get_buf(
         dynabuf_t* const dynabuf)
 {
     return dynabuf->buf;
@@ -196,10 +198,23 @@ inline uint8_t* dynabuf_get_buf(
  * @param[in] dynabuf  Dynamic buffer
  * @return             Number of bytes used in `dynabuf`
  */
-inline size_t dynabuf_get_used(
+size_t dynabuf_get_used(
         const dynabuf_t* const dynabuf)
 {
     return dynabuf->used;
+}
+
+/**
+ * Sets the number of bytes used in a dynamic buffer.
+ *
+ * @param[out] dynabuf  Dynamic buffer
+ * @param[in]  nbytes   Number of bytes used in `dynabuf`
+ */
+void dynabuf_set_used(
+        dynabuf_t* const dynabuf,
+        const size_t     nbytes)
+{
+    dynabuf->used = nbytes;
 }
 
 /**
