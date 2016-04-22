@@ -155,7 +155,7 @@ hndlr_noop(int sig)
 #ifndef NDEBUG
         switch(sig) {
         case SIGALRM :
-                udebug("SIGALRM") ;
+                log_debug("SIGALRM") ;
                 return ;
         }
         udebug("hndlr_noop: unhandled signal: %d", sig) ;
