@@ -183,12 +183,12 @@ static void stream_log(
     struct tm tm;
     (void)gmtime_r(&now.tv_sec, &tm);
     (void)fprintf(stream_file,
-            "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%d] %s %s:%s():%d %s\n",
+            "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%d] %s %s:%d:%s() %s\n",
             tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
             tm.tm_sec, (long)now.tv_usec,
             ident, getpid(),
             level_to_string(level),
-            logl_basename(loc->file), loc->func, loc->line,
+            logl_basename(loc->file), loc->line, loc->func,
             msg);
 }
 
