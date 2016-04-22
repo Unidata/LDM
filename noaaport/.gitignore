@@ -42,3 +42,6 @@ acq_ldm_getshm
 acq_ldm_freeshm
 Grib2Decoder.h
 *.out
+/nbs_test
+/pipe_test
+/socketpair_test
