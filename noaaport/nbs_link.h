@@ -18,7 +18,30 @@ typedef struct nbsl nbsl_t;
 #include "nbs.h"
 #include "nbs_transport.h"
 
+#include <stddef.h>
+#include <stdint.h>
 #include <sys/uio.h>
+#include <time.h>
+
+typedef struct {
+    struct timespec first_io;       ///< Time first I/O returned
+    struct timespec last_io;        ///< Time last I/O returned
+    uint_least64_t  total_bytes;    ///< Total number of data-bytes seen
+    /*
+     * The unbiased estimate of the variance of frame sizes can be computed from
+     * the following three members via the formula
+     *     var = (sum_sqr_dev-(sum_dev*sum_dev)/total_frames)/(total_frames-1)
+     * Obviously, this is valid only if `total_frames > 1`.
+     */
+    uint_least64_t  total_frames;   ///< Total number of frames seen
+    double          sum_dev;        ///< Sum of frame-size deviations from first
+                                    ///< frame
+    double          sum_sqr_dev;    ///< Sum of square of frame-size deviations
+                                    ///< from first frame
+    unsigned        first_frame;    ///< Size of first frame seen in bytes
+    unsigned        smallest_frame; ///< Size of smallest frame seen in bytes
+    unsigned        largest_frame;  ///< Size of largest frame seen in bytes
+} nbsl_stats_t;
 
 #ifdef __cplusplus
     extern "C" {
@@ -86,6 +109,15 @@ nbs_status_t nbsl_send(
         nbsl_t* const restrict             nbsl,
         const struct iovec* const restrict iovec,
         const int                          iocnt);
+
+/**
+ * Returns statistics.
+ *
+ * @param[in] nbsl  NBS link-layer object
+ * @return          Statistics
+ */
+const nbsl_stats_t* nbsl_get_stats(
+        nbsl_t* const nbsl);
 
 void nbsl_free(
         nbsl_t* nbsl);

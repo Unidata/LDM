@@ -8,7 +8,8 @@
  *
  * This file implements the link-layer of the NOAAPort Broadcast System (NBS).
  * This layer transfers NBS frames between a transport-layer and a file
- * descriptor
+ * descriptor. An instance may be used to send frames or to received frames
+ * -- but not both.
  */
 
 #include "config.h"
@@ -24,16 +25,59 @@
 
 // NBS link-layer structure:
 struct nbsl {
-    int      fd_recv;    ///< File descriptor for receiving products
-    int      fd_send;    ///< File descriptor for sending products
-    uint8_t* frame_buf;  ///< Buffer for receiving frames
-    unsigned frame_size; ///< Capacity of `frame` in bytes
-    nbst_t*  nbst;       ///< NBS transport-layer object
+    nbsl_stats_t stats;      ///< Statistics
+    int          fd_recv;    ///< File descriptor for receiving products
+    int          fd_send;    ///< File descriptor for sending products
+    uint8_t*     frame_buf;  ///< Buffer for receiving frames
+    unsigned     frame_size; ///< Capacity of `frame` in bytes
+    nbst_t*      nbst;       ///< NBS transport-layer object
 };
 
 /**
- * Receives an NBS frame the file-descriptor of an NBS lin-layer object and
- * transfers it to the associated transport-layer object.
+ * Initializes an NBS link-layer statistics object.
+ *
+ * @param[in,out] stats  Statistics object
+ */
+static void stats_init(
+        nbsl_stats_t* const stats)
+{
+    stats->total_bytes = 0;
+    stats->total_frames = 0;
+    stats->largest_frame = 0;
+    stats->smallest_frame = ~stats->largest_frame;
+    stats->sum_dev = 0;
+    stats->sum_sqr_dev = 0;
+}
+
+/**
+ * Handles a successful I/O operation on the file descriptor of an NBS
+ * link-layer object.
+ *
+ * @param[in,out] stats   Statistics object
+ * @param[in]     nbytes  Number of bytes read
+ */
+static void stats_io_returned(
+        nbsl_stats_t* const stats,
+        const unsigned      nbytes)
+{
+    (void)clock_gettime(CLOCK_REALTIME, &stats->last_io);
+    if (stats->total_frames++ == 0) {
+        stats->first_frame = nbytes;
+        stats->first_io = stats->last_io;
+    }
+    stats->total_bytes += nbytes;
+    if (nbytes > stats->largest_frame)
+        stats->largest_frame = nbytes;
+    if (nbytes < stats->smallest_frame)
+        stats->smallest_frame = nbytes;
+    unsigned long dev = nbytes - stats->first_frame;
+    stats->sum_dev += dev;
+    stats->sum_sqr_dev += dev*dev;
+}
+
+/**
+ * Receives an NBS frame from the file-descriptor of an NBS link-layer object
+ * and transfers it to the associated transport-layer object.
  *
  * @pre                       `nbsl->fd_recv >= 0 && nbsl->nbst != NULL`
  * @param[in] nbsl            NBS link-layer object
@@ -45,8 +89,8 @@ struct nbsl {
 nbs_status_t nbsl_recv(
         nbsl_t* const nbsl)
 {
-    int status;
-    int nbytes = read(nbsl->fd_recv, nbsl->frame_buf, nbsl->frame_size);
+    int     status;
+    ssize_t nbytes = read(nbsl->fd_recv, nbsl->frame_buf, nbsl->frame_size);
     if (nbytes == 0 || (nbytes < 0 && errno == EBADF)) {
         status = NBS_STATUS_END;
     }
@@ -55,8 +99,9 @@ nbs_status_t nbsl_recv(
         status = NBS_STATUS_SYSTEM;
     }
     else {
+        stats_io_returned(&nbsl->stats, nbytes);
         static unsigned long iframe;
-        log_debug("Read %d-byte frame %lu", nbytes, iframe++);
+        log_debug("Read %zd-byte frame %lu", nbytes, iframe++);
         status = nbst_recv(nbsl->nbst, nbsl->frame_buf, nbytes);
         if (status == NBS_STATUS_INVAL || status == NBS_STATUS_UNSUPP ||
                 status == NBS_STATUS_NOSTART) {
@@ -93,6 +138,7 @@ nbs_status_t nbsl_new(
             status = NBS_STATUS_NOMEM;
         }
         else {
+            stats_init(&obj->stats);
             obj->nbst = NULL;
             obj->fd_recv = -1;
             obj->fd_send = -1;
@@ -258,6 +304,7 @@ nbs_status_t nbsl_send(
         log_debug("Writing %zd-byte frame %lu", nbytes, iframe++);
         status = writev(nbsl->fd_send, iovec, iocnt);
         if (status == nbytes) {
+            stats_io_returned(&nbsl->stats, nbytes);
             status = 0;
         }
         else {
@@ -273,6 +320,18 @@ nbs_status_t nbsl_send(
         }
     }
     return status;
+}
+
+/**
+ * Returns statistics.
+ *
+ * @param[in] nbsl  NBS link-layer object
+ * @return          Statistics
+ */
+const nbsl_stats_t* nbsl_get_stats(
+        nbsl_t* const nbsl)
+{
+    return &nbsl->stats;
 }
 
 /**
