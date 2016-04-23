@@ -158,7 +158,7 @@ hndlr_noop(int sig)
                 log_debug("SIGALRM") ;
                 return ;
         }
-        udebug("hndlr_noop: unhandled signal: %d", sig) ;
+        log_debug("hndlr_noop: unhandled signal: %d", sig) ;
 #endif
         /* nothing to do, just wake up */
         return;
