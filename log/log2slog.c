@@ -386,9 +386,8 @@ int logi_reinit(void)
 }
 
 /**
- * Enables logging down to a given level. Should be called after logi_init().
- *
- * @param[in] level  The lowest level through which logging should occur.
+ * Enables logging down to the level given by `log::log_level`. Should be called
+ * after logi_init().
  */
 void logi_set_level(void)
 {
