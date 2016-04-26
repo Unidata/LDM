@@ -1,3 +1,9 @@
+6.13.0.1
+    nbs_ingest(1):
+        First crack at a replacement for the hard-to-maintain code of
+        noaaportIngester(1). Even if it works, it can only handle GINI
+        products. Also, doesn't do retransmission requests yet.
+
 6.13.0.0	2016-03-25T13:54:29-0600
     Logging:
         Re-wrote LDM logging to eliminate the dependency on the system logging
