@@ -69,13 +69,26 @@ if WANT_RETRANS
     DEFS                += -DRETRANS_SUPPORT
 endif 
 
-bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester
+bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester \
+                          nbs_ingest
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
 	dvbs_nwstg2 \
 	dvbs_oconus \
 	nplog_rotate
+	
+nbs_ingest_SOURCES	= nbs_ingest.c \
+                          nbs.h \
+                          nbs_link_filedes.c nbs_link.h \
+                          nbs_transport.c nbs_transport.h \
+                          nbs_presentation.c nbs_presentation.h \
+                          nbs_application.c nbs_application.h \
+                          nbs_stack.c nbs_stack.h \
+                          noaaport_socket.c noaaport_socket.h \
+                          decode.h \
+                          gini.c gini.h \
+                          dynabuf.c dynabuf.h
 
 COMMON_SOURCES          = \
         decode.h \
@@ -84,10 +97,6 @@ COMMON_SOURCES          = \
         gini.c gini.h \
         grib2name.c \
         ldmProductQueue.c ldmProductQueue.h \
-        nbs_application.c nbs_application.h \
-        nbs_link_filedes.c nbs_link.h \
-        nbs_presentation.c nbs_presentation.h \
-        nbs_transport.c nbs_transport.h \
         nport.h \
 	png_io.c \
         process_prod.c \

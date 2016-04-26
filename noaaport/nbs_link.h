@@ -113,11 +113,12 @@ nbs_status_t nbsl_send(
 /**
  * Returns statistics.
  *
- * @param[in] nbsl  NBS link-layer object
- * @return          Statistics
+ * @param[in]  nbsl   NBS link-layer object
+ * @param[out] stats  Statistics
  */
-const nbsl_stats_t* nbsl_get_stats(
-        nbsl_t* const nbsl);
+void nbsl_get_stats(
+        const nbsl_t* const restrict nbsl,
+        nbsl_stats_t* const restrict stats);
 
 void nbsl_free(
         nbsl_t* nbsl);

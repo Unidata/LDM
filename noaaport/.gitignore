@@ -45,3 +45,4 @@ Grib2Decoder.h
 /nbs_test
 /pipe_test
 /socketpair_test
+/nbs_ingest

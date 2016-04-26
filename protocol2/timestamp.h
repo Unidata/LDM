@@ -32,6 +32,9 @@ extern const struct timeval TS_ENDT; /* the end of time */
 	((tv).tv_sec cmp (uv).tv_sec || (\
 	 (tv).tv_sec == (uv).tv_sec && (tv).tv_usec cmp (uv).tv_usec))
 
+#define TIMEVAL_FORMAT_TIME 28 // Includes terminating NUL
+#define TIMEVAL_FORMAT_DURATION (20+20) // Fixed number + num_digits(long long)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -108,6 +111,59 @@ int
 tsParse(
     const char* const	string,
     timestampt* const	timestamp);
+
+/**
+ * Returns the number of seconds that correspond to a time-value as a double.
+ *
+ * @param[in] timeval  Time-value
+ * @return             Number of seconds corresponding to `timeval`
+ */
+double timeval_as_seconds(
+        struct timeval* timeval);
+
+/**
+ * Initializes a time-value from a time-specification. The intialized value is
+ * the closest one to the time-specification.
+ *
+ * @param[out] timeval   Time-value
+ * @param[in]  timespec  Time-specification
+ * @return               `timeval`
+ */
+struct timeval* timeval_init_from_timespec(
+        struct timeval* const        timeval,
+        const struct timespec* const timespec);
+
+struct timeval* timeval_init_from_difference(
+        struct timeval* const       duration,
+        const struct timeval* const after,
+        const struct timeval* const before);
+
+/**
+ * Formats a time-value as "<YYYY>-<MM>-<DD>T<hh>:<mm>:<ss>.<uuuuuu>Z".
+ *
+ * @param[out] buf      Buffer to hold formatted string. It is the caller's
+ *                      responsibility to ensure that the buffer can contain
+ *                      at least `TIMEVAL_FORMAT_TIME` bytes.
+ * @param[in]  timeval  Time-value to be formatted
+ * @retval     NULL     `timeval` couldn't be formatted
+ * @return              `buf`
+ */
+char* timeval_format_time(
+        char* const                 buf,
+        const struct timeval* const timeval);
+
+/**
+ * Formats a duration as "P[<days>D]T[<hh>H][<mm>M]<ss>.<uuuuuu>S".
+ *
+ * @param[out] buf       Buffer to hold formatted duration. It is the caller's
+ *                       responsibility to ensure that it can contain at least
+ *                       `TIMEVAL_FORMAT_DURATION` bytes.
+ * @param[in]  duration  Duration to be formatted
+ * @return     `buf`
+ */
+char* timeval_format_duration(
+        char*                       buf,
+        const struct timeval* const duration);
 
 #ifdef __cplusplus
 }
