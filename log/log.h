@@ -113,8 +113,8 @@ int log_reinit(void);
 void log_refresh(void);
 
 /**
- * Finalizes the logging module. Should be called eventually after
- * log_init(), after which no more logging should occur.
+ * Finalizes the logging module. Should be called eventually after log_init(),
+ * after which no more logging should occur.
  */
 #define log_fini() do {\
     LOG_LOC_DECL(loc);\
