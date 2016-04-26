@@ -112,10 +112,7 @@ static bool decode_command_line(
 }
 
 /**
- * Prints a LOG_LEVEL_INFO usage message after temporarily setting the logging
- * level to that level.
- *
- * @param[in] progname  Name of program
+ * Prints a usage message.
  */
 static void print_usage(void)
 {
@@ -505,21 +502,21 @@ static bool execute()
  * inserts the data-products into an LDM product-queue.
  *
  * Usage:
- *     nbs_ingest [-l <em>log</em>] [-v|-x] [-q <em>queue</em>] [-I <em>iface</em>] mcast_ip_addr
+ *     nbs_ingest [-l <em>log</em>] [-v|-x] [-q <em>queue</em>] [-I <em>iface</em>] <em>mcast_ip_addr</em>
  *
  * Where:
  * <dl>
  *      <dt>-I <em>iface</em></dt>
  *      <dd>Listen for multicast packets on the interface whose IP address is
- *      `iface`. Default is the system's default multicast interface.</dd>
+ *      <em>iface</em>. Default is to listen on all interfaces.</dd>
  *
  *      <dt>-l <em>log</em></dt>
- *      <dd>Log to file `log`. The default is to use the standard LDM log file
+ *      <dd>Log to file <em>log</em>. The default is to use the standard LDM log file
  *      if the current process is a daemon; otherwise, the standard error
  *      stream is used.</dd>
  *
  *      <dt>-q <em>queue</em></dt>
- *      <dd>Use `queue` as the pathname of the LDM product-queue. The default
+ *      <dd>Use <em>queue</em> as the pathname of the LDM product-queue. The default
  *      is to use the default LDM pathname of the product-queue.</dd>
  *
  *      <dt>-v</dt>
@@ -528,8 +525,8 @@ static bool execute()
  *      <dt>-x</dt>
  *      <dd>Log messages of level DEBUG and higher priority.</dd>
  *
- *      <dt>mcast_ip_addr</dt>
- *      <dd>Receive NBS packets from IP multicast group `mcast_ip_addr`.</dd>
+ *      <dt><em>mcast_ip_addr</em></dt>
+ *      <dd>Receive NBS packets from IP multicast group <em>mcast_ip_addr</em>.</dd>
  * </dl>
  *
  * If neither `-v`, nor `-x` is specified, then logging will be restricted to
@@ -543,8 +540,8 @@ int main(
         char* av[])
 {
     // Done first in case something happens that needs to be reported.
-   progname = basename(av[0]);
-   (void)log_init(progname);
+    progname = basename(av[0]);
+    (void)log_init(progname);
 
     int status = EXIT_FAILURE;
     if (!decode_command_line(ac, av)) {
