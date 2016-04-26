@@ -1,9 +1,9 @@
 /**
  * Copyright 2016 University Corporation for Atmospheric Research. All rights
- * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * reserved. See the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: ...
+ *   @file: nbs_ingest.c
  * @author: Steven R. Emmerson
  *
  * This program reads a NOAAPORT data stream, creates LDM data-products from the
@@ -32,29 +32,39 @@
 #include <timestamp.h>
 #include <unistd.h>
 
-static char*                 progname;           ///< Name of program
-static nbsa_t*               nbsa;               ///< NBS application-layer
-static nbsl_t*               nbsl;               ///< NBS link-layer
-static nbss_t*               nbss;               ///< NBS protocol stack
-static pthread_mutex_t       mutex;              ///< For statistics thread
-static pthread_cond_t        cond = PTHREAD_COND_INITIALIZER; ///< For `mutex`
-static volatile sig_atomic_t stats_thread_flag;  ///< Statistics thread flag
-static pthread_t             stats_thread;       ///< Statistics thread
-static const char*           mcast_ip_addr;      ///< NBS Multicast IP address
-static const char*           iface_ip_addr;      ///< NBS interface
-static int                   sock = -1;          ///< NBS socket
+/**
+ * Values for signaling the statistics thread.
+ */
+typedef enum {
+    STATS_THREAD_WAIT = 0,
+    STATS_THREAD_PRINT,
+    STATS_THREAD_TERMINATE
+} stats_thread_flag_t;
+
+static char*               progname;         ///< Name of program
+static nbsa_t*             nbsa;             ///< NBS application-layer
+static nbsl_t*             nbsl;             ///< NBS link-layer
+static nbss_t*             nbss;             ///< NBS protocol stack
+static pthread_mutex_t     mutex;            ///< For statistics thread
+static pthread_cond_t      cond =
+        PTHREAD_COND_INITIALIZER;            ///< For statistics thread
+static stats_thread_flag_t stats_thread_flag;///< Statistics thread flag
+static pthread_t           stats_thread;     ///< Statistics thread
+static const char*         mcast_ip_addr;    ///< NBS multicast IP address
+static const char*         iface_ip_addr;    ///< NBS interface
+static int                 sock = -1;        ///< NBS socket
 
 /**
  * Decodes this program's command-line.
  *
- * @param[in] ac  Number of argument
+ * @param[in] ac  Number of arguments
  * @param[in] av  Arguments
  * @retval true   Success
  * @retval false  Failure. log_add() called.
  */
 static bool decode_command_line(
-        int   ac,
-        char* av[])
+        int   argc,
+        char* argv[])
 {
     extern int   optind;
     extern int   opterr;
@@ -65,7 +75,7 @@ static bool decode_command_line(
     // Error messages are being explicitly handled
     opterr = 0;
 
-    while ((ch = getopt(ac, av, ":f:l:q:vx:")) != -1) {
+    while ((ch = getopt(argc, argv, ":f:l:q:vx:")) != -1) {
         switch (ch) {
         case 'I':
             iface_ip_addr = optarg;
@@ -95,14 +105,14 @@ static bool decode_command_line(
     }
 
     if (success) {
-        if (optind == ac) {
+        if (optind == argc) {
             log_add("Multicast group IP address not specified");
             success = false;
         }
         else {
-            mcast_ip_addr = av[optind++];
-            if (optind < ac) {
-                log_add("Extraneous operand \"%s\"", av[optind]);
+            mcast_ip_addr = argv[optind++];
+            if (optind < argc) {
+                log_add("Extraneous operand \"%s\"", argv[optind]);
                 success = false;
             }
         }
@@ -138,8 +148,6 @@ static void print_usage(void)
 
 /**
  * Prints input statistics.
- *
- * @param[in] nbsl  NBS link-layer
  */
 static void print_stats(void)
 {
@@ -260,15 +268,6 @@ static void print_stats(void)
 }
 
 /**
- * Values for signaling the statistics thread.
- */
-typedef enum {
-    STATS_THREAD_WAIT = 0,
-    STATS_THREAD_PRINT,
-    STATS_THREAD_TERMINATE
-} statsThread_signal_t;
-
-/**
  * Start function for the statistics thread. Waits on condition variable `cond`.
  * Action taken depends on value of `stats_thread_flag`.
  *
@@ -286,7 +285,7 @@ static void* stats_thread_start(
     int status = pthread_sigmask(SIG_BLOCK, &mask, NULL);
     log_assert(status == 0);
 
-    status = pthread_mutex_lock(&mutex);
+    status = mutex_lock(&mutex);
     log_assert(status == 0);
     for (;;) {
         while (stats_thread_flag == STATS_THREAD_WAIT) {
@@ -300,7 +299,7 @@ static void* stats_thread_start(
         }
         break;
     }
-    status = pthread_mutex_unlock(&mutex);
+    status = mutex_unlock(&mutex);
     log_assert(status == 0);
 
     log_free();
@@ -318,13 +317,13 @@ static void* stats_thread_start(
  *                     - STATS_THREAD_TERMINATE
  */
 static void signal_stats_thread(
-        const statsThread_signal_t value)
+        const stats_thread_flag_t value)
 {
-    int status = pthread_mutex_lock(&mutex);
+    int status = mutex_lock(&mutex);
     log_assert(status == 0);
     stats_thread_flag = value;
     (void)pthread_cond_signal(&cond);
-    status = pthread_mutex_unlock(&mutex);
+    status = mutex_unlock(&mutex);
     log_assert(status == 0);
 }
 
@@ -390,7 +389,7 @@ static int open_pq(
         log_add_errno(status, NULL);
     }
     else if (status) {
-        log_add("Product-queue is corrupt");
+        log_add("Product-queue \"%s\" is corrupt or doesn't exist", pathname);
     }
     return status;
 }
@@ -436,7 +435,7 @@ static int init_receiving_nbs_stack(
                 if (status)
                     nbsl_free(nbsl);
             } // `nbsl` created
-        } // `pq` set in `nbsa`
+        }
         if (status)
             nbsa_free(nbsa);
     } // `nbsa` created
@@ -483,7 +482,7 @@ static bool init(void)
                 else {
                     stats_thread_flag = STATS_THREAD_WAIT;
                     install_signal_handlers();
-                } // Receiving NBS stack initialized
+                }
                 if (status)
                     (void)close(sock);
             } // `sock` open
@@ -524,6 +523,7 @@ static bool execute()
     }
     else {
         status = nbss_receive(nbss);
+        // Harmless if already terminated:
         signal_stats_thread(STATS_THREAD_TERMINATE);
         (void)pthread_join(stats_thread, NULL);
     }
@@ -550,7 +550,7 @@ static bool execute()
  *
  *      <dt>-q <em>queue</em></dt>
  *      <dd>Use <em>queue</em> as the pathname of the LDM product-queue. The default
- *      is to use the default LDM pathname of the product-queue.</dd>
+ *      is the default LDM product-queue.</dd>
  *
  *      <dt>-v</dt>
  *      <dd>Log messages of level INFO and higher priority.</dd>
@@ -565,6 +565,8 @@ static bool execute()
  * If neither `-v`, nor `-x` is specified, then logging will be restricted to
  * levels ERROR, WARN, and NOTE.
  *
+ * A `SIGUSR1` causes this program to log input statistics.
+ *
  * @retval 0 if successful.
  * @retval 1 if an error occurred. At least one error-message will be logged.
  */
@@ -575,6 +577,7 @@ int main(
     // Done first in case something happens that needs to be reported.
     progname = basename(av[0]);
     (void)log_init(progname);
+    log_notice("Starting up");
 
     int status = EXIT_FAILURE;
     if (!decode_command_line(ac, av)) {
@@ -595,6 +598,7 @@ int main(
         fini();
     }
 
+    log_notice("Exiting");
     log_fini();
     return status;
 }
