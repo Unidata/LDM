@@ -143,8 +143,8 @@ static void syslog_log(
         const log_loc_t* restrict loc,
         const char* restrict      msg)
 {
-    syslog(logl_level_to_priority(level), "%s:%s():%d %s",
-            logl_basename(loc->file), loc->func, loc->line, msg);
+    syslog(logl_level_to_priority(level), "%s:%d:%s() %s",
+            logl_basename(loc->file), loc->line, loc->func, msg);
 }
 
 /**
