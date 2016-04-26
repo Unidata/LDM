@@ -149,7 +149,7 @@ pq_create(const char *path, mode_t mode,
  * @param[out] pqp         Memory location to receive pointer to product-queue
  *                         structure.
  * @retval     0           Success. *pqp set.
- * @retval     EACCESS     Permission denied. pflags doesn't contain PQ_READONLY
+ * @retval     EACCES      Permission denied. pflags doesn't contain PQ_READONLY
  *                         and the product-queue is already open by the maximum
  *                         number of writers.
  * @retval     PQ_CORRUPT  The  product-queue is internally inconsistent.
