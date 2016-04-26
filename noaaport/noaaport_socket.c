@@ -42,8 +42,13 @@ initNportSockAddr(
         }
         else {
             unsigned channel = ntohl(addr) & 0xFF;
-
-            sockAddr_init(nportSockAddr, addr, s_port[channel-1]);
+            if (channel == 0 || channel > sizeof(s_port)/sizeof(s_port[0])) {
+                log_add("Invalid NBS channel: %u", channel);
+                status = 1;
+            }
+            else {
+                sockAddr_init(nportSockAddr, addr, s_port[channel-1]);
+            }
         }
     }
 
