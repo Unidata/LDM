@@ -36,10 +36,10 @@ static char*                 progname;           ///< Name of program
 static nbsa_t*               nbsa;               ///< NBS application-layer
 static nbsl_t*               nbsl;               ///< NBS link-layer
 static nbss_t*               nbss;               ///< NBS protocol stack
-static pthread_mutex_t       mutex;              ///< For printing statistics
+static pthread_mutex_t       mutex;              ///< For statistics thread
 static pthread_cond_t        cond = PTHREAD_COND_INITIALIZER; ///< For `mutex`
-static volatile sig_atomic_t print_stats_flag;   ///< Statistics printing flag
-static pthread_t             print_stats_thread; ///< Statistics printing thread
+static volatile sig_atomic_t stats_thread_flag;  ///< Statistics thread flag
+static pthread_t             stats_thread;       ///< Statistics thread
 static const char*           mcast_ip_addr;      ///< NBS Multicast IP address
 static const char*           iface_ip_addr;      ///< NBS interface
 static int                   sock = -1;          ///< NBS socket
@@ -141,8 +141,7 @@ static void print_usage(void)
  *
  * @param[in] nbsl  NBS link-layer
  */
-static void print_stats(
-        nbsl_t* const nbsl)
+static void print_stats(void)
 {
     nbsl_stats_t stats;
     char         msg[512];
@@ -165,7 +164,7 @@ static void print_stats(
                 "            S.D.:     N/A\n"
                 "        Rate:      N/A\n"
                 "    Bytes:\n"
-                "        Count:     0\n",
+                "        Count:     0\n"
                 "        Rate:      N/A");
         msg[sizeof(msg)-1] = 0;
     }
@@ -195,7 +194,7 @@ static void print_stats(
                     "            S.D.:     N/A\n"
                     "        Rate:      N/A\n"
                     "    Bytes:\n"
-                    "        Count:     %"PRIuLEAST64"\n",
+                    "        Count:     %"PRIuLEAST64"\n"
                     "        Rate:      N/A",
                     first_string,
                     first_string,
@@ -261,65 +260,97 @@ static void print_stats(
 }
 
 /**
- * Prints statistics when appropriate. Action depends on value of
- * `print_stats_flag` when `cond` is signaled:
- *   - 0 Wait
- *   - 1 Print statistics
- *   - 2 Terminate
- * Called by pthread_create().
+ * Values for signaling the statistics thread.
+ */
+typedef enum {
+    STATS_THREAD_WAIT = 0,
+    STATS_THREAD_PRINT,
+    STATS_THREAD_TERMINATE
+} statsThread_signal_t;
+
+/**
+ * Start function for the statistics thread. Waits on condition variable `cond`.
+ * Action taken depends on value of `stats_thread_flag`.
  *
  * @param[in] arg  Ignored
  */
-static void* print_stats_start(
+static void* stats_thread_start(
         void* arg)
 {
     /*
      * The only task on this thread is listening to the condition variable,
-     * examining `print_stats_flag`, and printing statistics.
+     * examining `stats_thread_flag`, and taking the signaled action.
      */
     sigset_t mask;
     sigfillset(&mask);
     int status = pthread_sigmask(SIG_BLOCK, &mask, NULL);
     log_assert(status == 0);
 
+    status = pthread_mutex_lock(&mutex);
+    log_assert(status == 0);
     for (;;) {
-        status = pthread_mutex_lock(&mutex);
-        log_assert(status == 0);
-        while (print_stats_flag == 0) {
+        while (stats_thread_flag == STATS_THREAD_WAIT) {
             status = pthread_cond_wait(&cond, &mutex);
             log_assert(status == 0);
         }
-        if (print_stats_flag != 1) {
-            break;
+        if (stats_thread_flag == STATS_THREAD_PRINT) {
+            stats_thread_flag = STATS_THREAD_WAIT;
+            print_stats();
+            continue;
         }
-        print_stats_flag = 0;
-        print_stats(nbsl);
+        break;
     }
+    status = pthread_mutex_unlock(&mutex);
+    log_assert(status == 0);
 
+    log_free();
     return NULL;
 }
 
 /**
- * Signals for the printing of statistics.
+ * Signals the statistics thread.
+ *
+ * This function is async-signal-safe.
+ *
+ * @param[in] value  Signal value. One of
+ *                     - STATS_THREAD_WAIT
+ *                     - STATS_THREAD_PRINT
+ *                     - STATS_THREAD_TERMINATE
+ */
+static void signal_stats_thread(
+        const statsThread_signal_t value)
+{
+    int status = pthread_mutex_lock(&mutex);
+    log_assert(status == 0);
+    stats_thread_flag = value;
+    (void)pthread_cond_signal(&cond);
+    status = pthread_mutex_unlock(&mutex);
+    log_assert(status == 0);
+}
+
+/**
+ * Signals the statistics thread to print statistics.
  *
  * @param[in] sig  `SIGUSR1`. Ignored.
  */
 static void signal_print_stats(
         const int sig)
 {
-    print_stats_flag = 1;
-    (void)pthread_cond_signal(&cond);
+    log_assert(sig == SIGUSR1);
+    signal_stats_thread(STATS_THREAD_PRINT);
 }
 
 /**
- * Shuts down the input -- causing the program to terminate cleanly.
+ * Signals the program to terminate cleanly.
  *
  * @param[in] sig  `SIGTERM` or `SIGINT`. Ignored.
  */
-static void shut_down_input(
+static void signal_terminate(
         const int sig)
 {
-    (void)close(sock);
+    log_assert(sig == SIGTERM || sig == SIGINT);
+    signal_stats_thread(STATS_THREAD_TERMINATE);
+    (void)close(sock); // Closes input
 }
 
 /**
@@ -336,7 +367,7 @@ static void install_signal_handlers(void)
     int status = sigaction(SIGUSR1, &sigact, NULL);
     log_assert(status == 0);
 
-    sigact.sa_handler = shut_down_input;
+    sigact.sa_handler = signal_terminate;
     status = sigaction(SIGTERM, &sigact, NULL);
     log_assert(status == 0);
     status = sigaction(SIGINT, &sigact, NULL);
@@ -450,6 +481,7 @@ static bool init(void)
                     log_add("Couldn't initialize receiving NBS protocol stack");
                 }
                 else {
+                    stats_thread_flag = STATS_THREAD_WAIT;
                     install_signal_handlers();
                 } // Receiving NBS stack initialized
                 if (status)
@@ -486,13 +518,14 @@ static void fini(void)
  */
 static bool execute()
 {
-    int status = pthread_create(&print_stats_thread, NULL, print_stats_start,
-            NULL);
+    int status = pthread_create(&stats_thread, NULL, stats_thread_start, NULL);
     if (status) {
-        log_add_errno(status, "Couldn't start statistics-printing thread");
+        log_add_errno(status, "Couldn't start statistics thread");
     }
     else {
         status = nbss_receive(nbss);
+        signal_stats_thread(STATS_THREAD_TERMINATE);
+        (void)pthread_join(stats_thread, NULL);
     }
     return status == 0;
 }
@@ -556,6 +589,7 @@ int main(
             log_error("Couldn't execute program");
         }
         else {
+            print_stats();
             status = EXIT_SUCCESS;
         }
         fini();
