@@ -632,7 +632,7 @@ newClient(
             &sockAddr);
 
     if (status) {
-        const char* servAddrStr = sa_format(down7->servAddr);
+        char* servAddrStr = sa_format(down7->servAddr);
         log_add("Couldn't create socket to %s", servAddrStr);
         free(servAddrStr);
     }
