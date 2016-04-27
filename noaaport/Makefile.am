@@ -254,6 +254,7 @@ nbs_test_SOURCES		= nbs_test.c \
 				  nbs_presentation.c nbs_presentation.h \
 				  nbs_transport.c nbs_transport.h \
 				  nbs_link_filedes.c nbs_link.h \
+				  nbs_stack.c nbs_stack.h \
 				  decode.h \
 				  gini.c gini.h \
 				  dynabuf.c dynabuf.h

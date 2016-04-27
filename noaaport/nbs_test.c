@@ -16,6 +16,7 @@
 #include "log.h"
 #include "nbs_application.h"
 #include "nbs_presentation.h"
+#include "nbs_stack.h"
 #include "nbs_transport.h"
 #include "pq.h"
 
@@ -73,38 +74,32 @@ void* start_recv_processing(void* const arg)
     status = nbsa_set_pq(nbsa, recv_arg->pq);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    nbsp_t* nbsp;
-    status = nbsp_new(&nbsp);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = nbsp_set_application_layer(nbsp, nbsa);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    nbst_t* nbst;
-    status = nbst_new(&nbst);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = nbst_set_presentation_layer(nbst, nbsp);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
     nbsl_t* nbsl;
     status = nbsl_new(&nbsl);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = nbsl_set_transport_layer(nbsl, nbst);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     status = nbsl_set_recv_file_descriptor(nbsl, recv_arg->fd);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
+    nbss_t* nbss = NULL;
+    status = nbss_recv_new(&nbss, nbsa, nbsl);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(nbss);
+
     status = nbsl_execute(nbsl);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
+    const log_level_t level = log_get_level();
+    (void)log_set_level(LOG_LEVEL_INFO);
+    nbsl_log_stats(nbsl, LOG_LEVEL_INFO);
+    (void)log_set_level(level);
+
+    nbss_free(nbss);
     nbsl_free(nbsl);
-    nbst_free(nbst);
-    nbsp_free(nbsp);
     nbsa_free(nbsa);
 
     log_free();
 
-    static int zero;
-    return &zero;
+    return 0;
 }
 
 /**
@@ -239,7 +234,7 @@ static void test_gini(
     void* value_ptr;
     status = pthread_join(thread, &value_ptr);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL_FATAL(*(int*)value_ptr, 0);
+    CU_ASSERT_EQUAL_FATAL((int)value_ptr, 0);
 
     (void)pq_close(pq);
     //(void)unlink(pq_pathname);
