@@ -1,3 +1,8 @@
+6.13.0.5
+    push(1):
+        Moved "--force" to before "--tags" in push(1) because it didn't seem
+        to work the other way.
+
 6.13.0.4	2016-04-27T16:10:20-0600
     log(3):
         Changed format of location field printed by log2ulog(3) from
