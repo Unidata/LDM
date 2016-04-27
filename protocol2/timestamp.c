@@ -413,24 +413,25 @@ char* timeval_format_duration(
     int           nchar;
     int           tPrinted = 0;
     long          seconds = duration->tv_sec;
+    char*         cp = buf;
     size_t        size = TIMEVAL_FORMAT_DURATION;
 
-    *buf++ = 'P';
+    *cp++ = 'P';
     size--;
 
     value = seconds / 86400;
     if (value != 0) {
-        nchar = snprintf(buf, size, "%dD", value);
-        buf += nchar;
+        nchar = snprintf(cp, size, "%dD", value);
+        cp += nchar;
         size -= nchar;
         seconds -= 86400 * value;
     }
 
     value = seconds / 3600;
     if (value != 0) {
-        nchar = snprintf(buf, size, "T%dH", value);
+        nchar = snprintf(cp, size, "T%dH", value);
         tPrinted = 1;
-        buf += nchar;
+        cp += nchar;
         size -= nchar;
         seconds -= 3600 * value;
     }
@@ -438,26 +439,26 @@ char* timeval_format_duration(
     value = seconds / 60;
     if (value != 0) {
         if (!tPrinted) {
-            (void)strncpy(buf, "T", size);
-            buf++;
+            (void)strncpy(cp, "T", size);
+            cp++;
             size--;
             tPrinted = 1;
         }
-        nchar = snprintf(buf, size, "%dM", value);
-        buf += nchar;
+        nchar = snprintf(cp, size, "%dM", value);
+        cp += nchar;
         size -= nchar;
         seconds -= 60 * value;
     }
 
     if (!tPrinted) {
-        (void)strncpy(buf, "T", size);
-        buf++;
+        (void)strncpy(cp, "T", size);
+        cp++;
         size--;
     }
-    nchar = snprintf(buf, size, "%02ld", seconds);
-    buf += nchar;
+    nchar = snprintf(cp, size, "%ld", seconds);
+    cp += nchar;
     size -= nchar;
-    nchar = snprintf(buf, size, "%06ldZ", (long)duration->tv_usec);
+    nchar = snprintf(cp, size, ".%06ldS", (long)duration->tv_usec);
 
     buf[TIMEVAL_FORMAT_DURATION-1] = 0;
 
