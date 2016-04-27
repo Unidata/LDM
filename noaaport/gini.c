@@ -100,7 +100,10 @@ static gini_status_t gap_new(
     }
     else {
         obj->data = log_malloc(nbytes, "gap");
-        if (obj->data) {
+        if (obj->data == NULL) {
+            status = GINI_STATUS_NOMEM;
+        }
+        else {
             obj->nbytes = nbytes;
             obj->is_compressed = compressed;
             if (!compressed) {
