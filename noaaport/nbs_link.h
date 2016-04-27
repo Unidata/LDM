@@ -120,6 +120,16 @@ void nbsl_get_stats(
         const nbsl_t* const restrict nbsl,
         nbsl_stats_t* const restrict stats);
 
+/**
+ * Logs statistics via the `log` module at level `INFO`.
+ *
+ * @param[in] nbsl   NBS link-layer
+ * @param[in] level  Level at which to log
+ */
+void nbsl_log_stats(
+        const nbsl_t* const nbsl,
+        const log_level_t   level);
+
 void nbsl_free(
         nbsl_t* nbsl);
 

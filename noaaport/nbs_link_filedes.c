@@ -15,10 +15,14 @@
 #include "config.h"
 
 #include "log.h"
+#include "timestamp.h"
 
 #include <errno.h>
+#include <inttypes.h>
+#include <math.h>
 #include <nbs_link.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -333,6 +337,129 @@ void nbsl_get_stats(
         nbsl_stats_t* const restrict stats)
 {
     *stats = nbsl->stats;
+}
+
+/**
+ * Logs statistics via the `log` module at a given level.
+ *
+ * @param[in] nbsl   NBS link-layer
+ * @param[in] level  Logging level
+ */
+void nbsl_log_stats(
+        const nbsl_t* const nbsl,
+        const log_level_t   level)
+{
+    nbsl_stats_t stats;
+    char         msg[512];
+
+    stats = nbsl->stats;
+    if (stats.total_frames == 0) {
+        // Format no-observation statistics
+        snprintf(msg, sizeof(msg),
+                "Link-Layer Statistics:\n"
+                "    Times:\n"
+                "        First I/O: N/A\n"
+                "        Last I/O:  N/A\n"
+                "        Duration:  N/A\n"
+                "    Frames:\n"
+                "        Count:     0\n"
+                "        Sizes in Bytes:\n"
+                "            Smallest: N/A\n"
+                "            Mean:     N/A\n"
+                "            Largest:  N/A\n"
+                "            S.D.:     N/A\n"
+                "        Rate:      N/A\n"
+                "    Bytes:\n"
+                "        Count:     0\n"
+                "        Rate:      N/A");
+        msg[sizeof(msg)-1] = 0;
+    }
+    else {
+        struct timeval first;
+        (void)timeval_init_from_timespec(&first, &stats.first_io);
+        struct timeval duration;
+        char           first_string[TIMEVAL_FORMAT_TIME];
+        timeval_format_time(first_string, &first);
+        char           duration_string[TIMEVAL_FORMAT_DURATION];
+
+        if (stats.total_frames == 1) {
+            // Format single-observation statistics
+            (void)timeval_init_from_difference(&duration, &first, &first);
+            snprintf(msg, sizeof(msg),
+                    "Link-Layer Statistics:\n"
+                    "    Times:\n"
+                    "        First I/O: %s\n"
+                    "        Last I/O:  %s\n"
+                    "        Duration:  %s\n"
+                    "    Frames:\n"
+                    "        Count:     1\n"
+                    "        Sizes in Bytes:\n"
+                    "            Smallest: %5u\n"
+                    "            Mean:     %5u.1\n"
+                    "            Largest:  %5u\n"
+                    "            S.D.:     N/A\n"
+                    "        Rate:      N/A\n"
+                    "    Bytes:\n"
+                    "        Count:     %"PRIuLEAST64"\n"
+                    "        Rate:      N/A",
+                    first_string,
+                    first_string,
+                    timeval_format_duration(duration_string, &duration),
+                    stats.smallest_frame,
+                    stats.smallest_frame,
+                    stats.largest_frame,
+                    stats.total_bytes);
+            msg[sizeof(msg)-1] = 0;
+        }
+        else {
+            // Format multiple-observation statistics
+            struct timeval last;
+            (void)timeval_init_from_timespec(&last, &stats.last_io);
+            (void)timeval_init_from_difference(&duration, &last, &first);
+            char           last_string[TIMEVAL_FORMAT_TIME];
+            double         mean_frame_size = (double)stats.total_bytes /
+                    stats.total_frames;
+            double         variance_frame_size = (stats.sum_sqr_dev -
+                    (stats.sum_dev*stats.sum_dev)/stats.total_frames) /
+                            (stats.total_frames-1);
+            double         stddev_frame_size = sqrt(variance_frame_size);
+            double         stddev_mean_frame_size = sqrt(variance_frame_size /
+                    stats.total_frames);
+            double         seconds_duration = timeval_as_seconds(&duration);
+            (void)snprintf(msg, sizeof(msg),
+                    "Link-Layer Statistics:\n"
+                    "    Times:\n"
+                    "        First I/O: %s\n"
+                    "        Last I/O:  %s\n"
+                    "        Duration:  %s\n"
+                    "    Frames:\n"
+                    "        Count:     %"PRIuLEAST64"\n"
+                    "        Sizes in Bytes:\n"
+                    "            Smallest: %5u\n"
+                    "            Mean:     %7.1f(%.1f)\n"
+                    "            Largest:  %5u\n"
+                    "            S.D.:     %7.1f\n"
+                    "        Rate:      %g/s\n"
+                    "    Bytes:\n"
+                    "        Count:     %"PRIuLEAST64"\n"
+                    "        Rate:      %g/s",
+                    first_string,
+                    timeval_format_time(last_string, &last),
+                    timeval_format_duration(duration_string, &duration),
+                    stats.total_frames,
+                    stats.smallest_frame,
+                    mean_frame_size,
+                    stddev_mean_frame_size,
+                    stats.largest_frame,
+                    stddev_frame_size,
+                    stats.total_frames / seconds_duration,
+                    stats.total_bytes,
+                    stats.total_bytes / seconds_duration);
+            msg[sizeof(msg)-1] = 0;
+        }
+    }
+
+    log_log(level, msg);
 }
 
 /**
