@@ -1,4 +1,21 @@
-6.13.0.1	2016-04-26T20:36:36-0600
+6.13.0.3
+    NOAAPort:
+        nbs_ingest(1):
+            Moved printing of link-layer statistics from
+            "nbs_ingest.c:print_stats()" to
+            "nbs_link_filedes.c:nbsl_log_stats()". Modified
+            "nbs_ingest.c:print_stats()" accordingly.
+
+            Corrected and improved printing of link-layer statistics.
+
+        nbs_test(1):
+            Added printing of link-layer input statistics.
+
+    Misc:
+        Corrected and improved formatting by
+        "timestamp.c:timeval_format_duration()".
+
+6.13.0.2	2016-04-26T20:36:36-0600
     Removed Coverity-discovered lint.
 
 6.13.0.1	2016-04-26T16:21:39-0600
