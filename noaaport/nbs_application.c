@@ -94,11 +94,12 @@ nbs_status_t nbsa_new(
             status = nbsa_init(obj);
             if (status) {
                 log_add("Couldn't initialize NBS application-layer object");
+                free(obj);
             }
             else {
                 *nbsa = obj;
             }
-        }
+        } // 'obj` allocated
     }
     return status;
 }

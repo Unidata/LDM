@@ -33,7 +33,7 @@ extern const struct timeval TS_ENDT; /* the end of time */
 	 (tv).tv_sec == (uv).tv_sec && (tv).tv_usec cmp (uv).tv_usec))
 
 #define TIMEVAL_FORMAT_TIME 28 // Includes terminating NUL
-#define TIMEVAL_FORMAT_DURATION (20+20) // Fixed number + num_digits(long long)
+#define TIMEVAL_FORMAT_DURATION (25+20) // Fixed number + num_digits(long long)
 
 #ifdef __cplusplus
 extern "C" {

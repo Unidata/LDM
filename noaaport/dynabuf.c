@@ -79,7 +79,7 @@ dynabuf_status_t dynabuf_new(
             status = dynabuf_init(obj, nbytes);
             if (status) {
                 log_add("Couldn't initialize dynamic-buffer object");
-                free(dynabuf);
+                free(obj);
             }
             else {
                 *dynabuf = obj;

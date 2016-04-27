@@ -409,47 +409,44 @@ char* timeval_format_duration(
         char* restrict                       buf,
         const struct timeval* const restrict duration)
 {
-    unsigned      value;
+    int           value;
     int           nchar;
     int           tPrinted = 0;
-    unsigned long seconds = duration->tv_sec;
+    long          seconds = duration->tv_sec;
     size_t        size = TIMEVAL_FORMAT_DURATION;
 
     *buf++ = 'P';
     size--;
 
     value = seconds / 86400;
-    if (value > 0) {
-        nchar = snprintf(buf, size, "%uD", value);
+    if (value != 0) {
+        nchar = snprintf(buf, size, "%dD", value);
         buf += nchar;
         size -= nchar;
         seconds -= 86400 * value;
-        seconds = seconds < 0 ? 0 : seconds;
     }
 
     value = seconds / 3600;
-    if (value > 0) {
-        nchar = snprintf(buf, size, "T%uH", value);
+    if (value != 0) {
+        nchar = snprintf(buf, size, "T%dH", value);
         tPrinted = 1;
         buf += nchar;
         size -= nchar;
         seconds -= 3600 * value;
-        seconds = seconds < 0 ? 0 : seconds;
     }
 
     value = seconds / 60;
-    if (value > 0) {
+    if (value != 0) {
         if (!tPrinted) {
             (void)strncpy(buf, "T", size);
             buf++;
             size--;
             tPrinted = 1;
         }
-        nchar = snprintf(buf, size, "%uM", value);
+        nchar = snprintf(buf, size, "%dM", value);
         buf += nchar;
         size -= nchar;
         seconds -= 60 * value;
-        seconds = seconds < 0 ? 0 : seconds;
     }
 
     if (!tPrinted) {
@@ -457,7 +454,7 @@ char* timeval_format_duration(
         buf++;
         size--;
     }
-    nchar = snprintf(buf, size, "%02d", seconds);
+    nchar = snprintf(buf, size, "%02ld", seconds);
     buf += nchar;
     size -= nchar;
     nchar = snprintf(buf, size, "%06ldZ", (long)duration->tv_usec);

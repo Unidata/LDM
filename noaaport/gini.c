@@ -106,6 +106,7 @@ static gini_status_t gap_new(
             if (!compressed) {
                 (void)memset(obj->data, 255, nbytes);
                 obj->data_len = nbytes;
+                status = 0;
             }
             else {
                 uint8_t buf[nbytes];
@@ -117,9 +118,8 @@ static gini_status_t gap_new(
                 (void)memset(buf, 255, nbytes);
                 status = gini_pack(buf, nbytes, obj->data, nbytes,
                         &obj->data_len);
-                if (status) {
+                if (status)
                     log_add("Couldn't compress %u-byte blank gap", nbytes);
-                }
             }
             if (status)
                 free(obj->data);
@@ -273,7 +273,7 @@ static int ga_compare(
 static gini_status_t ga_ensure_pointer_array(
         ga_t* const ga)
 {
-    int status;
+    int status = 0;
     if (ga->gaps == NULL) {
         gap_t** gaps = log_malloc(ga->max_recs*sizeof(gap_t*),
                 "array of pointers to gaps");
@@ -305,7 +305,7 @@ static gini_status_t ga_ensure_gap(
         ga_t* const    ga,
         const unsigned nrecs)
 {
-    int     status;
+    int     status = 0;
     gap_t** gap = ga->gaps + nrecs - 1;
     if (*gap == NULL) {
         status = gap_new(gap, nrecs*ga->rec_len, ga->compressed);
@@ -843,6 +843,7 @@ static nbs_status_t eopb_new(
         if (!is_compressed) {
             eopb_set(blk->data, nbytes);
             blk->data_len = nbytes;
+            status = 0;
         }
         else {
             uint8_t buf[nbytes];
@@ -1402,8 +1403,8 @@ static gini_status_t gini_add_missing_records(
         else {
             status = gini_append_block(gini, &gap);
             if (status) {
-                log_add("Couldn't append missing block %u with %zu bytes to "
-                        "dynamic-buffer", iblock, nbytes);
+                log_add("Couldn't append missing block %u with %u bytes to "
+                        "dynamic-buffer", iblock, gap.data_len);
                 break;
             }
         }

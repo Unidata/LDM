@@ -208,7 +208,7 @@ static void print_stats(void)
                     first_string,
                     timeval_format_duration(duration_string, &duration),
                     stats.smallest_frame,
-                    stats.smallest_frame,
+                    (double)stats.smallest_frame,
                     stats.smallest_frame,
                     stats.total_bytes);
             msg[sizeof(msg)-1] = 0;

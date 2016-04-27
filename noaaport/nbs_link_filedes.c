@@ -252,7 +252,7 @@ nbs_status_t nbsl_execute(
         log_add("Invalid argument: nbsl=%p", nbsl);
         status = NBS_STATUS_INVAL;
     }
-    if (nbsl->fd_recv < 0) {
+    else if (nbsl->fd_recv < 0) {
         log_add("nbsl_set_recv_file_descriptor() not called");
         status = NBS_STATUS_LOGIC;
     }
