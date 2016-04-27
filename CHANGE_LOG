@@ -1,4 +1,4 @@
-6.13.0.4	2016-04-27T15:01:11-0600
+6.13.0.4	2016-04-27T16:06:43-0600
     log(3):
         Changed format of location field printed by log2ulog(3) from
         "file:func():line" to "file:line:func()" to match change to
