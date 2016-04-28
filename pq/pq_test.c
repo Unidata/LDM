@@ -12,14 +12,17 @@
 #include "config.h"
 
 #include "ldm.h"
+#include "ldm_xlen.h"
 #include "ldmprint.h"
 #include "limits.h"
 #include "log.h"
 #include "pq.h"
 #include "stdbool.h"
+#include "xdr.h"
+
 #include <sys/time.h>
-#include "sys/wait.h"
-#include "unistd.h"
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
@@ -83,6 +86,34 @@ static double duration(
 {
     return (later->tv_sec - earlier->tv_sec) +
         1e-6*(later->tv_usec - earlier->tv_usec);
+}
+
+static int insert_prod_reserve_no_sig(
+        pqueue* const restrict  pq,
+        product* const restrict prod)
+{
+    char*     space;
+    pqe_index pqe_index;
+    size_t    extent = xlen_product(prod);
+    int       status = pqe_newDirect(pq, extent, NULL, &space, &pqe_index);
+    if (status) {
+        log_add("Couldn't reserve space for product");
+    }
+    else {
+        XDR xdrs ;
+        xdrmem_create(&xdrs, space, extent, XDR_ENCODE);
+        if (!xdr_product(&xdrs, prod)) {
+            log_error("xdr_product() failed");
+            (void)pqe_discard(pq, pqe_index);
+            status = -1;
+        }
+        else {
+            status = pqe_insert(pq, pqe_index);
+            if (status)
+                log_error("pqe_insert() failed");
+        }
+    }
+    return status;
 }
 
 static int insert_prod(
@@ -181,6 +212,24 @@ static void test_pq_insert(
     close_pq(pq);
 }
 
+static void test_pq_insert_reserve_no_sig(
+        void)
+{
+    pqueue* const pq = create_pq();
+    CU_ASSERT_NOT_EQUAL_FATAL(pq, NULL);
+    int status = insert_products(pq, insert_prod_reserve_no_sig);
+    CU_ASSERT_EQUAL(status, 0);
+    double dur = duration(&stop, &start);
+    log_notice("Elapsed time       = %g s", dur);
+    log_notice("Number of bytes    = %lu", num_bytes);
+    log_notice("Number of products = %lu", NUM_PRODS);
+    log_notice("Mean product size  = %lu", num_bytes / NUM_PRODS);
+    log_notice("Product rate       = %g/s", NUM_PRODS/dur);
+    log_notice("Byte rate          = %g/s", num_bytes/dur);
+    log_notice("Bit rate           = %g/s", CHAR_BIT*num_bytes/dur);
+    close_pq(pq);
+}
+
 static void test_pq_insert_children(
         void)
 {
@@ -226,7 +275,8 @@ int main(
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
             if (NULL != testSuite) {
-                if (       CU_ADD_TEST(testSuite, test_pq_insert)
+                if (CU_ADD_TEST(testSuite, test_pq_insert_reserve_no_sig)
+                        && CU_ADD_TEST(testSuite, test_pq_insert)
                         && CU_ADD_TEST(testSuite, test_pq_insert_children)
                         ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
