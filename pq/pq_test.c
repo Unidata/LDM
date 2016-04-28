@@ -85,8 +85,21 @@ static double duration(
         1e-6*(later->tv_usec - earlier->tv_usec);
 }
 
+static int insert_prod(
+        pqueue* const restrict  pq,
+        product* const restrict prod)
+{
+    int status = pq_insert(pq, prod);
+    if (status == PQ_DUP) {
+        log_add("Duplicate data-product");
+        status = 0;
+    }
+    return status;
+}
+
 static int insert_products(
-        pqueue* const pq)
+        pqueue* const pq,
+        int         (*insert)(pqueue* restrict pq, product* restrict prod))
 {
     static char    data[MAX_PROD_SIZE];
     int            status;
@@ -118,12 +131,8 @@ static int insert_products(
                 sizeof(signet));
         info->sz = size;
 
-        status = pq_insert(pq, &prod);
-        if (status == PQ_DUP) {
-            log_add("Duplicate data-product");
-            status = 0;
-        }
-        else if (status) {
+        status = insert(pq, &prod);
+        if (status) {
             log_add("Couldn't insert data-product %d into product-queue", i);
             break;
         }
@@ -149,7 +158,7 @@ static int create_insert_close(
         void)
 {
     pqueue* pq = create_pq();
-    int status = insert_products(pq);
+    int status = insert_products(pq, insert_prod);
     close_pq(pq);
     return status;
 }
@@ -159,7 +168,7 @@ static void test_pq_insert(
 {
     pqueue* const pq = create_pq();
     CU_ASSERT_NOT_EQUAL_FATAL(pq, NULL);
-    int status = insert_products(pq);
+    int status = insert_products(pq, insert_prod);
     CU_ASSERT_EQUAL(status, 0);
     double dur = duration(&stop, &start);
     log_notice("Elapsed time       = %g s", dur);
@@ -185,7 +194,7 @@ static void test_pq_insert_children(
         CU_ASSERT_NOT_EQUAL(pid, -1);
         if (pid == 0) {
             pq = open_pq();
-            int status = insert_products(pq);
+            int status = insert_products(pq, insert_prod);
             CU_ASSERT_EQUAL(status, 0);
             close_pq(pq);
             return; // `log_fini()` should be called
