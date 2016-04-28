@@ -275,9 +275,9 @@ int main(
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
             if (NULL != testSuite) {
-                if (CU_ADD_TEST(testSuite, test_pq_insert_reserve_no_sig)
-                        && CU_ADD_TEST(testSuite, test_pq_insert)
-                        && CU_ADD_TEST(testSuite, test_pq_insert_children)
+                if (//CU_ADD_TEST(testSuite, test_pq_insert_reserve_no_sig) &&
+                        CU_ADD_TEST(testSuite, test_pq_insert) &&
+                        CU_ADD_TEST(testSuite, test_pq_insert_children)
                         ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
