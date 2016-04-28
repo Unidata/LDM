@@ -6032,8 +6032,8 @@ pqe_newDirect(
     /*
      * Vet arguments.
      */
-    if (pq == NULL || ptrp == NULL || indexp == NULL) {
-        log_add("NULL pointer argument");
+    if (pq == NULL || ptrp == NULL || indexp == NULL || signature == NULL) {
+        log_add("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p");
         status = EINVAL;
     }
     else if (size > pq_getDataSize(pq)) {
