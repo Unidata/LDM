@@ -170,13 +170,13 @@ if WANT_SLOG
 READNOAAPORT_LOG                = readnoaaport.slog
 NOAAPORTINGESTER_LOG            = noaaportIngester.slog
 NOAAPORTINGESTER_NSSL_LOG       = noaaportIngester-nssl.slog
-CUT_FIELD                       = 5
+CUT_FIELDS                      = 5-
 endif
 if WANT_ULOG
 READNOAAPORT_LOG                = readnoaaport.ulog
 NOAAPORTINGESTER_LOG            = noaaportIngester.ulog
 NOAAPORTINGESTER_NSSL_LOG       = noaaportIngester-nssl.ulog
-CUT_FIELD                       = 5
+CUT_FIELDS                      = 5,7-
 endif
 
 installcheck-local:
@@ -193,7 +193,7 @@ check-readnoaaport:     readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
 	    -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
 	rm /tmp/readnoaaport-test.pq
-	fgrep 'process_prod()' readnoaaport.out | cut -d ' ' -f $(CUT_FIELD)- \
+	fgrep 'process_prod()' readnoaaport.out | cut -d ' ' -f $(CUT_FIELDS) \
 		>readnoaaport.log
 	diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
 
@@ -204,7 +204,7 @@ noaaportIngester.out:           noaaportIngester
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:           noaaportIngester.out
-	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
+	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester:         noaaportIngester.log \
 	                        $(srcdir)/$(NOAAPORTINGESTER_LOG)
 	diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
@@ -222,7 +222,7 @@ noaaportIngester-nssl.out:      noaaportIngester
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
 	    g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:      noaaportIngester-nssl.out
-	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
+	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)

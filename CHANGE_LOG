@@ -2,6 +2,9 @@
     NOAAPort:
         Removed "pdb.c" and "pdb.h".
 
+        Corrected "make check": corrected vetting of output from ingesters when
+        the configure(1)-script is executed with the option "--with-ulog".
+
     push(1):
         Moved "--force" to before "--tags" in push(1) because it didn't seem
         to work the other way.
