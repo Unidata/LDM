@@ -79,6 +79,7 @@ child_map.h:		child_map.hin child_map.c
 doubly_linked_list.h:	doubly_linked_list.hin doubly_linked_list.c
 doubly_linked_stack.h:	doubly_linked_stack.hin doubly_linked_stack.c
 semRWLock.h:		semRWLock.hin semRWLock.c
+StrBuf.h:		StrBuf.hin StrBuf.c
 
 if HAVE_CUNIT
 check_PROGRAMS		= test_inetutil test_child_map testSemRWLock \
