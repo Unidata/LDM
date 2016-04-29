@@ -13,8 +13,8 @@
 #include "mcast.h"
 #include "PerProdSendingNotifier.h"
 
-#include <vcmtpRecvv3.h>
-#include <vcmtpSendv3.h>
+#include <fmtpRecvv3.h>
+#include <fmtpSendv3.h>
 
 #include <errno.h>
 #include <exception>
@@ -45,7 +45,7 @@ struct mcast_receiver {
     /**
      * The multicast-layer receiver.
      */
-    vcmtpRecvv3*      vcmtpReceiver;
+    fmtpRecvv3*      fmtpReceiver;
     /**
      * The receiving application notifier.
      */
@@ -98,7 +98,7 @@ mcastReceiver_init(
     std::string             hostId(tcpAddr);
     std::string             groupId(mcastAddr);
     receiver->notifier = notifier;
-    receiver->vcmtpReceiver = new vcmtpRecvv3(hostId, tcpPort, groupId,
+    receiver->fmtpReceiver = new fmtpRecvv3(hostId, tcpPort, groupId,
             mcastPort, notifier, mcastIface);
 }
 
@@ -171,8 +171,8 @@ void
 mcastReceiver_free(
     McastReceiver* const       receiver)
 {
-    // VCMTP call
-    delete receiver->vcmtpReceiver;
+    // FMTP call
+    delete receiver->fmtpReceiver;
     delete receiver->notifier;
     free(receiver);
 }
@@ -199,8 +199,8 @@ mcastReceiver_execute(
     else {
         status = -1;
         try {
-            // VCMTP call
-            receiver->vcmtpReceiver->Start();
+            // FMTP call
+            receiver->fmtpReceiver->Start();
             status = 0;
         }
         catch (const std::exception& e) {
@@ -221,7 +221,7 @@ void
 mcastReceiver_stop(
     McastReceiver* const receiver)
 {
-    receiver->vcmtpReceiver->Stop();
+    receiver->fmtpReceiver->Stop();
 }
 
 /**
@@ -229,11 +229,11 @@ mcastReceiver_stop(
  */
 struct mcast_sender {
     /**
-     * The VCMTP sender:
+     * The FMTP sender:
      */
-    vcmtpSendv3*            vcmtpSender;
+    fmtpSendv3*            fmtpSender;
     /**
-     * The per-product notifier passed to the VCMTP sender. Pointer kept so
+     * The per-product notifier passed to the FMTP sender. Pointer kept so
      * that the object can be deleted when it's no longer needed.
      */
     PerProdSendingNotifier* notifier;
@@ -269,11 +269,11 @@ struct mcast_sender {
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
  * @param[in]     timeoutFactor Ratio of the duration that a data-product will
- *                              be held by the VCMTP layer before being released
+ *                              be held by the FMTP layer before being released
  *                              after being multicast to the duration to
  *                              multicast the product. If negative, then the
  *                              default timeout factor is used.
- * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
+ * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
  * @retval        0             Success. `*sender` is set.
@@ -290,9 +290,9 @@ mcastSender_init(
     const unsigned short   groupPort,
     const char* const      ifaceAddr,
     const unsigned         ttl,
-    const VcmtpProdIndex   iProd,
+    const FmtpProdIndex   iProd,
     const float            timeoutFactor,
-    void                  (*doneWithProd)(VcmtpProdIndex iProd))
+    void                  (*doneWithProd)(FmtpProdIndex iProd))
 {
     int status;
 
@@ -301,13 +301,13 @@ mcastSender_init(
                 new PerProdSendingNotifier(doneWithProd);
 
         try {
-            vcmtpSendv3* vcmtpSender = timeoutFactor < 0
-                    ? new vcmtpSendv3(serverAddr, serverPort, groupAddr,
+            fmtpSendv3* fmtpSender = timeoutFactor < 0
+                    ? new fmtpSendv3(serverAddr, serverPort, groupAddr,
                             groupPort, notifier, ttl, ifaceAddr, iProd)
-                    : new vcmtpSendv3(serverAddr, serverPort, groupAddr,
+                    : new fmtpSendv3(serverAddr, serverPort, groupAddr,
                             groupPort, notifier, ttl, ifaceAddr, iProd,
                             timeoutFactor);
-            sender->vcmtpSender = vcmtpSender;
+            sender->fmtpSender = fmtpSender;
             sender->notifier = notifier;
             status = 0;
         }
@@ -365,11 +365,11 @@ mcastSender_init(
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
  * @param[in]     timeoutFactor Ratio of the duration that a data-product will
- *                              be held by the VCMTP layer before being released
+ *                              be held by the FMTP layer before being released
  *                              after being multicast to the duration to
  *                              multicast the product. If negative, then the
  *                              default timeout factor is used.
- * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
+ * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
  * @retval        0             Success. `*sender` is set.
@@ -386,9 +386,9 @@ mcastSender_new(
     const unsigned short   groupPort,
     const char* const      ifaceAddr,
     const unsigned         ttl,
-    const VcmtpProdIndex   iProd,
+    const FmtpProdIndex   iProd,
     const float            timeoutFactor,
-    void                  (*doneWithProd)(VcmtpProdIndex iProd))
+    void                  (*doneWithProd)(FmtpProdIndex iProd))
 {
     McastSender* const send = (McastSender*)log_malloc(sizeof(McastSender),
             "multicast sender");
@@ -430,18 +430,18 @@ mcastSender_start(
 {
     int status;
 
-    log_debug("Starting VCMTP sender");
+    log_debug("Starting FMTP sender");
     try {
-        sender->vcmtpSender->Start();
+        sender->fmtpSender->Start();
 
         try {
-            *serverPort = sender->vcmtpSender->getTcpPortNum();
+            *serverPort = sender->fmtpSender->getTcpPortNum();
             status = 0;
         }
         catch(std::system_error& e) {
             log_what(e);
             log_add("Couldn't get TCP port number of FMTP sender");
-            sender->vcmtpSender->Stop();
+            sender->fmtpSender->Stop();
             status = 3;
         }
     }
@@ -475,7 +475,7 @@ mcastSender_stop(
     int status;
 
     try {
-        sender->vcmtpSender->Stop();
+        sender->fmtpSender->Stop();
         status = 0;
     }
     catch (std::runtime_error& e) {
@@ -499,7 +499,7 @@ static void
 mcastSender_free(
     McastSender* const sender)
 {
-    delete sender->vcmtpSender;
+    delete sender->fmtpSender;
     delete sender->notifier;
     free(sender);
 }
@@ -536,11 +536,11 @@ mcastSender_free(
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
  * @param[in]     timeoutFactor Ratio of the duration that a data-product will
- *                              be held by the VCMTP layer before being released
+ *                              be held by the FMTP layer before being released
  *                              after being multicast to the duration to
  *                              multicast the product. If negative, then the
  *                              default timeout factor is used.
- * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
+ * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
@@ -558,9 +558,9 @@ mcastSender_spawn(
     const unsigned short   groupPort,
     const char* const      ifaceAddr,
     const unsigned         ttl,
-    const VcmtpProdIndex   iProd,
+    const FmtpProdIndex   iProd,
     const float            timeoutFactor,
-    void                  (*doneWithProd)(VcmtpProdIndex iProd))
+    void                  (*doneWithProd)(FmtpProdIndex iProd))
 {
     McastSender* send;
     int          status = mcastSender_new(&send, serverAddr, *serverPort,
@@ -587,20 +587,20 @@ mcastSender_spawn(
 
 /**
  * Returns the product-index of the next product to be sent.
- * @param[in]  sender  VCMTP sender.
+ * @param[in]  sender  FMTP sender.
  * @return the product-index of the next product to be sent.
  */
-VcmtpProdIndex
+FmtpProdIndex
 mcastSender_getNextProdIndex(
     McastSender* const    sender)
 {
-  return sender->vcmtpSender->getNextProdIndex();
+  return sender->fmtpSender->getNextProdIndex();
 }
 
 /**
  * Sends a product.
  *
- * @param[in]  sender  VCMTP sender.
+ * @param[in]  sender  FMTP sender.
  * @param[in]  data    Data to send.
  * @param[in]  nbytes  Amount of data in bytes.
  * @param[out] iProd   Index of the sent product.
@@ -614,14 +614,14 @@ mcastSender_send(
     const size_t          nbytes,
     const void* const     metadata,
     const unsigned        metaSize,
-    VcmtpProdIndex* const iProd)
+    FmtpProdIndex* const iProd)
 {
     try {
         /*
          * The signature of the product is sent to the receiver as metadata in
          * order to allow duplicate rejection.
          */
-        *iProd = sender->vcmtpSender->sendProduct((void*)data, nbytes,
+        *iProd = sender->fmtpSender->sendProduct((void*)data, nbytes,
                 (void*)metadata, metaSize);     //  safe to cast away `const`s
         return 0;
     }

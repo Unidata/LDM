@@ -39,8 +39,8 @@ teardown(void)
 static void
 test_add_get(void)
 {
-    VcmtpProdIndex     fileA = 1;
-    VcmtpProdIndex     fileB;
+    FmtpProdIndex     fileA = 1;
+    FmtpProdIndex     fileB;
     int                status;
 
     status = piq_add(rq, fileA);
@@ -58,10 +58,10 @@ test_add_get(void)
 static void
 test_order(void)
 {
-    VcmtpProdIndex fileA = 1;
-    VcmtpProdIndex fileB = 2;
-    VcmtpProdIndex fileC = 3;
-    VcmtpProdIndex fileD;
+    FmtpProdIndex fileA = 1;
+    FmtpProdIndex fileB = 2;
+    FmtpProdIndex fileC = 3;
+    FmtpProdIndex fileD;
     int            status;
 
     status = piq_add(rq, fileA);

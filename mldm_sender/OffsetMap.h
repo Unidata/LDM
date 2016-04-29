@@ -6,7 +6,7 @@
  *   @file: OffsetMap.h
  * @author: Steven R. Emmerson
  *
- * This file defines a thread-safe mapping from VCMTP product-indexes to
+ * This file defines a thread-safe mapping from FMTP product-indexes to
  * file-offsets.
  */
 

@@ -102,7 +102,7 @@ static void closeAndUnlink(void)
 }
 
 static void exists(
-        const VcmtpProdIndex iProd,
+        const FmtpProdIndex iProd,
         const int            iSig)
 {
     signaturet sig;
@@ -112,7 +112,7 @@ static void exists(
 }
 
 static void doesNotExist(
-        const VcmtpProdIndex iProd)
+        const FmtpProdIndex iProd)
 {
     signaturet sig;
 
@@ -196,7 +196,7 @@ static void test_putNonSequential(void)
 
 static void test_getNextFileId(void)
 {
-    VcmtpProdIndex iProd;
+    FmtpProdIndex iProd;
 
     openNew(3);
     CU_ASSERT_EQUAL(pim_getNextProdIndex(&iProd), 0);

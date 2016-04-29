@@ -9,4 +9,4 @@
 SUBDIRS			= C C++ vcmtp
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		=
-lib_la_LIBADD		= C/lib.la C++/lib.la vcmtp/libvcmtp.la
+lib_la_LIBADD		= C/lib.la C++/lib.la vcmtp/libfmtp.la

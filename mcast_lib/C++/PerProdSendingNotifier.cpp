@@ -20,7 +20,7 @@
 #include <strings.h>
 
 PerProdSendingNotifier::PerProdSendingNotifier(
-    void (*eop_func)(VcmtpProdIndex iProd))
+    void (*eop_func)(FmtpProdIndex iProd))
 :
     eop_func(eop_func)
 {
@@ -29,12 +29,12 @@ PerProdSendingNotifier::PerProdSendingNotifier(
 }
 
 /**
- * Notifies the sending application when the VCMTP layer is done with a product.
+ * Notifies the sending application when the FMTP layer is done with a product.
  *
  * @param[in,out] prodIndex             Index of the product.
  */
 void PerProdSendingNotifier::notify_of_eop(
-        const VcmtpProdIndex prodIndex)
+        const FmtpProdIndex prodIndex)
 {
     eop_func(prodIndex);
 }

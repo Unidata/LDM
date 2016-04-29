@@ -276,7 +276,7 @@ up7_ensureFree(
  * @param[in] data         Data-product data.
  * @param[in] xprod        XDR-encoded data-product.
  * @param[in] len          Size of XDR-encoded data-product in bytes.
- * @param[in] optArg       Pointer to associated VCMTP product-index.
+ * @param[in] optArg       Pointer to associated FMTP product-index.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  Failure. `log_add()` called.
  */
@@ -290,7 +290,7 @@ up7_deliverProduct(
 {
     MissedProduct missedProd;
 
-    missedProd.iProd = *(VcmtpProdIndex*)optArg;
+    missedProd.iProd = *(FmtpProdIndex*)optArg;
     missedProd.prod.info = *info;
     missedProd.prod.data = (void*)data; // cast away `const`
 
@@ -326,7 +326,7 @@ up7_deliverProduct(
  */
 static Ldm7Status
 up7_sendProduct(
-        VcmtpProdIndex iProd)
+        FmtpProdIndex iProd)
 {
     signaturet sig;
     int        status = pim_get(iProd, &sig);
@@ -366,7 +366,7 @@ up7_sendProduct(
  */
 static bool
 up7_findAndSendProduct(
-    VcmtpProdIndex iProd)       // not `cont` because of `no_such_product_7()`
+    FmtpProdIndex iProd)       // not `cont` because of `no_such_product_7()`
 {
     int status = up7_sendProduct(iProd);
 
@@ -712,7 +712,7 @@ subscribe_7_svc(
  */
 void*
 request_product_7_svc(
-    VcmtpProdIndex* const iProd,
+    FmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
     log_debug("request_product_7_svc(): Entered: iProd=%lu",

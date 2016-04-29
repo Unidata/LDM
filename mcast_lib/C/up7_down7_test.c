@@ -105,8 +105,8 @@ static Receiver          receiver;
 static pthread_t         requesterThread;
 static pqueue*           receiverPq;
 static uint64_t          numDeletedProds;
-static const unsigned short VCMTP_MCAST_PORT = 5173; // From Wireshark plug-in
-static const unsigned short VCMTP_UCAST_PORT = 1234; // From Wireshark plug-in
+static const unsigned short FMTP_MCAST_PORT = 5173; // From Wireshark plug-in
+static const unsigned short FMTP_UCAST_PORT = 1234; // From Wireshark plug-in
 
 /*
  * The following functions (until otherwise noted) are only called once.
@@ -822,7 +822,7 @@ setMcastInfo(
         const feedtypet   feedtype)
 {
     ServiceAddr* mcastServAddr;
-    int          status = sa_new(&mcastServAddr, "224.0.0.1", VCMTP_MCAST_PORT);
+    int          status = sa_new(&mcastServAddr, "224.0.0.1", FMTP_MCAST_PORT);
 
     if (status) {
         log_add("Couldn't create multicast service address object");
@@ -830,7 +830,7 @@ setMcastInfo(
     else {
         ServiceAddr* ucastServAddr;
 
-        status = sa_new(&ucastServAddr, LOCAL_HOST, VCMTP_UCAST_PORT);
+        status = sa_new(&ucastServAddr, LOCAL_HOST, FMTP_UCAST_PORT);
         if (status) {
             log_add("Couldn't create unicast service address object");
         }
@@ -1076,9 +1076,9 @@ requester_decide(
     char infoStr[LDM_INFO_MAX];
     log_debug("requester_decide(): Entered: info=\"%s\"",
             s_prod_info(infoStr, sizeof(infoStr), info, 1));
-    static VcmtpProdIndex maxProdIndex;
+    static FmtpProdIndex maxProdIndex;
     static bool           maxProdIndexSet = false;
-    VcmtpProdIndex        prodIndex;
+    FmtpProdIndex        prodIndex;
     RequestArg* const     reqArg = (RequestArg*)arg;
 
     /*
@@ -1086,8 +1086,8 @@ requester_decide(
      * recently-created data-product is eligible for deletion.
      */
     (void)memcpy(&prodIndex,
-            info->signature + sizeof(signaturet) - sizeof(VcmtpProdIndex),
-            sizeof(VcmtpProdIndex));
+            info->signature + sizeof(signaturet) - sizeof(FmtpProdIndex),
+            sizeof(FmtpProdIndex));
     prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
     if (maxProdIndexSet && prodIndex <= maxProdIndex) {
         reqArg->delete = false;
@@ -1118,9 +1118,9 @@ static inline int // inline because only called in one place
 requester_deleteAndRequest(
         const signaturet sig)
 {
-    VcmtpProdIndex  prodIndex;
-    (void)memcpy(&prodIndex, sig + sizeof(signaturet) - sizeof(VcmtpProdIndex),
-        sizeof(VcmtpProdIndex));
+    FmtpProdIndex  prodIndex;
+    (void)memcpy(&prodIndex, sig + sizeof(signaturet) - sizeof(FmtpProdIndex),
+        sizeof(FmtpProdIndex));
     prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
     int status = pq_deleteBySignature(receiverPq, sig);
     char buf[2*sizeof(signaturet)+1];
@@ -1434,7 +1434,7 @@ test_down7(
     done = 0;
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(LOCAL_HOST, VCMTP_MCAST_PORT, ANY);
+    status = receiver_spawn(LOCAL_HOST, FMTP_MCAST_PORT, ANY);
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 

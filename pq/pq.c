@@ -5345,7 +5345,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     /*
      * Check for duplicate
      */
-    if (sx_find(pq->sxp, sxi, sxepp) != 0) {
+    if (sxi && sx_find(pq->sxp, sxi, sxepp) != 0) {
         log_debug("PQ_DUP");
         return PQ_DUP;
     }
@@ -5387,28 +5387,26 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     if (status != ENOERR)
         goto rgn_get_failure;
 
-    {
+    if (sxi) {
         sxelem* const sxelem = sx_add(pq->sxp, sxi, hit->offset);
         if (sxelem == NULL) {
             log_error("sx_add() failure");
             status = ENOMEM;
             goto sx_add_failure;
         }
-        else {
-            *sxepp = sxelem;
-
-            /* Update stats */
-            off_t         highwater = hit->offset + (off_t)Extent(hit) -
-                    pq->ctlp->datao;
-            if (highwater > pq->ctlp->highwater)
-                pq->ctlp->highwater = highwater;
-            if (pq->rlp->nelems >  pq->ctlp->maxproducts)
-                pq->ctlp->maxproducts = pq->rlp->nelems;
-            pq->rlp->nbytes += (off_t)Extent(hit);
-            if (pq->rlp->nbytes > pq->rlp->maxbytes)
-                pq->rlp->maxbytes = pq->rlp->nbytes;
-        }
+        *sxepp = sxelem;
     }
+
+    /* Update stats */
+    off_t         highwater = hit->offset + (off_t)Extent(hit) -
+            pq->ctlp->datao;
+    if (highwater > pq->ctlp->highwater)
+        pq->ctlp->highwater = highwater;
+    if (pq->rlp->nelems >  pq->ctlp->maxproducts)
+        pq->ctlp->maxproducts = pq->rlp->nelems;
+    pq->rlp->nbytes += (off_t)Extent(hit);
+    if (pq->rlp->nbytes > pq->rlp->maxbytes)
+        pq->rlp->maxbytes = pq->rlp->nbytes;
 
     return status;
 
@@ -6074,6 +6072,7 @@ pqe_newDirect(
                     indexp->offset = sxep->offset;
                     (void)memcpy(indexp->signature, sxep->sxi,
                             sizeof(signaturet));
+                    indexp->sig_is_set = true;
                 }
 
                 (void)ctl_rel(pq, RGN_MODIFIED);

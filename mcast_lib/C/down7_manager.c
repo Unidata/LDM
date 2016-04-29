@@ -87,7 +87,7 @@ waitForTermSig(
  *
  * @param[in] servAddr       Pointer to the address of the server from which to
  *                           obtain multicast information, backlog products, and
- *                           products missed by the VCMTP layer. Caller may free
+ *                           products missed by the FMTP layer. Caller may free
  *                           upon return.
  * @param[in] feedtype       Feedtype of multicast group to receive.
  * @param[in] mcastIface     IP address of interface to use for receiving

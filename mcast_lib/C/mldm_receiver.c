@@ -6,8 +6,8 @@
  *   @file: mldm_receiver.c
  * @author: Steven R. Emmerson
  *
- * This file implements the multicast LDM receiver, which uses a VCMTP receiver
- * to receive LDM data-products sent to a multicast group via a VCMTP sender.
+ * This file implements the multicast LDM receiver, which uses a FMTP receiver
+ * to receive LDM data-products sent to a multicast group via a FMTP sender.
  */
 
 #include "config.h"
@@ -38,12 +38,12 @@
 struct mlr {
     pqueue*               pq;         // product-queue to use */
     Down7*                down7;      // pointer to associated downstream LDM-7
-    McastReceiver*        receiver;   // VCMTP C Receiver
+    McastReceiver*        receiver;   // FMTP C Receiver
     volatile sig_atomic_t done;
 };
 
 /**
- * Allocates space in a product-queue for a VCMTP product if it's not a
+ * Allocates space in a product-queue for a FMTP product if it's not a
  * duplicate and returns the starting memory-location for the data.
  *
  * @param[in]  mlr        Pointer to the multicast LDM receiver.
@@ -101,9 +101,9 @@ allocateSpace(
 }
 
 /**
- * Accepts notification of the beginning of a VCMTP product. Allocates a region
- * in the LDM product-queue to receive the VCMTP product, which is an
- * XDR-encoded LDM data-product. Called by VCMTP layer.
+ * Accepts notification of the beginning of a FMTP product. Allocates a region
+ * in the LDM product-queue to receive the FMTP product, which is an
+ * XDR-encoded LDM data-product. Called by FMTP layer.
  *
  * @param[in,out]  mlr          The associated multicast LDM receiver.
  * @param[in]      prodSize     Size of the product in bytes.
@@ -126,7 +126,7 @@ bop_func(
         pqe_index* const restrict  pqeIndex)
 {
     /*
-     * This function is called on both the VCMTP multicast and unicast
+     * This function is called on both the FMTP multicast and unicast
      * threads.
      */
     int  status;
@@ -149,7 +149,7 @@ bop_func(
     }
 
     if (status)
-        log_flush_error(); // because called by VCMTP layer
+        log_flush_error(); // because called by FMTP layer
 
     log_debug("bop_func(): Returning: prod=%p, prodSize=%zu",
             *prod, prodSize);
@@ -202,7 +202,7 @@ lastReceived(
 }
 
 /**
- * Finishes inserting a received VCMTP product into an LDM product-queue as an
+ * Finishes inserting a received FMTP product into an LDM product-queue as an
  * LDM data-product.
  *
  * @param[in] mlr          Pointer to the multicast LDM receiver.
@@ -240,8 +240,8 @@ finishInsertion(
 }
 
 /**
- * Accepts notification from the VCMTP layer of the complete reception of a
- * product. Finishes inserting the VCMTP product (which is an XDR-encoded
+ * Accepts notification from the FMTP layer of the complete reception of a
+ * product. Finishes inserting the FMTP product (which is an XDR-encoded
  * data-product) into the associated LDM product-queue.
  *
  * @param[in,out]  mlr       Pointer to the associated multicast LDM receiver.
@@ -263,7 +263,7 @@ eop_func(
         pqe_index* const     pqeIndex)
 {
     /*
-     * This function is called on both the VCMTP multicast and unicast threads.
+     * This function is called on both the FMTP multicast and unicast threads.
      */
 
     int status;
@@ -281,7 +281,7 @@ eop_func(
 
         if (!xdr_prod_info(&xdrs, info)) {
             log_add("Couldn't decode LDM product metadata from %zu-byte "
-                    "VCMTP product", prodSize);
+                    "FMTP product", prodSize);
             status = -1;
             pqe_discard(mlr->pq, *pqeIndex);
         }
@@ -293,13 +293,13 @@ eop_func(
     }
 
     if (status)
-        log_flush_error(); // because called by VCMTP layer
+        log_flush_error(); // because called by FMTP layer
 
     return status;
 }
 
 /**
- * Accepts notification from the VCMTP layer of the missed reception of a
+ * Accepts notification from the FMTP layer of the missed reception of a
  * product. Queues the product for reception by other means. This function must
  * and does return immediately.
  *
@@ -312,11 +312,11 @@ eop_func(
 static void
 missed_prod_func(
         void* const restrict      obj,
-        const VcmtpProdIndex      iProd,
+        const FmtpProdIndex      iProd,
         pqe_index* const restrict pqeIndex)
 {
     /*
-     * This function is called on both the VCMTP multicast and unicast threads.
+     * This function is called on both the FMTP multicast and unicast threads.
      */
 
     Mlr* mlr = obj;
@@ -340,7 +340,7 @@ missed_prod_func(
  * @retval     LDM7_INVAL     `pq == NULL || missed_product == NULL ||
  *                            mcastInfo == NULL || down7 == NULL`. `log_add()`
  *                            called.
- * @retval     LDM7_VCMTP     VCMTP error. `log_add()` called.
+ * @retval     LDM7_FMTP     FMTP error. `log_add()` called.
  */
 static int
 init(
@@ -379,7 +379,7 @@ init(
                 ppn_free(notifier);
                 return LDM7_SYSTEM;
             }
-            log_info("init(): Initializing VCMTP receiver with %s", miStr);
+            log_info("init(): Initializing FMTP receiver with %s", miStr);
             free(miStr);
         }
 
@@ -387,7 +387,7 @@ init(
                 mcastInfo->server.port, notifier, mcastInfo->group.inetId,
                 mcastInfo->group.port, mcastIface);
         if (status) {
-            log_add("Couldn't create VCMTP receiver");
+            log_add("Couldn't create FMTP receiver");
             ppn_free(notifier);
             return LDM7_MCAST;
         }

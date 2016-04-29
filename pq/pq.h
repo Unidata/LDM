@@ -10,6 +10,7 @@
 #include "prod_class.h"
 
 #include <sys/types.h>	/* off_t, mode_t */
+#include <stdbool.h>
 #include <stddef.h>	/* size_t */
 
 
@@ -52,8 +53,9 @@ typedef enum {
 } pq_match;
 
 struct pqe_index {
-	off_t offset;
+	off_t      offset;
 	signaturet signature;
+	bool       sig_is_set;
 };
 
 /*

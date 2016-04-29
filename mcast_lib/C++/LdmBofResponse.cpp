@@ -6,7 +6,7 @@
  * @file LdmBofResponse.cpp
  *
  * This file defines the API for the response by the LDM to a beginning-of-file
- * notice from the VCMTP layer.
+ * notice from the FMTP layer.
  *
  * @author: Steven R. Emmerson
  */
@@ -18,7 +18,7 @@
 
 /**
  * The class corresponding to a response from the LDM to a beginning-of-file
- * notice from the VCMTP layer.
+ * notice from the FMTP layer.
  */
 class LdmBofResponse : public MemoryBofResponse {
 public:
@@ -32,10 +32,10 @@ private:
 /**
  * Returns a new LDM BOF response.
  *
- * @param[in] buf    The buffer into which to write the VCMTP file.
+ * @param[in] buf    The buffer into which to write the FMTP file.
  * @param[in] size   The size of the buffer in bytes.
  * @param[in] index  Information on the region in the LDM product-queue into
- *                   which the VCMTP file will be written. The client may free.
+ *                   which the FMTP file will be written. The client may free.
  * @return           Pointer to a corresponding LDM BOF response. The client
  *                   should \c free() it when it is no longer needed.
  */
@@ -50,7 +50,7 @@ ldmBofResponse_new(
 
 /**
  * Returns information on the region of the product-queue associated with the
- * VCMTP file.
+ * FMTP file.
  *
  * @param[in] ldmBofResponse  Pointer to an LDM BOF response.
  * @return                    Pointer to the associated region information.
@@ -63,7 +63,7 @@ ldmBofResponse_getIndex(
 }
 
 /**
- * Returns the buffer associated with the VCMTP file.
+ * Returns the buffer associated with the FMTP file.
  *
  * @param[in] ldmBofResponse  Pointer to an LDM BOF response.
  * @return                    Pointer to the associated buffer.

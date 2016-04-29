@@ -6,7 +6,7 @@
  * @file LdmBofResponse.h
  *
  * This file declares the API for the response by the LDM to a beginning-of-file
- * notice from the VCMTP layer.
+ * notice from the FMTP layer.
  *
  * @author: Steven R. Emmerson
  */

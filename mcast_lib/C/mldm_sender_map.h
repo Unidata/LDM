@@ -49,7 +49,7 @@ msm_lock(
  *
  * @param[in] feedtype     Feed-type.
  * @param[in] pid          Multicast LDM sender process-ID.
- * @param[in] port         Port number of the VCMTP TCP server.
+ * @param[in] port         Port number of the FMTP TCP server.
  * @retval    0            Success.
  * @retval    LDM7_DUP     Process identifier duplicates existing entry.
  *                         `log_add()` called.
@@ -67,7 +67,7 @@ msm_put(
  *
  * @param[in]  feedtype     Feed-type.
  * @param[out] pid          Associated process-ID.
- * @param[out] port         Port number of the associated VCMTP TCP server.
+ * @param[out] port         Port number of the associated FMTP TCP server.
  * @retval     0            Success. `*pid` and `*port` are set.
  * @retval     LDM7_NOENT   No process associated with feed-type.
  */

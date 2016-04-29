@@ -15,7 +15,8 @@ EXTRA_DIST	        = \
         child_map.hin \
         doubly_linked_list.hin \
         doubly_linked_stack.hin \
-        semRWLock.hin
+        semRWLock.hin \
+        StrBuf.hin
 CLEANFILES		= $(BUILT_SOURCES) *.i
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \

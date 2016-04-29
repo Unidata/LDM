@@ -76,7 +76,7 @@ mlsm_ensureCleanup(void)
  * @pre                     Multicast LDM sender PID map is locked for writing.
  * @param[in]  feedtype     Feed-type of multicast group.
  * @param[out] pid          Process ID of the multicast LDM sender.
- * @param[out] port         Port number of the VCMTP TCP server.
+ * @param[out] port         Port number of the FMTP TCP server.
  * @retval     0            The multicast LDM sender associated with the given
  *                          multicast group is running. `*pid` and `*port` are
  *                          set.
@@ -115,12 +115,12 @@ mlsm_isRunning(
 }
 
 /**
- * Gets the port number of the VCMTP TCP server of a multicast LDM sender
+ * Gets the port number of the FMTP TCP server of a multicast LDM sender
  * process that writes it to a pipe.
  *
  * @param[in]  pipe         Pipe for reading from the multicast LDM sender
  *                          process.
- * @param[out] serverPort   Port number of VCMTP TCP server.
+ * @param[out] serverPort   Port number of FMTP TCP server.
  * @retval     0            Success. `*serverPort` is set.
  * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
  */
@@ -366,7 +366,7 @@ mlsm_spawn(
             (void)close(fds[0]);                // no longer needed
 
             if (status) {
-                log_add("Couldn't get port number of VCMTP TCP server from "
+                log_add("Couldn't get port number of FMTP TCP server from "
                         "multicast LDM sender process. Terminating that "
                         "process.");
                 (void)kill(child, SIGTERM);
@@ -558,7 +558,7 @@ me_new(
 
 #if 0
     if (port != 0) {
-        log_add("Port number of VCMTP TCP server isn't zero: %hu", port);
+        log_add("Port number of FMTP TCP server isn't zero: %hu", port);
         status = LDM7_INVAL;
     }
     else {
@@ -695,7 +695,7 @@ me_compareOrConflict(
  * @retval         0            Success. The multicast LDM sender associated
  *                              with the given multicast group is running or was
  *                              successfully started. `info->server.port` is
- *                              set to the port number of the VCMTP TCP server.
+ *                              set to the port number of the FMTP TCP server.
  *                              `*pid` is set.
  * @retval         LDM7_SYSTEM  System error. `log_add()` called.
  */

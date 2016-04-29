@@ -24,21 +24,21 @@ public:
     /**
      * Constructs from the notification functions.
      *
-     * @param[in] eop_func              Function to call when the VCMTP layer is
+     * @param[in] eop_func              Function to call when the FMTP layer is
      *                                  finished with a product.
      * @throws    std::invalid_argument if `eop_func == NULL`.
      */
     PerProdSendingNotifier(
-            void (*eop_func)(VcmtpProdIndex prodIndex));
+            void (*eop_func)(FmtpProdIndex prodIndex));
 
     ~PerProdSendingNotifier() {}
-    void notify_of_eop(VcmtpProdIndex prodIndex);
+    void notify_of_eop(FmtpProdIndex prodIndex);
 
 private:
     /**
-     * Function to call when the VCMTP layer is done with a product.
+     * Function to call when the FMTP layer is done with a product.
      */
-    void   (*eop_func)(VcmtpProdIndex prodIndex);
+    void   (*eop_func)(FmtpProdIndex prodIndex);
 };
 
 #endif /* PER_PROD_SENDING_NOTIFIER_H_ */
