@@ -1,4 +1,4 @@
-6.13.0
+6.13.0	2016-05-02T15:14:40-0600
     Logging:
         Re-wrote LDM logging to eliminate the dependency on the system logging
         daemon because:
