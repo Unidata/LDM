@@ -49,8 +49,8 @@
 
     ldmadmin(1):
         Reduced overestimation of new queue capacities (i.e., data capacity and
-        product capacity) and eliminated computing new capacities if the data is
-        insufficient.
+        product capacity) by "ldmadmin vetqueuesize" and eliminated computing
+        new capacities if the data is insufficient.
 
         Modified the "printmetrics" command to use free(1) to obtain
         memory-usage metrics if they aren't obtained from top(1).
