@@ -1,59 +1,4 @@
-6.13.0.8
-    Installation:
-        Stopped "make distclean" from removing "*.log" files so that the prior
-        invocation of the configure(1)-script can be seen in the file
-        "config.log".
-
-6.13.0.7	2016-04-29T14:38:22-0600
-    Added rule to made "StrBuf.h".
-
-6.13.0.6	2016-04-29T14:31:51-0600
-    VCMTP -> FMTP (mostly) nonsense
-
-6.13.0.5	2016-04-28T16:29:06-0600
-    NOAAPort:
-        Removed "pdb.c" and "pdb.h".
-
-        Corrected "make check": corrected vetting of output from ingesters when
-        the configure(1)-script is executed with the option "--with-ulog".
-
-    push(1):
-        Moved "--force" to before "--tags" in push(1) because it didn't seem
-        to work the other way.
-
-6.13.0.4	2016-04-27T16:10:20-0600
-    log(3):
-        Changed format of location field printed by log2ulog(3) from
-        "file:func():line" to "file:line:func()" to match change to
-        log2slog(3).
-
-6.13.0.3	2016-04-27T10:26:20-0600
-    NOAAPort:
-        nbs_ingest(1):
-            Moved printing of link-layer statistics from
-            "nbs_ingest.c:print_stats()" to
-            "nbs_link_filedes.c:nbsl_log_stats()". Modified
-            "nbs_ingest.c:print_stats()" accordingly.
-
-            Corrected and improved printing of link-layer statistics.
-
-        nbs_test(1):
-            Added printing of link-layer input statistics.
-
-    Misc:
-        Corrected and improved formatting by
-        "timestamp.c:timeval_format_duration()".
-
-6.13.0.2	2016-04-26T20:36:36-0600
-    Removed Coverity-discovered lint.
-
-6.13.0.1	2016-04-26T16:21:39-0600
-    nbs_ingest(1):
-        First crack at a replacement for the hard-to-maintain code of
-        noaaportIngester(1). Even if it works, it can only handle GINI
-        products. Also, doesn't do retransmission requests yet.
-
-6.13.0.0	2016-03-25T13:54:29-0600
+6.13.0
     Logging:
         Re-wrote LDM logging to eliminate the dependency on the system logging
         daemon because:
@@ -144,7 +89,7 @@
         this, pqact(1) might miss a product due to a restart of the LDM. This
         was most apparent in processing NEXRAD-2 data-products. Thanks Ryan.
 
-        Demoted uerror() message in spipe_prodput() to udebug().
+        Demoted uerror() message in spipe_prodput() to log_debug().
 
     pqing(1):
         Accepted Bill Gerry's additions of higher baud rates.
@@ -153,12 +98,7 @@
         improved algorithm for decoding the length of GRIB-1 messages.
 
     Product-Queue (pq(3)):
-        Added unlocking of mutex in pq_sequence() before calling ifMatch() to
-        avoid deadlock in calling a foreign function.
-
         Added mutex destruction to freeing.
-
-        Made pq_release() thread-safe.
 
         Modified fb_get() to log `fblk` diagnostics when it fails.
 
@@ -194,7 +134,11 @@
     ldmprint(3):
         Added missing space between the timestamp and feedtype.
 
-    Build Procedure:
+    Installation:
+        Stopped "make distclean" from removing "*.log" files so that the prior
+        invocation of the configure(1)-script can be seen in the file
+        "config.log".
+
         Improved test of netstat(1) options by the configure-script.
 
         Replaced UD_SEARCH_HEADER and UD_SEARCH_LIB with AC_ macros, improved
@@ -207,6 +151,7 @@
         Modified script ensureSyslogEntry(1) to accommodate Solaris's grep(1),
         which doesn't support the standard "-F" or "-q" options.
 
+    Documentation:
         Improved documentation based on latest workshop.
 
     Testing:
