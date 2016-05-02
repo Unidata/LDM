@@ -1,3 +1,9 @@
+6.13.0.8
+    Installation:
+        Stopped "make distclean" from removing "*.log" files so that the prior
+        invocation of the configure(1)-script can be seen in the file
+        "config.log".
+
 6.13.0.7	2016-04-29T14:38:22-0600
     Added rule to made "StrBuf.h".
 
