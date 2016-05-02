@@ -45,3 +45,4 @@ fi
 
 # Push to the origin repository
 git push
+git push --force --tags
