@@ -11,18 +11,18 @@ test $# -eq 0
 
 # If the source repository doesn't have the source distribution,
 #
-if ! ssh $SOURCE_REPO_HOST test -e $ABSPATH_SOURCE_DISTRO; then
+if ! ssh steve@$SOURCE_REPO_HOST test -e $ABSPATH_SOURCE_DISTRO; then
     #
     # Copy the source distribution to the source repository.
     #
-    trap "ssh $SOURCE_REPO_HOST rm -f $ABSPATH_SOURCE_DISTRO; `trap -p ERR`" ERR
+    trap "ssh steve@$SOURCE_REPO_HOST rm -f $ABSPATH_SOURCE_DISTRO; `trap -p ERR`" ERR
     scp $SOURCE_DISTRO_NAME steve@$SOURCE_REPO_HOST:$ABSPATH_SOURCE_DISTRO
 fi
 
 # Purge the source-repository of bug-fix versions that are older than the latest
 # corresponding minor release.
 #
-ssh -T $SOURCE_REPO_HOST bash --login <<EOF
+ssh -T steve@$SOURCE_REPO_HOST bash --login <<EOF
     set -ex # Exit on error
     cd $ABSPATH_SOURCE_REPO_DIR        
     ls -d $PKG_ID_GLOB |
@@ -52,14 +52,14 @@ make install DESTDIR=$DESTDIR >install.log 2>&1
 # Copy the documentation to the package's website and delete the installation.
 #
 versionWebDirTmp=$ABSPATH_VERSION_WEB_DIR.tmp
-ssh -T $WEB_HOST rm -rf $versionWebDirTmp
-trap "ssh -T $WEB_HOST rm -rf $versionWebDirTmp; `trap -p ERR`" ERR
+ssh -T steve@$WEB_HOST rm -rf $versionWebDirTmp
+trap "ssh -T steve@$WEB_HOST rm -rf $versionWebDirTmp; `trap -p ERR`" ERR
 scp -Br $DESTDIR$ABSPATH_DEFAULT_INSTALL_PREFIX/$RELPATH_DOC_DIR \
         steve@$WEB_HOST:$versionWebDirTmp
 rm -r $DESTDIR
 
 # Ensure that the package's home-page references the just-copied documentation.
-ssh -T $WEB_HOST bash --login <<EOF
+ssh -T steve@$WEB_HOST bash --login <<EOF
     set -ex  # Exit on error
 
     # Install the just-copied documentation.
