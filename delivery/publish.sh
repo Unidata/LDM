@@ -16,7 +16,7 @@ if ! ssh $SOURCE_REPO_HOST test -e $ABSPATH_SOURCE_DISTRO; then
     # Copy the source distribution to the source repository.
     #
     trap "ssh $SOURCE_REPO_HOST rm -f $ABSPATH_SOURCE_DISTRO; `trap -p ERR`" ERR
-    scp $SOURCE_DISTRO_NAME $SOURCE_REPO_HOST:$ABSPATH_SOURCE_DISTRO
+    scp $SOURCE_DISTRO_NAME steve@$SOURCE_REPO_HOST:$ABSPATH_SOURCE_DISTRO
 fi
 
 # Purge the source-repository of bug-fix versions that are older than the latest
@@ -55,7 +55,7 @@ versionWebDirTmp=$ABSPATH_VERSION_WEB_DIR.tmp
 ssh -T $WEB_HOST rm -rf $versionWebDirTmp
 trap "ssh -T $WEB_HOST rm -rf $versionWebDirTmp; `trap -p ERR`" ERR
 scp -Br $DESTDIR$ABSPATH_DEFAULT_INSTALL_PREFIX/$RELPATH_DOC_DIR \
-        $WEB_HOST:$versionWebDirTmp
+        steve@$WEB_HOST:$versionWebDirTmp
 rm -r $DESTDIR
 
 # Ensure that the package's home-page references the just-copied documentation.
