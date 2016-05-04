@@ -150,6 +150,9 @@
 
         Modified script ensureSyslogEntry(1) to accommodate Solaris's grep(1),
         which doesn't support the standard "-F" or "-q" options.
+        
+        Modified the "make clean" and "make distclean" rules so that the LDM
+        tutorial files aren't deleted so that a subsequent "make" doesn't fail.
 
     Documentation:
         Improved documentation based on latest workshop.
