@@ -1,3 +1,8 @@
+6.13.1
+    Installation:
+        Modified the "make clean" rule so that it doesn't delete the (generated)
+        LDM tutorial files so that a subsequent "make" won't fail.
+
 6.13.0	2016-05-03T16:03:52-0600
     Logging:
         Re-wrote LDM logging to eliminate the dependency on the system logging
@@ -150,9 +155,6 @@
 
         Modified script ensureSyslogEntry(1) to accommodate Solaris's grep(1),
         which doesn't support the standard "-F" or "-q" options.
-        
-        Modified the "make clean" and "make distclean" rules so that the LDM
-        tutorial files aren't deleted so that a subsequent "make" doesn't fail.
 
     Documentation:
         Improved documentation based on latest workshop.
