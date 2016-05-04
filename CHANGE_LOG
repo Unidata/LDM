@@ -3,6 +3,9 @@
         Modified the "make clean" rule so that it doesn't delete the (generated)
         LDM tutorial files so that a subsequent "make" won't fail.
 
+    FMTP:
+        Changed name from "vcmtp" to "FMTP" in LDM codebase.
+
 6.13.0	2016-05-03T16:03:52-0600
     Logging:
         Re-wrote LDM logging to eliminate the dependency on the system logging

@@ -6,7 +6,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS			= C C++ vcmtp
+SUBDIRS			= C C++ FMTP
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		=
-lib_la_LIBADD		= C/lib.la C++/lib.la vcmtp/libfmtp.la
+lib_la_LIBADD		= C/lib.la C++/lib.la FMTP/libfmtp.la

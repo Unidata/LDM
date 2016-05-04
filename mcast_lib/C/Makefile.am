@@ -36,9 +36,9 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
                           -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/log -I$(top_srcdir)/log \
-                          -I$(srcdir)/../vcmtp/FMTPv3 \
-                          -I$(srcdir)/../vcmtp/FMTPv3/receiver \
-                          -I$(srcdir)/../vcmtp/FMTPv3/sender \
+                          -I$(srcdir)/../FMTP/FMTPv3 \
+                          -I$(srcdir)/../FMTP/FMTPv3/receiver \
+                          -I$(srcdir)/../FMTP/FMTPv3/sender \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc \
                           -I$(top_srcdir)/mcast_lib/C++
@@ -83,7 +83,7 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \
                           -I/usr/local/include \
                           -I/usr/include
-$(FMTPReceiver_stubs):		../vcmtp/FMTPv3/receiver/fmtpRecvv3.h
+$(FMTPReceiver_stubs):		../FMTP/FMTPv3/receiver/fmtpRecvv3.h
 	opmock2 -cpp -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mcast_stubs):			../C++/mcast.h
 	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
