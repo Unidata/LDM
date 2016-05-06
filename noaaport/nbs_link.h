@@ -21,12 +21,12 @@ typedef struct nbsl nbsl_t;
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/uio.h>
-#include <time.h>
+#include <sys/time.h>
 
 typedef struct {
-    struct timespec first_io;       ///< Time first I/O returned
-    struct timespec last_io;        ///< Time last I/O returned
-    uint_least64_t  total_bytes;    ///< Total number of data-bytes seen
+    struct timeval first_io;       ///< Time first I/O returned
+    struct timeval last_io;        ///< Time last I/O returned
+    uint_least64_t total_bytes;    ///< Total number of data-bytes seen
     /*
      * The unbiased estimate of the variance of frame sizes can be computed from
      * the following three members via the formula

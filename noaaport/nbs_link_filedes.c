@@ -64,7 +64,7 @@ static void stats_io_returned(
         nbsl_stats_t* const stats,
         const unsigned      nbytes)
 {
-    (void)clock_gettime(CLOCK_REALTIME, &stats->last_io);
+    (void)gettimeofday(&stats->last_io, NULL);
     if (stats->total_frames++ == 0) {
         stats->first_frame = nbytes;
         stats->first_io = stats->last_io;
@@ -375,16 +375,15 @@ void nbsl_log_stats(
         msg[sizeof(msg)-1] = 0;
     }
     else {
-        struct timeval first;
-        (void)timeval_init_from_timespec(&first, &stats.first_io);
         struct timeval duration;
         char           first_string[TIMEVAL_FORMAT_TIME];
-        timeval_format_time(first_string, &first);
+        timeval_format_time(first_string, &stats.first_io);
         char           duration_string[TIMEVAL_FORMAT_DURATION];
 
         if (stats.total_frames == 1) {
             // Format single-observation statistics
-            (void)timeval_init_from_difference(&duration, &first, &first);
+            (void)timeval_init_from_difference(&duration, &stats.first_io,
+                    &stats.first_io);
             snprintf(msg, sizeof(msg),
                     "Link-Layer Statistics:\n"
                     "    Times:\n"
@@ -413,9 +412,8 @@ void nbsl_log_stats(
         }
         else {
             // Format multiple-observation statistics
-            struct timeval last;
-            (void)timeval_init_from_timespec(&last, &stats.last_io);
-            (void)timeval_init_from_difference(&duration, &last, &first);
+            (void)timeval_init_from_difference(&duration, &stats.last_io,
+                    &stats.first_io);
             char           last_string[TIMEVAL_FORMAT_TIME];
             double         mean_frame_size = (double)stats.total_bytes /
                     stats.total_frames;
@@ -444,7 +442,7 @@ void nbsl_log_stats(
                     "        Count:     %"PRIuLEAST64"\n"
                     "        Rate:      %g/s",
                     first_string,
-                    timeval_format_time(last_string, &last),
+                    timeval_format_time(last_string, &stats.last_io),
                     timeval_format_duration(duration_string, &duration),
                     stats.total_frames,
                     stats.smallest_frame,

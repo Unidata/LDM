@@ -121,6 +121,9 @@ tsParse(
 double timeval_as_seconds(
         struct timeval* timeval);
 
+#if defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0
+#include <time.h>
+
 /**
  * Initializes a time-value from a time-specification. The intialized value is
  * the closest one to the time-specification.
@@ -132,6 +135,8 @@ double timeval_as_seconds(
 struct timeval* timeval_init_from_timespec(
         struct timeval* const        timeval,
         const struct timespec* const timespec);
+
+#endif
 
 struct timeval* timeval_init_from_difference(
         struct timeval* const       duration,

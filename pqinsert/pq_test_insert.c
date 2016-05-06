@@ -30,6 +30,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
@@ -39,6 +40,7 @@ static const char* progname;
 static feedtypet   feedtype = EXP;
 static product     prod;
 static unsigned    seq_start = 0;
+static const long  ONE_MILLION = 1000000;
 
 static bool pti_decodeCommandLine(
         int                ac,
@@ -257,59 +259,57 @@ static int pti_decodeInputLine(
     return status;
 }
 
-static const long ONE_BILLION = 1000000000;
-
 /**
- * Returns the difference between two `struct timespec`s.
+ * Returns the difference between two `struct timeval`s.
  *
  * @param[out] result  The difference `left - right`.
  * @param[in]  left    The left operand.
  * @param[in]  right   The right operand.
  */
-static inline void timespec_diff(
-        struct timespec* const restrict       result,
-        const struct timespec* const restrict left,
-        const struct timespec* const restrict right)
+static inline void timeval_diff(
+        struct timeval* const restrict       result,
+        const struct timeval* const restrict left,
+        const struct timeval* const restrict right)
 {
     result->tv_sec = left->tv_sec - right->tv_sec;
-    result->tv_nsec = left->tv_nsec - right->tv_nsec;
-    if (result->tv_nsec < 0) {
-        result->tv_nsec += ONE_BILLION;
+    result->tv_usec = left->tv_usec - right->tv_usec;
+    if (result->tv_usec < 0) {
+        result->tv_usec += ONE_MILLION;
         result->tv_sec -= 1;
     }
 }
 
 /**
- * Returns the sum of two `struct timespec`s.
+ * Returns the sum of two `struct timeval`s.
  *
  * @param[out] result  The sum `left + right`.
  * @param[in]  left    The left operand.
  * @param[in]  right   The right operand.
  */
-static inline void timespec_sum(
-        struct timespec* const restrict       result,
-        const struct timespec* const restrict left,
-        const struct timespec* const restrict right)
+static inline void timeval_sum(
+        struct timeval* const restrict       result,
+        const struct timeval* const restrict left,
+        const struct timeval* const restrict right)
 {
     result->tv_sec = left->tv_sec + right->tv_sec;
-    result->tv_nsec = left->tv_nsec + right->tv_nsec;
-    if (result->tv_nsec > ONE_BILLION) {
-        result->tv_nsec -= ONE_BILLION;
+    result->tv_usec = left->tv_usec + right->tv_usec;
+    if (result->tv_usec > ONE_MILLION) {
+        result->tv_usec -= ONE_MILLION;
         result->tv_sec += 1;
     }
 }
 
 /**
- * Indicates if a `struct timespec` contains a positive value or not.
+ * Indicates if a `struct timeval` contains a positive value or not.
  *
  * @param[in] time   The time to examine.
  * @retval    true   `time` is positive.
  * @retval    false  `time` is zero or negative.
  */
-static inline bool timespec_isPositive(
-        struct timespec* const time)
+static inline bool timeval_isPositive(
+        struct timeval* const time)
 {
-    return time->tv_sec > 0 || (time->tv_sec == 0 && time->tv_nsec > 0);
+    return time->tv_sec > 0 || (time->tv_sec == 0 && time->tv_usec > 0);
 }
 
 /**
@@ -326,47 +326,48 @@ static bool pti_setCreationTime(
         struct tm* const    tm,
         const unsigned long ns)
 {
-    struct timespec        creationTime;
-    struct timespec        creationInterval;
-    struct timespec        returnTime;
-    static struct timespec prevReturnTime;
-    static struct timespec prevCreationTime;
+    struct timeval        creationTime;
+    struct timeval        creationInterval;
+    struct timeval        returnTime;
+    static struct timeval prevReturnTime;
+    static struct timeval prevCreationTime;
 
     // Set the input creation-time
     creationTime.tv_sec = mktime(tm);
-    creationTime.tv_nsec = ns;
+    creationTime.tv_usec = ns/1000;
 
     if (init) {
-        prevReturnTime.tv_sec = prevReturnTime.tv_nsec = 0;
+        prevReturnTime.tv_sec = prevReturnTime.tv_usec = 0;
         prevCreationTime = creationTime;
     }
 
     // Compute the time-interval since the previous input creation-time.
-    timespec_diff(&creationInterval, &creationTime, &prevCreationTime);
+    timeval_diff(&creationInterval, &creationTime, &prevCreationTime);
 
-    if (!timespec_isPositive(&creationInterval)) {
-        (void)clock_gettime(CLOCK_REALTIME, &returnTime);
+    if (!timeval_isPositive(&creationInterval)) {
+        (void)gettimeofday(&returnTime, NULL);
     }
     else {
-        struct timespec now;
-        struct timespec sleepInterval;
+        struct timeval now;
+        struct timeval sleepInterval;
 
         /*
          * Compute when this function should return based on the previous return
          * time and the interval since the previous input creation-time.
          */
-        timespec_sum(&returnTime, &prevReturnTime, &creationInterval);
+        timeval_sum(&returnTime, &prevReturnTime, &creationInterval);
 
         /*
          * Compute how long to sleep based on the return time and the current
          * time.
          */
-        (void)clock_gettime(CLOCK_REALTIME, &now);
-        timespec_diff(&sleepInterval, &returnTime, &now);
+        (void)gettimeofday(&now, NULL);
+        timeval_diff(&sleepInterval, &returnTime, &now);
 
         // Sleep if necessary
-        if (timespec_isPositive(&sleepInterval)) {
-            if (nanosleep(&sleepInterval, NULL)) {
+        if (timeval_isPositive(&sleepInterval)) {
+            if (sleep(sleepInterval.tv_sec) != 0 ||
+                    usleep(sleepInterval.tv_usec)) {
                 log_syserr("Couldn't sleep");
                 return false;
             }
@@ -375,7 +376,7 @@ static bool pti_setCreationTime(
 
     // Set the product's creation-time and save values for next time
     prod.info.arrival.tv_sec = returnTime.tv_sec;
-    prod.info.arrival.tv_usec = returnTime.tv_nsec / 1000;
+    prod.info.arrival.tv_usec = returnTime.tv_usec;
     prevCreationTime = creationTime;
     prevReturnTime = returnTime;
 

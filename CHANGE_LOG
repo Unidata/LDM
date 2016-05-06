@@ -1,4 +1,9 @@
-6.13.1	2016-05-05T11:53:34-0600
+6.13.1.1
+    Replaced use of clock_gettime() with gettimeofday() because the former
+    doesn't exist on one clients system (OS X) and its usage appears to be 
+    less portable than the latter.
+
+6.13.1.0	2016-05-05T11:53:34-0600
     Installation:
         Modified the "make clean" rule so that it doesn't delete the (generated)
         LDM tutorial files so that a subsequent "make" won't fail.

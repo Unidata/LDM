@@ -5,15 +5,18 @@
  */
 
 #include <config.h>
-#include <errno.h>
-#include <log.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
 
 #include "log.h"
 #include "timestamp.h"
+#include "unistd.h"
+
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+#include <time.h>
+
 #ifndef NDEBUG
 #define pIf(a,b) (!(a) || (b))  /* a implies b */
 #endif
@@ -332,24 +335,6 @@ double timeval_as_seconds(
 }
 
 /**
- * Initializes a time-value from a time-specification. The intialized value is
- * the closest one to the time-specification.
- *
- * @param[out] timeval   Time-value
- * @param[in]  timespec  Time-specification
- * @return               `timeval`
- */
-struct timeval* timeval_init_from_timespec(
-        struct timeval* const restrict        timeval,
-        const struct timespec* const restrict timespec)
-{
-    timeval->tv_sec = timespec->tv_sec;
-    timeval->tv_usec = (timespec->tv_nsec + 500) / 1000;
-    timeval_normalize(timeval);
-    return timeval;
-}
-
-/**
  * Initializes a time-value from the difference between two time-values.
  *
  * @param[out] duration  Duration equal to `after - before`
@@ -464,3 +449,26 @@ char* timeval_format_duration(
 
     return buf;
 }
+
+#if defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0
+#include <time.h>
+
+/**
+ * Initializes a time-value from a time-specification. The intialized value is
+ * the closest one to the time-specification.
+ *
+ * @param[out] timeval   Time-value
+ * @param[in]  timespec  Time-specification
+ * @return               `timeval`
+ */
+struct timeval* timeval_init_from_timespec(
+        struct timeval* const restrict        timeval,
+        const struct timespec* const restrict timespec)
+{
+    timeval->tv_sec = timespec->tv_sec;
+    timeval->tv_usec = (timespec->tv_nsec + 500) / 1000;
+    timeval_normalize(timeval);
+    return timeval;
+}
+
+#endif
