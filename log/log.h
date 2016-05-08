@@ -470,6 +470,14 @@ bool log_is_level_enabled(
 #define log_flush_debug()    log_flush(LOG_LEVEL_DEBUG)
 
 /**
+ * Returns the file descriptor that is used for logging.
+ *
+ * @retval -1  No file descriptor is used
+ * @return     The file descriptor that is used for logging
+ */
+int log_get_fd(void);
+
+/**
  * Allocates memory. Adds an error-message the current thread's list of
  * error-messages if an error occurs.
  *

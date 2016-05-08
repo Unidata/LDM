@@ -45,6 +45,7 @@ typedef struct {
         const log_loc_t* restrict loc,
         const char* restrict      msg);
     void (*flush)(void);
+    int  (*get_fd)(void);
     void (*fini)(void);
 } dest_funcs_t;
 
@@ -156,6 +157,17 @@ static void syslog_flush(void)
 }
 
 /**
+ * Returns the file descriptor that will be used for logging.
+ *
+ * @retval -1  No file descriptor will be used
+ * @return     The file descriptor that will be used for logging
+ */
+static int syslog_get_fd(void)
+{
+    return -1;
+}
+
+/**
  * Finalizes access to the system logging daemon.
  */
 static void syslog_fini(void)
@@ -164,7 +176,7 @@ static void syslog_fini(void)
 }
 
 static dest_funcs_t syslog_funcs =
-        {syslog_init, syslog_log, syslog_flush, syslog_fini};
+        {syslog_init, syslog_log, syslog_flush, syslog_get_fd, syslog_fini};
 
 /**
  * Writes a single log message to the stream.
@@ -201,6 +213,17 @@ static void stream_flush(void)
 }
 
 /**
+ * Returns the file descriptor that will be used for logging.
+ *
+ * @retval -1  No file descriptor will be used
+ * @return     The file descriptor that will be used for logging
+ */
+static int stream_get_fd(void)
+{
+    return fileno(stream_file);
+}
+
+/**
  * Initializes access to the standard error stream.
  *
  * @retval 0  Success (always)
@@ -221,7 +244,7 @@ static void stderr_fini(void)
 }
 
 static dest_funcs_t stderr_funcs =
-        {stderr_init, stream_log, stream_flush, stderr_fini};
+        {stderr_init, stream_log, stream_flush, stream_get_fd, stderr_fini};
 
 /**
  * Initializes access to the log file.
@@ -273,7 +296,7 @@ static void file_fini(void)
 }
 
 static dest_funcs_t file_funcs =
-        {file_init, stream_log, stream_flush, file_fini};
+        {file_init, stream_log, stream_flush, stream_get_fd, file_fini};
 
 /******************************************************************************
  * Package-Private Implementation API:
@@ -573,4 +596,15 @@ unsigned log_get_options(void)
     const int opts = syslog_options;
     logl_unlock();
     return opts;
+}
+
+/**
+ * Returns the file descriptor that is used for logging.
+ *
+ * @retval -1  No file descriptor is used
+ * @return     The file descriptor that is used for logging
+ */
+int log_get_fd(void)
+{
+    return dest_funcs.get_fd();
 }

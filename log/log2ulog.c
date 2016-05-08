@@ -280,3 +280,14 @@ unsigned log_get_options(void)
     logl_unlock();
     return opts;
 }
+
+/**
+ * Returns the file descriptor that is used for logging.
+ *
+ * @retval -1  No file descriptor is used
+ * @return     The file descriptor that is used for logging
+ */
+int log_get_fd(void)
+{
+    return getulogfd();
+}

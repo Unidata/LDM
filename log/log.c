@@ -925,7 +925,7 @@ int log_init(
     if (status == 0) {
         // The following isn't done by log_reinit():
         init_thread = pthread_self();
-        avoid_stderr = (fcntl(STDERR_FILENO, F_GETFD) == -1);
+        avoid_stderr = (fcntl(STDERR_FILENO, F_GETFD) < 0);
         log_level = LOG_LEVEL_NOTICE;
         const char* const dest = get_default_destination();
         // `dest` doesn't overlap `log_dest`

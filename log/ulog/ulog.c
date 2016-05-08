@@ -182,6 +182,19 @@ getulogpath(void) {
 
 
 /**
+ * Returns the file descriptor used for logging.
+ *
+ * @retval  -1  No file descriptor is used
+ * @return      The file descriptor used for logging
+ */
+int
+getulogfd(void)
+{
+    return logFd;
+}
+
+
+/**
  * Initializes syslog(3) system. Like Berkeley 'openlog(3)', but:
  *   - Always attempts to open the log connection if there is none,
  *     even if the LOG_NDELAY option bit is cleared.

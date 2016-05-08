@@ -1,7 +1,19 @@
+6.13.1.2
+    pqact(1):
+        Added configuration of the standard output and standard error streams in
+        preparation for execution of child processes. Apparently, there are
+        decoders (e.g., "metar2nc") that fail is they can't write to one of
+        these streams.
+        
+    Logging:
+        Added log_get_fd() to support change to pqact(1).
+
 6.13.1.1	2016-05-05T18:27:01-0600
     Replaced use of clock_gettime() with gettimeofday() because the former
-    doesn't exist on one clients system (OS X) and its usage appears to be 
-    less portable than the latter.
+    doesn't exist on one client's OS X system (at least) and it appears to be
+    supported on fewer platforms than the latter. Also, while clock_gettime()
+    can have nanosecond resolution, the microsecond resolution of gettimeofday()
+    is sufficient for the LDM.
 
 6.13.1.0	2016-05-05T11:53:34-0600
     Installation:
@@ -38,6 +50,9 @@
         web page
         <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/logfile-format.html>
         for more information.
+
+        A particular consequence is that logging, by default, will no longer
+        depend on SELINUX.
 
     NOAAPort Ingestion (noaaportIngester(1), readnoaaport(1)):
         Incorporated Raytheon's modifications to noaaportIngester(1) to:

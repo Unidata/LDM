@@ -11,6 +11,7 @@
 
 #include <config.h>
 
+#include <fcntl.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -81,6 +82,51 @@ int                          currentCursorSet = 0;
 #define DEFAULT_PIPE_TIMEO 60
 #endif /* !DEFAULT_PIPE_TIMEO */
 int pipe_timeo = DEFAULT_PIPE_TIMEO;
+
+/**
+ * Configures the standard output file descriptor and the standard error file
+ * descriptor for subsequent execution of child processes. If the standard
+ * output file descriptor is open, then it is unmodified; otherwise, it is
+ * opened on "/dev/null". If the standard error file descriptor is open, then it
+ * is unmodified; otherwise, if the logging module uses a file descriptor, then
+ * the standard error file descriptor is made a duplicate of that; otherwise,
+ * the standard error file descriptor is opened on "/dev/null".
+ *
+ * @retval  0  Success
+ * @retval -1  Failure. log_add() called.
+ */
+static int configure_stdout_stderr(void)
+{
+    int       status = 0; // Success
+    const int dev_null_fd = open("/dev/null", O_RDWR);
+    if (dev_null_fd < 0) {
+        log_add_syserr("Couldn't open /dev/null");
+        status = -1;
+    }
+    else {
+        if (fcntl(STDOUT_FILENO, F_GETFD) < 0) {
+            if (dup2(dev_null_fd, STDOUT_FILENO) < 0) {
+                log_add_syserr("Couldn't dup2() STDOUT_FILENO");
+                status = -1;
+            }
+        }
+        if (status == 0) {
+            if (fcntl(STDERR_FILENO, F_GETFD) < 0) {
+                int fd = log_get_fd();
+                fd = (fd >= 0 ? fd : dev_null_fd);
+                if (dup2(fd, STDERR_FILENO) < 0) {
+                    log_add_syserr("Couldn't dup2() STDERR_FILENO to %s",
+                            fd == dev_null_fd
+                                ? "/dev/null"
+                                : "logging module file descriptor");
+                    status = -1;
+                }
+            }
+        }
+        (void)close(dev_null_fd);
+    }
+    return status;
+}
 
 
 /*
@@ -385,6 +431,12 @@ main(int ac, char *av[])
             }
         }
 
+        if (configure_stdout_stderr()) {
+            log_error("Couldn't configure standard output or standard error "
+                    "for execution of child processes");
+            exit(1);
+        }
+
         log_notice("Starting Up");
 
         if ('/' != conffilename[0]) {
@@ -412,7 +464,7 @@ main(int ac, char *av[])
         }
 
         /*
-         * Initialze the previous-state module for this process.
+         * Initialize the previous-state module for this process.
          */
         if (stateInit(conffilename) < 0) {
             log_error("Couldn't initialize previous-state module");
