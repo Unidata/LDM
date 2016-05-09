@@ -1,12 +1,13 @@
 6.13.1.2
     pqact(1):
         Added configuration of the standard output and standard error streams in
-        preparation for execution of child processes. Apparently, there are
-        decoders (e.g., "metar2nc") that fail is they can't write to one of
-        these streams.
+        preparation for execution of child processes. This is based on the
+        assumption that the "metar2nc" decoder fails because it can't write to
+        one of these streams.
         
     Logging:
-        Added log_get_fd() to support change to pqact(1).
+        Added log_get_fd() to support configuration of the standard error stream
+        by pqact(1).
 
 6.13.1.1	2016-05-05T18:27:01-0600
     Replaced use of clock_gettime() with gettimeofday() because the former
