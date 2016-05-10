@@ -587,7 +587,6 @@ AC_CHECK_HEADERS([stropts.h], ,
 AC_SEARCH_LIBS([log10], [m], , [AC_MSG_ERROR([Library not found])])
 
 # Ensure a reference to the real-time library, if necessary
-AC_SEARCH_LIBS([clock_gettime], [rt], , [AC_MSG_ERROR([Library not found])])
 AC_SEARCH_LIBS([shm_open], [rt], , [AC_MSG_ERROR([Library not found])])
 
 # Ensure references to networking libraries, if necessary.

@@ -1,3 +1,6 @@
+6.13.1.3
+    Removed search for clock_gettime() from configure(1)-script.
+
 6.13.1.2	2016-05-09T10:21:22-0600
     pqact(1):
         Added configuration of the standard output and standard error streams in
