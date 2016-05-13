@@ -2255,25 +2255,6 @@ proc_free(Process *proc)
 
 
 static int
-close_rest(int bottom)
-{
-        static long open_max = 0; /* number of descriptors */
-        int ii;
-        if(!open_max)
-        {
-#ifdef _SC_OPEN_MAX
-                open_max = sysconf(_SC_OPEN_MAX);
-#else
-                open_max = 32 ; /* punt */
-#endif
-        }
-        for(ii = bottom; (long)ii < open_max ; ii++)
-                (void)close(ii) ;
-        return ii ;
-}
-
-
-static int
 proc_exec(Process *proc)
 {
         log_assert(proc->pid == -1);
@@ -2319,37 +2300,25 @@ proc_exec(Process *proc)
                 }
                 (void)close(1);
                 {
-                        int fd = open("/dev/console", O_WRONLY);
-                        if(fd < 0)
-                                fd = open("/dev/null", O_WRONLY);
+                        int fd = open("/dev/null", O_WRONLY);
                         if(fd > 1)
                         {
                                 (void) dup2(fd, 1);
                                 (void) close(fd);
                         }
                 }
-                if(strcmp(log_get_destination(), "") == 0)
-                {
-                        // Logging to system logging daemon
-                        (void)close(2);
-                        {
-                                int fd = open("/dev/console", O_WRONLY);
-                                if(fd < 0)
-                                        fd = open("/dev/null", O_WRONLY);
-                                if(fd > 2)
-                                {
-                                        (void) dup2(fd, 2);
-                                        (void) close(fd);
-                                }
-                        }
-                } /* else, the logFd is stderr, and that's ok */
-                close_rest(3);
-                endpriv();
-                log_fini();
-                (void) execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
-                (void)log_reinit();
-                log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
-                        proc->wrdexp.we_wordv[0], getenv("PATH"));
+                if (close_most_file_descriptors() < 0) {
+                    log_error("Couldn't close file descriptors");
+                }
+                else {
+                    endpriv();
+                    log_fini();
+                    (void) execvp(proc->wrdexp.we_wordv[0],
+                            proc->wrdexp.we_wordv);
+                    (void)log_reinit();
+                    log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
+                            proc->wrdexp.we_wordv[0], getenv("PATH"));
+                }
                 _exit(127) ;
         }
         /* else, parent */

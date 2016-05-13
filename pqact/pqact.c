@@ -84,46 +84,31 @@ int                          currentCursorSet = 0;
 int pipe_timeo = DEFAULT_PIPE_TIMEO;
 
 /**
- * Configures the standard output file descriptor and the standard error file
- * descriptor for subsequent execution of child processes. If the standard
- * output file descriptor is open, then it is unmodified; otherwise, it is
- * opened on "/dev/null". If the standard error file descriptor is open, then it
- * is unmodified; otherwise, if the logging module uses a file descriptor, then
- * the standard error file descriptor is made a duplicate of that; otherwise,
- * the standard error file descriptor is opened on "/dev/null".
+ * Configures the standard I/O streams for subsequent execution of child
+ * processes. The standard input and output streams are redirected to
+ * "/dev/null" because they are not used by this program and doing so prevents
+ * child processes that mistakenly write to them from terminating abnormally.
+ * The same is done with the standard error stream for the same reason _if_ it
+ * is not used for logging.
  *
  * @retval  0  Success
  * @retval -1  Failure. log_add() called.
  */
-static int configure_stdout_stderr(void)
+static int configure_stdio(void)
 {
-    int       status = 0; // Success
-    const int dev_null_fd = open("/dev/null", O_RDWR);
-    if (dev_null_fd < 0) {
-        log_add_syserr("Couldn't open /dev/null");
+    int status = 0; // Success
+    if (NULL == freopen("/dev/null", "r", stdin)) {
+        log_add_syserr("Couldn't redirect stdin to /dev/null");
         status = -1;
     }
-    else {
-        if (fcntl(STDOUT_FILENO, F_GETFD) < 0) {
-            if (dup2(dev_null_fd, STDOUT_FILENO) < 0) {
-                log_add_syserr("Couldn't dup2() STDOUT_FILENO");
-                status = -1;
-            }
-        }
-        if (status == 0) {
-            if (fcntl(STDERR_FILENO, F_GETFD) < 0) {
-                int fd = log_get_fd();
-                fd = (fd >= 0 ? fd : dev_null_fd);
-                if (dup2(fd, STDERR_FILENO) < 0) {
-                    log_add_syserr("Couldn't dup2() STDERR_FILENO to %s",
-                            fd == dev_null_fd
-                                ? "/dev/null"
-                                : "logging module file descriptor");
-                    status = -1;
-                }
-            }
-        }
-        (void)close(dev_null_fd);
+    else if (NULL == freopen("/dev/null", "w", stdout)) {
+        log_add_syserr("Couldn't redirect stdout to /dev/null");
+        status = -1;
+    }
+    else if (log_get_fd() != STDERR_FILENO &&
+            NULL == freopen("/dev/null", "r+", stderr)) {
+        log_add_syserr("Couldn't redirect stderr to /dev/null");
+        status = -1;
     }
     return status;
 }
@@ -292,7 +277,7 @@ usage(
         log_error(
 "\tconfig_file  Pathname of configuration-file (default: " "\"%s\")",
                 getPqactConfigPath());
-        exit(1);
+        exit(EXIT_FAILURE);
         /*NOTREACHED*/
 }
 
@@ -326,7 +311,7 @@ main(int ac, char *av[])
         {
                 int errnum = errno;
                 log_error("Couldn't set timestamp: %s", strerror(errnum));
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
         clss.to = TS_ENDT;
@@ -431,12 +416,6 @@ main(int ac, char *av[])
             }
         }
 
-        if (configure_stdout_stderr()) {
-            log_error("Couldn't configure standard output or standard error "
-                    "for execution of child processes");
-            exit(1);
-        }
-
         log_notice("Starting Up");
 
         if ('/' != conffilename[0]) {
@@ -452,14 +431,14 @@ main(int ac, char *av[])
 #endif
             if (getcwd(buf, sizeof(buf)) == NULL) {
                 log_syserr("Couldn't get current working directory");
-                exit(1);
+                exit(EXIT_FAILURE);
             }
             (void)strncat(buf, "/", sizeof(buf)-strlen(buf)-1);
             (void)strncat(buf, conffilename, sizeof(buf)-strlen(buf)-1);
             conffilename = strdup(buf);
             if (conffilename == NULL) {
                 log_syserr("Couldn't duplicate string \"%s\"", buf);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
 
@@ -473,35 +452,12 @@ main(int ac, char *av[])
         }
 
         /*
-         * The standard input stream is redirected to /dev/null because this
-         * program doesn't use it and doing so prevents child processes
-         * that mistakenly read from it from terminating abnormally.
+         * Configure the standard I/O streams for execution of child processes.
          */
-        if (NULL == freopen("/dev/null", "r", stdin))
-        {
-            err_log_and_free(
-                ERR_NEW1(0, NULL,
-                    "Couldn't redirect stdin to /dev/null: %s",
-                    strerror(errno)),
-                ERR_FAILURE);
+        if (configure_stdio()) {
+            log_error("Couldn't configure standard I/O streams for execution "
+                    "of child processes");
             exit(EXIT_FAILURE);
-            /*NOTREACHED*/
-        }
-
-        /*
-         * The standard output stream is redirected to /dev/null because this
-         * program doesn't use it and doing so prevents child processes
-         * that mistakenly write to it from terminating abnormally.
-         */
-        if (NULL == freopen("/dev/null", "w", stdout))
-        {
-            err_log_and_free(
-                ERR_NEW1(0, NULL,
-                    "Couldn't redirect stdout to /dev/null: %s",
-                    strerror(errno)),
-                ERR_FAILURE);
-            exit(EXIT_FAILURE);
-            /*NOTREACHED*/
         }
 
         /*
@@ -514,7 +470,7 @@ main(int ac, char *av[])
         {
             log_error("Couldn't set number of available file-descriptors");
             log_notice("Exiting");
-            exit(1);
+            exit(EXIT_FAILURE);
             /*NOTREACHED*/
         }
 
@@ -541,7 +497,7 @@ main(int ac, char *av[])
                 log_error("Can't compile regular expression \"%s\"",
                         spec.pattern);
                 log_notice("Exiting");
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
 
@@ -552,7 +508,7 @@ main(int ac, char *av[])
         {
                 log_syserr("atexit");
                 log_notice("Exiting");
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
 
@@ -566,7 +522,7 @@ main(int ac, char *av[])
          * its syntax may be checked without opening a product queue.
          */
         if ((status = readPatFile(conffilename)) < 0) {
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
         else if (status == 0) {
@@ -589,7 +545,7 @@ main(int ac, char *av[])
                     log_error("pq_open failed: %s: %s\n",
                             pqfname, strerror(status));
                 }
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
 
@@ -746,7 +702,7 @@ main(int ac, char *av[])
                 else {
                     log_error("pq_sequence failed: %s (errno = %d)",
                         strerror(status), status);
-                    exit(1);
+                    exit(EXIT_FAILURE);
                     /*NOTREACHED*/
                 }
 

@@ -1,3 +1,19 @@
+6.13.1.4
+    pqact(1):
+        Added closing of all file descriptors greater than the ones used for
+        standard I/O and the one used for logging before executing a child
+        process because a pqact(1) process can have many open file descriptors
+        that shouldn't be inherited by a child process.
+
+        Simplified the initial redirection of standard I/O streams: the 
+        standard input and output streams are redirected to "/dev/null" and the
+        standard error stream is redirected to "/dev/null" if it's not used for
+        logging.
+
+    Misc:
+        Added the function close_most_file_descriptors() to support the change
+        to pqact(1).
+
 6.13.1.3	2016-05-10T13:48:26-0600
     Removed search for clock_gettime() from configure(1)-script.
 
@@ -7,7 +23,7 @@
         preparation for execution of child processes. This is based on the
         assumption that the "metar2nc" decoder fails because it can't write to
         one of these streams.
-        
+
     Logging:
         Added log_get_fd() to support configuration of the standard error stream
         by pqact(1).
