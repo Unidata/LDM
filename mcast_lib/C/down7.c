@@ -1506,7 +1506,7 @@ deliver_product(
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info,
                     log_is_enabled_debug);
-            log_info("deliver_product(): Inserted: %s", buf);
+            log_info("Inserted: %s", buf);
         }
         down7_incNumProds(down7);
     }
@@ -1522,8 +1522,7 @@ deliver_product(
                     log_is_enabled_debug);
 
             if (status == PQUEUE_DUP) {
-                log_info("deliver_product(): Duplicate data-product: %s",
-                        buf);
+                log_info("Duplicate data-product: %s", buf);
             }
             else {
                 log_warning("Product too big for queue: %s", buf);

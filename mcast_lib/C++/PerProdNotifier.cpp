@@ -178,8 +178,8 @@ void PerProdNotifier::notify_of_missed_prod(const FmtpProdIndex prodIndex)
     std::unique_lock<std::mutex> lock(mutex);
     void* const                  prodStart = prodInfos[prodIndex].start;
 
-    log_info("PerProdNotifier::notify_of_missed_prod(): Missed product: prodIndex="
-            "%lu, prodStart=%p", (unsigned long)prodIndex, prodStart);
+    log_info("Missed product: prodIndex=%lu, prodStart=%p",
+            (unsigned long)prodIndex, prodStart);
 
     missed_prod_func(mlr, prodIndex,
             prodStart ? &prodInfos[prodIndex].index : nullptr);
