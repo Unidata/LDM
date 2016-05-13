@@ -209,7 +209,8 @@ static void stream_log(
  */
 static void stream_flush(void)
 {
-    (void)fflush(stream_file);
+    if (stream_file)
+        (void)fflush(stream_file);
 }
 
 /**
@@ -267,7 +268,7 @@ static int file_init(void)
             status = -1;
         }
         else {
-            int flags = fcntl(fd, F_GETFD);
+            const int flags = fcntl(fd, F_GETFD);
             (void)fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
             stream_file = fdopen(fd, "a");
             if (stream_file == NULL) {
