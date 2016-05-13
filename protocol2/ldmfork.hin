@@ -6,6 +6,8 @@
 #ifndef LDMFORK_H
 #define LDMFORK_H
 
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
