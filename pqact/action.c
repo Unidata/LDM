@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <signal.h>
-#include <fcntl.h>
 
 #include "child_map.h"
 #include "ldm.h"
@@ -104,23 +103,14 @@ exec_prodput(
              * streams are correct and should not be modified.
              */
 
-            /*
-             * Because a pqact(1) process can have many open file descriptors
-             * that shouldn't be inherited by a child process:
-             */
-            if (close_most_file_descriptors() < 0) {
-                log_error("Couldn't close file descriptors");
-            }
-            else {
-                // Don't let the child process get any inappropriate privileges.
-                endpriv();
-                log_info("Executing program \"%s\"", argv[0]);
-                log_fini(); // ldmfork() called log_free()
-                (void) execvp(argv[0], argv);
-                (void)log_reinit();
-                log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
-                        getenv("PATH"));
-            }
+            // Don't let the child process get any inappropriate privileges.
+            endpriv();
+            log_info("Executing program \"%s\"", argv[0]);
+            log_fini(); // ldmfork() called log_free()
+            (void) execvp(argv[0], argv);
+            (void)log_reinit();
+            log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
+                    getenv("PATH"));
             exit(EXIT_FAILURE); // cleanup() calls log_fini()
         }
         else {

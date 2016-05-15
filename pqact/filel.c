@@ -1543,29 +1543,19 @@ static int pipe_open(
                                     "read-end of pipe: pfd[0]=%d", pfd[0]);
                         }
                         else {
-                            (void) close(pfd[0]);
+                            (void)close(pfd[0]);
                             pfd[0] = STDIN_FILENO;
                         }
                     }
 
                     if (STDIN_FILENO == pfd[0]) {
-                        /*
-                         * Because a pqact(1) process can have many open file
-                         * descriptors that shouldn't be inherited by a child
-                         * process:
-                         */
-                        if (close_most_file_descriptors() < 0) {
-                            log_error("Couldn't close file descriptors");
-                        }
-                        else {
-                            endpriv();
-                            log_info("Executing decoder \"%s\"", av[0]);
-                            log_fini();
-                            (void) execvp(av[0], &av[0]);
-                            (void)log_reinit();
-                            log_syserr("Couldn't execute decoder \"%s\";"
-                                    "PATH=%s", av[0], getenv("PATH"));
-                        }
+                        endpriv();
+                        log_info("Executing decoder \"%s\"", av[0]);
+                        log_fini();
+                        (void) execvp(av[0], &av[0]);
+                        (void)log_reinit();
+                        log_syserr("Couldn't execute decoder \"%s\";"
+                                "PATH=%s", av[0], getenv("PATH"));
                     }
 
                     exit(EXIT_FAILURE); // cleanup() calls log_fini()
