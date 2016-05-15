@@ -2,3 +2,5 @@ pqact.1
 Makefile.in
 date_sub
 awips
+/freopen_test
+/stderr_test
