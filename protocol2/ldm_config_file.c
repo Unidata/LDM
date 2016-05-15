@@ -2289,36 +2289,18 @@ proc_exec(Process *proc)
                 }
 
                 /* Set up fd 0,1 */
-                (void)close(0);
-                {
-                        int fd = open("/dev/null", O_RDONLY);
-                        if(fd > 0)
-                        {
-                                (void) dup2(fd, 0);
-                                (void) close(fd);
-                        }
-                }
-                (void)close(1);
-                {
-                        int fd = open("/dev/null", O_WRONLY);
-                        if(fd > 1)
-                        {
-                                (void) dup2(fd, 1);
-                                (void) close(fd);
-                        }
-                }
-                if (close_most_file_descriptors() < 0) {
-                    log_error("Couldn't close file descriptors");
-                }
-                else {
-                    endpriv();
-                    log_fini();
-                    (void) execvp(proc->wrdexp.we_wordv[0],
-                            proc->wrdexp.we_wordv);
-                    (void)log_reinit();
-                    log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
-                            proc->wrdexp.we_wordv[0], getenv("PATH"));
-                }
+                (void)close(STDIN_FILENO);
+                (void)open_on_dev_null_if_closed(STDIN_FILENO, O_RDONLY);
+                (void)close(STDOUT_FILENO);
+                (void)open_on_dev_null_if_closed(STDOUT_FILENO, O_WRONLY);
+                (void)open_on_dev_null_if_closed(STDERR_FILENO, O_RDWR);
+                endpriv();
+                log_fini();
+                (void) execvp(proc->wrdexp.we_wordv[0],
+                        proc->wrdexp.we_wordv);
+                (void)log_reinit();
+                log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
+                        proc->wrdexp.we_wordv[0], getenv("PATH"));
                 _exit(127) ;
         }
         /* else, parent */

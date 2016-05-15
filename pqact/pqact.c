@@ -43,6 +43,7 @@
 #include "atofeedt.h"
 #include "pq.h"
 #include "palt.h"
+#include "ldmfork.h"
 #include "ldmprint.h"
 #include "filel.h" /* pipe_timeo */
 #include "state.h"
@@ -84,31 +85,21 @@ int                          currentCursorSet = 0;
 int pipe_timeo = DEFAULT_PIPE_TIMEO;
 
 /**
- * Configures the standard I/O streams for subsequent execution of child
- * processes. The standard input and output streams are redirected to
- * "/dev/null" because they are not used by this program and doing so prevents
- * child processes that mistakenly write to them from terminating abnormally.
- * The same is done with the standard error stream for the same reason _if_ it
- * is not used for logging.
+ * Configures the standard I/O file descriptors for subsequent execution of
+ * child processes. The standard input, output, and error file descriptors are
+ * redirected to `/dev/null` if they are closed to prevent child processes that
+ * mistakenly write to them from misbehaving.
  *
  * @retval  0  Success
  * @retval -1  Failure. log_add() called.
  */
-static int configure_stdio(void)
+static int configure_stdio_file_descriptors(void)
 {
-    int status = 0; // Success
-    if (NULL == freopen("/dev/null", "r", stdin)) {
-        log_add_syserr("Couldn't redirect stdin to /dev/null");
-        status = -1;
-    }
-    else if (NULL == freopen("/dev/null", "w", stdout)) {
-        log_add_syserr("Couldn't redirect stdout to /dev/null");
-        status = -1;
-    }
-    else if (log_get_fd() != STDERR_FILENO &&
-            NULL == freopen("/dev/null", "r+", stderr)) {
-        log_add_syserr("Couldn't redirect stderr to /dev/null");
-        status = -1;
+    int status = open_on_dev_null_if_closed(STDIN_FILENO, O_RDONLY);
+    if (status == 0) {
+        status = open_on_dev_null_if_closed(STDOUT_FILENO, O_WRONLY);
+        if (status == 0)
+            status = open_on_dev_null_if_closed(STDERR_FILENO, O_RDWR);
     }
     return status;
 }
@@ -124,8 +115,8 @@ cleanup(void)
 
     if (done) {
         /*
-         * We are not in the interrupt context, so these can
-         * be performed safely.
+         * We are not in the interrupt context, so these can be performed
+         * safely.
          */
         fl_closeAll();
 
@@ -454,7 +445,7 @@ main(int ac, char *av[])
         /*
          * Configure the standard I/O streams for execution of child processes.
          */
-        if (configure_stdio()) {
+        if (configure_stdio_file_descriptors()) {
             log_error("Couldn't configure standard I/O streams for execution "
                     "of child processes");
             exit(EXIT_FAILURE);
