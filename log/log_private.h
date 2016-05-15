@@ -336,7 +336,7 @@ int logi_set_destination(void);
 
 /**
  * Initializes the logging module's implementation. Should be called before any
- * other function.
+ * other function. `log_dest` must be set.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.

@@ -278,6 +278,7 @@ static int file_init(void)
                 status = -1;
             }
             else {
+                setbuf(stream_file, NULL); // No buffering
                 status = 0;
             }
         }
@@ -352,6 +353,7 @@ void logi_internal(
 
 /**
  * Initializes the logging module. Should be called before any other function.
+ * `log_dest` must be set.
  * - log_get_id()           will return the filename component of `id`
  * - log_get_facility()     will return `LOG_LDM`
  * - log_get_level()        will return `LOG_LEVEL_NOTICE`

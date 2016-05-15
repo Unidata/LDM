@@ -53,6 +53,7 @@
 #include <stdio.h>    /* vsnprintf(), snprintf() */
 #include <stdlib.h>   /* malloc(), free(), abort() */
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #ifndef _XOPEN_NAME_MAX
@@ -912,6 +913,29 @@ int logl_fini(
  ******************************************************************************/
 
 /**
+ * Indicates if the standard error file descriptor refers to a file that is not
+ * `/dev/null`. This function may be called at any time.
+ *
+ * @retval true   Standard error file descriptor refers to a file that is not
+ *               `/dev/null`
+ * @retval false  Standard error file descriptor is closed or refers to
+ *                `/dev/null`.
+ */
+bool log_have_useful_stderr(void)
+{
+    static struct stat dev_null_stat;
+    static bool        initialized = false;
+    if (!initialized) {
+        (void)stat("/dev/null", &dev_null_stat); // Can't fail
+        initialized = true;
+    }
+    struct stat stderr_stat;
+    return (fstat(STDERR_FILENO, &stderr_stat) == 0) &&
+        ((stderr_stat.st_ino != dev_null_stat.st_ino) ||
+                (stderr_stat.st_dev != dev_null_stat.st_dev));
+}
+
+/**
  * Initializes this logging module.
  *
  * @param[in] id The pathname of the program (e.g., `argv[0]`). Caller may free.
@@ -924,17 +948,17 @@ int log_init(
     int status = init();
     if (status == 0) {
         // The following isn't done by log_reinit():
-        init_thread = pthread_self();
-        avoid_stderr = (fcntl(STDERR_FILENO, F_GETFD) < 0);
         log_level = LOG_LEVEL_NOTICE;
-        const char* const dest = get_default_destination();
-        // `dest` doesn't overlap `log_dest`
-        strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
+        (void)strncpy(log_dest, STDERR_SPEC, sizeof(log_dest));
         status = logi_init(id);
-        if (status)
-            logl_internal(LOG_LEVEL_ERROR,
-                    "Couldn't initialize implementation");
-        isInitialized = (status == 0);
+        if (status == 0) {
+            init_thread = pthread_self();
+            avoid_stderr = !log_have_useful_stderr();
+            const char* const dest = get_default_destination();
+            // `dest` doesn't overlap `log_dest`
+            strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
+            isInitialized = true;
+        }
     }
     return status;
 }

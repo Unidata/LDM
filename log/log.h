@@ -72,6 +72,17 @@ const char* log_get_default_daemon_destination(void);
 const char* log_get_default_destination(void);
 
 /**
+ * Indicates if the standard error file descriptor refers to a file that is not
+ * `/dev/null`. This function may be called at any time.
+ *
+ * @retval true   Standard error file descriptor refers to a file that is not
+ *               `/dev/null`
+ * @retval false  Standard error file descriptor is closed or refers to
+ *                `/dev/null`.
+ */
+bool log_have_useful_stderr(void);
+
+/**
  * Initializes the logging module. Should be called before most other functions.
  * <dl>
  *     <dt>log_get_facility() <dd>will return `LOG_LDM`.
