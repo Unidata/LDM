@@ -1,3 +1,13 @@
+6.13.1.5
+    Logging:
+        Re-arranged initialization steps to avoid a segmentation violation if
+        the initialization attempts to log a message.
+        
+        Created log_have_useful_stderr().
+        
+    Misc:
+        Created open_on_dev_null_if_closed().
+
 6.13.1.4	2016-05-12T18:17:28-0600
     pqact(1):
         Added closing of all file descriptors greater than the ones used for
