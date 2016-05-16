@@ -118,7 +118,7 @@ static const char* level_to_string(
         const log_level_t level)
 {
     static const char* strings[] = {"DEBUG", "INFO", "NOTE", "WARN",
-            "ERROR", "CRIT", "ALERT", "FATAL"};
+            "ERROR", "ALERT", "CRIT", "EMERG"};
     return logl_vet_level(level) ? strings[level] : "UNKNOWN";
 }
 
