@@ -78,7 +78,7 @@
         crontab(1)-executed "ldmadmin newlog" command. See the installed HTML
         documentation "$HOME/share/doc/ldm/basics/logging-format.html" or the
         web page
-        <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/logfile-format.html>
+        <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/logging-format.html>
         for more information.
 
         A particular consequence is that logging, by default, will no longer
