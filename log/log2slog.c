@@ -510,9 +510,9 @@ int log_set_facility(
         const int facility)
 {
     int  status;
-    bool sign_local0 = facility > LOG_LOCAL0;
-    bool sign_local7 = facility > LOG_LOCAL7;
-    if (sign_local0 == sign_local7 && facility != LOG_USER) {
+    int  diff_local0 = facility - LOG_LOCAL0;
+    int  diff_local7 = facility - LOG_LOCAL7;
+    if (diff_local0 * diff_local7 > 0 && facility != LOG_USER) {
         logl_internal(LOG_LEVEL_ERROR, "Invalid system logging facility: %d",
                 facility);
         status = -1; // `facility` is invalid
