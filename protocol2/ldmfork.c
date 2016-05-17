@@ -111,7 +111,10 @@ int open_on_dev_null_if_closed(
         status = -1;
         int fd = open("/dev/null", flags);
         if (fd < 0) {
-            log_add_syserr("Couldn't open /dev/null: flags=%d", flags);
+            log_add_syserr("Couldn't open /dev/null: flags=%#X", flags);
+        }
+        else if (fd == fileno) {
+            status = 0;
         }
         else {
             if (dup2(fd, fileno) < 0) {
@@ -121,6 +124,37 @@ int open_on_dev_null_if_closed(
                 status = 0;
             }
             (void)close(fd);
+        }
+    }
+    return status;
+}
+
+/**
+ * Ensures that a file descriptor will close if and when a function of the
+ * `exec()` family is called.
+ *
+ * @param[in] fd  File descriptor
+ * @retval  0     Success
+ * @retval -1     Failure. log_add() called.
+ */
+int ensure_close_on_exec(
+        const int fd)
+{
+    int status = fcntl(fd, F_GETFD);
+    if (status == -1) {
+        log_add_syserr("Couldn't get file descriptor flags: fd=%d", fd);
+    }
+    else if (status & FD_CLOEXEC) {
+        status = 0;
+    }
+    else {
+        status = fcntl(fd, F_SETFD, status | FD_CLOEXEC);
+        if (status == -1) {
+            log_add_syserr("Couldn't set file descriptor to close-on-exec: "
+                    "fd=%d", fd);
+        }
+        else {
+            status = 0;
         }
     }
     return status;
