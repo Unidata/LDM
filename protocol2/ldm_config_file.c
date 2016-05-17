@@ -2288,12 +2288,6 @@ proc_exec(Process *proc)
                         (void) sigaction(SIGTERM, &sigact, NULL);
                 }
 
-                /* Set up fd 0,1 */
-                (void)close(STDIN_FILENO);
-                (void)open_on_dev_null_if_closed(STDIN_FILENO, O_RDONLY);
-                (void)close(STDOUT_FILENO);
-                (void)open_on_dev_null_if_closed(STDOUT_FILENO, O_WRONLY);
-                (void)open_on_dev_null_if_closed(STDERR_FILENO, O_RDWR);
                 endpriv();
                 log_fini();
                 (void) execvp(proc->wrdexp.we_wordv[0],

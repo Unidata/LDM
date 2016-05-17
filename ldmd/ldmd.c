@@ -438,6 +438,7 @@ static int create_ldm_tcp_svc(
         log_syserr("Couldn't get socket for server");
     }
     else {
+        (void)ensure_close_on_exec(sock);
         unsigned short port = (unsigned short) localPort;
         struct sockaddr_in addr;
         socklen_t len = sizeof(addr);
@@ -582,9 +583,11 @@ static void handle_connection(
             goto again;
         }
         /* else */
-        log_syserr("accept");
+        log_syserr("accept() failure");
         return;
     }
+
+    (void)ensure_close_on_exec(xp_sock);
 
     /*
      * Don't bother continuing if no more clients are allowed.
@@ -929,7 +932,7 @@ int main(
 
         if (pid > 0) {
             /* parent */
-            (void) printf("%ld\n", (long) pid);
+            (void)printf("%ld\n", (long)pid);
             exit(0);
         }
 
@@ -938,18 +941,16 @@ int main(
          * the parent's process group.
          */
         (void)setsid(); // also makes this process a process group leader
-
-        (void)fclose(stderr);
         log_avoid_stderr(); // Because this process is now a daemon
+        (void)close(STDERR_FILENO);
+        (void)open_on_dev_null_if_closed(STDERR_FILENO, O_RDWR);
     }
 #endif
-
-    /*
-     * Close the standard input and standard output streams because they won't
-     * be used (more anality :-)
-     */
-    (void) fclose(stdout);
-    (void) fclose(stdin);
+    /* Set up fd 0,1 */
+    (void)close(STDIN_FILENO);
+    (void)open_on_dev_null_if_closed(STDIN_FILENO, O_RDONLY);
+    (void)close(STDOUT_FILENO);
+    (void)open_on_dev_null_if_closed(STDOUT_FILENO, O_WRONLY);
 
     logfname = log_get_destination();
 
