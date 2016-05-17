@@ -29,7 +29,7 @@
 
 /// Logging levels
 typedef enum {
-    LOG_LEVEL_DEBUG,    ///< Debug messages
+    LOG_LEVEL_DEBUG = 0,///< Debug messages
     LOG_LEVEL_INFO,     ///< Informational messages
     LOG_LEVEL_NOTICE,   ///< Notices
     LOG_LEVEL_WARNING,  ///< Warnings
@@ -80,7 +80,7 @@ const char* log_get_default_destination(void);
  * @retval false  Standard error file descriptor is closed or refers to
  *                `/dev/null`.
  */
-bool log_have_useful_stderr(void);
+bool log_is_stderr_useful(void);
 
 /**
  * Initializes the logging module. Should be called before most other functions.

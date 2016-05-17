@@ -921,7 +921,7 @@ int logl_fini(
  * @retval false  Standard error file descriptor is closed or refers to
  *                `/dev/null`.
  */
-bool log_have_useful_stderr(void)
+bool log_is_stderr_useful(void)
 {
     static struct stat dev_null_stat;
     static bool        initialized = false;
@@ -953,10 +953,11 @@ int log_init(
         status = logi_init(id);
         if (status == 0) {
             init_thread = pthread_self();
-            avoid_stderr = !log_have_useful_stderr();
+            avoid_stderr = !log_is_stderr_useful();
             const char* const dest = get_default_destination();
             // `dest` doesn't overlap `log_dest`
             strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
+            (void)logi_set_destination();
             isInitialized = true;
         }
     }
