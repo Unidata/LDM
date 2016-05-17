@@ -1,3 +1,21 @@
+6.13.1.6
+    ulogger(1):
+        Corrected log_set_facility() algorithm that vets the facility code.
+        
+        Corrected interpretation of priority levels by making the map from name
+        to logging level distinct from the one in </usr/include/sys/syslog.h>.
+        
+    Logging:
+        Renamed log_have_useful_stderr() to log_is_stderr_useful().
+        
+        Don't print trailing newline in messages.
+        
+        Added call to logi_set_destination() to log_init().
+        
+    ldmd(1):
+        Moved configuring of standard I/O file descriptors from EXEC action of
+        configuration-file to near fork(2) of ldmd(1).
+
 6.13.1.5	2016-05-15T10:31:36-0600
     Logging:
         Re-arranged initialization steps to avoid a segmentation violation if

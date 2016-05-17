@@ -11,3 +11,5 @@ up7.conf
 down7.conf
 *.pid
 *.pim
+/check-exec-stderr.conf
+/ldmd.pq
