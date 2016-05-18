@@ -285,9 +285,7 @@ execMldmSender(
     sbFree(command);
 
     (void)dup2(pipe, 1);
-    log_fini();
     execvp(args[0], args);
-    log_reinit();
 
     log_syserr("Couldn't execute multicast LDM sender \"%s\"; PATH=%s",
             args[0], getenv("PATH"));

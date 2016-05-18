@@ -448,7 +448,7 @@ static const char* get_default_destination(void)
 }
 
 /**
- * Initializes this logging module. Called by log_init() and log_reinit().
+ * Initializes this logging module. Called by log_init().
  *
  * @retval    -1  Failure
  * @retval     0  Success
@@ -947,7 +947,6 @@ int log_init(
 {
     int status = init();
     if (status == 0) {
-        // The following isn't done by log_reinit():
         log_level = LOG_LEVEL_NOTICE;
         (void)strncpy(log_dest, STDERR_SPEC, sizeof(log_dest));
         status = logi_init(id);
@@ -982,23 +981,6 @@ void log_avoid_stderr(void)
         (void)logi_set_destination();
     }
     logl_unlock();
-}
-
-/**
- * Re-initializes this logging module based on its state just prior to calling
- * log_fini().
- *
- * @retval    -1  Failure
- * @retval     0  Success
- */
-int log_reinit(void)
-{
-    int status = init();
-    if (status == 0) {
-        status = logi_reinit();
-        isInitialized = (status == 0);
-    }
-    return status;
 }
 
 /**

@@ -18,6 +18,8 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <CUnit/CUnit.h>
@@ -516,11 +518,15 @@ static void test_sighup_prog(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_log_reinit(void)
+static void test_change_file(void)
 {
     (void)unlink(tmpPathname);
-    int status = log_init(progname);
+    (void)unlink(tmpPathname1);
+
+    int status;
+    status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+
     status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
     status = log_set_level(LOG_LEVEL_DEBUG);
@@ -528,18 +534,61 @@ static void test_log_reinit(void)
 
     logMessages();
 
-    log_fini();
+    int n;
+    n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
 
-    status = log_reinit();
+    status = log_set_destination(tmpPathname1);
     CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
 
+    n = numLines(tmpPathname1);
+    CU_ASSERT_EQUAL(n, 5);
+
     log_fini();
 
-    int n = numLines(tmpPathname);
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = unlink(tmpPathname1);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void test_fork(void)
+{
+    (void)unlink(tmpPathname);
+
+    int status;
+    status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = log_set_destination(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = log_set_level(LOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+    logMessages();
+
+    pid_t pid = fork();
+    CU_ASSERT_TRUE_FATAL(pid != -1);
+    if (pid == 0) {
+        // Child
+        logMessages();
+        exit(0);
+    }
+    else {
+        // Parent
+        int child_status;
+        status = wait(&child_status);
+        CU_ASSERT_EQUAL_FATAL(status, pid);
+        CU_ASSERT_TRUE_FATAL(WIFEXITED(child_status));
+        CU_ASSERT_EQUAL_FATAL(WEXITSTATUS(child_status), 0);
+    }
+
+    int n;
+    n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 10);
 
+    log_fini();
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 }
@@ -572,7 +621,8 @@ int main(
                     && CU_ADD_TEST(testSuite, test_log_refresh)
                     && CU_ADD_TEST(testSuite, test_sighup_log)
                     && CU_ADD_TEST(testSuite, test_sighup_prog)
-                    && CU_ADD_TEST(testSuite, test_log_reinit)
+                    && CU_ADD_TEST(testSuite, test_change_file)
+                    && CU_ADD_TEST(testSuite, test_fork)
                     /*
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);

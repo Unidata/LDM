@@ -104,15 +104,6 @@ int log_init(
 void log_avoid_stderr(void);
 
 /**
- * Re-initializes this logging module based on its state just prior to calling
- * log_fini().
- *
- * @retval    -1  Failure
- * @retval     0  Success
- */
-int log_reinit(void);
-
-/**
  * Refreshes the logging module. If logging is to the system logging daemon,
  * then it will continue to be. If logging is to a file, then the file is closed
  * and re-opened; thus enabling log file rotation. If logging is to the standard

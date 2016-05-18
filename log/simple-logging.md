@@ -95,9 +95,7 @@ static pid_t exec_child(const char* const path)
     }
     else if (pid > 0) {
         // Child process
-        log_fini(); // Frees resources; closes appropriate file descriptors
-        (void)execl(path, path, NULL);
-        log_reinit(); // Re-establishes logging state before log_fini()
+        (void)execl(path, path, NULL)
         /*
          * Adds to empty message queue using `errno`, prints queue at ERROR
          * level, then clears queue:

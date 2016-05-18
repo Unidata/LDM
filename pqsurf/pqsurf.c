@@ -130,9 +130,7 @@ run_child(int argc, char *argv[])
                 /* don't let child get real privilege */
                 endpriv();
 
-                log_fini();
                 (void) execvp(argv[0], &argv[0]);
-                (void)log_reinit();
 
                 log_syserr("Couldn't execute decoder \"%s\"; PATH=%s", argv[0],
                         getenv("PATH"));

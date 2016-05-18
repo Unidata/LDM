@@ -1551,9 +1551,7 @@ static int pipe_open(
                     if (STDIN_FILENO == pfd[0]) {
                         endpriv();
                         log_info("Executing decoder \"%s\"", av[0]);
-                        log_fini();
-                        (void) execvp(av[0], &av[0]);
-                        (void)log_reinit();
+                        (void)execvp(av[0], &av[0]);
                         log_syserr("Couldn't execute decoder \"%s\";"
                                 "PATH=%s", av[0], getenv("PATH"));
                     }

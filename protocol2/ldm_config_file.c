@@ -2289,10 +2289,8 @@ proc_exec(Process *proc)
                 }
 
                 endpriv();
-                log_fini();
-                (void) execvp(proc->wrdexp.we_wordv[0],
+                (void)execvp(proc->wrdexp.we_wordv[0],
                         proc->wrdexp.we_wordv);
-                (void)log_reinit();
                 log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
                         proc->wrdexp.we_wordv[0], getenv("PATH"));
                 _exit(127) ;
