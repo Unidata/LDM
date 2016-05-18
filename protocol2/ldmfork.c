@@ -135,7 +135,7 @@ int open_on_dev_null_if_closed(
  *
  * @param[in] fd  File descriptor
  * @retval  0     Success
- * @retval -1     Failure. log_add() called.
+ * @retval -1     `fd` is not a valid open file descriptor. log_add() called.
  */
 int ensure_close_on_exec(
         const int fd)
