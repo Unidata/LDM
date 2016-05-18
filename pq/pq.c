@@ -32,6 +32,7 @@
 #include "remote.h"
 #include "lcm.h"
 #include "log.h"
+#include "ldmfork.h"
 #include "ldmprint.h"
 #include "fsStats.h"
 #include "ldm_xlen.h"
@@ -5531,6 +5532,7 @@ pq_create(const char *path, mode_t mode,
                 status = errno;
                 goto unwind_new;
         }
+        (void)ensure_close_on_exec(fd);
 
         lockIf(pq);
 
@@ -5606,6 +5608,7 @@ pq_open(
             status = errno;
         }
         else {
+            (void)ensure_close_on_exec(pq->fd);
             status = ctl_gopen(pq, path);
 
             if (!status) {
