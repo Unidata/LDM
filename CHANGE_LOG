@@ -12,9 +12,14 @@
         
         Added call to logi_set_destination() to log_init().
         
+        Make log2slog(3) more atomic regarding destination changes.
+        
     ldmd(1):
         Moved configuring of standard I/O file descriptors from EXEC action of
         configuration-file to near fork(2) of ldmd(1).
+        
+    Product-Queue (pq.c):
+        Make product-queue close-on-exec.
 
 6.13.1.5	2016-05-15T10:31:36-0600
     Logging:
