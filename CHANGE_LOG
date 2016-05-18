@@ -1,4 +1,4 @@
-6.13.1.6	2016-05-18T10:52:02-0600
+6.13.1.6	2016-05-18T10:53:44-0600
     ulogger(1):
         Corrected log_set_facility() algorithm that vets the facility code.
         
