@@ -302,7 +302,6 @@ static int file_init(
                 dest->flush = stream_flush;
                 dest->get_fd = stream_get_fd;
                 dest->fini = file_fini;
-                status = 0;
             }
         }
         if (status)
