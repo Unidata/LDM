@@ -1,3 +1,10 @@
+6.13.1.8
+    log2slog(3):
+        file_init():
+            Use ensure_close_on_exec().
+            Close file descriptor on error.
+            Correct log_add_syserr() arguments. 
+
 6.13.1.7	2016-05-18T14:39:05-0600
     Logging:
         Eliminated log_reinit() because it's no longer needed.
