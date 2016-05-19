@@ -12,6 +12,7 @@
 #include "config.h"
 
 #include "mutex.h"
+#include "ldmfork.h"
 #include "log.h"
 
 #include <errno.h>
@@ -283,22 +284,28 @@ static int file_init(
         status = -1;
     }
     else {
-        const int flags = fcntl(fd, F_GETFD);
-        (void)fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
-        dest->stream = fdopen(fd, "a");
-        if (dest->stream == NULL) {
-            log_add_syserr("Can't associate stream with log file \"%s\"",
-                    log_dest);
-            status = -1;
+        status = ensure_close_on_exec(fd);
+        if (status) {
+            log_add("Couldn't ensure log file is close-on-exec");
         }
         else {
-            setbuf(dest->stream, NULL); // No buffering
-            dest->log = stream_log;
-            dest->flush = stream_flush;
-            dest->get_fd = stream_get_fd;
-            dest->fini = file_fini;
-            status = 0;
+            dest->stream = fdopen(fd, "a");
+            if (dest->stream == NULL) {
+                log_add_syserr("Can't associate stream with log file \"%s\"",
+                        log_dest);
+                status = -1;
+            }
+            else {
+                setbuf(dest->stream, NULL); // No buffering
+                dest->log = stream_log;
+                dest->flush = stream_flush;
+                dest->get_fd = stream_get_fd;
+                dest->fini = file_fini;
+                status = 0;
+            }
         }
+        if (status)
+            close(fd);
     }
     return status;
 }
