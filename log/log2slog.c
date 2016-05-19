@@ -279,8 +279,7 @@ static int file_init(
     int fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
             S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
     if (fd < 0) {
-        log_add_syserr("Can't open log file \"%s\": %s",
-                log_dest);
+        log_add_syserr("Can't open log file \"%s\"", log_dest);
         status = -1;
     }
     else {
@@ -288,7 +287,7 @@ static int file_init(
         (void)fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
         dest->stream = fdopen(fd, "a");
         if (dest->stream == NULL) {
-            log_add_syserr("Can't associate stream with log file \"%s\": %s",
+            log_add_syserr("Can't associate stream with log file \"%s\"",
                     log_dest);
             status = -1;
         }
