@@ -286,7 +286,8 @@ static int file_init(
     else {
         status = ensure_close_on_exec(fd);
         if (status) {
-            log_add("Couldn't ensure log file is close-on-exec");
+            log_add("Couldn't ensure log file \"%s\" is close-on-exec",
+                    log_dest);
         }
         else {
             dest->stream = fdopen(fd, "a");
