@@ -82,16 +82,9 @@ consequently, be missed by a reader of the queue that's waiting at the
 queue's tail for the next product.
 
 <p>
-Some Linux systems are particularly vulnerable to this phenomena.  They
-are noted <a
-href="http://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=1006086">here</a>.
-
-<p>
 The solution is to run the <tt><b>ntpd</b>(8)</tt> daemon to
 continuously adjust the clock slew rate to ensure a monotonic system
-clock.  Linux users are also <b>strongly advised</b> to follow <a
-href="http://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=1006113">
-this recommendation</a>.
+clock.
 
 <hr>
 
