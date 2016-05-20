@@ -1,3 +1,8 @@
+6.13.1.10
+    Documentation:
+        Removed links to VMWare documentation on ntpd(8) on Linux systems
+        because they're no longer relevant and the pages no longer exist.
+
 6.13.1	2016-05-20T13:39:22-0600
     Installation:
         Modified the "make clean" rule so that it doesn't delete the (generated)
