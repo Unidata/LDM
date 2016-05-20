@@ -75,22 +75,6 @@ close_rest(
  ******************************************************************************/
 
 /**
- * Closes all file descriptors that are greater than the ones used for standard
- * I/O and the one used for logging.
- *
- * @retval -1  Failure. log_add() called.
- * @return     The maximum number of open file descriptors.
- */
-int close_most_file_descriptors(void)
-{
-    int fd = log_get_fd();
-    if (fd < STDERR_FILENO)
-        fd = STDERR_FILENO;
-    int status = close_rest(fd + 1);
-    return status;
-}
-
-/**
  * Opens a file descriptor on `/dev/null` if it's closed. If the file
  * descriptor is open, then nothing happens.
  *

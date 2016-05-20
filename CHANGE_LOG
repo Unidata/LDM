@@ -1,88 +1,48 @@
-6.13.1.8	2016-05-19T11:40:17-0600
-    log2slog(3):
-        file_init():
-            Use ensure_close_on_exec().
-            Close file descriptor on error.
-            Correct log_add_syserr() arguments. 
-
-6.13.1.7	2016-05-18T14:39:05-0600
-    Logging:
-        Eliminated log_reinit() because it's no longer needed.
-
-6.13.1.6	2016-05-18T11:07:58-0600
-    ulogger(1):
-        Corrected log_set_facility() algorithm that vets the facility code.
-        
-        Corrected interpretation of priority levels by making the map from name
-        to logging level distinct from the one in </usr/include/sys/syslog.h>.
-        
-    Logging:
-        Renamed log_have_useful_stderr() to log_is_stderr_useful().
-        
-        Don't print trailing newline in messages.
-        
-        Added call to logi_set_destination() to log_init().
-        
-        Make log2slog(3) more atomic regarding destination changes.
-        
-    ldmd(1):
-        Moved configuring of standard I/O file descriptors from EXEC action of
-        configuration-file to near fork(2) of ldmd(1).
-        
-    Product-Queue (pq.c):
-        Make product-queue close-on-exec.
-
-6.13.1.5	2016-05-15T10:31:36-0600
-    Logging:
-        Re-arranged initialization steps to avoid a segmentation violation if
-        the initialization attempts to log a message.
-        
-        Created log_have_useful_stderr().
-        
-    Misc:
-        Created open_on_dev_null_if_closed().
-
-6.13.1.4	2016-05-12T18:17:28-0600
-    pqact(1):
-        Added closing of all file descriptors greater than the ones used for
-        standard I/O and the one used for logging before executing a child
-        process because a pqact(1) process can have many open file descriptors
-        that shouldn't be inherited by a child process.
-
-        Simplified the initial redirection of standard I/O streams: the 
-        standard input and output streams are redirected to "/dev/null" and the
-        standard error stream is redirected to "/dev/null" if it's not used for
-        logging.
-
-    Misc:
-        Added the function close_most_file_descriptors() to support the change
-        to pqact(1).
-
-6.13.1.3	2016-05-10T13:48:26-0600
-    Removed search for clock_gettime() from configure(1)-script.
-
-6.13.1.2	2016-05-09T10:21:22-0600
-    pqact(1):
-        Added configuration of the standard output and standard error streams in
-        preparation for execution of child processes. This is based on the
-        assumption that the "metar2nc" decoder fails because it can't write to
-        one of these streams.
-
-    Logging:
-        Added log_get_fd() to support configuration of the standard error stream
-        by pqact(1).
-
-6.13.1.1	2016-05-05T18:27:01-0600
-    Replaced use of clock_gettime() with gettimeofday() because the former
-    doesn't exist on one client's OS X system (at least) and it appears to be
-    supported on fewer platforms than the latter. Also, while clock_gettime()
-    can have nanosecond resolution, the microsecond resolution of gettimeofday()
-    is sufficient for the LDM.
-
-6.13.1.0	2016-05-05T11:53:34-0600
+6.13.1	2016-05-20T13:39:22-0600
     Installation:
         Modified the "make clean" rule so that it doesn't delete the (generated)
         LDM tutorial files so that a subsequent "make" won't fail.
+
+    Logging:
+        log(3):
+            Created log_is_stderr_useful(), which indicates if the standard
+            error stream is open on something other than /dev/null.
+
+            Eliminated log_reinit() because it's no longer needed.
+
+        log2slog(3):
+            Made initialization more robust.
+
+            Corrected algorithm that vets the facility code.
+
+            Eliminated printing of trailing newline in messages.
+
+            Made the setting of the destination for log messages more atomic.
+
+        ulogger(1):
+            Corrected interpretation of priority levels by making the map from
+            name to logging level distinct from the one in
+            </usr/include/sys/syslog.h>.
+
+    Product-Queue (pq.c):
+        Made product-queue file descriptor close-on-exec.
+
+    ldmd(1):
+        Moved configuring of standard I/O file descriptors from EXEC action of
+        the configuration-file module to near where ldmd(1) daemonizes itself.
+
+    pqact(1):
+        Made the configuration of the standard output and standard error streams
+        more robust in preparation for execution of child processes.
+
+    Misc:
+        Replaced the use of clock_gettime() with gettimeofday() because the
+        former doesn't exist on one client's OS X system (at least) and it
+        appears to be supported on fewer platforms than the latter. Also, while
+        clock_gettime() can have nanosecond resolution, the microsecond
+        resolution of gettimeofday() is sufficient for the LDM.
+
+        Created open_on_dev_null_if_closed().
 
     FMTP:
         Changed name from "vcmtp" to "FMTP" in LDM codebase.

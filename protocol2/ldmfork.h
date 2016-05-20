@@ -14,15 +14,6 @@ extern "C" {
 #endif
 
 /**
- * Closes all file descriptors that are greater than the ones used for standard
- * I/O and the one used for logging.
- *
- * @retval -1  Failure. log_add() called.
- * @return     The maximum number of open file descriptors.
- */
-int close_most_file_descriptors(void);
-
-/**
  * Opens a file descriptor on `/dev/null` if it's closed. If the file
  * descriptor is open, then nothing happens.
  *
