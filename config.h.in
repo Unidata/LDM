@@ -245,7 +245,7 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Pathname of system logging daemon PID file */
+/* Pathname of system logging daemon's PID file */
 #undef SYSLOG_PIDFILE
 
 /* Whether syslog(3) returns an int */

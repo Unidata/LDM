@@ -442,27 +442,10 @@ dnl ])
 dnl Set ulog parameters
 dnl
 AC_DEFUN([UD_ULOG], [dnl
-    AC_MSG_CHECKING([for system logging daemon])
-    if ps -e | grep -v grep | grep syslog-ng >/dev/null; then
-	AC_MSG_RESULT([syslog-ng])
-        AC_CHECK_FILE([/etc/syslog-ng/syslog-ng.conf],
-            [SYSLOG_CONF=/etc/syslog-ng/syslog-ng.conf],
-            [AC_MSG_ERROR([system logging configuration-file not found or not readable])])
-    elif ps -e | grep -v grep | grep rsyslog >/dev/null; then
-	AC_MSG_RESULT([rsyslog])
-        AC_CHECK_FILE([/etc/rsyslog.conf],
-            [SYSLOG_CONF=/etc/rsyslog.conf],
-            [AC_CHECK_FILE([/etc/opt/csw/rsyslog.conf],
-                [SYSLOG_CONF=/etc/opt/csw/rsyslog.conf],
-                [AC_MSG_ERROR([system logging configuration-file not found or not readable])])])
-    elif ps -e | grep -v grep | grep syslog >/dev/null; then
-	AC_MSG_RESULT([syslog])
-        AC_CHECK_FILE([/etc/syslog.conf],
-            [SYSLOG_CONF=/etc/syslog.conf],
-            [AC_MSG_ERROR([system logging configuration-file not found or not readable])])
-    else
-	AC_MSG_ERROR([system logging daemon not running], 1)
-    fi
+    AC_MSG_CHECKING([for system logging daemon's configuration-file])
+    SYSLOG_CONF=`ls -t /etc/syslog-ng/syslog-ng.conf /etc/rsyslog.conf \
+        /etc/opt/csw/rsyslog.conf /etc/syslog.conf 2>/dev/null | head -1`
+    AC_MSG_RESULT($SYSLOG_CONF)
     AC_SUBST([SYSLOG_CONF])
 
     if test -e $LDMHOME/logs; then
@@ -527,16 +510,12 @@ AC_DEFUN([UD_ULOG], [dnl
 dnl Set syslog pid filename for hupsyslog
 dnl
 AC_DEFUN([UD_SYSLOG_PIDFILE], [dnl
-    AC_MSG_CHECKING([system logging daemon PID file])
-    for path in /var/run/rsyslogd.pid /var/run/syslog.pid /var/run/syslogd.pid \
-	    /etc/syslog.pid; do
-	if test -f $path; then
-	    AC_DEFINE_UNQUOTED(SYSLOG_PIDFILE, "$path",
-		[Pathname of system logging daemon PID file])
-	    AC_MSG_RESULT($path)
-	    break;
-	fi
-    done
+    AC_MSG_CHECKING([for system logging daemon's PID file])
+    path=`ls -t /var/run/rsyslogd.pid /var/run/syslog.pid \
+        /var/run/syslogd.pid /etc/syslog.pid 2>/dev/null | head -1`
+    AC_MSG_RESULT($path)
+    AC_DEFINE_UNQUOTED(SYSLOG_PIDFILE, "$path",
+		[Pathname of system logging daemon's PID file])
 ])dnl
 
 
