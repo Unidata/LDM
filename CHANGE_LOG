@@ -1,7 +1,14 @@
 6.13.1.10
+    Installation:
+        Improve checks for system logging daemon by configure(1):
+            - Remove test for running daemon to accomodate Docker
+            - Simplify tests for configuration and PID files.
+
+    Testing:
+        Shortened run-time of pq_test(1).
+
     Documentation:
-        Removed links to VMWare documentation on ntpd(8) on Linux systems
-        because they're no longer relevant and the pages no longer exist.
+        Updated version-independent HTML files.
 
 6.13.1	2016-05-20T13:39:22-0600
     Installation:
@@ -56,7 +63,9 @@
     Logging:
         Re-wrote LDM logging to eliminate the dependency on the system logging
         daemon because:
-            1) It was the major impediment to correctly using the LDM;
+            1) It was the major impediment to correctly using the LDM (different
+               logging daemons, different configuration-file formats, different
+               security considerations, etc.);
             2) It was the major impediment to putting the LDM in a Docker
                container;
             3) Only 7 "local" syslog(8) facilities are guaranteed and NOAAPort

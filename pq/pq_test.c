@@ -28,8 +28,11 @@
 #include <CUnit/Basic.h>
 
 #define               PQ_PATHNAME   "pq_test.pq"
-#define               NUM_PRODS     100000
-#define               MAX_PROD_SIZE 2000000
+#define               NUM_PRODS            50000
+#define               MAX_PROD_SIZE       200000
+#define               PQ_DATA_SIZE     100000000
+#define               PQ_SLOT_COUNT         1000
+#define               NUM_CHILDREN             3
 static unsigned long  num_bytes;
 static struct timeval start;
 static struct timeval stop;
@@ -53,7 +56,8 @@ static int teardown(void)
 static pqueue* create_pq(void)
 {
     pqueue* pq;
-    int     status = pq_create(PQ_PATHNAME, 0600, 0, 0, 50000000, 1000, &pq);
+    int     status = pq_create(PQ_PATHNAME, 0600, 0, 0, PQ_DATA_SIZE,
+            PQ_SLOT_COUNT, &pq);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     return pq;
 }
@@ -237,8 +241,7 @@ static void test_pq_insert_children(
     CU_ASSERT_NOT_EQUAL_FATAL(pq, NULL);
     close_pq(pq);
 
-    const int num_children = 3;
-    for (int i = 0; i < num_children; i++) {
+    for (int i = 0; i < NUM_CHILDREN; i++) {
         int pid = fork();
         CU_ASSERT_NOT_EQUAL(pid, -1);
         if (pid == 0) {
@@ -250,7 +253,7 @@ static void test_pq_insert_children(
         }
     }
 
-    for (int i = 0; i < num_children; i++) {
+    for (int i = 0; i < NUM_CHILDREN; i++) {
         int child_status;
         int status = wait(&child_status);
         CU_ASSERT_NOT_EQUAL(status, -1);
