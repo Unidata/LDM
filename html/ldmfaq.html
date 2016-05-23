@@ -24,7 +24,6 @@ about the LDM.
  <li><a href="#ldm-what">What is the LDM</a>?
  <li><a href="#ldm-who">Who can use the LDM software</a>
  <li><a href="#ldm-distribution">How do I get the LDM distribution</a>?
- <li><a href="#ldm-notfound">Why do I get the error "bin/ldmadmin: Command not found" when I run ldmadmin</a>?
  <li><a href="#ldm-access1">(IRIX 6.1) Why does my server deny RPC access to others</a>?
  <li><a href="#ldm-defrag">(IRIX) Why does my LDM die every Sunday at 4:30 am</a>?
  <li><a href="#ldm-388">Why do I get the error that another server is
@@ -44,38 +43,19 @@ protocols.
 <a name="ldm-who"></a>
 <h4>Who can use the LDM software?</h4>
 
-The LDM software is freely available to anyone who wishes to use it. It is <a href="copyright.html">copyrighted</a> 
+The LDM software is being used by hundreds of universities and  cooperating
+agencies and is freely available to anyone who wishes to use it.
+The software is <a href="COPYRIGHT">copyrighted</a> 
 by the <a href="http://www.ucar.edu"> University 
 Corporation for Atmospheric Resesarch</a>. <a name="ldm-distribution"></a> 
+
 <h4>How do I get the LDM distribution?</h4>
 
-<p> The Unidata LDM software is now used by more than 150 universities/cooperating 
-  agencies. The LDM software is currently <a
-href="copyright.html">freely available</a> via anonymous 
-  FTP <a
-href="ftp://ftp.unidata.ucar.edu/pub/ldm">in 
-  source form</a> or <a
-href="ftp://ftp.unidata.ucar.edu/pub/binary/">as 
-  binaries</a> for several supported platforms from the Unidata Program Center. 
+<p>The LDM software is <a
+href="COPYRIGHT">freely available</a> via anonymous 
+FTP <a href="ftp://ftp.unidata.ucar.edu/pub/ldm">in source form</a>
+from the Unidata Program Center. 
 <p>
-
-<a name="ldm-notfound"></a>
-<h4>Why do I get the error "bin/ldmadmin: Command not found" when I run ldmadmin</h4>
-
-If you install the binary release of the LDM, the path to the
-<code><b>perl</b></code> binary (which interprets the <b><tt>ldmadmin</tt></b> 
-script) is based on the perl installation at the Unidata
-Program Center.  This might
-not be correct for your site's setup.  The first line of each perl script
-in the LDM distribution starts with a line that looks something like:
-
-<blockquote><pre>
-#!/usr/local/perl</code>
-</blockquote></pre>
-
-If your <code><b>perl</b></code> binary is not located in the path noted on that
-line, modify the line to use the correct path.
-
 
 <a name="ldm-access1"></a>
 <h4>(IRIX 6.1) Why does my server deny RPC access to others?</h4>
