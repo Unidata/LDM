@@ -269,7 +269,6 @@ chown %{ldmUser} "$RPM_INSTALL_PREFIX" || exit 1
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/addpart.gif
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/troubleshooting/packetshaper/newclass2.gif
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/CHANGE_LOG
-%attr(0644,ldm,-) %{versdir}/share/doc/ldm/LDM_Development_Steps.html
 %attr(0755,ldm,-) %{versdir}/share/doc/ldm/noaaport
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/tab_l.gif
 %attr(0644,ldm,-) %{versdir}/share/doc/ldm/noaaport/index.html

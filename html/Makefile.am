@@ -12,7 +12,6 @@ html_DATA	= \
     known-problems.html \
     LDM_icon.GIF \
     ldmConfigInstallList.html \
-    LDM_Development_Steps.html \
     ldmfaq.html \
     manindex.html \
     networkSecurityAndSetup.html \
@@ -47,7 +46,6 @@ EXTRA_DIST	= \
     index.html \
     known-problems.html \
     ldmConfigInstallList.html \
-    LDM_Development_Steps.html \
     ldmfaq.html \
     manindex.html \
     networkSecurityAndSetup.html \
