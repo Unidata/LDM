@@ -1,4 +1,4 @@
-6.13.1.10
+6.13.1.10	2016-05-23T17:09:22-0600
     Installation:
         Improve checks for system logging daemon by configure(1):
             - Remove test for running daemon to accomodate Docker
