@@ -1,8 +1,14 @@
+6.13.1.11
+    Misc:
+        Added unit-test of timestamp module.
+
+        Corrected timeval_normalize().
+
 6.13.1.10	2016-05-23T17:09:22-0600
     Installation:
-        Improve checks for system logging daemon by configure(1):
-            - Remove test for running daemon to accomodate Docker
-            - Simplify tests for configuration and PID files.
+        Improved examination of system logging daemon by configure(1):
+            - Removed check for running daemon to accomodate Docker
+            - Simplified tests for configuration and PID files.
 
     Testing:
         Shortened run-time of pq_test(1).

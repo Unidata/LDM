@@ -315,10 +315,18 @@ tsParse(
 static void timeval_normalize(
         struct timeval* const timeval)
 {
-    static const uint_fast32_t ONE_MILLION = 1000000;
+    #define ONE_MILLION 1000000
     if (timeval->tv_usec >= ONE_MILLION || timeval->tv_usec <= -ONE_MILLION) {
         timeval->tv_sec += timeval->tv_usec / ONE_MILLION;
         timeval->tv_usec %= ONE_MILLION;
+    }
+    if (timeval->tv_sec > 0 && timeval->tv_usec < 0) {
+        timeval->tv_sec--;
+        timeval->tv_usec += ONE_MILLION;
+    }
+    else if (timeval->tv_sec < 0 && timeval->tv_usec > 0) {
+        timeval->tv_sec++;
+        timeval->tv_usec -= ONE_MILLION;
     }
 }
 
@@ -344,11 +352,11 @@ double timeval_as_seconds(
  */
 struct timeval* timeval_init_from_difference(
         struct timeval* const restrict       duration,
-        const struct timeval* const restrict after,
-        const struct timeval* const restrict before)
+        const struct timeval* const restrict later,
+        const struct timeval* const restrict earlier)
 {
-    duration->tv_sec = after->tv_sec - before->tv_sec;
-    duration->tv_usec = after->tv_usec - before->tv_usec;
+    duration->tv_sec = later->tv_sec - earlier->tv_sec;
+    duration->tv_usec = later->tv_usec - earlier->tv_usec;
     timeval_normalize(duration);
     return duration;
 }

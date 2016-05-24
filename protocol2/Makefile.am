@@ -129,7 +129,12 @@ local_checks		=
 
 if HAVE_CUNIT
 
-check_PROGRAMS		= ldmfork_test ldmprint_test test_data_prod testuldb
+check_PROGRAMS		= timestamp_test ldmfork_test ldmprint_test \
+			  test_data_prod testuldb
+
+timestamp_test_SOURCES 	= timestamp_test.c timestamp.c
+timestamp_test_CPPFLAGS	= -I$(top_srcdir) -I$(top_srcdir)/log @CPPFLAGS_CUNIT@
+timestamp_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
 ldmfork_test_CPPFLAGS	= -I$(top_srcdir) \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -160,7 +165,8 @@ testuldb_CPPFLAGS	= -I$(top_srcdir) \
                           @CPPFLAGS_CUNIT@
 testuldb_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
-TESTS			= ldmfork_test ldmprint_test test_data_prod testuldb
+TESTS			= timestamp_test ldmfork_test ldmprint_test \
+                          test_data_prod testuldb
 
 valgrind:	testuldb
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
