@@ -1,4 +1,4 @@
-6.13.1.11	2016-05-25T12:45:06-0600
+6.13.1.11	2016-05-25T16:20:29-0600
     pqing(1):
         Corrected bug introduced in 6.13.0 that didn't honor argument of "-q"
         option.
