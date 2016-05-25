@@ -541,7 +541,7 @@ main(int ac, char *av[])
                             break;
                     }
                     case 'q':
-                            pqpath = optarg;
+                            setQueuePath(optarg);
                             break;
                     case 'r':
                             rawfname = optarg;
