@@ -687,6 +687,8 @@ int main(int ac, char *av[])
                         break;
                 }
 
+        setQueuePath(pqfname);
+
         if (re_isPathological(spec.pattern))
         {
                 fprintf(stderr, "Adjusting pathological regular-expression: "

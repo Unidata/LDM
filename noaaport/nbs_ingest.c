@@ -71,6 +71,7 @@ static bool decode_command_line(
     extern char* optarg;
     int          ch;
     bool         success = true;
+    const char*  pqfname = getQueuePath();
 
     // Error messages are being explicitly handled
     opterr = 0;
@@ -84,7 +85,7 @@ static bool decode_command_line(
             (void)log_set_destination(optarg);
             break;
         case 'q':
-            setQueuePath(optarg);
+            pqfname = optarg;
             break;
         case 'v':
             if (!log_is_enabled_info)
@@ -114,6 +115,9 @@ static bool decode_command_line(
             if (optind < argc) {
                 log_add("Extraneous operand \"%s\"", argv[optind]);
                 success = false;
+            }
+            else {
+                setQueuePath(pqfname);
             }
         }
     }

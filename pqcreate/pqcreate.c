@@ -66,6 +66,7 @@ int main(int ac, char *av[])
         char *Sopt = NULL;
         extern char     *optarg;
         extern int       optind;
+        const char* pqfname = getQueuePath();
 
         while ((ch = getopt(ac, av, "xvcfq:s:S:l:")) != EOF)
                 switch (ch) {
@@ -86,7 +87,6 @@ int main(int ac, char *av[])
                         Sopt = optarg;
                         break;
                 case 'q':
-                        setQueuePath(optarg);
                         qopt = optarg;
                         break;
                 case 'x':
@@ -99,8 +99,6 @@ int main(int ac, char *av[])
                         usage(av[0]);
                         break;
                 }
-
-        const char* pqfname = getQueuePath();
         
         if(ac - optind > 1)
         {
@@ -115,8 +113,10 @@ int main(int ac, char *av[])
                 qopt =  av[ac - 1];
         }
 
-        if(qopt)
+        if(qopt) {
                 pqfname = qopt ;
+                setQueuePath(qopt);
+        }
 
         if (sopt) {
             char*       cp;

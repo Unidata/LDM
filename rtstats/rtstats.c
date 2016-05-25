@@ -223,8 +223,6 @@ int main(int ac, char *av[])
          */
         (void)log_init(progname);
 
-        const char* const  pqfname = getQueuePath();
-
         remote = "localhost";
 
         if(set_timestamp(&clss.from) != ENOERR) /* corrected by toffset below */
@@ -344,6 +342,8 @@ int main(int ac, char *av[])
                 usage(progname);
             }
         } /* command-line decoding block */
+
+        const char* const  pqfname = getQueuePath();
 
         if (regcomp(&spec.rgx, spec.pattern, REG_EXTENDED|REG_NOSUB)) {
             log_error("Bad regular expression \"%s\"\n", spec.pattern);

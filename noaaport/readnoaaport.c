@@ -464,6 +464,7 @@ int main(
      * the IPv4 multicast address (e.g., the "3" in "224.0.1.3").
      */
     int                 pid_channel = -1;
+    const char*         pqfname = getQueuePath();
 
     /*compr = (unsigned char *) calloc (comprLen, 1);*/
 
@@ -495,7 +496,7 @@ int main(
             (void)log_set_destination(logfname);
             break;
         case 'q':
-            setQueuePath(optarg);
+            pqfname = optarg;
             break;
         case 'u': {
             int         i = atoi(optarg);
@@ -545,10 +546,11 @@ int main(
         }
     }
 
-    const char*         pqfname = getQueuePath();
 
     if (argc - optind < 0)
         usage(argv[0]);
+
+    setQueuePath(pqfname);
 
     log_notice("Starting Up %s", PACKAGE_VERSION);
 

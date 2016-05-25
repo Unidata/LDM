@@ -280,6 +280,7 @@ int main(
     int                 bufpag = CBUFPAG;
     product             prod;
     static char*        prodident = "dvbs";
+    const char*         pqfname = getQueuePath();
 
     /* Initialize the logger. */
     (void)log_init(argv[0]);
@@ -308,7 +309,7 @@ int main(
             (void)log_set_destination(optarg);
             break;
         case 'q':
-            setQueuePath(optarg);
+            pqfname = optarg;
             break;
         case 'I':
             imr_interface = optarg;
@@ -346,10 +347,10 @@ int main(
         }
     }
 
-    const char*         pqfname = getQueuePath();
-
     if (argc - optind < 1)
         usage(argv[0]);
+
+    setQueuePath(pqfname);
 
     log_notice("Starting Up %s", PACKAGE_VERSION);
 

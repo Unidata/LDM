@@ -166,7 +166,7 @@ mm_md5 (MD5_CTX * md5ctxp, void *vp, size_t sz, signaturet signature)
 int
 main (int ac, char *av[])
 {
-  const char* pqfname;
+  const char* pqfname = getQueuePath();
   char *progname = av[0];
   int status;
   int seq_start = 0;
@@ -211,7 +211,7 @@ main (int ac, char *av[])
 	  log_set_destination(optarg);
 	  break;
 	case 'q':
-	  setQueuePath(optarg);
+	  pqfname = optarg;
 	  break;
 	case 's':
 	  seq_start = atoi (optarg);
@@ -232,7 +232,7 @@ main (int ac, char *av[])
 	  break;
 	}
 
-    pqfname = getQueuePath();
+    setQueuePath(pqfname);
 
     ac -= optind;
     av += optind;

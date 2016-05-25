@@ -775,12 +775,13 @@ int main(
         int ac,
         char* av[])
 {
-    int       status;
-    int       doSomething = 1;
-    in_addr_t ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
-    unsigned  ldmPort = LDM_PORT;
-    unsigned  logOpts = 0;
-    bool      becomeDaemon = true; // default
+    int         status;
+    int         doSomething = 1;
+    in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
+    unsigned    ldmPort = LDM_PORT;
+    unsigned    logOpts = 0;
+    bool        becomeDaemon = true; // default
+    const char* pqfname = getQueuePath();
 
     (void)log_init(av[0]);
     ensureDumpable();
@@ -824,7 +825,7 @@ int main(
                 becomeDaemon = strcmp(optarg, "-") != 0;
                 break;
             case 'q':
-                setQueuePath(optarg);
+                pqfname = optarg;
                 break;
             case 'o':
                 toffset = atoi(optarg);
@@ -893,7 +894,7 @@ int main(
         }
     } /* command-line argument decoding */
 
-    const char* pqfname = getQueuePath();
+    setQueuePath(pqfname);
 
     /*
      * Vet the configuration file.

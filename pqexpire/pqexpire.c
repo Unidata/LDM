@@ -357,7 +357,7 @@ char *av[];
         /*
          * Open the product queue
          */
-        const char* const       pqfname = getQueuePath();
+        const char* const pqfname = getQueuePath();
         status = pq_open(pqfname, PQ_DEFAULT, &pq);
         if(status)
         {

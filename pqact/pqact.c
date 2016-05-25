@@ -276,7 +276,7 @@ usage(
 int
 main(int ac, char *av[])
 {
-        const char*  pqfname;
+        const char*  pqfname = getQueuePath();
         int          status = 0;
         char*        logfname = 0;
         /// Data directory, conffile paths may be relative
@@ -355,7 +355,7 @@ main(int ac, char *av[])
                         }
                         break;
                 case 'q':
-                        setQueuePath(optarg);
+                        pqfname = optarg;
                         break;
                 case 'o':
                         toffset = atoi(optarg);
@@ -390,7 +390,6 @@ main(int ac, char *av[])
                 }
             }
 
-            pqfname = getQueuePath();
             conffilename = getPqactConfigPath();
             datadir = getPqactDataDirPath();
 
@@ -407,6 +406,7 @@ main(int ac, char *av[])
             }
         }
 
+        setQueuePath(pqfname);
         log_notice("Starting Up");
 
         if ('/' != conffilename[0]) {

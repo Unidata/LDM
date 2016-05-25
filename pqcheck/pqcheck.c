@@ -119,6 +119,7 @@ int main(int ac, char *av[])
             extern char *optarg;
             int ch;
 
+            pqfname = getQueuePath();
             opterr = 1;
 
             while ((ch = getopt(ac, av, "Fvxl:q:")) != EOF)
@@ -137,7 +138,7 @@ int main(int ac, char *av[])
                             (void)log_set_destination(optarg);
                             break;
                     case 'q':
-                            setQueuePath(optarg);
+                            pqfname = optarg;
                             break;
                     case '?':
                             usage(progname);
@@ -145,8 +146,7 @@ int main(int ac, char *av[])
                     }
         }
 
-        pqfname = getQueuePath();
-
+        setQueuePath(pqfname);
         log_notice("Starting Up (%d)", getpgrp());
 
         /*

@@ -169,6 +169,7 @@ mls_decodeOptions(
         const char** const restrict    ifaceAddr,
         float* const                   timeoutFactor)
 {
+    const char*  pqfname = getQueuePath();
     int          ch;
     extern int   opterr;
     extern int   optopt;
@@ -178,77 +179,78 @@ mls_decodeOptions(
 
     while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:s:t:vx")) != EOF)
         switch (ch) {
-        case 'f': {
-            if (strfeedtypet(optarg, feed)) {
-                log_add("Invalid feed expression: \"%s\"", optarg);
-                return 1;
+            case 'f': {
+                if (strfeedtypet(optarg, feed)) {
+                    log_add("Invalid feed expression: \"%s\"", optarg);
+                    return 1;
+                }
+                break;
             }
-            break;
-        }
-        case 'l': {
-            (void)log_set_destination(optarg);
-            break;
-        }
-        case 'm': {
-            *ifaceAddr = optarg;
-            break;
-        }
-        case 'p': {
-            unsigned short port;
-            int            nbytes;
+            case 'l': {
+                (void)log_set_destination(optarg);
+                break;
+            }
+            case 'm': {
+                *ifaceAddr = optarg;
+                break;
+            }
+            case 'p': {
+                unsigned short port;
+                int            nbytes;
 
-            if (1 != sscanf(optarg, "%5hu %n", &port, &nbytes) ||
-                    0 != optarg[nbytes]) {
-                log_add("Couldn't decode TCP-server port-number option-argument "
-                        "\"%s\"", optarg);
+                if (1 != sscanf(optarg, "%5hu %n", &port, &nbytes) ||
+                        0 != optarg[nbytes]) {
+                    log_add("Couldn't decode TCP-server port-number option-argument "
+                            "\"%s\"", optarg);
+                    return 1;
+                }
+                *serverPort = port;
+                break;
+            }
+            case 'q': {
+                pqfname = optarg;
+                break;
+            }
+            case 's': {
+                *serverIface = optarg;
+                break;
+            }
+            case 't': {
+                unsigned t;
+                int      nbytes;
+                if (1 != sscanf(optarg, "%3u %n", &t, &nbytes) ||
+                        0 != optarg[nbytes]) {
+                    log_add("Couldn't decode time-to-live option-argument \"%s\"",
+                            optarg);
+                    return 1;
+                }
+                if (t >= 255) {
+                    log_add("Invalid time-to-live option-argument \"%s\"",
+                            optarg);
+                    return 1;
+                }
+                *ttl = t;
+                break;
+            }
+            case 'v': {
+                if (!log_is_enabled_info)
+                    (void)log_set_level(LOG_LEVEL_INFO);
+                break;
+            }
+            case 'x': {
+                (void)log_set_level(LOG_LEVEL_DEBUG);
+                break;
+            }
+            case ':': {
+                log_add("Option \"%c\" requires an argument", optopt);
                 return 1;
             }
-            *serverPort = port;
-            break;
-        }
-        case 'q': {
-            setQueuePath(optarg);
-            break;
-        }
-        case 's': {
-            *serverIface = optarg;
-            break;
-        }
-        case 't': {
-            unsigned t;
-            int      nbytes;
-            if (1 != sscanf(optarg, "%3u %n", &t, &nbytes) ||
-                    0 != optarg[nbytes]) {
-                log_add("Couldn't decode time-to-live option-argument \"%s\"",
-                        optarg);
+            default: {
+                log_add("Unknown option: \"%c\"", optopt);
                 return 1;
             }
-            if (t >= 255) {
-                log_add("Invalid time-to-live option-argument \"%s\"",
-                        optarg);
-                return 1;
-            }
-            *ttl = t;
-            break;
         }
-        case 'v': {
-            if (!log_is_enabled_info)
-                (void)log_set_level(LOG_LEVEL_INFO);
-            break;
-        }
-        case 'x': {
-            (void)log_set_level(LOG_LEVEL_DEBUG);
-            break;
-        }
-        case ':': {
-            log_add("Option \"%c\" requires an argument", optopt);
-            return 1;
-        }
-        default: {
-            log_add("Unknown option: \"%c\"", optopt);
-            return 1;
-        }
-        }
+    setQueuePath(pqfname);
 
     return 0;
 }

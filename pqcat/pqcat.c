@@ -132,7 +132,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
 "\t-p pattern   Interested in products matching \"pattern\" (default \".*\")\n") ;
         (void)fprintf(stderr,
-"\t-q pqfname   (default \"%s\")\n", getQueuePath());
+"\t-q pqfname   (default \"%s\")\n", getDefaultQueuePath());
         (void)fprintf(stderr,
 "\t-o offset    Set the \"from\" time \"offset\" secs before now\n");
         (void)fprintf(stderr,
@@ -272,6 +272,7 @@ int main(int ac, char *av[])
         int ch;
         int fterr;
 
+        pqfname = getQueuePath();
         opterr = 1;
 
         while ((ch = getopt(ac, av, "cvxOsl:p:f:q:o:i:")) != EOF)
@@ -305,7 +306,7 @@ int main(int ac, char *av[])
                         }
                         break;
                 case 'q':
-                        setQueuePath(optarg);
+                        pqfname = optarg;
                         break;
                 case 'o':
                         (void) set_timestamp(&clss.from);
@@ -331,7 +332,6 @@ int main(int ac, char *av[])
                         break;
                 }
 
-        pqfname = getQueuePath();
 
         if (re_isPathological(spec.pattern))
         {
@@ -349,6 +349,7 @@ int main(int ac, char *av[])
                 usage(av[0]);
         }
 
+        setQueuePath(pqfname);
 
         /* last arg, outputfname, is optional */
         if(ac - optind > 0)
