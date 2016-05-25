@@ -6,7 +6,7 @@
     Misc:
         Added unit-test of timestamp module.
 
-        Corrected timeval_normalize().
+        Corrected timeval_normalize() (which is currently unused).
 
 6.13.1.10	2016-05-23T17:09:22-0600
     Installation:

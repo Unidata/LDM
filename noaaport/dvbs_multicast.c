@@ -280,11 +280,11 @@ int main(
     int                 bufpag = CBUFPAG;
     product             prod;
     static char*        prodident = "dvbs";
-    const char*         pqfname = getQueuePath();
 
     /* Initialize the logger. */
     (void)log_init(argv[0]);
     (void)log_set_level(LOG_LEVEL_ERROR);
+    const char*         pqfname = getQueuePath();
 
     opterr = 1;
 

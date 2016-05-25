@@ -464,13 +464,14 @@ int main(
      * the IPv4 multicast address (e.g., the "3" in "224.0.1.3").
      */
     int                 pid_channel = -1;
-    const char*         pqfname = getQueuePath();
 
     /*compr = (unsigned char *) calloc (comprLen, 1);*/
 
     /* Initialize the logger. */
     (void)log_init(argv[0]);
     (void)log_set_level(LOG_LEVEL_ERROR);
+
+    const char*         pqfname = getQueuePath();
 
     opterr = 1;
     while ((ch = getopt(argc, argv, "nvxl:q:u:m:")) != EOF) {

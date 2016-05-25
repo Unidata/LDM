@@ -781,10 +781,10 @@ int main(
     unsigned    ldmPort = LDM_PORT;
     unsigned    logOpts = 0;
     bool        becomeDaemon = true; // default
-    const char* pqfname = getQueuePath();
 
     (void)log_init(av[0]);
     ensureDumpable();
+    const char* pqfname = getQueuePath();
 
     /*
      * deal with the command line, set options

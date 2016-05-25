@@ -276,7 +276,6 @@ usage(
 int
 main(int ac, char *av[])
 {
-        const char*  pqfname = getQueuePath();
         int          status = 0;
         char*        logfname = 0;
         /// Data directory, conffile paths may be relative
@@ -294,6 +293,8 @@ main(int ac, char *av[])
          * Setup default logging before anything else.
          */
         (void)log_init(progname);
+
+        const char*  pqfname = getQueuePath();
 
         spec.feedtype = DEFAULT_FEEDTYPE;
         spec.pattern = DEFAULT_PATTERN;

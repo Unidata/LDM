@@ -166,7 +166,6 @@ mm_md5 (MD5_CTX * md5ctxp, void *vp, size_t sz, signaturet signature)
 int
 main (int ac, char *av[])
 {
-  const char* pqfname = getQueuePath();
   char *progname = av[0];
   int status;
   int seq_start = 0;
@@ -178,6 +177,7 @@ main (int ac, char *av[])
    */
   (void)log_init(progname);
 
+  const char* pqfname = getQueuePath();
 
   /*
    * Check the environment for some options.
