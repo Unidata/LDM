@@ -1,3 +1,10 @@
+6.13.1.12
+    noaaportIngester(1):
+        Merged Raytheon's correction to the use of zlib(3). When option "-c"
+        wasn't specified, the OCONUS imagery received over the NOAAPORT_OPT
+        channel wasn't processed correctly: the zlib stream was not reset before
+        the beginning of the new product resulting in Z_STREAM_ERROR.
+
 6.13.1.11	2016-05-25T16:20:29-0600
     pqing(1):
         Corrected bug introduced in 6.13.0 that didn't honor argument of "-q"
