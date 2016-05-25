@@ -118,6 +118,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	fifo.c fifo.h \
 	fileReader.c fileReader.h \
 	getFacilityName.c getFacilityName.h \
+	goes.h \
 	lockProcessInMemory.c \
 	multicastReader.c multicastReader.h \
 	noaaport_socket.c noaaport_socket.h \
