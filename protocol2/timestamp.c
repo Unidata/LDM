@@ -390,7 +390,9 @@ char* timeval_format_time(
 }
 
 /**
- * Formats a duration as "P[<days>D]T[<hh>H][<mm>M]<ss>.<uuuuuu>S".
+ * Formats a duration as "P[<days>D]T[<hours>H][<minutes>M]<seconds>.<uuuuuu>S",
+ * where <days>, <hours>, <minutes>, and <seconds> have the minimum number of
+ * necessary numerals.
  *
  * @param[out] buf       Buffer to hold formatted duration. It is the caller's
  *                       responsibility to ensure that it can contain at least
