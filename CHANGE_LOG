@@ -1,4 +1,4 @@
-6.13.1.13
+6.13.1.13	2016-05-26T12:38:48-0600
     noaaportIngester(1):
         Added two pieces of productMaker.c code that were missed in 6.13.1.12.
         They were found by differencing Sathya's productMaker.c and the one in
