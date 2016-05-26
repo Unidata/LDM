@@ -4,6 +4,9 @@
         They were found by differencing Sathya's productMaker.c and the one in
         6.12.14.
 
+    Misc:
+        Added "#include <stddef.h>" to "noaaport/fifo.hin" for `size_t`.
+
 6.13.1.12	2016-05-25T16:31:32-0600
     noaaportIngester(1):
         Merged Raytheon's correction to the use of zlib(3). When option "-c"
