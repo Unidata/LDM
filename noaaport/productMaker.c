@@ -213,10 +213,10 @@ unsigned char comprDataBuf[CHUNK_SZ];
 char  GOES_BLANK_FRAME[MAXBYTES_DATA];
 unsigned int GOES_BLNK_FRM_LEN;
 
-    size_t              wmolen;
-int nxlen;
-int wmo_offset;
-int nnnxxx_offset;
+size_t wmolen;
+int    nxlen;
+int    wmo_offset;
+int    nnnxxx_offset;
 
 #ifdef RETRANS_SUPPORT
     long cpio_addr_tmp;
@@ -242,8 +242,9 @@ int nnnxxx_offset;
 
         /*** For Retranmission Purpose  ***/
 #ifdef RETRANS_SUPPORT
-    log_debug(" retrans_xmit_enable = %d   transfer_type = %s sbn_channel_name=%s \n",
-                retrans_xmit_enable, transfer_type, sbn_channel_name);
+    log_debug(" retrans_xmit_enable [%d]   transfer_type [%s] sbn_channel_name [%s] "
+            " unCompress [%d] fillScan [%d]\n", retrans_xmit_enable,
+            transfer_type, sbn_channel_name, unCompress, fillScan);
 
        if((retrans_xmit_enable == OPTION_ENABLE) && (!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs"))){
                 idx = get_cpio_addr(mcastAddr);
@@ -692,7 +693,7 @@ int nnnxxx_offset;
                         else {
                             /** Use compressed blank frames for scanlines **/
                             /** Compress the frame and add to the memheap **/
-                            log_notice("Genearating compressed blank scan lines of size [%d x %d x %d]"
+                            log_notice("Generating compressed blank scan lines of size [%d x %d x %d]"
                                      "[%ld] for prod seq %ld ", frags_left, n_scanlines, GOES_BLNK_FRM_LEN,
                                      (frags_left * n_scanlines * GOES_BLNK_FRM_LEN), prod.seqno);
     /**** FOR NOW   *****/
@@ -736,7 +737,7 @@ int nnnxxx_offset;
 
                         /** Increase the prod cnt as the product is inserted into ldm pq **/
                         (void)pthread_mutex_lock(&productMaker->mutex);
-                                productMaker->nprods++;
+                        productMaker->nprods++;
                         (void)pthread_mutex_unlock(&productMaker->mutex);
                     }
                 } /* end if GOES == 1 && fillScan */
@@ -954,265 +955,271 @@ int nnnxxx_offset;
                                         }
 #endif
 /**********************    NEW CODE    ********************************/
-                if(fillScan) {
-                    if(pfrag->seqno != prod.seqno) { /** Ex. last 307/5690 this 5/5691 **/
-                        frags_left = saved_nfrags - prod.tail->fragnum - 1;
-                        log_notice("Total frames expected: %d balance left %d ",
-                                saved_nfrags, frags_left);
+                    if(fillScan) {
+                        if(pfrag->seqno != prod.seqno) { /** Ex. last 307/5690 this 5/5691 **/
+                            frags_left = saved_nfrags - prod.tail->fragnum - 1;
+                            log_notice("Total frames expected: %d balance left %d ",
+                                    saved_nfrags, frags_left);
 
-                        GOES_BLNK_FRM_LEN = saved_pdb_struct.recsize;
-                        n_scanlines = saved_pdh_struct.records_per_block;
+                            GOES_BLNK_FRM_LEN = saved_pdb_struct.recsize;
+                            n_scanlines = saved_pdh_struct.records_per_block;
+
+                            if(unCompress) {
+                                 for(int cnt = 0; cnt < frags_left; cnt++){
+                                    memcpy(memheap + heapcount, GOES_BLANK_FRAME,
+                                            (GOES_BLNK_FRM_LEN * n_scanlines));
+                                    MD5Update(md5ctxp,
+                                            (unsigned char *) (memheap + heapcount),
+                                            (GOES_BLNK_FRM_LEN * n_scanlines));
+                                    heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
+                                    log_debug("GOES uncompressed blank frames added "
+                                            "[tot/this] [%d/%d] heapcount = %ld "
+                                            "blank_frame_len = %d scanlines %d",
+                                             frags_left, cnt, heapcount,
+                                             GOES_BLNK_FRM_LEN, n_scanlines);
+                                  }
+                            }
+                            else{
+                                /** Use compressed blank frames for scanlines **/
+                                /** Compress the frame and add to the memheap **/
+    /**** FOR NOW   *****/
+
+                                memset(uncomprBuf, 0, (GOES_BLNK_FRM_LEN * n_scanlines));
+                                memset(comprBuf, 0, MAXBYTES_DATA);
+                                uncomprLen = 0;
+                                comprLen = 0;
+
+                                deflateData(uncomprBuf,
+                                        (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf,
+                                        &comprLen, ANY_BLK );
+                                inflateData(comprBuf, comprLen, uncomprBuf,
+                                        &uncomprLen, ANY_BLK );
+                                deflateData(uncomprBuf, uncomprLen, comprDataBuf,
+                                        &comprDataLen, ANY_BLK );
+
+                                for(int cnt = 0; cnt < (frags_left - 1); cnt++){
+                                    memcpy(memheap + heapcount, comprBuf, comprLen);
+                                    MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
+                                    heapcount += comprLen;
+                                 }
+
+                                /*** Last frame should be a filler with -1,0,-1,0 to make edex happy - Sathya - 10/06/2015 ***/
+                                for(int ii=0; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii +=2)
+                                    uncomprBuf[ii] =  -1;
+                                for(int ii=1; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii +=2)
+                                    uncomprBuf[ii] =  0;
+
+                                deflateData(uncomprBuf,
+                                        (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf,
+                                        &comprLen, ANY_BLK );
+
+                                inflateData(comprBuf, comprLen, uncomprBuf,
+                                        &uncomprLen, ANY_BLK );
+                                deflateData(uncomprBuf, uncomprLen, comprBuf,
+                                        &comprLen, ANY_BLK );
+
+        /**** FOR NOW   *****/
+                                for(int cnt = 0; cnt < 1; cnt++){
+                                    memcpy(memheap + heapcount, comprBuf, comprLen);
+                                    MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
+                                    heapcount += comprLen;
+                                }
+                            } /** end if-else unCompress **/
+
+                            log_notice("%d scanlines filled into block %d prod seq %ld ",
+                                    n_scanlines, frags_left, prod.seqno);
+                            /** Insert the prod with missing frames into the ldm pq    **/
+                            /** Also terminate current prod as there is no header info **/
+                            process_prod(prod, PROD_NAME, memheap, heapcount,
+                                    md5ctxp, productMaker->ldmProdQueue,
+                                    &saved_psh_struct, &saved_sbn_struct);
+
+                            /** Increase the prod cnt as the product is inserted into ldm pq **/
+                            (void)pthread_mutex_lock(&productMaker->mutex);
+                            productMaker->nprods++;
+                            (void)pthread_mutex_unlock(&productMaker->mutex);
+
+                            ds_free();
+                            prod.head = NULL;
+                            prod.tail = NULL;
+                            continue;
+
+                        } /** pfrag->seqno != prod.seqno **/
+
+                        frags_left = pfrag->fragnum - prod.tail->fragnum - 1;
+                        n_scanlines = pdh->records_per_block;
+                        GOES_BLNK_FRM_LEN = pdb->recsize;
+
+                        log_notice("Balance frames left %d scanlines per frame %d",
+                                frags_left, n_scanlines);
 
                         if(unCompress) {
-                             for(int cnt = 0; cnt < frags_left; cnt++){
-                                memcpy(memheap + heapcount, GOES_BLANK_FRAME,
+                            for(int cnt = 0; cnt < frags_left; cnt++){
+                                 memcpy(memheap + heapcount, GOES_BLANK_FRAME,
+                                         (GOES_BLNK_FRM_LEN * n_scanlines));
+                                 MD5Update(md5ctxp,
+                                         (unsigned char *) (memheap + heapcount),
                                         (GOES_BLNK_FRM_LEN * n_scanlines));
-                                MD5Update(md5ctxp,
-                                        (unsigned char *) (memheap + heapcount),
-                                        (GOES_BLNK_FRM_LEN * n_scanlines));
-                                heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
-                                log_debug("GOES uncompressed blank frames added [tot/this] [%d/%d] heapcount = %ld blank_frame_len = %d scanlines %d",
+                                 heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
+                                 log_debug("GOES blank frames added [tot/this] "
+                                         "[%d/%d] heapcount [%ld] blank_frame_len "
+                                         "[%d] scanlines [%d]",
                                          frags_left, cnt, heapcount,
                                          GOES_BLNK_FRM_LEN, n_scanlines);
-                              }
+                            }
                         }
                         else{
                             /** Use compressed blank frames for scanlines **/
                             /** Compress the frame and add to the memheap **/
-/**** FOR NOW   *****/
-
+        /**** FOR NOW   *****/
                             memset(uncomprBuf, 0, (GOES_BLNK_FRM_LEN * n_scanlines));
                             memset(comprBuf, 0, MAXBYTES_DATA);
                             uncomprLen = 0;
                             comprLen = 0;
 
+                            //deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines * frags_left),
                             deflateData(uncomprBuf,
                                     (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf,
                                     &comprLen, ANY_BLK );
-                            inflateData(comprBuf, comprLen, uncomprBuf,
-                                    &uncomprLen, ANY_BLK );
-                            deflateData(uncomprBuf, uncomprLen, comprDataBuf,
-                                    &comprDataLen, ANY_BLK );
+        /**** FOR NOW   *****/
 
-                            for(int cnt = 0; cnt < (frags_left - 1); cnt++){
+                            for(int cnt = 0; cnt < frags_left; cnt++){
                                 memcpy(memheap + heapcount, comprBuf, comprLen);
                                 MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
                                 heapcount += comprLen;
-                             }
-
-                            /*** Last frame should be a filler with -1,0,-1,0 to make edex happy - Sathya - 10/06/2015 ***/
-                            for(int ii=0; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii +=2)
-                                uncomprBuf[ii] =  -1;
-                            for(int ii=1; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii +=2)
-                                uncomprBuf[ii] =  0;
-
-                            deflateData(uncomprBuf,
-                                    (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf,
-                                    &comprLen, ANY_BLK );
-
-                            inflateData(comprBuf, comprLen, uncomprBuf,
-                                    &uncomprLen, ANY_BLK );
-                            deflateData(uncomprBuf, uncomprLen, comprBuf,
-                                    &comprLen, ANY_BLK );
-
-    /**** FOR NOW   *****/
-                            for(int cnt = 0; cnt < 1; cnt++){
-                                memcpy(memheap + heapcount, comprBuf, comprLen);
-                                MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
-                                heapcount += comprLen;
+                                log_debug("GOES compressed blank frames added "
+                                        "heapcount = %ld blank frame size = %ld ",
+                                        heapcount, comprLen );
                             }
-                        } /** end if-else unCompress **/
+                        }
 
-                        log_notice("%d scanlines filled into block %d prod seq %ld ", n_scanlines, frags_left, prod.seqno);
-                        /** Insert the prod with missing frames into the ldm pq    **/
-                        /** Also terminate current prod as there is no header info **/
-                        process_prod(prod, PROD_NAME, memheap, heapcount,
-                                md5ctxp, productMaker->ldmProdQueue,
-                                &saved_psh_struct, &saved_sbn_struct);
-
-                        /** Increase the prod cnt as the product is inserted into ldm pq **/
-                        (void)pthread_mutex_lock(&productMaker->mutex);
-                        productMaker->nprods++;
-                        (void)pthread_mutex_unlock(&productMaker->mutex);
-
+                        log_notice("Total %d scanlines filled for block %d into prod seq %ld ",
+                                (n_scanlines * frags_left), frags_left, prod.seqno);
+        /**********************    NEW CODE    ********************************/
+                    }/** end if fillScan */
+                    else {
                         ds_free();
+
                         prod.head = NULL;
                         prod.tail = NULL;
+
                         continue;
-
-                    } /** pfrag->seqno != prod.seqno **/
-
-                    frags_left = pfrag->fragnum - prod.tail->fragnum - 1;
-                    n_scanlines = pdh->records_per_block;
-                    GOES_BLNK_FRM_LEN = pdb->recsize;
-
-                    log_notice("Balance frames left %d scanlines per frame %d",
-                            frags_left, n_scanlines);
-
-                    if(unCompress) {
-                        for(int cnt = 0; cnt < frags_left; cnt++){
-                             memcpy(memheap + heapcount, GOES_BLANK_FRAME,
-                                     (GOES_BLNK_FRM_LEN * n_scanlines));
-                             MD5Update(md5ctxp,
-                                     (unsigned char *) (memheap + heapcount),
-                                    (GOES_BLNK_FRM_LEN * n_scanlines));
-                             heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
-                             log_debug("GOES blank frames added [tot/this] [%d/%d] heapcount [%ld] blank_frame_len [%d] scanlines [%d]",
-                                     frags_left, cnt, heapcount,
-                                     GOES_BLNK_FRM_LEN, n_scanlines);
-                        }
                     }
-                    else{
-                        /** Use compressed blank frames for scanlines **/
-                        /** Compress the frame and add to the memheap **/
-    /**** FOR NOW   *****/
-                        memset(uncomprBuf, 0, (GOES_BLNK_FRM_LEN * n_scanlines));
-                        memset(comprBuf, 0, MAXBYTES_DATA);
-                        uncomprLen = 0;
-                        comprLen = 0;
+                }
 
-                        //deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines * frags_left),
-                        deflateData(uncomprBuf,
-                                (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf,
-                                &comprLen, ANY_BLK );
-    /**** FOR NOW   *****/
-
-                        for(int cnt = 0; cnt < frags_left; cnt++){
-                            memcpy(memheap + heapcount, comprBuf, comprLen);
-                            MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
-                            heapcount += comprLen;
-                            log_debug("GOES compressed blank frames added heapcount = %ld blank frame size = %ld ",
-                                    heapcount, comprLen );
-                        }
-                    }
-
-                    log_notice("Total %d scanlines filled for block %d into prod seq %ld ",
-                            (n_scanlines * frags_left), frags_left, prod.seqno);
-    /**********************    NEW CODE    ********************************/
-                }/** end if fillScan */
-                else {
-                    ds_free();
-
-                    prod.head = NULL;
-                    prod.tail = NULL;
-
+                if ((PNGINIT != 1) && (!PROD_COMPRESSED)) {
+                    log_error("failed pnginit %d %d %s", sbn->datastream,
+                            psh->pcat, PROD_NAME);
                     continue;
                 }
-            }
-
-            if ((PNGINIT != 1) && (!PROD_COMPRESSED)) {
-                log_error("failed pnginit %d %d %s", sbn->datastream,
-                        psh->pcat, PROD_NAME);
-                continue;
-            }
-            if (pdh->records_per_block < 1) {
-                log_error("records_per_block %d blocks_per_record %d "
-                        "nx %d ny %d", pdh->records_per_block,
-                        pdh->blocks_per_record, pdb->nx, pdb->ny);
-                log_error("source %d sector %d channel %d", pdb->source,
-                        pdb->sector, pdb->channel);
-                log_error("nrec %d recsize %d date %02d%02d%02d %02d%02d "
-                        "%02d.%02d", pdb->nrec, pdb->recsize, pdb->year,
-                        pdb->month, pdb->day, pdb->hour, pdb->minute,
-                        pdb->second, pdb->sechunds);
-                log_error("pshname %s", psh->pname);
-            }
-            if (!PROD_COMPRESSED) {
-                for (nscan = 0; (nscan * pdb->nx) < pdh->dbsize; nscan++) {
-                    log_debug("png write nscan %d", nscan);
-                    if (nscan >= pdh->records_per_block) {
-                        log_error("nscan exceeding records per block %d [%d "
-                            "%d %d]", pdh->records_per_block, nscan,
-                            pdb->nx, pdh->dbsize);
-                    }
-                    else {
-                        pngwrite(buf + dataoff + (nscan * pdb->nx));
+                if (pdh->records_per_block < 1) {
+                    log_error("records_per_block %d blocks_per_record %d "
+                            "nx %d ny %d", pdh->records_per_block,
+                            pdh->blocks_per_record, pdb->nx, pdb->ny);
+                    log_error("source %d sector %d channel %d", pdb->source,
+                            pdb->sector, pdb->channel);
+                    log_error("nrec %d recsize %d date %02d%02d%02d %02d%02d "
+                            "%02d.%02d", pdb->nrec, pdb->recsize, pdb->year,
+                            pdb->month, pdb->day, pdb->hour, pdb->minute,
+                            pdb->second, pdb->sechunds);
+                    log_error("pshname %s", psh->pname);
+                }
+                if (!PROD_COMPRESSED) {
+                    for (nscan = 0; (nscan * pdb->nx) < pdh->dbsize; nscan++) {
+                        log_debug("png write nscan %d", nscan);
+                        if (nscan >= pdh->records_per_block) {
+                            log_error("nscan exceeding records per block %d [%d "
+                                "%d %d]", pdh->records_per_block, nscan,
+                                pdb->nx, pdh->dbsize);
+                        }
+                        else {
+                            pngwrite(buf + dataoff + (nscan * pdb->nx));
+                        }
                     }
                 }
-            }
+                else {
+                   if(unCompress){
+                        memset(uncomprBuf, 0, MAXBYTES_DATA);
+                        uncomprLen = 0;
+                        /** Uncompress the frame and add to the memheap **/
+                        inflateData(buf + dataoff, datalen, uncomprBuf, &uncomprLen,
+                                ANY_BLK );
+                        memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
+                        MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount),
+                                                                        uncomprLen);
+                        heapcount += uncomprLen;
+                   }
+                   else {
+                        /*** Inflate and Deflate Data and then add to memheap ***/
+                        memset(uncomprBuf, 0, MAXBYTES_DATA);
+                        memset(comprDataBuf, 0, CHUNK_SZ);
+                        uncomprLen = 0;
+                        comprDataLen = 0;
+
+                        inflateData(buf + dataoff, datalen, uncomprBuf, &uncomprLen,
+                                ANY_BLK );
+                        deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen,
+                                ANY_BLK );
+                        //memcpy(memheap + heapcount, buf + dataoff, datalen);
+                        memcpy(memheap + heapcount, comprDataBuf, comprDataLen);
+                        MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount),
+                                comprDataLen);
+                        heapcount += comprDataLen;
+                   }
+                }
+            } /* end if fragnum > 0 */
             else {
-               if(unCompress){
-                    memset(uncomprBuf, 0, MAXBYTES_DATA);
-                    uncomprLen = 0;
-                    /** Uncompress the frame and add to the memheap **/
-                    inflateData(buf + dataoff, datalen, uncomprBuf, &uncomprLen,
-                            ANY_BLK );
-                    memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
-                    MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount),
-                                                                    uncomprLen);
-                    heapcount += uncomprLen;
-               }
-               else {
-                    /*** Inflate and Deflate Data and then add to memheap ***/
-                    memset(uncomprBuf, 0, MAXBYTES_DATA);
-                    memset(comprDataBuf, 0, CHUNK_SZ);
-                    uncomprLen = 0;
-                    comprDataLen = 0;
+                if (!PROD_COMPRESSED) {
+                    png_set_memheap(memheap, md5ctxp);
+                    png_header(buf + dataoff, datalen);
+                    /*
+                     * Add 1 to number of scanlines, image ends with
+                     * f0f0f0f0...
+                     */
+                    pngout_init(pdb->nx, pdb->ny + 1);
 
-                    inflateData(buf + dataoff, datalen, uncomprBuf, &uncomprLen,
-                            ANY_BLK );
-                    deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen,
-                            ANY_BLK );
-                    //memcpy(memheap + heapcount, buf + dataoff, datalen);
-                    memcpy(memheap + heapcount, comprDataBuf, comprDataLen);
-                    MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount),
-                            comprDataLen);
-                    heapcount += comprDataLen;
-               }
-           }
-           } /* end if fragnum > 0 */
-           else {
-               if (!PROD_COMPRESSED) {
-                   png_set_memheap(memheap, md5ctxp);
-                   png_header(buf + dataoff, datalen);
-                   /*
-                    * Add 1 to number of scanlines, image ends with
-                    * f0f0f0f0...
-                    */
-                   pngout_init(pdb->nx, pdb->ny + 1);
-
-                   PNGINIT = 1;
-               }
-               else {
-                   if(unCompress) {
-                       /** Uncompress the frame and add to the memheap **/
-                       inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
-                       inflateData(buf + dataoff + 21, datalen - 21, uncomprBuf,
-                               &uncomprLen, ANY_BLK );
-                       memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
-                       MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount),
-                             uncomprLen);
-                       heapcount += uncomprLen;
-                   }
-                   else{
-                       /*** Inflate and Deflate Data ***/
-                       memset(uncomprBuf, 0, MAXBYTES_DATA);
-                       memset(comprDataBuf, 0, MAXBYTES_DATA);
-                       uncomprLen = 0;
-                       comprDataLen = 0;
-                       memcpy(memheap + heapcount, buf + dataoff, 21);
-                       heapcount += 21;
-                       inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
-                       deflateData(NULL, 0, NULL, &comprDataLen, BEGIN_BLK );
-                       inflateData(buf + dataoff + 21, datalen - 21, uncomprBuf, &uncomprLen, ANY_BLK );
-                       deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
-                       memcpy(memheap + heapcount, comprDataBuf, comprDataLen);
-                       MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprDataLen);
-                       heapcount += comprDataLen;
-                   }
-               }
-               log_notice("records_per_block %d blocks_per_record %d nx %d ny %d",
-                       pdh->records_per_block, pdh->blocks_per_record, pdb->nx,
-                       pdb->ny);
-               log_notice("source %d sector %d channel %d", pdb->source,
-                       pdb->sector, pdb->channel);
-               log_notice("nrec %d recsize %d date %02d%02d%02d %02d%02d "
-                       "%02d.%02d", pdb->nrec, pdb->recsize, pdb->year, pdb->month,
-                       pdb->day, pdb->hour, pdb->minute, pdb->second,
-                       pdb->sechunds);
-               log_notice("pshname %s", psh->pname);
-           }
-           deflen = 0;
+                    PNGINIT = 1;
+                }
+                else {
+                    if(unCompress) {
+                        /** Uncompress the frame and add to the memheap **/
+                        inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
+                        inflateData(buf + dataoff + 21, datalen - 21, uncomprBuf,
+                                &uncomprLen, ANY_BLK );
+                        memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
+                        MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount),
+                              uncomprLen);
+                        heapcount += uncomprLen;
+                    }
+                    else{
+                        /*** Inflate and Deflate Data ***/
+                        memset(uncomprBuf, 0, MAXBYTES_DATA);
+                        memset(comprDataBuf, 0, MAXBYTES_DATA);
+                        uncomprLen = 0;
+                        comprDataLen = 0;
+                        memcpy(memheap + heapcount, buf + dataoff, 21);
+                        heapcount += 21;
+                        inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
+                        deflateData(NULL, 0, NULL, &comprDataLen, BEGIN_BLK );
+                        inflateData(buf + dataoff + 21, datalen - 21, uncomprBuf, &uncomprLen, ANY_BLK );
+                        deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
+                        memcpy(memheap + heapcount, comprDataBuf, comprDataLen);
+                        MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprDataLen);
+                        heapcount += comprDataLen;
+                    }
+                }
+                log_notice("records_per_block %d blocks_per_record %d nx %d ny %d",
+                        pdh->records_per_block, pdh->blocks_per_record, pdb->nx,
+                        pdb->ny);
+                log_notice("source %d sector %d channel %d", pdb->source,
+                        pdb->sector, pdb->channel);
+                log_notice("nrec %d recsize %d date %02d%02d%02d %02d%02d "
+                        "%02d.%02d", pdb->nrec, pdb->recsize, pdb->year, pdb->month,
+                        pdb->day, pdb->hour, pdb->minute, pdb->second,
+                        pdb->sechunds);
+                log_notice("pshname %s", psh->pname);
+            }
+            deflen = 0;
 #ifdef RETRANS_SUPPORT
                         if(retrans_xmit_enable == OPTION_ENABLE){
                            if(buff_hdr->proc_blkno != 0){
@@ -1309,10 +1316,11 @@ int nnnxxx_offset;
                     unCompress, PROD_COMPRESSED, prod.seqno);
 
              /***
-                   Special case: For a given produt, when first and intermediate frames are compressed
-                   but not the last frame by uplink then last frame does not need
-                   to be decompressed. But inflateData routine should be notified
-                   to close the stream. Otherwise it would cause memory leak
+                   Special case: For a given product, when first and
+                   intermediate frames are compressed but not the last frame by
+                   uplink then last frame does not need to be decompressed. But
+                   inflateData routine should be notified to close the stream.
+                   Otherwise it would cause memory leak
 
              if((unCompress) &&
                 (curr_prod_seqno == prod.seqno) &&
@@ -1422,6 +1430,10 @@ int nnnxxx_offset;
                 }
                 else {
                     log_debug("GOES product already compressed %d", heapcount);
+                }
+                if(fillScan || !unCompress) {
+                    udebug("Last Blk, call deflateEnd prod %ld", prod.seqno);
+                    deflateData(NULL, 0, NULL, &uncomprLen, END_BLK );
                 }
             }
 
