@@ -1,4 +1,4 @@
-6.13.1.14	2016-05-31T12:25:47-0600
+6.13.1.14	2016-05-31T12:44:49-0600
     Installation:
         Added "StrBuf.h" to BUILT_SOURCES macro in "misc/Makefile.am".
 
