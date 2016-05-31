@@ -770,14 +770,18 @@ sender_getPort(
 static void
 sender_insertProducts(void)
 {
-    int            status;
-    product        prod;
-    prod_info*     info = &prod.info;
-    char           ident[80];
-    void*          data = NULL;
-    unsigned short xsubi[3] = {(unsigned short)1234567890,
+    int             status;
+    product         prod;
+    prod_info*      info = &prod.info;
+    char            ident[80];
+    void*           data = NULL;
+    unsigned short  xsubi[3] = {(unsigned short)1234567890,
                                (unsigned short)9876543210,
                                (unsigned short)1029384756};
+    struct timespec duration;
+
+    duration.tv_sec = 0;
+    duration.tv_nsec = INTER_PRODUCT_INTERVAL;
     info->feedtype = EXP;
     info->ident = ident;
     info->origin = "localhost";
@@ -806,9 +810,6 @@ sender_insertProducts(void)
         log_info("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
 
-        struct timespec duration;
-        duration.tv_sec = 0;
-        duration.tv_nsec = INTER_PRODUCT_INTERVAL;
         status = nanosleep(&duration, NULL);
         CU_ASSERT_FATAL(status == 0 || errno == EINTR);
     }
@@ -1503,7 +1504,7 @@ test_up7_down7(
     CU_ASSERT_EQUAL(status, PQ_END);
     receiver_requestLastProduct(&receiver);
 #endif
-    (void)sleep(2);
+    (void)sleep(4);
     log_notice("%lu sender product-queue insertions", (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
     log_notice("%lu receiver product-queue insertions",
