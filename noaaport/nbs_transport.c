@@ -45,10 +45,10 @@ static inline void serialize_version_and_length(
 static void deserialize_version_and_length(
         uint_fast32_t* const restrict version,
         uint_fast32_t* const restrict length,
-        const uint8_t const           buf)
+        const unsigned                value)
 {
-    *version = buf >> 4;
-    *length = (buf & 0xF) * 4;
+    *version = value >> 4;
+    *length = (value & 0xF) * 4;
 }
 
 #define SET_BITS(t, f)   (t |= (f))
@@ -62,8 +62,8 @@ static void deserialize_version_and_length(
 #define CHECKSUM_OFFSET (FH_LENGTH - 2)
 
 /// NBS frame header
-typedef struct fh {
-    struct {
+typedef struct {
+    struct fh {
         uint_fast32_t hdlc_address;
         uint_fast32_t hdlc_control;
         uint_fast32_t sbn_version;
@@ -116,6 +116,44 @@ static void fh_init(
     fh->buf[7] = fh->bin.sbn_destination;
     encode_uint32(fh->buf+8, fh->bin.sbn_sequence_num);
     encode_uint16(fh->buf+12, fh->bin.sbn_run);
+}
+
+/**
+ * Returns the formatted representation of a frame-header.
+ *
+ * @param[in] fh  Frame-header
+ * @return        Formatted representation
+ */
+static const char* fh_format(
+        const fh_t* const fh)
+{
+    static char            buf[256];
+    const struct fh* const bin = &fh->bin;
+    (void)snprintf(buf, sizeof(buf)-1, "{"
+            "hdlc_address=%"PRIuFAST32", "
+            "hdlc_control=%"PRIuFAST32", "
+            "sbn_version=%"PRIuFAST32", "
+            "sbn_length=%"PRIuFAST32", "
+            "sbn_control=%"PRIuFAST32", "
+            "sbn_command=%"PRIuFAST32", "
+            "sbn_data_stream=%"PRIuFAST32", "
+            "sbn_source=%"PRIuFAST32", "
+            "sbn_destination=%"PRIuFAST32", "
+            "sbn_seq_num=%"PRIuFAST32", "
+            "sbn_run=%"PRIuFAST32", "
+            "sbn_checksum=%"PRIuFAST32"}",
+            bin->hdlc_address,
+            bin->hdlc_control,
+            bin->sbn_version,
+            bin->sbn_length,
+            bin->sbn_control,
+            bin->sbn_command,
+            bin->sbn_data_stream,
+            bin->sbn_source,
+            bin->sbn_destination,
+            bin->sbn_sequence_num,
+            bin->sbn_run,
+            bin->sbn_checksum);
 }
 
 /**
@@ -410,6 +448,35 @@ static inline uint8_t* pdh_get_buf(
 }
 
 /**
+ * Formats a product-definition header.
+ *
+ * This function is thread-compatible but not thread-safe.
+ *
+ * @param[in]  pdh   Product-definition header
+ * @return           Formatted representation
+ */
+static const char* pdh_format(
+        const pdh_t* const pdh)
+{
+    static char  buf[256];
+    const struct pdh* const bin = &pdh->bin;
+    (void)snprintf(buf, sizeof(buf)-1, "{version=%d, length=%d, trans_type=%#X, "
+            "psh_length=%d, block_num=%d, data_off=%d, data_size=%d, "
+            "recs_per_block=%d, blocks_per_rec=%d, prod_seq_num=%d}",
+        (int)bin->version,
+        (int)bin->pdh_length,
+        (int)bin->trans_type,
+        (int)bin->psh_length,
+        (int)bin->block_num,
+        (int)bin->data_offset,
+        (int)bin->data_size,
+        (int)bin->recs_per_block,
+        (int)bin->blocks_per_rec,
+        (int)bin->prod_sequence_num);
+    return buf;
+}
+
+/**
  * De-serializes a product-definition header.
  *
  * @param[out] pdh                Product-definition header
@@ -446,6 +513,7 @@ static nbs_status_t pdh_deserialize(
             status = NBS_STATUS_INVAL;
         }
         else {
+            log_debug("bin->pdh_length=%"PRIuFAST32, bin->pdh_length);
             bin->trans_type = buf[1];
             bin->psh_length = decode_uint16(buf+2) - bin->pdh_length;
             bin->block_num = decode_uint16(buf+4);
@@ -468,8 +536,11 @@ static nbs_status_t pdh_deserialize(
                     status = NBS_STATUS_INVAL;
                 }
             }
-            if (status == 0)
+            if (status == 0) {
+                if (log_is_enabled_debug)
+                    log_debug("pdh=%s", pdh_format(pdh));
                 *nscanned = bin->pdh_length;
+            }
         }
     }
     return status;
@@ -722,20 +793,81 @@ static inline uint8_t* psh_get_buf(
 }
 
 /**
+ * Formats a binary product-specific header.
+ *
+ * @param[in]  psh   Binary product-specific header
+ * @param[out] buf   Buffer to format `psh` into
+ * @param[in]  size  Number of bytes in `buf`
+ * @return           Number of bytes that would have been written to `buf` had
+ *                   `size` been sufficiently large excluding the terminating
+ *                   NUL.
+ */
+static int psh_format(
+        const psh_t* const restrict psh,
+        char* const restrict        buf,
+        const size_t                size)
+{
+    const struct psh* const bin = &psh->bin;
+    int          nbytes = snprintf(buf, size, "{opt_field_num=%"PRIuFAST32", "
+            "opt_field_type=%"PRIuFAST32", opt_field_length=%"PRIuFAST32", "
+            "version=%"PRIuFAST32", flag=%#"PRIXFAST32", "
+            "data_length=%"PRIuFAST32", bytes_per_rec=%"PRIuFAST32", "
+            "prod_type=%"PRIuFAST32", prod_category=%"PRIuFAST32", "
+            "prod_code=%"PRIdFAST32", num_frags=%"PRIdFAST32", "
+            "next_head_off=%"PRIuFAST32", prod_seq_num=%"PRIuFAST32", "
+            "prod_source=%"PRIuFAST32", prod_start_time=%"PRIuFAST32", "
+            "ncf_recv_time=%"PRIuFAST32,
+            bin->opt_field_num, bin->opt_field_type, bin->opt_field_length,
+            bin->version, bin->flag, bin->data_length, bin->bytes_per_rec,
+            bin->prod_type, bin->prod_category, bin->prod_code,
+            bin->num_fragments, bin->next_head_offset, bin->prod_seq_num,
+            bin->prod_source, bin->prod_start_time, bin->ncf_recv_time);
+    if (nbytes < size && bin->opt_field_length >= 36) {
+        nbytes += snprintf(buf+nbytes, size-nbytes,
+                ", ncf_send_time=%"PRIuFAST32, bin->ncf_send_time);
+        if (nbytes < size && bin->opt_field_length >= 38) {
+            nbytes += snprintf(buf+nbytes, size-nbytes,
+                    ", proc_cntl_flag=%#"PRIXFAST32, bin->proc_cntl_flag);
+            if (nbytes < size && bin->opt_field_length >= 40) {
+                nbytes += snprintf(buf+nbytes, size-nbytes,
+                        ", put_buf_last=%"PRIuFAST32, bin->put_buf_last);
+                if (nbytes < size && bin->opt_field_length >= 42) {
+                    nbytes += snprintf(buf+nbytes, size-nbytes,
+                            ", put_buf_first=%"PRIdFAST32, bin->put_buf_first);
+                    if (nbytes < size && bin->opt_field_length >= 44) {
+                        nbytes += snprintf(buf+nbytes, size-nbytes,
+                                ", expect_buf_num=%"PRIuFAST32,
+                                bin->expect_buf_num);
+                        if (nbytes < size && bin->opt_field_length >= 48) {
+                            nbytes += snprintf(buf+nbytes, size-nbytes,
+                                    ", prod_run_id=%"PRIdFAST32,
+                                    bin->prod_run_id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (nbytes < size)
+        nbytes += snprintf(buf+nbytes, size-nbytes, "}");
+    return nbytes;
+}
+
+/**
  * Deserializes a product-specific header.
  *
- * @param[out] psh                Decoded product-specific header
- * @param[in]  buf                Encoded product-specific header
- * @param[in]  nbytes             Number of bytes in `buf`
- * @param[out] nscanned           Number of bytes in `buf` scanned in order to
- *                                perform the decoding
- * @retval     0                  Success. `*psh` and `*nscanned` are set.
+ * @param[out] psh               Decoded product-specific header
+ * @param[in]  buf               Encoded product-specific header
+ * @param[in]  nbytes            Number of bytes in `buf`
+ * @param[out] nscanned          Number of bytes in `buf` scanned in order to
+ *                               perform the decoding
+ * @retval     0                 Success. `*psh` and `*nscanned` are set.
  * @retval     NBS_STATUS_INVAL  Invalid header. log_add() called.
  */
 static nbs_status_t psh_deserialize(
         psh_t* const restrict         psh,
         const uint8_t* const restrict buf,
-        const unsigned                nbytes,
+        unsigned                      nbytes,
         unsigned* const restrict      nscanned)
 {
     int status;
@@ -757,6 +889,7 @@ static nbs_status_t psh_deserialize(
             bin->version = buf[4];
             bin->flag = buf[5];
             bin->data_length = decode_uint16(buf+6);
+            nbytes = bin->opt_field_length;
             bin->bytes_per_rec = decode_uint16(buf+8);
             bin->prod_type = buf[10];
             bin->prod_category = buf[11];
@@ -792,6 +925,12 @@ static nbs_status_t psh_deserialize(
                         }
                     }
                 }
+            }
+            if (log_is_enabled_debug) {
+                char string[512];
+                (void)psh_format(psh, string, sizeof(string));
+                string[sizeof(string)-1] = 0;
+                log_debug("psh=%s", string);
             }
             *nscanned = n;
             status = 0;
@@ -867,7 +1006,7 @@ static nbs_status_t pdhpsh_deserialize_psh(
         psh_t* const restrict         psh,
         const pdh_t* const restrict   pdh,
         const uint8_t* const restrict buf,
-        const unsigned                nbytes,
+        unsigned                      nbytes,
         unsigned* const restrict      nscanned)
 {
     int status;
@@ -886,6 +1025,14 @@ static nbs_status_t pdhpsh_deserialize_psh(
         if (!pdh_is_product_start(pdh))
             log_notice("Frame after start-of-product has product-specific "
                     "header");
+        /*
+         * Because the number of bytes in a start-of-product frame has been seen
+         * to be greater than the sum of the lengths of the frame,
+         * product-definition, and product-specific headers, the length of the
+         * product-specific header is set to the value in the product-definition
+         * header.
+         */
+        nbytes = pdh_get_psh_length(pdh);
         status = psh_deserialize(psh, buf, nbytes, nscanned);
         if (status) {
             log_add("Invalid product-specific header");
@@ -896,7 +1043,8 @@ static nbs_status_t pdhpsh_deserialize_psh(
                 log_add("Actual length of product-specific header doesn't "
                         "match expected length: actual=%u, expected=%u",
                         *nscanned, expected);
-                status = NBS_STATUS_INVAL;
+                //status = NBS_STATUS_INVAL;
+                status = NBS_STATUS_SYSTEM;
             }
         }
     }
@@ -913,9 +1061,9 @@ static nbs_status_t pdhpsh_deserialize_psh(
  * @param[in]  nbytes             Number of bytes in `buf`
  * @param[out] nscanned           Number of bytes in `buf` scanned in order to
  *                                perform the decoding
- * @return     0                  Success. `*pdh` and `*nscanned` are set.
+ * @retval     0                  Success. `*pdh` and `*nscanned` are set.
  *                                `*psh` is set if appropriate.
- * @retval     NBS_STATUS_INVAL  Invalid header. `log_add()` called.
+ * @retval     NBS_STATUS_INVAL   Invalid header. `log_add()` called.
  */
 static nbs_status_t pdhpsh_deserialize(
         pdh_t* const restrict    pdh,
@@ -924,9 +1072,9 @@ static nbs_status_t pdhpsh_deserialize(
         unsigned                 nbytes,
         unsigned* const restrict nscanned)
 {
-    const uint8_t* pdh_start = buf;
-    unsigned       n;
-    int            status = pdh_deserialize(pdh, buf, nbytes, &n);
+    const uint8_t* const pdh_start = buf;
+    unsigned             n;
+    int                  status = pdh_deserialize(pdh, buf, nbytes, &n);
     if (status == 0) {
         buf += n;
         nbytes -= n;
@@ -948,7 +1096,7 @@ typedef struct {
 
 typedef struct {
     headers_t headers[2];  ///< Frame-dependent previous and current FH and PDH
-    psh_t psh;             ///< Product-specific header. Previous and current
+    psh_t     psh;         ///< Product-specific header. Previous and current
                            ///< not needed
     uint8_t   buf[65507];  ///< Buffer for serialized frame. Maximum UDP payload
     int       curr_index;  ///< Index of current headers
@@ -977,6 +1125,23 @@ static void recvFrame_init(
     psh_init(&frame->psh);
     frame->curr_index = 0;
     frame->prev_exists = false;
+}
+
+/**
+ * Returns the formatted string representation of a receive-frame.
+ *
+ * This function is thread-compatible but not thread-safe.
+ *
+ * @param[in] frame  Receive-frame
+ * @return           Formatted string representation
+ */
+static const char* recvFrame_format(
+        const recvFrame_t* const frame)
+{
+    static char string[512];
+    (void)snprintf(string, sizeof(string)-1, "{fh=%s, pdh=%s}",
+            fh_format(CURR_FH(frame)), pdh_format(CURR_PDH(frame)));
+    return string;
 }
 
 /**
@@ -1351,7 +1516,7 @@ static nbs_status_t nbst_recv_data(
  *                             called.
  * @retval NBS_STATUS_LOGIC    Logic error. log_add() called.
  * @retval NBS_STATUS_NOSTART  No start-frame for product was seen. log_add()
- *                             called.
+ *                             called iff frame is for different product.
  * @retval NBS_STATUS_UNSUPP   Unsupported product. log_add() called.
  * @retval NBS_STATUS_SYSTEM   System failure. log_add() called.
  */
@@ -1375,7 +1540,8 @@ static nbs_status_t nbst_recv_non_sync_frame(
         }
     }
     else {
-        log_add("No start-frame received for product");
+        log_add("No start-frame received for product: recv_frame=%s",
+                recvFrame_format(&nbst->recv_frame));
         nbst->start_processed = false;
         status = NBS_STATUS_NOSTART;
     }
@@ -1497,8 +1663,11 @@ void nbst_free(
  * @param[in]     nbytes             Number of bytes in `buf`
  * @retval        0                  Success
  * @retval        NBS_STATUS_INVAL   `buf` is invalid. log_add() called.
- * @retval        NBS_STATUS_UNSUPP  Unsupported product type. log_add() called.
  * @retval        NBS_STATUS_LOGIC   Logic error. log_add() called.
+ * @retval        NBS_STATUS_NOSTART No start-frame for product was seen.
+ *                                   log_add() called iff frame is for different
+ *                                   product.
+ * @retval        NBS_STATUS_UNSUPP  Unsupported product type. log_add() called.
  * @retval        NBS_STATUS_SYSTEM  System failure. log_add() called.
  */
 nbs_status_t nbst_recv(
