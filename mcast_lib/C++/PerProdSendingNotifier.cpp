@@ -38,3 +38,14 @@ void PerProdSendingNotifier::notify_of_eop(
 {
     eop_func(prodIndex);
 }
+
+/**
+ * Requests the application to verify an incoming connection request,
+ * and to decide whether to accept or to reject the connection. This
+ * method is thread-safe.
+ * @return    true: receiver accepted; false: receiver rejected.
+ */
+bool PerProdSendingNotifier::verify_new_recv(int newsock)
+{
+    return true;
+}
