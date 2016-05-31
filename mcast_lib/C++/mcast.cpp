@@ -49,7 +49,7 @@ struct mcast_receiver {
     /**
      * The receiving application notifier.
      */
-    RecvAppNotifier*  notifier;
+    RecvProxy*       notifier;
 };
 
 /**
@@ -90,7 +90,7 @@ mcastReceiver_init(
     McastReceiver* const        receiver,
     const char* const           tcpAddr,
     const unsigned short        tcpPort,
-    RecvAppNotifier* const      notifier,
+    RecvProxy* const            notifier,
     const char* const           mcastAddr,
     const unsigned short        mcastPort,
     const char* const           mcastIface)
@@ -145,7 +145,7 @@ mcastReceiver_new(
         return ENOMEM;
 
     try {
-        mcastReceiver_init(rcvr, tcpAddr, tcpPort, (RecvAppNotifier*)notifier,
+        mcastReceiver_init(rcvr, tcpAddr, tcpPort, (RecvProxy*)notifier,
                 mcastAddr, mcastPort, mcastIface);
         *receiver = rcvr;
         return 0;
