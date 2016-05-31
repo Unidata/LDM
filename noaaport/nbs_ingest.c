@@ -76,7 +76,7 @@ static bool decode_command_line(
     // Error messages are being explicitly handled
     opterr = 0;
 
-    while ((ch = getopt(argc, argv, ":f:l:q:vx:")) != -1) {
+    while ((ch = getopt(argc, argv, ":f:l:q:vx")) != -1) {
         switch (ch) {
         case 'I':
             iface_ip_addr = optarg;
