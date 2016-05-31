@@ -994,8 +994,8 @@ struct gini {
     unsigned     recs_per_block;   ///< Number of records (i.e., scan-lines) in
                                    ///< a canonical data-block
     unsigned     num_blocks_actual;///< Number of received blocks
-    unsigned     num_blocks_expected;///< Number of blocks in product. Includes
-                                   ///< product-definition block and
+    unsigned     num_blocks_expected;///< Number of expected blocks in product.
+                                   ///< Includes product-definition block and
                                    ///< end-of-product block.
     unsigned     num_recs_actual;  ///< Number of logical records (i.e.,
                                    ///< scan-lines) received or to send.
