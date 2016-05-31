@@ -1,6 +1,5 @@
 /child_map.h
 /semRWLock.h
-StrBuf.h
 testSemRWLock
 test_child_map
 doubly_linked_stack.h
