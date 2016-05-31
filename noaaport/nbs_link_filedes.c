@@ -109,7 +109,7 @@ nbs_status_t nbsl_recv(
         status = nbst_recv(nbsl->nbst, nbsl->frame_buf, nbytes);
         if (status == NBS_STATUS_INVAL || status == NBS_STATUS_UNSUPP ||
                 status == NBS_STATUS_NOSTART) {
-            log_notice("Discarding frame");
+            log_debug("Discarding frame");
             status = 0;
         }
     }
