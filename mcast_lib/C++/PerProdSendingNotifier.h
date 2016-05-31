@@ -15,11 +15,11 @@
 #define PER_PROD_SENDING_NOTIFIER_H_
 
 #include "mcast.h"
-#include "SendAppNotifier.h"
+#include "SendProxy.h"
 
 #include <sys/types.h>
 
-class PerProdSendingNotifier: public SendAppNotifier {
+class PerProdSendingNotifier: public SendProxy {
 public:
     /**
      * Constructs from the notification functions.
@@ -33,6 +33,14 @@ public:
 
     ~PerProdSendingNotifier() {}
     void notify_of_eop(FmtpProdIndex prodIndex);
+
+    /**
+     * Requests the application to verify an incoming connection request,
+     * and to decide whether to accept or to reject the connection. This
+     * method is thread-safe.
+     * @return    true: receiver accepted; false: receiver rejected.
+     */
+    bool verify_new_recv(int newsock);
 
 private:
     /**

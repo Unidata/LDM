@@ -29,11 +29,11 @@ typedef void    (*MissedProdFunc)(void* obj, const FmtpProdIndex iProd,
 
 #ifdef __cplusplus
 
-#include "RecvAppNotifier.h"
+#include "RecvProxy.h"
 #include <mutex>
 #include <unordered_map>
 
-class PerProdNotifier: public RecvAppNotifier {
+class PerProdNotifier: public RecvProxy {
 public:
     /**
      * Constructs from the notification functions.
