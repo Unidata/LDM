@@ -352,6 +352,17 @@ int
 pqe_insert(pqueue *pq, pqe_index index);
 
 /**
+ * Returns the number of outstanding product reservations (i.e., the number of
+ * times `pqe_new()` and `pqe_newDirect()` have been called minus the number of
+ * times `pqe_insert()` and `pqe_discard()` have been called.
+ *
+ * @param[in] pq  Product queue
+ * @return        Number of outstanding product reservations
+ */
+long pqe_get_count(
+        pqueue* const pq);
+
+/**
  * Inserts a data-product at the tail-end of the product-queue without signaling
  * the process group.
  *

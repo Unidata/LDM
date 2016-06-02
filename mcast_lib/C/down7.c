@@ -1828,6 +1828,13 @@ down7_getNumProds(
     return num;
 }
 
+long
+down7_getPqeCount(
+        Down7* const down7)
+{
+    return pqe_get_count(down7->pq);
+}
+
 /**
  * Stops a downstream LDM-7. Causes `down7_start()` to return if it hasn't
  * already. Returns immediately.

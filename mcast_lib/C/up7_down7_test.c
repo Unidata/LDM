@@ -77,8 +77,8 @@ typedef struct {
  * Approximate number of times the product-queue will be "filled".
  */
 #define                  NUM_TIMES 10
-// Time, in nanoseconds, between sending data-products.
-#define                  INTER_PRODUCT_INTERVAL 5000000 // 5 ms
+// Duration, in nanoseconds, between sending data-products.
+#define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
 /*
  * Factor by which the capacity of the product-queue is greater than a single
  * product.
@@ -1377,9 +1377,15 @@ receiver_deleteAllProducts(
  */
 static uint64_t
 receiver_getNumProds(
-        Receiver* const restrict receiver)
+        Receiver* const receiver)
 {
     return down7_getNumProds(receiver->down7);
+}
+
+static long receiver_getPqeCount(
+        Receiver* const receiver)
+{
+    return down7_getPqeCount(receiver->down7);
 }
 
 /**
@@ -1504,12 +1510,14 @@ test_up7_down7(
     CU_ASSERT_EQUAL(status, PQ_END);
     receiver_requestLastProduct(&receiver);
 #endif
-    (void)sleep(4);
+    (void)sleep(8);
     log_notice("%lu sender product-queue insertions", (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
+    log_notice("%lu product deletions", (unsigned long)numDeletedProds);
     log_notice("%lu receiver product-queue insertions",
             (unsigned long)numDownInserts);
-    log_notice("%lu product deletions", (unsigned long)numDeletedProds);
+    log_notice("%ld outstanding product reservations",
+            receiver_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
     #if USE_SIGWAIT

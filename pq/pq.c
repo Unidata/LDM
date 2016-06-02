@@ -3037,6 +3037,7 @@ struct pqueue {
         sigset_t sav_set;
         pthread_mutex_t mutex;  /* synchronizes multi-threaded access */
         char pathname[PATH_MAX]; // pathname of the product-queue
+        long pqe_count;         // Number of reserved products
 };
 
 /* The total size of a product-queue in bytes: */
@@ -4316,6 +4317,7 @@ pq_new(
     pq->fd = -1;
     pq->cursor = TS_NONE;
     pq->cursor_offset = OFF_NONE;
+    pq->pqe_count = 0;
 
     return pq;
 }
@@ -5982,6 +5984,7 @@ pqe_new(pqueue *pq,
 
         indexp->offset = sxep->offset;
         memcpy(indexp->signature, sxep->sxi, sizeof(signaturet));
+        pq->pqe_count++;
 /* */
         /*FALLTHROUGH*/
 unwind_ctl:
@@ -6076,6 +6079,7 @@ pqe_newDirect(
                     (void)memcpy(indexp->signature, sxep->sxi,
                             sizeof(signaturet));
                     indexp->sig_is_set = true;
+                    pq->pqe_count++;
                 }
 
                 (void)ctl_rel(pq, RGN_MODIFIED);
@@ -6115,6 +6119,7 @@ pqe_discard(pqueue *pq, pqe_index index)
             if(status == ENOERR) {
                 status = rpqe_free(pq, offset, index.signature);
                 (void)ctl_rel(pq, RGN_MODIFIED);
+                pq->pqe_count--;
             }
         }
 
@@ -6275,6 +6280,7 @@ pqe_insert(pqueue *pq, pqe_index index)
             }
             else {
                 (void)set_timestamp(&pq->ctlp->mostRecent);
+                pq->pqe_count--;
                 /*
                  * Inform our process group that there is new data available
                  * (see pq_suspend() below). SIGCONT is ignored by default.
@@ -6332,6 +6338,23 @@ unwind_lock:
         unlockIf(pq);
         return status;
 #endif
+}
+
+/**
+ * Returns the number of outstanding product reservations (i.e., the number of
+ * times `pqe_new()` and `pqe_newDirect()` have been called minus the number of
+ * times `pqe_insert()` and `pqe_discard()` have been called.
+ *
+ * @param[in] pq  Product queue
+ * @return        Number of outstanding product reservations
+ */
+long pqe_get_count(
+        pqueue* const pq)
+{
+    lockIf(pq);
+    const long pqe_count = pq->pqe_count;
+    unlockIf(pq);
+    return pqe_count;
 }
 
 
