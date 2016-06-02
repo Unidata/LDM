@@ -1,11 +1,20 @@
+6.13.1.15
+    Product-Queue (pq.c):
+        Added count of outstanding reservations property and pqe_get_count() to
+        read it.
+
+    FMTP:
+        Ported TcpSend::updatePathMTU() to SunOS 5.10.
+
 6.13.1.14	2016-05-31T12:44:49-0600
     Installation:
         Added "StrBuf.h" to BUILT_SOURCES macro in "misc/Makefile.am".
 
     nbs_ingest(1) (not yet ready to be used):
-        - Use "Option Field Length" parameter in product-definition header for
-          length of product-specific header instead of remaining bytes in frame.
-        - Added debugging statements.
+        Use "Option Field Length" parameter in product-definition header for
+        length of product-specific header instead of remaining bytes in frame.
+
+        Added debugging statements.
 
     mcast_lib(3):
         Changed use of SendAppNotifier and RecvAppNotifier to SendProxy and
@@ -14,11 +23,14 @@
 6.13.1	2016-05-20T13:39:22-0600
     Installation:
         Improved examination of system logging daemon by configure(1):
-            - Removed check for running daemon to accomodate Docker
-            - Simplified tests for configuration and PID files.
+            Removed check for running daemon to accomodate Docker
+
+            Simplified tests for configuration and PID files.
 
         Modified the "make clean" rule so that it doesn't delete the (generated)
         LDM tutorial files so that a subsequent "make" won't fail.
+
+        Added "StrBuf.h" to BUILT_SOURCES macro in "misc/Makefile.am".
 
     Logging:
         log(3):
@@ -56,11 +68,20 @@
         Corrected bug introduced in 6.13.0 that didn't honor the argument of the
         "-q" option.
 
-    noaaportIngester(1):
-        Merged Raytheon's correction to the use of zlib(3). When option "-c"
-        wasn't specified, the OCONUS imagery received over the NOAAPORT_OPT
-        channel wasn't processed correctly: the zlib stream was not reset before
-        the beginning of the new product resulting in Z_STREAM_ERROR.
+    NOAAPort:
+        noaaportIngester(1):
+            Merged Raytheon's correction to the use of zlib(3). When option
+            "-c" wasn't specified, the OCONUS imagery received over the
+            NOAAPORT_OPT channel wasn't processed correctly: the zlib stream
+            was not reset before the beginning of the new product resulting
+            in Z_STREAM_ERROR.
+
+        nbs_ingest(1) (not yet ready for use):
+            Use "Option Field Length" parameter in product-definition header for
+            length of product-specific header instead of remaining bytes in
+            frame.
+
+            Added debugging statements.
 
     Misc:
         Replaced the use of clock_gettime() with gettimeofday() because the
@@ -83,8 +104,13 @@
     Documentation:
         Updated version-independent HTML files.
 
-    FMTP:
-        Changed name from "vcmtp" to "FMTP" in LDM codebase.
+    Multicast (not yet ready for use):
+        mcast_lib(3):
+            Changed use of SendAppNotifier and RecvAppNotifier to SendProxy and
+            RecvProxy, respectively.
+
+        FMTP:
+            Changed name from "vcmtp" to "FMTP" in LDM codebase.
 
 6.13.0	2016-05-03T16:03:52-0600
     Logging:
