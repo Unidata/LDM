@@ -1,4 +1,4 @@
-6.13.1.15
+6.13.1.15	2016-06-02T11:02:11-0600
     Product-Queue (pq.c):
         Added count of outstanding reservations property and pqe_get_count() to
         read it.
