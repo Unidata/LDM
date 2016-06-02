@@ -154,6 +154,7 @@ static const char* fh_format(
             bin->sbn_sequence_num,
             bin->sbn_run,
             bin->sbn_checksum);
+    return buf;
 }
 
 /**

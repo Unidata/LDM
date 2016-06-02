@@ -1717,17 +1717,10 @@ static int inflateData(
          totalBytesIn += i_zstrm.total_in;
          decompByteCounter += inflatedBytes;
 
-         if(totalBytesIn == inLen) {
+         if(totalBytesIn == inLen)
               idx = getIndex(out, 0, inflatedBytes);
-          }
-         if(idx == -1) {
-            /** search failed, so write all data **/
-            memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
-         } else {
-            /*memcpy(dstBuf + savedByteCntr, out, idx);*/
-            memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
-          }
-            savedByteCntr = decompByteCounter;
+         memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
+         savedByteCntr = decompByteCounter;
        }
        // Reset inflater for additional input
        ret = inflateReset(&i_zstrm);
