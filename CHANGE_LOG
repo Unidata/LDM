@@ -1,31 +1,6 @@
-6.13.1.16	2016-06-02T12:13:51-0600
-    Fixed minor coverity lint.
-
-6.13.1.15	2016-06-02T11:02:11-0600
-    Product-Queue (pq.c):
-        Added count of outstanding reservations property and pqe_get_count() to
-        read it.
-
-    FMTP:
-        Ported TcpSend::updatePathMTU() to SunOS 5.10.
-
-6.13.1.14	2016-05-31T12:44:49-0600
+6.13.1
     Installation:
-        Added "StrBuf.h" to BUILT_SOURCES macro in "misc/Makefile.am".
-
-    nbs_ingest(1) (not yet ready to be used):
-        Use "Option Field Length" parameter in product-definition header for
-        length of product-specific header instead of remaining bytes in frame.
-
-        Added debugging statements.
-
-    mcast_lib(3):
-        Changed use of SendAppNotifier and RecvAppNotifier to SendProxy and
-        RecvProxy, respectively.
-
-6.13.1	2016-05-20T13:39:22-0600
-    Installation:
-        Improved examination of system logging daemon by configure(1):
+        Improved examination of system logging daemon by configure(1) script:
             Removed check for running daemon to accomodate Docker
 
             Simplified tests for configuration and PID files.
@@ -58,6 +33,10 @@
 
     Product-Queue (pq.c):
         Made product-queue file descriptor close-on-exec.
+
+        Added property that is the count of outstanding reservations from
+        uncompleted pqe_new() and pqe_newDirect() calls and the function
+        pqe_get_count() to read it.
 
     ldmd(1):
         Moved configuring of standard I/O file descriptors from EXEC action of
@@ -101,6 +80,8 @@
 
         Added "#include <stddef.h>" to "noaaport/fifo.hin" for `size_t`.
 
+        Removed minor lint discovered by Coverity.
+
     Testing:
         Shortened run-time of pq_test(1).
 
@@ -114,6 +95,8 @@
 
         FMTP:
             Changed name from "vcmtp" to "FMTP" in LDM codebase.
+
+            Ported TcpSend::updatePathMTU() to SunOS 5.10.
 
 6.13.0	2016-05-03T16:03:52-0600
     Logging:
