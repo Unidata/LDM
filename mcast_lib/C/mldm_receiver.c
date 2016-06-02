@@ -249,8 +249,9 @@ finishInsertion(
  *                           data-product in the product-queue or NULL,
  *                           indicating a duplicate product.
  * @param[in]      prodSize  The size of the XDR-encoded data-product in bytes.
+ *                           Ignored if `prodStart == NULL`.
  * @param[in]      pqeIndex  Reference to the reserved space in the product-
- *                           queue.
+ *                           queue. Ignored if `prodStart == NULL`.
  * @retval         0         Success.
  * @retval         -1        Error. `log_add()` called. The allocated space
  *                           in the LDM product-queue was released.
@@ -312,7 +313,7 @@ eop_func(
 static void
 missed_prod_func(
         void* const restrict      obj,
-        const FmtpProdIndex      iProd,
+        const FmtpProdIndex       iProd,
         pqe_index* const restrict pqeIndex)
 {
     /*
