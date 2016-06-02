@@ -82,15 +82,31 @@ ssh -T steve@$WEB_HOST bash --login <<EOF
         sed "s/$PKG_NAME-//" |
         sort -t. -k 1nr,1 -k 2nr,2 -k 3nr,3 |
         awk -F. '\$1!=ma||\$2!=mi{print}{ma=\$1;mi=\$2}' >versions
-    sed -n '1,/$BEGIN_VERSION_LINKS/p' documentation.inc >documentation.inc.new
+    sed -n '1,/$BEGIN_VERSION_LINKS/p' versions.inc >versions.inc.new
     for vers in \`cat versions\`; do
         href=$PKG_NAME-\$vers
-        echo "            <li><a href=\"\$href\">\$vers</a>" >>documentation.inc.new
+        cat <<END_VERS >>versions.inc.new
+             <tr>
+              <td>
+               <b>\$vers</b>
+              </td>
+              <td>
+               <a href="\$href">Documentation</a> 
+              </td>
+              <td>
+               <a href="ftp://ftp.unidata.ucar.edu/pub/ldm/\$href.tar.gz">Download</a> 
+              </td>
+               <td>
+               <a href="\$href/CHANGE_LOG">Release Notes</a> 
+              </td>
+             </tr>
+
+END_VERS
     done
-    sed -n '/$END_VERSION_LINKS/,\$p' documentation.inc >>documentation.inc.new
-    rm -f documentation.inc.old
-    cp documentation.inc documentation.inc.old
-    mv documentation.inc.new documentation.inc
+    sed -n '/$END_VERSION_LINKS/,\$p' versions.inc >>versions.inc.new
+    rm -f versions.inc.old
+    cp versions.inc versions.inc.old
+    mv versions.inc.new versions.inc
 
     # Delete all versions not referenced in the top-level HTML file.
     #
