@@ -1,4 +1,4 @@
-6.13.1
+6.13.1	2016-06-02T13:21:50-0600
     Installation:
         Improved examination of system logging daemon by configure(1) script:
             Removed check for running daemon to accomodate Docker
