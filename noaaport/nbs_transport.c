@@ -1476,7 +1476,7 @@ static nbs_status_t nbst_recv_data(
                             recvFrame_get_rec_len(frame),
                             recvFrame_get_recs_per_block(frame), is_compressed,
                             recvFrame_get_type(frame),
-                            num_frag * 5120) // Canonical data-block max size
+                            num_frag * 5120) // 5120 == data-block max size
                     : nbsp_recv_gini_block(nbsp, buf, nbytes,
                             recvFrame_get_block_num(frame), is_compressed);
             return (status == NBS_STATUS_INVAL || status == NBS_STATUS_LOGIC ||
