@@ -234,7 +234,7 @@ static void test_gini(
     void* value_ptr;
     status = pthread_join(thread, &value_ptr);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL_FATAL((int)value_ptr, 0);
+    CU_ASSERT_PTR_NULL_FATAL(value_ptr);
 
     (void)pq_close(pq);
     //(void)unlink(pq_pathname);
