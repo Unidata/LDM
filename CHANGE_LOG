@@ -1,3 +1,14 @@
+6.13.2.0
+    noaaportIngester(1):
+        Reverted the computation of the MD5 checksum in productMaker.c for
+        compressed GINI data-blocks when neither the "-c" nor "-f" options are
+        specified from Raytheon's algorithm (which always decompresses and
+        recompresses the data-block) to the original algorithm (which uses the
+        data-block "as is"). This was done because Raytheon's algorithm results
+        in MD5 checksums that differ from previous versions of
+        noaaportIngester(1) -- resulting in failure of the duplicate product
+        rejection mechanism of the product-queue.
+
 6.13.1	2016-06-02T15:29:28-0600
     Installation:
         Improved examination of system logging daemon by configure(1) script:

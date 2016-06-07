@@ -1150,21 +1150,10 @@ int    nnnxxx_offset;
                         heapcount += uncomprLen;
                    }
                    else {
-                        /*** Inflate and Deflate Data and then add to memheap ***/
-                        memset(uncomprBuf, 0, MAXBYTES_DATA);
-                        memset(comprDataBuf, 0, CHUNK_SZ);
-                        uncomprLen = 0;
-                        comprDataLen = 0;
-
-                        inflateData(buf + dataoff, datalen, uncomprBuf, &uncomprLen,
-                                ANY_BLK );
-                        deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen,
-                                ANY_BLK );
-                        //memcpy(memheap + heapcount, buf + dataoff, datalen);
-                        memcpy(memheap + heapcount, comprDataBuf, comprDataLen);
-                        MD5Update(md5ctxp, (unsigned char *) (memheap + heapcount),
-                                comprDataLen);
-                        heapcount += comprDataLen;
+                        memcpy(memheap + heapcount, buf + dataoff, datalen);
+                        MD5Update(md5ctxp,
+                                (unsigned char*)(memheap + heapcount), datalen);
+                        heapcount += datalen;
                    }
                 }
             } /* end if fragnum > 0 */
@@ -1192,20 +1181,10 @@ int    nnnxxx_offset;
                         heapcount += uncomprLen;
                     }
                     else{
-                        /*** Inflate and Deflate Data ***/
-                        memset(uncomprBuf, 0, MAXBYTES_DATA);
-                        memset(comprDataBuf, 0, MAXBYTES_DATA);
-                        uncomprLen = 0;
-                        comprDataLen = 0;
-                        memcpy(memheap + heapcount, buf + dataoff, 21);
-                        heapcount += 21;
-                        inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
-                        deflateData(NULL, 0, NULL, &comprDataLen, BEGIN_BLK );
-                        inflateData(buf + dataoff + 21, datalen - 21, uncomprBuf, &uncomprLen, ANY_BLK );
-                        deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
-                        memcpy(memheap + heapcount, comprDataBuf, comprDataLen);
-                        MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprDataLen);
-                        heapcount += comprDataLen;
+                        memcpy(memheap + heapcount, buf + dataoff, datalen);
+                        MD5Update(md5ctxp,
+                                (unsigned char*)(memheap + heapcount), datalen);
+                        heapcount += datalen;
                     }
                 }
                 log_notice("records_per_block %d blocks_per_record %d nx %d ny %d",
@@ -1822,7 +1801,7 @@ static int deflateData(
        do  {
          ret  = deflate(&d_zstrm, flush);
           if (ret < 0) {
-              log_error("FAIL %d delate (%s}", ret, decode_zlib_err(ret));
+              log_error("FAIL %d delate (%s)", ret, decode_zlib_err(ret));
               (void)deflateEnd(&d_zstrm);
                isStreamSet = NO;
                return (ret);
