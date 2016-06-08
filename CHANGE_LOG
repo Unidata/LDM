@@ -1,3 +1,8 @@
+6.13.2.1
+    noaaportIngester(1):
+        Incorporated Raytheon's bug-fix that eliminates unnecessary
+        retransmission requests for GINI products.
+
 6.13.2.0	2016-06-08T09:31:05-0600
     noaaportIngester(1):
         Reverted the computation of the MD5 checksum in productMaker.c for

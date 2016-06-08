@@ -231,6 +231,7 @@ int    nnnxxx_offset;
     int save_prod = 1;
     int discard_prod = 0;
     long proc_orig_prod_seqno_last_save=0;
+    int genRetransReq = 0;
 #endif
 
     prod.head = NULL;
@@ -610,6 +611,7 @@ int    nnnxxx_offset;
                                         buff_hdr->buff_datahdr_length = psh->psdl;
                                         time(&acq_tbl->proc_prod_start_time);
                                         acq_tbl->proc_tot_prods_handled++;
+                                        genRetransReq = 0;
                                 }else{
                                                 buff_hdr->buff_datahdr_length = 0;
                                  }
@@ -950,8 +952,14 @@ int    nnnxxx_offset;
 #ifdef RETRANS_SUPPORT
                                         if(retrans_xmit_enable == OPTION_ENABLE){
                                           acq_tbl->proc_acqtab_prodseq_errs++;
-                                          do_prod_mismatch(acq_tbl,buff_hdr);
-                                          acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
+                                          if((pfrag->seqno != prod.seqno) ||
+                                                  (pfrag->seqno == prod.seqno) &&
+                                                  (genRetransReq == 0)) {
+                                              do_prod_mismatch(acq_tbl,buff_hdr);
+                                              genRetransReq = 1;
+                                          }
+                                          acq_tbl->proc_base_prod_seqno_last =
+                                                  buff_hdr->proc_prod_seqno;
                                         }
 #endif
 /**********************    NEW CODE    ********************************/
