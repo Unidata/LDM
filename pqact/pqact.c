@@ -652,10 +652,10 @@ main(int ac, char *av[])
                 if (wasProcessed) {
                     /*
                      * The insertion-time of the last successfully-processed
-                     * data-product is only set if it was successfully processed
-                     * by all matching entries in order to allow re-processing
-                     * of a partially processed data-product in the next session
-                     * by a corrected action.
+                     * data-product is only set if the product had no processing
+                     * error. This is done to allow re-processing of a partially
+                     * processed product in the next session by a corrected
+                     * action.
                      */
                     currentCursor = insertionTime;
                     currentCursorSet = 1;
