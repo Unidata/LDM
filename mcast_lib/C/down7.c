@@ -1828,6 +1828,12 @@ down7_getNumProds(
     return num;
 }
 
+/**
+ * Returns the number of reserved spaces in the product-queue for which
+ * pqe_insert() or pqe_discard() have not been called.
+ *
+ * @param[in] down7  The downstream LDM-7.
+ */
 long
 down7_getPqeCount(
         Down7* const down7)
