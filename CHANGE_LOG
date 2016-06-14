@@ -1,10 +1,17 @@
 6.13.2.1
-    noaaportIngester(1):
+    noaaportIngester(1) (productMaker.c):
         Incorporated Raytheon's bug-fix that eliminates unnecessary
-        retransmission requests for GINI products.
+        retransmission requests for GINI products from NOAA's NCF. (Only
+        requests from NOAA offices are honored).
+        
+    pqact(1):
+        Changed meaning of `wasProcessed` variable from "matched and no error"
+        to just "no error" so that a product that matched the "-f" and "-p"
+        options would be used as the starting-point in the next session even if
+        if didn't match any pqact(1) configuration-file entries.
 
 6.13.2.0	2016-06-08T09:31:05-0600
-    noaaportIngester(1):
+    noaaportIngester(1) (productMaker.c):
         Reverted the computation of the MD5 checksum in productMaker.c for
         compressed GINI data-blocks when neither the "-c" nor "-f" options are
         specified from Raytheon's algorithm (which always decompresses and
@@ -152,8 +159,9 @@
           1) Optionally create blank scan lines for missing GINI data; and
           2) Optionally always de-compress a compressed data block in a NOAAPort  
              frame.
-             
-        Eliminated memory-leaks from components that read GEMPAK tables.
+
+        Eliminated memory-leaks and SIGSEGV violations from components that read
+        GEMPAK tables.
 
         Added entries to GEMPAK tables (indicated column positions aren't correct):
           File "g2varswmo.tbl":

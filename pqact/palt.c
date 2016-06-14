@@ -1306,7 +1306,7 @@ processProduct(
         
         bool* const wasProcessed = (bool*)otherargs;
         if (wasProcessed)
-            *wasProcessed = didMatch && !errorOccurred;
+            *wasProcessed = !errorOccurred;
 
         return 0; // Any non-product-queue error causes program termination
 }
