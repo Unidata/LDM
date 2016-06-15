@@ -9,6 +9,9 @@
         to just "no error" so that a product that matched the "-f" and "-p"
         options would be used as the starting-point in the next session even if
         if didn't match any pqact(1) configuration-file entries.
+        
+        Refactored palt.c:processProduct(): simplified use of optional "noError" 
+        argument.
 
 6.13.2.0	2016-06-08T09:31:05-0600
     noaaportIngester(1) (productMaker.c):
