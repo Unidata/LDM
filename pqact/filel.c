@@ -438,27 +438,15 @@ fl_removeAndFree(
  * Flushes outstanding I/O of entries in the list starting with the tail of the
  * list and moving to the head.
  *
- * @param[in] nentries  Number of entries to flush or `-1` to flush all entries.
  * @param[in] block     Whether or not the I/O should block.
  */
 void
 fl_sync(
-        int       nentries,
         const int block)
 {
-    // LOG_DEBUG("  fl_sync");
-
-    if (thefl->size <= 0)
-        return;
-
-    if (nentries == -1) /* sync everyone */
-        nentries = thefl->size;
-
     fl_entry *entry, *prev;
-    for (entry = thefl->tail; entry != NULL && nentries >= 0;
-            entry = prev, nentries--) {
+    for (entry = thefl->tail; entry != NULL; entry = prev) {
         prev = entry->prev;
-
         if (entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
             if (entry->ops->sync(entry, block)) {
                 log_error("Couldn't sync entry");

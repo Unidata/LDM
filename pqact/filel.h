@@ -42,7 +42,7 @@ extern int ldmdb_prodput( const product *prod, int argc, char **argv,
 	const void *xprod, size_t xlen);
 #endif /* !NO_DB */
 extern pid_t reap(pid_t pid, int options);
-extern void fl_sync(int nentries, int block);
+extern void fl_sync(int block);
 extern void fl_closeLru(int skipflags);
 extern void fl_closeAll(void);
 extern void endpriv(void);
