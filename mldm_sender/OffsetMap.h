@@ -35,7 +35,7 @@ public:
      * Removes and returns the offset corresponding to a product-index.
      * @param[in] prodIndex       The product-index.
      * @return                    The corresponding offset.
-     * @throws std::out_of_range if the corresponding offset doesn't exit.
+     * @throws std::out_of_range if the corresponding offset doesn't exist.
      */
     inline off_t get(McastProdIndex prodIndex);
 
