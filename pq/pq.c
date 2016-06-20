@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <search.h>
+#include <stdint.h>
 #include <xdr.h>
 
 #include "ldm.h"
@@ -144,30 +145,32 @@ log4(size_t n)
  *  - 2 with probability 3/4*(1/4)^2 = .046875
  *  - ...
  *  capped at "fbp->maxsize - 1". Not thread-safe.
+ *
+ *  @param[in] fbp  Pointer to fblk structure
  */
 static int 
-fb_ranlev(fb *fbp) 
+fb_ranlev(
+        const fb* const fbp)
 {
-#   define                BITSINRANDOM 31
-    int                   level;
-    int                   maxlevel = fbp->maxsize - 1;
-    static int            randomsLeft = 1;
-    static long           randomBits;
-    static unsigned short xsubi[3] = {
-            (unsigned short)1234567890,
-            (unsigned short)9876543210,
-            (unsigned short)1029384756};
-
-    for (level = 0; level < maxlevel; level++) {
+    int level;
+    for (level = 0; level < fbp->maxsize - 1; level++) {
+        // nrand48() returns 31 pseudo-random bits:
+#       define                BITS_IN_RANDOM 31
+#       define                BITS_IN_PIECE  2
+#       define                PIECE_MASK     ((1 << BITS_IN_PIECE) - 1)
+        static int            randomsLeft;
+        static long           randomBits;
+        // Randomly-generated values:
+        static unsigned short xsubi[3] = {
+                0x473da8f190d5f1c4, 0x440937acf01c8c4e, 0xa8a9d686bec2da48};
         if (--randomsLeft <= 0) {
             randomBits = nrand48(xsubi);
-            randomsLeft = BITSINRANDOM / 2;
+            randomsLeft = BITS_IN_RANDOM / BITS_IN_PIECE;
         }
-        if (randomBits & 3)
+        if (randomBits & PIECE_MASK)
             break;
-        randomBits >>= 2;
+        randomBits >>= BITS_IN_PIECE;
     }
-
     return level;
 }
 
