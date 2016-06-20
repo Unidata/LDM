@@ -1,4 +1,4 @@
-6.13.2.1
+6.13.2.1	2016-06-20T17:13:34-0600
     noaaportIngester(1) (productMaker.c):
         Incorporated Raytheon's bug-fix that eliminates unnecessary
         retransmission requests for GINI products from NOAA's NCF. (Only
