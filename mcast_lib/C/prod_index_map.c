@@ -937,8 +937,12 @@ pim_put(
         if (0 == status) {
             clearMapIfUnexpected(iProd);
 
-            (void)memcpy(mmo->sigs + (mmo->oldSig + mmo->numSigs) % maxSigs, sig,
-                    SIG_SIZE);
+            (void)memcpy(mmo->sigs + (mmo->oldSig + mmo->numSigs) % maxSigs,
+                    sig, SIG_SIZE);
+            char buf[2*sizeof(signaturet)+1];
+            status = sprint_signaturet(buf, sizeof(buf), *sig);
+            log_assert(status > 0);
+            log_info("Added: iProd=%lu, sig=%s", (unsigned long)iProd, buf);
 
             if (mmo->numSigs < maxSigs) {
                 if (0 == mmo->numSigs++)
