@@ -705,7 +705,7 @@ main(int ac, char *av[])
             /*
              * Perform a non-blocking sync on all open file descriptors.
              */
-            fl_sync(-1, FALSE);
+            fl_sync(FALSE);
 
             /*
              * Wait on any children which might have terminated.
