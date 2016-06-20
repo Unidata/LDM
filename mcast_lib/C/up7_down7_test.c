@@ -69,32 +69,33 @@ typedef struct {
  * Proportion of data-products that the receiving LDM-7 will delete from the
  * product-queue and request from the sending LDM-7.
  */
-#define                  REQUEST_RATE 0.2
+#define                  REQUEST_RATE 0.1
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 1000000
-#define                  MEAN_PROD_SIZE (MAX_PROD_SIZE/2)
-/*
- * Approximate number of times the product-queue will be "filled".
- */
-#define                  NUM_TIMES 10
-// Duration, in nanoseconds, between sending data-products.
+// Approximate number of times the product-queue will be "filled".
+#define                  NUM_TIMES 1
+// Duration, in nanoseconds, between data-product insertions
 #define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
-/*
- * Factor by which the capacity of the product-queue is greater than a single
- * product.
- */
-#define                  CAPACITY_TO_PROD_RATIO 100
+// Mean residence-time, in seconds, of a data-product
+#define                  MEAN_RESIDENCE_TIME 100
+
+// Mean product size in bytes
+#define                  MEAN_PROD_SIZE (MAX_PROD_SIZE/2)
+// Mean number of products in product-queue
+#define                  MEAN_NUM_PRODS \
+        ((int)(MEAN_RESIDENCE_TIME / (INTER_PRODUCT_INTERVAL/1e9)))
+
 /*
  * The product-queue is limited by its data-capacity (rather than its product-
  * capacity) to attempt to reproduce the queue corruption seen by Shawn Chen at
  * the University of Virginia.
  */
 // Capacity of the product-queue in bytes
-static const unsigned    PQ_DATA_CAPACITY = CAPACITY_TO_PROD_RATIO*MEAN_PROD_SIZE;
+static const unsigned    PQ_DATA_CAPACITY = MEAN_NUM_PRODS*MEAN_PROD_SIZE;
 // Capacity of the product-queue in number of products
-static const unsigned    PQ_PROD_CAPACITY = 50*CAPACITY_TO_PROD_RATIO;
+static const unsigned    PQ_PROD_CAPACITY = MEAN_NUM_PRODS;
 // Number of data-products to insert
-static const unsigned    NUM_PRODS = NUM_TIMES*CAPACITY_TO_PROD_RATIO;
+static const unsigned    NUM_PRODS = NUM_TIMES*MEAN_NUM_PRODS;
 static const char        LOCAL_HOST[] = "127.0.0.1";
 static sigset_t          termSigSet;
 static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
@@ -288,7 +289,10 @@ createEmptyProductQueue(
     int     status = pq_create(pathname, 0666, PQ_DEFAULT, 0, PQ_DATA_CAPACITY,
             PQ_PROD_CAPACITY, &pq); // PQ_DEFAULT => clobber existing
 
-    if (status == 0) {
+    if (status) {
+        log_add_errno(status, "pq_create(\"%s\") failure", pathname);
+    }
+    else {
         status = pq_close(pq);
         if (status) {
             log_add("Couldn't close product-queue \"%s\"", pathname);
