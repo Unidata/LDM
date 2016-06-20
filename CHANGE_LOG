@@ -12,6 +12,9 @@
         
         Refactored palt.c:processProduct(): simplified use of optional "noError" 
         argument.
+        
+    Multicast(1):
+        Improved up7_down7_test(1).
 
 6.13.2.0	2016-06-08T09:31:05-0600
     noaaportIngester(1) (productMaker.c):
