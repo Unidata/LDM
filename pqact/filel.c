@@ -264,13 +264,13 @@ entry_unsetFlag(
     entry->flags &= ~flag;
 }
 
-static inline bool
-entry_isFlagSet(
-        fl_entry* const entry,
-        const int       flag)
-{
-    return entry->flags & flag;
-}
+/**
+ * Indicate if a particular flag is set.
+ *
+ * Because profiling revealed that the utility pqact(1) spent about 15% of its
+ * time in this "function", it is now a macro. SRE 2016-06-21
+ */
+#define entry_isFlagSet(entry, flag) (entry->flags & flag)
 
 /**
  * Removes an entry from the open-file list.
