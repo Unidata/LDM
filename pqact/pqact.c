@@ -698,14 +698,14 @@ main(int ac, char *av[])
                     /*NOTREACHED*/
                 }
 
+                /*
+                 * Perform a non-blocking sync on all open file descriptors.
+                 */
+                fl_sync(FALSE);
+
                 (void)pq_suspend(interval);
                 (void)exitIfDone(0);
             }                           /* data-product not processed */
-
-            /*
-             * Perform a non-blocking sync on all open file descriptors.
-             */
-            fl_sync(FALSE);
 
             /*
              * Wait on any children which might have terminated.
