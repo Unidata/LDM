@@ -2634,31 +2634,50 @@ ix_sz(size_t nelems, size_t align)
  * into the useful handles.
  */
 static int
-ix_ptrs(void *ix, size_t ixsz, size_t nelems,
-        size_t align, regionl **rlpp, tqueue **tqpp, fb **fbpp, sx **sxpp)
+ix_ptrs(void *ix, const size_t ixsz, const size_t nelems,
+        const size_t align, regionl **rlpp, tqueue **tqpp, fb **fbpp, sx **sxpp)
 {
-        *rlpp = (regionl *)ix;
-        *tqpp = (tqueue *) _RNDUP((size_t)((char *)(*rlpp) + rl_sz(nelems)), align);
-        *fbpp = (fb *) _RNDUP((size_t)((char *)(*tqpp) + tq_sz(nelems)), align);
-        *sxpp = (sx *) _RNDUP((size_t)((char *)(*fbpp) + fb_sz(nelems)), align);
-        /* can't set cached tq->fbp and rl->fbp here, because those
-           are in mmap'd file, which might be open read-only */
-        /*
-        ((struct regionl *)*rlpp)->fbp = *fbpp;
-        ((struct tqueue *)*tqpp)->fbp = *fbpp;
-        */
+    /*
+     * Profiling revealed that the program pqact(1) spent about 1/3 of its time
+     * in the function isprime(), which is indirectly called by the functions
+     * rl_sz() and sx_sz(); thus, the following optimization. SRE 2016-06-21
+     */
+    static bool   initialized = false;
+    static size_t prev_nelems;
+    static size_t rl_size;
+    static size_t tq_size;
+    static size_t fb_size;
+    static size_t sx_size;
+    if (nelems != prev_nelems || !initialized) {
+        prev_nelems = nelems;
+        initialized = true;
+        rl_size = rl_sz(nelems);
+        tq_size = tq_sz(nelems);
+        fb_size = fb_sz(nelems);
+        sx_size = sx_sz(nelems);
+    }
+    *rlpp = (regionl *)ix;
+    *tqpp = (tqueue *) _RNDUP((size_t)((char *)(*rlpp) + rl_size), align);
+    *fbpp = (fb *) _RNDUP((size_t)((char *)(*tqpp) + tq_size), align);
+    *sxpp = (sx *) _RNDUP((size_t)((char *)(*fbpp) + fb_size), align);
+    /* can't set cached tq->fbp and rl->fbp here, because those
+       are in mmap'd file, which might be open read-only */
+    /*
+    ((struct regionl *)*rlpp)->fbp = *fbpp;
+    ((struct tqueue *)*tqpp)->fbp = *fbpp;
+    */
 #ifndef NDEBUG
-        log_assert(((char *)(*sxpp) + sx_sz(nelems)) <= ((char *)ix + ixsz));
+    log_assert(((char *)(*sxpp) + sx_size) <= ((char *)ix + ixsz));
 #else
-        if (!(((char *)(*sxpp) + sx_sz(nelems)) <= ((char *)ix + ixsz))) {
-            log_error("ix_ptrs: *sxpp=%p, sx_sz(%lu)=%lu, ix=%p, ixsz=%lu",
-                (void*)*sxpp, (unsigned long)nelems,
-                (unsigned long)sx_sz(nelems), (void*)ix,
-                (unsigned long)ixsz);
-            return 0;
-        }
+    if (!(((char *)(*sxpp) + sx_size) <= ((char *)ix + ixsz))) {
+        log_error("ix_ptrs: *sxpp=%p, sx_sz(%lu)=%lu, ix=%p, ixsz=%lu",
+            (void*)*sxpp, (unsigned long)nelems,
+            (unsigned long)sx_size, (void*)ix,
+            (unsigned long)ixsz);
+        return 0;
+    }
 #endif
-        return 1;
+    return 1;
 }
 
 /* End ix */
