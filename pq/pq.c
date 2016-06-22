@@ -2629,13 +2629,30 @@ ix_sz(size_t nelems, size_t align)
 }
 
 
-/*
- * Convert the raw index area 'ix', 'ixsz'
- * into the useful handles.
+/**
+ * Computes and returns pointers to the indexes.
+ *
+ * @param[in]  ix      Start of index region
+ * @param[in]  ixsz    Extent of the index region in bytes
+ * @param[in]  nelems  Capacity of product-queue in number of products
+ * @param[in]  align   Alignment parameter in bytes
+ * @param[out] rlpp    Pointer to region index
+ * @param[out] tqpp    Pointer to time index
+ * @param[out] fbpp    Pointer to "fblk" index
+ * @param[out] sxpp    Pointer to signature index
+ * @retval     1       Success. `*rlpp`, `*tqpp`, `*fbpp`, and `*sxpp` are set
+ * @retval     0       Failure. log_log() called.
  */
 static int
-ix_ptrs(void *ix, const size_t ixsz, const size_t nelems,
-        const size_t align, regionl **rlpp, tqueue **tqpp, fb **fbpp, sx **sxpp)
+ix_ptrs(
+        void* const restrict     ix,
+        const size_t             ixsz,
+        const size_t             nelems,
+        const size_t             align,
+        regionl** const restrict rlpp,
+        tqueue** const restrict  tqpp,
+        fb** const restrict      fbpp,
+        sx** const restrict      sxpp)
 {
     /*
      * Profiling revealed that the program pqact(1) spent about 1/3 of its time
@@ -2656,26 +2673,25 @@ ix_ptrs(void *ix, const size_t ixsz, const size_t nelems,
         fb_size = fb_sz(nelems);
         sx_size = sx_sz(nelems);
     }
-    *rlpp = (regionl *)ix;
-    *tqpp = (tqueue *) _RNDUP((size_t)((char *)(*rlpp) + rl_size), align);
-    *fbpp = (fb *) _RNDUP((size_t)((char *)(*tqpp) + tq_size), align);
-    *sxpp = (sx *) _RNDUP((size_t)((char *)(*fbpp) + fb_size), align);
-    /* can't set cached tq->fbp and rl->fbp here, because those
-       are in mmap'd file, which might be open read-only */
+    *rlpp = (regionl*)ix;
+    *tqpp =  (tqueue*)_RNDUP((intptr_t)((char*)(*rlpp) + rl_size), align);
+    *fbpp =      (fb*)_RNDUP((intptr_t)((char*)(*tqpp) + tq_size), align);
+    *sxpp =      (sx*)_RNDUP((intptr_t)((char*)(*fbpp) + fb_size), align);
     /*
-    ((struct regionl *)*rlpp)->fbp = *fbpp;
-    ((struct tqueue *)*tqpp)->fbp = *fbpp;
-    */
-#ifndef NDEBUG
-    log_assert(((char *)(*sxpp) + sx_size) <= ((char *)ix + ixsz));
-#else
-    if (!(((char *)(*sxpp) + sx_size) <= ((char *)ix + ixsz))) {
-        log_error("ix_ptrs: *sxpp=%p, sx_sz(%lu)=%lu, ix=%p, ixsz=%lu",
-            (void*)*sxpp, (unsigned long)nelems,
-            (unsigned long)sx_size, (void*)ix,
-            (unsigned long)ixsz);
+     * Can't set cached `tq->fbp` and `rl->fbp` here because they are in a
+     * memory-mapped file, which might be open read-only.
+     */
+    bool bounds_check = ((char*)(*sxpp) + sx_size) <= ((char*)ix + ixsz);
+#ifdef NDEBUG
+    if (!bounds_check) {
+        log_error("ix=%p, ixsz=%zu, nelems=%zu, align=%zu, rl_size=%zu, "
+                "tq_size=%zu, fb_size=%zu, sx_size=%zu, *sxpp=%p",
+                ix, ixsz, nelems, align, rl_size, tq_size, fb_size, sx_size,
+                *sxpp);
         return 0;
     }
+#else
+    log_assert(bounds_check);
 #endif
     return 1;
 }
