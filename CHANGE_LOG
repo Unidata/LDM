@@ -1,8 +1,8 @@
 6.13.2.2
     Product-Queue (pq.c):
         Greatly improved performance by caching the previous result of function
-        ix_ptrs() (profiling revealed that the utility pqact(1) spent about 1/3
-        of its time in this function).
+        ix_ptrs() (profiling revealed that pqact(1) spent about 1/3 of its time
+        in this function).
         
     pqact(1):
         Improved performance by
