@@ -1216,9 +1216,8 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         OUTBUF[sizeof(OUTBUF)-1] = 0;
         SWITCH_BUFS;
 
-        if (log_is_enabled_info)
-            log_info("               %s: %s and the ident is %s",
-                    s_actiont(&pal->action), INBUF, prod->info.ident);
+        log_info("               %s: %s and the ident is %s",
+                s_actiont(&pal->action), INBUF, prod->info.ident);
 
         argc = tokenize(INBUF, argv, ARRAYLEN(argv));
 
@@ -1251,10 +1250,11 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
  * @param[in] xprod      Pointer to XDR-encoded data-product.
  * @param[in] xlen       Size of XDR-encoded data-product in bytes.
  * @param[in] noError    Pointer to boolean argument indicating that no error
- *                       occurred while processing the data-product.
- * @retval    0          Always. *(bool*)otherargs` is set to `true` if and only
- *                       if the data-product matched an entry and was
- *                       successfully processed by all matching entries.
+ *                       occurred while processing the data-product or `NULL`.
+ * @retval    0          Always. If `noError != NULL`, then *(bool*)noError` is
+ *                       set to `true` if and only if no error occurred while
+ *                       processing the data-product, which includes not
+ *                       matching any entry.
  */
 /*ARGSUSED*/
 int
@@ -1271,9 +1271,7 @@ processProduct(
         bool            errorOccurred = false;
         product         prod;
 
-        if(log_is_enabled_info)
-                log_info("%s", s_prod_info(NULL, 0, infop,
-                        log_is_enabled_debug));
+        log_info("%s", s_prod_info(NULL, 0, infop, log_is_enabled_debug));
 
         for(pal = paList; pal != NULL; pal = next)
         {
