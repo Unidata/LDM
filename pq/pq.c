@@ -210,11 +210,17 @@ fb_arena_sz(size_t nelems)
 
 /* return size of fb needed for nelems products */
 static size_t
-fb_sz(size_t nelems) 
+fb_sz(const size_t nelems)
 {
-    size_t sz = sizeof(fb) - sizeof(fblk_t) * FBLKS_NALLOC_INITIAL;
-    sz += fb_arena_sz(nelems) * sizeof(fblk_t);
-    return sz;
+    log_assert(nelems);
+    static size_t prev_nelems = 0;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = sizeof(fb) - sizeof(fblk_t) * FBLKS_NALLOC_INITIAL;
+        size += fb_arena_sz(nelems) * sizeof(fblk_t);
+    }
+    return size;
 }
 
 
@@ -522,12 +528,18 @@ typedef struct tqueue tqueue;
  * it will consume
  */
 static size_t
-tq_sz(size_t nelems) 
+tq_sz(const size_t nelems)
 {
-    size_t sz = sizeof(tqueue) - sizeof(tqelem) * TQ_NALLOC_INITIAL;
-    /* TQ_OVERHEAD_ELEMS extra slots for TQ_NIL, TQ_HEADER  */
-    sz += (nelems + TQ_OVERHEAD_ELEMS) * sizeof(tqelem);
-    return sz;
+    log_assert(nelems);
+    static size_t prev_nelems = 0;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = sizeof(tqueue) - sizeof(tqelem) * TQ_NALLOC_INITIAL;
+        /* TQ_OVERHEAD_ELEMS extra slots for TQ_NIL, TQ_HEADER  */
+        size += (nelems + TQ_OVERHEAD_ELEMS) * sizeof(tqelem);
+    }
+    return size;
 }
 
 /*
@@ -1268,9 +1280,16 @@ rlwo_sz(size_t nelems)
  * return how much space the rl will consume.
  */
 static size_t
-rl_sz(size_t nelems)
+rl_sz(const size_t nelems)
 {
-    return rlwo_sz(nelems) + rlhash_sz(rlhash_nchains(nelems));
+    log_assert(nelems);
+    static size_t prev_nelems = 0;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = rlwo_sz(nelems) + rlhash_sz(rlhash_nchains(nelems));
+    }
+    return size;
 }
 
 /* 
@@ -2359,9 +2378,16 @@ sxwo_sz(size_t nelems)
  * consume, including the auxilliary sxhash structure.
  */
 static size_t
-sx_sz(size_t nelems) 
+sx_sz(const size_t nelems)
 {
-    return sxwo_sz(nelems) + sxhash_sz(nchains(nelems));
+    log_assert(nelems);
+    static size_t prev_nelems = 0;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = sxwo_sz(nelems) + sxhash_sz(nchains(nelems));
+    }
+    return size;
 }
 
 /* 
@@ -2622,10 +2648,17 @@ sx_find_delete(sx *const sx, const signaturet sig)
  * collection of indices, each of 'nelems'.
  */
 static size_t
-ix_sz(size_t nelems, size_t align)
+ix_sz(const size_t nelems, const size_t align)
 {
-    return _RNDUP(rl_sz(nelems), align) + _RNDUP(tq_sz(nelems), align)
+    log_assert(nelems);
+    static size_t prev_nelems;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = _RNDUP(rl_sz(nelems), align) + _RNDUP(tq_sz(nelems), align)
            + _RNDUP(fb_sz(nelems), align) + _RNDUP(sx_sz(nelems), align);
+    }
+    return size;
 }
 
 
@@ -2654,20 +2687,19 @@ ix_ptrs(
         fb** const restrict      fbpp,
         sx** const restrict      sxpp)
 {
+    log_assert(nelems);
     /*
      * Profiling revealed that the program pqact(1) spent about 1/3 of its time
      * in the function isprime(), which is indirectly called by the functions
      * rl_sz() and sx_sz(); thus, the following optimization. SRE 2016-06-21
      */
-    static bool   initialized = false;
-    static size_t prev_nelems;
+    static size_t prev_nelems = 0;
     static size_t rl_size;
     static size_t tq_size;
     static size_t fb_size;
     static size_t sx_size;
-    if (nelems != prev_nelems || !initialized) {
+    if (nelems != prev_nelems) {
         prev_nelems = nelems;
-        initialized = true;
         rl_size = rl_sz(nelems);
         tq_size = tq_sz(nelems);
         fb_size = fb_sz(nelems);
