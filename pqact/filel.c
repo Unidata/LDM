@@ -856,7 +856,7 @@ static int unio_put(
             else {
                 if (EINTR != errno) {
                     log_add_syserr("Couldn't write() %zu bytes to file \"%s\"",
-                            entry->path);
+                            sz, entry->path);
                     // disable flushing on I/O error
                     entry_unsetFlag(entry, FL_NEEDS_SYNC);
                 }
