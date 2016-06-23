@@ -512,14 +512,14 @@ fl_getEntry(
         bool* const restrict  isNew)
 {
     fl_entry* entry = fl_find(type, argc, argv);
-    bool      wasCreated;
 
     if (NULL != entry) {
         TO_HEAD(entry);
         #ifdef FL_DEBUG
             dump_fl();
         #endif
-        wasCreated = false;
+        if (isNew)
+            *isNew = false;
     }
     else {
         log_assert(maxEntries > 0);
@@ -533,12 +533,10 @@ fl_getEntry(
             #ifdef FL_DEBUG
                 dump_fl();
             #endif
-            wasCreated = true;
+            if (isNew)
+                *isNew = true;
         }
     }
-
-    if (entry && isNew)
-        *isNew = wasCreated;
 
     return entry;
 }
