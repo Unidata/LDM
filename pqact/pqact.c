@@ -628,28 +628,30 @@ main(int ac, char *av[])
                 hupped = 0;
             }
 
-            bool wasProcessed = false;
+            bool noProcessingError = false;
             status = pq_sequence(pq, TV_GT, &clss, processProduct,
-                    &wasProcessed);
+                    &noProcessingError);
 
             if (status == 0) {
                 /*
-                 * No product-queue error.
+                 * No product-queue error. Product might or might not have been
+                 * processed.
                  */
-                timestampt insertionTime, oldestInsertionTime;
+                if (noProcessingError) {
+                    // Product matched `clss` and no processing error occurred
+                    timestampt insertionTime, oldestInsertionTime;
 
-                pq_ctimestamp(pq, &insertionTime);
-                status = pq_getOldestCursor(pq, &oldestInsertionTime);
+                    pq_ctimestamp(pq, &insertionTime);
+                    status = pq_getOldestCursor(pq, &oldestInsertionTime);
 
-                if (status == 0 &&
-                        tvEqual(oldestInsertionTime, insertionTime)) {
-                    timestampt  now;
-                    (void)set_timestamp(&now);
-                    log_warning("Processed oldest product in queue: %g s",
-                        d_diff_timestamp(&now, &currentCursor));
-                }
+                    if (status == 0 &&
+                            tvEqual(oldestInsertionTime, insertionTime)) {
+                        timestampt  now;
+                        (void)set_timestamp(&now);
+                        log_warning("Processed oldest product in queue: %g s",
+                            d_diff_timestamp(&now, &currentCursor));
+                    }
 
-                if (wasProcessed) {
                     /*
                      * The insertion-time of the last successfully-processed
                      * data-product is only set if the product had no processing
@@ -665,13 +667,18 @@ main(int ac, char *av[])
             }
             else {
                 /*
-                 * Product-queue error. Data-product wasn't processed.
+                 * Product-queue error. No data-product was processed.
                  */
                 if (status == PQUEUE_END) {
                     log_debug("End of Queue");
 
                     if (interval == 0)
                         break;
+
+                    /*
+                     * Perform a non-blocking sync on all open file descriptors.
+                     */
+                    fl_sync(FALSE);
                 }
                 else if (status == EAGAIN || status == EACCES) {
                     log_debug("Hit a lock");
@@ -697,11 +704,6 @@ main(int ac, char *av[])
                     exit(EXIT_FAILURE);
                     /*NOTREACHED*/
                 }
-
-                /*
-                 * Perform a non-blocking sync on all open file descriptors.
-                 */
-                fl_sync(FALSE);
 
                 (void)pq_suspend(interval);
                 (void)exitIfDone(0);
