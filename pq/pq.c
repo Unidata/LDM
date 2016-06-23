@@ -7800,8 +7800,9 @@ pq_processProduct(
  *                        locked against deletion by another process and the
  *                        caller should call `pq_release(*off)` when the product
  *                        may be deleted to make room for another product.
- * @retval 0          Success.
- * @retval PQUEUE_END No matching data-product.
+ * @retval 0          Product didn't match `clss`
+ * @retval PQUEUE_END No next product
+ * @return            The return-value of `ifMatch()`.
  * @retval EACCESS or EAGAIN
  *                    A necessary region of the product-queue is locked by
  *                    another process.
@@ -7836,7 +7837,6 @@ pq_processProduct(
  *                    requested.
  * @retval ENXIO      The size of the product-queue is inconsistent with its
  *                    file descriptor.
- * @return            The return-value of `ifMatch()`.
  */
 static int
 pq_sequenceHelper(pqueue *pq, pq_match mt,
@@ -8067,8 +8067,9 @@ unwind_lock:
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval 0          Success.
- * @retval PQUEUE_END No matching data-product.
+ * @retval 0          Product didn't match `clss`
+ * @retval PQUEUE_END No next product
+ * @return            The return-value of `ifMatch()`.
  * @retval EACCESS or EAGAIN
  *                    A necessary region of the product-queue is locked by
  *                    another process.
@@ -8103,7 +8104,6 @@ unwind_lock:
  *                    requested.
  * @retval ENXIO      The size of the product-queue is inconsistent with its
  *                    file descriptor.
- * @return            The return-value of `ifMatch()`.
  */
 int
 pq_sequence(pqueue *pq, pq_match mt,
@@ -8141,8 +8141,9 @@ pq_sequence(pqueue *pq, pq_match mt,
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval 0          Success.
- * @retval PQUEUE_END No matching data-product.
+ * @retval 0          Product didn't match `clss`
+ * @retval PQUEUE_END No next product
+ * @return            The return-value of `ifMatch()`.
  * @retval EACCESS or EAGAIN
  *                    A necessary region of the product-queue is locked by
  *                    another process.
@@ -8177,7 +8178,6 @@ pq_sequence(pqueue *pq, pq_match mt,
  *                    requested.
  * @retval ENXIO      The size of the product-queue is inconsistent with its
  *                    file descriptor.
- * @return            The return-value of `ifMatch()`.
  */
 int
 pq_sequenceLock(
