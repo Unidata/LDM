@@ -1,9 +1,24 @@
+6.13.2.3
+    pqact(1):
+        filel.c:
+            Squashed latent bug in format argument of log_add_syserr() in
+            unio_put().
+
+        pqact.c:
+            Call fl_sync() only if pq_sequence() returns PQUEUE_END.
+
+            Renamed `wasProcessed` to `noProcessingError`.
+
+    Product-Queue (pq.c):
+        Restored caching to fb_sz(), tq_sz(), fl_sz(), and ix_sz() to improve
+        performance. Added log_assert(nelems) to same and to ix_ptrs().
+
 6.13.2.2	2016-06-22T13:11:19-0600
     Product-Queue (pq.c):
         Greatly improved performance by caching the previous result of function
         ix_ptrs() (profiling revealed that pqact(1) spent about 1/3 of its time
         in this function).
-        
+
     pqact(1):
         Improved performance by
           * Converting the function entry_isFlagSet() into a macro (profiling
@@ -19,7 +34,7 @@
         Incorporated Raytheon's bug-fix that eliminates unnecessary
         retransmission requests for GINI products from NOAA's NCF. (Only
         requests from NOAA offices are honored).
-        
+
     pqact(1):
         Changed meaning of `wasProcessed` variable from "matched and no error"
         to just "no error" so that a product that matched the "-f" and "-p"
@@ -28,7 +43,7 @@
         
         Refactored palt.c:processProduct(): simplified use of optional "noError" 
         argument.
-        
+
     Multicast(1):
         Improved up7_down7_test(1).
 
