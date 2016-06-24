@@ -162,7 +162,7 @@ fb_ranlev(
         static long           randomBits;
         // Randomly-generated values:
         static unsigned short xsubi[3] = {
-                0x473da8f190d5f1c4, 0x440937acf01c8c4e, 0xa8a9d686bec2da48};
+                0x473da8f190d5f1c4u, 0x440937acf01c8c4eu, 0xa8a9d686bec2da48u};
         if (--randomsLeft <= 0) {
             randomBits = nrand48(xsubi);
             randomsLeft = BITS_IN_RANDOM / BITS_IN_PIECE;
