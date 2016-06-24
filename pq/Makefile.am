@@ -45,11 +45,17 @@ pq_test_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 check-local:	pq_test
 	rm -f pq_test.out
 	./pq_test
-#	rm pq_test.out
+	rm pq_test.out
 
 valgrind:	pq_test
 	rm -f pq_test.out
 	$(LIBTOOL) --mode=execute valgrind --leak-check=full \
                 --show-reachable=yes --gen-suppressions=all ./pq_test
-#	rm pq_test.out
+	rm pq_test.out
+
+callgrind:	pq_test
+	rm -f pq_test.out callgrind.out.*
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind ./pq_test
+	rm pq_test.out
+	kcachegrind
 endif
