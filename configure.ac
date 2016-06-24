@@ -17,15 +17,13 @@ AC_ARG_ENABLE([debug],
     [
 	case "$enableval" in
 	yes) enable_debug=true
-            case "$CFLAGS" in
+            case "$AM_CFLAGS" in
                 *-g*);;
-                '') CFLAGS=-g;;
-                *) CFLAGS="${CFLAGS} -g";;
+                *) AM_CFLAGS="${AM_CFLAGS+ }-g";;
             esac
-            case "$CXXFLAGS" in
+            case "$AM_CXXFLAGS" in
                 *-g*);;
-                '') CXXFLAGS=-g;;
-                *) CXXFLAGS="${CXXFLAGS} -g";;
+                *) AM_CXXFLAGS="${AM_CXXFLAGS+ }-g";;
             esac
             ;;
 	no) enable_debug=false
