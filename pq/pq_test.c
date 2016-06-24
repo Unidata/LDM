@@ -20,8 +20,11 @@
 #include "stdbool.h"
 #include "xdr.h"
 
+#include <errno.h>
+#include <stdint.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <CUnit/CUnit.h>
@@ -62,10 +65,11 @@ static pqueue* create_pq(void)
     return pq;
 }
 
-static pqueue* open_pq(void)
+static pqueue* open_pq(
+        const bool for_writing)
 {
     pqueue* pq;
-    int     status = pq_open(PQ_PATHNAME, 0, &pq);
+    int     status = pq_open(PQ_PATHNAME, for_writing ? 0 : PQ_READONLY, &pq);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     return pq;
 }
@@ -132,6 +136,23 @@ static int insert_prod(
     return status;
 }
 
+static int insert_prod_after_delay(
+        pqueue* const restrict  pq,
+        product* const restrict prod)
+{
+    struct timespec duration;
+    duration.tv_sec = 0;
+    duration.tv_nsec = 1000000; // 1 ms
+    int status = nanosleep(&duration, NULL);
+    CU_ASSERT_FATAL(status == 0 || errno == EINTR);
+    status = pq_insert(pq, prod);
+    if (status == PQ_DUP) {
+        log_add("Duplicate data-product");
+        status = 0;
+    }
+    return status;
+}
+
 static int insert_products(
         pqueue* const pq,
         int         (*insert)(pqueue* restrict pq, product* restrict prod))
@@ -175,16 +196,38 @@ static int insert_products(
         log_notice("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
         num_bytes += size;
-
-#if 0
-        struct timespec duration;
-        duration.tv_sec = 0;
-        duration.tv_nsec = INTER_PRODUCT_INTERVAL;
-        status = nanosleep(&duration, NULL);
-        CU_ASSERT_FATAL(status == 0 || errno == EINTR);
-#endif
     }
     (void)gettimeofday(&stop, NULL);
+
+    return status;
+}
+
+static int read_prod(
+        const prod_info* const restrict info,
+        const void* const restrict      data,
+        void* const restrict            xprod,
+        const size_t                    size,
+        void* const restrict            arg)
+{
+    bool* const done = arg;
+    *done = info->seqno == NUM_PRODS - 1;
+    return 0;
+}
+
+static int read_products(
+        pqueue* const pq)
+{
+    int status = 0;
+
+    for (bool done = false; !done;) {
+        status = pq_sequence(pq, TV_GT, PQ_CLASS_ALL, read_prod, &done);
+        if (status == PQUEUE_END) {
+            (void)pq_suspend(5); // Unblocks SIGCONT
+        }
+        else {
+            CU_ASSERT_EQUAL_FATAL(status, 0);
+        }
+    }
 
     return status;
 }
@@ -234,9 +277,9 @@ static void test_pq_insert_reserve_no_sig(
     close_pq(pq);
 }
 
-static void test_pq_insert_children(
-        void)
+static void test_pq_insert_children(void)
 {
+    int status;
     pqueue* pq = create_pq();
     CU_ASSERT_NOT_EQUAL_FATAL(pq, NULL);
     close_pq(pq);
@@ -245,21 +288,52 @@ static void test_pq_insert_children(
         int pid = fork();
         CU_ASSERT_NOT_EQUAL(pid, -1);
         if (pid == 0) {
-            pq = open_pq();
-            int status = insert_products(pq, insert_prod);
+            pq = open_pq(true);
+            status = insert_products(pq, insert_prod);
             CU_ASSERT_EQUAL(status, 0);
             close_pq(pq);
-            return; // `log_fini()` should be called
+            exit(0);
         }
     }
 
-    for (int i = 0; i < NUM_CHILDREN; i++) {
+    for (;;) {
         int child_status;
-        int status = wait(&child_status);
-        CU_ASSERT_NOT_EQUAL(status, -1);
+        status = wait(&child_status);
+        if (status == -1 && errno == ECHILD)
+            break; // No unwaited-for child processes
+        CU_ASSERT_NOT_EQUAL_FATAL(status, -1);
         CU_ASSERT_TRUE(WIFEXITED(child_status));
         CU_ASSERT_EQUAL(WEXITSTATUS(child_status), 0);
     }
+}
+
+static void test_pq_sequence(void)
+{
+    pqueue* pq = create_pq();
+    CU_ASSERT_PTR_NOT_NULL_FATAL(pq);
+    close_pq(pq);
+
+    int status;
+    int pid = fork();
+    CU_ASSERT_NOT_EQUAL(pid, -1);
+    if (pid == 0) {
+        pq = open_pq(true);
+        status = insert_products(pq, insert_prod_after_delay);
+        CU_ASSERT_EQUAL(status, 0);
+        close_pq(pq);
+        exit(0);
+    }
+    pq = open_pq(false);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(pq);
+    status = read_products(pq);
+    CU_ASSERT_EQUAL(status, 0);
+    close_pq(pq);
+
+    int child_status;
+    status = wait(&child_status);
+    CU_ASSERT_EQUAL(status, pid);
+    CU_ASSERT_TRUE(WIFEXITED(child_status));
+    CU_ASSERT_EQUAL(WEXITSTATUS(child_status), 0);
 }
 
 int main(
@@ -280,6 +354,7 @@ int main(
             if (NULL != testSuite) {
                 if (//CU_ADD_TEST(testSuite, test_pq_insert_reserve_no_sig) &&
                         CU_ADD_TEST(testSuite, test_pq_insert) &&
+                        CU_ADD_TEST(testSuite, test_pq_sequence) &&
                         CU_ADD_TEST(testSuite, test_pq_insert_children)
                         ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
