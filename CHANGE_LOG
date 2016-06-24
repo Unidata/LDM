@@ -5,13 +5,18 @@
             unio_put().
 
         pqact.c:
-            Call fl_sync() only if pq_sequence() returns PQUEUE_END.
+            Call fl_sync() only if pq_sequence() returns PQUEUE_END to improve
+            performance.
 
-            Renamed `wasProcessed` to `noProcessingError`.
+            Renamed `wasProcessed` to `noProcessingError` to improve clarity.
 
-    Product-Queue (pq.c):
-        Restored caching to fb_sz(), tq_sz(), fl_sz(), and ix_sz() to improve
-        performance. Added log_assert(nelems) to same and to ix_ptrs().
+    Product-Queue:
+        pq.c:
+            Restored caching to fb_sz(), tq_sz(), fl_sz(), and ix_sz() to improve
+            performance. Added log_assert(nelems) to same and to ix_ptrs().
+
+        test_pq.c:
+            Created test_pq_sequence().
 
 6.13.2.2	2016-06-22T13:11:19-0600
     Product-Queue (pq.c):
