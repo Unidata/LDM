@@ -1,3 +1,7 @@
+6.13.2.4
+    Product-Queue (pq.c):
+        Inlined some static functions to obtain small performance improvements.
+
 6.13.2.3	2016-06-24T16:07:02-0600
     pqact(1):
         filel.c:
