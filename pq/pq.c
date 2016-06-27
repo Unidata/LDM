@@ -130,7 +130,7 @@ struct fb {
 typedef struct fb fb;
 
 /* return floor(log4(n)) */
-static int 
+static inline int
 log4(size_t n) 
 {
     log_assert(n > 0);
@@ -162,7 +162,9 @@ fb_ranlev(
         static long           randomBits;
         // Randomly-generated values:
         static unsigned short xsubi[3] = {
-                0x473da8f190d5f1c4u, 0x440937acf01c8c4eu, 0xa8a9d686bec2da48u};
+                (unsigned short)0x473da8f190d5f1c4u,
+                (unsigned short)0x440937acf01c8c4eu,
+                (unsigned short)0xa8a9d686bec2da48u}; // Casts silence warnings
         if (--randomsLeft <= 0) {
             randomBits = nrand48(xsubi);
             randomsLeft = BITS_IN_RANDOM / BITS_IN_PIECE;
@@ -598,7 +600,7 @@ tq_init(tqueue *const tq, size_t const nalloc0, fb *fbp)
 /*
  * Affirm that that another element can be added to tq
  */
-static int
+static inline int
 tq_HasSpace(const tqueue *const tq)
 {
         log_assert(tq->nelems - TQ_OVERHEAD_ELEMS <= tq->nalloc);
@@ -976,7 +978,7 @@ tq_delete(tqueue *const tq, tqelem *tqep)
  * Return the next element by insertion time in the time queue tq, 
  * after the one pointed to by tqep.
  */
-static tqelem *
+static inline tqelem *
 tq_next(const tqueue *const tq, const tqelem *const tqep) 
 {
     /* get the skip list array of offsets */
@@ -1243,7 +1245,7 @@ prevprime(unsigned long n) {/* find largest prime <= n */
 /*
  * Returns number of chains required for the specified number of elements.
  */
-static size_t
+static inline size_t
 rlhash_nchains(size_t const nelems) 
 {
   return prevprime(nelems / RL_EXP_CHAIN_LEN);
@@ -1253,7 +1255,7 @@ rlhash_nchains(size_t const nelems)
  * For an rlhash which is nelems long, return how much space it will
  * consume.
  */
-static size_t
+static inline size_t
 rlhash_sz(size_t nelems)
 {
         size_t sz = sizeof(rlhash) - sizeof(size_t) * RL_NALLOC_INITIAL;
@@ -1265,7 +1267,7 @@ rlhash_sz(size_t nelems)
  * For a region list which is nelems long, return how much space it will
  * consume, *without* the auxilliary rlhash structure.
  */
-static size_t
+static inline size_t
 rlwo_sz(size_t nelems) 
 {
         size_t sz = sizeof(regionl) - sizeof(region) * RL_NALLOC_INITIAL;
@@ -1295,7 +1297,7 @@ rl_sz(const size_t nelems)
 /* 
  * Hash function for offset.
  */
-static size_t 
+static inline size_t
 rl_hash(size_t nchains, const off_t offset) 
 {
     unsigned int n = offset;
@@ -1528,7 +1530,7 @@ rl_fext_prev(regionl *const rl, size_t rlix)
  * rl->maxfextent, in O(log(nfree)) time.  Used after taking the free
  * region with maximum extent off of the freelist.  
 */
-static size_t
+static inline size_t
 rl_maxfextent(regionl *const rl) {
     region *rlrp = rl->rp;
     size_t rmix;                /* index of region with maximum extent */
@@ -2343,7 +2345,7 @@ typedef struct sxhash sxhash;
 /*
  * Returns number of chains required for the specified number of elements.
  */
-static size_t
+static inline size_t
 nchains(size_t const nelems) 
 {
   return prevprime(nelems / SX_EXP_CHAIN_LEN);
@@ -2353,7 +2355,7 @@ nchains(size_t const nelems)
  * For an sxhash which is nelems long, return how much space it will
  * consume.
  */
-static size_t
+static inline size_t
 sxhash_sz(size_t nelems)
 {
         size_t sz = sizeof(sxhash) - sizeof(off_t) * SXHASH_NALLOC_INITIAL;
@@ -2365,7 +2367,7 @@ sxhash_sz(size_t nelems)
  * For a sx which is nelems long, return how much space it will
  * consume, *without* the auxilliary sxhash structure.
  */
-static size_t
+static inline size_t
 sxwo_sz(size_t nelems) 
 {
         size_t sz = sizeof(sx) - sizeof(sxelem) * SX_NALLOC_INITIAL;
@@ -2462,7 +2464,7 @@ sx_init(sx *const sx, size_t const nalloc)
  * Comparison function used in sx_find() below.  
  * Returns 1 if sig1 equals sig2, 0 otherwise.
  */
-static int
+static inline int
 sx_compare(const signaturet sig1, const signaturet sig2)
 {
   return 0 == memcmp(sig1, sig2, sizeof(signaturet));
@@ -2601,7 +2603,6 @@ sx_find_delete(sx *const sx, const signaturet sig)
     size_t try;
     size_t next;
     sxhash *sxhp;
-    int status = 0;
     /* sxhp = (sxhash *)((char *)(sx) + sxwo_sz(sx->nalloc)); */
     sxhp = (sxhash *)(&sx->sxep[sx->nalloc]);
     log_assert(sxhp->magic == SX_MAGIC);
@@ -2615,8 +2616,7 @@ sx_find_delete(sx *const sx, const signaturet sig)
         sxhp->chains[try] = sxep->next;
         sxelem_free(sx, next);
         sx->nelems--;
-        status = 1;
-        return status;
+        return 1;
     }
     next = sxep->next;
     while (next != SX_NONE) {
@@ -2626,12 +2626,11 @@ sx_find_delete(sx *const sx, const signaturet sig)
             osxep->next = sxep->next;
             sxelem_free(sx, next);
             sx->nelems--;
-            status = 1;
-            return status;
+            return 1;
         }
         next = sxep->next;
     }
-    return status;              /* not found */
+    return 0;              /* not found */
 }
 
 /* End sx */
@@ -3118,7 +3117,7 @@ struct pqueue {
 /*
  * What is the system pagesize?
  */
-static long
+static inline long
 pagesize(void)
 {
 /* Hmm, aren't standards great? */
@@ -4217,7 +4216,7 @@ static const size_t MAX_SIZE_T = ~(size_t)0;
  *      0       If and only if it is not necessary to memory-map the
  *              product-queue by individual data-products.
  */
-static int
+static inline int
 isProductMappingNecessary(
     const pqueue* const pq)
 {
@@ -4825,7 +4824,7 @@ unwind_mask:
 /*
  * Release/unlock a data region. This function is the complement of `rgn_get()`.
  */
-static int
+static inline int
 rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
 {
         log_assert(offset >= pq->datao && offset < pq->ixo);
@@ -4895,7 +4894,7 @@ rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
  *              description associated with "pq->fd". 
  *      EROFS   The file resides on a read-only file system.
  */
-static int
+static inline int
 rgn_get(pqueue *const pq, off_t const offset, size_t const extent,
          int const rflags, void **const vpp)
 {
@@ -5501,7 +5500,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
  *
  * @param[in] pq  The product-queue to be locked.
  */
-static void lockIf(
+static inline void lockIf(
         pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_lock(pq))
@@ -5516,7 +5515,7 @@ static void lockIf(
  *
  * @param[in] pq  The product-queue to be unlocked.
  */
-static void unlockIf(
+static inline void unlockIf(
         pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_unlock(pq))
@@ -6438,7 +6437,7 @@ typedef struct {
 } FutureEntry;
 
 
-static int
+static inline int
 compareFutureEntries(
     const void* const   entry1,
     const void* const   entry2)
@@ -8523,7 +8522,7 @@ pq_deleteBySignature(
  * Used only by pq_last() below.
  */
 /*ARGSUSED*/
-static int
+static inline int
 didmatch(const prod_info *infop, const void *datap,
                 void *xprod, size_t size,  void *vp)
 {
@@ -8531,10 +8530,7 @@ didmatch(const prod_info *infop, const void *datap,
         if(tsp != NULL)
                 *tsp = infop->arrival;
 
-        if(log_is_enabled_debug)
-        {
-                log_debug("lastmatch: %s", s_prod_info(NULL, 0, infop, 1));
-        }
+        log_debug("lastmatch: %s", s_prod_info(NULL, 0, infop, 1));
 
         return PQUEUE_END; /* done with scan on the first hit */
 }
