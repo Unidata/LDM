@@ -1,4 +1,4 @@
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2016 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -43,19 +43,19 @@ pq_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 pq_test_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
 check-local:	pq_test
-	rm -f pq_test.out
+	rm -f pq_test.pq pq_test.out
 	./pq_test
-	rm pq_test.out
+	rm pq_test.pq pq_test.out
 
 valgrind:	pq_test
-	rm -f pq_test.out
+	rm -f pq_test.pq pq_test.out
 	$(LIBTOOL) --mode=execute valgrind --leak-check=full \
                 --show-reachable=yes --gen-suppressions=all ./pq_test
-	rm pq_test.out
+	rm pq_test.pq pq_test.out
 
 callgrind:	pq_test
-	rm -f pq_test.out callgrind.out.*
+	rm -f pq_test.pq pq_test.out callgrind.out.*
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind ./pq_test
-	rm pq_test.out
+	rm pq_test.pq pq_test.out
 	kcachegrind
 endif
