@@ -1,4 +1,4 @@
-6.13.2.4
+6.13.2.4	2016-06-27T12:29:33-0600
     Product-Queue (pq.c):
         Inlined some static functions to obtain small performance improvements.
 
