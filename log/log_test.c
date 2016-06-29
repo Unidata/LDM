@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -593,6 +594,50 @@ static void test_fork(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
+/**
+ * Returns the time interval between two times.
+ *
+ * @param[in] later    The later time
+ * @param[in] earlier  The earlier time.
+ * @return             The time interval, in seconds, between the two times.
+ */
+static double duration(
+    const struct timeval*   later,
+    const struct timeval*   earlier)
+{
+    return (later->tv_sec - earlier->tv_sec) +
+        1e-6*(later->tv_usec - earlier->tv_usec);
+}
+
+static void test_performance(void)
+{
+    int status;
+    status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = log_set_destination("/dev/null");
+    CU_ASSERT_EQUAL(status, 0);
+
+    struct timeval start;
+    (void)gettimeofday(&start, NULL);
+
+    const long num_messages = 1000000;
+    for (long i = 0; i < num_messages; i++) {
+        log_error("Error message %d", i);
+    }
+
+    struct timeval stop;
+    (void)gettimeofday(&stop, NULL);
+    double dur = duration(&stop, &start);
+
+    status = log_set_destination("-");
+    CU_ASSERT_EQUAL(status, 0);
+    log_notice("%ld messages in %g seconds = %g/s", num_messages, dur,
+            num_messages/dur);
+
+    log_fini();
+}
+
 int main(
         const int    argc,
         char* const* argv)
@@ -623,6 +668,7 @@ int main(
                     && CU_ADD_TEST(testSuite, test_sighup_prog)
                     && CU_ADD_TEST(testSuite, test_change_file)
                     && CU_ADD_TEST(testSuite, test_fork)
+                    && CU_ADD_TEST(testSuite, test_performance)
                     /*
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
