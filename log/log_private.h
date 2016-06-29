@@ -310,17 +310,6 @@ void* logl_malloc(
     }\
 } while (false)
 
-#define LOG_LOG_FLUSH(level, ...) do {\
-    if (!log_is_level_enabled(level)) {\
-        log_clear();\
-    }\
-    else {\
-        LOG_LOC_DECL(loc);\
-        logl_add(&loc, __VA_ARGS__);\
-        log_flush(level);\
-    }\
-} while (false)
-
 /******************************************************************************
  * Logging implementation functions:
  ******************************************************************************/
