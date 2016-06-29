@@ -1,4 +1,4 @@
-6.13.2.5
+6.13.2.5	2016-06-29T14:35:51-0600
     Product-Queue (pq.c):
         Squashed latent bug that would eventually cause an assertion failure or
         a segmentation violation if a new skip-list node couldn't be obtained.
