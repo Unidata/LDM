@@ -8,11 +8,13 @@
 
 EXTRA_DIST		= \
     action.h \
+    blackhole \
     filel.h \
     palt.h \
     pbuf.h \
     pqact.1.in \
     pqact.conf \
+    pqact_test.conf \
     SharedCounter.h \
     state.h
 GDBMLIB			= @GDBMLIB@
@@ -52,7 +54,7 @@ TAGS_FILES		= \
     ../rpc/*.c ../rpc/*.h \
     /usr/local/include/CUnit/CUnit.h \
     /usr/local/include/CUnit/Basic.h
-CLEANFILES              = pqact.1 *.i 
+CLEANFILES              = pqact.1 *.i *.pq callgrind.out.* *.state
 
 pqact.1:	$(srcdir)/pqact.1.in
 	../regutil/substPaths <$? >$@.tmp
@@ -68,6 +70,26 @@ $(DESTDIR)$(sysconfdir)/pqact.conf:
 .c.i:
 	$(COMPILE) -E $< >$@
 
+check-local:	pqact
+	../pqcreate/pqcreate -c -s 100k -S 100 -q pqact_test.pq
+	./pqact -d $(srcdir) -q pqact_test.pq $(srcdir)/pqact_test.conf & \
+		pid=$$!; \
+	../pqinsert/pq_test_insert -q pqact_test.pq -m 2000 -n 1000; \
+	sleep 1; \
+	kill $$pid
+	rm -f pqact_test.pq
+
+callgrind:	pqact
+	rm -f callgrind.out.*
+	../pqcreate/pqcreate -c -s 100k -S 100 -q pqact_test.pq
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+	    ./pqact -d . -q pqact_test.pq ./pqact_test.conf & pid=$$!; \
+	../pqinsert/pq_test_insert -q pqact_test.pq -m 2000 -n 1000; \
+	sleep 5; \
+	kill $$pid
+	rm -f pqact_test.pq
+	kcachegrind
+	
 valgrind:	pqact
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./pqact -l /dev/null \
