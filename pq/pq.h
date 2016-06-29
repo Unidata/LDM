@@ -376,14 +376,17 @@ long pqe_get_count(
 int
 pq_insertNoSig(pqueue *pq, const product *prod);
 
-/*
+/**
  * Insert at rear of queue, send SIGCONT to process group
  *
- * Returns:
- *      ENOERR          Success.
- *      EINVAL          Invalid argument.
- *      PQ_DUP          Product already exists in the queue.
- *      PQ_BIG          Product is too large to insert in the queue.
+ * @param[in,out]  pq    Product queue
+ * @param[in]      prod  Data product
+ * @retval 0             Success.
+ * @retval EINVAL        Invalid argument.
+ * @retval PQ_DUP        Product already exists in the queue.
+ * @retval PQ_BIG        Product is too large to insert in the queue.
+ * @retval PQ_SYSTEM     System failure. log_add() called.
+ *
  */
 int
 pq_insert(pqueue *pq, const product *prod);
