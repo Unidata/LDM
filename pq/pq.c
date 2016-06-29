@@ -70,10 +70,10 @@ extern unsigned int     interval;
 
 
 /* useful for aligning memory */
-#define _RNDUP(x, unit)  ((((x) + (unit) - 1) / (unit)) * (unit))
+#define _RNDUP(x, unit) ((((x) + (unit) - 1) / (unit)) * (unit))
 #define M_RND_UNIT      (sizeof(double))
-#define M_RNDUP(x) _RNDUP(x, M_RND_UNIT)
-#define M_RNDDOWN(x)  ((x) - ((x)%M_RND_UNIT))
+#define M_RNDUP(x)      _RNDUP(x, M_RND_UNIT)
+#define M_RNDDOWN(x)    ((x) - ((x)%M_RND_UNIT))
 
 #define MIN_RGN_SIZE    M_RND_UNIT
 
@@ -438,7 +438,7 @@ fb_get(fb *fbp, int level)
      * All out of blocks. This means we tried to keep in the product-queue
      * significantly more products than the specified maximum number.
      */
-    log_error("fb layer ran out of product slots. "
+    log_error("\"fblk\" subsystem ran out of skip-list nodes. "
             "Too many products in queue.");
     fb_stats_dump(fbp);
     return (fblk_t)OFF_NONE;
@@ -1787,13 +1787,19 @@ rlhash_del(regionl *const rl, size_t rlix)
     return;
 }
 
-/*
+/**
  * Add recycled region to freelist skip list by offset in O(log(nfree))
  * time.
+ *
+ * @param[in,out] rl    Region list
+ * @param[in]     rlix  Offset of region entry
+ * @retval 0            Success
+ * @retval PQ_SYSTEM    Couldn't get new node for skip-list. log_add() called.
  */
-static void
+static int
 rl_foff_add(regionl *const rl, size_t rlix)
 {
+    int     status;
     region *rlrp = rl->rp;
     region *rep = rlrp + rlix;
     int k;
@@ -1833,23 +1839,37 @@ rl_foff_add(regionl *const rl, size_t rlix)
     }
     /* get new fblk of level k */
     rep->next = fb_get(fbp, k);
-    do {
-        spix = update[k];
-        spp = rlrp + spix;
-        /* q->forward[k] = p->forward[k]; */
-        fbp->fblks[rep->next + k] = fbp->fblks[spp->next + k];
-        /* p->forward[k] = q; */
-        fbp->fblks[spp->next + k] = rlix; /* forward pointer to new region */
-    } while(--k >= 0);
+    if (rep->next == (fblk_t)OFF_NONE) {
+        log_add("Couldn't get skip-list node of level %d", k);
+        status = PQ_SYSTEM;
+    }
+    else {
+        do {
+            spix = update[k];
+            spp = rlrp + spix;
+            /* q->forward[k] = p->forward[k]; */
+            fbp->fblks[rep->next + k] = fbp->fblks[spp->next + k];
+            /* p->forward[k] = q; */
+            fbp->fblks[spp->next + k] = rlix; /* forward pointer to new region */
+        } while(--k >= 0);
+        status = 0;
+    }
+    return status;
 }
 
-/*
+/**
  * Add recycled region to freelist skip list by extent in O(log(nfree))
  * time.
+ *
+ * @param[in,out] rl  Region list
+ * @param[in]         Offset to region entry
+ * @retval PQ_SYSTEM  Couldn't get new skip-list node. `log_add()` called.
+ * @retval 0          Success
  */
-static void
+static int
 rl_fext_add(regionl *const rl, size_t rlix)
 {
+    int     status;
     region *rlrp = rl->rp;
     region *rep = rlrp + rlix;
     int k;
@@ -1891,14 +1911,22 @@ rl_fext_add(regionl *const rl, size_t rlix)
     }
     /* get new fblk of level k */
     rep->prev = fb_get(fbp, k);
-    do {
-        spix = update[k];
-        spp = rlrp + spix;
-        /* q->forward[k] = p->forward[k]; */
-        fbp->fblks[rep->prev + k] = fbp->fblks[spp->prev + k];
-        /* p->forward[k] = q; */
-        fbp->fblks[spp->prev + k] = rlix; /* forward pointer to new region */
-    } while(--k >= 0);
+    if (rep->prev == (fblk_t)OFF_NONE) {
+        log_add("Couldn't get new skip-list node of level %d", k);
+        status = PQ_SYSTEM;
+    }
+    else {
+        do {
+            spix = update[k];
+            spp = rlrp + spix;
+            /* q->forward[k] = p->forward[k]; */
+            fbp->fblks[rep->prev + k] = fbp->fblks[spp->prev + k];
+            /* p->forward[k] = q; */
+            fbp->fblks[spp->prev + k] = rlix; /* forward pointer to new region */
+        } while(--k >= 0);
+        status = 0;
+    }
+    return status;
 }
 
 
@@ -1937,17 +1965,34 @@ rl_foff_dump(regionl *const rl)
 #endif
 
 
-/*
+/**
  * Return region with index rlix to the free list.
+ *
+ * @param[in,out] rl    Region list
+ * @param[in]     rlix  Offset of region entry
+ * @retval PQ_SYSTEM    Couldn't get new skip-list node. `log_add()` called.
+ * @retval 0            Success
  */
-static void
+static int
 rl_rel(regionl *const rl, size_t rlix) 
 {
-    rl_foff_add(rl, rlix);      /* add to freelist skip list by offset */
-    rl_fext_add(rl, rlix);      /* add to freelist skip list by extent */
-
-    rl->nfree++;
-    return;
+    // Add to freelist skip list by offset */
+    int status = rl_foff_add(rl, rlix);
+    if (status) {
+        log_add("Couldn't add to offset free-list");
+    }
+    else {
+        // Add to freelist skip list by extent
+        status = rl_fext_add(rl, rlix);
+        if (status) {
+            log_add("Couldn't add to extent free-list");
+            rl_foff_del(rl, rlix);
+        }
+        else {
+            rl->nfree++;
+        }
+    }
+    return status;
 }
 
 /*
@@ -2195,10 +2240,18 @@ rl_add(regionl *const rl, off_t const offset, size_t const extent)
     rep->offset = offset;
     rep->extent = extent;
 
-    rl_rel(rl, rpix);   /* Insert into free list.  No need to consolidate. */
-    if(rl->nfree > rl->maxfree)
-        rl->maxfree = rl->nfree;
-    log_assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
+    // Insert into free list.  No need to consolidate.
+    int status = rl_rel(rl, rpix);
+    if (status) {
+        log_add("Couldn't insert region into free region list");
+        rp_rel(rl, rpix);
+        rep = NULL;
+    }
+    else {
+        if(rl->nfree > rl->maxfree)
+            rl->maxfree = rl->nfree;
+        log_assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
+    }
     return rep;
 }
 
@@ -2231,6 +2284,7 @@ rl_split(regionl *const rl, size_t rlix, size_t const extent)
             if(rem > rl->maxfextent)
                 rl->maxfextent = rem;
         } else {                /* out of empty slots, not enough allocated */
+            log_add("Couldn't add split-off region to free region list");
             status = ENOMEM;
         }
         return status;
@@ -5417,6 +5471,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     /*
      * Check for duplicate
      */
+    // log_debug("Checking for duplicate");
     if (sxi && sx_find(pq->sxp, sxi, sxepp) != 0) {
         log_debug("PQ_DUP");
         return PQ_DUP;
@@ -5425,6 +5480,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     /* We may need to split what we find */
     if (!rl_HasSpace(pq->rlp)) {
         /* get one slot */
+        // log_debug("Making a slot");
         status = rpqe_mkslot(pq);
         if (status != ENOERR)
             return status;
@@ -5434,6 +5490,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     if (extent < smallest_extent_seen)
         smallest_extent_seen = extent;
 
+    // log_debug("Getting a region");
     rlix = rl_get(pq->rlp, extent);
     if (rlix == RL_NONE) {
         status = rpqe_mkspace(pq, extent, &rlix);
@@ -5446,6 +5503,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     /* Don't bother to split off tiny fragments too small for any
        product we've seen */
     if (extent + smallest_extent_seen + PQ_FRAGMENT_HEURISTIC < hit->extent) {
+        // log_debug("Splitting region");
         status = rl_split(pq->rlp, rlix, extent);
         if (status != ENOERR)
             goto rl_split_failure;
@@ -5453,13 +5511,16 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
 
     log_assert((hit->offset % pq->ctlp->align) == 0);
     set_IsAlloc(hit);
+    // log_debug("Adding region hash");
     rlhash_add(pq->rlp, rlix);
 
+    // log_debug("Getting region");
     status = rgn_get(pq, hit->offset, Extent(hit), RGN_WRITE, vpp);
     if (status != ENOERR)
         goto rgn_get_failure;
 
     if (sxi) {
+        // log_debug("Adding signature");
         sxelem* const sxelem = sx_add(pq->sxp, sxi, hit->offset);
         if (sxelem == NULL) {
             log_error("sx_add() failure");
@@ -5483,11 +5544,14 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     return status;
 
     sx_add_failure:
+        // log_debug("Releasing region");
         (void)rgn_rel(pq, hit->offset, 0); // region's data portion unmodified
     rgn_get_failure:
+        // log_debug("Deleting region hash");
         rlhash_del(pq->rlp, rlix);
         clear_IsAlloc(hit);
     rl_split_failure:
+        // log_debug("Unsplitting region");
         rl_put(pq->rlp, rlix); // undoes `rl_get()` and `rpqe_mkspace()`
         return status;
 }
@@ -6545,6 +6609,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         log_assert(pq != NULL);
         log_assert(prod != NULL);
 
+        // log_debug("Locking");
         lockIf(pq);
 
         if(fIsSet(pq->pflags, PQ_READONLY)) {
@@ -6553,6 +6618,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 goto unwind_lock;
         }
 
+        // log_debug("Getting product size");
         extent = xlen_product(prod);
         if (extent > pq_getDataSize(pq)) {
                 log_debug("pq_insertNoSig(): product is too big");
@@ -6563,18 +6629,21 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         /*
          * Write lock pq->ctl.
          */
+        // log_debug("Getting control header");
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR) {
                 log_debug("pq_insertNoSig(): ctl_get() failure");
                 goto unwind_lock;
         }
 
+        // log_debug("Getting space for product");
         status = rpqe_new(pq, extent, prod->info.signature, &vp, &sxep);
         if(status != ENOERR) {
                 log_debug("pq_insertNoSig(): rpqe_new() failure");
                 goto unwind_ctl;
         }
 
+        // log_debug("XDR-ing product");
                                                 /* cast away const'ness */
         if(xproduct(vp, extent, XDR_ENCODE, (product *)prod) == 0)
         {
@@ -6590,30 +6659,39 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 goto unwind_rgn;
         }
 
+        // log_debug("Setting timestamp");
         set_timestamp(&pq->ctlp->mostRecent);
+        // log_debug("Vetting creation time");
         vetCreationTime(&prod->info);
 
         /*FALLTHROUGH*/
 unwind_rgn:
+        // log_debug("Releasing region");
         (void) rgn_rel(pq, sxep->offset, status == ENOERR ? RGN_MODIFIED : 0);
 
         /*FALLTHROUGH*/
 unwind_ctl:
+        // log_debug("Releasing control header");
         (void) ctl_rel(pq, RGN_MODIFIED);
 unwind_lock:
+        // log_debug("Unlocking");
         unlockIf(pq);
+        // log_debug("Returning %d", status);
         return status;
 }
 
 
-/*
+/**
  * Insert at rear of queue, send SIGCONT to process group
  *
- * Returns:
- *      ENOERR          Success.
- *      EINVAL          Invalid argument.
- *      PQ_DUP          Product already exists in the queue.
- *      PQ_BIG          Product is too large to insert in the queue.
+ * @param[in,out]  pq    Product queue
+ * @param[in]      prod  Data product
+ * @retval 0             Success.
+ * @retval EINVAL        Invalid argument.
+ * @retval PQ_DUP        Product already exists in the queue.
+ * @retval PQ_BIG        Product is too large to insert in the queue.
+ * @retval PQ_SYSTEM     System failure. log_add() called.
+ *
  */
 int
 pq_insert(pqueue *pq, const product *prod)
