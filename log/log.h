@@ -429,7 +429,7 @@ bool log_is_level_enabled(
  * @param[in] ...    Optional arguments of the message -- starting with the
  *                   format of the message.
  */
-#define log_log(level, ...)  LOG_LOG(level,               __VA_ARGS__)
+#define log_log(level, ...)  LOG_LOG(level,             __VA_ARGS__)
 
 /**
  * Logs the currently-accumulated log-messages of the current thread and resets
