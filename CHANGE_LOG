@@ -1,3 +1,14 @@
+6.13.2.5
+    Product-Queue (pq.c):
+        Squashed latent bug that would eventually cause an assertion failure or
+        a segmentation violation if a new skip-list node couldn't be obtained.
+
+    pq_test_insert(1):
+        Added ability to periodically insert synthetic data products.
+
+    pqact(1):
+        Added test and profiling targets.
+
 6.13.2.4	2016-06-27T12:29:33-0600
     Product-Queue (pq.c):
         Inlined some static functions to obtain small performance improvements.
