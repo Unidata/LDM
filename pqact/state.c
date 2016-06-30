@@ -42,7 +42,7 @@ stateInit(
     int         status;
 
     if (configPathname == NULL) {
-        log_add("stateInit(): Pathname is NULL");
+        log_add("Pathname is NULL");
         status = -1;
     }
     else {
@@ -106,14 +106,14 @@ stateRead(
     int         status;
 
     if (statePathname == NULL) {
-        log_add("stateRead(): stateInit() not successfully called");
+        log_add("stateInit() not successfully called");
         status = -1;                    /* module not initialized */
     }
     else {
         FILE*   file = fopen(statePathname, "r");
 
         if (file == NULL) {
-            log_add_syserr("stateRead(): Couldn't open \"%s\"", statePathname);
+            log_add_syserr("Couldn't open \"%s\"", statePathname);
             status = -2;                /* couldn't open state-file */
         }
         else {
@@ -125,8 +125,7 @@ stateRead(
                 (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
-                log_syserr("Couldn't read comments from \"%s\"",
-                        statePathname);
+                log_syserr("Couldn't read comments from \"%s\"", statePathname);
             }
             else {
                 unsigned long   seconds;
@@ -171,7 +170,7 @@ stateWrite(
     int         status;
 
     if (statePathname == NULL) {
-        log_add("stateWrite(): stateInit() not successfully called");
+        log_add("stateInit() not successfully called");
         status = -1;
     }
     else {
