@@ -649,7 +649,7 @@ main(int ac, char *av[])
                         timestampt  now;
                         (void)set_timestamp(&now);
                         log_warning("Processed oldest product in queue: %g s",
-                            d_diff_timestamp(&now, &currentCursor));
+                            d_diff_timestamp(&now, &insertionTime));
                     }
 
                     /*
