@@ -71,23 +71,24 @@ $(DESTDIR)$(sysconfdir)/pqact.conf:
 	$(COMPILE) -E $< >$@
 
 check-local:	pqact
+	rm -f pqact_test.conf.state
 	../pqcreate/pqcreate -c -s 100k -S 100 -q pqact_test.pq
 	./pqact -d $(srcdir) -q pqact_test.pq $(srcdir)/pqact_test.conf & \
 		pid=$$!; \
 	../pqinsert/pq_test_insert -q pqact_test.pq -m 2000 -n 1000; \
 	sleep 1; \
 	kill $$pid
-	rm -f pqact_test.pq
+	rm -f pqact_test.conf.state pqact_test.pq
 
 callgrind:	pqact
-	rm -f callgrind.out.*
+	rm -f pqact_test.conf.state callgrind.out.*
 	../pqcreate/pqcreate -c -s 100k -S 100 -q pqact_test.pq
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
 	    ./pqact -d . -q pqact_test.pq ./pqact_test.conf & pid=$$!; \
 	../pqinsert/pq_test_insert -q pqact_test.pq -m 2000 -n 1000; \
 	sleep 5; \
 	kill $$pid
-	rm -f pqact_test.pq
+	rm -f pqact_test.conf.state pqact_test.pq
 	kcachegrind
 	
 valgrind:	pqact
