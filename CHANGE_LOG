@@ -1,3 +1,10 @@
+6.13.2.6
+    Logging (log.c):
+        Added performance test and profiling target.
+
+    pqact(1):
+        Corrected time-value in first "Processed oldest product" message.
+
 6.13.2.5	2016-06-29T14:35:51-0600
     Product-Queue (pq.c):
         Squashed latent bug that would eventually cause an assertion failure or
