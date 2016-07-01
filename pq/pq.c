@@ -8481,9 +8481,9 @@ pq_next(
                                 prod_par.data = xdrs.x_private;
                                 queue_par.offset = rp->offset;
                                 /*
-                                 * The product-queue is unlocked because calling
-                                 * a foreign function with an acquired lock
-                                 * might result in deadlock:
+                                 * Product-queue is unlocked because calling a
+                                 * foreign function with an acquired lock can
+                                 * result in deadlock:
                                  */
                                 unlockIf(pq);
                                 func(&prod_par, &queue_par, app_par);
