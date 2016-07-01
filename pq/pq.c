@@ -7903,12 +7903,12 @@ pq_processProduct(
  * @param[in]  otherargs  Optional argument to `ifMatch`.
  * @param[out] off        Offset to the region in the product-queue or NULL. If
  *                        NULL, then upon return the product is unlocked and may
- *                        be deleted by another process to make room for another
+ *                        be deleted by another process to make room for a new
  *                        product. If non-NULL, then this variable is set before
  *                        `ifMatch()` is called and, upon return, the product is
  *                        locked against deletion by another process and the
  *                        caller should call `pq_release(*off)` when the product
- *                        may be deleted to make room for another product.
+ *                        may be deleted to make room for a new product.
  * @retval 0          Product didn't match `clss`
  * @retval PQUEUE_END No next product
  * @return            The return-value of `ifMatch()`.
@@ -8244,12 +8244,20 @@ pq_sequence(pqueue *pq, pq_match mt,
  * execute ifMatch(xprod, len, otherargs) and return the
  * return value from ifMatch().
  *
- * @param[in] pq          Product-queue.
- * @param[in] mt          Direction from current position in queue to start
+ * @param[in]  pq         Product-queue.
+ * @param[in]  mt         Direction from current position in queue to start
  *                        matching.
- * @param[in] clss        Class of data-products to match.
- * @param[in] ifMatch     Function to call for matching products.
- * @param[in] otherargs   Optional argument to `ifMatch`.
+ * @param[in]  clss       Class of data-products to match.
+ * @param[in]  ifMatch    Function to call for matching products.
+ * @param[in]  otherargs  Optional argument to `ifMatch`.
+ * @param[out] off        Offset to the region in the product-queue or NULL. If
+ *                        NULL, then upon return the product is unlocked and may
+ *                        be deleted by another process to make room for a new
+ *                        product. If non-NULL, then this variable is set before
+ *                        `ifMatch()` is called and, upon return, the product is
+ *                        locked against deletion by another process and the
+ *                        caller should call `pq_release(*off)` when the product
+ *                        may be deleted to make room for a new product.
  * @retval 0          Product didn't match `clss`
  * @retval PQUEUE_END No next product
  * @return            The return-value of `ifMatch()`.
@@ -8298,6 +8306,202 @@ pq_sequenceLock(
         off_t* const restrict              offset)
 {
     return pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, offset);
+}
+
+/**
+ * Step thru the time-sorted inventory from the current time-cursor.
+ *
+ * @param[in,out] pq           Product queue
+ * @param[in]     reverse      Whether to match in reverse direction (i.e.,
+ *                             towards earlier times).
+ * @param[in]     clss         Product matching criteria
+ * @param[in]     func         Function to call for matching products
+ * @param[in]     keep_locked  Whether or not product should be locked (i.e.,
+ *                             kept unavailable for deletion) upon return. If
+ *                             `true`, then caller must call
+ *                             `pq_release(queue_par->offset)`, where
+ *                             `queue_par` is the queue-parameters argument to
+ *                             `func`.
+ * @param[in,out] app_par      Application-supplied parameters or `NULL`
+ * @retval        0            Success. `func()` was called.
+ * @retval        PQ_END       End of time-queue hit
+ * @retval        PQ_INVAL     Invalid argument. log_add() called.
+ * @retval        PQ_SYSTEM    System failure. log_add() called.
+ */
+static int
+pq_next(
+        pqueue* const restrict             pq,
+        const bool                         reverse,
+        const prod_class_t* const restrict clss,
+        pq_next_func* const                func,
+        const bool                         keep_locked,
+        void* const restrict               app_par)
+{
+    int status;
+
+    if (pq == NULL || clss == NULL || func==NULL) {
+        log_add("Invalid argument: pq=%p, clss=%p, func=%p", pq, clss, func);
+        status = PQ_INVAL;
+    }
+    else {
+        lockIf(pq);
+
+        // If necessary, initialize product-queue time-cursor
+        if (tvIsNone(pq->cursor))
+            pq->cursor = reverse ? TS_ENDT : TS_ZERO;
+
+        // Read-lock control-header
+        status = ctl_get(pq, 0);
+        if (status) {
+            log_add_errno(status, "Couldn't get control-header");
+            status = PQ_SYSTEM;
+        }
+        else {
+            bool ctl_locked = true;
+
+            queue_par_t queue_par;
+            queue_par.is_full = pq->ctlp->isFull;
+
+            // Find next element in time-queue
+            tqelem* tqep = tqe_find(pq->tqp, &pq->cursor,
+                    reverse ? TV_LT : TV_GT);
+            if (tqep == NULL) {
+                status = PQUEUE_END;
+            }
+            else {
+                // Update product-queue time-cursor
+                pq_cset(pq, &tqep->tv);
+                pq_coffset(pq, tqep->offset);
+
+                queue_par.inserted = tqep->tv;
+                queue_par.is_oldest = (tqep == tqe_first(pq->tqp));
+
+                // Find region in product-queue that contains product
+                region* rp;
+                status = rl_r_find(pq->rlp, tqep->offset, &rp);
+                if (status == 0 || rp->offset != tqep->offset
+                        || Extent(rp) > pq_getDataSize(pq)) {
+                    char ts[20];
+                    (void)sprint_timestampt(ts, sizeof(ts), &tqep->tv);
+                    log_error("Queue corrupt: tq: %s %s at %ld",
+                            ts,
+                            status ? "invalid region" : "no data",
+                            tqep->offset);
+                    /*
+                     * Can't be fixed (tq_delete(pq->tqp, tqep)) here because no
+                     * write permission
+                     */
+                    status = 0;
+                }
+                else {
+                    // Following avoids calls to malloc() in XDR module
+                    char ident[KEYSIZE + 1];
+                    char origin[HOSTNAMESIZE + 1];
+                    prod_par_t prod_par = {
+                            .info.ident = ident,
+                            .info.origin = origin,
+                            .size = Extent(rp)
+                    };
+                    // Lock region in product-queue that contains product
+                    status = rgn_get(pq, rp->offset, prod_par.size, 0,
+                            &prod_par.encoded);
+                    if (status) {
+                        log_add_errno(status, "Couldn't get product region");
+                        status = PQ_SYSTEM;
+                    }
+                    else {
+                        log_assert(prod_par.encoded != NULL);
+
+                        /*
+                         * Because data-product is locked, control-header can
+                         * be released so that another thread-of-control can
+                         * access product-queue. NB: This makes `tqep` invalid.
+                         */
+                        status = ctl_rel(pq, 0);
+                        log_assert(status == 0);
+                        ctl_locked = false;
+
+                        /*
+                         * If appropriate, log delay since product insertion to
+                         * indicate if processing is falling behind.
+                         */
+                        if (log_is_enabled_debug) {
+                            timestampt now;
+                            if (gettimeofday(&now, 0) == 0) {
+                                double delay = d_diff_timestamp(&now,
+                                        &queue_par.inserted);
+                                log_debug("Delay: %.4f sec", delay);
+                            }
+                        }
+
+                        // Decode data-product metadata
+                        XDR xdrs;
+                        xdrmem_create(&xdrs, prod_par.encoded,
+                                (u_int)prod_par.size, XDR_DECODE) ;
+                        if (!xdr_prod_info(&xdrs, &prod_par.info)) {
+                            log_error("xdr_prod_info() failed") ;
+                            status = PQ_SYSTEM;
+                        }
+                        else {
+                            log_assert(prod_par.info.sz <= xdrs.x_handy);
+
+                            #if PQ_SEQ_TRACE
+                                log_debug("%s %u",
+                                        s_prod_info(NULL, 0, &prod_par.info, 1),
+                                        xdrs.x_handy) ;
+                            #endif
+
+                            /*
+                             * If appropriate, log time-interval from
+                             * product-creation to queue-insertion.
+                             */
+                            if (log_is_enabled_debug) {
+                                double latency =
+                                        d_diff_timestamp(&queue_par.inserted,
+                                                &prod_par.info.arrival);
+                                log_debug("time(insert)-time(create): %.4f s",
+                                        latency);
+                            }
+
+                            // If appropriate, apply caller-supplied function.
+                            if (clss == PQ_CLASS_ALL ||
+                                    prodInClass(clss, &prod_par.info)) {
+                                log_assert(func != NULL);
+                                {
+                                    // Change extent into xlen_product */
+                                    const size_t xsz =
+                                            _RNDUP(prod_par.info.sz, 4);
+                                    if (xdrs.x_handy > xsz)
+                                        prod_par.size -= (xdrs.x_handy - xsz);
+                                }
+                                /*
+                                 * Copying data is avoided by using existing
+                                 * buffer.
+                                 */
+                                prod_par.data = xdrs.x_private;
+                                queue_par.offset = rp->offset;
+                                /*
+                                 * The product-queue is unlocked because calling
+                                 * a foreign function with an acquired lock
+                                 * might result in deadlock:
+                                 */
+                                unlockIf(pq);
+                                func(&prod_par, &queue_par, app_par);
+                                lockIf(pq);
+                            } // Product matches
+                        } // xdr_prod_info() succeeded
+                        xdr_destroy(&xdrs);
+                        if (!keep_locked)
+                            (void)rgn_rel(pq, rp->offset, 0);
+                    } // rgn_get() succeeded
+                } // rl_r_find() succeeded
+            } // tqe_find() succeeded
+            if (ctl_locked)
+                (void)ctl_rel(pq, 0);
+        } // ctl_get() succeeded
+        unlockIf(pq);
+    } // Valid arguments
+    return status;
 }
 
 /**
