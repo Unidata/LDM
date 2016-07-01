@@ -1419,7 +1419,7 @@ int    nnnxxx_offset;
                     log_debug("GOES product already compressed %d", heapcount);
                 }
                 if(fillScan || !unCompress) {
-                    udebug("Last Blk, call deflateEnd prod %ld", prod.seqno);
+                    log_debug("Last Blk, call deflateEnd prod %ld", prod.seqno);
                     deflateData(NULL, 0, NULL, &uncomprLen, END_BLK );
                 }
             }
