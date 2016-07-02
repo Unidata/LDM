@@ -8328,7 +8328,7 @@ pq_sequenceLock(
  * @retval        PQ_INVAL     Invalid argument. log_add() called.
  * @retval        PQ_SYSTEM    System failure. log_add() called.
  */
-static int
+int
 pq_next(
         pqueue* const restrict             pq,
         const bool                         reverse,
