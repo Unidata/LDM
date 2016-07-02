@@ -629,8 +629,13 @@ main(int ac, char *av[])
             }
 
             bool noProcessingError = false;
+#if 0
             status = pq_sequence(pq, TV_GT, &clss, processProduct,
                     &noProcessingError);
+#else
+            status = pq_next(pq, false, &clss, processProduct, false,
+                    &noProcessingError);
+#endif
 
             if (status == 0) {
                 /*

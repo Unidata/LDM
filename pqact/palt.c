@@ -29,6 +29,7 @@
 #include "ldmalloc.h"
 #include "RegularExpressions.h"
 #include "log.h"
+#include "timestamp.h"
 #include <stdio.h>
 
 #ifndef TEST_DATE_SUB
@@ -1241,7 +1242,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
     return status;
 }
 
-
+#if 0
 /**
  * Loop thru the pattern / action table, applying actions
  *
@@ -1309,6 +1310,70 @@ processProduct(
         return 0; // Any non-product-queue error causes program termination
 }
 
+#else
+
+/**
+ * Loop thru the pattern / action table, applying actions to matching product.
+ *
+ * @param[in] prod_par   Data-product parameters
+ * @param[in] queue_par  Product-queue parameters
+ * @param[in] noError    Pointer to boolean argument indicating that no error
+ *                       occurred while processing data-product
+ */
+void
+processProduct(
+        const prod_par_t* const restrict  prod_par,
+        const queue_par_t* const restrict queue_par,
+        void* const restrict              noError)
+{
+    const prod_info* const infop = &prod_par->info;
+    void* const            datap = prod_par->data;
+    palt*                  next;
+    bool                   didMatch = false;
+    bool                   errorOccurred = false;
+
+    log_info("%s", s_prod_info(NULL, 0, infop, log_is_enabled_debug));
+
+    for (palt* pal = paList; pal != NULL; pal = next) {
+        next = pal->next;
+        /*
+         * If the feedtype matches AND ((the product ID matches the regular
+         * expression) OR (the pattern is "_ELSE_" AND nothing has been done to
+         * this product yet AND the first char of the ident isn't '_'))
+         */
+        if ((infop->feedtype & pal->feedtype) && (
+                (regexec(&pal->prog, infop->ident, pal->prog.re_nsub +1,
+                        pal->pmatchp, 0) == 0)
+                || (strcmp(pal->pattern, "^_ELSE_$") == 0
+                        && !didMatch && infop->ident[0] != '_'))) {
+            /* A match, do something */
+            didMatch = true;
+            product prod;
+            prod.info = *infop;
+            prod.data = (void*)datap; /* cast away const */
+            if (prodAction(&prod, pal, prod_par->encoded, prod_par->size)) {
+                if (pal->action.flags & LDM_ACT_TRANSIENT) {
+                    /* connection closed, don't try again */
+                    remove_palt(pal);
+                }
+                errorOccurred = true;
+            }
+        }
+    }
+    if (didMatch && queue_par->is_oldest && queue_par->is_full) {
+        char        buf[LDM_INFO_MAX];
+        timestampt  now;
+        (void)set_timestamp(&now);
+        log_warning("Processed oldest product in full queue: age=%g s, prod=%s",
+            d_diff_timestamp(&now, &queue_par->inserted),
+            s_prod_info(buf, sizeof(buf), infop, log_is_enabled_debug));
+    }
+
+    if (noError)
+        *(bool*)noError = !errorOccurred;
+}
+#endif
+
 
 /*
  * Create and process an (auto) empty product
@@ -1318,6 +1383,7 @@ processProduct(
 void
 dummyprod(char *ident)
 {
+#if 0
         product prod;
 
         (void) memset((char *)&prod, 0 , sizeof(prod));
@@ -1328,5 +1394,23 @@ dummyprod(char *ident)
         prod.info.origin = "localhost";
 
         processProduct(&prod.info, &prod.data, 0, 0, 0);
+#else
+        prod_par_t  prod_par = {
+                .info.feedtype = ANY,
+                .info.ident = ident,
+                .info.origin = "localhost",
+                .data = NULL,
+                .encoded = NULL,
+                .size = 0
+        };
+        queue_par_t queue_par = {
+                .inserted = TS_NONE,
+                .offset = 0,
+                .is_oldest = false,
+                .is_full = false
+        };
+        bool        noError;
+        processProduct(&prod_par, &queue_par, &noError);
+#endif
 }
 #endif

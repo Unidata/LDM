@@ -4,6 +4,8 @@
 #ifndef _PALT_H_
 #define _PALT_H_
 
+#include "pq.h"
+
 #ifdef __cplusplus
 extern "C" int readPatFile(const char *path);
 extern "C" int processProduct(const prod_info *infop, const void *datap,
@@ -13,6 +15,7 @@ extern "C" void dummyprod(char *ident);
 #elif defined(__STDC__)
 extern int readPatFile(const char *path);
 
+#if 0
 /**
  * Loop thru the pattern / action table, applying actions
  *
@@ -30,6 +33,21 @@ extern int readPatFile(const char *path);
 extern int processProduct(const prod_info *infop, const void *datap,
 	void *xprod, size_t len,
 	void *otherargs);
+#else
+/**
+ * Loop thru the pattern / action table, applying actions to matching product.
+ *
+ * @param[in] prod_par   Data-product parameters
+ * @param[in] queue_par  Product-queue parameters
+ * @param[in] noError    Pointer to boolean argument indicating that no error
+ *                       occurred while processing data-product
+ */
+void
+processProduct(
+        const prod_par_t* const restrict  prod_par,
+        const queue_par_t* const restrict queue_par,
+        void* const restrict              noError);
+#endif
 extern void dummyprod(char *ident);
 #else /* Old Style C */
 extern int readPatFile();
