@@ -622,9 +622,8 @@ static void test_performance(void)
     (void)gettimeofday(&start, NULL);
 
     const long num_messages = 1000000;
-    for (long i = 0; i < num_messages; i++) {
-        log_error("Error message %d", i);
-    }
+    for (long i = 0; i < num_messages; i++)
+        log_error("Error message %ld", i);
 
     struct timeval stop;
     (void)gettimeofday(&stop, NULL);
@@ -632,7 +631,23 @@ static void test_performance(void)
 
     status = log_set_destination("-");
     CU_ASSERT_EQUAL(status, 0);
-    log_notice("%ld messages in %g seconds = %g/s", num_messages, dur,
+    log_notice("%ld printed messages in %g seconds = %g/s", num_messages, dur,
+            num_messages/dur);
+
+    status = log_set_destination("/dev/null");
+    CU_ASSERT_EQUAL(status, 0);
+
+    (void)gettimeofday(&start, NULL);
+
+    for (long i = 0; i < num_messages; i++)
+        log_debug("Debug message %ld", i);
+
+    (void)gettimeofday(&stop, NULL);
+    dur = duration(&stop, &start);
+
+    status = log_set_destination("-");
+    CU_ASSERT_EQUAL(status, 0);
+    log_notice("%ld unprinted messages in %g seconds = %g/s", num_messages, dur,
             num_messages/dur);
 
     log_fini();

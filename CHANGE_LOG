@@ -1,3 +1,17 @@
+6.13.2.7
+    Product-Queue (pq.c):
+        Added function pq_next() as a more performant replacement for 
+        pq_sequence() and pq_sequenceLock().
+
+    pqact(1):
+        pqact.c:
+            Refactored to use pq_next().
+
+        palt.c:
+            Rewrote processProduct() to be called by pq_next().
+
+            Rewrote dummyprod() to use new processProduct().
+
 6.13.2.6	2016-06-30T12:22:29-0600
     Logging (log.c):
         Added performance test and profiling target.
