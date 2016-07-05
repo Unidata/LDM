@@ -90,7 +90,7 @@ callgrind:	pqact
 	kill $$pid
 	rm -f pqact_test.conf.state pqact_test.pq
 	kcachegrind
-	
+
 valgrind:	pqact
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./pqact -l /dev/null \
