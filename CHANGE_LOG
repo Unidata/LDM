@@ -11,6 +11,10 @@
             Rewrote processProduct() to be called by pq_next().
 
             Rewrote dummyprod() to use new processProduct().
+            
+    ldmadmin(1):
+        Added check of the pqsurf(1) queue for any pqsurf(1) EXEC-ed in the LDM
+        configuration-file.
 
 6.13.2.6	2016-06-30T12:22:29-0600
     Logging (log.c):
