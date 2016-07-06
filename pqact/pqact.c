@@ -61,9 +61,6 @@ static int                   shmid = -1;
 static int                   semid = -1;
 static key_t                 key;
 static key_t                 semkey;
-timestampt                   oldestCursor;
-timestampt                   currentCursor;
-int                          currentCursorSet = 0;
 
 #ifndef DEFAULT_INTERVAL
 #define DEFAULT_INTERVAL 15
@@ -123,13 +120,14 @@ cleanup(void)
         if (pq)
             (void)pq_close(pq);
 
-        if (currentCursorSet) {
+        if (!tvEqual(palt_last_insertion, TS_ZERO)) {
             timestampt  now;
 
             (void)set_timestamp(&now);
-            log_notice("Behind by %g s", d_diff_timestamp(&now, &currentCursor));
+            log_notice("Behind by %g s",
+                    d_diff_timestamp(&now, &palt_last_insertion));
 
-            if (stateWrite(&currentCursor) < 0) {
+            if (stateWrite(&palt_last_insertion) < 0) {
                 log_error("Couldn't save insertion-time of last processed "
                     "data-product");
             }
@@ -628,49 +626,14 @@ main(int ac, char *av[])
                 hupped = 0;
             }
 
-            bool noProcessingError = false;
 #if 0
             status = pq_sequence(pq, TV_GT, &clss, processProduct,
-                    &noProcessingError);
+                    &palt_processing_error);
 #else
-            status = pq_next(pq, false, &clss, processProduct, false,
-                    &noProcessingError);
+            status = pq_next(pq, false, &clss, processProduct, false, NULL);
 #endif
 
-            if (status == 0) {
-                /*
-                 * No product-queue error. Product might or might not have been
-                 * processed.
-                 */
-                if (noProcessingError) {
-                    // Product matched `clss` and no processing error occurred
-                    timestampt insertionTime, oldestInsertionTime;
-
-                    pq_ctimestamp(pq, &insertionTime);
-                    status = pq_getOldestCursor(pq, &oldestInsertionTime);
-
-                    if (status == 0 &&
-                            tvEqual(oldestInsertionTime, insertionTime)) {
-                        timestampt  now;
-                        (void)set_timestamp(&now);
-                        log_warning("Processed oldest product in queue: %g s",
-                            d_diff_timestamp(&now, &insertionTime));
-                    }
-
-                    /*
-                     * The insertion-time of the last successfully-processed
-                     * data-product is only set if the product had no processing
-                     * error. This is done to allow re-processing of a partially
-                     * processed product in the next session by a corrected
-                     * action.
-                     */
-                    currentCursor = insertionTime;
-                    currentCursorSet = 1;
-                }
-
-                (void)exitIfDone(0);
-            }
-            else {
+            if (status) {
                 /*
                  * Product-queue error. No data-product was processed.
                  */
@@ -711,8 +674,9 @@ main(int ac, char *av[])
                 }
 
                 (void)pq_suspend(interval);
-                (void)exitIfDone(0);
             }                           /* data-product not processed */
+
+            (void)exitIfDone(0);
 
             /*
              * Wait on any children which might have terminated.

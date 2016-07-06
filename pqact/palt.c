@@ -34,6 +34,11 @@
 
 #ifndef TEST_DATE_SUB
 
+/*
+ * When last successfully-processed data-product was inserted into
+ * product-queue:
+ */
+timestampt                   palt_last_insertion = {0, 0};
 
 /* 
  * A pattern/action file "line" gets compiled into one of these.
@@ -1314,17 +1319,18 @@ processProduct(
 
 /**
  * Loop thru the pattern / action table, applying actions to matching product.
+ * If no processing error occurs, then the global variable `palt_last_insertion`
+ * is set.
  *
  * @param[in] prod_par   Data-product parameters
  * @param[in] queue_par  Product-queue parameters
- * @param[in] noError    Pointer to boolean argument indicating that no error
- *                       occurred while processing data-product
+ * @param[in] opt_arg    Optional argument. Ignored.
  */
 void
 processProduct(
         const prod_par_t* const restrict  prod_par,
         const queue_par_t* const restrict queue_par,
-        void* const restrict              noError)
+        void* const restrict              opt_arg)
 {
     const prod_info* const infop = &prod_par->info;
     void* const            datap = prod_par->data;
@@ -1369,8 +1375,16 @@ processProduct(
             s_prod_info(buf, sizeof(buf), infop, log_is_enabled_debug));
     }
 
-    if (noError)
-        *(bool*)noError = !errorOccurred;
+    if (!errorOccurred) {
+        /*
+         * The insertion-time of the last successfully-processed
+         * data-product is only set if the product had no processing
+         * error. This is done to allow re-processing of a partially
+         * processed product in the next session by a corrected
+         * action.
+         */
+        palt_last_insertion = queue_par->inserted; // Global variable
+    }
 }
 #endif
 

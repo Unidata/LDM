@@ -5,6 +5,13 @@
 #define _PALT_H_
 
 #include "pq.h"
+#include "timestamp.h"
+
+/*
+ * When last successfully-processed data-product was inserted into
+ * product-queue:
+ */
+extern timestampt palt_last_insertion;
 
 #ifdef __cplusplus
 extern "C" int readPatFile(const char *path);

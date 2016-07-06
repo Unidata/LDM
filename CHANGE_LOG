@@ -1,3 +1,11 @@
+6.13.2.8
+    pqact(1):
+        Move setting of insertion-time of last successfully-processed product
+        from main() to processProduct() to increase performance.
+        
+        Eliminate duplicate "Processed oldest product..." log messages 
+        introduced in 6.13.2.7.
+
 6.13.2.7	2016-07-05T12:49:46-0600
     Product-Queue (pq.c):
         Added function pq_next() as a more performant replacement for 
