@@ -1,4 +1,4 @@
-6.13.2.8
+6.13.2.8	2016-07-06T15:04:02-0600
     pqact(1):
         Move setting of insertion-time of last successfully-processed product
         from main() to processProduct() to increase performance.
