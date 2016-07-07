@@ -497,7 +497,7 @@ static bool pti_process_input_file()
 
 static bool pti_generate_products(void)
 {
-    int            status;
+    int            status = 0;
     prod_info*     info = &prod.info;
     char           ident[80];
 
