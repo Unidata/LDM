@@ -1,3 +1,7 @@
+6.13.2.10
+    refresh_logging(1):
+        Added trailing newline to script.
+
 6.13.2.9	2016-07-07T12:08:16-0600
     pq_test_insert(1):
         Corrected uninitialized variable discovered by Coverity.
