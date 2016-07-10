@@ -682,7 +682,6 @@ AC_CONFIG_FILES([
     html/workshop/Makefile
     html/workshop/specifics.html
     hupsyslog/Makefile
-    hupsyslog/refresh_logging
     ldmd/Makefile
     ldmping/Makefile
     ldmsend/Makefile

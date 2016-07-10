@@ -6,6 +6,16 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+EXTRA_DIST		= refresh_logging.in
+BUILT_SOURCES		= refresh_logging
 bin_PROGRAMS		= hupsyslog
 bin_SCRIPTS 		= refresh_logging
 hupsyslog_LDADD		= $(top_builddir)/lib/libldm.la
+
+refresh_logging:	refresh_logging.in
+if WANT_ULOG
+	echo hupsyslog >$@
+else
+	sed 's;$$LDMHOME;@LDMHOME@;' refresh_logging.in >$@
+endif
+	chmod +x $@
