@@ -16,6 +16,6 @@ refresh_logging:	refresh_logging.in
 if WANT_ULOG
 	echo hupsyslog >$@
 else
-	sed 's;$$LDMHOME;@LDMHOME@;' refresh_logging.in >$@
+	sed 's;$$LDMHOME;@LDMHOME@;' $(srcdir)/refresh_logging.in >$@
 endif
 	chmod +x $@

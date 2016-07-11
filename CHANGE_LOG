@@ -1,3 +1,7 @@
+6.13.2.11
+    refresh_logging(1):
+        Added $(srcdir) to "refresh_logging.in".
+
 6.13.2.10	2016-07-10T10:28:06-0600
     refresh_logging(1):
         Modified makefile to create logging-specific script at build-time to
