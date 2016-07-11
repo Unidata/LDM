@@ -8,9 +8,9 @@
 
 set -e
 
-pid_pathname=$LDMHOME/ldmd.pid 
-if test -r $pid_pathname; then
-    if pid=`cat $pid_pathname`; then
-        kill -s HUP -- -$pid
+pid_pathname="$LDMHOME"/ldmd.pid 
+if test -r "$pid_pathname"; then
+    if pid=`cat "$pid_pathname"`; then
+        kill -s HUP -- -"$pid"
     fi
 fi
