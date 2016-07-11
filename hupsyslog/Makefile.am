@@ -11,6 +11,7 @@ BUILT_SOURCES		= refresh_logging
 bin_PROGRAMS		= hupsyslog
 bin_SCRIPTS 		= refresh_logging
 hupsyslog_LDADD		= $(top_builddir)/lib/libldm.la
+CLEANFILES		= $(BUILT_SOURCES)
 
 refresh_logging:	refresh_logging.in
 if WANT_ULOG

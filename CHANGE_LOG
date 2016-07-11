@@ -1,3 +1,7 @@
+6.13.2.12	2016-07-11T11:23:47-0600
+    refresh_logging(1):
+        Added $(BUILT_SOURCES) to CLEANFILES.
+
 6.13.2.11	2016-07-11T09:22:11-0600
     refresh_logging(1):
         Added $(srcdir) to "refresh_logging.in".
