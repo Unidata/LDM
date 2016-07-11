@@ -1,3 +1,8 @@
+6.13.2.13
+    refresh_logging(1):
+        Changed "test -f <pid-file>" to "test -r <pid_file>" to accomodate the
+        non-standard test(1) built-in of Solaris' shell.
+
 6.13.2.12	2016-07-11T11:23:47-0600
     refresh_logging(1):
         Added $(BUILT_SOURCES) to CLEANFILES.
