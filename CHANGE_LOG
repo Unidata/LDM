@@ -1,4 +1,4 @@
-6.13.2.14
+6.13.2.14	2016-07-12T15:10:36-0600
     log.c:
         Added check of return-value of logi_set_destination() to log_init().
 
