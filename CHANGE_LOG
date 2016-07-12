@@ -1,3 +1,7 @@
+6.13.2.14
+    log.c:
+        Added check of return-value of logi_set_destination() to log_init().
+
 6.13.2.13	2016-07-11T15:12:57-0600
     refresh_logging(1):
         Changed "test -f <pid-file>" to "test -r <pid_file>" to accomodate the

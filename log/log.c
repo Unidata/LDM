@@ -956,8 +956,8 @@ int log_init(
             const char* const dest = get_default_destination();
             // `dest` doesn't overlap `log_dest`
             strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
-            (void)logi_set_destination();
-            isInitialized = true;
+            status = logi_set_destination();
+            isInitialized = status == 0;
         }
     }
     return status;
