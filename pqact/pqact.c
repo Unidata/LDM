@@ -667,7 +667,7 @@ main(int ac, char *av[])
                     fl_closeLru(FL_NOTRANSIENT);
                 }
                 else {
-                    log_error("pq_sequence failed: %s (errno = %d)",
+                    log_error("pq_next() failure: %s (errno = %d)",
                         strerror(status), status);
                     exit(EXIT_FAILURE);
                     /*NOTREACHED*/

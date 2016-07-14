@@ -1,3 +1,7 @@
+6.13.3.0
+    pqact(1):
+        Corrected "pq_sequence" to "pq_next" in log message in pqact.c.
+
 6.13.2	2016-07-13T10:32:17-0600
     Logging:
         log.c:
