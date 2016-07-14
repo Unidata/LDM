@@ -1,4 +1,4 @@
-6.13.3.0
+6.13.3.0	2016-07-14T17:13:32-0600
     logging:
         Enhanced performance by making "log_level" volatile and having LOG_LOG()
         test it directly.
