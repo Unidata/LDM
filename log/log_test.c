@@ -429,10 +429,9 @@ static void test_log_refresh(void)
     log_refresh();
 
     logMessages();
+    log_fini();
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
-
-    log_fini();
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);

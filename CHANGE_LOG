@@ -1,4 +1,11 @@
 6.13.3.0
+    logging:
+        Enhanced performance by making "log_level" volatile and having LOG_LOG()
+        test it directly.
+        
+        Improved robustness by moving log_refresh() action from logl_lock() to
+        the static I/O function flush().
+
     pqact(1):
         Corrected "pq_sequence" to "pq_next" in log message in pqact.c.
 

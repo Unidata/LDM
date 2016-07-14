@@ -65,7 +65,7 @@ typedef struct message {
 /**
  *  Logging level.
  */
-extern log_level_t log_level;
+extern volatile log_level_t log_level;
 
 /**
  * The persistent destination specification.
@@ -301,14 +301,14 @@ void* logl_malloc(
 #define LOG_LOC_DECL(loc) const log_loc_t loc = {__FILE__, __func__, __LINE__}
 
 #define LOG_LOG(level, ...) do {\
-    if (!log_is_level_enabled(level)) {\
+    if (level < log_level) {\
         log_clear();\
     }\
     else {\
         LOG_LOC_DECL(loc);\
         logl_log(&loc, level, __VA_ARGS__);\
     }\
-} while (false)
+} while (0)
 
 /******************************************************************************
  * Logging implementation functions:

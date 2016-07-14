@@ -489,6 +489,25 @@ static bool is_level_enabled(
 }
 
 /**
+ * Refreshes the logging module. If logging is to the system logging daemon,
+ * then it will continue to be. If logging is to a file, then the file is closed
+ * and re-opened; thus enabling log file rotation. If logging is to the standard
+ * error stream, then it will continue to be if log_avoid_stderr() hasn't been
+ * called; otherwise, logging will be to the provider default. Should be called
+ * after log_init().
+ *
+ * @pre        Module is locked
+ * @retval  0  Success
+ * @retval -1  Failure
+ */
+static inline int refresh_if_necessary(void)
+{
+    int status  = refresh_needed ? logi_set_destination() : 0;
+    refresh_needed = 0;
+    return status;
+}
+
+/**
  * Logs the currently-accumulated log-messages of the current thread and resets
  * the message-queue for the current thread.
  *
@@ -506,6 +525,7 @@ static void flush(
 
     if (NULL != queue && NULL != queue->last) {
         if (is_level_enabled(level)) {
+            (void)refresh_if_necessary();
             for (const Message* msg = queue->first; NULL != msg;
                     msg = msg->next) {
                 logi_log(level, &msg->loc, msg->string);
@@ -521,23 +541,6 @@ static void flush(
     restoreSigs(&sigset);
 }
 
-/**
- * Refreshes the logging module. If logging is to the system logging daemon,
- * then it will continue to be. If logging is to a file, then the file is closed
- * and re-opened; thus enabling log file rotation. If logging is to the standard
- * error stream, then it will continue to be if log_avoid_stderr() hasn't been
- * called; otherwise, logging will be to the provider default. Should be called
- * after log_init().
- *
- * @pre        Module is locked
- * @retval  0  Success
- * @retval -1  Failure
- */
-static int refresh(void)
-{
-    return logi_set_destination();
-}
-
 /******************************************************************************
  * Package-private API:
  ******************************************************************************/
@@ -550,7 +553,7 @@ char log_dest[_XOPEN_PATH_MAX];
 /**
  *  Logging level.
  */
-log_level_t log_level = LOG_LEVEL_NOTICE;
+volatile log_level_t log_level = LOG_LEVEL_NOTICE;
 
 /**
  * The mapping from `log` logging levels to system logging daemon priorities:
@@ -589,10 +592,6 @@ void logl_lock(void)
     blockSigs(&prevSigs);
     int status = mutex_lock(&log_mutex);
     logl_assert(status == 0);
-    if (refresh_needed) {
-        refresh_needed = 0;
-        (void)refresh();
-    }
 }
 
 /**
