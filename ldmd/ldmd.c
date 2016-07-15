@@ -63,8 +63,9 @@
     #define LDM_SELECT_TIMEO  6
 #endif
 
-static int portIsMapped = 0;
+static int      portIsMapped = 0;
 static unsigned maxClients = 256;
+static int      exit_status = 0;
 
 static pid_t reap(
         pid_t pid,
@@ -146,6 +147,7 @@ static pid_t reap(
             case SIGXFSZ:
 #endif
                 log_notice("Killing (SIGTERM) process group");
+                exit_status = 3;
                 (void) kill(0, SIGTERM);
                 break;
             }
@@ -300,7 +302,7 @@ static void signal_handler(
         log_refresh();
         return;
     case SIGINT:
-        exit(0);
+        exit(exit_status);
         /*NOTREACHED*/
     case SIGTERM:
         up6_close();
@@ -575,7 +577,7 @@ static void handle_connection(
 
     xp_sock = accept(sock, (struct sockaddr *) &raddr, &len);
 
-    (void) exitIfDone(0);
+    (void) exitIfDone(exit_status);
 
     if (xp_sock < 0) {
         if (errno == EINTR) {
@@ -706,7 +708,7 @@ static void handle_connection(
 
         status = one_svc_run(xp_sock, TIMEOUT);
 
-        (void) exitIfDone(0);
+        (void) exitIfDone(exit_status);
 
         if (status == 0) {
             log_info("Done");
@@ -733,7 +735,7 @@ static void sock_svc(
 {
     const int width = sock + 1;
 
-    while (exitIfDone(0)) {
+    while (exitIfDone(exit_status)) {
         int ready;
         fd_set readfds;
         struct timeval stimeo;
@@ -1061,5 +1063,5 @@ int main(
         }
     }   // configuration-file will be executed
 
-    return (0);
+    return (exit_status);
 }
