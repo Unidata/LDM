@@ -240,7 +240,6 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
 
 int main(int ac, char *av[])
 {
-        char*         logfname = 0;
         unsigned      timeo = DEFAULT_TIMEO;
         unsigned      interval = DEFAULT_TIMEO;
         unsigned      TotalTimeo = DEFAULT_TOTALTIMEO;
@@ -285,7 +284,8 @@ int main(int ac, char *av[])
                         log_set_level(LOG_LEVEL_DEBUG);
                         break;
                 case 'l':
-                        logfname = optarg;
+                        if (log_set_destination(optarg))
+                            usage(av[0]);
                         break;
                 case 'h':
                         remote = optarg;
