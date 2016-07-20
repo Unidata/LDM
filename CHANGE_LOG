@@ -1,4 +1,4 @@
-6.13.3.1
+6.13.3.1	2016-07-20T12:45:56-0600
     notifyme(1):
         Corrected handling of "-l ..." option.
 
