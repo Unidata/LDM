@@ -1,21 +1,20 @@
-6.13.3.1	2016-07-20T12:45:56-0600
-    notifyme(1):
-        Corrected handling of "-l ..." option.
-
-6.13.3.0	2016-07-14T17:13:32-0600
+6.13.3
     logging:
         Enhanced performance by making "log_level" volatile and having LOG_LOG()
         test it directly.
-        
+
         Improved robustness by moving log_refresh() action from logl_lock() to
         the static I/O function flush().
 
     ldmd(1):
-        Changed the exit status of the top-level LDM server when it terminates
-        due to a child process crashing from 0 to 3.
+        Changed the exit status of the top-level LDM server from 0 to 3 when it
+        terminates due to the crashing of a child process.
 
     pqact(1):
-        Corrected "pq_sequence" to "pq_next" in log message in pqact.c.
+        Corrected "pq_sequence()" to "pq_next()" in log message in pqact.c.
+
+    notifyme(1):
+        Corrected handling of "-l ..." option.
 
 6.13.2	2016-07-13T10:32:17-0600
     Logging:
