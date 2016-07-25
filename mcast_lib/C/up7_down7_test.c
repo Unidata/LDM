@@ -252,6 +252,9 @@ teardown(void)
         (void)pthread_mutex_destroy(&mutex);
     #endif
 
+    unlink(UP7_PQ_PATHNAME);
+    unlink(DOWN7_PQ_PATHNAME);
+
     return 0;
 }
 
