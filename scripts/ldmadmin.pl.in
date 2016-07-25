@@ -1743,17 +1743,24 @@ sub getLoad
 # Command for getting the number of connections to the LDM port (local, remote):
 sub getPortCount
 {
-    my($localCount) = 0;
-    my($remoteCount) = 0;
+    my($totalCount) = 0;
     open(FH, $netstat."|") or die "Can't fork() netstat(1): $!";
     while (<FH>) {
-	if (/ESTABLISHED/) {
-	    my(@fields) = split(/\s+/);
-	    $localCount++ if ($fields[3] =~ /:$port$/);
-	    $remoteCount++ if ($fields[4] =~ /:$port$/);
+	if (/ESTABLISHED/ && /:$port\W/) {
+	    totalCount++;
 	}
     }
     (close FH || !$!) or die "Can't close(): status=$?";
+    my($remoteCount) = 0;
+    open(FH, "uldbutil|") or die "Can't fork() uldbutil(1): $!";
+    while (<FH>) {
+        $remoteCount++;
+    }
+    (close FH || !$!) or die "Can't close(): status=$?";
+    my $localCount = $totalCount - $remoteCount;
+    if ($localCount < 0) {
+        $localCount = 0;
+    }
     return ($localCount, $remoteCount);
 }
 #
