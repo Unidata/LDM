@@ -1752,7 +1752,7 @@ sub getPortCount
     }
     (close FH || !$!) or die "Can't close(): status=$?";
     my($remoteCount) = 0;
-    open(FH, "uldbutil|") or die "Can't fork() uldbutil(1): $!";
+    open(FH, "uldbutil 2>/dev/null |") or die "Can't fork() uldbutil(1): $!";
     while (<FH>) {
         $remoteCount++;
     }

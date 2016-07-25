@@ -1,6 +1,8 @@
 6.13.4.1
-    ldmadmin(1):
+    ldmadmin(1) (getPortCount()):
         Added missing "$"-s to variable references.
+
+        Redirected standard error stream of uldbutil(1) to /dev/null.
 
 6.13.4.0	2016-07-25T13:37:55-0600
     ldmadmin(1):
