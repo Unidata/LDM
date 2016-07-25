@@ -1,3 +1,7 @@
+6.13.4.1
+    ldmadmin(1):
+        Added missing "$"-s to variable references.
+
 6.13.4.0	2016-07-25T13:37:55-0600
     ldmadmin(1):
         Made the computation of the number of LDM connections more robust to
