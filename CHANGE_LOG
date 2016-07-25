@@ -1,3 +1,11 @@
+6.13.4.0
+    ldmadmin(1):
+        Made the computation of the number of LDM connections more robust to
+        accommodate Solaris' netstat(1).
+
+    Multicast:
+        Ensured removal of test product-queues in up7_down7_test.c.
+
 6.13.3	2016-07-20T14:56:07-0600
     logging:
         Enhanced performance by making "log_level" volatile and having LOG_LOG()
