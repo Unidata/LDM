@@ -7,6 +7,9 @@
     pqcat(1):
         Added printing of product-class to starting-up message.
 
+    pqcopy(1):
+        Corrected usage-message and manual-page.
+
 6.13.4.1	2016-07-25T14:42:28-0600
     ldmadmin(1) (getPortCount()):
         Added missing "$"-s to variable references.

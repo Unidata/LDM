@@ -101,7 +101,7 @@ usage(const char *av0) /*  id string */
 "   -v           Verbose, tell me about each product\n"
 "   -x           Add debuging to diagnostic outout\n"
 "   inPath       Path name of source product-queue\n"
-"   outPath      Path name of destination product-queue\n",
+"   outPath      Path name of destination product-queue. Must exist.\n",
         av0, s_feedtypet(DEFAULT_FEEDTYPE), log_get_default_destination());
     exit(1);
 }
