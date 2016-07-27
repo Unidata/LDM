@@ -365,7 +365,12 @@ int main(int ac, char *av[])
 
         }
 
-        log_notice("Starting Up (%d)", getpgrp());
+        {
+            char buf[128];
+            (void)pc_format(&clss, buf, sizeof(buf));
+            buf[sizeof(buf)-1] = 0;
+            log_notice("Starting Up (%d): prod_class=%s", getpgrp(), buf);
+        }
 
         /*
          * register exit handler
