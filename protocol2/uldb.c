@@ -1526,11 +1526,11 @@ static uldb_Status sm_vetUpstreamLdm(
 
                     if (kill(entry_getPid(entry), SIGTERM)) {
                         log_warning(
-                                "Couldn't terminate obsolete upstream LDM %s",
+                                "Couldn't terminate redundant upstream LDM %s",
                                 buf);
                     }
                     else {
-                        log_notice("Terminated obsolete upstream LDM %s", buf);
+                        log_notice("Terminated redundant upstream LDM %s", buf);
                     }
                 }
                 else {
