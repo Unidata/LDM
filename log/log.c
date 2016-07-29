@@ -502,8 +502,11 @@ static bool is_level_enabled(
  */
 static inline int refresh_if_necessary(void)
 {
-    int status  = refresh_needed ? logi_set_destination() : 0;
-    refresh_needed = 0;
+    int status = 0;
+    if (refresh_needed) {
+        status = logi_set_destination();
+        refresh_needed = 0;
+    }
     return status;
 }
 
