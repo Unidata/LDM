@@ -456,7 +456,7 @@ static void test_sighup_log(void)
     status = rename(tmpPathname, tmpPathname1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    (void)raise(SIGHUP);
+    (void)raise(SIGUSR1);
 
     logMessages();
     n = numLines(tmpPathname);
@@ -473,7 +473,7 @@ static void test_sighup_log(void)
 static void signal_handler(
         const int sig)
 {
-    if (sig == SIGHUP)
+    if (sig == SIGUSR1)
         log_refresh();
 }
 
@@ -491,7 +491,7 @@ static void test_sighup_prog(void)
     (void) sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = SA_RESTART;
     sigact.sa_handler = signal_handler;
-    status = sigaction(SIGHUP, &sigact, &oldsigact);
+    status = sigaction(SIGUSR1, &sigact, &oldsigact);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     logMessages();
@@ -501,13 +501,13 @@ static void test_sighup_prog(void)
     status = rename(tmpPathname, tmpPathname1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    (void)raise(SIGHUP);
+    (void)raise(SIGUSR1);
 
     logMessages();
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
 
-    status = sigaction(SIGHUP, &oldsigact, NULL);
+    status = sigaction(SIGUSR1, &oldsigact, NULL);
     CU_ASSERT_EQUAL(status, 0);
 
     log_fini();

@@ -1,8 +1,19 @@
 6.13.4.2
+    logging (log.c):
+        Ensured that the "refresh_logging" flag is cleared if and only if the 
+        destination is refreshed to eliminate a potential race condition.
+        
+        Replaced the use of SIGHUP for refreshing logging with SIGUSR1.
+
     ldmd(1):
         Changed "obsolete" to "redundant" in the log message about terminating a
         previous upstream LDM whose subscription is a subset of the
         currently-subscribing downstream LDM.
+        
+        Changed the signal-mask for EXECed programs to ignore SIGUSR1 so that it
+        can be used to signal a logging refresh in programs that expect it yet
+        won't terminate programs that don't (e.g., the McIDAS product-decoding
+        programs).
 
     pqcat(1):
         Added printing of product-class to starting-up message.

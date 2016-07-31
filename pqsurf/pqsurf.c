@@ -402,9 +402,6 @@ signal_handler(int sig)
         (void) signal(sig, signal_handler);
 #endif
         switch(sig) {
-        case SIGHUP :
-                log_refresh();
-                return;
         case SIGINT :
                 intr = !0;
                 exit(0);
@@ -412,6 +409,7 @@ signal_handler(int sig)
                 done = !0;      
                 return;
         case SIGUSR1 :
+                log_refresh();
                 stats_req = !0;
                 return;
         case SIGUSR2 :
@@ -446,7 +444,6 @@ set_sigactions(void)
         sigact.sa_flags |= SA_RESTART;
 #endif
         sigact.sa_handler = signal_handler;
-        (void) sigaction(SIGHUP,  &sigact, NULL);
         (void) sigaction(SIGTERM, &sigact, NULL);
         (void) sigaction(SIGUSR1, &sigact, NULL);
         (void) sigaction(SIGUSR2, &sigact, NULL);
@@ -458,6 +455,17 @@ set_sigactions(void)
         sigact.sa_flags |= SA_INTERRUPT;
 #endif
         (void) sigaction(SIGINT, &sigact, NULL);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGUSR2);
+    (void)sigaddset(&sigset, SIGCHLD);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 

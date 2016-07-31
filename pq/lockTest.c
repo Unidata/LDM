@@ -240,7 +240,7 @@ startChildLocker(
          * Child process.
          */
         (void)fprintf(stderr, "%ld: Started\n", (long)getpid());
-        if (signal(SIGHUP, sigHandler) == SIG_ERR ||
+        if (signal(SIGUSR1, sigHandler) == SIG_ERR ||
                 signal(SIGTERM, sigHandler) == SIG_ERR ||
                 signal(SIGINT, sigHandler) == SIG_ERR) {
             (void)fprintf(stderr, "%ld: signal() failure: %s\n",

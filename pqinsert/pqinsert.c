@@ -107,13 +107,13 @@ signal_handler(
         (void) signal(sig, signal_handler);
 #endif
     switch(sig) {
-      case SIGHUP :
-         log_refresh();
-         return;
       case SIGINT :
          exit(1);
       case SIGTERM :
          done = 1;
+         return;
+      case SIGUSR1 :
+         log_refresh();
          return;
     }
 }
@@ -139,8 +139,8 @@ set_sigactions(void)
         sigact.sa_flags |= SA_RESTART;
 #endif
         sigact.sa_handler = signal_handler;
-        (void) sigaction(SIGHUP,  &sigact, NULL);
         (void) sigaction(SIGTERM, &sigact, NULL);
+        (void) sigaction(SIGUSR1, &sigact, NULL);
         /* Don't restart after interrupt */
         sigact.sa_flags = 0;
 #ifdef SA_INTERRUPT     /* SunOS 4.x */
@@ -149,13 +149,22 @@ set_sigactions(void)
         (void) sigaction(SIGINT, &sigact, NULL);
 #else
         
-        (void) signal(SIGHUP, SIG_IGN);
+        (void) signal(SIGUSR1, SIG_IGN);
         (void) signal(SIGALRM, SIG_IGN);
         (void) signal(SIGCHLD, SIG_IGN);
 
         (void) signal(SIGTERM, signal_handler);
         (void) signal(SIGINT, signal_handler);
 #endif
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGCHLD);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 

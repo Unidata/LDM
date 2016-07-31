@@ -165,7 +165,6 @@ signal_handler(int sig)
         switch(sig) {
         case SIGHUP :
                 hupped = 1;
-                log_refresh();
                 return;
         case SIGINT :
                 exit(0);
@@ -174,7 +173,7 @@ signal_handler(int sig)
                 done = 1;
                 return;
         case SIGUSR1 :
-                /* TODO? stats */
+                log_refresh();
                 return;
         case SIGUSR2 :
                 log_roll_level();
@@ -226,6 +225,18 @@ set_sigactions(void)
         sigact.sa_flags |= SA_INTERRUPT;
 #endif
         (void) sigaction(SIGINT, &sigact, NULL);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigaddset(&sigset, SIGXFSZ);
+    (void)sigaddset(&sigset, SIGHUP);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGUSR2);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 

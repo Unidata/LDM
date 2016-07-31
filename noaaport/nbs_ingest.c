@@ -224,32 +224,30 @@ static void signal_stats_thread(
 }
 
 /**
- * Signals the statistics thread to print statistics.
+ * Handles signals.
  *
- * @param[in] sig  `SIGUSR1`. Ignored.
+ * @param sig  Signal to handle
  */
-static void signal_print_stats(
+static void signal_handler(
         const int sig)
 {
-    log_assert(sig == SIGUSR1);
-    signal_stats_thread(STATS_THREAD_PRINT);
+    switch (sig) {
+        case SIGUSR1:
+            log_refresh();
+            signal_stats_thread(STATS_THREAD_PRINT);
+            break;
+        case SIGINT:
+        case SIGTERM:
+            signal_stats_thread(STATS_THREAD_TERMINATE);
+            (void)close(sock); // Closes input
+            break;
+        default:
+            log_error("Unhandled signal: %d", sig);
+    }
 }
 
 /**
- * Signals the program to terminate cleanly.
- *
- * @param[in] sig  `SIGTERM` or `SIGINT`. Ignored.
- */
-static void signal_terminate(
-        const int sig)
-{
-    log_assert(sig == SIGTERM || sig == SIGINT);
-    signal_stats_thread(STATS_THREAD_TERMINATE);
-    (void)close(sock); // Closes input
-}
-
-/**
- * Installs the signal handlers for this program.
+ * Installs the signal handler for this program.
  */
 static void install_signal_handlers(void)
 {
@@ -257,16 +255,21 @@ static void install_signal_handlers(void)
 
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = SA_RESTART;
+    sigact.sa_handler = signal_handler;
 
-    sigact.sa_handler = signal_print_stats;
-    int status = sigaction(SIGUSR1, &sigact, NULL);
+    int status = sigaction(SIGINT, &sigact, NULL);
     log_assert(status == 0);
-
-    sigact.sa_handler = signal_terminate;
     status = sigaction(SIGTERM, &sigact, NULL);
     log_assert(status == 0);
-    status = sigaction(SIGINT, &sigact, NULL);
+    status = sigaction(SIGUSR1, &sigact, NULL);
     log_assert(status == 0);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 /**
@@ -461,7 +464,8 @@ static bool execute()
  * If neither `-v`, nor `-x` is specified, then logging will be restricted to
  * levels ERROR, WARN, and NOTE.
  *
- * A `SIGUSR1` causes this program to log input statistics.
+ * A `SIGUSR1` causes this program to refresh logging (if configure(1) was
+ * executed without the "--with-ulog" option) and log input statistics.
  *
  * @retval 0 if successful.
  * @retval 1 if an error occurred. At least one error-message will be logged.

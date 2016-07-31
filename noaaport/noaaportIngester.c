@@ -320,7 +320,7 @@ static void usage(
 "If neither \"-n\", \"-v\", nor \"-x\" is specified, then only levels ERROR\n"
 "and WARN are logged.\n"
 "\n"
-"SIGUSR1 causes statistics to be unconditionally logged at level NOTE.\n"
+"SIGUSR1 refreshes logging and unconditionally logs statistics at level NOTE.\n"
 "SIGUSR2 rotates the logging level.\n",
         progName, PACKAGE_VERSION, copyright, progName, (unsigned long)npages,
         log_get_default_destination(), lpqGetQueuePath(),
@@ -361,7 +361,7 @@ sigusr1_handler(
 /**
  * Handles a signal.
  *
- * @param[in] sig  The signal to be handled. Should be SIGHUP, SIGTERM, or
+ * @param[in] sig  The signal to be handled. Should be SIGUSR1, SIGTERM, or
  *                 SIGUSR2.
  */
 static void signal_handler(
@@ -376,15 +376,15 @@ static void signal_handler(
 #endif
 
     switch (sig) {
-        case SIGHUP:
-            log_notice("SIGHUP received");
-            log_refresh();
-            break;
         case SIGTERM:
             log_notice("SIGTERM received");
             done = 1;
             if (fifo)
                 fifo_close(fifo); // will cause input-reader to terminate
+            break;
+        case SIGUSR1:
+            log_notice("SIGUSR1 received");
+            log_refresh();
             break;
         case SIGUSR2:
             log_notice("SIGUSR2 received");
@@ -418,6 +418,11 @@ set_sigusr1Action(
 #endif
 
     (void)sigaction(SIGUSR1, &sigact, NULL);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 /**
@@ -447,8 +452,18 @@ static void set_sigactions(void)
     /* Restart system calls for these */
     sigact.sa_flags |= SA_RESTART;
 #endif
-    (void)sigaction(SIGHUP,  &sigact, NULL);
+    (void)sigaction(SIGUSR1,  &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGCHLD);
+    (void)sigaddset(&sigset, SIGCONT);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGUSR2);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 /**

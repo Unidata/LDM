@@ -32,7 +32,7 @@
  *         - _priority_: DEBUG | INFO | NOTE | WARN | ERROR
  *         - _location_: _file_:_func()_:_line_
  *       - Example: 20160113T150106.734013Z noaaportIngester[26398] NOTE process_prod.c:process_prod():216 SDUS58 PACR 062008 /pN0RABC inserted
- *   - Enable log file rotation by refreshing destination upon SIGHUP reception
+ *   - Enable log file rotation by refreshing destination upon SIGUSR1 reception
  */
 #include <config.h>
 
@@ -96,17 +96,17 @@ static bool                  avoid_stderr;
  */
 static volatile sig_atomic_t refresh_needed;
 /**
- * The SIGHUP signal set.
+ * The SIGUSR1 signal set.
  */
-static sigset_t              hup_sigset;
+static sigset_t              usr1_sigset;
 /**
- * The SIGHUP action for this module.
+ * The SIGUSR1 action for this module.
  */
-static struct sigaction      hup_sigaction;
+static struct sigaction      usr1_sigaction;
 /**
- * The previous SIGHUP action when this module's SIGHUP action is registered.
+ * The previous SIGUSR1 action when this module's SIGUSR1 action is registered.
  */
-static struct sigaction      prev_hup_sigaction;
+static struct sigaction      prev_usr1_sigaction;
 /**
  * The signal mask of all signals.
  */
@@ -148,21 +148,21 @@ static void restoreSigs(
 }
 
 /**
- * Handles SIGHUP delivery. Sets variable `refresh_needed` and ensures that any
- * previously-registered SIGHUP handler is called.
+ * Handles SIGUSR1 delivery. Sets variable `refresh_needed` and ensures that any
+ * previously-registered SIGUSR1 handler is called.
  *
- * @param[in] sig  SIGHUP.
+ * @param[in] sig  SIGUSR1.
  */
-static void handle_sighup(
+static void handle_sigusr1(
         const int sig)
 {
     refresh_needed = 1;
-    if (prev_hup_sigaction.sa_handler != SIG_DFL &&
-            prev_hup_sigaction.sa_handler != SIG_IGN) {
-        (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
-        raise(SIGHUP);
-        (void)sigprocmask(SIG_UNBLOCK, &hup_sigset, NULL);
-        (void)sigaction(SIGHUP, &hup_sigaction, NULL);
+    if (prev_usr1_sigaction.sa_handler != SIG_DFL &&
+            prev_usr1_sigaction.sa_handler != SIG_IGN) {
+        (void)sigaction(SIGUSR1, &prev_usr1_sigaction, NULL);
+        raise(SIGUSR1);
+        (void)sigprocmask(SIG_UNBLOCK, &usr1_sigset, NULL);
+        (void)sigaction(SIGUSR1, &usr1_sigaction, NULL);
     }
 }
 
@@ -462,12 +462,12 @@ static int init(void)
     }
     else {
         (void)sigfillset(&all_sigset);
-        (void)sigemptyset(&hup_sigset);
-        (void)sigaddset(&hup_sigset, SIGHUP);
-        hup_sigaction.sa_mask = hup_sigset;
-        hup_sigaction.sa_flags = SA_RESTART;
-        hup_sigaction.sa_handler = handle_sighup;
-        (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
+        (void)sigemptyset(&usr1_sigset);
+        (void)sigaddset(&usr1_sigset, SIGUSR1);
+        usr1_sigaction.sa_mask = usr1_sigset;
+        usr1_sigaction.sa_flags = SA_RESTART;
+        usr1_sigaction.sa_handler = handle_sigusr1;
+        (void)sigaction(SIGUSR1, &usr1_sigaction, &prev_usr1_sigaction);
         status = mutex_init(&log_mutex, false, true);
         if (status)
             logl_internal(LOG_LEVEL_ERROR, "Couldn't initialize mutex: %s",
@@ -1227,7 +1227,7 @@ int log_fini_located(
     if (status == 0) {
         status = mutex_fini(&log_mutex);
         if (status == 0) {
-            (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+            (void)sigaction(SIGUSR1, &prev_usr1_sigaction, NULL);
             isInitialized = false;
         }
     }

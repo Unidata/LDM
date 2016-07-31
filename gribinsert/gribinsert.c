@@ -121,7 +121,6 @@ set_sigactions (void)
 
   /* Ignore these */
   sigact.sa_handler = SIG_IGN;
-  (void) sigaction (SIGPIPE, &sigact, NULL);
   (void) sigaction (SIGALRM, &sigact, NULL);
   (void) sigaction (SIGCHLD, &sigact, NULL);
 
@@ -142,7 +141,6 @@ set_sigactions (void)
 #else
 
   (void) signal (SIGHUP, SIG_IGN);
-  (void) signal (SIGPIPE, SIG_IGN);
   (void) signal (SIGALRM, SIG_IGN);
   (void) signal (SIGCHLD, SIG_IGN);
 
@@ -150,6 +148,14 @@ set_sigactions (void)
   (void) signal (SIGPIPE, signal_handler);
   (void) signal (SIGINT, signal_handler);
 #endif
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGCHLD);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 static int

@@ -156,8 +156,8 @@ static void signal_handler(
         int sig)
 {
     switch (sig) {
-    case SIGHUP:
-        log_debug("SIGHUP");
+    case SIGUSR1:
+        log_debug("SIGUSR1");
         log_refresh();
         return;
     case SIGINT:
@@ -181,7 +181,7 @@ setTermSigHandler(void)
     sigact.sa_handler = signal_handler;
 
     sigact.sa_flags = SA_RESTART;
-    (void)sigaction(SIGHUP, &sigact, NULL );
+    (void)sigaction(SIGUSR1, &sigact, NULL );
 
     sigact.sa_flags = 0;
     (void)sigaction(SIGINT, &sigact, NULL );
