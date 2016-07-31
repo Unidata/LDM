@@ -1,4 +1,4 @@
-6.13.4.2
+6.13.4.2	2016-07-31T12:17:32-0600
     logging (log.c):
         Ensured that the "refresh_logging" flag is cleared if and only if the 
         destination is refreshed to eliminate a potential race condition.
