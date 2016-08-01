@@ -1,4 +1,4 @@
-6.13.4.3
+6.13.4.3	2016-08-01T12:30:27-0600
     logging on an system built without configure(1)'s "--with-ulog" option
     (refresh_logging):
         Corrected the signal from SIGHUP to SIGUSR1.
