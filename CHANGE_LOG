@@ -1,19 +1,35 @@
+6.13.4.3
+    logging on an system built without configure(1)'s "--with-ulog" option
+    (refresh_logging):
+        Corrected the signal from SIGHUP to SIGUSR1.
+
+        Added use of command(1) to kill(1) command to avoid non-standard
+        kill(1)-s.
+
 6.13.4.2	2016-07-31T12:17:32-0600
-    logging (log.c):
+    logging:
         Ensured that the "refresh_logging" flag is cleared if and only if the 
         destination is refreshed to eliminate a potential race condition.
-        
-        Replaced the use of SIGHUP for refreshing logging with SIGUSR1.
+
+        For an LDM system built without configure(1)'s "--with-ulog" option,
+        changed the signal that the system uses to re-open log files from SIGHUP
+        to SIGUSR1 to follow more closely the semantics of these signals. 
+        (Re-opening a log file is necessary to support log file rotation.)
+        SIGUSR1 is also used by some LDM utilities to log performance
+        statistics; consequently, such statistics will appear at the start of a
+        rotated log files. The extant LDM utilities that log such statistics
+        are: dvbs_multicast(1), noaaportIngester(1), readnoaaport(1), pqcat(1),
+        pqcopy(1), pqing(1), pqsend(1), pqsurf(1), and rtstats(1).
 
     ldmd(1):
         Changed "obsolete" to "redundant" in the log message about terminating a
         previous upstream LDM whose subscription is a subset of the
         currently-subscribing downstream LDM.
-        
-        Changed the signal-mask for EXECed programs to ignore SIGUSR1 so that it
-        can be used to signal a logging refresh in programs that expect it yet
-        won't terminate programs that don't (e.g., the McIDAS product-decoding
-        programs).
+
+        Blocked delivery of the SIGUSR1 signal for EXEC-ed programs so that it
+        won't terminate programs that don't handle it (e.g., the McIDAS
+        product-decoding programs). Programs that do handle it must and do
+        explicitly unblock this signal.
 
     pqcat(1):
         Added printing of product-class to starting-up message.
