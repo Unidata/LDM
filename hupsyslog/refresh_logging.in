@@ -11,7 +11,9 @@ set -e
 pid_pathname="$LDMHOME"/ldmd.pid 
 if test -r "$pid_pathname"; then
     if pid=`cat "$pid_pathname"`; then
-        # NB: Solaris' kill(1) doesn't support the option "-s sig"
-        kill -USR1 -- -"$pid"
+        # NB:
+        #   - Solaris' kill(1) doesn't support option "-s sig"
+        #   - Using command(1) avoids shell built-in kill(1) that expects "%job"
+        command kill -USR1 -- -"$pid"
     fi
 fi
