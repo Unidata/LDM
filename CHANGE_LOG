@@ -1,25 +1,27 @@
-6.13.4.3	2016-08-01T12:30:27-0600
-    logging on an system built without configure(1)'s "--with-ulog" option
-    (refresh_logging):
-        Corrected the signal from SIGHUP to SIGUSR1.
+6.13.4
+    Logging:
+        log.c:
+            Ensured that the "refresh_logging" flag is cleared if and only if
+            the destination is refreshed to eliminate a potential race
+            condition.
 
-        Added use of command(1) to kill(1) command to avoid non-standard
-        kill(1)-s.
+        On a system built without configure(1)'s "--with-ulog" option:
+            refresh_logging(1):
+                Corrected the signal from SIGHUP to SIGUSR1.
 
-6.13.4.2	2016-07-31T12:17:32-0600
-    logging:
-        Ensured that the "refresh_logging" flag is cleared if and only if the 
-        destination is refreshed to eliminate a potential race condition.
+                Prefixed kill(1) command with command(1) to avoid non-standard
+                kill(1)-s (e.g., those that expect "%job").
 
-        For an LDM system built without configure(1)'s "--with-ulog" option,
-        changed the signal that the system uses to re-open log files from SIGHUP
-        to SIGUSR1 to follow more closely the semantics of these signals. 
-        (Re-opening a log file is necessary to support log file rotation.)
-        SIGUSR1 is also used by some LDM utilities to log performance
-        statistics; consequently, such statistics will appear at the start of a
-        rotated log files. The extant LDM utilities that log such statistics
-        are: dvbs_multicast(1), noaaportIngester(1), readnoaaport(1), pqcat(1),
-        pqcopy(1), pqing(1), pqsend(1), pqsurf(1), and rtstats(1).
+            log.c:
+                Changed the signal that the system uses to re-open log files
+                from SIGHUP to SIGUSR1 to follow more closely the semantics of
+                these signals. (Re-opening a log file is necessary to support
+                log file rotation.) SIGUSR1 is also used by some LDM utilities
+                to log performance statistics; consequently, such statistics
+                will appear at the start of a rotated log file. The extant LDM
+                utilities that log such statistics are: dvbs_multicast(1),
+                noaaportIngester(1), readnoaaport(1), pqcat(1), pqcopy(1),
+                pqing(1), pqsend(1), pqsurf(1), and rtstats(1).
 
     ldmd(1):
         Changed "obsolete" to "redundant" in the log message about terminating a
@@ -37,16 +39,10 @@
     pqcopy(1):
         Corrected usage-message and manual-page.
 
-6.13.4.1	2016-07-25T14:42:28-0600
-    ldmadmin(1) (getPortCount()):
-        Added missing "$"-s to variable references.
-
-        Redirected standard error stream of uldbutil(1) to /dev/null.
-
-6.13.4.0	2016-07-25T13:37:55-0600
     ldmadmin(1):
-        Fixed computation of the number of LDM connections on Solaris system by
-        making the algorithm more robust to variations in netstat(1) output.
+        Fixed computation of the number of LDM connections on a Solaris system
+        by making the algorithm more robust to variations in netstat(1) output
+        and by using uldbutil(1).
 
     Multicast:
         Ensured removal of test product-queues in up7_down7_test.c.
