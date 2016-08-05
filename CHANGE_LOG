@@ -1,4 +1,4 @@
-6.13.4
+6.13.4	2016-08-05T10:39:58-0600
     Logging:
         log.c:
             Ensured that the "refresh_logging" flag is cleared if and only if
