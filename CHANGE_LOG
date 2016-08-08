@@ -1,3 +1,8 @@
+6.13.5.1
+    ldmd(1):   
+        Added logging of received signals. In particular, SIGINT and SIGTERM
+        are logged at the notice level.
+
 6.13.4	2016-08-05T10:39:58-0600
     Logging:
         log.c:

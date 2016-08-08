@@ -299,24 +299,31 @@ static void signal_handler(
 #endif
     switch (sig) {
     case SIGINT:
+        log_notice("SIGINT received");
         exit(exit_status);
         /*NOTREACHED*/
     case SIGTERM:
+        log_notice("SIGTERM received");
         up6_close();
         req6_close();
         done = 1;
         return;
     case SIGUSR1:
+        log_info("SIGUSR1 received");
         log_refresh();
         return;
     case SIGUSR2:
+        log_info("SIGUSR2 received");
         log_roll_level();
         return;
     case SIGPIPE:
+        log_debug("SIGPIPE received");
         return;
     case SIGCHLD:
+        log_debug("SIGCHLD received");
         return;
     case SIGALRM:
+        log_debug("SIGALRM received");
         return;
     }
 }
