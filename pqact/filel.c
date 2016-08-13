@@ -669,6 +669,7 @@ typedef struct {
     void       (*action)(fl_entry*, int);
     const int    flag;
 } Option;
+static Option OPT_STRIPWMO    = {"removewmo", entry_setFlag,   FL_STRIPWMO};
 static Option OPT_CLOSE       = {"close",     entry_setFlag,   FL_CLOSE};
 static Option OPT_EDEX        = {"edex",      entry_setFlag,   FL_EDEX};
 static Option OPT_FLUSH       = {"flush",     entry_setFlag,   FL_FLUSH};
@@ -714,6 +715,262 @@ decodeOptions(
     return ac - argc;
 }
 
+/* -----------------------------------------------------------------------------
+ * Function Name
+ * 	getWmoOffset
+ *
+ * Format
+ * 	int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen)
+ *
+ * Arguments
+ * 	Type			Name		I/O		Description
+ * 	char *			buf		I		buffer to parse for WMO
+ * 	size_t			buflen		I		length of data in buffer
+ * 	size_t *		p_wmolen	O		length of wmo header
+ *
+ * Description
+ * 	Parse the wmo heading from buffer and load the appropriate prod
+ * 	info fields.  The following regular expressions will satisfy this
+ * 	parser.  Note this parser is not case sensative.
+ * 	The WMO format is supposed to be...
+ * 		TTAAii CCCC DDHHMM[ BBB]\r\r\n
+ * 		[NNNXXX\r\r\n]
+ *
+ * 	This parser is generous with the ii portion of the WMO and all spaces
+ * 	are optional.  The TTAAII, CCCC, and DDHHMM portions of the WMO are
+ * 	required followed by at least 1 <cr> or <lf> with no other unparsed
+ * 	intervening characters. The following quasi-grammar describe what
+ * 	is matched.
+ *
+ * 	WMO = "TTAAII CCCC DDHHMM [BBB] CRCRLF [NNNXXX CRCRLF]"
+ *
+ * 	TTAAII = "[A-Z]{4}[0-9]{0,1,2}" | "[A-Z]{4} [0-9]" | "[A-Z]{3}[0-9]{3} "
+ * 	CCCC = "[A-Z]{4}"
+ * 	DDHHMM = "[ 0-9][0-9]{3,5}"
+ * 	BBB = "[A-Z0-9]{0-3}"
+ * 	CRCRLF = "[\r\n]+"
+ * 	NNNXXX = "[A-Z0-9]{0,4-6}"
+ *
+ * 	Most of the WMO's that fail to be parsed seem to be missing the ii
+ * 	altogether or missing part or all of the timestamp (DDHHMM)
+ *
+ * Returns
+ * 	offset to WMO from buf[0]
+ * 	-1: otherwise
+ *
+ * -------------------------------------------------------------------------- */
+
+#define WMO_TTAAII_LEN		6
+#define WMO_CCCC_LEN		4
+#define WMO_DDHHMM_LEN		6
+#define WMO_DDHH_LEN		4
+#define WMO_BBB_LEN			3
+
+#define WMO_T1	0
+#define WMO_T2	1
+#define WMO_A1	2
+#define WMO_A2	3
+#define WMO_I1	4
+#define WMO_I2	5
+
+int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
+	char *p_wmo;
+	int i_bbb;
+	int spaces;
+	int	ttaaii_found = 0;
+	int	ddhhmm_found = 0;
+	int	crcrlf_found = 0;
+	int	bbb_found = 0;
+	int wmo_offset = -1;
+
+	*p_wmolen = 0;
+
+	for (p_wmo = buf; p_wmo + WMO_I2 + 1 < buf + buflen; p_wmo++) {
+		if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
+				&& isalpha(p_wmo[WMO_A1]) && isalpha(p_wmo[WMO_A2])) {
+			/* 'TTAAII ' */
+			if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
+					&& (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+				ttaaii_found = 1;
+				wmo_offset = p_wmo - buf;
+				p_wmo += WMO_I2 + 1;
+				break;
+			/* 'TTAAI C' */
+			} else if (isdigit(p_wmo[WMO_I1]) && isspace(p_wmo[WMO_I2])
+					&& (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+				ttaaii_found = 1;
+				wmo_offset = p_wmo - buf;
+				p_wmo += WMO_I1 + 1;
+				break;
+			/* 'TTAA I ' */
+			} else if (isspace(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
+					&& (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+				ttaaii_found = 1;
+				wmo_offset = p_wmo - buf;
+				p_wmo += WMO_I2 + 1;
+				break;
+			/* 'TTAAIC' */
+			} else if (isdigit(p_wmo[WMO_I1]) && isalpha(p_wmo[WMO_I2])) {
+				ttaaii_found = 1;
+				wmo_offset = p_wmo - buf;
+				p_wmo += WMO_I1 + 1;
+				break;
+			}
+		} else if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
+				&& isalpha(p_wmo[WMO_A1]) && isdigit(p_wmo[WMO_A2])) {
+			/* 'TTA#II ' */
+			if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
+					&& (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+				ttaaii_found = 1;
+				wmo_offset = p_wmo - buf;
+				p_wmo += WMO_I2 + 1;
+				break;
+			}
+		} else if (!strncmp(p_wmo, "\r\r\n", 3)) {
+			/* got to EOH with no TTAAII found, check TTAA case below */
+			break;
+		}
+	}
+
+	if (!ttaaii_found) {
+		/* look for TTAA CCCC DDHHMM */
+		for (p_wmo = buf; p_wmo + 9 < buf + buflen; p_wmo++) {
+			if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
+					&& isalpha(p_wmo[WMO_A1]) && isalpha(p_wmo[WMO_A2])
+					&& isspace(p_wmo[WMO_A2+1]) && isalpha(p_wmo[WMO_A2+2])
+					&& isalpha(p_wmo[WMO_A2+3]) && isalpha(p_wmo[WMO_A2+4])
+					&& isalpha(p_wmo[WMO_A2+5]) && isspace(p_wmo[WMO_A2+6])) {
+				ttaaii_found = 1;
+				wmo_offset = p_wmo - buf;
+				p_wmo += WMO_A2 + 1;
+				break;
+			} else if (!strncmp(p_wmo, "\r\r\n", 3)) {
+				/* got to EOH with no TTAA found, give up */
+				return -1;
+			}
+		}
+	}
+
+	/* skip spaces if present */
+	while (isspace(*p_wmo) && p_wmo < buf + buflen) {
+		p_wmo++;
+	}
+
+	if (p_wmo + WMO_CCCC_LEN > buf + buflen) {
+		return -1;
+	} else if (isalpha(*p_wmo) && isalnum(*(p_wmo+1))
+			&& isalpha(*(p_wmo+2)) && isalnum(*(p_wmo+3))) {
+		p_wmo += WMO_CCCC_LEN;
+	} else {
+		return -1;
+	}
+
+	/* skip spaces if present */
+	spaces = 0;
+	while (isspace(*p_wmo) && p_wmo < buf + buflen) {
+		p_wmo++;
+		spaces++;
+	}
+
+	/* case1: check for 6 digit date-time group */
+	if (p_wmo + 6 <= buf + buflen) {
+		if (isdigit(*p_wmo) && isdigit(*(p_wmo+1))
+				&& isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
+				&& isdigit(*(p_wmo+4)) && isdigit(*(p_wmo+5))) {
+			ddhhmm_found = 1;
+			p_wmo += 6;
+		}
+	}
+
+	/* case2: check for 4 digit date-time group */
+	if (!ddhhmm_found && p_wmo + 5 <= buf + buflen) {
+		if (isdigit(*p_wmo) && isdigit(*(p_wmo+1))
+				&& isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
+				&& isspace(*(p_wmo+4))) {
+			ddhhmm_found = 1;
+			p_wmo += 4;
+		}
+	}
+
+	/* case3: check for leading 0 in date-time group being a space */
+	if (!ddhhmm_found && p_wmo + 5 <= buf + buflen) {
+		if (spaces > 1 && isdigit(*p_wmo) && isdigit(*(p_wmo+1))
+				&& isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
+				&& isdigit(*(p_wmo+4))) {
+			ddhhmm_found = 1;
+			p_wmo += 5;
+		} else {
+			return -1;
+		}
+	}
+
+	/* skip potential trailing 'Z' on dddhhmm */
+	if (*p_wmo == 'Z') {
+		p_wmo++;
+	}
+
+	/* Everything past this point is gravy, we'll return the current
+	   length if we don't get the expected [bbb] crcrlf
+ 	 */
+
+	/* check if we have a <cr> and/or <lf>, parse bbb if present */
+	while (p_wmo < buf + buflen) {
+		if ((*p_wmo == '\r') || (*p_wmo == '\n')) {
+			crcrlf_found++;
+			p_wmo++;
+			if (crcrlf_found == 3) {
+				/* assume this is our complete cr-cr-lf */
+				break;
+			}
+		} else if (crcrlf_found) {
+			/* pre-mature end of crcrlf */
+			p_wmo--;
+			break;
+		} else if (isalpha(*p_wmo)) {
+			if (bbb_found) {
+				/* already have a bbb, give up here */
+				return wmo_offset;
+			}
+			for (i_bbb = 1;
+					p_wmo + i_bbb < buf + buflen && i_bbb < WMO_BBB_LEN;
+						i_bbb++) {
+				if (!isalpha(p_wmo[i_bbb])) {
+					break; /* out of bbb parse loop */
+				}
+			}
+			if (p_wmo + i_bbb < buf + buflen && isspace(p_wmo[i_bbb])) {
+				bbb_found = 1;
+				p_wmo += i_bbb;
+			} else {
+				/* bbb is too long or maybe not a bbb at all, give up */
+				return wmo_offset;
+			}
+		} else if (isspace(*p_wmo)) {
+			p_wmo++;
+		} else {
+			/* give up */
+			return wmo_offset;
+		}
+	}
+
+	/* update length to include bbb and crcrlf */
+	*p_wmolen = p_wmo - buf - wmo_offset;
+
+	return wmo_offset;
+}
+
+static void *skipWMO(char *data, size_t *sz) {
+	size_t		wmo_len;
+	int		wmo_offset;
+
+	if ((wmo_offset = getWmoOffset(data, *sz, &wmo_len)) > 0) {
+		data += wmo_offset;
+		*sz -= (wmo_offset + wmo_len);
+	} else {
+		return data;
+	}
+}
+
 /* Begin UNIXIO */
 static int str_cmp(
         fl_entry*             entry,
@@ -755,7 +1012,7 @@ static int unio_open(
     log_assert(*av[ac -1] != 0);
 
     unsigned nopt = decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP,
-            &OPT_METADATA, &OPT_LOG, &OPT_EDEX, &OPT_FLUSH, &OPT_CLOSE, NULL);
+            &OPT_METADATA, &OPT_LOG, &OPT_EDEX, &OPT_STRIPWMO, &OPT_FLUSH, &OPT_CLOSE, NULL);
     ac -= nopt;
     av += nopt;
 
@@ -861,6 +1118,13 @@ static int unio_put(
         const void *data,
         size_t sz)
 {
+    if (!sz)
+	return 0;
+
+    if (entry_isFlagSet(entry, FL_STRIPWMO)) {
+	data = skipWMO(data, &sz);
+    }
+
     if (sz) {
         TO_HEAD(entry);
         log_debug("%d", entry->handle.fd);
@@ -1185,7 +1449,7 @@ static int stdio_open(
     entry->handle.stream = NULL;
 
     unsigned nopt = decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP,
-            &OPT_LOG, &OPT_FLUSH, &OPT_CLOSE, NULL);
+            &OPT_LOG, &OPT_STRIPWMO, &OPT_FLUSH, &OPT_CLOSE, NULL);
     ac -= nopt;
     av += nopt;
 
@@ -1299,6 +1563,10 @@ static int stdio_put(
 {
     log_debug("%d", fileno(entry->handle.stream));
     TO_HEAD(entry);
+
+    if (entry_isFlagSet (entry, FL_STRIPWMO)) {
+		data = skipWMO(data, &sz);
+    }
 
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
 
@@ -1482,7 +1750,7 @@ static int pipe_open(
     entry_setFlag(entry, FL_NOTRANSIENT);
 
     unsigned nopt = decodeOptions(entry, ac, av, &OPT_TRANSIENT, &OPT_STRIP,
-            &OPT_METADATA, &OPT_NODATA, &OPT_FLUSH, &OPT_CLOSE, NULL);
+            &OPT_METADATA, &OPT_NODATA, &OPT_STRIPWMO, &OPT_FLUSH, &OPT_CLOSE, NULL);
     // ac -= nopt; // not used
     av += nopt;
 
@@ -1697,6 +1965,10 @@ static int pipe_put(
             status = 0;
         }
         else {
+	    if (entry_isFlagSet (entry, FL_STRIPWMO)) {
+			data = skipWMO(data, &sz);
+	    }
+
             status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo);
 
             if (status && status != EINTR) {
