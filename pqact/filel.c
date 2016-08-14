@@ -959,16 +959,17 @@ int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
 	return wmo_offset;
 }
 
-static void *skipWMO(char *data, size_t *sz) {
+static void *skipWMO(const void *data, size_t *sz) {
 	size_t		wmo_len;
 	int		wmo_offset;
+	char		*dptr = (char *) data;
 
-	if ((wmo_offset = getWmoOffset(data, *sz, &wmo_len)) > 0) {
-		data += wmo_offset;
+	if ((wmo_offset = getWmoOffset(dptr, *sz, &wmo_len)) > 0) {
+		dptr += wmo_offset;
 		*sz -= (wmo_offset + wmo_len);
-	} else {
-		return data;
 	}
+
+	return (void *) dptr;
 }
 
 /* Begin UNIXIO */
