@@ -902,7 +902,7 @@ static void *skipWMO (const void *data, size_t *sz) {
 	    isdigit(dptr[4]) && isdigit(dptr[5]) && isdigit(dptr[6]) &&
 	    !memcmp (&dptr[7], "\040\015\015\012", 4)))) {
 		dptr += SIZE_SBN_HDR;
-		log_debug("Skipping SBN header");
+		log_debug("Stripping LDM header/trailer");
 	}
 
 	if ((wmo_offset = getWmoOffset (dptr, *sz, &wmo_len)) >= 0) {
