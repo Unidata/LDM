@@ -876,10 +876,12 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 	}
 
 	/* Advance past NNNXXX, if found */
-	if (isalnum(p_wmo[0]) && isalnum(p_wmo[1]) && isalnum(p_wmo[2]) &&
-	    isalnum(p_wmo[3]) && isalnum(p_wmo[4]) && isalnum(p_wmo[5]) &&
-	    (p_wmo[6] == '\r') && (p_wmo[7] == '\r') && (p_wmo[8] == '\n')) {
-		p_wmo += 9;
+	if (p_wmo + 9 <= buf + buflen) {
+		if (isalnum(p_wmo[0]) && isalnum(p_wmo[1]) && isalnum(p_wmo[2]) &&
+		    isalnum(p_wmo[3]) && isalnum(p_wmo[4]) && isalnum(p_wmo[5]) &&
+		    (p_wmo[6] == '\r') && (p_wmo[7] == '\r') && (p_wmo[8] == '\n')) {
+			p_wmo += 9;
+		}
 	}
 
 	/* update length to include bbb and crcrlf */
@@ -894,8 +896,9 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 static void *skipWMO (const void *data, size_t *sz) {
 	size_t		wmo_len;
 	int		wmo_offset;
-	char		*dptr	= (char *) data;
-	size_t		isz	= *sz;
+	char		*dptr		= (char *) data;
+	size_t		isz		= *sz;
+	size_t		slen		= isz < 200 ? isz : 200;
 	char		hasLdmHdr;
 
 	if ((hasLdmHdr = (!memcmp (dptr, "\001\015\015\012", 4) &&
@@ -905,7 +908,7 @@ static void *skipWMO (const void *data, size_t *sz) {
 		log_debug("Stripping LDM header/trailer");
 	}
 
-	if ((wmo_offset = getWmoOffset (dptr, *sz, &wmo_len)) >= 0) {
+	if ((wmo_offset = getWmoOffset (dptr, slen, &wmo_len)) >= 0) {
 		dptr += (wmo_offset + wmo_len);
 		*sz -= (wmo_offset + wmo_len);
 		if (hasLdmHdr) {
