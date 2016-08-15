@@ -899,21 +899,18 @@ static void *skipWMO (const void *data, size_t *sz) {
 	char		*dptr		= (char *) data;
 	size_t		isz		= *sz;
 	size_t		slen		= isz < 200 ? isz : 200;
-	char		hasLdmHdr;
 
-	if ((hasLdmHdr = (!memcmp (dptr, "\001\015\015\012", 4) &&
+	if ((!memcmp (dptr, "\001\015\015\012", 4) &&
 	    isdigit(dptr[4]) && isdigit(dptr[5]) && isdigit(dptr[6]) &&
-	    !memcmp (&dptr[7], "\040\015\015\012", 4)))) {
+	    !memcmp (&dptr[7], "\040\015\015\012", 4))) {
 		dptr += SIZE_SBN_HDR;
+		*sz -= (SIZE_SBN_HDR + SIZE_SBN_TLR);
 		log_debug("Stripping LDM header/trailer");
 	}
 
 	if ((wmo_offset = getWmoOffset (dptr, slen, &wmo_len)) >= 0) {
 		dptr += (wmo_offset + wmo_len);
 		*sz -= (wmo_offset + wmo_len);
-		if (hasLdmHdr) {
-			*sz -= (SIZE_SBN_HDR + SIZE_SBN_TLR);
-		}
 
 		log_debug("Stripping WMO header at offset %d, length %d with initial product size %d and final product size %d",
 			wmo_offset, wmo_len, isz, *sz);
