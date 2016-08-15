@@ -731,7 +731,7 @@ decodeOptions(
  * Description
  * 	Parse the wmo heading from buffer and load the appropriate prod
  * 	info fields.  The following regular expressions will satisfy this
- * 	parser.  Note this parser is not case sensative.
+ * 	parser.  Note this parser is not case sensitive.
  * 	The WMO format is supposed to be...
  * 		TTAAii CCCC DDHHMM[ BBB]\r\r\n
  * 		[NNNXXX\r\r\n]
@@ -764,7 +764,7 @@ decodeOptions(
 #define WMO_CCCC_LEN		4
 #define WMO_DDHHMM_LEN		6
 #define WMO_DDHH_LEN		4
-#define WMO_BBB_LEN			3
+#define WMO_BBB_LEN		3
 
 #define WMO_T1	0
 #define WMO_T2	1
@@ -773,7 +773,7 @@ decodeOptions(
 #define WMO_I1	4
 #define WMO_I2	5
 
-int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
+int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 	char *p_wmo;
 	int i_bbb;
 	int spaces;
@@ -786,41 +786,11 @@ int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
 	*p_wmolen = 0;
 
 	for (p_wmo = buf; p_wmo + WMO_I2 + 1 < buf + buflen; p_wmo++) {
-		if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
-				&& isalpha(p_wmo[WMO_A1]) && isalpha(p_wmo[WMO_A2])) {
+		if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2]) &&
+		    isalpha(p_wmo[WMO_A1]) && isalpha(p_wmo[WMO_A2])) {
 			/* 'TTAAII ' */
-			if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
-					&& (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
-				ttaaii_found = 1;
-				wmo_offset = p_wmo - buf;
-				p_wmo += WMO_I2 + 1;
-				break;
-			/* 'TTAAI C' */
-			} else if (isdigit(p_wmo[WMO_I1]) && isspace(p_wmo[WMO_I2])
-					&& (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
-				ttaaii_found = 1;
-				wmo_offset = p_wmo - buf;
-				p_wmo += WMO_I1 + 1;
-				break;
-			/* 'TTAA I ' */
-			} else if (isspace(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
-					&& (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
-				ttaaii_found = 1;
-				wmo_offset = p_wmo - buf;
-				p_wmo += WMO_I2 + 1;
-				break;
-			/* 'TTAAIC' */
-			} else if (isdigit(p_wmo[WMO_I1]) && isalpha(p_wmo[WMO_I2])) {
-				ttaaii_found = 1;
-				wmo_offset = p_wmo - buf;
-				p_wmo += WMO_I1 + 1;
-				break;
-			}
-		} else if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
-				&& isalpha(p_wmo[WMO_A1]) && isdigit(p_wmo[WMO_A2])) {
-			/* 'TTA#II ' */
-			if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2])
-					&& (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+			if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2]) &&
+			   (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
 				ttaaii_found = 1;
 				wmo_offset = p_wmo - buf;
 				p_wmo += WMO_I2 + 1;
@@ -832,25 +802,6 @@ int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
 		}
 	}
 
-	if (!ttaaii_found) {
-		/* look for TTAA CCCC DDHHMM */
-		for (p_wmo = buf; p_wmo + 9 < buf + buflen; p_wmo++) {
-			if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2])
-					&& isalpha(p_wmo[WMO_A1]) && isalpha(p_wmo[WMO_A2])
-					&& isspace(p_wmo[WMO_A2+1]) && isalpha(p_wmo[WMO_A2+2])
-					&& isalpha(p_wmo[WMO_A2+3]) && isalpha(p_wmo[WMO_A2+4])
-					&& isalpha(p_wmo[WMO_A2+5]) && isspace(p_wmo[WMO_A2+6])) {
-				ttaaii_found = 1;
-				wmo_offset = p_wmo - buf;
-				p_wmo += WMO_A2 + 1;
-				break;
-			} else if (!strncmp(p_wmo, "\r\r\n", 3)) {
-				/* got to EOH with no TTAA found, give up */
-				return -1;
-			}
-		}
-	}
-
 	/* skip spaces if present */
 	while (isspace(*p_wmo) && p_wmo < buf + buflen) {
 		p_wmo++;
@@ -858,8 +809,8 @@ int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
 
 	if (p_wmo + WMO_CCCC_LEN > buf + buflen) {
 		return -1;
-	} else if (isalpha(*p_wmo) && isalnum(*(p_wmo+1))
-			&& isalpha(*(p_wmo+2)) && isalnum(*(p_wmo+3))) {
+	} else if (isalpha(*p_wmo) && isalnum(*(p_wmo+1)) &&
+		   isalpha(*(p_wmo+2)) && isalnum(*(p_wmo+3))) {
 		p_wmo += WMO_CCCC_LEN;
 	} else {
 		return -1;
@@ -874,39 +825,12 @@ int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
 
 	/* case1: check for 6 digit date-time group */
 	if (p_wmo + 6 <= buf + buflen) {
-		if (isdigit(*p_wmo) && isdigit(*(p_wmo+1))
-				&& isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
-				&& isdigit(*(p_wmo+4)) && isdigit(*(p_wmo+5))) {
+		if (isdigit(*p_wmo) && isdigit(*(p_wmo+1)) &&
+		    isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3)) &&
+		    isdigit(*(p_wmo+4)) && isdigit(*(p_wmo+5))) {
 			ddhhmm_found = 1;
 			p_wmo += 6;
 		}
-	}
-
-	/* case2: check for 4 digit date-time group */
-	if (!ddhhmm_found && p_wmo + 5 <= buf + buflen) {
-		if (isdigit(*p_wmo) && isdigit(*(p_wmo+1))
-				&& isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
-				&& isspace(*(p_wmo+4))) {
-			ddhhmm_found = 1;
-			p_wmo += 4;
-		}
-	}
-
-	/* case3: check for leading 0 in date-time group being a space */
-	if (!ddhhmm_found && p_wmo + 5 <= buf + buflen) {
-		if (spaces > 1 && isdigit(*p_wmo) && isdigit(*(p_wmo+1))
-				&& isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
-				&& isdigit(*(p_wmo+4))) {
-			ddhhmm_found = 1;
-			p_wmo += 5;
-		} else {
-			return -1;
-		}
-	}
-
-	/* skip potential trailing 'Z' on dddhhmm */
-	if (*p_wmo == 'Z') {
-		p_wmo++;
 	}
 
 	/* Everything past this point is gravy, we'll return the current
@@ -931,9 +855,7 @@ int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
 				/* already have a bbb, give up here */
 				return wmo_offset;
 			}
-			for (i_bbb = 1;
-					p_wmo + i_bbb < buf + buflen && i_bbb < WMO_BBB_LEN;
-						i_bbb++) {
+			for (i_bbb = 1;	p_wmo + i_bbb < buf + buflen && i_bbb < WMO_BBB_LEN; i_bbb++) {
 				if (!isalpha(p_wmo[i_bbb])) {
 					break; /* out of bbb parse loop */
 				}
@@ -953,20 +875,47 @@ int getWmoOffset(char *buf, size_t buflen, size_t *p_wmolen) {
 		}
 	}
 
+	/* Advance past NNNXXX, if found */
+	if (isalnum(p_wmo[0]) && isalnum(p_wmo[1]) && isalnum(p_wmo[2]) &&
+	    isalnum(p_wmo[3]) && isalnum(p_wmo[4]) && isalnum(p_wmo[5]) &&
+	    (p_wmo[6] == '\r') && (p_wmo[7] == '\r') && (p_wmo[8] == '\n')) {
+		p_wmo += 9;
+	}
+
 	/* update length to include bbb and crcrlf */
 	*p_wmolen = p_wmo - buf - wmo_offset;
 
 	return wmo_offset;
 }
 
-static void *skipWMO(const void *data, size_t *sz) {
+#define SIZE_SBN_HDR	11
+#define SIZE_SBN_TLR	4
+
+static void *skipWMO (const void *data, size_t *sz) {
 	size_t		wmo_len;
 	int		wmo_offset;
-	char		*dptr = (char *) data;
+	char		*dptr	= (char *) data;
+	size_t		isz	= *sz;
+	char		hasLdmHdr;
 
-	if ((wmo_offset = getWmoOffset(dptr, *sz, &wmo_len)) > 0) {
-		dptr += wmo_offset;
+	if ((hasLdmHdr = (!memcmp (dptr, "\001\015\015\012", 4) &&
+	    isdigit(dptr[4]) && isdigit(dptr[5]) && isdigit(dptr[6]) &&
+	    !memcmp (&dptr[7], "\040\015\015\012", 4)))) {
+		dptr += SIZE_SBN_HDR;
+		log_debug("Skipping SBN header");
+	}
+
+	if ((wmo_offset = getWmoOffset (dptr, *sz, &wmo_len)) >= 0) {
+		dptr += (wmo_offset + wmo_len);
 		*sz -= (wmo_offset + wmo_len);
+		if (hasLdmHdr) {
+			*sz -= (SIZE_SBN_HDR + SIZE_SBN_TLR);
+		}
+
+		log_debug("Stripping WMO header at offset %d, length %d with initial product size %d and final product size %d",
+			wmo_offset, wmo_len, isz, *sz);
+	} else {
+		log_debug("WMO header not found in product with length %d", *sz);
 	}
 
 	return (void *) dptr;
