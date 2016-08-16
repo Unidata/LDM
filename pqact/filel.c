@@ -900,6 +900,10 @@ static void *skipWMO (const void *data, size_t *sz) {
 	size_t		isz		= *sz;
 	size_t		slen		= isz < 200 ? isz : 200;
 
+	if (*sz < 21) {
+		return dptr;
+	}
+
 	if ((!memcmp (dptr, "\001\015\015\012", 4) &&
 	    isdigit(dptr[4]) && isdigit(dptr[5]) && isdigit(dptr[6]) &&
 	    !memcmp (&dptr[7], "\040\015\015\012", 4))) {
@@ -1068,16 +1072,9 @@ static int unio_put(
         const void *data,
         size_t sz)
 {
-    if (!sz)
-	return 0;
-
-    if (entry_isFlagSet(entry, FL_STRIPWMO)) {
-	data = skipWMO(data, &sz);
-    }
-
     if (sz) {
         TO_HEAD(entry);
-        log_debug("%d", entry->handle.fd);
+        log_debug("handle: %d size: %d", entry->handle.fd, sz);
 
         do {
             ssize_t nwrote = write(entry->handle.fd, data, sz);
@@ -1271,8 +1268,9 @@ int unio_prodput(
         const void*                   ignored,
         const size_t                  also_ignored)
 {
-    int status = -1; /* failure */
-    fl_entry* entry = fl_getEntry(UNIXIO, argc, argv, NULL);
+    int		status = -1; /* failure */
+    fl_entry	*entry = fl_getEntry(UNIXIO, argc, argv, NULL);
+    char	must_free_data = 0;
 
     log_debug("%d %s", entry == NULL ? -1 : entry->handle.fd,
     prodp->info.ident);
@@ -1302,10 +1300,14 @@ int unio_prodput(
         }
 
         size_t sz = prodp->info.sz;
-        void*  data;
+        void*  data = prodp->data;
+
+        if (entry_isFlagSet (entry, FL_STRIPWMO)) {
+            data = skipWMO (prodp->data, &sz);
+        }
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
-            data = dupstrip(prodp->data, sz, &sz);
+            data = dupstrip(data, sz, &sz);
             if (data == NULL) {
                 log_add("Couldn't strip control-characters out of product "
                         "\"%s\"", prodp->info.ident);
@@ -1313,10 +1315,10 @@ int unio_prodput(
             }
             else {
                 status = 0;
+                must_free_data = 1;
             }
         }
         else {
-            data = prodp->data;
             status = 0;
         }
 
@@ -1357,7 +1359,7 @@ int unio_prodput(
                 }
             } /* data written */
 
-            if (data != prodp->data)
+            if (must_free_data)
                 free(data);
         } /* data != NULL */
 
@@ -1514,10 +1516,6 @@ static int stdio_put(
     log_debug("%d", fileno(entry->handle.stream));
     TO_HEAD(entry);
 
-    if (entry_isFlagSet (entry, FL_STRIPWMO)) {
-		data = skipWMO(data, &sz);
-    }
-
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
 
     if (nwrote != sz) {
@@ -1545,17 +1543,32 @@ int stdio_prodput(
         const void* const restrict    ignored,
         const size_t                  also_ignored)
 {
-    int status = -1; /* failure */
-    fl_entry* entry = fl_getEntry(STDIO, argc, argv, NULL);
+    int		status = -1; /* failure */
+    fl_entry*	entry = fl_getEntry(STDIO, argc, argv, NULL);
+    char	must_free_data = 0;
 
     log_debug("%d %s",
             entry == NULL ? -1 : fileno(entry->handle.stream), prodp->info.ident);
 
     if (entry != NULL ) {
-        size_t sz = prodp->info.sz;
-        void* data =
-                (entry_isFlagSet(entry, FL_STRIP)) ?
-                        dupstrip(prodp->data, prodp->info.sz, &sz) : prodp->data;
+        size_t	sz = prodp->info.sz;
+        void	*data = prodp->data;
+
+        if (entry_isFlagSet (entry, FL_STRIPWMO)) {
+            data = skipWMO (data, &sz);
+        }
+
+        if (entry_isFlagSet(entry, FL_STRIP)) {
+            data = dupstrip(data, sz, &sz);
+            if (data == NULL) {
+        	log_add("Couldn't strip control-characters out of product "
+                        "\"%s\"", prodp->info.ident);
+                status = -1;
+            } else {
+                status = 0;
+                must_free_data = 1;
+            }
+        }
 
         if (data != NULL ) {
             if (entry_isFlagSet(entry, FL_OVERWRITE)) {
@@ -1582,7 +1595,7 @@ int stdio_prodput(
                                     log_is_enabled_debug));
             } /* data written */
 
-            if (data != prodp->data)
+            if (must_free_data)
                 free(data);
         } /* data != NULL */
 
@@ -1915,10 +1928,6 @@ static int pipe_put(
             status = 0;
         }
         else {
-	    if (entry_isFlagSet (entry, FL_STRIPWMO)) {
-			data = skipWMO(data, &sz);
-	    }
-
             status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo);
 
             if (status && status != EINTR) {
@@ -2134,10 +2143,11 @@ int pipe_prodput(
         const void* const restrict    ignored,
         const size_t                  also_ignored)
 {
-    int       status;
-    size_t    sz = prodp->info.sz;
-    bool      isNew;
-    fl_entry* entry = fl_getEntry(PIPE, argc, argv, &isNew);
+    int		status;
+    size_t	sz = prodp->info.sz;
+    bool	isNew;
+    fl_entry*	entry = fl_getEntry(PIPE, argc, argv, &isNew);
+    char	must_free_data = 0;
 
     if (entry == NULL ) {
         log_add("Couldn't get entry for product \"%s\"", prodp->info.ident);
@@ -2148,22 +2158,22 @@ int pipe_prodput(
                 entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                 prodp->info.ident);
 
-        void *data;
+        void	*data = prodp->data;
+
+        if (entry_isFlagSet (entry, FL_STRIPWMO)) {
+            data = skipWMO (data, &sz);
+        }
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
-            data = dupstrip(prodp->data, prodp->info.sz, &sz);
+            data = dupstrip(data, sz, &sz);
             if (data == NULL) {
                 log_add("Couldn't strip control-characters out of product "
                         "\"%s\"", prodp->info.ident);
                 status = -1;
-            }
-            else {
+            } else {
                 status = 0;
+                must_free_data = 1;
             }
-        }
-        else {
-            data = prodp->data;
-            status = 0;
         }
 
         if (0 == status) {
@@ -2201,7 +2211,7 @@ int pipe_prodput(
                             entry->path);
             }
 
-            if (data != prodp->data)
+            if (must_free_data)
                 free(data);
         }       // `data` possibly allocated
 
