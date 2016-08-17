@@ -890,17 +890,19 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 	return wmo_offset;
 }
 
-#define SIZE_SBN_HDR	11
-#define SIZE_SBN_TLR	4
+#define SIZE_SBN_HDR		11
+#define SIZE_SBN_TLR		4
+#define CHECK_DEPTH		200
+#define MIN_PRODUCT_SIZE	21
 
 static void *skipWMO (const void *data, size_t *sz) {
 	size_t		wmo_len;
 	int		wmo_offset;
 	char		*dptr		= (char *) data;
 	size_t		isz		= *sz;
-	size_t		slen		= isz < 200 ? isz : 200;
+	size_t		slen		= isz < CHECK_DEPTH ? isz : CHECK_DEPTH;
 
-	if (*sz < 21) {
+	if (*sz < MIN_PRODUCT_SIZE) {
 		return dptr;
 	}
 
