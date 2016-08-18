@@ -890,12 +890,39 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 	return wmo_offset;
 }
 
-#define SIZE_SBN_HDR		11
-#define SIZE_SBN_TLR		4
-#define CHECK_DEPTH		200
-#define MIN_PRODUCT_SIZE	21
 
-static void *skipWMO (const void *data, size_t *sz) {
+/* -----------------------------------------------------------------------------
+ * Function Name
+ * 	stripHeaders
+ *
+ * Format
+ * 	static void *stripHeaders (const void *data, size_t *sz)
+ *
+ * Arguments
+ * 	Type			Name		I/O		Description
+ * 	const void *		data		I		pointer to product in memory
+ * 	size_t			sz		I/O		product size in bytes - will
+ * 								be updated if headers are found
+ *
+ * Description
+ * 	Finds LDM and WMO headers in a product if it exists within the first 200 bytes.
+ * 	Adjusts the product size 'sz' to account for any headers found.  Returns a
+ * 	pointer to the product advanced past the headers, or the original address if
+ * 	a header isn't found.  This function is called if '-removewmo' option is provided
+ * 	for a FILE, STDIOFILE, or PIPE action.  This function call getWmoOffset() to find
+ * 	a WMO header.
+ *
+ * Returns
+ * 	Pointer to start of actual product data past any headers found.
+ *
+ * -------------------------------------------------------------------------- */
+
+#define SIZE_SBN_HDR		11	/* noaaportIngester adds a header and trailer to products - header is 11 bytes */
+#define SIZE_SBN_TLR		4	/* trailer is 4 bytes - if there is a header, there will also be a trailer */
+#define CHECK_DEPTH		200	/* This is how far into each product to look for a WMO header */
+#define MIN_PRODUCT_SIZE	21	/* Ignore any files smaller than this since they are too small to contain a WMO header */
+
+static void *stripHeaders (const void *data, size_t *sz) {
 	size_t		wmo_len;
 	int		wmo_offset;
 	char		*dptr		= (char *) data;
@@ -1305,7 +1332,7 @@ int unio_prodput(
         void*  data = prodp->data;
 
         if (entry_isFlagSet (entry, FL_STRIPWMO)) {
-            data = skipWMO (prodp->data, &sz);
+            data = stripHeaders (prodp->data, &sz);
         }
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
@@ -1557,7 +1584,7 @@ int stdio_prodput(
         void	*data = prodp->data;
 
         if (entry_isFlagSet (entry, FL_STRIPWMO)) {
-            data = skipWMO (data, &sz);
+            data = stripHeaders (data, &sz);
         }
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
@@ -2163,7 +2190,7 @@ int pipe_prodput(
         void	*data = prodp->data;
 
         if (entry_isFlagSet (entry, FL_STRIPWMO)) {
-            data = skipWMO (data, &sz);
+            data = stripHeaders (data, &sz);
         }
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
