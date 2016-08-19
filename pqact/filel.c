@@ -905,12 +905,10 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
  * 								be updated if headers are found
  *
  * Description
- * 	Finds LDM and WMO headers in a product if it exists within the first 200 bytes.
- * 	Adjusts the product size 'sz' to account for any headers found.  Returns a
- * 	pointer to the product advanced past the headers, or the original address if
- * 	a header isn't found.  This function is called if '-removewmo' option is provided
- * 	for a FILE, STDIOFILE, or PIPE action.  This function call getWmoOffset() to find
- * 	a WMO header.
+ * 	Finds LDM and WMO headers in a product if either exists within the first 100 bytes.
+ * 	Adjusts the product size 'sz' to account for any headers found.  Returns a pointer
+ * 	to the beginning of the product data.  This function calls getWmoOffset() to find a
+ * 	WMO header, its offset, and length.
  *
  * Returns
  * 	Pointer to start of actual product data past any headers found.
@@ -919,7 +917,7 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 
 #define SIZE_SBN_HDR		11	/* noaaportIngester adds a header and trailer to products - header is 11 bytes */
 #define SIZE_SBN_TLR		4	/* trailer is 4 bytes - if there is a header, there will also be a trailer */
-#define CHECK_DEPTH		200	/* This is how far into each product to look for a WMO header */
+#define CHECK_DEPTH		100	/* This is how far into each product to look for a WMO header */
 #define MIN_PRODUCT_SIZE	21	/* Ignore any files smaller than this since they are too small to contain a WMO header */
 
 static void *stripHeaders (const void *data, size_t *sz) {
@@ -929,8 +927,12 @@ static void *stripHeaders (const void *data, size_t *sz) {
 	size_t		isz		= *sz;
 	size_t		slen		= isz < CHECK_DEPTH ? isz : CHECK_DEPTH;
 
-	if (*sz < MIN_PRODUCT_SIZE) {
+	if (*sz < MIN_PRODUCT_SIZE) {	/* Don't check for a header in a product that's smaller than the minimum header size */
 		return dptr;
+	}
+
+	if (slen < *sz) {	/* Don't check beyond the end of the product */
+		slen = *sz;
 	}
 
 	if ((!memcmp (dptr, "\001\015\015\012", 4) &&
