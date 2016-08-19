@@ -161,13 +161,11 @@ pal_line(char buf[],
 again1:
         cp = fgets(buf, bufsize, fp);
         if(cp == NULL) return -1;
-        if(*cp == '#' || *cp == '\n')
-        {
+        if(*cp == '#') {
                 linenumber++;
-                goto again1;    /* skip comments or blank lines */
+                goto again1;    /* skip comments */
         }
         len = (int) strlen(buf);
-        incr++;
 
         cp = &buf[len-1];
         if(*cp != '\n' && !feof(fp)) {
@@ -175,15 +173,13 @@ again1:
                 return -2;
         }
         /* get rid of trailing white space */
-        for(; cp >= buf; cp--, len--)
-        {
-                if(!isspace(*cp))
-                {
-                        break;
-                }
-                /* else */
+        for(; len && isspace(*cp); cp--, len--)
                 *cp = 0;
+        if (len == 0) {
+                linenumber++;
+                goto again1;    /* skip blank lines */
         }
+        incr++;
 
 again2:
         ch = getc(fp);

@@ -2,6 +2,10 @@
     ldmd(1):   
         Added logging of received signals. In particular, SIGINT and SIGTERM
         are logged at the notice level.
+        
+    pqact(1):
+        Corrected handling of blank but non-empty lines in configuration-file.
+        Before, they would terminate parsing of the configuration-file.
 
 6.13.4	2016-08-05T10:39:58-0600
     Logging:
