@@ -2174,7 +2174,7 @@ int pipe_prodput(
         const void* const restrict    ignored,
         const size_t                  also_ignored)
 {
-    int		status;
+    int		status = 0;
     size_t	sz = prodp->info.sz;
     bool	isNew;
     fl_entry*	entry = fl_getEntry(PIPE, argc, argv, &isNew);
