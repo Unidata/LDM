@@ -26,6 +26,7 @@
 #include "atofeedt.h"
 #include "ldm_config_file.h"
 #include "error.h"
+#include "ldmfork.h"
 #include "log.h"
 #include "RegularExpressions.h"
 
@@ -238,6 +239,7 @@ scannerPush(
 	    log_syserr("Couldn't open input-file \"%s\"", entry->path);
 	}
 	else {
+	    (void)ensure_close_on_exec(fileno(entry->file));
 	    entry->buf = yy_create_buffer(entry->file, YY_BUF_SIZE);
 
 	    if (entry->buf == NULL) {

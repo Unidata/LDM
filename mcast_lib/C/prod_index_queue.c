@@ -28,7 +28,7 @@
 typedef struct entry {
     struct entry*  prev;   ///< points to the previous entry towards the head
     struct entry*  next;   ///< points to the next entry towards the tail
-    VcmtpProdIndex iProd;  ///< index of the product
+    FmtpProdIndex iProd;  ///< index of the product
 } Entry;
 
 /**
@@ -41,7 +41,7 @@ typedef struct entry {
  */
 static Entry*
 entry_new(
-    const VcmtpProdIndex iProd)
+    const FmtpProdIndex iProd)
 {
     Entry* entry = log_malloc(sizeof(Entry), "product-index queue-entry");
 
@@ -71,7 +71,7 @@ entry_free(
  * @param[in] entry  Pointer to the entry.
  * @return           The product-index of the entry.
  */
-static inline VcmtpProdIndex
+static inline FmtpProdIndex
 entry_getProductIndex(
     const Entry* const entry)
 {
@@ -356,7 +356,7 @@ piq_free(
 int
 piq_add(
     ProdIndexQueue* const fiq,
-    const VcmtpProdIndex  iProd)
+    const FmtpProdIndex  iProd)
 {
     Entry* entry = entry_new(iProd);
     int    status;
@@ -389,7 +389,7 @@ piq_add(
 int
 piq_peekWait(
     ProdIndexQueue* const fiq,
-    VcmtpProdIndex* const iProd)
+    FmtpProdIndex* const iProd)
 {
     int    status;
     Entry* entry;
@@ -417,7 +417,7 @@ piq_peekWait(
 int
 piq_removeNoWait(
     ProdIndexQueue* const fiq,
-    VcmtpProdIndex* const iProd)
+    FmtpProdIndex* const iProd)
 {
     lock(fiq);
 
@@ -451,7 +451,7 @@ piq_removeNoWait(
 int
 piq_peekNoWait(
     ProdIndexQueue* const    fiq,
-    VcmtpProdIndex* const iProd)
+    FmtpProdIndex* const iProd)
 {
     lock(fiq);
 
@@ -491,7 +491,7 @@ piq_count(
 }
 
 /**
- * Cancels the operation of a VCMTP product-index queue. Idempotent.
+ * Cancels the operation of a FMTP product-index queue. Idempotent.
  *
  * @param[in] fiq     Pointer to the queue to be canceled.
  * @retval    0       Success.

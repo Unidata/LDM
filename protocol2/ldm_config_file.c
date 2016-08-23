@@ -2255,25 +2255,6 @@ proc_free(Process *proc)
 
 
 static int
-close_rest(int bottom)
-{
-        static long open_max = 0; /* number of descriptors */
-        int ii;
-        if(!open_max)
-        {
-#ifdef _SC_OPEN_MAX
-                open_max = sysconf(_SC_OPEN_MAX);
-#else
-                open_max = 32 ; /* punt */
-#endif
-        }
-        for(ii = bottom; (long)ii < open_max ; ii++)
-                (void)close(ii) ;
-        return ii ;
-}
-
-
-static int
 proc_exec(Process *proc)
 {
         log_assert(proc->pid == -1);
@@ -2298,56 +2279,29 @@ proc_exec(Process *proc)
                         sigact.sa_handler = SIG_DFL;
 
                         (void) sigaction(SIGPIPE, &sigact, NULL);
-                        (void) sigaction(SIGHUP, &sigact, NULL);
                         (void) sigaction(SIGUSR1, &sigact, NULL);
                         (void) sigaction(SIGUSR2, &sigact, NULL);
                         (void) sigaction(SIGCHLD, &sigact, NULL);
                         (void) sigaction(SIGALRM, &sigact, NULL);
-                        (void) sigaction(SIGINT, &sigact, NULL);
+                        (void) sigaction(SIGINT,  &sigact, NULL);
                         (void) sigaction(SIGTERM, &sigact, NULL);
                 }
+                /*
+                 * Block SIGUSR1 because it's sent to the LDM process-group in
+                 * order to refresh logging (i.e., enable log file rotation) and
+                 * would, otherwise, terminate processes that don't handle it
+                 * (e.g., the McIDAS product-decoding system).
+                 */
+                {
+                    sigset_t sigset;
+                    (void)sigemptyset(&sigset);
+                    (void)sigaddset(&sigset, SIGUSR1);
+                    (void)sigprocmask(SIG_BLOCK, &sigset, NULL);
+                }
 
-                /* Set up fd 0,1 */
-                (void)close(0);
-                {
-                        int fd = open("/dev/null", O_RDONLY);
-                        if(fd > 0)
-                        {
-                                (void) dup2(fd, 0);
-                                (void) close(fd);
-                        }
-                }
-                (void)close(1);
-                {
-                        int fd = open("/dev/console", O_WRONLY);
-                        if(fd < 0)
-                                fd = open("/dev/null", O_WRONLY);
-                        if(fd > 1)
-                        {
-                                (void) dup2(fd, 1);
-                                (void) close(fd);
-                        }
-                }
-                if(strcmp(log_get_destination(), "") == 0)
-                {
-                        // Logging to system logging daemon
-                        (void)close(2);
-                        {
-                                int fd = open("/dev/console", O_WRONLY);
-                                if(fd < 0)
-                                        fd = open("/dev/null", O_WRONLY);
-                                if(fd > 2)
-                                {
-                                        (void) dup2(fd, 2);
-                                        (void) close(fd);
-                                }
-                        }
-                } /* else, the logFd is stderr, and that's ok */
-                close_rest(3);
                 endpriv();
-                log_fini();
-                (void) execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
-                (void)log_reinit();
+                (void)execvp(proc->wrdexp.we_wordv[0],
+                        proc->wrdexp.we_wordv);
                 log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
                         proc->wrdexp.we_wordv[0], getenv("PATH"));
                 _exit(127) ;

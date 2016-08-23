@@ -3,7 +3,6 @@ data_prod.h
 forn.h
 globals.h
 *.i
-ldmfork.h
 LdmProxy.h
 test_data_prod
 testuldb
@@ -11,3 +10,5 @@ timer.h
 .Tpo
 uldb.h
 ldmprint_test
+/ldmfork_test
+/timestamp_test

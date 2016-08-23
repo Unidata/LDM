@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 1983 Regents of the University of California.
  * All rights reserved.
  *
@@ -31,6 +31,13 @@
  * SUCH DAMAGE.
  */
 
+/**
+ *  ULOGGER -- command line interface to log(3)
+ *
+ *  This program reads messages from an input and logs them via the log(3)
+ *  library.
+ */
+
 #include <config.h>
 #include <errno.h>
 #include <stdio.h>
@@ -39,36 +46,28 @@
 #include <unistd.h> /* getlogin() */
 #include <string.h>
 #include <strings.h>
-#define SYSLOG_NAMES
 #include "log.h"
 
-#ifdef SYSLOG_NAMES
-#if !defined(INTERNAL_NOPRI)
-#define INTERNAL_NOPRI  0x10    /* the "no priority" priority */
-                                /* mark "facility" */
-#define INTERNAL_MARK   LOG_MAKEPRI(LOG_NFACILITIES, 0)
-typedef struct _code {
-        char    *c_name;
-        int     c_val;
-} CODE;
+typedef struct {
+        const char* c_name;
+        const int   c_val;
+} code_t;
 
-CODE prioritynames[] = {
-        "alert",        LOG_LEVEL_ALERT,
-        "crit",         LOG_LEVEL_CRIT,
-        "debug",        LOG_LEVEL_DEBUG,
-        "emerg",        LOG_LEVEL_EMERG,
-        "err",          LOG_LEVEL_ERROR,
-        "error",        LOG_LEVEL_ERROR,                /* DEPRECATED */
-        "info",         LOG_LEVEL_INFO,
-        "none",         INTERNAL_NOPRI,         /* INTERNAL */
-        "notice",       LOG_LEVEL_NOTICE,
-        "panic",        LOG_LEVEL_EMERG,              /* DEPRECATED */
-        "warn",         LOG_LEVEL_WARNING,            /* DEPRECATED */
-        "warning",      LOG_LEVEL_WARNING,
-        NULL,           -1,
-};
+static const code_t log_levels[] = {
+        {"alert",        LOG_LEVEL_ALERT},
+        {"crit",         LOG_LEVEL_CRIT},
+        {"debug",        LOG_LEVEL_DEBUG},
+        {"emerg",        LOG_LEVEL_EMERG},
+        {"err",          LOG_LEVEL_ERROR},
+        {"error",        LOG_LEVEL_ERROR},   // DEPRECATED
+        {"info",         LOG_LEVEL_INFO},
+        {"notice",       LOG_LEVEL_NOTICE},
+        {"panic",        LOG_LEVEL_EMERG},   // DEPRECATED
+        {"warn",         LOG_LEVEL_WARNING}, // DEPRECATED
+        {"warning",      LOG_LEVEL_WARNING},
+        {NULL,           -1}};
 
-CODE facilitynames[] = {
+static code_t facilitynames[] = {
         "auth",         LOG_AUTH,
 #ifdef LOG_AUTHPRIV
         "authpriv",     LOG_AUTHPRIV,
@@ -80,11 +79,10 @@ CODE facilitynames[] = {
         "kern",         LOG_KERN,
         "lpr",          LOG_LPR,
         "mail",         LOG_MAIL,
-/*      "mark",         INTERNAL_MARK, */               /* INTERNAL */
 #ifdef LOG_NEWS
         "news",         LOG_NEWS,
 #endif
-        "security",     LOG_AUTH,               /* DEPRECATED */
+        "security",     LOG_AUTH,               // DEPRECATED
         "syslog",       LOG_SYSLOG,
         "user",         LOG_USER,
 #ifdef LOG_UUCP
@@ -100,16 +98,6 @@ CODE facilitynames[] = {
         "local7",       LOG_LOCAL7,
         NULL,           -1,
 };
-#endif
-#endif
-
-/*
-**  ULOGGER -- command line interface to ulog(3)
-**
-**      This program reads from an input and arranges to write the
-**      result on the system log, along with a useful tag, via the
-**  ulog library. Default output is via syslogd.
-*/
 
 static void
 usage(const char *av0)
@@ -122,9 +110,11 @@ usage(const char *av0)
 
 
 static int
-decode( const char *name, CODE *codetab)
+decode(
+        const char* restrict   name,
+        const code_t* restrict codetab)
 {
-        CODE *c;
+        const code_t *c;
 
         if (isdigit(*name))
                 return (atoi(name));
@@ -141,16 +131,16 @@ decode( const char *name, CODE *codetab)
  *  Decode a symbolic name to a numeric value
  */
 static int
-pencode( char *s)
+pencode( char *s, int* const restrict facility)
 {
         char *save;
-        int fac, lev;
+        int lev;
 
         for (save = s; *s && *s != '.'; ++s);
         if (*s) {
                 *s = '\0';
-                fac = decode(save, facilitynames);
-                if (fac < 0) {
+                *facility = decode(save, facilitynames);
+                if (*facility < 0) {
                         (void)fprintf(stderr,
                             "logger: unknown facility name: %s.\n", save);
                         exit(1);
@@ -158,16 +148,15 @@ pencode( char *s)
                 *s++ = '.';
         }
         else {
-                fac = 0;
                 s = save;
         }
-        lev = decode(s, prioritynames);
+        lev = decode(s, log_levels);
         if (lev < 0) {
                 (void)fprintf(stderr,
                     "logger: unknown priority name: %s.\n", save);
                 exit(1);
         }
-        return ((lev & LOG_PRIMASK) | (fac & LOG_FACMASK));
+        return lev;
 }
 
 
@@ -176,6 +165,7 @@ int main(int argc, char *argv[])
         extern char *optarg;
         extern int errno, optind;
         int pri = LOG_LEVEL_NOTICE;
+        int facility = LOG_LDM;
         int ch, logflags = 0;
         char *tag, buf[1024];
 
@@ -186,7 +176,7 @@ int main(int argc, char *argv[])
 
         tag = NULL;
 #ifdef LOG_PERROR
-        while ((ch = getopt(argc, argv, "f:iyzp:st:l:")) != EOF)
+        while ((ch = getopt(argc, argv, "f:ip:st:l:")) != EOF)
 #else
         while ((ch = getopt(argc, argv, "f:ip:t:l:")) != EOF)
 #endif
@@ -202,7 +192,7 @@ int main(int argc, char *argv[])
                         logflags |= LOG_PID;
                         break;
                 case 'p':               /* priority */
-                        pri = pencode(optarg);
+                        pri = pencode(optarg, &facility);
                         break;
 #ifdef LOG_PERROR
                 case 's':               /* log to standard error */
@@ -221,6 +211,9 @@ int main(int argc, char *argv[])
                 }
         argc -= optind;
         argv += optind;
+
+        log_set_facility(facility);
+        log_set_options(logflags);
 
         /* log input line if appropriate */
         if (argc > 0) {

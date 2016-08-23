@@ -9,7 +9,7 @@
 SUBDIRS			= ulog
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mutex.c mutex.h log.c log.h log_private.h
-lib_la_CPPFLAGS		= -I$(top_srcdir)/misc
+lib_la_CPPFLAGS		= -I$(top_srcdir)/misc -I$(top_srcdir)/protocol2
 lib_la_LIBADD		= $(builddir)/ulog/lib.la
 MAIN_PAGE		= simple-logging.md
 # The Doxygen documentation is part of the distribution so that it doesn't have
@@ -18,6 +18,7 @@ dist_man3_MANS		= man/man3/log.h.3
 EXTRA_DIST		= Doxyfile $(MAIN_PAGE) html $(dist_man3_MANS)
 DOXYGEN			= @DOXYGEN@
 docdir			= @DOCDIR_LIBRARIES@/simple-logging
+CLEANFILES		= callgrind.out *.log
 
 $(srcdir)/html \
 $(srcdir)/$(dist_man3_MANS) \
@@ -55,4 +56,10 @@ log_test_LDADD		= $(lib_la_LIBADD) $(top_builddir)/lib/libldm.la \
 valgrind:       log_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 		--leak-check=full --show-reachable=yes ./log_test
+
+callgrind:	log_test
+	rm -f callgrind.out.*
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind ./log_test
+	kcachegrind
+	rm callgrind.out.*
 endif

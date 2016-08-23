@@ -26,7 +26,7 @@ has ever been compromised via the LDM since it was first released in
 href="http://www.iana.org/"><b>IANA</b></a> to 
   use reserved port 388. (For more information on port numbers see <a
 href="http://www.iana.org/numbers.html"> <b>IANA's 
-  Protocol Numbers and Assignment Services</b></a> and click on "Port Numbers".) 
+  Protocol Numbers and Assignment Services</b></a> and search for "Port Numbers".) 
 </p>
 <p align="justify">
 Under UNIX it is necessary to have root level privileges in order to
@@ -49,11 +49,15 @@ SUID bit.
   <a href="basics/">LDM Reference</a> webpages.
 </p>
 <p align="justify">
-The only other purpose for which the LDM needs root privileges is to
-implement logging.  LDM logging is initiated via the
+The only other purpose for which the LDM might need root privileges is to
+implement logging. LDM version 6.12 and earlier use the system logging daemon.
+LDM version 6.13 and later can be built to use the system logging daemon.
+Such logging is initiated via the
 <code>hupsyslog</code> program, which sends a HUP
-signal to the system log daemon <code>syslogd</code>.
-When <code>syslogd</code> receives a HUP, it closes any files it has open
+signal to the system logging daemon (e.g., <code>syslogd</code>,
+<code>rsyslogd</code>).
+This can only be done if the <code>hupsyslog</code> process is owned by root.
+When the system logging daemon receives a HUP, it closes all files it has open
 and rereads its configuration file. <code>hupsyslog</code> is always
 called upon LDM start-up, and is typically run periodically to rotate the
 log files.
@@ -72,20 +76,21 @@ user shell by crashing the LDM (even if such a thing were possible).
 
 <h3> Access Control and Access to Port 388</h3>
 
-<p align="justify">When the LDM was designed it was decided that it would perform its own access 
-  control. This is implemented in the form of <code>allow</code> lines in the 
-  configuration file <code>ldmd.conf</code>. In that file <code>allow</code> lines 
-  specify hosts that may connect to the localhost to receive data. Subnets may 
+<p align="justify">When the LDM was designed it was necessary for it to perform its own access 
+  control. This is implemented in the form of <code>ALLOW</code> entries in the 
+  configuration file <code>ldmd.conf</code>. In that file, <code>ALLOW</code> entries 
+  specify hosts that may connect to the localhost to receive data. Subnet
+  regular expressions may 
   be used as host names. The LDM will deny a connection from any host that is 
   not allowed to connect. </p>
 <p align="justify">
 Use of the LDM requires that any host listed in its access control list be
 allowed a TCP connection to port 388 on the localhost.
-If the localhost is behind a firewall, the firewall must allow TCP access
+If the localhost is behind a firewall, the firewall <em>must</em> allow TCP access
 to port 388.
 </p>
 
-<p align="justify">The LDM was not coded to use TCP-Wrappers. Nor is it spawned by <code>inetd</code>, 
+<p align="justify">The LDM does not use TCP-Wrappers. Nor is it spawned by <code>inetd</code>, 
 so TCP-Wrappers provide no benefit with respect to the use of port 388. </p>
 
 <h3> The Portmapper </h3>

@@ -24,27 +24,27 @@ typedef int     (*BopFunc)(Mlr* mlr, size_t prodSize, const void* metadata,
                         unsigned metaSize, void** data, pqe_index* pqeIndex);
 typedef int     (*EopFunc)(Mlr* mlr, void* prod, size_t prodSize,
                         pqe_index* pqeIndex);
-typedef void    (*MissedProdFunc)(void* obj, const VcmtpProdIndex iProd,
+typedef void    (*MissedProdFunc)(void* obj, const FmtpProdIndex iProd,
                         pqe_index* pqeIndex);
 
 #ifdef __cplusplus
 
-#include "RecvAppNotifier.h"
+#include "RecvProxy.h"
 #include <mutex>
 #include <unordered_map>
 
-class PerProdNotifier: public RecvAppNotifier {
+class PerProdNotifier: public RecvProxy {
 public:
     /**
      * Constructs from the notification functions.
      *
      * @param[in] bof_func              Function to call when the beginning of
-     *                                  a product has been seen by the VCMTP
+     *                                  a product has been seen by the FMTP
      *                                  layer.
      * @param[in] eof_func              Function to call when a product has been
-     *                                  completely received by the VCMTP layer.
+     *                                  completely received by the FMTP layer.
      * @param[in] missed_prod_func      Function to call when a product is
-     *                                  missed by the VCMTP layer.
+     *                                  missed by the FMTP layer.
      * @param[in] mlr                   Associated multicast LDM receiver.
      * @throws    std::invalid_argument if @code{!bof_func || !eof_func ||
      *                                  !missed_prod_func}
@@ -56,15 +56,15 @@ public:
             Mlr*            mlr);
 
     ~PerProdNotifier() {}
-    void notify_of_bop(const VcmtpProdIndex iProd, size_t prodSize, void*
+    void notify_of_bop(const FmtpProdIndex iProd, size_t prodSize, void*
             metadata, unsigned metaSize, void** data);
     /**
-     * @param[in] prodIndex        The VCMTP index of the product.
+     * @param[in] prodIndex        The FMTP index of the product.
      * @throws std::out_of_range   There's no entry for `prodIndex`
      * @throws std::runtime_error  Receiving application error.
      */
-    void notify_of_eop(VcmtpProdIndex prodIndex);
-    void notify_of_missed_prod(VcmtpProdIndex prodIndex);
+    void notify_of_eop(FmtpProdIndex prodIndex);
+    void notify_of_missed_prod(FmtpProdIndex prodIndex);
 
 private:
     /**
@@ -73,17 +73,17 @@ private:
      */
     std::mutex          mutex;
     /**
-     * C function to call when a beginning-of-product has been seen by the VCMTP
+     * C function to call when a beginning-of-product has been seen by the FMTP
      * layer.
      */
     BopFunc             bop_func;
     /**
      * C function to call when a product has been completely received by the
-     * VCMTP layer.
+     * FMTP layer.
      */
     EopFunc             eop_func;
     /**
-     * C function to call when a product is missed by the VCMTP layer.
+     * C function to call when a product is missed by the FMTP layer.
      */
     MissedProdFunc      missed_prod_func;
     /**
@@ -102,7 +102,7 @@ private:
         size_t    size;  /**< Size of XDR-encoded product in bytes */
         pqe_index index; /**< Reference to allocated space in product-queue */
     };
-    std::unordered_map<VcmtpProdIndex, ProdInfo> prodInfos;
+    std::unordered_map<FmtpProdIndex, ProdInfo> prodInfos;
 };
 
 #endif

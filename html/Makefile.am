@@ -10,10 +10,8 @@ html_DATA	= \
     huge-queues.html \
     index.html \
     known-problems.html \
-    LDM_and_CVS.html \
     LDM_icon.GIF \
     ldmConfigInstallList.html \
-    LDM_Development_Steps.html \
     ldmfaq.html \
     manindex.html \
     networkSecurityAndSetup.html \
@@ -47,9 +45,7 @@ EXTRA_DIST	= \
     huge-queues.html \
     index.html \
     known-problems.html \
-    LDM_and_CVS.html \
     ldmConfigInstallList.html \
-    LDM_Development_Steps.html \
     ldmfaq.html \
     manindex.html \
     networkSecurityAndSetup.html \

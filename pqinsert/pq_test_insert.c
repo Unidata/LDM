@@ -20,8 +20,11 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <libgen.h>
+#include <limits.h>
 #include <math.h>
+#include <netinet/in.h>
 #include <rpc/rpc.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -30,50 +33,72 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
-static char        myname[HOSTNAMESIZE];
-static const char* progname;
-static feedtypet   feedtype = EXP;
-static product     prod;
-static unsigned    seq_start = 0;
+static bool           have_input_file;
+static const char*    inputPathname;
+static char           myname[HOSTNAMESIZE];
+static const char*    progname;
+static feedtypet      feedtype = EXP;
+static product        prod;
+static unsigned       seq_start = 0;
+static const long     ONE_MILLION = 1000000;
+static unsigned long  max_prod_size = 200000;
+static unsigned       num_prods = 50000;
+static unsigned long  inter_prod_gap = 5000000; // 5 ms
+static unsigned short seed[3];
 
 static bool pti_decodeCommandLine(
         int                ac,
-        char*              av[],
-        const char** const inputPathname)
+        char*              av[])
 {
     extern int   optind;
     extern int   opterr;
     extern char* optarg;
     int          ch;
-    feedtypet    ft = feedtype;
     int          seq = seq_start;
     bool         success = true;
 
     // Error messages are being explicitly handled
     opterr = 0;
 
-    while ((ch = getopt(ac, av, ":f:l:q:s:vx:")) != EOF) {
+    while ((ch = getopt(ac, av, ":f:g:l:m:n:q:s:vx")) != EOF) {
         switch (ch) {
         case 'f':
-            ft = atofeedtypet(optarg);
-            if (ft == NONE) {
+            if (strfeedtypet(optarg, &feedtype)) {
                 log_add("Unknown feedtype \"%s\"", optarg);
+                success = false;
+            }
+            break;
+        case 'g':
+            if (sscanf(optarg, "%lu", &inter_prod_gap) != 1) {
+                log_add("Invalid inter-product gap duration: \"%s\"", optarg);
                 success = false;
             }
             break;
         case 'l':
             (void)log_set_destination(optarg);
             break;
+        case 'm':
+            if (sscanf(optarg, "%lu", &max_prod_size) != 1) {
+                log_add("Invalid maximum product size: \"%s\"", optarg);
+                success = false;
+            }
+            break;
+        case 'n':
+            if (sscanf(optarg, "%lu", &num_prods) != 1) {
+                log_add("Invalid number of products: \"%s\"", optarg);
+                success = false;
+            }
+            break;
         case 'q':
             setQueuePath(optarg);
             break;
         case 's':
-            seq = atoi(optarg);
-            if (seq < 0) {
+            if (sscanf(optarg, "%u", &seq_start) != 1) {
                 log_add("Invalid beginning sequence-number \"%s\"", optarg);
                 success = false;
             }
@@ -102,14 +127,16 @@ static bool pti_decodeCommandLine(
         ac -= optind;
         av += optind ;
 
-        if(ac != 1) {
+        if (ac == 0) {
+            have_input_file = false;
+        }
+        else if (ac != 1) {
             log_add("Invalid number of operands");
             success = false;
         }
         else {
-            prod.info.feedtype = feedtype = ft;
-            seq_start = seq;
-            *inputPathname = *av;
+            inputPathname = *av;
+            have_input_file = true;
         }
     }
 
@@ -122,93 +149,91 @@ static void pti_usage(void)
     const char* pqPath = getDefaultQueuePath();
 
     (void)ft_format(feedtype, feedbuf, sizeof(feedbuf));
-    log_add(
-"Usage: %s [options] file\n"
+    log_error(
+"Usage: %s [options] [file]\n"
 "Options:\n"
 "    -f feedtype   Use <feedtype> as data-product feed-type. Default is %s.\n"
+"    -g sleep      Sleep <sleep> nanoseconds between inserting products.\n"
+"                  Ignored if <file> given. Default is %lu\n"
 "    -l dest       Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
 "                  (standard error), or file `dest`. Default is \"%s\"\n"
+"    -m max_size   Maximum product size in bytes. Ignored if <file> given.\n"
+"                  Default is %lu.\n"
+"    -n num_prods  Number of products. Ignored if <file> given. Default is\n"
+"                  %lu.\n"
 "    -q queue      Use <queue> as product-queue. Default is \"%s\".\n"
 "    -s seqno      Set initial product sequence number to <seqno>. Default is\n"
 "                  %d.\n"
 "    -v            Verbose logging level: log each product.\n"
 "    -x            Debug logging level.\n"
 "Operands:\n"
-"    file          Pathname of file containing size and timestamp entries.",
-            progname, feedbuf, log_get_default_destination(), pqPath,
-            seq_start);
-    log_flush_error();
-}
-
-static void cleanup(void)
-{
-    if (pq) {
-        (void) pq_close(pq);
-        pq = NULL;
-    }
-
-    log_fini();
+"    file          Pathname of file containing size and timestamp entries.\n"
+"                  If given, then '-g', '-m', and '-n' options are ignored",
+            progname, feedbuf, inter_prod_gap, log_get_default_destination(),
+            max_prod_size, num_prods, pqPath, seq_start);
 }
 
 static void
 pti_setSig(
-        signaturet* const sig)
+        uint8_t* const sig,
+        unsigned i)
 {
-    for (int i = 0; i < sizeof(signaturet)/4; i++)
-        ((int32_t*)sig)[i] = mrand48();
+    for (int j = sizeof(signaturet); --j >= 0;) {
+        sig[j] = (i & 0xFF);
+        i >>= 8;
+    }
 }
 
 /**
  * Initializes this module:
- *     - Registers the function `cleanup()` to be run at process termination;
  *     - Opens the product-queue named by `getQueuePath()`;
  *     - Redirects the standard input stream to the given input file;
  *     - Initializes the structure `prod`; and
  *     - Initializes the PRNG module associated with the function `random()`.
  *
- * @param[in] inputPathname  The pathname of the input file containing the size
- *                           and timestamp fields.
  * @retval    true           if and only if successful.
  */
-static bool pti_init(
-        const char* const inputPathname)
+static bool pti_init(void)
 {
-    int success = false;
-
-    if (atexit(cleanup) != 0) {
-        log_syserr("Couldn't register exit handler");
+    int               success = false;
+    const char* const pqfname = getQueuePath();
+    int               status = pq_open(pqfname, PQ_DEFAULT, &pq);
+    if (PQ_CORRUPT == status) {
+        log_add("The product-queue \"%s\" is corrupt\n", pqfname);
+    }
+    else if (status) {
+        log_errno(status, "Couldn't open product-queue \"%s\"", pqfname);
     }
     else {
-        const char* const pqfname = getQueuePath();
-        int status = pq_open(pqfname, PQ_DEFAULT, &pq);
-        if (PQ_CORRUPT == status) {
-            log_add("The product-queue \"%s\" is corrupt\n", pqfname);
-        }
-        else if (status) {
-            log_errno(status, "Couldn't open product-queue \"%s\"", pqfname);
-        }
-        else if (freopen(inputPathname, "r", stdin) == NULL) {
-            log_syserr("Couldn't open input-file \"%s\"", inputPathname);
+        prod.data = malloc(max_prod_size);
+        if (prod.data == NULL) {
+            log_syserr("Couldn't allocate buffer for data-product");
         }
         else {
-            prod.data = malloc(20000000);
-            if (prod.data == NULL) {
-                log_syserr("Couldn't allocate buffer for data-product");
-            }
-            else {
-                (void)strncpy(myname, ghostname(), sizeof(myname));
-                myname[sizeof(myname)-1] = 0;
-                prod.info.origin = myname;
-                srandom(1); // for `random()`
-                unsigned short seed[3];
-                seed[2] = random(); seed[1] = random(); seed[0] = random();
-                (void)seed48(seed); // for `mrand48()`
-                success = true;
-            }
+            (void)strncpy(myname, ghostname(), sizeof(myname));
+            myname[sizeof(myname)-1] = 0;
+            prod.info.origin = myname;
+            prod.info.feedtype = feedtype;
+            srandom(1); // for `random()`
+            seed[2] = random(); seed[1] = random(); seed[0] = random();
+            (void)seed48(seed); // for `mrand48()`
+            success = true;
         }
     }
 
     return success;
+}
+
+static void pti_fini(void)
+{
+    if (pq) {
+        (void)pq_close(pq);
+        pq = NULL;
+    }
+    if (prod.data) {
+        free(prod.data);
+        prod.data = NULL;
+    }
 }
 
 /**
@@ -257,59 +282,57 @@ static int pti_decodeInputLine(
     return status;
 }
 
-static const long ONE_BILLION = 1000000000;
-
 /**
- * Returns the difference between two `struct timespec`s.
+ * Returns the difference between two `struct timeval`s.
  *
  * @param[out] result  The difference `left - right`.
  * @param[in]  left    The left operand.
  * @param[in]  right   The right operand.
  */
-static inline void timespec_diff(
-        struct timespec* const restrict       result,
-        const struct timespec* const restrict left,
-        const struct timespec* const restrict right)
+static inline void timeval_diff(
+        struct timeval* const restrict       result,
+        const struct timeval* const restrict left,
+        const struct timeval* const restrict right)
 {
     result->tv_sec = left->tv_sec - right->tv_sec;
-    result->tv_nsec = left->tv_nsec - right->tv_nsec;
-    if (result->tv_nsec < 0) {
-        result->tv_nsec += ONE_BILLION;
+    result->tv_usec = left->tv_usec - right->tv_usec;
+    if (result->tv_usec < 0) {
+        result->tv_usec += ONE_MILLION;
         result->tv_sec -= 1;
     }
 }
 
 /**
- * Returns the sum of two `struct timespec`s.
+ * Returns the sum of two `struct timeval`s.
  *
  * @param[out] result  The sum `left + right`.
  * @param[in]  left    The left operand.
  * @param[in]  right   The right operand.
  */
-static inline void timespec_sum(
-        struct timespec* const restrict       result,
-        const struct timespec* const restrict left,
-        const struct timespec* const restrict right)
+static inline void timeval_sum(
+        struct timeval* const restrict       result,
+        const struct timeval* const restrict left,
+        const struct timeval* const restrict right)
 {
     result->tv_sec = left->tv_sec + right->tv_sec;
-    result->tv_nsec = left->tv_nsec + right->tv_nsec;
-    if (result->tv_nsec > ONE_BILLION) {
-        result->tv_nsec -= ONE_BILLION;
+    result->tv_usec = left->tv_usec + right->tv_usec;
+    if (result->tv_usec > ONE_MILLION) {
+        result->tv_usec -= ONE_MILLION;
         result->tv_sec += 1;
     }
 }
 
 /**
- * Indicates if a `struct timespec` contains a positive value or not.
+ * Indicates if a `struct timeval` contains a positive value or not.
  *
  * @param[in] time   The time to examine.
  * @retval    true   `time` is positive.
  * @retval    false  `time` is zero or negative.
  */
-static inline bool timespec_isPositive(
-        struct timespec* const time)
+static inline bool timeval_isPositive(
+        struct timeval* const time)
 {
-    return time->tv_sec > 0 || (time->tv_sec == 0 && time->tv_nsec > 0);
+    return time->tv_sec > 0 || (time->tv_sec == 0 && time->tv_usec > 0);
 }
 
 /**
@@ -326,47 +349,48 @@ static bool pti_setCreationTime(
         struct tm* const    tm,
         const unsigned long ns)
 {
-    struct timespec        creationTime;
-    struct timespec        creationInterval;
-    struct timespec        returnTime;
-    static struct timespec prevReturnTime;
-    static struct timespec prevCreationTime;
+    struct timeval        creationTime;
+    struct timeval        creationInterval;
+    struct timeval        returnTime;
+    static struct timeval prevReturnTime;
+    static struct timeval prevCreationTime;
 
     // Set the input creation-time
     creationTime.tv_sec = mktime(tm);
-    creationTime.tv_nsec = ns;
+    creationTime.tv_usec = ns/1000;
 
     if (init) {
-        prevReturnTime.tv_sec = prevReturnTime.tv_nsec = 0;
+        prevReturnTime.tv_sec = prevReturnTime.tv_usec = 0;
         prevCreationTime = creationTime;
     }
 
     // Compute the time-interval since the previous input creation-time.
-    timespec_diff(&creationInterval, &creationTime, &prevCreationTime);
+    timeval_diff(&creationInterval, &creationTime, &prevCreationTime);
 
-    if (!timespec_isPositive(&creationInterval)) {
-        (void)clock_gettime(CLOCK_REALTIME, &returnTime);
+    if (!timeval_isPositive(&creationInterval)) {
+        (void)gettimeofday(&returnTime, NULL);
     }
     else {
-        struct timespec now;
-        struct timespec sleepInterval;
+        struct timeval now;
+        struct timeval sleepInterval;
 
         /*
          * Compute when this function should return based on the previous return
          * time and the interval since the previous input creation-time.
          */
-        timespec_sum(&returnTime, &prevReturnTime, &creationInterval);
+        timeval_sum(&returnTime, &prevReturnTime, &creationInterval);
 
         /*
          * Compute how long to sleep based on the return time and the current
          * time.
          */
-        (void)clock_gettime(CLOCK_REALTIME, &now);
-        timespec_diff(&sleepInterval, &returnTime, &now);
+        (void)gettimeofday(&now, NULL);
+        timeval_diff(&sleepInterval, &returnTime, &now);
 
         // Sleep if necessary
-        if (timespec_isPositive(&sleepInterval)) {
-            if (nanosleep(&sleepInterval, NULL)) {
+        if (timeval_isPositive(&sleepInterval)) {
+            if (sleep(sleepInterval.tv_sec) != 0 ||
+                    usleep(sleepInterval.tv_usec)) {
                 log_syserr("Couldn't sleep");
                 return false;
             }
@@ -375,7 +399,7 @@ static bool pti_setCreationTime(
 
     // Set the product's creation-time and save values for next time
     prod.info.arrival.tv_sec = returnTime.tv_sec;
-    prod.info.arrival.tv_usec = returnTime.tv_nsec / 1000;
+    prod.info.arrival.tv_usec = returnTime.tv_usec;
     prevCreationTime = creationTime;
     prevReturnTime = returnTime;
 
@@ -387,97 +411,147 @@ static bool pti_setCreationTime(
  *
  * @retval true  if and only if success.
  */
-static bool pti_execute()
+static bool pti_process_input_file()
 {
-    bool          success;
-    struct tm     tm;
-    unsigned long lineNo;
-    char          id[KEYSIZE];
-    char          feedStr[128];
+    bool success;
 
-    prod.info.ident = id;
-    tm.tm_isdst = 0;
+    if (freopen(inputPathname, "r", stdin) == NULL) {
+        log_syserr("Couldn't open input-file \"%s\"", inputPathname);
+        success = false;
+    }
+    else {
+        struct tm     tm;
+        unsigned long lineNo;
+        char          id[KEYSIZE];
+        char          feedStr[128];
 
-    (void)ft_format(feedtype, feedStr, sizeof(feedStr));
-    log_notice("Starting up: feedtype=%s, seq_start=%d", feedStr, seq_start);
+        prod.info.ident = id;
+        prod.info.seqno = seq_start;
+        tm.tm_isdst = 0;
 
-    prod.info.seqno = seq_start;
-    for (lineNo = 1, success = true; success; prod.info.seqno++, lineNo++) {
-        unsigned long ns;
-        int           status = pti_decodeInputLine(lineNo, &prod.info.sz, &tm,
-                &ns);
+        (void)ft_format(feedtype, feedStr, sizeof(feedStr));
+        log_notice("Starting up: feedtype=%s, seq_start=%u", feedStr,
+                seq_start);
 
-        if (status) {
-            success = status == 1; // EOF
-            break;
-        }
+        for (lineNo = 1, success = true; success; prod.info.seqno++, lineNo++) {
+            unsigned long ns;
+            int           status = pti_decodeInputLine(lineNo, &prod.info.sz,
+                    &tm, &ns);
 
-        (void)snprintf(id, sizeof(id), "%u", prod.info.seqno);
-        prod.data = realloc(prod.data, prod.info.sz);
-        if (prod.data == NULL) {
-            log_syserr("Couldn't allocate memory for data-product");
-            success = false;
-            break;
-        }
-        (void)memset(prod.data, 0xbd, prod.info.sz);
+            if (status) {
+                success = status == 1; // EOF
+                break;
+            }
 
-        pti_setSig(&prod.info.signature);
+            (void)snprintf(id, sizeof(id), "%u", prod.info.seqno);
+            prod.data = realloc(prod.data, prod.info.sz);
+            if (prod.data == NULL) {
+                log_syserr("Couldn't allocate memory for data-product");
+                success = false;
+                break;
+            }
+            (void)memset(prod.data, 0xbd, prod.info.sz);
 
-        success = pti_setCreationTime(lineNo == 1, &tm, ns);
-        if (!success)
-            break;
+            pti_setSig(prod.info.signature, prod.info.seqno);
 
-        status = pq_insert(pq, &prod);
+            success = pti_setCreationTime(lineNo == 1, &tm, ns);
+            if (!success)
+                break;
 
-        switch (status) {
-        case ENOERR:
-            if (log_is_enabled_info)
-                log_info("%s", s_prod_info(NULL, 0, &prod.info, 1)) ;
-            log_clear(); // just in case
-            break;
-        case PQUEUE_DUP:
-            log_add("Product already in queue: %s",
-                s_prod_info(NULL, 0, &prod.info, 1));
-            success = false;
-            break;
-        case PQUEUE_BIG:
-            log_add("Product too big for queue: %s",
-                s_prod_info(NULL, 0, &prod.info, 1));
-            success = false;
-            break;
-        case ENOMEM:
-            log_errno(status, "Queue full?");
-            success = false;
-            break;
-        case EINTR:
-        case EDEADLK:
-            /* TODO: retry ? */
-            /*FALLTHROUGH*/
-        default:
-            log_add("pq_insert: %s", status > 0
-                ? strerror(status) : "Internal error");
-            success = false;
-        }
-    }                               /* input-file loop */
+            status = pq_insert(pq, &prod);
 
-    free(prod.data);
+            switch (status) {
+            case ENOERR:
+                if (log_is_enabled_info)
+                    log_info("%s", s_prod_info(NULL, 0, &prod.info, 1)) ;
+                log_clear(); // just in case
+                break;
+            case PQUEUE_DUP:
+                log_add("Product already in queue: %s",
+                    s_prod_info(NULL, 0, &prod.info, 1));
+                success = false;
+                break;
+            case PQUEUE_BIG:
+                log_add("Product too big for queue: %s",
+                    s_prod_info(NULL, 0, &prod.info, 1));
+                success = false;
+                break;
+            case ENOMEM:
+                log_errno(status, "Queue full?");
+                success = false;
+                break;
+            case EINTR:
+            case EDEADLK:
+                /* TODO: retry ? */
+                /*FALLTHROUGH*/
+            default:
+                log_add("pq_insert: %s", status > 0
+                    ? strerror(status) : "Internal error");
+                success = false;
+            }
+        }                               /* input-file loop */
+    }
 
     return success;
 }
 
-static bool pti_initAndExecute(
-        const char* const inputPathname)
+static bool pti_generate_products(void)
 {
-    bool success = pti_init(inputPathname);
+    int            status = 0;
+    prod_info*     info = &prod.info;
+    char           ident[80];
+
+    info->ident = ident;
+    (void)memset(info->signature, 0, sizeof(info->signature));
+
+    for (unsigned i = seq_start; i < seq_start + num_prods; i++) {
+        if (i != seq_start) {
+            struct timespec duration;
+            duration.tv_sec = 0;
+            duration.tv_nsec = inter_prod_gap;
+            int status = nanosleep(&duration, NULL);
+            log_assert(status == 0 || errno == EINTR);
+        }
+
+        const unsigned long size = max_prod_size*drand48() + 0.5;
+        const ssize_t       nbytes = snprintf(ident, sizeof(ident), "%u", i);
+        log_assert(nbytes >= 0 && nbytes < sizeof(ident));
+        info->seqno = i;
+        pti_setSig(info->signature, i);
+        info->sz = size;
+        status = set_timestamp(&info->arrival);
+        log_assert(status == 0);
+
+        char buf[LDM_INFO_MAX];
+        status = pq_insert(pq, &prod);
+        if (status) {
+            log_add("pq_insert() failure: prodInfo=\"%s\"",
+                    s_prod_info(buf, sizeof(buf), info, 1));
+            break;
+        }
+        log_info("Inserted: prodInfo=\"%s\"",
+                s_prod_info(buf, sizeof(buf), info, 1));
+    }
+
+    return status == 0;
+}
+
+static bool pti_initAndExecute(void)
+{
+    bool success = pti_init();
 
     if (!success) {
         log_add("Couldn't initialize program");
     }
     else {
-        success = pti_execute();
+        success = have_input_file
+                ? pti_process_input_file()
+                : pti_generate_products();
 
         if (!success)
             log_add("Failure executing program");
+
+        pti_fini();
     }
 
     return success;
@@ -491,20 +565,21 @@ int main(
    progname = basename(av[0]);
    (void)log_init(progname);
 
-    const char* inputPathname;
     int         status = EXIT_FAILURE;
-    if (!pti_decodeCommandLine(ac, av, &inputPathname)) {
+    if (!pti_decodeCommandLine(ac, av)) {
         log_error("Couldn't decode command-line");
         pti_usage();
     }
     else {
-        if (!pti_initAndExecute(inputPathname)) {
+        if (!pti_initAndExecute()) {
             log_flush_error();
         }
         else {
             status = EXIT_SUCCESS;
         }
     }
+
+    log_fini();
 
     return status;
 }

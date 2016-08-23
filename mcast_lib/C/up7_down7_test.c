@@ -69,32 +69,33 @@ typedef struct {
  * Proportion of data-products that the receiving LDM-7 will delete from the
  * product-queue and request from the sending LDM-7.
  */
-#define                  REQUEST_RATE 0.2
+#define                  REQUEST_RATE 0.1
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 1000000
+// Approximate number of times the product-queue will be "filled".
+#define                  NUM_TIMES 1
+// Duration, in nanoseconds, between data-product insertions
+#define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
+// Mean residence-time, in seconds, of a data-product
+#define                  MEAN_RESIDENCE_TIME 100
+
+// Mean product size in bytes
 #define                  MEAN_PROD_SIZE (MAX_PROD_SIZE/2)
-/*
- * Approximate number of times the product-queue will be "filled".
- */
-#define                  NUM_TIMES 10
-// Time, in nanoseconds, between sending data-products.
-#define                  INTER_PRODUCT_INTERVAL 5000000 // 5 ms
-/*
- * Factor by which the capacity of the product-queue is greater than a single
- * product.
- */
-#define                  CAPACITY_TO_PROD_RATIO 100
+// Mean number of products in product-queue
+#define                  MEAN_NUM_PRODS \
+        ((int)(MEAN_RESIDENCE_TIME / (INTER_PRODUCT_INTERVAL/1e9)))
+
 /*
  * The product-queue is limited by its data-capacity (rather than its product-
  * capacity) to attempt to reproduce the queue corruption seen by Shawn Chen at
  * the University of Virginia.
  */
 // Capacity of the product-queue in bytes
-static const unsigned    PQ_DATA_CAPACITY = CAPACITY_TO_PROD_RATIO*MEAN_PROD_SIZE;
+static const unsigned    PQ_DATA_CAPACITY = MEAN_NUM_PRODS*MEAN_PROD_SIZE;
 // Capacity of the product-queue in number of products
-static const unsigned    PQ_PROD_CAPACITY = 50*CAPACITY_TO_PROD_RATIO;
+static const unsigned    PQ_PROD_CAPACITY = MEAN_NUM_PRODS;
 // Number of data-products to insert
-static const unsigned    NUM_PRODS = NUM_TIMES*CAPACITY_TO_PROD_RATIO;
+static const unsigned    NUM_PRODS = NUM_TIMES*MEAN_NUM_PRODS;
 static const char        LOCAL_HOST[] = "127.0.0.1";
 static sigset_t          termSigSet;
 static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
@@ -105,8 +106,8 @@ static Receiver          receiver;
 static pthread_t         requesterThread;
 static pqueue*           receiverPq;
 static uint64_t          numDeletedProds;
-static const unsigned short VCMTP_MCAST_PORT = 5173; // From Wireshark plug-in
-static const unsigned short VCMTP_UCAST_PORT = 1234; // From Wireshark plug-in
+static const unsigned short FMTP_MCAST_PORT = 5173; // From Wireshark plug-in
+static const unsigned short FMTP_UCAST_PORT = 1234; // From Wireshark plug-in
 
 /*
  * The following functions (until otherwise noted) are only called once.
@@ -155,8 +156,8 @@ static void signal_handler(
         int sig)
 {
     switch (sig) {
-    case SIGHUP:
-        log_debug("SIGHUP");
+    case SIGUSR1:
+        log_debug("SIGUSR1");
         log_refresh();
         return;
     case SIGINT:
@@ -180,7 +181,7 @@ setTermSigHandler(void)
     sigact.sa_handler = signal_handler;
 
     sigact.sa_flags = SA_RESTART;
-    (void)sigaction(SIGHUP, &sigact, NULL );
+    (void)sigaction(SIGUSR1, &sigact, NULL );
 
     sigact.sa_flags = 0;
     (void)sigaction(SIGINT, &sigact, NULL );
@@ -251,6 +252,9 @@ teardown(void)
         (void)pthread_mutex_destroy(&mutex);
     #endif
 
+    unlink(UP7_PQ_PATHNAME);
+    unlink(DOWN7_PQ_PATHNAME);
+
     return 0;
 }
 
@@ -288,7 +292,10 @@ createEmptyProductQueue(
     int     status = pq_create(pathname, 0666, PQ_DEFAULT, 0, PQ_DATA_CAPACITY,
             PQ_PROD_CAPACITY, &pq); // PQ_DEFAULT => clobber existing
 
-    if (status == 0) {
+    if (status) {
+        log_add_errno(status, "pq_create(\"%s\") failure", pathname);
+    }
+    else {
         status = pq_close(pq);
         if (status) {
             log_add("Couldn't close product-queue \"%s\"", pathname);
@@ -770,14 +777,18 @@ sender_getPort(
 static void
 sender_insertProducts(void)
 {
-    int            status;
-    product        prod;
-    prod_info*     info = &prod.info;
-    char           ident[80];
-    void*          data = NULL;
-    unsigned short xsubi[3] = {(unsigned short)1234567890,
+    int             status;
+    product         prod;
+    prod_info*      info = &prod.info;
+    char            ident[80];
+    void*           data = NULL;
+    unsigned short  xsubi[3] = {(unsigned short)1234567890,
                                (unsigned short)9876543210,
                                (unsigned short)1029384756};
+    struct timespec duration;
+
+    duration.tv_sec = 0;
+    duration.tv_nsec = INTER_PRODUCT_INTERVAL;
     info->feedtype = EXP;
     info->ident = ident;
     info->origin = "localhost";
@@ -806,9 +817,6 @@ sender_insertProducts(void)
         log_info("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
 
-        struct timespec duration;
-        duration.tv_sec = 0;
-        duration.tv_nsec = INTER_PRODUCT_INTERVAL;
         status = nanosleep(&duration, NULL);
         CU_ASSERT_FATAL(status == 0 || errno == EINTR);
     }
@@ -822,7 +830,7 @@ setMcastInfo(
         const feedtypet   feedtype)
 {
     ServiceAddr* mcastServAddr;
-    int          status = sa_new(&mcastServAddr, "224.0.0.1", VCMTP_MCAST_PORT);
+    int          status = sa_new(&mcastServAddr, "224.0.0.1", FMTP_MCAST_PORT);
 
     if (status) {
         log_add("Couldn't create multicast service address object");
@@ -830,7 +838,7 @@ setMcastInfo(
     else {
         ServiceAddr* ucastServAddr;
 
-        status = sa_new(&ucastServAddr, LOCAL_HOST, VCMTP_UCAST_PORT);
+        status = sa_new(&ucastServAddr, LOCAL_HOST, FMTP_UCAST_PORT);
         if (status) {
             log_add("Couldn't create unicast service address object");
         }
@@ -1076,9 +1084,9 @@ requester_decide(
     char infoStr[LDM_INFO_MAX];
     log_debug("requester_decide(): Entered: info=\"%s\"",
             s_prod_info(infoStr, sizeof(infoStr), info, 1));
-    static VcmtpProdIndex maxProdIndex;
+    static FmtpProdIndex maxProdIndex;
     static bool           maxProdIndexSet = false;
-    VcmtpProdIndex        prodIndex;
+    FmtpProdIndex        prodIndex;
     RequestArg* const     reqArg = (RequestArg*)arg;
 
     /*
@@ -1086,8 +1094,8 @@ requester_decide(
      * recently-created data-product is eligible for deletion.
      */
     (void)memcpy(&prodIndex,
-            info->signature + sizeof(signaturet) - sizeof(VcmtpProdIndex),
-            sizeof(VcmtpProdIndex));
+            info->signature + sizeof(signaturet) - sizeof(FmtpProdIndex),
+            sizeof(FmtpProdIndex));
     prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
     if (maxProdIndexSet && prodIndex <= maxProdIndex) {
         reqArg->delete = false;
@@ -1118,9 +1126,9 @@ static inline int // inline because only called in one place
 requester_deleteAndRequest(
         const signaturet sig)
 {
-    VcmtpProdIndex  prodIndex;
-    (void)memcpy(&prodIndex, sig + sizeof(signaturet) - sizeof(VcmtpProdIndex),
-        sizeof(VcmtpProdIndex));
+    FmtpProdIndex  prodIndex;
+    (void)memcpy(&prodIndex, sig + sizeof(signaturet) - sizeof(FmtpProdIndex),
+        sizeof(FmtpProdIndex));
     prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
     int status = pq_deleteBySignature(receiverPq, sig);
     char buf[2*sizeof(signaturet)+1];
@@ -1376,9 +1384,15 @@ receiver_deleteAllProducts(
  */
 static uint64_t
 receiver_getNumProds(
-        Receiver* const restrict receiver)
+        Receiver* const receiver)
 {
     return down7_getNumProds(receiver->down7);
+}
+
+static long receiver_getPqeCount(
+        Receiver* const receiver)
+{
+    return down7_getPqeCount(receiver->down7);
 }
 
 /**
@@ -1434,7 +1448,7 @@ test_down7(
     done = 0;
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(LOCAL_HOST, VCMTP_MCAST_PORT, ANY);
+    status = receiver_spawn(LOCAL_HOST, FMTP_MCAST_PORT, ANY);
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -1503,12 +1517,14 @@ test_up7_down7(
     CU_ASSERT_EQUAL(status, PQ_END);
     receiver_requestLastProduct(&receiver);
 #endif
-    (void)sleep(2);
+    (void)sleep(180);
     log_notice("%lu sender product-queue insertions", (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
+    log_notice("%lu product deletions", (unsigned long)numDeletedProds);
     log_notice("%lu receiver product-queue insertions",
             (unsigned long)numDownInserts);
-    log_notice("%lu product deletions", (unsigned long)numDeletedProds);
+    log_notice("%ld outstanding product reservations",
+            receiver_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
     #if USE_SIGWAIT

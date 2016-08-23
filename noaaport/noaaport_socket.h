@@ -12,12 +12,9 @@
 #ifndef NOAAPORT_SOCKET_H_
 #define NOAAPORT_SOCKET_H_
 
-
-
 #ifdef __cplusplus
     extern "C" {
 #endif
-
 
 /**
  * Initializes a socket for receiving a NOAAPORT multicast.
@@ -37,7 +34,6 @@ nportSock_init(
     int* const restrict        socket,
     const char* const restrict nportSpec,
     const char* const restrict ifaceSpec);
-
 
 #ifdef __cplusplus
     }

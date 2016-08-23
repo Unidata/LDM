@@ -103,9 +103,6 @@ static void signal_handler(
     (void)signal(sig, signal_handler);
 #endif
     switch (sig) {
-      case SIGHUP:
-        log_refresh();
-        return;
       case SIGINT:
         exit(0);
       case SIGTERM:
@@ -113,6 +110,7 @@ static void signal_handler(
       case SIGPIPE:
         return;
       case SIGUSR1:
+        log_refresh();
         logstats = 1;
         return;
       case SIGUSR2:
@@ -142,7 +140,6 @@ static void set_sigactions(void)
     sigact.sa_flags |= SA_RESTART;
 #endif
     sigact.sa_handler = signal_handler;
-    (void)sigaction(SIGHUP,  &sigact, NULL);
     (void)sigaction(SIGTERM, &sigact, NULL);
     (void)sigaction(SIGUSR1, &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
@@ -154,6 +151,17 @@ static void set_sigactions(void)
 #endif
     (void)sigaction(SIGINT, &sigact, NULL);
     (void)sigaction(SIGPIPE, &sigact, NULL);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGCHLD);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGUSR2);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 static void usage(
@@ -471,6 +479,8 @@ int main(
     (void)log_init(argv[0]);
     (void)log_set_level(LOG_LEVEL_ERROR);
 
+    const char*         pqfname = getQueuePath();
+
     opterr = 1;
     while ((ch = getopt(argc, argv, "nvxl:q:u:m:")) != EOF) {
         switch (ch) {
@@ -495,7 +505,7 @@ int main(
             (void)log_set_destination(logfname);
             break;
         case 'q':
-            setQueuePath(optarg);
+            pqfname = optarg;
             break;
         case 'u': {
             int         i = atoi(optarg);
@@ -545,10 +555,11 @@ int main(
         }
     }
 
-    const char*         pqfname = getQueuePath();
 
     if (argc - optind < 0)
         usage(argv[0]);
+
+    setQueuePath(pqfname);
 
     log_notice("Starting Up %s", PACKAGE_VERSION);
 

@@ -153,17 +153,20 @@ section, below.  The default is
 .hy
 .SH SIGNALS
 .TP
-.BR SIGTERM
-Graceful termination after finishing actions on current product.
-.TP
-.BR SIGHUP
-Rereads configuration file.
+.B SIGCONT
+Wake up if sleeping, because there is a new product in the queue.
 .TP
 .BR SIGINT
 Immediate termination.
 .TP
-.B SIGUSR1
-A no-op. (This program currently keeps no internal statistics.)
+.BR SIGHUP
+Rereads configuration-file.
+.TP
+.BR SIGTERM
+Graceful termination after finishing actions on current product.
+.TP
+.BR SIGUSR1
+Refreshes logging if configure(1)-script executed without "--with-ulog" option. 
 .TP
 .B SIGUSR2
 Cyclically increment the verbosity of the program. Assumming the program was
@@ -171,9 +174,6 @@ started without the \fB-v\fP or \fB-x\fP switches, the first \fBSIGUSR2\fP will
 make it verbose and \fBLOG_INFO\fP priority messages will appear.
 The second will turn on the \fBLOG_DEBUG\fP priority messages as well.
 A third will take it back to the normal state.
-.TP
-.B SIGCONT
-Wake up if sleeping, because there is a new product in the queue.
 
 .SH USAGE
 .LP

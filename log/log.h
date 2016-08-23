@@ -29,7 +29,7 @@
 
 /// Logging levels
 typedef enum {
-    LOG_LEVEL_DEBUG,    ///< Debug messages
+    LOG_LEVEL_DEBUG = 0,///< Debug messages
     LOG_LEVEL_INFO,     ///< Informational messages
     LOG_LEVEL_NOTICE,   ///< Notices
     LOG_LEVEL_WARNING,  ///< Warnings
@@ -72,6 +72,17 @@ const char* log_get_default_daemon_destination(void);
 const char* log_get_default_destination(void);
 
 /**
+ * Indicates if the standard error file descriptor refers to a file that is not
+ * `/dev/null`. This function may be called at any time.
+ *
+ * @retval true   Standard error file descriptor refers to a file that is not
+ *               `/dev/null`
+ * @retval false  Standard error file descriptor is closed or refers to
+ *                `/dev/null`.
+ */
+bool log_is_stderr_useful(void);
+
+/**
  * Initializes the logging module. Should be called before most other functions.
  * <dl>
  *     <dt>log_get_facility() <dd>will return `LOG_LDM`.
@@ -93,15 +104,6 @@ int log_init(
 void log_avoid_stderr(void);
 
 /**
- * Re-initializes this logging module based on its state just prior to calling
- * log_fini().
- *
- * @retval    -1  Failure
- * @retval     0  Success
- */
-int log_reinit(void);
-
-/**
  * Refreshes the logging module. If logging is to the system logging daemon,
  * then it will continue to be. If logging is to a file, then the file is closed
  * and re-opened; thus enabling log file rotation. If logging is to the standard
@@ -113,8 +115,8 @@ int log_reinit(void);
 void log_refresh(void);
 
 /**
- * Finalizes the logging module. Should be called eventually after
- * log_init(), after which no more logging should occur.
+ * Finalizes the logging module. Should be called eventually after log_init(),
+ * after which no more logging should occur.
  */
 #define log_fini() do {\
     LOG_LOC_DECL(loc);\
@@ -427,7 +429,7 @@ bool log_is_level_enabled(
  * @param[in] ...    Optional arguments of the message -- starting with the
  *                   format of the message.
  */
-#define log_log(level, ...)  LOG_LOG(level,               __VA_ARGS__)
+#define log_log(level, ...)  LOG_LOG(level,             __VA_ARGS__)
 
 /**
  * Logs the currently-accumulated log-messages of the current thread and resets

@@ -62,7 +62,7 @@ typedef struct {
      */
     size_t         numSigs;   ///< Number of signatures
     size_t         oldSig;    ///< Offset of oldest signature
-    VcmtpProdIndex oldIProd;  ///< Product-index of oldest signature
+    FmtpProdIndex oldIProd;  ///< Product-index of oldest signature
     signaturet     sigs[1];   ///< Data-products signatures
 } Mmo;
 static Mmo*         mmo;
@@ -741,7 +741,7 @@ openMapForReading(
  */
 static inline void
 clearMapIfUnexpected(
-        const VcmtpProdIndex iProd)
+        const FmtpProdIndex iProd)
 {
     if (mmo->numSigs && (iProd != mmo->oldIProd + mmo->numSigs))
         clearMap();
@@ -926,7 +926,7 @@ pim_delete(
  */
 Ldm7Status
 pim_put(
-        const VcmtpProdIndex    iProd,
+        const FmtpProdIndex    iProd,
         const signaturet* const sig)
 {
     int status = ensureProperState(true);
@@ -937,8 +937,12 @@ pim_put(
         if (0 == status) {
             clearMapIfUnexpected(iProd);
 
-            (void)memcpy(mmo->sigs + (mmo->oldSig + mmo->numSigs) % maxSigs, sig,
-                    SIG_SIZE);
+            (void)memcpy(mmo->sigs + (mmo->oldSig + mmo->numSigs) % maxSigs,
+                    sig, SIG_SIZE);
+            char buf[2*sizeof(signaturet)+1];
+            status = sprint_signaturet(buf, sizeof(buf), *sig);
+            log_assert(status > 0);
+            log_info("Added: iProd=%lu, sig=%s", (unsigned long)iProd, buf);
 
             if (mmo->numSigs < maxSigs) {
                 if (0 == mmo->numSigs++)
@@ -969,7 +973,7 @@ pim_put(
  */
 Ldm7Status
 pim_get(
-        const VcmtpProdIndex iProd,
+        const FmtpProdIndex iProd,
         signaturet* const    sig)
 {
     int status = ensureProperState(true);
@@ -978,7 +982,7 @@ pim_get(
         status = lockMap(0); // shared lock
 
         if (0 == status) {
-            const VcmtpProdIndex delta = iProd - mmo->oldIProd;
+            const FmtpProdIndex delta = iProd - mmo->oldIProd;
 
             if (delta >= mmo->numSigs) {
                 status = LDM7_NOENT;
@@ -1010,7 +1014,7 @@ pim_get(
  */
 Ldm7Status
 pim_getNextProdIndex(
-        VcmtpProdIndex* const iProd)
+        FmtpProdIndex* const iProd)
 {
     int status = ensureProperState(true);
 

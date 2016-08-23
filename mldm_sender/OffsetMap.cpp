@@ -6,7 +6,7 @@
  *   @file: OffsetMap.cpp
  * @author: Steven R. Emmerson
  *
- * This file implements a mapping from VCMTP product-indexes to file-offsets.
+ * This file implements a mapping from FMTP product-indexes to file-offsets.
  */
 
 #include "log.h"

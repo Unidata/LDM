@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.13.0.0], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.13.4], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -17,15 +17,13 @@ AC_ARG_ENABLE([debug],
     [
 	case "$enableval" in
 	yes) enable_debug=true
-            case "$CFLAGS" in
+            case "$AM_CFLAGS" in
                 *-g*);;
-                '') CFLAGS=-g;;
-                *) CFLAGS="${CFLAGS} -g";;
+                *) AM_CFLAGS="${AM_CFLAGS+ }-g";;
             esac
-            case "$CXXFLAGS" in
+            case "$AM_CXXFLAGS" in
                 *-g*);;
-                '') CXXFLAGS=-g;;
-                *) CXXFLAGS="${CXXFLAGS} -g";;
+                *) AM_CXXFLAGS="${AM_CXXFLAGS+ }-g";;
             esac
             ;;
 	no) enable_debug=false
@@ -595,7 +593,6 @@ AC_CHECK_HEADERS([stropts.h], ,
 AC_SEARCH_LIBS([log10], [m], , [AC_MSG_ERROR([Library not found])])
 
 # Ensure a reference to the real-time library, if necessary
-AC_SEARCH_LIBS([clock_gettime], [rt], , [AC_MSG_ERROR([Library not found])])
 AC_SEARCH_LIBS([shm_open], [rt], , [AC_MSG_ERROR([Library not found])])
 
 # Ensure references to networking libraries, if necessary.
@@ -703,7 +700,6 @@ AC_CONFIG_FILES([
     html/workshop/Makefile
     html/workshop/specifics.html
     hupsyslog/Makefile
-    hupsyslog/refresh_logging
     ldmd/Makefile
     ldmping/Makefile
     ldmsend/Makefile
@@ -756,7 +752,7 @@ AC_CONFIG_FILES([
 
 dnl The subsystems are unconditionally configured to enable, for example,
 dnl "make dist" to work.
-AC_CONFIG_SUBDIRS([mcast_lib/vcmtp])
+AC_CONFIG_SUBDIRS([mcast_lib/FMTP])
 
 export CC
 

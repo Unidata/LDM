@@ -386,7 +386,7 @@ up7proxy_requestSessionBacklog(
 static int
 up7proxy_requestProduct(
     Up7Proxy* const      proxy,
-    const VcmtpProdIndex iProd)
+    const FmtpProdIndex iProd)
 {
     up7proxy_lock(proxy);
 
@@ -395,7 +395,7 @@ up7proxy_requestProduct(
 
     log_debug("iProd=%lu", (unsigned long)iProd);
     // Asynchronous send => no reply
-    (void)request_product_7((VcmtpProdIndex*)&iProd, clnt); // safe cast
+    (void)request_product_7((FmtpProdIndex*)&iProd, clnt); // safe cast
 
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         /*
@@ -632,7 +632,7 @@ newClient(
             &sockAddr);
 
     if (status) {
-        const char* servAddrStr = sa_format(down7->servAddr);
+        char* servAddrStr = sa_format(down7->servAddr);
         log_add("Couldn't create socket to %s", servAddrStr);
         free(servAddrStr);
     }
@@ -844,7 +844,7 @@ makeRequest(
     Down7* const down7)
 {
     int            status;
-    VcmtpProdIndex iProd;
+    FmtpProdIndex iProd;
 
     /*
      * The semantics and order of the following actions are necessary to
@@ -857,7 +857,7 @@ makeRequest(
     }
     else {
         if (!mrm_addRequestedFile(down7->mrm, iProd)) {
-            log_add("Couldn't add VCMTP product-index to requested-queue");
+            log_add("Couldn't add FMTP product-index to requested-queue");
             status = LDM7_SYSTEM;
         }
         else {
@@ -1506,7 +1506,7 @@ deliver_product(
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info,
                     log_is_enabled_debug);
-            log_info("deliver_product(): Inserted: %s", buf);
+            log_info("Inserted: %s", buf);
         }
         down7_incNumProds(down7);
     }
@@ -1522,8 +1522,7 @@ deliver_product(
                     log_is_enabled_debug);
 
             if (status == PQUEUE_DUP) {
-                log_info("deliver_product(): Duplicate data-product: %s",
-                        buf);
+                log_info("Duplicate data-product: %s", buf);
             }
             else {
                 log_warning("Product too big for queue: %s", buf);
@@ -1597,7 +1596,7 @@ wakeUpNappingDown7(
  *
  * @param[in] servAddr    Pointer to the address of the server from which to
  *                        obtain multicast information, backlog products, and
- *                        products missed by the VCMTP layer. Caller may free
+ *                        products missed by the FMTP layer. Caller may free
  *                        upon return.
  * @param[in] feedtype    Feedtype of multicast group to receive.
  * @param[in] mcastIface  IP address of interface to use for receiving multicast
@@ -1622,7 +1621,7 @@ down7_new(
 
     /*
      * `PQ_THREADSAFE` because the queue is accessed by this module on 3
-     * threads: VCMTP multicast receiver, VCMTP unicast receiver, and LDM-7
+     * threads: FMTP multicast receiver, FMTP unicast receiver, and LDM-7
      * data-product receiver.
      */
     if (!(pq_getFlags(down7Pq) | PQ_THREADSAFE)) {
@@ -1830,6 +1829,19 @@ down7_getNumProds(
 }
 
 /**
+ * Returns the number of reserved spaces in the product-queue for which
+ * pqe_insert() or pqe_discard() have not been called.
+ *
+ * @param[in] down7  The downstream LDM-7.
+ */
+long
+down7_getPqeCount(
+        Down7* const down7)
+{
+    return pqe_get_count(down7->pq);
+}
+
+/**
  * Stops a downstream LDM-7. Causes `down7_start()` to return if it hasn't
  * already. Returns immediately.
  *
@@ -1930,12 +1942,12 @@ down7_free(
  * return immediately so that the multicast LDM receiver can continue.
  *
  * @param[in] down7   Pointer to the downstream LDM-7.
- * @param[in] iProd   Index of the missed VCMTP product.
+ * @param[in] iProd   Index of the missed FMTP product.
  */
 void
 down7_missedProduct(
     Down7* const         down7,
-    const VcmtpProdIndex iProd)
+    const FmtpProdIndex iProd)
 {
     /*
      * Cancellation of the operation of the missed-but-not-requested queue is
@@ -2003,7 +2015,7 @@ deliver_missed_product_7_svc(
 {
     prod_info* const info = &missedProd->prod.info;
     Down7*           down7 = pthread_getspecific(down7Key);
-    VcmtpProdIndex   iProd;
+    FmtpProdIndex   iProd;
 
     if (!mrm_peekRequestedFileNoWait(down7->mrm, &iProd) ||
             iProd != missedProd->iProd) {
@@ -2029,11 +2041,11 @@ deliver_missed_product_7_svc(
  */
 void*
 no_such_product_7_svc(
-    VcmtpProdIndex* const missingIprod,
+    FmtpProdIndex* const missingIprod,
     struct svc_req* const rqstp)
 {
     Down7*         down7 = pthread_getspecific(down7Key);
-    VcmtpProdIndex iProd;
+    FmtpProdIndex iProd;
 
     if (!mrm_peekRequestedFileNoWait(down7->mrm, &iProd) ||
         iProd != *missingIprod) {

@@ -11,18 +11,18 @@ test $# -eq 0
 
 # If the source repository doesn't have the source distribution,
 #
-if ! ssh $SOURCE_REPO_HOST test -e $ABSPATH_SOURCE_DISTRO; then
+if ! ssh steve@$SOURCE_REPO_HOST test -e $ABSPATH_SOURCE_DISTRO; then
     #
     # Copy the source distribution to the source repository.
     #
-    trap "ssh $SOURCE_REPO_HOST rm -f $ABSPATH_SOURCE_DISTRO; `trap -p ERR`" ERR
-    scp $SOURCE_DISTRO_NAME $SOURCE_REPO_HOST:$ABSPATH_SOURCE_DISTRO
+    trap "ssh steve@$SOURCE_REPO_HOST rm -f $ABSPATH_SOURCE_DISTRO; `trap -p ERR`" ERR
+    scp $SOURCE_DISTRO_NAME steve@$SOURCE_REPO_HOST:$ABSPATH_SOURCE_DISTRO
 fi
 
 # Purge the source-repository of bug-fix versions that are older than the latest
 # corresponding minor release.
 #
-ssh -T $SOURCE_REPO_HOST bash --login <<EOF
+ssh -T steve@$SOURCE_REPO_HOST bash --login <<EOF
     set -ex # Exit on error
     cd $ABSPATH_SOURCE_REPO_DIR        
     ls -d $PKG_ID_GLOB |
@@ -52,14 +52,14 @@ make install DESTDIR=$DESTDIR >install.log 2>&1
 # Copy the documentation to the package's website and delete the installation.
 #
 versionWebDirTmp=$ABSPATH_VERSION_WEB_DIR.tmp
-ssh -T $WEB_HOST rm -rf $versionWebDirTmp
-trap "ssh -T $WEB_HOST rm -rf $versionWebDirTmp; `trap -p ERR`" ERR
+ssh -T steve@$WEB_HOST rm -rf $versionWebDirTmp
+trap "ssh -T steve@$WEB_HOST rm -rf $versionWebDirTmp; `trap -p ERR`" ERR
 scp -Br $DESTDIR$ABSPATH_DEFAULT_INSTALL_PREFIX/$RELPATH_DOC_DIR \
-        $WEB_HOST:$versionWebDirTmp
+        steve@$WEB_HOST:$versionWebDirTmp
 rm -r $DESTDIR
 
 # Ensure that the package's home-page references the just-copied documentation.
-ssh -T $WEB_HOST bash --login <<EOF
+ssh -T steve@$WEB_HOST bash --login <<EOF
     set -ex  # Exit on error
 
     # Install the just-copied documentation.
@@ -82,15 +82,31 @@ ssh -T $WEB_HOST bash --login <<EOF
         sed "s/$PKG_NAME-//" |
         sort -t. -k 1nr,1 -k 2nr,2 -k 3nr,3 |
         awk -F. '\$1!=ma||\$2!=mi{print}{ma=\$1;mi=\$2}' >versions
-    sed -n '1,/$BEGIN_VERSION_LINKS/p' documentation.inc >documentation.inc.new
+    sed -n '1,/$BEGIN_VERSION_LINKS/p' versions.inc >versions.inc.new
     for vers in \`cat versions\`; do
         href=$PKG_NAME-\$vers
-        echo "            <li><a href=\"\$href\">\$vers</a>" >>documentation.inc.new
+        cat <<END_VERS >>versions.inc.new
+             <tr>
+              <td>
+               <b>\$vers</b>
+              </td>
+              <td>
+               <a href="\$href">Documentation</a> 
+              </td>
+              <td>
+               <a href="ftp://ftp.unidata.ucar.edu/pub/ldm/\$href.tar.gz">Download</a> 
+              </td>
+               <td>
+               <a href="\$href/CHANGE_LOG">Release Notes</a> 
+              </td>
+             </tr>
+
+END_VERS
     done
-    sed -n '/$END_VERSION_LINKS/,\$p' documentation.inc >>documentation.inc.new
-    rm -f documentation.inc.old
-    cp documentation.inc documentation.inc.old
-    mv documentation.inc.new documentation.inc
+    sed -n '/$END_VERSION_LINKS/,\$p' versions.inc >>versions.inc.new
+    rm -f versions.inc.old
+    cp versions.inc versions.inc.old
+    mv versions.inc.new versions.inc
 
     # Delete all versions not referenced in the top-level HTML file.
     #

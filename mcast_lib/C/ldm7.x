@@ -25,10 +25,10 @@ typedef string McastGroupName<>;
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %
 %/*
-% * VCMTP file identifier:
+% * FMTP file identifier:
 % */
 #endif
-typedef uint32_t VcmtpFileId;
+typedef uint32_t FmtpFileId;
 
 
 #if defined(RPC_HDR) || defined(RPC_XDR)
@@ -97,7 +97,7 @@ program LDMPROG {
          * Downstream to upstream RPC messages:
          */
         SubscriptionReply SUBSCRIBE(McastGroupName) = 1;
-        void              REQUEST_PRODUCT(VcmtpFileId) = 2;
+        void              REQUEST_PRODUCT(FmtpFileId) = 2;
         /*
          * Upstream to downstream RPC messages:
          */

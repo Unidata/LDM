@@ -35,7 +35,8 @@ EXTRA_DIST              = \
         nwstgdump.data \
         productMaker.hin \
         reader.hin \
-	shmfifo.hin
+	shmfifo.hin \
+	SUPER-NATIONAL_8km_IR_20160422_1915.gini
 
 BUILT_SOURCES		= \
 	fifo.h \
@@ -48,7 +49,7 @@ BUILT_SOURCES		= \
 	shmfifo.h
 
 DISTCLEANFILES          = $(BUILT_SOURCES)
-CLEANFILES              = $(BUILT_SOURCES) *.out *.log
+CLEANFILES              = $(BUILT_SOURCES) *.out *.log *.pq output.gini
 
 AM_CPPFLAGS             = \
         -I$(top_srcdir) \
@@ -68,16 +69,32 @@ if WANT_RETRANS
     DEFS                += -DRETRANS_SUPPORT
 endif 
 
-bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester
+bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester \
+                          nbs_ingest
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
 	dvbs_nwstg2 \
 	dvbs_oconus \
 	nplog_rotate
+	
+nbs_ingest_SOURCES	= nbs_ingest.c \
+                          nbs.h \
+                          nbs_link_filedes.c nbs_link.h \
+                          nbs_transport.c nbs_transport.h \
+                          nbs_presentation.c nbs_presentation.h \
+                          nbs_application.c nbs_application.h \
+                          nbs_stack.c nbs_stack.h \
+                          noaaport_socket.c noaaport_socket.h \
+                          decode.h \
+                          gini.c gini.h \
+                          dynabuf.c dynabuf.h
 
 COMMON_SOURCES          = \
+        decode.h \
         dvbs.h \
+        dynabuf.c dynabuf.h \
+        gini.c gini.h \
         grib2name.c \
         ldmProductQueue.c ldmProductQueue.h \
         nport.h \
@@ -101,6 +118,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	fifo.c fifo.h \
 	fileReader.c fileReader.h \
 	getFacilityName.c getFacilityName.h \
+	goes.h \
 	lockProcessInMemory.c \
 	multicastReader.c multicastReader.h \
 	noaaport_socket.c noaaport_socket.h \
@@ -153,13 +171,13 @@ if WANT_SLOG
 READNOAAPORT_LOG                = readnoaaport.slog
 NOAAPORTINGESTER_LOG            = noaaportIngester.slog
 NOAAPORTINGESTER_NSSL_LOG       = noaaportIngester-nssl.slog
-CUT_FIELD                       = 5
+CUT_FIELDS                      = 5-
 endif
 if WANT_ULOG
 READNOAAPORT_LOG                = readnoaaport.ulog
 NOAAPORTINGESTER_LOG            = noaaportIngester.ulog
 NOAAPORTINGESTER_NSSL_LOG       = noaaportIngester-nssl.ulog
-CUT_FIELD                       = 5
+CUT_FIELDS                      = 5,7-
 endif
 
 installcheck-local:
@@ -176,7 +194,7 @@ check-readnoaaport:     readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
 	    -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
 	rm /tmp/readnoaaport-test.pq
-	fgrep 'process_prod()' readnoaaport.out | cut -d ' ' -f $(CUT_FIELD)- \
+	fgrep 'process_prod()' readnoaaport.out | cut -d ' ' -f $(CUT_FIELDS) \
 		>readnoaaport.log
 	diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
 
@@ -187,7 +205,7 @@ noaaportIngester.out:           noaaportIngester
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:           noaaportIngester.out
-	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
+	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester:         noaaportIngester.log \
 	                        $(srcdir)/$(NOAAPORTINGESTER_LOG)
 	diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
@@ -205,7 +223,7 @@ noaaportIngester-nssl.out:      noaaportIngester
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
 	    g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:      noaaportIngester-nssl.out
-	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELD)- >$@
+	fgrep 'process_prod()' <$? | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
@@ -219,13 +237,46 @@ valgrind-readnoaaport:		readnoaaport
 	rm /tmp/readnoaaport-test.pq
 
 if HAVE_CUNIT
-check_PROGRAMS			= frame_queue_test
-frame_queue_test_SOURCES	= frame_queue_test.c \
-				  frame_queue.c frame_queue.h
-frame_queue_test_LDADD		= $(LDADD) @LIBS_CUNIT@
-TESTS				= frame_queue_test
-valgrind-frame_queue:	frame_queue_test
-	$(LIBTOOL) --mode=execute valgrind --leak-check=yes frame_queue_test
+check_PROGRAMS			= nbs_test
+#				  pipe_test socketpair_test frame_queue_test 
+
+#pipe_test_SOURCES		= pipe_test.c
+#pipe_test_LDADD		= $(LDADD) @LIBS_CUNIT@
+
+#socketpair_test_SOURCES	= socketpair_test.c
+#socketpair_test_LDADD		= $(LDADD) @LIBS_CUNIT@
+
+#frame_queue_test_SOURCES	= frame_queue_test.c \
+#				  frame_queue.c frame_queue.h
+#frame_queue_test_LDADD		= $(LDADD) @LIBS_CUNIT@
+
+nbs_test_SOURCES		= nbs_test.c \
+				  nbs_application.c nbs_application.h \
+				  nbs_presentation.c nbs_presentation.h \
+				  nbs_transport.c nbs_transport.h \
+				  nbs_link_filedes.c nbs_link.h \
+				  nbs_stack.c nbs_stack.h \
+				  decode.h \
+				  gini.c gini.h \
+				  dynabuf.c dynabuf.h
+nbs_test_LDADD			= $(LDADD) @LIBS_CUNIT@
+
+#TESTS				= pipe_test socketpair_test frame_queue_test 
+
+check-local: 			check-nbs_test
+
+check-nbs_test:	nbs_test
+	./nbs_test $(srcdir)/SUPER-NATIONAL_8km_IR_20160422_1915.gini
+	../pqcat/pqcat -l- -q nbs_test.pq >output.gini 2>/dev/null
+	if cmp $(srcdir)/SUPER-NATIONAL_8km_IR_20160422_1915.gini output.gini; then \
+            rm output.gini nbs_test.pq; \
+	fi
+
+valgrind-nbs_test:	nbs_test
+	$(LIBTOOL) --mode=execute valgrind --leak-check=yes nbs_test
+
+#valgrind-frame_queue:	frame_queue_test
+#	$(LIBTOOL) --mode=execute valgrind --leak-check=yes frame_queue_test
 endif
 
 sudo:

@@ -18,7 +18,7 @@ set -e  # exit if error
 # Build and test the package and create a source distribution.
 #
 PATH=/usr/bin:$PATH
-mkdir -p m4 mcast_lib/vcmtp/m4
+mkdir -p m4 mcast_lib/fmtp/m4
 autoreconf -if
 ./configure --enable-debug --disable-root-actions >configure.log 2>&1
 

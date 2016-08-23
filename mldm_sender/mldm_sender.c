@@ -8,7 +8,7 @@
  *
  * This file implements the multicast LDM sender, which is a program for
  * multicasting LDM data-products from the LDM product-queue to a multicast
- * group using VCMTP.
+ * group using FMTP.
  */
 
 #include "config.h"
@@ -65,7 +65,7 @@ static const int             termSigs[] = {SIGINT, SIGTERM};
  */
 static sigset_t              termSigSet;
 /**
- * VCMTP product-index to product-queue offset map.
+ * FMTP product-index to product-queue offset map.
  */
 static OffMap*               offMap;
 
@@ -103,10 +103,10 @@ Options:\n\
     -m mcastIf        IP address of interface to use to send multicast\n\
                       packets. Default is the system's default multicast\n\
                       interface.\n\
-    -p serverPort     Port number for VCMTP TCP server. Default is chosen by\n\
+    -p serverPort     Port number for FMTP TCP server. Default is chosen by\n\
                       operating system.\n\
     -q prodQueue      Pathname of product-queue. Default is \"%s\".\n\
-    -s serverIface    IP Address of interface on which VCMTP TCP server will\n\
+    -s serverIface    IP Address of interface on which FMTP TCP server will\n\
                       listen. Default is all interfaces.\n\
     -t ttl            Time-to-live of outgoing packets (default is 1):\n\
                            0  Restricted to same host. Won't be output by\n\
@@ -134,9 +134,9 @@ Operands:\n\
  * @param[in]  argc          Number of arguments.
  * @param[in]  argv          Arguments.
  * @param[out] feed          Feedtypes of data to be sent.
- * @param[out] serverIface   Interface on which VCMTP TCP server should listen.
+ * @param[out] serverIface   Interface on which FMTP TCP server should listen.
  *                           Caller must not free.
- * @param[out] serverPort    Port number for VCMTP TCP server.
+ * @param[out] serverPort    Port number for FMTP TCP server.
  * @param[out] ttl           Time-to-live of outgoing packets.
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.
@@ -150,7 +150,7 @@ Operands:\n\
  * @param[out] ifaceAddr     IP address of the interface to use to send
  *                           multicast packets.
  * @param[out] timeoutFactor Ratio of the duration that a data-product will
- *                           be held by the VCMTP layer before being released
+ *                           be held by the FMTP layer before being released
  *                           after being multicast to the duration to
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
@@ -169,6 +169,7 @@ mls_decodeOptions(
         const char** const restrict    ifaceAddr,
         float* const                   timeoutFactor)
 {
+    const char*  pqfname = getQueuePath();
     int          ch;
     extern int   opterr;
     extern int   optopt;
@@ -178,77 +179,78 @@ mls_decodeOptions(
 
     while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:s:t:vx")) != EOF)
         switch (ch) {
-        case 'f': {
-            if (strfeedtypet(optarg, feed)) {
-                log_add("Invalid feed expression: \"%s\"", optarg);
-                return 1;
+            case 'f': {
+                if (strfeedtypet(optarg, feed)) {
+                    log_add("Invalid feed expression: \"%s\"", optarg);
+                    return 1;
+                }
+                break;
             }
-            break;
-        }
-        case 'l': {
-            (void)log_set_destination(optarg);
-            break;
-        }
-        case 'm': {
-            *ifaceAddr = optarg;
-            break;
-        }
-        case 'p': {
-            unsigned short port;
-            int            nbytes;
+            case 'l': {
+                (void)log_set_destination(optarg);
+                break;
+            }
+            case 'm': {
+                *ifaceAddr = optarg;
+                break;
+            }
+            case 'p': {
+                unsigned short port;
+                int            nbytes;
 
-            if (1 != sscanf(optarg, "%5hu %n", &port, &nbytes) ||
-                    0 != optarg[nbytes]) {
-                log_add("Couldn't decode TCP-server port-number option-argument "
-                        "\"%s\"", optarg);
+                if (1 != sscanf(optarg, "%5hu %n", &port, &nbytes) ||
+                        0 != optarg[nbytes]) {
+                    log_add("Couldn't decode TCP-server port-number option-argument "
+                            "\"%s\"", optarg);
+                    return 1;
+                }
+                *serverPort = port;
+                break;
+            }
+            case 'q': {
+                pqfname = optarg;
+                break;
+            }
+            case 's': {
+                *serverIface = optarg;
+                break;
+            }
+            case 't': {
+                unsigned t;
+                int      nbytes;
+                if (1 != sscanf(optarg, "%3u %n", &t, &nbytes) ||
+                        0 != optarg[nbytes]) {
+                    log_add("Couldn't decode time-to-live option-argument \"%s\"",
+                            optarg);
+                    return 1;
+                }
+                if (t >= 255) {
+                    log_add("Invalid time-to-live option-argument \"%s\"",
+                            optarg);
+                    return 1;
+                }
+                *ttl = t;
+                break;
+            }
+            case 'v': {
+                if (!log_is_enabled_info)
+                    (void)log_set_level(LOG_LEVEL_INFO);
+                break;
+            }
+            case 'x': {
+                (void)log_set_level(LOG_LEVEL_DEBUG);
+                break;
+            }
+            case ':': {
+                log_add("Option \"%c\" requires an argument", optopt);
                 return 1;
             }
-            *serverPort = port;
-            break;
-        }
-        case 'q': {
-            setQueuePath(optarg);
-            break;
-        }
-        case 's': {
-            *serverIface = optarg;
-            break;
-        }
-        case 't': {
-            unsigned t;
-            int      nbytes;
-            if (1 != sscanf(optarg, "%3u %n", &t, &nbytes) ||
-                    0 != optarg[nbytes]) {
-                log_add("Couldn't decode time-to-live option-argument \"%s\"",
-                        optarg);
+            default: {
+                log_add("Unknown option: \"%c\"", optopt);
                 return 1;
             }
-            if (t >= 255) {
-                log_add("Invalid time-to-live option-argument \"%s\"",
-                        optarg);
-                return 1;
-            }
-            *ttl = t;
-            break;
         }
-        case 'v': {
-            if (!log_is_enabled_info)
-                (void)log_set_level(LOG_LEVEL_INFO);
-            break;
-        }
-        case 'x': {
-            (void)log_set_level(LOG_LEVEL_DEBUG);
-            break;
-        }
-        case ':': {
-            log_add("Option \"%c\" requires an argument", optopt);
-            return 1;
-        }
-        default: {
-            log_add("Unknown option: \"%c\"", optopt);
-            return 1;
-        }
-        }
+    setQueuePath(pqfname);
 
     return 0;
 }
@@ -340,9 +342,9 @@ mls_decodeOperands(
 /**
  * Sets the multicast group information from command-line arguments.
  *
- * @param[in]  serverIface  Interface on which VCMTP TCP server should listen.
+ * @param[in]  serverIface  Interface on which FMTP TCP server should listen.
  *                          Caller must not free.
- * @param[in]  serverPort   Port number for VCMTP TCP server.
+ * @param[in]  serverPort   Port number for FMTP TCP server.
  * @param[in]  feed         Feedtype of multicast group.
  * @param[in]  groupAddr    Internet service address of multicast group.
  *                          Caller should free when it's no longer needed.
@@ -391,7 +393,7 @@ mls_setMcastGroupInfo(
  *                           packets should be sent or NULL to have them sent
  *                           from the system's default multicast interface.
  * @param[out] timeoutFactor Ratio of the duration that a data-product will
- *                           be held by the VCMTP layer before being released
+ *                           be held by the FMTP layer before being released
  *                           after being multicast to the duration to
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
@@ -575,7 +577,7 @@ mls_openProdIndexMap(
  */
 static void
 mls_doneWithProduct(
-    const VcmtpProdIndex prodIndex)
+    const FmtpProdIndex prodIndex)
 {
     off_t offset;
     int   status = om_get(offMap, prodIndex, &offset);
@@ -595,7 +597,7 @@ mls_doneWithProduct(
 
 /**
  * Initializes the resources of this module. Sets `mcastInfo`; in particular,
- * sets `mcastInfo.server.port` to the actual port number used by the VCMTP
+ * sets `mcastInfo.server.port` to the actual port number used by the FMTP
  * TCP server (in case the number was chosen by the operating-system).
  *
  * @param[in] info           Information on the multicast group.
@@ -613,7 +615,7 @@ mls_doneWithProduct(
  *                           multicast packets. "0.0.0.0" obtains the default
  *                           multicast interface. Caller may free.
  * @param[in] timeoutFactor  Ratio of the duration that a data-product will
- *                           be held by the VCMTP layer before being released
+ *                           be held by the FMTP layer before being released
  *                           after being multicast to the duration to
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
@@ -666,7 +668,7 @@ mls_init(
     if ((status = mls_openProdIndexMap(info->feed, pq_getSlotCount(pq))))
         goto close_pq;
 
-    VcmtpProdIndex iProd;
+    FmtpProdIndex iProd;
     if ((status = pim_getNextProdIndex(&iProd)))
         goto close_prod_index_map;
 
@@ -749,7 +751,7 @@ mls_multicastProduct(
         void* const restrict            arg)
 {
     off_t          offset = *(off_t*)arg;
-    VcmtpProdIndex iProd = mcastSender_getNextProdIndex(mcastSender);
+    FmtpProdIndex iProd = mcastSender_getNextProdIndex(mcastSender);
     int            status = om_put(offMap, iProd, offset);
     if (status) {
         log_add("Couldn't add product %lu, offset %lu to map",
@@ -838,7 +840,7 @@ static int
 mls_tryMulticast(
         prod_class* const restrict prodClass)
 {
-    // TODO: Keep product locked until VCMTP notification, then release
+    // TODO: Keep product locked until FMTP notification, then release
 
     off_t offset;
     int   status = pq_sequenceLock(pq, TV_GT, prodClass, mls_multicastProduct,
@@ -940,7 +942,7 @@ mls_startMulticasting(void)
  *                           multicast packets. "0.0.0.0" obtains the default
  *                           multicast interface. Caller may free.
  * @param[in]  timeoutFactor Ratio of the duration that a data-product will
- *                           be held by the VCMTP layer before being released
+ *                           be held by the FMTP layer before being released
  *                           after being multicast to the duration to
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.

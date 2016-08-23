@@ -33,7 +33,7 @@
 
 #if 0
 static void missed_product_func(
-    const VcmtpFileId fileId)
+    const FmtpFileId fileId)
 {
 }
 #endif
@@ -120,12 +120,12 @@ test_mdl_createAndExecute()
     Mlr*                 mdl;
 
 
-    vcmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
+    fmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
     status = mlr_start(mdl);
     log_flush_info();
     OP_ASSERT_EQUAL_INT(LDM7_SHUTDOWN, status);
 
-    vcmtpReceiver_free_ExpectAndReturn(NULL, NULL);
+    fmtpReceiver_free_ExpectAndReturn(NULL, NULL);
     mlr_free(mdl);
     log_flush_info();
 

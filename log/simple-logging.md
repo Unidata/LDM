@@ -95,9 +95,7 @@ static pid_t exec_child(const char* const path)
     }
     else if (pid > 0) {
         // Child process
-        log_fini(); // Frees resources; closes appropriate file descriptors
-        (void)execl(path, path, NULL);
-        log_reinit(); // Re-establishes logging state before log_fini()
+        (void)execl(path, path, NULL)
         /*
          * Adds to empty message queue using `errno`, prints queue at ERROR
          * level, then clears queue:
@@ -214,12 +212,12 @@ where:
 <dt><em>level</em> <dd>Is the logging-level (i.e., priority) of the message. One
     of `DEBUG`, `INFO`, `NOTE`, `WARN`, or `ERROR`.
 <dt><em>loc</em> <dd>Is the location where the message was created in the form
-    <em>file</em>:<em>func</em>():<em>line</em>, where <em>file</em> is the name
-    of the file where the message was generated, <em>func</em> is the name of
-    the function that generated the message, and <em>line</em> is the line
-    number where the message was created.
-<dt><em>msg</em></dt>  <dd>Is the actual message given to one of the logging
-    functions.</dd>
+    <em>file</em>:<em>line</em>:<em>func</em>(), where <em>file</em> is the name
+    of the file where the message was generated, <em>line</em> is the line
+    number, and <em>func</em> is the name of the function that generated the
+    message.
+<dt><em>msg</em> <dd>Is the actual message given to one of the logging
+    functions.
 </dl>
 
 Log messages sent to the system logging daemon will, in general, have the same

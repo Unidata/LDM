@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <search.h>
+#include <stdint.h>
 #include <xdr.h>
 
 #include "ldm.h"
@@ -32,6 +33,7 @@
 #include "remote.h"
 #include "lcm.h"
 #include "log.h"
+#include "ldmfork.h"
 #include "ldmprint.h"
 #include "fsStats.h"
 #include "ldm_xlen.h"
@@ -68,10 +70,10 @@ extern unsigned int     interval;
 
 
 /* useful for aligning memory */
-#define _RNDUP(x, unit)  ((((x) + (unit) - 1) / (unit)) * (unit))
+#define _RNDUP(x, unit) ((((x) + (unit) - 1) / (unit)) * (unit))
 #define M_RND_UNIT      (sizeof(double))
-#define M_RNDUP(x) _RNDUP(x, M_RND_UNIT)
-#define M_RNDDOWN(x)  ((x) - ((x)%M_RND_UNIT))
+#define M_RNDUP(x)      _RNDUP(x, M_RND_UNIT)
+#define M_RNDDOWN(x)    ((x) - ((x)%M_RND_UNIT))
 
 #define MIN_RGN_SIZE    M_RND_UNIT
 
@@ -128,7 +130,7 @@ struct fb {
 typedef struct fb fb;
 
 /* return floor(log4(n)) */
-static int 
+static inline int
 log4(size_t n) 
 {
     log_assert(n > 0);
@@ -143,30 +145,34 @@ log4(size_t n)
  *  - 2 with probability 3/4*(1/4)^2 = .046875
  *  - ...
  *  capped at "fbp->maxsize - 1". Not thread-safe.
+ *
+ *  @param[in] fbp  Pointer to fblk structure
  */
 static int 
-fb_ranlev(fb *fbp) 
+fb_ranlev(
+        const fb* const fbp)
 {
-#   define                BITSINRANDOM 31
-    int                   level;
-    int                   maxlevel = fbp->maxsize - 1;
-    static int            randomsLeft = 1;
-    static long           randomBits;
-    static unsigned short xsubi[3] = {
-            (unsigned short)1234567890,
-            (unsigned short)9876543210,
-            (unsigned short)1029384756};
-
-    for (level = 0; level < maxlevel; level++) {
+    int level;
+    for (level = 0; level < fbp->maxsize - 1; level++) {
+        // nrand48() returns 31 pseudo-random bits:
+#       define                BITS_IN_RANDOM 31
+#       define                BITS_IN_PIECE  2
+#       define                PIECE_MASK     ((1 << BITS_IN_PIECE) - 1)
+        static int            randomsLeft;
+        static long           randomBits;
+        // Randomly-generated values:
+        static unsigned short xsubi[3] = {
+                (unsigned short)0x473da8f190d5f1c4u,
+                (unsigned short)0x440937acf01c8c4eu,
+                (unsigned short)0xa8a9d686bec2da48u}; // Casts silence warnings
         if (--randomsLeft <= 0) {
             randomBits = nrand48(xsubi);
-            randomsLeft = BITSINRANDOM / 2;
+            randomsLeft = BITS_IN_RANDOM / BITS_IN_PIECE;
         }
-        if (randomBits & 3)
+        if (randomBits & PIECE_MASK)
             break;
-        randomBits >>= 2;
+        randomBits >>= BITS_IN_PIECE;
     }
-
     return level;
 }
 
@@ -206,11 +212,17 @@ fb_arena_sz(size_t nelems)
 
 /* return size of fb needed for nelems products */
 static size_t
-fb_sz(size_t nelems) 
+fb_sz(const size_t nelems)
 {
-    size_t sz = sizeof(fb) - sizeof(fblk_t) * FBLKS_NALLOC_INITIAL;
-    sz += fb_arena_sz(nelems) * sizeof(fblk_t);
-    return sz;
+    log_assert(nelems);
+    static size_t prev_nelems = 0;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = sizeof(fb) - sizeof(fblk_t) * FBLKS_NALLOC_INITIAL;
+        size += fb_arena_sz(nelems) * sizeof(fblk_t);
+    }
+    return size;
 }
 
 
@@ -426,7 +438,7 @@ fb_get(fb *fbp, int level)
      * All out of blocks. This means we tried to keep in the product-queue
      * significantly more products than the specified maximum number.
      */
-    log_error("fb layer ran out of product slots. "
+    log_error("\"fblk\" subsystem ran out of skip-list nodes. "
             "Too many products in queue.");
     fb_stats_dump(fbp);
     return (fblk_t)OFF_NONE;
@@ -518,12 +530,18 @@ typedef struct tqueue tqueue;
  * it will consume
  */
 static size_t
-tq_sz(size_t nelems) 
+tq_sz(const size_t nelems)
 {
-    size_t sz = sizeof(tqueue) - sizeof(tqelem) * TQ_NALLOC_INITIAL;
-    /* TQ_OVERHEAD_ELEMS extra slots for TQ_NIL, TQ_HEADER  */
-    sz += (nelems + TQ_OVERHEAD_ELEMS) * sizeof(tqelem);
-    return sz;
+    log_assert(nelems);
+    static size_t prev_nelems = 0;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = sizeof(tqueue) - sizeof(tqelem) * TQ_NALLOC_INITIAL;
+        /* TQ_OVERHEAD_ELEMS extra slots for TQ_NIL, TQ_HEADER  */
+        size += (nelems + TQ_OVERHEAD_ELEMS) * sizeof(tqelem);
+    }
+    return size;
 }
 
 /*
@@ -582,7 +600,7 @@ tq_init(tqueue *const tq, size_t const nalloc0, fb *fbp)
 /*
  * Affirm that that another element can be added to tq
  */
-static int
+static inline int
 tq_HasSpace(const tqueue *const tq)
 {
         log_assert(tq->nelems - TQ_OVERHEAD_ELEMS <= tq->nalloc);
@@ -960,7 +978,7 @@ tq_delete(tqueue *const tq, tqelem *tqep)
  * Return the next element by insertion time in the time queue tq, 
  * after the one pointed to by tqep.
  */
-static tqelem *
+static inline tqelem *
 tq_next(const tqueue *const tq, const tqelem *const tqep) 
 {
     /* get the skip list array of offsets */
@@ -1227,7 +1245,7 @@ prevprime(unsigned long n) {/* find largest prime <= n */
 /*
  * Returns number of chains required for the specified number of elements.
  */
-static size_t
+static inline size_t
 rlhash_nchains(size_t const nelems) 
 {
   return prevprime(nelems / RL_EXP_CHAIN_LEN);
@@ -1237,7 +1255,7 @@ rlhash_nchains(size_t const nelems)
  * For an rlhash which is nelems long, return how much space it will
  * consume.
  */
-static size_t
+static inline size_t
 rlhash_sz(size_t nelems)
 {
         size_t sz = sizeof(rlhash) - sizeof(size_t) * RL_NALLOC_INITIAL;
@@ -1249,7 +1267,7 @@ rlhash_sz(size_t nelems)
  * For a region list which is nelems long, return how much space it will
  * consume, *without* the auxilliary rlhash structure.
  */
-static size_t
+static inline size_t
 rlwo_sz(size_t nelems) 
 {
         size_t sz = sizeof(regionl) - sizeof(region) * RL_NALLOC_INITIAL;
@@ -1264,15 +1282,22 @@ rlwo_sz(size_t nelems)
  * return how much space the rl will consume.
  */
 static size_t
-rl_sz(size_t nelems)
+rl_sz(const size_t nelems)
 {
-    return rlwo_sz(nelems) + rlhash_sz(rlhash_nchains(nelems));
+    log_assert(nelems);
+    static size_t prev_nelems = 0;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = rlwo_sz(nelems) + rlhash_sz(rlhash_nchains(nelems));
+    }
+    return size;
 }
 
 /* 
  * Hash function for offset.
  */
-static size_t 
+static inline size_t
 rl_hash(size_t nchains, const off_t offset) 
 {
     unsigned int n = offset;
@@ -1505,7 +1530,7 @@ rl_fext_prev(regionl *const rl, size_t rlix)
  * rl->maxfextent, in O(log(nfree)) time.  Used after taking the free
  * region with maximum extent off of the freelist.  
 */
-static size_t
+static inline size_t
 rl_maxfextent(regionl *const rl) {
     region *rlrp = rl->rp;
     size_t rmix;                /* index of region with maximum extent */
@@ -1762,13 +1787,19 @@ rlhash_del(regionl *const rl, size_t rlix)
     return;
 }
 
-/*
+/**
  * Add recycled region to freelist skip list by offset in O(log(nfree))
  * time.
+ *
+ * @param[in,out] rl    Region list
+ * @param[in]     rlix  Offset of region entry
+ * @retval 0            Success
+ * @retval PQ_SYSTEM    Couldn't get new node for skip-list. log_add() called.
  */
-static void
+static int
 rl_foff_add(regionl *const rl, size_t rlix)
 {
+    int     status;
     region *rlrp = rl->rp;
     region *rep = rlrp + rlix;
     int k;
@@ -1808,23 +1839,37 @@ rl_foff_add(regionl *const rl, size_t rlix)
     }
     /* get new fblk of level k */
     rep->next = fb_get(fbp, k);
-    do {
-        spix = update[k];
-        spp = rlrp + spix;
-        /* q->forward[k] = p->forward[k]; */
-        fbp->fblks[rep->next + k] = fbp->fblks[spp->next + k];
-        /* p->forward[k] = q; */
-        fbp->fblks[spp->next + k] = rlix; /* forward pointer to new region */
-    } while(--k >= 0);
+    if (rep->next == (fblk_t)OFF_NONE) {
+        log_add("Couldn't get skip-list node of level %d", k);
+        status = PQ_SYSTEM;
+    }
+    else {
+        do {
+            spix = update[k];
+            spp = rlrp + spix;
+            /* q->forward[k] = p->forward[k]; */
+            fbp->fblks[rep->next + k] = fbp->fblks[spp->next + k];
+            /* p->forward[k] = q; */
+            fbp->fblks[spp->next + k] = rlix; /* forward pointer to new region */
+        } while(--k >= 0);
+        status = 0;
+    }
+    return status;
 }
 
-/*
+/**
  * Add recycled region to freelist skip list by extent in O(log(nfree))
  * time.
+ *
+ * @param[in,out] rl  Region list
+ * @param[in]         Offset to region entry
+ * @retval PQ_SYSTEM  Couldn't get new skip-list node. `log_add()` called.
+ * @retval 0          Success
  */
-static void
+static int
 rl_fext_add(regionl *const rl, size_t rlix)
 {
+    int     status;
     region *rlrp = rl->rp;
     region *rep = rlrp + rlix;
     int k;
@@ -1866,14 +1911,22 @@ rl_fext_add(regionl *const rl, size_t rlix)
     }
     /* get new fblk of level k */
     rep->prev = fb_get(fbp, k);
-    do {
-        spix = update[k];
-        spp = rlrp + spix;
-        /* q->forward[k] = p->forward[k]; */
-        fbp->fblks[rep->prev + k] = fbp->fblks[spp->prev + k];
-        /* p->forward[k] = q; */
-        fbp->fblks[spp->prev + k] = rlix; /* forward pointer to new region */
-    } while(--k >= 0);
+    if (rep->prev == (fblk_t)OFF_NONE) {
+        log_add("Couldn't get new skip-list node of level %d", k);
+        status = PQ_SYSTEM;
+    }
+    else {
+        do {
+            spix = update[k];
+            spp = rlrp + spix;
+            /* q->forward[k] = p->forward[k]; */
+            fbp->fblks[rep->prev + k] = fbp->fblks[spp->prev + k];
+            /* p->forward[k] = q; */
+            fbp->fblks[spp->prev + k] = rlix; /* forward pointer to new region */
+        } while(--k >= 0);
+        status = 0;
+    }
+    return status;
 }
 
 
@@ -1912,17 +1965,34 @@ rl_foff_dump(regionl *const rl)
 #endif
 
 
-/*
+/**
  * Return region with index rlix to the free list.
+ *
+ * @param[in,out] rl    Region list
+ * @param[in]     rlix  Offset of region entry
+ * @retval PQ_SYSTEM    Couldn't get new skip-list node. `log_add()` called.
+ * @retval 0            Success
  */
-static void
+static int
 rl_rel(regionl *const rl, size_t rlix) 
 {
-    rl_foff_add(rl, rlix);      /* add to freelist skip list by offset */
-    rl_fext_add(rl, rlix);      /* add to freelist skip list by extent */
-
-    rl->nfree++;
-    return;
+    // Add to freelist skip list by offset */
+    int status = rl_foff_add(rl, rlix);
+    if (status) {
+        log_add("Couldn't add to offset free-list");
+    }
+    else {
+        // Add to freelist skip list by extent
+        status = rl_fext_add(rl, rlix);
+        if (status) {
+            log_add("Couldn't add to extent free-list");
+            rl_foff_del(rl, rlix);
+        }
+        else {
+            rl->nfree++;
+        }
+    }
+    return status;
 }
 
 /*
@@ -2170,10 +2240,18 @@ rl_add(regionl *const rl, off_t const offset, size_t const extent)
     rep->offset = offset;
     rep->extent = extent;
 
-    rl_rel(rl, rpix);   /* Insert into free list.  No need to consolidate. */
-    if(rl->nfree > rl->maxfree)
-        rl->maxfree = rl->nfree;
-    log_assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
+    // Insert into free list.  No need to consolidate.
+    int status = rl_rel(rl, rpix);
+    if (status) {
+        log_add("Couldn't insert region into free region list");
+        rp_rel(rl, rpix);
+        rep = NULL;
+    }
+    else {
+        if(rl->nfree > rl->maxfree)
+            rl->maxfree = rl->nfree;
+        log_assert(rl->nelems + rl->nfree + rl->nempty == rl->nalloc);
+    }
     return rep;
 }
 
@@ -2206,6 +2284,7 @@ rl_split(regionl *const rl, size_t rlix, size_t const extent)
             if(rem > rl->maxfextent)
                 rl->maxfextent = rem;
         } else {                /* out of empty slots, not enough allocated */
+            log_add("Couldn't add split-off region to free region list");
             status = ENOMEM;
         }
         return status;
@@ -2320,7 +2399,7 @@ typedef struct sxhash sxhash;
 /*
  * Returns number of chains required for the specified number of elements.
  */
-static size_t
+static inline size_t
 nchains(size_t const nelems) 
 {
   return prevprime(nelems / SX_EXP_CHAIN_LEN);
@@ -2330,7 +2409,7 @@ nchains(size_t const nelems)
  * For an sxhash which is nelems long, return how much space it will
  * consume.
  */
-static size_t
+static inline size_t
 sxhash_sz(size_t nelems)
 {
         size_t sz = sizeof(sxhash) - sizeof(off_t) * SXHASH_NALLOC_INITIAL;
@@ -2342,7 +2421,7 @@ sxhash_sz(size_t nelems)
  * For a sx which is nelems long, return how much space it will
  * consume, *without* the auxilliary sxhash structure.
  */
-static size_t
+static inline size_t
 sxwo_sz(size_t nelems) 
 {
         size_t sz = sizeof(sx) - sizeof(sxelem) * SX_NALLOC_INITIAL;
@@ -2355,9 +2434,16 @@ sxwo_sz(size_t nelems)
  * consume, including the auxilliary sxhash structure.
  */
 static size_t
-sx_sz(size_t nelems) 
+sx_sz(const size_t nelems)
 {
-    return sxwo_sz(nelems) + sxhash_sz(nchains(nelems));
+    log_assert(nelems);
+    static size_t prev_nelems = 0;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = sxwo_sz(nelems) + sxhash_sz(nchains(nelems));
+    }
+    return size;
 }
 
 /* 
@@ -2432,7 +2518,7 @@ sx_init(sx *const sx, size_t const nalloc)
  * Comparison function used in sx_find() below.  
  * Returns 1 if sig1 equals sig2, 0 otherwise.
  */
-static int
+static inline int
 sx_compare(const signaturet sig1, const signaturet sig2)
 {
   return 0 == memcmp(sig1, sig2, sizeof(signaturet));
@@ -2571,7 +2657,6 @@ sx_find_delete(sx *const sx, const signaturet sig)
     size_t try;
     size_t next;
     sxhash *sxhp;
-    int status = 0;
     /* sxhp = (sxhash *)((char *)(sx) + sxwo_sz(sx->nalloc)); */
     sxhp = (sxhash *)(&sx->sxep[sx->nalloc]);
     log_assert(sxhp->magic == SX_MAGIC);
@@ -2585,8 +2670,7 @@ sx_find_delete(sx *const sx, const signaturet sig)
         sxhp->chains[try] = sxep->next;
         sxelem_free(sx, next);
         sx->nelems--;
-        status = 1;
-        return status;
+        return 1;
     }
     next = sxep->next;
     while (next != SX_NONE) {
@@ -2596,12 +2680,11 @@ sx_find_delete(sx *const sx, const signaturet sig)
             osxep->next = sxep->next;
             sxelem_free(sx, next);
             sx->nelems--;
-            status = 1;
-            return status;
+            return 1;
         }
         next = sxep->next;
     }
-    return status;              /* not found */
+    return 0;              /* not found */
 }
 
 /* End sx */
@@ -2618,43 +2701,84 @@ sx_find_delete(sx *const sx, const signaturet sig)
  * collection of indices, each of 'nelems'.
  */
 static size_t
-ix_sz(size_t nelems, size_t align)
+ix_sz(const size_t nelems, const size_t align)
 {
-    return _RNDUP(rl_sz(nelems), align) + _RNDUP(tq_sz(nelems), align)
+    log_assert(nelems);
+    static size_t prev_nelems;
+    static size_t size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        size = _RNDUP(rl_sz(nelems), align) + _RNDUP(tq_sz(nelems), align)
            + _RNDUP(fb_sz(nelems), align) + _RNDUP(sx_sz(nelems), align);
+    }
+    return size;
 }
 
 
-/*
- * Convert the raw index area 'ix', 'ixsz'
- * into the useful handles.
+/**
+ * Computes and returns pointers to the indexes.
+ *
+ * @param[in]  ix      Start of index region
+ * @param[in]  ixsz    Extent of the index region in bytes
+ * @param[in]  nelems  Capacity of product-queue in number of products
+ * @param[in]  align   Alignment parameter in bytes
+ * @param[out] rlpp    Pointer to region index
+ * @param[out] tqpp    Pointer to time index
+ * @param[out] fbpp    Pointer to "fblk" index
+ * @param[out] sxpp    Pointer to signature index
+ * @retval     1       Success. `*rlpp`, `*tqpp`, `*fbpp`, and `*sxpp` are set
+ * @retval     0       Failure. log_log() called.
  */
 static int
-ix_ptrs(void *ix, size_t ixsz, size_t nelems,
-        size_t align, regionl **rlpp, tqueue **tqpp, fb **fbpp, sx **sxpp)
+ix_ptrs(
+        void* const restrict     ix,
+        const size_t             ixsz,
+        const size_t             nelems,
+        const size_t             align,
+        regionl** const restrict rlpp,
+        tqueue** const restrict  tqpp,
+        fb** const restrict      fbpp,
+        sx** const restrict      sxpp)
 {
-        *rlpp = (regionl *)ix;
-        *tqpp = (tqueue *) _RNDUP((size_t)((char *)(*rlpp) + rl_sz(nelems)), align);
-        *fbpp = (fb *) _RNDUP((size_t)((char *)(*tqpp) + tq_sz(nelems)), align);
-        *sxpp = (sx *) _RNDUP((size_t)((char *)(*fbpp) + fb_sz(nelems)), align);
-        /* can't set cached tq->fbp and rl->fbp here, because those
-           are in mmap'd file, which might be open read-only */
-        /*
-        ((struct regionl *)*rlpp)->fbp = *fbpp;
-        ((struct tqueue *)*tqpp)->fbp = *fbpp;
-        */
-#ifndef NDEBUG
-        log_assert(((char *)(*sxpp) + sx_sz(nelems)) <= ((char *)ix + ixsz));
+    log_assert(nelems);
+    /*
+     * Profiling revealed that the program pqact(1) spent about 1/3 of its time
+     * in the function isprime(), which is indirectly called by the functions
+     * rl_sz() and sx_sz(); thus, the following optimization. SRE 2016-06-21
+     */
+    static size_t prev_nelems = 0;
+    static size_t rl_size;
+    static size_t tq_size;
+    static size_t fb_size;
+    static size_t sx_size;
+    if (nelems != prev_nelems) {
+        prev_nelems = nelems;
+        rl_size = rl_sz(nelems);
+        tq_size = tq_sz(nelems);
+        fb_size = fb_sz(nelems);
+        sx_size = sx_sz(nelems);
+    }
+    *rlpp = (regionl*)ix;
+    *tqpp =  (tqueue*)_RNDUP((intptr_t)((char*)(*rlpp) + rl_size), align);
+    *fbpp =      (fb*)_RNDUP((intptr_t)((char*)(*tqpp) + tq_size), align);
+    *sxpp =      (sx*)_RNDUP((intptr_t)((char*)(*fbpp) + fb_size), align);
+    /*
+     * Can't set cached `tq->fbp` and `rl->fbp` here because they are in a
+     * memory-mapped file, which might be open read-only.
+     */
+    bool bounds_check = ((char*)(*sxpp) + sx_size) <= ((char*)ix + ixsz);
+#ifdef NDEBUG
+    if (!bounds_check) {
+        log_error("ix=%p, ixsz=%zu, nelems=%zu, align=%zu, rl_size=%zu, "
+                "tq_size=%zu, fb_size=%zu, sx_size=%zu, *sxpp=%p",
+                ix, ixsz, nelems, align, rl_size, tq_size, fb_size, sx_size,
+                *sxpp);
+        return 0;
+    }
 #else
-        if (!(((char *)(*sxpp) + sx_sz(nelems)) <= ((char *)ix + ixsz))) {
-            log_error("ix_ptrs: *sxpp=%p, sx_sz(%lu)=%lu, ix=%p, ixsz=%lu",
-                (void*)*sxpp, (unsigned long)nelems,
-                (unsigned long)sx_sz(nelems), (void*)ix,
-                (unsigned long)ixsz);
-            return 0;
-        }
+    log_assert(bounds_check);
 #endif
-        return 1;
+    return 1;
 }
 
 /* End ix */
@@ -3036,6 +3160,7 @@ struct pqueue {
         sigset_t sav_set;
         pthread_mutex_t mutex;  /* synchronizes multi-threaded access */
         char pathname[PATH_MAX]; // pathname of the product-queue
+        long pqe_count;         // Number of reserved products
 };
 
 /* The total size of a product-queue in bytes: */
@@ -3046,7 +3171,7 @@ struct pqueue {
 /*
  * What is the system pagesize?
  */
-static long
+static inline long
 pagesize(void)
 {
 /* Hmm, aren't standards great? */
@@ -4145,7 +4270,7 @@ static const size_t MAX_SIZE_T = ~(size_t)0;
  *      0       If and only if it is not necessary to memory-map the
  *              product-queue by individual data-products.
  */
-static int
+static inline int
 isProductMappingNecessary(
     const pqueue* const pq)
 {
@@ -4315,6 +4440,7 @@ pq_new(
     pq->fd = -1;
     pq->cursor = TS_NONE;
     pq->cursor_offset = OFF_NONE;
+    pq->pqe_count = 0;
 
     return pq;
 }
@@ -4752,7 +4878,7 @@ unwind_mask:
 /*
  * Release/unlock a data region. This function is the complement of `rgn_get()`.
  */
-static int
+static inline int
 rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
 {
         log_assert(offset >= pq->datao && offset < pq->ixo);
@@ -4822,7 +4948,7 @@ rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
  *              description associated with "pq->fd". 
  *      EROFS   The file resides on a read-only file system.
  */
-static int
+static inline int
 rgn_get(pqueue *const pq, off_t const offset, size_t const extent,
          int const rflags, void **const vpp)
 {
@@ -5345,7 +5471,8 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     /*
      * Check for duplicate
      */
-    if (sx_find(pq->sxp, sxi, sxepp) != 0) {
+    // log_debug("Checking for duplicate");
+    if (sxi && sx_find(pq->sxp, sxi, sxepp) != 0) {
         log_debug("PQ_DUP");
         return PQ_DUP;
     }
@@ -5353,6 +5480,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     /* We may need to split what we find */
     if (!rl_HasSpace(pq->rlp)) {
         /* get one slot */
+        // log_debug("Making a slot");
         status = rpqe_mkslot(pq);
         if (status != ENOERR)
             return status;
@@ -5362,6 +5490,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     if (extent < smallest_extent_seen)
         smallest_extent_seen = extent;
 
+    // log_debug("Getting a region");
     rlix = rl_get(pq->rlp, extent);
     if (rlix == RL_NONE) {
         status = rpqe_mkspace(pq, extent, &rlix);
@@ -5374,6 +5503,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     /* Don't bother to split off tiny fragments too small for any
        product we've seen */
     if (extent + smallest_extent_seen + PQ_FRAGMENT_HEURISTIC < hit->extent) {
+        // log_debug("Splitting region");
         status = rl_split(pq->rlp, rlix, extent);
         if (status != ENOERR)
             goto rl_split_failure;
@@ -5381,43 +5511,47 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
 
     log_assert((hit->offset % pq->ctlp->align) == 0);
     set_IsAlloc(hit);
+    // log_debug("Adding region hash");
     rlhash_add(pq->rlp, rlix);
 
+    // log_debug("Getting region");
     status = rgn_get(pq, hit->offset, Extent(hit), RGN_WRITE, vpp);
     if (status != ENOERR)
         goto rgn_get_failure;
 
-    {
+    if (sxi) {
+        // log_debug("Adding signature");
         sxelem* const sxelem = sx_add(pq->sxp, sxi, hit->offset);
         if (sxelem == NULL) {
             log_error("sx_add() failure");
             status = ENOMEM;
             goto sx_add_failure;
         }
-        else {
-            *sxepp = sxelem;
-
-            /* Update stats */
-            off_t         highwater = hit->offset + (off_t)Extent(hit) -
-                    pq->ctlp->datao;
-            if (highwater > pq->ctlp->highwater)
-                pq->ctlp->highwater = highwater;
-            if (pq->rlp->nelems >  pq->ctlp->maxproducts)
-                pq->ctlp->maxproducts = pq->rlp->nelems;
-            pq->rlp->nbytes += (off_t)Extent(hit);
-            if (pq->rlp->nbytes > pq->rlp->maxbytes)
-                pq->rlp->maxbytes = pq->rlp->nbytes;
-        }
+        *sxepp = sxelem;
     }
+
+    /* Update stats */
+    off_t         highwater = hit->offset + (off_t)Extent(hit) -
+            pq->ctlp->datao;
+    if (highwater > pq->ctlp->highwater)
+        pq->ctlp->highwater = highwater;
+    if (pq->rlp->nelems >  pq->ctlp->maxproducts)
+        pq->ctlp->maxproducts = pq->rlp->nelems;
+    pq->rlp->nbytes += (off_t)Extent(hit);
+    if (pq->rlp->nbytes > pq->rlp->maxbytes)
+        pq->rlp->maxbytes = pq->rlp->nbytes;
 
     return status;
 
     sx_add_failure:
+        // log_debug("Releasing region");
         (void)rgn_rel(pq, hit->offset, 0); // region's data portion unmodified
     rgn_get_failure:
+        // log_debug("Deleting region hash");
         rlhash_del(pq->rlp, rlix);
         clear_IsAlloc(hit);
     rl_split_failure:
+        // log_debug("Unsplitting region");
         rl_put(pq->rlp, rlix); // undoes `rl_get()` and `rpqe_mkspace()`
         return status;
 }
@@ -5430,7 +5564,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
  *
  * @param[in] pq  The product-queue to be locked.
  */
-static void lockIf(
+static inline void lockIf(
         pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_lock(pq))
@@ -5445,7 +5579,7 @@ static void lockIf(
  *
  * @param[in] pq  The product-queue to be unlocked.
  */
-static void unlockIf(
+static inline void unlockIf(
         pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE) && pq_unlock(pq))
@@ -5533,6 +5667,7 @@ pq_create(const char *path, mode_t mode,
                 status = errno;
                 goto unwind_new;
         }
+        (void)ensure_close_on_exec(fd);
 
         lockIf(pq);
 
@@ -5581,7 +5716,7 @@ unwind_new:
  * @param[out] pqp         Memory location to receive pointer to product-queue
  *                         structure.
  * @retval     0           Success. *pqp set.
- * @retval     EACCESS     Permission denied. pflags doesn't contain PQ_READONLY
+ * @retval     EACCES      Permission denied. pflags doesn't contain PQ_READONLY
  *                         and the product-queue is already open by the maximum
  *                         number of writers.
  * @retval     PQ_CORRUPT  The  product-queue is internally inconsistent.
@@ -5608,6 +5743,7 @@ pq_open(
             status = errno;
         }
         else {
+            (void)ensure_close_on_exec(pq->fd);
             status = ctl_gopen(pq, path);
 
             if (!status) {
@@ -5981,6 +6117,7 @@ pqe_new(pqueue *pq,
 
         indexp->offset = sxep->offset;
         memcpy(indexp->signature, sxep->sxi, sizeof(signaturet));
+        pq->pqe_count++;
 /* */
         /*FALLTHROUGH*/
 unwind_ctl:
@@ -6032,8 +6169,8 @@ pqe_newDirect(
     /*
      * Vet arguments.
      */
-    if (pq == NULL || ptrp == NULL || indexp == NULL) {
-        log_add("NULL pointer argument");
+    if (pq == NULL || ptrp == NULL || indexp == NULL || signature == NULL) {
+        log_add("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p");
         status = EINVAL;
     }
     else if (size > pq_getDataSize(pq)) {
@@ -6074,6 +6211,8 @@ pqe_newDirect(
                     indexp->offset = sxep->offset;
                     (void)memcpy(indexp->signature, sxep->sxi,
                             sizeof(signaturet));
+                    indexp->sig_is_set = true;
+                    pq->pqe_count++;
                 }
 
                 (void)ctl_rel(pq, RGN_MODIFIED);
@@ -6113,6 +6252,7 @@ pqe_discard(pqueue *pq, pqe_index index)
             if(status == ENOERR) {
                 status = rpqe_free(pq, offset, index.signature);
                 (void)ctl_rel(pq, RGN_MODIFIED);
+                pq->pqe_count--;
             }
         }
 
@@ -6273,6 +6413,7 @@ pqe_insert(pqueue *pq, pqe_index index)
             }
             else {
                 (void)set_timestamp(&pq->ctlp->mostRecent);
+                pq->pqe_count--;
                 /*
                  * Inform our process group that there is new data available
                  * (see pq_suspend() below). SIGCONT is ignored by default.
@@ -6332,6 +6473,23 @@ unwind_lock:
 #endif
 }
 
+/**
+ * Returns the number of outstanding product reservations (i.e., the number of
+ * times `pqe_new()` and `pqe_newDirect()` have been called minus the number of
+ * times `pqe_insert()` and `pqe_discard()` have been called.
+ *
+ * @param[in] pq  Product queue
+ * @return        Number of outstanding product reservations
+ */
+long pqe_get_count(
+        pqueue* const pq)
+{
+    lockIf(pq);
+    const long pqe_count = pq->pqe_count;
+    unlockIf(pq);
+    return pqe_count;
+}
+
 
 typedef struct {
     time_t      start;
@@ -6343,7 +6501,7 @@ typedef struct {
 } FutureEntry;
 
 
-static int
+static inline int
 compareFutureEntries(
     const void* const   entry1,
     const void* const   entry2)
@@ -6451,6 +6609,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         log_assert(pq != NULL);
         log_assert(prod != NULL);
 
+        // log_debug("Locking");
         lockIf(pq);
 
         if(fIsSet(pq->pflags, PQ_READONLY)) {
@@ -6459,6 +6618,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 goto unwind_lock;
         }
 
+        // log_debug("Getting product size");
         extent = xlen_product(prod);
         if (extent > pq_getDataSize(pq)) {
                 log_debug("pq_insertNoSig(): product is too big");
@@ -6469,18 +6629,21 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         /*
          * Write lock pq->ctl.
          */
+        // log_debug("Getting control header");
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR) {
                 log_debug("pq_insertNoSig(): ctl_get() failure");
                 goto unwind_lock;
         }
 
+        // log_debug("Getting space for product");
         status = rpqe_new(pq, extent, prod->info.signature, &vp, &sxep);
         if(status != ENOERR) {
                 log_debug("pq_insertNoSig(): rpqe_new() failure");
                 goto unwind_ctl;
         }
 
+        // log_debug("XDR-ing product");
                                                 /* cast away const'ness */
         if(xproduct(vp, extent, XDR_ENCODE, (product *)prod) == 0)
         {
@@ -6496,30 +6659,39 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                 goto unwind_rgn;
         }
 
+        // log_debug("Setting timestamp");
         set_timestamp(&pq->ctlp->mostRecent);
+        // log_debug("Vetting creation time");
         vetCreationTime(&prod->info);
 
         /*FALLTHROUGH*/
 unwind_rgn:
+        // log_debug("Releasing region");
         (void) rgn_rel(pq, sxep->offset, status == ENOERR ? RGN_MODIFIED : 0);
 
         /*FALLTHROUGH*/
 unwind_ctl:
+        // log_debug("Releasing control header");
         (void) ctl_rel(pq, RGN_MODIFIED);
 unwind_lock:
+        // log_debug("Unlocking");
         unlockIf(pq);
+        // log_debug("Returning %d", status);
         return status;
 }
 
 
-/*
+/**
  * Insert at rear of queue, send SIGCONT to process group
  *
- * Returns:
- *      ENOERR          Success.
- *      EINVAL          Invalid argument.
- *      PQ_DUP          Product already exists in the queue.
- *      PQ_BIG          Product is too large to insert in the queue.
+ * @param[in,out]  pq    Product queue
+ * @param[in]      prod  Data product
+ * @retval 0             Success.
+ * @retval EINVAL        Invalid argument.
+ * @retval PQ_DUP        Product already exists in the queue.
+ * @retval PQ_BIG        Product is too large to insert in the queue.
+ * @retval PQ_SYSTEM     System failure. log_add() called.
+ *
  */
 int
 pq_insert(pqueue *pq, const product *prod)
@@ -7731,14 +7903,15 @@ pq_processProduct(
  * @param[in]  otherargs  Optional argument to `ifMatch`.
  * @param[out] off        Offset to the region in the product-queue or NULL. If
  *                        NULL, then upon return the product is unlocked and may
- *                        be deleted by another process to make room for another
+ *                        be deleted by another process to make room for a new
  *                        product. If non-NULL, then this variable is set before
  *                        `ifMatch()` is called and, upon return, the product is
  *                        locked against deletion by another process and the
  *                        caller should call `pq_release(*off)` when the product
- *                        may be deleted to make room for another product.
- * @retval 0          Success.
- * @retval PQUEUE_END No matching data-product.
+ *                        may be deleted to make room for a new product.
+ * @retval 0          Product didn't match `clss`
+ * @retval PQUEUE_END No next product
+ * @return            The return-value of `ifMatch()`.
  * @retval EACCESS or EAGAIN
  *                    A necessary region of the product-queue is locked by
  *                    another process.
@@ -7773,7 +7946,6 @@ pq_processProduct(
  *                    requested.
  * @retval ENXIO      The size of the product-queue is inconsistent with its
  *                    file descriptor.
- * @return            The return-value of `ifMatch()`.
  */
 static int
 pq_sequenceHelper(pqueue *pq, pq_match mt,
@@ -8004,8 +8176,9 @@ unwind_lock:
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval 0          Success.
- * @retval PQUEUE_END No matching data-product.
+ * @retval 0          Product didn't match `clss`
+ * @retval PQUEUE_END No next product
+ * @return            The return-value of `ifMatch()`.
  * @retval EACCESS or EAGAIN
  *                    A necessary region of the product-queue is locked by
  *                    another process.
@@ -8040,7 +8213,6 @@ unwind_lock:
  *                    requested.
  * @retval ENXIO      The size of the product-queue is inconsistent with its
  *                    file descriptor.
- * @return            The return-value of `ifMatch()`.
  */
 int
 pq_sequence(pqueue *pq, pq_match mt,
@@ -8072,14 +8244,23 @@ pq_sequence(pqueue *pq, pq_match mt,
  * execute ifMatch(xprod, len, otherargs) and return the
  * return value from ifMatch().
  *
- * @param[in] pq          Product-queue.
- * @param[in] mt          Direction from current position in queue to start
+ * @param[in]  pq         Product-queue.
+ * @param[in]  mt         Direction from current position in queue to start
  *                        matching.
- * @param[in] clss        Class of data-products to match.
- * @param[in] ifMatch     Function to call for matching products.
- * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval 0          Success.
- * @retval PQUEUE_END No matching data-product.
+ * @param[in]  clss       Class of data-products to match.
+ * @param[in]  ifMatch    Function to call for matching products.
+ * @param[in]  otherargs  Optional argument to `ifMatch`.
+ * @param[out] off        Offset to the region in the product-queue or NULL. If
+ *                        NULL, then upon return the product is unlocked and may
+ *                        be deleted by another process to make room for a new
+ *                        product. If non-NULL, then this variable is set before
+ *                        `ifMatch()` is called and, upon return, the product is
+ *                        locked against deletion by another process and the
+ *                        caller should call `pq_release(*off)` when the product
+ *                        may be deleted to make room for a new product.
+ * @retval 0          Product didn't match `clss`
+ * @retval PQUEUE_END No next product
+ * @return            The return-value of `ifMatch()`.
  * @retval EACCESS or EAGAIN
  *                    A necessary region of the product-queue is locked by
  *                    another process.
@@ -8114,7 +8295,6 @@ pq_sequence(pqueue *pq, pq_match mt,
  *                    requested.
  * @retval ENXIO      The size of the product-queue is inconsistent with its
  *                    file descriptor.
- * @return            The return-value of `ifMatch()`.
  */
 int
 pq_sequenceLock(
@@ -8126,6 +8306,202 @@ pq_sequenceLock(
         off_t* const restrict              offset)
 {
     return pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, offset);
+}
+
+/**
+ * Step thru the time-sorted inventory from the current time-cursor.
+ *
+ * @param[in,out] pq           Product queue
+ * @param[in]     reverse      Whether to match in reverse direction (i.e.,
+ *                             towards earlier times).
+ * @param[in]     clss         Product matching criteria
+ * @param[in]     func         Function to call for matching products
+ * @param[in]     keep_locked  Whether or not product should be locked (i.e.,
+ *                             kept unavailable for deletion) upon return. If
+ *                             `true`, then caller must call
+ *                             `pq_release(queue_par->offset)`, where
+ *                             `queue_par` is the queue-parameters argument to
+ *                             `func`.
+ * @param[in,out] app_par      Application-supplied parameters or `NULL`
+ * @retval        0            Success. `func()` was called.
+ * @retval        PQ_END       End of time-queue hit
+ * @retval        PQ_INVAL     Invalid argument. log_add() called.
+ * @retval        PQ_SYSTEM    System failure. log_add() called.
+ */
+int
+pq_next(
+        pqueue* const restrict             pq,
+        const bool                         reverse,
+        const prod_class_t* const restrict clss,
+        pq_next_func* const                func,
+        const bool                         keep_locked,
+        void* const restrict               app_par)
+{
+    int status;
+
+    if (pq == NULL || clss == NULL || func==NULL) {
+        log_add("Invalid argument: pq=%p, clss=%p, func=%p", pq, clss, func);
+        status = PQ_INVAL;
+    }
+    else {
+        lockIf(pq);
+
+        // If necessary, initialize product-queue time-cursor
+        if (tvIsNone(pq->cursor))
+            pq->cursor = reverse ? TS_ENDT : TS_ZERO;
+
+        // Read-lock control-header
+        status = ctl_get(pq, 0);
+        if (status) {
+            log_add_errno(status, "Couldn't get control-header");
+            status = PQ_SYSTEM;
+        }
+        else {
+            bool ctl_locked = true;
+
+            queue_par_t queue_par;
+            queue_par.is_full = pq->ctlp->isFull;
+
+            // Find next element in time-queue
+            tqelem* tqep = tqe_find(pq->tqp, &pq->cursor,
+                    reverse ? TV_LT : TV_GT);
+            if (tqep == NULL) {
+                status = PQUEUE_END;
+            }
+            else {
+                // Update product-queue time-cursor
+                pq_cset(pq, &tqep->tv);
+                pq_coffset(pq, tqep->offset);
+
+                queue_par.inserted = tqep->tv;
+                queue_par.is_oldest = (tqep == tqe_first(pq->tqp));
+
+                // Find region in product-queue that contains product
+                region* rp;
+                status = rl_r_find(pq->rlp, tqep->offset, &rp);
+                if (status == 0 || rp->offset != tqep->offset
+                        || Extent(rp) > pq_getDataSize(pq)) {
+                    char ts[20];
+                    (void)sprint_timestampt(ts, sizeof(ts), &tqep->tv);
+                    log_error("Queue corrupt: tq: %s %s at %ld",
+                            ts,
+                            status ? "invalid region" : "no data",
+                            tqep->offset);
+                    /*
+                     * Can't be fixed (tq_delete(pq->tqp, tqep)) here because no
+                     * write permission
+                     */
+                    status = 0;
+                }
+                else {
+                    // Following avoids calls to malloc() in XDR module
+                    char ident[KEYSIZE + 1];
+                    char origin[HOSTNAMESIZE + 1];
+                    prod_par_t prod_par = {
+                            .info.ident = ident,
+                            .info.origin = origin,
+                            .size = Extent(rp)
+                    };
+                    // Lock region in product-queue that contains product
+                    status = rgn_get(pq, rp->offset, prod_par.size, 0,
+                            &prod_par.encoded);
+                    if (status) {
+                        log_add_errno(status, "Couldn't get product region");
+                        status = PQ_SYSTEM;
+                    }
+                    else {
+                        log_assert(prod_par.encoded != NULL);
+
+                        /*
+                         * Because data-product is locked, control-header can
+                         * be released so that another thread-of-control can
+                         * access product-queue. NB: This makes `tqep` invalid.
+                         */
+                        status = ctl_rel(pq, 0);
+                        log_assert(status == 0);
+                        ctl_locked = false;
+
+                        /*
+                         * If appropriate, log delay since product insertion to
+                         * indicate if processing is falling behind.
+                         */
+                        if (log_is_enabled_debug) {
+                            timestampt now;
+                            if (gettimeofday(&now, 0) == 0) {
+                                double delay = d_diff_timestamp(&now,
+                                        &queue_par.inserted);
+                                log_debug("Delay: %.4f sec", delay);
+                            }
+                        }
+
+                        // Decode data-product metadata
+                        XDR xdrs;
+                        xdrmem_create(&xdrs, prod_par.encoded,
+                                (u_int)prod_par.size, XDR_DECODE) ;
+                        if (!xdr_prod_info(&xdrs, &prod_par.info)) {
+                            log_error("xdr_prod_info() failed") ;
+                            status = PQ_SYSTEM;
+                        }
+                        else {
+                            log_assert(prod_par.info.sz <= xdrs.x_handy);
+
+                            #if PQ_SEQ_TRACE
+                                log_debug("%s %u",
+                                        s_prod_info(NULL, 0, &prod_par.info, 1),
+                                        xdrs.x_handy) ;
+                            #endif
+
+                            /*
+                             * If appropriate, log time-interval from
+                             * product-creation to queue-insertion.
+                             */
+                            if (log_is_enabled_debug) {
+                                double latency =
+                                        d_diff_timestamp(&queue_par.inserted,
+                                                &prod_par.info.arrival);
+                                log_debug("time(insert)-time(create): %.4f s",
+                                        latency);
+                            }
+
+                            // If appropriate, apply caller-supplied function.
+                            if (clss == PQ_CLASS_ALL ||
+                                    prodInClass(clss, &prod_par.info)) {
+                                log_assert(func != NULL);
+                                {
+                                    // Change extent into xlen_product */
+                                    const size_t xsz =
+                                            _RNDUP(prod_par.info.sz, 4);
+                                    if (xdrs.x_handy > xsz)
+                                        prod_par.size -= (xdrs.x_handy - xsz);
+                                }
+                                /*
+                                 * Copying data is avoided by using existing
+                                 * buffer.
+                                 */
+                                prod_par.data = xdrs.x_private;
+                                queue_par.offset = rp->offset;
+                                /*
+                                 * Product-queue is unlocked because calling a
+                                 * foreign function with an acquired lock can
+                                 * result in deadlock:
+                                 */
+                                unlockIf(pq);
+                                func(&prod_par, &queue_par, app_par);
+                                lockIf(pq);
+                            } // Product matches
+                        } // xdr_prod_info() succeeded
+                        xdr_destroy(&xdrs);
+                        if (!keep_locked)
+                            (void)rgn_rel(pq, rp->offset, 0);
+                    } // rgn_get() succeeded
+                } // rl_r_find() succeeded
+            } // tqe_find() succeeded
+            if (ctl_locked)
+                (void)ctl_rel(pq, 0);
+        } // ctl_get() succeeded
+        unlockIf(pq);
+    } // Valid arguments
+    return status;
 }
 
 /**
@@ -8428,7 +8804,7 @@ pq_deleteBySignature(
  * Used only by pq_last() below.
  */
 /*ARGSUSED*/
-static int
+static inline int
 didmatch(const prod_info *infop, const void *datap,
                 void *xprod, size_t size,  void *vp)
 {
@@ -8436,10 +8812,7 @@ didmatch(const prod_info *infop, const void *datap,
         if(tsp != NULL)
                 *tsp = infop->arrival;
 
-        if(log_is_enabled_debug)
-        {
-                log_debug("lastmatch: %s", s_prod_info(NULL, 0, infop, 1));
-        }
+        log_debug("lastmatch: %s", s_prod_info(NULL, 0, infop, 1));
 
         return PQUEUE_END; /* done with scan on the first hit */
 }

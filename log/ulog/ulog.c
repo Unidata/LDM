@@ -17,32 +17,34 @@
  * We use this macro to handle SVR4 streams based logging.
  */
 
-#include <config.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <syslog.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
+#include "config.h"
+
+#include "ulog.h"
+
+#include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #if defined(__STDC__) || defined(_AIX)
 #    include <stdarg.h>
 #define STDC_ARGS 1
 #else
 #    include <varargs.h>
 #endif
-#include <errno.h>
-#include <time.h>
-#include <signal.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #ifdef HAVE_WAITPID
 #    include <sys/wait.h>
 #endif
-#include "ulog.h"
+#include <syslog.h>
+#include <time.h>
+#include <unistd.h>
 
 #if defined(__CENTERLINE__) && defined(sun) && defined(__STDC__)
     /* Workaround for ObjectCenter 1.1 stdargs problem, Sun OS 4.1.x */
@@ -176,6 +178,19 @@ getulogfacility(void) {
 const char*
 getulogpath(void) {
     return logFilename;
+}
+
+
+/**
+ * Returns the file descriptor used for logging.
+ *
+ * @retval  -1  No file descriptor is used
+ * @return      The file descriptor used for logging
+ */
+int
+getulogfd(void)
+{
+    return logFd;
 }
 
 
@@ -541,10 +556,10 @@ vulog(pri, fmt, args)
             if (!(logOptions & LOG_NOTIME))
             {
 #if 1
-                struct timespec now;
+                struct timeval  now;
                 struct tm       tm_now;
                 const bool      isUtc = logOptions & LOG_LOCALTIME;
-                (void)clock_gettime(CLOCK_REALTIME, &now);
+                (void)gettimeofday(&now, NULL);
                 /* N.B.: default for this package is to use gmt */
                 if (isUtc) {
                     (void)gmtime_r(&now.tv_sec, &tm_now);

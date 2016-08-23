@@ -18,6 +18,9 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <CUnit/CUnit.h>
@@ -426,10 +429,9 @@ static void test_log_refresh(void)
     log_refresh();
 
     logMessages();
+    log_fini();
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
-
-    log_fini();
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -454,7 +456,7 @@ static void test_sighup_log(void)
     status = rename(tmpPathname, tmpPathname1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    (void)raise(SIGHUP);
+    (void)raise(SIGUSR1);
 
     logMessages();
     n = numLines(tmpPathname);
@@ -471,7 +473,7 @@ static void test_sighup_log(void)
 static void signal_handler(
         const int sig)
 {
-    if (sig == SIGHUP)
+    if (sig == SIGUSR1)
         log_refresh();
 }
 
@@ -489,7 +491,7 @@ static void test_sighup_prog(void)
     (void) sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = SA_RESTART;
     sigact.sa_handler = signal_handler;
-    status = sigaction(SIGHUP, &sigact, &oldsigact);
+    status = sigaction(SIGUSR1, &sigact, &oldsigact);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     logMessages();
@@ -499,13 +501,13 @@ static void test_sighup_prog(void)
     status = rename(tmpPathname, tmpPathname1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    (void)raise(SIGHUP);
+    (void)raise(SIGUSR1);
 
     logMessages();
     n = numLines(tmpPathname);
     CU_ASSERT_EQUAL(n, 5);
 
-    status = sigaction(SIGHUP, &oldsigact, NULL);
+    status = sigaction(SIGUSR1, &oldsigact, NULL);
     CU_ASSERT_EQUAL(status, 0);
 
     log_fini();
@@ -516,11 +518,15 @@ static void test_sighup_prog(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_log_reinit(void)
+static void test_change_file(void)
 {
     (void)unlink(tmpPathname);
-    int status = log_init(progname);
+    (void)unlink(tmpPathname1);
+
+    int status;
+    status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
+
     status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
     status = log_set_level(LOG_LEVEL_DEBUG);
@@ -528,20 +534,122 @@ static void test_log_reinit(void)
 
     logMessages();
 
-    log_fini();
+    int n;
+    n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 5);
 
-    status = log_reinit();
+    status = log_set_destination(tmpPathname1);
     CU_ASSERT_EQUAL(status, 0);
 
     logMessages();
 
-    log_fini();
+    n = numLines(tmpPathname1);
+    CU_ASSERT_EQUAL(n, 5);
 
-    int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 10);
+    log_fini();
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
+    status = unlink(tmpPathname1);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+static void test_fork(void)
+{
+    (void)unlink(tmpPathname);
+
+    int status;
+    status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = log_set_destination(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+    status = log_set_level(LOG_LEVEL_DEBUG);
+    CU_ASSERT_EQUAL(status, 0);
+    logMessages();
+
+    pid_t pid = fork();
+    CU_ASSERT_TRUE_FATAL(pid != -1);
+    if (pid == 0) {
+        // Child
+        logMessages();
+        exit(0);
+    }
+    else {
+        // Parent
+        int child_status;
+        status = wait(&child_status);
+        CU_ASSERT_EQUAL_FATAL(status, pid);
+        CU_ASSERT_TRUE_FATAL(WIFEXITED(child_status));
+        CU_ASSERT_EQUAL_FATAL(WEXITSTATUS(child_status), 0);
+    }
+
+    int n;
+    n = numLines(tmpPathname);
+    CU_ASSERT_EQUAL(n, 10);
+
+    log_fini();
+    status = unlink(tmpPathname);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
+/**
+ * Returns the time interval between two times.
+ *
+ * @param[in] later    The later time
+ * @param[in] earlier  The earlier time.
+ * @return             The time interval, in seconds, between the two times.
+ */
+static double duration(
+    const struct timeval*   later,
+    const struct timeval*   earlier)
+{
+    return (later->tv_sec - earlier->tv_sec) +
+        1e-6*(later->tv_usec - earlier->tv_usec);
+}
+
+static void test_performance(void)
+{
+    int status;
+    status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = log_set_destination("/dev/null");
+    CU_ASSERT_EQUAL(status, 0);
+
+    struct timeval start;
+    (void)gettimeofday(&start, NULL);
+
+    const long num_messages = 1000000;
+    for (long i = 0; i < num_messages; i++)
+        log_error("Error message %ld", i);
+
+    struct timeval stop;
+    (void)gettimeofday(&stop, NULL);
+    double dur = duration(&stop, &start);
+
+    status = log_set_destination("-");
+    CU_ASSERT_EQUAL(status, 0);
+    log_notice("%ld printed messages in %g seconds = %g/s", num_messages, dur,
+            num_messages/dur);
+
+    status = log_set_destination("/dev/null");
+    CU_ASSERT_EQUAL(status, 0);
+
+    (void)gettimeofday(&start, NULL);
+
+    for (long i = 0; i < num_messages; i++)
+        log_debug("Debug message %ld", i);
+
+    (void)gettimeofday(&stop, NULL);
+    dur = duration(&stop, &start);
+
+    status = log_set_destination("-");
+    CU_ASSERT_EQUAL(status, 0);
+    log_notice("%ld unprinted messages in %g seconds = %g/s", num_messages, dur,
+            num_messages/dur);
+
+    log_fini();
 }
 
 int main(
@@ -572,7 +680,9 @@ int main(
                     && CU_ADD_TEST(testSuite, test_log_refresh)
                     && CU_ADD_TEST(testSuite, test_sighup_log)
                     && CU_ADD_TEST(testSuite, test_sighup_prog)
-                    && CU_ADD_TEST(testSuite, test_log_reinit)
+                    && CU_ADD_TEST(testSuite, test_change_file)
+                    && CU_ADD_TEST(testSuite, test_fork)
+                    && CU_ADD_TEST(testSuite, test_performance)
                     /*
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);

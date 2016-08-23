@@ -117,7 +117,7 @@ valgrind_uldb:	testUpstreamLdmDb
         
 endif
 
-check-empty-conf:
+check-empty-conf: ./ldmd
 	../pqcreate/pqcreate -c -s 10M -q ldmd.pq
 	trap "rm ldmd.pq" EXIT; \
 	if $(TESTS_ENVIRONMENT) ./ldmd -l- -I 127.0.0.1 -P 38800 -q ldmd.pq \
@@ -126,6 +126,20 @@ check-empty-conf:
         else \
             exit 0; \
         fi
+
+check-exec-stderr: ./ldmd
+	../pqcreate/pqcreate -c -s 10M -q ldmd.pq
+	echo 'ALLOW ANY ^((localhost|loopback)|(127\.0\.0\.1\.?$$))' \
+		>check-exec-stderr.conf
+	echo 'EXEC "../ulogger/ulogger -p ERROR This is an error"' \
+		>>check-exec-stderr.conf
+	rm -f ldmd.log
+	$(TESTS_ENVIRONMENT) ./ldmd -l ldmd.log -I 127.0.0.1 -P 38800 \
+                    -q ldmd.pq check-exec-stderr.conf >ldmd.pid
+	sleep 2
+	kill `cat ldmd.pid`
+	pqcat -l ldmd.log -s -q ldmd.pq
+	rm ldmd.pid check-exec-stderr.conf ldmd.pq
 
 if WANT_MULTICAST
 CHECK_MULTICAST	= check-multicast

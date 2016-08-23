@@ -84,9 +84,9 @@ PerProdNotifier::PerProdNotifier(
 
 /**
  * Notifies the receiving application about a product that is about to be
- * received by the VCMTP layer.
+ * received by the FMTP layer.
  *
- * @param[in]   iProd                 VCMTP product-index.
+ * @param[in]   iProd                 FMTP product-index.
  * @param[in]   prodSize              The size of the product in bytes.
  * @param[in]   metadata              The product's metadata. Ignored if
  *                                    `metaSize == 0`.
@@ -99,7 +99,7 @@ PerProdNotifier::PerProdNotifier(
  *                                    an error.
  */
 void PerProdNotifier::notify_of_bop(
-        const VcmtpProdIndex iProd,
+        const FmtpProdIndex iProd,
         const size_t         prodSize,
         void* const          metadata,
         const unsigned       metaSize,
@@ -139,16 +139,16 @@ void PerProdNotifier::notify_of_bop(
         }
     }
 
-    log_free(); // to prevent memory leak by VCMTP thread
+    log_free(); // to prevent memory leak by FMTP thread
 }
 
 /**
- * @param[in] prodIndex        The VCMTP index of the product.
+ * @param[in] prodIndex        The FMTP index of the product.
  * @throws std::out_of_range   There's no entry for `prodIndex`
  * @throws std::runtime_error  Receiving application error.
  */
 void PerProdNotifier::notify_of_eop(
-        const VcmtpProdIndex prodIndex)
+        const FmtpProdIndex prodIndex)
 {
     log_debug("PerProdNotifier::notify_of_eop(): Entered: prodIndex=%lu",
             (unsigned long)prodIndex);
@@ -166,25 +166,25 @@ void PerProdNotifier::notify_of_eop(
                 "Unknown product-index: ") + std::to_string(prodIndex));
     }
 
-    log_free(); // to prevent memory leak by VCMTP thread
+    log_free(); // to prevent memory leak by FMTP thread
 }
 
 /**
- * @param[in] prodIndex       The VCMTP product index.
+ * @param[in] prodIndex       The FMTP product index.
  * @throws std::out_of_range  `prodIndex` is unknown.
  */
-void PerProdNotifier::notify_of_missed_prod(const VcmtpProdIndex prodIndex)
+void PerProdNotifier::notify_of_missed_prod(const FmtpProdIndex prodIndex)
 {
     std::unique_lock<std::mutex> lock(mutex);
     void* const                  prodStart = prodInfos[prodIndex].start;
 
-    log_info("PerProdNotifier::notify_of_missed_prod(): Missed product: prodIndex="
-            "%lu, prodStart=%p", (unsigned long)prodIndex, prodStart);
+    log_info("Missed product: prodIndex=%lu, prodStart=%p",
+            (unsigned long)prodIndex, prodStart);
 
     missed_prod_func(mlr, prodIndex,
             prodStart ? &prodInfos[prodIndex].index : nullptr);
 
     (void)prodInfos.erase(prodIndex);
 
-    log_free(); // to prevent memory leak by VCMTP thread
+    log_free(); // to prevent memory leak by FMTP thread
 }

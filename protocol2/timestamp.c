@@ -5,14 +5,18 @@
  */
 
 #include <config.h>
-#include <errno.h>
-#include <log.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
 
 #include "log.h"
 #include "timestamp.h"
+#include "unistd.h"
+
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+#include <time.h>
+
 #ifndef NDEBUG
 #define pIf(a,b) (!(a) || (b))  /* a implies b */
 #endif
@@ -307,3 +311,174 @@ tsParse(
 
     return nbytes;
 }
+
+static void timeval_normalize(
+        struct timeval* const timeval)
+{
+    #define ONE_MILLION 1000000
+    if (timeval->tv_usec >= ONE_MILLION || timeval->tv_usec <= -ONE_MILLION) {
+        timeval->tv_sec += timeval->tv_usec / ONE_MILLION;
+        timeval->tv_usec %= ONE_MILLION;
+    }
+    if (timeval->tv_sec > 0 && timeval->tv_usec < 0) {
+        timeval->tv_sec--;
+        timeval->tv_usec += ONE_MILLION;
+    }
+    else if (timeval->tv_sec < 0 && timeval->tv_usec > 0) {
+        timeval->tv_sec++;
+        timeval->tv_usec -= ONE_MILLION;
+    }
+}
+
+/**
+ * Returns the number of seconds that correspond to a time-value as a double.
+ *
+ * @param[in] timeval  Time-value
+ * @return             Number of seconds corresponding to `timeval`
+ */
+double timeval_as_seconds(
+        struct timeval* timeval)
+{
+    return timeval->tv_sec + timeval->tv_usec/1000000.0;
+}
+
+/**
+ * Initializes a time-value from the difference between two time-values.
+ *
+ * @param[out] duration  Duration equal to `after - before`
+ * @param[in]  after     Later time-value
+ * @param[in]  before    Earlier time-value
+ * @return               `duration`
+ */
+struct timeval* timeval_init_from_difference(
+        struct timeval* const restrict       duration,
+        const struct timeval* const restrict later,
+        const struct timeval* const restrict earlier)
+{
+    duration->tv_sec = later->tv_sec - earlier->tv_sec;
+    duration->tv_usec = later->tv_usec - earlier->tv_usec;
+    timeval_normalize(duration);
+    return duration;
+}
+
+/**
+ * Formats a time-value as "<YYYY>-<MM>-<DD>T<hh>:<mm>:<ss>.<uuuuuu>Z".
+ *
+ * @param[out] buf      Buffer to hold formatted string. It is the caller's
+ *                      responsibility to ensure that the buffer can contain
+ *                      at least `TIMEVAL_FORMAT_TIME` bytes.
+ * @param[in]  timeval  Time-value to be formatted
+ * @retval     NULL     `timeval` couldn't be formatted
+ * @return              `buf`
+ */
+char* timeval_format_time(
+        char* const restrict                 buf,
+        const struct timeval* const restrict timeval)
+{
+    char* string = NULL;
+    const struct tm*    tm = gmtime(&timeval->tv_sec);
+    size_t              size = TIMEVAL_FORMAT_TIME;
+    size_t              nbytes = strftime(buf, size, "%Y-%m-%dT%H:%M:%S.", tm);
+    if (nbytes != 0) {
+        if (snprintf(buf+nbytes, size-nbytes, "%06ldZ", (long)timeval->tv_usec)
+                > 0) {
+            buf[TIMEVAL_FORMAT_TIME-1] = 0;
+            string = buf;
+        }
+    }
+    return string;
+}
+
+/**
+ * Formats a duration as "P[<days>D]T[<hours>H][<minutes>M]<seconds>.<uuuuuu>S",
+ * where <days>, <hours>, <minutes>, and <seconds> have the minimum number of
+ * necessary numerals.
+ *
+ * @param[out] buf       Buffer to hold formatted duration. It is the caller's
+ *                       responsibility to ensure that it can contain at least
+ *                       `TIMEVAL_FORMAT_DURATION` bytes.
+ * @param[in]  duration  Duration to be formatted
+ * @return     `buf`
+ */
+char* timeval_format_duration(
+        char* restrict                       buf,
+        const struct timeval* const restrict duration)
+{
+    int           value;
+    int           nchar;
+    int           tPrinted = 0;
+    long          seconds = duration->tv_sec;
+    char*         cp = buf;
+    size_t        size = TIMEVAL_FORMAT_DURATION;
+
+    *cp++ = 'P';
+    size--;
+
+    value = seconds / 86400;
+    if (value != 0) {
+        nchar = snprintf(cp, size, "%dD", value);
+        cp += nchar;
+        size -= nchar;
+        seconds -= 86400 * value;
+    }
+
+    value = seconds / 3600;
+    if (value != 0) {
+        nchar = snprintf(cp, size, "T%dH", value);
+        tPrinted = 1;
+        cp += nchar;
+        size -= nchar;
+        seconds -= 3600 * value;
+    }
+
+    value = seconds / 60;
+    if (value != 0) {
+        if (!tPrinted) {
+            (void)strncpy(cp, "T", size);
+            cp++;
+            size--;
+            tPrinted = 1;
+        }
+        nchar = snprintf(cp, size, "%dM", value);
+        cp += nchar;
+        size -= nchar;
+        seconds -= 60 * value;
+    }
+
+    if (!tPrinted) {
+        (void)strncpy(cp, "T", size);
+        cp++;
+        size--;
+    }
+    nchar = snprintf(cp, size, "%ld", seconds);
+    cp += nchar;
+    size -= nchar;
+    nchar = snprintf(cp, size, ".%06ldS", (long)duration->tv_usec);
+
+    buf[TIMEVAL_FORMAT_DURATION-1] = 0;
+
+    return buf;
+}
+
+#if defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0
+#include <time.h>
+
+/**
+ * Initializes a time-value from a time-specification. The intialized value is
+ * the closest one to the time-specification.
+ *
+ * @param[out] timeval   Time-value
+ * @param[in]  timespec  Time-specification
+ * @return               `timeval`
+ */
+struct timeval* timeval_init_from_timespec(
+        struct timeval* const restrict        timeval,
+        const struct timespec* const restrict timespec)
+{
+    timeval->tv_sec = timespec->tv_sec;
+    timeval->tv_usec = (timespec->tv_nsec + 500) / 1000;
+    timeval_normalize(timeval);
+    return timeval;
+}
+
+#endif

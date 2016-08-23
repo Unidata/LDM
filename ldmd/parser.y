@@ -391,7 +391,7 @@ decodeSendEntry(
         else {
             ServiceAddr* tcpServerSa = NULL;
             /*
-             * Currently, the VCMTP TCP server listens on the same interfaces as
+             * Currently, the FMTP TCP server listens on the same interfaces as
              * the LDM server and the operating-system chooses the port.
              */
             {
@@ -401,7 +401,7 @@ decodeSendEntry(
             }
 
             if (status) {
-                log_add("Couldn't create VCMTP TCP server specification");
+                log_add("Couldn't create FMTP TCP server specification");
             }
             else {
                 McastInfo* mcastInfo;

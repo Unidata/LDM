@@ -3,9 +3,9 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file vcmtp_c_api_test.cpp
+ * @file fmtp_c_api_test.cpp
  *
- * This file performs a unit-test of the vcmtp_c_api module.
+ * This file performs a unit-test of the fmtp_c_api module.
  *
  * @author: Steven R. Emmerson
  */
@@ -16,7 +16,7 @@
 #include "log.h"
 #include "mldm_receiver.h"
 #include "mcast.h"
-#include "VCMTPReceiver_stub.hpp"
+#include "FMTPReceiver_stub.hpp"
 
 #include <errno.h>
 #include <opmock.h>
@@ -35,11 +35,11 @@ int eof_func(void* obj, const void* file_entry)
 {
     return 0;
 }
-void missed_file_func(void* obj, const VcmtpProdIndex iProd)
+void missed_file_func(void* obj, const FmtpProdIndex iProd)
 {
 }
 
-void test_vcmtpReceiver_new()
+void test_fmtpReceiver_new()
 {
     int                         status;
     McastReceiver*              receiver;
@@ -82,7 +82,7 @@ int main(
     char**	argv)
 {
     opmock_test_suite_reset();
-    opmock_register_test(test_vcmtpReceiver_new, "test_vcmtpReceiver_new");
+    opmock_register_test(test_fmtpReceiver_new, "test_fmtpReceiver_new");
     opmock_test_suite_run();
     return opmock_get_number_of_errors() != 0;
 }

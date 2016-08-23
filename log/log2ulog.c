@@ -149,8 +149,8 @@ void logi_log(
         const log_loc_t*  loc,
         const char*       string)
 {
-    (void)ulog(logl_level_to_priority(level), "%s:%s():%d %s",
-            logl_basename(loc->file), loc->func, loc->line, string);
+    (void)ulog(logl_level_to_priority(level), "%s:%d:%s() %s",
+            logl_basename(loc->file), loc->line, loc->func, string);
 }
 
 /**
@@ -279,4 +279,15 @@ unsigned log_get_options(void)
     const unsigned opts = ulog_get_options();
     logl_unlock();
     return opts;
+}
+
+/**
+ * Returns the file descriptor that is used for logging.
+ *
+ * @retval -1  No file descriptor is used
+ * @return     The file descriptor that is used for logging
+ */
+int log_get_fd(void)
+{
+    return getulogfd();
 }

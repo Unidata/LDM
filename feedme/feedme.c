@@ -91,15 +91,13 @@ signal_handler(int sig)
         (void) signal(sig, signal_handler);
 #endif
         switch(sig) {
-        case SIGHUP :
-                log_refresh();
-                return;
         case SIGINT :
                 /*FALLTHROUGH*/
         case SIGTERM :
                 done = 1;
                 return;
         case SIGUSR1 :
+                log_refresh();
                 return;
         case SIGUSR2 :
                 log_roll_level();
@@ -120,22 +118,28 @@ set_sigactions(void)
         (void)sigemptyset(&sigact.sa_mask);
 
         sigact.sa_flags = SA_RESTART;
-        (void) sigaction(SIGHUP, &sigact, NULL);
+        (void) sigaction(SIGUSR1, &sigact, NULL);
+        (void) sigaction(SIGUSR2, &sigact, NULL);
 
         sigact.sa_flags = 0;
         (void) sigaction(SIGINT, &sigact, NULL);
         (void) sigaction(SIGTERM, &sigact, NULL);
-        (void) sigaction(SIGUSR1, &sigact, NULL);
-        (void) sigaction(SIGUSR2, &sigact, NULL);
         (void) sigaction(SIGPIPE, &sigact, NULL);
 #else
-        (void) signal(SIGHUP, signal_handler);
         (void) signal(SIGINT, signal_handler);
         (void) signal(SIGTERM, signal_handler);
         (void) signal(SIGUSR1, signal_handler);
         (void) signal(SIGUSR2, signal_handler);
         (void) signal(SIGPIPE, signal_handler);
 #endif
+        sigset_t sigset;
+        (void)sigemptyset(&sigset);
+        (void)sigaddset(&sigset, SIGINT);
+        (void)sigaddset(&sigset, SIGPIPE);
+        (void)sigaddset(&sigset, SIGTERM);
+        (void)sigaddset(&sigset, SIGUSR1);
+        (void)sigaddset(&sigset, SIGUSR2);
+        (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 

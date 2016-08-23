@@ -144,9 +144,12 @@ of the filename ``\fB\-\fP'' forces the program to read from standard input.
 .SH SIGNALS
 On receipt of the following signals, the specified action occurs:
 .TP
-SIGUSR1 \- accumulated statistics are printed to the logfile.
+SIGUSR1
+.B Refresh logging (if configure(1) executed without the "--with-ulog" option) and
+write accumulated statistics to the logfile.
 .TP
-SIGUSR2 \- the \fIverbose\fP flag is toggled.
+.B SIGUSR2
+Toggle the \fIverbose\fP flag.
 .LP
 On successful insertion of a product into the product queue, SIGCONT is sent
 to \fBpqing\fP's process group, informing all queue processes that are

@@ -7,7 +7,15 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-bin_PROGRAMS           = ulogger
-dist_bin_SCRIPTS       = newlog
-ulogger_CPPFLAGS       = -I$(top_srcdir)/log
-ulogger_LDADD          = $(top_builddir)/lib/libldm.la
+bin_PROGRAMS		= ulogger
+dist_bin_SCRIPTS	= newlog
+CPPFLAGS		= -I$(top_srcdir)/log
+LDADD			= $(top_builddir)/lib/libldm.la
+TAGS_FILES              = ulogger.c ../log/log.c ../log/log.h \
+                          ../log/log_private.h ../log/mutex.h
+if WANT_ULOG
+TAGS_FILES		+= ../log/log2ulog.c ../log/ulog/ulog.c \
+			   ../log/ulog/ulog.h
+else
+TAGS_FILES		+= ../log/log2slog.c
+endif

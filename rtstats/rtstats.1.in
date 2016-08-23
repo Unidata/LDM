@@ -156,7 +156,7 @@ Port on the remote system to which to connect.  The well-known LDM port is
 Normal termination.
 .TP
 .B SIGUSR1
-Ignored.
+Refresh logging (if configure(1) executed without the "--with-ulog" option).
 .TP
 .B SIGUSR2
 Toggle logging of verbose messages.

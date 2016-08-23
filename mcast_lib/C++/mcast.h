@@ -7,11 +7,11 @@
  * @author: Steven R. Emmerson
  *
  * This file declares the C API for the Virtual Circuit Multicast Transport
- * Protocol, VCMTP.
+ * Protocol, FMTP.
  */
 
-#ifndef VCMTP_C_API_H
-#define VCMTP_C_API_H
+#ifndef FMTP_C_API_H
+#define FMTP_C_API_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,7 +22,7 @@
     extern "C" {
 #endif
 
-typedef uint32_t                 VcmtpProdIndex;
+typedef uint32_t                 FmtpProdIndex;
 #define xdr_McastFileId          xdr_u_long
 typedef struct mcast_receiver    McastReceiver;
 typedef struct mcast_sender      McastSender;
@@ -76,11 +76,11 @@ void mcastReceiver_stop(
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
  * @param[in]     timeoutFactor Ratio of the duration that a data-product will
- *                              be held by the VCMTP layer before being released
+ *                              be held by the FMTP layer before being released
  *                              after being multicast to the duration to
  *                              multicast the product. If negative, then the
  *                              default timeout factor is used.
- * @param[in]     doneWithProd  Function to call when the VCMTP layer is done
+ * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
@@ -98,23 +98,23 @@ mcastSender_spawn(
     const unsigned short   groupPort,
     const char* const      ifaceAddr,
     const unsigned         ttl,
-    const VcmtpProdIndex   iProd,
+    const FmtpProdIndex   iProd,
     const float            timeoutFactor,
-    void                  (*doneWithProd)(VcmtpProdIndex iProd));
+    void                  (*doneWithProd)(FmtpProdIndex iProd));
 
 /**
  * Returns the product-index of the next product to be sent.
- * @param[in]  sender  VCMTP sender.
+ * @param[in]  sender  FMTP sender.
  * @return             The product-index of the next product to be sent.
  */
-VcmtpProdIndex
+FmtpProdIndex
 mcastSender_getNextProdIndex(
     McastSender* const    sender);
 
 /**
  * Sends a product.
  *
- * @param[in]  sender  VCMTP sender.
+ * @param[in]  sender  FMTP sender.
  * @param[in]  data    Data to send.
  * @param[in]  nbytes  Amount of data in bytes.
  * @param[out] iProd   Index of the sent product.
@@ -128,7 +128,7 @@ mcastSender_send(
     const size_t          nbytes,
     const void* const     metadata,
     const unsigned        metaSize,
-    VcmtpProdIndex* const iProd);
+    FmtpProdIndex* const iProd);
 
 /**
  * Terminates a multicast sender by stopping it and releasing its resources.

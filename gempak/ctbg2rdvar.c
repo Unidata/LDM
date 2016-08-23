@@ -85,7 +85,8 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
 	    cst_lstr (  buffer, &blen, &ier );
 
             if ( blen > ncoln ) {
-                sscanf( buffer, "%12d %12d %12d %12d %32c %20c %12s %12d %f %12d %12d",
+                sscanf( buffer,
+                        "%12d %12d %12d %12d %32c %20c %12s %12d %20f %12d %12d",
                             &disc, &cat, &parm, &pdtn,
                             name, unts, gname,
                             &scl, &msng, &ihzrmp, &idrct );

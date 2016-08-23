@@ -1,8 +1,269 @@
-6.13.0.0	2016-03-21T14:44:51-0600
+6.13.4	2016-08-05T10:39:58-0600
+    Logging:
+        log.c:
+            Ensured that the "refresh_logging" flag is cleared if and only if
+            the destination is refreshed to eliminate a potential race
+            condition.
+
+        On a system built without configure(1)'s "--with-ulog" option:
+            refresh_logging(1):
+                Corrected the signal from SIGHUP to SIGUSR1.
+
+                Prefixed kill(1) command with command(1) to avoid non-standard
+                kill(1)-s (e.g., those that expect "%job").
+
+            log.c:
+                Changed the signal that the system uses to re-open log files
+                from SIGHUP to SIGUSR1 to follow more closely the semantics of
+                these signals. (Re-opening a log file is necessary to support
+                log file rotation.) SIGUSR1 is also used by some LDM utilities
+                to log performance statistics; consequently, such statistics
+                will appear at the start of a rotated log file. The extant LDM
+                utilities that log such statistics are: dvbs_multicast(1),
+                noaaportIngester(1), readnoaaport(1), pqcat(1), pqcopy(1),
+                pqing(1), pqsend(1), pqsurf(1), and rtstats(1).
+
+    ldmd(1):
+        Changed "obsolete" to "redundant" in the log message about terminating a
+        previous upstream LDM whose subscription is a subset of the
+        currently-subscribing downstream LDM.
+
+        Blocked delivery of the SIGUSR1 signal for EXEC-ed programs so that it
+        won't terminate programs that don't handle it (e.g., the McIDAS
+        product-decoding programs). Programs that do handle it must and do
+        explicitly unblock this signal.
+
+    pqcat(1):
+        Added printing of product-class to starting-up message.
+
+    pqcopy(1):
+        Corrected usage-message and manual-page.
+
+    ldmadmin(1):
+        Fixed computation of the number of LDM connections on a Solaris system
+        by making the algorithm more robust to variations in netstat(1) output
+        and by using uldbutil(1).
+
+    Multicast:
+        Ensured removal of test product-queues in up7_down7_test.c.
+
+6.13.3	2016-07-20T14:56:07-0600
+    logging:
+        Enhanced performance by making "log_level" volatile and having LOG_LOG()
+        test it directly.
+
+        Improved robustness by moving log_refresh() action from logl_lock() to
+        the static I/O function flush().
+
+    ldmd(1):
+        Changed the exit status of the top-level LDM server from 0 to 3 when it
+        terminates due to the crashing of a child process.
+
+    pqact(1):
+        Corrected "pq_sequence()" to "pq_next()" in log message in pqact.c.
+
+    notifyme(1):
+        Corrected handling of "-l ..." option.
+
+6.13.2	2016-07-13T10:32:17-0600
+    Logging:
+        log.c:
+            Added check of return-value of logi_set_destination() in log_init().
+
+            Added performance test and profiling target.
+
+        ulogger(1):
+            Enabled makefile "make ctags" target.
+
+    Product-Queue:
+        pq.c:
+            Added function pq_next() as a more performant replacement for 
+            pq_sequence() and pq_sequenceLock().
+
+            Squashed latent bug that would eventually cause an assertion failure
+            or a segmentation violation if a new skip-list node couldn't be
+            obtained.
+
+            Restored caching to fb_sz(), tq_sz(), fl_sz(), and ix_sz() to
+            improve performance. Added log_assert(nelems) to same and to
+            ix_ptrs().
+
+            Inlined some static functions to obtain small performance
+            improvements.
+
+        test_pq.c:
+            Created test_pq_sequence().
+
+        pq_test_insert(1):
+            Added ability to periodically insert synthetic data products.
+
+    pqact(1):
+        pqact.c:
+            Refactored to use pq_next().
+
+            Moved setting of insertion-time of last successfully-processed
+            product from main() to processProduct() to increase performance.
+
+            Corrected time-value in first "Processed oldest product" message.
+
+        filel.c:
+            Improved performance by
+                Converting the function entry_isFlagSet() into a macro
+                (profiling revealed that pqact(1) spent about 15% of its time in
+                this function).
+
+                Executing the fl_sync() function only when the head of the
+                product- queue is reached instead of after every matched
+                data-product (profiling revealed that pqact(1) spent about 1/3
+                of its time in this function).
+
+            Squashed latent bug in format argument of log_add_syserr() in
+            unio_put().
+
+        palt.c:
+            Rewrote processProduct(), which is called by pq_next().
+
+            Rewrote dummyprod() to use new processProduct().
+
+        Added test and profiling targets.
+
+    noaaportIngester(1) (productMaker.c):
+        Reverted the computation of the MD5 checksum in productMaker.c for
+        compressed GINI data-blocks when neither the "-c" nor "-f" options are
+        specified from Raytheon's algorithm (which always decompresses and
+        recompresses the data-block) to the original algorithm (which uses the
+        data-block "as is"). This was done because Raytheon's algorithm results
+        in MD5 checksums that differ from previous versions of
+        noaaportIngester(1) -- resulting in failure of the duplicate product
+        rejection mechanism of the product-queue.
+
+        Incorporated Raytheon's bug-fix that eliminates unnecessary
+        retransmission requests for GINI products from NOAA's NCF. (Only
+        requests from NOAA offices are honored).
+
+    ldmadmin(1):
+        Added check for the pqsurf(1) queue for any pqsurf(1) EXEC-ed in the LDM
+        configuration-file.
+
+    refresh_logging(1):
+        Modified makefile to create logging-specific script at build-time to
+        accomodate Solaris' broken sh(1) (`test -z "#"` fails).
+
+        Changed "test -f <pid_file>" to "test -r <pid_file>" to accomodate the
+        non-standard test(1) built-in of Solaris' shell.
+
+        Added quotes around variable substitutions.
+
+    Multicast(1):
+        Improved up7_down7_test(1).
+
+6.13.1	2016-06-02T15:29:28-0600
+    Installation:
+        Improved examination of system logging daemon by configure(1) script:
+            Removed check for running daemon to accomodate Docker
+
+            Simplified tests for configuration and PID files.
+
+        Modified the "make clean" rule so that it doesn't delete the (generated)
+        LDM tutorial files so that a subsequent "make" won't fail.
+
+        Added "StrBuf.h" to BUILT_SOURCES macro in "misc/Makefile.am".
+
+    Logging:
+        log(3):
+            Created log_is_stderr_useful(), which indicates if the standard
+            error stream is open on something other than /dev/null.
+
+            Eliminated log_reinit() because it's no longer needed.
+
+        log2slog(3):
+            Made initialization more robust.
+
+            Corrected algorithm that vets the facility code.
+
+            Eliminated printing of trailing newline in messages.
+
+            Made the setting of the destination for log messages more atomic.
+
+        ulogger(1):
+            Corrected interpretation of priority levels by making the map from
+            name to logging level distinct from the one in
+            </usr/include/sys/syslog.h>.
+
+    Product-Queue (pq.c):
+        Made product-queue file descriptor close-on-exec.
+
+        Added property that is the count of outstanding reservations from
+        uncompleted pqe_new() and pqe_newDirect() calls and the function
+        pqe_get_count() to read it.
+
+    ldmd(1):
+        Moved configuring of standard I/O file descriptors from EXEC action of
+        the configuration-file module to near where ldmd(1) daemonizes itself.
+
+    pqact(1):
+        Made the configuration of the standard output and standard error streams
+        more robust in preparation for execution of child processes.
+
+    pqing(1):
+        Corrected bug introduced in 6.13.0 that didn't honor the argument of the
+        "-q" option.
+
+    NOAAPort:
+        noaaportIngester(1):
+            Merged Raytheon's correction to the use of zlib(3). When option
+            "-c" wasn't specified, the OCONUS imagery received over the
+            NOAAPORT_OPT channel wasn't processed correctly: the zlib stream
+            was not reset before the beginning of the new product resulting
+            in Z_STREAM_ERROR.
+
+        nbs_ingest(1) (not yet ready for use):
+            Use "Option Field Length" parameter in product-definition header for
+            length of product-specific header instead of remaining bytes in
+            frame.
+
+            Added debugging statements.
+
+    Misc:
+        Replaced the use of clock_gettime() with gettimeofday() because the
+        former doesn't exist on one client's OS X system (at least) and it
+        appears to be supported on fewer platforms than the latter. Also, while
+        clock_gettime() can have nanosecond resolution, the microsecond
+        resolution of gettimeofday() is sufficient for the LDM.
+
+        Created open_on_dev_null_if_closed().
+
+        Added unit-test of timestamp module.
+
+        Corrected timeval_normalize() (which is currently unused).
+
+        Added "#include <stddef.h>" to "noaaport/fifo.hin" for `size_t`.
+
+        Removed minor lint discovered by Coverity.
+
+    Testing:
+        Shortened run-time of pq_test(1).
+
+    Documentation:
+        Updated version-independent HTML files.
+
+    Multicast (not yet ready for use):
+        mcast_lib(3):
+            Changed use of SendAppNotifier and RecvAppNotifier to SendProxy and
+            RecvProxy, respectively.
+
+        FMTP:
+            Changed name from "vcmtp" to "FMTP" in LDM codebase.
+
+            Ported TcpSend::updatePathMTU() to SunOS 5.10.
+
+6.13.0	2016-05-03T16:03:52-0600
     Logging:
         Re-wrote LDM logging to eliminate the dependency on the system logging
         daemon because:
-            1) It was the major impediment to correctly using the LDM;
+            1) It was the major impediment to correctly using the LDM (different
+               logging daemons, different configuration-file formats, different
+               security considerations, etc.);
             2) It was the major impediment to putting the LDM in a Docker
                container;
             3) Only 7 "local" syslog(8) facilities are guaranteed and NOAAPort
@@ -23,16 +284,20 @@
         crontab(1)-executed "ldmadmin newlog" command. See the installed HTML
         documentation "$HOME/share/doc/ldm/basics/logging-format.html" or the
         web page
-        <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/logfile-format.html>
+        <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/logging-format.html>
         for more information.
+
+        A particular consequence is that logging, by default, will no longer
+        depend on SELINUX.
 
     NOAAPort Ingestion (noaaportIngester(1), readnoaaport(1)):
         Incorporated Raytheon's modifications to noaaportIngester(1) to:
           1) Optionally create blank scan lines for missing GINI data; and
           2) Optionally always de-compress a compressed data block in a NOAAPort  
              frame.
-             
-        Eliminated memory-leaks from components that read GEMPAK tables.
+
+        Eliminated memory-leaks and SIGSEGV violations from components that read
+        GEMPAK tables.
 
         Added entries to GEMPAK tables (indicated column positions aren't correct):
           File "g2varswmo.tbl":
@@ -49,8 +314,8 @@
 
     ldmadmin(1):
         Reduced overestimation of new queue capacities (i.e., data capacity and
-        product capacity) and eliminated computing new capacities if the data is
-        insufficient.
+        product capacity) by "ldmadmin vetqueuesize" and eliminated computing
+        new capacities if the data is insufficient.
 
         Modified the "printmetrics" command to use free(1) to obtain
         memory-usage metrics if they aren't obtained from top(1).
@@ -89,7 +354,7 @@
         this, pqact(1) might miss a product due to a restart of the LDM. This
         was most apparent in processing NEXRAD-2 data-products. Thanks Ryan.
 
-        Demoted uerror() message in spipe_prodput() to udebug().
+        Demoted uerror() message in spipe_prodput() to log_debug().
 
     pqing(1):
         Accepted Bill Gerry's additions of higher baud rates.
@@ -98,12 +363,7 @@
         improved algorithm for decoding the length of GRIB-1 messages.
 
     Product-Queue (pq(3)):
-        Added unlocking of mutex in pq_sequence() before calling ifMatch() to
-        avoid deadlock in calling a foreign function.
-
         Added mutex destruction to freeing.
-
-        Made pq_release() thread-safe.
 
         Modified fb_get() to log `fblk` diagnostics when it fails.
 
@@ -139,7 +399,11 @@
     ldmprint(3):
         Added missing space between the timestamp and feedtype.
 
-    Build Procedure:
+    Installation:
+        Stopped "make distclean" from removing "*.log" files so that the prior
+        invocation of the configure(1)-script can be seen in the file
+        "config.log".
+
         Improved test of netstat(1) options by the configure-script.
 
         Replaced UD_SEARCH_HEADER and UD_SEARCH_LIB with AC_ macros, improved
@@ -152,6 +416,7 @@
         Modified script ensureSyslogEntry(1) to accommodate Solaris's grep(1),
         which doesn't support the standard "-F" or "-q" options.
 
+    Documentation:
         Improved documentation based on latest workshop.
 
     Testing:

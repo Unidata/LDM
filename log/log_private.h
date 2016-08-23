@@ -65,7 +65,7 @@ typedef struct message {
 /**
  *  Logging level.
  */
-extern log_level_t log_level;
+extern volatile log_level_t log_level;
 
 /**
  * The persistent destination specification.
@@ -301,22 +301,14 @@ void* logl_malloc(
 #define LOG_LOC_DECL(loc) const log_loc_t loc = {__FILE__, __func__, __LINE__}
 
 #define LOG_LOG(level, ...) do {\
-    if (log_is_level_enabled(level)) {\
-        LOG_LOC_DECL(loc);\
-        logl_log(&loc, level, __VA_ARGS__);\
-    }\
-} while (false)
-
-#define LOG_LOG_FLUSH(level, ...) do {\
-    if (!log_is_level_enabled(level)) {\
+    if (level < log_level) {\
         log_clear();\
     }\
     else {\
         LOG_LOC_DECL(loc);\
-        logl_add(&loc, __VA_ARGS__);\
-        log_flush(level);\
+        logl_log(&loc, level, __VA_ARGS__);\
     }\
-} while (false)
+} while (0)
 
 /******************************************************************************
  * Logging implementation functions:
@@ -333,7 +325,7 @@ int logi_set_destination(void);
 
 /**
  * Initializes the logging module's implementation. Should be called before any
- * other function.
+ * other function. `log_dest` must be set.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
@@ -354,10 +346,8 @@ int logi_init(
 int logi_reinit(void);
 
 /**
- * Enables logging down to a given level.
- *
- * @pre              `log_level` is valid
- * @param[in] level  The lowest level through which logging should occur.
+ * Enables logging down to the level given by `log::log_level`. Should be called
+ * after logi_init().
  */
 void logi_set_level(void);
 

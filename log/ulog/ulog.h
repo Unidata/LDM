@@ -115,6 +115,13 @@ unsigned getulogfacility(void);
  * @return the pathname of the log file.
  */
 const char* getulogpath(void);
+/**
+ * Returns the file descriptor used for logging.
+ *
+ * @retval  -1  No file descriptor is used
+ * @return      The file descriptor used for logging
+ */
+int getulogfd(void);
 void ulog(unsigned int pri, const char *fmt, ...);
 int vulog(
         unsigned int      pri,

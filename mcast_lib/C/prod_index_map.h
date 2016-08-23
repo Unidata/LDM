@@ -97,7 +97,7 @@ pim_delete(
  */
 Ldm7Status
 pim_put(
-        const VcmtpProdIndex    iProd,
+        const FmtpProdIndex    iProd,
         const signaturet* const sig);
 
 /**
@@ -111,7 +111,7 @@ pim_put(
  */
 Ldm7Status
 pim_get(
-        const VcmtpProdIndex iProd,
+        const FmtpProdIndex iProd,
         signaturet* const    sig);
 
 /**
@@ -124,7 +124,7 @@ pim_get(
  */
 Ldm7Status
 pim_getNextProdIndex(
-        VcmtpProdIndex* const iProd);
+        FmtpProdIndex* const iProd);
 
 #ifdef __cplusplus
     }

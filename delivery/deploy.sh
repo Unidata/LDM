@@ -37,7 +37,7 @@ ssh -T $USER_NAME@$host bash --login <<EOF
     gunzip -c $SOURCE_DISTRO_NAME | (mkdir -p $PKG_ID &&
         cd $PKG_ID && tar -xf - && rm -rf src && mv -f $PKG_ID src)
     cd $RELPATH_DISTRO_SOURCE_DIR
-    ./configure --disable-root-actions --enable-debug $@ CFLAGS=-g
+    ./configure --disable-root-actions --enable-debug $@
     make install
 EOF
 

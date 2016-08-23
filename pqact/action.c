@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <signal.h>
-#include <fcntl.h>
 
 #include "child_map.h"
 #include "ldm.h"
@@ -106,14 +105,11 @@ exec_prodput(
 
             // Don't let the child process get any inappropriate privileges.
             endpriv();
-
-            log_fini(); // ldmfork() called log_free()
-            (void) execvp(argv[0], argv);
-            (void)log_reinit();
+            log_info("Executing program \"%s\"", argv[0]);
+            (void)execvp(argv[0], argv);
             log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
                     getenv("PATH"));
-            log_fini();
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE); // cleanup() calls log_fini()
         }
         else {
             // Parent process.

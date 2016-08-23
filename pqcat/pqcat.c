@@ -132,7 +132,7 @@ usage(const char *av0) /*  id string */
         (void)fprintf(stderr,
 "\t-p pattern   Interested in products matching \"pattern\" (default \".*\")\n") ;
         (void)fprintf(stderr,
-"\t-q pqfname   (default \"%s\")\n", getQueuePath());
+"\t-q pqfname   (default \"%s\")\n", getDefaultQueuePath());
         (void)fprintf(stderr,
 "\t-o offset    Set the \"from\" time \"offset\" secs before now\n");
         (void)fprintf(stderr,
@@ -187,9 +187,6 @@ signal_handler(int sig)
         (void) signal(sig, signal_handler);
 #endif
         switch(sig) {
-        case SIGHUP :
-                log_refresh();
-                return;
         case SIGINT :
                 intr = !0;
                 exit(0);
@@ -197,6 +194,7 @@ signal_handler(int sig)
                 done = !0;      
                 return;
         case SIGUSR1 :
+                log_refresh();
                 stats_req = !0;
                 return;
         case SIGUSR2 :
@@ -229,7 +227,6 @@ set_sigactions(void)
         sigact.sa_flags |= SA_RESTART;
 #endif
         sigact.sa_handler = signal_handler;
-        (void) sigaction(SIGHUP,  &sigact, NULL);
         (void) sigaction(SIGTERM, &sigact, NULL);
         (void) sigaction(SIGUSR1, &sigact, NULL);
         (void) sigaction(SIGUSR2, &sigact, NULL);
@@ -240,6 +237,17 @@ set_sigactions(void)
         sigact.sa_flags |= SA_INTERRUPT;
 #endif
         (void) sigaction(SIGINT, &sigact, NULL);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGCHLD);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGUSR2);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 
@@ -272,6 +280,7 @@ int main(int ac, char *av[])
         int ch;
         int fterr;
 
+        pqfname = getQueuePath();
         opterr = 1;
 
         while ((ch = getopt(ac, av, "cvxOsl:p:f:q:o:i:")) != EOF)
@@ -305,7 +314,7 @@ int main(int ac, char *av[])
                         }
                         break;
                 case 'q':
-                        setQueuePath(optarg);
+                        pqfname = optarg;
                         break;
                 case 'o':
                         (void) set_timestamp(&clss.from);
@@ -331,7 +340,6 @@ int main(int ac, char *av[])
                         break;
                 }
 
-        pqfname = getQueuePath();
 
         if (re_isPathological(spec.pattern))
         {
@@ -349,6 +357,7 @@ int main(int ac, char *av[])
                 usage(av[0]);
         }
 
+        setQueuePath(pqfname);
 
         /* last arg, outputfname, is optional */
         if(ac - optind > 0)
@@ -364,7 +373,12 @@ int main(int ac, char *av[])
 
         }
 
-        log_notice("Starting Up (%d)", getpgrp());
+        {
+            char buf[128];
+            (void)pc_format(&clss, buf, sizeof(buf));
+            buf[sizeof(buf)-1] = 0;
+            log_notice("Starting Up (%d): prod_class=%s", getpgrp(), buf);
+        }
 
         /*
          * register exit handler

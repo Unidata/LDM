@@ -6,6 +6,7 @@
  */
 
 #include <config.h>
+#include <errno.h>
 #include <stdio.h>
 #include <log.h>
 #include <string.h>
@@ -25,7 +26,6 @@
 #include <fcntl.h> /* O_RDONLY et al */
 #include <unistd.h> /* access, lseek */
 #include <signal.h>
-#include <errno.h>
 
 #if !defined(_DARWIN_C_SOURCE)
 union semun {
@@ -264,13 +264,13 @@ entry_unsetFlag(
     entry->flags &= ~flag;
 }
 
-static inline bool
-entry_isFlagSet(
-        fl_entry* const entry,
-        const int       flag)
-{
-    return entry->flags & flag;
-}
+/**
+ * Indicate if a particular flag is set.
+ *
+ * Because profiling revealed that the utility pqact(1) spent about 15% of its
+ * time in this "function", it is now a macro. SRE 2016-06-21
+ */
+#define entry_isFlagSet(entry, flag) (entry->flags & flag)
 
 /**
  * Removes an entry from the open-file list.
@@ -438,27 +438,15 @@ fl_removeAndFree(
  * Flushes outstanding I/O of entries in the list starting with the tail of the
  * list and moving to the head.
  *
- * @param[in] nentries  Number of entries to flush or `-1` to flush all entries.
  * @param[in] block     Whether or not the I/O should block.
  */
 void
 fl_sync(
-        int       nentries,
         const int block)
 {
-    // LOG_DEBUG("  fl_sync");
-
-    if (thefl->size <= 0)
-        return;
-
-    if (nentries == -1) /* sync everyone */
-        nentries = thefl->size;
-
     fl_entry *entry, *prev;
-    for (entry = thefl->tail; entry != NULL && nentries >= 0;
-            entry = prev, nentries--) {
+    for (entry = thefl->tail; entry != NULL; entry = prev) {
         prev = entry->prev;
-
         if (entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
             if (entry->ops->sync(entry, block)) {
                 log_error("Couldn't sync entry");
@@ -524,14 +512,14 @@ fl_getEntry(
         bool* const restrict  isNew)
 {
     fl_entry* entry = fl_find(type, argc, argv);
-    bool      wasCreated;
 
     if (NULL != entry) {
         TO_HEAD(entry);
         #ifdef FL_DEBUG
             dump_fl();
         #endif
-        wasCreated = false;
+        if (isNew)
+            *isNew = false;
     }
     else {
         log_assert(maxEntries > 0);
@@ -545,12 +533,10 @@ fl_getEntry(
             #ifdef FL_DEBUG
                 dump_fl();
             #endif
-            wasCreated = true;
+            if (isNew)
+                *isNew = true;
         }
     }
-
-    if (entry && isNew)
-        *isNew = wasCreated;
 
     return entry;
 }
@@ -577,34 +563,32 @@ fl_findByPid(
     return entry;
 }
 
+
 /**
  * Ensures that a given file descriptor will be closed upon execution of an
  * exec(2) family function.
  *
  * @param[in] fd      The file descriptor to be set to close-on-exec.
- * @retval    NULL    Success.
- * @return            Error object.
+ * @retval    0       Success.
+ * @retval    -1      Failure. log_add() called.
  */
-static ErrorObj*
+static int
 ensureCloseOnExec(
         const int fd)
 {
-    ErrorObj* errObj = NULL; /* success */
+    int status = 0; // Success
     int flags = fcntl(fd, F_GETFD);
-
     if (-1 == flags) {
-        errObj = ERR_NEW2(errno, NULL,
-                "Couldn't get flags for file descriptor %d: %s",
-                fd, strerror(errno));
+        log_add_syserr("Couldn't get flags for file descriptor %d", fd);
+        status = -1;
     }
     else if (!(flags & FD_CLOEXEC)
             && (-1 == fcntl(fd, F_SETFD, flags | FD_CLOEXEC))) {
-        errObj = ERR_NEW2(errno, NULL,
-                "Couldn't set file descriptor %d to close-on-exec(): %s",
-                fd, strerror(errno));
+        log_add_syserr("Couldn't set file descriptor %d to close-on-exec()",
+                fd);
+        status = -1;
     }
-
-    return errObj;
+    return status;
 }
 
 /**
@@ -779,19 +763,14 @@ static int unio_open(
         log_syserr("unio_open: %s", path);
     }
     else {
-        int error = 0;
         /*
          * Ensure that the file descriptor will close upon execution
          * of an exec(2) family function because no child processes should
          * inherit it.
          */
-        ErrorObj* errObj = ensureCloseOnExec(writeFd);
-
-        if (errObj) {
-            err_log_and_free(ERR_NEW(0, errObj, "Couldn't open FILE output-file"),
-                    ERR_FAILURE);
-
-            error = 1;
+        int status = ensureCloseOnExec(writeFd);
+        if (status) {
+            log_error("Couldn't open FILE output-file");
         }
         else {
             if (!(flags & O_TRUNC)) {
@@ -810,7 +789,7 @@ static int unio_open(
             log_debug("%d %s", entry->handle.fd, entry->path);
         } /* output-file set to close_on_exec */
 
-        if (error) {
+        if (status) {
             (void) close(writeFd);
             writeFd = -1;
         }
@@ -875,7 +854,7 @@ static int unio_put(
             else {
                 if (EINTR != errno) {
                     log_add_syserr("Couldn't write() %zu bytes to file \"%s\"",
-                            entry->path);
+                            sz, entry->path);
                     // disable flushing on I/O error
                     entry_unsetFlag(entry, FL_NEEDS_SYNC);
                 }
@@ -1210,17 +1189,13 @@ static int stdio_open(
         log_syserr("mkdirs_open: %s", path);
     }
     else {
-        int error = 1;
         /*
          * Ensure that the file descriptor will close upon execution of an
          * exec(2) family function because no child processes should inherit it.
          */
-        ErrorObj* errObj = ensureCloseOnExec(fd);
-
-        if (errObj) {
-            err_log_and_free(
-                    ERR_NEW(0, errObj, "Couldn't open STDIOFILE output-file"),
-                    ERR_FAILURE);
+        int status = ensureCloseOnExec(fd);
+        if (status) {
+            log_error("Couldn't open STDIOFILE output-file");
         }
         else {
             entry->handle.stream = fdopen(fd, mode);
@@ -1241,11 +1216,11 @@ static int stdio_open(
                 strncpy(entry->path, path, PATH_MAX);
                 entry->path[PATH_MAX - 1] = 0; /* just in case */
                 log_debug("%d", fileno(entry->handle.stream));
-                error = 0;
+                status = 0;
             } /* entry->handle.stream allocated */
         } /* output-file set to close-on-exec */
 
-        if (error) {
+        if (status) {
             (void) close(fd);
             fd = -1;
         }
@@ -1505,17 +1480,14 @@ static int pipe_open(
         log_syserr("Couldn't create pipe");
     }
     else {
-        ErrorObj* errObj;
-
         /*
          * Ensure that the write-end of the pipe will close upon execution
          * of an exec(2) family function because no child processes should
          * inherit it.
          */
-        if ((errObj = ensureCloseOnExec(pfd[1]))) {
-            err_log_and_free(ERR_NEW(0, errObj,
-                    "Couldn't set write-end of pipe to close on exec()"),
-                    ERR_FAILURE);
+        int status = ensureCloseOnExec(pfd[1]);
+        if (status) {
+            log_error("Couldn't set write-end of pipe to close on exec()");
         }
         else {
             pid_t pid = ldmfork();
@@ -1528,8 +1500,8 @@ static int pipe_open(
                     /*
                      * Child process.
                      */
-                    (void) signal(SIGTERM, SIG_DFL );
-                    (void) pq_close(pq);
+                    (void)signal(SIGTERM, SIG_DFL);
+                    (void)pq_close(pq);
                     pq = NULL;
 
                     /*
@@ -1548,34 +1520,29 @@ static int pipe_open(
                      */
 
                     /*
-                     * Associate the standard input stream with the
-                     * read-end of the pipe.
+                     * Associate the standard input stream with the read-end of
+                     * the pipe.
                      */
                     if (STDIN_FILENO != pfd[0]) {
                         if (-1 == dup2(pfd[0], STDIN_FILENO)) {
-                            log_syserr("Couldn't dup2(%d,%d)", pfd[0],
-                                    STDIN_FILENO);
+                            log_syserr("Couldn't redirect standard input to "
+                                    "read-end of pipe: pfd[0]=%d", pfd[0]);
                         }
                         else {
-                            (void) close(pfd[0]);
-
+                            (void)close(pfd[0]);
                             pfd[0] = STDIN_FILENO;
                         }
                     }
 
                     if (STDIN_FILENO == pfd[0]) {
                         endpriv();
-                        if (log_is_enabled_info)
-                            log_info("Executing decoder \"%s\"", av[0]);
-                        log_fini();
-                        (void) execvp(av[0], &av[0]);
-                        (void)log_reinit();
-                        log_syserr("Couldn't execute decoder \"%s\"; PATH=%s",
-                                av[0], getenv("PATH"));
+                        log_info("Executing decoder \"%s\"", av[0]);
+                        (void)execvp(av[0], &av[0]);
+                        log_syserr("Couldn't execute decoder \"%s\";"
+                                "PATH=%s", av[0], getenv("PATH"));
                     }
 
-                    log_fini();
-                    exit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE); // cleanup() calls log_fini()
                 } /* child process */
                 else {
                     /*

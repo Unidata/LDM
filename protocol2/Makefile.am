@@ -9,7 +9,6 @@
 hinHeaders	        = \
     data_prod.h \
     forn.h \
-    ldmfork.h \
     LdmProxy.h \
     timer.h \
     uldb.h
@@ -67,7 +66,7 @@ lib_la_SOURCES		= \
     ldm_xlen.c \
     ldm5_clnt.c \
     ldm_server.c \
-    ldmfork.c \
+    ldmfork.c ldmfork.h \
     ldmprint.c \
     ldm_clnt_misc.c \
     ldm_config_file.c \
@@ -113,7 +112,6 @@ dist_man3_MANS		= uldb.3
 	mv -f $@.tmp $@
 data_prod.h:		data_prod.hin data_prod.c
 forn.h:			forn.hin forn.c
-ldmfork.h:		ldmfork.hin ldmfork.c
 LdmProxy.h:		LdmProxy.hin LdmProxy.c
 timer.h:		timer.hin timer.c
 uldb.h:			uldb.hin uldb.c
@@ -131,7 +129,18 @@ local_checks		=
 
 if HAVE_CUNIT
 
-check_PROGRAMS		= ldmprint_test test_data_prod testuldb
+check_PROGRAMS		= timestamp_test ldmfork_test ldmprint_test \
+			  test_data_prod testuldb
+
+timestamp_test_SOURCES 	= timestamp_test.c timestamp.c
+timestamp_test_CPPFLAGS	= -I$(top_srcdir) -I$(top_srcdir)/log @CPPFLAGS_CUNIT@
+timestamp_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+
+ldmfork_test_CPPFLAGS	= -I$(top_srcdir) \
+                          -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+                          -I$(top_srcdir)/log \
+                          @CPPFLAGS_CUNIT@
+ldmfork_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
 ldmprint_test_CPPFLAGS  = -I$(top_srcdir) -I$(top_srcdir)/log \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -156,7 +165,8 @@ testuldb_CPPFLAGS	= -I$(top_srcdir) \
                           @CPPFLAGS_CUNIT@
 testuldb_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
-TESTS			= ldmprint_test test_data_prod testuldb
+TESTS			= timestamp_test ldmfork_test ldmprint_test \
+                          test_data_prod testuldb
 
 valgrind:	testuldb
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \

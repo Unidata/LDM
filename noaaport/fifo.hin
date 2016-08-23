@@ -6,6 +6,8 @@
 #ifndef FIFO_H
 #define FIFO_H
 
+#include <stddef.h>
+
 typedef struct fifo     Fifo;
 
 @FUNCTION_DECLARATIONS@

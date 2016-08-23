@@ -32,7 +32,7 @@
  *         - _priority_: DEBUG | INFO | NOTE | WARN | ERROR
  *         - _location_: _file_:_func()_:_line_
  *       - Example: 20160113T150106.734013Z noaaportIngester[26398] NOTE process_prod.c:process_prod():216 SDUS58 PACR 062008 /pN0RABC inserted
- *   - Enable log file rotation by refreshing destination upon SIGHUP reception
+ *   - Enable log file rotation by refreshing destination upon SIGUSR1 reception
  */
 #include <config.h>
 
@@ -53,6 +53,7 @@
 #include <stdio.h>    /* vsnprintf(), snprintf() */
 #include <stdlib.h>   /* malloc(), free(), abort() */
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #ifndef _XOPEN_NAME_MAX
@@ -95,17 +96,17 @@ static bool                  avoid_stderr;
  */
 static volatile sig_atomic_t refresh_needed;
 /**
- * The SIGHUP signal set.
+ * The SIGUSR1 signal set.
  */
-static sigset_t              hup_sigset;
+static sigset_t              usr1_sigset;
 /**
- * The SIGHUP action for this module.
+ * The SIGUSR1 action for this module.
  */
-static struct sigaction      hup_sigaction;
+static struct sigaction      usr1_sigaction;
 /**
- * The previous SIGHUP action when this module's SIGHUP action is registered.
+ * The previous SIGUSR1 action when this module's SIGUSR1 action is registered.
  */
-static struct sigaction      prev_hup_sigaction;
+static struct sigaction      prev_usr1_sigaction;
 /**
  * The signal mask of all signals.
  */
@@ -147,21 +148,21 @@ static void restoreSigs(
 }
 
 /**
- * Handles SIGHUP delivery. Sets variable `refresh_needed` and ensures that any
- * previously-registered SIGHUP handler is called.
+ * Handles SIGUSR1 delivery. Sets variable `refresh_needed` and ensures that any
+ * previously-registered SIGUSR1 handler is called.
  *
- * @param[in] sig  SIGHUP.
+ * @param[in] sig  SIGUSR1.
  */
-static void handle_sighup(
+static void handle_sigusr1(
         const int sig)
 {
     refresh_needed = 1;
-    if (prev_hup_sigaction.sa_handler != SIG_DFL &&
-            prev_hup_sigaction.sa_handler != SIG_IGN) {
-        (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
-        raise(SIGHUP);
-        (void)sigprocmask(SIG_UNBLOCK, &hup_sigset, NULL);
-        (void)sigaction(SIGHUP, &hup_sigaction, NULL);
+    if (prev_usr1_sigaction.sa_handler != SIG_DFL &&
+            prev_usr1_sigaction.sa_handler != SIG_IGN) {
+        (void)sigaction(SIGUSR1, &prev_usr1_sigaction, NULL);
+        raise(SIGUSR1);
+        (void)sigprocmask(SIG_UNBLOCK, &usr1_sigset, NULL);
+        (void)sigaction(SIGUSR1, &usr1_sigaction, NULL);
     }
 }
 
@@ -447,7 +448,7 @@ static const char* get_default_destination(void)
 }
 
 /**
- * Initializes this logging module. Called by log_init() and log_reinit().
+ * Initializes this logging module. Called by log_init().
  *
  * @retval    -1  Failure
  * @retval     0  Success
@@ -461,12 +462,12 @@ static int init(void)
     }
     else {
         (void)sigfillset(&all_sigset);
-        (void)sigemptyset(&hup_sigset);
-        (void)sigaddset(&hup_sigset, SIGHUP);
-        hup_sigaction.sa_mask = hup_sigset;
-        hup_sigaction.sa_flags = SA_RESTART;
-        hup_sigaction.sa_handler = handle_sighup;
-        (void)sigaction(SIGHUP, &hup_sigaction, &prev_hup_sigaction);
+        (void)sigemptyset(&usr1_sigset);
+        (void)sigaddset(&usr1_sigset, SIGUSR1);
+        usr1_sigaction.sa_mask = usr1_sigset;
+        usr1_sigaction.sa_flags = SA_RESTART;
+        usr1_sigaction.sa_handler = handle_sigusr1;
+        (void)sigaction(SIGUSR1, &usr1_sigaction, &prev_usr1_sigaction);
         status = mutex_init(&log_mutex, false, true);
         if (status)
             logl_internal(LOG_LEVEL_ERROR, "Couldn't initialize mutex: %s",
@@ -488,6 +489,28 @@ static bool is_level_enabled(
 }
 
 /**
+ * Refreshes the logging module. If logging is to the system logging daemon,
+ * then it will continue to be. If logging is to a file, then the file is closed
+ * and re-opened; thus enabling log file rotation. If logging is to the standard
+ * error stream, then it will continue to be if log_avoid_stderr() hasn't been
+ * called; otherwise, logging will be to the provider default. Should be called
+ * after log_init().
+ *
+ * @pre        Module is locked
+ * @retval  0  Success
+ * @retval -1  Failure
+ */
+static inline int refresh_if_necessary(void)
+{
+    int status = 0;
+    if (refresh_needed) {
+        status = logi_set_destination();
+        refresh_needed = 0;
+    }
+    return status;
+}
+
+/**
  * Logs the currently-accumulated log-messages of the current thread and resets
  * the message-queue for the current thread.
  *
@@ -505,6 +528,7 @@ static void flush(
 
     if (NULL != queue && NULL != queue->last) {
         if (is_level_enabled(level)) {
+            (void)refresh_if_necessary();
             for (const Message* msg = queue->first; NULL != msg;
                     msg = msg->next) {
                 logi_log(level, &msg->loc, msg->string);
@@ -520,23 +544,6 @@ static void flush(
     restoreSigs(&sigset);
 }
 
-/**
- * Refreshes the logging module. If logging is to the system logging daemon,
- * then it will continue to be. If logging is to a file, then the file is closed
- * and re-opened; thus enabling log file rotation. If logging is to the standard
- * error stream, then it will continue to be if log_avoid_stderr() hasn't been
- * called; otherwise, logging will be to the provider default. Should be called
- * after log_init().
- *
- * @pre        Module is locked
- * @retval  0  Success
- * @retval -1  Failure
- */
-static int refresh(void)
-{
-    return logi_set_destination();
-}
-
 /******************************************************************************
  * Package-private API:
  ******************************************************************************/
@@ -549,7 +556,7 @@ char log_dest[_XOPEN_PATH_MAX];
 /**
  *  Logging level.
  */
-log_level_t log_level = LOG_LEVEL_NOTICE;
+volatile log_level_t log_level = LOG_LEVEL_NOTICE;
 
 /**
  * The mapping from `log` logging levels to system logging daemon priorities:
@@ -588,10 +595,6 @@ void logl_lock(void)
     blockSigs(&prevSigs);
     int status = mutex_lock(&log_mutex);
     logl_assert(status == 0);
-    if (refresh_needed) {
-        refresh_needed = 0;
-        (void)refresh();
-    }
 }
 
 /**
@@ -912,6 +915,29 @@ int logl_fini(
  ******************************************************************************/
 
 /**
+ * Indicates if the standard error file descriptor refers to a file that is not
+ * `/dev/null`. This function may be called at any time.
+ *
+ * @retval true   Standard error file descriptor refers to a file that is not
+ *               `/dev/null`
+ * @retval false  Standard error file descriptor is closed or refers to
+ *                `/dev/null`.
+ */
+bool log_is_stderr_useful(void)
+{
+    static struct stat dev_null_stat;
+    static bool        initialized = false;
+    if (!initialized) {
+        (void)stat("/dev/null", &dev_null_stat); // Can't fail
+        initialized = true;
+    }
+    struct stat stderr_stat;
+    return (fstat(STDERR_FILENO, &stderr_stat) == 0) &&
+        ((stderr_stat.st_ino != dev_null_stat.st_ino) ||
+                (stderr_stat.st_dev != dev_null_stat.st_dev));
+}
+
+/**
  * Initializes this logging module.
  *
  * @param[in] id The pathname of the program (e.g., `argv[0]`). Caller may free.
@@ -923,18 +949,18 @@ int log_init(
 {
     int status = init();
     if (status == 0) {
-        // The following isn't done by log_reinit():
-        init_thread = pthread_self();
-        avoid_stderr = (fcntl(STDERR_FILENO, F_GETFD) == -1);
         log_level = LOG_LEVEL_NOTICE;
-        const char* const dest = get_default_destination();
-        // `dest` doesn't overlap `log_dest`
-        strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
+        (void)strncpy(log_dest, STDERR_SPEC, sizeof(log_dest));
         status = logi_init(id);
-        if (status)
-            logl_internal(LOG_LEVEL_ERROR,
-                    "Couldn't initialize implementation");
-        isInitialized = (status == 0);
+        if (status == 0) {
+            init_thread = pthread_self();
+            avoid_stderr = !log_is_stderr_useful();
+            const char* const dest = get_default_destination();
+            // `dest` doesn't overlap `log_dest`
+            strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
+            status = logi_set_destination();
+            isInitialized = status == 0;
+        }
     }
     return status;
 }
@@ -957,23 +983,6 @@ void log_avoid_stderr(void)
         (void)logi_set_destination();
     }
     logl_unlock();
-}
-
-/**
- * Re-initializes this logging module based on its state just prior to calling
- * log_fini().
- *
- * @retval    -1  Failure
- * @retval     0  Success
- */
-int log_reinit(void)
-{
-    int status = init();
-    if (status == 0) {
-        status = logi_reinit();
-        isInitialized = (status == 0);
-    }
-    return status;
 }
 
 /**
@@ -1147,6 +1156,7 @@ void log_roll_level(void)
     log_level = (log_level == LOG_LEVEL_DEBUG)
             ? LOG_LEVEL_ERROR
             : log_level - 1;
+    logi_set_level();
     logl_unlock();
 }
 
@@ -1217,7 +1227,7 @@ int log_fini_located(
     if (status == 0) {
         status = mutex_fini(&log_mutex);
         if (status == 0) {
-            (void)sigaction(SIGHUP, &prev_hup_sigaction, NULL);
+            (void)sigaction(SIGUSR1, &prev_usr1_sigaction, NULL);
             isInitialized = false;
         }
     }

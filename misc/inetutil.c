@@ -1,5 +1,5 @@
 /*
- *   Copyright 2014, University Corporation for Atmospheric Research
+ *   Copyright 2016, University Corporation for Atmospheric Research
  *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
 
@@ -10,13 +10,11 @@
 #include <config.h>
 
 #include "error.h"
-#include "log.h"
-#include "ldm.h"
+#include "inetutil.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "inetutil.h"
-#include "timestamp.h"
 #include "registry.h"
+#include "timestamp.h"
 #include "xdr.h"
 
 #include <limits.h>

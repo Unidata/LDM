@@ -11,6 +11,7 @@
 
 #include <config.h>
 
+#include <fcntl.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -42,6 +43,7 @@
 #include "atofeedt.h"
 #include "pq.h"
 #include "palt.h"
+#include "ldmfork.h"
 #include "ldmprint.h"
 #include "filel.h" /* pipe_timeo */
 #include "state.h"
@@ -59,9 +61,6 @@ static int                   shmid = -1;
 static int                   semid = -1;
 static key_t                 key;
 static key_t                 semkey;
-timestampt                   oldestCursor;
-timestampt                   currentCursor;
-int                          currentCursorSet = 0;
 
 #ifndef DEFAULT_INTERVAL
 #define DEFAULT_INTERVAL 15
@@ -82,6 +81,26 @@ int                          currentCursorSet = 0;
 #endif /* !DEFAULT_PIPE_TIMEO */
 int pipe_timeo = DEFAULT_PIPE_TIMEO;
 
+/**
+ * Configures the standard I/O file descriptors for subsequent execution of
+ * child processes. The standard input, output, and error file descriptors are
+ * redirected to `/dev/null` if they are closed to prevent child processes that
+ * mistakenly write to them from misbehaving.
+ *
+ * @retval  0  Success
+ * @retval -1  Failure. log_add() called.
+ */
+static int configure_stdio_file_descriptors(void)
+{
+    int status = open_on_dev_null_if_closed(STDIN_FILENO, O_RDONLY);
+    if (status == 0) {
+        status = open_on_dev_null_if_closed(STDOUT_FILENO, O_WRONLY);
+        if (status == 0)
+            status = open_on_dev_null_if_closed(STDERR_FILENO, O_RDWR);
+    }
+    return status;
+}
+
 
 /*
  * called at exit
@@ -93,21 +112,22 @@ cleanup(void)
 
     if (done) {
         /*
-         * We are not in the interrupt context, so these can
-         * be performed safely.
+         * We are not in the interrupt context, so these can be performed
+         * safely.
          */
         fl_closeAll();
 
         if (pq)
             (void)pq_close(pq);
 
-        if (currentCursorSet) {
+        if (!tvEqual(palt_last_insertion, TS_ZERO)) {
             timestampt  now;
 
             (void)set_timestamp(&now);
-            log_notice("Behind by %g s", d_diff_timestamp(&now, &currentCursor));
+            log_notice("Behind by %g s",
+                    d_diff_timestamp(&now, &palt_last_insertion));
 
-            if (stateWrite(&currentCursor) < 0) {
+            if (stateWrite(&palt_last_insertion) < 0) {
                 log_error("Couldn't save insertion-time of last processed "
                     "data-product");
             }
@@ -145,7 +165,6 @@ signal_handler(int sig)
         switch(sig) {
         case SIGHUP :
                 hupped = 1;
-                log_refresh();
                 return;
         case SIGINT :
                 exit(0);
@@ -154,7 +173,7 @@ signal_handler(int sig)
                 done = 1;
                 return;
         case SIGUSR1 :
-                /* TODO? stats */
+                log_refresh();
                 return;
         case SIGUSR2 :
                 log_roll_level();
@@ -206,6 +225,18 @@ set_sigactions(void)
         sigact.sa_flags |= SA_INTERRUPT;
 #endif
         (void) sigaction(SIGINT, &sigact, NULL);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigaddset(&sigset, SIGXFSZ);
+    (void)sigaddset(&sigset, SIGHUP);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGUSR2);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 
@@ -246,7 +277,7 @@ usage(
         log_error(
 "\tconfig_file  Pathname of configuration-file (default: " "\"%s\")",
                 getPqactConfigPath());
-        exit(1);
+        exit(EXIT_FAILURE);
         /*NOTREACHED*/
 }
 
@@ -254,7 +285,6 @@ usage(
 int
 main(int ac, char *av[])
 {
-        const char*  pqfname;
         int          status = 0;
         char*        logfname = 0;
         /// Data directory, conffile paths may be relative
@@ -273,6 +303,8 @@ main(int ac, char *av[])
          */
         (void)log_init(progname);
 
+        const char*  pqfname = getQueuePath();
+
         spec.feedtype = DEFAULT_FEEDTYPE;
         spec.pattern = DEFAULT_PATTERN;
 
@@ -280,7 +312,7 @@ main(int ac, char *av[])
         {
                 int errnum = errno;
                 log_error("Couldn't set timestamp: %s", strerror(errnum));
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
         clss.to = TS_ENDT;
@@ -333,7 +365,7 @@ main(int ac, char *av[])
                         }
                         break;
                 case 'q':
-                        setQueuePath(optarg);
+                        pqfname = optarg;
                         break;
                 case 'o':
                         toffset = atoi(optarg);
@@ -368,7 +400,6 @@ main(int ac, char *av[])
                 }
             }
 
-            pqfname = getQueuePath();
             conffilename = getPqactConfigPath();
             datadir = getPqactDataDirPath();
 
@@ -385,6 +416,7 @@ main(int ac, char *av[])
             }
         }
 
+        setQueuePath(pqfname);
         log_notice("Starting Up");
 
         if ('/' != conffilename[0]) {
@@ -400,19 +432,19 @@ main(int ac, char *av[])
 #endif
             if (getcwd(buf, sizeof(buf)) == NULL) {
                 log_syserr("Couldn't get current working directory");
-                exit(1);
+                exit(EXIT_FAILURE);
             }
             (void)strncat(buf, "/", sizeof(buf)-strlen(buf)-1);
             (void)strncat(buf, conffilename, sizeof(buf)-strlen(buf)-1);
             conffilename = strdup(buf);
             if (conffilename == NULL) {
                 log_syserr("Couldn't duplicate string \"%s\"", buf);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
 
         /*
-         * Initialze the previous-state module for this process.
+         * Initialize the previous-state module for this process.
          */
         if (stateInit(conffilename) < 0) {
             log_error("Couldn't initialize previous-state module");
@@ -421,35 +453,12 @@ main(int ac, char *av[])
         }
 
         /*
-         * The standard input stream is redirected to /dev/null because this
-         * program doesn't use it and doing so prevents child processes
-         * that mistakenly read from it from terminating abnormally.
+         * Configure the standard I/O streams for execution of child processes.
          */
-        if (NULL == freopen("/dev/null", "r", stdin))
-        {
-            err_log_and_free(
-                ERR_NEW1(0, NULL,
-                    "Couldn't redirect stdin to /dev/null: %s",
-                    strerror(errno)),
-                ERR_FAILURE);
+        if (configure_stdio_file_descriptors()) {
+            log_error("Couldn't configure standard I/O streams for execution "
+                    "of child processes");
             exit(EXIT_FAILURE);
-            /*NOTREACHED*/
-        }
-
-        /*
-         * The standard output stream is redirected to /dev/null because this
-         * program doesn't use it and doing so prevents child processes
-         * that mistakenly write to it from terminating abnormally.
-         */
-        if (NULL == freopen("/dev/null", "w", stdout))
-        {
-            err_log_and_free(
-                ERR_NEW1(0, NULL,
-                    "Couldn't redirect stdout to /dev/null: %s",
-                    strerror(errno)),
-                ERR_FAILURE);
-            exit(EXIT_FAILURE);
-            /*NOTREACHED*/
         }
 
         /*
@@ -462,7 +471,7 @@ main(int ac, char *av[])
         {
             log_error("Couldn't set number of available file-descriptors");
             log_notice("Exiting");
-            exit(1);
+            exit(EXIT_FAILURE);
             /*NOTREACHED*/
         }
 
@@ -489,7 +498,7 @@ main(int ac, char *av[])
                 log_error("Can't compile regular expression \"%s\"",
                         spec.pattern);
                 log_notice("Exiting");
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
 
@@ -500,7 +509,7 @@ main(int ac, char *av[])
         {
                 log_syserr("atexit");
                 log_notice("Exiting");
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
 
@@ -514,7 +523,7 @@ main(int ac, char *av[])
          * its syntax may be checked without opening a product queue.
          */
         if ((status = readPatFile(conffilename)) < 0) {
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
         else if (status == 0) {
@@ -537,7 +546,7 @@ main(int ac, char *av[])
                     log_error("pq_open failed: %s: %s\n",
                             pqfname, strerror(status));
                 }
-                exit(1);
+                exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
 
@@ -628,50 +637,27 @@ main(int ac, char *av[])
                 hupped = 0;
             }
 
-            bool wasProcessed = false;
+#if 0
             status = pq_sequence(pq, TV_GT, &clss, processProduct,
-                    &wasProcessed);
+                    &palt_processing_error);
+#else
+            status = pq_next(pq, false, &clss, processProduct, false, NULL);
+#endif
 
-            if (status == 0) {
+            if (status) {
                 /*
-                 * No product-queue error.
-                 */
-                timestampt insertionTime, oldestInsertionTime;
-
-                pq_ctimestamp(pq, &insertionTime);
-                status = pq_getOldestCursor(pq, &oldestInsertionTime);
-
-                if (status == 0 &&
-                        tvEqual(oldestInsertionTime, insertionTime)) {
-                    timestampt  now;
-                    (void)set_timestamp(&now);
-                    log_warning("Processed oldest product in queue: %g s",
-                        d_diff_timestamp(&now, &currentCursor));
-                }
-
-                if (wasProcessed) {
-                    /*
-                     * The insertion-time of the last successfully-processed
-                     * data-product is only set if it was successfully processed
-                     * by all matching entries in order to allow re-processing
-                     * of a partially processed data-product in the next session
-                     * by a corrected action.
-                     */
-                    currentCursor = insertionTime;
-                    currentCursorSet = 1;
-                }
-
-                (void)exitIfDone(0);
-            }
-            else {
-                /*
-                 * Product-queue error. Data-product wasn't processed.
+                 * Product-queue error. No data-product was processed.
                  */
                 if (status == PQUEUE_END) {
                     log_debug("End of Queue");
 
                     if (interval == 0)
                         break;
+
+                    /*
+                     * Perform a non-blocking sync on all open file descriptors.
+                     */
+                    fl_sync(FALSE);
                 }
                 else if (status == EAGAIN || status == EACCES) {
                     log_debug("Hit a lock");
@@ -692,20 +678,16 @@ main(int ac, char *av[])
                     fl_closeLru(FL_NOTRANSIENT);
                 }
                 else {
-                    log_error("pq_sequence failed: %s (errno = %d)",
+                    log_error("pq_next() failure: %s (errno = %d)",
                         strerror(status), status);
-                    exit(1);
+                    exit(EXIT_FAILURE);
                     /*NOTREACHED*/
                 }
 
                 (void)pq_suspend(interval);
-                (void)exitIfDone(0);
             }                           /* data-product not processed */
 
-            /*
-             * Perform a non-blocking sync on all open file descriptors.
-             */
-            fl_sync(-1, FALSE);
+            (void)exitIfDone(0);
 
             /*
              * Wait on any children which might have terminated.

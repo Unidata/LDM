@@ -22,6 +22,8 @@
 
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <time.h>
 
 typedef struct frame {
     struct frame* next;    ///< Pointer to next frame
@@ -30,15 +32,18 @@ typedef struct frame {
 } frame_t;
 
 struct frame_queue {
-    frame_t*        frames;   ///< Frame buffer
-    frame_t*        write;    ///< Next frame to write
-    frame_t*        read;     ///< Next frame to read
-    frame_t*        out;      ///< One frame beyond the end of the queue
-    size_t          max_data; ///< Maximum possible number of data bytes
-    pthread_mutex_t mutex;    ///< Mutual exclusion lock
-    pthread_cond_t  cond;     ///< Conditional variable
-    uint16_t        reserved; ///< Reserved space in bytes
-    bool            shutdown; ///< Whether or not the queue is shut down for input
+    frame_t*        frames;      ///< Frame buffer
+    frame_t*        write;       ///< Next frame to write
+    frame_t*        read;        ///< Next frame to read
+    frame_t*        out;         ///< One frame beyond the end of the queue
+    fq_stats_t      stats;       ///< Statistics
+    size_t          capacity;    ///< Maximum possible number of data bytes
+    size_t          num_bytes;   ///< Number of bytes of data in queue
+    pthread_mutex_t mutex;       ///< Mutual exclusion lock
+    pthread_cond_t  cond;        ///< Conditional variable
+    uint16_t        reserved;    ///< Reserved space in bytes
+    bool            shutdown;    ///< Whether or not the queue is shut down for
+                                 ///< input
 };
 
 #define FQ_MIN_ELT(total, size)   (((total) + ((size) - 1)) / (size))
@@ -169,13 +174,26 @@ static fq_status_t init(
         else {
             frames->size = 0;
             frames->next = NULL;
+
             fq->frames = frames;
             fq->write = frames;
             fq->read = frames;
             fq->out = frames + nframes;
             fq->reserved = 0;
-            fq->max_data = nbytes - sizeof(frame_t) + 1;
+            fq->capacity = nbytes - sizeof(frame_t) + 1;
+            fq->num_bytes = 0;
             fq->shutdown = false;
+
+            fq->stats.capacity = fq->capacity;
+            fq->stats.total_frames = 0;
+            fq->stats.total_bytes = 0;
+            fq->stats.first_frame = 0;
+            fq->stats.smallest_frame = ~0u;
+            fq->stats.largest_frame = 0;
+            fq->stats.max_bytes = 0;
+            fq->stats.sum_dev = 0;
+            fq->stats.sum_sqr_dev = 0;
+
             status = 0;
         } // Lock initialized
     } // `frames` allocated
@@ -208,16 +226,16 @@ static bool is_too_big(
         fq_t* const    fq,
         const unsigned nbytes)
 {
-    return nbytes > fq->max_data;
+    return nbytes > fq->capacity;
 }
 
 /**
  * Indicates if a frame of a given size can be added to the tail of the queue.
  *
- * @pre             The frame queue is locked
- * @param[in] fq    Frame queue
- * @retval    true  iff a frame of the given size can be added to the tail of
- *                  the queue.
+ * @pre                 The frame queue is locked
+ * @param[in,out] fq    Frame queue
+ * @retval        true  iff a frame of the given size can be added to the tail
+ *                      of the queue.
  */
 static bool is_writable(
         fq_t* const    fq,
@@ -259,18 +277,19 @@ static bool is_writable(
  * @retval     0                  Success. `*data` is set; will be NULL if
  *                                `nbytes == 0`. Call fq_release() after writing
  *                                the data.
- * @retval     FQ_STATUS_INVAL    `fq == NULL || data == NULL`
+ * @retval     FQ_STATUS_INVAL    `fq == NULL || data == NULL`. log_add()
+ *                                called.
  * @retval     FQ_STATUS_TOO_BIG  `nbytes` is greater than the queue capacity
- * @retval     FQ_STATUS_NO_SPACE `block == false` and there's insufficient
+ * @retval     FQ_STATUS_AGAIN    `block == false` and there's insufficient
  *                                space for the frame
  * @retval     FQ_STATUS_SHUTDOWN Queue is shut down for input
  * @post                          Queue isn't locked; space is allocated
  */
 static fq_status_t reserve(
-        fq_t* const restrict     fq,
-        uint8_t** const restrict data,
-        const unsigned           nbytes,
-        const bool               block)
+        fq_t* const restrict              fq,
+        uint8_t* restrict* const restrict data,
+        const unsigned                    nbytes,
+        const bool                        block)
 {
     int status;
     if (nbytes == 0) {
@@ -293,7 +312,7 @@ static fq_status_t reserve(
             while (block && !is_writable(fq, nbytes))
                 (void)pthread_cond_wait(&fq->cond, &fq->mutex);
             if (!is_writable(fq, nbytes)) {
-                status = FQ_STATUS_NO_SPACE;
+                status = FQ_STATUS_AGAIN;
             }
             else {
                 fq->write->size = 0; // Prevents reading
@@ -382,9 +401,9 @@ fq_status_t fq_new(
  * @retval     FQ_STATUS_TOO_BIG  `nbytes` is greater than the queue capacity
  */
 fq_status_t fq_reserve(
-        fq_t* const restrict     fq,
-        uint8_t** const restrict data,
-        const unsigned           nbytes)
+        fq_t* const restrict              fq,
+        uint8_t* restrict* const restrict data,
+        const unsigned                    nbytes)
 {
     return reserve(fq, data, nbytes, true);
 }
@@ -399,14 +418,15 @@ fq_status_t fq_reserve(
  * @retval     0                  Success. `*data` is set; will be NULL if
  *                                `nbytes == 0`. Call fq_release() after writing
  *                                the data.
- * @retval     FQ_STATUS_INVAL    `fq == NULL || data == NULL`
+ * @retval     FQ_STATUS_INVAL    `fq == NULL || data == NULL`. log_add()
+ *                                called.
  * @retval     FQ_STATUS_TOO_BIG  `nbytes` is greater than the queue capacity
- * @retval     FQ_STATUS_NO_SPACE No space available for the frame
+ * @retval     FQ_STATUS_AGAIN    No space available for the frame
  */
 fq_status_t fq_try_reserve(
-        fq_t* const restrict     fq,
-        uint8_t** const restrict data,
-        const unsigned           nbytes)
+        fq_t* const restrict              fq,
+        uint8_t* restrict* const restrict data,
+        const unsigned                    nbytes)
 {
     return reserve(fq, data, nbytes, false);
 }
@@ -419,10 +439,12 @@ fq_status_t fq_try_reserve(
  *                                  cancels the operation -- even if the
  *                                  reserved space was `0`.
  * @retval    0                     Success
+ * @retval    FQ_STATUS_INVAL       `fq == NULL`. log_add() called.
  * @retval    FQ_STATUS_UNRESERVED  `nbytes` is greater than the `nbytes` given
  *                                  to fq_reserve(). If that much data was
  *                                  actually written into the queue, then the
- *                                  queue has likely been corrupted.
+ *                                  queue has likely been corrupted. log_add()
+ *                                  called.
  */
 fq_status_t fq_release(
         fq_t* const restrict fq,
@@ -459,6 +481,25 @@ fq_status_t fq_release(
             fq->write->next = next;
             fq->write = next;
             fq->reserved = 0;
+            fq->num_bytes += nbytes;
+
+            fq_stats_t* const stats = &fq->stats;
+            if (stats->total_frames++ == 0) {
+                stats->first_frame = nbytes;
+                (void)clock_gettime(CLOCK_REALTIME, &stats->first_release);
+            }
+            stats->total_bytes += nbytes;
+            if (fq->num_bytes > stats->max_bytes)
+                stats->max_bytes = fq->num_bytes;
+            if (nbytes < stats->smallest_frame)
+                stats->smallest_frame = nbytes;
+            if (nbytes > stats->largest_frame)
+                stats->largest_frame = nbytes;
+            double dev = nbytes - stats->first_frame;
+            stats->sum_dev += dev;
+            stats->sum_sqr_dev += dev*dev;
+            (void)clock_gettime(CLOCK_REALTIME, &stats->last_release);
+
             (void)pthread_cond_signal(&fq->cond);
             status = 0;
         }
@@ -517,6 +558,7 @@ fq_status_t fq_remove(
     lock(fq);
 
     log_assert(fq->read->size != 0);
+    fq->num_bytes -= fq->read->size;
     fq->read->size = 0; // Indicates writable
 
     log_assert(fq->read->next != NULL);
@@ -531,10 +573,10 @@ fq_status_t fq_remove(
 /**
  * Shuts down a frame queue for input.
  *
- * @param[in] fq               Frame queue to be shut down
- * @retval    0                Success. fq_peek() will now return
- *                             FQ_STATUS_SHUTDOWN when the queue is empty.
- * @retval    FQ_STATUS_INVAL  `fq == NULL`
+ * @param[in,out] fq        Frame queue to be shut down
+ * @retval 0                Success. fq_peek() will now return
+ *                          FQ_STATUS_SHUTDOWN when the queue is empty.
+ * @retval FQ_STATUS_INVAL  `fq == NULL`
  */
 fq_status_t fq_shutdown(
         fq_t* const fq)
@@ -554,9 +596,35 @@ fq_status_t fq_shutdown(
 }
 
 /**
+ * Returns statistics for a frame-queue.
+ *
+ * @param[in,out]  fq       Frame-queue
+ * @param[out]     stats    Returned statistics
+ * @retval 0                Success. `*status` is set.
+ * @retval FQ_STATUS_INVAL  `fq == NULL || status == NULL`. log_add() called.
+ */
+fq_status_t fq_get_stats(
+        fq_t* const restrict fq,
+        fq_stats_t* const restrict stats)
+{
+    int status;
+    if (fq == NULL || stats == NULL) {
+        log_add("Invalid argument: fq=%p, stats=%p", fq, stats);
+        status = FQ_STATUS_INVAL;
+    }
+    else {
+        lock(fq);
+        *stats = fq->stats;
+        unlock(fq);
+        status = 0;
+    }
+    return status;
+}
+
+/**
  * Frees a frame queue.
  *
- * @param[in] fq  Frame queue to be freed or NULL.
+ * @param[in,out] fq  Frame queue to be freed or NULL.
  */
 void fq_free(
         fq_t* const fq)

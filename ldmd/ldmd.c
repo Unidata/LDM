@@ -63,8 +63,9 @@
     #define LDM_SELECT_TIMEO  6
 #endif
 
-static int portIsMapped = 0;
+static int      portIsMapped = 0;
 static unsigned maxClients = 256;
+static int      exit_status = 0;
 
 static pid_t reap(
         pid_t pid,
@@ -146,6 +147,7 @@ static pid_t reap(
             case SIGXFSZ:
 #endif
                 log_notice("Killing (SIGTERM) process group");
+                exit_status = 3;
                 (void) kill(0, SIGTERM);
                 break;
             }
@@ -296,16 +298,16 @@ static void signal_handler(
     (void) signal(sig, signal_handler);
 #endif
     switch (sig) {
-    case SIGHUP:
-        log_refresh();
-        return;
     case SIGINT:
-        exit(0);
+        exit(exit_status);
         /*NOTREACHED*/
     case SIGTERM:
         up6_close();
         req6_close();
         done = 1;
+        return;
+    case SIGUSR1:
+        log_refresh();
         return;
     case SIGUSR2:
         log_roll_level();
@@ -341,7 +343,7 @@ static void set_sigactions(
     sigact.sa_flags |= SA_RESTART;
 #endif
     sigact.sa_handler = signal_handler;
-    (void) sigaction(SIGHUP,  &sigact, NULL );
+    (void) sigaction(SIGUSR1, &sigact, NULL );
     (void) sigaction(SIGUSR2, &sigact, NULL );
     (void) sigaction(SIGCHLD, &sigact, NULL );
 
@@ -353,6 +355,18 @@ static void set_sigactions(
     (void) sigaction(SIGALRM, &sigact, NULL );
     (void) sigaction(SIGINT, &sigact, NULL );
     (void) sigaction(SIGTERM, &sigact, NULL );
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigaddset(&sigset, SIGCONT);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGUSR2);
+    (void)sigaddset(&sigset, SIGCHLD);
+    (void)sigaddset(&sigset, SIGALRM);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 static void usage(
@@ -438,6 +452,7 @@ static int create_ldm_tcp_svc(
         log_syserr("Couldn't get socket for server");
     }
     else {
+        (void)ensure_close_on_exec(sock);
         unsigned short port = (unsigned short) localPort;
         struct sockaddr_in addr;
         socklen_t len = sizeof(addr);
@@ -574,7 +589,7 @@ static void handle_connection(
 
     xp_sock = accept(sock, (struct sockaddr *) &raddr, &len);
 
-    (void) exitIfDone(0);
+    (void) exitIfDone(exit_status);
 
     if (xp_sock < 0) {
         if (errno == EINTR) {
@@ -582,9 +597,11 @@ static void handle_connection(
             goto again;
         }
         /* else */
-        log_syserr("accept");
+        log_syserr("accept() failure");
         return;
     }
+
+    (void)ensure_close_on_exec(xp_sock);
 
     /*
      * Don't bother continuing if no more clients are allowed.
@@ -703,7 +720,7 @@ static void handle_connection(
 
         status = one_svc_run(xp_sock, TIMEOUT);
 
-        (void) exitIfDone(0);
+        (void) exitIfDone(exit_status);
 
         if (status == 0) {
             log_info("Done");
@@ -730,7 +747,7 @@ static void sock_svc(
 {
     const int width = sock + 1;
 
-    while (exitIfDone(0)) {
+    while (exitIfDone(exit_status)) {
         int ready;
         fd_set readfds;
         struct timeval stimeo;
@@ -772,15 +789,16 @@ int main(
         int ac,
         char* av[])
 {
-    int       status;
-    int       doSomething = 1;
-    in_addr_t ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
-    unsigned  ldmPort = LDM_PORT;
-    unsigned  logOpts = 0;
-    bool      becomeDaemon = true; // default
+    int         status;
+    int         doSomething = 1;
+    in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
+    unsigned    ldmPort = LDM_PORT;
+    unsigned    logOpts = 0;
+    bool        becomeDaemon = true; // default
 
     (void)log_init(av[0]);
     ensureDumpable();
+    const char* pqfname = getQueuePath();
 
     /*
      * deal with the command line, set options
@@ -821,7 +839,7 @@ int main(
                 becomeDaemon = strcmp(optarg, "-") != 0;
                 break;
             case 'q':
-                setQueuePath(optarg);
+                pqfname = optarg;
                 break;
             case 'o':
                 toffset = atoi(optarg);
@@ -890,7 +908,7 @@ int main(
         }
     } /* command-line argument decoding */
 
-    const char* pqfname = getQueuePath();
+    setQueuePath(pqfname);
 
     /*
      * Vet the configuration file.
@@ -929,7 +947,7 @@ int main(
 
         if (pid > 0) {
             /* parent */
-            (void) printf("%ld\n", (long) pid);
+            (void)printf("%ld\n", (long)pid);
             exit(0);
         }
 
@@ -938,18 +956,16 @@ int main(
          * the parent's process group.
          */
         (void)setsid(); // also makes this process a process group leader
-
-        (void)fclose(stderr);
         log_avoid_stderr(); // Because this process is now a daemon
+        (void)close(STDERR_FILENO);
+        (void)open_on_dev_null_if_closed(STDERR_FILENO, O_RDWR);
     }
 #endif
-
-    /*
-     * Close the standard input and standard output streams because they won't
-     * be used (more anality :-)
-     */
-    (void) fclose(stdout);
-    (void) fclose(stdin);
+    /* Set up fd 0,1 */
+    (void)close(STDIN_FILENO);
+    (void)open_on_dev_null_if_closed(STDIN_FILENO, O_RDONLY);
+    (void)close(STDOUT_FILENO);
+    (void)open_on_dev_null_if_closed(STDOUT_FILENO, O_WRONLY);
 
     logfname = log_get_destination();
 
@@ -1059,5 +1075,5 @@ int main(
         }
     }   // configuration-file will be executed
 
-    return (0);
+    return (exit_status);
 }

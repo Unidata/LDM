@@ -19,15 +19,15 @@ PQ_SUBDIR			= @PQ_SUBDIR@
 # Keep the value of LDMHOME consonant with that in `CI-commit.sh`.
 # "--with-multicast" is conditional because Spock's g++ is 4.6.3 and doesn't
 # support the C++11 standard (in particular, `std::this_thread::sleep_for()`),
-# which is used by `mcast_lib/vcmtp/VCMTPV3/RateShaper/RateShaper.cpp`.
+# which is used by `mcast_lib/fmtp/FMTPV3/RateShaper/RateShaper.cpp`.
 AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
                                   --disable-root-actions \
 				  --with-noaaport \
 				  --with-retrans \
 				  --with-ingester \
 				  --with-gribinsert \
-				  @DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST@ \
 				  LDMHOME=`cd ../_inst && pwd`
+#				  @DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST@
 # This works and doesn't result in `redefined` warnings but does rely
 # inappropriately on `../_inst` being the `make distcheck` installation
 # directory.
@@ -136,7 +136,6 @@ dist_doc_DATA		= CHANGE_LOG COPYRIGHT README
 
 distName = $(PACKAGE)-$(VERSION)
 distArchive = $(distName).tar.gz
-DISTCLEANFILES	= *.log
 distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
 LAST_VERSION	= $$(git tag -l v\* | sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | tail -1)
 ACLOCAL_AMFLAGS = -I m4

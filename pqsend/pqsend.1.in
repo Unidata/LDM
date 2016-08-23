@@ -119,7 +119,8 @@ Normal termination.
 Immediate termination.
 .TP
 .B SIGUSR1
-Write status and product statistics to log output.
+Refresh logging (if configure(1) executed without the "--with-ulog" option) and
+write status and product statistics to log output.
 .TP
 .B SIGUSR2
 Cyclically increment the verbosity of the program. Assumming the program was

@@ -15,30 +15,38 @@
 #define PER_PROD_SENDING_NOTIFIER_H_
 
 #include "mcast.h"
-#include "SendAppNotifier.h"
+#include "SendProxy.h"
 
 #include <sys/types.h>
 
-class PerProdSendingNotifier: public SendAppNotifier {
+class PerProdSendingNotifier: public SendProxy {
 public:
     /**
      * Constructs from the notification functions.
      *
-     * @param[in] eop_func              Function to call when the VCMTP layer is
+     * @param[in] eop_func              Function to call when the FMTP layer is
      *                                  finished with a product.
      * @throws    std::invalid_argument if `eop_func == NULL`.
      */
     PerProdSendingNotifier(
-            void (*eop_func)(VcmtpProdIndex prodIndex));
+            void (*eop_func)(FmtpProdIndex prodIndex));
 
     ~PerProdSendingNotifier() {}
-    void notify_of_eop(VcmtpProdIndex prodIndex);
+    void notify_of_eop(FmtpProdIndex prodIndex);
+
+    /**
+     * Requests the application to verify an incoming connection request,
+     * and to decide whether to accept or to reject the connection. This
+     * method is thread-safe.
+     * @return    true: receiver accepted; false: receiver rejected.
+     */
+    bool verify_new_recv(int newsock);
 
 private:
     /**
-     * Function to call when the VCMTP layer is done with a product.
+     * Function to call when the FMTP layer is done with a product.
      */
-    void   (*eop_func)(VcmtpProdIndex prodIndex);
+    void   (*eop_func)(FmtpProdIndex prodIndex);
 };
 
 #endif /* PER_PROD_SENDING_NOTIFIER_H_ */

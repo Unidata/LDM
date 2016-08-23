@@ -36,9 +36,9 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
                           -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/log -I$(top_srcdir)/log \
-                          -I$(srcdir)/../vcmtp/VCMTPv3 \
-                          -I$(srcdir)/../vcmtp/VCMTPv3/receiver \
-                          -I$(srcdir)/../vcmtp/VCMTPv3/sender \
+                          -I$(srcdir)/../FMTP/FMTPv3 \
+                          -I$(srcdir)/../FMTP/FMTPv3/receiver \
+                          -I$(srcdir)/../FMTP/FMTPv3/sender \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc \
                           -I$(top_srcdir)/mcast_lib/C++
@@ -64,13 +64,13 @@ server_test_LDADD	= -lpthread
 local_checks		=
 
 if HAVE_OPMOCK
-VCMTPReceiver_stubs	= vcmtpRecvv3_stub.cpp vcmtpRecvv3_stub.hpp
+FMTPReceiver_stubs	= fmtpRecvv3_stub.cpp fmtpRecvv3_stub.hpp
 mcast_stubs		= mcast_stub.c mcast_stub.h
 pq_stubs		= pq_stub.c pq_stub.h
 globals_stubs		= globals_stub.c globals_stub.h
 mldm_sender_map_stubs	= mldm_sender_map_stub.c mldm_sender_map_stub.h
 down7_stubs		= down7_stub.c down7_stub.h
-all_stubs		= $(VCMTPReceiver_stubs) \
+all_stubs		= $(FMTPReceiver_stubs) \
                           $(mcast_stubs) \
                           $(pq_stubs) \
                           $(globals_stubs) \
@@ -83,7 +83,7 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \
                           -I/usr/local/include \
                           -I/usr/include
-$(VCMTPReceiver_stubs):		../vcmtp/VCMTPv3/receiver/vcmtpRecvv3.h
+$(FMTPReceiver_stubs):		../FMTP/FMTPv3/receiver/fmtpRecvv3.h
 	opmock2 -cpp -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mcast_stubs):			../C++/mcast.h
 	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)

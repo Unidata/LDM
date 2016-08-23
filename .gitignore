@@ -90,3 +90,4 @@ down7_test.pq
 up7_test.pq
 *.yaml
 .*.info
+/nbs_test.pq

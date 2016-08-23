@@ -34,14 +34,13 @@
   to send the statistics to the LDM running on localhost. To store the statistics 
   from the local LDM, the following pqact.conf FILE pattern/action can be used: 
 <pre>
-EXP     ^stats/(.*)/(.*)/(.*)
+EXP     ^rtstats/(.*)/(.*)/(.*)
 	FILE	data/rtstats/\2/%Y%m%d/\1/\3
 </pre>
 <p></p>
 <p> A separate statistic product will be sent for each FEEDTYPE and LDM product 
   origin. For more information on the data included within the product or for 
-  other details, see the <a href="/software/ldm/man/rtstats" ><code>rtstats(1)</code> 
-  man page</a>. </p>
+  other details, see the installed manual page on <code>rtstats(1)</code>.
 
 </body>
 </html>

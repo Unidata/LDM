@@ -720,9 +720,9 @@ sub start_ldm
             $status = 1;
         }
         else {
-            # Check the product-queue
-            #print "start_ldm(): Checking product-queue\n";
-            if (!isProductQueueOk())  {
+            # Check the queues
+            #print "start_ldm(): Checking queues\n";
+            if (!areQueuesOk())  {
                 errmsg("LDM not started");
                 $status = 1;
             }
@@ -743,6 +743,7 @@ sub start_ldm
                     $line_prefix = $prev_line_prefix;
 
                     # Rotate the ldm log files if appropriate
+                    system("mkdir -p `dirname $log_file`");
                     if ($log_rotate) {
                         #print "start_ldm(): Rotating log files\n";
                         if (new_log()) {
@@ -1514,50 +1515,117 @@ sub ldmadmin_pqactHUP
 }
 
 ###############################################################################
-# Check the queue file for errors
+# Check a queue-file for errors
 ###############################################################################
 
-sub isProductQueueOk
+sub getQueueStatus
 {
-    my $isOk = 0;
-    print "Checking the product-queue...\n";
-    my($status) = system("pqcheck -q $pq_path 2>/dev/null") >> 8;
+    my $queue_path = $_[0];
+    my $name = $_[1];
+    print "Checking the $name-queue...\n";
+    my($status) = system("pqcheck -q $queue_path 2>/dev/null") >> 8;
 
-    if( 0 == $status ) {
-	$isOk = 1;
-    }
-    elsif (1 == $status) {
+    if (1 == $status) {
 	errmsg(
-	    "The self-consistency of the product-queue couldn't be " .
+	    "The self-consistency of the $name-queue couldn't be " .
 	    "determined.  See the logfile for details.");
     }
     elsif (2 == $status) {
 	errmsg(
-	    "The product-queue doesn't have a writer-counter.  Using " .
+	    "The $name-queue doesn't have a writer-counter.  Using " .
 	    "\"pqcheck -F\" to create one...");
-	system("pqcheck -F -q $pq_path");
+	system("pqcheck -F -q $queue_path");
 	if ($?) {
-	    errmsg("Couldn't add writer-counter to product-queue.");
+	    errmsg("Couldn't add writer-counter to $name-queue.");
 	}
 	else {
-	    $isOk = 1;
+	    $status = 0;
 	}
     }
     elsif (3 == $status) {
 	errmsg(
-	    "The writer-counter of the product-queue isn't zero.  Either " .
+	    "The writer-counter of the $name-queue isn't zero.  Either " .
 	    "a process has the product-queue open for writing or the queue " .
 	    "might be corrupt.  Terminate the process and recheck or use\n" .
-	    "    pqcat -l- -s -q $pq_path && pqcheck -F -q $pq_path\n" .
+	    "    pqcat -l- -s -q $queue_path && pqcheck -F -q $queue_path\n" .
 	    "to validate the queue and set the writer-counter to zero.");
     }
-    else {
+    return $status;
+}
+
+###############################################################################
+# Check the product-queue file for errors
+###############################################################################
+
+sub isProductQueueOk
+{
+    my $status = getQueueStatus($pq_path, "product");
+
+    if (4 == $status) {
 	errmsg(
 	    "The product-queue is corrupt.  Use\n" .
 	    "    ldmadmin delqueue && ldmadmin mkqueue\n" .
 	    "to remove and recreate it.");
     }
-    return $isOk;
+    return $status == 0;
+}
+
+###############################################################################
+# Check the surf-queue file for errors
+###############################################################################
+
+sub isSurfQueueOk
+{
+    my $path = $_[0];
+    my $status = getQueueStatus($path, "surf");
+
+    if (4 == $status) {
+	errmsg(
+	    "The surf-queue is corrupt.  Use\n" .
+	    "    ldmadmin delsurfqueue -q $path && ldmadmin mksurfqueue -q $path\n" .
+	    "to remove and recreate it.");
+    }
+    return $status == 0;
+}
+
+###############################################################################
+# Check the queue-files for errors
+###############################################################################
+
+sub areQueuesOk
+{
+    my $areOk = isProductQueueOk();
+
+    if ($areOk) {
+	if (!open(LDM_CONF_FILE, "<$ldmd_conf")) {
+	    errmsg("Could not open LDM configuration-file, $ldmd_conf");
+            $areOk = 0;
+	}
+	else {
+	    while (<LDM_CONF_FILE>) {
+		if (/^exec/i && /pqsurf/) {
+		    chomp;
+		    s/^exec\s+"\s*//i;
+		    s/\s*"\s*$//;
+		    
+		    # ()-s around $pathname are necessary
+		    my ($pathname) = $_ =~ /-Q *([^ ]*)/;
+		    if (!$pathname) {
+		        $pathname = $surf_path;
+                    }
+                    
+                    $areOk = isSurfQueueOk($pathname);
+                    
+                    if (!$areOk) {
+                        last;
+                    }
+		}
+	    }
+
+	    close(LDM_CONF_FILE);
+	}
+    }
+    return $areOk;
 }
 
 ###############################################################################
@@ -1675,17 +1743,24 @@ sub getLoad
 # Command for getting the number of connections to the LDM port (local, remote):
 sub getPortCount
 {
-    my($localCount) = 0;
-    my($remoteCount) = 0;
+    my($totalCount) = 0;
     open(FH, $netstat."|") or die "Can't fork() netstat(1): $!";
     while (<FH>) {
-	if (/ESTABLISHED/) {
-	    my(@fields) = split(/\s+/);
-	    $localCount++ if ($fields[3] =~ /:$port$/);
-	    $remoteCount++ if ($fields[4] =~ /:$port$/);
+	if (/ESTABLISHED/ && /:$port\W/) {
+	    $totalCount++;
 	}
     }
     (close FH || !$!) or die "Can't close(): status=$?";
+    my($remoteCount) = 0;
+    open(FH, "uldbutil 2>/dev/null |") or die "Can't fork() uldbutil(1): $!";
+    while (<FH>) {
+        $remoteCount++;
+    }
+    (close FH || !$!) or die "Can't close(): status=$?";
+    my $localCount = $totalCount - $remoteCount;
+    if ($localCount < 0) {
+        $localCount = 0;
+    }
     return ($localCount, $remoteCount);
 }
 #

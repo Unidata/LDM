@@ -17,9 +17,9 @@ AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/log -I$(top_srcdir)/log \
                           -I../C \
-                          -I$(srcdir)/../vcmtp/VCMTPv3 \
-                          -I$(srcdir)/../vcmtp/VCMTPv3/receiver \
-                          -I$(srcdir)/../vcmtp/VCMTPv3/sender \
+                          -I$(srcdir)/../FMTP/FMTPv3 \
+                          -I$(srcdir)/../FMTP/FMTPv3/receiver \
+                          -I$(srcdir)/../FMTP/FMTPv3/sender \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc
 
@@ -35,7 +35,7 @@ if HAVE_OPMOCK
 #mcast_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 #
 # The stubs are included here because they can't be in "_SOURCES" above.
-#mcast_test_LDADD		= VCMTPReceiver_stub.o \
+#mcast_test_LDADD		= FMTPReceiver_stub.o \
 #				  $(top_builddir)/lib/libldm.la \
 #				  @OPMOCK_LDADD@
 endif
