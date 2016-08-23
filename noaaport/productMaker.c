@@ -3,7 +3,7 @@
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
 #include <config.h>
-
+#define RETRANS_SUPPORT
 #include "fifo.h"
 #include "goes.h"
 #include "ldm.h"
@@ -305,10 +305,6 @@ int    nnnxxx_offset;
          buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
          if(init_buff_hdr(buff_hdr) < 0){
             log_error("Unable to initialize buffer header \n");
-            if (acq_tbl) {
-                        free(acq_tbl);
-            }
-
             if (p_prod_retrans_table) {
                   free(p_prod_retrans_table);
             }
