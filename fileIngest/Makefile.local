@@ -2,10 +2,10 @@
 COPTS = -g -Wall
 
 BUILT_HEADERS = datelib.h goesr_lib.h mlogger.h stdclib.h
-BUILT_PROGS = fileIngester test read_acq_pipe
+BUILT_PROGS = fileIngester test read_acq_pipe log_tester
 INGEST_OBJS = fileIngester.o stdclib.o goesr_lib.o mlogger.o
 
-all ::	fileIngester test test_logger read_acq_pipe
+all ::	fileIngester test log_tester read_acq_pipe
 
 clean :: 
 	rm -f $(INGEST_OBJS) $(BUILT_PROGS) read_acq_pipe.o log_tester.o
