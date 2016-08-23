@@ -149,7 +149,7 @@ decodeCommandLine(
                 break;
             case 's': {
 #ifdef RETRANS_SUPPORT
-                strcpy(sbn_channel_name, optarg);
+                strncpy(sbn_channel_name, optarg, 12);
                 if(!strcmp(optarg,NAME_SBN_TYP_GOES)) {
                     sbn_type = SBN_TYP_GOES;
                     break;
@@ -216,7 +216,7 @@ decodeCommandLine(
             }
             case 't':
 #ifdef RETRANS_SUPPORT
-                strcpy(transfer_type, optarg);
+                strncpy(transfer_type, optarg, 9);
                 if(!strcmp(transfer_type,"MHS") || !strcmp(transfer_type,"mhs")){
                      /** Using MHS for communication with NCF  **/
                 }else{
@@ -890,7 +890,7 @@ initRetransSupport(
     #ifdef RETRANS_SUPPORT
         if (isMcastInput && retrans_xmit_enable == OPTION_ENABLE) {
             // Copy mcastAddress needed to obtain the cpio entries
-            (void)strcpy(mcastAddr, mcastSpec);
+            (void)strncpy(mcastAddr, mcastSpec, 15);
         }
     #endif
 }

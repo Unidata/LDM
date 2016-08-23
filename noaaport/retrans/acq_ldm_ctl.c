@@ -229,6 +229,9 @@ RETURNS
 
 #define SLEEP_SEMTAKE_WAIT 2 /* wait for semaphore */
 
+#define MAX_INPUT_STRING	256
+#define LEN_INPUT_OPTION	128
+
 /* setup shared memory parameters in this process */
 	ACQ_TABLE       *acq_table;	/* acquisition table ptr */
 
@@ -250,7 +253,7 @@ typedef struct		input {		/* user input options */
 	int		shutdown_flag;	/* operator shutdown acq flag */
 	int		NCF_only_flag;	/* sbn downlink flag */
 	int		kill_flag;	/* operator kill acq flag */
-	char	input_option[128];	/* operator input option string */
+	char	input_option[LEN_INPUT_OPTION+1];	/* operator input option string */
 }    INPUT;
 
 /**** prototypes ****/
@@ -302,7 +305,7 @@ main(argc, argv)	/* argument #1 is a test SHMnumber */
 
 	char 	*get_shm_ptr();
 	int		ii;
-	char	in_line[256];	/* operator input */
+	char	in_line[MAX_INPUT_STRING];	/* operator input */
 	int     shm_region;             /* shared mem region */
 	int		extend_flag=0;	/* extended acq_table flag */
 	ACQ_TABLE	*p_acqtable_tmp; 	/* pointer to acq_table */
@@ -404,7 +407,8 @@ main(argc, argv)	/* argument #1 is a test SHMnumber */
 		  } else {
 		  	printf("\n%s Select link(%d) option[0-%d]?", PNAME,global_i_cpiofd, LAST_COMMAND);
 		  }
-		  gets(in_line);
+		  fgets(in_line, MAX_INPUT_STRING, stdin);
+
 		  flag = 0;
 		  if((in_line[0]!='\0')) {
 		  	printf("Input command: %s", in_line);
@@ -465,7 +469,7 @@ main(argc, argv)	/* argument #1 is a test SHMnumber */
 static int acqctl_do_confirm(char *in_command, INPUT *p_input)
 {
 	const char FUNCNAME[] = "acqctl_do_confirm";
-	char	in_line[256];
+	char	in_line[MAX_INPUT_STRING];
 
 	in_line[0] = '\0';
 
@@ -475,7 +479,7 @@ static int acqctl_do_confirm(char *in_command, INPUT *p_input)
 
 	printf("%s Are you sure want to %s [Y/N]?",
 		PNAME, in_command);
-	gets(in_line);
+	fgets(in_line, MAX_INPUT_STRING, stdin);
 	printf("Returned confirmation is: %s",in_line);
 
 	if((in_line[0]!='Y') && in_line[0]!='y') {
@@ -500,7 +504,7 @@ static int acqctl_do_confirm(char *in_command, INPUT *p_input)
 static int acqctl_do_caution(char *in_command, INPUT *p_input)
 {
 	const char FUNCNAME[] = "acqctl_do_caution";
-	char	in_line[256];
+	char	in_line[MAX_INPUT_STRING];
 
 	in_line[0] = '\0';
 
@@ -512,7 +516,7 @@ static int acqctl_do_caution(char *in_command, INPUT *p_input)
 		PNAME);
 	printf("%s Are you sure want to %s [Y/N]?",
 		PNAME, in_command);
-	gets(in_line);
+	fgets(in_line, MAX_INPUT_STRING, stdin);
 	printf("Returned confirmation is: %s",in_line);
 
 	if((in_line[0]!='Y') && in_line[0]!='y') {
@@ -541,7 +545,7 @@ static int acqctl_get_response(
 		int *rtn_code)
 {
 	const char FUNCNAME[] = "acqctl_get_response";
-	char	in_line[256];
+	char	in_line[MAX_INPUT_STRING];
 
 	in_line[0] = '\0';
 
@@ -553,7 +557,7 @@ static int acqctl_get_response(
 			strcpy(in_line, p_input->input_option);
 			printf("%s\n", in_line);
 		} else {
-			gets(in_line);
+			fgets(in_line, MAX_INPUT_STRING, stdin);
 		}
 		printf("Response to ASK_YES_NO is: %s",in_line);
 		if((in_line[0]=='Y') || in_line[0]=='y') {
@@ -581,7 +585,7 @@ static int acqctl_get_response(
 			strcpy(in_line, p_input->input_option);
 			printf("%s\n", in_line);
 		} else {
-			gets(in_line);
+			fgets(in_line, MAX_INPUT_STRING, stdin);
 		}
 		printf("Response to ASK_YES_NO_DFLT_YES is: %s",in_line);
 		if((in_line[0]=='Y') || in_line[0]=='y') {
@@ -608,7 +612,7 @@ static int acqctl_get_response(
 			strcpy(in_line, p_input->input_option);
 			printf("%s\n", in_line);
 		} else {
-			gets(in_line);
+			fgets(in_line, MAX_INPUT_STRING, stdin);
 		}
 		printf("Response to question is: %s",in_line);
 		if((in_line[0]=='S') || in_line[0]=='s') {
@@ -637,7 +641,7 @@ static int acqctl_get_response(
 			strcpy(in_line, p_input->input_option);
 			printf("%s\n", in_line);
 		} else {
-			gets(in_line);
+			fgets(in_line, MAX_INPUT_STRING, stdin);
 		}
 		printf("Response to question is: %s",in_line);
 		if((in_line[0]=='S') || in_line[0]=='s') {
@@ -665,7 +669,7 @@ static int acqctl_get_response(
 			strcpy(in_line, p_input->input_option);
 			printf("%s\n", in_line);
 		} else {
-			gets(in_line);
+			fgets(in_line, MAX_INPUT_STRING, stdin);
 		}
 		printf("Response to ASK_DISCARD_RESUME is: %s",in_line);
 		if((in_line[0]=='D') || in_line[0]=='d') {
@@ -693,7 +697,7 @@ static int acqctl_get_response(
 			strcpy(in_line, p_input->input_option);
 			printf("%s\n", in_line);
 		} else {
-			gets(in_line);
+			fgets(in_line, MAX_INPUT_STRING, stdin);
 		}
 		printf("Response to ASK_ENABLE_DISABLE is: %s",in_line);
 		if((in_line[0]=='E') || in_line[0]=='e') {
@@ -721,7 +725,7 @@ static int acqctl_get_response(
 			strcpy(in_line, p_input->input_option);
 			printf("%s\n", in_line);
 		} else {
-			gets(in_line);
+			fgets(in_line, MAX_INPUT_STRING, stdin);
 		}
 		printf("Response to ASK_OPEN_CLOSE is: %s",in_line);
 		if((in_line[0]=='C') || in_line[0]=='c') {
@@ -749,7 +753,7 @@ static int acqctl_get_response(
 			strcpy(in_line, p_input->input_option);
 			printf("%s\n", in_line);
 		} else {
-			gets(in_line);
+			fgets(in_line, MAX_INPUT_STRING, stdin);
 		}
 		printf("Response to ASK_ADD_DROP is: %s",in_line);
 		if((in_line[0]=='D') || in_line[0]=='d') {
@@ -830,7 +834,7 @@ acqctl_do_action(
 
 	int		log_product_flag;		/* log product flag */	
 
-	char	in_line[256];		/* operator input */
+	char	in_line[MAX_INPUT_STRING];		/* operator input */
 	int	temp_i_cpiofd;		/* temp cpiofd */
 	int	temp_i_wait_connect_interval;	/* temp wait connect interval */
 	int	temp_i_wait_delay_xmit_interval;	/* temp wait xmit rqst interval */
@@ -1002,7 +1006,7 @@ acqctl_get_pid(
 	}
 
 	pclose(fp);
-	return last_pid;
+	return (int) last_pid;
 
 } /* end routine acqctl_get_pid */
 
@@ -1047,7 +1051,7 @@ cmd_line(
   	    printf("getopt returned %c\n", (char)c);
 	    switch(c) {
 		case 'i': {
-			strcpy(p_input->input_option,optarg);
+			strncpy(p_input->input_option,optarg, LEN_INPUT_OPTION);
 			break;
 		}
 		case 'k': {
@@ -1094,7 +1098,7 @@ cmd_line(
 			break;
 		}
 		case 'c': {
-			strcpy(input_string, optarg);
+			strncpy(input_string, optarg, 79);
 			printf(" input is %s\n", input_string);
 			/* strcpy(input_string, p_input->input_command); */
 			p_in_args = &input_string[0];
@@ -1161,6 +1165,7 @@ cmd_line(
 		}
 		case '?': {
 			usage();
+			break;
 		}
 		default:
 		        break; 

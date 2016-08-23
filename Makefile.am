@@ -24,6 +24,7 @@ AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
                                   --disable-root-actions \
 				  --with-noaaport \
 				  --with-retrans \
+				  --with-ingester \
 				  --with-gribinsert \
 				  LDMHOME=`cd ../_inst && pwd`
 #				  @DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST@
@@ -64,6 +65,9 @@ endif
 SUBDIRS 	+= lib
 if WANT_NOAAPORT
     SUBDIRS	+= noaaport
+endif
+if WANT_INGESTER
+    SUBDIRS	+= fileIngest
 endif
 SUBDIRS 	+= regutil \
                    feedme \
@@ -196,6 +200,10 @@ install_setuids:
 	    chown root $(DESTDIR)$(bindir)/noaaportIngester; \
 	    chmod 4755 $(DESTDIR)$(bindir)/noaaportIngester; \
 	fi
+	-if test -f $(DESTDIR)$(bindir)/fileIngester; then \
+	    chown root $(DESTDIR)$(bindir)/fileIngester; \
+	    chmod 4755 $(DESTDIR)$(bindir)/fileIngester; \
+	fi
 	-if test -f $(DESTDIR)$(bindir)/dvbs_multicast; then \
 	    chown root $(DESTDIR)$(bindir)/dvbs_multicast; \
 	    chmod 4755 $(DESTDIR)$(bindir)/dvbs_multicast; \
@@ -211,8 +219,8 @@ install_setuids:
 	    echo " \
 ERROR: One or more of the following programs in the \"bin/\" installation \
 directory is not owned by \"root\" or does not have the setuid bit enabled: \
-ldmd, hupsyslog, noaaportIngester, dvbs_multicast. The superuser will have to \
-set these attributes manually."; \
+ldmd, hupsyslog, noaaportIngester, fileIngester, dvbs_multicast. The superuser \
+will have to set these attributes manually."; \
 	    echo; \
 	    exit 1; \
 	fi

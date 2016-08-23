@@ -22,6 +22,7 @@
 #define FL_EDEX 512 /* send message to memory segment */
 #define FL_FLUSH 1024
 #define FL_CLOSE 2048
+#define FL_STRIPWMO 4096
 
 #ifdef __cplusplus
 extern "C" {
