@@ -1911,7 +1911,7 @@ RETURNS
 #define MAX_SECLINE_LEN		40
 
 
-static int prod_get_WMO_offset(char *buf, int buflen, int *p_wmolen)
+static int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
 {
         char *p_wmo;
         int i_bbb;
