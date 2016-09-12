@@ -186,8 +186,14 @@ installcheck-local:
 	    $(srcdir)/nwstgdump.data
 	rm /tmp/readnoaaport-test.pq
 
+if HAVE_CUNIT
+check-local: 		check-readnoaaport check-noaaportIngester \
+                        check-noaaportIngester-nssl \
+                        check-nbs_test
+else
 check-local:            check-readnoaaport check-noaaportIngester \
                         check-noaaportIngester-nssl
+endif
 check-readnoaaport:     readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	LDM_REGISTRY_DIR=../regutil ./readnoaaport -nl- \
@@ -263,8 +269,6 @@ nbs_test_LDADD			= $(LDADD) @LIBS_CUNIT@
 
 #TESTS				= pipe_test socketpair_test frame_queue_test 
 
-check-local: 			check-nbs_test
-
 check-nbs_test:	nbs_test
 	./nbs_test $(srcdir)/SUPER-NATIONAL_8km_IR_20160422_1915.gini
 	../pqcat/pqcat -l- -q nbs_test.pq >output.gini 2>/dev/null
@@ -279,10 +283,11 @@ valgrind-nbs_test:	nbs_test
 #	$(LIBTOOL) --mode=execute valgrind --leak-check=yes frame_queue_test
 endif
 
-sudo:
 if HAVE_SUDO
+sudo:
 	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) $(TARGET) 2>/dev/tty
 else
+sudo:
 	@printf "Enter root's password (or don't): " >/dev/tty
 	@su root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) $(TARGET)' \
 	    </dev/tty 2>/dev/tty
@@ -297,9 +302,9 @@ valgrind-noaaportIngester:      noaaportIngester
 	rm /tmp/noaaportIngester-test.pq
 
 root-ni-vg:
-        LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute valgrind \
-            --leak-check=yes noaaportIngester -n \
-            -q /tmp/noaaportIngester-test.pq <$(srcdir)/nwstgdump.data
+	LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute valgrind \
+	    --leak-check=yes noaaportIngester -n \
+	    -q /tmp/noaaportIngester-test.pq <$(srcdir)/nwstgdump.data
 
 debug-readnoaaport:     readnoaaport
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
@@ -320,8 +325,8 @@ debug-noaaportIngester:	noaaportIngester
 	rm /tmp/noaaportIngester-test.pq /tmp/noaaportIngester.gdb
 
 root-ni-db:
-        LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute gdb -x \
-            /tmp/noaaportIngester.gdb noaaportIngester
+	LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute gdb -x \
+	    /tmp/noaaportIngester.gdb noaaportIngester
 
 install-html:           $(srcdir)/html/index.html $(DESTDIR)$(docdir)
 	cp -R $(srcdir)/html/* $(DESTDIR)$(docdir)
