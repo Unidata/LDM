@@ -115,8 +115,13 @@ static void dump_stats(const sendstats *stp) {
     }
 }
 
-static void printUsage(const char* const av0) {
-    (void) fprintf(stderr,
+/**
+ * Prints a usage message at logging level NOTICE.
+ * @param[in] av0  Name of the program
+ */
+static void printUsage(const char* const av0)
+{
+    log_add(
 "Usage:\n"
 "    %s [-vx] [-l logfile] [-f feedtype] [-p pattern] [-t timeout] \\\n"
 "        [-q queue] [-d] [-T totalTimeo] [-o offset] [-i interval] [-h host]\n"
@@ -149,6 +154,10 @@ static void printUsage(const char* const av0) {
             s_feedtypet(DEFAULT_FEEDTYPE), DEFAULT_INTERVAL,
             log_get_default_destination(), getDefaultQueuePath(),
             DEFAULT_TOTALTIMEOUT, DEFAULT_TIMEOUT);
+    log_level_t level = log_get_level();
+    (void)log_set_level(LOG_NOTICE);
+    log_flush_notice();
+    log_set_level(level);
 }
 
 static void cleanup(void) {
@@ -360,7 +369,7 @@ static int getConfiguration(int ac, char* const * const av) {
             case 'f':
                 fterr = strfeedtypet(optarg, &offerProdSpec.feedtype);
                 if (fterr != FEEDTYPE_OK) {
-                    (void) fprintf(stderr, "Bad feedtype \"%s\", %s\n", optarg,
+                    log_add("Bad feedtype: \"%s\"; %s", optarg,
                             strfeederr(fterr));
                     status = INVOCATION_ERROR;
                 }
@@ -371,8 +380,7 @@ static int getConfiguration(int ac, char* const * const av) {
             case 'i':
                 interval = (unsigned) atoi(optarg);
                 if (interval == 0 && *optarg != '0') {
-                    (void) fprintf(stderr, "%s: invalid interval %s", progname,
-                            optarg);
+                    log_add("Invalid interval: \"%s\"", optarg);
                     status = INVOCATION_ERROR;
                 }
                 break;
@@ -382,8 +390,7 @@ static int getConfiguration(int ac, char* const * const av) {
             case 'o':
                 timeOffset.tv_sec = atoi(optarg);
                 if (timeOffset.tv_sec == 0 && *optarg != '0') {
-                    (void) fprintf(stderr, "%s: invalid offset %s\n", av[0],
-                            optarg);
+                    log_add("Invalid offset: \"%s\"", optarg);
                     status = INVOCATION_ERROR;
                 }
                 timeOffset.tv_usec = 0;
@@ -399,16 +406,14 @@ static int getConfiguration(int ac, char* const * const av) {
             case 'T':
                 totalTimeo = atoi(optarg);
                 if (totalTimeo == 0) {
-                    (void) fprintf(stderr, "%s: invalid Total timeout "
-                            "\"%s\"\n", progname, optarg);
+                    log_add("Invalid Total timeout: \"%s\"", optarg);
                     status = INVOCATION_ERROR;
                 }
                 break;
             case 't':
                 rpcTimeout = (unsigned) atoi(optarg);
                 if (rpcTimeout == 0) {
-                    (void) fprintf(stderr, "%s: invalid timeout \"%s\"\n",
-                            progname, optarg);
+                    log_add("Invalid timeout: \"%s\"", optarg);
                     status = INVOCATION_ERROR;
                 }
                 break;
@@ -427,14 +432,13 @@ static int getConfiguration(int ac, char* const * const av) {
 
         if (0 == status) {
             if ((2 * rpcTimeout) >= totalTimeo) {
-                (void) fprintf(stderr, "%s: Total timeout %u too small for rpc "
-                        "timeout %u\n", progname, totalTimeo, rpcTimeout);
+                log_add("Total timeout %u too small for RPC timeout %u",
+                        totalTimeo, rpcTimeout);
                 status = INVOCATION_ERROR;
             } else {
                 if (coupledTimes && timeOffset.tv_sec > totalTimeo) {
-                    (void) fprintf(stderr,
-                            "%s: Total timeout %u too small for offset %ld\n",
-                            progname, totalTimeo, (long) timeOffset.tv_sec);
+                    log_add("Total timeout %u too small for time-offset %ld",
+                            totalTimeo, (long) timeOffset.tv_sec);
                     status = INVOCATION_ERROR;
                 } else {
                     if (coupledTimes) {
@@ -454,15 +458,14 @@ static int getConfiguration(int ac, char* const * const av) {
                     }
 
                     if (re_isPathological(offerProdSpec.pattern)) {
-                        fprintf(stderr, "Adjusting pathological "
-                                "regular-expression: \"%s\"\n",
-                                offerProdSpec.pattern);
+                        log_add("Adjusting pathological regular-expression: "
+                                "\"%s\"", offerProdSpec.pattern);
                         (void) re_vetSpec(offerProdSpec.pattern);
                     }
                     status = regcomp(&offerProdSpec.rgx, offerProdSpec.pattern,
                     REG_EXTENDED | REG_NOSUB);
                     if (status != 0) {
-                        fprintf(stderr, "Bad regular expression \"%s\"\n",
+                        log_add("Bad regular expression: \"%s\"",
                                 offerProdSpec.pattern);
                         status = INVOCATION_ERROR;
                     }
@@ -714,16 +717,13 @@ int main(int ac, char* const * const av) {
 
     int status = getConfiguration(ac, av);
     if (0 != status) {
-        if (INVOCATION_ERROR == status) {
-            log_flush_error();
+        log_error("Couldn't get execution parameters");
+        if (INVOCATION_ERROR == status)
             printUsage(av[0]);
-        }
     } else {
         status = execute();
-
-        if (0 != status) {
+        if (0 != status)
             log_flush_error();
-        }
     }
 
     return status;
