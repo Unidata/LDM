@@ -12,6 +12,7 @@
 #ifndef MISC_TIMER_H_
 #define MISC_TIMER_H_
 
+typedef struct timer Timer;
 
 #ifdef __cplusplus
     extern "C" {
