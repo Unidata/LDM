@@ -303,10 +303,6 @@ int    nnnxxx_offset;
          buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
          if(init_buff_hdr(buff_hdr) < 0){
             log_error("Unable to initialize buffer header \n");
-            if (acq_tbl) {
-                        free(acq_tbl);
-            }
-
             if (p_prod_retrans_table) {
                   free(p_prod_retrans_table);
             }
@@ -1856,14 +1852,6 @@ static int deflateData(
    return 0; 
 }
 
-/*******************************************************************************
-FUNCTION NAME
-        int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
-
-FUNCTION DESCRIPTION
-        Parse the wmo heading from buffer and load the appropriate prod
-        info fields.  The following regular expressions will satisfy this
-        parser.  Note this parser is not case sensative.
 /*******************************************************************************
 FUNCTION NAME
         int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)

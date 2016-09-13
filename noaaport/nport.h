@@ -67,6 +67,7 @@
 #define NAME_PROD_TYPE_GOESR_WEST	"GOES_R_WEST"		/* name for GOES-R West product type	*/
 #define NAME_PROD_TYPE_POLAR_SAT	"POLAR_SAT"		/* name for (NPP/JPSS) product type	*/
 
+/*
 #define GET_PROD_TYPE_NAME(ptype)  \
 	((ptype==PROD_TYPE_GOES_EAST)?NAME_PROD_TYPE_GOES_EAST:\
 	(ptype==PROD_TYPE_GOES_WEST)?NAME_PROD_TYPE_GOES_WEST:\
@@ -83,6 +84,7 @@
 	(ptype==PROD_TYPE_GOESR_WEST)?NAME_PROD_TYPE_GOESR_WEST:\
 	(ptype==PROD_TYPE_POLAR_SAT)?NAME_PROD_TYPE_POLAR_SAT:\
 	(ptype==PROD_TYPE_RESERVE)?"RESERVE":"UNKNOWN")
+*/
 
 #define PROD_CAT_TEXT			1	/* text product cat		*/
 #define PROD_CAT_GRAPHIC		2	/* graphic product cat		*/

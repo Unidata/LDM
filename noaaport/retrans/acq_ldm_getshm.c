@@ -51,33 +51,63 @@ int cmd_line(int argc, char *argv[], INPUT *p_input);
 
 #define VAR_GET_SHMEM(a,b,c,d)  VAR_LEAN_GET_SHMEM(a,b,c,d,SHM_REUSE_FLAG)
 
-void VAR_LEAN_GET_SHMEM(char *a,ACQ_TABLE ss, int z, int k, int r) { 
-    /* allocate and set a shared memory segment if required or requested */ 
-	long ii,iii;
-
-	a = (char *)NULL; 
-    if (!(r) || !com_shmIsAlloc(k)) { 
-        if ((a = (char *)com_shmAlloc((sizeof(ss)*z), k)) == (char *)NULL) { 
-            printf(" Key=%d ret(0x%lx) com_shmAlloc " "size(%ld bytes) FAILED\n", k, (unsigned long) a, (sizeof(ss)*z)); 
-            exit(99); 
-        } 
-        ii=(sizeof(ss)*z); 
-        iii=z; 
-        printf(" Key=%d alloc shm OK.. at(0x%lx) (%ld/%ld bytes) s[%d]\n", k,(unsigned long) a, (sizeof(ss)*z),ii/iii,z); 
-        /* fill it and detach it */ 
-        (char *)memset((char *)a,0,(size_t)(sizeof(ss)*z)); 
-        com_shmDetach(a); 
-    } else { 
-        if ((a = (char *)get_shm_ptr(k,a,DEBUGGETSHM)) == (char *)NULL) { 
-            printf(" KEY %d Get get_shm_ptr FAILED \n", k); 
-            exit(0); 
-        } else { 
-            printf(" KEY %d Get get_shm_ptr OK at (0x%lx)\n", k,(unsigned long) a); 
-		}
-        memset(a,0,(sizeof(ss)*z)); 
-        com_shmDetach(a); 
-    } 
+#define VAR_LEAN_GET_SHMEM(a, ss, z, k, r) { \
+    /* allocate and set a shared memory segment if required or requested */ \
+	a = (char *)NULL; \
+    if (!(r) || !com_shmIsAlloc(k)) { \
+        if ((a = \
+            (char *)com_shmAlloc((sizeof(ss)*z), k)) == (char *)NULL) { \
+            printf(" Key=%d ret(0x%p) com_shmAlloc size(%ld bytes) FAILED\n", \
+                    k, (void *) a, (sizeof(ss)*z)); \
+            exit(99); \
+        } \
+        ii=(sizeof(ss)*z); \
+        iii=z; \
+        printf(" Key=%d alloc shm OK at(0x%p) (%ld/%d bytes) s[%d]\n", \
+        k, (void *) a, (sizeof(ss)*z),ii/iii,z); \
+        /* fill it and detach it */ \
+        memset(a,0,(sizeof(ss)*z)); \
+        com_shmDetach(a); \
+    } else { \
+        if ((a = (char *)get_shm_ptr(k,#a,DEBUGGETSHM)) == (char *)NULL) { \
+            printf(" KEY %d Get get_shm_ptr FAILED \n", k); \
+            exit(0); \
+        } else { \
+            printf(" KEY %d Get get_shm_ptr OK at (0x%p)\n", k, (void *) a); \
+	}\
+        memset(a,0,(sizeof(ss)*z)); \
+        com_shmDetach(a); \
+    } \
 }
+
+//void VAR_LEAN_GET_SHMEM(char *a, ACQ_TABLE ss, int z, int k, int r) {
+//    /* allocate and set a shared memory segment if required or requested */
+//	long ii,iii;
+//
+//	a = (char *)NULL;
+//    if (!(r) || !com_shmIsAlloc(k)) {
+//        if ((a = (char *)com_shmAlloc((sizeof(ss)*z), k)) == (char *)NULL) {
+//            printf(" Key=%d ret(0x%lx) com_shmAlloc " "size(%ld bytes) FAILED\n", k, (unsigned long) a, (sizeof(ss)*z));
+//            exit(99);
+//        }
+//        ii=(sizeof(ss)*z);
+//        iii=z;
+//        printf(" Key=%d alloc shm OK.. at(0x%lx) (%ld/%ld bytes) s[%d]\n", k,(unsigned long) a, (sizeof(ss)*z),ii/iii,z);
+//        /* fill it and detach it */
+//        (char *)memset((char *)a,0,(size_t)(sizeof(ss)*z));
+//        com_shmDetach(a);
+//    } else {
+//        if ((a = (char *)get_shm_ptr(k,a,DEBUGGETSHM)) == (char *)NULL) {
+//            printf(" KEY %d Get get_shm_ptr FAILED \n", k);
+//            exit(0);
+//        } else {
+//            printf(" KEY %d Get get_shm_ptr OK at (0x%lx)\n", k,(unsigned long) a);
+//		}
+//        memset(a,0,(sizeof(ss)*z));
+//        com_shmDetach(a);
+//    }
+//}
+
 
 char	PNAME[40];
 int MaxLinks;
@@ -88,23 +118,14 @@ int argc;
 char **argv;
 {
 	INPUT   input;				/* user input options */
-	int 	SHMnumber;
 	char 	*address=NULL; 
-	char 	*address1; 
 	int		ii,iii,iiii;		/* loop counter */
 	long	tot_shmem;			/* total amount of shared memory */
 	long	new_shmem;			/* new amount of shared memory */
-	long	add_array_shmem;	/* add array amount of shared memory */
-	long	add_bytes_shmem;	/* add bytes amount of shared memory */
 	int		shm_region;			/* shm region */
 	int		new_key;			/* shm key */
 	ACQ_TABLE *acq_table;				/* acq table */
-	ACQ_TABLE	*p_acqtable;			/* acq table ptr */
 	ACQ_TABLE	*p_acqtable_link;		/* acq table link ptr */
-	int		extend_host_flag;	/* extended structure flag */
-	int		extend_group_flag;	/* extended structure flag */
-	int		size_of_acqtable;	/* size of acqtable per link */
-	int		size_of_group_info;	/* size of group_info per link */
 	ACQ_TABLE	acq_tbl;
 
 	strcpy(PNAME, "acq_getshm");
@@ -140,21 +161,17 @@ char **argv;
 
 
 		/* Now update the internal acq_table value */
-		GET_SHMPTR_DEBUG(acq_table, ACQ_TABLE,
-			SHMKEY_REGION(ACQ_TABLE_SHMKEY ,shm_region), DebugShm);
+	GET_SHMPTR_DEBUG(acq_table, ACQ_TABLE, SHMKEY_REGION(ACQ_TABLE_SHMKEY ,shm_region), DebugShm);
 		/* tcq_table = address; */
 		printf("xxxxxxxxxxxxxxxx  = 0x%lx\n",(unsigned long) acq_table);
 		printf("yyyyyyyyyyyyyyyy  = 0x%lx\n",(unsigned long) &acq_table[0]);
-		p_acqtable = acq_table;
 		for(iiii=0; iiii< MaxLinks; iiii++) {
 				p_acqtable_link = &acq_table[iiii];
 				if(input.verbose) {
-					printf("  p_acqtable_link[%d]=0x%lx\n", 
-						iiii,(unsigned long) p_acqtable_link);
+			printf("  p_acqtable_link[%d]=0x%lx\n", iiii,(unsigned long) p_acqtable_link);
 				} else {
 					if((iiii <= 1) || (iiii == (MaxLinks -1))) {
-						printf("  p_acqtable_link[%d]=0x%lx\n", 
-							iiii,(unsigned long) p_acqtable_link);
+				printf("  p_acqtable_link[%d]=0x%lx\n", iiii,(unsigned long) p_acqtable_link);
 					}
 				}
 			p_acqtable_link->max_links = (unsigned char)MaxLinks; 
@@ -185,10 +202,7 @@ char **argv;
 			
 		}
 	
-		printf("  subtotal ACQ_TABLE key(0x%x)= %ld bytes\n", 
-			new_key, new_shmem);
-
-	
+	printf("  subtotal ACQ_TABLE key(0x%x)= %ld bytes\n", new_key, new_shmem);
 	printf("acq_getshm Done OK get shmem total = %ld bytes\n", tot_shmem);
 
 	exit(0);
@@ -209,7 +223,6 @@ cmd_line(
 	INPUT *p_input)
 {
 	int     c;
-	int		flag;
 
 	/* input initialization */
 	p_input->verbose = 0;
