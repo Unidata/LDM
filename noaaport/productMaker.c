@@ -3,7 +3,6 @@
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
 #include <config.h>
-#define RETRANS_SUPPORT
 #include "fifo.h"
 #include "goes.h"
 #include "ldm.h"
